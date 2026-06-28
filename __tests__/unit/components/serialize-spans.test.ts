@@ -127,7 +127,11 @@ describe("applySpans", () => {
     const span = createInlineIcon("IconHeart");
     applySpans(root, [span], document);
     expect(root.childNodes.length).toBe(1);
-    const el = root.firstChild as HTMLElement;
+    const el = root.firstChild;
+    expect(el).toBeInstanceOf(HTMLElement);
+    if (!(el instanceof HTMLElement)) {
+      throw new Error("iconInline span must render an HTMLElement");
+    }
     expect(el.getAttribute(ICON_NAME_ATTR)).toBe("IconHeart");
     expect(el.getAttribute(KEY_DATA_ATTR)).toBe(span._key);
     expect(el.getAttribute(SPAN_TYPE_ATTR)).toBe("iconInline");

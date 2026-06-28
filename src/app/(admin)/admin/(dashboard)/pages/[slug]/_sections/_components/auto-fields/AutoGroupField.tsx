@@ -18,20 +18,20 @@ import { IconChevronDown } from "@tabler/icons-react";
 import { getZodObjectShape, extractFieldMetaDeep } from "../zod-introspection";
 import type { FieldInfo } from "../zod-introspection";
 
-export function AutoGroupField({
+export function AutoGroupField<TForm extends Record<string, unknown>>({
   field,
   label,
   schema,
   defaultValue,
   renderField,
 }: {
-  readonly field: FieldMetadata<unknown>;
+  readonly field: FieldMetadata<unknown, TForm>;
   readonly label: string;
   readonly schema: z.ZodType;
   readonly defaultValue: unknown;
   readonly renderField: (
     info: FieldInfo,
-    subField: FieldMetadata<unknown>,
+    subField: FieldMetadata<unknown, TForm>,
     defaultValue: unknown,
   ) => ReactNode;
 }) {

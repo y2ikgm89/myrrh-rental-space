@@ -175,7 +175,10 @@ describe("crypto", () => {
       const encrypted = safeEncrypt(plaintext);
 
       expect(encrypted).not.toBeNull();
-      expect(safeDecrypt(encrypted!)).toBe(plaintext);
+      if (encrypted === null) {
+        throw new Error("safeEncrypt must return encrypted text");
+      }
+      expect(safeDecrypt(encrypted)).toBe(plaintext);
     });
 
     test("safeDecrypt は不正な値に対して null を返す", () => {

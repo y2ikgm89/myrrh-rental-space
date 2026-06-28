@@ -38,12 +38,16 @@ type SyncOnlyWebhookMembers = "constructEvent" | "generateTestHeaderString";
 type AsyncOnlyWebhooks = Omit<Stripe["webhooks"], SyncOnlyWebhookMembers>;
 
 /**
- * `client.webhooks` を async-only に封印した Stripe クライアント。
- * 既存実装は本体を一切変更せず、型のみ narrow する。
+ * アプリケーションで使う Stripe service 面だけを公開する facade。
+ * `webhooks` は async-only 型にして、Bun で失敗する sync crypto 経路を
+ * 型レベルで到達不能にする。
  */
-export type AsyncOnlyStripe = Omit<Stripe, "webhooks"> & {
+export interface AsyncOnlyStripe {
+  readonly accounts: Stripe["accounts"];
+  readonly checkout: Stripe["checkout"];
+  readonly refunds: Stripe["refunds"];
   readonly webhooks: AsyncOnlyWebhooks;
-};
+}
 
 /**
  * Stripe設定の取得元
@@ -71,8 +75,7 @@ function getEnvSecretKey(): string | null {
 /**
  * Stripeクライアントを作成
  *
- * 戻り値は `AsyncOnlyStripe` で sync webhook helpers を型レベルで封印する。
- * 実体は `new Stripe()` のまま（runtime 動作は不変・cast のみ）。
+ * 戻り値は `AsyncOnlyStripe` facade で sync webhook helpers を型レベルで封印する。
  *
  * @param secretKey - シークレットキー（復号化済み）
  */
@@ -82,7 +85,12 @@ export function createStripeClient(secretKey: string): AsyncOnlyStripe {
     apiVersion: "2026-05-27.dahlia",
     typescript: true,
   });
-  return client as AsyncOnlyStripe;
+  return {
+    accounts: client.accounts,
+    checkout: client.checkout,
+    refunds: client.refunds,
+    webhooks: client.webhooks,
+  };
 }
 
 /**

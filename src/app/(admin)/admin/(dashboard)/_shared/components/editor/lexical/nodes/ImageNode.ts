@@ -27,7 +27,8 @@ import { renderLexicalDecorator } from "./decorator-registry";
 export const IMAGE_ALIGNMENTS = ["left", "center", "right"] as const;
 export type ImageAlignment = (typeof IMAGE_ALIGNMENTS)[number];
 
-const isImageAlignment = createEnumGuard<ImageAlignment>(IMAGE_ALIGNMENTS);
+export const isImageAlignment =
+  createEnumGuard<ImageAlignment>(IMAGE_ALIGNMENTS);
 
 export const srcState = createState("src", {
   parse: parseString,

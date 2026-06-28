@@ -16,6 +16,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectErrorResult } from "../../../helpers/type-assertions";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -196,9 +197,8 @@ describe("getAccountLinksAction", () => {
 
       const result = await getAccountLinksAction();
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("認証が必要です");
+      expectErrorResult(result);
+      expect(result.error).toBe("認証が必要です");
     });
 
     test("未認証時は getAccountProviders が呼ばれない", async () => {
@@ -227,9 +227,8 @@ describe("getAccountLinksAction", () => {
 
       const result = await getAccountLinksAction();
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("リクエストが多すぎます");
+      expectErrorResult(result);
+      expect(result.error).toBe("リクエストが多すぎます");
     });
 
     test("レート制限超過時は getSession が呼ばれない", async () => {
@@ -297,9 +296,8 @@ describe("deleteAccountAction", () => {
 
       const result = await deleteAccountAction();
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("認証が必要です");
+      expectErrorResult(result);
+      expect(result.error).toBe("認証が必要です");
     });
 
     test("未認証時は auth.api.deleteUser が呼ばれない", async () => {
@@ -328,9 +326,8 @@ describe("deleteAccountAction", () => {
 
       const result = await deleteAccountAction();
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("リクエストが多すぎます");
+      expectErrorResult(result);
+      expect(result.error).toBe("リクエストが多すぎます");
     });
   });
 
@@ -345,9 +342,8 @@ describe("deleteAccountAction", () => {
 
       const result = await deleteAccountAction();
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("アカウントの削除に失敗しました");
+      expectErrorResult(result);
+      expect(result.error).toBe("アカウントの削除に失敗しました");
     });
   });
 });

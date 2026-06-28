@@ -4,7 +4,7 @@ import {
   createMutationError,
 } from "@/shared/lib/mutation-result";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import type { ZodError } from "zod";
+import { z } from "zod";
 
 describe("mutation-result", () => {
   test("createMutationError は error と fieldErrors を持つオブジェクトを返す", () => {
@@ -32,13 +32,16 @@ describe("mutation-result", () => {
 
 describe("createValidationMutationError", () => {
   test("ZodError を MutationError に変換する", () => {
-    const zodError = {
-      issues: [
-        { path: ["title"], message: "タイトルは必須です" },
-        { path: ["slug"], message: "スラッグは必須です" },
-      ],
-    };
-    const result = createValidationMutationError(zodError as ZodError);
+    const schema = z.object({
+      title: z.string({ error: "タイトルは必須です" }),
+      slug: z.string({ error: "スラッグは必須です" }),
+    });
+    const parsed = schema.safeParse({});
+    expect(parsed.success).toBe(false);
+    if (parsed.success) {
+      throw new Error("schema must reject empty input");
+    }
+    const result = createValidationMutationError(parsed.error);
     expect(result).toEqual({
       error: "入力内容に誤りがあります",
       code: "VALIDATION",

@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 
 const mockCheckPermission = mock();
 const mockGetReservationsForExport = mock();
-const mockGenerateCsv = mock();
+type CsvColumn = { header: string };
+const mockGenerateCsv = mock<(rows: unknown[], columns: CsvColumn[]) => string>(
+  () => "",
+);
 
 mock.module("next/server", () => ({
   NextResponse,
@@ -151,10 +154,12 @@ describe("GET /api/admin/export/reservations", () => {
 
     expect(mockGenerateCsv).toHaveBeenCalledTimes(1);
 
-    const [rows, columns] = mockGenerateCsv.mock.calls[0] as [
-      unknown[],
-      Array<{ header: string }>,
-    ];
+    const firstCall = mockGenerateCsv.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    if (firstCall === undefined) {
+      throw new Error("generateCsv must be called");
+    }
+    const [rows, columns] = firstCall;
 
     // 予約データが渡される
     expect(rows).toEqual([testReservation]);

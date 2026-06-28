@@ -4,10 +4,10 @@
  * お知らせエディタ 設定ダイアログ定義
  *
  * SettingsDialog に渡すタブ・セクション構成。conform `FieldMetadata` ベース。
- * フォーム型は `NewsSettingsFormData` (本文 contentJson を含まないメタデータ専用)。
+ * フォーム型は `NewsSettingsFormState` (本文 contentJson を含まないメタデータ専用)。
  */
 
-import type { NewsSettingsFormData } from "@/admin/lib/validations/news";
+import type { NewsSettingsFormState } from "../hooks/use-news-editor";
 import { generateSlug } from "@/shared/lib/slug";
 import {
   type NewsSidePanelExtra,
@@ -23,7 +23,7 @@ import {
 } from "../side-panel";
 
 export const newsSettingsPanel: SidePanelDefinition<
-  NewsSettingsFormData,
+  NewsSettingsFormState,
   NewsSidePanelExtra
 > = {
   title: "お知らせ設定",

@@ -8,11 +8,12 @@
  * の `tagsFormSchema` 参照)。
  */
 
-import { useInputControl, type FieldMetadata } from "@conform-to/react";
+import type { FieldMetadata } from "@conform-to/react";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 import { TagInput, type TagOption } from "./TagInput";
 
 type PostTagFieldsProps = {
-  tagsField: FieldMetadata<string[]>;
+  tagsField: FieldMetadata<unknown>;
   /** 利用可能なタグのリスト */
   availableTags?: readonly TagOption[];
   /** 新規タグ作成時のコールバック */
@@ -47,7 +48,7 @@ export function PostTagFields({
   placeholder = "タグを入力...",
   disabled,
 }: PostTagFieldsProps) {
-  const control = useInputControl(tagsField);
+  const control = useTypedInputControl(tagsField);
   const tagsArray = parseTagsValue(control.value);
   const tagsError = tagsField.errors?.[0];
 

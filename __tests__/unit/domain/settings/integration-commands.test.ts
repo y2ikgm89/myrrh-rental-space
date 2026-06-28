@@ -4,9 +4,10 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 // =============================================================================
 
-const mockSettingsUpsert = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "singleton" }),
-);
+type SettingsUpsertArgs = { update?: Record<string, unknown> };
+const mockSettingsUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
 const mockTransactionFn =
   mock<
     (
@@ -48,6 +49,11 @@ mock.module("@/shared/lib/env/encryption", () => ({
   findEncryptionKeyByKid: (kid: string) =>
     kid === TEST_PRIMARY.kid ? TEST_PRIMARY : null,
 }));
+
+function lastUpdate(): Record<string, unknown> {
+  const lastCall = mockSettingsUpsert.mock.calls.at(-1);
+  return lastCall?.[0]?.update ?? {};
+}
 
 // CalendarSyncMethod enum モック
 mock.module("@generated/prisma/enums", () => ({
@@ -188,13 +194,7 @@ describe("updateStripeSettings", () => {
         stripeCurrency: "jpy",
       });
 
-      const lastCall = mockSettingsUpsert.mock.calls.at(-1) as unknown as
-        | [{ update?: Record<string, unknown> }]
-        | undefined;
-      const updateArg = lastCall?.[0]?.update;
-      expect(Object.keys(updateArg ?? {})).not.toContain(
-        "stripePublishableKey",
-      );
+      expect(Object.keys(lastUpdate())).not.toContain("stripePublishableKey");
     });
 
     test("戻り値が void（undefined）", async () => {
@@ -408,11 +408,7 @@ describe("updateGoogleCalendarSettings", () => {
         googleCalendarReminderMinutes: null,
       });
 
-      const lastCall = mockSettingsUpsert.mock.calls.at(-1) as unknown as
-        | [{ update?: Record<string, unknown> }]
-        | undefined;
-      const updateArg = lastCall?.[0]?.update;
-      expect(Object.keys(updateArg ?? {})).not.toContain("googleCalendarId");
+      expect(Object.keys(lastUpdate())).not.toContain("googleCalendarId");
     });
 
     test("有効な googleCalendarId はそのまま保持される", async () => {

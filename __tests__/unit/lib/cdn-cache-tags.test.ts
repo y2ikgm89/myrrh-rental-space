@@ -42,9 +42,8 @@ describe("CDN_CACHE_TAGS invariants", () => {
   });
 
   test("HOME_MARKETING is NOT in SITE_WIDE_CDN_TAGS (scoped to / and /about)", () => {
-    expect(SITE_WIDE_CDN_TAGS as readonly string[]).not.toContain(
-      CDN_CACHE_TAGS.HOME_MARKETING,
-    );
+    const siteWideTags = new Set<unknown>(SITE_WIDE_CDN_TAGS);
+    expect(siteWideTags.has(CDN_CACHE_TAGS.HOME_MARKETING)).toBe(false);
   });
 });
 

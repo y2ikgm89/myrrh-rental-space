@@ -29,10 +29,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
 const { POST } = await import("@/app/api/webhooks/resend/route");
 
 function makeRequestWithoutSvixHeaders(onText: () => Promise<string>): Request {
-  return {
-    headers: new Headers(),
-    text: onText,
-  } as Request;
+  const request = new Request("https://example.com/api/webhooks/resend");
+  Object.defineProperty(request, "text", { value: onText });
+  return request;
 }
 
 describe("POST /api/webhooks/resend", () => {

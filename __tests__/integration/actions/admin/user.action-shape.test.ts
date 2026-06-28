@@ -14,6 +14,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -105,17 +106,20 @@ describe("updateUserRole (action shape)", () => {
   });
 
   test("無効な id は validation error", async () => {
-    const r = await updateUserRole("bad", "ADMIN" as unknown as never);
+    const r = await updateUserRole("bad", Role.ADMIN);
     expect(isMutationError(r)).toBe(true);
   });
 
   test("無効な role は validation error", async () => {
-    const r = await updateUserRole(VALID_UUID, "INVALID" as unknown as never);
+    const r = await Reflect.apply(updateUserRole, undefined, [
+      VALID_UUID,
+      "INVALID",
+    ]);
     expect(isMutationError(r)).toBe(true);
   });
 
   test("正常系: resource=user, action=manage", async () => {
-    await updateUserRole(VALID_UUID, "ADMIN" as unknown as never);
+    await updateUserRole(VALID_UUID, Role.ADMIN);
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "user",
@@ -123,7 +127,7 @@ describe("updateUserRole (action shape)", () => {
         resourceId: VALID_UUID,
       }),
     );
-    expect(mockUpdateUserRole).toHaveBeenCalledWith(VALID_UUID, "ADMIN", {
+    expect(mockUpdateUserRole).toHaveBeenCalledWith(VALID_UUID, Role.ADMIN, {
       id: "admin",
       role: "SUPER_ADMIN",
     });

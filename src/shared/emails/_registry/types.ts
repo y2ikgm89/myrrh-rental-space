@@ -6,6 +6,7 @@
  */
 
 import type { ReactElement } from "react";
+import type { EmailFooterData } from "@/shared/emails/_shared/footer-data";
 import type { EmailResult } from "@/shared/lib/email/types";
 
 export type {
@@ -13,6 +14,10 @@ export type {
   TemplateCategory,
   EmailTemplateIndexItem,
 } from "./data";
+
+export interface TemplateFixtureOverride {
+  footer: EmailFooterData;
+}
 
 /** 送信時に sender に渡す共通入力（recipient と運用者 ID）。 */
 export interface SendTestInput {
@@ -26,11 +31,9 @@ export interface SendTestInput {
   simulatorAddress?: boolean;
   /**
    * fixture の浅マージ用 override。テスト送信時に fixture の `footer` を
-   * `getEmailFooterData()` の実値に差し替える等の用途。
-   * `Partial` ではなく `Record<string, unknown>` にしたのは TemplateEntry<unknown>
-   * の closure と互換させるため。実呼び出しは type-safe な registry helper を介す。
+   * `getEmailFooterData()` の実値に差し替える用途に限定する。
    */
-  fixtureOverride?: Record<string, unknown>;
+  fixtureOverride?: TemplateFixtureOverride;
 }
 
 /**
@@ -38,6 +41,7 @@ export interface SendTestInput {
  *
  * - `component`: テンプレ本体（React 関数コンポーネント）
  * - `fixture`: フィクスチャ（`satisfies Props`）でデモプロップス
+ * - `renderPreview`: fixture と任意 override から preview 用 ReactElement を生成
  * - `sendTest`: 実 sender ラッパーを呼ぶ「テスト送信用」関数
  *   - subject に必ず `[TEST]` を前置（呼び出し側ではなくエントリ側で強制）
  *   - idempotency key・tags は送信側の既存仕様を尊重
@@ -49,5 +53,6 @@ export interface TemplateEntry<P = unknown> {
   category: import("./data").TemplateCategory;
   component: (props: P) => ReactElement;
   fixture: P;
+  renderPreview: (fixtureOverride?: TemplateFixtureOverride) => ReactElement;
   sendTest: (input: SendTestInput) => Promise<EmailResult>;
 }

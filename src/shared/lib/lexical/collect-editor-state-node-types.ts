@@ -3,6 +3,8 @@
  * headless 派生パイプラインの検証・デバッグ用。
  */
 
+import { isRecord } from "@/shared/lib/serialize";
+
 export function collectLexicalEditorStateNodeTypes(
   editorStateJson: string,
 ): Set<string> {
@@ -18,18 +20,21 @@ export function collectLexicalEditorStateNodeTypes(
       }
       return;
     }
-    const record = value as Record<string, unknown>;
-    const type = record["type"];
+    if (!isRecord(value)) {
+      return;
+    }
+    const type = value["type"];
     if (typeof type === "string") {
       types.add(type);
     }
-    for (const child of Object.values(record)) {
+    for (const child of Object.values(value)) {
       walk(child);
     }
   }
 
   try {
-    walk(JSON.parse(editorStateJson) as unknown);
+    const parsed: unknown = JSON.parse(editorStateJson);
+    walk(parsed);
   } catch {
     return types;
   }

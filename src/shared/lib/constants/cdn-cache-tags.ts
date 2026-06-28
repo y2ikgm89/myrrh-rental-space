@@ -25,53 +25,53 @@
 
 import { CACHE_TAGS } from "./cache";
 
-/** Branded CDN cache tag string type. */
-export type CdnCacheTag = string & { readonly __brand: "CdnCacheTag" };
+/** CDN cache tag string type. All current tags carry the rollout version suffix. */
+export type CdnCacheTag = `${string}-v1`;
 
-function asCdnTag<T extends string>(value: T): T & CdnCacheTag {
-  return value as T & CdnCacheTag;
+function defineCdnTag<T extends CdnCacheTag>(value: T): T {
+  return value;
 }
 
 export const CDN_CACHE_TAGS = {
   // --- Site-wide (emitted on every public source entry) ---
-  LAYOUT: asCdnTag("layout-v1"),
-  NAVIGATION: asCdnTag("navigation-v1"),
-  ANNOUNCEMENT_BAR: asCdnTag("announcement-bar-v1"),
-  COOKIE_CONSENT: asCdnTag("cookie-consent-v1"),
-  ANALYTICS_CONFIG: asCdnTag("analytics-config-v1"),
-  BUSINESS_SETTINGS: asCdnTag("business-settings-v1"),
-  ORGANIZATION_SETTINGS: asCdnTag("organization-settings-v1"),
-  SEO_SETTINGS: asCdnTag("seo-settings-v1"),
-  SOCIAL_LINKS: asCdnTag("social-links-v1"),
-  TERMS_FOOTER: asCdnTag("terms-footer-v1"),
-  FEATURE_MODULES: asCdnTag("feature-modules-v1"),
-  PAGE: asCdnTag("page-v1"),
-  PAGE_SECTIONS: asCdnTag("page-sections-v1"),
-  PAGE_SEO: asCdnTag("page-seo-v1"),
-  INSTAGRAM_FEED: asCdnTag("instagram-feed-v1"),
+  LAYOUT: defineCdnTag("layout-v1"),
+  NAVIGATION: defineCdnTag("navigation-v1"),
+  ANNOUNCEMENT_BAR: defineCdnTag("announcement-bar-v1"),
+  COOKIE_CONSENT: defineCdnTag("cookie-consent-v1"),
+  ANALYTICS_CONFIG: defineCdnTag("analytics-config-v1"),
+  BUSINESS_SETTINGS: defineCdnTag("business-settings-v1"),
+  ORGANIZATION_SETTINGS: defineCdnTag("organization-settings-v1"),
+  SEO_SETTINGS: defineCdnTag("seo-settings-v1"),
+  SOCIAL_LINKS: defineCdnTag("social-links-v1"),
+  TERMS_FOOTER: defineCdnTag("terms-footer-v1"),
+  FEATURE_MODULES: defineCdnTag("feature-modules-v1"),
+  PAGE: defineCdnTag("page-v1"),
+  PAGE_SECTIONS: defineCdnTag("page-sections-v1"),
+  PAGE_SEO: defineCdnTag("page-seo-v1"),
+  INSTAGRAM_FEED: defineCdnTag("instagram-feed-v1"),
 
   // --- Marketing aggregation (scoped to / and /about only) ---
-  HOME_MARKETING: asCdnTag("home-marketing-v1"),
+  HOME_MARKETING: defineCdnTag("home-marketing-v1"),
 
   // --- Per-collection ---
-  POST: asCdnTag("post-v1"),
-  POST_CATEGORY: asCdnTag("post-category-v1"),
-  POST_TAG: asCdnTag("post-tag-v1"),
-  SPACE: asCdnTag("space-v1"),
-  SPACE_CATEGORY: asCdnTag("space-category-v1"),
-  LOCATION: asCdnTag("location-v1"),
-  NEWS: asCdnTag("news-v1"),
-  EVENT: asCdnTag("event-v1"),
-  FAQ: asCdnTag("faq-v1"),
-  TERMS_DETAIL: asCdnTag("terms-detail-v1"),
-  SITEMAP: asCdnTag("sitemap-v1"),
+  POST: defineCdnTag("post-v1"),
+  POST_CATEGORY: defineCdnTag("post-category-v1"),
+  POST_TAG: defineCdnTag("post-tag-v1"),
+  SPACE: defineCdnTag("space-v1"),
+  SPACE_CATEGORY: defineCdnTag("space-category-v1"),
+  LOCATION: defineCdnTag("location-v1"),
+  NEWS: defineCdnTag("news-v1"),
+  EVENT: defineCdnTag("event-v1"),
+  FAQ: defineCdnTag("faq-v1"),
+  TERMS_DETAIL: defineCdnTag("terms-detail-v1"),
+  SITEMAP: defineCdnTag("sitemap-v1"),
 
   // --- BlogLayout sidebar ---
-  SIDEBAR_DATA: asCdnTag("sidebar-data-v1"),
-  SIDEBAR_SETTINGS: asCdnTag("sidebar-settings-v1"),
+  SIDEBAR_DATA: defineCdnTag("sidebar-data-v1"),
+  SIDEBAR_SETTINGS: defineCdnTag("sidebar-settings-v1"),
 
   // --- Admin-only (no Cache-Tag header emission; purge is a no-op for these) ---
-  INTEGRATION_SETTINGS: asCdnTag("integration-settings-v1"),
+  INTEGRATION_SETTINGS: defineCdnTag("integration-settings-v1"),
 } as const;
 
 export type CdnTagValue = (typeof CDN_CACHE_TAGS)[keyof typeof CDN_CACHE_TAGS];
@@ -155,6 +155,10 @@ export const NEXTJS_TAG_TO_CDN_TAG = {
   [CACHE_TAGS.INTEGRATION_SETTINGS]: CDN_CACHE_TAGS.INTEGRATION_SETTINGS,
 } as const satisfies Record<string, CdnTagValue>;
 
+const NEXTJS_TAG_TO_CDN_TAG_MAP = new Map<string, CdnTagValue>(
+  Object.entries(NEXTJS_TAG_TO_CDN_TAG),
+);
+
 /**
  * Next.js tags intentionally NOT in NEXTJS_TAG_TO_CDN_TAG.
  * - Admin-only (no public cached render)
@@ -219,7 +223,5 @@ export function joinCacheTags(tags: readonly CdnTagValue[]): string {
 }
 
 export function resolveCdnTag(nextJsTag: string): CdnTagValue | null {
-  return (
-    (NEXTJS_TAG_TO_CDN_TAG as Record<string, CdnTagValue>)[nextJsTag] ?? null
-  );
+  return NEXTJS_TAG_TO_CDN_TAG_MAP.get(nextJsTag) ?? null;
 }

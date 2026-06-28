@@ -17,14 +17,11 @@ import {
   getInputProps,
   getTextareaProps,
   useForm,
+  parse,
   type FieldMetadata,
   type FormMetadata,
 } from "@conform-to/react";
-import {
-  asConformLooseRecord,
-  useTypedInputControl,
-} from "@/shared/lib/conform/typed-input-control";
-import { parseWithZod } from "@conform-to/zod/v4";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 import dynamic from "next/dynamic";
 import { z } from "zod";
 import { IconLink, IconPhotoVideo, IconTypography } from "@tabler/icons-react";
@@ -89,6 +86,59 @@ import { AutoImageField } from "./auto-fields/AutoImageField";
 import { AutoMediaField } from "./auto-fields/AutoMediaField";
 import { isRecord } from "@/shared/lib/serialize";
 
+type DynamicConfigValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | DynamicConfigValue[]
+  | { readonly [key: string]: DynamicConfigValue };
+
+type DynamicConfigForm = Record<string, DynamicConfigValue>;
+
+function isDynamicConfigValue(value: unknown): value is DynamicConfigValue {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.every(isDynamicConfigValue);
+  }
+  if (isRecord(value)) {
+    return Object.values(value).every(isDynamicConfigValue);
+  }
+  return false;
+}
+
+function toDynamicConfigForm(
+  record: Record<string, unknown>,
+): DynamicConfigForm {
+  const result: DynamicConfigForm = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (isDynamicConfigValue(value)) {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+function formatZodFieldErrors(error: z.ZodError): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
+  for (const issue of error.issues) {
+    const key = issue.path.map(String).join(".");
+    const current = errors[key];
+    errors[key] =
+      current === undefined ? [issue.message] : [...current, issue.message];
+  }
+  return errors;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────────
@@ -126,19 +176,25 @@ export function AutoSectionForm({
   // conform useForm: callback-based form（onSave 起動）
   // 動的 schema のため defaultValue / onValidate の戻り値 / form.update に境界変換が必要
   // (conform generic invariance 境界対応。方針: .claude/rules/type-safety.md)
-  const [form, fields] = useForm<Record<string, unknown>>({
+  const [form, fields] = useForm<DynamicConfigForm>({
     id: `auto-section-${section.id}`,
     // defaultValue: 内部的に boolean/number/array/object を含むが、conform は runtime で
     // FormData string にシリアライズするため実害なし
     // (typed-input-control SSoT helper 経由。方針: .claude/rules/type-safety.md)
-    defaultValue: asConformLooseRecord(defaultConfig),
+    defaultValue: toDynamicConfigForm(defaultConfig),
     onValidate({ formData }) {
-      // schema が未定義のケースも parseWithZod 経由で Submission を返す（reply 等の API 完備のため）
-      // schema は typed cast して submission.value 型を form の Schema と整合させる
-      const activeSchema =
-        schema ?? (z.record(z.string(), z.unknown()) as z.ZodType);
-      return parseWithZod(formData, {
-        schema: activeSchema as z.ZodType<Record<string, unknown>>,
+      const activeSchema = schema ?? z.record(z.string(), z.unknown());
+      return parse<DynamicConfigForm, string[]>(formData, {
+        resolve(payload) {
+          const result = activeSchema.safeParse(payload);
+          if (!result.success) {
+            return { error: formatZodFieldErrors(result.error) };
+          }
+          if (!isRecord(result.data)) {
+            return { error: { "": ["設定値の形式が正しくありません"] } };
+          }
+          return { value: toDynamicConfigForm(result.data) };
+        },
       });
     },
     onSubmit(event, { submission }) {
@@ -178,7 +234,7 @@ export function AutoSectionForm({
     if (fallback.success && isRecord(fallback.data)) {
       lastVariantRef.current = nextVariant;
       form.update({
-        value: asConformLooseRecord(fallback.data),
+        value: toDynamicConfigForm(fallback.data),
       });
     }
   });
@@ -305,23 +361,23 @@ export function AutoSectionForm({
 // Field Renderer
 // ─────────────────────────────────────────────────────────────
 
-interface AutoFieldProps {
+interface AutoFieldProps<TForm extends Record<string, unknown>> {
   readonly fieldInfo: FieldInfo | ArrayItemFieldInfo;
-  readonly field: FieldMetadata<unknown>;
-  readonly form: FormMetadata<Record<string, unknown>>;
+  readonly field: FieldMetadata<unknown, TForm>;
+  readonly form: FormMetadata<TForm>;
   readonly isPending: boolean;
   readonly defaultValue: unknown;
   readonly dynamicOptions: DynamicSectionOptions | undefined;
 }
 
-function AutoField({
+function AutoField<TForm extends Record<string, unknown>>({
   fieldInfo,
   field,
   form,
   isPending,
   defaultValue,
   dynamicOptions,
-}: AutoFieldProps) {
+}: AutoFieldProps<TForm>) {
   if (!fieldInfo.meta) return null;
   const { key, meta } = fieldInfo;
   const fieldId = `auto-${field.name}`;
@@ -350,7 +406,7 @@ function AutoField({
   );
 }
 
-interface AutoFieldByTypeProps {
+interface AutoFieldByTypeProps<TForm extends Record<string, unknown>> {
   readonly fieldType: FieldType;
   readonly fieldKey: string;
   readonly fieldId: string;
@@ -362,15 +418,17 @@ interface AutoFieldByTypeProps {
   readonly trailingIcon: string | undefined;
   readonly mediaAccept: MediaAcceptType | undefined;
   readonly schema: z.ZodType;
-  readonly field: FieldMetadata<unknown>;
-  readonly form: FormMetadata<Record<string, unknown>>;
+  readonly field: FieldMetadata<unknown, TForm>;
+  readonly form: FormMetadata<TForm>;
   readonly isPending: boolean;
   readonly defaultValue: unknown;
   readonly error: string | undefined;
   readonly dynamicOptions: DynamicSectionOptions | undefined;
 }
 
-function AutoFieldByType(props: AutoFieldByTypeProps) {
+function AutoFieldByType<TForm extends Record<string, unknown>>(
+  props: AutoFieldByTypeProps<TForm>,
+) {
   const {
     fieldType,
     fieldId,

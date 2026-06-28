@@ -5,7 +5,11 @@ import { cn } from "@/shared/lib/cn";
 import type { NodeKey } from "lexical";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import { formatFileSize } from "./FileNode";
-import { registerLexicalDecorator } from "./decorator-registry";
+import {
+  getDecoratorNumberProp,
+  getDecoratorStringProp,
+  registerLexicalDecorator,
+} from "./decorator-registry";
 
 function getFileIconEmoji(mime: string): string {
   if (mime.includes("pdf")) return "📕";
@@ -68,4 +72,30 @@ function FileComponent({
   );
 }
 
-registerLexicalDecorator("file", FileComponent as never);
+registerLexicalDecorator("file", (props) => {
+  const url = getDecoratorStringProp(props, "url");
+  const fileName = getDecoratorStringProp(props, "fileName");
+  const fileSize = getDecoratorNumberProp(props, "fileSize");
+  const mime = getDecoratorStringProp(props, "mime");
+  const nodeKey = getDecoratorStringProp(props, "nodeKey");
+
+  if (
+    url === null ||
+    fileName === null ||
+    fileSize === null ||
+    mime === null ||
+    nodeKey === null
+  ) {
+    return null;
+  }
+
+  return (
+    <FileComponent
+      url={url}
+      fileName={fileName}
+      fileSize={fileSize}
+      mime={mime}
+      nodeKey={nodeKey}
+    />
+  );
+});

@@ -6,8 +6,17 @@ import {
   assertTypeScriptToolchainCompatibility,
   isVersionInSupportedRange,
 } from "../../../scripts/ensure-typescript-toolchain";
+import { expectRecord } from "../../helpers/type-assertions";
 
 const ROOT = process.cwd();
+
+function readPackageJson(): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(
+    readFileSync(join(ROOT, "package.json"), "utf8"),
+  );
+  expectRecord(parsed);
+  return parsed;
+}
 
 describe("TypeScript toolchain compatibility", () => {
   test("rejects TypeScript versions outside the typescript-eslint supported range", () => {
@@ -16,13 +25,11 @@ describe("TypeScript toolchain compatibility", () => {
   });
 
   test("package.json keeps TypeScript pinned until typescript-eslint supports 6.1", () => {
-    const packageJson = JSON.parse(
-      readFileSync(join(ROOT, "package.json"), "utf8"),
-    ) as {
-      devDependencies?: Record<string, string>;
-    };
+    const packageJson = readPackageJson();
+    const devDependencies = packageJson["devDependencies"];
+    expectRecord(devDependencies);
 
-    expect(packageJson.devDependencies?.["typescript"]).toBe("6.0.3");
+    expect(devDependencies["typescript"]).toBe("6.0.3");
   });
 
   test("installed TypeScript satisfies the installed typescript-eslint peer range", () => {
@@ -30,16 +37,17 @@ describe("TypeScript toolchain compatibility", () => {
   });
 
   test("production build scripts run the TypeScript toolchain gate first", () => {
-    const packageJson = JSON.parse(
-      readFileSync(join(ROOT, "package.json"), "utf8"),
-    ) as {
-      scripts?: Record<string, string>;
-    };
+    const packageJson = readPackageJson();
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
 
     for (const scriptName of ["build", "build:skip-env", "analyze"]) {
-      expect(packageJson.scripts?.[scriptName]).toStartWith(
-        "bun run toolchain:check && ",
-      );
+      const script = scripts[scriptName];
+      expect(typeof script).toBe("string");
+      if (typeof script !== "string") {
+        throw new Error(`${scriptName} script must exist`);
+      }
+      expect(script).toStartWith("bun run toolchain:check && ");
     }
   });
 });

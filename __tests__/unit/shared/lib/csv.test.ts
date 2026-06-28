@@ -55,9 +55,8 @@ describe("generateCsv", () => {
   });
 
   test("handles null and undefined accessor values", () => {
-    const rows = [
-      { name: null as string | null, value: undefined as number | undefined },
-    ];
+    type NullableRow = { name: string | null; value: number | undefined };
+    const rows: NullableRow[] = [{ name: null, value: undefined }];
     const columns = [
       { header: "名前", accessor: (r: (typeof rows)[number]) => r.name },
       { header: "値", accessor: (r: (typeof rows)[number]) => r.value },
@@ -73,7 +72,7 @@ describe("generateCsv", () => {
     const columns = [
       {
         header: "名前",
-        accessor: (_r: Record<string, never>) => "" as string,
+        accessor: (_r: Record<string, never>): string => "",
       },
     ];
     const csv = generateCsv([], columns);

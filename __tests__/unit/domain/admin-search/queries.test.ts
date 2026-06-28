@@ -255,7 +255,10 @@ describe("searchByResource", () => {
 
   test("未対応 resource は items: [] を返す（404 / type 衝突から防御）", async () => {
     // SEARCH_BY_RESOURCE の handler に存在しない resource
-    const result = await searchByResource("settings" as Resource, "test");
+    const result = await Reflect.apply(searchByResource, undefined, [
+      "settings",
+      "test",
+    ]);
 
     expect(result).toEqual({ resource: "settings", items: [] });
     // どの handler も呼ばれない

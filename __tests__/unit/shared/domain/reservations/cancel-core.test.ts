@@ -28,7 +28,7 @@ describe("applyCancellation", () => {
 
   test("PENDING かつ期限内なら CANCELLED に atomic claim して success", async () => {
     const result = await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.PENDING,
@@ -58,7 +58,7 @@ describe("applyCancellation", () => {
 
   test("CUSTOMER_TOKEN を渡すと cancelledByType にそのまま流れる", async () => {
     await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.PENDING,
@@ -84,7 +84,7 @@ describe("applyCancellation", () => {
 
   test("既に CANCELLED ならエラーで更新しない", async () => {
     const result = await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.CANCELLED,
@@ -104,7 +104,7 @@ describe("applyCancellation", () => {
   test("キャンセル期限を過ぎていればエラーで更新しない", async () => {
     const soonStart = new Date("2026-04-01T12:00:00Z"); // 12時間後 < 24h
     const result = await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.CONFIRMED,
@@ -121,7 +121,7 @@ describe("applyCancellation", () => {
   test("atomic claim が count=0 なら race を error として返す", async () => {
     mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
     const result = await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.PENDING,
@@ -140,7 +140,7 @@ describe("applyCancellation", () => {
 
   test("クーポン付き予約はクーポン使用回数を戻す", async () => {
     await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.CONFIRMED,
@@ -160,7 +160,7 @@ describe("applyCancellation", () => {
 
   test("クーポンなし予約は coupon.updateMany を呼ばない", async () => {
     await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.PENDING,
@@ -175,7 +175,7 @@ describe("applyCancellation", () => {
 
   test("理由を渡すと cancellationReason に記録する", async () => {
     await applyCancellation(
-      mockTx as never,
+      mockTx,
       {
         id: "r1",
         status: ReservationStatus.PENDING,

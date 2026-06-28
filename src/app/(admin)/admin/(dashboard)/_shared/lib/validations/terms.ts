@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TERMS_TYPE_VALUES } from "@/shared/lib/validations/terms";
+import { isTermsTypeValue } from "@/shared/lib/validations/terms";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 const slugSchema = z
@@ -61,14 +61,9 @@ export const termsSettingsFormSchema = z.object({
     .string()
     .min(1, { error: "タイプを入力してください" })
     .max(64, { error: "タイプは64文字以内です" })
-    .refine(
-      (v) =>
-        TERMS_TYPE_VALUES.includes(v as (typeof TERMS_TYPE_VALUES)[number]) ||
-        /^[a-z0-9-]+$/u.test(v),
-      {
-        error: "タイプは小文字英数字とハイフンのみ使用できます",
-      },
-    ),
+    .refine((v) => isTermsTypeValue(v) || /^[a-z0-9-]+$/u.test(v), {
+      error: "タイプは小文字英数字とハイフンのみ使用できます",
+    }),
   slug: slugSchema,
   title: titleSchema,
   isPublished: booleanFromCheckbox,

@@ -22,8 +22,9 @@ describe("DASHBOARD_ROLES", () => {
   });
 
   test("USER / CUSTOMER は含まない", () => {
-    expect(DASHBOARD_ROLES as readonly Role[]).not.toContain(Role.USER);
-    expect(DASHBOARD_ROLES as readonly Role[]).not.toContain(Role.CUSTOMER);
+    const roles = new Set<unknown>(DASHBOARD_ROLES);
+    expect(roles.has(Role.USER)).toBe(false);
+    expect(roles.has(Role.CUSTOMER)).toBe(false);
   });
 });
 
@@ -51,10 +52,9 @@ describe("INVITABLE_BY", () => {
 
   test("ADMIN は EDITOR / VIEWER のみ招待可（特権昇格防止）", () => {
     expect(INVITABLE_BY.ADMIN).toEqual([Role.EDITOR, Role.VIEWER]);
-    expect(INVITABLE_BY.ADMIN as readonly Role[]).not.toContain(Role.ADMIN);
-    expect(INVITABLE_BY.ADMIN as readonly Role[]).not.toContain(
-      Role.SUPER_ADMIN,
-    );
+    const roles = new Set<unknown>(INVITABLE_BY.ADMIN);
+    expect(roles.has(Role.ADMIN)).toBe(false);
+    expect(roles.has(Role.SUPER_ADMIN)).toBe(false);
   });
 
   test("EDITOR / VIEWER は誰も招待できない", () => {

@@ -97,6 +97,59 @@ interface PurgeApiResponse {
   result?: { id?: string };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parsePurgeErrors(value: unknown): PurgeApiResponse["errors"] {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new Error("Invalid response from CF API: errors must be an array");
+  }
+  return value.map((item) => {
+    if (!isRecord(item)) {
+      throw new Error(
+        "Invalid response from CF API: error item must be object",
+      );
+    }
+    const code = item["code"];
+    const message = item["message"];
+    if (typeof code !== "number" || typeof message !== "string") {
+      throw new Error("Invalid response from CF API: malformed error item");
+    }
+    return { code, message };
+  });
+}
+
+function parsePurgeResult(value: unknown): PurgeApiResponse["result"] {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) {
+    throw new Error("Invalid response from CF API: result must be object");
+  }
+  const id = value["id"];
+  if (id !== undefined && typeof id !== "string") {
+    throw new Error("Invalid response from CF API: result.id must be string");
+  }
+  return id === undefined ? {} : { id };
+}
+
+function parsePurgeApiResponse(value: unknown): PurgeApiResponse {
+  if (!isRecord(value)) {
+    throw new Error(`Invalid response from CF API: ${JSON.stringify(value)}`);
+  }
+  const success = value["success"];
+  if (typeof success !== "boolean") {
+    throw new Error("Invalid response from CF API: success must be boolean");
+  }
+  const errors = parsePurgeErrors(value["errors"]);
+  const result = parsePurgeResult(value["result"]);
+  return {
+    success,
+    ...(errors !== undefined && { errors }),
+    ...(result !== undefined && { result }),
+  };
+}
+
 async function firePurge(tags: readonly string[]): Promise<PurgeApiResponse> {
   const url = new URL(
     `/client/v4/zones/${encodeURIComponent(zoneId)}/purge_cache`,
@@ -112,10 +165,7 @@ async function firePurge(tags: readonly string[]): Promise<PurgeApiResponse> {
     signal: AbortSignal.timeout(10000),
   });
   const json: unknown = await response.json();
-  if (typeof json !== "object" || json === null) {
-    throw new Error(`Invalid response from CF API: ${JSON.stringify(json)}`);
-  }
-  return json as PurgeApiResponse;
+  return parsePurgeApiResponse(json);
 }
 
 function sleep(ms: number): Promise<void> {

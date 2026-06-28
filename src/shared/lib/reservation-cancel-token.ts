@@ -1,6 +1,7 @@
 import "server-only";
 
 import { encrypt, decrypt } from "@/shared/lib/crypto";
+import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * ゲスト予約キャンセル用トークン
@@ -170,13 +171,12 @@ export function verifyCancelToken(
 }
 
 function isCancelTokenPayload(value: unknown): value is CancelTokenPayload {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
   return (
-    typeof record["rid"] === "string" &&
-    typeof record["exp"] === "number" &&
-    Number.isFinite(record["exp"]) &&
-    typeof record["iat"] === "number" &&
-    Number.isFinite(record["iat"])
+    typeof value["rid"] === "string" &&
+    typeof value["exp"] === "number" &&
+    Number.isFinite(value["exp"]) &&
+    typeof value["iat"] === "number" &&
+    Number.isFinite(value["iat"])
   );
 }

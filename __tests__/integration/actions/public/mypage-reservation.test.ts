@@ -23,6 +23,10 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import {
+  expectSubmissionLike,
+  expectErrorResult,
+} from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
@@ -263,12 +267,6 @@ function inputToFormData(input: UpdateInputShape): FormData {
   return fd;
 }
 
-type SubmissionLike = {
-  readonly status?: "success" | "error";
-  readonly initialValue?: unknown;
-  readonly error?: Record<string, string[] | null> | null;
-};
-
 // =============================================================================
 // テスト本体: cancelReservationAction (signature 維持 — RPC、button 由来)
 // =============================================================================
@@ -367,9 +365,8 @@ describe("cancelReservationAction", () => {
 
       const result = await cancelReservationAction(VALID_RESERVATION_ID);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("認証が必要です");
+      expectErrorResult(result);
+      expect(result.error).toBe("認証が必要です");
     });
 
     test("未認証時は cancelCustomerReservation が呼ばれない", async () => {
@@ -398,9 +395,8 @@ describe("cancelReservationAction", () => {
 
       const result = await cancelReservationAction(VALID_RESERVATION_ID);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("リクエストが多すぎます");
+      expectErrorResult(result);
+      expect(result.error).toBe("リクエストが多すぎます");
     });
   });
 
@@ -411,9 +407,8 @@ describe("cancelReservationAction", () => {
 
       const result = await cancelReservationAction("not-a-uuid");
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("予約IDが不正です");
+      expectErrorResult(result);
+      expect(result.error).toBe("予約IDが不正です");
     });
   });
 
@@ -426,9 +421,8 @@ describe("cancelReservationAction", () => {
 
       const result = await cancelReservationAction(VALID_RESERVATION_ID);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("顧客情報が見つかりません");
+      expectErrorResult(result);
+      expect(result.error).toBe("顧客情報が見つかりません");
     });
   });
 
@@ -446,9 +440,8 @@ describe("cancelReservationAction", () => {
 
       const result = await cancelReservationAction(VALID_RESERVATION_ID);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("キャンセル期限を過ぎています");
+      expectErrorResult(result);
+      expect(result.error).toBe("キャンセル期限を過ぎています");
     });
 
     test("cancelCustomerReservation が DomainError をスローしたとき MutationError を返す", async () => {
@@ -463,9 +456,8 @@ describe("cancelReservationAction", () => {
 
       const result = await cancelReservationAction(VALID_RESERVATION_ID);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("この予約はキャンセルできません");
+      expectErrorResult(result);
+      expect(result.error).toBe("この予約はキャンセルできません");
     });
 
     test("cancelCustomerReservation が DomainError 以外の Error をスローしたとき再スローされる", async () => {
@@ -534,10 +526,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData(VALID_UPDATE_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       // conform v1.19: `reply({ resetForm: true })` は `{ initialValue: null }`
       expect(result.initialValue).toBeNull();
@@ -583,10 +576,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData(VALID_UPDATE_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("認証が必要です");
@@ -619,10 +613,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData(VALID_UPDATE_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("リクエストが多すぎます");
@@ -636,10 +631,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData(VALID_UPDATE_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("顧客情報が見つかりません");
@@ -651,10 +647,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData({ ...VALID_UPDATE_INPUT, reservationId: "not-a-uuid" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["reservationId"]).toBeDefined();
@@ -664,10 +661,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData({ ...VALID_UPDATE_INPUT, spaceId: "not-a-uuid" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["spaceId"]).toBeDefined();
@@ -677,10 +675,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData({ ...VALID_UPDATE_INPUT, date: "2025/08/01" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["date"]).toBeDefined();
@@ -690,10 +689,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData({ ...VALID_UPDATE_INPUT, startTime: "10:00:00" }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["startTime"]).toBeDefined();
@@ -703,14 +703,15 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData({
           ...VALID_UPDATE_INPUT,
           startTime: "14:00",
           endTime: "10:00",
         }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["endTime"]).toBeDefined();
@@ -720,10 +721,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData({ ...VALID_UPDATE_INPUT, numberOfGuests: 0 }),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.["numberOfGuests"]).toBeDefined();
@@ -754,10 +756,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData(VALID_UPDATE_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("変更期限を過ぎています");
@@ -773,10 +776,11 @@ describe("updateReservationAction", () => {
       const { updateReservationAction } =
         await import("@/app/(public)/mypage/_shared/actions/reservation");
 
-      const result = (await updateReservationAction(
+      const result = await updateReservationAction(
         undefined,
         inputToFormData(VALID_UPDATE_INPUT),
-      )) as SubmissionLike;
+      );
+      expectSubmissionLike(result);
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe(

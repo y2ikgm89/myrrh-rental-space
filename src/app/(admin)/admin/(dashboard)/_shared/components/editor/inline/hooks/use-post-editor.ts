@@ -14,17 +14,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@conform-to/react";
-import {
-  asConformDefaultValue,
-  asConformSubmissionValue,
-} from "@/shared/lib/conform/typed-input-control";
 import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
+import type { z } from "zod";
 import { toast } from "sonner";
 import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
-import {
-  postSettingsFormSchema,
-  type PostSettingsFormData,
-} from "@/admin/lib/validations/post";
+import { postSettingsFormSchema } from "@/admin/lib/validations/post";
 import {
   createPost,
   updatePostBody,
@@ -48,8 +42,6 @@ import {
   toFormContentWidth,
   toFormNumberString,
   toNullableString,
-  toSubmitContentWidth,
-  toSubmitNumber,
 } from "./shared";
 import type { CategoryOption, TagOption } from "./shared";
 
@@ -64,7 +56,25 @@ type UsePostEditorOptions = {
   onCreateTag?: ((name: string) => Promise<TagOption | null>) | undefined;
 };
 
-function toSettingsFormData(data?: PostData): PostSettingsFormData {
+export type PostSettingsFormState = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  thumbnailUrl: string;
+  ogpImageUrl: string;
+  categoryId: string;
+  tags: string[];
+  metaDescription: string;
+  metaKeywords: string;
+  ogpTitle: string;
+  ogpDescription: string;
+  status: PostStatus;
+  publishedAt: string;
+  contentWidth: string;
+  contentWidthCustom: string;
+};
+
+function toSettingsFormData(data?: PostData): PostSettingsFormState {
   if (!data) {
     return {
       title: "",
@@ -80,8 +90,8 @@ function toSettingsFormData(data?: PostData): PostSettingsFormData {
       ogpDescription: "",
       status: PostStatus.DRAFT,
       publishedAt: "",
-      contentWidth: null,
-      contentWidthCustom: null,
+      contentWidth: "",
+      contentWidthCustom: "",
     };
   }
 
@@ -104,7 +114,9 @@ function toSettingsFormData(data?: PostData): PostSettingsFormData {
   };
 }
 
-function toSettingsSubmitPayload(formData: PostSettingsFormData) {
+type ParsedPostSettingsFormData = z.output<typeof postSettingsFormSchema>;
+
+function toSettingsSubmitPayload(formData: ParsedPostSettingsFormData) {
   return {
     title: formData.title,
     slug: formData.slug,
@@ -118,18 +130,8 @@ function toSettingsSubmitPayload(formData: PostSettingsFormData) {
     ogpTitle: toNullableString(formData.ogpTitle),
     ogpDescription: toNullableString(formData.ogpDescription),
     status: formData.status,
-    contentWidth: toSubmitContentWidth(
-      typeof formData.contentWidth === "string"
-        ? formData.contentWidth
-        : undefined,
-    ),
-    contentWidthCustom: toSubmitNumber(
-      typeof formData.contentWidthCustom === "string"
-        ? formData.contentWidthCustom
-        : formData.contentWidthCustom != null
-          ? String(formData.contentWidthCustom)
-          : undefined,
-    ),
+    contentWidth: formData.contentWidth ?? null,
+    contentWidthCustom: formData.contentWidthCustom ?? null,
   };
 }
 
@@ -164,12 +166,13 @@ export function usePostEditor({
 
   // 設定 — conform useForm
   // conform generic invariance — typed-input-control SSoT helper 経由（方針: .claude/rules/type-safety.md）
-  const [settingsForm, settingsFields] = useForm<PostSettingsFormData>({
+  const [settingsForm, settingsFields] = useForm<
+    PostSettingsFormState,
+    ParsedPostSettingsFormData
+  >({
     id: "post-settings-form",
     constraint: getZodConstraint(postSettingsFormSchema),
-    defaultValue: asConformDefaultValue<PostSettingsFormData>(
-      toSettingsFormData(post),
-    ),
+    defaultValue: toSettingsFormData(post),
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: postSettingsFormSchema });
     },
@@ -220,7 +223,7 @@ export function usePostEditor({
   };
 
   // 設定フォームを imperative に validate (FormData を fields から組み立て)
-  const validateSettings = (): PostSettingsFormData | null => {
+  const validateSettings = (): ParsedPostSettingsFormData | null => {
     const formData = new FormData();
     for (const [key, field] of Object.entries(settingsFields)) {
       const fieldValue = field.value;
@@ -237,7 +240,7 @@ export function usePostEditor({
       toast.error("入力内容に誤りがあります");
       return null;
     }
-    return asConformSubmissionValue<PostSettingsFormData>(submission.value);
+    return submission.value;
   };
 
   const onSubmitSettings = () => {
@@ -269,7 +272,7 @@ export function usePostEditor({
   // create mode の下書き作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
   // 「保存して作成」と「未保存プレビュー (auto-draft)」の両経路が共有する。
   const createDraftPost = async (
-    settingsData: PostSettingsFormData,
+    settingsData: ParsedPostSettingsFormData,
   ): Promise<string | null> => {
     const settingsPayload = toSettingsSubmitPayload(settingsData);
     try {

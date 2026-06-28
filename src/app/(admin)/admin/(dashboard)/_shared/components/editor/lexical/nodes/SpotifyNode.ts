@@ -37,7 +37,7 @@ const SPOTIFY_CONTENT_TYPES: readonly SpotifyContentType[] = [
   "show",
 ] as const;
 
-const isSpotifyContentType = createEnumGuard<SpotifyContentType>(
+export const isSpotifyContentType = createEnumGuard<SpotifyContentType>(
   SPOTIFY_CONTENT_TYPES,
 );
 

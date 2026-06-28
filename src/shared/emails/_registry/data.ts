@@ -37,6 +37,12 @@ export const TEMPLATE_KEYS = [
 
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
+const TEMPLATE_KEY_SET = new Set<string>(TEMPLATE_KEYS);
+
+export function isTemplateKey(value: unknown): value is TemplateKey {
+  return typeof value === "string" && TEMPLATE_KEY_SET.has(value);
+}
+
 export type TemplateCategory =
   | "reservation"
   | "event"
@@ -182,9 +188,11 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
 ] satisfies ReadonlyArray<EmailTemplateIndexItem>;
 
 // Compile-time exhaustiveness: INDEX が TEMPLATE_KEYS の全 key を網羅することを enforce。
-// 抜けがあれば `Type X is missing key Y` で compile fail。
-type _IndexCheck = Record<TemplateKey, true>;
-const _INDEX_KEYS_EXHAUSTIVE: _IndexCheck = Object.fromEntries(
-  EMAIL_TEMPLATE_INDEX.map((i) => [i.key, true]),
-) as _IndexCheck;
+type IndexKey = (typeof EMAIL_TEMPLATE_INDEX)[number]["key"];
+type MissingIndexKeys = Exclude<TemplateKey, IndexKey>;
+type ExtraIndexKeys = Exclude<IndexKey, TemplateKey>;
+type _IndexCheck = [MissingIndexKeys, ExtraIndexKeys] extends [never, never]
+  ? true
+  : never;
+const _INDEX_KEYS_EXHAUSTIVE: _IndexCheck = true;
 void _INDEX_KEYS_EXHAUSTIVE;

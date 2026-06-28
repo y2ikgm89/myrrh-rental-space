@@ -8,11 +8,16 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
 import {
   ImageNode,
+  isImageAlignment,
   type ImageAlignment,
   widthState,
   heightState,
 } from "./ImageNode";
-import { registerLexicalDecorator } from "./decorator-registry";
+import {
+  getDecoratorNumberProp,
+  getDecoratorStringProp,
+  registerLexicalDecorator,
+} from "./decorator-registry";
 
 const ALIGNMENT_CLASSES: Record<ImageAlignment, string> = {
   left: "justify-start",
@@ -118,4 +123,33 @@ function ImageComponent({
   );
 }
 
-registerLexicalDecorator("image", ImageComponent as never);
+registerLexicalDecorator("image", (props) => {
+  const src = getDecoratorStringProp(props, "src");
+  const alt = getDecoratorStringProp(props, "alt");
+  const nodeKey = getDecoratorStringProp(props, "nodeKey");
+
+  if (src === null || alt === null || nodeKey === null) {
+    return null;
+  }
+
+  const rawAlignment = getDecoratorStringProp(props, "alignment");
+  const alignment =
+    rawAlignment !== null && isImageAlignment(rawAlignment)
+      ? rawAlignment
+      : undefined;
+  const width = getDecoratorNumberProp(props, "width");
+  const height = getDecoratorNumberProp(props, "height");
+  const caption = getDecoratorStringProp(props, "caption");
+
+  return (
+    <ImageComponent
+      src={src}
+      alt={alt}
+      nodeKey={nodeKey}
+      {...(width === null ? {} : { width })}
+      {...(height === null ? {} : { height })}
+      {...(alignment === undefined ? {} : { alignment })}
+      {...(caption === null ? {} : { caption })}
+    />
+  );
+});

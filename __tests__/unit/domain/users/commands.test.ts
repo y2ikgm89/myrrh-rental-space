@@ -231,7 +231,7 @@ describe("users/commands", () => {
       test("既存のメールアドレスで CONFLICT エラーをスローする", async () => {
         mockUserFindUnique.mockResolvedValueOnce({
           id: "existing-id",
-          role: "ADMIN" as Role,
+          role: Role.ADMIN,
           _count: { reservations: 0, posts: 0 },
         });
 

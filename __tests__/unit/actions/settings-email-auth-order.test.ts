@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { expectRecord } from "../../helpers/type-assertions";
 
 const mockExecuteAdminMutationResult = mock(async () => ({
   error: "settingsのupdate権限がありません",
@@ -62,13 +63,14 @@ describe("updateEmailSettings auth order", () => {
   });
 
   test("settings:update 認可に失敗した場合は Resend ドメイン検証を実行しない", async () => {
-    const result = (await updateEmailSettings(undefined, new FormData())) as {
-      ok?: boolean;
-      error?: unknown;
-    };
+    const result: unknown = await updateEmailSettings(
+      undefined,
+      new FormData(),
+    );
+    expectRecord(result);
 
-    expect(result.ok).toBe(false);
-    expect(result.error).toBe("settingsのupdate権限がありません");
+    expect(result["ok"]).toBe(false);
+    expect(result["error"]).toBe("settingsのupdate権限がありません");
     expect(mockExecuteAdminMutationResult).toHaveBeenCalled();
     expect(mockValidateSenderDomain).not.toHaveBeenCalled();
     expect(mockUpdateEmailSettingsCommand).not.toHaveBeenCalled();

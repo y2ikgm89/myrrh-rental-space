@@ -12,7 +12,6 @@ import {
 } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
 import { getFormProps, useForm, useInputControl } from "@conform-to/react";
-import { asConformFieldset } from "@/shared/lib/conform/typed-input-control";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { Button } from "@/public/components/design-system/button";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
@@ -39,7 +38,7 @@ import type { TurnstileInstance } from "@/shared/components/turnstile-widget";
 import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
-import { CustomerStep, type ReservationFormFields } from "./customer-step";
+import { CustomerStep } from "./customer-step";
 import { StickyBottomBar } from "./sticky-bottom-bar";
 import { selectionReducer, EMPTY_SLOTS } from "./use-reservation-selection";
 import {
@@ -59,6 +58,7 @@ const ALL_STEPS = [
 ] as const;
 
 const STEPS_WITHOUT_SPACE = ALL_STEPS.filter((s) => s.number !== 1);
+type ReservationStep = 1 | 2 | 3;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,6 +66,17 @@ const STEPS_WITHOUT_SPACE = ALL_STEPS.filter((s) => s.number !== 1);
 
 function isCustomerType(value: unknown): value is CustomerType {
   return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
+}
+
+function clampReservationStep(
+  value: number,
+  min: ReservationStep,
+  max: ReservationStep,
+): ReservationStep {
+  const bounded = Math.min(Math.max(value, min), max);
+  if (bounded <= 1) return 1;
+  if (bounded >= 3) return 3;
+  return 2;
 }
 
 function resolveAutoIds(
@@ -269,9 +280,13 @@ export function ReservationForm({
   // URL の step を「現在到達可能な最大ステップ」でクランプする。
   // リロードで reducer がリセットされても ?step=3 のまま step3 を描画せず、
   // 前提未充足なら手前に戻す。hideStep1 のときは最小ステップが 2。
-  const minStep = hideStep1 ? 2 : 1;
-  const maxStep = isStep2Complete ? 3 : isStep1Complete ? 2 : minStep;
-  const step = Math.min(Math.max(urlStep, minStep), maxStep) as 1 | 2 | 3;
+  const minStep: ReservationStep = hideStep1 ? 2 : 1;
+  const maxStep: ReservationStep = isStep2Complete
+    ? 3
+    : isStep1Complete
+      ? 2
+      : minStep;
+  const step = clampReservationStep(urlStep, minStep, maxStep);
 
   const visibleSteps = hideStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
   const displayStep = hideStep1 ? step - 1 : step;
@@ -523,7 +538,7 @@ export function ReservationForm({
 
         {renderStepIndicator()}
         <CustomerStep
-          fields={asConformFieldset<ReservationFormFields>(fields)}
+          fields={fields}
           customerType={customerType}
           turnstileSiteKey={turnstileSiteKey}
           turnstileRef={turnstileRef}

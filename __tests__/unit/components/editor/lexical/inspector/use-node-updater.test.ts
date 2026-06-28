@@ -158,7 +158,7 @@ describe("useNodeUpdater pattern", () => {
     });
 
     test("$setStateでプロパティを更新し$getStateで読み取れる", async () => {
-      let nodeKey: string;
+      let nodeKey = "";
 
       await editor.update(() => {
         const root = $getRoot();
@@ -174,7 +174,7 @@ describe("useNodeUpdater pattern", () => {
       // 更新前の状態を取得
       let originalText = "";
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(nodeKey!);
+        const node = $getNodeByKey(nodeKey);
         if ($isButtonNode(node)) {
           originalText = spansToPlainText($getState(node, buttonLabelState));
         }
@@ -184,7 +184,7 @@ describe("useNodeUpdater pattern", () => {
 
       // 更新
       await editor.update(() => {
-        const node = $getNodeByKey(nodeKey!);
+        const node = $getNodeByKey(nodeKey);
         if ($isButtonNode(node)) {
           $setState(node, buttonLabelState, [createSpan("更新後")]);
         }
@@ -192,7 +192,7 @@ describe("useNodeUpdater pattern", () => {
 
       // 更新後の状態を確認
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(nodeKey!);
+        const node = $getNodeByKey(nodeKey);
         if ($isButtonNode(node)) {
           const updatedText = spansToPlainText(
             $getState(node, buttonLabelState),
@@ -204,7 +204,7 @@ describe("useNodeUpdater pattern", () => {
     });
 
     test("$getStateは最新の値を返す", async () => {
-      let nodeKey: string;
+      let nodeKey = "";
 
       await editor.update(() => {
         const root = $getRoot();
@@ -219,14 +219,14 @@ describe("useNodeUpdater pattern", () => {
 
       // 複数回更新
       await editor.update(() => {
-        const node = $getNodeByKey(nodeKey!);
+        const node = $getNodeByKey(nodeKey);
         if ($isButtonNode(node)) {
           $setState(node, buttonLabelState, [createSpan("更新1")]);
         }
       });
 
       await editor.update(() => {
-        const node = $getNodeByKey(nodeKey!);
+        const node = $getNodeByKey(nodeKey);
         if ($isButtonNode(node)) {
           $setState(node, buttonLabelState, [createSpan("更新2")]);
         }
@@ -234,7 +234,7 @@ describe("useNodeUpdater pattern", () => {
 
       // 最新の値が取得できることを確認
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(nodeKey!);
+        const node = $getNodeByKey(nodeKey);
         if ($isButtonNode(node)) {
           expect(spansToPlainText($getState(node, buttonLabelState))).toBe(
             "更新2",

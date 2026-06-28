@@ -23,6 +23,8 @@
 
 import "server-only";
 
+import { isRecord } from "@/shared/lib/serialize";
+
 /** 再試行対象の HTTP ステータスコード（reason に関わらず常に retry） */
 const RETRYABLE_STATUS_CODES: ReadonlySet<number> = new Set([429, 500, 503]);
 
@@ -58,15 +60,15 @@ const INITIAL_BACKOFF_MS = 1000;
  * `error.code` は string の場合がある（ネットワークエラー時）ので型を丁寧に判定する。
  */
 function extractStatusCode(error: unknown): number | null {
-  if (!error || typeof error !== "object") return null;
-  const err = error as {
-    code?: number | string;
-    status?: number;
-    response?: { status?: number };
-  };
-  if (typeof err.code === "number") return err.code;
-  if (typeof err.status === "number") return err.status;
-  if (typeof err.response?.status === "number") return err.response.status;
+  if (!isRecord(error)) return null;
+  const code = error["code"];
+  if (typeof code === "number") return code;
+  const status = error["status"];
+  if (typeof status === "number") return status;
+  const response = error["response"];
+  if (isRecord(response) && typeof response["status"] === "number") {
+    return response["status"];
+  }
   return null;
 }
 
@@ -74,9 +76,9 @@ function extractStatusCode(error: unknown): number | null {
  * エラーオブジェクトから system error code（`ECONNRESET` 等）を抽出する。
  */
 function extractSystemErrorCode(error: unknown): string | null {
-  if (!error || typeof error !== "object") return null;
-  const err = error as { code?: number | string };
-  return typeof err.code === "string" ? err.code : null;
+  if (!isRecord(error)) return null;
+  const code = error["code"];
+  return typeof code === "string" ? code : null;
 }
 
 /**
@@ -88,19 +90,25 @@ function extractSystemErrorCode(error: unknown): string | null {
  * ```
  */
 export function extractFirstErrorReason(error: unknown): string | null {
-  if (!error || typeof error !== "object") return null;
-  const err = error as {
-    response?: {
-      data?: { error?: { errors?: Array<{ reason?: string }> } };
-    };
-    errors?: Array<{ reason?: string }>;
-  };
+  if (!isRecord(error)) return null;
 
-  const direct = err.errors?.[0]?.reason;
-  if (typeof direct === "string") return direct;
+  const directFirst = Array.isArray(error["errors"])
+    ? error["errors"][0]
+    : undefined;
+  if (isRecord(directFirst) && typeof directFirst["reason"] === "string") {
+    return directFirst["reason"];
+  }
 
-  const nested = err.response?.data?.error?.errors?.[0]?.reason;
-  if (typeof nested === "string") return nested;
+  const response = error["response"];
+  const data = isRecord(response) ? response["data"] : undefined;
+  const responseError = isRecord(data) ? data["error"] : undefined;
+  const nestedErrors = isRecord(responseError)
+    ? responseError["errors"]
+    : undefined;
+  const nestedFirst = Array.isArray(nestedErrors) ? nestedErrors[0] : undefined;
+  if (isRecord(nestedFirst) && typeof nestedFirst["reason"] === "string") {
+    return nestedFirst["reason"];
+  }
 
   return null;
 }

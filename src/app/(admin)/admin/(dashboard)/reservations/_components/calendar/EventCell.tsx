@@ -18,6 +18,10 @@ interface EventCellProps {
   isPast?: boolean;
 }
 
+type EventCellStyle = CSSProperties & {
+  readonly "--event-z": number;
+};
+
 /**
  * 構造化された aria-label を生成する。
  * 視覚的な title (hover tooltip) と SR 向け aria-label を分離。
@@ -49,13 +53,13 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
   // 過去イベント / キャンセルは統一的に muted (Google Calendar 同等)
   const isMuted = isCancelled || isPast;
 
-  const style: CSSProperties = {
+  const style: EventCellStyle = {
     top: `${position.top}px`,
     height: `${position.height}px`,
     left: `${position.left}%`,
     width: `${position.width}%`,
     // Tailwind v4 CSS var arbitrary: `z-[var(--event-z)]` で参照
-    ["--event-z" as string]: position.zIndex,
+    "--event-z": position.zIndex,
   };
 
   return (

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createTypeGuard } from "@/shared/lib/serialize";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import {
   LayoutWidth,
@@ -34,6 +35,7 @@ export const TERMS_TYPE_VALUES = [
   "custom",
 ] as const;
 export type TermsTypeValue = (typeof TERMS_TYPE_VALUES)[number];
+export const isTermsTypeValue = createTypeGuard(TERMS_TYPE_VALUES);
 
 export const TERMS_TYPE_LABELS: Record<string, string> = {
   "terms-of-use": "利用規約",
@@ -62,6 +64,7 @@ export const TERMS_SCOPE_VALUES = [
   TermsScope.INQUIRY,
   TermsScope.EVENT_REGISTRATION,
 ] as const;
+export const isTermsScope = createTypeGuard(TERMS_SCOPE_VALUES);
 
 export const TERMS_SCOPE_LABELS: Record<TermsScope, string> = {
   [TermsScope.LOGIN_SIGNUP]: "ログイン (社会ログイン新規登録)",

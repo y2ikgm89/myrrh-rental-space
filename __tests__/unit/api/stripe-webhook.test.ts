@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+  expectErrorResult,
+  expectReceivedResult,
+} from "../../helpers/type-assertions";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import Stripe from "stripe";
@@ -21,11 +25,17 @@ const mockGetStripeSettings = mock<
 >();
 const mockSafeDecrypt = mock<(value: string) => string | null>();
 
-// Stripe Client — `Stripe.Event` を返却型に固定して silent contract drift を検知。
+// Stripe Client — route が読む webhook event の最小 contract に固定する。
 // Bun runtime は SubtleCryptoProvider (async-only) を選択するため
 // route handler は `await constructEventAsync` を使用する。mock 型も Promise 化。
+type StripeWebhookEvent = {
+  type: Stripe.Event.Type;
+  data: { object: unknown };
+};
 const mockConstructEvent =
-  mock<(body: string, sig: string, secret: string) => Promise<Stripe.Event>>();
+  mock<
+    (body: string, sig: string, secret: string) => Promise<StripeWebhookEvent>
+  >();
 const mockGetStripeClient = mock<
   () => Promise<{
     client: {
@@ -229,22 +239,11 @@ const DEFAULT_RESERVATION = {
   },
 };
 
-/**
- * 部分イベント literal を `Stripe.Event` にキャストするテストヘルパー。
- *
- * `mockConstructEvent` の戻り値型は SDK 公式の `Stripe.Event` discriminated union
- * に固定済（silent contract drift 検知用）。テストではハンドラが触れる field のみ
- * を含む薄い literal を使うため、明示キャストでヘルパに通す。
- */
-function asStripeEvent(literal: object): Stripe.Event {
-  return literal as unknown as Stripe.Event;
-}
-
 /** Stripe セッション完了イベントを作成するヘルパー */
 function makeSessionCompletedEvent(
   paymentStatus: "paid" | "unpaid" = "paid",
   paymentIntent: string | null = "pi-123",
-) {
+): StripeWebhookEvent {
   return {
     type: "checkout.session.completed",
     data: {
@@ -259,7 +258,9 @@ function makeSessionCompletedEvent(
 }
 
 /** charge.refunded イベントを作成するヘルパー */
-function makeChargeRefundedEvent(paymentIntent: string | null = "pi-123") {
+function makeChargeRefundedEvent(
+  paymentIntent: string | null = "pi-123",
+): StripeWebhookEvent {
   return {
     type: "charge.refunded",
     data: {
@@ -354,7 +355,8 @@ describe("POST /api/webhooks/stripe", () => {
     const request = makeRequest("body", null);
 
     const response = await POST(request);
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(400);
     expect(body.error).toContain("stripe-signature");
@@ -366,7 +368,8 @@ describe("POST /api/webhooks/stripe", () => {
     mockConstructEvent.mockRejectedValue(new Error("Invalid signature"));
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(400);
     expect(body.error).toContain("Invalid signature");
@@ -385,7 +388,8 @@ describe("POST /api/webhooks/stripe", () => {
     });
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(503);
     expect(body.error).toContain("not configured");
@@ -395,7 +399,8 @@ describe("POST /api/webhooks/stripe", () => {
     mockGetStripeSettings.mockResolvedValue(null);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(503);
     expect(body.error).toContain("not configured");
@@ -409,7 +414,8 @@ describe("POST /api/webhooks/stripe", () => {
     });
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(503);
     expect(body.error).toContain("not configured");
@@ -419,7 +425,8 @@ describe("POST /api/webhooks/stripe", () => {
     mockGetStripeClient.mockResolvedValue({ client: null });
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(503);
     expect(body.error).toContain("not configured");
@@ -431,10 +438,11 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("checkout.session.completed (paid) → fulfill + キャッシュ無効化", async () => {
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -453,7 +461,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("checkout.session.completed (paid) は予約時メールを確認メールに使う", async () => {
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
     mockClaimReservationAsPaid.mockResolvedValueOnce({
       ...DEFAULT_RESERVATION,
       guestEmail: "booked-address@example.com",
@@ -480,10 +488,11 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("checkout.session.completed (unpaid) → PI ID のみ保存", async () => {
     const event = makeSessionCompletedEvent("unpaid", "pi-456");
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -510,10 +519,11 @@ describe("POST /api/webhooks/stripe", () => {
     mockClaimReservationAsPaid.mockResolvedValueOnce(null);
 
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -529,7 +539,7 @@ describe("POST /api/webhooks/stripe", () => {
   // ---------------------------------------------------------------------------
 
   test("checkout.session.async_payment_succeeded → fulfill", async () => {
-    const event = {
+    const event: StripeWebhookEvent = {
       type: "checkout.session.async_payment_succeeded",
       data: {
         object: {
@@ -540,7 +550,7 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
     mockClaimReservationAsPaid.mockResolvedValueOnce({
       ...DEFAULT_RESERVATION,
       id: "res-456",
@@ -548,7 +558,8 @@ describe("POST /api/webhooks/stripe", () => {
     });
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -563,7 +574,7 @@ describe("POST /api/webhooks/stripe", () => {
   // ---------------------------------------------------------------------------
 
   test("checkout.session.async_payment_failed → FAILED", async () => {
-    const event = {
+    const event: StripeWebhookEvent = {
       type: "checkout.session.async_payment_failed",
       data: {
         object: {
@@ -574,10 +585,11 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -590,7 +602,7 @@ describe("POST /api/webhooks/stripe", () => {
   // ---------------------------------------------------------------------------
 
   test("checkout.session.expired → FAILED", async () => {
-    const event = {
+    const event: StripeWebhookEvent = {
       type: "checkout.session.expired",
       data: {
         object: {
@@ -601,10 +613,11 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -615,7 +628,7 @@ describe("POST /api/webhooks/stripe", () => {
   test("べき等性: checkout.session.expired で既に PAID → claim が false で cache invalidate スキップ", async () => {
     // atomic claim: 既に PAID/REFUNDED/FAILED なら count === 0 で false を返す
     mockClaimReservationAsFailed.mockResolvedValueOnce(false);
-    const event = {
+    const event: StripeWebhookEvent = {
       type: "checkout.session.expired",
       data: {
         object: {
@@ -626,7 +639,7 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
 
@@ -642,14 +655,15 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("charge.refunded → REFUNDED", async () => {
     const event = makeChargeRefundedEvent("pi-refund-123");
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
     mockFindReservationByPaymentIntent.mockResolvedValue({
       id: "res-ref-1",
       paymentStatus: "PAID",
     });
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -662,7 +676,7 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("べき等性: charge.refunded で既に REFUNDED → claim が false で cache invalidate スキップ", async () => {
     const event = makeChargeRefundedEvent("pi-refund-123");
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
     mockFindReservationByPaymentIntent.mockResolvedValue({
       id: "res-ref-1",
       paymentStatus: "REFUNDED",
@@ -679,10 +693,11 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("charge.refunded で payment_intent が null → ログのみ、200 を返す", async () => {
     const event = makeChargeRefundedEvent(null);
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -692,11 +707,12 @@ describe("POST /api/webhooks/stripe", () => {
 
   test("charge.refunded で予約が見つからない → ログのみ、200 を返す", async () => {
     const event = makeChargeRefundedEvent("pi-not-found");
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
     mockFindReservationByPaymentIntent.mockResolvedValue(null);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -709,14 +725,15 @@ describe("POST /api/webhooks/stripe", () => {
   // ---------------------------------------------------------------------------
 
   test("未対応イベント → 200 を返す（無視）", async () => {
-    const event = {
+    const event: StripeWebhookEvent = {
       type: "payment_intent.created",
       data: { object: {} },
     };
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -741,12 +758,12 @@ describe("POST /api/webhooks/stripe", () => {
     );
 
     const event = makeSessionCompletedEvent("paid", "pi-123");
-    // mockConstructEvent は Promise<Stripe.Event> 戻り型 (PR #744 で async 化)。
-    // 他 14 箇所と同じ mockResolvedValue + asStripeEvent helper pattern に統一。
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    // mockConstructEvent は Promise 戻り型 (PR #744 で async 化)。
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { error: string };
+    const body = await response.json();
+    expectErrorResult(body);
 
     expect(response.status).toBe(500);
     // エラー詳細は body に出さない（情報漏洩防止）
@@ -761,7 +778,7 @@ describe("POST /api/webhooks/stripe", () => {
   // ---------------------------------------------------------------------------
 
   test("reservationId がメタデータに存在しない → ログのみ、200 を返す", async () => {
-    const event = {
+    const event: StripeWebhookEvent = {
       type: "checkout.session.completed",
       data: {
         object: {
@@ -772,10 +789,11 @@ describe("POST /api/webhooks/stripe", () => {
         },
       },
     };
-    mockConstructEvent.mockResolvedValue(asStripeEvent(event));
+    mockConstructEvent.mockResolvedValue(event);
 
     const response = await POST(makeRequest("body"));
-    const body = (await response.json()) as { received: boolean };
+    const body = await response.json();
+    expectReceivedResult(body);
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
@@ -789,7 +807,7 @@ describe("POST /api/webhooks/stripe", () => {
   // 実 fixture + 実 Stripe SDK の constructEvent 経由（contract drift 検知）
   //
   // 既存テストは `mockConstructEvent.mockReturnValue(...)` で SDK を完全に
-  // バイパスしており、SDK の major bump で `Stripe.Event` のシェイプや
+  // バイパスしており、SDK の major bump で webhook event のシェイプや
   // `constructEvent` のシグネチャが変わっても検知できない。
   //
   // このブロックは:
@@ -863,7 +881,8 @@ describe("POST /api/webhooks/stripe", () => {
       );
 
       const response = await POST(makeRequest(payload, signature));
-      const body = (await response.json()) as { received: boolean };
+      const body = await response.json();
+      expectReceivedResult(body);
 
       expect(response.status).toBe(200);
       expect(body.received).toBe(true);
@@ -893,7 +912,8 @@ describe("POST /api/webhooks/stripe", () => {
       // body を 1 byte 改ざんすると signature が一致しない
       const tampered = payload.replace('"amount": 5000', '"amount": 9999999');
       const response = await POST(makeRequest(tampered, signature));
-      const responseBody = (await response.json()) as { error: string };
+      const responseBody = await response.json();
+      expectErrorResult(responseBody);
 
       expect(response.status).toBe(400);
       expect(responseBody.error).toContain("Invalid signature");

@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, mock } from "bun:test";
+import { setNodeEnv } from "../../../helpers/env";
 
 const originalNodeEnv = process.env.NODE_ENV;
 
@@ -13,13 +14,16 @@ let mockBaseUrl: string | undefined;
 let mockAppUrl: string | undefined;
 
 mock.module("@/shared/lib/env/client", () => ({
-  clientEnv: new Proxy({} as Record<string, string | undefined>, {
-    get(_, key) {
-      if (key === "NEXT_PUBLIC_BASE_URL") return mockBaseUrl;
-      if (key === "NEXT_PUBLIC_APP_URL") return mockAppUrl;
-      return undefined;
+  clientEnv: new Proxy<Record<string, string | undefined>>(
+    {},
+    {
+      get(_, key) {
+        if (key === "NEXT_PUBLIC_BASE_URL") return mockBaseUrl;
+        if (key === "NEXT_PUBLIC_APP_URL") return mockAppUrl;
+        return undefined;
+      },
     },
-  }),
+  ),
 }));
 
 const { getBaseUrl, getAppUrl, getAdminUrl, getAppHost } =
@@ -32,11 +36,7 @@ describe("urls.ts", () => {
   });
 
   afterEach(() => {
-    if (originalNodeEnv === undefined) {
-      delete (process.env as Record<string, string | undefined>)["NODE_ENV"];
-    } else {
-      (process.env as Record<string, string>)["NODE_ENV"] = originalNodeEnv;
-    }
+    setNodeEnv(originalNodeEnv);
   });
 
   describe("getBaseUrl", () => {
@@ -46,12 +46,12 @@ describe("urls.ts", () => {
     });
 
     test("development で env 未設定なら DEV_FALLBACK_URL", () => {
-      (process.env as Record<string, string>)["NODE_ENV"] = "development";
+      setNodeEnv("development");
       expect(getBaseUrl()).toBe("http://localhost:3000");
     });
 
     test("production で env 未設定なら throw（silent SEO 汚染防止）", () => {
-      (process.env as Record<string, string>)["NODE_ENV"] = "production";
+      setNodeEnv("production");
       expect(() => getBaseUrl()).toThrow(/NEXT_PUBLIC_BASE_URL/);
     });
   });
@@ -69,12 +69,12 @@ describe("urls.ts", () => {
     });
 
     test("development で両方未設定なら DEV_FALLBACK_URL", () => {
-      (process.env as Record<string, string>)["NODE_ENV"] = "development";
+      setNodeEnv("development");
       expect(getAppUrl()).toBe("http://localhost:3000");
     });
 
     test("production で両方未設定なら throw", () => {
-      (process.env as Record<string, string>)["NODE_ENV"] = "production";
+      setNodeEnv("production");
       expect(() => getAppUrl()).toThrow(/NEXT_PUBLIC_APP_URL/);
     });
   });

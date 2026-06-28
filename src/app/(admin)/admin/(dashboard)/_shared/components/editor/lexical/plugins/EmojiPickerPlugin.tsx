@@ -24,6 +24,7 @@ import {
   useBasicTypeaheadTriggerMatch,
 } from "@lexical/react/LexicalTypeaheadMenuPlugin";
 import { TextNode, $createTextNode, $insertNodes } from "lexical";
+import { isRecord } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Types
@@ -32,6 +33,20 @@ import { TextNode, $createTextNode, $insertNodes } from "lexical";
 interface EmojiEntry {
   emoji: string;
   keywords: string[];
+}
+
+function isEmojiEntry(value: unknown): value is EmojiEntry {
+  if (!isRecord(value)) return false;
+  const keywords = value["keywords"];
+  return (
+    typeof value["emoji"] === "string" &&
+    Array.isArray(keywords) &&
+    keywords.every((keyword) => typeof keyword === "string")
+  );
+}
+
+function parseEmojiList(value: unknown): EmojiEntry[] {
+  return Array.isArray(value) ? value.filter(isEmojiEntry) : [];
 }
 
 // =============================================================================
@@ -70,7 +85,7 @@ export function EmojiPickerPlugin() {
     let cancelled = false;
     void import("./emoji-list.json").then((mod) => {
       if (cancelled) return;
-      setEmojiList(mod.default as EmojiEntry[]);
+      setEmojiList(parseEmojiList(mod.default));
     });
     return () => {
       cancelled = true;

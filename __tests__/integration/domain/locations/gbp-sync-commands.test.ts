@@ -32,6 +32,7 @@ const mockLocationUpdate = mock<
     select?: Record<string, boolean>;
   }) => Promise<{ id: string; gbpSyncEnabled: boolean }>
 >(() => Promise.resolve({ id: "loc-1", gbpSyncEnabled: true }));
+const EMPTY_GBP_SCOPES: readonly string[] = [];
 
 // 2. モジュールを差し替え（import より前）
 mock.module("@/shared/lib/google-business-profile", () => ({
@@ -52,7 +53,7 @@ mock.module("@/shared/lib/google-business-profile", () => ({
   revokeGbpToken: mock(() => Promise.resolve()),
   createOAuth2Client: mock(() => null),
   getGbpClient: mock(() => Promise.resolve(null)),
-  GBP_SCOPES: [] as readonly string[],
+  GBP_SCOPES: EMPTY_GBP_SCOPES,
 }));
 
 mock.module("@/shared/db/prisma", () => ({

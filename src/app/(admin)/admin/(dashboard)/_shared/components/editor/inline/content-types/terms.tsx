@@ -20,7 +20,7 @@ import {
   TERMS_SCOPE_DESCRIPTIONS,
 } from "@/shared/lib/validations/terms";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
-import type { TermsSettingsFormData } from "@/admin/lib/validations/terms";
+import type { TermsSettingsFormState } from "../hooks/use-terms-editor";
 import { TitleSlugFields } from "../side-panel";
 import {
   type TermsSidePanelExtra,
@@ -36,7 +36,7 @@ import {
  * しないよう説明文も具体化する。
  */
 export const termsSettingsPanel: SidePanelDefinition<
-  TermsSettingsFormData,
+  TermsSettingsFormState,
   TermsSidePanelExtra
 > = {
   title: "利用規約設定",

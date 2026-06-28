@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 
 const mockCheckPermission = mock();
 const mockGetCustomersForExport = mock();
-const mockGenerateCsv = mock();
+type CsvColumn = { header: string; accessor?: (row: unknown) => unknown };
+const mockGenerateCsv = mock<(rows: unknown[], columns: CsvColumn[]) => string>(
+  () => "",
+);
 
 mock.module("next/server", () => ({
   NextResponse,
@@ -115,10 +118,12 @@ describe("GET /api/admin/export/customers", () => {
 
       expect(mockGenerateCsv).toHaveBeenCalledTimes(1);
 
-      const [rows, columns] = mockGenerateCsv.mock.calls[0] as [
-        unknown[],
-        Array<{ header: string }>,
-      ];
+      const firstCall = mockGenerateCsv.mock.calls[0];
+      expect(firstCall).toBeDefined();
+      if (firstCall === undefined) {
+        throw new Error("generateCsv must be called");
+      }
+      const [rows, columns] = firstCall;
 
       expect(rows).toEqual([testCustomer]);
       expect(columns).toHaveLength(23);
@@ -177,15 +182,9 @@ describe("GET /api/admin/export/customers", () => {
       });
       mockGetCustomersForExport.mockResolvedValue([testCustomer]);
       mockGenerateCsv.mockImplementation(
-        (
-          rows: (typeof testCustomer)[],
-          columns: Array<{
-            header: string;
-            accessor: (c: typeof testCustomer) => unknown;
-          }>,
-        ) => {
+        (_rows: unknown[], columns: CsvColumn[]) => {
           const idColumn = columns[0];
-          const idValue = idColumn?.accessor(testCustomer);
+          const idValue = idColumn?.accessor?.(testCustomer);
           return `${idValue}\r\n`;
         },
       );
@@ -224,12 +223,9 @@ describe("GET /api/admin/export/customers", () => {
       });
       mockGetCustomersForExport.mockResolvedValue([activeCustomer]);
 
-      let capturedColumns: Array<{
-        header: string;
-        accessor: (c: typeof activeCustomer) => unknown;
-      }> = [];
+      let capturedColumns: CsvColumn[] = [];
       mockGenerateCsv.mockImplementation(
-        (_rows: unknown, columns: typeof capturedColumns) => {
+        (_rows: unknown[], columns: CsvColumn[]) => {
           capturedColumns = columns;
           return "";
         },
@@ -239,10 +235,10 @@ describe("GET /api/admin/export/customers", () => {
 
       const isActiveColumn = capturedColumns.find((c) => c.header === "有効");
       expect(
-        isActiveColumn?.accessor({ ...activeCustomer, isActive: true }),
+        isActiveColumn?.accessor?.({ ...activeCustomer, isActive: true }),
       ).toBe("はい");
       expect(
-        isActiveColumn?.accessor({ ...activeCustomer, isActive: false }),
+        isActiveColumn?.accessor?.({ ...activeCustomer, isActive: false }),
       ).toBe("いいえ");
     });
 
@@ -272,12 +268,9 @@ describe("GET /api/admin/export/customers", () => {
       });
       mockGetCustomersForExport.mockResolvedValue([customerNoReservation]);
 
-      let capturedColumns: Array<{
-        header: string;
-        accessor: (c: typeof customerNoReservation) => unknown;
-      }> = [];
+      let capturedColumns: CsvColumn[] = [];
       mockGenerateCsv.mockImplementation(
-        (_rows: unknown, columns: typeof capturedColumns) => {
+        (_rows: unknown[], columns: CsvColumn[]) => {
           capturedColumns = columns;
           return "";
         },
@@ -289,7 +282,7 @@ describe("GET /api/admin/export/customers", () => {
         (c) => c.header === "最終予約日",
       );
       expect(
-        lastReservationColumn?.accessor({
+        lastReservationColumn?.accessor?.({
           ...customerNoReservation,
           lastReservationAt: null,
         }),
@@ -299,7 +292,7 @@ describe("GET /api/admin/export/customers", () => {
         (c) => c.header === "初回予約日",
       );
       expect(
-        firstReservationColumn?.accessor({
+        firstReservationColumn?.accessor?.({
           ...customerNoReservation,
           firstReservationAt: null,
         }),

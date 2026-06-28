@@ -13,8 +13,38 @@ type Version = {
   patch: number;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readStringRecord(value: unknown): Record<string, string> | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) {
+    throw new Error("Expected package.json dependency map to be an object");
+  }
+  const result: Record<string, string> = {};
+  for (const [key, dependencyVersion] of Object.entries(value)) {
+    if (typeof dependencyVersion !== "string") {
+      throw new Error(`Expected ${key} dependency version to be a string`);
+    }
+    result[key] = dependencyVersion;
+  }
+  return result;
+}
+
 function readPackageJson(path: string): PackageJson {
-  return JSON.parse(readFileSync(path, "utf8")) as PackageJson;
+  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (!isRecord(parsed)) {
+    throw new Error("Expected package.json to contain an object");
+  }
+  const version = parsed["version"];
+  const devDependencies = readStringRecord(parsed["devDependencies"]);
+  const peerDependencies = readStringRecord(parsed["peerDependencies"]);
+  return {
+    ...(typeof version === "string" && { version }),
+    ...(devDependencies !== undefined && { devDependencies }),
+    ...(peerDependencies !== undefined && { peerDependencies }),
+  };
 }
 
 function parseVersion(value: string): Version {

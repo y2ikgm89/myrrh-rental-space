@@ -4,7 +4,7 @@
  * Tabler curated icon の SVG markup（server enrich 用。React DOM render は Next バンドル外で生成）。
  */
 
-export const CURATED_ICON_SVG_MARKUP = {
+export const CURATED_ICON_SVG_MARKUP: Readonly<Record<string, string>> = {
   IconAccessible:
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-accessible inline-icon-svg" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path><path d="M10 16.5l2 -3l2 3m-2 -3v-2l3 -1m-6 0l3 1"></path><path d="M11.5 7.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor"></path></svg>',
   IconAirConditioning:
@@ -209,8 +209,8 @@ export const CURATED_ICON_SVG_MARKUP = {
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-world inline-icon-svg" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path><path d="M3.6 9h16.8"></path><path d="M3.6 15h16.8"></path><path d="M11.5 3a17 17 0 0 0 0 18"></path><path d="M12.5 3a17 17 0 0 1 0 18"></path></svg>',
   IconX:
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-x inline-icon-svg" aria-hidden="true"><path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path></svg>',
-} as const satisfies Record<string, string>;
+} as const;
 
 export function getCuratedIconSvgMarkup(name: string): string | undefined {
-  return (CURATED_ICON_SVG_MARKUP as Record<string, string>)[name];
+  return CURATED_ICON_SVG_MARKUP[name];
 }

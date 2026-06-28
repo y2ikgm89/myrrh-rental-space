@@ -17,39 +17,30 @@ import {
 import { IconPhotoPlus } from "@tabler/icons-react";
 import type { FieldMetadata, FormMetadata } from "@conform-to/react";
 import { useMultipleMediaPicker } from "@/admin/hooks/use-media-picker";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import type { MediaUsage } from "@/admin/lib/validations/media";
-import { asConformButtonGetter } from "@/shared/lib/conform/typed-input-control";
 import { GalleryItemRow } from "./GalleryItemRow";
 
-// conform FieldName branded type 境界を吸収する制御関数型
-// (AutoArrayField と同パターン — typed-input-control.ts SSoT helper 経由)
-type InsertControl = (opts: {
-  name: string;
-  defaultValue?: Record<string, unknown>;
-}) => void;
-type RemoveControl = (opts: { name: string; index: number }) => void;
-type ReorderControl = (opts: {
-  name: string;
-  from: number;
-  to: number;
-}) => void;
+type GalleryFormItem = {
+  readonly url: string;
+  readonly alt?: string | undefined;
+  readonly caption?: string | undefined;
+};
 
-interface GalleryFieldProps {
-  readonly field: FieldMetadata<GalleryItem[]>;
-  readonly form: FormMetadata<Record<string, unknown>>;
+interface GalleryFieldProps<TForm extends Record<string, unknown>> {
+  readonly field: FieldMetadata<GalleryFormItem[] | undefined, TForm>;
+  readonly form: FormMetadata<TForm>;
   readonly defaultUsage: Extract<MediaUsage, "SPACE" | "EVENT">;
   readonly max?: number;
   readonly disabled?: boolean;
 }
 
-export function GalleryField({
+export function GalleryField<TForm extends Record<string, unknown>>({
   field,
   form,
   defaultUsage,
   max = 20,
   disabled,
-}: GalleryFieldProps): ReactElement {
+}: GalleryFieldProps<TForm>): ReactElement {
   const dndId = useId();
   const items = field.getFieldList();
 
@@ -63,20 +54,16 @@ export function GalleryField({
 
   const remaining = max - items.length;
 
-  // conform 制御関数 (branded FieldName 境界を helper で緩める)
-  const insertItem = asConformButtonGetter<InsertControl>(form.insert);
-  const removeItem = asConformButtonGetter<RemoveControl>(form.remove);
-  const reorderItem = asConformButtonGetter<ReorderControl>(form.reorder);
-
   const picker = useMultipleMediaPicker({
     defaultUsage,
     accept: "image-or-video",
     maxSelections: Math.max(0, remaining),
     onSelect: (media) => {
       const toAdd = media.slice(0, Math.max(0, remaining));
+      const fieldName: string = field.name;
       for (const m of toAdd) {
-        insertItem({
-          name: field.name,
+        form.insert<GalleryFormItem[]>({
+          name: fieldName,
           defaultValue: { url: m.url, alt: "", caption: "" },
         });
       }
@@ -89,7 +76,8 @@ export function GalleryField({
     const from = items.findIndex((it) => it.key === String(active.id));
     const to = items.findIndex((it) => it.key === String(over.id));
     if (from < 0 || to < 0) return;
-    reorderItem({ name: field.name, from, to });
+    const fieldName: string = field.name;
+    form.reorder<GalleryFormItem[]>({ name: fieldName, from, to });
   };
 
   return (
@@ -133,7 +121,13 @@ export function GalleryField({
                     altField={alt}
                     captionField={caption}
                     url={url.initialValue ?? ""}
-                    onRemove={() => removeItem({ name: field.name, index })}
+                    onRemove={() => {
+                      const fieldName: string = field.name;
+                      form.remove<GalleryFormItem[]>({
+                        name: fieldName,
+                        index,
+                      });
+                    }}
                     {...(disabled !== undefined && { disabled })}
                   />
                 );

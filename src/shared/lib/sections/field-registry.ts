@@ -117,7 +117,7 @@ interface BooleanOpts extends CommonFieldOpts {
 }
 
 interface SelectOpts<T extends string> extends CommonFieldOpts {
-  readonly options: readonly T[];
+  readonly options: readonly [T, ...T[]];
   readonly default: NoInfer<T>;
   readonly helpText?: string;
   readonly placeholder?: string;
@@ -300,7 +300,7 @@ export const field = {
    */
   select<T extends string>(label: string, opts: SelectOpts<T>) {
     return z
-      .enum(opts.options as [T, ...T[]])
+      .enum(opts.options)
       .default(opts.default)
       .register(fieldRegistry, {
         fieldType: "select",

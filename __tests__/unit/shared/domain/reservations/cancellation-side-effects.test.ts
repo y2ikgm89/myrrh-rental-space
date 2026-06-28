@@ -21,6 +21,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { expectRecord } from "../../../../helpers/type-assertions";
 
 // ---------------------------------------------------------------------------
 // Mocks（モジュール解決の都合上、import より前に登録する）
@@ -108,7 +109,10 @@ mock.module("@/shared/lib/errors/server", () => ({
 // SUT を mock 登録後に import
 // ---------------------------------------------------------------------------
 
-import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
+import {
+  applyCancellationSideEffects,
+  type CancellationSideEffectInput,
+} from "@/shared/domain/reservations/cancellation-side-effects";
 
 // ---------------------------------------------------------------------------
 // Fixture
@@ -117,23 +121,49 @@ import { applyCancellationSideEffects } from "@/shared/domain/reservations/cance
 const RID = "11111111-1111-4111-8111-111111111111";
 const USER_ID = "22222222-2222-4222-8222-222222222222";
 
-const baseReservation = {
+type ReservationFixture = {
+  id: string;
+  startTime: Date;
+  endTime: Date;
+  totalPrice: number | null;
+  notes: string | null;
+  icsSequence: number;
+  paymentStatus: "UNPAID" | "PAID";
+  stripePaymentIntentId: string | null;
+  googleCalendarEventId: string | null;
+  guestLastName: string | null;
+  guestFirstName: string | null;
+  guestEmail: string | null;
+  customer: {
+    lastName: string;
+    firstName: string;
+    companyName: string | null;
+    email: string;
+  };
+  space: {
+    name: string;
+    addressDetail: string | null;
+    location: { address: string };
+  };
+};
+
+const baseReservation: ReservationFixture = {
   id: RID,
   startTime: new Date("2026-05-01T10:00:00Z"),
   endTime: new Date("2026-05-01T12:00:00Z"),
   totalPrice: 5000,
   notes: "備考",
   icsSequence: 2,
-  paymentStatus: "UNPAID" as const,
-  stripePaymentIntentId: null as string | null,
-  googleCalendarEventId: null as string | null,
-  guestLastName: null as string | null,
-  guestFirstName: null as string | null,
-  guestEmail: null as string | null,
+  paymentStatus: "UNPAID",
+  stripePaymentIntentId: null,
+  googleCalendarEventId: null,
+  guestLastName: null,
+  guestFirstName: null,
+  guestEmail: null,
   customer: {
     lastName: "山田",
     firstName: "太郎",
-    companyName: null as string | null,
+    companyName: null,
     email: "taro@example.com",
   },
   space: {
@@ -150,7 +180,7 @@ function baseInput(
     cancellationReason?: string | null;
     tokenFingerprint?: string | null;
   } = {},
-) {
+): CancellationSideEffectInput {
   // ?? は null をデフォルトへ置換してしまうため、テストで null を明示渡しできるよう
   // 「キーが存在するか」で分岐する（undefined のみデフォルトに置換）。
   return {
@@ -159,7 +189,7 @@ function baseInput(
       "cancellationReason" in overrides
         ? (overrides.cancellationReason ?? null)
         : "都合により",
-    channel: overrides.channel ?? ("customer-token" as const),
+    channel: overrides.channel ?? "customer-token",
     actorUserId: "actorUserId" in overrides ? overrides.actorUserId : null,
     request: {
       ip: "203.0.113.10",
@@ -311,10 +341,8 @@ describe("applyCancellationSideEffects", () => {
       "cancel",
     );
     // payload に customer 情報 + 整形済 location（base + detail）が含まれる
-    const payload = mockSendCancelledEmail.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
+    const payload = mockSendCancelledEmail.mock.calls[0]?.[0];
+    expectRecord(payload);
     expect(payload).toMatchObject({
       reservationId: RID,
       customerEmail: "taro@example.com",
@@ -378,10 +406,8 @@ describe("applyCancellationSideEffects", () => {
       }),
     );
 
-    const auditCall = mockCreateAuditLog.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
+    const auditCall = mockCreateAuditLog.mock.calls[0]?.[0];
+    expectRecord(auditCall);
     expect(auditCall).toMatchObject({
       newValue: { cancelledByType: "CUSTOMER_TOKEN" },
       metadata: {
@@ -402,11 +428,10 @@ describe("applyCancellationSideEffects", () => {
       baseInput({ channel: "admin", tokenFingerprint: null }),
     );
 
-    const meta = (
-      mockCreateAuditLog.mock.calls[0]?.[0] as {
-        metadata?: Record<string, unknown>;
-      }
-    ).metadata;
+    const auditCall = mockCreateAuditLog.mock.calls[0]?.[0];
+    expectRecord(auditCall);
+    const meta = auditCall["metadata"];
+    expectRecord(meta);
     expect(meta).not.toHaveProperty("tokenFingerprint");
     expect(meta).toMatchObject({ ip: "203.0.113.10" });
   });
@@ -434,10 +459,8 @@ describe("applyCancellationSideEffects", () => {
 
     await applyCancellationSideEffects(baseInput());
 
-    const payload = mockSendCancelledEmail.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
+    const payload = mockSendCancelledEmail.mock.calls[0]?.[0];
+    expectRecord(payload);
     expect(payload).not.toHaveProperty("guestName");
   });
 

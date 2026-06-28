@@ -1,6 +1,7 @@
 import "server-only";
 
 import { encrypt, decrypt } from "@/shared/lib/crypto";
+import { isRecord } from "@/shared/lib/serialize";
 
 /**
  * 予約完了ページ用トークン
@@ -99,7 +100,6 @@ export function verifyCompleteToken(
 }
 
 function isCompleteTokenPayload(value: unknown): value is CompleteTokenPayload {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
-  return typeof record["rid"] === "string" && typeof record["exp"] === "number";
+  if (!isRecord(value)) return false;
+  return typeof value["rid"] === "string" && typeof value["exp"] === "number";
 }

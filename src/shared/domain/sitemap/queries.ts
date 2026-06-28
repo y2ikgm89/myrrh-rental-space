@@ -95,20 +95,18 @@ const STATIC_SYSTEM_PAGE_SLUGS = [
   "terms",
 ] as const;
 
-const COLLECTION_KEYS = [
-  "spaces",
-  "news",
-  "posts",
-  "postCategories",
-  "postTags",
-  "customPages",
-  "events",
-  "terms",
-  "systemPageLastModified",
-] as const;
-
 export async function getSitemapContentData(): Promise<SitemapContentData> {
-  const settled = await Promise.allSettled([
+  const [
+    spacesResult,
+    newsResult,
+    postsResult,
+    postCategoriesResult,
+    postTagsResult,
+    customPagesResult,
+    eventsResult,
+    termsResult,
+    systemPageLastModifiedResult,
+  ] = await Promise.allSettled([
     // Space は deletedAt 列を持たず isActive=false が soft-delete 代替 (schema.prisma:429-500 確認済み)
     prisma.space.findMany({
       where: { isPublished: true, isActive: true },
@@ -169,71 +167,41 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
     fetchSystemPageLastModified(),
   ]);
 
-  const fallback: SitemapContentData = {
-    spaces: [],
-    news: [],
-    posts: [],
-    postCategories: [],
-    postTags: [],
-    customPages: [],
-    events: [],
-    terms: [],
-    systemPageLastModified: new Map<string, Date>(),
+  return {
+    spaces: collectionOrFallback(spacesResult, "spaces", []),
+    news: collectionOrFallback(newsResult, "news", []),
+    posts: collectionOrFallback(postsResult, "posts", []),
+    postCategories: collectionOrFallback(
+      postCategoriesResult,
+      "postCategories",
+      [],
+    ),
+    postTags: collectionOrFallback(postTagsResult, "postTags", []),
+    customPages: collectionOrFallback(customPagesResult, "customPages", []),
+    events: collectionOrFallback(eventsResult, "events", []),
+    terms: collectionOrFallback(termsResult, "terms", []),
+    systemPageLastModified: collectionOrFallback(
+      systemPageLastModifiedResult,
+      "systemPageLastModified",
+      new Map<string, Date>(),
+    ),
   };
-
-  const result: SitemapContentData = { ...fallback };
-  settled.forEach((r, idx) => {
-    const key = COLLECTION_KEYS[idx];
-    if (key === undefined) return;
-    if (r.status === "fulfilled") {
-      assignCollection(result, key, r.value);
-      return;
-    }
-    logger.error("getSitemapContentData partial failure", {
-      collection: key,
-      error: r.reason instanceof Error ? r.reason.message : String(r.reason),
-    });
-  });
-
-  return result;
 }
 
-type CollectionKey = (typeof COLLECTION_KEYS)[number];
-
-function assignCollection(
-  target: SitemapContentData,
-  key: CollectionKey,
-  value: unknown,
-): void {
-  switch (key) {
-    case "spaces":
-      target.spaces = value as SitemapSpace[];
-      break;
-    case "news":
-      target.news = value as SitemapNews[];
-      break;
-    case "posts":
-      target.posts = value as SitemapPost[];
-      break;
-    case "postCategories":
-      target.postCategories = value as SitemapPostCategory[];
-      break;
-    case "postTags":
-      target.postTags = value as SitemapPostTag[];
-      break;
-    case "customPages":
-      target.customPages = value as SitemapCustomPage[];
-      break;
-    case "events":
-      target.events = value as SitemapEvent[];
-      break;
-    case "terms":
-      target.terms = value as SitemapTerms[];
-      break;
-    case "systemPageLastModified":
-      target.systemPageLastModified = value as SystemPageLastModifiedMap;
-      break;
-  }
+function collectionOrFallback<T>(
+  result: PromiseSettledResult<T>,
+  collection: keyof SitemapContentData,
+  fallback: T,
+): T {
+  if (result.status === "fulfilled") return result.value;
+  logger.error("getSitemapContentData partial failure", {
+    collection,
+    error:
+      result.reason instanceof Error
+        ? result.reason.message
+        : String(result.reason),
+  });
+  return fallback;
 }
 
 async function fetchSystemPageLastModified(): Promise<SystemPageLastModifiedMap> {

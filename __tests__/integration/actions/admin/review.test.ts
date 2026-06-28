@@ -11,6 +11,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
@@ -110,7 +111,7 @@ mock.module("@/shared/lib/email/review-emails", () => ({
 }));
 
 // next/cache モック
-const mockUpdateTag = mock(() => undefined);
+const mockUpdateTag = mock<(tag: string) => void>(() => undefined);
 
 // 公式 Bun re-export pattern: actual を spread して必要 fn のみ override。
 // partial mock は cacheTag/cacheLife/revalidateTag 等を undefined 化し、
@@ -120,6 +121,10 @@ mock.module("next/cache", () => ({
   ...actualNextCache,
   updateTag: mockUpdateTag,
 }));
+
+function getUpdatedTags(): string[] {
+  return mockUpdateTag.mock.calls.map(([tag]) => tag);
+}
 
 // server-only モック
 mock.module("server-only", () => ({}));
@@ -185,9 +190,7 @@ describe("updateReviewPublished", () => {
 
       await updateReviewPublished(VALID_UUID, true);
 
-      const calledTags = (
-        mockUpdateTag.mock.calls as unknown as [string][]
-      ).map((c) => c[0]);
+      const calledTags = getUpdatedTags();
       expect(
         calledTags.some(
           (tag) => typeof tag === "string" && tag.includes("review"),
@@ -247,9 +250,8 @@ describe("updateReviewPublished", () => {
 
       const result = await updateReviewPublished(VALID_UUID, true);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("レビューが見つかりません");
+      expectErrorResult(result);
+      expect(result.error).toBe("レビューが見つかりません");
     });
 
     test("DomainError 以外のエラーは再スローされる", async () => {
@@ -294,9 +296,7 @@ describe("deleteReview", () => {
 
       await deleteReview(VALID_UUID);
 
-      const calledTags = (
-        mockUpdateTag.mock.calls as unknown as [string][]
-      ).map((c) => c[0]);
+      const calledTags = getUpdatedTags();
       expect(
         calledTags.some(
           (tag) => typeof tag === "string" && tag.includes("review"),
@@ -356,9 +356,8 @@ describe("deleteReview", () => {
 
       const result = await deleteReview(VALID_UUID);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("レビューが見つかりません");
+      expectErrorResult(result);
+      expect(result.error).toBe("レビューが見つかりません");
     });
 
     test("DomainError 以外のエラーは再スローされる", async () => {
@@ -427,9 +426,7 @@ describe("replyToReview (conform Server Action signature)", () => {
 
       await replyToReview(undefined, buildReplyFormData(VALID_REPLY_INPUT));
 
-      const calledTags = (
-        mockUpdateTag.mock.calls as unknown as [string][]
-      ).map((c) => c[0]);
+      const calledTags = getUpdatedTags();
       expect(calledTags).toContain("reviews");
       expect(calledTags).toContain("reviews-space-space-1");
       expect(calledTags).toContain("reviews-stats-space-1");
@@ -553,9 +550,7 @@ describe("deleteReviewReply", () => {
 
       await deleteReviewReply(VALID_UUID);
 
-      const calledTags = (
-        mockUpdateTag.mock.calls as unknown as [string][]
-      ).map((c) => c[0]);
+      const calledTags = getUpdatedTags();
       expect(calledTags).toContain("reviews");
       expect(calledTags).toContain("reviews-space-space-1");
       expect(calledTags).toContain("reviews-stats-space-1");

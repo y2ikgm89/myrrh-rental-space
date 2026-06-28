@@ -70,9 +70,10 @@ function expectSuccess(
 ): void {
   const result = parseWithZod(fd, { schema });
   if (result.status !== "success") {
+    const resultError = "error" in result ? result.error : undefined;
     throw new Error(
       `${label}: expected success but got error: ${JSON.stringify(
-        (result as { error?: unknown }).error,
+        resultError,
       )}`,
     );
   }
@@ -86,8 +87,22 @@ function emptyKeys(keys: readonly string[]): FormData {
 }
 
 const CURRENCY = SUPPORTED_CURRENCY_VALUES[0] ?? "jpy";
-const SYNC_METHOD = Object.values(CalendarSyncMethod)[0] as string;
-const DISCOUNT_MODE = Object.values(DiscountCombinationMode)[0] as string;
+function firstEnumValue(values: string[], label: string): string {
+  const value = values[0];
+  if (value === undefined) {
+    throw new Error(`${label} must define at least one value`);
+  }
+  return value;
+}
+
+const SYNC_METHOD = firstEnumValue(
+  Object.values(CalendarSyncMethod),
+  "CalendarSyncMethod",
+);
+const DISCOUNT_MODE = firstEnumValue(
+  Object.values(DiscountCombinationMode),
+  "DiscountCombinationMode",
+);
 
 describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform の空→undefined 変換）", () => {
   // ---------------------------------------------------------------------------

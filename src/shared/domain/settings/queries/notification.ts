@@ -49,7 +49,7 @@ export async function getNotificationEmailAddresses(): Promise<string[]> {
           where: { id: { in: staffIds } },
           select: { email: true },
         }),
-      fallback: [] as { email: string }[],
+      fallback: [],
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.LOW,
       operationName: "getNotificationEmailAddresses.staff",

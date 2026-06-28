@@ -1,6 +1,12 @@
 import { describe, test, expect } from "bun:test";
+import { isValidElement } from "react";
 import { TestEmail } from "@/shared/emails/test-email";
-import type { ReactElement } from "react";
+
+type EmailLayoutElementProps = {
+  preview?: string;
+  footer?: unknown;
+  children?: unknown;
+};
 
 function getFooter() {
   return {
@@ -27,12 +33,11 @@ function getProps() {
 
 describe("TestEmail component", () => {
   test("returns a React element wrapped in EmailLayout", () => {
-    const el = TestEmail(getProps()) as ReactElement<{
-      preview?: string;
-      footer?: unknown;
-      children: unknown;
-    }>;
-    expect(el).toBeTruthy();
+    const el = TestEmail(getProps());
+    expect(isValidElement<EmailLayoutElementProps>(el)).toBe(true);
+    if (!isValidElement<EmailLayoutElementProps>(el)) {
+      throw new Error("TestEmail must return a React element");
+    }
     expect(el.props.preview).toContain("テスト送信");
     expect(el.props.footer).toBeTruthy();
   });

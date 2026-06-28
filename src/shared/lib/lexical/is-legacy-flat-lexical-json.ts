@@ -6,11 +6,26 @@
  * 再 import または data migration で置換する。
  */
 
+import { isRecord } from "@/shared/lib/serialize";
+
 type LexicalJsonNode = {
   readonly type?: string;
   readonly text?: string;
   readonly children?: readonly LexicalJsonNode[];
 };
+
+function isLexicalJsonNode(value: unknown): value is LexicalJsonNode {
+  if (!isRecord(value)) return false;
+  const type = value["type"];
+  const text = value["text"];
+  const children = value["children"];
+  return (
+    (type === undefined || typeof type === "string") &&
+    (text === undefined || typeof text === "string") &&
+    (children === undefined ||
+      (Array.isArray(children) && children.every(isLexicalJsonNode)))
+  );
+}
 
 function parseRootChildren(json: string): readonly LexicalJsonNode[] | null {
   try {
@@ -28,7 +43,9 @@ function parseRootChildren(json: string): readonly LexicalJsonNode[] | null {
       return null;
     }
     const children: unknown = root.children;
-    return Array.isArray(children) ? (children as LexicalJsonNode[]) : null;
+    return Array.isArray(children) && children.every(isLexicalJsonNode)
+      ? children
+      : null;
   } catch {
     return null;
   }

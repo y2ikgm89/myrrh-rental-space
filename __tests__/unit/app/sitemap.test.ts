@@ -215,11 +215,10 @@ describe("app/sitemap.ts", () => {
       const result = await sitemap();
       const after = Date.now();
       for (const entry of result) {
-        if (entry.lastModified === undefined) continue;
+        const { lastModified } = entry;
+        if (lastModified === undefined) continue;
         const ts = (
-          entry.lastModified instanceof Date
-            ? entry.lastModified
-            : new Date(entry.lastModified as string)
+          lastModified instanceof Date ? lastModified : new Date(lastModified)
         ).getTime();
         // テスト実行ウィンドウ内のタイムスタンプは入っていないこと
         expect(ts < before || ts > after).toBe(true);

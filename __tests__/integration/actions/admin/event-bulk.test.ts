@@ -11,6 +11,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { expectErrorResult } from "../../../helpers/type-assertions";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
@@ -300,9 +301,8 @@ describe("bulkPublishEvents", () => {
 
       const result = await bulkPublishEvents([VALID_UUID_1], true);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("公開できません");
+      expectErrorResult(result);
+      expect(result.error).toBe("公開できません");
     });
   });
 });
@@ -403,9 +403,8 @@ describe("bulkSoftDeleteEvents", () => {
 
       const result = await bulkSoftDeleteEvents([VALID_UUID_1]);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("削除できません");
+      expectErrorResult(result);
+      expect(result.error).toBe("削除できません");
     });
   });
 });

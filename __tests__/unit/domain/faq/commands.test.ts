@@ -106,11 +106,17 @@ const txClient: TxClient = {
   },
 };
 
+function isTransactionCallback(
+  value: unknown,
+): value is (tx: TxClient) => Promise<unknown> {
+  return typeof value === "function";
+}
+
 // $transaction は配列形式と callback 形式の両方をサポート
 const mockTransaction = mock<(argOrCallback: unknown) => Promise<unknown>>(
   (argOrCallback) => {
-    if (typeof argOrCallback === "function") {
-      return (argOrCallback as (tx: TxClient) => Promise<unknown>)(txClient);
+    if (isTransactionCallback(argOrCallback)) {
+      return argOrCallback(txClient);
     }
     return Promise.resolve(argOrCallback);
   },
@@ -153,6 +159,15 @@ mock.module("@/shared/db/prisma", () => ({
 // Prisma.sql / Prisma.join / Prisma.raw を結合済み文字列に展開するスタブ
 mock.module("@generated/prisma/client", () => {
   type SqlFragment = { __sql: string; __values: unknown[] };
+  function isSqlFragment(value: unknown): value is SqlFragment {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "__sql" in value &&
+      "__values" in value
+    );
+  }
+
   const sql = (
     strings: TemplateStringsArray,
     ...values: unknown[]
@@ -161,9 +176,9 @@ mock.module("@generated/prisma/client", () => {
     for (let i = 0; i < strings.length; i++) {
       combined += strings[i];
       if (i < values.length) {
-        const v = values[i] as SqlFragment | unknown;
-        if (v && typeof v === "object" && "__sql" in (v as object)) {
-          combined += (v as SqlFragment).__sql;
+        const v = values[i];
+        if (isSqlFragment(v)) {
+          combined += v.__sql;
         } else {
           combined += `$${i + 1}`;
         }
@@ -185,11 +200,17 @@ mock.module("@generated/prisma/client", () => {
 });
 
 mock.module("@/shared/lib/serialize", () => ({
-  omitUndefined: mock(<T extends Record<string, unknown>>(obj: T): T => {
-    return Object.fromEntries(
-      Object.entries(obj).filter(([, v]) => v !== undefined),
-    ) as T;
-  }),
+  omitUndefined: mock(
+    (obj: Record<string, unknown>): Record<string, unknown> => {
+      const result: Record<string, unknown> = {};
+      for (const key in obj) {
+        if (obj[key] !== undefined) {
+          result[key] = obj[key];
+        }
+      }
+      return result;
+    },
+  ),
 }));
 
 import {
@@ -558,8 +579,7 @@ describe("reorderFaqCategories", () => {
 
       const call = mockExecuteRaw.mock.calls[0];
       // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
-      const sql =
-        (call?.[0] as TemplateStringsArray | undefined)?.join("?") ?? "";
+      const sql = call?.[0].join("?") ?? "";
       expect(sql).toContain("faq_categories");
       expect(sql).toContain("order");
       expect(sql).toContain("CASE");
@@ -845,8 +865,7 @@ describe("reorderFaqItems", () => {
 
       const call = mockExecuteRaw.mock.calls[0];
       // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
-      const sql =
-        (call?.[0] as TemplateStringsArray | undefined)?.join("?") ?? "";
+      const sql = call?.[0].join("?") ?? "";
       expect(sql).toContain("faq_items");
       expect(sql).toContain("categoryId");
       expect(sql).toContain("CASE");

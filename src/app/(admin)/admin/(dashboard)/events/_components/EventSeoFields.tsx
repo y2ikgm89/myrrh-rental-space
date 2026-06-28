@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactElement } from "react";
-import type { FieldMetadata } from "@conform-to/react";
 import Image from "next/image";
 import { IconPhotoPlus, IconX } from "@tabler/icons-react";
 import {
@@ -25,11 +24,11 @@ interface SeoField {
 
 interface EventSeoFieldsProps {
   readonly fields: {
-    readonly ogpImageUrl: FieldMetadata<string | null | undefined>;
-    readonly ogpTitle: FieldMetadata<string | null | undefined>;
-    readonly ogpDescription: FieldMetadata<string | null | undefined>;
-    readonly metaDescription: FieldMetadata<string | null | undefined>;
-    readonly metaKeywords: FieldMetadata<string | null | undefined>;
+    readonly ogpImageUrl: SeoField;
+    readonly ogpTitle: SeoField;
+    readonly ogpDescription: SeoField;
+    readonly metaDescription: SeoField;
+    readonly metaKeywords: SeoField;
   };
   readonly isPending: boolean;
   readonly ogpImageUrl: string | null;

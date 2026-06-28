@@ -71,10 +71,20 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
+type SqlFragment = { __sql: string; __values: unknown[] };
+
+function isSqlFragment(value: unknown): value is SqlFragment {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "__sql" in value &&
+    "__values" in value
+  );
+}
+
 // Prisma.sql / Prisma.join は実行時にトークン化された SQL 片を返す。テストでは
 // 結合済み文字列で検証できるよう raw を保持するスタブを返す。
 mock.module("@generated/prisma/client", () => {
-  type SqlFragment = { __sql: string; __values: unknown[] };
   const sql = (
     strings: TemplateStringsArray,
     ...values: unknown[]
@@ -83,9 +93,9 @@ mock.module("@generated/prisma/client", () => {
     for (let i = 0; i < strings.length; i++) {
       combined += strings[i];
       if (i < values.length) {
-        const v = values[i] as SqlFragment | unknown;
-        if (v && typeof v === "object" && "__sql" in (v as object)) {
-          combined += (v as SqlFragment).__sql;
+        const v = values[i];
+        if (isSqlFragment(v)) {
+          combined += v.__sql;
         } else {
           combined += `$${i + 1}`;
         }
@@ -271,8 +281,7 @@ describe("reorderTermsCommand", () => {
 
     const call = mockExecuteRaw.mock.calls[0];
     // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
-    const sql =
-      (call?.[0] as TemplateStringsArray | undefined)?.join("?") ?? "";
+    const sql = call?.[0].join("?") ?? "";
     expect(sql).toContain("terms_documents");
     expect(sql).toContain("footerOrder");
     expect(sql).toContain("CASE");

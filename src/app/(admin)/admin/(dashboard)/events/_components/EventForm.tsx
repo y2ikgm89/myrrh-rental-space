@@ -19,16 +19,8 @@ import { createEventAction, updateEventAction } from "@/admin/actions/event";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
-import {
-  asTypedField,
-  asConformFieldset,
-} from "@/shared/lib/conform/typed-input-control";
 import { GalleryField } from "@/admin/components/gallery-field/GalleryField";
-import {
-  type GalleryItem,
-  parseGallery,
-} from "@/shared/lib/validations/gallery";
-import type { FormMetadata } from "@conform-to/react";
+import { parseGallery } from "@/shared/lib/validations/gallery";
 import type {
   getEventById,
   getLocationsForEvent,
@@ -343,10 +335,8 @@ export function EventForm({
               本文内のギャラリーブロックとは別の、イベント最上位の画像一覧です。最初の数枚は一覧カードのカルーセルに表示されます。
             </p>
             <GalleryField
-              field={asTypedField<GalleryItem[]>(fields.gallery)}
-              form={asConformFieldset<FormMetadata<Record<string, unknown>>>(
-                form,
-              )}
+              field={fields.gallery}
+              form={form}
               defaultUsage="EVENT"
               max={20}
               disabled={isPending}
@@ -413,21 +403,11 @@ export function EventForm({
         >
           <EventSeoFields
             fields={{
-              ogpImageUrl: asTypedField<string | null | undefined>(
-                fields.ogpImageUrl,
-              ),
-              ogpTitle: asTypedField<string | null | undefined>(
-                fields.ogpTitle,
-              ),
-              ogpDescription: asTypedField<string | null | undefined>(
-                fields.ogpDescription,
-              ),
-              metaDescription: asTypedField<string | null | undefined>(
-                fields.metaDescription,
-              ),
-              metaKeywords: asTypedField<string | null | undefined>(
-                fields.metaKeywords,
-              ),
+              ogpImageUrl: fields.ogpImageUrl,
+              ogpTitle: fields.ogpTitle,
+              ogpDescription: fields.ogpDescription,
+              metaDescription: fields.metaDescription,
+              metaKeywords: fields.metaKeywords,
             }}
             isPending={isPending}
             ogpImageUrl={ogpImageUrl}

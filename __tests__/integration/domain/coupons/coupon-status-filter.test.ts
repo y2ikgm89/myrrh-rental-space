@@ -114,10 +114,13 @@ describeMaybe("getCoupons — status filter raw SQL (@@map coupons)", () => {
     // 下流（formatCoupon の toLocaleString 等）が壊れる経路の回帰防止。
     const active = result.coupons[0];
     expect(active).toBeDefined();
-    expect(typeof active!.discountValue).toBe("number");
-    expect(active!.discountValue).toBe(10);
-    expect(active!.minReservationAmount).toBeNull();
-    expect(active!.maxDiscountAmount).toBeNull();
+    if (active === undefined) {
+      throw new Error("active coupon must exist");
+    }
+    expect(typeof active.discountValue).toBe("number");
+    expect(active.discountValue).toBe(10);
+    expect(active.minReservationAmount).toBeNull();
+    expect(active.maxDiscountAmount).toBeNull();
   });
 
   test("status=limitReached は raw SQL を例外なく実行し、上限到達クーポンのみ返す", async () => {
@@ -131,7 +134,10 @@ describeMaybe("getCoupons — status filter raw SQL (@@map coupons)", () => {
     // Decimal→number 正規化の回帰防止（FIXED_AMOUNT 値も number で揃える）。
     const limit = result.coupons[0];
     expect(limit).toBeDefined();
-    expect(typeof limit!.discountValue).toBe("number");
-    expect(limit!.discountValue).toBe(500);
+    if (limit === undefined) {
+      throw new Error("limit reached coupon must exist");
+    }
+    expect(typeof limit.discountValue).toBe("number");
+    expect(limit.discountValue).toBe(500);
   });
 });

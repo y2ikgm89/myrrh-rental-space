@@ -16,6 +16,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -231,13 +232,13 @@ describe("restoreReservationStatus (action shape)", () => {
   test("正常系: 引数不正で validation error", async () => {
     const r = await restoreReservationStatus(
       "bad",
-      "CONFIRMED" as unknown as never,
+      ReservationStatus.CONFIRMED,
     );
     expect(isMutationError(r)).toBe(true);
   });
 
   test("正常系: SUPER_ADMIN で wrapper 経由 command 呼び出し", async () => {
-    await restoreReservationStatus(VALID_UUID, "CONFIRMED" as unknown as never);
+    await restoreReservationStatus(VALID_UUID, ReservationStatus.CONFIRMED);
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "reservation",
@@ -254,7 +255,7 @@ describe("updateReservationStatus (action shape)", () => {
   });
 
   test("正常系: status 変更を domain に伝搬", async () => {
-    await updateReservationStatus(VALID_UUID, "CONFIRMED" as unknown as never);
+    await updateReservationStatus(VALID_UUID, ReservationStatus.CONFIRMED);
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "reservation",
