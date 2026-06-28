@@ -16,6 +16,7 @@ import type {
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
+import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
 type CustomerWhereInput = Prisma.CustomerWhereInput;
 
@@ -294,18 +295,34 @@ export async function searchCustomers(
 }
 
 /**
- * メールアドレス重複事前チェック（顧客作成・編集フォームの onBlur 用）
+ * メールアドレス重複候補チェック（顧客作成・編集フォームの onBlur 用）
  *
  * `excludeId` を渡すと該当 ID を除外して検索（編集時に自分自身の email を許可）。
- * UNIQUE 制約 P2002 失敗を画面上で事前警告するための軽量 lookup。
+ * email は所有権キーではないため、候補表示と未リンク guest 重複の事前判定に使う。
  */
 export async function findCustomerByEmailExcept(
   email: string,
   excludeId?: string,
-): Promise<{ id: string } | null> {
+): Promise<{ id: string; userId: string | null } | null> {
+  const emailCanonical = normalizeEmailForIdentity(email);
   return prisma.customer.findFirst({
     where: {
-      email,
+      emailCanonical,
+      ...(excludeId ? { NOT: { id: excludeId } } : {}),
+    },
+    select: { id: true, userId: true },
+  });
+}
+
+export async function findGuestCustomerByEmailExcept(
+  email: string,
+  excludeId?: string,
+): Promise<{ id: string } | null> {
+  const emailCanonical = normalizeEmailForIdentity(email);
+  return prisma.customer.findFirst({
+    where: {
+      emailCanonical,
+      userId: null,
       ...(excludeId ? { NOT: { id: excludeId } } : {}),
     },
     select: { id: true },
@@ -340,16 +357,34 @@ export async function getSuppressedEmailSet(
 
   if (emails.length === 0) return new Set();
 
+  const canonicalToOriginals = new Map<string, string[]>();
+  for (const email of emails) {
+    const canonical = normalizeEmailForIdentity(email);
+    const originals = canonicalToOriginals.get(canonical);
+    if (originals) {
+      originals.push(email);
+    } else {
+      canonicalToOriginals.set(canonical, [email]);
+    }
+  }
+
   const rows = await prisma.customer.findMany({
     where: {
-      email: { in: [...emails] },
+      emailCanonical: { in: [...canonicalToOriginals.keys()] },
       emailDeliveryStatus: {
         in: [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED],
       },
     },
-    select: { email: true },
+    select: { emailCanonical: true },
   });
-  return new Set(rows.map((r) => r.email));
+
+  const suppressed = new Set<string>();
+  for (const row of rows) {
+    for (const original of canonicalToOriginals.get(row.emailCanonical) ?? []) {
+      suppressed.add(original);
+    }
+  }
+  return suppressed;
 }
 
 export async function getCustomerByUserId(userId: string) {

@@ -5,43 +5,52 @@ import {
   CustomerType,
   EmailDeliveryStatus,
 } from "@generated/prisma/enums";
+import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 import type { CustomerFormData } from "@/shared/lib/validations/customer";
 
-async function ensureCustomerExists(id: string): Promise<void> {
+const GUEST_EMAIL_DUPLICATE_MESSAGE =
+  "同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。";
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
+async function ensureCustomerExists(
+  id: string,
+): Promise<{ id: string; userId: string | null }> {
   const customer = await prisma.customer.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
 
   if (!customer) {
     throw new DomainError("顧客が見つかりません", "NOT_FOUND");
   }
+
+  return customer;
 }
 
-async function ensureEmailAvailable(
+async function ensureGuestEmailAvailable(
   email: string,
   currentId?: string,
 ): Promise<void> {
-  const existing = currentId
-    ? await prisma.customer.findFirst({
-        where: {
-          email,
-          NOT: { id: currentId },
-        },
-        select: { id: true },
-      })
-    : await prisma.customer.findUnique({
-        where: { email },
-        select: { id: true },
-      });
+  const duplicate = await prisma.customer.findFirst({
+    where: {
+      emailCanonical: normalizeEmailForIdentity(email),
+      userId: null,
+      ...(currentId ? { NOT: { id: currentId } } : {}),
+    },
+    select: { id: true },
+  });
 
-  if (existing) {
-    throw new DomainError(
-      "このメールアドレスは既に登録されています",
-      "CONFLICT",
-    );
+  if (duplicate) {
+    throw new DomainError(GUEST_EMAIL_DUPLICATE_MESSAGE, "CONFLICT");
   }
 }
 
@@ -54,6 +63,7 @@ function toCustomerData(data: CustomerFormData) {
     companyName: data.companyName || null,
     customerType: data.customerType ?? CustomerType.PERSONAL,
     email: data.email,
+    emailCanonical: normalizeEmailForIdentity(data.email),
     phoneNumber: data.phoneNumber || null,
     postalCode: data.postalCode || null,
     prefecture: data.prefecture || null,
@@ -69,17 +79,24 @@ function toCustomerData(data: CustomerFormData) {
 export async function createCustomer(
   data: CustomerFormData,
 ): Promise<{ id: string }> {
-  await ensureEmailAvailable(data.email);
+  await ensureGuestEmailAvailable(data.email);
 
-  const customer = await prisma.customer.create({
-    data: {
-      ...toCustomerData(data),
-      status: CustomerStatus.NEW,
-      isActive: true,
-    },
-  });
+  try {
+    const customer = await prisma.customer.create({
+      data: {
+        ...toCustomerData(data),
+        status: CustomerStatus.NEW,
+        isActive: true,
+      },
+    });
 
-  return { id: customer.id };
+    return { id: customer.id };
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new DomainError(GUEST_EMAIL_DUPLICATE_MESSAGE, "CONFLICT");
+    }
+    throw error;
+  }
 }
 
 export async function updateCustomerStatus(
@@ -126,13 +143,23 @@ export async function updateCustomer(
   id: string,
   data: CustomerFormData,
 ): Promise<void> {
-  await ensureCustomerExists(id);
-  await ensureEmailAvailable(data.email, id);
+  const customer = await ensureCustomerExists(id);
 
-  await prisma.customer.update({
-    where: { id },
-    data: toCustomerData(data),
-  });
+  if (customer.userId === null) {
+    await ensureGuestEmailAvailable(data.email, id);
+  }
+
+  try {
+    await prisma.customer.update({
+      where: { id },
+      data: toCustomerData(data),
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw new DomainError(GUEST_EMAIL_DUPLICATE_MESSAGE, "CONFLICT");
+    }
+    throw error;
+  }
 }
 
 /** 顧客が自身のプロフィールを更新（userId ベース） */
@@ -285,6 +312,7 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
   status: EmailDeliveryStatus,
   reason: string | null,
 ): Promise<number> {
+  const emailCanonical = normalizeEmailForIdentity(email);
   // 強い終端状態（HARD_BOUNCED / COMPLAINED）は SOFT_BOUNCED で上書きしない。
   // OK へのリセットは管理 UI 経由を想定（本 PR 範囲外）。
   const protectedStates: EmailDeliveryStatus[] =
@@ -294,7 +322,7 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
 
   const result = await prisma.customer.updateMany({
     where: {
-      email,
+      emailCanonical,
       ...(protectedStates.length > 0
         ? { emailDeliveryStatus: { notIn: protectedStates } }
         : {}),

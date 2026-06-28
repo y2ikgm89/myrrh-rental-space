@@ -631,7 +631,8 @@ model Customer {
   firstNameKana      String?        // 名カナ（任意）
   companyName        String?        // 会社名・団体名（法人の場合）
   customerType       CustomerType   @default(PERSONAL)
-  email              String         @unique
+  email              String
+  emailCanonical     String
   phoneNumber        String?
   postalCode         String?        @db.VarChar(8)   // 郵便番号 "123-4567" 等
   prefecture         String?        @db.VarChar(10)  // 都道府県（PREFECTURES SSoT）
@@ -672,6 +673,8 @@ model Customer {
   @@index([phoneNumber])
   @@index([status])
   @@index([customerType])
+  @@index([emailCanonical])
+  @@index([emailCanonical, userId])
   @@index([isActive])
   @@index([lastReservationAt])
   @@index([lastName, firstName])

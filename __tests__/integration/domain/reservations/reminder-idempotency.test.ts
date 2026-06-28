@@ -96,6 +96,7 @@ async function createReservationFixture(opts?: {
       lastName: "山田",
       firstName: "太郎",
       email: `reminder-${suffix}@example.com`,
+      emailCanonical: `reminder-${suffix}@example.com`,
     },
     select: { id: true },
   });
