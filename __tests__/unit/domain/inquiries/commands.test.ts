@@ -26,9 +26,17 @@ const mockInquiryDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "inquiry-1" }),
 );
 
-const mockCustomerFindUnique = mock<() => Promise<{ id: string } | null>>(() =>
-  Promise.resolve(null),
-);
+const mockCustomerFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<{ id: string } | null>
+>(() => Promise.resolve(null));
+
+const mockCustomerFindFirst = mock<
+  (args: Record<string, unknown>) => Promise<{ id: string } | null>
+>(() => Promise.resolve(null));
+
+const mockCustomerCreate = mock<
+  (args: Record<string, unknown>) => Promise<{ id: string }>
+>(() => Promise.resolve({ id: "guest-customer-id" }));
 
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
@@ -43,6 +51,8 @@ mock.module("@/shared/db/prisma", () => ({
     },
     customer: {
       findUnique: mockCustomerFindUnique,
+      findFirst: mockCustomerFindFirst,
+      create: mockCustomerCreate,
     },
   },
 }));
@@ -87,6 +97,8 @@ describe("inquiries/commands", () => {
     mockInquiryUpdate.mockReset();
     mockInquiryDelete.mockReset();
     mockCustomerFindUnique.mockReset();
+    mockCustomerFindFirst.mockReset();
+    mockCustomerCreate.mockReset();
 
     // デフォルト: お問い合わせ・顧客は存在しない
     mockInquiryFindUnique.mockResolvedValue(null);
@@ -94,6 +106,8 @@ describe("inquiries/commands", () => {
     mockInquiryUpdate.mockResolvedValue({ id: INQUIRY_ID });
     mockInquiryDelete.mockResolvedValue({ id: INQUIRY_ID });
     mockCustomerFindUnique.mockResolvedValue(null);
+    mockCustomerFindFirst.mockResolvedValue(null);
+    mockCustomerCreate.mockResolvedValue({ id: "guest-customer-id" });
   });
 
   // =============================================================================
@@ -320,45 +334,60 @@ describe("inquiries/commands", () => {
         );
       });
 
-      test("customerId が未指定でメール一致の顧客が存在する場合はその ID を使用する（3段解決: 第2段）", async () => {
+      test("customerId が未指定でメール一致の会員顧客が存在しても未リンクゲスト顧客を作成する", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({ id: CUSTOMER_ID });
         mockInquiryCreate.mockResolvedValueOnce({ id: INQUIRY_ID });
 
         const result = await createInquiryCommand(VALID_CREATE_INPUT);
 
         expect(result.id).toBe(INQUIRY_ID);
-        expect(mockCustomerFindUnique).toHaveBeenCalledWith(
+        expect(mockCustomerFindUnique).not.toHaveBeenCalled();
+        expect(mockCustomerFindFirst).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: { email: VALID_CREATE_INPUT.email },
+            where: expect.objectContaining({
+              emailCanonical: "tanaka@example.com",
+              userId: null,
+            }),
+          }),
+        );
+        expect(mockCustomerCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              email: VALID_CREATE_INPUT.email,
+              emailCanonical: "tanaka@example.com",
+              userId: null,
+            }),
           }),
         );
         expect(mockInquiryCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              customerId: CUSTOMER_ID,
+              customerId: "guest-customer-id",
             }),
           }),
         );
       });
 
-      test("customerId が未指定でメール一致の顧客も存在しない場合は null を使用する（3段解決: 第3段）", async () => {
-        mockCustomerFindUnique.mockResolvedValueOnce(null);
+      test("customerId が未指定で同じメールの未リンクゲスト顧客が存在する場合はその ID を使用する", async () => {
+        mockCustomerFindFirst.mockResolvedValueOnce({
+          id: "guest-existing-id",
+        });
         mockInquiryCreate.mockResolvedValueOnce({ id: INQUIRY_ID });
 
         const result = await createInquiryCommand(VALID_CREATE_INPUT);
 
         expect(result.id).toBe(INQUIRY_ID);
+        expect(mockCustomerCreate).not.toHaveBeenCalled();
         expect(mockInquiryCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              customerId: null,
+              customerId: "guest-existing-id",
             }),
           }),
         );
       });
 
-      test("customerId: null が明示されている場合はメール検索を行う", async () => {
-        mockCustomerFindUnique.mockResolvedValueOnce({ id: CUSTOMER_ID });
+      test("customerId: null が明示されている場合も未リンクゲスト顧客を作成する", async () => {
         mockInquiryCreate.mockResolvedValueOnce({ id: INQUIRY_ID });
 
         await createInquiryCommand({
@@ -366,12 +395,13 @@ describe("inquiries/commands", () => {
           customerId: null,
         });
 
-        // null は falsy なのでメール検索が実行される
-        expect(mockCustomerFindUnique).toHaveBeenCalledTimes(1);
+        expect(mockCustomerFindUnique).not.toHaveBeenCalled();
+        expect(mockCustomerFindFirst).toHaveBeenCalledTimes(1);
+        expect(mockCustomerCreate).toHaveBeenCalledTimes(1);
         expect(mockInquiryCreate).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
-              customerId: CUSTOMER_ID,
+              customerId: "guest-customer-id",
             }),
           }),
         );
@@ -454,8 +484,7 @@ describe("inquiries/commands", () => {
     });
 
     describe("エッジケース", () => {
-      test("customerId: undefined は未指定として扱いメール検索が実行される", async () => {
-        mockCustomerFindUnique.mockResolvedValueOnce(null);
+      test("customerId: undefined は未指定として扱い未リンクゲスト顧客 lookup が実行される", async () => {
         mockInquiryCreate.mockResolvedValueOnce({ id: INQUIRY_ID });
 
         // customerId を省略することで undefined として扱われる（exactOptionalPropertyTypes 対応）
@@ -463,7 +492,8 @@ describe("inquiries/commands", () => {
           ...VALID_CREATE_INPUT,
         });
 
-        expect(mockCustomerFindUnique).toHaveBeenCalledTimes(1);
+        expect(mockCustomerFindUnique).not.toHaveBeenCalled();
+        expect(mockCustomerFindFirst).toHaveBeenCalledTimes(1);
       });
 
       test("create が返す id が結果の id に反映される", async () => {
@@ -476,13 +506,12 @@ describe("inquiries/commands", () => {
         expect(result.payload.inquiryId).toBe(generatedId);
       });
 
-      test("メール検索には select で id フィールドが指定される", async () => {
-        mockCustomerFindUnique.mockResolvedValueOnce(null);
+      test("未リンクゲスト顧客 lookup には select で id フィールドが指定される", async () => {
         mockInquiryCreate.mockResolvedValueOnce({ id: INQUIRY_ID });
 
         await createInquiryCommand(VALID_CREATE_INPUT);
 
-        expect(mockCustomerFindUnique).toHaveBeenCalledWith(
+        expect(mockCustomerFindFirst).toHaveBeenCalledWith(
           expect.objectContaining({
             select: { id: true },
           }),

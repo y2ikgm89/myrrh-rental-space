@@ -17,7 +17,10 @@ import {
   SelectValue,
   Input,
 } from "@/admin/components/ui";
-import { ReservationStatusBadge } from "@/admin/components/status-badges";
+import {
+  CustomerIdentityBadge,
+  ReservationStatusBadge,
+} from "@/admin/components/status-badges";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
@@ -266,7 +269,15 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           <DetailField
             label="氏名"
-            value={`${reservation.customer.lastName} ${reservation.customer.firstName}`}
+            value={
+              <span className="inline-flex items-center gap-2">
+                <span>
+                  {reservation.customer.lastName}{" "}
+                  {reservation.customer.firstName}
+                </span>
+                <CustomerIdentityBadge userId={reservation.customer.userId} />
+              </span>
+            }
           />
           {reservation.customer.companyName ? (
             <DetailField

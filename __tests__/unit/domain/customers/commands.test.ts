@@ -18,12 +18,16 @@ const CustomerType = {
 
 // Prisma モック関数（mock.module より先に定義）
 const mockCustomerFindUnique = mock<
-  () => Promise<{ id: string; isActive: boolean } | null>
+  () => Promise<{
+    id: string;
+    isActive?: boolean;
+    userId?: string | null;
+  } | null>
 >(() => Promise.resolve(null));
 
-const mockCustomerFindFirst = mock<() => Promise<{ id: string } | null>>(() =>
-  Promise.resolve(null),
-);
+const mockCustomerFindFirst = mock<
+  () => Promise<{ id: string; userId?: string | null } | null>
+>(() => Promise.resolve(null));
 
 const mockCustomerCreate = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "customer-1" }),
@@ -114,8 +118,6 @@ describe("customers/commands", () => {
   describe("createCustomer", () => {
     describe("正常系", () => {
       test("新規メールアドレスで顧客を作成できる", async () => {
-        // メール重複チェックで null（使用可能）
-        mockCustomerFindUnique.mockResolvedValueOnce(null);
         mockCustomerCreate.mockResolvedValueOnce({ id: "new-customer-id" });
 
         const result = await createCustomer(VALID_CUSTOMER_DATA);
@@ -138,6 +140,7 @@ describe("customers/commands", () => {
               lastName: "田中",
               firstName: "太郎",
               email: "tanaka@example.com",
+              emailCanonical: "tanaka@example.com",
             }),
           }),
         );
@@ -180,20 +183,35 @@ describe("customers/commands", () => {
       });
     });
 
-    describe("異常系", () => {
-      test("既存のメールアドレスで CONFLICT エラーをスローする", async () => {
-        // メール重複チェックで既存顧客を返す
-        mockCustomerFindUnique.mockResolvedValueOnce({
-          id: "existing-id",
-          isActive: true,
+    describe("重複メール", () => {
+      test("未リンク顧客の重複がなければ同じメールアドレスでも別顧客として作成できる", async () => {
+        mockCustomerFindFirst.mockResolvedValueOnce(null);
+        mockCustomerCreate.mockResolvedValueOnce({ id: "duplicate-customer" });
+
+        await expect(createCustomer(VALID_CUSTOMER_DATA)).resolves.toEqual({
+          id: "duplicate-customer",
         });
+        expect(mockCustomerCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              email: "tanaka@example.com",
+              emailCanonical: "tanaka@example.com",
+            }),
+          }),
+        );
+      });
+
+      test("同じ canonical email の未リンク顧客が存在する場合は CONFLICT を返す", async () => {
+        mockCustomerFindFirst.mockResolvedValueOnce({ id: "guest-customer" });
 
         await expect(createCustomer(VALID_CUSTOMER_DATA)).rejects.toMatchObject(
           {
             code: "CONFLICT",
-            message: "このメールアドレスは既に登録されています",
+            message:
+              "同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。",
           },
         );
+        expect(mockCustomerCreate).not.toHaveBeenCalled();
       });
     });
   });
@@ -369,12 +387,11 @@ describe("customers/commands", () => {
   describe("updateCustomer", () => {
     describe("正常系", () => {
       test("存在する顧客の情報を更新できる", async () => {
-        // ensureCustomerExists: 顧客が存在する
         mockCustomerFindUnique.mockResolvedValueOnce({
           id: CUSTOMER_ID,
           isActive: true,
+          userId: null,
         });
-        // ensureEmailAvailable: 他の顧客はメールを使っていない
         mockCustomerFindFirst.mockResolvedValueOnce(null);
 
         await expect(
@@ -388,17 +405,18 @@ describe("customers/commands", () => {
               lastName: "田中",
               firstName: "太郎",
               email: "tanaka@example.com",
+              emailCanonical: "tanaka@example.com",
             }),
           }),
         );
       });
 
-      test("同じメールアドレスで自分自身を更新できる（重複チェックが currentId を除外）", async () => {
+      test("同じメールアドレスで更新できる", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
           id: CUSTOMER_ID,
           isActive: true,
+          userId: null,
         });
-        // findFirst で自分自身を除いた重複チェック → 結果なし
         mockCustomerFindFirst.mockResolvedValueOnce(null);
 
         await expect(
@@ -408,8 +426,17 @@ describe("customers/commands", () => {
         expect(mockCustomerFindFirst).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({
-              email: VALID_CUSTOMER_DATA.email,
+              emailCanonical: "tanaka@example.com",
+              userId: null,
               NOT: { id: CUSTOMER_ID },
+            }),
+          }),
+        );
+        expect(mockCustomerUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              email: VALID_CUSTOMER_DATA.email,
+              emailCanonical: "tanaka@example.com",
             }),
           }),
         );
@@ -428,20 +455,36 @@ describe("customers/commands", () => {
         });
       });
 
-      test("他の顧客が使用中のメールアドレスで CONFLICT エラーをスローする", async () => {
+      test("リンク済み顧客は他の顧客が使用中のメールアドレスでも更新できる", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
           id: CUSTOMER_ID,
           isActive: true,
+          userId: USER_ID,
         });
-        // 他の顧客がそのメールを使用中
         mockCustomerFindFirst.mockResolvedValueOnce({ id: "other-customer" });
+
+        await expect(
+          updateCustomer(CUSTOMER_ID, VALID_CUSTOMER_DATA),
+        ).resolves.toBeUndefined();
+        expect(mockCustomerFindFirst).not.toHaveBeenCalled();
+      });
+
+      test("未リンク顧客を同じ canonical email の未リンク顧客へ重複更新できない", async () => {
+        mockCustomerFindUnique.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          isActive: true,
+          userId: null,
+        });
+        mockCustomerFindFirst.mockResolvedValueOnce({ id: "other-guest" });
 
         await expect(
           updateCustomer(CUSTOMER_ID, VALID_CUSTOMER_DATA),
         ).rejects.toMatchObject({
           code: "CONFLICT",
-          message: "このメールアドレスは既に登録されています",
+          message:
+            "同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。",
         });
+        expect(mockCustomerUpdate).not.toHaveBeenCalled();
       });
     });
   });

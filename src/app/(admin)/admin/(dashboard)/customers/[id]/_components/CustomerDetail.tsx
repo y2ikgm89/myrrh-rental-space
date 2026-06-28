@@ -35,6 +35,7 @@ import {
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import {
+  CustomerIdentityBadge,
   CustomerStatusBadge,
   ReservationStatusBadge,
 } from "@/admin/components/status-badges";
@@ -120,6 +121,10 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               label="区分"
               value={CUSTOMER_TYPE_LABELS[customer.customerType]}
             />
+            <DetailField
+              label="顧客ID状態"
+              value={<CustomerIdentityBadge userId={customer.userId} />}
+            />
             {customer.companyName ? (
               <DetailField
                 label="会社名・団体名"
@@ -185,7 +190,12 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
 
         <DetailSection title="アカウント連携">
           {customer.user === null ? (
-            <p className="text-sm text-muted-foreground">未連携</p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">ゲスト未リンク</p>
+              <p className="text-sm text-muted-foreground">
+                メールアドレスが一致しても会員アカウントへは自動連携されません。
+              </p>
+            </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {ALL_PROVIDERS.map((provider) => {

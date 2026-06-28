@@ -118,6 +118,26 @@ export function CustomerStatusBadge({ status }: { status: CustomerStatus }) {
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 
+export function CustomerIdentityBadge({ userId }: { userId: string | null }) {
+  return userId === null ? (
+    <Badge
+      variant="secondary"
+      aria-label="ゲスト未リンク顧客"
+      title="会員アカウントには紐づいていない顧客履歴です"
+    >
+      ゲスト
+    </Badge>
+  ) : (
+    <Badge
+      variant="success"
+      aria-label="会員連携済み顧客"
+      title="会員アカウントに紐づく顧客です"
+    >
+      会員
+    </Badge>
+  );
+}
+
 export function InquiryStatusBadge({ status }: { status: InquiryStatus }) {
   const config = inquiryStatusConfig[status];
   return <Badge variant={config.variant}>{config.label}</Badge>;

@@ -1,11 +1,13 @@
 /**
- * 顧客メールアドレス重複事前チェック API
+ * 顧客メールアドレス重複候補チェック API
  *
- * 顧客作成・編集フォームで onBlur 時に呼び出し、UNIQUE 制約 P2002 失敗を
- * 事前に画面上で警告するための軽量エンドポイント。
+ * Customer.email は所有権キーではなくなったため重複をブロックしない。
+ * 既存 UI 互換の `available: true` に加えて、同じ canonical email の候補が
+ * あるかを `duplicateCandidate` で返す。未リンク guest 同士の重複だけは
+ * DB の部分一意制約に当たるため、`unlinkedDuplicateCandidate` も返す。
  *
  * 認証: 認証済み admin ロール（`checkAdminAuth`）
- * レスポンス: `{ available: boolean }` のみ（重複時の ID は漏洩防止のため返さない）
+ * レスポンス: `{ available: true, duplicateCandidate: boolean, unlinkedDuplicateCandidate: boolean }`
  *
  * @see docs/api-conventions.md — status code 規約 / レスポンスヘルパー
  */
@@ -14,7 +16,10 @@ import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
-import { findCustomerByEmailExcept } from "@/shared/domain/customers/queries";
+import {
+  findCustomerByEmailExcept,
+  findGuestCustomerByEmailExcept,
+} from "@/shared/domain/customers/queries";
 import {
   logError,
   ErrorCategory,
@@ -51,9 +56,16 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const { email, excludeId } = parsed.data;
 
-    const existing = await findCustomerByEmailExcept(email, excludeId);
+    const [existing, existingGuest] = await Promise.all([
+      findCustomerByEmailExcept(email, excludeId),
+      findGuestCustomerByEmailExcept(email, excludeId),
+    ]);
 
-    return jsonSuccess({ available: existing === null });
+    return jsonSuccess({
+      available: true,
+      duplicateCandidate: existing !== null,
+      unlinkedDuplicateCandidate: existingGuest !== null,
+    });
   } catch (error: unknown) {
     unstable_rethrow(error);
     logError(normalizeError(error), {

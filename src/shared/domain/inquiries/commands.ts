@@ -1,8 +1,10 @@
 import "server-only";
 
+import { Prisma } from "@generated/prisma/client";
 import { CustomerType, InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
 export async function updateInquiryStatus(
   id: string,
@@ -140,19 +142,55 @@ type CreateInquiryResult = {
   payload: InquiryPayload;
 };
 
+async function resolveOrCreateGuestInquiryCustomer(
+  input: CreateInquiryInput,
+): Promise<string> {
+  const emailCanonical = normalizeEmailForIdentity(input.email);
+
+  const existingGuest = await prisma.customer.findFirst({
+    where: { emailCanonical, userId: null },
+    select: { id: true },
+  });
+  if (existingGuest) return existingGuest.id;
+
+  try {
+    const customer = await prisma.customer.create({
+      data: {
+        lastName: input.name,
+        firstName: "",
+        companyName: input.companyName || null,
+        customerType: input.customerType ?? CustomerType.PERSONAL,
+        email: input.email,
+        emailCanonical,
+        userId: null,
+      },
+      select: { id: true },
+    });
+    return customer.id;
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const fallback = await prisma.customer.findFirst({
+        where: { emailCanonical, userId: null },
+        select: { id: true },
+      });
+      if (fallback) return fallback.id;
+    }
+    throw error;
+  }
+}
+
 export async function createInquiryCommand(
   input: CreateInquiryInput,
 ): Promise<CreateInquiryResult> {
-  // Resolve customerId: explicit > email lookup > null
+  // Resolve customerId: explicit authenticated owner > unlinked guest customer.
+  // Submitted email is not proof of account ownership, so never use it to attach
+  // an inquiry to an existing linked customer.
   let resolvedCustomerId = input.customerId ?? null;
-  if (!resolvedCustomerId) {
-    const existingCustomer = await prisma.customer.findUnique({
-      where: { email: input.email },
-      select: { id: true },
-    });
-    if (existingCustomer) {
-      resolvedCustomerId = existingCustomer.id;
-    }
+  if (resolvedCustomerId === null) {
+    resolvedCustomerId = await resolveOrCreateGuestInquiryCustomer(input);
   }
 
   const inquiry = await prisma.inquiry.create({

@@ -7,14 +7,13 @@
  * `Function.prototype.bind` で部分適用する。Switch / Select は
  * `useInputControl` で hidden input と sync する公式パターン。
  *
- * Edit 固有: ① email blur 時の重複チェック (`/api/admin/customers/check-email`)
+ * Edit 固有: ① email blur 時の重複候補チェック (`/api/admin/customers/check-email`)
  * ② ソーシャル連携済み顧客のメール変更時の警告 ③ カナ自動入力の既存値 hydration。
  */
 
 import {
   useActionState,
   useEffect,
-  useState,
   type FocusEvent,
   type ReactElement,
 } from "react";
@@ -27,7 +26,6 @@ import {
   useInputControl,
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { z } from "zod";
 import { toast } from "sonner";
 import { updateCustomer } from "@/admin/actions/customer";
 import { useKanaInput } from "@/admin/hooks";
@@ -52,20 +50,25 @@ import { CUSTOMER_TYPE_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { entriesOf } from "@/shared/lib/serialize";
 import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { PREFECTURES, isPrefecture } from "@/shared/lib/customer-address";
+import { useCustomerEmailDuplicateCheck } from "./customer-email-duplicate-check";
 
 type CustomerEditFormProps = {
   customer: CustomerWithReservations;
 };
 
-const checkEmailResponseSchema = z.object({
-  available: z.boolean().optional(),
-});
-
 export function CustomerEditForm({
   customer,
 }: CustomerEditFormProps): ReactElement {
   const router = useRouter();
-  const [emailConflict, setEmailConflict] = useState(false);
+  const {
+    duplicateCandidate: emailDuplicateCandidate,
+    unlinkedDuplicateCandidate: emailUnlinkedDuplicateCandidate,
+    checkEmail,
+    resetEmailDuplicateCheck,
+  } = useCustomerEmailDuplicateCheck({
+    excludeId: customer.id,
+    originalEmail: customer.email,
+  });
 
   const boundAction = updateCustomer.bind(null, customer.id);
   const [lastResult, action, isPending] = useActionState(
@@ -116,6 +119,20 @@ export function CustomerEditForm({
   const isEmailChanged = watchedEmail !== customer.email;
   const showSocialLinkWarning =
     isEmailChanged && customer.userId !== null && watchedEmail !== "";
+  const emailBlockedByGuestDuplicate =
+    customer.userId === null && emailUnlinkedDuplicateCandidate;
+  const emailDuplicateWarningId = `${fields.email.id}-duplicate-candidate`;
+  const emailDuplicateErrorId = `${fields.email.id}-duplicate-error`;
+  const emailSocialWarningId = `${fields.email.id}-social-warning`;
+  const emailDescribedBy = fields.email.errors
+    ? fields.email.errorId
+    : [
+        emailBlockedByGuestDuplicate ? emailDuplicateErrorId : null,
+        emailDuplicateCandidate ? emailDuplicateWarningId : null,
+        showSocialLinkWarning ? emailSocialWarningId : null,
+      ]
+        .filter((id): id is string => id !== null)
+        .join(" ") || undefined;
 
   function handleCustomerTypeChange(value: string) {
     if (!isValidCustomerType(value)) return;
@@ -135,23 +152,10 @@ export function CustomerEditForm({
     emailControl.blur();
     const email = event.target.value;
     if (!email || email === customer.email) {
-      setEmailConflict(false);
+      resetEmailDuplicateCheck();
       return;
     }
-    try {
-      const response = await fetch(
-        `/api/admin/customers/check-email?email=${encodeURIComponent(email)}&excludeId=${customer.id}`,
-      );
-      if (!response.ok) {
-        setEmailConflict(false);
-        return;
-      }
-      const parsed = checkEmailResponseSchema.safeParse(await response.json());
-      setEmailConflict(parsed.success && parsed.data.available === false);
-    } catch {
-      // 重複チェック失敗は silent — 送信時の UNIQUE 制約で最終検証
-      setEmailConflict(false);
-    }
+    await checkEmail(email);
   }
 
   // IME 自動カナ入力（既存データで初期化）
@@ -355,41 +359,40 @@ export function CustomerEditForm({
               onBlur={handleEmailBlur}
               disabled={isPending}
               aria-invalid={
-                fields.email.errors || emailConflict ? true : undefined
+                fields.email.errors || emailBlockedByGuestDuplicate
+                  ? true
+                  : undefined
               }
-              aria-describedby={
-                fields.email.errors
-                  ? fields.email.errorId
-                  : emailConflict
-                    ? `${fields.email.id}-conflict`
-                    : showSocialLinkWarning
-                      ? `${fields.email.id}-social-warning`
-                      : undefined
-              }
+              aria-describedby={emailDescribedBy}
             />
             {fields.email.errors && (
               <p id={fields.email.errorId} className="text-xs text-destructive">
                 {fields.email.errors.join(", ")}
               </p>
             )}
-            {!fields.email.errors && emailConflict && (
+            {!fields.email.errors && emailBlockedByGuestDuplicate && (
               <p
-                id={`${fields.email.id}-conflict`}
+                id={emailDuplicateErrorId}
                 className="text-xs text-destructive"
               >
-                このメールアドレスは既に他の顧客で使用されています
+                同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。
               </p>
             )}
             {!fields.email.errors &&
-              !emailConflict &&
-              showSocialLinkWarning && (
+              !emailBlockedByGuestDuplicate &&
+              emailDuplicateCandidate && (
                 <p
-                  id={`${fields.email.id}-social-warning`}
-                  className="text-xs text-warning"
+                  id={emailDuplicateWarningId}
+                  className="text-xs text-warning-strong"
                 >
-                  ソーシャル連携済みの顧客のメールアドレスを変更すると、連携が解除される可能性があります。
+                  同じメールアドレスの顧客候補があります。必要に応じて顧客詳細から確認してください。
                 </p>
               )}
+            {!fields.email.errors && showSocialLinkWarning && (
+              <p id={emailSocialWarningId} className="text-xs text-warning">
+                ソーシャル連携済みの顧客のメールアドレスを変更すると、連携が解除される可能性があります。
+              </p>
+            )}
           </div>
 
           {/* 電話番号 */}
@@ -620,7 +623,7 @@ export function CustomerEditForm({
               isPending={isPending}
               label="顧客情報を更新"
               pendingLabel="更新中..."
-              disabled={emailConflict}
+              disabled={emailBlockedByGuestDuplicate}
             />
           </div>
         </div>

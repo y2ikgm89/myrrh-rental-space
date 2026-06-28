@@ -23,6 +23,7 @@ export type InquiryWithCustomer = InquiryData & {
     lastName: string;
     firstName: string;
     email: string;
+    userId: string | null;
   } | null;
 };
 

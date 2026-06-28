@@ -60,7 +60,8 @@ export type VerifyCalendarTokenResult =
   | { valid: false; reason: "invalid" | "expired" };
 
 function purposeFor(kind: CalendarTokenKind): string {
-  return `${PURPOSE_PREFIX}:${kind}`;
+  // Purpose is stored inside a colon-delimited crypto wire format.
+  return `${PURPOSE_PREFIX}-${kind}`;
 }
 
 /**

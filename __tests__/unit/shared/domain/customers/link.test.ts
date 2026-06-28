@@ -172,35 +172,35 @@ describe("ensureCustomerLinked", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Pattern 2: email 一致 + userId = null → リンク設定（update with userId）
+  // Pattern 2: email 一致 + userId = null → 既存ゲストを自動会員化せず新規会員顧客を作成
   // -----------------------------------------------------------------------
-  test("email 一致 + userId = null → リンク設定", async () => {
+  test("email 一致 + userId = null → 既存ゲストを自動会員化せず新規会員顧客を作成", async () => {
     // Step 1: userId で検索 → 見つからない
-    // Step 2: email で検索 → 未リンク顧客
+    // 旧実装の Step 2: email で検索 → 未リンク顧客
     mockFindUnique
       .mockResolvedValueOnce(null) // Step 1
       .mockResolvedValueOnce(UNLINKED_CUSTOMER); // Step 2
 
-    mockUpdate.mockResolvedValueOnce({
-      ...UNLINKED_CUSTOMER,
-      userId: "user-1",
-    });
-
     const result = await ensureCustomerLinked(USER);
 
-    expect(result).toEqual({
-      customer: { ...UNLINKED_CUSTOMER, userId: "user-1" },
-      isNew: false,
-    });
-    expect(mockFindUnique).toHaveBeenCalledTimes(2);
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
-    expect(mockUpdate).toHaveBeenCalledWith(
+    expect(result).toEqual({ customer: NEW_CUSTOMER, isNew: true });
+    expect(mockFindUnique).toHaveBeenCalledTimes(1);
+    expect(mockFindUnique).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "customer-unlinked" },
-        data: { userId: "user-1" },
+        where: { userId: "user-1" },
       }),
     );
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: "test@example.com",
+          emailCanonical: "test@example.com",
+          userId: "user-1",
+        }),
+      }),
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -208,7 +208,7 @@ describe("ensureCustomerLinked", () => {
   // -----------------------------------------------------------------------
   test("email 一致 + userId = 別ユーザー → 新規作成（乗っ取り防止）", async () => {
     // Step 1: userId で検索 → 見つからない
-    // Step 2: email で検索 → 別ユーザーにリンク済み
+    // 旧実装の Step 2: email で検索 → 別ユーザーにリンク済み
     mockFindUnique
       .mockResolvedValueOnce(null) // Step 1
       .mockResolvedValueOnce(OTHER_USER_CUSTOMER); // Step 2
@@ -216,7 +216,7 @@ describe("ensureCustomerLinked", () => {
     const result = await ensureCustomerLinked(USER);
 
     expect(result).toEqual({ customer: NEW_CUSTOMER, isNew: true });
-    expect(mockFindUnique).toHaveBeenCalledTimes(2);
+    expect(mockFindUnique).toHaveBeenCalledTimes(1);
     // update は呼ばれない（乗っ取り防止）
     expect(mockUpdate).not.toHaveBeenCalled();
     // 新規作成される
@@ -225,6 +225,7 @@ describe("ensureCustomerLinked", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           email: "test@example.com",
+          emailCanonical: "test@example.com",
           lastName: "テスト太郎",
           firstName: "",
           userId: "user-1",
@@ -240,7 +241,7 @@ describe("ensureCustomerLinked", () => {
   // -----------------------------------------------------------------------
   test("email 一致なし → 新規作成", async () => {
     // Step 1: userId で検索 → 見つからない
-    // Step 2: email で検索 → 見つからない
+    // 旧実装の Step 2: email で検索 → 見つからない
     mockFindUnique
       .mockResolvedValueOnce(null) // Step 1
       .mockResolvedValueOnce(null); // Step 2
@@ -248,13 +249,14 @@ describe("ensureCustomerLinked", () => {
     const result = await ensureCustomerLinked(USER);
 
     expect(result).toEqual({ customer: NEW_CUSTOMER, isNew: true });
-    expect(mockFindUnique).toHaveBeenCalledTimes(2);
+    expect(mockFindUnique).toHaveBeenCalledTimes(1);
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           email: "test@example.com",
+          emailCanonical: "test@example.com",
           lastName: "テスト太郎",
           firstName: "",
           userId: "user-1",
@@ -269,12 +271,10 @@ describe("ensureCustomerLinked", () => {
   // -----------------------------------------------------------------------
   test("P2002 競合 → フォールバッククエリで既存顧客を返す", async () => {
     // Step 1: userId で検索 → 見つからない
-    // Step 2: email で検索 → 見つからない
     // Step 3: create → P2002（unique constraint violation）
     // Fallback: userId で再検索 → 見つかる
     mockFindUnique
       .mockResolvedValueOnce(null) // Step 1
-      .mockResolvedValueOnce(null) // Step 2
       .mockResolvedValueOnce(LINKED_CUSTOMER); // Fallback
 
     mockCreate.mockRejectedValueOnce(
@@ -288,7 +288,7 @@ describe("ensureCustomerLinked", () => {
 
     expect(result).toEqual({ customer: LINKED_CUSTOMER, isNew: false });
     expect(mockCreate).toHaveBeenCalledTimes(1);
-    // フォールバックの findUnique（3回目）
-    expect(mockFindUnique).toHaveBeenCalledTimes(3);
+    // フォールバックの findUnique（2回目）
+    expect(mockFindUnique).toHaveBeenCalledTimes(2);
   });
 });

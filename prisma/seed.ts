@@ -85,6 +85,10 @@ function buildSeedLexicalContent(plainText: string) {
   };
 }
 
+function normalizeSeedEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 // Prisma 7 の pg Pool v7 デフォルト（connect 0s）は遅い接続で seed が失敗し得るため、
 // アプリ本番（src/shared/db/prisma.ts）と同じ connectionTimeoutMillis を明示する。
@@ -1169,14 +1173,16 @@ async function seedCustomers() {
   ];
 
   for (const customer of customers) {
-    const existing = await prisma.customer.findUnique({
-      where: { email: customer.email },
+    const emailCanonical = normalizeSeedEmail(customer.email);
+    const existing = await prisma.customer.findFirst({
+      where: { emailCanonical, userId: null },
     });
 
     if (!existing) {
       await prisma.customer.create({
         data: {
           ...customer,
+          emailCanonical,
           totalSpent: customer.totalSpent
             ? new Prisma.Decimal(customer.totalSpent)
             : null,
@@ -1923,11 +1929,15 @@ async function seedDevCustomerAndReservations() {
 
   // 2) Customer を upsert（mypage layout の `ensureCustomerLinked` と互換）
   const customer = await prisma.customer.upsert({
-    where: { email: DEV_EMAIL },
-    update: { userId: user.id },
+    where: { userId: user.id },
+    update: {
+      email: DEV_EMAIL,
+      emailCanonical: normalizeSeedEmail(DEV_EMAIL),
+    },
     create: {
       userId: user.id,
       email: DEV_EMAIL,
+      emailCanonical: normalizeSeedEmail(DEV_EMAIL),
       lastName: "開発",
       firstName: "テスト",
       phoneNumber: "090-0000-0000",

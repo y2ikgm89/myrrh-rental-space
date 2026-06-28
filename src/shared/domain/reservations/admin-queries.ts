@@ -155,6 +155,7 @@ export async function getReservationsQuery(
             companyName: true,
             email: true,
             phoneNumber: true,
+            userId: true,
           },
         },
       },
@@ -227,6 +228,7 @@ export async function getReservationByIdQuery(id: string) {
           companyName: true,
           email: true,
           phoneNumber: true,
+          userId: true,
         },
       },
       coupon: {

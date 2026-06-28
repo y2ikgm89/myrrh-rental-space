@@ -11,6 +11,7 @@ import {
   ADMIN_GATE_COOKIE_NAME,
   isSignedAdminGateToken,
 } from "@/shared/lib/admin-login-gate";
+import { FRAME_SRC_DIRECTIVE_VALUES } from "@/shared/lib/constants/frame-sources";
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
@@ -106,7 +107,7 @@ function buildCsp(
     img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
     connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
-    frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://www.figma.com https://www.instagram.com https://www.google.com;
+    frame-src ${FRAME_SRC_DIRECTIVE_VALUES.join(" ")};
     object-src 'none';
     base-uri 'self';
     form-action 'self';

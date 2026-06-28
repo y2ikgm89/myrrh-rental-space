@@ -84,6 +84,10 @@ const mockCustomerFindUnique = mock<() => Promise<unknown>>(() =>
   Promise.resolve(null),
 );
 
+const mockCustomerFindFirst = mock<() => Promise<unknown>>(() =>
+  Promise.resolve(null),
+);
+
 const mockCustomerFindUniqueOrThrow = mock<() => Promise<unknown>>(() =>
   Promise.resolve({ firstReservationAt: null }),
 );
@@ -118,6 +122,7 @@ const txClient = {
   },
   customer: {
     findUnique: mockCustomerFindUnique,
+    findFirst: mockCustomerFindFirst,
     findUniqueOrThrow: mockCustomerFindUniqueOrThrow,
     create: mockCustomerCreate,
     upsert: mockCustomerUpsert,
@@ -212,6 +217,7 @@ function resetAllMocks() {
   mockCouponUpdate.mockClear();
   mockCouponUpdateMany.mockClear();
   mockCustomerFindUnique.mockClear();
+  mockCustomerFindFirst.mockClear();
   mockCustomerFindUniqueOrThrow.mockClear();
   mockCustomerCreate.mockClear();
   mockCustomerUpsert.mockClear();
@@ -1290,9 +1296,21 @@ describe("createPublicReservationCommand", () => {
     test("顧客が自動作成される", async () => {
       await createPublicReservationCommand(validInput);
 
-      // resolveOrCreateCustomer は findUnique → 未存在なら create（upsert ではない）
-      expect(mockCustomerFindUnique).toHaveBeenCalled();
-      expect(mockCustomerCreate).toHaveBeenCalled();
+      expect(mockCustomerFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { emailCanonical: "taro@example.com", userId: null },
+          select: { id: true },
+        }),
+      );
+      expect(mockCustomerCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            email: "taro@example.com",
+            emailCanonical: "taro@example.com",
+            userId: null,
+          }),
+        }),
+      );
     });
 
     test("userId 付きで予約に userId が設定される", async () => {

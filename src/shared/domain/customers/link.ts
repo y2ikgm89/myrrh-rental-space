@@ -6,6 +6,7 @@ import { sendWelcomeEmail } from "@/shared/lib/email/welcome-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { getAppUrl } from "@/shared/lib/constants";
+import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
 /** ensureCustomerLinked で使用する仮名（LINE ログイン時に name がない場合） */
 export const CUSTOMER_PLACEHOLDER_NAME = "未設定";
@@ -46,29 +47,14 @@ export async function ensureCustomerLinked(user: {
   });
   if (linked) return { customer: linked, isNew: false };
 
-  // 2. email で既存 Customer 検索 → userId 紐づけ
-  const byEmail = await prisma.customer.findUnique({
-    where: { email: user.email },
-    select: CUSTOMER_LINK_SELECT,
-  });
-  if (byEmail) {
-    if (byEmail.userId === null) {
-      // 未リンク → userId を設定してリンク（既存顧客なので isNew=false）
-      const updated = await prisma.customer.update({
-        where: { id: byEmail.id },
-        data: { userId: user.id },
-        select: CUSTOMER_LINK_SELECT,
-      });
-      return { customer: updated, isNew: false };
-    }
-    // 別ユーザーにリンク済み → リンクせず新規作成へ（乗っ取り防止）
-  }
-
-  // 3. 新規作成（競合状態対策付き）
+  // 2. 新規作成（競合状態対策付き）
+  // email は連絡先であり本人性の証明ではないため、同じ email の guest Customer を
+  // 自動で userId にリンクしない。merge は本人確認/管理者操作の別ワークフローで行う。
   try {
     const customer = await prisma.customer.create({
       data: {
         email: user.email,
+        emailCanonical: normalizeEmailForIdentity(user.email),
         lastName: user.name || CUSTOMER_PLACEHOLDER_NAME,
         firstName: "",
         userId: user.id,

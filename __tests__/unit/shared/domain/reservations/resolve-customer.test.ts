@@ -8,6 +8,10 @@ const mockFindUnique = mock<
   (args: Record<string, unknown>) => Promise<{ id: string } | null>
 >(() => Promise.resolve(null));
 
+const mockFindFirst = mock<
+  (args: Record<string, unknown>) => Promise<{ id: string } | null>
+>(() => Promise.resolve(null));
+
 const mockCreate = mock<
   (args: Record<string, unknown>) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "new-customer-id" }));
@@ -26,6 +30,7 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     customer: {
       findUnique: mockFindUnique,
+      findFirst: mockFindFirst,
       create: mockCreate,
       update: mockUpdate,
     },
@@ -46,6 +51,7 @@ import { resolveOrCreateCustomer } from "@/shared/domain/reservations/resolve-cu
 const mockTx = {
   customer: {
     findUnique: mockFindUnique,
+    findFirst: mockFindFirst,
     create: mockCreate,
     update: mockUpdate,
   },
@@ -70,11 +76,13 @@ const BASE_CUSTOMER_DATA = {
 describe("resolveOrCreateCustomer", () => {
   beforeEach(() => {
     mockFindUnique.mockReset();
+    mockFindFirst.mockReset();
     mockCreate.mockReset();
     mockUpdate.mockReset();
 
     // デフォルト: 顧客が見つからない
     mockFindUnique.mockResolvedValue(null);
+    mockFindFirst.mockResolvedValue(null);
     mockCreate.mockResolvedValue({ id: "new-customer-id" });
     mockUpdate.mockResolvedValue({ id: "existing-customer-id" });
   });
@@ -96,6 +104,7 @@ describe("resolveOrCreateCustomer", () => {
           lastName: "田中",
           firstName: "太郎",
           email: "taro@example.com",
+          emailCanonical: "taro@example.com",
           phoneNumber: "090-1234-5678",
           companyName: "テスト株式会社",
           userId: null,
@@ -125,18 +134,11 @@ describe("resolveOrCreateCustomer", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Pattern 3: 既存メール + 未リンク(userId=null) + ゲスト → 変更なし、customerId のみ返す
+  // Pattern 3: 既存 canonical email + 未リンク(userId=null) + ゲスト → 既存ゲスト顧客を返す
   // -----------------------------------------------------------------------
-  test("既存メール + 未リンク + ゲスト → 変更なし、customerId のみ返す", async () => {
-    mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
-      const where = args["where"] as Record<string, unknown> | undefined;
-      if (where?.["email"]) {
-        return Promise.resolve({
-          id: "existing-unlinked-id",
-          userId: null,
-        } as { id: string });
-      }
-      return Promise.resolve(null);
+  test("既存 canonical email + 未リンク + ゲスト → 既存ゲスト顧客を返す", async () => {
+    mockFindFirst.mockResolvedValueOnce({
+      id: "existing-unlinked-id",
     });
 
     const result = await resolveOrCreateCustomer(
@@ -145,24 +147,23 @@ describe("resolveOrCreateCustomer", () => {
     );
 
     expect(result).toBe("existing-unlinked-id");
+    expect(mockFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { emailCanonical: "taro@example.com", userId: null },
+      }),
+    );
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
-  // Pattern 4: 既存メール + 未リンク + ログイン → userId のみ設定（名前は上書きしない）
+  // Pattern 4: 既存メール + 未リンク + ログイン → ゲスト顧客を会員化せずログインユーザー用に新規作成
   // -----------------------------------------------------------------------
-  test("既存メール + 未リンク + ログイン → userId のみ設定", async () => {
+  test("既存メール + 未リンク + ログイン → ゲスト顧客を会員化せずログインユーザー用に新規作成", async () => {
     mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
       const where = args["where"] as Record<string, unknown> | undefined;
       if (where?.["userId"]) {
         return Promise.resolve(null);
-      }
-      if (where?.["email"]) {
-        return Promise.resolve({
-          id: "existing-unlinked-id",
-          userId: null,
-        } as { id: string });
       }
       return Promise.resolve(null);
     });
@@ -172,20 +173,25 @@ describe("resolveOrCreateCustomer", () => {
       mockTx as never,
     );
 
-    expect(result).toBe("existing-unlinked-id");
-    expect(mockUpdate).toHaveBeenCalledTimes(1);
-    expect(mockUpdate).toHaveBeenCalledWith(
+    expect(result).toBe("new-customer-id");
+    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "existing-unlinked-id" },
-        data: { userId: "user-456" },
+        data: expect.objectContaining({
+          email: "taro@example.com",
+          emailCanonical: "taro@example.com",
+          userId: "user-456",
+        }),
       }),
     );
   });
 
   // -----------------------------------------------------------------------
-  // Pattern 5: 既存メール + リンク済み(userId!=null) + ゲスト → 変更なし、customerId のみ返す
+  // Pattern 5: 既存メール + リンク済み(userId!=null) + ゲスト → 既存会員には紐づけずゲスト顧客を新規作成
   // -----------------------------------------------------------------------
-  test("既存メール + リンク済み + ゲスト → 変更なし、customerId のみ返す", async () => {
+  test("既存メール + リンク済み + ゲスト → 既存会員には紐づけずゲスト顧客を新規作成", async () => {
     mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
       const where = args["where"] as Record<string, unknown> | undefined;
       if (where?.["email"]) {
@@ -202,9 +208,17 @@ describe("resolveOrCreateCustomer", () => {
       mockTx as never,
     );
 
-    expect(result).toBe("linked-customer-id");
+    expect(result).toBe("new-customer-id");
     expect(mockUpdate).not.toHaveBeenCalled();
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: "taro@example.com",
+          userId: null,
+        }),
+      }),
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -233,9 +247,9 @@ describe("resolveOrCreateCustomer", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Pattern 7: 既存メール + リンク済み + 異なるユーザー → 変更なし、customerId のみ返す
+  // Pattern 7: 既存メール + リンク済み + 異なるユーザー → メールでは紐づけずログインユーザー用に新規作成
   // -----------------------------------------------------------------------
-  test("既存メール + リンク済み + 異なるユーザー → 変更なし、customerId のみ返す", async () => {
+  test("既存メール + リンク済み + 異なるユーザー → メールでは紐づけずログインユーザー用に新規作成", async () => {
     mockFindUnique.mockImplementation((args: Record<string, unknown>) => {
       const where = args["where"] as Record<string, unknown> | undefined;
       if (where?.["userId"] === "user-different") {
@@ -257,9 +271,17 @@ describe("resolveOrCreateCustomer", () => {
       mockTx as never,
     );
 
-    expect(result).toBe("linked-to-other-customer-id");
+    expect(result).toBe("new-customer-id");
     expect(mockUpdate).not.toHaveBeenCalled();
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          email: "taro@example.com",
+          userId: "user-different",
+        }),
+      }),
+    );
   });
 
   // -----------------------------------------------------------------------

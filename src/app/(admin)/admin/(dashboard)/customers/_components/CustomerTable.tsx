@@ -13,7 +13,10 @@ import {
   TooltipTrigger,
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { CustomerStatusBadge } from "@/admin/components/status-badges";
+import {
+  CustomerIdentityBadge,
+  CustomerStatusBadge,
+} from "@/admin/components/status-badges";
 import {
   CheckboxCell,
   ClickableTableRow,
@@ -104,6 +107,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                         <span className="font-medium">
                           {customer.lastName} {customer.firstName}
                         </span>
+                        <CustomerIdentityBadge userId={customer.userId} />
                         {hasNameMismatch ? (
                           <TooltipProvider>
                             <Tooltip>
