@@ -59,7 +59,7 @@ mock.module("@/shared/domain/events/admin-queries", () => ({
 }));
 
 mock.module("@/shared/domain/events/calendar-sync", () => ({
-  getEventForCalendarSync: mock(async () => null),
+  getEventSlotsForCalendarSync: mock(async () => []),
 }));
 
 mock.module("@/shared/lib/calendar-sync/event-outbound", () => ({

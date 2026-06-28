@@ -18,6 +18,7 @@ export interface ReservationSyncData {
 
 export interface EventSyncData {
   eventId: string;
+  slotId: string;
   title: string;
   /** Lexical plainText 派生（descriptionPlainText カラムから取得） */
   descriptionPlainText: string;

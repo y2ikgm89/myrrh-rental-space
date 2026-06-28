@@ -36,7 +36,7 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { getEventDetailsForEmail } from "@/shared/domain/events/registration-queries";
+import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
@@ -123,8 +123,8 @@ export async function registerForEvent(
 
         fireAndForget(
           (async () => {
-            const event = await getEventDetailsForEmail(
-              result.registration.eventId,
+            const event = await getEventRegistrationDetailsForEmail(
+              result.registration.id,
             );
             if (!event) return;
 
@@ -241,7 +241,9 @@ export async function cancelEventRegistration(
     // 7. Send cancellation email (fire-and-forget)
     fireAndForget(
       (async () => {
-        const event = await getEventDetailsForEmail(registration.eventId);
+        const event = await getEventRegistrationDetailsForEmail(
+          registration.id,
+        );
         if (!event) return;
 
         await Promise.all([

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  EventScheduleMode,
+  EventStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
 import { gallerySchema } from "@/shared/lib/validations/gallery";
@@ -16,7 +19,10 @@ import { gallerySchema } from "@/shared/lib/validations/gallery";
  * - `slots`  は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
  *   （startAt/endAt は datetime-local 文字列 → parseDateTimeLocalAsJst で Date 変換）
  * - sentinel `EVENT_FORM_NONE_VALUE` で `locationId` / `spaceId` の「外部会場」「会場全体」を表現、preprocess で null 化
- * - cross-field refine: registrationDeadline ≤ 最初スロット開始時刻
+ * - cross-field refine:
+ *   - SINGLE_OCCURRENCE はスロット 1 件のみ
+ *   - TIMED_ENTRY はスロット 2 件以上
+ *   - registrationDeadline ≤ 最初スロット開始時刻
  */
 
 /** Radix Select の `value=""` 予約を回避する「未選択」sentinel（会場 / スペース共通）。 */
@@ -100,7 +106,7 @@ const slotFormItemSchema = z.object({
   endAt: z.iso
     .datetime({ local: true, error: "有効な終了日時を入力してください" })
     .transform(parseDateTimeLocalAsJst),
-  capacity: z.number().int().min(0, { error: "定員は0以上です" }),
+  capacity: z.number().int().min(1, { error: "定員は1以上です" }),
 });
 
 /** スロット一覧（JSON 文字列 hidden input で transit）。 */
@@ -163,6 +169,9 @@ const eventFormBaseSchema = z.object({
   locationId: nullableUuidWithSentinel(EVENT_FORM_NONE_VALUE),
   spaceId: nullableUuidWithSentinel(EVENT_FORM_NONE_VALUE),
   status: z.enum(EventStatus, { error: "無効なステータスです" }),
+  scheduleMode: z.enum(EventScheduleMode, {
+    error: "無効な開催方式です",
+  }),
   registrationOpen: booleanFromCheckbox,
   ogpImageUrl: z.preprocess(
     emptyOrNullToNull,
@@ -177,11 +186,34 @@ const eventFormBaseSchema = z.object({
 
 function refineEvent(
   data: {
+    scheduleMode: keyof typeof EventScheduleMode;
     slots: Array<{ startAt: Date }>;
     registrationDeadline?: string | null | undefined;
   },
   ctx: z.RefinementCtx,
 ): void {
+  if (
+    data.scheduleMode === EventScheduleMode.SINGLE_OCCURRENCE &&
+    data.slots.length !== 1
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "単一開催ではスロットを1件だけ登録してください",
+      path: ["slots"],
+    });
+  }
+
+  if (
+    data.scheduleMode === EventScheduleMode.TIMED_ENTRY &&
+    data.slots.length < 2
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "日時選択制ではスロットを2件以上登録してください",
+      path: ["slots"],
+    });
+  }
+
   const firstSlot = data.slots[0];
   if (!firstSlot) return;
 

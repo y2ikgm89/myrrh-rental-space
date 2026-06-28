@@ -42,23 +42,21 @@ test.describe("イベント管理 - 一覧ページ", () => {
     await expect(createButton).toBeVisible();
   });
 
-  test("テーブルまたはカード形式でイベント一覧が表示される", async ({
+  test("seed 由来の単一開催・日時選択制イベントが表示される", async ({
     page,
   }) => {
     await page.goto(urls.adminEvents);
 
-    // テーブル行 / カード / 空状態のいずれか
-    const hasRows = await page
-      .locator("tbody tr, [class*='event-row']")
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const hasEmptyState = await page
-      .getByText(/イベントがありません|データがありません/i)
-      .isVisible()
-      .catch(() => false);
-
-    expect(hasRows || hasEmptyState).toBeTruthy();
+    await expect(
+      page.getByRole("link", {
+        name: /ヨガ＆マインドフルネス体験会/u,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /写真撮影ワークショップ/u }),
+    ).toBeVisible();
+    await expect(page.getByText("単一開催").first()).toBeVisible();
+    await expect(page.getByText("日時選択制").first()).toBeVisible();
   });
 });
 
@@ -100,5 +98,43 @@ test.describe("イベント管理 - 新規作成", () => {
 
     const endTimeInput = page.getByLabel("終了日時");
     await expect(endTimeInput).toBeVisible();
+  });
+
+  test("開催方式を単一開催と日時選択制で切り替えられる", async ({ page }) => {
+    await page.goto("/admin/events/new");
+
+    await expect(page.getByText("開催方式")).toBeVisible();
+    await expect(page.getByText("開催枠")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "スロットを追加" }),
+    ).toHaveCount(0);
+
+    await page.getByRole("button", { name: "日時選択制" }).click();
+
+    await expect(page.getByText("スロット 1")).toBeVisible();
+    await expect(page.getByText("スロット 2")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "スロットを追加" }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "単一開催" }).click();
+
+    await expect(page.getByText("開催枠")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "スロットを追加" }),
+    ).toHaveCount(0);
+    await expect(page.getByText("スロット 2")).toHaveCount(0);
+  });
+
+  test("日時選択制の seed イベント詳細で開催方式と複数枠が見える", async ({
+    page,
+  }) => {
+    await page.goto(urls.adminEvents);
+
+    await page.getByRole("link", { name: /写真撮影ワークショップ/u }).click();
+    await expect(page).toHaveURL(/\/admin\/events\/[^/]+$/u);
+
+    await expect(page.getByText("日時選択制").first()).toBeVisible();
+    await expect(page.getByText(/定員\s*8人/u).first()).toBeVisible();
   });
 });

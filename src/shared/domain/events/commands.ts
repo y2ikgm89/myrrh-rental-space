@@ -16,7 +16,10 @@ import {
   buildParagraphHtml,
 } from "@/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  EventScheduleMode,
+  EventStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
 import type {
   EventTicketInput,
@@ -52,6 +55,7 @@ export interface EventCommandInput {
   locationId?: string | null;
   spaceId?: string | null;
   status: (typeof EventStatus)[keyof typeof EventStatus];
+  scheduleMode: (typeof EventScheduleMode)[keyof typeof EventScheduleMode];
   registrationOpen?: boolean;
   tickets?: readonly EventTicketInput[];
   slots: readonly SlotInput[];
@@ -101,7 +105,30 @@ function parseOptionalDeadline(value: string | null | undefined): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function assertEventScheduleInvariant(data: EventCommandInput): void {
+  if (
+    data.scheduleMode === EventScheduleMode.SINGLE_OCCURRENCE &&
+    data.slots.length !== 1
+  ) {
+    throw new DomainError(
+      "単一開催ではスロットを1件だけ登録してください",
+      "VALIDATION",
+    );
+  }
+
+  if (
+    data.scheduleMode === EventScheduleMode.TIMED_ENTRY &&
+    data.slots.length < 2
+  ) {
+    throw new DomainError(
+      "日時選択制ではスロットを2件以上登録してください",
+      "VALIDATION",
+    );
+  }
+}
+
 export async function createEventCommand(data: EventCommandInput) {
+  assertEventScheduleInvariant(data);
   const slug = await ensureUniqueSlug(data.slug);
 
   const event = await prisma.$transaction(async (tx) => {
@@ -124,6 +151,7 @@ export async function createEventCommand(data: EventCommandInput) {
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
         status: data.status,
+        scheduleMode: data.scheduleMode,
         registrationOpen: normalizeRegistrationOpen(
           data.status,
           data.registrationOpen,
@@ -152,6 +180,7 @@ export async function createEventCommand(data: EventCommandInput) {
 }
 
 export async function updateEventCommand(id: string, data: EventCommandInput) {
+  assertEventScheduleInvariant(data);
   const existing = await prisma.event.findFirst({
     where: { id, deletedAt: null },
     select: {
@@ -200,6 +229,7 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
         status: data.status,
+        scheduleMode: data.scheduleMode,
         registrationOpen: normalizeRegistrationOpen(
           data.status,
           data.registrationOpen,
@@ -362,6 +392,7 @@ export async function duplicateEventCommand(id: string) {
       metaDescription: true,
       metaKeywords: true,
       registrationDeadline: true,
+      scheduleMode: true,
       addressDetail: true,
       locationId: true,
       spaceId: true,
@@ -411,6 +442,7 @@ export async function duplicateEventCommand(id: string) {
         locationId: source.locationId,
         spaceId: source.spaceId,
         status: EventStatus.DRAFT,
+        scheduleMode: source.scheduleMode,
         registrationOpen: false,
         publishedAt: null,
       },
@@ -512,6 +544,7 @@ export async function upsertEventFromCalendar(data: {
         descriptionPlainText,
         addressDetail: data.location ?? null,
         status: EventStatus.DRAFT,
+        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
         firstSlotStartAt: data.startTime,
         lastSlotEndAt: data.endTime,
       },
@@ -522,7 +555,7 @@ export async function upsertEventFromCalendar(data: {
         eventId: created.id,
         startAt: data.startTime,
         endAt: data.endTime,
-        capacity: 0,
+        capacity: 1,
         googleCalendarEventId: data.googleCalendarEventId,
       },
     });

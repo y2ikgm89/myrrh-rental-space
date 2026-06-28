@@ -166,4 +166,19 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
       ]),
     ).rejects.toThrow(DomainError);
   });
+
+  test("capacity が 0 の入力は DomainError 'VALIDATION'", async () => {
+    const tx = buildTx({});
+
+    await expect(
+      syncEventTimeSlotsCommand(tx, EVENT_ID, [
+        {
+          startAt: new Date("2026-12-04T10:00:00Z"),
+          endAt: new Date("2026-12-04T11:00:00Z"),
+          capacity: 0,
+        },
+      ]),
+    ).rejects.toThrow(DomainError);
+    expect(tx.eventTimeSlot.create).not.toHaveBeenCalled();
+  });
 });

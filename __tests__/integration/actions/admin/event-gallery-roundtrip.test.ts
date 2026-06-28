@@ -15,7 +15,10 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { asPrismaInputJsonValue } from "@/shared/db/prisma-input-json";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  EventScheduleMode,
+  EventStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -150,6 +153,7 @@ const BASE_INPUT = {
     },
   ] as const,
   status: EventStatus.DRAFT,
+  scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
 } as const;
 
 const SOURCE_EVENT = {
@@ -174,8 +178,15 @@ const SOURCE_EVENT = {
   metaKeywords: null,
   registrationDeadline: null,
   capacity: null,
+  scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
   registrationOpen: false,
-  slots: [],
+  slots: [
+    {
+      startAt: new Date("2026-07-01T01:00:00.000Z"),
+      endAt: new Date("2026-07-01T03:00:00.000Z"),
+      capacity: 10,
+    },
+  ],
   tickets: [],
 };
 

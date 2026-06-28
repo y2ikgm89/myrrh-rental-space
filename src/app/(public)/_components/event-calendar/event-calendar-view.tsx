@@ -70,7 +70,7 @@ function SideDayPanel({
   readonly nowMs: number;
 }) {
   const dayEvents = events.filter((e) =>
-    isSameJSTDay(e.startTime, year, month, selectedDay),
+    eventHasSlotOnJSTDay(e, year, month, selectedDay),
   );
 
   return (
@@ -111,7 +111,7 @@ function InlineDayPanel({
   readonly nowMs: number;
 }) {
   const dayEvents = events.filter((e) =>
-    isSameJSTDay(e.startTime, year, month, selectedDay),
+    eventHasSlotOnJSTDay(e, year, month, selectedDay),
   );
 
   return (
@@ -161,6 +161,17 @@ interface EventCalendarViewProps {
   readonly events: readonly EventCardData[];
 }
 
+function eventHasSlotOnJSTDay(
+  event: EventCardData,
+  year: number,
+  month: number,
+  day: number,
+): boolean {
+  return event.slots.some((slot) =>
+    isSameJSTDay(slot.startTime, year, month, day),
+  );
+}
+
 export function EventCalendarView({ events }: EventCalendarViewProps) {
   const {
     today,
@@ -185,12 +196,12 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
   const days = getCalendarDays(currentYear, currentMonth);
 
   function dayHasEvents(day: number, m: number, y: number): boolean {
-    return events.some((e) => isSameJSTDay(e.startTime, y, m, day));
+    return events.some((e) => eventHasSlotOnJSTDay(e, y, m, day));
   }
 
   function getDayEventTitles(day: number, m: number, y: number): string[] {
     return events
-      .filter((e) => isSameJSTDay(e.startTime, y, m, day))
+      .filter((e) => eventHasSlotOnJSTDay(e, y, m, day))
       .map((e) => e.title);
   }
 

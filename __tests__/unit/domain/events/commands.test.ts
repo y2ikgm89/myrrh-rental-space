@@ -11,6 +11,11 @@ const EventStatus = {
   ARCHIVED: "ARCHIVED",
 } as const;
 
+const EventScheduleMode = {
+  SINGLE_OCCURRENCE: "SINGLE_OCCURRENCE",
+  TIMED_ENTRY: "TIMED_ENTRY",
+} as const;
+
 // ---------------------------------------------------------------------------
 // モック関数（mock.module より前に定義 — TDZ 対策）
 // ---------------------------------------------------------------------------
@@ -234,6 +239,7 @@ const VALID_EVENT_INPUT = {
     },
   ],
   registrationDeadline: null,
+  scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
   tickets: [
     {
       name: "一般",
@@ -903,6 +909,7 @@ describe("duplicateEventCommand", () => {
     metaDescription: null,
     metaKeywords: null,
     registrationDeadline: new Date("2024-06-14T23:59:00Z"),
+    scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
     slots: [
       {
         startAt: new Date("2024-06-15T10:00:00Z"),

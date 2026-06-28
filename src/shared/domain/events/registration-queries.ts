@@ -46,6 +46,12 @@ export async function getEventRegistrations(
         cancelledAt: true,
         attendedAt: true,
         createdAt: true,
+        slot: {
+          select: {
+            startAt: true,
+            endAt: true,
+          },
+        },
       },
     }),
     prisma.eventRegistration.count({ where }),
@@ -99,53 +105,57 @@ export async function getEventCheckInAttendees(eventId: string) {
   };
 }
 
-export async function getRegistrationCount(eventId: string) {
-  const result = await prisma.eventRegistration.aggregate({
-    where: { eventId, status: RegistrationStatus.CONFIRMED },
-    _sum: { quantity: true },
-  });
-  return result._sum.quantity ?? 0;
-}
-
-export async function getEventDetailsForEmail(eventId: string): Promise<{
+export async function getEventRegistrationDetailsForEmail(
+  registrationId: string,
+): Promise<{
   readonly startTime: Date;
   readonly endTime: Date;
   readonly location: string | null;
-  readonly capacity: number | null;
+  readonly capacity: number;
   readonly confirmedCount: number;
 } | null> {
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, deletedAt: null },
+  const registration = await prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
     select: {
-      addressDetail: true,
-      location: { select: { name: true } },
-      space: { select: { name: true } },
-      slots: {
-        select: { startAt: true, endAt: true, capacity: true },
-        orderBy: { startAt: "asc" as const },
-        take: 1,
-      },
-      _count: {
+      id: true,
+      eventId: true,
+      slotId: true,
+      slot: {
         select: {
-          registrations: {
-            where: { status: RegistrationStatus.CONFIRMED },
-          },
+          startAt: true,
+          endAt: true,
+          capacity: true,
+        },
+      },
+      event: {
+        select: {
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
         },
       },
     },
   });
-  if (!event) return null;
-  const firstSlot = event.slots[0];
+  if (!registration) return null;
+
+  const confirmed = await prisma.eventRegistration.aggregate({
+    where: {
+      slotId: registration.slotId,
+      status: RegistrationStatus.CONFIRMED,
+    },
+    _sum: { quantity: true },
+  });
+
   return {
-    startTime: firstSlot?.startAt ?? new Date(0),
-    endTime: firstSlot?.endAt ?? new Date(0),
+    startTime: registration.slot.startAt,
+    endTime: registration.slot.endAt,
     location: formatEventVenue({
-      location: event.location,
-      space: event.space,
-      addressDetail: event.addressDetail,
+      location: registration.event.location,
+      space: registration.event.space,
+      addressDetail: registration.event.addressDetail,
     }),
-    capacity: firstSlot?.capacity ?? null,
-    confirmedCount: event._count.registrations,
+    capacity: registration.slot.capacity,
+    confirmedCount: confirmed._sum.quantity ?? 0,
   };
 }
 
@@ -183,7 +193,7 @@ type CustomerEventRegistrationRow = {
   readonly slot: {
     readonly startAt: Date;
     readonly endAt: Date;
-  } | null;
+  };
   readonly event: {
     readonly id: string;
     readonly title: string;
@@ -206,8 +216,8 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
       id: row.event.id,
       title: row.event.title,
       slug: row.event.slug,
-      startTime: row.slot?.startAt ?? new Date(0),
-      endTime: row.slot?.endAt ?? new Date(0),
+      startTime: row.slot.startAt,
+      endTime: row.slot.endAt,
       status: row.event.status,
       location: formatEventVenue({
         location: row.event.location,
@@ -320,8 +330,8 @@ export async function getEventRegistrationForCalendar(params: {
     id: reg.id,
     eventTitle: reg.event.title,
     customerName: reg.name,
-    startTime: reg.slot?.startAt ?? new Date(0),
-    endTime: reg.slot?.endAt ?? new Date(0),
+    startTime: reg.slot.startAt,
+    endTime: reg.slot.endAt,
     location: formatEventVenue({
       location: reg.event.location,
       space: reg.event.space,

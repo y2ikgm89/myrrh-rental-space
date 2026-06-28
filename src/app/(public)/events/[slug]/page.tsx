@@ -12,11 +12,12 @@ import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { EventJsonLd } from "@/public/components/seo/json-ld";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
+import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
+import { getSlotRegistrationCounts } from "@/shared/domain/events/slot-queries";
 import {
-  getPublishedEventBySlug,
-  isEventRegistrationPastDeadline,
-} from "@/shared/domain/events/public-queries";
-import { getRegistrationCount } from "@/shared/domain/events/registration-queries";
+  buildCurrentPublicEventSlotOptions,
+  derivePublicEventRegistrationState,
+} from "@/shared/domain/events/public-slot-options";
 import {
   formatEventAddress,
   formatEventVenue,
@@ -26,7 +27,6 @@ import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import {
   generateArticleMetadata,
@@ -98,27 +98,31 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  const [registrationCount, turnstileSiteKey, requiredTerms] =
-    await Promise.all([
-      getRegistrationCount(event.id),
-      getTurnstileSiteKey(),
-      getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
-    ]);
+  const [slotInventory, turnstileSiteKey, requiredTerms] = await Promise.all([
+    getSlotRegistrationCounts(event.id),
+    getTurnstileSiteKey(),
+    getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
+  ]);
 
-  const remainingCapacity =
-    event.capacity != null ? event.capacity - registrationCount : null;
-  const isFull = remainingCapacity !== null && remainingCapacity <= 0;
-  const isPastDeadline = isEventRegistrationPastDeadline(event);
-  const canRegister =
-    event.registrationOpen &&
-    event.status === EventStatus.PUBLISHED &&
-    !isFull &&
-    !isPastDeadline;
+  const slotOptions = buildCurrentPublicEventSlotOptions({
+    slots: slotInventory,
+    registrationDeadline: event.registrationDeadline,
+  });
+  const registration = derivePublicEventRegistrationState({
+    eventStatus: event.status,
+    registrationOpen: event.registrationOpen,
+    slots: slotOptions,
+  });
+  const canRegister = registration.kind === "open";
 
   const baseUrl = getBaseUrl();
   const eventUrl = `${baseUrl}/events/${slug}`;
   const startDateIso = new Date(event.startTime).toISOString();
   const endDateIso = new Date(event.endTime).toISOString();
+  const totalCapacity =
+    slotOptions.length > 0
+      ? slotOptions.reduce((sum, slot) => sum + slot.capacity, 0)
+      : null;
 
   const venueName = formatEventVenue({
     location: event.location,
@@ -149,14 +153,6 @@ export default async function EventDetailPage({
     venues.push({ kind: "addressDetail", text: event.addressDetail });
   }
 
-  const registration = canRegister
-    ? ({ kind: "open", remainingCapacity } as const)
-    : isFull
-      ? ({ kind: "full" } as const)
-      : isPastDeadline
-        ? ({ kind: "deadline-passed" } as const)
-        : ({ kind: "closed" } as const);
-
   const resolvedDescriptionHtml = await resolveInternalLinkCards(
     event.descriptionHtml,
   );
@@ -165,7 +161,8 @@ export default async function EventDetailPage({
     startTime: event.startTime,
     endTime: event.endTime,
     venues,
-    capacity: event.capacity ?? null,
+    scheduleMode: event.scheduleMode,
+    slots: slotOptions,
     tickets: event.tickets,
     registration,
     registerAnchorId: REGISTER_ANCHOR_ID,
@@ -214,13 +211,14 @@ export default async function EventDetailPage({
                   offers: {
                     price: event.tickets[0]?.price ?? 0,
                     priceCurrency: "JPY",
-                    availability: isFull ? "SoldOut" : "InStock",
+                    availability:
+                      registration.kind === "full" ? "SoldOut" : "InStock",
                     url: eventUrl,
                   },
                 }
               : {})}
-            {...(event.capacity != null
-              ? { maximumAttendeeCapacity: event.capacity }
+            {...(totalCapacity != null
+              ? { maximumAttendeeCapacity: totalCapacity }
               : {})}
           />
         }
@@ -280,7 +278,8 @@ export default async function EventDetailPage({
                 key={event.id}
                 eventId={event.id}
                 turnstileSiteKey={turnstileSiteKey}
-                remainingCapacity={remainingCapacity}
+                scheduleMode={event.scheduleMode}
+                slots={slotOptions}
                 tickets={event.tickets.map((t) => ({
                   id: t.id,
                   name: t.name,
@@ -293,13 +292,13 @@ export default async function EventDetailPage({
                   title: t.title,
                 }))}
               />
-            ) : isFull ? (
+            ) : registration.kind === "full" ? (
               <EventStatusNotice
                 variant="warning"
                 title="定員に達しました"
                 description="このイベントは満員のため、現在お申し込みいただけません。"
               />
-            ) : isPastDeadline ? (
+            ) : registration.kind === "deadline-passed" ? (
               <EventStatusNotice
                 variant="muted"
                 title="申込受付を終了しました"

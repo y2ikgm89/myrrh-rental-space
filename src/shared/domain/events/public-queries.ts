@@ -23,13 +23,13 @@ const publicEventSelect = {
   registrationDeadline: true,
   addressDetail: true,
   status: true,
+  scheduleMode: true,
   registrationOpen: true,
   location: { select: { id: true, name: true, address: true } },
   space: { select: { id: true, name: true, slug: true } },
   slots: {
-    select: { startAt: true, endAt: true, capacity: true },
+    select: { id: true, startAt: true, endAt: true, capacity: true },
     orderBy: { startAt: "asc" as const },
-    take: 1,
   },
   tickets: {
     where: { isAvailable: true },
@@ -64,11 +64,12 @@ type PublicEventRow = Awaited<
 
 function mapPublicEvent<T extends PublicEventRow>(event: T) {
   const firstSlot = event.slots[0];
+  const lastSlot = event.slots[event.slots.length - 1] ?? firstSlot;
   return {
     ...event,
     gallery: parseGallery(event.gallery),
     startTime: firstSlot?.startAt ?? new Date(0),
-    endTime: firstSlot?.endAt ?? new Date(0),
+    endTime: lastSlot?.endAt ?? new Date(0),
     capacity: firstSlot?.capacity ?? null,
   };
 }
@@ -151,23 +152,6 @@ export async function getUpcomingEventsExcluding(params: {
   );
 
   return toPlainArray([...sameSpace, ...others].map(mapPublicEvent));
-}
-
-/**
- * 申込締切日時の判定（Server Component から呼び出し可能な純関数）。
- *
- * 呼び出し側 SC は事前に `await connection()` 済みであることが前提。
- * ヘルパーに切り出すことで `@eslint-react/purity` の Component 検査を回避する
- * （`Date.now()` 自体はサーバーで動的に評価される）。
- */
-export function isEventRegistrationPastDeadline(event: {
-  readonly registrationDeadline: Date | string | null;
-  readonly startTime: Date | string;
-}): boolean {
-  const deadlineMs = event.registrationDeadline
-    ? new Date(event.registrationDeadline).getTime()
-    : new Date(event.startTime).getTime();
-  return Date.now() > deadlineMs;
 }
 
 export async function getPublishedEventBySlug(slug: string) {

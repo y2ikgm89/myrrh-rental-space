@@ -7,12 +7,12 @@ import { urls } from "../../fixtures";
  * テストシナリオ:
  * 1. `/api/calendar/reservation/[id]` が認証済みリクエストで 200 / text/calendar を返す
  * 2. マイページ予約詳細に `AddToCalendar` セクションが表示される（非キャンセル予約）
- * 3. マイページイベント申込一覧の AddToCalendar 描画（seed に CONFIRMED 申込が無ければ smoke）
+ * 3. マイページイベント申込一覧の AddToCalendar 描画
  *
  * 前提（seed-driven、`prisma/seed.ts` § seedDevCustomerAndReservations 経由）:
  * - dev customer に 4 件 reservation 確実に存在
  * - うち 2 件は非キャンセル状態（COMPLETED+PAID / CONFIRMED+UNPAID）
- * - イベント申込（EventRegistration）は seed なし — 該当 test は早期 return で smoke 完走
+ * - dev customer に CONFIRMED のイベント申込が 1 件存在
  */
 
 test.describe("AddToCalendar UI 表示", () => {
@@ -59,22 +59,23 @@ test.describe("AddToCalendar UI 表示", () => {
   }) => {
     await page.goto("/mypage/events");
 
-    // EventRegistration は seed にないため、ページ自体の描画ゲートのみ。
-    // CONFIRMED 申込が seed に追加された時点で本 test を assertion 化する。
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /ヨガ＆マインドフルネス体験会/u }),
+    ).toBeVisible();
 
-    const confirmedRegistration = page
-      .locator(
-        'article:has([data-variant="success"]), article:has(:text("申込済"))',
-      )
+    const addToCalendar = page
+      .locator('section[aria-labelledby="add-to-calendar-label"]')
       .first();
-
-    if (await confirmedRegistration.isVisible().catch(() => false)) {
-      const addToCalendar = confirmedRegistration.locator(
-        'section[aria-labelledby="add-to-calendar-label"]',
-      );
-      await expect(addToCalendar).toBeVisible();
-    }
+    await expect(addToCalendar).toBeVisible();
+    await expect(
+      addToCalendar.getByRole("link", { name: /google calendar/i }),
+    ).toBeVisible();
+    await expect(
+      addToCalendar.getByRole("link", { name: /outlook/i }),
+    ).toBeVisible();
+    await expect(
+      addToCalendar.getByRole("link", { name: /iCal.*\.ics/i }),
+    ).toBeVisible();
   });
 });
 
@@ -115,6 +116,36 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
     expect(body).toContain("UID:reservation-");
     expect(body).toContain("BEGIN:VTIMEZONE");
     expect(body).toContain("TZID:Asia/Tokyo");
+    expect(body).toContain("END:VCALENDAR");
+  });
+
+  test("イベント申込一覧の ICS リンクは text/calendar を返す", async ({
+    page,
+    request,
+  }) => {
+    await page.goto("/mypage/events");
+
+    await expect(
+      page.getByRole("link", { name: /ヨガ＆マインドフルネス体験会/u }),
+    ).toBeVisible();
+
+    const icsLink = page
+      .locator('section[aria-labelledby="add-to-calendar-label"]')
+      .first()
+      .getByRole("link", { name: /iCal.*\.ics/i });
+    await expect(icsLink).toBeVisible();
+
+    const href = await icsLink.getAttribute("href");
+    expect(href).toMatch(/\/api\/calendar\/event\/[^/?#]+$/u);
+
+    const response = await request.get(href ?? "");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toContain("text/calendar");
+
+    const body = await response.text();
+    expect(body).toContain("BEGIN:VCALENDAR");
+    expect(body).toContain("UID:event-registration-");
+    expect(body).toContain("METHOD:REQUEST");
     expect(body).toContain("END:VCALENDAR");
   });
 });

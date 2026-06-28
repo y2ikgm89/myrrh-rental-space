@@ -525,6 +525,12 @@ export async function SectionRenderer({
         }),
         startTime: e.startTime,
         endTime: e.endTime,
+        slots: e.slots.map((slot) => ({
+          id: slot.id,
+          startTime: slot.startAt,
+          endTime: slot.endAt,
+          capacity: slot.capacity,
+        })),
         price: e.tickets[0]?.price ?? null,
         registrationOpen: e.registrationOpen,
         spaceName: e.space?.name ?? null,

@@ -14,6 +14,13 @@ import { ImageCarousel } from "@/shared/components/media/ImageCarousel";
 import { isImageUrl } from "@/shared/lib/media/detect-media-type";
 import type { GalleryItem } from "@/shared/lib/validations/gallery";
 
+export interface EventCardSlotData {
+  readonly id: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly capacity: number;
+}
+
 export interface EventCardData {
   readonly id: string;
   readonly title: string;
@@ -23,6 +30,7 @@ export interface EventCardData {
   readonly location: string | null;
   readonly startTime: string;
   readonly endTime: string;
+  readonly slots: readonly EventCardSlotData[];
   readonly price: number | null;
   readonly registrationOpen: boolean;
   readonly spaceName: string | null;
@@ -78,13 +86,16 @@ function EventMeta({
   readonly event: EventCardData;
   readonly iconSize: string;
 }) {
-  const start = new Date(event.startTime);
-  const end = new Date(event.endTime);
+  const firstSlot = event.slots[0];
+  const start = new Date(firstSlot?.startTime ?? event.startTime);
+  const end = new Date(firstSlot?.endTime ?? event.endTime);
   return (
     <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
         <IconCalendar className={cn(iconSize, "shrink-0")} aria-hidden="true" />
-        {formatTime(start)} – {formatTime(end)}
+        {event.slots.length > 1
+          ? `${String(event.slots.length)}枠`
+          : `${formatTime(start)} – ${formatTime(end)}`}
       </span>
       {event.location ? (
         <span className="inline-flex items-center gap-1.5">

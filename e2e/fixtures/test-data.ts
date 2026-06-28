@@ -52,3 +52,9 @@ export const urls = {
   adminTermsTrash: "/admin/terms/trash",
   adminTermsAgreements: "/admin/terms/agreements",
 } as const;
+
+/** Event seed contract used by public/admin/customer E2E specs. */
+export const eventFixtures = {
+  singleOccurrenceSlug: "yoga-mindfulness-workshop",
+  timedEntrySlug: "photography-workshop",
+} as const;

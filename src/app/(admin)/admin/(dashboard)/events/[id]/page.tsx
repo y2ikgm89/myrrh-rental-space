@@ -16,6 +16,7 @@ import { EventStatusBadge } from "@/admin/components/status-badges";
 import { Badge, Button } from "@/admin/components/ui";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { getEventScheduleModeLabel } from "@/shared/domain/events/schedule-mode";
 import { loadAdminEventRegistrationsSearchParams } from "@/shared/lib/nuqs";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import type { Metadata } from "next";
@@ -64,6 +65,8 @@ export default async function EventDetailPage({
     cancelledAt: r.cancelledAt?.toISOString() ?? null,
     attendedAt: r.attendedAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),
+    slotStartAt: r.slot.startAt.toISOString(),
+    slotEndAt: r.slot.endAt.toISOString(),
   }));
 
   const confirmedCount = registrationPage.confirmedCount;
@@ -123,6 +126,10 @@ export default async function EventDetailPage({
             value={<EventStatusBadge status={event.status} />}
           />
           <DetailField
+            label="開催方式"
+            value={getEventScheduleModeLabel(event.scheduleMode)}
+          />
+          <DetailField
             label="参加登録"
             value={event.registrationOpen ? "受付中" : "受付停止"}
           />
@@ -132,12 +139,22 @@ export default async function EventDetailPage({
       <DetailSection title="日時・会場">
         <div className="grid gap-4 sm:grid-cols-2">
           <DetailField
-            label="開始日時"
-            value={formatDateTimeShort(event.slots[0]?.startAt ?? null)}
-          />
-          <DetailField
-            label="終了日時"
-            value={formatDateTimeShort(event.slots[0]?.endAt ?? null)}
+            label="タイムスロット"
+            className="sm:col-span-2"
+            value={
+              event.slots.length > 0 ? (
+                <ul className="space-y-1.5">
+                  {event.slots.map((slot) => (
+                    <li key={slot.id}>
+                      {formatDateTimeShort(slot.startAt)} -{" "}
+                      {formatDateTimeShort(slot.endAt)} / 定員 {slot.capacity}人
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                "-"
+              )
+            }
           />
           <DetailField
             label="会場"
@@ -157,14 +174,6 @@ export default async function EventDetailPage({
 
       <DetailSection title="詳細">
         <div className="grid gap-4 sm:grid-cols-2">
-          <DetailField
-            label="定員"
-            value={
-              (event.slots[0]?.capacity ?? null) !== null
-                ? `${event.slots[0]?.capacity}人`
-                : "-"
-            }
-          />
           <DetailField
             label="料金"
             value={

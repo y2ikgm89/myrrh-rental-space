@@ -19,11 +19,19 @@ function isInJSTMonth(iso: string, year: number, month: number): boolean {
   return parts.year === year && parts.month === month;
 }
 
+function eventHasSlotInJSTMonth(
+  event: EventCardData,
+  year: number,
+  month: number,
+): boolean {
+  return event.slots.some((slot) => isInJSTMonth(slot.startTime, year, month));
+}
+
 export function EventListView({ events }: EventListViewProps) {
   const { year, month, nowMs, prev, next, goToday, jump } = useCalendarMonth();
 
   const monthEvents = events.filter((e) =>
-    isInJSTMonth(e.startTime, year, month),
+    eventHasSlotInJSTMonth(e, year, month),
   );
   const monthLabel = formatMonthYear(new Date(year, month, 1));
 

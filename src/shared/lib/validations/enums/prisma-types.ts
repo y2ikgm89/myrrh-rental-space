@@ -51,6 +51,7 @@ export {
   AnnouncementBarDesignStyle,
   InstagramMediaType,
   EventStatus,
+  EventScheduleMode,
   RegistrationStatus,
   AuditAction,
   EditorCommentStatus,

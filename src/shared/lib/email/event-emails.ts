@@ -339,11 +339,6 @@ export async function sendEventCancelledToAllParticipants(
       addressDetail: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
-      slots: {
-        select: { startAt: true, endAt: true },
-        orderBy: { startAt: "asc" as const },
-        take: 1,
-      },
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
@@ -352,6 +347,9 @@ export async function sendEventCancelledToAllParticipants(
           email: true,
           quantity: true,
           icsSequence: true,
+          slot: {
+            select: { startAt: true, endAt: true },
+          },
         },
       },
     },
@@ -359,19 +357,12 @@ export async function sendEventCancelledToAllParticipants(
 
   if (!event) return;
 
-  const firstSlot = event.slots[0];
-  const startTime = firstSlot?.startAt ?? new Date(0);
-  const endTime = firstSlot?.endAt ?? new Date(0);
-
   const venueDisplay = formatEventVenue({
     location: event.location,
     space: event.space,
     addressDetail: event.addressDetail,
   });
 
-  const eventDate = format(startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
   // event の updatedAt を idempotency key に混ぜることで、24h 内に同一イベントを
   // 再キャンセル相当の更新があっても payload 差異で Resend が silent drop しない。
   const eventUpdatedAt = event.updatedAt.getTime();
@@ -390,6 +381,11 @@ export async function sendEventCancelledToAllParticipants(
 
   const results = await Promise.allSettled(
     recipients.map((registration) => {
+      const startTime = registration.slot.startAt;
+      const endTime = registration.slot.endAt;
+      const eventDate = format(startTime, "yyyy年M月d日 (EEEE)", {
+        locale: ja,
+      });
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {
@@ -477,11 +473,6 @@ export async function sendEventUpdatedToAllParticipants(
       addressDetail: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
-      slots: {
-        select: { startAt: true, endAt: true },
-        orderBy: { startAt: "asc" as const },
-        take: 1,
-      },
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
@@ -490,16 +481,15 @@ export async function sendEventUpdatedToAllParticipants(
           email: true,
           quantity: true,
           icsSequence: true,
+          slot: {
+            select: { startAt: true, endAt: true },
+          },
         },
       },
     },
   });
 
   if (!event) return;
-
-  const firstSlot = event.slots[0];
-  const newStartTime = firstSlot?.startAt ?? new Date(0);
-  const newEndTimeDate = firstSlot?.endAt ?? new Date(0);
 
   const venueDisplay = formatEventVenue({
     location: event.location,
@@ -510,10 +500,6 @@ export async function sendEventUpdatedToAllParticipants(
   const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
     locale: ja,
   });
-  const newEventDate = format(newStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
-    locale: ja,
-  });
-  const newEndTime = format(newEndTimeDate, "HH:mm", { locale: ja });
   const oldStartTimestamp = oldStartTime.getTime();
   // 同一 oldStartTime のまま他のフィールド (タイトル/場所/etc.) のみ更新されても
   // idempotency key を分離するため event.updatedAt も混ぜる。event-cancelled と対称。
@@ -533,6 +519,12 @@ export async function sendEventUpdatedToAllParticipants(
 
   const results = await Promise.allSettled(
     recipients.map((registration) => {
+      const newStartTime = registration.slot.startAt;
+      const newEndTimeDate = registration.slot.endAt;
+      const newEventDate = format(newStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
+        locale: ja,
+      });
+      const newEndTime = format(newEndTimeDate, "HH:mm", { locale: ja });
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {

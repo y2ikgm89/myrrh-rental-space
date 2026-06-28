@@ -21,8 +21,16 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { registerForEvent } from "@/public/actions/event-registration";
 import type { z } from "zod";
 import type { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
-import { formatEventPrice } from "@/public/lib/format-event-date";
+import {
+  formatEventDateTimeRange,
+  formatEventPrice,
+} from "@/public/lib/format-event-date";
 import type { EventTicketOption } from "@/shared/domain/events/ticket-types";
+import {
+  shouldExposePublicEventSlotSelector,
+  type PublicEventScheduleMode,
+  type PublicEventSlotOption,
+} from "@/shared/domain/events/public-slot-options";
 import { cn } from "@/shared/lib/cn";
 import {
   TermsConsentChecklist,
@@ -32,7 +40,8 @@ import {
 interface EventRegistrationFormProps {
   readonly eventId: string;
   readonly turnstileSiteKey: string | null;
-  readonly remainingCapacity: number | null;
+  readonly scheduleMode: PublicEventScheduleMode;
+  readonly slots: readonly PublicEventSlotOption[];
   readonly tickets: readonly EventTicketOption[];
   readonly requiredTerms?: readonly ConsentTerm[];
 }
@@ -40,10 +49,14 @@ interface EventRegistrationFormProps {
 export function EventRegistrationForm({
   eventId,
   turnstileSiteKey,
-  remainingCapacity,
+  scheduleMode,
+  slots,
   tickets,
   requiredTerms = [],
 }: EventRegistrationFormProps): ReactElement {
+  const firstAvailableSlot = slots.find((slot) => slot.status === "available");
+  const initialSlotId = firstAvailableSlot?.id ?? slots[0]?.id ?? "";
+  const [selectedSlotId, setSelectedSlotId] = useState<string>(initialSlotId);
   const [selectedTicketId, setSelectedTicketId] = useState<string>(
     tickets[0]?.id ?? "",
   );
@@ -78,6 +91,7 @@ export function EventRegistrationForm({
       lastResult,
       defaultValue: {
         eventId,
+        slotId: initialSlotId,
         ticketId: tickets[0]?.id ?? "",
         quantity: 1,
       },
@@ -131,16 +145,28 @@ export function EventRegistrationForm({
 
   const formErrorMessage =
     form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
+  const selectedSlot =
+    slots.find((slot) => slot.id === selectedSlotId) ?? firstAvailableSlot;
+  const selectedRemainingCapacity = selectedSlot?.remaining ?? null;
+  const showSlotSelector = shouldExposePublicEventSlotSelector({
+    scheduleMode,
+    slots,
+  });
+  const quantityMax =
+    selectedRemainingCapacity !== null
+      ? Math.max(1, Math.min(selectedRemainingCapacity, 10))
+      : 10;
+  const canSubmitSelectedSlot = selectedSlot?.status === "available";
 
   return (
     <section aria-label="参加申込" className="space-y-4">
       <div className="space-y-1">
         <Heading level={2}>参加申込</Heading>
-        {remainingCapacity !== null ? (
+        {selectedRemainingCapacity !== null ? (
           <p className="text-sm text-muted-foreground">
-            現在の残り枠:{" "}
+            {showSlotSelector ? "選択中の残り枠" : "残り枠"}:{" "}
             <span className="font-medium text-foreground">
-              {String(remainingCapacity)} 名
+              {String(selectedRemainingCapacity)} 名
             </span>
           </p>
         ) : null}
@@ -152,6 +178,11 @@ export function EventRegistrationForm({
         className="space-y-6 border border-border p-6 sm:p-8"
       >
         <input type="hidden" name={fields.eventId.name} value={eventId} />
+        <input
+          type="hidden"
+          name={fields.slotId.name}
+          value={selectedSlot?.id ?? ""}
+        />
         <input
           type="hidden"
           name={fields.ticketId.name}
@@ -170,6 +201,61 @@ export function EventRegistrationForm({
             value={id}
           />
         ))}
+
+        {showSlotSelector && (
+          <fieldset className="space-y-3">
+            <legend className="text-sm font-medium text-foreground">
+              参加日時を選択
+            </legend>
+            <div className="space-y-2">
+              {slots.map((slot) => {
+                const id = `slot-option-${slot.id}`;
+                const isSelected = selectedSlot?.id === slot.id;
+                const isDisabled = slot.status !== "available";
+                return (
+                  <label
+                    key={slot.id}
+                    htmlFor={id}
+                    className={cn(
+                      "flex min-h-11 cursor-pointer items-center justify-between gap-3 border p-4",
+                      isSelected
+                        ? "border-accent bg-accent/5"
+                        : "border-border hover:border-foreground/30",
+                      isDisabled && "cursor-not-allowed opacity-55",
+                    )}
+                  >
+                    <span className="flex items-center gap-3">
+                      <input
+                        id={id}
+                        type="radio"
+                        name="slot-selector"
+                        value={slot.id}
+                        checked={isSelected}
+                        disabled={isDisabled}
+                        onChange={() => setSelectedSlotId(slot.id)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm font-medium text-foreground">
+                        {formatEventDateTimeRange(slot.startTime, slot.endTime)}
+                      </span>
+                    </span>
+                    <SlotAvailabilityText slot={slot} />
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
+        {fields.slotId.errors !== undefined &&
+          fields.slotId.errors.length > 0 && (
+            <p
+              className="text-sm text-destructive"
+              role="alert"
+              id={fields.slotId.errorId}
+            >
+              {fields.slotId.errors[0]}
+            </p>
+          )}
 
         {tickets.length > 1 && (
           <fieldset className="space-y-3">
@@ -268,7 +354,7 @@ export function EventRegistrationForm({
           label="参加人数"
           required
           min={1}
-          max={remainingCapacity ?? 10}
+          max={quantityMax}
           {...(fields.quantity.errors?.[0] !== undefined && {
             error: fields.quantity.errors[0],
           })}
@@ -317,7 +403,7 @@ export function EventRegistrationForm({
 
         <Button
           type="submit"
-          disabled={isPending || !allTermsAgreed}
+          disabled={isPending || !allTermsAgreed || !canSubmitSelectedSlot}
           className="w-full sm:w-auto"
         >
           {isPending ? "送信中..." : "申し込む"}
@@ -325,4 +411,27 @@ export function EventRegistrationForm({
       </form>
     </section>
   );
+}
+
+function SlotAvailabilityText({
+  slot,
+}: {
+  readonly slot: PublicEventSlotOption;
+}): ReactElement {
+  switch (slot.status) {
+    case "available":
+      return (
+        <span className="shrink-0 text-sm text-accent">
+          残り {String(slot.remaining)} 名
+        </span>
+      );
+    case "sold-out":
+      return (
+        <span className="shrink-0 text-sm text-muted-foreground">満席</span>
+      );
+    case "deadline-passed":
+      return (
+        <span className="shrink-0 text-sm text-muted-foreground">締切</span>
+      );
+  }
 }

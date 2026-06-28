@@ -46,7 +46,7 @@ mock.module("@/shared/domain/events/calendar-sync", () => ({
   saveEventGoogleCalendarEventId: mockSave,
   clearEventGoogleCalendarEventId: mockClear,
   markEventCalendarSyncError: mockMarkError,
-  getEventForCalendarSync: mockGetForSync,
+  getEventSlotsForCalendarSync: mockGetForSync,
 }));
 
 // =============================================================================
@@ -66,6 +66,7 @@ import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 
 const baseEventData: EventSyncData = {
   eventId: "event-id-001",
+  slotId: "slot-id-001",
   title: "テストイベント",
   descriptionPlainText: "イベントの説明文です。",
   startTime: new Date("2026-05-01T10:00:00+09:00"),
@@ -112,7 +113,7 @@ describe("syncEventToCalendar", () => {
     expect(mockSave).toHaveBeenCalledTimes(1);
     expect(mockSave).toHaveBeenCalledWith(
       expect.objectContaining({
-        eventId: "event-id-001",
+        slotId: "slot-id-001",
         googleCalendarEventId: "gcal-event-abc",
       }),
     );
@@ -240,7 +241,11 @@ describe("deleteEventCalendarSync", () => {
     expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(mockDelete).toHaveBeenCalledWith("gcal-event-to-delete");
     expect(mockClear).toHaveBeenCalledTimes(1);
-    expect(mockClear).toHaveBeenCalledWith("event-id-001");
+    expect(mockClear).toHaveBeenCalledWith(
+      expect.objectContaining({
+        googleCalendarEventId: "gcal-event-to-delete",
+      }),
+    );
   });
 
   test("GCal disabled → no-op { success: true }", async () => {
