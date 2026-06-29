@@ -21,6 +21,8 @@ import {
 
 /** フォームで扱うスロット 1 件（datetime-local 文字列形式）。JSON hidden input で transit。 */
 export type SlotFormItem = {
+  /** React key 用。hidden input で送信する永続データからは除外する。 */
+  clientKey: string;
   /** 既存スロットの更新時に指定。新規スロットは undefined。 */
   id?: string;
   /** datetime-local 形式 "YYYY-MM-DDTHH:mm" */
@@ -47,6 +49,13 @@ const EVENT_SCHEDULE_MODE_VALUES = [
   EventScheduleMode.TIMED_ENTRY,
 ] as const;
 
+let nextClientSlotKey = 0;
+
+export function createSlotClientKey(): string {
+  nextClientSlotKey += 1;
+  return `client-slot-${String(nextClientSlotKey)}`;
+}
+
 function isEventScheduleModeValue(
   value: string,
 ): value is EventScheduleModeValue {
@@ -54,7 +63,12 @@ function isEventScheduleModeValue(
 }
 
 function emptySlot(): SlotFormItem {
-  return { startAt: "", endAt: "", capacity: 1 };
+  return {
+    clientKey: createSlotClientKey(),
+    startAt: "",
+    endAt: "",
+    capacity: 1,
+  };
 }
 
 export function EventScheduleFields({
@@ -133,7 +147,10 @@ export function EventScheduleFields({
         )}
 
         {displayedSlots.map((slot, i) => (
-          <div key={slot.id ?? i} className="rounded-md border p-3 space-y-3">
+          <div
+            key={slot.id ?? slot.clientKey}
+            className="rounded-md border p-3 space-y-3"
+          >
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">
                 {isTimedEntry ? `スロット ${String(i + 1)}` : "開催枠"}

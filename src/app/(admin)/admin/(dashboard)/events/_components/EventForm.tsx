@@ -30,7 +30,11 @@ import type {
   getSpacesForEvent,
 } from "@/shared/domain/events/admin-queries";
 import { EventBasicFields } from "./EventBasicFields";
-import { EventScheduleFields, type SlotFormItem } from "./EventScheduleFields";
+import {
+  EventScheduleFields,
+  createSlotClientKey,
+  type SlotFormItem,
+} from "./EventScheduleFields";
 import type { EventScheduleModeValue } from "@/shared/domain/events/schedule-mode";
 import { EventLocationSpaceSelector } from "./EventLocationSpaceSelector";
 import { EventPublishFields } from "./EventPublishFields";
@@ -153,12 +157,15 @@ export function EventForm({
     if (event && event.slots.length > 0) {
       return event.slots.map((s) => ({
         id: s.id,
+        clientKey: s.id,
         startAt: formatDateTimeLocalInJst(s.startAt),
         endAt: formatDateTimeLocalInJst(s.endAt),
         capacity: s.capacity,
       }));
     }
-    return [{ startAt: "", endAt: "", capacity: 1 }];
+    return [
+      { clientKey: createSlotClientKey(), startAt: "", endAt: "", capacity: 1 },
+    ];
   });
   const boundAction =
     isEdit && event?.id
@@ -274,7 +281,9 @@ export function EventForm({
       <input
         type="hidden"
         name={fields.slots.name}
-        value={JSON.stringify(slots)}
+        value={JSON.stringify(
+          slots.map(({ clientKey: _clientKey, ...slot }) => slot),
+        )}
       />
       <input
         type="hidden"
