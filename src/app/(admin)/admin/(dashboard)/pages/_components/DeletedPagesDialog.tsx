@@ -41,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/admin/components/ui/table";
-import { restorePage, deletePagePermanently } from "@/admin/actions/page";
+import { restorePage, deletePagePermanently } from "@/admin/actions/pages";
 import type { PageData } from "@/shared/domain/pages/types";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";

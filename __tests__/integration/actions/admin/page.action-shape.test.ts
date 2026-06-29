@@ -103,7 +103,7 @@ const {
   updatePagePublished,
   bulkUpdatePagePublished,
   bulkDeletePages,
-} = await import("@/app/(admin)/admin/(dashboard)/_shared/actions/page");
+} = await import("@/app/(admin)/admin/(dashboard)/_shared/actions/pages");
 
 const SLUG = "about";
 const SLUG_B = "contact";

@@ -338,7 +338,7 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "page.ts",
+    "pages.ts",
   ),
   join(
     SRC_ROOT,
@@ -519,6 +519,42 @@ describe("architecture boundaries", () => {
     const source = readFileSync(NEXT_CONFIG_FILE, "utf8");
 
     expect(source).not.toMatch(/ignoreBuildErrors\s*:\s*true/u);
+  });
+
+  test("admin _shared は App Router special file names を使わない", () => {
+    const adminSharedRoot = join(
+      APP_ROUTE_ROOT,
+      "(admin)",
+      "admin",
+      "(dashboard)",
+      "_shared",
+    );
+    const appRouterSpecialFiles = new Set([
+      "default.ts",
+      "default.tsx",
+      "error.ts",
+      "error.tsx",
+      "layout.ts",
+      "layout.tsx",
+      "loading.ts",
+      "loading.tsx",
+      "not-found.ts",
+      "not-found.tsx",
+      "page.ts",
+      "page.tsx",
+      "route.ts",
+      "route.tsx",
+      "template.ts",
+      "template.tsx",
+    ]);
+    const offenders = collectSourceFiles(adminSharedRoot)
+      .filter((file) =>
+        appRouterSpecialFiles.has(file.split(/[\\/]/u).at(-1) ?? ""),
+      )
+      .map((file) => relative(ROOT, file))
+      .sort();
+
+    expect(offenders).toEqual([]);
   });
 
   // 全 app route file fs traverse + regex で 5s default timeout を超えるため 30s に延長
@@ -1398,7 +1434,7 @@ describe("architecture boundaries", () => {
         "(dashboard)",
         "_shared",
         "actions",
-        "page.ts",
+        "pages.ts",
       ),
       join(
         SRC_ROOT,

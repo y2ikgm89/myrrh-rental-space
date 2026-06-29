@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getPageBySlug } from "@/admin/queries/page";
+import { getPageBySlug } from "@/admin/queries/pages";
 
 type PageProps = {
   params: Promise<{ slug: string }>;

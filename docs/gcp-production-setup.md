@@ -161,6 +161,10 @@ gcloud run jobs add-iam-policy-binding "$MIGRATE_JOB_NAME" \
 gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
   --member="serviceAccount:${BUILD_SA}" \
   --role="roles/iam.serviceAccountUser"
+
+gcloud storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/storage.objectViewer"
 ```
 
 Do not create or download service account keys.
@@ -326,20 +330,41 @@ manually, then create the job, then rerun the full build.
 The repository already has `cloudbuild.yaml`. For production, run Cloud Build
 with required substitutions instead of relying on defaults:
 
+Create the private worker pool once. The production build needs more memory
+than the default Cloud Build pool provides, and `cloudbuild.yaml` points deploys
+to this pool:
+
 ```bash
-gcloud builds submit \
-  --config=cloudbuild.yaml \
-  --substitutions=_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_REPOSITORY="${AR_REPOSITORY}",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${APP_DOMAIN}",_BETTER_AUTH_URL="${APP_DOMAIN}"
+gcloud builds worker-pools create myrrh-deploy-pool \
+  --project="$PROJECT_ID" \
+  --region="$REGION" \
+  --worker-machine-type=e2-highmem-4 \
+  --worker-disk-size=100GB
 ```
 
-`cloudbuild.yaml` sets both of these for user-specified Cloud Build service
-accounts:
+```bash
+SHORT_SHA="$(git rev-parse --short=7 HEAD)"
+
+gcloud builds submit \
+  --region="$REGION" \
+  --config=cloudbuild.yaml \
+  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${APP_DOMAIN}",_BETTER_AUTH_URL="${APP_DOMAIN}"
+```
+
+`cloudbuild.yaml` sets all of these for user-specified Cloud Build service
+accounts and the private worker pool:
 
 ```yaml
 serviceAccount: projects/${PROJECT_ID}/serviceAccounts/${_BUILD_SERVICE_ACCOUNT}
 options:
   logging: CLOUD_LOGGING_ONLY
+  pool:
+    name: projects/${PROJECT_ID}/locations/${_REGION}/workerPools/${_WORKER_POOL}
 ```
+
+Production builds use the Next.js 16 default `next build` path. Do not switch
+deploys to Webpack as a memory workaround; use the private pool so production
+and CI stay on the same bundler path.
 
 After the first successful deploy, prefer fixed Secret Manager versions for
 production rollouts. Update the `_..._SECRET_VERSION` substitutions in the Cloud
@@ -364,7 +389,7 @@ gcloud builds triggers create github \
   --branch-pattern="^main$" \
   --build-config="cloudbuild.yaml" \
   --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
   --ignored-files="docs/**,**/*.md" \
   --include-logs-with-status \
   --no-require-approval
@@ -377,7 +402,7 @@ gcloud builds triggers update github deploy-main \
   --project="$PROJECT_ID" \
   --region="$REGION" \
   --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
   --ignored-files="docs/**,**/*.md" \
   --include-logs-with-status \
   --no-require-approval

@@ -9,7 +9,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { Metadata } from "next";
 import { IconChevronLeft } from "@tabler/icons-react";
-import { getPageBySlug } from "@/admin/queries/page";
+import { getPageBySlug } from "@/admin/queries/pages";
 import { ListPageSeoForm } from "@/admin/components/ListPageSeoForm";
 import { LoadingState } from "@/admin/components/LoadingState";
 

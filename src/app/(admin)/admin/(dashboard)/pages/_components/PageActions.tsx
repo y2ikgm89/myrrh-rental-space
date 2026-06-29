@@ -22,7 +22,7 @@ import {
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import { deletePage, updatePagePublished } from "@/admin/actions/page";
+import { deletePage, updatePagePublished } from "@/admin/actions/pages";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getPagePreviewHref } from "@/shared/lib/preview-routes";

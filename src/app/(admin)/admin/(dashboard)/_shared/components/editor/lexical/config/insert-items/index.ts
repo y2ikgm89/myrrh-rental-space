@@ -24,7 +24,7 @@
 import type { LexicalEditor } from "lexical";
 import type { DialogId } from "../../dialogs/dialog-types";
 import { EMBED_INSERT_ITEMS } from "./embed";
-import { LAYOUT_INSERT_ITEMS } from "./layout";
+import { LAYOUT_INSERT_ITEMS } from "./layout-items";
 import { MEDIA_INSERT_ITEMS } from "./media";
 import { STRUCTURE_INSERT_ITEMS } from "./structure";
 import type {
