@@ -72,7 +72,16 @@ JOBS=(
 
 run_gcloud() {
   if [[ "${DRY_RUN}" == "1" ]]; then
-    echo "[DRY RUN] gcloud $*"
+    local redacted_args=()
+    local arg
+    for arg in "$@"; do
+      if [[ "${arg}" == --headers=Authorization=Bearer* ]]; then
+        redacted_args+=("--headers=Authorization=Bearer [REDACTED]")
+      else
+        redacted_args+=("${arg}")
+      fi
+    done
+    echo "[DRY RUN] gcloud ${redacted_args[*]}"
   else
     gcloud "$@"
   fi
@@ -80,6 +89,10 @@ run_gcloud() {
 
 job_exists() {
   local name="$1"
+  if [[ "${DRY_RUN}" == "1" ]]; then
+    return 1
+  fi
+
   gcloud scheduler jobs describe "${name}" \
     --location="${REGION}" \
     --project="${PROJECT_ID}" \
@@ -101,6 +114,7 @@ upsert_job() {
   echo "▶ ${action}: ${name} (${schedule}) → ${path}"
 
   run_gcloud scheduler jobs "${action}" http "${name}" \
+    --quiet \
     --location="${REGION}" \
     --project="${PROJECT_ID}" \
     --schedule="${schedule}" \
@@ -112,7 +126,8 @@ upsert_job() {
     --max-retry-attempts=3 \
     --min-backoff=30s \
     --max-backoff=600s \
-    --description="${description}"
+    --description="${description}" \
+    --format="value(name)"
 }
 
 # --- 実行 ------------------------------------------------------------------
