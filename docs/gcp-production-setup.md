@@ -79,9 +79,11 @@ export SERVICE_NAME="myrrh-rental-space"
 export AR_REPOSITORY="myrrh-rental-space"
 export PUBLIC_DOMAIN="https://example.com"
 export APP_DOMAIN="https://example.com"
+export TURNSTILE_SITE_KEY="0x..."
 export MIGRATE_JOB_NAME="prisma-migrate"
 export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
 export BUILD_SA="myrrh-rental-space-build@${PROJECT_ID}.iam.gserviceaccount.com"
+export GITHUB_REPOSITORY_RESOURCE="projects/${PROJECT_ID}/locations/${REGION}/connections/github-myrrh-rental-space/repositories/y2ikgm89-myrrh-rental-space"
 export IAP_ADMIN_GROUP="group:myrrh-admins@example.com"
 ```
 
@@ -343,6 +345,52 @@ After the first successful deploy, prefer fixed Secret Manager versions for
 production rollouts. Update the `_..._SECRET_VERSION` substitutions in the Cloud
 Build trigger when rotating a secret. Avoid `latest` in production deploy
 triggers because it makes rollbacks ambiguous.
+
+## Cloud Build production trigger
+
+Use a single push trigger for production deploys. Do not create a pull-request
+deploy trigger. PR validation belongs in GitHub Actions; Cloud Build deploys
+only after code reaches `main`.
+
+Create the trigger:
+
+```bash
+gcloud builds triggers create github \
+  --project="$PROJECT_ID" \
+  --region="$REGION" \
+  --name="deploy-main" \
+  --description="Deploy main to Cloud Run production" \
+  --repository="$GITHUB_REPOSITORY_RESOURCE" \
+  --branch-pattern="^main$" \
+  --build-config="cloudbuild.yaml" \
+  --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
+  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --ignored-files="docs/**,**/*.md" \
+  --include-logs-with-status \
+  --no-require-approval
+```
+
+If the trigger already exists, update it instead:
+
+```bash
+gcloud builds triggers update github deploy-main \
+  --project="$PROJECT_ID" \
+  --region="$REGION" \
+  --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
+  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --ignored-files="docs/**,**/*.md" \
+  --include-logs-with-status \
+  --no-require-approval
+```
+
+Verify:
+
+```bash
+gcloud builds triggers describe deploy-main \
+  --project="$PROJECT_ID" \
+  --region="$REGION" \
+  --format="yaml(name,disabled,serviceAccount,repositoryEventConfig.push.branch,filename,ignoredFiles,includeBuildLogs,substitutions)"
+```
 
 ## Cloud Run service settings
 
