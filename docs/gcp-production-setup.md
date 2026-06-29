@@ -163,6 +163,44 @@ gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
 
 Do not create or download service account keys.
 
+## Default service account cleanup
+
+Do not rely on the Compute Engine default service account for deploys or
+runtime execution. This project uses the dedicated identities above instead.
+
+Verify that the default Compute Engine service account is not attached to
+running resources:
+
+```bash
+export DEFAULT_COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+gcloud run services list \
+  --platform=managed \
+  --format="table(metadata.name,spec.template.spec.serviceAccountName)"
+
+gcloud run jobs list \
+  --format="table(metadata.name,spec.template.spec.template.spec.serviceAccountName)"
+
+gcloud compute instances list \
+  --format="table(name,zone,status,serviceAccounts.email.scope())"
+
+gcloud builds triggers list \
+  --format="table(name,id,disabled,serviceAccount)"
+```
+
+If no active resource depends on the default Compute Engine service account,
+remove its basic `Editor` role:
+
+```bash
+gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${DEFAULT_COMPUTE_SA}" \
+  --role="roles/editor" \
+  --condition=None
+```
+
+At the organization or folder level, also enable the policy constraint that
+prevents automatic role grants to default service accounts for new projects.
+
 ## Secret Manager
 
 Create required secrets. Do not paste secret values into commit history or shell
