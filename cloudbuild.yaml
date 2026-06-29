@@ -3,6 +3,9 @@
 # Usage:
 #   gcloud builds submit --config=cloudbuild.yaml
 #
+# Production setup runbook:
+#   docs/gcp-production-setup.md
+#
 # Required secrets (Secret Manager):
 #   DATABASE_URL, BETTER_AUTH_SECRET, ENCRYPTION_KEY, CRON_SECRET, ADMIN_LOGIN_TOKEN
 #   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
