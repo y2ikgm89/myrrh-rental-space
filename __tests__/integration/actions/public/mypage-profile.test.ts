@@ -62,8 +62,8 @@ mock.module("@/shared/lib/rate-limit", () => ({
 }));
 
 // domain コマンドモック
-const mockUpdateCustomerProfileByUserId = mock(
-  (): Promise<void> => Promise.resolve(),
+const mockUpdateCustomerProfileByUserId = mock((): Promise<void> =>
+  Promise.resolve(),
 );
 
 mock.module("@/shared/domain/customers/commands", () => ({

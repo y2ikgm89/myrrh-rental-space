@@ -23,11 +23,7 @@ import { createEnumGuard, parseString } from "../config/type-guards";
 import { renderLexicalDecorator } from "./decorator-registry";
 
 export type SpotifyContentType =
-  | "track"
-  | "album"
-  | "playlist"
-  | "episode"
-  | "show";
+  "track" | "album" | "playlist" | "episode" | "show";
 
 const SPOTIFY_CONTENT_TYPES: readonly SpotifyContentType[] = [
   "track",

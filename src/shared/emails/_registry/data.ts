@@ -44,11 +44,7 @@ export function isTemplateKey(value: unknown): value is TemplateKey {
 }
 
 export type TemplateCategory =
-  | "reservation"
-  | "event"
-  | "inquiry"
-  | "account"
-  | "system";
+  "reservation" | "event" | "inquiry" | "account" | "system";
 
 export const TEMPLATE_CATEGORY_LABELS: Record<TemplateCategory, string> = {
   reservation: "予約",

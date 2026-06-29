@@ -10,8 +10,7 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/shared/lib/logger";
 
 export type ConvertHtmlToLexicalJsonResult =
-  | { ok: true; json: string }
-  | { ok: false; error: string };
+  { ok: true; json: string } | { ok: false; error: string };
 
 /**
  * HTML 文字列 → Lexical EditorState JSON（環境非依存コア）。

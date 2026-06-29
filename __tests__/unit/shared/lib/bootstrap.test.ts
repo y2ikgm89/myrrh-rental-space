@@ -16,8 +16,8 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 mock.module("server-only", () => ({}));
 
 // bootstrapSystemPagesCommand のモック
-const mockBootstrapSystemPagesCommand = mock(
-  (_db: unknown): Promise<void> => Promise.resolve(),
+const mockBootstrapSystemPagesCommand = mock((_db: unknown): Promise<void> =>
+  Promise.resolve(),
 );
 
 mock.module("@/shared/domain/pages/system-pages-commands", () => ({

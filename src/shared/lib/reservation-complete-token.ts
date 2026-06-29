@@ -26,8 +26,7 @@ interface CompleteTokenPayload {
 }
 
 export type VerifyCompleteTokenResult =
-  | { valid: true; reservationId: string }
-  | { valid: false };
+  { valid: true; reservationId: string } | { valid: false };
 
 /**
  * 完了トークンを生成する。

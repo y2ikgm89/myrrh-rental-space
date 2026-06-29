@@ -53,6 +53,5 @@ export type GbpLocationPayload = {
   readonly regularHours: GbpRegularHours | undefined;
   readonly websiteUri: string | undefined;
   readonly latlng:
-    | { readonly latitude: number; readonly longitude: number }
-    | undefined;
+    { readonly latitude: number; readonly longitude: number } | undefined;
 };

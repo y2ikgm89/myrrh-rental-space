@@ -82,7 +82,7 @@ function getEnvSecretKey(): string | null {
 export function createStripeClient(secretKey: string): AsyncOnlyStripe {
   const client = new Stripe(secretKey, {
     // stripe@22 ピン留め — SDK 更新時は型エラーで次の LatestApiVersion が分かる
-    apiVersion: "2026-05-27.dahlia",
+    apiVersion: "2026-06-24.dahlia",
     typescript: true,
   });
   return {

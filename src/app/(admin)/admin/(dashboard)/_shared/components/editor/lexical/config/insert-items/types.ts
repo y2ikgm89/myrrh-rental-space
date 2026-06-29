@@ -73,9 +73,7 @@ export type TransformInsertItem = InsertItemBase & {
 };
 
 export type InsertItem =
-  | DialogInsertItem
-  | CommandInsertItem
-  | TransformInsertItem;
+  DialogInsertItem | CommandInsertItem | TransformInsertItem;
 
 // =============================================================================
 // Category Labels

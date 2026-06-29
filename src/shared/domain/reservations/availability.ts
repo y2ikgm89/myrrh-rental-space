@@ -22,8 +22,7 @@ import type {
 } from "@/shared/lib/reservation/types";
 
 export type DateBlockedResult =
-  | { blocked: true; reason: string | null }
-  | { blocked: false };
+  { blocked: true; reason: string | null } | { blocked: false };
 
 /**
  * 指定日が臨時休業 / 急な休み（BlockedDate）かを 3 階層 cascade で判定する。

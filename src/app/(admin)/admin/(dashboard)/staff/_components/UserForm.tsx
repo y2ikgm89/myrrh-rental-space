@@ -52,8 +52,7 @@ function isDashboardRoleValue(value: string): value is DashboardRole {
 }
 
 type Props = (
-  | { mode: "create"; user?: never }
-  | { mode: "edit"; user: UserData }
+  { mode: "create"; user?: never } | { mode: "edit"; user: UserData }
 ) & {
   /** 現在ユーザーが付与可能なロール（`getInvitableRoles(currentUser.role)` で取得） */
   editableRoles: readonly Role[];

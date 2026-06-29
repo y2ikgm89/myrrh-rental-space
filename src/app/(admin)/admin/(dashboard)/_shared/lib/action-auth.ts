@@ -31,12 +31,10 @@ import type { MutationError } from "@/shared/lib/mutation-result";
 // =============================================================================
 
 export type AuthResult =
-  | { success: true; user: AdminUser }
-  | { success: false; error: MutationError };
+  { success: true; user: AdminUser } | { success: false; error: MutationError };
 
 export type PermissionResult =
-  | { success: true; user: AdminUser }
-  | { success: false; error: MutationError };
+  { success: true; user: AdminUser } | { success: false; error: MutationError };
 
 // =============================================================================
 // Auth Functions (call inside server actions)

@@ -44,11 +44,7 @@ export type GetCouponsResult = {
  * - `CouponStatusFilter`: URL クエリのフィルター値（"ALL" sentinel 込み）
  */
 export type CouponStatusValue =
-  | "active"
-  | "inactive"
-  | "expired"
-  | "limitReached"
-  | "notStarted";
+  "active" | "inactive" | "expired" | "limitReached" | "notStarted";
 
 export type CouponFilters = {
   status?: CouponStatusValue | undefined;

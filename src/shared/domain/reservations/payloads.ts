@@ -184,8 +184,7 @@ export function calculatePricing(params: {
   settings: Awaited<ReturnType<typeof getReservationSettings>>;
   coupon: ValidatedCoupon;
   spaceDiscount?:
-    | import("@/shared/lib/pricing/types").SpaceDiscountSettings
-    | null;
+    import("@/shared/lib/pricing/types").SpaceDiscountSettings | null;
 }) {
   const priceCalculation = calculateReservationPrice({
     hourlyPrice: params.hourlyPrice,

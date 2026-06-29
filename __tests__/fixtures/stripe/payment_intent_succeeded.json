@@ -1,7 +1,7 @@
 {
   "id": "evt_test_payment_intent_succeeded",
   "object": "event",
-  "api_version": "2026-05-27.dahlia",
+  "api_version": "2026-06-24.dahlia",
   "created": 1717000000,
   "livemode": false,
   "pending_webhooks": 0,

@@ -5,12 +5,7 @@ import type { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import { type CouponStatusType } from "../_lib/coupon-status";
 
 type CouponBadgeVariant =
-  | "default"
-  | "secondary"
-  | "outline"
-  | "success"
-  | "warning"
-  | "destructive";
+  "default" | "secondary" | "outline" | "success" | "warning" | "destructive";
 
 const couponTypeConfig = {
   PERCENTAGE: { label: "%割引", variant: "default" },

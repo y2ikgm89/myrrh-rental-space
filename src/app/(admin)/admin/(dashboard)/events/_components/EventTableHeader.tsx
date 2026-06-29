@@ -6,11 +6,7 @@ import { CheckboxCell, SortableColumnHeader } from "@/admin/components/table";
 import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 
 type EventSortBy =
-  | "startTime"
-  | "endTime"
-  | "createdAt"
-  | "updatedAt"
-  | "title";
+  "startTime" | "endTime" | "createdAt" | "updatedAt" | "title";
 
 type EventTableHeaderProps = {
   allSelected: boolean;

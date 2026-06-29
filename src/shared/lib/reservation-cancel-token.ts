@@ -81,8 +81,7 @@ export interface VerifiedCancelToken {
 }
 
 export type VerifyCancelTokenResult =
-  | VerifiedCancelToken
-  | { valid: false; reason: "invalid" | "expired" };
+  VerifiedCancelToken | { valid: false; reason: "invalid" | "expired" };
 
 /**
  * キャンセルトークンを生成する。

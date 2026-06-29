@@ -1,7 +1,5 @@
 export type PublicEventSlotStatus =
-  | "available"
-  | "sold-out"
-  | "deadline-passed";
+  "available" | "sold-out" | "deadline-passed";
 
 export type PublicEventScheduleMode = "SINGLE_OCCURRENCE" | "TIMED_ENTRY";
 

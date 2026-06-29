@@ -41,11 +41,7 @@ import {
 import { renderLexicalDecorator } from "./decorator-registry";
 
 export type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "ghost"
-  | "link"
-  | "editorial";
+  "primary" | "secondary" | "ghost" | "link" | "editorial";
 export type ButtonSize = "sm" | "md" | "lg";
 export type ButtonAlignment = "left" | "center" | "right";
 

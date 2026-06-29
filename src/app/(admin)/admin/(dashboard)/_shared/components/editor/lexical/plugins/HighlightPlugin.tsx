@@ -42,12 +42,7 @@ import {
 // =============================================================================
 
 type PresetHighlightColor =
-  | "yellow"
-  | "green"
-  | "blue"
-  | "pink"
-  | "orange"
-  | "purple";
+  "yellow" | "green" | "blue" | "pink" | "orange" | "purple";
 
 export type HighlightColor = PresetHighlightColor | "none";
 

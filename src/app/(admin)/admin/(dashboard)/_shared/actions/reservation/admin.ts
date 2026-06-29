@@ -75,8 +75,7 @@ export async function createReservationAction(
           : undefined;
 
       let mutationPayload:
-        | Awaited<ReturnType<typeof createAdminReservationCommand>>
-        | undefined;
+        Awaited<ReturnType<typeof createAdminReservationCommand>> | undefined;
 
       const result = await executeAdminMutationResult({
         resource: "reservation",
@@ -191,8 +190,7 @@ export async function updateReservationAction(
     updateReservationFormSchema,
     async (data) => {
       let mutationPayload:
-        | Awaited<ReturnType<typeof updateAdminReservationCommand>>
-        | undefined;
+        Awaited<ReturnType<typeof updateAdminReservationCommand>> | undefined;
 
       const result = await executeAdminMutationResult({
         resource: "reservation",

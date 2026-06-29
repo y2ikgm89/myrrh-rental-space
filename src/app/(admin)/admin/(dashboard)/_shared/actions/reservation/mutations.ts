@@ -63,8 +63,7 @@ export const updateReservationStatus = async (
   }
 
   let result:
-    | Awaited<ReturnType<typeof updateReservationStatusCommand>>
-    | undefined;
+    Awaited<ReturnType<typeof updateReservationStatusCommand>> | undefined;
 
   return executeAdminMutationResult({
     resource: "reservation",
@@ -211,8 +210,7 @@ export const restoreReservationStatus = async (
   }
 
   let result:
-    | Awaited<ReturnType<typeof restoreReservationStatusCommand>>
-    | undefined;
+    Awaited<ReturnType<typeof restoreReservationStatusCommand>> | undefined;
 
   return executeAdminMutationResult({
     resource: "reservation",
@@ -319,8 +317,7 @@ export const deleteReservation = async (
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   let deleteResult:
-    | Awaited<ReturnType<typeof deleteReservationCommand>>
-    | undefined;
+    Awaited<ReturnType<typeof deleteReservationCommand>> | undefined;
 
   return executeAdminMutationResult({
     resource: "reservation",
@@ -358,8 +355,7 @@ export const restoreReservation = async (
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   let restoreResult:
-    | Awaited<ReturnType<typeof restoreReservationCommand>>
-    | undefined;
+    Awaited<ReturnType<typeof restoreReservationCommand>> | undefined;
 
   return executeAdminMutationResult({
     resource: "reservation",
