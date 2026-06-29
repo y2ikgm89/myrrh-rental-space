@@ -61,8 +61,8 @@ mock.module("@/shared/lib/rate-limit", () => ({
 }));
 
 // domain クエリモック
-const mockGetAccountProviders = mock(
-  (): Promise<string[]> => Promise.resolve(["google", "line"]),
+const mockGetAccountProviders = mock((): Promise<string[]> =>
+  Promise.resolve(["google", "line"]),
 );
 
 mock.module("@/shared/domain/users/queries", () => ({

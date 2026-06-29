@@ -34,12 +34,7 @@ export type Resource =
   | "notification";
 
 export type Action =
-  | "create"
-  | "read"
-  | "update"
-  | "delete"
-  | "publish"
-  | "manage";
+  "create" | "read" | "update" | "delete" | "publish" | "manage";
 
 export const RESOURCE_LABELS: Record<Resource, string> = {
   space: "スペース",

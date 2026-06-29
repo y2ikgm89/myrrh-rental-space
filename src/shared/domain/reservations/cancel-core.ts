@@ -45,8 +45,7 @@ export interface CancellableReservation {
 }
 
 export type CancellationResult =
-  | { success: true }
-  | { success: false; error: string };
+  { success: true } | { success: false; error: string };
 
 export interface ApplyCancellationOptions {
   deadlineHours: number;

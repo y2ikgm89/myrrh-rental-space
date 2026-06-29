@@ -18,8 +18,7 @@ const SENDABLE_STATUSES: ReadonlySet<string> = new Set([
 ]);
 
 export type SenderDomainCheck =
-  | { ok: true }
-  | { ok: false; verifiedDomains: string[] };
+  { ok: true } | { ok: false; verifiedDomains: string[] };
 
 /**
  * 送信元アドレスのドメインが Resend で送信可能かを確認する。

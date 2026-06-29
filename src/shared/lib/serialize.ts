@@ -70,11 +70,13 @@ export type Serialized<T> = T extends Date
       ? {
           // function プロパティは JSON.stringify で除去されるため型レベルでも除外する。
           // Symbol key は keyof T の string|number|symbol union から symbol を弾く。
-          [K in keyof T as K extends symbol
-            ? never
-            : T[K] extends (...args: never[]) => unknown
+          [
+            K in keyof T as K extends symbol
               ? never
-              : K]: Serialized<T[K]>;
+              : T[K] extends (...args: never[]) => unknown
+                ? never
+                : K
+          ]: Serialized<T[K]>;
         }
       : T;
 

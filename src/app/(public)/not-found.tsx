@@ -16,12 +16,7 @@ export const metadata: Metadata = {
 
 const POPULAR_DESTINATIONS: ReadonlyArray<{
   readonly href:
-    | "/spaces"
-    | "/events"
-    | "/blog"
-    | "/news"
-    | "/faq"
-    | "/contact";
+    "/spaces" | "/events" | "/blog" | "/news" | "/faq" | "/contact";
   readonly label: string;
   readonly description: string;
 }> = [

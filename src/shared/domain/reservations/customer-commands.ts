@@ -19,8 +19,7 @@ import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/
 // ---------------------------------------------------------------------------
 
 type CommandResult<T> =
-  | { success: true; payload: T }
-  | { success: false; error: string };
+  { success: true; payload: T } | { success: false; error: string };
 
 type CancelPayload = { reservationId: string };
 type UpdatePayload = { reservationId: string };
@@ -220,8 +219,7 @@ export async function updateCustomerReservation(
     const hours = calculateDurationHours(startDateTime, endDateTime);
 
     const spaceDiscount:
-      | import("@/shared/lib/pricing/types").SpaceDiscountSettings
-      | null =
+      import("@/shared/lib/pricing/types").SpaceDiscountSettings | null =
       space.discountType !== "none" &&
       space.discountValue != null &&
       space.discountValue > 0

@@ -51,8 +51,7 @@ type UsePostEditorOptions = {
   initialCategories?: CategoryOption[] | undefined;
   initialTags?: TagOption[] | undefined;
   onCreateCategory?:
-    | ((name: string) => Promise<CategoryOption | null>)
-    | undefined;
+    ((name: string) => Promise<CategoryOption | null>) | undefined;
   onCreateTag?: ((name: string) => Promise<TagOption | null>) | undefined;
 };
 

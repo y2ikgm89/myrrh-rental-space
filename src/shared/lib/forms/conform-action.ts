@@ -33,8 +33,7 @@ import type { z } from "zod";
  * 認証 / 権限 / domain error / DB エラー全てを `{ ok, error }` に統一する。
  */
 export type ConformHandlerResult =
-  | { readonly ok: true }
-  | { readonly ok: false; readonly error: string };
+  { readonly ok: true } | { readonly ok: false; readonly error: string };
 
 /**
  * Conform Server Action handler 関数のシグネチャ。

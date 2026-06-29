@@ -154,11 +154,7 @@ export const footerLink = {
 
 /** セクション variant の背景色／見出し色を一括管理。 */
 export type SectionVariant =
-  | "default"
-  | "info"
-  | "warning"
-  | "danger"
-  | "success";
+  "default" | "info" | "warning" | "danger" | "success";
 
 export const SECTION_VARIANT_STYLES: Record<
   SectionVariant,

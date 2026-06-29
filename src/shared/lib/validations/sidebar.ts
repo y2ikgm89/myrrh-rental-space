@@ -57,10 +57,7 @@ export type RecentWidget = z.infer<typeof recentWidgetSchema>;
 export type PopularWidget = z.infer<typeof popularWidgetSchema>;
 export type CustomWidget = z.infer<typeof customWidgetSchema>;
 export type SidebarWidget =
-  | SimpleBuiltinWidget
-  | RecentWidget
-  | PopularWidget
-  | CustomWidget;
+  SimpleBuiltinWidget | RecentWidget | PopularWidget | CustomWidget;
 
 // 各 widget の identity（builtin: type / custom: id）は React key の stable ID として
 // 機能するため、重複を禁止する。BlogSidebar / SidebarSection の getWidgetKey と一致。

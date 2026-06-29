@@ -66,8 +66,4 @@ export interface SectionMetadata {
 }
 
 export type SectionCategory =
-  | "hero"
-  | "content"
-  | "list"
-  | "functional"
-  | "media";
+  "hero" | "content" | "list" | "functional" | "media";

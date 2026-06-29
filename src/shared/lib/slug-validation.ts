@@ -17,8 +17,7 @@ export type ContentType = "post" | "news" | "page" | "space";
 
 /** スラッグチェック結果 */
 export type SlugCheckResult =
-  | { available: true }
-  | { available: false; reason: SlugUnavailableReason };
+  { available: true } | { available: false; reason: SlugUnavailableReason };
 
 /** スラッグが使用できない理由 */
 export type SlugUnavailableReason =

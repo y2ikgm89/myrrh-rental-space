@@ -57,8 +57,7 @@ export interface VerifiedCalendarToken {
 }
 
 export type VerifyCalendarTokenResult =
-  | VerifiedCalendarToken
-  | { valid: false; reason: "invalid" | "expired" };
+  VerifiedCalendarToken | { valid: false; reason: "invalid" | "expired" };
 
 function purposeFor(kind: CalendarTokenKind): string {
   // Purpose is stored inside a colon-delimited crypto wire format.

@@ -20,14 +20,7 @@ import type { HeadingTagType } from "@lexical/rich-text";
 import type { ComponentType } from "react";
 
 export type BlockType =
-  | "paragraph"
-  | "h1"
-  | "h2"
-  | "h3"
-  | "h4"
-  | "quote"
-  | "ul"
-  | "ol";
+  "paragraph" | "h1" | "h2" | "h3" | "h4" | "quote" | "ul" | "ol";
 
 const BLOCK_TYPE_VALUES = [
   "paragraph",

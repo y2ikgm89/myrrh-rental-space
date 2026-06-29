@@ -119,8 +119,7 @@ export async function validateTurnstile(
 // =============================================================================
 
 type RateLimitCheckResult =
-  | { success: true }
-  | { success: false; error: string };
+  { success: true } | { success: false; error: string };
 
 /**
  * Server Action 内でレート制限を適用

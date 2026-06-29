@@ -576,8 +576,7 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
       const meta = fieldRegistry.get(schema);
       const dynamicSource = meta?.dynamicSelectSource;
       const dynamicCategoryOptions:
-        | ReadonlyArray<DynamicCategoryOption>
-        | undefined =
+        ReadonlyArray<DynamicCategoryOption> | undefined =
         dynamicSource && dynamicOptions
           ? dynamicOptions[dynamicSource]
           : undefined;

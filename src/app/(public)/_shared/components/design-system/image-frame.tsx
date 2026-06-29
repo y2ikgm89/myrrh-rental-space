@@ -17,12 +17,7 @@ import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 
 type AspectRatio =
-  | "video"
-  | "square"
-  | "portrait"
-  | "wide"
-  | "landscape"
-  | "photo";
+  "video" | "square" | "portrait" | "wide" | "landscape" | "photo";
 
 const aspectClasses = {
   video: "aspect-video",

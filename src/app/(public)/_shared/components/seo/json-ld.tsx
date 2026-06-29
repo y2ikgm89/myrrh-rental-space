@@ -51,10 +51,7 @@ interface ArticleData {
 }
 
 type EventStatusType =
-  | "EventScheduled"
-  | "EventCancelled"
-  | "EventPostponed"
-  | "EventRescheduled";
+  "EventScheduled" | "EventCancelled" | "EventPostponed" | "EventRescheduled";
 
 type EventAttendanceModeType =
   | "OfflineEventAttendanceMode"
@@ -62,10 +59,7 @@ type EventAttendanceModeType =
   | "MixedEventAttendanceMode";
 
 type OfferAvailability =
-  | "InStock"
-  | "SoldOut"
-  | "LimitedAvailability"
-  | "PreOrder";
+  "InStock" | "SoldOut" | "LimitedAvailability" | "PreOrder";
 
 interface EventData {
   name: string;

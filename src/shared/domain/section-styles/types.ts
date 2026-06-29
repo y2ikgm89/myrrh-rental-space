@@ -11,11 +11,7 @@
 // ---------------------------------------------------------------------------
 
 export type SectionStyleBackgroundType =
-  | "default"
-  | "surface"
-  | "muted"
-  | "image"
-  | "gradient";
+  "default" | "surface" | "muted" | "image" | "gradient";
 
 export interface SectionStyleBackground {
   readonly type: SectionStyleBackgroundType;
@@ -25,12 +21,7 @@ export interface SectionStyleBackground {
 }
 
 export type SectionStyleMaxWidth =
-  | "sm"
-  | "md"
-  | "editorial"
-  | "lg"
-  | "xl"
-  | "full";
+  "sm" | "md" | "editorial" | "lg" | "xl" | "full";
 
 export interface SectionStyleContainer {
   readonly maxWidth: SectionStyleMaxWidth;
@@ -47,10 +38,7 @@ export interface SectionStyleTypography {
 }
 
 export type SectionStyleAnimationPreset =
-  | "none"
-  | "fade"
-  | "slide-up"
-  | "scale";
+  "none" | "fade" | "slide-up" | "scale";
 
 export interface SectionStyleAnimation {
   readonly preset: SectionStyleAnimationPreset;

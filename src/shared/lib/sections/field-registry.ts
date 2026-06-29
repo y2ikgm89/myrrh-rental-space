@@ -33,9 +33,7 @@ export type FieldSubGroup = "text" | "media" | "button" | "other";
  * AutoSectionForm が `dynamicOptions[source]` から options を取得する。
  */
 export type DynamicSelectSource =
-  | "postCategories"
-  | "faqCategories"
-  | "locations";
+  "postCategories" | "faqCategories" | "locations";
 
 export interface FieldMeta {
   readonly fieldType: FieldType;
