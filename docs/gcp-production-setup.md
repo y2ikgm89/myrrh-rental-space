@@ -458,6 +458,27 @@ gcloud run services update "$ADMIN_SERVICE_NAME" \
   --iap
 ```
 
+### First-time OAuth client setup
+
+If this is the first Cloud Run direct IAP setup in a project without a Google
+Cloud organization, or if you need to grant access to users outside the
+organization, do the one-time OAuth setup from the Google Cloud console.
+Google's Cloud Run IAP documentation explicitly notes that OAuth clients cannot
+be created programmatically for this first-time setup.
+
+Use the console path:
+
+1. Cloud Run -> `$ADMIN_SERVICE_NAME` -> Security.
+2. Under IAP, click Edit policy.
+3. Click Configure in IAP.
+4. Configure the OAuth consent screen with audience type External.
+5. For fastest setup, choose Auto generate credentials and save.
+
+If the admin URL returns `502` with
+`Empty Google Account OAuth client ID(s)/secret(s).`, IAP is enabled but this
+OAuth setup is still missing. After completing the setup, retry the verification
+commands below.
+
 Grant the IAP service agent permission to invoke the admin Cloud Run service:
 
 ```bash
