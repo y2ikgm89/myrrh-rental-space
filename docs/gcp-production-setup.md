@@ -470,10 +470,13 @@ gcloud run services add-iam-policy-binding "$ADMIN_SERVICE_NAME" \
 Grant admin users through a Google Group, not individual users:
 
 ```bash
-gcloud run services add-iam-policy-binding "$ADMIN_SERVICE_NAME" \
+gcloud iap web add-iam-policy-binding \
+  --resource-type=cloud-run \
+  --service="$ADMIN_SERVICE_NAME" \
   --region="$REGION" \
   --member="$IAP_ADMIN_GROUP" \
-  --role="roles/iap.httpsResourceAccessor"
+  --role="roles/iap.httpsResourceAccessor" \
+  --condition=None
 ```
 
 Operational rule:
