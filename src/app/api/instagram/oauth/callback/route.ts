@@ -27,7 +27,8 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
-import { CACHE_TAGS, getAppUrl } from "@/shared/lib/constants";
+import { getAdminAppUrl } from "@/shared/lib/admin-urls";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 import { jsonError } from "@/shared/lib/route-responses";
 
@@ -184,7 +185,7 @@ export async function GET(request: NextRequest) {
  * 設定ページにリダイレクト
  */
 function redirectToSettings(params: { error?: string; success?: string }) {
-  const settingsUrl = new URL("/admin/settings/integrations", getAppUrl());
+  const settingsUrl = new URL("/admin/settings/integrations", getAdminAppUrl());
   settingsUrl.searchParams.set("tab", "instagram");
 
   if (params.error) {

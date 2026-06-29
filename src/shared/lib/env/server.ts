@@ -6,6 +6,7 @@
  *
  * ## 環境変数の必須/任意ルール
  * - DATABASE_URL, BETTER_AUTH_SECRET: 常に必須
+ * - APP_SURFACE, ADMIN_APP_URL: 本番環境では必須
  * - ENCRYPTION_KEY, CRON_SECRET: 本番環境では必須
  * - その他: 任意（機能が無効化される）
  *
@@ -18,6 +19,10 @@
 import "server-only";
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+
+const noTrailingSlashUrl = z.url().refine((v) => !v.endsWith("/"), {
+  message: "must not end with trailing slash (paths are concatenated)",
+});
 
 /**
  * 本番環境かどうかを判定
@@ -130,6 +135,10 @@ export const serverEnv = createEnv({
     // Database connection pool tuning
     DATABASE_POOL_MAX: z.coerce.number().int().positive().optional(),
 
+    // Deployment surface
+    APP_SURFACE: z.enum(["public", "admin"]).default("admin"),
+    ADMIN_APP_URL: noTrailingSlashUrl.optional(),
+
     // Google Analytics（サービスアカウント JSON — GA4 Data API）
     GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
 
@@ -183,6 +192,8 @@ export const serverEnv = createEnv({
     CRON_SECRET: process.env["CRON_SECRET"],
     ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
+    APP_SURFACE: process.env["APP_SURFACE"],
+    ADMIN_APP_URL: process.env["ADMIN_APP_URL"],
     GOOGLE_APPLICATION_CREDENTIALS_JSON:
       process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
     R2_ACCOUNT_ID: process.env["R2_ACCOUNT_ID"],
@@ -216,6 +227,8 @@ export function validateProductionEnv(): void {
   if (!isProduction()) return;
 
   const requiredInProd = [
+    { name: "APP_SURFACE", value: process.env["APP_SURFACE"] },
+    { name: "ADMIN_APP_URL", value: serverEnv.ADMIN_APP_URL },
     { name: "ENCRYPTION_KEY", value: serverEnv.ENCRYPTION_KEY },
     { name: "CRON_SECRET", value: serverEnv.CRON_SECRET },
     { name: "ADMIN_LOGIN_TOKEN", value: serverEnv.ADMIN_LOGIN_TOKEN },

@@ -14,7 +14,7 @@ import {
   getEmailDeliverySettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
-import { getAdminUrl } from "../constants";
+import { getAdminUrl } from "../admin-urls";
 import { sendEmail } from "./send";
 import type { ContactEmailData, EmailResult } from "./types";
 

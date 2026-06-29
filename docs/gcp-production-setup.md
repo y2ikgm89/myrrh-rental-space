@@ -9,8 +9,8 @@ repository:
 - deploy containers to Cloud Run from Artifact Registry;
 - run Prisma migrations as a Cloud Run Job before deploying the web service;
 - protect admin traffic with Identity-Aware Proxy (IAP) and Google accounts;
-- keep public pages reachable without letting direct Cloud Run URLs bypass the
-  intended edge.
+- keep public pages reachable while admin routes are isolated on a separate
+  IAP-protected Cloud Run service.
 
 Official references:
 
@@ -31,30 +31,36 @@ Official references:
 
 ## Target architecture
 
-Do not enable IAP directly on the current single Cloud Run service if public
-pages must stay public. Cloud Run service-level IAP protects the entire service.
-For this application the clean production target is:
+Cloud Run service-level IAP protects an entire service. Do not enable IAP on
+the public service. The clean production target is:
 
-- one public Cloud Run backend for public routes;
-- one admin Cloud Run backend for admin routes;
-- an external HTTPS Application Load Balancer in front of both backends;
-- IAP enabled only on the admin backend;
-- Cloud Run ingress restricted to `internal-and-cloud-load-balancing` so the
-  `*.run.app` URL cannot bypass the load balancer;
+- one public Cloud Run service for public routes, deployed with
+  `APP_SURFACE=public` and `--allow-unauthenticated`;
+- one admin Cloud Run service for admin routes, deployed with
+  `APP_SURFACE=admin`, `--no-allow-unauthenticated`, and `--iap`;
 - a Google Group or Workspace/Cloud Identity group granted
   `roles/iap.httpsResourceAccessor` for admin access.
 
 Recommended host/path layout:
 
-- `https://example.com/*` -> public backend
-- `https://example.com/admin` -> admin backend with IAP
-- `https://example.com/admin/*` -> admin backend with IAP
-- `https://example.com/admin/api/*` -> admin backend with IAP
-- `https://example.com/api/auth/*` -> admin Better Auth backend with IAP
-- `https://example.com/api/instagram/oauth/*` -> admin backend with IAP
-- `https://example.com/api/google-business-profile/oauth/*` -> admin backend
+- `https://example.com/*` -> public service
+- `https://myrrh-rental-space-admin-...run.app/admin` -> admin service with IAP
+- `https://myrrh-rental-space-admin-...run.app/admin/*` -> admin service with IAP
+- `https://myrrh-rental-space-admin-...run.app/admin/api/*` -> admin service
   with IAP
-- `https://example.com/preview/*` -> admin backend with IAP
+- `https://myrrh-rental-space-admin-...run.app/api/auth/*` -> admin Better Auth
+  service with IAP
+- `https://myrrh-rental-space-admin-...run.app/api/instagram/oauth/*` -> admin
+  service with IAP
+- `https://myrrh-rental-space-admin-...run.app/api/google-business-profile/oauth/*`
+  -> admin service with IAP
+- `https://myrrh-rental-space-admin-...run.app/preview/*` -> admin service with
+  IAP
+
+If a same-domain `/admin` path is required later, add an external HTTPS
+Application Load Balancer and path-route admin traffic to the admin service.
+That is optional for the current recommended setup because Cloud Run direct IAP
+is GA and avoids DNS / edge migration risk.
 
 Keep these public even in production:
 
@@ -76,9 +82,10 @@ export PROJECT_ID="your-gcp-project-id"
 export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 export REGION="asia-northeast1"
 export SERVICE_NAME="myrrh-rental-space"
+export ADMIN_SERVICE_NAME="myrrh-rental-space-admin"
 export AR_REPOSITORY="myrrh-rental-space"
 export PUBLIC_DOMAIN="https://example.com"
-export APP_DOMAIN="https://example.com"
+export ADMIN_DOMAIN="https://myrrh-rental-space-admin-...run.app"
 export TURNSTILE_SITE_KEY="0x..."
 export MIGRATE_JOB_NAME="prisma-migrate"
 export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -87,8 +94,8 @@ export GITHUB_REPOSITORY_RESOURCE="projects/${PROJECT_ID}/locations/${REGION}/co
 export IAP_ADMIN_GROUP="group:myrrh-admins@example.com"
 ```
 
-`PUBLIC_DOMAIN` and `APP_DOMAIN` must not have a trailing slash because the app
-concatenates paths directly.
+`PUBLIC_DOMAIN` and `ADMIN_DOMAIN` must not have a trailing slash because the
+app concatenates paths directly.
 
 ## Enable APIs
 
@@ -103,7 +110,7 @@ gcloud services enable \
   secretmanager.googleapis.com \
   cloudscheduler.googleapis.com \
   iap.googleapis.com \
-  compute.googleapis.com \
+  cloudresourcemanager.googleapis.com \
   iam.googleapis.com
 ```
 
@@ -348,7 +355,7 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 gcloud builds submit \
   --region="$REGION" \
   --config=cloudbuild.yaml \
-  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${APP_DOMAIN}",_BETTER_AUTH_URL="${APP_DOMAIN}"
+  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}"
 ```
 
 `cloudbuild.yaml` sets all of these for user-specified Cloud Build service
@@ -389,7 +396,7 @@ gcloud builds triggers create github \
   --branch-pattern="^main$" \
   --build-config="cloudbuild.yaml" \
   --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
   --ignored-files="docs/**,**/*.md" \
   --include-logs-with-status \
   --no-require-approval
@@ -402,7 +409,7 @@ gcloud builds triggers update github deploy-main \
   --project="$PROJECT_ID" \
   --region="$REGION" \
   --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${APP_DOMAIN},_BETTER_AUTH_URL=${APP_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_ADMIN_LOGIN_TOKEN_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
   --ignored-files="docs/**,**/*.md" \
   --include-logs-with-status \
   --no-require-approval
@@ -419,24 +426,21 @@ gcloud builds triggers describe deploy-main \
 
 ## Cloud Run service settings
 
-For a load-balancer-fronted production service, configure both public and admin
-Cloud Run services with:
+`cloudbuild.yaml` deploys two services from the same image:
+
+- public: `$SERVICE_NAME`, `APP_SURFACE=public`, unauthenticated;
+- admin: `$ADMIN_SERVICE_NAME`, `APP_SURFACE=admin`, Cloud Run direct IAP.
+
+Confirm the runtime service accounts:
 
 ```bash
-gcloud run services update SERVICE_NAME \
+gcloud run services describe "$SERVICE_NAME" \
   --region="$REGION" \
-  --ingress=internal-and-cloud-load-balancing
-```
+  --format="value(spec.template.spec.serviceAccountName)"
 
-This prevents users from bypassing the load balancer through the direct
-`*.run.app` URL.
-
-Use the runtime service account:
-
-```bash
-gcloud run services update SERVICE_NAME \
+gcloud run services describe "$ADMIN_SERVICE_NAME" \
   --region="$REGION" \
-  --service-account="$RUNTIME_SA"
+  --format="value(spec.template.spec.serviceAccountName)"
 ```
 
 Keep `/api/live` as the startup and liveness probe path. It is intentionally DB
@@ -445,12 +449,29 @@ to touch dependencies.
 
 ## IAP admin access
 
+Enable Cloud Run direct IAP on the admin service only:
+
+```bash
+gcloud run services update "$ADMIN_SERVICE_NAME" \
+  --region="$REGION" \
+  --no-allow-unauthenticated \
+  --iap
+```
+
+Grant the IAP service agent permission to invoke the admin Cloud Run service:
+
+```bash
+gcloud run services add-iam-policy-binding "$ADMIN_SERVICE_NAME" \
+  --region="$REGION" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-iap.iam.gserviceaccount.com" \
+  --role="roles/run.invoker"
+```
+
 Grant admin users through a Google Group, not individual users:
 
 ```bash
-gcloud iap web add-iam-policy-binding \
-  --resource-type=backend-services \
-  --service=ADMIN_BACKEND_SERVICE_NAME \
+gcloud run services add-iam-policy-binding "$ADMIN_SERVICE_NAME" \
+  --region="$REGION" \
   --member="$IAP_ADMIN_GROUP" \
   --role="roles/iap.httpsResourceAccessor"
 ```
@@ -460,7 +481,7 @@ Operational rule:
 - staff should use Google accounts;
 - a non-Gmail address is fine only if it is a Google account or managed through
   Google Workspace / Cloud Identity;
-- do not grant `allUsers` or `allAuthenticatedUsers` to the IAP admin backend;
+- do not grant `allUsers` or `allAuthenticatedUsers` to the admin service;
 - remove users by removing them from the Google Group.
 
 ## Cloud Scheduler
@@ -488,20 +509,24 @@ gcloud run services describe "$SERVICE_NAME" \
   --region="$REGION" \
   --format="yaml(status.url,spec.template.spec.serviceAccountName,spec.template.metadata.annotations)"
 
+gcloud run services describe "$ADMIN_SERVICE_NAME" \
+  --region="$REGION" \
+  --format="yaml(status.url,spec.template.spec.serviceAccountName,spec.template.metadata.annotations)"
+
 gcloud run jobs execute prisma-migrate --region="$REGION" --wait
 
 curl -fsS "${PUBLIC_DOMAIN}/api/live"
 curl -fsS "${PUBLIC_DOMAIN}/api/health"
 curl -I "${PUBLIC_DOMAIN}/admin/login"
+curl -I "${ADMIN_DOMAIN}/admin/login"
 ```
 
 Expected results:
 
 - `/api/live` returns 200;
 - `/api/health` returns 200 only when DB and dependencies are healthy;
-- `/admin/login` is not publicly reachable without IAP and the app admin gate;
-- Cloud Run direct `*.run.app` URL is not reachable from the public internet
-  when ingress is restricted to the load balancer;
+- `${PUBLIC_DOMAIN}/admin/login` returns 404 from `APP_SURFACE=public`;
+- `${ADMIN_DOMAIN}/admin/login` is protected by IAP before the app admin gate;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
 
 ## Current repository contract
@@ -512,14 +537,14 @@ The current `cloudbuild.yaml` already handles:
 - Artifact Registry image push;
 - dedicated migrator image;
 - Cloud Run Job update and execution for `prisma migrate deploy`;
-- Cloud Run deploy with service account, probes, env vars, and secrets.
+- public and admin Cloud Run deploys with service account, probes, env vars,
+  secrets, and admin IAP.
 
 The remaining GCP-side production tasks are:
 
 1. create the actual GCP project resources listed above;
 2. create and grant Secret Manager secrets;
-3. create the Application Load Balancer and backend routing;
-4. enable IAP only for the admin backend;
-5. create a Cloud Build trigger with required substitutions and fixed secret
+3. create a Cloud Build trigger with required substitutions and fixed secret
    versions;
-6. run the production verification checks.
+4. grant IAP access to the admin Google Group;
+5. run the production verification checks.

@@ -9,7 +9,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 import { canInviteRole } from "@/shared/lib/admin-roles";
-import { getAppUrl } from "@/shared/lib/constants";
+import { getAdminUrl } from "@/shared/lib/admin-urls";
 import { sendStaffInvitationEmail } from "@/shared/lib/email/system-emails";
 import {
   ErrorCategory,
@@ -143,7 +143,7 @@ async function sendInvitationEmailOrThrow(params: {
   invitationId: string;
   operation: "sendInvitation" | "resendInvitation";
 }): Promise<void> {
-  const setupUrl = `${getAppUrl()}/admin/setup/${params.token}`;
+  const setupUrl = getAdminUrl(`/setup/${params.token}`);
   const emailResult = await sendStaffInvitationEmail({
     to: params.email,
     staffName: params.name ?? params.email,

@@ -36,6 +36,26 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Cross-Origin-Opener-Policy", "same-origin"],
 ];
 
+const PUBLIC_SURFACE_BLOCKED_PATH_PREFIXES = [
+  "/admin",
+  "/preview",
+  "/api/admin",
+  "/api/auth",
+  "/api/instagram/oauth",
+  "/api/google-business-profile/oauth",
+] as const;
+
+function isPathOrSubpath(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isBlockedOnPublicSurface(pathname: string): boolean {
+  if (serverEnv.APP_SURFACE !== "public") return false;
+  return PUBLIC_SURFACE_BLOCKED_PATH_PREFIXES.some((prefix) =>
+    isPathOrSubpath(pathname, prefix),
+  );
+}
+
 function resolveFrameAncestors(pathname: string): string {
   if (pathname.startsWith("/preview/")) {
     return "'self'";
@@ -265,6 +285,10 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
 
   const cancelTransfer = handleGuestCancelTokenTransfer(req);
   if (cancelTransfer) return cancelTransfer;
+
+  if (isBlockedOnPublicSurface(pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
 
   if (pathname.startsWith("/api")) {
     // Cloud Run の liveness probe は x-forwarded-for を設定しないため、
