@@ -79,8 +79,9 @@ export SERVICE_NAME="myrrh-rental-space"
 export AR_REPOSITORY="myrrh-rental-space"
 export PUBLIC_DOMAIN="https://example.com"
 export APP_DOMAIN="https://example.com"
-export RUNTIME_SA="myrrh-run@${PROJECT_ID}.iam.gserviceaccount.com"
-export BUILD_SA="myrrh-build@${PROJECT_ID}.iam.gserviceaccount.com"
+export MIGRATE_JOB_NAME="prisma-migrate"
+export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+export BUILD_SA="myrrh-rental-space-build@${PROJECT_ID}.iam.gserviceaccount.com"
 export IAP_ADMIN_GROUP="group:myrrh-admins@example.com"
 ```
 
@@ -122,10 +123,10 @@ If the repository already exists, keep it and do not recreate it.
 Create a runtime identity and a build identity:
 
 ```bash
-gcloud iam service-accounts create myrrh-run \
+gcloud iam service-accounts create myrrh-rental-space-runtime \
   --display-name="Myrrh Cloud Run runtime"
 
-gcloud iam service-accounts create myrrh-build \
+gcloud iam service-accounts create myrrh-rental-space-build \
   --display-name="Myrrh Cloud Build deployer"
 ```
 
@@ -134,15 +135,26 @@ Grant the build identity only the deployment permissions it needs:
 ```bash
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${BUILD_SA}" \
-  --role="roles/run.admin"
-
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:${BUILD_SA}" \
-  --role="roles/artifactregistry.writer"
+  --role="roles/cloudbuild.builds.editor"
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${BUILD_SA}" \
   --role="roles/logging.logWriter"
+
+gcloud artifacts repositories add-iam-policy-binding "$AR_REPOSITORY" \
+  --location="$REGION" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/artifactregistry.writer"
+
+gcloud run services add-iam-policy-binding "$SERVICE_NAME" \
+  --region="$REGION" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/run.admin"
+
+gcloud run jobs add-iam-policy-binding "$MIGRATE_JOB_NAME" \
+  --region="$REGION" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/run.admin"
 
 gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
   --member="serviceAccount:${BUILD_SA}" \
@@ -174,6 +186,8 @@ Required when Cloudflare cache purge is enabled:
 
 - `CLOUDFLARE_ZONE_ID`
 - `CLOUDFLARE_API_TOKEN`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 
 Create each secret once:
 
@@ -191,7 +205,9 @@ for name in \
   R2_BUCKET_NAME \
   R2_PUBLIC_URL \
   CLOUDFLARE_ZONE_ID \
-  CLOUDFLARE_API_TOKEN
+  CLOUDFLARE_API_TOKEN \
+  GOOGLE_CLIENT_ID \
+  GOOGLE_CLIENT_SECRET
 do
   gcloud secrets create "$name" --replication-policy="automatic" || true
 done
@@ -219,7 +235,9 @@ for name in \
   R2_BUCKET_NAME \
   R2_PUBLIC_URL \
   CLOUDFLARE_ZONE_ID \
-  CLOUDFLARE_API_TOKEN
+  CLOUDFLARE_API_TOKEN \
+  GOOGLE_CLIENT_ID \
+  GOOGLE_CLIENT_SECRET
 do
   gcloud secrets add-iam-policy-binding "$name" \
     --member="serviceAccount:${RUNTIME_SA}" \
@@ -271,8 +289,16 @@ with required substitutions instead of relying on defaults:
 ```bash
 gcloud builds submit \
   --config=cloudbuild.yaml \
-  --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --substitutions=_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_REPOSITORY="${AR_REPOSITORY}",_SERVICE_ACCOUNT="${RUNTIME_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${APP_DOMAIN}",_BETTER_AUTH_URL="${APP_DOMAIN}"
+  --substitutions=_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_REPOSITORY="${AR_REPOSITORY}",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${APP_DOMAIN}",_BETTER_AUTH_URL="${APP_DOMAIN}"
+```
+
+`cloudbuild.yaml` sets both of these for user-specified Cloud Build service
+accounts:
+
+```yaml
+serviceAccount: projects/${PROJECT_ID}/serviceAccounts/${_BUILD_SERVICE_ACCOUNT}
+options:
+  logging: CLOUD_LOGGING_ONLY
 ```
 
 After the first successful deploy, prefer fixed Secret Manager versions for
