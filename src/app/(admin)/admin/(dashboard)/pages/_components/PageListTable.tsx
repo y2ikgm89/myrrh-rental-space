@@ -21,7 +21,7 @@ import {
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { Pagination } from "@/admin/components/ui/Pagination";
-import { updatePagePublished } from "@/admin/actions/page";
+import { updatePagePublished } from "@/admin/actions/pages";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { PageData } from "@/shared/domain/pages/types";
 import { PageActions } from "./PageActions";

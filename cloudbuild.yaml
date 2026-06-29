@@ -28,6 +28,7 @@ substitutions:
   _REPOSITORY: myrrh-rental-space
   _AR_HOST: asia-northeast1-docker.pkg.dev
   _MIGRATE_JOB_NAME: prisma-migrate
+  _WORKER_POOL: myrrh-deploy-pool
   # migrate Job のメモリ。かつて 512Mi では `bunx prisma migrate deploy` が実行時に依存を
   # 再ダウンロード（不完全な runner image が原因）して OOM（signal 11）を起こしたが、
   # migrator ステージ（完全な node_modules）の導入で再DL 自体を排除済み。1Gi は余裕分として維持。
@@ -77,6 +78,8 @@ substitutions:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  pool:
+    name: projects/${PROJECT_ID}/locations/${_REGION}/workerPools/${_WORKER_POOL}
   env:
     - DOCKER_BUILDKIT=1
 
@@ -96,10 +99,9 @@ steps:
   # type-check / lint-format / unit-tests job）が required status check として merge 前に
   # 担保する。deploy pipeline は push-to-main＝マージ後にしか走らないため、ここで再実行する
   # のは冗長。さらに旧 test step の `tsc` 二重型チェックは既定ワーカー（e2-standard-2 / 8GB）を
-  # メモリ枯渇で VM ごと落とし `INTERNAL_ERROR` を起こしていた（#600 で 2/2 再現）。non-default
-  # マシンタイプはこのリージョンの quota で起動不可のため、検証は CI の責務に一本化して
-  # deploy pipeline から除去した。service イメージの型安全は下記 `next build` が app を
-  # 型チェックして担保する。
+  # メモリ枯渇で VM ごと落とし `INTERNAL_ERROR` を起こしていた（#600 で 2/2 再現）。deploy pipeline
+  # は private pool で十分な worker を確保し、検証は CI の責務に一本化して deploy pipeline から
+  # 除去した。service イメージの型安全は下記 `next build` が app を型チェックして担保する。
   # `--target=runner` を必ず明示する。Dockerfile には migrator ステージも在り、
   # `--target` 未指定だと Docker は「末尾ステージ」をビルドするため、ステージ追加・
   # 並べ替えで service タグに別イメージが入る事故を構造的に防ぐ（#599 回帰の再発防止）。
@@ -218,4 +220,4 @@ availableSecrets:
     - versionName: projects/${PROJECT_ID}/secrets/NEXT_SERVER_ACTIONS_ENCRYPTION_KEY/versions/${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION}
       env: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 
-timeout: 1800s
+timeout: 3600s

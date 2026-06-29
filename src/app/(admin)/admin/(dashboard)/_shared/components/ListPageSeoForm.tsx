@@ -34,7 +34,7 @@ import {
 } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { updatePageSeoSchema } from "@/shared/lib/validations/page";
-import { updatePageSeo } from "@/admin/actions/page";
+import { updatePageSeo } from "@/admin/actions/pages";
 
 interface SeoData {
   title: string;

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { Badge } from "@/admin/components/ui/badge";
-import { updatePagePublished } from "@/admin/actions/page";
+import { updatePagePublished } from "@/admin/actions/pages";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 

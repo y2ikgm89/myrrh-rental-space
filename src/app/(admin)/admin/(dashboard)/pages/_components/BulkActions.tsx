@@ -17,7 +17,10 @@ import {
   IconLoader2,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
-import { bulkUpdatePagePublished, bulkDeletePages } from "@/admin/actions/page";
+import {
+  bulkUpdatePagePublished,
+  bulkDeletePages,
+} from "@/admin/actions/pages";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 interface BulkActionsProps {

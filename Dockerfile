@@ -67,9 +67,21 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL \
 # （Docker context は .dockerignore で e2e/ __tests__ を除外するため、
 # tsconfig.test.json の tsc は scripts/e2e → e2e/fixtures を解決できず context 不整合）。
 # next build が app の型チェックを内蔵するため、builder は build のみ実行する。
+# Cloud Build の Docker RUN は Next.js production compile 中に長時間無出力に
+# なることがある。build 自体の挙動は変えず、heartbeat だけを出して Cloud Build
+# 側の無出力 internal error とアプリ側 exit code を切り分けやすくする。
 FROM builder-base AS builder
 RUN --mount=type=secret,id=next_server_actions_encryption_key \
-    sh -lc 'export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; bun run build'
+    sh -lc 'export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; \
+      (while sleep 60; do echo "[cloudbuild] next build still running"; done) & \
+      heartbeat_pid="$!"; \
+      cleanup() { kill "$heartbeat_pid" 2>/dev/null || true; wait "$heartbeat_pid" 2>/dev/null || true; }; \
+      trap cleanup EXIT INT TERM; \
+      bun run build; \
+      status="$?"; \
+      cleanup; \
+      trap - EXIT INT TERM; \
+      exit "$status"'
 
 # --- Stage 4: Migrator (Cloud Run Job: `prisma migrate deploy`) ---
 # slim な runner と違い、Prisma CLI は TypeScript の prisma.config.ts を c12 / jiti /

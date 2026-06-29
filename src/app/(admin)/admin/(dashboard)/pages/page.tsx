@@ -6,7 +6,7 @@
  * 検索・フィルター・ページネーション・一括操作・ゴミ箱復元対応
  */
 
-import { getPagesList } from "@/admin/queries/page";
+import { getPagesList } from "@/admin/queries/pages";
 import { loadAdminPageSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {

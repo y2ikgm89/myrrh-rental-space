@@ -45,7 +45,7 @@ import {
 } from "@/admin/components/ui/dialog";
 import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
-import { createPage } from "@/admin/actions/page";
+import { createPage } from "@/admin/actions/pages";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { generateSlug } from "@/shared/lib/slug";
 import { createPageSchema } from "@/shared/lib/validations/page";

@@ -9,7 +9,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import { getNewsList } from "@/admin/queries/news";
-import { getPageBySlug } from "@/admin/queries/page";
+import { getPageBySlug } from "@/admin/queries/pages";
 import { NewsFilters } from "./_components/NewsFilters";
 import { NewsTable } from "./_components/NewsTable";
 import { NewsManagementTabs } from "./_components/NewsManagementTabs";
