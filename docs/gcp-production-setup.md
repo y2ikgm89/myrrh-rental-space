@@ -251,10 +251,19 @@ gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
   --member="serviceAccount:${BUILD_SA}" \
   --role="roles/iam.serviceAccountUser"
 
+gcloud iam service-accounts add-iam-policy-binding "$BUILD_SA" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/iam.serviceAccountUser"
+
 gcloud storage buckets add-iam-policy-binding "gs://${PROJECT_ID}_cloudbuild" \
   --member="serviceAccount:${BUILD_SA}" \
   --role="roles/storage.objectViewer"
 ```
+
+The second `roles/iam.serviceAccountUser` binding is intentional. GitHub
+Actions authenticates as `$BUILD_SA` through WIF, and `cloudbuild.yaml` also
+sets `$BUILD_SA` as the user-specified Cloud Build service account. The caller
+therefore needs `iam.serviceAccounts.actAs` on that exact service account.
 
 Do not create or download service account keys.
 
