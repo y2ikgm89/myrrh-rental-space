@@ -11,6 +11,16 @@ type Binding = {
   members?: string[];
 };
 
+type GcloudJsonResult =
+  | {
+      ok: true;
+      value: unknown;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
+
 const gcloudBin = process.platform === "win32" ? "gcloud.cmd" : "gcloud";
 
 function requireEnv(name: string, fallback?: string): string {
@@ -19,6 +29,14 @@ function requireEnv(name: string, fallback?: string): string {
     throw new Error(`${name} is required`);
   }
   return value;
+}
+
+function formatGcloudError(args: string[], error: unknown): string {
+  if (error instanceof Error && "stderr" in error) {
+    const stderr = String((error as { stderr?: unknown }).stderr ?? "");
+    return `gcloud ${args.join(" ")} failed${stderr ? `: ${stderr.trim()}` : ""}`;
+  }
+  return `gcloud ${args.join(" ")} failed: ${String(error)}`;
 }
 
 function runGcloudJson(args: string[]): unknown {
@@ -30,18 +48,29 @@ function runGcloudJson(args: string[]): unknown {
     const trimmed = output.trim();
     return trimmed ? JSON.parse(trimmed) : null;
   } catch (error) {
-    if (error instanceof Error && "stderr" in error) {
-      const stderr = String((error as { stderr?: unknown }).stderr ?? "");
-      throw new Error(
-        `gcloud ${args.join(" ")} failed${stderr ? `: ${stderr.trim()}` : ""}`,
-      );
-    }
-    throw error;
+    throw new Error(formatGcloudError(args, error));
+  }
+}
+
+function tryRunGcloudJson(args: string[]): GcloudJsonResult {
+  try {
+    return { ok: true, value: runGcloudJson(args) };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error ? error.message : formatGcloudError(args, error),
+    };
   }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readRecords(value: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isRecord);
 }
 
 function readBindings(value: unknown): Binding[] {
@@ -77,6 +106,10 @@ function getPath(value: unknown, path: string[]): unknown {
   return current;
 }
 
+function detailForResult(result: GcloudJsonResult, detail: string): string {
+  return result.ok ? detail : result.error;
+}
+
 function requireGoogleGroupMember(value: string): string {
   if (!value.startsWith("group:") || !value.includes("@")) {
     throw new Error(
@@ -96,6 +129,18 @@ function main(): void {
   );
   const expectedGroup = requireGoogleGroupMember(requireEnv("IAP_ADMIN_GROUP"));
   const expectedOrganizationId = requireEnv("GCP_ORGANIZATION_ID");
+  const cloudIdentityDomain = requireEnv("CLOUD_IDENTITY_DOMAIN");
+  const buildServiceAccount = requireEnv(
+    "BUILD_SERVICE_ACCOUNT",
+    process.env["BUILD_SA"] ??
+      `myrrh-rental-space-build@${projectId}.iam.gserviceaccount.com`,
+  );
+  const githubRepositoryId = requireEnv("GITHUB_REPOSITORY_ID");
+  const wifPoolId = requireEnv("WIF_POOL_ID", "github-actions");
+  const wifProviderId = requireEnv(
+    "WIF_PROVIDER_ID",
+    "github-myrrh-rental-space",
+  );
 
   const checks: Check[] = [];
   const addCheck = (name: string, ok: boolean, detail: string): void => {
@@ -132,10 +177,67 @@ function main(): void {
     `actual=${String(organizationId ?? "none")} expected=${expectedOrganizationId}`,
   );
 
+  const cloudIdentityApi = tryRunGcloudJson([
+    "services",
+    "list",
+    "--project",
+    projectId,
+    "--enabled",
+    "--filter=config.name:cloudidentity.googleapis.com",
+    "--format=json(config.name,name)",
+  ]);
+  const enabledCloudIdentityServices = cloudIdentityApi.ok
+    ? readRecords(cloudIdentityApi.value)
+        .map((record) => {
+          const configName = getPath(record, ["config", "name"]);
+          const name = record["name"];
+          if (typeof configName === "string") return configName;
+          if (typeof name === "string") return name;
+          return null;
+        })
+        .filter((name): name is string => name !== null)
+    : [];
+  addCheck(
+    "Cloud Identity API is enabled",
+    cloudIdentityApi.ok &&
+      enabledCloudIdentityServices.some((serviceName) => {
+        return serviceName === "cloudidentity.googleapis.com";
+      }),
+    detailForResult(
+      cloudIdentityApi,
+      `services=${enabledCloudIdentityServices.join(",") || "none"}`,
+    ),
+  );
+
   addCheck(
     "IAP_ADMIN_GROUP is a Google Group IAM member",
     expectedGroup.startsWith("group:") && expectedGroup.includes("@"),
     expectedGroup,
+  );
+
+  const expectedGroupEmail = expectedGroup.slice("group:".length);
+  const groupDescription = tryRunGcloudJson([
+    "identity",
+    "groups",
+    "describe",
+    expectedGroupEmail,
+    "--format=json(name,groupKey.id,labels)",
+  ]);
+  const groupName = groupDescription.ok
+    ? getPath(groupDescription.value, ["name"])
+    : undefined;
+  const groupKeyId = groupDescription.ok
+    ? getPath(groupDescription.value, ["groupKey", "id"])
+    : undefined;
+  addCheck(
+    "configured IAP Google Group exists in Cloud Identity",
+    groupDescription.ok &&
+      typeof groupName === "string" &&
+      groupKeyId === expectedGroupEmail,
+    detailForResult(
+      groupDescription,
+      `group=${String(groupKeyId ?? "missing")} name=${String(groupName ?? "missing")} domain=${cloudIdentityDomain}`,
+    ),
   );
 
   const adminServiceDescription = runGcloudJson([
@@ -240,13 +342,179 @@ function main(): void {
     `invokers=${publicRunInvokers.join(",") || "none"}`,
   );
 
+  const wifProvider = tryRunGcloudJson([
+    "iam",
+    "workload-identity-pools",
+    "providers",
+    "describe",
+    wifProviderId,
+    "--project",
+    projectId,
+    "--location=global",
+    "--workload-identity-pool",
+    wifPoolId,
+    "--format=json(name,state,attributeCondition)",
+  ]);
+  const wifProviderState = wifProvider.ok
+    ? getPath(wifProvider.value, ["state"])
+    : undefined;
+  const wifProviderCondition = wifProvider.ok
+    ? getPath(wifProvider.value, ["attributeCondition"])
+    : undefined;
+  addCheck(
+    "GitHub Actions WIF provider is active",
+    wifProvider.ok && wifProviderState === "ACTIVE",
+    detailForResult(
+      wifProvider,
+      `provider=${wifProviderId} pool=${wifPoolId} state=${String(wifProviderState ?? "missing")}`,
+    ),
+  );
+  addCheck(
+    "GitHub Actions WIF provider is restricted to the configured repository",
+    wifProvider.ok &&
+      typeof wifProviderCondition === "string" &&
+      wifProviderCondition.includes(
+        `assertion.repository_id == '${githubRepositoryId}'`,
+      ) &&
+      wifProviderCondition.includes("assertion.ref == 'refs/heads/main'"),
+    detailForResult(
+      wifProvider,
+      `condition=${String(wifProviderCondition ?? "missing")}`,
+    ),
+  );
+
+  const buildServiceAccountIam = readBindings(
+    runGcloudJson([
+      "iam",
+      "service-accounts",
+      "get-iam-policy",
+      buildServiceAccount,
+      "--project",
+      projectId,
+      "--format=json",
+    ]),
+  );
+  const expectedWifMember = `principalSet://iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${wifPoolId}/attribute.repository_id/${githubRepositoryId}`;
+  const wifImpersonators = membersForRole(
+    buildServiceAccountIam,
+    "roles/iam.workloadIdentityUser",
+  );
+  addCheck(
+    "build service account is impersonated only by the configured GitHub repository",
+    wifImpersonators.length > 0 &&
+      wifImpersonators.every((member) => member === expectedWifMember),
+    `impersonators=${wifImpersonators.join(",") || "none"} expected=${expectedWifMember}`,
+  );
+  const serviceAccountUsers = membersForRole(
+    buildServiceAccountIam,
+    "roles/iam.serviceAccountUser",
+  );
+  const expectedBuildServiceAccountUser = `serviceAccount:${buildServiceAccount}`;
+  addCheck(
+    "build service account can act as itself for user-specified Cloud Build",
+    serviceAccountUsers.includes(expectedBuildServiceAccountUser),
+    `members=${serviceAccountUsers.join(",") || "none"}`,
+  );
+  addCheck(
+    "build service account actAs grant has no individual users",
+    serviceAccountUsers.length > 0 &&
+      serviceAccountUsers.every((member) => {
+        return member === expectedBuildServiceAccountUser;
+      }),
+    `members=${serviceAccountUsers.join(",") || "none"} expected=${expectedBuildServiceAccountUser}`,
+  );
+
+  const buildServiceAccountKeys = tryRunGcloudJson([
+    "iam",
+    "service-accounts",
+    "keys",
+    "list",
+    "--iam-account",
+    buildServiceAccount,
+    "--project",
+    projectId,
+    "--managed-by=user",
+    "--format=json(name)",
+  ]);
+  const userManagedKeys = buildServiceAccountKeys.ok
+    ? readRecords(buildServiceAccountKeys.value)
+        .map((record) => record["name"])
+        .filter((name): name is string => typeof name === "string")
+    : [];
+  addCheck(
+    "build service account has no user-managed keys",
+    buildServiceAccountKeys.ok && userManagedKeys.length === 0,
+    detailForResult(
+      buildServiceAccountKeys,
+      `userManagedKeys=${userManagedKeys.join(",") || "none"}`,
+    ),
+  );
+
+  const cloudBuildTriggers = tryRunGcloudJson([
+    "builds",
+    "triggers",
+    "list",
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json(id,name)",
+  ]);
+  const triggerNames = cloudBuildTriggers.ok
+    ? readRecords(cloudBuildTriggers.value)
+        .map((record) => {
+          const name = record["name"];
+          const id = record["id"];
+          if (typeof name === "string") return name;
+          if (typeof id === "string") return id;
+          return null;
+        })
+        .filter((name): name is string => name !== null)
+    : [];
+  addCheck(
+    "legacy Cloud Build triggers are absent",
+    cloudBuildTriggers.ok && triggerNames.length === 0,
+    detailForResult(
+      cloudBuildTriggers,
+      `triggers=${triggerNames.join(",") || "none"}`,
+    ),
+  );
+
+  const cloudBuildConnections = tryRunGcloudJson([
+    "builds",
+    "connections",
+    "list",
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json(name)",
+  ]);
+  const connectionNames = cloudBuildConnections.ok
+    ? readRecords(cloudBuildConnections.value)
+        .map((record) => record["name"])
+        .filter((name): name is string => typeof name === "string")
+    : [];
+  addCheck(
+    "legacy Cloud Build GitHub connections are absent",
+    cloudBuildConnections.ok && connectionNames.length === 0,
+    detailForResult(
+      cloudBuildConnections,
+      `connections=${connectionNames.join(",") || "none"}`,
+    ),
+  );
+
   console.log("GCP production IAP audit");
   console.log(`project=${projectId}`);
   console.log(`region=${region}`);
   console.log(`adminService=${adminService}`);
   console.log(`expectedOrganization=${expectedOrganizationId}`);
   console.log(`expectedGroup=${expectedGroup}`);
-  console.log("baseline=organization-backed Google Group IAP production");
+  console.log(`cloudIdentityDomain=${cloudIdentityDomain}`);
+  console.log(`buildServiceAccount=${buildServiceAccount}`);
+  console.log(`githubRepositoryId=${githubRepositoryId}`);
+  console.log(`wifProvider=${wifPoolId}/${wifProviderId}`);
+  console.log("baseline=organization-backed Google Group IAP + WIF production");
   console.log("");
 
   for (const check of checks) {
@@ -263,7 +531,7 @@ function main(): void {
   }
 
   console.log(
-    "\nPASS: production IAP posture matches the org-backed group model.",
+    "\nPASS: production posture matches the org-backed group IAP + WIF model.",
   );
 }
 

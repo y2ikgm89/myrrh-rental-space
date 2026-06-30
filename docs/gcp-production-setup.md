@@ -129,8 +129,11 @@ account that will be allowed through IAP. `IAP_JWT_AUDIENCE` must match the
 Cloud Run IAP signed-header audience format:
 `/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME`.
 
-`GCP_ORGANIZATION_ID` is required for production verification. The audit does
-not infer or accept any organization; it must match this exact ID.
+`GCP_ORGANIZATION_ID`, `CLOUD_IDENTITY_DOMAIN`, `GITHUB_REPOSITORY_ID`,
+`BUILD_SA`, `WIF_POOL_ID`, and `WIF_PROVIDER_ID` are required for production
+verification. The audit does not infer or accept the organization, Google
+Group, GitHub repository identity, or deploy identity from loose defaults; they
+must match these exact values.
 
 `IAP_ADMIN_GROUP` must be a `group:` member backed by Cloud Identity or Google
 Workspace, for example `group:myrrh-admins@example.com`. Do not set it to a
@@ -666,10 +669,15 @@ curl -I "${ADMIN_DOMAIN}/admin"
 
 GCP_PROJECT_ID="$PROJECT_ID" \
 GCP_ORGANIZATION_ID="$GCP_ORGANIZATION_ID" \
+CLOUD_IDENTITY_DOMAIN="$CLOUD_IDENTITY_DOMAIN" \
 REGION="$REGION" \
 SERVICE_NAME="$SERVICE_NAME" \
 ADMIN_SERVICE_NAME="$ADMIN_SERVICE_NAME" \
 IAP_ADMIN_GROUP="$IAP_ADMIN_GROUP" \
+BUILD_SERVICE_ACCOUNT="$BUILD_SA" \
+GITHUB_REPOSITORY_ID="$GITHUB_REPOSITORY_ID" \
+WIF_POOL_ID="$WIF_POOL_ID" \
+WIF_PROVIDER_ID="$WIF_PROVIDER_ID" \
 bun run gcp:audit-production-iap
 ```
 
@@ -684,9 +692,11 @@ Expected results:
 - `.github/workflows/deploy-production.yml` starts on `main` pushes that include
   application/deploy files and the Cloud Build it submits succeeds;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
-- `bun run gcp:audit-production-iap` passes. If it fails on Organization or
-  individual IAP grants, the admin site is protected but the GCP posture is not
-  the final production baseline.
+- `bun run gcp:audit-production-iap` passes. If it fails on Organization,
+  Cloud Identity group, individual IAP grants, WIF, user-managed service
+  account keys, individual build service account `actAs` grants, or legacy
+  Cloud Build triggers/connections, the admin site may be protected but the GCP
+  posture is not the final production baseline.
 
 ## Current repository contract
 
