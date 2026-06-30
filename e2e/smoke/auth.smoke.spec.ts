@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { urls } from "../fixtures";
 
 /**
@@ -11,6 +11,10 @@ import { urls } from "../fixtures";
  */
 
 const appSurface = process.env["APP_SURFACE"] ?? "admin";
+
+function emailTextbox(page: Page) {
+  return page.getByRole("textbox", { name: "メールアドレス" });
+}
 
 test.describe("smoke: auth pages", () => {
   test("公開サインインページが描画される", async ({ page }) => {
@@ -27,11 +31,11 @@ test.describe("smoke: auth pages", () => {
 
     if (appSurface === "public") {
       expect(response?.status()).toBe(404);
-      await expect(page.getByLabel("メールアドレス")).toBeHidden();
+      await expect(emailTextbox(page)).toBeHidden();
       return;
     }
 
     expect(response?.status()).toBe(200);
-    await expect(page.getByLabel("メールアドレス")).toBeVisible();
+    await expect(emailTextbox(page)).toBeVisible();
   });
 });

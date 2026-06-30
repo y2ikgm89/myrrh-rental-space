@@ -29,13 +29,17 @@ export async function gotoAdminLogin(page: Page): Promise<void> {
   await ensureAdminUser();
   await primeAdminRequestContext(page.context());
   await page.goto(urls.login);
-  await expect(page.getByLabel("メールアドレス")).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "メールアドレス" }),
+  ).toBeVisible();
   await expect(page.getByLabel("パスワード")).toBeVisible();
 }
 
 export async function signInAsAdmin(page: Page): Promise<void> {
   await gotoAdminLogin(page);
-  await page.getByLabel("メールアドレス").fill(adminCredentials.email);
+  await page
+    .getByRole("textbox", { name: "メールアドレス" })
+    .fill(adminCredentials.email);
   await page.getByLabel("パスワード").fill(adminCredentials.password);
   // `exact: true` 必須 — `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` 環境 (CI / dev) では
   // `<DevLoginButton>`「SUPER_ADMIN でログイン」も同 page に render され、

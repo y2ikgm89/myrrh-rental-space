@@ -56,6 +56,10 @@ function adminShell(page: Page) {
   return page.getByRole("button", { name: "ログアウト" });
 }
 
+function emailTextbox(page: Page) {
+  return page.getByRole("textbox", { name: "メールアドレス" });
+}
+
 test.describe("Authentication Flow", () => {
   test.beforeEach(async ({ page }) => {
     await primeAdminRequestContext(page.context());
@@ -74,7 +78,7 @@ test.describe("Authentication Flow", () => {
       ).toBeVisible();
 
       // Verify form elements exist
-      await expect(page.getByLabel("メールアドレス")).toBeVisible();
+      await expect(emailTextbox(page)).toBeVisible();
       await expect(page.getByLabel("パスワード")).toBeVisible();
       await expect(
         page.getByRole("button", { name: "ログイン", exact: true }),
@@ -100,7 +104,7 @@ test.describe("Authentication Flow", () => {
     test("should show error for invalid credentials", async ({ page }) => {
       await gotoAdminLogin(page);
 
-      await page.getByLabel("メールアドレス").fill("invalid@example.com");
+      await emailTextbox(page).fill("invalid@example.com");
       await page.getByLabel("パスワード").fill("wrongpassword");
       await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
@@ -117,19 +121,19 @@ test.describe("Authentication Flow", () => {
     test("should validate email format", async ({ page }) => {
       await gotoAdminLogin(page);
 
-      await page.getByLabel("メールアドレス").fill("not-an-email");
+      await emailTextbox(page).fill("not-an-email");
       await page.getByLabel("パスワード").fill("password123");
       await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // HTML5 validation should prevent form submission
-      const emailInput = page.getByLabel("メールアドレス");
+      const emailInput = emailTextbox(page);
       await expect(emailInput).toHaveAttribute("required", "");
     });
 
     test("should show loading state during login", async ({ page }) => {
       await gotoAdminLogin(page);
 
-      await page.getByLabel("メールアドレス").fill(testUsers.admin.email);
+      await emailTextbox(page).fill(testUsers.admin.email);
       await page.getByLabel("パスワード").fill("admin123");
 
       // Click submit and immediately check for loading state
@@ -150,7 +154,7 @@ test.describe("Authentication Flow", () => {
       await gotoAdminLogin(page);
 
       const email = testUsers.admin.email;
-      await page.getByLabel("メールアドレス").fill(email);
+      await emailTextbox(page).fill(email);
       await page.getByLabel("パスワード").fill("admin123");
       await page
         .getByRole("checkbox", { name: /メールアドレスを保存/ })
@@ -165,7 +169,7 @@ test.describe("Authentication Flow", () => {
       await gotoAdminLogin(page);
 
       // Email should be pre-filled
-      await expect(page.getByLabel("メールアドレス")).toHaveValue(email);
+      await expect(emailTextbox(page)).toHaveValue(email);
       await expect(
         page.getByRole("checkbox", { name: /メールアドレスを保存/ }),
       ).toBeChecked();
@@ -442,7 +446,7 @@ test.describe("Authentication Flow", () => {
       await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
       // HTML5 validation should prevent submission
-      const emailInput = page.getByLabel("メールアドレス");
+      const emailInput = emailTextbox(page);
       await expect(emailInput).toHaveAttribute("required", "");
     });
 
@@ -452,7 +456,7 @@ test.describe("Authentication Flow", () => {
       // Simulate offline mode
       await page.context().setOffline(true);
 
-      await page.getByLabel("メールアドレス").fill(testUsers.admin.email);
+      await emailTextbox(page).fill(testUsers.admin.email);
       await page.getByLabel("パスワード").fill("admin123");
       await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
@@ -485,7 +489,7 @@ test.describe("Authentication Flow", () => {
       const longEmail = "a".repeat(300) + "@example.com";
       const longPassword = "p".repeat(300);
 
-      await page.getByLabel("メールアドレス").fill(longEmail);
+      await emailTextbox(page).fill(longEmail);
       await page.getByLabel("パスワード").fill(longPassword);
       await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
@@ -497,7 +501,7 @@ test.describe("Authentication Flow", () => {
       await gotoAdminLogin(page);
 
       const specialPassword = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-      await page.getByLabel("メールアドレス").fill(testUsers.admin.email);
+      await emailTextbox(page).fill(testUsers.admin.email);
       await page.getByLabel("パスワード").fill(specialPassword);
       await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
@@ -512,7 +516,7 @@ test.describe("Authentication Flow", () => {
 
       const attempts = 5;
       for (let i = 0; i < attempts; i++) {
-        await page.getByLabel("メールアドレス").fill("test@example.com");
+        await emailTextbox(page).fill("test@example.com");
         await page.getByLabel("パスワード").fill(`wrongpassword${i}`);
         await page
           .getByRole("button", { name: "ログイン", exact: true })
