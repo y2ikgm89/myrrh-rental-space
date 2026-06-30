@@ -348,7 +348,7 @@ jobs:
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           SKIP_ENV_VALIDATION: "true"
 
-      - name: Run smoke E2E tests
+      - name: Run public smoke E2E tests
         if: needs.changes.outputs.code == 'true'
         run: bunx playwright test --project=chromium-smoke
         env:
@@ -356,6 +356,27 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           APP_SURFACE: public
+          ADMIN_APP_URL: http://localhost:3000
+          ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
+          R2_ACCOUNT_ID: "test-r2-account"
+          R2_ACCESS_KEY_ID: "test-r2-access-key"
+          R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
+          R2_BUCKET_NAME: "test-r2-bucket"
+          R2_PUBLIC_URL: "https://example.com"
+          RESEND_API_KEY: "re_test_placeholder_for_ci_smoke_only"
+          STRIPE_SECRET_KEY: "sk_test_placeholder_for_ci_smoke_only"
+          GOOGLE_CLIENT_ID: "test-google-client-id.apps.googleusercontent.com"
+          GOOGLE_CLIENT_SECRET: "test-google-client-secret-for-ci-smoke"
+
+      - name: Run admin smoke E2E tests
+        if: needs.changes.outputs.code == 'true'
+        run: bunx playwright test --project=chromium-smoke e2e/smoke/auth.smoke.spec.ts --grep "管理ログイン"
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
@@ -444,7 +465,7 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           # webServer が next start で起動する際の runtime env。
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
-          APP_SURFACE: public
+          APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（lhci-start.ts と同方針）。
