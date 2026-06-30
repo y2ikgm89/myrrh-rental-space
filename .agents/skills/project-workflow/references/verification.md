@@ -20,6 +20,10 @@
   `bun run type-check`.
 - Prisma schema: run `bun run db:generate`, a relevant test, and
   `bun run type-check`.
+- Prisma baseline reset: verify `prisma migrate deploy` on an empty Postgres
+  database, run the production seed once against that disposable database, check
+  Prisma diff back to `schema.prisma` is empty, run Squawk on the baseline SQL,
+  then run the focused tests that guard preserved manual DB invariants.
 - Route handler, webhook, cron, proxy, auth, env, cache, or security change:
   run focused tests plus `bun run validate` when practical.
 - UI-only change: run focused component/unit tests; use Playwright only when the
