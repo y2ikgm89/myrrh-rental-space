@@ -1,5 +1,5 @@
 /**
- * 旧 terms_initial_data migration が投入した「root 直下 paragraph 1 個 + 全文ベタ結合」
+ * baseline migration の terms initial data が投入した「root 直下 paragraph 1 個 + 全文ベタ結合」
  * Lexical JSON を検出する。
  *
  * 本形式は Lexical エディタ・保存パイプラインと整合しないため、contentHtml からの

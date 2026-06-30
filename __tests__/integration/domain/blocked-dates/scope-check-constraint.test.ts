@@ -1,7 +1,7 @@
 /**
  * blocked_dates の scope discriminated-union CHECK 制約の存在を検証する統合テスト（実 DB 必須）。
  *
- * `blocked_dates_scope_target_check`（migration 20260528173132）は
+ * `blocked_dates_scope_target_check`（baseline migration 00000000000000_init）は
  * SPACE→spaceId 必須 / LOCATION→locationId 必須 / GLOBAL→両方 null の不変条件を DB 層で
  * 強制する。Prisma schema DSL では表現できず、`prisma db pull` は CHECK 制約を黙って落とすため、
  * introspection 由来の schema 再生成等で制約が失われる回帰を機械的に検出する。

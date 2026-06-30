@@ -4,7 +4,6 @@ import { useState } from "react";
 import { z } from "zod";
 
 const checkEmailResponseSchema = z.object({
-  available: z.literal(true),
   duplicateCandidate: z.boolean(),
   unlinkedDuplicateCandidate: z.boolean(),
 });

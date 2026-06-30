@@ -4,11 +4,11 @@ import { join } from "node:path";
 
 const ROOT = process.cwd();
 const SCHEMA = join(ROOT, "prisma", "schema.prisma");
-const SCHEDULE_MODE_MIGRATION = join(
+const BASELINE_MIGRATION = join(
   ROOT,
   "prisma",
   "migrations",
-  "20260628120000_add_event_schedule_mode",
+  "00000000000000_init",
   "migration.sql",
 );
 
@@ -20,29 +20,24 @@ describe("event schedule DB invariants", () => {
   test("Event.scheduleMode is explicit and deadline uses slot-compatible timestamp type", () => {
     const schema = read(SCHEMA);
 
-    expect(schema).toContain("scheduleMode          EventScheduleMode");
-    expect(schema).not.toContain(
-      "scheduleMode          EventScheduleMode @default",
+    expect(schema).toMatch(/\bscheduleMode\s+EventScheduleMode\b/u);
+    expect(schema).not.toMatch(
+      /\bscheduleMode\s+EventScheduleMode\s+@default\b/u,
     );
-    expect(schema).toContain(
-      "registrationDeadline  DateTime?   @db.Timestamptz(6)",
+    expect(schema).toMatch(
+      /\bregistrationDeadline\s+DateTime\?\s+@db\.Timestamptz\(6\)/u,
     );
     expect(schema).toContain("slotId      String             @db.VarChar(30)");
   });
 
-  test("schedule migration backfills once and then enforces DB-level invariants", () => {
-    const migration = read(SCHEDULE_MODE_MIGRATION);
+  test("baseline migration enforces DB-level schedule invariants", () => {
+    const migration = read(BASELINE_MIGRATION);
 
-    expect(migration).toContain(
-      'ADD COLUMN "scheduleMode" "EventScheduleMode";',
-    );
+    expect(migration).toContain('"scheduleMode" "EventScheduleMode" NOT NULL');
     expect(migration).not.toContain(
-      'ADD COLUMN "scheduleMode" "EventScheduleMode" NOT NULL DEFAULT',
+      '"scheduleMode" "EventScheduleMode" NOT NULL DEFAULT',
     );
-    expect(migration).toContain('ALTER COLUMN "scheduleMode" SET NOT NULL;');
-    expect(migration).toContain(
-      'ALTER COLUMN "registrationDeadline" TYPE TIMESTAMPTZ(6)',
-    );
+    expect(migration).toContain('"registrationDeadline" TIMESTAMPTZ(6)');
     expect(migration).toContain(
       'CONSTRAINT "event_time_slots_capacity_positive"',
     );

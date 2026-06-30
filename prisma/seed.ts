@@ -52,8 +52,8 @@ import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
 import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
 
 // NOTE: terms 系の import (applyBusinessInfo / getTemplatesForType / TermsScope 等) は
-// `prisma/migrations/<ts>_terms_initial_data/migration.sql` に SSoT 移管したため撤去済。
-// 規約マスターは `prisma migrate deploy` で投入され、seed.ts は規約を一切扱わない (PR #819)。
+// 初期 baseline migration に SSoT 移管したため撤去済。
+// 規約マスターは `prisma migrate deploy` で投入され、seed.ts は規約を一切扱わない。
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -125,9 +125,9 @@ async function clearAllData() {
 
     // 予約関連
     // NOTE: termsDocument / termsAgreement は意図的に deleteMany しない。
-    //   規約マスターは Prisma 公式 Data Migration パターン
-    //   (prisma/migrations/<ts>_terms_initial_data/migration.sql) で SSoT 管理しており、
-    //   seed.ts は規約に一切触れない設計に統一済 (PR #819)。
+    //   規約マスターは Prisma 公式 Data Migration パターンとして
+    //   初期 baseline migration で SSoT 管理しており、
+    //   seed.ts は規約に一切触れない設計に統一済。
     //   完全再初期化が必要な場合は `prisma migrate reset` を使用すること
     //   (schema drop + 全 migration 再適用で terms_documents も再生成される)。
     await tx.reservation.deleteMany();
@@ -2395,9 +2395,9 @@ async function seedPages() {
 }
 
 // =============================================================================
-// Terms — Prisma 公式 Data Migration パターンに完全移管済 (PR #819)
+// Terms — Prisma 公式 Data Migration パターンに完全移管済
 //
-// `prisma/migrations/<ts>_terms_initial_data/migration.sql` が 8 規約の SSoT。
+// `prisma/migrations/00000000000000_init/migration.sql` が 8 規約の SSoT。
 // `prisma migrate deploy` (CI / 本番デプロイ) で必ず投入されるため seed.ts は
 // 規約に一切触れない設計に統一。`prisma db seed` は dev/test 用と公式で明示
 // されており、initial data の二重管理を物理的に排除した
@@ -4386,7 +4386,7 @@ async function seedDev() {
   await seedNews();
   await seedPages();
   await seedFaq();
-  // 規約は Data Migration (terms_initial_data) で投入済のため seed では何もしない
+  // 規約は baseline Data Migration で投入済のため seed では何もしない
   await seedBlogTags();
   await seedBlog();
 
@@ -4446,7 +4446,7 @@ async function seedProduction(email: string | undefined, name: string) {
   await seedNews(false);
   await seedPages();
   await seedFaq(false);
-  // 規約は Data Migration (terms_initial_data) で投入済のため seed では何もしない
+  // 規約は baseline Data Migration で投入済のため seed では何もしない
 
   // Phase 5: サイト設定
   await seedNavigation();

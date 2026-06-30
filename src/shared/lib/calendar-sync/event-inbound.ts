@@ -17,7 +17,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import { getServiceAccountClient } from "@/shared/lib/google-calendar/service-account";
 import { formatGoogleApiError } from "@/shared/lib/google-calendar/helpers";

@@ -29,6 +29,11 @@
 - Do not edit existing migration SQL. Create or regenerate migrations.
 - Preserve CHECK constraints and comments that Prisma introspection cannot
   represent.
+- Migration-history baseline resets are only valid as explicit data-loss
+  clean-break work. Require a new empty Neon database/branch cutover, generate
+  from the current Prisma schema, preserve manual SQL constraints/triggers and
+  production initial data, and verify with `prisma migrate deploy` on an empty
+  database before PR.
 
 ## Verification
 
@@ -36,4 +41,7 @@
 - Architecture boundaries: `bun test __tests__/unit/architecture-boundaries.test.ts`.
 - Cache tag contract: same architecture test, focused near `next.config`.
 - Prisma schema: `bun run db:generate` plus relevant domain tests.
+- Baseline migration reset: empty Postgres `prisma migrate deploy`, production
+  seed once, Prisma diff back to schema is empty, and Squawk passes on the
+  baseline SQL.
 - Webhook/cron/proxy: focused route tests plus `bun run validate` when practical.

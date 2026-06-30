@@ -21,7 +21,7 @@ belong in repo skills under `.agents/skills`.
 
 ## Stack Snapshot
 
-- Package manager/runtime: Bun `1.3.13` via `packageManager`.
+- Package manager/runtime: Bun `1.3.14` via `packageManager`.
 - App: Next.js `16.2.x` App Router, React `19.2.x`, TypeScript `6.x`.
 - Data: Prisma `7.x`, PostgreSQL, generated client in `generated/prisma`.
 - UI: route groups under `src/app/(public)` and `src/app/(admin)`, Tailwind v4
@@ -80,6 +80,12 @@ the touched surface is shared, security-sensitive, or build-sensitive.
   `prisma migrate reset`, `prisma db push`, or `prisma db pull` unless the user
   explicitly asks and the target database is verified.
 - Preserve expand/contract compatibility for Cloud Run rollout windows.
+- Exception: a migration-history baseline reset is allowed only when the user
+  explicitly approves discarding existing data and production will cut over to a
+  new empty Neon database/branch. Generate the baseline from the current Prisma
+  schema, preserve manual SQL invariants and production initial data, verify it
+  with `prisma migrate deploy` on an empty database, and do not deploy it to an
+  already-migrated database.
 
 ## Testing Standards
 

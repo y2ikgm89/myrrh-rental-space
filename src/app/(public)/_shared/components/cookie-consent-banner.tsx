@@ -11,7 +11,7 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isAppRoute } from "@/shared/lib/typed-routes";
 

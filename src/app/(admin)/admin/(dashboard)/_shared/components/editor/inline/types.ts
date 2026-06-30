@@ -1,9 +1,8 @@
 /**
  * インラインエディター型定義
  *
- * EditorHeader が消費する props 型のみ保持。RHF 依存の legacy 型は
- * 全 component の conform 移行後に削除済 (`SidePanelInjectedProps` /
- * `FieldMetadata` API が `content-types/types.ts` 側にある)。
+ * EditorHeader が消費する props 型のみ保持。
+ * SidePanelInjectedProps / FieldMetadata API は `content-types/types.ts` 側にある。
  */
 
 import type { ReactNode } from "react";

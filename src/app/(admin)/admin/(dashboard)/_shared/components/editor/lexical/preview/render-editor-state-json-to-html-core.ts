@@ -1,7 +1,7 @@
 import { withDOM } from "@lexical/headless/dom";
 import { $generateHtmlFromNodes } from "@lexical/html";
 import { createProjectHeadlessEditor } from "../create-headless-lexical-editor";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 /**
  * Lexical EditorState JSON → HTML（環境非依存コア）。

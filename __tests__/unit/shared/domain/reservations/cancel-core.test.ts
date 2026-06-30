@@ -1,6 +1,9 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { ReservationStatus } from "@generated/prisma/enums";
-import { applyCancellation } from "@/shared/domain/reservations/cancel-core";
+import {
+  applyCancellation,
+  type ApplyCancellationOptions,
+} from "@/shared/domain/reservations/cancel-core";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 
 const mockReservationUpdateMany = mock<
@@ -17,6 +20,18 @@ const mockTx = {
 
 const NOW = new Date("2026-04-01T00:00:00Z");
 const FUTURE_START = new Date("2026-04-10T00:00:00Z"); // 期限内（9日後）
+
+function customerMypageOptions(
+  overrides: Partial<ApplyCancellationOptions> = {},
+): ApplyCancellationOptions {
+  return {
+    deadlineHours: 24,
+    now: NOW,
+    cancellationReason: null,
+    cancelledByType: CANCELLED_BY.CUSTOMER_MYPAGE,
+    ...overrides,
+  };
+}
 
 describe("applyCancellation", () => {
   beforeEach(() => {
@@ -35,7 +50,7 @@ describe("applyCancellation", () => {
         startTime: FUTURE_START,
         couponId: null,
       },
-      { deadlineHours: 24, now: NOW, cancellationReason: null },
+      customerMypageOptions(),
     );
 
     expect(result).toEqual({ success: true });
@@ -91,7 +106,7 @@ describe("applyCancellation", () => {
         startTime: FUTURE_START,
         couponId: null,
       },
-      { deadlineHours: 24, now: NOW, cancellationReason: null },
+      customerMypageOptions(),
     );
 
     expect(result).toEqual({
@@ -111,7 +126,7 @@ describe("applyCancellation", () => {
         startTime: soonStart,
         couponId: null,
       },
-      { deadlineHours: 24, now: NOW, cancellationReason: null },
+      customerMypageOptions(),
     );
 
     expect(result.success).toBe(false);
@@ -128,7 +143,7 @@ describe("applyCancellation", () => {
         startTime: FUTURE_START,
         couponId: null,
       },
-      { deadlineHours: 24, now: NOW, cancellationReason: null },
+      customerMypageOptions(),
     );
 
     expect(result.success).toBe(false);
@@ -147,7 +162,7 @@ describe("applyCancellation", () => {
         startTime: FUTURE_START,
         couponId: "c1",
       },
-      { deadlineHours: 24, now: NOW, cancellationReason: null },
+      customerMypageOptions(),
     );
 
     expect(mockCouponUpdateMany).toHaveBeenCalledWith(
@@ -167,7 +182,7 @@ describe("applyCancellation", () => {
         startTime: FUTURE_START,
         couponId: null,
       },
-      { deadlineHours: 24, now: NOW, cancellationReason: null },
+      customerMypageOptions(),
     );
 
     expect(mockCouponUpdateMany).not.toHaveBeenCalled();
@@ -182,7 +197,7 @@ describe("applyCancellation", () => {
         startTime: FUTURE_START,
         couponId: null,
       },
-      { deadlineHours: 24, now: NOW, cancellationReason: "予定変更のため" },
+      customerMypageOptions({ cancellationReason: "予定変更のため" }),
     );
 
     expect(mockReservationUpdateMany).toHaveBeenCalledWith(

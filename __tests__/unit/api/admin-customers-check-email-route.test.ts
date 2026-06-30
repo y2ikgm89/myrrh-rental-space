@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockCheckPermission = mock();
-const mockCheckAdminAuth = mock();
 const mockFindCustomerByEmailExcept = mock();
 const mockFindGuestCustomerByEmailExcept = mock();
 
 mock.module("@/admin/lib/action-auth", () => ({
-  checkAdminAuth: (...args: Parameters<typeof mockCheckAdminAuth>) =>
-    mockCheckAdminAuth(...args),
   checkPermission: (...args: Parameters<typeof mockCheckPermission>) =>
     mockCheckPermission(...args),
 }));
@@ -25,7 +22,6 @@ const { GET } = await import("@/app/api/admin/customers/check-email/route");
 
 describe("GET /api/admin/customers/check-email", () => {
   beforeEach(() => {
-    mockCheckAdminAuth.mockReset();
     mockCheckPermission.mockReset();
     mockFindCustomerByEmailExcept.mockReset();
     mockFindGuestCustomerByEmailExcept.mockReset();
@@ -33,10 +29,6 @@ describe("GET /api/admin/customers/check-email", () => {
 
   test("customer:read 権限を確認してからメール重複候補を検索する", async () => {
     mockCheckPermission.mockResolvedValue({
-      success: true,
-      user: { id: "admin-user", role: "ADMIN" },
-    });
-    mockCheckAdminAuth.mockResolvedValue({
       success: true,
       user: { id: "admin-user", role: "ADMIN" },
     });
@@ -51,7 +43,6 @@ describe("GET /api/admin/customers/check-email", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({
-      available: true,
       duplicateCandidate: false,
       unlinkedDuplicateCandidate: false,
     });
@@ -75,10 +66,6 @@ describe("GET /api/admin/customers/check-email", () => {
       success: true,
       user: { id: "admin-user", role: "ADMIN" },
     });
-    mockCheckAdminAuth.mockResolvedValue({
-      success: true,
-      user: { id: "admin-user", role: "ADMIN" },
-    });
     mockFindCustomerByEmailExcept.mockResolvedValue({
       id: "customer-1",
       userId: null,
@@ -94,7 +81,6 @@ describe("GET /api/admin/customers/check-email", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({
-      available: true,
       duplicateCandidate: true,
       unlinkedDuplicateCandidate: true,
     });
@@ -112,10 +98,6 @@ describe("GET /api/admin/customers/check-email", () => {
     mockCheckPermission.mockResolvedValue({
       success: false,
       error: { error: "customerのread権限がありません" },
-    });
-    mockCheckAdminAuth.mockResolvedValue({
-      success: true,
-      user: { id: "admin-user", role: "ADMIN" },
     });
 
     const response = await GET(

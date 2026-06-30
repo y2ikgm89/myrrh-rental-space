@@ -30,7 +30,7 @@ import {
   isUrlDisabled,
 } from "@/shared/lib/features/check";
 import { isReservedPath } from "@/shared/lib/slug-validation";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 // =============================================================================
 // Types

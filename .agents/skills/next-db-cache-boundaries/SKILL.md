@@ -22,6 +22,9 @@ caching, security headers, webhooks, cron, or migrations.
    responses. Do not reintroduce legacy success boolean wrappers.
 6. For webhooks and cron, verify auth/signature first and fail closed.
 7. For Prisma schema changes, prefer expand/contract and run generation.
+   Treat migration-history baseline resets as an explicit data-loss exception:
+   require user approval, an empty database cutover plan, manual SQL invariant
+   preservation, and empty-database `prisma migrate deploy` verification.
 
 ## Read When Needed
 

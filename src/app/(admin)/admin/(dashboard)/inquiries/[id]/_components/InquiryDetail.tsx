@@ -39,7 +39,7 @@ import {
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getErrorMessage } from "@/shared/lib/errors";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import type { InquiryWithCustomer } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";

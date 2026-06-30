@@ -1,12 +1,12 @@
 /**
  * 汎用ロガーテスト
  *
- * src/shared/lib/logger.ts のユニットテスト
+ * src/shared/lib/errors/logger-core.ts のユニットテスト
  */
 
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
 import { setNodeEnv } from "../../helpers/env";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 const originalConsoleLog = console.log;
 const originalConsoleInfo = console.info;

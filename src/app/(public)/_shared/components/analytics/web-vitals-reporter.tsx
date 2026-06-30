@@ -13,7 +13,7 @@
 
 import { useEffect } from "react";
 import { useCookieConsent } from "@/public/components/cookie-consent-banner";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 /**
  * gtag がグローバルに存在するか型安全にチェック

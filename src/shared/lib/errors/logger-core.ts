@@ -2,12 +2,10 @@
  * 構造化ログ実装（Node / スクリプト両用・Cloud Logging 準拠）
  *
  * - エラーログ: `logError` / `createErrorLogger`
- * - 汎用ログ : `logger.{debug,info,warn,error}` （旧 `src/shared/lib/logger.ts` の SSoT 統合先）
+ * - 汎用ログ : `logger.{debug,info,warn,error}`
  *
  * 本ファイルは `server-only` を付けない（Prisma seed など Node スクリプトからも import するため）。
- * Next.js Server 専用エントリは:
- *   - `@/shared/lib/errors/logger` (server-only re-export)
- *   - `@/shared/lib/logger`        (client-safe re-export → 内部実装はここに集約)
+ * Next.js Server 専用エントリは `@/shared/lib/errors/logger` (server-only re-export)。
  *
  * # Cloud Logging 特殊フィールド対応
  * `logging.googleapis.com/trace`・`spanId`・`trace_sampled`・`httpRequest` を出力に含めると
@@ -278,7 +276,7 @@ export function createErrorLogger(
 }
 
 // ---------------------------------------------------------------------------
-// Generic logger (旧 src/shared/lib/logger.ts の SSoT 統合先)
+// Generic logger
 // ---------------------------------------------------------------------------
 
 type LogLevel = "debug" | "info" | "warn" | "error";

@@ -111,7 +111,7 @@ export const DEFAULT_SIDEBAR_WIDGETS: SidebarWidget[] = [
 
 /**
  * Parse sidebar widgets from DB JSON.
- * Handles: valid array, legacy object format, null/undefined, invalid data.
+ * Handles: valid array, null/undefined, invalid data.
  * Always returns a valid SidebarWidget[].
  */
 export function parseSidebarWidgets(value: unknown): SidebarWidget[] {

@@ -1,40 +1,16 @@
 /**
  * セクション デフォルト設定・ゲッター
  *
- * レジストリ（registry.ts）へ委譲する薄いラッパー。
- * 旧 API との互換を維持しつつ、定義の正本はファイルベースレジストリに一元化する。
+ * レジストリ（registry.ts）由来の canonical schema を使い、公開レンダラーが
+ * セクション別の型付き config を取得するための facade。
  */
 
-import type {
-  HeroConfig,
-  HeroParallaxConfig,
-  CustomConfig,
-  ConceptConfig,
-  SpaceListConfig,
-  SpaceShowcaseConfig,
-  NewsListConfig,
-  PostListConfig,
-  FaqListConfig,
-  FeaturesConfig,
-  TestimonialConfig,
-  GalleryConfig,
-  CtaConfig,
-  ContactFormConfig,
-  MapConfig,
-  EmbedConfig,
-  InstagramConfig,
-  SectionConfig,
-} from "./section";
+import type { SectionConfig } from "./section";
 import { validateSectionConfig } from "./section";
-import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
 import { locationListConfigSchema } from "@/shared/lib/sections/definitions/location-list/schema";
-import type { EventCalendarConfig } from "@/shared/lib/sections/definitions/event-calendar/schema";
 import { eventCalendarConfigSchema } from "@/shared/lib/sections/definitions/event-calendar/schema";
-import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/reservation-form/schema";
 import { reservationFormConfigSchema } from "@/shared/lib/sections/definitions/reservation-form/schema";
-import type { ValuePropsConfig } from "@/shared/lib/sections/definitions/value-props/schema";
 import { valuePropsConfigSchema } from "@/shared/lib/sections/definitions/value-props/schema";
-import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero/schema";
 import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero/schema";
 
 // =============================================================================
@@ -148,82 +124,3 @@ export const getValuePropsConfig = createTypedConfigGetterFromSchema(
 
 export const getPageHeroConfig =
   createTypedConfigGetterFromSchema(pageHeroConfigSchema);
-
-// =============================================================================
-// getSafeConfig — 汎用: セクションタイプに応じた config 取得（レジストリ委譲）
-// =============================================================================
-
-export function getSafeConfig(type: "hero", config: unknown): HeroConfig;
-export function getSafeConfig(
-  type: "hero-parallax",
-  config: unknown,
-): HeroParallaxConfig;
-export function getSafeConfig(type: "custom", config: unknown): CustomConfig;
-export function getSafeConfig(type: "concept", config: unknown): ConceptConfig;
-export function getSafeConfig(
-  type: "space-list",
-  config: unknown,
-): SpaceListConfig;
-export function getSafeConfig(
-  type: "space-showcase",
-  config: unknown,
-): SpaceShowcaseConfig;
-export function getSafeConfig(
-  type: "news-list",
-  config: unknown,
-): NewsListConfig;
-export function getSafeConfig(
-  type: "post-list",
-  config: unknown,
-): PostListConfig;
-export function getSafeConfig(type: "faq-list", config: unknown): FaqListConfig;
-export function getSafeConfig(
-  type: "features",
-  config: unknown,
-): FeaturesConfig;
-export function getSafeConfig(
-  type: "testimonial",
-  config: unknown,
-): TestimonialConfig;
-export function getSafeConfig(type: "gallery", config: unknown): GalleryConfig;
-export function getSafeConfig(type: "cta", config: unknown): CtaConfig;
-export function getSafeConfig(
-  type: "contact-form",
-  config: unknown,
-): ContactFormConfig;
-export function getSafeConfig(type: "map", config: unknown): MapConfig;
-export function getSafeConfig(type: "embed", config: unknown): EmbedConfig;
-export function getSafeConfig(
-  type: "instagram",
-  config: unknown,
-): InstagramConfig;
-export function getSafeConfig(
-  type: "location-list",
-  config: unknown,
-): LocationListConfig;
-export function getSafeConfig(
-  type: "event-calendar",
-  config: unknown,
-): EventCalendarConfig;
-export function getSafeConfig(
-  type: "reservation-form",
-  config: unknown,
-): ReservationFormConfig;
-export function getSafeConfig(
-  type: "value-props",
-  config: unknown,
-): ValuePropsConfig;
-export function getSafeConfig(
-  type: "page-hero",
-  config: unknown,
-): PageHeroConfig;
-export function getSafeConfig(type: string, config: unknown): SectionConfig {
-  // config をパース試行
-  const result = validateSectionConfig(type, config);
-  if (result.success) return result.data;
-  // フォールバック: デフォルト値を取得
-  const fallback = validateSectionConfig(type, {});
-  if (fallback.success) return fallback.data;
-  // 到達不能: 全セクションスキーマが {} からデフォルト値を生成可能
-  throw new Error(`Unknown section type: ${type}`);
-}

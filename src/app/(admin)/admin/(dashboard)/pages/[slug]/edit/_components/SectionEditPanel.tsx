@@ -20,7 +20,7 @@ import {
 } from "@/admin/components/ui";
 import { updatePageSection } from "@/admin/actions/page-section";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
 import type { DynamicSectionOptions } from "@/shared/domain/sections/dynamic-options";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
@@ -40,6 +40,8 @@ export function SectionEditPanel({
 }: SectionEditPanelProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const label =
+    getSectionDefinition(section.type)?.metadata.label ?? section.type;
 
   const handleSave = (payload: ConfigFormSavePayload) => {
     startTransition(async () => {
@@ -64,7 +66,7 @@ export function SectionEditPanel({
             type={section.type}
             className="h-5 w-5 text-muted-foreground"
           />
-          {sectionTypeLabels[section.type] ?? section.type}
+          {label}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -21,7 +21,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 import { serverEnv } from "@/shared/lib/env/server";
-import { logger } from "./logger";
+import { logger } from "./errors/logger-core";
 import { getBaseUrl } from "@/shared/lib/constants";
 
 interface PurgeResult {

@@ -23,10 +23,7 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("記事");
 
-/**
- * 投稿記事 新規作成（既存 RHF callback 用、互換維持）。
- * Sub-Chunk 2d で usePostEditor が conform 化されるまで残置。
- */
+/** 投稿記事 新規作成。 */
 export async function createPost(
   input: CreatePostInput,
 ): Promise<MutationResult<{ id: string }>> {
@@ -61,10 +58,7 @@ export async function createPost(
   });
 }
 
-/**
- * 投稿記事 設定更新（既存 RHF callback 用、互換維持）。
- * usePostEditor が conform 化されるまで残置。
- */
+/** 投稿記事 設定更新。 */
 export async function updatePostSettings(
   id: string,
   input: UpdatePostSettingsInput,
@@ -121,10 +115,7 @@ export async function updatePostSettings(
   });
 }
 
-/**
- * 投稿記事 本文更新（既存 RHF callback 用、互換維持）。
- * Sub-Chunk 2d で usePostEditor が conform 化されるまで残置。
- */
+/** 投稿記事 本文更新。 */
 export async function updatePostBody(
   id: string,
   input: { contentJson: string },

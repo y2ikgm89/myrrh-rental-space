@@ -2,7 +2,7 @@ import { createHeadlessEditor } from "@lexical/headless";
 import type { LexicalEditor } from "lexical";
 import { HEADLESS_EDITOR_NODES } from "./config/nodes";
 import { editorTheme } from "./theme";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 /** 規約 HTML↔JSON 派生および CLI 向け headless editor（Lexical 公式 API） */
 export function createProjectHeadlessEditor(): LexicalEditor {

@@ -16,8 +16,8 @@ import {
  * - `linkUrl` / `linkText` は空文字を許容 (server 側で null 化)
  * - `startAt` / `endAt` は `<input type="datetime-local">` の "YYYY-MM-DDTHH:mm" 形式
  *
- * 空 → null 変換は Server Action の executor が legacy `normalizeAnnouncementBarInput`
- * に委譲（command 層で `parseDateTimeLocalAsJst` を通す）。
+ * 空 → null 変換は Server Action の executor が command 層の
+ * `normalizeAnnouncementBarInput` に委譲（`parseDateTimeLocalAsJst` を通す）。
  */
 
 const messageSchema = z

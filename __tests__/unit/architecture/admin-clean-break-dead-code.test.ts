@@ -82,6 +82,20 @@ describe("admin clean-break dead code boundaries", () => {
     expect(utilsTest).toContain("@/shared/lib/slug");
   });
 
+  test("shared logger compatibility re-export is removed", () => {
+    expect(existsSync(filePath("src/shared/lib/logger.ts"))).toBe(false);
+
+    for (const path of [
+      "src/app/sitemap.ts",
+      "src/shared/lib/cloudflare.ts",
+      "__tests__/unit/lib/logger.test.ts",
+    ]) {
+      const source = read(path);
+      expect(source).not.toContain("@/shared/lib/logger");
+      expect(source).toContain("logger-core");
+    }
+  });
+
   test("admin password login validation and pages are removed", () => {
     expect(
       existsSync(

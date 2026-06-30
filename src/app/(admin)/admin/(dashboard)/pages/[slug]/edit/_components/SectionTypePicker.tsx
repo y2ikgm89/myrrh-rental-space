@@ -7,11 +7,7 @@
  * カード形式で表示し、クリックで `onSelect(type)` を発火する。
  */
 
-import {
-  getAllSectionDefinitions,
-  getSectionDefinition,
-} from "@/shared/lib/sections/registry";
-import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 
 interface SectionTypePickerProps {
@@ -23,11 +19,6 @@ interface SectionTypePickerProps {
 // レジストリから type → metadata を取得（registry.getSectionDefinition は client-safe）
 function getMetadata(type: string) {
   return getSectionDefinition(type)?.metadata;
-}
-
-// availableTypes が未指定の場合のフォールバック（呼び出し側で必須なので参考実装）
-export function getAllAvailableTypes(): readonly string[] {
-  return getAllSectionDefinitions().map((d) => d.type);
 }
 
 export function SectionTypePicker({
@@ -52,9 +43,7 @@ export function SectionTypePicker({
               className="h-5 w-5 shrink-0 text-muted-foreground group-hover:text-foreground"
             />
             <div className="space-y-0.5">
-              <div className="text-sm font-medium">
-                {sectionTypeLabels[type] ?? type}
-              </div>
+              <div className="text-sm font-medium">{meta?.label ?? type}</div>
               {meta?.description && (
                 <div className="text-xs text-muted-foreground">
                   {meta.description}
