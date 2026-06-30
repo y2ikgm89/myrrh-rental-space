@@ -1012,13 +1012,16 @@ describe("architecture boundaries", () => {
     expect(source).toContain("NuqsAdapter");
   });
 
-  test("Better Auth は静的 adminAuth export を使い、動的 getAuth を再導入しない", () => {
+  test("管理 auth は IAP-only で Better Auth admin instance を再導入しない", () => {
     const source = readFileSync(
       join(SRC_ROOT, "shared", "lib", "admin-auth.ts"),
       "utf8",
     );
 
-    expect(source).toContain("export const adminAuth = createAdminAuth();");
+    expect(source).toContain("resolveIapIdentity");
+    expect(source).not.toContain("createAdminAuth");
+    expect(source).not.toContain("betterAuth");
+    expect(source).not.toContain("export const adminAuth");
     expect(source).not.toContain("export async function getAuth");
     expect(source).not.toContain("resetAuthInstance");
   });
@@ -1059,14 +1062,8 @@ describe("architecture boundaries", () => {
     );
   });
 
-  test("Better Auth の canonical route handler を app/api/auth/[...all] に固定する", () => {
-    expect(existsSync(AUTH_ROUTE_FILE)).toBe(true);
-
-    const source = readFileSync(AUTH_ROUTE_FILE, "utf8");
-    expect(source).toContain(
-      'import { adminAuth } from "@/shared/lib/admin-auth"',
-    );
-    expect(source).toContain("toNextJsHandler(adminAuth)");
+  test("管理 Better Auth canonical route handler は削除済み", () => {
+    expect(existsSync(AUTH_ROUTE_FILE)).toBe(false);
   });
 
   test("cache tag invalidation は CACHE_TAGS / getCacheTag を経由し、タグ文字列を直書きしない", () => {

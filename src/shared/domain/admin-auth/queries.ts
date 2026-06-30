@@ -1,0 +1,33 @@
+import "server-only";
+
+import { prisma } from "@/shared/db/prisma";
+import { isValidRole } from "@/shared/lib/validations/enums/guards";
+import type { Role } from "@/shared/lib/validations/enums/prisma-types";
+
+export type AdminAuthUser = {
+  id: string;
+  email: string;
+  name: string;
+  image: string | null;
+  role: Role;
+  emailVerified: boolean;
+};
+
+export async function findAdminAuthUserByEmail(
+  email: string,
+): Promise<AdminAuthUser | null> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      image: true,
+      role: true,
+      emailVerified: true,
+    },
+  });
+
+  if (!user || !isValidRole(user.role)) return null;
+  return user;
+}

@@ -3,9 +3,9 @@ import "server-only";
 import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/shared/db/prisma";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
+import { findAdminAuthUserByEmail } from "@/shared/domain/admin-auth/queries";
 import { resolveIapIdentity } from "@/shared/lib/iap/admin-iap-auth";
 import { isAdminOrHigherRole, isDashboardRole } from "./admin-roles";
 import { serverEnv } from "./env/server";
@@ -55,24 +55,7 @@ async function resolveAdminEmail(
   return getTestIapEmail();
 }
 
-const loadAdminUserByEmail = cache(
-  async (email: string): Promise<AdminUser | null> => {
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
-    });
-
-    if (!user || !isValidRole(user.role)) return null;
-    return user;
-  },
-);
+const loadAdminUserByEmail = cache(findAdminAuthUserByEmail);
 
 function coerceAdminUser(user: unknown): AdminUser | null {
   if (!isRecord(user)) return null;
