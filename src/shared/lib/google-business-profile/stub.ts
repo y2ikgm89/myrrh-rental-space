@@ -5,7 +5,7 @@
 
 import "server-only";
 
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 import type { GbpSyncInput, GbpSyncResult } from "./types";
 

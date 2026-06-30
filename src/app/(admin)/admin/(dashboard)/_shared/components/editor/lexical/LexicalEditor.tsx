@@ -69,7 +69,7 @@ import { StatusBar } from "./parts/StatusBar";
 import { editorTheme } from "./theme";
 import { InspectorSidebar, InspectorSidebarProvider } from "./inspector";
 import { MobileEditorFallback } from "./parts/MobileEditorFallback";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { LexicalEditorProps } from "./types";
 import { EDITOR_PADDING_HORIZONTAL } from "./editor-layout-constants";

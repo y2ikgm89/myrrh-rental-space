@@ -7,7 +7,7 @@ import {
   isLexicalComposerReadyEditorStateJson,
 } from "@/shared/lib/validations/lexical";
 import { getErrorMessage } from "@/shared/lib/errors";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 export type ConvertHtmlToLexicalJsonResult =
   { ok: true; json: string } | { ok: false; error: string };

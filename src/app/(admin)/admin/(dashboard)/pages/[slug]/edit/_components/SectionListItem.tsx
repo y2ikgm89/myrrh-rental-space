@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
-import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 
@@ -62,6 +62,9 @@ export function SectionListItem({
   dragHandleProps,
   disableDeleteReason,
 }: SectionListItemProps) {
+  const label =
+    getSectionDefinition(section.type)?.metadata.label ?? section.type;
+
   return (
     <div
       className={cn(
@@ -100,9 +103,7 @@ export function SectionListItem({
           type={section.type}
           className="h-4 w-4 shrink-0 text-muted-foreground"
         />
-        <span className="truncate">
-          {sectionTypeLabels[section.type] ?? section.type}
-        </span>
+        <span className="truncate">{label}</span>
       </button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

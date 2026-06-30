@@ -8,7 +8,7 @@ import { deleteOldNotificationsCommand } from "@/shared/domain/notifications/com
 import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 const RETENTION_DAYS = 30;
 

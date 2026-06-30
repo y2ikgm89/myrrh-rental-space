@@ -23,7 +23,7 @@ import {
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 

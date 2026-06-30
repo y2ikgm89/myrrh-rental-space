@@ -20,12 +20,12 @@ describe("event schedule DB invariants", () => {
   test("Event.scheduleMode is explicit and deadline uses slot-compatible timestamp type", () => {
     const schema = read(SCHEMA);
 
-    expect(schema).toContain("scheduleMode          EventScheduleMode");
-    expect(schema).not.toContain(
-      "scheduleMode          EventScheduleMode @default",
+    expect(schema).toMatch(/\bscheduleMode\s+EventScheduleMode\b/u);
+    expect(schema).not.toMatch(
+      /\bscheduleMode\s+EventScheduleMode\s+@default\b/u,
     );
-    expect(schema).toContain(
-      "registrationDeadline  DateTime?   @db.Timestamptz(6)",
+    expect(schema).toMatch(
+      /\bregistrationDeadline\s+DateTime\?\s+@db\.Timestamptz\(6\)/u,
     );
     expect(schema).toContain("slotId      String             @db.VarChar(30)");
   });

@@ -28,7 +28,7 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorSeverity: { MEDIUM: "MEDIUM" },
 }));
 
-mock.module("@/shared/lib/logger", () => ({
+mock.module("@/shared/lib/errors/logger-core", () => ({
   logger: {
     info: mock(),
     warn: mock(),

@@ -10,7 +10,7 @@ import {
 } from "@/shared/lib/terms-templates";
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
 import { tryConvertHtmlStringToLexicalJsonServer } from "@/admin/components/editor/lexical/html-to-lexical-json-server";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { TermsInlineEditor } from "../_components/TermsInlineEditor";
 
 export const metadata: Metadata = {

@@ -1,10 +1,7 @@
 import "server-only";
 
 import { ReservationStatus } from "@generated/prisma/enums";
-import {
-  CANCELLED_BY,
-  type CancelledByType,
-} from "@/shared/lib/validations/enums/helpers";
+import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import { isWithinDeadline } from "./deadline";
 
 /**
@@ -56,10 +53,8 @@ export interface ApplyCancellationOptions {
    * - `CUSTOMER_MYPAGE`: 会員のマイページ自己キャンセル
    * - `CUSTOMER_TOKEN`: ゲストのメールリンク経由キャンセル
    * - `ADMIN`: 管理画面からの管理者キャンセル
-   *
-   * 後方互換のため未指定時は `CUSTOMER_MYPAGE` を default にする。
    */
-  cancelledByType?: CancelledByType;
+  cancelledByType: CancelledByType;
 }
 
 export async function applyCancellation(
@@ -80,8 +75,6 @@ export async function applyCancellation(
     };
   }
 
-  const cancelledBy = options.cancelledByType ?? CANCELLED_BY.CUSTOMER_MYPAGE;
-
   // Atomic claim: WHERE に status: { in: CANCELLABLE_STATUSES } を含めて
   // 二重 submit / 同時操作のレースを DB レベルで防ぐ。
   const updateResult = await tx.reservation.updateMany({
@@ -93,7 +86,7 @@ export async function applyCancellation(
     data: {
       status: ReservationStatus.CANCELLED,
       cancelledAt: options.now,
-      cancelledByType: cancelledBy,
+      cancelledByType: options.cancelledByType,
       icsSequence: { increment: 1 },
       ...(options.cancellationReason
         ? { cancellationReason: options.cancellationReason }

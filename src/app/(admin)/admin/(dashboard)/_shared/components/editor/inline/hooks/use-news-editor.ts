@@ -26,7 +26,7 @@ import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexica
 import { getNewsPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { NewsData } from "@/shared/domain/news/types";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

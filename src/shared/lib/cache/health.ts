@@ -23,7 +23,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 const CANARY_TAG = "cdn-tag-purge-canary-v1";
 

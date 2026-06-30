@@ -22,7 +22,7 @@ import {
   IconPhoto,
 } from "@tabler/icons-react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import {
   Button,
   Dialog,

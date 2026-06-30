@@ -50,4 +50,20 @@ describe("TypeScript toolchain compatibility", () => {
       expect(script).toStartWith("bun run toolchain:check && ");
     }
   });
+
+  test("build:skip-env supplies local public URLs for production-mode page data collection", () => {
+    const packageJson = readPackageJson();
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
+
+    const script = scripts["build:skip-env"];
+    expect(typeof script).toBe("string");
+    if (typeof script !== "string") {
+      throw new Error("build:skip-env script must exist");
+    }
+
+    expect(script).toContain("NEXT_PUBLIC_BASE_URL=http://localhost:3000");
+    expect(script).toContain("NEXT_PUBLIC_APP_URL=http://localhost:3000");
+    expect(script).toContain("SKIP_ENV_VALIDATION=true next build");
+  });
 });

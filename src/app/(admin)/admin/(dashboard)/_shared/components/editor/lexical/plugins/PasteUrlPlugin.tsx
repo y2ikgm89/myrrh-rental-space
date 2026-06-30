@@ -12,7 +12,7 @@ import {
 } from "lexical";
 import { useEffect } from "react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { $createBookmarkNode } from "../nodes/BookmarkNode";
 
 const URL_PATTERN = /^https?:\/\/[^\s]+$/;

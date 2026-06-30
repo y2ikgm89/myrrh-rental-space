@@ -18,7 +18,7 @@ import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

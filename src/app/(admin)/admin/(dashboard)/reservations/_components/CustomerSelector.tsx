@@ -13,7 +13,7 @@ import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
 import { CustomerIdentityBadge } from "@/admin/components/status-badges";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors";
 
 interface CustomerSelectorProps {

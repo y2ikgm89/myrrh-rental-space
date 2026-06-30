@@ -11,7 +11,7 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { deleteTerms } from "@/admin/actions/terms";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors";
 
 type TermsActionCellProps = {

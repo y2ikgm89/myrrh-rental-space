@@ -11,7 +11,7 @@ import type { ErrorInfo } from "next/error";
 import { useEffect } from "react";
 import { Button } from "@/public/components/design-system/button";
 import { toAppRoute } from "@/shared/lib/typed-routes";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 export default function PublicError({ error, unstable_retry }: ErrorInfo) {
   const digest = "digest" in error ? String(error.digest) : undefined;

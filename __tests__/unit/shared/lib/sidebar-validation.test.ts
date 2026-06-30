@@ -62,15 +62,15 @@ describe("parseSidebarWidgets", () => {
     expect(result).toEqual(DEFAULT_SIDEBAR_WIDGETS);
   });
 
-  test("returns default for legacy object format", () => {
-    const legacy = {
+  test("returns default for non-array object input", () => {
+    const objectInput = {
       search: true,
       recent: true,
       popular: true,
       categories: true,
       tags: true,
     };
-    const result = parseSidebarWidgets(legacy);
+    const result = parseSidebarWidgets(objectInput);
     expect(result).toEqual(DEFAULT_SIDEBAR_WIDGETS);
   });
 

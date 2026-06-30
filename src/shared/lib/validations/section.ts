@@ -173,11 +173,6 @@ export {
   type PageHeroConfig,
 } from "@/shared/lib/sections/definitions/page-hero/schema";
 
-// CTA / TextAlign の補助型・定数も互換 re-export
-export type { CTAButtonItem } from "./cta-and-url";
-export { ctaButtonVariants, ctaButtonSizes } from "./cta-and-url";
-export type { TextAlign } from "./section-options";
-
 // =============================================================================
 // SectionConfig union（全 22 セクション）
 // =============================================================================
@@ -346,7 +341,7 @@ export const isEmbedConfig = createConfigGuard(embedConfigSchema);
 export const isInstagramConfig = createConfigGuard(instagramConfigSchema);
 
 // =============================================================================
-// Parser / Metadata の互換 re-export
+// Parser re-export
 // =============================================================================
 
 export {
@@ -382,5 +377,3 @@ export {
   parseImagePosition,
   parseTextAlign,
 } from "./section-parsers";
-
-export * from "./section-metadata";

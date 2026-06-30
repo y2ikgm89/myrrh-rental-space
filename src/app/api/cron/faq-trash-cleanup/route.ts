@@ -20,7 +20,7 @@ import {
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
-import { logger } from "@/shared/lib/logger";
+import { logger } from "@/shared/lib/errors/logger-core";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 const RETENTION_DAYS = 30;

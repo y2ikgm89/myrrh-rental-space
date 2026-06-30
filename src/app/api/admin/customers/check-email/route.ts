@@ -2,12 +2,12 @@
  * 顧客メールアドレス重複候補チェック API
  *
  * Customer.email は所有権キーではなくなったため重複をブロックしない。
- * 既存 UI 互換の `available: true` に加えて、同じ canonical email の候補が
- * あるかを `duplicateCandidate` で返す。未リンク guest 同士の重複だけは
- * DB の部分一意制約に当たるため、`unlinkedDuplicateCandidate` も返す。
+ * 同じ canonical email の候補有無を `duplicateCandidate` で返す。
+ * 未リンク guest 同士の重複だけは DB の部分一意制約に当たるため、
+ * `unlinkedDuplicateCandidate` も返す。
  *
- * 認証: 認証済み admin ロール（`checkAdminAuth`）
- * レスポンス: `{ available: true, duplicateCandidate: boolean, unlinkedDuplicateCandidate: boolean }`
+ * 認証: customer:read 権限（`checkPermission`）
+ * レスポンス: `{ duplicateCandidate: boolean, unlinkedDuplicateCandidate: boolean }`
  *
  * @see docs/api-conventions.md — status code 規約 / レスポンスヘルパー
  */
@@ -62,7 +62,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     ]);
 
     return jsonSuccess({
-      available: true,
       duplicateCandidate: existing !== null,
       unlinkedDuplicateCandidate: existingGuest !== null,
     });
