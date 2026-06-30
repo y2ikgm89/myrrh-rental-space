@@ -3,8 +3,6 @@
 /**
  * スタッフ（User）作成・編集フォーム
  *
- * への clean break 移行。`updateUser` は `user.id` を bind で部分適用。
- *
  * ロール選択肢は `editableRoles` prop に従う（呼び出し側が階層から決定）。
  * サーバー側でも `canInviteRole()` / `canModifyUser()` で defense-in-depth チェック。
  */
@@ -101,13 +99,11 @@ export function UserForm({ mode, user, editableRoles }: Props) {
     defaultValue: isEdit
       ? {
           email: user.email,
-          password: "",
           name: user.name || "",
           role: defaultRole,
         }
       : {
           email: "",
-          password: "",
           name: "",
           role: defaultRole,
         },
@@ -128,7 +124,7 @@ export function UserForm({ mode, user, editableRoles }: Props) {
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
       toast.success(
-        isEdit ? "ユーザーを更新しました" : "ユーザーを作成しました",
+        isEdit ? "スタッフを更新しました" : "スタッフを追加しました",
       );
       router.push(isEdit ? `/admin/staff/${user.id}` : "/admin/staff");
       router.refresh();
@@ -179,73 +175,50 @@ export function UserForm({ mode, user, editableRoles }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={fields.password.id}>
-            パスワード {isEdit ? "(変更する場合のみ入力)" : "*"}
-          </Label>
-          <Input
-            {...getInputProps(fields.password, { type: "password" })}
-            autoComplete="new-password"
-            placeholder={isEdit ? "変更しない場合は空欄" : "8文字以上"}
-            disabled={isPending}
-          />
-          {fields.password.errors && (
-            <p
-              id={fields.password.errorId}
-              role="alert"
-              className="text-xs text-destructive"
-            >
-              {fields.password.errors.join(", ")}
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor={fields.role.id}>ロール *</Label>
-          <Select
-            value={currentRole}
-            onValueChange={(value) => {
-              if (isDashboardRoleValue(value)) {
-                roleControl.change(value);
-              }
-            }}
-            disabled={roleLocked || isPending}
+      <div className="space-y-2 md:max-w-md">
+        <Label htmlFor={fields.role.id}>ロール *</Label>
+        <Select
+          value={currentRole}
+          onValueChange={(value) => {
+            if (isDashboardRoleValue(value)) {
+              roleControl.change(value);
+            }
+          }}
+          disabled={roleLocked || isPending}
+        >
+          <SelectTrigger
+            id={fields.role.id}
+            aria-describedby={`${fields.role.id}-description`}
+            onBlur={roleControl.blur}
           >
-            <SelectTrigger
-              id={fields.role.id}
-              aria-describedby={`${fields.role.id}-description`}
-              onBlur={roleControl.blur}
-            >
-              <SelectValue placeholder="ロールを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableRoles.map((role) => (
-                <SelectItem
-                  key={role}
-                  value={role}
-                  disabled={roleLocked && role !== currentUserRole}
-                >
-                  {ROLE_LABELS[role]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <input type="hidden" name={fields.role.name} value={currentRole} />
-          <p
-            id={`${fields.role.id}-description`}
-            className="text-xs text-muted-foreground"
-          >
-            {roleLocked
-              ? "このユーザーのロールを変更する権限がありません"
-              : ROLE_DESCRIPTIONS[currentRole]}
+            <SelectValue placeholder="ロールを選択" />
+          </SelectTrigger>
+          <SelectContent>
+            {availableRoles.map((role) => (
+              <SelectItem
+                key={role}
+                value={role}
+                disabled={roleLocked && role !== currentUserRole}
+              >
+                {ROLE_LABELS[role]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <input type="hidden" name={fields.role.name} value={currentRole} />
+        <p
+          id={`${fields.role.id}-description`}
+          className="text-xs text-muted-foreground"
+        >
+          {roleLocked
+            ? "このスタッフのロールを変更する権限がありません"
+            : ROLE_DESCRIPTIONS[currentRole]}
+        </p>
+        {fields.role.errors && (
+          <p role="alert" className="text-xs text-destructive">
+            {fields.role.errors.join(", ")}
           </p>
-          {fields.role.errors && (
-            <p role="alert" className="text-xs text-destructive">
-              {fields.role.errors.join(", ")}
-            </p>
-          )}
-        </div>
+        )}
       </div>
 
       {formErrors && formErrors.length > 0 && (
@@ -261,8 +234,8 @@ export function UserForm({ mode, user, editableRoles }: Props) {
       <div className="flex gap-4">
         <SubmitButton
           isPending={isPending}
-          label={isEdit ? "更新" : "作成"}
-          pendingLabel={isEdit ? "更新中..." : "作成中..."}
+          label={isEdit ? "更新" : "追加"}
+          pendingLabel={isEdit ? "更新中..." : "追加中..."}
         />
         <Button
           type="button"

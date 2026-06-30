@@ -11,40 +11,6 @@ const Role = {
 } as const;
 type Role = (typeof Role)[keyof typeof Role];
 
-// hashPassword モック（better-auth/crypto）
-const mockHashPassword = mock<(password: string) => Promise<string>>(() =>
-  Promise.resolve("hashed-password"),
-);
-
-mock.module("better-auth/crypto", () => ({
-  hashPassword: mockHashPassword,
-}));
-
-// トランザクション内で使用する tx オブジェクト
-const mockTxUserUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "user-1" }),
-);
-const mockTxAccountFindFirst = mock<() => Promise<{ id: string } | null>>(() =>
-  Promise.resolve(null),
-);
-const mockTxAccountUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "account-1" }),
-);
-const mockTxAccountCreate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "account-1" }),
-);
-
-const mockTx = {
-  user: {
-    update: mockTxUserUpdate,
-  },
-  account: {
-    findFirst: mockTxAccountFindFirst,
-    update: mockTxAccountUpdate,
-    create: mockTxAccountCreate,
-  },
-};
-
 // Prisma モック関数（mock.module より先に定義）
 const mockUserFindUnique = mock<
   () => Promise<{
@@ -72,10 +38,6 @@ const mockUserDelete = mock<() => Promise<Record<string, unknown>>>(() =>
 
 const mockUserCount = mock<() => Promise<number>>(() => Promise.resolve(2));
 
-const mockTransaction = mock((fn: (tx: typeof mockTx) => Promise<unknown>) =>
-  fn(mockTx),
-);
-
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
@@ -89,7 +51,6 @@ mock.module("@/shared/db/prisma", () => ({
       delete: mockUserDelete,
       count: mockUserCount,
     },
-    $transaction: mockTransaction,
   },
 }));
 
@@ -97,7 +58,6 @@ mock.module("@generated/prisma/enums", () => ({
   Role,
 }));
 
-import { DomainError } from "@/shared/domain/domain-error";
 import {
   createUser,
   updateUser,
@@ -113,7 +73,6 @@ const ADMIN_ACTOR = { id: ACTOR_USER_ID, role: Role.ADMIN };
 
 const VALID_CREATE_INPUT = {
   email: "user@example.com",
-  password: "password123",
   name: "田中太郎",
   role: Role.ADMIN,
 } as const;
@@ -122,7 +81,6 @@ const VALID_UPDATE_INPUT = {
   email: "updated@example.com",
   name: "田中次郎",
   role: Role.EDITOR,
-  password: "newpassword123",
 } as const;
 
 const EXISTING_USER = {
@@ -133,34 +91,20 @@ const EXISTING_USER = {
 
 describe("users/commands", () => {
   beforeEach(() => {
-    mockHashPassword.mockReset();
     mockUserFindUnique.mockReset();
     mockUserFindFirst.mockReset();
     mockUserCreate.mockReset();
     mockUserUpdate.mockReset();
     mockUserDelete.mockReset();
     mockUserCount.mockReset();
-    mockTransaction.mockReset();
-    mockTxUserUpdate.mockReset();
-    mockTxAccountFindFirst.mockReset();
-    mockTxAccountUpdate.mockReset();
-    mockTxAccountCreate.mockReset();
 
     // デフォルト値の設定
-    mockHashPassword.mockResolvedValue("hashed-password");
     mockUserFindUnique.mockResolvedValue(null);
     mockUserFindFirst.mockResolvedValue(null);
     mockUserCreate.mockResolvedValue({ id: "user-1" });
     mockUserUpdate.mockResolvedValue({ id: USER_ID });
     mockUserDelete.mockResolvedValue({ id: USER_ID });
     mockUserCount.mockResolvedValue(2);
-    mockTransaction.mockImplementation(
-      (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
-    );
-    mockTxUserUpdate.mockResolvedValue({ id: USER_ID });
-    mockTxAccountFindFirst.mockResolvedValue(null);
-    mockTxAccountUpdate.mockResolvedValue({ id: "account-1" });
-    mockTxAccountCreate.mockResolvedValue({ id: "account-1" });
   });
 
   // ===========================================================================
@@ -179,29 +123,19 @@ describe("users/commands", () => {
         expect(mockUserCreate).toHaveBeenCalledTimes(1);
       });
 
-      test("パスワードがハッシュ化されてアカウントが作成される", async () => {
+      test("credential アカウントを作成せずスタッフユーザーを作成する", async () => {
         mockUserFindUnique.mockResolvedValueOnce(null);
         mockUserCreate.mockResolvedValueOnce({ id: "user-1" });
 
         await createUser(VALID_CREATE_INPUT, SUPER_ADMIN_ACTOR);
 
-        expect(mockHashPassword).toHaveBeenCalledWith("password123");
-        expect(mockUserCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({
-              email: "user@example.com",
-              name: "田中太郎",
-              role: Role.ADMIN,
-              accounts: {
-                create: {
-                  accountId: "user@example.com",
-                  providerId: "credential",
-                  password: "hashed-password",
-                },
-              },
-            }),
-          }),
-        );
+        expect(mockUserCreate).toHaveBeenCalledWith({
+          data: {
+            email: "user@example.com",
+            name: "田中太郎",
+            role: Role.ADMIN,
+          },
+        });
       });
 
       test("SUPER_ADMIN は全 DashboardRole のユーザーを作成できる", async () => {
@@ -282,120 +216,34 @@ describe("users/commands", () => {
 
   describe("updateUser", () => {
     describe("正常系", () => {
-      test("存在するユーザーの情報を更新できる（credential アカウントあり）", async () => {
-        // ensureUserExists: ユーザーが存在する
+      test("存在するスタッフの情報を更新できる", async () => {
         mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER);
-        // ensureEmailAvailable: 重複なし
         mockUserFindFirst.mockResolvedValueOnce(null);
-        // tx 内: credential アカウントが存在する
-        mockTxAccountFindFirst.mockResolvedValueOnce({ id: "account-1" });
 
         await expect(
           updateUser(USER_ID, VALID_UPDATE_INPUT, SUPER_ADMIN_ACTOR),
         ).resolves.toBeUndefined();
 
-        expect(mockTransaction).toHaveBeenCalledTimes(1);
-        expect(mockTxUserUpdate).toHaveBeenCalledWith(
+        expect(mockUserUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
             where: { id: USER_ID },
             data: {
               email: "updated@example.com",
               name: "田中次郎",
               role: Role.EDITOR,
+              accounts: {
+                deleteMany: {
+                  providerId: "credential",
+                },
+              },
             },
           }),
         );
-        expect(mockTxAccountUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: { id: "account-1" },
-            data: expect.objectContaining({
-              accountId: "updated@example.com",
-              password: "hashed-password",
-            }),
-          }),
-        );
-      });
-
-      test("credential アカウントがない場合はアカウントを新規作成する（パスワードあり）", async () => {
-        mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER);
-        mockUserFindFirst.mockResolvedValueOnce(null);
-        // credential アカウントが存在しない
-        mockTxAccountFindFirst.mockResolvedValueOnce(null);
-
-        await expect(
-          updateUser(USER_ID, VALID_UPDATE_INPUT, SUPER_ADMIN_ACTOR),
-        ).resolves.toBeUndefined();
-
-        expect(mockTxAccountCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: {
-              userId: USER_ID,
-              accountId: "updated@example.com",
-              providerId: "credential",
-              password: "hashed-password",
-            },
-          }),
-        );
-      });
-
-      test("パスワードが空文字の場合はハッシュ化されない", async () => {
-        mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER);
-        mockUserFindFirst.mockResolvedValueOnce(null);
-        mockTxAccountFindFirst.mockResolvedValueOnce({ id: "account-1" });
-
-        await updateUser(
-          USER_ID,
-          { ...VALID_UPDATE_INPUT, password: "" },
-          SUPER_ADMIN_ACTOR,
-        );
-
-        expect(mockHashPassword).not.toHaveBeenCalled();
-        // password フィールドは含まれない（undefined）
-        expect(mockTxAccountUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({
-              accountId: "updated@example.com",
-            }),
-          }),
-        );
-      });
-
-      test("パスワードが undefined の場合はハッシュ化されない", async () => {
-        mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER);
-        mockUserFindFirst.mockResolvedValueOnce(null);
-        mockTxAccountFindFirst.mockResolvedValueOnce({ id: "account-1" });
-
-        await updateUser(
-          USER_ID,
-          {
-            email: "updated@example.com",
-            name: "田中次郎",
-            role: Role.EDITOR,
-          },
-          SUPER_ADMIN_ACTOR,
-        );
-
-        expect(mockHashPassword).not.toHaveBeenCalled();
-      });
-
-      test("credential アカウントがなくパスワードも空の場合はアカウント作成しない", async () => {
-        mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER);
-        mockUserFindFirst.mockResolvedValueOnce(null);
-        mockTxAccountFindFirst.mockResolvedValueOnce(null);
-
-        await updateUser(
-          USER_ID,
-          { ...VALID_UPDATE_INPUT, password: "" },
-          SUPER_ADMIN_ACTOR,
-        );
-
-        expect(mockTxAccountCreate).not.toHaveBeenCalled();
       });
 
       test("同じメールアドレスで自分自身を更新できる（重複チェックが currentId を除外）", async () => {
         mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER);
         mockUserFindFirst.mockResolvedValueOnce(null);
-        mockTxAccountFindFirst.mockResolvedValueOnce(null);
 
         await updateUser(
           USER_ID,
@@ -429,7 +277,7 @@ describe("users/commands", () => {
           message: "ユーザーが見つかりません",
         });
 
-        expect(mockTransaction).not.toHaveBeenCalled();
+        expect(mockUserUpdate).not.toHaveBeenCalled();
       });
 
       test("他のユーザーが使用中のメールアドレスで CONFLICT エラーをスローする", async () => {
@@ -444,7 +292,7 @@ describe("users/commands", () => {
           message: "このメールアドレスは既に使用されています",
         });
 
-        expect(mockTransaction).not.toHaveBeenCalled();
+        expect(mockUserUpdate).not.toHaveBeenCalled();
       });
 
       test("ADMIN は別 ADMIN を編集できない（FORBIDDEN）", async () => {
@@ -457,7 +305,7 @@ describe("users/commands", () => {
           message: "このユーザーを編集する権限がありません",
         });
 
-        expect(mockTransaction).not.toHaveBeenCalled();
+        expect(mockUserUpdate).not.toHaveBeenCalled();
       });
 
       test("ADMIN は SUPER_ADMIN を編集できない（FORBIDDEN）", async () => {
@@ -491,7 +339,7 @@ describe("users/commands", () => {
           message: "このロールに変更する権限がありません",
         });
 
-        expect(mockTransaction).not.toHaveBeenCalled();
+        expect(mockUserUpdate).not.toHaveBeenCalled();
       });
 
       test("ADMIN は EDITOR を VIEWER に変更できる", async () => {
@@ -501,7 +349,6 @@ describe("users/commands", () => {
           _count: { reservations: 0, posts: 0 },
         });
         mockUserFindFirst.mockResolvedValueOnce(null);
-        mockTxAccountFindFirst.mockResolvedValueOnce(null);
 
         await expect(
           updateUser(
