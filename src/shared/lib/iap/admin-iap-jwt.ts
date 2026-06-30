@@ -24,7 +24,7 @@ export async function verifyIapJwt(jwt: string): Promise<VerifiedIapJwt> {
   }
 
   const client = getOAuthClient();
-  const certs = await client.getIapCerts();
+  const certs = await client.getIapPublicKeys();
   const ticket = await client.verifySignedJwtWithCertsAsync(
     jwt,
     certs.pubkeys,

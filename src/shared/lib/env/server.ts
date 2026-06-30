@@ -131,6 +131,10 @@ export const serverEnv = createEnv({
     // Deployment surface
     APP_SURFACE: z.enum(["public", "admin"]).default("admin"),
     ADMIN_APP_URL: noTrailingSlashUrl.optional(),
+    IAP_JWT_AUDIENCE: z.string().min(1).optional(),
+    INITIAL_ADMIN_EMAIL: z.email().optional(),
+    INITIAL_ADMIN_NAME: z.string().min(1).max(100).optional(),
+    ADMIN_TEST_IAP_EMAIL: z.email().optional(),
 
     // Google Analytics（サービスアカウント JSON — GA4 Data API）
     GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
@@ -186,6 +190,10 @@ export const serverEnv = createEnv({
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
     APP_SURFACE: process.env["APP_SURFACE"],
     ADMIN_APP_URL: process.env["ADMIN_APP_URL"],
+    IAP_JWT_AUDIENCE: process.env["IAP_JWT_AUDIENCE"],
+    INITIAL_ADMIN_EMAIL: process.env["INITIAL_ADMIN_EMAIL"],
+    INITIAL_ADMIN_NAME: process.env["INITIAL_ADMIN_NAME"],
+    ADMIN_TEST_IAP_EMAIL: process.env["ADMIN_TEST_IAP_EMAIL"],
     GOOGLE_APPLICATION_CREDENTIALS_JSON:
       process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
     R2_ACCOUNT_ID: process.env["R2_ACCOUNT_ID"],
@@ -247,6 +255,12 @@ export function validateProductionEnv(): void {
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variables in production: ${missing.join(", ")}`,
+    );
+  }
+
+  if (serverEnv.APP_SURFACE === "admin" && !serverEnv.IAP_JWT_AUDIENCE) {
+    throw new Error(
+      "Missing required environment variables in production: IAP_JWT_AUDIENCE",
     );
   }
 
