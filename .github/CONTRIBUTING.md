@@ -33,7 +33,8 @@ bun dev
 
 ### 初回ログイン
 
-- **管理者**: `bun run db:seed`（dev 既定）が固定アカウントを自動作成し、ログイン URL を表示します。`admin@example.com` / `admin123`（ADMIN）または `superadmin@example.com` / `superadmin123`（SUPER_ADMIN）。本番用の管理者は `bun prisma/seed.ts --production <email> <password>` で作成。
+- **管理者（ローカル）**: `bun run db:seed`（dev 既定）が固定アカウントを自動作成します。`http://localhost:3000/admin/login` で `admin@example.com` / `admin123`（ADMIN）または `superadmin@example.com` / `superadmin123`（SUPER_ADMIN）を使います。ログイントークン URL は発行しません。
+- **管理者（本番）**: 管理画面は公開ドメインではなく、Cloud Run の admin service URL を Cloud Run direct IAP で保護します。Google アカウントが IAP アクセス許可済みの場合のみ、admin service の `/admin/login` でアプリ側のメールアドレス / パスワードログインに進めます。公開ドメインの `/admin/*` は 404 にします。
 - **顧客**: `/login` ページの「テスト顧客でログイン」ボタン（dev 限定）
 
 ## ブランチ戦略
