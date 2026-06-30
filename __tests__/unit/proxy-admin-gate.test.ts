@@ -34,15 +34,13 @@ describe("proxy admin surface", () => {
     expect(response.headers.get("x-pathname")).toBe("/admin/login/consume");
   });
 
-  test("削除済み /admin/setup/[token] も proxy では admin route として通す", async () => {
+  test("存在しない admin route も proxy では admin route として通す", async () => {
     const response = await proxy(
-      new NextRequest("https://example.com/admin/setup/invitation-token"),
+      new NextRequest("https://example.com/admin/legacy-path"),
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("x-pathname")).toBe(
-      "/admin/setup/invitation-token",
-    );
+    expect(response.headers.get("x-pathname")).toBe("/admin/legacy-path");
   });
 
   test("session cookie がない /admin/* も proxy では redirect しない", async () => {

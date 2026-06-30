@@ -6,20 +6,20 @@ import {
   CardTitle,
   CardDescription,
 } from "@/admin/components/ui/card";
-import { InviteForm } from "../_components/InviteForm";
+import { UserForm } from "../_components/UserForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { getInvitableRoles, isDashboardRole } from "@/shared/lib/admin-roles";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "スタッフを招待 | 管理画面",
+  title: "スタッフを追加 | 管理画面",
 };
 
-export default async function InviteStaffPage() {
+export default async function NewStaffPage() {
   const user = await verifyAdminSession();
 
-  // 招待可能ロールが 0 件（= 招待権限なし）の場合はスタッフ一覧へリダイレクト
+  // 付与可能ロールが 0 件（= 追加権限なし）の場合はスタッフ一覧へリダイレクト
   if (!isDashboardRole(user.role)) {
     redirect("/admin/staff");
   }
@@ -31,18 +31,18 @@ export default async function InviteStaffPage() {
   return (
     <AdminDetailLayout
       backHref="/admin/staff"
-      title="スタッフを招待"
-      subtitle="メールでスタッフを招待します"
+      title="スタッフを追加"
+      subtitle="Google アカウントのメールアドレスと管理ロールを登録します"
     >
       <Card>
         <CardHeader>
-          <CardTitle>招待情報</CardTitle>
+          <CardTitle>スタッフ情報</CardTitle>
           <CardDescription>
-            招待するスタッフのメールアドレスとロールを入力してください
+            登録後、管理画面の案内メールをスタッフへ送信します
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <InviteForm invitableRoles={invitableRoles} />
+          <UserForm mode="create" editableRoles={invitableRoles} />
         </CardContent>
       </Card>
     </AdminDetailLayout>

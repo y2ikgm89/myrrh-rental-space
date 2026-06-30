@@ -5,6 +5,8 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { logRoleChange } from "@/admin/lib/audit";
+import { getAdminUrl } from "@/shared/lib/admin-urls";
+import { ROLE_LABELS } from "@/shared/lib/admin-roles";
 import {
   createUserSchema,
   updateUserSchema,
@@ -17,6 +19,7 @@ import {
   updateUserRole as updateUserRoleCommand,
 } from "@/shared/domain/users/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { sendStaffAccessGuideEmail } from "@/shared/lib/email/system-emails";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -37,8 +40,20 @@ export async function createUser(
     const result = await executeAdminMutationResult({
       resource: "user",
       action: "create",
-      execute: async (user) =>
-        createUserCommand(data, { id: user.id, role: user.role }),
+      execute: async (user) => {
+        const created = await createUserCommand(data, {
+          id: user.id,
+          role: user.role,
+        });
+        const emailResult = await sendStaffAccessGuideEmail({
+          to: data.email,
+          staffName: data.name,
+          staffEmail: data.email,
+          roleLabel: ROLE_LABELS[data.role],
+          adminUrl: getAdminUrl("/"),
+        });
+        return { id: created.id, emailResult };
+      },
       afterSuccess: () => {
         updateTag(CACHE_TAGS.STAFF);
       },
@@ -47,7 +62,26 @@ export async function createUser(
     if (isMutationError(result)) {
       return { ok: false, error: result.error };
     }
-    return { ok: true };
+
+    if (!result.emailResult.ok && result.emailResult.reason === "disabled") {
+      return {
+        ok: true,
+        successMessage: "スタッフを登録しました。メール送信は無効です。",
+      };
+    }
+
+    if (!result.emailResult.ok) {
+      return {
+        ok: true,
+        successMessage:
+          "スタッフを登録しました。メール送信に失敗したため、管理URLを直接共有してください。",
+      };
+    }
+
+    return {
+      ok: true,
+      successMessage: "スタッフを登録し、管理画面の案内メールを送信しました。",
+    };
   });
 }
 

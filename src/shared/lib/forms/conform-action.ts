@@ -28,12 +28,17 @@ import type { SubmissionResult } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import type { z } from "zod";
 
+type SubmissionResultWithMessage = SubmissionResult & {
+  successMessage?: string;
+};
+
 /**
  * Conform Server Action handler の戻り値契約。
  * 認証 / 権限 / domain error / DB エラー全てを `{ ok, error }` に統一する。
  */
 export type ConformHandlerResult =
-  { readonly ok: true } | { readonly ok: false; readonly error: string };
+  | { readonly ok: true; readonly successMessage?: string }
+  | { readonly ok: false; readonly error: string };
 
 /**
  * Conform Server Action handler 関数のシグネチャ。
@@ -102,7 +107,16 @@ export async function executeConformMutation<TSchema extends z.ZodTypeAny>(
   }
 
   // resetForm defaults to true。false 指定時は submitted values を維持して inline 表示
-  return options?.resetForm === false
-    ? submission.reply()
-    : submission.reply({ resetForm: true });
+  const reply =
+    options?.resetForm === false
+      ? submission.reply()
+      : submission.reply({ resetForm: true });
+
+  if (!result.successMessage) return reply;
+
+  const replyWithMessage: SubmissionResultWithMessage = {
+    ...reply,
+    successMessage: result.successMessage,
+  };
+  return replyWithMessage;
 }

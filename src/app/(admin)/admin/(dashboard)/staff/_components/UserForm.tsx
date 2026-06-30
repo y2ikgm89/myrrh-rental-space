@@ -8,6 +8,7 @@
  */
 
 import { useActionState, useEffect } from "react";
+import type { SubmissionResult } from "@conform-to/react";
 import { useRouter } from "next/navigation";
 import {
   getFormProps,
@@ -44,6 +45,9 @@ import {
 } from "@/shared/lib/admin-roles";
 
 const DASHBOARD_ROLE_SET = new Set<string>(DASHBOARD_ROLES);
+type SubmissionResultWithMessage = SubmissionResult & {
+  successMessage?: string;
+};
 
 function isDashboardRoleValue(value: string): value is DashboardRole {
   return DASHBOARD_ROLE_SET.has(value);
@@ -123,8 +127,11 @@ export function UserForm({ mode, user, editableRoles }: Props) {
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
+      const successMessage = (lastResult as SubmissionResultWithMessage)
+        .successMessage;
       toast.success(
-        isEdit ? "スタッフを更新しました" : "スタッフを追加しました",
+        successMessage ??
+          (isEdit ? "スタッフを更新しました" : "スタッフを追加しました"),
       );
       router.push(isEdit ? `/admin/staff/${user.id}` : "/admin/staff");
       router.refresh();

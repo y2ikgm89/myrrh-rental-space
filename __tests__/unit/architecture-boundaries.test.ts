@@ -200,16 +200,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "staff-invitation.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
     "space-category.ts",
   ),
   join(

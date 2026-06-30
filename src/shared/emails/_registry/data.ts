@@ -30,7 +30,7 @@ export const TEMPLATE_KEYS = [
   "admin-notification-inquiry",
   "welcome",
   "password-reset",
-  "staff-invitation",
+  "staff-access-guide",
   "review-reply",
   "__infra_check",
 ] as const;
@@ -163,9 +163,9 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     category: "account",
   },
   {
-    key: "staff-invitation",
-    label: "スタッフ招待",
-    description: "管理者がスタッフを招待した時に送信。",
+    key: "staff-access-guide",
+    label: "スタッフ案内",
+    description: "管理者がスタッフを追加した時に送信。",
     category: "account",
   },
   {

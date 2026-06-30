@@ -1,7 +1,7 @@
 /**
  * システム通知メール
  *
- * カレンダー同期エラー、スタッフ招待、Webhook 更新通知メールの送信。
+ * カレンダー同期エラー、スタッフアクセス案内、Webhook 更新通知メールの送信。
  *
  * @module shared/lib/email/system-emails
  */
@@ -9,12 +9,12 @@
 import "server-only";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
+import { StaffAccessGuideEmail } from "@/shared/emails/staff-access-guide";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../admin-urls";
 import { hashForKey, sendEmail } from "./send";
-import type { EmailResult, StaffInvitationEmailData } from "./types";
+import type { EmailResult, StaffAccessGuideEmailData } from "./types";
 
 /**
  * カレンダー同期による時間変更拒否の管理者通知メールを送信
@@ -97,27 +97,27 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 }
 
 /**
- * スタッフ招待メールを送信
+ * スタッフアクセス案内メールを送信
  */
-export async function sendStaffInvitationEmail(
-  data: StaffInvitationEmailData,
+export async function sendStaffAccessGuideEmail(
+  data: StaffAccessGuideEmailData,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
 
   return sendEmail({
     payload: {
       to: data.to,
-      subject: `【スタッフ招待】${footer.businessName}`,
-      react: StaffInvitationEmail({
+      subject: `【管理画面のご案内】${footer.businessName}`,
+      react: StaffAccessGuideEmail({
         staffName: data.staffName,
-        setupUrl: data.setupUrl,
-        expiresAt: data.expiresAt,
+        staffEmail: data.staffEmail,
+        roleLabel: data.roleLabel,
+        adminUrl: data.adminUrl,
         footer,
       }),
     },
-    // setupUrl は一意なトークンを含むため、再招待時は新しいキーになる
-    idempotencyKey: `staff-invitation/${hashForKey(data.setupUrl)}`,
-    operation: "sendStaffInvitationEmail",
+    idempotencyKey: `staff-access-guide/${hashForKey(`${data.staffEmail}:${data.adminUrl}`)}`,
+    operation: "sendStaffAccessGuideEmail",
     context: {
       to: data.to,
     },

@@ -1,7 +1,7 @@
 /**
  * 回帰テスト: リソース管理フォームの「任意フィールド空欄保存」（conform 整合）
  *
- * 顧客 / クーポン / FAQ / ページ / 分類(taxonomy) / スペースカテゴリ / 招待 /
+ * 顧客 / クーポン / FAQ / ページ / 分類(taxonomy) / スペースカテゴリ /
  * レビュー返信 / ブロック日 の conform フォームについて、必須項目のみ埋めて
  * 任意項目を空欄にした FormData が parseWithZod で status==="success" になることを
  * 固定する（conform の空→undefined 変換で任意項目が弾かれないことの実測ガード）。
@@ -11,12 +11,11 @@
  */
 import { describe, test, expect } from "bun:test";
 import { parseWithZod } from "@conform-to/zod/v4";
-import { CouponType, Role } from "@/shared/lib/validations/enums/prisma-types";
+import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import { blockedDateTypeSchema } from "@/shared/lib/validations/blocked-date";
 import { customerFormSchema } from "@/shared/lib/validations/customer";
 import { couponFormSchema } from "@/shared/lib/validations/coupon";
 import { spaceCategoryFormSchema } from "@/shared/lib/validations/space-category";
-import { createInvitationSchema } from "@/shared/lib/validations/staff-invitation";
 import { reviewReplySchema } from "@/shared/lib/validations/review";
 import {
   createPageSchema,
@@ -191,18 +190,6 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
       spaceCategoryFormSchema,
       form({ name: "会議室", description: "", icon: "", color: "" }),
       "spaceCategory",
-    );
-  });
-
-  test("invitation: name 空欄で保存できる", () => {
-    expectSuccess(
-      createInvitationSchema,
-      form({
-        email: "invite@example.com",
-        role: String(Role.EDITOR),
-        name: "",
-      }),
-      "invitation",
     );
   });
 

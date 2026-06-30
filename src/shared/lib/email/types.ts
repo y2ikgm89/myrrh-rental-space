@@ -36,11 +36,12 @@ export type ContactEmailData = {
   message: string;
 };
 
-export type StaffInvitationEmailData = {
+export type StaffAccessGuideEmailData = {
   to: string;
   staffName: string;
-  setupUrl: string;
-  expiresAt: Date;
+  staffEmail: string;
+  roleLabel: string;
+  adminUrl: string;
 };
 
 export type InquiryReplyEmailData = {
