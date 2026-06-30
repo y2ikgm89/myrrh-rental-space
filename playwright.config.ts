@@ -9,7 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Project 構成:
  *   - setup-customer / setup-admin → 認証してストレージ保存
  *   - chromium-smoke               → 毎 push 必須の critical-path gate (< 3 分)
- *   - chromium                     → 未認証テスト（公開 + 管理ログインフロー + a11y）
+ *   - chromium                     → 未認証テスト（公開 + 管理 IAP 境界 + a11y）
  *   - chromium-customer            → 顧客認証済テスト
  *   - chromium-admin               → 管理者認証済テスト
  *   - chromium-visual              → visual regression (opt-in)
@@ -69,7 +69,7 @@ export default defineConfig({
     },
 
     /* ===================================================================
-     * 未認証 project: 公開ページ + 管理ログインフロー + a11y
+     * 未認証 project: 公開ページ + 管理 IAP 境界 + a11y
      * `e2e/public/*.spec.ts` および `e2e/a11y/*.spec.ts` を対象。
      * setup spec / 認証済 / visual / smoke は明示除外。
      * =================================================================== */
@@ -120,7 +120,7 @@ export default defineConfig({
    * - CI: `bun run start` (production build artifact、dev mode の初回コンパイル
    *   による timeout / CPU 枯渇を回避し安定化)
    *
-   * production build でも DevLoginButton を CI で出すため
+   * production build でも顧客 DevLoginButton を CI で出すため
    * `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` を build + start 両方で渡す。
    * staging / production には絶対伝播させない (login bypass risk)。
    */
@@ -129,5 +129,16 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env["CI"],
     timeout: 180 * 1000,
+    env: {
+      ...process.env,
+      ADMIN_TEST_IAP_EMAIL:
+        process.env["ADMIN_TEST_IAP_EMAIL"] ?? "admin@example.com",
+      INITIAL_ADMIN_EMAIL:
+        process.env["INITIAL_ADMIN_EMAIL"] ?? "admin@example.com",
+      INITIAL_ADMIN_NAME: process.env["INITIAL_ADMIN_NAME"] ?? "Test Admin",
+      IAP_JWT_AUDIENCE:
+        process.env["IAP_JWT_AUDIENCE"] ??
+        "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin",
+    },
   },
 });

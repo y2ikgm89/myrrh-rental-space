@@ -81,4 +81,27 @@ describe("admin clean-break dead code boundaries", () => {
     expect(utilsTest).toContain("@/shared/lib/form-data");
     expect(utilsTest).toContain("@/shared/lib/slug");
   });
+
+  test("admin password login validation and pages are removed", () => {
+    expect(
+      existsSync(
+        filePath(
+          "src/app/(admin)/admin/(dashboard)/_shared/lib/validations/auth.ts",
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(filePath("src/app/(admin)/admin/(auth)/login/page.tsx")),
+    ).toBe(false);
+    expect(
+      existsSync(
+        filePath("src/app/(admin)/admin/(auth)/forgot-password/page.tsx"),
+      ),
+    ).toBe(false);
+    expect(
+      existsSync(
+        filePath("src/app/(admin)/admin/(auth)/reset-password/page.tsx"),
+      ),
+    ).toBe(false);
+  });
 });

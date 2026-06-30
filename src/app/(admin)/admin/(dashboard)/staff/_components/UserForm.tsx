@@ -170,6 +170,10 @@ export function UserForm({ mode, user, editableRoles }: Props) {
             placeholder="example@example.com"
             disabled={isPending}
           />
+          <p className="text-xs text-muted-foreground">
+            同じメールアドレスの Google アカウントを IAP
+            の許可グループにも追加してください。アプリ用パスワードは不要です。
+          </p>
           {fields.email.errors && (
             <p
               id={fields.email.errorId}

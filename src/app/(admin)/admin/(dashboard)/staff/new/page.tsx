@@ -32,13 +32,13 @@ export default async function NewStaffPage() {
     <AdminDetailLayout
       backHref="/admin/staff"
       title="スタッフを追加"
-      subtitle="Google アカウントのメールアドレスと管理ロールを登録します"
+      subtitle="Google アカウントのメールアドレスを登録し、IAP 側の許可と合わせて管理アクセスを付与します"
     >
       <Card>
         <CardHeader>
           <CardTitle>スタッフ情報</CardTitle>
           <CardDescription>
-            登録後、管理画面の案内メールをスタッフへ送信します
+            登録後、管理画面の案内メールを送信します。アプリ用パスワードは発行しません
           </CardDescription>
         </CardHeader>
         <CardContent>

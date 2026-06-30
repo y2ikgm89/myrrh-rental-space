@@ -32,7 +32,7 @@ test.describe("Google Business Profile 連携 - smoke", () => {
   test("GBP セクションが「カレンダー」タブに表示される", async ({ page }) => {
     await page.goto(API_SETTINGS_PATH);
 
-    // 認証済み（/admin/login にリダイレクトされていない）
+    // 認証済み（/admin/access-denied にリダイレクトされていない）
     expect(page.url()).not.toMatch(/\/admin\/login/);
 
     // GBP セクションタイトル

@@ -31,10 +31,10 @@ bun dev
 
 `bun dev` は Turbopack で起動し、`http://localhost:3000` で公開ページ、`http://localhost:3000/admin` で管理画面を開けます。
 
-### 初回ログイン
+### 初回アクセス
 
-- **管理者（ローカル）**: `bun run db:seed`（dev 既定）が固定アカウントを自動作成します。`http://localhost:3000/admin/login` で `admin@example.com` / `admin123`（ADMIN）または `superadmin@example.com` / `superadmin123`（SUPER_ADMIN）を使います。ログイントークン URL は発行しません。
-- **管理者（本番）**: 管理画面は公開ドメインではなく、Cloud Run の admin service URL を Cloud Run direct IAP で保護します。Google アカウントが IAP アクセス許可済みの場合のみ、admin service の `/admin/login` でアプリ側のメールアドレス / パスワードログインに進めます。公開ドメインの `/admin/*` は 404 にします。
+- **管理者（ローカル）**: `.env.local` に `ADMIN_TEST_IAP_EMAIL=admin@example.com` を設定し、`bun run db:seed` 後に `http://localhost:3000/admin` を開きます。アプリ用パスワードやログイントークン URL はありません。
+- **管理者（本番）**: 管理画面は公開ドメインではなく、Cloud Run の admin service URL を Cloud Run direct IAP で保護します。Google アカウントが IAP 許可済みで、同じメールアドレスのスタッフ user が DB にある場合のみ `/admin` を開けます。公開ドメインの `/admin/*` は 404 にします。
 - **顧客**: `/login` ページの「テスト顧客でログイン」ボタン（dev 限定）
 
 ## ブランチ戦略

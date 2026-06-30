@@ -115,4 +115,20 @@ describe("GET /api/google-business-profile/oauth/callback", () => {
     expect(mockExchangeGbpAuthCode).not.toHaveBeenCalled();
     expect(mockSaveGbpAuthState).not.toHaveBeenCalled();
   });
+
+  test("IAP 通過後の未登録 user は access-denied に送る", async () => {
+    mockCheckPermission.mockResolvedValueOnce({
+      success: false as const,
+      error: { error: "ログインが必要です" },
+    });
+
+    const response = await GET(createCallbackRequest());
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://app.example.test/admin/access-denied",
+    );
+    expect(mockExchangeGbpAuthCode).not.toHaveBeenCalled();
+    expect(mockSaveGbpAuthState).not.toHaveBeenCalled();
+  });
 });

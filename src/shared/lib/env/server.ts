@@ -258,10 +258,19 @@ export function validateProductionEnv(): void {
     );
   }
 
-  if (serverEnv.APP_SURFACE === "admin" && !serverEnv.IAP_JWT_AUDIENCE) {
-    throw new Error(
-      "Missing required environment variables in production: IAP_JWT_AUDIENCE",
-    );
+  if (serverEnv.APP_SURFACE === "admin") {
+    const missingAdminEnv = [
+      { name: "IAP_JWT_AUDIENCE", value: serverEnv.IAP_JWT_AUDIENCE },
+      { name: "INITIAL_ADMIN_EMAIL", value: serverEnv.INITIAL_ADMIN_EMAIL },
+    ]
+      .filter(({ value }) => !value)
+      .map(({ name }) => name);
+
+    if (missingAdminEnv.length > 0) {
+      throw new Error(
+        `Missing required environment variables in production: ${missingAdminEnv.join(", ")}`,
+      );
+    }
   }
 
   // ENCRYPTION_KEY の形式検証（64文字のhex = 32バイト）

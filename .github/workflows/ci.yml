@@ -371,13 +371,17 @@ jobs:
 
       - name: Run admin smoke E2E tests
         if: needs.changes.outputs.code == 'true'
-        run: bunx playwright test --project=chromium-smoke e2e/smoke/auth.smoke.spec.ts --grep "管理ログイン"
+        run: bunx playwright test --project=chromium-smoke e2e/smoke/auth.smoke.spec.ts --grep "管理入口"
         env:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
+          IAP_JWT_AUDIENCE: "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin"
+          INITIAL_ADMIN_EMAIL: "admin@example.com"
+          INITIAL_ADMIN_NAME: "Test Admin"
+          ADMIN_TEST_IAP_EMAIL: "admin@example.com"
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
           R2_ACCOUNT_ID: "test-r2-account"
@@ -453,7 +457,9 @@ jobs:
         env:
           # NEXT_PUBLIC_* は build 時に static replace されるため build step で渡す。
           # E2E 専用 opt-in: DevLoginButton を production build でも表示し、
-          # setup-customer / setup-admin が dev login ボタンをクリックできるようにする。
+          # setup-customer が dev login ボタンをクリックできるようにする。
+          # setup-admin は IAP-only のため、runtime env の ADMIN_TEST_IAP_EMAIL で
+          # ローカル IAP identity を解決する。
           # staging / production には絶対伝播させない（login bypass risk）。
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           SKIP_ENV_VALIDATION: "true"
@@ -467,6 +473,10 @@ jobs:
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
+          IAP_JWT_AUDIENCE: "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin"
+          INITIAL_ADMIN_EMAIL: "admin@example.com"
+          INITIAL_ADMIN_NAME: "Test Admin"
+          ADMIN_TEST_IAP_EMAIL: "admin@example.com"
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（lhci-start.ts と同方針）。
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
