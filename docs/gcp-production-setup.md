@@ -28,6 +28,12 @@ Official references:
   <https://cloud.google.com/build/docs/deploying-builds/deploy-cloud-run>
 - Cloud Build user-specified service accounts:
   <https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts>
+- Google Cloud Workload Identity Federation for deployment pipelines:
+  <https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines>
+- google-github-actions/auth:
+  <https://github.com/google-github-actions/auth>
+- google-github-actions/setup-gcloud:
+  <https://github.com/google-github-actions/setup-gcloud>
 - IAP IAM:
   <https://cloud.google.com/iap/docs/managing-access>
 - Google Cloud resource hierarchy:
@@ -104,7 +110,11 @@ export TURNSTILE_SITE_KEY="0x..."
 export MIGRATE_JOB_NAME="prisma-migrate"
 export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
 export BUILD_SA="myrrh-rental-space-build@${PROJECT_ID}.iam.gserviceaccount.com"
-export GITHUB_REPOSITORY_RESOURCE="projects/${PROJECT_ID}/locations/${REGION}/connections/github-myrrh-rental-space/repositories/y2ikgm89-myrrh-rental-space"
+export GITHUB_REPOSITORY="y2ikgm89/myrrh-rental-space"
+export GITHUB_REPOSITORY_ID="1128842422"
+export GITHUB_REPOSITORY_OWNER_ID="69025248"
+export WIF_POOL_ID="github-actions"
+export WIF_PROVIDER_ID="github-myrrh-rental-space"
 export IAP_ADMIN_GROUP="group:myrrh-admins@example.com"
 export INITIAL_ADMIN_EMAIL="owner@example.com"
 export INITIAL_ADMIN_NAME="Owner"
@@ -181,6 +191,8 @@ gcloud services enable \
   iap.googleapis.com \
   cloudresourcemanager.googleapis.com \
   iam.googleapis.com \
+  iamcredentials.googleapis.com \
+  sts.googleapis.com \
   cloudidentity.googleapis.com
 ```
 
@@ -214,7 +226,7 @@ Grant the build identity only the deployment permissions it needs:
 ```bash
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${BUILD_SA}" \
-  --role="roles/cloudbuild.builds.editor"
+  --role="roles/cloudbuild.builds.builder"
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${BUILD_SA}" \
@@ -447,48 +459,60 @@ triggers because it makes rollbacks ambiguous.
 
 ## Cloud Build production trigger
 
-Use a single push trigger for production deploys. Do not create a pull-request
-deploy trigger. PR validation belongs in GitHub Actions; Cloud Build deploys
-only after code reaches `main`.
+Production auto-deploy uses GitHub Actions with Google Workload Identity
+Federation (WIF), then submits the existing `cloudbuild.yaml`. This keeps
+GitHub as the merge event source while avoiding service account keys and the
+Cloud Build GitHub repository connection as a production dependency.
 
-Create the trigger:
+Do not create a pull-request deploy trigger. PR validation belongs in
+`.github/workflows/ci.yml`; production deploys only after code reaches `main`.
+
+Create the WIF pool and provider:
 
 ```bash
-gcloud builds triggers create github \
+gcloud iam workload-identity-pools create "$WIF_POOL_ID" \
   --project="$PROJECT_ID" \
-  --region="$REGION" \
-  --name="deploy-main" \
-  --description="Deploy main to Cloud Run production" \
-  --repository="$GITHUB_REPOSITORY_RESOURCE" \
-  --branch-pattern="^main$" \
-  --build-config="cloudbuild.yaml" \
-  --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_IAP_JWT_AUDIENCE=${IAP_JWT_AUDIENCE},_INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL},_INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
-  --ignored-files="docs/**,**/*.md" \
-  --include-logs-with-status \
-  --no-require-approval
+  --location="global" \
+  --display-name="GitHub Actions" \
+  --description="GitHub Actions OIDC federation for production deploys"
+
+gcloud iam workload-identity-pools providers create-oidc "$WIF_PROVIDER_ID" \
+  --project="$PROJECT_ID" \
+  --location="global" \
+  --workload-identity-pool="$WIF_POOL_ID" \
+  --display-name="GitHub Myrrh Rental Space" \
+  --description="${GITHUB_REPOSITORY} main deploy workflow" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner=assertion.repository_owner,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.event_name=assertion.event_name,attribute.workflow=assertion.workflow" \
+  --attribute-condition="assertion.repository == '${GITHUB_REPOSITORY}' && assertion.repository_id == '${GITHUB_REPOSITORY_ID}' && assertion.repository_owner_id == '${GITHUB_REPOSITORY_OWNER_ID}' && assertion.ref == 'refs/heads/main' && (assertion.event_name == 'push' || assertion.event_name == 'workflow_dispatch')"
 ```
 
-If the trigger already exists, update it instead:
+Allow only that repository identity to impersonate the build service account:
 
 ```bash
-gcloud builds triggers update github deploy-main \
+gcloud iam service-accounts add-iam-policy-binding "$BUILD_SA" \
   --project="$PROJECT_ID" \
-  --region="$REGION" \
-  --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_IAP_JWT_AUDIENCE=${IAP_JWT_AUDIENCE},_INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL},_INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
-  --ignored-files="docs/**,**/*.md" \
-  --include-logs-with-status \
-  --no-require-approval
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_ID}/attribute.repository_id/${GITHUB_REPOSITORY_ID}" \
+  --role="roles/iam.workloadIdentityUser"
 ```
 
-Verify:
+The repository workflow `.github/workflows/deploy-production.yml` is the
+production deploy trigger. It authenticates with `google-github-actions/auth`,
+sets up `gcloud`, and runs `gcloud builds submit` with the fixed production
+substitutions and Secret Manager version `1` values.
+
+Verify the WIF provider and service account binding:
 
 ```bash
-gcloud builds triggers describe deploy-main \
+gcloud iam workload-identity-pools providers describe "$WIF_PROVIDER_ID" \
   --project="$PROJECT_ID" \
-  --region="$REGION" \
-  --format="yaml(name,disabled,serviceAccount,repositoryEventConfig.push.branch,filename,ignoredFiles,includeBuildLogs,substitutions)"
+  --location="global" \
+  --workload-identity-pool="$WIF_POOL_ID" \
+  --format="yaml(name,state,attributeCondition,attributeMapping)"
+
+gcloud iam service-accounts get-iam-policy "$BUILD_SA" \
+  --project="$PROJECT_ID" \
+  --format="yaml(bindings)"
 ```
 
 ## Cloud Run service settings
@@ -648,6 +672,8 @@ Expected results:
 - `${ADMIN_DOMAIN}/admin` redirects unauthenticated visitors to Google/IAP;
 - with an IAP-allowed Google account and matching app staff user, `/admin`
   opens the dashboard without an app password form;
+- `.github/workflows/deploy-production.yml` starts on `main` pushes that include
+  application/deploy files and the Cloud Build it submits succeeds;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
 - `bun run gcp:audit-production-iap` passes. If it fails on Organization or
   individual IAP grants, the admin site is protected but the GCP posture is not
@@ -671,8 +697,8 @@ The remaining GCP-side production tasks are:
 
 1. create or cut over to an Organization-backed GCP project;
 2. create and grant Secret Manager secrets;
-3. create a Cloud Build trigger with required substitutions and fixed secret
-   versions;
+3. create WIF pool/provider and keep `.github/workflows/deploy-production.yml`
+   as the only production auto-deploy trigger;
 4. grant IAP access to the admin Google Group and remove individual IAP grants;
 5. run `bun run gcp:audit-production-iap`;
 6. run the production verification checks.

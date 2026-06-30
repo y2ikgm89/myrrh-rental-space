@@ -1,0 +1,101 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: myrrh-rental-space
+  PROJECT_NUMBER: "626108938746"
+  REGION: asia-northeast1
+  SERVICE_NAME: myrrh-rental-space
+  ADMIN_SERVICE_NAME: myrrh-rental-space-admin
+  AR_REPOSITORY: myrrh-rental-space
+  WORKER_POOL: myrrh-deploy-pool
+  RUNTIME_SERVICE_ACCOUNT: myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com
+  BUILD_SERVICE_ACCOUNT: myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com
+  WORKLOAD_IDENTITY_PROVIDER: projects/626108938746/locations/global/workloadIdentityPools/github-actions/providers/github-myrrh-rental-space
+  PUBLIC_DOMAIN: https://rental-space.myrrh-jp.com
+  ADMIN_DOMAIN: https://myrrh-rental-space-admin-da57q4squa-an.a.run.app
+  IAP_JWT_AUDIENCE: /projects/626108938746/locations/asia-northeast1/services/myrrh-rental-space-admin
+  INITIAL_ADMIN_EMAIL: ikeakie@gmail.com
+  INITIAL_ADMIN_NAME: Owner
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: 0x4AAAAAADi6Bqavj97fu7JG
+
+jobs:
+  deploy:
+    name: Cloud Build Deploy
+    if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.BUILD_SERVICE_ACCOUNT }}
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Submit Cloud Build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SHORT_SHA="${GITHUB_SHA::7}"
+          SUBSTITUTIONS="SHORT_SHA=${SHORT_SHA}"
+          SUBSTITUTIONS+=",_REGION=${REGION}"
+          SUBSTITUTIONS+=",_SERVICE_NAME=${SERVICE_NAME}"
+          SUBSTITUTIONS+=",_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME}"
+          SUBSTITUTIONS+=",_IAP_JWT_AUDIENCE=${IAP_JWT_AUDIENCE}"
+          SUBSTITUTIONS+=",_INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL}"
+          SUBSTITUTIONS+=",_INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME}"
+          SUBSTITUTIONS+=",_REPOSITORY=${AR_REPOSITORY}"
+          SUBSTITUTIONS+=",_WORKER_POOL=${WORKER_POOL}"
+          SUBSTITUTIONS+=",_SERVICE_ACCOUNT=${RUNTIME_SERVICE_ACCOUNT}"
+          SUBSTITUTIONS+=",_BUILD_SERVICE_ACCOUNT=${BUILD_SERVICE_ACCOUNT}"
+          SUBSTITUTIONS+=",_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN}"
+          SUBSTITUTIONS+=",_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN}"
+          SUBSTITUTIONS+=",_BETTER_AUTH_URL=${PUBLIC_DOMAIN}"
+          SUBSTITUTIONS+=",_ADMIN_APP_URL=${ADMIN_DOMAIN}"
+          SUBSTITUTIONS+=",_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}"
+          SUBSTITUTIONS+=",_DATABASE_URL_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_BETTER_AUTH_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_ENCRYPTION_KEY_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_CRON_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_R2_ACCOUNT_ID_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_R2_ACCESS_KEY_ID_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_R2_BUCKET_NAME_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_R2_PUBLIC_URL_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_GOOGLE_CLIENT_ID_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1"
+
+          gcloud builds submit \
+            --project="${PROJECT_ID}" \
+            --region="${REGION}" \
+            --config=cloudbuild.yaml \
+            --substitutions="${SUBSTITUTIONS}"
