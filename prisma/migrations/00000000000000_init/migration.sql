@@ -1,5 +1,1785 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER', 'USER', 'CUSTOMER');
+
+-- CreateEnum
+CREATE TYPE "ReservationStatus" AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
+
+-- CreateEnum
+CREATE TYPE "InquiryStatus" AS ENUM ('NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED');
+
+-- CreateEnum
+CREATE TYPE "CustomerType" AS ENUM ('PERSONAL', 'CORPORATE');
+
+-- CreateEnum
+CREATE TYPE "CustomerStatus" AS ENUM ('NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST');
+
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('UNPAID', 'PENDING', 'PAID', 'REFUNDED', 'FAILED');
+
+-- CreateEnum
+CREATE TYPE "NavigationType" AS ENUM ('HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER');
+
+-- CreateEnum
+CREATE TYPE "SocialPlatform" AS ENUM ('TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTUBE', 'LINE', 'TIKTOK', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "LayoutWidth" AS ENUM ('XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM');
+
+-- CreateEnum
+CREATE TYPE "PostStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "CouponType" AS ENUM ('PERCENTAGE', 'FIXED_AMOUNT');
+
+-- CreateEnum
+CREATE TYPE "DiscountType" AS ENUM ('none', 'percentage', 'fixed');
+
+-- CreateEnum
+CREATE TYPE "DurationDiscountOverride" AS ENUM ('inherit', 'enabled', 'disabled');
+
+-- CreateEnum
+CREATE TYPE "TaxRateType" AS ENUM ('standard', 'reduced');
+
+-- CreateEnum
+CREATE TYPE "HeaderScrollBehavior" AS ENUM ('auto-hide', 'always-visible', 'hide-on-scroll');
+
+-- CreateEnum
+CREATE TYPE "HeaderBackgroundMode" AS ENUM ('solid', 'transparent');
+
+-- CreateEnum
+CREATE TYPE "TaxDisplayMode" AS ENUM ('tax_excluded', 'tax_included', 'both');
+
+-- CreateEnum
+CREATE TYPE "TaxInputMode" AS ENUM ('tax_excluded', 'tax_included');
+
+-- CreateEnum
+CREATE TYPE "CalendarSyncMethod" AS ENUM ('polling', 'webhook', 'both');
+
+-- CreateEnum
+CREATE TYPE "AnalyticsType" AS ENUM ('ga4', 'gtm');
+
+-- CreateEnum
+CREATE TYPE "DiscountCombinationMode" AS ENUM ('best', 'both');
+
+-- CreateEnum
+CREATE TYPE "AnnouncementBarAnimation" AS ENUM ('fade', 'slideX', 'slideY');
+
+-- CreateEnum
+CREATE TYPE "AnnouncementBarDesignStyle" AS ENUM ('solid', 'gradient', 'outlined', 'glass', 'minimal', 'striped');
+
+-- CreateEnum
+CREATE TYPE "InstagramMediaType" AS ENUM ('IMAGE', 'VIDEO', 'CAROUSEL_ALBUM');
+
+-- CreateEnum
+CREATE TYPE "EventStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'CANCELLED', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "EventScheduleMode" AS ENUM ('SINGLE_OCCURRENCE', 'TIMED_ENTRY');
+
+-- CreateEnum
+CREATE TYPE "RegistrationStatus" AS ENUM ('CONFIRMED', 'CANCELLED');
+
+-- CreateEnum
+CREATE TYPE "EmailDeliveryStatus" AS ENUM ('OK', 'SOFT_BOUNCED', 'HARD_BOUNCED', 'COMPLAINED');
+
+-- CreateEnum
+CREATE TYPE "AuditAction" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'PUBLISH', 'LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGOUT', 'PERMISSION_DENIED', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_FAILED', 'ROLE_CHANGE');
+
+-- CreateEnum
+CREATE TYPE "EditorCommentStatus" AS ENUM ('ACTIVE', 'RESOLVED', 'DELETED');
+
+-- CreateEnum
+CREATE TYPE "MediaType" AS ENUM ('IMAGE', 'VIDEO', 'AUDIO', 'DOCUMENT', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "MediaUsage" AS ENUM ('POST', 'NEWS', 'PAGE', 'SPACE', 'EVENT', 'SITE', 'GENERAL');
+
+-- CreateEnum
+CREATE TYPE "TermsScope" AS ENUM ('LOGIN_SIGNUP', 'RESERVATION', 'INQUIRY', 'EVENT_REGISTRATION');
+
+-- CreateTable
+CREATE TABLE "user" (
+    "id" UUID NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "image" TEXT,
+    "role" "Role" NOT NULL DEFAULT 'USER',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "user_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_page_assignments" (
+    "userId" UUID NOT NULL,
+    "pageId" UUID NOT NULL,
+
+    CONSTRAINT "user_page_assignments_pkey" PRIMARY KEY ("userId","pageId")
+);
+
+-- CreateTable
+CREATE TABLE "account" (
+    "id" UUID NOT NULL,
+    "userId" UUID NOT NULL,
+    "accountId" TEXT NOT NULL,
+    "providerId" TEXT NOT NULL,
+    "accessToken" TEXT,
+    "refreshToken" TEXT,
+    "idToken" TEXT,
+    "accessTokenExpiresAt" TIMESTAMP(3),
+    "refreshTokenExpiresAt" TIMESTAMP(3),
+    "scope" TEXT,
+    "password" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "account_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "session" (
+    "id" UUID NOT NULL,
+    "token" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "ipAddress" TEXT,
+    "userAgent" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "session_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "verification" (
+    "id" UUID NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "verification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "locations" (
+    "id" UUID NOT NULL,
+    "slug" VARCHAR(255) NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "address" TEXT NOT NULL,
+    "postalCode" TEXT,
+    "prefecture" TEXT,
+    "city" TEXT,
+    "streetAddress" TEXT,
+    "buildingName" TEXT,
+    "accessLines" JSONB NOT NULL DEFAULT '[]',
+    "parkingInfo" TEXT,
+    "amenities" JSONB NOT NULL DEFAULT '{}',
+    "imageUrl" TEXT NOT NULL,
+    "imageUrls" JSONB NOT NULL DEFAULT '[]',
+    "businessHours" JSONB,
+    "specialHolidays" JSONB,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "googleBusinessPlaceId" TEXT,
+    "googleReviewUrl" TEXT,
+    "priceRange" VARCHAR(100),
+    "paymentAccepted" TEXT,
+    "phoneNumber" TEXT,
+    "email" TEXT,
+    "gbpSyncEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "gbpSyncedAt" TIMESTAMP(3),
+    "gbpSyncError" TEXT,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "locations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "space_categories" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "icon" TEXT,
+    "color" TEXT,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "space_categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "spaces" (
+    "id" UUID NOT NULL,
+    "slug" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "descriptionJson" JSONB NOT NULL,
+    "descriptionHtml" TEXT NOT NULL,
+    "descriptionPlainText" TEXT NOT NULL,
+    "addressDetail" TEXT,
+    "capacity" INTEGER NOT NULL,
+    "area" DECIMAL(10,2),
+    "hourlyPrice" DECIMAL(10,2) NOT NULL,
+    "dailyPrice" DECIMAL(10,2),
+    "mainImageUrl" TEXT NOT NULL,
+    "gallery" JSONB NOT NULL DEFAULT '[]',
+    "facilities" JSONB NOT NULL DEFAULT '[]',
+    "businessHours" JSONB,
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    "publishedAt" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "reviewsEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "metaDescription" TEXT,
+    "metaKeywords" TEXT,
+    "ogpTitle" TEXT,
+    "ogpDescription" TEXT,
+    "ogpImageUrl" TEXT,
+    "discountType" "DiscountType" NOT NULL DEFAULT 'none',
+    "discountValue" DECIMAL(10,2),
+    "durationDiscountOverride" "DurationDiscountOverride" NOT NULL DEFAULT 'inherit',
+    "taxRateType" "TaxRateType" NOT NULL DEFAULT 'standard',
+    "locationId" UUID NOT NULL,
+    "categoryId" UUID,
+
+    CONSTRAINT "spaces_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "blocked_dates" (
+    "id" UUID NOT NULL,
+    "scope" VARCHAR(16) NOT NULL,
+    "spaceId" UUID,
+    "locationId" UUID,
+    "startDate" DATE NOT NULL,
+    "endDate" DATE NOT NULL,
+    "reason" VARCHAR(200),
+    "type" VARCHAR(32) NOT NULL,
+    "createdBy" UUID NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "blocked_dates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "reservations" (
+    "id" UUID NOT NULL,
+    "spaceId" UUID NOT NULL,
+    "userId" UUID,
+    "customerId" UUID NOT NULL,
+    "startTime" TIMESTAMP(3) NOT NULL,
+    "endTime" TIMESTAMP(3) NOT NULL,
+    "status" "ReservationStatus" NOT NULL DEFAULT 'PENDING',
+    "totalPrice" DECIMAL(10,2),
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "couponId" UUID,
+    "couponDiscountAmount" DECIMAL(10,2),
+    "durationDiscountAmount" DECIMAL(10,2),
+    "spaceDiscountAmount" DECIMAL(10,2),
+    "basePrice" DECIMAL(10,2),
+    "taxRateType" "TaxRateType",
+    "taxRate" DECIMAL(5,2),
+    "taxAmount" DECIMAL(10,2),
+    "totalPriceWithTax" DECIMAL(10,2),
+    "googleCalendarEventId" TEXT,
+    "calendarSyncedAt" TIMESTAMP(3),
+    "calendarSyncError" TEXT,
+    "guestLastName" TEXT,
+    "guestFirstName" TEXT,
+    "guestEmail" TEXT,
+    "guestPhone" TEXT,
+    "guestCompanyName" TEXT,
+    "guestCustomerType" "CustomerType",
+    "deletedAt" TIMESTAMP(3),
+    "deletedById" UUID,
+    "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'UNPAID',
+    "stripeCheckoutSessionId" TEXT,
+    "stripePaymentIntentId" TEXT,
+    "paidAt" TIMESTAMP(3),
+    "cancellationReason" TEXT,
+    "cancelledAt" TIMESTAMP(3),
+    "cancelledByType" VARCHAR(20),
+    "icsSequence" INTEGER NOT NULL DEFAULT 0,
+    "reminderSentAt" TIMESTAMP(3),
+
+    CONSTRAINT "reservations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "customers" (
+    "id" UUID NOT NULL,
+    "lastName" TEXT NOT NULL,
+    "firstName" TEXT NOT NULL,
+    "lastNameKana" TEXT,
+    "firstNameKana" TEXT,
+    "companyName" TEXT,
+    "customerType" "CustomerType" NOT NULL DEFAULT 'PERSONAL',
+    "email" TEXT NOT NULL,
+    "emailCanonical" TEXT,
+    "phoneNumber" TEXT,
+    "postalCode" VARCHAR(8),
+    "prefecture" VARCHAR(10),
+    "city" VARCHAR(100),
+    "streetAddress" VARCHAR(200),
+    "building" VARCHAR(200),
+    "status" "CustomerStatus" NOT NULL DEFAULT 'NEW',
+    "notes" TEXT,
+    "totalReservations" INTEGER NOT NULL DEFAULT 0,
+    "totalSpent" DECIMAL(10,2),
+    "lastReservationAt" TIMESTAMP(3),
+    "firstReservationAt" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "marketingOptIn" BOOLEAN NOT NULL DEFAULT false,
+    "phoneContactOptIn" BOOLEAN NOT NULL DEFAULT true,
+    "emailDeliveryStatus" "EmailDeliveryStatus" NOT NULL DEFAULT 'OK',
+    "emailDeliveryUpdatedAt" TIMESTAMP(3),
+    "emailDeliveryReason" VARCHAR(500),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" UUID,
+
+    CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "coupons" (
+    "id" UUID NOT NULL,
+    "code" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "type" "CouponType" NOT NULL,
+    "discountValue" DECIMAL(10,2) NOT NULL,
+    "minReservationAmount" DECIMAL(10,2),
+    "maxDiscountAmount" DECIMAL(10,2),
+    "validFrom" TIMESTAMP(3) NOT NULL,
+    "validUntil" TIMESTAMP(3),
+    "usageLimit" INTEGER,
+    "usageCount" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "canCombineWithDurationDiscount" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "coupons_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "inquiries" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "companyName" TEXT,
+    "customerType" "CustomerType",
+    "email" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "status" "InquiryStatus" NOT NULL DEFAULT 'NEW',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "replyMessage" TEXT,
+    "repliedAt" TIMESTAMP(3),
+    "repliedById" UUID,
+    "customerId" UUID,
+
+    CONSTRAINT "inquiries_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "news" (
+    "id" UUID NOT NULL,
+    "slug" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "contentJson" JSONB,
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    "publishedAt" TIMESTAMP(3),
+    "contentWidth" "LayoutWidth",
+    "contentWidthCustom" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "metaDescription" TEXT,
+    "metaKeywords" TEXT,
+    "ogpTitle" TEXT,
+    "ogpDescription" TEXT,
+    "ogpImageUrl" TEXT,
+
+    CONSTRAINT "news_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "announcement_bars" (
+    "id" UUID NOT NULL,
+    "message" JSONB NOT NULL DEFAULT '[]',
+    "linkUrl" TEXT,
+    "linkText" TEXT,
+    "bgColor" TEXT,
+    "textColor" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "priority" INTEGER NOT NULL DEFAULT 0,
+    "startAt" TIMESTAMP(3),
+    "endAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "announcement_bars_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "posts" (
+    "id" UUID NOT NULL,
+    "title" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "excerpt" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "contentJson" JSONB,
+    "thumbnailUrl" TEXT NOT NULL,
+    "ogpImageUrl" TEXT,
+    "categoryId" UUID NOT NULL,
+    "metaDescription" TEXT,
+    "metaKeywords" TEXT,
+    "ogpTitle" TEXT,
+    "ogpDescription" TEXT,
+    "publishedAt" TIMESTAMP(3),
+    "status" "PostStatus" NOT NULL DEFAULT 'DRAFT',
+    "authorId" UUID,
+    "contentWidth" "LayoutWidth",
+    "contentWidthCustom" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "posts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "post_tag_on_posts" (
+    "postId" UUID NOT NULL,
+    "tagId" UUID NOT NULL,
+
+    CONSTRAINT "post_tag_on_posts_pkey" PRIMARY KEY ("postId","tagId")
+);
+
+-- CreateTable
+CREATE TABLE "post_categories" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "metaTitle" TEXT,
+    "metaDescription" TEXT,
+    "ogpImageUrl" TEXT,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "post_categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "post_tags" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "metaTitle" TEXT,
+    "metaDescription" TEXT,
+    "ogpImageUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "post_tags_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "pages" (
+    "id" UUID NOT NULL,
+    "slug" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "metaDescription" TEXT,
+    "metaKeywords" TEXT,
+    "ogpTitle" TEXT,
+    "ogpDescription" TEXT,
+    "ogpImageUrl" TEXT,
+    "isPublished" BOOLEAN NOT NULL DEFAULT true,
+    "publishedAt" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "isSystemPage" BOOLEAN NOT NULL DEFAULT false,
+    "template" VARCHAR(64) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "pages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sections" (
+    "id" UUID NOT NULL,
+    "pageId" UUID NOT NULL,
+    "type" VARCHAR(64) NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "config" JSONB NOT NULL DEFAULT '{}',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sections_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "navigation_items" (
+    "id" UUID NOT NULL,
+    "type" "NavigationType" NOT NULL,
+    "parentId" UUID,
+    "label" JSONB NOT NULL,
+    "url" TEXT NOT NULL,
+    "isExternal" BOOLEAN NOT NULL DEFAULT false,
+    "order" INTEGER NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "navigation_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "social_links" (
+    "id" UUID NOT NULL,
+    "platform" "SocialPlatform" NOT NULL,
+    "url" TEXT NOT NULL,
+    "order" INTEGER NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "showOnDesktop" BOOLEAN NOT NULL DEFAULT true,
+    "showOnMobile" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "social_links_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "faq_categories" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "description" TEXT,
+    "icon" TEXT,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "deletedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "faq_categories_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "faq_items" (
+    "id" UUID NOT NULL,
+    "categoryId" UUID NOT NULL,
+    "question" TEXT NOT NULL,
+    "answer" TEXT NOT NULL,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "isPublished" BOOLEAN NOT NULL DEFAULT true,
+    "publishedAt" TIMESTAMP(3),
+    "deletedAt" TIMESTAMP(3),
+    "viewCount" INTEGER NOT NULL DEFAULT 0,
+    "lastViewedAt" TIMESTAMP(3),
+    "helpfulCount" INTEGER NOT NULL DEFAULT 0,
+    "notHelpfulCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "faq_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "settings" (
+    "id" TEXT NOT NULL DEFAULT 'singleton',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "siteName" TEXT,
+    "siteDescription" TEXT,
+    "faviconUrl" TEXT NOT NULL DEFAULT '',
+    "defaultOgpImageUrl" TEXT,
+    "headerLogoUrl" TEXT,
+    "footerLogoUrl" TEXT,
+    "footerCopyright" TEXT,
+    "useHeaderLogo" BOOLEAN NOT NULL DEFAULT true,
+    "useFooterLogo" BOOLEAN NOT NULL DEFAULT true,
+    "businessName" TEXT,
+    "businessNameKana" TEXT,
+    "representativeName" TEXT,
+    "establishedDate" TIMESTAMP(3),
+    "registrationNumber" TEXT,
+    "invoiceNumber" TEXT,
+    "businessDescription" TEXT,
+    "phoneNumber" TEXT,
+    "faxNumber" TEXT,
+    "email" TEXT,
+    "postalCode" TEXT,
+    "prefecture" TEXT,
+    "city" TEXT,
+    "streetAddress" TEXT,
+    "buildingName" TEXT,
+    "businessHours" JSONB,
+    "regularHolidays" JSONB,
+    "holidayNotice" TEXT,
+    "senderEmail" TEXT,
+    "senderName" TEXT,
+    "replyToEmail" TEXT,
+    "defaultMetaDescription" TEXT,
+    "defaultMetaKeywords" TEXT,
+    "defaultOgpTitle" TEXT,
+    "defaultOgpDescription" TEXT,
+    "containerWidth" "LayoutWidth",
+    "containerWidthCustom" INTEGER,
+    "contentWidth" "LayoutWidth",
+    "contentWidthCustom" INTEGER,
+    "headerScrollBehavior" "HeaderScrollBehavior" NOT NULL DEFAULT 'always-visible',
+    "headerBackgroundMode" "HeaderBackgroundMode" NOT NULL DEFAULT 'solid',
+    "footerTagline" TEXT,
+    "footerNavigationLabel" TEXT NOT NULL DEFAULT 'Navigation',
+    "footerContactLabel" TEXT NOT NULL DEFAULT 'Contact',
+    "footerHoursLabel" TEXT NOT NULL DEFAULT 'Hours',
+    "footerShowSocialLinks" BOOLEAN NOT NULL DEFAULT true,
+    "themeColor" TEXT NOT NULL DEFAULT '#fafafa',
+    "sidebarEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "sidebarWidgets" JSONB NOT NULL DEFAULT '{"search":true,"recent":true,"popular":true,"categories":true,"tags":true}',
+    "sidebarRecentCount" INTEGER NOT NULL DEFAULT 5,
+    "sidebarPopularCount" INTEGER NOT NULL DEFAULT 5,
+    "sidebarTocEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "analyticsType" "AnalyticsType",
+    "googleAnalyticsId" TEXT,
+    "googleTagManagerId" TEXT,
+    "googleSearchConsoleId" TEXT,
+    "bingWebmasterToolsId" TEXT,
+    "gaPropertyId" TEXT,
+    "microsoftClarityId" TEXT,
+    "defaultTimeSlot" INTEGER NOT NULL DEFAULT 60,
+    "minReservationDuration" INTEGER NOT NULL DEFAULT 60,
+    "maxReservationDuration" INTEGER NOT NULL DEFAULT 480,
+    "sendReservationConfirmationEmail" BOOLEAN NOT NULL DEFAULT true,
+    "durationDiscountEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "durationDiscountRules" JSONB NOT NULL DEFAULT '[]',
+    "discountCombinationMode" "DiscountCombinationMode" NOT NULL DEFAULT 'best',
+    "showOriginalPrice" BOOLEAN NOT NULL DEFAULT true,
+    "taxStandardRate" DECIMAL(5,2) NOT NULL DEFAULT 10,
+    "taxReducedRate" DECIMAL(5,2) NOT NULL DEFAULT 8,
+    "taxDisplayModePublic" "TaxDisplayMode" NOT NULL DEFAULT 'tax_included',
+    "notifyNewReservation" BOOLEAN NOT NULL DEFAULT true,
+    "notifyReservationChange" BOOLEAN NOT NULL DEFAULT true,
+    "notifyReservationCancel" BOOLEAN NOT NULL DEFAULT true,
+    "notifyNewInquiry" BOOLEAN NOT NULL DEFAULT true,
+    "notifyEventRegistration" BOOLEAN NOT NULL DEFAULT true,
+    "notifyEventCancellation" BOOLEAN NOT NULL DEFAULT true,
+    "notificationStaffIds" JSONB,
+    "notificationEmailAddresses" TEXT,
+    "maintenanceMode" BOOLEAN NOT NULL DEFAULT false,
+    "maintenanceMessage" TEXT,
+    "stripeEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "stripePublishableKey" TEXT,
+    "stripeSecretKey" TEXT,
+    "stripeWebhookSecret" TEXT,
+    "stripeAccountId" TEXT,
+    "stripeCurrency" TEXT NOT NULL DEFAULT 'jpy',
+    "stripeLastTestedAt" TIMESTAMP(3),
+    "stripeConnectionStatus" TEXT,
+    "cookieConsentEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "cookieConsentMessage" TEXT,
+    "cookieConsentAcceptText" TEXT,
+    "cookieConsentRejectText" TEXT,
+    "cookieConsentPolicyUrl" TEXT,
+    "announcementBarAnimation" "AnnouncementBarAnimation" NOT NULL DEFAULT 'fade',
+    "announcementBarDuration" INTEGER NOT NULL DEFAULT 5000,
+    "announcementBarAutoPlay" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarPauseOnHover" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarShowArrows" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarShowIndicator" BOOLEAN NOT NULL DEFAULT true,
+    "announcementBarDesignStyle" "AnnouncementBarDesignStyle" NOT NULL DEFAULT 'solid',
+    "announcementBarBgColor" TEXT,
+    "announcementBarTextColor" TEXT,
+    "announcementBarStripeColor" TEXT,
+    "announcementBarStripeAnimation" BOOLEAN NOT NULL DEFAULT false,
+    "announcementBarGradientAnimation" BOOLEAN NOT NULL DEFAULT false,
+    "announcementBarGlassAnimation" BOOLEAN NOT NULL DEFAULT false,
+    "announcementBarSticky" BOOLEAN NOT NULL DEFAULT false,
+    "resendApiKey" TEXT,
+    "resendLastTestedAt" TIMESTAMP(3),
+    "resendConnectionStatus" TEXT,
+    "turnstileSiteKey" TEXT,
+    "turnstileSecretKey" TEXT,
+    "turnstileLastTestedAt" TIMESTAMP(3),
+    "turnstileConnectionStatus" TEXT,
+    "googleMapsApiKey" TEXT,
+    "googleMapsLastTestedAt" TIMESTAMP(3),
+    "googleMapsConnectionStatus" TEXT,
+    "customApiKeys" JSONB DEFAULT '{}',
+    "googleCalendarEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "googleCalendarServiceAccountJson" TEXT,
+    "googleCalendarId" TEXT,
+    "googleCalendarLastTestedAt" TIMESTAMP(3),
+    "googleCalendarConnectionStatus" TEXT,
+    "googleBusinessProfileEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "googleBusinessProfileAuth" JSONB,
+    "googleCalendarMeetEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "googleCalendarReminderMinutes" INTEGER,
+    "icalAttachmentEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "addToCalendarLinksEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "googleCalendarTwoWaySyncEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "googleCalendarSyncMethod" "CalendarSyncMethod" NOT NULL DEFAULT 'polling',
+    "googleCalendarSyncToken" TEXT,
+    "googleCalendarLastSyncedAt" TIMESTAMP(3),
+    "eventImportEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "eventImportSyncToken" TEXT,
+    "featureModules" JSONB NOT NULL DEFAULT '{}',
+    "googleCalendarWebhookChannelId" TEXT,
+    "googleCalendarWebhookResourceId" TEXT,
+    "googleCalendarWebhookExpiration" TIMESTAMP(3),
+    "googleCalendarWebhookToken" TEXT,
+    "instagramAccessToken" TEXT,
+    "instagramTokenExpiresAt" TIMESTAMP(3),
+    "instagramUserId" TEXT,
+    "instagramUsername" TEXT,
+    "instagramAccountType" TEXT,
+    "cancellationDeadlineHours" INTEGER NOT NULL DEFAULT 24,
+    "modificationDeadlineHours" INTEGER NOT NULL DEFAULT 24,
+
+    CONSTRAINT "settings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "instagram_posts" (
+    "id" UUID NOT NULL,
+    "postId" TEXT NOT NULL,
+    "postUrl" TEXT NOT NULL,
+    "mediaUrl" TEXT,
+    "thumbnailUrl" TEXT,
+    "caption" TEXT,
+    "mediaType" "InstagramMediaType" NOT NULL,
+    "permalink" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "instagram_posts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "audit_logs" (
+    "id" UUID NOT NULL,
+    "userId" UUID,
+    "action" "AuditAction" NOT NULL,
+    "resource" TEXT NOT NULL,
+    "resourceId" TEXT,
+    "oldValue" JSONB,
+    "newValue" JSONB,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "media" (
+    "id" UUID NOT NULL,
+    "filename" TEXT NOT NULL,
+    "storagePath" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "bucket" TEXT NOT NULL,
+    "mimeType" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+    "width" INTEGER,
+    "height" INTEGER,
+    "type" "MediaType" NOT NULL,
+    "usage" "MediaUsage" NOT NULL DEFAULT 'GENERAL',
+    "alt" TEXT,
+    "title" TEXT,
+    "description" TEXT,
+    "tags" JSONB NOT NULL DEFAULT '[]',
+    "uploadedBy" UUID,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "media_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "login_attempts" (
+    "id" UUID NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "success" BOOLEAN NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "login_attempts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "terms_documents" (
+    "id" UUID NOT NULL,
+    "type" VARCHAR(64) NOT NULL,
+    "slug" VARCHAR(50) NOT NULL,
+    "title" VARCHAR(100) NOT NULL,
+    "contentJson" JSONB NOT NULL,
+    "contentHtml" TEXT NOT NULL,
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    "publishedAt" TIMESTAMP(3),
+    "scopes" "TermsScope"[],
+    "changelog" TEXT,
+    "showInFooter" BOOLEAN NOT NULL DEFAULT true,
+    "footerOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "terms_documents_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "terms_agreements" (
+    "id" UUID NOT NULL,
+    "termsId" UUID NOT NULL,
+    "customerId" UUID,
+    "guestEmail" VARCHAR(255),
+    "contentSnapshot" TEXT NOT NULL,
+    "contentHash" VARCHAR(64) NOT NULL,
+    "agreedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "scope" "TermsScope" NOT NULL,
+    "resourceId" UUID,
+    "ipAddress" VARCHAR(45),
+    "userAgent" TEXT,
+
+    CONSTRAINT "terms_agreements_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "editor_comment_threads" (
+    "id" UUID NOT NULL,
+    "markId" TEXT NOT NULL,
+    "contentType" TEXT NOT NULL,
+    "contentId" UUID NOT NULL,
+    "quotedText" TEXT NOT NULL,
+    "status" "EditorCommentStatus" NOT NULL DEFAULT 'ACTIVE',
+    "resolvedAt" TIMESTAMP(3),
+    "resolvedBy" UUID,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdBy" UUID,
+
+    CONSTRAINT "editor_comment_threads_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "editor_comments" (
+    "id" UUID NOT NULL,
+    "threadId" UUID NOT NULL,
+    "content" TEXT NOT NULL,
+    "isDeleted" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
+    "deletedBy" UUID,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdBy" UUID,
+
+    CONSTRAINT "editor_comments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "block_templates" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "nodeJson" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdBy" UUID,
+
+    CONSTRAINT "block_templates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "space_reviews" (
+    "id" UUID NOT NULL,
+    "spaceId" UUID NOT NULL,
+    "customerId" UUID NOT NULL,
+    "reservationId" UUID NOT NULL,
+    "rating" INTEGER NOT NULL,
+    "title" VARCHAR(100),
+    "comment" VARCHAR(1000),
+    "isPublished" BOOLEAN NOT NULL DEFAULT true,
+    "replyBody" VARCHAR(1000),
+    "repliedAt" TIMESTAMP(3),
+    "repliedById" UUID,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "space_reviews_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "event_time_slots" (
+    "id" VARCHAR(30) NOT NULL,
+    "eventId" VARCHAR(30) NOT NULL,
+    "startAt" TIMESTAMPTZ(6) NOT NULL,
+    "endAt" TIMESTAMPTZ(6) NOT NULL,
+    "capacity" INTEGER NOT NULL,
+    "googleCalendarEventId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "event_time_slots_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "events" (
+    "id" VARCHAR(30) NOT NULL,
+    "title" VARCHAR(200) NOT NULL,
+    "slug" VARCHAR(100) NOT NULL,
+    "descriptionJson" JSONB NOT NULL,
+    "descriptionHtml" TEXT NOT NULL,
+    "descriptionPlainText" TEXT NOT NULL,
+    "thumbnailUrl" TEXT,
+    "ogpImageUrl" TEXT,
+    "ogpTitle" TEXT,
+    "ogpDescription" TEXT,
+    "metaDescription" TEXT,
+    "metaKeywords" TEXT,
+    "addressDetail" VARCHAR(200),
+    "locationId" UUID,
+    "spaceId" UUID,
+    "status" "EventStatus" NOT NULL DEFAULT 'DRAFT',
+    "scheduleMode" "EventScheduleMode" NOT NULL,
+    "registrationOpen" BOOLEAN NOT NULL DEFAULT true,
+    "registrationDeadline" TIMESTAMPTZ(6),
+    "publishedAt" TIMESTAMP(3),
+    "deletedAt" TIMESTAMP(3),
+    "deletedById" UUID,
+    "gallery" JSONB NOT NULL DEFAULT '[]',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "firstSlotStartAt" TIMESTAMPTZ(6),
+    "lastSlotEndAt" TIMESTAMPTZ(6),
+
+    CONSTRAINT "events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "event_tickets" (
+    "id" VARCHAR(30) NOT NULL,
+    "eventId" VARCHAR(30) NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "description" TEXT,
+    "price" INTEGER NOT NULL,
+    "capacity" INTEGER,
+    "unitSize" INTEGER NOT NULL DEFAULT 1,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "isAvailable" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "event_tickets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "event_registrations" (
+    "id" VARCHAR(30) NOT NULL,
+    "eventId" VARCHAR(30) NOT NULL,
+    "slotId" VARCHAR(30) NOT NULL,
+    "ticketId" VARCHAR(30) NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "email" VARCHAR(255),
+    "phone" VARCHAR(20),
+    "note" TEXT,
+    "quantity" INTEGER NOT NULL DEFAULT 1,
+    "status" "RegistrationStatus" NOT NULL DEFAULT 'CONFIRMED',
+    "customerId" UUID,
+    "cancelledAt" TIMESTAMP(3),
+    "attendedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "icsSequence" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "event_registrations_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "admin_notification" (
+    "id" UUID NOT NULL,
+    "type" VARCHAR(50) NOT NULL,
+    "title" VARCHAR(200) NOT NULL,
+    "message" VARCHAR(500) NOT NULL,
+    "resourceType" VARCHAR(50),
+    "resourceId" UUID,
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "admin_notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
+
+-- CreateIndex
+CREATE INDEX "user_name_idx" ON "user"("name");
+
+-- CreateIndex
+CREATE INDEX "user_page_assignments_pageId_idx" ON "user_page_assignments"("pageId");
+
+-- CreateIndex
+CREATE INDEX "account_userId_idx" ON "account"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "session_token_key" ON "session"("token");
+
+-- CreateIndex
+CREATE INDEX "session_userId_idx" ON "session"("userId");
+
+-- CreateIndex
+CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "locations_slug_key" ON "locations"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "locations_name_key" ON "locations"("name");
+
+-- CreateIndex
+CREATE INDEX "locations_isPublished_isActive_idx" ON "locations"("isPublished", "isActive");
+
+-- CreateIndex
+CREATE INDEX "locations_sortOrder_idx" ON "locations"("sortOrder");
+
+-- CreateIndex
+CREATE INDEX "locations_gbpSyncError_idx" ON "locations"("gbpSyncError");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "space_categories_name_key" ON "space_categories"("name");
+
+-- CreateIndex
+CREATE INDEX "space_categories_sortOrder_idx" ON "space_categories"("sortOrder");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "spaces_slug_key" ON "spaces"("slug");
+
+-- CreateIndex
+CREATE INDEX "spaces_name_idx" ON "spaces"("name");
+
+-- CreateIndex
+CREATE INDEX "spaces_addressDetail_idx" ON "spaces"("addressDetail");
+
+-- CreateIndex
+CREATE INDEX "spaces_isPublished_isActive_idx" ON "spaces"("isPublished", "isActive");
+
+-- CreateIndex
+CREATE INDEX "spaces_publishedAt_isActive_idx" ON "spaces"("publishedAt", "isActive");
+
+-- CreateIndex
+CREATE INDEX "spaces_locationId_idx" ON "spaces"("locationId");
+
+-- CreateIndex
+CREATE INDEX "spaces_categoryId_idx" ON "spaces"("categoryId");
+
+-- CreateIndex
+CREATE INDEX "blocked_dates_scope_startDate_endDate_idx" ON "blocked_dates"("scope", "startDate", "endDate");
+
+-- CreateIndex
+CREATE INDEX "blocked_dates_spaceId_startDate_endDate_idx" ON "blocked_dates"("spaceId", "startDate", "endDate");
+
+-- CreateIndex
+CREATE INDEX "blocked_dates_locationId_startDate_endDate_idx" ON "blocked_dates"("locationId", "startDate", "endDate");
+
+-- CreateIndex
+CREATE INDEX "reservations_spaceId_idx" ON "reservations"("spaceId");
+
+-- CreateIndex
+CREATE INDEX "reservations_customerId_idx" ON "reservations"("customerId");
+
+-- CreateIndex
+CREATE INDEX "reservations_userId_idx" ON "reservations"("userId");
+
+-- CreateIndex
+CREATE INDEX "reservations_startTime_idx" ON "reservations"("startTime");
+
+-- CreateIndex
+CREATE INDEX "reservations_endTime_idx" ON "reservations"("endTime");
+
+-- CreateIndex
+CREATE INDEX "reservations_status_idx" ON "reservations"("status");
+
+-- CreateIndex
+CREATE INDEX "reservations_createdAt_idx" ON "reservations"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "reservations_spaceId_startTime_endTime_idx" ON "reservations"("spaceId", "startTime", "endTime");
+
+-- CreateIndex
+CREATE INDEX "reservations_customerId_startTime_idx" ON "reservations"("customerId", "startTime");
+
+-- CreateIndex
+CREATE INDEX "reservations_couponId_idx" ON "reservations"("couponId");
+
+-- CreateIndex
+CREATE INDEX "reservations_deletedAt_idx" ON "reservations"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "reservations_paymentStatus_idx" ON "reservations"("paymentStatus");
+
+-- CreateIndex
+CREATE INDEX "reservations_stripePaymentIntentId_idx" ON "reservations"("stripePaymentIntentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customers_userId_key" ON "customers"("userId");
+
+-- CreateIndex
+CREATE INDEX "customers_lastName_idx" ON "customers"("lastName");
+
+-- CreateIndex
+CREATE INDEX "customers_firstName_idx" ON "customers"("firstName");
+
+-- CreateIndex
+CREATE INDEX "customers_phoneNumber_idx" ON "customers"("phoneNumber");
+
+-- CreateIndex
+CREATE INDEX "customers_status_idx" ON "customers"("status");
+
+-- CreateIndex
+CREATE INDEX "customers_customerType_idx" ON "customers"("customerType");
+
+-- CreateIndex
+CREATE INDEX "customers_emailCanonical_idx" ON "customers"("emailCanonical");
+
+-- CreateIndex
+CREATE INDEX "customers_emailCanonical_userId_idx" ON "customers"("emailCanonical", "userId");
+
+-- CreateIndex
+CREATE INDEX "customers_isActive_idx" ON "customers"("isActive");
+
+-- CreateIndex
+CREATE INDEX "customers_lastReservationAt_idx" ON "customers"("lastReservationAt");
+
+-- CreateIndex
+CREATE INDEX "customers_lastName_firstName_idx" ON "customers"("lastName", "firstName");
+
+-- CreateIndex
+CREATE INDEX "customers_emailDeliveryStatus_idx" ON "customers"("emailDeliveryStatus");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "coupons_code_key" ON "coupons"("code");
+
+-- CreateIndex
+CREATE INDEX "coupons_validFrom_validUntil_idx" ON "coupons"("validFrom", "validUntil");
+
+-- CreateIndex
+CREATE INDEX "coupons_isActive_idx" ON "coupons"("isActive");
+
+-- CreateIndex
+CREATE INDEX "inquiries_email_idx" ON "inquiries"("email");
+
+-- CreateIndex
+CREATE INDEX "inquiries_status_idx" ON "inquiries"("status");
+
+-- CreateIndex
+CREATE INDEX "inquiries_createdAt_idx" ON "inquiries"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "inquiries_createdAt_status_idx" ON "inquiries"("createdAt", "status");
+
+-- CreateIndex
+CREATE INDEX "inquiries_customerId_idx" ON "inquiries"("customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "news_slug_key" ON "news"("slug");
+
+-- CreateIndex
+CREATE INDEX "news_title_idx" ON "news"("title");
+
+-- CreateIndex
+CREATE INDEX "news_isPublished_publishedAt_idx" ON "news"("isPublished", "publishedAt");
+
+-- CreateIndex
+CREATE INDEX "news_createdAt_idx" ON "news"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "announcement_bars_isActive_priority_idx" ON "announcement_bars"("isActive", "priority");
+
+-- CreateIndex
+CREATE INDEX "announcement_bars_startAt_endAt_idx" ON "announcement_bars"("startAt", "endAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "posts_slug_key" ON "posts"("slug");
+
+-- CreateIndex
+CREATE INDEX "posts_title_idx" ON "posts"("title");
+
+-- CreateIndex
+CREATE INDEX "posts_authorId_idx" ON "posts"("authorId");
+
+-- CreateIndex
+CREATE INDEX "posts_status_publishedAt_idx" ON "posts"("status", "publishedAt");
+
+-- CreateIndex
+CREATE INDEX "posts_categoryId_status_publishedAt_idx" ON "posts"("categoryId", "status", "publishedAt");
+
+-- CreateIndex
+CREATE INDEX "post_tag_on_posts_tagId_idx" ON "post_tag_on_posts"("tagId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "post_categories_name_key" ON "post_categories"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "post_categories_slug_key" ON "post_categories"("slug");
+
+-- CreateIndex
+CREATE INDEX "post_categories_order_idx" ON "post_categories"("order");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "post_tags_name_key" ON "post_tags"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "post_tags_slug_key" ON "post_tags"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "pages_slug_key" ON "pages"("slug");
+
+-- CreateIndex
+CREATE INDEX "pages_isPublished_isActive_idx" ON "pages"("isPublished", "isActive");
+
+-- CreateIndex
+CREATE INDEX "pages_isSystemPage_idx" ON "pages"("isSystemPage");
+
+-- CreateIndex
+CREATE INDEX "sections_pageId_order_isActive_idx" ON "sections"("pageId", "order", "isActive");
+
+-- CreateIndex
+CREATE INDEX "sections_type_idx" ON "sections"("type");
+
+-- CreateIndex
+CREATE INDEX "navigation_items_type_order_idx" ON "navigation_items"("type", "order");
+
+-- CreateIndex
+CREATE INDEX "navigation_items_parentId_idx" ON "navigation_items"("parentId");
+
+-- CreateIndex
+CREATE INDEX "social_links_order_idx" ON "social_links"("order");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "faq_categories_slug_key" ON "faq_categories"("slug");
+
+-- CreateIndex
+CREATE INDEX "faq_categories_order_idx" ON "faq_categories"("order");
+
+-- CreateIndex
+CREATE INDEX "faq_categories_isActive_order_idx" ON "faq_categories"("isActive", "order");
+
+-- CreateIndex
+CREATE INDEX "faq_categories_deletedAt_idx" ON "faq_categories"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "faq_items_categoryId_order_idx" ON "faq_items"("categoryId", "order");
+
+-- CreateIndex
+CREATE INDEX "faq_items_categoryId_isPublished_order_idx" ON "faq_items"("categoryId", "isPublished", "order");
+
+-- CreateIndex
+CREATE INDEX "faq_items_isPublished_idx" ON "faq_items"("isPublished");
+
+-- CreateIndex
+CREATE INDEX "faq_items_deletedAt_idx" ON "faq_items"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "faq_items_updatedAt_idx" ON "faq_items"("updatedAt");
+
+-- CreateIndex
+CREATE INDEX "faq_items_viewCount_idx" ON "faq_items"("viewCount");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "instagram_posts_postId_key" ON "instagram_posts"("postId");
+
+-- CreateIndex
+CREATE INDEX "instagram_posts_sortOrder_idx" ON "instagram_posts"("sortOrder");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_userId_idx" ON "audit_logs"("userId");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_resource_resourceId_idx" ON "audit_logs"("resource", "resourceId");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_action_idx" ON "audit_logs"("action");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "audit_logs_userId_createdAt_idx" ON "audit_logs"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "media_type_usage_idx" ON "media"("type", "usage");
+
+-- CreateIndex
+CREATE INDEX "media_uploadedBy_idx" ON "media"("uploadedBy");
+
+-- CreateIndex
+CREATE INDEX "media_isActive_createdAt_idx" ON "media"("isActive", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "media_mimeType_idx" ON "media"("mimeType");
+
+-- CreateIndex
+CREATE INDEX "login_attempts_identifier_createdAt_idx" ON "login_attempts"("identifier", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "login_attempts_email_createdAt_idx" ON "login_attempts"("email", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "terms_documents_slug_key" ON "terms_documents"("slug");
+
+-- CreateIndex
+CREATE INDEX "terms_documents_type_idx" ON "terms_documents"("type");
+
+-- CreateIndex
+CREATE INDEX "terms_documents_deletedAt_isPublished_idx" ON "terms_documents"("deletedAt", "isPublished");
+
+-- CreateIndex
+CREATE INDEX "terms_documents_showInFooter_isPublished_footerOrder_idx" ON "terms_documents"("showInFooter", "isPublished", "footerOrder");
+
+-- CreateIndex
+CREATE INDEX "terms_agreements_termsId_idx" ON "terms_agreements"("termsId");
+
+-- CreateIndex
+CREATE INDEX "terms_agreements_customerId_idx" ON "terms_agreements"("customerId");
+
+-- CreateIndex
+CREATE INDEX "terms_agreements_resourceId_idx" ON "terms_agreements"("resourceId");
+
+-- CreateIndex
+CREATE INDEX "terms_agreements_agreedAt_idx" ON "terms_agreements"("agreedAt");
+
+-- CreateIndex
+CREATE INDEX "terms_agreements_scope_agreedAt_idx" ON "terms_agreements"("scope", "agreedAt");
+
+-- CreateIndex
+CREATE INDEX "editor_comment_threads_contentType_contentId_status_idx" ON "editor_comment_threads"("contentType", "contentId", "status");
+
+-- CreateIndex
+CREATE INDEX "editor_comment_threads_createdBy_idx" ON "editor_comment_threads"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "editor_comment_threads_status_createdAt_idx" ON "editor_comment_threads"("status", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "editor_comment_threads_markId_contentType_contentId_key" ON "editor_comment_threads"("markId", "contentType", "contentId");
+
+-- CreateIndex
+CREATE INDEX "editor_comments_threadId_createdAt_idx" ON "editor_comments"("threadId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "editor_comments_createdBy_idx" ON "editor_comments"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "editor_comments_isDeleted_idx" ON "editor_comments"("isDeleted");
+
+-- CreateIndex
+CREATE INDEX "block_templates_createdBy_idx" ON "block_templates"("createdBy");
+
+-- CreateIndex
+CREATE INDEX "block_templates_createdAt_idx" ON "block_templates"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "space_reviews_reservationId_key" ON "space_reviews"("reservationId");
+
+-- CreateIndex
+CREATE INDEX "space_reviews_spaceId_isPublished_createdAt_idx" ON "space_reviews"("spaceId", "isPublished", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "space_reviews_customerId_idx" ON "space_reviews"("customerId");
+
+-- CreateIndex
+CREATE INDEX "space_reviews_repliedById_idx" ON "space_reviews"("repliedById");
+
+-- CreateIndex
+CREATE INDEX "event_time_slots_eventId_startAt_idx" ON "event_time_slots"("eventId", "startAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "event_time_slots_eventId_startAt_key" ON "event_time_slots"("eventId", "startAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "events_slug_key" ON "events"("slug");
+
+-- CreateIndex
+CREATE INDEX "events_status_idx" ON "events"("status");
+
+-- CreateIndex
+CREATE INDEX "events_locationId_idx" ON "events"("locationId");
+
+-- CreateIndex
+CREATE INDEX "events_spaceId_idx" ON "events"("spaceId");
+
+-- CreateIndex
+CREATE INDEX "events_deletedAt_idx" ON "events"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "events_firstSlotStartAt_idx" ON "events"("firstSlotStartAt");
+
+-- CreateIndex
+CREATE INDEX "events_lastSlotEndAt_idx" ON "events"("lastSlotEndAt");
+
+-- CreateIndex
+CREATE INDEX "event_tickets_eventId_sortOrder_idx" ON "event_tickets"("eventId", "sortOrder");
+
+-- CreateIndex
+CREATE INDEX "event_tickets_eventId_isAvailable_idx" ON "event_tickets"("eventId", "isAvailable");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_eventId_idx" ON "event_registrations"("eventId");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_slotId_idx" ON "event_registrations"("slotId");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_slotId_status_idx" ON "event_registrations"("slotId", "status");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_ticketId_idx" ON "event_registrations"("ticketId");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_customerId_idx" ON "event_registrations"("customerId");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_status_idx" ON "event_registrations"("status");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_eventId_status_createdAt_idx" ON "event_registrations"("eventId", "status", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_eventId_attendedAt_idx" ON "event_registrations"("eventId", "attendedAt");
+
+-- CreateIndex
+CREATE INDEX "admin_notification_isRead_createdAt_idx" ON "admin_notification"("isRead", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "admin_notification_type_idx" ON "admin_notification"("type");
+
+-- CreateIndex
+CREATE INDEX "admin_notification_createdAt_idx" ON "admin_notification"("createdAt" DESC);
+
+-- AddForeignKey
+ALTER TABLE "user_page_assignments" ADD CONSTRAINT "user_page_assignments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_page_assignments" ADD CONSTRAINT "user_page_assignments_pageId_fkey" FOREIGN KEY ("pageId") REFERENCES "pages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account" ADD CONSTRAINT "account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "space_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "blocked_dates" ADD CONSTRAINT "blocked_dates_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_couponId_fkey" FOREIGN KEY ("couponId") REFERENCES "coupons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customers" ADD CONSTRAINT "customers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_repliedById_fkey" FOREIGN KEY ("repliedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "posts" ADD CONSTRAINT "posts_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "post_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "posts" ADD CONSTRAINT "posts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "post_tag_on_posts" ADD CONSTRAINT "post_tag_on_posts_postId_fkey" FOREIGN KEY ("postId") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "post_tag_on_posts" ADD CONSTRAINT "post_tag_on_posts_tagId_fkey" FOREIGN KEY ("tagId") REFERENCES "post_tags"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sections" ADD CONSTRAINT "sections_pageId_fkey" FOREIGN KEY ("pageId") REFERENCES "pages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "navigation_items"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "faq_categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "media" ADD CONSTRAINT "media_uploadedBy_fkey" FOREIGN KEY ("uploadedBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "terms_agreements" ADD CONSTRAINT "terms_agreements_termsId_fkey" FOREIGN KEY ("termsId") REFERENCES "terms_documents"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "terms_agreements" ADD CONSTRAINT "terms_agreements_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "editor_comment_threads" ADD CONSTRAINT "editor_comment_threads_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "editor_comment_threads" ADD CONSTRAINT "editor_comment_threads_resolvedBy_fkey" FOREIGN KEY ("resolvedBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_threadId_fkey" FOREIGN KEY ("threadId") REFERENCES "editor_comment_threads"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_deletedBy_fkey" FOREIGN KEY ("deletedBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "block_templates" ADD CONSTRAINT "block_templates_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_reservationId_fkey" FOREIGN KEY ("reservationId") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_repliedById_fkey" FOREIGN KEY ("repliedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_time_slots" ADD CONSTRAINT "event_time_slots_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "events" ADD CONSTRAINT "events_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "events" ADD CONSTRAINT "events_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "events" ADD CONSTRAINT "events_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_tickets" ADD CONSTRAINT "event_tickets_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_slotId_fkey" FOREIGN KEY ("slotId") REFERENCES "event_time_slots"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "event_tickets"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+
+-- Manual DB invariants not expressible in Prisma schema.prisma.
+-- Keep these with the baseline migration so a fresh database has the same
+-- domain constraints as the previous migration history.
+
+ALTER TABLE "blocked_dates"
+ADD CONSTRAINT "blocked_dates_scope_target_check"
+CHECK (
+    ("scope" = 'SPACE' AND "spaceId" IS NOT NULL AND "locationId" IS NULL)
+    OR ("scope" = 'LOCATION' AND "locationId" IS NOT NULL AND "spaceId" IS NULL)
+    OR ("scope" = 'GLOBAL' AND "spaceId" IS NULL AND "locationId" IS NULL)
+);
+
+ALTER TABLE "event_time_slots"
+ADD CONSTRAINT "event_time_slots_capacity_positive"
+CHECK ("capacity" >= 1);
+
+ALTER TABLE "event_time_slots"
+ADD CONSTRAINT "event_time_slots_time_order"
+CHECK ("startAt" < "endAt");
+
+ALTER TABLE "event_tickets"
+ADD CONSTRAINT "event_tickets_price_non_negative"
+CHECK ("price" >= 0);
+
+ALTER TABLE "event_tickets"
+ADD CONSTRAINT "event_tickets_capacity_positive_or_null"
+CHECK ("capacity" IS NULL OR "capacity" >= 1);
+
+ALTER TABLE "event_tickets"
+ADD CONSTRAINT "event_tickets_unit_size_positive"
+CHECK ("unitSize" >= 1);
+
+ALTER TABLE "event_registrations"
+ADD CONSTRAINT "event_registrations_quantity_positive"
+CHECK ("quantity" >= 1);
+
+COMMENT ON COLUMN "events"."scheduleMode" IS
+'SINGLE_OCCURRENCE = exactly one EventTimeSlot; TIMED_ENTRY = two or more EventTimeSlot rows. Registrations always attach to EventTimeSlot.';
+
+COMMENT ON COLUMN "events"."registrationDeadline" IS
+'Optional registration deadline as an instant. When null, registration closes at the first slot start.';
+
+COMMENT ON CONSTRAINT "event_time_slots_capacity_positive" ON "event_time_slots" IS
+'EventTimeSlot.capacity is a positive concrete seat count; zero is intentionally invalid.';
+
+COMMENT ON CONSTRAINT "event_time_slots_time_order" ON "event_time_slots" IS
+'EventTimeSlot.startAt must be earlier than endAt.';
+
+COMMENT ON CONSTRAINT "event_tickets_price_non_negative" ON "event_tickets" IS
+'EventTicket.price is stored as a non-negative integer amount.';
+
+COMMENT ON CONSTRAINT "event_tickets_capacity_positive_or_null" ON "event_tickets" IS
+'EventTicket.capacity is null for no ticket-level cap, otherwise positive.';
+
+COMMENT ON CONSTRAINT "event_tickets_unit_size_positive" ON "event_tickets" IS
+'EventTicket.unitSize must be positive.';
+
+COMMENT ON CONSTRAINT "event_registrations_quantity_positive" ON "event_registrations" IS
+'EventRegistration.quantity must be positive.';
+
+CREATE OR REPLACE FUNCTION "check_event_schedule_integrity"("targetEventId" text)
+RETURNS void AS $$
+DECLARE
+  current_mode "EventScheduleMode";
+  current_deadline timestamp with time zone;
+  slot_count integer;
+  first_slot_start timestamp with time zone;
+BEGIN
+  SELECT "scheduleMode", "registrationDeadline"
+  INTO current_mode, current_deadline
+  FROM "events"
+  WHERE "id" = "targetEventId"
+    AND "deletedAt" IS NULL;
+
+  IF current_mode IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT COUNT(*), MIN("startAt")
+  INTO slot_count, first_slot_start
+  FROM "event_time_slots"
+  WHERE "eventId" = "targetEventId";
+
+  IF current_mode = 'SINGLE_OCCURRENCE' AND slot_count <> 1 THEN
+    RAISE EXCEPTION
+      'SINGLE_OCCURRENCE events must have exactly one EventTimeSlot; eventId=%, slot_count=%',
+      "targetEventId",
+      slot_count
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF current_mode = 'TIMED_ENTRY' AND slot_count < 2 THEN
+    RAISE EXCEPTION
+      'TIMED_ENTRY events must have at least two EventTimeSlot rows; eventId=%, slot_count=%',
+      "targetEventId",
+      slot_count
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF current_deadline IS NOT NULL
+    AND first_slot_start IS NOT NULL
+    AND current_deadline > first_slot_start THEN
+    RAISE EXCEPTION
+      'Event registrationDeadline must be on or before the first slot start; eventId=%',
+      "targetEventId"
+      USING ERRCODE = '23514';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION "check_event_schedule_integrity_from_event"()
+RETURNS trigger AS $$
+BEGIN
+  PERFORM "check_event_schedule_integrity"(NEW."id");
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION "check_event_schedule_integrity_from_slot"()
+RETURNS trigger AS $$
+DECLARE
+  target_event_id text;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    target_event_id := OLD."eventId";
+    PERFORM "check_event_schedule_integrity"(target_event_id);
+    RETURN OLD;
+  END IF;
+
+  target_event_id := NEW."eventId";
+  PERFORM "check_event_schedule_integrity"(target_event_id);
+
+  IF TG_OP = 'UPDATE' AND OLD."eventId" <> NEW."eventId" THEN
+    PERFORM "check_event_schedule_integrity"(OLD."eventId");
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE CONSTRAINT TRIGGER "events_schedule_integrity_check"
+AFTER INSERT OR UPDATE OF "scheduleMode", "deletedAt", "registrationDeadline" ON "events"
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW
+EXECUTE FUNCTION "check_event_schedule_integrity_from_event"();
+
+CREATE CONSTRAINT TRIGGER "event_time_slots_schedule_integrity_check"
+AFTER INSERT OR UPDATE OF "eventId", "startAt" OR DELETE ON "event_time_slots"
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW
+EXECUTE FUNCTION "check_event_schedule_integrity_from_slot"();
+
+COMMENT ON FUNCTION "check_event_schedule_integrity"(text) IS
+'Deferred DB invariant: SINGLE_OCCURRENCE has exactly one EventTimeSlot, TIMED_ENTRY has two or more, and registrationDeadline is not after the first slot start.';
+
+-- Production initial data. This stays in migrate deploy rather than seed so
+-- fresh production installs have legal terms without running dev seed data.
 -- ============================================================================
--- terms_initial_data — Prisma 公式 Data Migration パターン (production initial data)
+-- baseline legal terms data — Prisma 公式 Data Migration パターン (production initial data)
 --
 -- Prisma 公式 doc: https://www.prisma.io/docs/orm/prisma-migrate/workflows/data-migration
 --   "use Prisma Migrate to add data to a database in production"
@@ -20,8 +1800,7 @@
 --   - 特定商取引法・支払い規約・施設利用規約・レビュー投稿ガイドライン・Cookie ポリシー
 --     → scopes=[] (フッター掲載のみ)
 --
--- 関連: PR #819 (refactor(terms)!: scope enum + consent gate + admin UX 全面刷新)
---      seed.ts の terms ブロックは本 migration への移管に伴い撤去 (二重管理排除)。
+-- seed.ts の terms ブロックは本 migration への移管に伴い撤去 (二重管理排除)。
 -- ============================================================================
 
 INSERT INTO public.terms_documents (id, type, slug, title, "contentJson", "contentHtml", "isPublished", "publishedAt", "showInFooter", "footerOrder", "createdAt", "updatedAt", "deletedAt", changelog, scopes) VALUES ('1044f3f6-ab6d-43cf-ad52-1c5625f53a57', 'terms-of-use', 'terms-of-use', '利用規約', '{"root": {"type": "root", "format": "", "indent": 0, "version": 1, "children": [{"type": "paragraph", "format": "", "indent": 0, "version": 1, "children": [{"mode": "normal", "text": "最終更新日：2026年6月26日 事業者情報 事業者名株式会社サンプル 代表者山田 太郎 所在地〒150-0001 東京都 渋谷区 神宮前1-1-1 サンプルビル メールinfo@example.com 電話03-1234-5678 本規約は、当社のレンタルスペースサービスをご利用いただくための基本的なルールを定めたものです。ご利用前に全文をご確認ください。特に 第3条・第10条（未成年者の利用）、第5条・第6条（予約と料金）、第15条（免責事項） は重要な内容を含みます。 第1条（目的・適用範囲） 本規約は、株式会社サンプル（以下「当社」といいます）が提供するレンタルスペースサービス（以下「本サービス」といいます）の利用条件を、利用者（第 2 条で定義します）と当社との間で定めるものです。 利用者が本サービスを利用した場合、本規約の全ての条項に同意したものとみなされます。 当社が別途定める「プライバシーポリシー」「キャンセルポリシー」「支払い規約」「施設利用規約」「特定商取引法に基づく表記」その他の個別規約は、本規約の一部を構成します。本規約と個別規約の内容が矛盾する場合は、個別規約の定めが優先して適用されます。 第2条（定義） 本規約において使用する用語の意義は、次の各号に定めるとおりとします。 利用者：本サービスを利用する全ての方（会員・非会員を問いません） 会員：当社所定の方法によりアカウントを登録した利用者 スペース：当社が本サービスを通じて提供するレンタルスペース 予約：利用者が本サービスを通じてスペースの利用を申し込む行為 投稿コンテンツ：利用者が本サービス上に投稿するレビュー・写真・コメント・評価その他一切の情報 第3条（本規約への同意） 利用者は、本規約に同意したうえで本サービスを利用するものとします。 未成年者（満 18 歳未満の者）が本サービスを利用する場合は、事前に法定代理人（親権者等）の同意を得なければなりません。同意を得ずに利用した結果、民法その他の規定により取消しを主張することはできません。 第4条（会員登録・アカウント管理） 会員登録を希望する方は、当社所定の方法（Google アカウントまたは LINE アカウントによる認証等）により登録を行うものとします。 会員は、登録情報を正確かつ最新の内容に保つ責任を負います。 会員は、アカウント（ID・パスワード・ソーシャルログイン認証情報を含みます）を自らの責任で管理するものとし、第三者に譲渡・貸与・共有することはできません。 アカウントの不正利用による損害について、当社の故意または重過失による場合を除き、会員本人がその責任を負うものとします。 会員は、マイページからいつでもアカウントの退会手続きを行うことができます。退会後も、法令・取引上必要な期間は個人情報が保管されることがあります（プライバシーポリシーに従います）。 第5条（予約の申込みと成立） 利用者は、当社所定の方法により予約の申込みを行うものとします。 予約は、クレジットカード決済が完了し、当社のシステムにおいて予約確認通知がされた時点をもって成立します。決済が成立しない場合、予約は成立しません。 当社は、以下のいずれかに該当する場合、予約の成立を取り消すことができます。 申込内容に虚偽・誤記があった場合 定員超過・システム障害等により提供が困難な場合 利用者が過去に本規約に違反したことがある場合 その他、当社が不適切と判断する事由がある場合 第6条（利用料金・支払い） 利用者は、当社が定める利用料金を、当社の指定する方法により支払うものとします。 料金の詳細、支払方法、返金等については「支払い規約」に従うものとします。 キャンセルに伴う料金の取扱いについては「キャンセルポリシー」に従うものとします。 第7条（利用上のルール） 利用者は、本サービスの利用にあたり、次の各号を遵守するものとします。 予約時間を厳守し、終了時刻までに原状回復のうえ退室すること スペース内の設備・備品を善良な管理者の注意をもって取り扱うこと 他の利用者や近隣住民に対し、騒音その他の迷惑となる行為をしないこと 法令および公序良俗に反する行為をしないこと 個別のスペースにおける「施設利用規約」を遵守すること 第8条（禁止事項） 利用者は、本サービスの利用にあたり、次の行為を行ってはなりません。 法令または公序良俗に違反する行為 犯罪行為または犯罪行為を助長する行為 他の利用者、第三者または当社の権利・利益を侵害する行為 他の利用者、第三者または当社に対する誹謗中傷、脅迫、ハラスメント 虚偽の情報を登録・投稿する行為 無断でスペースを第三者に転貸・又貸しする行為 当社の事前承諾なく、営利目的で本サービスを利用する行為（マルチ商法・連鎖販売・無登録の宗教勧誘等を含みます） 本サービスの運営を妨害する行為、システムに不正アクセスする行為 本サービスを利用して取得した情報を、本サービスの利用目的以外に使用する行為 当社または第三者になりすます行為 その他、当社が不適切と合理的に判断する行為 第9条（投稿コンテンツ） 利用者は、投稿コンテンツが自己のオリジナルの著作物であること、または第三者の権利を侵害しないことを保証するものとします。 利用者は、投稿コンテンツについて、当社に対し、無償かつ地域の制限なく、複製・公衆送信・翻訳・翻案その他の方法により利用すること（本サービスの運営・宣伝・広告・プロモーション目的での利用を含みます）を許諾します。 利用者は、投稿コンテンツの掲載・編集・改変・要約等にあたり、当社および当社が指定する第三者に対して著作者人格権（公表権・氏名表示権・同一性保持権）を行使しないものとします。 当社は、投稿コンテンツが以下のいずれかに該当すると合理的に判断する場合、事前の通知なく当該投稿コンテンツを削除または非表示にすることができます。 本規約に違反する内容を含む場合 第三者の権利・利益を侵害する内容を含む場合 虚偽・誤解を招く内容を含む場合 事実無根の誹謗中傷、営業妨害、特定個人への攻撃が含まれる場合 当社の運営方針に著しく反する内容を含む場合 当社は、投稿コンテンツの内容について、真実性・適法性・有用性を保証するものではありません。 未成年の方へ：本サービスは満 18 歳以上の方を対象としています。満 18 歳未満の方がご利用になる場合は、必ず事前に保護者（法定代理人）の同意を得てください。同意なくお申込みされた場合のトラブルについて、当社は責任を負いかねます。 第10条（未成年者の利用） 満 18 歳未満の方は、本サービスを単独で利用することはできません。法定代理人の同意のうえで利用することが必要です。 法定代理人の同意なく本サービスを利用した場合の責任は、利用者および法定代理人が負うものとします。 第11条（アカウント停止・利用制限） 当社は、利用者が本規約に違反した場合、または違反するおそれがあると合理的に判断した場合、事前の通知なくアカウントの一時停止、利用制限、予約の取消し、会員資格の抹消その他必要な措置を講じることができます。 前項の措置に伴い利用者に損害が生じた場合であっても、当社の故意または重過失による場合を除き、当社は責任を負わないものとします。 当社は、以下の場合に継続的な利用をお断りすることがあります。 無断キャンセル（ノーショー）を繰り返した場合 繰り返し直前キャンセルを行い、当社または他の利用者に著しい不利益を与えた場合 他の利用者や当社スタッフに対する迷惑行為があった場合 第12条（サービスの変更・中断・終了） 当社は、本サービスの内容を、事前の通知により変更することがあります。 当社は、次の各号のいずれかに該当する場合、事前の通知なく本サービスの全部または一部を中断することができます。 システムの保守・点検を行う場合 天災・停電・通信障害その他の不可抗力により運営が困難となった場合 その他、当社が中断を必要と合理的に判断する場合 当社は、利用者に対し事前の通知を行ったうえで、本サービスを終了することができます。 第13条（反社会的勢力の排除） 利用者は、反社会的勢力（暴力団、暴力団員、暴力団関係企業、総会屋、社会運動等標ぼうゴロ、特殊知能暴力集団等をいいます）に該当しないこと、および反社会的勢力と資金提供その他の関係を有しないことを表明し、保証するものとします。 利用者が前項の表明・保証に違反した場合、当社は催告なく直ちに予約を取消し、会員資格を抹消し、または本規約に基づく一切の契約関係を解除することができます。 第14条（損害賠償） 利用者が本規約に違反し、または故意もしくは過失により当社に損害を与えた場合、利用者はその損害（弁護士費用を含みます）を賠償する責任を負います。 利用者の行為により第三者に損害を与えた場合、利用者は自己の責任と費用においてこれを解決し、当社に一切の迷惑をかけないものとします。 第15条（免責事項） 当社は、本サービスに関し、特定目的への適合性、商品的価値、正確性、有用性、完全性、適法性、信頼性その他一切について、明示・黙示を問わず保証するものではありません。 当社は、次の事由により生じた損害について責任を負いません。ただし、当社の故意または重過失による場合を除きます。 天災、戦争、暴動、停電、通信障害、法令の改廃、その他の不可抗力 利用者自身の機器・通信環境に起因する不具合 利用者の私物の盗難・紛失 スペース内で発生した利用者間・利用者と第三者間のトラブル 当社の責めに帰すべき事由により利用者に損害が生じた場合の賠償額は、当該利用者が当社に支払った直近の利用料金相当額を上限とします。ただし、当社の故意または重過失による場合はこの限りではありません。 消費者契約法により、当社の故意・重過失による損害については上記の賠償上限は適用されません。本条はあくまで当社に軽過失がある場合の賠償範囲を定めるものです。 第16条（通知方法） 当社から利用者への通知は、本サービスへの掲示、電子メール、会員登録時に指定された連絡先への通信等、当社が適当と判断する方法により行います。 前項の通知は、発信をもって利用者に到達したものとみなします。 第17条（規約の変更） 当社は、民法 548 条の 4（定型約款の変更）その他関係法令に従い、本規約を変更することができます。 本規約を変更する場合、当社は、変更後の内容、変更の効力発生時期を、効力発生時期の相当期間前までに、本サービス上での掲示その他の適切な方法により周知します。 変更の効力発生時期を経過した後に利用者が本サービスを利用した場合、利用者は変更後の規約に同意したものとみなされます。 第18条（分離可能性） 本規約のいずれかの条項が法令により無効または執行不能と判断された場合であっても、本規約の他の条項の効力には影響しないものとします。この場合、当社と利用者は、当該無効または執行不能な条項を適法かつ有効な条項に置き換えるよう誠実に協議するものとします。 第19条（準拠法・管轄裁判所） 本規約の成立、効力、解釈および適用については、日本法を準拠法とします。 本規約または本サービスに関して当社と利用者との間に紛争が生じた場合、訴額に応じて、当社の所在地を管轄する地方裁判所または簡易裁判所を第一審の専属的合意管轄裁判所とします。 第20条（お問い合わせ） 本規約に関するお問い合わせは、次の連絡先までお願いいたします。 メール：info@example.com 電話：03-1234-5678", "type": "text", "style": "", "detail": 0, "format": 0, "version": 1}], "direction": "ltr", "textStyle": "", "textFormat": 0}], "direction": "ltr"}}', '<p>最終更新日：2026年6月26日</p>

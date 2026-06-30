@@ -471,11 +471,11 @@ model Space {
 /// scope / spaceId / locationId は discriminated union 不変条件を持つ:
 /// SPACE→spaceId 必須・locationId null / LOCATION→locationId 必須・spaceId null /
 /// GLOBAL→両方 null。これは DB の CHECK 制約 `blocked_dates_scope_target_check`
-/// (migration 20260528173132_create_blocked_dates) で強制されるが、Prisma schema DSL では
+/// (baseline migration 00000000000000_init) で強制されるが、Prisma schema DSL では
 /// 表現できないため schema.prisma は完全な SSoT ではない。
 /// ⚠ `prisma db pull`（introspection）は CHECK 制約を取り込まず黙って落とすので、
 /// introspection で schema を再生成する際は本制約を手で復元すること
-/// （`prisma migrate reset` は全 migration を再生するため制約は復元される）。
+/// （`prisma migrate reset` は baseline migration を再生するため制約は復元される）。
 /// アプリ層は Zod superRefine（blocked-date バリデーション）で同一不変条件を二重に保証する。
 model BlockedDate {
   id          String   @id @default(uuid()) @db.Uuid
