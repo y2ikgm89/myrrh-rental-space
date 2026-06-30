@@ -76,6 +76,7 @@ lerna-debug.log*
 *.pem
 *.key
 *.crt
+gha-creds-*.json
 
 # ─── Python (hooks) ──────────────────────────────────────────────────────────
 __pycache__/
