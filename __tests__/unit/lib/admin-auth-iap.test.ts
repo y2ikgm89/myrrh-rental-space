@@ -9,6 +9,11 @@ const mockRedirect = mock((path: string): never => {
 const mockFindUnique = mock();
 const mockResolveIapIdentity = mock();
 const mockBetterAuthGetSession = mock(() => null);
+const mockServerEnv: Record<string, string | undefined> = {
+  NODE_ENV: "test",
+  ADMIN_TEST_IAP_EMAIL: undefined,
+  CI: undefined,
+};
 
 mock.module("next/headers", () => ({
   headers: mockHeaders,
@@ -28,6 +33,10 @@ mock.module("@/shared/db/prisma", () => ({
 
 mock.module("@/shared/lib/iap/admin-iap-auth", () => ({
   resolveIapIdentity: mockResolveIapIdentity,
+}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: mockServerEnv,
 }));
 
 mock.module("better-auth", () => ({
@@ -73,6 +82,9 @@ beforeEach(() => {
   mockResolveIapIdentity.mockReset();
   mockBetterAuthGetSession.mockReset();
   mockBetterAuthGetSession.mockImplementation(() => null);
+  mockServerEnv["NODE_ENV"] = "test";
+  mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = undefined;
+  mockServerEnv["CI"] = undefined;
 });
 
 describe("admin auth IAP boundary", () => {
@@ -137,6 +149,48 @@ describe("admin auth IAP boundary", () => {
         emailVerified: true,
       },
     });
+  });
+
+  test("CI の production start では ADMIN_TEST_IAP_EMAIL を IAP 代替 identity として使う", async () => {
+    mockServerEnv["NODE_ENV"] = "production";
+    mockServerEnv["CI"] = "true";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue({
+      id: "user-1",
+      email: "admin@example.com",
+      name: "Admin",
+      image: null,
+      role: "ADMIN",
+      emailVerified: true,
+    });
+
+    const user = await getCurrentAdminUser(new Headers());
+
+    expect(user?.email).toBe("admin@example.com");
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { email: "admin@example.com" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        role: true,
+        emailVerified: true,
+      },
+    });
+  });
+
+  test("通常 production では ADMIN_TEST_IAP_EMAIL を無視する", async () => {
+    mockServerEnv["NODE_ENV"] = "production";
+    mockServerEnv["CI"] = undefined;
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockResolveIapIdentity.mockResolvedValue(null);
+
+    const user = await getCurrentAdminUser(new Headers());
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
   });
 
   test("verifyAdminSession は未登録 IAP user を access-denied に送る", async () => {

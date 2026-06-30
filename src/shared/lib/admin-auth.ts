@@ -36,7 +36,9 @@ async function resolveRequestHeaders(
 }
 
 function getTestIapEmail(): string | null {
-  if (serverEnv.NODE_ENV === "production") return null;
+  const isProductionRuntime = serverEnv.NODE_ENV === "production";
+  const isCiRuntime = serverEnv.CI === "true";
+  if (isProductionRuntime && !isCiRuntime) return null;
   return serverEnv.ADMIN_TEST_IAP_EMAIL ?? null;
 }
 

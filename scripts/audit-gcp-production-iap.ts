@@ -77,8 +77,13 @@ function getPath(value: unknown, path: string[]): unknown {
   return current;
 }
 
-function normalizeGroupMember(value: string): string {
-  return value.startsWith("group:") ? value : `group:${value}`;
+function requireGoogleGroupMember(value: string): string {
+  if (!value.startsWith("group:") || !value.includes("@")) {
+    throw new Error(
+      "IAP_ADMIN_GROUP must be a Google Group IAM member like group:admins@example.com",
+    );
+  }
+  return value;
 }
 
 function main(): void {
@@ -89,8 +94,8 @@ function main(): void {
     "ADMIN_SERVICE_NAME",
     "myrrh-rental-space-admin",
   );
-  const expectedGroup = normalizeGroupMember(requireEnv("IAP_ADMIN_GROUP"));
-  const expectedOrganizationId = process.env["GCP_ORGANIZATION_ID"];
+  const expectedGroup = requireGoogleGroupMember(requireEnv("IAP_ADMIN_GROUP"));
+  const expectedOrganizationId = requireEnv("GCP_ORGANIZATION_ID");
 
   const checks: Check[] = [];
   const addCheck = (name: string, ok: boolean, detail: string): void => {
@@ -122,19 +127,10 @@ function main(): void {
     ? organization["id"]
     : undefined;
   addCheck(
-    "project is under a Google Cloud Organization",
-    typeof organizationId === "string",
-    typeof organizationId === "string"
-      ? `organization=${organizationId}`
-      : "no organization ancestor; create a Cloud Identity/Workspace org-backed project",
+    "project is under the configured Google Cloud Organization",
+    organizationId === expectedOrganizationId,
+    `actual=${String(organizationId ?? "none")} expected=${expectedOrganizationId}`,
   );
-  if (expectedOrganizationId) {
-    addCheck(
-      "project organization matches GCP_ORGANIZATION_ID",
-      organizationId === expectedOrganizationId,
-      `actual=${String(organizationId ?? "none")} expected=${expectedOrganizationId}`,
-    );
-  }
 
   addCheck(
     "IAP_ADMIN_GROUP is a Google Group IAM member",
@@ -248,7 +244,9 @@ function main(): void {
   console.log(`project=${projectId}`);
   console.log(`region=${region}`);
   console.log(`adminService=${adminService}`);
+  console.log(`expectedOrganization=${expectedOrganizationId}`);
   console.log(`expectedGroup=${expectedGroup}`);
+  console.log("baseline=organization-backed Google Group IAP production");
   console.log("");
 
   for (const check of checks) {

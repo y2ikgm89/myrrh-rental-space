@@ -49,9 +49,11 @@ the public service. The clean production target is:
 - no individual user grants on the IAP-secured admin resource.
 
 For production, do not treat an orgless Google Cloud project as the final
-state. An orgless project can be used only as a temporary bootstrap environment.
-The clean production target is a new or migrated project under a Google Cloud
-Organization created from a verified Cloud Identity / Google Workspace domain.
+state. Google Cloud Run direct IAP can protect an orgless project after the
+required console OAuth setup, but this repository's production baseline is
+stricter: the final admin site must run in a project under the configured
+Google Cloud Organization. An orgless project is only a temporary bootstrap
+environment.
 
 Recommended host/path layout:
 
@@ -117,8 +119,12 @@ account that will be allowed through IAP. `IAP_JWT_AUDIENCE` must match the
 Cloud Run IAP signed-header audience format:
 `/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME`.
 
+`GCP_ORGANIZATION_ID` is required for production verification. The audit does
+not infer or accept any organization; it must match this exact ID.
+
 `IAP_ADMIN_GROUP` must be a `group:` member backed by Cloud Identity or Google
-Workspace. Do not set it to a personal `user:` identity for production.
+Workspace, for example `group:myrrh-admins@example.com`. Do not set it to a
+personal `user:` identity for production, and do not omit the `group:` prefix.
 
 ## Organization and group baseline
 
@@ -530,7 +536,8 @@ be created programmatically for this first-time setup.
 This is a bootstrap-only path. The production target for this repository is an
 Organization-backed project with a Cloud Identity / Google Workspace admin
 group. If a deploy prints the orgless-project warning, the service can still be
-protected by IAP, but the project has not reached the final production posture.
+protected by IAP, but the project has not reached the final production posture
+and `bun run gcp:audit-production-iap` must fail.
 
 Use the console path:
 
