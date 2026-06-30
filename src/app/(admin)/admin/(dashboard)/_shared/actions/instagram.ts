@@ -27,7 +27,7 @@ export async function saveManualToken(
 
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => saveInstagramTokenCommand(parsed.data),
     afterSuccess: () => {
       invalidateInstagramCaches();
@@ -45,7 +45,7 @@ export async function testInstagramConnectionAction(
 
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const result = await testInstagramConnection(parsed.data);
       if (!result.success) {
@@ -68,7 +68,7 @@ export async function testInstagramConnectionAction(
 export async function disconnectInstagram(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await disconnectInstagramCommand();
       return null;

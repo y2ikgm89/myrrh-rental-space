@@ -23,13 +23,24 @@ import {
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
 import { IntegrationHealthAlert } from "../_components/IntegrationHealthAlert";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import type { Action, Resource } from "@/shared/lib/admin-resources";
 
-const SETTINGS_CATEGORIES: SettingsCardProps[] = [
+type SettingsCategory = SettingsCardProps & {
+  requiredPermission?: {
+    resource: Resource;
+    action: Action;
+  };
+};
+
+const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     title: "機能モジュール",
     description: "スペース・予約・イベント・ブログ等の機能 ON/OFF を切り替え",
     href: "/admin/settings/features",
     icon: IconToggleLeft,
+    requiredPermission: { resource: "settings", action: "manage" },
     items: [
       "スペース",
       "予約",
@@ -76,6 +87,7 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
     description: "Stripe オンライン決済・割引・消費税",
     href: "/admin/settings/billing",
     icon: IconCreditCard,
+    requiredPermission: { resource: "settings", action: "manage" },
     items: ["決済", "割引", "消費税"],
   },
   {
@@ -90,6 +102,7 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
     description: "外部サービスの API キーと OAuth 連携",
     href: "/admin/settings/integrations",
     icon: IconKey,
+    requiredPermission: { resource: "settings", action: "manage" },
     items: [
       "Resend",
       "Turnstile",
@@ -101,14 +114,48 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
   },
   {
     title: "システム管理",
-    description: "メンテナンス・Cookie・権限",
+    description: "メンテナンス・Cookie・IAP前提の管理ロール",
     href: "/admin/settings/system",
     icon: IconSettings,
-    items: ["メンテナンス", "Cookie", "権限"],
+    requiredPermission: { resource: "settings", action: "manage" },
+    items: ["メンテナンス", "Cookie", "管理ロール"],
   },
 ];
 
+function toSettingsCardProps(category: SettingsCategory): SettingsCardProps {
+  const props = {
+    title: category.title,
+    description: category.description,
+    href: category.href,
+    icon: category.icon,
+  };
+
+  if (!category.items) {
+    return props;
+  }
+
+  return {
+    ...props,
+    items: category.items,
+  };
+}
+
 export default async function SettingsPage() {
+  const currentUser = await requireAdminPermission("settings", "read");
+  const canManageSettings = hasPermission(
+    currentUser.role,
+    "settings",
+    "manage",
+  );
+  const visibleCategories = SETTINGS_CATEGORIES.filter((category) => {
+    if (!category.requiredPermission) return true;
+    return hasPermission(
+      currentUser.role,
+      category.requiredPermission.resource,
+      category.requiredPermission.action,
+    );
+  });
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -120,15 +167,18 @@ export default async function SettingsPage() {
       </div>
 
       {/* 外部連携ヘルスチェック: 未設定があれば alert 表示（dismiss 可能） */}
-      <Suspense fallback={null}>
-        <IntegrationHealthAlert />
-      </Suspense>
+      {canManageSettings ? (
+        <Suspense fallback={null}>
+          <IntegrationHealthAlert />
+        </Suspense>
+      ) : null}
 
       {/* カテゴリカード一覧 */}
       <div className="grid gap-4 @md/main:grid-cols-2 @3xl/main:grid-cols-3">
-        {SETTINGS_CATEGORIES.map((category) => (
-          <SettingsCard key={category.href} {...category} />
-        ))}
+        {visibleCategories.map((category) => {
+          const cardProps = toSettingsCardProps(category);
+          return <SettingsCard key={category.href} {...cardProps} />;
+        })}
       </div>
     </div>
   );

@@ -100,14 +100,19 @@ describe("GET /api/google-business-profile/oauth/callback", () => {
     mockSaveGbpAuthState.mockClear();
   });
 
-  test("settings:update 権限がない場合は認証情報を保存しない", async () => {
+  test("settings:manage 権限がない場合は認証情報を保存しない", async () => {
     mockCheckPermission.mockResolvedValueOnce({
       success: false as const,
-      error: { error: "settingsのupdate権限がありません" },
+      error: { error: "settingsのmanage権限がありません" },
     });
 
     const response = await GET(createCallbackRequest());
 
+    expect(mockCheckPermission).toHaveBeenCalledWith(
+      "settings",
+      "manage",
+      expect.any(Headers),
+    );
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(
       "https://app.example.test/admin/settings/integrations?gbp_error=forbidden",

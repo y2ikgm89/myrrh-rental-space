@@ -60,12 +60,15 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
     description: "システム全体を管理できる最上位の権限",
     capabilities: [
       "すべての機能へのフルアクセス",
-      "スタッフの追加・削除・権限変更",
+      "管理者・編集者・閲覧者の追加・削除・権限変更",
       "監査ログの閲覧",
       "システム設定の変更",
       "API キーの管理",
     ],
-    restrictions: [],
+    restrictions: [
+      "SUPER_ADMIN の新規作成は初期化時のみ",
+      "IAP 許可グループの変更は Google Cloud 側で実施",
+    ],
   },
   {
     id: "ADMIN",
@@ -81,9 +84,10 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
       "サイト設定（ナビゲーション・告知バー等）",
     ],
     restrictions: [
-      "スタッフの追加・削除",
+      "SUPER_ADMIN / ADMIN の追加・削除・編集",
       "監査ログの閲覧",
-      "システム設定の一部",
+      "API キーや外部連携などの特権設定",
+      "IAP 許可グループの変更",
     ],
   },
   {
@@ -102,6 +106,7 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
       "コンテンツの公開・削除",
       "予約・顧客情報の編集",
       "システム設定へのアクセス",
+      "スタッフ管理",
     ],
   },
   {
@@ -120,6 +125,7 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
       "すべての編集・削除操作",
       "設定変更",
       "データのエクスポート",
+      "スタッフ管理",
     ],
   },
 ];
@@ -249,6 +255,58 @@ function QuickTips() {
   );
 }
 
+function AccessModel() {
+  const gates = [
+    {
+      title: "IAP 許可",
+      description:
+        "Google Cloud 側の IAP 許可グループに Google アカウントを追加します。",
+      icon: IconShield,
+    },
+    {
+      title: "スタッフ登録",
+      description:
+        "同じメールアドレスをスタッフ管理に登録します。アプリ用パスワードはありません。",
+      icon: IconSettings,
+    },
+    {
+      title: "アプリ内ロール",
+      description:
+        "SUPER_ADMIN / ADMIN / EDITOR / VIEWER のロールで管理機能を制御します。",
+      icon: IconCheck,
+    },
+  ] as const;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">管理画面アクセスの3段階</CardTitle>
+        <CardDescription>
+          Googleログインだけでは管理画面に入れません。IAP許可、スタッフ登録、ロール権限の3つをすべて確認します。
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 md:grid-cols-3">
+          {gates.map((gate) => {
+            const Icon = gate.icon;
+            return (
+              <div key={gate.title} className="rounded-lg border p-3">
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-medium">{gate.title}</p>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  {gate.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // =============================================================================
 // Main Component
 // =============================================================================
@@ -271,6 +329,8 @@ export function PermissionsSection() {
           </Link>
         </Button>
       </div>
+
+      <AccessModel />
 
       {/* ロールカード */}
       <div className="grid gap-4 md:grid-cols-2">

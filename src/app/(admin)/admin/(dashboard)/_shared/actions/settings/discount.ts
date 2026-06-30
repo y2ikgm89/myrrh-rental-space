@@ -32,7 +32,7 @@ export async function updateDiscountSettings(
   return executeConformMutation(formData, discountFormSchema, async (data) => {
     const result = await executeAdminMutationResult({
       resource: "settings",
-      action: "update",
+      action: "manage",
       execute: async () => {
         await settingsCommands.updateDiscountSettings({
           durationDiscountEnabled: data.durationDiscountEnabled,

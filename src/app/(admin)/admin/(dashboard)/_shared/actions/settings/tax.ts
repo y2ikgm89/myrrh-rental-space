@@ -29,7 +29,7 @@ export async function updateTaxSettings(
   return executeConformMutation(formData, taxSettingsSchema, async (data) => {
     const result = await executeAdminMutationResult({
       resource: "settings",
-      action: "update",
+      action: "manage",
       execute: async () => {
         await settingsCommands.updateTaxSettings(data);
         return null;

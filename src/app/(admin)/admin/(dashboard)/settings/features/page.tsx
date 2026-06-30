@@ -9,6 +9,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { parseFeatureModules } from "@/shared/lib/json-validators";
 import {
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default async function FeaturesSettingsPage() {
+  await requireAdminPermission("settings", "manage");
   await connection();
 
   const settings = await getSettings();

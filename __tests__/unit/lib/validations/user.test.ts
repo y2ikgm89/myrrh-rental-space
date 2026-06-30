@@ -47,8 +47,8 @@ describe("createUserSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("DASHBOARD_ROLES の全ロール値を許可", () => {
-    const roles = [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER];
+  test("スタッフ管理で付与可能なロール値を許可", () => {
+    const roles = [Role.ADMIN, Role.EDITOR, Role.VIEWER];
     roles.forEach((role) => {
       const data = { ...validUserData, role };
       const result = createUserSchema.safeParse(data);
@@ -56,16 +56,12 @@ describe("createUserSchema", () => {
     });
   });
 
-  test("USER ロールはスキーマレベルで拒否（公開ユーザー用のため）", () => {
-    const data = { ...validUserData, role: Role.USER };
-    const result = createUserSchema.safeParse(data);
-    expect(result.success).toBe(false);
-  });
-
-  test("CUSTOMER ロールはスキーマレベルで拒否", () => {
-    const data = { ...validUserData, role: Role.CUSTOMER };
-    const result = createUserSchema.safeParse(data);
-    expect(result.success).toBe(false);
+  test("SUPER_ADMIN / USER / CUSTOMER ロールはスキーマレベルで拒否", () => {
+    for (const role of [Role.SUPER_ADMIN, Role.USER, Role.CUSTOMER]) {
+      const data = { ...validUserData, role };
+      const result = createUserSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    }
   });
 
   test("無効なRole値の場合にエラー", () => {
@@ -123,8 +119,8 @@ describe("updateUserSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("DASHBOARD_ROLES の全ロール値を許可", () => {
-    const roles = [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER];
+  test("スタッフ管理で付与可能なロール値を許可", () => {
+    const roles = [Role.ADMIN, Role.EDITOR, Role.VIEWER];
     roles.forEach((role) => {
       const data = { ...validUpdateData, role };
       const result = updateUserSchema.safeParse(data);
@@ -132,8 +128,8 @@ describe("updateUserSchema", () => {
     });
   });
 
-  test("USER / CUSTOMER ロールは拒否", () => {
-    for (const role of [Role.USER, Role.CUSTOMER]) {
+  test("SUPER_ADMIN / USER / CUSTOMER ロールは拒否", () => {
+    for (const role of [Role.SUPER_ADMIN, Role.USER, Role.CUSTOMER]) {
       const data = { ...validUpdateData, role };
       const result = updateUserSchema.safeParse(data);
       expect(result.success).toBe(false);

@@ -3,37 +3,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/admin/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/admin/components/ui";
 import {
   ActionDropdown,
   ActionDropdownItem,
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
-import { deleteUser, updateUserRole } from "@/admin/actions/user";
+import { deleteUser } from "@/admin/actions/user";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { Role, isAdminRole } from "@/admin/lib/role-guards";
-import { ROLE_LABELS } from "@/shared/lib/admin-roles";
+import { canModifyUser } from "@/shared/lib/admin-roles";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { UserData } from "@/shared/domain/users/types";
+import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 type Props = {
   user: UserData;
+  currentUser: {
+    id: string;
+    role: Role;
+  };
 };
 
-export function UserActions({ user }: Props) {
+export function UserActions({ user, currentUser }: Props) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
-  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
 
   async function handleDelete() {
     setIsDeleting(true);
@@ -50,23 +44,13 @@ export function UserActions({ user }: Props) {
     }
   }
 
-  async function handleRoleChange(newRole: Role) {
-    setIsUpdatingRole(true);
-    try {
-      const result = await updateUserRole(user.id, newRole);
-      if (!isMutationError(result)) {
-        setRoleDialogOpen(false);
-        router.refresh();
-      } else {
-        toast.error(result.error);
-      }
-    } finally {
-      setIsUpdatingRole(false);
-    }
-  }
-
-  const newRole = isAdminRole(user.role) ? Role.USER : Role.ADMIN;
-  const newRoleLabel = ROLE_LABELS[newRole];
+  const canModifyTarget = canModifyUser(currentUser.role, user.role);
+  const canEdit =
+    hasPermission(currentUser.role, "user", "update") && canModifyTarget;
+  const canDelete =
+    currentUser.id !== user.id &&
+    hasPermission(currentUser.role, "user", "delete") &&
+    canModifyTarget;
 
   return (
     <>
@@ -74,20 +58,22 @@ export function UserActions({ user }: Props) {
         <ActionDropdownItem href={`/admin/staff/${user.id}`}>
           詳細
         </ActionDropdownItem>
-        <ActionDropdownItem href={`/admin/staff/${user.id}/edit`}>
-          編集
-        </ActionDropdownItem>
-        <ActionDropdownSeparator />
-        <ActionDropdownItem onClick={() => setRoleDialogOpen(true)}>
-          {newRoleLabel}に変更
-        </ActionDropdownItem>
-        <ActionDropdownSeparator />
-        <ActionDropdownItem
-          destructive
-          onClick={() => setDeleteDialogOpen(true)}
-        >
-          削除
-        </ActionDropdownItem>
+        {canEdit ? (
+          <ActionDropdownItem href={`/admin/staff/${user.id}/edit`}>
+            編集
+          </ActionDropdownItem>
+        ) : null}
+        {canDelete ? (
+          <>
+            <ActionDropdownSeparator />
+            <ActionDropdownItem
+              destructive
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              削除
+            </ActionDropdownItem>
+          </>
+        ) : null}
       </ActionDropdown>
 
       <DeleteConfirmDialog
@@ -97,32 +83,6 @@ export function UserActions({ user }: Props) {
         onConfirm={handleDelete}
         isPending={isDeleting}
       />
-
-      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>ロールを変更</DialogTitle>
-            <DialogDescription>
-              {user.name || user.email} を{newRoleLabel}に変更しますか？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRoleDialogOpen(false)}
-              disabled={isUpdatingRole}
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => handleRoleChange(newRole)}
-              disabled={isUpdatingRole}
-            >
-              {isUpdatingRole ? "変更中..." : "変更"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

@@ -8,6 +8,7 @@ import {
   isDashboardRole,
   ROLE_DESCRIPTIONS,
   ROLE_LABELS,
+  STAFF_ASSIGNABLE_ROLES,
 } from "@/shared/lib/admin-roles";
 import { Role } from "@generated/prisma/enums";
 
@@ -23,6 +24,23 @@ describe("DASHBOARD_ROLES", () => {
 
   test("USER / CUSTOMER は含まない", () => {
     const roles = new Set<unknown>(DASHBOARD_ROLES);
+    expect(roles.has(Role.USER)).toBe(false);
+    expect(roles.has(Role.CUSTOMER)).toBe(false);
+  });
+});
+
+describe("STAFF_ASSIGNABLE_ROLES", () => {
+  test("スタッフ管理 UI から付与できるロールだけを含む", () => {
+    expect(STAFF_ASSIGNABLE_ROLES).toEqual([
+      Role.ADMIN,
+      Role.EDITOR,
+      Role.VIEWER,
+    ]);
+  });
+
+  test("SUPER_ADMIN / USER / CUSTOMER は含まない", () => {
+    const roles = new Set<unknown>(STAFF_ASSIGNABLE_ROLES);
+    expect(roles.has(Role.SUPER_ADMIN)).toBe(false);
     expect(roles.has(Role.USER)).toBe(false);
     expect(roles.has(Role.CUSTOMER)).toBe(false);
   });
@@ -122,7 +140,7 @@ describe("canInviteRole", () => {
 });
 
 describe("canModifyUser", () => {
-  test("SUPER_ADMIN は ADMIN / EDITOR / VIEWER を編集可（SUPER_ADMIN は updateUserRole のみ）", () => {
+  test("SUPER_ADMIN は ADMIN / EDITOR / VIEWER を編集可", () => {
     expect(canModifyUser(Role.SUPER_ADMIN, Role.ADMIN)).toBe(true);
     expect(canModifyUser(Role.SUPER_ADMIN, Role.EDITOR)).toBe(true);
     expect(canModifyUser(Role.SUPER_ADMIN, Role.VIEWER)).toBe(true);

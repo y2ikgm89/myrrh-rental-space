@@ -93,7 +93,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "user:read",
     "user:update",
     "user:delete",
-    "user:manage",
     "auditLog:read",
     "auditLog:manage",
     "navigation:create",
@@ -190,7 +189,6 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "settings:read",
     "settings:update",
     // ユーザー管理（階層制御あり — admin-roles.ts INVITABLE_BY で EDITOR/VIEWER のみ操作可）
-    // `user:manage`（ロール変更等の特権操作）は SUPER_ADMIN 専用で温存
     "user:create",
     "user:read",
     "user:update",

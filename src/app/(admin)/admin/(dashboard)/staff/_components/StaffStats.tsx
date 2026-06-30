@@ -23,18 +23,22 @@ export async function StaffStats() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">管理者</CardTitle>
+          <CardTitle className="text-sm font-medium">管理者以上</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.admins}</div>
+          <div className="text-2xl font-bold">
+            {stats.superAdmins + stats.admins}
+          </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">一般スタッフ</CardTitle>
+          <CardTitle className="text-sm font-medium">編集・閲覧</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.users}</div>
+          <div className="text-2xl font-bold">
+            {stats.editors + stats.viewers}
+          </div>
         </CardContent>
       </Card>
       <Card>
@@ -44,7 +48,7 @@ export async function StaffStats() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.recentUsers}</div>
+          <div className="text-2xl font-bold">{stats.recentStaff}</div>
         </CardContent>
       </Card>
     </div>

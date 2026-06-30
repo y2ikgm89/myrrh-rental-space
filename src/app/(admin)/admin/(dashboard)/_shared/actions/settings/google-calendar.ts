@@ -70,7 +70,7 @@ export async function updateGoogleCalendarSettings(
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
-        action: "update",
+        action: "manage",
         execute: async () => {
           await updateGoogleCalendarSettingsCommand({
             googleCalendarEnabled: data.googleCalendarEnabled,
@@ -106,7 +106,7 @@ export async function testGoogleCalendarConnectionAction(
 
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const result = await testServiceAccountConnection(parsed.data);
       if (!result.success) {
@@ -152,7 +152,7 @@ export async function testGoogleCalendarConnectionAction(
 export async function clearGoogleCalendarServiceAccount(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await clearGoogleCalendarServiceAccountCommand();
       return null;
@@ -177,7 +177,7 @@ export async function updateTwoWaySyncSettings(
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
-        action: "update",
+        action: "manage",
         execute: async () => {
           await updateTwoWaySyncSettingsCommand(data);
           return null;
@@ -199,7 +199,7 @@ export async function setupCalendarWebhook(): Promise<
 > {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const baseUrl =
         clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
@@ -237,7 +237,7 @@ export async function setupCalendarWebhook(): Promise<
 export async function stopCalendarWebhook(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const webhookState = await getGoogleCalendarWebhookState();
       if (!webhookState.channelId || !webhookState.resourceId) {
@@ -269,7 +269,7 @@ export async function toggleEventImport(
 ): Promise<MutationResult<null>> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await updateEventImportEnabled(enabled);
       return null;
@@ -290,7 +290,7 @@ export async function triggerManualSync(): Promise<
 > {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const result = await syncFromCalendar();
       if (!result.success) {

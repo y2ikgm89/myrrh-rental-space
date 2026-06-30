@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { isValidRole } from "@/shared/lib/validations/enums/guards";
+import { isDashboardRole } from "@/shared/lib/admin-roles";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 export type AdminAuthUser = {
@@ -28,6 +28,6 @@ export async function findAdminAuthUserByEmail(
     },
   });
 
-  if (!user || !isValidRole(user.role)) return null;
+  if (!user || !isDashboardRole(user.role)) return null;
   return user;
 }

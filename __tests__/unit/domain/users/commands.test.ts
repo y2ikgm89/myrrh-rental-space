@@ -36,8 +36,6 @@ const mockUserDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "user-1" }),
 );
 
-const mockUserCount = mock<() => Promise<number>>(() => Promise.resolve(2));
-
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
@@ -49,7 +47,6 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockUserCreate,
       update: mockUserUpdate,
       delete: mockUserDelete,
-      count: mockUserCount,
     },
   },
 }));
@@ -62,8 +59,11 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  updateUserRole,
 } from "@/shared/domain/users/commands";
+import type {
+  CreateUserInput,
+  UpdateUserInput,
+} from "@/shared/lib/validations/user";
 
 // テスト用定数
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -83,6 +83,14 @@ const VALID_UPDATE_INPUT = {
   role: Role.EDITOR,
 } as const;
 
+function uncheckedCreateInput(role: Role): CreateUserInput {
+  return { ...VALID_CREATE_INPUT, role } as CreateUserInput;
+}
+
+function uncheckedUpdateInput(role: Role): UpdateUserInput {
+  return { ...VALID_UPDATE_INPUT, role } as UpdateUserInput;
+}
+
 const EXISTING_USER = {
   id: USER_ID,
   role: Role.ADMIN,
@@ -96,7 +104,6 @@ describe("users/commands", () => {
     mockUserCreate.mockReset();
     mockUserUpdate.mockReset();
     mockUserDelete.mockReset();
-    mockUserCount.mockReset();
 
     // デフォルト値の設定
     mockUserFindUnique.mockResolvedValue(null);
@@ -104,7 +111,6 @@ describe("users/commands", () => {
     mockUserCreate.mockResolvedValue({ id: "user-1" });
     mockUserUpdate.mockResolvedValue({ id: USER_ID });
     mockUserDelete.mockResolvedValue({ id: USER_ID });
-    mockUserCount.mockResolvedValue(2);
   });
 
   // ===========================================================================
@@ -192,10 +198,7 @@ describe("users/commands", () => {
 
       test("ADMIN は SUPER_ADMIN を作成できない（FORBIDDEN）", async () => {
         await expect(
-          createUser(
-            { ...VALID_CREATE_INPUT, role: Role.SUPER_ADMIN },
-            ADMIN_ACTOR,
-          ),
+          createUser(uncheckedCreateInput(Role.SUPER_ADMIN), ADMIN_ACTOR),
         ).rejects.toMatchObject({ code: "FORBIDDEN" });
       });
 
@@ -333,6 +336,28 @@ describe("users/commands", () => {
             USER_ID,
             { ...VALID_UPDATE_INPUT, role: Role.ADMIN },
             ADMIN_ACTOR,
+          ),
+        ).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          message: "このロールに変更する権限がありません",
+        });
+
+        expect(mockUserUpdate).not.toHaveBeenCalled();
+      });
+
+      test("SUPER_ADMIN でもスタッフ編集経由で SUPER_ADMIN へ変更できない（FORBIDDEN）", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.ADMIN,
+          _count: { reservations: 0, posts: 0 },
+        });
+        mockUserFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          updateUser(
+            USER_ID,
+            uncheckedUpdateInput(Role.SUPER_ADMIN),
+            SUPER_ADMIN_ACTOR,
           ),
         ).rejects.toMatchObject({
           code: "FORBIDDEN",
@@ -507,165 +532,6 @@ describe("users/commands", () => {
           code: "CONFLICT",
           message: expect.stringContaining("2"),
         });
-      });
-    });
-  });
-
-  // ===========================================================================
-  // updateUserRole
-  // ===========================================================================
-
-  describe("updateUserRole", () => {
-    describe("正常系", () => {
-      test("ユーザーのロールを更新し旧ロールと新ロールを返す", async () => {
-        mockUserFindUnique.mockResolvedValueOnce({
-          id: USER_ID,
-          role: Role.ADMIN,
-          _count: { reservations: 0, posts: 0 },
-        });
-
-        const result = await updateUserRole(
-          USER_ID,
-          Role.EDITOR,
-          SUPER_ADMIN_ACTOR,
-        );
-
-        expect(result).toEqual({
-          oldRole: Role.ADMIN,
-          newRole: Role.EDITOR,
-        });
-      });
-
-      test("userUpdate が新しいロールで呼ばれる", async () => {
-        mockUserFindUnique.mockResolvedValueOnce({
-          id: USER_ID,
-          role: Role.VIEWER,
-          _count: { reservations: 0, posts: 0 },
-        });
-
-        await updateUserRole(USER_ID, Role.SUPER_ADMIN, SUPER_ADMIN_ACTOR);
-
-        expect(mockUserUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: { id: USER_ID },
-            data: { role: Role.SUPER_ADMIN },
-          }),
-        );
-      });
-
-      test("同じロールへの更新も正常に処理される", async () => {
-        mockUserFindUnique.mockResolvedValueOnce({
-          id: USER_ID,
-          role: Role.ADMIN,
-          _count: { reservations: 0, posts: 0 },
-        });
-
-        const result = await updateUserRole(
-          USER_ID,
-          Role.ADMIN,
-          SUPER_ADMIN_ACTOR,
-        );
-
-        expect(result).toEqual({
-          oldRole: Role.ADMIN,
-          newRole: Role.ADMIN,
-        });
-      });
-
-      test("各 Role に更新できる", async () => {
-        for (const role of Object.values(Role)) {
-          mockUserFindUnique.mockResolvedValueOnce({
-            id: USER_ID,
-            role: Role.USER,
-            _count: { reservations: 0, posts: 0 },
-          });
-          mockUserUpdate.mockResolvedValueOnce({ id: USER_ID });
-
-          const result = await updateUserRole(USER_ID, role, SUPER_ADMIN_ACTOR);
-
-          expect(result.newRole).toBe(role);
-        }
-      });
-
-      test("SUPER_ADMIN が複数いる場合、SUPER_ADMIN を降格できる", async () => {
-        mockUserFindUnique.mockResolvedValueOnce({
-          id: USER_ID,
-          role: Role.SUPER_ADMIN,
-          _count: { reservations: 0, posts: 0 },
-        });
-        mockUserCount.mockResolvedValueOnce(3);
-
-        await expect(
-          updateUserRole(USER_ID, Role.ADMIN, SUPER_ADMIN_ACTOR),
-        ).resolves.toEqual({
-          oldRole: Role.SUPER_ADMIN,
-          newRole: Role.ADMIN,
-        });
-      });
-    });
-
-    describe("異常系", () => {
-      test("存在しないユーザー ID で NOT_FOUND エラーをスローする", async () => {
-        mockUserFindUnique.mockResolvedValueOnce(null);
-
-        await expect(
-          updateUserRole(USER_ID, Role.ADMIN, SUPER_ADMIN_ACTOR),
-        ).rejects.toMatchObject({
-          code: "NOT_FOUND",
-          message: "ユーザーが見つかりません",
-        });
-
-        expect(mockUserUpdate).not.toHaveBeenCalled();
-      });
-
-      test("自分自身のロールは変更できない（CONFLICT）", async () => {
-        await expect(
-          updateUserRole(USER_ID, Role.EDITOR, {
-            id: USER_ID,
-            role: Role.SUPER_ADMIN,
-          }),
-        ).rejects.toMatchObject({
-          code: "CONFLICT",
-          message: "自分自身のロールは変更できません",
-        });
-
-        expect(mockUserFindUnique).not.toHaveBeenCalled();
-        expect(mockUserUpdate).not.toHaveBeenCalled();
-      });
-
-      test("最後の SUPER_ADMIN を降格できない（CONFLICT）", async () => {
-        mockUserFindUnique.mockResolvedValueOnce({
-          id: USER_ID,
-          role: Role.SUPER_ADMIN,
-          _count: { reservations: 0, posts: 0 },
-        });
-        mockUserCount.mockResolvedValueOnce(1);
-
-        await expect(
-          updateUserRole(USER_ID, Role.ADMIN, SUPER_ADMIN_ACTOR),
-        ).rejects.toMatchObject({
-          code: "CONFLICT",
-          message: "最後のSUPER_ADMINのロールは変更できません",
-        });
-
-        expect(mockUserUpdate).not.toHaveBeenCalled();
-      });
-
-      test("SUPER_ADMIN → SUPER_ADMIN（同ロール）は count 検証を発火しない", async () => {
-        mockUserFindUnique.mockResolvedValueOnce({
-          id: USER_ID,
-          role: Role.SUPER_ADMIN,
-          _count: { reservations: 0, posts: 0 },
-        });
-
-        await expect(
-          updateUserRole(USER_ID, Role.SUPER_ADMIN, SUPER_ADMIN_ACTOR),
-        ).resolves.toEqual({
-          oldRole: Role.SUPER_ADMIN,
-          newRole: Role.SUPER_ADMIN,
-        });
-
-        expect(mockUserCount).not.toHaveBeenCalled();
       });
     });
   });

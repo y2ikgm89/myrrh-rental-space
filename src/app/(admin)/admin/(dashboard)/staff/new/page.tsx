@@ -8,7 +8,7 @@ import {
 } from "@/admin/components/ui/card";
 import { UserForm } from "../_components/UserForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { getInvitableRoles, isDashboardRole } from "@/shared/lib/admin-roles";
 import type { Metadata } from "next";
 
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function NewStaffPage() {
-  const user = await verifyAdminSession();
+  const user = await requireAdminPermission("user", "create");
 
   // 付与可能ロールが 0 件（= 追加権限なし）の場合はスタッフ一覧へリダイレクト
   if (!isDashboardRole(user.role)) {

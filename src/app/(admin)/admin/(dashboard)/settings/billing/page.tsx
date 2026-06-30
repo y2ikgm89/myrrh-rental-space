@@ -15,6 +15,7 @@ import {
   getDiscountSettings,
   getTaxSettings,
 } from "@/admin/queries/settings";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -75,6 +76,8 @@ function BillingSettingsLoading(): ReactElement {
 }
 
 export default async function BillingSettingsPage(): Promise<ReactElement> {
+  await requireAdminPermission("settings", "manage");
+
   return (
     <SettingsLayout
       title="課金・決済"

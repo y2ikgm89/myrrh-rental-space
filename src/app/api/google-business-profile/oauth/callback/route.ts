@@ -3,7 +3,7 @@
  *
  * Authorization Code + state CSRF フローの callback。
  *
- * 1. settings:update 権限検証 → 未登録なら `/admin/access-denied` にリダイレクト
+ * 1. settings:manage 権限検証 → 未登録なら `/admin/access-denied` にリダイレクト
  * 2. `code` / `state` / `error` クエリ取得（不足時は API 設定ページにリダイレクト）
  * 3. CSRF state 検証（httpOnly cookie と照合、不一致なら拒否）
  * 4. `exchangeGbpAuthCode` で access / refresh token を取得
@@ -52,7 +52,7 @@ function redirectToIntegrationsError(
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const auth = await checkPermission("settings", "update", request.headers);
+    const auth = await checkPermission("settings", "manage", request.headers);
     if (!auth.success) {
       if (auth.error.error.includes("ログイン")) {
         return NextResponse.redirect(

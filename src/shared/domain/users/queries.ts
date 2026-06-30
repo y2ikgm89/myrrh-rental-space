@@ -2,6 +2,7 @@ import "server-only";
 
 import { Role } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { DASHBOARD_ROLES, isDashboardRole } from "@/shared/lib/admin-roles";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@generated/prisma/client";
 import type {
@@ -12,13 +13,7 @@ import type {
   UserStats,
 } from "@/shared/domain/users/types";
 
-/** 通知先に指定できる管理ロール（公開ユーザー・顧客を除く）。 */
-const NOTIFICATION_STAFF_ROLES = [
-  Role.SUPER_ADMIN,
-  Role.ADMIN,
-  Role.EDITOR,
-  Role.VIEWER,
-];
+const STAFF_QUERY_ROLES: Role[] = [...DASHBOARD_ROLES];
 
 /**
  * 通知先ピッカー用に、管理ロールのスタッフ一覧を取得する（ページングなし）。
@@ -27,7 +22,7 @@ export async function getNotificationStaffCandidates(): Promise<
   NotificationStaffCandidate[]
 > {
   const users = await prisma.user.findMany({
-    where: { role: { in: NOTIFICATION_STAFF_ROLES } },
+    where: { role: { in: STAFF_QUERY_ROLES } },
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: "asc" },
   });
@@ -77,8 +72,14 @@ export async function getUsers(
     limit: perPage,
   } = paginate({ page: params.page, limit: params.perPage ?? 20 });
 
+  const roleFilter =
+    role && role !== "ALL" && isDashboardRole(role)
+      ? [role]
+      : STAFF_QUERY_ROLES;
+
   const where = {
     AND: [
+      { role: { in: roleFilter } },
       search
         ? {
             OR: [
@@ -87,7 +88,6 @@ export async function getUsers(
             ],
           }
         : {},
-      role && role !== "ALL" ? { role } : {},
     ],
   } satisfies Prisma.UserWhereInput;
 
@@ -119,8 +119,8 @@ export async function getUsers(
 }
 
 export async function getUser(id: string): Promise<UserData | null> {
-  const user = await prisma.user.findUnique({
-    where: { id },
+  const user = await prisma.user.findFirst({
+    where: { id, role: { in: STAFF_QUERY_ROLES } },
     include: {
       _count: {
         select: {
@@ -148,20 +148,23 @@ export async function getAccountProviders(userId: string): Promise<string[]> {
 }
 
 export async function getUserStats(): Promise<UserStats> {
-  const [total, admins, users, recentUsers] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({
-      where: { role: { in: [Role.SUPER_ADMIN, Role.ADMIN] } },
-    }),
-    prisma.user.count({ where: { role: Role.USER } }),
-    prisma.user.count({
-      where: {
-        createdAt: {
-          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+  const recentStaffCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const [total, superAdmins, admins, editors, viewers, recentStaff] =
+    await Promise.all([
+      prisma.user.count({ where: { role: { in: STAFF_QUERY_ROLES } } }),
+      prisma.user.count({ where: { role: Role.SUPER_ADMIN } }),
+      prisma.user.count({ where: { role: Role.ADMIN } }),
+      prisma.user.count({ where: { role: Role.EDITOR } }),
+      prisma.user.count({ where: { role: Role.VIEWER } }),
+      prisma.user.count({
+        where: {
+          role: { in: STAFF_QUERY_ROLES },
+          createdAt: {
+            gte: recentStaffCutoff,
+          },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  return { total, admins, users, recentUsers };
+  return { total, superAdmins, admins, editors, viewers, recentStaff };
 }

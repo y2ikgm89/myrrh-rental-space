@@ -16,7 +16,6 @@ describe("hasPermission", () => {
     });
 
     test("SUPER_ADMIN 専用特権を許可する", () => {
-      expect(hasPermission("SUPER_ADMIN", "user", "manage")).toBe(true);
       expect(hasPermission("SUPER_ADMIN", "auditLog", "read")).toBe(true);
       expect(hasPermission("SUPER_ADMIN", "auditLog", "manage")).toBe(true);
       expect(hasPermission("SUPER_ADMIN", "settings", "manage")).toBe(true);
@@ -105,12 +104,10 @@ describe("ROLE_PERMISSIONS 表の不変条件", () => {
     expect(nonRead).toHaveLength(0);
   });
 
-  test("auditLog / user:manage / settings:manage は SUPER_ADMIN 専用", () => {
+  test("auditLog / settings:manage は SUPER_ADMIN 専用", () => {
     expect(ROLE_PERMISSIONS.ADMIN).not.toContain("auditLog:read");
-    expect(ROLE_PERMISSIONS.ADMIN).not.toContain("user:manage");
     expect(ROLE_PERMISSIONS.ADMIN).not.toContain("settings:manage");
     expect(ROLE_PERMISSIONS.SUPER_ADMIN).toContain("auditLog:read");
-    expect(ROLE_PERMISSIONS.SUPER_ADMIN).toContain("user:manage");
     expect(ROLE_PERMISSIONS.SUPER_ADMIN).toContain("settings:manage");
   });
 
