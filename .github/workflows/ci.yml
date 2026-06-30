@@ -355,9 +355,10 @@ jobs:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          APP_SURFACE: public
+          ADMIN_APP_URL: http://localhost:3000
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
-          ADMIN_LOGIN_TOKEN: "test-admin-login-token-for-ci-smoke-strict-0123456789ab"
           R2_ACCOUNT_ID: "test-r2-account"
           R2_ACCESS_KEY_ID: "test-r2-access-key"
           R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
@@ -443,11 +444,12 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           # webServer が next start で起動する際の runtime env。
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
+          APP_SURFACE: public
+          ADMIN_APP_URL: http://localhost:3000
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（lhci-start.ts と同方針）。
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_SECRET: "test-cron-secret-for-ci-e2e-strict-0123456789ab"
-          ADMIN_LOGIN_TOKEN: "test-admin-login-token-for-ci-e2e-strict-0123456789ab"
           R2_ACCOUNT_ID: "test-r2-account"
           R2_ACCESS_KEY_ID: "test-r2-access-key"
           R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
@@ -506,7 +508,6 @@ jobs:
           NEXT_PUBLIC_GA_MEASUREMENT_ID: G-XXXXXXXXXX
           ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           CRON_SECRET: test-cron-secret-for-ci-build-strict-0123456789ab
-          ADMIN_LOGIN_TOKEN: test-admin-login-token-for-ci-build-strict-0123456789ab
           RESEND_API_KEY: re_test_placeholder_for_ci_strict_build_only
           STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_strict_build_only
           GOOGLE_CLIENT_ID: test-google-client-id.apps.googleusercontent.com
@@ -748,11 +749,12 @@ jobs:
           CI: true
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           PLAYWRIGHT_VISUAL: "1"
+          APP_SURFACE: public
+          ADMIN_APP_URL: http://localhost:3000
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（webServer は playwright.config.ts の分岐により CI で next start）。
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_SECRET: "test-cron-secret-for-ci-visual-strict-0123456789ab"
-          ADMIN_LOGIN_TOKEN: "test-admin-login-token-for-ci-visual-strict-0123456789ab"
           R2_ACCOUNT_ID: "test-r2-account"
           R2_ACCESS_KEY_ID: "test-r2-access-key"
           R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"

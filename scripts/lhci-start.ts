@@ -23,7 +23,6 @@ function applyLhciProductionFallbacks(): void {
   const fallbacks: Record<string, string> = {
     ENCRYPTION_KEY: hex64,
     CRON_SECRET: token32,
-    ADMIN_LOGIN_TOKEN: token32,
     R2_ACCOUNT_ID: "lhci-local-r2-account",
     R2_ACCESS_KEY_ID: "lhci-local-r2-access-key",
     R2_SECRET_ACCESS_KEY: "lhci-local-r2-secret-key-32-min!!",

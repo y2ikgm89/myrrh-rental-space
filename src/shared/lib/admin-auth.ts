@@ -368,9 +368,8 @@ export const verifyAdminSession = cache(
   async (requestHeaders?: Headers): Promise<AdminUser> => {
     const user = await verifySession(requestHeaders);
     if (!isDashboardRole(user.role)) {
-      // 非管理者ロール（CUSTOMER/USER）は公開サイトへ
-      // /admin/login にリダイレクトすると proxy の Admin Gate で 404 になるか、
-      // gate cookie があれば無限リダイレクトループの原因になる
+      // 非管理者ロール（CUSTOMER/USER）は公開サイトへ。
+      // /admin/login へ戻すとログイン済み非管理者で無限リダイレクトになる。
       redirect("/");
     }
     return user;

@@ -15,7 +15,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { urls, testUsers } from "../fixtures";
 import {
   gotoAdminLogin,
-  primeAdminLoginGate,
+  primeAdminRequestContext,
   signInAsAdmin,
 } from "../helpers/admin-auth";
 
@@ -41,7 +41,7 @@ async function clearAuthSession(
     }
     sessionStorage.clear();
   }, options?.preserveLocalStorage ?? false);
-  await primeAdminLoginGate(page.context());
+  await primeAdminRequestContext(page.context());
 }
 
 function getLoginErrorMessage(page: Page) {
@@ -58,7 +58,7 @@ function adminShell(page: Page) {
 
 test.describe("Authentication Flow", () => {
   test.beforeEach(async ({ page }) => {
-    await primeAdminLoginGate(page.context());
+    await primeAdminRequestContext(page.context());
   });
 
   test.describe("Login Page", () => {

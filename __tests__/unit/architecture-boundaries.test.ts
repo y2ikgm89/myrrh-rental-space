@@ -479,8 +479,7 @@ describe("architecture boundaries", () => {
     expect(source).not.toContain("@/shared/db/prisma");
     expect(source).not.toContain("@/shared/lib/prisma");
     expect(source).not.toContain("@generated/prisma");
-    expect(source).not.toContain("admin-login-tokens/commands");
-    expect(source).not.toContain("consumeAdminLoginToken");
+    expect(source).not.toMatch(/shared\/domain\/.*\/commands/u);
   });
 
   test("src/shared/ は @/admin・@/public を import しない（依存方向の保護）", () => {

@@ -1,16 +1,12 @@
 /**
  * Next.js 16 Proxy
  *
- * 共通セキュリティヘッダー・レート制限・Admin Gate を担当する。
+ * 共通セキュリティヘッダー・レート制限を担当する。
  * 公開ルーティングの解決は route 側で行う。
  */
 
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  ADMIN_GATE_COOKIE_NAME,
-  isSignedAdminGateToken,
-} from "@/shared/lib/admin-login-gate";
 import { FRAME_SRC_DIRECTIVE_VALUES } from "@/shared/lib/constants/frame-sources";
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
@@ -194,47 +190,6 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Admin Gate: /admin/login のアクセス制御
-//
-// 以下のいずれかを満たす場合のみログインページを表示:
-// 1. admin-gate cookie が設定済み（過去にトークン検証済み）
-// 2. ?token= パラメータ付きの初回アクセスは Node.js Route Handler へ委譲
-//
-// セッション cookie の存在だけでは通過させない。公開サイトのソーシャル
-// ログイン（CUSTOMER ロール）でもセッション cookie は発行されるため、
-// gate cookie なしではログインフォームを表示しない。
-// ---------------------------------------------------------------------------
-
-function handleAdminLoginGate(
-  req: NextRequest,
-  pathname: string,
-): NextResponse {
-  // 開発環境では Admin Gate をバイパス（generate-login-url.ts 不要にする）。
-  // `=== "development"` 厳密判定で staging / production を確実に除外。
-  if (serverEnv.NODE_ENV === "development") {
-    return createResponse(req, pathname);
-  }
-
-  const gateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
-
-  // gate cookie がある → 通過（timing-safe comparison for defensive consistency）
-  if (gateCookie?.value && timingSafeEqualStrings(gateCookie.value, "1")) {
-    return createResponse(req, pathname);
-  }
-
-  // DB-backed 検証と消費は Node.js Route Handler に委譲する
-  const token = req.nextUrl.searchParams.get("token");
-  if (token && isSignedAdminGateToken(token)) {
-    const consumeUrl = new URL("/admin/login/consume", req.url);
-    consumeUrl.searchParams.set("token", token);
-    return NextResponse.redirect(consumeUrl);
-  }
-
-  // いずれの条件も満たさない → 404
-  return new NextResponse(null, { status: 404 });
-}
-
-// ---------------------------------------------------------------------------
 // Main proxy
 // ---------------------------------------------------------------------------
 
@@ -344,12 +299,9 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   }
 
   if (pathname.startsWith("/admin")) {
-    // Admin Gate: ログインページの隠蔽
+    // 管理ログインは Cloud Run IAP が入口を保護する。公開 service では
+    // APP_SURFACE=public の blocklist により /admin/* 全体が 404 になる。
     if (pathname === "/admin/login") {
-      return handleAdminLoginGate(req, pathname);
-    }
-
-    if (pathname === "/admin/login/consume") {
       return createResponse(req, pathname);
     }
 

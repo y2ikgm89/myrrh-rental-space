@@ -125,13 +125,6 @@ export const serverEnv = createEnv({
       .min(32, { error: "CRON_SECRET must be at least 32 characters" })
       .optional(),
 
-    // Admin Login（本番必須 - ランタイム検証）
-    // 管理画面ログインページへのアクセス制限
-    ADMIN_LOGIN_TOKEN: z
-      .string()
-      .min(32, { error: "ADMIN_LOGIN_TOKEN must be at least 32 characters" })
-      .optional(),
-
     // Database connection pool tuning
     DATABASE_POOL_MAX: z.coerce.number().int().positive().optional(),
 
@@ -190,7 +183,6 @@ export const serverEnv = createEnv({
     ENCRYPTION_KEY_ID: process.env["ENCRYPTION_KEY_ID"],
     ENCRYPTION_KEYS_LEGACY: process.env["ENCRYPTION_KEYS_LEGACY"],
     CRON_SECRET: process.env["CRON_SECRET"],
-    ADMIN_LOGIN_TOKEN: process.env["ADMIN_LOGIN_TOKEN"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
     APP_SURFACE: process.env["APP_SURFACE"],
     ADMIN_APP_URL: process.env["ADMIN_APP_URL"],
@@ -231,7 +223,6 @@ export function validateProductionEnv(): void {
     { name: "ADMIN_APP_URL", value: serverEnv.ADMIN_APP_URL },
     { name: "ENCRYPTION_KEY", value: serverEnv.ENCRYPTION_KEY },
     { name: "CRON_SECRET", value: serverEnv.CRON_SECRET },
-    { name: "ADMIN_LOGIN_TOKEN", value: serverEnv.ADMIN_LOGIN_TOKEN },
     // Cloudflare R2 — 画像ストレージ必須
     { name: "R2_ACCOUNT_ID", value: serverEnv.R2_ACCOUNT_ID },
     { name: "R2_ACCESS_KEY_ID", value: serverEnv.R2_ACCESS_KEY_ID },

@@ -3,8 +3,8 @@
 /**
  * ログアウトボタン
  *
- * ログアウト後 /admin/login にリダイレクトする
- * admin-gate cookie が有効な間はトークンなしでアクセス可能
+ * ログアウト後 /admin/login にリダイレクトする。
+ * 本番の管理ログイン入口は Cloud Run IAP が保護する。
  */
 
 import { useRouter } from "next/navigation";

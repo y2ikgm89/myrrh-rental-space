@@ -5,8 +5,8 @@
  * - サイドバーと一貫性のあるダークパネル
  * - Trust Blue アクセント
  *
- * Admin Gate は proxy.ts が処理するため、このページに到達した時点で
- * gate cookie が確認済み。
+ * 本番の入口制御は Cloud Run IAP が担当する。公開 service では proxy.ts が
+ * /admin/* を 404 にするため、このページは admin service 側でのみ表示される。
  */
 
 import type { Metadata } from "next";

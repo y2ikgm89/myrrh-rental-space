@@ -1,14 +1,9 @@
 import { expect, type BrowserContext, type Page } from "@playwright/test";
-import { ADMIN_GATE_COOKIE_NAME } from "../../src/shared/lib/admin-login-gate";
 import { adminCredentials, urls } from "../fixtures";
 import { ensureAdminUser } from "./ensure-admin-user";
 
 const contextIpMap = new WeakMap<BrowserContext, string>();
 let nextContextIpOctet = 10;
-
-function getPlaywrightBaseUrl(): string {
-  return process.env["PLAYWRIGHT_BASE_URL"] || "http://localhost:3000";
-}
 
 function getContextClientIp(context: BrowserContext): string {
   const existing = contextIpMap.get(context);
@@ -22,28 +17,17 @@ function getContextClientIp(context: BrowserContext): string {
   return ip;
 }
 
-export async function primeAdminLoginGate(
+export async function primeAdminRequestContext(
   context: BrowserContext,
 ): Promise<void> {
-  const adminUrl = new URL("/admin", getPlaywrightBaseUrl()).toString();
-
   await context.setExtraHTTPHeaders({
     "x-forwarded-for": getContextClientIp(context),
   });
-  await context.addCookies([
-    {
-      name: ADMIN_GATE_COOKIE_NAME,
-      value: "1",
-      url: adminUrl,
-      httpOnly: true,
-      sameSite: "Strict",
-    },
-  ]);
 }
 
 export async function gotoAdminLogin(page: Page): Promise<void> {
   await ensureAdminUser();
-  await primeAdminLoginGate(page.context());
+  await primeAdminRequestContext(page.context());
   await page.goto(urls.login);
   await expect(page.getByLabel("メールアドレス")).toBeVisible();
   await expect(page.getByLabel("パスワード")).toBeVisible();

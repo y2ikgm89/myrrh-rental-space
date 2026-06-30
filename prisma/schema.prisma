@@ -249,7 +249,6 @@ model User {
   reservationDeletions    Reservation[]          @relation("ReservationDeletions")
   eventDeletions          Event[]                @relation("EventDeletions")
   createdStaffInvitations StaffInvitation[]      @relation("StaffInvitationCreator")
-  createdLoginTokens      LoginToken[]           @relation("LoginTokenCreator")
   createdBlockTemplates   BlockTemplate[]        @relation("BlockTemplateCreator")
   repliedSpaceReviews     SpaceReview[]          @relation("SpaceReviewReplyAuthor")
 
@@ -317,23 +316,6 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
-}
-
-model LoginToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  token     String    @unique
-  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
-  usedAt    DateTime?
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-
-  // Relations
-  creator User? @relation("LoginTokenCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-
-  // @unique が自動的にインデックスを作成するため @@index([token]) は不要
-  @@index([expiresAt])
-  @@index([usedAt])
-  @@map("login_tokens")
 }
 
 model StaffInvitation {
