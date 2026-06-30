@@ -37,10 +37,10 @@ export default function AuthError({ error, unstable_retry }: ErrorInfo) {
           </button>
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
-            href="/admin/login"
+            href="/admin"
             className="rounded-lg border border-border bg-card px-6 py-3 font-medium text-card-foreground transition-colors hover:bg-accent"
           >
-            ログインに戻る
+            管理画面に戻る
           </a>
         </div>
       </div>

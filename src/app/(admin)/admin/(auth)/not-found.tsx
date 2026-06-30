@@ -16,10 +16,10 @@ export default function AuthNotFound() {
           お探しのページは存在しないか、移動された可能性があります。
         </p>
         <Link
-          href="/admin/login"
+          href="/admin"
           className="inline-block rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
-          ログインに戻る
+          管理画面に戻る
         </Link>
       </div>
     </div>
