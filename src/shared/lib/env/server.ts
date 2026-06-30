@@ -164,6 +164,7 @@ export const serverEnv = createEnv({
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
+    CI: z.string().optional(),
   },
   runtimeEnv: {
     DATABASE_URL: process.env["DATABASE_URL"],
@@ -206,6 +207,7 @@ export const serverEnv = createEnv({
     CLOUDFLARE_ORIGIN_HEADER_SECRET:
       process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"],
     NODE_ENV: process.env["NODE_ENV"],
+    CI: process.env["CI"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）
   skipValidation: !!process.env["SKIP_ENV_VALIDATION"],
