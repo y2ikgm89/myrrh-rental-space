@@ -9,6 +9,8 @@ repository:
 - deploy containers to Cloud Run from Artifact Registry;
 - run Prisma migrations as a Cloud Run Job before deploying the web service;
 - protect admin traffic with Identity-Aware Proxy (IAP) and Google accounts;
+- run the production project under a Google Cloud Organization backed by Cloud
+  Identity or Google Workspace;
 - keep public pages reachable while admin routes are isolated on a separate
   IAP-protected Cloud Run service.
 
@@ -28,6 +30,10 @@ Official references:
   <https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts>
 - IAP IAM:
   <https://cloud.google.com/iap/docs/managing-access>
+- Google Cloud resource hierarchy:
+  <https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy>
+- Cloud Identity groups:
+  <https://cloud.google.com/identity/docs/groups>
 
 ## Target architecture
 
@@ -38,8 +44,14 @@ the public service. The clean production target is:
   `APP_SURFACE=public` and `--allow-unauthenticated`;
 - one admin Cloud Run service for admin routes, deployed with
   `APP_SURFACE=admin`, `--no-allow-unauthenticated`, and `--iap`;
-- a Google Group or Workspace/Cloud Identity group granted
-  `roles/iap.httpsResourceAccessor` for admin access.
+- a Google Workspace / Cloud Identity security group granted
+  `roles/iap.httpsResourceAccessor` for admin access;
+- no individual user grants on the IAP-secured admin resource.
+
+For production, do not treat an orgless Google Cloud project as the final
+state. An orgless project can be used only as a temporary bootstrap environment.
+The clean production target is a new or migrated project under a Google Cloud
+Organization created from a verified Cloud Identity / Google Workspace domain.
 
 Recommended host/path layout:
 
@@ -78,6 +90,8 @@ Set these in your shell before running setup commands:
 ```bash
 export PROJECT_ID="your-gcp-project-id"
 export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+export GCP_ORGANIZATION_ID="123456789012"
+export CLOUD_IDENTITY_DOMAIN="example.com"
 export REGION="asia-northeast1"
 export SERVICE_NAME="myrrh-rental-space"
 export ADMIN_SERVICE_NAME="myrrh-rental-space-admin"
@@ -103,6 +117,49 @@ account that will be allowed through IAP. `IAP_JWT_AUDIENCE` must match the
 Cloud Run IAP signed-header audience format:
 `/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME`.
 
+`IAP_ADMIN_GROUP` must be a `group:` member backed by Cloud Identity or Google
+Workspace. Do not set it to a personal `user:` identity for production.
+
+## Organization and group baseline
+
+Before this project is considered production-ready for the admin site, create or
+use a Google Cloud Organization backed by Cloud Identity or Google Workspace.
+Use the business domain, not a personal Gmail-only project.
+
+Required external setup:
+
+1. Create or use a Cloud Identity / Google Workspace tenant for
+   `$CLOUD_IDENTITY_DOMAIN`.
+2. Verify domain ownership in Google Admin.
+3. Create the production Google Cloud project under that Organization, or
+   migrate/cut over from the bootstrap project to a new Organization-backed
+   project.
+4. Create a Cloud Identity security group for admin access:
+
+```bash
+gcloud identity groups create "${IAP_ADMIN_GROUP#group:}" \
+  --organization="$CLOUD_IDENTITY_DOMAIN" \
+  --group-type="security" \
+  --display-name="Myrrh Rental Space Admins" \
+  --description="Users allowed to access the Myrrh Rental Space IAP admin service" \
+  --with-initial-owner="$INITIAL_ADMIN_EMAIL"
+```
+
+Add administrators and staff to the group:
+
+```bash
+gcloud identity groups memberships add \
+  --group-email="${IAP_ADMIN_GROUP#group:}" \
+  --member-email="$INITIAL_ADMIN_EMAIL" \
+  --roles=MEMBER
+```
+
+Create a clean Organization-backed project rather than keeping an orgless
+project as production. If the bootstrap project already contains disposable
+resources, recreate them in the Organization-backed project and cut over DNS and
+secrets there. This keeps IAM, OAuth consent, groups, audit, and future policy
+controls under one administrative boundary.
+
 ## Enable APIs
 
 ```bash
@@ -117,7 +174,8 @@ gcloud services enable \
   cloudscheduler.googleapis.com \
   iap.googleapis.com \
   cloudresourcemanager.googleapis.com \
-  iam.googleapis.com
+  iam.googleapis.com \
+  cloudidentity.googleapis.com
 ```
 
 ## Artifact Registry
@@ -469,6 +527,11 @@ organization, do the one-time OAuth setup from the Google Cloud console.
 Google's Cloud Run IAP documentation explicitly notes that OAuth clients cannot
 be created programmatically for this first-time setup.
 
+This is a bootstrap-only path. The production target for this repository is an
+Organization-backed project with a Cloud Identity / Google Workspace admin
+group. If a deploy prints the orgless-project warning, the service can still be
+protected by IAP, but the project has not reached the final production posture.
+
 Use the console path:
 
 1. Cloud Run -> `$ADMIN_SERVICE_NAME` -> Security.
@@ -492,7 +555,8 @@ gcloud run services add-iam-policy-binding "$ADMIN_SERVICE_NAME" \
   --role="roles/run.invoker"
 ```
 
-Grant admin users through a Google Group, not individual users:
+Grant admin users through the Cloud Identity / Google Workspace group, not
+individual users:
 
 ```bash
 gcloud iap web add-iam-policy-binding \
@@ -510,10 +574,19 @@ Operational rule:
 - a non-Gmail address is fine only if it is a Google account or managed through
   Google Workspace / Cloud Identity;
 - do not grant `allUsers` or `allAuthenticatedUsers` to the admin service;
+- do not grant `roles/iap.httpsResourceAccessor` directly to `user:*` members
+  in production;
 - add staff by creating the staff user in `/admin/users/new`, adding the same
   Google account to the IAP Google Group, then sending the access guide email;
 - remove users by removing them from the Google Group and disabling/deleting
   the app staff user.
+
+When migrating from a bootstrap individual grant, do this in order:
+
+1. grant `roles/iap.httpsResourceAccessor` to `$IAP_ADMIN_GROUP`;
+2. confirm a member of that group can open `${ADMIN_DOMAIN}/admin`;
+3. remove any `user:*` IAP accessor grants;
+4. run `bun run gcp:audit-production-iap`.
 
 ## Cloud Scheduler
 
@@ -550,6 +623,14 @@ curl -fsS "${PUBLIC_DOMAIN}/api/live"
 curl -fsS "${PUBLIC_DOMAIN}/api/health"
 curl -I "${PUBLIC_DOMAIN}/admin"
 curl -I "${ADMIN_DOMAIN}/admin"
+
+GCP_PROJECT_ID="$PROJECT_ID" \
+GCP_ORGANIZATION_ID="$GCP_ORGANIZATION_ID" \
+REGION="$REGION" \
+SERVICE_NAME="$SERVICE_NAME" \
+ADMIN_SERVICE_NAME="$ADMIN_SERVICE_NAME" \
+IAP_ADMIN_GROUP="$IAP_ADMIN_GROUP" \
+bun run gcp:audit-production-iap
 ```
 
 Expected results:
@@ -561,6 +642,9 @@ Expected results:
 - with an IAP-allowed Google account and matching app staff user, `/admin`
   opens the dashboard without an app password form;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
+- `bun run gcp:audit-production-iap` passes. If it fails on Organization or
+  individual IAP grants, the admin site is protected but the GCP posture is not
+  the final production baseline.
 
 ## Current repository contract
 
@@ -578,9 +662,10 @@ The current `cloudbuild.yaml` already handles:
 
 The remaining GCP-side production tasks are:
 
-1. create the actual GCP project resources listed above;
+1. create or cut over to an Organization-backed GCP project;
 2. create and grant Secret Manager secrets;
 3. create a Cloud Build trigger with required substitutions and fixed secret
    versions;
-4. grant IAP access to the admin Google Group;
-5. run the production verification checks.
+4. grant IAP access to the admin Google Group and remove individual IAP grants;
+5. run `bun run gcp:audit-production-iap`;
+6. run the production verification checks.

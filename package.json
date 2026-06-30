@@ -31,6 +31,7 @@
     "lhci": "lhci autorun",
     "lhci:collect": "lhci collect",
     "lhci:assert": "lhci assert",
+    "gcp:audit-production-iap": "bun scripts/audit-gcp-production-iap.ts",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
     "prepare": "lefthook install || true",
