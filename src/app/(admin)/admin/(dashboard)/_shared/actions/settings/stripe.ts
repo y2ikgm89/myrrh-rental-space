@@ -42,7 +42,7 @@ export async function updateStripeSettings(
   return executeConformMutation(formData, stripeFormSchema, async (data) => {
     const result = await executeAdminMutationResult({
       resource: "settings",
-      action: "update",
+      action: "manage",
       execute: async () => {
         await settingsCommands.updateStripeSettings({
           stripeEnabled: data.stripeEnabled,
@@ -72,7 +72,7 @@ export async function testStripeConnectionAction(
 ): Promise<MutationResult<{ accountId?: string; mode?: "test" | "live" }>> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const result = await stripeLib.testStripeConnection(secretKey);
       if (!result.success) {
@@ -109,7 +109,7 @@ export async function testStripeConnectionAction(
 export async function clearStripeKeys(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await settingsCommands.clearStripeKeys();
       return null;

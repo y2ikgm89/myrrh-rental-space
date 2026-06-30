@@ -7,6 +7,7 @@
  * - `DASHBOARD_ROLES` — 管理画面アクセス可能なロール（admin-auth が再 export）
  * - `ROLE_LABELS` — 日本語ラベル（permissions.ts が再 export）
  * - `ROLE_DESCRIPTIONS` — UI 表示用のロール説明
+ * - `STAFF_ASSIGNABLE_ROLES` — スタッフ管理 UI から付与できるロール
  * - `INVITABLE_BY` — 階層制御マップ（誰が誰を招待/編集できるか）
  * - `getInvitableRoles()` / `canInviteRole()` / `canModifyUser()` — 階層ヘルパー
  */
@@ -28,6 +29,20 @@ export const DASHBOARD_ROLES = [
 export type DashboardRole = (typeof DASHBOARD_ROLES)[number];
 
 const DASHBOARD_ROLE_SET = new Set<Role>(DASHBOARD_ROLES);
+
+/**
+ * スタッフ管理 UI から作成・更新できるロール。
+ *
+ * SUPER_ADMIN は初期 bootstrap 専用で、スタッフ管理 UI からは付与しない。
+ * USER / CUSTOMER は公開サイト用で、管理スタッフとして扱わない。
+ */
+export const STAFF_ASSIGNABLE_ROLES = [
+  Role.ADMIN,
+  Role.EDITOR,
+  Role.VIEWER,
+] as const satisfies readonly DashboardRole[];
+
+export type StaffAssignableRole = (typeof STAFF_ASSIGNABLE_ROLES)[number];
 
 /** `role` がダッシュボードアクセス可能かを判定する型ガード */
 export function isDashboardRole(role: Role): role is DashboardRole {
@@ -68,7 +83,7 @@ export function isAdminOrHigherRole(role: Role): role is AdminOrHigherRole {
  * - ADMIN → EDITOR / VIEWER のみ招待/操作可（同格以上は不可、特権昇格攻撃の防止）
  * - EDITOR / VIEWER → 他ユーザー管理不可
  *
- * SUPER_ADMIN は招待経由で付与できない（システム初期化時のみ作成可、seed / 直接 DB 操作）。
+ * SUPER_ADMIN はスタッフ管理 UI から付与できない（システム初期化時のみ作成）。
  */
 export const INVITABLE_BY: Record<DashboardRole, readonly Role[]> = {
   SUPER_ADMIN: [Role.ADMIN, Role.EDITOR, Role.VIEWER],

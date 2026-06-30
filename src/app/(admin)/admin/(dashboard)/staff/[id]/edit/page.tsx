@@ -1,10 +1,14 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getUser } from "@/admin/queries/user";
 import { UserForm } from "../../_components/UserForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
-import { verifyAdminSession } from "@/shared/lib/admin-auth";
-import { getInvitableRoles, isDashboardRole } from "@/shared/lib/admin-roles";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
+import {
+  canModifyUser,
+  getInvitableRoles,
+  isDashboardRole,
+} from "@/shared/lib/admin-roles";
 import type { Metadata } from "next";
 
 type Props = {
@@ -25,12 +29,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EditStaffPage({ params }: Props) {
   const { id } = await params;
   const [currentUser, user] = await Promise.all([
-    verifyAdminSession(),
+    requireAdminPermission("user", "update"),
     getUser(id),
   ]);
 
   if (!user) {
     notFound();
+  }
+
+  if (!canModifyUser(currentUser.role, user.role)) {
+    redirect("/admin/staff");
   }
 
   const editableRoles = isDashboardRole(currentUser.role)

@@ -32,10 +32,10 @@ import { toAppRoute } from "@/shared/lib/routes/to-app-route";
  * Instagram OAuth `/api/instagram/oauth/authorize` と同パターンの公式 OAuth 2.0 state 検証。
  *
  * `redirect()` は throw する Next.js API のため try/catch で握り潰せない。
- * `executeAdminMutationResult` を経由せず、OAuth redirect 前に settings:update を直接確認する。
+ * `executeAdminMutationResult` を経由せず、OAuth redirect 前に settings:manage を直接確認する。
  */
 export async function initiateGbpAuth(): Promise<void> {
-  const auth = await checkPermission("settings", "update");
+  const auth = await checkPermission("settings", "manage");
   if (!auth.success) {
     redirect("/admin/settings/integrations?gbp_error=forbidden");
   }
@@ -62,7 +62,7 @@ export async function initiateGbpAuth(): Promise<void> {
 export async function revokeGbpAuth(): Promise<MutationResult<null>> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const state = await getGbpAuthState();
       if (state) {

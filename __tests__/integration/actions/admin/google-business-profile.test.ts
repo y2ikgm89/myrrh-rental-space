@@ -195,7 +195,7 @@ describe("Google Business Profile Server Actions", () => {
   });
 
   describe("initiateGbpAuth", () => {
-    test("settings:update 権限を確認し、state cookie 設定後 redirect をスローする", async () => {
+    test("settings:manage 権限を確認し、state cookie 設定後 redirect をスローする", async () => {
       let caught: unknown = null;
       try {
         await initiateGbpAuth();
@@ -203,7 +203,7 @@ describe("Google Business Profile Server Actions", () => {
         caught = error;
       }
 
-      expect(mockCheckPermission).toHaveBeenCalledWith("settings", "update");
+      expect(mockCheckPermission).toHaveBeenCalledWith("settings", "manage");
 
       // CSRF state cookie が httpOnly + sameSite: lax + maxAge: 600 で設定される
       expect(mockCookieStoreSet).toHaveBeenCalledTimes(1);
@@ -234,10 +234,10 @@ describe("Google Business Profile Server Actions", () => {
       expect(caught.message).toBe("NEXT_REDIRECT");
     });
 
-    test("settings:update 権限がない場合は OAuth state を発行しない", async () => {
+    test("settings:manage 権限がない場合は OAuth state を発行しない", async () => {
       mockCheckPermission.mockResolvedValueOnce({
         success: false as const,
-        error: { error: "settingsのupdate権限がありません" },
+        error: { error: "settingsのmanage権限がありません" },
       });
 
       let caught: unknown = null;

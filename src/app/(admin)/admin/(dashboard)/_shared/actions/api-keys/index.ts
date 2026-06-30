@@ -59,7 +59,7 @@ export async function updateResendSettings(
   return executeConformMutation(formData, resendFormSchema, async (data) => {
     const result = await executeAdminMutationResult({
       resource: "settings",
-      action: "update",
+      action: "manage",
       execute: async () => {
         await updateResendSettingsCommand({
           resendApiKey: data.resendApiKey ? data.resendApiKey : null,
@@ -80,7 +80,7 @@ export async function testResendConnectionAction(
 ): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const result = await testResendConnection(apiKey);
       await recordResendConnectionStatus(
@@ -103,7 +103,7 @@ export async function testResendConnectionAction(
 export async function clearResendKeys(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await clearResendSettingsCommand();
       return null;
@@ -124,7 +124,7 @@ export async function updateTurnstileSettings(
   return executeConformMutation(formData, turnstileFormSchema, async (data) => {
     const result = await executeAdminMutationResult({
       resource: "settings",
-      action: "update",
+      action: "manage",
       execute: async () => {
         await updateTurnstileSettingsCommand({
           turnstileSiteKey: data.turnstileSiteKey
@@ -151,7 +151,7 @@ export async function testTurnstileConnectionAction(
 ): Promise<MutationResult<{ note?: string }>> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const result = await testTurnstileConnection(siteKey, secretKey);
       await recordTurnstileConnectionStatus(
@@ -179,7 +179,7 @@ export async function testTurnstileConnectionAction(
 export async function clearTurnstileKeys(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await clearTurnstileSettingsCommand();
       return null;
@@ -203,7 +203,7 @@ export async function updateGoogleMapsSettings(
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
-        action: "update",
+        action: "manage",
         execute: async () => {
           await updateGoogleMapsSettingsCommand({
             googleMapsApiKey: data.googleMapsApiKey
@@ -227,7 +227,7 @@ export async function testGoogleMapsConnectionAction(
 ): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       const result = await testGoogleMapsConnection(apiKey);
       await recordGoogleMapsConnectionStatus(
@@ -250,7 +250,7 @@ export async function testGoogleMapsConnectionAction(
 export async function clearGoogleMapsKeys(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await clearGoogleMapsSettingsCommand();
       return null;
@@ -269,7 +269,7 @@ export async function addCustomApiKey(
 
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => addCustomApiKeyCommand(omitUndefined(parsed.data)),
     afterSuccess: refreshSettingsCache,
     resolveAuditResourceId: (result) => result.id,
@@ -284,7 +284,7 @@ export async function deleteCustomApiKey(id: string): Promise<MutationResult> {
 
   return executeAdminMutationResult({
     resource: "settings",
-    action: "update",
+    action: "manage",
     execute: async () => {
       await deleteCustomApiKeyCommand(validated.data);
       return null;

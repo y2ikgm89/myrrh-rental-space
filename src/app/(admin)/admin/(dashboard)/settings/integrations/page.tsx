@@ -13,6 +13,7 @@ import {
   getGoogleMapsConfig,
   getCustomApiKeys,
 } from "@/admin/queries/api-keys";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getSettings } from "@/admin/queries/settings";
 import { getGbpAuthState } from "@/shared/lib/google-business-profile";
@@ -135,6 +136,8 @@ function IntegrationsSettingsLoading(): ReactElement {
 }
 
 export default async function IntegrationsSettingsPage(): Promise<ReactElement> {
+  await requireAdminPermission("settings", "manage");
+
   return (
     <SettingsLayout
       title="外部連携"

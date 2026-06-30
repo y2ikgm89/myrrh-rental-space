@@ -56,7 +56,7 @@ export async function updateMaintenanceSettings(
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
-        action: "update",
+        action: "manage",
         execute: async () => {
           await settingsCommands.updateMaintenanceSettings({
             maintenanceMode: data.maintenanceMode,
@@ -91,7 +91,7 @@ export async function updateCookieConsentSettings(
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
-        action: "update",
+        action: "manage",
         execute: async () => {
           await settingsCommands.updateCookieConsentSettings({
             cookieConsentEnabled: data.cookieConsentEnabled,
@@ -283,7 +283,7 @@ export async function updateFeatureModulesSettings(
     async (data) => {
       const result = await executeAdminMutationResult({
         resource: "settings",
-        action: "update",
+        action: "manage",
         execute: async () => {
           await settingsCommands.updateFeatureModulesCommand(data);
           return null;

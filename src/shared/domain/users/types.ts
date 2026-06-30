@@ -37,9 +37,11 @@ export type UserListResult = {
 
 export type UserStats = {
   total: number;
+  superAdmins: number;
   admins: number;
-  users: number;
-  recentUsers: number;
+  editors: number;
+  viewers: number;
+  recentStaff: number;
 };
 
 /** 通知先ピッカー用のスタッフ候補（管理ロールのユーザー最小情報）。 */

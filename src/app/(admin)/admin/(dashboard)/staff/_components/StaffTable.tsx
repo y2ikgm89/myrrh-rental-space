@@ -6,12 +6,17 @@ import { UserActions } from "./UserActions";
 import { StaffTableHeader } from "./StaffTableHeader";
 import type { UserData } from "@/shared/domain/users/types";
 import { formatDateShort } from "@/shared/lib/date-format";
+import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 type StaffTableProps = {
   users: UserData[];
+  currentUser: {
+    id: string;
+    role: Role;
+  };
 };
 
-export function StaffTable({ users }: StaffTableProps) {
+export function StaffTable({ users, currentUser }: StaffTableProps) {
   if (users.length === 0) {
     return <EmptyState message="スタッフが見つかりません" />;
   }
@@ -46,7 +51,7 @@ export function StaffTable({ users }: StaffTableProps) {
                   {formatDateShort(user.createdAt)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <UserActions user={user} />
+                  <UserActions user={user} currentUser={currentUser} />
                 </TableCell>
               </TableRow>
             ))}
