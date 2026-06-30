@@ -58,8 +58,8 @@ import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-statu
 import { reservationStatusChangedFixture } from "@/shared/emails/reservation-status-changed.fixture";
 import { ReviewReplyEmail } from "@/shared/emails/review-reply";
 import { reviewReplyFixture } from "@/shared/emails/review-reply.fixture";
-import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
-import { staffInvitationFixture } from "@/shared/emails/staff-invitation.fixture";
+import { StaffAccessGuideEmail } from "@/shared/emails/staff-access-guide";
+import { staffAccessGuideFixture } from "@/shared/emails/staff-access-guide.fixture";
 import { TestEmail } from "@/shared/emails/test-email";
 import { testEmailFixture } from "@/shared/emails/test-email.fixture";
 import { WelcomeEmail } from "@/shared/emails/welcome";
@@ -285,10 +285,10 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     PasswordResetEmail,
     passwordResetFixture,
   ),
-  "staff-invitation": defineEntry(
-    "staff-invitation",
-    StaffInvitationEmail,
-    staffInvitationFixture,
+  "staff-access-guide": defineEntry(
+    "staff-access-guide",
+    StaffAccessGuideEmail,
+    staffAccessGuideFixture,
   ),
   "review-reply": defineEntry(
     "review-reply",

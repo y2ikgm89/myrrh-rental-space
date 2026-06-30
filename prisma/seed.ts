@@ -7,11 +7,11 @@
  *   bun prisma/seed.ts                          # DEV（既定・冪等）: 完全な開発環境を構築
  *   bun prisma/seed.ts --dev                    #   ↑ の明示エイリアス
  *   bun prisma/seed.ts --reset                  # DEV: 全削除してから再構築（破壊的・開発専用）
- *   bun prisma/seed.ts --production <email> <password> [name]   # PROD: 本番テンプレート（デモ/テストなし）
+ *   bun prisma/seed.ts --production [email] [name]              # PROD: 本番テンプレート（デモ/テストなし）
  *
  * DEV（引数なし）が構築するもの:
- *   - ログイン可能な固定アカウント: admin@example.com / admin123（ADMIN）,
- *     superadmin@example.com / superadmin123（SUPER_ADMIN）, editor / viewer
+ *   - IAP 用の固定スタッフ: admin@example.com（ADMIN）,
+ *     superadmin@example.com（SUPER_ADMIN）, editor / viewer
  *   - 全デモデータ（スペース・予約・ブログ・イベント・FAQ 等）
  *   - 全 feature module を ON（管理画面の表示確認用）
  *   ※ `prisma migrate reset` / `prisma db seed` の既定経路（prisma.config.ts: migrations.seed）
@@ -19,7 +19,7 @@
  * 例:
  *   bun prisma/seed.ts
  *   bun prisma/seed.ts --reset
- *   bun prisma/seed.ts --production owner@example.com mypassword123 "オーナー名"
+ *   bun prisma/seed.ts --production owner@example.com "オーナー名"
  */
 
 // Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
@@ -168,7 +168,6 @@ async function clearAllData() {
     await tx.auditLog.deleteMany();
     await tx.session.deleteMany();
     await tx.verification.deleteMany();
-    await tx.staffInvitation.deleteMany();
     await tx.account.deleteMany();
     await tx.user.deleteMany();
 
@@ -183,10 +182,67 @@ async function clearAllData() {
 }
 
 // =============================================================================
-// Helper: Create or Update User with Credential
+// Helper: Create or Update Staff User (IAP only)
 // =============================================================================
 
-interface CreateUserOptions {
+interface CreateStaffUserOptions {
+  email: string;
+  name: string;
+  role: Role;
+  pageIds?: string[];
+}
+
+async function createOrUpdateStaffUser(
+  options: CreateStaffUserOptions,
+): Promise<boolean> {
+  const { email, name, role, pageIds = [] } = options;
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  if (existingUser) {
+    await prisma.user.update({
+      where: { email },
+      data: {
+        role,
+        name,
+        emailVerified: true,
+        accounts: {
+          deleteMany: {
+            providerId: "credential",
+          },
+        },
+        pageAssignments: {
+          deleteMany: {},
+          create: pageIds.map((pageId) => ({ pageId })),
+        },
+      },
+    });
+    return false;
+  }
+
+  await prisma.user.create({
+    data: {
+      email,
+      name,
+      role,
+      emailVerified: true,
+      pageAssignments: {
+        create: pageIds.map((pageId) => ({ pageId })),
+      },
+    },
+  });
+
+  return true;
+}
+
+// =============================================================================
+// Helper: Create or Update Customer User with Credential
+// =============================================================================
+
+interface CreateCredentialUserOptions {
   email: string;
   password: string;
   name: string;
@@ -195,7 +251,7 @@ interface CreateUserOptions {
 }
 
 async function createOrUpdateUserWithCredential(
-  options: CreateUserOptions,
+  options: CreateCredentialUserOptions,
 ): Promise<boolean> {
   const { email, password, name, role, pageIds = [] } = options;
   const hashedPassword = await hashPassword(password);
@@ -268,19 +324,18 @@ async function createOrUpdateUserWithCredential(
 }
 
 // =============================================================================
-// Admin User
+// Admin User (IAP only)
 // =============================================================================
 
 async function seedAdmin(
   email: string,
-  password: string,
   name: string = "Administrator",
+  role: Role = Role.ADMIN,
 ) {
-  const created = await createOrUpdateUserWithCredential({
+  const created = await createOrUpdateStaffUser({
     email,
-    password,
     name,
-    role: Role.ADMIN,
+    role,
   });
 
   if (created) {
@@ -289,7 +344,7 @@ async function seedAdmin(
     console.log(`✅ Updated existing admin user: ${email}`);
   }
 
-  console.log("   Admin login is protected by the deployment surface / IAP.");
+  console.log("   Admin access is protected by Google Cloud IAP.");
 }
 
 // =============================================================================
@@ -301,25 +356,21 @@ async function seedStaffUsers() {
     email: string;
     name: string;
     role: Role;
-    password: string;
   }> = [
     {
       email: "superadmin@example.com",
       name: "スーパー管理者",
       role: Role.SUPER_ADMIN,
-      password: "superadmin123",
     },
     {
       email: "editor@example.com",
       name: "田中編集者",
       role: Role.EDITOR,
-      password: "editor123",
     },
     {
       email: "viewer@example.com",
       name: "鈴木閲覧者",
       role: Role.VIEWER,
-      password: "viewer123",
     },
   ];
 
@@ -332,7 +383,7 @@ async function seedStaffUsers() {
       continue;
     }
 
-    await createOrUpdateUserWithCredential(staff);
+    await createOrUpdateStaffUser(staff);
     console.log(`✅ Created staff user: ${staff.name} (${staff.role})`);
   }
 }
@@ -4303,9 +4354,9 @@ async function seedUserPageAssignments() {
  * `prisma migrate reset` / `prisma db seed`（引数なし）の既定経路。
  */
 async function seedDev() {
-  // 固定 dev 認証情報（ローカル専用・公開既知）。createOrUpdate で冪等。
+  // 固定 dev スタッフ（IAP ローカルテスト用）。createOrUpdate で冪等。
   // ADMIN ロールは seedBlog 等の author lookup（role:"ADMIN"）の前提でもある。
-  await seedAdmin("admin@example.com", "admin123", "管理者");
+  await seedAdmin("admin@example.com", "管理者");
   await seedStaffUsers();
 
   console.log("");
@@ -4368,8 +4419,14 @@ async function seedDev() {
 // 管理画面から本番データに上書きすることを前提としたテンプレート構成。
 // =============================================================================
 
-async function seedProduction(email: string, password: string, name: string) {
-  await seedAdmin(email, password, name);
+async function seedProduction(email: string | undefined, name: string) {
+  if (email) {
+    await seedAdmin(email, name, Role.SUPER_ADMIN);
+  } else {
+    console.log(
+      "⏭️ Skipped production admin seed. Use INITIAL_ADMIN_EMAIL for startup bootstrap.",
+    );
+  }
 
   console.log("");
   console.log("📦 Creating production template data...");
@@ -4427,20 +4484,12 @@ async function main() {
     await seedDev();
   } else if (mode === "--production") {
     const email = args[1];
-    const password = args[2];
-    const name = args[3];
-    if (!email || !password) {
-      console.error("Error: --production requires <email> and <password>");
-      console.error(
-        "Usage: bun prisma/seed.ts --production <email> <password> [name]",
-      );
-      process.exit(1);
-    }
-    await seedProduction(email, password, name ?? "Administrator");
+    const name = args[2];
+    await seedProduction(email, name ?? "Administrator");
   } else {
     console.error(`Unknown option: ${mode}`);
     console.error(
-      "Usage: bun prisma/seed.ts [--dev | --reset | --production <email> <password> [name]]",
+      "Usage: bun prisma/seed.ts [--dev | --reset | --production [email] [name]]",
     );
     process.exit(1);
   }

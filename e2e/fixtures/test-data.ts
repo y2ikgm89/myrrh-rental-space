@@ -3,12 +3,12 @@
  *
  * 動的に一意な値が必要な test data（email / phone / slug 等）は
  * `factories.ts` を使う。本ファイルは並列実行で衝突しない静的
- * データ（seed 由来の管理者アカウント、ルート URL）のみを置く。
+ * データ（seed 由来の管理者メールアドレス、ルート URL）のみを置く。
  *
  * 規約 SSoT: `.claude/rules/test-quality/e2e.md`
  */
 
-/** Seed 由来の管理者アカウント（factories.ts の `adminCredentials` が wrap する） */
+/** IAP ローカルテスト用の管理者メールアドレス */
 export const testUsers = {
   admin: {
     email: "admin@example.com",
@@ -34,8 +34,6 @@ export const urls = {
   mypageReservations: "/mypage/reservations",
   mypageInquiries: "/mypage/inquiries",
   mypageProfile: "/mypage/settings",
-  // 管理者認証
-  login: "/admin/login",
   // 管理画面
   adminDashboard: "/admin",
   adminSpaces: "/admin/spaces",

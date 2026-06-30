@@ -2,18 +2,12 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
 import { getUsers } from "@/admin/queries/user";
-import { getPendingInvitations } from "@/admin/queries/staff-invitation";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
 import { getRoleFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { Button, Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import {
-  StaffStats,
-  StaffFilters,
-  StaffTable,
-  InvitationTable,
-} from "./_components";
+import { StaffStats, StaffFilters, StaffTable } from "./_components";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -82,13 +76,6 @@ async function StaffList({ searchParams }: PageProps) {
   );
 }
 
-async function InvitationSection() {
-  await connection();
-  const invitations = await getPendingInvitations();
-  if (invitations.length === 0) return null;
-  return <InvitationTable invitations={invitations} />;
-}
-
 // =============================================================================
 // メインページ
 // =============================================================================
@@ -107,18 +94,13 @@ export default async function StaffPage({ searchParams }: PageProps) {
           </p>
         </div>
         <Button asChild>
-          <Link href="/admin/staff/new">スタッフを招待</Link>
+          <Link href="/admin/staff/new">スタッフを追加</Link>
         </Button>
       </div>
 
       {/* スタッツカード */}
       <Suspense fallback={<LoadingState />}>
         <StaffStats />
-      </Suspense>
-
-      {/* 招待中 */}
-      <Suspense fallback={null}>
-        <InvitationSection />
       </Suspense>
 
       {/* フィルター */}

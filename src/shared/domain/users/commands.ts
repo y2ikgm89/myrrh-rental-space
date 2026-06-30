@@ -1,6 +1,5 @@
 import "server-only";
 
-import { hashPassword } from "better-auth/crypto";
 import { Role } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -77,20 +76,12 @@ export async function createUser(
   }
 
   await ensureEmailAvailable(data.email);
-  const hashedPassword = await hashPassword(data.password);
 
   const user = await prisma.user.create({
     data: {
       email: data.email,
       name: data.name,
       role: data.role,
-      accounts: {
-        create: {
-          accountId: data.email,
-          providerId: "credential",
-          password: hashedPassword,
-        },
-      },
     },
   });
 
@@ -119,50 +110,18 @@ export async function updateUser(
 
   await ensureEmailAvailable(data.email, id);
 
-  const hashedPassword =
-    data.password && data.password.length >= 8
-      ? await hashPassword(data.password)
-      : undefined;
-
-  await prisma.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id },
-      data: {
-        email: data.email,
-        name: data.name,
-        role: data.role,
-      },
-    });
-
-    const credentialAccount = await tx.account.findFirst({
-      where: {
-        userId: id,
-        providerId: "credential",
-      },
-      select: { id: true },
-    });
-
-    if (credentialAccount) {
-      await tx.account.update({
-        where: { id: credentialAccount.id },
-        data: {
-          accountId: data.email,
-          ...(hashedPassword ? { password: hashedPassword } : {}),
-        },
-      });
-      return;
-    }
-
-    if (hashedPassword) {
-      await tx.account.create({
-        data: {
-          userId: id,
-          accountId: data.email,
+  await prisma.user.update({
+    where: { id },
+    data: {
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      accounts: {
+        deleteMany: {
           providerId: "credential",
-          password: hashedPassword,
         },
-      });
-    }
+      },
+    },
   });
 }
 

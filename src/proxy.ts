@@ -5,7 +5,6 @@
  * 公開ルーティングの解決は route 側で行う。
  */
 
-import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { FRAME_SRC_DIRECTIVE_VALUES } from "@/shared/lib/constants/frame-sources";
 import { serverEnv } from "@/shared/lib/env/server";
@@ -299,32 +298,12 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   }
 
   if (pathname.startsWith("/admin")) {
-    // 管理ログインは Cloud Run IAP が入口を保護する。公開 service では
+    // 管理入口は Cloud Run IAP が保護する。公開 service では
     // APP_SURFACE=public の blocklist により /admin/* 全体が 404 になる。
+    // admin service 側ではアプリ内ログインフォームを持たず、IAP 通過後に
+    // Server Component / Server Action 層で DB ロール照合を行う。
     if (pathname === "/admin/login") {
-      return createResponse(req, pathname);
-    }
-
-    // セットアップページは認証不要
-    if (pathname.startsWith("/admin/setup/")) {
-      return createResponse(req, pathname);
-    }
-
-    // パスワードリセット系ページは認証不要（ログインできないユーザーがアクセスする）
-    // Turnstile + Better Auth の TURNSTILE_PROTECTED_ENDPOINTS で別途レート制限・bot 対策済み
-    if (
-      pathname === "/admin/forgot-password" ||
-      pathname === "/admin/reset-password"
-    ) {
-      return createResponse(req, pathname);
-    }
-
-    // その他の管理画面: セッション必須
-    const sessionCookie = getSessionCookie(req, {
-      cookiePrefix: "admin-auth",
-    });
-    if (!sessionCookie) {
-      return NextResponse.redirect(new URL("/admin/login", req.url));
+      return NextResponse.redirect(new URL("/admin", req.url));
     }
 
     // 管理画面内部 API（/admin/api/*）: 認証済みでも IP 単位で rate-limit を貼る

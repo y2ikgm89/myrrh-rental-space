@@ -17,8 +17,6 @@
  * 規約 SSoT: `.claude/rules/test-quality/e2e.md`
  */
 
-import { testUsers } from "./test-data";
-
 // ---------------------------------------------------------------------------
 // Unique value generators
 // ---------------------------------------------------------------------------
@@ -69,13 +67,3 @@ export const inquiryFactory = {
     return { ...defaultInquiry(), ...overrides };
   },
 };
-
-// ---------------------------------------------------------------------------
-// Admin credentials (seed-driven, static)
-// ---------------------------------------------------------------------------
-
-/** Seed の admin user wrapper。`testUsers.admin.email` ＋ seed password。 */
-export const adminCredentials = {
-  email: testUsers.admin.email,
-  password: "admin123",
-} as const;

@@ -77,7 +77,7 @@ test.describe("admin 顧客詳細 - reflection smoke", () => {
   test("/admin/customers がリスト or 空状態を表示する", async ({ page }) => {
     await page.goto(ADMIN_CUSTOMERS_PATH);
 
-    // 認証済み（/admin/login にリダイレクトされていない）
+    // 認証済み（/admin/access-denied にリダイレクトされていない）
     expect(page.url()).not.toMatch(/\/admin\/login/);
 
     // 顧客一覧 page heading

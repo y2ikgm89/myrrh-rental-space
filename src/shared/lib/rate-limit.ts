@@ -281,9 +281,6 @@ function isExpensiveAdminApiPath(pathname: string): boolean {
  * get-session / list-sessions / list-accounts は credential を介さない参照系のため、
  * authMutationRateLimiter（20/15分）ではなく apiRateLimiter（100/分）で十分。
  *
- * Better Auth のエンドポイント命名は admin (`/api/auth/*`) / customer (`/api/customer-auth/*`)
- * いずれも共通（basePath だけが異なる）ため、basePath を剥がした最終セグメントで判定する。
- *
  * @see https://www.better-auth.com/docs/concepts/api
  */
 const BETTER_AUTH_READONLY_ENDPOINTS: ReadonlySet<string> = new Set([
@@ -308,9 +305,9 @@ function isBetterAuthReadOnlyPath(pathname: string, basePath: string): boolean {
  * update-user 等）は credential stuffing / enumeration 緩和のため
  * authMutationRateLimiter (20/15分) を使う。
  *
- * 顧客向け `/api/customer-auth/*`（公開サイトのソーシャル/パスワードログイン）と
- * 管理向け `/api/auth/*`（管理画面ログイン）は basePath のみ異なる同一の Better Auth
- * エンドポイント群なので、判定ロジックは対称に組む。
+ * 現在の Better Auth は顧客向け `/api/customer-auth/*` のみで使う。
+ * `/api/auth/*` は旧管理 auth の blocklist 互換で残し、到達しても mutation bucket
+ * に落としてから route 側の 404 に任せる。
  */
 export async function checkRateLimit(
   pathname: string,

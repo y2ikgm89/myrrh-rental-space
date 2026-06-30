@@ -3,9 +3,14 @@
  */
 
 import { Role } from "@generated/prisma/enums";
-import type { MockUser } from "../mocks/auth";
+import type { AdminUser } from "@/shared/lib/admin-auth";
 
-export const SUPER_ADMIN_USER: MockUser = {
+type FixtureUser = AdminUser & {
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export const SUPER_ADMIN_USER: FixtureUser = {
   id: "super-admin-id",
   email: "superadmin@example.com",
   name: "Super Admin",
@@ -16,7 +21,7 @@ export const SUPER_ADMIN_USER: MockUser = {
   updatedAt: new Date("2024-01-01"),
 };
 
-export const ADMIN_USER: MockUser = {
+export const ADMIN_USER: FixtureUser = {
   id: "admin-id",
   email: "admin@example.com",
   name: "Admin User",
@@ -27,7 +32,7 @@ export const ADMIN_USER: MockUser = {
   updatedAt: new Date("2024-01-01"),
 };
 
-export const EDITOR_USER: MockUser = {
+export const EDITOR_USER: FixtureUser = {
   id: "editor-id",
   email: "editor@example.com",
   name: "Editor User",
@@ -38,7 +43,7 @@ export const EDITOR_USER: MockUser = {
   updatedAt: new Date("2024-01-01"),
 };
 
-export const VIEWER_USER: MockUser = {
+export const VIEWER_USER: FixtureUser = {
   id: "viewer-id",
   email: "viewer@example.com",
   name: "Viewer User",
@@ -49,7 +54,7 @@ export const VIEWER_USER: MockUser = {
   updatedAt: new Date("2024-01-01"),
 };
 
-export const REGULAR_USER: MockUser = {
+export const REGULAR_USER: FixtureUser = {
   id: "user-id",
   email: "user@example.com",
   name: "Regular User",

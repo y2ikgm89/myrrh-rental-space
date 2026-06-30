@@ -46,7 +46,7 @@ export default async function EditStaffPage({ params }: Props) {
     >
       <DetailSection
         title="スタッフ情報"
-        description="スタッフ情報を編集します。パスワードを変更しない場合は空欄のままにしてください。"
+        description="IAP で許可する Google アカウントのメールアドレスと管理ロールを編集します。"
       >
         <UserForm
           key={user.id}

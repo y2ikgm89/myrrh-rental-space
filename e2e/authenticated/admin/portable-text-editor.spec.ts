@@ -30,7 +30,7 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
   test("ページ編集画面が表示される", async ({ page }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
 
-    // 認証済み（/admin/login にリダイレクトされていない）
+    // 認証済み（/admin/access-denied にリダイレクトされていない）
     expect(page.url()).not.toMatch(/\/admin\/login/);
 
     // 編集画面の core element（少なくとも 1 つの contenteditable inline editor）

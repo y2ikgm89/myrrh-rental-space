@@ -8,7 +8,6 @@ import { Role } from "@generated/prisma/enums";
 describe("createUserSchema", () => {
   const validUserData = {
     email: "user@example.com",
-    password: "password123",
     name: "山田太郎",
     role: Role.EDITOR,
   };
@@ -31,21 +30,6 @@ describe("createUserSchema", () => {
     if (!result.success) {
       expect(result.error.issues[0].message).toContain("有効なメールアドレス");
     }
-  });
-
-  test("パスワードが8文字未満の場合にエラー", () => {
-    const invalidData = { ...validUserData, password: "pass123" };
-    const result = createUserSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("8文字以上");
-    }
-  });
-
-  test("パスワードがちょうど8文字の場合に成功", () => {
-    const validData = { ...validUserData, password: "password" };
-    const result = createUserSchema.safeParse(validData);
-    expect(result.success).toBe(true);
   });
 
   test("名前が空の場合にエラー", () => {
@@ -89,6 +73,18 @@ describe("createUserSchema", () => {
     const result = createUserSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });
+
+  test("パスワードフィールドは保存対象に含めない", () => {
+    const result = createUserSchema.safeParse({
+      ...validUserData,
+      password: "password123",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect("password" in result.data).toBe(false);
+    }
+  });
 });
 
 describe("updateUserSchema", () => {
@@ -100,32 +96,6 @@ describe("updateUserSchema", () => {
 
   test("有効なデータでバリデーションに成功する", () => {
     const result = updateUserSchema.safeParse(validUpdateData);
-    expect(result.success).toBe(true);
-  });
-
-  test("パスワードフィールドはオプショナル", () => {
-    const result = updateUserSchema.safeParse(validUpdateData);
-    expect(result.success).toBe(true);
-  });
-
-  test("パスワードに空文字列を許可", () => {
-    const validData = { ...validUpdateData, password: "" };
-    const result = updateUserSchema.safeParse(validData);
-    expect(result.success).toBe(true);
-  });
-
-  test("パスワードが指定された場合は8文字以上必須", () => {
-    const invalidData = { ...validUpdateData, password: "pass123" };
-    const result = updateUserSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("8文字以上");
-    }
-  });
-
-  test("パスワードが8文字以上の場合に成功", () => {
-    const validData = { ...validUpdateData, password: "newpassword123" };
-    const result = updateUserSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
@@ -174,5 +144,17 @@ describe("updateUserSchema", () => {
     const invalidData = { ...validUpdateData, role: "INVALID_ROLE" };
     const result = updateUserSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
+  });
+
+  test("パスワードフィールドは保存対象に含めない", () => {
+    const result = updateUserSchema.safeParse({
+      ...validUpdateData,
+      password: "newpassword123",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect("password" in result.data).toBe(false);
+    }
   });
 });

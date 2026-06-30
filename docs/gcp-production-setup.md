@@ -48,8 +48,6 @@ Recommended host/path layout:
 - `https://myrrh-rental-space-admin-...run.app/admin/*` -> admin service with IAP
 - `https://myrrh-rental-space-admin-...run.app/admin/api/*` -> admin service
   with IAP
-- `https://myrrh-rental-space-admin-...run.app/api/auth/*` -> admin Better Auth
-  service with IAP
 - `https://myrrh-rental-space-admin-...run.app/api/instagram/oauth/*` -> admin
   service with IAP
 - `https://myrrh-rental-space-admin-...run.app/api/google-business-profile/oauth/*`
@@ -92,10 +90,18 @@ export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.
 export BUILD_SA="myrrh-rental-space-build@${PROJECT_ID}.iam.gserviceaccount.com"
 export GITHUB_REPOSITORY_RESOURCE="projects/${PROJECT_ID}/locations/${REGION}/connections/github-myrrh-rental-space/repositories/y2ikgm89-myrrh-rental-space"
 export IAP_ADMIN_GROUP="group:myrrh-admins@example.com"
+export INITIAL_ADMIN_EMAIL="owner@example.com"
+export INITIAL_ADMIN_NAME="Owner"
+export IAP_JWT_AUDIENCE="/projects/${PROJECT_NUMBER}/locations/${REGION}/services/${ADMIN_SERVICE_NAME}"
 ```
 
 `PUBLIC_DOMAIN` and `ADMIN_DOMAIN` must not have a trailing slash because the
 app concatenates paths directly.
+
+`INITIAL_ADMIN_EMAIL` is the first `SUPER_ADMIN` app user. Use the same Google
+account that will be allowed through IAP. `IAP_JWT_AUDIENCE` must match the
+Cloud Run IAP signed-header audience format:
+`/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME`.
 
 ## Enable APIs
 
@@ -352,7 +358,7 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 gcloud builds submit \
   --region="$REGION" \
   --config=cloudbuild.yaml \
-  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}"
+  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_INITIAL_ADMIN_EMAIL="${INITIAL_ADMIN_EMAIL}",_INITIAL_ADMIN_NAME="${INITIAL_ADMIN_NAME}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}"
 ```
 
 `cloudbuild.yaml` sets all of these for user-specified Cloud Build service
@@ -393,7 +399,7 @@ gcloud builds triggers create github \
   --branch-pattern="^main$" \
   --build-config="cloudbuild.yaml" \
   --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_IAP_JWT_AUDIENCE=${IAP_JWT_AUDIENCE},_INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL},_INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
   --ignored-files="docs/**,**/*.md" \
   --include-logs-with-status \
   --no-require-approval
@@ -406,7 +412,7 @@ gcloud builds triggers update github deploy-main \
   --project="$PROJECT_ID" \
   --region="$REGION" \
   --service-account="projects/${PROJECT_ID}/serviceAccounts/${BUILD_SA}" \
-  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
+  --update-substitutions="_REGION=${REGION},_SERVICE_NAME=${SERVICE_NAME},_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME},_IAP_JWT_AUDIENCE=${IAP_JWT_AUDIENCE},_INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL},_INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME},_REPOSITORY=${AR_REPOSITORY},_WORKER_POOL=myrrh-deploy-pool,_SERVICE_ACCOUNT=${RUNTIME_SA},_BUILD_SERVICE_ACCOUNT=${BUILD_SA},_NEXT_PUBLIC_BASE_URL=${PUBLIC_DOMAIN},_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN},_BETTER_AUTH_URL=${PUBLIC_DOMAIN},_ADMIN_APP_URL=${ADMIN_DOMAIN},_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY},_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1" \
   --ignored-files="docs/**,**/*.md" \
   --include-logs-with-status \
   --no-require-approval
@@ -504,7 +510,10 @@ Operational rule:
 - a non-Gmail address is fine only if it is a Google account or managed through
   Google Workspace / Cloud Identity;
 - do not grant `allUsers` or `allAuthenticatedUsers` to the admin service;
-- remove users by removing them from the Google Group.
+- add staff by creating the staff user in `/admin/users/new`, adding the same
+  Google account to the IAP Google Group, then sending the access guide email;
+- remove users by removing them from the Google Group and disabling/deleting
+  the app staff user.
 
 ## Cloud Scheduler
 
@@ -539,17 +548,18 @@ gcloud run jobs execute prisma-migrate --region="$REGION" --wait
 
 curl -fsS "${PUBLIC_DOMAIN}/api/live"
 curl -fsS "${PUBLIC_DOMAIN}/api/health"
-curl -I "${PUBLIC_DOMAIN}/admin/login"
-curl -I "${ADMIN_DOMAIN}/admin/login"
+curl -I "${PUBLIC_DOMAIN}/admin"
+curl -I "${ADMIN_DOMAIN}/admin"
 ```
 
 Expected results:
 
 - `/api/live` returns 200;
 - `/api/health` returns 200 only when DB and dependencies are healthy;
-- `${PUBLIC_DOMAIN}/admin/login` returns 404 from `APP_SURFACE=public`;
-- `${ADMIN_DOMAIN}/admin/login` is protected by IAP, then shows the app-level
-  admin login page;
+- `${PUBLIC_DOMAIN}/admin` returns 404 from `APP_SURFACE=public`;
+- `${ADMIN_DOMAIN}/admin` redirects unauthenticated visitors to Google/IAP;
+- with an IAP-allowed Google account and matching app staff user, `/admin`
+  opens the dashboard without an app password form;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
 
 ## Current repository contract
@@ -562,6 +572,9 @@ The current `cloudbuild.yaml` already handles:
 - Cloud Run Job update and execution for `prisma migrate deploy`;
 - public and admin Cloud Run deploys with service account, probes, env vars,
   secrets, and admin IAP.
+- fail-fast validation for admin `IAP_JWT_AUDIENCE` and
+  `INITIAL_ADMIN_EMAIL`, plus initial `SUPER_ADMIN` bootstrap on the admin
+  service.
 
 The remaining GCP-side production tasks are:
 

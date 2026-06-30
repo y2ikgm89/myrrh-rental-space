@@ -3,60 +3,53 @@ import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 
 describe("proxy admin surface", () => {
-  test("/admin/login は IAP 後のログインページとして通す", async () => {
+  test("/admin/login は管理トップへ redirect する", async () => {
     const response = await proxy(
       new NextRequest("https://example.com/admin/login"),
     );
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("x-pathname")).toBe("/admin/login");
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://example.com/admin");
   });
 
-  test("旧 token query は consume へ redirect せずログインページを通す", async () => {
+  test("旧 token query は consume へ redirect せず管理トップへ redirect する", async () => {
     const response = await proxy(
       new NextRequest(
         "https://example.com/admin/login?token=payload.signature",
       ),
     );
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("x-pathname")).toBe("/admin/login");
-    expect(response.headers.get("location")).toBeNull();
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://example.com/admin");
   });
 
-  test("旧 /admin/login/consume は特例せず通常の未ログイン admin route として扱う", async () => {
+  test("旧 /admin/login/consume は特例せず通常の admin route として通す", async () => {
     const response = await proxy(
       new NextRequest(
         "https://example.com/admin/login/consume?token=payload.signature",
       ),
     );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(
-      "https://example.com/admin/login",
-    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-pathname")).toBe("/admin/login/consume");
   });
 
-  test("session cookie がなくても /admin/setup/[token] は通す", async () => {
+  test("存在しない admin route も proxy では admin route として通す", async () => {
     const response = await proxy(
-      new NextRequest("https://example.com/admin/setup/invitation-token"),
+      new NextRequest("https://example.com/admin/legacy-path"),
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("x-pathname")).toBe(
-      "/admin/setup/invitation-token",
-    );
+    expect(response.headers.get("x-pathname")).toBe("/admin/legacy-path");
   });
 
-  test("session cookie がない /admin/* は login に redirect する", async () => {
+  test("session cookie がない /admin/* も proxy では redirect しない", async () => {
     const response = await proxy(
       new NextRequest("https://example.com/admin/posts"),
     );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(
-      "https://example.com/admin/login",
-    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-pathname")).toBe("/admin/posts");
   });
 
   test("公開ページは frame-ancestors 'none' で埋め込み禁止にする", async () => {
