@@ -37,7 +37,8 @@ import {
   buildEventCancelCalendar,
 } from "../ical";
 import { omitUndefined } from "../serialize";
-import { getAdminUrl, getAppHost, getAppUrl } from "../constants";
+import { getAdminUrl } from "../admin-urls";
+import { getAppHost, getAppUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult } from "./types";
 

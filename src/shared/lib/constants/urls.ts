@@ -48,10 +48,11 @@ export function getBaseUrl(): string {
 }
 
 /**
- * アプリ URL を取得（管理画面ホスト）。
+ * アプリ URL を取得（公開アプリ / 顧客向けホスト）。
  *
  * NEXT_PUBLIC_APP_URL → NEXT_PUBLIC_BASE_URL の順でフォールバック。
  * production 時に両方未設定なら throw。
+ * 管理画面リンクは server-only の `@/shared/lib/admin-urls` を使う。
  */
 export function getAppUrl(): string {
   const explicit =
@@ -62,15 +63,6 @@ export function getAppUrl(): string {
       "NEXT_PUBLIC_APP_URL / NEXT_PUBLIC_BASE_URL",
     ) ?? DEV_FALLBACK_URL
   );
-}
-
-/**
- * 管理画面 URL を構築
- *
- * @param path - /admin 以下のパス（例: '/reservations/123'）
- */
-export function getAdminUrl(path: string): string {
-  return `${getAppUrl()}/admin${path}`;
 }
 
 /**

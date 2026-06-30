@@ -12,7 +12,7 @@ import { ja } from "date-fns/locale";
 import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
-import { getAdminUrl } from "../constants";
+import { getAdminUrl } from "../admin-urls";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult, StaffInvitationEmailData } from "./types";
 

@@ -11,7 +11,7 @@ import "server-only";
 import { google } from "googleapis";
 
 import { serverEnv } from "@/shared/lib/env/server";
-import { getAppUrl } from "@/shared/lib/constants/urls";
+import { getAdminAppUrl } from "@/shared/lib/admin-urls";
 
 import { saveGbpAuthState } from "@/shared/domain/google-business-profile/settings";
 import type { GbpAuthState } from "./types";
@@ -34,7 +34,7 @@ export function createOAuth2Client(): InstanceType<
     return null;
   }
 
-  const baseUrl = serverEnv.BETTER_AUTH_URL ?? getAppUrl();
+  const baseUrl = serverEnv.BETTER_AUTH_URL ?? getAdminAppUrl();
   return new google.auth.OAuth2(
     serverEnv.GOOGLE_CLIENT_ID,
     serverEnv.GOOGLE_CLIENT_SECRET,

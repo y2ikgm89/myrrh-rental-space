@@ -29,7 +29,8 @@ import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
-import { getAdminUrl, getAppHost, getAppUrl } from "../constants";
+import { getAdminUrl } from "../admin-urls";
+import { getAppHost, getAppUrl } from "../constants";
 import {
   ErrorCategory,
   ErrorSeverity,

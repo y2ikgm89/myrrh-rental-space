@@ -12,7 +12,7 @@ import { cookies } from "next/headers";
 import { serverEnv } from "@/shared/lib/env/server";
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
-import { getAppUrl } from "@/shared/lib/constants";
+import { getAdminAppUrl } from "@/shared/lib/admin-urls";
 
 const INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize";
 const STATE_COOKIE_NAME = "instagram_oauth_state";
@@ -40,7 +40,10 @@ export async function GET(request: Request) {
   const redirectUri = serverEnv.INSTAGRAM_REDIRECT_URI;
 
   if (!clientId || !redirectUri) {
-    const settingsUrl = new URL("/admin/settings/integrations", getAppUrl());
+    const settingsUrl = new URL(
+      "/admin/settings/integrations",
+      getAdminAppUrl(),
+    );
     settingsUrl.searchParams.set("tab", "instagram");
     settingsUrl.searchParams.set(
       "error",

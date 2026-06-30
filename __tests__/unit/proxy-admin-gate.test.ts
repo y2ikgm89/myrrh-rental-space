@@ -2,45 +2,39 @@ import { describe, expect, test } from "bun:test";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 
-describe("proxy admin gate", () => {
-  test("token も gate cookie もない /admin/login は 404 にする", async () => {
+describe("proxy admin surface", () => {
+  test("/admin/login は IAP 後のログインページとして通す", async () => {
     const response = await proxy(
       new NextRequest("https://example.com/admin/login"),
     );
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-pathname")).toBe("/admin/login");
   });
 
-  test("token 形式が無効な /admin/login は 404 にする", async () => {
-    const response = await proxy(
-      new NextRequest("https://example.com/admin/login?token=invalid"),
-    );
-
-    expect(response.status).toBe(404);
-  });
-
-  test("署名トークン形式の /admin/login は token consume route に redirect する", async () => {
+  test("旧 token query は consume へ redirect せずログインページを通す", async () => {
     const response = await proxy(
       new NextRequest(
         "https://example.com/admin/login?token=payload.signature",
       ),
     );
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toBe(
-      "https://example.com/admin/login/consume?token=payload.signature",
-    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-pathname")).toBe("/admin/login");
+    expect(response.headers.get("location")).toBeNull();
   });
 
-  test("/admin/login/consume は session cookie なしでも route handler に通す", async () => {
+  test("旧 /admin/login/consume は特例せず通常の未ログイン admin route として扱う", async () => {
     const response = await proxy(
       new NextRequest(
         "https://example.com/admin/login/consume?token=payload.signature",
       ),
     );
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("x-pathname")).toBe("/admin/login/consume");
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://example.com/admin/login",
+    );
   });
 
   test("session cookie がなくても /admin/setup/[token] は通す", async () => {
