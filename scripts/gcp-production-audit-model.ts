@@ -9,6 +9,12 @@ type WifProviderConditionIdentity = {
   repositoryOwnerId: string;
 };
 
+export type AdminRoleGroupMembership = {
+  groupEmail: string;
+  memberEmail: string;
+  memberType?: string;
+};
+
 type ProductionDomainConfig = {
   publicDomain: string;
   adminDomain: string;
@@ -180,6 +186,31 @@ export function readBuildServiceAccountProjectIamRoleErrors(
   });
 
   return [...missingRoleErrors, ...forbiddenRoleErrors];
+}
+
+export function readAmbiguousAdminRolePrincipalErrors(
+  memberships: AdminRoleGroupMembership[],
+): string[] {
+  const groupsByMember = new Map<string, Set<string>>();
+
+  for (const membership of memberships) {
+    if (membership.memberType === "SERVICE_ACCOUNT") continue;
+
+    const memberEmail = membership.memberEmail.trim().toLowerCase();
+    const groupEmail = membership.groupEmail.trim().toLowerCase();
+    if (!memberEmail || !groupEmail) continue;
+
+    const groups = groupsByMember.get(memberEmail) ?? new Set<string>();
+    groups.add(groupEmail);
+    groupsByMember.set(memberEmail, groups);
+  }
+
+  return [...groupsByMember.entries()]
+    .filter(([, groups]) => groups.size > 1)
+    .map(([memberEmail, groups]) => {
+      return `${memberEmail}:${[...groups].sort().join(",")}`;
+    })
+    .sort();
 }
 
 export function readProductionDomainConfigErrors(
