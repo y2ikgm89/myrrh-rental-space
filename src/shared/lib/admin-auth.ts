@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
-import { findAdminAuthUserByEmail } from "@/shared/domain/admin-auth/queries";
+import { findOrSyncAdminAuthUserByEmail } from "@/shared/domain/admin-auth/queries";
 import { resolveIapIdentity } from "@/shared/lib/iap/admin-iap-auth";
 import { isAdminOrHigherRole, isDashboardRole } from "./admin-roles";
 import { serverEnv } from "./env/server";
@@ -57,7 +57,7 @@ async function resolveAdminEmail(
   return getTestIapEmail();
 }
 
-const loadAdminUserByEmail = cache(findAdminAuthUserByEmail);
+const loadAdminUserByEmail = cache(findOrSyncAdminAuthUserByEmail);
 
 function coerceAdminUser(user: unknown): AdminUser | null {
   if (!isRecord(user)) return null;

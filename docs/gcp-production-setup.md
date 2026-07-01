@@ -28,6 +28,12 @@ Official references:
   <https://cloud.google.com/build/docs/deploying-builds/deploy-cloud-run>
 - Cloud Build user-specified service accounts:
   <https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts>
+- Cloud Build locations:
+  <https://cloud.google.com/build/docs/locations>
+- Cloud Build triggers:
+  <https://cloud.google.com/build/docs/automating-builds/create-manage-triggers>
+- `gcloud builds triggers run`:
+  <https://cloud.google.com/sdk/gcloud/reference/builds/triggers/run>
 - Google Cloud Workload Identity Federation for deployment pipelines:
   <https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines>
 - google-github-actions/auth:
@@ -40,6 +46,10 @@ Official references:
   <https://cloud.google.com/resource-manager/docs/cloud-platform-resource-hierarchy>
 - Cloud Identity groups:
   <https://cloud.google.com/identity/docs/groups>
+- Cloud Identity Groups API setup:
+  <https://cloud.google.com/identity/docs/how-to/setup>
+- Service account key best practices:
+  <https://cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys>
 
 ## Target architecture
 
@@ -49,9 +59,11 @@ the public service. The clean production target is:
 - one public Cloud Run service for public routes, deployed with
   `APP_SURFACE=public` and `--allow-unauthenticated`;
 - one admin Cloud Run service for admin routes, deployed with
-  `APP_SURFACE=admin`, `--no-allow-unauthenticated`, and `--iap`;
-- a Google Workspace / Cloud Identity security group granted
-  `roles/iap.httpsResourceAccessor` for admin access;
+  `APP_SURFACE=admin` and `--no-allow-unauthenticated`, with Cloud Run direct
+  IAP enabled once during setup;
+- Google Workspace / Cloud Identity security groups for admin roles, each
+  granted `roles/iap.httpsResourceAccessor` for admin access and used as the
+  application role source;
 - no individual user grants on the IAP-secured admin resource.
 
 For production, do not treat an orgless Google Cloud project as the final
@@ -61,19 +73,21 @@ stricter: the final admin site must run in a project under the configured
 Google Cloud Organization. An orgless project is only a temporary bootstrap
 environment.
 
-Recommended host/path layout:
+Production host/path layout:
 
-- `https://example.com/*` -> public service
-- `https://myrrh-rental-space-admin-...run.app/admin` -> admin service with IAP
-- `https://myrrh-rental-space-admin-...run.app/admin/*` -> admin service with IAP
-- `https://myrrh-rental-space-admin-...run.app/admin/api/*` -> admin service
-  with IAP
-- `https://myrrh-rental-space-admin-...run.app/api/instagram/oauth/*` -> admin
+- `https://rental-space.myrrh-jp.com/*` -> public service
+- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin` -> admin
   service with IAP
-- `https://myrrh-rental-space-admin-...run.app/api/google-business-profile/oauth/*`
+- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin/*` -> admin
+  service with IAP
+- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin/api/*` ->
+  admin service with IAP
+- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/api/instagram/oauth/*`
   -> admin service with IAP
-- `https://myrrh-rental-space-admin-...run.app/preview/*` -> admin service with
-  IAP
+- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/api/google-business-profile/oauth/*`
+  -> admin service with IAP
+- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/preview/*` -> admin
+  service with IAP
 
 If a same-domain `/admin` path is required later, add an external HTTPS
 Application Load Balancer and path-route admin traffic to the admin service.
@@ -96,17 +110,17 @@ Keep these public even in production:
 Set these in your shell before running setup commands:
 
 ```bash
-export PROJECT_ID="your-gcp-project-id"
+export PROJECT_ID="myrrh-rental-space"
 export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
-export GCP_ORGANIZATION_ID="123456789012"
-export CLOUD_IDENTITY_DOMAIN="example.com"
+export GCP_ORGANIZATION_ID="844678510879"
+export CLOUD_IDENTITY_DOMAIN="myrrh-jp.com"
 export REGION="asia-northeast1"
 export SERVICE_NAME="myrrh-rental-space"
 export ADMIN_SERVICE_NAME="myrrh-rental-space-admin"
 export AR_REPOSITORY="myrrh-rental-space"
-export PUBLIC_DOMAIN="https://example.com"
-export ADMIN_DOMAIN="https://myrrh-rental-space-admin-...run.app"
-export TURNSTILE_SITE_KEY="0x..."
+export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"
+export ADMIN_DOMAIN="https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"
+export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"
 export MIGRATE_JOB_NAME="prisma-migrate"
 export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
 export BUILD_SA="myrrh-rental-space-build@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -115,29 +129,91 @@ export GITHUB_REPOSITORY_ID="1128842422"
 export GITHUB_REPOSITORY_OWNER_ID="69025248"
 export WIF_POOL_ID="github-actions"
 export WIF_PROVIDER_ID="github-myrrh-rental-space"
-export IAP_ADMIN_GROUP="group:myrrh-admins@example.com"
-export INITIAL_ADMIN_EMAIL="owner@example.com"
-export INITIAL_ADMIN_NAME="Owner"
+export ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="myrrh-super-admins@myrrh-jp.com"
+export ADMIN_ROLE_GROUP_ADMIN_EMAIL="myrrh-admins@myrrh-jp.com"
+export ADMIN_ROLE_GROUP_EDITOR_EMAIL="myrrh-editors@myrrh-jp.com"
+export ADMIN_ROLE_GROUP_VIEWER_EMAIL="myrrh-viewers@myrrh-jp.com"
+export PRIMARY_ADMIN_EMAIL="admin@myrrh-jp.com"
 export IAP_JWT_AUDIENCE="/projects/${PROJECT_NUMBER}/locations/${REGION}/services/${ADMIN_SERVICE_NAME}"
 ```
 
-`PUBLIC_DOMAIN` and `ADMIN_DOMAIN` must not have a trailing slash because the
-app concatenates paths directly.
+Use the official Cloud Build region inventory when auditing or removing legacy
+Cloud Build triggers and repository connections. Native triggers can be
+regional or global, and repository connections are regional:
 
-`INITIAL_ADMIN_EMAIL` is the first `SUPER_ADMIN` app user. Use the same Google
-account that will be allowed through IAP. `IAP_JWT_AUDIENCE` must match the
-Cloud Run IAP signed-header audience format:
+```bash
+CLOUD_BUILD_REGIONS=(
+  africa-south1
+  asia-east1
+  asia-east2
+  asia-northeast1
+  asia-northeast2
+  asia-northeast3
+  asia-south1
+  asia-south2
+  asia-southeast1
+  asia-southeast2
+  asia-southeast3
+  australia-southeast1
+  australia-southeast2
+  europe-central2
+  europe-north1
+  europe-north2
+  europe-southwest1
+  europe-west1
+  europe-west2
+  europe-west3
+  europe-west4
+  europe-west6
+  europe-west8
+  europe-west9
+  europe-west10
+  europe-west12
+  me-central1
+  me-central2
+  me-west1
+  northamerica-northeast1
+  northamerica-northeast2
+  northamerica-south1
+  southamerica-east1
+  southamerica-west1
+  us-central1
+  us-east1
+  us-east4
+  us-east5
+  us-south1
+  us-west1
+  us-west2
+  us-west3
+  us-west4
+)
+```
+
+`PUBLIC_DOMAIN` and `ADMIN_DOMAIN` must be HTTPS origin URLs only, with no
+path, query, fragment, credentials, or trailing slash, because the app and audit
+append paths directly.
+The production audit rejects any other host, including lookalike domains and
+private IP literals.
+
+`PRIMARY_ADMIN_EMAIL` is the first managed Google account that owns the role
+groups and belongs to `myrrh-super-admins@myrrh-jp.com`. The app creates the
+local `SUPER_ADMIN` staff record on first successful admin access from Google
+Group membership. `IAP_JWT_AUDIENCE` must match the Cloud Run IAP
+signed-header audience format:
 `/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME`.
 
-`GCP_ORGANIZATION_ID`, `CLOUD_IDENTITY_DOMAIN`, `GITHUB_REPOSITORY_ID`,
+`GCP_ORGANIZATION_ID`, `CLOUD_IDENTITY_DOMAIN`, `GITHUB_REPOSITORY`,
+`GITHUB_REPOSITORY_ID`, `GITHUB_REPOSITORY_OWNER_ID`, `RUNTIME_SA`,
 `BUILD_SA`, `WIF_POOL_ID`, and `WIF_PROVIDER_ID` are required for production
-verification. The audit does not infer or accept the organization, Google
-Group, GitHub repository identity, or deploy identity from loose defaults; they
-must match these exact values.
+verification.
+The audit does not infer or accept the organization, Google Group, GitHub
+repository identity, or deploy identity from loose defaults; they must match
+these exact values.
 
-`IAP_ADMIN_GROUP` must be a `group:` member backed by Cloud Identity or Google
-Workspace, for example `group:myrrh-admins@example.com`. Do not set it to a
-personal `user:` identity for production, and do not omit the `group:` prefix.
+The admin role groups must remain Cloud Identity / Google Workspace group
+emails. Do not set them to personal `user:` identities. A person must belong to
+exactly one role group; the application rejects ambiguous multi-role
+membership.
 
 ## Organization and group baseline
 
@@ -153,23 +229,32 @@ Required external setup:
 3. Create the production Google Cloud project under that Organization, or
    migrate/cut over from the bootstrap project to a new Organization-backed
    project.
-4. Create a Cloud Identity security group for admin access:
+4. Create Cloud Identity security groups for admin roles:
 
 ```bash
-gcloud identity groups create "${IAP_ADMIN_GROUP#group:}" \
-  --organization="$CLOUD_IDENTITY_DOMAIN" \
-  --group-type="security" \
-  --display-name="Myrrh Rental Space Admins" \
-  --description="Users allowed to access the Myrrh Rental Space IAP admin service" \
-  --with-initial-owner="$INITIAL_ADMIN_EMAIL"
+declare -A ADMIN_ROLE_GROUP_NAMES=(
+  ["$ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL"]="Myrrh Rental Space Super Admins"
+  ["$ADMIN_ROLE_GROUP_ADMIN_EMAIL"]="Myrrh Rental Space Admins"
+  ["$ADMIN_ROLE_GROUP_EDITOR_EMAIL"]="Myrrh Rental Space Editors"
+  ["$ADMIN_ROLE_GROUP_VIEWER_EMAIL"]="Myrrh Rental Space Viewers"
+)
+
+for group_email in "${!ADMIN_ROLE_GROUP_NAMES[@]}"; do
+  gcloud identity groups create "$group_email" \
+    --organization="$CLOUD_IDENTITY_DOMAIN" \
+    --group-type="security" \
+    --display-name="${ADMIN_ROLE_GROUP_NAMES[$group_email]}" \
+    --description="Myrrh Rental Space admin role group" \
+    --with-initial-owner="$PRIMARY_ADMIN_EMAIL" || true
+done
 ```
 
-Add administrators and staff to the group:
+Add the initial owner to the super admin role group:
 
 ```bash
 gcloud identity groups memberships add \
-  --group-email="${IAP_ADMIN_GROUP#group:}" \
-  --member-email="$INITIAL_ADMIN_EMAIL" \
+  --group-email="$ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL" \
+  --member-email="$PRIMARY_ADMIN_EMAIL" \
   --roles=MEMBER
 ```
 
@@ -194,8 +279,8 @@ gcloud services enable \
   iap.googleapis.com \
   cloudresourcemanager.googleapis.com \
   iam.googleapis.com \
-  iamcredentials.googleapis.com \
   sts.googleapis.com \
+  iamcredentials.googleapis.com \
   cloudidentity.googleapis.com
 ```
 
@@ -245,6 +330,11 @@ gcloud run services add-iam-policy-binding "$SERVICE_NAME" \
   --member="serviceAccount:${BUILD_SA}" \
   --role="roles/run.admin"
 
+gcloud run services add-iam-policy-binding "$ADMIN_SERVICE_NAME" \
+  --region="$REGION" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/run.admin"
+
 gcloud run jobs add-iam-policy-binding "$MIGRATE_JOB_NAME" \
   --region="$REGION" \
   --member="serviceAccount:${BUILD_SA}" \
@@ -267,8 +357,54 @@ The second `roles/iam.serviceAccountUser` binding is intentional. GitHub
 Actions authenticates as `$BUILD_SA` through WIF, and `cloudbuild.yaml` also
 sets `$BUILD_SA` as the user-specified Cloud Build service account. The caller
 therefore needs `iam.serviceAccounts.actAs` on that exact service account.
+In production, keep both broad project grants absent:
+
+- project-level `roles/iam.serviceAccountUser` grants must remain absent.
+- project-level `roles/iam.workloadIdentityUser` grants must remain absent.
+- project-level `roles/run.admin` for `$BUILD_SA` must remain absent.
+- project-level `roles/iap.admin` for `$BUILD_SA` must remain absent.
+
+Grant deploy impersonation only on the exact service account resource that needs
+it.
+
+Grant Cloud Run admin only on the existing public service, admin service, and
+migration job resources. IAP is enabled once during setup and then verified by
+the production audit; recurring deploys do not need project-level IAP admin.
+
+If a previous bootstrap left broad project-level deploy grants on `$BUILD_SA`,
+remove them after the resource-level grants above exist:
+
+```bash
+gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/run.admin" \
+  --condition=None
+
+gcloud projects remove-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/iap.admin" \
+  --condition=None
+```
 
 Do not create or download service account keys.
+
+Grant the runtime service account owner access only to the admin role groups it
+must read. This lets the app use Cloud Identity Groups API with Application
+Default Credentials and avoids Google Workspace domain-wide delegation:
+
+```bash
+for group_email in \
+  "$ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL" \
+  "$ADMIN_ROLE_GROUP_ADMIN_EMAIL" \
+  "$ADMIN_ROLE_GROUP_EDITOR_EMAIL" \
+  "$ADMIN_ROLE_GROUP_VIEWER_EMAIL"
+do
+  gcloud identity groups memberships add \
+    --group-email="$group_email" \
+    --member-email="$RUNTIME_SA" \
+    --roles=OWNER || true
+done
+```
 
 ## Default service account cleanup
 
@@ -291,8 +427,12 @@ gcloud run jobs list \
 gcloud compute instances list \
   --format="table(name,zone,status,serviceAccounts.email.scope())"
 
-gcloud builds triggers list \
-  --format="table(name,id,disabled,serviceAccount)"
+for location in global "${CLOUD_BUILD_REGIONS[@]}"; do
+  gcloud builds triggers list \
+    --project="$PROJECT_ID" \
+    --region="$location" \
+    --format="table(name,id,disabled,serviceAccount)"
+done
 ```
 
 If no active resource depends on the default Compute Engine service account,
@@ -319,7 +459,6 @@ Required by production startup:
 - `BETTER_AUTH_SECRET`
 - `ENCRYPTION_KEY`
 - `CRON_SECRET`
-- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
@@ -332,6 +471,11 @@ Required when Cloudflare cache purge is enabled:
 - `CLOUDFLARE_API_TOKEN`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
+
+Required by the production image build and injected into the matching Cloud Run
+revision at runtime:
+
+- `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
 
 Create each secret once:
 
@@ -403,6 +547,15 @@ openssl rand -hex 32      # ENCRYPTION_KEY, exactly 64 hex chars
 openssl rand -base64 32   # NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ```
 
+`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` follows the official Next.js self-hosting
+contract: it is a consistent base64-encoded AES key supplied during
+`next build` so Server Actions / Server Functions decrypt across Cloud Run
+instances and revisions. Next.js records the effective key in the server
+reference manifest inside the built image. Treat Artifact Registry image access
+as access to this key, rotate it only with a rebuild + redeploy, and do not
+expect changing the Cloud Run runtime secret alone to change the image-baked
+key.
+
 ## Cloud Run migrate Job
 
 Create the job once. `cloudbuild.yaml` updates the image, memory, and
@@ -425,8 +578,10 @@ manually, then create the job, then rerun the full build.
 
 ## Cloud Build deploy
 
-The repository already has `cloudbuild.yaml`. For production, run Cloud Build
-with required substitutions instead of relying on defaults:
+The repository already has `cloudbuild.yaml`. The normal production path is the
+GitHub Actions workflow below. Direct `gcloud builds submit` is only for initial
+bootstrap before WIF is live or for an explicit emergency deploy. In both cases,
+run Cloud Build with required substitutions instead of relying on defaults:
 
 Create the private worker pool once. The production build needs more memory
 than the default Cloud Build pool provides, and `cloudbuild.yaml` points deploys
@@ -446,8 +601,16 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 gcloud builds submit \
   --region="$REGION" \
   --config=cloudbuild.yaml \
-  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_INITIAL_ADMIN_EMAIL="${INITIAL_ADMIN_EMAIL}",_INITIAL_ADMIN_NAME="${INITIAL_ADMIN_NAME}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}"
+  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_EDITOR_EMAIL="${ADMIN_ROLE_GROUP_EDITOR_EMAIL}",_ADMIN_ROLE_GROUP_VIEWER_EMAIL="${ADMIN_ROLE_GROUP_VIEWER_EMAIL}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}",_NEXT_PUBLIC_TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY}",_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1
 ```
+
+`cloudbuild.yaml` intentionally has no defaults for production-only
+substitutions such as `_IAP_JWT_AUDIENCE`, the four
+`_ADMIN_ROLE_GROUP_*_EMAIL` values, `_NEXT_PUBLIC_BASE_URL`,
+`_NEXT_PUBLIC_APP_URL`, `_ADMIN_APP_URL`, and
+`_NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Missing values fail at Cloud Build submit
+time, and explicit empty values are rejected by the first
+`validate-production-substitutions` step before any image build or push.
 
 `cloudbuild.yaml` sets all of these for user-specified Cloud Build service
 accounts and the private worker pool:
@@ -465,19 +628,69 @@ deploys to Webpack as a memory workaround; use the private pool so production
 and CI stay on the same bundler path.
 
 After the first successful deploy, prefer fixed Secret Manager versions for
-production rollouts. Update the `_..._SECRET_VERSION` substitutions in the Cloud
-Build trigger when rotating a secret. Avoid `latest` in production deploy
-triggers because it makes rollbacks ambiguous.
+production rollouts. Update the `_..._SECRET_VERSION` substitutions in
+`.github/workflows/deploy-production.yml` when rotating a secret. Avoid `latest`
+in production deploys because it makes rollbacks ambiguous.
 
-## Cloud Build production trigger
+## GitHub Actions production workflow
 
 Production auto-deploy uses GitHub Actions with Google Workload Identity
 Federation (WIF), then submits the existing `cloudbuild.yaml`. This keeps
 GitHub as the merge event source while avoiding service account keys and the
 Cloud Build GitHub repository connection as a production dependency.
 
-Do not create a pull-request deploy trigger. PR validation belongs in
-`.github/workflows/ci.yml`; production deploys only after code reaches `main`.
+The workflow triggers on every push to `main`, plus explicit
+`workflow_dispatch`. Do not add `paths` or `paths-ignore` filters to the
+production deploy workflow; file-path filters make post-merge production
+deployment conditional and reintroduce ambiguity about whether a merge should
+deploy.
+
+Do not create Cloud Build native triggers for production. That includes
+`deploy-main`, console-created GitHub triggers, and manual
+`gcloud builds triggers run`. Native triggers have their own trigger service
+account path; this repository's production path is the GitHub WIF principal
+impersonating `$BUILD_SA` and then calling `gcloud builds submit`.
+
+Do not grant broad project IAM or permanent individual-user `actAs` grants to
+make a native trigger work. If `gcloud builds triggers run` fails with
+`cloudbuild.builds.create`, treat that as evidence that the legacy trigger path
+is not the production path. Remove the trigger instead.
+
+PR validation belongs in `.github/workflows/ci.yml`; production deploys only
+after code reaches `main`.
+
+Remove any existing native Cloud Build triggers and Cloud Build repository
+connections before considering the project production-ready:
+
+```bash
+for location in global "${CLOUD_BUILD_REGIONS[@]}"; do
+  gcloud builds triggers list \
+    --project="$PROJECT_ID" \
+    --region="$location" \
+    --format="value(id)" |
+  while read -r trigger_id; do
+    test -n "$trigger_id" || continue
+    gcloud builds triggers delete "$trigger_id" \
+      --project="$PROJECT_ID" \
+      --region="$location" \
+      --quiet
+  done
+done
+
+for location in "${CLOUD_BUILD_REGIONS[@]}"; do
+  gcloud builds connections list \
+    --project="$PROJECT_ID" \
+    --region="$location" \
+    --format="value(name)" |
+  while read -r connection_name; do
+    test -n "$connection_name" || continue
+    gcloud builds connections delete "$connection_name" \
+      --project="$PROJECT_ID" \
+      --region="$location" \
+      --quiet
+  done
+done
+```
 
 Create the WIF pool and provider:
 
@@ -509,7 +722,7 @@ gcloud iam service-accounts add-iam-policy-binding "$BUILD_SA" \
 ```
 
 The repository workflow `.github/workflows/deploy-production.yml` is the
-production deploy trigger. It authenticates with `google-github-actions/auth`,
+production deploy workflow. It authenticates with `google-github-actions/auth`,
 sets up `gcloud`, and runs `gcloud builds submit` with the fixed production
 substitutions and Secret Manager version `1` values.
 
@@ -533,6 +746,10 @@ gcloud iam service-accounts get-iam-policy "$BUILD_SA" \
 
 - public: `$SERVICE_NAME`, `APP_SURFACE=public`, unauthenticated;
 - admin: `$ADMIN_SERVICE_NAME`, `APP_SURFACE=admin`, Cloud Run direct IAP.
+
+IAP is enabled once during setup and then verified by the production audit.
+The recurring Cloud Build deploy updates the admin service revision but does
+not pass `--iap` and does not require project-level `roles/iap.admin`.
 
 Confirm the runtime service accounts:
 
@@ -606,13 +823,20 @@ Grant admin users through the Cloud Identity / Google Workspace group, not
 individual users:
 
 ```bash
-gcloud iap web add-iam-policy-binding \
-  --resource-type=cloud-run \
-  --service="$ADMIN_SERVICE_NAME" \
-  --region="$REGION" \
-  --member="$IAP_ADMIN_GROUP" \
-  --role="roles/iap.httpsResourceAccessor" \
-  --condition=None
+for group_email in \
+  "$ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL" \
+  "$ADMIN_ROLE_GROUP_ADMIN_EMAIL" \
+  "$ADMIN_ROLE_GROUP_EDITOR_EMAIL" \
+  "$ADMIN_ROLE_GROUP_VIEWER_EMAIL"
+do
+  gcloud iap web add-iam-policy-binding \
+    --resource-type=cloud-run \
+    --service="$ADMIN_SERVICE_NAME" \
+    --region="$REGION" \
+    --member="group:${group_email}" \
+    --role="roles/iap.httpsResourceAccessor" \
+    --condition=None
+done
 ```
 
 Operational rule:
@@ -623,15 +847,16 @@ Operational rule:
 - do not grant `allUsers` or `allAuthenticatedUsers` to the admin service;
 - do not grant `roles/iap.httpsResourceAccessor` directly to `user:*` members
   in production;
-- add staff by creating the staff user in `/admin/users/new`, adding the same
-  Google account to the IAP Google Group, then sending the access guide email;
-- remove users by removing them from the Google Group and disabling/deleting
-  the app staff user.
+- add staff by creating or inviting the Google Workspace / Cloud Identity user,
+  adding the user to exactly one admin role group, then sending the common admin
+  URL;
+- remove users by removing them from all admin role groups and then suspending
+  or deleting the Google Workspace / Cloud Identity user.
 
 When migrating from a bootstrap individual grant, do this in order:
 
-1. grant `roles/iap.httpsResourceAccessor` to `$IAP_ADMIN_GROUP`;
-2. confirm a member of that group can open `${ADMIN_DOMAIN}/admin`;
+1. grant `roles/iap.httpsResourceAccessor` to all four admin role groups;
+2. confirm a member of exactly one role group can open `${ADMIN_DOMAIN}/admin`;
 3. remove any `user:*` IAP accessor grants;
 4. run `bun run gcp:audit-production-iap`.
 
@@ -677,9 +902,17 @@ CLOUD_IDENTITY_DOMAIN="$CLOUD_IDENTITY_DOMAIN" \
 REGION="$REGION" \
 SERVICE_NAME="$SERVICE_NAME" \
 ADMIN_SERVICE_NAME="$ADMIN_SERVICE_NAME" \
-IAP_ADMIN_GROUP="$IAP_ADMIN_GROUP" \
+PUBLIC_DOMAIN="$PUBLIC_DOMAIN" \
+ADMIN_DOMAIN="$ADMIN_DOMAIN" \
+ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="$ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL" \
+ADMIN_ROLE_GROUP_ADMIN_EMAIL="$ADMIN_ROLE_GROUP_ADMIN_EMAIL" \
+ADMIN_ROLE_GROUP_EDITOR_EMAIL="$ADMIN_ROLE_GROUP_EDITOR_EMAIL" \
+ADMIN_ROLE_GROUP_VIEWER_EMAIL="$ADMIN_ROLE_GROUP_VIEWER_EMAIL" \
+RUNTIME_SERVICE_ACCOUNT="$RUNTIME_SA" \
 BUILD_SERVICE_ACCOUNT="$BUILD_SA" \
+GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
 GITHUB_REPOSITORY_ID="$GITHUB_REPOSITORY_ID" \
+GITHUB_REPOSITORY_OWNER_ID="$GITHUB_REPOSITORY_OWNER_ID" \
 WIF_POOL_ID="$WIF_POOL_ID" \
 WIF_PROVIDER_ID="$WIF_PROVIDER_ID" \
 bun run gcp:audit-production-iap
@@ -691,16 +924,24 @@ Expected results:
 - `/api/health` returns 200 only when DB and dependencies are healthy;
 - `${PUBLIC_DOMAIN}/admin` returns 404 from `APP_SURFACE=public`;
 - `${ADMIN_DOMAIN}/admin` redirects unauthenticated visitors to Google/IAP;
-- with an IAP-allowed Google account and matching app staff user, `/admin`
-  opens the dashboard without an app password form;
-- `.github/workflows/deploy-production.yml` starts on `main` pushes that include
-  application/deploy files and the Cloud Build it submits succeeds;
+- with an IAP-allowed Google account in exactly one admin role group, `/admin`
+  opens the dashboard and auto-syncs the local staff record without an app
+  password form;
+- `.github/workflows/deploy-production.yml` starts on every `main` push and the
+  Cloud Build it submits succeeds;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
-- `bun run gcp:audit-production-iap` passes. If it fails on Organization,
-  Cloud Identity group, individual IAP grants, WIF, user-managed service
-  account keys, individual build service account `actAs` grants, or legacy
-  Cloud Build triggers/connections, the admin site may be protected but the GCP
-  posture is not the final production baseline.
+- `bun run gcp:audit-production-iap` passes. The audit check
+  `production HTTP domains are canonical HTTPS URLs` verifies URL shape before
+  checking `/api/live`, `/api/health`, public `/admin` hiding, and
+  `admin /admin redirects unauthenticated visitors to Google/IAP`. If it fails
+  on Organization, Cloud Identity group, individual IAP grants, WIF,
+  user-managed service account key absence, project-level
+  `roles/iam.serviceAccountUser`, project-level
+  `roles/iam.workloadIdentityUser`, project-level `roles/run.admin` for
+  `$BUILD_SA`, project-level `roles/iap.admin` for `$BUILD_SA`, individual
+  build service account `actAs` grants, legacy Cloud Build
+  triggers/connections, or live HTTP behavior, the admin site may be protected
+  but the GCP posture is not the final production baseline.
 
 ## Current repository contract
 
@@ -711,17 +952,23 @@ The current `cloudbuild.yaml` already handles:
 - dedicated migrator image;
 - Cloud Run Job update and execution for `prisma migrate deploy`;
 - public and admin Cloud Run deploys with service account, probes, env vars,
-  secrets, and admin IAP.
-- fail-fast validation for admin `IAP_JWT_AUDIENCE` and
-  `INITIAL_ADMIN_EMAIL`, plus initial `SUPER_ADMIN` bootstrap on the admin
-  service.
+  and secrets. Recurring deploys do not mutate admin IAP.
+- fail-fast validation for admin `IAP_JWT_AUDIENCE` and the four admin role
+  group emails. Initial `SUPER_ADMIN` creation is synced from the super-admin
+  Google Group on first access, not bootstrapped from app env.
 
-The remaining GCP-side production tasks are:
+The current GCP-side production posture is:
 
-1. create or cut over to an Organization-backed GCP project;
-2. create and grant Secret Manager secrets;
-3. create WIF pool/provider and keep `.github/workflows/deploy-production.yml`
-   as the only production auto-deploy trigger;
-4. grant IAP access to the admin Google Group and remove individual IAP grants;
-5. run `bun run gcp:audit-production-iap`;
-6. run the production verification checks.
+1. project `myrrh-rental-space` is under organization `844678510879`;
+2. Cloud Identity domain `myrrh-jp.com` owns the four admin role groups
+   `myrrh-super-admins@myrrh-jp.com`, `myrrh-admins@myrrh-jp.com`,
+   `myrrh-editors@myrrh-jp.com`, and `myrrh-viewers@myrrh-jp.com`;
+3. `.github/workflows/deploy-production.yml` is the only production
+   auto-deploy workflow;
+4. native Cloud Build triggers and Cloud Build GitHub repository connections
+   are absent;
+5. `$BUILD_SA` has project-level `roles/cloudbuild.builds.builder` and
+   `roles/logging.logWriter`, but no project-level `roles/run.admin` or
+   `roles/iap.admin`;
+6. `bun run gcp:audit-production-iap` is the gate for proving the posture is
+   still clean after infrastructure changes.

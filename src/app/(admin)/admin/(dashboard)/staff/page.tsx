@@ -1,17 +1,13 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import Link from "next/link";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { getUsers } from "@/admin/queries/user";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
 import { getRoleFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { Button, Pagination } from "@/admin/components/ui";
+import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { StaffStats, StaffFilters, StaffTable } from "./_components";
-import { getInvitableRoles, isDashboardRole } from "@/shared/lib/admin-roles";
-import { hasPermission } from "@/shared/lib/admin-permissions";
-import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -53,15 +49,7 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-type CurrentStaffUser = {
-  id: string;
-  role: Role;
-};
-
-async function StaffList({
-  searchParams,
-  currentUser,
-}: PageProps & { currentUser: CurrentStaffUser }) {
+async function StaffList({ searchParams }: PageProps) {
   await connection();
   const params = await loadAdminUserSearchParams(searchParams);
   const result = await getUsers(
@@ -77,7 +65,7 @@ async function StaffList({
 
   return (
     <>
-      <StaffTable users={result.users} currentUser={currentUser} />
+      <StaffTable users={result.users} />
       <Pagination
         currentPage={result.page}
         totalPages={result.totalPages}
@@ -93,11 +81,7 @@ async function StaffList({
 // =============================================================================
 
 export default async function StaffPage({ searchParams }: PageProps) {
-  const currentUser = await requireAdminPermission("user", "read");
-  const canCreateStaff =
-    hasPermission(currentUser.role, "user", "create") &&
-    isDashboardRole(currentUser.role) &&
-    getInvitableRoles(currentUser.role).length > 0;
+  await requireAdminPermission("user", "read");
 
   return (
     <div className="space-y-6">
@@ -108,14 +92,9 @@ export default async function StaffPage({ searchParams }: PageProps) {
             スタッフ管理
           </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
-            管理画面にアクセスできるスタッフアカウントを管理します
+            Google Group から自動同期された管理スタッフを確認します
           </p>
         </div>
-        {canCreateStaff ? (
-          <Button asChild>
-            <Link href="/admin/staff/new">スタッフを追加</Link>
-          </Button>
-        ) : null}
       </div>
 
       {/* スタッツカード */}
@@ -130,10 +109,7 @@ export default async function StaffPage({ searchParams }: PageProps) {
 
       {/* テーブル + ページネーション */}
       <Suspense fallback={<LoadingState />}>
-        <StaffList
-          searchParams={searchParams}
-          currentUser={{ id: currentUser.id, role: currentUser.role }}
-        />
+        <StaffList searchParams={searchParams} />
       </Suspense>
     </div>
   );

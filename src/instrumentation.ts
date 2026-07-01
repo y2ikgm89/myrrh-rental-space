@@ -18,10 +18,6 @@ export async function register(): Promise<void> {
     const { validateProductionEnv } = await import("@/shared/lib/env/server");
     validateProductionEnv();
 
-    const { bootstrapInitialAdmin } =
-      await import("@/shared/lib/bootstrap/initial-admin");
-    await bootstrapInitialAdmin();
-
     const { bootstrapSystemPages } = await import("@/shared/lib/bootstrap");
     await bootstrapSystemPages();
 

@@ -1,7 +1,7 @@
 /**
  * システム通知メール
  *
- * カレンダー同期エラー、スタッフアクセス案内、Webhook 更新通知メールの送信。
+ * カレンダー同期エラー、Webhook 更新通知メールの送信。
  *
  * @module shared/lib/email/system-emails
  */
@@ -9,12 +9,10 @@
 import "server-only";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { StaffAccessGuideEmail } from "@/shared/emails/staff-access-guide";
-import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../admin-urls";
-import { hashForKey, sendEmail } from "./send";
-import type { EmailResult, StaffAccessGuideEmailData } from "./types";
+import { sendEmail } from "./send";
+import type { EmailResult } from "./types";
 
 /**
  * カレンダー同期による時間変更拒否の管理者通知メールを送信
@@ -92,36 +90,6 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
     operation: "sendCalendarSyncRejectionEmail",
     context: {
       reservationId: data.reservationId,
-    },
-  });
-}
-
-/**
- * スタッフアクセス案内メールを送信
- */
-export async function sendStaffAccessGuideEmail(
-  data: StaffAccessGuideEmailData,
-): Promise<EmailResult> {
-  const footer = await getEmailFooterData();
-  const idempotencyKeyMaterial =
-    data.deliveryKey ?? `${data.staffEmail}:${data.adminUrl}`;
-
-  return sendEmail({
-    payload: {
-      to: data.to,
-      subject: `【管理画面のご案内】${footer.businessName}`,
-      react: StaffAccessGuideEmail({
-        staffName: data.staffName,
-        staffEmail: data.staffEmail,
-        roleLabel: data.roleLabel,
-        adminUrl: data.adminUrl,
-        footer,
-      }),
-    },
-    idempotencyKey: `staff-access-guide/${hashForKey(idempotencyKeyMaterial)}`,
-    operation: "sendStaffAccessGuideEmail",
-    context: {
-      to: data.to,
     },
   });
 }

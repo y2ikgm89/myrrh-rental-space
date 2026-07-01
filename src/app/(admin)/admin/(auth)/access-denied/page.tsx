@@ -20,8 +20,8 @@ export default async function AdminAccessDeniedPage() {
           管理権限がありません
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Googleログインは完了していますが、このGoogleアカウントは管理スタッフとして登録されていません。
-          管理者に、IAPアクセスとスタッフ登録の両方を確認してもらってください。
+          Googleログインは完了していますが、このGoogleアカウントは管理ロールのGoogle
+          Groupに所属していません。管理者に、IAP許可とロール別グループ所属を確認してもらってください。
         </p>
         <Button asChild className="mt-6 w-full">
           <Link href="/admin">管理画面を再確認</Link>

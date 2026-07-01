@@ -1,6 +1,10 @@
 # Cloud Build: Artifact Registry + Cloud Run deploy
 #
-# Usage:
+# Normal production deploy path:
+#   .github/workflows/deploy-production.yml authenticates through GitHub WIF
+#   and submits this file with fixed production substitutions.
+#
+# Bootstrap/emergency usage only:
 #   gcloud builds submit --config=cloudbuild.yaml
 #
 # Production setup runbook:
@@ -26,12 +30,20 @@ substitutions:
   _REGION: asia-northeast1
   _SERVICE_NAME: myrrh-rental-space
   _ADMIN_SERVICE_NAME: myrrh-rental-space-admin
-  # Required for admin service startup. Set real values in production triggers.
-  # _IAP_JWT_AUDIENCE format:
-  # /projects/PROJECT_NUMBER/locations/REGION/services/ADMIN_SERVICE_NAME
-  _IAP_JWT_AUDIENCE: ""
-  _INITIAL_ADMIN_EMAIL: ""
-  _INITIAL_ADMIN_NAME: ""
+  # Required production substitutions intentionally have no defaults here.
+  # Missing values must fail at `gcloud builds submit` time, before any image
+  # is built or pushed. Explicit empty values are rejected by Step 0 below.
+  # Required keys:
+  #   _IAP_JWT_AUDIENCE
+  #     /projects/PROJECT_NUMBER/locations/REGION/services/ADMIN_SERVICE_NAME
+  #   _ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL
+  #   _ADMIN_ROLE_GROUP_ADMIN_EMAIL
+  #   _ADMIN_ROLE_GROUP_EDITOR_EMAIL
+  #   _ADMIN_ROLE_GROUP_VIEWER_EMAIL
+  #   _NEXT_PUBLIC_BASE_URL
+  #   _NEXT_PUBLIC_APP_URL
+  #   _ADMIN_APP_URL
+  #   _NEXT_PUBLIC_TURNSTILE_SITE_KEY
   _REPOSITORY: myrrh-rental-space
   _AR_HOST: asia-northeast1-docker.pkg.dev
   _MIGRATE_JOB_NAME: prisma-migrate
@@ -70,19 +82,20 @@ substitutions:
   _GOOGLE_CLIENT_SECRET_SECRET_VERSION: "1"
   # NEXT_PUBLIC_* (ビルド時インライン + ランタイム両方で使用)
   #
-  # _NEXT_PUBLIC_BASE_URL / _NEXT_PUBLIC_APP_URL は **trigger で必須設定**。
-  # 空デフォルトを残すと trigger 未設定時に `""` が build に流入し、
+  # _NEXT_PUBLIC_BASE_URL / _NEXT_PUBLIC_APP_URL /
+  # _NEXT_PUBLIC_TURNSTILE_SITE_KEY は **production workflow / emergency
+  # submit で必須設定**。
+  # 空デフォルトを残すと substitution 未設定時に `""` が build に流入し、
   # next build が空文字を client/server bundle にインライン化して
   # `http://localhost:3000` を sitemap / OGP / canonical / breadcrumb に
   # 焼き込む silent SEO 汚染を起こす。デフォルトを削除して
   # `gcloud builds submit` の substitution 未設定エラーで build 投入時点に
   # 早期 fail させる（Dockerfile builder-base の assert と多重防御）。
-  _NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
   _NEXT_PUBLIC_GA_MEASUREMENT_ID: ""
   # Server-only env vars（optional・空はコード fallback で吸収するためデフォルト維持）
   _BETTER_AUTH_URL: ""
-  # _ADMIN_APP_URL は admin service の URL（例: run.app URL）を
-  # trigger / gcloud builds submit 側で必須指定する。
+  # _ADMIN_APP_URL は admin service の URL（run.app URL）を
+  # production workflow / emergency submit 側で必須指定する。
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -94,6 +107,102 @@ options:
 serviceAccount: projects/${PROJECT_ID}/serviceAccounts/${_BUILD_SERVICE_ACCOUNT}
 
 steps:
+  # Step 0: Validate explicit empty production substitutions before any image
+  # build or push. Missing substitutions are rejected by Cloud Build because
+  # this config does not opt in to ALLOW_LOOSE.
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: validate-production-substitutions
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        test -n "${_ADMIN_APP_URL}" || {
+          echo "_ADMIN_APP_URL is required";
+          exit 1;
+        }
+        test -n "${_IAP_JWT_AUDIENCE}" || {
+          echo "_IAP_JWT_AUDIENCE is required";
+          exit 1;
+        }
+        test -n "${_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}" || {
+          echo "_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL is required";
+          exit 1;
+        }
+        test -n "${_ADMIN_ROLE_GROUP_ADMIN_EMAIL}" || {
+          echo "_ADMIN_ROLE_GROUP_ADMIN_EMAIL is required";
+          exit 1;
+        }
+        test -n "${_ADMIN_ROLE_GROUP_EDITOR_EMAIL}" || {
+          echo "_ADMIN_ROLE_GROUP_EDITOR_EMAIL is required";
+          exit 1;
+        }
+        test -n "${_ADMIN_ROLE_GROUP_VIEWER_EMAIL}" || {
+          echo "_ADMIN_ROLE_GROUP_VIEWER_EMAIL is required";
+          exit 1;
+        }
+        test -n "${_NEXT_PUBLIC_APP_URL}" || {
+          echo "_NEXT_PUBLIC_APP_URL is required";
+          exit 1;
+        }
+        test -n "${_NEXT_PUBLIC_BASE_URL}" || {
+          echo "_NEXT_PUBLIC_BASE_URL is required";
+          exit 1;
+        }
+        test -n "${_NEXT_PUBLIC_TURNSTILE_SITE_KEY}" || {
+          echo "_NEXT_PUBLIC_TURNSTILE_SITE_KEY is required";
+          exit 1;
+        }
+
+        case "${_IAP_JWT_AUDIENCE}" in
+          /projects/*/locations/${_REGION}/services/${_ADMIN_SERVICE_NAME}) ;;
+          *)
+            echo "_IAP_JWT_AUDIENCE must match /projects/PROJECT_NUMBER/locations/${_REGION}/services/${_ADMIN_SERVICE_NAME}";
+            exit 1;
+            ;;
+        esac
+
+        case "${_ADMIN_APP_URL}" in
+          https://*) ;;
+          *)
+            echo "_ADMIN_APP_URL must be an https URL";
+            exit 1;
+            ;;
+        esac
+        case "${_ADMIN_APP_URL}" in
+          */)
+            echo "_ADMIN_APP_URL must not end with a trailing slash";
+            exit 1;
+            ;;
+        esac
+
+        case "${_NEXT_PUBLIC_APP_URL}" in
+          https://*) ;;
+          *)
+            echo "_NEXT_PUBLIC_APP_URL must be an https URL";
+            exit 1;
+            ;;
+        esac
+        case "${_NEXT_PUBLIC_APP_URL}" in
+          */)
+            echo "_NEXT_PUBLIC_APP_URL must not end with a trailing slash";
+            exit 1;
+            ;;
+        esac
+
+        case "${_NEXT_PUBLIC_BASE_URL}" in
+          https://*) ;;
+          *)
+            echo "_NEXT_PUBLIC_BASE_URL must be an https URL";
+            exit 1;
+            ;;
+        esac
+        case "${_NEXT_PUBLIC_BASE_URL}" in
+          */)
+            echo "_NEXT_PUBLIC_BASE_URL must not end with a trailing slash";
+            exit 1;
+            ;;
+        esac
+
   # Step 1: Pull cache image (fail-safe)
   - name: gcr.io/cloud-builders/docker
     id: pull-cache
@@ -154,27 +263,10 @@ steps:
       - --all-tags
       - ${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}
 
-  # Step 4: Validate required admin IAP configuration before touching DB or services.
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: validate-admin-iap-config
-    waitFor: [push-image]
-    entrypoint: bash
-    args:
-      - -ceu
-      - |
-        test -n "${_IAP_JWT_AUDIENCE}" || {
-          echo "_IAP_JWT_AUDIENCE is required for admin Cloud Run IAP";
-          exit 1;
-        }
-        test -n "${_INITIAL_ADMIN_EMAIL}" || {
-          echo "_INITIAL_ADMIN_EMAIL is required for initial SUPER_ADMIN bootstrap";
-          exit 1;
-        }
-
-  # Step 5: Update Prisma migrate Job image (schema drift 防止のためデプロイ前に実行)
+  # Step 4: Update Prisma migrate Job image (schema drift 防止のためデプロイ前に実行)
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: migrate-update
-    waitFor: [validate-admin-iap-config]
+    waitFor: [push-image]
     entrypoint: gcloud
     args:
       - run
@@ -189,7 +281,7 @@ steps:
       # DATABASE_URL を毎デプロイ宣言的に再適用（Job 作成時設定へのドリフト防止）。
       - --set-secrets=DATABASE_URL=DATABASE_URL:${_DATABASE_URL_SECRET_VERSION}
 
-  # Step 6: Execute Prisma migration (fail 時はデプロイ全体を止める)
+  # Step 5: Execute Prisma migration (fail 時はデプロイ全体を止める)
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: migrate-execute
     waitFor: [migrate-update]
@@ -202,7 +294,7 @@ steps:
       - --region=${_REGION}
       - --wait
 
-  # Step 7a: Deploy public Cloud Run service
+  # Step 6a: Deploy public Cloud Run service
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-public
     waitFor: [migrate-execute]
@@ -236,8 +328,9 @@ steps:
       - --remove-secrets=ADMIN_LOGIN_TOKEN
       - --update-secrets=DATABASE_URL=DATABASE_URL:${_DATABASE_URL_SECRET_VERSION},BETTER_AUTH_SECRET=BETTER_AUTH_SECRET:${_BETTER_AUTH_SECRET_VERSION},ENCRYPTION_KEY=ENCRYPTION_KEY:${_ENCRYPTION_KEY_SECRET_VERSION},CRON_SECRET=CRON_SECRET:${_CRON_SECRET_VERSION},NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION},R2_ACCOUNT_ID=R2_ACCOUNT_ID:${_R2_ACCOUNT_ID_SECRET_VERSION},R2_ACCESS_KEY_ID=R2_ACCESS_KEY_ID:${_R2_ACCESS_KEY_ID_SECRET_VERSION},R2_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY:${_R2_SECRET_ACCESS_KEY_SECRET_VERSION},R2_BUCKET_NAME=R2_BUCKET_NAME:${_R2_BUCKET_NAME_SECRET_VERSION},R2_PUBLIC_URL=R2_PUBLIC_URL:${_R2_PUBLIC_URL_SECRET_VERSION},CLOUDFLARE_ZONE_ID=CLOUDFLARE_ZONE_ID:${_CLOUDFLARE_ZONE_ID_SECRET_VERSION},CLOUDFLARE_API_TOKEN=CLOUDFLARE_API_TOKEN:${_CLOUDFLARE_API_TOKEN_SECRET_VERSION},GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:${_GOOGLE_CLIENT_ID_SECRET_VERSION},GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:${_GOOGLE_CLIENT_SECRET_SECRET_VERSION}
 
-  # Step 7b: Deploy admin Cloud Run service protected by service-level IAP.
-  # Cloud Run 公式推奨どおり direct IAP を使い、公開 service と管理 service を分離する。
+  # Step 6b: Deploy admin Cloud Run service. Direct IAP is enabled once by the
+  # production setup runbook and verified by `bun run gcp:audit-production-iap`;
+  # recurring deploys must not mutate IAP.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-admin
     waitFor: [migrate-execute]
@@ -250,7 +343,6 @@ steps:
       - --region=${_REGION}
       - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
       - --no-allow-unauthenticated
-      - --iap
       - --service-account=${_SERVICE_ACCOUNT}
       - --memory=${_MEMORY}
       - --cpu=${_CPU}
@@ -264,7 +356,7 @@ steps:
       - --port=8080
       - --startup-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=1,periodSeconds=10,failureThreshold=9
       - --liveness-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=10,timeoutSeconds=1,periodSeconds=30,failureThreshold=3
-      - --update-env-vars=NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1,APP_SURFACE=admin,ADMIN_APP_URL=${_ADMIN_APP_URL},IAP_JWT_AUDIENCE=${_IAP_JWT_AUDIENCE},INITIAL_ADMIN_EMAIL=${_INITIAL_ADMIN_EMAIL},INITIAL_ADMIN_NAME=${_INITIAL_ADMIN_NAME},DATABASE_POOL_MAX=${_DATABASE_POOL_MAX},NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL},NEXT_PUBLIC_APP_URL=${_ADMIN_APP_URL},NEXT_PUBLIC_TURNSTILE_SITE_KEY=${_NEXT_PUBLIC_TURNSTILE_SITE_KEY},NEXT_PUBLIC_GA_MEASUREMENT_ID=${_NEXT_PUBLIC_GA_MEASUREMENT_ID},BETTER_AUTH_URL=${_ADMIN_APP_URL}
+      - --update-env-vars=NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1,APP_SURFACE=admin,ADMIN_APP_URL=${_ADMIN_APP_URL},IAP_JWT_AUDIENCE=${_IAP_JWT_AUDIENCE},ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL=${_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL},ADMIN_ROLE_GROUP_ADMIN_EMAIL=${_ADMIN_ROLE_GROUP_ADMIN_EMAIL},ADMIN_ROLE_GROUP_EDITOR_EMAIL=${_ADMIN_ROLE_GROUP_EDITOR_EMAIL},ADMIN_ROLE_GROUP_VIEWER_EMAIL=${_ADMIN_ROLE_GROUP_VIEWER_EMAIL},DATABASE_POOL_MAX=${_DATABASE_POOL_MAX},NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL},NEXT_PUBLIC_APP_URL=${_ADMIN_APP_URL},NEXT_PUBLIC_TURNSTILE_SITE_KEY=${_NEXT_PUBLIC_TURNSTILE_SITE_KEY},NEXT_PUBLIC_GA_MEASUREMENT_ID=${_NEXT_PUBLIC_GA_MEASUREMENT_ID},BETTER_AUTH_URL=${_ADMIN_APP_URL}
       - --remove-secrets=ADMIN_LOGIN_TOKEN
       - --update-secrets=DATABASE_URL=DATABASE_URL:${_DATABASE_URL_SECRET_VERSION},BETTER_AUTH_SECRET=BETTER_AUTH_SECRET:${_BETTER_AUTH_SECRET_VERSION},ENCRYPTION_KEY=ENCRYPTION_KEY:${_ENCRYPTION_KEY_SECRET_VERSION},CRON_SECRET=CRON_SECRET:${_CRON_SECRET_VERSION},NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION},R2_ACCOUNT_ID=R2_ACCOUNT_ID:${_R2_ACCOUNT_ID_SECRET_VERSION},R2_ACCESS_KEY_ID=R2_ACCESS_KEY_ID:${_R2_ACCESS_KEY_ID_SECRET_VERSION},R2_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY:${_R2_SECRET_ACCESS_KEY_SECRET_VERSION},R2_BUCKET_NAME=R2_BUCKET_NAME:${_R2_BUCKET_NAME_SECRET_VERSION},R2_PUBLIC_URL=R2_PUBLIC_URL:${_R2_PUBLIC_URL_SECRET_VERSION},CLOUDFLARE_ZONE_ID=CLOUDFLARE_ZONE_ID:${_CLOUDFLARE_ZONE_ID_SECRET_VERSION},CLOUDFLARE_API_TOKEN=CLOUDFLARE_API_TOKEN:${_CLOUDFLARE_API_TOKEN_SECRET_VERSION},GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:${_GOOGLE_CLIENT_ID_SECRET_VERSION},GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:${_GOOGLE_CLIENT_SECRET_SECRET_VERSION}
 

@@ -66,8 +66,8 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
       "API キーの管理",
     ],
     restrictions: [
-      "SUPER_ADMIN の新規作成は初期化時のみ",
-      "IAP 許可グループの変更は Google Cloud 側で実施",
+      "ロール変更は Google Admin のグループ所属で実施",
+      "通常スタッフの日常運用には付与しない",
     ],
   },
   {
@@ -84,10 +84,10 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
       "サイト設定（ナビゲーション・告知バー等）",
     ],
     restrictions: [
-      "SUPER_ADMIN / ADMIN の追加・削除・編集",
+      "SUPER_ADMIN / ADMIN ロールグループの管理",
       "監査ログの閲覧",
       "API キーや外部連携などの特権設定",
-      "IAP 許可グループの変更",
+      "Google Admin / GCP 側の権限変更",
     ],
   },
   {
@@ -260,19 +260,19 @@ function AccessModel() {
     {
       title: "IAP 許可",
       description:
-        "Google Cloud 側の IAP 許可グループに Google アカウントを追加します。",
+        "Cloud Run direct IAP が Google アカウントを認証し、許可グループだけを通します。",
       icon: IconShield,
     },
     {
-      title: "スタッフ登録",
+      title: "Google Group ロール",
       description:
-        "同じメールアドレスをスタッフ管理に登録します。アプリ用パスワードはありません。",
+        "Google Admin のロール別グループ所属をアプリ内ロールの正として扱います。",
       icon: IconSettings,
     },
     {
-      title: "アプリ内ロール",
+      title: "自動同期",
       description:
-        "SUPER_ADMIN / ADMIN / EDITOR / VIEWER のロールで管理機能を制御します。",
+        "初回アクセス時にスタッフレコードを作成し、以後のログインでロールを同期します。",
       icon: IconCheck,
     },
   ] as const;
@@ -282,7 +282,8 @@ function AccessModel() {
       <CardHeader>
         <CardTitle className="text-base">管理画面アクセスの3段階</CardTitle>
         <CardDescription>
-          Googleログインだけでは管理画面に入れません。IAP許可、スタッフ登録、ロール権限の3つをすべて確認します。
+          Googleログインだけでは管理画面に入れません。IAP許可、ロール別Google
+          Group、アプリ同期の3つを確認します。
         </CardDescription>
       </CardHeader>
       <CardContent>

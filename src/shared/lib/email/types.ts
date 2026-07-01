@@ -36,22 +36,6 @@ export type ContactEmailData = {
   message: string;
 };
 
-export type StaffAccessGuideEmailData = {
-  to: string;
-  staffName: string;
-  staffEmail: string;
-  roleLabel: string;
-  adminUrl: string;
-  /**
-   * Optional per-send key material for explicit resend operations.
-   *
-   * Resend idempotency keys intentionally dedupe the same key for 24 hours, so
-   * staff creation uses the stable default while manual resend supplies a
-   * unique delivery key.
-   */
-  deliveryKey?: string;
-};
-
 export type InquiryReplyEmailData = {
   inquiryId: string;
   customerName: string;
