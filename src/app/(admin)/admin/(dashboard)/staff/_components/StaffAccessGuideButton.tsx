@@ -13,7 +13,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/admin/components/ui/alert-dialog";
 import { Button } from "@/admin/components/ui/button";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -24,12 +23,18 @@ type Props = {
   staffEmail: string;
 };
 
-export function StaffAccessGuideButton({
+type StaffAccessGuideDialogProps = Props & {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function StaffAccessGuideDialog({
   userId,
   staffName,
   staffEmail,
-}: Props) {
-  const [open, setOpen] = useState(false);
+  open,
+  onOpenChange,
+}: StaffAccessGuideDialogProps) {
   const [isPending, setIsPending] = useState(false);
 
   async function handleSend() {
@@ -42,7 +47,7 @@ export function StaffAccessGuideButton({
       }
 
       toast.success(result.message);
-      setOpen(false);
+      onOpenChange(false);
     } finally {
       setIsPending(false);
     }
@@ -52,15 +57,9 @@ export function StaffAccessGuideButton({
     <AlertDialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!isPending) setOpen(nextOpen);
+        if (!isPending) onOpenChange(nextOpen);
       }}
     >
-      <AlertDialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <IconMail className="h-4 w-4" />
-          案内メール
-        </Button>
-      </AlertDialogTrigger>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>案内メールを送信しますか？</AlertDialogTitle>
@@ -91,5 +90,19 @@ export function StaffAccessGuideButton({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+export function StaffAccessGuideButton(props: Props) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+        <IconMail className="h-4 w-4" />
+        案内メール
+      </Button>
+      <StaffAccessGuideDialog {...props} open={open} onOpenChange={setOpen} />
+    </>
   );
 }
