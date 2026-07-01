@@ -115,6 +115,8 @@ function buildCsp(
   //   *.analytics.google.com に加え、gtag.js / GTM が設定取得・収集に使う *.googletagmanager.com
   //   も connect-src / img-src に必要（Google 公式 Tag Platform CSP ガイド準拠）。
   //   Microsoft Clarity は *.clarity.ms / c.bing.com へデータをアップロードする。
+  // - manifest-src: PWA manifest は公開 root metadata から same-origin route のみを
+  //   明示リンクする。admin では link 自体を出さないが、CSP も same-origin に fail-closed。
   return `
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
@@ -122,6 +124,7 @@ function buildCsp(
     img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
     connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
+    manifest-src 'self';
     frame-src ${FRAME_SRC_DIRECTIVE_VALUES.join(" ")};
     object-src 'none';
     base-uri 'self';

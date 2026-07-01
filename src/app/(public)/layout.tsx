@@ -73,8 +73,8 @@ export async function generateMetadata(): Promise<Metadata> {
   // favicon は静的 URL `/icon` で `<link rel="icon">` を注入し、実体は dynamic icon
   // Route Handler (`src/app/icon/route.tsx`) が DB driven で配信する。generateMetadata
   // 自体は静的 literal のみ返し DB query しないため、PR #699 が懸念した build-time
-  // prerender 汚染は構造的に発生しない。/icon-192, /icon-512, /apple-icon は別
-  // file-convention で配信（PWA manifest 経由）。
+  // prerender 汚染は構造的に発生しない。PWA manifest は公開 root metadata からだけ
+  // 明示リンクし、IAP-protected admin root では取得自体を発生させない。
   return {
     metadataBase: new URL(getBaseUrl()),
     title: {
@@ -82,6 +82,7 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${SITE_DEFAULTS.name}`,
     },
     description: SITE_DEFAULTS.description,
+    manifest: "/manifest.webmanifest",
     icons: {
       icon: "/icon",
       apple: "/apple-icon",
