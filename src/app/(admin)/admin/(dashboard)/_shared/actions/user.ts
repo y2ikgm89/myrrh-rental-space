@@ -1,10 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { getUser as getUserQuery } from "@/shared/domain/users/queries";
 import { getAdminUrl } from "@/shared/lib/admin-urls";
-import { ROLE_LABELS } from "@/shared/lib/admin-roles";
+import { canInviteRole, ROLE_LABELS } from "@/shared/lib/admin-roles";
 import {
   createUserSchema,
   updateUserSchema,
@@ -14,6 +16,7 @@ import {
   deleteUser as deleteUserCommand,
   updateUser as updateUserCommand,
 } from "@/shared/domain/users/commands";
+import { DomainError } from "@/shared/domain/domain-error";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { sendStaffAccessGuideEmail } from "@/shared/lib/email/system-emails";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -23,6 +26,10 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("ユーザー");
+
+type ResendStaffAccessGuideResult = {
+  message: string;
+};
 
 export async function createUser(
   _prev: SubmissionResult | undefined,
@@ -129,6 +136,59 @@ export async function deleteUser(id: string): Promise<MutationResult> {
     },
     afterSuccess: () => {
       updateTag(CACHE_TAGS.STAFF);
+    },
+  });
+}
+
+export async function resendStaffAccessGuide(
+  id: string,
+): Promise<MutationResult<ResendStaffAccessGuideResult>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "user",
+    action: "create",
+    resourceId: validated.data,
+    execute: async (actor) => {
+      const staff = await getUserQuery(validated.data);
+      if (!staff) {
+        throw new DomainError("スタッフが見つかりません", "NOT_FOUND");
+      }
+
+      if (!canInviteRole(actor.role, staff.role)) {
+        throw new DomainError(
+          "このスタッフに案内メールを送信する権限がありません",
+          "FORBIDDEN",
+        );
+      }
+
+      const emailResult = await sendStaffAccessGuideEmail({
+        to: staff.email,
+        staffName: staff.name,
+        staffEmail: staff.email,
+        roleLabel: ROLE_LABELS[staff.role],
+        adminUrl: getAdminUrl("/"),
+        deliveryKey: `resend/${staff.id}/${randomUUID()}`,
+      });
+
+      if (!emailResult.ok && emailResult.reason === "disabled") {
+        throw new DomainError(
+          "メール送信は無効です。管理URLを直接共有してください。",
+          "UNEXPECTED",
+        );
+      }
+
+      if (!emailResult.ok) {
+        throw new DomainError(
+          `案内メールの送信に失敗しました: ${emailResult.error}`,
+          "UNEXPECTED",
+        );
+      }
+
+      return { message: "管理画面の案内メールを送信しました。" };
     },
   });
 }

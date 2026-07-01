@@ -21,6 +21,7 @@ import { RoleBadge } from "@/admin/components/status-badges";
 import { formatDate } from "@/shared/lib/date-format";
 import { canModifyUser } from "@/shared/lib/admin-roles";
 import { hasPermission } from "@/shared/lib/admin-permissions";
+import { StaffAccessGuideButton } from "../_components/StaffAccessGuideButton";
 import type { Metadata } from "next";
 
 type Props = {
@@ -56,6 +57,8 @@ export default async function StaffDetailPage({ params }: Props) {
     currentUser.id !== user.id &&
     hasPermission(currentUser.role, "user", "delete") &&
     canModifyTarget;
+  const canSendAccessGuide =
+    hasPermission(currentUser.role, "user", "create") && canModifyTarget;
 
   return (
     <AdminDetailLayout
@@ -69,6 +72,13 @@ export default async function StaffDetailPage({ params }: Props) {
               itemName={user.name ?? user.email}
               onDelete={deleteUser.bind(null, user.id)}
               redirectTo="/admin/staff"
+            />
+          ) : null}
+          {canSendAccessGuide ? (
+            <StaffAccessGuideButton
+              userId={user.id}
+              staffName={user.name ?? user.email}
+              staffEmail={user.email}
             />
           ) : null}
           {canEdit ? (
