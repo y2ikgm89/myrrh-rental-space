@@ -141,7 +141,7 @@ export async function getFooterSettings(): Promise<FooterSettings> {
  *
  * 呼び出し元は必ず Route Handler の `await connection()` の後に呼ぶ
  * (rule .claude/rules/db-and-domain.md §6)。generateMetadata / layout 本体・
- * manifest.ts からは呼ばない（build-time prerender 汚染の構造的回避）。
+ * Web App Manifest route からは呼ばない（build-time prerender 汚染の構造的回避）。
  */
 export async function getFaviconUrl(): Promise<string> {
   "use cache";

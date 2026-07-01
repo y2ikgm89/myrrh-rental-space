@@ -2,7 +2,7 @@
  * PWA Icon 192x192 — Dynamic Route Handler
  *
  * ImageResponse で動的にPWAアイコンを生成。
- * manifest.ts の icons から参照される。
+ * 公開 Web App Manifest の icons から参照される。
  */
 
 import { ImageResponse } from "next/og";
