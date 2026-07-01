@@ -5,7 +5,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
-import { findOrSyncAdminAuthUserByEmail } from "@/shared/domain/admin-auth/queries";
+import {
+  findAdminAuthUserByEmail,
+  findOrSyncAdminAuthUserByEmail,
+} from "@/shared/domain/admin-auth/queries";
 import { resolveIapIdentity } from "@/shared/lib/iap/admin-iap-auth";
 import { isAdminOrHigherRole, isDashboardRole } from "./admin-roles";
 import { serverEnv } from "./env/server";
@@ -22,6 +25,11 @@ export type AdminUser = {
 
 export type AdminSession = {
   user: AdminUser;
+};
+
+type AdminIdentity = {
+  email: string;
+  source: "iap" | "test";
 };
 
 /**
@@ -42,22 +50,24 @@ function getTestIapEmail(): string | null {
   return serverEnv.ADMIN_TEST_IAP_EMAIL ?? null;
 }
 
-async function resolveAdminEmail(
+async function resolveAdminIdentity(
   requestHeaders?: Headers,
-): Promise<string | null> {
+): Promise<AdminIdentity | null> {
   const requestHeaderList = await resolveRequestHeaders(requestHeaders);
 
   try {
     const identity = await resolveIapIdentity(requestHeaderList);
-    if (identity) return identity.email;
+    if (identity) return { email: identity.email, source: "iap" };
   } catch {
     return null;
   }
 
-  return getTestIapEmail();
+  const testEmail = getTestIapEmail();
+  return testEmail ? { email: testEmail, source: "test" } : null;
 }
 
 const loadAdminUserByEmail = cache(findOrSyncAdminAuthUserByEmail);
+const loadTestAdminUserByEmail = cache(findAdminAuthUserByEmail);
 
 function coerceAdminUser(user: unknown): AdminUser | null {
   if (!isRecord(user)) return null;
@@ -88,9 +98,12 @@ export function getAdminSessionUser(session: unknown): AdminUser | null {
 export async function getCurrentAdminUser(
   requestHeaders?: Headers,
 ): Promise<AdminUser | null> {
-  const email = await resolveAdminEmail(requestHeaders);
-  if (!email) return null;
-  return loadAdminUserByEmail(email);
+  const identity = await resolveAdminIdentity(requestHeaders);
+  if (!identity) return null;
+  if (identity.source === "test") {
+    return loadTestAdminUserByEmail(identity.email);
+  }
+  return loadAdminUserByEmail(identity.email);
 }
 
 export const verifyAdminSession = cache(
