@@ -133,9 +133,17 @@ export default defineConfig({
       ...process.env,
       ADMIN_TEST_IAP_EMAIL:
         process.env["ADMIN_TEST_IAP_EMAIL"] ?? "admin@example.com",
-      INITIAL_ADMIN_EMAIL:
-        process.env["INITIAL_ADMIN_EMAIL"] ?? "admin@example.com",
-      INITIAL_ADMIN_NAME: process.env["INITIAL_ADMIN_NAME"] ?? "Test Admin",
+      ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL"] ??
+        "ci-super-admins@example.com",
+      ADMIN_ROLE_GROUP_ADMIN_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_ADMIN_EMAIL"] ?? "ci-admins@example.com",
+      ADMIN_ROLE_GROUP_EDITOR_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_EDITOR_EMAIL"] ??
+        "ci-editors@example.com",
+      ADMIN_ROLE_GROUP_VIEWER_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_VIEWER_EMAIL"] ??
+        "ci-viewers@example.com",
       IAP_JWT_AUDIENCE:
         process.env["IAP_JWT_AUDIENCE"] ??
         "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin",

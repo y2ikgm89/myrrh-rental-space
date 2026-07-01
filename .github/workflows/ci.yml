@@ -55,6 +55,12 @@ env:
   NEXT_PUBLIC_APP_URL: http://localhost:3000
   TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+  # Production-mode Playwright webServer also runs server env validation.
+  # These are non-secret dummy Google group addresses for CI only.
+  ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL: ci-super-admins@example.com
+  ADMIN_ROLE_GROUP_ADMIN_EMAIL: ci-admins@example.com
+  ADMIN_ROLE_GROUP_EDITOR_EMAIL: ci-editors@example.com
+  ADMIN_ROLE_GROUP_VIEWER_EMAIL: ci-viewers@example.com
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -379,8 +385,6 @@ jobs:
           APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
           IAP_JWT_AUDIENCE: "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin"
-          INITIAL_ADMIN_EMAIL: "admin@example.com"
-          INITIAL_ADMIN_NAME: "Test Admin"
           ADMIN_TEST_IAP_EMAIL: "admin@example.com"
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
@@ -474,8 +478,6 @@ jobs:
           APP_SURFACE: admin
           ADMIN_APP_URL: http://localhost:3000
           IAP_JWT_AUDIENCE: "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin"
-          INITIAL_ADMIN_EMAIL: "admin@example.com"
-          INITIAL_ADMIN_NAME: "Test Admin"
           ADMIN_TEST_IAP_EMAIL: "admin@example.com"
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（lhci-start.ts と同方針）。
