@@ -298,16 +298,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "user.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
     "editor-comment.ts",
   ),
   join(
@@ -2113,7 +2103,6 @@ describe("conform FieldMetadata generic invariance gate（方針: .claude/rules/
       "INQUIRIES",
       "MEDIA",
       "RESERVATIONS",
-      "STAFF",
     ].sort();
 
     const files = collectSourceFiles(SRC_ROOT);
