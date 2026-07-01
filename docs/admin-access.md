@@ -122,6 +122,14 @@ Expected result:
 - public `/admin` returns 404;
 - admin `/admin` returns a redirect to Google/IAP when unauthenticated.
 
+If the admin page shows "Google IAP authenticated" but "no admin role", IAP
+has already allowed the Google account. Check Cloud Identity next:
+
+- the account must be in exactly one of the four admin role groups;
+- remove the account from every other admin role group before retrying;
+- if the browser has multiple Google accounts signed in, retry with
+  `?gcp-iap-mode=CLEAR_LOGIN_COOKIE` and choose the managed account.
+
 Run the GCP posture audit:
 
 ```powershell
