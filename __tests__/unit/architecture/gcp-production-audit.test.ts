@@ -10,6 +10,7 @@ import {
   getExpectedWifProviderCondition,
   getProductionHttpAuditTargets,
   getRequiredWifProviderConditionFragments,
+  readAmbiguousAdminRolePrincipalErrors,
   readBroadProjectIamDeployGrantErrors,
   readBuildServiceAccountProjectIamRoleErrors,
   readIamPolicyMembersForRole,
@@ -174,6 +175,37 @@ describe("GCP production audit model", () => {
       "roles/logging.logWriter missing for serviceAccount:myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com",
       "roles/iap.admin must not be project-level for serviceAccount:myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com",
       "roles/run.admin must not be project-level for serviceAccount:myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com",
+    ]);
+  });
+
+  test("reports non-service-account principals assigned to multiple admin role Google Groups", () => {
+    expect(
+      readAmbiguousAdminRolePrincipalErrors([
+        {
+          groupEmail: "myrrh-super-admins@myrrh-jp.com",
+          memberEmail: "admin@myrrh-jp.com",
+          memberType: "USER",
+        },
+        {
+          groupEmail: "myrrh-admins@myrrh-jp.com",
+          memberEmail: "ADMIN@myrrh-jp.com",
+          memberType: "USER",
+        },
+        {
+          groupEmail: "myrrh-editors@myrrh-jp.com",
+          memberEmail:
+            "myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com",
+          memberType: "SERVICE_ACCOUNT",
+        },
+        {
+          groupEmail: "myrrh-viewers@myrrh-jp.com",
+          memberEmail:
+            "myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com",
+          memberType: "SERVICE_ACCOUNT",
+        },
+      ]),
+    ).toEqual([
+      "admin@myrrh-jp.com:myrrh-admins@myrrh-jp.com,myrrh-super-admins@myrrh-jp.com",
     ]);
   });
 
@@ -368,9 +400,14 @@ describe("GCP production audit model", () => {
       "runtime service account owns role Google Group",
     );
     expect(auditScript).toContain("--view=full");
-    expect(auditScript).toContain("--format=json(preferredMemberKey.id,roles)");
+    expect(auditScript).toContain(
+      "--format=json(preferredMemberKey.id,type,roles)",
+    );
     expect(auditScript).not.toContain(
       "--format=json(preferredMemberKey.id,roles.name)",
+    );
+    expect(auditScript).toContain(
+      "non-service-account principals are assigned to at most one admin role Google Group",
     );
   });
 

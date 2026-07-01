@@ -258,6 +258,24 @@ gcloud identity groups memberships add \
   --roles=MEMBER
 ```
 
+If the group creation command was run as `$PRIMARY_ADMIN_EMAIL`, Cloud Identity
+can leave that account as the initial owner/member on every role group. Remove
+the primary admin from non-super-admin role groups so the app can resolve
+exactly one role:
+
+```bash
+for group_email in "$ADMIN_ROLE_GROUP_ADMIN_EMAIL" "$ADMIN_ROLE_GROUP_EDITOR_EMAIL" "$ADMIN_ROLE_GROUP_VIEWER_EMAIL"; do
+  gcloud identity groups memberships delete \
+    --group-email="$group_email" \
+    --member-email="$PRIMARY_ADMIN_EMAIL" \
+    --quiet || true
+done
+```
+
+If a different setup operator created the groups, make sure that operator is
+also removed from any admin role groups they should not use. No human Google
+account may remain in more than one admin role group.
+
 Create a clean Organization-backed project rather than keeping an orgless
 project as production. If the bootstrap project already contains disposable
 resources, recreate them in the Organization-backed project and cut over DNS and

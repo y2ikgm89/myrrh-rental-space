@@ -135,6 +135,10 @@ describe("GCP production setup runbook", () => {
       "gcloud identity groups memberships modify-membership-roles",
     );
     expect(runbook).toContain("--add-roles=OWNER");
+    expect(runbook).toContain(
+      'for group_email in "$ADMIN_ROLE_GROUP_ADMIN_EMAIL" "$ADMIN_ROLE_GROUP_EDITOR_EMAIL" "$ADMIN_ROLE_GROUP_VIEWER_EMAIL"',
+    );
+    expect(runbook).toContain('--member-email="$PRIMARY_ADMIN_EMAIL"');
     expect(runbook).not.toContain(
       '--with-initial-owner="$PRIMARY_ADMIN_EMAIL"',
     );

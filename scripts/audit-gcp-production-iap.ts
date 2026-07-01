@@ -6,6 +6,7 @@ import {
   getCloudBuildConnectionAuditLocations,
   getCloudBuildTriggerAuditLocations,
   getProductionHttpAuditTargets,
+  readAmbiguousAdminRolePrincipalErrors,
   readBroadProjectIamDeployGrantErrors,
   readBuildServiceAccountProjectIamRoleErrors,
   readProductionDomainConfigErrors,
@@ -13,6 +14,7 @@ import {
   readWifProviderConditionErrors,
   readCloudBuildTriggerIdentifiers,
   type ProductionHttpAuditTarget,
+  type AdminRoleGroupMembership,
 } from "./gcp-production-audit-model";
 
 type Check = {
@@ -398,6 +400,8 @@ async function main(): Promise<void> {
     `groups=${expectedRoleGroupEmails.join(",")}`,
   );
 
+  const roleGroupMemberships: AdminRoleGroupMembership[] = [];
+
   for (const expectedGroupEmail of expectedRoleGroupEmails) {
     const groupDescription = tryRunGcloudJson([
       "identity",
@@ -431,11 +435,21 @@ async function main(): Promise<void> {
       "--group-email",
       expectedGroupEmail,
       "--view=full",
-      "--format=json(preferredMemberKey.id,roles)",
+      "--format=json(preferredMemberKey.id,type,roles)",
     ]);
     const membershipRows = groupMemberships.ok
       ? readRecords(groupMemberships.value)
       : [];
+    for (const record of membershipRows) {
+      const memberEmail = getPath(record, ["preferredMemberKey", "id"]);
+      const memberType = record["type"];
+      if (typeof memberEmail !== "string") continue;
+      roleGroupMemberships.push({
+        groupEmail: expectedGroupEmail,
+        memberEmail,
+        ...(typeof memberType === "string" && { memberType }),
+      });
+    }
     const runtimeMembership = membershipRows.find((record) => {
       return (
         getPath(record, ["preferredMemberKey", "id"]) === runtimeServiceAccount
@@ -453,6 +467,14 @@ async function main(): Promise<void> {
       ),
     );
   }
+
+  const ambiguousAdminRolePrincipals =
+    readAmbiguousAdminRolePrincipalErrors(roleGroupMemberships);
+  addCheck(
+    "non-service-account principals are assigned to at most one admin role Google Group",
+    ambiguousAdminRolePrincipals.length === 0,
+    `ambiguous=${ambiguousAdminRolePrincipals.join(";") || "none"}`,
+  );
 
   const adminServiceDescription = runGcloudJson([
     "run",
