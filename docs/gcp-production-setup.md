@@ -552,6 +552,10 @@ to touch dependencies.
 
 ## IAP admin access
 
+Daily staff onboarding, offboarding, and access checks are documented in
+`docs/admin-access.md`. Keep this section focused on infrastructure setup and
+use the operations runbook when changing people.
+
 Enable Cloud Run direct IAP on the admin service only:
 
 ```bash
