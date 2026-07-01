@@ -179,6 +179,7 @@ describe("admin auth IAP boundary", () => {
     mockServerEnv["NODE_ENV"] = "production";
     mockServerEnv["CI"] = "true";
     mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    enableRoleGroupSyncEnv();
     mockResolveIapIdentity.mockResolvedValue(null);
     mockFindUnique.mockResolvedValue({
       id: "user-1",
@@ -203,6 +204,7 @@ describe("admin auth IAP boundary", () => {
         emailVerified: true,
       },
     });
+    expect(mockIsGoogleWorkspaceGroupMember).not.toHaveBeenCalled();
   });
 
   test("通常 production では ADMIN_TEST_IAP_EMAIL を無視する", async () => {
