@@ -431,7 +431,7 @@ async function main(): Promise<void> {
       "--group-email",
       expectedGroupEmail,
       "--view=full",
-      "--format=json(preferredMemberKey.id,roles.name)",
+      "--format=json(preferredMemberKey.id,roles)",
     ]);
     const membershipRows = groupMemberships.ok
       ? readRecords(groupMemberships.value)

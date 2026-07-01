@@ -245,7 +245,7 @@ for group_email in "${!ADMIN_ROLE_GROUP_NAMES[@]}"; do
     --group-type="security" \
     --display-name="${ADMIN_ROLE_GROUP_NAMES[$group_email]}" \
     --description="Myrrh Rental Space admin role group" \
-    --with-initial-owner="$PRIMARY_ADMIN_EMAIL" || true
+    --with-initial-owner=with-initial-owner || true
 done
 ```
 
@@ -401,8 +401,11 @@ for group_email in \
 do
   gcloud identity groups memberships add \
     --group-email="$group_email" \
+    --member-email="$RUNTIME_SA" || true
+  gcloud identity groups memberships modify-membership-roles \
+    --group-email="$group_email" \
     --member-email="$RUNTIME_SA" \
-    --roles=OWNER || true
+    --add-roles=OWNER || true
 done
 ```
 

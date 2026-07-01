@@ -368,6 +368,10 @@ describe("GCP production audit model", () => {
       "runtime service account owns role Google Group",
     );
     expect(auditScript).toContain("--view=full");
+    expect(auditScript).toContain("--format=json(preferredMemberKey.id,roles)");
+    expect(auditScript).not.toContain(
+      "--format=json(preferredMemberKey.id,roles.name)",
+    );
   });
 
   test("production audit script audits Cloud Build locations concurrently", () => {

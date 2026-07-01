@@ -129,6 +129,18 @@ describe("GCP production setup runbook", () => {
     );
   });
 
+  test("documents current Cloud Identity group owner commands", () => {
+    expect(runbook).toContain("--with-initial-owner=with-initial-owner");
+    expect(runbook).toContain(
+      "gcloud identity groups memberships modify-membership-roles",
+    );
+    expect(runbook).toContain("--add-roles=OWNER");
+    expect(runbook).not.toContain(
+      '--with-initial-owner="$PRIMARY_ADMIN_EMAIL"',
+    );
+    expect(runbook).not.toContain("--roles=OWNER || true");
+  });
+
   test("native Cloud Build cleanup covers every official Cloud Build region", () => {
     expect(runbook).toContain("CLOUD_BUILD_REGIONS=(");
     expect(runbook).toContain("asia-northeast1");
