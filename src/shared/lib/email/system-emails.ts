@@ -103,6 +103,8 @@ export async function sendStaffAccessGuideEmail(
   data: StaffAccessGuideEmailData,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
+  const idempotencyKeyMaterial =
+    data.deliveryKey ?? `${data.staffEmail}:${data.adminUrl}`;
 
   return sendEmail({
     payload: {
@@ -116,7 +118,7 @@ export async function sendStaffAccessGuideEmail(
         footer,
       }),
     },
-    idempotencyKey: `staff-access-guide/${hashForKey(`${data.staffEmail}:${data.adminUrl}`)}`,
+    idempotencyKey: `staff-access-guide/${hashForKey(idempotencyKeyMaterial)}`,
     operation: "sendStaffAccessGuideEmail",
     context: {
       to: data.to,
