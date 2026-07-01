@@ -13,6 +13,7 @@ import { deleteUser } from "@/admin/actions/user";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { canModifyUser } from "@/shared/lib/admin-roles";
 import { hasPermission } from "@/shared/lib/admin-permissions";
+import { StaffAccessGuideDialog } from "./StaffAccessGuideButton";
 import type { UserData } from "@/shared/domain/users/types";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
@@ -28,6 +29,7 @@ export function UserActions({ user, currentUser }: Props) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [accessGuideDialogOpen, setAccessGuideDialogOpen] = useState(false);
 
   async function handleDelete() {
     setIsDeleting(true);
@@ -51,6 +53,8 @@ export function UserActions({ user, currentUser }: Props) {
     currentUser.id !== user.id &&
     hasPermission(currentUser.role, "user", "delete") &&
     canModifyTarget;
+  const canSendAccessGuide =
+    hasPermission(currentUser.role, "user", "create") && canModifyTarget;
 
   return (
     <>
@@ -61,6 +65,11 @@ export function UserActions({ user, currentUser }: Props) {
         {canEdit ? (
           <ActionDropdownItem href={`/admin/staff/${user.id}/edit`}>
             編集
+          </ActionDropdownItem>
+        ) : null}
+        {canSendAccessGuide ? (
+          <ActionDropdownItem onClick={() => setAccessGuideDialogOpen(true)}>
+            案内メール
           </ActionDropdownItem>
         ) : null}
         {canDelete ? (
@@ -76,6 +85,13 @@ export function UserActions({ user, currentUser }: Props) {
         ) : null}
       </ActionDropdown>
 
+      <StaffAccessGuideDialog
+        userId={user.id}
+        staffName={user.name ?? user.email}
+        staffEmail={user.email}
+        open={accessGuideDialogOpen}
+        onOpenChange={setAccessGuideDialogOpen}
+      />
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
