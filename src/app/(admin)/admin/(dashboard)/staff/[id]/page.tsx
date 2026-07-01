@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
-import { IconPencil } from "@tabler/icons-react";
+import { connection } from "next/server";
 import Link from "next/link";
-import { deleteUser } from "@/admin/actions/user";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { getUser } from "@/admin/queries/user";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import {
   Card,
   CardContent,
@@ -19,9 +17,6 @@ import { Button } from "@/admin/components/ui/button";
 import { Badge } from "@/admin/components/ui/badge";
 import { RoleBadge } from "@/admin/components/status-badges";
 import { formatDate } from "@/shared/lib/date-format";
-import { canModifyUser } from "@/shared/lib/admin-roles";
-import { hasPermission } from "@/shared/lib/admin-permissions";
-import { StaffAccessGuideButton } from "../_components/StaffAccessGuideButton";
 import type { Metadata } from "next";
 
 type Props = {
@@ -29,6 +24,8 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const user = await getUser(id);
   if (!user) {
@@ -40,8 +37,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function StaffDetailPage({ params }: Props) {
+  await connection();
+
   const { id } = await params;
-  const [currentUser, user] = await Promise.all([
+  const [, user] = await Promise.all([
     requireAdminPermission("user", "read"),
     getUser(id),
   ]);
@@ -50,47 +49,11 @@ export default async function StaffDetailPage({ params }: Props) {
     notFound();
   }
 
-  const canModifyTarget = canModifyUser(currentUser.role, user.role);
-  const canEdit =
-    hasPermission(currentUser.role, "user", "update") && canModifyTarget;
-  const canDelete =
-    currentUser.id !== user.id &&
-    hasPermission(currentUser.role, "user", "delete") &&
-    canModifyTarget;
-  const canSendAccessGuide =
-    hasPermission(currentUser.role, "user", "create") && canModifyTarget;
-
   return (
     <AdminDetailLayout
       backHref="/admin/staff"
       title={user.name ?? "(未設定)"}
       subtitle={user.email}
-      actions={
-        <>
-          {canDelete ? (
-            <DetailDeleteButton
-              itemName={user.name ?? user.email}
-              onDelete={deleteUser.bind(null, user.id)}
-              redirectTo="/admin/staff"
-            />
-          ) : null}
-          {canSendAccessGuide ? (
-            <StaffAccessGuideButton
-              userId={user.id}
-              staffName={user.name ?? user.email}
-              staffEmail={user.email}
-            />
-          ) : null}
-          {canEdit ? (
-            <Button size="sm" asChild>
-              <Link href={`/admin/staff/${user.id}/edit`}>
-                <IconPencil className="mr-2 h-4 w-4" />
-                編集
-              </Link>
-            </Button>
-          ) : null}
-        </>
-      }
     >
       <div className="grid gap-6 md:grid-cols-2">
         <DetailSection title="基本情報">
@@ -106,8 +69,8 @@ export default async function StaffDetailPage({ params }: Props) {
               value={<Badge variant="default">Google IAP</Badge>}
             />
             <DetailField
-              label="IAP許可"
-              value="同じGoogleアカウントをIAP許可グループに追加してください"
+              label="ロール管理"
+              value="Google Admin のロール別グループ所属から自動同期されます"
             />
           </div>
         </DetailSection>

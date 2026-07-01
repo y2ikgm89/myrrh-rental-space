@@ -58,8 +58,6 @@ import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-statu
 import { reservationStatusChangedFixture } from "@/shared/emails/reservation-status-changed.fixture";
 import { ReviewReplyEmail } from "@/shared/emails/review-reply";
 import { reviewReplyFixture } from "@/shared/emails/review-reply.fixture";
-import { StaffAccessGuideEmail } from "@/shared/emails/staff-access-guide";
-import { staffAccessGuideFixture } from "@/shared/emails/staff-access-guide.fixture";
 import { TestEmail } from "@/shared/emails/test-email";
 import { testEmailFixture } from "@/shared/emails/test-email.fixture";
 import { WelcomeEmail } from "@/shared/emails/welcome";
@@ -205,7 +203,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 19 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * 18 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {
@@ -284,11 +282,6 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "password-reset",
     PasswordResetEmail,
     passwordResetFixture,
-  ),
-  "staff-access-guide": defineEntry(
-    "staff-access-guide",
-    StaffAccessGuideEmail,
-    staffAccessGuideFixture,
   ),
   "review-reply": defineEntry(
     "review-reply",

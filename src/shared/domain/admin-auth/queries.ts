@@ -2,6 +2,16 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { isDashboardRole } from "@/shared/lib/admin-roles";
+import {
+  isAdminRoleGroupSyncConfigured,
+  syncAdminAuthUserFromGoogleGroups,
+} from "./google-role-sync";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+  normalizeError,
+} from "@/shared/lib/errors/server";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 export type AdminAuthUser = {
@@ -30,4 +40,25 @@ export async function findAdminAuthUserByEmail(
 
   if (!user || !isDashboardRole(user.role)) return null;
   return user;
+}
+
+export async function findOrSyncAdminAuthUserByEmail(
+  email: string,
+): Promise<AdminAuthUser | null> {
+  try {
+    if (isAdminRoleGroupSyncConfigured()) {
+      return syncAdminAuthUserFromGoogleGroups(email);
+    }
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "findOrSyncAdminAuthUserByEmail.checkRoleGroupSync",
+      },
+    });
+    return null;
+  }
+
+  return findAdminAuthUserByEmail(email);
 }

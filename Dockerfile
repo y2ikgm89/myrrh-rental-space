@@ -51,7 +51,7 @@ ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 # 空でかつ末尾スラッシュ無しの絶対 URL であることを Docker layer で early assert する。
 # Turnstile / GA は legitimately optional のため未検査。
 RUN if [ -z "$NEXT_PUBLIC_BASE_URL" ] || [ -z "$NEXT_PUBLIC_APP_URL" ]; then \
-      echo "ERROR: NEXT_PUBLIC_BASE_URL / NEXT_PUBLIC_APP_URL は build 時に必須（cloudbuild trigger で substitution 設定）" >&2; \
+      echo "ERROR: NEXT_PUBLIC_BASE_URL / NEXT_PUBLIC_APP_URL は build 時に必須（deploy workflow の substitution 設定）" >&2; \
       exit 1; \
     fi; \
     case "$NEXT_PUBLIC_BASE_URL" in */) echo "ERROR: NEXT_PUBLIC_BASE_URL に末尾スラッシュ" >&2; exit 1 ;; esac; \

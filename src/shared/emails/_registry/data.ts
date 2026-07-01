@@ -12,7 +12,7 @@
  * Zod schema は `z.enum(TEMPLATE_KEYS, …)` で SSoT 直参照。
  */
 
-/** 全 19 エントリの key 列挙。`as const` で literal tuple として固定。 */
+/** 全 18 エントリの key 列挙。`as const` で literal tuple として固定。 */
 export const TEMPLATE_KEYS = [
   "reservation-confirmation",
   "reservation-cancelled",
@@ -30,7 +30,6 @@ export const TEMPLATE_KEYS = [
   "admin-notification-inquiry",
   "welcome",
   "password-reset",
-  "staff-access-guide",
   "review-reply",
   "__infra_check",
 ] as const;
@@ -160,12 +159,6 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     key: "password-reset",
     label: "パスワードリセット",
     description: "パスワードリセット申請時に送信。",
-    category: "account",
-  },
-  {
-    key: "staff-access-guide",
-    label: "スタッフ案内",
-    description: "管理者がスタッフを追加した時に送信。",
     category: "account",
   },
   {

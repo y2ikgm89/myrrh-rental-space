@@ -3,9 +3,6 @@ name: Deploy Production
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
   workflow_dispatch:
 
 concurrency:
@@ -30,8 +27,10 @@ env:
   PUBLIC_DOMAIN: https://rental-space.myrrh-jp.com
   ADMIN_DOMAIN: https://myrrh-rental-space-admin-da57q4squa-an.a.run.app
   IAP_JWT_AUDIENCE: /projects/626108938746/locations/asia-northeast1/services/myrrh-rental-space-admin
-  INITIAL_ADMIN_EMAIL: admin@myrrh-jp.com
-  INITIAL_ADMIN_NAME: AKIE IKEGAMI
+  ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL: myrrh-super-admins@myrrh-jp.com
+  ADMIN_ROLE_GROUP_ADMIN_EMAIL: myrrh-admins@myrrh-jp.com
+  ADMIN_ROLE_GROUP_EDITOR_EMAIL: myrrh-editors@myrrh-jp.com
+  ADMIN_ROLE_GROUP_VIEWER_EMAIL: myrrh-viewers@myrrh-jp.com
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: 0x4AAAAAADi6Bqavj97fu7JG
 
 jobs:
@@ -68,8 +67,10 @@ jobs:
           SUBSTITUTIONS+=",_SERVICE_NAME=${SERVICE_NAME}"
           SUBSTITUTIONS+=",_ADMIN_SERVICE_NAME=${ADMIN_SERVICE_NAME}"
           SUBSTITUTIONS+=",_IAP_JWT_AUDIENCE=${IAP_JWT_AUDIENCE}"
-          SUBSTITUTIONS+=",_INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL}"
-          SUBSTITUTIONS+=",_INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME}"
+          SUBSTITUTIONS+=",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL=${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}"
+          SUBSTITUTIONS+=",_ADMIN_ROLE_GROUP_ADMIN_EMAIL=${ADMIN_ROLE_GROUP_ADMIN_EMAIL}"
+          SUBSTITUTIONS+=",_ADMIN_ROLE_GROUP_EDITOR_EMAIL=${ADMIN_ROLE_GROUP_EDITOR_EMAIL}"
+          SUBSTITUTIONS+=",_ADMIN_ROLE_GROUP_VIEWER_EMAIL=${ADMIN_ROLE_GROUP_VIEWER_EMAIL}"
           SUBSTITUTIONS+=",_REPOSITORY=${AR_REPOSITORY}"
           SUBSTITUTIONS+=",_WORKER_POOL=${WORKER_POOL}"
           SUBSTITUTIONS+=",_SERVICE_ACCOUNT=${RUNTIME_SERVICE_ACCOUNT}"
