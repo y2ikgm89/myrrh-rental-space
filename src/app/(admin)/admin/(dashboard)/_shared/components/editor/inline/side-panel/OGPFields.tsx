@@ -39,6 +39,7 @@ export function OGPFields({
     typeof ogpImageControl.value === "string" ? ogpImageControl.value : "";
 
   const ogpPicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "POST",
     onSelect: (media) => {
       const selected = media[0];

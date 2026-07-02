@@ -16,9 +16,14 @@ const runbook = readFileSync(
   join(process.cwd(), "docs", "gcp-production-setup.md"),
   "utf8",
 );
+const serverEnvSource = readFileSync(
+  join(process.cwd(), "src", "shared", "lib", "env", "server.ts"),
+  "utf8",
+);
 
 const requiredProductionSubstitutions = [
   "_ADMIN_APP_URL",
+  "_BETTER_AUTH_URL",
   "_IAP_JWT_AUDIENCE",
   "_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL",
   "_ADMIN_ROLE_GROUP_ADMIN_EMAIL",
@@ -26,6 +31,8 @@ const requiredProductionSubstitutions = [
   "_ADMIN_ROLE_GROUP_VIEWER_EMAIL",
   "_NEXT_PUBLIC_APP_URL",
   "_NEXT_PUBLIC_BASE_URL",
+  "_CRON_OIDC_AUDIENCE",
+  "_CRON_SERVICE_ACCOUNT_EMAIL",
   "_NEXT_PUBLIC_TURNSTILE_SITE_KEY",
 ] as const;
 
@@ -153,7 +160,7 @@ describe("production deploy workflow", () => {
     }
 
     expect(cloudBuildConfig).toContain('_NEXT_PUBLIC_GA_MEASUREMENT_ID: ""');
-    expect(cloudBuildConfig).toContain('_BETTER_AUTH_URL: ""');
+    expect(cloudBuildConfig).not.toContain('_BETTER_AUTH_URL: ""');
   });
 
   test("validates explicit empty production substitutions before building images", () => {
@@ -173,6 +180,65 @@ describe("production deploy workflow", () => {
       expect(validationStep).toContain(`\${${key}}`);
       expect(validationStep).toContain(`${key} is required`);
     }
+  });
+
+  test("requires a canonical Better Auth URL in production runtime env", () => {
+    expect(serverEnvSource).toContain(
+      "BETTER_AUTH_URL: noTrailingSlashUrl.optional()",
+    );
+    expect(serverEnvSource).toContain(
+      '{ name: "BETTER_AUTH_URL", value: serverEnv.BETTER_AUTH_URL }',
+    );
+    expect(cloudBuildConfig).toContain("_BETTER_AUTH_URL is required");
+    expect(cloudBuildConfig).toContain(
+      "_BETTER_AUTH_URL must not end with a trailing slash",
+    );
+  });
+
+  test("validates Cloud Run IAP audience format in production runtime env", () => {
+    expect(serverEnvSource).toContain("cloudRunIapJwtAudience");
+    expect(serverEnvSource).toContain(
+      "IAP_JWT_AUDIENCE: cloudRunIapJwtAudience.optional()",
+    );
+    expect(serverEnvSource).toContain(
+      "/projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME",
+    );
+    expect(serverEnvSource).toContain("must match Cloud Run IAP audience");
+    expect(serverEnvSource).not.toContain(
+      "IAP_JWT_AUDIENCE: z.string().min(1)",
+    );
+  });
+
+  test("requires the image-baked Next Server Actions encryption key in production runtime env", () => {
+    expect(serverEnvSource).toContain("nextServerActionsEncryptionKey");
+    expect(serverEnvSource).toContain("NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:");
+    expect(serverEnvSource).toContain(
+      "nextServerActionsEncryptionKey.optional()",
+    );
+    expect(serverEnvSource).toContain(
+      'process.env["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"]',
+    );
+    expect(serverEnvSource).toContain(
+      'name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"',
+    );
+    expect(serverEnvSource).toContain(
+      "serverEnv.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
+    );
+    expect(serverEnvSource).toContain("base64-encoded AES key");
+    expect(cloudBuildConfig).toContain("NEXT_SERVER_ACTIONS_ENCRYPTION_KEY");
+    expect(runbook).toContain("openssl rand -base64 32");
+  });
+
+  test("keeps single-image public origin substitutions canonical", () => {
+    expect(cloudBuildConfig).toContain(
+      "_NEXT_PUBLIC_APP_URL must match _NEXT_PUBLIC_BASE_URL for the single production image",
+    );
+    expect(cloudBuildConfig).toContain(
+      "_BETTER_AUTH_URL must match _NEXT_PUBLIC_BASE_URL for the public service",
+    );
+    expect(cloudBuildConfig).toContain(
+      "_CRON_OIDC_AUDIENCE must match _NEXT_PUBLIC_BASE_URL",
+    );
   });
 
   test("does not describe production Cloud Build substitutions as trigger-owned", () => {
@@ -204,5 +270,59 @@ describe("production deploy workflow", () => {
     );
     expect(runbook).toContain('--role="roles/iap.admin"');
     expect(runbook).toContain('--role="roles/run.admin"');
+  });
+
+  test("replaces Cloud Run runtime env and secret bindings during deploys", () => {
+    const deployPublicIndex = cloudBuildConfig.indexOf("id: deploy-public");
+    const deployAdminIndex = cloudBuildConfig.indexOf("id: deploy-admin");
+    expect(deployPublicIndex).toBeGreaterThanOrEqual(0);
+    expect(deployAdminIndex).toBeGreaterThan(deployPublicIndex);
+
+    const deployPublicStep = cloudBuildConfig.slice(
+      deployPublicIndex,
+      deployAdminIndex,
+    );
+    const deployAdminStep = cloudBuildConfig.slice(deployAdminIndex);
+
+    for (const step of [deployPublicStep, deployAdminStep]) {
+      expect(step).toContain("--set-env-vars=");
+      expect(step).toContain("--set-secrets=");
+      expect(step).toContain("--ingress=all");
+      expect(step).not.toContain("--remove-env-vars=");
+      expect(step).not.toContain("--update-env-vars=");
+      expect(step).not.toContain("--remove-secrets=");
+      expect(step).not.toContain("--update-secrets=");
+      expect(step).not.toContain("CRON_SECRET=CRON_SECRET");
+      expect(step).not.toContain("ADMIN_LOGIN_TOKEN=ADMIN_LOGIN_TOKEN");
+    }
+  });
+
+  test("reapplies the Cloud Run migrate Job service account during deploys", () => {
+    const migrateUpdateIndex = cloudBuildConfig.indexOf("id: migrate-update");
+    const migrateExecuteIndex = cloudBuildConfig.indexOf("id: migrate-execute");
+    expect(migrateUpdateIndex).toBeGreaterThanOrEqual(0);
+    expect(migrateExecuteIndex).toBeGreaterThan(migrateUpdateIndex);
+
+    const migrateUpdateStep = cloudBuildConfig.slice(
+      migrateUpdateIndex,
+      migrateExecuteIndex,
+    );
+
+    expect(migrateUpdateStep).toContain(
+      "--service-account=${_SERVICE_ACCOUNT}",
+    );
+    expect(migrateUpdateStep).toContain("--set-secrets=DATABASE_URL=");
+    expect(migrateUpdateStep).toContain("--command=bunx");
+    expect(migrateUpdateStep).toContain("--args=--bun,prisma,migrate,deploy");
+    expect(migrateUpdateStep).toContain("--tasks=1");
+    expect(migrateUpdateStep).toContain("--parallelism=1");
+    expect(migrateUpdateStep).toContain("--max-retries=0");
+    expect(migrateUpdateStep).toContain("--task-timeout=600s");
+    expect(migrateUpdateStep).toContain("--cpu=1");
+    expect(runbook).toContain("Cloud Run migrate Job identity is dedicated");
+    expect(runbook).toContain("Cloud Run migrate Job command is canonical");
+    expect(runbook).toContain(
+      "Cloud Run migrate Job execution config is canonical",
+    );
   });
 });

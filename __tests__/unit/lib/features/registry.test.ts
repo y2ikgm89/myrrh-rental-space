@@ -64,12 +64,12 @@ describe("FEATURE_MODULES metadata", () => {
   });
 });
 
-describe("FEATURE_MODULES routing alignment (legacy /posts → /blog 移行)", () => {
-  test("posts module は /blog に統一され /posts 残骸を持たない", () => {
+describe("FEATURE_MODULES routing alignment", () => {
+  test("posts module は /blog に統一される", () => {
     const posts = FEATURE_MODULES.posts;
-    // pageSlugs は実 system page slug "blog" を指す（旧 "posts" は存在しない）
+    // pageSlugs は実 system page slug "blog" を指す。
     expect(posts.pageSlugs).toEqual(["blog"]);
-    // publicRoutes は /blog 系のみ。/posts は next.config の 308 redirect で処理する
+    // publicRoutes は /blog 系のみ。
     expect(posts.publicRoutes).toContain("/blog");
     expect(posts.publicRoutes).not.toContain("/posts");
   });
@@ -83,7 +83,7 @@ describe("FEATURE_MODULES routing alignment (legacy /posts → /blog 移行)", (
 
   test("pageSlugs はすべて実在のシステムページ slug を指す", () => {
     // 全 module の pageSlugs が SYSTEM_PAGES に実在する slug を指す不変条件。
-    // posts→blog / events 追加漏れと同種の「存在しない Page slug」退行を回帰防止。
+    // blog / events 追加漏れと同種の「存在しない Page slug」退行を回帰防止。
     for (const id of FEATURE_MODULES_LIST) {
       for (const slug of FEATURE_MODULES[id].pageSlugs) {
         expect(SYSTEM_PAGE_SLUGS).toContain(slug);

@@ -8,13 +8,13 @@ await withScript("ensure-admin-user", async (prisma) => {
       where: { email: testUsers.admin.email },
       update: {
         name: testUsers.admin.name,
-        role: Role.ADMIN,
+        role: Role.SUPER_ADMIN,
         emailVerified: true,
       },
       create: {
         email: testUsers.admin.email,
         name: testUsers.admin.name,
-        role: Role.ADMIN,
+        role: Role.SUPER_ADMIN,
         emailVerified: true,
       },
       select: { id: true },

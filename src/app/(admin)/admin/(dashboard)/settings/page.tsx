@@ -10,6 +10,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import {
   IconWorld,
   IconBuilding,
@@ -141,6 +142,8 @@ function toSettingsCardProps(category: SettingsCategory): SettingsCardProps {
 }
 
 export default async function SettingsPage() {
+  await connection();
+
   const currentUser = await requireAdminPermission("settings", "read");
   const canManageSettings = hasPermission(
     currentUser.role,

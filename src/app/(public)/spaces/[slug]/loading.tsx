@@ -8,7 +8,7 @@ import { Skeleton } from "@/public/components/design-system/skeleton";
 
 export default function SpaceDetailLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Breadcrumb 帯 */}
       <div className="bg-surface py-2 shadow-inner">
         <Container>
@@ -84,6 +84,6 @@ export default function SpaceDetailLoading() {
           <Skeleton className="mt-6 h-5 w-1/2" variant="text" />
         </section>
       </div>
-    </main>
+    </div>
   );
 }

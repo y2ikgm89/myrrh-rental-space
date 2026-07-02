@@ -59,9 +59,10 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
     ).toBeVisible();
 
     // 姓 / 名 / 電話番号は autocomplete 属性経由で取得（label は重複しうる）
-    const lastName = page.locator('input[autocomplete="family-name"]');
-    const firstName = page.locator('input[autocomplete="given-name"]');
-    const phone = page.locator('input[autocomplete="tel"]');
+    const main = page.locator("#main-content");
+    const lastName = main.locator('input[autocomplete="family-name"]');
+    const firstName = main.locator('input[autocomplete="given-name"]');
+    const phone = main.locator('input[autocomplete="tel"]');
     await expect(lastName).toBeVisible();
     await expect(firstName).toBeVisible();
     await expect(phone).toBeVisible();
@@ -75,12 +76,13 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
   test("メールアドレス input は disabled（ソーシャル取得値で固定）", async ({
     page,
   }) => {
-    const email = page.locator('input[autocomplete="email"]');
+    const email = page.locator("#profile-form").getByLabel("メールアドレス");
     await expect(email).toBeVisible();
     await expect(email).toBeDisabled();
 
-    // 補足説明「ソーシャルアカウントから取得されます」
-    await expect(page.getByText(/ソーシャルアカウントから取得/)).toBeVisible();
+    await expect(email).toHaveAccessibleDescription(
+      "メールアドレスはソーシャルアカウントから取得されます",
+    );
   });
 
   test("「法人・団体」を選択すると会社名 input が表示される", async ({
@@ -94,7 +96,9 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
     await corporateRadio.click();
 
     // autocomplete="organization" の会社名入力欄
-    const company = page.locator('input[autocomplete="organization"]');
+    const company = page
+      .locator("#main-content")
+      .locator('input[autocomplete="organization"]');
     await expect(company).toBeVisible({ timeout: 3000 });
   });
 
@@ -103,7 +107,9 @@ test.describe("マイページプロフィール - 編集 UI smoke", () => {
 
     // まず法人にして company input を表示させる
     await typeGroup.getByRole("radio", { name: "法人・団体" }).click();
-    const company = page.locator('input[autocomplete="organization"]');
+    const company = page
+      .locator("#main-content")
+      .locator('input[autocomplete="organization"]');
     await expect(company).toBeVisible({ timeout: 3000 });
 
     // 個人に戻すと company input は DOM から消える

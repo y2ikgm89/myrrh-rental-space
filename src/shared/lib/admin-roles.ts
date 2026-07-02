@@ -5,7 +5,7 @@
  * このモジュールは server-only を持たず、ロール定数・ラベル・説明・階層制御を一元管理する。
  *
  * - `DASHBOARD_ROLES` — 管理画面アクセス可能なロール（admin-auth が再 export）
- * - `ROLE_LABELS` — 日本語ラベル（permissions.ts が再 export）
+ * - `ROLE_LABELS` — 日本語ラベル
  * - `ROLE_DESCRIPTIONS` — UI 表示用のロール説明
  * - `STAFF_ASSIGNABLE_ROLES` — スタッフ管理 UI から付与できるロール
  * - `INVITABLE_BY` — 階層制御マップ（誰が誰を招待/編集できるか）

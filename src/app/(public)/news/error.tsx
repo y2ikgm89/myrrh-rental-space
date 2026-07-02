@@ -11,7 +11,7 @@ export default function NewsError({
   reset: () => void;
 }) {
   return (
-    <main id="main-content">
+    <div>
       <Container>
         <div className="flex min-h-[60svh] flex-col items-center justify-center space-y-6 text-center">
           <Heading level={1}>お知らせの読み込みに失敗しました</Heading>
@@ -23,6 +23,6 @@ export default function NewsError({
           </Button>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

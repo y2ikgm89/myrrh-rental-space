@@ -253,6 +253,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
   const ogpImageUrlValue = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "POST",
     onSelect: (media: SelectedMedia[]) => {
       const selected = media[0];
@@ -546,6 +547,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
   const ogpImageUrlValue = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "POST",
     onSelect: (media: SelectedMedia[]) => {
       const selected = media[0];

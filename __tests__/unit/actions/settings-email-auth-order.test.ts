@@ -20,8 +20,8 @@ mock.module("@/shared/lib/forms/conform-action", () => ({
       senderName?: string;
       replyToEmail?: string;
       sendReservationConfirmationEmail: boolean;
-      notificationStaffIds?: string[];
-      notificationEmailAddresses?: string;
+      notificationStaffIds: string[];
+      notificationEmailAddresses: string[];
     }) => Promise<unknown>,
   ) =>
     callback({
@@ -30,7 +30,7 @@ mock.module("@/shared/lib/forms/conform-action", () => ({
       replyToEmail: "",
       sendReservationConfirmationEmail: true,
       notificationStaffIds: [],
-      notificationEmailAddresses: "",
+      notificationEmailAddresses: [],
     }),
 }));
 

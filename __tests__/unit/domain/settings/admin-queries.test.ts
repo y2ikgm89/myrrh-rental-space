@@ -7,7 +7,7 @@ const mockSettingsUpsert = mock(() =>
     updatedAt: new Date("2026-01-02T00:00:00Z"),
     businessHours: null,
     regularHolidays: null,
-    notificationStaffIds: null,
+    notificationStaffIds: [],
     featureModules: {},
     durationDiscountRules: [],
     discountCombinationMode: "best",

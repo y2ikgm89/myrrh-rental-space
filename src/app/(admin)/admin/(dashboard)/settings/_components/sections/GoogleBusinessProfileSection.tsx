@@ -36,6 +36,8 @@ type GoogleBusinessProfileSectionProps = {
   authInfo: GbpAuthInfo | null;
 };
 
+const GBP_SECTION_TITLE_ID = "google-business-profile-section-title";
+
 // =============================================================================
 // Main Component
 // =============================================================================
@@ -93,9 +95,12 @@ export function GoogleBusinessProfileSection({
   };
 
   return (
-    <Card>
+    <Card role="region" aria-labelledby={GBP_SECTION_TITLE_ID}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle
+          id={GBP_SECTION_TITLE_ID}
+          className="flex items-center gap-2"
+        >
           <svg
             className="h-5 w-5"
             viewBox="0 0 24 24"

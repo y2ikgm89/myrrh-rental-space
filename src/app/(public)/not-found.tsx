@@ -30,7 +30,7 @@ const POPULAR_DESTINATIONS: ReadonlyArray<{
 
 export default function PublicNotFound() {
   return (
-    <main id="main-content">
+    <div>
       <Container>
         <div className="flex min-h-[60svh] flex-col items-center justify-center py-[var(--spacing-fluid-lg)]">
           <Stack gap="lg" className="items-center text-center">
@@ -84,6 +84,6 @@ export default function PublicNotFound() {
           </Stack>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

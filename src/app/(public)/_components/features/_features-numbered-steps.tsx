@@ -67,7 +67,7 @@ export function FeaturesNumberedSteps({
                 </div>
               ) : null}
               <span
-                className="mb-4 block font-heading text-[2.5rem] font-light italic text-accent/50"
+                className="mb-4 block font-heading text-[2.5rem] font-light italic text-accent"
                 aria-hidden="true"
               >
                 {String(i + 1).padStart(2, "0")}

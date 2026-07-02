@@ -63,10 +63,8 @@ export async function updateEmailSettings(
           replyToEmail: emptyToNull(data.replyToEmail),
           sendReservationConfirmationEmail:
             data.sendReservationConfirmationEmail,
-          notificationStaffIds: data.notificationStaffIds ?? [],
-          notificationEmailAddresses: emptyToNull(
-            data.notificationEmailAddresses,
-          ),
+          notificationStaffIds: data.notificationStaffIds,
+          notificationEmailAddresses: data.notificationEmailAddresses,
         });
         return null;
       },

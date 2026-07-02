@@ -14,10 +14,16 @@ import {
   notificationFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 
-/** Record → FormData（値は全て文字列。空欄 / OFF は "" を渡す）。 */
-function form(entries: Record<string, string>): FormData {
+/** Record → FormData（値は文字列または同名 field の配列）。 */
+function form(entries: Record<string, string | string[]>): FormData {
   const fd = new FormData();
-  for (const [k, v] of Object.entries(entries)) fd.set(k, v);
+  for (const [k, value] of Object.entries(entries)) {
+    if (Array.isArray(value)) {
+      for (const item of value) fd.append(k, item);
+      continue;
+    }
+    fd.set(k, value);
+  }
   return fd;
 }
 
@@ -26,7 +32,7 @@ describe("emailFormSchema（実体）", () => {
     const r = parseWithZod(
       form({
         replyToEmail: "reply@example.com",
-        notificationEmailAddresses: "admin@example.com",
+        notificationEmailAddresses: ["admin@example.com"],
         sendReservationConfirmationEmail: "on",
       }),
       { schema: emailFormSchema },
@@ -38,7 +44,6 @@ describe("emailFormSchema（実体）", () => {
     const r = parseWithZod(
       form({
         replyToEmail: "",
-        notificationEmailAddresses: "",
         sendReservationConfirmationEmail: "",
       }),
       { schema: emailFormSchema },
@@ -69,28 +74,49 @@ describe("emailFormSchema（実体）", () => {
     ).toBe("error");
   });
 
-  test("カスタム通知先: 有効メール（複数カンマ区切り）は success", () => {
+  test("カスタム通知先: 同名 hidden input の複数値を配列として受け取る", () => {
+    const result = parseWithZod(
+      form({
+        notificationEmailAddresses: ["a@example.com", "b@example.com"],
+      }),
+      { schema: emailFormSchema },
+    );
+    expect(result.status).toBe("success");
+    if (result.status === "success" && result.value) {
+      expect(result.value.notificationEmailAddresses).toEqual([
+        "a@example.com",
+        "b@example.com",
+      ]);
+    }
+  });
+
+  test("カスタム通知先: カンマ区切り単一文字列は error", () => {
     expect(
       parseWithZod(
         form({ notificationEmailAddresses: "a@example.com, b@example.com" }),
         { schema: emailFormSchema },
       ).status,
-    ).toBe("success");
+    ).toBe("error");
   });
 
   test("カスタム通知先: 不正なアドレスを含むと error（各アドレス検証）", () => {
     expect(
       parseWithZod(
-        form({ notificationEmailAddresses: "a@example.com, not-an-email" }),
+        form({
+          notificationEmailAddresses: ["a@example.com", "not-an-email"],
+        }),
         { schema: emailFormSchema },
       ).status,
     ).toBe("error");
   });
 
-  test("カスタム通知先: 500 文字超は error（長さ上限・全て有効メールでも）", () => {
-    const long = Array(45).fill("a@example.com").join(","); // ≈629 文字 > 500
+  test("カスタム通知先: 50件超は error（全て有効メールでも）", () => {
+    const tooMany = Array.from(
+      { length: 51 },
+      (_, index) => `recipient-${index}@example.com`,
+    );
     expect(
-      parseWithZod(form({ notificationEmailAddresses: long }), {
+      parseWithZod(form({ notificationEmailAddresses: tooMany }), {
         schema: emailFormSchema,
       }).status,
     ).toBe("error");
@@ -141,6 +167,9 @@ describe("emailFormSchema（実体）", () => {
   test("notificationStaffIds 未指定でも success（任意）", () => {
     const r = parseWithZod(new FormData(), { schema: emailFormSchema });
     expect(r.status).toBe("success");
+    if (r.status === "success" && r.value) {
+      expect(r.value.notificationStaffIds).toEqual([]);
+    }
   });
 });
 

@@ -274,6 +274,7 @@ export function SpaceEditForm({
   };
 
   const mainImagePicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "SPACE",
     onSelect: (media) => {
       const selected = media[0];
@@ -281,6 +282,7 @@ export function SpaceEditForm({
     },
   });
   const ogpImagePicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "SPACE",
     onSelect: (media) => {
       const selected = media[0];

@@ -9,6 +9,7 @@ import {
   useForm,
   useInputControl,
 } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
@@ -16,7 +17,7 @@ import { formatCurrency } from "@/shared/lib/pricing/format";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { updateReservationAction } from "../../../../_shared/actions/reservation";
 import type { z } from "zod";
-import type { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
+import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -95,14 +96,11 @@ export function EditReservationForm({
     undefined,
   );
 
-  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
-  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
-  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
-  // HTML5 の required は JSX 上のリテラル attribute で担保。
   const [form, fields] = useForm<z.input<typeof customerReservationEditSchema>>(
     {
       id: "edit-reservation-form",
       lastResult,
+      constraint: getZodConstraint(customerReservationEditSchema),
       defaultValue: {
         reservationId,
         spaceId: initialValues.spaceId,
@@ -110,6 +108,11 @@ export function EditReservationForm({
         startTime: initialValues.startTime,
         endTime: initialValues.endTime,
         numberOfGuests,
+      },
+      onValidate({ formData }) {
+        return parseWithZod(formData, {
+          schema: customerReservationEditSchema,
+        });
       },
       shouldValidate: "onBlur",
       shouldRevalidate: "onInput",

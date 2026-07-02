@@ -104,7 +104,7 @@ export function FeaturesNumberedEditorial({
             className="grid grid-cols-1 gap-4 border-t border-border py-10 md:grid-cols-[6rem_1fr] md:gap-12 md:py-14"
           >
             <span
-              className="font-heading text-6xl font-extralight leading-none text-accent/20 md:text-7xl md:text-right"
+              className="font-heading text-6xl font-extralight leading-none text-accent md:text-7xl md:text-right"
               aria-hidden="true"
             >
               {String(index + 1).padStart(2, "0")}

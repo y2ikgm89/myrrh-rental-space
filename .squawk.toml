@@ -1,10 +1,10 @@
 # Squawk — Postgres マイグレーション安全 linter の設定
 # 強制点: CI `migration-safety` job（.github/workflows/ci.yml）が変更された
-# prisma/migrations/**/migration.sql に対して実行する。詳細規約は
-# .claude/rules/migrations.md（expand / contract）が SSoT。
+# prisma/migrations/**/migration.sql に対して実行する。CI job とこの設定が
+# migration safety の実行境界を定義する。
 #
 # スコープ方針（重要）:
-#   このゲートが守る対象は **Risk 1 = 後方互換を壊す破壊的スキーマ変更**。
+#   このゲートが守る対象は **Risk 1 = 旧 revision 参照事故を起こす破壊的スキーマ変更**。
 #   Cloud Run のローリング切替窓（migrate 完了〜新リビジョン ready）で
 #   「旧コードが破壊済み新スキーマを叩く」と unknown column 等で 500 になる。
 #   → 旧コードを壊しうる変更（列/テーブル削除・リネーム・型変更・既存列への
@@ -31,7 +31,7 @@ assume_in_transaction = true
 #   syntax-error（パース不能＝解析不可能なファイルを検出する安全網）
 # 上記以外のデフォルト rule をすべて無効化する（require-table-schema は opt-in で元々無効）。
 excluded_rules = [
-  # --- 追加系（後方互換 or PG11+ で安全。Risk 1 ではない） ---
+  # --- 追加系（旧 revision 参照事故を起こさない、または PG11+ で rewrite なし。Risk 1 ではない） ---
   "adding-field-with-default",         # PG11+ は default 付き追加が安全（rewrite なし）
   "adding-foreign-key-constraint",     # ロック懸念であり旧コード 500 ではない
   "adding-serial-primary-key-field",   # ロック / rewrite 懸念、Risk 1 ではない

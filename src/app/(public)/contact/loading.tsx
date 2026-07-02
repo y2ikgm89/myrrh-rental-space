@@ -7,7 +7,7 @@ import { Skeleton } from "@/public/components/design-system/skeleton";
 
 export default function ContactLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Page hero */}
       <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
@@ -54,6 +54,6 @@ export default function ContactLoading() {
           </div>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

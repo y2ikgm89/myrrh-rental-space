@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { PostDetailPageContent } from "@/app/(public)/posts/_components/post-detail-page-content";
+import { PostDetailPageContent } from "@/app/(public)/blog/_components/post-detail-page-content";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { getPostByIdForPreview } from "@/shared/domain/posts/preview-queries";

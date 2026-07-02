@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import {
   getPublishedReviewsForSpace,
   getSpaceReviewStats,
@@ -19,6 +20,8 @@ interface SpaceReviewsProps {
 // ---------------------------------------------------------------------------
 
 export async function SpaceReviews({ spaceId }: SpaceReviewsProps) {
+  await connection();
+
   const [reviews, stats] = await Promise.all([
     getPublishedReviewsForSpace(spaceId),
     getSpaceReviewStats(spaceId),

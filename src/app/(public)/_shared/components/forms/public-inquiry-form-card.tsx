@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import type { ReactElement } from "react";
+import type { FormEvent, ReactElement } from "react";
 import {
   getFormProps,
   getInputProps,
   useForm,
   useInputControl,
 } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
@@ -15,7 +16,7 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 import { submitInquiry } from "@/public/actions/inquiry";
 import type { z } from "zod";
-import type { publicInquirySchema } from "@/shared/lib/validations/inquiry";
+import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Textarea } from "@/public/components/design-system/textarea";
@@ -79,6 +80,9 @@ function isCustomerType(value: unknown): value is CustomerType {
   return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
 }
 
+const OFFLINE_ERROR_MESSAGE =
+  "ネットワーク接続がありません。接続を確認してから再度送信してください。";
+
 export function PublicInquiryFormCard({
   mode = "live",
   turnstileSiteKey = null,
@@ -92,6 +96,7 @@ export function PublicInquiryFormCard({
   const [submitted, setSubmitted] = useState(false);
   const [agreedTermsIds, setAgreedTermsIds] = useState<readonly string[]>([]);
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
+  const [clientError, setClientError] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
   const isInteractive = mode === "live";
   const hasPrefilledIdentity =
@@ -108,12 +113,10 @@ export function PublicInquiryFormCard({
   const initialCustomerType: CustomerType =
     defaults?.customerType ?? CustomerType.PERSONAL;
 
-  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
-  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
-  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
   const [form, fields] = useForm<z.input<typeof publicInquirySchema>>({
     id: "public-inquiry-form",
     lastResult,
+    constraint: getZodConstraint(publicInquirySchema),
     defaultValue: {
       customerType: initialCustomerType,
       ...(defaults?.companyName !== undefined && {
@@ -126,9 +129,13 @@ export function PublicInquiryFormCard({
       ...(defaults?.email !== undefined && { email: defaults.email }),
       ...(defaults?.subject !== undefined && { subject: defaults.subject }),
     },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: publicInquirySchema });
+    },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });
+  const formProps = getFormProps(form);
 
   const customerTypeControl = useInputControl(fields.customerType);
   const turnstileTokenControl = useInputControl(fields.turnstileToken);
@@ -177,12 +184,28 @@ export function PublicInquiryFormCard({
     );
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    formProps.onSubmit(event);
+    if (event.defaultPrevented) return;
+
+    if (!navigator.onLine) {
+      event.preventDefault();
+      setClientError(OFFLINE_ERROR_MESSAGE);
+      return;
+    }
+
+    setClientError(null);
+  }
+
   const allTermsAgreed =
     requiredTerms.length === 0 ||
     requiredTerms.every((term) => agreedTermsIds.includes(term.id));
   const isSubmitDisabled = !isInteractive || isPending || !allTermsAgreed;
   const formErrorMessage =
-    form.errors !== undefined && form.errors.length > 0 ? form.errors[0] : null;
+    clientError ??
+    (form.errors !== undefined && form.errors.length > 0
+      ? form.errors[0]
+      : null);
 
   if (submitted) {
     return (
@@ -247,8 +270,9 @@ export function PublicInquiryFormCard({
         />
 
         <form
-          {...getFormProps(form)}
+          {...formProps}
           action={isInteractive ? formAction : undefined}
+          onSubmit={handleSubmit}
           className="mt-8"
         >
           <input

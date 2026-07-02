@@ -11,7 +11,7 @@ export default function ContactError({
   reset: () => void;
 }) {
   return (
-    <main id="main-content">
+    <div>
       <Container>
         <div className="flex min-h-[60svh] flex-col items-center justify-center space-y-6 text-center">
           <Heading level={1}>
@@ -25,6 +25,6 @@ export default function ContactError({
           </Button>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

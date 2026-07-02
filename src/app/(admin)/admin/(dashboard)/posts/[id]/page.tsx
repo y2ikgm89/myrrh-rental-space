@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import {
   getPostById,
   getPostCategories,
@@ -20,6 +21,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const post = await getPostById(id);
 
@@ -35,6 +38,8 @@ export async function generateMetadata({
 }
 
 export default async function EditPostPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
 
   const [post, categories, tags, settings] = await Promise.all([

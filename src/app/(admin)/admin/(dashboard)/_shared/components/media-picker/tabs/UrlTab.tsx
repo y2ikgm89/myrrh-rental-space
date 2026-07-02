@@ -15,10 +15,10 @@ import { acceptToLabel, acceptToUrlPlaceholder } from "../accept-helpers";
 interface UrlTabProps {
   onAdd: (url: string, alt?: string) => void;
   canAddMore: boolean;
-  accept?: MediaAcceptType;
+  accept: MediaAcceptType;
 }
 
-export function UrlTab({ onAdd, canAddMore, accept = "image" }: UrlTabProps) {
+export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
   const acceptLabel = acceptToLabel(accept);
   const urlPlaceholder = acceptToUrlPlaceholder(accept);
   const [url, setUrl] = useState("");
@@ -102,7 +102,7 @@ export function UrlTab({ onAdd, canAddMore, accept = "image" }: UrlTabProps) {
           type="text"
           value={alt}
           onChange={(e) => setAlt(e.target.value)}
-          placeholder="画像の説明"
+          placeholder={`${acceptLabel}の説明`}
           className="h-9 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
@@ -147,7 +147,7 @@ export function UrlTab({ onAdd, canAddMore, accept = "image" }: UrlTabProps) {
 
       {!canAddMore && (
         <p className="text-center text-sm text-muted-foreground">
-          選択できる画像の上限に達しました
+          選択できる{acceptLabel}の上限に達しました
         </p>
       )}
     </div>

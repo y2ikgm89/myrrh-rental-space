@@ -25,7 +25,11 @@ const mockReleaseReservationReminderClaim = mock<() => Promise<void>>(() =>
 
 const mockLogError = mock<() => void>(() => undefined);
 
-const mockAuthorizeCronRequest = mock<() => Response | null>(() => null);
+const mockAuthorizeCronRequest = mock<() => Promise<Response | null>>(() =>
+  Promise.resolve(null),
+);
+
+const mockConnection = mock<() => Promise<void>>(() => Promise.resolve());
 
 const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
   throw error;
@@ -34,6 +38,7 @@ const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
 // --- mock.module() は await import() より前 ---
 
 mock.module("next/server", () => ({
+  connection: () => mockConnection(),
   NextResponse,
 }));
 
@@ -106,13 +111,6 @@ mock.module("@/shared/lib/errors/server", () => ({
   },
 }));
 
-mock.module("@/shared/lib/env/server", () => ({
-  serverEnv: {
-    CRON_SECRET: "test-secret",
-    NODE_ENV: "test",
-  },
-}));
-
 mock.module("@/shared/lib/cron-auth", () => ({
   authorizeCronRequest: (
     ...args: Parameters<typeof mockAuthorizeCronRequest>
@@ -158,6 +156,10 @@ function makeRequest(authHeader?: string) {
   });
 }
 
+function makeSchedulerRequest() {
+  return makeRequest("Bearer cloud-scheduler-oidc-token");
+}
+
 function makeReservation(overrides: Record<string, unknown> = {}) {
   return {
     id: "res-1",
@@ -187,10 +189,12 @@ describe("GET /api/cron/reservation-reminder", () => {
     mockReleaseReservationReminderClaim.mockReset();
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
+    mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
 
     // デフォルト: 認証通過、予約なし、claim 成功、メール送信成功
-    mockAuthorizeCronRequest.mockReturnValue(null);
+    mockConnection.mockResolvedValue(undefined);
+    mockAuthorizeCronRequest.mockResolvedValue(null);
     mockFindReservationsForReminderWindow.mockResolvedValue([]);
     mockClaimReservationReminder.mockResolvedValue(true);
     mockReleaseReservationReminderClaim.mockResolvedValue(undefined);
@@ -203,25 +207,30 @@ describe("GET /api/cron/reservation-reminder", () => {
     });
   });
 
-  test("認証失敗 → authorizeCronRequest の返却値をそのまま返す (401)", async () => {
+  test("Cloud Scheduler OIDC 認証失敗 → authorizeCronRequest の返却値をそのまま返す (401)", async () => {
     const authErrorResponse = NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 },
     );
-    mockAuthorizeCronRequest.mockReturnValue(authErrorResponse);
+    mockAuthorizeCronRequest.mockResolvedValue(authErrorResponse);
 
-    const response = await GET(makeRequest("Bearer wrong-secret"));
+    const response = await GET(makeRequest("Bearer invalid-oidc-token"));
 
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body).toEqual({ error: "Unauthorized" });
+    expect(mockAuthorizeCronRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: "reservationReminderCron",
+      }),
+    );
     expect(mockFindReservationsForReminderWindow).not.toHaveBeenCalled();
   });
 
   test("予約なし → sent=0, skipped=0, total=0 を返す", async () => {
     mockFindReservationsForReminderWindow.mockResolvedValue([]);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -233,7 +242,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     const reservation = makeReservation();
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -264,7 +273,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     });
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     expect(mockSendReservationReminderEmail).toHaveBeenCalledWith(
@@ -280,7 +289,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     });
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -292,7 +301,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     const reservation = makeReservation({ customer: null });
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -306,7 +315,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     const emailError = new Error("SMTP connection failed");
     mockSendReservationReminderEmail.mockRejectedValue(emailError);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -331,7 +340,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     // 別の cron 実行が既に claim 済み（または前回送信済み）
     mockClaimReservationReminder.mockResolvedValue(false);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -353,7 +362,7 @@ describe("GET /api/cron/reservation-reminder", () => {
       error: "メール送信に失敗しました",
     });
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -372,7 +381,7 @@ describe("GET /api/cron/reservation-reminder", () => {
       reason: "disabled",
     });
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -393,7 +402,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     ];
     mockFindReservationsForReminderWindow.mockResolvedValue(reservations);
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -411,7 +420,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     });
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
 
-    await GET(makeRequest("Bearer test-secret"));
+    await GET(makeSchedulerRequest());
 
     expect(mockSendReservationReminderEmail).toHaveBeenCalledWith(
       expect.objectContaining({ customerName: "お客様" }),
@@ -424,7 +433,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     // unstable_rethrow は通常エラーを再スローしない（Next.js bail out 以外）
     mockUnstableRethrow.mockImplementation(() => {});
 
-    const response = await GET(makeRequest("Bearer test-secret"));
+    const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(500);
     const body = await response.json();

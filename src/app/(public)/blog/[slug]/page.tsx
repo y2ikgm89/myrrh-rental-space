@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import {
   PostDetailPageContent,
   buildPostMetadata,
-} from "../../posts/_components/post-detail-page-content";
+} from "../_components/post-detail-page-content";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 

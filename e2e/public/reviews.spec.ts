@@ -1,17 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { urls } from "../fixtures";
+import { reviewFixtures, urls } from "../fixtures";
 
 /**
  * 公開サイト - レビュー E2E テスト
  *
  * テストシナリオ:
- * 1. スペース詳細ページのレビューセクション or 空状態 (seed-driven)
- * 2. 評価 / レビューカード or empty state の択一
- * 3. 未認証時のログイン誘導 or 投稿フォーム非表示
+ * 1. seed のレビュー有効スペースでレビューセクションが描画される
+ * 2. 評価 / レビューカードが表示される
+ * 3. 未認証時は投稿フォームが表示されない
  *
  * 前提（seed-driven、`prisma/seed.ts` § seedSpaces / seedDevCustomerAndReservations 経由）:
- * - 公開済 space が seed で確実に存在
- * - dev customer の COMPLETED 予約に SpaceReview seed 済（最低 1 件のレビュー）
+ * - `reviewFixtures.publicReviewSpaceSlug` が公開済み + reviewsEnabled
+ * - dev customer の COMPLETED 予約に公開 SpaceReview seed 済
  *
  * 注意: レビュー投稿は予約完了済み顧客の認証が必要なため smoke テストのみ。
  *       投稿フローは integration テストで担保。
@@ -19,75 +19,37 @@ import { urls } from "../fixtures";
 
 test.describe("公開スペース - レビュー表示", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(urls.spaces);
+    await page.goto(`${urls.spaces}/${reviewFixtures.publicReviewSpaceSlug}`);
+    await expect(page).toHaveURL(
+      new RegExp(`/spaces/${reviewFixtures.publicReviewSpaceSlug}$`, "u"),
+    );
   });
 
-  test("スペース詳細ページにレビューセクション or 空状態が描画される", async ({
+  test("スペース詳細ページにレビューセクションが描画される", async ({
     page,
   }) => {
-    const spaceLink = page.locator('a[href*="/spaces/"]').first();
-    await expect(spaceLink).toBeVisible({ timeout: 5000 });
-    await spaceLink.click();
+    const reviewsSection = page
+      .getByRole("heading", { name: "レビュー", level: 2 })
+      .locator("..");
 
-    expect(page.url()).toMatch(/\/spaces\/[^/]+/);
-
-    const hasReviewSection = await page
-      .getByRole("heading", { name: /レビュー|口コミ|評価/i })
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const hasReviewArea = await page
-      .locator(
-        '[class*="review"], [data-testid*="review"], section:has-text("レビュー")',
-      )
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const hasEmptyState = await page
-      .getByText(/レビューはまだありません|評価はまだありません|レビューなし/i)
-      .isVisible()
-      .catch(() => false);
-
-    expect(hasReviewSection || hasReviewArea || hasEmptyState).toBeTruthy();
+    await expect(reviewsSection).toBeVisible();
+    await expect(
+      reviewsSection.getByText("[E2E] 公開レビュー検証用"),
+    ).toBeVisible();
   });
 
-  test("評価表示 (数値) or empty state の択一が成立する", async ({ page }) => {
-    const spaceLink = page.locator('a[href*="/spaces/"]').first();
-    await expect(spaceLink).toBeVisible({ timeout: 5000 });
-    await spaceLink.click();
+  test("評価表示とレビュー件数が表示される", async ({ page }) => {
+    const reviewsSection = page
+      .getByRole("heading", { name: "レビュー", level: 2 })
+      .locator("..");
 
-    // 評価表示パターン: "4.5" "★4.5" "4.5 / 5" 等
-    const hasRatingNumber = await page
-      .locator("text=/^[1-5](\\.\\d)?(\\s*\\/\\s*5)?$/")
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const hasNoReviews = await page
-      .getByText(/レビューはまだありません|評価はまだありません|レビューなし/i)
-      .isVisible()
-      .catch(() => false);
-
-    expect(hasRatingNumber || hasNoReviews).toBeTruthy();
+    await expect(reviewsSection.getByText(/^[1-5]\.\d$/u)).toBeVisible();
+    await expect(reviewsSection.getByText(/\d+件のレビュー/u)).toBeVisible();
   });
 
-  test("未認証時はログイン誘導 or 投稿フォーム非表示の択一が成立する", async ({
-    page,
-  }) => {
-    const spaceLink = page.locator('a[href*="/spaces/"]').first();
-    await expect(spaceLink).toBeVisible({ timeout: 5000 });
-    await spaceLink.click();
-
-    const loginPrompt = await page
-      .getByText(/ログイン|サインイン|予約完了後にレビュー/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const noWriteForm = !(await page
-      .getByRole("button", { name: /レビューを投稿|レビューを書く/i })
-      .first()
-      .isVisible()
-      .catch(() => false));
-
-    expect(loginPrompt || noWriteForm).toBeTruthy();
+  test("未認証時は投稿フォームが表示されない", async ({ page }) => {
+    await expect(
+      page.getByRole("button", { name: /レビューを投稿|レビューを書く/u }),
+    ).toHaveCount(0);
   });
 });

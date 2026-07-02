@@ -34,18 +34,14 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
     expect(page.url()).not.toMatch(/\/admin\/login/);
 
     // 編集画面の core element（少なくとも 1 つの contenteditable inline editor）
-    const inlineEditor = page
-      .locator('[role="textbox"][aria-multiline="false"]')
-      .first();
+    const inlineEditor = page.getByRole("textbox", { name: "タイトル" });
     await expect(inlineEditor).toBeVisible({ timeout: 15000 });
   });
 
   test("PortableTextInlineEditor に文字入力できる", async ({ page }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
 
-    const inlineEditor = page
-      .locator('[role="textbox"][aria-multiline="false"]')
-      .first();
+    const inlineEditor = page.getByRole("textbox", { name: "タイトル" });
     await expect(inlineEditor).toBeVisible({ timeout: 15000 });
 
     await inlineEditor.click();
@@ -64,9 +60,7 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
 
     // home page-hero schema は全 variant が `description: field.portableTextBlock(...)` を持つ
     // (definitions/page-hero/schema.ts) ため block editor は必ず存在する
-    const blockEditor = page
-      .locator('[role="textbox"][aria-multiline="true"]')
-      .first();
+    const blockEditor = page.getByRole("textbox", { name: "説明" });
     await expect(blockEditor).toBeVisible({ timeout: 15000 });
 
     await blockEditor.click();
@@ -83,9 +77,7 @@ test.describe("Portable Text editor - inline / block 入力 smoke", () => {
   }) => {
     await page.goto(HOME_PAGE_EDIT_PATH);
 
-    const inlineEditor = page
-      .locator('[role="textbox"][aria-multiline="false"]')
-      .first();
+    const inlineEditor = page.getByRole("textbox", { name: "タイトル" });
     await expect(inlineEditor).toBeVisible({ timeout: 15000 });
 
     await inlineEditor.click();

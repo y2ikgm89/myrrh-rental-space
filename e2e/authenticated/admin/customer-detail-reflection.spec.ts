@@ -10,7 +10,7 @@ import { test, expect, type Page } from "@playwright/test";
  *
  * シナリオ:
  *   1. /admin/customers が DataTable を表示する
- *   2. dev-customer (or 既存顧客) 行を ClickableTableRow 経由で詳細ページへ遷移
+ *   2. dev-customer 行を ClickableTableRow 経由で詳細ページへ遷移
  *   3. 詳細ページで AdminDetailLayout（title = lastName + firstName, subtitle = email）
  *   4. DetailSection「基本情報」+ DetailField「お名前」「区分」「メールアドレス」
  *   5. 編集ボタン（`/admin/customers/[id]/edit`）が存在
@@ -25,52 +25,53 @@ import { test, expect, type Page } from "@playwright/test";
  *   - playwright.config.ts の chromium-admin project で実行
  *   - setup-admin により admin user が認証済み
  *   - dev サーバー稼働中
- *   - 顧客が 1 名以上存在する場合のみ詳細ページ遷移系を検証（無ければ skip）
+ *   - seed で dev-customer が作成済み
  */
 
 const ADMIN_CUSTOMERS_PATH = "/admin/customers";
+const DEV_CUSTOMER_EMAIL = "dev-customer@example.com";
+const DEV_CUSTOMER_NAME = "開発 テスト";
+const DEV_CUSTOMER_SEARCH_PATH = `${ADMIN_CUSTOMERS_PATH}?search=${encodeURIComponent(
+  DEV_CUSTOMER_EMAIL,
+)}`;
 
-/** ClickableTableRow は `<tr tabindex="0">` のみ（rules で role="link" 禁止）。
- *  tbody 配下に scope して TableHeader 行を除外。 */
-const CUSTOMER_ROW_SELECTOR = 'tbody tr[tabindex="0"]';
+const DETAIL_FIELD_LABEL_SELECTOR = "dt";
 
 const CUSTOMER_DETAIL_URL_PATTERN = /\/admin\/customers\/[0-9a-f-]+(?:\?|$)/;
 
-/** 顧客行が無ければ test.skip するヘルパー（Empty state / 未 seed 環境対応）。 */
-async function gotoListAndRequireCustomer(page: Page) {
-  await page.goto(ADMIN_CUSTOMERS_PATH);
-  // テーブル全体が描画されるまで待機（Suspense / RSC 遅延対策）
-  await expect(
-    page.getByRole("heading", { name: /顧客|Customer/ }).first(),
-  ).toBeVisible({
+async function gotoListAndRequireDevCustomer(page: Page) {
+  await page.goto(DEV_CUSTOMER_SEARCH_PATH);
+  await expect(page.getByRole("heading", { name: "顧客管理" })).toBeVisible({
     timeout: 15000,
   });
-  const customerRow = page.locator(CUSTOMER_ROW_SELECTOR).first();
-  const count = await page.locator(CUSTOMER_ROW_SELECTOR).count();
-  if (count === 0) {
-    test.skip(
-      true,
-      "dev DB に顧客が登録されていません（seed で dev-customer を作成してください）",
-    );
-  }
+  const customerRow = page.getByRole("row", {
+    name: `${DEV_CUSTOMER_NAME} の顧客情報を表示`,
+  });
+  await expect(customerRow).toBeVisible({ timeout: 15000 });
   return customerRow;
 }
 
 /** 行クリック → 詳細ページ遷移を URL pattern で確実に待機する canonical pattern。
  *
  *  - `row.click()` の center 位置は CheckboxCell / Email / ActionDropdown 等の
- *    `stopRowClick` cell に落ちうるため、name cell（3 番目 = `td:nth(2)`、
- *    `stopRowClick` 非適用）を明示ターゲットして click 伝播を保証する。
+ *    `stopRowClick` cell に落ちうるため、ClickableTableRow の keyboard contract
+ *    を使って遷移する。
  *  - Next.js App Router の soft navigation は load event を発火しないため
- *    `waitForURL` ではなく URL を直接 polling する `toHaveURL` を使う。
+ *    web-first assertion の `toHaveURL` で URL 変化を待つ。
  */
 async function clickRowAndWaitForDetail(
   page: Page,
   row: ReturnType<Page["locator"]>,
 ) {
-  // 列順: [0] CheckboxCell(stop) [1] StatusBadge [2] 名前 [3] 区分 ...
-  await row.locator("td").nth(2).click();
+  await row.focus();
+  await row.press("Enter");
   await expect(page).toHaveURL(CUSTOMER_DETAIL_URL_PATTERN, { timeout: 10000 });
+}
+
+function detailFieldLabel(page: Page, label: string) {
+  return page.locator(DETAIL_FIELD_LABEL_SELECTOR).filter({
+    hasText: new RegExp(`^${label}$`, "u"),
+  });
 }
 
 test.describe("admin 顧客詳細 - reflection smoke", () => {
@@ -81,40 +82,40 @@ test.describe("admin 顧客詳細 - reflection smoke", () => {
     expect(page.url()).not.toMatch(/\/admin\/login/);
 
     // 顧客一覧 page heading
-    await expect(
-      page.getByRole("heading", { name: /顧客|Customer/ }).first(),
-    ).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: "顧客管理" })).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test("顧客行をクリックすると詳細ページに遷移する", async ({ page }) => {
-    const customerRow = await gotoListAndRequireCustomer(page);
+    const customerRow = await gotoListAndRequireDevCustomer(page);
     await clickRowAndWaitForDetail(page, customerRow);
     expect(page.url()).toMatch(CUSTOMER_DETAIL_URL_PATTERN);
   });
 
   test("詳細ページで基本情報セクションが表示される", async ({ page }) => {
-    const customerRow = await gotoListAndRequireCustomer(page);
+    const customerRow = await gotoListAndRequireDevCustomer(page);
     await clickRowAndWaitForDetail(page, customerRow);
 
     // AdminDetailLayout: title (h1) + DetailSection「基本情報」
-    await expect(page.getByText("基本情報").first()).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(
+      page.getByRole("heading", { name: DEV_CUSTOMER_NAME, level: 1 }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("基本情報", { exact: true })).toBeVisible();
 
     // DetailField のラベル群
-    await expect(page.getByText("お名前").first()).toBeVisible();
-    await expect(page.getByText("区分").first()).toBeVisible();
-    await expect(page.getByText("メールアドレス").first()).toBeVisible();
+    await expect(detailFieldLabel(page, "お名前")).toBeVisible();
+    await expect(detailFieldLabel(page, "区分")).toBeVisible();
+    await expect(detailFieldLabel(page, "メールアドレス")).toBeVisible();
   });
 
   test("詳細ページに編集ボタン（リンク）が存在する", async ({ page }) => {
-    const customerRow = await gotoListAndRequireCustomer(page);
+    const customerRow = await gotoListAndRequireDevCustomer(page);
     await clickRowAndWaitForDetail(page, customerRow);
 
     // AdminDetailLayout actions に「編集」リンク（href が /edit を含む）
-    const editLink = page.locator(
-      'a[href*="/admin/customers/"][href$="/edit"]',
-    );
-    await expect(editLink.first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("link", { name: "編集" })).toBeVisible({
+      timeout: 5000,
+    });
   });
 });

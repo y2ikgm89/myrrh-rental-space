@@ -57,7 +57,6 @@ import { MaintenanceGate } from "@/public/components/maintenance-gate";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
-import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import {
   TaxSettingsProvider,
   type PublicTaxDisplay,
@@ -304,14 +303,6 @@ async function MobileNavWithAuth(): Promise<ReactElement> {
 /**
  * `<main>` chrome 全体の presentational frame（Server Component）。
  *
- * fallback と resolved の両方から同じコンポーネントで呼ばれるが、React Suspense semantics 上
- * fallback → resolved の遷移では fallback subtree が unmount され resolved subtree が
- * fresh に mount される（React 19 公式: state 保持には `<Activity mode="hidden">` が必要）。
- * したがって LenisProvider / NuqsAdapter は初回 Suspense 解決時に 1 回 remount する。
- * これは初回ロード時の一度きりで user-perceptible 影響は無く、同一 frame コンポーネントを
- * 使うのは **fallback DOM 形状を resolved と一致させて CLS / レイアウトシフトを防ぐ**目的
- * （state 保持目的ではない）。
- *
  * 取得した settings は props 経由で渡す。データ取得は `MainShellResolved`（async）が担う。
  */
 function MainShellFrame({
@@ -342,18 +333,20 @@ function MainShellFrame({
   );
 }
 
-/**
- * Suspense fallback 用デフォルト（DB 非依存）。queries 側の null-fallback と同じ値を
- * 直接 import し、build prerender に **DB query を含めず** に静的シェルを焼く。
- */
-const DEFAULT_TAX_VALUE: PublicTaxDisplay = {
-  standardRate: DEFAULT_TAX_SETTINGS.standardRate,
-  reducedRate: DEFAULT_TAX_SETTINGS.reducedRate,
-  displayMode: DEFAULT_TAX_SETTINGS.displayModePublic,
-};
+// Suspense fallback is a decorative spacer only, so it stays DB-independent.
 const DEFAULT_MAIN_STYLE: MainShellStyle = {
   "--container-site": getContainerSiteCss(FALLBACK_LAYOUT_CONFIG),
 };
+
+function MainShellFallback(): ReactElement {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex-1 pb-[var(--spacing-fluid-md)]"
+      style={DEFAULT_MAIN_STYLE}
+    />
+  );
+}
 
 /**
  * `<main>` の動的 chrome を解決する async Server Component（Suspense 内で resume）。
@@ -361,12 +354,8 @@ const DEFAULT_MAIN_STYLE: MainShellStyle = {
  * 設計（PR #76c2316b で確立した build-time prerender 汚染回避 pattern の layout 本体への展開）:
  * - `await connection()` で build prerender を skip して runtime に評価
  * - 'use cache' + safeFetch fallback の null が静的シェル RSC payload に焼き込まれる構造的問題を回避
- * - fallback と resolved で同じ `MainShellFrame` を使うのは **DOM レイアウト一致による CLS 抑制**
- *   が目的。React Suspense 解決時には LenisProvider / NuqsAdapter は 1 回 unmount + remount
- *   される（公式 semantics・初回ロード時のみで実害皆無）。state 保持目的では使えない。
- *
- * 詳細根拠と再 litigate 禁止項目は memory
- * `project_cacheable-fetch-build-prerender-canonical-2026-06-22` が SSoT。
+ * - fallback は装飾 skeleton / spacer のみ。page children と landmark は resolved 側だけで
+ *   描画し、React streaming 中の duplicate landmark / hydration mismatch を避ける。
  */
 async function MainShellResolved({
   children,
@@ -423,7 +412,7 @@ export default async function PublicRootLayout({
 
   return (
     <Suspense>
-      <html lang="ja">
+      <html lang="ja" data-scroll-behavior="smooth">
         <head>
           <Suspense fallback={null}>
             <HeadContent />
@@ -452,20 +441,20 @@ export default async function PublicRootLayout({
                 </Suspense>
                 <Suspense
                   fallback={
-                    <header
-                      role="banner"
+                    <div
+                      aria-hidden="true"
                       className="flex h-[var(--header-height,4rem)] items-center border-b border-border/50 px-[var(--container-padding)]"
                     >
                       <div className="h-5 w-24 animate-pulse bg-surface" />
-                      <nav className="ml-auto hidden gap-6 md:flex">
+                      <div className="ml-auto hidden gap-6 md:flex">
                         {skeletonKeys(4, "nav-item").map((key) => (
                           <div
                             key={key}
                             className="h-3 w-14 animate-pulse bg-surface"
                           />
                         ))}
-                      </nav>
-                    </header>
+                      </div>
+                    </div>
                   }
                 >
                   <HeaderWithData />
@@ -474,20 +463,8 @@ export default async function PublicRootLayout({
                 {/* `<main>` chrome を Suspense + await connection() で隔離。Footer/Header/
                     AnnouncementBar と同 pattern (PR #76c2316b) を layout 本体にも展開し、
                     build prerender で null fallback が静的シェルに焼き込まれる構造を排除。
-                    fallback と resolved で同じ MainShellFrame を使うのは **DOM 形状一致による
-                    CLS 抑制が目的**（state 保持ではない・Suspense 解決時に providers は
-                    1 回 remount される・React 公式仕様）。 */}
-                <Suspense
-                  fallback={
-                    <MainShellFrame
-                      style={DEFAULT_MAIN_STYLE}
-                      isTransparent={false}
-                      taxValue={DEFAULT_TAX_VALUE}
-                    >
-                      {children}
-                    </MainShellFrame>
-                  }
-                >
+                    fallback は装飾 spacer のみにして duplicate landmark を避ける。 */}
+                <Suspense fallback={<MainShellFallback />}>
                   <MainShellResolved>{children}</MainShellResolved>
                 </Suspense>
 
@@ -495,8 +472,8 @@ export default async function PublicRootLayout({
                     内部の `await connection()` で runtime 動的化を保証。実データは resume で流入。 */}
                 <Suspense
                   fallback={
-                    <footer
-                      role="contentinfo"
+                    <div
+                      aria-hidden="true"
                       className="border-t border-border bg-surface"
                     >
                       <div className="mx-auto max-w-6xl px-5 py-[var(--spacing-fluid-sm)] md:px-8 md:py-[var(--spacing-fluid-md)]">
@@ -510,7 +487,7 @@ export default async function PublicRootLayout({
                           ))}
                         </div>
                       </div>
-                    </footer>
+                    </div>
                   }
                 >
                   <Footer />

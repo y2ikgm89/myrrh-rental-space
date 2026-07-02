@@ -77,7 +77,7 @@ export type SettingsData = {
   notifyEventRegistration: boolean;
   notifyEventCancellation: boolean;
   notificationStaffIds: string[];
-  notificationEmailAddresses: string | null;
+  notificationEmailAddresses: string[];
   taxStandardRate: number;
   taxReducedRate: number;
   taxDisplayModePublic: TaxDisplayMode;

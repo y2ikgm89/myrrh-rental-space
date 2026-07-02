@@ -14,7 +14,11 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import * as stripeLib from "@/shared/lib/stripe";
 import { stripeFormSchema } from "./schemas/form-schemas-security-integrations";
 import { DomainError } from "@/shared/domain/domain-error";
-import * as settingsCommands from "@/shared/domain/settings/commands";
+import {
+  clearStripeKeys as clearStripeKeysCommand,
+  recordStripeConnectionSuccess,
+  updateStripeSettings as updateStripeSettingsCommand,
+} from "@/shared/domain/settings/integration-commands";
 import {
   logError,
   ErrorCategory,
@@ -44,7 +48,7 @@ export async function updateStripeSettings(
       resource: "settings",
       action: "manage",
       execute: async () => {
-        await settingsCommands.updateStripeSettings({
+        await updateStripeSettingsCommand({
           stripeEnabled: data.stripeEnabled,
           stripePublishableKey: data.stripePublishableKey || null,
           stripeSecretKey: data.stripeSecretKey || null,
@@ -83,7 +87,7 @@ export async function testStripeConnectionAction(
       }
 
       try {
-        await settingsCommands.recordStripeConnectionSuccess(result.accountId);
+        await recordStripeConnectionSuccess(result.accountId);
       } catch (error) {
         logError(normalizeError(error), {
           category: ErrorCategory.DATABASE,
@@ -111,7 +115,7 @@ export async function clearStripeKeys(): Promise<MutationResult> {
     resource: "settings",
     action: "manage",
     execute: async () => {
-      await settingsCommands.clearStripeKeys();
+      await clearStripeKeysCommand();
       return null;
     },
     afterSuccess: () => {

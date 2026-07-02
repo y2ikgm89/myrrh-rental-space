@@ -94,18 +94,15 @@ export function EmailSection({ settings, staff }: EmailSectionProps) {
       sendReservationConfirmationEmail:
         settings.sendReservationConfirmationEmail ? "on" : "",
       notificationStaffIds: settings.notificationStaffIds,
-      notificationEmailAddresses: settings.notificationEmailAddresses ?? "",
+      notificationEmailAddresses: settings.notificationEmailAddresses,
     },
   });
 
   const [staffIds, setStaffIds] = useState<string[]>(
     settings.notificationStaffIds,
   );
-  const [customTokens, setCustomTokens] = useState<string[]>(() =>
-    (settings.notificationEmailAddresses ?? "")
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean),
+  const [customTokens, setCustomTokens] = useState<string[]>(
+    () => settings.notificationEmailAddresses,
   );
   const customLabelId = useId();
   const customHelpId = useId();

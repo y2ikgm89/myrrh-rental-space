@@ -108,7 +108,7 @@ export function CancelButton({
 
           {/* JSX 順 = visual 順 (Dialog primitive が flex-col / sm:flex-row 両軸対応)。
            *  mobile 縦並びでは「閉じる」が上、「キャンセル確定」(destructive) が thumb-zone 底に来る。 */}
-          <DialogFooter>
+          <DialogFooter role="group" aria-label="予約キャンセル操作">
             <Button
               variant="ghost"
               size="sm"

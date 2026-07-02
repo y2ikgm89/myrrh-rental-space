@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getPublishedPostsList } from "@/shared/domain/posts/queries";
 import { getBaseUrl } from "@/shared/lib/constants";
 
@@ -11,6 +12,8 @@ function escapeXml(str: string): string {
 }
 
 export async function GET(): Promise<Response> {
+  await connection();
+
   const baseUrl = getBaseUrl();
   const result = await getPublishedPostsList(1, 20);
 

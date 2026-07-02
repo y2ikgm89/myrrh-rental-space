@@ -1,7 +1,7 @@
 /**
  * カレンダー同期 Cron API
  *
- * Cloud Schedulerまたは外部スケジューラーから定期的に呼び出され、
+ * Cloud Scheduler から定期的に呼び出され、
  * Google Calendarとの双方向同期を実行します。
  *
  * ## 機能
@@ -24,6 +24,7 @@
  */
 
 import { unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
 import {
@@ -45,7 +46,6 @@ import {
 } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
-import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
@@ -53,17 +53,16 @@ import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
  * カレンダー同期用Cronエンドポイント
  * GET /api/cron/calendar-sync
  *
- * Cloud Schedulerまたは外部スケジューラーから呼び出される
+ * Cloud Scheduler から呼び出される
  * 設定で指定された間隔（デフォルト5分）でカレンダーの変更をチェック
  *
- * セキュリティ: CRON_SECRET環境変数による認証
+ * セキュリティ: Cloud Scheduler OIDC token による認証
  */
 export async function GET(request: Request) {
   try {
-    const authorizationResult = authorizeCronRequest({
-      authorizationHeader: request.headers.get("authorization"),
-      secret: serverEnv.CRON_SECRET,
-      nodeEnv: serverEnv.NODE_ENV,
+    await connection();
+    const authorizationResult = await authorizeCronRequest({
+      request,
       operation: "calendarSyncCron",
     });
     if (authorizationResult) {

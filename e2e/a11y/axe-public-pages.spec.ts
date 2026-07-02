@@ -55,10 +55,13 @@ function formatAxeViolations(violations: readonly Result[]): string {
 }
 
 test.describe("a11y scan - 公開ページ主要ルート", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+  });
+
   test("ホームページに critical/serious 違反がない", async ({ page }) => {
     await page.goto(urls.home);
-    await expect(page.locator("main").first()).toBeVisible();
-    // GSAP 入場アニメ完了は web-first assertion の auto-wait で吸収
+    await expect(page.getByRole("main")).toBeVisible();
 
     const results = await buildAxeScanner(page).analyze();
     const blocking = results.violations.filter(isBlocking);

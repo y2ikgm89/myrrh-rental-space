@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import Link from "next/link";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -31,6 +32,8 @@ const DATE_FORMAT_OPTIONS = {
 export default async function MypageInquiryDetailPage({
   params,
 }: PageProps): Promise<ReactElement> {
+  await connection();
+
   const { id } = await params;
 
   const { user } = await verifyCustomerSession();

@@ -59,6 +59,7 @@ export function EventSeoFields({
   defaults,
 }: EventSeoFieldsProps): ReactElement {
   const ogpImagePicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "EVENT",
     onSelect: (media) => {
       const selected = media[0];

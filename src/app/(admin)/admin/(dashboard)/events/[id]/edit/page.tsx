@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import {
   getEventById,
   getLocationsForEvent,
@@ -17,6 +18,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const event = await getEventById(id);
 
@@ -32,6 +35,8 @@ export async function generateMetadata({
 }
 
 export default async function EditEventPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
 
   const event = await getEventById(id);

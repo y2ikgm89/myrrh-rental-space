@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import {
   getLocationsForEvent,
   getSpacesForEvent,
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NewEventPage() {
+  await connection();
+
   const [locations, spaces] = await Promise.all([
     getLocationsForEvent(),
     getSpacesForEvent(),

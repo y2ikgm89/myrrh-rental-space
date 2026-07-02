@@ -14,16 +14,14 @@ test.describe("smoke: homepage", () => {
     const response = await page.goto(urls.home);
     expect(response?.status()).toBe(200);
 
-    // <main> は SkipLink ターゲット + nested SC で 2 個 render される構成のため .first()
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
   });
 
   test("ヘッダー + フッターが描画される", async ({ page }) => {
     await page.goto(urls.home);
-    await page.waitForLoadState("domcontentloaded");
 
-    await expect(page.locator("header").first()).toBeVisible();
-    await expect(page.locator("footer").first()).toBeVisible();
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
   });
 
   test("メタタイトルが設定されている", async ({ page }) => {

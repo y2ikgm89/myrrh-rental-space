@@ -121,8 +121,7 @@ function toSettingsData(
     notifyNewInquiry: settings.notifyNewInquiry,
     notifyEventRegistration: settings.notifyEventRegistration,
     notifyEventCancellation: settings.notifyEventCancellation,
-    notificationStaffIds:
-      parseStringArrayOrNull(settings.notificationStaffIds) ?? [],
+    notificationStaffIds: settings.notificationStaffIds,
     notificationEmailAddresses: settings.notificationEmailAddresses,
     taxStandardRate: settings.taxStandardRate,
     taxReducedRate: settings.taxReducedRate,

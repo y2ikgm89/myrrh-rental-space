@@ -7,9 +7,10 @@
 # に一括登録する。存在するジョブは `update`、存在しないジョブは `create` する
 # 冪等スクリプト。何度実行しても安全。
 #
-# 認証方式: Authorization: Bearer $CRON_SECRET (Secret Manager から取得)
-#   - GCP OIDC トークンではなく、既存の `authorizeCronRequest` パターン準拠
-#   - 外部ポーリング（例: cron-job.org）との互換性維持
+# 認証方式: Cloud Scheduler OIDC token
+#   - `--oidc-service-account-email` で指定した service account から
+#     Authorization: Bearer <Google ID token> が生成される
+#   - アプリ側は token の audience と service account email を検証する
 #
 # 使い方:
 #   1. gcloud CLI 認証済み (`gcloud auth login`)
@@ -21,7 +22,8 @@
 #   SERVICE_URL      Cloud Run サービス URL（必須）例: https://myrrh-rental-space-xxx.a.run.app
 #   REGION           Cloud Scheduler リージョン（デフォルト: asia-northeast1）
 #   TIME_ZONE        Cron タイムゾーン（デフォルト: Asia/Tokyo）
-#   CRON_SECRET      Cron 認証トークン（Secret Manager から取得推奨）
+#   CRON_SERVICE_ACCOUNT_EMAIL  OIDC token 発行元 service account（必須）
+#   CRON_OIDC_AUDIENCE          OIDC audience（デフォルト: SERVICE_URL）
 #   DRY_RUN          "1" 指定時は gcloud コマンドを出力するだけで実行しない
 #
 # 参考:
@@ -35,19 +37,11 @@ set -euo pipefail
 
 : "${PROJECT_ID:?PROJECT_ID is required}"
 : "${SERVICE_URL:?SERVICE_URL is required (e.g., https://myrrh-rental-space-xxx.a.run.app)}"
+: "${CRON_SERVICE_ACCOUNT_EMAIL:?CRON_SERVICE_ACCOUNT_EMAIL is required}"
 REGION="${REGION:-asia-northeast1}"
 TIME_ZONE="${TIME_ZONE:-Asia/Tokyo}"
+CRON_OIDC_AUDIENCE="${CRON_OIDC_AUDIENCE:-${SERVICE_URL}}"
 DRY_RUN="${DRY_RUN:-0}"
-
-if [[ -z "${CRON_SECRET:-}" ]]; then
-  echo "⚠️  CRON_SECRET not set in environment. Fetching from Secret Manager..."
-  CRON_SECRET=$(gcloud secrets versions access latest \
-    --secret=CRON_SECRET \
-    --project="${PROJECT_ID}") || {
-    echo "❌ Failed to fetch CRON_SECRET from Secret Manager" >&2
-    exit 1
-  }
-fi
 
 # --- ジョブ定義 ------------------------------------------------------------
 #
@@ -72,16 +66,7 @@ JOBS=(
 
 run_gcloud() {
   if [[ "${DRY_RUN}" == "1" ]]; then
-    local redacted_args=()
-    local arg
-    for arg in "$@"; do
-      if [[ "${arg}" == --headers=Authorization=Bearer* ]]; then
-        redacted_args+=("--headers=Authorization=Bearer [REDACTED]")
-      else
-        redacted_args+=("${arg}")
-      fi
-    done
-    echo "[DRY RUN] gcloud ${redacted_args[*]}"
+    echo "[DRY RUN] gcloud $*"
   else
     gcloud "$@"
   fi
@@ -113,6 +98,11 @@ upsert_job() {
 
   echo "▶ ${action}: ${name} (${schedule}) → ${path}"
 
+  local header_args=()
+  if [[ "${action}" == "update" ]]; then
+    header_args+=(--clear-headers)
+  fi
+
   run_gcloud scheduler jobs "${action}" http "${name}" \
     --quiet \
     --location="${REGION}" \
@@ -121,7 +111,9 @@ upsert_job() {
     --time-zone="${TIME_ZONE}" \
     --uri="${uri}" \
     --http-method=GET \
-    --headers="Authorization=Bearer ${CRON_SECRET}" \
+    "${header_args[@]}" \
+    --oidc-service-account-email="${CRON_SERVICE_ACCOUNT_EMAIL}" \
+    --oidc-token-audience="${CRON_OIDC_AUDIENCE}" \
     --attempt-deadline=300s \
     --max-retry-attempts=3 \
     --min-backoff=30s \
@@ -137,6 +129,8 @@ echo "  Project:   ${PROJECT_ID}"
 echo "  Region:    ${REGION}"
 echo "  TimeZone:  ${TIME_ZONE}"
 echo "  Service:   ${SERVICE_URL}"
+echo "  Audience:  ${CRON_OIDC_AUDIENCE}"
+echo "  OIDC SA:   ${CRON_SERVICE_ACCOUNT_EMAIL}"
 echo "  Dry run:   ${DRY_RUN}"
 echo ""
 

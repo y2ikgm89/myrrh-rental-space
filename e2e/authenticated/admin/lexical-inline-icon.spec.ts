@@ -32,7 +32,9 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
   }) => {
     await page.goto(NEW_POST_PATH);
 
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = page
+      .getByRole("region", { name: "本文エディタ" })
+      .getByRole("textbox");
     await expect(editor).toBeVisible({ timeout: 15000 });
 
     await editor.click();
@@ -40,20 +42,32 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
 
     // ComponentPicker (typeahead) が dropdown 表示される
     // 公式 Lexical は role="listbox"、項目は role="option"
-    const iconOption = page.getByRole("option", { name: /アイコン/ }).first();
+    const componentPicker = page.getByRole("listbox", {
+      name: "ブロックを挿入",
+    });
+    const iconOption = componentPicker.getByRole("option", {
+      name: "アイコン",
+    });
     await expect(iconOption).toBeVisible({ timeout: 5000 });
   });
 
   test("「アイコン」を選択すると IconPickerDialog が開く", async ({ page }) => {
     await page.goto(NEW_POST_PATH);
 
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = page
+      .getByRole("region", { name: "本文エディタ" })
+      .getByRole("textbox");
     await expect(editor).toBeVisible({ timeout: 15000 });
 
     await editor.click();
     await page.keyboard.type("/icon");
 
-    const iconOption = page.getByRole("option", { name: /アイコン/ }).first();
+    const componentPicker = page.getByRole("listbox", {
+      name: "ブロックを挿入",
+    });
+    const iconOption = componentPicker.getByRole("option", {
+      name: "アイコン",
+    });
     await expect(iconOption).toBeVisible({ timeout: 5000 });
     await iconOption.click();
 
@@ -68,13 +82,20 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
   }) => {
     await page.goto(NEW_POST_PATH);
 
-    const editor = page.locator('[contenteditable="true"]').first();
+    const editor = page
+      .getByRole("region", { name: "本文エディタ" })
+      .getByRole("textbox");
     await expect(editor).toBeVisible({ timeout: 15000 });
 
     await editor.click();
     await page.keyboard.type("/icon");
 
-    const iconOption = page.getByRole("option", { name: /アイコン/ }).first();
+    const componentPicker = page.getByRole("listbox", {
+      name: "ブロックを挿入",
+    });
+    const iconOption = componentPicker.getByRole("option", {
+      name: "アイコン",
+    });
     await iconOption.click();
 
     const dialog = page.getByRole("dialog");
@@ -87,16 +108,18 @@ test.describe("Lexical InlineIcon - slash command 挿入", () => {
     await expect(searchInput).toBeVisible();
     await searchInput.fill("clock");
 
-    // 検索結果の最初の icon ボタン（aria-label="<label>（<name>）" + aria-pressed）
-    const firstIconButton = dialog.locator("button[aria-pressed]").first();
-    await expect(firstIconButton).toBeVisible({ timeout: 5000 });
-    await firstIconButton.click();
+    const clockIconButton = dialog.getByRole("button", {
+      name: "時計（IconClock）",
+    });
+    await expect(clockIconButton).toBeVisible({ timeout: 5000 });
+    await clockIconButton.click();
 
     // 確定ボタンは「選択」（実装: IconPickerDialog.tsx の primary action）
     await dialog.getByRole("button", { name: "選択", exact: true }).click();
 
-    // editor に inline-icon DOM が挿入される（exportDOM の data-lexical-inline-icon）
-    const inlineIcon = editor.locator("[data-lexical-inline-icon]").first();
-    await expect(inlineIcon).toBeVisible({ timeout: 5000 });
+    // editor に inline-icon DOM が挿入される（編集中 DOM は data-icon-name を持たない）
+    await expect(editor.locator("[data-lexical-inline-icon]")).toHaveCount(1, {
+      timeout: 5000,
+    });
   });
 });

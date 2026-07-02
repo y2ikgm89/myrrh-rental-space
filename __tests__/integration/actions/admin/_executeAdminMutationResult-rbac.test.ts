@@ -90,8 +90,6 @@ mock.module("@/shared/lib/cloudflare", () => ({
   purgeCloudflareCacheByTags: mock(async () => ({ success: true })),
   callPurgeApiPublic: mock(async () => ({ success: true })),
   getCloudflareCredentialsValidated: mock(() => null),
-  setCloudflareTagPurgeEnabled: mock(() => {}),
-  isCloudflareTagPurgeEnabled: mock(() => true),
 }));
 
 // deleteCouponCommand は domain command の発火観測用スパイ。

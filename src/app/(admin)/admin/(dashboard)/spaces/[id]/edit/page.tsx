@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import Link from "next/link";
 import { IconExternalLink } from "@tabler/icons-react";
 import { deleteSpace } from "@/admin/actions/space";
@@ -20,6 +21,8 @@ type PageProps = { params: Params };
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const space = await getSpaceById(id);
   if (!space) return { title: "スペースが見つかりません | Myrrh Rental Space" };
@@ -27,6 +30,8 @@ export async function generateMetadata({
 }
 
 export default async function EditSpacePage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
 
   const [

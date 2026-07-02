@@ -7,6 +7,7 @@
 
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import {
   getResendConfig,
   getTurnstileConfig,
@@ -17,6 +18,7 @@ import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getSettings } from "@/admin/queries/settings";
 import { getGbpAuthState } from "@/shared/lib/google-business-profile";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -30,6 +32,34 @@ import {
   InstagramSection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+type PageProps = {
+  readonly searchParams: Promise<SearchParams>;
+};
+
+function getGbpCanonicalUrl(searchParams: SearchParams): string | null {
+  if (
+    searchParams["gbp_success"] === undefined &&
+    searchParams["gbp_error"] === undefined
+  ) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (key === "gbp_success" || key === "gbp_error") continue;
+    if (Array.isArray(value)) {
+      value.forEach((item) => params.append(key, item));
+    } else if (value !== undefined) {
+      params.set(key, value);
+    }
+  }
+
+  const next = params.toString();
+  return `/admin/settings/integrations${next ? `?${next}` : ""}`;
+}
 
 async function IntegrationsSettingsContent(): Promise<ReactElement> {
   await connection();
@@ -135,8 +165,12 @@ function IntegrationsSettingsLoading(): ReactElement {
   );
 }
 
-export default async function IntegrationsSettingsPage(): Promise<ReactElement> {
+export default async function IntegrationsSettingsPage({
+  searchParams,
+}: PageProps): Promise<ReactElement> {
   await requireAdminPermission("settings", "manage");
+  const canonicalUrl = getGbpCanonicalUrl(await searchParams);
+  if (canonicalUrl) redirect(toAppRoute(canonicalUrl));
 
   return (
     <SettingsLayout

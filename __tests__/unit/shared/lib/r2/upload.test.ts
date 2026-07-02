@@ -37,8 +37,8 @@ mock.module("@/shared/lib/errors/server", () => ({
 import {
   uploadFile,
   uploadFiles,
-  DEFAULT_VALIDATION,
   IMAGE_VALIDATION,
+  MEDIA_VALIDATION,
 } from "@/shared/lib/r2/upload";
 import { STORAGE_PREFIXES } from "@/shared/lib/r2/keys";
 
@@ -77,6 +77,7 @@ describe("uploadFile (magic-byte trust boundary)", () => {
     const file = makeImageFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
     const result = await uploadFile(file, STORAGE_PREFIXES.SPACES, {
       folder: "space-1",
+      validation: IMAGE_VALIDATION,
     });
     expect(result.success).toBe(true);
     if (!result.success) throw new Error("expected success");
@@ -91,7 +92,9 @@ describe("uploadFile (magic-byte trust boundary)", () => {
   test("PNG: 検出 MIME 由来の拡張子になる（client.type が偽装でも server-side で確定）", async () => {
     // declaredType を image/jpeg と偽装するが、magic-byte は PNG
     const file = makeImageFile("evil.jpg", "image/jpeg", PNG_HEADER, 1024);
-    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: IMAGE_VALIDATION,
+    });
     expect(result.success).toBe(true);
     if (!result.success) throw new Error("expected success");
     expect(result.contentType).toBe("image/png");
@@ -100,7 +103,9 @@ describe("uploadFile (magic-byte trust boundary)", () => {
 
   test("WebP: 検出 MIME 由来の拡張子", async () => {
     const file = makeImageFile("photo.webp", "image/webp", WEBP_HEADER, 2048);
-    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: IMAGE_VALIDATION,
+    });
     expect(result.success).toBe(true);
     if (!result.success) throw new Error("expected success");
     expect(result.contentType).toBe("image/webp");
@@ -109,7 +114,9 @@ describe("uploadFile (magic-byte trust boundary)", () => {
 
   test("magic-byte が画像でない（HTML 偽装）→ success:false で send されない", async () => {
     const file = makeRawFile("evil.jpg", "image/jpeg", 1024);
-    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: IMAGE_VALIDATION,
+    });
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
     expect(result.error).toContain("認識できません");
@@ -138,7 +145,9 @@ describe("uploadFile (magic-byte trust boundary)", () => {
       JPEG_HEADER,
       20 * 1024 * 1024,
     );
-    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: IMAGE_VALIDATION,
+    });
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
     expect(result.error).toContain("MB以下");
@@ -150,7 +159,9 @@ describe("uploadFile (magic-byte trust boundary)", () => {
       throw new Error("network error");
     });
     const file = makeImageFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
-    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: IMAGE_VALIDATION,
+    });
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
     expect(result.error).toContain("アップロードに失敗");
@@ -161,6 +172,7 @@ describe("uploadFile (magic-byte trust boundary)", () => {
     // generateStorageKey が throw → uploadFile の catch で success:false
     const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
       folder: "../etc",
+      validation: IMAGE_VALIDATION,
     });
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
@@ -177,6 +189,7 @@ describe("uploadFiles", () => {
     ];
     const result = await uploadFiles(files, STORAGE_PREFIXES.POSTS, {
       folder: "post-1",
+      validation: IMAGE_VALIDATION,
     });
     expect(result.success).toBe(true);
     expect(result.results).toHaveLength(2);
@@ -189,25 +202,27 @@ describe("uploadFiles", () => {
       makeImageFile("big.jpg", "image/jpeg", JPEG_HEADER, 20 * 1024 * 1024),
       makeImageFile("c.png", "image/png", PNG_HEADER, 1024),
     ];
-    const result = await uploadFiles(files, STORAGE_PREFIXES.POSTS);
+    const result = await uploadFiles(files, STORAGE_PREFIXES.POSTS, {
+      validation: IMAGE_VALIDATION,
+    });
     expect(result.success).toBe(false);
     expect(result.results).toHaveLength(2); // 最初の1件成功 + 2件目失敗で短絡
     expect(result.error).toContain("big.jpg");
   });
 });
 
-describe("DEFAULT_VALIDATION / IMAGE_VALIDATION", () => {
-  test("DEFAULT は 全画像 MIME 許可（maxSize 省略時は per-type 上限が適用）", () => {
-    expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/jpeg");
-    expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/png");
-    expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/webp");
-    expect(DEFAULT_VALIDATION.allowedTypes).toContain("image/gif");
-  });
-
+describe("IMAGE_VALIDATION / MEDIA_VALIDATION", () => {
   test("IMAGE は 全画像 MIME 許可", () => {
     expect(IMAGE_VALIDATION.allowedTypes).toContain("image/jpeg");
     expect(IMAGE_VALIDATION.allowedTypes).toContain("image/png");
     expect(IMAGE_VALIDATION.allowedTypes).toContain("image/webp");
     expect(IMAGE_VALIDATION.allowedTypes).toContain("image/gif");
+  });
+
+  test("MEDIA は画像 / 動画 / 音声 / 文書 MIME を許可", () => {
+    expect(MEDIA_VALIDATION.allowedTypes).toContain("image/jpeg");
+    expect(MEDIA_VALIDATION.allowedTypes).toContain("video/mp4");
+    expect(MEDIA_VALIDATION.allowedTypes).toContain("audio/mpeg");
+    expect(MEDIA_VALIDATION.allowedTypes).toContain("application/pdf");
   });
 });

@@ -6,8 +6,10 @@
  *
  * ## 環境変数の必須/任意ルール
  * - DATABASE_URL, BETTER_AUTH_SECRET: 常に必須
+ * - BETTER_AUTH_URL: 本番環境では必須
  * - APP_SURFACE, ADMIN_APP_URL: 本番環境では必須
- * - ENCRYPTION_KEY, CRON_SECRET: 本番環境では必須
+ * - ENCRYPTION_KEY, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 本番環境では必須
+ * - CRON_OIDC_AUDIENCE, CRON_SERVICE_ACCOUNT_EMAIL: 本番環境では必須
  * - その他: 任意（機能が無効化される）
  *
  * ## ビルド時の注意
@@ -17,12 +19,55 @@
  */
 
 import "server-only";
+import { Buffer } from "node:buffer";
 import { createEnv } from "@t3-oss/env-nextjs";
+import type { StandardSchemaV1 } from "@t3-oss/env-core";
 import { z } from "zod";
 
+const isBase64EncodedAesKey = (value: string): boolean => {
+  if (
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(
+      value,
+    )
+  ) {
+    return false;
+  }
+
+  const decodedKey = Buffer.from(value, "base64");
+  return [16, 24, 32].includes(decodedKey.length);
+};
+
+const nextServerActionsEncryptionKey = z
+  .string()
+  .refine(isBase64EncodedAesKey, {
+    error:
+      "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY must be a base64-encoded AES key of 16, 24, or 32 bytes. Generate with: openssl rand -base64 32",
+  });
+
+const formatEnvValidationIssues = (
+  issues: readonly StandardSchemaV1.Issue[],
+): string => {
+  const paths = issues.map((issue) => {
+    const path = issue.path?.map(String).join(".");
+    return path && path.length > 0 ? path : "<unknown>";
+  });
+
+  return `Invalid environment variables: ${paths.join(", ")}`;
+};
+
 const noTrailingSlashUrl = z.url().refine((v) => !v.endsWith("/"), {
-  message: "must not end with trailing slash (paths are concatenated)",
+  error: "must not end with trailing slash (paths are concatenated)",
 });
+
+const cloudRunIapJwtAudience = z
+  .string()
+  .regex(
+    /^\/projects\/[1-9][0-9]*\/locations\/[a-z0-9-]+\/services\/[a-z0-9-]+$/u,
+    {
+      error:
+        "IAP_JWT_AUDIENCE must match Cloud Run IAP audience /projects/PROJECT_NUMBER/locations/REGION/services/SERVICE_NAME",
+    },
+  );
 
 /**
  * 本番環境かどうかを判定
@@ -48,7 +93,7 @@ export const serverEnv = createEnv({
 
     // Better Auth（必須）
     BETTER_AUTH_SECRET: z.string().min(32),
-    BETTER_AUTH_URL: z.url().optional(),
+    BETTER_AUTH_URL: noTrailingSlashUrl.optional(),
 
     // Email (Resend)
     RESEND_API_KEY: z.string().optional(),
@@ -87,13 +132,15 @@ export const serverEnv = createEnv({
     // Encryption（本番必須 - ランタイム検証）
     // API キー / OAuth トークン等の暗号化に使用。
     // 鍵ローテーション: `ENCRYPTION_KEY` は常に「新規 encrypt に使う primary key」、
-    // `ENCRYPTION_KEY_ID` はそれの kid（識別子、デフォルト "v1"）、
-    // `ENCRYPTION_KEYS_LEGACY` は decrypt fallback 用の旧鍵リスト
-    // (`<kid>:<hex64>,<kid>:<hex64>,...` 形式)。
+    // `ENCRYPTION_KEY_ID` はそれの kid（識別子、デフォルト "v1"）。
     ENCRYPTION_KEY: z
       .string()
       .length(64, { error: "ENCRYPTION_KEY must be exactly 64 characters" })
       .optional(),
+    // Next.js self-hosting Server Actions encryption key.
+    // The value is baked into the build and must stay consistent across instances.
+    NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:
+      nextServerActionsEncryptionKey.optional(),
     /** Primary key の識別子（kid）。1〜32 文字、`a-zA-Z0-9-_` のみ。未指定なら "v1"。 */
     ENCRYPTION_KEY_ID: z
       .string()
@@ -102,41 +149,41 @@ export const serverEnv = createEnv({
           "ENCRYPTION_KEY_ID must be 1-32 chars of [a-zA-Z0-9_-] (e.g. 'v1', 'v2', 'k20260623')",
       })
       .optional(),
-    /**
-     * decrypt fallback 用の旧鍵リスト（ローテーション猶予期間用）。
-     * 形式: `<kid1>:<hex64>,<kid2>:<hex64>,...`
-     * 旧 ciphertext は kid に従って該当鍵で復号、鍵不在なら decrypt 失敗。
-     */
-    ENCRYPTION_KEYS_LEGACY: z
-      .string()
-      .regex(
-        /^([a-zA-Z0-9_-]{1,32}:[0-9a-fA-F]{64})(,[a-zA-Z0-9_-]{1,32}:[0-9a-fA-F]{64})*$/u,
-        {
-          error:
-            "ENCRYPTION_KEYS_LEGACY must be '<kid>:<hex64>' entries joined by ','",
-        },
-      )
-      .optional(),
 
     // Cron（本番必須 - ランタイム検証）
-    // Cron エンドポイントの認証に使用
-    CRON_SECRET: z
-      .string()
-      .min(32, { error: "CRON_SECRET must be at least 32 characters" })
-      .optional(),
+    // Cloud Scheduler OIDC token の audience と発行元 service account を検証する。
+    CRON_OIDC_AUDIENCE: noTrailingSlashUrl.optional(),
+    CRON_SERVICE_ACCOUNT_EMAIL: z.email().optional(),
 
     // Database connection pool tuning
     DATABASE_POOL_MAX: z.coerce.number().int().positive().optional(),
+    DATABASE_CONNECTION_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional(),
+    DATABASE_IDLE_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
+    DATABASE_STATEMENT_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional(),
+    DATABASE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional(),
 
     // Deployment surface
     APP_SURFACE: z.enum(["public", "admin"]).default("admin"),
     ADMIN_APP_URL: noTrailingSlashUrl.optional(),
-    IAP_JWT_AUDIENCE: z.string().min(1).optional(),
+    IAP_JWT_AUDIENCE: cloudRunIapJwtAudience.optional(),
     ADMIN_TEST_IAP_EMAIL: z.email().optional(),
     ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL: z.email().optional(),
     ADMIN_ROLE_GROUP_ADMIN_EMAIL: z.email().optional(),
     ADMIN_ROLE_GROUP_EDITOR_EMAIL: z.email().optional(),
     ADMIN_ROLE_GROUP_VIEWER_EMAIL: z.email().optional(),
+    E2E_RUNTIME: z.enum(["1"]).optional(),
 
     // Google Analytics（サービスアカウント JSON — GA4 Data API）
     GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
@@ -187,10 +234,18 @@ export const serverEnv = createEnv({
     INSTAGRAM_REDIRECT_URI: process.env["INSTAGRAM_REDIRECT_URI"],
     TURNSTILE_SECRET_KEY: process.env["TURNSTILE_SECRET_KEY"],
     ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"],
+    NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:
+      process.env["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
     ENCRYPTION_KEY_ID: process.env["ENCRYPTION_KEY_ID"],
-    ENCRYPTION_KEYS_LEGACY: process.env["ENCRYPTION_KEYS_LEGACY"],
-    CRON_SECRET: process.env["CRON_SECRET"],
+    CRON_OIDC_AUDIENCE: process.env["CRON_OIDC_AUDIENCE"],
+    CRON_SERVICE_ACCOUNT_EMAIL: process.env["CRON_SERVICE_ACCOUNT_EMAIL"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
+    DATABASE_CONNECTION_TIMEOUT_MS:
+      process.env["DATABASE_CONNECTION_TIMEOUT_MS"],
+    DATABASE_IDLE_TIMEOUT_MS: process.env["DATABASE_IDLE_TIMEOUT_MS"],
+    DATABASE_STATEMENT_TIMEOUT_MS: process.env["DATABASE_STATEMENT_TIMEOUT_MS"],
+    DATABASE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS:
+      process.env["DATABASE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS"],
     APP_SURFACE: process.env["APP_SURFACE"],
     ADMIN_APP_URL: process.env["ADMIN_APP_URL"],
     IAP_JWT_AUDIENCE: process.env["IAP_JWT_AUDIENCE"],
@@ -200,6 +255,7 @@ export const serverEnv = createEnv({
     ADMIN_ROLE_GROUP_ADMIN_EMAIL: process.env["ADMIN_ROLE_GROUP_ADMIN_EMAIL"],
     ADMIN_ROLE_GROUP_EDITOR_EMAIL: process.env["ADMIN_ROLE_GROUP_EDITOR_EMAIL"],
     ADMIN_ROLE_GROUP_VIEWER_EMAIL: process.env["ADMIN_ROLE_GROUP_VIEWER_EMAIL"],
+    E2E_RUNTIME: process.env["E2E_RUNTIME"],
     GOOGLE_APPLICATION_CREDENTIALS_JSON:
       process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
     R2_ACCOUNT_ID: process.env["R2_ACCOUNT_ID"],
@@ -213,6 +269,12 @@ export const serverEnv = createEnv({
       process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"],
     NODE_ENV: process.env["NODE_ENV"],
     CI: process.env["CI"],
+  },
+  // This module imports "server-only"; tests install JSDOM, so `window` is not
+  // a reliable server/runtime signal here.
+  isServer: true,
+  onValidationError: (issues) => {
+    throw new Error(formatEnvValidationIssues(issues));
   },
   // ビルド時検証をスキップするオプション（CI環境用）
   skipValidation: !!process.env["SKIP_ENV_VALIDATION"],
@@ -236,8 +298,17 @@ export function validateProductionEnv(): void {
   const requiredInProd = [
     { name: "APP_SURFACE", value: process.env["APP_SURFACE"] },
     { name: "ADMIN_APP_URL", value: serverEnv.ADMIN_APP_URL },
+    { name: "BETTER_AUTH_URL", value: serverEnv.BETTER_AUTH_URL },
     { name: "ENCRYPTION_KEY", value: serverEnv.ENCRYPTION_KEY },
-    { name: "CRON_SECRET", value: serverEnv.CRON_SECRET },
+    {
+      name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
+      value: serverEnv.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
+    },
+    { name: "CRON_OIDC_AUDIENCE", value: serverEnv.CRON_OIDC_AUDIENCE },
+    {
+      name: "CRON_SERVICE_ACCOUNT_EMAIL",
+      value: serverEnv.CRON_SERVICE_ACCOUNT_EMAIL,
+    },
     // Cloudflare R2 — 画像ストレージ必須
     { name: "R2_ACCOUNT_ID", value: serverEnv.R2_ACCOUNT_ID },
     { name: "R2_ACCESS_KEY_ID", value: serverEnv.R2_ACCESS_KEY_ID },

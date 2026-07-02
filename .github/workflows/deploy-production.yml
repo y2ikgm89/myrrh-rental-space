@@ -23,6 +23,8 @@ env:
   WORKER_POOL: myrrh-deploy-pool
   RUNTIME_SERVICE_ACCOUNT: myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com
   BUILD_SERVICE_ACCOUNT: myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com
+  CRON_SERVICE_ACCOUNT_EMAIL: myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com
+  CRON_OIDC_AUDIENCE: https://rental-space.myrrh-jp.com
   WORKLOAD_IDENTITY_PROVIDER: projects/626108938746/locations/global/workloadIdentityPools/github-actions/providers/github-myrrh-rental-space
   PUBLIC_DOMAIN: https://rental-space.myrrh-jp.com
   ADMIN_DOMAIN: https://myrrh-rental-space-admin-da57q4squa-an.a.run.app
@@ -79,11 +81,12 @@ jobs:
           SUBSTITUTIONS+=",_NEXT_PUBLIC_APP_URL=${PUBLIC_DOMAIN}"
           SUBSTITUTIONS+=",_BETTER_AUTH_URL=${PUBLIC_DOMAIN}"
           SUBSTITUTIONS+=",_ADMIN_APP_URL=${ADMIN_DOMAIN}"
+          SUBSTITUTIONS+=",_CRON_OIDC_AUDIENCE=${CRON_OIDC_AUDIENCE}"
+          SUBSTITUTIONS+=",_CRON_SERVICE_ACCOUNT_EMAIL=${CRON_SERVICE_ACCOUNT_EMAIL}"
           SUBSTITUTIONS+=",_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}"
           SUBSTITUTIONS+=",_DATABASE_URL_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_BETTER_AUTH_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_ENCRYPTION_KEY_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_CRON_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_R2_ACCOUNT_ID_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_R2_ACCESS_KEY_ID_SECRET_VERSION=1"

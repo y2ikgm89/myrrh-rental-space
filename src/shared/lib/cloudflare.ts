@@ -9,7 +9,7 @@
  * 未設定（env 欠落）時は `getCloudflareCredentials()` が null を返し、
  * 各 purge エントリポイントは早期 return で no-op（既存挙動と整合）。
  *
- * 起動時の credential 健全性チェック + plan-tier 検出は
+ * 起動時の credential 健全性チェックは
  * `src/shared/lib/cache/health.ts` の `assertCloudflareCredentials()` が担当。
  */
 
@@ -254,22 +254,6 @@ export async function purgeCloudflareCache(
 }
 
 // ============================================================
-// Plan-tier gate. Health probe (cache/health.ts) flips this to false when the
-// canary purge_by_tags returns a plan-tier feature-unavailable error.
-// purgeCloudflareCacheByTags consults the flag and falls back to
-// purgeAllCloudflareCache for site-wide invalidation.
-// ============================================================
-let cloudflareTagPurgeEnabled = true;
-
-export function setCloudflareTagPurgeEnabled(enabled: boolean): void {
-  cloudflareTagPurgeEnabled = enabled;
-}
-
-export function isCloudflareTagPurgeEnabled(): boolean {
-  return cloudflareTagPurgeEnabled;
-}
-
-// ============================================================
 // Public-facing exports for health probe
 // ============================================================
 
@@ -300,7 +284,7 @@ export async function callPurgeApiPublic(
 }
 
 // ============================================================
-// Whole-zone purge (kept as tag-purge fallback)
+// Whole-zone purge (explicit operator/tooling path only)
 // ============================================================
 
 export async function purgeAllCloudflareCache(): Promise<PurgeResult> {
@@ -353,9 +337,8 @@ export async function purgeCloudflareDetailUrls(
 const MAX_TAGS_PER_REQUEST = 30;
 
 /**
- * Purge by Cache-Tag values. Falls back to purgeAllCloudflareCache when the
- * runtime flag indicates the plan doesn't support tag purge (set by the
- * startup health probe).
+ * Purge by Cache-Tag values. Failures are returned as failures and surfaced by
+ * `firePurgeAsync`; callers do not silently broaden scope to whole-zone purge.
  */
 export async function purgeCloudflareCacheByTags(
   tags: string[],
@@ -369,16 +352,6 @@ export async function purgeCloudflareCacheByTags(
   }
   if (tags.length === 0) {
     return { success: true };
-  }
-
-  // Plan-tier fallback: degrade to purge_everything so site-wide invalidation
-  // still happens, just less surgically.
-  if (!cloudflareTagPurgeEnabled) {
-    logger.info(
-      "Cloudflare tag purge disabled (plan tier); falling back to purge_all",
-      { tags },
-    );
-    return purgeAllCloudflareCache();
   }
 
   // Validate + dedupe per Cloudflare constraints

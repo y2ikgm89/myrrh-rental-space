@@ -1,10 +1,11 @@
 /**
  * iCal (.ics) 生成 SSoT（server-only）
  *
- * `ical-generator` v10 + `@touch4it/ical-timezones` ベース。RFC 5545 準拠で
- * UID 安定・SEQUENCE 管理・METHOD:REQUEST/CANCEL・VTIMEZONE (Asia/Tokyo) を
- * サポートする。`ical-generator` は `node:fs` / `node:path` に依存するため
- * 本モジュールは server-only として保護する。
+ * `ical-generator` v11 ベース。RFC 5545 準拠で UID 安定・SEQUENCE 管理・
+ * METHOD:REQUEST/CANCEL をサポートする。日時は UTC (`Z`) で出力し、Cloud Run
+ * など server timezone が UTC の環境でも絶対時刻がずれないようにする。
+ * `ical-generator` は `node:fs` / `node:path` に依存するため本モジュールは
+ * server-only として保護する。
  *
  * Client Component から URL ビルダーのみ使う場合は {@link "./urls"} から
  * サブパス import する（`@/shared/lib/ical/urls`）。
@@ -21,13 +22,11 @@ import ical, {
   ICalEventStatus,
   type ICalCalendar,
 } from "ical-generator";
-import { getVtimezoneComponent } from "@touch4it/ical-timezones";
 import { formatJstYmd, formatTimeShort } from "@/shared/lib/date-format";
 import { buildEventRegistrationUid, buildReservationUid } from "./uid";
 import type { EventCalendarParams, ReservationCalendarParams } from "./types";
 
 const PRODID = "-//Myrrh Rental Space//Reservation System//JP";
-const DEFAULT_TIMEZONE = "Asia/Tokyo";
 
 // =============================================================================
 // Calendar factory
@@ -40,10 +39,6 @@ function createCalendar(
   const cal = ical({
     prodId: PRODID,
     method,
-    timezone: {
-      name: DEFAULT_TIMEZONE,
-      generator: getVtimezoneComponent,
-    },
   });
   if (name !== undefined) cal.name(name);
   return cal;

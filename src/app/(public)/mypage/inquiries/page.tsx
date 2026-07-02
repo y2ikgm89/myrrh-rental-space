@@ -6,6 +6,7 @@
 
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerInquiries } from "../_lib/inquiry-queries";
@@ -15,6 +16,8 @@ import { Button } from "@/public/components/design-system/button";
 import { InquiryList } from "./_components/inquiry-list";
 
 export default async function MypageInquiriesPage(): Promise<ReactElement> {
+  await connection();
+
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);
 

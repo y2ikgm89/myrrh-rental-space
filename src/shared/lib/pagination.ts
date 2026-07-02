@@ -45,7 +45,7 @@ export function paginate(input: {
  * findMany 結果 (items) と count (total) を受け取り、
  * 一般的なページネーション応答 (`items`/`total`/`page`/`limit`/`totalPages`) を返す。
  *
- * - `total = 0` でも `totalPages` は 0 を返す（後方互換: 既存 `Math.ceil(0 / n) = 0`）
+ * - `total = 0` では `totalPages` は 0 を返す。
  * - 呼び出し側は `paginate()` 由来の `{ page, limit }` を渡すこと
  */
 export function toPageResult<T>(

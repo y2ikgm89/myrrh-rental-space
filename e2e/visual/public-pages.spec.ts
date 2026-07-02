@@ -25,15 +25,32 @@ import { urls } from "../fixtures";
  *   （Kinfolk-style subtle animations の flaky 回避）
  * - 動的要素（日付・時刻・お知らせバー等）は `mask` で pink box
  * - `fullPage: true` で above-the-fold 以外の regression も検出
+ * - `toHaveScreenshot` 公式の連続 screenshot 安定化待ちに任せる
  * - `maxDiffPixelRatio: 0.01` で 1% 以内の微差は許容（フォント微調整等）
  *
  * 【baseline 管理】
  *
  * snapshot ファイルは `e2e/visual/public-pages.spec.ts-snapshots/` に
- * 自動配置される。CI / レビュー時の差分は playwright-report で確認。
+ * 自動配置され、Playwright の既定どおり browser / platform ごとに分かれる。
+ * CI では Ubuntu runner の `*-linux.png` が canonical baseline。`*-win32.png`
+ * は Windows ローカルで同じ opt-in 検証を走らせるための baseline として保持する。
+ * CI / レビュー時の差分は playwright-report で確認。
  */
 
 const VISUAL_ENABLED = process.env["PLAYWRIGHT_VISUAL"] === "1";
+
+const preparePageForVisualSnapshot = async (
+  page: Page,
+  headingName: string | RegExp,
+) => {
+  await expect(page.getByRole("main")).toBeVisible();
+  const heading =
+    typeof headingName === "string"
+      ? page.getByRole("heading", { name: headingName, exact: true })
+      : page.getByRole("heading", { name: headingName });
+  await expect(heading).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+};
 
 test.describe("Visual Regression - 公開ページ主要ルート", () => {
   // opt-in ガード
@@ -52,22 +69,6 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
     page.locator('[class*="instagram" i]'),
   ];
 
-  // 全 <img> の load 完了を待つ（toHaveScreenshot 直前の決定論的待機）
-  const waitForImagesLoaded = (page: Page) =>
-    page.evaluate(() =>
-      Promise.all(
-        Array.from(document.images)
-          .filter((img) => !img.complete)
-          .map(
-            (img) =>
-              new Promise((res) => {
-                img.onload = res;
-                img.onerror = res;
-              }),
-          ),
-      ),
-    );
-
   // GSAP / CSS animations が prefers-reduced-motion を見て止まる前提で reduce を強制
   test.beforeEach(async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -78,10 +79,7 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
   }) => {
     await page.goto(urls.home);
 
-    // GSAP / Lenis アニメーション完了を待つ
-    await expect(page.locator("main").first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    await waitForImagesLoaded(page);
+    await preparePageForVisualSnapshot(page, /Where silence works\./);
 
     await expect(page).toHaveScreenshot("homepage.png", {
       fullPage: true,
@@ -93,9 +91,7 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("スペース一覧ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.spaces);
-    await expect(page.locator("main").first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    await waitForImagesLoaded(page);
+    await preparePageForVisualSnapshot(page, "スペース一覧");
 
     await expect(page).toHaveScreenshot("spaces-list.png", {
       fullPage: true,
@@ -107,11 +103,9 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("ブログ一覧ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.blog);
-    await expect(page.locator("main").first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    await waitForImagesLoaded(page);
+    await preparePageForVisualSnapshot(page, "ブログ");
 
-    await expect(page).toHaveScreenshot("posts-list.png", {
+    await expect(page).toHaveScreenshot("blog-list.png", {
       fullPage: true,
       animations: "disabled",
       mask: dynamicMaskLocators(page),
@@ -121,9 +115,7 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("お知らせ一覧ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.news);
-    await expect(page.locator("main").first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    await waitForImagesLoaded(page);
+    await preparePageForVisualSnapshot(page, "お知らせ");
 
     await expect(page).toHaveScreenshot("news-list.png", {
       fullPage: true,
@@ -135,9 +127,7 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("FAQ ページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.faq);
-    await expect(page.locator("main").first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    await waitForImagesLoaded(page);
+    await preparePageForVisualSnapshot(page, "よくある質問");
 
     await expect(page).toHaveScreenshot("faq.png", {
       fullPage: true,
@@ -149,9 +139,7 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
 
   test("お問い合わせページ - full page snapshot", async ({ page }) => {
     await page.goto(urls.contact);
-    await expect(page.locator("main").first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    await waitForImagesLoaded(page);
+    await preparePageForVisualSnapshot(page, "お問い合わせ");
 
     await expect(page).toHaveScreenshot("contact.png", {
       fullPage: true,
@@ -176,21 +164,7 @@ test.describe("Visual Regression - モバイル viewport", () => {
 
   test("ホームページ - モバイル full page", async ({ page }) => {
     await page.goto(urls.home);
-    await expect(page.locator("main").first()).toBeVisible();
-    await page.evaluate(() => document.fonts.ready);
-    await page.evaluate(() =>
-      Promise.all(
-        Array.from(document.images)
-          .filter((img) => !img.complete)
-          .map(
-            (img) =>
-              new Promise((res) => {
-                img.onload = res;
-                img.onerror = res;
-              }),
-          ),
-      ),
-    );
+    await preparePageForVisualSnapshot(page, /Where silence works\./);
 
     await expect(page).toHaveScreenshot("homepage-mobile.png", {
       fullPage: true,

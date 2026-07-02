@@ -7,8 +7,7 @@
  * - 確定時に各アドレスを `z.email()` で検証（不正は inline エラーで弾く）。
  * - 貼り付けはカンマ/空白/セミコロン区切りで一括分割・正規化。
  * - IME 変換中の Enter 確定を抑止。空入力で Backspace は末尾チップを削除。
- * - 確定済みトークンは `join(",")` した hidden input（指定 name）に mirror し、
- *   既存の保存形式（カンマ区切り文字列）と互換のまま submit する。
+ * - 確定済みトークンは同名 hidden input として1件ずつ submit する。
  */
 import { useId, useRef, useState } from "react";
 import { z } from "zod";
@@ -151,7 +150,14 @@ export function EmailChips({
           className="min-w-[8rem] flex-1 bg-transparent text-sm outline-none disabled:cursor-not-allowed"
         />
       </div>
-      <input type="hidden" name={name} value={value.join(",")} />
+      {value.map((email) => (
+        <input
+          key={`hidden-${email}`}
+          type="hidden"
+          name={name}
+          value={email}
+        />
+      ))}
       {error && (
         <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
           {error}

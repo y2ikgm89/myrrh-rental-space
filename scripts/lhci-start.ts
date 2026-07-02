@@ -17,12 +17,11 @@
 
 function applyLhciProductionFallbacks(): void {
   const hex64 = "0".repeat(64);
-  /** serverEnv の z.string().min(32) を満たすプレースホルダ */
-  const token32 = "x".repeat(32);
 
   const fallbacks: Record<string, string> = {
     ENCRYPTION_KEY: hex64,
-    CRON_SECRET: token32,
+    CRON_OIDC_AUDIENCE: "http://localhost:3000",
+    CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com",
     R2_ACCOUNT_ID: "lhci-local-r2-account",
     R2_ACCESS_KEY_ID: "lhci-local-r2-access-key",
     R2_SECRET_ACCESS_KEY: "lhci-local-r2-secret-key-32-min!!",

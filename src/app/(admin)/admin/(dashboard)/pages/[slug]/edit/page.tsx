@@ -6,6 +6,7 @@
  */
 
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { IconExternalLink } from "@tabler/icons-react";
 import {
   getPageForEdit,
@@ -29,6 +30,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { slug } = await params;
   const page = await getPageWithSections(slug);
 
@@ -40,6 +43,8 @@ export async function generateMetadata({
 export default async function EditPagePage({
   params,
 }: PageProps): Promise<ReactElement> {
+  await connection();
+
   const { slug } = await params;
 
   const page = await getPageForEdit(slug);

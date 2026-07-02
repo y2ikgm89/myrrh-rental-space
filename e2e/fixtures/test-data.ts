@@ -11,9 +11,9 @@
 /** IAP ローカルテスト用の管理者メールアドレス */
 export const testUsers = {
   admin: {
-    email: "admin@example.com",
-    name: "Test Admin",
-    role: "ADMIN",
+    email: "superadmin@example.com",
+    name: "Test Super Admin",
+    role: "SUPER_ADMIN",
   },
 } as const;
 
@@ -31,7 +31,7 @@ export const urls = {
   // 顧客認証 + マイページ
   customerLogin: "/login",
   mypage: "/mypage",
-  mypageReservations: "/mypage/reservations",
+  mypageReservations: "/mypage",
   mypageInquiries: "/mypage/inquiries",
   mypageProfile: "/mypage/settings",
   // 管理画面
@@ -55,4 +55,14 @@ export const urls = {
 export const eventFixtures = {
   singleOccurrenceSlug: "yoga-mindfulness-workshop",
   timedEntrySlug: "photography-workshop",
+} as const;
+
+/** Public space seed contract used by reservation/review E2E specs. */
+export const spaceFixtures = {
+  publicReservableSpaceSlug: "coworking-space",
+} as const;
+
+/** Review seed contract used by public/customer review E2E specs. */
+export const reviewFixtures = {
+  publicReviewSpaceSlug: spaceFixtures.publicReservableSpaceSlug,
 } as const;

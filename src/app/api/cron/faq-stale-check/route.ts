@@ -4,11 +4,12 @@
  * 長期間更新されていない公開中 FAQ 項目を検出し、管理者通知を生成する。
  * Cloud Scheduler から weekly（月曜 09:00 JST）で起動する想定。
  *
- * 認証: `CRON_SECRET` の Authorization Bearer ヘッダー
+ * 認証: Cloud Scheduler OIDC token
  * 重複通知抑制: 直近 `DEDUP_DAYS` 日以内に同 type の通知があればスキップ（再実行・頻度緩和対応）
  */
 
 import { unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 import { detectStaleFaqItems } from "@/shared/domain/faq/analytics-commands";
 import { FAQ_STALE_DAYS } from "@/shared/domain/faq/constants";
 import {
@@ -17,7 +18,6 @@ import {
 } from "@/shared/domain/notifications/commands";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
-import { serverEnv } from "@/shared/lib/env/server";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -34,10 +34,9 @@ const DEDUP_DAYS = 6;
 
 export async function GET(request: Request) {
   try {
-    const authResult = authorizeCronRequest({
-      authorizationHeader: request.headers.get("authorization"),
-      secret: serverEnv.CRON_SECRET,
-      nodeEnv: serverEnv.NODE_ENV,
+    await connection();
+    const authResult = await authorizeCronRequest({
+      request,
       operation: "faqStaleCheck",
     });
     if (authResult) return authResult;

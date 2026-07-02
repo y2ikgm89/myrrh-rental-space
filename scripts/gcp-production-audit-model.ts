@@ -20,6 +20,70 @@ type ProductionDomainConfig = {
   adminDomain: string;
 };
 
+type CloudSchedulerOidcAuditConfig = {
+  publicDomain: string;
+  schedulerServiceAccount: string;
+  expectedJobIds?: readonly string[];
+};
+
+type CloudRunRuntimeEnvAuditConfig = {
+  serviceName: string;
+  expectedEnv: Record<string, string>;
+  requiredSecretEnvRefs?: readonly CloudRunSecretEnvRef[];
+  forbiddenEnvNames?: readonly string[];
+};
+
+type CloudRunIngressAuditConfig = {
+  serviceName: string;
+  expectedIngress: "all" | "internal" | "internal-and-cloud-load-balancing";
+};
+
+type CloudRunServiceIdentityAuditConfig = {
+  resourceName: string;
+  expectedServiceAccount: string;
+};
+
+type CloudRunContainerCommandAuditConfig = {
+  resourceName: string;
+  expectedCommand: readonly string[];
+  expectedArgs: readonly string[];
+};
+
+type CloudRunSecretEnvRef = {
+  name: string;
+  version: string;
+};
+
+type IamRoleMembershipAuditConfig = {
+  resourceName: string;
+  role: string;
+  expectedMembers: readonly string[];
+  allowAdditionalMembers?: boolean;
+};
+
+type IamPolicyBindingRemovalCommandConfig = {
+  baseCommand: string;
+  role: string;
+  members: readonly string[];
+  additionalArgs?: readonly string[];
+};
+
+type CloudRunSecretEnvBinding = {
+  secret: string;
+  version: string | null;
+};
+
+type SecretManagerSecretAccessorPolicyConfig = {
+  secretName: string;
+  expectedMembers: readonly string[];
+};
+
+type SecretManagerSecretAccessorMembersConfig = {
+  secretName: string;
+  runtimeServiceAccount: string;
+  buildServiceAccount: string;
+};
+
 const EXPECTED_PRODUCTION_DOMAINS = {
   PUBLIC_DOMAIN: "https://rental-space.myrrh-jp.com",
   ADMIN_DOMAIN: "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app",
@@ -83,6 +147,51 @@ const CLOUD_BUILD_REGIONS = [
   "us-west4",
 ] as const;
 
+export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
+  "calendar-sync",
+  "event-import",
+  "faq-trash-cleanup",
+  "faq-stale-check",
+  "instagram-refresh",
+  "instagram-sync",
+  "notification-cleanup",
+  "reservation-reminder",
+] as const;
+
+export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
+  { name: "DATABASE_URL", version: "1" },
+  { name: "BETTER_AUTH_SECRET", version: "1" },
+  { name: "ENCRYPTION_KEY", version: "1" },
+  { name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", version: "1" },
+  { name: "R2_ACCOUNT_ID", version: "1" },
+  { name: "R2_ACCESS_KEY_ID", version: "1" },
+  { name: "R2_SECRET_ACCESS_KEY", version: "1" },
+  { name: "R2_BUCKET_NAME", version: "1" },
+  { name: "R2_PUBLIC_URL", version: "1" },
+  { name: "CLOUDFLARE_ZONE_ID", version: "1" },
+  { name: "CLOUDFLARE_API_TOKEN", version: "1" },
+  { name: "GOOGLE_CLIENT_ID", version: "1" },
+  { name: "GOOGLE_CLIENT_SECRET", version: "1" },
+] as const satisfies readonly CloudRunSecretEnvRef[];
+
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS = [
+  { name: "DATABASE_URL", version: "1" },
+] as const satisfies readonly CloudRunSecretEnvRef[];
+
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND = ["bunx"] as const;
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS = [
+  "--bun",
+  "prisma",
+  "migrate",
+  "deploy",
+] as const;
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_TASK_COUNT = 1;
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_PARALLELISM = 1;
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_MAX_RETRIES = 0;
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_TIMEOUT_SECONDS = 600;
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_MEMORY_LIMIT = "1Gi";
+export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_CPU_LIMIT = "1";
+
 function uniqueLocations(locations: string[]): string[] {
   return [
     ...new Set(
@@ -114,6 +223,14 @@ export function getCloudBuildConnectionAuditLocations(
   );
 }
 
+export function getIapCloudRunServiceIamPolicyUrl(
+  projectNumber: string,
+  region: string,
+  service: string,
+): string {
+  return `https://iap.googleapis.com/v1/projects/${projectNumber}/iap_web/cloud_run-${region}/services/${service}:getIamPolicy`;
+}
+
 export function readCloudBuildTriggerIdentifiers(value: unknown): string[] {
   return readRecords(value)
     .map((record) => {
@@ -135,6 +252,124 @@ export function formatNamedResourcesByLocation(
   return formatted.join(",") || "none";
 }
 
+export function formatCloudBuildTriggerDeletionCommands(
+  projectId: string,
+  resourcesByLocation: NamedResourcesByLocation[],
+): string[] {
+  return resourcesByLocation.flatMap((entry) => {
+    return entry.names.map((name) => {
+      return [
+        `gcloud builds triggers delete "${name}"`,
+        `  --project="${projectId}"`,
+        `  --region="${entry.location}"`,
+        "  --quiet",
+      ].join(" \\\n");
+    });
+  });
+}
+
+export function formatCloudBuildConnectionDeletionCommands(
+  projectId: string,
+  resourcesByLocation: NamedResourcesByLocation[],
+): string[] {
+  return resourcesByLocation.flatMap((entry) => {
+    return entry.names.map((name) => {
+      return [
+        `gcloud builds connections delete "${name}"`,
+        `  --project="${projectId}"`,
+        `  --region="${entry.location}"`,
+        "  --quiet",
+      ].join(" \\\n");
+    });
+  });
+}
+
+export function formatCloudRunRevisionDeletionCommands(
+  projectId: string,
+  region: string,
+  revisionNames: readonly string[],
+): string[] {
+  return revisionNames.map((revisionName) => {
+    return [
+      `gcloud run revisions delete "${revisionName}"`,
+      `  --project="${projectId}"`,
+      `  --region="${region}"`,
+      "  --quiet",
+    ].join(" \\\n");
+  });
+}
+
+export function formatBuildServiceAccountActAsRemovalCommands(
+  buildServiceAccount: string,
+  projectId: string,
+  members: string[],
+): string[] {
+  const expectedMember = `serviceAccount:${buildServiceAccount}`;
+  return members
+    .filter((member) => member !== expectedMember)
+    .map((member) => {
+      return [
+        `gcloud iam service-accounts remove-iam-policy-binding "${buildServiceAccount}"`,
+        `  --project="${projectId}"`,
+        `  --member="${member}"`,
+        '  --role="roles/iam.serviceAccountUser"',
+        "  --condition=None",
+      ].join(" \\\n");
+    });
+}
+
+export function formatRuntimeGroupOwnerRepairCommands(
+  groupEmail: string,
+  runtimeServiceAccount: string,
+): string[] {
+  return [
+    [
+      "gcloud identity groups memberships add",
+      `  --group-email="${groupEmail}"`,
+      `  --member-email="${runtimeServiceAccount}"`,
+      "  --quiet || true",
+    ].join(" \\\n"),
+    [
+      "gcloud identity groups memberships modify-membership-roles",
+      `  --group-email="${groupEmail}"`,
+      `  --member-email="${runtimeServiceAccount}"`,
+      "  --add-roles=OWNER",
+      "  --quiet || true",
+    ].join(" \\\n"),
+  ];
+}
+
+export function formatSecretManagerSecretAccessorRemovalCommands(
+  projectId: string,
+  secretName: string,
+  members: readonly string[],
+): string[] {
+  return members.map((member) => {
+    return [
+      `gcloud secrets remove-iam-policy-binding "${secretName}"`,
+      `  --project="${projectId}"`,
+      `  --member="${member}"`,
+      '  --role="roles/secretmanager.secretAccessor"',
+      "  --condition=None",
+    ].join(" \\\n");
+  });
+}
+
+export function formatIamPolicyBindingRemovalCommands(
+  config: IamPolicyBindingRemovalCommandConfig,
+): string[] {
+  const additionalArgs = config.additionalArgs ?? [];
+  return [...config.members].sort().map((member) => {
+    return [
+      config.baseCommand,
+      ...additionalArgs,
+      `  --member="${member}"`,
+      `  --role="${config.role}"`,
+      "  --condition=None",
+    ].join(" \\\n");
+  });
+}
+
 export function readIamPolicyMembersForRole(
   value: unknown,
   role: string,
@@ -153,8 +388,69 @@ export function readIamPolicyMembersForRole(
   });
 }
 
+export function readIamRoleMembershipErrors(
+  value: unknown,
+  config: IamRoleMembershipAuditConfig,
+): string[] {
+  if (!isRecord(value)) {
+    return [`${config.resourceName} IAM policy metadata is missing`];
+  }
+
+  const bindings = value["bindings"];
+  const roleBindings = Array.isArray(bindings)
+    ? bindings.filter((binding): binding is Record<string, unknown> => {
+        return isRecord(binding) && binding["role"] === config.role;
+      })
+    : [];
+  const unconditionalMembers = new Set<string>();
+  const allMembers = new Set<string>();
+  let hasConditionalBinding = false;
+
+  for (const binding of roleBindings) {
+    const members = binding["members"];
+    const memberNames = Array.isArray(members)
+      ? members.filter((member): member is string => typeof member === "string")
+      : [];
+    const hasCondition = isRecord(binding["condition"]);
+    if (hasCondition) {
+      hasConditionalBinding = true;
+    }
+    for (const member of memberNames) {
+      allMembers.add(member);
+      if (!hasCondition) {
+        unconditionalMembers.add(member);
+      }
+    }
+  }
+
+  const expectedMembers = [...config.expectedMembers].sort();
+  const expectedMemberSet = new Set(expectedMembers);
+  const missingErrors = expectedMembers.flatMap((member) => {
+    return unconditionalMembers.has(member)
+      ? []
+      : [`${config.resourceName} ${config.role} missing ${member}`];
+  });
+  const unexpectedErrors = config.allowAdditionalMembers
+    ? []
+    : [...allMembers]
+        .filter((member) => !expectedMemberSet.has(member))
+        .sort()
+        .map((member) => {
+          return `${config.resourceName} ${config.role} unexpected ${member}`;
+        });
+  const conditionalErrors = hasConditionalBinding
+    ? [`${config.resourceName} ${config.role} must not use IAM Conditions`]
+    : [];
+
+  return [...missingErrors, ...unexpectedErrors, ...conditionalErrors];
+}
+
 export function readBroadProjectIamDeployGrantErrors(value: unknown): string[] {
-  return ["roles/iam.serviceAccountUser", "roles/iam.workloadIdentityUser"]
+  return [
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/iam.serviceAccountUser",
+    "roles/iam.workloadIdentityUser",
+  ]
     .flatMap((role) => {
       return readIamPolicyMembersForRole(value, role).map((member) => {
         return `${role}:${member}`;
@@ -211,6 +507,729 @@ export function readAmbiguousAdminRolePrincipalErrors(
       return `${memberEmail}:${[...groups].sort().join(",")}`;
     })
     .sort();
+}
+
+export function readProjectSecretManagerAccessorErrors(
+  value: unknown,
+): string[] {
+  return readIamPolicyMembersForRole(
+    value,
+    "roles/secretmanager.secretAccessor",
+  )
+    .sort()
+    .map((member) => {
+      return `roles/secretmanager.secretAccessor project-level grant must be removed for ${member}`;
+    });
+}
+
+export function getExpectedSecretManagerSecretAccessorMembers(
+  config: SecretManagerSecretAccessorMembersConfig,
+): string[] {
+  const runtimeMember = `serviceAccount:${config.runtimeServiceAccount}`;
+  const buildMember = `serviceAccount:${config.buildServiceAccount}`;
+  const members =
+    config.secretName === "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"
+      ? [buildMember, runtimeMember]
+      : [runtimeMember];
+  return [...members].sort();
+}
+
+export function readSecretManagerSecretAccessorPolicyErrors(
+  value: unknown,
+  config: SecretManagerSecretAccessorPolicyConfig,
+): string[] {
+  if (!isRecord(value)) {
+    return [
+      `${config.secretName} Secret Manager IAM policy metadata is missing`,
+    ];
+  }
+
+  const bindings = value["bindings"];
+  const secretAccessorBindings = Array.isArray(bindings)
+    ? bindings.filter((binding): binding is Record<string, unknown> => {
+        return (
+          isRecord(binding) &&
+          binding["role"] === "roles/secretmanager.secretAccessor"
+        );
+      })
+    : [];
+  const unconditionalMembers = new Set<string>();
+  const allMembers = new Set<string>();
+  let hasConditionalBinding = false;
+
+  for (const binding of secretAccessorBindings) {
+    const members = binding["members"];
+    const memberNames = Array.isArray(members)
+      ? members.filter((member): member is string => typeof member === "string")
+      : [];
+    const hasCondition = isRecord(binding["condition"]);
+    if (hasCondition) {
+      hasConditionalBinding = true;
+    }
+    for (const member of memberNames) {
+      allMembers.add(member);
+      if (!hasCondition) {
+        unconditionalMembers.add(member);
+      }
+    }
+  }
+
+  const expectedMembers = [...config.expectedMembers].sort();
+  const expectedMemberSet = new Set(expectedMembers);
+  const missingErrors = expectedMembers.flatMap((member) => {
+    return unconditionalMembers.has(member)
+      ? []
+      : [
+          `${config.secretName} roles/secretmanager.secretAccessor missing ${member}`,
+        ];
+  });
+  const unexpectedErrors = [...allMembers]
+    .filter((member) => !expectedMemberSet.has(member))
+    .sort()
+    .map((member) => {
+      return `${config.secretName} roles/secretmanager.secretAccessor unexpected ${member}`;
+    });
+  const conditionalErrors = hasConditionalBinding
+    ? [
+        `${config.secretName} roles/secretmanager.secretAccessor must not use IAM Conditions`,
+      ]
+    : [];
+
+  return [...missingErrors, ...unexpectedErrors, ...conditionalErrors];
+}
+
+export function readUnexpectedSecretManagerSecretAccessorMembers(
+  value: unknown,
+  expectedMembers: readonly string[],
+): string[] {
+  if (!isRecord(value)) return [];
+  const expectedMemberSet = new Set(expectedMembers);
+  return readIamPolicyMembersForRole(
+    value,
+    "roles/secretmanager.secretAccessor",
+  )
+    .filter((member) => !expectedMemberSet.has(member))
+    .sort();
+}
+
+function readCloudRunRuntimeEnvMap(value: unknown): Map<string, string> {
+  const env = readCloudRunRuntimeEnvRecords(value);
+
+  return new Map(
+    env.flatMap((entry) => {
+      const name = entry["name"];
+      const value = entry["value"];
+      if (typeof name !== "string" || typeof value !== "string") {
+        return [];
+      }
+      return [[name, value] as const];
+    }),
+  );
+}
+
+function readCloudRunRuntimeEnvNames(value: unknown): Set<string> {
+  return new Set(
+    readCloudRunRuntimeEnvRecords(value).flatMap((entry) => {
+      const name = entry["name"];
+      return typeof name === "string" ? [name] : [];
+    }),
+  );
+}
+
+function readCloudRunRuntimeEnvRecords(
+  value: unknown,
+): Record<string, unknown>[] {
+  const firstContainer = readCloudRunFirstContainer(value);
+  if (!firstContainer) return [];
+  const env = firstContainer["env"];
+  if (!Array.isArray(env)) return [];
+  return env.filter(isRecord);
+}
+
+function readCloudRunFirstContainer(
+  value: unknown,
+): Record<string, unknown> | null {
+  if (!isRecord(value)) return null;
+  const containerPaths = [
+    ["spec", "template", "spec", "containers"],
+    ["spec", "template", "spec", "template", "spec", "containers"],
+    ["template", "containers"],
+    ["template", "template", "containers"],
+  ] as const;
+
+  for (const path of containerPaths) {
+    let current: unknown = value;
+    for (const segment of path) {
+      if (!isRecord(current)) {
+        current = null;
+        break;
+      }
+      current = current[segment];
+    }
+
+    if (!Array.isArray(current)) continue;
+    const firstContainer = current.find(isRecord);
+    if (firstContainer) return firstContainer;
+  }
+
+  return null;
+}
+
+function readValueAtPath(value: unknown, path: readonly string[]): unknown {
+  let current = value;
+  for (const segment of path) {
+    if (!isRecord(current)) return undefined;
+    current = current[segment];
+  }
+  return current;
+}
+
+function readCloudRunSecretKeyRefBinding(
+  secretKeyRef: Record<string, unknown>,
+): CloudRunSecretEnvBinding | null {
+  const v1Name = secretKeyRef["name"];
+  const v2Secret = secretKeyRef["secret"];
+  const secret =
+    typeof v1Name === "string" && v1Name.length > 0
+      ? v1Name
+      : typeof v2Secret === "string" && v2Secret.length > 0
+        ? v2Secret
+        : null;
+  if (secret === null) {
+    return null;
+  }
+
+  const v1Key = secretKeyRef["key"];
+  const v2Version = secretKeyRef["version"];
+  const version =
+    typeof v1Key === "string" && v1Key.length > 0
+      ? v1Key
+      : typeof v2Version === "string" && v2Version.length > 0
+        ? v2Version
+        : null;
+
+  return { secret, version };
+}
+
+function readCloudRunRuntimeSecretEnvBinding(
+  entry: Record<string, unknown>,
+): CloudRunSecretEnvBinding | null {
+  const valueFrom = entry["valueFrom"];
+  const valueSource = entry["valueSource"];
+  const secretKeyRef =
+    (isRecord(valueFrom) && valueFrom["secretKeyRef"]) ||
+    (isRecord(valueSource) && valueSource["secretKeyRef"]);
+
+  if (!isRecord(secretKeyRef)) return null;
+
+  return readCloudRunSecretKeyRefBinding(secretKeyRef);
+}
+
+function readCloudRunRuntimeSecretEnvRefs(
+  value: unknown,
+): Map<string, CloudRunSecretEnvBinding> {
+  return new Map(
+    readCloudRunRuntimeEnvRecords(value).flatMap((entry) => {
+      const name = entry["name"];
+      if (typeof name !== "string") return [];
+      const binding = readCloudRunRuntimeSecretEnvBinding(entry);
+      return binding === null ? [] : [[name, binding] as const];
+    }),
+  );
+}
+
+export function readCloudRunRuntimeEnvErrors(
+  value: unknown,
+  config: CloudRunRuntimeEnvAuditConfig,
+): string[] {
+  const actualEnv = readCloudRunRuntimeEnvMap(value);
+  const actualEnvNames = readCloudRunRuntimeEnvNames(value);
+  const actualSecretEnvRefs = readCloudRunRuntimeSecretEnvRefs(value);
+
+  const missingOrWrongEnvErrors = Object.entries(config.expectedEnv).flatMap(
+    ([name, expectedValue]) => {
+      if (!actualEnv.has(name)) {
+        return [`${config.serviceName} ${name} is missing`];
+      }
+      const actualValue = actualEnv.get(name);
+      if (actualValue !== expectedValue) {
+        return [`${config.serviceName} ${name} must be ${expectedValue}`];
+      }
+      return [];
+    },
+  );
+  const forbiddenEnvErrors = (config.forbiddenEnvNames ?? []).flatMap(
+    (name) => {
+      return actualEnvNames.has(name)
+        ? [`${config.serviceName} ${name} must be removed`]
+        : [];
+    },
+  );
+  const missingSecretEnvErrors = (config.requiredSecretEnvRefs ?? []).flatMap(
+    (expectedRef) => {
+      if (!actualEnvNames.has(expectedRef.name)) {
+        return [
+          `${config.serviceName} ${expectedRef.name} secret binding is missing`,
+        ];
+      }
+      const actualRef = actualSecretEnvRefs.get(expectedRef.name);
+      if (!actualRef) {
+        return [
+          `${config.serviceName} ${expectedRef.name} must be bound from Secret Manager`,
+        ];
+      }
+      if (actualRef.secret !== expectedRef.name) {
+        return [
+          `${config.serviceName} ${expectedRef.name} must reference Secret Manager secret ${expectedRef.name}`,
+        ];
+      }
+      if (actualRef.version !== expectedRef.version) {
+        return [
+          `${config.serviceName} ${expectedRef.name} must reference Secret Manager version ${expectedRef.version}`,
+        ];
+      }
+      return [];
+    },
+  );
+
+  return [
+    ...missingOrWrongEnvErrors,
+    ...forbiddenEnvErrors,
+    ...missingSecretEnvErrors,
+  ];
+}
+
+function readStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  if (!value.every((entry): entry is string => typeof entry === "string")) {
+    return null;
+  }
+  return value;
+}
+
+function stringArraysEqual(
+  actual: readonly string[] | null,
+  expected: readonly string[],
+): boolean {
+  if (!actual || actual.length !== expected.length) return false;
+  return expected.every(
+    (expectedValue, index) => actual[index] === expectedValue,
+  );
+}
+
+export function readCloudRunContainerCommandErrors(
+  value: unknown,
+  config: CloudRunContainerCommandAuditConfig,
+): string[] {
+  const container = readCloudRunFirstContainer(value);
+  if (!container) return [`${config.resourceName} container is missing`];
+
+  const actualCommand = readStringArray(container["command"]);
+  const actualArgs = readStringArray(container["args"]);
+  const errors: string[] = [];
+
+  if (!stringArraysEqual(actualCommand, config.expectedCommand)) {
+    errors.push(
+      `${config.resourceName} command must be ${JSON.stringify(config.expectedCommand)}, got ${JSON.stringify(actualCommand ?? null)}`,
+    );
+  }
+  if (!stringArraysEqual(actualArgs, config.expectedArgs)) {
+    errors.push(
+      `${config.resourceName} args must be ${JSON.stringify(config.expectedArgs)}, got ${JSON.stringify(actualArgs ?? null)}`,
+    );
+  }
+
+  return errors;
+}
+
+function readIntegerAtPaths(
+  value: unknown,
+  paths: readonly (readonly string[])[],
+): number | null {
+  for (const path of paths) {
+    const rawValue = readValueAtPath(value, path);
+    if (typeof rawValue === "number" && Number.isInteger(rawValue)) {
+      return rawValue;
+    }
+    if (typeof rawValue === "string" && /^\d+$/u.test(rawValue)) {
+      return Number(rawValue);
+    }
+  }
+  return null;
+}
+
+function readDurationSecondsAtPaths(
+  value: unknown,
+  paths: readonly (readonly string[])[],
+): number | null {
+  for (const path of paths) {
+    const rawValue = readValueAtPath(value, path);
+    if (typeof rawValue === "number" && Number.isInteger(rawValue)) {
+      return rawValue;
+    }
+    if (typeof rawValue !== "string") continue;
+    if (/^\d+$/u.test(rawValue)) return Number(rawValue);
+    const secondsMatch = /^(\d+)s$/u.exec(rawValue);
+    if (secondsMatch) return Number(secondsMatch[1]);
+  }
+  return null;
+}
+
+function readCloudRunContainerResourceLimit(
+  value: unknown,
+  limitName: "cpu" | "memory",
+): string | null {
+  const container = readCloudRunFirstContainer(value);
+  if (!container) return null;
+  const resources = container["resources"];
+  if (!isRecord(resources)) return null;
+  const limits = resources["limits"];
+  if (!isRecord(limits)) return null;
+  const limit = limits[limitName];
+  return typeof limit === "string" && limit.length > 0 ? limit : null;
+}
+
+function formatExpectedActualNumberError(
+  resourceName: string,
+  fieldName: string,
+  expected: number,
+  actual: number | null,
+): string[] {
+  return actual === expected
+    ? []
+    : [
+        `${resourceName} ${fieldName} must be ${expected}, got ${String(actual ?? "missing")}`,
+      ];
+}
+
+function formatExpectedActualStringError(
+  resourceName: string,
+  fieldName: string,
+  expected: string,
+  actual: string | null,
+): string[] {
+  return actual === expected
+    ? []
+    : [
+        `${resourceName} ${fieldName} must be ${expected}, got ${actual ?? "missing"}`,
+      ];
+}
+
+function readCloudRunMetadataAnnotation(
+  value: unknown,
+  annotationName: string,
+): string | null {
+  const annotations = readValueAtPath(value, ["metadata", "annotations"]);
+  if (!isRecord(annotations)) return null;
+  const annotationValue = annotations[annotationName];
+  return typeof annotationValue === "string" && annotationValue.length > 0
+    ? annotationValue
+    : null;
+}
+
+export function readCloudRunIngressErrors(
+  value: unknown,
+  config: CloudRunIngressAuditConfig,
+): string[] {
+  return [
+    ...formatExpectedActualStringError(
+      config.serviceName,
+      "ingress",
+      config.expectedIngress,
+      readCloudRunMetadataAnnotation(value, "run.googleapis.com/ingress"),
+    ),
+    ...formatExpectedActualStringError(
+      config.serviceName,
+      "ingress-status",
+      config.expectedIngress,
+      readCloudRunMetadataAnnotation(
+        value,
+        "run.googleapis.com/ingress-status",
+      ),
+    ),
+  ];
+}
+
+export function readCloudRunJobExecutionConfigErrors(
+  value: unknown,
+  config: { resourceName: string },
+): string[] {
+  const taskCount = readIntegerAtPaths(value, [
+    ["spec", "template", "spec", "taskCount"],
+    ["template", "taskCount"],
+  ]);
+  const parallelism = readIntegerAtPaths(value, [
+    ["spec", "template", "spec", "parallelism"],
+    ["template", "parallelism"],
+  ]);
+  const maxRetries = readIntegerAtPaths(value, [
+    ["spec", "template", "spec", "template", "spec", "maxRetries"],
+    ["template", "template", "maxRetries"],
+  ]);
+  const timeoutSeconds = readDurationSecondsAtPaths(value, [
+    ["spec", "template", "spec", "template", "spec", "timeoutSeconds"],
+    ["template", "template", "timeout"],
+  ]);
+  const memoryLimit = readCloudRunContainerResourceLimit(value, "memory");
+  const cpuLimit = readCloudRunContainerResourceLimit(value, "cpu");
+
+  return [
+    ...formatExpectedActualNumberError(
+      config.resourceName,
+      "taskCount",
+      REQUIRED_CLOUD_RUN_MIGRATE_JOB_TASK_COUNT,
+      taskCount,
+    ),
+    ...formatExpectedActualNumberError(
+      config.resourceName,
+      "parallelism",
+      REQUIRED_CLOUD_RUN_MIGRATE_JOB_PARALLELISM,
+      parallelism,
+    ),
+    ...formatExpectedActualNumberError(
+      config.resourceName,
+      "maxRetries",
+      REQUIRED_CLOUD_RUN_MIGRATE_JOB_MAX_RETRIES,
+      maxRetries,
+    ),
+    ...formatExpectedActualNumberError(
+      config.resourceName,
+      "timeoutSeconds",
+      REQUIRED_CLOUD_RUN_MIGRATE_JOB_TIMEOUT_SECONDS,
+      timeoutSeconds,
+    ),
+    ...formatExpectedActualStringError(
+      config.resourceName,
+      "memory limit",
+      REQUIRED_CLOUD_RUN_MIGRATE_JOB_MEMORY_LIMIT,
+      memoryLimit,
+    ),
+    ...formatExpectedActualStringError(
+      config.resourceName,
+      "cpu limit",
+      REQUIRED_CLOUD_RUN_MIGRATE_JOB_CPU_LIMIT,
+      cpuLimit,
+    ),
+  ];
+}
+
+function readCloudRunServiceAccountName(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+
+  const serviceAccountPaths = [
+    ["spec", "template", "spec", "serviceAccountName"],
+    ["spec", "template", "spec", "template", "spec", "serviceAccountName"],
+    ["template", "serviceAccount"],
+    ["template", "template", "serviceAccount"],
+  ] as const;
+
+  for (const path of serviceAccountPaths) {
+    let current: unknown = value;
+    for (const segment of path) {
+      if (!isRecord(current)) {
+        current = null;
+        break;
+      }
+      current = current[segment];
+    }
+    if (typeof current === "string" && current.length > 0) {
+      return current;
+    }
+  }
+
+  return null;
+}
+
+export function readCloudRunServiceIdentityErrors(
+  value: unknown,
+  config: CloudRunServiceIdentityAuditConfig,
+): string[] {
+  const serviceAccountName = readCloudRunServiceAccountName(value);
+  if (!serviceAccountName) {
+    return [`${config.resourceName} serviceAccountName is missing`];
+  }
+  if (serviceAccountName !== config.expectedServiceAccount) {
+    return [
+      `${config.resourceName} serviceAccountName must be ${config.expectedServiceAccount}, got ${serviceAccountName}`,
+    ];
+  }
+  return [];
+}
+
+export function readSecretManagerVersionStateErrors(
+  value: unknown,
+  expectedRef: CloudRunSecretEnvRef,
+): string[] {
+  if (!isRecord(value)) {
+    return [
+      `${expectedRef.name} Secret Manager version ${expectedRef.version} metadata is missing`,
+    ];
+  }
+
+  const errors: string[] = [];
+  const expectedNameSuffix = `/secrets/${expectedRef.name}/versions/${expectedRef.version}`;
+  const resourceName = value["name"];
+  if (
+    typeof resourceName !== "string" ||
+    !resourceName.endsWith(expectedNameSuffix)
+  ) {
+    errors.push(
+      `${expectedRef.name} Secret Manager version resource must end with ${expectedNameSuffix}`,
+    );
+  }
+
+  const state = value["state"];
+  if (state !== "ENABLED") {
+    errors.push(
+      `${expectedRef.name} Secret Manager version ${expectedRef.version} must be ENABLED, got ${String(state ?? "missing")}`,
+    );
+  }
+
+  return errors;
+}
+
+function readCloudRunRevisionName(record: Record<string, unknown>): string {
+  const metadata = record["metadata"];
+  if (!isRecord(metadata)) return "unknown-revision";
+  const name = metadata["name"];
+  return typeof name === "string" && name.length > 0
+    ? name
+    : "unknown-revision";
+}
+
+function readCloudRunRevisionReadyCondition(
+  record: Record<string, unknown>,
+): Record<string, unknown> | null {
+  const status = record["status"];
+  if (!isRecord(status)) return null;
+  const conditions = status["conditions"];
+  if (!Array.isArray(conditions)) return null;
+  return (
+    conditions.filter(isRecord).find((condition) => {
+      return condition["type"] === "Ready";
+    }) ?? null
+  );
+}
+
+export function readCloudRunRevisionHealthErrors(
+  value: unknown,
+  serviceName: string,
+): string[] {
+  return readRecords(value).flatMap((record) => {
+    const revisionName = readCloudRunRevisionName(record);
+    const readyCondition = readCloudRunRevisionReadyCondition(record);
+    if (!readyCondition) {
+      return [`${serviceName} ${revisionName} Ready condition is missing`];
+    }
+
+    const status = readyCondition["status"];
+    if (status === "True") return [];
+
+    const reason = readyCondition["reason"];
+    const formattedReason =
+      typeof reason === "string" && reason.length > 0 ? ` (${reason})` : "";
+    return [
+      `${serviceName} ${revisionName} Ready status must be True, got ${String(status ?? "missing")}${formattedReason}`,
+    ];
+  });
+}
+
+export function readUnhealthyCloudRunRevisionNames(value: unknown): string[] {
+  return readRecords(value).flatMap((record) => {
+    const revisionName = readCloudRunRevisionName(record);
+    if (revisionName === "unknown-revision") return [];
+
+    const readyCondition = readCloudRunRevisionReadyCondition(record);
+    if (!readyCondition) return [revisionName];
+    return readyCondition["status"] === "True" ? [] : [revisionName];
+  });
+}
+
+function readCloudSchedulerJobDisplayName(
+  record: Record<string, unknown>,
+): string {
+  const name = record["name"];
+  if (typeof name === "string" && name.length > 0) {
+    return name.split("/").at(-1) ?? name;
+  }
+  return "unknown-job";
+}
+
+export function readCloudSchedulerOidcJobErrors(
+  value: unknown,
+  config: CloudSchedulerOidcAuditConfig,
+): string[] {
+  const cronUriPrefix = `${config.publicDomain}/api/cron/`;
+  const expectedJobIds =
+    config.expectedJobIds ?? REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS;
+  const expectedJobIdSet = new Set(expectedJobIds);
+  const records = readRecords(value);
+  const jobsByName = new Map(
+    records.map((record) => [readCloudSchedulerJobDisplayName(record), record]),
+  );
+
+  const missingJobErrors = expectedJobIds.flatMap((jobId) => {
+    return jobsByName.has(jobId) ? [] : [`${jobId} scheduler job is missing`];
+  });
+
+  const jobConfigErrors = records.flatMap((record) => {
+    const httpTarget = record["httpTarget"];
+    const jobName = readCloudSchedulerJobDisplayName(record);
+    const isExpectedJob = expectedJobIdSet.has(jobName);
+    if (!isRecord(httpTarget)) {
+      return isExpectedJob ? [`${jobName} missing httpTarget`] : [];
+    }
+    const uri = httpTarget["uri"];
+    const isPublicCronJob =
+      typeof uri === "string" && uri.startsWith(cronUriPrefix);
+    if (!isExpectedJob && !isPublicCronJob) {
+      return [];
+    }
+
+    const errors: string[] = [];
+    const expectedUri = `${cronUriPrefix}${jobName}`;
+    if (isExpectedJob && uri !== expectedUri) {
+      errors.push(`${jobName} uri must be ${expectedUri}`);
+    }
+    if (!isExpectedJob && isPublicCronJob) {
+      errors.push(`${jobName} is not an expected Cloud Scheduler cron job`);
+    }
+    const oidcToken = httpTarget["oidcToken"];
+    const headers = httpTarget["headers"];
+
+    if (!isRecord(oidcToken)) {
+      errors.push(`${jobName} missing httpTarget.oidcToken`);
+    } else {
+      const serviceAccountEmail = oidcToken["serviceAccountEmail"];
+      const audience = oidcToken["audience"];
+      if (serviceAccountEmail !== config.schedulerServiceAccount) {
+        errors.push(
+          `${jobName} oidc serviceAccountEmail must be ${config.schedulerServiceAccount}`,
+        );
+      }
+      if (audience !== config.publicDomain) {
+        errors.push(`${jobName} oidc audience must be ${config.publicDomain}`);
+      }
+    }
+
+    if (isRecord(headers)) {
+      const headerNames = Object.keys(headers).map((headerName) => {
+        return headerName.toLowerCase();
+      });
+      if (headerNames.includes("authorization")) {
+        errors.push(
+          `${jobName} must not set HTTP Authorization header directly`,
+        );
+      }
+      if (headerNames.includes("x-cron-secret")) {
+        errors.push(`${jobName} must not set X-Cron-Secret header`);
+      }
+    }
+
+    return errors;
+  });
+
+  return [...missingJobErrors, ...jobConfigErrors];
 }
 
 export function readProductionDomainConfigErrors(

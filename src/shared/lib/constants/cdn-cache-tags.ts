@@ -9,10 +9,8 @@
  * - Per-tag printable ASCII, no space, no comma (commas separate tags in the header).
  * - Per-tag max 1024 chars.
  * - Aggregate Cache-Tag header value max 16 KB.
- * - Cloudflare strips Cache-Tag from the response before delivery on plans that
- *   support it (Enterprise traditionally; the April 2025 changelog opened tag purge
- *   API access to all plans, but origin header HONORING is still plan-tier dependent).
- *   Our runtime health probe (cache/health.ts) detects and downgrades to URL-only purge.
+ * - Cloudflare strips Cache-Tag from the response before delivery. Since the
+ *   April 2025 changelog, purge by tag is available on all plans.
  *
  * Versioning policy (-v1 suffix):
  * - All tags carry -v1 today.

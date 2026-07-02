@@ -22,7 +22,7 @@ test.describe("smoke: auth pages", () => {
     const response = await page.goto(urls.customerLogin);
     expect(response?.status()).toBe(200);
 
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
   });
 
   test("管理入口が surface policy 通りに処理される", async ({ page }) => {

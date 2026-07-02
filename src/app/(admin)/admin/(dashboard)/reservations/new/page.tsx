@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import {
   getReservationDiscountSettings,
   getSpacesForReservation,
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NewReservationPage() {
+  await connection();
+
   const [spaces, discountSettings] = await Promise.all([
     getSpacesForReservation(),
     getReservationDiscountSettings(),

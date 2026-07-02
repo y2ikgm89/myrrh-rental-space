@@ -141,7 +141,10 @@ function EventRegistrationCard({
     : "default";
 
   return (
-    <div className="border border-border p-4 sm:p-6">
+    <article
+      aria-label={`${registration.event.title}の申込: ${statusLabel}`}
+      className="border border-border p-4 sm:p-6"
+    >
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         {/* min-w-0 + break-words で長 title の overflow を防止し、
             Link 自体に min-h-11 を付けて 44px タップ標的を担保。 */}
@@ -256,6 +259,6 @@ function EventRegistrationCard({
           </Dialog>
         </div>
       )}
-    </div>
+    </article>
   );
 }

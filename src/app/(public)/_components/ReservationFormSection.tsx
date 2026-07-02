@@ -13,6 +13,7 @@
 
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
@@ -59,6 +60,8 @@ export async function ReservationFormSection({
   style,
   searchParamSpaceId,
 }: ReservationFormSectionProps): Promise<ReactElement> {
+  await connection();
+
   const [
     locations,
     businessHours,

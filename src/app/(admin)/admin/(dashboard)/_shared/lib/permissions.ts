@@ -16,23 +16,9 @@ import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { type AdminUser } from "@/shared/lib/admin-auth";
 import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
-import {
-  ROLE_PERMISSIONS,
-  hasPermission,
-  type PermissionKey,
-  type RolePermissions,
-} from "@/shared/lib/admin-permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Resource, Action } from "@/shared/lib/admin-resources";
 import { isEditorRole } from "./role-guards";
-
-// =============================================================================
-// Re-exports (互換性 — 既存 import path 維持)
-// =============================================================================
-
-export { ROLE_PERMISSIONS, hasPermission };
-export type { PermissionKey, RolePermissions, Resource, Action };
-export { RESOURCE_LABELS } from "@/shared/lib/admin-resources";
-export { ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 /**
  * アクション説明（UI 表示用）

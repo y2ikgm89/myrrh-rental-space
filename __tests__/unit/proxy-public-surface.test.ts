@@ -6,7 +6,6 @@ mock.module("@/shared/lib/env/server", () => ({
     APP_SURFACE: "public",
     NODE_ENV: "production",
     R2_PUBLIC_URL: undefined,
-    CRON_SECRET: "test-cron-secret-with-at-least-32-chars",
   },
 }));
 
@@ -19,7 +18,6 @@ describe("proxy public surface routing", () => {
     "/admin/login",
     "/preview/pages/about",
     "/api/admin/export/customers",
-    "/api/auth/sign-in/email",
     "/api/instagram/oauth/authorize",
     "/api/google-business-profile/oauth/callback",
   ])("public service returns 404 for admin-only path %s", async (pathname) => {
@@ -33,6 +31,7 @@ describe("proxy public surface routing", () => {
   test.each([
     "/",
     "/spaces",
+    "/api/auth/sign-in/email",
     "/api/customer-auth/get-session",
     "/api/live",
     "/api/health",

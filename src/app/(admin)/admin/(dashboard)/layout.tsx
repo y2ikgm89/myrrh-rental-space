@@ -12,6 +12,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AdminLayoutProvider } from "@/admin/contexts/admin-layout-context";
 import { ConfirmProvider } from "@/admin/contexts/confirm-context";
@@ -27,7 +28,7 @@ import {
   filterSidebarGroupsByPermission,
   SIDEBAR_GROUPS,
 } from "./_components/sidebar-items";
-import { hasPermission } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import {
   NotificationBellFallback,
   NotificationBellSlot,
@@ -46,6 +47,8 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }): Promise<ReactElement> {
+  await connection();
+
   const user = await requireAdminDashboardAccess();
   const sidebarGroups = filterSidebarGroupsByPermission(
     SIDEBAR_GROUPS,

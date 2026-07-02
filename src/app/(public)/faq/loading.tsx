@@ -10,7 +10,7 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function FaqLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Page hero */}
       <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
@@ -38,6 +38,6 @@ export default function FaqLoading() {
           </div>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

@@ -65,9 +65,21 @@ export function ReservationCard({
     ? RESERVATION_STATUS_LABELS[reservation.status]
     : reservation.status;
   const paymentStatusEnum = getValidPaymentStatus(reservation.paymentStatus);
+  const paymentStatusLabel = PAYMENT_STATUS_LABELS[paymentStatusEnum];
+  const startLabel = formatSerializedDate(startTime, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const reservationLabel = `${space.name}の予約: ${statusLabel}, 支払い: ${paymentStatusLabel}, ${startLabel}`;
 
   return (
-    <div className="border border-border p-4 sm:p-6 transition-colors">
+    <article
+      aria-label={reservationLabel}
+      className="border border-border p-4 sm:p-6 transition-colors"
+    >
       {/* Header: space name + status */}
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {/* min-w-0 break-words で長 space.name の overflow を防止し
@@ -130,6 +142,7 @@ export function ReservationCard({
             {canCancel && (
               <Link
                 href={`/mypage/reservations/${id}`}
+                aria-label={`${reservationLabel} をキャンセルする`}
                 className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm text-destructive transition-colors hover:text-destructive/80 sm:w-auto sm:justify-start"
               >
                 キャンセル
@@ -139,6 +152,7 @@ export function ReservationCard({
             {canModify && (
               <Link
                 href={`/mypage/reservations/${id}/edit`}
+                aria-label={`${reservationLabel} を変更する`}
                 className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm text-muted-foreground transition-colors hover:text-foreground sm:w-auto sm:justify-start"
               >
                 変更
@@ -147,6 +161,7 @@ export function ReservationCard({
 
             <Link
               href={`/mypage/reservations/${id}`}
+              aria-label={`${reservationLabel} の詳細を見る`}
               className="inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap px-3 text-sm font-medium text-foreground underline underline-offset-4 transition-colors hover:text-accent sm:w-auto sm:justify-start"
             >
               詳細を見る
@@ -160,6 +175,6 @@ export function ReservationCard({
           </p>
         )}
       </div>
-    </div>
+    </article>
   );
 }

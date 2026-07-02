@@ -14,16 +14,16 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
+import { updateEventImportEnabled } from "@/shared/domain/settings/commands";
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
   clearGoogleCalendarWebhook,
   recordGoogleCalendarConnectionError,
   recordGoogleCalendarConnectionSuccess,
   saveGoogleCalendarWebhook,
-  updateEventImportEnabled,
   updateGoogleCalendarSettings as updateGoogleCalendarSettingsCommand,
   updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/integration-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   logError,

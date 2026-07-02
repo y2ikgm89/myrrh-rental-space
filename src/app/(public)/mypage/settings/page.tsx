@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -24,6 +25,8 @@ export default async function SettingsPage({
 }: {
   readonly searchParams: Promise<SearchParams>;
 }): Promise<ReactElement> {
+  await connection();
+
   const params = await searchParams;
   const requireEmail = params["require_email"] === "true";
 

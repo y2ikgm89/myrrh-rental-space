@@ -61,15 +61,16 @@ const isProduction = serverEnv.NODE_ENV === "production";
  * Prisma driver adapter（adapter-pg）
  *
  * `PrismaPg` に接続設定オブジェクトを渡す Prisma 7 公式推奨形式。`pg.Pool` の
- * 生成は adapter-pg が `connect()` 時に内部で 1 度だけ行う。`connect()` は
- * PrismaClient のライフタイムにつき 1 回しか呼ばれず（client engine が
- * memoize する公式仕様）、PrismaClient 自体が下記 globalStore singleton の
- * ため、Pool も実質 1 インスタンスに収束する。
+ * Prisma 公式 docs では、driver adapter 利用時の pool は underlying driver が
+ * 管理し、Prisma Client が最初に接続を開くタイミングで作られる。ここでは
+ * PrismaClient 自体を下記 globalStore singleton に寄せ、dev HMR で adapter /
+ * client が増殖し続ける経路を閉じる。
  *
  * タイムアウト値は Prisma 公式の「v6 互換」推奨値に準拠:
  * - `connectionTimeoutMillis: 5_000` (v6 connect_timeout)
  * - `idleTimeoutMillis: 300_000` (v6 max_idle_connection_lifetime)
  * v7 デフォルト（idle 10s）は短すぎて Cloud Run のコールドスタート直後に切断される。
+ * 値は validated server env で上書きできるが、未指定時はこの互換値を使う。
  *
  * サーバー側クエリ／トランザクション上限（プール枯渇対策）:
  * - `statement_timeout` … 1 クエリの最大実行時間。これが無いと runaway / lock 待ちの
@@ -82,11 +83,12 @@ const isProduction = serverEnv.NODE_ENV === "production";
  */
 const adapter = new PrismaPg({
   connectionString: serverEnv.DATABASE_URL,
-  connectionTimeoutMillis: 5_000,
-  idleTimeoutMillis: 300_000,
+  connectionTimeoutMillis: serverEnv.DATABASE_CONNECTION_TIMEOUT_MS ?? 5_000,
+  idleTimeoutMillis: serverEnv.DATABASE_IDLE_TIMEOUT_MS ?? 300_000,
   max: serverEnv.DATABASE_POOL_MAX ?? 10,
-  statement_timeout: 15_000,
-  idle_in_transaction_session_timeout: 15_000,
+  statement_timeout: serverEnv.DATABASE_STATEMENT_TIMEOUT_MS ?? 15_000,
+  idle_in_transaction_session_timeout:
+    serverEnv.DATABASE_IDLE_IN_TRANSACTION_SESSION_TIMEOUT_MS ?? 15_000,
 });
 
 /**

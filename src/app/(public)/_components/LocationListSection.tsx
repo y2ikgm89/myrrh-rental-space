@@ -211,6 +211,7 @@ interface LocationChapterProps {
   readonly anchorId: string;
   readonly index: number;
   readonly location: LocationForAccess;
+  readonly isFirst: boolean;
   readonly showSectionDivider: boolean;
 }
 
@@ -218,6 +219,7 @@ function LocationChapter({
   anchorId,
   index,
   location,
+  isFirst,
   showSectionDivider,
 }: LocationChapterProps): ReactElement {
   const transitLines = location.accessLines;
@@ -260,6 +262,10 @@ function LocationChapter({
           aspect="wide"
           rounded={false}
           sizes="(max-width: 1280px) 100vw, 1280px"
+          {...(isFirst && {
+            loading: "eager",
+            fetchPriority: "high",
+          })}
         />
       )}
 
@@ -654,6 +660,7 @@ export function LocationListSection({
                 anchorId={entry.anchorId}
                 index={entry.index}
                 location={entry.location}
+                isFirst={i === 0}
                 showSectionDivider={i > 0}
               />
             </ScrollReveal>

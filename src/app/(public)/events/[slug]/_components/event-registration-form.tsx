@@ -8,6 +8,7 @@ import {
   useForm,
   useInputControl,
 } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
 import { Heading } from "@/public/components/design-system/heading";
@@ -20,7 +21,7 @@ import {
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { registerForEvent } from "@/public/actions/event-registration";
 import type { z } from "zod";
-import type { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
+import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import {
   formatEventDateTimeRange,
   formatEventPrice,
@@ -80,20 +81,21 @@ export function EventRegistrationForm({
     undefined,
   );
 
-  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
-  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
-  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
-  // これにより client bundle から zod / @conform-to/zod (約 302KB) が DCE される。
-  // HTML5 の required / min / max は JSX 上のリテラル attribute で担保。
   const [form, fields] = useForm<z.input<typeof publicEventRegistrationSchema>>(
     {
       id: "event-registration-form",
       lastResult,
+      constraint: getZodConstraint(publicEventRegistrationSchema),
       defaultValue: {
         eventId,
         slotId: initialSlotId,
         ticketId: tickets[0]?.id ?? "",
         quantity: 1,
+      },
+      onValidate({ formData }) {
+        return parseWithZod(formData, {
+          schema: publicEventRegistrationSchema,
+        });
       },
       shouldValidate: "onBlur",
       shouldRevalidate: "onInput",
@@ -353,12 +355,12 @@ export function EventRegistrationForm({
         <Input
           label="参加人数"
           required
-          min={1}
-          max={quantityMax}
           {...(fields.quantity.errors?.[0] !== undefined && {
             error: fields.quantity.errors[0],
           })}
           {...getInputProps(fields.quantity, { type: "number" })}
+          min={1}
+          max={quantityMax}
         />
 
         <Textarea

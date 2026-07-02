@@ -12,6 +12,7 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { serverEnv } from "@/shared/lib/env/server";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 export type AdminAuthUser = {
@@ -45,8 +46,11 @@ export async function findAdminAuthUserByEmail(
 export async function findOrSyncAdminAuthUserByEmail(
   email: string,
 ): Promise<AdminAuthUser | null> {
+  const isE2ETestIdentity =
+    serverEnv.E2E_RUNTIME === "1" && serverEnv.ADMIN_TEST_IAP_EMAIL === email;
+
   try {
-    if (isAdminRoleGroupSyncConfigured()) {
+    if (!isE2ETestIdentity && isAdminRoleGroupSyncConfigured()) {
       return syncAdminAuthUserFromGoogleGroups(email);
     }
   } catch (error) {

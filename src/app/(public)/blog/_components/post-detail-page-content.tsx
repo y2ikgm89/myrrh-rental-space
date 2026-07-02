@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import {
   ArticleJsonLd,
   BreadcrumbJsonLd,
@@ -32,6 +33,8 @@ const TOC_MIN_H2 = 2;
 type PublishedPost = NonNullable<Awaited<ReturnType<typeof getPublishedPost>>>;
 
 export async function buildPostMetadata(slug: string): Promise<Metadata> {
+  await connection();
+
   const [post, settings] = await Promise.all([
     getPublishedPost(slug),
     getSeoSettings(),
@@ -64,6 +67,8 @@ export async function PostDetailPageContent({
   post: PublishedPost;
   banner?: ReactNode;
 }): Promise<ReactElement> {
+  await connection();
+
   const [siteLayout, sidebarSettings] = await Promise.all([
     getSiteLayoutSettings(),
     getSidebarSettings(),

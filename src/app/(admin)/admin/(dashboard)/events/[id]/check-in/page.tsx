@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { getEventById } from "@/shared/domain/events/admin-queries";
@@ -13,6 +14,8 @@ type PageProps = { params: Promise<{ id: string }> };
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const event = await getEventById(id);
   if (!event) {
@@ -24,6 +27,8 @@ export async function generateMetadata({
 }
 
 export default async function CheckInPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
   const [event, attendees] = await Promise.all([
     getEventById(id),

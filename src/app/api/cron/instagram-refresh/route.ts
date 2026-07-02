@@ -1,7 +1,7 @@
 /**
  * Instagram Token Refresh Cron API
  *
- * Cloud Schedulerまたは外部スケジューラーから定期的に呼び出され、
+ * Cloud Scheduler から定期的に呼び出され、
  * Instagramアクセストークンの自動更新を実行します。
  *
  * ## 機能
@@ -12,6 +12,7 @@
  */
 
 import { unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 import { getInstagramRefreshState } from "@/shared/domain/instagram/queries";
 import { refreshInstagramAccessToken } from "@/shared/domain/instagram/commands";
 import {
@@ -25,7 +26,6 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
@@ -38,17 +38,16 @@ const REFRESH_THRESHOLD_DAYS = 10;
  * Instagram Token Refresh Cronエンドポイント
  * GET /api/cron/instagram-refresh
  *
- * Cloud Schedulerまたは外部スケジューラーから呼び出される
+ * Cloud Scheduler から呼び出される
  * 毎日1回実行を推奨
  *
- * セキュリティ: CRON_SECRET環境変数による認証
+ * セキュリティ: Cloud Scheduler OIDC token による認証
  */
 export async function GET(request: Request) {
   try {
-    const authorizationResult = authorizeCronRequest({
-      authorizationHeader: request.headers.get("authorization"),
-      secret: serverEnv.CRON_SECRET,
-      nodeEnv: serverEnv.NODE_ENV,
+    await connection();
+    const authorizationResult = await authorizeCronRequest({
+      request,
       operation: "instagramTokenRefreshCron",
     });
     if (authorizationResult) {

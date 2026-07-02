@@ -41,13 +41,16 @@ mock.module("@/shared/lib/customer-auth", () => ({
 }));
 
 mock.module("@/admin/lib/permissions", () => ({
-  hasPermission: (...args: Parameters<typeof mockHasPermission>) =>
-    mockHasPermission(...args),
   isEditorRole: (...args: Parameters<typeof mockIsEditorRole>) =>
     mockIsEditorRole(...args),
   userHasResourceAccess: (
     ...args: Parameters<typeof mockUserHasResourceAccess>
   ) => mockUserHasResourceAccess(...args),
+}));
+
+mock.module("@/shared/lib/admin-permissions", () => ({
+  hasPermission: (...args: Parameters<typeof mockHasPermission>) =>
+    mockHasPermission(...args),
 }));
 
 mock.module("@/admin/lib/audit", () => ({

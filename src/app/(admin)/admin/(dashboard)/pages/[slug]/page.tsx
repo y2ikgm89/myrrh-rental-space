@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getPageBySlug } from "@/admin/queries/pages";
 
 type PageProps = {
@@ -8,6 +9,8 @@ type PageProps = {
 export default async function PageSlugPage({
   params,
 }: PageProps): Promise<never> {
+  await connection();
+
   const { slug } = await params;
   const page = await getPageBySlug(slug);
 

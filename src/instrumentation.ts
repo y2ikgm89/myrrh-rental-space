@@ -21,9 +21,9 @@ export async function register(): Promise<void> {
     const { bootstrapSystemPages } = await import("@/shared/lib/bootstrap");
     await bootstrapSystemPages();
 
-    // Cloudflare credentials + plan-tier startup probe (production only).
-    // Surfaces missing/malformed credentials as HIGH-severity logError, and
-    // detects non-Enterprise plans via a canary tag-purge to enable URL-purge fallback.
+    // Cloudflare credentials + tag purge startup probe (production only).
+    // Surfaces missing/malformed credentials or purge API failures as
+    // HIGH-severity logError.
     const { assertCloudflareCredentials } =
       await import("@/shared/lib/cache/health");
     await assertCloudflareCredentials();
@@ -41,6 +41,15 @@ function pickHeader(
   const value = headers[name] ?? headers[name.toLowerCase()];
   if (Array.isArray(value)) return value[0];
   return value;
+}
+
+export function shouldIgnoreRequestError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message === "aborted" &&
+    isRecord(error) &&
+    error["code"] === "ECONNRESET"
+  );
 }
 
 /**
@@ -68,6 +77,7 @@ export const onRequestError: Instrumentation.onRequestError = async (
   context,
 ) => {
   if (process.env["NEXT_RUNTIME"] !== "nodejs") return;
+  if (shouldIgnoreRequestError(error)) return;
 
   const { logError, ErrorCategory, ErrorSeverity, parseCloudTraceContext } =
     await import("@/shared/lib/errors/server");

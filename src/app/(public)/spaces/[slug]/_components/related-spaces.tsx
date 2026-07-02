@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getRelatedSpaces } from "@/shared/domain/spaces/public-queries";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
@@ -14,6 +15,8 @@ export async function RelatedSpaces({
   currentId,
   categoryId,
 }: RelatedSpacesProps) {
+  await connection();
+
   const spaces = await getRelatedSpaces(currentId, categoryId, 3);
   if (spaces.length === 0) return null;
 

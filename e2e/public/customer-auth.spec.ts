@@ -31,18 +31,16 @@ test.describe("顧客ログインページ - UI と a11y", () => {
   });
 
   test("Google ログインボタンが表示される", async ({ page }) => {
-    const googleButton = page
-      .getByRole("button", { name: /google/i })
-      .or(page.getByRole("link", { name: /google/i }))
-      .first();
+    const googleButton = page.getByRole("button", {
+      name: "Googleでログイン",
+    });
     await expect(googleButton).toBeVisible();
   });
 
   test("LINE ログインボタンが表示される", async ({ page }) => {
-    const lineButton = page
-      .getByRole("button", { name: /line/i })
-      .or(page.getByRole("link", { name: /line/i }))
-      .first();
+    const lineButton = page.getByRole("button", {
+      name: "LINEでログイン",
+    });
     await expect(lineButton).toBeVisible();
   });
 
@@ -65,10 +63,9 @@ test.describe("顧客ログインページ - UI と a11y", () => {
     expect(page.url()).toContain("redirectTo");
 
     // ログインボタンは引き続き表示
-    const googleButton = page
-      .getByRole("button", { name: /google/i })
-      .or(page.getByRole("link", { name: /google/i }))
-      .first();
+    const googleButton = page.getByRole("button", {
+      name: "Googleでログイン",
+    });
     await expect(googleButton).toBeVisible();
   });
 });

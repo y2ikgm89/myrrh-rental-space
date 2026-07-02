@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
@@ -47,6 +48,8 @@ const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
 // ---------------------------------------------------------------------------
 
 export default async function GuestCancelPage(): Promise<ReactElement> {
+  await connection();
+
   // proxy（middleware）が `?token=...` を HttpOnly cookie に転写済み。
   // ここでは cookie のみ読み、URL クエリにトークンを残さない（ログ・履歴漏洩遮断）。
   const cookieStore = await cookies();

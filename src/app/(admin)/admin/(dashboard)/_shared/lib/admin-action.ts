@@ -1,13 +1,9 @@
 import "server-only";
 
 import type { AdminUser } from "@/shared/lib/admin-auth";
-import {
-  type Resource,
-  type Action,
-  hasPermission,
-  userHasResourceAccess,
-  isEditorRole,
-} from "@/admin/lib/permissions";
+import { userHasResourceAccess, isEditorRole } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { checkAdminAuth, logAction } from "@/admin/lib/action-auth";
 import { logPermissionDenied } from "@/admin/lib/audit";
 import { isDomainError } from "@/shared/domain/domain-error";

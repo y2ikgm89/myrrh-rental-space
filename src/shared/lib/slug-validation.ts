@@ -51,9 +51,6 @@ const RESERVED_PATHS: ReadonlySet<string> = new Set([
   "spaces",
   "terms",
   "privacy",
-  // 旧ブログ一覧 URL（/blog へ 308 redirect されるため実体ページ作成は無意味）
-  "posts",
-  "p",
   // 分類アーカイブ / プレビューのルートプレフィックス（システムページではないが
   // /category/[slug]・/tag/[slug]・/preview/* と衝突するため予約）
   "category",

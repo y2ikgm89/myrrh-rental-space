@@ -7,6 +7,7 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -56,6 +57,8 @@ export default async function ReservationDetailPage({
   params,
   searchParams,
 }: PageProps): Promise<ReactElement> {
+  await connection();
+
   const { id } = await params;
   const sp = await searchParams;
   const reasonRaw = typeof sp["reason"] === "string" ? sp["reason"] : null;

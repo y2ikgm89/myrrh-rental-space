@@ -18,12 +18,11 @@
 #   `prisma generate`, so it cannot be omitted. The failure is network-only:
 #   the identical image + lockfile installs cleanly on retry and locally.
 #
-#   We cannot patch Bun's extractor and cannot move off 1.3.13 — 1.3.14+ enables
-#   `[run] noOrphans`, which breaks Lexical's dynamic-import path (see
-#   bunfig.toml). So the install itself is made resilient: bounded retries, and
-#   on retry a cleared download cache + reduced network concurrency so the large
-#   tarball gets a stable, uncontended stream instead of competing with 48
-#   concurrent downloads.
+#   We cannot patch Bun's extractor, so cold-cache CI/Docker installs are made
+#   resilient: bounded retries, and on retry a cleared download cache + reduced
+#   network concurrency so the large tarball gets a stable, uncontended stream
+#   instead of competing with 48 concurrent downloads. Bun runtime version is
+#   pinned by package.json#packageManager and mirrored by Docker/devcontainer.
 #
 # Override the attempt count with BUN_INSTALL_ATTEMPTS (default 3). A genuine,
 # non-transient failure still fails the build loudly after the last attempt.

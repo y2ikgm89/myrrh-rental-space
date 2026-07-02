@@ -202,12 +202,3 @@ export function detectMediaMimeFromMagicBytes(
 
   return null;
 }
-
-// =============================================================================
-// Backward-compatible image-only helper (removed)
-// =============================================================================
-//
-// `detectImageMimeFromMagicBytes` / `SUPPORTED_IMAGE_MIME_TYPES` (image only) /
-// `IMAGE_MIME_EXTENSIONS` は破壊的変更で `detectMediaMimeFromMagicBytes` /
-// `SUPPORTED_MEDIA_MIME_TYPES` / `MEDIA_MIME_EXTENSIONS` に統合した。
-// 旧 API への再 export shim は意図的に提供しない（後方互換ハック禁止規律）。

@@ -10,7 +10,6 @@ import { FRAME_SRC_DIRECTIVE_VALUES } from "@/shared/lib/constants/frame-sources
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
-import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
@@ -21,7 +20,7 @@ const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   // Lighthouse Best Practices `coop` audit 通過。cross-origin の opener / popup から
   // window.opener 経由でアクセスされないよう top-level browsing context を分離する
   // (Spectre / cross-origin 情報漏洩の defense-in-depth)。
-  // 値選定: better-auth の social login は redirect flow (`/api/auth/sign-in/social/*`)
+  // 値選定: better-auth の social login は redirect flow (`/api/customer-auth/sign-in/social/*`)
   // を使い popup + postMessage は使わない。Stripe / Cloudflare Turnstile / Google reCAPTCHA
   // / YouTube / Instagram embed は全て iframe 経由で COOP の影響を受けない。
   // `_blank` で開く external tab (`openExternalTab`) は noreferrer で opener が
@@ -35,7 +34,6 @@ const PUBLIC_SURFACE_BLOCKED_PATH_PREFIXES = [
   "/admin",
   "/preview",
   "/api/admin",
-  "/api/auth",
   "/api/instagram/oauth",
   "/api/google-business-profile/oauth",
 ] as const;
@@ -278,22 +276,6 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
             },
           },
         );
-      }
-    }
-
-    if (pathname.startsWith("/api/cron")) {
-      const cronSecret = serverEnv.CRON_SECRET;
-
-      // fail-closed: CRON_SECRET 未設定時は全環境で 401
-      // 本番は validateProductionEnv が起動時に throw、dev/staging はここで拒否
-      // (Vercel Cron / Cloud Scheduler / GitHub Actions の業界標準)
-      if (!cronSecret) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      const authHeader = req.headers.get("authorization");
-      const expected = `Bearer ${cronSecret}`;
-      if (!authHeader || !timingSafeEqualStrings(authHeader, expected)) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
 

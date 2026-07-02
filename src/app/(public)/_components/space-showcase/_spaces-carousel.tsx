@@ -407,6 +407,7 @@ export function SpacesCarousel({
               if (!space) return null;
               const { zIndex, scale, opacity } = getCardStyle(distance);
               const isActive = distance === 0;
+              const isActiveSpaceImage = realIdx === activeIndex;
               const translateX = offset * cardStep;
 
               return (
@@ -441,6 +442,8 @@ export function SpacesCarousel({
                               "group-hover:scale-[1.08]",
                           )}
                           sizes={dims.sizes}
+                          loading={isActiveSpaceImage ? "eager" : "lazy"}
+                          fetchPriority={isActiveSpaceImage ? "high" : "auto"}
                         />
                       ) : (
                         <div className="h-full w-full bg-card" />
@@ -546,7 +549,7 @@ export function SpacesCarousel({
             </div>
             <Link
               href="/spaces"
-              className="mt-3 inline-flex min-h-11 items-center gap-1 px-3 py-1.5 text-eyebrow uppercase text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
+              className="mt-3 inline-flex min-h-11 items-center gap-1 px-3 py-1.5 text-eyebrow uppercase text-muted-foreground transition-colors duration-300 hover:text-foreground"
             >
               すべてのスペースを見る
               <IconArrowRight className="h-3 w-3" aria-hidden="true" />

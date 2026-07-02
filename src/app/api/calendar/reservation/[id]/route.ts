@@ -2,9 +2,11 @@
  * 予約 .ics ダウンロード API
  *
  * アクセス権限の判定:
- *   1. クエリ `?token=<署名付きトークン>` がある場合: HMAC 検証成功で許可
+ *   1. クエリ `?token=<署名付きトークン>` がない場合: customer session 必須
+ *      (未認証リクエストは path validation より先に 401)
+ *   2. token がある場合: HMAC 検証成功で許可
+ *      (invalid / expired token は path validation より先に拒否)
  *      (ゲスト = 確認メール / リマインダの「iCal (.ics)」リンク経路)
- *   2. それ以外: customer session 必須 + 所有者一致
  *
  * ステータスが CANCELLED の場合は METHOD:CANCEL、それ以外は METHOD:REQUEST。
  *
@@ -44,20 +46,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    // 1. パスパラメータ検証
-    const raw = await params;
-    const parsed = paramSchema.safeParse(raw);
-    if (!parsed.success) {
-      return new NextResponse("Invalid id", { status: 400 });
-    }
-    const reservationId = parsed.data.id;
-
-    // 2. アクセス権判定: token 経路 → session 経路の順で解決
+    // 1. アクセス権判定: session 経路は path validation より先に fail closed
     const url = new URL(request.url);
     const token = url.searchParams.get("token");
     let lookupCustomerId: string | undefined;
+    let verifiedTokenTargetId: string | undefined;
+    let verifiedTokenFingerprint: string | undefined;
 
-    if (token !== null) {
+    if (token === null) {
+      const session = await getCustomerSession();
+      if (!session) {
+        return new NextResponse("Unauthorized", { status: 401 });
+      }
+      const customer = await getCustomerByUserId(session.user.id);
+      if (!customer) {
+        return new NextResponse("Customer not found", { status: 404 });
+      }
+      lookupCustomerId = customer.id;
+    } else {
       const result = verifyCalendarToken(token, "reservation");
       if (!result.valid) {
         logError(
@@ -71,7 +77,6 @@ export async function GET(
               operation: "calendarReservationDownload",
               reason: result.reason,
               tokenFingerprint: calendarTokenFingerprint(token),
-              reservationId,
             },
           },
         );
@@ -80,32 +85,35 @@ export async function GET(
           { status: result.reason === "expired" ? 410 : 401 },
         );
       }
-      if (result.targetId !== reservationId) {
+      verifiedTokenTargetId = result.targetId;
+      verifiedTokenFingerprint = calendarTokenFingerprint(token);
+      // token 検証成功 → customer ownership 強制をスキップ
+      lookupCustomerId = undefined;
+    }
+
+    // 2. パスパラメータ検証
+    const raw = await params;
+    const parsed = paramSchema.safeParse(raw);
+    if (!parsed.success) {
+      return new NextResponse("Invalid id", { status: 400 });
+    }
+    const reservationId = parsed.data.id;
+
+    if (verifiedTokenTargetId !== undefined) {
+      if (verifiedTokenTargetId !== reservationId) {
         // payload と URL の reservationId 不一致 = 改ざんまたは流用
         logError(normalizeError(new Error("Calendar token target mismatch")), {
           category: ErrorCategory.AUTHORIZATION,
           severity: ErrorSeverity.MEDIUM,
           context: {
             operation: "calendarReservationDownload",
-            tokenFingerprint: calendarTokenFingerprint(token),
+            tokenFingerprint: verifiedTokenFingerprint,
             urlReservationId: reservationId,
-            payloadReservationId: result.targetId,
+            payloadReservationId: verifiedTokenTargetId,
           },
         });
         return new NextResponse("Invalid token", { status: 401 });
       }
-      // token 検証成功 → customer ownership 強制をスキップ
-      lookupCustomerId = undefined;
-    } else {
-      const session = await getCustomerSession();
-      if (!session) {
-        return new NextResponse("Unauthorized", { status: 401 });
-      }
-      const customer = await getCustomerByUserId(session.user.id);
-      if (!customer) {
-        return new NextResponse("Customer not found", { status: 404 });
-      }
-      lookupCustomerId = customer.id;
     }
 
     // 3. 予約取得

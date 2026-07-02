@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import {
   getOrganizationSettings,
   getSocialLinkUrls,
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NewLocationPage() {
+  await connection();
+
   const [settings, socialLinks] = await Promise.all([
     getOrganizationSettings(),
     getSocialLinkUrls(),

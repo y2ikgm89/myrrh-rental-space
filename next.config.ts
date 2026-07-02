@@ -154,8 +154,10 @@ const nextConfig: NextConfig = {
 
   // Experimental features
   experimental: {
-    // Turbopack ファイルシステムキャッシュ: 開発サーバー再起動後もビルドキャッシュを永続化
-    turbopackFileSystemCacheForDev: true,
+    // Turbopack ファイルシステムキャッシュ: 開発サーバー再起動後もビルドキャッシュを永続化。
+    // ローカル切り分け時のみ NEXT_DISABLE_TURBOPACK_FS_CACHE=1 で無効化できる。
+    turbopackFileSystemCacheForDev:
+      process.env["NEXT_DISABLE_TURBOPACK_FS_CACHE"] !== "1",
     // NOTE: experimental.cachedNavigations はあえて有効化しない（cacheComponents 必須の opt-in 実験機能）。
     // 有効化すると cacheComponents 下で searchParams のみのソフトナビ（管理タブの ?tab= 切替等）の
     // コンテンツが「一手前のタブのまま残る」stale を起こす。これは Next.js 16 の既知 OPEN
@@ -175,22 +177,6 @@ const nextConfig: NextConfig = {
     //        imports, so this configuration is not required"
     // 公式: "Starting with Next.js 16, Turbopack is stable and used by default
     //        for both `next dev` and `next build`"
-  },
-
-  // Legacy URL redirects（恒久 308）
-  // ブログ一覧 URL を /posts → /blog に統一した移行。公開済み URL の被リンク / SEO 評価を
-  // 新 URL に引き継ぐため、Google 公式推奨どおりサーバー側の恒久リダイレクトを張る。
-  // 公式: https://developers.google.com/search/docs/crawling-indexing/301-redirects
-  //   （permanent: true → 308。検索エンジン / クライアントに恒久キャッシュさせる）
-  async redirects() {
-    return [
-      { source: "/posts", destination: "/blog", permanent: true },
-      {
-        source: "/posts/:path*",
-        destination: "/blog/:path*",
-        permanent: true,
-      },
-    ];
   },
 
   // Cache-Control（セキュリティヘッダーは proxy.ts に集約）

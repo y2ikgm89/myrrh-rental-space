@@ -154,7 +154,7 @@ describe("getClientIp", () => {
           "x-forwarded-for": "203.0.113.10",
           "x-real-ip": "203.0.113.11",
         },
-        "https://example.com/api/auth/sign-in",
+        "https://example.com/api/customer-auth/sign-in",
       );
       expect(getClientIp(req)).toBe("unknown");
     } finally {
@@ -173,7 +173,7 @@ describe("getClientIp", () => {
           "cf-connecting-ip": "198.51.100.10",
           "x-forwarded-for": "203.0.113.10",
         },
-        "https://example.com/api/auth/sign-in",
+        "https://example.com/api/customer-auth/sign-in",
       );
       expect(getClientIp(req)).toBe("unknown");
     } finally {
@@ -197,7 +197,7 @@ describe("getClientIp", () => {
           "x-cloudflare-origin-secret": "0123456789abcdef0123456789abcdef",
           "x-forwarded-for": "203.0.113.10",
         },
-        "https://example.com/api/auth/sign-in",
+        "https://example.com/api/customer-auth/sign-in",
       );
       expect(getClientIp(req)).toBe("198.51.100.10");
     } finally {
@@ -213,11 +213,24 @@ describe("getClientIp", () => {
 });
 
 describe("checkRateLimit", () => {
-  test("/api/auth mutation パスは authMutationRateLimiter を使用する", async () => {
-    const result = await checkRateLimit("/api/auth/sign-in", "check-auth-ip");
+  test("/api/customer-auth mutation パスは authMutationRateLimiter を使用する", async () => {
+    const result = await checkRateLimit(
+      "/api/customer-auth/sign-in",
+      "check-customer-auth-ip",
+    );
     expect(result.success).toBe(true);
     // authMutationRateLimiter は maxRequests: 20
     expect(result.remaining).toBe(19);
+  });
+
+  test("削除済み /api/auth パスは Better Auth 特例に入れない", async () => {
+    const result = await checkRateLimit(
+      "/api/auth/sign-in",
+      "check-removed-auth-ip",
+    );
+    expect(result.success).toBe(true);
+    // デフォルトリミッターは maxRequests: 100
+    expect(result.remaining).toBe(99);
   });
 
   test("その他のAPIパスはデフォルトリミッターを使用する", async () => {

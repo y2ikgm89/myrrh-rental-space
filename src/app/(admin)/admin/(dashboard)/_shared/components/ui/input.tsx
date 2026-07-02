@@ -50,6 +50,7 @@ function Input({
 }: InputProps) {
   const hasLeading = leadingIcon !== undefined;
   const hasTrailing = trailingIcon !== undefined || trailingSlot !== undefined;
+  const hasAdornment = hasLeading || hasTrailing;
 
   const inputElement = (
     <input
@@ -78,11 +79,8 @@ function Input({
     />
   );
 
-  // adornment が無ければ従来通り `<input>` 直接 return（後方互換）
-  if (!hasLeading && !hasTrailing) return inputElement;
-
   return (
-    <div className="relative">
+    <div className={hasAdornment ? "relative" : "contents"}>
       {hasLeading ? (
         <CuratedIcon
           name={leadingIcon}

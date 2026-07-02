@@ -240,7 +240,7 @@ async function main() {
       "\n❌ FAIL: purge 直後・30秒後とも MISS/EXPIRED が観測されない = purge が edge に効いていない",
     );
     console.error(
-      "   plan-tier が tag purge 非対応か、credentials/権限の問題の可能性",
+      "   credentials/権限、または Cache-Tag header emission の問題の可能性",
     );
     process.exit(1);
   }

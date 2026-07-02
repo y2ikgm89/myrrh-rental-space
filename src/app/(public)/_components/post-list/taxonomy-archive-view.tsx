@@ -1,9 +1,9 @@
 /**
  * TaxonomyArchiveView — カテゴリ / タグ別アーカイブの共通描画（Server Component）
  *
- * `/category/[slug]` と `/tag/[slug]` が共有する。見出し（分類名 + 説明）は `/posts` の
+ * `/category/[slug]` と `/tag/[slug]` が共有する。見出し（分類名 + 説明）は `/blog` の
  * hero(minimal) セクションに揃えた全幅・中央寄せ。その下の PostGrid + Pagination を
- * BlogLayout（サイドバー）で包む。分類は URL パスで確定済みのため、`/posts` archive と
+ * BlogLayout（サイドバー）で包む。分類は URL パスで確定済みのため、`/blog` archive と
  * 違いカテゴリフィルタ UI は持たない（絞り込みは専用ページへの遷移で表現する）。
  */
 

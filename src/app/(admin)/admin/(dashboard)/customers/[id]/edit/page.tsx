@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { getCustomerById } from "@/admin/queries/customer";
 import { CustomerEditForm } from "../../_components/CustomerEditForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -11,6 +12,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const customer = await getCustomerById(id);
   if (!customer) return {};
@@ -21,6 +24,8 @@ export async function generateMetadata({
 }
 
 export default async function CustomerEditPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
   const customer = await getCustomerById(id);
   if (!customer) notFound();

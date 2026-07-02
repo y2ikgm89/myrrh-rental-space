@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import {
   getReservationById,
   getReservationDiscountSettings,
@@ -17,6 +18,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const reservation = await getReservationById(id);
 
@@ -30,6 +33,8 @@ export async function generateMetadata({
 }
 
 export default async function ReservationEditPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
 
   const [reservation, spaces, discountSettings] = await Promise.all([

@@ -16,23 +16,24 @@ import { DropZone, FilePreview } from "../components";
 import { Button } from "@/admin/components/ui";
 import type { MediaUsage } from "@/admin/lib/validations/media";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
-import { acceptToInputAttr } from "../accept-helpers";
+import { acceptToInputAttr, acceptToLabel } from "../accept-helpers";
 
 interface UploadTabProps {
   onUploadComplete: (media: UploadResult) => void;
   usage: MediaUsage;
   canAddMore: boolean;
-  accept?: MediaAcceptType;
+  accept: MediaAcceptType;
 }
 
 export function UploadTab({
   onUploadComplete,
   usage,
   canAddMore,
-  accept = "image",
+  accept,
 }: UploadTabProps) {
   const [file, setFile] = useState<File | null>(null);
   const [alt, setAlt] = useState("");
+  const acceptLabel = acceptToLabel(accept);
 
   const { uploadFile, isUploading, previewUrl, setPreviewFile, clearPreview } =
     useMediaUpload();
@@ -73,7 +74,7 @@ export function UploadTab({
         />
         {!canAddMore && (
           <p className="text-center text-sm text-muted-foreground">
-            選択できる画像の上限に達しました
+            選択できる{acceptLabel}の上限に達しました
           </p>
         )}
       </div>
@@ -95,7 +96,7 @@ export function UploadTab({
           type="text"
           value={alt}
           onChange={(e) => setAlt(e.target.value)}
-          placeholder="画像の説明"
+          placeholder={`${acceptLabel}の説明`}
           disabled={isUploading}
           className="h-9 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
         />

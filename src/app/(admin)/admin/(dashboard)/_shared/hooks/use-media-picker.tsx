@@ -22,11 +22,8 @@ export interface UseMediaPickerOptions {
   defaultUsage?: MediaUsage;
   /** URLタブを表示するか */
   showUrlTab?: boolean;
-  /**
-   * 許容するメディアカテゴリ (`field.media` / Lexical Inspector 等から指定)。
-   * 省略時は `"image"` (旧 useSingleMediaPicker 互換)。
-   */
-  accept?: MediaAcceptType;
+  /** 許容するメディアカテゴリ (`field.media` / Lexical Inspector 等から指定)。 */
+  accept: MediaAcceptType;
   /** 選択時のコールバック */
   onSelect?: (media: SelectedMedia[]) => void;
 }
@@ -83,14 +80,14 @@ export interface UseMediaPickerReturn {
 }
 
 export function useMediaPicker(
-  options: UseMediaPickerOptions = {},
+  options: UseMediaPickerOptions,
 ): UseMediaPickerReturn {
   const {
     selectionMode = "single",
     maxSelections = 10,
     defaultUsage = "GENERAL",
     showUrlTab = true,
-    accept = "image",
+    accept,
     onSelect,
   } = options;
 
@@ -136,10 +133,10 @@ export function useMediaPicker(
 }
 
 /**
- * 単一画像選択用のシンプルなフック
+ * 単一メディア選択用のシンプルなフック
  */
 export function useSingleMediaPicker(
-  options: Omit<UseMediaPickerOptions, "selectionMode"> = {},
+  options: Omit<UseMediaPickerOptions, "selectionMode">,
 ) {
   const result = useMediaPicker({
     ...options,
@@ -148,18 +145,18 @@ export function useSingleMediaPicker(
 
   return {
     ...result,
-    /** 単一選択された画像URL */
+    /** 単一選択されたメディア URL */
     selectedUrl: result.selectedMedia[0]?.url ?? null,
-    /** 単一選択された画像alt */
+    /** 単一選択されたメディア alt */
     selectedAlt: result.selectedMedia[0]?.alt ?? null,
   };
 }
 
 /**
- * 複数画像選択用のシンプルなフック
+ * 複数メディア選択用のシンプルなフック
  */
 export function useMultipleMediaPicker(
-  options: Omit<UseMediaPickerOptions, "selectionMode"> = {},
+  options: Omit<UseMediaPickerOptions, "selectionMode">,
 ) {
   const result = useMediaPicker({
     ...options,
@@ -168,7 +165,7 @@ export function useMultipleMediaPicker(
 
   return {
     ...result,
-    /** 選択された画像URL配列 */
+    /** 選択されたメディア URL 配列 */
     selectedUrls: result.selectedMedia.map((m) => m.url),
   };
 }

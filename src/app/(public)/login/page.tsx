@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Container } from "@/public/components/design-system/container";
@@ -21,6 +22,8 @@ export default async function LoginPage({
 }: {
   readonly searchParams: Promise<SearchParams>;
 }) {
+  await connection();
+
   const user = await getCurrentCustomerUser();
   if (user) redirect("/mypage");
 

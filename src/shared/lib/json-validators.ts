@@ -65,7 +65,7 @@ const monthlyClosureSchema = z.object({
 
 /**
  * 営業時間（週間）スキーマ。
- * `monthlyClosures` は毎月の繰り返し定休（後方互換のため default []）。
+ * `monthlyClosures` は毎月の繰り返し定休。
  */
 const businessHoursSchema = z.object({
   monday: businessHoursDaySchema,

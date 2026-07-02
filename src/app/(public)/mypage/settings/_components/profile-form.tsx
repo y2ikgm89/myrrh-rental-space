@@ -8,12 +8,13 @@ import {
   useForm,
   useInputControl,
 } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { updateProfileAction } from "../../_shared/actions/profile";
 import type { z } from "zod";
-import type { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
+import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -56,18 +57,19 @@ export function ProfileForm({
     undefined,
   );
 
-  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
-  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
-  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
   const [form, fields] = useForm<z.input<typeof customerProfileSchema>>({
     id: "profile-form",
     lastResult,
+    constraint: getZodConstraint(customerProfileSchema),
     defaultValue: {
       customerType: defaultValues.customerType,
       lastName: defaultValues.lastName,
       firstName: defaultValues.firstName,
       companyName: defaultValues.companyName,
       phoneNumber: defaultValues.phoneNumber,
+    },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: customerProfileSchema });
     },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
@@ -194,8 +196,9 @@ export function ProfileForm({
           disabled
           autoComplete="email"
           leadingIcon="IconMail"
+          aria-describedby="profile-email-help"
         />
-        <p className="text-xs text-muted-foreground">
+        <p id="profile-email-help" className="text-xs text-muted-foreground">
           メールアドレスはソーシャルアカウントから取得されます
         </p>
       </div>
