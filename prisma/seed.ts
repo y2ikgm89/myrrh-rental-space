@@ -50,6 +50,7 @@ import {
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
 import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
+import { createAuditLogRecord } from "../src/shared/domain/audit-log/commands";
 
 // NOTE: terms 系の import (applyBusinessInfo / getTemplatesForType / TermsScope 等) は
 // 初期 baseline migration に SSoT 移管したため撤去済。
@@ -165,6 +166,7 @@ async function clearAllData() {
     await tx.socialLink.deleteMany();
 
     // 認証関連
+    await tx.$executeRaw`SELECT set_config('myrrh.audit_log_mutation_bypass', 'seed', true)`;
     await tx.auditLog.deleteMany();
     await tx.session.deleteMany();
     await tx.verification.deleteMany();
@@ -4009,22 +4011,26 @@ async function seedAuditLog() {
 
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
 
-  // AuditAction 全 11 値（schema.prisma の AuditAction enum と一致）:
-  // CREATE / UPDATE / DELETE / PUBLISH / LOGIN_SUCCESS / LOGIN_FAILED /
-  // LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE / PASSWORD_RESET_REQUEST / ROLE_CHANGE
+  // AuditAction 全 14 値（schema.prisma の AuditAction enum と一致）:
+  // CREATE / UPDATE / DELETE / PUBLISH / EXPORT / LOGIN_SUCCESS / LOGIN_FAILED /
+  // LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE / PASSWORD_RESET_REQUEST /
+  // PASSWORD_RESET_FAILED / ROLE_CHANGE / INTEGRITY_CHECK
   const entries: Array<{
     action:
       | "CREATE"
       | "UPDATE"
       | "DELETE"
       | "PUBLISH"
+      | "EXPORT"
       | "LOGIN_SUCCESS"
       | "LOGIN_FAILED"
       | "LOGOUT"
       | "PERMISSION_DENIED"
       | "PASSWORD_CHANGE"
       | "PASSWORD_RESET_REQUEST"
-      | "ROLE_CHANGE";
+      | "PASSWORD_RESET_FAILED"
+      | "ROLE_CHANGE"
+      | "INTEGRITY_CHECK";
     resource: string;
     resourceId?: string;
     metadata?: Prisma.InputJsonValue;
@@ -4060,23 +4066,30 @@ async function seedAuditLog() {
     },
     {
       action: "LOGIN_SUCCESS",
-      resource: "auth",
+      resource: "adminAuth",
       userId: admin.id,
-      metadata: { ip: "203.0.113.10", userAgent: "Mozilla/5.0" },
+      metadata: { ipAddress: "203.0.113.10", userAgent: "Mozilla/5.0" },
       createdAt: hoursAgo(24),
     },
     {
       action: "LOGIN_FAILED",
-      resource: "auth",
+      resource: "adminAuth",
       userId: null,
-      metadata: { ip: "203.0.113.99", reason: "invalid_password" },
+      metadata: { ipAddress: "203.0.113.99", reason: "user_not_authorized" },
       createdAt: hoursAgo(18),
     },
     {
       action: "LOGOUT",
-      resource: "auth",
+      resource: "adminAuth",
       userId: admin.id,
       createdAt: hoursAgo(12),
+    },
+    {
+      action: "EXPORT",
+      resource: "auditLog",
+      userId: admin.id,
+      metadata: { format: "csv", exportedCount: 25 },
+      createdAt: hoursAgo(10),
     },
     {
       action: "PERMISSION_DENIED",
@@ -4099,11 +4112,25 @@ async function seedAuditLog() {
       createdAt: hoursAgo(4),
     },
     {
+      action: "PASSWORD_RESET_FAILED",
+      resource: "auth",
+      userId: null,
+      metadata: { email: "forgot@example.com", reason: "token_expired" },
+      createdAt: hoursAgo(3),
+    },
+    {
       action: "ROLE_CHANGE",
       resource: "user",
       userId: admin.id,
       metadata: { target: "editor@example.com", from: "VIEWER", to: "EDITOR" },
       createdAt: hoursAgo(2),
+    },
+    {
+      action: "INTEGRITY_CHECK",
+      resource: "auditLog",
+      userId: admin.id,
+      metadata: { operation: "verifyAuditLogIntegrity", ok: true },
+      createdAt: hoursAgo(1.5),
     },
   ];
 
@@ -4119,22 +4146,20 @@ async function seedAuditLog() {
   }
 
   for (const entry of entries) {
-    await prisma.auditLog.create({
-      data: {
-        action: entry.action,
-        resource: entry.resource,
-        userId: entry.userId,
-        ...(entry.resourceId !== undefined
-          ? { resourceId: entry.resourceId }
-          : {}),
-        ...(entry.metadata !== undefined ? { metadata: entry.metadata } : {}),
-        createdAt: entry.createdAt,
-      },
+    await createAuditLogRecord({
+      action: entry.action,
+      resource: entry.resource,
+      ...(entry.userId !== null ? { userId: entry.userId } : {}),
+      ...(entry.resourceId !== undefined
+        ? { resourceId: entry.resourceId }
+        : {}),
+      ...(entry.metadata !== undefined ? { metadata: entry.metadata } : {}),
+      createdAt: entry.createdAt,
     });
   }
 
   console.log(
-    `✅ Created ${entries.length.toString()} audit log entries (all 11 AuditAction values)`,
+    `✅ Created ${entries.length.toString()} audit log entries (all 14 AuditAction values)`,
   );
 }
 

@@ -31,6 +31,9 @@ async function AuditLogList({ searchParams }: PageProps) {
       userId: params.userId || undefined,
       dateFrom: params.dateFrom || undefined,
       dateTo: params.dateTo || undefined,
+      search: params.search || undefined,
+      ipAddress: params.ipAddress || undefined,
+      securityOnly: params.securityOnly === "1",
     }),
   );
 

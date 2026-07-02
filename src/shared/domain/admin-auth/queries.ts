@@ -1,7 +1,6 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { isDashboardRole } from "@/shared/lib/admin-roles";
 import {
   isAdminRoleGroupSyncConfigured,
   syncAdminAuthUserFromGoogleGroups,
@@ -39,7 +38,6 @@ export async function findAdminAuthUserByEmail(
     },
   });
 
-  if (!user || !isDashboardRole(user.role)) return null;
   return user;
 }
 

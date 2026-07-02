@@ -9,9 +9,11 @@ const mockRedirect = mock((path: string): never => {
 const mockFindUnique = mock();
 const mockUserCreate = mock();
 const mockUserUpdate = mock();
+const mockAuditLogFindFirst = mock();
 const mockResolveIapIdentity = mock();
 const mockBetterAuthGetSession = mock(() => null);
 const mockIsGoogleWorkspaceGroupMember = mock();
+const mockCreateAuditLogRecord = mock();
 const mockServerEnv: Record<string, string | undefined> = {
   NODE_ENV: "test",
   ADMIN_TEST_IAP_EMAIL: undefined,
@@ -32,6 +34,9 @@ mock.module("@/shared/db/prisma", () => ({
       findUnique: mockFindUnique,
       create: mockUserCreate,
       update: mockUserUpdate,
+    },
+    auditLog: {
+      findFirst: mockAuditLogFindFirst,
     },
   },
 }));
@@ -70,7 +75,9 @@ mock.module("@/shared/db/better-auth-adapter", () => ({
 }));
 
 mock.module("@/shared/domain/audit-log/commands", () => ({
-  createAuditLogRecord: mock(),
+  createAuditLogRecord: (
+    ...args: Parameters<typeof mockCreateAuditLogRecord>
+  ) => mockCreateAuditLogRecord(...args),
 }));
 
 mock.module("@/shared/lib/action-helpers", () => ({
@@ -98,8 +105,11 @@ beforeEach(() => {
   mockFindUnique.mockReset();
   mockUserCreate.mockReset();
   mockUserUpdate.mockReset();
+  mockAuditLogFindFirst.mockReset();
+  mockAuditLogFindFirst.mockResolvedValue(null);
   mockResolveIapIdentity.mockReset();
   mockIsGoogleWorkspaceGroupMember.mockReset();
+  mockCreateAuditLogRecord.mockReset();
   mockBetterAuthGetSession.mockReset();
   mockBetterAuthGetSession.mockImplementation(() => null);
   mockServerEnv["NODE_ENV"] = "test";
@@ -148,6 +158,20 @@ describe("admin auth IAP boundary", () => {
         emailVerified: true,
       },
     });
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-1",
+        action: "LOGIN_SUCCESS",
+        resource: "adminAuth",
+        resourceId: "user-1",
+        metadata: expect.objectContaining({
+          provider: "google-iap",
+          email: "admin@example.com",
+          iapSubject: "subject-1",
+          role: "ADMIN",
+        }),
+      }),
+    );
   });
 
   test("getAdminSession は IAP user を session shape で返す", async () => {
@@ -295,6 +319,38 @@ describe("admin auth IAP boundary", () => {
       "redirect:/admin/access-denied",
     );
     expect(mockRedirect).toHaveBeenCalledWith("/admin/access-denied");
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "LOGIN_FAILED",
+        resource: "adminAuth",
+        metadata: expect.objectContaining({
+          provider: "google-iap",
+          email: "missing@example.com",
+          iapSubject: "subject-1",
+          reason: "user_not_authorized",
+        }),
+      }),
+    );
+  });
+
+  test("IAP assertion 検証失敗は LOGIN_FAILED として記録する", async () => {
+    mockResolveIapIdentity.mockRejectedValue(new Error("invalid jwt"));
+
+    const user = await getCurrentAdminUser(
+      new Headers({ "x-goog-iap-jwt-assertion": "signed.jwt" }),
+    );
+
+    expect(user).toBeNull();
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "LOGIN_FAILED",
+        resource: "adminAuth",
+        metadata: expect.objectContaining({
+          provider: "google-iap",
+          reason: "iap_assertion_invalid",
+        }),
+      }),
+    );
   });
 
   test("Google Group 同期が有効な場合は未登録 IAP user を自動作成する", async () => {
@@ -433,5 +489,20 @@ describe("admin auth IAP boundary", () => {
       "redirect:/admin/access-denied",
     );
     expect(mockRedirect).toHaveBeenCalledWith("/admin/access-denied");
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "user-2",
+        action: "LOGIN_FAILED",
+        resource: "adminAuth",
+        resourceId: "user-2",
+        metadata: expect.objectContaining({
+          provider: "google-iap",
+          email: "customer@example.com",
+          iapSubject: "subject-1",
+          role: "CUSTOMER",
+          reason: "role_not_allowed",
+        }),
+      }),
+    );
   });
 });

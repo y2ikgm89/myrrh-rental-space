@@ -2,11 +2,18 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { AuditAction } from "@generated/prisma/enums";
+import type { Prisma } from "@generated/prisma/client";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { isRecord, toPlainObject } from "@/shared/lib/serialize";
 
 export type AuditLogItem = {
   id: string;
+  sequence: string;
+  previousHash: string;
+  entryHash: string;
+  hashAlgorithm: string;
+  hashKeyId: string;
+  chainVersion: number;
   userId: string | null;
   action: AuditAction;
   resource: string;
@@ -34,6 +41,9 @@ export type AuditLogFilters = {
   userId?: string | undefined;
   dateFrom?: string | undefined;
   dateTo?: string | undefined;
+  search?: string | undefined;
+  ipAddress?: string | undefined;
+  securityOnly?: boolean | undefined;
 };
 
 export type AuditLogResult = {
@@ -52,12 +62,57 @@ export type AuditLogStats = {
 
 type AuditLogMetadata = AuditLogItem["metadata"];
 
-type AuditLogWhere = {
-  action?: AuditAction;
-  resource?: string;
-  userId?: string;
-  createdAt?: { gte?: Date; lte?: Date };
-};
+type AuditLogWhere = Prisma.AuditLogWhereInput;
+
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const AUDIT_LOG_EXPORT_LIMIT = 10_000;
+const SECURITY_AUDIT_ACTIONS = [
+  AuditAction.LOGIN_SUCCESS,
+  AuditAction.LOGIN_FAILED,
+  AuditAction.LOGOUT,
+  AuditAction.PERMISSION_DENIED,
+  AuditAction.PASSWORD_CHANGE,
+  AuditAction.PASSWORD_RESET_REQUEST,
+  AuditAction.PASSWORD_RESET_FAILED,
+  AuditAction.ROLE_CHANGE,
+  AuditAction.EXPORT,
+  AuditAction.INTEGRITY_CHECK,
+] satisfies AuditAction[];
+
+const auditLogSelect = {
+  id: true,
+  sequence: true,
+  previousHash: true,
+  entryHash: true,
+  hashAlgorithm: true,
+  hashKeyId: true,
+  chainVersion: true,
+  userId: true,
+  action: true,
+  resource: true,
+  resourceId: true,
+  oldValue: true,
+  newValue: true,
+  metadata: true,
+  createdAt: true,
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+} satisfies Prisma.AuditLogSelect;
+
+function parseAuditDateBound(value: string, boundary: "start" | "end"): Date {
+  if (!DATE_ONLY_PATTERN.test(value)) {
+    return new Date(value);
+  }
+
+  const time =
+    boundary === "start" ? "00:00:00.000+09:00" : "23:59:59.999+09:00";
+  return new Date(`${value}T${time}`);
+}
 
 function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
   if (!isRecord(value)) {
@@ -83,9 +138,13 @@ function parseAuditLogMetadata(value: unknown): AuditLogMetadata {
 
 function buildAuditLogWhere(filters: Required<AuditLogFilters>): AuditLogWhere {
   const where: AuditLogWhere = {};
+  const search = (filters.search ?? "").trim();
+  const ipAddress = (filters.ipAddress ?? "").trim();
 
   if (filters.action !== "ALL" && filters.action !== undefined) {
     where.action = filters.action;
+  } else if (filters.securityOnly) {
+    where.action = { in: SECURITY_AUDIT_ACTIONS };
   }
 
   if (filters.resource) {
@@ -99,14 +158,43 @@ function buildAuditLogWhere(filters: Required<AuditLogFilters>): AuditLogWhere {
   if (filters.dateFrom || filters.dateTo) {
     where.createdAt = {};
     if (filters.dateFrom) {
-      where.createdAt.gte = new Date(filters.dateFrom);
+      where.createdAt.gte = parseAuditDateBound(filters.dateFrom, "start");
     }
     if (filters.dateTo) {
-      where.createdAt.lte = new Date(filters.dateTo);
+      where.createdAt.lte = parseAuditDateBound(filters.dateTo, "end");
     }
   }
 
+  if (search) {
+    where.OR = [
+      { resource: { contains: search, mode: "insensitive" } },
+      { resourceId: { contains: search, mode: "insensitive" } },
+      { user: { is: { email: { contains: search, mode: "insensitive" } } } },
+      { user: { is: { name: { contains: search, mode: "insensitive" } } } },
+    ];
+  }
+
+  if (ipAddress) {
+    where.metadata = {
+      path: ["ipAddress"],
+      string_contains: ipAddress,
+    };
+  }
+
   return where;
+}
+
+type SelectedAuditLog = Prisma.AuditLogGetPayload<{
+  select: typeof auditLogSelect;
+}>;
+
+function serializeAuditLog(log: SelectedAuditLog): AuditLogItem {
+  return {
+    ...log,
+    sequence: log.sequence.toString(),
+    createdAt: log.createdAt.toISOString(),
+    metadata: parseAuditLogMetadata(log.metadata),
+  };
 }
 
 export async function getAuditLogs(
@@ -120,44 +208,42 @@ export async function getAuditLogs(
     limit: perPage,
   } = paginate({ page: filters.page, limit: filters.perPage ?? 20 });
 
-  const [logs, total] = await Promise.all([
-    prisma.auditLog.findMany({
-      where,
-      select: {
-        id: true,
-        userId: true,
-        action: true,
-        resource: true,
-        resourceId: true,
-        oldValue: true,
-        newValue: true,
-        metadata: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      skip,
-      take,
-    }),
-    prisma.auditLog.count({ where }),
-  ]);
+  const [logs, total] = await prisma.$transaction(
+    async (tx) => {
+      const logs = await tx.auditLog.findMany({
+        where,
+        select: auditLogSelect,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      });
+      const total = await tx.auditLog.count({ where });
+
+      return [logs, total] as const;
+    },
+    { isolationLevel: "RepeatableRead" },
+  );
 
   return toPlainObject({
-    logs: logs.map((log) => ({
-      ...log,
-      createdAt: log.createdAt.toISOString(),
-      metadata: parseAuditLogMetadata(log.metadata),
-    })),
+    logs: logs.map(serializeAuditLog),
     total,
     page,
     totalPages: calcTotalPages(total, perPage),
   });
+}
+
+export async function getAuditLogsForExport(
+  filters: Required<AuditLogFilters>,
+): Promise<AuditLogItem[]> {
+  const where = buildAuditLogWhere(filters);
+  const logs = await prisma.auditLog.findMany({
+    where,
+    select: auditLogSelect,
+    orderBy: { createdAt: "asc" },
+    take: AUDIT_LOG_EXPORT_LIMIT,
+  });
+
+  return toPlainObject(logs.map(serializeAuditLog));
 }
 
 export async function getAuditLogStats(): Promise<AuditLogStats> {
@@ -167,9 +253,14 @@ export async function getAuditLogStats(): Promise<AuditLogStats> {
   const securityActions = [
     AuditAction.LOGIN_SUCCESS,
     AuditAction.LOGIN_FAILED,
+    AuditAction.LOGOUT,
     AuditAction.PERMISSION_DENIED,
     AuditAction.PASSWORD_CHANGE,
+    AuditAction.PASSWORD_RESET_REQUEST,
+    AuditAction.PASSWORD_RESET_FAILED,
     AuditAction.ROLE_CHANGE,
+    AuditAction.EXPORT,
+    AuditAction.INTEGRITY_CHECK,
   ];
 
   const [total, todayCount, securityEvents, actionCounts] = await Promise.all([
