@@ -51,7 +51,7 @@ function isActive(pathname: string, item: NavItem): boolean {
 }
 
 export function MobileNav({ authKind }: MobileNavProps) {
-  // preview URL (`/preview/posts/[id]` 等) は本番 URL (`/posts` 等) に正規化して
+  // preview URL (`/preview/posts/[id]` 等) は本番 URL (`/blog` 等) に正規化して
   // active 判定する。preview と本番で同じタブが選択状態として表示される。
   const pathname = normalizePreviewPathname(usePathname());
   const authItem = authKind ? AUTH_NAV_ITEMS[authKind] : null;

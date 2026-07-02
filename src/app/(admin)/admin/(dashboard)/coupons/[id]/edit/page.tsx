@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { getCouponById } from "@/admin/queries/coupon";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { CouponForm } from "../../_components/CouponForm";
@@ -11,6 +12,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const coupon = await getCouponById(id);
   if (!coupon) return {};
@@ -21,6 +24,8 @@ export async function generateMetadata({
 }
 
 export default async function CouponEditPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
   const coupon = await getCouponById(id);
   if (!coupon) notFound();

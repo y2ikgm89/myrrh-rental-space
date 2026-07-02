@@ -94,6 +94,8 @@ export function SpaceSelector({
                   alt={space.name}
                   fill
                   sizes="(min-width: 120rem) 320px, (min-width: 48rem) 260px, 100vw"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchPriority={index === 0 ? "high" : "auto"}
                   className="object-cover transition-opacity duration-400 group-hover:opacity-85"
                 />
               </div>

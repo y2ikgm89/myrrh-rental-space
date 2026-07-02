@@ -37,10 +37,18 @@ describe("buildReservationCalendar", () => {
     expect(ics).toContain("END:VCALENDAR");
   });
 
-  test("includes VTIMEZONE for Asia/Tokyo", () => {
+  test("outputs event times as UTC to avoid server timezone drift", () => {
     const ics = buildReservationCalendar(SAMPLE_RESERVATION, "example.com");
-    expect(ics).toContain("BEGIN:VTIMEZONE");
-    expect(ics).toContain("TZID:Asia/Tokyo");
+    expect(ics).toContain("DTSTART:20260501T010000Z");
+    expect(ics).toContain("DTEND:20260501T030000Z");
+    expect(ics).not.toContain("BEGIN:VTIMEZONE");
+    expect(ics).not.toContain("TIMEZONE-ID:");
+  });
+
+  test("keeps human-facing description in JST", () => {
+    const ics = buildReservationCalendar(SAMPLE_RESERVATION, "example.com");
+    const unfolded = ics.replace(/\r\n /g, "");
+    expect(unfolded).toContain("日時: 2026/05/01 10:00 - 12:00");
   });
 
   test("escapes special characters in description", () => {
@@ -112,6 +120,8 @@ describe("buildEventCalendar", () => {
     );
     expect(ics).toContain("UID:event-registration-reg-456@example.com");
     expect(ics).toContain("METHOD:REQUEST");
+    expect(ics).toContain("DTSTART:20260501T010000Z");
+    expect(ics).toContain("DTEND:20260501T030000Z");
     expect(ics).toContain("SUMMARY:ワークショップ");
   });
 });

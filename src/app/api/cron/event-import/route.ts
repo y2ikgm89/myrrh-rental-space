@@ -1,13 +1,14 @@
 /**
  * イベントインポート Cron API
  *
- * Cloud Schedulerまたは外部スケジューラーから定期的に呼び出され、
+ * Cloud Scheduler から定期的に呼び出され、
  * Google Calendarの非予約イベントをEventモデルにインポートします。
  *
  * @module api/cron/event-import
  */
 
 import { unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 import { importCalendarEvents } from "@/shared/lib/calendar-sync/event-inbound";
@@ -19,7 +20,6 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
@@ -28,17 +28,16 @@ import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
  * イベントインポート用Cronエンドポイント
  * GET /api/cron/event-import
  *
- * Cloud Schedulerまたは外部スケジューラーから呼び出される
+ * Cloud Scheduler から呼び出される
  * Google Calendarの非予約イベントをEventモデルにインポート
  *
- * セキュリティ: CRON_SECRET環境変数による認証
+ * セキュリティ: Cloud Scheduler OIDC token による認証
  */
 export async function GET(request: Request) {
   try {
-    const authorizationResult = authorizeCronRequest({
-      authorizationHeader: request.headers.get("authorization"),
-      secret: serverEnv.CRON_SECRET,
-      nodeEnv: serverEnv.NODE_ENV,
+    await connection();
+    const authorizationResult = await authorizeCronRequest({
+      request,
       operation: "eventImportCron",
     });
     if (authorizationResult) {

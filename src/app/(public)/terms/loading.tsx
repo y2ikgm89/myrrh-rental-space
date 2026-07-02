@@ -10,7 +10,7 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function TermsListLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Breadcrumb band */}
       <div className="border-b border-divider bg-surface">
         <Container>
@@ -38,6 +38,6 @@ export default function TermsListLoading() {
           </ul>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

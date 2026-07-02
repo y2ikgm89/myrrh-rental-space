@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { connection } from "next/server";
 import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
 import { getSidebarData } from "@/shared/domain/sidebar/queries";
 import { BlogSidebar } from "@/public/components/layouts/blog-sidebar";
@@ -21,6 +22,8 @@ export async function BlogLayout({
   if (showSidebar === false) {
     return <>{children}</>;
   }
+
+  await connection();
 
   const settings = await getSidebarSettings();
   if (!settings.enabled) {

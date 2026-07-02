@@ -28,27 +28,20 @@ export const emailFormSchema = z.object({
     .optional(),
   sendReservationConfirmationEmail: switchBoolean(),
   // 通知先スタッフ（User.id 配列）。チェックボックス群を conform が配列に集約する。
-  notificationStaffIds: z.array(z.string()).optional(),
-  // カスタム通知先（カンマ区切り）。長さ＋各アドレスの形式を検証する（多層防御）。
-  notificationEmailAddresses: z
-    .string()
-    .max(500, { error: "500文字以内で入力してください" })
+  notificationStaffIds: z
+    .array(z.string())
     .optional()
-    .superRefine((value, ctx) => {
-      if (!value) return;
-      for (const part of value
-        .split(",")
-        .map((p) => p.trim())
-        .filter(Boolean)) {
-        if (!z.email().safeParse(part).success) {
-          ctx.addIssue({
-            code: "custom",
-            message: `不正なメールアドレスが含まれています: ${part}`,
-          });
-          break;
-        }
-      }
-    }),
+    .transform((value) => value ?? []),
+  // カスタム通知先。同名 hidden input の複数値を配列として受け取る。
+  notificationEmailAddresses: z
+    .array(
+      z
+        .email({ error: "有効なメールアドレスを入力してください" })
+        .max(100, { error: "メールアドレスは100文字以内で入力してください" }),
+    )
+    .max(50, { error: "カスタム通知先は50件以内で入力してください" })
+    .optional()
+    .transform((value) => value ?? []),
 });
 
 export type EmailFormInput = z.infer<typeof emailFormSchema>;

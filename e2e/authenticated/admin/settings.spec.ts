@@ -1,6 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { urls } from "../../fixtures";
 
+async function expectPageHeading(
+  page: import("@playwright/test").Page,
+  name: string | RegExp,
+) {
+  await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
+}
+
 /**
  * 管理画面 - 設定 E2E テスト
  *
@@ -24,7 +31,7 @@ test.describe("設定トップページ", () => {
   test("設定ページが正しく表示される", async ({ page }) => {
     await page.goto(urls.adminSettings);
 
-    await expect(page.locator("h1")).toContainText("設定");
+    await expectPageHeading(page, "設定");
   });
 
   test("設定カテゴリカードが複数表示される", async ({ page }) => {
@@ -106,59 +113,61 @@ test.describe("サイト基本ページ", () => {
   test("サイト基本ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    await expect(page.locator("h1, h2")).toContainText("サイト基本");
+    await expectPageHeading(page, "サイト基本");
   });
 
   test("一般タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    const generalTab = page.locator('[role="tab"]:has-text("一般")');
+    const generalTab = page.getByRole("tab", { name: "一般" });
     await expect(generalTab).toBeVisible();
   });
 
   test("SEOタブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    const seoTab = page.locator('[role="tab"]:has-text("SEO")');
+    const seoTab = page.getByRole("tab", { name: "SEO" });
     await expect(seoTab).toBeVisible();
   });
 
-  test("投稿タブが表示される", async ({ page }) => {
+  test("連絡先情報が表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    const postTab = page.locator('[role="tab"]:has-text("投稿")');
-    await expect(postTab).toBeVisible();
+    await expect(page.getByText("連絡先情報", { exact: true })).toBeVisible();
   });
 
   test("サイト名フィールドが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    const siteNameInput = page.locator("#siteName");
+    const siteNameInput = page.getByRole("textbox", { name: "サイト名" });
     await expect(siteNameInput).toBeVisible();
   });
 
   test("基本情報の保存ボタンが存在する", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    const saveButton = page.locator('button:has-text("基本情報を保存")');
+    const saveButton = page.getByRole("button", { name: "基本情報を保存" });
     await expect(saveButton).toBeVisible();
   });
 
   test("SEOタブに切り替えられる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    await page.locator('[role="tab"]:has-text("SEO")').click();
+    await page.getByRole("tab", { name: "SEO" }).click();
 
-    await expect(page.locator('[role="tabpanel"]')).toBeVisible();
+    await expect(page.getByRole("tabpanel", { name: "SEO" })).toBeVisible();
   });
 
-  test("robots.txt セクションはSEOタブに存在する", async ({ page }) => {
+  test("メタ情報設定はSEOタブに存在する", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    await page.locator('[role="tab"]:has-text("SEO")').click();
+    await page.getByRole("tab", { name: "SEO" }).click();
 
-    const robotsSection = page.locator("text=robots.txt");
-    await expect(robotsSection.first()).toBeVisible();
+    await expect(
+      page.getByRole("textbox", {
+        name: "デフォルトメタディスクリプション",
+      }),
+    ).toBeVisible();
   });
 });
 
@@ -167,17 +176,23 @@ test.describe.serial("サイト名 mutation - 並列化禁止", () => {
   test("サイト名を変更して保存できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/site");
 
-    const siteNameInput = page.locator("#siteName");
+    const siteNameInput = page.getByRole("textbox", { name: "サイト名" });
     await expect(siteNameInput).toBeVisible();
 
     await siteNameInput.clear();
     await siteNameInput.fill("テストサイト名");
 
-    await page.locator('button:has-text("基本情報を保存")').click();
+    await page.getByRole("button", { name: "基本情報を保存" }).click();
 
-    await expect(page.locator("[data-sonner-toaster]")).toBeVisible({
-      timeout: 10000,
-    });
+    await expect
+      .poll(
+        async () => {
+          await page.reload();
+          return page.getByRole("textbox", { name: "サイト名" }).inputValue();
+        },
+        { timeout: 10000 },
+      )
+      .toBe("テストサイト名");
   });
 });
 
@@ -189,36 +204,38 @@ test.describe("ビジネス設定ページ", () => {
   test("ビジネス設定ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/business");
 
-    await expect(page.locator("h1, h2")).toContainText("ビジネス設定");
+    await expectPageHeading(page, "ビジネス設定");
   });
 
   test("事業者情報タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/business");
 
-    const infoTab = page.locator('[role="tab"]:has-text("事業者情報")');
+    const infoTab = page.getByRole("tab", { name: "事業者情報" });
     await expect(infoTab).toBeVisible();
   });
 
   test("営業時間タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/business");
 
-    const hoursTab = page.locator('[role="tab"]:has-text("営業時間")');
+    const hoursTab = page.getByRole("tab", { name: "営業時間" });
     await expect(hoursTab).toBeVisible();
   });
 
   test("予約タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/business");
 
-    const reservationTab = page.locator('[role="tab"]:has-text("予約")');
+    const reservationTab = page.getByRole("tab", { name: "予約" });
     await expect(reservationTab).toBeVisible();
   });
 
   test("営業時間タブに切り替えられる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/business");
 
-    await page.locator('[role="tab"]:has-text("営業時間")').click();
+    await page.getByRole("tab", { name: "営業時間" }).click();
 
-    await expect(page.locator('[role="tabpanel"]')).toBeVisible();
+    await expect(
+      page.getByRole("tabpanel", { name: "営業時間" }),
+    ).toBeVisible();
   });
 });
 
@@ -230,27 +247,27 @@ test.describe("メール・通知設定ページ", () => {
   test("メール・通知設定ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/notifications");
 
-    await expect(page.locator("h1, h2")).toContainText("メール・通知");
+    await expectPageHeading(page, /メール・通知/u);
   });
 
   test("メールタブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/notifications");
 
-    const emailTab = page.locator('[role="tab"]:has-text("メール")');
+    const emailTab = page.getByRole("tab", { name: "メール" });
     await expect(emailTab).toBeVisible();
   });
 
   test("通知タブが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/notifications");
 
-    const notificationTab = page.locator('[role="tab"]:has-text("通知")');
+    const notificationTab = page.getByRole("tab", { name: "通知" });
     await expect(notificationTab).toBeVisible();
   });
 
   test("メールタブのコンテンツが表示される", async ({ page }) => {
     await page.goto(urls.adminSettings + "/notifications");
 
-    await expect(page.locator('[role="tabpanel"]')).toBeVisible();
+    await expect(page.getByRole("tabpanel", { name: "メール" })).toBeVisible();
   });
 });
 
@@ -262,7 +279,7 @@ test.describe("課金・決済設定ページ", () => {
   test("課金・決済設定ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/billing");
 
-    await expect(page.locator("h1, h2")).toContainText("課金・決済");
+    await expectPageHeading(page, "課金・決済");
   });
 
   test("決済タブが表示される", async ({ page }) => {
@@ -295,7 +312,7 @@ test.describe("外部連携設定ページ", () => {
   test("外部連携設定ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/integrations");
 
-    await expect(page.locator("h1, h2")).toBeVisible();
+    await expectPageHeading(page, "外部連携");
   });
 
   test("外部連携設定ページが読み込まれる", async ({ page }) => {
@@ -319,7 +336,7 @@ test.describe("システム管理設定ページ", () => {
   test("システム管理設定ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/system");
 
-    await expect(page.locator("h1, h2")).toBeVisible();
+    await expectPageHeading(page, "システム管理");
   });
 
   test("システム管理設定ページが読み込まれる", async ({ page }) => {
@@ -341,7 +358,7 @@ test.describe("サイトの見た目ページ", () => {
   test("サイトの見た目ページに遷移できる", async ({ page }) => {
     await page.goto(urls.adminSettings + "/appearance");
 
-    await expect(page.locator("h1, h2")).toContainText("サイトの見た目");
+    await expectPageHeading(page, "サイトの見た目");
   });
 
   test("ナビゲーションタブが表示される", async ({ page }) => {
@@ -369,7 +386,7 @@ test.describe("レスポンシブ対応", () => {
 
     await page.goto(urls.adminSettings);
 
-    await expect(page.locator("h1")).toContainText("設定");
+    await expectPageHeading(page, "設定");
   });
 
   test("モバイルビューでもサイト基本ページが表示される", async ({ page }) => {
@@ -377,6 +394,6 @@ test.describe("レスポンシブ対応", () => {
 
     await page.goto(urls.adminSettings + "/site");
 
-    await expect(page.locator("h1, h2")).toContainText("サイト基本");
+    await expectPageHeading(page, "サイト基本");
   });
 });

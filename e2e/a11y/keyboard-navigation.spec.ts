@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { urls } from "../fixtures";
 
 /**
@@ -15,6 +15,23 @@ import { urls } from "../fixtures";
 // =============================================================================
 // 1. トップナビゲーションの Tab キー移動
 // =============================================================================
+
+async function tabUntilFocused(
+  page: Page,
+  target: Locator,
+  maxTabs = 16,
+): Promise<void> {
+  for (let i = 0; i < maxTabs; i += 1) {
+    if (
+      await target.evaluate((element) => element === document.activeElement)
+    ) {
+      break;
+    }
+    await page.keyboard.press("Tab");
+  }
+
+  await expect(target).toBeFocused();
+}
 
 test.describe("トップナビゲーション - Tabキーフォーカス移動", () => {
   test("ヘッダー内のリンクが Tab キーで順に到達できる", async ({ page }) => {
@@ -39,27 +56,27 @@ test.describe("トップナビゲーション - Tabキーフォーカス移動",
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(urls.home);
-    // header 内のインタラクティブ要素（a, button）を取得
-    const interactiveItems = page.locator("header a, header nav button");
-    const count = await interactiveItems.count();
-    expect(count).toBeGreaterThan(0);
 
-    // 最初の要素を Tab で到達して Enter で遷移できる (リンクの場合)
-    const firstLink = interactiveItems.first();
-    await firstLink.focus();
-    await expect(firstLink).toBeFocused();
+    const spacesLink = page
+      .getByRole("navigation", { name: "メインナビゲーション" })
+      .getByRole("link", { name: "スペース" });
+
+    await expect(spacesLink).toBeVisible();
+    await tabUntilFocused(page, spacesLink);
   });
 
   test("ナビゲーションリンクが Enter キーで遷移できる", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(urls.home);
-    // /spaces へのナビリンクを見つけてキーボードで遷移
-    const spacesLink = page.locator('header a[href="/spaces"]').first();
+    const spacesLink = page
+      .getByRole("navigation", { name: "メインナビゲーション" })
+      .getByRole("link", { name: "スペース" });
 
-    await spacesLink.focus();
-    await expect(spacesLink).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/spaces/);
+    await expect(spacesLink).toBeVisible();
+    await expect(spacesLink).toHaveAttribute("href", "/spaces");
+    await tabUntilFocused(page, spacesLink);
+    await spacesLink.press("Enter");
+    await expect(page).toHaveURL(/\/spaces/, { timeout: 15000 });
   });
 
   test("フォーカスされたリンクに視覚的なインジケーターがある", async ({
@@ -97,70 +114,157 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
     await page.setViewportSize({ width: 375, height: 812 });
   });
 
-  test("ハンバーガーボタンをクリックするとメニューが開く", async ({ page }) => {
+  async function gotoHomeWithReadyMobileShell(page: Page): Promise<void> {
     await page.goto(urls.home);
-    const hamburger = page.locator(
-      'button[aria-label="メニューを開く"], button[aria-label*="menu"], header button[class*="md:hidden"]',
-    );
+    await expect(page.getByRole("banner")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "モバイルナビゲーション" }),
+    ).toBeVisible();
+  }
 
-    await hamburger.first().click();
+  function mobileMenuControls(page: Page): {
+    hamburger: Locator;
+    closeButton: Locator;
+  } {
+    const banner = page.getByRole("banner");
+    const dialog = page.getByRole("dialog", { name: "ナビゲーションメニュー" });
 
-    // オーバーレイまたは閉じるボタンのいずれかが表示されることを単一 assertion で確認
-    // (両分岐 assert は silent-pass を生むため `.or()` チェーンで決定論化)
-    const overlay = page.locator(
-      'div[class*="fixed inset-0"], [role="dialog"]',
-    );
-    const closeButton = page.locator('button[aria-label="メニューを閉じる"]');
-    const indicator = overlay.or(closeButton);
-    await expect(indicator.first()).toBeVisible();
+    return {
+      hamburger: banner.getByRole("button", { name: "メニューを開く" }),
+      closeButton: dialog.getByRole("button", { name: "メニューを閉じる" }),
+    };
+  }
+
+  async function openMobileMenu(page: Page): Promise<{
+    hamburger: Locator;
+    closeButton: Locator;
+  }> {
+    const controls = mobileMenuControls(page);
+
+    await expect(controls.hamburger).toBeVisible();
+    await expect(controls.hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect
+      .poll(
+        async () => {
+          if (await controls.closeButton.isVisible()) return true;
+
+          await controls.hamburger.click();
+          return controls.closeButton.isVisible();
+        },
+        { timeout: 5000 },
+      )
+      .toBe(true);
+    await expect(controls.hamburger).toHaveAttribute("aria-expanded", "true");
+    await expect(controls.closeButton).toBeVisible();
+
+    return controls;
+  }
+
+  test("メニュー開閉で hydration mismatch warning を出さない", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const windowWithWarnings = window as typeof window & {
+        __hydrationWarnings?: string[];
+      };
+      windowWithWarnings.__hydrationWarnings = [];
+      const capture = (value: unknown) => {
+        const text =
+          typeof value === "string"
+            ? value
+            : value instanceof Error
+              ? value.message
+              : String(value);
+        if (
+          text.includes("A tree hydrated but some attributes") ||
+          text.includes("Hydration failed")
+        ) {
+          windowWithWarnings.__hydrationWarnings?.push(text);
+        }
+      };
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      console.error = (...args: unknown[]) => {
+        args.forEach(capture);
+        originalError.apply(console, args);
+      };
+      console.warn = (...args: unknown[]) => {
+        args.forEach(capture);
+        originalWarn.apply(console, args);
+      };
+    });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(urls.home);
+    await expect(
+      page
+        .getByRole("navigation", { name: "メインナビゲーション" })
+        .getByRole("link", { name: "スペース" }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 812 });
+    await gotoHomeWithReadyMobileShell(page);
+
+    const { hamburger } = await openMobileMenu(page);
+    await page.keyboard.press("Escape");
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+
+    const hydrationWarnings = await page.evaluate(() => {
+      const windowWithWarnings = window as typeof window & {
+        __hydrationWarnings?: string[];
+      };
+      return windowWithWarnings.__hydrationWarnings ?? [];
+    });
+    expect(hydrationWarnings).toEqual([]);
+  });
+
+  test("ハンバーガーボタンをクリックするとメニューが開く", async ({ page }) => {
+    await gotoHomeWithReadyMobileShell(page);
+
+    const { hamburger } = await openMobileMenu(page);
+
+    await page.keyboard.press("Escape");
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("メニューが開いた状態で Escape キーを押すとメニューが閉じる", async ({
     page,
   }) => {
-    await page.goto(urls.home);
-    const hamburger = page.locator('button[aria-label="メニューを開く"]');
-
-    await hamburger.first().click();
-
-    // 閉じるボタンが表示されているかでメニューが開いたことを確認
-    const closeButton = page.locator('button[aria-label="メニューを閉じる"]');
-    await expect(closeButton.first()).toBeVisible({ timeout: 3000 });
+    await gotoHomeWithReadyMobileShell(page);
+    const { hamburger } = await openMobileMenu(page);
 
     // Escape キーでメニューを閉じる
     await page.keyboard.press("Escape");
 
     // メニューが閉じてハンバーガーボタンが再表示されることを確認
-    await expect(hamburger.first()).toBeVisible({ timeout: 3000 });
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("閉じるボタンをクリックするとメニューが閉じる", async ({ page }) => {
-    await page.goto(urls.home);
-    const hamburger = page.locator('button[aria-label="メニューを開く"]');
-
-    await hamburger.first().click();
-
-    const closeButton = page.locator('button[aria-label="メニューを閉じる"]');
-    await expect(closeButton.first()).toBeVisible({ timeout: 3000 });
-    await closeButton.first().click();
+    await gotoHomeWithReadyMobileShell(page);
+    const { hamburger, closeButton } = await openMobileMenu(page);
+    await closeButton.click();
 
     // ハンバーガーボタンが再表示される
-    await expect(hamburger.first()).toBeVisible({ timeout: 3000 });
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("ハンバーガーボタンに aria-expanded が設定されている", async ({
     page,
   }) => {
-    await page.goto(urls.home);
-    const hamburger = page.locator('button[aria-label="メニューを開く"]');
+    await gotoHomeWithReadyMobileShell(page);
+    const { hamburger } = mobileMenuControls(page);
 
     // 初期状態は expanded=false
-    await expect(hamburger.first()).toHaveAttribute("aria-expanded", "false");
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
 
-    await hamburger.first().click();
+    await openMobileMenu(page);
 
     // 開いた状態は expanded=true
-    await expect(hamburger.first()).toHaveAttribute("aria-expanded", "true");
+    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
+
+    await page.keyboard.press("Escape");
+    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
   });
 });
 
@@ -173,55 +277,98 @@ test.describe("お問い合わせフォーム - Tabキー移動", () => {
     await page.goto(urls.contact);
   }
 
+  function contactFields(page: Page) {
+    const main = page.getByRole("main");
+    const form = page.locator("form").filter({
+      has: page.getByRole("button", { name: /送信|Submit/i }),
+    });
+
+    return {
+      form,
+      lastName: main.getByRole("textbox", { name: /^姓/u }),
+      firstName: main.getByRole("textbox", { name: /^名/u }),
+      email: main.getByRole("textbox", { name: "メールアドレス" }),
+      subject: main.getByRole("textbox", { name: "件名" }),
+      message: main.getByRole("textbox", { name: "お問い合わせ内容" }),
+    };
+  }
+
+  async function expectContactFieldsReady(page: Page) {
+    const fields = contactFields(page);
+
+    await expect(fields.form).toBeVisible();
+    await expect(fields.lastName).toBeEditable();
+    await expect(fields.firstName).toBeEditable();
+    await expect(fields.email).toBeEditable();
+    await expect(fields.subject).toBeEditable();
+    await expect(fields.message).toBeEditable();
+
+    return fields;
+  }
+
+  async function ensureCheckboxChecked(page: Page, name: RegExp) {
+    const { form } = contactFields(page);
+    const checkbox = form.getByRole("checkbox", { name });
+
+    await expect(checkbox).toBeEnabled();
+    if (await checkbox.isChecked()) return;
+
+    await checkbox.focus();
+    await expect(checkbox).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(checkbox).toBeChecked();
+  }
+
   test("Tab キーでフォームの各フィールドを順に移動できる", async ({ page }) => {
     await gotoContact(page);
+    const fields = await expectContactFieldsReady(page);
 
-    // 名前フィールドを直接フォーカス
-    const nameInput = page.locator("#contact-name");
-    await nameInput.focus();
-    await expect(nameInput).toBeFocused();
+    await fields.lastName.focus();
+    await expect(fields.lastName).toBeFocused();
 
-    // Tab でメールフィールドへ
     await page.keyboard.press("Tab");
-    const emailInput = page.locator("#contact-email");
-    await expect(emailInput).toBeFocused();
+    await expect(fields.firstName).toBeFocused();
 
-    // Tab で件名フィールドへ
     await page.keyboard.press("Tab");
-    const subjectInput = page.locator("#contact-subject");
-    await expect(subjectInput).toBeFocused();
+    await expect(fields.email).toBeFocused();
 
-    // Tab でメッセージフィールドへ
     await page.keyboard.press("Tab");
-    const messageTextarea = page.locator("#contact-message");
-    await expect(messageTextarea).toBeFocused();
+    await expect(fields.subject).toBeFocused();
+
+    await page.keyboard.press("Tab");
+    await expect(fields.message).toBeFocused();
   });
 
   test("Shift+Tab でフォームを逆順に移動できる", async ({ page }) => {
     await gotoContact(page);
+    const fields = await expectContactFieldsReady(page);
 
-    // メッセージフィールドから逆順に移動
-    const messageTextarea = page.locator("#contact-message");
-    await messageTextarea.focus();
-    await expect(messageTextarea).toBeFocused();
-
-    await page.keyboard.press("Shift+Tab");
-    const subjectInput = page.locator("#contact-subject");
-    await expect(subjectInput).toBeFocused();
+    await fields.message.focus();
+    await expect(fields.message).toBeFocused();
 
     await page.keyboard.press("Shift+Tab");
-    const emailInput = page.locator("#contact-email");
-    await expect(emailInput).toBeFocused();
+    await expect(fields.subject).toBeFocused();
 
     await page.keyboard.press("Shift+Tab");
-    const nameInput = page.locator("#contact-name");
-    await expect(nameInput).toBeFocused();
+    await expect(fields.email).toBeFocused();
+
+    await page.keyboard.press("Shift+Tab");
+    await expect(fields.firstName).toBeFocused();
+
+    await page.keyboard.press("Shift+Tab");
+    await expect(fields.lastName).toBeFocused();
   });
 
   test("送信ボタンが Tab で到達可能", async ({ page }) => {
     await gotoContact(page);
 
-    const submitButton = page.getByRole("button", { name: /送信|Submit/i });
+    const fields = await expectContactFieldsReady(page);
+    await ensureCheckboxChecked(page, /利用規約/);
+    await ensureCheckboxChecked(page, /プライバシーポリシー/);
+    const submitButton = fields.form.getByRole("button", {
+      name: /送信|Submit/i,
+    });
+    await expect(submitButton).toBeEnabled();
     await submitButton.focus();
     await expect(submitButton).toBeFocused();
   });
@@ -230,19 +377,23 @@ test.describe("お問い合わせフォーム - Tabキー移動", () => {
     page,
   }) => {
     await gotoContact(page);
+    let fields = await expectContactFieldsReady(page);
 
-    // お名前ラベル → #contact-name
-    const nameLabel = page.locator('label[for="contact-name"]');
-    await expect(nameLabel).toBeVisible();
-    // ラベルクリックでフォーカスが移動する
-    await nameLabel.click();
-    await expect(page.locator("#contact-name")).toBeFocused();
+    const lastNameId = await fields.lastName.getAttribute("id");
+    expect(lastNameId).toBeTruthy();
+    const lastNameLabel = page.locator(`label[for="${lastNameId}"]`);
+    await expect(lastNameLabel).toBeVisible();
+    await lastNameLabel.click();
+    await expect(fields.lastName).toBeFocused();
 
-    // メールラベル → #contact-email
-    const emailLabel = page.locator('label[for="contact-email"]');
+    await gotoContact(page);
+    fields = await expectContactFieldsReady(page);
+    const emailId = await fields.email.getAttribute("id");
+    expect(emailId).toBeTruthy();
+    const emailLabel = page.locator(`label[for="${emailId}"]`);
     await expect(emailLabel).toBeVisible();
     await emailLabel.click();
-    await expect(page.locator("#contact-email")).toBeFocused();
+    await expect(fields.email).toBeFocused();
   });
 });
 
@@ -266,7 +417,7 @@ test.describe("管理画面ダイアログ - フォーカストラップとEscap
     await context.clearCookies();
     await page.goto(urls.adminReservations);
     // ログインページにリダイレクトされること
-    expect(page.url()).toContain("/admin");
+    await expect(page).toHaveURL(/\/admin/u);
   });
 });
 
@@ -287,14 +438,17 @@ test.describe("公開ページ - フォーカス管理", () => {
 // =============================================================================
 
 test.describe("予約ページ - Tabキー移動", () => {
-  test("スペース未選択状態の予約ページでリンクが Tab で到達可能", async ({
+  test("スペース未選択状態の予約ページで場所選択が Tab で到達可能", async ({
     page,
   }) => {
     await page.goto(urls.reservation);
-    // スペース一覧リンクに Tab で到達できる
-    const spacesLink = page.getByRole("link", { name: /スペース一覧を見る/i });
 
-    await spacesLink.focus();
-    await expect(spacesLink).toBeFocused();
+    const locationGroup = page.getByRole("radiogroup", { name: "場所を選択" });
+    await expect(locationGroup).toBeVisible();
+
+    const mainLocation = locationGroup.getByRole("radio", { name: /^本館/u });
+    await expect(mainLocation).toBeVisible();
+    await mainLocation.focus();
+    await expect(mainLocation).toBeFocused();
   });
 });

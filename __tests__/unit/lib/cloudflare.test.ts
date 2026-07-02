@@ -61,7 +61,8 @@ mock.module("@/shared/lib/env/server", () => ({
   isProduction: () => false,
 }));
 
-const { purgeCloudflareCache } = await import("@/shared/lib/cloudflare");
+const { purgeCloudflareCache, purgeCloudflareCacheByTags } =
+  await import("@/shared/lib/cloudflare");
 
 // =============================================================================
 // Helpers
@@ -281,5 +282,44 @@ describe("purgeCloudflareCache - retry", () => {
     const result = await purgeCloudflareCache([]);
     expect(result.success).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("tag purge は tags body を送信し、重複と空タグを除外する", async () => {
+    fetchSpy.mockResolvedValue(jsonResponse({ success: true }));
+
+    const result = await purgeCloudflareCacheByTags([
+      "layout-v1",
+      "layout-v1",
+      "",
+    ]);
+
+    expect(result).toEqual({ success: true, purgedFiles: 1 });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const requestInit = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(JSON.parse(String(requestInit?.body))).toEqual({
+      tags: ["layout-v1"],
+    });
+  });
+
+  test("tag purge 失敗時は purge_everything に広げず失敗を返す", async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse({
+        success: false,
+        errors: [{ code: 1000, message: "tag purge failed" }],
+      }),
+    );
+
+    const result = await purgeCloudflareCacheByTags(["layout-v1"]);
+
+    expect(result).toEqual({
+      success: false,
+      error: "tag purge failed",
+      purgedFiles: 0,
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const requestInit = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(requestInit?.body));
+    expect(body).toEqual({ tags: ["layout-v1"] });
+    expect(body).not.toHaveProperty("purge_everything");
   });
 });

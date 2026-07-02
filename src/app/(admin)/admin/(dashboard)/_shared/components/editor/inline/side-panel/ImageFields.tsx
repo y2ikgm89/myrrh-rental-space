@@ -24,6 +24,7 @@ export function ImageFields({ thumbnailUrlField, disabled }: ImageFieldsProps) {
   const thumbnailUrl = typeof control.value === "string" ? control.value : "";
 
   const thumbnailPicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "POST",
     onSelect: (media) => {
       const selected = media[0];

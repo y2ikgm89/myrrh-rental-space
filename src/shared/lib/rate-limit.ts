@@ -306,19 +306,11 @@ function isBetterAuthReadOnlyPath(pathname: string, basePath: string): boolean {
  * authMutationRateLimiter (20/15分) を使う。
  *
  * 現在の Better Auth は顧客向け `/api/customer-auth/*` のみで使う。
- * `/api/auth/*` は旧管理 auth の blocklist 互換で残し、到達しても mutation bucket
- * に落としてから route 側の 404 に任せる。
  */
 export async function checkRateLimit(
   pathname: string,
   clientIp: string,
 ): Promise<RateLimitResult> {
-  if (pathname.startsWith("/api/auth")) {
-    if (isBetterAuthReadOnlyPath(pathname, "/api/auth")) {
-      return apiRateLimiter.check(clientIp);
-    }
-    return authMutationRateLimiter.check(clientIp);
-  }
   if (pathname.startsWith("/api/customer-auth")) {
     if (isBetterAuthReadOnlyPath(pathname, "/api/customer-auth")) {
       return apiRateLimiter.check(clientIp);

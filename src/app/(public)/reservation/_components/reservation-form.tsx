@@ -11,7 +11,8 @@ import {
   type ReactElement,
 } from "react";
 import { useQueryState, parseAsInteger } from "nuqs";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import { getFormProps, useForm } from "@conform-to/react";
+import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { Button } from "@/public/components/design-system/button";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
@@ -29,7 +30,7 @@ import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
 import { submitReservation } from "@/public/actions/reservation";
 import type { z } from "zod";
-import type { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
+import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import {
   fetchAvailableSlots,
   fetchSpaceBlockedDates,
@@ -63,10 +64,6 @@ type ReservationStep = 1 | 2 | 3;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function isCustomerType(value: unknown): value is CustomerType {
-  return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
-}
 
 function clampReservationStep(
   value: number,
@@ -170,6 +167,10 @@ export function ReservationForm({
 
   const [agreedTermsIds, setAgreedTermsIds] = useState<readonly string[]>([]);
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
+  const [customerType, setCustomerType] = useState<CustomerType>(
+    CustomerType.PERSONAL,
+  );
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [isFetchingSlots, startSlotTransition] = useTransition();
   const [blockedRanges, setBlockedRanges] = useState<
     readonly BlockedDateRange[]
@@ -201,12 +202,10 @@ export function ReservationForm({
     undefined,
   );
 
-  // Server-only validation (bundle 削減): `onValidate` / `constraint` を渡さない
-  // と Conform は提交時にサーバへ送信し、`lastResult` 経由でフィールドエラーを反映する
-  // (公式: validation.md 「Optional: Client validation. Fallback to server validation if not provided」)。
   const [form, fields] = useForm<z.input<typeof publicReservationSchema>>({
     id: "reservation-form",
     lastResult,
+    constraint: getZodConstraint(publicReservationSchema),
     defaultValue: {
       locationId: auto.locationId ?? "",
       spaceId: auto.spaceId ?? "",
@@ -219,16 +218,12 @@ export function ReservationForm({
       phoneNumber: prefillData?.phoneNumber ?? "",
       notes: "",
     },
+    onValidate({ formData }) {
+      return parseWithZod(formData, { schema: publicReservationSchema });
+    },
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });
-
-  const customerTypeControl = useInputControl(fields.customerType);
-  const turnstileTokenControl = useInputControl(fields.turnstileToken);
-
-  const customerType: CustomerType = isCustomerType(customerTypeControl.value)
-    ? customerTypeControl.value
-    : CustomerType.PERSONAL;
 
   // --- Derived ---
   const currentLocation = locations.find((l) => l.id === state.locationId);
@@ -295,6 +290,7 @@ export function ReservationForm({
   if (lastResult !== previousResult) {
     setPreviousResult(lastResult);
     if (lastResult?.status === "error") {
+      setTurnstileToken("");
       const formErrors = lastResult.error?.[""];
       if (formErrors !== undefined && formErrors !== null && formErrors[0]) {
         dispatch({ type: "setError", message: formErrors[0] });
@@ -306,9 +302,8 @@ export function ReservationForm({
   useEffect(() => {
     if (lastResult?.status === "error") {
       turnstileRef.current?.reset();
-      turnstileTokenControl.change("");
     }
-  }, [lastResult, turnstileTokenControl]);
+  }, [lastResult]);
 
   // --- Handlers ---
   function handleLocationSelect(id: string) {
@@ -376,15 +371,15 @@ export function ReservationForm({
   }
 
   function handleCustomerTypeChange(type: CustomerType) {
-    customerTypeControl.change(type);
+    setCustomerType(type);
   }
 
   function handleTurnstileVerify(token: string) {
-    turnstileTokenControl.change(token);
+    setTurnstileToken(token);
   }
 
   function handleTurnstileExpire() {
-    turnstileTokenControl.change("");
+    setTurnstileToken("");
   }
 
   function toggleTermAgreement(id: string) {
@@ -525,7 +520,7 @@ export function ReservationForm({
         <input
           type="hidden"
           name={fields.turnstileToken.name}
-          value={turnstileTokenControl.value ?? ""}
+          value={turnstileToken}
         />
         {agreedTermsIds.map((id) => (
           <input

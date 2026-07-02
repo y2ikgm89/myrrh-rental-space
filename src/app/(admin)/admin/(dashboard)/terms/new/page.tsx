@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import {
   TERMS_TYPE_VALUES,
   type TermsTypeValue,
@@ -30,6 +31,8 @@ interface NewTermsPageProps {
 export default async function NewTermsPage({
   searchParams,
 }: NewTermsPageProps) {
+  await connection();
+
   const { type: typeParam } = await searchParams;
   const typeValue: TermsTypeValue =
     typeParam && isTermsTypeValue(typeParam) ? typeParam : "custom";

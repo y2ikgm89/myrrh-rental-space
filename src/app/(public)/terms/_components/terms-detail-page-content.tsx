@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
+import { connection } from "next/server";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
@@ -30,6 +31,8 @@ export async function TermsDetailPageContent({
   terms,
   banner,
 }: TermsDetailPageContentProps): Promise<ReactElement> {
+  await connection();
+
   const sidebarSettings = await getSidebarSettings();
 
   const headings = extractHeadingsFromHtml(terms.contentHtml);

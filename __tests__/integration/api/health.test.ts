@@ -8,10 +8,18 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
+const mockConnection = mock(() => Promise.resolve());
 const mockRunDatabaseHealthCheck = mock<() => Promise<void>>(() =>
   Promise.resolve(),
 );
 const mockLogError = mock<() => void>(() => {});
+
+mock.module("next/server", () => ({
+  connection: mockConnection,
+  NextResponse: {
+    json: (body: unknown, init?: ResponseInit) => Response.json(body, init),
+  },
+}));
 
 mock.module("@/shared/domain/system/queries", () => ({
   runDatabaseHealthCheck: mockRunDatabaseHealthCheck,
@@ -45,6 +53,7 @@ const { GET } = await import("@/app/api/health/route");
 
 describe("GET /api/health", () => {
   beforeEach(() => {
+    mockConnection.mockClear();
     mockRunDatabaseHealthCheck.mockReset();
     mockLogError.mockReset();
   });
@@ -55,6 +64,7 @@ describe("GET /api/health", () => {
 
       const response = await GET();
 
+      expect(mockConnection).toHaveBeenCalledTimes(1);
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.status).toBe("healthy");

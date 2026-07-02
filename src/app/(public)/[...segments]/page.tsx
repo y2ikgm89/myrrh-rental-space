@@ -26,7 +26,13 @@ export async function generateMetadata({
     }
   }
 
-  return { title: "ページが見つかりません" };
+  return {
+    title: "ページが見つかりません",
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
 }
 
 export default async function DynamicPage({ params }: PageProps) {

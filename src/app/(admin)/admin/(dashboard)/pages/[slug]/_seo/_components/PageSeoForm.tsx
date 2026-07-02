@@ -95,6 +95,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
   const ogpImageUrl = ogpImageUrlControl.value ?? "";
 
   const ogpPicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "GENERAL",
     onSelect: (media) => {
       const selected = media[0];

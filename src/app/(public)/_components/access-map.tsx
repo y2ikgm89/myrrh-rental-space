@@ -3,22 +3,31 @@
  *
  * Server Component。props で住所 or 緯度経度を受け取り埋め込み地図を表示。
  * https://developers.google.com/maps/documentation/embed/get-started
- *
- * 引数なしで呼ばれた場合は Settings の latitude/longitude/address にフォールバック。
  */
 
 import type { ReactElement } from "react";
+import { connection } from "next/server";
 import { cn } from "@/shared/lib/cn";
-import { getOrganizationSettings } from "@/shared/domain/settings/queries/organization";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
 
-interface AccessMapProps {
-  readonly address?: string | null;
-  readonly latitude?: number | null;
-  readonly longitude?: number | null;
+interface AccessMapBaseProps {
   readonly title?: string;
   readonly heightClass?: string;
 }
+
+type AccessMapLocationProps =
+  | {
+      readonly address: string;
+      readonly latitude?: number | null;
+      readonly longitude?: number | null;
+    }
+  | {
+      readonly address?: string | null;
+      readonly latitude: number;
+      readonly longitude: number;
+    };
+
+type AccessMapProps = AccessMapBaseProps & AccessMapLocationProps;
 
 function buildEmbedUrl(
   apiKey: string,
@@ -42,29 +51,18 @@ export async function AccessMap({
   longitude,
   title = "Google Maps - アクセスマップ",
   heightClass = "h-[360px] w-full md:h-[440px]",
-}: AccessMapProps = {}): Promise<ReactElement> {
+}: AccessMapProps): Promise<ReactElement> {
+  await connection();
+
   const apiKey = await getDecryptedGoogleMapsApiKey();
 
-  // props 未指定なら Settings にフォールバック（後方互換）
-  let resolvedAddress = address ?? null;
-  const resolvedLat = latitude ?? null;
-  const resolvedLng = longitude ?? null;
-
-  if (!resolvedAddress && resolvedLat == null && resolvedLng == null) {
-    const settings = await getOrganizationSettings();
-    resolvedAddress =
-      [
-        settings?.prefecture,
-        settings?.city,
-        settings?.streetAddress,
-        settings?.buildingName,
-      ]
-        .filter(Boolean)
-        .join("") || null;
-  }
-
   const embedUrl = apiKey
-    ? buildEmbedUrl(apiKey, resolvedLat, resolvedLng, resolvedAddress)
+    ? buildEmbedUrl(
+        apiKey,
+        latitude ?? null,
+        longitude ?? null,
+        address ?? null,
+      )
     : null;
 
   if (!embedUrl) {

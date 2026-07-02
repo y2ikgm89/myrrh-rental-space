@@ -29,7 +29,7 @@ interface LibraryTabProps {
   selectedIds: Set<string>;
   onSelect: (media: MediaData) => void;
   canSelectMore: boolean;
-  accept?: MediaAcceptType;
+  accept: MediaAcceptType;
 }
 
 /** image-or-video accept 時の MediaType 切替ボタン UI */
@@ -72,7 +72,7 @@ export function LibraryTab({
   selectedIds,
   onSelect,
   canSelectMore,
-  accept = "image",
+  accept,
 }: LibraryTabProps) {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

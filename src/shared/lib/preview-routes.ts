@@ -38,7 +38,7 @@ export function getPublicPageHref(slug: string): string {
  *
  * `(public)/preview/{posts,news,terms,pages}/[id|slug]` 配下で `(public)` root layout を
  * 共有する設計 (2026-05-20) では、`usePathname()` は `/preview/posts/<id>` を返す。
- * ヘッダーナビ / モバイルナビの `aria-current` 判定は本番 URL (`/posts` 等) を
+ * ヘッダーナビ / モバイルナビの `aria-current` 判定は本番 URL (`/blog` 等) を
  * 想定するため、preview pathname を正規化してから active 判定に渡す。
  *
  * @param pathname - `usePathname()` で取得した現在 pathname

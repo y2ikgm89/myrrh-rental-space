@@ -23,7 +23,7 @@
 import { render } from "@react-email/render";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { hasPermission } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getTemplate } from "@/shared/emails/_registry";
 import {

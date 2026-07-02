@@ -42,6 +42,7 @@ export function AutoImageField({
   const [imageLoadError, setImageLoadError] = useState(false);
 
   const imagePicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "GENERAL",
     onSelect: (media) => {
       const selected = media[0];

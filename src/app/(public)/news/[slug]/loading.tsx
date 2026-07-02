@@ -9,7 +9,7 @@ import { Skeleton } from "@/public/components/design-system/skeleton";
 
 export default function NewsDetailLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Breadcrumb band */}
       <div className="border-b border-divider bg-surface">
         <Container>
@@ -45,6 +45,6 @@ export default function NewsDetailLoading() {
           </div>
         </article>
       </Container>
-    </main>
+    </div>
   );
 }

@@ -90,6 +90,7 @@ function createCustomerAuth() {
     },
     ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
     account: {
+      encryptOAuthTokens: true,
       accountLinking: {
         enabled: true,
         trustedProviders: ["google", "line"],

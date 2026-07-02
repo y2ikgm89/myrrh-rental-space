@@ -16,13 +16,12 @@ import {
 } from "@/shared/lib/admin-auth";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
-  hasPermission,
   userHasResourceAccess,
   canAccessAdmin,
   isEditorRole,
-  type Resource,
-  type Action,
 } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { logUserAction, logPermissionDenied } from "@/admin/lib/audit";
 import type { MutationError } from "@/shared/lib/mutation-result";
 

@@ -18,6 +18,6 @@ test.describe("smoke: reservation entry", () => {
     // のいずれかが broken した際は <main> 自体が render されないため、main visible でゲートする。
     // 具体的な heading テキストは DB section config (`reservation-form` 等) に依存するため
     // smoke では assert しない（広域 E2E が機能カバー）。
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
   });
 });

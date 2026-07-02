@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { IconTrash } from "@tabler/icons-react";
 import { Badge, Button } from "@/admin/components/ui";
 import {
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminTermsPage() {
+  await connection();
+
   const [items, deletedCount] = await Promise.all([
     getAdminTermsList(),
     getDeletedTermsCount(),

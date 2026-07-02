@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NewSpacePage() {
+  await connection();
+
   const [
     availableLocations,
     availableCategories,

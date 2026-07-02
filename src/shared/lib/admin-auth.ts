@@ -46,7 +46,8 @@ async function resolveRequestHeaders(
 function getTestIapEmail(): string | null {
   const isProductionRuntime = serverEnv.NODE_ENV === "production";
   const isCiRuntime = serverEnv.CI === "true";
-  if (isProductionRuntime && !isCiRuntime) return null;
+  const isE2ERuntime = serverEnv.E2E_RUNTIME === "1";
+  if (isProductionRuntime && !isCiRuntime && !isE2ERuntime) return null;
   return serverEnv.ADMIN_TEST_IAP_EMAIL ?? null;
 }
 

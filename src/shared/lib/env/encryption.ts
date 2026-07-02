@@ -1,5 +1,5 @@
 /**
- * Encryption key 取得 SSoT helper（kid + legacy fallback 対応）
+ * Encryption key 取得 SSoT helper（primary key only）
  *
  * `crypto.ts` の `getMasterKey()` から `process.env["ENCRYPTION_KEY"]` 直参照を
  * 排除し `serverEnv` 経由化するための boundary helper。
@@ -8,9 +8,6 @@
  *
  * - **Primary**: `ENCRYPTION_KEY` (hex64) + `ENCRYPTION_KEY_ID` (kid, default "v1")
  *   新規 encrypt は常に primary で書く。
- * - **Legacy fallback**: `ENCRYPTION_KEYS_LEGACY="<kid>:<hex>,<kid>:<hex>"`
- *   旧 ciphertext は payload 内 kid に従って該当鍵で復号する。ローテーション猶予期間中に
- *   at-rest re-encrypt を進め、移行後に environment から外す。
  *
  * `@t3-oss/env-nextjs` の `serverEnv` はモジュールロード時 snapshot を取るため
  * runtime 動的変更を受け付けない。test で「ENCRYPTION_KEY 未設定」シナリオを検証する
@@ -46,39 +43,4 @@ export function getPrimaryEncryptionKey(): EncryptionKey {
   }
   const kid = serverEnv.ENCRYPTION_KEY_ID ?? DEFAULT_KID;
   return { kid, hex };
-}
-
-/**
- * Legacy 鍵リストを取得。`ENCRYPTION_KEYS_LEGACY="kidA:hexA,kidB:hexB"` を parse。
- * decrypt fallback 用。同一 kid が primary とも legacy にも存在する場合は primary が勝つ。
- */
-export function getLegacyEncryptionKeys(): EncryptionKey[] {
-  const raw = serverEnv.ENCRYPTION_KEYS_LEGACY;
-  if (!raw) return [];
-  return raw
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0)
-    .map((entry) => {
-      const [kid, hex] = entry.split(":");
-      if (!kid || !hex) {
-        throw new Error(
-          `Invalid ENCRYPTION_KEYS_LEGACY entry: "${entry}". Expected <kid>:<hex64>.`,
-        );
-      }
-      return { kid, hex };
-    });
-}
-
-/**
- * 指定 kid に該当する鍵を返す。primary → legacy の順で探す。
- * 該当鍵がなければ null（caller が decrypt 失敗として扱う）。
- */
-export function findEncryptionKeyByKid(kid: string): EncryptionKey | null {
-  const primary = getPrimaryEncryptionKey();
-  if (primary.kid === kid) return primary;
-  for (const legacy of getLegacyEncryptionKeys()) {
-    if (legacy.kid === kid) return legacy;
-  }
-  return null;
 }

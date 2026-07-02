@@ -13,6 +13,6 @@ test.describe("smoke: spaces", () => {
     const response = await page.goto(urls.spaces);
     expect(response?.status()).toBe(200);
 
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
   });
 });

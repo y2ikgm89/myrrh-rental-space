@@ -4,7 +4,7 @@ This is the day-to-day operating runbook for Myrrh Rental Space admin access.
 The build and GCP setup details live in `docs/gcp-production-setup.md`; this
 file is only for adding, removing, and verifying people.
 
-Last verified: 2026-07-01.
+Last verified: 2026-07-02.
 
 Official references checked for this runbook:
 
@@ -133,12 +133,16 @@ has already allowed the Google account. Check Cloud Identity next:
 Run the GCP posture audit:
 
 ```powershell
+# Optional when Google Cloud CLI is installed but the gcloud executable is not on PATH.
+$env:GCLOUD_BIN = "$env:LOCALAPPDATA\google-cloud-sdk\bin\gcloud.cmd"
 $env:GCP_PROJECT_ID = "myrrh-rental-space"
 $env:GCP_ORGANIZATION_ID = "844678510879"
 $env:CLOUD_IDENTITY_DOMAIN = "myrrh-jp.com"
 $env:REGION = "asia-northeast1"
 $env:SERVICE_NAME = "myrrh-rental-space"
 $env:ADMIN_SERVICE_NAME = "myrrh-rental-space-admin"
+$env:MIGRATE_JOB_NAME = "prisma-migrate"
+$env:AR_REPOSITORY = "myrrh-rental-space"
 $env:PUBLIC_DOMAIN = "https://rental-space.myrrh-jp.com"
 $env:ADMIN_DOMAIN = "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"
 $env:ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL = "myrrh-super-admins@myrrh-jp.com"
@@ -147,6 +151,7 @@ $env:ADMIN_ROLE_GROUP_EDITOR_EMAIL = "myrrh-editors@myrrh-jp.com"
 $env:ADMIN_ROLE_GROUP_VIEWER_EMAIL = "myrrh-viewers@myrrh-jp.com"
 $env:RUNTIME_SERVICE_ACCOUNT = "myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com"
 $env:BUILD_SERVICE_ACCOUNT = "myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com"
+$env:CRON_SERVICE_ACCOUNT_EMAIL = "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com"
 $env:GITHUB_REPOSITORY = "y2ikgm89/myrrh-rental-space"
 $env:GITHUB_REPOSITORY_ID = "1128842422"
 $env:GITHUB_REPOSITORY_OWNER_ID = "69025248"
@@ -156,6 +161,7 @@ bun run gcp:audit-production-iap
 ```
 
 The audit must pass before considering the admin posture clean.
+It reads Cloud Run IAP access through the official IAP REST API and does not depend on local `gcloud iap web --resource-type=cloud-run` support.
 
 ## Emergency checks
 

@@ -9,8 +9,9 @@
 # - run: package.json scripts は `bunx --bun <bin>` で bun runtime を明示
 # - scripts: scripts/* は .ts native + Bun runtime API (Bun.spawn / Bun.file / Bun.Glob)
 #
-# Note: `[run] noOrphans` (Bun 1.3.14+) は Lexical の dynamic import 経路で
-# TDZ regression を起こすため、Bun 1.3.13 base に統一し当機能は未採用。
+# Note: `[run] noOrphans` は Lexical の dynamic import 経路で TDZ regression
+# を起こすため未採用。Bun runtime version は package.json#packageManager に
+# 一本化し、Docker / devcontainer / CI はその pin に追従する。
 
 [test]
 # テストファイルのプリロード（DOM 環境 + グローバル設定）

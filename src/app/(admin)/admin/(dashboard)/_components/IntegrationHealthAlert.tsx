@@ -1,5 +1,6 @@
 import "server-only";
 import type { ReactElement } from "react";
+import { connection } from "next/server";
 import { getIntegrationHealthSummary } from "@/shared/domain/settings/api-key-queries";
 import {
   IntegrationHealthAlertClient,
@@ -42,6 +43,8 @@ const INTEGRATIONS: ReadonlyArray<
  *          同じ未設定状態は再表示しない。新たな未設定が増えたら自動で再表示される。
  */
 export async function IntegrationHealthAlert(): Promise<ReactElement | null> {
+  await connection();
+
   const health = await getIntegrationHealthSummary();
   const disconnected = INTEGRATIONS.filter((i) => !health[i.key]);
   if (disconnected.length === 0) return null;

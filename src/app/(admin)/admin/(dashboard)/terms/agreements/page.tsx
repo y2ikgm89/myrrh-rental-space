@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { IconArrowLeft } from "@tabler/icons-react";
 import {
   Badge,
@@ -53,6 +54,8 @@ export default async function AdminTermsAgreementsPage({
 }: {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await connection();
+
   const sp = await searchParams;
   const page = parsePositiveInt(sp["page"]) ?? 1;
   const perPage = parsePositiveInt(sp["perPage"]) ?? DEFAULT_PER_PAGE;

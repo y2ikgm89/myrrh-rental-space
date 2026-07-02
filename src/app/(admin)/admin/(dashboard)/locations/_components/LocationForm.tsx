@@ -395,6 +395,7 @@ export function LocationForm({
   };
 
   const mainImagePicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "SPACE",
     onSelect: (media) => {
       const selected = media[0];
@@ -405,6 +406,7 @@ export function LocationForm({
   });
 
   const additionalImagesPicker = useMultipleMediaPicker({
+    accept: "image",
     defaultUsage: "SPACE",
     maxSelections: 10 - imageUrlsList.length,
     onSelect: (media) => {

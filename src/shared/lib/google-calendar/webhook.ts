@@ -13,7 +13,7 @@ import {
 import {
   saveGoogleCalendarWebhook,
   saveGoogleCalendarWebhookToken,
-} from "@/shared/domain/settings/commands";
+} from "@/shared/domain/settings/integration-commands";
 import { getAppUrl } from "@/shared/lib/constants";
 import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { omitUndefined } from "@/shared/lib/serialize";

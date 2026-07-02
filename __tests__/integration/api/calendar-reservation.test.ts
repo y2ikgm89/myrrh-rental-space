@@ -23,6 +23,27 @@ describe("GET /api/calendar/reservation/[id]", () => {
     expect(res.status).toBe(401);
   });
 
+  test("rejects an invalid guest token before exposing path validation", async () => {
+    mock.module("@/shared/lib/errors/server", () => ({
+      ErrorCategory: { AUTHORIZATION: "AUTHORIZATION", DATABASE: "DATABASE" },
+      ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM" },
+      logError: mock(() => undefined),
+      normalizeError: (error: unknown) =>
+        error instanceof Error ? error : new Error(String(error)),
+    }));
+
+    const { GET } = await import("@/app/api/calendar/reservation/[id]/route");
+    const res = await GET(
+      new Request(
+        "http://localhost/api/calendar/reservation/not-a-uuid?token=not-a-token",
+      ),
+      { params: Promise.resolve({ id: "not-a-uuid" }) },
+    );
+
+    expect(res.status).toBe(401);
+    expect(await res.text()).toBe("Invalid token");
+  });
+
   test("returns 400 when id is not a valid uuid", async () => {
     mock.module("@/shared/lib/customer-auth", () => ({
       getCustomerSession: mock(() =>
@@ -118,6 +139,9 @@ describe("GET /api/calendar/reservation/[id]", () => {
       "UID:reservation-a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11@",
     );
     expect(body).toContain("METHOD:REQUEST");
+    expect(body).toContain("DTSTART:20260501T010000Z");
+    expect(body).toContain("DTEND:20260501T030000Z");
+    expect(body).not.toContain("TIMEZONE-ID:");
     expect(body).toContain("SUMMARY:【予約】Studio A");
   });
 

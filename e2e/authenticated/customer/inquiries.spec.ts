@@ -7,7 +7,7 @@ import { urls } from "../../fixtures";
  * テストシナリオ:
  * 1. お問い合わせ一覧ページの表示（seed-driven、最低 2 件）
  * 2. お問い合わせ詳細ページへのナビゲーション
- * 3. 管理者返信 (replyMessage) または未返信表示の択一
+ * 3. 返信済み inquiry のスタッフ返信 (replyMessage)
  * 4. 投稿日時のフォーマット
  *
  * 前提（seed-driven、`prisma/seed.ts` § seedDevCustomerAndReservations 経由）:
@@ -23,13 +23,22 @@ test.describe("お問い合わせ履歴 - 一覧ページ", () => {
   test("お問い合わせ一覧ページが認証済みで表示される", async ({ page }) => {
     expect(page.url()).not.toMatch(/\/login/);
     expect(page.url()).toContain("/mypage/inquiries");
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
   });
 
   test("seed の inquiry 一覧（最低 2 件）が描画される", async ({ page }) => {
-    // seed-driven: dev customer に NEW + RESOLVED が必ずある。空なら seed regression。
-    const inquiryCard = page.locator('a[href^="/mypage/inquiries/"]').first();
-    await expect(inquiryCard).toBeVisible({ timeout: 5000 });
+    const main = page.locator("#main-content");
+
+    await expect(
+      main.getByRole("link", {
+        name: /\[E2E\] dev customer の新規お問い合わせ/u,
+      }),
+    ).toBeVisible({ timeout: 5000 });
+    await expect(
+      main.getByRole("link", {
+        name: /\[E2E\] dev customer の解決済お問い合わせ/u,
+      }),
+    ).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -39,43 +48,39 @@ test.describe("お問い合わせ履歴 - 詳細ページ", () => {
   }) => {
     await page.goto(urls.mypageInquiries);
 
-    const detailLink = page.locator('a[href^="/mypage/inquiries/"]').first();
+    const detailLink = page.locator("#main-content").getByRole("link", {
+      name: /\[E2E\] dev customer の新規お問い合わせ/u,
+    });
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
 
-    expect(page.url()).toMatch(/\/mypage\/inquiries\/[^/]+$/);
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page).toHaveURL(/\/mypage\/inquiries\/[^/]+$/u);
+    const main = page.locator("#main-content");
+    await expect(main.getByRole("heading", { level: 1 })).toBeVisible();
 
-    // YYYY/MM/DD or YYYY年M月 形式の日付
-    const hasDate = await page
-      .locator("text=/\\d{4}[年/-]\\d{1,2}/")
-      .first()
-      .isVisible()
-      .catch(() => false);
-    expect(hasDate).toBeTruthy();
+    await expect(
+      main.getByRole("article", { name: "あなたから" }).locator("time"),
+    ).toHaveText(/\d{4}年\d{1,2}月\d{1,2}日/u);
   });
 
-  test("管理者返信セクション or 未返信表示の択一が成立する", async ({
-    page,
-  }) => {
+  test("返信済み inquiry のスタッフ返信が表示される", async ({ page }) => {
     await page.goto(urls.mypageInquiries);
 
-    const detailLink = page.locator('a[href^="/mypage/inquiries/"]').first();
+    const detailLink = page.locator("#main-content").getByRole("link", {
+      name: /\[E2E\] dev customer の解決済お問い合わせ/u,
+    });
     await expect(detailLink).toBeVisible({ timeout: 5000 });
     await detailLink.click();
+    await expect(page).toHaveURL(/\/mypage\/inquiries\/[^/]+$/u);
 
-    // 返信セクション or 「未返信」メッセージ（一覧 sort 順で最初が NEW か RESOLVED かは仕様依存）
-    const hasReplySection = await page
-      .getByText(/管理者からの返信|店舗からの返信|返信内容/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-    const hasNoReply = await page
-      .getByText(/返信はまだありません|未返信|返信待ち/i)
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    expect(hasReplySection || hasNoReply).toBeTruthy();
+    const main = page.locator("#main-content");
+    await expect(
+      main.getByRole("heading", { level: 2, name: "スタッフから" }),
+    ).toBeVisible();
+    await expect(
+      main.getByText(
+        "ご返信ありがとうございました。引き続きよろしくお願いします。",
+      ),
+    ).toBeVisible();
   });
 });

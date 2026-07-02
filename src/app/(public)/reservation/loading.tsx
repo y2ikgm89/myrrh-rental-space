@@ -11,7 +11,7 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function ReservationLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Page hero (compact variant) */}
       <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
@@ -28,7 +28,7 @@ export default function ReservationLoading() {
           {/* StepIndicator (3 steps) */}
           <div
             className="flex items-center justify-between gap-2"
-            aria-label="ステップインジケーター"
+            aria-hidden="true"
           >
             {skeletonKeys(3, "step").map((key, i) => (
               <div key={key} className="flex flex-1 items-center gap-3">
@@ -67,6 +67,6 @@ export default function ReservationLoading() {
           </div>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

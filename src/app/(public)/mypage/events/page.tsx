@@ -6,6 +6,7 @@
 
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
@@ -15,6 +16,8 @@ import { Stack } from "@/public/components/design-system/stack";
 import { EventRegistrationTabs } from "./_components/event-registration-tabs";
 
 export default async function MypageEventsPage(): Promise<ReactElement> {
+  await connection();
+
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);
 

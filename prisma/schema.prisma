@@ -599,10 +599,7 @@ model Customer {
   companyName            String? // 会社名・団体名（法人の場合）
   customerType           CustomerType        @default(PERSONAL)
   email                  String
-  /// Expand phase: nullable in DB so the previous Cloud Run revision can keep
-  /// inserting customers during rollout. New code always writes this value.
-  /// Contract phase should backfill nulls and make it NOT NULL.
-  emailCanonical         String?
+  emailCanonical         String
   phoneNumber            String?
   postalCode             String?             @db.VarChar(8) // 郵便番号 "123-4567" 等
   prefecture             String?             @db.VarChar(10) // 都道府県（PREFECTURES SSoT）
@@ -1136,9 +1133,9 @@ model Settings {
   notifyNewInquiry           Boolean @default(true)
   notifyEventRegistration    Boolean @default(true)
   notifyEventCancellation    Boolean @default(true)
-  // 通知先: スタッフ(User.id 配列・送信時に現在メールへ解決) ＋ カスタムメール(カンマ区切り)
-  notificationStaffIds       Json?
-  notificationEmailAddresses String?
+  // 通知先: スタッフ(User.id 配列・送信時に現在メールへ解決) ＋ カスタムメール
+  notificationStaffIds       String[] @default([])
+  notificationEmailAddresses String[] @default([])
 
   // Other Settings
   // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、

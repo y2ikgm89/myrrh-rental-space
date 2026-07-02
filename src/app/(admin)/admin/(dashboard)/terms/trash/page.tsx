@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { getDeletedTermsList } from "@/shared/domain/terms/admin-queries";
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminTermsTrashPage() {
+  await connection();
+
   const items = await getDeletedTermsList();
 
   return (

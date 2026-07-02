@@ -108,6 +108,7 @@ export function CoverInspectorPanel({
   );
 
   const imagePicker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage: "POST",
     showUrlTab: true,
     onSelect: (media) => {

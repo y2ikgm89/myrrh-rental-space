@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { urls } from "../../fixtures";
+import {
+  customerReservationTargets,
+  openCustomerReservationDetail,
+  expectReservationDetailHeading,
+} from "./reservation-test-helpers";
 
 /**
  * マイページ - 予約キャンセル Dialog フロー E2E（顧客認証済み state）
@@ -28,54 +32,32 @@ import { urls } from "../../fixtures";
  *   - `e2e/auth/customer.setup.ts` が認証済 storage state を生成済
  */
 
-async function openFirstReservationDetail(
-  page: import("@playwright/test").Page,
-): Promise<void> {
-  await page.goto(urls.mypageReservations);
-
-  // seed-driven: dev customer に 4 件の reservation が必ずある。空なら seed regression。
-  const detailLink = page.locator('a[href^="/mypage/reservations/"]').first();
-  await expect(detailLink).toBeVisible({ timeout: 5000 });
-  await detailLink.click();
-}
-
 test.describe("予約キャンセル Dialog - 顧客側 smoke", () => {
-  test("詳細ページにキャンセルボタン or キャンセル不可文言が表示される", async ({
+  test("キャンセル可能な予約詳細ページにキャンセルボタンが表示される", async ({
     page,
   }) => {
-    await openFirstReservationDetail(page);
-
-    // 「予約をキャンセルする」ボタン or 「キャンセルできません」文言の択一表示。
-    // 一覧の最初がどの status / paymentStatus を持つかは sort 順に依存するため
-    // どちらかが visible なら pass の契約とする（status × 期限 × 既キャンセル の組合せ網羅）。
-    const cancelTrigger = page.getByRole("button", {
-      name: /予約をキャンセルする/,
-    });
-    const cancelBlocked = page.getByText(
-      /キャンセルできません|キャンセル期限|変更できません|キャンセル済み/i,
+    await openCustomerReservationDetail(
+      page,
+      customerReservationTargets.pendingUnpaid,
     );
 
-    const hasTrigger = await cancelTrigger.isVisible().catch(() => false);
-    const hasBlocked = await cancelBlocked.isVisible().catch(() => false);
-
-    expect(hasTrigger || hasBlocked).toBeTruthy();
+    await expect(
+      page.getByRole("button", { name: "予約をキャンセルする" }),
+    ).toBeVisible();
   });
 
   test("キャンセル可能な予約で Dialog title / description / 理由 textarea / 閉じる動作が成立", async ({
     page,
   }) => {
-    await openFirstReservationDetail(page);
+    await openCustomerReservationDetail(
+      page,
+      customerReservationTargets.pendingUnpaid,
+    );
 
     const cancelTrigger = page.getByRole("button", {
-      name: /予約をキャンセルする/,
+      name: "予約をキャンセルする",
     });
-
-    // 一覧の最初がキャンセル不可状態（COMPLETED+PAID 等）の場合は
-    // detail 描画ゲートのみで完走を契約とする（seed sort 順依存を spec 側で吸収）。
-    if (!(await cancelTrigger.isVisible().catch(() => false))) {
-      await expect(page.locator("main").first()).toBeVisible();
-      return;
-    }
+    await expect(cancelTrigger).toBeVisible();
 
     await cancelTrigger.click();
 
@@ -95,8 +77,11 @@ test.describe("予約キャンセル Dialog - 顧客側 smoke", () => {
     });
     await expect(confirmButton).toBeVisible();
 
-    // 「閉じる」ボタンで Dialog 閉じる
-    await dialog.getByRole("button", { name: "閉じる", exact: true }).click();
+    await dialog
+      .getByRole("group", { name: "予約キャンセル操作" })
+      .getByRole("button", { name: "閉じる", exact: true })
+      .click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
+    await expectReservationDetailHeading(page);
   });
 });

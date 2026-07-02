@@ -92,6 +92,7 @@ export function MediaPickerField({
   "aria-describedby": ariaDescribedBy,
 }: MediaPickerFieldProps) {
   const picker = useSingleMediaPicker({
+    accept: "image",
     defaultUsage,
     onSelect: (media) => {
       const selected = media[0];

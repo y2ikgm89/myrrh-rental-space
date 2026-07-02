@@ -35,9 +35,10 @@ test.describe("Google Business Profile 連携 - smoke", () => {
     // 認証済み（/admin/access-denied にリダイレクトされていない）
     expect(page.url()).not.toMatch(/\/admin\/login/);
 
-    // GBP セクションタイトル
     await expect(
-      page.getByText("Google Business Profile 連携", { exact: false }).first(),
+      page.getByRole("region", {
+        name: "Google Business Profile 連携",
+      }),
     ).toBeVisible({ timeout: 15000 });
   });
 
@@ -46,9 +47,11 @@ test.describe("Google Business Profile 連携 - smoke", () => {
   }) => {
     await page.goto(API_SETTINGS_PATH);
 
-    // 未連携 Badge
-    const unconnectedBadge = page.getByText("未連携", { exact: true }).first();
-    const connectedBadge = page.getByText("連携済み", { exact: true }).first();
+    const gbpSection = page.getByRole("region", {
+      name: "Google Business Profile 連携",
+    });
+    const unconnectedBadge = gbpSection.getByText("未連携", { exact: true });
+    const connectedBadge = gbpSection.getByText("連携済み", { exact: true });
 
     // どちらか一方が必ず存在する（seed / Settings 状態に依存しない）
     const isConnected = await connectedBadge.isVisible().catch(() => false);
@@ -56,12 +59,12 @@ test.describe("Google Business Profile 連携 - smoke", () => {
       await expect(unconnectedBadge).toBeVisible();
       // 未連携時のみ「Google で連携」 SubmitButton が表示される
       await expect(
-        page.getByRole("button", { name: /Google で連携/ }),
+        gbpSection.getByRole("button", { name: /Google で連携/ }),
       ).toBeVisible();
     } else {
       // 連携済みなら「連携を解除」が表示される
       await expect(
-        page.getByRole("button", { name: /連携を解除/ }),
+        gbpSection.getByRole("button", { name: /連携を解除/ }),
       ).toBeVisible();
     }
   });
@@ -74,9 +77,10 @@ test.describe("Google Business Profile 連携 - smoke", () => {
     // useEffect → router.replace は async commit phase で発火するため
     // 固定 timeout ではなく toHaveURL の auto-retry で polling 検証する
     // （tab=calendar は GoogleBusinessProfileSection の cleanup ロジックで保持される）
-    await expect(page).toHaveURL(/^(?!.*gbp_success).*\/admin\/settings\/api/, {
-      timeout: 5000,
-    });
+    await expect(page).toHaveURL(
+      /^(?!.*gbp_success).*\/admin\/settings\/integrations\?tab=calendar/u,
+      { timeout: 5000 },
+    );
   });
 
   test("`gbp_error=invalid_state` query で開くと URL から query が clean up される", async ({
@@ -84,8 +88,9 @@ test.describe("Google Business Profile 連携 - smoke", () => {
   }) => {
     await page.goto(`${API_SETTINGS_PATH}&gbp_error=invalid_state`);
 
-    await expect(page).toHaveURL(/^(?!.*gbp_error).*\/admin\/settings\/api/, {
-      timeout: 5000,
-    });
+    await expect(page).toHaveURL(
+      /^(?!.*gbp_error).*\/admin\/settings\/integrations\?tab=calendar/u,
+      { timeout: 5000 },
+    );
   });
 });

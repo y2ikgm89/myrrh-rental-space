@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { IconArrowRight, IconMapPin, IconStar } from "@tabler/icons-react";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
@@ -22,6 +23,7 @@ interface SpaceCardProps {
   readonly locationName?: string | undefined;
   readonly averageRating?: number | undefined;
   readonly reviewCount?: number | undefined;
+  readonly imagePriority?: boolean | undefined;
   /**
    * "grid"（default）: 画像上・テキスト下の縦カード。SpaceShowcase / 関連スペース等で使用。
    * "horizontal": 画像左・テキスト右の横長カード。/spaces 一覧の SpaceGrid で使用。
@@ -49,8 +51,13 @@ export async function SpaceCard({
   locationName,
   averageRating,
   reviewCount,
+  imagePriority = false,
   layout = "grid",
 }: SpaceCardProps) {
+  await connection();
+
+  const imageLoading = imagePriority ? "eager" : "lazy";
+  const imageFetchPriority = imagePriority ? "high" : "auto";
   const allImages = gallery
     ? [
         mainImageUrl,
@@ -82,6 +89,8 @@ export async function SpaceCard({
           fill
           aspect="landscape"
           sizes="(min-width: 768px) 16rem, 100vw"
+          loading={imageLoading}
+          fetchPriority={imageFetchPriority}
           className="w-full shrink-0 md:w-64"
         />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -125,7 +134,7 @@ export async function SpaceCard({
                     fill="currentColor"
                     aria-hidden="true"
                   />
-                  <span className="text-rating">
+                  <span className="font-medium text-accent">
                     {averageRating.toFixed(1)}
                   </span>
                   <span>({reviewCount})</span>
@@ -166,6 +175,8 @@ export async function SpaceCard({
             images={allImages}
             alt={name}
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            loading={imageLoading}
+            fetchPriority={imageFetchPriority}
           />
         ) : (
           <ImageFrame
@@ -174,6 +185,8 @@ export async function SpaceCard({
             fill
             aspect="photo"
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            loading={imageLoading}
+            fetchPriority={imageFetchPriority}
           />
         )}
       </div>
@@ -206,7 +219,7 @@ export async function SpaceCard({
               fill="currentColor"
               aria-hidden="true"
             />
-            <span className="font-medium text-rating">
+            <span className="font-medium text-accent">
               {averageRating.toFixed(1)}
             </span>
             <span className="text-muted-foreground">({reviewCount}件)</span>

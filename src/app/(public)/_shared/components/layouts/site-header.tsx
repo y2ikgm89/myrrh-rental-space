@@ -9,7 +9,13 @@
  * - 全ナビ項目は DB 駆動。navItems が空なら nav リストのみ省略
  */
 
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactElement,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavigationMenu, Dialog } from "radix-ui";
@@ -78,6 +84,13 @@ const MOBILE_PARENT_CLASS =
 const MOBILE_CHILD_CLASS =
   "inline-flex min-h-11 items-center gap-1.5 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
 
+const MOBILE_MENU_FOCUSABLE_SELECTOR = [
+  'a[href]:not([tabindex="-1"])',
+  'button:not([disabled]):not([tabindex="-1"])',
+  'summary:not([tabindex="-1"])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
 /**
  * 指定された URL が現在のパスと一致するか判定する。
  * ルート "/" は exact 一致、それ以外は segment-aware な prefix 一致。
@@ -85,12 +98,26 @@ const MOBILE_CHILD_CLASS =
  */
 function useIsActiveUrl(url: string, isExternal: boolean): boolean {
   const rawPathname = usePathname();
-  // preview URL (`/preview/posts/[id]` 等) は本番 URL (`/posts` 等) に正規化して
+  // preview URL (`/preview/posts/[id]` 等) は本番 URL (`/blog` 等) に正規化して
   // active 判定する。preview と本番で同じ nav 項目が active 表示される。
   const pathname = normalizePreviewPathname(rawPathname);
   if (isExternal || !url.startsWith("/")) return false;
   if (url === "/") return pathname === "/";
   return pathname === url || pathname.startsWith(`${url}/`);
+}
+
+function getFocusableMenuElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(MOBILE_MENU_FOCUSABLE_SELECTOR),
+  ).filter((element) => {
+    return (
+      !element.hasAttribute("disabled") &&
+      element.getAttribute("aria-hidden") !== "true" &&
+      (element.offsetWidth > 0 ||
+        element.offsetHeight > 0 ||
+        element.getClientRects().length > 0)
+    );
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -220,9 +247,41 @@ export function Header({
   // /reservation は CTA ボタンで導線があるためナビから除外
   const items = navItems.filter((item) => item.url !== "/reservation");
   const headerRef = useRef<HTMLElement>(null);
+  const mobileMenuContentRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+
+  const handleMobileMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Tab") return;
+
+    const content = mobileMenuContentRef.current;
+    if (!content) return;
+
+    const focusableElements = getFocusableMenuElements(content);
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements.at(-1);
+    if (!firstElement || !lastElement) return;
+
+    const activeElement = document.activeElement;
+    if (!content.contains(activeElement)) {
+      event.preventDefault();
+      firstElement.focus();
+      return;
+    }
+
+    if (event.shiftKey && activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+      return;
+    }
+
+    if (!event.shiftKey && activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  };
 
   // Publish header height as CSS custom property so the hero overlap / sticky
   // sidebars can align to the current header size.
@@ -243,6 +302,20 @@ export function Header({
     observer.observe(header);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [menuOpen]);
 
   // Scroll-linked background + hide/show behaviour (prefers-reduced-motion: off
   // → matchMedia cleanup restores styles and leaves the header always visible).
@@ -432,8 +505,8 @@ export function Header({
           </Button>
         </div>
 
-        {/* Mobile — Radix Dialog (focus trap + body scroll lock + Esc) */}
-        <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
+        {/* Mobile — non-modal Dialog avoids global aria-hidden mutations during streaming hydration. */}
+        <Dialog.Root modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger
             className="inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground lg:hidden"
             aria-label="メニューを開く"
@@ -446,7 +519,16 @@ export function Header({
           </Dialog.Trigger>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl lg:hidden" />
-            <Dialog.Content className="fixed inset-0 z-50 flex flex-col lg:hidden">
+            <Dialog.Content
+              ref={mobileMenuContentRef}
+              tabIndex={-1}
+              className="fixed inset-0 z-50 flex flex-col lg:hidden"
+              onKeyDown={handleMobileMenuKeyDown}
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                closeButtonRef.current?.focus();
+              }}
+            >
               <Dialog.Title className="sr-only">
                 ナビゲーションメニュー
               </Dialog.Title>
@@ -461,6 +543,7 @@ export function Header({
                   onNavigate={closeMenu}
                 />
                 <Dialog.Close
+                  ref={closeButtonRef}
                   className="inline-flex h-11 w-11 items-center justify-center text-foreground"
                   aria-label="メニューを閉じる"
                 >

@@ -536,6 +536,21 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("public route-level loading/error/not-found は layout の main landmark を重複させない", () => {
+    const publicSpecialFiles = collectSourceFiles(PUBLIC_APP_ROOT).filter(
+      (file) =>
+        /(?:^|[\\/])(?:loading|error|not-found)\.tsx$/u.test(file) &&
+        file !== PUBLIC_LAYOUT_FILE,
+    );
+    const offenders = collectNonCommentOffenders(
+      publicSpecialFiles,
+      /<main\b|id=["']main-content["']/u,
+    );
+
+    expect(publicSpecialFiles.length).toBeGreaterThan(0);
+    expect(offenders).toEqual([]);
+  });
+
   // 全 app route file fs traverse + regex で 5s default timeout を超えるため 30s に延長
   test("cacheComponents 有効時は route segment config export を残さない", () => {
     const nextConfigSource = readFileSync(NEXT_CONFIG_FILE, "utf8");

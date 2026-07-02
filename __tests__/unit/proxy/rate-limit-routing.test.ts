@@ -29,54 +29,9 @@ function uniqueIp(label: string): string {
   return `proxy-rl-${label}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-describe("checkRateLimit — /api/auth (admin Better Auth)", () => {
-  test("sign-in は authMutationRateLimiter に落ちる", async () => {
+describe("checkRateLimit — removed /api/auth path", () => {
+  test("旧管理 auth path は Better Auth mutation bucket に入れない", async () => {
     const result = await checkRateLimit("/api/auth/sign-in", uniqueIp("a1"));
-    expect(result.success).toBe(true);
-    expect(result.remaining).toBe(AUTH_MUTATION_REMAINING);
-  });
-
-  test("sign-up は authMutationRateLimiter に落ちる", async () => {
-    const result = await checkRateLimit(
-      "/api/auth/sign-up/email",
-      uniqueIp("a2"),
-    );
-    expect(result.success).toBe(true);
-    expect(result.remaining).toBe(AUTH_MUTATION_REMAINING);
-  });
-
-  test("reset-password は authMutationRateLimiter に落ちる", async () => {
-    const result = await checkRateLimit(
-      "/api/auth/reset-password",
-      uniqueIp("a3"),
-    );
-    expect(result.success).toBe(true);
-    expect(result.remaining).toBe(AUTH_MUTATION_REMAINING);
-  });
-
-  test("get-session は apiRateLimiter に落ちる（読み取り専用）", async () => {
-    const result = await checkRateLimit(
-      "/api/auth/get-session",
-      uniqueIp("a4"),
-    );
-    expect(result.success).toBe(true);
-    expect(result.remaining).toBe(API_REMAINING);
-  });
-
-  test("list-sessions は apiRateLimiter に落ちる（読み取り専用）", async () => {
-    const result = await checkRateLimit(
-      "/api/auth/list-sessions",
-      uniqueIp("a5"),
-    );
-    expect(result.success).toBe(true);
-    expect(result.remaining).toBe(API_REMAINING);
-  });
-
-  test("list-accounts は apiRateLimiter に落ちる（読み取り専用）", async () => {
-    const result = await checkRateLimit(
-      "/api/auth/list-accounts",
-      uniqueIp("a6"),
-    );
     expect(result.success).toBe(true);
     expect(result.remaining).toBe(API_REMAINING);
   });

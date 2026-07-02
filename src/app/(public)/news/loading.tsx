@@ -11,7 +11,7 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function NewsLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Page hero (StandardHeroSection minimal variant) */}
       <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
@@ -58,6 +58,6 @@ export default function NewsLoading() {
           </nav>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

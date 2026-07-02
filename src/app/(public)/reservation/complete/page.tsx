@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
@@ -30,6 +31,8 @@ interface PageProps {
 export default async function ReservationCompletePage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
+  await connection();
+
   const sp = await searchParams;
   const token = typeof sp["token"] === "string" ? sp["token"] : null;
 

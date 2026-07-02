@@ -23,7 +23,7 @@ test.describe("マイページ - 認証ガード", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("未認証で /mypage/reservations にアクセスすると /login にリダイレクト", async ({
+  test("未認証で予約一覧にアクセスすると /login にリダイレクト", async ({
     page,
   }) => {
     await page.goto(urls.mypageReservations);

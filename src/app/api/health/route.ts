@@ -11,7 +11,7 @@
  * @module api/health
  */
 
-import { NextResponse } from "next/server";
+import { connection, NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { runDatabaseHealthCheck } from "@/shared/domain/system/queries";
 import {
@@ -26,6 +26,8 @@ const noCacheHeaders = {
 } as const;
 
 export async function GET() {
+  await connection();
+
   try {
     await runDatabaseHealthCheck();
 

@@ -3,13 +3,9 @@ import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { logPermissionDenied } from "@/admin/lib/audit";
-import {
-  hasPermission,
-  isEditorRole,
-  userHasResourceAccess,
-  type Action,
-  type Resource,
-} from "@/admin/lib/permissions";
+import { isEditorRole, userHasResourceAccess } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { verifyAdminSession, type AdminUser } from "@/shared/lib/admin-auth";
 
 function redirectToAdminHome(): never {

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { getAdminTermsById } from "@/shared/domain/terms/admin-queries";
 import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
 
@@ -10,6 +11,8 @@ interface PageProps {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const terms = await getAdminTermsById(id);
   if (!terms) {
@@ -19,6 +22,8 @@ export async function generateMetadata({
 }
 
 export default async function EditTermsPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
   const terms = await getAdminTermsById(id);
 

@@ -2,15 +2,42 @@ import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 
 import {
+  formatBuildServiceAccountActAsRemovalCommands,
+  formatCloudBuildConnectionDeletionCommands,
+  formatCloudBuildTriggerDeletionCommands,
+  formatCloudRunRevisionDeletionCommands,
+  formatIamPolicyBindingRemovalCommands,
   formatNamedResourcesByLocation,
+  formatRuntimeGroupOwnerRepairCommands,
+  formatSecretManagerSecretAccessorRemovalCommands,
   getCloudBuildConnectionAuditLocations,
   getCloudBuildTriggerAuditLocations,
+  getIapCloudRunServiceIamPolicyUrl,
   getProductionHttpAuditTargets,
   readAmbiguousAdminRolePrincipalErrors,
+  getExpectedSecretManagerSecretAccessorMembers,
+  REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS,
+  REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND,
+  REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
+  REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
   readBroadProjectIamDeployGrantErrors,
   readBuildServiceAccountProjectIamRoleErrors,
+  readCloudRunContainerCommandErrors,
+  readCloudRunIngressErrors,
+  readCloudRunJobExecutionConfigErrors,
+  readCloudRunRevisionHealthErrors,
+  readCloudRunRuntimeEnvErrors,
+  readCloudRunServiceIdentityErrors,
+  readCloudSchedulerOidcJobErrors,
+  readIamPolicyMembersForRole,
+  readIamRoleMembershipErrors,
   readProductionDomainConfigErrors,
   readProductionHttpTargetError,
+  readProjectSecretManagerAccessorErrors,
+  readSecretManagerSecretAccessorPolicyErrors,
+  readSecretManagerVersionStateErrors,
+  readUnexpectedSecretManagerSecretAccessorMembers,
+  readUnhealthyCloudRunRevisionNames,
   readWifProviderConditionErrors,
   readCloudBuildTriggerIdentifiers,
   type ProductionHttpAuditTarget,
@@ -55,13 +82,29 @@ type HttpTargetResult =
       error: string;
     };
 
-const gcloudBin = process.platform === "win32" ? "gcloud.cmd" : "gcloud";
+const configuredGcloudBin = process.env["GCLOUD_BIN"]?.trim();
+const gcloudBin =
+  configuredGcloudBin && configuredGcloudBin.length > 0
+    ? configuredGcloudBin
+    : process.platform === "win32"
+      ? "gcloud.cmd"
+      : "gcloud";
 const execFileAsync = promisify(execFile);
+const forbiddenCloudRunRuntimeEnvNames = [
+  "ADMIN_LOGIN_TOKEN",
+  "CRON_SECRET",
+  "INITIAL_ADMIN_EMAIL",
+  "INITIAL_ADMIN_NAME",
+] as const;
+const googleGroupEmailPattern = /^[^\s@:]+@[^\s@:]+\.[^\s@]+$/u;
 
-function requireEnv(name: string, fallback?: string): string {
-  const value = process.env[name] ?? fallback;
+function requireEnv(name: string): string {
+  const value = process.env[name];
   if (!value) {
     throw new Error(`${name} is required`);
+  }
+  if (value !== value.trim()) {
+    throw new Error(`${name} must not have leading or trailing whitespace`);
   }
   return value;
 }
@@ -69,9 +112,9 @@ function requireEnv(name: string, fallback?: string): string {
 function formatGcloudError(args: string[], error: unknown): string {
   if (error instanceof Error && "stderr" in error) {
     const stderr = String((error as { stderr?: unknown }).stderr ?? "");
-    return `gcloud ${args.join(" ")} failed${stderr ? `: ${stderr.trim()}` : ""}`;
+    return `${gcloudBin} ${args.join(" ")} failed${stderr ? `: ${stderr.trim()}` : ""}`;
   }
-  return `gcloud ${args.join(" ")} failed: ${String(error)}`;
+  return `${gcloudBin} ${args.join(" ")} failed: ${String(error)}`;
 }
 
 function runGcloudJson(args: string[]): unknown {
@@ -84,6 +127,36 @@ function runGcloudJson(args: string[]): unknown {
     return trimmed ? JSON.parse(trimmed) : null;
   } catch (error) {
     throw new Error(formatGcloudError(args, error));
+  }
+}
+
+function runGcloudText(args: string[]): string {
+  try {
+    return execFileSync(gcloudBin, args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (error) {
+    throw new Error(formatGcloudError(args, error));
+  }
+}
+
+function assertGcloudNonInteractiveAuth(): void {
+  try {
+    const token = runGcloudText(["auth", "print-access-token"]).trim();
+    if (!token) {
+      throw new Error("gcloud auth print-access-token returned an empty token");
+    }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      [
+        "gcloud authentication is refreshable check failed.",
+        "Run `gcloud auth login` in the same Windows user/profile used by Codex,",
+        "then verify `gcloud auth print-access-token` succeeds before rerunning this audit.",
+        `Original error: ${detail}`,
+      ].join(" "),
+    );
   }
 }
 
@@ -169,6 +242,17 @@ function membersForRole(bindings: Binding[], role: string): string[] {
     .flatMap((binding) => binding.members ?? []);
 }
 
+function unexpectedMembersForRole(
+  policy: unknown,
+  role: string,
+  expectedMembers: readonly string[],
+): string[] {
+  const expectedMemberSet = new Set(expectedMembers);
+  return readIamPolicyMembersForRole(policy, role)
+    .filter((member) => !expectedMemberSet.has(member))
+    .sort();
+}
+
 function getPath(value: unknown, path: string[]): unknown {
   let current = value;
   for (const key of path) {
@@ -184,15 +268,12 @@ function detailForResult(result: GcloudJsonResult, detail: string): string {
 
 function requireGoogleGroupEmail(name: string): string {
   const value = requireEnv(name);
-  const email = value.startsWith("group:")
-    ? value.slice("group:".length)
-    : value;
-  if (!email.includes("@")) {
+  if (!googleGroupEmailPattern.test(value)) {
     throw new Error(
-      `${name} must be a Google Group email like admins@example.com`,
+      `${name} must be a bare Google Group email like admins@example.com`,
     );
   }
-  return email;
+  return value;
 }
 
 async function fetchHttpTarget(
@@ -230,6 +311,42 @@ function readRedirectHost(redirectUrl: string | null): string {
   } catch {
     return "invalid";
   }
+}
+
+function summarizeResponseBody(body: string): string {
+  const trimmed = body.trim();
+  if (!trimmed) return "empty response";
+  return trimmed.length > 800 ? `${trimmed.slice(0, 800)}...` : trimmed;
+}
+
+async function runIapCloudRunServiceIamPolicyJson(
+  projectNumber: string,
+  region: string,
+  service: string,
+): Promise<unknown> {
+  const accessToken = runGcloudText(["auth", "print-access-token"]).trim();
+  if (!accessToken) {
+    throw new Error("gcloud auth print-access-token returned an empty token");
+  }
+
+  const url = getIapCloudRunServiceIamPolicyUrl(projectNumber, region, service);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `IAP Cloud Run getIamPolicy REST API failed (${response.status} ${response.statusText}) for ${url}: ${summarizeResponseBody(body)}`,
+    );
+  }
+
+  const trimmed = body.trim();
+  return trimmed ? JSON.parse(trimmed) : null;
 }
 
 async function auditCloudBuildTriggers(
@@ -287,13 +404,14 @@ async function auditCloudBuildConnections(
 }
 
 async function main(): Promise<void> {
-  const projectId = requireEnv("GCP_PROJECT_ID", process.env["PROJECT_ID"]);
-  const region = requireEnv("REGION", "asia-northeast1");
-  const publicService = requireEnv("SERVICE_NAME", "myrrh-rental-space");
-  const adminService = requireEnv(
-    "ADMIN_SERVICE_NAME",
-    "myrrh-rental-space-admin",
-  );
+  assertGcloudNonInteractiveAuth();
+
+  const projectId = requireEnv("GCP_PROJECT_ID");
+  const region = requireEnv("REGION");
+  const publicService = requireEnv("SERVICE_NAME");
+  const adminService = requireEnv("ADMIN_SERVICE_NAME");
+  const migrateJobName = requireEnv("MIGRATE_JOB_NAME");
+  const artifactRepository = requireEnv("AR_REPOSITORY");
   const expectedRoleGroupEmails = [
     requireGoogleGroupEmail("ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL"),
     requireGoogleGroupEmail("ADMIN_ROLE_GROUP_ADMIN_EMAIL"),
@@ -305,26 +423,16 @@ async function main(): Promise<void> {
   );
   const expectedOrganizationId = requireEnv("GCP_ORGANIZATION_ID");
   const cloudIdentityDomain = requireEnv("CLOUD_IDENTITY_DOMAIN");
-  const buildServiceAccount = requireEnv(
-    "BUILD_SERVICE_ACCOUNT",
-    process.env["BUILD_SA"] ??
-      `myrrh-rental-space-build@${projectId}.iam.gserviceaccount.com`,
-  );
-  const runtimeServiceAccount = requireEnv(
-    "RUNTIME_SERVICE_ACCOUNT",
-    process.env["RUNTIME_SA"] ??
-      `myrrh-rental-space-runtime@${projectId}.iam.gserviceaccount.com`,
-  );
+  const buildServiceAccount = requireEnv("BUILD_SERVICE_ACCOUNT");
+  const runtimeServiceAccount = requireEnv("RUNTIME_SERVICE_ACCOUNT");
   const githubRepositoryId = requireEnv("GITHUB_REPOSITORY_ID");
   const githubRepositoryOwnerId = requireEnv("GITHUB_REPOSITORY_OWNER_ID");
   const githubRepository = requireEnv("GITHUB_REPOSITORY");
-  const wifPoolId = requireEnv("WIF_POOL_ID", "github-actions");
-  const wifProviderId = requireEnv(
-    "WIF_PROVIDER_ID",
-    "github-myrrh-rental-space",
-  );
+  const wifPoolId = requireEnv("WIF_POOL_ID");
+  const wifProviderId = requireEnv("WIF_PROVIDER_ID");
   const publicDomain = requireEnv("PUBLIC_DOMAIN");
   const adminDomain = requireEnv("ADMIN_DOMAIN");
+  const schedulerServiceAccount = requireEnv("CRON_SERVICE_ACCOUNT_EMAIL");
 
   const checks: Check[] = [];
   const addCheck = (name: string, ok: boolean, detail: string): void => {
@@ -341,6 +449,7 @@ async function main(): Promise<void> {
   if (typeof projectNumber !== "string") {
     throw new Error("Unable to read projectNumber");
   }
+  const expectedIapJwtAudience = `/projects/${projectNumber}/locations/${region}/services/${adminService}`;
 
   const ancestors = runGcloudJson([
     "projects",
@@ -458,12 +567,23 @@ async function main(): Promise<void> {
     const runtimeMembershipRoles = runtimeMembership
       ? readMembershipRoles(runtimeMembership)
       : [];
+    const runtimeGroupOwnerRepairCommands =
+      groupMemberships.ok && !runtimeMembershipRoles.includes("OWNER")
+        ? formatRuntimeGroupOwnerRepairCommands(
+            expectedGroupEmail,
+            runtimeServiceAccount,
+          )
+        : [];
     addCheck(
       `runtime service account owns role Google Group: ${expectedGroupEmail}`,
       groupMemberships.ok && runtimeMembershipRoles.includes("OWNER"),
       detailForResult(
         groupMemberships,
-        `runtime=${runtimeServiceAccount} roles=${runtimeMembershipRoles.join(",") || "none"}`,
+        [
+          `runtime=${runtimeServiceAccount}`,
+          `roles=${runtimeMembershipRoles.join(",") || "none"}`,
+          `repairCommands=${runtimeGroupOwnerRepairCommands.join(" | ") || "none"}`,
+        ].join(" "),
       ),
     );
   }
@@ -476,6 +596,17 @@ async function main(): Promise<void> {
     `ambiguous=${ambiguousAdminRolePrincipals.join(";") || "none"}`,
   );
 
+  const publicServiceDescription = runGcloudJson([
+    "run",
+    "services",
+    "describe",
+    publicService,
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json",
+  ]);
   const adminServiceDescription = runGcloudJson([
     "run",
     "services",
@@ -487,6 +618,307 @@ async function main(): Promise<void> {
     region,
     "--format=json",
   ]);
+  const publicServiceIdentityErrors = readCloudRunServiceIdentityErrors(
+    publicServiceDescription,
+    {
+      resourceName: publicService,
+      expectedServiceAccount: runtimeServiceAccount,
+    },
+  );
+  const adminServiceIdentityErrors = readCloudRunServiceIdentityErrors(
+    adminServiceDescription,
+    {
+      resourceName: adminService,
+      expectedServiceAccount: runtimeServiceAccount,
+    },
+  );
+  const serviceIdentityErrors = [
+    ...publicServiceIdentityErrors,
+    ...adminServiceIdentityErrors,
+  ];
+  addCheck(
+    "Cloud Run service identities are dedicated",
+    serviceIdentityErrors.length === 0,
+    `errors=${serviceIdentityErrors.join(",") || "none"}`,
+  );
+  const serviceIngressErrors = [
+    ...readCloudRunIngressErrors(publicServiceDescription, {
+      serviceName: publicService,
+      expectedIngress: "all",
+    }),
+    ...readCloudRunIngressErrors(adminServiceDescription, {
+      serviceName: adminService,
+      expectedIngress: "all",
+    }),
+  ];
+  addCheck(
+    "Cloud Run service ingress is canonical",
+    serviceIngressErrors.length === 0,
+    `errors=${serviceIngressErrors.join(",") || "none"}`,
+  );
+  const publicRuntimeEnvErrors = readCloudRunRuntimeEnvErrors(
+    publicServiceDescription,
+    {
+      serviceName: publicService,
+      expectedEnv: {
+        APP_SURFACE: "public",
+        ADMIN_APP_URL: adminDomain,
+        BETTER_AUTH_URL: publicDomain,
+        NEXT_PUBLIC_BASE_URL: publicDomain,
+        NEXT_PUBLIC_APP_URL: publicDomain,
+        CRON_OIDC_AUDIENCE: publicDomain,
+        CRON_SERVICE_ACCOUNT_EMAIL: schedulerServiceAccount,
+      },
+      requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
+      forbiddenEnvNames: forbiddenCloudRunRuntimeEnvNames,
+    },
+  );
+  addCheck(
+    "public Cloud Run runtime env is canonical",
+    publicRuntimeEnvErrors.length === 0,
+    `errors=${publicRuntimeEnvErrors.join(",") || "none"}`,
+  );
+  const adminRuntimeEnvErrors = readCloudRunRuntimeEnvErrors(
+    adminServiceDescription,
+    {
+      serviceName: adminService,
+      expectedEnv: {
+        APP_SURFACE: "admin",
+        ADMIN_APP_URL: adminDomain,
+        BETTER_AUTH_URL: adminDomain,
+        NEXT_PUBLIC_BASE_URL: publicDomain,
+        NEXT_PUBLIC_APP_URL: adminDomain,
+        IAP_JWT_AUDIENCE: expectedIapJwtAudience,
+        CRON_OIDC_AUDIENCE: publicDomain,
+        CRON_SERVICE_ACCOUNT_EMAIL: schedulerServiceAccount,
+      },
+      requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
+      forbiddenEnvNames: forbiddenCloudRunRuntimeEnvNames,
+    },
+  );
+  addCheck(
+    "admin Cloud Run runtime env is canonical",
+    adminRuntimeEnvErrors.length === 0,
+    `errors=${adminRuntimeEnvErrors.join(",") || "none"}`,
+  );
+
+  const migrateJobDescription = runGcloudJson([
+    "run",
+    "jobs",
+    "describe",
+    migrateJobName,
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json",
+  ]);
+  const migrateJobIdentityErrors = readCloudRunServiceIdentityErrors(
+    migrateJobDescription,
+    {
+      resourceName: migrateJobName,
+      expectedServiceAccount: runtimeServiceAccount,
+    },
+  );
+  addCheck(
+    "Cloud Run migrate Job identity is dedicated",
+    migrateJobIdentityErrors.length === 0,
+    `errors=${migrateJobIdentityErrors.join(",") || "none"}`,
+  );
+  const migrateJobRuntimeEnvErrors = readCloudRunRuntimeEnvErrors(
+    migrateJobDescription,
+    {
+      serviceName: migrateJobName,
+      expectedEnv: {},
+      requiredSecretEnvRefs: REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS,
+      forbiddenEnvNames: forbiddenCloudRunRuntimeEnvNames,
+    },
+  );
+  addCheck(
+    "Cloud Run migrate Job env is canonical",
+    migrateJobRuntimeEnvErrors.length === 0,
+    `errors=${migrateJobRuntimeEnvErrors.join(",") || "none"}`,
+  );
+  const migrateJobCommandErrors = readCloudRunContainerCommandErrors(
+    migrateJobDescription,
+    {
+      resourceName: migrateJobName,
+      expectedCommand: REQUIRED_CLOUD_RUN_MIGRATE_JOB_COMMAND,
+      expectedArgs: REQUIRED_CLOUD_RUN_MIGRATE_JOB_ARGS,
+    },
+  );
+  addCheck(
+    "Cloud Run migrate Job command is canonical",
+    migrateJobCommandErrors.length === 0,
+    `errors=${migrateJobCommandErrors.join(",") || "none"}`,
+  );
+  const migrateJobExecutionConfigErrors = readCloudRunJobExecutionConfigErrors(
+    migrateJobDescription,
+    {
+      resourceName: migrateJobName,
+    },
+  );
+  addCheck(
+    "Cloud Run migrate Job execution config is canonical",
+    migrateJobExecutionConfigErrors.length === 0,
+    `errors=${migrateJobExecutionConfigErrors.join(",") || "none"}`,
+  );
+
+  const secretVersionResults = await Promise.all(
+    REQUIRED_CLOUD_RUN_SECRET_ENV_REFS.map(async (ref) => {
+      const result = await tryRunGcloudJsonAsync([
+        "secrets",
+        "versions",
+        "describe",
+        ref.version,
+        "--secret",
+        ref.name,
+        "--project",
+        projectId,
+        "--format=json(name,state)",
+      ]);
+      const errors = result.ok
+        ? readSecretManagerVersionStateErrors(result.value, ref)
+        : [
+            `${ref.name} Secret Manager version ${ref.version} metadata describe failed`,
+          ];
+      return { ref, result, errors };
+    }),
+  );
+  const secretVersionErrors = secretVersionResults.flatMap((entry) => {
+    return entry.result.ok
+      ? entry.errors
+      : [...entry.errors, entry.result.error];
+  });
+  addCheck(
+    "required Secret Manager versions are enabled",
+    secretVersionErrors.length === 0,
+    `errors=${secretVersionErrors.join(",") || "none"}`,
+  );
+
+  const secretAccessorPolicyResults = await Promise.all(
+    REQUIRED_CLOUD_RUN_SECRET_ENV_REFS.map(async (ref) => {
+      const result = await tryRunGcloudJsonAsync([
+        "secrets",
+        "get-iam-policy",
+        ref.name,
+        "--project",
+        projectId,
+        "--format=json",
+      ]);
+      const expectedMembers = getExpectedSecretManagerSecretAccessorMembers({
+        secretName: ref.name,
+        runtimeServiceAccount,
+        buildServiceAccount,
+      });
+      const errors = result.ok
+        ? readSecretManagerSecretAccessorPolicyErrors(result.value, {
+            secretName: ref.name,
+            expectedMembers,
+          })
+        : [`${ref.name} Secret Manager IAM policy describe failed`];
+      const unexpectedMembers = result.ok
+        ? readUnexpectedSecretManagerSecretAccessorMembers(
+            result.value,
+            expectedMembers,
+          )
+        : [];
+      const removalCommands = formatSecretManagerSecretAccessorRemovalCommands(
+        projectId,
+        ref.name,
+        unexpectedMembers,
+      );
+      return { ref, result, errors, removalCommands };
+    }),
+  );
+  const secretAccessorPolicyErrors = secretAccessorPolicyResults.flatMap(
+    (entry) => {
+      return entry.result.ok
+        ? entry.errors
+        : [...entry.errors, entry.result.error];
+    },
+  );
+  const secretAccessorPolicyRemovalCommands =
+    secretAccessorPolicyResults.flatMap((entry) => entry.removalCommands);
+  addCheck(
+    "required Secret Manager accessor IAM is least privilege",
+    secretAccessorPolicyErrors.length === 0,
+    [
+      `errors=${secretAccessorPolicyErrors.join(",") || "none"}`,
+      `removeCommands=${secretAccessorPolicyRemovalCommands.join(" | ") || "none"}`,
+    ].join(" "),
+  );
+
+  const publicRevisions = tryRunGcloudJson([
+    "run",
+    "revisions",
+    "list",
+    "--service",
+    publicService,
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json(metadata.name,status.conditions)",
+  ]);
+  const publicRevisionHealthErrors = publicRevisions.ok
+    ? readCloudRunRevisionHealthErrors(publicRevisions.value, publicService)
+    : [];
+  const publicUnhealthyRevisions = publicRevisions.ok
+    ? readUnhealthyCloudRunRevisionNames(publicRevisions.value)
+    : [];
+  const publicRevisionDeletionCommands = formatCloudRunRevisionDeletionCommands(
+    projectId,
+    region,
+    publicUnhealthyRevisions,
+  );
+  addCheck(
+    "public Cloud Run revisions are healthy",
+    publicRevisions.ok && publicRevisionHealthErrors.length === 0,
+    detailForResult(
+      publicRevisions,
+      [
+        `errors=${publicRevisionHealthErrors.join(",") || "none"}`,
+        `deleteCommands=${publicRevisionDeletionCommands.join(" | ") || "none"}`,
+      ].join(" "),
+    ),
+  );
+
+  const adminRevisions = tryRunGcloudJson([
+    "run",
+    "revisions",
+    "list",
+    "--service",
+    adminService,
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json(metadata.name,status.conditions)",
+  ]);
+  const adminRevisionHealthErrors = adminRevisions.ok
+    ? readCloudRunRevisionHealthErrors(adminRevisions.value, adminService)
+    : [];
+  const adminUnhealthyRevisions = adminRevisions.ok
+    ? readUnhealthyCloudRunRevisionNames(adminRevisions.value)
+    : [];
+  const adminRevisionDeletionCommands = formatCloudRunRevisionDeletionCommands(
+    projectId,
+    region,
+    adminUnhealthyRevisions,
+  );
+  addCheck(
+    "admin Cloud Run revisions are healthy",
+    adminRevisions.ok && adminRevisionHealthErrors.length === 0,
+    detailForResult(
+      adminRevisions,
+      [
+        `errors=${adminRevisionHealthErrors.join(",") || "none"}`,
+        `deleteCommands=${adminRevisionDeletionCommands.join(" | ") || "none"}`,
+      ].join(" "),
+    ),
+  );
+
   const adminIapEnabled = getPath(adminServiceDescription, [
     "metadata",
     "annotations",
@@ -499,19 +931,18 @@ async function main(): Promise<void> {
     `iap-enabled=${String(adminIapEnabled ?? "missing")} url=${String(adminUrl ?? "missing")}`,
   );
 
-  const adminRunIam = readBindings(
-    runGcloudJson([
-      "run",
-      "services",
-      "get-iam-policy",
-      adminService,
-      "--project",
-      projectId,
-      "--region",
-      region,
-      "--format=json",
-    ]),
-  );
+  const adminRunIamPolicy = runGcloudJson([
+    "run",
+    "services",
+    "get-iam-policy",
+    adminService,
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json",
+  ]);
+  const adminRunIam = readBindings(adminRunIamPolicy);
   const adminRunInvokers = membersForRole(adminRunIam, "roles/run.invoker");
   const expectedIapInvoker = `serviceAccount:service-${projectNumber}@gcp-sa-iap.iam.gserviceaccount.com`;
   addCheck(
@@ -528,19 +959,11 @@ async function main(): Promise<void> {
   );
 
   const iapIam = readBindings(
-    runGcloudJson([
-      "iap",
-      "web",
-      "get-iam-policy",
-      "--project",
-      projectId,
-      "--region",
+    await runIapCloudRunServiceIamPolicyJson(
+      projectNumber,
       region,
-      "--resource-type=cloud-run",
-      "--service",
       adminService,
-      "--format=json",
-    ]),
+    ),
   );
   const iapAccessors = membersForRole(
     iapIam,
@@ -565,19 +988,18 @@ async function main(): Promise<void> {
     `accessors=${iapAccessors.join(",") || "none"} unexpected=${unexpectedIapMembers.join(",") || "none"}`,
   );
 
-  const publicRunIam = readBindings(
-    runGcloudJson([
-      "run",
-      "services",
-      "get-iam-policy",
-      publicService,
-      "--project",
-      projectId,
-      "--region",
-      region,
-      "--format=json",
-    ]),
-  );
+  const publicRunIamPolicy = runGcloudJson([
+    "run",
+    "services",
+    "get-iam-policy",
+    publicService,
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json",
+  ]);
+  const publicRunIam = readBindings(publicRunIamPolicy);
   const publicRunInvokers = membersForRole(publicRunIam, "roles/run.invoker");
   addCheck(
     "public Cloud Run service is publicly invokable",
@@ -662,17 +1084,16 @@ async function main(): Promise<void> {
     ),
   );
 
-  const buildServiceAccountIam = readBindings(
-    runGcloudJson([
-      "iam",
-      "service-accounts",
-      "get-iam-policy",
-      buildServiceAccount,
-      "--project",
-      projectId,
-      "--format=json",
-    ]),
-  );
+  const buildServiceAccountIamPolicy = runGcloudJson([
+    "iam",
+    "service-accounts",
+    "get-iam-policy",
+    buildServiceAccount,
+    "--project",
+    projectId,
+    "--format=json",
+  ]);
+  const buildServiceAccountIam = readBindings(buildServiceAccountIamPolicy);
   const projectIam = runGcloudJson([
     "projects",
     "get-iam-policy",
@@ -686,6 +1107,13 @@ async function main(): Promise<void> {
     broadProjectIamDeployGrantErrors.length === 0,
     `grants=${broadProjectIamDeployGrantErrors.join(",") || "none"}`,
   );
+  const projectSecretManagerAccessorErrors =
+    readProjectSecretManagerAccessorErrors(projectIam);
+  addCheck(
+    "project IAM has no broad Secret Manager accessor grants",
+    projectSecretManagerAccessorErrors.length === 0,
+    `errors=${projectSecretManagerAccessorErrors.join(",") || "none"}`,
+  );
   const buildServiceAccountProjectIamRoleErrors =
     readBuildServiceAccountProjectIamRoleErrors(
       projectIam,
@@ -695,6 +1123,216 @@ async function main(): Promise<void> {
     "build service account project-level roles are limited to Cloud Build execution",
     buildServiceAccountProjectIamRoleErrors.length === 0,
     `errors=${buildServiceAccountProjectIamRoleErrors.join(",") || "none"}`,
+  );
+  const expectedBuildServiceAccountUser = `serviceAccount:${buildServiceAccount}`;
+  const expectedBuildServiceAccountUsers = [expectedBuildServiceAccountUser];
+  const artifactRepositoryIamPolicy = runGcloudJson([
+    "artifacts",
+    "repositories",
+    "get-iam-policy",
+    artifactRepository,
+    "--project",
+    projectId,
+    "--location",
+    region,
+    "--format=json",
+  ]);
+  const artifactRepositoryWriterRole = "roles/artifactregistry.writer";
+  const artifactRepositoryWriterErrors = readIamRoleMembershipErrors(
+    artifactRepositoryIamPolicy,
+    {
+      resourceName: `Artifact Registry repository ${artifactRepository}`,
+      role: artifactRepositoryWriterRole,
+      expectedMembers: expectedBuildServiceAccountUsers,
+    },
+  );
+  const artifactRepositoryWriterRemovalCommands =
+    formatIamPolicyBindingRemovalCommands({
+      baseCommand: `gcloud artifacts repositories remove-iam-policy-binding "${artifactRepository}"`,
+      role: artifactRepositoryWriterRole,
+      members: unexpectedMembersForRole(
+        artifactRepositoryIamPolicy,
+        artifactRepositoryWriterRole,
+        expectedBuildServiceAccountUsers,
+      ),
+      additionalArgs: [
+        `  --project="${projectId}"`,
+        `  --location="${region}"`,
+      ],
+    });
+  addCheck(
+    "Artifact Registry repository writer is limited to build service account",
+    artifactRepositoryWriterErrors.length === 0,
+    [
+      `errors=${artifactRepositoryWriterErrors.join(",") || "none"}`,
+      `removeCommands=${artifactRepositoryWriterRemovalCommands.join(" | ") || "none"}`,
+    ].join(" "),
+  );
+
+  const migrateJobIamPolicy = runGcloudJson([
+    "run",
+    "jobs",
+    "get-iam-policy",
+    migrateJobName,
+    "--project",
+    projectId,
+    "--region",
+    region,
+    "--format=json",
+  ]);
+  const cloudRunDeployAdminRole = "roles/run.admin";
+  const cloudRunDeployAdminPolicies = [
+    {
+      policy: publicRunIamPolicy,
+      resourceName: `Cloud Run service ${publicService}`,
+      baseCommand: `gcloud run services remove-iam-policy-binding "${publicService}"`,
+      additionalArgs: [`  --project="${projectId}"`, `  --region="${region}"`],
+    },
+    {
+      policy: adminRunIamPolicy,
+      resourceName: `Cloud Run service ${adminService}`,
+      baseCommand: `gcloud run services remove-iam-policy-binding "${adminService}"`,
+      additionalArgs: [`  --project="${projectId}"`, `  --region="${region}"`],
+    },
+    {
+      policy: migrateJobIamPolicy,
+      resourceName: `Cloud Run Job ${migrateJobName}`,
+      baseCommand: `gcloud run jobs remove-iam-policy-binding "${migrateJobName}"`,
+      additionalArgs: [`  --project="${projectId}"`, `  --region="${region}"`],
+    },
+  ] as const;
+  const cloudRunDeployAdminErrors = cloudRunDeployAdminPolicies.flatMap(
+    (entry) => {
+      return readIamRoleMembershipErrors(entry.policy, {
+        resourceName: entry.resourceName,
+        role: cloudRunDeployAdminRole,
+        expectedMembers: expectedBuildServiceAccountUsers,
+      });
+    },
+  );
+  const cloudRunDeployAdminRemovalCommands =
+    cloudRunDeployAdminPolicies.flatMap((entry) => {
+      return formatIamPolicyBindingRemovalCommands({
+        baseCommand: entry.baseCommand,
+        role: cloudRunDeployAdminRole,
+        members: unexpectedMembersForRole(
+          entry.policy,
+          cloudRunDeployAdminRole,
+          expectedBuildServiceAccountUsers,
+        ),
+        additionalArgs: entry.additionalArgs,
+      });
+    });
+  addCheck(
+    "Cloud Run deploy admin grants are limited to build service account",
+    cloudRunDeployAdminErrors.length === 0,
+    [
+      `errors=${cloudRunDeployAdminErrors.join(",") || "none"}`,
+      `removeCommands=${cloudRunDeployAdminRemovalCommands.join(" | ") || "none"}`,
+    ].join(" "),
+  );
+
+  const runtimeServiceAccountIamPolicy = runGcloudJson([
+    "iam",
+    "service-accounts",
+    "get-iam-policy",
+    runtimeServiceAccount,
+    "--project",
+    projectId,
+    "--format=json",
+  ]);
+  const serviceAccountUserRole = "roles/iam.serviceAccountUser";
+  const serviceAccountTokenCreatorRole = "roles/iam.serviceAccountTokenCreator";
+  const runtimeServiceAccountActAsErrors = readIamRoleMembershipErrors(
+    runtimeServiceAccountIamPolicy,
+    {
+      resourceName: `runtime service account ${runtimeServiceAccount}`,
+      role: serviceAccountUserRole,
+      expectedMembers: expectedBuildServiceAccountUsers,
+    },
+  );
+  const runtimeServiceAccountActAsRemovalCommands =
+    formatIamPolicyBindingRemovalCommands({
+      baseCommand: `gcloud iam service-accounts remove-iam-policy-binding "${runtimeServiceAccount}"`,
+      role: serviceAccountUserRole,
+      members: unexpectedMembersForRole(
+        runtimeServiceAccountIamPolicy,
+        serviceAccountUserRole,
+        expectedBuildServiceAccountUsers,
+      ),
+      additionalArgs: [`  --project="${projectId}"`],
+    });
+  addCheck(
+    "runtime service account actAs grant is limited to build service account",
+    runtimeServiceAccountActAsErrors.length === 0,
+    [
+      `errors=${runtimeServiceAccountActAsErrors.join(",") || "none"}`,
+      `removeCommands=${runtimeServiceAccountActAsRemovalCommands.join(" | ") || "none"}`,
+    ].join(" "),
+  );
+
+  const runtimeServiceAccountTokenCreatorErrors = readIamRoleMembershipErrors(
+    runtimeServiceAccountIamPolicy,
+    {
+      resourceName: `runtime service account ${runtimeServiceAccount}`,
+      role: serviceAccountTokenCreatorRole,
+      expectedMembers: [],
+    },
+  );
+  const runtimeServiceAccountTokenCreatorRemovalCommands =
+    formatIamPolicyBindingRemovalCommands({
+      baseCommand: `gcloud iam service-accounts remove-iam-policy-binding "${runtimeServiceAccount}"`,
+      role: serviceAccountTokenCreatorRole,
+      members: unexpectedMembersForRole(
+        runtimeServiceAccountIamPolicy,
+        serviceAccountTokenCreatorRole,
+        [],
+      ),
+      additionalArgs: [`  --project="${projectId}"`],
+    });
+  addCheck(
+    "runtime service account tokenCreator grants are absent",
+    runtimeServiceAccountTokenCreatorErrors.length === 0,
+    [
+      `errors=${runtimeServiceAccountTokenCreatorErrors.join(",") || "none"}`,
+      `removeCommands=${runtimeServiceAccountTokenCreatorRemovalCommands.join(" | ") || "none"}`,
+    ].join(" "),
+  );
+
+  const cloudBuildSourceBucket = `${projectId}_cloudbuild`;
+  const cloudBuildSourceBucketIamPolicy = runGcloudJson([
+    "storage",
+    "buckets",
+    "get-iam-policy",
+    `gs://${cloudBuildSourceBucket}`,
+    "--format=json",
+  ]);
+  const cloudBuildSourceBucketRole = "roles/storage.objectViewer";
+  const cloudBuildSourceBucketErrors = readIamRoleMembershipErrors(
+    cloudBuildSourceBucketIamPolicy,
+    {
+      resourceName: `Cloud Build source bucket gs://${cloudBuildSourceBucket}`,
+      role: cloudBuildSourceBucketRole,
+      expectedMembers: expectedBuildServiceAccountUsers,
+    },
+  );
+  const cloudBuildSourceBucketRemovalCommands =
+    formatIamPolicyBindingRemovalCommands({
+      baseCommand: `gcloud storage buckets remove-iam-policy-binding "gs://${cloudBuildSourceBucket}"`,
+      role: cloudBuildSourceBucketRole,
+      members: unexpectedMembersForRole(
+        cloudBuildSourceBucketIamPolicy,
+        cloudBuildSourceBucketRole,
+        expectedBuildServiceAccountUsers,
+      ),
+    });
+  addCheck(
+    "Cloud Build source bucket objectViewer is limited to build service account",
+    cloudBuildSourceBucketErrors.length === 0,
+    [
+      `errors=${cloudBuildSourceBucketErrors.join(",") || "none"}`,
+      `removeCommands=${cloudBuildSourceBucketRemovalCommands.join(" | ") || "none"}`,
+    ].join(" "),
   );
   const expectedWifMember = `principalSet://iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${wifPoolId}/attribute.repository_id/${githubRepositoryId}`;
   const wifImpersonators = membersForRole(
@@ -711,19 +1349,28 @@ async function main(): Promise<void> {
     buildServiceAccountIam,
     "roles/iam.serviceAccountUser",
   );
-  const expectedBuildServiceAccountUser = `serviceAccount:${buildServiceAccount}`;
   addCheck(
     "build service account can act as itself for user-specified Cloud Build",
     serviceAccountUsers.includes(expectedBuildServiceAccountUser),
     `members=${serviceAccountUsers.join(",") || "none"}`,
   );
+  const buildServiceAccountActAsRemovalCommands =
+    formatBuildServiceAccountActAsRemovalCommands(
+      buildServiceAccount,
+      projectId,
+      serviceAccountUsers,
+    );
   addCheck(
-    "build service account actAs grant has no individual users",
+    "build service account actAs grant has only the build service account",
     serviceAccountUsers.length > 0 &&
       serviceAccountUsers.every((member) => {
         return member === expectedBuildServiceAccountUser;
       }),
-    `members=${serviceAccountUsers.join(",") || "none"} expected=${expectedBuildServiceAccountUser}`,
+    [
+      `members=${serviceAccountUsers.join(",") || "none"}`,
+      `expected=${expectedBuildServiceAccountUser}`,
+      `removeCommands=${buildServiceAccountActAsRemovalCommands.join(" | ") || "none"}`,
+    ].join(" "),
   );
 
   const buildServiceAccountKeys = tryRunGcloudJson([
@@ -752,6 +1399,57 @@ async function main(): Promise<void> {
     ),
   );
 
+  const schedulerServiceAccountKeys = tryRunGcloudJson([
+    "iam",
+    "service-accounts",
+    "keys",
+    "list",
+    "--iam-account",
+    schedulerServiceAccount,
+    "--project",
+    projectId,
+    "--managed-by=user",
+    "--format=json(name)",
+  ]);
+  const schedulerUserManagedKeys = schedulerServiceAccountKeys.ok
+    ? readRecords(schedulerServiceAccountKeys.value)
+        .map((record) => record["name"])
+        .filter((name): name is string => typeof name === "string")
+    : [];
+  addCheck(
+    "scheduler service account has no user-managed keys",
+    schedulerServiceAccountKeys.ok && schedulerUserManagedKeys.length === 0,
+    detailForResult(
+      schedulerServiceAccountKeys,
+      `userManagedKeys=${schedulerUserManagedKeys.join(",") || "none"}`,
+    ),
+  );
+
+  const cloudSchedulerJobs = tryRunGcloudJson([
+    "scheduler",
+    "jobs",
+    "list",
+    "--project",
+    projectId,
+    "--location",
+    region,
+    "--format=json(name,httpTarget.uri,httpTarget.headers,httpTarget.oidcToken)",
+  ]);
+  const cloudSchedulerOidcJobErrors = cloudSchedulerJobs.ok
+    ? readCloudSchedulerOidcJobErrors(cloudSchedulerJobs.value, {
+        publicDomain,
+        schedulerServiceAccount,
+      })
+    : [];
+  addCheck(
+    "Cloud Scheduler cron jobs use Google OIDC tokens only",
+    cloudSchedulerJobs.ok && cloudSchedulerOidcJobErrors.length === 0,
+    detailForResult(
+      cloudSchedulerJobs,
+      `schedulerServiceAccount=${schedulerServiceAccount} audience=${publicDomain} errors=${cloudSchedulerOidcJobErrors.join(",") || "none"}`,
+    ),
+  );
+
   const cloudBuildTriggerResults = await auditCloudBuildTriggers(
     projectId,
     region,
@@ -769,12 +1467,19 @@ async function main(): Promise<void> {
     },
   );
   const triggerNames = cloudBuildTriggerResults.flatMap((entry) => entry.names);
+  const triggerDeletionCommands = formatCloudBuildTriggerDeletionCommands(
+    projectId,
+    triggerNamesByLocation,
+  );
   addCheck(
     "legacy Cloud Build triggers are absent in all Cloud Build regions and global",
     cloudBuildTriggerAuditErrors.length === 0 && triggerNames.length === 0,
     cloudBuildTriggerAuditErrors.length > 0
       ? cloudBuildTriggerAuditErrors.join("; ")
-      : `triggers=${formatNamedResourcesByLocation(triggerNamesByLocation)}`,
+      : [
+          `triggers=${formatNamedResourcesByLocation(triggerNamesByLocation)}`,
+          `deleteCommands=${triggerDeletionCommands.join(" | ") || "none"}`,
+        ].join(" "),
   );
 
   const cloudBuildConnectionResults = await auditCloudBuildConnections(
@@ -796,24 +1501,33 @@ async function main(): Promise<void> {
   const connectionNames = cloudBuildConnectionResults.flatMap((entry) => {
     return entry.names;
   });
+  const connectionDeletionCommands = formatCloudBuildConnectionDeletionCommands(
+    projectId,
+    connectionNamesByLocation,
+  );
   addCheck(
     "legacy Cloud Build GitHub connections are absent in all Cloud Build regions",
     cloudBuildConnectionAuditErrors.length === 0 &&
       connectionNames.length === 0,
     cloudBuildConnectionAuditErrors.length > 0
       ? cloudBuildConnectionAuditErrors.join("; ")
-      : `connections=${formatNamedResourcesByLocation(connectionNamesByLocation)}`,
+      : [
+          `connections=${formatNamedResourcesByLocation(connectionNamesByLocation)}`,
+          `deleteCommands=${connectionDeletionCommands.join(" | ") || "none"}`,
+        ].join(" "),
   );
 
   console.log("GCP production IAP audit");
   console.log(`project=${projectId}`);
   console.log(`region=${region}`);
   console.log(`adminService=${adminService}`);
+  console.log(`migrateJob=${migrateJobName}`);
   console.log(`expectedOrganization=${expectedOrganizationId}`);
   console.log(`expectedRoleGroups=${expectedRoleGroupEmails.join(",")}`);
   console.log(`cloudIdentityDomain=${cloudIdentityDomain}`);
   console.log(`runtimeServiceAccount=${runtimeServiceAccount}`);
   console.log(`buildServiceAccount=${buildServiceAccount}`);
+  console.log(`schedulerServiceAccount=${schedulerServiceAccount}`);
   console.log(`githubRepository=${githubRepository}`);
   console.log(`githubRepositoryId=${githubRepositoryId}`);
   console.log(`githubRepositoryOwnerId=${githubRepositoryOwnerId}`);

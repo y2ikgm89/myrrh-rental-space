@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { getCustomerById } from "@/admin/queries/customer";
@@ -19,6 +20,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const customer = await getCustomerById(id);
 
@@ -34,6 +37,8 @@ export async function generateMetadata({
 }
 
 export default async function CustomerDetailPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
   const customer = await getCustomerById(id);
 

@@ -8,6 +8,7 @@
  */
 
 import type { ReactElement } from "react";
+import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { SectionType } from "@/shared/lib/validations/section";
 import { getFeatureFilterContext } from "@/shared/lib/features/check";
@@ -145,6 +146,8 @@ export async function SectionRenderer({
   pageSlug: _pageSlug,
   inquiryDefaults,
 }: SectionRendererProps): Promise<ReactElement | null> {
+  await connection();
+
   // 該当 section type が disabled feature module に紐づく場合は早期 null。
   // 例: spaces feature OFF 時にホームに埋め込まれた space-showcase / space-list を非表示化。
   // 公開ページ自体の 404 ガードは page.tsx の requireFeatureEnabled が担う。

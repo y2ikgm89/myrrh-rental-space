@@ -650,6 +650,14 @@ async function seedSpaceCategories() {
 // Spaces (with Location/Category relations)
 // =============================================================================
 
+const REVIEW_E2E_SPACE_SLUG = "coworking-space";
+const DEV_CUSTOMER_EMAIL = "dev-customer@example.com";
+const SEED_REVIEWABLE_SPACE_SLUGS = [
+  "meeting-room-a",
+  "seminar-room",
+  REVIEW_E2E_SPACE_SLUG,
+] as const;
+
 async function seedSpaces(overridePublished?: boolean) {
   // 先にLocation/Categoryを取得
   const locations = await prisma.location.findMany({
@@ -688,6 +696,7 @@ async function seedSpaces(overridePublished?: boolean) {
       ],
       isPublished: overridePublished ?? true,
       isActive: true,
+      reviewsEnabled: overridePublished !== false,
       ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
       ...(meetingRoom?.id != null ? { categoryId: meetingRoom.id } : {}),
     },
@@ -714,6 +723,7 @@ async function seedSpaces(overridePublished?: boolean) {
       ],
       isPublished: overridePublished ?? true,
       isActive: true,
+      reviewsEnabled: overridePublished !== false,
       ...(mainBuilding?.id != null ? { locationId: mainBuilding.id } : {}),
       ...(seminarRoom?.id != null ? { categoryId: seminarRoom.id } : {}),
     },
@@ -740,6 +750,7 @@ async function seedSpaces(overridePublished?: boolean) {
       ],
       isPublished: overridePublished ?? true,
       isActive: true,
+      reviewsEnabled: overridePublished !== false,
       ...(annex?.id != null ? { locationId: annex.id } : {}),
       ...(coworking?.id != null ? { categoryId: coworking.id } : {}),
     },
@@ -755,6 +766,16 @@ async function seedSpaces(overridePublished?: boolean) {
     } else {
       console.log(`⏭️ Skipped existing space: ${space.name}`);
     }
+  }
+
+  if (overridePublished !== false) {
+    const result = await prisma.space.updateMany({
+      where: { slug: { in: [...SEED_REVIEWABLE_SPACE_SLUGS] } },
+      data: { reviewsEnabled: true },
+    });
+    console.log(
+      `✅ Enabled reviews for ${result.count.toString()} seed space(s)`,
+    );
   }
 }
 
@@ -1888,6 +1909,21 @@ async function seedReservations() {
     });
 
     if (!existing) {
+      const overlappingActiveReservation = await prisma.reservation.findFirst({
+        where: {
+          spaceId: space.id,
+          deletedAt: null,
+          status: { in: ["PENDING", "CONFIRMED"] },
+          AND: [{ startTime: { lt: endDate } }, { endTime: { gt: date } }],
+        },
+        select: { id: true },
+      });
+
+      if (overlappingActiveReservation) {
+        console.log(`⏭️ Skipped overlapping reservation`);
+        continue;
+      }
+
       const basePrice = Number(space.hourlyPrice) * res.duration;
       let couponDiscountAmount: number | null = null;
       let couponId: string | null = null;
@@ -1936,19 +1972,18 @@ async function seedReservations() {
 // =============================================================================
 
 async function seedDevCustomerAndReservations() {
-  const DEV_EMAIL = "dev-customer@example.com";
   const DEV_PASSWORD = "dev-password-12345";
   const DEV_NAME = "開発テスト";
 
   // 1) User + credential account（Better Auth 互換）
   await createOrUpdateUserWithCredential({
-    email: DEV_EMAIL,
+    email: DEV_CUSTOMER_EMAIL,
     password: DEV_PASSWORD,
     name: DEV_NAME,
     role: Role.CUSTOMER,
   });
   const user = await prisma.user.findUnique({
-    where: { email: DEV_EMAIL },
+    where: { email: DEV_CUSTOMER_EMAIL },
     select: { id: true },
   });
   if (!user) {
@@ -1960,13 +1995,13 @@ async function seedDevCustomerAndReservations() {
   const customer = await prisma.customer.upsert({
     where: { userId: user.id },
     update: {
-      email: DEV_EMAIL,
-      emailCanonical: normalizeSeedEmail(DEV_EMAIL),
+      email: DEV_CUSTOMER_EMAIL,
+      emailCanonical: normalizeSeedEmail(DEV_CUSTOMER_EMAIL),
     },
     create: {
       userId: user.id,
-      email: DEV_EMAIL,
-      emailCanonical: normalizeSeedEmail(DEV_EMAIL),
+      email: DEV_CUSTOMER_EMAIL,
+      emailCanonical: normalizeSeedEmail(DEV_CUSTOMER_EMAIL),
       lastName: "開発",
       firstName: "テスト",
       phoneNumber: "090-0000-0000",
@@ -2123,7 +2158,7 @@ async function seedDevCustomerAndReservations() {
   }
 
   console.log(
-    `✅ Seeded dev customer (${DEV_EMAIL}) + ${created.toString()} reservation(s) + review/inquiry (${inquiryCreated.toString()})`,
+    `✅ Seeded dev customer (${DEV_CUSTOMER_EMAIL}) + ${created.toString()} reservation(s) + review/inquiry (${inquiryCreated.toString()})`,
   );
 }
 
@@ -3443,6 +3478,93 @@ async function seedSpaceReviews() {
   console.log(`✅ Upserted ${created.toString()} space reviews`);
 }
 
+async function seedPublicReviewE2EFixture() {
+  const [space, customer] = await Promise.all([
+    prisma.space.findUnique({
+      where: { slug: REVIEW_E2E_SPACE_SLUG },
+      select: { id: true, hourlyPrice: true },
+    }),
+    prisma.customer.findFirst({
+      where: { email: DEV_CUSTOMER_EMAIL, isActive: true },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!space || !customer) {
+    console.log(
+      `⚠️ ${REVIEW_E2E_SPACE_SLUG} or dev customer missing. Skipping public review E2E fixture.`,
+    );
+    return;
+  }
+
+  const notes = "[E2E] public review fixture";
+  const start = new Date();
+  start.setDate(start.getDate() - 75);
+  start.setHours(9, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(11, 0, 0, 0);
+  const basePrice = Number(space.hourlyPrice) * 2;
+
+  const existingReservation = await prisma.reservation.findFirst({
+    where: { notes },
+    select: { id: true },
+  });
+
+  const reservation = existingReservation
+    ? await prisma.reservation.update({
+        where: { id: existingReservation.id },
+        data: {
+          spaceId: space.id,
+          customerId: customer.id,
+          startTime: start,
+          endTime: end,
+          status: "COMPLETED",
+          paymentStatus: "PAID",
+          basePrice: new Prisma.Decimal(basePrice),
+          totalPrice: new Prisma.Decimal(basePrice),
+          notes,
+        },
+        select: { id: true },
+      })
+    : await prisma.reservation.create({
+        data: {
+          spaceId: space.id,
+          customerId: customer.id,
+          startTime: start,
+          endTime: end,
+          status: "COMPLETED",
+          paymentStatus: "PAID",
+          basePrice: new Prisma.Decimal(basePrice),
+          totalPrice: new Prisma.Decimal(basePrice),
+          notes,
+        },
+        select: { id: true },
+      });
+
+  await prisma.spaceReview.upsert({
+    where: { reservationId: reservation.id },
+    update: {
+      spaceId: space.id,
+      customerId: customer.id,
+      rating: 5,
+      title: "[E2E] 公開レビュー検証用",
+      comment: "公開スペース詳細のレビュー表示を検証する固定 fixture。",
+      isPublished: true,
+    },
+    create: {
+      reservationId: reservation.id,
+      spaceId: space.id,
+      customerId: customer.id,
+      rating: 5,
+      title: "[E2E] 公開レビュー検証用",
+      comment: "公開スペース詳細のレビュー表示を検証する固定 fixture。",
+      isPublished: true,
+    },
+  });
+
+  console.log("✅ Upserted public review E2E fixture");
+}
+
 // =============================================================================
 // Admin Notifications（管理画面通知ベル）
 // =============================================================================
@@ -4401,6 +4523,7 @@ async function seedDev() {
 
   // Phase 9: 新機能（レビュー・通知・メディア・ブロック・ページ権限）
   await seedSpaceReviews();
+  await seedPublicReviewE2EFixture();
   await seedAdminNotifications();
   await seedMedia();
   await seedBlockTemplates();
@@ -4424,7 +4547,7 @@ async function seedProduction(email: string | undefined, name: string) {
     await seedAdmin(email, name, Role.SUPER_ADMIN);
   } else {
     console.log(
-      "⏭️ Skipped production admin seed. Use INITIAL_ADMIN_EMAIL for startup bootstrap.",
+      "⏭️ Skipped production admin seed. Pass `--production <email> <name>` when an initial staff account is required.",
     );
   }
 

@@ -109,6 +109,7 @@ beforeEach(() => {
   mockServerEnv["ADMIN_ROLE_GROUP_ADMIN_EMAIL"] = undefined;
   mockServerEnv["ADMIN_ROLE_GROUP_EDITOR_EMAIL"] = undefined;
   mockServerEnv["ADMIN_ROLE_GROUP_VIEWER_EMAIL"] = undefined;
+  mockServerEnv["E2E_RUNTIME"] = undefined;
 });
 
 describe("admin auth IAP boundary", () => {
@@ -205,6 +206,70 @@ describe("admin auth IAP boundary", () => {
       },
     });
     expect(mockIsGoogleWorkspaceGroupMember).not.toHaveBeenCalled();
+  });
+
+  test("production-mode E2E では ADMIN_TEST_IAP_EMAIL を IAP 代替 identity として使う", async () => {
+    mockServerEnv["NODE_ENV"] = "production";
+    mockServerEnv["CI"] = undefined;
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue({
+      id: "user-1",
+      email: "admin@example.com",
+      name: "Admin",
+      image: null,
+      role: "ADMIN",
+      emailVerified: true,
+    });
+
+    const user = await getCurrentAdminUser(new Headers());
+
+    expect(user?.email).toBe("admin@example.com");
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { email: "admin@example.com" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        role: true,
+        emailVerified: true,
+      },
+    });
+  });
+
+  test("production-mode E2E の ADMIN_TEST_IAP_EMAIL は Google Group sync を bypass する", async () => {
+    enableRoleGroupSyncEnv();
+    mockServerEnv["NODE_ENV"] = "production";
+    mockServerEnv["CI"] = undefined;
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockResolveIapIdentity.mockResolvedValue(null);
+    mockFindUnique.mockResolvedValue({
+      id: "user-1",
+      email: "admin@example.com",
+      name: "Admin",
+      image: null,
+      role: "ADMIN",
+      emailVerified: true,
+    });
+
+    const user = await getCurrentAdminUser(new Headers());
+
+    expect(user?.email).toBe("admin@example.com");
+    expect(mockIsGoogleWorkspaceGroupMember).not.toHaveBeenCalled();
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { email: "admin@example.com" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        role: true,
+        emailVerified: true,
+      },
+    });
   });
 
   test("通常 production では ADMIN_TEST_IAP_EMAIL を無視する", async () => {

@@ -1,10 +1,11 @@
 /**
  * マイグレーション安全ゲート — 変更された Prisma migration SQL を Squawk で lint し、
- * expand / contract 規約（AGENTS.md / next-db-cache-boundaries skill）を CI で強制する。
+ * Cloud Run rollout 中の旧 revision 参照事故を CI で検出する。
  *
  * 目的: Cloud Run のローリング切替窓（migrate 完了〜新リビジョン ready）で
- * 旧コードが破壊済み新スキーマを叩く 500 を、後方互換でない変更を merge 前に
- * ブロックすることで構造的に防ぐ。
+ * 旧コードが破壊済み新スキーマを叩く 500 を merge 前に検出する。
+ * 意図的な破壊的 migration は SQL に rule 名つき `-- squawk-ignore <rule>`
+ * または `-- squawk-ignore-file <rule>` を置き、旧参照ゼロを確認したうえで明示する。
  *
  * 使い方:
  *   bun scripts/lint-migrations.ts <file.sql> [<file2.sql> ...]  # 指定ファイルを lint
@@ -51,12 +52,12 @@ function selfTest(): number {
     {
       file: "safe.sql",
       expectViolation: false,
-      desc: "後方互換な変更は通る（除外 rule の誤発火なし）",
+      desc: "additive migration は通る（除外 rule の誤発火なし）",
     },
     {
       file: "ignored.sql",
       expectViolation: false,
-      desc: "squawk-ignore で contract DROP は通る",
+      desc: "squawk-ignore で意図的な破壊的 migration は通る",
     },
   ] as const;
 

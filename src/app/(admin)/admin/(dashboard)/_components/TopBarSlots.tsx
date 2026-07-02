@@ -1,4 +1,5 @@
 import { IconBell } from "@tabler/icons-react";
+import { connection } from "next/server";
 import { getAdminBrandingSettings } from "@/shared/domain/settings/queries/organization";
 import { getRecentNotifications } from "@/admin/queries/notification";
 import { NotificationBell } from "./NotificationBell";
@@ -13,6 +14,8 @@ export function TopBarBrandingFallback(): ReactElement {
 }
 
 export async function TopBarBrandingSlot(): Promise<ReactElement> {
+  await connection();
+
   const settings = await getAdminBrandingSettings();
   return (
     <TopBarBranding

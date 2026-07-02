@@ -8,7 +8,7 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function EventDetailLoading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Page hero (compact) */}
       <section className="bg-background py-[var(--spacing-fluid-lg)]">
         <Container>
@@ -57,6 +57,6 @@ export default function EventDetailLoading() {
           </div>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

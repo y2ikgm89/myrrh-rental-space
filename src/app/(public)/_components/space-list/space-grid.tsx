@@ -51,7 +51,7 @@ export function SpaceGrid({ spaces, reviewStats, hasFilters }: SpaceGridProps) {
 
   return (
     <ScrollRevealGroup className="divide-y divide-divider">
-      {spaces.map((space) => {
+      {spaces.map((space, index) => {
         const stats = reviewStats?.[space.id];
         return (
           <SpaceCard
@@ -67,6 +67,7 @@ export function SpaceGrid({ spaces, reviewStats, hasFilters }: SpaceGridProps) {
             gallery={space.gallery}
             categoryName={space.category?.name}
             layout="horizontal"
+            imagePriority={index === 0}
             {...(stats && stats.totalCount > 0
               ? {
                   averageRating: stats.averageRating,

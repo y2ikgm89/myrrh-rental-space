@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { hasPermission } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { createMutationError } from "@/shared/lib/mutation-result";

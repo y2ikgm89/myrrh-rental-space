@@ -11,7 +11,7 @@ import { Skeleton } from "@/public/components/design-system/skeleton";
 
 export default function Loading() {
   return (
-    <main id="main-content" aria-busy="true">
+    <div aria-busy="true">
       {/* Page hero placeholder（中央寄せ minimal variant 相当） */}
       <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
@@ -35,6 +35,6 @@ export default function Loading() {
           </div>
         </div>
       </Container>
-    </main>
+    </div>
   );
 }

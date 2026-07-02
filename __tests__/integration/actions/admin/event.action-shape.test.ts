@@ -86,8 +86,6 @@ mock.module("@/shared/lib/cloudflare", () => ({
   purgeCloudflareCacheByTags: mock(async () => ({ success: true })),
   callPurgeApiPublic: mock(async () => ({ success: true })),
   getCloudflareCredentialsValidated: mock(() => null),
-  setCloudflareTagPurgeEnabled: mock(() => {}),
-  isCloudflareTagPurgeEnabled: mock(() => true),
 }));
 
 mock.module("@/shared/lib/async-utils", () => ({

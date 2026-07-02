@@ -174,7 +174,10 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
               }}
               disabled={isPending}
             >
-              <SelectTrigger className="w-48">
+              <SelectTrigger
+                className="w-48"
+                aria-label={`予約ステータスを変更（現在: ${RESERVATION_STATUS_LABELS[reservation.status]}）`}
+              >
                 <SelectValue placeholder="ステータスを変更" />
               </SelectTrigger>
               <SelectContent>

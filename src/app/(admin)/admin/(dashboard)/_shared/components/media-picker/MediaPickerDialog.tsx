@@ -38,8 +38,8 @@ export interface MediaPickerDialogProps {
   defaultUsage?: MediaUsage;
   initialSelected?: SelectedMedia[];
   showUrlTab?: boolean;
-  /** 許容するメディアカテゴリ (default: "image") */
-  accept?: MediaAcceptType;
+  /** 許容するメディアカテゴリ */
+  accept: MediaAcceptType;
 }
 
 export function MediaPickerDialog({
@@ -51,7 +51,7 @@ export function MediaPickerDialog({
   defaultUsage = "GENERAL",
   initialSelected = [],
   showUrlTab = true,
-  accept = "image",
+  accept,
 }: MediaPickerDialogProps) {
   const [activeTab, setActiveTab] = useState<MediaPickerTab>("library");
 
@@ -117,7 +117,7 @@ export function MediaPickerDialog({
         <DialogHeader className="shrink-0 border-b p-4 pr-12">
           <DialogTitle>メディアを選択</DialogTitle>
           <DialogDescription className="sr-only">
-            メディアライブラリから画像を検索して選択するか、新しい画像をアップロードします。
+            メディアライブラリから対象のメディアを検索して選択するか、新しいメディアをアップロードします。
           </DialogDescription>
         </DialogHeader>
 

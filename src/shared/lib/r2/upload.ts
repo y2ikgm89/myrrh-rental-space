@@ -66,14 +66,6 @@ export type MediaUploadValidation = {
 // Constants
 // =============================================================================
 
-/**
- * デフォルト validation: 画像のみ（旧 `DEFAULT_VALIDATION` 互換の挙動を維持）。
- * 動画 / 音声 / 文書を受け取る upload 経路は呼び出し側で `allowedTypes` を明示する。
- */
-export const DEFAULT_VALIDATION: MediaUploadValidation = {
-  allowedTypes: SUPPORTED_IMAGE_MIME_TYPES,
-};
-
 /** 画像のみを受け付ける明示エイリアス（OGP / hero / favicon 等） */
 export const IMAGE_VALIDATION: MediaUploadValidation = {
   allowedTypes: SUPPORTED_IMAGE_MIME_TYPES,
@@ -140,8 +132,8 @@ function validatePerTypeSize(
 type UploadOptions = {
   /** 任意のサブフォルダ（`isValidStorageFolder` を通過する値のみ） */
   folder?: string;
-  /** デフォルトは {@link DEFAULT_VALIDATION}（image-only） */
-  validation?: MediaUploadValidation;
+  /** 呼び出し側が受け付ける MIME policy を必ず宣言する */
+  validation: MediaUploadValidation;
   /** デフォルトは Cloudflare CDN 向け immutable long-cache */
   cacheControl?: string;
 };
@@ -163,9 +155,9 @@ type UploadOptions = {
 export async function uploadFile(
   file: File,
   prefix: StoragePrefix,
-  options?: UploadOptions,
+  options: UploadOptions,
 ): Promise<UploadResult> {
-  const validation = options?.validation ?? DEFAULT_VALIDATION;
+  const validation = options.validation;
 
   const sizeError = preValidateSize(file, validation);
   if (sizeError) {
@@ -208,7 +200,7 @@ export async function uploadFile(
     const key = generateStorageKey({
       prefix,
       contentType: detected,
-      ...(options?.folder !== undefined && { folder: options.folder }),
+      ...(options.folder !== undefined && { folder: options.folder }),
     });
 
     await getR2Client().send(
@@ -217,7 +209,7 @@ export async function uploadFile(
         Key: key,
         Body: body,
         ContentType: detected,
-        CacheControl: options?.cacheControl ?? DEFAULT_CACHE_CONTROL,
+        CacheControl: options.cacheControl ?? DEFAULT_CACHE_CONTROL,
         ContentLength: file.size,
       }),
     );
@@ -247,7 +239,7 @@ export async function uploadFile(
 export async function uploadFiles(
   files: File[],
   prefix: StoragePrefix,
-  options?: UploadOptions,
+  options: UploadOptions,
 ): Promise<{
   success: boolean;
   results: UploadResult[];

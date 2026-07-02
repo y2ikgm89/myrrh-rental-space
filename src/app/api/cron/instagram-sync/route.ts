@@ -1,7 +1,7 @@
 /**
  * Instagram Feed Sync Cron API
  *
- * Cloud Schedulerまたは外部スケジューラーから定期的に呼び出され、
+ * Cloud Scheduler から定期的に呼び出され、
  * Instagramフィードの投稿データをDBに同期します。
  *
  * ## 機能
@@ -13,6 +13,7 @@
 
 import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 import { getDecryptedInstagramToken } from "@/shared/domain/instagram/queries";
 import { syncInstagramFeed } from "@/shared/domain/instagram/commands";
 import { fetchInstagramFeed } from "@/shared/lib/instagram";
@@ -22,7 +23,6 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
@@ -31,17 +31,16 @@ import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
  * Instagram Feed Sync Cronエンドポイント
  * GET /api/cron/instagram-sync
  *
- * Cloud Schedulerまたは外部スケジューラーから呼び出される
+ * Cloud Scheduler から呼び出される
  * 毎日1〜数回実行を推奨
  *
- * セキュリティ: CRON_SECRET環境変数による認証
+ * セキュリティ: Cloud Scheduler OIDC token による認証
  */
 export async function GET(request: Request) {
   try {
-    const authorizationResult = authorizeCronRequest({
-      authorizationHeader: request.headers.get("authorization"),
-      secret: serverEnv.CRON_SECRET,
-      nodeEnv: serverEnv.NODE_ENV,
+    await connection();
+    const authorizationResult = await authorizeCronRequest({
+      request,
       operation: "instagramFeedSyncCron",
     });
     if (authorizationResult) {

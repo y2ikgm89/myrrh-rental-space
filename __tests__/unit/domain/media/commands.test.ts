@@ -41,13 +41,28 @@ type MockUploadResult =
     }
   | { success: false; error: string };
 
-const mockUploadFile = mock<() => Promise<MockUploadResult>>(() =>
-  Promise.resolve({
-    success: true,
-    url: "https://media.test.example.com/media/folder/x.jpg",
-    path: "media/folder/x.jpg",
-    contentType: "image/jpeg",
-  }),
+const MOCK_MEDIA_VALIDATION = {
+  allowedTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "video/mp4",
+    "video/webm",
+    "audio/mpeg",
+    "audio/wav",
+    "application/pdf",
+  ],
+} as const;
+
+const mockUploadFile = mock<(...args: unknown[]) => Promise<MockUploadResult>>(
+  () =>
+    Promise.resolve({
+      success: true,
+      url: "https://media.test.example.com/media/folder/x.jpg",
+      path: "media/folder/x.jpg",
+      contentType: "image/jpeg",
+    }),
 );
 const mockDeleteFile = mock<() => Promise<{ success: boolean }>>(() =>
   Promise.resolve({ success: true }),
@@ -57,6 +72,7 @@ const mockDeleteFiles = mock<() => Promise<{ success: boolean }>>(() =>
 );
 
 mock.module("@/shared/lib/r2/upload", () => ({
+  MEDIA_VALIDATION: MOCK_MEDIA_VALIDATION,
   uploadFile: mockUploadFile,
 }));
 mock.module("@/shared/lib/r2/delete", () => ({
@@ -137,6 +153,10 @@ describe("uploadMediaCommand", () => {
 
       expect(result).toEqual({ id: MEDIA_ID, url: MEDIA_URL });
       expect(mockUploadFile).toHaveBeenCalledTimes(1);
+      expect(mockUploadFile).toHaveBeenCalledWith(MOCK_FILE, "media", {
+        folder: "media",
+        validation: MOCK_MEDIA_VALIDATION,
+      });
       expect(mockMediaCreate).toHaveBeenCalledTimes(1);
     });
 

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import Link from "next/link";
 import {
   IconDownload,
@@ -30,6 +31,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const event = await getEventById(id);
 
@@ -48,6 +51,8 @@ export default async function EventDetailPage({
   params,
   searchParams,
 }: PageProps) {
+  await connection();
+
   const { id } = await params;
   const { page, perPage } =
     await loadAdminEventRegistrationsSearchParams(searchParams);

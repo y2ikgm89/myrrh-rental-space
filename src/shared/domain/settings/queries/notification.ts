@@ -8,7 +8,6 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
-import { parseStringArrayOrNull } from "@/shared/lib/json-validators";
 import { mergeRecipients } from "@/shared/lib/email/recipients";
 
 /**
@@ -16,7 +15,7 @@ import { mergeRecipients } from "@/shared/lib/email/recipients";
  *
  * - スタッフは `User.id` で保存し、ここで毎回 findMany して**現在の**メールに解決する
  *   （メール変更・退職に自動追従。意図的に非キャッシュ＝stale を作らない）。
- * - カスタムは `notificationEmailAddresses`（カンマ区切り）。
+ * - カスタムは `notificationEmailAddresses`（PostgreSQL text[] / Prisma String[]）。
  * - 重複は大文字小文字無視で除去（スタッフ優先・順序保持）。
  */
 export async function getNotificationEmailAddresses(): Promise<string[]> {
@@ -35,12 +34,9 @@ export async function getNotificationEmailAddresses(): Promise<string[]> {
     operationName: "getNotificationEmailAddresses",
   });
 
-  const customEmails = (settings?.notificationEmailAddresses ?? "")
-    .split(",")
-    .map((email) => email.trim())
-    .filter((email) => email.length > 0);
+  const customEmails = settings?.notificationEmailAddresses ?? [];
 
-  const staffIds = parseStringArrayOrNull(settings?.notificationStaffIds) ?? [];
+  const staffIds = settings?.notificationStaffIds ?? [];
   let staffEmails: string[] = [];
   if (staffIds.length > 0) {
     const users = await safeFetch({

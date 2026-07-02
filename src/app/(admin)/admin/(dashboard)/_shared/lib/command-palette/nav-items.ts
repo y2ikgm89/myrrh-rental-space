@@ -1,6 +1,6 @@
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import type { NavItem } from "@/shared/lib/command-palette-types";
-import { hasPermission } from "@/admin/lib/permissions";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 
 const ALL_NAV_ITEMS: readonly NavItem[] = [
   {

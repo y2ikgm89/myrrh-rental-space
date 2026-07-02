@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { NewsArticleJsonLd } from "@/public/components/seo/json-ld";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { ArticleHeader } from "@/public/components/layouts/article-header";
@@ -30,6 +31,8 @@ type PublishedNewsItem = NonNullable<
 >;
 
 export async function buildNewsMetadata(slug: string): Promise<Metadata> {
+  await connection();
+
   const [newsItem, settings] = await Promise.all([
     getPublishedNewsItem(slug),
     getSeoSettings(),
@@ -62,6 +65,8 @@ export async function NewsDetailPageContent({
   newsItem: PublishedNewsItem;
   banner?: ReactNode;
 }): Promise<ReactElement> {
+  await connection();
+
   const [siteLayout, sidebarSettings] = await Promise.all([
     getSiteLayoutSettings(),
     getSidebarSettings(),

@@ -30,10 +30,6 @@ Official references:
   <https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts>
 - Cloud Build locations:
   <https://cloud.google.com/build/docs/locations>
-- Cloud Build triggers:
-  <https://cloud.google.com/build/docs/automating-builds/create-manage-triggers>
-- `gcloud builds triggers run`:
-  <https://cloud.google.com/sdk/gcloud/reference/builds/triggers/run>
 - Google Cloud Workload Identity Federation for deployment pipelines:
   <https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines>
 - google-github-actions/auth:
@@ -50,6 +46,23 @@ Official references:
   <https://cloud.google.com/identity/docs/how-to/setup>
 - Service account key best practices:
   <https://cloud.google.com/iam/docs/best-practices-for-managing-service-account-keys>
+- gcloud run jobs update:
+  <https://cloud.google.com/sdk/gcloud/reference/run/jobs/update>
+- gcloud artifacts repositories get-iam-policy:
+  <https://cloud.google.com/sdk/gcloud/reference/artifacts/repositories/get-iam-policy>
+- gcloud run services get-iam-policy:
+  <https://cloud.google.com/sdk/gcloud/reference/run/services/get-iam-policy>
+- gcloud run jobs get-iam-policy:
+  <https://cloud.google.com/sdk/gcloud/reference/run/jobs/get-iam-policy>
+- gcloud iam service-accounts get-iam-policy:
+  <https://cloud.google.com/sdk/gcloud/reference/iam/service-accounts/get-iam-policy>
+- gcloud storage buckets get-iam-policy:
+  <https://cloud.google.com/sdk/gcloud/reference/storage/buckets/get-iam-policy>
+
+Legacy Cloud Build cleanup reference, for auditing or deleting leftovers only:
+
+- Cloud Build triggers:
+  <https://cloud.google.com/build/docs/automating-builds/create-manage-triggers>
 
 ## Target architecture
 
@@ -204,8 +217,8 @@ signed-header audience format:
 
 `GCP_ORGANIZATION_ID`, `CLOUD_IDENTITY_DOMAIN`, `GITHUB_REPOSITORY`,
 `GITHUB_REPOSITORY_ID`, `GITHUB_REPOSITORY_OWNER_ID`, `RUNTIME_SA`,
-`BUILD_SA`, `WIF_POOL_ID`, and `WIF_PROVIDER_ID` are required for production
-verification.
+`BUILD_SA`, `AR_REPOSITORY`, `WIF_POOL_ID`, and `WIF_PROVIDER_ID` are required
+for production verification.
 The audit does not infer or accept the organization, Google Group, GitHub
 repository identity, or deploy identity from loose defaults; they must match
 these exact values.
@@ -317,7 +330,7 @@ If the repository already exists, keep it and do not recreate it.
 
 ## Service accounts
 
-Create a runtime identity and a build identity:
+Create runtime, build, and scheduler identities:
 
 ```bash
 gcloud iam service-accounts create myrrh-rental-space-runtime \
@@ -325,6 +338,15 @@ gcloud iam service-accounts create myrrh-rental-space-runtime \
 
 gcloud iam service-accounts create myrrh-rental-space-build \
   --display-name="Myrrh Cloud Build deployer"
+
+gcloud iam service-accounts create myrrh-rental-space-scheduler \
+  --display-name="Myrrh Cloud Scheduler OIDC caller"
+```
+
+Use this address in the examples below:
+
+```bash
+SCHEDULER_SA="myrrh-rental-space-scheduler@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
 Grant the build identity only the deployment permissions it needs:
@@ -377,6 +399,7 @@ sets `$BUILD_SA` as the user-specified Cloud Build service account. The caller
 therefore needs `iam.serviceAccounts.actAs` on that exact service account.
 In production, keep both broad project grants absent:
 
+- project-level `roles/iam.serviceAccountTokenCreator` grants must remain absent.
 - project-level `roles/iam.serviceAccountUser` grants must remain absent.
 - project-level `roles/iam.workloadIdentityUser` grants must remain absent.
 - project-level `roles/run.admin` for `$BUILD_SA` must remain absent.
@@ -384,6 +407,9 @@ In production, keep both broad project grants absent:
 
 Grant deploy impersonation only on the exact service account resource that needs
 it.
+For this same-project production baseline, Cloud Build deploys to Cloud Run by
+giving `$BUILD_SA` `roles/iam.serviceAccountUser` on `$RUNTIME_SA`; do not leave
+`roles/iam.serviceAccountTokenCreator` on `$RUNTIME_SA`.
 
 Grant Cloud Run admin only on the existing public service, admin service, and
 migration job resources. IAP is enabled once during setup and then verified by
@@ -479,7 +505,6 @@ Required by production startup:
 - `DATABASE_URL`
 - `BETTER_AUTH_SECRET`
 - `ENCRYPTION_KEY`
-- `CRON_SECRET`
 - `R2_ACCOUNT_ID`
 - `R2_ACCESS_KEY_ID`
 - `R2_SECRET_ACCESS_KEY`
@@ -505,7 +530,6 @@ for name in \
   DATABASE_URL \
   BETTER_AUTH_SECRET \
   ENCRYPTION_KEY \
-  CRON_SECRET \
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
   R2_ACCOUNT_ID \
   R2_ACCESS_KEY_ID \
@@ -534,7 +558,6 @@ for name in \
   DATABASE_URL \
   BETTER_AUTH_SECRET \
   ENCRYPTION_KEY \
-  CRON_SECRET \
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
   R2_ACCOUNT_ID \
   R2_ACCESS_KEY_ID \
@@ -560,10 +583,18 @@ gcloud secrets add-iam-policy-binding NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
   --role="roles/secretmanager.secretAccessor"
 ```
 
+Do not grant `roles/secretmanager.secretAccessor` at the project level. Keep
+Secret Manager access on each secret resource with `gcloud secrets
+add-iam-policy-binding`. The runtime service account is the only accessor for
+runtime secrets; `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` additionally allows the
+dedicated build service account because the production image build reads it
+through Cloud Build `availableSecrets`. The legacy default Cloud Build service
+account must not have Secret Manager access.
+
 Secret generation rules used by this app:
 
 ```bash
-openssl rand -base64 32   # BETTER_AUTH_SECRET, CRON_SECRET
+openssl rand -base64 32   # BETTER_AUTH_SECRET
 openssl rand -hex 32      # ENCRYPTION_KEY, exactly 64 hex chars
 openssl rand -base64 32   # NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 ```
@@ -579,8 +610,8 @@ key.
 
 ## Cloud Run migrate Job
 
-Create the job once. `cloudbuild.yaml` updates the image, memory, and
-`DATABASE_URL` secret on every deploy before executing it.
+Create the job once. `cloudbuild.yaml` updates the image, memory, command,
+args, and `DATABASE_URL` secret on every deploy before executing it.
 
 ```bash
 gcloud run jobs create prisma-migrate \
@@ -588,10 +619,27 @@ gcloud run jobs create prisma-migrate \
   --image="${REGION}-docker.pkg.dev/${PROJECT_ID}/${AR_REPOSITORY}/${SERVICE_NAME}:migrate-placeholder" \
   --service-account="$RUNTIME_SA" \
   --memory=1Gi \
-  --set-secrets=DATABASE_URL=DATABASE_URL:latest \
+  --cpu=1 \
+  --tasks=1 \
+  --parallelism=1 \
+  --max-retries=0 \
+  --task-timeout=600s \
+  --set-secrets=DATABASE_URL=DATABASE_URL:1 \
   --command=bunx \
   --args=--bun,prisma,migrate,deploy
 ```
+
+Cloud Run resolves environment variable secrets at instance startup. Pin the
+migrate Job's `DATABASE_URL` secret to a numeric Secret Manager version from the
+first create command; do not use `latest` in production bootstrap or recurring
+deploys. The production audit checks `Cloud Run migrate Job env is canonical`
+and fails if `DATABASE_URL` is missing, set as a plain value, or references a
+non-pinned Secret Manager version.
+The audit also checks `Cloud Run migrate Job command is canonical` and fails if
+the Job no longer runs `bunx --bun prisma migrate deploy`.
+The audit also checks `Cloud Run migrate Job execution config is canonical` and
+fails if the Job is not a single task with `--parallelism=1`, no task retries,
+a 600 second task timeout, 1 vCPU, and 1Gi memory.
 
 The placeholder image can be replaced by the first Cloud Build deploy. If the
 create command requires an existing image, run the first build through Step 3
@@ -622,16 +670,41 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 gcloud builds submit \
   --region="$REGION" \
   --config=cloudbuild.yaml \
-  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_EDITOR_EMAIL="${ADMIN_ROLE_GROUP_EDITOR_EMAIL}",_ADMIN_ROLE_GROUP_VIEWER_EMAIL="${ADMIN_ROLE_GROUP_VIEWER_EMAIL}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}",_NEXT_PUBLIC_TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY}",_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_CRON_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1
+  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_EDITOR_EMAIL="${ADMIN_ROLE_GROUP_EDITOR_EMAIL}",_ADMIN_ROLE_GROUP_VIEWER_EMAIL="${ADMIN_ROLE_GROUP_VIEWER_EMAIL}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}",_CRON_OIDC_AUDIENCE="${PUBLIC_DOMAIN}",_CRON_SERVICE_ACCOUNT_EMAIL="${SCHEDULER_SA}",_NEXT_PUBLIC_TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY}",_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1
+```
+
+If an individual operator needs to run this emergency command before WIF is
+available, grant that person a
+temporary break-glass `roles/iam.serviceAccountUser` binding only on
+`$BUILD_SA`, not on the project.
+
+Remove that individual-user binding immediately after the deploy. The normal
+production path is GitHub WIF impersonating `$BUILD_SA`.
+
+This is because the production audit treats individual-user build `actAs`
+bindings as non-clean posture.
+
+```bash
+gcloud iam service-accounts remove-iam-policy-binding "$BUILD_SA" \
+  --project="$PROJECT_ID" \
+  --member="user:OPERATOR_EMAIL" \
+  --role="roles/iam.serviceAccountUser"
 ```
 
 `cloudbuild.yaml` intentionally has no defaults for production-only
 substitutions such as `_IAP_JWT_AUDIENCE`, the four
 `_ADMIN_ROLE_GROUP_*_EMAIL` values, `_NEXT_PUBLIC_BASE_URL`,
-`_NEXT_PUBLIC_APP_URL`, `_ADMIN_APP_URL`, and
-`_NEXT_PUBLIC_TURNSTILE_SITE_KEY`. Missing values fail at Cloud Build submit
+`_NEXT_PUBLIC_APP_URL`, `_BETTER_AUTH_URL`, `_ADMIN_APP_URL`,
+`_CRON_OIDC_AUDIENCE`, `_CRON_SERVICE_ACCOUNT_EMAIL`, and
+`_NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+Missing values fail at Cloud Build submit
 time, and explicit empty values are rejected by the first
 `validate-production-substitutions` step before any image build or push.
+For production submits, `_NEXT_PUBLIC_APP_URL`, `_BETTER_AUTH_URL`, and
+`_CRON_OIDC_AUDIENCE` must match `_NEXT_PUBLIC_BASE_URL`; the single production
+image is built for the canonical public origin, while the admin service gets
+its admin-specific runtime `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL` during
+the Cloud Run deploy step.
 
 `cloudbuild.yaml` sets all of these for user-specified Cloud Build service
 accounts and the private worker pool:
@@ -772,6 +845,15 @@ IAP is enabled once during setup and then verified by the production audit.
 The recurring Cloud Build deploy updates the admin service revision but does
 not pass `--iap` and does not require project-level `roles/iap.admin`.
 
+Both services intentionally keep Cloud Run network ingress at `all`. The public
+service uses the public custom domain, and the admin service uses the direct
+`run.app` URL protected by Cloud Run direct IAP. `cloudbuild.yaml` reapplies
+`--ingress=all` on every service deploy, and the production audit verifies the
+live `run.googleapis.com/ingress` and `run.googleapis.com/ingress-status`
+annotations. If the architecture later moves to an external Application Load
+Balancer-only entrypoint, change the URL/IAP design, deploy flags, and audit
+contract together instead of changing ingress alone.
+
 Confirm the runtime service accounts:
 
 ```bash
@@ -860,6 +942,14 @@ do
 done
 ```
 
+Google Cloud's current `gcloud iap web add-iam-policy-binding` and
+`get-iam-policy` references support `--resource-type=cloud-run`. If your local
+Google Cloud CLI help does not list `cloud-run`, update the CLI before mutating
+IAP policy. The read-only production audit uses the official IAP REST API
+resource
+`iap_web/cloud_run-${REGION}/services/${ADMIN_SERVICE_NAME}:getIamPolicy` and
+does not depend on local `gcloud iap web --resource-type=cloud-run` support.
+
 Operational rule:
 
 - staff should use Google accounts;
@@ -883,19 +973,24 @@ When migrating from a bootstrap individual grant, do this in order:
 
 ## Cloud Scheduler
 
-The current app validates cron calls with `Authorization: Bearer $CRON_SECRET`.
-Set up jobs after the service URL is stable:
+The app validates `/api/cron/*` calls with a Google OIDC ID token issued by
+Cloud Scheduler. Use the dedicated scheduler service account and set one stable
+audience shared by all cron jobs, normally the public origin without a trailing
+slash.
 
 ```bash
 PROJECT_ID="$PROJECT_ID" \
 SERVICE_URL="$PUBLIC_DOMAIN" \
 REGION="$REGION" \
+CRON_SERVICE_ACCOUNT_EMAIL="$SCHEDULER_SA" \
+CRON_OIDC_AUDIENCE="$PUBLIC_DOMAIN" \
 bash scripts/setup-cloud-scheduler.sh
 ```
 
-Future hardening option: replace the shared bearer secret with Cloud Scheduler
-OIDC and app-side Google token verification. Do that as a separate code change,
-because the current route handlers intentionally fail closed on `CRON_SECRET`.
+The setup script uses Cloud Scheduler's official OIDC flags:
+`--oidc-service-account-email` and `--oidc-token-audience`. The app verifies
+the token signature, expected audience, and exact service account email before
+running any cron handler logic.
 
 ## Production verification
 
@@ -904,11 +999,11 @@ Run these checks after deployment:
 ```bash
 gcloud run services describe "$SERVICE_NAME" \
   --region="$REGION" \
-  --format="yaml(status.url,spec.template.spec.serviceAccountName,spec.template.metadata.annotations)"
+  --format="yaml(status.url,metadata.annotations,spec.template.spec.serviceAccountName,spec.template.metadata.annotations)"
 
 gcloud run services describe "$ADMIN_SERVICE_NAME" \
   --region="$REGION" \
-  --format="yaml(status.url,spec.template.spec.serviceAccountName,spec.template.metadata.annotations)"
+  --format="yaml(status.url,metadata.annotations,spec.template.spec.serviceAccountName,spec.template.metadata.annotations)"
 
 gcloud run jobs execute prisma-migrate --region="$REGION" --wait
 
@@ -916,7 +1011,21 @@ curl -fsS "${PUBLIC_DOMAIN}/api/live"
 curl -fsS "${PUBLIC_DOMAIN}/api/health"
 curl -I "${PUBLIC_DOMAIN}/admin"
 curl -I "${ADMIN_DOMAIN}/admin"
+```
 
+Before running the live GCP audit, verify that the current shell can refresh
+Google Cloud credentials without an interactive prompt:
+
+```bash
+gcloud auth print-access-token >/dev/null
+```
+
+If this fails with `cannot prompt during non-interactive execution`, run
+`gcloud auth login` in the same Windows user/profile used by the audit process,
+then rerun the token check. Do not debug Cloud Build IAM until this preflight
+succeeds.
+
+```bash
 GCP_PROJECT_ID="$PROJECT_ID" \
 GCP_ORGANIZATION_ID="$GCP_ORGANIZATION_ID" \
 CLOUD_IDENTITY_DOMAIN="$CLOUD_IDENTITY_DOMAIN" \
@@ -931,6 +1040,9 @@ ADMIN_ROLE_GROUP_EDITOR_EMAIL="$ADMIN_ROLE_GROUP_EDITOR_EMAIL" \
 ADMIN_ROLE_GROUP_VIEWER_EMAIL="$ADMIN_ROLE_GROUP_VIEWER_EMAIL" \
 RUNTIME_SERVICE_ACCOUNT="$RUNTIME_SA" \
 BUILD_SERVICE_ACCOUNT="$BUILD_SA" \
+MIGRATE_JOB_NAME="$MIGRATE_JOB_NAME" \
+AR_REPOSITORY="$AR_REPOSITORY" \
+CRON_SERVICE_ACCOUNT_EMAIL="$SCHEDULER_SA" \
 GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
 GITHUB_REPOSITORY_ID="$GITHUB_REPOSITORY_ID" \
 GITHUB_REPOSITORY_OWNER_ID="$GITHUB_REPOSITORY_OWNER_ID" \
@@ -938,6 +1050,8 @@ WIF_POOL_ID="$WIF_POOL_ID" \
 WIF_PROVIDER_ID="$WIF_PROVIDER_ID" \
 bun run gcp:audit-production-iap
 ```
+
+If `gcloud` is installed but not on `PATH`, set `GCLOUD_BIN` to the gcloud executable before running the audit. Windows user installs commonly use `$env:GCLOUD_BIN = "$env:LOCALAPPDATA\google-cloud-sdk\bin\gcloud.cmd"`.
 
 Expected results:
 
@@ -951,16 +1065,97 @@ Expected results:
 - `.github/workflows/deploy-production.yml` starts on every `main` push and the
   Cloud Build it submits succeeds;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
+- Cloud Scheduler cron jobs use Google OIDC tokens only. They must use
+  `$SCHEDULER_SA` as `oidcToken.serviceAccountEmail`, `$PUBLIC_DOMAIN` as
+  `oidcToken.audience`, and no old `Authorization: Bearer` cron secrets.
+- The audit checks `public Cloud Run runtime env is canonical` and
+  `admin Cloud Run runtime env is canonical`. In particular, `BETTER_AUTH_URL`
+  must be the canonical public origin on the public service and the canonical
+  admin origin on the admin service, with no trailing slash.
+  The audit checks `Cloud Run service ingress is canonical`; recurring deploys
+  must keep `--ingress=all` because the current public domain and direct admin
+  IAP `run.app` URL both depend on direct public Cloud Run ingress.
+  The audit also checks `Cloud Run service identities are dedicated`,
+  `Cloud Run migrate Job identity is dedicated`,
+  `Cloud Run migrate Job env is canonical`, and
+  `Cloud Run migrate Job command is canonical`, and
+  `Cloud Run migrate Job execution config is canonical`; the public service,
+  admin service, and migrate Job must all run as `$RUNTIME_SA`, not the Compute
+  Engine default service account, and the migrate Job must bind `DATABASE_URL`
+  from `DATABASE_URL:1` in Secret Manager while running
+  `bunx --bun prisma migrate deploy` as one task, one parallel task, no retries,
+  600 second task timeout, 1 vCPU, and 1Gi memory.
+  Recurring Cloud Build deploys replace Cloud Run runtime env and secret
+  bindings with `--set-env-vars` and `--set-secrets`; they do not rely on
+  legacy `--update-*` / `--remove-*` drift cleanup.
+  Legacy clean-break names `CRON_SECRET`, `ADMIN_LOGIN_TOKEN`,
+  `INITIAL_ADMIN_EMAIL`, and `INITIAL_ADMIN_NAME` must be absent from Cloud Run
+  runtime env.
+- The audit checks `required Secret Manager versions are enabled` using
+  `gcloud secrets versions describe` metadata only. Every production secret
+  referenced by Cloud Run must point at the pinned numeric version `1`, and that
+  version must report `state=ENABLED`; do not use `latest` for production.
+- The audit checks `required Secret Manager accessor IAM is least privilege`
+  with `gcloud secrets get-iam-policy`, and checks
+  `project IAM has no broad Secret Manager accessor grants` on the project IAM
+  policy. Required runtime secrets must have only `$RUNTIME_SA` as
+  `roles/secretmanager.secretAccessor`; `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
+  must have only `$RUNTIME_SA` and `$BUILD_SA`. Remove any default Cloud Build
+  service account accessor from Secret Manager.
+- The audit checks resource-level deploy IAM with
+  `gcloud artifacts repositories get-iam-policy`,
+  `gcloud run services get-iam-policy`, `gcloud run jobs get-iam-policy`,
+  `gcloud iam service-accounts get-iam-policy`, and
+  `gcloud storage buckets get-iam-policy`. The checks
+  `Artifact Registry repository writer is limited to build service account`,
+  `Cloud Run deploy admin grants are limited to build service account`,
+  `runtime service account actAs grant is limited to build service account`,
+  `runtime service account tokenCreator grants are absent`,
+  and `Cloud Build source bucket objectViewer is limited to build service account`
+  must pass. The only expected member for those exact deployment
+  roles is `serviceAccount:${BUILD_SA}`; remove default Cloud Build service
+  account, runtime service account, and individual-user members from those
+  role bindings.
+- The audit checks `public Cloud Run revisions are healthy` and
+  `admin Cloud Run revisions are healthy`. Failed or pending revisions are not
+  clean production posture. If the audit prints a revision `deleteCommands=`
+  entry, first confirm that revision has traffic 0% and is not the latest ready revision,
+  then remove it with the official command:
+
+  ```bash
+  gcloud run revisions delete "REVISION_NAME" \
+    --project="$PROJECT_ID" \
+    --region="$REGION" \
+    --quiet
+  ```
+
 - `bun run gcp:audit-production-iap` passes. The audit check
   `production HTTP domains are canonical HTTPS URLs` verifies URL shape before
   checking `/api/live`, `/api/health`, public `/admin` hiding, and
-  `admin /admin redirects unauthenticated visitors to Google/IAP`. If it fails
+  `admin /admin redirects unauthenticated visitors to Google/IAP`. The audit
+  reads Cloud Run IAP access through the official IAP REST API resource
+  `iap_web/cloud_run-${REGION}/services/${ADMIN_SERVICE_NAME}:getIamPolicy`,
+  so it does not depend on local `gcloud iap web --resource-type=cloud-run`
+  support. If it fails
   on Organization, Cloud Identity group, individual IAP grants, WIF,
   user-managed service account key absence, project-level
+  `roles/iam.serviceAccountTokenCreator`, project-level
   `roles/iam.serviceAccountUser`, project-level
   `roles/iam.workloadIdentityUser`, project-level `roles/run.admin` for
   `$BUILD_SA`, project-level `roles/iap.admin` for `$BUILD_SA`, individual
-  build service account `actAs` grants, legacy Cloud Build
+  build service account `actAs` grants, resource-level deploy IAM grants,
+  Cloud Scheduler OIDC configuration,
+  scheduler service account has no user-managed keys,
+  Cloud Run service identities are dedicated,
+  Cloud Run migrate Job identity is dedicated,
+  Cloud Run migrate Job env is canonical,
+  Cloud Run migrate Job command is canonical,
+  Cloud Run migrate Job execution config is canonical,
+  canonical Cloud Run runtime env values,
+  required Secret Manager versions are enabled,
+  required Secret Manager accessor IAM is least privilege,
+  project IAM has no broad Secret Manager accessor grants,
+  legacy Cloud Build
   triggers/connections, or live HTTP behavior, the admin site may be protected
   but the GCP posture is not the final production baseline.
 
@@ -971,14 +1166,22 @@ The current `cloudbuild.yaml` already handles:
 - Docker image build with Bun;
 - Artifact Registry image push;
 - dedicated migrator image;
-- Cloud Run Job update and execution for `prisma migrate deploy`;
+- Cloud Run Job update and execution for `bunx --bun prisma migrate deploy`;
 - public and admin Cloud Run deploys with service account, probes, env vars,
-  and secrets. Recurring deploys do not mutate admin IAP.
+  secrets, and explicit `--ingress=all`. Recurring deploys do not mutate admin
+  IAP.
 - fail-fast validation for admin `IAP_JWT_AUDIENCE` and the four admin role
   group emails. Initial `SUPER_ADMIN` creation is synced from the super-admin
   Google Group on first access, not bootstrapped from app env.
 
-The current GCP-side production posture is:
+Do not treat any previous Cloud Build trigger inventory as current proof. The
+production target is still zero native triggers and zero Cloud Build repository
+connections, but a fresh `bun run gcp:audit-production-iap` pass is the proof.
+If a native trigger such as `deploy-main` exists, delete it instead of adding
+Cloud Build Editor, broad project IAM, or permanent individual-user `actAs`
+grants to make that trigger runnable.
+
+The audited production target posture is:
 
 1. project `myrrh-rental-space` is under organization `844678510879`;
 2. Cloud Identity domain `myrrh-jp.com` owns the four admin role groups
@@ -988,8 +1191,30 @@ The current GCP-side production posture is:
    auto-deploy workflow;
 4. native Cloud Build triggers and Cloud Build GitHub repository connections
    are absent;
-5. `$BUILD_SA` has project-level `roles/cloudbuild.builds.builder` and
+5. Cloud Scheduler cron jobs use OIDC from `$SCHEDULER_SA` with `$PUBLIC_DOMAIN`
+   as the audience, no shared-secret HTTP headers, and no user-managed keys on
+   `$SCHEDULER_SA`;
+6. `$BUILD_SA` has project-level `roles/cloudbuild.builds.builder` and
    `roles/logging.logWriter`, but no project-level `roles/run.admin` or
    `roles/iap.admin`;
-6. `bun run gcp:audit-production-iap` is the gate for proving the posture is
-   still clean after infrastructure changes.
+7. `$BUILD_SA` is the only member for Artifact Registry repository
+   `roles/artifactregistry.writer`, public/admin/migrate Cloud Run
+   `roles/run.admin`, runtime service account `roles/iam.serviceAccountUser`,
+   and Cloud Build source bucket `roles/storage.objectViewer`; runtime service
+   account `roles/iam.serviceAccountTokenCreator` has no members;
+8. Secret Manager accessor grants are secret-level only: runtime secrets allow
+   `$RUNTIME_SA`, `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` allows `$RUNTIME_SA` and
+   `$BUILD_SA`, and project-level `roles/secretmanager.secretAccessor` is
+   absent;
+9. public and admin Cloud Run services keep `run.googleapis.com/ingress` and
+   `run.googleapis.com/ingress-status` set to `all`;
+10. public, admin, and migrate Cloud Run resources all use `$RUNTIME_SA` as
+    their service identity;
+11. the migrate Job runs `bunx --bun prisma migrate deploy` with `DATABASE_URL`
+    bound from Secret Manager version `1`, one task, one parallel task, no
+    retries, a 600 second task timeout, 1 vCPU, and 1Gi memory;
+12. `bun run gcp:audit-production-iap` is the gate for proving the live posture
+    still matches this target after infrastructure changes.
+
+If the audit has not passed after the latest GCP-side change, treat the list
+above as the desired target state, not as proof of the current project state.

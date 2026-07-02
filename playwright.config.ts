@@ -1,4 +1,24 @@
 import { defineConfig, devices } from "@playwright/test";
+import { testUsers } from "./e2e/fixtures/test-data";
+
+process.env["APP_SURFACE"] ??= "admin";
+
+const localE2eBaseUrl =
+  process.env["PLAYWRIGHT_BASE_URL"] || "http://localhost:3000";
+const localE2eBetterAuthSecret =
+  process.env["BETTER_AUTH_SECRET"] &&
+  process.env["BETTER_AUTH_SECRET"].length >= 32
+    ? process.env["BETTER_AUTH_SECRET"]
+    : "local-e2e-better-auth-secret-000000";
+const localE2eNextServerActionsEncryptionKey =
+  process.env["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"] ||
+  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+const e2eWebServerCommand = [
+  "bun run db:generate",
+  "bun prisma/seed.ts --dev",
+  ...(process.env["CI"] ? [] : ["bun run build:skip-env"]),
+  "bun run start",
+].join(" && ");
 
 /**
  * Playwright E2E テスト設定
@@ -15,9 +35,10 @@ import { defineConfig, devices } from "@playwright/test";
  *   - chromium-visual              → visual regression (opt-in)
  *
  * 並列化:
- *   `fullyParallel: true` で test レベル並列化。DB を書き換える特定の describe は
- *   各 spec 内で `test.describe.serial(...)` を局所適用して隔離する
- *   （グローバル `workers: 1` で隠蔽しない）。
+ *   `fullyParallel: true` で test レベル並列化。CI は 2 workers、local は
+ *   共有 Next dev server / Postgres の枯渇を避けるため 1 worker に固定する。
+ *   DB を書き換える特定の describe は各 spec 内で `test.describe.serial(...)`
+ *   を局所適用して隔離する。
  *
  * @see https://playwright.dev/docs/test-configuration
  * @see https://playwright.dev/docs/test-parallel
@@ -30,13 +51,13 @@ export default defineConfig({
   forbidOnly: !!process.env["CI"],
   /* Retry on CI only */
   retries: process.env["CI"] ? 2 : 0,
-  /* CI は 2 並列で DB 競合と Cloud Run リソースのバランスを取る。local はマシン依存で
-   * default（CPU 半数）に委ねる。spec 内 `test.describe.serial(...)` で局所隔離する設計。
-   * exactOptionalPropertyTypes 下で `undefined` を直接渡せないため spread で条件付き付与。 */
-  ...(process.env["CI"] ? { workers: 2 } : {}),
+  /* DB-backed admin/customer pages share one local Postgres and one Next
+   * server. Keep parallelism bounded instead of letting Playwright default to
+   * CPU-count workers, which can exhaust pg-pool during route rendering. */
+  workers: process.env["CI"] ? 2 : 1,
   reporter: [["html", { outputFolder: "playwright-report" }], ["list"]],
   use: {
-    baseURL: process.env["PLAYWRIGHT_BASE_URL"] || "http://localhost:3000",
+    baseURL: localE2eBaseUrl,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -116,37 +137,70 @@ export default defineConfig({
   ],
 
   /* webServer:
-   * - local: `bun run dev` (Turbopack HMR、開発と同等の環境で反復実行)
-   * - CI: `bun run start` (production build artifact、dev mode の初回コンパイル
-   *   による timeout / CPU 枯渇を回避し安定化)
+   * - local: `db:generate -> seed --dev -> build:skip-env -> start`
+   * - CI: `db:generate -> seed --dev -> start` (workflow builds first)
+   *
+   * E2E は seed-driven specs を含み、Next `use cache` は server process 内で
+   * null fallback も保持し得る。既存 server を再利用せず、seed 後の fresh
+   * process だけを検証対象にする。
    *
    * production build でも顧客 DevLoginButton を CI で出すため
    * `NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` を build + start 両方で渡す。
    * staging / production には絶対伝播させない (login bypass risk)。
    */
   webServer: {
-    command: process.env["CI"] ? "bun run start" : "bun run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env["CI"],
+    command: e2eWebServerCommand,
+    url: localE2eBaseUrl,
+    reuseExistingServer: false,
     timeout: 180 * 1000,
     env: {
       ...process.env,
+      BETTER_AUTH_SECRET: localE2eBetterAuthSecret,
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:
+        localE2eNextServerActionsEncryptionKey,
+      BETTER_AUTH_URL: process.env["BETTER_AUTH_URL"] ?? localE2eBaseUrl,
+      NEXT_PUBLIC_BASE_URL:
+        process.env["NEXT_PUBLIC_BASE_URL"] ?? localE2eBaseUrl,
+      NEXT_PUBLIC_APP_URL:
+        process.env["NEXT_PUBLIC_APP_URL"] ?? localE2eBaseUrl,
+      NEXT_PUBLIC_ENABLE_E2E_LOGIN:
+        process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] ?? "1",
+      E2E_RUNTIME: "1",
+      DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"] ?? "30",
+      DATABASE_CONNECTION_TIMEOUT_MS:
+        process.env["DATABASE_CONNECTION_TIMEOUT_MS"] ?? "15000",
+      APP_SURFACE: process.env["APP_SURFACE"] ?? "admin",
+      ADMIN_APP_URL: process.env["ADMIN_APP_URL"] ?? localE2eBaseUrl,
       ADMIN_TEST_IAP_EMAIL:
-        process.env["ADMIN_TEST_IAP_EMAIL"] ?? "admin@example.com",
-      ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL:
-        process.env["ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL"] ??
-        "ci-super-admins@example.com",
-      ADMIN_ROLE_GROUP_ADMIN_EMAIL:
-        process.env["ADMIN_ROLE_GROUP_ADMIN_EMAIL"] ?? "ci-admins@example.com",
-      ADMIN_ROLE_GROUP_EDITOR_EMAIL:
-        process.env["ADMIN_ROLE_GROUP_EDITOR_EMAIL"] ??
-        "ci-editors@example.com",
-      ADMIN_ROLE_GROUP_VIEWER_EMAIL:
-        process.env["ADMIN_ROLE_GROUP_VIEWER_EMAIL"] ??
-        "ci-viewers@example.com",
+        process.env["ADMIN_TEST_IAP_EMAIL"] ?? testUsers.admin.email,
       IAP_JWT_AUDIENCE:
         process.env["IAP_JWT_AUDIENCE"] ??
         "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin",
+      ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL"] ??
+        "myrrh-super-admins@example.com",
+      ADMIN_ROLE_GROUP_ADMIN_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_ADMIN_EMAIL"] ??
+        "myrrh-admins@example.com",
+      ADMIN_ROLE_GROUP_EDITOR_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_EDITOR_EMAIL"] ??
+        "myrrh-editors@example.com",
+      ADMIN_ROLE_GROUP_VIEWER_EMAIL:
+        process.env["ADMIN_ROLE_GROUP_VIEWER_EMAIL"] ??
+        "myrrh-viewers@example.com",
+      ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"] ?? "0".repeat(64),
+      CRON_OIDC_AUDIENCE: process.env["CRON_OIDC_AUDIENCE"] ?? localE2eBaseUrl,
+      CRON_SERVICE_ACCOUNT_EMAIL:
+        process.env["CRON_SERVICE_ACCOUNT_EMAIL"] ??
+        "scheduler-e2e@example.iam.gserviceaccount.com",
+      R2_ACCOUNT_ID: process.env["R2_ACCOUNT_ID"] ?? "local-e2e-r2-account",
+      R2_ACCESS_KEY_ID:
+        process.env["R2_ACCESS_KEY_ID"] ?? "local-e2e-r2-access-key",
+      R2_SECRET_ACCESS_KEY:
+        process.env["R2_SECRET_ACCESS_KEY"] ?? "local-e2e-r2-secret-key",
+      R2_BUCKET_NAME: process.env["R2_BUCKET_NAME"] ?? "local-e2e-r2-bucket",
+      R2_PUBLIC_URL:
+        process.env["R2_PUBLIC_URL"] ?? "https://assets.example.com",
     },
   },
 });

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { getReservationById } from "@/admin/queries/reservation";
@@ -21,6 +22,8 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  await connection();
+
   const { id } = await params;
   const reservation = await getReservationById(id);
 
@@ -34,6 +37,8 @@ export async function generateMetadata({
 }
 
 export default async function ReservationDetailPage({ params }: PageProps) {
+  await connection();
+
   const { id } = await params;
   const [reservation, sessionUser] = await Promise.all([
     getReservationById(id),

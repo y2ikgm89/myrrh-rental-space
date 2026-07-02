@@ -75,15 +75,7 @@ describe("isReservedPath", () => {
       expect(isReservedPath("privacy")).toBe(true);
     });
 
-    test('"posts" は予約済みパス', () => {
-      expect(isReservedPath("posts")).toBe(true);
-    });
-
-    test('"p" は予約済みパス', () => {
-      expect(isReservedPath("p")).toBe(true);
-    });
-
-    test('"blog" は予約済みパス（/posts→/blog 移行後の一覧ルート）', () => {
+    test('"blog" は予約済みパス（ブログ一覧ルート）', () => {
       expect(isReservedPath("blog")).toBe(true);
     });
 
@@ -131,6 +123,14 @@ describe("isReservedPath", () => {
 
     test('"rental-space-tokyo" は予約済みでない', () => {
       expect(isReservedPath("rental-space-tokyo")).toBe(false);
+    });
+
+    test('"posts" は予約済みでない', () => {
+      expect(isReservedPath("posts")).toBe(false);
+    });
+
+    test('"p" は予約済みでない', () => {
+      expect(isReservedPath("p")).toBe(false);
     });
   });
 

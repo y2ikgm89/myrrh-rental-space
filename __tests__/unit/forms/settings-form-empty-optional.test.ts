@@ -390,7 +390,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         "senderName",
         "replyToEmail",
         "sendReservationConfirmationEmail",
-        "notificationEmailAddresses",
       ]),
       "email",
     );
@@ -402,7 +401,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       "senderName",
       "replyToEmail",
       "sendReservationConfirmationEmail",
-      "notificationEmailAddresses",
     ]);
     fd.set("senderEmail", "invalid-email");
     expect(parseWithZod(fd, { schema: emailFormSchema }).status).toBe("error");

@@ -91,7 +91,10 @@ export function ReservationStatusSelect({
         }}
         disabled={isPending || isTerminal}
       >
-        <SelectTrigger className="w-36">
+        <SelectTrigger
+          className="w-36"
+          aria-label={`予約ステータス（現在: ${RESERVATION_STATUS_LABELS[currentStatus]}）`}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

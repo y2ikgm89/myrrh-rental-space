@@ -1,4 +1,5 @@
 import { unstable_rethrow } from "next/navigation";
+import { connection } from "next/server";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { findReservationsForReminderWindow } from "@/shared/domain/reservations/admin-queries";
 import {
@@ -12,17 +13,15 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 export async function GET(request: Request) {
   try {
-    const authorizationResult = authorizeCronRequest({
-      authorizationHeader: request.headers.get("authorization"),
-      secret: serverEnv.CRON_SECRET,
-      nodeEnv: serverEnv.NODE_ENV,
+    await connection();
+    const authorizationResult = await authorizeCronRequest({
+      request,
       operation: "reservationReminderCron",
     });
     if (authorizationResult) {

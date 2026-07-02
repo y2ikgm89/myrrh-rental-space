@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
@@ -36,6 +37,8 @@ interface PageProps {
 export default async function ReservationEditPage({
   params,
 }: PageProps): Promise<ReactElement> {
+  await connection();
+
   const { id } = await params;
 
   const { user } = await verifyCustomerSession();

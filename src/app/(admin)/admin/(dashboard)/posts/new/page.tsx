@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getPostCategories, getPostTags } from "@/admin/queries/post";
 import { PostEditor } from "../_components/PostEditor";
 import { getLayoutSettings } from "@/shared/domain/settings/queries/site";
@@ -11,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function NewPostPage() {
+  await connection();
+
   const [categories, tags, settings] = await Promise.all([
     getPostCategories(),
     getPostTags(),

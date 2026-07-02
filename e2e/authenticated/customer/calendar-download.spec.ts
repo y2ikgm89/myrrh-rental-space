@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
-import { urls } from "../../fixtures";
+import {
+  customerReservationTargets,
+  openCustomerReservationDetail,
+} from "./reservation-test-helpers";
 
 /**
  * Calendar ICS ダウンロード E2E（顧客認証済み state）
@@ -19,29 +22,14 @@ test.describe("AddToCalendar UI 表示", () => {
   test("マイページ予約詳細に AddToCalendar セクションが表示される", async ({
     page,
   }) => {
-    await page.goto(urls.mypageReservations);
-
-    const firstReservation = page
-      .locator('a[href^="/mypage/reservations/"]')
-      .first();
-    await expect(firstReservation).toBeVisible({ timeout: 5000 });
-    await firstReservation.click();
-
-    const reservationCancelled = await page
-      .getByText(/キャンセル済|CANCELLED/i)
-      .isVisible()
-      .catch(() => false);
+    await openCustomerReservationDetail(
+      page,
+      customerReservationTargets.confirmedUnpaid,
+    );
 
     const addToCalendar = page.locator(
       'section[aria-labelledby="add-to-calendar-label"]',
     );
-
-    if (reservationCancelled) {
-      // キャンセル済みは AddToCalendar 非表示が仕様（一覧 sort 順で最初の予約が CANCELLED の場合）
-      await expect(addToCalendar).toHaveCount(0);
-      return;
-    }
-
     await expect(addToCalendar).toBeVisible();
 
     const googleLink = addToCalendar.getByRole("link", {
@@ -63,9 +51,14 @@ test.describe("AddToCalendar UI 表示", () => {
       page.getByRole("link", { name: /ヨガ＆マインドフルネス体験会/u }),
     ).toBeVisible();
 
-    const addToCalendar = page
-      .locator('section[aria-labelledby="add-to-calendar-label"]')
-      .first();
+    const registrationCard = page.getByRole("article", {
+      name: /ヨガ＆マインドフルネス体験会.*申込済み/u,
+    });
+    await expect(registrationCard).toBeVisible();
+
+    const addToCalendar = registrationCard.locator(
+      'section[aria-labelledby="add-to-calendar-label"]',
+    );
     await expect(addToCalendar).toBeVisible();
     await expect(
       addToCalendar.getByRole("link", { name: /google calendar/i }),
@@ -84,24 +77,15 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
     page,
     request,
   }) => {
-    await page.goto(urls.mypageReservations);
-
-    const firstReservation = page
-      .locator('a[href^="/mypage/reservations/"]')
-      .first();
-    await expect(firstReservation).toBeVisible({ timeout: 5000 });
-    await firstReservation.click();
+    await openCustomerReservationDetail(
+      page,
+      customerReservationTargets.confirmedUnpaid,
+    );
 
     const icsLink = page
       .locator('section[aria-labelledby="add-to-calendar-label"]')
       .getByRole("link", { name: /iCal.*\.ics/i });
-
-    if (!(await icsLink.isVisible().catch(() => false))) {
-      // キャンセル済み予約は AddToCalendar 非表示が仕様。本 test は HTTP 検証が目的のため
-      // 該当の場合は detail 描画ゲートで完走（seed sort 順依存を spec 側で吸収）。
-      await expect(page.locator("main").first()).toBeVisible();
-      return;
-    }
+    await expect(icsLink).toBeVisible();
 
     const href = await icsLink.getAttribute("href");
     expect(href).toMatch(/\/api\/calendar\/reservation\/[0-9a-f-]+$/u);
@@ -114,8 +98,10 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
     const body = await response.text();
     expect(body).toContain("BEGIN:VCALENDAR");
     expect(body).toContain("UID:reservation-");
-    expect(body).toContain("BEGIN:VTIMEZONE");
-    expect(body).toContain("TZID:Asia/Tokyo");
+    expect(body).toMatch(/\bDTSTART:\d{8}T\d{6}Z\b/u);
+    expect(body).toMatch(/\bDTEND:\d{8}T\d{6}Z\b/u);
+    expect(body).not.toContain("BEGIN:VTIMEZONE");
+    expect(body).not.toContain("TIMEZONE-ID:");
     expect(body).toContain("END:VCALENDAR");
   });
 
@@ -129,9 +115,13 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
       page.getByRole("link", { name: /ヨガ＆マインドフルネス体験会/u }),
     ).toBeVisible();
 
-    const icsLink = page
+    const registrationCard = page.getByRole("article", {
+      name: /ヨガ＆マインドフルネス体験会.*申込済み/u,
+    });
+    await expect(registrationCard).toBeVisible();
+
+    const icsLink = registrationCard
       .locator('section[aria-labelledby="add-to-calendar-label"]')
-      .first()
       .getByRole("link", { name: /iCal.*\.ics/i });
     await expect(icsLink).toBeVisible();
 
@@ -146,6 +136,9 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
     expect(body).toContain("BEGIN:VCALENDAR");
     expect(body).toContain("UID:event-registration-");
     expect(body).toContain("METHOD:REQUEST");
+    expect(body).toMatch(/\bDTSTART:\d{8}T\d{6}Z\b/u);
+    expect(body).toMatch(/\bDTEND:\d{8}T\d{6}Z\b/u);
+    expect(body).not.toContain("TIMEZONE-ID:");
     expect(body).toContain("END:VCALENDAR");
   });
 });

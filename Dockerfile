@@ -4,7 +4,7 @@
 # standalone の server.js は Node API 互換のため Bun でそのまま起動可能
 # https://bun.sh/guides/ecosystem/docker
 
-FROM oven/bun:1.3.13-alpine AS base
+FROM oven/bun:1.3.14-alpine AS base
 WORKDIR /app
 
 # --- Stage 1: Dependencies ---
@@ -51,7 +51,7 @@ ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 # 空でかつ末尾スラッシュ無しの絶対 URL であることを Docker layer で early assert する。
 # Turnstile / GA は legitimately optional のため未検査。
 RUN if [ -z "$NEXT_PUBLIC_BASE_URL" ] || [ -z "$NEXT_PUBLIC_APP_URL" ]; then \
-      echo "ERROR: NEXT_PUBLIC_BASE_URL / NEXT_PUBLIC_APP_URL は build 時に必須（deploy workflow の substitution 設定）" >&2; \
+      echo "ERROR: NEXT_PUBLIC_BASE_URL / NEXT_PUBLIC_APP_URL は build 時に必須（production workflow / emergency submit で substitution 設定）" >&2; \
       exit 1; \
     fi; \
     case "$NEXT_PUBLIC_BASE_URL" in */) echo "ERROR: NEXT_PUBLIC_BASE_URL に末尾スラッシュ" >&2; exit 1 ;; esac; \
@@ -72,7 +72,8 @@ ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL \
 # 側の無出力 internal error とアプリ側 exit code を切り分けやすくする。
 FROM builder-base AS builder
 RUN --mount=type=secret,id=next_server_actions_encryption_key \
-    sh -lc 'export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; \
+    sh -lc 'export BETTER_AUTH_SECRET="build-time-better-auth-placeholder-not-runtime-7dS9kL4qQ8mN2vX5rT6yB3cH1pZ0aW"; \
+      export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; \
       (while sleep 60; do echo "[cloudbuild] next build still running"; done) & \
       heartbeat_pid="$!"; \
       cleanup() { kill "$heartbeat_pid" 2>/dev/null || true; wait "$heartbeat_pid" 2>/dev/null || true; }; \

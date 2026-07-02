@@ -18,6 +18,29 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     expect(res.status).toBe(401);
   });
 
+  test("rejects an invalid guest token before exposing path validation", async () => {
+    mock.module("@/shared/lib/errors/server", () => ({
+      ErrorCategory: { AUTHORIZATION: "AUTHORIZATION", DATABASE: "DATABASE" },
+      ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM" },
+      logError: mock(() => undefined),
+      normalizeError: (error: unknown) =>
+        error instanceof Error ? error : new Error(String(error)),
+    }));
+
+    const invalidRegistrationId = "x".repeat(41);
+    const { GET } =
+      await import("@/app/api/calendar/event/[registrationId]/route");
+    const res = await GET(
+      new Request(
+        `http://localhost/api/calendar/event/${invalidRegistrationId}?token=not-a-token`,
+      ),
+      { params: Promise.resolve({ registrationId: invalidRegistrationId }) },
+    );
+
+    expect(res.status).toBe(401);
+    expect(await res.text()).toBe("Invalid token");
+  });
+
   test("returns 400 when registrationId is empty", async () => {
     mock.module("@/shared/lib/customer-auth", () => ({
       getCustomerSession: mock(() =>
@@ -80,6 +103,9 @@ describe("GET /api/calendar/event/[registrationId]", () => {
     const body = await res.text();
     expect(body).toContain("UID:event-registration-reg-456@");
     expect(body).toContain("METHOD:REQUEST");
+    expect(body).toContain("DTSTART:20260501T010000Z");
+    expect(body).toContain("DTEND:20260501T030000Z");
+    expect(body).not.toContain("TIMEZONE-ID:");
     expect(body).toContain("SUMMARY:ワークショップ");
   });
 });

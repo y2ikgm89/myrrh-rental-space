@@ -105,13 +105,15 @@ jobs:
               - '!.gitignore'
 
   # ---------------------------------------------------------------------------
-  # migration-safety: 破壊的マイグレーションの後方互換ゲート（Risk 1）。
+  # migration-safety: 意図的な破壊的 migration を明示する gate（Risk 1）。
   # Cloud Run ローリング切替窓（cloudbuild Step6 migrate → Step7 deploy の間も
-  # 旧リビジョンが処理）で旧コードが破壊済み新スキーマを叩く 500 を、後方互換でない
-  # migration を merge 前にブロックして構造的に防ぐ。規約は AGENTS.md / repo skills。
+  # 旧リビジョンが処理）で旧コードが破壊済み新スキーマを叩く 500 を merge 前に検出する。
+  # 破壊的 migration は SQL に rule 名つき `-- squawk-ignore <rule>` または
+  # `-- squawk-ignore-file <rule>` を置き、旧参照ゼロを確認して明示する。
   # job は常に走らせ（required check の安定化、changes job と同じ gate 方針）、
   # squawk step のみ migration 変更時に gate する。escape hatch は SQL 内の
-  # `-- squawk-ignore <rule>`（contract フェーズの意図的 DROP 用）。
+  # `-- squawk-ignore <rule>` / `-- squawk-ignore-file <rule>`
+  # （意図的な破壊的 migration 用）。
   # ---------------------------------------------------------------------------
   migration-safety:
     name: Migration Safety (squawk)
@@ -196,8 +198,7 @@ jobs:
   # ---------------------------------------------------------------------------
   # lint-format / type-check は並列実行。typecheck (~2-3 分) が dominant のため
   # 直列実行時の wall clock 損失を回避。両 job を branch protection の required
-  # status check に個別登録する（旧 `Lint & Type Check` wrapper は backwards-compat
-  # shim だったため Trunk-Based + Conventional Commits 規律で撤去済み）。
+  # status check に個別登録する。単一 wrapper job は持たず、失敗面を明確に分ける。
   # ---------------------------------------------------------------------------
   lint-format:
     name: Lint & Format
@@ -364,7 +365,8 @@ jobs:
           APP_SURFACE: public
           ADMIN_APP_URL: http://localhost:3000
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-          CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
+          CRON_OIDC_AUDIENCE: "http://localhost:3000"
+          CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com"
           R2_ACCOUNT_ID: "test-r2-account"
           R2_ACCESS_KEY_ID: "test-r2-access-key"
           R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
@@ -387,7 +389,8 @@ jobs:
           IAP_JWT_AUDIENCE: "/projects/123456789012/locations/asia-northeast1/services/myrrh-rental-space-admin"
           ADMIN_TEST_IAP_EMAIL: "admin@example.com"
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-          CRON_SECRET: "test-cron-secret-for-ci-smoke-strict-0123456789ab"
+          CRON_OIDC_AUDIENCE: "http://localhost:3000"
+          CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com"
           R2_ACCOUNT_ID: "test-r2-account"
           R2_ACCESS_KEY_ID: "test-r2-access-key"
           R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
@@ -482,7 +485,8 @@ jobs:
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（lhci-start.ts と同方針）。
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-          CRON_SECRET: "test-cron-secret-for-ci-e2e-strict-0123456789ab"
+          CRON_OIDC_AUDIENCE: "http://localhost:3000"
+          CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com"
           R2_ACCOUNT_ID: "test-r2-account"
           R2_ACCESS_KEY_ID: "test-r2-access-key"
           R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"
@@ -540,7 +544,8 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x0000000000000000000000000000000AA
           NEXT_PUBLIC_GA_MEASUREMENT_ID: G-XXXXXXXXXX
           ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-          CRON_SECRET: test-cron-secret-for-ci-build-strict-0123456789ab
+          CRON_OIDC_AUDIENCE: http://localhost:3000
+          CRON_SERVICE_ACCOUNT_EMAIL: scheduler-ci@example.iam.gserviceaccount.com
           RESEND_API_KEY: re_test_placeholder_for_ci_strict_build_only
           STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_strict_build_only
           GOOGLE_CLIENT_ID: test-google-client-id.apps.googleusercontent.com
@@ -787,7 +792,8 @@ jobs:
           # production build を `next start` で動かすため validateProductionEnv の
           # 要求 env を埋める（webServer は playwright.config.ts の分岐により CI で next start）。
           ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-          CRON_SECRET: "test-cron-secret-for-ci-visual-strict-0123456789ab"
+          CRON_OIDC_AUDIENCE: "http://localhost:3000"
+          CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com"
           R2_ACCOUNT_ID: "test-r2-account"
           R2_ACCESS_KEY_ID: "test-r2-access-key"
           R2_SECRET_ACCESS_KEY: "test-r2-secret-key-32-min-length!!"

@@ -50,6 +50,10 @@ import {
 import { googleCalendarWebhookHeadersSchema } from "@/shared/lib/validations/google-calendar-webhook";
 import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 
+function acknowledgeNotification(data: Record<string, unknown> = {}) {
+  return jsonSuccess({ acknowledged: true, ...data });
+}
+
 /**
  * Google Calendar Push Notification Webhook
  * POST /api/webhooks/google-calendar
@@ -128,8 +132,8 @@ export async function POST(request: Request) {
         severity: ErrorSeverity.LOW,
         context: { operation: "googleCalendarWebhook", channelId, resourceId },
       });
-      // 不明なWebhookでも200を返す（Googleが再送しないように）
-      return jsonSuccess({ ignored: true });
+      // Google Calendar は 2xx で配信成功扱いにする。検証済み token の通知は明示的に ack して再送を抑止する。
+      return acknowledgeNotification({ ignored: true });
     }
 
     // X-Goog-Resource-URI の改ざん検証（公式仕様: URI には監視対象の calendar ID が含まれる）
@@ -151,26 +155,26 @@ export async function POST(request: Request) {
             expectedCalendarId: settings.calendarId,
           },
         });
-        // 不整合でも 200 を返す（Google の再送抑制）
-        return jsonSuccess({ ignored: true });
+        // 検証済み token の通知は処理対象外として ack し、Google の再送を抑止する。
+        return acknowledgeNotification({ ignored: true });
       }
     }
 
     // syncイベントは初回登録時の確認なのでスキップ
     if (resourceState === "sync") {
-      return jsonSuccess({ sync: true });
+      return acknowledgeNotification({ sync: true });
     }
 
     // 双方向同期が有効か確認
     const enabled = await isTwoWaySyncEnabled();
     if (!enabled) {
-      return jsonSuccess({ disabled: true });
+      return acknowledgeNotification({ disabled: true });
     }
 
     // 同期方式を確認（webhookまたはbothの場合のみ実行）
     const syncSettings = await getTwoWaySyncSettings();
     if (syncSettings.syncMethod === CalendarSyncMethod.polling) {
-      return jsonSuccess({ pollingOnly: true });
+      return acknowledgeNotification({ pollingOnly: true });
     }
 
     // 同期実行
@@ -182,15 +186,15 @@ export async function POST(request: Request) {
         severity: ErrorSeverity.MEDIUM,
         context: { operation: "googleCalendarWebhook", errors: result.errors },
       });
-      // エラーでも200を返す（Googleが再送しないように）
-      return jsonSuccess({ error: "Calendar sync failed" });
+      // 検証済み通知は ack し、同期の失敗はログと定期同期で回収する。
+      return acknowledgeNotification({ processing: "sync_failed" });
     }
 
     // キャッシュ無効化: カレンダー同期後に予約データを最新化
     revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
     revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
 
-    return jsonSuccess({
+    return acknowledgeNotification({
       processed: result.processed,
       deleted: result.deleted,
       updated: result.updated,
@@ -203,9 +207,7 @@ export async function POST(request: Request) {
       severity: ErrorSeverity.HIGH,
       context: { operation: "googleCalendarWebhook" },
     });
-    // エラーでも200を返す（Googleが再送しないように）
-    return jsonSuccess({
-      error: "Webhook processing failed",
-    });
+    // 検証済み通知は ack し、内部例外はログと定期同期で回収する。
+    return acknowledgeNotification({ processing: "failed" });
   }
 }
