@@ -45,8 +45,7 @@ describe("audit log append-only boundary", () => {
     const migration = readAuditLogHashChainMigration();
 
     expect(migration).toContain('TRUNCATE TABLE "audit_logs"');
-    expect(migration).toContain("squawk-ignore adding-not-nullable-field");
-    expect(migration).toContain("squawk-ignore adding-required-field");
+    expect(migration).toContain("squawk-ignore-file adding-required-field");
     expect(migration).toContain('"sequence" BIGINT NOT NULL');
     expect(migration).toContain('"previousHash" CHAR(64) NOT NULL');
     expect(migration).toContain('"entryHash" CHAR(64) NOT NULL');

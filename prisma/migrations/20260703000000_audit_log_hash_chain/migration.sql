@@ -4,6 +4,8 @@
 -- inside a Prisma migration because the HMAC key must live outside the
 -- database. Reset the table so every row after this migration participates in
 -- the same mandatory append-only hash chain.
+--
+-- squawk-ignore-file adding-required-field
 
 ALTER TYPE "AuditAction" ADD VALUE IF NOT EXISTS 'EXPORT';
 ALTER TYPE "AuditAction" ADD VALUE IF NOT EXISTS 'INTEGRITY_CHECK';
@@ -15,8 +17,6 @@ TRUNCATE TABLE "audit_logs";
 
 -- Clean-break: audit_logs was truncated above, so these required columns do
 -- not backfill existing rows and cannot break old audit rows during rollout.
--- squawk-ignore adding-not-nullable-field
--- squawk-ignore adding-required-field
 ALTER TABLE "audit_logs"
   ADD COLUMN "sequence" BIGINT NOT NULL,
   ADD COLUMN "previousHash" CHAR(64) NOT NULL,
