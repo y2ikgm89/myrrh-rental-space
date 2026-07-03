@@ -10,6 +10,7 @@ import {
   TableRow,
   Button,
   Pagination,
+  Badge,
 } from "@/admin/components/ui";
 import { RegistrationStatusBadge } from "@/admin/components/status-badges";
 import { adminCancelRegistration } from "@/admin/actions/event-registration";
@@ -43,6 +44,29 @@ interface EventRegistrationTableProps {
   readonly currentPage: number;
   /** 1 ページあたり件数。 */
   readonly perPage: number;
+}
+
+function AttendanceStatusCell({
+  registration,
+}: {
+  readonly registration: Registration;
+}) {
+  if (registration.status !== "CONFIRMED") {
+    return <span className="text-sm text-muted-foreground">-</span>;
+  }
+
+  if (registration.attendedAt === null) {
+    return <Badge variant="outline">未出席</Badge>;
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <Badge variant="success">出席済</Badge>
+      <span className="text-xs text-muted-foreground">
+        {formatDateTimeShort(registration.attendedAt)}
+      </span>
+    </div>
+  );
 }
 
 export function EventRegistrationTable({
@@ -88,6 +112,7 @@ export function EventRegistrationTable({
                 <TableHead className="hidden md:table-cell">メール</TableHead>
                 <TableHead>参加人数</TableHead>
                 <TableHead>ステータス</TableHead>
+                <TableHead>出欠</TableHead>
                 <TableHead className="hidden lg:table-cell">申込日時</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -110,6 +135,9 @@ export function EventRegistrationTable({
                   <TableCell>{reg.quantity}名</TableCell>
                   <TableCell className="whitespace-nowrap">
                     <RegistrationStatusBadge status={reg.status} />
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <AttendanceStatusCell registration={reg} />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     {formatDateTimeShort(reg.createdAt)}

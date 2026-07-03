@@ -39,7 +39,6 @@ type SlotInfo = {
 type Props = {
   readonly eventId: string;
   readonly initialAttendees: Attendee[];
-  readonly initialAttendedCount: number;
   readonly tickets: Ticket[];
   readonly slots: SlotInfo[];
 };
@@ -47,19 +46,55 @@ type Props = {
 export function CheckInClient({
   eventId,
   initialAttendees,
-  initialAttendedCount,
+  tickets,
+  slots,
+}: Props) {
+  return (
+    <CheckInClientState
+      key={getAttendeeSnapshotKey(initialAttendees)}
+      eventId={eventId}
+      initialAttendees={initialAttendees}
+      tickets={tickets}
+      slots={slots}
+    />
+  );
+}
+
+function getAttendeeSnapshotKey(attendees: readonly Attendee[]) {
+  return JSON.stringify(
+    attendees.map((attendee) => [
+      attendee.id,
+      attendee.attendedAt,
+      attendee.quantity,
+      attendee.name,
+      attendee.email,
+      attendee.phone,
+      attendee.ticket.id,
+      attendee.ticket.name,
+    ]),
+  );
+}
+
+function CheckInClientState({
+  eventId,
+  initialAttendees,
   tickets,
   slots,
 }: Props) {
   const router = useRouter();
   const [attendees, setAttendees] = useState<Attendee[]>(initialAttendees);
-  const [attendedCount, setAttendedCount] =
-    useState<number>(initialAttendedCount);
   const [query, setQuery] = useState("");
   const [walkInOpen, setWalkInOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const totalQuantity = attendees.reduce((sum, a) => sum + a.quantity, 0);
+  const attendedQuantity = attendees.reduce(
+    (sum, a) => sum + (a.attendedAt !== null ? a.quantity : 0),
+    0,
+  );
+  const attendedRegistrationCount = attendees.filter(
+    (a) => a.attendedAt !== null,
+  ).length;
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredAttendees = normalizedQuery
@@ -83,7 +118,6 @@ export function CheckInClient({
         a.id === registrationId ? { ...a, attendedAt: optimisticAt } : a,
       ),
     );
-    setAttendedCount((c) => c + (willAttend ? 1 : -1));
 
     startTransition(async () => {
       const result = await toggleEventRegistrationCheckIn({
@@ -100,7 +134,6 @@ export function CheckInClient({
               : a,
           ),
         );
-        setAttendedCount((c) => c + (willAttend ? -1 : 1));
         toast.error(result.error);
         return;
       }
@@ -145,10 +178,10 @@ export function CheckInClient({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold tabular-nums">
-              {attendedCount}
+              {attendedQuantity}
             </span>
             <span className="text-muted-foreground">
-              / {attendees.length} 名チェック済
+              / {totalQuantity} 名チェック済
             </span>
             {normalizedQuery && (
               <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs">
@@ -156,7 +189,7 @@ export function CheckInClient({
               </span>
             )}
             <span className="ml-2 text-xs text-muted-foreground">
-              （延べ {totalQuantity} 名）
+              申込 {attendedRegistrationCount} / {attendees.length} 件
             </span>
           </div>
           <div className="flex items-center gap-2">

@@ -47,6 +47,7 @@ describe("Playwright E2E webServer env", () => {
       "ADMIN_APP_URL",
       "ENCRYPTION_KEY",
       "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
+      "AUDIT_LOG_HMAC_KEY",
       "CRON_OIDC_AUDIENCE",
       "CRON_SERVICE_ACCOUNT_EMAIL",
       "R2_ACCOUNT_ID",

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
-import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getEventCheckInAttendees } from "@/shared/domain/events/registration-queries";
 import {
@@ -13,12 +12,9 @@ import {
   jsonError,
   jsonValidationError,
 } from "@/shared/lib/route-responses";
+import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 
-// EventRegistration.id / Event.id は cuid (varchar 30)。uuid 不可
-const eventIdSchema = z
-  .string()
-  .min(1, { error: "eventId が不正です" })
-  .max(30, { error: "eventId が不正です" });
+const eventIdSchema = prismaCuidIdSchema("イベント");
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -63,8 +59,9 @@ export async function GET(
           createdAt: r.createdAt.toISOString(),
           ticket: r.ticket,
         })),
-        total: result.total,
-        attendedCount: result.attendedCount,
+        totalRegistrations: result.totalRegistrations,
+        totalQuantity: result.totalQuantity,
+        attendedQuantity: result.attendedQuantity,
       },
       {
         headers: {

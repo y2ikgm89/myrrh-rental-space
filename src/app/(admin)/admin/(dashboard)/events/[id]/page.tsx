@@ -108,9 +108,18 @@ export default async function EventDetailPage({
             </a>
           </Button>
           <Button asChild size="sm" variant="outline">
+            <a
+              href={`/api/admin/export/event-registrations?eventId=${event.id}&format=xlsx`}
+              download
+            >
+              <IconDownload className="mr-2 h-4 w-4" />
+              Excel
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <Link href={`/admin/events/${event.id}/check-in`}>
               <IconClipboardCheck className="mr-2 h-4 w-4" />
-              当日受付
+              出欠確認
             </Link>
           </Button>
           <Button asChild size="sm">

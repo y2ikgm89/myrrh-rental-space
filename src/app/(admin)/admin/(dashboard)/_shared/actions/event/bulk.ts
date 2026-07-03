@@ -19,9 +19,12 @@ import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
 import { ErrorCategory } from "@/shared/lib/errors";
+import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+
+const eventIdSchema = prismaCuidIdSchema("イベント");
 
 const bulkIdsSchema = z
-  .array(z.uuid({ error: "イベントIDが不正です" }))
+  .array(eventIdSchema)
   .min(1, { error: "1件以上選択してください" })
   .max(100, { error: "一度に処理できるのは100件までです" });
 
@@ -61,7 +64,7 @@ export async function bulkSoftDeleteEvents(
 
 const bulkStatusInputSchema = z.object({
   ids: z
-    .array(z.uuid({ error: "イベントIDが不正です" }))
+    .array(eventIdSchema)
     .min(1, { error: "1件以上選択してください" })
     .max(100, { error: "一度に処理できるのは100件までです" }),
   newStatus: z.enum(EventStatus),

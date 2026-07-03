@@ -155,13 +155,13 @@ mock.module("@/shared/lib/cloudflare", () => ({
 // テストデータ
 // =============================================================================
 
-const VALID_UUID_1 = "11111111-1111-4111-8111-111111111111";
-const VALID_UUID_2 = "22222222-2222-4222-8222-222222222222";
+const VALID_EVENT_ID_1 = "cm0event1234567890123456";
+const VALID_EVENT_ID_2 = "cm0event2234567890123456";
 
-const INVALID_UUIDS = [
+const INVALID_EVENT_IDS = [
   "",
   "invalid",
-  "not-a-uuid",
+  "not-a-cuid",
   "11111111-1111-4111-8111", // 短すぎる
 ];
 
@@ -179,22 +179,22 @@ describe("bulkPublishEvents", () => {
         skipped: 0,
         isPublished: true,
         affectedSlugs: ["event-1"],
-        affectedTargets: [{ id: VALID_UUID_1, slug: "event-1" }],
+        affectedTargets: [{ id: VALID_EVENT_ID_1, slug: "event-1" }],
       }),
     );
   });
 
   describe("正常系", () => {
-    test("有効な UUID 配列で公開できる", async () => {
+    test("有効な CUID 配列で公開できる", async () => {
       const { bulkPublishEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      const result = await bulkPublishEvents([VALID_UUID_1], true);
+      const result = await bulkPublishEvents([VALID_EVENT_ID_1], true);
 
       expect(result).not.toHaveProperty("error");
       expect(mockBulkPublishEventsCommand).toHaveBeenCalledTimes(1);
       expect(mockBulkPublishEventsCommand).toHaveBeenCalledWith(
-        [VALID_UUID_1],
+        [VALID_EVENT_ID_1],
         true,
       );
     });
@@ -206,17 +206,17 @@ describe("bulkPublishEvents", () => {
           skipped: 0,
           isPublished: false,
           affectedSlugs: ["event-1"],
-          affectedTargets: [{ id: VALID_UUID_1, slug: "event-1" }],
+          affectedTargets: [{ id: VALID_EVENT_ID_1, slug: "event-1" }],
         }),
       );
 
       const { bulkPublishEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      await bulkPublishEvents([VALID_UUID_1], false);
+      await bulkPublishEvents([VALID_EVENT_ID_1], false);
 
       expect(mockBulkPublishEventsCommand).toHaveBeenCalledWith(
-        [VALID_UUID_1],
+        [VALID_EVENT_ID_1],
         false,
       );
     });
@@ -229,8 +229,8 @@ describe("bulkPublishEvents", () => {
           isPublished: true,
           affectedSlugs: ["event-1", "event-2"],
           affectedTargets: [
-            { id: VALID_UUID_1, slug: "event-1" },
-            { id: VALID_UUID_2, slug: "event-2" },
+            { id: VALID_EVENT_ID_1, slug: "event-1" },
+            { id: VALID_EVENT_ID_2, slug: "event-2" },
           ],
         }),
       );
@@ -238,7 +238,7 @@ describe("bulkPublishEvents", () => {
       const { bulkPublishEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      await bulkPublishEvents([VALID_UUID_1, VALID_UUID_2], true);
+      await bulkPublishEvents([VALID_EVENT_ID_1, VALID_EVENT_ID_2], true);
 
       // collection タグ EVENTS の単一無効化で全イベントページが更新されるため、
       // affectedTargets 件数によらず 1 回・引数なしで呼ぶ
@@ -258,8 +258,8 @@ describe("bulkPublishEvents", () => {
       expect(mockBulkPublishEventsCommand).not.toHaveBeenCalled();
     });
 
-    test.each(INVALID_UUIDS)(
-      "不正な UUID '%s' を含む場合はエラーを返す",
+    test.each(INVALID_EVENT_IDS)(
+      "不正な CUID '%s' を含む場合はエラーを返す",
       async (invalidId) => {
         const { bulkPublishEvents } =
           await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
@@ -273,10 +273,10 @@ describe("bulkPublishEvents", () => {
     );
 
     test("100件超の配列はエラーを返す", async () => {
-      const tooMany = Array.from({ length: 101 }, (_, i) => {
-        const hex = i.toString(16).padStart(2, "0");
-        return `${hex}${hex}${hex}${hex}-${hex}${hex}-4${hex}${hex}-8${hex}${hex}-${hex}${hex}${hex}${hex}${hex}${hex}${hex}${hex}${hex}${hex}${hex}${hex}`;
-      });
+      const tooMany = Array.from(
+        { length: 101 },
+        (_, i) => `cm0bulk${String(i).padStart(17, "0")}`,
+      );
 
       const { bulkPublishEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
@@ -297,7 +297,7 @@ describe("bulkPublishEvents", () => {
       const { bulkPublishEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      const result = await bulkPublishEvents([VALID_UUID_1], true);
+      const result = await bulkPublishEvents([VALID_EVENT_ID_1], true);
 
       expectErrorResult(result);
       expect(result.error).toBe("公開できません");
@@ -313,17 +313,17 @@ describe("bulkSoftDeleteEvents", () => {
       Promise.resolve({
         count: 1,
         affectedSlugs: ["event-1"],
-        affectedTargets: [{ id: VALID_UUID_1, slug: "event-1" }],
+        affectedTargets: [{ id: VALID_EVENT_ID_1, slug: "event-1" }],
       }),
     );
   });
 
   describe("正常系", () => {
-    test("有効な UUID 配列でソフト削除できる", async () => {
+    test("有効な CUID 配列でソフト削除できる", async () => {
       const { bulkSoftDeleteEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      const result = await bulkSoftDeleteEvents([VALID_UUID_1]);
+      const result = await bulkSoftDeleteEvents([VALID_EVENT_ID_1]);
 
       expect(result).not.toHaveProperty("error");
       expect(mockBulkSoftDeleteEventsCommand).toHaveBeenCalledTimes(1);
@@ -333,10 +333,10 @@ describe("bulkSoftDeleteEvents", () => {
       const { bulkSoftDeleteEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      await bulkSoftDeleteEvents([VALID_UUID_1]);
+      await bulkSoftDeleteEvents([VALID_EVENT_ID_1]);
 
       expect(mockBulkSoftDeleteEventsCommand).toHaveBeenCalledWith(
-        [VALID_UUID_1],
+        [VALID_EVENT_ID_1],
         { id: MOCK_ADMIN_USER.id },
       );
     });
@@ -347,8 +347,8 @@ describe("bulkSoftDeleteEvents", () => {
           count: 2,
           affectedSlugs: ["event-1", "event-2"],
           affectedTargets: [
-            { id: VALID_UUID_1, slug: "event-1" },
-            { id: VALID_UUID_2, slug: "event-2" },
+            { id: VALID_EVENT_ID_1, slug: "event-1" },
+            { id: VALID_EVENT_ID_2, slug: "event-2" },
           ],
         }),
       );
@@ -356,7 +356,7 @@ describe("bulkSoftDeleteEvents", () => {
       const { bulkSoftDeleteEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      await bulkSoftDeleteEvents([VALID_UUID_1, VALID_UUID_2]);
+      await bulkSoftDeleteEvents([VALID_EVENT_ID_1, VALID_EVENT_ID_2]);
 
       // collection タグ EVENTS の単一無効化で全イベントページが更新されるため 1 回でよい
       expect(mockInvalidateEventCaches).toHaveBeenCalledTimes(1);
@@ -375,8 +375,8 @@ describe("bulkSoftDeleteEvents", () => {
       expect(mockBulkSoftDeleteEventsCommand).not.toHaveBeenCalled();
     });
 
-    test.each(INVALID_UUIDS)(
-      "不正な UUID '%s' を含む場合はエラーを返す",
+    test.each(INVALID_EVENT_IDS)(
+      "不正な CUID '%s' を含む場合はエラーを返す",
       async (invalidId) => {
         const { bulkSoftDeleteEvents } =
           await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
@@ -399,7 +399,7 @@ describe("bulkSoftDeleteEvents", () => {
       const { bulkSoftDeleteEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      const result = await bulkSoftDeleteEvents([VALID_UUID_1]);
+      const result = await bulkSoftDeleteEvents([VALID_EVENT_ID_1]);
 
       expectErrorResult(result);
       expect(result.error).toBe("削除できません");
@@ -429,12 +429,12 @@ describe("bulkSetStatusEvents", () => {
       expect(result).toHaveProperty("error");
     });
 
-    test("非 UUID の ID は validation error", async () => {
+    test("非 CUID の ID は validation error", async () => {
       const { bulkSetStatusEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
       const result = await bulkSetStatusEvents(
-        ["not-a-uuid"],
+        ["not-a-cuid"],
         EventStatus.CANCELLED,
       );
 
@@ -445,10 +445,10 @@ describe("bulkSetStatusEvents", () => {
       const { bulkSetStatusEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      const ids = Array.from({ length: 101 }, (_, i) => {
-        const hex = (i + 1).toString(16).padStart(12, "0");
-        return `00000000-0000-4000-8000-${hex}`;
-      });
+      const ids = Array.from(
+        { length: 101 },
+        (_, i) => `cm0status${String(i).padStart(15, "0")}`,
+      );
 
       const result = await bulkSetStatusEvents(ids, EventStatus.CANCELLED);
 
@@ -461,7 +461,7 @@ describe("bulkSetStatusEvents", () => {
       mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
         count: 2,
         newStatus: EventStatus.CANCELLED,
-        affectedIds: [VALID_UUID_1, VALID_UUID_2],
+        affectedIds: [VALID_EVENT_ID_1, VALID_EVENT_ID_2],
         rejectedIds: [],
       });
 
@@ -469,13 +469,13 @@ describe("bulkSetStatusEvents", () => {
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
       const result = await bulkSetStatusEvents(
-        [VALID_UUID_1, VALID_UUID_2],
+        [VALID_EVENT_ID_1, VALID_EVENT_ID_2],
         EventStatus.CANCELLED,
       );
 
       expect(result).not.toHaveProperty("error");
       expect(mockBulkSetStatusEventsCommand).toHaveBeenCalledWith(
-        [VALID_UUID_1, VALID_UUID_2],
+        [VALID_EVENT_ID_1, VALID_EVENT_ID_2],
         EventStatus.CANCELLED,
       );
     });
@@ -484,7 +484,7 @@ describe("bulkSetStatusEvents", () => {
       mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
         count: 2,
         newStatus: EventStatus.CANCELLED,
-        affectedIds: [VALID_UUID_1, VALID_UUID_2],
+        affectedIds: [VALID_EVENT_ID_1, VALID_EVENT_ID_2],
         rejectedIds: [],
       });
 
@@ -492,7 +492,7 @@ describe("bulkSetStatusEvents", () => {
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
       await bulkSetStatusEvents(
-        [VALID_UUID_1, VALID_UUID_2],
+        [VALID_EVENT_ID_1, VALID_EVENT_ID_2],
         EventStatus.CANCELLED,
       );
 
@@ -503,14 +503,14 @@ describe("bulkSetStatusEvents", () => {
       mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
         count: 1,
         newStatus: EventStatus.ARCHIVED,
-        affectedIds: [VALID_UUID_1],
+        affectedIds: [VALID_EVENT_ID_1],
         rejectedIds: [],
       });
 
       const { bulkSetStatusEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      await bulkSetStatusEvents([VALID_UUID_1], EventStatus.ARCHIVED);
+      await bulkSetStatusEvents([VALID_EVENT_ID_1], EventStatus.ARCHIVED);
 
       expect(mockFireAndForget).not.toHaveBeenCalled();
     });
@@ -520,13 +520,13 @@ describe("bulkSetStatusEvents", () => {
         count: 0,
         newStatus: EventStatus.CANCELLED,
         affectedIds: [],
-        rejectedIds: [VALID_UUID_1],
+        rejectedIds: [VALID_EVENT_ID_1],
       });
 
       const { bulkSetStatusEvents } =
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
-      await bulkSetStatusEvents([VALID_UUID_1], EventStatus.CANCELLED);
+      await bulkSetStatusEvents([VALID_EVENT_ID_1], EventStatus.CANCELLED);
 
       expect(mockFireAndForget).not.toHaveBeenCalled();
     });
@@ -535,7 +535,7 @@ describe("bulkSetStatusEvents", () => {
       mockBulkSetStatusEventsCommand.mockResolvedValueOnce({
         count: 2,
         newStatus: EventStatus.CANCELLED,
-        affectedIds: [VALID_UUID_1, VALID_UUID_2],
+        affectedIds: [VALID_EVENT_ID_1, VALID_EVENT_ID_2],
         rejectedIds: [],
       });
 
@@ -543,7 +543,7 @@ describe("bulkSetStatusEvents", () => {
         await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk");
 
       await bulkSetStatusEvents(
-        [VALID_UUID_1, VALID_UUID_2],
+        [VALID_EVENT_ID_1, VALID_EVENT_ID_2],
         EventStatus.CANCELLED,
       );
 

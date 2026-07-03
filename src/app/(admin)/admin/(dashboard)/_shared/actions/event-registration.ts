@@ -24,14 +24,15 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { uuidIdSchema } from "@/shared/lib/validations/params";
+import {
+  prismaCuid2IdSchema,
+  prismaCuidIdSchema,
+} from "@/shared/lib/validations/params";
 
-const idSchema = uuidIdSchema("イベント参加申込");
-// EventRegistration.id / Event.id / EventTicket.id は cuid (varchar 30) なので uuid 不可
-const cuidSchema = z
-  .string()
-  .min(1, { error: "IDが不正です" })
-  .max(30, { error: "IDが不正です" });
+const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
+const eventIdSchema = prismaCuidIdSchema("イベント");
+const eventTicketIdSchema = prismaCuidIdSchema("イベントチケット");
+const eventTimeSlotIdSchema = prismaCuid2IdSchema("イベントタイムスロット");
 
 type CancelRegistrationData = {
   registrationId: string;
@@ -47,7 +48,7 @@ type CancelRegistrationData = {
 export async function adminCancelRegistration(
   registrationId: string,
 ): Promise<MutationResult<CancelRegistrationData>> {
-  const validated = idSchema.safeParse(registrationId);
+  const validated = eventRegistrationIdSchema.safeParse(registrationId);
   if (!validated.success) return createValidationMutationError(validated.error);
 
   return executeAdminMutationResult({
@@ -133,8 +134,8 @@ export async function adminCancelRegistration(
 // =============================================================================
 
 const checkInToggleSchema = z.object({
-  registrationId: cuidSchema,
-  eventId: cuidSchema,
+  registrationId: eventRegistrationIdSchema,
+  eventId: eventIdSchema,
   attended: z.boolean(),
 });
 
@@ -159,6 +160,7 @@ export async function toggleEventRegistrationCheckIn(
     execute: async () => {
       // DomainError は executeAdminMutationResult が外側で MutationError に変換する
       const result = await setEventRegistrationCheckInCommand({
+        eventId: parsed.data.eventId,
         registrationId: parsed.data.registrationId,
         attended: parsed.data.attended,
       });
@@ -177,9 +179,9 @@ export async function toggleEventRegistrationCheckIn(
 // =============================================================================
 
 const walkInSchema = z.object({
-  eventId: cuidSchema,
-  slotId: cuidSchema,
-  ticketId: cuidSchema,
+  eventId: eventIdSchema,
+  slotId: eventTimeSlotIdSchema,
+  ticketId: eventTicketIdSchema,
   name: z.string().trim().min(1, "氏名を入力してください").max(100),
   // 受付係が代行入力するため任意。空文字は null 扱い
   email: z

@@ -37,3 +37,20 @@ export const idParamSchema = z.string().min(1).max(100);
 export function uuidIdSchema(entityLabel: string) {
   return z.uuid({ error: `${entityLabel}IDが不正です` });
 }
+
+/**
+ * Prisma `@default(cuid())` の String ID スキーマファクトリ。
+ *
+ * イベント系モデルなど、DB schema 上 `@db.VarChar(30)` + `cuid()` を使う
+ * ID では UUID 検証を使わない。
+ */
+export function prismaCuidIdSchema(entityLabel: string) {
+  return z.cuid({ error: `${entityLabel}IDが不正です` });
+}
+
+/**
+ * Prisma `@default(cuid(2))` の String ID スキーマファクトリ。
+ */
+export function prismaCuid2IdSchema(entityLabel: string) {
+  return z.cuid2({ error: `${entityLabel}IDが不正です` });
+}

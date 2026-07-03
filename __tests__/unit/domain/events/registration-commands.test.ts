@@ -52,6 +52,12 @@ const mockRegistrationCreate = mock<() => Promise<Record<string, unknown>>>(
       icsSequence: 0,
     }),
 );
+const mockRegistrationFindFirst = mock<
+  () => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+const mockRegistrationUpdate = mock<() => Promise<Record<string, unknown>>>(
+  () => Promise.resolve({ attendedAt: new Date("2026-07-01T00:00:00.000Z") }),
+);
 // 本番コードは先頭で advisory xact lock を tx.$executeRaw で取得する。戻り値（影響行数）は
 // 使わないため 0 を返すだけのスタブで足りる。
 const mockExecuteRaw = mock<(...args: unknown[]) => Promise<number>>(() =>
@@ -76,6 +82,10 @@ mock.module("@/shared/db/prisma", () => {
   return {
     prisma: {
       $transaction: (cb: (client: typeof tx) => Promise<unknown>) => cb(tx),
+      eventRegistration: {
+        findFirst: mockRegistrationFindFirst,
+        update: mockRegistrationUpdate,
+      },
     },
   };
 });
@@ -85,7 +95,10 @@ mock.module("@generated/prisma/enums", () => ({
   RegistrationStatus,
 }));
 
-import { createEventRegistrationCommand } from "@/shared/domain/events/registration-commands";
+import {
+  createEventRegistrationCommand,
+  setEventRegistrationCheckInCommand,
+} from "@/shared/domain/events/registration-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // ---------------------------------------------------------------------------
@@ -266,5 +279,48 @@ describe("createEventRegistrationCommand", () => {
         createEventRegistrationCommand({ ...VALID_INPUT, quantity: 3 }),
       ).rejects.toThrow("残り1枠");
     });
+  });
+});
+
+describe("setEventRegistrationCheckInCommand", () => {
+  beforeEach(() => {
+    mockRegistrationFindFirst.mockReset();
+    mockRegistrationUpdate.mockReset();
+    mockRegistrationFindFirst.mockImplementation(() => Promise.resolve(null));
+    mockRegistrationUpdate.mockImplementation(() =>
+      Promise.resolve({ attendedAt: new Date("2026-07-01T00:00:00.000Z") }),
+    );
+  });
+
+  afterEach(() => {
+    mock.restore();
+  });
+
+  test("registrationId と eventId の両方で対象申込を絞る", async () => {
+    const eventId = "cm0event1234567890123456";
+    const registrationId = "cm0reg12345678901234567";
+
+    await expect(
+      setEventRegistrationCheckInCommand({
+        eventId,
+        registrationId,
+        attended: true,
+      }),
+    ).rejects.toThrow("申込が見つかりません");
+
+    expect(mockRegistrationFindFirst).toHaveBeenCalledWith({
+      where: {
+        id: registrationId,
+        eventId,
+        event: { deletedAt: null },
+      },
+      select: {
+        id: true,
+        eventId: true,
+        attendedAt: true,
+        status: true,
+      },
+    });
+    expect(mockRegistrationUpdate).not.toHaveBeenCalled();
   });
 });
