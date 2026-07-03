@@ -216,15 +216,11 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
-      # Prettier format check を全ファイル対象で実行（lefthook が pre-commit で
-      # auto-fix する前提だが、CI でも最終ゲートとして検証）
-      - name: Check code formatting
+      # job 内の step は順次実行されるため、read-only な format check と lint は
+      # wrapper 内で同時起動して Lint & Format の wall clock を短縮する。
+      - name: Run lint and format checks
         if: needs.changes.outputs.code == 'true'
-        run: bun run format:check
-
-      - name: Run lint
-        if: needs.changes.outputs.code == 'true'
-        run: bun run lint
+        run: bun run lint-format
 
   type-check:
     name: Type Check
@@ -239,10 +235,6 @@ jobs:
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
-
-      - name: Generate Prisma client
-        if: needs.changes.outputs.code == 'true'
-        run: bunx --bun prisma generate
 
       - name: Run type check
         if: needs.changes.outputs.code == 'true'
@@ -277,10 +269,6 @@ jobs:
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
 
-      - name: Generate Prisma client
-        if: needs.changes.outputs.code == 'true'
-        run: bunx --bun prisma generate
-
       - name: Run database migrations
         if: needs.changes.outputs.code == 'true'
         run: bunx --bun prisma migrate deploy
@@ -289,13 +277,9 @@ jobs:
       # mock.module() は process グローバルに live binding を残すため、複数 test
       # ファイルを同一 bun test 起動で実行すると干渉する（公式 docs の guidance）。
       # 各 *.test.ts を独立 bun サブプロセスで起動して干渉を物理的に排除する。
-      - name: Run unit tests (per-file isolation)
+      - name: Run unit and integration tests (per-file isolation)
         if: needs.changes.outputs.code == 'true'
-        run: bun run test:unit
-
-      - name: Run integration tests (per-file isolation)
-        if: needs.changes.outputs.code == 'true'
-        run: bun run test:integration
+        run: bun run test:all
 
   smoke-e2e:
     name: Smoke E2E (critical path)
@@ -352,7 +336,7 @@ jobs:
 
       - name: Build application
         if: needs.changes.outputs.code == 'true'
-        run: bun run build:skip-env
+        run: bun run build:skip-env:prepared
         env:
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           SKIP_ENV_VALIDATION: "true"
@@ -462,7 +446,7 @@ jobs:
         run: bunx --bun prisma db seed
 
       - name: Build application
-        run: bun run build:skip-env
+        run: bun run build:skip-env:prepared
         env:
           # NEXT_PUBLIC_* は build 時に static replace されるため build step で渡す。
           # E2E 専用 opt-in: DevLoginButton を production build でも表示し、
@@ -528,10 +512,6 @@ jobs:
       - name: Setup Next.js cache
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-next-cache
-
-      - name: Generate Prisma client
-        if: needs.changes.outputs.code == 'true'
-        run: bunx --bun prisma generate
 
       - name: Build with env validation
         if: needs.changes.outputs.code == 'true'
@@ -634,9 +614,6 @@ jobs:
 
       - name: Setup Next.js cache
         uses: ./.github/actions/setup-next-cache
-
-      - name: Generate Prisma client
-        run: bunx --bun prisma generate
 
       # Next.js 16 公式の Turbopack-native bundle analyzer
       # 結果は .next/diagnostics/analyze に出力される
@@ -770,7 +747,7 @@ jobs:
         run: bunx --bun prisma db seed
 
       - name: Build application
-        run: bun run build:skip-env
+        run: bun run build:skip-env:prepared
         env:
           SKIP_ENV_VALIDATION: "true"
 
