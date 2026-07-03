@@ -23,6 +23,7 @@
  */
 
 // Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
+import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PrismaClient,
@@ -50,7 +51,13 @@ import {
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
 import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
-import { createAuditLogRecord } from "../src/shared/domain/audit-log/commands";
+import {
+  AUDIT_LOG_CHAIN_VERSION,
+  AUDIT_LOG_GENESIS_HASH,
+  AUDIT_LOG_HASH_ALGORITHM,
+  computeAuditLogEntryHashWithKey,
+  type AuditLogHashPayload,
+} from "../src/shared/domain/audit-log/hash-chain-core";
 
 // NOTE: terms 系の import (applyBusinessInfo / getTemplatesForType / TermsScope 等) は
 // 初期 baseline migration に SSoT 移管したため撤去済。
@@ -3981,6 +3988,86 @@ async function seedBlockTemplates() {
 // Audit Logs（監査ログ・全 AuditAction カバレッジ）
 // =============================================================================
 
+const SEED_AUDIT_LOG_HASH_KEY_ID_PATTERN = /^[a-zA-Z0-9_-]{1,32}$/u;
+const LOCAL_DEV_AUDIT_LOG_HMAC_KEY = "f".repeat(64);
+
+function getSeedAuditLogHmacKeyHex(): string {
+  const configuredKey = process.env["AUDIT_LOG_HMAC_KEY"];
+  if (configuredKey) return configuredKey;
+
+  return LOCAL_DEV_AUDIT_LOG_HMAC_KEY;
+}
+
+function getSeedAuditLogHashKeyId(): string {
+  const keyId = process.env["AUDIT_LOG_HMAC_KEY_ID"] ?? "v1";
+  if (!SEED_AUDIT_LOG_HASH_KEY_ID_PATTERN.test(keyId)) {
+    throw new Error(
+      "AUDIT_LOG_HMAC_KEY_ID must be 1-32 chars of [a-zA-Z0-9_-]",
+    );
+  }
+  return keyId;
+}
+
+async function createSeedAuditLogRecord(input: {
+  action: AuditLogHashPayload["action"];
+  resource: string;
+  userId?: string;
+  resourceId?: string;
+  metadata?: Prisma.InputJsonValue;
+  createdAt: Date;
+}) {
+  const previous = await prisma.auditLog.findFirst({
+    select: { sequence: true, entryHash: true },
+    orderBy: { sequence: "desc" },
+  });
+
+  const id = randomUUID();
+  const sequence = previous ? previous.sequence + 1n : 1n;
+  const previousHash = previous?.entryHash ?? AUDIT_LOG_GENESIS_HASH;
+  const hashKeyId = getSeedAuditLogHashKeyId();
+  const metadata = input.metadata ?? null;
+  const hashPayload: AuditLogHashPayload = {
+    version: AUDIT_LOG_CHAIN_VERSION,
+    id,
+    sequence: sequence.toString(),
+    previousHash,
+    hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
+    hashKeyId,
+    userId: input.userId ?? null,
+    action: input.action,
+    resource: input.resource,
+    resourceId: input.resourceId ?? null,
+    oldValue: null,
+    newValue: null,
+    metadata,
+    createdAt: input.createdAt.toISOString(),
+  };
+  const entryHash = computeAuditLogEntryHashWithKey(
+    hashPayload,
+    getSeedAuditLogHmacKeyHex(),
+  );
+
+  await prisma.auditLog.create({
+    data: {
+      id,
+      sequence,
+      previousHash,
+      entryHash,
+      hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
+      hashKeyId,
+      chainVersion: AUDIT_LOG_CHAIN_VERSION,
+      action: input.action,
+      resource: input.resource,
+      ...(input.userId !== undefined ? { userId: input.userId } : {}),
+      ...(input.resourceId !== undefined
+        ? { resourceId: input.resourceId }
+        : {}),
+      ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+      createdAt: input.createdAt,
+    },
+  });
+}
+
 async function seedAuditLog() {
   const existingCount = await prisma.auditLog.count();
   if (existingCount > 0) {
@@ -4146,7 +4233,7 @@ async function seedAuditLog() {
   }
 
   for (const entry of entries) {
-    await createAuditLogRecord({
+    await createSeedAuditLogRecord({
       action: entry.action,
       resource: entry.resource,
       ...(entry.userId !== null ? { userId: entry.userId } : {}),

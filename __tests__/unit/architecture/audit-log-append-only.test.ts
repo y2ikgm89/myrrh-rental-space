@@ -41,6 +41,15 @@ describe("audit log append-only boundary", () => {
     );
   });
 
+  test("Prisma seed は Next server-only audit command を import しない", () => {
+    const seed = readFileSync(join(process.cwd(), "prisma", "seed.ts"), {
+      encoding: "utf8",
+    });
+
+    expect(seed).not.toContain("../src/shared/domain/audit-log/commands");
+    expect(seed).not.toContain("createAuditLogRecord");
+  });
+
   test("hash chain migration は旧 audit_logs を残さず必須ハッシュ列を追加する", () => {
     const migration = readAuditLogHashChainMigration();
 
