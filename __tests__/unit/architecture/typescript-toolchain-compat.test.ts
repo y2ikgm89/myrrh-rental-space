@@ -55,7 +55,12 @@ describe("TypeScript toolchain compatibility", () => {
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
 
-    for (const scriptName of ["build", "build:skip-env", "analyze"]) {
+    for (const scriptName of [
+      "build",
+      "build:skip-env",
+      "build:skip-env:prepared",
+      "analyze",
+    ]) {
       const script = scripts[scriptName];
       expect(typeof script).toBe("string");
       if (typeof script !== "string") {
@@ -69,8 +74,17 @@ describe("TypeScript toolchain compatibility", () => {
     const packageJson = readPackageJson();
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
+    const typeCheckSource = readFileSync(
+      join(ROOT, "scripts", "type-check.ts"),
+      "utf8",
+    );
 
-    for (const scriptName of ["build", "build:skip-env", "analyze"]) {
+    for (const scriptName of [
+      "build",
+      "build:skip-env",
+      "build:skip-env:prepared",
+      "analyze",
+    ]) {
       const script = scripts[scriptName];
       expect(typeof script).toBe("string");
       if (typeof script !== "string") {
@@ -84,9 +98,19 @@ describe("TypeScript toolchain compatibility", () => {
     if (typeof typeCheck !== "string") {
       throw new Error("type-check script must exist");
     }
-    expect(typeCheck).toContain(
-      "next typegen && bun scripts/ensure-next-types.ts && bun scripts/clean-next-dev-types.ts && tsc",
+    expect(typeCheck).toBe("bun scripts/type-check.ts");
+    expect(typeCheckSource.indexOf('name: "next:typegen"')).toBeLessThan(
+      typeCheckSource.indexOf('name: "next:ensure-types"'),
     );
+    expect(typeCheckSource.indexOf('name: "next:ensure-types"')).toBeLessThan(
+      typeCheckSource.indexOf('name: "next:clean-dev-types"'),
+    );
+    expect(
+      typeCheckSource.indexOf('name: "next:clean-dev-types"'),
+    ).toBeLessThan(typeCheckSource.indexOf('name: "tsc:app"'));
+    expect(
+      typeCheckSource.indexOf('name: "next:clean-dev-types"'),
+    ).toBeLessThan(typeCheckSource.indexOf('name: "tsc:test"'));
   });
 
   test("tsconfig includes the Next CLI-managed generated route type outputs", () => {
@@ -166,10 +190,10 @@ describe("TypeScript toolchain compatibility", () => {
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
 
-    const script = scripts["build:skip-env"];
+    const script = scripts["build:skip-env:next"];
     expect(typeof script).toBe("string");
     if (typeof script !== "string") {
-      throw new Error("build:skip-env script must exist");
+      throw new Error("build:skip-env:next script must exist");
     }
 
     expect(script).toContain("NEXT_PUBLIC_BASE_URL=http://localhost:3000");
@@ -182,10 +206,10 @@ describe("TypeScript toolchain compatibility", () => {
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
 
-    const script = scripts["build:skip-env"];
+    const script = scripts["build:skip-env:next"];
     expect(typeof script).toBe("string");
     if (typeof script !== "string") {
-      throw new Error("build:skip-env script must exist");
+      throw new Error("build:skip-env:next script must exist");
     }
 
     const match = script.match(/BETTER_AUTH_SECRET=([^ ]+)/);

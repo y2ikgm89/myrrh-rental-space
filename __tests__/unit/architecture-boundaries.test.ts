@@ -20,6 +20,11 @@ const API_WEBHOOK_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "webhooks");
 const PUBLIC_APP_ROOT = join(SRC_ROOT, "app", "(public)");
 const PUBLIC_LAYOUT_FILE = join(PUBLIC_APP_ROOT, "layout.tsx");
 const PACKAGE_JSON_FILE = join(ROOT, "package.json");
+const TYPE_CHECK_SCRIPT_FILE = join(ROOT, "scripts", "type-check.ts");
+const VALIDATE_SCRIPT_FILE = join(ROOT, "scripts", "validate.ts");
+const LINT_FORMAT_SCRIPT_FILE = join(ROOT, "scripts", "lint-format.ts");
+const PRETTIER_SCRIPT_FILE = join(ROOT, "scripts", "prettier.ts");
+const LHCI_START_SCRIPT_FILE = join(ROOT, "scripts", "lhci-start.ts");
 const NEXT_CONFIG_FILE = join(ROOT, "next.config.ts");
 const CLOUDBUILD_FILE = join(ROOT, "cloudbuild.yaml");
 const AUTH_ROUTE_FILE = join(
@@ -1052,11 +1057,109 @@ describe("architecture boundaries", () => {
     expectRecord(packageJson);
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
+    const typeCheckSource = readFileSync(TYPE_CHECK_SCRIPT_FILE, "utf8");
 
-    expect(scripts["type-check"]).toContain("--incremental false");
-    expect(scripts["type-check"]).toContain("bun run db:generate");
+    expect(scripts["type-check"]).toBe("bun scripts/type-check.ts");
+    expect(typeCheckSource).toContain('name: "prisma:generate"');
+    expect(typeCheckSource).toContain('name: "next:typegen"');
+    expect(typeCheckSource).toContain('name: "next:ensure-types"');
+    expect(typeCheckSource).toContain('name: "next:clean-dev-types"');
+    expect(typeCheckSource.match(/"--incremental"/gu)?.length).toBe(2);
+    expect(typeCheckSource.match(/"false"/gu)?.length).toBe(2);
+    expect(typeCheckSource).toContain('"tsconfig.test.json"');
     expect(scripts["build"]).toContain("bun run db:generate");
     expect(scripts["test:unit"]).toContain("bun run db:generate");
+  });
+
+  test("prepared skip-env build は Prisma client generation 済み CI job で再生成しない", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
+    const lhciStartSource = readFileSync(LHCI_START_SCRIPT_FILE, "utf8");
+
+    expect(scripts["build:skip-env"]).toBe(
+      "bun run toolchain:check && bun run db:generate && bun scripts/clean-next-dev-types.ts && bun run build:skip-env:next",
+    );
+    expect(scripts["build:skip-env:prepared"]).toBe(
+      "bun run toolchain:check && bun scripts/clean-next-dev-types.ts && bun run build:skip-env:next",
+    );
+    expect(scripts["build:skip-env:next"]).toContain(
+      "SKIP_ENV_VALIDATION=true next build",
+    );
+    expect(scripts["build:skip-env:prepared"]).not.toContain(
+      "bun run db:generate",
+    );
+    expect(lhciStartSource).toContain('process.env["CI"]');
+    expect(lhciStartSource).toContain('"build:skip-env:prepared"');
+    expect(lhciStartSource).toContain('"build:skip-env"');
+  });
+
+  test("test:all は Prisma client generation を 1 回にまとめる", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
+
+    expect(scripts["test:all"]).toBe(
+      "bun run db:generate && bun scripts/run-tests.ts __tests__/unit && bun scripts/run-tests.ts __tests__/integration",
+    );
+    expect(scripts["test:all"]).not.toContain("bun run test:unit");
+    expect(scripts["test:all"]).not.toContain("bun run test:integration");
+  });
+
+  test("validate は type-check と lint を並列化し、lint concurrency を明示する", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
+    const validateSource = readFileSync(VALIDATE_SCRIPT_FILE, "utf8");
+
+    expect(scripts["lint"]).toBe("eslint . --concurrency 4");
+    expect(scripts["validate"]).toBe("bun scripts/validate.ts");
+    expect(validateSource).toContain('name: "type-check"');
+    expect(validateSource).toContain('command: ["bun", "run", "type-check"]');
+    expect(validateSource).toContain('name: "lint"');
+    expect(validateSource).toContain('command: ["bun", "run", "lint"]');
+  });
+
+  test("CI lint-format runner は format check と lint を並列化する", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
+    const lintFormatSource = readFileSync(LINT_FORMAT_SCRIPT_FILE, "utf8");
+
+    expect(scripts["lint-format"]).toBe("bun scripts/lint-format.ts");
+    expect(lintFormatSource).toContain('name: "format:check"');
+    expect(lintFormatSource).toContain(
+      'command: ["bun", "run", "format:check"]',
+    );
+    expect(lintFormatSource).toContain('name: "lint"');
+    expect(lintFormatSource).toContain('command: ["bun", "run", "lint"]');
+  });
+
+  test("format scripts は対象指定時に repo 全体を追加チェックしない", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
+    const prettierSource = readFileSync(PRETTIER_SCRIPT_FILE, "utf8");
+
+    expect(scripts["format"]).toBe("bun scripts/prettier.ts --write");
+    expect(scripts["format:check"]).toBe("bun scripts/prettier.ts --check");
+    expect(prettierSource).toContain('targets.length > 0 ? targets : ["."]');
+    expect(prettierSource).toContain('"bunx", "prettier"');
   });
 
   test("Cloud Run deploy は Server Actions encryption key を runtime にも注入する", () => {

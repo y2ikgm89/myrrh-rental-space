@@ -9,9 +9,10 @@
  *
  * ## 並列実行戦略
  *
- * - 既定並列度 `N = min(navigator.hardwareConcurrency, 4)` の `p-limit` プール。
- *   上限を 4 にクランプするのは CI ランナ (Cloud Build / GitHub Actions) の
- *   2-4 vCPU と OOM 余裕を見越した経験則。`TEST_PARALLEL` 環境変数で上書き可能。
+ * - 既定並列度は CI では `min(navigator.hardwareConcurrency, 4)`、ローカルでは
+ *   `min(navigator.hardwareConcurrency, 8)` の `p-limit` プール。CI の 4 上限は
+ *   GitHub Actions の 2-4 vCPU と OOM 余裕を優先し、ローカルは実測に基づいて
+ *   待ち時間を短縮する。`TEST_PARALLEL` 環境変数で上書き可能。
  * - **実 DB 接続テストは serial bucket に隔離**。`TEST_DATABASE_URL` を読み
  *   共有 Postgres を操作する 5 ファイル (cancel-by-token-roundtrip /
  *   reminder-idempotency / coupon-status-filter / registration-overbooking /
@@ -38,10 +39,11 @@
  *   bun scripts/run-tests.ts __tests__/unit/lib/crypto.test.ts
  *
  * Env:
- *   TEST_PARALLEL  並列度の手動上書き (default: min(cpu, 4))
+ *   TEST_PARALLEL  並列度の手動上書き (default: CI min(cpu, 4), local min(cpu, 8))
  */
 
 import pLimit from "p-limit";
+import { resolveTestConcurrency } from "./test-runner-concurrency";
 
 interface FileResult {
   file: string;
@@ -108,14 +110,11 @@ files.sort();
 const parallelFiles = files.filter((f) => !SERIAL_DB_TESTS.has(f));
 const serialFiles = files.filter((f) => SERIAL_DB_TESTS.has(f));
 
-const cpuCount = Math.max(1, navigator.hardwareConcurrency || 1);
-const envParallel = process.env["TEST_PARALLEL"];
-const parsedEnv =
-  envParallel === undefined ? Number.NaN : Number.parseInt(envParallel, 10);
-const concurrency =
-  Number.isFinite(parsedEnv) && parsedEnv > 0
-    ? parsedEnv
-    : Math.min(cpuCount, 4);
+const concurrency = resolveTestConcurrency({
+  cpuCount: navigator.hardwareConcurrency || 1,
+  envParallel: process.env["TEST_PARALLEL"],
+  isCi: process.env["CI"] === "true",
+});
 
 console.info(
   `[run-tests] ${files.length} test files ` +

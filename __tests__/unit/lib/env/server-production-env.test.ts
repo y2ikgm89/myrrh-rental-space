@@ -32,6 +32,7 @@ function setProductionEnv(
   Object.assign(process.env, {
     APP_SURFACE: "public",
     ADMIN_APP_URL: "https://myrrh-rental-space-admin.example.com",
+    AUDIT_LOG_HMAC_KEY: "a".repeat(64),
     BETTER_AUTH_SECRET: "a".repeat(32),
     BETTER_AUTH_URL: "https://rental-space.example.com",
     CRON_OIDC_AUDIENCE: "https://rental-space.example.com",

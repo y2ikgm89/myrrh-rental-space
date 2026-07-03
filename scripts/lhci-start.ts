@@ -41,7 +41,11 @@ function applyLhciProductionFallbacks(): void {
 
 applyLhciProductionFallbacks();
 
-const build = Bun.spawnSync(["bun", "run", "build:skip-env"], {
+const buildScript = process.env["CI"]
+  ? "build:skip-env:prepared"
+  : "build:skip-env";
+
+const build = Bun.spawnSync(["bun", "run", buildScript], {
   stdout: "inherit",
   stderr: "inherit",
   env: process.env,
