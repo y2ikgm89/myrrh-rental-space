@@ -5,7 +5,7 @@ type BadgeVariant = "default" | "success" | "warning" | "info";
 
 const variantClasses = {
   default: "bg-surface text-foreground",
-  success: "bg-success/10 text-success",
+  success: "bg-success/10 text-success-strong",
   // warning は淡色 tint 上で text-warning が AA 未達のため暗い専用前景を使う。
   warning: "bg-warning/10 text-warning-strong",
   info: "bg-info/10 text-info",

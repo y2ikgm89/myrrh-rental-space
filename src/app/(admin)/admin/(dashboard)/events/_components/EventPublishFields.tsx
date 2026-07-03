@@ -223,7 +223,10 @@ export function EventPublishFields({
                 </p>
               )}
               {fields.thumbnailUrl.errors && (
-                <p className="text-sm text-destructive">
+                <p
+                  id={fields.thumbnailUrl.errorId}
+                  className="text-sm text-destructive"
+                >
                   {fields.thumbnailUrl.errors.join(", ")}
                 </p>
               )}
@@ -248,7 +251,10 @@ export function EventPublishFields({
             height="560px"
           />
           {fields.descriptionJson.errors && (
-            <p className="mt-2 text-sm text-destructive">
+            <p
+              id={fields.descriptionJson.errorId}
+              className="mt-2 text-sm text-destructive"
+            >
               {fields.descriptionJson.errors.join(", ")}
             </p>
           )}

@@ -310,7 +310,7 @@ function SummaryStat({
       <dd className="text-lg font-semibold tabular-nums tracking-tight text-foreground">
         {value}
       </dd>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {hint ? <dd className="text-xs text-muted-foreground">{hint}</dd> : null}
     </div>
   );
 }

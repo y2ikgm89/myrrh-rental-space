@@ -4,18 +4,12 @@
  * Site Header — Radix NavigationMenu + Radix Dialog (mobile)
  *
  * - デスクトップ: @radix-ui/react-navigation-menu（WAI-ARIA 準拠、キーボード操作対応）
- * - モバイル: @radix-ui/react-dialog（Portal / focus trap / Esc / body scroll lock 自動）
+ * - モバイル: @radix-ui/react-dialog（Portal / focus trap / Esc）
  * - スクロール挙動: gsap.matchMedia で prefers-reduced-motion を尊重
  * - 全ナビ項目は DB 駆動。navItems が空なら nav リストのみ省略
  */
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactElement,
-} from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavigationMenu, Dialog } from "radix-ui";
@@ -84,13 +78,6 @@ const MOBILE_PARENT_CLASS =
 const MOBILE_CHILD_CLASS =
   "inline-flex min-h-11 items-center gap-1.5 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
 
-const MOBILE_MENU_FOCUSABLE_SELECTOR = [
-  'a[href]:not([tabindex="-1"])',
-  'button:not([disabled]):not([tabindex="-1"])',
-  'summary:not([tabindex="-1"])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(",");
-
 /**
  * 指定された URL が現在のパスと一致するか判定する。
  * ルート "/" は exact 一致、それ以外は segment-aware な prefix 一致。
@@ -104,20 +91,6 @@ function useIsActiveUrl(url: string, isExternal: boolean): boolean {
   if (isExternal || !url.startsWith("/")) return false;
   if (url === "/") return pathname === "/";
   return pathname === url || pathname.startsWith(`${url}/`);
-}
-
-function getFocusableMenuElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(
-    container.querySelectorAll<HTMLElement>(MOBILE_MENU_FOCUSABLE_SELECTOR),
-  ).filter((element) => {
-    return (
-      !element.hasAttribute("disabled") &&
-      element.getAttribute("aria-hidden") !== "true" &&
-      (element.offsetWidth > 0 ||
-        element.offsetHeight > 0 ||
-        element.getClientRects().length > 0)
-    );
-  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -252,36 +225,22 @@ export function Header({
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
-
-  const handleMobileMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab") return;
-
+  function focusMobileMenuInitialElement() {
     const content = mobileMenuContentRef.current;
-    if (!content) return;
+    const closeButton = closeButtonRef.current;
 
-    const focusableElements = getFocusableMenuElements(content);
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements.at(-1);
-    if (!firstElement || !lastElement) return;
-
-    const activeElement = document.activeElement;
-    if (!content.contains(activeElement)) {
-      event.preventDefault();
-      firstElement.focus();
-      return;
+    closeButton?.focus({ preventScroll: true });
+    if (content && !content.contains(document.activeElement)) {
+      content.focus({ preventScroll: true });
     }
+  }
 
-    if (event.shiftKey && activeElement === firstElement) {
-      event.preventDefault();
-      lastElement.focus();
-      return;
-    }
+  useEffect(() => {
+    if (!menuOpen) return;
 
-    if (!event.shiftKey && activeElement === lastElement) {
-      event.preventDefault();
-      firstElement.focus();
-    }
-  };
+    const frame = window.requestAnimationFrame(focusMobileMenuInitialElement);
+    return () => window.cancelAnimationFrame(frame);
+  }, [menuOpen]);
 
   // Publish header height as CSS custom property so the hero overlap / sticky
   // sidebars can align to the current header size.
@@ -505,8 +464,8 @@ export function Header({
           </Button>
         </div>
 
-        {/* Mobile — non-modal Dialog avoids global aria-hidden mutations during streaming hydration. */}
-        <Dialog.Root modal={false} open={menuOpen} onOpenChange={setMenuOpen}>
+        {/* Mobile — full-screen modal Dialog keeps focus inside the menu. */}
+        <Dialog.Root modal open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger
             className="inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground lg:hidden"
             aria-label="メニューを開く"
@@ -523,10 +482,9 @@ export function Header({
               ref={mobileMenuContentRef}
               tabIndex={-1}
               className="fixed inset-0 z-50 flex flex-col lg:hidden"
-              onKeyDown={handleMobileMenuKeyDown}
               onOpenAutoFocus={(event) => {
+                focusMobileMenuInitialElement();
                 event.preventDefault();
-                closeButtonRef.current?.focus();
               }}
             >
               <Dialog.Title className="sr-only">

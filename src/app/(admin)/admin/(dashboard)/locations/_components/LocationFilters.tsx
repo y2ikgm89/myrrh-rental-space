@@ -56,7 +56,7 @@ export function LocationFilters() {
       {/* 公開状態フィルター */}
       <div className="w-full sm:w-48">
         <Select value={currentPublished} onValueChange={setPublished}>
-          <SelectTrigger>
+          <SelectTrigger aria-label="公開状態で絞り込み">
             <SelectValue placeholder="公開状態" />
           </SelectTrigger>
           <SelectContent>

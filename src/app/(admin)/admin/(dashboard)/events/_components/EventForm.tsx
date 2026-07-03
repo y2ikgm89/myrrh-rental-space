@@ -292,7 +292,10 @@ export function EventForm({
       />
 
       {form.errors && form.errors.length > 0 && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+        <div
+          className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+        >
           {form.errors.join(", ")}
         </div>
       )}

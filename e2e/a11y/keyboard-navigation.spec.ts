@@ -125,6 +125,7 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
 
   function mobileMenuControls(page: Page): {
     hamburger: Locator;
+    hamburgerElement: Locator;
     closeButton: Locator;
   } {
     const banner = page.getByRole("banner");
@@ -132,6 +133,9 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
 
     return {
       hamburger: banner.getByRole("button", { name: "メニューを開く" }),
+      hamburgerElement: page.locator(
+        'header button[aria-label="メニューを開く"]',
+      ),
       closeButton: dialog.getByRole("button", { name: "メニューを閉じる" }),
     };
   }
@@ -155,7 +159,10 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
         { timeout: 5000 },
       )
       .toBe(true);
-    await expect(controls.hamburger).toHaveAttribute("aria-expanded", "true");
+    await expect(controls.hamburgerElement).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     await expect(controls.closeButton).toBeVisible();
 
     return controls;
@@ -253,7 +260,7 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
     page,
   }) => {
     await gotoHomeWithReadyMobileShell(page);
-    const { hamburger } = mobileMenuControls(page);
+    const { hamburger, hamburgerElement } = mobileMenuControls(page);
 
     // 初期状態は expanded=false
     await expect(hamburger).toHaveAttribute("aria-expanded", "false");
@@ -261,7 +268,7 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
     await openMobileMenu(page);
 
     // 開いた状態は expanded=true
-    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
+    await expect(hamburgerElement).toHaveAttribute("aria-expanded", "true");
 
     await page.keyboard.press("Escape");
     await expect(hamburger).toHaveAttribute("aria-expanded", "false");

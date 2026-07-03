@@ -74,7 +74,10 @@ export function MediaFilters() {
               void setParams({ type: v === "all" ? null : v, page: 1 })
             }
           >
-            <SelectTrigger className="h-9 w-auto min-w-[140px]">
+            <SelectTrigger
+              className="h-9 w-auto min-w-[140px]"
+              aria-label="メディア種別で絞り込み"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -94,7 +97,10 @@ export function MediaFilters() {
               void setParams({ usage: v === "all" ? null : v, page: 1 })
             }
           >
-            <SelectTrigger className="h-9 w-auto min-w-[140px]">
+            <SelectTrigger
+              className="h-9 w-auto min-w-[140px]"
+              aria-label="用途で絞り込み"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

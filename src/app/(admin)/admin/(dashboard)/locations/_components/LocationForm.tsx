@@ -488,7 +488,10 @@ export function LocationForm({
       ))}
 
       {form.errors && form.errors.length > 0 && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+        <div
+          className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+        >
           {form.errors.join(", ")}
         </div>
       )}
@@ -522,7 +525,10 @@ export function LocationForm({
                   disabled={isPending}
                 />
                 {fields.name.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.name.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.name.errors.join(", ")}
                   </p>
                 )}
@@ -545,7 +551,10 @@ export function LocationForm({
                   として使われ、JSON-LD `@id` にも影響します。
                 </p>
                 {fields.slug.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.slug.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.slug.errors.join(", ")}
                   </p>
                 )}
@@ -562,7 +571,10 @@ export function LocationForm({
                   disabled={isPending}
                 />
                 {fields.description.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.description.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.description.errors.join(", ")}
                   </p>
                 )}
@@ -578,7 +590,10 @@ export function LocationForm({
                   disabled={isPending}
                 />
                 {fields.address.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.address.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.address.errors.join(", ")}
                   </p>
                 )}
@@ -599,7 +614,10 @@ export function LocationForm({
                       disabled={isPending}
                     />
                     {fields.postalCode.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.postalCode.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.postalCode.errors.join(", ")}
                       </p>
                     )}
@@ -614,7 +632,10 @@ export function LocationForm({
                       disabled={isPending}
                     />
                     {fields.prefecture.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.prefecture.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.prefecture.errors.join(", ")}
                       </p>
                     )}
@@ -631,7 +652,10 @@ export function LocationForm({
                       disabled={isPending}
                     />
                     {fields.city.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.city.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.city.errors.join(", ")}
                       </p>
                     )}
@@ -646,7 +670,10 @@ export function LocationForm({
                       disabled={isPending}
                     />
                     {fields.streetAddress.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.streetAddress.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.streetAddress.errors.join(", ")}
                       </p>
                     )}
@@ -660,7 +687,10 @@ export function LocationForm({
                     disabled={isPending}
                   />
                   {fields.buildingName.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.buildingName.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.buildingName.errors.join(", ")}
                     </p>
                   )}
@@ -727,7 +757,10 @@ export function LocationForm({
                     </p>
                   )}
                   {fields.accessLines.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.accessLines.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.accessLines.errors.join(", ")}
                     </p>
                   )}
@@ -746,7 +779,10 @@ export function LocationForm({
                   この拠点の駐車場情報。拠点ごとに設定できます。
                 </p>
                 {fields.parkingInfo.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.parkingInfo.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.parkingInfo.errors.join(", ")}
                   </p>
                 )}
@@ -803,7 +839,10 @@ export function LocationForm({
                   </div>
                 </div>
                 {fields.imageUrl.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.imageUrl.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.imageUrl.errors.join(", ")}
                   </p>
                 )}
@@ -867,7 +906,10 @@ export function LocationForm({
                   </>
                 )}
                 {fields.imageUrls.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.imageUrls.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.imageUrls.errors.join(", ")}
                   </p>
                 )}
@@ -978,7 +1020,10 @@ export function LocationForm({
                     onChange={(e) => setLatitude(e.target.value)}
                   />
                   {fields.latitude.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.latitude.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.latitude.errors.join(", ")}
                     </p>
                   )}
@@ -995,7 +1040,10 @@ export function LocationForm({
                     onChange={(e) => setLongitude(e.target.value)}
                   />
                   {fields.longitude.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.longitude.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.longitude.errors.join(", ")}
                     </p>
                   )}
@@ -1012,7 +1060,10 @@ export function LocationForm({
                   disabled={isPending}
                 />
                 {fields.phoneNumber.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.phoneNumber.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.phoneNumber.errors.join(", ")}
                   </p>
                 )}
@@ -1029,7 +1080,10 @@ export function LocationForm({
                   disabled={isPending}
                 />
                 {fields.email.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.email.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.email.errors.join(", ")}
                   </p>
                 )}
@@ -1048,7 +1102,10 @@ export function LocationForm({
                   例: ¥1,000〜¥5,000/時間（最大 100 文字）
                 </p>
                 {fields.priceRange.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.priceRange.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.priceRange.errors.join(", ")}
                   </p>
                 )}
@@ -1069,7 +1126,10 @@ export function LocationForm({
                   現金, クレジットカード, 電子マネー, QRコード決済
                 </p>
                 {fields.paymentAccepted.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.paymentAccepted.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.paymentAccepted.errors.join(", ")}
                   </p>
                 )}
@@ -1090,7 +1150,10 @@ export function LocationForm({
                   Google Maps Platform で確認できます（ChIJ...）
                 </p>
                 {fields.googleBusinessPlaceId.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.googleBusinessPlaceId.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.googleBusinessPlaceId.errors.join(", ")}
                   </p>
                 )}
@@ -1109,7 +1172,10 @@ export function LocationForm({
                   お客様に口コミ投稿を促すための URL
                 </p>
                 {fields.googleReviewUrl.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.googleReviewUrl.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.googleReviewUrl.errors.join(", ")}
                   </p>
                 )}

@@ -87,27 +87,29 @@ export function AuditLogFilters() {
         className="w-[220px]"
       />
 
-      <div className="flex items-center gap-2">
+      <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
         <span className="text-sm font-medium text-muted-foreground">期間:</span>
-        <Input
-          type="date"
-          aria-label="開始日"
-          value={params.dateFrom}
-          onChange={(e) =>
-            void setParams({ dateFrom: e.target.value || null, page: 1 })
-          }
-          className="w-[160px]"
-        />
-        <span className="text-sm text-muted-foreground">〜</span>
-        <Input
-          type="date"
-          aria-label="終了日"
-          value={params.dateTo}
-          onChange={(e) =>
-            void setParams({ dateTo: e.target.value || null, page: 1 })
-          }
-          className="w-[160px]"
-        />
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+          <Input
+            type="date"
+            aria-label="開始日"
+            value={params.dateFrom}
+            onChange={(e) =>
+              void setParams({ dateFrom: e.target.value || null, page: 1 })
+            }
+            className="min-w-0 sm:w-[160px]"
+          />
+          <span className="text-sm text-muted-foreground">〜</span>
+          <Input
+            type="date"
+            aria-label="終了日"
+            value={params.dateTo}
+            onChange={(e) =>
+              void setParams({ dateTo: e.target.value || null, page: 1 })
+            }
+            className="min-w-0 sm:w-[160px]"
+          />
+        </div>
       </div>
 
       <Select
@@ -116,7 +118,7 @@ export function AuditLogFilters() {
           void setParams({ action: value === "ALL" ? null : value, page: 1 })
         }
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px]" aria-label="アクションで絞り込み">
           <SelectValue placeholder="アクション" />
         </SelectTrigger>
         <SelectContent>
@@ -134,7 +136,7 @@ export function AuditLogFilters() {
           void setParams({ resource: value === "ALL" ? null : value, page: 1 })
         }
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px]" aria-label="リソースで絞り込み">
           <SelectValue placeholder="リソース" />
         </SelectTrigger>
         <SelectContent>

@@ -207,7 +207,10 @@ export function ReservationEditForm({
       />
 
       {form.errors && form.errors.length > 0 && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+        <div
+          className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+        >
           {form.errors.join(", ")}
         </div>
       )}
@@ -226,7 +229,13 @@ export function ReservationEditForm({
                 onValueChange={setSpaceId}
                 disabled={isPending}
               >
-                <SelectTrigger id="spaceId">
+                <SelectTrigger
+                  id="spaceId"
+                  aria-invalid={fields.spaceId.errors ? true : undefined}
+                  aria-describedby={
+                    fields.spaceId.errors ? fields.spaceId.errorId : undefined
+                  }
+                >
                   <SelectValue placeholder="スペースを選択してください" />
                 </SelectTrigger>
                 <SelectContent>
@@ -278,7 +287,15 @@ export function ReservationEditForm({
                   onValueChange={setStartTime}
                   disabled={isPending}
                 >
-                  <SelectTrigger id="startTime">
+                  <SelectTrigger
+                    id="startTime"
+                    aria-invalid={fields.startTime.errors ? true : undefined}
+                    aria-describedby={
+                      fields.startTime.errors
+                        ? fields.startTime.errorId
+                        : undefined
+                    }
+                  >
                     <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -306,7 +323,13 @@ export function ReservationEditForm({
                   onValueChange={setEndTime}
                   disabled={isPending}
                 >
-                  <SelectTrigger id="endTime">
+                  <SelectTrigger
+                    id="endTime"
+                    aria-invalid={fields.endTime.errors ? true : undefined}
+                    aria-describedby={
+                      fields.endTime.errors ? fields.endTime.errorId : undefined
+                    }
+                  >
                     <SelectValue placeholder="選択" />
                   </SelectTrigger>
                   <SelectContent>

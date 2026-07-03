@@ -23,7 +23,7 @@ export function PostFilters({ categories }: PostFiltersProps) {
       {/* カテゴリフィルター */}
       <div className="w-full sm:w-48">
         <Select value={params.categoryId} onValueChange={setCategory}>
-          <SelectTrigger>
+          <SelectTrigger aria-label="カテゴリで絞り込み">
             <SelectValue placeholder="カテゴリ" />
           </SelectTrigger>
           <SelectContent>

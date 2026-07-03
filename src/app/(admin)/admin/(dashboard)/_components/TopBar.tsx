@@ -27,7 +27,7 @@ export function TopBar({
   notifications,
   searchTrigger,
 }: TopBarProps) {
-  const { toggleSidebar, isMobile, isFullscreen, hasMounted } =
+  const { toggleSidebar, sidebarState, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
 
   // フルスクリーンモード時はヘッダーを非表示
@@ -35,6 +35,7 @@ export function TopBar({
 
   // Hydration対策: マウント前はSSR時と同じ値（isMobile=false）を使用
   const showMobileMenu = hasMounted && isMobile;
+  const isSidebarExpanded = sidebarState === "expanded";
 
   return (
     <header
@@ -50,6 +51,8 @@ export function TopBar({
             size="icon"
             onClick={toggleSidebar}
             aria-label="メニューを開く"
+            aria-controls="admin-sidebar"
+            aria-expanded={isSidebarExpanded}
           >
             <IconMenu2 className="h-5 w-5" aria-hidden="true" />
           </Button>

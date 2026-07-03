@@ -100,7 +100,15 @@ export function EventLocationSpaceSelector({
               onValueChange={handleLocationChange}
               disabled={isPending}
             >
-              <SelectTrigger id="event-locationId">
+              <SelectTrigger
+                id="event-locationId"
+                aria-invalid={fields.locationId.errors ? true : undefined}
+                aria-describedby={
+                  fields.locationId.errors
+                    ? fields.locationId.errorId
+                    : undefined
+                }
+              >
                 <SelectValue placeholder="会場を選択" />
               </SelectTrigger>
               <SelectContent>
@@ -133,7 +141,13 @@ export function EventLocationSpaceSelector({
                 spacesInLocation.length === 0
               }
             >
-              <SelectTrigger id="event-spaceId">
+              <SelectTrigger
+                id="event-spaceId"
+                aria-invalid={fields.spaceId.errors ? true : undefined}
+                aria-describedby={
+                  fields.spaceId.errors ? fields.spaceId.errorId : undefined
+                }
+              >
                 <SelectValue
                   placeholder={
                     !hasLocationSelected

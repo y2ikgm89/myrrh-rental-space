@@ -34,6 +34,8 @@ const e2eWebServerCommand = [
  *   - chromium                     → 未認証テスト（公開 + 管理 IAP 境界 + a11y）
  *   - chromium-customer            → 顧客認証済テスト
  *   - chromium-admin               → 管理者認証済テスト
+ *   - chromium-*-mobile            → Android Chrome touch viewport regression
+ *   - webkit-*-mobile              → iOS Mobile Safari touch viewport regression
  *   - chromium-visual              → visual regression (opt-in)
  *
  * 並列化:
@@ -101,6 +103,25 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       testMatch: [/e2e\/public\/.*\.spec\.ts/, /e2e\/a11y\/.*\.spec\.ts/],
     },
+    {
+      name: "chromium-mobile",
+      use: {
+        ...devices["Pixel 5"],
+        isMobile: true,
+        hasTouch: true,
+      },
+      testMatch: /e2e\/mobile\/public-mobile\..*\.spec\.ts/,
+    },
+    {
+      name: "webkit-mobile",
+      use: {
+        ...devices["iPhone 13"],
+        browserName: "webkit",
+        isMobile: true,
+        hasTouch: true,
+      },
+      testMatch: /e2e\/mobile\/public-mobile\..*\.spec\.ts/,
+    },
 
     /* ===================================================================
      * 顧客認証済 project: マイページ・予約履歴・レビュー等
@@ -114,6 +135,29 @@ export default defineConfig({
       dependencies: ["setup-customer"],
       testMatch: /e2e\/authenticated\/customer\/.*\.spec\.ts/,
     },
+    {
+      name: "chromium-customer-mobile",
+      use: {
+        ...devices["Pixel 5"],
+        isMobile: true,
+        hasTouch: true,
+        storageState: "playwright/.auth/customer.json",
+      },
+      dependencies: ["setup-customer"],
+      testMatch: /e2e\/mobile\/customer-mobile\..*\.spec\.ts/,
+    },
+    {
+      name: "webkit-customer-mobile",
+      use: {
+        ...devices["iPhone 13"],
+        browserName: "webkit",
+        isMobile: true,
+        hasTouch: true,
+        storageState: "playwright/.auth/customer.json",
+      },
+      dependencies: ["setup-customer"],
+      testMatch: /e2e\/mobile\/customer-mobile\..*\.spec\.ts/,
+    },
 
     /* ===================================================================
      * 管理者認証済 project: Lexical editor / 通知センター / 設定等
@@ -126,6 +170,29 @@ export default defineConfig({
       },
       dependencies: ["setup-admin"],
       testMatch: /e2e\/authenticated\/admin\/.*\.spec\.ts/,
+    },
+    {
+      name: "chromium-admin-mobile",
+      use: {
+        ...devices["Pixel 5"],
+        isMobile: true,
+        hasTouch: true,
+        storageState: "playwright/.auth/admin.json",
+      },
+      dependencies: ["setup-admin"],
+      testMatch: /e2e\/mobile\/admin-mobile\..*\.spec\.ts/,
+    },
+    {
+      name: "webkit-admin-mobile",
+      use: {
+        ...devices["iPhone 13"],
+        browserName: "webkit",
+        isMobile: true,
+        hasTouch: true,
+        storageState: "playwright/.auth/admin.json",
+      },
+      dependencies: ["setup-admin"],
+      testMatch: /e2e\/mobile\/admin-mobile\..*\.spec\.ts/,
     },
 
     /* ===================================================================

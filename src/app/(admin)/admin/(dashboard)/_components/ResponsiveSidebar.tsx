@@ -100,6 +100,7 @@ export function ResponsiveSidebar({
   // SSR時: sidebarState='expanded', isMobile=false → isOpen=true
   const isOpen = hasMounted ? sidebarState === "expanded" : true;
   const effectiveIsMobile = hasMounted && isMobile;
+  const hideBeforeHydrationOnMobile = !hasMounted;
   const classes = styles({ isOpen });
 
   // ESCキーで閉じる（useEffectEvent: closeSidebarをdeps配列から除外）
@@ -136,7 +137,11 @@ export function ResponsiveSidebar({
     <>
       {/* オーバーレイ (モバイル) */}
       <div
-        className={classes.overlay()}
+        className={cn(
+          classes.overlay(),
+          hideBeforeHydrationOnMobile &&
+            "max-lg:pointer-events-none max-lg:opacity-0",
+        )}
         style={{ zIndex: Z_INDEX.overlay }}
         onClick={closeSidebar}
         aria-hidden="true"
@@ -144,7 +149,11 @@ export function ResponsiveSidebar({
 
       {/* サイドバー */}
       <aside
-        className={classes.sidebar()}
+        id="admin-sidebar"
+        className={cn(
+          classes.sidebar(),
+          hideBeforeHydrationOnMobile && "max-lg:-translate-x-full",
+        )}
         style={{
           zIndex: effectiveIsMobile ? Z_INDEX.sidebarDrawer : Z_INDEX.sidebar,
         }}
@@ -195,13 +204,17 @@ export function ResponsiveSidebar({
                           )}
                           onClick={() => effectiveIsMobile && closeSidebar()}
                         >
-                          <span className={isActive ? "text-sidebar-text" : ""}>
+                          <span
+                            className={
+                              isActive ? "text-primary-foreground" : ""
+                            }
+                          >
                             {item.icon}
                           </span>
                           <span
                             className={cn(
                               "text-sm font-medium",
-                              isActive && "text-sidebar-text",
+                              isActive && "text-primary-foreground",
                             )}
                           >
                             {item.label}
