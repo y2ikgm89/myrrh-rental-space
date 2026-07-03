@@ -1313,6 +1313,7 @@ enum AuditAction {
   UPDATE
   DELETE
   PUBLISH
+  EXPORT
   LOGIN_SUCCESS
   LOGIN_FAILED
   LOGOUT
@@ -1321,6 +1322,7 @@ enum AuditAction {
   PASSWORD_RESET_REQUEST
   PASSWORD_RESET_FAILED
   ROLE_CHANGE
+  INTEGRITY_CHECK
 }
 
 enum EditorCommentStatus {
@@ -1349,15 +1351,21 @@ enum MediaUsage {
 
 /// 監査ログ（書き込み操作 + セキュリティイベント）
 model AuditLog {
-  id         String      @id @default(uuid()) @db.Uuid
-  userId     String?     @db.Uuid // 実行ユーザー（null = システム or 未認証）
-  action     AuditAction // 操作種別
-  resource   String // 対象リソース種別 ('space', 'blog' 等)
-  resourceId String? // 対象リソースID
-  oldValue   Json? // 変更前の値（UPDATE時）
-  newValue   Json? // 変更後の値 or 作成値
-  metadata   Json? // 追加情報（IPアドレス、UserAgent等）
-  createdAt  DateTime    @default(now())
+  id            String      @id @default(uuid()) @db.Uuid
+  sequence      BigInt      @unique
+  previousHash  String      @db.Char(64)
+  entryHash     String      @db.Char(64)
+  hashAlgorithm String      @default("HMAC-SHA256") @db.VarChar(32)
+  hashKeyId     String      @default("v1") @db.VarChar(32)
+  chainVersion  Int         @default(1)
+  userId        String?     @db.Uuid // 実行ユーザー（null = システム or 未認証）
+  action        AuditAction // 操作種別
+  resource      String // 対象リソース種別 ('space', 'blog' 等)
+  resourceId    String? // 対象リソースID
+  oldValue      Json? // 変更前の値（UPDATE時）
+  newValue      Json? // 変更後の値 or 作成値
+  metadata      Json? // 追加情報（IPアドレス、UserAgent等）
+  createdAt     DateTime    @default(now())
 
   // Relations
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -1367,6 +1375,7 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@index([userId, createdAt])
+  @@index([hashKeyId, sequence])
   @@map("audit_logs")
 }
 

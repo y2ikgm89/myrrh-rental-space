@@ -6,6 +6,11 @@ import { redirect } from "next/navigation";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
 import {
+  recordAdminLoginFailed,
+  recordAdminLoginSuccess,
+  type AdminAuthAuditIdentity,
+} from "@/shared/domain/admin-auth/audit";
+import {
   findAdminAuthUserByEmail,
   findOrSyncAdminAuthUserByEmail,
 } from "@/shared/domain/admin-auth/queries";
@@ -27,11 +32,6 @@ export type AdminSession = {
   user: AdminUser;
 };
 
-type AdminIdentity = {
-  email: string;
-  source: "iap" | "test";
-};
-
 /**
  * ダッシュボードアクセス可能なロール（Single Source of Truth は `admin-roles.ts`）。
  */
@@ -51,20 +51,45 @@ function getTestIapEmail(): string | null {
   return serverEnv.ADMIN_TEST_IAP_EMAIL ?? null;
 }
 
-async function resolveAdminIdentity(
-  requestHeaders?: Headers,
-): Promise<AdminIdentity | null> {
+async function resolveAdminEmail(requestHeaders?: Headers): Promise<{
+  identity: AdminAuthAuditIdentity;
+  requestHeaders: Headers;
+} | null> {
   const requestHeaderList = await resolveRequestHeaders(requestHeaders);
 
   try {
     const identity = await resolveIapIdentity(requestHeaderList);
-    if (identity) return { email: identity.email, source: "iap" };
+    if (identity) {
+      return {
+        identity: {
+          email: identity.email,
+          provider: "google-iap",
+          subject: identity.subject,
+        },
+        requestHeaders: requestHeaderList,
+      };
+    }
   } catch {
+    await recordAdminLoginFailed({
+      reason: "iap_assertion_invalid",
+      requestHeaders: requestHeaderList,
+      identity: {
+        email: "unknown",
+        provider: "google-iap",
+      },
+    });
     return null;
   }
 
   const testEmail = getTestIapEmail();
-  return testEmail ? { email: testEmail, source: "test" } : null;
+  if (!testEmail) return null;
+  return {
+    identity: {
+      email: testEmail,
+      provider: "test-iap",
+    },
+    requestHeaders: requestHeaderList,
+  };
 }
 
 const loadAdminUserByEmail = cache(findOrSyncAdminAuthUserByEmail);
@@ -99,12 +124,39 @@ export function getAdminSessionUser(session: unknown): AdminUser | null {
 export async function getCurrentAdminUser(
   requestHeaders?: Headers,
 ): Promise<AdminUser | null> {
-  const identity = await resolveAdminIdentity(requestHeaders);
-  if (!identity) return null;
-  if (identity.source === "test") {
-    return loadTestAdminUserByEmail(identity.email);
+  const resolved = await resolveAdminEmail(requestHeaders);
+  if (!resolved) return null;
+
+  const user =
+    resolved.identity.provider === "test-iap"
+      ? await loadTestAdminUserByEmail(resolved.identity.email)
+      : await loadAdminUserByEmail(resolved.identity.email);
+
+  if (!user) {
+    await recordAdminLoginFailed({
+      identity: resolved.identity,
+      reason: "user_not_authorized",
+      requestHeaders: resolved.requestHeaders,
+    });
+    return null;
   }
-  return loadAdminUserByEmail(identity.email);
+
+  if (!isDashboardRole(user.role)) {
+    await recordAdminLoginFailed({
+      identity: resolved.identity,
+      user,
+      reason: "role_not_allowed",
+      requestHeaders: resolved.requestHeaders,
+    });
+    return user;
+  }
+
+  await recordAdminLoginSuccess({
+    identity: resolved.identity,
+    user,
+    requestHeaders: resolved.requestHeaders,
+  });
+  return user;
 }
 
 export const verifyAdminSession = cache(

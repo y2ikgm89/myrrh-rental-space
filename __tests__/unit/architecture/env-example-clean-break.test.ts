@@ -11,6 +11,7 @@ describe(".env.example clean-break contract", () => {
       "APP_SURFACE",
       "ADMIN_APP_URL",
       "BETTER_AUTH_URL",
+      "AUDIT_LOG_HMAC_KEY",
       "CRON_OIDC_AUDIENCE",
       "CRON_SERVICE_ACCOUNT_EMAIL",
       "IAP_JWT_AUDIENCE",

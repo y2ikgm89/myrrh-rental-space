@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { isGoogleWorkspaceGroupMember } from "@/shared/lib/google-workspace/cloud-identity-groups";
 import { DASHBOARD_ROLES, isDashboardRole } from "@/shared/lib/admin-roles";
 import {
@@ -9,7 +10,7 @@ import {
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { Role } from "@/shared/lib/validations/enums/prisma-types";
+import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { AdminAuthUser } from "./queries";
 
@@ -68,6 +69,42 @@ function readConfiguredRoleGroups(): AdminRoleGroup[] | null {
 function defaultNameFromEmail(email: string): string {
   const [localPart] = email.split("@");
   return localPart && localPart.trim().length > 0 ? localPart : email;
+}
+
+async function writeGoogleRoleSyncAudit(input: {
+  action:
+    | typeof AuditAction.CREATE
+    | typeof AuditAction.UPDATE
+    | typeof AuditAction.ROLE_CHANGE;
+  email: string;
+  resourceId: string;
+  oldValue?: Record<string, unknown>;
+  newValue: Record<string, unknown>;
+}): Promise<void> {
+  try {
+    await createAuditLogRecord({
+      action: input.action,
+      resource: "user",
+      resourceId: input.resourceId,
+      oldValue: input.oldValue,
+      newValue: input.newValue,
+      metadata: {
+        source: "google-workspace-role-sync",
+        targetEmail: input.email,
+      },
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "syncAdminAuthUserFromGoogleGroups.auditLog",
+        action: input.action,
+        resourceId: input.resourceId,
+        targetEmail: input.email,
+      },
+    });
+  }
 }
 
 export function isAdminRoleGroupSyncConfigured(): boolean {
@@ -134,7 +171,7 @@ export async function syncAdminAuthUserFromGoogleGroups(
   if (existing) {
     if (existing.role === role && existing.emailVerified) return existing;
 
-    return prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: existing.id },
       data: {
         role,
@@ -150,9 +187,28 @@ export async function syncAdminAuthUserFromGoogleGroups(
         emailVerified: true,
       },
     });
+
+    await writeGoogleRoleSyncAudit({
+      action:
+        existing.role === updated.role
+          ? AuditAction.UPDATE
+          : AuditAction.ROLE_CHANGE,
+      email,
+      resourceId: updated.id,
+      oldValue:
+        existing.role === updated.role
+          ? { emailVerified: existing.emailVerified }
+          : { role: existing.role },
+      newValue: {
+        role: updated.role,
+        emailVerified: updated.emailVerified,
+      },
+    });
+
+    return updated;
   }
 
-  return prisma.user.create({
+  const created = await prisma.user.create({
     data: {
       email,
       name: defaultNameFromEmail(email),
@@ -168,4 +224,16 @@ export async function syncAdminAuthUserFromGoogleGroups(
       emailVerified: true,
     },
   });
+
+  await writeGoogleRoleSyncAudit({
+    action: AuditAction.CREATE,
+    email,
+    resourceId: created.id,
+    newValue: {
+      role: created.role,
+      emailVerified: created.emailVerified,
+    },
+  });
+
+  return created;
 }

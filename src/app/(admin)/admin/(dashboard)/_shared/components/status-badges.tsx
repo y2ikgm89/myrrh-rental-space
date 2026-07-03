@@ -226,6 +226,7 @@ const auditActionConfig = {
   UPDATE: { label: AUDIT_ACTION_LABELS.UPDATE, variant: "secondary" },
   DELETE: { label: AUDIT_ACTION_LABELS.DELETE, variant: "destructive" },
   PUBLISH: { label: AUDIT_ACTION_LABELS.PUBLISH, variant: "default" },
+  EXPORT: { label: AUDIT_ACTION_LABELS.EXPORT, variant: "outline" },
   LOGIN_SUCCESS: {
     label: AUDIT_ACTION_LABELS.LOGIN_SUCCESS,
     variant: "default",
@@ -254,6 +255,10 @@ const auditActionConfig = {
   ROLE_CHANGE: {
     label: AUDIT_ACTION_LABELS.ROLE_CHANGE,
     variant: "secondary",
+  },
+  INTEGRITY_CHECK: {
+    label: AUDIT_ACTION_LABELS.INTEGRITY_CHECK,
+    variant: "warning",
   },
 } satisfies Record<AuditAction, { label: string; variant: BadgeVariant }>;
 

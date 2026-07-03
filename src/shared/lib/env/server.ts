@@ -8,7 +8,7 @@
  * - DATABASE_URL, BETTER_AUTH_SECRET: 常に必須
  * - BETTER_AUTH_URL: 本番環境では必須
  * - APP_SURFACE, ADMIN_APP_URL: 本番環境では必須
- * - ENCRYPTION_KEY, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 本番環境では必須
+ * - ENCRYPTION_KEY, AUDIT_LOG_HMAC_KEY, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 本番環境では必須
  * - CRON_OIDC_AUDIENCE, CRON_SERVICE_ACCOUNT_EMAIL: 本番環境では必須
  * - その他: 任意（機能が無効化される）
  *
@@ -150,6 +150,24 @@ export const serverEnv = createEnv({
       })
       .optional(),
 
+    // Audit log integrity（本番必須 - ランタイム検証）
+    // 監査ログ hash chain の HMAC-SHA256 鍵。DB 内に保存しないこと。
+    AUDIT_LOG_HMAC_KEY: z
+      .string()
+      .length(64, {
+        error: "AUDIT_LOG_HMAC_KEY must be exactly 64 hex characters",
+      })
+      .regex(/^[0-9a-fA-F]+$/u, {
+        error: "AUDIT_LOG_HMAC_KEY must contain only hex characters",
+      })
+      .optional(),
+    AUDIT_LOG_HMAC_KEY_ID: z
+      .string()
+      .regex(/^[a-zA-Z0-9_-]{1,32}$/u, {
+        error: "AUDIT_LOG_HMAC_KEY_ID must be 1-32 chars of [a-zA-Z0-9_-]",
+      })
+      .optional(),
+
     // Cron（本番必須 - ランタイム検証）
     // Cloud Scheduler OIDC token の audience と発行元 service account を検証する。
     CRON_OIDC_AUDIENCE: noTrailingSlashUrl.optional(),
@@ -237,6 +255,8 @@ export const serverEnv = createEnv({
     NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:
       process.env["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
     ENCRYPTION_KEY_ID: process.env["ENCRYPTION_KEY_ID"],
+    AUDIT_LOG_HMAC_KEY: process.env["AUDIT_LOG_HMAC_KEY"],
+    AUDIT_LOG_HMAC_KEY_ID: process.env["AUDIT_LOG_HMAC_KEY_ID"],
     CRON_OIDC_AUDIENCE: process.env["CRON_OIDC_AUDIENCE"],
     CRON_SERVICE_ACCOUNT_EMAIL: process.env["CRON_SERVICE_ACCOUNT_EMAIL"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
@@ -304,6 +324,7 @@ export function validateProductionEnv(): void {
       name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
       value: serverEnv.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
     },
+    { name: "AUDIT_LOG_HMAC_KEY", value: serverEnv.AUDIT_LOG_HMAC_KEY },
     { name: "CRON_OIDC_AUDIENCE", value: serverEnv.CRON_OIDC_AUDIENCE },
     {
       name: "CRON_SERVICE_ACCOUNT_EMAIL",

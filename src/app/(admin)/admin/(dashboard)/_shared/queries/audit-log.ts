@@ -30,6 +30,9 @@ const filtersSchema = z.object({
     .or(z.literal(""))
     .optional()
     .default(""),
+  search: z.string().trim().max(200).optional().default(""),
+  ipAddress: z.string().trim().max(64).optional().default(""),
+  securityOnly: z.boolean().optional().default(false),
 });
 
 export async function getAuditLogs(

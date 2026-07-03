@@ -23,6 +23,7 @@
  */
 
 // Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
+import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PrismaClient,
@@ -50,6 +51,13 @@ import {
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
 import { createSpan, createInlineIcon } from "../src/shared/lib/portable-text";
+import {
+  AUDIT_LOG_CHAIN_VERSION,
+  AUDIT_LOG_GENESIS_HASH,
+  AUDIT_LOG_HASH_ALGORITHM,
+  computeAuditLogEntryHashWithKey,
+  type AuditLogHashPayload,
+} from "../src/shared/domain/audit-log/hash-chain-core";
 
 // NOTE: terms 系の import (applyBusinessInfo / getTemplatesForType / TermsScope 等) は
 // 初期 baseline migration に SSoT 移管したため撤去済。
@@ -165,6 +173,7 @@ async function clearAllData() {
     await tx.socialLink.deleteMany();
 
     // 認証関連
+    await tx.$executeRaw`SELECT set_config('myrrh.audit_log_mutation_bypass', 'seed', true)`;
     await tx.auditLog.deleteMany();
     await tx.session.deleteMany();
     await tx.verification.deleteMany();
@@ -3979,6 +3988,86 @@ async function seedBlockTemplates() {
 // Audit Logs（監査ログ・全 AuditAction カバレッジ）
 // =============================================================================
 
+const SEED_AUDIT_LOG_HASH_KEY_ID_PATTERN = /^[a-zA-Z0-9_-]{1,32}$/u;
+const LOCAL_DEV_AUDIT_LOG_HMAC_KEY = "f".repeat(64);
+
+function getSeedAuditLogHmacKeyHex(): string {
+  const configuredKey = process.env["AUDIT_LOG_HMAC_KEY"];
+  if (configuredKey) return configuredKey;
+
+  return LOCAL_DEV_AUDIT_LOG_HMAC_KEY;
+}
+
+function getSeedAuditLogHashKeyId(): string {
+  const keyId = process.env["AUDIT_LOG_HMAC_KEY_ID"] ?? "v1";
+  if (!SEED_AUDIT_LOG_HASH_KEY_ID_PATTERN.test(keyId)) {
+    throw new Error(
+      "AUDIT_LOG_HMAC_KEY_ID must be 1-32 chars of [a-zA-Z0-9_-]",
+    );
+  }
+  return keyId;
+}
+
+async function createSeedAuditLogRecord(input: {
+  action: AuditLogHashPayload["action"];
+  resource: string;
+  userId?: string;
+  resourceId?: string;
+  metadata?: Prisma.InputJsonValue;
+  createdAt: Date;
+}) {
+  const previous = await prisma.auditLog.findFirst({
+    select: { sequence: true, entryHash: true },
+    orderBy: { sequence: "desc" },
+  });
+
+  const id = randomUUID();
+  const sequence = previous ? previous.sequence + 1n : 1n;
+  const previousHash = previous?.entryHash ?? AUDIT_LOG_GENESIS_HASH;
+  const hashKeyId = getSeedAuditLogHashKeyId();
+  const metadata = input.metadata ?? null;
+  const hashPayload: AuditLogHashPayload = {
+    version: AUDIT_LOG_CHAIN_VERSION,
+    id,
+    sequence: sequence.toString(),
+    previousHash,
+    hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
+    hashKeyId,
+    userId: input.userId ?? null,
+    action: input.action,
+    resource: input.resource,
+    resourceId: input.resourceId ?? null,
+    oldValue: null,
+    newValue: null,
+    metadata,
+    createdAt: input.createdAt.toISOString(),
+  };
+  const entryHash = computeAuditLogEntryHashWithKey(
+    hashPayload,
+    getSeedAuditLogHmacKeyHex(),
+  );
+
+  await prisma.auditLog.create({
+    data: {
+      id,
+      sequence,
+      previousHash,
+      entryHash,
+      hashAlgorithm: AUDIT_LOG_HASH_ALGORITHM,
+      hashKeyId,
+      chainVersion: AUDIT_LOG_CHAIN_VERSION,
+      action: input.action,
+      resource: input.resource,
+      ...(input.userId !== undefined ? { userId: input.userId } : {}),
+      ...(input.resourceId !== undefined
+        ? { resourceId: input.resourceId }
+        : {}),
+      ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
+      createdAt: input.createdAt,
+    },
+  });
+}
+
 async function seedAuditLog() {
   const existingCount = await prisma.auditLog.count();
   if (existingCount > 0) {
@@ -4009,22 +4098,26 @@ async function seedAuditLog() {
 
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
 
-  // AuditAction 全 11 値（schema.prisma の AuditAction enum と一致）:
-  // CREATE / UPDATE / DELETE / PUBLISH / LOGIN_SUCCESS / LOGIN_FAILED /
-  // LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE / PASSWORD_RESET_REQUEST / ROLE_CHANGE
+  // AuditAction 全 14 値（schema.prisma の AuditAction enum と一致）:
+  // CREATE / UPDATE / DELETE / PUBLISH / EXPORT / LOGIN_SUCCESS / LOGIN_FAILED /
+  // LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE / PASSWORD_RESET_REQUEST /
+  // PASSWORD_RESET_FAILED / ROLE_CHANGE / INTEGRITY_CHECK
   const entries: Array<{
     action:
       | "CREATE"
       | "UPDATE"
       | "DELETE"
       | "PUBLISH"
+      | "EXPORT"
       | "LOGIN_SUCCESS"
       | "LOGIN_FAILED"
       | "LOGOUT"
       | "PERMISSION_DENIED"
       | "PASSWORD_CHANGE"
       | "PASSWORD_RESET_REQUEST"
-      | "ROLE_CHANGE";
+      | "PASSWORD_RESET_FAILED"
+      | "ROLE_CHANGE"
+      | "INTEGRITY_CHECK";
     resource: string;
     resourceId?: string;
     metadata?: Prisma.InputJsonValue;
@@ -4060,23 +4153,30 @@ async function seedAuditLog() {
     },
     {
       action: "LOGIN_SUCCESS",
-      resource: "auth",
+      resource: "adminAuth",
       userId: admin.id,
-      metadata: { ip: "203.0.113.10", userAgent: "Mozilla/5.0" },
+      metadata: { ipAddress: "203.0.113.10", userAgent: "Mozilla/5.0" },
       createdAt: hoursAgo(24),
     },
     {
       action: "LOGIN_FAILED",
-      resource: "auth",
+      resource: "adminAuth",
       userId: null,
-      metadata: { ip: "203.0.113.99", reason: "invalid_password" },
+      metadata: { ipAddress: "203.0.113.99", reason: "user_not_authorized" },
       createdAt: hoursAgo(18),
     },
     {
       action: "LOGOUT",
-      resource: "auth",
+      resource: "adminAuth",
       userId: admin.id,
       createdAt: hoursAgo(12),
+    },
+    {
+      action: "EXPORT",
+      resource: "auditLog",
+      userId: admin.id,
+      metadata: { format: "csv", exportedCount: 25 },
+      createdAt: hoursAgo(10),
     },
     {
       action: "PERMISSION_DENIED",
@@ -4099,11 +4199,25 @@ async function seedAuditLog() {
       createdAt: hoursAgo(4),
     },
     {
+      action: "PASSWORD_RESET_FAILED",
+      resource: "auth",
+      userId: null,
+      metadata: { email: "forgot@example.com", reason: "token_expired" },
+      createdAt: hoursAgo(3),
+    },
+    {
       action: "ROLE_CHANGE",
       resource: "user",
       userId: admin.id,
       metadata: { target: "editor@example.com", from: "VIEWER", to: "EDITOR" },
       createdAt: hoursAgo(2),
+    },
+    {
+      action: "INTEGRITY_CHECK",
+      resource: "auditLog",
+      userId: admin.id,
+      metadata: { operation: "verifyAuditLogIntegrity", ok: true },
+      createdAt: hoursAgo(1.5),
     },
   ];
 
@@ -4119,22 +4233,20 @@ async function seedAuditLog() {
   }
 
   for (const entry of entries) {
-    await prisma.auditLog.create({
-      data: {
-        action: entry.action,
-        resource: entry.resource,
-        userId: entry.userId,
-        ...(entry.resourceId !== undefined
-          ? { resourceId: entry.resourceId }
-          : {}),
-        ...(entry.metadata !== undefined ? { metadata: entry.metadata } : {}),
-        createdAt: entry.createdAt,
-      },
+    await createSeedAuditLogRecord({
+      action: entry.action,
+      resource: entry.resource,
+      ...(entry.userId !== null ? { userId: entry.userId } : {}),
+      ...(entry.resourceId !== undefined
+        ? { resourceId: entry.resourceId }
+        : {}),
+      ...(entry.metadata !== undefined ? { metadata: entry.metadata } : {}),
+      createdAt: entry.createdAt,
     });
   }
 
   console.log(
-    `✅ Created ${entries.length.toString()} audit log entries (all 11 AuditAction values)`,
+    `✅ Created ${entries.length.toString()} audit log entries (all 14 AuditAction values)`,
   );
 }
 

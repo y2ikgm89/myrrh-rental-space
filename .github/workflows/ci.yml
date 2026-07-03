@@ -48,6 +48,8 @@ env:
   # server.ts の z.string().min(32) と整合（短い値だと将来 server env を読むテストで破綻する）
   BETTER_AUTH_SECRET: test-secret-key-for-ci-0123456789abcdef0123456789ab
   BETTER_AUTH_URL: http://localhost:3000
+  AUDIT_LOG_HMAC_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+  AUDIT_LOG_HMAC_KEY_ID: ci
   # clientEnv（@t3-oss/env-nextjs）の z.string().url() を満たすため両 URL を渡す。
   # E2E / Visual / Lighthouse の Playwright webServer が `next start` を起動する際に
   # NEXT_PUBLIC_BASE_URL 未設定だと Invalid environment variables で起動失敗する。

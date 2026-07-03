@@ -1,10 +1,14 @@
 "use client";
 
+import { IconDownload, IconShieldCheck } from "@tabler/icons-react";
+import Link from "next/link";
 import { useQueryStates } from "nuqs";
 import { adminAuditLogSearchParamsParsers } from "@/shared/lib/nuqs";
 import {
   Button,
+  Checkbox,
   Input,
+  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -35,20 +39,54 @@ export function AuditLogFilters() {
   });
 
   const hasFilters =
-    params.action || params.resource || params.dateFrom || params.dateTo;
+    params.action ||
+    params.resource ||
+    params.userId ||
+    params.dateFrom ||
+    params.dateTo ||
+    params.search ||
+    params.ipAddress ||
+    params.securityOnly;
+  const exportParams = new URLSearchParams();
+  if (params.action) exportParams.set("action", params.action);
+  if (params.resource) exportParams.set("resource", params.resource);
+  if (params.userId) exportParams.set("userId", params.userId);
+  if (params.dateFrom) exportParams.set("dateFrom", params.dateFrom);
+  if (params.dateTo) exportParams.set("dateTo", params.dateTo);
+  if (params.search) exportParams.set("search", params.search);
+  if (params.ipAddress) exportParams.set("ipAddress", params.ipAddress);
+  if (params.securityOnly) exportParams.set("securityOnly", "1");
+  const exportHref = `/api/admin/export/audit-logs${
+    exportParams.size > 0 ? `?${exportParams.toString()}` : ""
+  }`;
 
   const handleReset = () => {
     void setParams({
       action: null,
       resource: null,
+      userId: null,
       dateFrom: null,
       dateTo: null,
+      search: null,
+      ipAddress: null,
+      securityOnly: null,
       page: 1,
     });
   };
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <Input
+        type="search"
+        aria-label="監査ログ検索"
+        placeholder="ユーザー・リソース・ID"
+        value={params.search}
+        onChange={(e) =>
+          void setParams({ search: e.target.value || null, page: 1 })
+        }
+        className="w-[220px]"
+      />
+
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-muted-foreground">期間:</span>
         <Input
@@ -108,11 +146,52 @@ export function AuditLogFilters() {
         </SelectContent>
       </Select>
 
+      <Input
+        type="search"
+        aria-label="IPアドレス"
+        placeholder="IPアドレス"
+        value={params.ipAddress}
+        onChange={(e) =>
+          void setParams({ ipAddress: e.target.value || null, page: 1 })
+        }
+        className="w-[160px]"
+      />
+
+      <div className="flex min-h-11 items-center gap-2">
+        <Checkbox
+          id="audit-security-only"
+          checked={params.securityOnly === "1"}
+          onCheckedChange={(checked) =>
+            void setParams({
+              securityOnly: checked === true ? "1" : null,
+              page: 1,
+            })
+          }
+        />
+        <Label htmlFor="audit-security-only" className="text-sm">
+          セキュリティのみ
+        </Label>
+      </div>
+
       {hasFilters && (
         <Button variant="ghost" onClick={handleReset}>
           クリア
         </Button>
       )}
+
+      <Button asChild variant="outline">
+        <a href={exportHref}>
+          <IconDownload aria-hidden="true" />
+          CSV
+        </a>
+      </Button>
+
+      <Button asChild variant="outline">
+        <Link href="/api/admin/audit-logs/integrity" prefetch={false}>
+          <IconShieldCheck aria-hidden="true" />
+          検証
+        </Link>
+      </Button>
     </div>
   );
 }

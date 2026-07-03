@@ -170,6 +170,9 @@ export const adminAuditLogSearchParamsParsers = {
   userId: parseAsString.withDefault(""),
   dateFrom: parseAsString.withDefault(""),
   dateTo: parseAsString.withDefault(""),
+  search: parseAsString.withDefault(""),
+  ipAddress: parseAsString.withDefault(""),
+  securityOnly: parseAsString.withDefault(""),
 };
 
 const adminAuditLogSearchParamsCache = createSearchParamsCache(
