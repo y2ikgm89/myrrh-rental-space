@@ -977,6 +977,7 @@ describe("GCP production audit model", () => {
       { name: "DATABASE_URL", version: "1" },
       { name: "BETTER_AUTH_SECRET", version: "1" },
       { name: "ENCRYPTION_KEY", version: "1" },
+      { name: "AUDIT_LOG_HMAC_KEY", version: "1" },
       { name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY", version: "1" },
       { name: "R2_ACCOUNT_ID", version: "1" },
       { name: "R2_ACCESS_KEY_ID", version: "1" },
