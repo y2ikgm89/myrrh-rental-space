@@ -258,6 +258,7 @@ describe("public site header mobile menu", () => {
       expect(element).not.toBeNull();
       expect(element?.className).toContain("focus-visible:ring-2");
       expect(element?.className).toContain("focus-visible:ring-ring");
+      expect(element?.className).not.toContain("rounded-");
     }
   });
 });
