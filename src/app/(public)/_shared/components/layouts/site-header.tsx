@@ -73,7 +73,7 @@ const DROPDOWN_LINK_CLASS =
   "flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none";
 
 const MOBILE_MENU_FOCUS_CLASS =
-  "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 const MOBILE_PARENT_CLASS = `inline-flex min-h-11 items-center gap-2 font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground focus-visible:text-muted-foreground ${MOBILE_MENU_FOCUS_CLASS}`;
 
