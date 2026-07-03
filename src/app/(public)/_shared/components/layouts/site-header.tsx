@@ -72,11 +72,15 @@ const DESKTOP_NAV_LINK_CLASS =
 const DROPDOWN_LINK_CLASS =
   "flex items-center gap-2 rounded-sm px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none";
 
-const MOBILE_PARENT_CLASS =
-  "inline-flex min-h-11 items-center gap-2 font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground focus-visible:text-muted-foreground focus-visible:outline-none";
+const MOBILE_MENU_FOCUS_CLASS =
+  "rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
-const MOBILE_CHILD_CLASS =
-  "inline-flex min-h-11 items-center gap-1.5 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
+const MOBILE_PARENT_CLASS = `inline-flex min-h-11 items-center gap-2 font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground focus-visible:text-muted-foreground ${MOBILE_MENU_FOCUS_CLASS}`;
+
+const MOBILE_CHILD_CLASS = `inline-flex min-h-11 items-center gap-1.5 text-base text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground ${MOBILE_MENU_FOCUS_CLASS}`;
+
+// Keep this aligned with Tailwind's default `lg` breakpoint used by `lg:hidden`.
+const MOBILE_MENU_DESKTOP_MEDIA_QUERY = "(min-width: 64rem)";
 
 /**
  * 指定された URL が現在のパスと一致するか判定する。
@@ -223,6 +227,25 @@ export function Header({
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    if (!menuOpen || typeof window.matchMedia !== "function") return;
+
+    const desktopQuery = window.matchMedia(MOBILE_MENU_DESKTOP_MEDIA_QUERY);
+    if (desktopQuery.matches) {
+      const closeTimer = window.setTimeout(() => setMenuOpen(false), 0);
+      return () => window.clearTimeout(closeTimer);
+    }
+
+    const closeWhenDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMenuOpen(false);
+    };
+
+    desktopQuery.addEventListener("change", closeWhenDesktop);
+    return () => {
+      desktopQuery.removeEventListener("change", closeWhenDesktop);
+    };
+  }, [menuOpen]);
 
   // Publish header height as CSS custom property so the hero overlap / sticky
   // sidebars can align to the current header size.
@@ -435,7 +458,10 @@ export function Header({
         {/* Mobile — modal Dialog keeps the covered page inert and delegates focus/scroll management to Radix. */}
         <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger
-            className="inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground lg:hidden"
+            className={cn(
+              "inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground lg:hidden",
+              MOBILE_MENU_FOCUS_CLASS,
+            )}
             aria-label="メニューを開く"
           >
             <IconMenu2
@@ -464,7 +490,10 @@ export function Header({
                   onNavigate={closeMenu}
                 />
                 <Dialog.Close
-                  className="inline-flex h-11 w-11 items-center justify-center text-foreground"
+                  className={cn(
+                    "inline-flex h-11 w-11 items-center justify-center text-foreground",
+                    MOBILE_MENU_FOCUS_CLASS,
+                  )}
                   aria-label="メニューを閉じる"
                 >
                   <IconX
@@ -520,7 +549,10 @@ export function Header({
                   <Link
                     href="/reservation"
                     onClick={closeMenu}
-                    className="inline-flex min-h-11 items-center justify-center border border-foreground px-5 py-2.5 text-eyebrow-lg uppercase text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
+                    className={cn(
+                      "inline-flex min-h-11 items-center justify-center border border-foreground px-5 py-2.5 text-eyebrow-lg uppercase text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground",
+                      MOBILE_MENU_FOCUS_CLASS,
+                    )}
                   >
                     Reserve
                   </Link>
