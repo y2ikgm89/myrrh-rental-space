@@ -14,7 +14,9 @@
  *     superadmin@example.com（SUPER_ADMIN）, editor / viewer
  *   - 全デモデータ（スペース・予約・ブログ・イベント・FAQ 等）
  *   - 全 feature module を ON（管理画面の表示確認用）
- *   ※ `prisma migrate reset` / `prisma db seed` の既定経路（prisma.config.ts: migrations.seed）
+ *   ※ `prisma db seed` の既定経路（prisma.config.ts: migrations.seed）。
+ *      Prisma ORM v7 では migrate reset 時の自動 seed はないため、
+ *      ローカル再構築は `bun run db:reset` が reset 後に明示 seed する。
  *
  * 例:
  *   bun prisma/seed.ts
@@ -4585,7 +4587,9 @@ async function seedUserPageAssignments() {
  * 再実行しても安全。feature module は dev では全 ON に強制する
  * （seedSettings の resetFeatureModules）。
  *
- * `prisma migrate reset` / `prisma db seed`（引数なし）の既定経路。
+ * `prisma db seed`（引数なし）の既定経路。
+ * Prisma ORM v7 では `migrate reset` が seed を自動実行しないため、
+ * `bun run db:reset` 側で reset 後に `prisma db seed` を明示実行する。
  */
 async function seedDev() {
   // 固定 dev スタッフ（IAP ローカルテスト用）。createOrUpdate で冪等。
@@ -4685,7 +4689,7 @@ async function seedProduction(email: string | undefined, name: string) {
 
   // Phase 5: サイト設定
   await seedNavigation();
-  await seedAnnouncementBar();
+  // お知らせ帯は公開時点の運用告知なので production seed では初期データを入れない。
   await seedSocialLinks();
   await seedSystemPageSections();
   await seedBlockTemplates();
@@ -4711,7 +4715,7 @@ async function main() {
   console.log("");
 
   if (!mode || mode === "--dev") {
-    // DEV（既定）: prisma migrate reset / prisma db seed の既定経路。
+    // DEV（既定）: prisma db seed / bun run db:reset の seed 経路。
     await seedDev();
   } else if (mode === "--reset") {
     // DEV: 全削除してから再構築（破壊的・開発専用）。

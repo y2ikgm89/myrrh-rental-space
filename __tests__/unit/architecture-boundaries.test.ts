@@ -1112,6 +1112,33 @@ describe("architecture boundaries", () => {
     expect(scripts["test:all"]).not.toContain("bun run test:integration");
   });
 
+  test("db:reset は Prisma v7 の明示 seed workflow を使う", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const scripts = packageJson["scripts"];
+    expectRecord(scripts);
+
+    expect(scripts["db:seed"]).toBe("bunx --bun prisma db seed");
+    expect(scripts["db:reset"]).toBe(
+      "bunx --bun prisma migrate reset --force && bun run db:seed",
+    );
+  });
+
+  test("production seed はお知らせ帯の初期データを投入しない", () => {
+    const source = readFileSync(join(ROOT, "prisma", "seed.ts"), "utf8");
+    const devSeed = source.match(
+      /async function seedDev\(\) \{[\s\S]*?\n\}/u,
+    )?.[0];
+    const productionSeed = source.match(
+      /async function seedProduction\([\s\S]*?\n\}/u,
+    )?.[0];
+
+    expect(devSeed).toContain("await seedAnnouncementBar();");
+    expect(productionSeed).not.toContain("await seedAnnouncementBar();");
+  });
+
   test("validate は type-check と lint を並列化し、lint concurrency を明示する", () => {
     const packageJson: unknown = JSON.parse(
       readFileSync(PACKAGE_JSON_FILE, "utf8"),
