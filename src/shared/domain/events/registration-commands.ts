@@ -203,12 +203,14 @@ export async function cancelEventRegistrationCommand(
  * 無いため advisory lock は不要。CANCELLED 済の申込には適用できない。
  */
 export async function setEventRegistrationCheckInCommand(params: {
+  eventId: string;
   registrationId: string;
   attended: boolean;
 }) {
   const existing = await prisma.eventRegistration.findFirst({
     where: {
       id: params.registrationId,
+      eventId: params.eventId,
       event: { deletedAt: null },
     },
     select: {

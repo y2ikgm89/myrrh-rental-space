@@ -69,7 +69,6 @@ export async function getEventRegistrations(
  * - 検索/フィルタはクライアント側で実行するため全件返却 (1 イベント数十〜数百名想定)
  * - CANCELLED は除外 (受付対象外)
  * - select は受付に必要な最小カラム (note は除外、CSV は別 query で扱う)
- * - 進捗カウンタ用に attendedCount (出席済件数) も併せて返す
  */
 export async function getEventCheckInAttendees(eventId: string) {
   const where = {
@@ -78,30 +77,36 @@ export async function getEventCheckInAttendees(eventId: string) {
     status: RegistrationStatus.CONFIRMED,
   };
 
-  const [registrations, attendedCount] = await Promise.all([
-    prisma.eventRegistration.findMany({
-      where,
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        quantity: true,
-        attendedAt: true,
-        createdAt: true,
-        ticket: { select: { id: true, name: true } },
-      },
-    }),
-    prisma.eventRegistration.count({
-      where: { ...where, attendedAt: { not: null } },
-    }),
-  ]);
+  const registrations = await prisma.eventRegistration.findMany({
+    where,
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      quantity: true,
+      attendedAt: true,
+      createdAt: true,
+      ticket: { select: { id: true, name: true } },
+    },
+  });
+
+  const totalQuantity = registrations.reduce(
+    (sum, registration) => sum + registration.quantity,
+    0,
+  );
+  const attendedQuantity = registrations.reduce(
+    (sum, registration) =>
+      sum + (registration.attendedAt === null ? 0 : registration.quantity),
+    0,
+  );
 
   return {
     registrations,
-    total: registrations.length,
-    attendedCount,
+    totalRegistrations: registrations.length,
+    totalQuantity,
+    attendedQuantity,
   };
 }
 

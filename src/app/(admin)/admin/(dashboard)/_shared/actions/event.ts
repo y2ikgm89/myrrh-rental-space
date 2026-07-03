@@ -53,9 +53,9 @@ import {
 } from "../../events/_components/event-form-schema";
 import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { uuidIdSchema } from "@/shared/lib/validations/params";
+import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 
-const idSchema = uuidIdSchema("イベント");
+const idSchema = prismaCuidIdSchema("イベント");
 
 /**
  * EventFormData (conform parsed output: Lexical JSON string)

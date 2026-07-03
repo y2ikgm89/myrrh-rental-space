@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { urls } from "../../fixtures";
 
 // Next dev compiles these admin event routes lazily. Keep this spec serial so
@@ -6,6 +7,28 @@ import { urls } from "../../fixtures";
 test.describe.configure({ mode: "serial" });
 
 const ADMIN_EVENT_ROUTE_TIMEOUT = 20000;
+const TIMED_ENTRY_EVENT_TITLE = "写真撮影ワークショップ";
+
+async function openTimedEntryEventDetail(page: Page) {
+  await page.goto(urls.adminEvents);
+
+  await page
+    .getByRole("cell", {
+      name: /写真撮影ワークショップ\s+日時選択制\s+\/photography-workshop/u,
+    })
+    .click();
+
+  await expect(page).toHaveURL(/\/admin\/events\/[^/]+$/u, {
+    timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
+  });
+}
+
+async function readDownload(downloadPath: string | null): Promise<Buffer> {
+  if (!downloadPath) {
+    throw new Error("download path missing");
+  }
+  return readFile(downloadPath);
+}
 
 /**
  * 管理画面 - イベント管理 E2E テスト
@@ -159,16 +182,7 @@ test.describe("イベント管理 - 新規作成", () => {
   test("日時選択制の seed イベント詳細で開催方式と複数枠が見える", async ({
     page,
   }) => {
-    await page.goto(urls.adminEvents);
-
-    await page
-      .getByRole("cell", {
-        name: /写真撮影ワークショップ\s+日時選択制\s+\/photography-workshop/u,
-      })
-      .click();
-    await expect(page).toHaveURL(/\/admin\/events\/[^/]+$/u, {
-      timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
-    });
+    await openTimedEntryEventDetail(page);
 
     const scheduleModeField = page
       .getByText("開催方式", { exact: true })
@@ -185,5 +199,84 @@ test.describe("イベント管理 - 新規作成", () => {
     await expect(timeSlotsField.getByText(/定員\s*8人/u)).toHaveCount(2, {
       timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
     });
+  });
+
+  test("イベント詳細で申込者の出欠状態を確認し CSV / Excel をダウンロードできる", async ({
+    page,
+  }) => {
+    await openTimedEntryEventDetail(page);
+
+    await expect(
+      page.getByRole("heading", {
+        name: TIMED_ENTRY_EVENT_TITLE,
+        level: 1,
+      }),
+    ).toBeVisible({ timeout: ADMIN_EVENT_ROUTE_TIMEOUT });
+
+    const registrationsTable = page.getByRole("table");
+    await expect(
+      registrationsTable.getByRole("columnheader", { name: "出欠" }),
+    ).toBeVisible();
+    await expect(
+      registrationsTable.getByRole("row", { name: /田中太郎/u }),
+    ).toContainText("未出席");
+    await expect(
+      registrationsTable.getByRole("row", { name: /鈴木一郎/u }),
+    ).toContainText("-");
+
+    const [csvDownload] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("link", { name: "CSV" }).click(),
+    ]);
+    expect(csvDownload.suggestedFilename()).toMatch(
+      /^event-registrations-\d{8}\.csv$/u,
+    );
+    const csv = (await readDownload(await csvDownload.path())).toString("utf8");
+    expect(csv).toContain("氏名,メール,電話番号,参加人数,ステータス");
+    expect(csv).toContain("出席日時");
+    expect(csv).toContain("田中太郎");
+    expect(csv).toContain("鈴木一郎");
+
+    const [excelDownload] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("link", { name: "Excel" }).click(),
+    ]);
+    expect(excelDownload.suggestedFilename()).toMatch(
+      /^event-registrations-\d{8}\.xlsx$/u,
+    );
+    const excelBuffer = await readDownload(await excelDownload.path());
+    expect(excelBuffer.byteLength).toBeGreaterThan(0);
+    expect(excelBuffer.subarray(0, 2).toString("utf8")).toBe("PK");
+  });
+
+  test("当日受付で出席トグルと quantity ベースの人数集計が実際に反映される", async ({
+    page,
+  }) => {
+    await openTimedEntryEventDetail(page);
+    await page.getByRole("link", { name: "出欠確認" }).click();
+
+    await expect(page).toHaveURL(/\/admin\/events\/[^/]+\/check-in$/u, {
+      timeout: ADMIN_EVENT_ROUTE_TIMEOUT,
+    });
+    await expect(
+      page.getByRole("heading", {
+        name: `当日受付: ${TIMED_ENTRY_EVENT_TITLE}`,
+        level: 1,
+      }),
+    ).toBeVisible({ timeout: ADMIN_EVENT_ROUTE_TIMEOUT });
+
+    await expect(page.getByText(/0\s*\/\s*3\s*名チェック済/u)).toBeVisible();
+    await expect(page.getByText(/申込\s*0\s*\/\s*2\s*件/u)).toBeVisible();
+
+    await page.getByRole("button", { name: /田中太郎 の出席を記録/u }).click();
+    await expect(page.getByText(/2\s*\/\s*3\s*名チェック済/u)).toBeVisible();
+    await expect(page.getByText(/申込\s*1\s*\/\s*2\s*件/u)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /田中太郎 の出席を取消/u }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: /田中太郎 の出席を取消/u }).click();
+    await expect(page.getByText(/0\s*\/\s*3\s*名チェック済/u)).toBeVisible();
+    await expect(page.getByText(/申込\s*0\s*\/\s*2\s*件/u)).toBeVisible();
   });
 });

@@ -124,7 +124,7 @@ const { deleteEvent, publishEvent, duplicateEvent, cancelEvent, archiveEvent } =
   await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
-const VALID_UUID = "11111111-1111-4111-8111-111111111111";
+const VALID_EVENT_ID = "cm0event1234567890123456";
 
 describe("deleteEvent (action shape)", () => {
   beforeEach(() => {
@@ -133,21 +133,21 @@ describe("deleteEvent (action shape)", () => {
   });
 
   test("無効な id は validation error", async () => {
-    const r = await deleteEvent("not-uuid");
+    const r = await deleteEvent("../bad");
     expect(isMutationError(r)).toBe(true);
     expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
   });
 
   test("正常系: resource=event, action=delete", async () => {
-    await deleteEvent(VALID_UUID);
+    await deleteEvent(VALID_EVENT_ID);
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "event",
         action: "delete",
-        resourceId: VALID_UUID,
+        resourceId: VALID_EVENT_ID,
       }),
     );
-    expect(mockDeleteEventCommand).toHaveBeenCalledWith(VALID_UUID);
+    expect(mockDeleteEventCommand).toHaveBeenCalledWith(VALID_EVENT_ID);
   });
 });
 
@@ -158,11 +158,11 @@ describe("publishEvent (action shape)", () => {
   });
 
   test("正常系: resource=event, action=publish", async () => {
-    await publishEvent(VALID_UUID);
+    await publishEvent(VALID_EVENT_ID);
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
       expect.objectContaining({ resource: "event", action: "publish" }),
     );
-    expect(mockPublishEventCommand).toHaveBeenCalledWith(VALID_UUID);
+    expect(mockPublishEventCommand).toHaveBeenCalledWith(VALID_EVENT_ID);
   });
 });
 
@@ -177,7 +177,7 @@ describe("duplicateEvent (action shape)", () => {
       id: "dup",
       slug: "dup-slug",
     });
-    await duplicateEvent(VALID_UUID);
+    await duplicateEvent(VALID_EVENT_ID);
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
       expect.objectContaining({ resource: "event", action: "create" }),
     );
@@ -191,11 +191,11 @@ describe("cancelEvent (action shape)", () => {
   });
 
   test("正常系: resource=event, action=update", async () => {
-    await cancelEvent(VALID_UUID);
+    await cancelEvent(VALID_EVENT_ID);
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
       expect.objectContaining({ resource: "event", action: "update" }),
     );
-    expect(mockCancelEventCommand).toHaveBeenCalledWith(VALID_UUID);
+    expect(mockCancelEventCommand).toHaveBeenCalledWith(VALID_EVENT_ID);
   });
 });
 
@@ -206,10 +206,10 @@ describe("archiveEvent (action shape)", () => {
   });
 
   test("正常系: resource=event, action=update", async () => {
-    await archiveEvent(VALID_UUID);
+    await archiveEvent(VALID_EVENT_ID);
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
       expect.objectContaining({ resource: "event", action: "update" }),
     );
-    expect(mockArchiveEventCommand).toHaveBeenCalledWith(VALID_UUID);
+    expect(mockArchiveEventCommand).toHaveBeenCalledWith(VALID_EVENT_ID);
   });
 });

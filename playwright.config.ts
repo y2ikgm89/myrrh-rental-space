@@ -13,6 +13,8 @@ const localE2eBetterAuthSecret =
 const localE2eNextServerActionsEncryptionKey =
   process.env["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"] ||
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+const localE2eAuditLogHmacKey =
+  process.env["AUDIT_LOG_HMAC_KEY"] ?? "f".repeat(64);
 const e2eWebServerCommand = [
   "bun run db:generate",
   "bun prisma/seed.ts --dev",
@@ -158,6 +160,8 @@ export default defineConfig({
       BETTER_AUTH_SECRET: localE2eBetterAuthSecret,
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:
         localE2eNextServerActionsEncryptionKey,
+      AUDIT_LOG_HMAC_KEY: localE2eAuditLogHmacKey,
+      AUDIT_LOG_HMAC_KEY_ID: process.env["AUDIT_LOG_HMAC_KEY_ID"] ?? "v1",
       BETTER_AUTH_URL: process.env["BETTER_AUTH_URL"] ?? localE2eBaseUrl,
       NEXT_PUBLIC_BASE_URL:
         process.env["NEXT_PUBLIC_BASE_URL"] ?? localE2eBaseUrl,

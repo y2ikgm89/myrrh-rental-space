@@ -6,9 +6,9 @@ import {
 
 describe("publicEventRegistrationSchema", () => {
   const validInput = {
-    eventId: "550e8400-e29b-41d4-a716-446655440000",
-    ticketId: "ticket-001",
-    slotId: "slot-001",
+    eventId: "cm0event1234567890123456",
+    ticketId: "cm0ticket1234567890123",
+    slotId: "uvslot123456789012345678",
     name: "山田太郎",
     email: "yamada@example.com",
     quantity: 2,
@@ -98,9 +98,9 @@ describe("publicEventRegistrationSchema", () => {
 
 describe("adminEventRegistrationSchema", () => {
   const validInput = {
-    eventId: "550e8400-e29b-41d4-a716-446655440000",
-    ticketId: "ticket-001",
-    slotId: "slot-001",
+    eventId: "cm0event1234567890123456",
+    ticketId: "cm0ticket1234567890123",
+    slotId: "uvslot123456789012345678",
     name: "山田太郎",
     email: "yamada@example.com",
     quantity: 1,

@@ -78,7 +78,6 @@ export default async function CheckInPage({ params }: PageProps) {
       <CheckInClient
         eventId={event.id}
         initialAttendees={initialAttendees}
-        initialAttendedCount={attendees.attendedCount}
         tickets={tickets}
         slots={slots}
       />

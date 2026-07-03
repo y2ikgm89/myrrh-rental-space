@@ -1,9 +1,13 @@
 import { z } from "zod";
+import {
+  prismaCuid2IdSchema,
+  prismaCuidIdSchema,
+} from "@/shared/lib/validations/params";
 
 const eventRegistrationBaseSchema = z.object({
-  eventId: z.uuid({ error: "イベントIDは必須です" }),
-  slotId: z.string().min(1, { error: "タイムスロットは必須です" }),
-  ticketId: z.string().min(1, { error: "チケット種別は必須です" }),
+  eventId: prismaCuidIdSchema("イベント"),
+  slotId: prismaCuid2IdSchema("タイムスロット"),
+  ticketId: prismaCuidIdSchema("チケット"),
   name: z
     .string()
     .min(1, { error: "お名前は必須です" })
