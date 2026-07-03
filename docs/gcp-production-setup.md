@@ -72,8 +72,8 @@ the public service. The clean production target is:
 - one public Cloud Run service for public routes, deployed with
   `APP_SURFACE=public` and `--allow-unauthenticated`;
 - one admin Cloud Run service for admin routes, deployed with
-  `APP_SURFACE=admin` and `--no-allow-unauthenticated`, with Cloud Run direct
-  IAP enabled once during setup;
+  `APP_SURFACE=admin`, with authenticated-only access and Cloud Run direct IAP
+  enabled once during setup;
 - Google Workspace / Cloud Identity security groups for admin roles, each
   granted `roles/iap.httpsResourceAccessor` for admin access and used as the
   application role source;
@@ -850,7 +850,8 @@ gcloud iam service-accounts get-iam-policy "$BUILD_SA" \
 
 IAP is enabled once during setup and then verified by the production audit.
 The recurring Cloud Build deploy updates the admin service revision but does
-not pass `--iap` and does not require project-level `roles/iap.admin`.
+not pass `--iap`, does not reapply `--no-allow-unauthenticated`, and does not
+require project-level `roles/iap.admin`.
 
 Both services intentionally keep Cloud Run network ingress at `all`. The public
 service uses the public custom domain, and the admin service uses the direct
