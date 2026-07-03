@@ -120,7 +120,8 @@ describe("production deploy workflow", () => {
     expect(workflow).toContain("google-github-actions/auth@");
     expect(workflow).toContain("workload_identity_provider:");
     expect(workflow).toContain("service_account:");
-    expect(workflow).toContain("gcloud builds submit");
+    expect(workflow).toContain("gcloud beta builds submit");
+    expect(runbook).toContain("gcloud beta builds submit");
     expect(workflow).not.toContain("credentials_json");
     expect(workflow).not.toContain("gcloud builds triggers run");
   });

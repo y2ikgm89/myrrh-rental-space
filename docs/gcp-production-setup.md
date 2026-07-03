@@ -736,9 +736,12 @@ in production deploys because it makes rollbacks ambiguous.
 ## GitHub Actions production workflow
 
 Production auto-deploy uses GitHub Actions with Google Workload Identity
-Federation (WIF), then submits the existing `cloudbuild.yaml`. This keeps
-GitHub as the merge event source while avoiding service account keys and the
-Cloud Build GitHub repository connection as a production dependency.
+Federation (WIF), then submits the existing `cloudbuild.yaml` with
+`gcloud beta builds submit`. The beta submit command is used because this build
+stores logs in Cloud Logging only; stable `gcloud builds submit` does not
+stream those logs into the GitHub Actions job. This keeps GitHub as the merge
+event source while avoiding service account keys and the Cloud Build GitHub
+repository connection as a production dependency.
 
 The workflow triggers on every push to `main`, plus explicit
 `workflow_dispatch`. Do not add `paths` or `paths-ignore` filters to the
@@ -750,7 +753,7 @@ Do not create Cloud Build native triggers for production. That includes
 `deploy-main`, console-created GitHub triggers, and manual
 `gcloud builds triggers run`. Native triggers have their own trigger service
 account path; this repository's production path is the GitHub WIF principal
-impersonating `$BUILD_SA` and then calling `gcloud builds submit`.
+impersonating `$BUILD_SA` and then calling `gcloud beta builds submit`.
 
 Do not grant broad project IAM or permanent individual-user `actAs` grants to
 make a native trigger work. If `gcloud builds triggers run` fails with
@@ -824,8 +827,8 @@ gcloud iam service-accounts add-iam-policy-binding "$BUILD_SA" \
 
 The repository workflow `.github/workflows/deploy-production.yml` is the
 production deploy workflow. It authenticates with `google-github-actions/auth`,
-sets up `gcloud`, and runs `gcloud builds submit` with the fixed production
-substitutions and Secret Manager version `1` values.
+sets up `gcloud`, and runs `gcloud beta builds submit` with the fixed
+production substitutions and Secret Manager version `1` values.
 
 Verify the WIF provider and service account binding:
 

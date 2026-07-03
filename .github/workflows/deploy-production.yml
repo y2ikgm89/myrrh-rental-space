@@ -99,7 +99,7 @@ jobs:
           SUBSTITUTIONS+=",_GOOGLE_CLIENT_ID_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1"
 
-          gcloud builds submit \
+          gcloud beta builds submit \
             --project="${PROJECT_ID}" \
             --region="${REGION}" \
             --config=cloudbuild.yaml \
