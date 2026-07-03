@@ -258,9 +258,11 @@ describe("production deploy workflow", () => {
     const deployAdminStep = cloudBuildConfig.slice(deployAdminIndex);
 
     expect(deployAdminStep).not.toContain("--iap");
+    expect(deployAdminStep).not.toContain("--no-allow-unauthenticated");
     expect(runbook).toContain(
       "IAP is enabled once during setup and then verified by the production audit",
     );
+    expect(runbook).toContain("does not reapply `--no-allow-unauthenticated`");
     expect(runbook).toContain(
       'gcloud run services add-iam-policy-binding "$ADMIN_SERVICE_NAME"',
     );
