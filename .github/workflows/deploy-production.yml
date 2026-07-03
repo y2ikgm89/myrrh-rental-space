@@ -57,6 +57,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
           project_id: ${{ env.PROJECT_ID }}
+          install_components: beta
 
       - name: Submit Cloud Build
         shell: bash
