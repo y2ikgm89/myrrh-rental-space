@@ -742,6 +742,9 @@ stores logs in Cloud Logging only; stable `gcloud builds submit` does not
 stream those logs into the GitHub Actions job. This keeps GitHub as the merge
 event source while avoiding service account keys and the Cloud Build GitHub
 repository connection as a production dependency.
+The workflow sets `install_components: beta` on
+`google-github-actions/setup-gcloud` so the beta component is installed before
+the non-interactive submit step and `gcloud` never prompts during deploy.
 
 The workflow triggers on every push to `main`, plus explicit
 `workflow_dispatch`. Do not add `paths` or `paths-ignore` filters to the
@@ -827,8 +830,9 @@ gcloud iam service-accounts add-iam-policy-binding "$BUILD_SA" \
 
 The repository workflow `.github/workflows/deploy-production.yml` is the
 production deploy workflow. It authenticates with `google-github-actions/auth`,
-sets up `gcloud`, and runs `gcloud beta builds submit` with the fixed
-production substitutions and Secret Manager version `1` values.
+sets up `gcloud` with `install_components: beta`, and runs
+`gcloud beta builds submit` with the fixed production substitutions and Secret
+Manager version `1` values.
 
 Verify the WIF provider and service account binding:
 
