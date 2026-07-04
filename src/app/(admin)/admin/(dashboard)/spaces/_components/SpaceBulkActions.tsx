@@ -60,13 +60,7 @@ export function SpaceBulkActions({
         return;
       }
 
-      if (result.skipped > 0) {
-        toast.success(
-          `${result.count}件のスペースを削除しました（${result.skipped}件は紐づく予約があるためスキップ）`,
-        );
-      } else {
-        toast.success(`${result.count}件のスペースを削除しました`);
-      }
+      toast.success(`${result.count}件のスペースを削除しました`);
       setDeleteOpen(false);
       onClear();
       router.refresh();

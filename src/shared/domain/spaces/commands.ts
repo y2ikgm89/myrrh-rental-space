@@ -129,7 +129,7 @@ async function ensureAssignableCategory(
 
 async function ensureSpaceExists(id: string) {
   const space = await prisma.space.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     select: { id: true, isPublished: true, publishedAt: true },
   });
 
@@ -177,14 +177,14 @@ export async function updateSpaceCommand(
   // Per CLAUDE.md: array form $transaction is banned; use interactive form.
   return prisma.$transaction(async (tx) => {
     const before = await tx.space.findUnique({
-      where: { id },
+      where: { id, isActive: true },
       select: { slug: true },
     });
     if (!before) {
       throw new DomainError("スペースが見つかりません", "NOT_FOUND");
     }
     const row = await tx.space.update({
-      where: { id },
+      where: { id, isActive: true },
       data: buildSpaceData(input, publishedAt),
       select: { id: true, slug: true },
     });
@@ -199,7 +199,7 @@ export async function updateSpacePublishedCommand(
   await ensureSpaceExists(id);
 
   const row = await prisma.space.update({
-    where: { id },
+    where: { id, isActive: true },
     data: {
       isPublished,
       publishedAt: isPublished ? new Date() : null,
@@ -214,7 +214,7 @@ export async function deleteSpaceCommand(
   id: string,
 ): Promise<{ id: string; slug: string }> {
   const space = await prisma.space.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     select: {
       id: true,
       slug: true,
@@ -239,10 +239,11 @@ export async function deleteSpaceCommand(
   }
 
   await prisma.space.update({
-    where: { id },
+    where: { id, isActive: true },
     data: {
       isActive: false,
       isPublished: false,
+      publishedAt: null,
     },
   });
 
@@ -268,7 +269,7 @@ export async function duplicateSpaceCommand(
   id: string,
 ): Promise<{ id: string; slug: string }> {
   const source = await prisma.space.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     select: {
       slug: true,
       name: true,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useQueryStates } from "nuqs";
 import {
   Select,
@@ -27,11 +28,24 @@ const RATING_OPTIONS = [
   { value: "5", label: "★5" },
 ];
 
-export function ReviewFilters() {
+type ReviewFiltersProps = {
+  readonly spaceOptions: ReadonlyArray<{ id: string; name: string }>;
+};
+
+export function ReviewFilters({ spaceOptions }: ReviewFiltersProps) {
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [params, setParams] = useQueryStates(adminSpaceSearchParamsParsers, {
     history: "replace",
     shallow: false,
   });
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handlePublishedChange = (value: string) => {
     void setParams({
@@ -47,11 +61,23 @@ export function ReviewFilters() {
     });
   };
 
-  const handleSearchChange = (value: string) => {
+  const handleSpaceChange = (value: string) => {
     void setParams({
-      rvSearch: value || null,
+      rvSpaceId: value === "ALL" ? null : value,
       rvPage: 1,
     });
+  };
+
+  const handleSearchChange = (value: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      void setParams({
+        rvSearch: value || null,
+        rvPage: 1,
+      });
+    }, 300);
   };
 
   return (
@@ -86,6 +112,25 @@ export function ReviewFilters() {
             {RATING_OPTIONS.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="w-full sm:w-56">
+        <Select
+          value={params.rvSpaceId || "ALL"}
+          onValueChange={handleSpaceChange}
+        >
+          <SelectTrigger aria-label="スペースで絞り込み">
+            <SelectValue placeholder="スペース" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">すべてのスペース</SelectItem>
+            {spaceOptions.map((space) => (
+              <SelectItem key={space.id} value={space.id}>
+                {space.name}
               </SelectItem>
             ))}
           </SelectContent>

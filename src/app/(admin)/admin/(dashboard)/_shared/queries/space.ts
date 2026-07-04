@@ -3,6 +3,7 @@ import "server-only";
 import {
   getSpaceByIdQuery,
   getSpacesForSelectQuery,
+  getSpacesForReviewFilterQuery,
   getSpaceStatsQuery,
   getSpacesQuery,
 } from "@/shared/domain/spaces/queries";
@@ -43,4 +44,11 @@ export async function getSpaceStats(): Promise<{
 export async function getSpacesForSelect(): Promise<SpaceSelectOption[]> {
   await requireAdminPermission("space", "read");
   return getSpacesForSelectQuery();
+}
+
+export async function getSpacesForReviewFilter(): Promise<
+  { id: string; name: string }[]
+> {
+  await requireAdminPermission("space", "read");
+  return getSpacesForReviewFilterQuery();
 }

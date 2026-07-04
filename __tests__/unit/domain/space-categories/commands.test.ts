@@ -51,6 +51,7 @@ import {
   updateSpaceCategory,
   updateSpaceCategoryOrder,
   deleteSpaceCategory,
+  updateSpaceCategoryActive,
 } from "@/shared/domain/space-categories/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -185,7 +186,7 @@ describe("createSpaceCategory", () => {
   });
 
   describe("異常系", () => {
-    test("同じ名前のアクティブカテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
+    test("同じ名前のカテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
       mockSpaceCategoryFindFirst.mockResolvedValue({ id: "other-category" });
 
       await expect(createSpaceCategory(VALID_FORM_DATA)).rejects.toMatchObject({
@@ -204,15 +205,12 @@ describe("createSpaceCategory", () => {
       expect(mockSpaceCategoryCreate).not.toHaveBeenCalled();
     });
 
-    test("重複チェックが isActive: true の条件で行われる", async () => {
+    test("重複チェックは DB 一意制約に合わせて全カテゴリーを対象にする", async () => {
       await createSpaceCategory(VALID_FORM_DATA);
 
       expect(mockSpaceCategoryFindFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            name: "会議室",
-            isActive: true,
-          }),
+          where: { name: "会議室" },
         }),
       );
     });
@@ -276,7 +274,6 @@ describe("updateSpaceCategory", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             name: "会議室",
-            isActive: true,
             id: { not: CATEGORY_ID },
           }),
         }),
@@ -354,7 +351,7 @@ describe("updateSpaceCategory", () => {
       expect(mockSpaceCategoryUpdate).not.toHaveBeenCalled();
     });
 
-    test("他の同名アクティブカテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
+    test("他の同名カテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
       mockSpaceCategoryFindUnique.mockResolvedValue(EXISTING_CATEGORY);
       mockSpaceCategoryFindFirst.mockResolvedValue({ id: "other-category" });
 
@@ -526,5 +523,75 @@ describe("deleteSpaceCategory", () => {
         message: expect.stringContaining("5件のスペース"),
       });
     });
+  });
+});
+
+// =============================================================================
+// updateSpaceCategoryActive
+// =============================================================================
+
+describe("updateSpaceCategoryActive", () => {
+  beforeEach(() => {
+    mockSpaceCategoryFindUnique.mockReset();
+    mockSpaceCategoryFindFirst.mockReset();
+    mockSpaceCategoryUpdate.mockReset();
+    mockSpaceCategoryFindUnique.mockResolvedValue(null);
+    mockSpaceCategoryFindFirst.mockResolvedValue(null);
+    mockSpaceCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
+  });
+
+  test("スペースが紐づいていないカテゴリーを非アクティブ化できる", async () => {
+    mockSpaceCategoryFindUnique.mockResolvedValue({
+      id: CATEGORY_ID,
+      name: "会議室",
+      _count: { spaces: 0 },
+    });
+
+    const result = await updateSpaceCategoryActive(CATEGORY_ID, false);
+
+    expect(result).toEqual({ id: CATEGORY_ID, isActive: false });
+    expect(mockSpaceCategoryUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: CATEGORY_ID },
+        data: { isActive: false },
+      }),
+    );
+  });
+
+  test("再アクティブ化時は同名カテゴリーの重複を拒否する", async () => {
+    mockSpaceCategoryFindUnique.mockResolvedValue({
+      id: CATEGORY_ID,
+      name: "会議室",
+      _count: { spaces: 0 },
+    });
+    mockSpaceCategoryFindFirst.mockResolvedValue({ id: "other-category" });
+
+    await expect(
+      updateSpaceCategoryActive(CATEGORY_ID, true),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "同じ名前のカテゴリーが既に存在します",
+    });
+
+    expect(mockSpaceCategoryUpdate).not.toHaveBeenCalled();
+  });
+
+  test("再アクティブ化時は自分以外のカテゴリー名を確認する", async () => {
+    mockSpaceCategoryFindUnique.mockResolvedValue({
+      id: CATEGORY_ID,
+      name: "会議室",
+      _count: { spaces: 0 },
+    });
+
+    await updateSpaceCategoryActive(CATEGORY_ID, true);
+
+    expect(mockSpaceCategoryFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          name: "会議室",
+          id: { not: CATEGORY_ID },
+        }),
+      }),
+    );
   });
 });

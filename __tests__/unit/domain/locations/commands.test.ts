@@ -297,6 +297,18 @@ describe("updateLocation", () => {
       );
     });
 
+    test("更新対象は active な場所だけを存在扱いする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await updateLocation(LOCATION_ID, VALID_FORM_DATA);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: LOCATION_ID, isActive: true },
+        }),
+      );
+    });
+
     test("update が正しいデータで呼ばれる", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
 
@@ -375,6 +387,18 @@ describe("updateLocationPublished", () => {
         expect.objectContaining({
           where: { id: LOCATION_ID },
           data: { isPublished: true },
+        }),
+      );
+    });
+
+    test("公開切り替え対象は active な場所だけを存在扱いする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await updateLocationPublished(LOCATION_ID, true);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: LOCATION_ID, isActive: true },
         }),
       );
     });
@@ -486,6 +510,18 @@ describe("deleteLocation", () => {
         expect.objectContaining({
           where: { id: LOCATION_ID },
           data: { isActive: false },
+        }),
+      );
+    });
+
+    test("削除対象は active な場所だけを存在扱いする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await deleteLocation(LOCATION_ID);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: LOCATION_ID, isActive: true },
         }),
       );
     });

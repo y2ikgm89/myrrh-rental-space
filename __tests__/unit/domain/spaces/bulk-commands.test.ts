@@ -1,11 +1,11 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-const mockFindMany = mock<() => Promise<Array<{ id: string; slug: string }>>>(
-  () => Promise.resolve([]),
-);
+const mockFindMany = mock<
+  (_args?: unknown) => Promise<Array<{ id: string; slug: string }>>
+>(() => Promise.resolve([]));
 
-const mockUpdateMany = mock<() => Promise<{ count: number }>>(() =>
-  Promise.resolve({ count: 0 }),
+const mockUpdateMany = mock<(_args?: unknown) => Promise<{ count: number }>>(
+  () => Promise.resolve({ count: 0 }),
 );
 
 const mockDelete = mock<(args: { where: { id: string } }) => Promise<unknown>>(
@@ -17,8 +17,8 @@ mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     space: {
-      findMany: () => mockFindMany(),
-      updateMany: () => mockUpdateMany(),
+      findMany: (args: unknown) => mockFindMany(args),
+      updateMany: (args: unknown) => mockUpdateMany(args),
       delete: (args: { where: { id: string } }) => mockDelete(args),
     },
   },
@@ -83,6 +83,24 @@ describe("bulkTogglePublishedSpacesCommand", () => {
       expect(mockUpdateMany).toHaveBeenCalledTimes(1);
     });
 
+    test("publish 対象は active なスペースだけに限定する", async () => {
+      mockFindMany.mockResolvedValueOnce([SPACE_A]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      await bulkTogglePublishedSpacesCommand([SPACE_A.id], true);
+
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: [SPACE_A.id] }, isActive: true },
+        }),
+      );
+      expect(mockUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: [SPACE_A.id] }, isActive: true },
+        }),
+      );
+    });
+
     test("publish: false で非公開化（publishedAt: null）", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A]);
       mockUpdateMany.mockResolvedValueOnce({ count: 1 });
@@ -124,7 +142,6 @@ describe("bulkDeleteSpacesCommand", () => {
 
       expect(result).toEqual({
         count: 0,
-        skipped: 0,
         affected: [],
       });
       expect(mockFindMany).not.toHaveBeenCalled();
@@ -133,16 +150,21 @@ describe("bulkDeleteSpacesCommand", () => {
 
     test("複数件削除成功で count と affected を返す", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
-      mockDelete.mockResolvedValue({});
+      mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
       const result = await bulkDeleteSpacesCommand([SPACE_A.id, SPACE_B.id]);
 
       expect(result).toEqual({
         count: 2,
-        skipped: 0,
         affected: [SPACE_A, SPACE_B],
       });
-      expect(mockDelete).toHaveBeenCalledTimes(2);
+      expect(mockUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: [SPACE_A.id, SPACE_B.id] }, isActive: true },
+          data: { isActive: false, isPublished: false, publishedAt: null },
+        }),
+      );
+      expect(mockDelete).not.toHaveBeenCalled();
     });
 
     test("対象が見つからない場合は count: 0 を返し delete を呼ばない", async () => {
@@ -152,76 +174,21 @@ describe("bulkDeleteSpacesCommand", () => {
 
       expect(result).toEqual({
         count: 0,
-        skipped: 0,
         affected: [],
       });
       expect(mockDelete).not.toHaveBeenCalled();
     });
   });
 
-  describe("FK 制約", () => {
-    test("一部の Space が P2003 を投げると skipped に計上され count は成功分のみ", async () => {
-      mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B, SPACE_C]);
-
-      // SPACE_B は FK 違反、他は成功
-      mockDelete.mockImplementation(({ where }) => {
-        if (where.id === SPACE_B.id) {
-          return Promise.reject(
-            new FakePrismaKnownRequestError("FK constraint", "P2003"),
-          );
-        }
-        return Promise.resolve({});
-      });
-
-      const result = await bulkDeleteSpacesCommand([
-        SPACE_A.id,
-        SPACE_B.id,
-        SPACE_C.id,
-      ]);
-
-      expect(result.count).toBe(2);
-      expect(result.skipped).toBe(1);
-      expect(result.affected).toEqual([SPACE_A, SPACE_C]);
-      expect(mockDelete).toHaveBeenCalledTimes(3);
-    });
-
-    test("全件 P2003 でも例外を投げず count: 0 / skipped: N", async () => {
+  describe("論理削除", () => {
+    test("FK 制約回避の物理削除は使わない", async () => {
       mockFindMany.mockResolvedValueOnce([SPACE_A, SPACE_B]);
-      mockDelete.mockImplementation(() =>
-        Promise.reject(
-          new FakePrismaKnownRequestError("FK constraint", "P2003"),
-        ),
-      );
+      mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
       const result = await bulkDeleteSpacesCommand([SPACE_A.id, SPACE_B.id]);
 
-      expect(result.count).toBe(0);
-      expect(result.skipped).toBe(2);
-      expect(result.affected).toEqual([]);
-    });
-
-    test("P2003 以外のエラーは throw する", async () => {
-      mockFindMany.mockResolvedValueOnce([SPACE_A]);
-      mockDelete.mockImplementation(() =>
-        Promise.reject(new Error("unexpected DB error")),
-      );
-
-      await expect(bulkDeleteSpacesCommand([SPACE_A.id])).rejects.toThrow(
-        "unexpected DB error",
-      );
-    });
-
-    test("P2003 以外の Prisma エラー（P2025 等）も throw する", async () => {
-      mockFindMany.mockResolvedValueOnce([SPACE_A]);
-      mockDelete.mockImplementation(() =>
-        Promise.reject(
-          new FakePrismaKnownRequestError("Record not found", "P2025"),
-        ),
-      );
-
-      await expect(bulkDeleteSpacesCommand([SPACE_A.id])).rejects.toThrow(
-        "Record not found",
-      );
+      expect(result.affected).toEqual([SPACE_A, SPACE_B]);
+      expect(mockDelete).not.toHaveBeenCalled();
     });
   });
 });

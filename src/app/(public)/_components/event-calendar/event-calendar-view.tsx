@@ -344,9 +344,11 @@ function CalendarGrid({
             ? getDayEventTitles(cell.day, cell.month, cell.year)
             : [];
           // 支援技術向けに日付・今日・選択・イベント有無を読み上げる
-          // （cell.month は 0-indexed なので +1）。視覚は色/丸印のみだった。
+          // （cell.month は 0-indexed なので +1）。
           const ariaLabel = `${String(cell.year)}年${String(cell.month + 1)}月${String(cell.day)}日${
             isToday ? "（今日）" : ""
+          }${isSelected ? "（選択中）" : ""}${
+            isPast ? "（過去日）" : ""
           }${hasEvents ? ` イベント${String(eventTitles.length)}件` : ""}`;
 
           return (
@@ -359,22 +361,28 @@ function CalendarGrid({
               aria-current={isToday ? "date" : undefined}
               onClick={() => onSelectDay(cell.day)}
               className={cn(
-                "relative flex min-h-[5.5rem] flex-col border-b border-r border-border p-1.5 text-left transition-colors sm:min-h-[7rem] sm:p-2",
+                "relative z-0 flex min-h-[5.5rem] flex-col border-b border-r border-border p-1.5 text-left transition-colors focus-visible:z-20 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent sm:min-h-[7rem] sm:p-2",
                 i % 7 === 0 && "border-l",
                 i < 7 && "border-t",
                 cell.isCurrentMonth
                   ? "hover:bg-surface/50"
                   : "cursor-default bg-background text-muted-foreground/30",
-                isPast && "bg-surface/30",
-                isSelected && "bg-accent/5",
+                isPast && "bg-muted/40 text-muted-foreground hover:bg-muted/50",
+                "aria-[pressed=true]:z-10 aria-[pressed=true]:border-accent aria-[pressed=true]:bg-accent/10 aria-[pressed=true]:ring-2 aria-[pressed=true]:ring-inset aria-[pressed=true]:ring-accent aria-[pressed=true]:hover:bg-accent/20",
               )}
             >
               <span
                 className={cn(
                   "inline-flex h-7 w-7 items-center justify-center text-sm sm:h-8 sm:w-8 sm:text-base",
+                  isSelected &&
+                    "rounded-full bg-accent font-semibold text-accent-foreground shadow-sm",
                   isToday &&
+                    !isSelected &&
                     "rounded-full bg-accent font-medium text-accent-foreground",
+                  !isToday && !isSelected && isPast && "text-muted-foreground",
                   !isToday &&
+                    !isSelected &&
+                    !isPast &&
                     cell.isCurrentMonth &&
                     (colIndex === 0
                       ? "text-destructive"
@@ -391,7 +399,14 @@ function CalendarGrid({
                   {eventTitles.slice(0, 2).map((title) => (
                     <div
                       key={title}
-                      className="truncate rounded-sm bg-accent/10 px-1 py-0.5 text-xs leading-tight text-accent"
+                      className={cn(
+                        "truncate rounded-sm px-1 py-0.5 text-xs leading-tight",
+                        isSelected
+                          ? "bg-background/90 text-foreground"
+                          : isPast
+                            ? "bg-muted text-muted-foreground"
+                            : "bg-accent/10 text-accent",
+                      )}
                     >
                       {title}
                     </div>

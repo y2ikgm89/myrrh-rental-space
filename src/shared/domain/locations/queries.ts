@@ -143,19 +143,20 @@ const LOCATION_FULL_SELECT = {
 } as const;
 
 export async function getLocations(options: {
-  includeInactive?: boolean;
+  isPublished?: boolean | "ALL";
   search?: string;
   page: number;
   limit: number;
 }): Promise<GetLocationsResult> {
-  const { includeInactive = false, search } = options;
+  const { isPublished = "ALL", search } = options;
   const { skip, take, page, limit } = paginate({
     page: options.page,
     limit: options.limit,
   });
 
   const where: Prisma.LocationWhereInput = {
-    ...(includeInactive ? {} : { isActive: true }),
+    isActive: true,
+    ...(isPublished === "ALL" ? {} : { isPublished }),
     ...(search
       ? {
           OR: [
@@ -192,7 +193,7 @@ export async function getLocationById(
   id: string,
 ): Promise<LocationWithStats | null> {
   const location = await prisma.location.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     select: LOCATION_FULL_SELECT,
   });
 

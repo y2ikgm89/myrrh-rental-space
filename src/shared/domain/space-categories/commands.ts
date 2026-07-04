@@ -9,14 +9,13 @@ type SpaceCategoryOrderInput = {
   sortOrder: number;
 };
 
-async function ensureActiveNameAvailable(
+async function ensureNameAvailable(
   name: string,
   currentId?: string,
 ): Promise<void> {
   const existing = await prisma.spaceCategory.findFirst({
     where: {
       name,
-      isActive: true,
       ...(currentId ? { id: { not: currentId } } : {}),
     },
     select: { id: true },
@@ -39,7 +38,7 @@ function toSpaceCategoryData(data: SpaceCategoryFormData) {
 export async function createSpaceCategory(
   data: SpaceCategoryFormData,
 ): Promise<{ id: string }> {
-  await ensureActiveNameAvailable(data.name);
+  await ensureNameAvailable(data.name);
 
   const maxOrder = await prisma.spaceCategory.aggregate({
     _max: { sortOrder: true },
@@ -69,7 +68,7 @@ export async function updateSpaceCategory(
     throw new DomainError("カテゴリーが見つかりません", "NOT_FOUND");
   }
 
-  await ensureActiveNameAvailable(data.name, id);
+  await ensureNameAvailable(data.name, id);
 
   await prisma.spaceCategory.update({
     where: { id },
@@ -146,6 +145,10 @@ export async function updateSpaceCategoryActive(
       `このカテゴリーには${category._count.spaces}件のスペースが紐づいています。先にスペースのカテゴリーを変更してください。`,
       "CONFLICT",
     );
+  }
+
+  if (isActive) {
+    await ensureNameAvailable(category.name, id);
   }
 
   await prisma.spaceCategory.update({

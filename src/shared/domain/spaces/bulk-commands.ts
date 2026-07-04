@@ -1,6 +1,5 @@
 import "server-only";
 
-import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 
 export interface AffectedSpace {
@@ -16,7 +15,6 @@ export type BulkPublishResult = {
 
 export type BulkDeleteResult = {
   count: number;
-  skipped: number;
   affected: ReadonlyArray<AffectedSpace>;
 };
 
@@ -35,14 +33,14 @@ export async function bulkTogglePublishedSpacesCommand(
     return { count: 0, isPublished: publish, affected: [] };
   }
   const targets = await prisma.space.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, isActive: true },
     select: { id: true, slug: true },
   });
   if (targets.length === 0) {
     return { count: 0, isPublished: publish, affected: [] };
   }
   const result = await prisma.space.updateMany({
-    where: { id: { in: targets.map((t) => t.id) } },
+    where: { id: { in: targets.map((t) => t.id) }, isActive: true },
     data: {
       isPublished: publish,
       publishedAt: publish ? new Date() : null,
@@ -56,46 +54,33 @@ export async function bulkTogglePublishedSpacesCommand(
 }
 
 /**
- * 複数スペースを一括削除する。
+ * 複数スペースを一括削除（論理削除）する。
  *
- * - `Reservation.spaceId` の FK 制約 (P2003) は個別 catch して `skipped` に計上
- * - 一括 `deleteMany` ではなく逐次 delete することで FK 違反のスペースのみスキップできる
- * - 戻り値の `affected` は cache invalidation 用（削除成功分のみ）
+ * 単体削除と同じく `isActive=false` + `isPublished=false` に統一する。
+ * 戻り値の `affected` は cache invalidation 用（対象 id+slug）として返す。
  */
 export async function bulkDeleteSpacesCommand(
   ids: string[],
 ): Promise<BulkDeleteResult> {
   if (ids.length === 0) {
-    return { count: 0, skipped: 0, affected: [] };
+    return { count: 0, affected: [] };
   }
   const targets = await prisma.space.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, isActive: true },
     select: { id: true, slug: true },
   });
   if (targets.length === 0) {
-    return { count: 0, skipped: 0, affected: [] };
+    return { count: 0, affected: [] };
   }
 
-  let count = 0;
-  let skipped = 0;
-  const affected: AffectedSpace[] = [];
+  const result = await prisma.space.updateMany({
+    where: { id: { in: targets.map((t) => t.id) }, isActive: true },
+    data: {
+      isActive: false,
+      isPublished: false,
+      publishedAt: null,
+    },
+  });
 
-  for (const target of targets) {
-    try {
-      await prisma.space.delete({ where: { id: target.id } });
-      count += 1;
-      affected.push({ id: target.id, slug: target.slug });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2003"
-      ) {
-        skipped += 1;
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  return { count, skipped, affected };
+  return { count: result.count, affected: targets };
 }

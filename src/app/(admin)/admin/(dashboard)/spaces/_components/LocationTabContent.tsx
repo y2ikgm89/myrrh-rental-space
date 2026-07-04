@@ -15,11 +15,16 @@ import { omitUndefined } from "@/shared/lib/serialize";
 async function LocationList() {
   await connection();
   const params = adminSpaceSearchParamsCache.all();
-  const includeInactive = params.locPublished !== "true";
+  const isPublished =
+    params.locStatus === "true"
+      ? true
+      : params.locStatus === "false"
+        ? false
+        : ("ALL" as const);
 
   const result = await getLocations(
     omitUndefined({
-      includeInactive,
+      isPublished,
       search: params.locSearch || undefined,
       page: params.locPage,
       limit: params.locPerPage,
@@ -28,7 +33,7 @@ async function LocationList() {
 
   // D&D 並び替えは検索・公開フィルタなしのときのみ有効
   // （絞り込み中は順序が部分集合になり破綻するため）
-  const sortable = !params.locSearch && includeInactive;
+  const sortable = !params.locSearch && isPublished === "ALL";
   const startIndex = (result.page - 1) * params.locPerPage;
 
   return (

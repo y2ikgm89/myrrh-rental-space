@@ -83,7 +83,7 @@ async function ensureLocationExists(id: string): Promise<{
   spaces: number;
 }> {
   const location = await prisma.location.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     include: {
       _count: {
         select: { spaces: true },

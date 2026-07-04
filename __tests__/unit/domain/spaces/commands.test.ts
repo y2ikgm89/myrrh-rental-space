@@ -99,6 +99,7 @@ import {
   updateSpaceCommand,
   updateSpacePublishedCommand,
   deleteSpaceCommand,
+  duplicateSpaceCommand,
 } from "@/shared/domain/spaces/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -378,6 +379,18 @@ describe("updateSpaceCommand", () => {
         }),
       );
     });
+
+    test("更新対象は active なスペースだけを存在扱いする", async () => {
+      mockSpaceFindUnique.mockResolvedValue(ACTIVE_SPACE);
+
+      await updateSpaceCommand(SPACE_ID, VALID_INPUT);
+
+      expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: SPACE_ID, isActive: true },
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -479,6 +492,16 @@ describe("updateSpacePublishedCommand", () => {
         }),
       );
     });
+
+    test("公開切り替え対象は active なスペースだけを存在扱いする", async () => {
+      await updateSpacePublishedCommand(SPACE_ID, true);
+
+      expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: SPACE_ID, isActive: true },
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -527,8 +550,8 @@ describe("deleteSpaceCommand", () => {
 
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: SPACE_ID },
-          data: { isActive: false, isPublished: false },
+          where: { id: SPACE_ID, isActive: true },
+          data: { isActive: false, isPublished: false, publishedAt: null },
         }),
       );
     });
@@ -542,6 +565,16 @@ describe("deleteSpaceCommand", () => {
             isActive: false,
             isPublished: false,
           }),
+        }),
+      );
+    });
+
+    test("削除対象は active なスペースだけを存在扱いする", async () => {
+      await deleteSpaceCommand(SPACE_ID);
+
+      expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: SPACE_ID, isActive: true },
         }),
       );
     });
@@ -588,5 +621,32 @@ describe("deleteSpaceCommand", () => {
 
       expect(mockSpaceUpdate).not.toHaveBeenCalled();
     });
+  });
+});
+
+// =============================================================================
+// duplicateSpaceCommand
+// =============================================================================
+
+describe("duplicateSpaceCommand", () => {
+  beforeEach(() => {
+    mockSpaceFindUnique.mockReset();
+    mockSpaceCreate.mockReset();
+    mockSpaceFindUnique.mockResolvedValue(null);
+    mockSpaceCreate.mockResolvedValue({ id: "copy-space", slug: "space-copy" });
+  });
+
+  test("複製元は active なスペースだけを存在扱いする", async () => {
+    await expect(duplicateSpaceCommand(SPACE_ID)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "スペースが見つかりません",
+    });
+
+    expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: SPACE_ID, isActive: true },
+      }),
+    );
+    expect(mockSpaceCreate).not.toHaveBeenCalled();
   });
 });
