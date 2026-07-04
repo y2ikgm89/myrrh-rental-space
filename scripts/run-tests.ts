@@ -44,6 +44,11 @@
 
 import pLimit from "p-limit";
 import { resolveTestConcurrency } from "./test-runner-concurrency";
+import {
+  assertRequiredTestDatabaseUrl,
+  findSelectedSerialDbTests,
+  SERIAL_DB_TESTS,
+} from "./test-db-runner-env";
 
 interface FileResult {
   file: string;
@@ -52,18 +57,6 @@ interface FileResult {
   stdout: string;
   stderr: string;
 }
-
-/**
- * 実 Postgres を共有する統合テスト。並列起動すると同一テーブルへの insert/delete
- * が衝突するため serial bucket に隔離する。新規追加時はこのリストに足すこと。
- */
-const SERIAL_DB_TESTS = new Set<string>([
-  "__tests__/integration/domain/reservations/cancel-by-token-roundtrip.test.ts",
-  "__tests__/integration/domain/reservations/reminder-idempotency.test.ts",
-  "__tests__/integration/domain/coupons/coupon-status-filter.test.ts",
-  "__tests__/integration/domain/events/registration-overbooking.test.ts",
-  "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
-]);
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
@@ -107,8 +100,18 @@ for (const arg of args) {
 }
 files.sort();
 
+const selectedSerialDbTests = findSelectedSerialDbTests(files);
+const testDatabaseUrlCheck = assertRequiredTestDatabaseUrl({
+  selectedSerialDbTests,
+  testDatabaseUrl: process.env["TEST_DATABASE_URL"],
+});
+if (!testDatabaseUrlCheck.ok) {
+  console.error(testDatabaseUrlCheck.message);
+  process.exit(1);
+}
+
 const parallelFiles = files.filter((f) => !SERIAL_DB_TESTS.has(f));
-const serialFiles = files.filter((f) => SERIAL_DB_TESTS.has(f));
+const serialFiles = selectedSerialDbTests;
 
 const concurrency = resolveTestConcurrency({
   cpuCount: navigator.hardwareConcurrency || 1,

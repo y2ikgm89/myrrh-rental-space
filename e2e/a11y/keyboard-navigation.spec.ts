@@ -125,25 +125,37 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
 
   function mobileMenuControls(page: Page): {
     hamburger: Locator;
+    hamburgerTrigger: Locator;
     closeButton: Locator;
+    dialog: Locator;
   } {
     const banner = page.getByRole("banner");
     const dialog = page.getByRole("dialog", { name: "ナビゲーションメニュー" });
 
     return {
       hamburger: banner.getByRole("button", { name: "メニューを開く" }),
+      // Modal open makes the background header inert, so role locators should
+      // not be used for trigger DOM-state assertions while the dialog is open.
+      hamburgerTrigger: page.locator(
+        'header[role="banner"] button[aria-label="メニューを開く"]',
+      ),
       closeButton: dialog.getByRole("button", { name: "メニューを閉じる" }),
+      dialog,
     };
   }
 
   async function openMobileMenu(page: Page): Promise<{
     hamburger: Locator;
+    hamburgerTrigger: Locator;
     closeButton: Locator;
   }> {
     const controls = mobileMenuControls(page);
 
     await expect(controls.hamburger).toBeVisible();
-    await expect(controls.hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(controls.hamburgerTrigger).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
     await expect
       .poll(
         async () => {
@@ -155,7 +167,11 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
         { timeout: 5000 },
       )
       .toBe(true);
-    await expect(controls.hamburger).toHaveAttribute("aria-expanded", "true");
+    await expect(controls.dialog).toBeVisible();
+    await expect(controls.hamburgerTrigger).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     await expect(controls.closeButton).toBeVisible();
 
     return controls;
@@ -205,9 +221,9 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
     await page.setViewportSize({ width: 375, height: 812 });
     await gotoHomeWithReadyMobileShell(page);
 
-    const { hamburger } = await openMobileMenu(page);
+    const { hamburgerTrigger } = await openMobileMenu(page);
     await page.keyboard.press("Escape");
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(hamburgerTrigger).toHaveAttribute("aria-expanded", "false");
 
     const hydrationWarnings = await page.evaluate(() => {
       const windowWithWarnings = window as typeof window & {
@@ -221,50 +237,50 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
   test("ハンバーガーボタンをクリックするとメニューが開く", async ({ page }) => {
     await gotoHomeWithReadyMobileShell(page);
 
-    const { hamburger } = await openMobileMenu(page);
+    const { hamburgerTrigger } = await openMobileMenu(page);
 
     await page.keyboard.press("Escape");
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(hamburgerTrigger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("メニューが開いた状態で Escape キーを押すとメニューが閉じる", async ({
     page,
   }) => {
     await gotoHomeWithReadyMobileShell(page);
-    const { hamburger } = await openMobileMenu(page);
+    const { hamburgerTrigger } = await openMobileMenu(page);
 
     // Escape キーでメニューを閉じる
     await page.keyboard.press("Escape");
 
     // メニューが閉じてハンバーガーボタンが再表示されることを確認
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(hamburgerTrigger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("閉じるボタンをクリックするとメニューが閉じる", async ({ page }) => {
     await gotoHomeWithReadyMobileShell(page);
-    const { hamburger, closeButton } = await openMobileMenu(page);
+    const { hamburgerTrigger, closeButton } = await openMobileMenu(page);
     await closeButton.click();
 
     // ハンバーガーボタンが再表示される
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(hamburgerTrigger).toHaveAttribute("aria-expanded", "false");
   });
 
   test("ハンバーガーボタンに aria-expanded が設定されている", async ({
     page,
   }) => {
     await gotoHomeWithReadyMobileShell(page);
-    const { hamburger } = mobileMenuControls(page);
+    const { hamburgerTrigger } = mobileMenuControls(page);
 
     // 初期状態は expanded=false
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(hamburgerTrigger).toHaveAttribute("aria-expanded", "false");
 
     await openMobileMenu(page);
 
     // 開いた状態は expanded=true
-    await expect(hamburger).toHaveAttribute("aria-expanded", "true");
+    await expect(hamburgerTrigger).toHaveAttribute("aria-expanded", "true");
 
     await page.keyboard.press("Escape");
-    await expect(hamburger).toHaveAttribute("aria-expanded", "false");
+    await expect(hamburgerTrigger).toHaveAttribute("aria-expanded", "false");
   });
 });
 
