@@ -132,6 +132,16 @@ describe("createPostSchema", () => {
       expect(result.data.contentJson).toBe(EMPTY_LEXICAL_EDITOR_STATE_JSON);
     }
   });
+
+  test("作成時のレイアウト設定を受け取れる", () => {
+    const result = createPostSchema.safeParse({
+      ...validBaseData,
+      contentWidth: LayoutWidth.CUSTOM,
+      contentWidthCustom: 960,
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("updatePostBodySchema", () => {
@@ -176,6 +186,12 @@ describe("updatePostSettingsSchema", () => {
 
   test("contentWidth フィールドを許可", () => {
     const validData = { ...validBaseData, contentWidth: LayoutWidth.LG };
+    const result = updatePostSettingsSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+
+  test("publishedAt フィールドを受け取れる", () => {
+    const validData = { ...validBaseData, publishedAt: "2026-01-01T10:00" };
     const result = updatePostSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });

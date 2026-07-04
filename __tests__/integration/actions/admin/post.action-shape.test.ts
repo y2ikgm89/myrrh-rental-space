@@ -160,6 +160,21 @@ describe("createPost (action shape)", () => {
     expect(mockCreatePost).toHaveBeenCalledTimes(1);
     expect(result).toEqual({ id: "new-id" });
   });
+
+  test("作成時のレイアウト設定を domain command へ渡す", async () => {
+    await createPost({
+      ...VALID_CREATE_INPUT,
+      contentWidth: "CUSTOM",
+      contentWidthCustom: 960,
+    });
+
+    expect(mockCreatePost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentWidth: "CUSTOM",
+        contentWidthCustom: 960,
+      }),
+    );
+  });
 });
 
 describe("updatePostSettings (action shape)", () => {
@@ -196,6 +211,7 @@ describe("updatePostSettings (action shape)", () => {
       categoryId: VALID_UUID,
       tags: [],
       status: "PUBLISHED",
+      publishedAt: "2026-01-02T03:04",
     });
 
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
@@ -206,6 +222,18 @@ describe("updatePostSettings (action shape)", () => {
       }),
     );
     expect(mockUpdatePostSettings).toHaveBeenCalledTimes(1);
+    expect(mockUpdatePostSettings).toHaveBeenCalledWith(
+      VALID_UUID,
+      expect.objectContaining({
+        status: "PUBLISHED",
+        publishedAt: expect.any(Date),
+      }),
+    );
+
+    const [, payload] = mockUpdatePostSettings.mock.calls[0] ?? [];
+    expect((payload as { publishedAt: Date }).publishedAt.toISOString()).toBe(
+      "2026-01-01T18:04:00.000Z",
+    );
   });
 });
 

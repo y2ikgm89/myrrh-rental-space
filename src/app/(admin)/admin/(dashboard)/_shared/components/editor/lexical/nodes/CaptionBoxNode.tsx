@@ -7,8 +7,6 @@
  * スタイルは lexical-content.css の [data-caption-box] セレクターで管理
  */
 
-"use client";
-
 import type {
   DOMConversionMap,
   DOMConversionOutput,

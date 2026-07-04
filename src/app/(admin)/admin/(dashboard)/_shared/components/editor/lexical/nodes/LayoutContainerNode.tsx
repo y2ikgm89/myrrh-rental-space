@@ -8,8 +8,6 @@
  * - NodeState で `templateColumns` / `templateColumnsNarrow` を保持
  */
 
-"use client";
-
 import type {
   DOMConversionMap,
   DOMConversionOutput,

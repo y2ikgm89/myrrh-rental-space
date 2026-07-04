@@ -36,6 +36,17 @@ function normalizeNullableString(
   return value;
 }
 
+function resolvePostPublishedAt(
+  status: PostStatus,
+  publishedAt: Date | null,
+): Date | null {
+  if (status !== PostStatus.PUBLISHED) {
+    return null;
+  }
+
+  return publishedAt ?? new Date();
+}
+
 async function ensurePostExists(
   id: string,
 ): Promise<{ id: string; slug: string }> {
@@ -117,6 +128,8 @@ export async function createPost(
       metaKeywords: normalizeNullableString(input.metaKeywords),
       ogpTitle: normalizeNullableString(input.ogpTitle),
       ogpDescription: normalizeNullableString(input.ogpDescription),
+      contentWidth: input.contentWidth ?? null,
+      contentWidthCustom: input.contentWidthCustom ?? null,
       status: PostStatus.DRAFT,
       authorId: input.authorId,
       postTags: {
@@ -189,6 +202,8 @@ export async function updatePostSettings(
       metaKeywords: normalizeNullableString(input.metaKeywords),
       ogpTitle: normalizeNullableString(input.ogpTitle),
       ogpDescription: normalizeNullableString(input.ogpDescription),
+      status: input.status,
+      publishedAt: resolvePostPublishedAt(input.status, input.publishedAt),
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
       postTags: {
@@ -246,6 +261,7 @@ export async function unpublishPost(id: string): Promise<DeletePostResult> {
     where: { id },
     data: {
       status: PostStatus.DRAFT,
+      publishedAt: null,
     },
   });
 
@@ -261,6 +277,7 @@ export async function archivePost(id: string): Promise<DeletePostResult> {
     where: { id },
     data: {
       status: PostStatus.ARCHIVED,
+      publishedAt: null,
     },
   });
 

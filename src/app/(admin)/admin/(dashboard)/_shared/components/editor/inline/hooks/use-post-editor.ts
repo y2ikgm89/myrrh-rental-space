@@ -44,6 +44,7 @@ import {
   toNullableString,
 } from "./shared";
 import type { CategoryOption, TagOption } from "./shared";
+import { collectFormDataFromContainer } from "./shared/collect-form-data";
 
 type UsePostEditorOptions = {
   post?: PostData | undefined;
@@ -129,6 +130,7 @@ function toSettingsSubmitPayload(formData: ParsedPostSettingsFormData) {
     ogpTitle: toNullableString(formData.ogpTitle),
     ogpDescription: toNullableString(formData.ogpDescription),
     status: formData.status,
+    publishedAt: formData.publishedAt || null,
     contentWidth: formData.contentWidth ?? null,
     contentWidthCustom: formData.contentWidthCustom ?? null,
   };
@@ -160,6 +162,8 @@ export function usePostEditor({
   const [statusValue, setStatusValue] = useState<PostStatus>(
     post?.status ?? PostStatus.DRAFT,
   );
+  const [settingsSnapshot, setSettingsSnapshot] =
+    useState<ParsedPostSettingsFormData | null>(null);
 
   const isBodyDirty = contentJson !== savedContentJson;
 
@@ -185,13 +189,15 @@ export function usePostEditor({
   const core = useEditorCore({ listPath: "/admin/posts" });
 
   const title =
-    typeof settingsFields.title.value === "string"
+    settingsSnapshot?.title ??
+    (typeof settingsFields.title.value === "string"
       ? settingsFields.title.value
-      : "";
+      : "");
   const slug =
-    typeof settingsFields.slug.value === "string"
+    settingsSnapshot?.slug ??
+    (typeof settingsFields.slug.value === "string"
       ? settingsFields.slug.value
-      : "";
+      : "");
 
   const handleContentChange = (json: string) => {
     setContentJson(json);
@@ -221,17 +227,28 @@ export function usePostEditor({
     });
   };
 
-  // 設定フォームを imperative に validate (FormData を fields から組み立て)
+  // 設定フォームを imperative に validate (mounted controls から FormData を組み立て)
   const validateSettings = (): ParsedPostSettingsFormData | null => {
-    const formData = new FormData();
-    for (const [key, field] of Object.entries(settingsFields)) {
-      const fieldValue = field.value;
-      if (Array.isArray(fieldValue)) {
-        formData.append(key, JSON.stringify(fieldValue));
-      } else if (fieldValue != null) {
-        formData.append(key, String(fieldValue));
+    const settingsContainer = document.querySelector<HTMLElement>(
+      `[data-settings-form-container="${settingsForm.id}"]`,
+    );
+    const formData =
+      settingsContainer instanceof HTMLElement
+        ? collectFormDataFromContainer(settingsContainer)
+        : new FormData();
+
+    if (!(settingsContainer instanceof HTMLElement)) {
+      for (const [key, field] of Object.entries(settingsFields)) {
+        const fieldValue = field.value;
+        if (Array.isArray(fieldValue)) {
+          formData.append(key, JSON.stringify(fieldValue));
+        } else if (fieldValue != null) {
+          formData.append(key, String(fieldValue));
+        }
       }
     }
+
+    formData.set("status", statusValue);
     const submission = parseWithZod(formData, {
       schema: postSettingsFormSchema,
     });
@@ -242,10 +259,24 @@ export function usePostEditor({
     return submission.value;
   };
 
+  const getSettingsDataForSubmit = (): ParsedPostSettingsFormData | null => {
+    if (!isSettingsDialogOpen && settingsSnapshot) {
+      return settingsSnapshot;
+    }
+
+    return validateSettings();
+  };
+
   const onSubmitSettings = () => {
-    if (!post) return;
     const settingsData = validateSettings();
     if (!settingsData) return;
+
+    if (mode === "create" || !post) {
+      setSettingsSnapshot(settingsData);
+      setIsSettingsDialogOpen(false);
+      toast.success("記事設定を保存しました");
+      return;
+    }
 
     core.startTransition(async () => {
       try {
@@ -256,6 +287,7 @@ export function usePostEditor({
           return;
         }
 
+        setSettingsSnapshot(settingsData);
         setIsSettingsDialogOpen(false);
         router.refresh();
         toast.success("記事設定を保存しました");
@@ -287,6 +319,8 @@ export function usePostEditor({
         metaKeywords: settingsPayload.metaKeywords,
         ogpTitle: settingsPayload.ogpTitle,
         ogpDescription: settingsPayload.ogpDescription,
+        contentWidth: settingsPayload.contentWidth,
+        contentWidthCustom: settingsPayload.contentWidthCustom,
       });
       if (isMutationError(result)) {
         toast.error(result.error);
@@ -303,7 +337,7 @@ export function usePostEditor({
   };
 
   const onCreateBoth = () => {
-    const settingsData = validateSettings();
+    const settingsData = getSettingsDataForSubmit();
     if (!settingsData) {
       setIsSettingsDialogOpen(true);
       return;
@@ -394,11 +428,11 @@ export function usePostEditor({
   // WordPress auto-draft 整合:
   // - create mode: 入力済み内容を下書き (非公開) として自動保存 → preview → edit へ遷移
   //   (以降の保存は更新)。title / slug 未入力なら設定ダイアログを開く。
-  // - edit mode: 本文を保存 → preview。
+  // - edit mode: 設定と本文を保存 → preview。
   // 別タブ起動は `openPreviewTab` (anchor.click) で popup blocker + noreferrer を両立。
   const handlePreview = () => {
     if (mode === "create" || !post) {
-      const settingsData = validateSettings();
+      const settingsData = getSettingsDataForSubmit();
       if (!settingsData) {
         setIsSettingsDialogOpen(true);
         return;
@@ -412,8 +446,26 @@ export function usePostEditor({
       return;
     }
 
+    const settingsData = getSettingsDataForSubmit();
+    if (!settingsData) {
+      setIsSettingsDialogOpen(true);
+      return;
+    }
+
     core.startTransition(async () => {
       try {
+        const settingsResult = await updatePostSettings(
+          post.id,
+          toSettingsSubmitPayload(settingsData),
+        );
+        if (isMutationError(settingsResult)) {
+          toast.error(settingsResult.error);
+          if (/スラッグ|slug/i.test(settingsResult.error)) {
+            setIsSettingsDialogOpen(true);
+          }
+          return;
+        }
+
         const bodyResult = await updatePostBody(post.id, {
           contentJson,
         });

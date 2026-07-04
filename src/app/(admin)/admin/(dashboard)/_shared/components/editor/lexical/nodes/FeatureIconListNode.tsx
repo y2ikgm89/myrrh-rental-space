@@ -8,8 +8,6 @@
  * updateDOM では WYSIWYG のため CuratedIcon を SVG として埋め込む。
  */
 
-"use client";
-
 import type { DOMConversionMap, EditorConfig, LexicalNode } from "lexical";
 import {
   $create,
@@ -19,12 +17,10 @@ import {
   createState,
   ElementNode,
 } from "lexical";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { parseString } from "../config/type-guards";
 import { createEnumGuard } from "../config/type-guards";
 import { type AccentColor, isAccentColor } from "../config/accent-colors";
-import { getCuratedIconComponent } from "@/shared/components/icon-curation/component-map";
+import { getCuratedIconSvgMarkup } from "@/shared/lib/html/curated-icon-svg-markup";
 
 /**
  * curation list の icon を SVG として要素内に埋め込む。
@@ -32,7 +28,8 @@ import { getCuratedIconComponent } from "@/shared/components/icon-curation/compo
  * - 該当 icon あり: `<svg>` を `data-icon-svg` 属性付きで innerHTML として埋め込み
  *
  * `createDOM` / `updateDOM` / `exportDOM` から共通で呼ばれる。
- * `renderToStaticMarkup` は同期関数で SSR / browser 両環境で動作する（react-dom/server）。
+ * SVG markup は build-time 生成済み SSoT を使い、client bundle へ
+ * `react-dom/server` を混入させない。
  */
 function renderIconSvgInto(host: HTMLElement, iconName: string): void {
   // 既存の埋め込み SVG をクリア（updateDOM で icon が変わった場合）
@@ -40,17 +37,14 @@ function renderIconSvgInto(host: HTMLElement, iconName: string): void {
   if (existing) existing.remove();
 
   if (iconName === "") return;
-  const Icon = getCuratedIconComponent(iconName);
-  if (!Icon) return;
+  const svgMarkup = getCuratedIconSvgMarkup(iconName);
+  if (svgMarkup === undefined) return;
 
-  const svgMarkup = renderToStaticMarkup(
-    createElement(Icon, {
-      className: "feature-icon-svg",
-      "aria-hidden": true,
-    }),
-  );
   // SVG を最初の子として挿入（li 内の paragraph テキストはそのまま残す）
-  host.insertAdjacentHTML("afterbegin", svgMarkup);
+  host.insertAdjacentHTML(
+    "afterbegin",
+    svgMarkup.replace("inline-icon-svg", "feature-icon-svg"),
+  );
   // 挿入後に識別用 data-icon-svg 属性を付与（Tabler IconProps 型が strict で
   // data-* を受け付けないため、DOM 経由で setAttribute）
   const inserted = host.querySelector(":scope > svg");

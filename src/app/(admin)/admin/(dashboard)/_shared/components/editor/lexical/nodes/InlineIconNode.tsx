@@ -15,8 +15,6 @@
  * curation 外 / 空 name は `null` を返し描画なし（CuratedIcon の no-op fallback）。
  */
 
-"use client";
-
 import type { ReactElement } from "react";
 import type {
   DOMConversionMap,

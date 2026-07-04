@@ -1,10 +1,8 @@
-﻿/**
+/**
  * X (Twitter) Node
  *
  * @description X（Twitter）投稿を埋め込むDecoratorNode
  */
-
-"use client";
 
 import type { ReactElement } from "react";
 import type {

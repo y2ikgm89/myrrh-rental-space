@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Collapsible Item Node
  *
  * @description 個別の折りたたみアイテムを表すElementNode
@@ -6,8 +6,6 @@
  *
  * スタイルは lexical-content.css の [data-collapsible-item] セレクターで管理
  */
-
-"use client";
 
 import type {
   DOMConversionMap,

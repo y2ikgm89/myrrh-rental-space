@@ -117,6 +117,23 @@ describe("createNewsSchema", () => {
     const result = createNewsSchema.safeParse(data);
     expect(result.success).toBe(false);
   });
+
+  test("作成時のレイアウトと SEO/OGP 設定を受け取れる", () => {
+    const result = createNewsSchema.safeParse({
+      slug: "sample-news",
+      title: "サンプルニュース",
+      contentJson: VALID_LEXICAL_JSON,
+      contentWidth: LayoutWidth.CUSTOM,
+      contentWidthCustom: 960,
+      metaDescription: "概要",
+      metaKeywords: "news,topic",
+      ogpTitle: "OGP",
+      ogpDescription: "OGP 概要",
+      ogpImageUrl: "https://example.com/ogp.jpg",
+    });
+
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("updateNewsBodySchema", () => {
@@ -158,6 +175,18 @@ describe("updateNewsSettingsSchema", () => {
       title: "サンプルニュース",
       isPublished: false,
       contentWidth: null,
+    };
+
+    const result = updateNewsSettingsSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+
+  test("publishedAt フィールドを受け取れる", () => {
+    const validData = {
+      slug: "sample-news",
+      title: "サンプルニュース",
+      isPublished: true,
+      publishedAt: "2026-01-01T10:00",
     };
 
     const result = updateNewsSettingsSchema.safeParse(validData);

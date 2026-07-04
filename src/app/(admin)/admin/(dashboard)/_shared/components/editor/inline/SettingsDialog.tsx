@@ -10,6 +10,7 @@
  */
 
 import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { getFormProps } from "@conform-to/react";
 import { tv } from "tailwind-variants";
 import {
   Button,
@@ -213,16 +214,23 @@ export function SettingsDialog<
 
   const sectionContext = buildRenderContext(injected, extraProps);
 
-  // conform `useForm({ id })` で指定した form id に対応する <form> を DOM に確実に
-  // 持たせる (conform 公式パターン)。未配置だと useInputControl が dummy input の
-  // 必要性を判定できず "unable to find form#xxx" warning を出す。
-  // imperative validation (onSave callback 経由) と両立させるため、conform の
-  // form.onSubmit は使わず onSubmit で preventDefault + onSave 呼び出しに統一する。
-  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitSettings = () => {
     if (!isPending && isDirty) {
       onSave();
     }
+  };
+
+  // Conform 公式パターンに合わせて実 <form> を置く。ただし server action submit
+  // ではなく親 hook の imperative save を呼ぶため、native navigation は必ず止める。
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    injected.form.onSubmit(event);
+    const preventedByConform = event.defaultPrevented;
+    event.preventDefault();
+    const isConformIntent = new FormData(event.currentTarget).has("__intent__");
+    if (preventedByConform || isConformIntent) {
+      return;
+    }
+    submitSettings();
   };
 
   return (
@@ -235,7 +243,13 @@ export function SettingsDialog<
           ) : null}
         </DialogHeader>
 
-        <form id={injected.form.id} onSubmit={handleFormSubmit} noValidate>
+        <form
+          {...getFormProps(injected.form)}
+          onSubmit={handleFormSubmit}
+          hidden
+        />
+
+        <div data-settings-form-container={injected.form.id}>
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
@@ -253,6 +267,7 @@ export function SettingsDialog<
               <TabsContent
                 key={tab.id}
                 value={tab.id}
+                forceMount
                 className={classes.tabContent()}
               >
                 <div className={classes.sectionWrapper()}>
@@ -273,25 +288,25 @@ export function SettingsDialog<
               </TabsContent>
             ))}
           </Tabs>
+        </div>
 
-          <DialogFooter className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isPending}
-            >
-              キャンセル
-            </Button>
-            <Button
-              type="button"
-              onClick={onSave}
-              disabled={isPending || !isDirty}
-            >
-              {isPending ? "保存中..." : "保存"}
-            </Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isPending}
+          >
+            キャンセル
+          </Button>
+          <Button
+            type="button"
+            onClick={submitSettings}
+            disabled={isPending || !isDirty}
+          >
+            {isPending ? "保存中..." : "保存"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

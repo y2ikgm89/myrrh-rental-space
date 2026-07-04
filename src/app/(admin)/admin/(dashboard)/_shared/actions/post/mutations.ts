@@ -20,8 +20,18 @@ import {
 } from "./cache-helpers";
 import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 
 const idSchema = uuidIdSchema("記事");
+
+function parsePublishedAt(value: string | null | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = parseDateTimeLocalAsJst(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 /** 投稿記事 新規作成。 */
 export async function createPost(
@@ -94,6 +104,8 @@ export async function updatePostSettings(
           metaKeywords: parsed.data.metaKeywords,
           ogpTitle: parsed.data.ogpTitle,
           ogpDescription: parsed.data.ogpDescription,
+          status: parsed.data.status,
+          publishedAt: parsePublishedAt(parsed.data.publishedAt),
           contentWidth: parsed.data.contentWidth ?? null,
           contentWidthCustom: parsed.data.contentWidthCustom ?? null,
         }),

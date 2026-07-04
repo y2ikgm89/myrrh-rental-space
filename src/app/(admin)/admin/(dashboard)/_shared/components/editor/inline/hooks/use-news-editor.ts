@@ -38,6 +38,7 @@ import {
   toFormNumberString,
   toNullableString,
 } from "./shared";
+import { collectFormDataFromContainer } from "./shared/collect-form-data";
 
 type UseNewsEditorOptions = {
   news?: NewsData | undefined;
@@ -97,6 +98,7 @@ function toSettingsSubmitPayload(formData: ParsedNewsSettingsFormData) {
     slug: formData.slug,
     title: formData.title,
     isPublished: Boolean(formData.isPublished),
+    publishedAt: formData.publishedAt || null,
     contentWidth: formData.contentWidth ?? null,
     contentWidthCustom: formData.contentWidthCustom ?? null,
     metaDescription: toNullableString(formData.metaDescription),
@@ -122,6 +124,8 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const [isPublishedValue, setIsPublishedValue] = useState<boolean>(
     news?.isPublished ?? false,
   );
+  const [settingsSnapshot, setSettingsSnapshot] =
+    useState<ParsedNewsSettingsFormData | null>(null);
 
   const isBodyDirty = contentJson !== savedContentJson;
 
@@ -147,13 +151,15 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const core = useEditorCore({ listPath: "/admin/news" });
 
   const title =
-    typeof settingsFields.title.value === "string"
+    settingsSnapshot?.title ??
+    (typeof settingsFields.title.value === "string"
       ? settingsFields.title.value
-      : "";
+      : "");
   const slug =
-    typeof settingsFields.slug.value === "string"
+    settingsSnapshot?.slug ??
+    (typeof settingsFields.slug.value === "string"
       ? settingsFields.slug.value
-      : "";
+      : "");
 
   const handleContentChange = (json: string) => {
     setContentJson(json);
@@ -184,17 +190,28 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   };
 
   const validateSettings = (): ParsedNewsSettingsFormData | null => {
-    const formData = new FormData();
-    for (const [key, field] of Object.entries(settingsFields)) {
-      const fieldValue = field.value;
-      if (Array.isArray(fieldValue)) {
-        formData.append(key, JSON.stringify(fieldValue));
-      } else if (typeof fieldValue === "boolean") {
-        if (fieldValue) formData.append(key, "on");
-      } else if (fieldValue != null) {
-        formData.append(key, String(fieldValue));
+    const settingsContainer = document.querySelector<HTMLElement>(
+      `[data-settings-form-container="${settingsForm.id}"]`,
+    );
+    const formData =
+      settingsContainer instanceof HTMLElement
+        ? collectFormDataFromContainer(settingsContainer)
+        : new FormData();
+
+    if (!(settingsContainer instanceof HTMLElement)) {
+      for (const [key, field] of Object.entries(settingsFields)) {
+        const fieldValue = field.value;
+        if (Array.isArray(fieldValue)) {
+          formData.append(key, JSON.stringify(fieldValue));
+        } else if (typeof fieldValue === "boolean") {
+          if (fieldValue) formData.append(key, "on");
+        } else if (fieldValue != null) {
+          formData.append(key, String(fieldValue));
+        }
       }
     }
+
+    formData.set("isPublished", isPublishedValue ? "on" : "");
     const submission = parseWithZod(formData, {
       schema: newsSettingsFormSchema,
     });
@@ -205,10 +222,24 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     return submission.value;
   };
 
+  const getSettingsDataForSubmit = (): ParsedNewsSettingsFormData | null => {
+    if (!isSettingsDialogOpen && settingsSnapshot) {
+      return settingsSnapshot;
+    }
+
+    return validateSettings();
+  };
+
   const onSubmitSettings = () => {
-    if (!news) return;
     const settingsData = validateSettings();
     if (!settingsData) return;
+
+    if (mode === "create" || !news) {
+      setSettingsSnapshot(settingsData);
+      setIsSettingsDialogOpen(false);
+      toast.success("お知らせ設定を保存しました");
+      return;
+    }
 
     core.startTransition(async () => {
       try {
@@ -219,6 +250,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
           return;
         }
 
+        setSettingsSnapshot(settingsData);
         setIsSettingsDialogOpen(false);
         router.refresh();
         toast.success("お知らせ設定を保存しました");
@@ -236,11 +268,19 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const createDraftNews = async (
     settingsData: ParsedNewsSettingsFormData,
   ): Promise<string | null> => {
+    const settingsPayload = toSettingsSubmitPayload(settingsData);
     try {
       const result = await createNews({
-        slug: settingsData.slug,
-        title: settingsData.title,
+        slug: settingsPayload.slug,
+        title: settingsPayload.title,
         contentJson,
+        contentWidth: settingsPayload.contentWidth,
+        contentWidthCustom: settingsPayload.contentWidthCustom,
+        metaDescription: settingsPayload.metaDescription,
+        metaKeywords: settingsPayload.metaKeywords,
+        ogpTitle: settingsPayload.ogpTitle,
+        ogpDescription: settingsPayload.ogpDescription,
+        ogpImageUrl: settingsPayload.ogpImageUrl,
       });
       if (isMutationError(result)) {
         toast.error(result.error);
@@ -257,7 +297,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   };
 
   const onCreateBoth = () => {
-    const settingsData = validateSettings();
+    const settingsData = getSettingsDataForSubmit();
     if (!settingsData) {
       setIsSettingsDialogOpen(true);
       return;
@@ -348,11 +388,11 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   // WordPress auto-draft 整合:
   // - create mode: 入力済み内容を下書き (非公開) として自動保存 → preview → edit へ遷移
   //   (以降の保存は更新)。title / slug 未入力なら設定ダイアログを開く。
-  // - edit mode: 本文を保存 → preview。
+  // - edit mode: 設定と本文を保存 → preview。
   // 別タブ起動は `openPreviewTab` (anchor.click) で popup blocker + noreferrer を両立。
   const handlePreview = () => {
     if (mode === "create" || !news) {
-      const settingsData = validateSettings();
+      const settingsData = getSettingsDataForSubmit();
       if (!settingsData) {
         setIsSettingsDialogOpen(true);
         return;
@@ -366,8 +406,26 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       return;
     }
 
+    const settingsData = getSettingsDataForSubmit();
+    if (!settingsData) {
+      setIsSettingsDialogOpen(true);
+      return;
+    }
+
     core.startTransition(async () => {
       try {
+        const settingsResult = await updateNewsSettings(
+          news.id,
+          toSettingsSubmitPayload(settingsData),
+        );
+        if (isMutationError(settingsResult)) {
+          toast.error(settingsResult.error);
+          if (/スラッグ|slug/i.test(settingsResult.error)) {
+            setIsSettingsDialogOpen(true);
+          }
+          return;
+        }
+
         const bodyResult = await updateNewsBody(news.id, {
           contentJson,
         });

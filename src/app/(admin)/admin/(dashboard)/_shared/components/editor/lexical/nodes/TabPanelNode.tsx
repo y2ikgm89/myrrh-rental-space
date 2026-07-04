@@ -1,11 +1,9 @@
-﻿/**
+/**
  * TabPanel Node
  *
  * @description 各タブのコンテンツパネル
  * TabsContainerNodeの子として使用
  */
-
-"use client";
 
 import type {
   DOMConversionMap,
