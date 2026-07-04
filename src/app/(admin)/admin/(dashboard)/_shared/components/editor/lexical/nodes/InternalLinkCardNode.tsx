@@ -12,8 +12,6 @@
  * 参照先が削除 / 非公開なら自動で非表示になる（404 カードを防ぐ）。
  */
 
-"use client";
-
 import type { ReactElement } from "react";
 import type {
   DOMConversionMap,

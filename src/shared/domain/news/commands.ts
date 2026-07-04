@@ -36,6 +36,17 @@ function normalizeNullableString(
   return value;
 }
 
+function resolveNewsPublishedAt(
+  isPublished: boolean,
+  publishedAt: Date | null,
+): Date | null {
+  if (!isPublished) {
+    return null;
+  }
+
+  return publishedAt ?? new Date();
+}
+
 async function ensureNewsExists(
   id: string,
 ): Promise<{ id: string; slug: string }> {
@@ -76,6 +87,13 @@ export async function createNews(
       title: input.title,
       contentHtml: input.contentHtml,
       contentJson: parseContentJson(input.contentJson),
+      contentWidth: input.contentWidth ?? null,
+      contentWidthCustom: input.contentWidthCustom ?? null,
+      metaDescription: normalizeNullableString(input.metaDescription),
+      metaKeywords: normalizeNullableString(input.metaKeywords),
+      ogpTitle: normalizeNullableString(input.ogpTitle),
+      ogpDescription: normalizeNullableString(input.ogpDescription),
+      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
       isPublished: false,
     }),
     select: {
@@ -125,6 +143,8 @@ export async function updateNewsSettings(
     data: {
       slug: input.slug,
       title: input.title,
+      isPublished: input.isPublished,
+      publishedAt: resolveNewsPublishedAt(input.isPublished, input.publishedAt),
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
       metaDescription: normalizeNullableString(input.metaDescription),
@@ -183,6 +203,7 @@ export async function unpublishNews(id: string): Promise<DeleteNewsResult> {
     where: { id },
     data: {
       isPublished: false,
+      publishedAt: null,
     },
   });
 

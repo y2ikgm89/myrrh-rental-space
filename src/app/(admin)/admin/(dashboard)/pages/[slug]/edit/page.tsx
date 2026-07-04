@@ -69,7 +69,7 @@ export default async function EditPagePage({
             <PublishToggle slug={slug} isPublished={page.isPublished} />
           )}
           <Button asChild variant="outline" size="sm">
-            <a href={getPagePreviewHref(slug)} target="_blank">
+            <a href={getPagePreviewHref(slug)} target="_blank" rel="noreferrer">
               <IconExternalLink className="h-4 w-4 mr-1" />
               プレビュー
             </a>

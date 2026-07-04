@@ -1,12 +1,10 @@
-﻿/**
+/**
  * TabList Node
  *
  * @description タブのヘッダーリスト
  * TabsContainerNodeの子として使用
  * 子ノード: TabTitleNode×N
  */
-
-"use client";
 
 import type {
   DOMConversionMap,

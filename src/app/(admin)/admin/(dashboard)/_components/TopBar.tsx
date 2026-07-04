@@ -66,6 +66,7 @@ export function TopBar({
         <Link
           href="/"
           target="_blank"
+          rel="noreferrer"
           className="hidden min-h-11 items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground sm:inline-flex"
         >
           サイトを表示

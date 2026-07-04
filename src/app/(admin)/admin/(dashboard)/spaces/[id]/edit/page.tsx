@@ -66,7 +66,11 @@ export default async function EditSpacePage({ params }: PageProps) {
             redirectTo="/admin/spaces"
           />
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/spaces/${space.slug}`} target="_blank">
+            <Link
+              href={`/spaces/${space.slug}`}
+              target="_blank"
+              rel="noreferrer"
+            >
               <IconExternalLink className="mr-2 h-4 w-4" />
               公開ページを見る
             </Link>

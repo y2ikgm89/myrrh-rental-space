@@ -90,6 +90,13 @@ const VALID_CREATE_INPUT = {
   title: "テストお知らせ",
   contentJson: '{"root":{"children":[]}}',
   contentHtml: "<p>テストコンテンツ</p>",
+  contentWidth: null,
+  contentWidthCustom: null,
+  metaDescription: null,
+  metaKeywords: null,
+  ogpTitle: null,
+  ogpDescription: null,
+  ogpImageUrl: null,
 };
 
 const VALID_UPDATE_BODY_INPUT = {
@@ -100,6 +107,8 @@ const VALID_UPDATE_BODY_INPUT = {
 const VALID_UPDATE_SETTINGS_INPUT = {
   slug: NEWS_SLUG,
   title: "更新後タイトル",
+  isPublished: false,
+  publishedAt: null,
   contentWidth: null,
   contentWidthCustom: null,
   metaDescription: null,
@@ -136,6 +145,33 @@ describe("createNews", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             isPublished: false,
+          }),
+        }),
+      );
+    });
+
+    test("作成時にレイアウトと SEO/OGP 設定も保存される", async () => {
+      await createNews({
+        ...VALID_CREATE_INPUT,
+        contentWidth: "CUSTOM",
+        contentWidthCustom: 880,
+        metaDescription: "作成時説明",
+        metaKeywords: "alpha,beta",
+        ogpTitle: "作成時 OGP",
+        ogpDescription: "作成時 OGP 説明",
+        ogpImageUrl: "https://example.com/ogp.jpg",
+      });
+
+      expect(mockNewsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            contentWidth: "CUSTOM",
+            contentWidthCustom: 880,
+            metaDescription: "作成時説明",
+            metaKeywords: "alpha,beta",
+            ogpTitle: "作成時 OGP",
+            ogpDescription: "作成時 OGP 説明",
+            ogpImageUrl: "https://example.com/ogp.jpg",
           }),
         }),
       );
@@ -285,6 +321,25 @@ describe("updateNewsSettings", () => {
           data: expect.objectContaining({
             metaDescription: null,
             ogpTitle: null,
+          }),
+        }),
+      );
+    });
+
+    test("公開状態と公開日時も設定更新で永続化される", async () => {
+      const publishedAt = new Date("2026-01-02T03:04:00.000Z");
+
+      await updateNewsSettings(NEWS_ID, {
+        ...VALID_UPDATE_SETTINGS_INPUT,
+        isPublished: true,
+        publishedAt,
+      });
+
+      expect(mockNewsUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isPublished: true,
+            publishedAt,
           }),
         }),
       );
@@ -481,7 +536,10 @@ describe("unpublishNews", () => {
 
       expect(mockNewsUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { isPublished: false },
+          data: expect.objectContaining({
+            isPublished: false,
+            publishedAt: null,
+          }),
         }),
       );
     });

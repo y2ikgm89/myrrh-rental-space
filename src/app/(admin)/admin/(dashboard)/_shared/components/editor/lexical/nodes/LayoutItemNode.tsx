@@ -4,8 +4,6 @@
  * @description レイアウトコンテナ内の 1 カラム（Lexical Playground の layout-item と同型）
  */
 
-"use client";
-
 import type {
   DOMConversionMap,
   DOMConversionOutput,

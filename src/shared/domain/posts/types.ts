@@ -113,6 +113,8 @@ export type CreatePostCommandInput = {
   metaKeywords?: string | null;
   ogpTitle?: string | null;
   ogpDescription?: string | null;
+  contentWidth?: LayoutWidth | null;
+  contentWidthCustom?: number | null;
   authorId: string;
 };
 
@@ -141,6 +143,8 @@ export type UpdatePostSettingsCommandInput = {
   metaKeywords?: string | null;
   ogpTitle?: string | null;
   ogpDescription?: string | null;
+  status: PostStatus;
+  publishedAt: Date | null;
   contentWidth: LayoutWidth | null;
   contentWidthCustom: number | null;
 };

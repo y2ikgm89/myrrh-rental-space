@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Collapsible Title Node
  *
  * @description 折りたたみのタイトル部分を表すElementNode
@@ -6,8 +6,6 @@
  *
  * スタイルは lexical-content.css の [data-collapsible-title] セレクターで管理
  */
-
-"use client";
 
 import type {
   DOMConversionMap,

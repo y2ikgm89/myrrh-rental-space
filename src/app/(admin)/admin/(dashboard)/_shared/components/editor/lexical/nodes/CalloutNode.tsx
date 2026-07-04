@@ -5,8 +5,6 @@
  * 4種類（info/warning/error/success）に対応。アイコンは CSS ::before で自動表示。
  */
 
-"use client";
-
 import type {
   DOMConversionMap,
   DOMConversionOutput,

@@ -185,6 +185,8 @@ const VALID_CREATE_INPUT = {
   metaKeywords: null,
   ogpTitle: null,
   ogpDescription: null,
+  contentWidth: null,
+  contentWidthCustom: null,
   authorId: USER_ID,
 };
 
@@ -205,6 +207,8 @@ const VALID_UPDATE_SETTINGS_INPUT = {
   metaKeywords: null,
   ogpTitle: null,
   ogpDescription: null,
+  status: "DRAFT" as const,
+  publishedAt: null,
   contentWidth: null,
   contentWidthCustom: null,
 };
@@ -294,6 +298,23 @@ describe("createPost", () => {
           data: expect.objectContaining({
             ogpImageUrl: null,
             metaDescription: null,
+          }),
+        }),
+      );
+    });
+
+    test("作成時にレイアウト設定も保存される", async () => {
+      await createPost({
+        ...VALID_CREATE_INPUT,
+        contentWidth: "CUSTOM",
+        contentWidthCustom: 960,
+      });
+
+      expect(mockPostCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            contentWidth: "CUSTOM",
+            contentWidthCustom: 960,
           }),
         }),
       );
@@ -413,6 +434,25 @@ describe("updatePostSettings", () => {
       const result = await updatePostSettings(POST_ID, input);
 
       expect(result.slug).toBe(POST_SLUG);
+    });
+
+    test("公開ステータスと公開日時も設定更新で永続化される", async () => {
+      const publishedAt = new Date("2026-01-02T03:04:00.000Z");
+
+      await updatePostSettings(POST_ID, {
+        ...VALID_UPDATE_SETTINGS_INPUT,
+        status: "PUBLISHED",
+        publishedAt,
+      });
+
+      expect(mockPostUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: "PUBLISHED",
+            publishedAt,
+          }),
+        }),
+      );
     });
   });
 
@@ -597,7 +637,10 @@ describe("unpublishPost", () => {
 
       expect(mockPostUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { status: "DRAFT" },
+          data: expect.objectContaining({
+            status: "DRAFT",
+            publishedAt: null,
+          }),
         }),
       );
     });
@@ -641,7 +684,10 @@ describe("archivePost", () => {
 
       expect(mockPostUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { status: "ARCHIVED" },
+          data: expect.objectContaining({
+            status: "ARCHIVED",
+            publishedAt: null,
+          }),
         }),
       );
     });

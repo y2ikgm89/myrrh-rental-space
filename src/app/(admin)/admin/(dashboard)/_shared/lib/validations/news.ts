@@ -54,14 +54,24 @@ export const newsSlugSchema = z
 /**
  * お知らせ作成スキーマ
  */
-export const createNewsSchema = z.object({
-  slug: newsSlugSchema,
-  title: z
-    .string()
-    .min(1, { error: "タイトルは必須です" })
-    .max(200, { error: "タイトルは200文字以内で入力してください" }),
-  contentJson: lexicalJsonSchema,
-});
+export const createNewsSchema = z
+  .object({
+    slug: newsSlugSchema,
+    title: z
+      .string()
+      .min(1, { error: "タイトルは必須です" })
+      .max(200, { error: "タイトルは200文字以内で入力してください" }),
+    contentJson: lexicalJsonSchema,
+    contentWidth: z.enum(LayoutWidth).nullable().optional(),
+    contentWidthCustom: z
+      .number()
+      .int()
+      .min(320)
+      .max(1920)
+      .nullable()
+      .optional(),
+  })
+  .extend(seoOgpFieldsSchema.shape);
 
 export type CreateNewsInput = z.infer<typeof createNewsSchema>;
 
@@ -85,6 +95,7 @@ export const updateNewsSettingsSchema = z
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
     isPublished: z.boolean(),
+    publishedAt: publishedAtFormSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z
       .number()

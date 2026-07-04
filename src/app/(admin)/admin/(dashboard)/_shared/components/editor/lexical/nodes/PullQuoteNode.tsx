@@ -1,11 +1,9 @@
-﻿/**
+/**
  * PullQuote Node
  *
  * @description プルクォート（強調引用）の親コンテナ
  * 子ノード: PullQuoteTextNode + PullQuoteCitationNode
  */
-
-"use client";
 
 import type {
   DOMConversionMap,

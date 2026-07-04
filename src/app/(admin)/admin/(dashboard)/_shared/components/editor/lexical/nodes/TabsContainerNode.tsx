@@ -1,11 +1,9 @@
-﻿/**
+/**
  * TabsContainer Node
  *
  * @description タブ切り替えの親コンテナ
  * 子ノード: TabListNode + TabPanelNode×N
  */
-
-"use client";
 
 import type {
   DOMConversionMap,
