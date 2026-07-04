@@ -1097,7 +1097,7 @@ describe("architecture boundaries", () => {
     expect(lhciStartSource).toContain('"build:skip-env"');
   });
 
-  test("test:all は Prisma client generation を 1 回にまとめる", () => {
+  test("test scripts run real-DB integration tests only after test DB migrations", () => {
     const packageJson: unknown = JSON.parse(
       readFileSync(PACKAGE_JSON_FILE, "utf8"),
     );
@@ -1105,8 +1105,12 @@ describe("architecture boundaries", () => {
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
 
+    expect(scripts["test:db:migrate"]).toBe("bun scripts/migrate-test-db.ts");
+    expect(scripts["test:integration"]).toBe(
+      "bun run db:generate && bun run test:db:migrate && bun scripts/run-tests.ts __tests__/integration",
+    );
     expect(scripts["test:all"]).toBe(
-      "bun run db:generate && bun scripts/run-tests.ts __tests__/unit && bun scripts/run-tests.ts __tests__/integration",
+      "bun run db:generate && bun scripts/run-tests.ts __tests__/unit && bun run test:db:migrate && bun scripts/run-tests.ts __tests__/integration",
     );
     expect(scripts["test:all"]).not.toContain("bun run test:unit");
     expect(scripts["test:all"]).not.toContain("bun run test:integration");

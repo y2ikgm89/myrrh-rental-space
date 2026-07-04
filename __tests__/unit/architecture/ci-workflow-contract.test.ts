@@ -83,6 +83,7 @@ describe("CI workflow contract", () => {
     expect(unitTestsJob).not.toContain("run: bun run test:unit");
     expect(unitTestsJob).not.toContain("run: bun run test:integration");
     expect(unitTestsJob).not.toContain("Generate Prisma client");
+    expect(unitTestsJob).not.toContain("run: bunx --bun prisma migrate deploy");
 
     expect(buildJob).toContain("run: bun run build");
     expect(buildJob).not.toContain("Generate Prisma client");
