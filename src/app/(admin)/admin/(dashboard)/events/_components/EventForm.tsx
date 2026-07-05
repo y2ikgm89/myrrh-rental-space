@@ -88,6 +88,12 @@ function fieldHasErrors(errors: ConformFieldErrors): boolean {
   return Array.isArray(errors) && errors.length > 0;
 }
 
+function serializeTicket(ticket: EventTicketInput) {
+  const { _key, ...serializableTicket } = ticket;
+  void _key;
+  return serializableTicket;
+}
+
 /**
  * DB の Lexical JSON（オブジェクト形式）を Editor 初期値用の文字列に変換。
  */
@@ -146,11 +152,10 @@ export function EventForm({
         price: t.price,
         capacity: t.capacity,
         unitSize: t.unitSize,
-        sortOrder: t.sortOrder,
         isAvailable: t.isAvailable,
       }));
     }
-    return [createDefaultTicket(0)];
+    return [createDefaultTicket()];
   });
 
   const [slots, setSlots] = useState<SlotFormItem[]>(() => {
@@ -288,7 +293,7 @@ export function EventForm({
       <input
         type="hidden"
         name={fields.tickets.name}
-        value={JSON.stringify(tickets)}
+        value={JSON.stringify(tickets.map(serializeTicket))}
       />
 
       {form.errors && form.errors.length > 0 && (

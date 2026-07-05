@@ -32,7 +32,7 @@ const PUBLIC_LIST_SELECT = {
   title: true,
   publishedAt: true,
   showInFooter: true,
-  footerOrder: true,
+  displayOrder: true,
   updatedAt: true,
 } as const;
 
@@ -60,7 +60,7 @@ export type PublicTermsListItem = Serialized<{
   title: string;
   publishedAt: Date | null;
   showInFooter: boolean;
-  footerOrder: number;
+  displayOrder: number;
   updatedAt: Date;
 }>;
 
@@ -93,7 +93,7 @@ export async function getPublishedTermsList(): Promise<PublicTermsListItem[]> {
     fetch: () =>
       prisma.termsDocument.findMany({
         where: { ...PUBLIC_WHERE },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_LIST_SELECT,
       }),
     fallback: [],
@@ -120,7 +120,7 @@ export async function getFooterTerms(): Promise<PublicTermsListItem[]> {
           ...PUBLIC_WHERE,
           showInFooter: true,
         },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_LIST_SELECT,
       }),
     fallback: [],
@@ -181,7 +181,7 @@ export async function getRequiredTermsByScope(
           ...PUBLIC_WHERE,
           scopes: { has: scope },
         },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_REQUIRED_SELECT,
       }),
     fallback: [],

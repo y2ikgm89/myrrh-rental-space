@@ -90,9 +90,10 @@ type LocationTableProps = {
 type SortableRowProps = {
   readonly location: LocationWithStats;
   readonly sortable: boolean;
+  readonly isPending: boolean;
 };
 
-function SortableRow({ location, sortable }: SortableRowProps) {
+function SortableRow({ location, sortable, isPending }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -100,7 +101,7 @@ function SortableRow({ location, sortable }: SortableRowProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: location.id, disabled: !sortable });
+  } = useSortable({ id: location.id, disabled: !sortable || isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -119,7 +120,7 @@ function SortableRow({ location, sortable }: SortableRowProps) {
       <TableCell className="w-12" onClick={stopRowClick}>
         {sortable ? (
           <div {...attributes} {...listeners}>
-            <DragHandle />
+            <DragHandle disabled={isPending} />
           </div>
         ) : (
           <span className="block h-4 w-4" aria-hidden="true" />
@@ -197,7 +198,7 @@ export function LocationTable({
     setLocations([...initialLocations]);
   }
 
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -208,7 +209,7 @@ export function LocationTable({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !sortable) return;
+    if (!over || active.id === over.id || !sortable || isPending) return;
 
     const oldIndex = locations.findIndex((l) => l.id === active.id);
     const newIndex = locations.findIndex((l) => l.id === over.id);
@@ -283,6 +284,7 @@ export function LocationTable({
                       key={location.id}
                       location={location}
                       sortable={sortable}
+                      isPending={isPending}
                     />
                   ))}
                 </TableBody>

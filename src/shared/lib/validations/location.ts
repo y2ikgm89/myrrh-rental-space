@@ -57,7 +57,7 @@ const imageUrlsSchema = z
   })
   .default([]);
 
-export const locationFormBaseSchema = z.object({
+export const locationFormBaseSchema = z.strictObject({
   name: z
     .string()
     .min(1, { error: "名前を入力してください" })

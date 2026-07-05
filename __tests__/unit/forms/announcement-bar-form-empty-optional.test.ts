@@ -43,7 +43,6 @@ describe("barFormSchema（お知らせバー）", () => {
         linkUrl: "",
         linkText: "",
         isActive: "on",
-        priority: "0",
         startAt: "",
         endAt: "",
       }),
@@ -59,7 +58,6 @@ describe("barFormSchema（お知らせバー）", () => {
         linkUrl: "",
         linkText: "",
         isActive: "",
-        priority: "5",
         startAt: "",
         endAt: "",
       }),
@@ -75,7 +73,6 @@ describe("barFormSchema（お知らせバー）", () => {
         linkUrl: "https://example.com",
         linkText: "詳細はこちら",
         isActive: "on",
-        priority: "10",
         startAt: "2026-07-01T09:00",
         endAt: "2026-07-31T18:00",
       }),
@@ -91,7 +88,6 @@ describe("barFormSchema（お知らせバー）", () => {
         linkUrl: "not-a-url",
         linkText: "",
         isActive: "on",
-        priority: "0",
         startAt: "",
         endAt: "",
       }),
@@ -110,7 +106,6 @@ describe("navFormSchema / socialFormSchema（回帰ガード）", () => {
         label: validLabel,
         url: "/about",
         isExternal: "",
-        order: "0",
         isActive: "on",
       }),
       { schema: navFormSchema },
@@ -123,7 +118,6 @@ describe("navFormSchema / socialFormSchema（回帰ガード）", () => {
       form({
         platform: "INSTAGRAM",
         url: "https://example.com",
-        order: "0",
         isActive: "",
         showOnDesktop: "",
         showOnMobile: "",
@@ -131,5 +125,36 @@ describe("navFormSchema / socialFormSchema（回帰ガード）", () => {
       { schema: socialFormSchema },
     );
     expect(submission.status).toBe("success");
+  });
+
+  test("ナビ: 旧 order hidden input は拒否する", () => {
+    const submission = parseWithZod(
+      form({
+        type: "HEADER_DESKTOP",
+        parentId: "none",
+        label: validLabel,
+        url: "/about",
+        isExternal: "",
+        order: "0",
+        isActive: "on",
+      }),
+      { schema: navFormSchema },
+    );
+    expect(submission.status).toBe("error");
+  });
+
+  test("SNS: 旧 order hidden input は拒否する", () => {
+    const submission = parseWithZod(
+      form({
+        platform: "INSTAGRAM",
+        url: "https://example.com",
+        order: "0",
+        isActive: "",
+        showOnDesktop: "",
+        showOnMobile: "",
+      }),
+      { schema: socialFormSchema },
+    );
+    expect(submission.status).toBe("error");
   });
 });

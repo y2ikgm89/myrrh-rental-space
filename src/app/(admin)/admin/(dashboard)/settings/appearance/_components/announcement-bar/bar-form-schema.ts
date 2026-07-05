@@ -12,7 +12,6 @@ import {
  * - `messageJson` は hidden input から PortableTextSpan[] を JSON.stringify した文字列で送信
  *   → schema 内で JSON.parse + spans 配列 validate
  * - `isActive` は Switch + hidden input で "on" / "" を boolean coerce
- * - `priority` は `z.coerce.number()` で string → number
  * - `linkUrl` / `linkText` は空文字を許容 (server 側で null 化)
  * - `startAt` / `endAt` は `<input type="datetime-local">` の "YYYY-MM-DDTHH:mm" 形式
  *
@@ -54,7 +53,7 @@ const messageSchema = z
       }),
   );
 
-export const barFormSchema = z.object({
+export const barFormSchema = z.strictObject({
   message: messageSchema,
   // 任意項目（リンク・日時）。conform `parseWithZod` は空入力を undefined に
   // 変換するため、`.or(z.literal(""))` だけでは undefined を取りこぼして弾かれる。
@@ -71,11 +70,6 @@ export const barFormSchema = z.object({
     (value) => value === "on" || value === true,
     z.boolean(),
   ),
-  priority: z.coerce
-    .number({ error: "優先度は数値です" })
-    .int()
-    .min(0, { error: "優先度は0以上です" })
-    .max(100, { error: "優先度は100以下です" }),
   startAt: z.iso
     .datetime({ local: true, error: "有効な日時を入力してください" })
     .or(z.literal(""))

@@ -21,7 +21,7 @@ const ADMIN_LIST_SELECT = {
   scopes: true,
   changelog: true,
   showInFooter: true,
-  footerOrder: true,
+  displayOrder: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -40,7 +40,7 @@ const ADMIN_DETAIL_SELECT = {
   scopes: true,
   changelog: true,
   showInFooter: true,
-  footerOrder: true,
+  displayOrder: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -56,7 +56,7 @@ export type AdminTermsListItem = Serialized<{
   scopes: TermsScope[];
   changelog: string | null;
   showInFooter: boolean;
-  footerOrder: number;
+  displayOrder: number;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -75,7 +75,7 @@ export type AdminTermsDetail = Serialized<{
   scopes: TermsScope[];
   changelog: string | null;
   showInFooter: boolean;
-  footerOrder: number;
+  displayOrder: number;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -87,7 +87,7 @@ export type AdminTermsDetail = Serialized<{
 export async function getAdminTermsList(): Promise<AdminTermsListItem[]> {
   const items = await prisma.termsDocument.findMany({
     where: { deletedAt: null },
-    orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+    orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
     select: ADMIN_LIST_SELECT,
   });
 

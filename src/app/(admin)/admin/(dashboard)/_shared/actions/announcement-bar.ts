@@ -12,6 +12,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createAnnouncementBar as createAnnouncementBarCommand,
   deleteAnnouncementBar as deleteAnnouncementBarCommand,
+  reorderAnnouncementBars as reorderAnnouncementBarsCommand,
   type AnnouncementBarInput,
   updateAnnouncementBarActive as updateAnnouncementBarActiveCommand,
   updateAnnouncementBar as updateAnnouncementBarCommand,
@@ -20,6 +21,11 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { barFormSchema } from "../../settings/appearance/_components/announcement-bar/bar-form-schema";
 
 const idSchema = uuidIdSchema("お知らせ");
+const orderedIdsSchema = z
+  .array(z.uuid({ error: "IDが不正です" }))
+  .refine((ids) => new Set(ids).size === ids.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 function invalidateAnnouncementBarCache(): void {
   invalidateSiteWideCache(CACHE_TAGS.ANNOUNCEMENT_BAR);
@@ -62,6 +68,20 @@ export async function updateAnnouncementBarActive(
   });
 }
 
+export async function reorderAnnouncementBars(
+  orderedIds: string[],
+): Promise<MutationResult<{ updated: number }>> {
+  const parsed = orderedIdsSchema.safeParse(orderedIds);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "announcementBar",
+    action: "update",
+    execute: async () => reorderAnnouncementBarsCommand(parsed.data),
+    afterSuccess: invalidateAnnouncementBarCache,
+  });
+}
+
 // =============================================================================
 // Conform `useActionState` 用 Server Actions
 //
@@ -79,7 +99,6 @@ function toAnnouncementBarInput(
     bgColor: null,
     textColor: null,
     isActive: data.isActive,
-    priority: data.priority,
     startAt: data.startAt || null,
     endAt: data.endAt || null,
   };

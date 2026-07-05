@@ -32,7 +32,6 @@ const VALID_ANNOUNCEMENT_INPUT = {
   bgColor: "#FF5733",
   textColor: "#FFFFFF",
   isActive: true,
-  priority: 10,
   startAt: "2026-01-01T00:00:00.000Z",
   endAt: "2026-03-31T23:59:59.000Z",
 };
@@ -64,14 +63,20 @@ describe("AnnouncementBar Admin Action Integration", () => {
         }
       });
 
-      test("priorityのデフォルトは0", () => {
+      test("displayOrder は入力契約として拒否する", () => {
         const result = announcementBarSchema.safeParse({
           message: [createSpan("テスト")],
+          displayOrder: 99,
         });
-        expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.priority).toBe(0);
-        }
+        expect(result.success).toBe(false);
+      });
+
+      test("旧 priority 入力は拒否する", () => {
+        const result = announcementBarSchema.safeParse({
+          message: [createSpan("テスト")],
+          priority: 99,
+        });
+        expect(result.success).toBe(false);
       });
 
       test("linkUrlはnull許可", () => {
@@ -296,48 +301,6 @@ describe("AnnouncementBar Admin Action Integration", () => {
       });
     });
 
-    describe("priority", () => {
-      test("0は許可", () => {
-        const result = announcementBarSchema.safeParse({
-          ...VALID_ANNOUNCEMENT_INPUT,
-          priority: 0,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("100は許可", () => {
-        const result = announcementBarSchema.safeParse({
-          ...VALID_ANNOUNCEMENT_INPUT,
-          priority: 100,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("負の数はエラー", () => {
-        const result = announcementBarSchema.safeParse({
-          ...VALID_ANNOUNCEMENT_INPUT,
-          priority: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("101はエラー", () => {
-        const result = announcementBarSchema.safeParse({
-          ...VALID_ANNOUNCEMENT_INPUT,
-          priority: 101,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = announcementBarSchema.safeParse({
-          ...VALID_ANNOUNCEMENT_INPUT,
-          priority: 1.5,
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-
     describe("isActive", () => {
       test("trueは許可", () => {
         const result = announcementBarSchema.safeParse({
@@ -405,7 +368,7 @@ describe("AnnouncementBar Admin Action Integration", () => {
         bgColor: "#ff5733",
         textColor: "#ffffff",
         isActive: true,
-        priority: 10,
+        displayOrder: 10,
         startAt: new Date("2026-01-01"),
         endAt: new Date("2026-03-31"),
         createdAt: new Date(),
@@ -414,7 +377,7 @@ describe("AnnouncementBar Admin Action Integration", () => {
 
       expect(bar.message).toHaveLength(2);
       expect(bar.message[0]?._type).toBe("iconInline");
-      expect(bar.priority).toBe(10);
+      expect(bar.displayOrder).toBe(10);
     });
   });
 
@@ -455,38 +418,6 @@ describe("AnnouncementBar Admin Action Integration", () => {
       const result = announcementBarSchema.safeParse({
         ...VALID_ANNOUNCEMENT_INPUT,
         linkText: "x".repeat(51),
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("priority 0（最小値）", () => {
-      const result = announcementBarSchema.safeParse({
-        ...VALID_ANNOUNCEMENT_INPUT,
-        priority: 0,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("priority 100（最大値）", () => {
-      const result = announcementBarSchema.safeParse({
-        ...VALID_ANNOUNCEMENT_INPUT,
-        priority: 100,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("priority -1（最小値未満）", () => {
-      const result = announcementBarSchema.safeParse({
-        ...VALID_ANNOUNCEMENT_INPUT,
-        priority: -1,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("priority 101（最大値超過）", () => {
-      const result = announcementBarSchema.safeParse({
-        ...VALID_ANNOUNCEMENT_INPUT,
-        priority: 101,
       });
       expect(result.success).toBe(false);
     });

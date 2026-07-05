@@ -96,6 +96,7 @@ export function GalleryItemRow({
             }
             placeholder="画像の説明 (省略可)"
             maxLength={200}
+            disabled={disabled}
           />
         </div>
         <div>
@@ -112,6 +113,7 @@ export function GalleryItemRow({
             }
             placeholder="画像の補足 (省略可)"
             maxLength={500}
+            disabled={disabled}
           />
         </div>
       </div>

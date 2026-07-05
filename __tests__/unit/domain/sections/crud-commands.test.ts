@@ -47,7 +47,7 @@ const mockPageFindUnique = mock<
   () => Promise<{ slug: string; template: string } | null>
 >(() => Promise.resolve({ slug: "test-page", template: "content" }));
 
-// $executeRaw tagged template の呼び出しを記録する（reorder 単一 SQL 化の検証用）
+// $executeRaw tagged template の呼び出しを記録する（reorder 二段更新の検証用）
 const mockExecuteRaw = mock<
   (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
 >(() => Promise.resolve(0));
@@ -92,6 +92,7 @@ mock.module("@/shared/db/prisma", () => ({
           delete: mockSectionDelete,
           aggregate: mockSectionAggregate,
         },
+        $executeRaw: mockExecuteRaw,
       };
       return fn(tx);
     },
@@ -171,6 +172,8 @@ beforeEach(() => {
   mockSectionUpdateMany.mockReset();
   mockSectionDelete.mockReset();
   mockSectionAggregate.mockReset();
+  mockExecuteRaw.mockReset();
+  mockExecuteRaw.mockResolvedValue(0);
   mockPageFindUnique.mockReset();
   // 各 test の前にデフォルトで page.findUnique は { slug, template } を返す
   // template="content" は universal + marketing を許可（cta / page-hero は universal）
@@ -419,7 +422,7 @@ describe("duplicatePageSectionCommand", () => {
     );
   });
 
-  test("通常 section は直後に複製（order+1）", async () => {
+  test("通常 section は unique 制約に衝突しない二段シフトで直後に複製", async () => {
     mockSectionFindUnique.mockImplementationOnce(() =>
       Promise.resolve({
         id: SECTION_ID,
@@ -433,9 +436,6 @@ describe("duplicatePageSectionCommand", () => {
         page: { slug: "test-page" },
       }),
     );
-    mockSectionUpdateMany.mockImplementationOnce(() =>
-      Promise.resolve({ count: 2 }),
-    );
     mockSectionCreate.mockImplementationOnce(() =>
       Promise.resolve({ id: "duplicated-id" }),
     );
@@ -444,11 +444,17 @@ describe("duplicatePageSectionCommand", () => {
 
     expect(result.id).toBe("duplicated-id");
     expect(result.pageId).toBe(PAGE_ID);
-    // 後続セクションの order を +1 ずらした
-    expect(mockSectionUpdateMany).toHaveBeenCalledWith({
-      where: { pageId: PAGE_ID, order: { gt: 3 } },
-      data: { order: { increment: 1 } },
-    });
+    expect(mockSectionUpdateMany).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+
+    const tempSql = mockExecuteRaw.mock.calls[1]?.[0];
+    const finalSql = mockExecuteRaw.mock.calls[2]?.[0];
+    expect(isSqlFragment(tempSql) ? tempSql.__sql : "").toContain(
+      'SET "order" = -("order" + 1000000)',
+    );
+    expect(isSqlFragment(finalSql) ? finalSql.__sql : "").toContain(
+      'SET "order" = -"order" - 999999',
+    );
     // 新 section は order=4 で作成
     expect(mockSectionCreate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -519,6 +525,18 @@ describe("togglePageSectionActiveCommand", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("reorderPageSectionsCommand", () => {
+  test("重複 ID は DB アクセス前に拒否する", async () => {
+    await expect(
+      reorderPageSectionsCommand({
+        pageId: PAGE_ID,
+        orderedIds: ["id-a", "id-a"],
+      }),
+    ).rejects.toThrow("同じIDを複数指定することはできません");
+
+    expect(mockSectionFindMany).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
+  });
+
   test("不正な ID が含まれると VALIDATION エラー", async () => {
     mockSectionFindMany.mockImplementationOnce(() =>
       Promise.resolve([
@@ -552,7 +570,7 @@ describe("reorderPageSectionsCommand", () => {
     ).rejects.toThrow("セクション数が一致しません");
   });
 
-  test("page-hero は order=-1 維持（CASE WHEN 単一 SQL）", async () => {
+  test("page-hero は order=-1 維持（CASE WHEN 二段更新）", async () => {
     mockSectionFindMany.mockImplementationOnce(() =>
       Promise.resolve([
         { id: "id-hero", type: "page-hero", order: -1 },
@@ -571,11 +589,11 @@ describe("reorderPageSectionsCommand", () => {
     expect(result.count).toBe(3);
     expect(result.pageSlug).toBe("test-page");
 
-    // 個別 update ループは廃止 — 1 回の $executeRaw に集約
+    // 個別 update ループは廃止。unique index 下の swap に耐えるため二段更新する。
     expect(mockSectionUpdate).not.toHaveBeenCalled();
-    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
 
-    const call = mockExecuteRaw.mock.calls[0];
+    const call = mockExecuteRaw.mock.calls[2];
     // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
     const sql = call?.[0].join("?") ?? "";
     expect(sql).toContain("sections");

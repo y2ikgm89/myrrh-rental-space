@@ -5,7 +5,7 @@
  *
  * /admin/faq/[categoryId] 詳細ページ配下の質問一覧テーブル。
  * 常に単一カテゴリにスコープされているため、カテゴリ列は表示せず、
- * `sortBy === "order"` のときは常に DnD 並び替えを有効化する。
+ * 検索・絞り込みなしの表示順昇順でのみ DnD 並び替えを有効化する。
  *
  * 行クリック → 編集 Dialog を親で開く（`onEditItem` コールバック）。
  * プレビューサイドシートは廃止（edit Dialog が直接開くため不要）。
@@ -61,6 +61,8 @@ type FaqCategoryItemsTableProps = {
   readonly items: readonly FaqItemWithCategory[];
   readonly allCategories: readonly { id: string; name: string }[];
   readonly currentSortBy: AdminFaqItemSortBy;
+  readonly reorderEnabled: boolean;
+  readonly startIndex: number;
   readonly onEditItem: (item: FaqItemWithCategory) => void;
   readonly onAddItem: () => void;
 };
@@ -73,6 +75,7 @@ type SortableRowProps = {
   readonly onToggle: (id: string) => void;
   readonly onEdit: (item: FaqItemWithCategory) => void;
   readonly sortable: boolean;
+  readonly isPending: boolean;
 };
 
 function SortableRow({
@@ -83,6 +86,7 @@ function SortableRow({
   onToggle,
   onEdit,
   sortable,
+  isPending,
 }: SortableRowProps) {
   const {
     attributes,
@@ -91,7 +95,7 @@ function SortableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id, disabled: !sortable });
+  } = useSortable({ id: item.id, disabled: !sortable || isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -110,7 +114,7 @@ function SortableRow({
       <TableCell className="w-12" onClick={stopRowClick}>
         {sortable ? (
           <div {...attributes} {...listeners}>
-            <DragHandle />
+            <DragHandle disabled={isPending} />
           </div>
         ) : (
           <span className="block h-4 w-4" aria-hidden="true" />
@@ -184,11 +188,13 @@ export function FaqCategoryItemsTable({
   items: initialItems,
   allCategories,
   currentSortBy,
+  reorderEnabled,
+  startIndex,
   onEditItem,
   onAddItem,
 }: FaqCategoryItemsTableProps) {
   const router = useRouter();
-  const sortable = currentSortBy === "order";
+  const sortable = reorderEnabled;
   const [items, setItems] = useState<FaqItemWithCategory[]>(() => [
     ...initialItems,
   ]);
@@ -204,7 +210,7 @@ export function FaqCategoryItemsTable({
     setSelectedIds([]);
   }
 
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const [, setParams] = useQueryStates(
     adminFaqCategoryDetailSearchParamsParsers,
     {
@@ -223,7 +229,7 @@ export function FaqCategoryItemsTable({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !sortable) return;
+    if (!over || active.id === over.id || !sortable || isPending) return;
 
     const oldIndex = items.findIndex((i) => i.id === active.id);
     const newIndex = items.findIndex((i) => i.id === over.id);
@@ -233,8 +239,11 @@ export function FaqCategoryItemsTable({
     setItems(reordered);
 
     startTransition(async () => {
-      const orderedIds = reordered.map((i) => i.id);
-      const result = await reorderFaqItems(categoryId, orderedIds);
+      const orderedItems = reordered.map((item, index) => ({
+        id: item.id,
+        order: startIndex + index,
+      }));
+      const result = await reorderFaqItems(categoryId, orderedItems);
       if (isMutationError(result)) {
         toast.error(result.error);
         setItems([...initialItems]);
@@ -292,7 +301,7 @@ export function FaqCategoryItemsTable({
         <p className="text-xs text-muted-foreground">
           {sortable
             ? "ドラッグ&ドロップで並び替え / 行クリックで編集 / チェックボックスで一括操作"
-            : "行クリックで編集 / チェックボックスで一括操作 / 並び替えは「表示順」ソート時のみ"}
+            : "行クリックで編集 / チェックボックスで一括操作 / 並び替えは検索・絞り込みを解除した表示順昇順で有効"}
         </p>
         <div className="overflow-hidden rounded-lg border bg-card">
           <div className="overflow-x-auto">
@@ -367,6 +376,7 @@ export function FaqCategoryItemsTable({
                         onToggle={toggleSelection}
                         onEdit={onEditItem}
                         sortable={sortable}
+                        isPending={isPending}
                       />
                     ))}
                   </TableBody>

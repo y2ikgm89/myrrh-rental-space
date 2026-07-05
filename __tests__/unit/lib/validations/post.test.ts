@@ -415,12 +415,12 @@ describe("postCategorySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("order は schema に含まれない（システム管理）", () => {
-    const result = postCategorySchema.safeParse(validCategoryData);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect("order" in result.data).toBe(false);
-    }
+  test("order は schema 入力として拒否する（システム管理）", () => {
+    const result = postCategorySchema.safeParse({
+      ...validCategoryData,
+      order: 999,
+    });
+    expect(result.success).toBe(false);
   });
 
   test("SEOフィールドはオプショナルでnullを許可", () => {

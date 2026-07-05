@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { InstagramMediaType } from "@generated/prisma/enums";
 import { encrypt } from "@/shared/lib/crypto";
 import { DomainError } from "@/shared/domain/domain-error";
+import { buildOrderScopeLockSql } from "@/shared/domain/order-sql";
 import { testInstagramConnection } from "@/shared/lib/instagram";
 import type { InstagramMediaItem } from "@/shared/lib/instagram";
 import type { SaveInstagramTokenResult } from "@/shared/domain/instagram/types";
@@ -109,18 +110,22 @@ export async function refreshInstagramAccessToken(input: {
 }
 
 export async function disconnectInstagram(): Promise<void> {
-  await prisma.settings.update({
-    where: { id: "singleton" },
-    data: {
-      instagramAccessToken: null,
-      instagramTokenExpiresAt: null,
-      instagramUserId: null,
-      instagramUsername: null,
-      instagramAccountType: null,
-    },
-  });
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("instagram_posts:all"));
 
-  await prisma.instagramPost.deleteMany({});
+    await tx.settings.update({
+      where: { id: "singleton" },
+      data: {
+        instagramAccessToken: null,
+        instagramTokenExpiresAt: null,
+        instagramUserId: null,
+        instagramUsername: null,
+        instagramAccountType: null,
+      },
+    });
+
+    await tx.instagramPost.deleteMany({});
+  });
 }
 
 /**
@@ -132,6 +137,8 @@ export async function syncInstagramFeed(
   items: InstagramMediaItem[],
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("instagram_posts:all"));
+
     // 既存投稿を全削除
     await tx.instagramPost.deleteMany({});
 

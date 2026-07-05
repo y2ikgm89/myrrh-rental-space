@@ -2,8 +2,12 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { asPrismaInputJsonValue, parsePrismaInputJson } from "@/shared/db/json";
-import type { Prisma } from "@generated/prisma/client";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buildOrderScopeLockSql,
+  buildTextOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import {
   sendEventCancelledToAllParticipants,
   sendEventUpdatedToAllParticipants,
@@ -83,6 +87,7 @@ function normalizeRegistrationOpen(
  */
 function buildTicketWriteData(
   ticket: EventTicketInput,
+  sortOrder: number,
 ): EventTicketWritableFields {
   return {
     name: ticket.name,
@@ -90,7 +95,7 @@ function buildTicketWriteData(
     price: ticket.price,
     capacity: ticket.capacity,
     unitSize: ticket.unitSize,
-    sortOrder: ticket.sortOrder,
+    sortOrder,
     isAvailable: ticket.isAvailable,
   };
 }
@@ -166,9 +171,9 @@ export async function createEventCommand(data: EventCommandInput) {
 
     if (data.tickets && data.tickets.length > 0) {
       await tx.eventTicket.createMany({
-        data: data.tickets.map((ticket) => ({
+        data: data.tickets.map((ticket, index) => ({
           eventId: created.id,
-          ...buildTicketWriteData(ticket),
+          ...buildTicketWriteData(ticket, index),
         })),
       });
     }
@@ -242,15 +247,34 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     await syncEventTimeSlotsCommand(tx, id, data.slots);
 
     if (data.tickets !== undefined) {
+      await tx.$executeRaw(buildOrderScopeLockSql(`event_tickets:${id}`));
+
       const incoming = data.tickets;
-      const incomingIds = new Set(
-        incoming.flatMap((t) => (t.id != null ? [t.id] : [])),
+      const incomingExistingTickets = incoming.filter(
+        (ticket): ticket is EventTicketInput & { id: string } =>
+          typeof ticket.id === "string",
       );
+      const incomingIds = new Set(incomingExistingTickets.map((t) => t.id));
+      if (incomingIds.size !== incomingExistingTickets.length) {
+        throw new DomainError(
+          "同じチケットIDを複数指定することはできません",
+          "VALIDATION",
+        );
+      }
 
       const existingTickets = await tx.eventTicket.findMany({
         where: { eventId: id },
         select: { id: true },
       });
+      const existingTicketIds = new Set(
+        existingTickets.map((ticket) => ticket.id),
+      );
+
+      for (const ticketId of incomingIds) {
+        if (!existingTicketIds.has(ticketId)) {
+          throw new DomainError("チケットが見つかりません", "NOT_FOUND");
+        }
+      }
 
       const toDelete = existingTickets
         .map((e) => e.id)
@@ -259,17 +283,33 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         await tx.eventTicket.deleteMany({ where: { id: { in: toDelete } } });
       }
 
+      if (incomingExistingTickets.length > 0) {
+        const { ids, tempCases } = buildTextOrderSqlFragments(
+          incomingExistingTickets,
+          (ticket) => ticket.id,
+          (_ticket, index) => index,
+        );
+        await tx.$executeRaw`
+          UPDATE "event_tickets"
+          SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+          WHERE "id" IN (${Prisma.join(ids)})
+            AND "eventId" = ${id}
+        `;
+      }
+
       const toCreate: Prisma.EventTicketCreateManyInput[] = [];
-      for (const ticket of incoming) {
+      for (let index = 0; index < incoming.length; index += 1) {
+        const ticket = incoming[index];
+        if (!ticket) continue;
         if (ticket.id) {
           await tx.eventTicket.update({
             where: { id: ticket.id },
-            data: buildTicketWriteData(ticket),
+            data: buildTicketWriteData(ticket, index),
           });
         } else {
           toCreate.push({
             eventId: id,
-            ...buildTicketWriteData(ticket),
+            ...buildTicketWriteData(ticket, index),
           });
         }
       }
@@ -456,14 +496,14 @@ export async function duplicateEventCommand(id: string) {
 
     if (source.tickets.length > 0) {
       await tx.eventTicket.createMany({
-        data: source.tickets.map((ticket) => ({
+        data: source.tickets.map((ticket, index) => ({
           eventId: newEvent.id,
           name: ticket.name,
           description: ticket.description,
           price: ticket.price,
           capacity: ticket.capacity,
           unitSize: ticket.unitSize,
-          sortOrder: ticket.sortOrder,
+          sortOrder: index,
           isAvailable: ticket.isAvailable,
         })),
       });

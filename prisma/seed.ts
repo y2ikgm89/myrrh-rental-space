@@ -2613,12 +2613,22 @@ async function seedBlog() {
     },
   ];
 
+  let nextCategoryOrder =
+    (
+      await prisma.postCategory.aggregate({
+        _max: { order: true },
+      })
+    )._max.order ?? -1;
+
   for (const category of categories) {
     const existing = await prisma.postCategory.findUnique({
       where: { slug: category.slug },
     });
     if (!existing) {
-      await prisma.postCategory.create({ data: category });
+      nextCategoryOrder += 1;
+      await prisma.postCategory.create({
+        data: { ...category, order: nextCategoryOrder },
+      });
       console.log(`✅ Created post category: ${category.name}`);
     }
   }
@@ -2880,7 +2890,7 @@ async function seedAnnouncementBar() {
       ],
       linkUrl: "/news",
       linkText: "詳細を見る",
-      priority: 0,
+      displayOrder: 2,
     },
     {
       probe: "オープン記念！今月末まで全スペース20%OFF",
@@ -2890,7 +2900,7 @@ async function seedAnnouncementBar() {
       ],
       linkUrl: "/spaces",
       linkText: "スペースを見る",
-      priority: 1,
+      displayOrder: 1,
     },
     {
       probe: "1月15日（水）は設備点検のため休館いたします",
@@ -2898,7 +2908,7 @@ async function seedAnnouncementBar() {
         createInlineIcon("IconAlertTriangle"),
         createSpan("1月15日(水)は設備点検のため休館いたします"),
       ],
-      priority: 2,
+      displayOrder: 0,
       isActive: false,
     },
   ];

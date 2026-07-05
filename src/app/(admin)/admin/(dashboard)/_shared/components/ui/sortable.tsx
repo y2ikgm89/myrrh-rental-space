@@ -221,6 +221,8 @@ export function SortableList<T extends SortableItem>({
   );
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (disabled) return;
+
     const { active, over } = event;
 
     if (over && active.id !== over.id) {

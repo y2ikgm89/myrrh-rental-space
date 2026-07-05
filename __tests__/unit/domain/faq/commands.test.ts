@@ -9,6 +9,10 @@ const mockFaqCategoryFindFirst = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
+const mockFaqCategoryFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+
 const mockFaqCategoryCreate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "category-1" }),
 );
@@ -66,6 +70,7 @@ type TxClient = {
   faqCategory: {
     findUnique: typeof mockFaqCategoryFindUnique;
     findFirst: typeof mockFaqCategoryFindFirst;
+    findMany: typeof mockFaqCategoryFindMany;
     create: typeof mockFaqCategoryCreate;
     update: typeof mockFaqCategoryUpdate;
     delete: typeof mockFaqCategoryDelete;
@@ -82,12 +87,17 @@ type TxClient = {
     updateMany: typeof mockFaqItemUpdateMany;
     findMany: typeof mockFaqItemFindMany;
   };
+  $executeRaw: (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) => Promise<number>;
 };
 
 const txClient: TxClient = {
   faqCategory: {
     findUnique: mockFaqCategoryFindUnique,
     findFirst: mockFaqCategoryFindFirst,
+    findMany: mockFaqCategoryFindMany,
     create: mockFaqCategoryCreate,
     update: mockFaqCategoryUpdate,
     delete: mockFaqCategoryDelete,
@@ -103,6 +113,9 @@ const txClient: TxClient = {
     aggregate: mockFaqItemAggregate,
     updateMany: mockFaqItemUpdateMany,
     findMany: mockFaqItemFindMany,
+  },
+  get $executeRaw() {
+    return mockExecuteRaw;
   },
 };
 
@@ -122,7 +135,7 @@ const mockTransaction = mock<(argOrCallback: unknown) => Promise<unknown>>(
   },
 );
 
-// $executeRaw tagged template の呼び出しを記録する（reorder 単一 SQL 化の検証用）
+// $executeRaw tagged template の呼び出しを記録する（reorder 二段更新の検証用）
 const mockExecuteRaw = mock<
   (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
 >(() => Promise.resolve(0));
@@ -135,6 +148,7 @@ mock.module("@/shared/db/prisma", () => ({
     faqCategory: {
       findUnique: mockFaqCategoryFindUnique,
       findFirst: mockFaqCategoryFindFirst,
+      findMany: mockFaqCategoryFindMany,
       create: mockFaqCategoryCreate,
       update: mockFaqCategoryUpdate,
       delete: mockFaqCategoryDelete,
@@ -308,7 +322,7 @@ describe("createFaqCategory", () => {
       );
     });
 
-    test("maxOrder が null の場合 order 1 で作成する", async () => {
+    test("maxOrder が null の場合 order 0 で作成する", async () => {
       mockFaqCategoryAggregate.mockResolvedValue({ _max: { order: null } });
 
       await createFaqCategory(VALID_CATEGORY_INPUT);
@@ -316,7 +330,7 @@ describe("createFaqCategory", () => {
       expect(mockFaqCategoryCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            order: 1,
+            order: 0,
           }),
         }),
       );
@@ -560,30 +574,50 @@ describe("deleteFaqCategory (soft delete)", () => {
 
 describe("reorderFaqCategories", () => {
   beforeEach(() => {
+    mockFaqCategoryFindMany.mockReset();
     mockFaqCategoryUpdate.mockReset();
     mockFaqCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
+    mockTransaction.mockReset();
+    mockTransaction.mockImplementation((argOrCallback) => {
+      if (isTransactionCallback(argOrCallback)) {
+        return argOrCallback(txClient);
+      }
+      return Promise.resolve(argOrCallback);
+    });
     mockExecuteRaw.mockReset();
     mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
-    test("複数 ID を渡すと CASE WHEN 単一 SQL で更新される", async () => {
+    test("複数 ID を渡すと CASE WHEN 二段更新で更新される", async () => {
+      mockFaqCategoryFindMany.mockResolvedValueOnce([
+        { id: "cat-1" },
+        { id: "cat-2" },
+        { id: "cat-3" },
+      ]);
+
       await reorderFaqCategories(["cat-1", "cat-2", "cat-3"]);
 
       expect(mockFaqCategoryUpdate).not.toHaveBeenCalled();
-      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
     });
 
     test("生成 SQL は faq_categories / CASE / deletedAt を含む", async () => {
+      mockFaqCategoryFindMany.mockResolvedValueOnce([
+        { id: "cat-a" },
+        { id: "cat-b" },
+      ]);
+
       await reorderFaqCategories(["cat-a", "cat-b"]);
 
-      const call = mockExecuteRaw.mock.calls[0];
-      // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
-      const sql = call?.[0].join("?") ?? "";
-      expect(sql).toContain("faq_categories");
-      expect(sql).toContain("order");
-      expect(sql).toContain("CASE");
-      expect(sql).toContain("deletedAt");
+      for (const call of mockExecuteRaw.mock.calls.slice(1)) {
+        const sql = call[0].join("?");
+        expect(sql).toContain("faq_categories");
+        expect(sql).toContain("order");
+        expect(sql).toContain("CASE");
+        expect(sql).toContain("deletedAt");
+      }
     });
   });
 
@@ -596,9 +630,39 @@ describe("reorderFaqCategories", () => {
     });
 
     test("1 件の配列を渡しても正常に動作する", async () => {
+      mockFaqCategoryFindMany.mockResolvedValueOnce([{ id: "cat-1" }]);
+
       await reorderFaqCategories(["cat-1"]);
 
-      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+    });
+
+    test("存在しない ID が混ざる場合 SQL が実行されない", async () => {
+      mockFaqCategoryFindMany.mockResolvedValueOnce([
+        { id: "cat-1" },
+        { id: "cat-2" },
+      ]);
+
+      await expect(
+        reorderFaqCategories(["cat-1", "missing-id"]),
+      ).rejects.toThrow("カテゴリが見つかりません");
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("既存 ID の subset は過不足として拒否する", async () => {
+      mockFaqCategoryFindMany.mockResolvedValueOnce([
+        { id: "cat-1" },
+        { id: "cat-2" },
+        { id: "cat-3" },
+      ]);
+
+      await expect(reorderFaqCategories(["cat-1", "cat-2"])).rejects.toThrow(
+        "カテゴリ数が一致しません",
+      );
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 });
@@ -848,28 +912,49 @@ describe("reorderFaqItems", () => {
     mockFaqItemUpdate.mockReset();
     mockFaqCategoryFindFirst.mockResolvedValue({ id: CATEGORY_ID });
     mockFaqItemUpdate.mockResolvedValue({ id: ITEM_ID });
+    mockFaqItemFindMany.mockReset();
+    mockFaqItemFindMany.mockImplementation((args?: unknown) => {
+      const where = (args as { where?: { id?: { in?: string[] } } } | undefined)
+        ?.where;
+      return Promise.resolve((where?.id?.in ?? []).map((id) => ({ id })));
+    });
+    mockTransaction.mockReset();
+    mockTransaction.mockImplementation((argOrCallback) => {
+      if (isTransactionCallback(argOrCallback)) {
+        return argOrCallback(txClient);
+      }
+      return Promise.resolve(argOrCallback);
+    });
     mockExecuteRaw.mockReset();
     mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
-    test("複数 ID を渡すと CASE WHEN 単一 SQL で更新される", async () => {
-      await reorderFaqItems(CATEGORY_ID, ["item-1", "item-2", "item-3"]);
+    test("複数 item order を渡すと CASE WHEN 二段更新で更新される", async () => {
+      await reorderFaqItems(CATEGORY_ID, [
+        { id: "item-1", order: 20 },
+        { id: "item-2", order: 21 },
+        { id: "item-3", order: 22 },
+      ]);
 
       expect(mockFaqItemUpdate).not.toHaveBeenCalled();
-      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
     });
 
     test("生成 SQL は faq_items / categoryId / CASE / deletedAt を含む", async () => {
-      await reorderFaqItems(CATEGORY_ID, ["item-a", "item-b"]);
+      await reorderFaqItems(CATEGORY_ID, [
+        { id: "item-a", order: 10 },
+        { id: "item-b", order: 11 },
+      ]);
 
-      const call = mockExecuteRaw.mock.calls[0];
-      // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
-      const sql = call?.[0].join("?") ?? "";
-      expect(sql).toContain("faq_items");
-      expect(sql).toContain("categoryId");
-      expect(sql).toContain("CASE");
-      expect(sql).toContain("deletedAt");
+      for (const call of mockExecuteRaw.mock.calls.slice(1)) {
+        const sql = call[0].join("?");
+        expect(sql).toContain("faq_items");
+        expect(sql).toContain("categoryId");
+        expect(sql).toContain("CASE");
+        expect(sql).toContain("deletedAt");
+      }
     });
   });
 
@@ -878,7 +963,7 @@ describe("reorderFaqItems", () => {
       mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(
-        reorderFaqItems("non-existent", ["item-1"]),
+        reorderFaqItems("non-existent", [{ id: "item-1", order: 0 }]),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "カテゴリが見つかりません",
@@ -888,10 +973,73 @@ describe("reorderFaqItems", () => {
     test("カテゴリが見つからない場合 SQL が実行されない", async () => {
       mockFaqCategoryFindFirst.mockResolvedValue(null);
 
-      await expect(reorderFaqItems("non-existent", ["item-1"])).rejects.toThrow(
-        DomainError,
-      );
+      await expect(
+        reorderFaqItems("non-existent", [{ id: "item-1", order: 0 }]),
+      ).rejects.toThrow(DomainError);
       expect(mockFaqItemUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("カテゴリ外または削除済みの質問が混ざる場合 SQL が実行されない", async () => {
+      mockFaqItemFindMany.mockResolvedValue([{ id: "item-1" }]);
+
+      await expect(
+        reorderFaqItems(CATEGORY_ID, [
+          { id: "item-1", order: 0 },
+          { id: "item-2", order: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "カテゴリ内の質問が見つかりません",
+      });
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("payload 内の order 重複は SQL 実行前に拒否する", async () => {
+      await expect(
+        reorderFaqItems(CATEGORY_ID, [
+          { id: "item-1", order: 0 },
+          { id: "item-2", order: 0 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "同じ並び順を複数指定することはできません",
+      });
+
+      expect(mockFaqItemFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("payload 内の ID 重複は SQL 実行前に拒否する", async () => {
+      await expect(
+        reorderFaqItems(CATEGORY_ID, [
+          { id: "item-1", order: 0 },
+          { id: "item-1", order: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "同じIDを複数指定することはできません",
+      });
+
+      expect(mockFaqItemFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("payload 外の質問と order が衝突する場合 SQL 実行前に拒否する", async () => {
+      mockFaqItemFindMany
+        .mockResolvedValueOnce([{ id: "item-1" }, { id: "item-2" }])
+        .mockResolvedValueOnce([{ id: "item-3" }]);
+
+      await expect(
+        reorderFaqItems(CATEGORY_ID, [
+          { id: "item-1", order: 10 },
+          { id: "item-2", order: 11 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "指定した並び順は他の質問と重複します",
+      });
+
       expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });

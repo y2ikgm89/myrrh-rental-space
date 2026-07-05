@@ -62,6 +62,9 @@ const mockEventTicketDeleteMany = mock<() => Promise<{ count: number }>>(() =>
 const mockEventTicketFindMany = mock<() => Promise<{ id: string }[]>>(() =>
   Promise.resolve([]),
 );
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 const mockEventRegistrationCount = mock<() => Promise<number>>(() =>
   Promise.resolve(0),
 );
@@ -118,6 +121,7 @@ type TxClient = {
     delete: typeof mockEventTimeSlotDelete;
     aggregate: typeof mockEventTimeSlotAggregate;
   };
+  $executeRaw: typeof mockExecuteRaw;
 };
 const txStub: TxClient = {
   event: { create: mockEventCreate, update: mockEventUpdate },
@@ -136,6 +140,7 @@ const txStub: TxClient = {
     delete: mockEventTimeSlotDelete,
     aggregate: mockEventTimeSlotAggregate,
   },
+  $executeRaw: mockExecuteRaw,
 };
 const mockTransaction = mock(
   async (callback: (tx: TxClient) => Promise<unknown>) => callback(txStub),
@@ -247,7 +252,6 @@ const VALID_EVENT_INPUT = {
       price: 5000,
       capacity: null,
       unitSize: 1,
-      sortOrder: 0,
       isAvailable: true,
     },
   ],
@@ -398,6 +402,37 @@ describe("createEventCommand", () => {
         }),
       );
     });
+
+    test("チケット順は入力配列の index から 0 始まりで保存される", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        tickets: [
+          {
+            name: "VIP",
+            description: null,
+            price: 9000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+          {
+            name: "一般",
+            description: null,
+            price: 5000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+        ],
+      });
+
+      expect(mockEventTicketCreateMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({ name: "VIP", sortOrder: 0 }),
+          expect.objectContaining({ name: "一般", sortOrder: 1 }),
+        ],
+      });
+    });
   });
 });
 
@@ -406,6 +441,13 @@ describe("updateEventCommand", () => {
     mockEventFindFirst.mockClear();
     mockEventFindMany.mockClear();
     mockEventUpdate.mockClear();
+    mockEventTicketFindMany.mockClear();
+    mockEventTicketUpdate.mockClear();
+    mockEventTicketCreateMany.mockClear();
+    mockEventTicketDeleteMany.mockClear();
+    mockEventTicketFindMany.mockImplementation(() => Promise.resolve([]));
+    mockExecuteRaw.mockClear();
+    mockExecuteRaw.mockResolvedValue(0);
     mockFireAndForget.mockClear();
     mockEventFindMany.mockImplementation(() => Promise.resolve([]));
   });
@@ -596,6 +638,53 @@ describe("updateEventCommand", () => {
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
     });
+
+    test("既存チケットの順序は一意制約衝突を避けるため一時退避してから更新する", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+      mockEventTicketFindMany.mockResolvedValueOnce([
+        { id: "ticket-1" },
+        { id: "ticket-2" },
+      ]);
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        tickets: [
+          {
+            id: "ticket-2",
+            name: "後半",
+            description: null,
+            price: 6000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+          {
+            id: "ticket-1",
+            name: "前半",
+            description: null,
+            price: 5000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+        ],
+      });
+
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
+      expect(mockEventTicketUpdate).toHaveBeenCalledTimes(2);
+      expect(mockEventTicketCreateMany).not.toHaveBeenCalled();
+    });
   });
 
   describe("異常系", () => {
@@ -614,6 +703,45 @@ describe("updateEventCommand", () => {
       await expect(
         updateEventCommand("deleted-event", VALID_EVENT_INPUT),
       ).rejects.toThrow(DomainError);
+    });
+
+    test("別イベントまたは存在しないチケットIDを含む更新は拒否する", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+      mockEventTicketFindMany.mockResolvedValueOnce([{ id: "ticket-1" }]);
+
+      await expect(
+        updateEventCommand("event-1", {
+          ...VALID_EVENT_INPUT,
+          tickets: [
+            {
+              id: "foreign-ticket",
+              name: "不正チケット",
+              description: null,
+              price: 5000,
+              capacity: null,
+              unitSize: 1,
+              isAvailable: true,
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "チケットが見つかりません",
+      });
+
+      expect(mockEventTicketUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
     });
   });
 });

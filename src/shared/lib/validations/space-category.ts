@@ -4,7 +4,7 @@ import { z } from "zod";
  * スペースカテゴリー（SpaceCategory）バリデーションスキーマ
  */
 
-export const spaceCategoryFormSchema = z.object({
+export const spaceCategoryFormSchema = z.strictObject({
   name: z
     .string()
     .min(1, { error: "カテゴリー名を入力してください" })

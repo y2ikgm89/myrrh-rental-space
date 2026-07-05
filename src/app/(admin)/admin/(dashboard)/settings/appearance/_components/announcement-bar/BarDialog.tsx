@@ -77,7 +77,6 @@ export function BarFormDialog({
       linkUrl: editingBar?.linkUrl ?? "",
       linkText: editingBar?.linkText ?? "",
       isActive: editingBar?.isActive === false ? "" : "on",
-      priority: String(editingBar?.priority ?? 0),
       startAt: editingBar?.startAt
         ? formatDateTimeLocalInJst(editingBar.startAt)
         : "",
@@ -143,28 +142,6 @@ export function BarFormDialog({
                   className="text-sm text-destructive"
                 >
                   {fields.message.errors.join(", ")}
-                </p>
-              )}
-            </div>
-
-            {/* Priority */}
-            <div className="space-y-2">
-              <Label htmlFor={fields.priority.id}>優先度</Label>
-              <Input
-                {...getInputProps(fields.priority, { type: "number" })}
-                min={0}
-                max={100}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                数字が大きいほど優先的に表示
-              </p>
-              {fields.priority.errors && (
-                <p
-                  id={fields.priority.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.priority.errors.join(", ")}
                 </p>
               )}
             </div>

@@ -43,6 +43,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
 }: GalleryFieldProps<TForm>): ReactElement {
   const dndId = useId();
   const items = field.getFieldList();
+  const isDisabled = disabled ?? false;
 
   // dnd-kit sensors
   const sensors = useSensors(
@@ -59,6 +60,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
     accept: "image-or-video",
     maxSelections: Math.max(0, remaining),
     onSelect: (media) => {
+      if (isDisabled) return;
       const toAdd = media.slice(0, Math.max(0, remaining));
       const fieldName: string = field.name;
       for (const m of toAdd) {
@@ -71,6 +73,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
   });
 
   const onDragEnd = (event: DragEndEvent) => {
+    if (isDisabled) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const from = items.findIndex((it) => it.key === String(active.id));
@@ -91,7 +94,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
           variant="outline"
           size="sm"
           onClick={() => picker.openPicker()}
-          disabled={(disabled ?? false) || items.length >= max}
+          disabled={isDisabled || items.length >= max}
         >
           <IconPhotoPlus className="mr-2 h-4 w-4" aria-hidden="true" />
           画像を追加
@@ -108,6 +111,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
           <SortableContext
             items={items.map((it) => it.key ?? "")}
             strategy={verticalListSortingStrategy}
+            disabled={isDisabled}
           >
             <div className="space-y-2">
               {items.map((item, index) => {
@@ -128,7 +132,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
                         index,
                       });
                     }}
-                    {...(disabled !== undefined && { disabled })}
+                    disabled={isDisabled}
                   />
                 );
               })}

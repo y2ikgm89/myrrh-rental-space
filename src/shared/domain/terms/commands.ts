@@ -6,6 +6,10 @@ import { parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buildOrderScopeLockSql,
+  buildUuidOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import { sanitizeContentHtml } from "@/shared/lib/html/sanitize";
 import type { TermsFormInput } from "@/shared/lib/validations/terms";
 
@@ -51,27 +55,31 @@ export async function createTermsCommand(
 
   const { contentJson, contentHtml } = buildContent(input);
 
-  const maxOrder = await prisma.termsDocument.aggregate({
-    where: { deletedAt: null },
-    _max: { footerOrder: true },
-  });
+  const created = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("terms_documents:active"));
 
-  const created = await prisma.termsDocument.create({
-    data: {
-      type: input.type,
-      slug: input.slug,
-      title: input.title,
-      contentJson,
-      contentHtml,
-      isPublished: input.isPublished,
-      publishedAt: input.isPublished ? new Date() : null,
-      scopes: [...input.scopes],
-      changelog: input.changelog,
-      showInFooter: input.showInFooter,
-      // footerOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
-      footerOrder: (maxOrder._max.footerOrder ?? 0) + 1,
-    },
-    select: { id: true, slug: true },
+    const maxOrder = await tx.termsDocument.aggregate({
+      where: { deletedAt: null },
+      _max: { displayOrder: true },
+    });
+
+    return tx.termsDocument.create({
+      data: {
+        type: input.type,
+        slug: input.slug,
+        title: input.title,
+        contentJson,
+        contentHtml,
+        isPublished: input.isPublished,
+        publishedAt: input.isPublished ? new Date() : null,
+        scopes: [...input.scopes],
+        changelog: input.changelog,
+        showInFooter: input.showInFooter,
+        // displayOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+        displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
+      },
+      select: { id: true, slug: true },
+    });
   });
 
   return created;
@@ -120,7 +128,7 @@ export async function updateTermsCommand(
       scopes: { set: [...input.scopes] },
       changelog: input.changelog,
       showInFooter: input.showInFooter,
-      // footerOrder は変更しない（位置は reorderTermsCommand のみが変更）
+      // displayOrder は変更しない（位置は reorderTermsCommand のみが変更）
     },
     select: { id: true, slug: true },
   });
@@ -129,9 +137,9 @@ export async function updateTermsCommand(
 }
 
 /**
- * 規約のフッター表示順を D&D 並び替えで更新（footerOrder の SSoT）
+ * 規約の表示順を D&D 並び替えで更新（displayOrder の SSoT）
  *
- * `orderedIds` の並び順で footerOrder を 0 始まりで再採番する。
+ * `orderedIds` の並び順で displayOrder を 0 始まりで再採番する。
  */
 export async function reorderTermsCommand(
   orderedIds: readonly string[],
@@ -140,21 +148,49 @@ export async function reorderTermsCommand(
     return { updated: 0 };
   }
 
-  // 単一 SQL の CASE WHEN で footerOrder を一括更新（N 回 UPDATE 廃止）。
-  // 対象 id × deletedAt IS NULL は WHERE 句で絞り、ソフトデリート済規約は除外する。
-  const cases: Prisma.Sql[] = [];
-  const ids: Prisma.Sql[] = [];
-  for (const [index, id] of orderedIds.entries()) {
-    cases.push(Prisma.sql`WHEN ${id}::uuid THEN ${index}`);
-    ids.push(Prisma.sql`${id}::uuid`);
+  if (new Set(orderedIds).size !== orderedIds.length) {
+    throw new DomainError("同じIDを複数指定することはできません", "VALIDATION");
   }
 
-  await prisma.$executeRaw`
-    UPDATE "terms_documents"
-    SET "footerOrder" = CASE "id" ${Prisma.join(cases, " ")} END
-    WHERE "id" IN (${Prisma.join(ids)})
-      AND "deletedAt" IS NULL
-  `;
+  const existing = await prisma.termsDocument.findMany({
+    where: { deletedAt: null },
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((term) => term.id));
+
+  for (const id of orderedIds) {
+    if (!existingIds.has(id)) {
+      throw new DomainError("規約が見つかりません", "NOT_FOUND");
+    }
+  }
+
+  if (existing.length !== orderedIds.length) {
+    throw new DomainError("規約数が一致しません（過不足）", "VALIDATION");
+  }
+
+  const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(
+    orderedIds,
+    (id) => id,
+    (_id, index) => index,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("terms_documents:active"));
+
+    await tx.$executeRaw`
+      UPDATE "terms_documents"
+      SET "displayOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+        AND "deletedAt" IS NULL
+    `;
+
+    await tx.$executeRaw`
+      UPDATE "terms_documents"
+      SET "displayOrder" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+        AND "deletedAt" IS NULL
+    `;
+  });
 
   return { updated: orderedIds.length };
 }
@@ -191,6 +227,30 @@ export async function updateTermsPublishedCommand(
   });
 
   return { ...updated, isPublished };
+}
+
+/**
+ * 規約のフッター掲載可否を直接更新（TermsTable の表示面管理用）。
+ */
+export async function updateTermsFooterVisibilityCommand(
+  id: string,
+  showInFooter: boolean,
+): Promise<SlugOnly & { showInFooter: boolean }> {
+  const existing = await prisma.termsDocument.findFirst({
+    where: { id, deletedAt: null },
+    select: { id: true, slug: true },
+  });
+  if (!existing) {
+    throw new DomainError("規約が見つかりません", "NOT_FOUND");
+  }
+
+  const updated = await prisma.termsDocument.update({
+    where: { id },
+    data: { showInFooter },
+    select: { id: true, slug: true, showInFooter: true },
+  });
+
+  return updated;
 }
 
 /**
@@ -277,10 +337,24 @@ export async function restoreTermsCommand(id: string): Promise<SlugOnly> {
     );
   }
 
-  const restored = await prisma.termsDocument.update({
-    where: { id },
-    data: { deletedAt: null, isPublished: false, publishedAt: null },
-    select: { id: true, slug: true },
+  const restored = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("terms_documents:active"));
+
+    const maxOrder = await tx.termsDocument.aggregate({
+      where: { deletedAt: null },
+      _max: { displayOrder: true },
+    });
+
+    return tx.termsDocument.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+        isPublished: false,
+        publishedAt: null,
+        displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
+      },
+      select: { id: true, slug: true },
+    });
   });
 
   return restored;
