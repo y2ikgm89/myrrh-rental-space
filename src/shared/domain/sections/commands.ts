@@ -4,6 +4,7 @@ import { clonePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageSourcesInJson } from "@/shared/domain/media/managed-image-assertions";
 import {
   buildOrderScopeLockSql,
   buildUuidOrderSqlFragments,
@@ -78,6 +79,9 @@ export async function updatePageSectionCommand(
     input.config === undefined
       ? undefined
       : validateConfig(existing.type, input.config);
+  if (config !== undefined) {
+    assertAllowedManagedImageSourcesInJson("セクション画像", config);
+  }
 
   await prisma.section.update({
     where: { id },
@@ -217,6 +221,7 @@ export async function duplicatePageSectionCommand(
 
   const sourcePageId = source.pageId;
   const sourcePageSlug = source.page.slug;
+  assertAllowedManagedImageSourcesInJson("セクション画像", source.config);
 
   const createdId = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(buildOrderScopeLockSql(`sections:${sourcePageId}`));

@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageUrl } from "@/shared/domain/media/managed-image-assertions";
 import {
   buildOrderScopeLockSql,
   buildUuidOrderSqlFragments,
@@ -60,6 +61,7 @@ async function ensurePostCategoryUnique(
 export async function createPostCategory(
   input: PostCategoryMutationInput,
 ): Promise<CreatePostCategoryResult> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   await ensurePostCategoryUnique(input);
 
   const category = await prisma.$transaction(async (tx) => {
@@ -91,6 +93,7 @@ export async function updatePostCategory(
   id: string,
   input: PostCategoryMutationInput,
 ): Promise<void> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   await ensurePostCategoryUnique(input, id);
   await ensurePostCategoryExists(id);
 

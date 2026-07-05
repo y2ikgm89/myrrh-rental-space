@@ -71,7 +71,6 @@ export function FilePlugin({ isOpen, onClose }: DialogPluginProps) {
       onSelect={handleSelect}
       selectionMode="single"
       defaultUsage="GENERAL"
-      showUrlTab
       accept="file"
     />
   );

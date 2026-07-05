@@ -178,6 +178,12 @@ mock.module("@/shared/lib/errors/server", () => ({
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
 }));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // テスト対象のインポート（モック設定後）
 // ---------------------------------------------------------------------------
@@ -432,6 +438,56 @@ describe("createEventCommand", () => {
           expect.objectContaining({ name: "一般", sortOrder: 1 }),
         ],
       });
+    });
+  });
+
+  describe("画像URL境界", () => {
+    test("管理メディア origin 外のサムネイルURLは拒否する", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          thumbnailUrl: "https://example.com/poster.jpg",
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+
+    test("管理メディア origin 外のギャラリーURLは拒否する", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          gallery: [
+            {
+              url: "https://example.com/gallery.jpg",
+              alt: "",
+              caption: "",
+            },
+          ],
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 説明内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          descriptionJson: {
+            root: {
+              children: [
+                {
+                  type: "image",
+                  src: "https://example.com/body.jpg",
+                },
+              ],
+            },
+          },
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
     });
   });
 });
@@ -1029,7 +1085,7 @@ describe("duplicateEventCommand", () => {
     descriptionJson: { root: { type: "root", children: [] } },
     descriptionHtml: "<p>本文</p>",
     descriptionPlainText: "本文",
-    thumbnailUrl: "https://example.com/thumb.jpg",
+    thumbnailUrl: "https://media.example.com/thumb.jpg",
     gallery: [],
     ogpImageUrl: null,
     ogpTitle: null,

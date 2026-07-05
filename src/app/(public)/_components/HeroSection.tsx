@@ -34,8 +34,7 @@ import {
   getTextStyle,
 } from "@/public/components/sections/section-style-helpers";
 
-const DEFAULT_BG_IMAGE =
-  "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&q=80";
+const DEFAULT_BG_IMAGE = "/images/seed/page-about-hero.svg";
 
 interface HeroSectionProps {
   readonly config: HeroParallaxConfig;
@@ -119,7 +118,6 @@ export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
                 "洗練されたレンタルスペースのインテリア"
               }
               fill
-              preload
               loading="eager"
               fetchPriority="high"
               sizes="(min-width: 768px) 50vw, 100vw"

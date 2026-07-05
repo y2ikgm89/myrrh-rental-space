@@ -9,12 +9,21 @@ import {
   TaxRateType,
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  assertAllowedManagedGallery,
+  assertAllowedManagedImageSourcesInJson,
+  assertAllowedManagedImageUrl,
+  assertAllowedManagedImageUrls,
+} from "@/shared/domain/media/managed-image-assertions";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,
 } from "@/shared/lib/slug-validation";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import {
+  gallerySchema,
+  type GalleryItem,
+} from "@/shared/lib/validations/gallery";
 
 type SpaceCommandInput = {
   slug: string;
@@ -88,6 +97,23 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
   };
 }
 
+function assertAllowedSpaceImages(input: {
+  readonly descriptionJson: Prisma.InputJsonValue;
+  readonly mainImageUrl: string;
+  readonly gallery: readonly GalleryItem[];
+  readonly ogpImageUrl?: string | null | undefined;
+}): void {
+  assertAllowedManagedImageSourcesInJson(
+    "スペース本文画像",
+    input.descriptionJson,
+  );
+  assertAllowedManagedImageUrls([
+    { label: "スペースメイン画像", url: input.mainImageUrl },
+    { label: "OGP画像", url: input.ogpImageUrl },
+  ]);
+  assertAllowedManagedGallery("スペースギャラリー画像", input.gallery);
+}
+
 async function ensureSlugAvailable(
   slug: string,
   currentId?: string,
@@ -143,6 +169,7 @@ async function ensureSpaceExists(id: string) {
 export async function createSpaceCommand(
   input: SpaceCommandInput,
 ): Promise<{ id: string; slug: string }> {
+  assertAllowedSpaceImages(input);
   await ensureSlugAvailable(input.slug);
   await ensureAssignableLocation(input.locationId);
   await ensureAssignableCategory(input.categoryId);
@@ -159,6 +186,7 @@ export async function updateSpaceCommand(
   id: string,
   input: SpaceCommandInput,
 ): Promise<{ id: string; slug: string; oldSlug: string }> {
+  assertAllowedSpaceImages(input);
   // Validation queries can run outside the transaction (each is a single read).
   const existingSpace = await ensureSpaceExists(id);
   await ensureAssignableLocation(input.locationId);
@@ -304,6 +332,18 @@ export async function duplicateSpaceCommand(
   }
 
   const slug = await ensureUniqueSlug(`${source.slug}-copy`);
+  const sourceGalleryResult = gallerySchema.safeParse(source.gallery);
+  if (!sourceGalleryResult.success) {
+    throw new DomainError("gallery が不正です", "VALIDATION");
+  }
+  const sourceGallery = sourceGalleryResult.data;
+  assertAllowedManagedImageSourcesInJson(
+    "スペース本文画像",
+    source.descriptionJson,
+  );
+  assertAllowedManagedImageUrl("スペースメイン画像", source.mainImageUrl);
+  assertAllowedManagedGallery("スペースギャラリー画像", sourceGallery);
+  assertAllowedManagedImageUrl("OGP画像", source.ogpImageUrl);
 
   const created = await prisma.space.create({
     data: {
@@ -321,7 +361,7 @@ export async function duplicateSpaceCommand(
       hourlyPrice: source.hourlyPrice,
       dailyPrice: source.dailyPrice,
       mainImageUrl: source.mainImageUrl,
-      gallery: asPrismaInputJsonValue(source.gallery, "gallery が不正です"),
+      gallery: asPrismaInputJsonValue(sourceGallery, "gallery が不正です"),
       facilities: asPrismaInputJsonValue(
         source.facilities,
         "facilities が不正です",

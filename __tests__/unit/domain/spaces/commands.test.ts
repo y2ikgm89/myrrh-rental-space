@@ -19,6 +19,12 @@ const mockSpaceCategoryFindFirst = mock<
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 // updateSpaceCommand は interactive `$transaction(async (tx) => ...)` を使うため、
 // tx として同じ space mocks を露出する callback ベースの実装を提供する。
 interface PrismaMock {
@@ -119,7 +125,7 @@ const VALID_INPUT = {
   descriptionPlainText: "テスト用のスペースです",
   capacity: 10,
   hourlyPrice: 1000,
-  mainImageUrl: "https://example.com/image.jpg",
+  mainImageUrl: "https://media.example.com/spaces/main.jpg",
   gallery: [] as const,
   facilities: [
     { name: "Wi-Fi", iconName: "IconWifi" },
@@ -279,6 +285,57 @@ describe("createSpaceCommand", () => {
       });
     });
 
+    test("管理メディア origin 外の mainImageUrl は拒否する", async () => {
+      await expect(
+        createSpaceCommand({
+          ...VALID_INPUT,
+          mainImageUrl: "https://external.example.com/space.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceCreate).not.toHaveBeenCalled();
+    });
+
+    test("管理メディア origin 外の gallery URL は拒否する", async () => {
+      await expect(
+        createSpaceCommand({
+          ...VALID_INPUT,
+          gallery: [
+            {
+              url: "https://external.example.com/gallery.jpg",
+              alt: "外部画像",
+              caption: "",
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 説明内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createSpaceCommand({
+          ...VALID_INPUT,
+          descriptionJson: {
+            root: {
+              children: [
+                {
+                  type: "image",
+                  src: "https://external.example.com/body.jpg",
+                },
+              ],
+            },
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceCreate).not.toHaveBeenCalled();
+    });
+
     test("スラッグエラー時は prisma.space.create が呼ばれない", async () => {
       mockCheckSlugAvailability.mockResolvedValue({
         available: false,
@@ -427,6 +484,39 @@ describe("updateSpaceCommand", () => {
       ).rejects.toMatchObject({
         code: "CONFLICT",
       });
+    });
+
+    test("管理メディア origin 外の mainImageUrl は拒否する", async () => {
+      await expect(
+        updateSpaceCommand(SPACE_ID, {
+          ...VALID_INPUT,
+          mainImageUrl: "https://external.example.com/space.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceUpdate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 説明内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        updateSpaceCommand(SPACE_ID, {
+          ...VALID_INPUT,
+          descriptionJson: {
+            root: {
+              children: [
+                {
+                  type: "cover",
+                  backgroundImageUrl: "https://external.example.com/body.jpg",
+                },
+              ],
+            },
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceUpdate).not.toHaveBeenCalled();
     });
   });
 });

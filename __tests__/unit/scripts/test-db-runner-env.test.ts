@@ -28,7 +28,7 @@ describe("test DB runner env", () => {
     ).toEqual({ ok: true });
   });
 
-  test("fails clearly when selected serial DB tests lack TEST_DATABASE_URL", () => {
+  test("uses docker-compose test-db default when selected serial DB tests lack TEST_DATABASE_URL", () => {
     const result = assertRequiredTestDatabaseUrl({
       selectedSerialDbTests: [
         "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
@@ -37,12 +37,9 @@ describe("test DB runner env", () => {
     });
 
     expect(result).toEqual({
-      ok: false,
-      message:
-        "[run-tests] TEST_DATABASE_URL is required for real-DB integration tests.\n" +
-        "Selected real-DB tests:\n" +
-        "  - __tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts\n" +
-        "Set TEST_DATABASE_URL to a disposable migrated PostgreSQL database, then re-run the test command.",
+      ok: true,
+      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+      source: "default-local",
     });
   });
 
@@ -55,34 +52,10 @@ describe("test DB runner env", () => {
         testDatabaseUrl:
           "postgresql://postgres:postgres@localhost:5433/myrrh_test",
       }),
-    ).toEqual({ ok: true });
-  });
-
-  test("run-tests exits before silent-skipping selected real-DB tests without TEST_DATABASE_URL", async () => {
-    const env = { ...process.env };
-    delete env["TEST_DATABASE_URL"];
-
-    const proc = Bun.spawn(
-      [
-        "bun",
-        "scripts/run-tests.ts",
-        "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
-      ],
-      {
-        stdout: "pipe",
-        stderr: "pipe",
-        env,
-      },
-    );
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-
-    expect(exitCode).toBe(1);
-    expect(`${stdout}\n${stderr}`).toContain(
-      "TEST_DATABASE_URL is required for real-DB integration tests",
-    );
+    ).toEqual({
+      ok: true,
+      url: "postgresql://postgres:postgres@localhost:5433/myrrh_test",
+      source: "env",
+    });
   });
 });

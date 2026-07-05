@@ -39,7 +39,8 @@
  *   bun scripts/run-tests.ts __tests__/unit/lib/crypto.test.ts
  *
  * Env:
- *   TEST_PARALLEL  並列度の手動上書き (default: CI min(cpu, 4), local min(cpu, 8))
+ *   TEST_DATABASE_URL  実 DB integration 用。未設定時は docker-compose test-db 既定値。
+ *   TEST_PARALLEL      並列度の手動上書き (default: CI min(cpu, 4), local min(cpu, 8))
  */
 
 import pLimit from "p-limit";
@@ -109,6 +110,14 @@ if (!testDatabaseUrlCheck.ok) {
   console.error(testDatabaseUrlCheck.message);
   process.exit(1);
 }
+if (testDatabaseUrlCheck.url !== undefined) {
+  process.env["TEST_DATABASE_URL"] = testDatabaseUrlCheck.url;
+  if (testDatabaseUrlCheck.source === "default-local") {
+    console.info(
+      "[run-tests] TEST_DATABASE_URL is not set; using docker-compose test-db default.",
+    );
+  }
+}
 
 const parallelFiles = files.filter((f) => !SERIAL_DB_TESTS.has(f));
 const serialFiles = selectedSerialDbTests;
@@ -161,6 +170,7 @@ async function runOne(file: string): Promise<FileResult> {
   const proc = Bun.spawn(["bun", "test", "--conditions", "production", file], {
     stdout: "pipe",
     stderr: "pipe",
+    env: { ...process.env },
   });
   // 公式パターン: stdout / stderr / exited を Promise.all で同時 await。
   // pipe バッファが full にならないよう必ず並列で吸い出す。

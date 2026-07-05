@@ -69,7 +69,6 @@ export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
   const filePicker = useSingleMediaPicker({
     accept: "file",
     defaultUsage: "GENERAL",
-    showUrlTab: true,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

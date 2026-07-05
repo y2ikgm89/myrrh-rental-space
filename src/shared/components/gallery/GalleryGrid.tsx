@@ -33,12 +33,14 @@ import { GalleryLightbox } from "./GalleryLightbox";
 interface GalleryGridProps {
   readonly items: readonly GalleryItem[];
   readonly hero?: string | null;
+  readonly priorityFirstImage?: boolean;
   readonly className?: string;
 }
 
 export function GalleryGrid({
   items,
   hero,
+  priorityFirstImage = false,
   className,
 }: GalleryGridProps): ReactElement | null {
   const merged: GalleryItem[] = hero
@@ -118,6 +120,7 @@ export function GalleryGrid({
     const isLastDisplayed = i === displayLimit - 1;
     const showOverlay = isLastDisplayed && hiddenImageCount > 0;
     const isVideo = detectMediaSourceType(item.url) === "video";
+    const isPriorityImage = priorityFirstImage && i === 0 && !isVideo;
 
     // 画像の場合は lightbox 内の index を imageItems サブセットで解決
     const imageIndex = isVideo
@@ -149,6 +152,8 @@ export function GalleryGrid({
               alt={item.alt}
               fill
               sizes="(min-width:1024px) 33vw, 50vw"
+              loading={isPriorityImage ? "eager" : "lazy"}
+              fetchPriority={isPriorityImage ? "high" : "auto"}
               className="object-cover"
             />
           </button>

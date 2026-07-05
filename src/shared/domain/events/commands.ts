@@ -14,7 +14,10 @@ import {
 } from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
+import { serverEnv } from "@/shared/lib/env/server";
 import { generateSlug } from "@/shared/lib/slug";
+import { isAllowedManagedImageSrc } from "@/shared/lib/media/next-image-src";
+import { assertAllowedManagedImageSourcesInJson } from "@/shared/domain/media/managed-image-assertions";
 import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
@@ -24,7 +27,10 @@ import {
   EventScheduleMode,
   EventStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import {
+  gallerySchema,
+  type GalleryItem,
+} from "@/shared/lib/validations/gallery";
 import type {
   EventTicketInput,
   EventTicketWritableFields,
@@ -132,8 +138,42 @@ function assertEventScheduleInvariant(data: EventCommandInput): void {
   }
 }
 
+function assertAllowedEventImageUrl(label: string, url: string | null): void {
+  if (url === null) return;
+  if (
+    isAllowedManagedImageSrc(url, {
+      publicMediaUrl: serverEnv.R2_PUBLIC_URL ?? null,
+    })
+  ) {
+    return;
+  }
+
+  throw new DomainError(
+    `${label}は管理画面からアップロードした画像を指定してください`,
+    "VALIDATION",
+  );
+}
+
+function assertAllowedEventImageUrls(params: {
+  readonly thumbnailUrl?: string | null;
+  readonly ogpImageUrl?: string | null;
+  readonly gallery: readonly GalleryItem[];
+}): void {
+  assertAllowedEventImageUrl("メイン画像", params.thumbnailUrl ?? null);
+  assertAllowedEventImageUrl("OGP画像", params.ogpImageUrl ?? null);
+
+  for (const item of params.gallery) {
+    assertAllowedEventImageUrl("イベントギャラリー画像", item.url);
+  }
+}
+
 export async function createEventCommand(data: EventCommandInput) {
   assertEventScheduleInvariant(data);
+  assertAllowedEventImageUrls(data);
+  assertAllowedManagedImageSourcesInJson(
+    "イベント本文画像",
+    data.descriptionJson,
+  );
   const slug = await ensureUniqueSlug(data.slug);
 
   const event = await prisma.$transaction(async (tx) => {
@@ -186,6 +226,11 @@ export async function createEventCommand(data: EventCommandInput) {
 
 export async function updateEventCommand(id: string, data: EventCommandInput) {
   assertEventScheduleInvariant(data);
+  assertAllowedEventImageUrls(data);
+  assertAllowedManagedImageSourcesInJson(
+    "イベント本文画像",
+    data.descriptionJson,
+  );
   const existing = await prisma.event.findFirst({
     where: { id, deletedAt: null },
     select: {
@@ -458,6 +503,20 @@ export async function duplicateEventCommand(id: string) {
   if (!source) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
   const slug = await ensureUniqueSlug(`${source.slug}-copy`);
+  const sourceGalleryResult = gallerySchema.safeParse(source.gallery);
+  if (!sourceGalleryResult.success) {
+    throw new DomainError("イベントギャラリーが不正です", "VALIDATION");
+  }
+  const sourceGallery = sourceGalleryResult.data;
+  assertAllowedEventImageUrls({
+    thumbnailUrl: source.thumbnailUrl,
+    gallery: sourceGallery,
+    ogpImageUrl: source.ogpImageUrl,
+  });
+  assertAllowedManagedImageSourcesInJson(
+    "イベント本文画像",
+    source.descriptionJson,
+  );
 
   const created = await prisma.$transaction(async (tx) => {
     const newEvent = await tx.event.create({
@@ -471,7 +530,7 @@ export async function duplicateEventCommand(id: string) {
         descriptionHtml: source.descriptionHtml,
         descriptionPlainText: source.descriptionPlainText,
         thumbnailUrl: source.thumbnailUrl,
-        gallery: asPrismaInputJsonValue(source.gallery, "gallery が不正です"),
+        gallery: asPrismaInputJsonValue(sourceGallery, "gallery が不正です"),
         ogpImageUrl: source.ogpImageUrl,
         ogpTitle: source.ogpTitle,
         ogpDescription: source.ogpDescription,

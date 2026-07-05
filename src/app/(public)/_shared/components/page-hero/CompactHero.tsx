@@ -38,7 +38,6 @@ export function CompactHero({
           fill
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 50vw"
-          preload
           loading="eager"
           fetchPriority="high"
         />

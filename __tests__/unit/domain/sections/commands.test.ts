@@ -15,6 +15,12 @@ const mockSectionUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     section: {
@@ -43,6 +49,8 @@ mock.module("@/shared/lib/serialize", () => ({
     }
     return result;
   },
+  isRecord: (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value),
 }));
 
 import { updatePageSectionCommand } from "@/shared/domain/sections/commands";
@@ -96,6 +104,81 @@ describe("updatePageSectionCommand", () => {
         }),
       }),
     );
+  });
+
+  test("管理メディア origin 外のセクション画像 URL は拒否する", async () => {
+    mockSectionFindUnique.mockImplementation(() =>
+      Promise.resolve({
+        ...PAGE_SECTION_RECORD,
+        type: "page-hero",
+      }),
+    );
+
+    await expect(
+      updatePageSectionCommand(SECTION_ID, {
+        config: {
+          variant: "editorial-split",
+          label: [],
+          title: [],
+          description: [],
+          images: [
+            {
+              url: "https://external.example.com/hero.jpg",
+              alt: "外部画像",
+            },
+          ],
+          transition: "crossfade",
+          buttons: [
+            {
+              label: [],
+              url: "https://external.example.com/page",
+              variant: "primary",
+              size: "lg",
+              openInNewTab: true,
+              backgroundColor: "",
+              textColor: "",
+            },
+          ],
+          layout: {
+            containerWidth: "lg",
+            hideOnMobile: false,
+            hideOnDesktop: false,
+            animateOnScroll: "none",
+          },
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    expect(mockSectionUpdate).not.toHaveBeenCalled();
+  });
+
+  test("セクションの外部埋め込み URL はメディア検査対象にしない", async () => {
+    mockSectionFindUnique.mockImplementation(() =>
+      Promise.resolve({
+        ...PAGE_SECTION_RECORD,
+        type: "embed",
+      }),
+    );
+
+    await updatePageSectionCommand(SECTION_ID, {
+      config: {
+        sectionLabel: "Media",
+        title: [],
+        embedUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        embedCode: "",
+        aspectRatio: "16:9",
+        borderRadius: "sm",
+        layout: {
+          containerWidth: "lg",
+          hideOnMobile: false,
+          hideOnDesktop: false,
+          animateOnScroll: "none",
+        },
+      },
+    });
+
+    expect(mockSectionUpdate).toHaveBeenCalledTimes(1);
   });
 
   test("存在しないセクション ID で NOT_FOUND をスロー", async () => {

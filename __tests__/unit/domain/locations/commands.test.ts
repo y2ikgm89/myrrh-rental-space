@@ -52,6 +52,12 @@ const mockExecuteRaw = mock<
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     location: {
@@ -115,10 +121,10 @@ const VALID_FORM_DATA = {
   accessLines: [{ value: "渋谷駅から徒歩5分" }],
   parkingInfo: "近隣コインパーキング",
   amenities: VALID_AMENITIES,
-  imageUrl: "https://example.com/main.jpg",
+  imageUrl: "https://media.example.com/locations/main.jpg",
   imageUrls: [
-    { url: "https://example.com/image1.jpg" },
-    { url: "https://example.com/image2.jpg" },
+    { url: "https://media.example.com/locations/image1.jpg" },
+    { url: "https://media.example.com/locations/image2.jpg" },
   ],
   businessHours: VALID_BUSINESS_HOURS,
   specialHolidays: null,
@@ -184,10 +190,10 @@ describe("createLocation", () => {
           data: expect.objectContaining({
             name: "渋谷スペース",
             address: "東京都渋谷区1-1-1",
-            imageUrl: "https://example.com/main.jpg",
+            imageUrl: "https://media.example.com/locations/main.jpg",
             imageUrls: [
-              "https://example.com/image1.jpg",
-              "https://example.com/image2.jpg",
+              "https://media.example.com/locations/image1.jpg",
+              "https://media.example.com/locations/image2.jpg",
             ],
             isPublished: true,
           }),
@@ -286,6 +292,30 @@ describe("createLocation", () => {
         }),
       );
     });
+
+    test("管理メディア origin 外の imageUrl は拒否する", async () => {
+      await expect(
+        createLocation({
+          ...VALID_FORM_DATA,
+          imageUrl: "https://external.example.com/location.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockLocationCreate).not.toHaveBeenCalled();
+    });
+
+    test("管理メディア origin 外の追加画像 URL は拒否する", async () => {
+      await expect(
+        createLocation({
+          ...VALID_FORM_DATA,
+          imageUrls: [{ url: "https://external.example.com/location.jpg" }],
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockLocationCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -348,6 +378,20 @@ describe("updateLocation", () => {
           }),
         }),
       );
+    });
+
+    test("管理メディア origin 外の imageUrl は拒否する", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await expect(
+        updateLocation(LOCATION_ID, {
+          ...VALID_FORM_DATA,
+          imageUrl: "https://external.example.com/location.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockLocationUpdate).not.toHaveBeenCalled();
     });
   });
 

@@ -8,6 +8,12 @@ const mockSettingsUpsert = mock<
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settings: {
@@ -71,10 +77,10 @@ import { DomainError } from "@/shared/domain/domain-error";
 const BASIC_INFO_INPUT = {
   siteName: "Myrrh Rental Space",
   siteDescription: "レンタルスペース予約サービス",
-  faviconUrl: "https://example.com/favicon.png",
-  defaultOgpImageUrl: "https://example.com/ogp.jpg",
-  headerLogoUrl: "https://example.com/header-logo.png",
-  footerLogoUrl: "https://example.com/footer-logo.png",
+  faviconUrl: "https://media.example.com/site/favicon.png",
+  defaultOgpImageUrl: "https://media.example.com/site/ogp.jpg",
+  headerLogoUrl: "https://media.example.com/site/header-logo.png",
+  footerLogoUrl: "https://media.example.com/site/footer-logo.png",
   footerCopyright: "© 2024 Myrrh",
   useHeaderLogo: true,
   useFooterLogo: true,
@@ -166,10 +172,10 @@ describe("updateBasicInfo", () => {
       expect(mockSettingsUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           create: expect.objectContaining({
-            faviconUrl: "https://example.com/favicon.png",
+            faviconUrl: "https://media.example.com/site/favicon.png",
           }),
           update: expect.objectContaining({
-            faviconUrl: "https://example.com/favicon.png",
+            faviconUrl: "https://media.example.com/site/favicon.png",
           }),
         }),
       );
@@ -179,6 +185,18 @@ describe("updateBasicInfo", () => {
       const result = await updateBasicInfo(BASIC_INFO_INPUT);
 
       expect(result).toBeUndefined();
+    });
+
+    test("管理メディア origin 外の画像 URL は拒否する", async () => {
+      await expect(
+        updateBasicInfo({
+          ...BASIC_INFO_INPUT,
+          headerLogoUrl: "https://external.example.com/header-logo.png",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSettingsUpsert).not.toHaveBeenCalled();
     });
   });
 });

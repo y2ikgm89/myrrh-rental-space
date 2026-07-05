@@ -61,6 +61,7 @@ export function EventSeoFields({
   const ogpImagePicker = useSingleMediaPicker({
     accept: "image",
     defaultUsage: "EVENT",
+    showUrlTab: false,
     onSelect: (media) => {
       const selected = media[0];
       if (selected) {

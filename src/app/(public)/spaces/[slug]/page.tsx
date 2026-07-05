@@ -137,7 +137,11 @@ export default async function SpaceDetailPage({
           {/* Left column */}
           <div className="min-w-0 space-y-16">
             {/* Gallery: GalleryGrid が 0/1/2+ 件を内包処理。hero は先頭に仮想挿入 */}
-            <GalleryGrid items={space.gallery} hero={space.mainImageUrl} />
+            <GalleryGrid
+              items={space.gallery}
+              hero={space.mainImageUrl}
+              priorityFirstImage
+            />
 
             {/* Quick stats row (Airbnb / Vrbo pattern): gallery 直下 icon + label + value 4-col grid */}
             <section

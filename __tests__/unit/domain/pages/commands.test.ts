@@ -38,6 +38,12 @@ const mockEnsurePageSections = mock<() => Promise<number>>(() =>
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     page: {
@@ -101,7 +107,7 @@ const VALID_SEO_INPUT = {
   metaKeywords: "SEOキーワード",
   ogpTitle: "OGPタイトル",
   ogpDescription: "OGP説明",
-  ogpImageUrl: "https://example.com/ogp.jpg",
+  ogpImageUrl: "https://media.example.com/pages/ogp.jpg",
 };
 
 // =============================================================================
@@ -885,6 +891,18 @@ describe("updatePageSeoCommand", () => {
         updatePageSeoCommand("non-existent", VALID_SEO_INPUT),
       ).rejects.toThrow(DomainError);
 
+      expect(mockPageUpdate).not.toHaveBeenCalled();
+    });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        updatePageSeoCommand(PAGE_SLUG, {
+          ...VALID_SEO_INPUT,
+          ogpImageUrl: "https://external.example.com/page-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
       expect(mockPageUpdate).not.toHaveBeenCalled();
     });
   });

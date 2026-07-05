@@ -20,15 +20,15 @@ export const DEFAULT_PAGE_HERO = {
   ],
   images: [
     {
-      url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
+      url: "/images/seed/space-meeting-a.svg",
       alt: "自然光が差し込む開放的なレンタルスペース",
     },
     {
-      url: "https://images.unsplash.com/photo-1462826303086-329426d1aef5?w=1200&q=80",
+      url: "/images/seed/seminar-room.svg",
       alt: "木の温もりを感じるミーティングルーム",
     },
     {
-      url: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&q=80",
+      url: "/images/seed/space-coworking.svg",
       alt: "モダンなデザインのコワーキングスペース",
     },
   ],

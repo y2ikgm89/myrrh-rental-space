@@ -16,6 +16,12 @@ const mockNewsDelete = mock<() => Promise<Record<string, unknown>>>(() =>
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     news: {
@@ -159,7 +165,7 @@ describe("createNews", () => {
         metaKeywords: "alpha,beta",
         ogpTitle: "作成時 OGP",
         ogpDescription: "作成時 OGP 説明",
-        ogpImageUrl: "https://example.com/ogp.jpg",
+        ogpImageUrl: "https://media.example.com/news/ogp.jpg",
       });
 
       expect(mockNewsCreate).toHaveBeenCalledWith(
@@ -171,7 +177,7 @@ describe("createNews", () => {
             metaKeywords: "alpha,beta",
             ogpTitle: "作成時 OGP",
             ogpDescription: "作成時 OGP 説明",
-            ogpImageUrl: "https://example.com/ogp.jpg",
+            ogpImageUrl: "https://media.example.com/news/ogp.jpg",
           }),
         }),
       );
@@ -217,6 +223,39 @@ describe("createNews", () => {
       await expect(createNews(VALID_CREATE_INPUT)).rejects.toThrow(DomainError);
       expect(mockNewsCreate).not.toHaveBeenCalled();
     });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        createNews({
+          ...VALID_CREATE_INPUT,
+          ogpImageUrl: "https://external.example.com/news-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createNews({
+          ...VALID_CREATE_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "gallery-item",
+                  src: "https://external.example.com/gallery.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -254,6 +293,27 @@ describe("updateNewsBody", () => {
         code: "NOT_FOUND",
         message: "お知らせが見つかりません",
       });
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        updateNewsBody(NEWS_ID, {
+          ...VALID_UPDATE_BODY_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "inline-image",
+                  src: "https://external.example.com/inline.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -381,6 +441,18 @@ describe("updateNewsSettings", () => {
       ).rejects.toMatchObject({
         code: "CONFLICT",
       });
+    });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        updateNewsSettings(NEWS_ID, {
+          ...VALID_UPDATE_SETTINGS_INPUT,
+          ogpImageUrl: "https://external.example.com/news-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
     });
   });
 });

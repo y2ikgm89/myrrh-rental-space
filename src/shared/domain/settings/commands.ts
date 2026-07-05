@@ -12,6 +12,7 @@ import type {
   TaxDisplayMode,
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-image-assertions";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
@@ -144,6 +145,13 @@ function normalizeNullableString(value: string | null): string | null {
 }
 
 export async function updateBasicInfo(data: BasicInfoInput): Promise<void> {
+  assertAllowedManagedImageUrls([
+    { label: "ファビコン画像", url: data.faviconUrl },
+    { label: "デフォルトOGP画像", url: data.defaultOgpImageUrl },
+    { label: "ヘッダーロゴ画像", url: data.headerLogoUrl },
+    { label: "フッターロゴ画像", url: data.footerLogoUrl },
+  ]);
+
   await prisma.settings.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },

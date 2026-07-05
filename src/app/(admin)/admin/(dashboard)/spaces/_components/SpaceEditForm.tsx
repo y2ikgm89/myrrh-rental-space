@@ -276,6 +276,7 @@ export function SpaceEditForm({
   const mainImagePicker = useSingleMediaPicker({
     accept: "image",
     defaultUsage: "SPACE",
+    showUrlTab: false,
     onSelect: (media) => {
       const selected = media[0];
       if (selected) setMainImageUrl(selected.url);
@@ -284,6 +285,7 @@ export function SpaceEditForm({
   const ogpImagePicker = useSingleMediaPicker({
     accept: "image",
     defaultUsage: "SPACE",
+    showUrlTab: false,
     onSelect: (media) => {
       const selected = media[0];
       if (selected) setOgpImageUrl(selected.url);
@@ -1011,6 +1013,7 @@ export function SpaceEditForm({
                   form={form}
                   defaultUsage="SPACE"
                   max={20}
+                  showUrlTab={false}
                   disabled={isPending}
                 />
               </div>
