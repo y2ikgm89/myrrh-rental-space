@@ -27,7 +27,7 @@ env:
   CRON_OIDC_AUDIENCE: https://rental-space.myrrh-jp.com
   WORKLOAD_IDENTITY_PROVIDER: projects/626108938746/locations/global/workloadIdentityPools/github-actions/providers/github-myrrh-rental-space
   PUBLIC_DOMAIN: https://rental-space.myrrh-jp.com
-  ADMIN_DOMAIN: https://myrrh-rental-space-admin-da57q4squa-an.a.run.app
+  ADMIN_DOMAIN: https://admin.myrrh-jp.com
   IAP_JWT_AUDIENCE: /projects/626108938746/locations/asia-northeast1/services/myrrh-rental-space-admin
   ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL: myrrh-super-admins@myrrh-jp.com
   ADMIN_ROLE_GROUP_ADMIN_EMAIL: myrrh-admins@myrrh-jp.com

@@ -21,6 +21,7 @@ import {
   readCloudSchedulerOidcJobErrors,
   readBroadProjectIamDeployGrantErrors,
   readBuildServiceAccountProjectIamRoleErrors,
+  readCloudRunDefaultUrlErrors,
   readCloudRunRevisionHealthErrors,
   readUnhealthyCloudRunRevisionNames,
   readCloudRunContainerCommandErrors,
@@ -626,35 +627,33 @@ describe("GCP production audit model", () => {
     expect(
       readProductionDomainConfigErrors({
         publicDomain: "https://rental-space.myrrh-jp.com",
-        adminDomain: "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app",
+        adminDomain: "https://admin.myrrh-jp.com",
       }),
     ).toEqual([]);
 
     expect(
       readProductionDomainConfigErrors({
         publicDomain: "http://rental-space.myrrh-jp.com/",
-        adminDomain:
-          "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/",
+        adminDomain: "https://admin.myrrh-jp.com/",
       }),
     ).toEqual([
       "PUBLIC_DOMAIN must be an https URL",
       "PUBLIC_DOMAIN must not end with a trailing slash",
       "PUBLIC_DOMAIN must be https://rental-space.myrrh-jp.com",
       "ADMIN_DOMAIN must not end with a trailing slash",
-      "ADMIN_DOMAIN must be https://myrrh-rental-space-admin-da57q4squa-an.a.run.app",
+      "ADMIN_DOMAIN must be https://admin.myrrh-jp.com",
     ]);
 
     expect(
       readProductionDomainConfigErrors({
         publicDomain: "https://rental-space.myrrh-jp.com/admin",
-        adminDomain:
-          "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app?debug=1",
+        adminDomain: "https://admin.myrrh-jp.com?debug=1",
       }),
     ).toEqual([
       "PUBLIC_DOMAIN must be a canonical origin URL without a path, query, or fragment",
       "PUBLIC_DOMAIN must be https://rental-space.myrrh-jp.com",
       "ADMIN_DOMAIN must be a canonical origin URL without a path, query, or fragment",
-      "ADMIN_DOMAIN must be https://myrrh-rental-space-admin-da57q4squa-an.a.run.app",
+      "ADMIN_DOMAIN must be https://admin.myrrh-jp.com",
     ]);
 
     expect(
@@ -664,7 +663,7 @@ describe("GCP production audit model", () => {
       }),
     ).toEqual([
       "PUBLIC_DOMAIN must be https://rental-space.myrrh-jp.com",
-      "ADMIN_DOMAIN must be https://myrrh-rental-space-admin-da57q4squa-an.a.run.app",
+      "ADMIN_DOMAIN must be https://admin.myrrh-jp.com",
     ]);
   });
 
@@ -672,7 +671,7 @@ describe("GCP production audit model", () => {
     expect(
       getProductionHttpAuditTargets({
         publicDomain: "https://rental-space.myrrh-jp.com",
-        adminDomain: "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app",
+        adminDomain: "https://admin.myrrh-jp.com",
       }),
     ).toEqual([
       {
@@ -691,8 +690,14 @@ describe("GCP production audit model", () => {
         expectedStatus: 404,
       },
       {
+        name: "admin root redirects unauthenticated visitors to Google/IAP",
+        url: "https://admin.myrrh-jp.com/",
+        expectedStatus: 302,
+        expectedRedirectHost: "accounts.google.com",
+      },
+      {
         name: "admin /admin redirects unauthenticated visitors to Google/IAP",
-        url: "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin",
+        url: "https://admin.myrrh-jp.com/admin",
         expectedStatus: 302,
         expectedRedirectHost: "accounts.google.com",
       },
@@ -700,10 +705,11 @@ describe("GCP production audit model", () => {
   });
 
   test("validates live production HTTP check responses", () => {
-    const [publicLive, , , adminRedirect] = getProductionHttpAuditTargets({
-      publicDomain: "https://rental-space.myrrh-jp.com",
-      adminDomain: "https://admin.example.run.app",
-    });
+    const [publicLive, , , adminRootRedirect, adminPathRedirect] =
+      getProductionHttpAuditTargets({
+        publicDomain: "https://rental-space.myrrh-jp.com",
+        adminDomain: "https://admin.example.run.app",
+      });
 
     expect(
       readProductionHttpTargetError(publicLive, {
@@ -718,13 +724,19 @@ describe("GCP production audit model", () => {
       }),
     ).toBe("expected status 200, got 503");
     expect(
-      readProductionHttpTargetError(adminRedirect, {
+      readProductionHttpTargetError(adminRootRedirect, {
         status: 302,
         redirectUrl: "https://accounts.google.com/o/oauth2/v2/auth",
       }),
     ).toBeNull();
     expect(
-      readProductionHttpTargetError(adminRedirect, {
+      readProductionHttpTargetError(adminPathRedirect, {
+        status: 302,
+        redirectUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+      }),
+    ).toBeNull();
+    expect(
+      readProductionHttpTargetError(adminPathRedirect, {
         status: 302,
         redirectUrl: "https://example.com/login",
       }),
@@ -840,7 +852,7 @@ describe("GCP production audit model", () => {
     ]);
   });
 
-  test("requires Cloud Run services to use explicit all ingress for direct public and IAP URLs", () => {
+  test("requires Cloud Run services to use public all ingress and admin load-balancer-only ingress", () => {
     expect(
       readCloudRunIngressErrors(
         {
@@ -871,12 +883,29 @@ describe("GCP production audit model", () => {
         },
         {
           serviceName: "myrrh-rental-space-admin",
-          expectedIngress: "all",
+          expectedIngress: "internal-and-cloud-load-balancing",
+        },
+      ),
+    ).toEqual([]);
+
+    expect(
+      readCloudRunIngressErrors(
+        {
+          metadata: {
+            annotations: {
+              "run.googleapis.com/ingress": "all",
+              "run.googleapis.com/ingress-status": "all",
+            },
+          },
+        },
+        {
+          serviceName: "myrrh-rental-space-admin",
+          expectedIngress: "internal-and-cloud-load-balancing",
         },
       ),
     ).toEqual([
-      "myrrh-rental-space-admin ingress must be all, got internal-and-cloud-load-balancing",
-      "myrrh-rental-space-admin ingress-status must be all, got internal-and-cloud-load-balancing",
+      "myrrh-rental-space-admin ingress must be internal-and-cloud-load-balancing, got all",
+      "myrrh-rental-space-admin ingress-status must be internal-and-cloud-load-balancing, got all",
     ]);
 
     expect(
@@ -890,6 +919,40 @@ describe("GCP production audit model", () => {
     ).toEqual([
       "myrrh-rental-space ingress must be all, got missing",
       "myrrh-rental-space ingress-status must be all, got missing",
+    ]);
+  });
+
+  test("requires the admin Cloud Run default run.app URL to be disabled", () => {
+    expect(
+      readCloudRunDefaultUrlErrors(
+        {
+          metadata: {
+            annotations: {
+              "run.googleapis.com/default-url-disabled": "true",
+            },
+          },
+        },
+        {
+          serviceName: "myrrh-rental-space-admin",
+          expectedDisabled: true,
+        },
+      ),
+    ).toEqual([]);
+
+    expect(
+      readCloudRunDefaultUrlErrors(
+        {
+          metadata: {
+            annotations: {},
+          },
+        },
+        {
+          serviceName: "myrrh-rental-space-admin",
+          expectedDisabled: true,
+        },
+      ),
+    ).toEqual([
+      "myrrh-rental-space-admin default run.app URL disabled must be true, got missing",
     ]);
   });
 
@@ -1701,6 +1764,10 @@ describe("GCP production audit model", () => {
     expect(auditScript).toContain("admin Cloud Run runtime env is canonical");
     expect(auditScript).toContain("Cloud Run service ingress is canonical");
     expect(auditScript).toContain("readCloudRunIngressErrors");
+    expect(auditScript).toContain("readCloudRunDefaultUrlErrors");
+    expect(auditScript).toContain(
+      "admin Cloud Run default run.app URL is disabled",
+    );
     expect(auditScript).toContain("Cloud Run service identities are dedicated");
     expect(auditScript).toContain(
       "Cloud Run migrate Job identity is dedicated",

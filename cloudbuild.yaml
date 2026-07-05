@@ -107,7 +107,9 @@ substitutions:
   _NEXT_PUBLIC_GA_MEASUREMENT_ID: ""
   # _BETTER_AUTH_URL は Better Auth の canonical base URL。production
   # workflow / emergency submit 側で必須指定する。
-  # _ADMIN_APP_URL は admin service の URL（run.app URL）。同じく必須指定する。
+  # _ADMIN_APP_URL は admin service の canonical custom origin。admin service は
+  # external HTTPS Load Balancer 経由のみを正規入口とし、direct run.app URL は
+  # 本番契約から除外する。
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -211,6 +213,13 @@ steps:
         case "${_ADMIN_APP_URL}" in
           */)
             echo "_ADMIN_APP_URL must not end with a trailing slash";
+            exit 1;
+            ;;
+        esac
+        case "${_ADMIN_APP_URL}" in
+          https://admin.myrrh-jp.com) ;;
+          *)
+            echo "_ADMIN_APP_URL must be https://admin.myrrh-jp.com";
             exit 1;
             ;;
         esac
@@ -487,7 +496,9 @@ steps:
   # Step 6b: Deploy admin Cloud Run service. Direct IAP and authenticated-only
   # access are enabled once by the production setup runbook and verified by
   # `bun run gcp:audit-production-iap`; recurring deploys update the revision
-  # and runtime config without mutating service IAM/IAP policy.
+  # and runtime config without mutating service IAM/IAP policy. Admin ingress is
+  # intentionally limited to Cloud Load Balancing and the default run.app URL is
+  # disabled, so the canonical admin entrypoint is only https://admin.myrrh-jp.com.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-admin
     waitFor: [migrate-execute]
@@ -499,7 +510,8 @@ steps:
       - --platform=managed
       - --region=${_REGION}
       - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
-      - --ingress=all
+      - --ingress=internal-and-cloud-load-balancing
+      - --no-default-url
       - --service-account=${_SERVICE_ACCOUNT}
       - --memory=${_MEMORY}
       - --cpu=${_CPU}

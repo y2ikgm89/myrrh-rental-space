@@ -1,8 +1,25 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { NextRequest } from "next/server";
-import { proxy } from "@/proxy";
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    APP_SURFACE: "admin",
+    NODE_ENV: "production",
+    R2_PUBLIC_URL: undefined,
+  },
+}));
+
+// eslint-disable-next-line import-x/first -- mock.module must precede imports
+const { proxy } = await import("@/proxy");
 
 describe("proxy admin surface", () => {
+  test("admin surface root は管理トップへ redirect する", async () => {
+    const response = await proxy(new NextRequest("https://example.com/"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://example.com/admin");
+  });
+
   test("/admin/login は管理トップへ redirect する", async () => {
     const response = await proxy(
       new NextRequest("https://example.com/admin/login"),

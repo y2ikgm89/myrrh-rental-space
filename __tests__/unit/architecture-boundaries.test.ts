@@ -5,6 +5,7 @@ import { expectRecord } from "../helpers/type-assertions";
 
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
+const SCRIPTS_ROOT = join(ROOT, "scripts");
 const SHARED_DB_ROOT = join(SRC_ROOT, "shared", "db");
 const ENUMS_GATEWAY_ROOT = join(
   SRC_ROOT,
@@ -20,6 +21,7 @@ const API_WEBHOOK_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "webhooks");
 const PUBLIC_APP_ROOT = join(SRC_ROOT, "app", "(public)");
 const PUBLIC_LAYOUT_FILE = join(PUBLIC_APP_ROOT, "layout.tsx");
 const PACKAGE_JSON_FILE = join(ROOT, "package.json");
+const BUN_LOCK_FILE = join(ROOT, "bun.lock");
 const TYPE_CHECK_SCRIPT_FILE = join(ROOT, "scripts", "type-check.ts");
 const VALIDATE_SCRIPT_FILE = join(ROOT, "scripts", "validate.ts");
 const LINT_FORMAT_SCRIPT_FILE = join(ROOT, "scripts", "lint-format.ts");
@@ -1050,6 +1052,28 @@ describe("architecture boundaries", () => {
     ).toBe(false);
   });
 
+  test("bun.lock の root package metadata は package.json と一致する", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    const bunLockSource = readFileSync(BUN_LOCK_FILE, "utf8");
+    expectRecord(packageJson);
+
+    expect(bunLockSource).toContain(`"name": "${packageJson["name"]}"`);
+    expect(bunLockSource).not.toContain('"name": "myrrh-temp"');
+  });
+
+  test("@lexical/overflow は @lexical/react の推移依存に任せ、直接依存しない", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const dependencies = packageJson["dependencies"];
+    expectRecord(dependencies);
+
+    expect(dependencies["@lexical/overflow"]).toBeUndefined();
+  });
+
   test("type-check は clean checkout 前提で増分 build state に依存しない", () => {
     const packageJson: unknown = JSON.parse(
       readFileSync(PACKAGE_JSON_FILE, "utf8"),
@@ -2036,6 +2060,19 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("src/scripts は explicit any と TypeScript suppression を使わない", () => {
+    const sourceFiles = [
+      ...collectSourceFiles(SRC_ROOT),
+      ...collectSourceFiles(SCRIPTS_ROOT),
+    ];
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\bas\s+any\b|<any>|:\s*any\b|Promise<any>|Record<string,\s*any>|@ts-(?:ignore|expect-error)/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
     // SDK 境界 cast の helper 強制（方針: .claude/rules/type-safety.md）
     // - LocationSchema.parse (googleapis Schema$Location)
@@ -2089,9 +2126,10 @@ describe("architecture boundaries", () => {
     const allowedFiles = [
       join(SRC_ROOT, "shared", "lib", "conform", "typed-input-control.ts"),
     ];
-    const sourceFiles = collectSourceFiles(SRC_ROOT).filter(
-      (file) => !allowedFiles.includes(file),
-    );
+    const sourceFiles = [
+      ...collectSourceFiles(SRC_ROOT),
+      ...collectSourceFiles(SCRIPTS_ROOT),
+    ].filter((file) => !allowedFiles.includes(file));
     const offenders = collectNonCommentOffenders(sourceFiles, /\bas\s+\{/u);
 
     expect(offenders).toEqual([]);
