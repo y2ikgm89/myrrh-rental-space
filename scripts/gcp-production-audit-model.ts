@@ -176,6 +176,7 @@ export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
   { name: "R2_PUBLIC_URL", version: "1" },
   { name: "CLOUDFLARE_ZONE_ID", version: "1" },
   { name: "CLOUDFLARE_API_TOKEN", version: "1" },
+  { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "1" },
   { name: "GOOGLE_CLIENT_ID", version: "1" },
   { name: "GOOGLE_CLIENT_SECRET", version: "1" },
 ] as const satisfies readonly CloudRunSecretEnvRef[];

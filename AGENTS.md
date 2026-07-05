@@ -99,13 +99,14 @@ surface:
 
 ## Runtime Security
 
-- Production runtime validation must require `TURNSTILE_SECRET_KEY`,
-  `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `CLOUDFLARE_ORIGIN_HEADER_SECRET`, and the
-  existing auth/encryption/database secrets.
+- Turnstile secret keys are managed from the admin settings page and stored
+  encrypted in the database. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` remains a
+  deploy-time public value. `CLOUDFLARE_ORIGIN_HEADER_SECRET` and the existing
+  auth/encryption/database secrets are Secret Manager runtime bindings.
 - E2E bypass variables (`E2E_RUNTIME`, `ADMIN_TEST_IAP_EMAIL`, and
   `NEXT_PUBLIC_ENABLE_E2E_LOGIN`) are allowed only for localhost
   production-mode Playwright runtime. Do not make `CI=true` a bypass.
-- Cloud Run deploys must bind production secrets through Secret Manager
+- Cloud Run deploys must bind Secret Manager-backed production secrets through
   versions in `cloudbuild.yaml`; do not bake secret values into build args,
   docs, logs, or workflow output.
 

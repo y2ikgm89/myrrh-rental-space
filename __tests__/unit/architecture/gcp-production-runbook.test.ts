@@ -199,6 +199,11 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("`gcloud secrets versions describe`");
     expect(runbook).toContain("`gcloud secrets get-iam-policy`");
     expect(runbook).toContain("`state=ENABLED`");
+    expect(runbook).toContain(
+      "Turnstile's secret key is managed from the admin settings page",
+    );
+    expect(runbook).toContain("CLOUDFLARE_ORIGIN_HEADER_SECRET");
+    expect(runbook).toContain("x-cloudflare-origin-secret");
     expect(runbook).toMatch(/default Cloud Build\s+service account/);
   });
 

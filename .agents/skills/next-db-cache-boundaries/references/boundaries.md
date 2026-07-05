@@ -17,8 +17,10 @@
   signing keys server-only.
 - Direct `process.env` reads belong in config/build/test harnesses or
   `src/shared/lib/env/*`; app logic should use `serverEnv`/`clientEnv`.
-- Production runtime validation must require Turnstile site/secret keys and
-  `CLOUDFLARE_ORIGIN_HEADER_SECRET`.
+- Turnstile secret keys are managed from the admin settings page and stored
+  encrypted in the database. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is deploy-time
+  public config. `CLOUDFLARE_ORIGIN_HEADER_SECRET` is Secret Manager-backed
+  runtime config.
 - `E2E_RUNTIME`, `ADMIN_TEST_IAP_EMAIL`, and
   `NEXT_PUBLIC_ENABLE_E2E_LOGIN` are localhost-only Playwright runtime
   exceptions. Do not use `CI=true` alone as an auth bypass.
