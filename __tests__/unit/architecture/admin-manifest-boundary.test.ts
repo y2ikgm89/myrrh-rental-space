@@ -70,7 +70,7 @@ describe("PWA manifest boundary", () => {
   });
 
   test("CSP は manifest-src を明示して same-origin manifest だけを許可する", async () => {
-    const response = await proxy(new NextRequest("https://example.com/"));
+    const response = await proxy(new NextRequest("https://example.com/spaces"));
     const csp = response.headers.get("Content-Security-Policy");
 
     expect(csp).toContain("manifest-src 'self'");

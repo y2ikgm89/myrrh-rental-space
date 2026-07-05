@@ -245,6 +245,10 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     return new NextResponse(null, { status: 404 });
   }
 
+  if (serverEnv.APP_SURFACE === "admin" && pathname === "/") {
+    return NextResponse.redirect(new URL("/admin", req.url));
+  }
+
   if (pathname.startsWith("/api")) {
     // Cloud Run の liveness probe は x-forwarded-for を設定しないため、
     // getClientIp() が "unknown" を返し全 probe が同一 bucket に合算される。

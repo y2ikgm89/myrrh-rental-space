@@ -292,7 +292,6 @@ describe("production deploy workflow", () => {
     for (const step of [deployPublicStep, deployAdminStep]) {
       expect(step).toContain("--set-env-vars=");
       expect(step).toContain("--set-secrets=");
-      expect(step).toContain("--ingress=all");
       expect(step).not.toContain("--remove-env-vars=");
       expect(step).not.toContain("--update-env-vars=");
       expect(step).not.toContain("--remove-secrets=");
@@ -300,6 +299,12 @@ describe("production deploy workflow", () => {
       expect(step).not.toContain("CRON_SECRET=CRON_SECRET");
       expect(step).not.toContain("ADMIN_LOGIN_TOKEN=ADMIN_LOGIN_TOKEN");
     }
+    expect(deployPublicStep).toContain("--ingress=all");
+    expect(deployPublicStep).not.toContain("--no-default-url");
+    expect(deployAdminStep).toContain(
+      "--ingress=internal-and-cloud-load-balancing",
+    );
+    expect(deployAdminStep).toContain("--no-default-url");
   });
 
   test("reapplies the Cloud Run migrate Job service account during deploys", () => {

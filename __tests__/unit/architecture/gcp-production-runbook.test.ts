@@ -23,7 +23,7 @@ describe("GCP production setup runbook", () => {
       'export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"',
     );
     expect(runbook).toContain(
-      'export ADMIN_DOMAIN="https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"',
+      'export ADMIN_DOMAIN="https://admin.myrrh-jp.com"',
     );
     expect(runbook).toContain(
       'export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"',
@@ -94,7 +94,7 @@ describe("GCP production setup runbook", () => {
       '$env:PUBLIC_DOMAIN = "https://rental-space.myrrh-jp.com"',
     );
     expect(adminAccessRunbook).toContain(
-      '$env:ADMIN_DOMAIN = "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"',
+      '$env:ADMIN_DOMAIN = "https://admin.myrrh-jp.com"',
     );
     expect(runbook).toContain('PUBLIC_DOMAIN="$PUBLIC_DOMAIN"');
     expect(runbook).toContain('ADMIN_DOMAIN="$ADMIN_DOMAIN"');
@@ -104,6 +104,9 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("The production audit rejects any other host");
     expect(runbook).toContain("lookalike domains");
     expect(runbook).toContain("private IP literals");
+    expect(runbook).toContain(
+      "admin root redirects unauthenticated visitors to Google/IAP",
+    );
     expect(runbook).toContain(
       "admin /admin redirects unauthenticated visitors to Google/IAP",
     );
@@ -163,6 +166,11 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("admin Cloud Run runtime env is canonical");
     expect(runbook).toContain("Cloud Run service ingress is canonical");
     expect(runbook).toContain("`--ingress=all`");
+    expect(runbook).toContain("`--ingress=internal-and-cloud-load-balancing`");
+    expect(runbook).toContain("`--no-default-url`");
+    expect(runbook).toContain(
+      "admin Cloud Run default run.app URL is disabled",
+    );
     expect(runbook).toContain("Cloud Run service identities are dedicated");
     expect(runbook).toContain("Cloud Run migrate Job identity is dedicated");
     expect(runbook).toContain("Cloud Run migrate Job env is canonical");

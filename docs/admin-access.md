@@ -4,12 +4,17 @@ This is the day-to-day operating runbook for Myrrh Rental Space admin access.
 The build and GCP setup details live in `docs/gcp-production-setup.md`; this
 file is only for adding, removing, and verifying people.
 
-Last verified: 2026-07-02.
+Last target update: 2026-07-05.
+Last live verification: 2026-07-02, before the admin custom-domain cutover.
 
 Official references checked for this runbook:
 
 - Cloud Run direct IAP:
   <https://cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run>
+- Cloud Run ingress:
+  <https://cloud.google.com/run/docs/securing/ingress>
+- Cloud Run custom domains:
+  <https://cloud.google.com/run/docs/mapping-custom-domains>
 - IAP access management:
   <https://cloud.google.com/iap/docs/managing-access>
 - IAP signed headers:
@@ -35,7 +40,7 @@ The public site and the admin site are intentionally separate:
 
 - Public site: <https://rental-space.myrrh-jp.com/>
 - Public `/admin`: must return 404.
-- Admin site: <https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin>
+- Admin site: <https://admin.myrrh-jp.com/>
 - Admin `/admin`: must redirect unauthenticated visitors to Google/IAP.
 
 There is no public admin registration page, no app password login, and no
@@ -114,13 +119,14 @@ Use PowerShell from this repository:
 
 ```powershell
 curl.exe -I "https://rental-space.myrrh-jp.com/admin"
-curl.exe -I "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin"
+curl.exe -I "https://admin.myrrh-jp.com/"
+curl.exe -I "https://admin.myrrh-jp.com/admin"
 ```
 
 Expected result:
 
 - public `/admin` returns 404;
-- admin `/admin` returns a redirect to Google/IAP when unauthenticated.
+- admin `/` and `/admin` return a redirect to Google/IAP when unauthenticated.
 
 If the admin page shows "Google IAP authenticated" but "no admin role", IAP
 has already allowed the Google account. Check Cloud Identity next:
@@ -144,7 +150,7 @@ $env:ADMIN_SERVICE_NAME = "myrrh-rental-space-admin"
 $env:MIGRATE_JOB_NAME = "prisma-migrate"
 $env:AR_REPOSITORY = "myrrh-rental-space"
 $env:PUBLIC_DOMAIN = "https://rental-space.myrrh-jp.com"
-$env:ADMIN_DOMAIN = "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"
+$env:ADMIN_DOMAIN = "https://admin.myrrh-jp.com"
 $env:ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL = "myrrh-super-admins@myrrh-jp.com"
 $env:ADMIN_ROLE_GROUP_ADMIN_EMAIL = "myrrh-admins@myrrh-jp.com"
 $env:ADMIN_ROLE_GROUP_EDITOR_EMAIL = "myrrh-editors@myrrh-jp.com"

@@ -22,6 +22,7 @@ import {
   REQUIRED_CLOUD_RUN_SECRET_ENV_REFS,
   readBroadProjectIamDeployGrantErrors,
   readBuildServiceAccountProjectIamRoleErrors,
+  readCloudRunDefaultUrlErrors,
   readCloudRunContainerCommandErrors,
   readCloudRunIngressErrors,
   readCloudRunJobExecutionConfigErrors,
@@ -111,7 +112,7 @@ function requireEnv(name: string): string {
 
 function formatGcloudError(args: string[], error: unknown): string {
   if (error instanceof Error && "stderr" in error) {
-    const stderr = String((error as { stderr?: unknown }).stderr ?? "");
+    const stderr = String(error.stderr ?? "");
     return `${gcloudBin} ${args.join(" ")} failed${stderr ? `: ${stderr.trim()}` : ""}`;
   }
   return `${gcloudBin} ${args.join(" ")} failed: ${String(error)}`;
@@ -648,13 +649,25 @@ async function main(): Promise<void> {
     }),
     ...readCloudRunIngressErrors(adminServiceDescription, {
       serviceName: adminService,
-      expectedIngress: "all",
+      expectedIngress: "internal-and-cloud-load-balancing",
     }),
   ];
   addCheck(
     "Cloud Run service ingress is canonical",
     serviceIngressErrors.length === 0,
     `errors=${serviceIngressErrors.join(",") || "none"}`,
+  );
+  const adminDefaultUrlErrors = readCloudRunDefaultUrlErrors(
+    adminServiceDescription,
+    {
+      serviceName: adminService,
+      expectedDisabled: true,
+    },
+  );
+  addCheck(
+    "admin Cloud Run default run.app URL is disabled",
+    adminDefaultUrlErrors.length === 0,
+    `errors=${adminDefaultUrlErrors.join(",") || "none"}`,
   );
   const publicRuntimeEnvErrors = readCloudRunRuntimeEnvErrors(
     publicServiceDescription,
