@@ -15,9 +15,24 @@ const mockPrismaClient = {
     ),
   },
 };
+const mockServerEnv: Record<string, string | undefined> = {
+  NODE_ENV: "test",
+  TURNSTILE_SECRET_KEY: undefined,
+};
+const mockClientEnv: Record<string, string | undefined> = {
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: undefined,
+};
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: mockPrismaClient,
+}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: mockServerEnv,
+}));
+
+mock.module("@/shared/lib/env/client", () => ({
+  clientEnv: mockClientEnv,
 }));
 
 mock.module("@/shared/lib/crypto", () => ({
@@ -67,6 +82,9 @@ const mockFetch = Object.assign(mock(fetchImpl), {
 beforeEach(() => {
   globalThis.fetch = mockFetch;
   mockPrismaClient.settings.findUnique.mockClear();
+  mockServerEnv["NODE_ENV"] = "test";
+  mockServerEnv["TURNSTILE_SECRET_KEY"] = undefined;
+  mockClientEnv["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] = undefined;
 });
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -117,6 +135,30 @@ describe("turnstile", () => {
         success: false,
         errorCodes: ["missing-input-response"],
       });
+    });
+
+    test("DB secret が未設定でも env TURNSTILE_SECRET_KEY で siteverify を実行する", async () => {
+      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+        turnstileSecretKey: null,
+      });
+      mockServerEnv["TURNSTILE_SECRET_KEY"] = "env-secret-key";
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ success: true, action: TURNSTILE_ACTIONS.inquiry }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+
+      const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
+      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+
+      expect(result.success).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        expect.objectContaining({
+          body: expect.stringContaining("env-secret-key"),
+        }),
+      );
     });
 
     test("検証成功時は success: true + action/hostname を返す", async () => {
@@ -304,6 +346,22 @@ describe("turnstile", () => {
       mockGetTurnstileConfig.mockResolvedValueOnce({
         siteKey: "site-key",
         secretKeyMasked: "***",
+        lastTestedAt: null,
+        connectionStatus: null,
+      });
+
+      const { isTurnstileEnabled } = await import("@/shared/lib/turnstile");
+      const result = await isTurnstileEnabled();
+
+      expect(result).toBe(true);
+    });
+
+    test("env site key と env secret key が設定されている場合はtrueを返す", async () => {
+      mockClientEnv["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] = "site-key";
+      mockServerEnv["TURNSTILE_SECRET_KEY"] = "secret-key";
+      mockGetTurnstileConfig.mockResolvedValueOnce({
+        siteKey: null,
+        secretKeyMasked: null,
         lastTestedAt: null,
         connectionStatus: null,
       });

@@ -10,6 +10,7 @@ import {
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { validateStatusTransition } from "./status";
 import { CUSTOMER_SELECT, buildPayload } from "./payloads";
+import { lockReservationSpaceForTransaction } from "./locks";
 
 const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
   TERMINAL_RESERVATION_STATUSES,
@@ -129,38 +130,45 @@ export async function restoreReservationStatusCommand(
     );
   }
 
-  if (targetStatus === ReservationStatus.CONFIRMED) {
-    const overlap = await checkReservationOverlap({
-      spaceId: reservation.spaceId,
-      startTime: reservation.startTime,
-      endTime: reservation.endTime,
-      excludeReservationId: id,
-    });
-    if (overlap.hasOverlap) {
-      throw new DomainError(
-        "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
-        "VALIDATION",
-      );
-    }
-  }
-
   const previousStatus = reservation.status;
   const wasCancelled = previousStatus === ReservationStatus.CANCELLED;
 
-  const updated = await prisma.reservation.update({
-    where: { id, deletedAt: null },
-    data: {
-      status: targetStatus,
-      icsSequence: { increment: 1 },
-      ...(wasCancelled
-        ? {
-            cancelledAt: null,
-            cancelledByType: null,
-            cancellationReason: null,
-          }
-        : {}),
-    },
-    select: { icsSequence: true },
+  const updated = await prisma.$transaction(async (tx) => {
+    if (targetStatus === ReservationStatus.CONFIRMED) {
+      await lockReservationSpaceForTransaction(tx, reservation.spaceId);
+
+      const overlap = await checkReservationOverlap(
+        {
+          spaceId: reservation.spaceId,
+          startTime: reservation.startTime,
+          endTime: reservation.endTime,
+          excludeReservationId: id,
+        },
+        tx,
+      );
+      if (overlap.hasOverlap) {
+        throw new DomainError(
+          "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
+          "VALIDATION",
+        );
+      }
+    }
+
+    return tx.reservation.update({
+      where: { id, deletedAt: null },
+      data: {
+        status: targetStatus,
+        icsSequence: { increment: 1 },
+        ...(wasCancelled
+          ? {
+              cancelledAt: null,
+              cancelledByType: null,
+              cancellationReason: null,
+            }
+          : {}),
+      },
+      select: { icsSequence: true },
+    });
   });
 
   return {

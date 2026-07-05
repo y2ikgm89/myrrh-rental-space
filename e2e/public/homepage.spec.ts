@@ -2,6 +2,12 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 import { urls } from "../fixtures";
 
 const NAVIGATION_TIMEOUT_MS = 45_000;
+const appSurface = process.env["APP_SURFACE"] ?? "admin";
+
+test.skip(
+  appSurface !== "public",
+  "Public homepage root is served only on public surface.",
+);
 
 /**
  * 公開サイト - ホームページ E2E

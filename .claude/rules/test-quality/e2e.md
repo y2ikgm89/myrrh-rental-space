@@ -10,4 +10,5 @@ Compatibility layer for Claude-oriented references. Canonical Codex guidance is
 - Use setup projects and storage state for authenticated flows.
 - Keep visual tests under `e2e/visual` and update snapshots only when the visual
   change is intended.
+- Install Playwright clock before `page.goto` when freezing browser time.
 - Run focused Playwright projects before broad E2E.

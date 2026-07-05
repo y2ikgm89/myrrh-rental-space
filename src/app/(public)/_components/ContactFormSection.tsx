@@ -34,6 +34,7 @@ import { spansToPlainText } from "@/shared/lib/portable-text";
 interface ContactFormSectionProps {
   readonly config: ContactFormConfig;
   readonly style: SectionStylePayload;
+  readonly sectionId: string;
   readonly turnstileSiteKey: string | null;
   readonly requiredTerms: readonly RequiredInquiryTerm[];
   /**
@@ -47,6 +48,7 @@ interface ContactFormSectionProps {
 export function ContactFormSection({
   config,
   style,
+  sectionId,
   turnstileSiteKey,
   requiredTerms,
   inquiryDefaults,
@@ -61,6 +63,7 @@ export function ContactFormSection({
     <ScrollReveal delay={variant === "split" ? 0.3 : 0.2}>
       <PublicInquiryFormCard
         mode="live"
+        formId={`public-inquiry-form-${sectionId}`}
         turnstileSiteKey={turnstileSiteKey}
         requiredTerms={requiredTerms}
         {...(inquiryDefaults !== undefined && { defaults: inquiryDefaults })}

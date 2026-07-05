@@ -16,6 +16,7 @@ import {
 } from "@/shared/domain/admin-auth/queries";
 import { resolveIapIdentity } from "@/shared/lib/iap/admin-iap-auth";
 import { isAdminOrHigherRole, isDashboardRole } from "./admin-roles";
+import { isLocalProductionE2ERuntime } from "./e2e-runtime";
 import { serverEnv } from "./env/server";
 import { isRecord } from "./serialize";
 
@@ -45,9 +46,7 @@ async function resolveRequestHeaders(
 
 function getTestIapEmail(): string | null {
   const isProductionRuntime = serverEnv.NODE_ENV === "production";
-  const isCiRuntime = serverEnv.CI === "true";
-  const isE2ERuntime = serverEnv.E2E_RUNTIME === "1";
-  if (isProductionRuntime && !isCiRuntime && !isE2ERuntime) return null;
+  if (isProductionRuntime && !isLocalProductionE2ERuntime()) return null;
   return serverEnv.ADMIN_TEST_IAP_EMAIL ?? null;
 }
 

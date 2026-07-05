@@ -9,6 +9,8 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { getTurnstileConfig } from "@/shared/domain/settings/api-key-queries";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import { clientEnv } from "@/shared/lib/env/client";
+import { serverEnv } from "@/shared/lib/env/server";
 
 /**
  * Turnstile Site Key を取得（null = 未設定 → ウィジェット非表示）
@@ -23,6 +25,9 @@ export async function getTurnstileSiteKey(): Promise<string | null> {
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
 
   const config = await getTurnstileConfig();
-  // siteKey と secretKey の両方が設定済みの場合のみ有効
-  return config.siteKey && config.secretKeyMasked ? config.siteKey : null;
+  const siteKey = config.siteKey ?? clientEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const hasSecret = Boolean(
+    config.secretKeyMasked || serverEnv.TURNSTILE_SECRET_KEY,
+  );
+  return siteKey && hasSecret ? siteKey : null;
 }

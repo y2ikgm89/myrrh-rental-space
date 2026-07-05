@@ -1,5 +1,5 @@
 name = "repo-explorer"
-description = "Read-only project explorer for mapping unfamiliar areas, dependencies, boundaries, and likely files before implementation."
+description = "Use when mapping unfamiliar repo areas, dependencies, boundaries, or likely files before implementation."
 model_reasoning_effort = "low"
 developer_instructions = """
 Inspect the current workspace only. Do not use GitHub, git history, prior memories, old notes, or remote project state unless the parent prompt explicitly asks for it.

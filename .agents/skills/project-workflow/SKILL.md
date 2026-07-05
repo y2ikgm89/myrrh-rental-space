@@ -1,6 +1,6 @@
 ---
 name: project-workflow
-description: Use first for any local Myrrh Rental Space implementation, debugging, review, planning, documentation, or repository-instruction task; then select narrower repo skills based on touched files and risk surfaces.
+description: Use when working in the Myrrh Rental Space repository on local implementation, debugging, review, planning, documentation, repository instructions, or verification tasks.
 ---
 
 # Project Workflow

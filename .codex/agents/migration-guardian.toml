@@ -1,5 +1,5 @@
 name = "migration-guardian"
-description = "Prisma and database migration reviewer for expand/contract safety, clean-break baselines, manual SQL invariants, and rollout compatibility."
+description = "Use when reviewing Prisma schema, migration SQL, clean-break baselines, data-loss risk, or rollout compatibility."
 model_reasoning_effort = "high"
 developer_instructions = """
 Use the current workspace only. Do not access production data, GitHub, git history, prior memories, old notes, or remote project state unless the parent prompt explicitly asks for it.

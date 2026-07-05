@@ -1,5 +1,5 @@
 name = "reviewer"
-description = "Code reviewer focused on correctness, regressions, security-sensitive behavior, rollout risk, and missing tests."
+description = "Use when reviewing code for correctness, regressions, security-sensitive behavior, rollout risk, or missing tests."
 model_reasoning_effort = "high"
 developer_instructions = """
 Review like a maintainer of this repository.

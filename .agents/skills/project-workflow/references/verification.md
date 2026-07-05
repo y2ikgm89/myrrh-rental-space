@@ -14,7 +14,8 @@
 ## Selection
 
 - Docs, instructions, rules, or agent files: run format/syntax checks when
-  available; otherwise use targeted `rg` consistency checks.
+  available; otherwise use targeted `rg` consistency checks. For Codex
+  customization changes, use the official Codex manual/OpenAI docs path first.
 - Type-only or route-type change: run `bun run type-check`.
 - Shared helper or validation schema: run the specific unit test, then
   `bun run type-check`.
@@ -24,6 +25,8 @@
   `bun run type-check`.
 - Route handler, webhook, cron, proxy, auth, env, cache, or security change:
   run focused tests plus `bun run validate` when practical.
+- Production env or deploy-secret changes: run focused env/deploy architecture
+  tests plus `bun run validate`.
 - UI-only change: run focused component/unit tests; use Playwright only when
   behavior depends on browser interaction or layout.
 - Admin UI change: also run the admin design-token and submit-button

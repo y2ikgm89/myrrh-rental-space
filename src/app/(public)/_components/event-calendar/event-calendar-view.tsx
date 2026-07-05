@@ -172,6 +172,7 @@ function DayEventList({
 
 interface EventCalendarViewProps {
   readonly events: readonly EventCardData[];
+  readonly initialNowIso?: string;
 }
 
 function eventHasSlotOnJSTDay(
@@ -185,7 +186,10 @@ function eventHasSlotOnJSTDay(
   );
 }
 
-export function EventCalendarView({ events }: EventCalendarViewProps) {
+export function EventCalendarView({
+  events,
+  initialNowIso,
+}: EventCalendarViewProps) {
   const {
     today,
     year: currentYear,
@@ -195,7 +199,7 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
     next,
     goToday,
     jump,
-  } = useCalendarMonth();
+  } = useCalendarMonth(initialNowIso);
 
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 

@@ -473,6 +473,7 @@ export async function SectionRenderer({
         <ContactFormSection
           config={config}
           style={resolved}
+          sectionId={section.id}
           turnstileSiteKey={turnstileSiteKey}
           requiredTerms={requiredTerms}
           {...(inquiryDefaults !== undefined && { inquiryDefaults })}

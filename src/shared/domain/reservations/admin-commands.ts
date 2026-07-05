@@ -20,6 +20,7 @@ import {
   calculatePricing,
   buildPayload,
 } from "./payloads";
+import { lockReservationSpaceForTransaction } from "./locks";
 
 const SPACE_SELECT = {
   id: true,
@@ -114,6 +115,8 @@ export async function createAdminReservationCommand(input: {
   const calculatedPrice = input.totalPrice ?? pricing.totalPrice;
 
   const reservation = await prisma.$transaction(async (tx) => {
+    await lockReservationSpaceForTransaction(tx, input.spaceId);
+
     await ensureNoOverlap(
       {
         spaceId: input.spaceId,
@@ -272,6 +275,8 @@ export async function updateAdminReservationCommand(
   let updatedIcsSequence = 0;
 
   await prisma.$transaction(async (tx) => {
+    await lockReservationSpaceForTransaction(tx, input.spaceId);
+
     await ensureNoOverlap(
       {
         spaceId: input.spaceId,

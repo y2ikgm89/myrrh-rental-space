@@ -3,7 +3,12 @@
 ## Runtime Rules
 
 - Server-only DB modules must import `"server-only"`.
-- `src/proxy.ts` stays DB-free and performs only edge-safe work.
+- `src/proxy.ts` stays DB-free and performs only request-bound proxy work:
+  security headers, CSP nonce propagation, gating, token transfer, rate limits,
+  redirects, rewrites, and response/header mutation.
+- Do not import domain/db modules, Cache Components data producers, or
+  revalidation helpers from `src/proxy.ts`. Move data reads and cache
+  invalidation to app/domain modules, Server Functions, or Route Handlers.
 - Admin and public route handlers should validate inputs with existing Zod
   schemas or a new schema in `src/shared/lib/validations`.
 - Do not return legacy `{ success: boolean }` route payloads where architecture
@@ -12,6 +17,13 @@
   signing keys server-only.
 - Direct `process.env` reads belong in config/build/test harnesses or
   `src/shared/lib/env/*`; app logic should use `serverEnv`/`clientEnv`.
+- Production runtime validation must require Turnstile site/secret keys and
+  `CLOUDFLARE_ORIGIN_HEADER_SECRET`.
+- `E2E_RUNTIME`, `ADMIN_TEST_IAP_EMAIL`, and
+  `NEXT_PUBLIC_ENABLE_E2E_LOGIN` are localhost-only Playwright runtime
+  exceptions. Do not use `CI=true` alone as an auth bypass.
+- Turnstile-protected public/customer mutations must call server-side
+  Siteverify and fail closed in production when config is missing.
 
 ## Cache Rules
 
@@ -20,7 +32,7 @@
   `cacheLife`, and `cacheTag`.
 - Do not add route segment config exports to work around caching. Use
   `connection()` for runtime-only route evaluation and `"use cache"` only in
-  producers that are safe to share.
+  app/domain producers that are safe to share.
 - Use `cacheLife` and `cacheTag` in cached data producers.
 - Use `revalidateTag`, `updateTag`, or cache helpers with tags from
   `CACHE_TAGS`, `CDN_CACHE_TAGS`, `getCacheTag`, and `joinCacheTags`.
@@ -41,6 +53,9 @@
 - Keep generated Prisma client imports out of app layers.
 - App-safe enum imports should use
   `@/shared/lib/validations/enums/prisma-types`.
+- Reservation create/update/re-confirm paths must call
+  `lockReservationSpaceForTransaction` in the same interactive transaction as
+  `checkReservationOverlap` and the write.
 - After `prisma/schema.prisma` changes, run `bun run db:generate`.
 - Do not edit existing migration SQL. Create or regenerate migrations.
 - Preserve CHECK constraints, triggers, comments, partial indexes, and seed data
@@ -73,3 +88,5 @@ Required proof before sharing:
 - Prisma schema: `bun run db:generate` plus relevant domain tests.
 - Webhook/cron/proxy: focused route tests plus `bun run validate` when
   practical.
+- Env/deploy secrets: `bun test __tests__/unit/lib/env/server-production-env.test.ts`
+  and `bun test __tests__/unit/architecture/deploy-production-workflow.test.ts`.

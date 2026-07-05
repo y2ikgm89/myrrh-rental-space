@@ -8,6 +8,7 @@ import { Stack } from "@/public/components/design-system/stack";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
+import { isCustomerE2ELoginEnabled } from "@/shared/lib/e2e-runtime";
 import { LoginHero } from "./_components/login-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
 import { DevLoginButton } from "./_components/dev-login-button";
@@ -70,9 +71,7 @@ export default async function LoginPage({
             turnstileSiteKey={turnstileSiteKey}
           />
           {(process.env["NODE_ENV"] !== "production" ||
-            process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1") && (
-            <DevLoginButton />
-          )}
+            isCustomerE2ELoginEnabled()) && <DevLoginButton />}
         </Stack>
       </Container>
     </>

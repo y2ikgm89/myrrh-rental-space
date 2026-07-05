@@ -23,11 +23,14 @@
 ## High-Risk Surfaces
 
 - `src/proxy.ts`: CSP, security headers, public/admin surface gating, cron auth,
-  token transfer, and rate limits. Keep it DB-free.
+  token transfer, and rate limits. Keep it DB-free and out of Cache Components
+  data production or revalidation paths.
 - `next.config.ts`: public blanket cache policy, private `no-store` blocklist,
   CDN `Cache-Tag` policy, image remote patterns, standalone deploy toggle.
 - `src/shared/lib/env/*`: server/client env schemas and production fail-fast
   validation.
+- `src/shared/lib/e2e-runtime.ts`: localhost-only production-mode E2E bypass
+  gate for customer dev login and admin test IAP identity.
 - `src/shared/db/prisma.ts`: Prisma 7 adapter-pg singleton, pool/timeouts, and
   Decimal conversion.
 - `src/app/api/webhooks/*`: external signatures and idempotent side effects.
@@ -37,6 +40,9 @@
 - `prisma/schema.prisma` and `prisma/migrations`: rollout and data-loss risk.
 - R2/media/external URL helpers: upload validation, delete behavior, magic
   bytes, and SSRF-safe fetches.
+- Reservation availability writes: use the advisory-lock helper in
+  `src/shared/domain/reservations/locks.ts` inside the same transaction as
+  overlap checks and writes.
 
 ## Dependency Boundaries
 

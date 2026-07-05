@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { customerAuth } from "@/shared/lib/customer-auth";
+import { isCustomerE2ELoginEnabled } from "@/shared/lib/e2e-runtime";
 import { DEV_CUSTOMER_CREDENTIALS } from "./dev-login-credentials";
 
 /**
@@ -20,7 +21,7 @@ export async function devCustomerLoginAction(): Promise<{
 } | void> {
   if (
     process.env["NODE_ENV"] === "production" &&
-    process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] !== "1"
+    !isCustomerE2ELoginEnabled()
   ) {
     return { error: "本番環境では利用できません" };
   }
