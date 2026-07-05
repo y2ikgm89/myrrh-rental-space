@@ -5,7 +5,7 @@ The build and GCP setup details live in `docs/gcp-production-setup.md`; this
 file is only for adding, removing, and verifying people.
 
 Last target update: 2026-07-05.
-Last live verification: 2026-07-02, before the admin custom-domain cutover.
+Last live verification: 2026-07-05, after the admin custom-domain cutover.
 
 Official references checked for this runbook:
 

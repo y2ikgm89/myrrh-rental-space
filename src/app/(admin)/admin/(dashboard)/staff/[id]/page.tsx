@@ -14,7 +14,6 @@ import {
   CardDescription,
 } from "@/admin/components/ui/card";
 import { Button } from "@/admin/components/ui/button";
-import { Badge } from "@/admin/components/ui/badge";
 import { RoleBadge } from "@/admin/components/status-badges";
 import { formatDate } from "@/shared/lib/date-format";
 import type { Metadata } from "next";
@@ -63,14 +62,6 @@ export default async function StaffDetailPage({ params }: Props) {
             <DetailField
               label="ロール"
               value={<RoleBadge role={user.role} />}
-            />
-            <DetailField
-              label="認証方式"
-              value={<Badge variant="default">Google IAP</Badge>}
-            />
-            <DetailField
-              label="ロール管理"
-              value="Google Admin のロール別グループ所属から自動同期されます"
             />
           </div>
         </DetailSection>
