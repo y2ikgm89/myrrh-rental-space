@@ -3,6 +3,10 @@ import { PostStatus } from "@generated/prisma/enums";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  assertAllowedManagedImageSourcesInJson,
+  assertAllowedManagedImageUrls,
+} from "@/shared/domain/media/managed-image-assertions";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
@@ -108,6 +112,12 @@ async function ensurePostTagsExist(tagIds: string[]): Promise<void> {
 export async function createPost(
   input: CreatePostCommandInput,
 ): Promise<CreatePostResult> {
+  assertAllowedManagedImageUrls([
+    { label: "サムネイル画像", url: input.thumbnailUrl },
+    { label: "OGP画像", url: input.ogpImageUrl },
+  ]);
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
+
   await Promise.all([
     ensurePostSlugAvailable(input.slug),
     ensurePostCategoryExists(input.categoryId),
@@ -155,6 +165,7 @@ export async function updatePostBody(
   id: string,
   input: UpdatePostBodyCommandInput,
 ): Promise<UpdatePostResult> {
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
   const existingPost = await ensurePostExists(id);
 
   await prisma.post.update({
@@ -181,6 +192,11 @@ export async function updatePostSettings(
   id: string,
   input: UpdatePostSettingsCommandInput,
 ): Promise<UpdatePostResult> {
+  assertAllowedManagedImageUrls([
+    { label: "サムネイル画像", url: input.thumbnailUrl },
+    { label: "OGP画像", url: input.ogpImageUrl },
+  ]);
+
   const existingPost = await ensurePostExists(id);
 
   await Promise.all([

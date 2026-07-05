@@ -119,7 +119,7 @@ function buildCsp(
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
+    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
     connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
     manifest-src 'self';

@@ -51,7 +51,6 @@ export function AudioPlugin({ isOpen, onClose }: DialogPluginProps) {
       onSelect={handleSelect}
       selectionMode="single"
       defaultUsage="GENERAL"
-      showUrlTab
       accept="audio"
     />
   );

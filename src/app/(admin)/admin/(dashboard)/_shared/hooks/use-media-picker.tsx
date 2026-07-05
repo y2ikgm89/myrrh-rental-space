@@ -86,7 +86,7 @@ export function useMediaPicker(
     selectionMode = "single",
     maxSelections = 10,
     defaultUsage = "GENERAL",
-    showUrlTab = true,
+    showUrlTab = false,
     accept,
     onSelect,
   } = options;

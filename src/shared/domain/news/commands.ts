@@ -3,6 +3,10 @@ import "server-only";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  assertAllowedManagedImageSourcesInJson,
+  assertAllowedManagedImageUrl,
+} from "@/shared/domain/media/managed-image-assertions";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
@@ -79,6 +83,8 @@ async function ensureNewsSlugAvailable(
 export async function createNews(
   input: CreateNewsCommandInput,
 ): Promise<CreateNewsResult> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
   await ensureNewsSlugAvailable(input.slug);
 
   const news = await prisma.news.create({
@@ -112,6 +118,7 @@ export async function updateNewsBody(
   id: string,
   input: UpdateNewsBodyCommandInput,
 ): Promise<UpdateNewsResult> {
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
   const existingNews = await ensureNewsExists(id);
 
   await prisma.news.update({
@@ -135,6 +142,7 @@ export async function updateNewsSettings(
   id: string,
   input: UpdateNewsSettingsCommandInput,
 ): Promise<UpdateNewsResult> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   const existingNews = await ensureNewsExists(id);
   await ensureNewsSlugAvailable(input.slug, id);
 

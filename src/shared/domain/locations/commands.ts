@@ -5,6 +5,10 @@ import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
+  assertAllowedManagedImageUrl,
+  assertAllowedManagedImageUrls,
+} from "@/shared/domain/media/managed-image-assertions";
+import {
   buildOrderScopeLockSql,
   buildUuidOrderSqlFragments,
 } from "@/shared/domain/order-sql";
@@ -47,6 +51,14 @@ function businessHoursToJson(
 }
 
 function toLocationData(data: LocationFormData) {
+  assertAllowedManagedImageUrl("ロケーションメイン画像", data.imageUrl);
+  assertAllowedManagedImageUrls(
+    data.imageUrls.map((image) => ({
+      label: "ロケーション追加画像",
+      url: image.url,
+    })),
+  );
+
   return {
     slug: data.slug,
     name: data.name,

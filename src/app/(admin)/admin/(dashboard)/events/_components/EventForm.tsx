@@ -373,6 +373,7 @@ export function EventForm({
               form={form}
               defaultUsage="EVENT"
               max={20}
+              showUrlTab={false}
               disabled={isPending}
             />
           </div>

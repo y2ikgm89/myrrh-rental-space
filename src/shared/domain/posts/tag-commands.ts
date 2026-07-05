@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageUrl } from "@/shared/domain/media/managed-image-assertions";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type {
   CreatePostTagResult,
@@ -44,6 +45,7 @@ async function ensurePostTagUnique(
 export async function createPostTag(
   input: PostTagMutationInput,
 ): Promise<CreatePostTagResult> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   await ensurePostTagUnique(input);
 
   const tag = await prisma.postTag.create({
@@ -65,6 +67,7 @@ export async function updatePostTag(
   id: string,
   input: PostTagMutationInput,
 ): Promise<void> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   await ensurePostTagUnique(input, id);
 
   const tag = await prisma.postTag.findUnique({

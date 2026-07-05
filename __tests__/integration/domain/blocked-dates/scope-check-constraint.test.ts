@@ -7,8 +7,10 @@
  * introspection 由来の schema 再生成等で制約が失われる回帰を機械的に検出する。
  *
  * == 実行条件 ==
- * `TEST_DATABASE_URL` 設定時のみ実行（未設定なら describe ごと skip。dev DB 誤汚染防止）。
- * gateway は import 時の `process.env.DATABASE_URL` を読むため動的 import より前に上書きする。
+ * `bun run test:integration` は docker-compose の test-db 既定値を注入する。直接
+ * `bun test` でこのファイルを実行し `TEST_DATABASE_URL` が未設定の場合のみ
+ * describe ごと skip する（dev DB 誤汚染防止）。gateway は import 時の
+ * `process.env.DATABASE_URL` を読むため動的 import より前に上書きする。
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

@@ -6,6 +6,7 @@ import { parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageSourcesInJson } from "@/shared/domain/media/managed-image-assertions";
 import {
   buildOrderScopeLockSql,
   buildUuidOrderSqlFragments,
@@ -36,6 +37,8 @@ async function ensureSlugAvailable(
  * contentHtml は admin action で contentJson から派生済みであること（TermsAgreement 境界）。
  */
 function buildContent(input: TermsFormInput) {
+  assertAllowedManagedImageSourcesInJson("規約本文画像", input.contentJson);
+
   return {
     contentJson: parsePrismaInputJson(
       input.contentJson,

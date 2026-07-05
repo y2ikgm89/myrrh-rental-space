@@ -31,6 +31,7 @@ interface GalleryFieldProps<TForm extends Record<string, unknown>> {
   readonly form: FormMetadata<TForm>;
   readonly defaultUsage: Extract<MediaUsage, "SPACE" | "EVENT">;
   readonly max?: number;
+  readonly showUrlTab?: boolean;
   readonly disabled?: boolean;
 }
 
@@ -39,6 +40,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
   form,
   defaultUsage,
   max = 20,
+  showUrlTab = false,
   disabled,
 }: GalleryFieldProps<TForm>): ReactElement {
   const dndId = useId();
@@ -58,6 +60,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
   const picker = useMultipleMediaPicker({
     defaultUsage,
     accept: "image-or-video",
+    showUrlTab,
     maxSelections: Math.max(0, remaining),
     onSelect: (media) => {
       if (isDisabled) return;
@@ -66,7 +69,7 @@ export function GalleryField<TForm extends Record<string, unknown>>({
       for (const m of toAdd) {
         form.insert<GalleryFormItem[]>({
           name: fieldName,
-          defaultValue: { url: m.url, alt: "", caption: "" },
+          defaultValue: { url: m.url, alt: m.alt ?? "", caption: "" },
         });
       }
     },

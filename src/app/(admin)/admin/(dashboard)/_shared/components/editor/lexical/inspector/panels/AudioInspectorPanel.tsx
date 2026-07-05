@@ -66,7 +66,6 @@ export function AudioInspectorPanel({
   const audioPicker = useSingleMediaPicker({
     accept: "audio",
     defaultUsage: "GENERAL",
-    showUrlTab: true,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

@@ -45,6 +45,11 @@ const mockCreate = mock<
 >(() => Promise.resolve({ id: "new-space-id", slug: "test-copy" }));
 
 mock.module("server-only", () => ({}));
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     space: {
@@ -75,10 +80,10 @@ const SOURCE_SPACE = {
   area: 30,
   hourlyPrice: 1000,
   dailyPrice: 8000,
-  mainImageUrl: "https://example.com/main.jpg",
+  mainImageUrl: "https://media.example.com/spaces/main.jpg",
   gallery: [
-    { url: "https://example.com/1.jpg", alt: "", caption: "" },
-    { url: "https://example.com/2.jpg", alt: "", caption: "" },
+    { url: "https://media.example.com/spaces/1.jpg", alt: "", caption: "" },
+    { url: "https://media.example.com/spaces/2.jpg", alt: "", caption: "" },
   ],
   facilities: ["wifi", "projector"],
   businessHours: null,

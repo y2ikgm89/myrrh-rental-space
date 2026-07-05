@@ -66,6 +66,12 @@ const mockExecuteRaw = mock<
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     termsDocument: {
@@ -207,6 +213,27 @@ describe("createTermsCommand", () => {
     );
     expect(mockCreate).not.toHaveBeenCalled();
   });
+
+  test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+    await expect(
+      createTermsCommand({
+        ...VALID_INPUT,
+        contentJson: JSON.stringify({
+          root: {
+            children: [
+              {
+                type: "image",
+                src: "https://external.example.com/terms.jpg",
+              },
+            ],
+          },
+        }),
+      }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
 });
 
 describe("updateTermsCommand", () => {
@@ -275,6 +302,34 @@ describe("updateTermsCommand", () => {
         }),
       }),
     );
+  });
+
+  test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+    mockFindFirst.mockResolvedValueOnce({
+      id: "id-1",
+      slug: "privacy-policy",
+      isPublished: false,
+      publishedAt: null,
+    });
+
+    await expect(
+      updateTermsCommand("id-1", {
+        ...VALID_INPUT,
+        contentJson: JSON.stringify({
+          root: {
+            children: [
+              {
+                type: "cover",
+                backgroundImageUrl: "https://external.example.com/terms.jpg",
+              },
+            ],
+          },
+        }),
+      }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 

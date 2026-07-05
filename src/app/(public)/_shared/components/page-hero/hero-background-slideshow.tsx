@@ -306,7 +306,6 @@ export function HeroBackgroundSlideshow({
                 fill
                 sizes={sizes}
                 className="object-cover"
-                preload={priority && isFirst}
                 loading={priority && isFirst ? "eager" : "lazy"}
                 fetchPriority={priority && isFirst ? "high" : "auto"}
               />

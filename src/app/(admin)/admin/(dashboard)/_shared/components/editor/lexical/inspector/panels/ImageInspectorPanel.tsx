@@ -83,7 +83,6 @@ export function ImageInspectorPanel({
   const imagePicker = useSingleMediaPicker({
     accept: "image",
     defaultUsage: "POST",
-    showUrlTab: true,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

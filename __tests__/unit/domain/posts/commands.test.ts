@@ -99,6 +99,12 @@ const mockExecuteRaw = mock<
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     post: {
@@ -240,7 +246,7 @@ const VALID_CREATE_INPUT = {
   excerpt: "概要テキスト",
   contentJson: '{"root":{}}',
   contentHtml: "<p>テスト</p>",
-  thumbnailUrl: "https://example.com/thumb.jpg",
+  thumbnailUrl: "https://media.example.com/posts/thumb.jpg",
   ogpImageUrl: null,
   categoryId: CATEGORY_ID,
   tags: [],
@@ -262,7 +268,7 @@ const VALID_UPDATE_SETTINGS_INPUT = {
   title: "更新テスト投稿",
   slug: "test-post-updated",
   excerpt: "更新概要",
-  thumbnailUrl: "https://example.com/thumb-updated.jpg",
+  thumbnailUrl: "https://media.example.com/posts/thumb-updated.jpg",
   ogpImageUrl: null,
   categoryId: CATEGORY_ID,
   tags: [],
@@ -415,6 +421,39 @@ describe("createPost", () => {
         message: "タグが見つかりません",
       });
     });
+
+    test("管理メディア origin 外の thumbnailUrl は拒否する", async () => {
+      await expect(
+        createPost({
+          ...VALID_CREATE_INPUT,
+          thumbnailUrl: "https://external.example.com/thumb.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createPost({
+          ...VALID_CREATE_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "image",
+                  src: "https://external.example.com/body.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -453,6 +492,27 @@ describe("updatePostBody", () => {
         code: "NOT_FOUND",
         message: "投稿記事が見つかりません",
       });
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        updatePostBody(POST_ID, {
+          ...VALID_UPDATE_BODY_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "cover",
+                  backgroundImageUrl: "https://external.example.com/cover.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -553,6 +613,18 @@ describe("updatePostSettings", () => {
         code: "NOT_FOUND",
         message: "カテゴリが見つかりません",
       });
+    });
+
+    test("管理メディア origin 外の thumbnailUrl は拒否する", async () => {
+      await expect(
+        updatePostSettings(POST_ID, {
+          ...VALID_UPDATE_SETTINGS_INPUT,
+          thumbnailUrl: "https://external.example.com/thumb.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -846,6 +918,18 @@ describe("createPostCategory", () => {
         message: "このスラッグは既に使用されています",
       });
     });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        createPostCategory({
+          ...VALID_CATEGORY_INPUT,
+          ogpImageUrl: "https://external.example.com/category-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCategoryCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -897,6 +981,18 @@ describe("updatePostCategory", () => {
         code: "CONFLICT",
         message: "このカテゴリ名は既に使用されています",
       });
+    });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        updatePostCategory(CATEGORY_ID, {
+          ...VALID_CATEGORY_INPUT,
+          ogpImageUrl: "https://external.example.com/category-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCategoryUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -1136,6 +1232,18 @@ describe("createPostTag", () => {
         message: "このスラッグは既に使用されています",
       });
     });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        createPostTag({
+          ...VALID_TAG_INPUT,
+          ogpImageUrl: "https://external.example.com/tag-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostTagCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -1187,6 +1295,18 @@ describe("updatePostTag", () => {
         code: "CONFLICT",
         message: "このタグ名は既に使用されています",
       });
+    });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        updatePostTag(TAG_ID, {
+          ...VALID_TAG_INPUT,
+          ogpImageUrl: "https://external.example.com/tag-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostTagUpdate).not.toHaveBeenCalled();
     });
   });
 });

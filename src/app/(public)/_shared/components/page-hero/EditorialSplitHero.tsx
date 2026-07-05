@@ -412,7 +412,6 @@ export function EditorialSplitHero({
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
-              preload={i === 0}
               loading={i === 0 ? "eager" : "lazy"}
               fetchPriority={i === 0 ? "high" : "auto"}
             />

@@ -9,11 +9,20 @@ interface ImageCarouselProps {
   readonly images: readonly string[];
   readonly alt: string;
   readonly sizes: string;
-  /** カルーセル最初の画像（mount 時に表示）のみに適用する LCP 最適化（Next.js 公式 3-prop）。 */
-  readonly preload?: boolean;
-  readonly loading?: "lazy" | "eager";
-  readonly fetchPriority?: "high" | "low" | "auto";
 }
+
+type ImageCarouselPriorityProps =
+  | {
+      /** カルーセル最初の画像（mount 時に表示）のみに適用する LCP 最適化。 */
+      readonly preload: true;
+      readonly loading?: never;
+      readonly fetchPriority?: never;
+    }
+  | {
+      readonly preload?: false;
+      readonly loading?: "lazy" | "eager";
+      readonly fetchPriority?: "high" | "low" | "auto";
+    };
 
 /**
  * Card-level image carousel with hover navigation buttons.
@@ -26,13 +35,14 @@ export function ImageCarousel({
   images,
   alt,
   sizes,
-  preload = false,
-  loading,
-  fetchPriority,
-}: ImageCarouselProps) {
+  ...priorityProps
+}: ImageCarouselProps & ImageCarouselPriorityProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const touchStartXRef = useRef(0);
   const count = images.length;
+  const shouldPreload = priorityProps.preload === true;
+  const loading = shouldPreload ? undefined : priorityProps.loading;
+  const fetchPriority = shouldPreload ? undefined : priorityProps.fetchPriority;
 
   const goTo = (index: number) => {
     setActiveIndex((index + count) % count);
@@ -110,6 +120,17 @@ export function ImageCarousel({
           i === activeIndex ||
           i === (activeIndex - 1 + count) % count ||
           i === (activeIndex + 1) % count;
+        const imagePriorityProps =
+          shouldPreload && i === 0
+            ? { preload: true }
+            : {
+                ...(loading !== undefined && {
+                  loading: i === 0 ? loading : "lazy",
+                }),
+                ...(fetchPriority !== undefined && {
+                  fetchPriority: i === 0 ? fetchPriority : "auto",
+                }),
+              };
         return (
           <div
             key={src}
@@ -125,13 +146,7 @@ export function ImageCarousel({
                 alt={i === activeIndex ? `${alt} ${i + 1}/${count}` : ""}
                 fill
                 sizes={sizes}
-                preload={preload && i === 0}
-                {...(loading !== undefined && {
-                  loading: i === 0 ? loading : "lazy",
-                })}
-                {...(fetchPriority !== undefined && {
-                  fetchPriority: i === 0 ? fetchPriority : "auto",
-                })}
+                {...imagePriorityProps}
                 className="object-cover"
               />
             ) : null}
