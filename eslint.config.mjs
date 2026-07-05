@@ -288,7 +288,7 @@ const eslintConfig = defineConfig([
   },
 
   // E2E 規約 (Playwright 公式の DISCOURAGED パターンを機械ブロック)
-  // SSoT: .claude/rules/test-quality/e2e.md
+  // SSoT: .claude/rules/testing-e2e.md
   // - waitForTimeout: 公式 "discouraged for production use ... inherently flaky"
   // - waitForLoadState("networkidle"): 公式 "DISCOURAGED. Don't use for testing,
   //   rely on web assertions to assess readiness instead."
@@ -303,18 +303,18 @@ const eslintConfig = defineConfig([
         {
           selector: "CallExpression[callee.property.name='waitForTimeout']",
           message:
-            "page.waitForTimeout は Playwright 公式で discouraged (flaky)。expect(locator).toBeVisible() 等の web-first assertion を使ってください。SSoT: .claude/rules/test-quality/e2e.md",
+            "page.waitForTimeout は Playwright 公式で discouraged (flaky)。expect(locator).toBeVisible() 等の web-first assertion を使ってください。SSoT: .claude/rules/testing-e2e.md",
         },
         {
           selector:
             "CallExpression[callee.property.name='waitForLoadState'] > Literal[value='networkidle']",
           message:
-            "waitForLoadState('networkidle') は Playwright 公式で DISCOURAGED。web assertion (expect(locator).toBeVisible() / expect(page).toHaveURL() 等) で readiness を待ってください。SSoT: .claude/rules/test-quality/e2e.md",
+            "waitForLoadState('networkidle') は Playwright 公式で DISCOURAGED。web assertion (expect(locator).toBeVisible() / expect(page).toHaveURL() 等) で readiness を待ってください。SSoT: .claude/rules/testing-e2e.md",
         },
         {
           selector: "CallExpression[callee.property.name='waitForURL']",
           message:
-            "page.waitForURL は App Router の soft navigation で silent timeout する。expect(page).toHaveURL() に置換してください。SSoT: .claude/rules/test-quality/e2e.md",
+            "page.waitForURL は App Router の soft navigation で silent timeout する。expect(page).toHaveURL() に置換してください。SSoT: .claude/rules/testing-e2e.md",
         },
         {
           // `if ((await x.count()) > 0) { ... }` 条件アサーション禁止。
@@ -323,7 +323,7 @@ const eslintConfig = defineConfig([
           selector:
             "IfStatement[test.type='BinaryExpression'][test.operator='>'][test.right.value=0] AwaitExpression > CallExpression[callee.property.name='count']",
           message:
-            "if ((await x.count()) > 0) は silent-pass の false coverage を生む。seed-guaranteed なら無条件 assert、optional UI なら test ごと削除してください。SSoT: .claude/rules/test-quality/e2e.md",
+            "if ((await x.count()) > 0) は silent-pass の false coverage を生む。seed-guaranteed なら無条件 assert、optional UI なら test ごと削除してください。SSoT: .claude/rules/testing-e2e.md",
         },
       ],
     },

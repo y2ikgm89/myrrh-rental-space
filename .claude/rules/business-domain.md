@@ -54,7 +54,8 @@ paths:
 
 - 税計算は経路で単位（% vs 割合）と丸め（round vs floor)が異なる。
   税関連の変更時は単位・丸め・書込経路の有無を必ず突合する
-- 公開 4 経路（SIGNUP / RESERVATION / INQUIRY / EVENT_REGISTRATION）の必須規約同意は
-  `assertAllRequiredTermsAgreed` による **server-side 強制**（client gate のみは禁止）
+- 必須規約同意が `assertAllRequiredTermsAgreed` で **server-side 強制**されるのは
+  RESERVATION / INQUIRY / EVENT_REGISTRATION の 3 経路（client gate のみは禁止）。
+  LOGIN_SIGNUP は署名 cookie 経由の同意証跡記録のみでこの gate を通らない
 - イベント/BlockedDate の CHECK 制約・DEFERRABLE trigger は baseline migration にのみ
   存在する手書き不変条件（Prisma DSL で表現不能）。migration 作業時に保全する

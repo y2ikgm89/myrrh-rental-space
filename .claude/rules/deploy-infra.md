@@ -14,8 +14,8 @@ paths:
 
 ## デプロイ経路
 
-- **main への push = 即・本番デプロイ**（deploy-production.yml → `gcloud builds submit`）。
-  PR merge は本番リリースを意味する
+- **main への push = 即・本番デプロイ**（deploy-production.yml →
+  `gcloud beta builds submit`）。PR merge は本番リリースを意味する
 - workflow が migration diff を grep し、DROP COLUMN / RENAME COLUMN / RENAME TO /
   DROP TABLE / DROP TYPE を検出すると自動で breaking migration mode
   （両サービス scaling=0 + 310 秒 drain = 計画ダウンタイム）に切り替わる
@@ -31,7 +31,8 @@ paths:
   ロードできず migrate が exit(1) する
 - `NEXT_PUBLIC_*` はビルド時にクライアント JS へインライン化されるため
   builder-base で **ARG → ENV 変換が必須**（ARG のままでは空文字が焼き込まれる）。
-  cloudbuild の対応 substitutions に空デフォルトを復活させない
+  \_NEXT_PUBLIC_BASE_URL / \_NEXT_PUBLIC_APP_URL / \_NEXT_PUBLIC_TURNSTILE_SITE_KEY の
+  substitutions に空デフォルトを復活させない（GA_MEASUREMENT_ID のみ optional で空可）
 - ビルドは DB 非接続（placeholder DATABASE_URL）。runner の Prisma prune ガードが
   Prisma minor bump で fail したら prune リストを更新する（握りつぶさない）
 
@@ -51,8 +52,10 @@ paths:
 ## ローカル環境
 
 - `docker compose up -d db` = 開発 DB（5432 / myrrh_rental）、
-  `test-db`（5433 / myrrh_test）はテスト runner が自動起動
+  `test-db`（5433 / myrrh_test）は `bun run test:db:migrate`
+  （test:integration の前段）が自動起動
 - 本番相当ビルドの再現は `bun run build:skip-env`
 - CI/Docker の install は `scripts/bun-ci-install.sh`（リトライ + キャッシュ消去 +
   network-concurrency 4 の耐 flake 版）に統一されている
-- Lighthouse CI（.lighthouserc.json のバジェット）は full CI dispatch 時のみ実行
+- Lighthouse CI（.lighthouserc.json のバジェット）は workflow_dispatch の
+  run_full_ci=true か `codex/full-ci/` prefix の PR branch でのみ実行

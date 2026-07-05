@@ -13,7 +13,8 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
 - `@/shared/db/prisma` を import する全ファイルは `import "server-only"` 必須
   （allowlist ではなく動的走査で検査される）
 - facade の import は `src/shared/` 配下限定。`prisma.<model>.<method>` 呼出は
-  `shared/domain` / `shared/db` 配下限定
+  原則 `shared/domain` / `shared/db` 配下限定（例外は architecture-boundaries テストの
+  placement gate ALLOWLIST に列挙された shared/lib の 4 ファイルのみ）
 - 金額・税率の Decimal 列は number に変換済みで届く。ドメインの金額計算は素の number
 
 ## JSON・エラー・ログ
@@ -26,7 +27,9 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   NOT_FOUND / CONFLICT / DUPLICATE / VALIDATION / UNAUTHORIZED / FORBIDDEN / UNEXPECTED
 - サーバーサイドのエラーログは `src/shared/lib/errors` の `logError` +
   ErrorCategory / ErrorSeverity を使う（`console.error` の場当たり実装をしない）
-- 外部 URL への fetch は `safeFetch` / `criticalFetch`（SSRF ガード付き）を使う
+- 外部 URL への fetch は `src/shared/lib/ssrf-guard.ts` の `fetchPublicHttpResource`
+  （SSRF ガード付き）を使う。DB/内部データ取得のエラーハンドリングは
+  `safeFetch`（fallback 返却）/ `criticalFetch`（logError + rethrow）で包む
 
 ## トランザクション
 

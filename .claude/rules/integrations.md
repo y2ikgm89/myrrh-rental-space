@@ -20,8 +20,9 @@ paths:
 
 ## メール（Resend）
 
-- 送信の SSoT は `sendEmail()`（`src/shared/lib/email/send.ts`）。from/replyTo は
-  自動注入（env 優先 → DB 設定）。リトライは rate_limit / server error 系のみ最大 3 回
+- 送信の SSoT は `sendEmail()`（`src/shared/lib/email/send.ts`）。from は自動注入
+  （env `EMAIL_FROM` 優先 → DB 設定）、replyTo は payload 明示 → DB 設定（env 層なし）。
+  リトライは rate_limit / server error 系のみ最大 3 回
 - `idempotencyKey` は `<event-type>/<entity-id>` 形式でほぼ全送信に指定する
 - API キー未設定・suppression 該当時は例外でなく `{ok: false, reason: "disabled"}` の
   silent no-op。呼び出し側は "disabled" と "error" を区別する

@@ -10,7 +10,7 @@ schema 変更 → migration 生成 → lint → 検証 → デプロイ影響確
 常設規約 (重複記載しない — 必ず先に参照):
 
 - 禁止事項・squawk 配置・breaking デプロイ連動・seed 契約: rules の `migrations.md`
-- Prisma/ドメイン層の配置境界 (`server-only`, `basePrisma` vs `prisma`): rules の `db-and-domain.md`
+- Prisma/ドメイン層の配置境界 (`server-only`, `basePrisma` vs `prisma`): rules の `db-domain.md`
 - 生成型の流通経路 (enums gateway・JSON helper): rules の `type-safety.md`
 - 実 DB 統合テストの書き方 (SERIAL_DB_TESTS 登録等): rules の `testing-unit.md`
 

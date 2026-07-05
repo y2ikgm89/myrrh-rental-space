@@ -15,7 +15,7 @@ Cloud Scheduler → Cloud Run の HTTP GET で起動する cron route を追加�
 - cron OIDC 認可・env の位置づけ → rules の `security-auth`
 - rate limit / proxy / `await connection()` → rules の `app-structure`
 - キャッシュ無効化の呼び分け → rules の `caching`
-- Prisma を route から直 import しない → rules の `db-and-domain`
+- Prisma を route から直 import しない → rules の `db-domain`
 - テスト実行方法 → rules の `testing-unit`
 
 ## 手順

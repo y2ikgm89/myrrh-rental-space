@@ -1760,8 +1760,8 @@ describe("architecture boundaries", () => {
   // を「import 文の `{...}` 内部改行のみ空白化」してから line 評価する。
   //
   // admin scope は対象外: admin layout が PR #604 で `generateViewport + connection() +
-  // <Suspense><html>` により全 71 route を `ƒ` 化済 (詳細は `.claude/rules/public-app.md` の
-  // 「Admin layout の動的化 (CSP nonce gap 予防)」節)。runtime nonce で全 chunk 保護されるため
+  // <Suspense><html>` により全 71 route を `ƒ` 化済 (詳細は `.claude/rules/app-structure.md` の
+  // 「cacheComponents + strict-dynamic CSP」節)。runtime nonce で全 chunk 保護されるため
   // admin client が zod を value-import しても CSP block は起きない。
 
   /**
