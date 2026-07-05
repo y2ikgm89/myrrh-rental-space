@@ -351,7 +351,6 @@ export function validateProductionEnv(): void {
     { name: "APP_SURFACE", value: process.env["APP_SURFACE"] },
     { name: "ADMIN_APP_URL", value: serverEnv.ADMIN_APP_URL },
     { name: "BETTER_AUTH_URL", value: serverEnv.BETTER_AUTH_URL },
-    { name: "TURNSTILE_SECRET_KEY", value: serverEnv.TURNSTILE_SECRET_KEY },
     { name: "ENCRYPTION_KEY", value: serverEnv.ENCRYPTION_KEY },
     {
       name: "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",

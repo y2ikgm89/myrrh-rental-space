@@ -110,12 +110,12 @@ describe("server production env validation", () => {
     );
   });
 
-  test("requires Turnstile secret key in production", async () => {
+  test("does not require Turnstile secret key in production because Settings is canonical", async () => {
     setProductionEnv({ TURNSTILE_SECRET_KEY: undefined });
 
     const { validateProductionEnv } = await importServerEnv();
 
-    expect(() => validateProductionEnv()).toThrow("TURNSTILE_SECRET_KEY");
+    expect(() => validateProductionEnv()).not.toThrow();
   });
 
   test("requires Turnstile site key in production", async () => {
