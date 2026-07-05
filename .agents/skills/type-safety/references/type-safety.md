@@ -28,6 +28,8 @@
 ## Validation
 
 - Use Zod schemas in `src/shared/lib/validations`.
+- For Zod 4, prefer `{ error: "..." }` issue customization and top-level string
+  formats such as `z.iso.datetime()`.
 - Prefer discriminated unions and `superRefine` for cross-field invariants.
 - If a DB invariant cannot be represented in Prisma schema, preserve it in
   migration SQL comments, validation, and tests.

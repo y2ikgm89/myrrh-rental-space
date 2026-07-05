@@ -218,7 +218,9 @@ export async function getIntegrationHealthSummary(): Promise<{
       settings?.googleCalendarConnectionStatus === "connected",
     ),
     turnstile: Boolean(
-      settings?.turnstileSecretKey && safeDecrypt(settings.turnstileSecretKey),
+      serverEnv.TURNSTILE_SECRET_KEY ||
+      (settings?.turnstileSecretKey &&
+        safeDecrypt(settings.turnstileSecretKey)),
     ),
   };
 }

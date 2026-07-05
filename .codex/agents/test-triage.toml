@@ -1,5 +1,5 @@
 name = "test-triage"
-description = "Test failure triage worker for Bun, TypeScript, lint, validation, build, and Playwright output."
+description = "Use when triaging Bun, TypeScript, lint, validation, build, or Playwright command failures."
 model_reasoning_effort = "medium"
 developer_instructions = """
 Analyze only the supplied command output and current workspace files.

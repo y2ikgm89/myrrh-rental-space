@@ -10,6 +10,8 @@ Compatibility layer for Claude-oriented references. Canonical Codex guidance is
 - Conform `FieldMetadata` generic-invariance casts must stay inside
   `src/shared/lib/conform/typed-input-control.ts`.
 - Use Zod 4 `{ error: "..." }` style for new schema messages.
+- Use top-level Zod 4 string formats such as `z.iso.datetime()` where
+  applicable.
 - Generated Prisma client/model types must not leak into `src/app/*`.
 - App-safe generated enums should flow through
   `src/shared/lib/validations/enums/prisma-types.ts`.

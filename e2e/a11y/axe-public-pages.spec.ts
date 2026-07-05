@@ -23,6 +23,7 @@ import { urls } from "../fixtures";
 
 // critical/serious 違反のみを許容ゼロとする（axe-core の impact は optional string）
 const BLOCKING_IMPACTS = new Set(["serious", "critical"]);
+const appSurface = process.env["APP_SURFACE"] ?? "admin";
 
 function isBlocking(violation: Result): boolean {
   return violation.impact ? BLOCKING_IMPACTS.has(violation.impact) : false;
@@ -60,6 +61,11 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
   });
 
   test("ホームページに critical/serious 違反がない", async ({ page }) => {
+    test.skip(
+      appSurface !== "public",
+      "Public homepage root is served only on public surface.",
+    );
+
     await page.goto(urls.home);
     await expect(page.getByRole("main")).toBeVisible();
 

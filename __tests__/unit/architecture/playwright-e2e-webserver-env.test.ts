@@ -19,6 +19,10 @@ const adminAuthQueries = readFileSync(
   join(process.cwd(), "src/shared/domain/admin-auth/queries.ts"),
   "utf8",
 );
+const e2eRuntime = readFileSync(
+  join(process.cwd(), "src/shared/lib/e2e-runtime.ts"),
+  "utf8",
+);
 const cacheHealth = readFileSync(
   join(process.cwd(), "src/shared/lib/cache/health.ts"),
   "utf8",
@@ -35,6 +39,7 @@ describe("Playwright E2E webServer env", () => {
       "BETTER_AUTH_URL",
       "NEXT_PUBLIC_BASE_URL",
       "NEXT_PUBLIC_APP_URL",
+      "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
       "NEXT_PUBLIC_ENABLE_E2E_LOGIN",
     ]) {
       expect(playwrightConfig).toContain(`${key}:`);
@@ -44,12 +49,15 @@ describe("Playwright E2E webServer env", () => {
   test("supplies production runtime env required by Next instrumentation", () => {
     for (const key of [
       "E2E_RUNTIME",
+      "E2E_FIXED_NOW_ISO",
       "ADMIN_APP_URL",
       "ENCRYPTION_KEY",
       "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
       "AUDIT_LOG_HMAC_KEY",
       "CRON_OIDC_AUDIENCE",
       "CRON_SERVICE_ACCOUNT_EMAIL",
+      "TURNSTILE_SECRET_KEY",
+      "CLOUDFLARE_ORIGIN_HEADER_SECRET",
       "R2_ACCOUNT_ID",
       "R2_ACCESS_KEY_ID",
       "R2_SECRET_ACCESS_KEY",
@@ -69,9 +77,19 @@ describe("Playwright E2E webServer env", () => {
   test("keeps server-side E2E bypasses on server-only env", () => {
     expect(serverEnv).toContain("E2E_RUNTIME:");
     expect(serverEnv).toContain('E2E_RUNTIME: process.env["E2E_RUNTIME"]');
+    expect(serverEnv).toContain("E2E_FIXED_NOW_ISO:");
+    expect(serverEnv).toContain(
+      'E2E_FIXED_NOW_ISO: process.env["E2E_FIXED_NOW_ISO"]',
+    );
     expect(playwrightConfig).toContain('E2E_RUNTIME: "1"');
+    expect(playwrightConfig).toContain("E2E_FIXED_NOW_ISO:");
 
-    for (const serverOnlyFile of [adminAuth, adminAuthQueries, cacheHealth]) {
+    expect(adminAuth).toContain("isLocalProductionE2ERuntime");
+    expect(e2eRuntime).toContain('serverEnv.E2E_RUNTIME === "1"');
+    expect(e2eRuntime).toContain("isLocalhostUrl");
+    expect(e2eRuntime).toContain('process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"]');
+
+    for (const serverOnlyFile of [adminAuthQueries, cacheHealth]) {
       expect(serverOnlyFile).toContain('serverEnv.E2E_RUNTIME === "1"');
       expect(serverOnlyFile).not.toContain(
         'process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"]',
@@ -125,21 +143,30 @@ describe("Playwright E2E webServer env", () => {
   });
 
   test("starts from a seeded production-mode server instead of Next dev", () => {
+    expect(playwrightConfig).toContain(
+      'import { resolveTestDatabaseUrl } from "./scripts/test-db-url";',
+    );
+    expect(playwrightConfig).toContain("localE2eDatabaseUrl");
+    expect(playwrightConfig).toContain("bun run test:db:migrate");
     expect(playwrightConfig).toContain("bun prisma/seed.ts --dev");
     expect(playwrightConfig).toContain("bun run build:skip-env");
     expect(playwrightConfig).toContain("reuseExistingServer: false");
     expect(playwrightConfig).not.toContain("bunx next dev");
 
+    const migrateIndex = playwrightConfig.indexOf("bun run test:db:migrate");
     const seedIndex = playwrightConfig.indexOf("bun prisma/seed.ts --dev");
     const buildIndex = playwrightConfig.indexOf("bun run build:skip-env");
     const startIndex = playwrightConfig.indexOf("bun run start");
 
+    expect(migrateIndex).toBeGreaterThanOrEqual(0);
     expect(seedIndex).toBeGreaterThanOrEqual(0);
+    expect(seedIndex).toBeGreaterThan(migrateIndex);
     expect(buildIndex).toBeGreaterThan(seedIndex);
     expect(startIndex).toBeGreaterThan(buildIndex);
   });
 
   test("widens local database pool startup tolerance for first-render bursts", () => {
+    expect(playwrightConfig).toContain("DATABASE_URL: localE2eDatabaseUrl");
     expect(playwrightConfig).toContain("DATABASE_POOL_MAX:");
     expect(playwrightConfig).toContain("DATABASE_CONNECTION_TIMEOUT_MS:");
     expect(playwrightConfig).toContain(

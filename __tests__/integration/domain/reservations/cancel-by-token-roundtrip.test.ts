@@ -56,6 +56,8 @@ type Fixture = {
   cleanup: () => Promise<void>;
 };
 
+let nextFixtureLocationSortOrder = 1_200_000_000;
+
 /** Location → Space → Customer → Reservation を 1 件作る最小 fixture（reminder-idempotency と同型）。 */
 async function createReservationFixture(opts?: {
   startTime?: Date;
@@ -72,6 +74,7 @@ async function createReservationFixture(opts?: {
       name: `Cancel Token Loc ${suffix}`,
       address: "東京都テスト区1-2-3",
       imageUrl: "https://example.com/loc.jpg",
+      sortOrder: nextFixtureLocationSortOrder++,
     },
     select: { id: true },
   });

@@ -1,6 +1,9 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { urls } from "../fixtures";
 
+const appSurface = process.env["APP_SURFACE"] ?? "admin";
+const publicShellUrl = appSurface === "public" ? urls.home : urls.spaces;
+
 /**
  * キーボードアクセシビリティ E2E テスト
  *
@@ -35,7 +38,7 @@ async function tabUntilFocused(
 
 test.describe("トップナビゲーション - Tabキーフォーカス移動", () => {
   test("ヘッダー内のリンクが Tab キーで順に到達できる", async ({ page }) => {
-    await page.goto(urls.home);
+    await page.goto(publicShellUrl);
     // ロゴリンクに Tab でフォーカスが移動する
     await page.keyboard.press("Tab");
     const focused = page.locator(":focus");
@@ -55,7 +58,7 @@ test.describe("トップナビゲーション - Tabキーフォーカス移動",
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(urls.home);
+    await page.goto(publicShellUrl);
 
     const spacesLink = page
       .getByRole("navigation", { name: "メインナビゲーション" })
@@ -67,7 +70,7 @@ test.describe("トップナビゲーション - Tabキーフォーカス移動",
 
   test("ナビゲーションリンクが Enter キーで遷移できる", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(urls.home);
+    await page.goto(publicShellUrl);
     const spacesLink = page
       .getByRole("navigation", { name: "メインナビゲーション" })
       .getByRole("link", { name: "スペース" });
@@ -83,7 +86,7 @@ test.describe("トップナビゲーション - Tabキーフォーカス移動",
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(urls.home);
+    await page.goto(publicShellUrl);
     // Tab でフォーカスを移動
     await page.keyboard.press("Tab");
     const focused = page.locator(":focus");
@@ -114,8 +117,10 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
     await page.setViewportSize({ width: 375, height: 812 });
   });
 
-  async function gotoHomeWithReadyMobileShell(page: Page): Promise<void> {
-    await page.goto(urls.home);
+  async function gotoPublicShellWithReadyMobileShell(
+    page: Page,
+  ): Promise<void> {
+    await page.goto(publicShellUrl);
     await expect(page.getByRole("banner")).toBeVisible();
     await expect(page.getByRole("contentinfo")).toBeVisible();
     await expect(
@@ -212,14 +217,14 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
     });
 
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto(urls.home);
+    await page.goto(publicShellUrl);
     await expect(
       page
         .getByRole("navigation", { name: "メインナビゲーション" })
         .getByRole("link", { name: "スペース" }),
     ).toBeVisible();
     await page.setViewportSize({ width: 375, height: 812 });
-    await gotoHomeWithReadyMobileShell(page);
+    await gotoPublicShellWithReadyMobileShell(page);
 
     const { hamburgerTrigger } = await openMobileMenu(page);
     await page.keyboard.press("Escape");
@@ -235,7 +240,7 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
   });
 
   test("ハンバーガーボタンをクリックするとメニューが開く", async ({ page }) => {
-    await gotoHomeWithReadyMobileShell(page);
+    await gotoPublicShellWithReadyMobileShell(page);
 
     const { hamburgerTrigger } = await openMobileMenu(page);
 
@@ -246,7 +251,7 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
   test("メニューが開いた状態で Escape キーを押すとメニューが閉じる", async ({
     page,
   }) => {
-    await gotoHomeWithReadyMobileShell(page);
+    await gotoPublicShellWithReadyMobileShell(page);
     const { hamburgerTrigger } = await openMobileMenu(page);
 
     // Escape キーでメニューを閉じる
@@ -257,7 +262,7 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
   });
 
   test("閉じるボタンをクリックするとメニューが閉じる", async ({ page }) => {
-    await gotoHomeWithReadyMobileShell(page);
+    await gotoPublicShellWithReadyMobileShell(page);
     const { hamburgerTrigger, closeButton } = await openMobileMenu(page);
     await closeButton.click();
 
@@ -268,7 +273,7 @@ test.describe("モバイルオーバーレイメニュー - Escapeキー", () =>
   test("ハンバーガーボタンに aria-expanded が設定されている", async ({
     page,
   }) => {
-    await gotoHomeWithReadyMobileShell(page);
+    await gotoPublicShellWithReadyMobileShell(page);
     const { hamburgerTrigger } = mobileMenuControls(page);
 
     // 初期状態は expanded=false
@@ -294,18 +299,17 @@ test.describe("お問い合わせフォーム - Tabキー移動", () => {
   }
 
   function contactFields(page: Page) {
-    const main = page.getByRole("main");
     const form = page.locator("form").filter({
       has: page.getByRole("button", { name: /送信|Submit/i }),
     });
 
     return {
       form,
-      lastName: main.getByRole("textbox", { name: /^姓/u }),
-      firstName: main.getByRole("textbox", { name: /^名/u }),
-      email: main.getByRole("textbox", { name: "メールアドレス" }),
-      subject: main.getByRole("textbox", { name: "件名" }),
-      message: main.getByRole("textbox", { name: "お問い合わせ内容" }),
+      lastName: form.getByRole("textbox", { name: /^姓/u }),
+      firstName: form.getByRole("textbox", { name: /^名/u }),
+      email: form.getByRole("textbox", { name: "メールアドレス" }),
+      subject: form.getByRole("textbox", { name: "件名" }),
+      message: form.getByRole("textbox", { name: "お問い合わせ内容" }),
     };
   }
 
@@ -397,7 +401,7 @@ test.describe("お問い合わせフォーム - Tabキー移動", () => {
 
     const lastNameId = await fields.lastName.getAttribute("id");
     expect(lastNameId).toBeTruthy();
-    const lastNameLabel = page.locator(`label[for="${lastNameId}"]`);
+    const lastNameLabel = fields.form.locator(`label[for="${lastNameId}"]`);
     await expect(lastNameLabel).toBeVisible();
     await lastNameLabel.click();
     await expect(fields.lastName).toBeFocused();
@@ -406,7 +410,7 @@ test.describe("お問い合わせフォーム - Tabキー移動", () => {
     fields = await expectContactFieldsReady(page);
     const emailId = await fields.email.getAttribute("id");
     expect(emailId).toBeTruthy();
-    const emailLabel = page.locator(`label[for="${emailId}"]`);
+    const emailLabel = fields.form.locator(`label[for="${emailId}"]`);
     await expect(emailLabel).toBeVisible();
     await emailLabel.click();
     await expect(fields.email).toBeFocused();
@@ -441,7 +445,7 @@ test.describe("公開ページ - フォーカス管理", () => {
   test("ページ読み込み後に body か skip-link に初期フォーカスがある", async ({
     page,
   }) => {
-    await page.goto(urls.home);
+    await page.goto(publicShellUrl);
     // 最初の Tab でフォーカスが画面内の要素に移動する
     await page.keyboard.press("Tab");
     const focused = page.locator(":focus");

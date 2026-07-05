@@ -16,17 +16,23 @@ security headers, webhooks, cron, deployment config, or migrations.
    UI or proxy layers.
 3. Preserve cache privacy: private/admin/PII routes use no-store behavior, and
    public cache tags come from repo cache constants/helpers.
-4. With Next `cacheComponents: true`, use existing `connection()`,
+4. With Next `cacheComponents: true`, use existing app/domain `connection()`,
    `"use cache"`, `cacheLife`, and `cacheTag` patterns. Do not add route
-   segment config exports as a workaround.
+   segment config exports as a workaround, and do not move these data-cache
+   patterns into proxy.
 5. Avoid build-time baking of DB/env fallbacks. Follow runtime-evaluation
    patterns already in the repo.
 6. For route handlers, validate requests and return explicit errors. Do not
    reintroduce banned success-boolean wrappers.
 7. For webhooks and cron, authenticate or verify signatures first and fail
    closed.
-8. For Prisma schema changes, prefer expand/contract, add migrations instead of
-   editing old SQL, and run generation.
+8. For Turnstile, Cloudflare origin protection, auth bypass flags, and
+   production runtime env, preserve fail-closed validation and localhost-only
+   E2E exceptions.
+9. For reservation availability writes, use the repo advisory-lock helper
+   inside the transaction before overlap checks and writes.
+10. For Prisma schema changes, prefer expand/contract, add migrations instead of
+    editing old SQL, and run generation.
 
 ## Read When Needed
 

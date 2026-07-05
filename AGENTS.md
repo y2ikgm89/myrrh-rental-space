@@ -76,20 +76,38 @@ surface:
   `@/shared/lib/validations/enums/prisma-types` for app-safe generated enums.
 - `src/shared/*` must not import `@/admin/*` or `@/public/*`.
 - Keep `src/proxy.ts` DB-free. It owns security headers, CSP nonce propagation,
-  admin gate, cron auth, token transfer, and rate limits.
+  admin gate, cron auth, token transfer, and rate limits. Do not put Cache
+  Components data producers or revalidation calls there.
 - Use `serverEnv`/`clientEnv` from `src/shared/lib/env/*`; do not scatter new
   ad hoc `process.env` reads in application logic.
 - Cache tags must flow through `CACHE_TAGS`, `CDN_CACHE_TAGS`, `getCacheTag`,
   and `joinCacheTags`. Do not hand-write cache tag strings.
-- With `cacheComponents: true`, follow the existing `connection()`,
-  `"use cache"`, `cacheLife`, and `cacheTag` patterns. Do not add route segment
-  config exports as a cache workaround.
+- With `cacheComponents: true`, follow the existing app/domain
+  `connection()`, `"use cache"`, `cacheLife`, and `cacheTag` patterns. Do not
+  add route segment config exports as a cache workaround.
 - Route handlers must validate inputs and return explicit error responses. Do
   not reintroduce legacy success-boolean wrappers where architecture tests ban
   them.
 - External URL fetches must use the existing SSRF guard or a domain-specific
   safe helper.
+- Turnstile-protected mutations must fail closed in production and perform
+  server-side Siteverify with the expected action.
+- Reservation create/update/re-confirm flows that check availability must take
+  `lockReservationSpaceForTransaction` inside the same Prisma transaction
+  before overlap checks and writes.
 - Treat `TermsAgreement` and `AuditLog` as append-only evidence records.
+
+## Runtime Security
+
+- Production runtime validation must require `TURNSTILE_SECRET_KEY`,
+  `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `CLOUDFLARE_ORIGIN_HEADER_SECRET`, and the
+  existing auth/encryption/database secrets.
+- E2E bypass variables (`E2E_RUNTIME`, `ADMIN_TEST_IAP_EMAIL`, and
+  `NEXT_PUBLIC_ENABLE_E2E_LOGIN`) are allowed only for localhost
+  production-mode Playwright runtime. Do not make `CI=true` a bypass.
+- Cloud Run deploys must bind production secrets through Secret Manager
+  versions in `cloudbuild.yaml`; do not bake secret values into build args,
+  docs, logs, or workflow output.
 
 ## Prisma And Migrations
 

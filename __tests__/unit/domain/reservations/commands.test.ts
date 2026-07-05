@@ -108,6 +108,9 @@ const mockCustomerUpdate = mock<() => Promise<unknown>>(() =>
 const mockTransaction = mock<
   (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>
 >((fn: (tx: unknown) => Promise<unknown>) => fn(txClient));
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
   Promise.resolve(null),
 );
@@ -148,6 +151,7 @@ const txClient = {
   blockedDate: {
     findFirst: mockBlockedDateFindFirst,
   },
+  $executeRaw: mockExecuteRaw,
 };
 
 // ---------------------------------------------------------------------------
@@ -226,6 +230,8 @@ function resetAllMocks() {
   mockCustomerUpsert.mockClear();
   mockCustomerUpdate.mockClear();
   mockTransaction.mockClear();
+  mockExecuteRaw.mockClear();
+  mockExecuteRaw.mockResolvedValue(0);
   mockBlockedDateFindFirst.mockClear();
   mockBlockedDateFindFirst.mockResolvedValue(null);
   mockTxReservationFindFirst.mockClear();
@@ -425,6 +431,17 @@ describe("createAdminReservationCommand", () => {
       expect(result.payload).toBeDefined();
       expect(result.payload.customerName).toBe("山田 太郎");
       expect(result.payload.spaceName).toBe("テストスペース");
+    });
+
+    test("同一スペースの予約作成は transaction 内で advisory lock を取得して直列化する", async () => {
+      await createAdminReservationCommand(validInput);
+
+      const lockSql = mockExecuteRaw.mock.calls
+        .map((call) => call[0]?.join("?") ?? "")
+        .find((sql) => sql.includes("pg_advisory_xact_lock"));
+
+      expect(lockSql ?? "").toContain("pg_advisory_xact_lock");
+      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(validInput.spaceId);
     });
 
     test("CONFIRMED ステータスでも作成可能", async () => {
@@ -1280,6 +1297,17 @@ describe("createPublicReservationCommand", () => {
       expect(result.payload.customerEmail).toBe("taro@example.com");
       expect(result.payload.customerName).toBe("山田 太郎");
       expect(result.payload.spaceName).toBe("テストスペース");
+    });
+
+    test("同一スペースの公開予約作成は transaction 内で advisory lock を取得して直列化する", async () => {
+      await createPublicReservationCommand(validInput);
+
+      const lockSql = mockExecuteRaw.mock.calls
+        .map((call) => call[0]?.join("?") ?? "")
+        .find((sql) => sql.includes("pg_advisory_xact_lock"));
+
+      expect(lockSql ?? "").toContain("pg_advisory_xact_lock");
+      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(validInput.spaceId);
     });
 
     test("ステータスは常に CONFIRMED（Stripe なし自動確定）", async () => {

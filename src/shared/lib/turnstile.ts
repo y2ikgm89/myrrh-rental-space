@@ -8,8 +8,8 @@
  * - timeout 10 秒（公式推奨値）
  *
  * ## キー取得元
- * - Site Key: DB の `Settings` から取得（管理画面で設定）
- * - Secret Key: DB の `Settings` から暗号化保存
+ * - Site Key: DB の `Settings`、なければ `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+ * - Secret Key: DB の `Settings`、なければ Secret Manager/env の `TURNSTILE_SECRET_KEY`
  *
  * ## 開発環境
  * シークレットキーが本番で未設定の場合は拒否、開発では検証をスキップする。
@@ -25,6 +25,7 @@ import {
   getDecryptedTurnstileSecretKey,
   getTurnstileConfig,
 } from "@/shared/domain/settings/api-key-queries";
+import { clientEnv } from "./env/client";
 import { serverEnv } from "./env/server";
 import {
   logError,
@@ -73,7 +74,11 @@ type TurnstileSiteverifyResponse = z.infer<
 >;
 
 async function getTurnstileSecretKey(): Promise<string | null> {
-  return getDecryptedTurnstileSecretKey();
+  return (
+    (await getDecryptedTurnstileSecretKey()) ??
+    serverEnv.TURNSTILE_SECRET_KEY ??
+    null
+  );
 }
 
 /**
@@ -206,5 +211,8 @@ export async function verifyTurnstileToken(
  */
 export async function isTurnstileEnabled(): Promise<boolean> {
   const config = await getTurnstileConfig();
-  return Boolean(config.siteKey && config.secretKeyMasked);
+  return Boolean(
+    (config.siteKey || clientEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY) &&
+    (config.secretKeyMasked || serverEnv.TURNSTILE_SECRET_KEY),
+  );
 }

@@ -3,7 +3,7 @@ import { urls } from "../fixtures";
 
 test.describe("イベント一覧 - カレンダー表示", () => {
   test("日付グリッドを選択状態とキーボードで操作できる", async ({ page }) => {
-    await page.clock.setFixedTime(new Date("2026-07-04T03:00:00.000Z"));
+    await page.clock.install({ time: new Date("2026-07-04T03:00:00.000Z") });
     await page.goto(urls.events);
 
     await page.getByRole("tab", { name: "カレンダー" }).click();
