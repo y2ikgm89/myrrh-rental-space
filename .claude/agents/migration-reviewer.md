@@ -27,7 +27,8 @@ tools: Bash, Read, Grep, Glob
    対象テーブルの再作成・型変更がこれらを落とさないか確認
 6. **PostgreSQL 制約**: enum 値の削除は `ALTER TYPE ... DROP VALUE` 非サポート
    （RENAME + 新 TYPE + USING cast + DROP が正規手順）。`ALTER TYPE ADD VALUE` は
-   トランザクション内で使えない点に注意
+   実行自体は可能だが新値は commit まで使用不可 — Prisma migrate は 1 migration を
+   1 トランザクションで適用するため、同一 migration 内での ADD VALUE + 新値使用は失敗する
 7. **schema との drift**: `bun run db:generate` が通ること（型生成の破綻がないこと）
 
 ## 報告形式

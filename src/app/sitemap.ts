@@ -297,7 +297,7 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
  * `connection()` は Next.js request scope を要求するため unit test で直接呼べない。
  * テスト時は `buildSitemap()` を直接呼んで sitemap エントリ生成ロジックだけ検証する。
  *
- * 公式 canonical pattern: .claude/rules/db-and-domain.md §6
+ * 公式 canonical pattern: .claude/rules/caching.md「build prerender の焼き込み防止」
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();

@@ -97,7 +97,8 @@ migrate Job の execution ログを読む（§4）。既知パターン:
    構造的に解消済みのため、再発したら Job 設定 drift か依存肥大を調査。
 3. **migration SQL 自体のエラー**（constraint 違反・型不一致等）→ prisma migrate deploy の
    エラー出力がそのまま原因。修正方針は rules の `migrations`（expand/contract）に従い、
-   ローカルで `bun run test:db:migrate`（空 DB への migrate deploy）で再現・検証してから
+   ローカルで `bun run test:db:migrate`（使い捨て test DB への migrate deploy。初回のみ
+   空 DB — クリーン再現には `docker compose down -v` で volume 削除）で再現・検証してから
    fix-forward する。
 
 - migrate-update は image/memory(1Gi)/command(`bunx --bun prisma migrate deploy`)/
@@ -192,7 +193,8 @@ docker build --target=runner \
   -t local-runner .
 docker build --target=migrator -t local-migrator .   # migrator は ARG 不要（FROM deps）
 
-# migrate deploy の再現（空の test DB へ適用。TEST_DATABASE_URL 未設定なら test-db を自動起動）
+# migrate deploy の再現（使い捨て test DB へ適用。TEST_DATABASE_URL 未設定なら test-db を自動起動。
+# volume は永続のため、空 DB からの再現は docker compose down -v で初期化してから）
 bun run test:db:migrate
 
 # ローカル開発 DB

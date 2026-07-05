@@ -15,7 +15,8 @@ model: sonnet
 - 単一/部分テスト: `bun scripts/run-tests.ts <path...>`（**素の `bun test <dir>` は禁止**。
   mock.module 汚染と Lexical TDZ で壊れる）
 - ビルド: `bun run build:skip-env`（DB/実 env 不要）または `bun run build`
-- フォーマット: `bun run lint-format`
+- フォーマット検査: `bun run lint-format`（format:check + lint の検査のみ。
+  整形の実行は `bun run format`）
 
 ビルドとテストは時間がかかるため timeout は 600000ms を指定する。
 
