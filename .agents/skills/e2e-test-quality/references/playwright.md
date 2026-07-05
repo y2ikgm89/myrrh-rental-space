@@ -35,5 +35,5 @@ await expect(page).toHaveURL(/\/admin\/reservations/);
 await expect(page.getByRole("table")).toBeVisible();
 ```
 
-Do not add sleeps, networkidle waits, or optional-count branches that silently
-skip coverage.
+Do not add sleeps, networkidle waits, `page.waitForURL`, or optional-count
+branches that silently skip coverage.

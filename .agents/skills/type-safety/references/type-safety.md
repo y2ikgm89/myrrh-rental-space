@@ -16,6 +16,15 @@
 - Section config widening casts are banned by architecture tests.
 - SDK or third-party edge casts should be wrapped in a small helper with tests.
 
+## Generated Prisma Types And Enums
+
+- Generated Prisma client imports belong in server-only domain/db code.
+- App-safe Prisma enum gateway:
+  `src/shared/lib/validations/enums/prisma-types.ts`.
+- Enum guards and labels live under `src/shared/lib/validations/enums/*`.
+- The gateway may import generated `browser` or `enums` entries only; do not
+  make it re-export the generated client.
+
 ## Validation
 
 - Use Zod schemas in `src/shared/lib/validations`.

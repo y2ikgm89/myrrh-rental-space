@@ -13,6 +13,8 @@
 
 ## Selection
 
+- Docs, instructions, rules, or agent files: run format/syntax checks when
+  available; otherwise use targeted `rg` consistency checks.
 - Type-only or route-type change: run `bun run type-check`.
 - Shared helper or validation schema: run the specific unit test, then
   `bun run type-check`.
@@ -20,13 +22,14 @@
   `bun run type-check`.
 - Prisma schema: run `bun run db:generate`, a relevant test, and
   `bun run type-check`.
-- Prisma baseline reset: verify `prisma migrate deploy` on an empty Postgres
-  database, run the production seed once against that disposable database, check
-  Prisma diff back to `schema.prisma` is empty, run Squawk on the baseline SQL,
-  then run the focused tests that guard preserved manual DB invariants.
 - Route handler, webhook, cron, proxy, auth, env, cache, or security change:
   run focused tests plus `bun run validate` when practical.
-- UI-only change: run focused component/unit tests; use Playwright only when the
+- UI-only change: run focused component/unit tests; use Playwright only when
   behavior depends on browser interaction or layout.
-- Playwright test change: run the specific project or file, then the relevant
+- Admin UI change: also run the admin design-token and submit-button
+  architecture tests named in `AGENTS.md`.
+- Playwright test change: run the specific file or project, then the relevant
   smoke/auth setup if auth state was touched.
+
+Use `$next-db-cache-boundaries` for migration-history baseline reset
+verification; that exception is intentionally owned there.
