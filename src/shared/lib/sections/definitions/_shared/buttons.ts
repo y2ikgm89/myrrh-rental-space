@@ -30,6 +30,7 @@ export function createButtonsArraySchema(label = "ボタン") {
   return field
     .array(label, {
       subGroup: "button",
+      strict: true,
       fields: {
         label: field.portableTextInline("ボタンの文字", {
           subGroup: "text",

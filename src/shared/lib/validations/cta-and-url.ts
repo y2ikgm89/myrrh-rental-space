@@ -113,7 +113,7 @@ export type CTAButtonSize = (typeof ctaButtonSizes)[number];
 export function createCtaButtonItemSchema<TUrl extends string>(
   urlSchema: z.ZodType<TUrl>,
 ) {
-  return z.object({
+  return z.strictObject({
     label: createSpanArraySchema(),
     url: urlSchema,
     variant: z.enum(ctaButtonVariants).default("primary"),
