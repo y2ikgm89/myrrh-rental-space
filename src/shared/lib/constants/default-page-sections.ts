@@ -18,6 +18,18 @@ function block(text: string) {
   return [createBlock([createSpan(text)])];
 }
 
+function button(
+  text: string,
+  url: string,
+  variant: "primary" | "secondary" | "outline" | "ghost" = "primary",
+) {
+  return {
+    label: [createSpan(text)],
+    url,
+    variant,
+  };
+}
+
 export type DefaultSectionDef = {
   type: string;
   config: Prisma.InputJsonValue;
@@ -63,8 +75,10 @@ export function createDefaultCustomPageSections(
           },
         ],
         description: block("空き状況の確認やご相談はこちらから承ります。"),
-        ctaPrimary: { text: "予約する", url: "/reservation" },
-        ctaSecondary: { text: "お問い合わせ", url: "/contact" },
+        buttons: [
+          button("予約する", "/reservation"),
+          button("お問い合わせ", "/contact", "secondary"),
+        ],
       },
       order: 2,
       isActive: true,
@@ -311,11 +325,8 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
         ),
         buttons: [
-          {
-            text: "スペースを見る",
-            url: "/spaces",
-            variant: "primary",
-          },
+          button("予約する", "/reservation"),
+          button("スペースを見る", "/spaces", "secondary"),
         ],
         layout: {
           containerWidth: "md",
@@ -368,8 +379,10 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         description: block(
           "ご質問やご相談がございましたら、お気軽にお問い合わせください。",
         ),
-        ctaPrimary: { text: "お問い合わせ", url: "/contact" },
-        ctaSecondary: { text: "スペースを見る", url: "/spaces" },
+        buttons: [
+          button("お問い合わせ", "/contact"),
+          button("スペースを見る", "/spaces", "secondary"),
+        ],
       },
       order: 2,
       isActive: true,
@@ -418,7 +431,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         description: block(
           "ご不明点がございましたら、お気軽にお問い合わせください。",
         ),
-        ctaPrimary: { text: "お問い合わせ", url: "/contact" },
+        buttons: [button("お問い合わせ", "/contact")],
       },
       order: 2,
       isActive: true,
@@ -500,9 +513,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
             text: "ご不明な点はお気軽にどうぞ",
           },
         ],
-        buttons: [
-          { text: "お問い合わせ", url: "/contact", variant: "primary" },
-        ],
+        buttons: [button("お問い合わせ", "/contact")],
       },
       order: 1,
       isActive: true,

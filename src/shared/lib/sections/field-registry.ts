@@ -154,6 +154,7 @@ interface ArrayOpts<TItem extends ArrayItem> extends CommonFieldOpts {
   readonly helpText?: string;
   readonly min?: number;
   readonly max?: number;
+  readonly strict?: boolean;
 }
 
 interface DynamicSelectOpts {
@@ -424,7 +425,9 @@ export const field = {
    * `min` / `max` は実 input が渡された場合の admin write-side 検証に使う。
    */
   array<TItem extends ArrayItem>(label: string, opts: ArrayOpts<TItem>) {
-    const itemSchema = z.object(opts.fields);
+    const itemSchema = opts.strict
+      ? z.strictObject(opts.fields)
+      : z.object(opts.fields);
     let arr = z.array(itemSchema);
     if (opts.min !== undefined) {
       arr = arr.min(opts.min, {

@@ -68,7 +68,13 @@ describe("heroConfigSchema", () => {
       backgroundImageUrl: "https://example.com/image.jpg",
       buttons: [
         {
-          text: "ボタン1",
+          label: [
+            {
+              _key: "test-hero-button-label",
+              _type: "span" as const,
+              text: "ボタン1",
+            },
+          ],
           url: "/test",
           variant: "primary",
           size: "lg",
@@ -108,7 +114,13 @@ describe("heroConfigSchema", () => {
     const data = {
       buttons: [
         {
-          text: "外部リンク",
+          label: [
+            {
+              _key: "test-external-button-label",
+              _type: "span" as const,
+              text: "外部リンク",
+            },
+          ],
           url: "https://example.com/reservation",
           variant: "primary",
           size: "lg",
@@ -668,7 +680,13 @@ describe("ctaConfigSchema", () => {
       ],
       buttons: [
         {
-          text: "予約する",
+          label: [
+            {
+              _key: "test-cta-button-label",
+              _type: "span" as const,
+              text: "予約する",
+            },
+          ],
           url: "/reservation",
           variant: "primary",
           size: "lg",
@@ -679,6 +697,36 @@ describe("ctaConfigSchema", () => {
     };
     const result = ctaConfigSchema.safeParse(data);
     expect(result.success).toBe(true);
+  });
+
+  test("button は旧 text キーを受け付けない", () => {
+    const result = ctaConfigSchema.safeParse({
+      buttons: [
+        {
+          text: "予約する",
+          url: "/reservation",
+          variant: "primary",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("旧 ctaPrimary / ctaSecondary キーを受け付けない", () => {
+    const result = ctaConfigSchema.safeParse({
+      title: [
+        {
+          _key: "test-legacy-cta-title",
+          _type: "span" as const,
+          text: "ご予約はこちら",
+        },
+      ],
+      ctaPrimary: { text: "予約する", url: "/reservation" },
+      ctaSecondary: { text: "お問い合わせ", url: "/contact" },
+    });
+
+    expect(result.success).toBe(false);
   });
 
   // architectural contract: 全 section schema は safeParse({}) 成立必須
