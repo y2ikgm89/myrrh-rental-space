@@ -5,7 +5,7 @@
 - Admin routes: `src/app/(admin)/admin/(dashboard)`.
 - Shared admin components: `src/app/(admin)/admin/(dashboard)/_shared`.
 - Admin CSS and tokens: `src/app/(admin)/_styles/admin.css`.
-- shadcn aliases: `@/admin/components/ui`, `@/admin/hooks`.
+- shadcn-style aliases: `@/admin/components/ui`, `@/admin/hooks`.
 
 ## Patterns
 
@@ -18,6 +18,8 @@
 - Avoid oversized headings inside dense admin surfaces.
 - Text must not overflow buttons, tabs, badges, or cells.
 - Use existing typed form helpers and validation schemas.
+- Preserve loading, empty, error, disabled, pending, and optimistic states when
+  changing workflows.
 
 ## Verification
 

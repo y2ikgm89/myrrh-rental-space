@@ -1,5 +1,8 @@
 # E2E Test Quality Rules
 
+Compatibility layer for Claude-oriented references. Canonical Codex guidance is
+`AGENTS.md` plus `.agents/skills/e2e-test-quality`.
+
 - Use semantic Playwright locators first.
 - Use web-first assertions as waits.
 - Do not use `page.waitForTimeout`, `waitForLoadState("networkidle")`, or

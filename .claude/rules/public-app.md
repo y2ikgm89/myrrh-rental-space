@@ -1,5 +1,8 @@
 # Public App Rules
 
+Compatibility layer for Claude-oriented references. Canonical Codex guidance is
+`AGENTS.md` plus `.agents/skills/next-db-cache-boundaries`.
+
 - Public routes live under `src/app/(public)`.
 - Avoid direct DB/Prisma imports from public UI layers; use domain/public query
   functions.

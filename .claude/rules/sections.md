@@ -1,5 +1,8 @@
 # Section Rules
 
+Compatibility layer for Claude-oriented references. Canonical Codex guidance is
+`AGENTS.md`, `.agents/skills/type-safety`, and nearby section tests.
+
 - Section schemas live under `src/shared/lib/sections/definitions/*/schema.ts`.
 - Section metadata lives next to schemas in `metadata.ts`.
 - Shared section field helpers live under `src/shared/lib/sections`.

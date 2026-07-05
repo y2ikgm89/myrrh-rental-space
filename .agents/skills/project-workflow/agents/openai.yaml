@@ -1,6 +1,6 @@
 interface:
   display_name: "Project Workflow"
-  short_description: "Repo workflow and verification guardrails"
+  short_description: "Repo orchestration and verification"
   default_prompt: "Use $project-workflow before changing this repository."
 
 dependencies:

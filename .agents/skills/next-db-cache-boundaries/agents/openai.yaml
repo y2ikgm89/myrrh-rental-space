@@ -1,7 +1,7 @@
 interface:
   display_name: "Next DB Cache Boundaries"
-  short_description: "Next, Prisma, cache, route safety"
-  default_prompt: "Use $next-db-cache-boundaries when changing routes, Prisma, env, cache, cron, or webhooks."
+  short_description: "Routes, Prisma, env, cache safety"
+  default_prompt: "Use $next-db-cache-boundaries when changing routes, Prisma, env, cache, cron, webhooks, or deploy config."
 
 dependencies:
   tools:
