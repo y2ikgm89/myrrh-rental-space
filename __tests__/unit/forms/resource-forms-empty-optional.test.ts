@@ -15,6 +15,7 @@ import { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import { blockedDateTypeSchema } from "@/shared/lib/validations/blocked-date";
 import { customerFormSchema } from "@/shared/lib/validations/customer";
 import { couponFormSchema } from "@/shared/lib/validations/coupon";
+import { locationFormSchema } from "@/shared/lib/validations/location";
 import { spaceCategoryFormSchema } from "@/shared/lib/validations/space-category";
 import { reviewReplySchema } from "@/shared/lib/validations/review";
 import {
@@ -53,7 +54,6 @@ const EMPTY_DESC_TICKET = JSON.stringify([
     price: 1000,
     capacity: null,
     unitSize: 1,
-    sortOrder: 0,
     isAvailable: true,
   },
 ]);
@@ -72,6 +72,11 @@ function expectSuccess(schema: z.ZodType, fd: FormData, label: string): void {
     console.log(`${label} errors:`, JSON.stringify(submission.reply().error));
   }
   expect(submission.status).toBe("success");
+}
+
+function expectError(schema: z.ZodType, fd: FormData): void {
+  const submission = parseWithZod(fd, { schema });
+  expect(submission.status).toBe("error");
 }
 
 describe("リソースフォーム: 任意空欄保存（conform 整合）", () => {
@@ -124,11 +129,36 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
     );
   });
 
+  test("faqItem: 旧 order hidden input は拒否する", () => {
+    expectError(
+      faqItemFormSchema,
+      form({
+        categoryId: UUID,
+        question: "質問",
+        answer: "回答",
+        order: "0",
+      }),
+    );
+  });
+
   test("faqCategory: 任意（説明/アイコン）空欄で保存できる", () => {
     expectSuccess(
       faqCategoryFormSchema,
       form({ name: "一般", slug: "general", description: "", icon: "" }),
       "faqCategory",
+    );
+  });
+
+  test("faqCategory: 旧 order hidden input は拒否する", () => {
+    expectError(
+      faqCategoryFormSchema,
+      form({
+        name: "一般",
+        slug: "general",
+        description: "",
+        icon: "",
+        order: "0",
+      }),
     );
   });
 
@@ -170,6 +200,21 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
     );
   });
 
+  test("taxonomy category: 旧 order hidden input は拒否する", () => {
+    expectError(
+      categoryFormSchema,
+      form({
+        name: "ニュース",
+        slug: "news",
+        description: "",
+        metaTitle: "",
+        metaDescription: "",
+        ogpImageUrl: "",
+        order: "0",
+      }),
+    );
+  });
+
   test("taxonomy tag: 任意空欄で保存できる", () => {
     expectSuccess(
       tagFormSchema,
@@ -185,11 +230,65 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
     );
   });
 
+  test("taxonomy tag: 旧 order hidden input は拒否する", () => {
+    expectError(
+      tagFormSchema,
+      form({
+        name: "お知らせ",
+        slug: "info",
+        description: "",
+        metaTitle: "",
+        metaDescription: "",
+        ogpImageUrl: "",
+        order: "0",
+      }),
+    );
+  });
+
   test("spaceCategory: 任意（説明/アイコン/色）空欄で保存できる", () => {
     expectSuccess(
       spaceCategoryFormSchema,
       form({ name: "会議室", description: "", icon: "", color: "" }),
       "spaceCategory",
+    );
+  });
+
+  test("spaceCategory: 旧 sortOrder hidden input は拒否する", () => {
+    expectError(
+      spaceCategoryFormSchema,
+      form({
+        name: "会議室",
+        description: "",
+        icon: "",
+        color: "",
+        sortOrder: "0",
+      }),
+    );
+  });
+
+  test("location: 必須のみで保存できる", () => {
+    expectSuccess(
+      locationFormSchema,
+      form({
+        name: "表参道",
+        slug: "omotesando",
+        address: "東京都渋谷区神宮前1-1-1",
+        imageUrl: "https://example.com/location.jpg",
+      }),
+      "location",
+    );
+  });
+
+  test("location: 旧 sortOrder hidden input は拒否する", () => {
+    expectError(
+      locationFormSchema,
+      form({
+        name: "表参道",
+        slug: "omotesando",
+        address: "東京都渋谷区神宮前1-1-1",
+        imageUrl: "https://example.com/location.jpg",
+        sortOrder: "0",
+      }),
     );
   });
 
@@ -309,6 +408,48 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
         metaKeywords: "",
       }),
       "event",
+    );
+  });
+
+  test("event: チケット JSON の旧 sortOrder は拒否する", () => {
+    expectError(
+      eventFormSchema,
+      form({
+        title: "イベント",
+        slug: "event-1",
+        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+        descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        thumbnailUrl: "",
+        slots: JSON.stringify([
+          {
+            startAt: "2026-07-01T10:00",
+            endAt: "2026-07-01T12:00",
+            capacity: 10,
+          },
+        ]),
+        registrationDeadline: "",
+        tickets: JSON.stringify([
+          {
+            name: "一般",
+            description: null,
+            price: 1000,
+            capacity: null,
+            unitSize: 1,
+            sortOrder: 0,
+            isAvailable: true,
+          },
+        ]),
+        addressDetail: "",
+        locationId: EVENT_FORM_NONE_VALUE,
+        spaceId: EVENT_FORM_NONE_VALUE,
+        status: String(Object.values(EventStatus)[0]),
+        registrationOpen: "",
+        ogpImageUrl: "",
+        ogpTitle: "",
+        ogpDescription: "",
+        metaDescription: "",
+        metaKeywords: "",
+      }),
     );
   });
 });

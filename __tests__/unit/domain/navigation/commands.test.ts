@@ -9,13 +9,21 @@ const mockNavigationItemFindUnique = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
-const mockNavigationItemUpdate = mock<() => Promise<Record<string, unknown>>>(
-  () => Promise.resolve({ id: "nav-1" }),
-);
+const mockNavigationItemFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+
+const mockNavigationItemUpdate = mock<
+  (args: { data: Record<string, unknown> }) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "nav-1" }));
 
 const mockNavigationItemDelete = mock<() => Promise<Record<string, unknown>>>(
   () => Promise.resolve({ id: "nav-1" }),
 );
+
+const mockNavigationItemAggregate = mock<
+  () => Promise<{ _max: { order: number | null } }>
+>(() => Promise.resolve({ _max: { order: null } }));
 
 const mockSocialLinkCreate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "social-1" }),
@@ -25,17 +33,52 @@ const mockSocialLinkFindUnique = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
-const mockSocialLinkUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
-  Promise.resolve({ id: "social-1" }),
-);
+const mockSocialLinkFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+
+const mockSocialLinkUpdate = mock<
+  (args: { data: Record<string, unknown> }) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "social-1" }));
 
 const mockSocialLinkDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "social-1" }),
 );
 
+const mockSocialLinkAggregate = mock<
+  () => Promise<{ _max: { order: number | null } }>
+>(() => Promise.resolve({ _max: { order: null } }));
+
 const mockTransaction = mock<
-  (ops: unknown[]) => Promise<Record<string, unknown>[]>
->(() => Promise.resolve([]));
+  (
+    cb: (tx: {
+      $executeRaw: typeof mockExecuteRaw;
+      navigationItem: {
+        create: typeof mockNavigationItemCreate;
+        aggregate: typeof mockNavigationItemAggregate;
+      };
+      socialLink: {
+        create: typeof mockSocialLinkCreate;
+        aggregate: typeof mockSocialLinkAggregate;
+      };
+    }) => Promise<unknown>,
+  ) => Promise<unknown>
+>((cb) =>
+  cb({
+    $executeRaw: mockExecuteRaw,
+    navigationItem: {
+      create: mockNavigationItemCreate,
+      aggregate: mockNavigationItemAggregate,
+    },
+    socialLink: {
+      create: mockSocialLinkCreate,
+      aggregate: mockSocialLinkAggregate,
+    },
+  }),
+);
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
@@ -45,18 +88,61 @@ mock.module("@/shared/db/prisma", () => ({
     navigationItem: {
       create: mockNavigationItemCreate,
       findUnique: mockNavigationItemFindUnique,
+      findMany: mockNavigationItemFindMany,
       update: mockNavigationItemUpdate,
       delete: mockNavigationItemDelete,
+      aggregate: mockNavigationItemAggregate,
     },
     socialLink: {
       create: mockSocialLinkCreate,
       findUnique: mockSocialLinkFindUnique,
+      findMany: mockSocialLinkFindMany,
       update: mockSocialLinkUpdate,
       delete: mockSocialLinkDelete,
+      aggregate: mockSocialLinkAggregate,
     },
     $transaction: mockTransaction,
+    $executeRaw: mockExecuteRaw,
   },
 }));
+
+type SqlFragment = { __sql: string; __values: unknown[] };
+
+function isSqlFragment(value: unknown): value is SqlFragment {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "__sql" in value &&
+    "__values" in value
+  );
+}
+
+mock.module("@generated/prisma/client", () => {
+  const sql = (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): SqlFragment => {
+    let combined = "";
+    for (let i = 0; i < strings.length; i++) {
+      combined += strings[i];
+      if (i < values.length) {
+        const value = values[i];
+        combined += isSqlFragment(value) ? value.__sql : "?";
+      }
+    }
+    return { __sql: combined, __values: values };
+  };
+
+  return {
+    Prisma: {
+      sql,
+      join: (items: SqlFragment[], separator = ", ") => ({
+        __sql: items.map((item) => item.__sql).join(separator),
+        __values: items.flatMap((item) => item.__values),
+      }),
+    },
+  };
+});
 
 mock.module("@generated/prisma/enums", () => ({
   NavigationType: {
@@ -103,14 +189,12 @@ const VALID_NAV_INPUT = {
   label: [{ _key: "tk-home", _type: "span" as const, text: "ホーム" }],
   url: "/",
   isExternal: false,
-  order: 0,
   isActive: true,
 };
 
 const VALID_SOCIAL_INPUT = {
   platform: "TWITTER" as const,
   url: "https://twitter.com/example",
-  order: 0,
   isActive: true,
   showOnDesktop: true,
   showOnMobile: true,
@@ -253,18 +337,10 @@ describe("navigationItemInputSchema バリデーション", () => {
       expect(result.success).toBe(false);
     });
 
-    test("order が負の値で失敗する", () => {
+    test("order は create/update 入力として拒否する", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        order: -1,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("order が小数で失敗する", () => {
-      const result = navigationItemInputSchema.safeParse({
-        ...VALID_NAV_INPUT,
-        order: 1.5,
+        order: 999,
       });
       expect(result.success).toBe(false);
     });
@@ -306,6 +382,25 @@ describe("navigationOrderInputSchema バリデーション", () => {
     test("id が UUID でない場合に失敗する", () => {
       const result = navigationOrderInputSchema.safeParse([
         { id: "not-a-uuid", order: 0 },
+      ]);
+      expect(result.success).toBe(false);
+    });
+
+    test("order が重複している場合に失敗する", () => {
+      const result = navigationOrderInputSchema.safeParse([
+        { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+        { id: "550e8400-e29b-41d4-a716-446655440001", order: 0 },
+      ]);
+      expect(result.success).toBe(false);
+    });
+
+    test("自分自身を parentId に指定すると失敗する", () => {
+      const result = navigationOrderInputSchema.safeParse([
+        {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          order: 0,
+          parentId: "550e8400-e29b-41d4-a716-446655440000",
+        },
       ]);
       expect(result.success).toBe(false);
     });
@@ -395,10 +490,10 @@ describe("socialLinkInputSchema バリデーション", () => {
       expect(result.success).toBe(false);
     });
 
-    test("order が負の値で失敗する", () => {
+    test("order は create/update 入力として拒否する", () => {
       const result = socialLinkInputSchema.safeParse({
         ...VALID_SOCIAL_INPUT,
-        order: -1,
+        order: 999,
       });
       expect(result.success).toBe(false);
     });
@@ -432,6 +527,14 @@ describe("socialLinkOrderInputSchema バリデーション", () => {
       ]);
       expect(result.success).toBe(false);
     });
+
+    test("order が重複している場合に失敗する", () => {
+      const result = socialLinkOrderInputSchema.safeParse([
+        { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+        { id: "550e8400-e29b-41d4-a716-446655440001", order: 0 },
+      ]);
+      expect(result.success).toBe(false);
+    });
   });
 });
 
@@ -442,7 +545,9 @@ describe("socialLinkOrderInputSchema バリデーション", () => {
 describe("createNavigationItem", () => {
   beforeEach(() => {
     mockNavigationItemCreate.mockReset();
+    mockNavigationItemAggregate.mockReset();
     mockNavigationItemCreate.mockResolvedValue({ id: NAV_ID });
+    mockNavigationItemAggregate.mockResolvedValue({ _max: { order: null } });
   });
 
   describe("正常系", () => {
@@ -465,6 +570,24 @@ describe("createNavigationItem", () => {
             isExternal: false,
             order: 0,
             isActive: true,
+          }),
+        }),
+      );
+    });
+
+    test("既存の同種メニューの末尾に order を自動採番する", async () => {
+      mockNavigationItemAggregate.mockResolvedValue({ _max: { order: 7 } });
+
+      await createNavigationItem(VALID_NAV_INPUT);
+
+      expect(mockNavigationItemAggregate).toHaveBeenCalledWith({
+        where: { type: "HEADER_DESKTOP" },
+        _max: { order: true },
+      });
+      expect(mockNavigationItemCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            order: 8,
           }),
         }),
       );
@@ -550,6 +673,17 @@ describe("updateNavigationItem", () => {
           }),
         }),
       );
+    });
+
+    test("update は order を更新しない", async () => {
+      await updateNavigationItem(NAV_ID, VALID_NAV_INPUT);
+
+      const call = mockNavigationItemUpdate.mock.calls.at(-1)?.[0] as
+        { data: Record<string, unknown> } | undefined;
+      expect(call).toBeDefined();
+      if (call) {
+        expect(call.data).not.toHaveProperty("order");
+      }
     });
 
     test("parentId が省略された場合 null が設定される", async () => {
@@ -674,8 +808,23 @@ describe("deleteNavigationItem", () => {
 describe("updateNavigationOrder", () => {
   beforeEach(() => {
     mockTransaction.mockReset();
+    mockNavigationItemFindMany.mockReset();
     mockNavigationItemUpdate.mockReset();
-    mockTransaction.mockResolvedValue([]);
+    mockExecuteRaw.mockReset();
+    mockTransaction.mockImplementation((cb) =>
+      cb({
+        $executeRaw: mockExecuteRaw,
+        navigationItem: {
+          create: mockNavigationItemCreate,
+          aggregate: mockNavigationItemAggregate,
+        },
+        socialLink: {
+          create: mockSocialLinkCreate,
+          aggregate: mockSocialLinkAggregate,
+        },
+      }),
+    );
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
@@ -690,30 +839,121 @@ describe("updateNavigationOrder", () => {
           order: 1,
         },
       ];
+      mockNavigationItemFindMany
+        .mockResolvedValueOnce(
+          items.map((item) => ({ id: item.id, type: "HEADER_DESKTOP" })),
+        )
+        .mockResolvedValueOnce(items.map((item) => ({ id: item.id })));
 
       await updateNavigationOrder(items);
 
-      expect(mockNavigationItemUpdate).toHaveBeenCalledTimes(2);
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockNavigationItemUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
     });
 
     test("空配列を渡しても正常に処理される", async () => {
       await updateNavigationOrder([]);
 
+      expect(mockNavigationItemFindMany).not.toHaveBeenCalled();
       expect(mockNavigationItemUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
       expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("1件の場合も正常に処理される", async () => {
-      await updateNavigationOrder([
-        { id: "550e8400-e29b-41d4-a716-446655440000", order: 5 },
-      ]);
+      const items = [{ id: "550e8400-e29b-41d4-a716-446655440000", order: 5 }];
+      mockNavigationItemFindMany
+        .mockResolvedValueOnce(
+          items.map((item) => ({ id: item.id, type: "HEADER_DESKTOP" })),
+        )
+        .mockResolvedValueOnce(items.map((item) => ({ id: item.id })));
 
-      expect(mockNavigationItemUpdate).toHaveBeenCalledTimes(1);
-      expect(mockTransaction).not.toHaveBeenCalled();
+      await updateNavigationOrder(items);
+
+      expect(mockNavigationItemUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
     });
 
     test("parentId を含む場合も正常に処理される", async () => {
+      const items = [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440099",
+          order: 0,
+          parentId: null,
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          order: 1,
+          parentId: "550e8400-e29b-41d4-a716-446655440099",
+        },
+      ];
+      mockNavigationItemFindMany
+        .mockResolvedValueOnce(
+          items.map((item) => ({ id: item.id, type: "HEADER_DESKTOP" })),
+        )
+        .mockResolvedValueOnce(items.map((item) => ({ id: item.id })))
+        .mockResolvedValueOnce([
+          {
+            id: "550e8400-e29b-41d4-a716-446655440099",
+            type: "HEADER_DESKTOP",
+          },
+        ]);
+
+      await updateNavigationOrder(items);
+
+      expect(mockNavigationItemUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+      const sql = mockExecuteRaw.mock.calls[2]?.[0].join("?") ?? "";
+      expect(sql).toContain("navigation_items");
+      expect(sql).toContain("parentId");
+    });
+  });
+
+  describe("異常系", () => {
+    test("重複 ID は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateNavigationOrder([
+          { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+          { id: "550e8400-e29b-41d4-a716-446655440000", order: 1 },
+        ]),
+      ).rejects.toThrow("同じIDを複数指定することはできません");
+
+      expect(mockNavigationItemFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("重複 order は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateNavigationOrder([
+          { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+          { id: "550e8400-e29b-41d4-a716-446655440001", order: 0 },
+        ]),
+      ).rejects.toThrow("同じ順序を複数指定することはできません");
+
+      expect(mockNavigationItemFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("存在しないナビゲーション ID が混ざる場合 SQL が実行されない", async () => {
+      const items = [
+        { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+        { id: "550e8400-e29b-41d4-a716-446655440001", order: 1 },
+      ];
+      mockNavigationItemFindMany.mockResolvedValueOnce([
+        { id: "550e8400-e29b-41d4-a716-446655440000", type: "HEADER_DESKTOP" },
+      ]);
+
+      await expect(updateNavigationOrder(items)).rejects.toThrow(
+        "ナビゲーションが見つかりません",
+      );
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("存在しない親 ID が混ざる場合 SQL が実行されない", async () => {
       const items = [
         {
           id: "550e8400-e29b-41d4-a716-446655440000",
@@ -721,17 +961,42 @@ describe("updateNavigationOrder", () => {
           parentId: "550e8400-e29b-41d4-a716-446655440099",
         },
       ];
+      mockNavigationItemFindMany
+        .mockResolvedValueOnce([
+          {
+            id: "550e8400-e29b-41d4-a716-446655440000",
+            type: "HEADER_DESKTOP",
+          },
+        ])
+        .mockResolvedValueOnce([{ id: "550e8400-e29b-41d4-a716-446655440000" }])
+        .mockResolvedValueOnce([]);
 
-      await updateNavigationOrder(items);
+      await expect(updateNavigationOrder(items)).rejects.toThrow(
+        "親ナビゲーションが見つかりません",
+      );
 
-      expect(mockNavigationItemUpdate).toHaveBeenCalledWith({
-        where: { id: "550e8400-e29b-41d4-a716-446655440000" },
-        data: {
-          order: 0,
-          parentId: "550e8400-e29b-41d4-a716-446655440099",
-        },
-      });
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("同一 type の subset は過不足として拒否する", async () => {
+      const items = [{ id: "550e8400-e29b-41d4-a716-446655440000", order: 0 }];
+      mockNavigationItemFindMany
+        .mockResolvedValueOnce([
+          {
+            id: "550e8400-e29b-41d4-a716-446655440000",
+            type: "HEADER_DESKTOP",
+          },
+        ])
+        .mockResolvedValueOnce([
+          { id: "550e8400-e29b-41d4-a716-446655440000" },
+          { id: "550e8400-e29b-41d4-a716-446655440001" },
+        ]);
+
+      await expect(updateNavigationOrder(items)).rejects.toThrow(
+        "ナビゲーション数が一致しません",
+      );
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 });
@@ -743,7 +1008,9 @@ describe("updateNavigationOrder", () => {
 describe("createSocialLink", () => {
   beforeEach(() => {
     mockSocialLinkCreate.mockReset();
+    mockSocialLinkAggregate.mockReset();
     mockSocialLinkCreate.mockResolvedValue({ id: SOCIAL_ID });
+    mockSocialLinkAggregate.mockResolvedValue({ _max: { order: null } });
   });
 
   describe("正常系", () => {
@@ -771,6 +1038,23 @@ describe("createSocialLink", () => {
       );
     });
 
+    test("既存SNSリンクの末尾に order を自動採番する", async () => {
+      mockSocialLinkAggregate.mockResolvedValue({ _max: { order: 11 } });
+
+      await createSocialLink(VALID_SOCIAL_INPUT);
+
+      expect(mockSocialLinkAggregate).toHaveBeenCalledWith({
+        _max: { order: true },
+      });
+      expect(mockSocialLinkCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            order: 12,
+          }),
+        }),
+      );
+    });
+
     test("各プラットフォームで作成できる", async () => {
       const platforms = [
         "FACEBOOK",
@@ -783,7 +1067,9 @@ describe("createSocialLink", () => {
 
       for (const platform of platforms) {
         mockSocialLinkCreate.mockReset();
+        mockSocialLinkAggregate.mockReset();
         mockSocialLinkCreate.mockResolvedValue({ id: SOCIAL_ID });
+        mockSocialLinkAggregate.mockResolvedValue({ _max: { order: null } });
 
         const result = await createSocialLink({
           ...VALID_SOCIAL_INPUT,
@@ -837,6 +1123,17 @@ describe("updateSocialLink", () => {
           }),
         }),
       );
+    });
+
+    test("update は order を更新しない", async () => {
+      await updateSocialLink(SOCIAL_ID, VALID_SOCIAL_INPUT);
+
+      const call = mockSocialLinkUpdate.mock.calls.at(-1)?.[0] as
+        { data: Record<string, unknown> } | undefined;
+      expect(call).toBeDefined();
+      if (call) {
+        expect(call.data).not.toHaveProperty("order");
+      }
     });
   });
 
@@ -923,8 +1220,23 @@ describe("deleteSocialLink", () => {
 describe("updateSocialLinkOrder", () => {
   beforeEach(() => {
     mockTransaction.mockReset();
+    mockSocialLinkFindMany.mockReset();
     mockSocialLinkUpdate.mockReset();
-    mockTransaction.mockResolvedValue([]);
+    mockExecuteRaw.mockReset();
+    mockTransaction.mockImplementation((cb) =>
+      cb({
+        $executeRaw: mockExecuteRaw,
+        navigationItem: {
+          create: mockNavigationItemCreate,
+          aggregate: mockNavigationItemAggregate,
+        },
+        socialLink: {
+          create: mockSocialLinkCreate,
+          aggregate: mockSocialLinkAggregate,
+        },
+      }),
+    );
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
@@ -943,27 +1255,93 @@ describe("updateSocialLinkOrder", () => {
           order: 2,
         },
       ];
+      mockSocialLinkFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
 
       await updateSocialLinkOrder(items);
 
-      expect(mockSocialLinkUpdate).toHaveBeenCalledTimes(3);
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockSocialLinkUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
     });
 
     test("空配列を渡しても正常に処理される", async () => {
       await updateSocialLinkOrder([]);
 
+      expect(mockSocialLinkFindMany).not.toHaveBeenCalled();
       expect(mockSocialLinkUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
       expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("1件の場合も正常に処理される", async () => {
-      await updateSocialLinkOrder([
-        { id: "550e8400-e29b-41d4-a716-446655440000", order: 3 },
+      const items = [{ id: "550e8400-e29b-41d4-a716-446655440000", order: 3 }];
+      mockSocialLinkFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
+
+      await updateSocialLinkOrder(items);
+
+      expect(mockSocialLinkUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("異常系", () => {
+    test("重複 ID は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateSocialLinkOrder([
+          { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+          { id: "550e8400-e29b-41d4-a716-446655440000", order: 1 },
+        ]),
+      ).rejects.toThrow("同じIDを複数指定することはできません");
+
+      expect(mockSocialLinkFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("重複 order は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateSocialLinkOrder([
+          { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+          { id: "550e8400-e29b-41d4-a716-446655440001", order: 0 },
+        ]),
+      ).rejects.toThrow("同じ順序を複数指定することはできません");
+
+      expect(mockSocialLinkFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("存在しない SNS リンク ID が混ざる場合 SQL が実行されない", async () => {
+      const items = [
+        { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+        { id: "550e8400-e29b-41d4-a716-446655440001", order: 1 },
+      ];
+      mockSocialLinkFindMany.mockResolvedValueOnce([
+        { id: "550e8400-e29b-41d4-a716-446655440000" },
       ]);
 
-      expect(mockSocialLinkUpdate).toHaveBeenCalledTimes(1);
-      expect(mockTransaction).not.toHaveBeenCalled();
+      await expect(updateSocialLinkOrder(items)).rejects.toThrow(
+        "SNSリンクが見つかりません",
+      );
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("既存 ID の subset は過不足として拒否する", async () => {
+      const items = [{ id: "550e8400-e29b-41d4-a716-446655440000", order: 0 }];
+      mockSocialLinkFindMany.mockResolvedValueOnce([
+        { id: "550e8400-e29b-41d4-a716-446655440000" },
+        { id: "550e8400-e29b-41d4-a716-446655440001" },
+      ]);
+
+      await expect(updateSocialLinkOrder(items)).rejects.toThrow(
+        "SNSリンク数が一致しません",
+      );
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 });

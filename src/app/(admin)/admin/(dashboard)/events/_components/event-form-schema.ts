@@ -15,7 +15,8 @@ import { gallerySchema } from "@/shared/lib/validations/gallery";
  * - `descriptionJson` (Lexical EditorState JSON) は hidden input で transit
  * - `descriptionHtml` は server が descriptionJson から派生
  * - boolean (`registrationOpen`) は Switch + hidden input "on" / "" を `z.preprocess` で coerce
- * - `tickets` は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
+ * - `tickets` は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate。
+ *   `sortOrder` は payload から受け取らず、domain command が配列順から 0 始まりで派生する
  * - `slots`  は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
  *   （startAt/endAt は datetime-local 文字列 → parseDateTimeLocalAsJst で Date 変換）
  * - sentinel `EVENT_FORM_NONE_VALUE` で `locationId` / `spaceId` の「外部会場」「会場全体」を表現、preprocess で null 化
@@ -43,7 +44,7 @@ const nullableUuidWithSentinel = (sentinel: string) =>
     z.uuid({ error: "無効なID形式です" }).nullable().optional(),
   );
 
-const ticketInputSchema = z.object({
+const ticketInputSchema = z.strictObject({
   id: z.string().optional(),
   name: z
     .string()
@@ -59,7 +60,6 @@ const ticketInputSchema = z.object({
     .number()
     .int()
     .min(1, { error: "1チケットあたりの人数は1以上です" }),
-  sortOrder: z.number().int().min(0),
   isAvailable: z.boolean(),
 });
 

@@ -16,6 +16,9 @@ const mockSettingsUpdateMany = mock<() => Promise<void>>(() =>
 const mockInstagramPostCreate = mock<() => Promise<void>>(() =>
   Promise.resolve(undefined),
 );
+const mockInstagramPostCreateMany = mock<() => Promise<void>>(() =>
+  Promise.resolve(undefined),
+);
 const mockInstagramPostFindUnique = mock<() => Promise<{ id: string } | null>>(
   () => Promise.resolve(null),
 );
@@ -31,9 +34,38 @@ const mockInstagramPostAggregate = mock<
 const mockInstagramPostUpdate = mock<() => Promise<void>>(() =>
   Promise.resolve(undefined),
 );
-const mockTransaction = mock((updates: Promise<void>[]) =>
-  Promise.all(updates),
-);
+const mockExecuteRaw = mock<() => Promise<number>>(() => Promise.resolve(0));
+const mockTransaction = mock<
+  (
+    arg:
+      | Promise<void>[]
+      | ((tx: {
+          $executeRaw: typeof mockExecuteRaw;
+          settings: {
+            update: typeof mockSettingsUpdate;
+          };
+          instagramPost: {
+            deleteMany: typeof mockInstagramPostDeleteMany;
+            createMany: typeof mockInstagramPostCreateMany;
+          };
+        }) => Promise<unknown>),
+  ) => Promise<unknown>
+>((arg) => {
+  if (typeof arg === "function") {
+    return arg({
+      $executeRaw: mockExecuteRaw,
+      settings: {
+        update: mockSettingsUpdate,
+      },
+      instagramPost: {
+        deleteMany: mockInstagramPostDeleteMany,
+        createMany: mockInstagramPostCreateMany,
+      },
+    });
+  }
+
+  return Promise.all(arg);
+});
 
 mock.module("server-only", () => ({}));
 
@@ -46,6 +78,7 @@ mock.module("@/shared/db/prisma", () => ({
     },
     instagramPost: {
       create: mockInstagramPostCreate,
+      createMany: mockInstagramPostCreateMany,
       findUnique: mockInstagramPostFindUnique,
       delete: mockInstagramPostDelete,
       deleteMany: mockInstagramPostDeleteMany,
@@ -53,6 +86,7 @@ mock.module("@/shared/db/prisma", () => ({
       update: mockInstagramPostUpdate,
     },
     $transaction: mockTransaction,
+    $executeRaw: mockExecuteRaw,
   },
 }));
 
@@ -107,6 +141,7 @@ import {
   connectInstagramOAuthAccount,
   refreshInstagramAccessToken,
   disconnectInstagram,
+  syncInstagramFeed,
 } from "@/shared/domain/instagram/commands";
 
 // テスト用定数
@@ -261,6 +296,25 @@ describe("refreshInstagramAccessToken", () => {
 
 describe("disconnectInstagram", () => {
   beforeEach(() => {
+    mockTransaction.mockReset();
+    mockTransaction.mockImplementation((arg) => {
+      if (typeof arg === "function") {
+        return arg({
+          $executeRaw: mockExecuteRaw,
+          settings: {
+            update: mockSettingsUpdate,
+          },
+          instagramPost: {
+            deleteMany: mockInstagramPostDeleteMany,
+            createMany: mockInstagramPostCreateMany,
+          },
+        });
+      }
+
+      return Promise.all(arg);
+    });
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(0);
     mockSettingsUpdate.mockReset();
     mockInstagramPostDeleteMany.mockReset();
     mockSettingsUpdate.mockResolvedValue(undefined);
@@ -271,6 +325,8 @@ describe("disconnectInstagram", () => {
     test("Instagram 連携を切断して投稿を削除できる", async () => {
       await expect(disconnectInstagram()).resolves.toBeUndefined();
 
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
       expect(mockSettingsUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
@@ -285,5 +341,82 @@ describe("disconnectInstagram", () => {
       );
       expect(mockInstagramPostDeleteMany).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("syncInstagramFeed", () => {
+  beforeEach(() => {
+    mockTransaction.mockReset();
+    mockTransaction.mockImplementation((arg) => {
+      if (typeof arg === "function") {
+        return arg({
+          $executeRaw: mockExecuteRaw,
+          settings: {
+            update: mockSettingsUpdate,
+          },
+          instagramPost: {
+            deleteMany: mockInstagramPostDeleteMany,
+            createMany: mockInstagramPostCreateMany,
+          },
+        });
+      }
+
+      return Promise.all(arg);
+    });
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(0);
+    mockInstagramPostDeleteMany.mockReset();
+    mockInstagramPostDeleteMany.mockResolvedValue(undefined);
+    mockInstagramPostCreateMany.mockReset();
+    mockInstagramPostCreateMany.mockResolvedValue(undefined);
+  });
+
+  test("フィード同期は sortOrder 一意制約に合わせてロック内で全件置換する", async () => {
+    await syncInstagramFeed([
+      {
+        id: "media-1",
+        permalink: "https://www.instagram.com/p/media1/",
+        mediaUrl: "https://cdn.example.com/media1.jpg",
+        caption: "first",
+        mediaType: "IMAGE",
+        timestamp: "2026-07-05T00:00:00+09:00",
+      },
+      {
+        id: "media-2",
+        permalink: "https://www.instagram.com/reel/media2/",
+        mediaUrl: "https://cdn.example.com/media2.mp4",
+        mediaType: "VIDEO",
+        thumbnailUrl: "https://cdn.example.com/media2.jpg",
+        timestamp: "2026-07-05T00:01:00+09:00",
+      },
+    ]);
+
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+    expect(mockInstagramPostDeleteMany).toHaveBeenCalledWith({});
+    expect(mockInstagramPostCreateMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          postId: "media-1",
+          mediaType: "IMAGE",
+          sortOrder: 0,
+        }),
+        expect.objectContaining({
+          postId: "media-2",
+          mediaType: "VIDEO",
+          sortOrder: 1,
+          thumbnailUrl: "https://cdn.example.com/media2.jpg",
+        }),
+      ],
+    });
+  });
+
+  test("空フィード同期もロック内で既存投稿を削除し createMany は呼ばない", async () => {
+    await syncInstagramFeed([]);
+
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+    expect(mockInstagramPostDeleteMany).toHaveBeenCalledWith({});
+    expect(mockInstagramPostCreateMany).not.toHaveBeenCalled();
   });
 });

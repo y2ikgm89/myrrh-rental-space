@@ -1,11 +1,17 @@
 "use client";
 
-import { DndContext, closestCenter } from "@dnd-kit/core";
-import type { DragEndEvent } from "@dnd-kit/core";
 import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
   SortableContext,
+  closestCenter,
+  sortableKeyboardCoordinates,
+  useSensor,
+  useSensors,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+  type DragEndEvent,
+} from "@/admin/components/ui";
 import type {
   CustomWidget,
   SidebarWidget,
@@ -37,15 +43,24 @@ export function SidebarWidgetGrid({
   onDelete,
   disabled,
 }: SidebarWidgetGridProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
   return (
     <DndContext
       id="sidebar-widgets-sortable"
+      sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}
     >
       <SortableContext
         items={widgets.map(getWidgetId)}
         strategy={verticalListSortingStrategy}
+        disabled={disabled}
       >
         <div className="space-y-2">
           {widgets.map((widget) => (

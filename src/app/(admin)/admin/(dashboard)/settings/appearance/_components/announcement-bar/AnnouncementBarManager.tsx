@@ -11,6 +11,7 @@ import {
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   deleteAnnouncementBar,
+  reorderAnnouncementBars,
   updateAnnouncementBarActive,
 } from "@/admin/actions/announcement-bar";
 import type { AnnouncementBarData } from "@/shared/domain/settings/announcement-bar";
@@ -126,6 +127,25 @@ export function AnnouncementBarManager({
     });
   };
 
+  const handleReorder = (reorderedBars: Serialized<AnnouncementBarData>[]) => {
+    const previousBars = bars;
+    setBars(reorderedBars);
+
+    startTransition(async () => {
+      const result = await reorderAnnouncementBars(
+        reorderedBars.map((bar) => bar.id),
+      );
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        setBars(previousBars);
+        return;
+      }
+
+      toast.success("お知らせバーの表示順を更新しました");
+      await loadBars();
+    });
+  };
+
   // Delete
   const handleDelete = () => {
     if (!deletingId) return;
@@ -211,6 +231,7 @@ export function AnnouncementBarManager({
             onEdit={openDialog}
             onCreate={() => openDialog()}
             onToggleActive={handleToggleActive}
+            onReorder={handleReorder}
             onDelete={(id) => {
               setDeletingId(id);
               setDeleteDialogOpen(true);

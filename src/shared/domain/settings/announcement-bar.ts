@@ -10,6 +10,10 @@ import {
   AnnouncementBarDesignStyle,
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buildOrderScopeLockSql,
+  buildUuidOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
@@ -47,7 +51,7 @@ export type AnnouncementBarData = {
   bgColor: string | null;
   textColor: string | null;
   isActive: boolean;
-  priority: number;
+  displayOrder: number;
   startAt: Date | null;
   endAt: Date | null;
   createdAt: Date;
@@ -109,7 +113,7 @@ const announcementBarSelect = {
   bgColor: true,
   textColor: true,
   isActive: true,
-  priority: true,
+  displayOrder: true,
   startAt: true,
   endAt: true,
   createdAt: true,
@@ -131,7 +135,7 @@ function shapeAnnouncementBarRow(
     bgColor: row.bgColor,
     textColor: row.textColor,
     isActive: row.isActive,
-    priority: row.priority,
+    displayOrder: row.displayOrder,
     startAt: row.startAt,
     endAt: row.endAt,
     createdAt: row.createdAt,
@@ -156,7 +160,7 @@ const defaultCarouselSettings: AnnouncementBarCarouselSettings = {
   announcementBarSticky: false,
 };
 
-export const announcementBarInputSchema = z.object({
+export const announcementBarInputSchema = z.strictObject({
   /**
    * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在、最大 30 span）。
    * 空配列 / 純アイコン構成は UI 層が許容するが、ここではプレーン文字列ベースで
@@ -195,7 +199,6 @@ export const announcementBarInputSchema = z.object({
     .nullable()
     .optional(),
   isActive: z.boolean().default(true),
-  priority: z.number().int().min(0).max(100).default(0),
   // `<input type="datetime-local">` の値（"YYYY-MM-DDTHH:mm" / "...:ss"）を受け取る
   // contract に統一。command 層で `parseDateTimeLocalAsJst` を通して JST 固定で UTC 化
   // （サーバ tz / ブラウザ tz 非依存）。空文字は `.or(z.literal(""))` で許容、normalize
@@ -224,7 +227,6 @@ function normalizeAnnouncementBarInput(data: AnnouncementBarInput) {
     bgColor: data.bgColor || null,
     textColor: data.textColor || null,
     isActive: data.isActive,
-    priority: data.priority,
     startAt:
       data.startAt && data.startAt !== ""
         ? parseDateTimeLocalAsJst(data.startAt)
@@ -247,7 +249,7 @@ export async function getAnnouncementBars(): Promise<
     fetch: () =>
       prisma.announcementBar.findMany({
         select: announcementBarSelect,
-        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
       }),
     fallback: [],
     category: ErrorCategory.DATABASE,
@@ -292,7 +294,7 @@ export async function getActiveAnnouncementBars(): Promise<
       prisma.announcementBar.findMany({
         where: { isActive: true },
         select: announcementBarSelect,
-        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }],
       }),
     fallback: [],
     category: ErrorCategory.DATABASE,
@@ -392,8 +394,19 @@ export async function updateAnnouncementBarCarouselSettings(
 export async function createAnnouncementBar(
   data: AnnouncementBarInput,
 ): Promise<{ id: string }> {
-  const bar = await prisma.announcementBar.create({
-    data: normalizeAnnouncementBarInput(data),
+  const bar = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("announcement_bars:all"));
+
+    const maxOrder = await tx.announcementBar.aggregate({
+      _max: { displayOrder: true },
+    });
+
+    return tx.announcementBar.create({
+      data: {
+        ...normalizeAnnouncementBarInput(data),
+        displayOrder: (maxOrder._max.displayOrder ?? -1) + 1,
+      },
+    });
   });
 
   return { id: bar.id };
@@ -416,6 +429,60 @@ export async function updateAnnouncementBar(
     where: { id },
     data: normalizeAnnouncementBarInput(data),
   });
+}
+
+export async function reorderAnnouncementBars(
+  orderedIds: readonly string[],
+): Promise<{ updated: number }> {
+  if (orderedIds.length === 0) {
+    return { updated: 0 };
+  }
+
+  if (new Set(orderedIds).size !== orderedIds.length) {
+    throw new DomainError("同じIDを複数指定することはできません", "VALIDATION");
+  }
+
+  const existing = await prisma.announcementBar.findMany({
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((bar) => bar.id));
+
+  for (const id of orderedIds) {
+    if (!existingIds.has(id)) {
+      throw new DomainError("お知らせバーが見つかりません", "NOT_FOUND");
+    }
+  }
+
+  if (existing.length !== orderedIds.length) {
+    throw new DomainError(
+      "お知らせバー数が一致しません（過不足）",
+      "VALIDATION",
+    );
+  }
+
+  const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(
+    orderedIds,
+    (id) => id,
+    (_id, index) => index,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("announcement_bars:all"));
+
+    await tx.$executeRaw`
+      UPDATE "announcement_bars"
+      SET "displayOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+    `;
+
+    await tx.$executeRaw`
+      UPDATE "announcement_bars"
+      SET "displayOrder" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+    `;
+  });
+
+  return { updated: orderedIds.length };
 }
 
 export async function deleteAnnouncementBar(id: string): Promise<void> {

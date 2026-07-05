@@ -18,7 +18,8 @@ import {
  * - boolean (`isExternal` / `isActive` / `showOnDesktop` / `showOnMobile`) は Switch +
  *   hidden input で "on" / "" を `z.preprocess` で boolean coerce
  * - `parentId` は Select で "none" → empty string、command 層で null 化
- * - `order` / `type` / `platform` は hidden input
+ * - `type` / `platform` は hidden input
+ * - `order` は create/update 入力から除外し、domain 層の自動採番と reorder action に閉じる
  */
 
 const labelSchema = z
@@ -57,25 +58,23 @@ const booleanFromCheckbox = z.preprocess(
   z.boolean(),
 );
 
-export const navFormSchema = z.object({
+export const navFormSchema = z.strictObject({
   type: z.enum(NavigationType),
   parentId: z.string(),
   label: labelSchema,
   url: z.string().min(1, { error: "URLは必須です" }),
   isExternal: booleanFromCheckbox,
-  order: z.coerce.number({ error: "順序は数値です" }).int().min(0),
   isActive: booleanFromCheckbox,
 });
 
 export type NavFormSubmitData = z.output<typeof navFormSchema>;
 
-export const socialFormSchema = z.object({
+export const socialFormSchema = z.strictObject({
   platform: z.enum(SocialPlatform),
   url: z
     .string()
     .min(1, { error: "URLは必須です" })
     .url({ error: "有効なURLを入力してください" }),
-  order: z.coerce.number({ error: "順序は数値です" }).int().min(0),
   isActive: booleanFromCheckbox,
   showOnDesktop: booleanFromCheckbox,
   showOnMobile: booleanFromCheckbox,

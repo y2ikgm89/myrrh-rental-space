@@ -25,6 +25,13 @@
 #   prisma-migrate — `bunx --bun prisma migrate deploy` を実行する独立 Job（プロジェクト毎に初回 1 回手動作成）。
 #   image / memory / command / args / DATABASE_URL secret は Step 4 が毎デプロイ宣言的に再適用する（作成時の値に依存しない）。
 #   image は runner（slim）ではなく完全な node_modules を持つ migrator ステージ（:migrate-SHORT_SHA）を使う。
+#
+# Breaking migration deploy mode:
+#   `_BREAKING_MIGRATION_DEPLOY=true` makes Cloud Build temporarily disable the
+#   public/admin Cloud Run services before `prisma migrate deploy`, wait for the
+#   configured request timeout drain window, then deploy the new clean revision
+#   with automatic scaling restored. This is for intentional non-expand/contract
+#   migrations such as column renames/drops.
 
 substitutions:
   _REGION: asia-northeast1
@@ -62,6 +69,8 @@ substitutions:
   _MAX_INSTANCES: "1"
   _CONCURRENCY: "80"
   _TIMEOUT: "300"
+  _BREAKING_MIGRATION_DEPLOY: "false"
+  _BREAKING_MIGRATION_DRAIN_SECONDS: "310"
   _DATABASE_POOL_MAX: "10"
   # Dedicated service account email (Cloud Run runtime + Prisma migrate Job 共通、初回 1 回手動作成)
   _SERVICE_ACCOUNT: myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com
@@ -167,6 +176,22 @@ steps:
           echo "_CRON_SERVICE_ACCOUNT_EMAIL is required";
           exit 1;
         }
+
+        case "${_BREAKING_MIGRATION_DEPLOY}" in
+          true|false) ;;
+          *)
+            echo "_BREAKING_MIGRATION_DEPLOY must be true or false";
+            exit 1;
+            ;;
+        esac
+
+        case "${_BREAKING_MIGRATION_DRAIN_SECONDS}" in
+          ''|*[!0-9]*)
+            echo "_BREAKING_MIGRATION_DRAIN_SECONDS must be a non-negative integer";
+            exit 1;
+            ;;
+          *) ;;
+        esac
 
         case "${_IAP_JWT_AUDIENCE}" in
           /projects/*/locations/${_REGION}/services/${_ADMIN_SERVICE_NAME}) ;;
@@ -346,10 +371,75 @@ steps:
       # DATABASE_URL を毎デプロイ宣言的に再適用（Job 作成時設定へのドリフト防止）。
       - --set-secrets=DATABASE_URL=DATABASE_URL:${_DATABASE_URL_SECRET_VERSION}
 
-  # Step 5: Execute Prisma migration (fail 時はデプロイ全体を止める)
+  # Step 5a: For intentional breaking migrations, stop new requests before DB
+  # schema changes. Cloud Run lets in-flight requests finish; the drain step
+  # below waits longer than the configured request timeout before migration.
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: disable-public-for-breaking-migration
+    waitFor: [migrate-update]
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        if [ "${_BREAKING_MIGRATION_DEPLOY}" != "true" ]; then
+          echo "Skipping public service quiesce for non-breaking migration deploy";
+          exit 0;
+        fi
+        if ! gcloud run services describe ${_SERVICE_NAME} \
+          --platform=managed \
+          --region=${_REGION} >/dev/null 2>&1; then
+          echo "Public Cloud Run service ${_SERVICE_NAME} does not exist; skipping quiesce";
+          exit 0;
+        fi
+        gcloud run services update ${_SERVICE_NAME} \
+          --platform=managed \
+          --region=${_REGION} \
+          --scaling=0 \
+          --quiet
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: disable-admin-for-breaking-migration
+    waitFor: [migrate-update]
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        if [ "${_BREAKING_MIGRATION_DEPLOY}" != "true" ]; then
+          echo "Skipping admin service quiesce for non-breaking migration deploy";
+          exit 0;
+        fi
+        if ! gcloud run services describe ${_ADMIN_SERVICE_NAME} \
+          --platform=managed \
+          --region=${_REGION} >/dev/null 2>&1; then
+          echo "Admin Cloud Run service ${_ADMIN_SERVICE_NAME} does not exist; skipping quiesce";
+          exit 0;
+        fi
+        gcloud run services update ${_ADMIN_SERVICE_NAME} \
+          --platform=managed \
+          --region=${_REGION} \
+          --scaling=0 \
+          --quiet
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: wait-for-breaking-migration-drain
+    waitFor:
+      - disable-public-for-breaking-migration
+      - disable-admin-for-breaking-migration
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        if [ "${_BREAKING_MIGRATION_DEPLOY}" != "true" ]; then
+          echo "Skipping request drain for non-breaking migration deploy";
+          exit 0;
+        fi
+        echo "Waiting ${_BREAKING_MIGRATION_DRAIN_SECONDS}s for old Cloud Run revisions to drain";
+        sleep ${_BREAKING_MIGRATION_DRAIN_SECONDS}
+
+  # Step 5b: Execute Prisma migration (fail 時はデプロイ全体を止める)
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: migrate-execute
-    waitFor: [migrate-update]
+    waitFor: [wait-for-breaking-migration-drain]
     entrypoint: gcloud
     args:
       - run
@@ -376,6 +466,7 @@ steps:
       - --service-account=${_SERVICE_ACCOUNT}
       - --memory=${_MEMORY}
       - --cpu=${_CPU}
+      - --scaling=auto
       - --min-instances=${_MIN_INSTANCES}
       - --max-instances=${_MAX_INSTANCES}
       - --concurrency=${_CONCURRENCY}
@@ -412,6 +503,7 @@ steps:
       - --service-account=${_SERVICE_ACCOUNT}
       - --memory=${_MEMORY}
       - --cpu=${_CPU}
+      - --scaling=auto
       - --min-instances=${_MIN_INSTANCES}
       - --max-instances=${_MAX_INSTANCES}
       - --concurrency=${_CONCURRENCY}

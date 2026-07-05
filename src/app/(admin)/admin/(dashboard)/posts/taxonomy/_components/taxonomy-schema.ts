@@ -9,7 +9,7 @@ import { z } from "zod";
 // `order` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
 // =============================================================================
 
-const baseTaxonomySchema = z.object({
+const baseTaxonomySchema = z.strictObject({
   name: z.string().min(1).max(50),
   slug: z
     .string()

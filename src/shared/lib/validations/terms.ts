@@ -116,10 +116,10 @@ const termsScopeSchema = z.enum(
 /**
  * 規約作成・編集フォームスキーマ
  *
- * `footerOrder` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
+ * `displayOrder` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
  * `scopes` は重複を許さず TermsScope enum 値のみ受理する。
  */
-export const termsFormSchema = z.object({
+export const termsFormSchema = z.strictObject({
   type: typeSchema,
   slug: slugSchema,
   title: titleSchema,

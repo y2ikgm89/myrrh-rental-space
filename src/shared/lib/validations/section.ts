@@ -256,13 +256,12 @@ export function validateSectionConfig(
 // CRUD スキーマ（admin Server Actions 用）
 // =============================================================================
 
-export const createSectionSchema = z.object({
+export const createSectionSchema = z.strictObject({
   pageId: z.uuid().optional(),
   type: z.enum(SECTION_TYPE_VALUES, {
     error: "有効なセクションタイプを選択してください",
   }),
   config: z.record(z.string(), z.unknown()).default({}),
-  order: z.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -274,17 +273,23 @@ export const updateSectionSchema = updateSectionContentSchema.extend({
   isActive: z.boolean().optional(),
 });
 
-export const updateSectionOrderSchema = z.object({
+export const updateSectionOrderSchema = z.strictObject({
   sections: z
     .array(
-      z.object({
+      z.strictObject({
         id: z.uuid(),
         order: z.number().int().min(0),
       }),
     )
     .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
       error: "同じIDを複数指定することはできません",
-    }),
+    })
+    .refine(
+      (items) => new Set(items.map((i) => i.order)).size === items.length,
+      {
+        error: "同じ並び順を複数指定することはできません",
+      },
+    ),
 });
 
 export type CreateSectionInput = z.infer<typeof createSectionSchema>;

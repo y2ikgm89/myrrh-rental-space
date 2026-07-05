@@ -11,6 +11,7 @@ import {
   reorderFaqCategories as reorderFaqCategoriesCommand,
   restoreFaqCategory as restoreFaqCategoryCommand,
   updateFaqCategory as updateFaqCategoryCommand,
+  updateFaqCategoryActive as updateFaqCategoryActiveCommand,
 } from "@/shared/domain/faq/category-commands";
 import {
   bulkDeleteFaqItems as bulkDeleteFaqItemsCommand,
@@ -47,6 +48,25 @@ const orderedIdsSchema = z
   .refine((ids) => new Set(ids).size === ids.length, {
     error: "同じIDを複数指定することはできません",
   });
+const faqItemOrderSchema = z
+  .array(
+    z.strictObject({
+      id: z.uuid({ error: "IDが不正です" }),
+      order: z.number().int().min(0, { error: "並び順が不正です" }),
+    }),
+  )
+  .refine(
+    (items) => new Set(items.map((item) => item.id)).size === items.length,
+    {
+      error: "同じIDを複数指定することはできません",
+    },
+  )
+  .refine(
+    (items) => new Set(items.map((item) => item.order)).size === items.length,
+    {
+      error: "同じ並び順を複数指定することはできません",
+    },
+  );
 
 function invalidateFaqCaches(): void {
   updateTag(CACHE_TAGS.FAQ);
@@ -132,6 +152,33 @@ export async function updateFaqCategory(
       return { ok: true };
     },
   );
+}
+
+export async function updateFaqCategoryActive(
+  id: string,
+  isActive: boolean,
+): Promise<MutationResult<{ id: string; isActive: boolean }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  const parsedActive = z.boolean().safeParse(isActive);
+  if (!parsedActive.success) {
+    return createValidationMutationError(parsedActive.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () =>
+      updateFaqCategoryActiveCommand(validated.data, parsedActive.data),
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
 }
 
 export async function deleteFaqCategory(id: string): Promise<MutationResult> {
@@ -264,14 +311,14 @@ export async function deleteFaqItem(id: string): Promise<MutationResult> {
 
 export async function reorderFaqItems(
   categoryId: string,
-  orderedIds: string[],
+  items: { id: string; order: number }[],
 ): Promise<MutationResult> {
   const validatedCategoryId = idSchema.safeParse(categoryId);
   if (!validatedCategoryId.success) {
     return createValidationMutationError(validatedCategoryId.error);
   }
 
-  const parsed = orderedIdsSchema.safeParse(orderedIds);
+  const parsed = faqItemOrderSchema.safeParse(items);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }

@@ -82,6 +82,7 @@ type SortableCategoryRowProps = {
   readonly onEdit: (category: PostCategoryData) => void;
   readonly onDelete: (id: string) => void;
   readonly isPending: boolean;
+  readonly isSortable: boolean;
 };
 
 function SortableCategoryRow({
@@ -89,6 +90,7 @@ function SortableCategoryRow({
   onEdit,
   onDelete,
   isPending,
+  isSortable,
 }: SortableCategoryRowProps) {
   const {
     attributes,
@@ -97,7 +99,7 @@ function SortableCategoryRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: category.id });
+  } = useSortable({ id: category.id, disabled: !isSortable || isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -114,7 +116,7 @@ function SortableCategoryRow({
     >
       <TableCell className="w-12">
         <div {...attributes} {...listeners}>
-          <DragHandle />
+          <DragHandle disabled={!isSortable || isPending} />
         </div>
       </TableCell>
       <TableCell className="font-medium">{category.name}</TableCell>
@@ -410,7 +412,12 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
     });
   };
 
+  const hasFilters = filterParams.search !== "";
+  const isSortable = !hasFilters;
+
   const handleDragEnd = (event: DragEndEvent) => {
+    if (!isSortable || isPending) return;
+
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -435,8 +442,6 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       }
     });
   };
-
-  const hasFilters = filterParams.search !== "";
 
   return (
     <>
@@ -485,7 +490,9 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                ドラッグ&ドロップで順序を変更できます
+                {isSortable
+                  ? "ドラッグ&ドロップで順序を変更できます"
+                  : "並び替えは検索を解除すると有効になります"}
               </p>
               <DndContext
                 id="category-sortable"
@@ -496,6 +503,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                 <SortableContext
                   items={filteredCategories.map((cat) => cat.id)}
                   strategy={verticalListSortingStrategy}
+                  disabled={!isSortable || isPending}
                 >
                   <Table>
                     <TableHeader>
@@ -515,6 +523,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                           onEdit={openEditDialog}
                           onDelete={handleDelete}
                           isPending={isPending}
+                          isSortable={isSortable}
                         />
                       ))}
                     </TableBody>

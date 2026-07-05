@@ -3,6 +3,10 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buildOrderScopeLockSql,
+  buildUuidOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import type {
   CreateFaqItemResult,
   FaqItemCommandInput,
@@ -20,15 +24,19 @@ async function ensureFaqCategoryExists(id: string): Promise<void> {
   }
 }
 
-async function ensureFaqItemExists(id: string): Promise<void> {
+async function ensureFaqItemExists(
+  id: string,
+): Promise<{ id: string; categoryId: string }> {
   const item = await prisma.faqItem.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true },
+    select: { id: true, categoryId: true },
   });
 
   if (!item) {
     throw new DomainError("質問が見つかりません", "NOT_FOUND");
   }
+
+  return item;
 }
 
 // ============================================================================
@@ -40,22 +48,28 @@ export async function createFaqItem(
 ): Promise<CreateFaqItemResult> {
   await ensureFaqCategoryExists(input.categoryId);
 
-  const maxOrder = await prisma.faqItem.aggregate({
-    where: { categoryId: input.categoryId, deletedAt: null },
-    _max: { order: true },
-  });
+  const item = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(
+      buildOrderScopeLockSql(`faq_items:${input.categoryId}`),
+    );
 
-  const item = await prisma.faqItem.create({
-    data: {
-      categoryId: input.categoryId,
-      question: input.question,
-      answer: input.answer,
-      // 並び順は末尾に自動採番。手動指定は廃止（並び替えは D&D の reorderFaqItems が SSoT）
-      order: (maxOrder._max.order ?? 0) + 1,
-      isPublished: input.isPublished,
-      publishedAt: input.isPublished ? new Date() : null,
-    },
-    select: { id: true },
+    const maxOrder = await tx.faqItem.aggregate({
+      where: { categoryId: input.categoryId, deletedAt: null },
+      _max: { order: true },
+    });
+
+    return tx.faqItem.create({
+      data: {
+        categoryId: input.categoryId,
+        question: input.question,
+        answer: input.answer,
+        // 並び順は末尾に自動採番。手動指定は廃止（並び替えは D&D の reorderFaqItems が SSoT）
+        order: (maxOrder._max.order ?? -1) + 1,
+        isPublished: input.isPublished,
+        publishedAt: input.isPublished ? new Date() : null,
+      },
+      select: { id: true },
+    });
   });
 
   return item;
@@ -65,21 +79,47 @@ export async function updateFaqItem(
   id: string,
   input: FaqItemCommandInput,
 ): Promise<void> {
-  await Promise.all([
+  const [existing] = await Promise.all([
     ensureFaqItemExists(id),
     ensureFaqCategoryExists(input.categoryId),
   ]);
+  const categoryChanged = existing.categoryId !== input.categoryId;
+  if (!categoryChanged) {
+    await prisma.faqItem.update({
+      where: { id, deletedAt: null },
+      data: {
+        categoryId: input.categoryId,
+        question: input.question,
+        answer: input.answer,
+        isPublished: input.isPublished,
+        publishedAt: input.isPublished ? new Date() : null,
+      },
+    });
+    return;
+  }
 
-  // order は更新対象外。位置は D&D の reorderFaqItems のみが変更する
-  await prisma.faqItem.update({
-    where: { id, deletedAt: null },
-    data: {
-      categoryId: input.categoryId,
-      question: input.question,
-      answer: input.answer,
-      isPublished: input.isPublished,
-      publishedAt: input.isPublished ? new Date() : null,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(
+      buildOrderScopeLockSql(`faq_items:${input.categoryId}`),
+    );
+
+    const maxTargetOrder = await tx.faqItem.aggregate({
+      where: { categoryId: input.categoryId, deletedAt: null },
+      _max: { order: true },
+    });
+
+    // 同一カテゴリ内では order 不変。カテゴリ移動時のみ移動先末尾へ再採番する。
+    await tx.faqItem.update({
+      where: { id, deletedAt: null },
+      data: {
+        categoryId: input.categoryId,
+        question: input.question,
+        answer: input.answer,
+        order: (maxTargetOrder._max.order ?? -1) + 1,
+        isPublished: input.isPublished,
+        publishedAt: input.isPublished ? new Date() : null,
+      },
+    });
   });
 }
 
@@ -117,9 +157,23 @@ export async function restoreFaqItem(id: string): Promise<void> {
     );
   }
 
-  await prisma.faqItem.update({
-    where: { id },
-    data: { deletedAt: null },
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(
+      buildOrderScopeLockSql(`faq_items:${item.category.id}`),
+    );
+
+    const maxOrder = await tx.faqItem.aggregate({
+      where: { categoryId: item.category.id, deletedAt: null },
+      _max: { order: true },
+    });
+
+    await tx.faqItem.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+        order: (maxOrder._max.order ?? -1) + 1,
+      },
+    });
   });
 }
 
@@ -147,30 +201,83 @@ export async function permanentlyDeleteFaqItem(id: string): Promise<void> {
 
 export async function reorderFaqItems(
   categoryId: string,
-  orderedIds: string[],
+  items: readonly { id: string; order: number }[],
 ): Promise<void> {
   await ensureFaqCategoryExists(categoryId);
 
-  if (orderedIds.length === 0) {
+  if (items.length === 0) {
     return;
   }
 
-  // 単一 SQL の CASE WHEN で order + categoryId を一括更新（N 回 UPDATE 廃止）。
-  // 対象 id × deletedAt IS NULL は WHERE 句で絞り、ソフトデリート済 item は除外する。
-  const orderCases: Prisma.Sql[] = [];
-  const ids: Prisma.Sql[] = [];
-  for (const [index, id] of orderedIds.entries()) {
-    orderCases.push(Prisma.sql`WHEN ${id}::uuid THEN ${index}`);
-    ids.push(Prisma.sql`${id}::uuid`);
+  const ids = items.map((item) => item.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new DomainError("同じIDを複数指定することはできません", "VALIDATION");
   }
 
-  await prisma.$executeRaw`
-    UPDATE "faq_items"
-    SET "order" = CASE "id" ${Prisma.join(orderCases, " ")} END,
-        "categoryId" = ${categoryId}::uuid
-    WHERE "id" IN (${Prisma.join(ids)})
-      AND "deletedAt" IS NULL
-  `;
+  const targetOrders = items.map((item) => item.order);
+  if (new Set(targetOrders).size !== targetOrders.length) {
+    throw new DomainError(
+      "同じ並び順を複数指定することはできません",
+      "VALIDATION",
+    );
+  }
+
+  const existingItems = await prisma.faqItem.findMany({
+    where: {
+      id: { in: ids },
+      categoryId,
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+
+  if (existingItems.length !== items.length) {
+    throw new DomainError("カテゴリ内の質問が見つかりません", "NOT_FOUND");
+  }
+
+  const conflictingItems = await prisma.faqItem.findMany({
+    where: {
+      categoryId,
+      deletedAt: null,
+      id: { notIn: ids },
+      order: { in: targetOrders },
+    },
+    select: { id: true },
+  });
+
+  if (conflictingItems.length > 0) {
+    throw new DomainError("指定した並び順は他の質問と重複します", "VALIDATION");
+  }
+
+  const {
+    ids: idFragments,
+    tempCases,
+    finalCases,
+  } = buildUuidOrderSqlFragments(
+    items,
+    (item) => item.id,
+    (item) => item.order,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql(`faq_items:${categoryId}`));
+
+    await tx.$executeRaw`
+      UPDATE "faq_items"
+      SET "order" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      WHERE "id" IN (${Prisma.join(idFragments)})
+        AND "categoryId" = ${categoryId}::uuid
+        AND "deletedAt" IS NULL
+    `;
+
+    await tx.$executeRaw`
+      UPDATE "faq_items"
+      SET "order" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      WHERE "id" IN (${Prisma.join(idFragments)})
+        AND "categoryId" = ${categoryId}::uuid
+        AND "deletedAt" IS NULL
+    `;
+  });
 }
 
 export async function updateFaqItemPublished(

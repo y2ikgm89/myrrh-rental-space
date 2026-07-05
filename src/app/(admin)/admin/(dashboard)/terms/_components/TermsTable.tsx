@@ -3,8 +3,8 @@
 /**
  * TermsTable
  *
- * 規約一覧テーブル。D&D 並び替えで footerOrder を更新する（`reorderTerms`）。
- * footerOrder はシステム管理（create=末尾自動採番 / reorder=D&D SSoT / update=不変）。
+ * 規約一覧テーブル。D&D 並び替えで displayOrder を更新する（`reorderTerms`）。
+ * displayOrder はシステム管理（create=末尾自動採番 / reorder=D&D SSoT / update=不変）。
  * 一覧はページネーション・絞り込みなしのため D&D は常時有効。
  */
 
@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import {
   Badge,
   PublishSwitch,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -43,7 +44,11 @@ import {
 } from "@/shared/lib/validations/terms";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type { AdminTermsListItem } from "@/shared/domain/terms/admin-queries";
-import { reorderTerms, updateTermsPublished } from "@/admin/actions/terms";
+import {
+  reorderTerms,
+  updateTermsFooterVisibility,
+  updateTermsPublished,
+} from "@/admin/actions/terms";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import { TermsActionCell } from "./TermsActionCell";
@@ -54,9 +59,11 @@ interface TermsTableProps {
 
 interface SortableRowProps {
   readonly item: AdminTermsListItem;
+  readonly isPending: boolean;
+  readonly onToggleFooter: (id: string, showInFooter: boolean) => void;
 }
 
-function SortableRow({ item }: SortableRowProps) {
+function SortableRow({ item, isPending, onToggleFooter }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -64,7 +71,7 @@ function SortableRow({ item }: SortableRowProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, disabled: isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -82,7 +89,7 @@ function SortableRow({ item }: SortableRowProps) {
     >
       <TableCell className="w-12" onClick={stopRowClick}>
         <div {...attributes} {...listeners}>
-          <DragHandle />
+          <DragHandle disabled={isPending} />
         </div>
       </TableCell>
       <TableCell className="font-medium">{item.title}</TableCell>
@@ -109,6 +116,14 @@ function SortableRow({ item }: SortableRowProps) {
       </TableCell>
       <TableCell className="hidden text-right tabular-nums lg:table-cell">
         {item.agreementsCount}
+      </TableCell>
+      <TableCell onClick={stopRowClick}>
+        <Switch
+          checked={item.showInFooter}
+          onCheckedChange={(checked) => onToggleFooter(item.id, checked)}
+          disabled={isPending}
+          aria-label={`${item.title} のフッター表示`}
+        />
       </TableCell>
       <TableCell onClick={stopRowClick}>
         <PublishSwitch
@@ -142,7 +157,7 @@ export function TermsTable({ items: initialItems }: TermsTableProps) {
     setItems([...initialItems]);
   }
 
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -175,6 +190,26 @@ export function TermsTable({ items: initialItems }: TermsTableProps) {
     });
   };
 
+  const handleToggleFooter = (id: string, showInFooter: boolean) => {
+    const previousItems = items;
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, showInFooter } : item,
+      ),
+    );
+
+    startTransition(async () => {
+      const result = await updateTermsFooterVisibility(id, showInFooter);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        setItems(previousItems);
+        return;
+      }
+      toast.success("フッター表示を更新しました");
+      router.refresh();
+    });
+  };
+
   if (items.length === 0) {
     return (
       <div className="rounded-lg border bg-card p-12 text-center">
@@ -188,7 +223,7 @@ export function TermsTable({ items: initialItems }: TermsTableProps) {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        ドラッグ&ドロップで表示順を変更できます
+        ドラッグ&ドロップで公開一覧・フッター・同意チェックリストの表示順を変更できます
       </p>
       <TableShell>
         <DndContext
@@ -216,13 +251,19 @@ export function TermsTable({ items: initialItems }: TermsTableProps) {
                   <TableHead className="hidden text-right lg:table-cell">
                     同意数
                   </TableHead>
+                  <TableHead>フッター</TableHead>
                   <TableHead>状態</TableHead>
                   <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
-                  <SortableRow key={item.id} item={item} />
+                  <SortableRow
+                    key={item.id}
+                    item={item}
+                    isPending={isPending}
+                    onToggleFooter={handleToggleFooter}
+                  />
                 ))}
               </TableBody>
             </Table>

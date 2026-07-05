@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, useSortable, toTranslate3d } from "@/admin/components/ui";
+import {
+  Badge,
+  Switch,
+  useSortable,
+  toTranslate3d,
+} from "@/admin/components/ui";
 import {
   ActionDropdown,
   ActionDropdownItem,
@@ -21,10 +26,39 @@ import { getProjectedDepth, platformLabels, platformIcons } from "./types";
 // Sortable Navigation Row (Card-based)
 // =============================================================================
 
+type InlineVisibilitySwitchProps = {
+  readonly checked: boolean;
+  readonly disabled: boolean;
+  readonly label: string;
+  readonly ariaLabel: string;
+  readonly onCheckedChange: (checked: boolean) => void;
+};
+
+function InlineVisibilitySwitch({
+  checked,
+  disabled,
+  label,
+  ariaLabel,
+  onCheckedChange,
+}: InlineVisibilitySwitchProps) {
+  return (
+    <label className="inline-flex min-h-10 min-w-11 flex-col items-center justify-center gap-1 text-xs text-muted-foreground">
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        aria-label={ariaLabel}
+      />
+      <span aria-hidden="true">{label}</span>
+    </label>
+  );
+}
+
 type SortableNavRowProps = {
   item: NavigationItemData;
   onEdit: (item: NavigationItemData) => void;
   onDelete: (id: string) => void;
+  onToggleActive: (id: string, isActive: boolean) => void;
   isPending: boolean;
   depth: 0 | 1;
   isDragTarget: boolean;
@@ -40,6 +74,7 @@ export function SortableNavRow({
   item,
   onEdit,
   onDelete,
+  onToggleActive,
   isPending,
   depth,
   isDragTarget,
@@ -57,7 +92,7 @@ export function SortableNavRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, disabled: isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -65,6 +100,7 @@ export function SortableNavRow({
   };
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const itemLabel = spansToPlainText(item.label) || "メニュー";
 
   const displayDepth =
     isDragTarget && isDragging ? getProjectedDepth(dragOffsetX, depth) : depth;
@@ -100,7 +136,7 @@ export function SortableNavRow({
           {...attributes}
           {...listeners}
         >
-          <DragHandle />
+          <DragHandle disabled={isPending} />
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-sm font-medium">
@@ -113,7 +149,14 @@ export function SortableNavRow({
             {item.url}
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <InlineVisibilitySwitch
+            checked={item.isActive}
+            disabled={isPending}
+            label="有効"
+            ariaLabel={`${itemLabel} の表示状態`}
+            onCheckedChange={(checked) => onToggleActive(item.id, checked)}
+          />
           {item.isExternal && (
             <Badge variant="outline" className="text-xs">
               外部
@@ -152,7 +195,7 @@ export function SortableNavRow({
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        itemName={spansToPlainText(item.label) || "メニュー"}
+        itemName={itemLabel}
         onConfirm={() => onDelete(item.id)}
         isPending={isPending}
       />
@@ -168,6 +211,9 @@ type SortableSocialRowProps = {
   link: Serialized<SocialLinkData>;
   onEdit: (link: Serialized<SocialLinkData>) => void;
   onDelete: (id: string) => void;
+  onToggleActive: (id: string, isActive: boolean) => void;
+  onToggleDesktop: (id: string, showOnDesktop: boolean) => void;
+  onToggleMobile: (id: string, showOnMobile: boolean) => void;
   isPending: boolean;
 };
 
@@ -175,6 +221,9 @@ export function SortableSocialRow({
   link,
   onEdit,
   onDelete,
+  onToggleActive,
+  onToggleDesktop,
+  onToggleMobile,
   isPending,
 }: SortableSocialRowProps) {
   const {
@@ -184,7 +233,7 @@ export function SortableSocialRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: link.id });
+  } = useSortable({ id: link.id, disabled: isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -213,7 +262,7 @@ export function SortableSocialRow({
           {...attributes}
           {...listeners}
         >
-          <DragHandle />
+          <DragHandle disabled={isPending} />
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <PlatformIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -224,7 +273,28 @@ export function SortableSocialRow({
             {link.url}
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <InlineVisibilitySwitch
+            checked={link.isActive}
+            disabled={isPending}
+            label="有効"
+            ariaLabel={`${platformLabels[link.platform]} の表示状態`}
+            onCheckedChange={(checked) => onToggleActive(link.id, checked)}
+          />
+          <InlineVisibilitySwitch
+            checked={link.showOnDesktop}
+            disabled={isPending}
+            label="PC"
+            ariaLabel={`${platformLabels[link.platform]} のPC表示`}
+            onCheckedChange={(checked) => onToggleDesktop(link.id, checked)}
+          />
+          <InlineVisibilitySwitch
+            checked={link.showOnMobile}
+            disabled={isPending}
+            label="SP"
+            ariaLabel={`${platformLabels[link.platform]} のモバイル表示`}
+            onCheckedChange={(checked) => onToggleMobile(link.id, checked)}
+          />
           {!link.showOnDesktop && (
             <Badge variant="secondary" className="text-xs">
               PC非表示

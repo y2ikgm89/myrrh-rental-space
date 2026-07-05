@@ -15,7 +15,7 @@ import { z } from "zod";
 // FaqCategory Schemas
 // =============================================================================
 
-export const faqCategoryFormSchema = z.object({
+export const faqCategoryFormSchema = z.strictObject({
   name: z
     .string()
     .min(1, { error: "カテゴリ名を入力してください" })
@@ -64,7 +64,7 @@ export type BulkMoveFaqItemsInput = z.infer<typeof bulkMoveFaqItemsSchema>;
 // FaqItem Schemas
 // =============================================================================
 
-export const faqItemFormSchema = z.object({
+export const faqItemFormSchema = z.strictObject({
   categoryId: z.uuid({ error: "カテゴリを選択してください" }),
   question: z
     .string()

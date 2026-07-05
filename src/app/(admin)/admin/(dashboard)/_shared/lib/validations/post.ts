@@ -192,7 +192,7 @@ export type PostSettingsFormData = z.input<typeof postSettingsFormSchema>;
 /**
  * 投稿カテゴリスキーマ（SEO/OGP含む）
  */
-export const postCategorySchema = z.object({
+export const postCategorySchema = z.strictObject({
   name: z
     .string()
     .min(1, { error: "カテゴリ名は必須です" })
@@ -223,7 +223,7 @@ export type PostCategoryInput = z.infer<typeof postCategorySchema>;
 /**
  * 投稿タグスキーマ（SEO/OGP含む）
  */
-export const postTagSchema = z.object({
+export const postTagSchema = z.strictObject({
   name: z
     .string()
     .min(1, { error: "タグ名は必須です" })

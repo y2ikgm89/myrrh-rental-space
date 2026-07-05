@@ -32,14 +32,12 @@ const VALID_NAVIGATION_ITEM_INPUT = {
   label: [{ _key: "k", _type: "span" as const, text: "ホーム" }],
   url: "/",
   isExternal: false,
-  order: 0,
   isActive: true,
 };
 
 const VALID_SOCIAL_LINK_INPUT = {
   platform: "INSTAGRAM" as const,
   url: "https://www.instagram.com/example/",
-  order: 0,
   isActive: true,
   showOnDesktop: true,
   showOnMobile: true,
@@ -68,7 +66,6 @@ describe("Navigation Admin Action Integration", () => {
           type: "HEADER_DESKTOP" as const,
           label: [{ _key: "k", _type: "span" as const, text: "ホーム" }],
           url: "/",
-          order: 0,
         };
         const result = navigationItemSchema.safeParse(input);
         expect(result.success).toBe(true);
@@ -88,7 +85,6 @@ describe("Navigation Admin Action Integration", () => {
           type: "HEADER_DESKTOP" as const,
           label: [{ _key: "k", _type: "span" as const, text: "ホーム" }],
           url: "/",
-          order: 0,
         };
         const result = navigationItemSchema.safeParse(input);
         expect(result.success).toBe(true);
@@ -102,7 +98,6 @@ describe("Navigation Admin Action Integration", () => {
           type: "HEADER_DESKTOP" as const,
           label: [{ _key: "k", _type: "span" as const, text: "ホーム" }],
           url: "/",
-          order: 0,
         };
         const result = navigationItemSchema.safeParse(input);
         expect(result.success).toBe(true);
@@ -282,29 +277,10 @@ describe("Navigation Admin Action Integration", () => {
     });
 
     describe("order", () => {
-      test("0以上の整数は許可", () => {
-        const orders = [0, 1, 50, 100, 999];
-        for (const order of orders) {
-          const result = navigationItemSchema.safeParse({
-            ...VALID_NAVIGATION_ITEM_INPUT,
-            order,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("負の数はエラー", () => {
+      test("create/update 入力として拒否する", () => {
         const result = navigationItemSchema.safeParse({
           ...VALID_NAVIGATION_ITEM_INPUT,
-          order: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = navigationItemSchema.safeParse({
-          ...VALID_NAVIGATION_ITEM_INPUT,
-          order: 1.5,
+          order: 999,
         });
         expect(result.success).toBe(false);
       });
@@ -341,7 +317,6 @@ describe("Navigation Admin Action Integration", () => {
         const input = {
           platform: "INSTAGRAM" as const,
           url: "https://www.instagram.com/example/",
-          order: 0,
         };
         const result = socialLinkSchema.safeParse(input);
         expect(result.success).toBe(true);
@@ -427,29 +402,10 @@ describe("Navigation Admin Action Integration", () => {
     });
 
     describe("order", () => {
-      test("0以上の整数は許可", () => {
-        const orders = [0, 1, 50, 100];
-        for (const order of orders) {
-          const result = socialLinkSchema.safeParse({
-            ...VALID_SOCIAL_LINK_INPUT,
-            order,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("負の数はエラー", () => {
+      test("create/update 入力として拒否する", () => {
         const result = socialLinkSchema.safeParse({
           ...VALID_SOCIAL_LINK_INPUT,
-          order: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = socialLinkSchema.safeParse({
-          ...VALID_SOCIAL_LINK_INPUT,
-          order: 1.5,
+          order: 999,
         });
         expect(result.success).toBe(false);
       });

@@ -84,13 +84,20 @@ const DEFAULT_GLOBALS: GlobalsMeoFlags = {
   socialLinks: false,
 };
 
-function DragHandle({ className }: { className?: string }) {
+function DragHandle({
+  className,
+  disabled,
+}: {
+  className?: string;
+  disabled?: boolean | undefined;
+}) {
   return (
     <div
       className={cn(
         "flex h-8 w-8 cursor-grab items-center justify-center rounded text-muted-foreground transition-colors",
         "hover:bg-muted hover:text-foreground",
         "active:cursor-grabbing",
+        disabled && "cursor-not-allowed opacity-50",
         className,
       )}
       aria-label="ドラッグして並び替え"
@@ -151,7 +158,7 @@ function SortableImageItem({
       )}
     >
       <div {...attributes} {...listeners}>
-        <DragHandle />
+        <DragHandle disabled={disabled} />
       </div>
       <Image
         src={url}
@@ -215,7 +222,7 @@ function SortableAccessLineItem({
       )}
     >
       <div {...attributes} {...listeners}>
-        <DragHandle />
+        <DragHandle disabled={disabled} />
       </div>
       <div className="flex-1">
         <Input
@@ -359,6 +366,7 @@ export function LocationForm({
   );
 
   const handleAccessLineDragEnd = (event: DragEndEvent) => {
+    if (isPending) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = accessLinesList.findIndex(
@@ -377,6 +385,7 @@ export function LocationForm({
   };
 
   const handleImageDragEnd = (event: DragEndEvent) => {
+    if (isPending) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     const oldIndex = imageUrlsList.findIndex(

@@ -25,8 +25,9 @@ async function CategoryList() {
     }),
   );
 
-  // D&D 並び替えは検索なしのときのみ有効（絞り込み中は順序が部分集合になり破綻するため）
-  const sortable = !params.catSearch;
+  // D&D 並び替えは検索・絞り込みなしのときのみ有効
+  // （非アクティブ除外中は順序が部分集合になり破綻するため）
+  const sortable = !params.catSearch && params.catIncludeInactive;
   const startIndex = (result.page - 1) * params.catPerPage;
 
   return (

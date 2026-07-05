@@ -20,7 +20,6 @@ describe("eventFormSchema (conform)", () => {
         price: 5000,
         capacity: null,
         unitSize: 1,
-        sortOrder: 0,
         isAvailable: true,
       },
     ]),
@@ -29,6 +28,24 @@ describe("eventFormSchema (conform)", () => {
   it("有効な入力を受け入れる", () => {
     const result = eventFormSchema.safeParse(validInput);
     expect(result.success).toBe(true);
+  });
+
+  it("チケット JSON の旧 sortOrder は拒否する", () => {
+    const result = eventFormSchema.safeParse({
+      ...validInput,
+      tickets: JSON.stringify([
+        {
+          name: "一般",
+          description: null,
+          price: 5000,
+          capacity: null,
+          unitSize: 1,
+          sortOrder: 0,
+          isAvailable: true,
+        },
+      ]),
+    });
+    expect(result.success).toBe(false);
   });
 
   it("タイトルが空の場合エラー", () => {

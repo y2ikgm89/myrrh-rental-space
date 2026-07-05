@@ -45,6 +45,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
@@ -63,6 +65,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          BREAKING_MIGRATION_DEPLOY="false"
+          BASE_SHA="${{ github.event.before }}"
+          if [ -z "${BASE_SHA}" ] || [[ "${BASE_SHA}" =~ ^0+$ ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            BASE_SHA="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || git rev-list --max-parents=0 HEAD)"
+          fi
+
+          mapfile -t changed_migrations < <(
+            git diff --name-only "${BASE_SHA}" "${GITHUB_SHA}" -- 'prisma/migrations/**/migration.sql'
+          )
+
+          if ((${#changed_migrations[@]} > 0)); then
+            if grep -Eiq 'ALTER[[:space:]]+TABLE[[:space:]]+.*(DROP[[:space:]]+COLUMN|RENAME[[:space:]]+COLUMN|RENAME[[:space:]]+TO)|DROP[[:space:]]+TABLE|DROP[[:space:]]+TYPE' "${changed_migrations[@]}"; then
+              BREAKING_MIGRATION_DEPLOY="true"
+              printf 'Breaking migration deploy mode enabled for:\n'
+              printf '  %s\n' "${changed_migrations[@]}"
+            fi
+          fi
 
           SHORT_SHA="${GITHUB_SHA::7}"
           SUBSTITUTIONS="SHORT_SHA=${SHORT_SHA}"
@@ -86,6 +106,7 @@ jobs:
           SUBSTITUTIONS+=",_CRON_SERVICE_ACCOUNT_EMAIL=${CRON_SERVICE_ACCOUNT_EMAIL}"
           SUBSTITUTIONS+=",_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}"
           SUBSTITUTIONS+=",_DATABASE_URL_SECRET_VERSION=1"
+          SUBSTITUTIONS+=",_BREAKING_MIGRATION_DEPLOY=${BREAKING_MIGRATION_DEPLOY}"
           SUBSTITUTIONS+=",_BETTER_AUTH_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_ENCRYPTION_KEY_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_AUDIT_LOG_HMAC_KEY_SECRET_VERSION=1"

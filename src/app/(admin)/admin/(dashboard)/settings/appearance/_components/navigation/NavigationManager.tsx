@@ -85,6 +85,7 @@ export function NavigationManager({
     loadData,
     getParentOptions,
     handleNavDelete,
+    handleNavActiveToggle,
     handleNavDragStart,
     handleNavDragMove,
     handleNavDragOver,
@@ -92,6 +93,9 @@ export function NavigationManager({
     handleMakeChild,
     handleMakeRoot,
     handleSocialDelete,
+    handleSocialActiveToggle,
+    handleSocialDesktopToggle,
+    handleSocialMobileToggle,
     handleSocialDragStart,
     handleSocialDragEnd,
   } = useNavigationHandlers(
@@ -137,15 +141,6 @@ export function NavigationManager({
     setIsSocialDialogOpen(true);
   };
 
-  // Default order for new items
-  const navDefaultOrder = flattenNavItems(
-    navDefaultType === "HEADER_DESKTOP"
-      ? desktopItems
-      : navDefaultType === "HEADER_MOBILE"
-        ? mobileItems
-        : footerItems,
-  ).length;
-
   return (
     <div className="space-y-6">
       <Tabs defaultValue="desktop">
@@ -169,6 +164,7 @@ export function NavigationManager({
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
+            onToggleActive={handleNavActiveToggle("HEADER_DESKTOP")}
             onDragStart={handleNavDragStart("HEADER_DESKTOP")}
             onDragMove={handleNavDragMove("HEADER_DESKTOP")}
             onDragOver={handleNavDragOver("HEADER_DESKTOP")}
@@ -191,6 +187,7 @@ export function NavigationManager({
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
+            onToggleActive={handleNavActiveToggle("HEADER_MOBILE")}
             onDragStart={handleNavDragStart("HEADER_MOBILE")}
             onDragMove={handleNavDragMove("HEADER_MOBILE")}
             onDragOver={handleNavDragOver("HEADER_MOBILE")}
@@ -216,6 +213,7 @@ export function NavigationManager({
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
+            onToggleActive={handleNavActiveToggle("FOOTER")}
             onDragStart={handleNavDragStart("FOOTER")}
             onDragMove={handleNavDragMove("FOOTER")}
             onDragOver={handleNavDragOver("FOOTER")}
@@ -234,6 +232,9 @@ export function NavigationManager({
             onAdd={openSocialCreateDialog}
             onEdit={openSocialEditDialog}
             onDelete={handleSocialDelete}
+            onToggleActive={handleSocialActiveToggle}
+            onToggleDesktop={handleSocialDesktopToggle}
+            onToggleMobile={handleSocialMobileToggle}
             onDragStart={handleSocialDragStart}
             onDragEnd={handleSocialDragEnd}
           />
@@ -247,7 +248,6 @@ export function NavigationManager({
           onOpenChange={setIsNavDialogOpen}
           editingItem={editingNavItem}
           defaultType={navDefaultType}
-          defaultOrder={navDefaultOrder}
           parentOptions={getParentOptions(navDefaultType)}
           onSuccess={loadData}
         />
@@ -258,7 +258,6 @@ export function NavigationManager({
           open={isSocialDialogOpen}
           onOpenChange={setIsSocialDialogOpen}
           editingLink={editingSocialLink}
-          defaultOrder={socialLinks.length}
           onSuccess={loadData}
         />
       )}

@@ -32,6 +32,8 @@ type FaqCategoryDetailViewProps = {
   readonly items: readonly FaqItemWithCategory[];
   readonly allCategories: readonly { id: string; name: string }[];
   readonly currentSortBy: AdminFaqItemSortBy;
+  readonly reorderEnabled: boolean;
+  readonly startIndex: number;
   readonly totalItems: number;
 };
 
@@ -40,6 +42,8 @@ export function FaqCategoryDetailView({
   items,
   allCategories,
   currentSortBy,
+  reorderEnabled,
+  startIndex,
   totalItems,
 }: FaqCategoryDetailViewProps) {
   const [editingItem, setEditingItem] = useState<FaqItemWithCategory | null>(
@@ -108,6 +112,8 @@ export function FaqCategoryDetailView({
         items={items}
         allCategories={allCategories}
         currentSortBy={currentSortBy}
+        reorderEnabled={reorderEnabled}
+        startIndex={startIndex}
         onEditItem={handleEditItem}
         onAddItem={handleAddItem}
       />

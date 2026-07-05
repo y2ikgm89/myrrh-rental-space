@@ -888,7 +888,6 @@ describe("createSectionSchema", () => {
     const data = {
       pageId: "550e8400-e29b-41d4-a716-446655440000",
       type: "hero",
-      title: "ヒーローセクション",
       config: {
         title: [
           {
@@ -898,7 +897,6 @@ describe("createSectionSchema", () => {
           },
         ],
       },
-      design: {},
       isActive: true,
     };
     const result = createSectionSchema.safeParse(data);
@@ -915,6 +913,19 @@ describe("createSectionSchema", () => {
       expect(result.data.config).toEqual({});
       expect(result.data.isActive).toBe(true);
     }
+  });
+
+  test.each([
+    ["title", { title: "ヒーローセクション" }],
+    ["design", { design: {} }],
+    ["order", { order: 999 }],
+    ["contentJson", { contentJson: "{}" }],
+  ])("%s は create 入力として拒否する", (_field, extra) => {
+    const result = createSectionSchema.safeParse({
+      type: "hero",
+      ...extra,
+    });
+    expect(result.success).toBe(false);
   });
 
   // 旧 contentJson 文字数制限 test は削除（Section.contentJson 列削除済、
@@ -960,6 +971,17 @@ describe("updateSectionOrderSchema", () => {
   test("負のorderでエラー", () => {
     const data = {
       sections: [{ id: "550e8400-e29b-41d4-a716-446655440000", order: -1 }],
+    };
+    const result = updateSectionOrderSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  test("重複した order でエラー", () => {
+    const data = {
+      sections: [
+        { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+        { id: "550e8400-e29b-41d4-a716-446655440001", order: 0 },
+      ],
     };
     const result = updateSectionOrderSchema.safeParse(data);
     expect(result.success).toBe(false);

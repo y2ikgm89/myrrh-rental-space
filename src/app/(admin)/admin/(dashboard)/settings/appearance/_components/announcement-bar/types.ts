@@ -108,6 +108,7 @@ export type BarListProps = {
   onEdit: (bar: Serialized<AnnouncementBarData>) => void;
   onCreate: () => void;
   onToggleActive: (id: string, isActive: boolean) => void;
+  onReorder: (bars: Serialized<AnnouncementBarData>[]) => void;
   onDelete: (id: string) => void;
 };
 
