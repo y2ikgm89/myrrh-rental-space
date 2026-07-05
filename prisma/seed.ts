@@ -2881,36 +2881,44 @@ async function seedNavigation() {
 // =============================================================================
 
 async function seedAnnouncementBar() {
+  const createSeedAnnouncement = ({
+    icon,
+    text,
+    ...data
+  }: {
+    icon: string;
+    text: string;
+    linkUrl?: string;
+    linkText?: string;
+    displayOrder: number;
+    isActive?: boolean;
+  }) => ({
+    probe: text,
+    message: [createInlineIcon(icon), createSpan(text)],
+    ...data,
+  });
+
   const announcements = [
-    {
-      probe: "年末年始の営業日程を掲載しました",
-      message: [
-        createInlineIcon("IconInfoCircle"),
-        createSpan("年末年始の営業日程を掲載しました"),
-      ],
+    createSeedAnnouncement({
+      icon: "IconInfoCircle",
+      text: "年末年始の営業日程を掲載しました",
       linkUrl: "/news",
       linkText: "詳細を見る",
       displayOrder: 2,
-    },
-    {
-      probe: "オープン記念！今月末まで全スペース20%OFF",
-      message: [
-        createInlineIcon("IconSparkles"),
-        createSpan("オープン記念!今月末まで全スペース20%OFF"),
-      ],
+    }),
+    createSeedAnnouncement({
+      icon: "IconSparkles",
+      text: "オープン記念!今月末まで全スペース20%OFF",
       linkUrl: "/spaces",
       linkText: "スペースを見る",
       displayOrder: 1,
-    },
-    {
-      probe: "1月15日（水）は設備点検のため休館いたします",
-      message: [
-        createInlineIcon("IconAlertTriangle"),
-        createSpan("1月15日(水)は設備点検のため休館いたします"),
-      ],
+    }),
+    createSeedAnnouncement({
+      icon: "IconAlertTriangle",
+      text: "1月15日(水)は設備点検のため休館いたします",
       displayOrder: 0,
       isActive: false,
-    },
+    }),
   ];
 
   for (const announcement of announcements) {
