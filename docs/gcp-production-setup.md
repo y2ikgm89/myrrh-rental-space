@@ -145,6 +145,8 @@ export ADMIN_SERVICE_NAME="myrrh-rental-space-admin"
 export AR_REPOSITORY="myrrh-rental-space"
 export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"
 export ADMIN_DOMAIN="https://admin.myrrh-jp.com"
+export ADMIN_LB_IP="8.233.111.15"
+export ADMIN_LB_IPV6="2600:1901:0:6b8e::"
 export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"
 export MIGRATE_JOB_NAME="prisma-migrate"
 export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -916,10 +918,37 @@ The admin user-facing origin is `https://admin.myrrh-jp.com`. It must be served
 by a global external HTTPS Application Load Balancer with a serverless NEG
 pointing at `$ADMIN_SERVICE_NAME` in `$REGION`.
 
+Current production resource names:
+
+- global IPv4 address: `myrrh-admin-lb-ip` (`8.233.111.15`);
+- global IPv6 address: `myrrh-admin-lb-ipv6` (`2600:1901:0:6b8e::`);
+- serverless NEG: `myrrh-admin-neg` in `$REGION`;
+- backend service: `myrrh-admin-backend`;
+- HTTPS URL map / proxy / forwarding rule:
+  `myrrh-admin-url-map`, `myrrh-admin-https-proxy`,
+  `myrrh-admin-https-rule`;
+- HTTP redirect URL map / proxy / forwarding rule:
+  `myrrh-admin-http-redirect`, `myrrh-admin-http-proxy`,
+  `myrrh-admin-http-rule`;
+- IPv6 HTTPS / HTTP forwarding rules:
+  `myrrh-admin-https-rule-ipv6`, `myrrh-admin-http-rule-ipv6`;
+- Google-managed certificate: `myrrh-admin-cert-20260705` for
+  `admin.myrrh-jp.com`.
+
 Required contract:
 
 - DNS for `admin.myrrh-jp.com` points to the global external HTTPS load
   balancer, not to a direct Cloud Run `run.app` URL.
+- Cloudflare DNS must contain exactly one DNS-only A record:
+  `admin.myrrh-jp.com -> 8.233.111.15`, with `proxied=false`. Do not orange-cloud
+  this record; Google-managed certificate provisioning needs the hostname to
+  resolve directly to the load balancer IP.
+- Cloudflare DNS must contain exactly one DNS-only AAAA record:
+  `admin.myrrh-jp.com -> 2600:1901:0:6b8e::`, with `proxied=false`. Add this only
+  after the GCP IPv6 forwarding rules exist.
+- Cloudflare API automation for this record requires a token scoped to the
+  `myrrh-jp.com` zone with DNS read/edit permission. The cache purge / zone
+  diagnostics token is not sufficient unless it also has DNS record access.
 - The load balancer routes host `admin.myrrh-jp.com` to the admin serverless
   NEG. A single host-wide route is preferred; the app redirects `/` to `/admin`
   on the admin surface.

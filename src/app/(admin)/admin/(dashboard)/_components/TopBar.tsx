@@ -8,11 +8,12 @@
  * ブランディング表示（ロゴ/サイト名）対応
  */
 
-import { IconMenu2 } from "@tabler/icons-react";
+import { IconExternalLink, IconMenu2 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { getBaseUrl } from "@/shared/lib/constants/urls";
 import { LogoutButton } from "./LogoutButton";
 import type { ReactNode } from "react";
 
@@ -35,6 +36,7 @@ export function TopBar({
 
   // Hydration対策: マウント前はSSR時と同じ値（isMobile=false）を使用
   const showMobileMenu = hasMounted && isMobile;
+  const publicSiteUrl = getBaseUrl();
 
   return (
     <header
@@ -63,14 +65,22 @@ export function TopBar({
       {/* 右: アクション */}
       <div className="flex items-center gap-4">
         {notifications}
-        <Link
-          href="/"
-          target="_blank"
-          rel="noreferrer"
-          className="hidden min-h-11 items-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground sm:inline-flex"
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="hidden sm:inline-flex"
         >
-          サイトを表示
-        </Link>
+          <a
+            href={publicSiteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="公開サイトを別タブで開く"
+          >
+            <IconExternalLink aria-hidden="true" />
+            <span>公開サイトを開く</span>
+          </a>
+        </Button>
         <LogoutButton />
       </div>
     </header>

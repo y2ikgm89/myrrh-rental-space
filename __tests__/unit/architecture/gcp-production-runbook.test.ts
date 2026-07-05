@@ -25,6 +25,8 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain(
       'export ADMIN_DOMAIN="https://admin.myrrh-jp.com"',
     );
+    expect(runbook).toContain('export ADMIN_LB_IP="8.233.111.15"');
+    expect(runbook).toContain('export ADMIN_LB_IPV6="2600:1901:0:6b8e::"');
     expect(runbook).toContain(
       'export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"',
     );
@@ -104,6 +106,14 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("The production audit rejects any other host");
     expect(runbook).toContain("lookalike domains");
     expect(runbook).toContain("private IP literals");
+    expect(runbook).toContain("myrrh-admin-lb-ip");
+    expect(runbook).toContain("myrrh-admin-lb-ipv6");
+    expect(runbook).toContain("myrrh-admin-https-rule-ipv6");
+    expect(runbook).toContain("myrrh-admin-cert-20260705");
+    expect(runbook).toContain("admin.myrrh-jp.com -> 8.233.111.15");
+    expect(runbook).toContain("admin.myrrh-jp.com -> 2600:1901:0:6b8e::");
+    expect(runbook).toContain("proxied=false");
+    expect(runbook).toContain("DNS read/edit permission");
     expect(runbook).toContain(
       "admin root redirects unauthenticated visitors to Google/IAP",
     );
