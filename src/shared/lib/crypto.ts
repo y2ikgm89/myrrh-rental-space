@@ -50,6 +50,10 @@ interface EncryptOptions {
  * 注: kid は HKDF info に含めない。kid は wire format 上での鍵識別のためのみで、
  * 派生鍵の入力（master key）が鍵ローテーションで変わることで結果的に派生鍵も変わる。
  * kid を info に入れると同一 master でも kid 変更で派生鍵が変わってしまい意図と外れる。
+ *
+ * 注: 戻り値は常に SHA-256 の出力そのまま（32バイト = AES-256 の鍵長）。
+ * HKDF-Expand の T(1) のみで完結する単一ブロック実装であり、33バイト以上の
+ * 鍵長を要求する用途には転用できない（T(2) 以降のマルチブロック拡張が無い）。
  */
 function deriveKey(masterKeyHex: string, purpose: string): Buffer {
   const masterKey = Buffer.from(masterKeyHex, "hex");

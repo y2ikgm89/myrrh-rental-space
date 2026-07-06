@@ -70,8 +70,8 @@ export async function getDecryptedResendApiKey(): Promise<string | null> {
 
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
   "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
@@ -133,8 +133,8 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
 
 export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
   "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },

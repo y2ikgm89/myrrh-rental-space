@@ -59,7 +59,12 @@ export interface VerifiedCalendarToken {
 export type VerifyCalendarTokenResult =
   VerifiedCalendarToken | { valid: false; reason: "invalid" | "expired" };
 
-function purposeFor(kind: CalendarTokenKind): string {
+/**
+ * カレンダートークンの HKDF purpose を種別ごとに生成する。
+ * `__tests__/unit/architecture/crypto-purpose-registry.test.ts` が
+ * `SETTINGS_CRYPTO_PURPOSES` 等の他の purpose と衝突しないことを確認するために import する。
+ */
+export function purposeFor(kind: CalendarTokenKind): string {
   // Purpose is stored inside a colon-delimited crypto wire format.
   return `${PURPOSE_PREFIX}-${kind}`;
 }

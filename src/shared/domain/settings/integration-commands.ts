@@ -6,6 +6,7 @@ import type { CalendarSyncMethod } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { encrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { encryptServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
@@ -73,7 +74,7 @@ export async function updateStripeSettings(
   if (data.stripeSecretKey) {
     try {
       updateData.stripeSecretKey = encrypt(data.stripeSecretKey, {
-        purpose: "stripe-secret-key",
+        purpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
       });
     } catch {
       throw new DomainError(
@@ -86,7 +87,7 @@ export async function updateStripeSettings(
   if (data.stripeWebhookSecret) {
     try {
       updateData.stripeWebhookSecret = encrypt(data.stripeWebhookSecret, {
-        purpose: "stripe-webhook-secret",
+        purpose: SETTINGS_CRYPTO_PURPOSES.stripeWebhookSecret,
       });
     } catch {
       throw new DomainError(

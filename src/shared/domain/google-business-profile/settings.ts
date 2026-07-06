@@ -13,6 +13,7 @@ import { Prisma } from "@generated/prisma/client";
 
 import { prisma } from "@/shared/db/prisma";
 import { decrypt, encrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -23,7 +24,7 @@ import { isRecord } from "@/shared/lib/serialize";
 
 import type { GbpAuthState } from "@/shared/lib/google-business-profile/types";
 
-const GBP_AUTH_PURPOSE = "google-business-profile-auth";
+const GBP_AUTH_PURPOSE = SETTINGS_CRYPTO_PURPOSES.googleBusinessProfileAuth;
 
 /**
  * 暗号化した GbpAuthState を `{ encrypted: string }` 形式で Prisma Json に格納するための型。
