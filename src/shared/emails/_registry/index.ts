@@ -48,6 +48,8 @@ import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-n
 import { inquiryStatusNotificationFixture } from "@/shared/emails/inquiry-status-notification.fixture";
 import { PasswordResetEmail } from "@/shared/emails/password-reset";
 import { passwordResetFixture } from "@/shared/emails/password-reset.fixture";
+import { DeleteAccountVerificationEmail } from "@/shared/emails/delete-account-verification";
+import { deleteAccountVerificationFixture } from "@/shared/emails/delete-account-verification.fixture";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { reservationCancelledFixture } from "@/shared/emails/reservation-cancelled.fixture";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
@@ -203,7 +205,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 18 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * 19 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {
@@ -282,6 +284,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "password-reset",
     PasswordResetEmail,
     passwordResetFixture,
+  ),
+  "delete-account-verification": defineEntry(
+    "delete-account-verification",
+    DeleteAccountVerificationEmail,
+    deleteAccountVerificationFixture,
   ),
   "review-reply": defineEntry(
     "review-reply",

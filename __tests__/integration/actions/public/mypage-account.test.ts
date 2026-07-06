@@ -69,15 +69,6 @@ mock.module("@/shared/domain/users/queries", () => ({
   getAccountProviders: mockGetAccountProviders,
 }));
 
-// customer query mock（deleteAccount は getCustomerByUserId でキャッシュ無効化用 customerId を取得）
-const mockGetCustomerByUserId = mock(() =>
-  Promise.resolve({ id: "customer-001" }),
-);
-
-mock.module("@/shared/domain/customers/queries", () => ({
-  getCustomerByUserId: mockGetCustomerByUserId,
-}));
-
 // auth モック
 const mockDeleteUser = mock(() => Promise.resolve(undefined));
 const mockGetSession = mock(
@@ -268,7 +259,7 @@ describe("deleteAccountAction", () => {
   });
 
   describe("正常系", () => {
-    test("認証済みユーザーがアカウントを削除できる", async () => {
+    test("認証済みユーザーがアカウント削除を申請できる（確認メール送信のみ、即時削除ではない）", async () => {
       const { deleteAccountAction } =
         await import("@/app/(public)/mypage/_shared/actions/account");
 
@@ -277,13 +268,18 @@ describe("deleteAccountAction", () => {
       expect(result).toBeNull();
     });
 
-    test("auth.api.deleteUser が headers を引数に呼ばれる", async () => {
+    test("auth.api.deleteUser が headers と callbackURL を引数に呼ばれる", async () => {
       const { deleteAccountAction } =
         await import("@/app/(public)/mypage/_shared/actions/account");
 
       await deleteAccountAction();
 
       expect(mockDeleteUser).toHaveBeenCalledTimes(1);
+      expect(mockDeleteUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: { callbackURL: "/" },
+        }),
+      );
     });
   });
 
@@ -343,7 +339,7 @@ describe("deleteAccountAction", () => {
       const result = await deleteAccountAction();
 
       expectErrorResult(result);
-      expect(result.error).toBe("アカウントの削除に失敗しました");
+      expect(result.error).toBe("アカウント削除の受付に失敗しました");
     });
   });
 });

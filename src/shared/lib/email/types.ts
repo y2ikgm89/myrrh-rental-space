@@ -83,6 +83,12 @@ export type PasswordResetEmailData = {
   resetUrl: string;
 };
 
+export type DeleteAccountVerificationEmailData = {
+  email: string;
+  name: string;
+  deletionUrl: string;
+};
+
 export type StatusChangeEmailData = {
   reservationId: string;
   customerEmail: string;
