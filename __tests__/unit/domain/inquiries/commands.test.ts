@@ -38,6 +38,12 @@ const mockCustomerCreate = mock<
   (args: Record<string, unknown>) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "guest-customer-id" }));
 
+// `createInquiryCommand` は `isFeatureEnabled("contact")` を直接呼ぶ
+// （reviews/commands.ts と同型の feature module gate）。
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
@@ -55,6 +61,10 @@ mock.module("@/shared/db/prisma", () => ({
       create: mockCustomerCreate,
     },
   },
+}));
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
 }));
 
 mock.module("@generated/prisma/enums", () => ({
@@ -105,6 +115,7 @@ describe("inquiries/commands", () => {
     mockCustomerFindUnique.mockReset();
     mockCustomerFindFirst.mockReset();
     mockCustomerCreate.mockReset();
+    mockIsFeatureEnabled.mockReset();
 
     // デフォルト: お問い合わせ・顧客は存在しない
     mockInquiryFindUnique.mockResolvedValue(null);
@@ -114,6 +125,7 @@ describe("inquiries/commands", () => {
     mockCustomerFindUnique.mockResolvedValue(null);
     mockCustomerFindFirst.mockResolvedValue(null);
     mockCustomerCreate.mockResolvedValue({ id: "guest-customer-id" });
+    mockIsFeatureEnabled.mockResolvedValue(true);
   });
 
   // =============================================================================
@@ -486,6 +498,18 @@ describe("inquiries/commands", () => {
 
         // payload には元の companyName がそのまま入る
         expect(result.payload.companyName).toBeNull();
+      });
+    });
+
+    describe("異常系", () => {
+      test("contact feature module が OFF の場合は VALIDATION エラーで拒否し、作成処理を行わない", async () => {
+        mockIsFeatureEnabled.mockResolvedValueOnce(false);
+
+        await expect(
+          createInquiryCommand(VALID_CREATE_INPUT),
+        ).rejects.toMatchObject({ code: "VALIDATION" });
+        expect(mockCustomerFindFirst).not.toHaveBeenCalled();
+        expect(mockInquiryCreate).not.toHaveBeenCalled();
       });
     });
 

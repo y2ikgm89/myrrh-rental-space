@@ -26,7 +26,7 @@
  * 動的 import する **前** に `DATABASE_URL` を `TEST_DATABASE_URL` で上書きする。
  */
 
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { describe, test, expect, beforeAll, afterAll, mock } from "bun:test";
 import {
   EventScheduleMode,
   EventStatus,
@@ -42,6 +42,15 @@ if (TEST_DB_URL) {
 }
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
+
+// `createEventRegistrationCommand` は `isFeatureEnabled("events")` を直接呼ぶ
+// （reviews/commands.ts と同型の feature module gate）。実装は 'use cache' 付きの
+// Settings 読取りを経由するが、この real-DB テストは advisory lock の直列化検証が
+// 目的でありテスト DB の Settings シーディングとは無関係なため、他の unit テストと
+// 同じ mock パターンで gate 自体をバイパスする。
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: () => Promise.resolve(true),
+}));
 
 // 動的 import の型（gateway / command を実行時に読み込む）
 type PrismaModule = typeof import("@/shared/db/prisma");
