@@ -190,7 +190,9 @@ const walkInSchema = z.object({
     .max(255)
     .optional()
     .transform((v) => (v === undefined || v === "" ? null : v))
-    .pipe(z.union([z.email("メールアドレスの形式が不正です"), z.null()])),
+    .pipe(
+      z.union([z.email({ error: "メールアドレスの形式が不正です" }), z.null()]),
+    ),
   phone: z
     .string()
     .trim()
