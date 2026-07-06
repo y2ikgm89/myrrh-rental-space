@@ -13,6 +13,7 @@ import {
   getPageWithSections,
 } from "@/admin/queries/page-section";
 import { getSectionDynamicOptions } from "@/shared/domain/sections/dynamic-options";
+import { getFeatureFilterContext } from "@/shared/lib/features/check";
 import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { PageEditor } from "./_components/PageEditor";
@@ -54,6 +55,7 @@ export default async function EditPagePage({
   }
 
   const dynamicOptions = await getSectionDynamicOptions();
+  const featureCtx = await getFeatureFilterContext();
 
   return (
     <AdminDetailLayout
@@ -77,7 +79,12 @@ export default async function EditPagePage({
         </>
       }
     >
-      <PageEditor key={page.id} page={page} dynamicOptions={dynamicOptions} />
+      <PageEditor
+        key={page.id}
+        page={page}
+        dynamicOptions={dynamicOptions}
+        disabledSectionTypes={Array.from(featureCtx.disabledSectionTypes)}
+      />
     </AdminDetailLayout>
   );
 }
