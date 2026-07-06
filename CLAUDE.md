@@ -30,6 +30,10 @@
 変更を証明できる最小のコマンドから実行する。完了報告前に `bun run validate` を必ず実行し、
 テストに触れた場合は該当テストも実行する。コミット前は `bun run validate && bun run build`。
 
+`git push` は lefthook の pre-push hook（`type-check` → `architecture-boundaries` テストを
+**直列実行**、実測合計 80〜110 秒）を待つ。`git push` / `git commit` をツール経由で実行する
+場合はタイムアウトを 180 秒以上（推奨 300 秒）確保する。
+
 ## 構造
 
 - `src/app/(public)` / `src/app/(admin)` — **Multiple Root Layouts**（それぞれ独自の `<html>`）。

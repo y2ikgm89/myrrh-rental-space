@@ -30,7 +30,7 @@ const legacyPrismaRestrictedImport = {
 };
 
 // db barrel `@/shared/db` は db 層（src/shared/db/**）の外から import 禁止。
-// 利用側は `@/shared/db/prisma` を直接 import する（db-and-domain.md）。
+// 利用側は `@/shared/db/prisma` を直接 import する（.claude/rules/db-domain.md）。
 const dbBarrelRestrictedImport = {
   name: "@/shared/db",
   message:

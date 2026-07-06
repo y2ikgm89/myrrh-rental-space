@@ -40,7 +40,7 @@ setup("authenticate as customer", async ({ page }) => {
   await devLoginButton.click();
 
   // `expect(page).toHaveURL` polling は App Router の soft / hard navigation
-  // 両方で動作する canonical pattern（→ `test-quality/e2e.md` §App Router Gotchas）。
+  // 両方で動作する canonical pattern（→ `.claude/rules/testing-e2e.md` §書き方の規約）。
   await expect(page).toHaveURL(/\/mypage(\?|$|\/)/, { timeout: 15000 });
 
   // session cookie が確定したことを確認
