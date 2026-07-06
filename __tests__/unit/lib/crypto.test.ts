@@ -22,14 +22,8 @@ mock.module("@/shared/lib/env/encryption", () => ({
   getPrimaryEncryptionKey: mockGetPrimary,
 }));
 
-const {
-  encrypt,
-  decrypt,
-  isEncrypted,
-  safeEncrypt,
-  safeDecrypt,
-  encryptApiKey,
-} = await import("@/shared/lib/crypto");
+const { encrypt, decrypt, isEncrypted, safeEncrypt, safeDecrypt } =
+  await import("@/shared/lib/crypto");
 
 describe("crypto", () => {
   describe("encrypt / decrypt (v2 wire format)", () => {
@@ -165,16 +159,6 @@ describe("crypto", () => {
       });
 
       expect(safeEncrypt("test")).toBeNull();
-    });
-  });
-
-  describe("encryptApiKey", () => {
-    test("API キーを purpose='api-key' で暗号化", () => {
-      const apiKey = "sk_test_1234567890";
-      const encrypted = encryptApiKey(apiKey);
-
-      expect(encrypted).toContain(":api-key:");
-      expect(decrypt(encrypted)).toBe(apiKey);
     });
   });
 
