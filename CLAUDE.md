@@ -71,6 +71,46 @@
     計画ダウンタイム付きデプロイに切り替わる
 12. 秘密値（`.env*` の実値）は出力・コピー・コミットしない
 
+## 自動完遂ポリシー
+
+タスクが完了点に達したら、ユーザー確認なしで commit → push → PR → **auto-merge 予約**まで自動進行し
+**即次タスクに移る**。CI watch では blocking しない（GitHub 側の required checks pass 時点で自動
+squash merge）。「進めて」等の明示承認は**不要**。gate はいずれか該当で停止する。
+
+| Gate            | 内容                                                                          | 該当/fail 時             |
+| --------------- | ----------------------------------------------------------------------------- | ------------------------ |
+| 1. branch       | main 直編集なら `<type>/<topic>` へ切替                                       | 自動切替                 |
+| 2. 停止例外     | 下記の停止例外に該当しないか scan                                             | 該当すれば停止           |
+| 3. 検証         | `bun run validate && bun run build` exit 0                                    | 停止                     |
+| 4. commit       | 明示ファイル指定 + Conventional Commits + Co-Authored-By                      | 停止                     |
+| 5. push         | `git push -u origin <branch>`（lefthook pre-push 通過）                       | 停止                     |
+| 6. PR           | `gh pr create --base main`（Summary + Test plan）                             | 停止                     |
+| 7. auto-merge   | `gh pr merge --auto --squash --delete-branch` 予約 → 即次タスク               | 停止                     |
+| 8. CI fail 検知 | 通知 or 次セッション開始時の `gh pr list` で検出                              | root cause fix → 再 push |
+| 9. sync         | 次セッション開始時 or 明示 `git pull --ff-only`。gone branch は `/clean_gone` | -                        |
+
+**PR 粒度**: 1 PR = 1 logical change、soft limit 300 行 / 10 file。同一 file の fix-of-fix で対象 PR が
+まだ未 merge なら新規 PR を作らず同 branch に追加 commit（push 前に `gh pr view <N> --json state` で
+OPEN を確認 — auto-merge 済みなら新 branch）。独立 topic / 別 domain は別 PR。
+
+**停止例外**（該当時はユーザーに確認する）:
+
+- breaking schema（`DROP COLUMN` / 型 narrowing / required 化 / table rename）
+- `.env*` 編集・新規 env 変数・`bun.lock` の予期せぬ変更
+- 10 file 超 / 1000 行超 / 既存 `prisma/migrations/*.sql` を含む大規模変更
+- 当該タスクと無関係な untracked / modified が存在する（並行セッションの可能性）
+- destructive 操作（`reset --hard` / `migrate reset` / `--no-verify` / hook bypass / `branch -D`）
+- 機密情報混入の疑い・test fail・過去 60 分で PR 3 件超の自動 merge（暴走 detect）
+- ユーザーが調査・相談・brainstorming 中で実装の明示指示がない
+
+「コミットしないで」「step by step で」「PR 作らないで」等の明示指示があれば override して即停止する。
+
+**事故防止の実体**: lefthook（pre-commit: eslint-fix + prettier-fix + `scripts/check-protected-files.sh` /
+pre-push: `type-check` → `architecture-boundaries.test.ts` 直列 / commit-msg:
+`scripts/check-commit-msg.sh` で Conventional Commits 強制）+ GitHub branch protection（main、
+required checks 7 件・force-push 禁止・branch 削除禁止、`strict: false`）。ツール呼び出しレベルの
+deny hook（危険 bash 拒否等）はプロジェクト側に現存しないため、上記 gate と停止例外自体が最終防衛線。
+
 ## 詳細ルール
 
 トピック別の規約は `.claude/rules/`（対象ファイルを読むと自動ロード）、
