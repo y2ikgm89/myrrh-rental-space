@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { EventStatus, RegistrationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 
 export async function createEventRegistrationCommand(data: {
   eventId: string;
@@ -16,6 +17,16 @@ export async function createEventRegistrationCommand(data: {
   quantity: number;
   customerId?: string | null;
 }) {
+  // Global gate: featureModules.events で OFF なら拒否。
+  // page.tsx の requireFeatureEnabled は Server Action の直接呼び出しを防げないため、
+  // 書込の実効性は domain 層のこのチェックが担保する（reviews/commands.ts と同型）。
+  if (!(await isFeatureEnabled("events"))) {
+    throw new DomainError(
+      "イベント機能は現在サイト全体で無効化されています",
+      "VALIDATION",
+    );
+  }
+
   // 定員集計〜create を 1 つの interactive transaction に閉じ、先頭で event 単位の
   // advisory xact ロックを取って同一イベントの登録を直列化する。これがないと最後の
   // 数枠に同時申込が殺到したとき、複数リクエストが同じ残枠を読んで全部チェックを

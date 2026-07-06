@@ -4,6 +4,7 @@ import { Prisma } from "@generated/prisma/client";
 import { CustomerType, InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
 export async function updateInquiryStatus(
@@ -185,6 +186,16 @@ async function resolveOrCreateGuestInquiryCustomer(
 export async function createInquiryCommand(
   input: CreateInquiryInput,
 ): Promise<CreateInquiryResult> {
+  // Global gate: featureModules.contact で OFF なら拒否。
+  // page.tsx の requireFeatureEnabled は Server Action の直接呼び出しを防げないため、
+  // 書込の実効性は domain 層のこのチェックが担保する（reviews/commands.ts と同型）。
+  if (!(await isFeatureEnabled("contact"))) {
+    throw new DomainError(
+      "お問い合わせ機能は現在サイト全体で無効化されています",
+      "VALIDATION",
+    );
+  }
+
   // Resolve customerId: explicit authenticated owner > unlinked guest customer.
   // Submitted email is not proof of account ownership, so never use it to attach
   // an inquiry to an existing linked customer.

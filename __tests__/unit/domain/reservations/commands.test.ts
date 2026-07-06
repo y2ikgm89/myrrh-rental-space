@@ -192,6 +192,16 @@ mock.module("@/shared/lib/reservation", () => ({
   ),
 }));
 
+// `createPublicReservationCommand` は `isFeatureEnabled("reservation")` を直接呼ぶ
+// （reviews/commands.ts と同型の feature module gate）。settings.findUnique mock は不要。
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
+
 // ---------------------------------------------------------------------------
 // Import test target (after mocks)
 // ---------------------------------------------------------------------------
@@ -289,6 +299,8 @@ function resetAllMocks() {
     fn(txClient),
   );
   mockTxReservationFindFirst.mockImplementation(() => Promise.resolve(null));
+  mockIsFeatureEnabled.mockClear();
+  mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
 }
 
 // ==========================================================================
@@ -1421,6 +1433,16 @@ describe("createPublicReservationCommand", () => {
         createPublicReservationCommand(validInput),
       ).rejects.toMatchObject({ code: "CONFLICT" });
       // blocked のため予約レコードは作成されない
+      expect(mockReservationCreate).not.toHaveBeenCalled();
+    });
+
+    test("reservation feature module が OFF の場合は VALIDATION エラーで拒否し、以降の処理を行わない", async () => {
+      mockIsFeatureEnabled.mockResolvedValue(false);
+
+      await expect(
+        createPublicReservationCommand(validInput),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
+      expect(mockSpaceFindUnique).not.toHaveBeenCalled();
       expect(mockReservationCreate).not.toHaveBeenCalled();
     });
   });

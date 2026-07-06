@@ -63,8 +63,17 @@ const mockRegistrationUpdate = mock<() => Promise<Record<string, unknown>>>(
 const mockExecuteRaw = mock<(...args: unknown[]) => Promise<number>>(() =>
   Promise.resolve(0),
 );
+// createEventRegistrationCommand は `isFeatureEnabled("events")` を直接呼ぶ
+// （reviews/commands.ts と同型の feature module gate）。
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
 
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
 
 // createEventRegistrationCommand は定員集計〜create を prisma.$transaction(async (tx) => {...})
 // に閉じるため、$transaction が同じモデル mock を載せた tx を callback に渡すよう模す。
@@ -146,7 +155,9 @@ describe("createEventRegistrationCommand", () => {
     mockTicketFindFirst.mockReset();
     mockRegistrationAggregate.mockReset();
     mockRegistrationCreate.mockReset();
+    mockIsFeatureEnabled.mockReset();
 
+    mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
     mockEventFindFirst.mockImplementation(() => Promise.resolve(BASE_EVENT));
     mockSlotFindUnique.mockImplementation(() => Promise.resolve(BASE_SLOT));
     mockTicketFindFirst.mockImplementation(() => Promise.resolve(BASE_TICKET));
@@ -245,6 +256,15 @@ describe("createEventRegistrationCommand", () => {
   });
 
   describe("異常系: その他", () => {
+    test("events feature module が OFF の場合は VALIDATION エラーで拒否し、以降の処理を行わない", async () => {
+      mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
+      await expect(
+        createEventRegistrationCommand(VALID_INPUT),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
+      expect(mockEventFindFirst).not.toHaveBeenCalled();
+      expect(mockRegistrationCreate).not.toHaveBeenCalled();
+    });
+
     test("イベントが存在しないと NOT_FOUND", async () => {
       mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
       await expect(createEventRegistrationCommand(VALID_INPUT)).rejects.toThrow(
