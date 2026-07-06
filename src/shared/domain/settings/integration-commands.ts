@@ -72,7 +72,9 @@ export async function updateStripeSettings(
 
   if (data.stripeSecretKey) {
     try {
-      updateData.stripeSecretKey = encrypt(data.stripeSecretKey);
+      updateData.stripeSecretKey = encrypt(data.stripeSecretKey, {
+        purpose: "stripe-secret-key",
+      });
     } catch {
       throw new DomainError(
         "シークレットキーの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。",
@@ -83,7 +85,9 @@ export async function updateStripeSettings(
 
   if (data.stripeWebhookSecret) {
     try {
-      updateData.stripeWebhookSecret = encrypt(data.stripeWebhookSecret);
+      updateData.stripeWebhookSecret = encrypt(data.stripeWebhookSecret, {
+        purpose: "stripe-webhook-secret",
+      });
     } catch {
       throw new DomainError(
         "Webhookシークレットの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。",

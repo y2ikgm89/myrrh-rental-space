@@ -7,7 +7,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { safeDecrypt, encryptApiKey } from "@/shared/lib/crypto";
+import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
 import { getGoogleCalendarServiceAccountConfig } from "@/shared/domain/settings/admin-queries";
 import {
   parseGoogleServiceAccountCredentials,
@@ -71,7 +71,7 @@ export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | 
  * サービスアカウントJSONを暗号化
  */
 export function encryptServiceAccountJson(json: string): string {
-  return encryptApiKey(json);
+  return encrypt(json, { purpose: "google-calendar-service-account" });
 }
 
 /**

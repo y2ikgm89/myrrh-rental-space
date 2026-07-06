@@ -5,15 +5,14 @@ import { serverEnv } from "@/shared/lib/env/server";
 import { getDecryptedResendApiKey } from "@/shared/domain/settings/api-key-queries";
 
 /**
- * 有効な Resend API キーを解決する（env 優先・無ければ管理画面で設定された DB キー）。
+ * 有効な Resend API キーを解決する（DB 優先・管理画面で未設定なら env フォールバック）。
  *
  * Stripe (`getStripeClient`) / Turnstile (`getDecryptedTurnstileSecretKey`) と同じ
- * env-OR-DB パターン。これが無いと送信経路は env のみを見るため、管理画面で設定した
- * 暗号化キー（settings.resendApiKey）が使われず、本番で全メールが silent no-op になる。
- * env キーがある場合は DB を読まずに短絡する（本番の通常経路では DB アクセスを増やさない）。
+ * DB-OR-env パターン（Settings is canonical、`.claude/rules/integrations.md`参照）。
+ * DB キーがある場合は env を読まずに短絡する。
  */
 async function resolveResendApiKey(): Promise<string | null> {
-  return serverEnv.RESEND_API_KEY ?? (await getDecryptedResendApiKey());
+  return (await getDecryptedResendApiKey()) ?? serverEnv.RESEND_API_KEY ?? null;
 }
 
 /**
@@ -46,10 +45,13 @@ export async function getResendClient(): Promise<Resend | null> {
 /**
  * 送信元アドレスを `表示名 <アドレス>` 形式で組み立てる。
  *
- * 解決順は env 優先・DB フォールバック（Stripe / Turnstile / Resend APIキーと同じ
- * env-OR-DB パターン）:
+ * 解決順は env 優先・DB フォールバック:
  *   アドレス: env EMAIL_FROM → DB senderEmail → "noreply@example.com"
  *   表示名:   env EMAIL_FROM_NAME → DB senderName → SITE_DEFAULTS.name
+ *
+ * 注: これは表示用の送信元アドレスであり、Stripe/Turnstile/Resendの秘密APIキー解決順
+ * （DB優先、`.claude/rules/integrations.md`参照）とは独立した設定。漏洩時の影響や
+ * ローテーション性の懸念がないため env 優先のままで問題ない。
  *
  * DB 値（管理画面のメール設定）は呼び出し側が `getEmailDeliverySettings()` から
  * 取得して渡す（client 層から domain クエリへ往復させない）。

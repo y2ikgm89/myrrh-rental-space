@@ -38,10 +38,17 @@ paths:
   副作用を gate する。findUnique → update の 2 ステップに書き換えない
   （並行配信でメール二重送信 race が再発）
 
-## API キーの優先順（統合ごとに逆なので注意）
+## API キーの優先順（DB優先で統一、Settings is canonical）
 
-Resend / Stripe = **env 優先** → DB フォールバック。Turnstile secret = **DB 優先** → env。
-管理画面でキーを変えても env 設定があると Resend/Stripe には反映されない。
+Resend / Stripe / Turnstile secret / Google Maps / CustomApiKeys は全て **DB優先** →
+env はフォールバック（PR #878 で確定した「Settings is canonical」に統一、2026-07-06）。
+env 側は `cloudbuild.yaml` に配線されておらず本番では常に undefined
+（ローカル開発の利便性のためのフォールバックとしてのみ機能する）。
+新しい統合キーを追加する際もこのパターンに従うこと（`turnstile.ts` の
+`getTurnstileSecretKey()` をお手本にする）。
+
+なお `EMAIL_FROM`（送信元アドレス表示値、23行目）は秘密キーではないため対象外。
+env優先のままで問題ない。
 
 ## R2（Cloudflare、S3 互換）
 

@@ -196,15 +196,12 @@ export function safeDecrypt(ciphertext: string): string | null {
 }
 
 /**
- * APIキー用の暗号化
+ * APIキー用の汎用暗号化。
+ *
+ * 統合固有の暗号化には呼び出し元で `encrypt(value, { purpose })` を直接使うこと。
+ * purpose は kebab-case の `domain-field` 形式（例: "stripe-secret-key",
+ * "google-calendar-service-account"）で、統合ごとに一意にする。
  */
 export function encryptApiKey(plaintext: string): string {
   return encrypt(plaintext, { purpose: "api-key" });
-}
-
-/**
- * Stripe関連データ用の暗号化
- */
-export function encryptStripeData(plaintext: string): string {
-  return encrypt(plaintext, { purpose: "stripe" });
 }
