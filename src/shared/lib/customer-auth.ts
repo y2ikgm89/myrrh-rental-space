@@ -17,7 +17,10 @@ import { nextCookies } from "better-auth/next-js";
 import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
 import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
-import { SESSION_CONFIG, getAppUrl } from "./constants";
+import { sendDeleteAccountVerificationEmail } from "@/shared/lib/email/delete-account-emails";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
+import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
+import { SESSION_CONFIG, CACHE_TAGS, getAppUrl } from "./constants";
 import { isRecord } from "./serialize";
 import { isDashboardRole } from "./admin-roles";
 import { isCustomerE2ELoginEnabled } from "./e2e-runtime";
@@ -106,6 +109,39 @@ function createCustomerAuth() {
       },
       deleteUser: {
         enabled: true,
+        // 顧客は OAuth 専用（パスワード未設定）のため、セッション鮮度チェックのみでの
+        // 即時削除は session hijack / XSS / 共有端末で危険（Better Auth 公式 docs
+        // "Authentication Requirements" が OAuth ユーザーに明示的にこの callback を推奨）。
+        // 設定するだけで deleteUser API は「即時削除」から「確認メール送信」に切り替わる。
+        sendDeleteAccountVerification: async ({ user, url }) => {
+          try {
+            await sendDeleteAccountVerificationEmail({
+              email: user.email,
+              name: user.name,
+              deletionUrl: url,
+            });
+          } catch (error) {
+            logError(error, {
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.HIGH,
+              context: { operation: "sendDeleteAccountVerification" },
+            });
+          }
+        },
+        // 実際の削除は本人がメール内リンクを踏んだ時点（Better Auth 内部の
+        // /api/customer-auth/delete-user/callback、Route Handler）で発生する。
+        // Customer.userId は User 削除で SetNull されるため、この時点では
+        // customer 個別レコードの id は復元できない（site-wide の CUSTOMERS
+        // collection タグで一覧系は十分カバーされる）。
+        afterDelete: async () => {
+          invalidateSiteWideCacheFromRouteHandler([
+            CACHE_TAGS.CUSTOMERS,
+            CACHE_TAGS.RESERVATIONS,
+            CACHE_TAGS.REVIEWS,
+            CACHE_TAGS.INQUIRIES,
+            CACHE_TAGS.EVENTS,
+          ]);
+        },
       },
     },
     trustedOrigins: [appUrl],

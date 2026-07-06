@@ -1,10 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
-import { updateTag } from "next/cache";
 import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
-import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
   createMutationError,
   type MutationResult,
@@ -20,7 +18,6 @@ import {
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
 export async function getAccountLinksAction(): Promise<
   MutationResult<{ accounts: string[] }>
@@ -35,6 +32,16 @@ export async function getAccountLinksAction(): Promise<
   return { accounts: providers };
 }
 
+/**
+ * アカウント削除の申請を受け付ける。
+ *
+ * 顧客は OAuth 専用（パスワード未設定）のため、即時削除は session hijack / XSS /
+ * 共有端末で危険（Better Auth 公式 docs "Authentication Requirements" 参照）。
+ * `customer-auth.ts` に `sendDeleteAccountVerification` を設定済みのため、この呼び出しは
+ * 即時削除ではなく確認メール送信のみを行う。実際の削除は本人がメール内リンクを踏んだ
+ * 時点（Better Auth 内部の `/api/customer-auth/delete-user/callback`）で発生し、
+ * キャッシュ無効化もその `afterDelete` フックで行う（ここでは行わない）。
+ */
 export async function deleteAccountAction(
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
@@ -50,22 +57,11 @@ export async function deleteAccountAction(
   const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
-  const customer = await getCustomerByUserId(session.user.id);
-
   try {
     await customerAuth.api.deleteUser({
       headers: await headers(),
-      body: {},
+      body: { callbackURL: "/" },
     });
-
-    updateTag(CACHE_TAGS.CUSTOMERS);
-    updateTag(CACHE_TAGS.RESERVATIONS);
-    updateTag(CACHE_TAGS.REVIEWS);
-    updateTag(CACHE_TAGS.INQUIRIES);
-    updateTag(CACHE_TAGS.EVENTS);
-    if (customer) {
-      updateTag(getCacheTag.customers.detail(customer.id));
-    }
 
     return null;
   } catch (error) {
@@ -74,6 +70,6 @@ export async function deleteAccountAction(
       severity: ErrorSeverity.HIGH,
       context: { operation: "deleteAccount", userId: session.user.id },
     });
-    return createMutationError("アカウントの削除に失敗しました");
+    return createMutationError("アカウント削除の受付に失敗しました");
   }
 }
