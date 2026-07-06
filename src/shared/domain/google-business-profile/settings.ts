@@ -2,7 +2,8 @@
  * Settings シングルトンに保存された Google Business Profile 認証情報の暗号化 I/O。
  *
  * - `googleBusinessProfileAuth` は `Json?` 型で `{ encrypted: string }` 形式を保存
- * - 中身は `JSON.stringify(GbpAuthState)` を `encrypt(..., { purpose: "api-key" })` で暗号化
+ * - 中身は `JSON.stringify(GbpAuthState)` を
+ *   `encrypt(..., { purpose: "google-business-profile-auth" })` で暗号化
  * - `googleBusinessProfileEnabled` が false または auth が null の場合は `getGbpAuthState()` が null を返す
  */
 
@@ -22,7 +23,7 @@ import { isRecord } from "@/shared/lib/serialize";
 
 import type { GbpAuthState } from "@/shared/lib/google-business-profile/types";
 
-const GBP_AUTH_PURPOSE = "api-key";
+const GBP_AUTH_PURPOSE = "google-business-profile-auth";
 
 /**
  * 暗号化した GbpAuthState を `{ encrypted: string }` 形式で Prisma Json に格納するための型。

@@ -18,9 +18,13 @@ async function upsertSettings(
   });
 }
 
-function encryptSecret(value: string, message: string): string {
+function encryptSecret(
+  value: string,
+  message: string,
+  purpose: string,
+): string {
   try {
-    return encrypt(value);
+    return encrypt(value, { purpose });
   } catch {
     throw new DomainError(message, "VALIDATION");
   }
@@ -35,6 +39,7 @@ export async function updateResendSettings(data: {
     updateData.resendApiKey = encryptSecret(
       data.resendApiKey,
       "APIキーの暗号化に失敗しました",
+      "resend-api-key",
     );
   }
 
@@ -75,6 +80,7 @@ export async function updateTurnstileSettings(data: {
     updateData.turnstileSecretKey = encryptSecret(
       data.turnstileSecretKey,
       "シークレットキーの暗号化に失敗しました",
+      "turnstile-secret-key",
     );
   }
 
@@ -108,6 +114,7 @@ export async function updateGoogleMapsSettings(data: {
     updateData.googleMapsApiKey = encryptSecret(
       data.googleMapsApiKey,
       "APIキーの暗号化に失敗しました",
+      "google-maps-api-key",
     );
   }
 
@@ -145,6 +152,7 @@ export async function addCustomApiKey(
   const encryptedKeyValue = encryptSecret(
     data.keyValue,
     "APIキーの暗号化に失敗しました",
+    "custom-api-key",
   );
 
   const updated = {
