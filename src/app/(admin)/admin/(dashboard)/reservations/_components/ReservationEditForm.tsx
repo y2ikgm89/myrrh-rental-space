@@ -30,7 +30,6 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-  Checkbox,
   SelectionBox,
   SubmitButton,
 } from "@/admin/components/ui";
@@ -39,6 +38,7 @@ import { formatCurrency } from "@/shared/lib/pricing/format";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import {
+  CREATABLE_RESERVATION_STATUSES,
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";
@@ -82,9 +82,15 @@ const ALL_STATUS_OPTIONS: Record<
   ),
 );
 
+// CANCELLED/COMPLETED/NO_SHOW への遷移は返金・キャンセルメール等の副作用チェーンを
+// 経由しないため、この編集フォームでは選択肢から除外する（予約詳細画面の専用ステータス
+// 変更経路のみが対象。currentStatus 自体が終端でも表示は維持する）。
 function getStatusOptionsForCurrent(currentStatus: ReservationStatus) {
   const transitions = RESERVATION_STATUS_TRANSITIONS[currentStatus] ?? [];
-  const allowed = [currentStatus, ...transitions];
+  const allowed = [currentStatus, ...transitions].filter(
+    (value) =>
+      value === currentStatus || CREATABLE_RESERVATION_STATUSES.includes(value),
+  );
   return allowed.flatMap((value) => {
     const option = ALL_STATUS_OPTIONS[value];
     if (!option) return [];
@@ -115,8 +121,6 @@ export function ReservationEditForm({
   const [startTime, setStartTime] = useState<string>(initialStartTime);
   const [endTime, setEndTime] = useState<string>(initialEndTime);
   const [status, setStatus] = useState<ReservationStatus>(reservation.status);
-  const [sendNotificationEmail, setSendNotificationEmail] =
-    useState<boolean>(false);
 
   const boundAction = updateReservationAction.bind(null, reservation.id);
   const [lastResult, action, isPending] = useActionState(
@@ -185,7 +189,7 @@ export function ReservationEditForm({
 
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
-      {/* customerId / spaceId / startTime / endTime / status / sendNotificationEmail hidden inputs */}
+      {/* customerId / spaceId / startTime / endTime / status hidden inputs */}
       <input
         type="hidden"
         name={fields.customerId.name}
@@ -199,11 +203,6 @@ export function ReservationEditForm({
         type="hidden"
         name={fields.totalPrice.name}
         value={manualPrice ?? ""}
-      />
-      <input
-        type="hidden"
-        name={fields.sendNotificationEmail.name}
-        value={sendNotificationEmail ? "on" : ""}
       />
 
       {form.errors && form.errors.length > 0 && (
@@ -481,22 +480,11 @@ export function ReservationEditForm({
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="sendNotificationEmail"
-                  checked={sendNotificationEmail}
-                  onCheckedChange={(checked) =>
-                    setSendNotificationEmail(checked === true)
-                  }
-                  disabled={isPending}
-                />
-                <Label
-                  htmlFor="sendNotificationEmail"
-                  className="cursor-pointer"
-                >
-                  変更内容を顧客にメール通知する
-                </Label>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                スペース・日時・料金の変更を保存すると、自動的にお客様と管理者へ
+                変更通知メールが送信されます。キャンセル・完了・無断キャンセルへの
+                変更は、予約詳細画面のステータス変更から行ってください。
+              </p>
             </CardContent>
           </Card>
         </div>

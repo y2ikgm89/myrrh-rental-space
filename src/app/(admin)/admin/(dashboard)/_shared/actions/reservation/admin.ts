@@ -22,6 +22,7 @@ import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   sendReservationAdminNotification,
   sendReservationConfirmationEmail,
+  sendReservationUpdatedEmail,
 } from "@/shared/lib/email/reservation-emails";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -246,13 +247,21 @@ export async function updateReservationAction(
             });
           }
 
-          if (data.sendNotificationEmail) {
-            fireAndForget(sendReservationConfirmationEmail(payloadData), {
-              operation: "sendNotificationEmail",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.LOW,
-              context: { reservationId: id },
-            });
+          // スペース・日時・料金など顧客に影響する変更があった場合のみ、
+          // 顧客+管理者へ変更通知メールを自動送信する（重要取引通知として非gate）。
+          if (mutationPayload.customerVisibleChanged) {
+            fireAndForget(
+              Promise.all([
+                sendReservationUpdatedEmail(payloadData),
+                sendReservationAdminNotification(payloadData, "update"),
+              ]),
+              {
+                operation: "sendReservationUpdateNotification",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.LOW,
+                context: { reservationId: id },
+              },
+            );
           }
 
           fireAndForget(

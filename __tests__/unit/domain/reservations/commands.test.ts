@@ -612,11 +612,15 @@ describe("updateAdminReservationCommand", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    // 既存予約をセットアップ
+    // 既存予約をセットアップ（日時は validInput と異なる値にし、diff 検知のデフォルトを true にする）
     mockReservationFindUnique.mockImplementation(() =>
       Promise.resolve({
         id: "res-1",
         status: ReservationStatus.PENDING,
+        spaceId: "space-1",
+        startTime: new Date("2024-06-15T09:00:00"),
+        endTime: new Date("2024-06-15T10:00:00"),
+        totalPrice: 1000,
         couponId: null,
         googleCalendarEventId: null,
         customer: {
@@ -636,6 +640,39 @@ describe("updateAdminReservationCommand", () => {
       expect(result.payload).toBeDefined();
       expect(result.payload.reservationId).toBe("res-1");
       expect(result.googleCalendarEventId).toBeNull();
+    });
+
+    test("日時が変更された場合 customerVisibleChanged: true", async () => {
+      // beforeEach の既存予約は 09:00-10:00、validInput は 10:00-12:00 で異なる
+      const result = await updateAdminReservationCommand("res-1", validInput);
+
+      expect(result.customerVisibleChanged).toBe(true);
+    });
+
+    test("顧客に影響する変更がない場合 customerVisibleChanged: false", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.PENDING,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T10:00:00"),
+          endTime: new Date("2024-06-15T12:00:00"),
+          totalPrice: 2000,
+          couponId: null,
+          googleCalendarEventId: null,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      // hourlyPrice=1000 × 2h = totalPrice=2000（既存予約と同一）
+      const result = await updateAdminReservationCommand("res-1", validInput);
+
+      expect(result.customerVisibleChanged).toBe(false);
     });
 
     test("スペース固有割引(percentage)が適用され spaceDiscountAmount が永続化される", async () => {
@@ -763,6 +800,38 @@ describe("updateAdminReservationCommand", () => {
           status: ReservationStatus.PENDING,
         }),
       ).rejects.toThrow("このステータスからは変更できません");
+    });
+
+    test("終端ステータス(CANCELLED)への変更を拒否", async () => {
+      // 返金・キャンセルメール等の副作用チェーンを経由しないため、この編集コマンドでは
+      // CANCELLED/COMPLETED/NO_SHOW への変更を許可しない（専用のステータス変更経路のみ）
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T10:00:00"),
+          endTime: new Date("2024-06-15T12:00:00"),
+          totalPrice: 2000,
+          couponId: null,
+          googleCalendarEventId: null,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await expect(
+        updateAdminReservationCommand("res-1", {
+          ...validInput,
+          status: ReservationStatus.CANCELLED,
+        }),
+      ).rejects.toThrow(
+        "このステータスへの変更は予約詳細画面のステータス変更から行ってください",
+      );
     });
   });
 });
