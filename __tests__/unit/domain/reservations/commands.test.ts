@@ -1087,7 +1087,7 @@ describe("deleteReservationCommand", () => {
         }),
       );
 
-      await deleteReservationCommand("res-1", "user-1");
+      const result = await deleteReservationCommand("res-1", "user-1");
 
       expect(mockReservationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1101,6 +1101,10 @@ describe("deleteReservationCommand", () => {
           }),
         }),
       );
+      // 呼び出し側（deleteReservation アクション）が applyCancellationSideEffects
+      // を発火するかどうかの判断材料になるフラグ
+      expect(result.wasCancelled).toBe(true);
+      expect(result.cancellationReason).toBe("管理者による削除");
     });
 
     test("CANCELLED 済み予約は再キャンセル追跡を設定しない", async () => {
@@ -1113,7 +1117,7 @@ describe("deleteReservationCommand", () => {
         }),
       );
 
-      await deleteReservationCommand("res-1", "user-1");
+      const result = await deleteReservationCommand("res-1", "user-1");
 
       expect(mockReservationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1127,6 +1131,10 @@ describe("deleteReservationCommand", () => {
       // cancelledByType が data に含まれないことを確認
       const callData = mockReservationUpdate.mock.calls[0];
       expect(callData).toBeDefined();
+
+      // 既に終端ステータスなので applyCancellationSideEffects は発火しない
+      expect(result.wasCancelled).toBe(false);
+      expect(result.cancellationReason).toBeNull();
     });
 
     test("COMPLETED 予約はキャンセル追跡なしで削除", async () => {
@@ -1230,7 +1238,11 @@ describe("deleteReservationCommand", () => {
         }),
       );
 
-      await deleteReservationCommand("res-1", "user-1", "テスト削除理由");
+      const result = await deleteReservationCommand(
+        "res-1",
+        "user-1",
+        "テスト削除理由",
+      );
 
       expect(mockReservationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1239,6 +1251,7 @@ describe("deleteReservationCommand", () => {
           }),
         }),
       );
+      expect(result.cancellationReason).toBe("テスト削除理由");
     });
   });
 
