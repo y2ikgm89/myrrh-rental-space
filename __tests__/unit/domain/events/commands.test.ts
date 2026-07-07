@@ -645,7 +645,15 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.PUBLISHED,
-        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        // 既存スロットの id/startAt/endAt/capacity が更新後の入力と完全一致
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -657,7 +665,7 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        // 既存スロット（id あり = 変更なしとみなされ通知スキップ）+ 同じ会場
+        // 既存スロット（id あり・値も一致 = 変更なしとみなされ通知スキップ）+ 同じ会場
         slots: [
           {
             id: "slot-1",
@@ -670,6 +678,83 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockFireAndForget).not.toHaveBeenCalled();
+    });
+
+    test("既存スロット(id あり)の日時のみ変更した場合、メール通知が送られる", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.PUBLISHED,
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        status: EventStatus.PUBLISHED,
+        // id は既存スロットのまま、startAt のみ変更（新規スロット追加ではない回帰ケース）
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T14:00:00Z"),
+            endAt: new Date("2024-06-15T16:00:00Z"),
+            capacity: 30,
+          },
+        ],
+        addressDetail: "東京都渋谷区",
+      });
+
+      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+    });
+
+    test("既存スロット(id あり)の定員のみ変更した場合、メール通知が送られる", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.PUBLISHED,
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        status: EventStatus.PUBLISHED,
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 50,
+          },
+        ],
+        addressDetail: "東京都渋谷区",
+      });
+
+      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
     });
 
     test("会場情報変更かつ PUBLISHED 状態の場合、参加者メール通知が送られる", async () => {

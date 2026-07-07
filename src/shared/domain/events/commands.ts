@@ -238,9 +238,8 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       slug: true,
       status: true,
       slots: {
-        select: { startAt: true },
+        select: { id: true, startAt: true, endAt: true, capacity: true },
         orderBy: { startAt: "asc" as const },
-        take: 1,
       },
       locationId: true,
       spaceId: true,
@@ -369,11 +368,24 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     (existing.spaceId ?? null) !== (data.spaceId ?? null) ||
     (existing.addressDetail ?? "") !== (data.addressDetail ?? "");
 
+  // 新規スロット追加だけでなく、既存スロット（id あり）の startAt/endAt/capacity
+  // 変更も検知する。id なしで参照される既存スロットは想定外だが安全側で変更扱いにする。
+  const existingSlotMap = new Map(
+    existing.slots.map((slot) => [slot.id, slot]),
+  );
+  const slotChanged = data.slots.some((slot) => {
+    if (!slot.id) return true;
+    const prev = existingSlotMap.get(slot.id);
+    if (!prev) return true;
+    return (
+      prev.startAt.getTime() !== slot.startAt.getTime() ||
+      prev.endAt.getTime() !== slot.endAt.getTime() ||
+      prev.capacity !== slot.capacity
+    );
+  });
+
   // スロット変更は sendEventUpdatedToAllParticipants で通知
-  if (
-    (data.slots.some((s) => !s.id) || venueChanged) &&
-    data.status === EventStatus.PUBLISHED
-  ) {
+  if ((slotChanged || venueChanged) && data.status === EventStatus.PUBLISHED) {
     fireAndForget(
       sendEventUpdatedToAllParticipants(
         id,
