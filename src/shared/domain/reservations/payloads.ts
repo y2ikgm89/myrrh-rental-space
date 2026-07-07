@@ -259,3 +259,57 @@ export function buildPayload(params: {
     userId: params.userId ?? null,
   };
 }
+
+/**
+ * 予約 ID からメール送信用ペイロードを再取得する。
+ *
+ * `updateCustomerReservation`（顧客セルフ変更）のように更新コマンドが最小限の
+ * payload しか返さない経路で、更新後のメール送信に必要な最新状態を組み立てるために使う。
+ */
+export async function fetchReservationEmailData(
+  reservationId: string,
+): Promise<ReservationPayload | null> {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      totalPrice: true,
+      notes: true,
+      icsSequence: true,
+      userId: true,
+      guestLastName: true,
+      guestFirstName: true,
+      customer: { select: CUSTOMER_SELECT },
+      space: {
+        select: {
+          name: true,
+          addressDetail: true,
+          location: { select: { address: true } },
+        },
+      },
+    },
+  });
+  if (!reservation) return null;
+
+  const guestFull =
+    `${reservation.guestLastName ?? ""} ${reservation.guestFirstName ?? ""}`.trim();
+  const customerFull =
+    `${reservation.customer.lastName} ${reservation.customer.firstName}`.trim();
+  const guestNameDiff =
+    guestFull && guestFull !== customerFull ? guestFull : null;
+
+  return buildPayload({
+    reservationId: reservation.id,
+    customer: reservation.customer,
+    space: reservation.space,
+    startTime: reservation.startTime,
+    endTime: reservation.endTime,
+    totalPrice: reservation.totalPrice,
+    notes: reservation.notes,
+    guestName: guestNameDiff,
+    icsSequence: reservation.icsSequence,
+    userId: reservation.userId,
+  });
+}

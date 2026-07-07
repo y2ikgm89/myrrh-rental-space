@@ -8,8 +8,10 @@ import { TIME_REGEX } from "@/shared/lib/validations/business-hours";
  * ReservationForm / ReservationEditForm (conform) form schema
  *
  * conform `parseWithZod` 経由で FormData 文字列を受けるため、
- * - boolean (`sendEmail` / `sendNotificationEmail`) は Switch + hidden input
- *   "on" / "" を `z.preprocess` で boolean coerce
+ * - boolean (`sendEmail`) は Switch + hidden input "on" / "" を
+ *   `z.preprocess` で boolean coerce（更新時の変更通知メールは
+ *   `updateAdminReservationCommand` の customerVisibleChanged 判定で自動送信するため、
+ *   update スキーマには対応する boolean フィールドを持たない）
  * - `totalPrice` は手動価格調整、空文字は undefined
  * - `customerData` は nested object (`customerData.lastName` 等)
  * - `mode` で「既存顧客 / 新規顧客」を排他制御 (cross-field refine)
@@ -186,7 +188,6 @@ export const updateReservationFormSchema = z
     couponCode: couponCodeSchema,
     status: z.enum(ReservationStatus).default(ReservationStatus.CONFIRMED),
     notes: notesSchema,
-    sendNotificationEmail: booleanFromCheckbox,
   })
   .superRefine((data, ctx) => {
     refineTimeRange(data, ctx);

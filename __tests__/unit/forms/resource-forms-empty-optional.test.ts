@@ -344,7 +344,6 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
         totalPrice: "",
         couponCode: "",
         notes: "",
-        sendNotificationEmail: "",
       }),
       "updateReservation",
     );
