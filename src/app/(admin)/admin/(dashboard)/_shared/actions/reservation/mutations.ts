@@ -329,7 +329,33 @@ export const deleteReservation = async (
     },
     afterSuccess: () => {
       if (!deleteResult) return;
-      if (deleteResult.googleCalendarEventId) {
+
+      if (deleteResult.wasCancelled) {
+        // PENDING/CONFIRMED 予約の削除は実質的な管理者キャンセルのため、
+        // 通常のキャンセル経路と同じ副作用（返金 / GCal 削除 / 顧客・管理者
+        // メール / in-app 通知 / 監査ログ）を発火する（GCal 削除も内包するため
+        // 下の直接呼び出しとは重複しないよう分岐する）。
+        fireAndForget(
+          (async () => {
+            const requestHeaders = await headers();
+            const ip = await getClientIpFromHeaders();
+            const userAgent = requestHeaders.get("user-agent");
+            await applyCancellationSideEffects({
+              reservationId: id,
+              cancellationReason: deleteResult.cancellationReason,
+              channel: "admin",
+              actorUserId: null,
+              request: { ip, userAgent, tokenFingerprint: null },
+            });
+          })(),
+          {
+            operation: "applyCancellationSideEffectsOnDelete",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: { reservationId: id },
+          },
+        );
+      } else if (deleteResult.googleCalendarEventId) {
         fireAndForget(
           deleteCalendarSync(id, deleteResult.googleCalendarEventId),
           {

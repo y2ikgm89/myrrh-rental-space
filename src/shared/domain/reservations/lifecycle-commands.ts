@@ -242,6 +242,9 @@ export async function deleteReservationCommand(
     reservation.status !== ReservationStatus.CANCELLED &&
     reservation.status !== ReservationStatus.COMPLETED &&
     reservation.status !== ReservationStatus.NO_SHOW;
+  const resolvedCancellationReason = needsCancellationTracking
+    ? (cancellationReason ?? "管理者による削除")
+    : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.reservation.update({
@@ -255,7 +258,7 @@ export async function deleteReservationCommand(
               status: ReservationStatus.CANCELLED,
               cancelledAt: now,
               cancelledByType: CANCELLED_BY.ADMIN,
-              cancellationReason: cancellationReason ?? "管理者による削除",
+              cancellationReason: resolvedCancellationReason,
             }
           : {}),
       },
@@ -273,6 +276,11 @@ export async function deleteReservationCommand(
     googleCalendarEventId: reservation.googleCalendarEventId,
     customerId: reservation.customerId,
     couponId: reservation.couponId,
+    // PENDING/CONFIRMED の予約を削除した場合、実質的には管理者キャンセルと同じ結果
+    // （空き解放・顧客への影響）になる。呼び出し側はこのフラグを見て
+    // applyCancellationSideEffects（返金・キャンセルメール等）を発火する。
+    wasCancelled: needsCancellationTracking,
+    cancellationReason: resolvedCancellationReason,
   };
 }
 
