@@ -17,6 +17,7 @@ import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { RESERVATION_CLAIM_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/claim-token-cookie-names";
+import { consumeSignupTermsAction } from "@/app/(public)/_shared/actions/consume-signup-terms";
 
 /**
  * ゲスト予約を現在ログイン中の会員アカウントへ再紐付けする（claim）。
@@ -29,8 +30,12 @@ import { RESERVATION_CLAIM_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/clai
  *  2. 顧客セッション必須（未ログインなら OAuth 導線へ）
  *  3. cookie からトークン取り出し → 暗号検証
  *  4. ensureCustomerLinked で会員 Customer を解決（初回は自動作成）
- *  5. claimReservationForCustomer の compare-and-swap（先着1名のみ成立）
- *  6. 監査ログ記録（fire-and-forget）
+ *  5. 初回サインアップの場合、signup 同意 cookie を消費して TermsAgreement を記録
+ *     （OAuth の callbackURL がこのページに戻るため、mypage 初期表示の
+ *     SignupTermsConsumer は実行されない — ここで代わりに消費しないと、claim
+ *     経由の新規サインアップだけ同意証跡が記録されずに失われる）
+ *  6. claimReservationForCustomer の compare-and-swap（先着1名のみ成立）
+ *  7. 監査ログ記録（fire-and-forget）
  */
 export async function claimReservationAction(): Promise<
   MutationResult<{ reservationId: string }>
@@ -52,7 +57,9 @@ export async function claimReservationAction(): Promise<
     return createMutationError("リンクの有効期限が切れました");
   }
 
-  const { customer } = await ensureCustomerLinked(session.user);
+  const { customer, isNew } = await ensureCustomerLinked(session.user);
+  await consumeSignupTermsAction({ isNew });
+
   const result = await claimReservationForCustomer(
     verified.reservationId,
     customer.id,
