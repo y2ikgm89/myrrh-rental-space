@@ -11,7 +11,7 @@ import {
   tokenFingerprint,
 } from "@/shared/lib/event-registration-cancel-token";
 import { getEventRegistrationForGuestCancel } from "@/shared/domain/events/registration-queries";
-import { eventRegistrationDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
+import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSerializedDate } from "@/shared/lib/serialize";
@@ -63,7 +63,7 @@ export default async function GuestEventCancelPage(): Promise<ReactElement> {
     return <InvalidLinkView />;
   }
 
-  const now = eventRegistrationDeadlineNow();
+  const now = eventDeadlineNow();
   const verified = verifyCancelToken(token, now);
 
   if (!verified.valid) {

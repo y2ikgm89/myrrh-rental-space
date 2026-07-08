@@ -29,6 +29,7 @@ import {
   createCancelToken as createEventCancelToken,
 } from "@/shared/lib/event-registration-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
+import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
@@ -62,6 +63,8 @@ type EventRegistrationConfirmationData = {
   location: string | undefined;
   quantity: number;
   icsSequence: number;
+  // customerId が非null（会員）の場合は claimUrl を生成しない
+  customerId: string | null;
 };
 
 /**
@@ -105,6 +108,11 @@ export async function sendEventRegistrationConfirmation(
   // ゲストでもログイン不要で .ics をダウンロードできるよう、署名付きトークンを URL に付与する。
   // 寿命は CALENDAR_TOKEN_LIFETIME_MS (30 日)。
   const icsDownloadUrl = `${appUrl}/api/calendar/event/${data.registrationId}?token=${createCalendarToken("event", data.registrationId)}`;
+
+  // ゲスト申込のみ、マイページに申込を追加する claim リンクを発行する（会員は不要）。
+  const claimUrl = data.customerId
+    ? undefined
+    : `${appUrl}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? buildAddToCalendarUrls({
         summary: data.eventTitle,
@@ -167,6 +175,7 @@ export async function sendEventRegistrationConfirmation(
           quantity: data.quantity,
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
+          claimUrl,
           cancelUrl,
           footer,
         }),
@@ -192,6 +201,8 @@ type EventReminderEmailData = {
   location: string | undefined;
   quantity: number;
   icsSequence: number;
+  // customerId が非null（会員）の場合は claimUrl を生成しない
+  customerId: string | null;
 };
 
 /**
@@ -216,6 +227,11 @@ export async function sendEventReminderEmail(
   ]);
   const host = getAppHost();
   const appUrl = getAppUrl();
+
+  // ゲスト申込のみ、マイページに申込を追加する claim リンクを発行する（会員は不要）。
+  const claimUrl = data.customerId
+    ? undefined
+    : `${getAppUrl()}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
 
   const calendarParams = omitUndefined({
     registrationId: data.registrationId,
@@ -276,6 +292,7 @@ export async function sendEventReminderEmail(
           endTime,
           location: data.location,
           quantity: data.quantity,
+          claimUrl,
           cancelUrl,
           footer,
         }),

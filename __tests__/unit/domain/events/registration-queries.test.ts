@@ -170,6 +170,7 @@ describe("event registration query slot consistency", () => {
         email: true,
         quantity: true,
         icsSequence: true,
+        customerId: true,
         slot: {
           select: { startAt: true, endAt: true },
         },

@@ -22,6 +22,8 @@ type Props = {
   endTime: string;
   location?: string;
   quantity: number;
+  /** ゲスト向け: マイページに申込を追加する claim リンク（会員は表示しない） */
+  claimUrl?: string;
   /** ゲスト向け: 期限内のみ生成される暗号化トークン付きキャンセル URL */
   cancelUrl?: string;
   footer: EmailFooterData;
@@ -35,6 +37,7 @@ export function EventReminderEmail({
   endTime,
   location,
   quantity,
+  claimUrl,
   cancelUrl,
   footer,
 }: Props) {
@@ -70,6 +73,36 @@ export function EventReminderEmail({
           <strong>参加人数:</strong> {String(quantity)}名
         </Text>
       </Section>
+
+      {claimUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            Google または LINE でログインすると、この申込をマイページに追加して
+            まとめて管理できます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={claimUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページに追加する
+            </Link>
+          </Text>
+        </Section>
+      )}
 
       {cancelUrl && (
         <Section

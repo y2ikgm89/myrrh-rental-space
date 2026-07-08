@@ -126,6 +126,7 @@ interface ReservationFormProps {
   readonly prefillData?: PrefillData | undefined;
   readonly initialSpaceId?: string | undefined;
   readonly requiredTerms?: readonly RequiredTerm[] | undefined;
+  readonly isLoggedIn: boolean;
 }
 
 export function ReservationForm({
@@ -138,6 +139,7 @@ export function ReservationForm({
   prefillData,
   initialSpaceId,
   requiredTerms = [],
+  isLoggedIn,
 }: ReservationFormProps): ReactElement {
   const auto = resolveAutoIds(locations, initialSpaceId);
   const preSelected = auto.locationId != null && auto.spaceId != null;
@@ -540,6 +542,7 @@ export function ReservationForm({
           requiredTerms={requiredTerms}
           agreedTermsIds={agreedTermsIds}
           isPending={isPending}
+          isLoggedIn={isLoggedIn}
           errorMessage={state.errorMessage}
           summary={{
             locationName: currentLocation?.name ?? "",

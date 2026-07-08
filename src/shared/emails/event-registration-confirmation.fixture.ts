@@ -21,5 +21,6 @@ export const eventRegistrationConfirmationFixture = {
   registrationId: "0123ABCD",
   addToCalendarLinks: sampleCalendarLinks,
   cancelUrl: "https://example.com/events/cancel?token=DEMO-TOKEN-DO-NOT-USE",
+  claimUrl: "https://example.com/claim/event-registration?token=preview-token",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof EventRegistrationConfirmationEmail>[0];

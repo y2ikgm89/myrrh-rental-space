@@ -30,6 +30,8 @@ type Props = {
   cancelUrl?: string;
   /** 会員向け: ログイン後の予約詳細ページ URL（マイページから取消・変更可能） */
   memberReservationUrl?: string;
+  /** ゲスト向け: マイページに予約を追加する claim リンク（会員は表示しない） */
+  claimUrl?: string;
   /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
   cancellationDeadlineHours?: number;
   footer: EmailFooterData;
@@ -47,6 +49,7 @@ export function ReservationConfirmationEmail({
   addToCalendarLinks,
   cancelUrl,
   memberReservationUrl,
+  claimUrl,
   cancellationDeadlineHours,
   footer,
 }: Props) {
@@ -118,6 +121,36 @@ export function ReservationConfirmationEmail({
               style={{ color: COLOR.link, textDecoration: "underline" }}
             >
               マイページで予約を確認する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
+      {claimUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            Google または LINE でログインすると、この予約をマイページに追加して
+            まとめて管理できます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={claimUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページに追加する
             </Link>
           </Text>
         </Section>

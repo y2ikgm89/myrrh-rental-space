@@ -8,6 +8,7 @@ import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
 import { verifyCompleteToken } from "@/shared/lib/reservation-complete-token";
+import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForCompletion } from "@/shared/domain/reservations/customer-queries";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
@@ -50,6 +51,11 @@ export default async function ReservationCompletePage({
 
   const isLoggedIn = user != null;
   const address = reservation?.space.location?.address ?? null;
+
+  const claimUrl =
+    reservation && !isLoggedIn
+      ? `/claim/reservation?token=${createReservationClaimToken(reservation.id)}`
+      : null;
 
   const calendarUrls =
     reservation && calendarSettings.addToCalendarLinksEnabled
@@ -131,6 +137,7 @@ export default async function ReservationCompletePage({
       <NextSteps
         isLoggedIn={isLoggedIn}
         isPending={reservation?.status === "PENDING"}
+        claimUrl={claimUrl}
       />
     </Layout>
   );
@@ -169,9 +176,11 @@ function DetailRow({ label, children }: DetailRowProps) {
 function NextSteps({
   isLoggedIn,
   isPending,
+  claimUrl,
 }: {
   readonly isLoggedIn: boolean;
   readonly isPending: boolean;
+  readonly claimUrl: string | null;
 }) {
   return (
     <div className="border border-border p-4 sm:p-6">
@@ -197,6 +206,16 @@ function NextSteps({
         ) : (
           <li>
             ご予約の確認・キャンセルは、確認メール内のリンクから行えます。
+          </li>
+        )}
+        {claimUrl && (
+          <li>
+            <a
+              href={claimUrl}
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              Google/LINEでこの予約をマイページに追加する
+            </a>
           </li>
         )}
         <li>

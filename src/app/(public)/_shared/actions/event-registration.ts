@@ -139,6 +139,7 @@ export async function registerForEvent(
                 location: event.location ?? undefined,
                 quantity: result.registration.quantity,
                 icsSequence: result.registration.icsSequence,
+                customerId,
               }),
               sendEventAdminNotification(
                 {

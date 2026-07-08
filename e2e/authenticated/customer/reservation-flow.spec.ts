@@ -9,7 +9,6 @@ import {
 /**
  * マイページ - 予約 full flow E2E（顧客認証済み state）
  *
- * 既存の未認証 `e2e/reservation.spec.ts` と相補的に、
  * 認証済み customer が行う一連のライフサイクルを検証する:
  *
  * 1. スペース詳細から予約ページへ遷移
@@ -23,7 +22,10 @@ import {
  * - Turnstile は `context.route` で `**\/*turnstile*` を 200 に fulfill
  *
  * 注意:
- * - 実際の予約 DB 書き込みは未認証 `e2e/reservation.spec.ts` で網羅済み
+ * - ゲスト（未認証）の予約 DB 書き込みは E2E 対象外。実際の予約作成は Stripe
+ *   Checkout へのリダイレクトで終わるため（`stripe-payment.spec.ts` と同方針）、
+ *   Server Action `createReservation` は `__tests__/integration/actions/public/reservation.test.ts`
+ *   のモック統合テストで担保する
  * - 本 spec は **認証 state 固有の挙動** (履歴反映 / 直接アクセス権限) に集中
  */
 
