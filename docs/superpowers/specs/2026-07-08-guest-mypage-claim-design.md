@@ -22,7 +22,7 @@
 - 予約には署名付き・ステートレスな期限付きトークン基盤が既に存在する(`src/shared/lib/reservation-cancel-token.ts`、`crypto.ts`の purpose-scoped 暗号)。`purpose`をワイヤフォーマットに埋め込み、検証側で明示チェックすることで他用途トークンの流用を防ぐ設計([[project_crypto-token-purpose-cross-use]])。
 - Stripe webhook などで「`updateMany` の WHERE 現在値ガードによる排他claim」パターン(`claimReservationAsPaid`等)が既に確立している。
 - `AuditLog`はHMAC-SHA256のhash chainで改ざん検知される書き込み操作+セキュリティイベントログ(`AuditAction` enumは固定14種)。`resource`は自由文字列。**顧客自身の操作(例: ゲスト予約キャンセル)も`AuditAction.UPDATE` + `resource: "reservation"`で記録されている**(`cancellation-side-effects.ts:293-297`、`userId`は認証済みactorがいる場合のみ設定)既存precedentがある。**新しい`AuditAction`列挙値の追加(=migration)は不要**、この既存precedentに倣う。
-- メールテンプレートは20種登録済み。**イベント系にはリマインダーメールが存在しない**(`event-registration-confirmation`/`event-registration-cancelled`/`event-cancelled-notification`/`event-updated-notification`/`event-admin-notification`の5種のみ)。予約側のみ`reservation-reminder`が存在する。
+- メールテンプレートは21種登録済み。イベント系は`event-registration-confirmation`/`event-registration-cancelled`/`event-cancelled-notification`/`event-updated-notification`/`event-admin-notification`/`event-reminder`の6種(`event-reminder`はcron `src/app/api/cron/event-reminder/route.ts`から`sendEventReminderEmail`経由で送信、`reservation-reminder`と対称設計)。**訂正**: 当初の調査(brainstorming時点)では「イベントにリマインダーメールは存在しない」としていたが、writing-plans時点でこのメール自体が別PRで新規追加されていたことが判明した(本設計の検討開始後、無関係な作業で追加されたもの)。事実誤認だったため訂正する。イベント参加のリマインダーにも予約リマインダーと対称的にclaim CTAを追加する(下記UI設置箇所c、却下代替案4を参照)。
 
 ## 外部検証
 
@@ -41,7 +41,7 @@
 ## 非ゴール(スコープ外)
 
 - イベント参加申込のゲスト`customerId: null`運用そのものを、申込時点で必ずCustomer行を作る設計に変更すること(Baymardの知見に基づき却下、下記「却下した代替案」参照)。
-- イベントリマインダーメールを新規に作ること。現状イベントにはリマインダーメール自体が存在しないため、本設計では**確認メール(`event-registration-confirmation`)+完了ページのみ**にCTAを置く。リマインダーメール新設は別スコープ。
+- イベントリマインダーメール(`event-reminder`)を新規に作ること。既に別PRで実装済みのため、本設計はこれを新設しない(既存の`sendEventReminderEmail`にCTAを追加するだけ、下記UI設置箇所c参照)。
 - 過去に遡って既存のゲストCustomer/EventRegistrationレコードを一括で会員に紐付ける機能(管理者の`mergeCustomerCommand`が既にその役割を担っており、変更しない)。
 - パスワードベースのサインアップフォーム追加(本番はOAuth-onlyのまま)。
 
@@ -92,7 +92,7 @@ a. **フォーム送信前**(`customer-step.tsx`/`event-registration-form.tsx`�
 
 b. **完了ページ**(`/reservation/complete`、イベント申込成功時の置き換え表示、いずれもゲストのみ): 「Google/LINEでこの予約をマイページに追加」という控えめなセカンダリボタン(`/claim?type=...&id=...&token=...`へのリンク。トークンはページレンダリング時にその場で生成、DB保存なし)。プライマリの案内(キャンセル方法等)を邪魔しない位置に配置し、閉じる/無視して問題ない扱いとする。
 
-c. **確認メール(予約: `reservation-confirmation`、イベント: `event-registration-confirmation`)+ 予約のみリマインダーメール(`reservation-reminder`)**: 同じCTAリンクを本文に追加。ゲスト(`userId`が無い場合)のみ表示、既に`memberReservationUrl`がある会員には表示しない。イベントにはリマインダーメールが存在しないため、イベント側はこの2テンプレートのみが対象。
+c. **確認メール(予約: `reservation-confirmation`、イベント: `event-registration-confirmation`)+ リマインダーメール(予約: `reservation-reminder`、イベント: `event-reminder`)**: 同じCTAリンクを本文に追加。ゲスト(予約は`userId`が無い場合、イベントは`customerId`が無い場合)のみ表示、既に会員向け導線がある場合は表示しない。予約・イベントとも確認メール+リマインダーメールの計2テンプレートずつが対象で対称。
 
 ### 4. ログアウト見過ごし対策
 
@@ -118,7 +118,7 @@ claim後、元のゲスト`Customer`行(予約の場合。0件になった不使
 1. **メールアドレス一致での自動マージ**: `resolve-customer.ts`/`link.ts`の既存設計判断、およびOAuthアカウントリンクのセキュリティ研究(「silent linking by email is risky」)に反するため却下。
 2. **予約/イベントフォーム内に会員登録チェックボックス+パスワード設定欄を追加**: 本番はOAuth-onlyでパスワード機構が存在せず、Better Authの設計と不整合。またBaymard調査の「購入/申込前の登録強制はコンバージョンを下げる」という知見にも反するため却下。
 3. **イベント参加も予約と同様、申込時点で必ず(未紐付け)Customer行を作成する設計に変更**: 変更範囲がEventRegistrationの既存ゲスト経路全体に広がり、Baymardの「使われるか分からないデータは事後(claim時)に生成する」という原則にも反するため却下。claim時の遅延生成で要件を満たせる。
-4. **イベント用のリマインダーメールを新設してそこにもCTAを追加**: 現状イベントにリマインダー機構自体が存在せず、新設は本設計(アカウント連携)のスコープを超える別機能追加になるため却下。将来必要なら別スペックで扱う。
+4. ~~イベント用のリマインダーメールを新設してそこにもCTAを追加~~: **この却下は事実誤認に基づくものだったため撤回**。brainstorming時点では「イベントにリマインダー機構が存在しない」という前提だったが、writing-plans時点の再検証で、無関係な別PRにより`event-reminder`テンプレート(`sendEventReminderEmail`、`src/app/api/cron/event-reminder/route.ts`)が既に実装済みであることが判明した。新設するのではなく既存の`event-reminder`にCTAを追加するだけで済むため、却下する理由が無くなった。予約と対称に対応する(上記UI設置箇所c参照)。
 
 ## エッジケース/エラーハンドリング
 

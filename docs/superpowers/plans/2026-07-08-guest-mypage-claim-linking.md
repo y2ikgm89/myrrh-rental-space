@@ -2103,16 +2103,22 @@ git commit -m "feat(reservations): add mypage-claim CTA to confirmation and remi
 
 ---
 
-### Task 15: イベント参加確認メールに claim CTA を追加
+### Task 15: イベント参加確認メール + リマインダーメールに claim CTA を追加
 
-イベント参加はリマインダーメール自体が存在しない（既存テンプレート5種に含まれない）ため、確認メール(`event-registration-confirmation`)のみが対象。完了ページ側(Task 11)ではクリック可能なリンクを置かず「確認メールからどうぞ」という文言に留めた理由はここにある — イベント申込フォームは client component の conform 送信結果(`{ok: true, successMessage?: string}`)経由でしか成功情報を受け取れず、共有インフラの `executeConformMutation`/`ConformHandlerResult` 契約を汎用フィールド追加で拡張するのは他の全 conform action に影響する変更になり、この機能単体のために touch するには不釣り合いに大きい。確認メールなら `result.registration.id` がサーバー側に既にあるため追加の配線なしで claim リンクを発行できる。
+イベント参加申込完了ページ(Task 11)ではクリック可能なリンクを置かず「確認メールからどうぞ」という文言に留めた理由: イベント申込フォームは client component の conform 送信結果(`{ok: true, successMessage?: string}`)経由でしか成功情報を受け取れず、共有インフラの `executeConformMutation`/`ConformHandlerResult` 契約を汎用フィールド追加で拡張するのは他の全 conform action に影響する変更になり、この機能単体のために touch するには不釣り合いに大きい。確認メール・リマインダーメールならサーバー側に `registration.id` が既にあるため追加の配線なしで claim リンクを発行できる。
+
+**訂正(writing-plans時点で判明):** 当初の想定では「イベントにはリマインダーメール自体が存在しない」ため確認メールのみを対象にしていたが、本Task着手前に別PR(このplanとは無関係の作業)で `event-reminder` テンプレート(`sendEventReminderEmail`、`src/app/api/cron/event-reminder/route.ts`)が既に実装済みであることが判明した。予約側(Task 14)が確認メール+リマインダーメールの両方を対象にしているのと対称にするため、本Taskでもイベントのリマインダーメールを対象に含める。
 
 **Files:**
 
 - Modify: `src/shared/emails/event-registration-confirmation.tsx`
 - Modify: `src/shared/emails/event-registration-confirmation.fixture.ts`
-- Modify: `src/shared/lib/email/event-emails.ts`（`EventRegistrationConfirmationData` 型 + `sendEventRegistrationConfirmation`）
+- Modify: `src/shared/emails/event-reminder.tsx`
+- Modify: `src/shared/emails/event-reminder.fixture.ts`
+- Modify: `src/shared/lib/email/event-emails.ts`（`EventRegistrationConfirmationData`/`EventReminderEmailData` 型 + `sendEventRegistrationConfirmation`/`sendEventReminderEmail`）
 - Modify: `src/app/(public)/_shared/actions/event-registration.ts`（`sendEventRegistrationConfirmation` 呼び出しに `customerId` を渡す）
+- Modify: `src/shared/domain/events/registration-queries.ts`（`findEventRegistrationsForReminderWindow` の select に `customerId` を追加）
+- Modify: `src/app/api/cron/event-reminder/route.ts`（`sendEventReminderEmail` 呼び出しに `customerId` を渡す）
 
 - [ ] **Step 1: `EventRegistrationConfirmationEmail` に `claimUrl` プロパティを追加**
 
@@ -2202,21 +2208,165 @@ const claimUrl = data.customerId
 
 （`customerId` は同ファイル `:84` で既に let 変数として定義済み — 追加の配線は不要、そのまま渡すだけ）
 
-- [ ] **Step 6: メールプレビューで目視確認**
+- [ ] **Step 6: `findEventRegistrationsForReminderWindow` の select に `customerId` を追加**
+
+`src/shared/domain/events/registration-queries.ts:311-328` の `select` に追加:
+
+```ts
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      quantity: true,
+      icsSequence: true,
+      customerId: true,
+      slot: {
+        select: { startAt: true, endAt: true },
+      },
+      event: {
+        select: {
+          title: true,
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
+        },
+      },
+    },
+```
+
+- [ ] **Step 7: `EventReminderEmailData` 型に `customerId` を追加**
+
+`event-emails.ts:172-182` の型に追加:
+
+```ts
+type EventReminderEmailData = {
+  registrationId: string;
+  customerName: string;
+  customerEmail: string;
+  eventTitle: string;
+  eventStartTime: Date;
+  eventEndTime: Date;
+  location: string | undefined;
+  quantity: number;
+  icsSequence: number;
+  // customerId が非null（会員）の場合は claimUrl を生成しない
+  customerId: string | null;
+};
+```
+
+- [ ] **Step 8: `EventReminderEmail` に `claimUrl` プロパティを追加**
+
+`event-reminder.tsx` の import(`:1-12`)に `Link` と `COLOR`/`SECTION_VARIANT_STYLES` を追加:
+
+```ts
+import { Hr, Link, Section, Text } from "@react-email/components";
+import { eventReminderFixture } from "./event-reminder.fixture";
+import { EmailLayout } from "./_shared/EmailLayout";
+import type { EmailFooterData } from "./_shared/footer-data";
+import {
+  COLOR,
+  SECTION_VARIANT_STYLES,
+  detailItem,
+  detailsHeading,
+  detailsSection,
+  heading,
+  hr,
+  text,
+} from "./_shared/styles";
+```
+
+`Props`(`:14-23`)に追加:
+
+```ts
+  /** ゲスト向け: マイページに申込を追加する claim リンク（会員は表示しない） */
+  claimUrl?: string;
+```
+
+分割代入(`:25-34`)に `claimUrl` を追加。`</Section>`(イベント内容セクション、`:65`)の直後に追加:
+
+```tsx
+{
+  claimUrl && (
+    <Section
+      style={{
+        backgroundColor: SECTION_VARIANT_STYLES.info.background,
+        borderRadius: "8px",
+        padding: "16px 20px",
+        margin: "24px 0",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: "14px",
+          color: COLOR.textMuted,
+          marginBottom: "8px",
+        }}
+      >
+        Google または LINE でログインすると、この申込をマイページに追加して
+        まとめて管理できます。
+      </Text>
+      <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+        <Link
+          href={claimUrl}
+          style={{ color: COLOR.link, textDecoration: "underline" }}
+        >
+          マイページに追加する
+        </Link>
+      </Text>
+    </Section>
+  );
+}
+```
+
+- [ ] **Step 9: `event-reminder.fixture.ts` に `claimUrl` を追加**
+
+`event-reminder.fixture.ts` の `eventReminderFixture` オブジェクトに追加:
+
+```ts
+  claimUrl: "https://example.com/claim/event-registration?token=preview-token",
+```
+
+- [ ] **Step 10: `sendEventReminderEmail` で claimUrl を生成**
+
+`event-emails.ts` の import に追加:
+
+```ts
+import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
+```
+
+`sendEventReminderEmail` 関数内、`calendarParams` 計算(`:206`)の付近に追加:
+
+```ts
+const claimUrl = data.customerId
+  ? undefined
+  : `${getAppUrl()}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
+```
+
+`EventReminderEmail({...})` 呼び出し(`:247-257`)の props に `claimUrl` を追加。
+
+- [ ] **Step 11: cron route から `customerId` を渡す**
+
+`src/app/api/cron/event-reminder/route.ts` の `sendEventReminderEmail({...})` 呼び出し(`:84-94`)に追加:
+
+```ts
+          customerId: registration.customerId,
+```
+
+- [ ] **Step 12: メールプレビューで目視確認**
 
 Run: `bun run email:dev`
-確認: `event-registration-confirmation` のプレビューで claim セクションが表示されること。
+確認: `event-registration-confirmation` と `event-reminder` のプレビューで claim セクションが表示されること。
 
-- [ ] **Step 7: 型チェック**
+- [ ] **Step 13: 型チェック**
 
 Run: `bun run type-check`
 Expected: 0 errors
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 14: Commit**
 
 ```bash
-git add src/shared/emails/event-registration-confirmation.tsx src/shared/emails/event-registration-confirmation.fixture.ts src/shared/lib/email/event-emails.ts "src/app/(public)/_shared/actions/event-registration.ts"
-git commit -m "feat(events): add mypage-claim CTA to registration confirmation email"
+git add src/shared/emails/event-registration-confirmation.tsx src/shared/emails/event-registration-confirmation.fixture.ts src/shared/emails/event-reminder.tsx src/shared/emails/event-reminder.fixture.ts src/shared/lib/email/event-emails.ts "src/app/(public)/_shared/actions/event-registration.ts" src/shared/domain/events/registration-queries.ts src/app/api/cron/event-reminder/route.ts
+git commit -m "feat(events): add mypage-claim CTA to registration confirmation and reminder emails"
 ```
 
 ---
@@ -2253,6 +2403,8 @@ Expected: PASS
 - proxy.ts token転写 → Task 3（design spec には無かった追加検証事項。既存 `cancel-token` 転写パターンとの整合のため実装計画時に発見・追加）
 
 **Placeholder scan:** 初稿では Task 8（`getEventRegistrationDetailsForEmail` 流用を想定）・Task 11（`slug` 未配線のまま「実装時に調整」と記載）・Task 14（`reservation-reminder.tsx` 未読のまま「同様に追加」と記載）の3箇所に "確認が必要" 型の曖昧さが残っていた。セルフレビューで検出し、いずれも実ファイルを実際に読んで具体コードに確定済み: `getEventRegistrationDetailsForEmail` は `event.title` を返さないことが判明したため専用の `getEventRegistrationForClaim` を新設(Task 8 Step 0)、`slug` は `page.tsx:94` の既存変数をそのまま渡す形で確定(Task 11 Step 1-2)、`reservation-reminder.tsx` は実ファイルを読んで `memberReservationUrl` ブロック直後への挿入コードを確定(Task 14 Step 4)。残る「TBD」「実装時に確認」等の未解決プレースホルダーは無い。
+
+**事後訂正(worktree作成後、Task着手前に発見):** 本計画は当初「イベントにリマインダーメールが存在しない」という前提(brainstorming時点の調査結果)でTask 15を書いたが、worktree作成のため`git pull`した際、無関係な別PRで`event-reminder`テンプレート(`sendEventReminderEmail`)が既に実装済みであることが判明した。設計spec(`2026-07-08-guest-mypage-claim-design.md`)の該当箇所(前提事実・非ゴール・UI設置箇所c・却下した代替案4)とTask 15を訂正し、イベントのリマインダーメールにも予約と対称にclaim CTAを追加するよう拡張済み(Task 15 Step 6-11)。line 2397の「イベントはTask 11で文言のみに変更」は完了ページ(b)についての記述であり、この訂正でも変わらず正しい(完了ページのCTAは引き続きテキストのみ、リマインダーメール(c)側でクリック可能なリンクを提供する)。
 
 **Type consistency:** `claimReservationForCustomer(reservationId, toCustomerId): Promise<{claimed: boolean}>` / `claimEventRegistrationForCustomer(eventRegistrationId, toCustomerId): Promise<{claimed: boolean}>` の名前・シグネチャは Task 4/5(定義)・Task 7/8(使用)で一致。`verifyReservationClaimToken` の戻り値 `{valid: true; reservationId: string} | {valid: false}` も Task 1/7 で一致。
 
