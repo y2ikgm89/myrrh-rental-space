@@ -3,7 +3,6 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
-import { z } from "zod";
 import {
   checkActionRateLimit,
   validateTurnstile,
@@ -42,6 +41,9 @@ import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { headers } from "next/headers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
+import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+
+const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 
 export async function registerForEvent(
   _prev: SubmissionResult | undefined,
@@ -203,10 +205,8 @@ export async function cancelEventRegistration(
   });
   if (!turnstile.success) return createMutationError(turnstile.error);
 
-  // 3. UUID validation
-  const idValidation = z
-    .uuid({ error: "申込IDが不正です" })
-    .safeParse(registrationId);
+  // 3. cuid validation（EventRegistration.id は cuid、UUID ではない）
+  const idValidation = registrationIdSchema.safeParse(registrationId);
   if (!idValidation.success) return createMutationError("申込IDが不正です");
 
   // 4. Require authenticated session
