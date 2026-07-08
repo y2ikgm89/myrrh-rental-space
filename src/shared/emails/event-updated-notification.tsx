@@ -1,4 +1,4 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { eventUpdatedNotificationFixture } from "./event-updated-notification.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -18,6 +18,8 @@ type Props = {
   eventDate: string;
   newEventDate: string;
   location: string | undefined;
+  /** 会員向け: ログイン後のマイページ申込一覧 URL */
+  memberEventRegistrationUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -27,6 +29,7 @@ export function EventUpdatedNotificationEmail({
   eventDate,
   newEventDate,
   location,
+  memberEventRegistrationUrl,
   footer,
 }: Props) {
   const warning = SECTION_VARIANT_STYLES.warning;
@@ -73,6 +76,17 @@ export function EventUpdatedNotificationEmail({
           </Text>
         )}
       </Section>
+
+      {memberEventRegistrationUrl && (
+        <Text style={text}>
+          <Link
+            href={memberEventRegistrationUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            マイページで申込を確認する
+          </Link>
+        </Text>
+      )}
 
       <Hr style={hr} />
 
