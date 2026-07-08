@@ -13,13 +13,26 @@ import { cancelGuestEventRegistrationAction } from "../_actions/cancel";
 
 interface GuestCancelFormProps {
   readonly turnstileSiteKey: string | null;
+  /**
+   * このフォームが表示している申込の ID（秘密情報ではない）。
+   *
+   * 同一ブラウザで複数のキャンセルリンクを別タブで開くと `event-cancel-token`
+   * cookie は最後に開いたリンクのトークンで上書きされる。この値が無いと、
+   * サーバー側は「送信時点の cookie」に紐づく申込をキャンセルしてしまい、
+   * 画面に表示されている申込と実際にキャンセルされる申込がズレ得る。
+   * action 側で cookie 復号後の registrationId と突合し、不一致なら拒否する。
+   */
+  readonly expectedRegistrationId: string;
 }
 
 /**
  * トークンはサーバ側で HttpOnly cookie (`event-cancel-token`) から読まれる。
  * client から token を引き渡す必要はない（漏洩面遮断のため意図的に prop 廃止）。
  */
-export function GuestCancelForm({ turnstileSiteKey }: GuestCancelFormProps) {
+export function GuestCancelForm({
+  turnstileSiteKey,
+  expectedRegistrationId,
+}: GuestCancelFormProps) {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -43,6 +56,7 @@ export function GuestCancelForm({ turnstileSiteKey }: GuestCancelFormProps) {
     setError(null);
     startTransition(async () => {
       const result = await cancelGuestEventRegistrationAction(
+        expectedRegistrationId,
         turnstileToken || undefined,
       );
       if (isMutationError(result)) {

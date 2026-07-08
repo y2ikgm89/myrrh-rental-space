@@ -166,7 +166,7 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
 
   test("有効トークン（cookie 経由）でキャンセル成功し null を返す", async () => {
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestEventRegistrationAction("ts");
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toBeNull();
     expect(mockCancelByToken).toHaveBeenCalledTimes(1);
     expect(mockCancelByToken).toHaveBeenCalledWith(VALID_ID);
@@ -181,7 +181,7 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
   test("cookie に token が無いとエラー", async () => {
     mockCookieGet.mockImplementation(() => undefined);
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestEventRegistrationAction("ts");
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toHaveProperty(
       "error",
       "キャンセルリンクが無効または期限切れです",
@@ -192,7 +192,7 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
   test("期限切れトークンは統合文言でエラー（invalid / expired を区別しない）", async () => {
     mockVerifyCancelToken.mockReturnValue({ valid: false, reason: "expired" });
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestEventRegistrationAction("ts");
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toHaveProperty(
       "error",
       "キャンセルリンクが無効または期限切れです",
@@ -206,7 +206,7 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
       error: "認証に失敗しました",
     });
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestEventRegistrationAction("ts");
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toHaveProperty("error", "認証に失敗しました");
     expect(mockCancelByToken).not.toHaveBeenCalled();
   });
@@ -217,7 +217,7 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
       error: "リクエストが多すぎます",
     });
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestEventRegistrationAction("ts");
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toHaveProperty("error", "リクエストが多すぎます");
     expect(mockVerifyCancelToken).not.toHaveBeenCalled();
   });
@@ -229,7 +229,7 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
       reset: Date.now() + 3600000,
     });
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestEventRegistrationAction("ts");
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toHaveProperty("error");
     expect(mockCancelByToken).not.toHaveBeenCalled();
   });
@@ -242,7 +242,21 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
       ),
     );
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestEventRegistrationAction("ts");
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toHaveProperty("error", "この申込はキャンセルできません");
+  });
+
+  test("表示中の申込 ID と cookie 復号後の申込 ID が異なればエラーでドメインを呼ばない（別タブでの cookie 上書き対策）", async () => {
+    const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
+    const staleRegistrationId = "ckstaleaaaa0000abcdefghi";
+    const result = await cancelGuestEventRegistrationAction(
+      staleRegistrationId,
+      "ts",
+    );
+    expect(result).toHaveProperty(
+      "error",
+      "表示中のページが最新ではありません。ページを再読み込みしてから再度お試しください",
+    );
+    expect(mockCancelByToken).not.toHaveBeenCalled();
   });
 });
