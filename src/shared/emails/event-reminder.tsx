@@ -22,6 +22,8 @@ type Props = {
   endTime: string;
   location?: string;
   quantity: number;
+  /** 会員向け: ログイン後のマイページ申込一覧 URL（キャンセル・確認が可能） */
+  memberEventRegistrationUrl?: string;
   /** ゲスト向け: マイページに申込を追加する claim リンク（会員は表示しない） */
   claimUrl?: string;
   /** ゲスト向け: 期限内のみ生成される暗号化トークン付きキャンセル URL */
@@ -37,6 +39,7 @@ export function EventReminderEmail({
   endTime,
   location,
   quantity,
+  memberEventRegistrationUrl,
   claimUrl,
   cancelUrl,
   footer,
@@ -73,6 +76,35 @@ export function EventReminderEmail({
           <strong>参加人数:</strong> {String(quantity)}名
         </Text>
       </Section>
+
+      {memberEventRegistrationUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            会員のお客様は、マイページから申込内容の確認・キャンセルが行えます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={memberEventRegistrationUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページで申込を確認する
+            </Link>
+          </Text>
+        </Section>
+      )}
 
       {claimUrl && (
         <Section
@@ -120,7 +152,7 @@ export function EventReminderEmail({
               marginBottom: "8px",
             }}
           >
-            やむを得ずキャンセルされる場合は下記のリンクからお手続きください。
+            やむを得ずキャンセルされる場合は下記のリンクからお手続きください（イベント開始前まで有効）。
           </Text>
           <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
             <Link href={cancelUrl} style={linkDangerStyle}>

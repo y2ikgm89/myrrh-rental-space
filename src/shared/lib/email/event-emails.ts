@@ -52,6 +52,18 @@ import type { EmailResult } from "./types";
 // Event Registration Emails
 // =============================================================================
 
+/**
+ * 会員向けマイページのイベント申込一覧 URL を組み立てる。
+ * customerId が無い（ゲスト申込）場合は undefined を返す。
+ * イベントには予約の [id] 詳細ページに相当するものが無いため一覧ページを指す。
+ */
+function buildMemberEventRegistrationUrl(
+  customerId: string | null | undefined,
+): string | undefined {
+  if (!customerId) return undefined;
+  return `${getAppUrl()}/mypage/events`;
+}
+
 type EventRegistrationConfirmationData = {
   registrationId: string;
   customerName: string;
@@ -113,6 +125,9 @@ export async function sendEventRegistrationConfirmation(
   const claimUrl = data.customerId
     ? undefined
     : `${appUrl}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
+  const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+    data.customerId,
+  );
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? buildAddToCalendarUrls({
         summary: data.eventTitle,
@@ -175,6 +190,7 @@ export async function sendEventRegistrationConfirmation(
           quantity: data.quantity,
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
+          memberEventRegistrationUrl,
           claimUrl,
           cancelUrl,
           footer,
@@ -232,6 +248,9 @@ export async function sendEventReminderEmail(
   const claimUrl = data.customerId
     ? undefined
     : `${getAppUrl()}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
+  const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+    data.customerId,
+  );
 
   const calendarParams = omitUndefined({
     registrationId: data.registrationId,
@@ -292,6 +311,7 @@ export async function sendEventReminderEmail(
           endTime,
           location: data.location,
           quantity: data.quantity,
+          memberEventRegistrationUrl,
           claimUrl,
           cancelUrl,
           footer,
