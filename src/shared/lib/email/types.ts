@@ -63,6 +63,10 @@ export type ReviewReplyEmailData = {
   originalTitle: string | null;
   originalComment: string | null;
   replyBody: string;
+  /** レビュー元の予約 ID。マイページ確認リンクの組み立てに使う。 */
+  reservationId: string;
+  /** レビュー投稿者 Customer の User.id。ログイン可能な実アカウントが無ければ null。 */
+  customerUserId: string | null;
 };
 
 export type WelcomeEmailData = {

@@ -1,4 +1,4 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { reviewReplyFixture } from "./review-reply.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -21,6 +21,8 @@ type Props = {
   originalTitle: string | null;
   originalComment: string | null;
   replyBody: string;
+  /** 会員向け: ログイン後のマイページ予約詳細 URL */
+  memberReservationUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -45,6 +47,7 @@ export function ReviewReplyEmail({
   originalTitle,
   originalComment,
   replyBody,
+  memberReservationUrl,
   footer,
 }: Props) {
   const info = SECTION_VARIANT_STYLES.info;
@@ -101,6 +104,17 @@ export function ReviewReplyEmail({
           </>
         ) : null}
       </Section>
+
+      {memberReservationUrl && (
+        <Text style={text}>
+          <Link
+            href={memberReservationUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            マイページで予約を確認する
+          </Link>
+        </Text>
+      )}
 
       <Hr style={hr} />
 
