@@ -47,12 +47,20 @@ const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
  *  1. IP rate-limit（formSubmitRateLimiter / 5 req/min/IP）
  *  2. Turnstile（bot 防御）
  *  3. cookie からトークン取り出し → 暗号検証
- *  4. per-registration rate-limit (3 req/hour/registrationId) — 分散攻撃 / XFF spoof 対策
- *  5. member-ownership ガード — ログイン中ユーザーが別人の申込に作用するのを遮断
- *  6. cancelEventRegistrationByToken の atomic claim（status race を防ぐ）
- *  7. applyEventRegistrationCancellationSideEffects（メール / 通知 / 監査）
+ *  4. 表示中申込との突合（同一ブラウザの別タブが cookie を上書きしていないか）
+ *  5. per-registration rate-limit (3 req/hour/registrationId) — 分散攻撃 / XFF spoof 対策
+ *  6. member-ownership ガード — ログイン中ユーザーが別人の申込に作用するのを遮断
+ *  7. cancelEventRegistrationByToken の atomic claim（status race を防ぐ）
+ *  8. applyEventRegistrationCancellationSideEffects（メール / 通知 / 監査）
+ *
+ * @param expectedRegistrationId フォーム表示時点の申込 ID（秘密情報ではない）。
+ *   同一ブラウザで複数のキャンセルリンクを別タブで開くと `event-cancel-token`
+ *   cookie は最後に開いたリンクのトークンで上書きされる。この値と cookie 復号後の
+ *   registrationId が一致しない場合は、画面に表示されている申込と異なる申込を
+ *   キャンセルしてしまうため拒否する。
  */
 export async function cancelGuestEventRegistrationAction(
+  expectedRegistrationId: string,
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
@@ -111,7 +119,27 @@ export async function cancelGuestEventRegistrationAction(
   const parsedId = registrationIdSchema.safeParse(verified.registrationId);
   if (!parsedId.success) return createMutationError("申込IDが不正です");
 
-  // 4. per-registration rate-limit — 単一申込への分散攻撃を遮断
+  // 4. 表示中申込との突合。別タブで別リンクを開いていた場合、cookie は最後に
+  //    開いたリンクのトークンに上書きされているため、送信前に画面表示と一致するか
+  //    確認する（不一致ならページの再読込を促し、誤った申込のキャンセルを防ぐ）。
+  if (parsedId.data !== expectedRegistrationId) {
+    logError(
+      new Error("Guest event cancel registration id mismatch (stale tab)"),
+      {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "guestEventCancelAction",
+          ip: await getClientIpFromHeaders(),
+        },
+      },
+    );
+    return createMutationError(
+      "表示中のページが最新ではありません。ページを再読み込みしてから再度お試しください",
+    );
+  }
+
+  // 5. per-registration rate-limit — 単一申込への分散攻撃を遮断
   const perRegistration = await cancelByEventRegistrationRateLimiter.check(
     parsedId.data,
   );
@@ -134,7 +162,7 @@ export async function cancelGuestEventRegistrationAction(
     );
   }
 
-  // 5. member-ownership ガード: ログイン中ユーザーが「別人の申込」をキャンセル
+  // 6. member-ownership ガード: ログイン中ユーザーが「別人の申込」をキャンセル
   //    しようとしている場合は拒否。ゲスト本人（session 無し）はそのまま通す。
   const session = await getCustomerSession();
   const sessionUserId = session?.user.id ?? null;

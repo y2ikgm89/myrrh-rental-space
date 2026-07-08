@@ -177,13 +177,18 @@ export async function applyEventRegistrationCancellationSideEffects(
   );
 
   // 3. 管理者向け in-app 通知
+  //
+  // resourceId は AdminNotification.resourceId（@db.Uuid）を意図した項目だが、
+  // Event.id は cuid()（VarChar(30)）であり UUID ではないため渡さない。渡すと
+  // insert が invalid input syntax for type uuid で失敗し、fireAndForget 経由で
+  // 静かに握りつぶされて通知自体が作成されない（既存の event 系通知呼び出し全般に
+  // 共通する制約）。
   fireAndForget(
     createNotificationCommand({
       type: NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL,
       title: `イベント申込キャンセル（${channelLabel(input.channel)}）`,
       message: `${registration.name}様が「${registration.event.title}」の申込をキャンセルしました`,
       resourceType: "event",
-      resourceId: registration.eventId,
     }),
     {
       operation: "createEventCancellationNotification",
