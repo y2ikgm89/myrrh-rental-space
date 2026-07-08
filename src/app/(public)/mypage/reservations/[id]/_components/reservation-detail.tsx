@@ -22,6 +22,7 @@ import {
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { getAppUrl } from "@/shared/lib/constants";
+import { toAppRoute } from "@/shared/lib/typed-routes";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
 
@@ -71,6 +72,8 @@ interface DeadlineSettings {
 interface ReservationDetailProps {
   readonly reservation: ReservationDetailData;
   readonly deadlineSettings: DeadlineSettings | undefined;
+  /** 公開中のキャンセルポリシー規約 URL。無ければリンクを出さない */
+  readonly cancellationPolicyUrl: string | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +104,7 @@ function DetailRow({ label, children }: DetailRowProps) {
 export function ReservationDetail({
   reservation,
   deadlineSettings,
+  cancellationPolicyUrl,
 }: ReservationDetailProps) {
   const {
     id,
@@ -265,6 +269,18 @@ export function ReservationDetail({
               ・キャンセル期限: ご利用日の
               {deadlineSettings.cancellationDeadlineHours}時間前まで
             </li>
+            {cancellationPolicyUrl && (
+              <li>
+                ・詳しくは
+                <Link
+                  href={toAppRoute(cancellationPolicyUrl)}
+                  className="underline underline-offset-4 hover:text-foreground"
+                >
+                  キャンセルポリシー
+                </Link>
+                をご確認ください
+              </li>
+            )}
           </ul>
         </div>
       )}

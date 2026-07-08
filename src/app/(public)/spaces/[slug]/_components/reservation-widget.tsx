@@ -32,6 +32,10 @@ interface ReservationWidgetProps {
   readonly spaceName: string;
   readonly hourlyPrice: number;
   readonly dailyPrice: number | null;
+  /** キャンセル無料受付の期限（予約開始の X 時間前まで）。Settings 由来の実値 */
+  readonly cancellationDeadlineHours: number;
+  /** 公開中のキャンセルポリシー規約 URL。無ければリンクを出さない */
+  readonly cancellationPolicyUrl: string | undefined;
 }
 
 /**
@@ -54,6 +58,8 @@ export function ReservationWidget({
   spaceId,
   hourlyPrice,
   dailyPrice,
+  cancellationDeadlineHours,
+  cancellationPolicyUrl,
 }: ReservationWidgetProps) {
   const { formatTotal, formatUnit } = useFormatPrice();
   const hourly = splitTaxedPrice(formatTotal(hourlyPrice));
@@ -121,7 +127,18 @@ export function ReservationWidget({
           icon={<IconCalendarOff className="h-4 w-4" aria-hidden="true" />}
           label="キャンセル"
         >
-          24 時間前まで無料
+          {cancellationDeadlineHours} 時間前まで無料
+          {cancellationPolicyUrl && (
+            <>
+              {" "}
+              <Link
+                href={toAppRoute(cancellationPolicyUrl)}
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                詳細
+              </Link>
+            </>
+          )}
         </DetailRow>
         <DetailRow
           icon={<IconCreditCardOff className="h-4 w-4" aria-hidden="true" />}
