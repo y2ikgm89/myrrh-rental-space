@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Stack } from "@/public/components/design-system/stack";
@@ -23,6 +23,11 @@ import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types"
 import { getAppUrl } from "@/shared/lib/constants";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/shared/components/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +54,7 @@ interface EventRegistrationListProps {
   readonly registrations: readonly EventRegistrationListItem[];
   readonly emptyMessage: string;
   readonly showBrowseCta?: boolean;
+  readonly turnstileSiteKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,6 +76,7 @@ export function EventRegistrationList({
   registrations,
   emptyMessage,
   showBrowseCta = false,
+  turnstileSiteKey,
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
@@ -95,6 +102,7 @@ export function EventRegistrationList({
         <EventRegistrationCard
           key={registration.id}
           registration={registration}
+          turnstileSiteKey={turnstileSiteKey}
         />
       ))}
     </Stack>
@@ -107,12 +115,16 @@ export function EventRegistrationList({
 
 function EventRegistrationCard({
   registration,
+  turnstileSiteKey,
 }: {
   readonly registration: EventRegistrationListItem;
+  readonly turnstileSiteKey: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const router = useRouter();
 
   const canCancel = registration.status === RegistrationStatus.CONFIRMED;
@@ -120,9 +132,13 @@ function EventRegistrationCard({
   const handleConfirmCancel = () => {
     setError(null);
     startTransition(async () => {
-      const result = await cancelEventRegistration(registration.id);
+      const result = await cancelEventRegistration(
+        registration.id,
+        turnstileToken || undefined,
+      );
       if (isMutationError(result)) {
         setError(result.error);
+        turnstileRef.current?.reset();
       } else {
         setCancelDialogOpen(false);
         router.refresh();
@@ -181,15 +197,6 @@ function EventRegistrationCard({
         </div>
       </dl>
 
-      {error != null && (
-        <div
-          className="mt-3 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
-
       {registration.status === RegistrationStatus.CONFIRMED && (
         <div className="mt-4 border-t border-border pt-3">
           <AddToCalendar
@@ -219,6 +226,7 @@ function EventRegistrationCard({
             className="text-destructive"
             onClick={() => {
               setError(null);
+              setTurnstileToken("");
               setCancelDialogOpen(true);
             }}
           >
@@ -231,11 +239,33 @@ function EventRegistrationCard({
                 <DialogTitle>申込キャンセルの確認</DialogTitle>
                 <DialogDescription>
                   「{registration.event.title}」の申込をキャンセルしますか？
+                  この操作は取り消せません。
                 </DialogDescription>
               </DialogHeader>
+
+              <TurnstileWidget
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                action={TURNSTILE_ACTIONS.mypage_event_registration_cancel}
+                onVerify={setTurnstileToken}
+                onExpire={() => setTurnstileToken("")}
+              />
+
+              {error != null && (
+                <div
+                  className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              )}
+
               {/* JSX 順 = visual 順 (Dialog primitive 修正後)。
                *  mobile 縦並びで「閉じる」=上、「キャンセル」(destructive) = 下 (thumb-zone)。 */}
-              <DialogFooter>
+              <DialogFooter
+                role="group"
+                aria-label="イベント申込キャンセル操作"
+              >
                 <Button
                   variant="ghost"
                   size="sm"

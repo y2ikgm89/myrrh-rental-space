@@ -20,6 +20,7 @@ export const TURNSTILE_ACTIONS = {
   mypage_profile: "mypage-profile-update",
   mypage_reservation_edit: "mypage-reservation-edit",
   mypage_reservation_cancel: "mypage-reservation-cancel",
+  mypage_event_registration_cancel: "mypage-event-registration-cancel",
   guest_reservation_cancel: "guest-reservation-cancel",
   guest_event_registration_cancel: "guest-event-registration-cancel",
   mypage_account_delete: "mypage-account-delete",
