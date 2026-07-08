@@ -22,6 +22,7 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,
@@ -139,6 +140,11 @@ export async function sendReservationConfirmationEmail(
     data.reservationId,
   );
 
+  // ゲスト予約のみ、マイページに予約を追加する claim リンクを発行する（会員は不要）。
+  const claimUrl = data.userId
+    ? undefined
+    : `${appUrl}/claim/reservation?token=${createReservationClaimToken(data.reservationId)}`;
+
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
     try {
@@ -180,6 +186,7 @@ export async function sendReservationConfirmationEmail(
           addToCalendarLinks,
           cancelUrl,
           memberReservationUrl,
+          claimUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
           footer,
         }),

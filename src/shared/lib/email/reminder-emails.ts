@@ -6,6 +6,7 @@ import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,
@@ -55,6 +56,11 @@ export async function sendReservationReminderEmail(
   const memberReservationUrl = data.userId
     ? `${appUrl}/mypage/reservations/${data.reservationId}`
     : undefined;
+
+  // ゲスト予約のみ、マイページに予約を追加する claim リンクを発行する（会員は不要）。
+  const claimUrl = data.userId
+    ? undefined
+    : `${appUrl}/claim/reservation?token=${createReservationClaimToken(data.reservationId)}`;
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -107,6 +113,7 @@ export async function sendReservationReminderEmail(
           notes: data.notes,
           cancelUrl,
           memberReservationUrl,
+          claimUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
           footer,
         }),
