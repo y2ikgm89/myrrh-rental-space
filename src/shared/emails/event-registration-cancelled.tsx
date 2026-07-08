@@ -60,7 +60,6 @@ export function EventRegistrationCancelledEmail({
       <Hr style={hr} />
 
       <Text style={text}>
-        参加費の払い戻し条件についてはキャンセルポリシーをご確認ください。
         ご不明な点がございましたら、お気軽にお問い合わせください。
       </Text>
 

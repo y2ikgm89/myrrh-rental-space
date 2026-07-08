@@ -1,15 +1,17 @@
 /**
- * ゲストのイベント参加申込メール（確認・リマインダー）の claimUrl 出し分けテスト
+ * ゲストのイベント参加申込メール（確認・リマインダー）の claimUrl /
+ * memberEventRegistrationUrl 出し分けテスト
  *
  * sendEventRegistrationConfirmation() / sendEventReminderEmail() は
  * ゲスト申込（customerId が null/undefined）のときだけ「マイページに追加」
- * claim リンクを本文に含める。会員申込（customerId あり）では claimUrl を
- * 持たせない（予約系と同一モデル、`reservation-emails.ts` 参照）。
+ * claim リンクを本文に含め、会員申込（customerId あり）のときだけ
+ * 「マイページで申込を確認する」memberEventRegistrationUrl を含める。
+ * 両者は互いに排他（予約系と同一モデル、`reservation-emails.ts` 参照）。
  *
  * このゲートは `data.customerId ? undefined : <mint token>` という三項演算子
  * 1本で実装されており、条件を反転する取り違えが起きても型チェック・lint では
  * 検出できない。メールテンプレートコンポーネントをモックして実際に渡された
- * props の claimUrl を検証することで、出し分けの向きを固定する回帰テスト。
+ * props を検証することで、出し分けの向きを固定する回帰テスト。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
@@ -56,7 +58,10 @@ const mockGetCalendarEmailSettings = mock<
   }),
 );
 
-type ClaimUrlProps = { claimUrl?: string };
+type ClaimUrlProps = {
+  claimUrl?: string;
+  memberEventRegistrationUrl?: string;
+};
 const mockEventRegistrationConfirmationEmail = mock(
   (props: ClaimUrlProps) => props,
 );
@@ -126,6 +131,7 @@ const REMINDER_DATA = {
 };
 
 const CLAIM_URL_PATTERN = /\/claim\/event-registration\?token=[A-Za-z0-9_-]+$/;
+const MEMBER_URL_PATTERN = /\/mypage\/events$/;
 
 beforeEach(() => {
   mockSendEmail.mockReset();
@@ -179,5 +185,49 @@ describe("sendEventReminderEmail() の claimUrl 出し分け", () => {
 
     const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toBeUndefined();
+  });
+});
+
+describe("sendEventRegistrationConfirmation() の memberEventRegistrationUrl 出し分け", () => {
+  test("会員申込（customerId あり）は memberEventRegistrationUrl を発行する", async () => {
+    await sendEventRegistrationConfirmation({
+      ...REGISTRATION_DATA,
+      customerId: "customer-1",
+    });
+
+    const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.memberEventRegistrationUrl).toMatch(MEMBER_URL_PATTERN);
+  });
+
+  test("ゲスト申込（customerId なし）は memberEventRegistrationUrl を発行しない", async () => {
+    await sendEventRegistrationConfirmation({
+      ...REGISTRATION_DATA,
+      customerId: null,
+    });
+
+    const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.memberEventRegistrationUrl).toBeUndefined();
+  });
+});
+
+describe("sendEventReminderEmail() の memberEventRegistrationUrl 出し分け", () => {
+  test("会員申込（customerId あり）は memberEventRegistrationUrl を発行する", async () => {
+    await sendEventReminderEmail({
+      ...REMINDER_DATA,
+      customerId: "customer-1",
+    });
+
+    const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
+    expect(props?.memberEventRegistrationUrl).toMatch(MEMBER_URL_PATTERN);
+  });
+
+  test("ゲスト申込（customerId なし）は memberEventRegistrationUrl を発行しない", async () => {
+    await sendEventReminderEmail({
+      ...REMINDER_DATA,
+      customerId: null,
+    });
+
+    const props = mockEventReminderEmail.mock.calls.at(-1)?.[0];
+    expect(props?.memberEventRegistrationUrl).toBeUndefined();
   });
 });
