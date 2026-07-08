@@ -175,6 +175,11 @@ export async function cancelGuestEventRegistrationAction(
   //    でキャンセルできなくなる）。
   const session = await getCustomerSession();
   const sessionUserId = session?.user.id ?? null;
+  // 事前読取りした customerId（ログイン中のみ意味を持つ）。実際の状態変更 UPDATE の
+  // WHERE 句にも渡し、この後の claim との TOCTOU race を DB レベルで再検証する
+  // （このガードの直後に別の claim が customerId を書き換えても、実際の cancel
+  // 書込は count=0 で安全に失敗する）。
+  let expectedCustomerId: string | null | undefined;
   if (sessionUserId) {
     const registration = await getEventRegistrationForGuestCancel(
       parsedId.data,
@@ -192,10 +197,14 @@ export async function cancelGuestEventRegistrationAction(
         "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
       );
     }
+    expectedCustomerId = registration.customerId;
   }
 
   try {
-    const result = await cancelEventRegistrationByToken(parsedId.data);
+    const result = await cancelEventRegistrationByToken(
+      parsedId.data,
+      expectedCustomerId,
+    );
 
     invalidateEventCaches();
 

@@ -45,6 +45,18 @@ export interface ApplyEventRegistrationCancellationOptions {
    * - `ADMIN`: 管理画面からの管理者キャンセル
    */
   cancelledByType: CancelledByType;
+  /**
+   * ゲストトークン経路で、呼び出し側が事前読取りした `customerId` の期待値
+   * （`undefined` = 制約なし）。
+   *
+   * ログイン中ユーザーが「未 claim（customerId: null）の申込」への操作を許可
+   * された後、この UPDATE 実行までの間に別の claim（`claimEventRegistrationForCustomer`）
+   * が customerId を書き換えるレースがあり得る。事前チェックとは別クエリで
+   * customerId を再読取りするのではなく、状態変更 UPDATE 自体の WHERE 句に
+   * 含めることで、claim との race を DB レベルで閉じる（claim 後は count=0 になり
+   * 「別の操作で変更されました」エラーとして安全側に倒れる）。
+   */
+  expectedCustomerId?: string | null;
 }
 
 export async function applyEventRegistrationCancellation(
@@ -56,12 +68,15 @@ export async function applyEventRegistrationCancellation(
     return { success: false, error: "この申込はキャンセルできません" };
   }
 
-  // Atomic claim: WHERE に status: CONFIRMED を含めて二重 submit / 同時操作の
-  // レースを DB レベルで防ぐ。
+  // Atomic claim: WHERE に status: CONFIRMED（+ 指定時は customerId 期待値）を
+  // 含めて二重 submit / 同時操作 / claim との race を DB レベルで防ぐ。
   const updateResult = await tx.eventRegistration.updateMany({
     where: {
       id: registration.id,
       status: { in: [...CANCELLABLE_REGISTRATION_STATUSES] },
+      ...(options.expectedCustomerId !== undefined
+        ? { customerId: options.expectedCustomerId }
+        : {}),
     },
     data: {
       status: RegistrationStatus.CANCELLED,
@@ -72,7 +87,7 @@ export async function applyEventRegistrationCancellation(
   });
 
   if (updateResult.count === 0) {
-    // 別の操作（admin / 別タブ）が先にキャンセルを完了している。
+    // 別の操作（admin / 別タブ / claim）が先にステータス・所有者を変更している。
     return {
       success: false,
       error:

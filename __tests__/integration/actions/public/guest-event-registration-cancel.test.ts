@@ -185,12 +185,12 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
     );
   });
 
-  test("有効トークン（cookie 経由）でキャンセル成功し null を返す", async () => {
+  test("有効トークン（cookie 経由）でキャンセル成功し null を返す（未ログイン=制約なし）", async () => {
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
     const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toBeNull();
     expect(mockCancelByToken).toHaveBeenCalledTimes(1);
-    expect(mockCancelByToken).toHaveBeenCalledWith(VALID_ID);
+    expect(mockCancelByToken).toHaveBeenCalledWith(VALID_ID, undefined);
     expect(mockApplySideEffects).toHaveBeenCalledWith(
       expect.objectContaining({
         registrationId: VALID_ID,
@@ -296,7 +296,9 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
     const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
     const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
     expect(result).toBeNull();
-    expect(mockCancelByToken).toHaveBeenCalledWith(VALID_ID);
+    // expectedCustomerId (null) を実際の cancel 書込にも渡し、claim との race を
+    // 実 UPDATE の WHERE 句で再検証させる（TOCTOU 対策）。
+    expect(mockCancelByToken).toHaveBeenCalledWith(VALID_ID, null);
   });
 
   test("ログイン中に customerId が別会員の claim 済み申込へアクセスするとエラー", async () => {
@@ -318,5 +320,23 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
       "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
     );
     expect(mockCancelByToken).not.toHaveBeenCalled();
+  });
+
+  test("ログイン中で自分自身が claim 済みの申込は expectedCustomerId 付きで成功する", async () => {
+    mockGetCustomerSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockGetCustomerByUserId.mockResolvedValue({ id: "cust-logged-in" });
+    mockGetEventRegistrationForGuestCancel.mockResolvedValue({
+      id: VALID_ID,
+      customerId: "cust-logged-in",
+      status: "CONFIRMED",
+      quantity: 2,
+      name: "山田太郎",
+      event: { title: "夏祭り" },
+      slot: { startAt: new Date(), endAt: new Date() },
+    });
+    const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
+    expect(result).toBeNull();
+    expect(mockCancelByToken).toHaveBeenCalledWith(VALID_ID, "cust-logged-in");
   });
 });

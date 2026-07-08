@@ -49,9 +49,11 @@ type CommandsModule =
   typeof import("@/shared/domain/events/registration-commands");
 type TokenModule =
   typeof import("@/shared/lib/event-registration-cancel-token");
+type ClaimModule = typeof import("@/shared/domain/events/claim-commands");
 
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
+let claimEventRegistrationForCustomer: ClaimModule["claimEventRegistrationForCustomer"];
 let cancelEventRegistrationByToken: CommandsModule["cancelEventRegistrationByToken"];
 let createCancelToken: TokenModule["createCancelToken"];
 let verifyCancelToken: TokenModule["verifyCancelToken"];
@@ -159,6 +161,8 @@ describeMaybe(
         await import("@/shared/domain/events/registration-commands"));
       ({ createCancelToken, verifyCancelToken, computeCancelTokenExpiresAt } =
         await import("@/shared/lib/event-registration-cancel-token"));
+      ({ claimEventRegistrationForCustomer } =
+        await import("@/shared/domain/events/claim-commands"));
       // 接続プールをウォームアップ（コールドスタートで初回クエリがブレるのを防ぐ）。
       await prisma.$queryRaw`SELECT 1`;
 
@@ -208,6 +212,60 @@ describeMaybe(
         expect(updated?.icsSequence).toBe(1);
       } finally {
         await cleanup();
+      }
+    }, 30_000);
+
+    test("expectedCustomerId 再検証: 事前チェック後に claim されると cancel は CONFLICT で弾かれる（TOCTOU race 対策）", async () => {
+      const { registrationId, cleanup } = await createRegistration(futureEvent);
+      const suffix = crypto.randomUUID();
+      const customer = await prisma.customer.create({
+        data: {
+          lastName: "鈴木",
+          firstName: "花子",
+          email: `cancel-race-${suffix}@example.com`,
+          emailCanonical: `cancel-race-${suffix}@example.com`,
+        },
+        select: { id: true },
+      });
+
+      try {
+        const expiresAt = computeCancelTokenExpiresAt(FUTURE_SLOT_START);
+        const token = createCancelToken(registrationId, expiresAt);
+        const verified = verifyCancelToken(token, new Date());
+        if (!verified.valid)
+          throw new Error("token verify failed unexpectedly");
+
+        // 「ログイン中ユーザーの所有権チェック」が customerId: null を読んだ直後、
+        // 別リクエストが claim を完了させた状況を再現する。
+        const claimResult = await claimEventRegistrationForCustomer(
+          verified.registrationId,
+          customer.id,
+        );
+        expect(claimResult.claimed).toBe(true);
+
+        // ローカル Windows + docker-compose test-db + adapter-pg 環境限定の既知の
+        // タイミング事象対策（cancel-by-token-roundtrip.test.ts の「逐次二重 cancel」
+        // と同じ注記）: 直前テストの interactive transaction 完了直後に同一プロセスから
+        // 次の $transaction を発行すると driver adapter 側のスロット解放待ちで
+        // "Unable to start a transaction in the given time" になることがある。
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // 事前チェック時点の期待値（null）のまま cancel を試みる → atomic UPDATE の
+        // WHERE (customerId: null) が今の実データ（customer.id）とヒットせず、
+        // count=0 で CONFLICT として弾かれるはず。
+        await expect(
+          cancelEventRegistrationByToken(verified.registrationId, null),
+        ).rejects.toThrow(/別の操作/);
+
+        const updated = await prisma.eventRegistration.findUnique({
+          where: { id: registrationId },
+          select: { status: true, customerId: true },
+        });
+        expect(updated?.status).toBe(RegistrationStatus.CONFIRMED);
+        expect(updated?.customerId).toBe(customer.id);
+      } finally {
+        await cleanup();
+        await prisma.customer.deleteMany({ where: { id: customer.id } });
       }
     }, 30_000);
 
