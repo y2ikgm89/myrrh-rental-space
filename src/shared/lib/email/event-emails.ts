@@ -508,6 +508,7 @@ export async function sendEventCancelledToAllParticipants(
           email: true,
           quantity: true,
           icsSequence: true,
+          customerId: true,
           slot: {
             select: { startAt: true, endAt: true },
           },
@@ -547,6 +548,9 @@ export async function sendEventCancelledToAllParticipants(
       const eventDate = format(startTime, "yyyy年M月d日 (EEEE)", {
         locale: ja,
       });
+      const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+        registration.customerId,
+      );
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {
@@ -586,6 +590,7 @@ export async function sendEventCancelledToAllParticipants(
               eventTitle: event.title,
               eventDate,
               reason,
+              memberEventRegistrationUrl,
               footer,
             }),
           ),
@@ -648,6 +653,7 @@ export async function sendEventUpdatedToAllParticipants(
           quantity: true,
           icsSequence: true,
           slotId: true,
+          customerId: true,
           slot: {
             select: { startAt: true, endAt: true },
           },
@@ -696,6 +702,9 @@ export async function sendEventUpdatedToAllParticipants(
         locale: ja,
       });
       const newEndTime = format(newEndTimeDate, "HH:mm", { locale: ja });
+      const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+        registration.customerId,
+      );
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {
@@ -735,6 +744,9 @@ export async function sendEventUpdatedToAllParticipants(
             eventDate: oldEventDate,
             newEventDate: `${newEventDate}〜${newEndTime}`,
             location: venueDisplay ?? undefined,
+            ...(memberEventRegistrationUrl !== undefined
+              ? { memberEventRegistrationUrl }
+              : {}),
             footer,
           }),
           attachments,
