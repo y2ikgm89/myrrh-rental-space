@@ -14,6 +14,8 @@ import {
   getEmailDeliverySettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
+import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import { PRIVACY_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { getAdminUrl } from "../admin-urls";
 import { getAppUrl } from "../constants";
 import { sendEmail } from "./send";
@@ -32,12 +34,24 @@ export function buildMemberInquiryUrl(
 }
 
 /**
+ * 公開中のプライバシーポリシー規約の絶対 URL を解決する。該当文書が無ければ
+ * undefined を返し、呼び出し側はプレーンテキストにフォールバックする。
+ */
+async function resolvePrivacyPolicyUrl(): Promise<string | undefined> {
+  const doc = await getPublishedTermsByType(PRIVACY_POLICY_TERMS_TYPE);
+  return doc ? `${getAppUrl()}/terms/${doc.slug}` : undefined;
+}
+
+/**
  * お問い合わせ確認メールを送信
  */
 export async function sendContactConfirmationEmail(
   data: ContactEmailData,
 ): Promise<EmailResult> {
-  const footer = await getEmailFooterData();
+  const [footer, privacyPolicyUrl] = await Promise.all([
+    getEmailFooterData(),
+    resolvePrivacyPolicyUrl(),
+  ]);
   const memberInquiryUrl = buildMemberInquiryUrl(
     data.customerId,
     data.inquiryId,
@@ -52,6 +66,7 @@ export async function sendContactConfirmationEmail(
         subject: data.subject,
         message: data.message,
         ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
+        ...(privacyPolicyUrl !== undefined ? { privacyPolicyUrl } : {}),
         footer,
       }),
     },
