@@ -35,9 +35,13 @@ async function createGuestReservationWithCustomer() {
 }
 
 async function createLinkedCustomer(userIdSuffix: string) {
+  // crypto.randomUUID() を混ぜて email を一意化する。この統合テストは実行の都度
+  // クリーンな DB を前提とせず、ローカルの永続 test-db コンテナに対して繰り返し
+  // 実行される（他のテストファイルの同種ヘルパーと同じ堅牢化パターン、例:
+  // space-overlap-concurrency.test.ts の `overlap-${crypto.randomUUID()}` 等）。
   const user = await prisma.user.create({
     data: {
-      email: `member-${userIdSuffix}@example.com`,
+      email: `member-${userIdSuffix}-${crypto.randomUUID()}@example.com`,
       name: "会員太郎",
       emailVerified: true,
     },
@@ -55,6 +59,13 @@ async function createLinkedCustomer(userIdSuffix: string) {
 }
 
 describe("claimReservationForCustomer", () => {
+  beforeAll(async () => {
+    // 接続プールをウォームアップ（コールドスタートが並行クエリをずらして race を隠すのを防ぐ。
+    // .claude/rules/testing-unit.md の規約、registration-overbooking.test.ts /
+    // space-overlap-concurrency.test.ts と同型）。
+    await prisma.$queryRaw`SELECT 1`;
+  });
+
   afterAll(async () => {
     await basePrisma.$disconnect();
   });
@@ -111,5 +122,27 @@ describe("claimReservationForCustomer", () => {
       member.id,
     );
     expect(result).toEqual({ claimed: false });
+  });
+
+  test("同時に2つのclaimが競合しても先着1件のみ成立する(真の並行実行)", async () => {
+    const { reservation } = await createGuestReservationWithCustomer();
+    const memberA = await createLinkedCustomer("race-a");
+    const memberB = await createLinkedCustomer("race-b");
+
+    const [resultA, resultB] = await Promise.all([
+      claimReservationForCustomer(reservation.id, memberA.id),
+      claimReservationForCustomer(reservation.id, memberB.id),
+    ]);
+
+    const claimedResults = [resultA, resultB].filter((r) => r.claimed);
+    expect(claimedResults.length).toBe(1);
+
+    const updated = await prisma.reservation.findUniqueOrThrow({
+      where: { id: reservation.id },
+    });
+    expect([memberA.id, memberB.id]).toContain(updated.customerId);
+    // どちらが勝っても、DB に反映された customerId は勝者の result と一致する。
+    const winnerId = resultA.claimed ? memberA.id : memberB.id;
+    expect(updated.customerId).toBe(winnerId);
   });
 });
