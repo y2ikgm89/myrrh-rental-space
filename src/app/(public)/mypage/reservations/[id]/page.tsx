@@ -13,6 +13,8 @@ import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
@@ -112,13 +114,18 @@ export default async function ReservationDetailPage({
 
   const isCompleted = reservation.status === ReservationStatus.COMPLETED;
 
-  const [existingReview, turnstileSiteKey, reviewsEnabled] = await Promise.all([
-    isCompleted
-      ? getReviewForReservation(reservation.id, customer.id)
-      : Promise.resolve(null),
-    getTurnstileSiteKey(),
-    isFeatureEnabled("reviews"),
-  ]);
+  const [existingReview, turnstileSiteKey, reviewsEnabled, cancellationPolicy] =
+    await Promise.all([
+      isCompleted
+        ? getReviewForReservation(reservation.id, customer.id)
+        : Promise.resolve(null),
+      getTurnstileSiteKey(),
+      isFeatureEnabled("reviews"),
+      getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+    ]);
+  const cancellationPolicyUrl = cancellationPolicy
+    ? `/terms/${cancellationPolicy.slug}`
+    : undefined;
 
   const serializedReservation = toPlainObject({
     ...reservation,
@@ -165,6 +172,7 @@ export default async function ReservationDetailPage({
       <ReservationDetail
         reservation={serializedReservation}
         deadlineSettings={deadlineSettings}
+        cancellationPolicyUrl={cancellationPolicyUrl}
       />
 
       {(canEdit || canCancel) && (

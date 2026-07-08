@@ -13,6 +13,8 @@ import {
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -88,11 +90,16 @@ export default async function GuestCancelPage(): Promise<ReactElement> {
     return <InvalidLinkView reason={verified.reason} />;
   }
 
-  const [reservation, deadlineSettings, turnstileSiteKey] = await Promise.all([
-    getReservationForGuestCancel(verified.reservationId),
-    getReservationDeadlineSettings(),
-    getTurnstileSiteKey(),
-  ]);
+  const [reservation, deadlineSettings, turnstileSiteKey, cancellationPolicy] =
+    await Promise.all([
+      getReservationForGuestCancel(verified.reservationId),
+      getReservationDeadlineSettings(),
+      getTurnstileSiteKey(),
+      getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+    ]);
+  const cancellationPolicyUrl = cancellationPolicy
+    ? `/terms/${cancellationPolicy.slug}`
+    : undefined;
 
   if (!reservation) {
     return <InvalidLinkView />;
@@ -199,6 +206,19 @@ export default async function GuestCancelPage(): Promise<ReactElement> {
           <p className="text-xs text-muted-foreground">
             キャンセル期限: ご利用日の{" "}
             {deadlineSettings.cancellationDeadlineHours} 時間前まで
+            {cancellationPolicyUrl && (
+              <>
+                （
+                <Link
+                  href={toAppRoute(cancellationPolicyUrl)}
+                  className="underline underline-offset-4 hover:text-foreground"
+                  rel="noreferrer"
+                >
+                  キャンセルポリシー
+                </Link>
+                ）
+              </>
+            )}
           </p>
         </div>
       </div>
