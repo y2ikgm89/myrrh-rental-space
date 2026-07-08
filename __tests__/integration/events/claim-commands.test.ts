@@ -129,6 +129,28 @@ describe("claimEventRegistrationForCustomer", () => {
     expect(updated.customerId).toBe(member.id);
   });
 
+  test("同じ会員が再度claimしても idempotent に成功扱い", async () => {
+    const registration = await createGuestEventRegistration();
+    const memberA = await createLinkedCustomer("self-reclaim");
+
+    const first = await claimEventRegistrationForCustomer(
+      registration.id,
+      memberA.id,
+    );
+    expect(first).toEqual({ claimed: true });
+
+    const second = await claimEventRegistrationForCustomer(
+      registration.id,
+      memberA.id,
+    );
+    expect(second).toEqual({ claimed: true });
+
+    const updated = await prisma.eventRegistration.findUniqueOrThrow({
+      where: { id: registration.id },
+    });
+    expect(updated.customerId).toBe(memberA.id);
+  });
+
   test("既に customerId が設定済みなら以降のclaimは全て失敗する", async () => {
     const registration = await createGuestEventRegistration();
     const firstMember = await createLinkedCustomer("b");
