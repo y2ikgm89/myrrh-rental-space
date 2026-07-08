@@ -4,6 +4,8 @@ import { prisma } from "@/shared/db/prisma";
 import { EventStatus, RegistrationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { applyEventRegistrationCancellation } from "./registration-cancel-core";
+import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 
 export async function createEventRegistrationCommand(data: {
   eventId: string;
@@ -168,40 +170,111 @@ export async function createEventRegistrationCommand(data: {
   );
 }
 
+const CANCEL_REGISTRATION_SELECT = {
+  id: true,
+  eventId: true,
+  name: true,
+  email: true,
+  quantity: true,
+  status: true,
+  event: { select: { title: true, slug: true } },
+} as const;
+
+/**
+ * 申込キャンセルの共通実装。
+ *
+ * `where` で本人性（会員=customerId / 管理者=フィルタなし / ゲスト=呼び出し元で
+ * トークン検証済み）を絞り込んだ上で、実際の状態遷移は atomic claim パターンの
+ * {@link applyEventRegistrationCancellation} に委譲する（二重 submit / 同時操作の
+ * レースを DB レベルで防ぐ。旧実装の findFirst→update はこの保証が無かった）。
+ */
+/**
+ * `prisma.$transaction` のコールバック内では throw せず、必ず値を return する
+ * （reservations/customer-commands.ts と同じ規約）。interactive transaction の
+ * callback 内で throw すると、driver adapter 経由の rollback 完了を待つ間に
+ * 後続の $transaction 呼び出しが `Unable to start a transaction in the given
+ * time` で詰まる事象を実測したため、失敗判定は必ず正常 return し、呼び出し元
+ * （transaction の外）で DomainError に変換する。
+ */
+async function cancelEventRegistrationWithClaim(
+  where: { id: string; event: { deletedAt: null }; customerId?: string },
+  cancelledByType: (typeof CANCELLED_BY)[keyof typeof CANCELLED_BY],
+) {
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const registration = await tx.eventRegistration.findFirst({
+        where,
+        select: CANCEL_REGISTRATION_SELECT,
+      });
+      if (!registration) {
+        return {
+          success: false,
+          code: "NOT_FOUND",
+          error: "申込が見つかりません",
+        } as const;
+      }
+
+      const claim = await applyEventRegistrationCancellation(tx, registration, {
+        now: new Date(),
+        cancelledByType,
+      });
+      if (!claim.success) {
+        return {
+          success: false,
+          code: "CONFLICT",
+          error: claim.error,
+        } as const;
+      }
+
+      const updated = await tx.eventRegistration.findUniqueOrThrow({
+        where: { id: registration.id },
+        select: { icsSequence: true },
+      });
+
+      return {
+        success: true,
+        payload: { ...registration, icsSequence: updated.icsSequence },
+      } as const;
+    },
+    { maxWait: 5000, timeout: 10000 },
+  );
+
+  if (!result.success) throw new DomainError(result.error, result.code);
+  return result.payload;
+}
+
+/** 会員のマイページ自己キャンセル（customerId で所有権を強制）。 */
 export async function cancelEventRegistrationCommand(
   registrationId: string,
-  customerId?: string,
+  customerId: string,
 ) {
-  const registration = await prisma.eventRegistration.findFirst({
-    where: {
-      id: registrationId,
-      status: RegistrationStatus.CONFIRMED,
-      event: { deletedAt: null },
-      ...(customerId ? { customerId } : {}),
-    },
-    select: {
-      id: true,
-      eventId: true,
-      name: true,
-      email: true,
-      quantity: true,
-      event: { select: { title: true, slug: true } },
-    },
-  });
+  return cancelEventRegistrationWithClaim(
+    { id: registrationId, customerId, event: { deletedAt: null } },
+    CANCELLED_BY.CUSTOMER_MYPAGE,
+  );
+}
 
-  if (!registration) throw new DomainError("申込が見つかりません", "NOT_FOUND");
+/** 管理画面からの管理者キャンセル（所有権フィルタなし）。 */
+export async function adminCancelEventRegistrationCommand(
+  registrationId: string,
+) {
+  return cancelEventRegistrationWithClaim(
+    { id: registrationId, event: { deletedAt: null } },
+    CANCELLED_BY.ADMIN,
+  );
+}
 
-  const updated = await prisma.eventRegistration.update({
-    where: { id: registrationId },
-    data: {
-      status: RegistrationStatus.CANCELLED,
-      cancelledAt: new Date(),
-      icsSequence: { increment: 1 },
-    },
-    select: { icsSequence: true },
-  });
-
-  return { ...registration, icsSequence: updated.icsSequence };
+/**
+ * トークン経由の申込キャンセル（ゲスト用）
+ *
+ * 確認メールのキャンセルリンクから呼ばれる。本人性は検証済みトークンが担保するため、
+ * customerId による所有権フィルタは行わず registrationId だけで申込を特定する。
+ */
+export async function cancelEventRegistrationByToken(registrationId: string) {
+  return cancelEventRegistrationWithClaim(
+    { id: registrationId, event: { deletedAt: null } },
+    CANCELLED_BY.CUSTOMER_TOKEN,
+  );
 }
 
 /**

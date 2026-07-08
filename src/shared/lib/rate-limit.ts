@@ -248,6 +248,14 @@ export const cancelByReservationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// ゲストイベント参加キャンセル「申込 ID 単位」の追加バケット（3 attempts / hour /
+// registration）。cancelByReservationRateLimiter と同じ設計判断（IP-only では
+// Cloud Run multi-instance × XFF spoof で単一申込への分散攻撃が抜ける）。
+export const cancelByEventRegistrationRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1時間
+  maxRequests: 3,
+});
+
 // 管理画面の「重い」内部 API 用（60 リクエスト/分/IP）— defense-in-depth。
 // 認証済みスタッフでも、外向き fetch (OGP プレビュー) や全件 LIKE スキャン
 // (customer 検索) のような副作用 / コスト大の endpoint は単独でレート制限する。

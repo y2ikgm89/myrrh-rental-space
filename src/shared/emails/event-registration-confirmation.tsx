@@ -1,15 +1,18 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import { eventRegistrationConfirmationFixture } from "./event-registration-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
+  COLOR,
+  SECTION_VARIANT_STYLES,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
+  linkDangerStyle,
   text,
 } from "./_shared/styles";
 
@@ -23,6 +26,8 @@ type Props = {
   quantity: number;
   registrationId: string;
   addToCalendarLinks?: AddToCalendarUrls;
+  /** ゲスト向け: 期限内のみ生成される暗号化トークン付き URL */
+  cancelUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -36,8 +41,10 @@ export function EventRegistrationConfirmationEmail({
   quantity,
   registrationId,
   addToCalendarLinks,
+  cancelUrl,
   footer,
 }: Props) {
+  const danger = SECTION_VARIANT_STYLES.danger;
   return (
     <EmailLayout
       preview={`イベント申込ありがとうございます - ${eventTitle}`}
@@ -79,12 +86,38 @@ export function EventRegistrationConfirmationEmail({
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 
+      {cancelUrl && (
+        <Section
+          style={{
+            backgroundColor: danger.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            お申込みのキャンセルは下記のリンクから行えます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link href={cancelUrl} style={linkDangerStyle}>
+              申込をキャンセルする
+            </Link>
+          </Text>
+        </Section>
+      )}
+
       <Hr style={hr} />
 
       <Text style={text}>
-        申込のキャンセル・人数変更をご希望の場合は、お問い合わせ窓口までご連絡
-        ください。キャンセル料金・払い戻し条件についてはキャンセルポリシーを
-        ご確認ください。
+        人数変更をご希望の場合や、上記リンクがご利用いただけない場合は、
+        お問い合わせ窓口までご連絡ください。キャンセル料金・払い戻し条件に
+        ついてはキャンセルポリシーをご確認ください。
       </Text>
 
       <Text style={text}>当日のご参加を心よりお待ちしております。</Text>

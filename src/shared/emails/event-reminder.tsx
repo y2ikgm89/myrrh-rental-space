@@ -1,13 +1,16 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { eventReminderFixture } from "./event-reminder.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
+  COLOR,
+  SECTION_VARIANT_STYLES,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
+  linkDangerStyle,
   text,
 } from "./_shared/styles";
 
@@ -19,6 +22,8 @@ type Props = {
   endTime: string;
   location?: string;
   quantity: number;
+  /** ゲスト向け: 期限内のみ生成される暗号化トークン付きキャンセル URL */
+  cancelUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -30,8 +35,10 @@ export function EventReminderEmail({
   endTime,
   location,
   quantity,
+  cancelUrl,
   footer,
 }: Props) {
+  const danger = SECTION_VARIANT_STYLES.danger;
   return (
     <EmailLayout
       preview={`明日のイベントリマインダー: ${eventTitle}`}
@@ -64,11 +71,37 @@ export function EventReminderEmail({
         </Text>
       </Section>
 
+      {cancelUrl && (
+        <Section
+          style={{
+            backgroundColor: danger.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            やむを得ずキャンセルされる場合は下記のリンクからお手続きください。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link href={cancelUrl} style={linkDangerStyle}>
+              申込をキャンセルする
+            </Link>
+          </Text>
+        </Section>
+      )}
+
       <Hr style={hr} />
 
       <Text style={text}>
-        申込のキャンセル・人数変更をご希望の場合は、お問い合わせ窓口までご連絡
-        ください。
+        人数変更をご希望の場合や、上記リンクがご利用いただけない場合は、
+        お問い合わせ窓口までご連絡ください。
       </Text>
 
       <Text style={text}>当日のご参加を心よりお待ちしております。</Text>

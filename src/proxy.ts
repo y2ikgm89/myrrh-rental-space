@@ -205,14 +205,26 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
  *   - base64url 文字種
  *   - 長さ 32〜1024 字（典型 100〜300）
  * 暗号学的な verify は Node ランタイムの page/action で実施する。
+ *
+ * 予約とイベント参加申込の 2 経路が同じ転写方式を共有する。cookie 名をドメイン別に
+ * 分けることで、一方の cancel ページ滞在中にもう一方のトークンが誤って読まれる
+ * （cross-contamination）ことを防ぐ。
  */
-const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
 const CANCEL_TOKEN_COOKIE_MAX_AGE = 30 * 60; // 30 分
 const CANCEL_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
 
+const GUEST_CANCEL_TOKEN_ROUTES: ReadonlyArray<{
+  pathname: string;
+  cookieName: string;
+}> = [
+  { pathname: "/reservation/cancel", cookieName: "cancel-token" },
+  { pathname: "/events/cancel", cookieName: "event-cancel-token" },
+];
+
 function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
   const { pathname, searchParams } = req.nextUrl;
-  if (pathname !== "/reservation/cancel") return null;
+  const route = GUEST_CANCEL_TOKEN_ROUTES.find((r) => r.pathname === pathname);
+  if (!route) return null;
   const token = searchParams.get("token");
   if (!token) return null;
 
@@ -223,7 +235,7 @@ function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
 
   if (CANCEL_TOKEN_PATTERN.test(token)) {
     response.cookies.set({
-      name: CANCEL_TOKEN_COOKIE_NAME,
+      name: route.cookieName,
       value: token,
       httpOnly: true,
       sameSite: "strict",
