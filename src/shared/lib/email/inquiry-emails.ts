@@ -3,6 +3,7 @@ import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
 import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { prisma } from "@/shared/db/prisma";
+import { buildMemberInquiryUrl } from "./contact-emails";
 import { hashForKey, sendEmail } from "./send";
 import {
   logError,
@@ -16,6 +17,10 @@ export async function sendInquiryReplyEmail(
   data: InquiryReplyEmailData,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
+  const memberInquiryUrl = buildMemberInquiryUrl(
+    data.customerUserId,
+    data.inquiryId,
+  );
 
   return sendEmail({
     payload: {
@@ -27,6 +32,7 @@ export async function sendInquiryReplyEmail(
         originalMessage: data.originalMessage,
         replyMessage: data.replyMessage,
         repliedByName: data.repliedByName,
+        ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
         footer,
       }),
     },
@@ -59,6 +65,7 @@ export async function sendInquiryStatusNotificationToAll(
       email: true,
       subject: true,
       updatedAt: true,
+      customer: { select: { userId: true } },
     },
   });
 
@@ -68,8 +75,12 @@ export async function sendInquiryStatusNotificationToAll(
   const statusLabel = newStatus === "RESOLVED" ? "対応完了" : "終了";
 
   const results = await Promise.allSettled(
-    inquiries.map((inquiry) =>
-      sendEmail({
+    inquiries.map((inquiry) => {
+      const memberInquiryUrl = buildMemberInquiryUrl(
+        inquiry.customer?.userId,
+        inquiry.id,
+      );
+      return sendEmail({
         payload: {
           to: inquiry.email,
           subject: `【お問い合わせ${statusLabel}】${inquiry.subject}`,
@@ -77,6 +88,7 @@ export async function sendInquiryStatusNotificationToAll(
             customerName: inquiry.name,
             inquirySubject: inquiry.subject,
             newStatus,
+            ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
             footer,
           }),
         },
@@ -86,8 +98,8 @@ export async function sendInquiryStatusNotificationToAll(
         idempotencyKey: `inquiry-status/${inquiry.id}/${newStatus}/${inquiry.updatedAt.getTime()}`,
         operation: "sendInquiryStatusNotificationToAll",
         context: { inquiryId: inquiry.id, email: inquiry.email },
-      }),
-    ),
+      });
+    }),
   );
 
   for (const [i, result] of results.entries()) {

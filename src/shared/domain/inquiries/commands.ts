@@ -32,6 +32,13 @@ export type InquiryReplyEmailContext = {
   readonly email: string;
   readonly subject: string;
   readonly message: string;
+  /**
+   * この問い合わせに紐づく Customer の User.id（ログイン可能な実アカウント）。
+   * Inquiry.customerId 自体は resolveOrCreateGuestInquiryCustomer が発行する
+   * userId=null の「ゲスト shell」customer を指し得るため、マイページ確認リンクの
+   * 出し分けには customer.userId（Better Auth 連携済みか）を直接見る必要がある。
+   */
+  readonly customerUserId: string | null;
 };
 
 export async function replyToInquiryCommand(
@@ -47,6 +54,7 @@ export async function replyToInquiryCommand(
       email: true,
       subject: true,
       message: true,
+      customer: { select: { userId: true } },
     },
   });
 
@@ -71,6 +79,7 @@ export async function replyToInquiryCommand(
       email: inquiry.email,
       subject: inquiry.subject,
       message: inquiry.message,
+      customerUserId: inquiry.customer?.userId ?? null,
     },
   };
 }

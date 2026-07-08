@@ -15,8 +15,21 @@ import {
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../admin-urls";
+import { getAppUrl } from "../constants";
 import { sendEmail } from "./send";
 import type { ContactEmailData, EmailResult } from "./types";
+
+/**
+ * お問い合わせ ID から、会員向けマイページの問い合わせ詳細 URL を組み立てる。
+ * userId が無い（ゲスト送信・未ログイン）場合は undefined を返す。
+ */
+export function buildMemberInquiryUrl(
+  userId: string | null | undefined,
+  inquiryId: string,
+): string | undefined {
+  if (!userId) return undefined;
+  return `${getAppUrl()}/mypage/inquiries/${inquiryId}`;
+}
 
 /**
  * お問い合わせ確認メールを送信
@@ -25,6 +38,10 @@ export async function sendContactConfirmationEmail(
   data: ContactEmailData,
 ): Promise<EmailResult> {
   const footer = await getEmailFooterData();
+  const memberInquiryUrl = buildMemberInquiryUrl(
+    data.customerId,
+    data.inquiryId,
+  );
 
   return sendEmail({
     payload: {
@@ -34,6 +51,7 @@ export async function sendContactConfirmationEmail(
         name: data.name,
         subject: data.subject,
         message: data.message,
+        ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
         footer,
       }),
     },
