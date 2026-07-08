@@ -11,6 +11,7 @@ import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { toPlainArray } from "@/shared/lib/serialize";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { EventRegistrationTabs } from "./_components/event-registration-tabs";
@@ -25,7 +26,10 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
     redirect("/login");
   }
 
-  const { active, past } = await getCustomerEventRegistrations(customer.id);
+  const [{ active, past }, turnstileSiteKey] = await Promise.all([
+    getCustomerEventRegistrations(customer.id),
+    getTurnstileSiteKey(),
+  ]);
 
   const serialize = (
     rows: Awaited<ReturnType<typeof getCustomerEventRegistrations>>["active"],
@@ -49,6 +53,7 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
       <EventRegistrationTabs
         activeItems={serialize(active)}
         pastItems={serialize(past)}
+        turnstileSiteKey={turnstileSiteKey}
       />
     </Stack>
   );
