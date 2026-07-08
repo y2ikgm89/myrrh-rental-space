@@ -8,17 +8,58 @@ const { basePrisma } = await import("@/shared/db/prisma");
 const { claimReservationForCustomer } =
   await import("@/shared/domain/reservations/claim-commands");
 
+// CI の test-db はシードデータを持たない（マイグレーションのみ）ため、
+// prisma.space.findFirstOrThrow() のような既存レコード依存は空振りする
+// （ローカル永続コンテナでは他テストの残留行でたまたま通っていた）。
+// space-overlap-concurrency.test.ts 等と同型の自己完結 fixture に揃える。
+//
+// sortOrder は Location に一意制約があるため、固定値からの単純インクリメントは
+// このファイルを同一の永続 test-db コンテナに対して2回以上実行すると衝突する
+// （CI は毎回クリーンな DB のため実害は無いが、ローカル反復実行の堅牢性のため
+// slug/name 同様ランダム値にする）。
+function randomSortOrder(): number {
+  // Postgres integer (32bit有符号)の範囲内に収める（1,500,000,000 〜 1,999,999,999）。
+  return Math.floor(Math.random() * 500_000_000) + 1_500_000_000;
+}
+
 async function createGuestReservationWithCustomer() {
+  const suffix = crypto.randomUUID();
+
+  const location = await prisma.location.create({
+    data: {
+      slug: `claim-loc-${suffix}`,
+      name: `Claim Loc ${suffix}`,
+      address: "東京都テスト区1-2-3",
+      imageUrl: "https://example.com/loc.jpg",
+      sortOrder: randomSortOrder(),
+    },
+    select: { id: true },
+  });
+
+  const space = await prisma.space.create({
+    data: {
+      slug: `claim-space-${suffix}`,
+      name: `Claim Space ${suffix}`,
+      descriptionJson: { type: "doc" },
+      descriptionHtml: "<p>test</p>",
+      descriptionPlainText: "test",
+      capacity: 10,
+      hourlyPrice: 1000,
+      mainImageUrl: "https://example.com/space.jpg",
+      locationId: location.id,
+    },
+    select: { id: true },
+  });
+
   const guestCustomer = await prisma.customer.create({
     data: {
-      email: "guest@example.com",
-      emailCanonical: "guest@example.com",
+      email: `guest-${suffix}@example.com`,
+      emailCanonical: `guest-${suffix}@example.com`,
       lastName: "ゲスト",
       firstName: "太郎",
       userId: null,
     },
   });
-  const space = await prisma.space.findFirstOrThrow();
   const reservation = await prisma.reservation.create({
     data: {
       spaceId: space.id,
@@ -28,7 +69,7 @@ async function createGuestReservationWithCustomer() {
       totalPrice: 1000,
       guestLastName: "ゲスト",
       guestFirstName: "太郎",
-      guestEmail: "guest@example.com",
+      guestEmail: `guest-${suffix}@example.com`,
     },
   });
   return { guestCustomer, reservation };
