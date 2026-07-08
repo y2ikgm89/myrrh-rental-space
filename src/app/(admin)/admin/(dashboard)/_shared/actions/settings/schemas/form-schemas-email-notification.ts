@@ -27,6 +27,9 @@ export const emailFormSchema = z.object({
     ])
     .optional(),
   sendReservationConfirmationEmail: switchBoolean(),
+  // イベント前日リマインダー。参加者全員へ一斉送信されメール量が増えやすいため
+  // schema 側の @default(false) と揃えて既定 OFF（opt-in）。
+  notifyEventReminder: switchBoolean(),
   // 通知先スタッフ（User.id 配列）。チェックボックス群を conform が配列に集約する。
   notificationStaffIds: z
     .array(z.string())

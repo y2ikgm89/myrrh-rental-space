@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { EventAdminNotificationEmail } from "@/shared/emails/event-admin-notification";
 import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled-notification";
+import { EventReminderEmail } from "@/shared/emails/event-reminder";
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
@@ -164,6 +165,104 @@ export async function sendEventRegistrationConfirmation(
     context: {
       registrationId: data.registrationId,
       customerEmail,
+    },
+  });
+}
+
+type EventReminderEmailData = {
+  registrationId: string;
+  customerName: string;
+  customerEmail: string;
+  eventTitle: string;
+  eventStartTime: Date;
+  eventEndTime: Date;
+  location: string | undefined;
+  quantity: number;
+  icsSequence: number;
+};
+
+/**
+ * イベント前日リマインダーメールを送信（REQUEST ICS 添付）
+ *
+ * cron から申込単位でループ呼び出しされる想定（reservation-reminder と対称）。
+ * 送信可否（Settings.notifyEventReminder）は呼び出し側の cron ルートで判定する。
+ */
+export async function sendEventReminderEmail(
+  data: EventReminderEmailData,
+): Promise<EmailResult> {
+  const eventDate = format(data.eventStartTime, "yyyy年M月d日 (EEEE)", {
+    locale: ja,
+  });
+  const startTime = format(data.eventStartTime, "HH:mm", { locale: ja });
+  const endTime = format(data.eventEndTime, "HH:mm", { locale: ja });
+
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
+  const host = getAppHost();
+
+  const calendarParams = omitUndefined({
+    registrationId: data.registrationId,
+    eventTitle: data.eventTitle,
+    customerName: data.customerName,
+    startTime: data.eventStartTime,
+    endTime: data.eventEndTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    quantity: data.quantity,
+    sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
+  });
+
+  let attachments: { filename: string; content: Buffer }[] | undefined;
+  if (calendarSettings.icalAttachmentEnabled) {
+    try {
+      attachments = [
+        {
+          filename: `event-${data.registrationId.slice(0, 8)}.ics`,
+          content: Buffer.from(
+            buildEventCalendar(calendarParams, host),
+            "utf-8",
+          ),
+        },
+      ];
+    } catch (icalError) {
+      logError(normalizeError(icalError), {
+        category: ErrorCategory.UNKNOWN,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "generateEventReminderICalAttachment",
+          registrationId: data.registrationId,
+        },
+      });
+    }
+  }
+
+  return sendEmail({
+    payload: omitUndefined({
+      to: data.customerEmail,
+      subject: `【イベント前日リマインダー】${data.eventTitle} - ${eventDate}`,
+      react: EventReminderEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          eventTitle: data.eventTitle,
+          eventDate,
+          startTime,
+          endTime,
+          location: data.location,
+          quantity: data.quantity,
+          footer,
+        }),
+      ),
+      attachments,
+    }),
+    idempotencyKey: `event-reminder/${data.registrationId}`,
+    operation: "sendEventReminderEmail",
+    context: {
+      registrationId: data.registrationId,
+      customerEmail: data.customerEmail,
     },
   });
 }

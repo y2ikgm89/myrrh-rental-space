@@ -1147,6 +1147,11 @@ model Settings {
   notificationStaffIds       String[] @default([])
   notificationEmailAddresses String[] @default([])
 
+  // Customer Reminder Settings（参加者向けリマインダーメールのトグル）
+  // 上記の管理者通知トグルとは対象読者が異なる。イベント前日リマインダーは
+  // 参加者全員へ一斉送信されるため送信数が増えやすく、既定は無効（opt-in）にする。
+  notifyEventReminder Boolean @default(false)
+
   // Other Settings
   // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、
   // html lang は layout が "ja" を固定使用しており、設定値は保存経路も consumer も無かった。
@@ -1765,6 +1770,10 @@ model EventRegistration {
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
+
+  // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
+  // Reservation.reminderSentAt と同型の atomic claim パターンで二重送信を防ぐ。
+  reminderSentAt DateTime?
 
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)

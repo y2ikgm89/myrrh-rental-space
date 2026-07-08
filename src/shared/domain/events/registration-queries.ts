@@ -289,6 +289,46 @@ export async function getCustomerEventRegistrations(
  * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
  *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
  */
+/**
+ * イベント前日リマインダー cron 用: 指定日時窓内の CONFIRMED 申込を取得。
+ *
+ * `reminderSentAt: null` でリマインダー未送信のみに絞る（冪等性の第一段 dedup）。
+ * 二重送信レースは送信前の atomic claim（claimEventRegistrationReminder）で防ぐ。
+ * walk-in（email=null）は宛先が無いため除外する。
+ */
+export async function findEventRegistrationsForReminderWindow(
+  startOfWindow: Date,
+  endOfWindow: Date,
+) {
+  return prisma.eventRegistration.findMany({
+    where: {
+      status: RegistrationStatus.CONFIRMED,
+      reminderSentAt: null,
+      email: { not: null },
+      event: { deletedAt: null },
+      slot: { startAt: { gte: startOfWindow, lte: endOfWindow } },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      quantity: true,
+      icsSequence: true,
+      slot: {
+        select: { startAt: true, endAt: true },
+      },
+      event: {
+        select: {
+          title: true,
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
+        },
+      },
+    },
+  });
+}
+
 export async function getEventRegistrationForCalendar(params: {
   registrationId: string;
   customerId?: string | undefined;

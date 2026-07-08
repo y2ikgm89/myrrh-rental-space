@@ -60,6 +60,7 @@ JOBS=(
   "instagram-sync|*/30 * * * *|/api/cron/instagram-sync|Instagram feed sync (every 30 min)"
   "notification-cleanup|0 4 * * *|/api/cron/notification-cleanup|Old notification cleanup 30d+ (daily 04:00 JST)"
   "reservation-reminder|0 * * * *|/api/cron/reservation-reminder|Reservation reminder email dispatch (hourly)"
+  "event-reminder|0 * * * *|/api/cron/event-reminder|Event reminder email dispatch (hourly, opt-in via Settings.notifyEventReminder)"
 )
 
 # --- ヘルパー ---------------------------------------------------------------
