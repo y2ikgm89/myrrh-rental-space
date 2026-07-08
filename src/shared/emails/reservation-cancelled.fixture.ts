@@ -8,5 +8,7 @@ export const reservationCancelledFixture = {
   startTime: "13:00",
   endTime: "17:00",
   reservationId: "0123ABCD",
+  memberReservationUrl:
+    "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof ReservationCancelledEmail>[0];

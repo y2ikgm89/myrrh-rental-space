@@ -55,8 +55,10 @@ import type {
 /**
  * 予約 ID から、会員向けマイページの予約詳細 URL を組み立てる。
  * userId が無い（ゲスト予約）場合は undefined を返す。
+ *
+ * reminder-emails.ts / review-emails.ts からも参照される SSoT のため export する。
  */
-function buildMemberReservationUrl(
+export function buildMemberReservationUrl(
   userId: string | null | undefined,
   reservationId: string,
 ): string | undefined {
@@ -349,6 +351,11 @@ export async function sendReservationCancelledEmail(
   ]);
   const host = getAppHost();
 
+  const memberReservationUrl = buildMemberReservationUrl(
+    data.userId,
+    data.reservationId,
+  );
+
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
     spaceName: data.spaceName,
@@ -390,15 +397,18 @@ export async function sendReservationCancelledEmail(
     payload: omitUndefined({
       to: data.customerEmail,
       subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
-      react: ReservationCancelledEmail({
-        customerName: data.customerName,
-        spaceName: data.spaceName,
-        reservationDate,
-        startTime,
-        endTime,
-        reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-        footer,
-      }),
+      react: ReservationCancelledEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          spaceName: data.spaceName,
+          reservationDate,
+          startTime,
+          endTime,
+          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+          memberReservationUrl,
+          footer,
+        }),
+      ),
       attachments,
     }),
     idempotencyKey: `reservation-cancel/${data.reservationId}`,
