@@ -215,7 +215,6 @@ export async function createWalkInRegistration(
           title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
           message: `${data.name}様が当日参加で受付されました`,
           resourceType: "event",
-          resourceId: data.eventId,
         }),
         {
           operation: "createWalkInRegistrationNotification",
