@@ -121,6 +121,7 @@ function toSettingsData(
     notifyNewInquiry: settings.notifyNewInquiry,
     notifyEventRegistration: settings.notifyEventRegistration,
     notifyEventCancellation: settings.notifyEventCancellation,
+    notifyEventReminder: settings.notifyEventReminder,
     notificationStaffIds: settings.notificationStaffIds,
     notificationEmailAddresses: settings.notificationEmailAddresses,
     taxStandardRate: settings.taxStandardRate,

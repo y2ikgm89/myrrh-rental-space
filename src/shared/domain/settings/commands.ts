@@ -88,6 +88,7 @@ export type EmailSettingsInput = {
   senderName: string | null;
   replyToEmail: string | null;
   sendReservationConfirmationEmail: boolean;
+  notifyEventReminder: boolean;
   notificationStaffIds: string[];
   notificationEmailAddresses: string[];
 };

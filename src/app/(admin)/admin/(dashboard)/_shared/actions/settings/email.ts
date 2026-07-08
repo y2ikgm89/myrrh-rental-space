@@ -63,6 +63,7 @@ export async function updateEmailSettings(
           replyToEmail: emptyToNull(data.replyToEmail),
           sendReservationConfirmationEmail:
             data.sendReservationConfirmationEmail,
+          notifyEventReminder: data.notifyEventReminder,
           notificationStaffIds: data.notificationStaffIds,
           notificationEmailAddresses: data.notificationEmailAddresses,
         });
