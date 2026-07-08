@@ -170,7 +170,6 @@ export async function registerForEvent(
               NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
             message: `${result.registration.name}様が「${result.event.title}」に申し込みました`,
             resourceType: "event",
-            resourceId: result.registration.eventId,
           }),
           {
             operation: "createEventRegistrationNotification",
