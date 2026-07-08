@@ -247,6 +247,15 @@ describe("Event gallery round-trip", () => {
       locationId: null,
       spaceId: null,
       addressDetail: null,
+      // updateEventCommand の slotChanged 判定が existing.slots を参照するため必須
+      slots: [
+        {
+          id: "slot-old-1",
+          startAt: new Date("2026-07-01T01:00:00.000Z"),
+          endAt: new Date("2026-07-01T03:00:00.000Z"),
+          capacity: 10,
+        },
+      ],
     });
 
     await updateEventCommand("evt-id", BASE_INPUT);

@@ -384,18 +384,17 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     );
   });
 
-  // スロット変更は sendEventUpdatedToAllParticipants で通知
+  // スロット変更は sendEventUpdatedToAllParticipants で通知。
+  // 参加者ごとに「自分が申し込んだスロットの変更前日時」を正しく表示できるよう、
+  // 全スロットの変更前 startAt を id 付きで渡す（単一の代表値を全員に使い回さない）。
   if ((slotChanged || venueChanged) && data.status === EventStatus.PUBLISHED) {
-    fireAndForget(
-      sendEventUpdatedToAllParticipants(
-        id,
-        existing.slots[0]?.startAt ?? new Date(),
-      ),
-      {
-        operation: "sendEventUpdatedToAllParticipants",
-        category: ErrorCategory.EXTERNAL_API,
-      },
+    const oldSlotStartTimes = new Map(
+      existing.slots.map((slot) => [slot.id, slot.startAt]),
     );
+    fireAndForget(sendEventUpdatedToAllParticipants(id, oldSlotStartTimes), {
+      operation: "sendEventUpdatedToAllParticipants",
+      category: ErrorCategory.EXTERNAL_API,
+    });
   }
 }
 
