@@ -77,16 +77,24 @@ const mockGetReservationDeadlineSettings = mock<
 type ClaimUrlProps = {
   claimUrl?: string;
   memberReservationUrl?: string;
+  cancellationPolicyUrl?: string;
 };
 const mockReservationConfirmationEmail = mock((props: ClaimUrlProps) => props);
 const mockReservationReminderEmail = mock((props: ClaimUrlProps) => props);
 const mockReservationCancelledEmail = mock((props: ClaimUrlProps) => props);
+
+const mockGetPublishedTermsByType = mock<
+  () => Promise<{ slug: string; title: string } | null>
+>(() => Promise.resolve(null));
 
 mock.module("@/shared/lib/email/send", () => ({ sendEmail: mockSendEmail }));
 mock.module("@/shared/domain/settings/queries/notification", () => ({
   getEmailDeliverySettings: mockGetEmailDeliverySettings,
   getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
   getCalendarEmailSettings: mockGetCalendarEmailSettings,
+}));
+mock.module("@/shared/domain/terms/queries", () => ({
+  getPublishedTermsByType: mockGetPublishedTermsByType,
 }));
 mock.module("@/shared/domain/settings/queries/organization", () => ({
   getIcalOrganizer: mockGetIcalOrganizer,
@@ -115,10 +123,15 @@ mock.module("@/shared/emails/reservation-reminder", () => ({
 mock.module("@/shared/emails/reservation-cancelled", () => ({
   ReservationCancelledEmail: mockReservationCancelledEmail,
 }));
+const mockReservationUpdatedEmail = mock((props: ClaimUrlProps) => props);
+mock.module("@/shared/emails/reservation-updated", () => ({
+  ReservationUpdatedEmail: mockReservationUpdatedEmail,
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendReservationConfirmationEmail,
+  sendReservationUpdatedEmail,
   sendReservationCancelledEmail,
 } from "@/shared/lib/email/reservation-emails";
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
@@ -152,6 +165,7 @@ const REMINDER_DATA: ReminderEmailData = {
 
 const CLAIM_URL_PATTERN = /\/claim\/reservation\?token=[A-Za-z0-9_-]+$/;
 const MEMBER_URL_PATTERN = /\/mypage\/reservations\/reservation-abcdef12$/;
+const CANCELLATION_POLICY_URL_PATTERN = /\/terms\/cancellation-policy$/;
 
 beforeEach(() => {
   mockSendEmail.mockReset();
@@ -163,6 +177,12 @@ beforeEach(() => {
   mockReservationConfirmationEmail.mockClear();
   mockReservationReminderEmail.mockClear();
   mockReservationCancelledEmail.mockClear();
+  mockReservationUpdatedEmail.mockClear();
+  mockGetPublishedTermsByType.mockReset();
+  mockGetPublishedTermsByType.mockResolvedValue({
+    slug: "cancellation-policy",
+    title: "キャンセルポリシー",
+  });
 });
 
 describe("sendReservationConfirmationEmail() の claimUrl 出し分け", () => {
@@ -228,5 +248,61 @@ describe("sendReservationCancelledEmail() の memberReservationUrl 出し分け"
 
     const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberReservationUrl).toBeUndefined();
+  });
+});
+
+describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポリシー文書の有無）", () => {
+  test("sendReservationConfirmationEmail: 文書が公開中なら cancellationPolicyUrl を発行する", async () => {
+    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationPolicyUrl).toMatch(
+      CANCELLATION_POLICY_URL_PATTERN,
+    );
+  });
+
+  test("sendReservationConfirmationEmail: 文書が無ければ cancellationPolicyUrl を発行しない", async () => {
+    mockGetPublishedTermsByType.mockResolvedValueOnce(null);
+
+    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationPolicyUrl).toBeUndefined();
+  });
+
+  test("sendReservationUpdatedEmail: 文書が公開中なら cancellationPolicyUrl を発行する", async () => {
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationUpdatedEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationPolicyUrl).toMatch(
+      CANCELLATION_POLICY_URL_PATTERN,
+    );
+  });
+
+  test("sendReservationUpdatedEmail: 文書が無ければ cancellationPolicyUrl を発行しない", async () => {
+    mockGetPublishedTermsByType.mockResolvedValueOnce(null);
+
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationUpdatedEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationPolicyUrl).toBeUndefined();
+  });
+
+  test("sendReservationCancelledEmail: 文書が公開中なら cancellationPolicyUrl を発行する", async () => {
+    await sendReservationCancelledEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationPolicyUrl).toMatch(
+      CANCELLATION_POLICY_URL_PATTERN,
+    );
+  });
+
+  test("sendReservationCancelledEmail: 文書が無ければ cancellationPolicyUrl を発行しない", async () => {
+    mockGetPublishedTermsByType.mockResolvedValueOnce(null);
+
+    await sendReservationCancelledEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationPolicyUrl).toBeUndefined();
   });
 });

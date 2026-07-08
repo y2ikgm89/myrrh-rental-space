@@ -34,6 +34,8 @@ type Props = {
   claimUrl?: string;
   /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
   cancellationDeadlineHours?: number;
+  /** 公開中のキャンセルポリシー規約 URL。無ければ本文はプレーンテキストにフォールバックする */
+  cancellationPolicyUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -51,6 +53,7 @@ export function ReservationConfirmationEmail({
   memberReservationUrl,
   claimUrl,
   cancellationDeadlineHours,
+  cancellationPolicyUrl,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -191,7 +194,18 @@ export function ReservationConfirmationEmail({
           ご予約のキャンセル・変更は、予約開始時刻の{" "}
           <strong>{cancellationDeadlineHours} 時間前まで</strong>
           にお手続きください。期限を過ぎたお取消しはキャンセル料の対象となる場合が
-          ございます。詳しくはキャンセルポリシーをご確認ください。
+          ございます。詳しくは
+          {cancellationPolicyUrl ? (
+            <Link
+              href={cancellationPolicyUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              キャンセルポリシー
+            </Link>
+          ) : (
+            "キャンセルポリシー"
+          )}
+          をご確認ください。
         </Text>
       )}
 

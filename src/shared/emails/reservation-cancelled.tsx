@@ -21,6 +21,8 @@ type Props = {
   reservationId: string;
   /** 会員向け: ログイン後の予約詳細ページ URL（マイページから履歴確認が可能） */
   memberReservationUrl?: string;
+  /** 公開中のキャンセルポリシー規約 URL。無ければ本文はプレーンテキストにフォールバックする */
+  cancellationPolicyUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -32,6 +34,7 @@ export function ReservationCancelledEmail({
   endTime,
   reservationId,
   memberReservationUrl,
+  cancellationPolicyUrl,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -87,8 +90,18 @@ export function ReservationCancelledEmail({
       <Hr style={hr} />
 
       <Text style={text}>
-        キャンセル料金や払い戻し条件については、当サービスのキャンセルポリシーを
-        ご確認ください。ご不明な点がございましたら、お気軽にお問い合わせください。
+        キャンセル料金や払い戻し条件については、当サービスの
+        {cancellationPolicyUrl ? (
+          <Link
+            href={cancellationPolicyUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            キャンセルポリシー
+          </Link>
+        ) : (
+          "キャンセルポリシー"
+        )}
+        をご確認ください。ご不明な点がございましたら、お気軽にお問い合わせください。
       </Text>
 
       <Text style={text}>またのご利用を心よりお待ちしております。</Text>
