@@ -87,26 +87,33 @@ mock.module(
   }),
 );
 
+const mockGetEventRegistrationForGuestCancel = mock(() =>
+  Promise.resolve({
+    id: VALID_ID,
+    customerId: null as string | null,
+    status: "CONFIRMED",
+    quantity: 2,
+    name: "山田太郎",
+    event: { title: "夏祭り" },
+    slot: { startAt: new Date(), endAt: new Date() },
+  }),
+);
 mock.module("@/shared/domain/events/registration-queries", () => ({
-  getEventRegistrationForGuestCancel: mock(() =>
-    Promise.resolve({
-      id: VALID_ID,
-      customerId: "cust-001",
-      status: "CONFIRMED",
-      quantity: 2,
-      name: "山田太郎",
-      event: { title: "夏祭り" },
-      slot: { startAt: new Date(), endAt: new Date() },
-    }),
-  ),
+  getEventRegistrationForGuestCancel: mockGetEventRegistrationForGuestCancel,
 }));
 
+const mockGetCustomerByUserId = mock<
+  (userId: string) => Promise<{ id: string } | null>
+>(() => Promise.resolve(null));
 mock.module("@/shared/domain/customers/queries", () => ({
-  getCustomerByUserId: mock(() => Promise.resolve(null)),
+  getCustomerByUserId: mockGetCustomerByUserId,
 }));
 
+const mockGetCustomerSession = mock<
+  () => Promise<{ user: { id: string } } | null>
+>(() => Promise.resolve(null));
 mock.module("@/shared/lib/customer-auth", () => ({
-  getCustomerSession: mock(() => Promise.resolve(null)),
+  getCustomerSession: mockGetCustomerSession,
 }));
 
 mock.module("@/shared/lib/cache/event-cache", () => ({
@@ -144,6 +151,20 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
     mockPerRegistrationCheck.mockReset();
     mockApplySideEffects.mockReset();
     mockCookieGet.mockReset();
+    mockGetEventRegistrationForGuestCancel.mockReset();
+    mockGetCustomerByUserId.mockReset();
+    mockGetCustomerSession.mockReset();
+    mockGetEventRegistrationForGuestCancel.mockResolvedValue({
+      id: VALID_ID,
+      customerId: null,
+      status: "CONFIRMED",
+      quantity: 2,
+      name: "山田太郎",
+      event: { title: "夏祭り" },
+      slot: { startAt: new Date(), endAt: new Date() },
+    });
+    mockGetCustomerByUserId.mockResolvedValue(null);
+    mockGetCustomerSession.mockResolvedValue(null);
     mockCheckActionRateLimit.mockResolvedValue({ success: true });
     mockValidateTurnstile.mockResolvedValue({ success: true });
     mockVerifyCancelToken.mockReturnValue({
@@ -256,6 +277,45 @@ describe("cancelGuestEventRegistrationAction (cookie 経路)", () => {
     expect(result).toHaveProperty(
       "error",
       "表示中のページが最新ではありません。ページを再読み込みしてから再度お試しください",
+    );
+    expect(mockCancelByToken).not.toHaveBeenCalled();
+  });
+
+  test("ログイン中でも未claim（customerId が null）のゲスト申込はトークンで通常通りキャンセルできる", async () => {
+    mockGetCustomerSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockGetCustomerByUserId.mockResolvedValue({ id: "cust-logged-in" });
+    mockGetEventRegistrationForGuestCancel.mockResolvedValue({
+      id: VALID_ID,
+      customerId: null,
+      status: "CONFIRMED",
+      quantity: 2,
+      name: "山田太郎",
+      event: { title: "夏祭り" },
+      slot: { startAt: new Date(), endAt: new Date() },
+    });
+    const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
+    expect(result).toBeNull();
+    expect(mockCancelByToken).toHaveBeenCalledWith(VALID_ID);
+  });
+
+  test("ログイン中に customerId が別会員の claim 済み申込へアクセスするとエラー", async () => {
+    mockGetCustomerSession.mockResolvedValue({ user: { id: "user-1" } });
+    mockGetCustomerByUserId.mockResolvedValue({ id: "cust-logged-in" });
+    mockGetEventRegistrationForGuestCancel.mockResolvedValue({
+      id: VALID_ID,
+      customerId: "cust-someone-else",
+      status: "CONFIRMED",
+      quantity: 2,
+      name: "山田太郎",
+      event: { title: "夏祭り" },
+      slot: { startAt: new Date(), endAt: new Date() },
+    });
+    const { cancelGuestEventRegistrationAction } = await import(IMPORT_PATH);
+    const result = await cancelGuestEventRegistrationAction(VALID_ID, "ts");
+    expect(result).toHaveProperty(
+      "error",
+      "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
     );
     expect(mockCancelByToken).not.toHaveBeenCalled();
   });

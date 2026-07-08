@@ -162,8 +162,17 @@ export async function cancelGuestEventRegistrationAction(
     );
   }
 
-  // 6. member-ownership ガード: ログイン中ユーザーが「別人の申込」をキャンセル
-  //    しようとしている場合は拒否。ゲスト本人（session 無し）はそのまま通す。
+  // 6. member-ownership ガード: ログイン中ユーザーが「別人（既に会員紐付け済み）の
+  //    申込」をキャンセルしようとしている場合は拒否。ゲスト本人（session 無し）は
+  //    そのまま通す。
+  //
+  //    EventRegistration.customerId は nullable（未 claim のゲスト申込は null）。
+  //    Reservation.customerId は非 null（ゲスト予約でも ad-hoc customer が必ず
+  //    紐付く）ため同じガードで問題ないが、イベントでは null のままトークンだけが
+  //    本人性の証明になっているケースがあるため、`registration.customerId` が
+  //    null の間はこのガードを適用しない（さもないと、申込者本人がメール受信後に
+  //    別件で会員登録済みだった場合、正規のトークンリンクなのに「別のお客様」誤判定
+  //    でキャンセルできなくなる）。
   const session = await getCustomerSession();
   const sessionUserId = session?.user.id ?? null;
   if (sessionUserId) {
@@ -174,7 +183,11 @@ export async function cancelGuestEventRegistrationAction(
       return createMutationError("申込が見つかりません");
     }
     const customer = await getCustomerByUserId(sessionUserId);
-    if (customer && customer.id !== registration.customerId) {
+    if (
+      customer &&
+      registration.customerId !== null &&
+      customer.id !== registration.customerId
+    ) {
       return createMutationError(
         "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
       );
