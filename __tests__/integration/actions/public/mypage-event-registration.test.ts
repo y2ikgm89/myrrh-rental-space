@@ -148,7 +148,9 @@ mock.module("@/shared/lib/terms-consent-gate", () => ({
 // テストデータ
 // =============================================================================
 
-const VALID_REGISTRATION_ID = "550e8400-e29b-41d4-a716-446655440000";
+// EventRegistration.id は Prisma cuid（@db.VarChar(30)）であり UUID ではない
+// （prisma/schema.prisma の EventRegistration モデル参照）
+const VALID_REGISTRATION_ID = "cm60x9k3p0000qzrm8f3a1b2c";
 const IMPORT_PATH = "@/app/(public)/_shared/actions/event-registration";
 
 // =============================================================================
@@ -267,13 +269,22 @@ describe("cancelEventRegistration", () => {
   });
 
   describe("異常系: 不正な申込 ID", () => {
-    test("UUID 形式でない申込 ID のとき MutationError を返す", async () => {
+    test("cuid 形式でない申込 ID のとき MutationError を返す", async () => {
       const { cancelEventRegistration } = await import(IMPORT_PATH);
 
       const result = await cancelEventRegistration(
-        "not-a-uuid",
+        "550e8400-e29b-41d4-a716-446655440000",
         "turnstile-token",
       );
+
+      expectErrorResult(result);
+      expect(result.error).toBe("申込IDが不正です");
+    });
+
+    test("空文字の申込 ID のとき MutationError を返す", async () => {
+      const { cancelEventRegistration } = await import(IMPORT_PATH);
+
+      const result = await cancelEventRegistration("", "turnstile-token");
 
       expectErrorResult(result);
       expect(result.error).toBe("申込IDが不正です");
