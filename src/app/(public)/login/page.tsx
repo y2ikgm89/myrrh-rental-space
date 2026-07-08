@@ -18,6 +18,19 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/**
+ * `redirect` クエリパラメータが同一オリジン内の相対パスであることを確認する。
+ * open redirect 防止のため `//`（protocol-relative）や `scheme://` を含む値は拒否する。
+ */
+function isSafeInternalRedirect(path: string | null): path is string {
+  return (
+    path !== null &&
+    path.startsWith("/") &&
+    !path.startsWith("//") &&
+    !path.includes("://")
+  );
+}
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -36,6 +49,11 @@ export default async function LoginPage({
   const params = await searchParams;
   const errorType =
     typeof params["error"] === "string" ? params["error"] : null;
+  const rawRedirect =
+    typeof params["redirect"] === "string" ? params["redirect"] : null;
+  const callbackURL = isSafeInternalRedirect(rawRedirect)
+    ? rawRedirect
+    : undefined;
 
   const ERROR_MESSAGES: Record<string, string> = {
     account_suspended:
@@ -69,6 +87,7 @@ export default async function LoginPage({
               title: t.title,
             }))}
             turnstileSiteKey={turnstileSiteKey}
+            {...(callbackURL !== undefined ? { callbackURL } : {})}
           />
           {(process.env["NODE_ENV"] !== "production" ||
             isCustomerE2ELoginEnabled()) && <DevLoginButton />}
