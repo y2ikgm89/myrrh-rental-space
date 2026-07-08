@@ -560,10 +560,15 @@ export async function sendEventCancelledToAllParticipants(
 
 /**
  * イベント内容変更時に全参加者へ通知メールを送信（REQUEST ICS 添付）
+ *
+ * `oldSlotStartTimes` は変更前の `EventTimeSlot.id -> startAt` の対応表。
+ * TIMED_ENTRY イベントで複数スロットが存在する場合、各参加者には自分が
+ * 申し込んだスロットの「変更前の日時」を表示する必要があるため、単一の
+ * 代表値（例: 最初のスロット）を全員に使い回さずスロット単位で解決する。
  */
 export async function sendEventUpdatedToAllParticipants(
   eventId: string,
-  oldStartTime: Date,
+  oldSlotStartTimes: ReadonlyMap<string, Date>,
 ): Promise<void> {
   const event = await prisma.event.findFirst({
     where: { id: eventId, deletedAt: null },
@@ -581,6 +586,7 @@ export async function sendEventUpdatedToAllParticipants(
           email: true,
           quantity: true,
           icsSequence: true,
+          slotId: true,
           slot: {
             select: { startAt: true, endAt: true },
           },
@@ -597,10 +603,6 @@ export async function sendEventUpdatedToAllParticipants(
     addressDetail: event.addressDetail,
   });
 
-  const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
-    locale: ja,
-  });
-  const oldStartTimestamp = oldStartTime.getTime();
   // 同一 oldStartTime のまま他のフィールド (タイトル/場所/etc.) のみ更新されても
   // idempotency key を分離するため event.updatedAt も混ぜる。event-cancelled と対称。
   const eventUpdatedAt = event.updatedAt.getTime();
@@ -621,6 +623,14 @@ export async function sendEventUpdatedToAllParticipants(
     recipients.map((registration) => {
       const newStartTime = registration.slot.startAt;
       const newEndTimeDate = registration.slot.endAt;
+      // 申込済みスロットは削除できない不変条件（syncEventTimeSlotsCommand）により
+      // 必ず変更前の対応表に存在するはずだが、念のため新値へのフォールバックを備える。
+      const oldStartTime =
+        oldSlotStartTimes.get(registration.slotId) ?? newStartTime;
+      const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
+        locale: ja,
+      });
+      const oldStartTimestamp = oldStartTime.getTime();
       const newEventDate = format(newStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
         locale: ja,
       });
@@ -668,7 +678,7 @@ export async function sendEventUpdatedToAllParticipants(
           }),
           attachments,
         }),
-        idempotencyKey: `event-updated/${eventId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
+        idempotencyKey: `event-updated/${eventId}/${registration.slotId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
         operation: "sendEventUpdatedToAllParticipants",
         context: {
           eventId,
