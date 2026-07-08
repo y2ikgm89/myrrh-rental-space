@@ -86,6 +86,8 @@ export async function ReservationFormSection({
 
   const customer = user ? await getCustomerByUserId(user.id) : null;
 
+  const isLoggedIn = user != null;
+
   const prefillData = customer
     ? {
         lastName:
@@ -152,6 +154,7 @@ export async function ReservationFormSection({
           prefillData={prefillData}
           initialSpaceId={initialSpaceId}
           requiredTerms={requiredTerms}
+          isLoggedIn={isLoggedIn}
         />
       </div>
     </SectionWrapper>
