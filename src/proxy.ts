@@ -235,11 +235,76 @@ function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
   return response;
 }
 
+/**
+ * 予約 / イベント参加申込の claim URL `?token=…` を HttpOnly cookie に転写し
+ * `?token` を URL から除去する。理由・トークン形式検証方針はゲストキャンセル token
+ * 転写（`handleGuestCancelTokenTransfer`）と同一。
+ *
+ * `sameSite` のみ意図的に異なる値（`"lax"`）を使う: この claim トークンは
+ * Google/LINE への外部リダイレクト（OAuth）を経由して戻ってくる。SameSite=Strict の
+ * cookie は「他サイトからの top-level navigation」では送信されないため、OAuth
+ * コールバックで戻ってきた際に cookie が消えて claim が失敗する。SameSite=Lax は
+ * top-level GET navigation では送信されるため、この往復を生き残る。ゲストキャンセルは
+ * 外部サイトを経由しないため既存の `strict` のままで問題ない（変更しない）。
+ */
+const CLAIM_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
+// OAuth 往復（Google/LINE への外部リダイレクトを経由して戻る）を生き越えるため 60 分。
+// cancel-token（サイト外遷移が無い）より長めに取っている。
+const CLAIM_TOKEN_COOKIE_MAX_AGE = 60 * 60; // 60 分
+export const RESERVATION_CLAIM_TOKEN_COOKIE_NAME = "reservation-claim-token";
+export const EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME =
+  "event-registration-claim-token";
+
+function handleClaimTokenTransfer(
+  req: NextRequest,
+  pathname: string,
+  cookieName: string,
+): NextResponse | null {
+  const { searchParams } = req.nextUrl;
+  if (req.nextUrl.pathname !== pathname) return null;
+  const token = searchParams.get("token");
+  if (!token) return null;
+
+  const cleanUrl = new URL(req.url);
+  cleanUrl.searchParams.delete("token");
+  const response = NextResponse.redirect(cleanUrl);
+
+  if (CLAIM_TOKEN_PATTERN.test(token)) {
+    response.cookies.set({
+      name: cookieName,
+      value: token,
+      httpOnly: true,
+      // OAuth コールバックは他サイト(Google/LINE)からの top-level navigation で
+      // 戻ってくるため、SameSite=Strict だと cookie が送信されず claim が失敗する。
+      // Lax は top-level GET navigation では送信されるため往復を生き残る。
+      sameSite: "lax",
+      secure: !isLocalhostRequest(req),
+      path: "/",
+      maxAge: CLAIM_TOKEN_COOKIE_MAX_AGE,
+    });
+  }
+  return response;
+}
+
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
   const cancelTransfer = handleGuestCancelTokenTransfer(req);
   if (cancelTransfer) return cancelTransfer;
+
+  const reservationClaimTransfer = handleClaimTokenTransfer(
+    req,
+    "/claim/reservation",
+    RESERVATION_CLAIM_TOKEN_COOKIE_NAME,
+  );
+  if (reservationClaimTransfer) return reservationClaimTransfer;
+
+  const eventRegistrationClaimTransfer = handleClaimTokenTransfer(
+    req,
+    "/claim/event-registration",
+    EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
+  );
+  if (eventRegistrationClaimTransfer) return eventRegistrationClaimTransfer;
 
   if (isBlockedOnPublicSurface(pathname)) {
     return new NextResponse(null, { status: 404 });
