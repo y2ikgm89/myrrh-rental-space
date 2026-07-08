@@ -1,15 +1,19 @@
 /**
- * ゲスト予約メール（確認・リマインダー）の claimUrl 出し分けテスト
+ * ゲスト予約メール（確認・リマインダー・キャンセル）の claimUrl /
+ * memberReservationUrl 出し分けテスト
  *
  * sendReservationConfirmationEmail() / sendReservationReminderEmail() は
  * ゲスト予約（userId が null/undefined）のときだけ「マイページに追加」claim
- * リンクを本文に含める。会員予約（userId あり）では claimUrl を持たせない
- * （既にマイページから閲覧できるため不要、`buildMemberReservationUrl` と対称）。
+ * リンクを本文に含め、会員予約（userId あり）のときだけ
+ * memberReservationUrl（マイページ詳細リンク）を本文に含める。
+ * sendReservationCancelledEmail() も同じ memberReservationUrl 出し分けを行う
+ * （こちらは claimUrl を持たない — キャンセル済み予約をゲストがマイページに
+ * 追加する意味が無いため）。
  *
  * このゲートは `data.userId ? undefined : <mint token>` という三項演算子1本で
  * 実装されており、条件を反転する取り違えが起きても型チェック・lint では検出
  * できない。メールテンプレートコンポーネントをモックして実際に渡された props
- * の claimUrl を検証することで、出し分けの向きを固定する回帰テスト。
+ * を検証することで、出し分けの向きを固定する回帰テスト。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
@@ -70,9 +74,13 @@ const mockGetReservationDeadlineSettings = mock<
   }),
 );
 
-type ClaimUrlProps = { claimUrl?: string };
+type ClaimUrlProps = {
+  claimUrl?: string;
+  memberReservationUrl?: string;
+};
 const mockReservationConfirmationEmail = mock((props: ClaimUrlProps) => props);
 const mockReservationReminderEmail = mock((props: ClaimUrlProps) => props);
+const mockReservationCancelledEmail = mock((props: ClaimUrlProps) => props);
 
 mock.module("@/shared/lib/email/send", () => ({ sendEmail: mockSendEmail }));
 mock.module("@/shared/domain/settings/queries/notification", () => ({
@@ -104,9 +112,15 @@ mock.module("@/shared/emails/reservation-confirmation", () => ({
 mock.module("@/shared/emails/reservation-reminder", () => ({
   ReservationReminderEmail: mockReservationReminderEmail,
 }));
+mock.module("@/shared/emails/reservation-cancelled", () => ({
+  ReservationCancelledEmail: mockReservationCancelledEmail,
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
-import { sendReservationConfirmationEmail } from "@/shared/lib/email/reservation-emails";
+import {
+  sendReservationConfirmationEmail,
+  sendReservationCancelledEmail,
+} from "@/shared/lib/email/reservation-emails";
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
 import type {
   ReservationEmailData,
@@ -137,6 +151,7 @@ const REMINDER_DATA: ReminderEmailData = {
 };
 
 const CLAIM_URL_PATTERN = /\/claim\/reservation\?token=[A-Za-z0-9_-]+$/;
+const MEMBER_URL_PATTERN = /\/mypage\/reservations\/reservation-abcdef12$/;
 
 beforeEach(() => {
   mockSendEmail.mockReset();
@@ -147,6 +162,7 @@ beforeEach(() => {
   mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
   mockReservationConfirmationEmail.mockClear();
   mockReservationReminderEmail.mockClear();
+  mockReservationCancelledEmail.mockClear();
 });
 
 describe("sendReservationConfirmationEmail() の claimUrl 出し分け", () => {
@@ -190,5 +206,27 @@ describe("sendReservationReminderEmail() の claimUrl 出し分け", () => {
 
     const props = mockReservationReminderEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toBeUndefined();
+  });
+});
+
+describe("sendReservationCancelledEmail() の memberReservationUrl 出し分け", () => {
+  test("会員予約（userId あり）は memberReservationUrl を発行する", async () => {
+    await sendReservationCancelledEmail({
+      ...CONFIRMATION_DATA,
+      userId: "user-1",
+    });
+
+    const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
+    expect(props?.memberReservationUrl).toMatch(MEMBER_URL_PATTERN);
+  });
+
+  test("ゲスト予約（userId なし）は memberReservationUrl を発行しない", async () => {
+    await sendReservationCancelledEmail({
+      ...CONFIRMATION_DATA,
+      userId: null,
+    });
+
+    const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
+    expect(props?.memberReservationUrl).toBeUndefined();
   });
 });

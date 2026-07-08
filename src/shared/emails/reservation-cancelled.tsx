@@ -1,8 +1,9 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { reservationCancelledFixture } from "./reservation-cancelled.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
+  COLOR,
   SECTION_VARIANT_STYLES,
   detailItem,
   detailsHeading,
@@ -18,6 +19,8 @@ type Props = {
   startTime: string;
   endTime: string;
   reservationId: string;
+  /** 会員向け: ログイン後の予約詳細ページ URL（マイページから履歴確認が可能） */
+  memberReservationUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -28,6 +31,7 @@ export function ReservationCancelledEmail({
   startTime,
   endTime,
   reservationId,
+  memberReservationUrl,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -68,6 +72,17 @@ export function ReservationCancelledEmail({
           <strong>時間:</strong> {startTime} - {endTime}
         </Text>
       </Section>
+
+      {memberReservationUrl && (
+        <Text style={text}>
+          <Link
+            href={memberReservationUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            マイページで予約履歴を確認する
+          </Link>
+        </Text>
+      )}
 
       <Hr style={hr} />
 
