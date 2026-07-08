@@ -90,6 +90,7 @@ const EXISTING_INQUIRY = {
   email: "yamada@example.com",
   subject: "スペース利用について",
   message: "詳しい料金を教えてください。",
+  customer: null,
 };
 
 const VALID_CREATE_INPUT: {
@@ -206,7 +207,23 @@ describe("inquiries/commands", () => {
           email: "yamada@example.com",
           subject: "スペース利用について",
           message: "詳しい料金を教えてください。",
+          customerUserId: null,
         });
+      });
+
+      test("customer.userId が設定されている場合 emailContext.customerUserId に反映される", async () => {
+        mockInquiryFindUnique.mockResolvedValueOnce({
+          ...EXISTING_INQUIRY,
+          customer: { userId: "user-linked-001" },
+        });
+
+        const result = await replyToInquiryCommand(
+          INQUIRY_ID,
+          "詳細についてご案内します。",
+          USER_ID,
+        );
+
+        expect(result.emailContext.customerUserId).toBe("user-linked-001");
       });
 
       test("返信保存時に replyMessage と repliedById が設定される", async () => {

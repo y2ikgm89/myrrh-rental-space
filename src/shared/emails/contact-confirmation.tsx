@@ -1,4 +1,4 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { contactConfirmationFixture } from "./contact-confirmation.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -17,6 +17,8 @@ type Props = {
   name: string;
   subject: string;
   message: string;
+  /** 会員向け: ログイン後のマイページ問い合わせ詳細 URL */
+  memberInquiryUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -24,6 +26,7 @@ export function ContactConfirmationEmail({
   name,
   subject,
   message,
+  memberInquiryUrl,
   footer,
 }: Props) {
   return (
@@ -58,6 +61,17 @@ export function ContactConfirmationEmail({
           {message}
         </Text>
       </Section>
+
+      {memberInquiryUrl && (
+        <Text style={text}>
+          <Link
+            href={memberInquiryUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            マイページでお問い合わせを確認する
+          </Link>
+        </Text>
+      )}
 
       <Hr style={hr} />
 

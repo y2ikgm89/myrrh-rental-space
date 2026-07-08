@@ -109,10 +109,13 @@ export async function submitInquiry(
         updateTag(getCacheTag.customers.detail(customerId));
       }
 
-      fireAndForget(sendContactConfirmationEmail(result.payload), {
-        operation: "sendContactConfirmationEmail",
-        category: ErrorCategory.EXTERNAL_API,
-      });
+      fireAndForget(
+        sendContactConfirmationEmail({ ...result.payload, customerId }),
+        {
+          operation: "sendContactConfirmationEmail",
+          category: ErrorCategory.EXTERNAL_API,
+        },
+      );
       fireAndForget(sendContactAdminNotification(result.payload), {
         operation: "sendContactAdminNotification",
         category: ErrorCategory.EXTERNAL_API,

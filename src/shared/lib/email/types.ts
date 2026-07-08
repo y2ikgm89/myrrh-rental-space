@@ -34,6 +34,12 @@ export type ContactEmailData = {
   email: string;
   subject: string;
   message: string;
+  /**
+   * ログイン中に送信した場合の Customer.id。ゲスト送信なら null/undefined。
+   * マイページ確認リンクの出し分けに使う（送信時点のセッション由来のみを信頼し、
+   * 事後に resolveOrCreateGuestInquiryCustomer が発行するゲスト shell とは区別する）。
+   */
+  customerId?: string | null;
 };
 
 export type InquiryReplyEmailData = {
@@ -44,6 +50,8 @@ export type InquiryReplyEmailData = {
   originalMessage: string;
   replyMessage: string;
   repliedByName: string;
+  /** 問い合わせに紐づく Customer の User.id。ログイン可能な実アカウントが無ければ null。 */
+  customerUserId?: string | null;
 };
 
 export type ReviewReplyEmailData = {

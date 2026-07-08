@@ -104,6 +104,7 @@ export async function replyToInquiry(
           originalMessage: emailContext.message,
           replyMessage: parsed.data.replyMessage,
           repliedByName: user.name ?? "スタッフ",
+          customerUserId: emailContext.customerUserId,
         }),
         {
           operation: "sendInquiryReplyEmail",
