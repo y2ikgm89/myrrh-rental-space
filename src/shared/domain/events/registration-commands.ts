@@ -199,6 +199,7 @@ const CANCEL_REGISTRATION_SELECT = {
 async function cancelEventRegistrationWithClaim(
   where: { id: string; event: { deletedAt: null }; customerId?: string },
   cancelledByType: (typeof CANCELLED_BY)[keyof typeof CANCELLED_BY],
+  expectedCustomerId?: string | null,
 ) {
   const result = await prisma.$transaction(
     async (tx) => {
@@ -217,6 +218,7 @@ async function cancelEventRegistrationWithClaim(
       const claim = await applyEventRegistrationCancellation(tx, registration, {
         now: new Date(),
         cancelledByType,
+        ...(expectedCustomerId !== undefined ? { expectedCustomerId } : {}),
       });
       if (!claim.success) {
         return {
@@ -269,11 +271,20 @@ export async function adminCancelEventRegistrationCommand(
  *
  * 確認メールのキャンセルリンクから呼ばれる。本人性は検証済みトークンが担保するため、
  * customerId による所有権フィルタは行わず registrationId だけで申込を特定する。
+ *
+ * @param expectedCustomerId 呼び出し側（ログイン中ユーザーの所有権チェック）が
+ *   事前読取りした customerId の期待値（`undefined` = 制約なし）。claim との
+ *   TOCTOU race を防ぐため、実際の状態変更 UPDATE の WHERE 句にも含めて再検証する
+ *   （{@link applyEventRegistrationCancellation} 参照）。
  */
-export async function cancelEventRegistrationByToken(registrationId: string) {
+export async function cancelEventRegistrationByToken(
+  registrationId: string,
+  expectedCustomerId?: string | null,
+) {
   return cancelEventRegistrationWithClaim(
     { id: registrationId, event: { deletedAt: null } },
     CANCELLED_BY.CUSTOMER_TOKEN,
+    expectedCustomerId,
   );
 }
 

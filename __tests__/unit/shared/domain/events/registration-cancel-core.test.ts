@@ -111,4 +111,69 @@ describe("applyEventRegistrationCancellation", () => {
       expect(result.error).toContain("別の操作");
     }
   });
+
+  test("expectedCustomerId 省略時は WHERE に customerId を含めない", async () => {
+    await applyEventRegistrationCancellation(
+      mockTx,
+      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      customerMypageOptions(),
+    );
+
+    const call = mockUpdateMany.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    expect(Object.hasOwn((call as { where: object }).where, "customerId")).toBe(
+      false,
+    );
+  });
+
+  test("expectedCustomerId 指定時は WHERE に customerId を含める（claim との race 対策）", async () => {
+    await applyEventRegistrationCancellation(
+      mockTx,
+      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      {
+        now: NOW,
+        cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
+        expectedCustomerId: null,
+      },
+    );
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ customerId: null }),
+      }),
+    );
+
+    await applyEventRegistrationCancellation(
+      mockTx,
+      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      {
+        now: NOW,
+        cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
+        expectedCustomerId: "cust-1",
+      },
+    );
+    expect(mockUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ customerId: "cust-1" }),
+      }),
+    );
+  });
+
+  test("expectedCustomerId が claim で書き換わっていれば count=0 で race error", async () => {
+    // claimEventRegistrationForCustomer が customerId を書き換えた後の状態を
+    // updateMany の WHERE (customerId: null) がヒットせず count=0 になる想定。
+    mockUpdateMany.mockResolvedValueOnce({ count: 0 });
+    const result = await applyEventRegistrationCancellation(
+      mockTx,
+      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      {
+        now: NOW,
+        cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
+        expectedCustomerId: null,
+      },
+    );
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("別の操作");
+    }
+  });
 });
