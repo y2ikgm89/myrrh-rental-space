@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
+import Link from "next/link";
 import {
   getFormProps,
   getInputProps,
@@ -45,6 +46,8 @@ interface EventRegistrationFormProps {
   readonly slots: readonly PublicEventSlotOption[];
   readonly tickets: readonly EventTicketOption[];
   readonly requiredTerms?: readonly ConsentTerm[];
+  readonly isLoggedIn: boolean;
+  readonly slug: string;
 }
 
 export function EventRegistrationForm({
@@ -54,6 +57,8 @@ export function EventRegistrationForm({
   slots,
   tickets,
   requiredTerms = [],
+  isLoggedIn,
+  slug,
 }: EventRegistrationFormProps): ReactElement {
   const firstAvailableSlot = slots.find((slot) => slot.status === "available");
   const initialSlotId = firstAvailableSlot?.id ?? slots[0]?.id ?? "";
@@ -141,6 +146,11 @@ export function EventRegistrationForm({
         <p className="mt-3 text-muted-foreground">
           確認メールをお送りしましたのでご確認ください。
         </p>
+        {!isLoggedIn && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            マイページに追加したい方は、確認メール内のリンクからどうぞ。
+          </p>
+        )}
       </div>
     );
   }
@@ -162,6 +172,18 @@ export function EventRegistrationForm({
 
   return (
     <section aria-label="参加申込" className="space-y-4">
+      {!isLoggedIn && (
+        <p className="text-sm text-muted-foreground">
+          ご登録済みの方は
+          <Link
+            href={`/login?redirect=/events/${slug}`}
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            ログイン
+          </Link>
+          すると入力が省略されます。
+        </p>
+      )}
       <div className="space-y-1">
         <Heading level={2}>参加申込</Heading>
         {selectedRemainingCapacity !== null ? (

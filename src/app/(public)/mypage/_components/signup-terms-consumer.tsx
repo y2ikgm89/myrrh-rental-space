@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { consumeSignupTermsAction } from "../_shared/actions/consume-signup-terms";
+import { consumeSignupTermsAction } from "@/app/(public)/_shared/actions/consume-signup-terms";
 
 interface SignupTermsConsumerProps {
   readonly isNew: boolean;

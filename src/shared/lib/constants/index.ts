@@ -15,3 +15,7 @@ export {
   ADMIN_SPACE_MANAGEMENT_TABS,
   type AdminSpaceManagementTab,
 } from "./admin-space-management";
+export {
+  RESERVATION_CLAIM_TOKEN_COOKIE_NAME,
+  EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
+} from "./claim-token-cookie-names";

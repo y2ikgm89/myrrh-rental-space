@@ -12,7 +12,11 @@ import {
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 
 /**
- * 公開ログインで集めた signup 同意 cookie を OAuth callback 後の mypage 初期表示で消費する。
+ * 公開ログインで集めた signup 同意 cookie を OAuth callback 後に消費する。
+ *
+ * mypage 初期表示（`SignupTermsConsumer`）と、ゲスト予約/イベント参加の claim
+ * コールバック（`/claim/reservation`・`/claim/event-registration` の Server Action）の
+ * 両方から呼ばれる共通ロジックのため `(public)/_shared/actions` に置く。
  *
  * Server Action にする理由（公式準拠）:
  *   Next.js は Server Component 内での cookie set/delete を ReadonlyRequestCookiesError で禁ずる。

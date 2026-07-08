@@ -164,6 +164,33 @@ export async function getEventRegistrationDetailsForEmail(
   };
 }
 
+/**
+ * `/claim/event-registration` の要約表示用の軽量クエリ。
+ *
+ * `getEventRegistrationDetailsForEmail` は `{startTime, endTime, location,
+ * capacity, confirmedCount}` のみを返し `event.title` を含まないため、
+ * claim ページ用に専用のクエリを設ける（イベント名表示が必須のため）。
+ */
+export async function getEventRegistrationForClaim(
+  registrationId: string,
+): Promise<{
+  readonly eventTitle: string;
+  readonly startTime: Date;
+} | null> {
+  const registration = await prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
+    select: {
+      slot: { select: { startAt: true } },
+      event: { select: { title: true } },
+    },
+  });
+  if (!registration) return null;
+  return {
+    eventTitle: registration.event.title,
+    startTime: registration.slot.startAt,
+  };
+}
+
 const CUSTOMER_EVENT_REGISTRATION_SELECT = {
   id: true,
   quantity: true,
@@ -314,6 +341,7 @@ export async function findEventRegistrationsForReminderWindow(
       email: true,
       quantity: true,
       icsSequence: true,
+      customerId: true,
       slot: {
         select: { startAt: true, endAt: true },
       },

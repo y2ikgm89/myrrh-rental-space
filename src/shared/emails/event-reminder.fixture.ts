@@ -9,5 +9,6 @@ export const eventReminderFixture = {
   endTime: "17:00",
   location: "本館 2階 ホール",
   quantity: 2,
+  claimUrl: "https://example.com/claim/event-registration?token=preview-token",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof EventReminderEmail>[0];

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactElement, RefObject } from "react";
+import Link from "next/link";
 import type { FieldMetadata } from "@conform-to/react";
 import { getInputProps } from "@conform-to/react";
 import { Button } from "@/public/components/design-system/button";
@@ -44,6 +45,7 @@ interface CustomerStepProps {
   readonly requiredTerms: readonly RequiredTerm[];
   readonly agreedTermsIds: readonly string[];
   readonly isPending: boolean;
+  readonly isLoggedIn: boolean;
   readonly errorMessage: string | null;
   readonly summary: {
     readonly locationName: string;
@@ -74,6 +76,7 @@ export function CustomerStep({
   requiredTerms,
   agreedTermsIds,
   isPending,
+  isLoggedIn,
   errorMessage,
   summary,
   onCustomerTypeChange,
@@ -101,6 +104,18 @@ export function CustomerStep({
 
   return (
     <div onFocus={scrollFocusedInput}>
+      {!isLoggedIn && (
+        <p className="mb-6 text-sm text-muted-foreground">
+          ご登録済みの方は
+          <Link
+            href="/login?redirect=/reservation"
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            ログイン
+          </Link>
+          すると入力が省略されます。
+        </p>
+      )}
       <BookingSummary
         locationName={summary.locationName}
         spaceName={summary.spaceName}
