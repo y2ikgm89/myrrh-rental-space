@@ -1,10 +1,12 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import { eventRegistrationConfirmationFixture } from "./event-registration-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
+  COLOR,
+  SECTION_VARIANT_STYLES,
   detailItem,
   detailsHeading,
   detailsSection,
@@ -23,6 +25,8 @@ type Props = {
   quantity: number;
   registrationId: string;
   addToCalendarLinks?: AddToCalendarUrls;
+  /** ゲスト向け: マイページに申込を追加する claim リンク（会員は表示しない） */
+  claimUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -36,6 +40,7 @@ export function EventRegistrationConfirmationEmail({
   quantity,
   registrationId,
   addToCalendarLinks,
+  claimUrl,
   footer,
 }: Props) {
   return (
@@ -78,6 +83,36 @@ export function EventRegistrationConfirmationEmail({
       </Section>
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
+
+      {claimUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            Google または LINE でログインすると、この申込をマイページに追加して
+            まとめて管理できます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={claimUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページに追加する
+            </Link>
+          </Text>
+        </Section>
+      )}
 
       <Hr style={hr} />
 

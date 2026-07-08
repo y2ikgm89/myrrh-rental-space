@@ -341,6 +341,7 @@ export async function findEventRegistrationsForReminderWindow(
       email: true,
       quantity: true,
       icsSequence: true,
+      customerId: true,
       slot: {
         select: { startAt: true, endAt: true },
       },
