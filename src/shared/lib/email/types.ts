@@ -77,12 +77,6 @@ export type ReminderEmailData = {
   userId?: string | null;
 };
 
-export type PasswordResetEmailData = {
-  email: string;
-  name: string;
-  resetUrl: string;
-};
-
 export type DeleteAccountVerificationEmailData = {
   email: string;
   name: string;

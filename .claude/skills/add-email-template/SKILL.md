@@ -85,7 +85,7 @@ registry は `as const satisfies Readonly<Record<TemplateKey, RegistryTemplateEn
 
 配置: 既存のドメイン別ファイル (`reservation-emails.ts` / `event-emails.ts` /
 `contact-emails.ts` / `inquiry-emails.ts` / `review-emails.ts` / `welcome-emails.ts` /
-`reminder-emails.ts` / `password-reset-emails.ts` / `system-emails.ts`) に追加するか、
+`reminder-emails.ts` / `system-emails.ts`) に追加するか、
 新ドメインなら `<domain>-emails.ts` を新設する。最小例は
 `src/shared/lib/email/welcome-emails.ts` の `sendWelcomeEmail`。
 
