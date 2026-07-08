@@ -36,7 +36,19 @@ mock.module("@/shared/emails/_shared/footer-data", () => ({
     }),
 }));
 
-type MemberUrlProps = { memberInquiryUrl?: string };
+const mockGetPublishedTermsByType = mock<
+  () => Promise<{ slug: string; title: string } | null>
+>(() =>
+  Promise.resolve({ slug: "privacy-policy", title: "プライバシーポリシー" }),
+);
+mock.module("@/shared/domain/terms/queries", () => ({
+  getPublishedTermsByType: mockGetPublishedTermsByType,
+}));
+
+type MemberUrlProps = {
+  memberInquiryUrl?: string;
+  privacyPolicyUrl?: string;
+};
 const mockContactConfirmationEmail = mock((props: MemberUrlProps) => props);
 mock.module("@/shared/emails/contact-confirmation", () => ({
   ContactConfirmationEmail: mockContactConfirmationEmail,
@@ -55,11 +67,17 @@ const DATA: ContactEmailData = {
 };
 
 const MEMBER_URL_PATTERN = /\/mypage\/inquiries\/inquiry-abcdef123456$/;
+const PRIVACY_POLICY_URL_PATTERN = /\/terms\/privacy-policy$/;
 
 beforeEach(() => {
   mockSendEmail.mockReset();
   mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
   mockContactConfirmationEmail.mockClear();
+  mockGetPublishedTermsByType.mockReset();
+  mockGetPublishedTermsByType.mockResolvedValue({
+    slug: "privacy-policy",
+    title: "プライバシーポリシー",
+  });
 });
 
 describe("sendContactConfirmationEmail() の memberInquiryUrl 出し分け", () => {
@@ -82,5 +100,23 @@ describe("sendContactConfirmationEmail() の memberInquiryUrl 出し分け", () 
 
     const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberInquiryUrl).toBeUndefined();
+  });
+});
+
+describe("sendContactConfirmationEmail() の privacyPolicyUrl 出し分け", () => {
+  test("プライバシーポリシー文書が公開中なら privacyPolicyUrl を発行する", async () => {
+    await sendContactConfirmationEmail(DATA);
+
+    const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.privacyPolicyUrl).toMatch(PRIVACY_POLICY_URL_PATTERN);
+  });
+
+  test("プライバシーポリシー文書が無ければ privacyPolicyUrl を発行しない", async () => {
+    mockGetPublishedTermsByType.mockResolvedValueOnce(null);
+
+    await sendContactConfirmationEmail(DATA);
+
+    const props = mockContactConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.privacyPolicyUrl).toBeUndefined();
   });
 });
