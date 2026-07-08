@@ -1763,6 +1763,7 @@ model EventRegistration {
   status      RegistrationStatus @default(CONFIRMED)
   customerId  String?            @db.Uuid
   cancelledAt DateTime?
+  cancelledByType String? @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
   // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
   attendedAt  DateTime?
   createdAt   DateTime           @default(now())

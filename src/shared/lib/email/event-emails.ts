@@ -24,6 +24,10 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { formatEventVenue } from "@/shared/domain/events/venue";
+import {
+  computeCancelTokenExpiresAt as computeEventCancelTokenExpiresAt,
+  createCancelToken as createEventCancelToken,
+} from "@/shared/lib/event-registration-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -124,6 +128,14 @@ export async function sendEventRegistrationConfirmation(
       })
     : undefined;
 
+  // 期限内（スロット開始時刻まで・7 日 cap）のみ有効なゲストキャンセルトークン URL を発行。
+  // 会員でも非会員でも cancelUrl は発行する（reservation-emails.ts と同方針）。
+  const cancelDeadline = computeEventCancelTokenExpiresAt(data.eventStartTime);
+  const cancelUrl =
+    cancelDeadline > new Date()
+      ? `${appUrl}/events/cancel?token=${createEventCancelToken(data.registrationId, cancelDeadline)}`
+      : undefined;
+
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
     try {
@@ -164,6 +176,7 @@ export async function sendEventRegistrationConfirmation(
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
           claimUrl,
+          cancelUrl,
           footer,
         }),
       ),
@@ -213,6 +226,7 @@ export async function sendEventReminderEmail(
     getEmailFooterData(),
   ]);
   const host = getAppHost();
+  const appUrl = getAppUrl();
 
   // ゲスト申込のみ、マイページに申込を追加する claim リンクを発行する（会員は不要）。
   const claimUrl = data.customerId
@@ -231,6 +245,15 @@ export async function sendEventReminderEmail(
     organizerName: organizer.name,
     organizerEmail: organizer.email,
   });
+
+  // リマインダ送信時点でキャンセル期限内なら、キャンセル URL を再発行する。
+  // 「リマインダにキャンセル URL が無い」と参加者が連絡無くキャンセルし得る運用上の
+  // 穴を塞ぐ（reminder-emails.ts の予約リマインダと同方針）。
+  const cancelDeadline = computeEventCancelTokenExpiresAt(data.eventStartTime);
+  const cancelUrl =
+    cancelDeadline > new Date()
+      ? `${appUrl}/events/cancel?token=${createEventCancelToken(data.registrationId, cancelDeadline)}`
+      : undefined;
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -270,6 +293,7 @@ export async function sendEventReminderEmail(
           location: data.location,
           quantity: data.quantity,
           claimUrl,
+          cancelUrl,
           footer,
         }),
       ),

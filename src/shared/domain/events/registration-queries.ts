@@ -110,6 +110,31 @@ export async function getEventCheckInAttendees(eventId: string) {
   };
 }
 
+/**
+ * ゲストキャンセルページ向けに申込を取得する。
+ *
+ * `customerId` フィルタを掛けない（トークン検証側でアクセス権を担保する。
+ * `reservations/customer-queries.ts` の `getReservationForGuestCancel` と同型）。
+ * `customerId` は member-ownership ガード（ログイン中ユーザーが別人の申込を
+ * キャンセルしようとしていないかの突合）のために呼び出し側へ返す。
+ */
+export async function getEventRegistrationForGuestCancel(
+  registrationId: string,
+) {
+  return prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
+    select: {
+      id: true,
+      customerId: true,
+      status: true,
+      quantity: true,
+      name: true,
+      event: { select: { title: true } },
+      slot: { select: { startAt: true, endAt: true } },
+    },
+  });
+}
+
 export async function getEventRegistrationDetailsForEmail(
   registrationId: string,
 ): Promise<{

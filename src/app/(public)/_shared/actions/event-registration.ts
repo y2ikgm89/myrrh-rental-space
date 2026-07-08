@@ -19,9 +19,9 @@ import {
   createEventRegistrationCommand,
   cancelEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
+import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import {
   sendEventRegistrationConfirmation,
-  sendEventRegistrationCancelled,
   sendEventAdminNotification,
 } from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -210,76 +210,30 @@ export async function cancelEventRegistration(
   const customer = await getCustomerByUserId(session.user.id);
   if (!customer) return createMutationError("顧客情報が見つかりません");
 
-  // 5. Cancel registration
+  // 5. Cancel registration（atomic claim + 統一副作用実行）
   try {
     const registration = await cancelEventRegistrationCommand(
       registrationId,
       customer.id,
     );
 
-    // 5. Invalidate cache
     invalidateEventCaches();
 
     // 顧客統計が変わる場合は CUSTOMERS も無効化
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.detail(customer.id));
 
-    // 6. Create admin notification (fire-and-forget)
-    fireAndForget(
-      createNotificationCommand({
-        type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
-        message: `${registration.name}様が「${registration.event.title}」の申込をキャンセルしました`,
-        resourceType: "event",
-        resourceId: registration.eventId,
-      }),
-      {
-        operation: "createEventCancellationNotification",
-        category: ErrorCategory.DATABASE,
-      },
-    );
+    // 副作用統一実行: メール / 通知 / 監査ログ
+    const requestHeaders = await headers();
+    const ip = await getClientIpFromHeaders();
+    const userAgent = requestHeaders.get("user-agent");
 
-    // 7. Send cancellation email (fire-and-forget)
-    fireAndForget(
-      (async () => {
-        const event = await getEventRegistrationDetailsForEmail(
-          registration.id,
-        );
-        if (!event) return;
-
-        await Promise.all([
-          sendEventRegistrationCancelled({
-            registrationId: registration.id,
-            customerName: registration.name,
-            customerEmail: registration.email,
-            eventTitle: registration.event.title,
-            eventStartTime: event.startTime,
-            eventEndTime: event.endTime,
-            location: event.location ?? undefined,
-            quantity: registration.quantity,
-            icsSequence: registration.icsSequence,
-          }),
-          sendEventAdminNotification(
-            {
-              registrationId: registration.id,
-              eventId: registration.eventId,
-              participantName: registration.name,
-              participantEmail: registration.email,
-              eventTitle: registration.event.title,
-              eventStartTime: event.startTime,
-              quantity: registration.quantity,
-              currentRegistrations: event.confirmedCount,
-              capacity: event.capacity,
-            },
-            "cancellation",
-          ),
-        ]);
-      })(),
-      {
-        operation: "sendEventCancellationEmails",
-        category: ErrorCategory.EXTERNAL_API,
-      },
-    );
+    await applyEventRegistrationCancellationSideEffects({
+      registrationId: registration.id,
+      channel: "customer-mypage",
+      actorUserId: session.user.id,
+      request: { ip, userAgent },
+    });
 
     return null;
   } catch (error) {
