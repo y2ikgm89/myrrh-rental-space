@@ -78,6 +78,8 @@ type ClaimUrlProps = {
   claimUrl?: string;
   memberReservationUrl?: string;
   cancellationPolicyUrl?: string;
+  cancellationDeadlineHours?: number;
+  modificationDeadlineHours?: number;
 };
 const mockReservationConfirmationEmail = mock((props: ClaimUrlProps) => props);
 const mockReservationReminderEmail = mock((props: ClaimUrlProps) => props);
@@ -304,5 +306,33 @@ describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポ
 
     const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toBeUndefined();
+  });
+});
+
+describe("modificationDeadlineHours の配線（キャンセル期限と独立設定可能な変更期限）", () => {
+  test("sendReservationConfirmationEmail: cancellationDeadlineHours と modificationDeadlineHours を別々に渡す", async () => {
+    mockGetReservationDeadlineSettings.mockResolvedValueOnce({
+      cancellationDeadlineHours: 24,
+      modificationDeadlineHours: 6,
+    });
+
+    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationDeadlineHours).toBe(24);
+    expect(props?.modificationDeadlineHours).toBe(6);
+  });
+
+  test("sendReservationUpdatedEmail: cancellationDeadlineHours と modificationDeadlineHours を別々に渡す", async () => {
+    mockGetReservationDeadlineSettings.mockResolvedValueOnce({
+      cancellationDeadlineHours: 24,
+      modificationDeadlineHours: 6,
+    });
+
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
+
+    const props = mockReservationUpdatedEmail.mock.calls.at(-1)?.[0];
+    expect(props?.cancellationDeadlineHours).toBe(24);
+    expect(props?.modificationDeadlineHours).toBe(6);
   });
 });

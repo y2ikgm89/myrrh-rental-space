@@ -26,6 +26,7 @@ export const reservationConfirmationFixture = {
     "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
   claimUrl: "https://example.com/claim/reservation?token=preview-token",
   cancellationDeadlineHours: 24,
+  modificationDeadlineHours: 24,
   cancellationPolicyUrl: "https://example.com/terms/cancellation-policy",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof ReservationConfirmationEmail>[0];
