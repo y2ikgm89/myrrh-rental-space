@@ -394,6 +394,7 @@ const ADMIN_USER_ID = "admin-user-1";
 const REVIEW_WITH_CUSTOMER = {
   id: REVIEW_ID,
   spaceId: SPACE_ID,
+  reservationId: RESERVATION_ID,
   rating: 5,
   title: "素晴らしい",
   comment: "また利用します",
@@ -401,6 +402,7 @@ const REVIEW_WITH_CUSTOMER = {
     email: "customer@example.com",
     lastName: "山田",
     firstName: "太郎",
+    userId: "user-linked-001",
   },
   space: { name: "Test Space", slug: SPACE_SLUG },
 };
@@ -432,6 +434,8 @@ describe("replyToReviewCommand", () => {
         title: "素晴らしい",
         comment: "また利用します",
         replyBody: "ご利用ありがとうございました。",
+        reservationId: RESERVATION_ID,
+        customerUserId: "user-linked-001",
       });
       expect(mockSpaceReviewUpdate).toHaveBeenCalledTimes(1);
       expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
