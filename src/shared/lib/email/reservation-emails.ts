@@ -31,6 +31,8 @@ import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import {
@@ -67,6 +69,15 @@ export function buildMemberReservationUrl(
 }
 
 /**
+ * 公開中のキャンセルポリシー規約の絶対 URL を解決する。該当文書が無ければ
+ * undefined を返し、呼び出し側はプレーンテキストにフォールバックする。
+ */
+async function resolveCancellationPolicyUrl(): Promise<string | undefined> {
+  const doc = await getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE);
+  return doc ? `${getAppUrl()}/terms/${doc.slug}` : undefined;
+}
+
+/**
  * 予約確認メールを送信
  */
 export async function sendReservationConfirmationEmail(
@@ -82,13 +93,19 @@ export async function sendReservationConfirmationEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const [calendarSettings, deadlineSettings, organizer, footer] =
-    await Promise.all([
-      getCalendarEmailSettings(),
-      getReservationDeadlineSettings(),
-      getIcalOrganizer(),
-      getEmailFooterData(),
-    ]);
+  const [
+    calendarSettings,
+    deadlineSettings,
+    organizer,
+    footer,
+    cancellationPolicyUrl,
+  ] = await Promise.all([
+    getCalendarEmailSettings(),
+    getReservationDeadlineSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+    resolveCancellationPolicyUrl(),
+  ]);
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -190,6 +207,7 @@ export async function sendReservationConfirmationEmail(
           memberReservationUrl,
           claimUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+          cancellationPolicyUrl,
           footer,
         }),
       ),
@@ -221,13 +239,19 @@ export async function sendReservationUpdatedEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const [calendarSettings, deadlineSettings, organizer, footer] =
-    await Promise.all([
-      getCalendarEmailSettings(),
-      getReservationDeadlineSettings(),
-      getIcalOrganizer(),
-      getEmailFooterData(),
-    ]);
+  const [
+    calendarSettings,
+    deadlineSettings,
+    organizer,
+    footer,
+    cancellationPolicyUrl,
+  ] = await Promise.all([
+    getCalendarEmailSettings(),
+    getReservationDeadlineSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+    resolveCancellationPolicyUrl(),
+  ]);
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -316,6 +340,7 @@ export async function sendReservationUpdatedEmail(
           cancelUrl,
           memberReservationUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+          cancellationPolicyUrl,
           footer,
         }),
       ),
@@ -344,11 +369,13 @@ export async function sendReservationCancelledEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const [calendarSettings, organizer, footer, cancellationPolicyUrl] =
+    await Promise.all([
+      getCalendarEmailSettings(),
+      getIcalOrganizer(),
+      getEmailFooterData(),
+      resolveCancellationPolicyUrl(),
+    ]);
   const host = getAppHost();
 
   const memberReservationUrl = buildMemberReservationUrl(
@@ -406,6 +433,7 @@ export async function sendReservationCancelledEmail(
           endTime,
           reservationId: data.reservationId.slice(0, 8).toUpperCase(),
           memberReservationUrl,
+          cancellationPolicyUrl,
           footer,
         }),
       ),
