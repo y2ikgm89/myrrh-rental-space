@@ -32,6 +32,8 @@ export interface SignupTermItem {
 interface SocialLoginButtonsProps {
   readonly requiredTerms?: readonly SignupTermItem[];
   readonly turnstileSiteKey: string | null;
+  /** 認証後のリダイレクト先。省略時は `/mypage`（既存動作を維持）。 */
+  readonly callbackURL?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -53,6 +55,7 @@ function toUserMessage(raw: string): string {
 export function SocialLoginButtons({
   requiredTerms = [],
   turnstileSiteKey,
+  callbackURL = "/mypage",
 }: SocialLoginButtonsProps) {
   const [pending, setPending] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +98,7 @@ export function SocialLoginButtons({
 
     void signIn.social({
       provider,
-      callbackURL: "/mypage",
+      callbackURL,
       fetchOptions: {
         onSuccess() {
           // Better Auth がリダイレクトを処理する
