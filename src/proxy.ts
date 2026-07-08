@@ -7,6 +7,10 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { FRAME_SRC_DIRECTIVE_VALUES } from "@/shared/lib/constants/frame-sources";
+import {
+  RESERVATION_CLAIM_TOKEN_COOKIE_NAME,
+  EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
+} from "@/shared/lib/constants/claim-token-cookie-names";
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
@@ -251,9 +255,6 @@ const CLAIM_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
 // OAuth 往復（Google/LINE への外部リダイレクトを経由して戻る）を生き越えるため 60 分。
 // cancel-token（サイト外遷移が無い）より長めに取っている。
 const CLAIM_TOKEN_COOKIE_MAX_AGE = 60 * 60; // 60 分
-export const RESERVATION_CLAIM_TOKEN_COOKIE_NAME = "reservation-claim-token";
-export const EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME =
-  "event-registration-claim-token";
 
 function handleClaimTokenTransfer(
   req: NextRequest,

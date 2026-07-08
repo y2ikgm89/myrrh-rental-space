@@ -16,12 +16,7 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-
-// proxy.ts（Edge middleware、`next/server` の NextRequest/NextResponse に依存）から
-// この定数を import すると、Node runtime の Server Action ファイルに Edge 専用の型が
-// 引き込まれてしまうため、値だけをここに再宣言する（proxy.ts の
-// `RESERVATION_CLAIM_TOKEN_COOKIE_NAME` と文字列を同期させること）。
-const RESERVATION_CLAIM_TOKEN_COOKIE_NAME = "reservation-claim-token";
+import { RESERVATION_CLAIM_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/claim-token-cookie-names";
 
 /**
  * ゲスト予約を現在ログイン中の会員アカウントへ再紐付けする（claim）。

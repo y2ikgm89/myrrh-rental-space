@@ -21,6 +21,8 @@ const OTHER_DOMAIN_PURPOSES = [
   "generic", // crypto.ts の DEFAULT_PURPOSE
   "reservation-cancel", // reservation-cancel-token.ts
   "reservation-complete", // reservation-complete-token.ts
+  "reservation-claim", // reservation-claim-token.ts
+  "event-registration-claim", // event-registration-claim-token.ts
   "instagram", // instagram/commands.ts
   purposeFor("reservation"), // calendar-token.ts
   purposeFor("event"), // calendar-token.ts

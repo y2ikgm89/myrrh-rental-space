@@ -17,13 +17,9 @@ import {
   publicQueryRateLimiter,
   getClientIpFromHeaders,
 } from "@/shared/lib/rate-limit";
+import { RESERVATION_CLAIM_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/claim-token-cookie-names";
 import { SocialLoginButtons } from "@/app/(public)/login/_components/social-login-buttons";
 import { ClaimConfirmForm } from "./_components/claim-confirm-form";
-
-// proxy.ts の `RESERVATION_CLAIM_TOKEN_COOKIE_NAME` と同じ文字列（`_actions/claim.ts`
-// の注記を参照 — Edge 専用の proxy.ts import を Node runtime ページに引き込まないための
-// 意図的な再宣言）。
-const RESERVATION_CLAIM_TOKEN_COOKIE_NAME = "reservation-claim-token";
 
 // トークンゲートのユーティリティページ。検索結果に出さない（mypage / login と同方針）。
 export const metadata: Metadata = {
