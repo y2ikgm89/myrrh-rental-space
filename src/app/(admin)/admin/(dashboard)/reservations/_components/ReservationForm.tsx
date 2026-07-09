@@ -445,6 +445,11 @@ export function ReservationForm({
                   phoneNumber: customerFields.phoneNumber.errors,
                   companyName: customerFields.companyName.errors,
                 }}
+                ariaDescribedBy={
+                  fields.customerId.errors
+                    ? fields.customerId.errorId
+                    : undefined
+                }
               />
               {fields.customerId.errors && (
                 <p
@@ -473,6 +478,9 @@ export function ReservationForm({
                   columns={2}
                   disabled={isPending}
                   name="予約ステータス"
+                  ariaDescribedBy={
+                    fields.status.errors ? fields.status.errorId : undefined
+                  }
                 />
                 <p className="text-sm text-muted-foreground">
                   電話予約の場合は「確定」を推奨します

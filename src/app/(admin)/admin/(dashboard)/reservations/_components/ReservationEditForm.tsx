@@ -474,6 +474,9 @@ export function ReservationEditForm({
                   columns={3}
                   disabled={isPending}
                   name="予約ステータス"
+                  ariaDescribedBy={
+                    fields.status.errors ? fields.status.errorId : undefined
+                  }
                 />
                 {fields.status.errors && (
                   <p

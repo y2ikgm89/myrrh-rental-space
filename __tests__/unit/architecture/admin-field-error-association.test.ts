@@ -36,11 +36,12 @@ describe("admin field error association", () => {
   test("inline Conform field errors expose the field error id and are wired to aria-describedby", () => {
     expect(existsSync(ADMIN_DASHBOARD_ROOT)).toBe(true);
 
-    // Pre-existing manually-bound fields outside this list already lack
-    // aria-describedby wiring from before this contract was introduced. Fixing
-    // them is a larger, separate accessibility pass — tracked outside this PR —
-    // so the stricter check below is scoped to the files it was introduced for.
-    // Do not add new entries here; wire new manually-bound fields correctly instead.
+    // Manually-bound fields outside this list may still lack aria-describedby
+    // wiring from before this stricter check was introduced (tracked as separate
+    // follow-up accessibility work), so the check below is scoped to the files
+    // already brought into compliance. Do not add a file here unless every
+    // manually-bound field in it is actually wired — wire new fields correctly
+    // instead of adding them to this list to force a pass.
     const DESCRIBED_BY_CHECKED_FILES = new Set([
       join("locations", "_components", "LocationForm.tsx"),
       join("customers", "_components", "CustomerForm.tsx"),
@@ -48,6 +49,9 @@ describe("admin field error association", () => {
       join("events", "_components", "EventPublishFields.tsx"),
       join("_shared", "components", "ListPageSeoForm.tsx"),
       join("pages", "[slug]", "_seo", "_components", "PageSeoForm.tsx"),
+      join("coupons", "_components", "CouponForm.tsx"),
+      join("reservations", "_components", "ReservationForm.tsx"),
+      join("reservations", "_components", "ReservationEditForm.tsx"),
     ]);
 
     const violations: string[] = [];
