@@ -1,8 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 import { testUsers } from "./e2e/fixtures/test-data";
+import { resolveTestDatabaseUrl } from "./scripts/test-db-url";
 
 process.env["APP_SURFACE"] ??= "admin";
 
+const localE2eDatabaseUrl = resolveTestDatabaseUrl(
+  process.env["TEST_DATABASE_URL"],
+).url;
 const localE2eBaseUrl =
   process.env["PLAYWRIGHT_BASE_URL"] || "http://localhost:3000";
 const localE2eBetterAuthSecret =
@@ -15,8 +19,15 @@ const localE2eNextServerActionsEncryptionKey =
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 const localE2eAuditLogHmacKey =
   process.env["AUDIT_LOG_HMAC_KEY"] ?? "f".repeat(64);
+const localE2eCloudflareOriginHeaderSecret =
+  process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"] ?? "e".repeat(32);
+const localE2eTurnstileSecretKey =
+  process.env["TURNSTILE_SECRET_KEY"] ?? "1x0000000000000000000000000000000AA";
+const localE2eTurnstileSiteKey =
+  process.env["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] ?? "1x00000000000000000000AA";
 const e2eWebServerCommand = [
   "bun run db:generate",
+  "bun run test:db:migrate",
   "bun prisma/seed.ts --dev",
   ...(process.env["CI"] ? [] : ["bun run build:skip-env"]),
   "bun run start",
@@ -206,8 +217,8 @@ export default defineConfig({
   ],
 
   /* webServer:
-   * - local: `db:generate -> seed --dev -> build:skip-env -> start`
-   * - CI: `db:generate -> seed --dev -> start` (workflow builds first)
+   * - local: `db:generate -> test:db:migrate -> seed --dev -> build:skip-env -> start`
+   * - CI: `db:generate -> test:db:migrate -> seed --dev -> start` (workflow builds first)
    *
    * E2E は seed-driven specs を含み、Next `use cache` は server process 内で
    * null fallback も保持し得る。既存 server を再利用せず、seed 後の fresh
@@ -234,9 +245,15 @@ export default defineConfig({
         process.env["NEXT_PUBLIC_BASE_URL"] ?? localE2eBaseUrl,
       NEXT_PUBLIC_APP_URL:
         process.env["NEXT_PUBLIC_APP_URL"] ?? localE2eBaseUrl,
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: localE2eTurnstileSiteKey,
       NEXT_PUBLIC_ENABLE_E2E_LOGIN:
         process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] ?? "1",
       E2E_RUNTIME: "1",
+      E2E_FIXED_NOW_ISO:
+        process.env["E2E_FIXED_NOW_ISO"] ?? "2026-07-04T03:00:00.000Z",
+      DATABASE_URL: localE2eDatabaseUrl,
+      TURNSTILE_SECRET_KEY: localE2eTurnstileSecretKey,
+      CLOUDFLARE_ORIGIN_HEADER_SECRET: localE2eCloudflareOriginHeaderSecret,
       DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"] ?? "30",
       DATABASE_CONNECTION_TIMEOUT_MS:
         process.env["DATABASE_CONNECTION_TIMEOUT_MS"] ?? "15000",

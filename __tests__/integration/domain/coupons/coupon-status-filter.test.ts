@@ -12,9 +12,11 @@
  * 統合テスト（実 Postgres）でのみ捕捉できる。
  *
  * == 実行条件 ==
- * `TEST_DATABASE_URL` が設定されているときのみ実行し、未設定なら describe ごと skip
- * する（開発者の dev DB を誤って汚染しないための安全弁）。gateway は import 時の
- * `process.env.DATABASE_URL` スナップショットを読むため、動的 import より前に上書きする。
+ * `bun run test:integration` は docker-compose の test-db 既定値を注入する。直接
+ * `bun test` でこのファイルを実行し `TEST_DATABASE_URL` が未設定の場合のみ
+ * describe ごと skip する（dev DB を誤って汚染しないための安全弁）。gateway は
+ * import 時の `process.env.DATABASE_URL` スナップショットを読むため、動的 import より
+ * 前に上書きする。
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

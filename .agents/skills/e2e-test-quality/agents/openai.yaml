@@ -1,7 +1,7 @@
 interface:
   display_name: "E2E Test Quality"
-  short_description: "Playwright tests without flaky waits"
-  default_prompt: "Use $e2e-test-quality when adding or fixing Playwright tests."
+  short_description: "Playwright tests without flakes"
+  default_prompt: "Use $e2e-test-quality when adding, fixing, or reviewing Playwright tests."
 
 dependencies:
   tools:

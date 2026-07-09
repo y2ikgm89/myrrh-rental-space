@@ -50,7 +50,7 @@ export function MediaPickerDialog({
   maxSelections = 10,
   defaultUsage = "GENERAL",
   initialSelected = [],
-  showUrlTab = true,
+  showUrlTab = false,
   accept,
 }: MediaPickerDialogProps) {
   const [activeTab, setActiveTab] = useState<MediaPickerTab>("library");

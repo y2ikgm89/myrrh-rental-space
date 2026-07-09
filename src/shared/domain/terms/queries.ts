@@ -32,7 +32,7 @@ const PUBLIC_LIST_SELECT = {
   title: true,
   publishedAt: true,
   showInFooter: true,
-  footerOrder: true,
+  displayOrder: true,
   updatedAt: true,
 } as const;
 
@@ -60,7 +60,7 @@ export type PublicTermsListItem = Serialized<{
   title: string;
   publishedAt: Date | null;
   showInFooter: boolean;
-  footerOrder: number;
+  displayOrder: number;
   updatedAt: Date;
 }>;
 
@@ -93,7 +93,7 @@ export async function getPublishedTermsList(): Promise<PublicTermsListItem[]> {
     fetch: () =>
       prisma.termsDocument.findMany({
         where: { ...PUBLIC_WHERE },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_LIST_SELECT,
       }),
     fallback: [],
@@ -120,7 +120,7 @@ export async function getFooterTerms(): Promise<PublicTermsListItem[]> {
           ...PUBLIC_WHERE,
           showInFooter: true,
         },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_LIST_SELECT,
       }),
     fallback: [],
@@ -159,6 +159,39 @@ export async function getPublicTermsBySlug(
 }
 
 /**
+ * 公開: type 一致の公開規約を1件取得（displayOrder 昇順の先頭）。
+ *
+ * type に一意制約は無いため同一 type の文書が複数存在し得るが、admin が
+ * 明示的に設定する displayOrder（`deletedAt: null` 内で一意）を tie-break に
+ * 使う（getFooterTerms/getPublishedTermsList と同じ並び順規約）。
+ * 該当文書が無ければ null（呼び出し側はリンクを出さずプレーンテキストに
+ * フォールバックする）。
+ */
+export async function getPublishedTermsByType(
+  type: string,
+): Promise<PublicTermsListItem | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.TERMS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.termsDocument.findFirst({
+        where: { ...PUBLIC_WHERE, type },
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
+        select: PUBLIC_LIST_SELECT,
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedTermsByType",
+    context: { type },
+  });
+
+  return result ? toPlainObject(result) : null;
+}
+
+/**
  * 公開: 指定 scope で同意必須に設定された規約一覧
  *
  * 旧 `getRequiredTermsAtReservation/Inquiry/Signup` 3 関数を統合した SSoT。
@@ -181,7 +214,7 @@ export async function getRequiredTermsByScope(
           ...PUBLIC_WHERE,
           scopes: { has: scope },
         },
-        orderBy: [{ footerOrder: "asc" }, { title: "asc" }],
+        orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
         select: PUBLIC_REQUIRED_SELECT,
       }),
     fallback: [],

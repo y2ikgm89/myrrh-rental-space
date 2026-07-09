@@ -5,15 +5,14 @@
  *
  * - drag handle（UI のみ、DnD 配線は SectionListSidebar 側で `dragHandleProps` を流し込む）
  * - セクション本体クリックで `onClick`
- * - kebab menu（DropdownMenu）で toggle / duplicate / delete
+ * - visibility switch で表示切替
+ * - kebab menu（DropdownMenu）で duplicate / delete
  * - 44px ヒットエリア確保（WCAG 2.5.5 Enhanced）
  */
 
 import {
   IconCopy,
   IconDotsVertical,
-  IconEye,
-  IconEyeOff,
   IconGripVertical,
   IconTrash,
 } from "@tabler/icons-react";
@@ -23,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Switch,
 } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
@@ -39,6 +39,7 @@ export interface SectionListItemProps {
   readonly canDuplicate: boolean;
   readonly canDelete: boolean;
   readonly canDrag: boolean;
+  readonly isPending: boolean;
   readonly dragHandleProps?: Record<string, unknown>;
   /**
    * 削除ボタンを表示するが disabled にし、tooltip でこの理由を表示する。
@@ -59,6 +60,7 @@ export function SectionListItem({
   canDuplicate,
   canDelete,
   canDrag,
+  isPending,
   dragHandleProps,
   disableDeleteReason,
 }: SectionListItemProps) {
@@ -76,8 +78,12 @@ export function SectionListItem({
       {canDrag ? (
         <button
           type="button"
-          className="flex min-h-11 min-w-11 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing"
+          className={cn(
+            "flex min-h-11 min-w-11 cursor-grab items-center justify-center text-muted-foreground active:cursor-grabbing",
+            isPending && "cursor-not-allowed opacity-50",
+          )}
           aria-label="並び替え"
+          disabled={isPending}
           {...dragHandleProps}
         >
           <IconGripVertical className="h-4 w-4" aria-hidden="true" />
@@ -105,25 +111,26 @@ export function SectionListItem({
         />
         <span className="truncate">{label}</span>
       </button>
+      <div className="inline-flex min-h-11 min-w-11 shrink-0 flex-col items-center justify-center gap-1 text-xs text-muted-foreground">
+        <Switch
+          checked={section.isActive}
+          onCheckedChange={onToggleActive}
+          disabled={isPending}
+          aria-label={`${label} の表示状態`}
+        />
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="セクション操作メニュー"
+            disabled={isPending}
           >
             <IconDotsVertical className="h-4 w-4" aria-hidden="true" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={onToggleActive}>
-            {section.isActive ? (
-              <IconEyeOff className="mr-2 h-4 w-4" aria-hidden="true" />
-            ) : (
-              <IconEye className="mr-2 h-4 w-4" aria-hidden="true" />
-            )}
-            {section.isActive ? "非表示にする" : "表示する"}
-          </DropdownMenuItem>
           {canDuplicate && (
             <DropdownMenuItem onClick={onDuplicate}>
               <IconCopy className="mr-2 h-4 w-4" aria-hidden="true" />

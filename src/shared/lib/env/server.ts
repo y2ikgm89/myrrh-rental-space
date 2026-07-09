@@ -59,6 +59,36 @@ const noTrailingSlashUrl = z.url().refine((v) => !v.endsWith("/"), {
   error: "must not end with trailing slash (paths are concatenated)",
 });
 
+export function isLocalhostUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  try {
+    const { hostname } = new URL(value);
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]" ||
+      hostname === "::1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isLocalhostDatabaseUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  try {
+    const { hostname } = new URL(value);
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]" ||
+      hostname === "::1"
+    );
+  } catch {
+    return false;
+  }
+}
+
 const cloudRunIapJwtAudience = z
   .string()
   .regex(
@@ -202,6 +232,7 @@ export const serverEnv = createEnv({
     ADMIN_ROLE_GROUP_EDITOR_EMAIL: z.email().optional(),
     ADMIN_ROLE_GROUP_VIEWER_EMAIL: z.email().optional(),
     E2E_RUNTIME: z.enum(["1"]).optional(),
+    E2E_FIXED_NOW_ISO: z.iso.datetime().optional(),
 
     // Google Analytics（サービスアカウント JSON — GA4 Data API）
     GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
@@ -276,6 +307,7 @@ export const serverEnv = createEnv({
     ADMIN_ROLE_GROUP_EDITOR_EMAIL: process.env["ADMIN_ROLE_GROUP_EDITOR_EMAIL"],
     ADMIN_ROLE_GROUP_VIEWER_EMAIL: process.env["ADMIN_ROLE_GROUP_VIEWER_EMAIL"],
     E2E_RUNTIME: process.env["E2E_RUNTIME"],
+    E2E_FIXED_NOW_ISO: process.env["E2E_FIXED_NOW_ISO"],
     GOOGLE_APPLICATION_CREDENTIALS_JSON:
       process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
     R2_ACCOUNT_ID: process.env["R2_ACCOUNT_ID"],
@@ -336,6 +368,10 @@ export function validateProductionEnv(): void {
     { name: "R2_SECRET_ACCESS_KEY", value: serverEnv.R2_SECRET_ACCESS_KEY },
     { name: "R2_BUCKET_NAME", value: serverEnv.R2_BUCKET_NAME },
     { name: "R2_PUBLIC_URL", value: serverEnv.R2_PUBLIC_URL },
+    {
+      name: "CLOUDFLARE_ORIGIN_HEADER_SECRET",
+      value: serverEnv.CLOUDFLARE_ORIGIN_HEADER_SECRET,
+    },
     // NEXT_PUBLIC_* はビルド時に client JS へインライン化されるが、
     // Cloud Build substitution で未指定だと "" でビルドされ silent failure になる。
     // instrumentation.register() で起動時に fail-fast させる。
@@ -344,6 +380,10 @@ export function validateProductionEnv(): void {
       value: process.env["NEXT_PUBLIC_BASE_URL"],
     },
     { name: "NEXT_PUBLIC_APP_URL", value: process.env["NEXT_PUBLIC_APP_URL"] },
+    {
+      name: "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+      value: process.env["NEXT_PUBLIC_TURNSTILE_SITE_KEY"],
+    },
     // Google OAuth は env / Secret Manager を正本とする
   ];
 
@@ -354,6 +394,30 @@ export function validateProductionEnv(): void {
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variables in production: ${missing.join(", ")}`,
+    );
+  }
+
+  const localE2ERuntimeAllowed =
+    serverEnv.E2E_RUNTIME === "1" &&
+    isLocalhostUrl(serverEnv.ADMIN_APP_URL) &&
+    isLocalhostUrl(serverEnv.BETTER_AUTH_URL) &&
+    isLocalhostUrl(process.env["NEXT_PUBLIC_BASE_URL"]) &&
+    isLocalhostUrl(process.env["NEXT_PUBLIC_APP_URL"]) &&
+    isLocalhostDatabaseUrl(process.env["DATABASE_URL"]);
+  const unsafeE2EOnlyEnv = [
+    {
+      name: "NEXT_PUBLIC_ENABLE_E2E_LOGIN",
+      value: process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"],
+    },
+    { name: "E2E_RUNTIME", value: serverEnv.E2E_RUNTIME },
+    { name: "ADMIN_TEST_IAP_EMAIL", value: serverEnv.ADMIN_TEST_IAP_EMAIL },
+  ]
+    .filter(({ value }) => value)
+    .map(({ name }) => name);
+
+  if (unsafeE2EOnlyEnv.length > 0 && !localE2ERuntimeAllowed) {
+    throw new Error(
+      `E2E/test-only environment variables are not allowed in production outside localhost E2E runtime: ${unsafeE2EOnlyEnv.join(", ")}`,
     );
   }
 

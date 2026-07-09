@@ -54,8 +54,10 @@ pre-push:
       tags: slow
 
     # architecture-boundaries test（Prisma gateway 規約等の違反検出）
+    # 素の bun test 禁止（mock.module() のプロセスグローバル干渉 / Lexical 循環 import の
+    # TDZ を runner の --conditions production が回避する。.claude/rules/testing-unit.md）
     - name: architecture-boundaries
-      run: bun test __tests__/unit/architecture-boundaries.test.ts
+      run: bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts
       tags: slow
 
 # commit-msg: Conventional Commits 形式チェック

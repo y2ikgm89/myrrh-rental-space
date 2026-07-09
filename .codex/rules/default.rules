@@ -6,6 +6,7 @@ prefix_rule(
         "db:generate",
         "type-check",
         "lint",
+        "lint-format",
         "format:check",
         "validate",
         "test:unit",
@@ -15,16 +16,43 @@ prefix_rule(
         "docs",
     ]],
     decision = "allow",
-    justification = "Repository verification and generation commands are safe read/build gates.",
+    justification = "Repository generation, static analysis, and non-destructive verification gates.",
     match = [
+        "bun run db:generate",
         "bun run type-check",
         "bun run lint",
+        "bun run lint-format",
+        "bun run validate",
         "bun run test:unit",
+        "bun run test:integration",
+        "bun run test:all",
         "bun run build:skip-env",
+        "bun run format:check",
+        "bun run docs",
     ],
     not_match = [
         "bun run db:reset",
         "bun run db:push",
+        "bun run e2e",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "db:migrate"],
+    decision = "prompt",
+    justification = "Migration creation changes database history. Confirm name, target database, and scope before running.",
+    match = [
+        "bun run db:migrate --name add-example",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "db:studio"],
+    decision = "prompt",
+    justification = "Prisma Studio is an interactive UI with arbitrary DB read/write access, comparable risk to the forbidden db push/pull.",
+    match = [
+        "bun run db:studio",
+        "bunx --bun prisma studio",
     ],
 )
 
@@ -34,6 +62,7 @@ prefix_rule(
     justification = "The local test runner isolates Bun tests per file.",
     match = [
         "bun scripts/run-tests.ts __tests__/unit/lib/crypto.test.ts",
+        "bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts",
     ],
 )
 
@@ -43,13 +72,44 @@ prefix_rule(
     justification = "Focused Bun tests are safe verification commands.",
     match = [
         "bun test __tests__/unit/architecture-boundaries.test.ts",
+        "bun test __tests__/unit/architecture/admin-design-tokens.test.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "e2e"],
+    decision = "prompt",
+    justification = "Playwright E2E launches browsers, a web server, and seeded test state. Run only when it is the right proof.",
+    match = [
+        "bun run e2e",
+        "bun run e2e -- --project=chromium-smoke",
+        "bun run e2e -- e2e/public/homepage.spec.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "e2e:ui"],
+    decision = "prompt",
+    justification = "The Playwright UI is interactive and should be launched only when requested.",
+    match = [
+        "bun run e2e:ui",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", ["db:reset", "db:push"]],
+    decision = "forbidden",
+    justification = "Destructive or migration-bypassing database commands require explicit user direction and verified target database.",
+    match = [
+        "bun run db:reset",
+        "bun run db:push",
     ],
 )
 
 prefix_rule(
     pattern = ["bunx", "--bun", "prisma", "migrate", "reset"],
     decision = "forbidden",
-    justification = "Destructive database reset is blocked. Ask the user and verify the database target first.",
+    justification = "Database reset is destructive. Ask the user and verify the database target first.",
     match = [
         "bunx --bun prisma migrate reset",
         "bunx --bun prisma migrate reset --force",
@@ -58,11 +118,20 @@ prefix_rule(
 
 prefix_rule(
     pattern = ["bunx", "--bun", "prisma", "db", ["push", "pull"]],
-    decision = "prompt",
-    justification = "Direct schema push/pull can bypass migration review. Prefer migrate dev plus generated migration files.",
+    decision = "forbidden",
+    justification = "Direct Prisma push/pull bypasses migration review or can drop manual SQL invariants. Use reviewed migrations instead.",
     match = [
         "bunx --bun prisma db push",
         "bunx --bun prisma db pull",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bunx", "--bun", "prisma", "migrate", "dev"],
+    decision = "prompt",
+    justification = "Migration creation changes database history. Confirm name, target database, and scope before running.",
+    match = [
+        "bunx --bun prisma migrate dev --name add-example",
     ],
 )
 
@@ -80,7 +149,7 @@ prefix_rule(
 prefix_rule(
     pattern = ["gh"],
     decision = "prompt",
-    justification = "GitHub access is external project history. Use only when the user explicitly requests it.",
+    justification = "GitHub access is external project state. Use only when the user explicitly requests it.",
     match = [
         "gh pr view 1",
         "gh issue list",
@@ -94,5 +163,32 @@ prefix_rule(
     match = [
         "git reset --hard",
         "git clean -fd",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "commit", "--no-verify"],
+    decision = "forbidden",
+    justification = "Bypassing commit hooks skips the protected-file and commit-message checks lefthook enforces.",
+    match = [
+        "git commit --no-verify -m \"msg\"",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--no-verify"],
+    decision = "forbidden",
+    justification = "Bypassing push hooks skips the type-check and architecture-boundaries verification lefthook enforces.",
+    match = [
+        "git push --no-verify",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "-D"],
+    decision = "forbidden",
+    justification = "Force-deleting a branch discards unmerged work without confirmation.",
+    match = [
+        "git branch -D feature/old-branch",
     ],
 )

@@ -13,6 +13,10 @@ const mockLocationUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "location-1" }),
 );
 
+const mockLocationFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+
 const mockLocationDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "location-1" }),
 );
@@ -22,22 +26,50 @@ const mockLocationAggregate = mock<
 >(() => Promise.resolve({ _max: { sortOrder: null } }));
 
 const mockTransaction = mock<
-  (ops: unknown[]) => Promise<Record<string, unknown>[]>
->(() => Promise.resolve([]));
+  (
+    cb: (tx: {
+      $executeRaw: typeof mockExecuteRaw;
+      location: {
+        create: typeof mockLocationCreate;
+        aggregate: typeof mockLocationAggregate;
+      };
+    }) => Promise<unknown>,
+  ) => Promise<unknown>
+>((cb) =>
+  cb({
+    $executeRaw: mockExecuteRaw,
+    location: {
+      create: mockLocationCreate,
+      aggregate: mockLocationAggregate,
+    },
+  }),
+);
+
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     location: {
       findUnique: mockLocationFindUnique,
+      findMany: mockLocationFindMany,
       create: mockLocationCreate,
       update: mockLocationUpdate,
       delete: mockLocationDelete,
       aggregate: mockLocationAggregate,
     },
     $transaction: mockTransaction,
+    $executeRaw: mockExecuteRaw,
   },
 }));
 
@@ -89,10 +121,10 @@ const VALID_FORM_DATA = {
   accessLines: [{ value: "渋谷駅から徒歩5分" }],
   parkingInfo: "近隣コインパーキング",
   amenities: VALID_AMENITIES,
-  imageUrl: "https://example.com/main.jpg",
+  imageUrl: "https://media.example.com/locations/main.jpg",
   imageUrls: [
-    { url: "https://example.com/image1.jpg" },
-    { url: "https://example.com/image2.jpg" },
+    { url: "https://media.example.com/locations/image1.jpg" },
+    { url: "https://media.example.com/locations/image2.jpg" },
   ],
   businessHours: VALID_BUSINESS_HOURS,
   specialHolidays: null,
@@ -158,10 +190,10 @@ describe("createLocation", () => {
           data: expect.objectContaining({
             name: "渋谷スペース",
             address: "東京都渋谷区1-1-1",
-            imageUrl: "https://example.com/main.jpg",
+            imageUrl: "https://media.example.com/locations/main.jpg",
             imageUrls: [
-              "https://example.com/image1.jpg",
-              "https://example.com/image2.jpg",
+              "https://media.example.com/locations/image1.jpg",
+              "https://media.example.com/locations/image2.jpg",
             ],
             isPublished: true,
           }),
@@ -260,6 +292,30 @@ describe("createLocation", () => {
         }),
       );
     });
+
+    test("管理メディア origin 外の imageUrl は拒否する", async () => {
+      await expect(
+        createLocation({
+          ...VALID_FORM_DATA,
+          imageUrl: "https://external.example.com/location.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockLocationCreate).not.toHaveBeenCalled();
+    });
+
+    test("管理メディア origin 外の追加画像 URL は拒否する", async () => {
+      await expect(
+        createLocation({
+          ...VALID_FORM_DATA,
+          imageUrls: [{ url: "https://external.example.com/location.jpg" }],
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockLocationCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -297,6 +353,18 @@ describe("updateLocation", () => {
       );
     });
 
+    test("更新対象は active な場所だけを存在扱いする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await updateLocation(LOCATION_ID, VALID_FORM_DATA);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: LOCATION_ID, isActive: true },
+        }),
+      );
+    });
+
     test("update が正しいデータで呼ばれる", async () => {
       mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
 
@@ -310,6 +378,20 @@ describe("updateLocation", () => {
           }),
         }),
       );
+    });
+
+    test("管理メディア origin 外の imageUrl は拒否する", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await expect(
+        updateLocation(LOCATION_ID, {
+          ...VALID_FORM_DATA,
+          imageUrl: "https://external.example.com/location.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockLocationUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -378,6 +460,18 @@ describe("updateLocationPublished", () => {
         }),
       );
     });
+
+    test("公開切り替え対象は active な場所だけを存在扱いする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await updateLocationPublished(LOCATION_ID, true);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: LOCATION_ID, isActive: true },
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -411,8 +505,24 @@ describe("updateLocationPublished", () => {
 describe("updateLocationOrder", () => {
   beforeEach(() => {
     mockTransaction.mockReset();
+    mockExecuteRaw.mockReset();
+    mockLocationFindMany.mockReset();
     mockLocationUpdate.mockReset();
-    mockTransaction.mockResolvedValue([]);
+    mockTransaction.mockImplementation((cb) =>
+      cb({
+        $executeRaw: mockExecuteRaw,
+        location: {
+          create: mockLocationCreate,
+          aggregate: mockLocationAggregate,
+        },
+      }),
+    );
+    mockExecuteRaw.mockResolvedValue(0);
+    mockLocationFindMany.mockImplementation((args?: unknown) => {
+      const where = (args as { where?: { id?: { in?: string[] } } } | undefined)
+        ?.where;
+      return Promise.resolve((where?.id?.in ?? []).map((id) => ({ id })));
+    });
   });
 
   describe("正常系", () => {
@@ -422,36 +532,128 @@ describe("updateLocationOrder", () => {
         { id: "location-2", sortOrder: 1 },
         { id: "location-3", sortOrder: 2 },
       ];
+      mockLocationFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
 
       const result = await updateLocationOrder(items);
 
       expect(result).toEqual({ updated: 3 });
     });
 
-    test("各アイテムに対して location.update が並列実行される（$transaction は使わない）", async () => {
+    test("CASE WHEN 二段更新で一括更新する（N 回 UPDATE は使わない）", async () => {
       const items = [
         { id: "location-1", sortOrder: 0 },
         { id: "location-2", sortOrder: 1 },
       ];
+      mockLocationFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
 
       await updateLocationOrder(items);
 
-      expect(mockLocationUpdate).toHaveBeenCalledTimes(2);
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockLocationUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+    });
+
+    test("生成 SQL は locations / CASE / isActive を含む", async () => {
+      const items = [
+        { id: "location-1", sortOrder: 10 },
+        { id: "location-2", sortOrder: 11 },
+      ];
+      mockLocationFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
+
+      await updateLocationOrder(items);
+
+      for (const call of mockExecuteRaw.mock.calls.slice(1)) {
+        const sql = call[0].join("?");
+        expect(sql).toContain("locations");
+        expect(sql).toContain("CASE");
+        expect(sql).toContain("isActive");
+      }
     });
 
     test("空配列を渡すと updated: 0 を返す", async () => {
       const result = await updateLocationOrder([]);
 
       expect(result).toEqual({ updated: 0 });
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("重複 ID は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateLocationOrder([
+          { id: "location-1", sortOrder: 0 },
+          { id: "location-1", sortOrder: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "同じIDを複数指定することはできません",
+      });
+      expect(mockLocationFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("重複 sortOrder は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateLocationOrder([
+          { id: "location-1", sortOrder: 0 },
+          { id: "location-2", sortOrder: 0 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "同じ並び順を複数指定することはできません",
+      });
+      expect(mockLocationFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
 
     test("1件の場合も updated: 1 を返す", async () => {
-      const result = await updateLocationOrder([
-        { id: "location-1", sortOrder: 5 },
-      ]);
+      const items = [{ id: "location-1", sortOrder: 5 }];
+      mockLocationFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
+
+      const result = await updateLocationOrder(items);
 
       expect(result).toEqual({ updated: 1 });
+    });
+
+    test("存在しない場所が混ざる場合 SQL が実行されない", async () => {
+      mockLocationFindMany.mockResolvedValue([{ id: "location-1" }]);
+
+      await expect(
+        updateLocationOrder([
+          { id: "location-1", sortOrder: 0 },
+          { id: "location-2", sortOrder: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "場所が見つかりません",
+      });
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("既存 ID の subset は過不足として拒否する", async () => {
+      mockLocationFindMany.mockResolvedValueOnce([
+        { id: "location-1" },
+        { id: "location-2" },
+        { id: "location-3" },
+      ]);
+
+      await expect(
+        updateLocationOrder([
+          { id: "location-1", sortOrder: 0 },
+          { id: "location-2", sortOrder: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "場所数が一致しません（過不足）",
+      });
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 });
@@ -486,6 +688,18 @@ describe("deleteLocation", () => {
         expect.objectContaining({
           where: { id: LOCATION_ID },
           data: { isActive: false },
+        }),
+      );
+    });
+
+    test("削除対象は active な場所だけを存在扱いする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await deleteLocation(LOCATION_ID);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: LOCATION_ID, isActive: true },
         }),
       );
     });

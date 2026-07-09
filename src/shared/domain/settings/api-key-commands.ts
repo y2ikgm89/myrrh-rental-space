@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import type { CustomApiKeyInput } from "@/shared/types/api-keys";
 import { parseCustomApiKeysMap } from "@/shared/domain/settings/api-key-helpers";
 
@@ -18,9 +19,13 @@ async function upsertSettings(
   });
 }
 
-function encryptSecret(value: string, message: string): string {
+function encryptSecret(
+  value: string,
+  message: string,
+  purpose: string,
+): string {
   try {
-    return encrypt(value);
+    return encrypt(value, { purpose });
   } catch {
     throw new DomainError(message, "VALIDATION");
   }
@@ -35,6 +40,7 @@ export async function updateResendSettings(data: {
     updateData.resendApiKey = encryptSecret(
       data.resendApiKey,
       "APIキーの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.resendApiKey,
     );
   }
 
@@ -75,6 +81,7 @@ export async function updateTurnstileSettings(data: {
     updateData.turnstileSecretKey = encryptSecret(
       data.turnstileSecretKey,
       "シークレットキーの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.turnstileSecretKey,
     );
   }
 
@@ -108,6 +115,7 @@ export async function updateGoogleMapsSettings(data: {
     updateData.googleMapsApiKey = encryptSecret(
       data.googleMapsApiKey,
       "APIキーの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.googleMapsApiKey,
     );
   }
 
@@ -145,6 +153,7 @@ export async function addCustomApiKey(
   const encryptedKeyValue = encryptSecret(
     data.keyValue,
     "APIキーの暗号化に失敗しました",
+    SETTINGS_CRYPTO_PURPOSES.customApiKey,
   );
 
   const updated = {

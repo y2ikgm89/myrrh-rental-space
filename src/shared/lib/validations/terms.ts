@@ -37,6 +37,14 @@ export const TERMS_TYPE_VALUES = [
 export type TermsTypeValue = (typeof TERMS_TYPE_VALUES)[number];
 export const isTermsTypeValue = createTypeGuard(TERMS_TYPE_VALUES);
 
+/**
+ * 特定の規約種別を本文中でリンク参照するコード箇所（メール本文・キャンセル
+ * 導線の案内文など）向けの SSoT。文字列を直書きせずこれらを参照することで、
+ * 参照箇所と `TERMS_TYPE_VALUES` の型的な結びつきを保つ。
+ */
+export const CANCELLATION_POLICY_TERMS_TYPE: TermsTypeValue = "cancellation";
+export const PRIVACY_POLICY_TERMS_TYPE: TermsTypeValue = "privacy-policy";
+
 export const TERMS_TYPE_LABELS: Record<string, string> = {
   "terms-of-use": "利用規約",
   "privacy-policy": "プライバシーポリシー",
@@ -116,10 +124,10 @@ const termsScopeSchema = z.enum(
 /**
  * 規約作成・編集フォームスキーマ
  *
- * `footerOrder` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
+ * `displayOrder` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
  * `scopes` は重複を許さず TermsScope enum 値のみ受理する。
  */
-export const termsFormSchema = z.object({
+export const termsFormSchema = z.strictObject({
   type: typeSchema,
   slug: slugSchema,
   title: titleSchema,

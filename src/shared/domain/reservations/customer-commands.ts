@@ -13,6 +13,7 @@ import { getReservationRuleSettings } from "@/shared/domain/reservations/availab
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
+import { lockReservationSpaceForTransaction } from "./locks";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -186,6 +187,8 @@ export async function updateCustomerReservation(
     if (!space) {
       throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
     }
+
+    await lockReservationSpaceForTransaction(tx, input.spaceId);
 
     // 重複チェック
     const overlapResult = await checkReservationOverlap(

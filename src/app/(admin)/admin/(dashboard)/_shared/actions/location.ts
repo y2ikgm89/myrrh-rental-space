@@ -25,20 +25,27 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("店舗");
-const publishSchema = z.object({
+const publishSchema = z.strictObject({
   id: z.uuid({ error: "場所IDが不正です" }),
   isPublished: z.boolean(),
 });
 const locationOrderSchema = z
   .array(
-    z.object({
+    z.strictObject({
       id: z.uuid({ error: "場所IDが不正です" }),
       sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
     }),
   )
   .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
     error: "同じIDを複数指定することはできません",
-  });
+  })
+  .refine(
+    (items) =>
+      new Set(items.map((item) => item.sortOrder)).size === items.length,
+    {
+      error: "同じ並び順を複数指定することはできません",
+    },
+  );
 
 /**
  * 管理画面 新規 Location 作成 — conform `useActionState` canonical

@@ -1,4 +1,4 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { contactConfirmationFixture } from "./contact-confirmation.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -17,6 +17,10 @@ type Props = {
   name: string;
   subject: string;
   message: string;
+  /** 会員向け: ログイン後のマイページ問い合わせ詳細 URL */
+  memberInquiryUrl?: string;
+  /** 公開中のプライバシーポリシー規約 URL。無ければ本文はプレーンテキストにフォールバックする */
+  privacyPolicyUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -24,6 +28,8 @@ export function ContactConfirmationEmail({
   name,
   subject,
   message,
+  memberInquiryUrl,
+  privacyPolicyUrl,
   footer,
 }: Props) {
   return (
@@ -59,6 +65,17 @@ export function ContactConfirmationEmail({
         </Text>
       </Section>
 
+      {memberInquiryUrl && (
+        <Text style={text}>
+          <Link
+            href={memberInquiryUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            マイページでお問い合わせを確認する
+          </Link>
+        </Text>
+      )}
+
       <Hr style={hr} />
 
       <Text style={text}>
@@ -67,8 +84,18 @@ export function ContactConfirmationEmail({
       </Text>
 
       <Text style={text}>
-        お問い合わせ内容に関する個人情報は、当サービスのプライバシーポリシーに
-        基づき、お問い合わせ対応の目的にのみ利用いたします。
+        お問い合わせ内容に関する個人情報は、当サービスの
+        {privacyPolicyUrl ? (
+          <Link
+            href={privacyPolicyUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            プライバシーポリシー
+          </Link>
+        ) : (
+          "プライバシーポリシー"
+        )}
+        に基づき、お問い合わせ対応の目的にのみ利用いたします。
       </Text>
     </EmailLayout>
   );

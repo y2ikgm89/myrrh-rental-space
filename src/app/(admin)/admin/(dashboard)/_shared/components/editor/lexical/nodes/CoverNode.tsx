@@ -5,8 +5,6 @@
  * 子要素: HeadingNode + ParagraphNode（直接編集可能）
  */
 
-"use client";
-
 import type {
   DOMConversionMap,
   DOMConversionOutput,

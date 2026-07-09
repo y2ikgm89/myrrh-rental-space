@@ -1,18 +1,15 @@
 "use server";
 
+import { headers } from "next/headers";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
-  cancelEventRegistrationCommand,
+  adminCancelEventRegistrationCommand,
   createWalkInRegistrationCommand,
   setEventRegistrationCheckInCommand,
 } from "@/shared/domain/events/registration-commands";
-import {
-  sendEventRegistrationCancelled,
-  sendEventAdminNotification,
-} from "@/shared/lib/email/event-emails";
-import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
+import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -23,6 +20,7 @@ import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   prismaCuid2IdSchema,
@@ -56,7 +54,9 @@ export async function adminCancelRegistration(
     action: "update",
     resourceId: validated.data,
     execute: async () => {
-      const registration = await cancelEventRegistrationCommand(validated.data);
+      const registration = await adminCancelEventRegistrationCommand(
+        validated.data,
+      );
 
       return {
         registrationId: registration.id,
@@ -71,57 +71,22 @@ export async function adminCancelRegistration(
     afterSuccess: (data) => {
       updateTag(CACHE_TAGS.EVENTS);
 
-      fireAndForget(
-        createNotificationCommand({
-          type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-          title: "イベント申込キャンセル（管理者）",
-          message: `${data.name}様の「${data.eventTitle}」申込を管理者がキャンセルしました`,
-          resourceType: "event",
-          resourceId: data.eventId,
-        }),
-        {
-          operation: "createAdminEventCancellationNotification",
-          category: ErrorCategory.DATABASE,
-        },
-      );
-
+      // メール / 通知 / 監査ログを一括で副作用ヘルパーへ委譲
+      // （会員・ゲスト経路と SSoT 共有。reservations の admin 経路と同型）。
       fireAndForget(
         (async () => {
-          const event = await getEventRegistrationDetailsForEmail(
-            data.registrationId,
-          );
-          if (!event) return;
-
-          await Promise.all([
-            sendEventRegistrationCancelled({
-              registrationId: data.registrationId,
-              customerName: data.name,
-              customerEmail: data.email,
-              eventTitle: data.eventTitle,
-              eventStartTime: event.startTime,
-              eventEndTime: event.endTime,
-              location: event.location ?? undefined,
-              quantity: data.quantity,
-              icsSequence: data.icsSequence,
-            }),
-            sendEventAdminNotification(
-              {
-                registrationId: data.registrationId,
-                eventId: data.eventId,
-                participantName: data.name,
-                participantEmail: data.email,
-                eventTitle: data.eventTitle,
-                eventStartTime: event.startTime,
-                quantity: data.quantity,
-                currentRegistrations: event.confirmedCount,
-                capacity: event.capacity,
-              },
-              "cancellation",
-            ),
-          ]);
+          const requestHeaders = await headers();
+          const ip = await getClientIpFromHeaders();
+          const userAgent = requestHeaders.get("user-agent");
+          await applyEventRegistrationCancellationSideEffects({
+            registrationId: data.registrationId,
+            channel: "admin",
+            actorUserId: null,
+            request: { ip, userAgent },
+          });
         })(),
         {
-          operation: "sendAdminEventCancellationEmails",
+          operation: "applyEventRegistrationCancellationSideEffects",
           category: ErrorCategory.EXTERNAL_API,
         },
       );
@@ -190,7 +155,9 @@ const walkInSchema = z.object({
     .max(255)
     .optional()
     .transform((v) => (v === undefined || v === "" ? null : v))
-    .pipe(z.union([z.email("メールアドレスの形式が不正です"), z.null()])),
+    .pipe(
+      z.union([z.email({ error: "メールアドレスの形式が不正です" }), z.null()]),
+    ),
   phone: z
     .string()
     .trim()
@@ -248,7 +215,6 @@ export async function createWalkInRegistration(
           title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
           message: `${data.name}様が当日参加で受付されました`,
           resourceType: "event",
-          resourceId: data.eventId,
         }),
         {
           operation: "createWalkInRegistrationNotification",

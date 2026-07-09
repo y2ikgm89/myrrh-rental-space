@@ -5,6 +5,7 @@ import { expectRecord } from "../helpers/type-assertions";
 
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
+const SCRIPTS_ROOT = join(ROOT, "scripts");
 const SHARED_DB_ROOT = join(SRC_ROOT, "shared", "db");
 const ENUMS_GATEWAY_ROOT = join(
   SRC_ROOT,
@@ -20,6 +21,7 @@ const API_WEBHOOK_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "webhooks");
 const PUBLIC_APP_ROOT = join(SRC_ROOT, "app", "(public)");
 const PUBLIC_LAYOUT_FILE = join(PUBLIC_APP_ROOT, "layout.tsx");
 const PACKAGE_JSON_FILE = join(ROOT, "package.json");
+const BUN_LOCK_FILE = join(ROOT, "bun.lock");
 const TYPE_CHECK_SCRIPT_FILE = join(ROOT, "scripts", "type-check.ts");
 const VALIDATE_SCRIPT_FILE = join(ROOT, "scripts", "validate.ts");
 const LINT_FORMAT_SCRIPT_FILE = join(ROOT, "scripts", "lint-format.ts");
@@ -1050,6 +1052,28 @@ describe("architecture boundaries", () => {
     ).toBe(false);
   });
 
+  test("bun.lock の root package metadata は package.json と一致する", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    const bunLockSource = readFileSync(BUN_LOCK_FILE, "utf8");
+    expectRecord(packageJson);
+
+    expect(bunLockSource).toContain(`"name": "${packageJson["name"]}"`);
+    expect(bunLockSource).not.toContain('"name": "myrrh-temp"');
+  });
+
+  test("@lexical/overflow は @lexical/react の推移依存に任せ、直接依存しない", () => {
+    const packageJson: unknown = JSON.parse(
+      readFileSync(PACKAGE_JSON_FILE, "utf8"),
+    );
+    expectRecord(packageJson);
+    const dependencies = packageJson["dependencies"];
+    expectRecord(dependencies);
+
+    expect(dependencies["@lexical/overflow"]).toBeUndefined();
+  });
+
   test("type-check は clean checkout 前提で増分 build state に依存しない", () => {
     const packageJson: unknown = JSON.parse(
       readFileSync(PACKAGE_JSON_FILE, "utf8"),
@@ -1097,7 +1121,7 @@ describe("architecture boundaries", () => {
     expect(lhciStartSource).toContain('"build:skip-env"');
   });
 
-  test("test:all は Prisma client generation を 1 回にまとめる", () => {
+  test("test scripts run real-DB integration tests only after test DB migrations", () => {
     const packageJson: unknown = JSON.parse(
       readFileSync(PACKAGE_JSON_FILE, "utf8"),
     );
@@ -1105,8 +1129,12 @@ describe("architecture boundaries", () => {
     const scripts = packageJson["scripts"];
     expectRecord(scripts);
 
+    expect(scripts["test:db:migrate"]).toBe("bun scripts/migrate-test-db.ts");
+    expect(scripts["test:integration"]).toBe(
+      "bun run db:generate && bun run test:db:migrate && bun scripts/run-tests.ts __tests__/integration",
+    );
     expect(scripts["test:all"]).toBe(
-      "bun run db:generate && bun scripts/run-tests.ts __tests__/unit && bun scripts/run-tests.ts __tests__/integration",
+      "bun run db:generate && bun scripts/run-tests.ts __tests__/unit && bun run test:db:migrate && bun scripts/run-tests.ts __tests__/integration",
     );
     expect(scripts["test:all"]).not.toContain("bun run test:unit");
     expect(scripts["test:all"]).not.toContain("bun run test:integration");
@@ -1732,8 +1760,8 @@ describe("architecture boundaries", () => {
   // を「import 文の `{...}` 内部改行のみ空白化」してから line 評価する。
   //
   // admin scope は対象外: admin layout が PR #604 で `generateViewport + connection() +
-  // <Suspense><html>` により全 71 route を `ƒ` 化済 (詳細は `.claude/rules/public-app.md` の
-  // 「Admin layout の動的化 (CSP nonce gap 予防)」節)。runtime nonce で全 chunk 保護されるため
+  // <Suspense><html>` により全 71 route を `ƒ` 化済 (詳細は `.claude/rules/app-structure.md` の
+  // 「cacheComponents + strict-dynamic CSP」節)。runtime nonce で全 chunk 保護されるため
   // admin client が zod を value-import しても CSP block は起きない。
 
   /**
@@ -2032,6 +2060,19 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("src/scripts は explicit any と TypeScript suppression を使わない", () => {
+    const sourceFiles = [
+      ...collectSourceFiles(SRC_ROOT),
+      ...collectSourceFiles(SCRIPTS_ROOT),
+    ];
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\bas\s+any\b|<any>|:\s*any\b|Promise<any>|Record<string,\s*any>|@ts-(?:ignore|expect-error)/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
     // SDK 境界 cast の helper 強制（方針: .claude/rules/type-safety.md）
     // - LocationSchema.parse (googleapis Schema$Location)
@@ -2085,9 +2126,10 @@ describe("architecture boundaries", () => {
     const allowedFiles = [
       join(SRC_ROOT, "shared", "lib", "conform", "typed-input-control.ts"),
     ];
-    const sourceFiles = collectSourceFiles(SRC_ROOT).filter(
-      (file) => !allowedFiles.includes(file),
-    );
+    const sourceFiles = [
+      ...collectSourceFiles(SRC_ROOT),
+      ...collectSourceFiles(SCRIPTS_ROOT),
+    ].filter((file) => !allowedFiles.includes(file));
     const offenders = collectNonCommentOffenders(sourceFiles, /\bas\s+\{/u);
 
     expect(offenders).toEqual([]);

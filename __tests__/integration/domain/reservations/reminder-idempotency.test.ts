@@ -15,13 +15,13 @@
  *
  * == 実行条件 ==
  * 実 Postgres を要求する（atomic UPDATE の直列化挙動は mock では再現不能）。
- * `TEST_DATABASE_URL` が設定されているときのみ実行し、未設定なら describe ごと skip する
- * （開発者の dev DB を誤って汚染しないための安全弁）。`registration-overbooking.test.ts`
- * と同じ規約。
+ * `bun run test:integration` は docker-compose の test-db 既定値を注入する。直接
+ * `bun test` でこのファイルを実行し `TEST_DATABASE_URL` が未設定の場合のみ
+ * describe ごと skip する（dev DB を誤って汚染しないための安全弁）。
  *
- *   ローカル: 専用テスト DB を用意し、
- *     TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/myrrh_test
- *   を設定して `bun run test:integration` を実行する。
+ *   ローカル: `bun run test:integration` が
+ *     postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public
+ *   を既定値として使い、docker-compose test-db を起動する。
  *   CI: `unit-tests` job が postgres service + `prisma migrate deploy` 済みのため
  *   `TEST_DATABASE_URL` を渡すだけで実行される。
  */
@@ -56,6 +56,8 @@ type Fixture = {
   cleanup: () => Promise<void>;
 };
 
+let nextFixtureLocationSortOrder = 1_100_000_000;
+
 /** Location → Space → Customer → Reservation を 1 件ずつ作る最小 fixture。 */
 async function createReservationFixture(opts?: {
   startTime?: Date;
@@ -72,6 +74,7 @@ async function createReservationFixture(opts?: {
       name: `Reminder Loc ${suffix}`,
       address: "東京都テスト区1-2-3",
       imageUrl: "https://example.com/loc.jpg",
+      sortOrder: nextFixtureLocationSortOrder++,
     },
     select: { id: true },
   });

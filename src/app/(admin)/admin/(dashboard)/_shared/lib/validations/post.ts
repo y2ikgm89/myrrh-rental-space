@@ -80,6 +80,14 @@ export const createPostSchema = z
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
+    contentWidth: z.enum(LayoutWidth).nullable().optional(),
+    contentWidthCustom: z
+      .number()
+      .int()
+      .min(320)
+      .max(1920)
+      .nullable()
+      .optional(),
   })
   .extend(seoOgpFieldsSchema.shape);
 
@@ -118,6 +126,7 @@ export const updatePostSettingsSchema = z
     categoryId: z.uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
     status: z.enum(PostStatus),
+    publishedAt: publishedAtFormSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z
       .number()
@@ -183,7 +192,7 @@ export type PostSettingsFormData = z.input<typeof postSettingsFormSchema>;
 /**
  * 投稿カテゴリスキーマ（SEO/OGP含む）
  */
-export const postCategorySchema = z.object({
+export const postCategorySchema = z.strictObject({
   name: z
     .string()
     .min(1, { error: "カテゴリ名は必須です" })
@@ -214,7 +223,7 @@ export type PostCategoryInput = z.infer<typeof postCategorySchema>;
 /**
  * 投稿タグスキーマ（SEO/OGP含む）
  */
-export const postTagSchema = z.object({
+export const postTagSchema = z.strictObject({
   name: z
     .string()
     .min(1, { error: "タグ名は必須です" })

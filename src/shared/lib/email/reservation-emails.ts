@@ -12,6 +12,7 @@ import { ja } from "date-fns/locale";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
+import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import {
@@ -21,6 +22,7 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,
@@ -29,6 +31,8 @@ import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { getAdminUrl } from "../admin-urls";
 import { getAppHost, getAppUrl } from "../constants";
 import {
@@ -53,13 +57,24 @@ import type {
 /**
  * 予約 ID から、会員向けマイページの予約詳細 URL を組み立てる。
  * userId が無い（ゲスト予約）場合は undefined を返す。
+ *
+ * reminder-emails.ts / review-emails.ts からも参照される SSoT のため export する。
  */
-function buildMemberReservationUrl(
+export function buildMemberReservationUrl(
   userId: string | null | undefined,
   reservationId: string,
 ): string | undefined {
   if (!userId) return undefined;
   return `${getAppUrl()}/mypage/reservations/${reservationId}`;
+}
+
+/**
+ * 公開中のキャンセルポリシー規約の絶対 URL を解決する。該当文書が無ければ
+ * undefined を返し、呼び出し側はプレーンテキストにフォールバックする。
+ */
+async function resolveCancellationPolicyUrl(): Promise<string | undefined> {
+  const doc = await getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE);
+  return doc ? `${getAppUrl()}/terms/${doc.slug}` : undefined;
 }
 
 /**
@@ -78,13 +93,19 @@ export async function sendReservationConfirmationEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const [calendarSettings, deadlineSettings, organizer, footer] =
-    await Promise.all([
-      getCalendarEmailSettings(),
-      getReservationDeadlineSettings(),
-      getIcalOrganizer(),
-      getEmailFooterData(),
-    ]);
+  const [
+    calendarSettings,
+    deadlineSettings,
+    organizer,
+    footer,
+    cancellationPolicyUrl,
+  ] = await Promise.all([
+    getCalendarEmailSettings(),
+    getReservationDeadlineSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+    resolveCancellationPolicyUrl(),
+  ]);
   const appUrl = getAppUrl();
   const host = getAppHost();
 
@@ -138,6 +159,11 @@ export async function sendReservationConfirmationEmail(
     data.reservationId,
   );
 
+  // ゲスト予約のみ、マイページに予約を追加する claim リンクを発行する（会員は不要）。
+  const claimUrl = data.userId
+    ? undefined
+    : `${appUrl}/claim/reservation?token=${createReservationClaimToken(data.reservationId)}`;
+
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
     try {
@@ -179,7 +205,10 @@ export async function sendReservationConfirmationEmail(
           addToCalendarLinks,
           cancelUrl,
           memberReservationUrl,
+          claimUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+          modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
+          cancellationPolicyUrl,
           footer,
         }),
       ),
@@ -187,6 +216,142 @@ export async function sendReservationConfirmationEmail(
     }),
     idempotencyKey: `reservation-confirm/${data.reservationId}`,
     operation: "sendReservationConfirmationEmail",
+    context: {
+      reservationId: data.reservationId,
+      customerEmail: data.customerEmail,
+    },
+  });
+}
+
+/**
+ * 予約内容変更通知メールを送信
+ *
+ * 顧客セルフ日時変更・管理者編集のいずれの経路でも、日時・スペース・料金など
+ * 顧客に影響する変更があった場合に呼ぶ。ステータス変更/キャンセル同様、重要な
+ * 取引通知として `sendReservationConfirmationEmail` のような Settings トグルは
+ * 持たず常時送信する。
+ */
+export async function sendReservationUpdatedEmail(
+  data: ReservationEmailData,
+): Promise<EmailResult> {
+  const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
+    locale: ja,
+  });
+  const startTime = format(data.startTime, "HH:mm", { locale: ja });
+  const endTime = format(data.endTime, "HH:mm", { locale: ja });
+
+  const [
+    calendarSettings,
+    deadlineSettings,
+    organizer,
+    footer,
+    cancellationPolicyUrl,
+  ] = await Promise.all([
+    getCalendarEmailSettings(),
+    getReservationDeadlineSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+    resolveCancellationPolicyUrl(),
+  ]);
+  const appUrl = getAppUrl();
+  const host = getAppHost();
+
+  const calendarParams = omitUndefined({
+    reservationId: data.reservationId,
+    spaceName: data.spaceName,
+    customerName: data.customerName,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    ...(data.notes !== undefined ? { notes: data.notes } : {}),
+    sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
+  });
+
+  const icsDownloadUrl = `${appUrl}/api/calendar/reservation/${data.reservationId}?token=${createCalendarToken("reservation", data.reservationId)}`;
+  const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
+    ? buildAddToCalendarUrls({
+        summary: `【予約】${data.spaceName}`,
+        description: [
+          `予約ID: ${data.reservationId.slice(0, 8).toUpperCase()}`,
+          `スペース: ${data.spaceName}`,
+          `日時: ${reservationDate} ${startTime} - ${endTime}`,
+        ].join("\n"),
+        startTime: data.startTime,
+        endTime: data.endTime,
+        ...(data.location !== undefined ? { location: data.location } : {}),
+        icsDownloadUrl,
+      })
+    : undefined;
+
+  const cancelDeadline = computeCancelTokenExpiresAt(
+    data.startTime,
+    deadlineSettings.cancellationDeadlineHours,
+  );
+  const cancelUrl =
+    cancelDeadline > new Date()
+      ? `${appUrl}/reservation/cancel?token=${createCancelToken(data.reservationId, cancelDeadline)}`
+      : undefined;
+
+  const memberReservationUrl = buildMemberReservationUrl(
+    data.userId,
+    data.reservationId,
+  );
+
+  let attachments: { filename: string; content: Buffer }[] | undefined;
+  if (calendarSettings.icalAttachmentEnabled) {
+    try {
+      attachments = [
+        {
+          filename: `reservation-${data.reservationId.slice(0, 8)}.ics`,
+          content: Buffer.from(
+            buildReservationCalendar(calendarParams, host),
+            "utf-8",
+          ),
+        },
+      ];
+    } catch (icalError) {
+      logError(normalizeError(icalError), {
+        category: ErrorCategory.UNKNOWN,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "generateICalUpdateAttachment",
+          reservationId: data.reservationId,
+        },
+      });
+    }
+  }
+
+  return sendEmail({
+    payload: omitUndefined({
+      to: data.customerEmail,
+      subject: `【ご予約内容変更】${data.spaceName} - ${reservationDate}`,
+      react: ReservationUpdatedEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          spaceName: data.spaceName,
+          reservationDate,
+          startTime,
+          endTime,
+          totalPrice: formatPrice(data.totalPrice, "未設定"),
+          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+          notes: data.notes,
+          addToCalendarLinks,
+          cancelUrl,
+          memberReservationUrl,
+          cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+          modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
+          cancellationPolicyUrl,
+          footer,
+        }),
+      ),
+      attachments,
+    }),
+    // icsSequence を含めることで、同一予約が短時間に複数回変更されても
+    // idempotency key が衝突せず Resend が silent drop しないようにする。
+    idempotencyKey: `reservation-update/${data.reservationId}/${data.icsSequence}`,
+    operation: "sendReservationUpdatedEmail",
     context: {
       reservationId: data.reservationId,
       customerEmail: data.customerEmail,
@@ -206,12 +371,19 @@ export async function sendReservationCancelledEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const [calendarSettings, organizer, footer] = await Promise.all([
-    getCalendarEmailSettings(),
-    getIcalOrganizer(),
-    getEmailFooterData(),
-  ]);
+  const [calendarSettings, organizer, footer, cancellationPolicyUrl] =
+    await Promise.all([
+      getCalendarEmailSettings(),
+      getIcalOrganizer(),
+      getEmailFooterData(),
+      resolveCancellationPolicyUrl(),
+    ]);
   const host = getAppHost();
+
+  const memberReservationUrl = buildMemberReservationUrl(
+    data.userId,
+    data.reservationId,
+  );
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -254,15 +426,19 @@ export async function sendReservationCancelledEmail(
     payload: omitUndefined({
       to: data.customerEmail,
       subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
-      react: ReservationCancelledEmail({
-        customerName: data.customerName,
-        spaceName: data.spaceName,
-        reservationDate,
-        startTime,
-        endTime,
-        reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-        footer,
-      }),
+      react: ReservationCancelledEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          spaceName: data.spaceName,
+          reservationDate,
+          startTime,
+          endTime,
+          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+          memberReservationUrl,
+          cancellationPolicyUrl,
+          footer,
+        }),
+      ),
       attachments,
     }),
     idempotencyKey: `reservation-cancel/${data.reservationId}`,

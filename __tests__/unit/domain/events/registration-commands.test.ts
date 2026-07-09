@@ -58,13 +58,25 @@ const mockRegistrationFindFirst = mock<
 const mockRegistrationUpdate = mock<() => Promise<Record<string, unknown>>>(
   () => Promise.resolve({ attendedAt: new Date("2026-07-01T00:00:00.000Z") }),
 );
+const mockRegistrationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 1 }),
+);
 // 本番コードは先頭で advisory xact lock を tx.$executeRaw で取得する。戻り値（影響行数）は
 // 使わないため 0 を返すだけのスタブで足りる。
 const mockExecuteRaw = mock<(...args: unknown[]) => Promise<number>>(() =>
   Promise.resolve(0),
 );
+// createEventRegistrationCommand は `isFeatureEnabled("events")` を直接呼ぶ
+// （reviews/commands.ts と同型の feature module gate）。
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
 
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
 
 // createEventRegistrationCommand は定員集計〜create を prisma.$transaction(async (tx) => {...})
 // に閉じるため、$transaction が同じモデル mock を載せた tx を callback に渡すよう模す。
@@ -85,6 +97,7 @@ mock.module("@/shared/db/prisma", () => {
       eventRegistration: {
         findFirst: mockRegistrationFindFirst,
         update: mockRegistrationUpdate,
+        updateMany: mockRegistrationUpdateMany,
       },
     },
   };
@@ -98,6 +111,8 @@ mock.module("@generated/prisma/enums", () => ({
 import {
   createEventRegistrationCommand,
   setEventRegistrationCheckInCommand,
+  claimEventRegistrationReminder,
+  releaseEventRegistrationReminderClaim,
 } from "@/shared/domain/events/registration-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -146,7 +161,9 @@ describe("createEventRegistrationCommand", () => {
     mockTicketFindFirst.mockReset();
     mockRegistrationAggregate.mockReset();
     mockRegistrationCreate.mockReset();
+    mockIsFeatureEnabled.mockReset();
 
+    mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
     mockEventFindFirst.mockImplementation(() => Promise.resolve(BASE_EVENT));
     mockSlotFindUnique.mockImplementation(() => Promise.resolve(BASE_SLOT));
     mockTicketFindFirst.mockImplementation(() => Promise.resolve(BASE_TICKET));
@@ -245,6 +262,15 @@ describe("createEventRegistrationCommand", () => {
   });
 
   describe("異常系: その他", () => {
+    test("events feature module が OFF の場合は VALIDATION エラーで拒否し、以降の処理を行わない", async () => {
+      mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
+      await expect(
+        createEventRegistrationCommand(VALID_INPUT),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
+      expect(mockEventFindFirst).not.toHaveBeenCalled();
+      expect(mockRegistrationCreate).not.toHaveBeenCalled();
+    });
+
     test("イベントが存在しないと NOT_FOUND", async () => {
       mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
       await expect(createEventRegistrationCommand(VALID_INPUT)).rejects.toThrow(
@@ -322,5 +348,50 @@ describe("setEventRegistrationCheckInCommand", () => {
       },
     });
     expect(mockRegistrationUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("claimEventRegistrationReminder", () => {
+  beforeEach(() => {
+    mockRegistrationUpdateMany.mockClear();
+    mockRegistrationUpdateMany.mockResolvedValue({ count: 1 });
+  });
+
+  test("claim 成功時は true を返し、WHERE に status/reminderSentAt を含める", async () => {
+    const result = await claimEventRegistrationReminder("reg-1");
+
+    expect(result).toBe(true);
+    expect(mockRegistrationUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: "reg-1",
+        status: RegistrationStatus.CONFIRMED,
+        reminderSentAt: null,
+      },
+      data: { reminderSentAt: expect.any(Date) },
+    });
+  });
+
+  test("既に claim 済み（count=0）の場合は false を返す", async () => {
+    mockRegistrationUpdateMany.mockResolvedValue({ count: 0 });
+
+    const result = await claimEventRegistrationReminder("reg-1");
+
+    expect(result).toBe(false);
+  });
+});
+
+describe("releaseEventRegistrationReminderClaim", () => {
+  beforeEach(() => {
+    mockRegistrationUpdateMany.mockClear();
+    mockRegistrationUpdateMany.mockResolvedValue({ count: 1 });
+  });
+
+  test("reminderSentAt を null に戻す", async () => {
+    await releaseEventRegistrationReminderClaim("reg-1");
+
+    expect(mockRegistrationUpdateMany).toHaveBeenCalledWith({
+      where: { id: "reg-1" },
+      data: { reminderSentAt: null },
+    });
   });
 });

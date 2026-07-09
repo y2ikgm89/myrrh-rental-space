@@ -6,7 +6,7 @@
  * - 新規顧客の場合、signup terms cookie を消費して同意記録（SignupTermsConsumer に隔離）
  * - メール未登録時は /mypage/settings にリダイレクト（LINE ログインで email なしの場合）
  *
- * 設計（rule .claude/rules/db-and-domain.md §6 canonical）:
+ * 設計（rule .claude/rules/caching.md「build prerender の焼き込み防止」canonical）:
  * - 認証 + Prisma 直呼び出し (verifyCustomerSession / ensureCustomerLinked) + headers
  *   等の dynamic API 処理は **MypageAuthGate async SC に隔離**し、冒頭で `await connection()`
  *   を呼んで build prerender skip を保証する。

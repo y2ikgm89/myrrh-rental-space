@@ -53,4 +53,20 @@ describe("DEFAULT_PAGE_SECTIONS", () => {
       );
     }
   });
+
+  test("全 page slug の defaults は各 section schema の正規 config である", () => {
+    for (const [slug, sections] of Object.entries(DEFAULT_PAGE_SECTIONS)) {
+      for (const section of sections ?? []) {
+        const def = getSectionDefinition(section.type);
+        expect(def, `${slug}.${section.type} not registered`).toBeDefined();
+        if (!def) continue;
+
+        const result = def.configSchema.safeParse(section.config);
+        expect(
+          result.success,
+          `${slug}.${section.type} default config should be canonical`,
+        ).toBe(true);
+      }
+    }
+  });
 });

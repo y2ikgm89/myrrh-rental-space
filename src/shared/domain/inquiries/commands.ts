@@ -4,6 +4,7 @@ import { Prisma } from "@generated/prisma/client";
 import { CustomerType, InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 
 export async function updateInquiryStatus(
@@ -31,6 +32,13 @@ export type InquiryReplyEmailContext = {
   readonly email: string;
   readonly subject: string;
   readonly message: string;
+  /**
+   * この問い合わせに紐づく Customer の User.id（ログイン可能な実アカウント）。
+   * Inquiry.customerId 自体は resolveOrCreateGuestInquiryCustomer が発行する
+   * userId=null の「ゲスト shell」customer を指し得るため、マイページ確認リンクの
+   * 出し分けには customer.userId（Better Auth 連携済みか）を直接見る必要がある。
+   */
+  readonly customerUserId: string | null;
 };
 
 export async function replyToInquiryCommand(
@@ -46,6 +54,7 @@ export async function replyToInquiryCommand(
       email: true,
       subject: true,
       message: true,
+      customer: { select: { userId: true } },
     },
   });
 
@@ -70,6 +79,7 @@ export async function replyToInquiryCommand(
       email: inquiry.email,
       subject: inquiry.subject,
       message: inquiry.message,
+      customerUserId: inquiry.customer?.userId ?? null,
     },
   };
 }
@@ -185,6 +195,16 @@ async function resolveOrCreateGuestInquiryCustomer(
 export async function createInquiryCommand(
   input: CreateInquiryInput,
 ): Promise<CreateInquiryResult> {
+  // Global gate: featureModules.contact で OFF なら拒否。
+  // page.tsx の requireFeatureEnabled は Server Action の直接呼び出しを防げないため、
+  // 書込の実効性は domain 層のこのチェックが担保する（reviews/commands.ts と同型）。
+  if (!(await isFeatureEnabled("contact"))) {
+    throw new DomainError(
+      "お問い合わせ機能は現在サイト全体で無効化されています",
+      "VALIDATION",
+    );
+  }
+
   // Resolve customerId: explicit authenticated owner > unlinked guest customer.
   // Submitted email is not proof of account ownership, so never use it to attach
   // an inquiry to an existing linked customer.

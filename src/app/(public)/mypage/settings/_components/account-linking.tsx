@@ -16,11 +16,7 @@ import {
 } from "@/public/components/design-system/dialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getErrorMessage } from "@/shared/lib/errors";
-import {
-  linkSocial,
-  unlinkAccount,
-  signOut,
-} from "@/shared/lib/customer-auth-client";
+import { linkSocial, unlinkAccount } from "@/shared/lib/customer-auth-client";
 import { deleteAccountAction } from "../../_shared/actions/account";
 import {
   TurnstileWidget,
@@ -60,6 +56,7 @@ export function AccountLinking({
   );
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteRequested, setDeleteRequested] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTurnstileToken, setDeleteTurnstileToken] = useState("");
   const deleteTurnstileRef = useRef<TurnstileInstance>(null);
@@ -106,12 +103,17 @@ export function AccountLinking({
           deleteTurnstileRef.current?.reset();
           return;
         }
-        // Server-side user deleted, now sign out client
-        await signOut();
-        window.location.href = "/login";
+        // 確認メールを送信しただけで、この時点ではアカウントはまだ削除されていない
+        // （実際の削除はメール内リンクを踏んだ時点で行われる）。sign out はしない。
+        setIsDeleting(false);
+        setDeleteDialogOpen(false);
+        setDeleteRequested(true);
       } catch (error) {
-        console.error("Failed to delete account", getErrorMessage(error));
-        setError("アカウントの削除に失敗しました");
+        console.error(
+          "Failed to request account deletion",
+          getErrorMessage(error),
+        );
+        setError("アカウント削除の受付に失敗しました");
         setIsDeleting(false);
         deleteTurnstileRef.current?.reset();
       }
@@ -201,61 +203,70 @@ export function AccountLinking({
 
       {/* Account deletion */}
       <div className="pt-6 border-t border-border">
-        <p className="text-xs text-muted-foreground mb-3">
-          アカウントを削除すると、ログインできなくなります。予約履歴は管理上保持されます。
-        </p>
-        <Dialog
-          open={deleteDialogOpen}
-          onOpenChange={(open) => {
-            setDeleteDialogOpen(open);
-            if (!open) setDeleteTurnstileToken("");
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="border-destructive/40 text-destructive hover:bg-destructive/5"
+        {deleteRequested ? (
+          <p className="text-sm text-foreground" role="status">
+            確認メールを送信しました。メール内のリンクを開くとアカウント削除が完了します（リンクの有効期限は1時間です）。
+          </p>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground mb-3">
+              アカウントを削除すると、ログインできなくなります。予約履歴は管理上保持されます。
+            </p>
+            <Dialog
+              open={deleteDialogOpen}
+              onOpenChange={(open) => {
+                setDeleteDialogOpen(open);
+                if (!open) setDeleteTurnstileToken("");
+              }}
             >
-              アカウントを削除する
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>アカウント削除の確認</DialogTitle>
-              <DialogDescription>
-                この操作は取り消せません。アカウントを削除すると、ソーシャルログインによるアクセスが無効になります。
-              </DialogDescription>
-            </DialogHeader>
-            <TurnstileWidget
-              ref={deleteTurnstileRef}
-              siteKey={turnstileSiteKey}
-              action={TURNSTILE_ACTIONS.mypage_account_delete}
-              onVerify={setDeleteTurnstileToken}
-              onExpire={() => setDeleteTurnstileToken("")}
-            />
-            {/* JSX 順 = visual 順: mobile 縦並びで「キャンセル」が上、「削除」が下 (thumb-zone)。 */}
-            <DialogFooter>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(false)}
-                className="w-full sm:w-auto"
-              >
-                キャンセル
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-                className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
-              >
-                {isDeleting ? "削除中..." : "削除する"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="border-destructive/40 text-destructive hover:bg-destructive/5"
+                >
+                  アカウントを削除する
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>アカウント削除の確認</DialogTitle>
+                  <DialogDescription>
+                    確認メールを送信します。メール内のリンクを開くとアカウントが削除され、
+                    ソーシャルログインによるアクセスが無効になります。この操作は取り消せません。
+                  </DialogDescription>
+                </DialogHeader>
+                <TurnstileWidget
+                  ref={deleteTurnstileRef}
+                  siteKey={turnstileSiteKey}
+                  action={TURNSTILE_ACTIONS.mypage_account_delete}
+                  onVerify={setDeleteTurnstileToken}
+                  onExpire={() => setDeleteTurnstileToken("")}
+                />
+                {/* JSX 順 = visual 順: mobile 縦並びで「キャンセル」が上、「削除」が下 (thumb-zone)。 */}
+                <DialogFooter>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(false)}
+                    className="w-full sm:w-auto"
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
+                  >
+                    {isDeleting ? "送信中..." : "確認メールを送信する"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
       </div>
     </div>
   );

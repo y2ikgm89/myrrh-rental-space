@@ -49,8 +49,9 @@ export async function getResendConfig(): Promise<ResendConfig> {
 /**
  * 送信経路で実際に使う Resend API キーを返す（管理画面で設定された暗号化キーを復号）。
  *
- * Turnstile / Google Maps / Cloudflare と同じ `getDecrypted*` パターン。env を正本とする
- * フォールバックの DB 側として `@/shared/lib/email/client` から参照される（env-OR-DB）。
+ * Turnstile / Google Maps と同じ `getDecrypted*` パターン。DB を正本とし、
+ * `@/shared/lib/email/client` の env フォールバックより先に参照される
+ * （DB-OR-env、Settings is canonical）。
  */
 export async function getDecryptedResendApiKey(): Promise<string | null> {
   const settings = await prisma.settings.findUnique({
@@ -69,8 +70,8 @@ export async function getDecryptedResendApiKey(): Promise<string | null> {
 
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
   "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
@@ -132,8 +133,8 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
 
 export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
   "use cache";
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
@@ -204,21 +205,25 @@ export async function getIntegrationHealthSummary(): Promise<{
   });
 
   return {
-    // 送信経路（client.ts）と同じ env-OR-DB ソースで判定する。env キーが正本のため
-    // env のみ設定／DB のみ設定のどちらでも「接続済み」を正しく反映する（health が嘘をつかない）。
+    // 送信経路（client.ts / stripe.ts / turnstile.ts）と同じ DB-OR-env ソースで判定する。
+    // DB キーが正本のため、DB のみ設定／env のみ設定のどちらでも「接続済み」を
+    // 正しく反映する（health が嘘をつかない）。
     resend: Boolean(
-      serverEnv.RESEND_API_KEY ||
-      (settings?.resendApiKey && safeDecrypt(settings.resendApiKey)),
+      (settings?.resendApiKey && safeDecrypt(settings.resendApiKey)) ||
+      serverEnv.RESEND_API_KEY,
     ),
     stripe: Boolean(
-      settings?.stripeSecretKey && safeDecrypt(settings.stripeSecretKey),
+      (settings?.stripeSecretKey && safeDecrypt(settings.stripeSecretKey)) ||
+      serverEnv.STRIPE_SECRET_KEY,
     ),
     googleCalendar: Boolean(
       settings?.googleCalendarEnabled &&
       settings?.googleCalendarConnectionStatus === "connected",
     ),
     turnstile: Boolean(
-      settings?.turnstileSecretKey && safeDecrypt(settings.turnstileSecretKey),
+      (settings?.turnstileSecretKey &&
+        safeDecrypt(settings.turnstileSecretKey)) ||
+      serverEnv.TURNSTILE_SECRET_KEY,
     ),
   };
 }

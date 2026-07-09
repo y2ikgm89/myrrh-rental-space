@@ -9,6 +9,10 @@ const mockSpaceCategoryFindUnique = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
+const mockSpaceCategoryFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+
 const mockSpaceCategoryCreate = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "category-1" }),
 );
@@ -26,8 +30,28 @@ const mockSpaceCategoryAggregate = mock<
 >(() => Promise.resolve({ _max: { sortOrder: null } }));
 
 const mockTransaction = mock<
-  (ops: unknown[]) => Promise<Record<string, unknown>[]>
->(() => Promise.resolve([]));
+  (
+    cb: (tx: {
+      $executeRaw: typeof mockExecuteRaw;
+      spaceCategory: {
+        create: typeof mockSpaceCategoryCreate;
+        aggregate: typeof mockSpaceCategoryAggregate;
+      };
+    }) => Promise<unknown>,
+  ) => Promise<unknown>
+>((cb) =>
+  cb({
+    $executeRaw: mockExecuteRaw,
+    spaceCategory: {
+      create: mockSpaceCategoryCreate,
+      aggregate: mockSpaceCategoryAggregate,
+    },
+  }),
+);
+
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
@@ -37,12 +61,14 @@ mock.module("@/shared/db/prisma", () => ({
     spaceCategory: {
       findFirst: mockSpaceCategoryFindFirst,
       findUnique: mockSpaceCategoryFindUnique,
+      findMany: mockSpaceCategoryFindMany,
       create: mockSpaceCategoryCreate,
       update: mockSpaceCategoryUpdate,
       delete: mockSpaceCategoryDelete,
       aggregate: mockSpaceCategoryAggregate,
     },
     $transaction: mockTransaction,
+    $executeRaw: mockExecuteRaw,
   },
 }));
 
@@ -51,6 +77,7 @@ import {
   updateSpaceCategory,
   updateSpaceCategoryOrder,
   deleteSpaceCategory,
+  updateSpaceCategoryActive,
 } from "@/shared/domain/space-categories/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -177,7 +204,7 @@ describe("createSpaceCategory", () => {
             description: "ビジネス用途の会議室カテゴリー",
             icon: "building",
             color: "#3B82F6",
-            sortOrder: 1,
+            sortOrder: 0,
           }),
         }),
       );
@@ -185,7 +212,7 @@ describe("createSpaceCategory", () => {
   });
 
   describe("異常系", () => {
-    test("同じ名前のアクティブカテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
+    test("同じ名前のカテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
       mockSpaceCategoryFindFirst.mockResolvedValue({ id: "other-category" });
 
       await expect(createSpaceCategory(VALID_FORM_DATA)).rejects.toMatchObject({
@@ -204,15 +231,12 @@ describe("createSpaceCategory", () => {
       expect(mockSpaceCategoryCreate).not.toHaveBeenCalled();
     });
 
-    test("重複チェックが isActive: true の条件で行われる", async () => {
+    test("重複チェックは DB 一意制約に合わせて全カテゴリーを対象にする", async () => {
       await createSpaceCategory(VALID_FORM_DATA);
 
       expect(mockSpaceCategoryFindFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            name: "会議室",
-            isActive: true,
-          }),
+          where: { name: "会議室" },
         }),
       );
     });
@@ -276,7 +300,6 @@ describe("updateSpaceCategory", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             name: "会議室",
-            isActive: true,
             id: { not: CATEGORY_ID },
           }),
         }),
@@ -354,7 +377,7 @@ describe("updateSpaceCategory", () => {
       expect(mockSpaceCategoryUpdate).not.toHaveBeenCalled();
     });
 
-    test("他の同名アクティブカテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
+    test("他の同名カテゴリーが存在する場合は CONFLICT エラーをスローする", async () => {
       mockSpaceCategoryFindUnique.mockResolvedValue(EXISTING_CATEGORY);
       mockSpaceCategoryFindFirst.mockResolvedValue({ id: "other-category" });
 
@@ -386,8 +409,24 @@ describe("updateSpaceCategory", () => {
 describe("updateSpaceCategoryOrder", () => {
   beforeEach(() => {
     mockTransaction.mockReset();
+    mockExecuteRaw.mockReset();
+    mockSpaceCategoryFindMany.mockReset();
     mockSpaceCategoryUpdate.mockReset();
-    mockTransaction.mockResolvedValue([]);
+    mockTransaction.mockImplementation((cb) =>
+      cb({
+        $executeRaw: mockExecuteRaw,
+        spaceCategory: {
+          create: mockSpaceCategoryCreate,
+          aggregate: mockSpaceCategoryAggregate,
+        },
+      }),
+    );
+    mockExecuteRaw.mockResolvedValue(0);
+    mockSpaceCategoryFindMany.mockImplementation((args?: unknown) => {
+      const where = (args as { where?: { id?: { in?: string[] } } } | undefined)
+        ?.where;
+      return Promise.resolve((where?.id?.in ?? []).map((id) => ({ id })));
+    });
   });
 
   describe("正常系", () => {
@@ -397,36 +436,127 @@ describe("updateSpaceCategoryOrder", () => {
         { id: "category-2", sortOrder: 1 },
         { id: "category-3", sortOrder: 2 },
       ];
+      mockSpaceCategoryFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
 
       const result = await updateSpaceCategoryOrder(items);
 
       expect(result).toEqual({ updated: 3 });
     });
 
-    test("各アイテムに対して spaceCategory.update が並列実行される", async () => {
+    test("CASE WHEN 二段更新で一括更新する（N 回 UPDATE は使わない）", async () => {
       const items = [
         { id: "category-1", sortOrder: 0 },
         { id: "category-2", sortOrder: 1 },
       ];
+      mockSpaceCategoryFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
 
       await updateSpaceCategoryOrder(items);
 
-      expect(mockSpaceCategoryUpdate).toHaveBeenCalledTimes(2);
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockSpaceCategoryUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+    });
+
+    test("生成 SQL は space_categories / CASE を含む", async () => {
+      const items = [
+        { id: "category-1", sortOrder: 10 },
+        { id: "category-2", sortOrder: 11 },
+      ];
+      mockSpaceCategoryFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
+
+      await updateSpaceCategoryOrder(items);
+
+      for (const call of mockExecuteRaw.mock.calls.slice(1)) {
+        const sql = call[0].join("?");
+        expect(sql).toContain("space_categories");
+        expect(sql).toContain("CASE");
+      }
     });
 
     test("空配列を渡すと updated: 0 を返す", async () => {
       const result = await updateSpaceCategoryOrder([]);
 
       expect(result).toEqual({ updated: 0 });
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("重複 ID は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateSpaceCategoryOrder([
+          { id: "category-1", sortOrder: 0 },
+          { id: "category-1", sortOrder: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "同じIDを複数指定することはできません",
+      });
+      expect(mockSpaceCategoryFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("重複 sortOrder は DB アクセス前に拒否する", async () => {
+      await expect(
+        updateSpaceCategoryOrder([
+          { id: "category-1", sortOrder: 0 },
+          { id: "category-2", sortOrder: 0 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "同じ並び順を複数指定することはできません",
+      });
+      expect(mockSpaceCategoryFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
 
     test("1件の場合も updated: 1 を返す", async () => {
-      const result = await updateSpaceCategoryOrder([
-        { id: "category-1", sortOrder: 5 },
-      ]);
+      const items = [{ id: "category-1", sortOrder: 5 }];
+      mockSpaceCategoryFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
+
+      const result = await updateSpaceCategoryOrder(items);
 
       expect(result).toEqual({ updated: 1 });
+    });
+
+    test("存在しないカテゴリーが混ざる場合 SQL が実行されない", async () => {
+      mockSpaceCategoryFindMany.mockResolvedValue([{ id: "category-1" }]);
+
+      await expect(
+        updateSpaceCategoryOrder([
+          { id: "category-1", sortOrder: 0 },
+          { id: "category-2", sortOrder: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "カテゴリーが見つかりません",
+      });
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("既存 ID の subset は過不足として拒否する", async () => {
+      mockSpaceCategoryFindMany.mockResolvedValueOnce([
+        { id: "category-1" },
+        { id: "category-2" },
+        { id: "category-3" },
+      ]);
+
+      await expect(
+        updateSpaceCategoryOrder([
+          { id: "category-1", sortOrder: 0 },
+          { id: "category-2", sortOrder: 1 },
+        ]),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "カテゴリー数が一致しません（過不足）",
+      });
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 });
@@ -526,5 +656,75 @@ describe("deleteSpaceCategory", () => {
         message: expect.stringContaining("5件のスペース"),
       });
     });
+  });
+});
+
+// =============================================================================
+// updateSpaceCategoryActive
+// =============================================================================
+
+describe("updateSpaceCategoryActive", () => {
+  beforeEach(() => {
+    mockSpaceCategoryFindUnique.mockReset();
+    mockSpaceCategoryFindFirst.mockReset();
+    mockSpaceCategoryUpdate.mockReset();
+    mockSpaceCategoryFindUnique.mockResolvedValue(null);
+    mockSpaceCategoryFindFirst.mockResolvedValue(null);
+    mockSpaceCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
+  });
+
+  test("スペースが紐づいていないカテゴリーを非アクティブ化できる", async () => {
+    mockSpaceCategoryFindUnique.mockResolvedValue({
+      id: CATEGORY_ID,
+      name: "会議室",
+      _count: { spaces: 0 },
+    });
+
+    const result = await updateSpaceCategoryActive(CATEGORY_ID, false);
+
+    expect(result).toEqual({ id: CATEGORY_ID, isActive: false });
+    expect(mockSpaceCategoryUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: CATEGORY_ID },
+        data: { isActive: false },
+      }),
+    );
+  });
+
+  test("再アクティブ化時は同名カテゴリーの重複を拒否する", async () => {
+    mockSpaceCategoryFindUnique.mockResolvedValue({
+      id: CATEGORY_ID,
+      name: "会議室",
+      _count: { spaces: 0 },
+    });
+    mockSpaceCategoryFindFirst.mockResolvedValue({ id: "other-category" });
+
+    await expect(
+      updateSpaceCategoryActive(CATEGORY_ID, true),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "同じ名前のカテゴリーが既に存在します",
+    });
+
+    expect(mockSpaceCategoryUpdate).not.toHaveBeenCalled();
+  });
+
+  test("再アクティブ化時は自分以外のカテゴリー名を確認する", async () => {
+    mockSpaceCategoryFindUnique.mockResolvedValue({
+      id: CATEGORY_ID,
+      name: "会議室",
+      _count: { spaces: 0 },
+    });
+
+    await updateSpaceCategoryActive(CATEGORY_ID, true);
+
+    expect(mockSpaceCategoryFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          name: "会議室",
+          id: { not: CATEGORY_ID },
+        }),
+      }),
+    );
   });
 });

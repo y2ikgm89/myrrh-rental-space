@@ -47,6 +47,13 @@ export type CreateNewsCommandInput = {
   title: string;
   contentJson: string;
   contentHtml: string;
+  contentWidth?: LayoutWidth | null;
+  contentWidthCustom?: number | null;
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
+  ogpTitle?: string | null;
+  ogpDescription?: string | null;
+  ogpImageUrl?: string | null;
 };
 
 /**
@@ -65,6 +72,8 @@ export type UpdateNewsBodyCommandInput = {
 export type UpdateNewsSettingsCommandInput = {
   slug: string;
   title: string;
+  isPublished: boolean;
+  publishedAt: Date | null;
   contentWidth: LayoutWidth | null;
   contentWidthCustom: number | null;
   metaDescription?: string | null;

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import {
   Badge,
   DndContext,
+  PublishSwitch,
   closestCenter,
   useSensor,
   useSensors,
@@ -35,7 +36,10 @@ import {
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { reorderFaqCategories } from "@/admin/actions/faq";
+import {
+  reorderFaqCategories,
+  updateFaqCategoryActive,
+} from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
@@ -49,9 +53,18 @@ type FaqCategoryGridProps = {
 
 type SortableCardProps = {
   readonly category: FaqCategoryWithItems;
+  readonly isPending: boolean;
+  readonly onToggleActive: (
+    id: string,
+    isActive: boolean,
+  ) => ReturnType<typeof updateFaqCategoryActive>;
 };
 
-function SortableCategoryCard({ category }: SortableCardProps) {
+function SortableCategoryCard({
+  category,
+  isPending,
+  onToggleActive,
+}: SortableCardProps) {
   const {
     attributes,
     listeners,
@@ -59,7 +72,7 @@ function SortableCategoryCard({ category }: SortableCardProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: category.id });
+  } = useSortable({ id: category.id, disabled: isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -85,7 +98,7 @@ function SortableCategoryCard({ category }: SortableCardProps) {
         className="shrink-0"
         aria-label={`${category.name}をドラッグして並び替え`}
       >
-        <DragHandle />
+        <DragHandle disabled={isPending} />
       </div>
 
       <Link
@@ -123,6 +136,15 @@ function SortableCategoryCard({ category }: SortableCardProps) {
       </Link>
 
       <div className="shrink-0">
+        <PublishSwitch
+          id={category.id}
+          isPublished={category.isActive}
+          onToggle={onToggleActive}
+          resourceLabel={`${category.name} の表示状態`}
+        />
+      </div>
+
+      <div className="shrink-0">
         <FaqCategoryActionCell
           id={category.id}
           name={category.name}
@@ -150,7 +172,7 @@ export function FaqCategoryGrid({
     setCategories([...initialCategories]);
   }
 
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -183,6 +205,21 @@ export function FaqCategoryGrid({
     });
   };
 
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    const previousCategories = categories;
+    setCategories((current) =>
+      current.map((category) =>
+        category.id === id ? { ...category, isActive } : category,
+      ),
+    );
+
+    const result = await updateFaqCategoryActive(id, isActive);
+    if (isMutationError(result)) {
+      setCategories(previousCategories);
+    }
+    return result;
+  };
+
   if (categories.length === 0) {
     return (
       <EmptyState
@@ -213,7 +250,12 @@ export function FaqCategoryGrid({
         >
           <div className="space-y-2">
             {categories.map((category) => (
-              <SortableCategoryCard key={category.id} category={category} />
+              <SortableCategoryCard
+                key={category.id}
+                category={category}
+                isPending={isPending}
+                onToggleActive={handleToggleActive}
+              />
             ))}
           </div>
         </SortableContext>

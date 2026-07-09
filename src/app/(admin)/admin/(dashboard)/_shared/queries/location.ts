@@ -14,7 +14,7 @@ import type {
 import { requireAdminPermission } from "./_helpers";
 
 export async function getLocations(options: {
-  includeInactive?: boolean;
+  isPublished?: boolean | "ALL";
   search?: string;
   page: number;
   limit: number;

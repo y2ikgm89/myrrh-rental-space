@@ -23,6 +23,7 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 import { useEditorCore } from "./shared";
+import { collectFormDataFromContainer } from "./shared/collect-form-data";
 
 type UseTermsEditorOptions = {
   terms?: AdminTermsDetail | undefined;
@@ -114,6 +115,8 @@ export function useTermsEditor({
   const [showInFooterValue, setShowInFooterValue] = useState<boolean>(
     terms?.showInFooter ?? true,
   );
+  const [settingsSnapshot, setSettingsSnapshot] =
+    useState<ParsedTermsSettingsFormData | null>(null);
 
   // settingsForm の外部 state (Select / Checkbox group / Textarea) は dirty を
   // form.update() 経由で伝搬しているが、初期値と一致する update を一度噛ませた
@@ -149,40 +152,50 @@ export function useTermsEditor({
     shouldRevalidate: "onInput",
   });
 
-  const isSettingsDirty = settingsForm.dirty ?? isExternalDirty;
-  const isDirty = isBodyDirty || isSettingsDirty || isExternalDirty;
+  const isSettingsDirty = Boolean(settingsForm.dirty || isExternalDirty);
+  const isDirty = isBodyDirty || isSettingsDirty;
 
   const core = useEditorCore({ listPath: "/admin/terms" });
 
   const title =
-    typeof settingsFields.title.value === "string"
+    settingsSnapshot?.title ??
+    (typeof settingsFields.title.value === "string"
       ? settingsFields.title.value
-      : "";
+      : "");
   const slug =
-    typeof settingsFields.slug.value === "string"
+    settingsSnapshot?.slug ??
+    (typeof settingsFields.slug.value === "string"
       ? settingsFields.slug.value
-      : "";
+      : "");
 
   const handleContentChange = (json: string) => {
     setContentJson(json);
   };
 
   const validateSettings = (): ParsedTermsSettingsFormData | null => {
-    const formData = new FormData();
-    for (const [key, field] of Object.entries(settingsFields)) {
-      const fieldValue = field.value;
-      if (Array.isArray(fieldValue)) {
-        for (const v of fieldValue) {
-          formData.append(key, String(v));
+    const settingsContainer = document.querySelector<HTMLElement>(
+      `[data-settings-form-container="${settingsForm.id}"]`,
+    );
+    const formData =
+      settingsContainer instanceof HTMLElement
+        ? collectFormDataFromContainer(settingsContainer)
+        : new FormData();
+
+    if (!(settingsContainer instanceof HTMLElement)) {
+      for (const [key, field] of Object.entries(settingsFields)) {
+        const fieldValue = field.value;
+        if (Array.isArray(fieldValue)) {
+          for (const v of fieldValue) {
+            formData.append(key, String(v));
+          }
+        } else if (typeof fieldValue === "boolean") {
+          formData.append(key, fieldValue ? "on" : "");
+        } else if (fieldValue != null) {
+          formData.append(key, String(fieldValue));
         }
-      } else if (typeof fieldValue === "boolean") {
-        // OFF も明示的に空文字を送ることで preprocess 側の dirty 検知漏れを防ぐ。
-        // booleanFromCheckbox は "on" / true → true, それ以外 → false に正規化する。
-        formData.append(key, fieldValue ? "on" : "");
-      } else if (fieldValue != null) {
-        formData.append(key, String(fieldValue));
       }
     }
+
     // 外部 state (Switch / multi-checkbox / Textarea) を上書き反映。form.update
     // が dirty 連動しないケースで信頼できる SSoT として外部値を最終的に勝たせる。
     formData.set("type", typeValue);
@@ -202,6 +215,14 @@ export function useTermsEditor({
       return null;
     }
     return submission.value;
+  };
+
+  const getSettingsDataForSubmit = (): ParsedTermsSettingsFormData | null => {
+    if (!isSettingsDialogOpen && settingsSnapshot) {
+      return settingsSnapshot;
+    }
+
+    return validateSettings();
   };
 
   // 規約は本文 + 設定を単一 `updateTerms` で保存する (Post / News のような
@@ -248,7 +269,7 @@ export function useTermsEditor({
     if (core.isPending) return;
 
     if (mode === "create") {
-      const settingsData = validateSettings();
+      const settingsData = getSettingsDataForSubmit();
       if (!settingsData) {
         setIsSettingsDialogOpen(true);
         return;
@@ -263,7 +284,7 @@ export function useTermsEditor({
     }
 
     if (!terms) return;
-    const settingsData = validateSettings();
+    const settingsData = getSettingsDataForSubmit();
     if (!settingsData) return;
     core.startTransition(async () => {
       try {
@@ -278,6 +299,7 @@ export function useTermsEditor({
           }
           return;
         }
+        setSettingsSnapshot(settingsData);
         setSavedContentJson(contentJson);
         router.refresh();
         toast.success("規約を保存しました");
@@ -291,9 +313,17 @@ export function useTermsEditor({
   };
 
   const handleSaveSettings = () => {
-    if (!terms || core.isPending) return;
+    if (core.isPending) return;
     const settingsData = validateSettings();
     if (!settingsData) return;
+
+    if (mode === "create" || !terms) {
+      setSettingsSnapshot(settingsData);
+      setIsSettingsDialogOpen(false);
+      toast.success("規約設定を保存しました");
+      return;
+    }
+
     core.startTransition(async () => {
       try {
         const result = await updateTerms(
@@ -304,6 +334,7 @@ export function useTermsEditor({
           toast.error(result.error);
           return;
         }
+        setSettingsSnapshot(settingsData);
         setIsSettingsDialogOpen(false);
         router.refresh();
         toast.success("規約設定を保存しました");
@@ -376,7 +407,7 @@ export function useTermsEditor({
   // (preview route が published filter なし + cache なしで未公開データを表示)。
   const handlePreview = () => {
     if (mode === "create" || !terms) {
-      const settingsData = validateSettings();
+      const settingsData = getSettingsDataForSubmit();
       if (!settingsData) {
         setIsSettingsDialogOpen(true);
         return;
@@ -390,7 +421,7 @@ export function useTermsEditor({
       return;
     }
 
-    const settingsData = validateSettings();
+    const settingsData = getSettingsDataForSubmit();
     if (!settingsData) return;
 
     core.startTransition(async () => {
@@ -403,6 +434,7 @@ export function useTermsEditor({
           toast.error(result.error);
           return;
         }
+        setSettingsSnapshot(settingsData);
         setSavedContentJson(contentJson);
         router.refresh();
         openPreviewTab(getTermsPreviewHref(terms.id));

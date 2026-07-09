@@ -4,10 +4,11 @@
 // Prisma 7 + PostgreSQL 16
 
 generator client {
-  provider   = "prisma-client"
-  output     = "../generated/prisma"
-  engineType = "client"
-  runtime    = "bun"
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  engineType      = "client"
+  runtime         = "bun"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -367,6 +368,7 @@ model Location {
   events       Event[]
   blockedDates BlockedDate[]
 
+  @@unique([sortOrder], map: "locations_active_sortOrder_key", where: { isActive: true })
   @@index([isPublished, isActive])
   @@index([sortOrder])
   @@index([gbpSyncError])
@@ -387,6 +389,7 @@ model SpaceCategory {
   // Relations
   spaces Space[]
 
+  @@unique([sortOrder], map: "space_categories_sortOrder_key")
   @@index([sortOrder])
   @@map("space_categories")
 }
@@ -751,22 +754,23 @@ model News {
 }
 
 model AnnouncementBar {
-  id        String    @id @default(uuid()) @db.Uuid
+  id           String    @id @default(uuid()) @db.Uuid
   /// Sanity Portable Text 互換の inline span 配列。`{_key,_type:"span",text}` と
   /// `{_key,_type:"iconInline",name}` の discriminated union を順次配置する。
-  message   Json      @default("[]")
-  linkUrl   String?
-  linkText  String?
-  bgColor   String? // カスタム背景色 (hex)
-  textColor String? // カスタム文字色 (hex)
-  isActive  Boolean   @default(true)
-  priority  Int       @default(0)
-  startAt   DateTime?
-  endAt     DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  message      Json      @default("[]")
+  linkUrl      String?
+  linkText     String?
+  bgColor      String? // カスタム背景色 (hex)
+  textColor    String? // カスタム文字色 (hex)
+  isActive     Boolean   @default(true)
+  displayOrder Int       @default(0)
+  startAt      DateTime?
+  endAt        DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  @@index([isActive, priority])
+  @@unique([displayOrder], map: "announcement_bars_displayOrder_key")
+  @@index([isActive, displayOrder])
   @@index([startAt, endAt])
   @@map("announcement_bars")
 }
@@ -837,6 +841,7 @@ model PostCategory {
   // Relations
   posts Post[]
 
+  @@unique([order], map: "post_categories_order_key")
   @@index([order])
   @@map("post_categories")
 }
@@ -906,6 +911,7 @@ model Section {
   // Relations
   page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
+  @@unique([pageId, order], map: "sections_pageId_order_key")
   @@index([pageId, order, isActive])
   @@index([type])
   @@map("sections")
@@ -930,6 +936,7 @@ model NavigationItem {
   parent   NavigationItem?  @relation("NavigationHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children NavigationItem[] @relation("NavigationHierarchy")
 
+  @@unique([type, order], map: "navigation_items_type_order_key")
   @@index([type, order])
   @@index([parentId])
   @@map("navigation_items")
@@ -946,6 +953,7 @@ model SocialLink {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
+  @@unique([order], map: "social_links_order_key")
   @@index([order])
   @@map("social_links")
 }
@@ -969,6 +977,7 @@ model FaqCategory {
   // Relations
   items FaqItem[]
 
+  @@unique([order], map: "faq_categories_order_active_key", where: { deletedAt: null })
   @@index([order])
   @@index([isActive, order])
   @@index([deletedAt])
@@ -994,6 +1003,7 @@ model FaqItem {
   // Relations
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
+  @@unique([categoryId, order], map: "faq_items_categoryId_order_active_key", where: { deletedAt: null })
   @@index([categoryId, order])
   @@index([categoryId, isPublished, order])
   @@index([isPublished])
@@ -1127,15 +1137,20 @@ model Settings {
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
 
   // Notification Settings（管理者通知のイベント別トグル）
-  notifyNewReservation       Boolean @default(true)
-  notifyReservationChange    Boolean @default(true)
-  notifyReservationCancel    Boolean @default(true)
-  notifyNewInquiry           Boolean @default(true)
-  notifyEventRegistration    Boolean @default(true)
-  notifyEventCancellation    Boolean @default(true)
+  notifyNewReservation       Boolean  @default(true)
+  notifyReservationChange    Boolean  @default(true)
+  notifyReservationCancel    Boolean  @default(true)
+  notifyNewInquiry           Boolean  @default(true)
+  notifyEventRegistration    Boolean  @default(true)
+  notifyEventCancellation    Boolean  @default(true)
   // 通知先: スタッフ(User.id 配列・送信時に現在メールへ解決) ＋ カスタムメール
   notificationStaffIds       String[] @default([])
   notificationEmailAddresses String[] @default([])
+
+  // Customer Reminder Settings（参加者向けリマインダーメールのトグル）
+  // 上記の管理者通知トグルとは対象読者が異なる。イベント前日リマインダーは
+  // 参加者全員へ一斉送信されるため送信数が増えやすく、既定は無効（opt-in）にする。
+  notifyEventReminder Boolean @default(false)
 
   // Other Settings
   // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、
@@ -1296,6 +1311,7 @@ model InstagramPost {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
+  @@unique([sortOrder], map: "instagram_posts_sortOrder_key")
   @@index([sortOrder])
   @@map("instagram_posts")
 }
@@ -1465,16 +1481,17 @@ model TermsDocument {
   /// 改訂時の周知文 (民法 548 条の 4 周知義務対応・任意)。
   changelog    String?      @db.Text
   showInFooter Boolean      @default(true)
-  footerOrder  Int          @default(0)
+  displayOrder Int          @default(0)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime?
 
   agreements TermsAgreement[]
 
+  @@unique([displayOrder], map: "terms_documents_displayOrder_active_key", where: { deletedAt: null })
   @@index([type])
   @@index([deletedAt, isPublished])
-  @@index([showInFooter, isPublished, footerOrder])
+  @@index([showInFooter, isPublished, displayOrder])
   @@map("terms_documents")
 }
 
@@ -1721,6 +1738,7 @@ model EventTicket {
   event         Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   registrations EventRegistration[]
 
+  @@unique([eventId, sortOrder], map: "event_tickets_eventId_sortOrder_key")
   @@index([eventId, sortOrder])
   @@index([eventId, isAvailable])
   @@map("event_tickets")
@@ -1745,6 +1763,7 @@ model EventRegistration {
   status      RegistrationStatus @default(CONFIRMED)
   customerId  String?            @db.Uuid
   cancelledAt DateTime?
+  cancelledByType String? @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
   // 当日受付 (check-in) 打刻時刻。null = 未来場・値あり = 来場確認済
   attendedAt  DateTime?
   createdAt   DateTime           @default(now())
@@ -1752,6 +1771,10 @@ model EventRegistration {
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
+
+  // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
+  // Reservation.reminderSentAt と同型の atomic claim パターンで二重送信を防ぐ。
+  reminderSentAt DateTime?
 
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)

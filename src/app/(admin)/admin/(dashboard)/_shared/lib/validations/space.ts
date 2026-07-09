@@ -207,8 +207,8 @@ export const spaceFormBaseSchema = z
     isPublished: z.preprocess(coerceBoolean, z.boolean()),
     reviewsEnabled: z.preprocess((value) => {
       // 編集フォームでは on/off で送られるが、未指定（チェックボックス未配置）時は
-      // default true を維持する。test fixture では明示的に boolean 値を渡す。
-      if (value === undefined) return true;
+      // 新規スペースの opt-in default false を維持する。
+      if (value === undefined) return false;
       return value === "on" || value === true;
     }, z.boolean()),
     locationId: z
@@ -248,13 +248,25 @@ export const spaceFormBaseSchema = z
  *
  * Server Action の safeParse で使用。
  */
-export const spaceFormSchema = spaceFormBaseSchema.refine(
-  (data) => !data.gallery.some((g) => g.url === data.mainImageUrl),
-  {
+export const spaceFormSchema = spaceFormBaseSchema
+  .refine((data) => !data.gallery.some((g) => g.url === data.mainImageUrl), {
     error: "メイン画像とギャラリーで同じ画像は使えません",
     path: ["gallery"],
-  },
-);
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.discountType === DiscountType.percentage &&
+      data.discountValue !== null &&
+      data.discountValue !== undefined &&
+      data.discountValue > 100
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["discountValue"],
+        message: "パーセント割引は100以下で入力してください",
+      });
+    }
+  });
 
 /**
  * フォーム入力値の型
@@ -282,7 +294,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   gallery: [],
   facilities: [],
   isPublished: false,
-  reviewsEnabled: true,
+  reviewsEnabled: false,
   locationId: "",
   categoryId: null,
   // 割引設定

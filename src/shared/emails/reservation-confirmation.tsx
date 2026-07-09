@@ -30,8 +30,14 @@ type Props = {
   cancelUrl?: string;
   /** 会員向け: ログイン後の予約詳細ページ URL（マイページから取消・変更可能） */
   memberReservationUrl?: string;
+  /** ゲスト向け: マイページに予約を追加する claim リンク（会員は表示しない） */
+  claimUrl?: string;
   /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
   cancellationDeadlineHours?: number;
+  /** 変更受付期限の時間数（予約開始の X 時間前まで）。キャンセルと独立に設定可能 */
+  modificationDeadlineHours?: number;
+  /** 公開中のキャンセルポリシー規約 URL。無ければ本文はプレーンテキストにフォールバックする */
+  cancellationPolicyUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -47,7 +53,10 @@ export function ReservationConfirmationEmail({
   addToCalendarLinks,
   cancelUrl,
   memberReservationUrl,
+  claimUrl,
   cancellationDeadlineHours,
+  modificationDeadlineHours,
+  cancellationPolicyUrl,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -123,6 +132,36 @@ export function ReservationConfirmationEmail({
         </Section>
       )}
 
+      {claimUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            Google または LINE でログインすると、この予約をマイページに追加して
+            まとめて管理できます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={claimUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページに追加する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
       {cancelUrl && (
         <Section
           style={{
@@ -155,10 +194,34 @@ export function ReservationConfirmationEmail({
 
       {cancellationDeadlineHours !== undefined && (
         <Text style={text}>
-          ご予約のキャンセル・変更は、予約開始時刻の{" "}
-          <strong>{cancellationDeadlineHours} 時間前まで</strong>
-          にお手続きください。期限を過ぎたお取消しはキャンセル料の対象となる場合が
-          ございます。詳しくはキャンセルポリシーをご確認ください。
+          {modificationDeadlineHours !== undefined &&
+          modificationDeadlineHours !== cancellationDeadlineHours ? (
+            <>
+              ご予約のキャンセルは、予約開始時刻の{" "}
+              <strong>{cancellationDeadlineHours} 時間前まで</strong>
+              、変更は <strong>{modificationDeadlineHours} 時間前まで</strong>
+              にお手続きください。
+            </>
+          ) : (
+            <>
+              ご予約のキャンセル・変更は、予約開始時刻の{" "}
+              <strong>{cancellationDeadlineHours} 時間前まで</strong>
+              にお手続きください。
+            </>
+          )}
+          期限を過ぎたお取消しはキャンセル料の対象となる場合が
+          ございます。詳しくは
+          {cancellationPolicyUrl ? (
+            <Link
+              href={cancellationPolicyUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              キャンセルポリシー
+            </Link>
+          ) : (
+            "キャンセルポリシー"
+          )}
+          をご確認ください。
         </Text>
       )}
 

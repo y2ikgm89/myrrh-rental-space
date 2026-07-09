@@ -369,7 +369,6 @@ export function StandardHeroSection({
                 fill
                 sizes="100vw"
                 className="object-cover"
-                preload
                 loading="eager"
                 fetchPriority="high"
               />

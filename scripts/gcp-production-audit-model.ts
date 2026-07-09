@@ -38,6 +38,11 @@ type CloudRunIngressAuditConfig = {
   expectedIngress: "all" | "internal" | "internal-and-cloud-load-balancing";
 };
 
+type CloudRunDefaultUrlAuditConfig = {
+  serviceName: string;
+  expectedDisabled: boolean;
+};
+
 type CloudRunServiceIdentityAuditConfig = {
   resourceName: string;
   expectedServiceAccount: string;
@@ -86,7 +91,7 @@ type SecretManagerSecretAccessorMembersConfig = {
 
 const EXPECTED_PRODUCTION_DOMAINS = {
   PUBLIC_DOMAIN: "https://rental-space.myrrh-jp.com",
-  ADMIN_DOMAIN: "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app",
+  ADMIN_DOMAIN: "https://admin.myrrh-jp.com",
 } as const;
 
 export type ProductionHttpAuditTarget = {
@@ -171,6 +176,7 @@ export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
   { name: "R2_PUBLIC_URL", version: "1" },
   { name: "CLOUDFLARE_ZONE_ID", version: "1" },
   { name: "CLOUDFLARE_API_TOKEN", version: "1" },
+  { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "1" },
   { name: "GOOGLE_CLIENT_ID", version: "1" },
   { name: "GOOGLE_CLIENT_SECRET", version: "1" },
 ] as const satisfies readonly CloudRunSecretEnvRef[];
@@ -951,6 +957,22 @@ export function readCloudRunIngressErrors(
   ];
 }
 
+export function readCloudRunDefaultUrlErrors(
+  value: unknown,
+  config: CloudRunDefaultUrlAuditConfig,
+): string[] {
+  const annotationValue = readCloudRunMetadataAnnotation(
+    value,
+    "run.googleapis.com/default-url-disabled",
+  );
+  const actualDisabled = annotationValue === "true";
+  return actualDisabled === config.expectedDisabled
+    ? []
+    : [
+        `${config.serviceName} default run.app URL disabled must be ${String(config.expectedDisabled)}, got ${annotationValue ?? "missing"}`,
+      ];
+}
+
 export function readCloudRunJobExecutionConfigErrors(
   value: unknown,
   config: { resourceName: string },
@@ -1301,6 +1323,12 @@ export function getProductionHttpAuditTargets(
       name: "public /admin is hidden",
       url: `${config.publicDomain}/admin`,
       expectedStatus: 404,
+    },
+    {
+      name: "admin root redirects unauthenticated visitors to Google/IAP",
+      url: `${config.adminDomain}/`,
+      expectedStatus: 302,
+      expectedRedirectHost: "accounts.google.com",
     },
     {
       name: "admin /admin redirects unauthenticated visitors to Google/IAP",

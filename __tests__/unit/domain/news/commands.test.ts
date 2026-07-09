@@ -16,6 +16,12 @@ const mockNewsDelete = mock<() => Promise<Record<string, unknown>>>(() =>
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     news: {
@@ -90,6 +96,13 @@ const VALID_CREATE_INPUT = {
   title: "テストお知らせ",
   contentJson: '{"root":{"children":[]}}',
   contentHtml: "<p>テストコンテンツ</p>",
+  contentWidth: null,
+  contentWidthCustom: null,
+  metaDescription: null,
+  metaKeywords: null,
+  ogpTitle: null,
+  ogpDescription: null,
+  ogpImageUrl: null,
 };
 
 const VALID_UPDATE_BODY_INPUT = {
@@ -100,6 +113,8 @@ const VALID_UPDATE_BODY_INPUT = {
 const VALID_UPDATE_SETTINGS_INPUT = {
   slug: NEWS_SLUG,
   title: "更新後タイトル",
+  isPublished: false,
+  publishedAt: null,
   contentWidth: null,
   contentWidthCustom: null,
   metaDescription: null,
@@ -136,6 +151,33 @@ describe("createNews", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             isPublished: false,
+          }),
+        }),
+      );
+    });
+
+    test("作成時にレイアウトと SEO/OGP 設定も保存される", async () => {
+      await createNews({
+        ...VALID_CREATE_INPUT,
+        contentWidth: "CUSTOM",
+        contentWidthCustom: 880,
+        metaDescription: "作成時説明",
+        metaKeywords: "alpha,beta",
+        ogpTitle: "作成時 OGP",
+        ogpDescription: "作成時 OGP 説明",
+        ogpImageUrl: "https://media.example.com/news/ogp.jpg",
+      });
+
+      expect(mockNewsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            contentWidth: "CUSTOM",
+            contentWidthCustom: 880,
+            metaDescription: "作成時説明",
+            metaKeywords: "alpha,beta",
+            ogpTitle: "作成時 OGP",
+            ogpDescription: "作成時 OGP 説明",
+            ogpImageUrl: "https://media.example.com/news/ogp.jpg",
           }),
         }),
       );
@@ -181,6 +223,39 @@ describe("createNews", () => {
       await expect(createNews(VALID_CREATE_INPUT)).rejects.toThrow(DomainError);
       expect(mockNewsCreate).not.toHaveBeenCalled();
     });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        createNews({
+          ...VALID_CREATE_INPUT,
+          ogpImageUrl: "https://external.example.com/news-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createNews({
+          ...VALID_CREATE_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "gallery-item",
+                  src: "https://external.example.com/gallery.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -218,6 +293,27 @@ describe("updateNewsBody", () => {
         code: "NOT_FOUND",
         message: "お知らせが見つかりません",
       });
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        updateNewsBody(NEWS_ID, {
+          ...VALID_UPDATE_BODY_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "inline-image",
+                  src: "https://external.example.com/inline.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -289,6 +385,25 @@ describe("updateNewsSettings", () => {
         }),
       );
     });
+
+    test("公開状態と公開日時も設定更新で永続化される", async () => {
+      const publishedAt = new Date("2026-01-02T03:04:00.000Z");
+
+      await updateNewsSettings(NEWS_ID, {
+        ...VALID_UPDATE_SETTINGS_INPUT,
+        isPublished: true,
+        publishedAt,
+      });
+
+      expect(mockNewsUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isPublished: true,
+            publishedAt,
+          }),
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -326,6 +441,18 @@ describe("updateNewsSettings", () => {
       ).rejects.toMatchObject({
         code: "CONFLICT",
       });
+    });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        updateNewsSettings(NEWS_ID, {
+          ...VALID_UPDATE_SETTINGS_INPUT,
+          ogpImageUrl: "https://external.example.com/news-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -481,7 +608,10 @@ describe("unpublishNews", () => {
 
       expect(mockNewsUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { isPublished: false },
+          data: expect.objectContaining({
+            isPublished: false,
+            publishedAt: null,
+          }),
         }),
       );
     });

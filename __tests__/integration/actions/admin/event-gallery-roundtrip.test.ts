@@ -117,6 +117,11 @@ mock.module("@/shared/lib/email/event-emails", () => ({
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mock((_fn: () => unknown) => {}),
 }));
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
 mock.module("@/shared/lib/lexical/description-defaults", () => ({
   buildParagraphEditorStateJson: mock(() => ({ type: "root" })),
   buildParagraphHtml: mock(() => "<p></p>"),
@@ -131,8 +136,12 @@ const { createEventCommand, updateEventCommand, duplicateEventCommand } =
 // ---------------------------------------------------------------------------
 
 const GALLERY = [
-  { url: "https://cdn.example.com/a.jpg", alt: "img a", caption: "Caption A" },
-  { url: "https://cdn.example.com/b.jpg", alt: "img b", caption: "" },
+  {
+    url: "https://media.example.com/a.jpg",
+    alt: "img a",
+    caption: "Caption A",
+  },
+  { url: "https://media.example.com/b.jpg", alt: "img b", caption: "" },
 ];
 
 const BASE_INPUT = {
@@ -238,6 +247,15 @@ describe("Event gallery round-trip", () => {
       locationId: null,
       spaceId: null,
       addressDetail: null,
+      // updateEventCommand の slotChanged 判定が existing.slots を参照するため必須
+      slots: [
+        {
+          id: "slot-old-1",
+          startAt: new Date("2026-07-01T01:00:00.000Z"),
+          endAt: new Date("2026-07-01T03:00:00.000Z"),
+          capacity: 10,
+        },
+      ],
     });
 
     await updateEventCommand("evt-id", BASE_INPUT);

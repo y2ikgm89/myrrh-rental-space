@@ -7,7 +7,7 @@
  * fallback (apple-icon と統一感のある "M" デザイン) を返す。
  *
  * 設計上の重要事項:
- * - `await connection()` で runtime 動的化を保証（rule .claude/rules/db-and-domain.md §6）。
+ * - `await connection()` で runtime 動的化を保証（rule .claude/rules/caching.md）。
  *   `getFaviconUrl()` は `'use cache' + safeFetch` 構造のため、connection() なしだと
  *   build prerender で placeholder DATABASE_URL での fallback null が永続 baking される。
  * - `generateMetadata` 経由ではなく Route Handler で DB を扱うため、PR #699 が懸念した

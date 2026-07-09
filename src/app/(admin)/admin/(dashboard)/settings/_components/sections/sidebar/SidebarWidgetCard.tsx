@@ -1,8 +1,7 @@
 "use client";
 
-import { useSortable } from "@dnd-kit/sortable";
 import { cn } from "@/shared/lib/cn";
-import { toTranslate3d } from "@/admin/components/ui/sortable";
+import { toTranslate3d, useSortable } from "@/admin/components/ui";
 import {
   ActionDropdown,
   ActionDropdownItem,
@@ -87,7 +86,7 @@ export function SidebarWidgetCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: getWidgetId(widget) });
+  } = useSortable({ id: getWidgetId(widget), disabled });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -119,6 +118,7 @@ export function SidebarWidgetCard({
         {...attributes}
         {...listeners}
         disabled={disabled}
+        aria-label="ドラッグして並び替え"
       >
         <IconGripVertical className="h-4 w-4" />
       </button>

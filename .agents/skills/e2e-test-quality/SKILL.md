@@ -1,14 +1,14 @@
 ---
 name: e2e-test-quality
-description: Use when adding, changing, reviewing, or debugging Playwright tests under e2e, Playwright auth setup, visual snapshots, accessibility tests, smoke tests, or browser-driven flows. Enforces semantic locators, web-first assertions, isolation, and no flaky sleeps/networkidle waits.
+description: Use when adding, changing, reviewing, or debugging Playwright tests under e2e, Playwright auth setup, visual snapshots, accessibility tests, smoke tests, or browser-driven test flows.
 ---
 
 # E2E Test Quality
 
 ## Rules
 
-1. Prefer `page.getByRole`, `getByLabel`, `getByText`, `getByTestId` only when
-   semantic locators are not enough.
+1. Prefer `page.getByRole`, `getByLabel`, and `getByText`; use `getByTestId`
+   only when semantic locators cannot express the target.
 2. Use Playwright web-first assertions such as `toBeVisible`, `toHaveText`, and
    `toHaveURL`.
 3. Do not use `page.waitForTimeout`, `waitForLoadState("networkidle")`, or
@@ -19,6 +19,7 @@ description: Use when adding, changing, reviewing, or debugging Playwright tests
    state; do not reduce global workers to hide coupling.
 6. Visual tests belong under `e2e/visual` and should be opt-in unless the task
    explicitly changes visual baselines.
+7. When freezing browser time, install Playwright clock before `page.goto`.
 
 ## Read When Needed
 

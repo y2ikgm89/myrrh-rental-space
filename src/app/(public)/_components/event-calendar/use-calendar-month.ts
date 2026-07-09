@@ -17,13 +17,26 @@ export interface CalendarMonthState {
   jump: (year: number, month: number) => void;
 }
 
+function getClockSnapshot(nowIso?: string): {
+  today: { year: number; month: number; day: number };
+  nowMs: number;
+} {
+  const now = nowIso !== undefined ? new Date(nowIso) : new Date();
+  return {
+    today: getJSTDateParts(now),
+    nowMs: now.getTime(),
+  };
+}
+
 /**
  * Calendar / 一覧ビュー共通の月状態管理フック。
  * y/m を URL と双方向同期（shallow: true で RSC 再レンダー不要）。
  */
-export function useCalendarMonth(): CalendarMonthState {
-  const [today] = useState(() => getJSTDateParts(new Date()));
-  const [nowMs] = useState(() => Date.now());
+export function useCalendarMonth(initialNowIso?: string): CalendarMonthState {
+  const [clientClock] = useState(() => getClockSnapshot());
+  const clock =
+    initialNowIso === undefined ? clientClock : getClockSnapshot(initialNowIso);
+  const { today, nowMs } = clock;
 
   // history: push は意図的。月送り（prev/next）は時系列のナビゲーションであり、
   // ブラウザの戻る＝前月が自然な体験（nuqs 公式の navigation-like 該当）。

@@ -12,6 +12,7 @@ import type { EventCardData } from "./event-card";
 
 interface EventListViewProps {
   readonly events: readonly EventCardData[];
+  readonly initialNowIso?: string;
 }
 
 function isInJSTMonth(iso: string, year: number, month: number): boolean {
@@ -27,8 +28,9 @@ function eventHasSlotInJSTMonth(
   return event.slots.some((slot) => isInJSTMonth(slot.startTime, year, month));
 }
 
-export function EventListView({ events }: EventListViewProps) {
-  const { year, month, nowMs, prev, next, goToday, jump } = useCalendarMonth();
+export function EventListView({ events, initialNowIso }: EventListViewProps) {
+  const { year, month, nowMs, prev, next, goToday, jump } =
+    useCalendarMonth(initialNowIso);
 
   const monthEvents = events.filter((e) =>
     eventHasSlotInJSTMonth(e, year, month),

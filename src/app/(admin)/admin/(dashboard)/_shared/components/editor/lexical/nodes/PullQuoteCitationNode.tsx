@@ -1,11 +1,9 @@
-﻿/**
+/**
  * PullQuoteCitation Node
  *
  * @description プルクォートの著者/出典部分
  * PullQuoteNodeの子として使用
  */
-
-"use client";
 
 import type {
   DOMConversionMap,

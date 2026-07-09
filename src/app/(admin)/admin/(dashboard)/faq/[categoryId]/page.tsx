@@ -82,6 +82,13 @@ async function CategoryDetailContent({
     { page: params.page, limit: params.perPage },
     { sortBy: params.sortBy, sortOrder: params.sortOrder },
   );
+  const reorderEnabled =
+    params.sortBy === "order" &&
+    params.sortOrder === "asc" &&
+    !params.search &&
+    params.status === "all" &&
+    params.quickFilter === "all";
+  const startIndex = (page - 1) * params.perPage;
 
   const allCategoryOptions = allCategoriesResult.categories.map((c) => ({
     id: c.id,
@@ -106,6 +113,8 @@ async function CategoryDetailContent({
         items={items}
         allCategories={allCategoryOptions}
         currentSortBy={params.sortBy}
+        reorderEnabled={reorderEnabled}
+        startIndex={startIndex}
         totalItems={total}
       />
 

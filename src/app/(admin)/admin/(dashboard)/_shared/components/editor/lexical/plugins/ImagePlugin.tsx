@@ -52,7 +52,6 @@ export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
       selectionMode="single"
       defaultUsage="POST"
       accept="image"
-      showUrlTab
     />
   );
 }

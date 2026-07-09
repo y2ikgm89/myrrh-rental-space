@@ -35,22 +35,42 @@ const mockAgreementCreateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
 const mockAggregate = mock<
-  () => Promise<{ _max: { footerOrder: number | null } }>
->(() => Promise.resolve({ _max: { footerOrder: null } }));
+  () => Promise<{ _max: { displayOrder: number | null } }>
+>(() => Promise.resolve({ _max: { displayOrder: null } }));
 
 type TxClient = {
-  termsDocument: { update: typeof mockUpdate };
+  $executeRaw: typeof mockExecuteRaw;
+  termsDocument: {
+    create: typeof mockCreate;
+    update: typeof mockUpdate;
+    aggregate: typeof mockAggregate;
+  };
 };
 const mockTransaction = mock<
   (cb: (tx: TxClient) => Promise<unknown>) => Promise<unknown>
->((cb) => cb({ termsDocument: { update: mockUpdate } }));
+>((cb) =>
+  cb({
+    $executeRaw: mockExecuteRaw,
+    termsDocument: {
+      create: mockCreate,
+      update: mockUpdate,
+      aggregate: mockAggregate,
+    },
+  }),
+);
 
-// $executeRaw tagged template の最後の呼び出しを記録する（reorder 単一 SQL 化の検証用）
+// $executeRaw tagged template の呼び出しを記録する（reorder 二段更新の検証用）
 const mockExecuteRaw = mock<
   (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
 >(() => Promise.resolve(0));
 
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -144,17 +164,17 @@ describe("createTermsCommand", () => {
     mockCreate.mockReset();
     mockCreate.mockResolvedValue({ id: "id-1", slug: "privacy-policy" });
     mockAggregate.mockReset();
-    mockAggregate.mockResolvedValue({ _max: { footerOrder: null } });
+    mockAggregate.mockResolvedValue({ _max: { displayOrder: null } });
   });
 
-  test("footerOrder は末尾に自動採番される（maxOrder + 1）", async () => {
-    mockAggregate.mockResolvedValue({ _max: { footerOrder: 6 } });
+  test("displayOrder は末尾に自動採番される（maxOrder + 1）", async () => {
+    mockAggregate.mockResolvedValue({ _max: { displayOrder: 6 } });
 
     await createTermsCommand(VALID_INPUT);
 
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ footerOrder: 7 }),
+        data: expect.objectContaining({ displayOrder: 7 }),
       }),
     );
   });
@@ -191,6 +211,27 @@ describe("createTermsCommand", () => {
     await expect(createTermsCommand(VALID_INPUT)).rejects.toThrow(
       "このスラッグは既に使用されています",
     );
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+    await expect(
+      createTermsCommand({
+        ...VALID_INPUT,
+        contentJson: JSON.stringify({
+          root: {
+            children: [
+              {
+                type: "image",
+                src: "https://external.example.com/terms.jpg",
+              },
+            ],
+          },
+        }),
+      }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
     expect(mockCreate).not.toHaveBeenCalled();
   });
 });
@@ -244,7 +285,7 @@ describe("updateTermsCommand", () => {
     expect(result.previousSlug).toBe("old-slug");
   });
 
-  test("footerOrder は更新しない（位置は reorder のみ）", async () => {
+  test("displayOrder は更新しない（位置は reorder のみ）", async () => {
     mockFindFirst.mockResolvedValueOnce({
       id: "id-1",
       slug: "privacy-policy",
@@ -257,41 +298,125 @@ describe("updateTermsCommand", () => {
     expect(mockUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.not.objectContaining({
-          footerOrder: expect.anything(),
+          displayOrder: expect.anything(),
         }),
       }),
     );
+  });
+
+  test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+    mockFindFirst.mockResolvedValueOnce({
+      id: "id-1",
+      slug: "privacy-policy",
+      isPublished: false,
+      publishedAt: null,
+    });
+
+    await expect(
+      updateTermsCommand("id-1", {
+        ...VALID_INPUT,
+        contentJson: JSON.stringify({
+          root: {
+            children: [
+              {
+                type: "cover",
+                backgroundImageUrl: "https://external.example.com/terms.jpg",
+              },
+            ],
+          },
+        }),
+      }),
+    ).rejects.toMatchObject({
+      code: "VALIDATION",
+    });
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
 
 describe("reorderTermsCommand", () => {
   beforeEach(() => {
+    mockFindMany.mockReset();
     mockUpdate.mockReset();
     mockUpdate.mockResolvedValue({ id: "id-1", slug: "privacy-policy" });
+    mockTransaction.mockReset();
+    mockTransaction.mockImplementation((cb) =>
+      cb({
+        $executeRaw: mockExecuteRaw,
+        termsDocument: {
+          create: mockCreate,
+          update: mockUpdate,
+          aggregate: mockAggregate,
+        },
+      }),
+    );
     mockExecuteRaw.mockReset();
     mockExecuteRaw.mockResolvedValue(0);
   });
 
-  test("orderedIds の順に footerOrder を 0 始まりで CASE WHEN 単一 SQL で再採番する", async () => {
+  test("orderedIds の順に displayOrder を 0 始まりで二段更新する", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      { id: "id-a", contentHtml: "" },
+      { id: "id-b", contentHtml: "" },
+      { id: "id-c", contentHtml: "" },
+    ]);
+
     await reorderTermsCommand(["id-a", "id-b", "id-c"]);
 
-    // N 回ループ UPDATE は廃止 — 1 回の $executeRaw に集約される
+    // N 回ループ UPDATE は廃止。unique index 下の swap に耐えるため二段更新する。
     expect(mockUpdate).not.toHaveBeenCalled();
-    expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
 
-    const call = mockExecuteRaw.mock.calls[0];
-    // 外側 template の静的部分（テーブル名・列名・CASE・WHERE）を検証
-    const sql = call?.[0].join("?") ?? "";
-    expect(sql).toContain("terms_documents");
-    expect(sql).toContain("footerOrder");
-    expect(sql).toContain("CASE");
-    expect(sql).toContain("deletedAt");
+    for (const call of mockExecuteRaw.mock.calls.slice(1)) {
+      const sql = call[0].join("?");
+      expect(sql).toContain("terms_documents");
+      expect(sql).toContain("displayOrder");
+      expect(sql).toContain("CASE");
+      expect(sql).toContain("deletedAt");
+    }
+  });
+
+  test("存在しない ID を含む場合は SQL 実行前に NOT_FOUND", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      { id: "id-a", contentHtml: "" },
+      { id: "id-b", contentHtml: "" },
+    ]);
+
+    await expect(reorderTermsCommand(["id-a", "missing-id"])).rejects.toThrow(
+      "規約が見つかりません",
+    );
+
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
+  });
+
+  test("重複 ID は DB アクセス前に拒否する", async () => {
+    await expect(reorderTermsCommand(["id-a", "id-a"])).rejects.toThrow(
+      "同じIDを複数指定することはできません",
+    );
+
+    expect(mockFindMany).not.toHaveBeenCalled();
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
+  });
+
+  test("既存 ID の subset は過不足として拒否する", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      { id: "id-a", contentHtml: "" },
+      { id: "id-b", contentHtml: "" },
+      { id: "id-c", contentHtml: "" },
+    ]);
+
+    await expect(reorderTermsCommand(["id-a", "id-b"])).rejects.toThrow(
+      "規約数が一致しません",
+    );
+
+    expect(mockExecuteRaw).not.toHaveBeenCalled();
   });
 
   test("空配列の場合 SQL を実行しない", async () => {
     const result = await reorderTermsCommand([]);
 
     expect(result).toEqual({ updated: 0 });
+    expect(mockFindMany).not.toHaveBeenCalled();
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockExecuteRaw).not.toHaveBeenCalled();
   });
@@ -302,6 +427,21 @@ describe("softDeleteTermsCommand / restoreTermsCommand", () => {
     mockFindFirst.mockReset();
     mockFindUnique.mockReset();
     mockUpdate.mockReset();
+    mockAggregate.mockReset();
+    mockAggregate.mockResolvedValue({ _max: { displayOrder: null } });
+    mockTransaction.mockReset();
+    mockTransaction.mockImplementation((cb) =>
+      cb({
+        $executeRaw: mockExecuteRaw,
+        termsDocument: {
+          create: mockCreate,
+          update: mockUpdate,
+          aggregate: mockAggregate,
+        },
+      }),
+    );
+    mockExecuteRaw.mockReset();
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
   test("softDelete は deletedAt を set + isPublished を false 化する", async () => {
@@ -344,6 +484,25 @@ describe("softDeleteTermsCommand / restoreTermsCommand", () => {
 
     await expect(restoreTermsCommand("id-1")).rejects.toThrow(
       "同一スラッグの規約が既に存在するため復元できません",
+    );
+  });
+
+  test("restore は有効規約の末尾 displayOrder へ再採番する", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      id: "id-1",
+      slug: "privacy",
+      deletedAt: new Date(),
+    });
+    mockFindFirst.mockResolvedValueOnce(null);
+    mockAggregate.mockResolvedValueOnce({ _max: { displayOrder: 7 } });
+    mockUpdate.mockResolvedValueOnce({ id: "id-1", slug: "privacy" });
+
+    await restoreTermsCommand("id-1");
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ displayOrder: 8 }),
+      }),
     );
   });
 });

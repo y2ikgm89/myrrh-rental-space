@@ -1,7 +1,7 @@
 /**
  * Stripe 初期化・ヘルパー関数
  *
- * 環境変数優先、DBフォールバック
+ * DB優先（管理画面設定）、envはフォールバック
  * テストモード自動検出
  * 接続テスト機能
  *
@@ -94,7 +94,8 @@ export function createStripeClient(secretKey: string): AsyncOnlyStripe {
 }
 
 /**
- * 環境変数またはDB設定からStripeクライアントを取得
+ * DB設定（管理画面）を優先し、なければ環境変数からStripeクライアントを取得
+ * （Settings is canonical、`.claude/rules/integrations.md`参照）
  * @param dbSecretKey - DBから取得した暗号化されたシークレットキー
  * @returns Stripeクライアントと設定元
  */
@@ -102,16 +103,16 @@ export async function getStripeClient(dbSecretKey?: string | null): Promise<{
   client: AsyncOnlyStripe | null;
   source: StripeConfigSource;
 }> {
-  const envKey = getEnvSecretKey();
-  if (envKey) {
-    return { client: createStripeClient(envKey), source: "env" };
-  }
-
   if (dbSecretKey) {
     const decryptedKey = safeDecrypt(dbSecretKey);
     if (decryptedKey) {
       return { client: createStripeClient(decryptedKey), source: "db" };
     }
+  }
+
+  const envKey = getEnvSecretKey();
+  if (envKey) {
+    return { client: createStripeClient(envKey), source: "env" };
   }
 
   return { client: null, source: null };

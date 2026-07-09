@@ -1,15 +1,18 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import { eventRegistrationConfirmationFixture } from "./event-registration-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
+  COLOR,
+  SECTION_VARIANT_STYLES,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
+  linkDangerStyle,
   text,
 } from "./_shared/styles";
 
@@ -23,6 +26,12 @@ type Props = {
   quantity: number;
   registrationId: string;
   addToCalendarLinks?: AddToCalendarUrls;
+  /** 会員向け: ログイン後のマイページ申込一覧 URL（キャンセル・確認が可能） */
+  memberEventRegistrationUrl?: string;
+  /** ゲスト向け: マイページに申込を追加する claim リンク（会員は表示しない） */
+  claimUrl?: string;
+  /** ゲスト向け: 期限内のみ生成される暗号化トークン付きキャンセル URL */
+  cancelUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -36,8 +45,12 @@ export function EventRegistrationConfirmationEmail({
   quantity,
   registrationId,
   addToCalendarLinks,
+  memberEventRegistrationUrl,
+  claimUrl,
+  cancelUrl,
   footer,
 }: Props) {
+  const danger = SECTION_VARIANT_STYLES.danger;
   return (
     <EmailLayout
       preview={`イベント申込ありがとうございます - ${eventTitle}`}
@@ -79,12 +92,96 @@ export function EventRegistrationConfirmationEmail({
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 
+      {memberEventRegistrationUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            会員のお客様は、マイページから申込内容の確認・キャンセルが行えます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={memberEventRegistrationUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページで申込を確認する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
+      {claimUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            Google または LINE でログインすると、この申込をマイページに追加して
+            まとめて管理できます。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={claimUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              マイページに追加する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
+      {cancelUrl && (
+        <Section
+          style={{
+            backgroundColor: danger.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            お申込みのキャンセルは下記のリンクから行えます（イベント開始前まで有効）。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link href={cancelUrl} style={linkDangerStyle}>
+              申込をキャンセルする
+            </Link>
+          </Text>
+        </Section>
+      )}
+
       <Hr style={hr} />
 
       <Text style={text}>
-        申込のキャンセル・人数変更をご希望の場合は、お問い合わせ窓口までご連絡
-        ください。キャンセル料金・払い戻し条件についてはキャンセルポリシーを
-        ご確認ください。
+        人数変更をご希望の場合や、上記リンクがご利用いただけない場合は、
+        お問い合わせ窓口までご連絡ください。
       </Text>
 
       <Text style={text}>当日のご参加を心よりお待ちしております。</Text>

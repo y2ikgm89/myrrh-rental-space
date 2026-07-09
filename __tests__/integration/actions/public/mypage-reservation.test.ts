@@ -81,6 +81,17 @@ mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
   applyCancellationSideEffects: mock(() => Promise.resolve()),
 }));
 
+// 新規: updateReservationAction が変更通知メール送信に直接呼ぶ関数を no-op モック
+// （実体は send.ts → customers/queries.ts の getSuppressedEmailSet まで連鎖するため）
+mock.module("@/shared/lib/email/reservation-emails", () => ({
+  sendReservationAdminNotification: mock(() =>
+    Promise.resolve({ ok: true, messageId: "msg_test" }),
+  ),
+  sendReservationUpdatedEmail: mock(() =>
+    Promise.resolve({ ok: true, messageId: "msg_test" }),
+  ),
+}));
+
 // auth モック
 const mockGetSession = mock(
   (): Promise<{ user: { id: string; name: string } } | null> =>

@@ -219,7 +219,7 @@ export function SpaceEditForm({
     space?.isPublished ?? false,
   );
   const [reviewsEnabled, setReviewsEnabled] = useState<boolean>(
-    space?.reviewsEnabled ?? true,
+    space?.reviewsEnabled ?? false,
   );
   const [metaDescription, setMetaDescription] = useState<string>(
     space?.metaDescription ?? "",
@@ -276,6 +276,7 @@ export function SpaceEditForm({
   const mainImagePicker = useSingleMediaPicker({
     accept: "image",
     defaultUsage: "SPACE",
+    showUrlTab: false,
     onSelect: (media) => {
       const selected = media[0];
       if (selected) setMainImageUrl(selected.url);
@@ -284,6 +285,7 @@ export function SpaceEditForm({
   const ogpImagePicker = useSingleMediaPicker({
     accept: "image",
     defaultUsage: "SPACE",
+    showUrlTab: false,
     onSelect: (media) => {
       const selected = media[0];
       if (selected) setOgpImageUrl(selected.url);
@@ -361,7 +363,7 @@ export function SpaceEditForm({
     if (!price || discountType === DiscountType.none || !discountValueNum)
       return price;
     if (discountType === DiscountType.percentage)
-      return Math.round(price * (1 - discountValueNum / 100));
+      return Math.max(0, Math.round(price * (1 - discountValueNum / 100)));
     if (discountType === DiscountType.fixed)
       return Math.max(0, price - discountValueNum);
     return price;
@@ -754,6 +756,8 @@ export function SpaceEditForm({
                           value={discountValue}
                           onChange={(e) => setDiscountValue(e.target.value)}
                           placeholder="10"
+                          min={0}
+                          max={100}
                           className="w-20"
                           disabled={isPending}
                           aria-label="割引率"
@@ -768,6 +772,7 @@ export function SpaceEditForm({
                           value={discountValue}
                           onChange={(e) => setDiscountValue(e.target.value)}
                           placeholder="500"
+                          min={0}
                           className="w-24"
                           disabled={isPending}
                           aria-label="割引額"
@@ -1011,6 +1016,7 @@ export function SpaceEditForm({
                   form={form}
                   defaultUsage="SPACE"
                   max={20}
+                  showUrlTab={false}
                   disabled={isPending}
                 />
               </div>

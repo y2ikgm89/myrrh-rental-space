@@ -25,6 +25,10 @@ const mockPostCategoryFindFirst = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
+const mockPostCategoryFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+
 const mockPostCategoryCreate = mock<() => Promise<Record<string, unknown>>>(
   () => Promise.resolve({ id: "category-1" }),
 );
@@ -65,16 +69,41 @@ const mockPostTagDelete = mock<() => Promise<Record<string, unknown>>>(() =>
 
 // $transaction はバッチ配列を受け取るパターンと関数パターン両方に対応
 const mockTransaction = mock<
-  (arg: unknown[] | ((tx: unknown) => Promise<unknown>)) => Promise<unknown>
+  (
+    arg:
+      | unknown[]
+      | ((tx: {
+          $executeRaw: typeof mockExecuteRaw;
+          postCategory: {
+            create: typeof mockPostCategoryCreate;
+            aggregate: typeof mockPostCategoryAggregate;
+          };
+        }) => Promise<unknown>),
+  ) => Promise<unknown>
 >((arg) => {
   if (typeof arg === "function") {
-    return Promise.resolve(null);
+    return arg({
+      $executeRaw: mockExecuteRaw,
+      postCategory: {
+        create: mockPostCategoryCreate,
+        aggregate: mockPostCategoryAggregate,
+      },
+    });
   }
   return Promise.resolve([]);
 });
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -87,6 +116,7 @@ mock.module("@/shared/db/prisma", () => ({
     postCategory: {
       findUnique: mockPostCategoryFindUnique,
       findFirst: mockPostCategoryFindFirst,
+      findMany: mockPostCategoryFindMany,
       create: mockPostCategoryCreate,
       update: mockPostCategoryUpdate,
       delete: mockPostCategoryDelete,
@@ -101,8 +131,47 @@ mock.module("@/shared/db/prisma", () => ({
       delete: mockPostTagDelete,
     },
     $transaction: mockTransaction,
+    $executeRaw: mockExecuteRaw,
   },
 }));
+
+type SqlFragment = { __sql: string; __values: unknown[] };
+
+function isSqlFragment(value: unknown): value is SqlFragment {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "__sql" in value &&
+    "__values" in value
+  );
+}
+
+mock.module("@generated/prisma/client", () => {
+  const sql = (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ): SqlFragment => {
+    let combined = "";
+    for (let i = 0; i < strings.length; i++) {
+      combined += strings[i];
+      if (i < values.length) {
+        const value = values[i];
+        combined += isSqlFragment(value) ? value.__sql : "?";
+      }
+    }
+    return { __sql: combined, __values: values };
+  };
+
+  return {
+    Prisma: {
+      sql,
+      join: (items: SqlFragment[], separator = ", ") => ({
+        __sql: items.map((item) => item.__sql).join(separator),
+        __values: items.flatMap((item) => item.__values),
+      }),
+    },
+  };
+});
 
 mock.module("@generated/prisma/enums", () => ({
   PostStatus: {
@@ -177,7 +246,7 @@ const VALID_CREATE_INPUT = {
   excerpt: "概要テキスト",
   contentJson: '{"root":{}}',
   contentHtml: "<p>テスト</p>",
-  thumbnailUrl: "https://example.com/thumb.jpg",
+  thumbnailUrl: "https://media.example.com/posts/thumb.jpg",
   ogpImageUrl: null,
   categoryId: CATEGORY_ID,
   tags: [],
@@ -185,6 +254,8 @@ const VALID_CREATE_INPUT = {
   metaKeywords: null,
   ogpTitle: null,
   ogpDescription: null,
+  contentWidth: null,
+  contentWidthCustom: null,
   authorId: USER_ID,
 };
 
@@ -197,7 +268,7 @@ const VALID_UPDATE_SETTINGS_INPUT = {
   title: "更新テスト投稿",
   slug: "test-post-updated",
   excerpt: "更新概要",
-  thumbnailUrl: "https://example.com/thumb-updated.jpg",
+  thumbnailUrl: "https://media.example.com/posts/thumb-updated.jpg",
   ogpImageUrl: null,
   categoryId: CATEGORY_ID,
   tags: [],
@@ -205,6 +276,8 @@ const VALID_UPDATE_SETTINGS_INPUT = {
   metaKeywords: null,
   ogpTitle: null,
   ogpDescription: null,
+  status: "DRAFT" as const,
+  publishedAt: null,
   contentWidth: null,
   contentWidthCustom: null,
 };
@@ -298,6 +371,23 @@ describe("createPost", () => {
         }),
       );
     });
+
+    test("作成時にレイアウト設定も保存される", async () => {
+      await createPost({
+        ...VALID_CREATE_INPUT,
+        contentWidth: "CUSTOM",
+        contentWidthCustom: 960,
+      });
+
+      expect(mockPostCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            contentWidth: "CUSTOM",
+            contentWidthCustom: 960,
+          }),
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -330,6 +420,39 @@ describe("createPost", () => {
         code: "NOT_FOUND",
         message: "タグが見つかりません",
       });
+    });
+
+    test("管理メディア origin 外の thumbnailUrl は拒否する", async () => {
+      await expect(
+        createPost({
+          ...VALID_CREATE_INPUT,
+          thumbnailUrl: "https://external.example.com/thumb.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createPost({
+          ...VALID_CREATE_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "image",
+                  src: "https://external.example.com/body.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCreate).not.toHaveBeenCalled();
     });
   });
 });
@@ -369,6 +492,27 @@ describe("updatePostBody", () => {
         code: "NOT_FOUND",
         message: "投稿記事が見つかりません",
       });
+    });
+
+    test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        updatePostBody(POST_ID, {
+          ...VALID_UPDATE_BODY_INPUT,
+          contentJson: JSON.stringify({
+            root: {
+              children: [
+                {
+                  type: "cover",
+                  backgroundImageUrl: "https://external.example.com/cover.jpg",
+                },
+              ],
+            },
+          }),
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -414,6 +558,25 @@ describe("updatePostSettings", () => {
 
       expect(result.slug).toBe(POST_SLUG);
     });
+
+    test("公開ステータスと公開日時も設定更新で永続化される", async () => {
+      const publishedAt = new Date("2026-01-02T03:04:00.000Z");
+
+      await updatePostSettings(POST_ID, {
+        ...VALID_UPDATE_SETTINGS_INPUT,
+        status: "PUBLISHED",
+        publishedAt,
+      });
+
+      expect(mockPostUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: "PUBLISHED",
+            publishedAt,
+          }),
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -450,6 +613,18 @@ describe("updatePostSettings", () => {
         code: "NOT_FOUND",
         message: "カテゴリが見つかりません",
       });
+    });
+
+    test("管理メディア origin 外の thumbnailUrl は拒否する", async () => {
+      await expect(
+        updatePostSettings(POST_ID, {
+          ...VALID_UPDATE_SETTINGS_INPUT,
+          thumbnailUrl: "https://external.example.com/thumb.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -597,7 +772,10 @@ describe("unpublishPost", () => {
 
       expect(mockPostUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { status: "DRAFT" },
+          data: expect.objectContaining({
+            status: "DRAFT",
+            publishedAt: null,
+          }),
         }),
       );
     });
@@ -641,7 +819,10 @@ describe("archivePost", () => {
 
       expect(mockPostUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: { status: "ARCHIVED" },
+          data: expect.objectContaining({
+            status: "ARCHIVED",
+            publishedAt: null,
+          }),
         }),
       );
     });
@@ -737,6 +918,18 @@ describe("createPostCategory", () => {
         message: "このスラッグは既に使用されています",
       });
     });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        createPostCategory({
+          ...VALID_CATEGORY_INPUT,
+          ogpImageUrl: "https://external.example.com/category-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCategoryCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -788,6 +981,18 @@ describe("updatePostCategory", () => {
         code: "CONFLICT",
         message: "このカテゴリ名は既に使用されています",
       });
+    });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        updatePostCategory(CATEGORY_ID, {
+          ...VALID_CATEGORY_INPUT,
+          ogpImageUrl: "https://external.example.com/category-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostCategoryUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -858,27 +1063,111 @@ describe("deletePostCategory", () => {
 
 describe("updatePostCategoryOrder", () => {
   beforeEach(() => {
+    mockPostCategoryFindMany.mockReset();
     mockPostCategoryUpdate.mockReset();
     mockTransaction.mockReset();
+    mockExecuteRaw.mockReset();
 
-    mockTransaction.mockResolvedValue([]);
+    mockTransaction.mockImplementation((arg) => {
+      if (typeof arg === "function") {
+        return arg({
+          $executeRaw: mockExecuteRaw,
+          postCategory: {
+            create: mockPostCategoryCreate,
+            aggregate: mockPostCategoryAggregate,
+          },
+        });
+      }
+      return Promise.resolve([]);
+    });
+    mockExecuteRaw.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
     test("空配列の場合は何もしない", async () => {
       await expect(updatePostCategoryOrder([])).resolves.toBeUndefined();
+      expect(mockPostCategoryFindMany).not.toHaveBeenCalled();
       expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
 
-    test("複数アイテムの順序を一括更新できる", async () => {
+    test("複数アイテムの順序を CASE WHEN 二段更新で更新できる", async () => {
       const items = [
         { id: "cat-1", order: 1 },
         { id: "cat-2", order: 2 },
         { id: "cat-3", order: 3 },
       ];
+      mockPostCategoryFindMany.mockResolvedValueOnce(
+        items.map((item) => ({ id: item.id })),
+      );
 
       await expect(updatePostCategoryOrder(items)).resolves.toBeUndefined();
+      expect(mockPostCategoryUpdate).not.toHaveBeenCalled();
       expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+      for (const call of mockExecuteRaw.mock.calls.slice(1)) {
+        const sql = call[0].join("?");
+        expect(sql).toContain("post_categories");
+        expect(sql).toContain("CASE");
+      }
+    });
+  });
+
+  describe("異常系", () => {
+    test("重複 ID は DB アクセス前に拒否する", async () => {
+      await expect(
+        updatePostCategoryOrder([
+          { id: "cat-1", order: 1 },
+          { id: "cat-1", order: 2 },
+        ]),
+      ).rejects.toThrow("同じIDを複数指定することはできません");
+
+      expect(mockPostCategoryFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("重複 order は DB アクセス前に拒否する", async () => {
+      await expect(
+        updatePostCategoryOrder([
+          { id: "cat-1", order: 1 },
+          { id: "cat-2", order: 1 },
+        ]),
+      ).rejects.toThrow("同じ順序を複数指定することはできません");
+
+      expect(mockPostCategoryFindMany).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("存在しない ID が混ざる場合 SQL が実行されない", async () => {
+      const items = [
+        { id: "cat-1", order: 1 },
+        { id: "missing-id", order: 2 },
+      ];
+      mockPostCategoryFindMany.mockResolvedValueOnce([{ id: "cat-1" }]);
+
+      await expect(updatePostCategoryOrder(items)).rejects.toThrow(
+        "カテゴリが見つかりません",
+      );
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+    });
+
+    test("既存 ID の subset は過不足として拒否する", async () => {
+      const items = [
+        { id: "cat-1", order: 1 },
+        { id: "cat-2", order: 2 },
+      ];
+      mockPostCategoryFindMany.mockResolvedValueOnce([
+        { id: "cat-1" },
+        { id: "cat-2" },
+        { id: "cat-3" },
+      ]);
+
+      await expect(updatePostCategoryOrder(items)).rejects.toThrow(
+        "カテゴリ数が一致しません",
+      );
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 });
@@ -943,6 +1232,18 @@ describe("createPostTag", () => {
         message: "このスラッグは既に使用されています",
       });
     });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        createPostTag({
+          ...VALID_TAG_INPUT,
+          ogpImageUrl: "https://external.example.com/tag-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostTagCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -994,6 +1295,18 @@ describe("updatePostTag", () => {
         code: "CONFLICT",
         message: "このタグ名は既に使用されています",
       });
+    });
+
+    test("管理メディア origin 外の ogpImageUrl は拒否する", async () => {
+      await expect(
+        updatePostTag(TAG_ID, {
+          ...VALID_TAG_INPUT,
+          ogpImageUrl: "https://external.example.com/tag-ogp.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockPostTagUpdate).not.toHaveBeenCalled();
     });
   });
 });

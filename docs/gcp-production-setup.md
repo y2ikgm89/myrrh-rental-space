@@ -20,6 +20,10 @@ Official references:
   <https://cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run>
 - Cloud Run ingress:
   <https://cloud.google.com/run/docs/securing/ingress>
+- Cloud Run custom domains:
+  <https://cloud.google.com/run/docs/mapping-custom-domains>
+- External Application Load Balancer with Cloud Run:
+  <https://cloud.google.com/load-balancing/docs/https/setup-global-ext-https-serverless>
 - Cloud Run secrets:
   <https://cloud.google.com/run/docs/configuring/services/secrets>
 - Cloud Run service identity:
@@ -74,6 +78,10 @@ the public service. The clean production target is:
 - one admin Cloud Run service for admin routes, deployed with
   `APP_SURFACE=admin`, with authenticated-only access and Cloud Run direct IAP
   enabled once during setup;
+- one global external HTTPS Application Load Balancer that maps
+  `https://admin.myrrh-jp.com` to the admin Cloud Run service. Do not enable
+  IAP on the load balancer backend; Cloud Run direct IAP remains the single IAP
+  enforcement point for the admin service;
 - Google Workspace / Cloud Identity security groups for admin roles, each
   granted `roles/iap.httpsResourceAccessor` for admin access and used as the
   application role source;
@@ -89,23 +97,27 @@ environment.
 Production host/path layout:
 
 - `https://rental-space.myrrh-jp.com/*` -> public service
-- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin` -> admin
+- `https://admin.myrrh-jp.com/` -> admin service with IAP, then app redirect
+  to `/admin`
+- `https://admin.myrrh-jp.com/admin` -> admin
   service with IAP
-- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin/*` -> admin
+- `https://admin.myrrh-jp.com/admin/*` -> admin
   service with IAP
-- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/admin/api/*` ->
+- `https://admin.myrrh-jp.com/admin/api/*` ->
   admin service with IAP
-- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/api/instagram/oauth/*`
+- `https://admin.myrrh-jp.com/api/instagram/oauth/*`
   -> admin service with IAP
-- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/api/google-business-profile/oauth/*`
+- `https://admin.myrrh-jp.com/api/google-business-profile/oauth/*`
   -> admin service with IAP
-- `https://myrrh-rental-space-admin-da57q4squa-an.a.run.app/preview/*` -> admin
+- `https://admin.myrrh-jp.com/preview/*` -> admin
   service with IAP
 
-If a same-domain `/admin` path is required later, add an external HTTPS
-Application Load Balancer and path-route admin traffic to the admin service.
-That is optional for the current recommended setup because Cloud Run direct IAP
-is GA and avoids DNS / edge migration risk.
+Direct admin `run.app` URLs are not part of the production contract. The admin
+Cloud Run service must use `--ingress=internal-and-cloud-load-balancing` and
+`--no-default-url`, so internet traffic reaches it only through the admin load
+balancer and then through Cloud Run direct IAP. If a same-domain public
+`/admin` path is required later, treat that as a new URL/IAP design and update
+the load balancer, deploy flags, audit model, and runbooks together.
 
 Keep these public even in production:
 
@@ -132,7 +144,9 @@ export SERVICE_NAME="myrrh-rental-space"
 export ADMIN_SERVICE_NAME="myrrh-rental-space-admin"
 export AR_REPOSITORY="myrrh-rental-space"
 export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"
-export ADMIN_DOMAIN="https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"
+export ADMIN_DOMAIN="https://admin.myrrh-jp.com"
+export ADMIN_LB_IP="8.233.111.15"
+export ADMIN_LB_IPV6="2600:1901:0:6b8e::"
 export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"
 export MIGRATE_JOB_NAME="prisma-migrate"
 export RUNTIME_SA="myrrh-rental-space-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -512,10 +526,11 @@ Required by production startup:
 - `R2_BUCKET_NAME`
 - `R2_PUBLIC_URL`
 
-Required when Cloudflare cache purge is enabled:
+Required by Cloudflare integration:
 
 - `CLOUDFLARE_ZONE_ID`
 - `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ORIGIN_HEADER_SECRET`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 
@@ -540,6 +555,7 @@ for name in \
   R2_PUBLIC_URL \
   CLOUDFLARE_ZONE_ID \
   CLOUDFLARE_API_TOKEN \
+  CLOUDFLARE_ORIGIN_HEADER_SECRET \
   GOOGLE_CLIENT_ID \
   GOOGLE_CLIENT_SECRET
 do
@@ -569,6 +585,7 @@ for name in \
   R2_PUBLIC_URL \
   CLOUDFLARE_ZONE_ID \
   CLOUDFLARE_API_TOKEN \
+  CLOUDFLARE_ORIGIN_HEADER_SECRET \
   GOOGLE_CLIENT_ID \
   GOOGLE_CLIENT_SECRET
 do
@@ -600,7 +617,15 @@ Secret generation rules used by this app:
 openssl rand -base64 32   # BETTER_AUTH_SECRET
 openssl rand -hex 32      # ENCRYPTION_KEY, AUDIT_LOG_HMAC_KEY, exactly 64 hex chars
 openssl rand -base64 32   # NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+openssl rand -base64 32   # CLOUDFLARE_ORIGIN_HEADER_SECRET, mirror exactly in the Cloudflare request-header transform rule
 ```
+
+Turnstile's secret key is managed from the admin settings page and stored
+encrypted in the application database. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` remains
+a deploy-time public value so the production image and client bundle use the
+canonical widget site key. `CLOUDFLARE_ORIGIN_HEADER_SECRET` must match the
+value Cloudflare injects into the `x-cloudflare-origin-secret` request header
+before traffic reaches Cloud Run.
 
 Audit log HMAC rotation is a clean-break operation. Do not add runtime legacy
 keys. Plan a retention cutover and deploy a new chain boundary when changing
@@ -677,8 +702,21 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 gcloud builds submit \
   --region="$REGION" \
   --config=cloudbuild.yaml \
-  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_EDITOR_EMAIL="${ADMIN_ROLE_GROUP_EDITOR_EMAIL}",_ADMIN_ROLE_GROUP_VIEWER_EMAIL="${ADMIN_ROLE_GROUP_VIEWER_EMAIL}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}",_CRON_OIDC_AUDIENCE="${PUBLIC_DOMAIN}",_CRON_SERVICE_ACCOUNT_EMAIL="${SCHEDULER_SA}",_NEXT_PUBLIC_TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY}",_DATABASE_URL_SECRET_VERSION=1,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_AUDIT_LOG_HMAC_KEY_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1
+  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_EDITOR_EMAIL="${ADMIN_ROLE_GROUP_EDITOR_EMAIL}",_ADMIN_ROLE_GROUP_VIEWER_EMAIL="${ADMIN_ROLE_GROUP_VIEWER_EMAIL}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}",_CRON_OIDC_AUDIENCE="${PUBLIC_DOMAIN}",_CRON_SERVICE_ACCOUNT_EMAIL="${SCHEDULER_SA}",_NEXT_PUBLIC_TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY}",_DATABASE_URL_SECRET_VERSION=1,_BREAKING_MIGRATION_DEPLOY=false,_BETTER_AUTH_SECRET_VERSION=1,_ENCRYPTION_KEY_SECRET_VERSION=1,_AUDIT_LOG_HMAC_KEY_SECRET_VERSION=1,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1,_R2_ACCOUNT_ID_SECRET_VERSION=1,_R2_ACCESS_KEY_ID_SECRET_VERSION=1,_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1,_R2_BUCKET_NAME_SECRET_VERSION=1,_R2_PUBLIC_URL_SECRET_VERSION=1,_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1,_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1,_CLOUDFLARE_ORIGIN_HEADER_SECRET_VERSION=1,_GOOGLE_CLIENT_ID_SECRET_VERSION=1,_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1
 ```
+
+For intentional non-expand/contract migrations, use breaking migration deploy
+mode. The GitHub Actions production workflow detects changed migration SQL that
+renames or drops columns/tables/types and automatically submits
+`_BREAKING_MIGRATION_DEPLOY=true`. Emergency manual submits must set it
+explicitly when the migration is not backward compatible.
+
+In breaking migration deploy mode, `cloudbuild.yaml` uses the official Cloud Run
+service disable mechanism (`gcloud run services update SERVICE --scaling=0`) for
+both public and admin services, waits 310 seconds so old revisions can finish
+in-flight requests, runs `prisma migrate deploy`, then deploys the new revisions
+with `--scaling=auto`. This keeps the application and schema clean while
+preventing old revisions from serving against the migrated database.
 
 If an individual operator needs to run this emergency command before WIF is
 available, grant that person a
@@ -860,14 +898,14 @@ The recurring Cloud Build deploy updates the admin service revision but does
 not pass `--iap`, does not reapply `--no-allow-unauthenticated`, and does not
 require project-level `roles/iap.admin`.
 
-Both services intentionally keep Cloud Run network ingress at `all`. The public
-service uses the public custom domain, and the admin service uses the direct
-`run.app` URL protected by Cloud Run direct IAP. `cloudbuild.yaml` reapplies
-`--ingress=all` on every service deploy, and the production audit verifies the
-live `run.googleapis.com/ingress` and `run.googleapis.com/ingress-status`
-annotations. If the architecture later moves to an external Application Load
-Balancer-only entrypoint, change the URL/IAP design, deploy flags, and audit
-contract together instead of changing ingress alone.
+The public service keeps Cloud Run network ingress at `all` because the public
+custom domain must remain directly reachable. The admin service is load
+balancer-only: `cloudbuild.yaml` reapplies
+`--ingress=internal-and-cloud-load-balancing` and `--no-default-url` on every
+admin deploy. The production audit verifies the live
+`run.googleapis.com/ingress`, `run.googleapis.com/ingress-status`, and
+`run.googleapis.com/default-url-disabled` annotations. Do not reintroduce a
+direct admin `run.app` production entrypoint.
 
 Confirm the runtime service accounts:
 
@@ -884,6 +922,56 @@ gcloud run services describe "$ADMIN_SERVICE_NAME" \
 Keep `/api/live` as the startup and liveness probe path. It is intentionally DB
 independent. Use `/api/health` only for manual or uptime checks that are allowed
 to touch dependencies.
+
+## Admin load balancer and DNS
+
+The admin user-facing origin is `https://admin.myrrh-jp.com`. It must be served
+by a global external HTTPS Application Load Balancer with a serverless NEG
+pointing at `$ADMIN_SERVICE_NAME` in `$REGION`.
+
+Current production resource names:
+
+- global IPv4 address: `myrrh-admin-lb-ip` (`8.233.111.15`);
+- global IPv6 address: `myrrh-admin-lb-ipv6` (`2600:1901:0:6b8e::`);
+- serverless NEG: `myrrh-admin-neg` in `$REGION`;
+- backend service: `myrrh-admin-backend`;
+- HTTPS URL map / proxy / forwarding rule:
+  `myrrh-admin-url-map`, `myrrh-admin-https-proxy`,
+  `myrrh-admin-https-rule`;
+- HTTP redirect URL map / proxy / forwarding rule:
+  `myrrh-admin-http-redirect`, `myrrh-admin-http-proxy`,
+  `myrrh-admin-http-rule`;
+- IPv6 HTTPS / HTTP forwarding rules:
+  `myrrh-admin-https-rule-ipv6`, `myrrh-admin-http-rule-ipv6`;
+- Google-managed certificate: `myrrh-admin-cert-20260705` for
+  `admin.myrrh-jp.com`.
+
+Required contract:
+
+- DNS for `admin.myrrh-jp.com` points to the global external HTTPS load
+  balancer, not to a direct Cloud Run `run.app` URL.
+- Cloudflare DNS must contain exactly one DNS-only A record:
+  `admin.myrrh-jp.com -> 8.233.111.15`, with `proxied=false`. Do not orange-cloud
+  this record; Google-managed certificate provisioning needs the hostname to
+  resolve directly to the load balancer IP.
+- Cloudflare DNS must contain exactly one DNS-only AAAA record:
+  `admin.myrrh-jp.com -> 2600:1901:0:6b8e::`, with `proxied=false`. Add this only
+  after the GCP IPv6 forwarding rules exist.
+- Cloudflare API automation for this record requires a token scoped to the
+  `myrrh-jp.com` zone with DNS read/edit permission. The cache purge / zone
+  diagnostics token is not sufficient unless it also has DNS record access.
+- The load balancer routes host `admin.myrrh-jp.com` to the admin serverless
+  NEG. A single host-wide route is preferred; the app redirects `/` to `/admin`
+  on the admin surface.
+- IAP is enabled on the Cloud Run admin service only. Do not enable IAP on the
+  load balancer backend service, because Google Cloud does not support IAP on
+  both the load balancer and the Cloud Run service for the same traffic path.
+- The admin Cloud Run service uses `--ingress=internal-and-cloud-load-balancing`
+  and `--no-default-url`, making the load balancer the only internet ingress
+  path.
+- `$ADMIN_APP_URL`, `BETTER_AUTH_URL` on the admin service, and
+  `NEXT_PUBLIC_APP_URL` on the admin service are all exactly
+  `https://admin.myrrh-jp.com`.
 
 ## IAP admin access
 
@@ -1025,6 +1113,7 @@ gcloud run jobs execute prisma-migrate --region="$REGION" --wait
 curl -fsS "${PUBLIC_DOMAIN}/api/live"
 curl -fsS "${PUBLIC_DOMAIN}/api/health"
 curl -I "${PUBLIC_DOMAIN}/admin"
+curl -I "${ADMIN_DOMAIN}/"
 curl -I "${ADMIN_DOMAIN}/admin"
 ```
 
@@ -1073,6 +1162,7 @@ Expected results:
 - `/api/live` returns 200;
 - `/api/health` returns 200 only when DB and dependencies are healthy;
 - `${PUBLIC_DOMAIN}/admin` returns 404 from `APP_SURFACE=public`;
+- `${ADMIN_DOMAIN}/` redirects unauthenticated visitors to Google/IAP;
 - `${ADMIN_DOMAIN}/admin` redirects unauthenticated visitors to Google/IAP;
 - with an IAP-allowed Google account in exactly one admin role group, `/admin`
   opens the dashboard and auto-syncs the local staff record without an app
@@ -1088,8 +1178,10 @@ Expected results:
   must be the canonical public origin on the public service and the canonical
   admin origin on the admin service, with no trailing slash.
   The audit checks `Cloud Run service ingress is canonical`; recurring deploys
-  must keep `--ingress=all` because the current public domain and direct admin
-  IAP `run.app` URL both depend on direct public Cloud Run ingress.
+  must keep the public service at `--ingress=all` and the admin service at
+  `--ingress=internal-and-cloud-load-balancing`. The audit also checks
+  `admin Cloud Run default run.app URL is disabled`; admin recurring deploys
+  must keep `--no-default-url`.
   The audit also checks `Cloud Run service identities are dedicated`,
   `Cloud Run migrate Job identity is dedicated`,
   `Cloud Run migrate Job env is canonical`, and
@@ -1146,7 +1238,8 @@ Expected results:
 
 - `bun run gcp:audit-production-iap` passes. The audit check
   `production HTTP domains are canonical HTTPS URLs` verifies URL shape before
-  checking `/api/live`, `/api/health`, public `/admin` hiding, and
+  checking `/api/live`, `/api/health`, public `/admin` hiding,
+  `admin root redirects unauthenticated visitors to Google/IAP`, and
   `admin /admin redirects unauthenticated visitors to Google/IAP`. The audit
   reads Cloud Run IAP access through the official IAP REST API resource
   `iap_web/cloud_run-${REGION}/services/${ADMIN_SERVICE_NAME}:getIamPolicy`,
@@ -1183,8 +1276,9 @@ The current `cloudbuild.yaml` already handles:
 - dedicated migrator image;
 - Cloud Run Job update and execution for `bunx --bun prisma migrate deploy`;
 - public and admin Cloud Run deploys with service account, probes, env vars,
-  secrets, and explicit `--ingress=all`. Recurring deploys do not mutate admin
-  IAP.
+  secrets, public `--ingress=all`, admin
+  `--ingress=internal-and-cloud-load-balancing`, and admin `--no-default-url`.
+  Recurring deploys do not mutate admin IAP.
 - fail-fast validation for admin `IAP_JWT_AUDIENCE` and the four admin role
   group emails. Initial `SUPER_ADMIN` creation is synced from the super-admin
   Google Group on first access, not bootstrapped from app env.
@@ -1221,8 +1315,10 @@ The audited production target posture is:
    `$RUNTIME_SA`, `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` allows `$RUNTIME_SA` and
    `$BUILD_SA`, and project-level `roles/secretmanager.secretAccessor` is
    absent;
-9. public and admin Cloud Run services keep `run.googleapis.com/ingress` and
-   `run.googleapis.com/ingress-status` set to `all`;
+9. public Cloud Run keeps `run.googleapis.com/ingress` and
+   `run.googleapis.com/ingress-status` set to `all`; admin Cloud Run keeps both
+   annotations set to `internal-and-cloud-load-balancing` and
+   `run.googleapis.com/default-url-disabled` set to `true`;
 10. public, admin, and migrate Cloud Run resources all use `$RUNTIME_SA` as
     their service identity;
 11. the migrate Job runs `bunx --bun prisma migrate deploy` with `DATABASE_URL`

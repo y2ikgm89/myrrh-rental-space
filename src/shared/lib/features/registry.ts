@@ -81,7 +81,7 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: ["events"],
     sectionTypes: ["event-calendar"],
     templates: ["events-archive"],
-    cronPaths: ["/api/cron/event-import"],
+    cronPaths: ["/api/cron/event-import", "/api/cron/event-reminder"],
   },
   posts: {
     id: "posts",

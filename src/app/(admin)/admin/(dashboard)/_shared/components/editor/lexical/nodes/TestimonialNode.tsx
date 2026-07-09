@@ -5,8 +5,6 @@
  * TestimonialContainerNode + TestimonialItemNode の2ノード構成
  */
 
-"use client";
-
 import type { DOMConversionMap, EditorConfig, LexicalNode } from "lexical";
 import {
   $create,

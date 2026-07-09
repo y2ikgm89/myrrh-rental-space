@@ -9,6 +9,9 @@ import type { EventTicket } from "@generated/prisma/client";
 
 /**
  * EventTicket の編集対象フィールド（`id` / `eventId` / timestamps を除く）。
+ *
+ * `sortOrder` は永続化フィールドだが、管理フォーム入力としては受け取らず、
+ * domain command が配列順から 0 始まりで再採番する。
  */
 export type EventTicketWritableFields = Readonly<
   Pick<
@@ -28,12 +31,11 @@ export type EventTicketWritableFields = Readonly<
  *
  * 既存チケットは `id` を持ち（update 時の diff/upsert に利用）、新規追加分は省略する。
  */
-export type EventTicketInput = EventTicketWritableFields & {
+export type EventTicketInput = Omit<EventTicketWritableFields, "sortOrder"> & {
   readonly id?: string;
   /**
    * React reconciliation 用の安定 key (UI 専用フィールド)。
-   * Zod の `ticketInputSchema` は宣言しないため `strip` mode で破棄され、
-   * domain command の persistence layer には到達しない。
+   * submit 時の JSON payload からは明示的に除外する。
    */
   readonly _key?: string;
 };
@@ -64,7 +66,7 @@ export type EventTicketOption = Readonly<
 /**
  * 新規チケットドラフトの初期値を生成する。
  */
-export function createDefaultTicket(sortOrder: number): EventTicketInput {
+export function createDefaultTicket(): EventTicketInput {
   return {
     _key: crypto.randomUUID(),
     name: "",
@@ -72,7 +74,6 @@ export function createDefaultTicket(sortOrder: number): EventTicketInput {
     price: 0,
     capacity: null,
     unitSize: 1,
-    sortOrder,
     isAvailable: true,
   };
 }

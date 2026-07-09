@@ -13,6 +13,10 @@ import {
   deleteNavigationItem,
   updateNavigationOrder,
   deleteSocialLink,
+  updateNavigationItemActive,
+  updateSocialLinkActive,
+  updateSocialLinkDesktopVisibility,
+  updateSocialLinkMobileVisibility,
   updateSocialLinkOrder,
 } from "@/admin/actions/navigation";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -97,6 +101,19 @@ export function useNavigationHandlers(
     }
   };
 
+  const updateNavActiveInTree = (
+    items: NavigationItemData[],
+    id: string,
+    isActive: boolean,
+  ): NavigationItemData[] =>
+    items.map((item) => ({
+      ...item,
+      isActive: item.id === id ? isActive : item.isActive,
+      children: item.children.map((child) =>
+        child.id === id ? { ...child, isActive } : child,
+      ),
+    }));
+
   const loadData = async () => {
     const [desktop, mobile, footer, social] = await Promise.all([
       fetchNavigationItems("HEADER_DESKTOP"),
@@ -130,6 +147,23 @@ export function useNavigationHandlers(
       void loadData();
     });
   };
+
+  const handleNavActiveToggle =
+    (type: NavigationType) => (id: string, isActive: boolean) => {
+      const previousItems = getItemsByType(type);
+      setItemsByType(type, updateNavActiveInTree(previousItems, id, isActive));
+
+      startTransition(async () => {
+        const result = await updateNavigationItemActive(id, isActive);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          setItemsByType(type, previousItems);
+          return;
+        }
+
+        toast.success("表示状態を更新しました");
+      });
+    };
 
   // ---------------------------------------------------------------------------
   // Navigation D&D Handlers
@@ -313,6 +347,70 @@ export function useNavigationHandlers(
     });
   };
 
+  const updateSocialLinkState = (
+    id: string,
+    patch: Partial<
+      Pick<
+        Serialized<SocialLinkData>,
+        "isActive" | "showOnDesktop" | "showOnMobile"
+      >
+    >,
+  ) => {
+    setters.setSocialLinks(
+      state.socialLinks.map((link) =>
+        link.id === id ? { ...link, ...patch } : link,
+      ),
+    );
+  };
+
+  const handleSocialActiveToggle = (id: string, isActive: boolean) => {
+    const previousLinks = state.socialLinks;
+    updateSocialLinkState(id, { isActive });
+
+    startTransition(async () => {
+      const result = await updateSocialLinkActive(id, isActive);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        setters.setSocialLinks(previousLinks);
+        return;
+      }
+
+      toast.success("表示状態を更新しました");
+    });
+  };
+
+  const handleSocialDesktopToggle = (id: string, showOnDesktop: boolean) => {
+    const previousLinks = state.socialLinks;
+    updateSocialLinkState(id, { showOnDesktop });
+
+    startTransition(async () => {
+      const result = await updateSocialLinkDesktopVisibility(id, showOnDesktop);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        setters.setSocialLinks(previousLinks);
+        return;
+      }
+
+      toast.success("PC表示を更新しました");
+    });
+  };
+
+  const handleSocialMobileToggle = (id: string, showOnMobile: boolean) => {
+    const previousLinks = state.socialLinks;
+    updateSocialLinkState(id, { showOnMobile });
+
+    startTransition(async () => {
+      const result = await updateSocialLinkMobileVisibility(id, showOnMobile);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        setters.setSocialLinks(previousLinks);
+        return;
+      }
+
+      toast.success("モバイル表示を更新しました");
+    });
+  };
+
   // ---------------------------------------------------------------------------
   // Social D&D Handlers
   // ---------------------------------------------------------------------------
@@ -358,6 +456,7 @@ export function useNavigationHandlers(
     loadData,
     getParentOptions,
     handleNavDelete,
+    handleNavActiveToggle,
     handleNavDragStart,
     handleNavDragMove,
     handleNavDragOver,
@@ -365,6 +464,9 @@ export function useNavigationHandlers(
     handleMakeChild,
     handleMakeRoot,
     handleSocialDelete,
+    handleSocialActiveToggle,
+    handleSocialDesktopToggle,
+    handleSocialMobileToggle,
     handleSocialDragStart,
     handleSocialDragEnd,
   };

@@ -145,6 +145,15 @@ export type ReviewReplyEmailContext = {
   readonly title: string | null;
   readonly comment: string | null;
   readonly replyBody: string;
+  /** レビュー元の予約 ID。マイページ予約詳細への確認リンク組み立てに使う。 */
+  readonly reservationId: string;
+  /**
+   * レビュー投稿者 Customer の User.id。レビューは常にマイページ経由（要ログイン）
+   * でのみ投稿可能なため通常は非 null だが、投稿後に紐づく User アカウントが
+   * 削除された場合（onDelete: SetNull）は null になり得るため、customerId の
+   * 有無ではなくこの値で確認リンクの出し分けを行う。
+   */
+  readonly customerUserId: string | null;
 };
 
 export async function replyToReviewCommand(input: ReplyToReviewInput): Promise<{
@@ -157,10 +166,13 @@ export async function replyToReviewCommand(input: ReplyToReviewInput): Promise<{
     select: {
       id: true,
       spaceId: true,
+      reservationId: true,
       rating: true,
       title: true,
       comment: true,
-      customer: { select: { email: true, lastName: true, firstName: true } },
+      customer: {
+        select: { email: true, lastName: true, firstName: true, userId: true },
+      },
       space: { select: { name: true, slug: true } },
     },
   });
@@ -191,6 +203,8 @@ export async function replyToReviewCommand(input: ReplyToReviewInput): Promise<{
       title: review.title,
       comment: review.comment,
       replyBody: input.replyBody,
+      reservationId: review.reservationId,
+      customerUserId: review.customer.userId,
     };
   }
 

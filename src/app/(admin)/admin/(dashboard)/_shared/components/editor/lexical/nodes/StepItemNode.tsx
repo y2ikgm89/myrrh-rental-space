@@ -1,11 +1,9 @@
-﻿/**
+/**
  * StepItem Node
  *
  * @description 各ステップを表現するコンテナ
  * 子ノード: StepTitleNode + StepContentNode
  */
-
-"use client";
 
 import type {
   DOMConversionMap,

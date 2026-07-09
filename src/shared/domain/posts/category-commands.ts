@@ -1,7 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageUrl } from "@/shared/domain/media/managed-image-assertions";
+import {
+  buildOrderScopeLockSql,
+  buildUuidOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type {
   CreatePostCategoryResult,
@@ -55,24 +61,29 @@ async function ensurePostCategoryUnique(
 export async function createPostCategory(
   input: PostCategoryMutationInput,
 ): Promise<CreatePostCategoryResult> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   await ensurePostCategoryUnique(input);
 
-  const maxOrder = await prisma.postCategory.aggregate({
-    _max: { order: true },
-  });
+  const category = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("post_categories:all"));
 
-  const category = await prisma.postCategory.create({
-    data: {
-      name: input.name,
-      slug: input.slug,
-      description: normalizeNullableString(input.description),
-      // order はシステム管理（末尾に自動採番、D&D reorder が SSoT）
-      order: (maxOrder._max.order ?? 0) + 1,
-      metaTitle: normalizeNullableString(input.metaTitle),
-      metaDescription: normalizeNullableString(input.metaDescription),
-      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-    },
-    select: { id: true },
+    const maxOrder = await tx.postCategory.aggregate({
+      _max: { order: true },
+    });
+
+    return tx.postCategory.create({
+      data: {
+        name: input.name,
+        slug: input.slug,
+        description: normalizeNullableString(input.description),
+        // order はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+        order: (maxOrder._max.order ?? -1) + 1,
+        metaTitle: normalizeNullableString(input.metaTitle),
+        metaDescription: normalizeNullableString(input.metaDescription),
+        ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
+      },
+      select: { id: true },
+    });
   });
 
   return category;
@@ -82,6 +93,7 @@ export async function updatePostCategory(
   id: string,
   input: PostCategoryMutationInput,
 ): Promise<void> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   await ensurePostCategoryUnique(input, id);
   await ensurePostCategoryExists(id);
 
@@ -133,12 +145,50 @@ export async function updatePostCategoryOrder(
     return;
   }
 
-  await prisma.$transaction(async (tx) => {
-    for (const item of items) {
-      await tx.postCategory.update({
-        where: { id: item.id },
-        data: { order: item.order },
-      });
+  if (new Set(items.map((item) => item.id)).size !== items.length) {
+    throw new DomainError("同じIDを複数指定することはできません", "VALIDATION");
+  }
+  if (new Set(items.map((item) => item.order)).size !== items.length) {
+    throw new DomainError(
+      "同じ順序を複数指定することはできません",
+      "VALIDATION",
+    );
+  }
+
+  const existing = await prisma.postCategory.findMany({
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((category) => category.id));
+
+  for (const item of items) {
+    if (!existingIds.has(item.id)) {
+      throw new DomainError("カテゴリが見つかりません", "NOT_FOUND");
     }
+  }
+
+  if (existing.length !== items.length) {
+    throw new DomainError("カテゴリ数が一致しません（過不足）", "VALIDATION");
+  }
+
+  const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(
+    items,
+    (item) => item.id,
+    (item) => item.order,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("post_categories:all"));
+
+    await tx.$executeRaw`
+      UPDATE "post_categories"
+      SET "order" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+    `;
+
+    await tx.$executeRaw`
+      UPDATE "post_categories"
+      SET "order" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+    `;
   });
 }

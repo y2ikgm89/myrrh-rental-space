@@ -56,13 +56,13 @@ describe("Homepage Settings Admin Action Integration", () => {
         expect(result.success).toBe(true);
       });
 
-      test("title はオプション", () => {
+      test("title は create 入力として拒否する", () => {
         const withTitle = createSectionSchema.safeParse({
           ...VALID_CREATE_INPUT,
           title: "テスト",
         });
         const withoutTitle = createSectionSchema.safeParse(VALID_CREATE_INPUT);
-        expect(withTitle.success).toBe(true);
+        expect(withTitle.success).toBe(false);
         expect(withoutTitle.success).toBe(true);
       });
 
@@ -84,12 +84,12 @@ describe("Homepage Settings Admin Action Integration", () => {
         }
       });
 
-      test("order はオプション", () => {
+      test("order は create 入力として拒否する", () => {
         const result = createSectionSchema.safeParse({
           ...VALID_CREATE_INPUT,
-          order: undefined,
+          order: 10,
         });
-        expect(result.success).toBe(true);
+        expect(result.success).toBe(false);
       });
     });
 
@@ -121,33 +121,8 @@ describe("Homepage Settings Admin Action Integration", () => {
     // 旧 title / contentJson バリデーション describe は削除
     // (Section.title / contentJson 列削除 + createSectionSchema field 削除済)
 
-    describe("order バリデーション", () => {
-      test("0 以上の整数は許可", () => {
-        for (const order of [0, 1, 10, 100]) {
-          const result = createSectionSchema.safeParse({
-            ...VALID_CREATE_INPUT,
-            order,
-          });
-          expect(result.success).toBe(true);
-        }
-      });
-
-      test("負の数はエラー", () => {
-        const result = createSectionSchema.safeParse({
-          ...VALID_CREATE_INPUT,
-          order: -1,
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("小数はエラー", () => {
-        const result = createSectionSchema.safeParse({
-          ...VALID_CREATE_INPUT,
-          order: 1.5,
-        });
-        expect(result.success).toBe(false);
-      });
-    });
+    // create 入力の order は廃止。順序は createPageSectionCommand の末尾採番と
+    // updateSectionOrderSchema / reorderPageSectionsCommand のみが変更する。
 
     describe("isActive バリデーション", () => {
       test("false は許可", () => {
@@ -255,6 +230,16 @@ describe("Homepage Settings Admin Action Integration", () => {
       test("小数の order はエラー", () => {
         const result = updateSectionOrderSchema.safeParse({
           sections: [{ id: VALID_UUID, order: 1.5 }],
+        });
+        expect(result.success).toBe(false);
+      });
+
+      test("同じ order を複数指定するとエラー", () => {
+        const result = updateSectionOrderSchema.safeParse({
+          sections: [
+            { id: VALID_UUID, order: 0 },
+            { id: VALID_UUID_2, order: 0 },
+          ],
         });
         expect(result.success).toBe(false);
       });
@@ -402,28 +387,20 @@ describe("Homepage Settings Admin Action Integration", () => {
   });
 
   describe("境界値テスト", () => {
-    test("タイトル 100 文字（境界）", () => {
+    test("旧 title 入力は拒否する", () => {
       const result = createSectionSchema.safeParse({
         ...VALID_CREATE_INPUT,
         title: "x".repeat(100),
       });
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
 
     // 旧「タイトル 101 文字 境界超過」test は削除 (createSectionSchema から title 削除済)
 
-    test("order 0（最小値）", () => {
+    test("order は create 入力として拒否する", () => {
       const result = createSectionSchema.safeParse({
         ...VALID_CREATE_INPUT,
         order: 0,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("order -1（最小値未満）", () => {
-      const result = createSectionSchema.safeParse({
-        ...VALID_CREATE_INPUT,
-        order: -1,
       });
       expect(result.success).toBe(false);
     });

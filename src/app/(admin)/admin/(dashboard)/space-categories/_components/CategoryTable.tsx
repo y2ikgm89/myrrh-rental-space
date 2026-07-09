@@ -59,9 +59,10 @@ type CategoryTableProps = {
 type SortableRowProps = {
   readonly category: SpaceCategoryWithStats;
   readonly sortable: boolean;
+  readonly isPending: boolean;
 };
 
-function SortableRow({ category, sortable }: SortableRowProps) {
+function SortableRow({ category, sortable, isPending }: SortableRowProps) {
   const {
     attributes,
     listeners,
@@ -69,7 +70,7 @@ function SortableRow({ category, sortable }: SortableRowProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: category.id, disabled: !sortable });
+  } = useSortable({ id: category.id, disabled: !sortable || isPending });
 
   const style = {
     transform: toTranslate3d(transform),
@@ -88,7 +89,7 @@ function SortableRow({ category, sortable }: SortableRowProps) {
       <TableCell className="hidden w-12 md:table-cell" onClick={stopRowClick}>
         {sortable ? (
           <div {...attributes} {...listeners}>
-            <DragHandle />
+            <DragHandle disabled={isPending} />
           </div>
         ) : (
           <span className="block h-4 w-4" aria-hidden="true" />
@@ -169,7 +170,7 @@ export function CategoryTable({
     setCategories([...initialCategories]);
   }
 
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -180,7 +181,7 @@ export function CategoryTable({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !sortable) return;
+    if (!over || active.id === over.id || !sortable || isPending) return;
 
     const oldIndex = categories.findIndex((c) => c.id === active.id);
     const newIndex = categories.findIndex((c) => c.id === over.id);
@@ -253,6 +254,7 @@ export function CategoryTable({
                       key={category.id}
                       category={category}
                       sortable={sortable}
+                      isPending={isPending}
                     />
                   ))}
                 </TableBody>

@@ -108,6 +108,9 @@ const mockCustomerUpdate = mock<() => Promise<unknown>>(() =>
 const mockTransaction = mock<
   (fn: (tx: unknown) => Promise<unknown>) => Promise<unknown>
 >((fn: (tx: unknown) => Promise<unknown>) => fn(txClient));
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
   Promise.resolve(null),
 );
@@ -148,6 +151,7 @@ const txClient = {
   blockedDate: {
     findFirst: mockBlockedDateFindFirst,
   },
+  $executeRaw: mockExecuteRaw,
 };
 
 // ---------------------------------------------------------------------------
@@ -188,6 +192,16 @@ mock.module("@/shared/lib/reservation", () => ({
   ),
 }));
 
+// `createPublicReservationCommand` は `isFeatureEnabled("reservation")` を直接呼ぶ
+// （reviews/commands.ts と同型の feature module gate）。settings.findUnique mock は不要。
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
+
 // ---------------------------------------------------------------------------
 // Import test target (after mocks)
 // ---------------------------------------------------------------------------
@@ -226,6 +240,8 @@ function resetAllMocks() {
   mockCustomerUpsert.mockClear();
   mockCustomerUpdate.mockClear();
   mockTransaction.mockClear();
+  mockExecuteRaw.mockClear();
+  mockExecuteRaw.mockResolvedValue(0);
   mockBlockedDateFindFirst.mockClear();
   mockBlockedDateFindFirst.mockResolvedValue(null);
   mockTxReservationFindFirst.mockClear();
@@ -283,6 +299,8 @@ function resetAllMocks() {
     fn(txClient),
   );
   mockTxReservationFindFirst.mockImplementation(() => Promise.resolve(null));
+  mockIsFeatureEnabled.mockClear();
+  mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
 }
 
 // ==========================================================================
@@ -425,6 +443,17 @@ describe("createAdminReservationCommand", () => {
       expect(result.payload).toBeDefined();
       expect(result.payload.customerName).toBe("山田 太郎");
       expect(result.payload.spaceName).toBe("テストスペース");
+    });
+
+    test("同一スペースの予約作成は transaction 内で advisory lock を取得して直列化する", async () => {
+      await createAdminReservationCommand(validInput);
+
+      const lockSql = mockExecuteRaw.mock.calls
+        .map((call) => call[0]?.join("?") ?? "")
+        .find((sql) => sql.includes("pg_advisory_xact_lock"));
+
+      expect(lockSql ?? "").toContain("pg_advisory_xact_lock");
+      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(validInput.spaceId);
     });
 
     test("CONFIRMED ステータスでも作成可能", async () => {
@@ -583,11 +612,15 @@ describe("updateAdminReservationCommand", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    // 既存予約をセットアップ
+    // 既存予約をセットアップ（日時は validInput と異なる値にし、diff 検知のデフォルトを true にする）
     mockReservationFindUnique.mockImplementation(() =>
       Promise.resolve({
         id: "res-1",
         status: ReservationStatus.PENDING,
+        spaceId: "space-1",
+        startTime: new Date("2024-06-15T09:00:00"),
+        endTime: new Date("2024-06-15T10:00:00"),
+        totalPrice: 1000,
         couponId: null,
         googleCalendarEventId: null,
         customer: {
@@ -607,6 +640,39 @@ describe("updateAdminReservationCommand", () => {
       expect(result.payload).toBeDefined();
       expect(result.payload.reservationId).toBe("res-1");
       expect(result.googleCalendarEventId).toBeNull();
+    });
+
+    test("日時が変更された場合 customerVisibleChanged: true", async () => {
+      // beforeEach の既存予約は 09:00-10:00、validInput は 10:00-12:00 で異なる
+      const result = await updateAdminReservationCommand("res-1", validInput);
+
+      expect(result.customerVisibleChanged).toBe(true);
+    });
+
+    test("顧客に影響する変更がない場合 customerVisibleChanged: false", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.PENDING,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T10:00:00"),
+          endTime: new Date("2024-06-15T12:00:00"),
+          totalPrice: 2000,
+          couponId: null,
+          googleCalendarEventId: null,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      // hourlyPrice=1000 × 2h = totalPrice=2000（既存予約と同一）
+      const result = await updateAdminReservationCommand("res-1", validInput);
+
+      expect(result.customerVisibleChanged).toBe(false);
     });
 
     test("スペース固有割引(percentage)が適用され spaceDiscountAmount が永続化される", async () => {
@@ -734,6 +800,38 @@ describe("updateAdminReservationCommand", () => {
           status: ReservationStatus.PENDING,
         }),
       ).rejects.toThrow("このステータスからは変更できません");
+    });
+
+    test("終端ステータス(CANCELLED)への変更を拒否", async () => {
+      // 返金・キャンセルメール等の副作用チェーンを経由しないため、この編集コマンドでは
+      // CANCELLED/COMPLETED/NO_SHOW への変更を許可しない（専用のステータス変更経路のみ）
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T10:00:00"),
+          endTime: new Date("2024-06-15T12:00:00"),
+          totalPrice: 2000,
+          couponId: null,
+          googleCalendarEventId: null,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await expect(
+        updateAdminReservationCommand("res-1", {
+          ...validInput,
+          status: ReservationStatus.CANCELLED,
+        }),
+      ).rejects.toThrow(
+        "このステータスへの変更は予約詳細画面のステータス変更から行ってください",
+      );
     });
   });
 });
@@ -989,7 +1087,7 @@ describe("deleteReservationCommand", () => {
         }),
       );
 
-      await deleteReservationCommand("res-1", "user-1");
+      const result = await deleteReservationCommand("res-1", "user-1");
 
       expect(mockReservationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1003,6 +1101,10 @@ describe("deleteReservationCommand", () => {
           }),
         }),
       );
+      // 呼び出し側（deleteReservation アクション）が applyCancellationSideEffects
+      // を発火するかどうかの判断材料になるフラグ
+      expect(result.wasCancelled).toBe(true);
+      expect(result.cancellationReason).toBe("管理者による削除");
     });
 
     test("CANCELLED 済み予約は再キャンセル追跡を設定しない", async () => {
@@ -1015,7 +1117,7 @@ describe("deleteReservationCommand", () => {
         }),
       );
 
-      await deleteReservationCommand("res-1", "user-1");
+      const result = await deleteReservationCommand("res-1", "user-1");
 
       expect(mockReservationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1029,6 +1131,10 @@ describe("deleteReservationCommand", () => {
       // cancelledByType が data に含まれないことを確認
       const callData = mockReservationUpdate.mock.calls[0];
       expect(callData).toBeDefined();
+
+      // 既に終端ステータスなので applyCancellationSideEffects は発火しない
+      expect(result.wasCancelled).toBe(false);
+      expect(result.cancellationReason).toBeNull();
     });
 
     test("COMPLETED 予約はキャンセル追跡なしで削除", async () => {
@@ -1132,7 +1238,11 @@ describe("deleteReservationCommand", () => {
         }),
       );
 
-      await deleteReservationCommand("res-1", "user-1", "テスト削除理由");
+      const result = await deleteReservationCommand(
+        "res-1",
+        "user-1",
+        "テスト削除理由",
+      );
 
       expect(mockReservationUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -1141,6 +1251,7 @@ describe("deleteReservationCommand", () => {
           }),
         }),
       );
+      expect(result.cancellationReason).toBe("テスト削除理由");
     });
   });
 
@@ -1282,6 +1393,17 @@ describe("createPublicReservationCommand", () => {
       expect(result.payload.spaceName).toBe("テストスペース");
     });
 
+    test("同一スペースの公開予約作成は transaction 内で advisory lock を取得して直列化する", async () => {
+      await createPublicReservationCommand(validInput);
+
+      const lockSql = mockExecuteRaw.mock.calls
+        .map((call) => call[0]?.join("?") ?? "")
+        .find((sql) => sql.includes("pg_advisory_xact_lock"));
+
+      expect(lockSql ?? "").toContain("pg_advisory_xact_lock");
+      expect(mockExecuteRaw.mock.calls[0]?.[1]).toBe(validInput.spaceId);
+    });
+
     test("ステータスは常に CONFIRMED（Stripe なし自動確定）", async () => {
       await createPublicReservationCommand(validInput);
 
@@ -1393,6 +1515,16 @@ describe("createPublicReservationCommand", () => {
         createPublicReservationCommand(validInput),
       ).rejects.toMatchObject({ code: "CONFLICT" });
       // blocked のため予約レコードは作成されない
+      expect(mockReservationCreate).not.toHaveBeenCalled();
+    });
+
+    test("reservation feature module が OFF の場合は VALIDATION エラーで拒否し、以降の処理を行わない", async () => {
+      mockIsFeatureEnabled.mockResolvedValue(false);
+
+      await expect(
+        createPublicReservationCommand(validInput),
+      ).rejects.toMatchObject({ code: "VALIDATION" });
+      expect(mockSpaceFindUnique).not.toHaveBeenCalled();
       expect(mockReservationCreate).not.toHaveBeenCalled();
     });
   });

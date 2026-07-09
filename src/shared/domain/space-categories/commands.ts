@@ -1,7 +1,12 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buildOrderScopeLockSql,
+  buildUuidOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import type { SpaceCategoryFormData } from "@/shared/lib/validations/space-category";
 
 type SpaceCategoryOrderInput = {
@@ -9,14 +14,13 @@ type SpaceCategoryOrderInput = {
   sortOrder: number;
 };
 
-async function ensureActiveNameAvailable(
+async function ensureNameAvailable(
   name: string,
   currentId?: string,
 ): Promise<void> {
   const existing = await prisma.spaceCategory.findFirst({
     where: {
       name,
-      isActive: true,
       ...(currentId ? { id: { not: currentId } } : {}),
     },
     select: { id: true },
@@ -39,18 +43,22 @@ function toSpaceCategoryData(data: SpaceCategoryFormData) {
 export async function createSpaceCategory(
   data: SpaceCategoryFormData,
 ): Promise<{ id: string }> {
-  await ensureActiveNameAvailable(data.name);
+  await ensureNameAvailable(data.name);
 
-  const maxOrder = await prisma.spaceCategory.aggregate({
-    _max: { sortOrder: true },
-  });
+  const category = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("space_categories:all"));
 
-  const category = await prisma.spaceCategory.create({
-    data: {
-      ...toSpaceCategoryData(data),
-      // sortOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
-      sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
-    },
+    const maxOrder = await tx.spaceCategory.aggregate({
+      _max: { sortOrder: true },
+    });
+
+    return tx.spaceCategory.create({
+      data: {
+        ...toSpaceCategoryData(data),
+        // sortOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+        sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+      },
+    });
   });
 
   return { id: category.id };
@@ -69,7 +77,7 @@ export async function updateSpaceCategory(
     throw new DomainError("カテゴリーが見つかりません", "NOT_FOUND");
   }
 
-  await ensureActiveNameAvailable(data.name, id);
+  await ensureNameAvailable(data.name, id);
 
   await prisma.spaceCategory.update({
     where: { id },
@@ -80,16 +88,60 @@ export async function updateSpaceCategory(
 }
 
 export async function updateSpaceCategoryOrder(
-  items: SpaceCategoryOrderInput[],
+  items: readonly SpaceCategoryOrderInput[],
 ): Promise<{ updated: number }> {
-  await Promise.all(
-    items.map((item) =>
-      prisma.spaceCategory.update({
-        where: { id: item.id },
-        data: { sortOrder: item.sortOrder },
-      }),
-    ),
+  if (items.length === 0) {
+    return { updated: 0 };
+  }
+
+  if (new Set(items.map((item) => item.id)).size !== items.length) {
+    throw new DomainError("同じIDを複数指定することはできません", "VALIDATION");
+  }
+  if (new Set(items.map((item) => item.sortOrder)).size !== items.length) {
+    throw new DomainError(
+      "同じ並び順を複数指定することはできません",
+      "VALIDATION",
+    );
+  }
+
+  const existingCategories = await prisma.spaceCategory.findMany({
+    select: { id: true },
+  });
+  const existingIds = new Set(
+    existingCategories.map((category) => category.id),
   );
+
+  for (const item of items) {
+    if (!existingIds.has(item.id)) {
+      throw new DomainError("カテゴリーが見つかりません", "NOT_FOUND");
+    }
+  }
+
+  if (existingCategories.length !== items.length) {
+    throw new DomainError("カテゴリー数が一致しません（過不足）", "VALIDATION");
+  }
+
+  const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(
+    items,
+    (item) => item.id,
+    (item) => item.sortOrder,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("space_categories:all"));
+
+    await tx.$executeRaw`
+      UPDATE "space_categories"
+      SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+    `;
+
+    await tx.$executeRaw`
+      UPDATE "space_categories"
+      SET "sortOrder" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+    `;
+  });
 
   return { updated: items.length };
 }
@@ -146,6 +198,10 @@ export async function updateSpaceCategoryActive(
       `このカテゴリーには${category._count.spaces}件のスペースが紐づいています。先にスペースのカテゴリーを変更してください。`,
       "CONFLICT",
     );
+  }
+
+  if (isActive) {
+    await ensureNameAvailable(category.name, id);
   }
 
   await prisma.spaceCategory.update({

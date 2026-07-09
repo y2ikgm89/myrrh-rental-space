@@ -19,10 +19,15 @@ function getR2PublicUrlPattern(): RemotePattern | null {
     const url = new URL(publicUrl);
     if (url.protocol !== "https:" && url.protocol !== "http:") return null;
 
+    const pathname =
+      url.pathname === "/" ? "/**" : `${url.pathname.replace(/\/$/, "")}/**`;
+
     return {
       protocol: url.protocol === "https:" ? "https" : "http",
       hostname: url.hostname,
-      pathname: "/**",
+      port: url.port,
+      pathname,
+      search: "",
     };
   } catch {
     return null;
@@ -113,10 +118,6 @@ const nextConfig: NextConfig = {
       ...(r2PublicUrlPattern ? [r2PublicUrlPattern] : []),
       {
         protocol: "https",
-        hostname: "*.r2.dev",
-      },
-      {
-        protocol: "https",
         hostname: "img.youtube.com",
         pathname: "/vi/**",
       },
@@ -127,10 +128,6 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "*.fbcdn.net",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
       },
     ],
     formats: ["image/avif", "image/webp"],

@@ -38,6 +38,7 @@ const PUBLIC_AXE_ROUTES = [
 
 // critical/serious 違反のみを許容ゼロとする（axe-core の impact は optional string）
 const BLOCKING_IMPACTS = new Set(["serious", "critical"]);
+const appSurface = process.env["APP_SURFACE"] ?? "admin";
 
 function isBlocking(violation: Result): boolean {
   return violation.impact ? BLOCKING_IMPACTS.has(violation.impact) : false;
@@ -76,6 +77,13 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
   for (const route of PUBLIC_AXE_ROUTES) {
     test(`${route.label}に critical/serious 違反がない`, async ({ page }) => {
+      if (route.path === urls.home) {
+        test.skip(
+          appSurface !== "public",
+          "Public homepage root is served only on public surface.",
+        );
+      }
+
       await page.goto(route.path);
       await expect(page.getByRole("main")).toBeVisible();
 

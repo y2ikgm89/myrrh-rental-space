@@ -75,6 +75,7 @@ describe("spaceFormSchema", () => {
         expect(result.data.gallery).toEqual([]);
         expect(result.data.facilities).toEqual([]);
         expect(result.data.isPublished).toBe(false);
+        expect(result.data.reviewsEnabled).toBe(false);
       }
     });
   });
@@ -456,6 +457,32 @@ describe("spaceFormSchema", () => {
       }
     });
   });
+
+  describe("discountValue", () => {
+    test("percentage の割引値は100以下のみ許可", () => {
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        discountType: "percentage",
+        discountValue: 101,
+      });
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].path).toEqual(["discountValue"]);
+        expect(result.error.issues[0].message).toContain("100以下");
+      }
+    });
+
+    test("fixed の割引値は100超でも許可", () => {
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        discountType: "fixed",
+        discountValue: 101,
+      });
+
+      expect(result.success).toBe(true);
+    });
+  });
 });
 
 describe("defaultSpaceFormValues", () => {
@@ -473,7 +500,7 @@ describe("defaultSpaceFormValues", () => {
       gallery: [],
       facilities: [],
       isPublished: false,
-      reviewsEnabled: true,
+      reviewsEnabled: false,
       locationId: "",
       categoryId: null,
       // 割引設定

@@ -4,6 +4,10 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 const envExample = readFileSync(join(process.cwd(), ".env.example"), "utf8");
+const dockerCompose = readFileSync(
+  join(process.cwd(), "docker-compose.yml"),
+  "utf8",
+);
 
 describe(".env.example clean-break contract", () => {
   test("documents the current production env surface without hidden admin requirements", () => {
@@ -34,5 +38,14 @@ describe(".env.example clean-break contract", () => {
     ]) {
       expect(envExample).not.toContain(removedName);
     }
+  });
+
+  test("documents an isolated local test database for real-DB integration tests", () => {
+    expect(envExample).toContain(
+      'TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public"',
+    );
+    expect(dockerCompose).toContain("test-db:");
+    expect(dockerCompose).toContain("POSTGRES_DB: myrrh_test");
+    expect(dockerCompose).toContain('"5433:5432"');
   });
 });

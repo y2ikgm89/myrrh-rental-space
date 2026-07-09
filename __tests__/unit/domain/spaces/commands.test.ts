@@ -19,6 +19,12 @@ const mockSpaceCategoryFindFirst = mock<
 
 mock.module("server-only", () => ({}));
 
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
+}));
+
 // updateSpaceCommand は interactive `$transaction(async (tx) => ...)` を使うため、
 // tx として同じ space mocks を露出する callback ベースの実装を提供する。
 interface PrismaMock {
@@ -99,6 +105,7 @@ import {
   updateSpaceCommand,
   updateSpacePublishedCommand,
   deleteSpaceCommand,
+  duplicateSpaceCommand,
 } from "@/shared/domain/spaces/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -118,7 +125,7 @@ const VALID_INPUT = {
   descriptionPlainText: "テスト用のスペースです",
   capacity: 10,
   hourlyPrice: 1000,
-  mainImageUrl: "https://example.com/image.jpg",
+  mainImageUrl: "https://media.example.com/spaces/main.jpg",
   gallery: [] as const,
   facilities: [
     { name: "Wi-Fi", iconName: "IconWifi" },
@@ -278,6 +285,57 @@ describe("createSpaceCommand", () => {
       });
     });
 
+    test("管理メディア origin 外の mainImageUrl は拒否する", async () => {
+      await expect(
+        createSpaceCommand({
+          ...VALID_INPUT,
+          mainImageUrl: "https://external.example.com/space.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceCreate).not.toHaveBeenCalled();
+    });
+
+    test("管理メディア origin 外の gallery URL は拒否する", async () => {
+      await expect(
+        createSpaceCommand({
+          ...VALID_INPUT,
+          gallery: [
+            {
+              url: "https://external.example.com/gallery.jpg",
+              alt: "外部画像",
+              caption: "",
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 説明内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createSpaceCommand({
+          ...VALID_INPUT,
+          descriptionJson: {
+            root: {
+              children: [
+                {
+                  type: "image",
+                  src: "https://external.example.com/body.jpg",
+                },
+              ],
+            },
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceCreate).not.toHaveBeenCalled();
+    });
+
     test("スラッグエラー時は prisma.space.create が呼ばれない", async () => {
       mockCheckSlugAvailability.mockResolvedValue({
         available: false,
@@ -378,6 +436,18 @@ describe("updateSpaceCommand", () => {
         }),
       );
     });
+
+    test("更新対象は active なスペースだけを存在扱いする", async () => {
+      mockSpaceFindUnique.mockResolvedValue(ACTIVE_SPACE);
+
+      await updateSpaceCommand(SPACE_ID, VALID_INPUT);
+
+      expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: SPACE_ID, isActive: true },
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -414,6 +484,39 @@ describe("updateSpaceCommand", () => {
       ).rejects.toMatchObject({
         code: "CONFLICT",
       });
+    });
+
+    test("管理メディア origin 外の mainImageUrl は拒否する", async () => {
+      await expect(
+        updateSpaceCommand(SPACE_ID, {
+          ...VALID_INPUT,
+          mainImageUrl: "https://external.example.com/space.jpg",
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceUpdate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 説明内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        updateSpaceCommand(SPACE_ID, {
+          ...VALID_INPUT,
+          descriptionJson: {
+            root: {
+              children: [
+                {
+                  type: "cover",
+                  backgroundImageUrl: "https://external.example.com/body.jpg",
+                },
+              ],
+            },
+          },
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+      expect(mockSpaceUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -479,6 +582,16 @@ describe("updateSpacePublishedCommand", () => {
         }),
       );
     });
+
+    test("公開切り替え対象は active なスペースだけを存在扱いする", async () => {
+      await updateSpacePublishedCommand(SPACE_ID, true);
+
+      expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: SPACE_ID, isActive: true },
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -527,8 +640,8 @@ describe("deleteSpaceCommand", () => {
 
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: SPACE_ID },
-          data: { isActive: false, isPublished: false },
+          where: { id: SPACE_ID, isActive: true },
+          data: { isActive: false, isPublished: false, publishedAt: null },
         }),
       );
     });
@@ -542,6 +655,16 @@ describe("deleteSpaceCommand", () => {
             isActive: false,
             isPublished: false,
           }),
+        }),
+      );
+    });
+
+    test("削除対象は active なスペースだけを存在扱いする", async () => {
+      await deleteSpaceCommand(SPACE_ID);
+
+      expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: SPACE_ID, isActive: true },
         }),
       );
     });
@@ -588,5 +711,32 @@ describe("deleteSpaceCommand", () => {
 
       expect(mockSpaceUpdate).not.toHaveBeenCalled();
     });
+  });
+});
+
+// =============================================================================
+// duplicateSpaceCommand
+// =============================================================================
+
+describe("duplicateSpaceCommand", () => {
+  beforeEach(() => {
+    mockSpaceFindUnique.mockReset();
+    mockSpaceCreate.mockReset();
+    mockSpaceFindUnique.mockResolvedValue(null);
+    mockSpaceCreate.mockResolvedValue({ id: "copy-space", slug: "space-copy" });
+  });
+
+  test("複製元は active なスペースだけを存在扱いする", async () => {
+    await expect(duplicateSpaceCommand(SPACE_ID)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "スペースが見つかりません",
+    });
+
+    expect(mockSpaceFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: SPACE_ID, isActive: true },
+      }),
+    );
+    expect(mockSpaceCreate).not.toHaveBeenCalled();
   });
 });

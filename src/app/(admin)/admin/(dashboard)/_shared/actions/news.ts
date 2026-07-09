@@ -30,8 +30,18 @@ import {
 } from "@/admin/lib/validations/news";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 
 const idSchema = uuidIdSchema("お知らせ");
+
+function parsePublishedAt(value: string | null | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = parseDateTimeLocalAsJst(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 function purgeNewsCaches(...slugs: Array<string | undefined>): void {
   const unique = [...new Set(slugs.filter((s): s is string => Boolean(s)))].map(
@@ -63,10 +73,14 @@ export async function createNews(
     resource: "news",
     action: "create",
     execute: async () => {
-      const result = await createNewsCommand({
-        ...parsed.data,
-        contentHtml: deriveLexicalContentHtmlFromJson(parsed.data.contentJson),
-      });
+      const result = await createNewsCommand(
+        omitUndefined({
+          ...parsed.data,
+          contentHtml: deriveLexicalContentHtmlFromJson(
+            parsed.data.contentJson,
+          ),
+        }),
+      );
       createdNewsSlug = result.slug;
       return { id: result.id };
     },
@@ -149,6 +163,8 @@ export async function updateNewsSettings(
         omitUndefined({
           slug: parsed.data.slug,
           title: parsed.data.title,
+          isPublished: parsed.data.isPublished,
+          publishedAt: parsePublishedAt(parsed.data.publishedAt),
           contentWidth: parsed.data.contentWidth ?? null,
           contentWidthCustom: parsed.data.contentWidthCustom ?? null,
           metaDescription: parsed.data.metaDescription,

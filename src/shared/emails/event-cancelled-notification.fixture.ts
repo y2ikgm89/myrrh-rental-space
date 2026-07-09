@@ -6,5 +6,6 @@ export const eventCancelledNotificationFixture = {
   eventTitle: "ワークショップ：和菓子づくり体験",
   eventDate: "2026年7月20日 (月)",
   reason: "講師の都合により開催を中止させていただきます。",
+  memberEventRegistrationUrl: "https://example.com/mypage/events",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof EventCancelledNotificationEmail>[0];

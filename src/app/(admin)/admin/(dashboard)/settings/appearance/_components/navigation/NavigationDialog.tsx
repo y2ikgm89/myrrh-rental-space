@@ -50,7 +50,6 @@ type NavigationFormDialogProps = {
   readonly onOpenChange: (open: boolean) => void;
   readonly editingItem: NavigationItemData | null;
   readonly defaultType: NavigationType;
-  readonly defaultOrder: number;
   readonly parentOptions: NavigationItemData[];
   readonly onSuccess: () => Promise<void>;
 };
@@ -60,7 +59,6 @@ export function NavigationFormDialog({
   onOpenChange,
   editingItem,
   defaultType,
-  defaultOrder,
   parentOptions,
   onSuccess,
 }: NavigationFormDialogProps) {
@@ -230,13 +228,8 @@ export function NavigationFormDialog({
               />
             </div>
 
-            {/* Hidden: type / order */}
+            {/* Hidden: type */}
             <input type="hidden" name={fields.type.name} value={initialType} />
-            <input
-              type="hidden"
-              name={fields.order.name}
-              value={String(editingItem?.order ?? defaultOrder)}
-            />
           </div>
           <DialogFooter>
             <Button
@@ -267,7 +260,6 @@ type SocialLinkFormDialogProps = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly editingLink: Serialized<SocialLinkData> | null;
-  readonly defaultOrder: number;
   readonly onSuccess: () => Promise<void>;
 };
 
@@ -275,7 +267,6 @@ export function SocialLinkFormDialog({
   open,
   onOpenChange,
   editingLink,
-  defaultOrder,
   onSuccess,
 }: SocialLinkFormDialogProps) {
   const isEdit = editingLink !== null;
@@ -437,13 +428,6 @@ export function SocialLinkFormDialog({
                 />
               </div>
             </div>
-
-            {/* Hidden: order */}
-            <input
-              type="hidden"
-              name={fields.order.name}
-              value={String(editingLink?.order ?? defaultOrder)}
-            />
           </div>
           <DialogFooter>
             <Button

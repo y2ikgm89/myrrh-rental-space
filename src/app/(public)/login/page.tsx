@@ -8,6 +8,7 @@ import { Stack } from "@/public/components/design-system/stack";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
+import { isCustomerE2ELoginEnabled } from "@/shared/lib/e2e-runtime";
 import { LoginHero } from "./_components/login-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
 import { DevLoginButton } from "./_components/dev-login-button";
@@ -16,6 +17,19 @@ export const metadata: Metadata = {
   title: "ログイン",
   robots: { index: false, follow: false },
 };
+
+/**
+ * `redirect` クエリパラメータが同一オリジン内の相対パスであることを確認する。
+ * open redirect 防止のため `//`（protocol-relative）や `scheme://` を含む値は拒否する。
+ */
+function isSafeInternalRedirect(path: string | null): path is string {
+  return (
+    path !== null &&
+    path.startsWith("/") &&
+    !path.startsWith("//") &&
+    !path.includes("://")
+  );
+}
 
 export default async function LoginPage({
   searchParams,
@@ -35,6 +49,11 @@ export default async function LoginPage({
   const params = await searchParams;
   const errorType =
     typeof params["error"] === "string" ? params["error"] : null;
+  const rawRedirect =
+    typeof params["redirect"] === "string" ? params["redirect"] : null;
+  const callbackURL = isSafeInternalRedirect(rawRedirect)
+    ? rawRedirect
+    : undefined;
 
   const ERROR_MESSAGES: Record<string, string> = {
     account_suspended:
@@ -68,11 +87,10 @@ export default async function LoginPage({
               title: t.title,
             }))}
             turnstileSiteKey={turnstileSiteKey}
+            {...(callbackURL !== undefined ? { callbackURL } : {})}
           />
           {(process.env["NODE_ENV"] !== "production" ||
-            process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"] === "1") && (
-            <DevLoginButton />
-          )}
+            isCustomerE2ELoginEnabled()) && <DevLoginButton />}
         </Stack>
       </Container>
     </>

@@ -27,6 +27,7 @@ import { EventsViewSwitcher } from "./event-calendar/events-view-switcher";
 import type { EventCardData } from "./event-calendar/event-card";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
+import { serverEnv } from "@/shared/lib/env/server";
 
 interface EventCalendarSectionProps {
   readonly config: EventCalendarConfig;
@@ -40,17 +41,20 @@ export function EventCalendarSection({
   events,
 }: EventCalendarSectionProps): ReactElement {
   const layout = config.displayLayout;
+  const initialNowIso =
+    serverEnv.E2E_RUNTIME === "1" ? serverEnv.E2E_FIXED_NOW_ISO : undefined;
+  const clockProps = initialNowIso !== undefined ? { initialNowIso } : {};
 
   let body: ReactElement;
   if (layout === "list") {
-    body = <EventListView events={events} />;
+    body = <EventListView events={events} {...clockProps} />;
   } else if (layout === "calendar") {
-    body = <EventCalendarView events={events} />;
+    body = <EventCalendarView events={events} {...clockProps} />;
   } else {
     body = (
       <EventsViewSwitcher
-        listView={<EventListView events={events} />}
-        calendarView={<EventCalendarView events={events} />}
+        listView={<EventListView events={events} {...clockProps} />}
+        calendarView={<EventCalendarView events={events} {...clockProps} />}
       />
     );
   }

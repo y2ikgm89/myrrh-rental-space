@@ -71,7 +71,7 @@ function SortableSectionListItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id, disabled: !itemProps.canDrag });
+  } = useSortable({ id, disabled: !itemProps.canDrag || itemProps.isPending });
 
   const dragHandleProps: Record<string, unknown> = {
     ...attributes,
@@ -116,7 +116,7 @@ export function SectionListSidebar({
   requiredSectionTypes,
 }: SectionListSidebarProps) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const dndId = useId();
 
   const sensors = useSensors(
@@ -234,6 +234,7 @@ export function SectionListSidebar({
                     canDuplicate={!isPageHero}
                     canDelete={!isPageHero}
                     canDrag={!isPageHero}
+                    isPending={isPending}
                     {...(isRequired && !isPageHero
                       ? {
                           disableDeleteReason:

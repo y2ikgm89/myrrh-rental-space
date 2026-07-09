@@ -29,14 +29,21 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 const idSchema = uuidIdSchema("スペースカテゴリ");
 const categoryOrderSchema = z
   .array(
-    z.object({
+    z.strictObject({
       id: z.uuid({ error: "カテゴリーIDが不正です" }),
       sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
     }),
   )
   .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
     error: "同じIDを複数指定することはできません",
-  });
+  })
+  .refine(
+    (items) =>
+      new Set(items.map((item) => item.sortOrder)).size === items.length,
+    {
+      error: "同じ並び順を複数指定することはできません",
+    },
+  );
 
 export async function createSpaceCategory(
   _prev: SubmissionResult | undefined,

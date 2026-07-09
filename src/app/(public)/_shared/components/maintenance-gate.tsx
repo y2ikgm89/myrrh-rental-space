@@ -11,9 +11,9 @@ import { MaintenancePage } from "./maintenance-page";
  * `getMaintenanceSettings()` は `'use cache' + safeFetch({fallback})` 構造のため、
  * layout 本体直配置だと build prerender 時 placeholder DATABASE_URL で fallback の
  * `{maintenanceMode: false}` が静的シェルに永続 baking され、admin の maintenance ON 切替が
- * Cloudflare HIT で恒久的に効かなくなる（.claude/rules/db-and-domain.md §6 違反）。
+ * Cloudflare HIT で恒久的に効かなくなる（.claude/rules/caching.md 違反）。
  *
- * canonical pattern（rule §6）: `<Suspense>` 境界内で `await connection()` を呼ぶ async SC
+ * canonical pattern（rule caching.md）: `<Suspense>` 境界内で `await connection()` を呼ぶ async SC
  * から呼び出す → build prerender skip / runtime resume で実 DB から resolve。
  *
  * 設計:

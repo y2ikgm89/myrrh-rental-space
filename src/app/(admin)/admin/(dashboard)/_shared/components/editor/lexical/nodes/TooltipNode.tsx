@@ -4,8 +4,6 @@
  * @description ツールチップを表示するインライン DecoratorNode
  */
 
-"use client";
-
 import type { ReactElement } from "react";
 import type {
   DOMConversionMap,

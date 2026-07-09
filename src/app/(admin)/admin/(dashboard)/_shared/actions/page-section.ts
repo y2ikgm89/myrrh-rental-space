@@ -24,12 +24,12 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("ページセクション");
 
-const createPageSectionSchema = z.object({
+const createPageSectionSchema = z.strictObject({
   pageId: z.uuid({ error: "ページIDが不正です" }),
   type: z.string().min(1, { error: "セクションタイプは必須です" }),
 });
 
-const reorderPageSectionsSchema = z.object({
+const reorderPageSectionsSchema = z.strictObject({
   pageId: z.uuid({ error: "ページIDが不正です" }),
   orderedIds: z
     .array(z.uuid())

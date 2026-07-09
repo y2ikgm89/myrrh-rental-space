@@ -76,6 +76,7 @@ export type SettingsData = {
   notifyNewInquiry: boolean;
   notifyEventRegistration: boolean;
   notifyEventCancellation: boolean;
+  notifyEventReminder: boolean;
   notificationStaffIds: string[];
   notificationEmailAddresses: string[];
   taxStandardRate: number;

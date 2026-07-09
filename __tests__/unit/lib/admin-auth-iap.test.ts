@@ -18,7 +18,11 @@ const mockServerEnv: Record<string, string | undefined> = {
   NODE_ENV: "test",
   ADMIN_TEST_IAP_EMAIL: undefined,
   CI: undefined,
+  ADMIN_APP_URL: undefined,
+  BETTER_AUTH_URL: undefined,
 };
+const originalNextPublicBaseUrl = process.env["NEXT_PUBLIC_BASE_URL"];
+const originalNextPublicAppUrl = process.env["NEXT_PUBLIC_APP_URL"];
 
 mock.module("next/headers", () => ({
   headers: mockHeaders,
@@ -51,6 +55,11 @@ mock.module("@/shared/lib/iap/admin-iap-auth", () => ({
 
 mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
+  isLocalhostUrl: (value: string | null | undefined) => {
+    if (!value) return false;
+    const url = new URL(value);
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  },
 }));
 
 mock.module("better-auth", () => ({
@@ -114,12 +123,24 @@ beforeEach(() => {
   mockBetterAuthGetSession.mockImplementation(() => null);
   mockServerEnv["NODE_ENV"] = "test";
   mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = undefined;
+  mockServerEnv["ADMIN_APP_URL"] = undefined;
+  mockServerEnv["BETTER_AUTH_URL"] = undefined;
   mockServerEnv["CI"] = undefined;
   mockServerEnv["ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL"] = undefined;
   mockServerEnv["ADMIN_ROLE_GROUP_ADMIN_EMAIL"] = undefined;
   mockServerEnv["ADMIN_ROLE_GROUP_EDITOR_EMAIL"] = undefined;
   mockServerEnv["ADMIN_ROLE_GROUP_VIEWER_EMAIL"] = undefined;
   mockServerEnv["E2E_RUNTIME"] = undefined;
+  if (originalNextPublicBaseUrl === undefined) {
+    Reflect.deleteProperty(process.env, "NEXT_PUBLIC_BASE_URL");
+  } else {
+    process.env["NEXT_PUBLIC_BASE_URL"] = originalNextPublicBaseUrl;
+  }
+  if (originalNextPublicAppUrl === undefined) {
+    Reflect.deleteProperty(process.env, "NEXT_PUBLIC_APP_URL");
+  } else {
+    process.env["NEXT_PUBLIC_APP_URL"] = originalNextPublicAppUrl;
+  }
 });
 
 describe("admin auth IAP boundary", () => {
@@ -200,7 +221,7 @@ describe("admin auth IAP boundary", () => {
     });
   });
 
-  test("CI の production start では ADMIN_TEST_IAP_EMAIL を IAP 代替 identity として使う", async () => {
+  test("CI=true だけでは production の ADMIN_TEST_IAP_EMAIL を IAP 代替 identity として使わない", async () => {
     mockServerEnv["NODE_ENV"] = "production";
     mockServerEnv["CI"] = "true";
     mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
@@ -217,26 +238,20 @@ describe("admin auth IAP boundary", () => {
 
     const user = await getCurrentAdminUser(new Headers());
 
-    expect(user?.email).toBe("admin@example.com");
-    expect(mockFindUnique).toHaveBeenCalledWith({
-      where: { email: "admin@example.com" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
-    });
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
     expect(mockIsGoogleWorkspaceGroupMember).not.toHaveBeenCalled();
   });
 
-  test("production-mode E2E では ADMIN_TEST_IAP_EMAIL を IAP 代替 identity として使う", async () => {
+  test("localhost production-mode E2E では ADMIN_TEST_IAP_EMAIL を IAP 代替 identity として使う", async () => {
     mockServerEnv["NODE_ENV"] = "production";
     mockServerEnv["CI"] = undefined;
     mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
     mockServerEnv["E2E_RUNTIME"] = "1";
+    mockServerEnv["ADMIN_APP_URL"] = "http://localhost:3000";
+    mockServerEnv["BETTER_AUTH_URL"] = "http://localhost:3000";
+    process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
+    process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
     mockResolveIapIdentity.mockResolvedValue(null);
     mockFindUnique.mockResolvedValue({
       id: "user-1",
@@ -263,12 +278,32 @@ describe("admin auth IAP boundary", () => {
     });
   });
 
+  test("real production URL では E2E_RUNTIME=1 でも ADMIN_TEST_IAP_EMAIL を使わない", async () => {
+    mockServerEnv["NODE_ENV"] = "production";
+    mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
+    mockServerEnv["E2E_RUNTIME"] = "1";
+    mockServerEnv["ADMIN_APP_URL"] = "https://admin.example.com";
+    mockServerEnv["BETTER_AUTH_URL"] = "https://admin.example.com";
+    process.env["NEXT_PUBLIC_BASE_URL"] = "https://rental-space.example.com";
+    process.env["NEXT_PUBLIC_APP_URL"] = "https://admin.example.com";
+    mockResolveIapIdentity.mockResolvedValue(null);
+
+    const user = await getCurrentAdminUser(new Headers());
+
+    expect(user).toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
+
   test("production-mode E2E の ADMIN_TEST_IAP_EMAIL は Google Group sync を bypass する", async () => {
     enableRoleGroupSyncEnv();
     mockServerEnv["NODE_ENV"] = "production";
     mockServerEnv["CI"] = undefined;
     mockServerEnv["ADMIN_TEST_IAP_EMAIL"] = "admin@example.com";
     mockServerEnv["E2E_RUNTIME"] = "1";
+    mockServerEnv["ADMIN_APP_URL"] = "http://localhost:3000";
+    mockServerEnv["BETTER_AUTH_URL"] = "http://localhost:3000";
+    process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
+    process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
     mockResolveIapIdentity.mockResolvedValue(null);
     mockFindUnique.mockResolvedValue({
       id: "user-1",

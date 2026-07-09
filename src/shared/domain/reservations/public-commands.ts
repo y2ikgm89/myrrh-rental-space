@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { CustomerType, ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { resolveOrCreateCustomer } from "@/shared/domain/reservations/resolve-customer";
 import {
   ensureDateNotBlocked,
@@ -19,6 +20,7 @@ import {
   incrementCustomerReservationStats,
   buildPayload,
 } from "./payloads";
+import { lockReservationSpaceForTransaction } from "./locks";
 
 const SPACE_SELECT = {
   id: true,
@@ -54,6 +56,16 @@ type PublicReservationInput = {
 export async function createPublicReservationCommand(
   input: PublicReservationInput,
 ) {
+  // Global gate: featureModules.reservation（依存元 spaces 含む）で OFF なら拒否。
+  // page.tsx の requireFeatureEnabled は Server Action の直接呼び出しを防げないため、
+  // 書込の実効性は domain 層のこのチェックが担保する（reviews/commands.ts と同型）。
+  if (!(await isFeatureEnabled("reservation"))) {
+    throw new DomainError(
+      "予約機能は現在サイト全体で無効化されています",
+      "VALIDATION",
+    );
+  }
+
   const startDateTime = buildDateTime(input.date, input.startTime);
   const endDateTime = buildDateTime(input.date, input.endTime);
 
@@ -115,6 +127,8 @@ export async function createPublicReservationCommand(
     });
 
   const reservation = await prisma.$transaction(async (tx) => {
+    await lockReservationSpaceForTransaction(tx, input.spaceId);
+
     await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
 
     await ensureNoOverlap(

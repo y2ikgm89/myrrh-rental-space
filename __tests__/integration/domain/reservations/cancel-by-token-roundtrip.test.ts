@@ -16,11 +16,12 @@
  * 切替などの「mock を素通りする」リグレッションを deploy 後まで気付けない。
  *
  * == 実行条件 ==
- * `TEST_DATABASE_URL` 設定時のみ実行（未設定なら describe ごと skip）。
- * `registration-overbooking.test.ts` / `reminder-idempotency.test.ts` と同じ規約。
+ * `bun run test:integration` は docker-compose の test-db 既定値を注入する。直接
+ * `bun test` でこのファイルを実行し `TEST_DATABASE_URL` が未設定の場合のみ
+ * describe ごと skip する。`registration-overbooking.test.ts` /
+ * `reminder-idempotency.test.ts` と同じ規約。
  *
- *   ローカル: TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/myrrh_test
- *           bun run test:integration
+ *   ローカル: bun run test:integration
  *   CI: unit-tests job が postgres service + prisma migrate deploy 済みのため自動実行。
  */
 
@@ -55,6 +56,8 @@ type Fixture = {
   cleanup: () => Promise<void>;
 };
 
+let nextFixtureLocationSortOrder = 1_200_000_000;
+
 /** Location → Space → Customer → Reservation を 1 件作る最小 fixture（reminder-idempotency と同型）。 */
 async function createReservationFixture(opts?: {
   startTime?: Date;
@@ -71,6 +74,7 @@ async function createReservationFixture(opts?: {
       name: `Cancel Token Loc ${suffix}`,
       address: "東京都テスト区1-2-3",
       imageUrl: "https://example.com/loc.jpg",
+      sortOrder: nextFixtureLocationSortOrder++,
     },
     select: { id: true },
   });

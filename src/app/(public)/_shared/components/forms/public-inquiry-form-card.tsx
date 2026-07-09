@@ -48,6 +48,7 @@ type PublicInquiryFormCardProps = {
   readonly title?: string | null;
   readonly description?: string | null;
   readonly className?: string;
+  readonly formId?: string;
   readonly submitLabel?: string;
   readonly requiredTerms?: readonly RequiredInquiryTerm[];
 };
@@ -90,6 +91,7 @@ export function PublicInquiryFormCard({
   title,
   description,
   className,
+  formId = "public-inquiry-form",
   submitLabel = "送信する",
   requiredTerms = [],
 }: PublicInquiryFormCardProps): ReactElement {
@@ -114,7 +116,7 @@ export function PublicInquiryFormCard({
     defaults?.customerType ?? CustomerType.PERSONAL;
 
   const [form, fields] = useForm<z.input<typeof publicInquirySchema>>({
-    id: "public-inquiry-form",
+    id: formId,
     lastResult,
     constraint: getZodConstraint(publicInquirySchema),
     defaultValue: {

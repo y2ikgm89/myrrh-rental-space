@@ -3,6 +3,10 @@ import { PostStatus } from "@generated/prisma/enums";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  assertAllowedManagedImageSourcesInJson,
+  assertAllowedManagedImageUrls,
+} from "@/shared/domain/media/managed-image-assertions";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
@@ -34,6 +38,17 @@ function normalizeNullableString(
   }
 
   return value;
+}
+
+function resolvePostPublishedAt(
+  status: PostStatus,
+  publishedAt: Date | null,
+): Date | null {
+  if (status !== PostStatus.PUBLISHED) {
+    return null;
+  }
+
+  return publishedAt ?? new Date();
 }
 
 async function ensurePostExists(
@@ -97,6 +112,12 @@ async function ensurePostTagsExist(tagIds: string[]): Promise<void> {
 export async function createPost(
   input: CreatePostCommandInput,
 ): Promise<CreatePostResult> {
+  assertAllowedManagedImageUrls([
+    { label: "サムネイル画像", url: input.thumbnailUrl },
+    { label: "OGP画像", url: input.ogpImageUrl },
+  ]);
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
+
   await Promise.all([
     ensurePostSlugAvailable(input.slug),
     ensurePostCategoryExists(input.categoryId),
@@ -117,6 +138,8 @@ export async function createPost(
       metaKeywords: normalizeNullableString(input.metaKeywords),
       ogpTitle: normalizeNullableString(input.ogpTitle),
       ogpDescription: normalizeNullableString(input.ogpDescription),
+      contentWidth: input.contentWidth ?? null,
+      contentWidthCustom: input.contentWidthCustom ?? null,
       status: PostStatus.DRAFT,
       authorId: input.authorId,
       postTags: {
@@ -142,6 +165,7 @@ export async function updatePostBody(
   id: string,
   input: UpdatePostBodyCommandInput,
 ): Promise<UpdatePostResult> {
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
   const existingPost = await ensurePostExists(id);
 
   await prisma.post.update({
@@ -168,6 +192,11 @@ export async function updatePostSettings(
   id: string,
   input: UpdatePostSettingsCommandInput,
 ): Promise<UpdatePostResult> {
+  assertAllowedManagedImageUrls([
+    { label: "サムネイル画像", url: input.thumbnailUrl },
+    { label: "OGP画像", url: input.ogpImageUrl },
+  ]);
+
   const existingPost = await ensurePostExists(id);
 
   await Promise.all([
@@ -189,6 +218,8 @@ export async function updatePostSettings(
       metaKeywords: normalizeNullableString(input.metaKeywords),
       ogpTitle: normalizeNullableString(input.ogpTitle),
       ogpDescription: normalizeNullableString(input.ogpDescription),
+      status: input.status,
+      publishedAt: resolvePostPublishedAt(input.status, input.publishedAt),
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
       postTags: {
@@ -246,6 +277,7 @@ export async function unpublishPost(id: string): Promise<DeletePostResult> {
     where: { id },
     data: {
       status: PostStatus.DRAFT,
+      publishedAt: null,
     },
   });
 
@@ -261,6 +293,7 @@ export async function archivePost(id: string): Promise<DeletePostResult> {
     where: { id },
     data: {
       status: PostStatus.ARCHIVED,
+      publishedAt: null,
     },
   });
 

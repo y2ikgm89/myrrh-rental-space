@@ -68,7 +68,13 @@ describe("heroConfigSchema", () => {
       backgroundImageUrl: "https://example.com/image.jpg",
       buttons: [
         {
-          text: "ボタン1",
+          label: [
+            {
+              _key: "test-hero-button-label",
+              _type: "span" as const,
+              text: "ボタン1",
+            },
+          ],
           url: "/test",
           variant: "primary",
           size: "lg",
@@ -108,7 +114,13 @@ describe("heroConfigSchema", () => {
     const data = {
       buttons: [
         {
-          text: "外部リンク",
+          label: [
+            {
+              _key: "test-external-button-label",
+              _type: "span" as const,
+              text: "外部リンク",
+            },
+          ],
           url: "https://example.com/reservation",
           variant: "primary",
           size: "lg",
@@ -668,7 +680,13 @@ describe("ctaConfigSchema", () => {
       ],
       buttons: [
         {
-          text: "予約する",
+          label: [
+            {
+              _key: "test-cta-button-label",
+              _type: "span" as const,
+              text: "予約する",
+            },
+          ],
           url: "/reservation",
           variant: "primary",
           size: "lg",
@@ -679,6 +697,36 @@ describe("ctaConfigSchema", () => {
     };
     const result = ctaConfigSchema.safeParse(data);
     expect(result.success).toBe(true);
+  });
+
+  test("button は旧 text キーを受け付けない", () => {
+    const result = ctaConfigSchema.safeParse({
+      buttons: [
+        {
+          text: "予約する",
+          url: "/reservation",
+          variant: "primary",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  test("旧 ctaPrimary / ctaSecondary キーを受け付けない", () => {
+    const result = ctaConfigSchema.safeParse({
+      title: [
+        {
+          _key: "test-legacy-cta-title",
+          _type: "span" as const,
+          text: "ご予約はこちら",
+        },
+      ],
+      ctaPrimary: { text: "予約する", url: "/reservation" },
+      ctaSecondary: { text: "お問い合わせ", url: "/contact" },
+    });
+
+    expect(result.success).toBe(false);
   });
 
   // architectural contract: 全 section schema は safeParse({}) 成立必須
@@ -888,7 +936,6 @@ describe("createSectionSchema", () => {
     const data = {
       pageId: "550e8400-e29b-41d4-a716-446655440000",
       type: "hero",
-      title: "ヒーローセクション",
       config: {
         title: [
           {
@@ -898,7 +945,6 @@ describe("createSectionSchema", () => {
           },
         ],
       },
-      design: {},
       isActive: true,
     };
     const result = createSectionSchema.safeParse(data);
@@ -915,6 +961,19 @@ describe("createSectionSchema", () => {
       expect(result.data.config).toEqual({});
       expect(result.data.isActive).toBe(true);
     }
+  });
+
+  test.each([
+    ["title", { title: "ヒーローセクション" }],
+    ["design", { design: {} }],
+    ["order", { order: 999 }],
+    ["contentJson", { contentJson: "{}" }],
+  ])("%s は create 入力として拒否する", (_field, extra) => {
+    const result = createSectionSchema.safeParse({
+      type: "hero",
+      ...extra,
+    });
+    expect(result.success).toBe(false);
   });
 
   // 旧 contentJson 文字数制限 test は削除（Section.contentJson 列削除済、
@@ -960,6 +1019,17 @@ describe("updateSectionOrderSchema", () => {
   test("負のorderでエラー", () => {
     const data = {
       sections: [{ id: "550e8400-e29b-41d4-a716-446655440000", order: -1 }],
+    };
+    const result = updateSectionOrderSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  test("重複した order でエラー", () => {
+    const data = {
+      sections: [
+        { id: "550e8400-e29b-41d4-a716-446655440000", order: 0 },
+        { id: "550e8400-e29b-41d4-a716-446655440001", order: 0 },
+      ],
     };
     const result = updateSectionOrderSchema.safeParse(data);
     expect(result.success).toBe(false);

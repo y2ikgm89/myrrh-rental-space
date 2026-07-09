@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { z } from "zod";
 import { getReviews } from "@/admin/queries/review";
+import { getSpacesForReviewFilter } from "@/admin/queries/space";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
@@ -33,7 +35,8 @@ async function ReviewList() {
   } = { isPublished };
 
   if (rvSearch) filters.search = rvSearch;
-  if (rvSpaceId) filters.spaceId = rvSpaceId;
+  const spaceIdParsed = z.uuid().safeParse(rvSpaceId);
+  if (spaceIdParsed.success) filters.spaceId = spaceIdParsed.data;
   if (ratingNum !== undefined) filters.rating = ratingNum;
 
   const result = await getReviews(filters, {
@@ -56,11 +59,14 @@ async function ReviewList() {
   );
 }
 
-export function ReviewTabContent() {
+export async function ReviewTabContent() {
+  await connection();
+  const spaceOptions = await getSpacesForReviewFilter();
+
   return (
     <div className="space-y-6">
       <Suspense fallback={<LoadingState variant="inline" />}>
-        <ReviewFilters />
+        <ReviewFilters spaceOptions={spaceOptions} />
       </Suspense>
       <Suspense fallback={<LoadingState />}>
         <ReviewList />

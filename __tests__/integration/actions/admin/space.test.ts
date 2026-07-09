@@ -134,6 +134,23 @@ describe("Space Admin Action Integration", () => {
         }
       });
 
+      test("reviewsEnabledデフォルトはfalse", () => {
+        const input = {
+          slug: "test-space",
+          name: "スペース",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+          locationId: VALID_UUID,
+          capacity: 1,
+          hourlyPrice: 0,
+          mainImageUrl: "https://example.com/image.jpg",
+        };
+        const result = spaceFormSchema.safeParse(input);
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.data.reviewsEnabled).toBe(false);
+        }
+      });
+
       test("discountTypeデフォルトはnone", () => {
         const input = {
           slug: "test-space",
@@ -649,6 +666,28 @@ describe("Space Admin Action Integration", () => {
         if (!result.success) {
           expect(result.error.issues[0].message).toContain("1000000以下");
         }
+      });
+
+      test("percentage の割引値が100を超える場合はエラー", () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountType: "percentage",
+          discountValue: 101,
+        });
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.issues[0].path).toEqual(["discountValue"]);
+          expect(result.error.issues[0].message).toContain("100以下");
+        }
+      });
+
+      test("fixed の割引値は100を超えても有効", () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          discountType: "fixed",
+          discountValue: 101,
+        });
+        expect(result.success).toBe(true);
       });
     });
 

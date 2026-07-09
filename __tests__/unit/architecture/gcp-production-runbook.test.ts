@@ -23,8 +23,10 @@ describe("GCP production setup runbook", () => {
       'export PUBLIC_DOMAIN="https://rental-space.myrrh-jp.com"',
     );
     expect(runbook).toContain(
-      'export ADMIN_DOMAIN="https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"',
+      'export ADMIN_DOMAIN="https://admin.myrrh-jp.com"',
     );
+    expect(runbook).toContain('export ADMIN_LB_IP="8.233.111.15"');
+    expect(runbook).toContain('export ADMIN_LB_IPV6="2600:1901:0:6b8e::"');
     expect(runbook).toContain(
       'export TURNSTILE_SITE_KEY="0x4AAAAAADi6Bqavj97fu7JG"',
     );
@@ -94,7 +96,7 @@ describe("GCP production setup runbook", () => {
       '$env:PUBLIC_DOMAIN = "https://rental-space.myrrh-jp.com"',
     );
     expect(adminAccessRunbook).toContain(
-      '$env:ADMIN_DOMAIN = "https://myrrh-rental-space-admin-da57q4squa-an.a.run.app"',
+      '$env:ADMIN_DOMAIN = "https://admin.myrrh-jp.com"',
     );
     expect(runbook).toContain('PUBLIC_DOMAIN="$PUBLIC_DOMAIN"');
     expect(runbook).toContain('ADMIN_DOMAIN="$ADMIN_DOMAIN"');
@@ -104,6 +106,17 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("The production audit rejects any other host");
     expect(runbook).toContain("lookalike domains");
     expect(runbook).toContain("private IP literals");
+    expect(runbook).toContain("myrrh-admin-lb-ip");
+    expect(runbook).toContain("myrrh-admin-lb-ipv6");
+    expect(runbook).toContain("myrrh-admin-https-rule-ipv6");
+    expect(runbook).toContain("myrrh-admin-cert-20260705");
+    expect(runbook).toContain("admin.myrrh-jp.com -> 8.233.111.15");
+    expect(runbook).toContain("admin.myrrh-jp.com -> 2600:1901:0:6b8e::");
+    expect(runbook).toContain("proxied=false");
+    expect(runbook).toContain("DNS read/edit permission");
+    expect(runbook).toContain(
+      "admin root redirects unauthenticated visitors to Google/IAP",
+    );
     expect(runbook).toContain(
       "admin /admin redirects unauthenticated visitors to Google/IAP",
     );
@@ -163,6 +176,11 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("admin Cloud Run runtime env is canonical");
     expect(runbook).toContain("Cloud Run service ingress is canonical");
     expect(runbook).toContain("`--ingress=all`");
+    expect(runbook).toContain("`--ingress=internal-and-cloud-load-balancing`");
+    expect(runbook).toContain("`--no-default-url`");
+    expect(runbook).toContain(
+      "admin Cloud Run default run.app URL is disabled",
+    );
     expect(runbook).toContain("Cloud Run service identities are dedicated");
     expect(runbook).toContain("Cloud Run migrate Job identity is dedicated");
     expect(runbook).toContain("Cloud Run migrate Job env is canonical");
@@ -181,6 +199,11 @@ describe("GCP production setup runbook", () => {
     expect(runbook).toContain("`gcloud secrets versions describe`");
     expect(runbook).toContain("`gcloud secrets get-iam-policy`");
     expect(runbook).toContain("`state=ENABLED`");
+    expect(runbook).toContain(
+      "Turnstile's secret key is managed from the admin settings page",
+    );
+    expect(runbook).toContain("CLOUDFLARE_ORIGIN_HEADER_SECRET");
+    expect(runbook).toContain("x-cloudflare-origin-secret");
     expect(runbook).toMatch(/default Cloud Build\s+service account/);
   });
 

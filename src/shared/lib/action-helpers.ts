@@ -15,6 +15,7 @@
 import type { ZodError } from "zod";
 import { verifyTurnstileToken, isTurnstileEnabled } from "./turnstile";
 import type { TurnstileAction } from "./turnstile-actions";
+import { serverEnv } from "./env/server";
 import { getClientIpFromHeaders } from "./rate-limit";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
@@ -80,13 +81,19 @@ export type ValidateTurnstileParams = {
  * `remoteip` は `getClientIpFromHeaders()` で自動取得（Server Actions / Route Handlers /
  * Better Auth hook すべてで動作）。
  *
- * Settings テーブルに site/secret key が未設定の場合は検証をスキップ（dev フレンドリー）。
- * 本番で secret 未設定は `verifyTurnstileToken` 側で拒否される。
+ * Settings/env に site/secret key が未設定の場合、dev/test は検証をスキップする。
+ * 本番は bot 対策境界を fail-closed にするため、token 未検証を成功扱いにしない。
  */
 export async function validateTurnstile(
   params: ValidateTurnstileParams,
 ): Promise<TurnstileResult> {
   if (!(await isTurnstileEnabled())) {
+    if (serverEnv.NODE_ENV === "production") {
+      return {
+        success: false,
+        error: "セキュリティ検証が必要です。ページを再読み込みしてください。",
+      };
+    }
     return { success: true };
   }
 

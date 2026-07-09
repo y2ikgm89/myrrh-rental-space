@@ -12,9 +12,10 @@
  * Zod schema は `z.enum(TEMPLATE_KEYS, …)` で SSoT 直参照。
  */
 
-/** 全 18 エントリの key 列挙。`as const` で literal tuple として固定。 */
+/** 全 20 エントリの key 列挙。`as const` で literal tuple として固定。 */
 export const TEMPLATE_KEYS = [
   "reservation-confirmation",
+  "reservation-updated",
   "reservation-cancelled",
   "reservation-status-changed",
   "reservation-reminder",
@@ -22,6 +23,7 @@ export const TEMPLATE_KEYS = [
   "event-registration-cancelled",
   "event-cancelled-notification",
   "event-updated-notification",
+  "event-reminder",
   "event-admin-notification",
   "contact-confirmation",
   "inquiry-reply",
@@ -29,7 +31,7 @@ export const TEMPLATE_KEYS = [
   "admin-notification-reservation",
   "admin-notification-inquiry",
   "welcome",
-  "password-reset",
+  "delete-account-verification",
   "review-reply",
   "__infra_check",
 ] as const;
@@ -69,6 +71,13 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     key: "reservation-confirmation",
     label: "予約確認",
     description: "予約確定時にお客様へ送信。",
+    category: "reservation",
+  },
+  {
+    key: "reservation-updated",
+    label: "予約内容変更",
+    description:
+      "予約内容（日時・スペース・料金等）が変更された時にお客様へ送信。",
     category: "reservation",
   },
   {
@@ -114,6 +123,12 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     category: "event",
   },
   {
+    key: "event-reminder",
+    label: "イベント前日リマインダー",
+    description: "開催前日に参加者へ送信（cron・設定でON/OFF可）。",
+    category: "event",
+  },
+  {
     key: "event-admin-notification",
     label: "イベント管理者通知",
     description: "新規申込・キャンセル時に管理者へ送信。",
@@ -156,9 +171,9 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     category: "account",
   },
   {
-    key: "password-reset",
-    label: "パスワードリセット",
-    description: "パスワードリセット申請時に送信。",
+    key: "delete-account-verification",
+    label: "アカウント削除の確認",
+    description: "マイページからのアカウント削除申請時にお客様へ送信。",
     category: "account",
   },
   {

@@ -4,8 +4,6 @@
  * @description Google マップを埋め込む DecoratorNode
  */
 
-"use client";
-
 import type { ReactElement } from "react";
 import type {
   DOMConversionMap,

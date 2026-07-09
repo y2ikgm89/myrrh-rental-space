@@ -61,7 +61,10 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
+import {
+  getEventRegistrationDetailsForEmail,
+  findEventRegistrationsForReminderWindow,
+} from "@/shared/domain/events/registration-queries";
 import { getEventRegistrationsForExport } from "@/shared/domain/events/export-queries";
 
 describe("event registration query slot consistency", () => {
@@ -144,5 +147,42 @@ describe("event registration query slot consistency", () => {
     expect(rows[0]?.event.startTime).toBe(selectedStart);
     expect(rows[0]?.event.endTime).toBe(selectedEnd);
     expect(rows[0]?.event.location).toBe("青山");
+  });
+
+  test("findEventRegistrationsForReminderWindow は CONFIRMED + 未送信 + 窓内 + email あり + 未削除イベントで絞り込む", async () => {
+    const start = new Date("2026-07-15T00:00:00.000Z");
+    const end = new Date("2026-07-15T23:59:59.999Z");
+    mockRegistrationFindMany.mockResolvedValue([]);
+
+    await findEventRegistrationsForReminderWindow(start, end);
+
+    expect(mockRegistrationFindMany).toHaveBeenCalledWith({
+      where: {
+        status: RegistrationStatus.CONFIRMED,
+        reminderSentAt: null,
+        email: { not: null },
+        event: { deletedAt: null },
+        slot: { startAt: { gte: start, lte: end } },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        quantity: true,
+        icsSequence: true,
+        customerId: true,
+        slot: {
+          select: { startAt: true, endAt: true },
+        },
+        event: {
+          select: {
+            title: true,
+            addressDetail: true,
+            location: { select: { name: true } },
+            space: { select: { name: true } },
+          },
+        },
+      },
+    });
   });
 });

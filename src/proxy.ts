@@ -7,6 +7,10 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { FRAME_SRC_DIRECTIVE_VALUES } from "@/shared/lib/constants/frame-sources";
+import {
+  RESERVATION_CLAIM_TOKEN_COOKIE_NAME,
+  EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
+} from "@/shared/lib/constants/claim-token-cookie-names";
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
@@ -119,7 +123,7 @@ function buildCsp(
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""};
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://*.r2.dev https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
+    img-src 'self' data: blob:${mediaSource ? ` ${mediaSource}` : ""} https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net https://*.google-analytics.com https://*.googletagmanager.com https://*.clarity.ms;
     font-src 'self';
     connect-src 'self' https://api.stripe.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.clarity.ms https://c.bing.com${isDev ? " ws://localhost:*" : ""};
     manifest-src 'self';
@@ -205,14 +209,26 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
  *   - base64url 文字種
  *   - 長さ 32〜1024 字（典型 100〜300）
  * 暗号学的な verify は Node ランタイムの page/action で実施する。
+ *
+ * 予約とイベント参加申込の 2 経路が同じ転写方式を共有する。cookie 名をドメイン別に
+ * 分けることで、一方の cancel ページ滞在中にもう一方のトークンが誤って読まれる
+ * （cross-contamination）ことを防ぐ。
  */
-const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
 const CANCEL_TOKEN_COOKIE_MAX_AGE = 30 * 60; // 30 分
 const CANCEL_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
 
+const GUEST_CANCEL_TOKEN_ROUTES: ReadonlyArray<{
+  pathname: string;
+  cookieName: string;
+}> = [
+  { pathname: "/reservation/cancel", cookieName: "cancel-token" },
+  { pathname: "/events/cancel", cookieName: "event-cancel-token" },
+];
+
 function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
   const { pathname, searchParams } = req.nextUrl;
-  if (pathname !== "/reservation/cancel") return null;
+  const route = GUEST_CANCEL_TOKEN_ROUTES.find((r) => r.pathname === pathname);
+  if (!route) return null;
   const token = searchParams.get("token");
   if (!token) return null;
 
@@ -223,7 +239,7 @@ function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
 
   if (CANCEL_TOKEN_PATTERN.test(token)) {
     response.cookies.set({
-      name: CANCEL_TOKEN_COOKIE_NAME,
+      name: route.cookieName,
       value: token,
       httpOnly: true,
       sameSite: "strict",
@@ -235,14 +251,80 @@ function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
   return response;
 }
 
+/**
+ * 予約 / イベント参加申込の claim URL `?token=…` を HttpOnly cookie に転写し
+ * `?token` を URL から除去する。理由・トークン形式検証方針はゲストキャンセル token
+ * 転写（`handleGuestCancelTokenTransfer`）と同一。
+ *
+ * `sameSite` のみ意図的に異なる値（`"lax"`）を使う: この claim トークンは
+ * Google/LINE への外部リダイレクト（OAuth）を経由して戻ってくる。SameSite=Strict の
+ * cookie は「他サイトからの top-level navigation」では送信されないため、OAuth
+ * コールバックで戻ってきた際に cookie が消えて claim が失敗する。SameSite=Lax は
+ * top-level GET navigation では送信されるため、この往復を生き残る。ゲストキャンセルは
+ * 外部サイトを経由しないため既存の `strict` のままで問題ない（変更しない）。
+ */
+const CLAIM_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
+// OAuth 往復（Google/LINE への外部リダイレクトを経由して戻る）を生き越えるため 60 分。
+// cancel-token（サイト外遷移が無い）より長めに取っている。
+const CLAIM_TOKEN_COOKIE_MAX_AGE = 60 * 60; // 60 分
+
+function handleClaimTokenTransfer(
+  req: NextRequest,
+  pathname: string,
+  cookieName: string,
+): NextResponse | null {
+  const { searchParams } = req.nextUrl;
+  if (req.nextUrl.pathname !== pathname) return null;
+  const token = searchParams.get("token");
+  if (!token) return null;
+
+  const cleanUrl = new URL(req.url);
+  cleanUrl.searchParams.delete("token");
+  const response = NextResponse.redirect(cleanUrl);
+
+  if (CLAIM_TOKEN_PATTERN.test(token)) {
+    response.cookies.set({
+      name: cookieName,
+      value: token,
+      httpOnly: true,
+      // OAuth コールバックは他サイト(Google/LINE)からの top-level navigation で
+      // 戻ってくるため、SameSite=Strict だと cookie が送信されず claim が失敗する。
+      // Lax は top-level GET navigation では送信されるため往復を生き残る。
+      sameSite: "lax",
+      secure: !isLocalhostRequest(req),
+      path: "/",
+      maxAge: CLAIM_TOKEN_COOKIE_MAX_AGE,
+    });
+  }
+  return response;
+}
+
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
   const cancelTransfer = handleGuestCancelTokenTransfer(req);
   if (cancelTransfer) return cancelTransfer;
 
+  const reservationClaimTransfer = handleClaimTokenTransfer(
+    req,
+    "/claim/reservation",
+    RESERVATION_CLAIM_TOKEN_COOKIE_NAME,
+  );
+  if (reservationClaimTransfer) return reservationClaimTransfer;
+
+  const eventRegistrationClaimTransfer = handleClaimTokenTransfer(
+    req,
+    "/claim/event-registration",
+    EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
+  );
+  if (eventRegistrationClaimTransfer) return eventRegistrationClaimTransfer;
+
   if (isBlockedOnPublicSurface(pathname)) {
     return new NextResponse(null, { status: 404 });
+  }
+
+  if (serverEnv.APP_SURFACE === "admin" && pathname === "/") {
+    return NextResponse.redirect(new URL("/admin", req.url));
   }
 
   if (pathname.startsWith("/api")) {

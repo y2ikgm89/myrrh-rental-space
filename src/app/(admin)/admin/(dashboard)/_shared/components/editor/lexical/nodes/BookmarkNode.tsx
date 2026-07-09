@@ -1,11 +1,9 @@
-﻿/**
+/**
  * Bookmark Node
  *
  * @description ブックマーク/リンクカードを表示するDecoratorNode
  * OGP情報（タイトル、説明、画像、favicon）を表示
  */
-
-"use client";
 
 import type { ReactElement } from "react";
 import type {

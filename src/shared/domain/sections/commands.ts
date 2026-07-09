@@ -4,6 +4,11 @@ import { clonePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageSourcesInJson } from "@/shared/domain/media/managed-image-assertions";
+import {
+  buildOrderScopeLockSql,
+  buildUuidOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   getPageTemplate,
@@ -74,6 +79,9 @@ export async function updatePageSectionCommand(
     input.config === undefined
       ? undefined
       : validateConfig(existing.type, input.config);
+  if (config !== undefined) {
+    assertAllowedManagedImageSourcesInJson("セクション画像", config);
+  }
 
   await prisma.section.update({
     where: { id },
@@ -119,42 +127,46 @@ export async function createPageSectionCommand(input: {
     );
   }
 
-  // page-hero は 1 ページに 1 つ制約
-  if (input.type === "page-hero") {
-    const existing = await prisma.section.findFirst({
-      where: { pageId: input.pageId, type: "page-hero" },
-      select: { id: true },
-    });
-    if (existing) {
-      throw new DomainError("ヒーローは既に存在します", "CONFLICT");
-    }
-  }
-
   // registry の defaults から config を生成
   const defaultParse = definition.configSchema.safeParse({});
   const config: unknown = defaultParse.success ? defaultParse.data : {};
 
-  // order: 既存セクションの max + 1（page-hero は -1 固定で先頭）
-  const maxOrder = await prisma.section.aggregate({
-    where: { pageId: input.pageId },
-    _max: { order: true },
-  });
-  const nextOrder =
-    input.type === "page-hero" ? -1 : (maxOrder._max.order ?? -1) + 1;
+  const created = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql(`sections:${input.pageId}`));
 
-  const created = await prisma.section.create({
-    data: {
-      pageId: input.pageId,
-      type: input.type,
-      config: cloneJsonValue(config),
-      order: nextOrder,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      pageId: true,
-      page: { select: { slug: true } },
-    },
+    // page-hero は 1 ページに 1 つ制約。ページ単位ロック内で確認する。
+    if (input.type === "page-hero") {
+      const existing = await tx.section.findFirst({
+        where: { pageId: input.pageId, type: "page-hero" },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new DomainError("ヒーローは既に存在します", "CONFLICT");
+      }
+    }
+
+    // order: 既存セクションの max + 1（page-hero は -1 固定で先頭）
+    const maxOrder = await tx.section.aggregate({
+      where: { pageId: input.pageId },
+      _max: { order: true },
+    });
+    const nextOrder =
+      input.type === "page-hero" ? -1 : (maxOrder._max.order ?? -1) + 1;
+
+    return tx.section.create({
+      data: {
+        pageId: input.pageId,
+        type: input.type,
+        config: cloneJsonValue(config),
+        order: nextOrder,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        pageId: true,
+        page: { select: { slug: true } },
+      },
+    });
   });
 
   return {
@@ -209,13 +221,21 @@ export async function duplicatePageSectionCommand(
 
   const sourcePageId = source.pageId;
   const sourcePageSlug = source.page.slug;
+  assertAllowedManagedImageSourcesInJson("セクション画像", source.config);
 
   const createdId = await prisma.$transaction(async (tx) => {
-    // source.order より大きい order を全部 +1 にずらす
-    await tx.section.updateMany({
-      where: { pageId: sourcePageId, order: { gt: source.order } },
-      data: { order: { increment: 1 } },
-    });
+    await tx.$executeRaw(buildOrderScopeLockSql(`sections:${sourcePageId}`));
+
+    // Unique 制約下で 3->4, 4->5 のような直接シフトは衝突するため、
+    // 後続セクションを一時的な負数領域へ退避してから戻す。
+    await tx.$executeRaw(
+      Prisma.sql`
+        UPDATE "sections"
+        SET "order" = -("order" + 1000000)
+        WHERE "pageId" = ${sourcePageId}
+          AND "order" > ${source.order}
+      `,
+    );
 
     const created = await tx.section.create({
       data: {
@@ -227,6 +247,16 @@ export async function duplicatePageSectionCommand(
       },
       select: { id: true },
     });
+
+    await tx.$executeRaw(
+      Prisma.sql`
+        UPDATE "sections"
+        SET "order" = -"order" - 999999
+        WHERE "pageId" = ${sourcePageId}
+          AND "order" <= -1000000
+      `,
+    );
+
     return created.id;
   });
 
@@ -274,10 +304,15 @@ export async function reorderPageSectionsCommand(input: {
   pageId: string;
   orderedIds: readonly string[];
 }): Promise<{ count: number; pageId: string; pageSlug: string }> {
+  if (new Set(input.orderedIds).size !== input.orderedIds.length) {
+    throw new DomainError("同じIDを複数指定することはできません", "VALIDATION");
+  }
+
   const [existing, pageSlug] = await Promise.all([
     prisma.section.findMany({
       where: { pageId: input.pageId },
       select: { id: true, type: true, order: true },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     }),
     getPageSlugByIdOrThrow(input.pageId),
   ]);
@@ -295,25 +330,30 @@ export async function reorderPageSectionsCommand(input: {
   // page-hero は順序不変（-1 固定で先頭維持）
   const heroSection = existing.find((s) => s.type === "page-hero");
 
-  // 単一 SQL の CASE WHEN で一括更新（N 回の UPDATE ループを廃止）。
-  // PostgreSQL は CASE 式の引数を順序評価するため、id ごとの分岐が成立する。
-  // page-hero は -1 固定、それ以外は配列インデックス。
-  const cases: Prisma.Sql[] = [];
-  const ids: Prisma.Sql[] = [];
-  for (let i = 0; i < input.orderedIds.length; i++) {
-    const id = input.orderedIds[i];
-    if (id === undefined) continue;
-    const nextOrder = heroSection && id === heroSection.id ? -1 : i;
-    cases.push(Prisma.sql`WHEN ${id}::uuid THEN ${nextOrder}`);
-    ids.push(Prisma.sql`${id}::uuid`);
-  }
+  const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(
+    input.orderedIds,
+    (id) => id,
+    (id, index) => (heroSection && id === heroSection.id ? -1 : index),
+  );
 
-  if (cases.length > 0) {
-    await prisma.$executeRaw`
-      UPDATE "sections"
-      SET "order" = CASE "id" ${Prisma.join(cases, " ")} END
-      WHERE "id" IN (${Prisma.join(ids)})
-    `;
+  if (finalCases.length > 0) {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw(buildOrderScopeLockSql(`sections:${input.pageId}`));
+
+      await tx.$executeRaw`
+        UPDATE "sections"
+        SET "order" = CASE "id" ${Prisma.join(tempCases, " ")} END
+        WHERE "id" IN (${Prisma.join(ids)})
+          AND "pageId" = ${input.pageId}::uuid
+      `;
+
+      await tx.$executeRaw`
+        UPDATE "sections"
+        SET "order" = CASE "id" ${Prisma.join(finalCases, " ")} END
+        WHERE "id" IN (${Prisma.join(ids)})
+          AND "pageId" = ${input.pageId}::uuid
+      `;
+    });
   }
 
   return {

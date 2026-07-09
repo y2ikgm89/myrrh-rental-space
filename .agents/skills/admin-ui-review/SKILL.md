@@ -1,6 +1,6 @@
 ---
 name: admin-ui-review
-description: Use when creating, changing, or reviewing admin dashboard UI, admin forms, tables, dialogs, filters, cards, editors, media pickers, settings screens, submit buttons, design tokens, or accessibility behavior under src/app/(admin).
+description: Use when creating, changing, or reviewing admin dashboard UI, admin forms, tables, dialogs, filters, cards, editors, media pickers, settings screens, submit buttons, design tokens, accessibility behavior, or code using admin shared UI aliases in this repository.
 ---
 
 # Admin UI Review

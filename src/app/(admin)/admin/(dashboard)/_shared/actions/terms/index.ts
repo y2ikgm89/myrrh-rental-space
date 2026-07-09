@@ -14,6 +14,7 @@ import {
   restoreTermsCommand,
   softDeleteTermsCommand,
   updateTermsCommand,
+  updateTermsFooterVisibilityCommand,
   updateTermsPublishedCommand,
 } from "@/shared/domain/terms/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -100,6 +101,23 @@ export async function updateTermsPublished(
     action: "publish",
     resourceId: id,
     execute: async () => updateTermsPublishedCommand(id, isPublished),
+    afterSuccess: (data) => {
+      invalidateTermsCaches(data.slug);
+    },
+  });
+}
+
+export async function updateTermsFooterVisibility(
+  id: string,
+  showInFooter: boolean,
+): Promise<
+  MutationResult<{ id: string; slug: string; showInFooter: boolean }>
+> {
+  return executeAdminMutationResult({
+    resource: "terms",
+    action: "update",
+    resourceId: id,
+    execute: async () => updateTermsFooterVisibilityCommand(id, showInFooter),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
     },

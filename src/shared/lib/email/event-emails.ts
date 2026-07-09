@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { EventAdminNotificationEmail } from "@/shared/emails/event-admin-notification";
 import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled-notification";
+import { EventReminderEmail } from "@/shared/emails/event-reminder";
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
@@ -23,7 +24,12 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { formatEventVenue } from "@/shared/domain/events/venue";
+import {
+  computeCancelTokenExpiresAt as computeEventCancelTokenExpiresAt,
+  createCancelToken as createEventCancelToken,
+} from "@/shared/lib/event-registration-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
+import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
@@ -46,6 +52,18 @@ import type { EmailResult } from "./types";
 // Event Registration Emails
 // =============================================================================
 
+/**
+ * 会員向けマイページのイベント申込一覧 URL を組み立てる。
+ * customerId が無い（ゲスト申込）場合は undefined を返す。
+ * イベントには予約の [id] 詳細ページに相当するものが無いため一覧ページを指す。
+ */
+function buildMemberEventRegistrationUrl(
+  customerId: string | null | undefined,
+): string | undefined {
+  if (!customerId) return undefined;
+  return `${getAppUrl()}/mypage/events`;
+}
+
 type EventRegistrationConfirmationData = {
   registrationId: string;
   customerName: string;
@@ -57,6 +75,8 @@ type EventRegistrationConfirmationData = {
   location: string | undefined;
   quantity: number;
   icsSequence: number;
+  // customerId が非null（会員）の場合は claimUrl を生成しない
+  customerId: string | null;
 };
 
 /**
@@ -100,6 +120,14 @@ export async function sendEventRegistrationConfirmation(
   // ゲストでもログイン不要で .ics をダウンロードできるよう、署名付きトークンを URL に付与する。
   // 寿命は CALENDAR_TOKEN_LIFETIME_MS (30 日)。
   const icsDownloadUrl = `${appUrl}/api/calendar/event/${data.registrationId}?token=${createCalendarToken("event", data.registrationId)}`;
+
+  // ゲスト申込のみ、マイページに申込を追加する claim リンクを発行する（会員は不要）。
+  const claimUrl = data.customerId
+    ? undefined
+    : `${appUrl}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
+  const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+    data.customerId,
+  );
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? buildAddToCalendarUrls({
         summary: data.eventTitle,
@@ -114,6 +142,14 @@ export async function sendEventRegistrationConfirmation(
         icsDownloadUrl,
       })
     : undefined;
+
+  // 期限内（スロット開始時刻まで・7 日 cap）のみ有効なゲストキャンセルトークン URL を発行。
+  // 会員でも非会員でも cancelUrl は発行する（reservation-emails.ts と同方針）。
+  const cancelDeadline = computeEventCancelTokenExpiresAt(data.eventStartTime);
+  const cancelUrl =
+    cancelDeadline > new Date()
+      ? `${appUrl}/events/cancel?token=${createEventCancelToken(data.registrationId, cancelDeadline)}`
+      : undefined;
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -154,6 +190,9 @@ export async function sendEventRegistrationConfirmation(
           quantity: data.quantity,
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
+          memberEventRegistrationUrl,
+          claimUrl,
+          cancelUrl,
           footer,
         }),
       ),
@@ -164,6 +203,127 @@ export async function sendEventRegistrationConfirmation(
     context: {
       registrationId: data.registrationId,
       customerEmail,
+    },
+  });
+}
+
+type EventReminderEmailData = {
+  registrationId: string;
+  customerName: string;
+  customerEmail: string;
+  eventTitle: string;
+  eventStartTime: Date;
+  eventEndTime: Date;
+  location: string | undefined;
+  quantity: number;
+  icsSequence: number;
+  // customerId が非null（会員）の場合は claimUrl を生成しない
+  customerId: string | null;
+};
+
+/**
+ * イベント前日リマインダーメールを送信（REQUEST ICS 添付）
+ *
+ * cron から申込単位でループ呼び出しされる想定（reservation-reminder と対称）。
+ * 送信可否（Settings.notifyEventReminder）は呼び出し側の cron ルートで判定する。
+ */
+export async function sendEventReminderEmail(
+  data: EventReminderEmailData,
+): Promise<EmailResult> {
+  const eventDate = format(data.eventStartTime, "yyyy年M月d日 (EEEE)", {
+    locale: ja,
+  });
+  const startTime = format(data.eventStartTime, "HH:mm", { locale: ja });
+  const endTime = format(data.eventEndTime, "HH:mm", { locale: ja });
+
+  const [calendarSettings, organizer, footer] = await Promise.all([
+    getCalendarEmailSettings(),
+    getIcalOrganizer(),
+    getEmailFooterData(),
+  ]);
+  const host = getAppHost();
+  const appUrl = getAppUrl();
+
+  // ゲスト申込のみ、マイページに申込を追加する claim リンクを発行する（会員は不要）。
+  const claimUrl = data.customerId
+    ? undefined
+    : `${getAppUrl()}/claim/event-registration?token=${createEventRegistrationClaimToken(data.registrationId)}`;
+  const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+    data.customerId,
+  );
+
+  const calendarParams = omitUndefined({
+    registrationId: data.registrationId,
+    eventTitle: data.eventTitle,
+    customerName: data.customerName,
+    startTime: data.eventStartTime,
+    endTime: data.eventEndTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    quantity: data.quantity,
+    sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
+  });
+
+  // リマインダ送信時点でキャンセル期限内なら、キャンセル URL を再発行する。
+  // 「リマインダにキャンセル URL が無い」と参加者が連絡無くキャンセルし得る運用上の
+  // 穴を塞ぐ（reminder-emails.ts の予約リマインダと同方針）。
+  const cancelDeadline = computeEventCancelTokenExpiresAt(data.eventStartTime);
+  const cancelUrl =
+    cancelDeadline > new Date()
+      ? `${appUrl}/events/cancel?token=${createEventCancelToken(data.registrationId, cancelDeadline)}`
+      : undefined;
+
+  let attachments: { filename: string; content: Buffer }[] | undefined;
+  if (calendarSettings.icalAttachmentEnabled) {
+    try {
+      attachments = [
+        {
+          filename: `event-${data.registrationId.slice(0, 8)}.ics`,
+          content: Buffer.from(
+            buildEventCalendar(calendarParams, host),
+            "utf-8",
+          ),
+        },
+      ];
+    } catch (icalError) {
+      logError(normalizeError(icalError), {
+        category: ErrorCategory.UNKNOWN,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "generateEventReminderICalAttachment",
+          registrationId: data.registrationId,
+        },
+      });
+    }
+  }
+
+  return sendEmail({
+    payload: omitUndefined({
+      to: data.customerEmail,
+      subject: `【イベント前日リマインダー】${data.eventTitle} - ${eventDate}`,
+      react: EventReminderEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          eventTitle: data.eventTitle,
+          eventDate,
+          startTime,
+          endTime,
+          location: data.location,
+          quantity: data.quantity,
+          memberEventRegistrationUrl,
+          claimUrl,
+          cancelUrl,
+          footer,
+        }),
+      ),
+      attachments,
+    }),
+    idempotencyKey: `event-reminder/${data.registrationId}`,
+    operation: "sendEventReminderEmail",
+    context: {
+      registrationId: data.registrationId,
+      customerEmail: data.customerEmail,
     },
   });
 }
@@ -348,6 +508,7 @@ export async function sendEventCancelledToAllParticipants(
           email: true,
           quantity: true,
           icsSequence: true,
+          customerId: true,
           slot: {
             select: { startAt: true, endAt: true },
           },
@@ -387,6 +548,9 @@ export async function sendEventCancelledToAllParticipants(
       const eventDate = format(startTime, "yyyy年M月d日 (EEEE)", {
         locale: ja,
       });
+      const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+        registration.customerId,
+      );
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {
@@ -426,6 +590,7 @@ export async function sendEventCancelledToAllParticipants(
               eventTitle: event.title,
               eventDate,
               reason,
+              memberEventRegistrationUrl,
               footer,
             }),
           ),
@@ -461,10 +626,15 @@ export async function sendEventCancelledToAllParticipants(
 
 /**
  * イベント内容変更時に全参加者へ通知メールを送信（REQUEST ICS 添付）
+ *
+ * `oldSlotStartTimes` は変更前の `EventTimeSlot.id -> startAt` の対応表。
+ * TIMED_ENTRY イベントで複数スロットが存在する場合、各参加者には自分が
+ * 申し込んだスロットの「変更前の日時」を表示する必要があるため、単一の
+ * 代表値（例: 最初のスロット）を全員に使い回さずスロット単位で解決する。
  */
 export async function sendEventUpdatedToAllParticipants(
   eventId: string,
-  oldStartTime: Date,
+  oldSlotStartTimes: ReadonlyMap<string, Date>,
 ): Promise<void> {
   const event = await prisma.event.findFirst({
     where: { id: eventId, deletedAt: null },
@@ -482,6 +652,8 @@ export async function sendEventUpdatedToAllParticipants(
           email: true,
           quantity: true,
           icsSequence: true,
+          slotId: true,
+          customerId: true,
           slot: {
             select: { startAt: true, endAt: true },
           },
@@ -498,10 +670,6 @@ export async function sendEventUpdatedToAllParticipants(
     addressDetail: event.addressDetail,
   });
 
-  const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
-    locale: ja,
-  });
-  const oldStartTimestamp = oldStartTime.getTime();
   // 同一 oldStartTime のまま他のフィールド (タイトル/場所/etc.) のみ更新されても
   // idempotency key を分離するため event.updatedAt も混ぜる。event-cancelled と対称。
   const eventUpdatedAt = event.updatedAt.getTime();
@@ -522,10 +690,21 @@ export async function sendEventUpdatedToAllParticipants(
     recipients.map((registration) => {
       const newStartTime = registration.slot.startAt;
       const newEndTimeDate = registration.slot.endAt;
+      // 申込済みスロットは削除できない不変条件（syncEventTimeSlotsCommand）により
+      // 必ず変更前の対応表に存在するはずだが、念のため新値へのフォールバックを備える。
+      const oldStartTime =
+        oldSlotStartTimes.get(registration.slotId) ?? newStartTime;
+      const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
+        locale: ja,
+      });
+      const oldStartTimestamp = oldStartTime.getTime();
       const newEventDate = format(newStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
         locale: ja,
       });
       const newEndTime = format(newEndTimeDate, "HH:mm", { locale: ja });
+      const memberEventRegistrationUrl = buildMemberEventRegistrationUrl(
+        registration.customerId,
+      );
       let attachments: { filename: string; content: Buffer }[] | undefined;
       if (calendarSettings.icalAttachmentEnabled) {
         try {
@@ -565,11 +744,14 @@ export async function sendEventUpdatedToAllParticipants(
             eventDate: oldEventDate,
             newEventDate: `${newEventDate}〜${newEndTime}`,
             location: venueDisplay ?? undefined,
+            ...(memberEventRegistrationUrl !== undefined
+              ? { memberEventRegistrationUrl }
+              : {}),
             footer,
           }),
           attachments,
         }),
-        idempotencyKey: `event-updated/${eventId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
+        idempotencyKey: `event-updated/${eventId}/${registration.slotId}/${oldStartTimestamp}/${eventUpdatedAt}/${hashForKey(registration.email)}`,
         operation: "sendEventUpdatedToAllParticipants",
         context: {
           eventId,

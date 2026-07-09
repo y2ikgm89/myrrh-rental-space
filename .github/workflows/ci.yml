@@ -43,7 +43,7 @@ env:
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
   # 実 DB 必須の統合テスト（イベント overbooking TOCTOU 等）が接続するテスト DB。
   # 未設定だと当該テストは describe ごと skip される（dev DB 誤汚染防止の安全弁）。
-  # unit-tests job が postgres service + `prisma migrate deploy` 済みのため同値を渡す。
+  # `test:all` が `test:db:migrate` で `prisma migrate deploy` を適用してから実行する。
   TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
   # server.ts の z.string().min(32) と整合（短い値だと将来 server env を読むテストで破綻する）
   BETTER_AUTH_SECRET: test-secret-key-for-ci-0123456789abcdef0123456789ab
@@ -268,10 +268,6 @@ jobs:
       - name: Setup Bun dependencies
         if: needs.changes.outputs.code == 'true'
         uses: ./.github/actions/setup-bun-deps
-
-      - name: Run database migrations
-        if: needs.changes.outputs.code == 'true'
-        run: bunx --bun prisma migrate deploy
 
       # per-file isolation 実行（scripts/run-tests.ts）必須:
       # mock.module() は process グローバルに live binding を残すため、複数 test

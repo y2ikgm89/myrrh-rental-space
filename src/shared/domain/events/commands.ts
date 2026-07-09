@@ -2,15 +2,22 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { asPrismaInputJsonValue, parsePrismaInputJson } from "@/shared/db/json";
-import type { Prisma } from "@generated/prisma/client";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buildOrderScopeLockSql,
+  buildTextOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import {
   sendEventCancelledToAllParticipants,
   sendEventUpdatedToAllParticipants,
 } from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
+import { serverEnv } from "@/shared/lib/env/server";
 import { generateSlug } from "@/shared/lib/slug";
+import { isAllowedManagedImageSrc } from "@/shared/lib/media/next-image-src";
+import { assertAllowedManagedImageSourcesInJson } from "@/shared/domain/media/managed-image-assertions";
 import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
@@ -20,7 +27,10 @@ import {
   EventScheduleMode,
   EventStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
-import type { GalleryItem } from "@/shared/lib/validations/gallery";
+import {
+  gallerySchema,
+  type GalleryItem,
+} from "@/shared/lib/validations/gallery";
 import type {
   EventTicketInput,
   EventTicketWritableFields,
@@ -83,6 +93,7 @@ function normalizeRegistrationOpen(
  */
 function buildTicketWriteData(
   ticket: EventTicketInput,
+  sortOrder: number,
 ): EventTicketWritableFields {
   return {
     name: ticket.name,
@@ -90,7 +101,7 @@ function buildTicketWriteData(
     price: ticket.price,
     capacity: ticket.capacity,
     unitSize: ticket.unitSize,
-    sortOrder: ticket.sortOrder,
+    sortOrder,
     isAvailable: ticket.isAvailable,
   };
 }
@@ -127,8 +138,42 @@ function assertEventScheduleInvariant(data: EventCommandInput): void {
   }
 }
 
+function assertAllowedEventImageUrl(label: string, url: string | null): void {
+  if (url === null) return;
+  if (
+    isAllowedManagedImageSrc(url, {
+      publicMediaUrl: serverEnv.R2_PUBLIC_URL ?? null,
+    })
+  ) {
+    return;
+  }
+
+  throw new DomainError(
+    `${label}は管理画面からアップロードした画像を指定してください`,
+    "VALIDATION",
+  );
+}
+
+function assertAllowedEventImageUrls(params: {
+  readonly thumbnailUrl?: string | null;
+  readonly ogpImageUrl?: string | null;
+  readonly gallery: readonly GalleryItem[];
+}): void {
+  assertAllowedEventImageUrl("メイン画像", params.thumbnailUrl ?? null);
+  assertAllowedEventImageUrl("OGP画像", params.ogpImageUrl ?? null);
+
+  for (const item of params.gallery) {
+    assertAllowedEventImageUrl("イベントギャラリー画像", item.url);
+  }
+}
+
 export async function createEventCommand(data: EventCommandInput) {
   assertEventScheduleInvariant(data);
+  assertAllowedEventImageUrls(data);
+  assertAllowedManagedImageSourcesInJson(
+    "イベント本文画像",
+    data.descriptionJson,
+  );
   const slug = await ensureUniqueSlug(data.slug);
 
   const event = await prisma.$transaction(async (tx) => {
@@ -166,9 +211,9 @@ export async function createEventCommand(data: EventCommandInput) {
 
     if (data.tickets && data.tickets.length > 0) {
       await tx.eventTicket.createMany({
-        data: data.tickets.map((ticket) => ({
+        data: data.tickets.map((ticket, index) => ({
           eventId: created.id,
-          ...buildTicketWriteData(ticket),
+          ...buildTicketWriteData(ticket, index),
         })),
       });
     }
@@ -181,6 +226,11 @@ export async function createEventCommand(data: EventCommandInput) {
 
 export async function updateEventCommand(id: string, data: EventCommandInput) {
   assertEventScheduleInvariant(data);
+  assertAllowedEventImageUrls(data);
+  assertAllowedManagedImageSourcesInJson(
+    "イベント本文画像",
+    data.descriptionJson,
+  );
   const existing = await prisma.event.findFirst({
     where: { id, deletedAt: null },
     select: {
@@ -188,9 +238,8 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       slug: true,
       status: true,
       slots: {
-        select: { startAt: true },
+        select: { id: true, startAt: true, endAt: true, capacity: true },
         orderBy: { startAt: "asc" as const },
-        take: 1,
       },
       locationId: true,
       spaceId: true,
@@ -242,15 +291,34 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     await syncEventTimeSlotsCommand(tx, id, data.slots);
 
     if (data.tickets !== undefined) {
+      await tx.$executeRaw(buildOrderScopeLockSql(`event_tickets:${id}`));
+
       const incoming = data.tickets;
-      const incomingIds = new Set(
-        incoming.flatMap((t) => (t.id != null ? [t.id] : [])),
+      const incomingExistingTickets = incoming.filter(
+        (ticket): ticket is EventTicketInput & { id: string } =>
+          typeof ticket.id === "string",
       );
+      const incomingIds = new Set(incomingExistingTickets.map((t) => t.id));
+      if (incomingIds.size !== incomingExistingTickets.length) {
+        throw new DomainError(
+          "同じチケットIDを複数指定することはできません",
+          "VALIDATION",
+        );
+      }
 
       const existingTickets = await tx.eventTicket.findMany({
         where: { eventId: id },
         select: { id: true },
       });
+      const existingTicketIds = new Set(
+        existingTickets.map((ticket) => ticket.id),
+      );
+
+      for (const ticketId of incomingIds) {
+        if (!existingTicketIds.has(ticketId)) {
+          throw new DomainError("チケットが見つかりません", "NOT_FOUND");
+        }
+      }
 
       const toDelete = existingTickets
         .map((e) => e.id)
@@ -259,17 +327,33 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         await tx.eventTicket.deleteMany({ where: { id: { in: toDelete } } });
       }
 
+      if (incomingExistingTickets.length > 0) {
+        const { ids, tempCases } = buildTextOrderSqlFragments(
+          incomingExistingTickets,
+          (ticket) => ticket.id,
+          (_ticket, index) => index,
+        );
+        await tx.$executeRaw`
+          UPDATE "event_tickets"
+          SET "sortOrder" = CASE "id" ${Prisma.join(tempCases, " ")} END
+          WHERE "id" IN (${Prisma.join(ids)})
+            AND "eventId" = ${id}
+        `;
+      }
+
       const toCreate: Prisma.EventTicketCreateManyInput[] = [];
-      for (const ticket of incoming) {
+      for (let index = 0; index < incoming.length; index += 1) {
+        const ticket = incoming[index];
+        if (!ticket) continue;
         if (ticket.id) {
           await tx.eventTicket.update({
             where: { id: ticket.id },
-            data: buildTicketWriteData(ticket),
+            data: buildTicketWriteData(ticket, index),
           });
         } else {
           toCreate.push({
             eventId: id,
-            ...buildTicketWriteData(ticket),
+            ...buildTicketWriteData(ticket, index),
           });
         }
       }
@@ -284,21 +368,33 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     (existing.spaceId ?? null) !== (data.spaceId ?? null) ||
     (existing.addressDetail ?? "") !== (data.addressDetail ?? "");
 
-  // スロット変更は sendEventUpdatedToAllParticipants で通知
-  if (
-    (data.slots.some((s) => !s.id) || venueChanged) &&
-    data.status === EventStatus.PUBLISHED
-  ) {
-    fireAndForget(
-      sendEventUpdatedToAllParticipants(
-        id,
-        existing.slots[0]?.startAt ?? new Date(),
-      ),
-      {
-        operation: "sendEventUpdatedToAllParticipants",
-        category: ErrorCategory.EXTERNAL_API,
-      },
+  // 新規スロット追加だけでなく、既存スロット（id あり）の startAt/endAt/capacity
+  // 変更も検知する。id なしで参照される既存スロットは想定外だが安全側で変更扱いにする。
+  const existingSlotMap = new Map(
+    existing.slots.map((slot) => [slot.id, slot]),
+  );
+  const slotChanged = data.slots.some((slot) => {
+    if (!slot.id) return true;
+    const prev = existingSlotMap.get(slot.id);
+    if (!prev) return true;
+    return (
+      prev.startAt.getTime() !== slot.startAt.getTime() ||
+      prev.endAt.getTime() !== slot.endAt.getTime() ||
+      prev.capacity !== slot.capacity
     );
+  });
+
+  // スロット変更は sendEventUpdatedToAllParticipants で通知。
+  // 参加者ごとに「自分が申し込んだスロットの変更前日時」を正しく表示できるよう、
+  // 全スロットの変更前 startAt を id 付きで渡す（単一の代表値を全員に使い回さない）。
+  if ((slotChanged || venueChanged) && data.status === EventStatus.PUBLISHED) {
+    const oldSlotStartTimes = new Map(
+      existing.slots.map((slot) => [slot.id, slot.startAt]),
+    );
+    fireAndForget(sendEventUpdatedToAllParticipants(id, oldSlotStartTimes), {
+      operation: "sendEventUpdatedToAllParticipants",
+      category: ErrorCategory.EXTERNAL_API,
+    });
   }
 }
 
@@ -418,6 +514,20 @@ export async function duplicateEventCommand(id: string) {
   if (!source) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
   const slug = await ensureUniqueSlug(`${source.slug}-copy`);
+  const sourceGalleryResult = gallerySchema.safeParse(source.gallery);
+  if (!sourceGalleryResult.success) {
+    throw new DomainError("イベントギャラリーが不正です", "VALIDATION");
+  }
+  const sourceGallery = sourceGalleryResult.data;
+  assertAllowedEventImageUrls({
+    thumbnailUrl: source.thumbnailUrl,
+    gallery: sourceGallery,
+    ogpImageUrl: source.ogpImageUrl,
+  });
+  assertAllowedManagedImageSourcesInJson(
+    "イベント本文画像",
+    source.descriptionJson,
+  );
 
   const created = await prisma.$transaction(async (tx) => {
     const newEvent = await tx.event.create({
@@ -431,7 +541,7 @@ export async function duplicateEventCommand(id: string) {
         descriptionHtml: source.descriptionHtml,
         descriptionPlainText: source.descriptionPlainText,
         thumbnailUrl: source.thumbnailUrl,
-        gallery: asPrismaInputJsonValue(source.gallery, "gallery が不正です"),
+        gallery: asPrismaInputJsonValue(sourceGallery, "gallery が不正です"),
         ogpImageUrl: source.ogpImageUrl,
         ogpTitle: source.ogpTitle,
         ogpDescription: source.ogpDescription,
@@ -456,14 +566,14 @@ export async function duplicateEventCommand(id: string) {
 
     if (source.tickets.length > 0) {
       await tx.eventTicket.createMany({
-        data: source.tickets.map((ticket) => ({
+        data: source.tickets.map((ticket, index) => ({
           eventId: newEvent.id,
           name: ticket.name,
           description: ticket.description,
           price: ticket.price,
           capacity: ticket.capacity,
           unitSize: ticket.unitSize,
-          sortOrder: ticket.sortOrder,
+          sortOrder: index,
           isAvailable: ticket.isAvailable,
         })),
       });

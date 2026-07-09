@@ -19,8 +19,12 @@ import {
   type NavigationItemInput,
   type SocialLinkInput,
   updateNavigationItem as updateNavigationItemCommand,
+  updateNavigationItemActive as updateNavigationItemActiveCommand,
   updateNavigationOrder as updateNavigationOrderCommand,
   updateSocialLink as updateSocialLinkCommand,
+  updateSocialLinkActive as updateSocialLinkActiveCommand,
+  updateSocialLinkDesktopVisibility as updateSocialLinkDesktopVisibilityCommand,
+  updateSocialLinkMobileVisibility as updateSocialLinkMobileVisibilityCommand,
   updateSocialLinkOrder as updateSocialLinkOrderCommand,
 } from "@/shared/domain/navigation/commands";
 import {
@@ -30,6 +34,7 @@ import {
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
 const idSchema = uuidIdSchema("ナビゲーション");
+const booleanSchema = z.boolean();
 
 function invalidateNavigationCache(): void {
   invalidateSiteWideCache([CACHE_TAGS.NAVIGATION, CACHE_TAGS.SOCIAL_LINKS]);
@@ -72,6 +77,28 @@ export async function updateNavigationOrder(
   });
 }
 
+export async function updateNavigationItemActive(
+  id: string,
+  isActive: boolean,
+): Promise<MutationResult<{ id: string; isActive: boolean }>> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
+  const parsedActive = booleanSchema.safeParse(isActive);
+  if (!parsedActive.success) {
+    return createValidationMutationError(parsedActive.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "navigation",
+    action: "update",
+    resourceId: parsedId.data,
+    execute: async () =>
+      updateNavigationItemActiveCommand(parsedId.data, parsedActive.data),
+    afterSuccess: invalidateNavigationCache,
+  });
+}
+
 export async function deleteSocialLink(id: string): Promise<MutationResult> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
@@ -84,6 +111,78 @@ export async function deleteSocialLink(id: string): Promise<MutationResult> {
       await deleteSocialLinkCommand(parsed.data);
       return null;
     },
+    afterSuccess: invalidateNavigationCache,
+  });
+}
+
+export async function updateSocialLinkActive(
+  id: string,
+  isActive: boolean,
+): Promise<MutationResult<{ id: string; isActive: boolean }>> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
+  const parsedActive = booleanSchema.safeParse(isActive);
+  if (!parsedActive.success) {
+    return createValidationMutationError(parsedActive.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "navigation",
+    action: "update",
+    resourceId: parsedId.data,
+    execute: async () =>
+      updateSocialLinkActiveCommand(parsedId.data, parsedActive.data),
+    afterSuccess: invalidateNavigationCache,
+  });
+}
+
+export async function updateSocialLinkDesktopVisibility(
+  id: string,
+  showOnDesktop: boolean,
+): Promise<MutationResult<{ id: string; showOnDesktop: boolean }>> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
+  const parsedVisibility = booleanSchema.safeParse(showOnDesktop);
+  if (!parsedVisibility.success) {
+    return createValidationMutationError(parsedVisibility.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "navigation",
+    action: "update",
+    resourceId: parsedId.data,
+    execute: async () =>
+      updateSocialLinkDesktopVisibilityCommand(
+        parsedId.data,
+        parsedVisibility.data,
+      ),
+    afterSuccess: invalidateNavigationCache,
+  });
+}
+
+export async function updateSocialLinkMobileVisibility(
+  id: string,
+  showOnMobile: boolean,
+): Promise<MutationResult<{ id: string; showOnMobile: boolean }>> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
+  const parsedVisibility = booleanSchema.safeParse(showOnMobile);
+  if (!parsedVisibility.success) {
+    return createValidationMutationError(parsedVisibility.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "navigation",
+    action: "update",
+    resourceId: parsedId.data,
+    execute: async () =>
+      updateSocialLinkMobileVisibilityCommand(
+        parsedId.data,
+        parsedVisibility.data,
+      ),
     afterSuccess: invalidateNavigationCache,
   });
 }
@@ -125,7 +224,6 @@ function toNavigationItemInput(
     label: data.label,
     url: data.url,
     isExternal: data.isExternal,
-    order: data.order,
     isActive: data.isActive,
   };
 }
@@ -185,7 +283,6 @@ function toSocialLinkInput(
   return {
     platform: data.platform,
     url: data.url,
-    order: data.order,
     isActive: data.isActive,
     showOnDesktop: data.showOnDesktop,
     showOnMobile: data.showOnMobile,

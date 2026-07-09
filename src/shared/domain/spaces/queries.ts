@@ -183,7 +183,7 @@ export async function getSpacesQuery(
 
 export async function getSpaceByIdQuery(id: string) {
   const space = await prisma.space.findUnique({
-    where: { id },
+    where: { id, isActive: true },
     include: {
       location: { select: { address: true } },
       category: { select: { id: true, name: true } },
@@ -244,4 +244,12 @@ export async function getSpacesForSelectQuery() {
     hourlyPrice: String(space.hourlyPrice),
     capacity: space.capacity,
   }));
+}
+
+export async function getSpacesForReviewFilterQuery() {
+  return prisma.space.findMany({
+    where: { reviews: { some: {} } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 }

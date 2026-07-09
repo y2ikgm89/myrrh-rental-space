@@ -1,10 +1,8 @@
-﻿/**
+/**
  * Instagram Node
  *
  * @description Instagram投稿を埋め込むDecoratorNode
  */
-
-"use client";
 
 import type { ReactElement } from "react";
 import type {

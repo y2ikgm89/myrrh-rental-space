@@ -93,6 +93,7 @@ export function EmailSection({ settings, staff }: EmailSectionProps) {
       replyToEmail: settings.replyToEmail ?? "",
       sendReservationConfirmationEmail:
         settings.sendReservationConfirmationEmail ? "on" : "",
+      notifyEventReminder: settings.notifyEventReminder ? "on" : "",
       notificationStaffIds: settings.notificationStaffIds,
       notificationEmailAddresses: settings.notificationEmailAddresses,
     },
@@ -270,6 +271,17 @@ export function EmailSection({ settings, staff }: EmailSectionProps) {
               <p className="text-xs text-muted-foreground">
                 新規予約時の確認メールのみを制御します。キャンセル・ステータス変更の
                 メールは予約者への重要連絡として、この設定に関わらず常に送信されます。
+              </p>
+              <EmailSwitch
+                field={fields.notifyEventReminder}
+                label="イベント前日リマインダーを参加者へ送信"
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                翌日開催のイベントについて、前日に参加者全員へリマインダーメールを
+                一斉送信します（毎時実行の
+                cron）。参加者数に比例してメール送信数が 増えるため、既定では
+                OFF になっています。有効化する場合は送信量にご注意ください。
               </p>
               <p className="text-xs text-muted-foreground">
                 管理者への通知メール（新規予約・変更・キャンセル・お問い合わせ・イベント申込）の

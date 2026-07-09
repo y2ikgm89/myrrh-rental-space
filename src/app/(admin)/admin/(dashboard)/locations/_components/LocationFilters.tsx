@@ -46,10 +46,10 @@ export function LocationFilters() {
 
   const setPublished = (value: string) => {
     const publishedValue = value === "ALL" ? null : value || null;
-    void setParams({ locPublished: publishedValue, locPage: 1 });
+    void setParams({ locStatus: publishedValue, locPage: 1 });
   };
 
-  const currentPublished = params.locPublished || "ALL";
+  const currentPublished = params.locStatus || "ALL";
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

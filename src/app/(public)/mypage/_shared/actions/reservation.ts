@@ -9,6 +9,11 @@ import {
   updateCustomerReservation,
 } from "@/shared/domain/reservations/customer-commands";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
+import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
+import {
+  sendReservationAdminNotification,
+  sendReservationUpdatedEmail,
+} from "@/shared/lib/email/reservation-emails";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
@@ -28,12 +33,13 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { DomainError } from "@/shared/domain/domain-error";
 import { fireAndForget } from "@/shared/lib/async-utils";
+import { omitUndefined } from "@/shared/lib/serialize";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
-import { ErrorCategory } from "@/shared/lib/errors/server";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { z } from "zod";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
@@ -149,6 +155,26 @@ export async function updateReservationAction(
         invalidateReservationCaches(data.reservationId, customer.id, {
           coupons: true,
         });
+
+        // 変更後の最新状態を再取得して顧客+管理者へ変更通知メールを送信。
+        // ステータス変更/キャンセル同様、重要取引通知として常時送信する。
+        fireAndForget(
+          (async () => {
+            const payload = await fetchReservationEmailData(data.reservationId);
+            if (!payload) return;
+            const payloadData = omitUndefined(payload);
+            await Promise.all([
+              sendReservationUpdatedEmail(payloadData),
+              sendReservationAdminNotification(payloadData, "update"),
+            ]);
+          })(),
+          {
+            operation: "sendReservationUpdateNotification",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: data.reservationId },
+          },
+        );
 
         fireAndForget(
           createNotificationCommand({

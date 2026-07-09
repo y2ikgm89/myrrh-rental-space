@@ -54,11 +54,22 @@ describe("PageSection Admin Action Integration", () => {
         pageId: VALID_UUID,
         type: "hero",
         config: { title: "Hello" },
-        order: 0,
         isActive: true,
       });
 
       expect(result.success).toBe(true);
+    });
+
+    test("order は create 入力として拒否する", () => {
+      const result = createSectionSchema.safeParse({
+        pageId: VALID_UUID,
+        type: "hero",
+        config: { title: "Hello" },
+        order: 999,
+        isActive: true,
+      });
+
+      expect(result.success).toBe(false);
     });
 
     test("旧 Prisma enum 形式の大文字タイプは拒否する", () => {
@@ -89,6 +100,17 @@ describe("PageSection Admin Action Integration", () => {
         sections: [
           { id: VALID_UUID, order: 0 },
           { id: VALID_UUID, order: 1 },
+        ],
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    test("同じ order を複数指定すると拒否する", () => {
+      const result = updateSectionOrderSchema.safeParse({
+        sections: [
+          { id: VALID_UUID, order: 0 },
+          { id: VALID_UUID_2, order: 0 },
         ],
       });
 

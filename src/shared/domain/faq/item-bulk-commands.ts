@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { buildOrderScopeLockSql } from "@/shared/domain/order-sql";
 import type { BulkFaqItemResult } from "@/shared/domain/faq/types";
 
 async function ensureFaqCategoryExists(id: string): Promise<void> {
@@ -68,13 +69,15 @@ export async function bulkMoveFaqItems(
 
   await ensureFaqCategoryExists(newCategoryId);
 
-  const maxOrder = await prisma.faqItem.aggregate({
-    where: { categoryId: newCategoryId, deletedAt: null },
-    _max: { order: true },
-  });
-  const startOrder = (maxOrder._max.order ?? 0) + 1;
-
   const movedCount = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql(`faq_items:${newCategoryId}`));
+
+    const maxOrder = await tx.faqItem.aggregate({
+      where: { categoryId: newCategoryId, deletedAt: null },
+      _max: { order: true },
+    });
+    const startOrder = (maxOrder._max.order ?? -1) + 1;
+
     let count = 0;
     let order = startOrder;
     for (const id of ids) {

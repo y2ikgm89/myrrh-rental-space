@@ -105,7 +105,13 @@ describe("pageHeroConfigSchema", () => {
         images: [{ url: "https://example.com/a.jpg", alt: "a" }],
         buttons: [
           {
-            text: "予約する",
+            label: [
+              {
+                _key: "test-page-hero-reservation-button",
+                _type: "span" as const,
+                text: "予約する",
+              },
+            ],
             url: "/reservation",
             variant: "primary",
             size: "lg",
@@ -137,13 +143,25 @@ describe("pageHeroConfigSchema", () => {
         images: [{ url: "https://example.com/a.jpg", alt: "a" }],
         buttons: [
           {
-            text: "予約する",
+            label: [
+              {
+                _key: "test-page-hero-primary-button",
+                _type: "span" as const,
+                text: "予約する",
+              },
+            ],
             url: "/reservation",
             variant: "primary",
             size: "lg",
           },
           {
-            text: "詳細を見る",
+            label: [
+              {
+                _key: "test-page-hero-secondary-button",
+                _type: "span" as const,
+                text: "詳細を見る",
+              },
+            ],
             url: "/spaces",
             variant: "secondary",
             size: "lg",

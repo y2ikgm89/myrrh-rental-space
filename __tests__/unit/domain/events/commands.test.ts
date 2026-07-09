@@ -38,7 +38,12 @@ const mockEventUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
 
 const mockFireAndForget = mock<() => void>(() => undefined);
 
-const mockSendEventUpdated = mock<() => Promise<void>>(() => Promise.resolve());
+const mockSendEventUpdated = mock<
+  (
+    eventId: string,
+    oldSlotStartTimes: ReadonlyMap<string, Date>,
+  ) => Promise<void>
+>(() => Promise.resolve());
 
 const mockSendEventCancelled = mock<() => Promise<void>>(() =>
   Promise.resolve(),
@@ -62,6 +67,9 @@ const mockEventTicketDeleteMany = mock<() => Promise<{ count: number }>>(() =>
 const mockEventTicketFindMany = mock<() => Promise<{ id: string }[]>>(() =>
   Promise.resolve([]),
 );
+const mockExecuteRaw = mock<
+  (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
+>(() => Promise.resolve(0));
 const mockEventRegistrationCount = mock<() => Promise<number>>(() =>
   Promise.resolve(0),
 );
@@ -118,6 +126,7 @@ type TxClient = {
     delete: typeof mockEventTimeSlotDelete;
     aggregate: typeof mockEventTimeSlotAggregate;
   };
+  $executeRaw: typeof mockExecuteRaw;
 };
 const txStub: TxClient = {
   event: { create: mockEventCreate, update: mockEventUpdate },
@@ -136,6 +145,7 @@ const txStub: TxClient = {
     delete: mockEventTimeSlotDelete,
     aggregate: mockEventTimeSlotAggregate,
   },
+  $executeRaw: mockExecuteRaw,
 };
 const mockTransaction = mock(
   async (callback: (tx: TxClient) => Promise<unknown>) => callback(txStub),
@@ -171,6 +181,12 @@ mock.module("@generated/prisma/enums", () => ({
 
 mock.module("@/shared/lib/errors/server", () => ({
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
+}));
+
+mock.module("@/shared/lib/env/server", () => ({
+  serverEnv: {
+    R2_PUBLIC_URL: "https://media.example.com",
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -247,7 +263,6 @@ const VALID_EVENT_INPUT = {
       price: 5000,
       capacity: null,
       unitSize: 1,
-      sortOrder: 0,
       isAvailable: true,
     },
   ],
@@ -398,6 +413,87 @@ describe("createEventCommand", () => {
         }),
       );
     });
+
+    test("チケット順は入力配列の index から 0 始まりで保存される", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        tickets: [
+          {
+            name: "VIP",
+            description: null,
+            price: 9000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+          {
+            name: "一般",
+            description: null,
+            price: 5000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+        ],
+      });
+
+      expect(mockEventTicketCreateMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({ name: "VIP", sortOrder: 0 }),
+          expect.objectContaining({ name: "一般", sortOrder: 1 }),
+        ],
+      });
+    });
+  });
+
+  describe("画像URL境界", () => {
+    test("管理メディア origin 外のサムネイルURLは拒否する", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          thumbnailUrl: "https://example.com/poster.jpg",
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+
+    test("管理メディア origin 外のギャラリーURLは拒否する", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          gallery: [
+            {
+              url: "https://example.com/gallery.jpg",
+              alt: "",
+              caption: "",
+            },
+          ],
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+
+    test("Lexical 説明内の管理メディア origin 外画像は拒否する", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          descriptionJson: {
+            root: {
+              children: [
+                {
+                  type: "image",
+                  src: "https://example.com/body.jpg",
+                },
+              ],
+            },
+          },
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -406,6 +502,13 @@ describe("updateEventCommand", () => {
     mockEventFindFirst.mockClear();
     mockEventFindMany.mockClear();
     mockEventUpdate.mockClear();
+    mockEventTicketFindMany.mockClear();
+    mockEventTicketUpdate.mockClear();
+    mockEventTicketCreateMany.mockClear();
+    mockEventTicketDeleteMany.mockClear();
+    mockEventTicketFindMany.mockImplementation(() => Promise.resolve([]));
+    mockExecuteRaw.mockClear();
+    mockExecuteRaw.mockResolvedValue(0);
     mockFireAndForget.mockClear();
     mockEventFindMany.mockImplementation(() => Promise.resolve([]));
   });
@@ -547,7 +650,15 @@ describe("updateEventCommand", () => {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.PUBLISHED,
-        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        // 既存スロットの id/startAt/endAt/capacity が更新後の入力と完全一致
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
         locationId: null,
         spaceId: null,
         addressDetail: "東京都渋谷区",
@@ -559,7 +670,7 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        // 既存スロット（id あり = 変更なしとみなされ通知スキップ）+ 同じ会場
+        // 既存スロット（id あり・値も一致 = 変更なしとみなされ通知スキップ）+ 同じ会場
         slots: [
           {
             id: "slot-1",
@@ -572,6 +683,150 @@ describe("updateEventCommand", () => {
       });
 
       expect(mockFireAndForget).not.toHaveBeenCalled();
+    });
+
+    test("既存スロット(id あり)の日時のみ変更した場合、メール通知が送られる", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.PUBLISHED,
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        status: EventStatus.PUBLISHED,
+        // id は既存スロットのまま、startAt のみ変更（新規スロット追加ではない回帰ケース）
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T14:00:00Z"),
+            endAt: new Date("2024-06-15T16:00:00Z"),
+            capacity: 30,
+          },
+        ],
+        addressDetail: "東京都渋谷区",
+      });
+
+      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      // 変更前の日時は「変更されたスロット自身」の旧 startAt であるべき
+      // （他スロットの値や新しい値を誤って渡していないこと）
+      expect(mockSendEventUpdated).toHaveBeenCalledWith(
+        "event-1",
+        new Map([["slot-1", new Date("2024-06-15T10:00:00Z")]]),
+      );
+    });
+
+    test("複数スロットのうち1件のみ変更した場合、旧日時マップは全スロットの変更前値を保持する（他スロット参加者への誤表示防止）", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.PUBLISHED,
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+          {
+            id: "slot-2",
+            startAt: new Date("2024-06-16T10:00:00Z"),
+            endAt: new Date("2024-06-16T12:00:00Z"),
+            capacity: 20,
+          },
+        ],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        status: EventStatus.PUBLISHED,
+        scheduleMode: EventScheduleMode.TIMED_ENTRY,
+        // slot-1 はそのまま、slot-2 の日時のみ変更
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+          {
+            id: "slot-2",
+            startAt: new Date("2024-06-16T14:00:00Z"),
+            endAt: new Date("2024-06-16T16:00:00Z"),
+            capacity: 20,
+          },
+        ],
+        addressDetail: "東京都渋谷区",
+      });
+
+      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      // slot-1・slot-2 双方の「変更前」日時が個別に渡され、単一の代表値
+      // （例えば slot-1 の値）を全参加者に使い回していないことを確認する
+      expect(mockSendEventUpdated).toHaveBeenCalledWith(
+        "event-1",
+        new Map([
+          ["slot-1", new Date("2024-06-15T10:00:00Z")],
+          ["slot-2", new Date("2024-06-16T10:00:00Z")],
+        ]),
+      );
+    });
+
+    test("既存スロット(id あり)の定員のみ変更した場合、メール通知が送られる", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.PUBLISHED,
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 30,
+          },
+        ],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        status: EventStatus.PUBLISHED,
+        slots: [
+          {
+            id: "slot-1",
+            startAt: new Date("2024-06-15T10:00:00Z"),
+            endAt: new Date("2024-06-15T12:00:00Z"),
+            capacity: 50,
+          },
+        ],
+        addressDetail: "東京都渋谷区",
+      });
+
+      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
     });
 
     test("会場情報変更かつ PUBLISHED 状態の場合、参加者メール通知が送られる", async () => {
@@ -596,6 +851,53 @@ describe("updateEventCommand", () => {
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
     });
+
+    test("既存チケットの順序は一意制約衝突を避けるため一時退避してから更新する", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+      mockEventTicketFindMany.mockResolvedValueOnce([
+        { id: "ticket-1" },
+        { id: "ticket-2" },
+      ]);
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        tickets: [
+          {
+            id: "ticket-2",
+            name: "後半",
+            description: null,
+            price: 6000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+          {
+            id: "ticket-1",
+            name: "前半",
+            description: null,
+            price: 5000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+        ],
+      });
+
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
+      expect(mockEventTicketUpdate).toHaveBeenCalledTimes(2);
+      expect(mockEventTicketCreateMany).not.toHaveBeenCalled();
+    });
   });
 
   describe("異常系", () => {
@@ -614,6 +916,45 @@ describe("updateEventCommand", () => {
       await expect(
         updateEventCommand("deleted-event", VALID_EVENT_INPUT),
       ).rejects.toThrow(DomainError);
+    });
+
+    test("別イベントまたは存在しないチケットIDを含む更新は拒否する", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+      mockEventTicketFindMany.mockResolvedValueOnce([{ id: "ticket-1" }]);
+
+      await expect(
+        updateEventCommand("event-1", {
+          ...VALID_EVENT_INPUT,
+          tickets: [
+            {
+              id: "foreign-ticket",
+              name: "不正チケット",
+              description: null,
+              price: 5000,
+              capacity: null,
+              unitSize: 1,
+              isAvailable: true,
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "チケットが見つかりません",
+      });
+
+      expect(mockEventTicketUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -901,7 +1242,7 @@ describe("duplicateEventCommand", () => {
     descriptionJson: { root: { type: "root", children: [] } },
     descriptionHtml: "<p>本文</p>",
     descriptionPlainText: "本文",
-    thumbnailUrl: "https://example.com/thumb.jpg",
+    thumbnailUrl: "https://media.example.com/thumb.jpg",
     gallery: [],
     ogpImageUrl: null,
     ogpTitle: null,

@@ -32,15 +32,24 @@ interface ImageFrameBaseProps {
   readonly src: string;
   readonly alt: string;
   readonly sizes: string;
-  /** `<link rel="preload" as="image">` を head に挿入する。LCP 候補のみ true（Next.js 公式）。 */
-  readonly preload?: boolean;
-  /** `lazy`（default）または `eager`。LCP / above-the-fold は `eager`。 */
-  readonly loading?: "lazy" | "eager";
-  /** ブラウザに通知するリソース優先度。LCP は `high`、それ以外は省略（`auto`）。 */
-  readonly fetchPriority?: "high" | "low" | "auto";
   readonly className?: string;
   readonly rounded?: boolean;
 }
+
+type ImagePriorityProps =
+  | {
+      /** `<link rel="preload" as="image">` を head に挿入する。LCP 候補のみ true。 */
+      readonly preload: true;
+      readonly loading?: never;
+      readonly fetchPriority?: never;
+    }
+  | {
+      readonly preload?: false;
+      /** `lazy`（default）または `eager`。LCP / above-the-fold は `eager`。 */
+      readonly loading?: "lazy" | "eager";
+      /** ブラウザに通知するリソース優先度。LCP は `high`、それ以外は省略（`auto`）。 */
+      readonly fetchPriority?: "high" | "low" | "auto";
+    };
 
 interface FillProps extends ImageFrameBaseProps {
   readonly fill: true;
@@ -56,19 +65,19 @@ interface DimensionProps extends ImageFrameBaseProps {
   readonly height: number;
 }
 
-type ImageFrameProps = FillProps | DimensionProps;
+type ImageFrameProps = (FillProps | DimensionProps) & ImagePriorityProps;
 
 export function ImageFrame(props: ImageFrameProps) {
-  const {
-    src,
-    alt,
-    sizes,
-    preload = false,
-    loading,
-    fetchPriority,
-    className,
-    rounded = false,
-  } = props;
+  const { src, alt, sizes, className, rounded = false } = props;
+  const shouldPreload = props.preload === true;
+  const imagePriorityProps = shouldPreload
+    ? { preload: true }
+    : {
+        ...(props.loading !== undefined && { loading: props.loading }),
+        ...(props.fetchPriority !== undefined && {
+          fetchPriority: props.fetchPriority,
+        }),
+      };
 
   return (
     <div
@@ -85,9 +94,7 @@ export function ImageFrame(props: ImageFrameProps) {
           alt={alt}
           fill
           sizes={sizes}
-          preload={preload}
-          {...(loading !== undefined && { loading })}
-          {...(fetchPriority !== undefined && { fetchPriority })}
+          {...imagePriorityProps}
           className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
         />
       ) : (
@@ -97,9 +104,7 @@ export function ImageFrame(props: ImageFrameProps) {
           width={props.width}
           height={props.height}
           sizes={sizes}
-          preload={preload}
-          {...(loading !== undefined && { loading })}
-          {...(fetchPriority !== undefined && { fetchPriority })}
+          {...imagePriorityProps}
           className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
         />
       )}

@@ -1,12 +1,10 @@
-﻿/**
+/**
  * Collapsible Content Node
  *
  * @description 折りたたみのコンテンツ部分を表すElementNode
  *
  * スタイルは lexical-content.css の [data-collapsible-content] セレクターで管理
  */
-
-"use client";
 
 import type {
   DOMConversionMap,

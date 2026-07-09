@@ -1,4 +1,4 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { inquiryReplyFixture } from "./inquiry-reply.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -20,6 +20,8 @@ type Props = {
   originalMessage: string;
   replyMessage: string;
   repliedByName: string;
+  /** 会員向け: ログイン後のマイページ問い合わせ詳細 URL */
+  memberInquiryUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -44,6 +46,7 @@ export function InquiryReplyEmail({
   originalMessage,
   replyMessage,
   repliedByName,
+  memberInquiryUrl,
   footer,
 }: Props) {
   const info = SECTION_VARIANT_STYLES.info;
@@ -86,6 +89,17 @@ export function InquiryReplyEmail({
         </Text>
         <Text style={messageBox}>{originalMessage}</Text>
       </Section>
+
+      {memberInquiryUrl && (
+        <Text style={text}>
+          <Link
+            href={memberInquiryUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            マイページでお問い合わせを確認する
+          </Link>
+        </Text>
+      )}
 
       <Hr style={hr} />
 

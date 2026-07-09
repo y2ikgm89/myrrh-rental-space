@@ -45,7 +45,7 @@ export interface EmailFooterData {
   siteName: string;
   /** 公開サイトのトップ URL（http(s): のみ・不正なら null） */
   siteUrl: string | null;
-  /** フッター表示対象の規約リンク（footerOrder 順・不正 URL は除外済） */
+  /** フッター表示対象の規約リンク（displayOrder 順・不正 URL は除外済） */
   legalLinks: EmailFooterLink[];
 }
 

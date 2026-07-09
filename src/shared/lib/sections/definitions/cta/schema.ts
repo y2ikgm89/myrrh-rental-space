@@ -7,7 +7,7 @@ import { sectionHeaderFields } from "../_shared/section-header";
 
 const variants = ["default", "centered", "split"] as const;
 
-export const ctaConfigSchema = z.object({
+export const ctaConfigSchema = z.strictObject({
   ...sectionHeaderFields({ sectionLabelDefault: "Ready to Begin?" }),
   description: field.portableTextBlock("説明文", { subGroup: "text" }),
   buttons: createButtonsArraySchema("ボタン"),

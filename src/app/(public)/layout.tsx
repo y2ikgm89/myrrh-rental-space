@@ -141,7 +141,7 @@ export async function generateViewport(): Promise<Viewport> {
  */
 async function DynamicContent(): Promise<ReactElement> {
   // `getCookieConsentSettings` / `getAnalyticsConfig` は `'use cache' + safeFetch` 構造のため、
-  // rule .claude/rules/db-and-domain.md §6 に従い `await connection()` で build prerender skip。
+  // rule .claude/rules/caching.md に従い `await connection()` で build prerender skip。
   await connection();
   const [cookieSettings, analyticsConfig, headersList] = await Promise.all([
     getCookieConsentSettings(),

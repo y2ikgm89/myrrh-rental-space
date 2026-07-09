@@ -2613,12 +2613,22 @@ async function seedBlog() {
     },
   ];
 
+  let nextCategoryOrder =
+    (
+      await prisma.postCategory.aggregate({
+        _max: { order: true },
+      })
+    )._max.order ?? -1;
+
   for (const category of categories) {
     const existing = await prisma.postCategory.findUnique({
       where: { slug: category.slug },
     });
     if (!existing) {
-      await prisma.postCategory.create({ data: category });
+      nextCategoryOrder += 1;
+      await prisma.postCategory.create({
+        data: { ...category, order: nextCategoryOrder },
+      });
       console.log(`✅ Created post category: ${category.name}`);
     }
   }
@@ -2871,36 +2881,44 @@ async function seedNavigation() {
 // =============================================================================
 
 async function seedAnnouncementBar() {
+  const createSeedAnnouncement = ({
+    icon,
+    text,
+    ...data
+  }: {
+    icon: string;
+    text: string;
+    linkUrl?: string;
+    linkText?: string;
+    displayOrder: number;
+    isActive?: boolean;
+  }) => ({
+    probe: text,
+    message: [createInlineIcon(icon), createSpan(text)],
+    ...data,
+  });
+
   const announcements = [
-    {
-      probe: "年末年始の営業日程を掲載しました",
-      message: [
-        createInlineIcon("IconInfoCircle"),
-        createSpan("年末年始の営業日程を掲載しました"),
-      ],
+    createSeedAnnouncement({
+      icon: "IconInfoCircle",
+      text: "年末年始の営業日程を掲載しました",
       linkUrl: "/news",
       linkText: "詳細を見る",
-      priority: 0,
-    },
-    {
-      probe: "オープン記念！今月末まで全スペース20%OFF",
-      message: [
-        createInlineIcon("IconSparkles"),
-        createSpan("オープン記念!今月末まで全スペース20%OFF"),
-      ],
+      displayOrder: 2,
+    }),
+    createSeedAnnouncement({
+      icon: "IconSparkles",
+      text: "オープン記念!今月末まで全スペース20%OFF",
       linkUrl: "/spaces",
       linkText: "スペースを見る",
-      priority: 1,
-    },
-    {
-      probe: "1月15日（水）は設備点検のため休館いたします",
-      message: [
-        createInlineIcon("IconAlertTriangle"),
-        createSpan("1月15日(水)は設備点検のため休館いたします"),
-      ],
-      priority: 2,
+      displayOrder: 1,
+    }),
+    createSeedAnnouncement({
+      icon: "IconAlertTriangle",
+      text: "1月15日(水)は設備点検のため休館いたします",
+      displayOrder: 0,
       isActive: false,
-    },
+    }),
   ];
 
   for (const announcement of announcements) {

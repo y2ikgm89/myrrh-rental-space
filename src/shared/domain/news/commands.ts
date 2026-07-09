@@ -3,6 +3,10 @@ import "server-only";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  assertAllowedManagedImageSourcesInJson,
+  assertAllowedManagedImageUrl,
+} from "@/shared/domain/media/managed-image-assertions";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
@@ -34,6 +38,17 @@ function normalizeNullableString(
   }
 
   return value;
+}
+
+function resolveNewsPublishedAt(
+  isPublished: boolean,
+  publishedAt: Date | null,
+): Date | null {
+  if (!isPublished) {
+    return null;
+  }
+
+  return publishedAt ?? new Date();
 }
 
 async function ensureNewsExists(
@@ -68,6 +83,8 @@ async function ensureNewsSlugAvailable(
 export async function createNews(
   input: CreateNewsCommandInput,
 ): Promise<CreateNewsResult> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
   await ensureNewsSlugAvailable(input.slug);
 
   const news = await prisma.news.create({
@@ -76,6 +93,13 @@ export async function createNews(
       title: input.title,
       contentHtml: input.contentHtml,
       contentJson: parseContentJson(input.contentJson),
+      contentWidth: input.contentWidth ?? null,
+      contentWidthCustom: input.contentWidthCustom ?? null,
+      metaDescription: normalizeNullableString(input.metaDescription),
+      metaKeywords: normalizeNullableString(input.metaKeywords),
+      ogpTitle: normalizeNullableString(input.ogpTitle),
+      ogpDescription: normalizeNullableString(input.ogpDescription),
+      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
       isPublished: false,
     }),
     select: {
@@ -94,6 +118,7 @@ export async function updateNewsBody(
   id: string,
   input: UpdateNewsBodyCommandInput,
 ): Promise<UpdateNewsResult> {
+  assertAllowedManagedImageSourcesInJson("本文画像", input.contentJson);
   const existingNews = await ensureNewsExists(id);
 
   await prisma.news.update({
@@ -117,6 +142,7 @@ export async function updateNewsSettings(
   id: string,
   input: UpdateNewsSettingsCommandInput,
 ): Promise<UpdateNewsResult> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   const existingNews = await ensureNewsExists(id);
   await ensureNewsSlugAvailable(input.slug, id);
 
@@ -125,6 +151,8 @@ export async function updateNewsSettings(
     data: {
       slug: input.slug,
       title: input.title,
+      isPublished: input.isPublished,
+      publishedAt: resolveNewsPublishedAt(input.isPublished, input.publishedAt),
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
       metaDescription: normalizeNullableString(input.metaDescription),
@@ -183,6 +211,7 @@ export async function unpublishNews(id: string): Promise<DeleteNewsResult> {
     where: { id },
     data: {
       isPublished: false,
+      publishedAt: null,
     },
   });
 

@@ -45,6 +45,7 @@ type NavigationListProps = {
   onAdd: (type: NavigationType) => void;
   onEdit: (item: NavigationItemData) => void;
   onDelete: (id: string) => void;
+  onToggleActive: (id: string, isActive: boolean) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragMove: (event: DragMoveEvent) => void;
   onDragOver: (event: DragOverEvent) => void;
@@ -65,6 +66,7 @@ export function NavigationList({
   onAdd,
   onEdit,
   onDelete,
+  onToggleActive,
   onDragStart,
   onDragMove,
   onDragOver,
@@ -128,6 +130,7 @@ export function NavigationList({
                         item={item}
                         onEdit={onEdit}
                         onDelete={onDelete}
+                        onToggleActive={onToggleActive}
                         isPending={isPending}
                         depth={item.depth}
                         isDragTarget={item.id === activeItemId}
@@ -177,6 +180,9 @@ type SocialLinkListProps = {
   onAdd: () => void;
   onEdit: (link: Serialized<SocialLinkData>) => void;
   onDelete: (id: string) => void;
+  onToggleActive: (id: string, isActive: boolean) => void;
+  onToggleDesktop: (id: string, showOnDesktop: boolean) => void;
+  onToggleMobile: (id: string, showOnMobile: boolean) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
 };
@@ -189,6 +195,9 @@ export function SocialLinkList({
   onAdd,
   onEdit,
   onDelete,
+  onToggleActive,
+  onToggleDesktop,
+  onToggleMobile,
   onDragStart,
   onDragEnd,
 }: SocialLinkListProps) {
@@ -232,6 +241,9 @@ export function SocialLinkList({
                       link={link}
                       onEdit={onEdit}
                       onDelete={onDelete}
+                      onToggleActive={onToggleActive}
+                      onToggleDesktop={onToggleDesktop}
+                      onToggleMobile={onToggleMobile}
                       isPending={isPending}
                     />
                   ))}

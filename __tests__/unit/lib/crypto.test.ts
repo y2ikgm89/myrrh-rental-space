@@ -22,15 +22,8 @@ mock.module("@/shared/lib/env/encryption", () => ({
   getPrimaryEncryptionKey: mockGetPrimary,
 }));
 
-const {
-  encrypt,
-  decrypt,
-  isEncrypted,
-  safeEncrypt,
-  safeDecrypt,
-  encryptApiKey,
-  encryptStripeData,
-} = await import("@/shared/lib/crypto");
+const { encrypt, decrypt, isEncrypted, safeEncrypt, safeDecrypt } =
+  await import("@/shared/lib/crypto");
 
 describe("crypto", () => {
   describe("encrypt / decrypt (v2 wire format)", () => {
@@ -169,21 +162,15 @@ describe("crypto", () => {
     });
   });
 
-  describe("encryptApiKey / encryptStripeData", () => {
-    test("API キーを purpose='api-key' で暗号化", () => {
-      const apiKey = "sk_test_1234567890";
-      const encrypted = encryptApiKey(apiKey);
+  describe("purpose 変更後の後方互換性", () => {
+    test("異なる purpose で暗号化された既存データも decrypt で復号できる（decrypt は暗号文自身に埋め込まれた purpose を使い、呼び出し側が期待する purpose とは無関係に鍵導出するため）", () => {
+      const legacyEncrypted = encrypt("legacy-value", { purpose: "generic" });
+      const migratedEncrypted = encrypt("legacy-value", {
+        purpose: "stripe-secret-key",
+      });
 
-      expect(encrypted).toContain(":api-key:");
-      expect(decrypt(encrypted)).toBe(apiKey);
-    });
-
-    test("Stripe データを purpose='stripe' で暗号化", () => {
-      const stripeData = "acct_1234567890";
-      const encrypted = encryptStripeData(stripeData);
-
-      expect(encrypted).toContain(":stripe:");
-      expect(decrypt(encrypted)).toBe(stripeData);
+      expect(decrypt(legacyEncrypted)).toBe("legacy-value");
+      expect(decrypt(migratedEncrypted)).toBe("legacy-value");
     });
   });
 });

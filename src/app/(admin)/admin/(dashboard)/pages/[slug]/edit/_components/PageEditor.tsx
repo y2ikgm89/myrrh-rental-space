@@ -31,9 +31,15 @@ import {
 interface PageEditorProps {
   readonly page: PageForEdit;
   readonly dynamicOptions: DynamicSectionOptions;
+  /** OFF の feature module に属する section type（追加ダイアログの選択肢から除外する）。 */
+  readonly disabledSectionTypes: readonly string[];
 }
 
-export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
+export function PageEditor({
+  page,
+  dynamicOptions,
+  disabledSectionTypes,
+}: PageEditorProps) {
   const router = useRouter();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -62,17 +68,20 @@ export function PageEditor({ page, dynamicOptions }: PageEditorProps) {
   // - page-hero は既存にあれば除外
   // - PAGE_TEMPLATES[page.template].allowedSectionTypes でフィルタ
   // - template が未知の場合は全 type 許容（Page.template が unknown の fallback）
+  // - OFF の feature module に属する section type を除外（check.ts の disabledSectionTypes）
   const template = getPageTemplate(page.template);
   const allowedSet = template
     ? new Set<string>(template.allowedSectionTypes)
     : null;
   const requiredSet = new Set<string>(template?.requiredSectionTypes ?? []);
+  const disabledSet = new Set<string>(disabledSectionTypes);
   const hasPageHero = page.sections.some((s) => s.type === "page-hero");
   const availableTypes = getAllSectionDefinitions()
     .map((def) => def.type)
     .filter((type) => {
       if (type === "page-hero" && hasPageHero) return false;
       if (allowedSet && !allowedSet.has(type)) return false;
+      if (disabledSet.has(type)) return false;
       return true;
     });
 

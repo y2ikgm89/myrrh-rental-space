@@ -655,6 +655,7 @@ export const NOTIFICATION_TYPE = {
   INQUIRY_NEW: "inquiry_new",
   REVIEW_NEW: "review_new",
   EVENT_REGISTRATION: "event_registration",
+  EVENT_REGISTRATION_CANCEL: "event_registration_cancel",
   FAQ_STALE: "faq_stale",
 } as const;
 
@@ -678,6 +679,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "新規お問い合わせ",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "新規レビュー",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "イベント申込キャンセル",
   [NOTIFICATION_TYPE.FAQ_STALE]: "FAQ 鮮度チェック",
 };
 
@@ -698,6 +700,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "IconMail",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "IconStar",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "IconUsersGroup",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "IconX",
   [NOTIFICATION_TYPE.FAQ_STALE]: "IconQuestionMark",
 };
 
@@ -728,6 +731,7 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "default",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "default",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "destructive",
   [NOTIFICATION_TYPE.FAQ_STALE]: "warning",
 };
 

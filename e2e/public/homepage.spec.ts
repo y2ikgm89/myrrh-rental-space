@@ -2,6 +2,12 @@ import { test, expect, type Locator, type Page } from "@playwright/test";
 import { urls } from "../fixtures";
 
 const NAVIGATION_TIMEOUT_MS = 45_000;
+const appSurface = process.env["APP_SURFACE"] ?? "admin";
+
+test.skip(
+  appSurface !== "public",
+  "Public homepage root is served only on public surface.",
+);
 
 /**
  * 公開サイト - ホームページ E2E
@@ -15,7 +21,7 @@ const NAVIGATION_TIMEOUT_MS = 45_000;
  * - axe 違反 → `e2e/a11y/axe-public-pages.spec.ts`
  * - ビジュアル → `e2e/visual/public-pages.spec.ts`
  *
- * 規約 SSoT: `.claude/rules/test-quality/e2e.md`
+ * 規約 SSoT: `.claude/rules/testing-e2e.md`
  */
 
 // =============================================================================

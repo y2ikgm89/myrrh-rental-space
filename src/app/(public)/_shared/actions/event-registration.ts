@@ -3,7 +3,6 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
-import { z } from "zod";
 import {
   checkActionRateLimit,
   validateTurnstile,
@@ -19,9 +18,9 @@ import {
   createEventRegistrationCommand,
   cancelEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
+import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import {
   sendEventRegistrationConfirmation,
-  sendEventRegistrationCancelled,
   sendEventAdminNotification,
 } from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -42,6 +41,9 @@ import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { headers } from "next/headers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
+import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+
+const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 
 export async function registerForEvent(
   _prev: SubmissionResult | undefined,
@@ -139,6 +141,7 @@ export async function registerForEvent(
                 location: event.location ?? undefined,
                 quantity: result.registration.quantity,
                 icsSequence: result.registration.icsSequence,
+                customerId,
               }),
               sendEventAdminNotification(
                 {
@@ -169,7 +172,6 @@ export async function registerForEvent(
               NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
             message: `${result.registration.name}様が「${result.event.title}」に申し込みました`,
             resourceType: "event",
-            resourceId: result.registration.eventId,
           }),
           {
             operation: "createEventRegistrationNotification",
@@ -190,95 +192,55 @@ export async function registerForEvent(
 
 export async function cancelEventRegistration(
   registrationId: string,
+  turnstileToken?: string,
 ): Promise<MutationResult<null>> {
   // 1. Rate limit check
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
 
-  // 2. UUID validation
-  const idValidation = z
-    .uuid({ error: "申込IDが不正です" })
-    .safeParse(registrationId);
+  // 2. Turnstile 検証（予約のマイページキャンセルと同じく、認証済みでも bot 対策として要求）
+  const turnstile = await validateTurnstile({
+    token: turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.mypage_event_registration_cancel,
+  });
+  if (!turnstile.success) return createMutationError(turnstile.error);
+
+  // 3. cuid validation（EventRegistration.id は cuid、UUID ではない）
+  const idValidation = registrationIdSchema.safeParse(registrationId);
   if (!idValidation.success) return createMutationError("申込IDが不正です");
 
-  // 3. Require authenticated session
+  // 4. Require authenticated session
   const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
-  // 4. Require customer
+  // 5. Require customer
   const customer = await getCustomerByUserId(session.user.id);
   if (!customer) return createMutationError("顧客情報が見つかりません");
 
-  // 5. Cancel registration
+  // 6. Cancel registration（atomic claim + 統一副作用実行）
   try {
     const registration = await cancelEventRegistrationCommand(
       registrationId,
       customer.id,
     );
 
-    // 5. Invalidate cache
     invalidateEventCaches();
 
     // 顧客統計が変わる場合は CUSTOMERS も無効化
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.detail(customer.id));
 
-    // 6. Create admin notification (fire-and-forget)
-    fireAndForget(
-      createNotificationCommand({
-        type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
-        message: `${registration.name}様が「${registration.event.title}」の申込をキャンセルしました`,
-        resourceType: "event",
-        resourceId: registration.eventId,
-      }),
-      {
-        operation: "createEventCancellationNotification",
-        category: ErrorCategory.DATABASE,
-      },
-    );
+    // 副作用統一実行: メール / 通知 / 監査ログ
+    const requestHeaders = await headers();
+    const ip = await getClientIpFromHeaders();
+    const userAgent = requestHeaders.get("user-agent");
 
-    // 7. Send cancellation email (fire-and-forget)
-    fireAndForget(
-      (async () => {
-        const event = await getEventRegistrationDetailsForEmail(
-          registration.id,
-        );
-        if (!event) return;
-
-        await Promise.all([
-          sendEventRegistrationCancelled({
-            registrationId: registration.id,
-            customerName: registration.name,
-            customerEmail: registration.email,
-            eventTitle: registration.event.title,
-            eventStartTime: event.startTime,
-            eventEndTime: event.endTime,
-            location: event.location ?? undefined,
-            quantity: registration.quantity,
-            icsSequence: registration.icsSequence,
-          }),
-          sendEventAdminNotification(
-            {
-              registrationId: registration.id,
-              eventId: registration.eventId,
-              participantName: registration.name,
-              participantEmail: registration.email,
-              eventTitle: registration.event.title,
-              eventStartTime: event.startTime,
-              quantity: registration.quantity,
-              currentRegistrations: event.confirmedCount,
-              capacity: event.capacity,
-            },
-            "cancellation",
-          ),
-        ]);
-      })(),
-      {
-        operation: "sendEventCancellationEmails",
-        category: ErrorCategory.EXTERNAL_API,
-      },
-    );
+    await applyEventRegistrationCancellationSideEffects({
+      registrationId: registration.id,
+      channel: "customer-mypage",
+      actorUserId: session.user.id,
+      request: { ip, userAgent },
+    });
 
     return null;
   } catch (error) {

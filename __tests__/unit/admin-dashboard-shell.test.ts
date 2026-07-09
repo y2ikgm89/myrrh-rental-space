@@ -37,9 +37,9 @@ describe("admin dashboard shell", () => {
     expect(source).toContain("max-w-96");
   });
 
-  test("admin の window.open(_blank) は noreferrer を指定する", () => {
-    const adminRoot = join(root, "src/app/(admin)");
-    const violations = listFiles(adminRoot)
+  test("app route の window.open(_blank) は noreferrer を指定する", () => {
+    const appRoot = join(root, "src/app");
+    const violations = listFiles(appRoot)
       .filter((file) => /\.(ts|tsx)$/.test(file))
       .flatMap((file) => {
         const lines = readFileSync(file, "utf8").split(/\r?\n/);
@@ -50,6 +50,23 @@ describe("admin dashboard shell", () => {
             return [];
           }
           if (snippet.includes("noreferrer")) return [];
+          return [`${file}:${String(index + 1)}`];
+        });
+      });
+
+    expect(violations).toEqual([]);
+  });
+
+  test("app route の target=_blank は noreferrer / noopener を指定する", () => {
+    const appRoot = join(root, "src/app");
+    const violations = listFiles(appRoot)
+      .filter((file) => /\.(ts|tsx)$/.test(file))
+      .flatMap((file) => {
+        const lines = readFileSync(file, "utf8").split(/\r?\n/);
+        return lines.flatMap((line, index) => {
+          if (!line.includes('target="_blank"')) return [];
+          const snippet = lines.slice(index, index + 6).join(" ");
+          if (/rel="[^"]*(?:noreferrer|noopener)/u.test(snippet)) return [];
           return [`${file}:${String(index + 1)}`];
         });
       });

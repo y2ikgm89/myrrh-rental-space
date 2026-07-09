@@ -12,6 +12,9 @@ import {
 
 import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
+import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
@@ -72,9 +75,18 @@ export default async function SpaceDetailPage({
   const space = await getSpaceBySlug(slug);
   if (!space) notFound();
 
-  const reviewStats = space.reviewsEnabled
-    ? await getSpaceReviewStats(space.id)
-    : { averageRating: 0, totalCount: 0 };
+  const [reviewStats, deadlineSettings, cancellationPolicy] = await Promise.all(
+    [
+      space.reviewsEnabled
+        ? getSpaceReviewStats(space.id)
+        : Promise.resolve({ averageRating: 0, totalCount: 0 }),
+      getReservationDeadlineSettings(),
+      getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+    ],
+  );
+  const cancellationPolicyUrl = cancellationPolicy
+    ? `/terms/${cancellationPolicy.slug}`
+    : undefined;
   const baseUrl = getBaseUrl();
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
 
@@ -137,7 +149,11 @@ export default async function SpaceDetailPage({
           {/* Left column */}
           <div className="min-w-0 space-y-16">
             {/* Gallery: GalleryGrid が 0/1/2+ 件を内包処理。hero は先頭に仮想挿入 */}
-            <GalleryGrid items={space.gallery} hero={space.mainImageUrl} />
+            <GalleryGrid
+              items={space.gallery}
+              hero={space.mainImageUrl}
+              priorityFirstImage
+            />
 
             {/* Quick stats row (Airbnb / Vrbo pattern): gallery 直下 icon + label + value 4-col grid */}
             <section
@@ -227,6 +243,10 @@ export default async function SpaceDetailPage({
               spaceName={space.name}
               hourlyPrice={Number(space.hourlyPrice)}
               dailyPrice={space.dailyPrice ? Number(space.dailyPrice) : null}
+              cancellationDeadlineHours={
+                deadlineSettings.cancellationDeadlineHours
+              }
+              cancellationPolicyUrl={cancellationPolicyUrl}
             />
           </aside>
         </div>

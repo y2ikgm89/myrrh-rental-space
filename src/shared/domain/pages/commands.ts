@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowedManagedImageUrl } from "@/shared/domain/media/managed-image-assertions";
 import { toPlainObject } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
@@ -258,6 +259,7 @@ export async function updatePageSeoCommand(
   slug: string,
   input: UpdatePageSeoInput,
 ): Promise<void> {
+  assertAllowedManagedImageUrl("OGP画像", input.ogpImageUrl);
   await ensurePageExists(slug);
 
   // title は schema で `min(1)` 必須のため直接保存（旧 `|| definition?.title || input.title`

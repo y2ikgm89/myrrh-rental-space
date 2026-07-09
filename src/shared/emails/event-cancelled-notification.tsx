@@ -1,4 +1,4 @@
-import { Hr, Section, Text } from "@react-email/components";
+import { Hr, Link, Section, Text } from "@react-email/components";
 import { eventCancelledNotificationFixture } from "./event-cancelled-notification.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -18,6 +18,8 @@ type Props = {
   eventDate: string;
   /** 中止の理由（管理者が任意で記入。空文字または undefined なら本文非表示） */
   reason?: string;
+  /** 会員向け: ログイン後のマイページ申込一覧 URL */
+  memberEventRegistrationUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -26,6 +28,7 @@ export function EventCancelledNotificationEmail({
   eventTitle,
   eventDate,
   reason,
+  memberEventRegistrationUrl,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -71,11 +74,21 @@ export function EventCancelledNotificationEmail({
         )}
       </Section>
 
+      {memberEventRegistrationUrl && (
+        <Text style={text}>
+          <Link
+            href={memberEventRegistrationUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            マイページで申込を確認する
+          </Link>
+        </Text>
+      )}
+
       <Hr style={hr} />
 
       <Text style={text}>
-        お支払い済みの参加費がある場合は、キャンセルポリシーに従い払い戻しの
-        ご案内をいたします。お手続きの詳細につきましては、別途ご連絡いたします。
+        お支払い済みの参加費がある場合は、払い戻しについて別途ご案内いたします。
       </Text>
 
       <Text style={text}>

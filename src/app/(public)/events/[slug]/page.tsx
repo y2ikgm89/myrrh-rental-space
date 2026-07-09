@@ -23,6 +23,7 @@ import {
   formatEventVenue,
 } from "@/shared/domain/events/venue";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
+import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
@@ -98,11 +99,13 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  const [slotInventory, turnstileSiteKey, requiredTerms] = await Promise.all([
-    getSlotRegistrationCounts(event.id),
-    getTurnstileSiteKey(),
-    getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
-  ]);
+  const [slotInventory, turnstileSiteKey, requiredTerms, user] =
+    await Promise.all([
+      getSlotRegistrationCounts(event.id),
+      getTurnstileSiteKey(),
+      getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
+      getCurrentCustomerUser(),
+    ]);
 
   const slotOptions = buildCurrentPublicEventSlotOptions({
     slots: slotInventory,
@@ -240,7 +243,6 @@ export default async function EventDetailPage({
                   fill
                   sizes="(min-width: 1024px) 60vw, 100vw"
                   rounded
-                  preload
                   loading="eager"
                   fetchPriority="high"
                 />
@@ -291,6 +293,8 @@ export default async function EventDetailPage({
                   slug: t.slug,
                   title: t.title,
                 }))}
+                isLoggedIn={user != null}
+                slug={slug}
               />
             ) : registration.kind === "full" ? (
               <EventStatusNotice

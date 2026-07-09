@@ -95,6 +95,8 @@ export async function replyToReview(
               originalTitle: replyResult.emailContext.title,
               originalComment: replyResult.emailContext.comment,
               replyBody: replyResult.emailContext.replyBody,
+              reservationId: replyResult.emailContext.reservationId,
+              customerUserId: replyResult.emailContext.customerUserId,
             }),
             {
               operation: "sendReviewReplyEmail",

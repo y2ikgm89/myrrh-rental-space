@@ -33,6 +33,7 @@ import {
  * placeholder ガイダンスで「どこで何を入力するか」の発見性を担保する。
  *
  * 型は `@/shared/domain/events/ticket-types` の `EventTicketInput` SSoT を共有する。
+ * 永続化順はこの配列順から server/domain が再採番する。
  */
 type TicketsFieldProps = {
   tickets: readonly EventTicketInput[];
@@ -41,7 +42,7 @@ type TicketsFieldProps = {
   isPending: boolean;
 };
 
-type PresetTicket = Omit<EventTicketInput, "sortOrder">;
+type PresetTicket = Omit<EventTicketInput, "id" | "_key">;
 type Preset = {
   readonly id: string;
   readonly label: string;
@@ -187,14 +188,12 @@ export function TicketsField({
   }
 
   function removeTicket(index: number): void {
-    const next = tickets
-      .filter((_, i) => i !== index)
-      .map((t, i) => ({ ...t, sortOrder: i }));
+    const next = tickets.filter((_, i) => i !== index);
     onChange(next);
   }
 
   function addTicket(): void {
-    onChange([...tickets, createDefaultTicket(tickets.length)]);
+    onChange([...tickets, createDefaultTicket()]);
   }
 
   function moveTicket(index: number, direction: -1 | 1): void {
@@ -206,7 +205,7 @@ export function TicketsField({
     if (!a || !b) return;
     next[index] = b;
     next[target] = a;
-    onChange(next.map((t, i) => ({ ...t, sortOrder: i })));
+    onChange(next);
   }
 
   function applyPreset(preset: Preset): void {
@@ -216,10 +215,8 @@ export function TicketsField({
       tickets[0]?.name === "" &&
       tickets[0]?.price === 0;
     const baseTickets = isEmptyDraft ? [] : tickets;
-    const offset = baseTickets.length;
-    const additions: EventTicketInput[] = preset.items.map((item, i) => ({
+    const additions: EventTicketInput[] = preset.items.map((item) => ({
       ...item,
-      sortOrder: offset + i,
     }));
     onChange([...baseTickets, ...additions]);
   }

@@ -14,7 +14,7 @@
  * - 全 factory は `build(overrides?)` method（部分上書き可）
  * - 一意性が要るフィールドは generator 関数で動的生成
  *
- * 規約 SSoT: `.claude/rules/test-quality/e2e.md`
+ * 規約 SSoT: `.claude/rules/testing-e2e.md`
  */
 
 // ---------------------------------------------------------------------------

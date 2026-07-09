@@ -110,6 +110,31 @@ export async function getEventCheckInAttendees(eventId: string) {
   };
 }
 
+/**
+ * ゲストキャンセルページ向けに申込を取得する。
+ *
+ * `customerId` フィルタを掛けない（トークン検証側でアクセス権を担保する。
+ * `reservations/customer-queries.ts` の `getReservationForGuestCancel` と同型）。
+ * `customerId` は member-ownership ガード（ログイン中ユーザーが別人の申込を
+ * キャンセルしようとしていないかの突合）のために呼び出し側へ返す。
+ */
+export async function getEventRegistrationForGuestCancel(
+  registrationId: string,
+) {
+  return prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
+    select: {
+      id: true,
+      customerId: true,
+      status: true,
+      quantity: true,
+      name: true,
+      event: { select: { title: true } },
+      slot: { select: { startAt: true, endAt: true } },
+    },
+  });
+}
+
 export async function getEventRegistrationDetailsForEmail(
   registrationId: string,
 ): Promise<{
@@ -161,6 +186,33 @@ export async function getEventRegistrationDetailsForEmail(
     }),
     capacity: registration.slot.capacity,
     confirmedCount: confirmed._sum.quantity ?? 0,
+  };
+}
+
+/**
+ * `/claim/event-registration` の要約表示用の軽量クエリ。
+ *
+ * `getEventRegistrationDetailsForEmail` は `{startTime, endTime, location,
+ * capacity, confirmedCount}` のみを返し `event.title` を含まないため、
+ * claim ページ用に専用のクエリを設ける（イベント名表示が必須のため）。
+ */
+export async function getEventRegistrationForClaim(
+  registrationId: string,
+): Promise<{
+  readonly eventTitle: string;
+  readonly startTime: Date;
+} | null> {
+  const registration = await prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
+    select: {
+      slot: { select: { startAt: true } },
+      event: { select: { title: true } },
+    },
+  });
+  if (!registration) return null;
+  return {
+    eventTitle: registration.event.title,
+    startTime: registration.slot.startAt,
   };
 }
 
@@ -289,6 +341,47 @@ export async function getCustomerEventRegistrations(
  * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
  *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
  */
+/**
+ * イベント前日リマインダー cron 用: 指定日時窓内の CONFIRMED 申込を取得。
+ *
+ * `reminderSentAt: null` でリマインダー未送信のみに絞る（冪等性の第一段 dedup）。
+ * 二重送信レースは送信前の atomic claim（claimEventRegistrationReminder）で防ぐ。
+ * walk-in（email=null）は宛先が無いため除外する。
+ */
+export async function findEventRegistrationsForReminderWindow(
+  startOfWindow: Date,
+  endOfWindow: Date,
+) {
+  return prisma.eventRegistration.findMany({
+    where: {
+      status: RegistrationStatus.CONFIRMED,
+      reminderSentAt: null,
+      email: { not: null },
+      event: { deletedAt: null },
+      slot: { startAt: { gte: startOfWindow, lte: endOfWindow } },
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      quantity: true,
+      icsSequence: true,
+      customerId: true,
+      slot: {
+        select: { startAt: true, endAt: true },
+      },
+      event: {
+        select: {
+          title: true,
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
+        },
+      },
+    },
+  });
+}
+
 export async function getEventRegistrationForCalendar(params: {
   registrationId: string;
   customerId?: string | undefined;

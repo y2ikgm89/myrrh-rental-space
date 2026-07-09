@@ -292,7 +292,6 @@ describe("production deploy workflow", () => {
     for (const step of [deployPublicStep, deployAdminStep]) {
       expect(step).toContain("--set-env-vars=");
       expect(step).toContain("--set-secrets=");
-      expect(step).toContain("--ingress=all");
       expect(step).not.toContain("--remove-env-vars=");
       expect(step).not.toContain("--update-env-vars=");
       expect(step).not.toContain("--remove-secrets=");
@@ -300,6 +299,12 @@ describe("production deploy workflow", () => {
       expect(step).not.toContain("CRON_SECRET=CRON_SECRET");
       expect(step).not.toContain("ADMIN_LOGIN_TOKEN=ADMIN_LOGIN_TOKEN");
     }
+    expect(deployPublicStep).toContain("--ingress=all");
+    expect(deployPublicStep).not.toContain("--no-default-url");
+    expect(deployAdminStep).toContain(
+      "--ingress=internal-and-cloud-load-balancing",
+    );
+    expect(deployAdminStep).toContain("--no-default-url");
   });
 
   test("reapplies the Cloud Run migrate Job service account during deploys", () => {
@@ -329,5 +334,73 @@ describe("production deploy workflow", () => {
     expect(runbook).toContain(
       "Cloud Run migrate Job execution config is canonical",
     );
+  });
+
+  test("quiesces Cloud Run services before breaking migrations can run", () => {
+    expect(workflow).toContain('BREAKING_MIGRATION_DEPLOY="false"');
+    expect(workflow).toContain("prisma/migrations/**/migration.sql");
+    expect(workflow).toContain("RENAME[[:space:]]+COLUMN");
+    expect(workflow).toContain("DROP[[:space:]]+COLUMN");
+    expect(workflow).toContain(
+      "_BREAKING_MIGRATION_DEPLOY=${BREAKING_MIGRATION_DEPLOY}",
+    );
+
+    expect(cloudBuildConfig).toContain('_BREAKING_MIGRATION_DEPLOY: "false"');
+    expect(cloudBuildConfig).toContain(
+      '_BREAKING_MIGRATION_DRAIN_SECONDS: "310"',
+    );
+
+    const migrateUpdateIndex = cloudBuildConfig.indexOf("id: migrate-update");
+    const disablePublicIndex = cloudBuildConfig.indexOf(
+      "id: disable-public-for-breaking-migration",
+    );
+    const disableAdminIndex = cloudBuildConfig.indexOf(
+      "id: disable-admin-for-breaking-migration",
+    );
+    const drainIndex = cloudBuildConfig.indexOf(
+      "id: wait-for-breaking-migration-drain",
+    );
+    const migrateExecuteIndex = cloudBuildConfig.indexOf("id: migrate-execute");
+    const deployPublicIndex = cloudBuildConfig.indexOf("id: deploy-public");
+    const deployAdminIndex = cloudBuildConfig.indexOf("id: deploy-admin");
+
+    expect(migrateUpdateIndex).toBeGreaterThanOrEqual(0);
+    expect(disablePublicIndex).toBeGreaterThan(migrateUpdateIndex);
+    expect(disableAdminIndex).toBeGreaterThan(migrateUpdateIndex);
+    expect(drainIndex).toBeGreaterThan(disablePublicIndex);
+    expect(drainIndex).toBeGreaterThan(disableAdminIndex);
+    expect(migrateExecuteIndex).toBeGreaterThan(drainIndex);
+    expect(deployPublicIndex).toBeGreaterThan(migrateExecuteIndex);
+    expect(deployAdminIndex).toBeGreaterThan(migrateExecuteIndex);
+
+    const disablePublicStep = cloudBuildConfig.slice(
+      disablePublicIndex,
+      disableAdminIndex,
+    );
+    const disableAdminStep = cloudBuildConfig.slice(
+      disableAdminIndex,
+      drainIndex,
+    );
+    const drainStep = cloudBuildConfig.slice(drainIndex, migrateExecuteIndex);
+    const deployPublicStep = cloudBuildConfig.slice(
+      deployPublicIndex,
+      deployAdminIndex,
+    );
+    const deployAdminStep = cloudBuildConfig.slice(deployAdminIndex);
+
+    expect(disablePublicStep).toContain("${_BREAKING_MIGRATION_DEPLOY}");
+    expect(disablePublicStep).toContain("${_SERVICE_NAME}");
+    expect(disablePublicStep).toContain("--scaling=0");
+    expect(disableAdminStep).toContain("${_BREAKING_MIGRATION_DEPLOY}");
+    expect(disableAdminStep).toContain("${_ADMIN_SERVICE_NAME}");
+    expect(disableAdminStep).toContain("--scaling=0");
+    expect(drainStep).toContain("${_BREAKING_MIGRATION_DRAIN_SECONDS}");
+    expect(drainStep).toContain("sleep");
+    expect(deployPublicStep).toContain("--scaling=auto");
+    expect(deployAdminStep).toContain("--scaling=auto");
+
+    expect(runbook).toContain("breaking migration deploy mode");
+    expect(runbook).toContain("_BREAKING_MIGRATION_DEPLOY=true");
+    expect(runbook).toContain("gcloud run services update SERVICE --scaling=0");
   });
 });

@@ -23,14 +23,19 @@ const reactCompilerRestrictedImports = [
   },
 ];
 
+// `@/shared/lib/prisma` は既に削除済みの legacy shim（現在このパスに実体はない）。
+// 再導入を防ぐための forward-guard として残す。
 const legacyPrismaRestrictedImport = {
   name: "@/shared/lib/prisma",
   message:
     "Prisma は '@/shared/db' または '@/shared/db/prisma' を使ってください。",
 };
 
-// db barrel `@/shared/db` は db 層（src/shared/db/**）の外から import 禁止。
-// 利用側は `@/shared/db/prisma` を直接 import する（db-and-domain.md）。
+// db barrel `@/shared/db`（現在 index.ts は存在しない）は db 層（src/shared/db/**）の
+// 外から import 禁止。利用側は `@/shared/db/prisma` を直接 import する。
+// このバレル import 禁止自体は ESLint 固有の予防ガードであり、.claude/rules/db-domain.md
+// が説明するのは別の制約（architecture-boundaries.test.ts の placement-gate
+// ALLOWLIST による prisma.<model>.<method> 呼出し可能箇所の制限）。
 const dbBarrelRestrictedImport = {
   name: "@/shared/db",
   message:
@@ -288,7 +293,7 @@ const eslintConfig = defineConfig([
   },
 
   // E2E 規約 (Playwright 公式の DISCOURAGED パターンを機械ブロック)
-  // SSoT: .claude/rules/test-quality/e2e.md
+  // SSoT: .claude/rules/testing-e2e.md
   // - waitForTimeout: 公式 "discouraged for production use ... inherently flaky"
   // - waitForLoadState("networkidle"): 公式 "DISCOURAGED. Don't use for testing,
   //   rely on web assertions to assess readiness instead."
@@ -303,18 +308,18 @@ const eslintConfig = defineConfig([
         {
           selector: "CallExpression[callee.property.name='waitForTimeout']",
           message:
-            "page.waitForTimeout は Playwright 公式で discouraged (flaky)。expect(locator).toBeVisible() 等の web-first assertion を使ってください。SSoT: .claude/rules/test-quality/e2e.md",
+            "page.waitForTimeout は Playwright 公式で discouraged (flaky)。expect(locator).toBeVisible() 等の web-first assertion を使ってください。SSoT: .claude/rules/testing-e2e.md",
         },
         {
           selector:
             "CallExpression[callee.property.name='waitForLoadState'] > Literal[value='networkidle']",
           message:
-            "waitForLoadState('networkidle') は Playwright 公式で DISCOURAGED。web assertion (expect(locator).toBeVisible() / expect(page).toHaveURL() 等) で readiness を待ってください。SSoT: .claude/rules/test-quality/e2e.md",
+            "waitForLoadState('networkidle') は Playwright 公式で DISCOURAGED。web assertion (expect(locator).toBeVisible() / expect(page).toHaveURL() 等) で readiness を待ってください。SSoT: .claude/rules/testing-e2e.md",
         },
         {
           selector: "CallExpression[callee.property.name='waitForURL']",
           message:
-            "page.waitForURL は App Router の soft navigation で silent timeout する。expect(page).toHaveURL() に置換してください。SSoT: .claude/rules/test-quality/e2e.md",
+            "page.waitForURL は App Router の soft navigation で silent timeout する。expect(page).toHaveURL() に置換してください。SSoT: .claude/rules/testing-e2e.md",
         },
         {
           // `if ((await x.count()) > 0) { ... }` 条件アサーション禁止。
@@ -323,7 +328,7 @@ const eslintConfig = defineConfig([
           selector:
             "IfStatement[test.type='BinaryExpression'][test.operator='>'][test.right.value=0] AwaitExpression > CallExpression[callee.property.name='count']",
           message:
-            "if ((await x.count()) > 0) は silent-pass の false coverage を生む。seed-guaranteed なら無条件 assert、optional UI なら test ごと削除してください。SSoT: .claude/rules/test-quality/e2e.md",
+            "if ((await x.count()) > 0) は silent-pass の false coverage を生む。seed-guaranteed なら無条件 assert、optional UI なら test ごと削除してください。SSoT: .claude/rules/testing-e2e.md",
         },
       ],
     },
@@ -362,7 +367,6 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "generated/**",
     "__tests__/**",
-    ".worktrees/**",
     // .claude は設定・スキル・git worktree 置き場で lint 対象外。worktree 内に
     // 別 tsconfig が同梱されると `eslint .` 時に typescript-eslint が
     // tsconfigRootDir を一意に決められず全ファイル parse error になるため必須。

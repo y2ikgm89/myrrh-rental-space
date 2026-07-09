@@ -248,7 +248,6 @@ describe("updateReservationFormSchema", () => {
     endTime: "12:00",
     customerId: "123e4567-e89b-12d3-a456-426614174001",
     status: ReservationStatus.CONFIRMED,
-    sendNotificationEmail: false,
   };
 
   describe("正常系", () => {

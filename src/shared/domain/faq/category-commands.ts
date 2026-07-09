@@ -3,6 +3,10 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import {
+  buildOrderScopeLockSql,
+  buildUuidOrderSqlFragments,
+} from "@/shared/domain/order-sql";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type {
   CreateFaqCategoryResult,
@@ -56,22 +60,26 @@ export async function createFaqCategory(
 ): Promise<CreateFaqCategoryResult> {
   await ensureFaqCategoryUnique(input.slug);
 
-  const maxOrder = await prisma.faqCategory.aggregate({
-    where: { deletedAt: null },
-    _max: { order: true },
-  });
+  const category = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("faq_categories:active"));
 
-  const category = await prisma.faqCategory.create({
-    data: {
-      name: input.name,
-      slug: input.slug,
-      description: normalizeNullableString(input.description),
-      icon: normalizeNullableString(input.icon),
-      // 並び順は末尾に自動採番。手動指定は廃止（並び替えは D&D の reorderFaqCategories が SSoT）
-      order: (maxOrder._max.order ?? 0) + 1,
-      isActive: input.isActive,
-    },
-    select: { id: true },
+    const maxOrder = await tx.faqCategory.aggregate({
+      where: { deletedAt: null },
+      _max: { order: true },
+    });
+
+    return tx.faqCategory.create({
+      data: {
+        name: input.name,
+        slug: input.slug,
+        description: normalizeNullableString(input.description),
+        icon: normalizeNullableString(input.icon),
+        // 並び順は末尾に自動採番。手動指定は廃止（並び替えは D&D の reorderFaqCategories が SSoT）
+        order: (maxOrder._max.order ?? -1) + 1,
+        isActive: input.isActive,
+      },
+      select: { id: true },
+    });
   });
 
   return category;
@@ -96,6 +104,19 @@ export async function updateFaqCategory(
       icon: normalizeNullableString(input.icon),
       isActive: input.isActive,
     },
+  });
+}
+
+export async function updateFaqCategoryActive(
+  id: string,
+  isActive: boolean,
+): Promise<{ id: string; isActive: boolean }> {
+  await ensureFaqCategoryExists(id);
+
+  return prisma.faqCategory.update({
+    where: { id, deletedAt: null },
+    data: { isActive },
+    select: { id: true, isActive: true },
   });
 }
 
@@ -160,9 +181,21 @@ export async function restoreFaqCategory(id: string): Promise<void> {
     );
   }
 
-  await prisma.faqCategory.update({
-    where: { id },
-    data: { deletedAt: null },
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("faq_categories:active"));
+
+    const maxOrder = await tx.faqCategory.aggregate({
+      where: { deletedAt: null },
+      _max: { order: true },
+    });
+
+    await tx.faqCategory.update({
+      where: { id },
+      data: {
+        deletedAt: null,
+        order: (maxOrder._max.order ?? -1) + 1,
+      },
+    });
   });
 }
 
@@ -196,19 +229,47 @@ export async function reorderFaqCategories(
     return;
   }
 
-  // 単一 SQL の CASE WHEN で order を一括更新（N 回 UPDATE 廃止）。
-  // 対象 id × deletedAt IS NULL は WHERE 句で絞り、ソフトデリート済カテゴリは除外する。
-  const cases: Prisma.Sql[] = [];
-  const ids: Prisma.Sql[] = [];
-  for (const [index, id] of orderedIds.entries()) {
-    cases.push(Prisma.sql`WHEN ${id}::uuid THEN ${index}`);
-    ids.push(Prisma.sql`${id}::uuid`);
+  if (new Set(orderedIds).size !== orderedIds.length) {
+    throw new DomainError("同じIDを複数指定することはできません", "VALIDATION");
   }
 
-  await prisma.$executeRaw`
-    UPDATE "faq_categories"
-    SET "order" = CASE "id" ${Prisma.join(cases, " ")} END
-    WHERE "id" IN (${Prisma.join(ids)})
-      AND "deletedAt" IS NULL
-  `;
+  const existing = await prisma.faqCategory.findMany({
+    where: { deletedAt: null },
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((category) => category.id));
+
+  for (const id of orderedIds) {
+    if (!existingIds.has(id)) {
+      throw new DomainError("カテゴリが見つかりません", "NOT_FOUND");
+    }
+  }
+
+  if (existing.length !== orderedIds.length) {
+    throw new DomainError("カテゴリ数が一致しません（過不足）", "VALIDATION");
+  }
+
+  const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(
+    orderedIds,
+    (id) => id,
+    (_id, index) => index,
+  );
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql("faq_categories:active"));
+
+    await tx.$executeRaw`
+      UPDATE "faq_categories"
+      SET "order" = CASE "id" ${Prisma.join(tempCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+        AND "deletedAt" IS NULL
+    `;
+
+    await tx.$executeRaw`
+      UPDATE "faq_categories"
+      SET "order" = CASE "id" ${Prisma.join(finalCases, " ")} END
+      WHERE "id" IN (${Prisma.join(ids)})
+        AND "deletedAt" IS NULL
+    `;
+  });
 }

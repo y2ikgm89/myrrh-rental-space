@@ -27,6 +27,7 @@ export default function robots(): MetadataRoute.Robots {
           "/mypage/",
           "/reservation/complete",
           "/reservation/cancel",
+          "/events/cancel",
           "/login",
           "/preview/",
           "/_next/data/",

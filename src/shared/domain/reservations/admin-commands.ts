@@ -20,6 +20,7 @@ import {
   calculatePricing,
   buildPayload,
 } from "./payloads";
+import { lockReservationSpaceForTransaction } from "./locks";
 
 const SPACE_SELECT = {
   id: true,
@@ -114,6 +115,8 @@ export async function createAdminReservationCommand(input: {
   const calculatedPrice = input.totalPrice ?? pricing.totalPrice;
 
   const reservation = await prisma.$transaction(async (tx) => {
+    await lockReservationSpaceForTransaction(tx, input.spaceId);
+
     await ensureNoOverlap(
       {
         spaceId: input.spaceId,
@@ -221,6 +224,10 @@ export async function updateAdminReservationCommand(
       select: {
         id: true,
         status: true,
+        spaceId: true,
+        startTime: true,
+        endTime: true,
+        totalPrice: true,
         couponId: true,
         googleCalendarEventId: true,
         customer: { select: CUSTOMER_SELECT },
@@ -238,6 +245,19 @@ export async function updateAdminReservationCommand(
   }
   if (!space) {
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
+  }
+
+  // CANCELLED/COMPLETED/NO_SHOW への遷移は返金・キャンセルメール等の副作用チェーン
+  // （applyCancellationSideEffects 等）を経由しないため、この編集フォームからは許可しない。
+  // 終端ステータスへの変更は予約詳細画面の専用ステータス変更経路から行う。
+  if (
+    input.status !== currentReservation.status &&
+    !CREATABLE_RESERVATION_STATUSES.includes(input.status)
+  ) {
+    throw new DomainError(
+      "このステータスへの変更は予約詳細画面のステータス変更から行ってください",
+      "VALIDATION",
+    );
   }
 
   validateStatusTransition(currentReservation.status, input.status);
@@ -269,9 +289,18 @@ export async function updateAdminReservationCommand(
   const oldCouponId = currentReservation.couponId;
   const couponChanged = oldCouponId !== newCouponId;
 
+  // 顧客に影響する変更があった場合のみ、呼び出し側が変更通知メールを送る判断材料にする。
+  const customerVisibleChanged =
+    currentReservation.spaceId !== input.spaceId ||
+    currentReservation.startTime.getTime() !== startDateTime.getTime() ||
+    currentReservation.endTime.getTime() !== endDateTime.getTime() ||
+    currentReservation.totalPrice !== calculatedPrice;
+
   let updatedIcsSequence = 0;
 
   await prisma.$transaction(async (tx) => {
+    await lockReservationSpaceForTransaction(tx, input.spaceId);
+
     await ensureNoOverlap(
       {
         spaceId: input.spaceId,
@@ -322,6 +351,7 @@ export async function updateAdminReservationCommand(
   return {
     googleCalendarEventId: currentReservation.googleCalendarEventId,
     customerId: input.customerId,
+    customerVisibleChanged,
     payload: buildPayload({
       reservationId: id,
       customer: currentReservation.customer,

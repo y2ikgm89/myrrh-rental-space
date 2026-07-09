@@ -56,7 +56,7 @@ const termsScopesField = z.preprocess(
  * "on" / boolean true を boolean に変換する。`scopes` は multi-checkbox の
  * 重複入力を許容しつつ enum 値のみに narrow する。
  */
-export const termsSettingsFormSchema = z.object({
+export const termsSettingsFormSchema = z.strictObject({
   type: z
     .string()
     .min(1, { error: "タイプを入力してください" })

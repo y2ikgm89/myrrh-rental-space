@@ -5,8 +5,6 @@
  * 15種のスタイルプリセット + AccentColor 10色
  */
 
-"use client";
-
 import type {
   DOMConversionMap,
   DOMConversionOutput,

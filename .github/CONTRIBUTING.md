@@ -17,9 +17,14 @@
 # 依存インストール（postinstall で prisma generate も実行）
 bun install
 
+# ローカル PostgreSQL（開発 DB + 実 DB 統合テスト専用 DB）
+docker compose up -d db test-db
+
 # .env.local を作成（.env.example があれば参照）
 cp .env.example .env.local
-# 必要な env var を設定: DATABASE_URL, BETTER_AUTH_SECRET, ENCRYPTION_KEY, etc.
+# 必要な env var を設定:
+# DATABASE_URL は開発 DB、TEST_DATABASE_URL は test-db に向ける
+# BETTER_AUTH_SECRET, ENCRYPTION_KEY, etc. も必要に応じて設定
 
 # DB マイグレーション適用 + seed
 bunx --bun prisma migrate dev
@@ -110,6 +115,11 @@ bun run validate && bun run build
 ```bash
 # 単体 + 統合（per-file isolation runner）
 bun run test:all
+
+# 実 DB 必須の統合テストは TEST_DATABASE_URL が必須。
+# test:integration / test:all は test-db に migrate deploy を適用してから実行する
+bun run test:db:migrate
+bun run test:integration
 
 # 特定ファイルのみ（日常開発はこれで十分）
 bun test __tests__/unit/domain/reservations/commands.test.ts

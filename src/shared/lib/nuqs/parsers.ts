@@ -660,7 +660,7 @@ export const adminSpaceSearchParamsParsers = {
   spLocationId: parseAsString.withDefault(""),
   spCategoryId: parseAsString.withDefault(""),
   locSearch: parseAsQuery,
-  locPublished: parseAsString.withDefault(""),
+  locStatus: parseAsString.withDefault(""),
   locPage: parseAsPage,
   locPerPage: parseAsPerPage,
   catSearch: parseAsQuery,
