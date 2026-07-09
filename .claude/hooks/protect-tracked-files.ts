@@ -6,23 +6,27 @@
  * 「コミット時」ではなく「編集しようとした瞬間」に前倒しで強制する:
  *   - 既存の prisma/migrations/<id>/migration.sql の改変 → 絶対規約 #7 でハード禁止
  *     （新規 migration の追加は許可 — ファイルが存在しない = 新規追加）
- *   - .env* の編集（.example/.sample を除く）→ CLAUDE.md 停止例外。ask にして
- *     ユーザー確認を必須化する
+ *   - .env* の編集（.example/.sample を除く）→ CLAUDE.md 停止例外。deny にする
  *
  * commit 時点まで待たずにここで止めることで、「編集→テスト→commit で初めて
  * lefthook に弾かれる」という手戻りを防ぐ。
+ *
+ * 全判定 deny（ask は不採用）: 実地検証の結果、PreToolUse hook の
+ * permissionDecision: "ask" は permission_mode: "bypassPermissions" 下では
+ * 確認プロンプトを出さず無視されることを確認した
+ * （block-destructive-commands.ts のコメント参照）。
  */
 
 type HookInput = {
   tool_input?: { file_path?: string };
 };
 
-function decide(permissionDecision: "deny" | "ask", reason: string): never {
+function deny(reason: string): never {
   console.log(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
-        permissionDecision,
+        permissionDecision: "deny",
         permissionDecisionReason: reason,
       },
     }),
@@ -47,8 +51,7 @@ const normalized = filePath.replace(/\\/g, "/");
 if (/\/prisma\/migrations\/[^/]+\/migration\.sql$/i.test(normalized)) {
   const exists = await Bun.file(filePath).exists();
   if (exists) {
-    decide(
-      "deny",
+    deny(
       "CLAUDE.md 絶対規約 #7: 既存の prisma/migrations/<id>/migration.sql は編集禁止です。schema.prisma を変更し `bun run db:migrate --name <name>` で新規 migration を生成してください。",
     );
   }
@@ -59,9 +62,8 @@ const basename = normalized.split("/").pop() ?? "";
 const envMatch = /^\.env(\.[^.]+)?$/.test(basename);
 const isExampleOrSample = /\.(example|sample)$/.test(basename);
 if (envMatch && !isExampleOrSample) {
-  decide(
-    "ask",
-    "CLAUDE.md 停止例外: .env* の編集(秘密値・新規 env 変数)はユーザー確認が必要です。",
+  deny(
+    "CLAUDE.md 停止例外: .env* の編集(秘密値・新規 env 変数)は agent 経由では実行できません。ユーザー自身が編集するか、明示的な許可を得てください。",
   );
 }
 

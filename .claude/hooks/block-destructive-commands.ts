@@ -9,36 +9,29 @@
  * いた通り、モデルが自己判断で従うことだけが防波堤だった。このスクリプトは
  * その一部を機械的に強制する。
  *
- * 設計:
- *   - hook バイパス機構（--no-verify / LEFTHOOK=0 / --no-gpg-sign 等）は
- *     ask にする（deny にしない）。理由: ユーザーの global CLAUDE.md の
- *     Git Safety Protocol は "NEVER skip hooks ... unless the user
- *     explicitly requests it" — ユーザーが明示的に要求した場合は許容される
- *     余地があり、PreToolUse hook は「その turn がユーザーの明示指示に
- *     基づくか」を判別できない。deny で一律ブロックすると正当なユーザー
- *     指示まで機械的に潰してしまうため、実際の許可ダイアログ(ask)で
- *     ユーザー自身に判断させる。
- *   - main/master への force push のみ deny を維持する。
- *     CLAUDE.md の Git Safety Protocol は "NEVER force push to main/master"
- *     と例外なく禁止しており、ask による中断より、そもそも agent 経由では
- *     実行させない方が既存ポリシーに忠実（必要ならユーザーがターミナルで
- *     直接実行すればよい）。
- *   - 「破壊的だが正当な場面もある」操作（reset --hard, clean -f, branch -D,
- *     migrate reset, db push/pull）は ask にして、実際の許可ダイアログで
- *     ユーザーに確認させる（CLAUDE.md の「該当すれば停止」＝ユーザー確認、を
- *     そのまま permission prompt にマッピング）。
+ * 設計（全判定 deny。ask は不採用）:
+ *   実地検証の結果、PreToolUse hook の permissionDecision: "ask" は
+ *   permission_mode: "bypassPermissions"（--dangerously-skip-permissions 等）
+ *   下では実際には確認プロンプトを出さず無視される（公式ドキュメント
+ *   code.claude.com/docs/en/hooks-guide の "Hooks and permission modes" 節が
+ *   明記するのは deny のみで、ask には一切言及がない）。使い捨てリポジトリで
+ *   実際に git reset --hard をこのモード下で実行し、確認なしに即実行される
+ *   ことを確認済み。deny は bypassPermissions でも確実にツール呼び出し自体を
+ *   阻止し、reason 文言でモデルに再検討・ユーザー確認を促す
+ *   （enforce-git-timeout.ts と同じパターン）。ユーザーが本当に必要な場合は
+ *   ターミナルで直接実行すればよい。
  */
 
 type HookInput = {
   tool_input?: { command?: string };
 };
 
-function decide(permissionDecision: "deny" | "ask", reason: string): never {
+function deny(reason: string): never {
   console.log(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
-        permissionDecision,
+        permissionDecision: "deny",
         permissionDecisionReason: reason,
       },
     }),
@@ -54,17 +47,15 @@ if (!cmd) {
   process.exit(0);
 }
 
-// --- hook/署名バイパス機構: ユーザー確認を必須化 (ask) ----------------------
+// --- hook/署名バイパス機構 --------------------------------------------------
 if (/--no-verify\b/.test(cmd)) {
-  decide(
-    "ask",
-    "Git Safety Protocol: --no-verify は lefthook (pre-commit/pre-push) をスキップします。ユーザーの明示的な許可が必要です。",
+  deny(
+    "Git Safety Protocol: --no-verify は lefthook (pre-commit/pre-push) をスキップします。agent 経由では実行できません。ユーザー自身がターミナルで直接実行してください。",
   );
 }
 if (/LEFTHOOK=0/.test(cmd)) {
-  decide(
-    "ask",
-    "lefthook.yml に記載の LEFTHOOK=0 による hook 全スキップです。ユーザーの明示的な許可が必要です。",
+  deny(
+    "lefthook.yml に記載の LEFTHOOK=0 による hook 全スキップです。agent 経由では実行できません。ユーザー自身がターミナルで直接実行してください。",
   );
 }
 if (
@@ -72,13 +63,12 @@ if (
   /commit\.gpgsign=false/.test(cmd) ||
   /core\.hooksPath=/.test(cmd)
 ) {
-  decide(
-    "ask",
-    "Git Safety Protocol: 署名/hooksPath のバイパスです。ユーザーの明示的な許可が必要です。",
+  deny(
+    "Git Safety Protocol: 署名/hooksPath のバイパスです。agent 経由では実行できません。ユーザー自身がターミナルで直接実行してください。",
   );
 }
 
-// --- main/master への force push（例外なく禁止のため deny を維持） ---------
+// --- main/master への force push --------------------------------------------
 if (
   /\bgit\s+push\b/.test(cmd) &&
   /(--force\b|--force-with-lease\b|\s-f\b)/.test(cmd)
@@ -86,54 +76,44 @@ if (
   try {
     const branch = (await Bun.$`git branch --show-current`.text()).trim();
     if (branch === "main" || branch === "master") {
-      decide(
-        "deny",
-        "Git Safety Protocol: main/master への force push は禁止です。",
-      );
+      deny("Git Safety Protocol: main/master への force push は禁止です。");
     }
   } catch {
-    decide(
-      "ask",
-      "現在ブランチを確認できませんでした。force push の実行前にユーザー確認が必要です。",
+    deny(
+      "現在ブランチを確認できませんでした。force push は安全側に倒して禁止します。",
     );
   }
 }
 
-// --- 破壊的だが正当な場合もある操作: 停止してユーザーに確認 -----------------
+// --- 破壊的だが正当な場面もある操作 ------------------------------------------
 if (/\bgit\s+reset\b[^|&;]*--hard\b/.test(cmd)) {
-  decide(
-    "ask",
-    "CLAUDE.md 停止例外: git reset --hard は破壊的操作です。実行前にユーザー確認が必要です。",
+  deny(
+    "CLAUDE.md 停止例外: git reset --hard は破壊的操作のため agent 経由では実行できません。必要な場合はユーザーに確認してください。",
   );
 }
 if (/\bgit\s+clean\b[^|&;]*-[a-zA-Z]*f/.test(cmd)) {
-  decide(
-    "ask",
-    "CLAUDE.md 停止例外: git clean -f は破壊的操作です。実行前にユーザー確認が必要です。",
+  deny(
+    "CLAUDE.md 停止例外: git clean -f は破壊的操作のため agent 経由では実行できません。必要な場合はユーザーに確認してください。",
   );
 }
 if (/\bgit\s+branch\b[^|&;]*(-D\b|--delete\s+--force\b)/.test(cmd)) {
-  decide(
-    "ask",
-    "CLAUDE.md 停止例外: git branch -D は破壊的操作です。実行前にユーザー確認が必要です。",
+  deny(
+    "CLAUDE.md 停止例外: git branch -D は破壊的操作のため agent 経由では実行できません。必要な場合はユーザーに確認してください。",
   );
 }
 if (/\bprisma\s+migrate\s+reset\b/.test(cmd) || /\bdb:reset\b/.test(cmd)) {
-  decide(
-    "ask",
-    "CLAUDE.md 停止例外: prisma migrate reset (package.json の db:reset 経由も含む) はローカル DB を全消去します。実行前にユーザー確認が必要です。",
+  deny(
+    "CLAUDE.md 停止例外: prisma migrate reset (package.json の db:reset 経由も含む) はローカル DB を全消去するため agent 経由では実行できません。必要な場合はユーザーに確認してください。",
   );
 }
 if (/\bprisma\s+db\s+push\b/.test(cmd) || /\bdb:push\b/.test(cmd)) {
-  decide(
-    "ask",
-    "prisma db push は migration 履歴を経由しない schema drift です。原則 bun run db:migrate --name <name> を使ってください。実行するにはユーザー確認が必要です。",
+  deny(
+    "prisma db push は migration 履歴を経由しない schema drift のため agent 経由では実行できません。原則 bun run db:migrate --name <name> を使ってください。",
   );
 }
 if (/\bprisma\s+db\s+pull\b/.test(cmd)) {
-  decide(
-    "ask",
-    "prisma db pull は schema.prisma を DB 側の実体で上書きし、未コミットの schema 変更を失う可能性があります。実行前にユーザー確認が必要です。",
+  deny(
+    "prisma db pull は schema.prisma を DB 側の実体で上書きし未コミットの変更を失う可能性があるため agent 経由では実行できません。必要な場合はユーザーに確認してください。",
   );
 }
 
