@@ -108,15 +108,15 @@ OPEN を確認 — auto-merge 済みなら新 branch）。独立 topic / 別 dom
 
 「コミットしないで」「step by step で」「PR 作らないで」等の明示指示があれば override して即停止する。
 
-**事故防止の実体**（lefthook + GitHub branch protection。ツール呼び出しレベルの deny hook は
-プロジェクト側に現存しないため、これと上記 gate・停止例外自体が最終防衛線）:
+**事故防止の実体**（Claude Code hooks + lefthook + GitHub branch protection の三層防御）:
 
-| 層                       | 内容                                                                          |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| pre-commit               | eslint-fix + prettier-fix + `scripts/check-protected-files.sh`（並列）        |
-| pre-push                 | `type-check` → `architecture-boundaries.test.ts` を直列実行                   |
-| commit-msg               | `scripts/check-commit-msg.sh` で Conventional Commits 強制                    |
-| GitHub branch protection | main、required checks 7 件・force-push 禁止・branch 削除禁止・`strict: false` |
+| 層                       | 内容                                                                                                                                                                                                                         |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code PreToolUse   | `.claude/hooks/`: git commit/push の timeout 不足を deny、既存 migration.sql・`.env*` の編集をガード、main/master への force push を deny、reset --hard・migrate reset・db push/pull・--no-verify 等は ask（許可ダイアログ） |
+| pre-commit               | eslint-fix + prettier-fix + `scripts/check-protected-files.sh`（並列）                                                                                                                                                       |
+| pre-push                 | `type-check` → `architecture-boundaries.test.ts` を直列実行                                                                                                                                                                  |
+| commit-msg               | `scripts/check-commit-msg.sh` で Conventional Commits 強制                                                                                                                                                                   |
+| GitHub branch protection | main、required checks 7 件・force-push 禁止・branch 削除禁止・`strict: false`                                                                                                                                                |
 
 ## 詳細ルール
 

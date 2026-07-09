@@ -48,7 +48,10 @@ non-null assertion（`!`）と angle-bracket assertion は ESLint error（`as` �
 ## React / Zod
 
 - React Compiler 前提のため `react` からの `forwardRef` / `useMemo` / `useCallback` の
-  import は禁止（唯一の例外: lexical-draggable-block-plugin.ts）
+  import は禁止（唯一の例外: lexical-draggable-block-plugin.ts。`@lexical/react` 由来の
+  パターンのため同ファイルは react-hooks/refs・@eslint-react/use-state・
+  @eslint-react/web-api-no-leaked-event-listener・no-restricted-imports の
+  4 ルールを ESLint 設定で除外している）
 - Zod 4: エラーメッセージは `{ error: "..." }` 形式、日付は `z.iso.date()` /
   `z.iso.datetime()` のトップレベル形式を使う
 

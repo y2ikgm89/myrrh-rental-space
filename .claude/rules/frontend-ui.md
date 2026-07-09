@@ -41,6 +41,10 @@ paths:
   テストで禁止
 - z-index は `Z_INDEX` 定数を **inline style の `zIndex`** で適用する。
   ``className={`z-[${Z_INDEX.x}]`}`` は Tailwind JIT で CSS 未生成の silent bug
+- media/\_components・editor/lexical・media-picker の 3 ディレクトリは
+  ユーザーアップロード・blob・外部 URL 等 Next.js Image で最適化できない画像を扱うため、
+  `@next/next/no-img-element` が意図的に除外されている（`<img>` 直書きが正。
+  next/image への「修正」は不要）
 
 ## アニメーション（GSAP / Lenis）
 
