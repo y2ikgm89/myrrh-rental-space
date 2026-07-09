@@ -32,7 +32,7 @@ function selectTriggerTags(source: string): string[] {
 }
 
 function hasAccessibleName(tag: string): boolean {
-  return /\s(?:aria-label|aria-labelledby|id)=/u.test(tag);
+  return /\s(?:aria-label|aria-labelledby)=/u.test(tag);
 }
 
 describe("admin filter select accessibility", () => {

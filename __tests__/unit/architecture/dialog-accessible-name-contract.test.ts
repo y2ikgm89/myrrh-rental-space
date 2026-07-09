@@ -31,7 +31,7 @@ describe("dialog accessible name contract", () => {
 
     const violations: string[] = [];
     const contentPattern =
-      /<(?<name>DialogContent|AlertDialogContent)\b(?<attrs>[^>]*)>(?<children>[\s\S]*?)<\/\k<name>>/gu;
+      /<(?<name>DialogContent|AlertDialogContent)\b(?<attrs>(?:[^>]|(?<==)>)*)>(?<children>[\s\S]*?)<\/\k<name>>/gu;
 
     for (const filePath of collectTsxFiles(APP_ROOT)) {
       const source = readFileSync(filePath, "utf8");

@@ -239,6 +239,11 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                   variant="outline"
                   size="sm"
                   id={fields.ogpImageUrl.id}
+                  aria-describedby={
+                    fields.ogpImageUrl.errors
+                      ? fields.ogpImageUrl.errorId
+                      : undefined
+                  }
                   onClick={() => ogpPicker.openPicker()}
                   disabled={isPending}
                 >

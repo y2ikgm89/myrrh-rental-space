@@ -33,22 +33,68 @@ function lineNumberFor(source: string, index: number): number {
 }
 
 describe("admin field error association", () => {
-  test("inline Conform field errors expose the field error id", () => {
+  test("inline Conform field errors expose the field error id and are wired to aria-describedby", () => {
     expect(existsSync(ADMIN_DASHBOARD_ROOT)).toBe(true);
 
+    // Pre-existing manually-bound fields outside this list already lack
+    // aria-describedby wiring from before this contract was introduced. Fixing
+    // them is a larger, separate accessibility pass — tracked outside this PR —
+    // so the stricter check below is scoped to the files it was introduced for.
+    // Do not add new entries here; wire new manually-bound fields correctly instead.
+    const DESCRIBED_BY_CHECKED_FILES = new Set([
+      join("locations", "_components", "LocationForm.tsx"),
+      join("customers", "_components", "CustomerForm.tsx"),
+      join("customers", "_components", "CustomerEditForm.tsx"),
+      join("events", "_components", "EventPublishFields.tsx"),
+      join("_shared", "components", "ListPageSeoForm.tsx"),
+      join("pages", "[slug]", "_seo", "_components", "PageSeoForm.tsx"),
+    ]);
+
     const violations: string[] = [];
+    const describedByViolations: string[] = [];
     const fieldErrorPattern =
       /fields\.([A-Za-z0-9_]+)\.errors\s*&&\s*\(\s*<p(?<attrs>[\s\S]*?)>/gu;
+    // Some fields thread the association through a child component instead of
+    // rendering the DOM attribute directly (e.g. a rich-text editor wrapper that
+    // accepts an `ariaDescribedBy` prop and applies `aria-describedby` internally).
+    const ariaDescribedByPattern =
+      /(?:aria-describedby|ariaDescribedBy)=\{([\s\S]*?)\}/gu;
+    // Conform's getInputProps/getTextareaProps/getSelectProps inject aria-describedby
+    // automatically (ariaAttributes defaults to true), so a field bound via one of
+    // these spreads is already wired even with no literal aria-describedby in source.
+    const conformBoundFieldPattern =
+      /\{\.\.\.get(?:Input|Textarea|Select)Props\(fields\.([A-Za-z0-9_]+)/gu;
 
     for (const filePath of collectTsxFiles(ADMIN_DASHBOARD_ROOT)) {
+      const relativePath = relative(ADMIN_DASHBOARD_ROOT, filePath);
       const source = readFileSync(filePath, "utf8");
+      const ariaDescribedByValues = [
+        ...source.matchAll(ariaDescribedByPattern),
+      ].map((match) => match[1]);
+      const conformBoundFields = new Set(
+        [...source.matchAll(conformBoundFieldPattern)].map((match) => match[1]),
+      );
 
       for (const match of source.matchAll(fieldErrorPattern)) {
         const fieldName = match[1];
         const attrs = match.groups?.["attrs"] ?? "";
+        const hasErrorId = attrs.includes(`id={fields.${fieldName}.errorId}`);
 
-        if (!attrs.includes(`id={fields.${fieldName}.errorId}`)) {
+        if (!hasErrorId) {
           violations.push(
+            `${relative(ROOT, filePath)}:${lineNumberFor(source, match.index)}`,
+          );
+          continue;
+        }
+
+        const isReferenced =
+          conformBoundFields.has(fieldName) ||
+          ariaDescribedByValues.some((value) =>
+            value.includes(`fields.${fieldName}.errorId`),
+          );
+
+        if (!isReferenced && DESCRIBED_BY_CHECKED_FILES.has(relativePath)) {
+          describedByViolations.push(
             `${relative(ROOT, filePath)}:${lineNumberFor(source, match.index)}`,
           );
         }
@@ -56,5 +102,6 @@ describe("admin field error association", () => {
     }
 
     expect(violations).toEqual([]);
+    expect(describedByViolations).toEqual([]);
   });
 });

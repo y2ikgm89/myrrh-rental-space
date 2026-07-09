@@ -251,6 +251,12 @@ export function CustomerForm(): ReactElement {
                 value={lastNameKanaInput.kana}
                 onChange={(e) => lastNameKanaInput.setKana(e.target.value)}
                 disabled={isPending}
+                aria-invalid={fields.lastNameKana.errors ? true : undefined}
+                aria-describedby={
+                  fields.lastNameKana.errors
+                    ? fields.lastNameKana.errorId
+                    : undefined
+                }
               />
               {fields.lastNameKana.errors && (
                 <p
@@ -275,6 +281,12 @@ export function CustomerForm(): ReactElement {
                 value={firstNameKanaInput.kana}
                 onChange={(e) => firstNameKanaInput.setKana(e.target.value)}
                 disabled={isPending}
+                aria-invalid={fields.firstNameKana.errors ? true : undefined}
+                aria-describedby={
+                  fields.firstNameKana.errors
+                    ? fields.firstNameKana.errorId
+                    : undefined
+                }
               />
               {fields.firstNameKana.errors && (
                 <p

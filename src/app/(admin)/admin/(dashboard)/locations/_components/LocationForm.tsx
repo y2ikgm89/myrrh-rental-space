@@ -532,6 +532,10 @@ export function LocationForm({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="例: Myrrhビル"
                   disabled={isPending}
+                  aria-invalid={fields.name.errors ? true : undefined}
+                  aria-describedby={
+                    fields.name.errors ? fields.name.errorId : undefined
+                  }
                 />
                 {fields.name.errors && (
                   <p
@@ -578,6 +582,12 @@ export function LocationForm({
                   placeholder="建物・施設の説明を入力..."
                   rows={4}
                   disabled={isPending}
+                  aria-invalid={fields.description.errors ? true : undefined}
+                  aria-describedby={
+                    fields.description.errors
+                      ? fields.description.errorId
+                      : undefined
+                  }
                 />
                 {fields.description.errors && (
                   <p
@@ -621,6 +631,12 @@ export function LocationForm({
                       onChange={(e) => setPostalCode(e.target.value)}
                       placeholder="150-0001"
                       disabled={isPending}
+                      aria-invalid={fields.postalCode.errors ? true : undefined}
+                      aria-describedby={
+                        fields.postalCode.errors
+                          ? fields.postalCode.errorId
+                          : undefined
+                      }
                     />
                     {fields.postalCode.errors && (
                       <p
@@ -639,6 +655,12 @@ export function LocationForm({
                       onChange={(e) => setPrefecture(e.target.value)}
                       placeholder="東京都"
                       disabled={isPending}
+                      aria-invalid={fields.prefecture.errors ? true : undefined}
+                      aria-describedby={
+                        fields.prefecture.errors
+                          ? fields.prefecture.errorId
+                          : undefined
+                      }
                     />
                     {fields.prefecture.errors && (
                       <p
@@ -659,6 +681,10 @@ export function LocationForm({
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="渋谷区"
                       disabled={isPending}
+                      aria-invalid={fields.city.errors ? true : undefined}
+                      aria-describedby={
+                        fields.city.errors ? fields.city.errorId : undefined
+                      }
                     />
                     {fields.city.errors && (
                       <p
@@ -756,6 +782,12 @@ export function LocationForm({
                       });
                     }}
                     disabled={isPending || accessLinesList.length >= 20}
+                    aria-invalid={fields.accessLines.errors ? true : undefined}
+                    aria-describedby={
+                      fields.accessLines.errors
+                        ? fields.accessLines.errorId
+                        : undefined
+                    }
                   >
                     + 経路を追加
                   </Button>
@@ -833,6 +865,12 @@ export function LocationForm({
                       variant="outline"
                       onClick={() => mainImagePicker.openPicker()}
                       disabled={isPending}
+                      aria-invalid={fields.imageUrl.errors ? true : undefined}
+                      aria-describedby={
+                        fields.imageUrl.errors
+                          ? fields.imageUrl.errorId
+                          : undefined
+                      }
                     >
                       <IconPhotoPlus
                         aria-hidden="true"
@@ -866,6 +904,12 @@ export function LocationForm({
                   variant="outline"
                   onClick={() => additionalImagesPicker.openPicker()}
                   disabled={isPending || imageUrlsList.length >= 10}
+                  aria-invalid={fields.imageUrls.errors ? true : undefined}
+                  aria-describedby={
+                    fields.imageUrls.errors
+                      ? fields.imageUrls.errorId
+                      : undefined
+                  }
                 >
                   <IconPhotoPlus aria-hidden="true" className="mr-2 h-4 w-4" />
                   画像を追加
@@ -1027,6 +1071,12 @@ export function LocationForm({
                     disabled={isPending}
                     value={latitude}
                     onChange={(e) => setLatitude(e.target.value)}
+                    aria-invalid={fields.latitude.errors ? true : undefined}
+                    aria-describedby={
+                      fields.latitude.errors
+                        ? fields.latitude.errorId
+                        : undefined
+                    }
                   />
                   {fields.latitude.errors && (
                     <p
@@ -1047,6 +1097,12 @@ export function LocationForm({
                     disabled={isPending}
                     value={longitude}
                     onChange={(e) => setLongitude(e.target.value)}
+                    aria-invalid={fields.longitude.errors ? true : undefined}
+                    aria-describedby={
+                      fields.longitude.errors
+                        ? fields.longitude.errorId
+                        : undefined
+                    }
                   />
                   {fields.longitude.errors && (
                     <p
@@ -1067,6 +1123,12 @@ export function LocationForm({
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="03-1234-5678"
                   disabled={isPending}
+                  aria-invalid={fields.phoneNumber.errors ? true : undefined}
+                  aria-describedby={
+                    fields.phoneNumber.errors
+                      ? fields.phoneNumber.errorId
+                      : undefined
+                  }
                 />
                 {fields.phoneNumber.errors && (
                   <p
@@ -1087,6 +1149,10 @@ export function LocationForm({
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="info@example.com"
                   disabled={isPending}
+                  aria-invalid={fields.email.errors ? true : undefined}
+                  aria-describedby={
+                    fields.email.errors ? fields.email.errorId : undefined
+                  }
                 />
                 {fields.email.errors && (
                   <p
@@ -1106,6 +1172,12 @@ export function LocationForm({
                   onChange={(e) => setPriceRange(e.target.value)}
                   placeholder="¥1,000〜¥5,000/時間"
                   disabled={isPending}
+                  aria-invalid={fields.priceRange.errors ? true : undefined}
+                  aria-describedby={
+                    fields.priceRange.errors
+                      ? fields.priceRange.errorId
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   例: ¥1,000〜¥5,000/時間（最大 100 文字）
@@ -1130,6 +1202,14 @@ export function LocationForm({
                   onChange={(e) => setPaymentAccepted(e.target.value)}
                   placeholder="現金, クレジットカード, 電子マネー"
                   disabled={isPending}
+                  aria-invalid={
+                    fields.paymentAccepted.errors ? true : undefined
+                  }
+                  aria-describedby={
+                    fields.paymentAccepted.errors
+                      ? fields.paymentAccepted.errorId
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   現金, クレジットカード, 電子マネー, QRコード決済
@@ -1154,6 +1234,14 @@ export function LocationForm({
                   onChange={(e) => setGoogleBusinessPlaceId(e.target.value)}
                   placeholder="ChIJ..."
                   disabled={isPending}
+                  aria-invalid={
+                    fields.googleBusinessPlaceId.errors ? true : undefined
+                  }
+                  aria-describedby={
+                    fields.googleBusinessPlaceId.errors
+                      ? fields.googleBusinessPlaceId.errorId
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Google Maps Platform で確認できます（ChIJ...）

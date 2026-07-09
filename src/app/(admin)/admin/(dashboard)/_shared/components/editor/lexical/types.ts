@@ -41,6 +41,8 @@ export type LexicalEditorProps = {
   height?: string | undefined;
   /** プレースホルダーテキスト */
   placeholder?: string | undefined;
+  /** エディタ本体（ContentEditable）に紐づけるエラーメッセージ等の要素ID（aria-describedby） */
+  ariaDescribedBy?: string | undefined;
   /** マークノードクリック時のコールバック */
   onMarkClick?: ((markId: string | null) => void) | undefined;
   /** コメント追加時のコールバック（FloatingToolbarからのコメントボタンクリック） */

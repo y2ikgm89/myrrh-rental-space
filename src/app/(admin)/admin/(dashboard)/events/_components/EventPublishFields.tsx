@@ -201,6 +201,11 @@ export function EventPublishFields({
                   size="sm"
                   onClick={() => thumbnailPicker.openPicker()}
                   disabled={isPending}
+                  aria-describedby={
+                    fields.thumbnailUrl.errors
+                      ? fields.thumbnailUrl.errorId
+                      : undefined
+                  }
                 >
                   <IconPhotoPlus aria-hidden="true" className="mr-1 h-4 w-4" />
                   {thumbnailUrl ? "変更" : "選択"}
@@ -250,6 +255,11 @@ export function EventPublishFields({
             className={EDITOR_PROSE_CLASSES}
             placeholder="イベントの詳細・プログラム・参加要件等を入力..."
             height="560px"
+            ariaDescribedBy={
+              fields.descriptionJson.errors
+                ? fields.descriptionJson.errorId
+                : undefined
+            }
           />
           {fields.descriptionJson.errors && (
             <p

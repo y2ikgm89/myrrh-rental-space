@@ -87,6 +87,7 @@ function EditorInner({
   flush = false,
   height = "300px",
   placeholder = "ここに内容を入力...",
+  ariaDescribedBy,
   onMarkClick,
   onAddComment,
   contentWidth,
@@ -197,6 +198,7 @@ function EditorInner({
                     <ContentEditable
                       aria-multiline
                       role="textbox"
+                      aria-describedby={ariaDescribedBy}
                       aria-placeholder={placeholder}
                       placeholder={
                         <div

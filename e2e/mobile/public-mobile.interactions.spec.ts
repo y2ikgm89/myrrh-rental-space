@@ -1,6 +1,13 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { urls } from "../fixtures";
 
+const appSurface = process.env["APP_SURFACE"] ?? "admin";
+
+test.skip(
+  appSurface !== "public",
+  "Public homepage root is served only on public surface.",
+);
+
 async function expectTouchMobileContext(page: Page) {
   const context = await page.evaluate(() => ({
     coarsePointer: window.matchMedia("(pointer: coarse)").matches,

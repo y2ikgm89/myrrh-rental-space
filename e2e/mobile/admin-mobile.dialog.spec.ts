@@ -1,6 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
+import { urls } from "../fixtures";
 
-const NEW_POST_PATH = "/admin/posts/new";
+const NEW_POST_PATH = `${urls.adminPosts}/new`;
 
 async function expectFocusedWithin(locator: Locator) {
   await expect

@@ -241,13 +241,6 @@ export function Header({
   }
 
   useEffect(() => {
-    if (!menuOpen) return;
-
-    const frame = window.requestAnimationFrame(focusMobileMenuInitialElement);
-    return () => window.cancelAnimationFrame(frame);
-  }, [menuOpen]);
-
-  useEffect(() => {
     if (!menuOpen || typeof window.matchMedia !== "function") return;
 
     const desktopQuery = window.matchMedia(MOBILE_MENU_DESKTOP_MEDIA_QUERY);

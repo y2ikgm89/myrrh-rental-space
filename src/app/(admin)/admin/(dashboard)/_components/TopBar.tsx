@@ -52,7 +52,9 @@ export function TopBar({
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            aria-label="メニューを開く"
+            aria-label={
+              isSidebarExpanded ? "メニューを閉じる" : "メニューを開く"
+            }
             aria-controls="admin-sidebar"
             aria-expanded={isSidebarExpanded}
           >
