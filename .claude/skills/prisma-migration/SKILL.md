@@ -59,32 +59,11 @@ schema 変更 → migration 生成 → lint → 検証 → デプロイ影響確
 
 ## 3. migration SQL セルフレビュー checklist
 
-生成 / 編集した `migration.sql` を必ず読み、以下を突合する:
-
-- [ ] **@@map 突合**: SQL のテーブル名・列名が `prisma/schema.prisma` の
-      `@@map` / `@map` と一致するか (例: AuditLog → `audit_logs`)。モデル名の
-      まま SQL を書くと対象テーブルを誤る。
-- [ ] **baseline 手書き不変条件の保全**: CHECK 制約
-      (`blocked_dates_scope_target_check`、capacity/価格/期間系の CHECK) と
-      CONSTRAINT TRIGGER (`events_schedule_integrity_check`、
-      `event_time_slots_schedule_integrity_check`) は baseline
-      `prisma/migrations/00000000000000_init/migration.sql` にのみ存在する。
-      対象テーブルの再作成・列型変更がこれらを落とさないか確認する。
-- [ ] **NOT NULL 化は backfill → SET NOT NULL の順**
-      (実例: `20260704000000_display_order_surfaces` — WITH ranked で全行
-      backfill してから SET NOT NULL + SET DEFAULT)。
-- [ ] **PostgreSQL enum の落とし穴**:
-  - `ALTER TYPE ... DROP VALUE` は PostgreSQL 非サポート。正規手順は
-    「`ALTER TYPE ... RENAME TO` で旧を退避 → `CREATE TYPE` で新 enum →
-    `ALTER TABLE ... ALTER COLUMN ... TYPE ... USING (cast)` → `DROP TYPE` 旧」。
-  - 値の追加は `ALTER TYPE ... ADD VALUE IF NOT EXISTS` の単独文にする
-    (実例: `20260703000000_audit_log_hash_chain`)。追加した値を同一 migration 内の
-    UPDATE で即使用する構成は避ける (トランザクション制約)。
-- [ ] **jsonb → text の unquote は `#>> '{}'`**
-      (実例: `20260702000000_notification_recipients_scalar_lists` の
-      json 配列 → text[] 変換。`::text` cast だと引用符が残る)。
-- [ ] 既存データがある前提の制約追加 (unique 等) は、違反行があると
-      migrate 自体が失敗する。事前の重複解消 SQL を同 migration に含める。
+生成 / 編集した `migration.sql` を必ず読み、`migration-reviewer` subagent
+(`.claude/agents/migration-reviewer.md`) のチェックリスト項目 4-6（@@map 整合・
+baseline 手書き不変条件の保全・PostgreSQL enum/NOT NULL 化/jsonb 変換の落とし穴、
+実例つき）を自己チェックする。§8 で同 subagent に正式レビューを依頼する前の
+セルフチェックとして使う。
 
 ## 4. squawk lint
 
@@ -92,29 +71,15 @@ schema 変更 → migration 生成 → lint → 検証 → デプロイ影響確
 bun scripts/lint-migrations.ts prisma/migrations/<dir>/migration.sql
 ```
 
-- 有効 rule は `.squawk.toml` の Risk-1 系のみ: ban-drop-column / ban-drop-table /
-  ban-drop-database / renaming-column / renaming-table / changing-column-type /
-  adding-not-nullable-field / adding-required-field / syntax-error。
-- 意図的な破壊は ignore コメントで明示する (配置ルールは rules の `migrations.md`):
-  - 単一文: SQL 文の**直前 1 行**に `-- squawk-ignore <rule名>`。
-  - ファイル全体: 先頭コメント群に `-- squawk-ignore-file <rule名>`
-    (複数 rule はカンマ区切り。実例: `20260702000000` の
-    `-- squawk-ignore-file changing-column-type, adding-not-nullable-field`)。
-  - 複数列 DROP は ALTER TABLE 文を列ごとに分割して per-column で ignore。
-- ローカルに squawk バイナリが無い場合は spawn 失敗で exit 1 になる。
-  `SQUAWK_BIN` で公式バイナリのパスを指定するか、CI の migration-safety job
-  (SHA256 検証済み squawk 2.51.0、`.github/workflows/ci.yml`) に委ねる。
+有効 rule・ignore コメントの配置ルールは `migration-reviewer` チェックリスト項目 1 を参照。
+
 - ゲート自体の動作確認: `bun scripts/lint-migrations.ts --selftest`
   (`scripts/lint-migrations.fixtures/` の unsafe / safe / ignored で検証)。
 
 ## 5. breaking 判定と expand/contract の判断基準
 
-`.github/workflows/deploy-production.yml` は変更された migration.sql を grep し、
-**ALTER TABLE 文脈の DROP COLUMN / RENAME COLUMN / RENAME TO、または DROP TABLE /
-DROP TYPE** を検出すると `_BREAKING_MIGRATION_DEPLOY=true` を自動セット →
-`cloudbuild.yaml` が public/admin 両サービスを `--scaling=0` で停止し
-`_BREAKING_MIGRATION_DRAIN_SECONDS` (310 秒) drain してから migrate を実行する
-(= main merge で**計画ダウンタイムが自動発生**)。
+自動 breaking デプロイモードの発動条件・挙動（`_BREAKING_MIGRATION_DEPLOY` /
+scaling=0 停止 + 310 秒 drain）は rules の `migrations.md`（デプロイとの連動）を参照。
 
 判断基準:
 

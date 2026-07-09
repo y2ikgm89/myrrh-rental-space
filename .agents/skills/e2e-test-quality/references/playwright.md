@@ -44,15 +44,18 @@ branches that silently skip coverage.
 
 ## Time Control
 
-Use Playwright clock before page scripts run:
+Use Playwright clock before page scripts run, matching the server's fixed
+`E2E_FIXED_NOW_ISO` value (`playwright.config.ts`) so browser and server clocks
+never diverge:
 
 ```ts
-await page.clock.install({ time: new Date("2026-01-15T00:00:00+09:00") });
+await page.clock.install({ time: new Date("2026-07-04T03:00:00.000Z") });
 await page.goto("/events");
 ```
 
-Keep server-rendered time deterministic through `E2E_FIXED_NOW_ISO` from
-`playwright.config.ts`.
+A mismatched clock value reproduces the server/client date-mismatch bug class
+this repo has hit before — always read the current `E2E_FIXED_NOW_ISO` value
+from `playwright.config.ts` rather than hardcoding a date here.
 
 ## Visual Pattern
 

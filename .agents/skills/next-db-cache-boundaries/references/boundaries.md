@@ -21,20 +21,16 @@
   encrypted in the database. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is deploy-time
   public config. `CLOUDFLARE_ORIGIN_HEADER_SECRET` is Secret Manager-backed
   runtime config.
-- `E2E_RUNTIME`, `ADMIN_TEST_IAP_EMAIL`, and
-  `NEXT_PUBLIC_ENABLE_E2E_LOGIN` are localhost-only Playwright runtime
-  exceptions. Do not use `CI=true` alone as an auth bypass.
-- Turnstile-protected public/customer mutations must call server-side
-  Siteverify and fail closed in production when config is missing.
+- E2E bypass env vars (localhost-only) and Turnstile fail-closed Siteverify
+  requirements: see SKILL.md checklist item 8.
 
 ## Cache Rules
 
 - `next.config.ts` has `typedRoutes: true` and `cacheComponents: true`.
 - Next 16 `cacheComponents` is the current switch for `"use cache"`,
   `cacheLife`, and `cacheTag`.
-- Do not add route segment config exports to work around caching. Use
-  `connection()` for runtime-only route evaluation and `"use cache"` only in
-  app/domain producers that are safe to share.
+- Do not add route segment config exports to work around caching (SKILL.md
+  checklist item 4). Use `connection()` for runtime-only route evaluation.
 - Use `cacheLife` and `cacheTag` in cached data producers.
 - Use `revalidateTag`, `updateTag`, or cache helpers with tags from
   `CACHE_TAGS`, `CDN_CACHE_TAGS`, `getCacheTag`, and `joinCacheTags`.
@@ -55,9 +51,8 @@
 - Keep generated Prisma client imports out of app layers.
 - App-safe enum imports should use
   `@/shared/lib/validations/enums/prisma-types`.
-- Reservation create/update/re-confirm paths must call
-  `lockReservationSpaceForTransaction` in the same interactive transaction as
-  `checkReservationOverlap` and the write.
+- Reservation availability writes: see SKILL.md checklist item 9
+  (`lockReservationSpaceForTransaction` inside the same transaction).
 - After `prisma/schema.prisma` changes, run `bun run db:generate`.
 - Do not edit existing migration SQL. Create or regenerate migrations.
 - Preserve CHECK constraints, triggers, comments, partial indexes, and seed data
@@ -82,13 +77,13 @@ Required proof before sharing:
 ## Verification
 
 - Next/types: `bun run type-check`.
-- Architecture boundaries: `bun test __tests__/unit/architecture-boundaries.test.ts`.
+- Architecture boundaries: `bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts`.
 - Prisma adapter contract:
-  `bun test __tests__/unit/architecture/prisma-adapter-pg-config.test.ts`.
+  `bun scripts/run-tests.ts __tests__/unit/architecture/prisma-adapter-pg-config.test.ts`.
 - Cache tag contract: focused architecture tests around `next.config.ts` and
   CDN tag constants.
 - Prisma schema: `bun run db:generate` plus relevant domain tests.
 - Webhook/cron/proxy: focused route tests plus `bun run validate` when
   practical.
-- Env/deploy secrets: `bun test __tests__/unit/lib/env/server-production-env.test.ts`
-  and `bun test __tests__/unit/architecture/deploy-production-workflow.test.ts`.
+- Env/deploy secrets: `bun scripts/run-tests.ts __tests__/unit/lib/env/server-production-env.test.ts`
+  and `bun scripts/run-tests.ts __tests__/unit/architecture/deploy-production-workflow.test.ts`.

@@ -23,7 +23,7 @@ paths:
 ## 認証は 2 系統（混ぜない）
 
 - **顧客** = Better Auth（`src/shared/lib/customer-auth.ts`、basePath `/api/customer-auth`）。
-  Prisma adapter には `$extends` 前の `basePrisma` を渡す必須契約
+  Prisma adapter には `$extends` 前の `basePrisma` を渡す必須契約（理由は db-domain ルール参照）
 - **管理** = Cloud Run IAP のみ（`x-goog-iap-jwt-assertion` JWT を audience/issuer 検証）。
   Better Auth の admin instance・管理ログインフォームの再導入はテストで禁止。
   IAP identity は Google Workspace グループ所属から Role へ同期される。

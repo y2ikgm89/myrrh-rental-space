@@ -25,7 +25,7 @@ paths:
 
 - 申込 create は interactive tx 冒頭で `pg_advisory_xact_lock(728350, hashtext(eventId))`、
   残枠は **CONFIRMED 申込の quantity 合計**のみで判定
-- tx 内のクエリは逐次 await（単一コネクションのため並行発行は失敗する）
+- tx 内のクエリは逐次 await（理由は db-domain ルールの「トランザクション」参照）
 
 ## 二重副作用防止 = 「updateMany の WHERE で claim」パターン
 

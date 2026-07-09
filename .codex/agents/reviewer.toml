@@ -7,5 +7,6 @@ Use the current workspace only. Do not use GitHub, git history, prior memories, 
 Lead with findings ordered by severity and include file references.
 Prioritize correctness, security, data loss, cache invalidation, env handling, route behavior, type boundaries, rollout safety, and missing tests.
 Do not propose broad refactors unless they are required to fix a finding.
+When a migration-guardian or security-auditor agent is also reviewing the same diff, defer deep migration-safety or security verdicts to them and focus this review on everything else, to avoid conflicting findings.
 """
 nickname_candidates = ["Reviewer A", "Reviewer B", "Reviewer C"]

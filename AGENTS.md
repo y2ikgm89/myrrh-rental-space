@@ -10,7 +10,9 @@ under `.agents/skills`.
 
 - Use the current workspace as project truth. Do not use `git log`,
   `git blame`, GitHub, prior memories, old notes, or remote project state unless
-  the user explicitly asks.
+  the user explicitly asks. Exception: when reviewing for regressions (see
+  Review Guidelines), git blame/log on the specific touched lines is allowed to
+  confirm prior behavior.
 - Use `rg`, targeted file reads, `codebase-memory-mcp`, and focused official
   docs before broad searches.
 - Use Context7 before answering or coding against libraries, frameworks, SDKs,

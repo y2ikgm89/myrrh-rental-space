@@ -27,8 +27,11 @@
 | `bunx playwright test --project=chromium-smoke` | smoke E2E（CI required gate と同一）           |
 | `bun run lint-format`                           | ESLint + Prettier チェック（CI と同一入口）    |
 
-変更を証明できる最小のコマンドから実行する。完了報告前に `bun run validate` を必ず実行し、
-テストに触れた場合は該当テストも実行する。コミット前は `bun run validate && bun run build`。
+変更を証明できる最小のコマンドを選ぶ: schema 変更 → `db:generate` + 該当テスト、
+section/registry 変更 → architecture-boundaries テスト、UI のみの変更 →
+`lint-format` + 該当 unit テスト。完了報告前に `bun run validate` を必ず実行し、
+テスト対象のロジックを変更した場合・該当テストファイルを編集した場合のいずれでも
+該当テストを実行する。コミット前は `bun run validate && bun run build`。
 
 `git push` は lefthook の pre-push hook（`type-check` → `architecture-boundaries` テストを
 **直列実行**、実測合計 80〜110 秒）を待つ。`git push` / `git commit` をツール経由で実行する
@@ -65,8 +68,8 @@
 8. 予約・イベントの空き/定員に関わる書込は `prisma.$transaction` 内で advisory lock
    （`lockReservationSpaceForTransaction` 等）を重複チェックより先に取得する
 9. `TermsAgreement` と `AuditLog` は append-only の証跡レコード（update/delete 禁止）
-10. 日付表示は `src/shared/lib/date-format.ts` の JST 固定 formatter を使う。
-    date-fns `format()` 直呼びはサーバー UTC で 9 時間ずれる
+10. 日付表示は `src/shared/lib/date-format.ts` の JST 固定 formatter を使う
+    （date-fns `format()` 直呼びが UTC ずれを起こす理由は business-domain ルール参照）
 11. **main への push = 即・本番デプロイ**。DROP/RENAME を含む migration は自動で
     計画ダウンタイム付きデプロイに切り替わる
 12. 秘密値（`.env*` の実値）は出力・コピー・コミットしない
@@ -97,7 +100,7 @@ OPEN を確認 — auto-merge 済みなら新 branch）。独立 topic / 別 dom
 
 - breaking schema（`DROP COLUMN` / 型 narrowing / required 化 / table rename）
 - `.env*` 編集・新規 env 変数・`bun.lock` の予期せぬ変更
-- 10 file 超 / 1000 行超 / 既存 `prisma/migrations/*.sql` を含む大規模変更
+- 20 file 超 / 1000 行超 / 既存 `prisma/migrations/*.sql` を含む大規模変更
 - 当該タスクと無関係な untracked / modified が存在する（並行セッションの可能性）
 - destructive 操作（`reset --hard` / `migrate reset` / `--no-verify` / hook bypass / `branch -D`）
 - 機密情報混入の疑い・test fail・過去 60 分で PR 3 件超の自動 merge（暴走 detect）
@@ -105,11 +108,15 @@ OPEN を確認 — auto-merge 済みなら新 branch）。独立 topic / 別 dom
 
 「コミットしないで」「step by step で」「PR 作らないで」等の明示指示があれば override して即停止する。
 
-**事故防止の実体**: lefthook（pre-commit: eslint-fix + prettier-fix + `scripts/check-protected-files.sh` /
-pre-push: `type-check` → `architecture-boundaries.test.ts` 直列 / commit-msg:
-`scripts/check-commit-msg.sh` で Conventional Commits 強制）+ GitHub branch protection（main、
-required checks 7 件・force-push 禁止・branch 削除禁止、`strict: false`）。ツール呼び出しレベルの
-deny hook（危険 bash 拒否等）はプロジェクト側に現存しないため、上記 gate と停止例外自体が最終防衛線。
+**事故防止の実体**（lefthook + GitHub branch protection。ツール呼び出しレベルの deny hook は
+プロジェクト側に現存しないため、これと上記 gate・停止例外自体が最終防衛線）:
+
+| 層                       | 内容                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| pre-commit               | eslint-fix + prettier-fix + `scripts/check-protected-files.sh`（並列）        |
+| pre-push                 | `type-check` → `architecture-boundaries.test.ts` を直列実行                   |
+| commit-msg               | `scripts/check-commit-msg.sh` で Conventional Commits 強制                    |
+| GitHub branch protection | main、required checks 7 件・force-push 禁止・branch 削除禁止・`strict: false` |
 
 ## 詳細ルール
 
