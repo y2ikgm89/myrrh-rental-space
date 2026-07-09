@@ -116,16 +116,10 @@ await requireFeatureEnabled("<id>");
   （他ページに埋め込まれた section も OFF 時に非表示）。section type 自体の新規追加は
   rules の sections を参照。
 - **cron**: module が cron を持つなら、route handler（`src/app/api/cron/*`）で
-  `authorizeCronRequest` の直後に早期 return を入れる（既存 4 route と同型）:
-
-```ts
-if (!(await isFeatureEnabled("<id>"))) {
-  return jsonSuccess({ skipped: true, reason: "feature_disabled" });
-}
-```
-
-例: `src/app/api/cron/event-import/route.ts`。registry の `cronPaths` にも path を列挙する
-（現状 metadata だが registry ↔ 実 route の対応表として維持する）。
+  `authorizeCronRequest` の直後に早期 return を入れる（スニペットは rules の
+  `app-structure` 参照。既存 4 route と同型）。例:
+  `src/app/api/cron/event-import/route.ts`。registry の `cronPaths` にも path を列挙する
+  （現状 metadata だが registry ↔ 実 route の対応表として維持する）。
 
 ### Step 6: nav / sitemap は自動（確認のみ）
 

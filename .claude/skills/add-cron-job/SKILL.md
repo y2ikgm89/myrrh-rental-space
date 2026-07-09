@@ -6,7 +6,7 @@ description: 定期実行ジョブ (cron job) を新規追加するときに使�
 # cron job (定期実行ジョブ) の追加
 
 Cloud Scheduler → Cloud Run の HTTP GET で起動する cron route を追加する手順。
-既存 8 route (`src/app/api/cron/*/route.ts`) が canonical 実装。参照が最も充実して
+既存 route (`src/app/api/cron/*/route.ts`) が canonical 実装。参照が最も充実して
 いるのは `calendar-sync` (lock + cache) と `reservation-reminder` (feature gate +
 冪等 claim)。
 
@@ -81,8 +81,8 @@ rate limit の追加作業は不要 — `src/proxy.ts` が `/api/cron` prefix �
 ジョブが feature module (reservation / events / faq 等) に属するなら:
 
 1. route 冒頭 (認可の直後) で `isFeatureEnabled("<module>")`
-   (`src/shared/lib/features/check.ts`) を確認し、OFF なら
-   `jsonSuccess({ skipped: true, reason: "feature_disabled" })` で早期 return
+   (`src/shared/lib/features/check.ts`) を確認し早期 return する
+   (スニペットは rules の `app-structure` 参照)
 2. `src/shared/lib/features/registry.ts` の該当 module の `cronPaths` に
    `"/api/cron/<job-name>"` を追記する (disabled 集合 `disabledCronPaths` の SSoT)
 
@@ -110,8 +110,8 @@ instagram-refresh) は gate 不要。ただし外部連携系は設定未構成�
 
 ### 4. キャッシュ無効化
 
-公開データを書き換えたら無効化する。**Route Handler では `updateTag` 系
-(`invalidateSiteWideCache`) は runtime throw する**ので使わない:
+公開データを書き換えたら無効化する。呼び分けの理由 (`updateTag` が Route Handler で
+throw する等) は rules の `caching` を参照。Route Handler からは:
 
 - Next.js Data Cache のみ →
   `revalidateTag(CACHE_TAGS.X, CACHE_LIFE.Y)` (`next/cache` +

@@ -21,8 +21,9 @@ paths:
 ## メール（Resend）
 
 - 送信の SSoT は `sendEmail()`（`src/shared/lib/email/send.ts`）。from は自動注入
-  （env `EMAIL_FROM` 優先 → DB 設定）、replyTo は payload 明示 → DB 設定（env 層なし）。
-  リトライは rate_limit / server error 系のみ最大 3 回
+  （env `EMAIL_FROM` 優先 → DB 設定。`EMAIL_FROM` は秘密キーではないため下記
+  「API キーの優先順（DB優先）」の対象外で、この env 優先が正）、replyTo は
+  payload 明示 → DB 設定（env 層なし）。リトライは rate_limit / server error 系のみ最大 3 回
 - `idempotencyKey` は `<event-type>/<entity-id>` 形式でほぼ全送信に指定する
 - API キー未設定・suppression 該当時は例外でなく `{ok: false, reason: "disabled"}` の
   silent no-op。呼び出し側は "disabled" と "error" を区別する
@@ -47,9 +48,6 @@ env 側は `cloudbuild.yaml` に配線されておらず本番では常に undef
 新しい統合キーを追加する際もこのパターンに従うこと（`turnstile.ts` の
 `getTurnstileSecretKey()` をお手本にする）。
 
-なお `EMAIL_FROM`（送信元アドレス表示値、23行目）は秘密キーではないため対象外。
-env優先のままで問題ない。
-
 ## R2（Cloudflare、S3 互換）
 
 - アップロードは magic-byte 検出 MIME で Content-Type / 拡張子を確定する fail-closed 設計
@@ -68,13 +66,13 @@ env優先のままで問題ない。
 - Instagram / Google Business Profile は OAuth token lifecycle
   （refresh cron / location-sync）を持つ。public surface では OAuth callback は 404
 
-## cron（src/app/api/cron/\*、8 routes）
+## cron（src/app/api/cron/\*）
 
-Cloud Scheduler の OIDC Bearer token 検証（fail-closed）が必須。
+Cloud Scheduler の OIDC Bearer token 検証（fail-closed。詳細は security-auth ルール）が必須。
 feature module OFF のジョブは早期 return。新規追加は `add-cron-job` skill 参照。
 
 ## その他
 
 - ical-generator は server-only（client からは `@/shared/lib/ical/urls` サブパスのみ）
 - GA4/GTM/Clarity は cookie 同意 "accepted" 時のみ、CSP nonce 付きで出力
-- 新しい外部通信先は proxy.ts の CSP と frame-sources.ts の両方に追加（security ルール参照）
+- 新しい外部通信先は proxy.ts の CSP と frame-sources.ts の両方を更新（詳細は security-auth ルール）

@@ -37,6 +37,15 @@ migration に `DROP COLUMN` / `RENAME COLUMN` / `RENAME TO` / `DROP TABLE` / `DR
 public/admin 両サービスを scaling=0 停止 + 310 秒 drain する（**計画ダウンタイム発生**）。
 Cloud Run のローリング窓を保つには expand/contract 分割を優先する。
 
+## migration-history baseline reset（clean-break 例外）
+
+通常の migration 作業ではない。ユーザーが既存データの全損を明示承認し、本番を新しい
+空の Neon database/branch へ切替する場合のみ有効。適用前に: 現行 schema からの
+baseline 生成・手書き SQL 不変条件と本番初期データの保全・空 DB への
+`prisma migrate deploy` 成功・`schema.prisma` との diff が空であることの確認・
+squawk 実行・本番 seed の一回限り実行、を証明する。既に migrate 済みの DB に
+baseline reset を適用しない。
+
 ## seed（prisma/seed.ts）
 
 - 3 モード: 既定 dev（冪等・IAP 用固定スタッフ + デモデータ + 全 feature ON）/

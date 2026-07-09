@@ -49,4 +49,12 @@ paths:
 - Server Component から cookie の set/delete は不可 → Server Action 経由に切り出す
 - 公開 CMS ページは `(public)/[...segments]` catch-all が single-segment slug のみ解決
 - サイト機能の ON/OFF は Feature Module registry（`src/shared/lib/features/`）が一元管理。
-  公開 route は 404 ガード、cron は早期 return で連動する（追加は `add-feature-module` skill）
+  公開 route は `requireFeatureEnabled` で 404 ガード、cron route は
+  `authorizeCronRequest` 直後に以下の早期 return で連動する（追加手順は
+  `add-feature-module` / `add-cron-job` skill）:
+
+  ```ts
+  if (!(await isFeatureEnabled("<id>"))) {
+    return jsonSuccess({ skipped: true, reason: "feature_disabled" });
+  }
+  ```

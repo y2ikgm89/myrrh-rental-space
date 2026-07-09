@@ -6,6 +6,7 @@ prefix_rule(
         "db:generate",
         "type-check",
         "lint",
+        "lint-format",
         "format:check",
         "validate",
         "test:unit",
@@ -20,15 +21,38 @@ prefix_rule(
         "bun run db:generate",
         "bun run type-check",
         "bun run lint",
+        "bun run lint-format",
         "bun run validate",
         "bun run test:unit",
         "bun run test:integration",
+        "bun run test:all",
         "bun run build:skip-env",
+        "bun run format:check",
+        "bun run docs",
     ],
     not_match = [
         "bun run db:reset",
         "bun run db:push",
         "bun run e2e",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "db:migrate"],
+    decision = "prompt",
+    justification = "Migration creation changes database history. Confirm name, target database, and scope before running.",
+    match = [
+        "bun run db:migrate --name add-example",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "db:studio"],
+    decision = "prompt",
+    justification = "Prisma Studio is an interactive UI with arbitrary DB read/write access, comparable risk to the forbidden db push/pull.",
+    match = [
+        "bun run db:studio",
+        "bunx --bun prisma studio",
     ],
 )
 
@@ -139,5 +163,32 @@ prefix_rule(
     match = [
         "git reset --hard",
         "git clean -fd",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "commit", "--no-verify"],
+    decision = "forbidden",
+    justification = "Bypassing commit hooks skips the protected-file and commit-message checks lefthook enforces.",
+    match = [
+        "git commit --no-verify -m \"msg\"",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--no-verify"],
+    decision = "forbidden",
+    justification = "Bypassing push hooks skips the type-check and architecture-boundaries verification lefthook enforces.",
+    match = [
+        "git push --no-verify",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "-D"],
+    decision = "forbidden",
+    justification = "Force-deleting a branch discards unmerged work without confirmation.",
+    match = [
+        "git branch -D feature/old-branch",
     ],
 )

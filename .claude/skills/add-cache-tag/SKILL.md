@@ -58,14 +58,14 @@ export async function getXxxList() {
 
 ## Step 3: invalidation の配線
 
-呼び分けの理由（updateTag は Route Handler で runtime throw する等）は rules の caching.md を参照。
-配線先の判断基準:
+呼び分けの理由・read-your-own-writes / blocking immediate-expire の意味は
+rules の caching.md を参照。配線先の判断基準:
 
-| 呼び出し元                                                    | 使うもの                                                        |
-| ------------------------------------------------------------- | --------------------------------------------------------------- |
-| Server Action（admin mutation）                               | `invalidateSiteWideCache(CACHE_TAGS.X)`（`@/shared/lib/cache`） |
-| Route Handler / cron で保存直後に読む（read-your-own-writes） | `invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.X)`         |
-| cron / webhook で「次リクエストで再検証されれば良い」         | `revalidateTag(CACHE_TAGS.X, CACHE_LIFE.DYNAMIC_DATA)` 等を直接 |
+| 呼び出し元                                            | 使うもの                                                        |
+| ----------------------------------------------------- | --------------------------------------------------------------- |
+| Server Action（admin mutation。read-your-own-writes） | `invalidateSiteWideCache(CACHE_TAGS.X)`（`@/shared/lib/cache`） |
+| Route Handler / cron（blocking immediate-expire）     | `invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.X)`         |
+| cron / webhook で「次リクエストで再検証されれば良い」 | `revalidateTag(CACHE_TAGS.X, CACHE_LIFE.DYNAMIC_DATA)` 等を直接 |
 
 - admin mutation では `executeAdminMutationResult` の `afterSuccess` 内から呼ぶ。
   `withPurgeBatch` が自動で wrap しており、複数の CDN purge が 1 回の Cloudflare API

@@ -5,6 +5,9 @@
 - `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
   `noPropertyAccessFromIndexSignature`, `noImplicitOverride`, and
   `erasableSyntaxOnly` are intentional.
+- `erasableSyntaxOnly` makes a TypeScript `enum`, `namespace`, or parameter
+  property a compile error. Use the generated Prisma const objects for enum
+  values instead of a TS `enum`.
 - Tests relax `noUncheckedIndexedAccess` only in `tsconfig.test.json`.
 - Do not change compiler flags to make a local failure disappear.
 
@@ -37,5 +40,5 @@
 ## Verification
 
 - `bun run type-check`.
-- `bun test __tests__/unit/architecture-boundaries.test.ts`.
-- `bun test __tests__/unit/architecture/zod-schema-error-key.test.ts`.
+- `bun scripts/run-tests.ts __tests__/unit/architecture-boundaries.test.ts`.
+- `bun scripts/run-tests.ts __tests__/unit/architecture/zod-schema-error-key.test.ts`.

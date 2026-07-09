@@ -75,8 +75,8 @@ registry は `as const satisfies Readonly<Record<TemplateKey, RegistryTemplateEn
 - `defineEntry` が `renderPreview` (プレビュー用 ReactElement 生成) と `sendTest`
   (テスト送信、subject `[TEST]` 強制・専用 idempotency namespace) を自動で組み立てる。
   第 4 引数 `mergeRuntime` は `__infra_check` 専用なので通常は渡さない
-- data.ts / index.ts の docblock にエントリ総数 (「全 18 エントリ」等) が書かれている。
-  追加したら総数コメントも更新する
+- data.ts / index.ts の docblock にエントリ総数 (「全 N エントリ」等、現在の実数) が
+  書かれている。追加したら総数コメントも更新する
 - 管理画面側 (`src/app/(admin)/admin/(dashboard)/_shared/actions/settings/` の
   `template-preview.ts` / `template-test-send.ts`) は `z.enum(TEMPLATE_KEYS)` +
   `getTemplate` で registry を直接参照するため変更不要

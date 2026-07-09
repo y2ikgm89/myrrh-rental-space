@@ -40,9 +40,8 @@
 - `prisma/schema.prisma` and `prisma/migrations`: rollout and data-loss risk.
 - R2/media/external URL helpers: upload validation, delete behavior, magic
   bytes, and SSRF-safe fetches.
-- Reservation availability writes: use the advisory-lock helper in
-  `src/shared/domain/reservations/locks.ts` inside the same transaction as
-  overlap checks and writes.
+- Reservation availability writes: advisory-lock invariant, see the
+  `next-db-cache-boundaries` skill checklist item 9.
 
 ## Dependency Boundaries
 

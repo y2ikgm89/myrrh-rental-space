@@ -17,13 +17,21 @@
   framed tools, and dialogs only.
 - Avoid oversized headings inside dense admin surfaces.
 - Text must not overflow buttons, tabs, badges, or cells.
-- Use existing typed form helpers and validation schemas.
+- Use existing typed form helpers and validation schemas. `parseWithZod` turns
+  empty input into `undefined` — this repo's most frequently reintroduced bug.
+  Use `optionalText(max)` for optional text, `switchBoolean()` for Switch
+  fields, and `emptyToNull()` before persisting empty values (all in
+  `_shared/actions/settings/schemas/form-schema-helpers.ts`). Admin mutations
+  go through `executeAdminMutationResult`, whose fixed execution order
+  (checkAdminAuth -> resolveResourceId -> hasPermission ->
+  userHasResourceAccess -> execute -> afterSuccess -> logAction) must not be
+  reordered.
 - Preserve loading, empty, error, disabled, pending, and optimistic states when
   changing workflows.
 
 ## Verification
 
-- `bun test __tests__/unit/architecture/admin-design-tokens.test.ts`.
-- `bun test __tests__/unit/architecture/admin-submit-button-pattern.test.ts`.
+- `bun scripts/run-tests.ts __tests__/unit/architecture/admin-design-tokens.test.ts`.
+- `bun scripts/run-tests.ts __tests__/unit/architecture/admin-submit-button-pattern.test.ts`.
 - Relevant component/unit tests under `__tests__/unit/components/admin`.
 - Playwright admin tests when workflow behavior changes.
