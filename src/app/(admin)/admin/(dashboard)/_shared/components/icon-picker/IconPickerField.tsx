@@ -40,7 +40,7 @@ interface IconPickerFieldProps {
    * エラーメッセージ要素の id (conform `fields.xxx.errorId` 等)。
    * primary トリガーボタンの `aria-describedby` に forward し SR にエラー伝搬する。
    */
-  readonly "aria-describedby"?: string;
+  readonly "aria-describedby"?: string | undefined;
 }
 
 export function IconPickerField({

@@ -303,6 +303,14 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
               <SelectTrigger
                 id={fields.discountCombinationMode.id}
                 className="w-full sm:w-[300px]"
+                aria-invalid={
+                  fields.discountCombinationMode.errors ? true : undefined
+                }
+                aria-describedby={
+                  fields.discountCombinationMode.errors
+                    ? fields.discountCombinationMode.errorId
+                    : undefined
+                }
               >
                 <SelectValue />
               </SelectTrigger>

@@ -265,6 +265,11 @@ function AnalyticsSettingsCard({ settings }: SeoSectionProps) {
               columns={3}
               disabled={isPending}
               name="トラッキング方式"
+              ariaDescribedBy={
+                fields.analyticsType.errors
+                  ? fields.analyticsType.errorId
+                  : undefined
+              }
             />
             <p className="text-xs text-muted-foreground">
               GA4とGTMは排他選択です。GTM経由でGA4を使う場合はGTMを選択してください。

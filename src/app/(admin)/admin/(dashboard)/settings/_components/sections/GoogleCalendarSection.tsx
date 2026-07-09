@@ -294,6 +294,14 @@ export function GoogleCalendarSection({
                   placeholder="example@group.calendar.google.com"
                   className="font-mono"
                   disabled={isPending}
+                  aria-invalid={
+                    fields.googleCalendarId.errors ? true : undefined
+                  }
+                  aria-describedby={
+                    fields.googleCalendarId.errors
+                      ? fields.googleCalendarId.errorId
+                      : undefined
+                  }
                 />
               )}
               <p className="text-xs text-muted-foreground">
@@ -344,6 +352,14 @@ export function GoogleCalendarSection({
                   rows={6}
                   className="font-mono text-xs"
                   disabled={isPending}
+                  aria-invalid={
+                    fields.serviceAccountJson.errors ? true : undefined
+                  }
+                  aria-describedby={
+                    fields.serviceAccountJson.errors
+                      ? fields.serviceAccountJson.errorId
+                      : undefined
+                  }
                 />
               )}
               <p className="text-xs text-muted-foreground">
@@ -461,6 +477,16 @@ export function GoogleCalendarSection({
                   disabled={isPending}
                   className="h-11 rounded-md border border-border bg-background px-3 text-sm"
                   aria-label="リマインダー設定"
+                  aria-invalid={
+                    fields.googleCalendarReminderMinutes.errors
+                      ? true
+                      : undefined
+                  }
+                  aria-describedby={
+                    fields.googleCalendarReminderMinutes.errors
+                      ? fields.googleCalendarReminderMinutes.errorId
+                      : undefined
+                  }
                 >
                   <option value="default">カレンダー既定を使う</option>
                   <option value="off">通知なし</option>
@@ -484,6 +510,16 @@ export function GoogleCalendarSection({
                       }}
                       disabled={isPending}
                       className="w-28"
+                      aria-invalid={
+                        fields.googleCalendarReminderMinutes.errors
+                          ? true
+                          : undefined
+                      }
+                      aria-describedby={
+                        fields.googleCalendarReminderMinutes.errors
+                          ? fields.googleCalendarReminderMinutes.errorId
+                          : undefined
+                      }
                     />
                     <span className="text-sm text-muted-foreground">分前</span>
                   </div>

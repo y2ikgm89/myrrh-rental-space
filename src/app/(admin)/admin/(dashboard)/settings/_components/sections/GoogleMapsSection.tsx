@@ -200,6 +200,12 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
                 className="font-mono [&:not(:placeholder-shown)]:[-webkit-text-security:disc]"
                 placeholder="AIza..."
                 disabled={isBusy}
+                aria-invalid={fields.googleMapsApiKey.errors ? true : undefined}
+                aria-describedby={
+                  fields.googleMapsApiKey.errors
+                    ? fields.googleMapsApiKey.errorId
+                    : undefined
+                }
               />
             )}
             <p className="text-xs text-muted-foreground">

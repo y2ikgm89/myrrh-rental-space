@@ -225,7 +225,15 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
                     }}
                     disabled={isPending}
                   >
-                    <SelectTrigger id={fields.syncMethod.id}>
+                    <SelectTrigger
+                      id={fields.syncMethod.id}
+                      aria-invalid={fields.syncMethod.errors ? true : undefined}
+                      aria-describedby={
+                        fields.syncMethod.errors
+                          ? fields.syncMethod.errorId
+                          : undefined
+                      }
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

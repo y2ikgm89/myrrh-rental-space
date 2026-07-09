@@ -194,7 +194,17 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
                   }}
                   disabled={isPending}
                 >
-                  <SelectTrigger id={fields.containerWidth.id}>
+                  <SelectTrigger
+                    id={fields.containerWidth.id}
+                    aria-invalid={
+                      fields.containerWidth.errors ? true : undefined
+                    }
+                    aria-describedby={
+                      fields.containerWidth.errors
+                        ? fields.containerWidth.errorId
+                        : undefined
+                    }
+                  >
                     <SelectValue placeholder="幅を選択" />
                   </SelectTrigger>
                   <SelectContent>
@@ -261,7 +271,15 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
                   }}
                   disabled={isPending}
                 >
-                  <SelectTrigger id={fields.contentWidth.id}>
+                  <SelectTrigger
+                    id={fields.contentWidth.id}
+                    aria-invalid={fields.contentWidth.errors ? true : undefined}
+                    aria-describedby={
+                      fields.contentWidth.errors
+                        ? fields.contentWidth.errorId
+                        : undefined
+                    }
+                  >
                     <SelectValue placeholder="幅を選択" />
                   </SelectTrigger>
                   <SelectContent>

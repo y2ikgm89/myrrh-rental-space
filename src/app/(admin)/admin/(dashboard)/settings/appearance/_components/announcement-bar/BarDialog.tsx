@@ -126,6 +126,9 @@ export function BarFormDialog({
                 value={messageSpans}
                 onChange={setMessageSpans}
                 disabled={isPending}
+                aria-describedby={
+                  fields.message.errors ? fields.message.errorId : undefined
+                }
               />
               <input
                 type="hidden"

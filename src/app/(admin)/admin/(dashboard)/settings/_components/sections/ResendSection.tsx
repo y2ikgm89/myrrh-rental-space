@@ -205,6 +205,12 @@ export function ResendSection({ config }: ResendSectionProps) {
                 className="font-mono [&:not(:placeholder-shown)]:[-webkit-text-security:disc]"
                 placeholder="re_..."
                 disabled={isBusy}
+                aria-invalid={fields.resendApiKey.errors ? true : undefined}
+                aria-describedby={
+                  fields.resendApiKey.errors
+                    ? fields.resendApiKey.errorId
+                    : undefined
+                }
               />
             )}
             <p className="text-xs text-muted-foreground">

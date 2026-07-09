@@ -119,6 +119,9 @@ export function CategoryForm({
             value={iconValue}
             onChange={(name) => iconControl.change(name)}
             disabled={isPending}
+            aria-describedby={
+              fields.icon.errors ? fields.icon.errorId : undefined
+            }
           />
           {fields.icon.errors && (
             <p id={fields.icon.errorId} className="text-sm text-destructive">
@@ -138,6 +141,10 @@ export function CategoryForm({
               onBlur={colorControl.blur}
               disabled={isPending}
               aria-label="カラーピッカー"
+              aria-invalid={fields.color.errors ? true : undefined}
+              aria-describedby={
+                fields.color.errors ? fields.color.errorId : undefined
+              }
               className="h-10 w-16 cursor-pointer rounded-md border border-input bg-background p-1"
             />
             <Input
@@ -149,6 +156,10 @@ export function CategoryForm({
               className="flex-1"
               disabled={isPending}
               aria-label="カラーコード"
+              aria-invalid={fields.color.errors ? true : undefined}
+              aria-describedby={
+                fields.color.errors ? fields.color.errorId : undefined
+              }
             />
           </div>
           {fields.color.errors && (

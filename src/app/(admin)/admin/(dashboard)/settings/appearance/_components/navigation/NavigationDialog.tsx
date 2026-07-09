@@ -130,6 +130,9 @@ export function NavigationFormDialog({
                 onChange={setLabelSpans}
                 disabled={isPending}
                 aria-label="メニューラベル"
+                aria-describedby={
+                  fields.label.errors ? fields.label.errorId : undefined
+                }
               />
               <input
                 type="hidden"

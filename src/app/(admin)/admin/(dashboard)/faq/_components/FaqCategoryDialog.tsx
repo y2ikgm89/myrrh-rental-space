@@ -315,9 +315,9 @@ function FaqCategoryFormBody({
           value={iconValue}
           onChange={(name) => iconControl.change(name)}
           disabled={isPending}
-          {...(fields.icon.errors && {
-            "aria-describedby": fields.icon.errorId,
-          })}
+          aria-describedby={
+            fields.icon.errors ? fields.icon.errorId : undefined
+          }
         />
         {fields.icon.errors && (
           <p id={fields.icon.errorId} className="text-xs text-destructive">
