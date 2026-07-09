@@ -218,7 +218,14 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                   onValueChange={handleTypeChange}
                   disabled={isPending}
                 >
-                  <SelectTrigger id={fields.type.id} onBlur={typeControl.blur}>
+                  <SelectTrigger
+                    id={fields.type.id}
+                    aria-invalid={fields.type.errors ? true : undefined}
+                    aria-describedby={
+                      fields.type.errors ? fields.type.errorId : undefined
+                    }
+                    onBlur={typeControl.blur}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -236,7 +243,10 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                   value={couponType}
                 />
                 {fields.type.errors && (
-                  <p className="text-xs text-destructive">
+                  <p
+                    id={fields.type.errorId}
+                    className="text-xs text-destructive"
+                  >
                     {fields.type.errors.join(", ")}
                   </p>
                 )}

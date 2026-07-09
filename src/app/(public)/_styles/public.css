@@ -58,6 +58,9 @@
   --color-destructive: oklch(0.5 0.18 25);
   --color-success-foreground: oklch(0.985 0 0);
   --color-warning-foreground: oklch(0.18 0.015 60);
+  /* 淡色 tint バッジ(bg-success/10)上の前景用。--color-success(oklch 0.52)は
+   * その上で axe 実測 4.32:1 と AA(4.5:1)未達のため、テキスト用に暗い緑を用意する。 */
+  --color-success-strong: oklch(0.45 0.15 145);
   /* 淡色 tint バッジ(bg-warning/10)上の前景用。--color-warning(oklch 0.58)は
    * その上で約3.68:1 と AA(4.5:1)未達のため、テキスト用に暗いゴールドを用意する。 */
   --color-warning-strong: oklch(0.45 0.13 85);

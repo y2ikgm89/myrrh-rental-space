@@ -1,6 +1,5 @@
 import { connection } from "next/server";
 import Link from "next/link";
-import { cn } from "@/shared/lib/cn";
 import { getRecentNotifications } from "@/admin/queries/notification";
 import {
   Card,
@@ -68,13 +67,7 @@ export async function DashboardNotificationsSection() {
               );
 
               return (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "flex items-start gap-3",
-                    notification.isRead && "opacity-60",
-                  )}
-                >
+                <div key={notification.id} className="flex items-start gap-3">
                   {!notification.isRead && (
                     <span className="mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full bg-primary" />
                   )}

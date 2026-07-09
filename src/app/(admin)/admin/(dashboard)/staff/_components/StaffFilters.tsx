@@ -41,7 +41,7 @@ export function StaffFilters() {
             void setParams({ role: value === "ALL" ? null : value, page: 1 })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="ロールで絞り込み">
             <SelectValue placeholder="ロール" />
           </SelectTrigger>
           <SelectContent>

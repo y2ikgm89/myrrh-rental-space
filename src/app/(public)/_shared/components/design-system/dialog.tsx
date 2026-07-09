@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { IconX } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
@@ -29,14 +30,38 @@ function DialogOverlay({
 function DialogContent({
   className,
   children,
+  onCloseAutoFocus,
+  onOpenAutoFocus,
   ref,
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Content>) {
+  const restoreFocusElementRef = useRef<HTMLElement | null>(null);
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
+        aria-modal="true"
+        onOpenAutoFocus={(event) => {
+          const activeElement = document.activeElement;
+          restoreFocusElementRef.current =
+            activeElement instanceof HTMLElement &&
+            activeElement !== document.body
+              ? activeElement
+              : null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          if (event.defaultPrevented) return;
+
+          const restoreTarget = restoreFocusElementRef.current;
+          if (restoreTarget?.isConnected) {
+            event.preventDefault();
+            restoreTarget.focus();
+          }
+        }}
         className={cn(
           // Mobile canonical: 左右 16px のセーフ余白 (w-[calc(100%-2rem)])、
           // iOS dynamic viewport ツールバー対応の 100dvh、長 dialog の内部スクロール

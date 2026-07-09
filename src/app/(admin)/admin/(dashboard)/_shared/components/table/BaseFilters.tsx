@@ -71,7 +71,7 @@ export function BaseFilters({
       {statusOptions.length > 0 && (
         <div className="w-full sm:w-48">
           <Select value={params.status} onValueChange={setStatus}>
-            <SelectTrigger>
+            <SelectTrigger aria-label="ステータスで絞り込み">
               <SelectValue placeholder="ステータス" />
             </SelectTrigger>
             <SelectContent>

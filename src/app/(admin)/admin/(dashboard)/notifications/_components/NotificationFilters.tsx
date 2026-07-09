@@ -56,7 +56,7 @@ export function NotificationFilters() {
           void setParams({ type: value === "ALL" ? null : value, page: 1 })
         }
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px]" aria-label="通知タイプで絞り込み">
           <SelectValue placeholder="通知タイプ" />
         </SelectTrigger>
         <SelectContent>
@@ -74,7 +74,7 @@ export function NotificationFilters() {
           void setParams({ isRead: value === "ALL" ? null : value, page: 1 })
         }
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-[160px]" aria-label="既読状態で絞り込み">
           <SelectValue placeholder="既読状態" />
         </SelectTrigger>
         <SelectContent>

@@ -91,10 +91,13 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
               <TableRow key={notification.id}>
                 <TableCell className="w-8 pr-0">
                   {!notification.isRead && (
-                    <span
-                      className="inline-block h-2 w-2 rounded-full bg-primary"
-                      aria-label="未読"
-                    />
+                    <>
+                      <span
+                        className="inline-block h-2 w-2 rounded-full bg-primary"
+                        aria-hidden="true"
+                      />
+                      <span className="sr-only">未読</span>
+                    </>
                   )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">

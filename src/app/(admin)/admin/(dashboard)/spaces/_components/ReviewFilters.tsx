@@ -87,7 +87,7 @@ export function ReviewFilters({ spaceOptions }: ReviewFiltersProps) {
           value={params.rvPublished || "ALL"}
           onValueChange={handlePublishedChange}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="公開状態で絞り込み">
             <SelectValue placeholder="公開状態" />
           </SelectTrigger>
           <SelectContent>
@@ -105,7 +105,7 @@ export function ReviewFilters({ spaceOptions }: ReviewFiltersProps) {
           value={params.rvRating || "ALL"}
           onValueChange={handleRatingChange}
         >
-          <SelectTrigger>
+          <SelectTrigger aria-label="評価で絞り込み">
             <SelectValue placeholder="評価" />
           </SelectTrigger>
           <SelectContent>

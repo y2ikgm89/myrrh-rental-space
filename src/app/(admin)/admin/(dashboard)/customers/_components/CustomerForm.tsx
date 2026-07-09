@@ -144,6 +144,12 @@ export function CustomerForm(): ReactElement {
             >
               <SelectTrigger
                 id={fields.customerType.id}
+                aria-invalid={fields.customerType.errors ? true : undefined}
+                aria-describedby={
+                  fields.customerType.errors
+                    ? fields.customerType.errorId
+                    : undefined
+                }
                 onBlur={customerTypeControl.blur}
               >
                 <SelectValue placeholder="区分を選択" />
@@ -245,6 +251,12 @@ export function CustomerForm(): ReactElement {
                 value={lastNameKanaInput.kana}
                 onChange={(e) => lastNameKanaInput.setKana(e.target.value)}
                 disabled={isPending}
+                aria-invalid={fields.lastNameKana.errors ? true : undefined}
+                aria-describedby={
+                  fields.lastNameKana.errors
+                    ? fields.lastNameKana.errorId
+                    : undefined
+                }
               />
               {fields.lastNameKana.errors && (
                 <p
@@ -269,6 +281,12 @@ export function CustomerForm(): ReactElement {
                 value={firstNameKanaInput.kana}
                 onChange={(e) => firstNameKanaInput.setKana(e.target.value)}
                 disabled={isPending}
+                aria-invalid={fields.firstNameKana.errors ? true : undefined}
+                aria-describedby={
+                  fields.firstNameKana.errors
+                    ? fields.firstNameKana.errorId
+                    : undefined
+                }
               />
               {fields.firstNameKana.errors && (
                 <p
@@ -397,6 +415,12 @@ export function CustomerForm(): ReactElement {
                 >
                   <SelectTrigger
                     id={fields.prefecture.id}
+                    aria-invalid={fields.prefecture.errors ? true : undefined}
+                    aria-describedby={
+                      fields.prefecture.errors
+                        ? fields.prefecture.errorId
+                        : undefined
+                    }
                     onBlur={prefectureControl.blur}
                   >
                     <SelectValue placeholder="選択してください" />
@@ -415,7 +439,10 @@ export function CustomerForm(): ReactElement {
                   value={prefecture}
                 />
                 {fields.prefecture.errors && (
-                  <p className="text-xs text-destructive">
+                  <p
+                    id={fields.prefecture.errorId}
+                    className="text-xs text-destructive"
+                  >
                     {fields.prefecture.errors.join(", ")}
                   </p>
                 )}

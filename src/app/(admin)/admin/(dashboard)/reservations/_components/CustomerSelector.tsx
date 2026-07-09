@@ -33,6 +33,8 @@ interface CustomerSelectorProps {
   onToggleNewCustomer: (isNew: boolean) => void;
   errors?: Record<string, string[] | undefined> | undefined;
   allowNewCustomer?: boolean;
+  /** 顧客未選択エラーを説明する要素の id */
+  ariaDescribedBy?: string | undefined;
 }
 
 async function fetchCustomerSearchResults(
@@ -50,6 +52,7 @@ export function CustomerSelector({
   onToggleNewCustomer,
   errors,
   allowNewCustomer = true,
+  ariaDescribedBy,
 }: CustomerSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<CustomerSearchResult[]>(
@@ -232,6 +235,7 @@ export function CustomerSelector({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             leadingIcon="IconSearch"
+            aria-describedby={ariaDescribedBy}
           />
 
           {/* 検索中インジケーター */}

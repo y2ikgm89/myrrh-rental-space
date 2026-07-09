@@ -1,16 +1,13 @@
 "use client";
 
+import type { ErrorInfo } from "next/error";
+
 import { Button } from "@/public/components/design-system/button";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 
-export default function TermsDetailError({
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function TermsDetailError({ unstable_retry }: ErrorInfo) {
   return (
     <Container>
       <div className="flex min-h-[60svh] items-center justify-center">
@@ -19,7 +16,7 @@ export default function TermsDetailError({
           <p className="text-muted-foreground">
             一時的な問題が発生しました。しばらくしてからもう一度お試しください。
           </p>
-          <Button variant="editorial" onClick={reset}>
+          <Button variant="editorial" onClick={() => unstable_retry()}>
             もう一度試す
           </Button>
         </Stack>

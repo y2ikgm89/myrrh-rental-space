@@ -2,19 +2,44 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import type { Result } from "axe-core";
+import { urls } from "../../fixtures";
+
+const ADMIN_AXE_ROUTES = [
+  { path: urls.adminDashboard, label: "ダッシュボード" },
+  { path: urls.adminNotifications, label: "通知" },
+  { path: urls.adminReservations, label: "予約管理" },
+  { path: urls.adminCustomers, label: "顧客管理" },
+  { path: urls.adminInquiries, label: "お問い合わせ管理" },
+  { path: urls.adminSpaces, label: "スペース管理" },
+  { path: urls.adminSpaceLocations, label: "スペース管理 場所タブ" },
+  { path: urls.adminSpaceCategories, label: "スペース管理 カテゴリータブ" },
+  { path: urls.adminSpaceReviews, label: "スペース管理 レビュータブ" },
+  { path: urls.adminEvents, label: "イベント管理" },
+  { path: urls.adminCoupons, label: "クーポン管理" },
+  { path: urls.adminPages, label: "ページ管理" },
+  { path: urls.adminPosts, label: "投稿管理" },
+  { path: urls.adminNews, label: "お知らせ管理" },
+  { path: urls.adminFaq, label: "FAQ 管理" },
+  { path: urls.adminMedia, label: "メディア管理" },
+  { path: urls.adminTerms, label: "利用規約管理" },
+  { path: urls.adminTermsTrash, label: "規約ゴミ箱" },
+  { path: urls.adminTermsAgreements, label: "規約同意記録" },
+  { path: urls.adminStaff, label: "スタッフ管理" },
+  { path: urls.adminAuditLogs, label: "監査ログ" },
+  { path: urls.adminSettings, label: "設定" },
+] as const;
 
 /**
  * 管理画面 - axe-core 自動アクセシビリティスキャン（管理者認証済み state）
  *
- * 管理画面は業務ツールのため公開ページより緩い許容だが、critical 違反は
- * 必ず潰す。serious 違反は "best-practice" として warning 扱い（assertion
- * には含めない）。
+ * 管理画面も業務ツールとして繰り返し使う画面のため、公開ページ / customer
+ * マイページと同じく serious / critical 違反を blocking とする。
  *
  * 【設計原則】
  * - WCAG 2.1 Level A/AA タグで filter
  * - 管理画面特有のウィジェット（Lexical editor / contenteditable 等）
  *   は既知の false positive が多いため除外
- * - `critical` のみを blocking（serious はログ出力）
+ * - `serious` / `critical` を blocking
  *
  * 前提: chromium-admin project で実行（setup-admin が storage state 作成済み）
  */
@@ -45,78 +70,42 @@ function formatViolations(violations: readonly Result[]): string {
     .join("\n\n");
 }
 
+const BLOCKING_IMPACTS = new Set(["serious", "critical"]);
+
+function isBlocking(violation: Result): boolean {
+  return violation.impact ? BLOCKING_IMPACTS.has(violation.impact) : false;
+}
+
 test.describe("a11y scan - 管理画面主要ページ", () => {
-  test("ダッシュボードに critical 違反がない", async ({ page }) => {
-    await page.goto("/admin");
+  for (const route of ADMIN_AXE_ROUTES) {
+    test(`${route.label}ページに critical/serious 違反がない`, async ({
+      page,
+    }) => {
+      await page.goto(route.path);
+      await expect(page.getByRole("main")).toBeVisible();
 
-    const results = await buildAdminAxeScanner(page).analyze();
-    const criticals = results.violations.filter((v) => v.impact === "critical");
+      const results = await buildAdminAxeScanner(page).analyze();
+      const blocking = results.violations.filter(isBlocking);
 
-    expect(
-      criticals,
-      `Admin dashboard critical a11y violations:\n${formatViolations(criticals)}`,
-    ).toEqual([]);
-  });
+      expect(
+        blocking,
+        `Admin ${route.label} a11y violations:\n${formatViolations(results.violations)}`,
+      ).toEqual([]);
+    });
+  }
 
-  test("予約管理ページに critical 違反がない", async ({ page }) => {
-    await page.goto("/admin/reservations");
-
-    const results = await buildAdminAxeScanner(page).analyze();
-    const criticals = results.violations.filter((v) => v.impact === "critical");
-
-    expect(
-      criticals,
-      `Admin reservations critical a11y violations:\n${formatViolations(criticals)}`,
-    ).toEqual([]);
-  });
-
-  test("スペース管理ページに critical 違反がない", async ({ page }) => {
-    await page.goto("/admin/spaces");
-
-    const results = await buildAdminAxeScanner(page).analyze();
-    const criticals = results.violations.filter((v) => v.impact === "critical");
-
-    expect(
-      criticals,
-      `Admin spaces critical a11y violations:\n${formatViolations(criticals)}`,
-    ).toEqual([]);
-  });
-
-  test("FAQ 管理ページに critical 違反がない", async ({ page }) => {
-    await page.goto("/admin/faq");
-
-    const results = await buildAdminAxeScanner(page).analyze();
-    const criticals = results.violations.filter((v) => v.impact === "critical");
-
-    expect(
-      criticals,
-      `Admin FAQ critical a11y violations:\n${formatViolations(criticals)}`,
-    ).toEqual([]);
-  });
-
-  test("ブログ新規作成ページに critical 違反がない（Lexical editor 除外）", async ({
+  test("投稿新規作成ページに critical/serious 違反がない（Lexical editor 除外）", async ({
     page,
   }) => {
-    await page.goto("/admin/blog/new");
+    await page.goto(`${urls.adminPosts}/new`);
+    await expect(page.getByRole("main")).toBeVisible();
 
     const results = await buildAdminAxeScanner(page).analyze();
-    const criticals = results.violations.filter((v) => v.impact === "critical");
+    const blocking = results.violations.filter(isBlocking);
 
     expect(
-      criticals,
-      `Admin blog new page critical a11y violations:\n${formatViolations(criticals)}`,
-    ).toEqual([]);
-  });
-
-  test("設定ページに critical 違反がない", async ({ page }) => {
-    await page.goto("/admin/settings");
-
-    const results = await buildAdminAxeScanner(page).analyze();
-    const criticals = results.violations.filter((v) => v.impact === "critical");
-
-    expect(
-      criticals,
-      `Admin settings critical a11y violations:\n${formatViolations(criticals)}`,
+      blocking,
+      `Admin post new page a11y violations:\n${formatViolations(results.violations)}`,
     ).toEqual([]);
   });
 });

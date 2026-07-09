@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import { cn } from "@/shared/lib/cn";
@@ -29,17 +30,41 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  onCloseAutoFocus,
+  onOpenAutoFocus,
   ref,
   style,
   ...props
 }: React.ComponentPropsWithRef<typeof AlertDialogPrimitive.Content>) {
+  const restoreFocusElementRef = useRef<HTMLElement | null>(null);
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Content
         ref={ref}
+        aria-modal="true"
+        onOpenAutoFocus={(event) => {
+          const activeElement = document.activeElement;
+          restoreFocusElementRef.current =
+            activeElement instanceof HTMLElement &&
+            activeElement !== document.body
+              ? activeElement
+              : null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          if (event.defaultPrevented) return;
+
+          const restoreTarget = restoreFocusElementRef.current;
+          if (restoreTarget?.isConnected) {
+            event.preventDefault();
+            restoreTarget.focus();
+          }
+        }}
         className={cn(
-          "fixed left-[50%] top-[50%] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg",
+          "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border bg-background p-4 shadow-lg duration-200 sm:p-6",
           className,
         )}
         style={{ ...style, zIndex: style?.zIndex ?? Z_INDEX.dialog }}
@@ -71,7 +96,7 @@ function AlertDialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+        "flex flex-col gap-2 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -129,11 +154,7 @@ function AlertDialogCancel({
   return (
     <AlertDialogPrimitive.Cancel
       ref={ref}
-      className={cn(
-        buttonVariants({ variant: "outline" }),
-        "mt-2 sm:mt-0",
-        className,
-      )}
+      className={cn(buttonVariants({ variant: "outline" }), className)}
       {...props}
     />
   );

@@ -3,6 +3,21 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Result } from "axe-core";
 import { urls } from "../fixtures";
 
+const PUBLIC_AXE_ROUTES = [
+  { path: urls.home, label: "ホームページ" },
+  { path: urls.about, label: "会社概要ページ" },
+  { path: urls.access, label: "アクセスページ" },
+  { path: urls.spaces, label: "スペース一覧ページ" },
+  { path: urls.reservation, label: "予約ページ" },
+  { path: urls.blog, label: "ブログ一覧ページ" },
+  { path: urls.news, label: "お知らせ一覧ページ" },
+  { path: urls.contact, label: "お問い合わせページ" },
+  { path: urls.faq, label: "FAQ ページ" },
+  { path: urls.events, label: "イベント一覧ページ" },
+  { path: urls.terms, label: "規約一覧ページ" },
+  { path: urls.customerLogin, label: "ログインページ" },
+] as const;
+
 /**
  * 公開ページ - axe-core 自動アクセシビリティスキャン
  *
@@ -60,109 +75,25 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
   });
 
-  test("ホームページに critical/serious 違反がない", async ({ page }) => {
-    test.skip(
-      appSurface !== "public",
-      "Public homepage root is served only on public surface.",
-    );
+  for (const route of PUBLIC_AXE_ROUTES) {
+    test(`${route.label}に critical/serious 違反がない`, async ({ page }) => {
+      if (route.path === urls.home) {
+        test.skip(
+          appSurface !== "public",
+          "Public homepage root is served only on public surface.",
+        );
+      }
 
-    await page.goto(urls.home);
-    await expect(page.getByRole("main")).toBeVisible();
+      await page.goto(route.path);
+      await expect(page.getByRole("main")).toBeVisible();
 
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
+      const results = await buildAxeScanner(page).analyze();
+      const blocking = results.violations.filter(isBlocking);
 
-    expect(
-      blocking,
-      `Homepage a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("スペース一覧ページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.spaces);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `Spaces list a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("予約ページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.reservation);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `Reservation page a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("ブログ一覧ページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.blog);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `Posts a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("お知らせ一覧ページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.news);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `News a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("お問い合わせページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.contact);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `Contact page a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("FAQ ページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.faq);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `FAQ a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("イベント一覧ページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.events);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `Events a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
-
-  test("ログインページに critical/serious 違反がない", async ({ page }) => {
-    await page.goto(urls.customerLogin);
-    const results = await buildAxeScanner(page).analyze();
-    const blocking = results.violations.filter(isBlocking);
-
-    expect(
-      blocking,
-      `Login a11y violations:\n${formatAxeViolations(results.violations)}`,
-    ).toEqual([]);
-  });
+      expect(
+        blocking,
+        `${route.label} a11y violations:\n${formatAxeViolations(results.violations)}`,
+      ).toEqual([]);
+    });
+  }
 });

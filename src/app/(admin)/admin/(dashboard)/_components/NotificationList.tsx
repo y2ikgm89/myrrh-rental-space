@@ -91,7 +91,7 @@ export function NotificationList({ notifications }: NotificationListProps) {
             key={notification.id}
             className={cn(
               "border-b px-4 py-3 last:border-b-0",
-              notification.isRead ? "opacity-60" : "bg-primary/5",
+              !notification.isRead && "bg-primary/5",
             )}
           >
             <div className="flex items-start justify-between gap-2">

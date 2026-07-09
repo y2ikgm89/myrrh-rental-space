@@ -38,6 +38,8 @@ export interface SelectionBoxProps {
   disabled?: boolean;
   /** aria-label用の名前 */
   name?: string;
+  /** エラーメッセージを説明する要素の id */
+  ariaDescribedBy?: string | undefined;
   /** 追加のクラス名 */
   className?: string;
 }
@@ -53,6 +55,7 @@ function SelectionBox({
   columns = 1,
   disabled = false,
   name,
+  ariaDescribedBy,
   className,
 }: SelectionBoxProps) {
   const groupId = useId();
@@ -114,6 +117,7 @@ function SelectionBox({
     <div
       role="radiogroup"
       aria-label={name}
+      aria-describedby={ariaDescribedBy}
       className={cn("grid gap-3", gridColumnsClass, className)}
     >
       {options.map((option) => {

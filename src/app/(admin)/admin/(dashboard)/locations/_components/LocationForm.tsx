@@ -497,7 +497,10 @@ export function LocationForm({
       ))}
 
       {form.errors && form.errors.length > 0 && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+        <div
+          className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+        >
           {form.errors.join(", ")}
         </div>
       )}
@@ -529,9 +532,16 @@ export function LocationForm({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="例: Myrrhビル"
                   disabled={isPending}
+                  aria-invalid={fields.name.errors ? true : undefined}
+                  aria-describedby={
+                    fields.name.errors ? fields.name.errorId : undefined
+                  }
                 />
                 {fields.name.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.name.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.name.errors.join(", ")}
                   </p>
                 )}
@@ -554,7 +564,10 @@ export function LocationForm({
                   として使われ、JSON-LD `@id` にも影響します。
                 </p>
                 {fields.slug.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.slug.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.slug.errors.join(", ")}
                   </p>
                 )}
@@ -569,9 +582,18 @@ export function LocationForm({
                   placeholder="建物・施設の説明を入力..."
                   rows={4}
                   disabled={isPending}
+                  aria-invalid={fields.description.errors ? true : undefined}
+                  aria-describedby={
+                    fields.description.errors
+                      ? fields.description.errorId
+                      : undefined
+                  }
                 />
                 {fields.description.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.description.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.description.errors.join(", ")}
                   </p>
                 )}
@@ -587,7 +609,10 @@ export function LocationForm({
                   disabled={isPending}
                 />
                 {fields.address.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.address.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.address.errors.join(", ")}
                   </p>
                 )}
@@ -606,9 +631,18 @@ export function LocationForm({
                       onChange={(e) => setPostalCode(e.target.value)}
                       placeholder="150-0001"
                       disabled={isPending}
+                      aria-invalid={fields.postalCode.errors ? true : undefined}
+                      aria-describedby={
+                        fields.postalCode.errors
+                          ? fields.postalCode.errorId
+                          : undefined
+                      }
                     />
                     {fields.postalCode.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.postalCode.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.postalCode.errors.join(", ")}
                       </p>
                     )}
@@ -621,9 +655,18 @@ export function LocationForm({
                       onChange={(e) => setPrefecture(e.target.value)}
                       placeholder="東京都"
                       disabled={isPending}
+                      aria-invalid={fields.prefecture.errors ? true : undefined}
+                      aria-describedby={
+                        fields.prefecture.errors
+                          ? fields.prefecture.errorId
+                          : undefined
+                      }
                     />
                     {fields.prefecture.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.prefecture.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.prefecture.errors.join(", ")}
                       </p>
                     )}
@@ -638,9 +681,16 @@ export function LocationForm({
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="渋谷区"
                       disabled={isPending}
+                      aria-invalid={fields.city.errors ? true : undefined}
+                      aria-describedby={
+                        fields.city.errors ? fields.city.errorId : undefined
+                      }
                     />
                     {fields.city.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.city.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.city.errors.join(", ")}
                       </p>
                     )}
@@ -655,7 +705,10 @@ export function LocationForm({
                       disabled={isPending}
                     />
                     {fields.streetAddress.errors && (
-                      <p className="text-sm text-destructive">
+                      <p
+                        id={fields.streetAddress.errorId}
+                        className="text-sm text-destructive"
+                      >
                         {fields.streetAddress.errors.join(", ")}
                       </p>
                     )}
@@ -669,7 +722,10 @@ export function LocationForm({
                     disabled={isPending}
                   />
                   {fields.buildingName.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.buildingName.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.buildingName.errors.join(", ")}
                     </p>
                   )}
@@ -726,6 +782,12 @@ export function LocationForm({
                       });
                     }}
                     disabled={isPending || accessLinesList.length >= 20}
+                    aria-invalid={fields.accessLines.errors ? true : undefined}
+                    aria-describedby={
+                      fields.accessLines.errors
+                        ? fields.accessLines.errorId
+                        : undefined
+                    }
                   >
                     + 経路を追加
                   </Button>
@@ -736,7 +798,10 @@ export function LocationForm({
                     </p>
                   )}
                   {fields.accessLines.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.accessLines.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.accessLines.errors.join(", ")}
                     </p>
                   )}
@@ -755,7 +820,10 @@ export function LocationForm({
                   この拠点の駐車場情報。拠点ごとに設定できます。
                 </p>
                 {fields.parkingInfo.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.parkingInfo.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.parkingInfo.errors.join(", ")}
                   </p>
                 )}
@@ -797,6 +865,12 @@ export function LocationForm({
                       variant="outline"
                       onClick={() => mainImagePicker.openPicker()}
                       disabled={isPending}
+                      aria-invalid={fields.imageUrl.errors ? true : undefined}
+                      aria-describedby={
+                        fields.imageUrl.errors
+                          ? fields.imageUrl.errorId
+                          : undefined
+                      }
                     >
                       <IconPhotoPlus
                         aria-hidden="true"
@@ -812,7 +886,10 @@ export function LocationForm({
                   </div>
                 </div>
                 {fields.imageUrl.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.imageUrl.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.imageUrl.errors.join(", ")}
                   </p>
                 )}
@@ -827,6 +904,12 @@ export function LocationForm({
                   variant="outline"
                   onClick={() => additionalImagesPicker.openPicker()}
                   disabled={isPending || imageUrlsList.length >= 10}
+                  aria-invalid={fields.imageUrls.errors ? true : undefined}
+                  aria-describedby={
+                    fields.imageUrls.errors
+                      ? fields.imageUrls.errorId
+                      : undefined
+                  }
                 >
                   <IconPhotoPlus aria-hidden="true" className="mr-2 h-4 w-4" />
                   画像を追加
@@ -876,7 +959,10 @@ export function LocationForm({
                   </>
                 )}
                 {fields.imageUrls.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.imageUrls.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.imageUrls.errors.join(", ")}
                   </p>
                 )}
@@ -985,9 +1071,18 @@ export function LocationForm({
                     disabled={isPending}
                     value={latitude}
                     onChange={(e) => setLatitude(e.target.value)}
+                    aria-invalid={fields.latitude.errors ? true : undefined}
+                    aria-describedby={
+                      fields.latitude.errors
+                        ? fields.latitude.errorId
+                        : undefined
+                    }
                   />
                   {fields.latitude.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.latitude.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.latitude.errors.join(", ")}
                     </p>
                   )}
@@ -1002,9 +1097,18 @@ export function LocationForm({
                     disabled={isPending}
                     value={longitude}
                     onChange={(e) => setLongitude(e.target.value)}
+                    aria-invalid={fields.longitude.errors ? true : undefined}
+                    aria-describedby={
+                      fields.longitude.errors
+                        ? fields.longitude.errorId
+                        : undefined
+                    }
                   />
                   {fields.longitude.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.longitude.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.longitude.errors.join(", ")}
                     </p>
                   )}
@@ -1019,9 +1123,18 @@ export function LocationForm({
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="03-1234-5678"
                   disabled={isPending}
+                  aria-invalid={fields.phoneNumber.errors ? true : undefined}
+                  aria-describedby={
+                    fields.phoneNumber.errors
+                      ? fields.phoneNumber.errorId
+                      : undefined
+                  }
                 />
                 {fields.phoneNumber.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.phoneNumber.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.phoneNumber.errors.join(", ")}
                   </p>
                 )}
@@ -1036,9 +1149,16 @@ export function LocationForm({
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="info@example.com"
                   disabled={isPending}
+                  aria-invalid={fields.email.errors ? true : undefined}
+                  aria-describedby={
+                    fields.email.errors ? fields.email.errorId : undefined
+                  }
                 />
                 {fields.email.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.email.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.email.errors.join(", ")}
                   </p>
                 )}
@@ -1052,12 +1172,21 @@ export function LocationForm({
                   onChange={(e) => setPriceRange(e.target.value)}
                   placeholder="¥1,000〜¥5,000/時間"
                   disabled={isPending}
+                  aria-invalid={fields.priceRange.errors ? true : undefined}
+                  aria-describedby={
+                    fields.priceRange.errors
+                      ? fields.priceRange.errorId
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   例: ¥1,000〜¥5,000/時間（最大 100 文字）
                 </p>
                 {fields.priceRange.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.priceRange.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.priceRange.errors.join(", ")}
                   </p>
                 )}
@@ -1073,12 +1202,23 @@ export function LocationForm({
                   onChange={(e) => setPaymentAccepted(e.target.value)}
                   placeholder="現金, クレジットカード, 電子マネー"
                   disabled={isPending}
+                  aria-invalid={
+                    fields.paymentAccepted.errors ? true : undefined
+                  }
+                  aria-describedby={
+                    fields.paymentAccepted.errors
+                      ? fields.paymentAccepted.errorId
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   現金, クレジットカード, 電子マネー, QRコード決済
                 </p>
                 {fields.paymentAccepted.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.paymentAccepted.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.paymentAccepted.errors.join(", ")}
                   </p>
                 )}
@@ -1094,12 +1234,23 @@ export function LocationForm({
                   onChange={(e) => setGoogleBusinessPlaceId(e.target.value)}
                   placeholder="ChIJ..."
                   disabled={isPending}
+                  aria-invalid={
+                    fields.googleBusinessPlaceId.errors ? true : undefined
+                  }
+                  aria-describedby={
+                    fields.googleBusinessPlaceId.errors
+                      ? fields.googleBusinessPlaceId.errorId
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Google Maps Platform で確認できます（ChIJ...）
                 </p>
                 {fields.googleBusinessPlaceId.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.googleBusinessPlaceId.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.googleBusinessPlaceId.errors.join(", ")}
                   </p>
                 )}
@@ -1118,7 +1269,10 @@ export function LocationForm({
                   お客様に口コミ投稿を促すための URL
                 </p>
                 {fields.googleReviewUrl.errors && (
-                  <p className="text-sm text-destructive">
+                  <p
+                    id={fields.googleReviewUrl.errorId}
+                    className="text-sm text-destructive"
+                  >
                     {fields.googleReviewUrl.errors.join(", ")}
                   </p>
                 )}

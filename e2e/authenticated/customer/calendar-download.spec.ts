@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { urls } from "../../fixtures";
 import {
   customerReservationTargets,
   openCustomerReservationDetail,
@@ -45,7 +46,7 @@ test.describe("AddToCalendar UI 表示", () => {
   test("マイページイベント申込一覧の AddToCalendar 描画契約", async ({
     page,
   }) => {
-    await page.goto("/mypage/events");
+    await page.goto(urls.mypageEvents);
 
     await expect(
       page.getByRole("link", { name: /ヨガ＆マインドフルネス体験会/u }),
@@ -109,7 +110,7 @@ test.describe("Calendar API - 認証済みダウンロード", () => {
     page,
     request,
   }) => {
-    await page.goto("/mypage/events");
+    await page.goto(urls.mypageEvents);
 
     await expect(
       page.getByRole("link", { name: /ヨガ＆マインドフルネス体験会/u }),

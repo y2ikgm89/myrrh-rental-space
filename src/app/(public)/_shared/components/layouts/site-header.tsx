@@ -4,7 +4,7 @@
  * Site Header — Radix NavigationMenu + Radix Dialog (mobile)
  *
  * - デスクトップ: @radix-ui/react-navigation-menu（WAI-ARIA 準拠、キーボード操作対応）
- * - モバイル: @radix-ui/react-dialog（Portal / focus trap / Esc / body scroll lock 自動）
+ * - モバイル: @radix-ui/react-dialog（Portal / focus trap / Esc）
  * - スクロール挙動: gsap.matchMedia で prefers-reduced-motion を尊重
  * - 全ナビ項目は DB 駆動。navItems が空なら nav リストのみ省略
  */
@@ -224,9 +224,21 @@ export function Header({
   // /reservation は CTA ボタンで導線があるためナビから除外
   const items = navItems.filter((item) => item.url !== "/reservation");
   const headerRef = useRef<HTMLElement>(null);
+  const mobileMenuContentRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
+
+  function focusMobileMenuInitialElement() {
+    const content = mobileMenuContentRef.current;
+    const closeButton = closeButtonRef.current;
+
+    closeButton?.focus({ preventScroll: true });
+    if (content && !content.contains(document.activeElement)) {
+      content.focus({ preventScroll: true });
+    }
+  }
 
   useEffect(() => {
     if (!menuOpen || typeof window.matchMedia !== "function") return;
@@ -456,7 +468,7 @@ export function Header({
         </div>
 
         {/* Mobile — modal Dialog keeps the covered page inert and delegates focus/scroll management to Radix. */}
-        <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
+        <Dialog.Root modal open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger
             className={cn(
               "inline-flex h-11 w-11 items-center justify-center justify-self-end text-foreground lg:hidden",
@@ -473,8 +485,13 @@ export function Header({
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl lg:hidden" />
             <Dialog.Content
+              ref={mobileMenuContentRef}
               tabIndex={-1}
               className="fixed inset-0 z-50 flex flex-col bg-background lg:hidden"
+              onOpenAutoFocus={(event) => {
+                focusMobileMenuInitialElement();
+                event.preventDefault();
+              }}
             >
               <Dialog.Title className="sr-only">
                 ナビゲーションメニュー
@@ -490,6 +507,7 @@ export function Header({
                   onNavigate={closeMenu}
                 />
                 <Dialog.Close
+                  ref={closeButtonRef}
                   className={cn(
                     "inline-flex h-11 w-11 items-center justify-center text-foreground",
                     MOBILE_MENU_FOCUS_CLASS,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { IconX } from "@tabler/icons-react";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
@@ -32,17 +33,41 @@ function DialogOverlay({
 function DialogContent({
   className,
   children,
+  onCloseAutoFocus,
+  onOpenAutoFocus,
   ref,
   style,
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Content>) {
+  const restoreFocusElementRef = useRef<HTMLElement | null>(null);
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
+        aria-modal="true"
+        onOpenAutoFocus={(event) => {
+          const activeElement = document.activeElement;
+          restoreFocusElementRef.current =
+            activeElement instanceof HTMLElement &&
+            activeElement !== document.body
+              ? activeElement
+              : null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          if (event.defaultPrevented) return;
+
+          const restoreTarget = restoreFocusElementRef.current;
+          if (restoreTarget?.isConnected) {
+            event.preventDefault();
+            restoreTarget.focus();
+          }
+        }}
         className={cn(
-          "fixed left-[50%] top-[50%] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg",
+          "fixed left-1/2 top-1/2 grid w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border bg-background p-4 shadow-lg duration-200 sm:p-6",
           className,
         )}
         style={{ ...style, zIndex: style?.zIndex ?? Z_INDEX.dialog }}
@@ -51,7 +76,7 @@ function DialogContent({
         {children}
         <DialogPrimitive.Close className="absolute right-2 top-2 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-sm opacity-70 ring-offset-background transition-opacity duration-200 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <IconX className="h-4 w-4" aria-hidden="true" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">閉じる</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>
@@ -65,7 +90,7 @@ function DialogHeader({
   return (
     <div
       className={cn(
-        "flex flex-col space-y-1.5 text-center sm:text-left",
+        "flex flex-col space-y-1.5 pe-12 text-center sm:text-left",
         className,
       )}
       {...props}
@@ -80,7 +105,7 @@ function DialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+        "flex flex-col gap-2 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}

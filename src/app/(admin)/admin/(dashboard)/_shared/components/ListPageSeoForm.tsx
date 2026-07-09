@@ -239,6 +239,11 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                   variant="outline"
                   size="sm"
                   id={fields.ogpImageUrl.id}
+                  aria-describedby={
+                    fields.ogpImageUrl.errors
+                      ? fields.ogpImageUrl.errorId
+                      : undefined
+                  }
                   onClick={() => ogpPicker.openPicker()}
                   disabled={isPending}
                 >
@@ -272,7 +277,10 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
               推奨サイズ: 1200x630px
             </p>
             {fields.ogpImageUrl.errors && (
-              <p className="text-sm text-destructive">
+              <p
+                id={fields.ogpImageUrl.errorId}
+                className="text-sm text-destructive"
+              >
                 {fields.ogpImageUrl.errors.join(", ")}
               </p>
             )}
