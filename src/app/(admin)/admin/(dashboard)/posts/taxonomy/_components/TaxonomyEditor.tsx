@@ -122,6 +122,7 @@ type OgpImagePickerProps = {
   isPending: boolean;
   onPickImage: () => void;
   onClearImage: () => void;
+  ariaDescribedBy?: string | undefined;
 };
 
 function OgpImagePicker({
@@ -133,6 +134,7 @@ function OgpImagePicker({
   isPending,
   onPickImage,
   onClearImage,
+  ariaDescribedBy,
 }: OgpImagePickerProps) {
   return (
     <Card>
@@ -162,6 +164,7 @@ function OgpImagePicker({
                       size="sm"
                       onClick={onPickImage}
                       disabled={isPending}
+                      aria-describedby={ariaDescribedBy}
                     >
                       変更
                     </Button>
@@ -181,6 +184,7 @@ function OgpImagePicker({
                   type="button"
                   onClick={onPickImage}
                   disabled={isPending}
+                  aria-describedby={ariaDescribedBy}
                   className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <IconPhoto className="h-8 w-8" />
@@ -472,6 +476,9 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
             isPending={isPending}
             onPickImage={() => ogpPicker.openPicker()}
             onClearImage={() => ogpImageUrlControl.change("")}
+            ariaDescribedBy={
+              fields.ogpImageUrl.errors ? fields.ogpImageUrl.errorId : undefined
+            }
           />
           {fields.ogpImageUrl.errors && (
             <p
@@ -766,6 +773,9 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
             isPending={isPending}
             onPickImage={() => ogpPicker.openPicker()}
             onClearImage={() => ogpImageUrlControl.change("")}
+            ariaDescribedBy={
+              fields.ogpImageUrl.errors ? fields.ogpImageUrl.errorId : undefined
+            }
           />
           {fields.ogpImageUrl.errors && (
             <p

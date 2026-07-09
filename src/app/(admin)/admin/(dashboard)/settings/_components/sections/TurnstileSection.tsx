@@ -211,6 +211,12 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
                 placeholder="0x..."
                 disabled={isBusy}
                 className="font-mono"
+                aria-invalid={fields.turnstileSiteKey.errors ? true : undefined}
+                aria-describedby={
+                  fields.turnstileSiteKey.errors
+                    ? fields.turnstileSiteKey.errorId
+                    : undefined
+                }
               />
             )}
             <p className="text-xs text-muted-foreground">
@@ -259,6 +265,14 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
                 className="font-mono [&:not(:placeholder-shown)]:[-webkit-text-security:disc]"
                 placeholder="0x..."
                 disabled={isBusy}
+                aria-invalid={
+                  fields.turnstileSecretKey.errors ? true : undefined
+                }
+                aria-describedby={
+                  fields.turnstileSecretKey.errors
+                    ? fields.turnstileSecretKey.errorId
+                    : undefined
+                }
               />
             )}
             <p className="text-xs text-muted-foreground">

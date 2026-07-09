@@ -191,7 +191,11 @@ export function EventLocationSpaceSelector({
             {...getInputProps(fields.addressDetail, { type: "text" })}
             disabled={isPending}
             placeholder={addressDetailFieldMeta.placeholder}
-            aria-describedby="addressDetail-description"
+            aria-describedby={
+              fields.addressDetail.errors
+                ? `addressDetail-description ${fields.addressDetail.errorId}`
+                : "addressDetail-description"
+            }
           />
           <p
             id="addressDetail-description"

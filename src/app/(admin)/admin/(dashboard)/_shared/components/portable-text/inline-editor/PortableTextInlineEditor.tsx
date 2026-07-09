@@ -67,7 +67,7 @@ interface PortableTextInlineEditorProps {
   readonly onChange: (spans: PortableTextSpan[]) => void;
   readonly disabled?: boolean;
   readonly id?: string;
-  readonly "aria-describedby"?: string;
+  readonly "aria-describedby"?: string | undefined;
   readonly "aria-label"?: string;
 }
 

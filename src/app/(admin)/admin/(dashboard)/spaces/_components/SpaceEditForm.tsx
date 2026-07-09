@@ -531,10 +531,17 @@ export function SpaceEditForm({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="例: 会議室A"
                   disabled={isPending}
+                  aria-invalid={fields.name.errors ? true : undefined}
+                  aria-describedby={
+                    fields.name.errors ? fields.name.errorId : undefined
+                  }
                 />
-                {fieldHasErrors(fields.name.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.name.errors?.join(", ")}
+                {fields.name.errors && (
+                  <p
+                    id={fields.name.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.name.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -547,13 +554,20 @@ export function SpaceEditForm({
                   onChange={(e) => setSlug(e.target.value)}
                   placeholder="例: meeting-room-a"
                   disabled={isPending}
+                  aria-invalid={fields.slug.errors ? true : undefined}
+                  aria-describedby={
+                    fields.slug.errors ? fields.slug.errorId : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   URLに使用されます（小文字英数字とハイフンのみ）
                 </p>
-                {fieldHasErrors(fields.slug.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.slug.errors?.join(", ")}
+                {fields.slug.errors && (
+                  <p
+                    id={fields.slug.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.slug.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -566,11 +580,19 @@ export function SpaceEditForm({
                     onChange={setDescriptionJson}
                     height="560px"
                     placeholder="スペースの説明を入力..."
+                    ariaDescribedBy={
+                      fields.descriptionJson.errors
+                        ? fields.descriptionJson.errorId
+                        : undefined
+                    }
                   />
                 </div>
-                {fieldHasErrors(fields.descriptionJson.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.descriptionJson.errors?.join(", ")}
+                {fields.descriptionJson.errors && (
+                  <p
+                    id={fields.descriptionJson.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.descriptionJson.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -587,7 +609,15 @@ export function SpaceEditForm({
                     onValueChange={setLocationId}
                     disabled={isPending}
                   >
-                    <SelectTrigger id="space-locationId">
+                    <SelectTrigger
+                      id="space-locationId"
+                      aria-invalid={fields.locationId.errors ? true : undefined}
+                      aria-describedby={
+                        fields.locationId.errors
+                          ? fields.locationId.errorId
+                          : undefined
+                      }
+                    >
                       <SelectValue placeholder="拠点を選択" />
                     </SelectTrigger>
                     <SelectContent>
@@ -599,9 +629,12 @@ export function SpaceEditForm({
                     </SelectContent>
                   </Select>
                 )}
-                {fieldHasErrors(fields.locationId.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.locationId.errors?.join(", ")}
+                {fields.locationId.errors && (
+                  <p
+                    id={fields.locationId.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.locationId.errors.join(", ")}
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
@@ -619,10 +652,19 @@ export function SpaceEditForm({
                   onChange={(e) => setAddressDetail(e.target.value)}
                   placeholder="例: 3F 会議室A（任意）"
                   disabled={isPending}
+                  aria-invalid={fields.addressDetail.errors ? true : undefined}
+                  aria-describedby={
+                    fields.addressDetail.errors
+                      ? fields.addressDetail.errorId
+                      : undefined
+                  }
                 />
-                {fieldHasErrors(fields.addressDetail.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.addressDetail.errors?.join(", ")}
+                {fields.addressDetail.errors && (
+                  <p
+                    id={fields.addressDetail.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.addressDetail.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -637,10 +679,19 @@ export function SpaceEditForm({
                     onChange={(e) => setCapacity(e.target.value)}
                     placeholder="10"
                     disabled={isPending}
+                    aria-invalid={fields.capacity.errors ? true : undefined}
+                    aria-describedby={
+                      fields.capacity.errors
+                        ? fields.capacity.errorId
+                        : undefined
+                    }
                   />
-                  {fieldHasErrors(fields.capacity.errors) && (
-                    <p className="text-sm text-destructive">
-                      {fields.capacity.errors?.join(", ")}
+                  {fields.capacity.errors && (
+                    <p
+                      id={fields.capacity.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.capacity.errors.join(", ")}
                     </p>
                   )}
                 </div>
@@ -654,10 +705,17 @@ export function SpaceEditForm({
                     onChange={(e) => setArea(e.target.value)}
                     placeholder="50"
                     disabled={isPending}
+                    aria-invalid={fields.area.errors ? true : undefined}
+                    aria-describedby={
+                      fields.area.errors ? fields.area.errorId : undefined
+                    }
                   />
-                  {fieldHasErrors(fields.area.errors) && (
-                    <p className="text-sm text-destructive">
-                      {fields.area.errors?.join(", ")}
+                  {fields.area.errors && (
+                    <p
+                      id={fields.area.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.area.errors.join(", ")}
                     </p>
                   )}
                 </div>
@@ -689,10 +747,19 @@ export function SpaceEditForm({
                     onChange={(e) => setHourlyPrice(e.target.value)}
                     placeholder="5000"
                     disabled={isPending}
+                    aria-invalid={fields.hourlyPrice.errors ? true : undefined}
+                    aria-describedby={
+                      fields.hourlyPrice.errors
+                        ? fields.hourlyPrice.errorId
+                        : undefined
+                    }
                   />
-                  {fieldHasErrors(fields.hourlyPrice.errors) && (
-                    <p className="text-sm text-destructive">
-                      {fields.hourlyPrice.errors?.join(", ")}
+                  {fields.hourlyPrice.errors && (
+                    <p
+                      id={fields.hourlyPrice.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.hourlyPrice.errors.join(", ")}
                     </p>
                   )}
                 </div>
@@ -705,10 +772,19 @@ export function SpaceEditForm({
                     onChange={(e) => setDailyPrice(e.target.value)}
                     placeholder="30000"
                     disabled={isPending}
+                    aria-invalid={fields.dailyPrice.errors ? true : undefined}
+                    aria-describedby={
+                      fields.dailyPrice.errors
+                        ? fields.dailyPrice.errorId
+                        : undefined
+                    }
                   />
-                  {fieldHasErrors(fields.dailyPrice.errors) && (
-                    <p className="text-sm text-destructive">
-                      {fields.dailyPrice.errors?.join(", ")}
+                  {fields.dailyPrice.errors && (
+                    <p
+                      id={fields.dailyPrice.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.dailyPrice.errors.join(", ")}
                     </p>
                   )}
                 </div>
@@ -761,6 +837,14 @@ export function SpaceEditForm({
                           className="w-20"
                           disabled={isPending}
                           aria-label="割引率"
+                          aria-invalid={
+                            fields.discountValue.errors ? true : undefined
+                          }
+                          aria-describedby={
+                            fields.discountValue.errors
+                              ? fields.discountValue.errorId
+                              : undefined
+                          }
                         />
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
@@ -776,6 +860,14 @@ export function SpaceEditForm({
                           className="w-24"
                           disabled={isPending}
                           aria-label="割引額"
+                          aria-invalid={
+                            fields.discountValue.errors ? true : undefined
+                          }
+                          aria-describedby={
+                            fields.discountValue.errors
+                              ? fields.discountValue.errorId
+                              : undefined
+                          }
                         />
                         <span className="text-sm text-muted-foreground">
                           円
@@ -783,9 +875,12 @@ export function SpaceEditForm({
                       </div>
                     )}
                   </div>
-                  {fieldHasErrors(fields.discountValue.errors) && (
-                    <p className="text-sm text-destructive">
-                      {fields.discountValue.errors?.join(", ")}
+                  {fields.discountValue.errors && (
+                    <p
+                      id={fields.discountValue.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.discountValue.errors.join(", ")}
                     </p>
                   )}
                 </div>
@@ -985,6 +1080,11 @@ export function SpaceEditForm({
                       variant="outline"
                       onClick={() => mainImagePicker.openPicker()}
                       disabled={isPending}
+                      aria-describedby={
+                        fields.mainImageUrl.errors
+                          ? fields.mainImageUrl.errorId
+                          : undefined
+                      }
                     >
                       <IconPhotoPlus
                         aria-hidden="true"
@@ -999,9 +1099,12 @@ export function SpaceEditForm({
                     )}
                   </div>
                 </div>
-                {fieldHasErrors(fields.mainImageUrl.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.mainImageUrl.errors?.join(", ")}
+                {fields.mainImageUrl.errors && (
+                  <p
+                    id={fields.mainImageUrl.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.mainImageUrl.errors.join(", ")}
                   </p>
                 )}
               </div>
@@ -1046,7 +1149,17 @@ export function SpaceEditForm({
                       }
                       disabled={isPending}
                     >
-                      <SelectTrigger id="space-categoryId">
+                      <SelectTrigger
+                        id="space-categoryId"
+                        aria-invalid={
+                          fields.categoryId.errors ? true : undefined
+                        }
+                        aria-describedby={
+                          fields.categoryId.errors
+                            ? fields.categoryId.errorId
+                            : undefined
+                        }
+                      >
                         <SelectValue placeholder="カテゴリーを選択（任意）" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1061,9 +1174,12 @@ export function SpaceEditForm({
                         ))}
                       </SelectContent>
                     </Select>
-                    {fieldHasErrors(fields.categoryId.errors) && (
-                      <p className="text-sm text-destructive">
-                        {fields.categoryId.errors?.join(", ")}
+                    {fields.categoryId.errors && (
+                      <p
+                        id={fields.categoryId.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.categoryId.errors.join(", ")}
                       </p>
                     )}
                   </div>
@@ -1091,6 +1207,12 @@ export function SpaceEditForm({
                           addFacility();
                         }
                       }}
+                      aria-invalid={fields.facilities.errors ? true : undefined}
+                      aria-describedby={
+                        fields.facilities.errors
+                          ? fields.facilities.errorId
+                          : undefined
+                      }
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1137,9 +1259,12 @@ export function SpaceEditForm({
                     ))}
                   </div>
                 )}
-                {fieldHasErrors(fields.facilities.errors) && (
-                  <p className="text-sm text-destructive">
-                    {fields.facilities.errors?.join(", ")}
+                {fields.facilities.errors && (
+                  <p
+                    id={fields.facilities.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.facilities.errors.join(", ")}
                   </p>
                 )}
               </CardContent>
@@ -1165,6 +1290,12 @@ export function SpaceEditForm({
                     checked={isPublished}
                     onCheckedChange={setIsPublished}
                     disabled={isPending}
+                    aria-invalid={fields.isPublished.errors ? true : undefined}
+                    aria-describedby={
+                      fields.isPublished.errors
+                        ? fields.isPublished.errorId
+                        : undefined
+                    }
                   />
                   <div className="space-y-1">
                     <label
@@ -1180,9 +1311,12 @@ export function SpaceEditForm({
                     </p>
                   </div>
                 </div>
-                {fieldHasErrors(fields.isPublished.errors) && (
-                  <p className="mt-2 text-sm text-destructive">
-                    {fields.isPublished.errors?.join(", ")}
+                {fields.isPublished.errors && (
+                  <p
+                    id={fields.isPublished.errorId}
+                    className="mt-2 text-sm text-destructive"
+                  >
+                    {fields.isPublished.errors.join(", ")}
                   </p>
                 )}
               </CardContent>
@@ -1244,10 +1378,21 @@ export function SpaceEditForm({
                       placeholder="検索結果に表示される説明文（160文字以内推奨）"
                       rows={3}
                       disabled={isPending}
+                      aria-invalid={
+                        fields.metaDescription.errors ? true : undefined
+                      }
+                      aria-describedby={
+                        fields.metaDescription.errors
+                          ? fields.metaDescription.errorId
+                          : undefined
+                      }
                     />
-                    {fieldHasErrors(fields.metaDescription.errors) && (
-                      <p className="text-sm text-destructive">
-                        {fields.metaDescription.errors?.join(", ")}
+                    {fields.metaDescription.errors && (
+                      <p
+                        id={fields.metaDescription.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.metaDescription.errors.join(", ")}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
@@ -1263,10 +1408,21 @@ export function SpaceEditForm({
                       onChange={(e) => setMetaKeywords(e.target.value)}
                       placeholder="キーワード1, キーワード2, キーワード3"
                       disabled={isPending}
+                      aria-invalid={
+                        fields.metaKeywords.errors ? true : undefined
+                      }
+                      aria-describedby={
+                        fields.metaKeywords.errors
+                          ? fields.metaKeywords.errorId
+                          : undefined
+                      }
                     />
-                    {fieldHasErrors(fields.metaKeywords.errors) && (
-                      <p className="text-sm text-destructive">
-                        {fields.metaKeywords.errors?.join(", ")}
+                    {fields.metaKeywords.errors && (
+                      <p
+                        id={fields.metaKeywords.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.metaKeywords.errors.join(", ")}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
@@ -1284,10 +1440,19 @@ export function SpaceEditForm({
                       onChange={(e) => setOgpTitle(e.target.value)}
                       placeholder="SNSシェア時のタイトル（100文字以内推奨）"
                       disabled={isPending}
+                      aria-invalid={fields.ogpTitle.errors ? true : undefined}
+                      aria-describedby={
+                        fields.ogpTitle.errors
+                          ? fields.ogpTitle.errorId
+                          : undefined
+                      }
                     />
-                    {fieldHasErrors(fields.ogpTitle.errors) && (
-                      <p className="text-sm text-destructive">
-                        {fields.ogpTitle.errors?.join(", ")}
+                    {fields.ogpTitle.errors && (
+                      <p
+                        id={fields.ogpTitle.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.ogpTitle.errors.join(", ")}
                       </p>
                     )}
                   </div>
@@ -1301,10 +1466,21 @@ export function SpaceEditForm({
                       placeholder="SNSシェア時の説明文（200文字以内推奨）"
                       rows={3}
                       disabled={isPending}
+                      aria-invalid={
+                        fields.ogpDescription.errors ? true : undefined
+                      }
+                      aria-describedby={
+                        fields.ogpDescription.errors
+                          ? fields.ogpDescription.errorId
+                          : undefined
+                      }
                     />
-                    {fieldHasErrors(fields.ogpDescription.errors) && (
-                      <p className="text-sm text-destructive">
-                        {fields.ogpDescription.errors?.join(", ")}
+                    {fields.ogpDescription.errors && (
+                      <p
+                        id={fields.ogpDescription.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.ogpDescription.errors.join(", ")}
                       </p>
                     )}
                   </div>
@@ -1337,6 +1513,11 @@ export function SpaceEditForm({
                           size="sm"
                           onClick={() => ogpImagePicker.openPicker()}
                           disabled={isPending}
+                          aria-describedby={
+                            fields.ogpImageUrl.errors
+                              ? fields.ogpImageUrl.errorId
+                              : undefined
+                          }
                         >
                           <IconPhotoPlus
                             aria-hidden="true"
@@ -1351,9 +1532,12 @@ export function SpaceEditForm({
                         )}
                       </div>
                     </div>
-                    {fieldHasErrors(fields.ogpImageUrl.errors) && (
-                      <p className="text-sm text-destructive">
-                        {fields.ogpImageUrl.errors?.join(", ")}
+                    {fields.ogpImageUrl.errors && (
+                      <p
+                        id={fields.ogpImageUrl.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.ogpImageUrl.errors.join(", ")}
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">

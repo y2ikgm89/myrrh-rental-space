@@ -421,6 +421,12 @@ export function StripeSection({ settings }: StripeSectionProps) {
               <SelectTrigger
                 id={fields.stripeCurrency.id}
                 className="w-[200px]"
+                aria-invalid={fields.stripeCurrency.errors ? true : undefined}
+                aria-describedby={
+                  fields.stripeCurrency.errors
+                    ? fields.stripeCurrency.errorId
+                    : undefined
+                }
               >
                 <SelectValue />
               </SelectTrigger>
