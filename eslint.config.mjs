@@ -23,14 +23,19 @@ const reactCompilerRestrictedImports = [
   },
 ];
 
+// `@/shared/lib/prisma` は既に削除済みの legacy shim（現在このパスに実体はない）。
+// 再導入を防ぐための forward-guard として残す。
 const legacyPrismaRestrictedImport = {
   name: "@/shared/lib/prisma",
   message:
     "Prisma は '@/shared/db' または '@/shared/db/prisma' を使ってください。",
 };
 
-// db barrel `@/shared/db` は db 層（src/shared/db/**）の外から import 禁止。
-// 利用側は `@/shared/db/prisma` を直接 import する（.claude/rules/db-domain.md）。
+// db barrel `@/shared/db`（現在 index.ts は存在しない）は db 層（src/shared/db/**）の
+// 外から import 禁止。利用側は `@/shared/db/prisma` を直接 import する。
+// このバレル import 禁止自体は ESLint 固有の予防ガードであり、.claude/rules/db-domain.md
+// が説明するのは別の制約（architecture-boundaries.test.ts の placement-gate
+// ALLOWLIST による prisma.<model>.<method> 呼出し可能箇所の制限）。
 const dbBarrelRestrictedImport = {
   name: "@/shared/db",
   message:
@@ -362,7 +367,6 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "generated/**",
     "__tests__/**",
-    ".worktrees/**",
     // .claude は設定・スキル・git worktree 置き場で lint 対象外。worktree 内に
     // 別 tsconfig が同梱されると `eslint .` 時に typescript-eslint が
     // tsconfigRootDir を一意に決められず全ファイル parse error になるため必須。

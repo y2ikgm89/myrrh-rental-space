@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/block-destructive-commands.ts"
+            ]
+          },
+          {
+            "type": "command",
+            "command": "bun",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/enforce-git-timeout.ts"
+            ]
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/protect-tracked-files.ts"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
