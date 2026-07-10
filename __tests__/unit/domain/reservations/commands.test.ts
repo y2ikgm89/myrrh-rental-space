@@ -856,12 +856,15 @@ describe("updateReservationStatusCommand", () => {
       mockReservationFindUnique.mockImplementation(() => {
         findUniqueCallCount += 1;
         if (findUniqueCallCount === 1) {
-          // 初回読取: この時点ではicsSequence=5、開始時刻は10:00
+          // 初回読取: この時点ではicsSequence=5、開始時刻は10:00、スペースA
           return Promise.resolve({
             id: "res-1",
             status: ReservationStatus.PENDING,
             googleCalendarEventId: null,
             icsSequence: 5,
+            spaceId: "space-a",
+            customerId: "cust-a",
+            couponId: "coupon-a",
             startTime: new Date("2024-06-15T10:00:00"),
             endTime: new Date("2024-06-15T12:00:00"),
             totalPrice: 2000,
@@ -879,23 +882,27 @@ describe("updateReservationStatusCommand", () => {
             },
           });
         }
-        // claim後の読み直し: 別経路（詳細編集）が開始時刻を11:00に変更しつつ
+        // claim後の読み直し: 別経路（詳細編集）が開始時刻を11:00・スペースをBへ変更しつつ
         // icsSequenceを7まで進めていた想定。claim自体はstatusのみを条件にするため
-        // 成功するが、返却するicsSequence/開始時刻は両方この実DB値（読み直し結果）
-        // から取得しなければならない（新SEQUENCE+旧内容の混在を防ぐ）。
+        // 成功するが、返却するicsSequence/開始時刻/spaceId等は全てこの実DB値
+        // （読み直し結果）から取得しなければならない（新SEQUENCE+旧内容の混在、
+        // および確認メールの内容とスマートロックパスコード発行先スペースの不一致を防ぐ）。
         return Promise.resolve({
           id: "res-1",
           status: ReservationStatus.CONFIRMED,
           googleCalendarEventId: null,
           icsSequence: 7,
+          spaceId: "space-b",
+          customerId: "cust-a",
+          couponId: "coupon-a",
           startTime: new Date("2024-06-15T11:00:00"),
           endTime: new Date("2024-06-15T13:00:00"),
           totalPrice: 2000,
           notes: "編集で追加されたメモ",
           space: {
-            name: "テストスペース",
+            name: "テストスペースB",
             addressDetail: null,
-            location: { address: "東京都渋谷区1-1-1" },
+            location: { address: "東京都渋谷区2-2-2" },
           },
           customer: {
             firstName: "太郎",
@@ -914,6 +921,10 @@ describe("updateReservationStatusCommand", () => {
       expect(result.payload.icsSequence).toBe(7);
       expect(result.payload.startTime).toEqual(new Date("2024-06-15T11:00:00"));
       expect(result.payload.notes).toBe("編集で追加されたメモ");
+      // spaceIdは確認メールの内容(source)と一致していなければならない
+      // （さもないとissueSmartLockAndSendConfirmationEmailが古いスペースの
+      // 物理ドアへパスコードを発行してしまう）。
+      expect(result.spaceId).toBe("space-b");
     });
 
     test("PENDING → CONFIRMED への遷移が成功", async () => {
