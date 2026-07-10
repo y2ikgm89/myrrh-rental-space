@@ -1154,7 +1154,7 @@ describe("architecture boundaries", () => {
     );
   });
 
-  test("production seed はお知らせ帯の初期データを投入しない", () => {
+  test("production seed は運用時点データ（お知らせ帯・SNSリンク・News）と架空の法人情報を投入しない", () => {
     const source = readFileSync(join(ROOT, "prisma", "seed.ts"), "utf8");
     const devSeed = source.match(
       /async function seedDev\(\) \{[\s\S]*?\n\}/u,
@@ -1165,6 +1165,16 @@ describe("architecture boundaries", () => {
 
     expect(devSeed).toContain("await seedAnnouncementBar();");
     expect(productionSeed).not.toContain("await seedAnnouncementBar();");
+
+    expect(devSeed).toContain("await seedSocialLinks();");
+    expect(productionSeed).not.toContain("await seedSocialLinks();");
+
+    expect(devSeed).toContain("await seedNews();");
+    expect(productionSeed).not.toContain("await seedNews(");
+
+    expect(productionSeed).toContain(
+      "await seedSettings({ includeBusinessPlaceholders: false });",
+    );
   });
 
   test("validate は type-check と lint を並列化し、lint concurrency を明示する", () => {

@@ -423,22 +423,51 @@ function resolveSeedFeatureModules(): Record<string, boolean> {
   return buildInitialFeatureModules(disabled);
 }
 
-async function seedSettings(options: { resetFeatureModules?: boolean } = {}) {
+async function seedSettings(
+  options: {
+    resetFeatureModules?: boolean;
+    includeBusinessPlaceholders?: boolean;
+  } = {},
+) {
+  // 特定商取引法表示等に関わる法人情報。DB は全列 nullable（NOT NULL 制約なし）で、
+  // admin フォームも空欄保存を公式に許容する（個人事業主は法人番号を持たない等）。
+  // 空欄なら getOrganizationJsonLdData 側が該当プロパティを丸ごと省略するため、
+  // production seed では架空の法人番号・代表者名等を公開データとして投入しない
+  // （includeBusinessPlaceholders:false）。dev のみサンプル値で埋める。
+  const includeBusinessPlaceholders =
+    options.includeBusinessPlaceholders ?? true;
+  const businessPlaceholders = includeBusinessPlaceholders
+    ? {
+        businessName: "株式会社サンプル",
+        businessNameKana: "カブシキガイシャサンプル",
+        representativeName: "山田 太郎",
+        registrationNumber: "1234567890123",
+        phoneNumber: "03-1234-5678",
+        email: "info@example.com",
+        postalCode: "150-0001",
+        prefecture: "東京都",
+        city: "渋谷区",
+        streetAddress: "神宮前1-1-1",
+        buildingName: "サンプルビル",
+      }
+    : {};
+
+  // senderEmail/replyToEmail も同じ理由で架空値を本番に投入しない。特に replyToEmail は
+  // env フォールバック層が無く（送信元 From と違い env EMAIL_FROM 相当が存在しない）、
+  // DB 値がそのまま全送信メールの Reply-To ヘッダーになる。senderEmail は未設定なら
+  // client.ts のハードコード既定値に落ちるだけなので実害はないが、対称性のため揃える。
+  const emailPlaceholders = includeBusinessPlaceholders
+    ? {
+        senderEmail: "noreply@example.com",
+        replyToEmail: "support@example.com",
+      }
+    : { senderEmail: null, replyToEmail: null };
+
   const settingsData = {
     siteName: "Myrrh Rental Space",
     siteDescription:
       "ビジネスからプライベートまで、様々な用途に対応したレンタルスペース",
-    businessName: "株式会社サンプル",
-    businessNameKana: "カブシキガイシャサンプル",
-    representativeName: "山田 太郎",
-    registrationNumber: "1234567890123",
-    phoneNumber: "03-1234-5678",
-    email: "info@example.com",
-    postalCode: "150-0001",
-    prefecture: "東京都",
-    city: "渋谷区",
-    streetAddress: "神宮前1-1-1",
-    buildingName: "サンプルビル",
+    ...businessPlaceholders,
     // 交通案内・駐車場案内は Location 単位（Location.accessLines / Location.parkingInfo）
     footerCopyright: "© 2025 Myrrh Rental Space. All rights reserved.",
     cancellationDeadlineHours: 24,
@@ -454,13 +483,9 @@ async function seedSettings(options: { resetFeatureModules?: boolean } = {}) {
     headerLogoUrl: "/images/seed/logo-header.svg",
     footerLogoUrl: "/images/seed/logo-footer.svg",
 
-    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）。
-    // senderEmail は未設定なら client.ts のハードコード既定値と同値になるため null で
-    // 開始して問題ない。replyToEmail は env レイヤーが無く DB 値がそのまま全送信メールの
-    // Reply-To になるため、実在しない example.com のダミー値を入れない（null=ヘッダー無し）。
-    senderEmail: null,
+    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
     senderName: "Myrrh Rental Space",
-    replyToEmail: null,
+    ...emailPlaceholders,
   };
 
   const featureModules = resolveSeedFeatureModules();
@@ -2180,7 +2205,7 @@ async function seedDevCustomerAndReservations() {
 // News
 // =============================================================================
 
-async function seedNews(overridePublished?: boolean) {
+async function seedNews() {
   const newsItems: Prisma.NewsCreateInput[] = [
     {
       slug: "year-end-business-hours",
@@ -2401,16 +2426,7 @@ async function seedNews(overridePublished?: boolean) {
     },
   ];
 
-  const processedNewsItems =
-    overridePublished !== undefined
-      ? newsItems.map((item) => ({
-          ...item,
-          isPublished: overridePublished,
-          ...(overridePublished === false ? { publishedAt: null } : {}),
-        }))
-      : newsItems;
-
-  for (const news of processedNewsItems) {
+  for (const news of newsItems) {
     const existing = await prisma.news.findUnique({
       where: { slug: news.slug },
     });
@@ -4692,8 +4708,8 @@ async function seedProduction(email: string | undefined, name: string) {
   console.log("📦 Creating production template data...");
   console.log("");
 
-  // Phase 1: 基本設定
-  await seedSettings();
+  // Phase 1: 基本設定（法人情報は架空データを公開しないため空欄のまま）
+  await seedSettings({ includeBusinessPlaceholders: false });
 
   // Phase 2: マスターデータ（下書きとして作成 — 管理画面で実際の情報に更新後に公開する）
   await seedLocations(false);
@@ -4703,15 +4719,17 @@ async function seedProduction(email: string | undefined, name: string) {
   await seedSpaces(false);
 
   // Phase 4: コンテンツ（下書きとして作成 — 管理画面で内容更新後に公開する）
-  await seedNews(false);
+  // News は「〇〇新聞に紹介されました」「利用者数1000名突破」等、捏造した具体的
+  // 事実を含むため投入しない（下記 Phase 5 の理由と同様）。
   await seedPages();
   await seedFaq(false);
   // 規約は baseline Data Migration で投入済のため seed では何もしない
 
   // Phase 5: サイト設定
   await seedNavigation();
-  // お知らせ帯は公開時点の運用告知なので production seed では初期データを入れない。
-  await seedSocialLinks();
+  // お知らせ帯・SNSリンクは実在の URL・公開時点の運用告知が前提のデータのため、
+  // 架空データを本番に投入しない（管理画面 /admin/settings/appearance から
+  // 実際の値で作成する）。
   await seedSystemPageSections();
   await seedBlockTemplates();
 
@@ -4720,13 +4738,18 @@ async function seedProduction(email: string | undefined, name: string) {
     "📝 テンプレートデータが作成されました。管理画面で本番データに更新してください:",
   );
   console.log(
-    "   /admin/settings  — 会社名・住所・連絡先・メール設定（送信元/返信先）",
+    "   /admin/settings  — 会社名・住所・連絡先・メール設定（未設定です。必ず入力してください）",
   );
   console.log("   /admin/locations — 実際の拠点情報");
   console.log("   /admin/spaces    — 実際のスペース・料金");
   console.log("   /admin/pages     — 公開ページのコンテンツ");
   console.log("   /admin/faq       — FAQコンテンツ");
-  console.log("   /admin/news      — お知らせ");
+  console.log("");
+  console.log(
+    "📌 以下は初期データを投入していません。必要な場合のみ管理画面から作成してください:",
+  );
+  console.log("   /admin/news                — お知らせ");
+  console.log("   /admin/settings/appearance — SNSリンク・お知らせ帯");
 }
 
 async function main() {
