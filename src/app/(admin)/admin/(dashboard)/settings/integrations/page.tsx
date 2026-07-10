@@ -20,6 +20,8 @@ import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getSettings } from "@/admin/queries/settings";
 import { getGbpAuthState } from "@/shared/lib/google-business-profile";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
+import { getAllSmartLockDevices } from "@/shared/domain/smart-lock/queries";
+import { getActiveLocationsForSelect } from "@/shared/domain/locations/queries";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -74,6 +76,8 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     settings,
     instagramConfig,
     gbpAuthState,
+    smartLockDevices,
+    smartLockLocations,
   ] = await Promise.all([
     getResendConfig(),
     getTurnstileConfig(),
@@ -83,6 +87,8 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     getSettings(),
     getInstagramConfig(),
     getGbpAuthState(),
+    getAllSmartLockDevices(),
+    getActiveLocationsForSelect(),
   ]);
 
   const gbpAuthInfo = gbpAuthState
@@ -103,7 +109,13 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     {
       value: "switchbot",
       label: "SwitchBot",
-      content: <SwitchBotSection config={switchbotConfig} />,
+      content: (
+        <SwitchBotSection
+          config={switchbotConfig}
+          devices={smartLockDevices}
+          availableLocations={smartLockLocations}
+        />
+      ),
     },
     {
       value: "google-maps",

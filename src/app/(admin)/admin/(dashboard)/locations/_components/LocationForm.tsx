@@ -54,17 +54,11 @@ import type { LocationWithStats } from "@/shared/domain/locations/types";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
 import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
 import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
-import { LocationSmartLockDevicesField } from "@/admin/components/LocationSmartLockDevicesField";
+import { LocationDefaultSmartLockDeviceCard } from "@/admin/components/LocationDefaultSmartLockDeviceCard";
 import {
   createLocationBlockedDate,
   deleteLocationBlockedDate,
 } from "@/admin/actions/location-blocked-dates";
-import {
-  createLocationSmartLockDevice,
-  updateLocationSmartLockDevice,
-  deleteLocationSmartLockDevice,
-  toggleLocationSmartLockDeviceActive,
-} from "@/admin/actions/location-smart-lock-devices";
 import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
@@ -1325,21 +1319,11 @@ export function LocationForm({
             forceMount
             className="mt-6 data-[state=inactive]:hidden"
           >
-            <Card>
-              <CardHeader>
-                <CardTitle>スマートロックデバイス</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <LocationSmartLockDevicesField
-                  locationId={location.id}
-                  initialSmartLockDevices={initialSmartLockDevices}
-                  createAction={createLocationSmartLockDevice}
-                  updateAction={updateLocationSmartLockDevice}
-                  deleteAction={deleteLocationSmartLockDevice}
-                  toggleActiveAction={toggleLocationSmartLockDeviceActive}
-                />
-              </CardContent>
-            </Card>
+            <LocationDefaultSmartLockDeviceCard
+              locationId={location.id}
+              initialDeviceId={location.defaultSmartLockDeviceId}
+              availableDevices={initialSmartLockDevices}
+            />
           </TabsContent>
         )}
       </Tabs>

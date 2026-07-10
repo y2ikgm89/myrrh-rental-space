@@ -1,9 +1,13 @@
 /**
- * スペース編集ページの「スマートロックデバイス」タブ用フォームスキーマ。
+ * スマートロックデバイス登録簿フォームスキーマ。
  *
- * `spaceId`（作成時）/ デバイス行 ID（更新時）は Server Action 側で URL・呼出元から
- * 固定注入するため、フォームでは deviceId（SwitchBot 側 device ID / MAC アドレス）・
- * deviceName・deviceType・isActive のみ受け取る。
+ * デバイス行 ID（更新時）は Server Action 側で呼出元から固定注入するため、
+ * フォームでは locationId（拠点）・deviceId（SwitchBot 側 device ID / MAC アドレス）・
+ * deviceName・deviceType・isActive を受け取る。
+ *
+ * `locationId` は作成時に必須（デバイスは Location に属する FK 必須）。更新時も
+ * フォームには含まれるが、`updateSmartLockDeviceCommand` は locationId の変更を
+ * サポートしないため値は無視される（拠点は作成時のみ確定、以後は変更不可）。
  */
 
 import { z } from "zod";
@@ -13,6 +17,7 @@ import { switchBoolean } from "@/admin/actions/settings/schemas/form-schema-help
 export const smartLockDeviceTypeSchema = z.enum(SmartLockDeviceType);
 
 export const smartLockDeviceFormSchema = z.object({
+  locationId: z.uuid({ error: "拠点を選択してください" }),
   deviceId: z
     .string()
     .trim()

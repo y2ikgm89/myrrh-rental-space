@@ -59,6 +59,7 @@ function formatLocation(location: {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  defaultSmartLockDeviceId: string | null;
   _count: {
     spaces: number;
   };
@@ -99,6 +100,7 @@ function formatLocation(location: {
     isActive: location.isActive,
     createdAt: location.createdAt.toISOString(),
     updatedAt: location.updatedAt.toISOString(),
+    defaultSmartLockDeviceId: location.defaultSmartLockDeviceId,
     _count: location._count,
   };
 }
@@ -137,6 +139,7 @@ const LOCATION_FULL_SELECT = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
+  defaultSmartLockDeviceId: true,
   _count: {
     select: { spaces: true },
   },

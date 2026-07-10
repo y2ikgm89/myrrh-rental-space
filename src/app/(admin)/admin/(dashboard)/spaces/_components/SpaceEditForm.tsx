@@ -1663,13 +1663,12 @@ function SpaceSmartLockDeviceCard({
         <CardTitle>スマートロックデバイス</CardTitle>
       </CardHeader>
       <CardContent>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submitDeviceChange(deviceId === "" ? null : deviceId);
-          }}
-          className="space-y-3"
-        >
+        {/*
+         * このカードはSpaceEditFormの外側<form>の内側に配置されるため、ここに
+         * <form>をネストしない（invalid HTMLかつブラウザのform送信/ownership挙動が
+         * 干渉する）。保存はtype="button"のクリックハンドラから直接actionを呼ぶ。
+         */}
+        <div className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="space-smartLockDeviceId">割り当てデバイス</Label>
             {activeDevices.length === 0 ? (
@@ -1702,13 +1701,17 @@ function SpaceSmartLockDeviceCard({
             </p>
           </div>
           <div className="flex justify-end">
-            <SubmitButton
-              isPending={isSaving}
-              label="保存"
-              pendingLabel="保存中..."
-            />
+            <Button
+              type="button"
+              onClick={() =>
+                submitDeviceChange(deviceId === "" ? null : deviceId)
+              }
+              disabled={isSaving}
+            >
+              {isSaving ? "保存中..." : "保存"}
+            </Button>
           </div>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

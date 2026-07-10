@@ -35,6 +35,7 @@ type LocationRecord = {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  defaultSmartLockDeviceId: string | null;
   _count: {
     spaces: number;
   };
