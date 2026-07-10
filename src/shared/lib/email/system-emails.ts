@@ -7,8 +7,10 @@
  */
 
 import "server-only";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import {
+  formatDateWithWeekday,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../admin-urls";
 import { sendEmail } from "./send";
@@ -35,27 +37,19 @@ export async function sendCalendarSyncRejectionEmail(data: {
   const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
 
-  const currentDate = format(data.currentStartTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const currentStart = format(data.currentStartTime, "HH:mm");
-  const currentEnd = format(data.currentEndTime, "HH:mm");
+  const currentDate = formatDateWithWeekday(data.currentStartTime);
+  const currentStart = formatTimeShort(data.currentStartTime);
+  const currentEnd = formatTimeShort(data.currentEndTime);
 
-  const attemptedDate = format(data.attemptedStartTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const attemptedStart = format(data.attemptedStartTime, "HH:mm");
-  const attemptedEnd = format(data.attemptedEndTime, "HH:mm");
+  const attemptedDate = formatDateWithWeekday(data.attemptedStartTime);
+  const attemptedStart = formatTimeShort(data.attemptedStartTime);
+  const attemptedEnd = formatTimeShort(data.attemptedEndTime);
 
-  const conflictDate = format(
+  const conflictDate = formatDateWithWeekday(
     data.conflictingReservation.startTime,
-    "yyyy年M月d日 (EEEE)",
-    {
-      locale: ja,
-    },
   );
-  const conflictStart = format(data.conflictingReservation.startTime, "HH:mm");
-  const conflictEnd = format(data.conflictingReservation.endTime, "HH:mm");
+  const conflictStart = formatTimeShort(data.conflictingReservation.startTime);
+  const conflictEnd = formatTimeShort(data.conflictingReservation.endTime);
 
   const textContent = `
 カレンダー同期エラー: 時間変更が拒否されました
@@ -112,9 +106,10 @@ export async function sendWebhookRenewalNotification(data: {
     ? "【Google Calendar】Webhook自動更新完了"
     : "【エラー】Google Calendar Webhook自動更新失敗";
 
-  const renewedAt = format(new Date(), "yyyy年M月d日 HH:mm", { locale: ja });
+  const now = new Date();
+  const renewedAt = `${formatDateWithWeekday(now)} ${formatTimeShort(now)}`;
   const newExpirationStr = data.newExpiration
-    ? format(data.newExpiration, "yyyy年M月d日 HH:mm", { locale: ja })
+    ? `${formatDateWithWeekday(data.newExpiration)} ${formatTimeShort(data.newExpiration)}`
     : "不明";
 
   let textContent: string;

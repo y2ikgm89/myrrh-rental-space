@@ -32,8 +32,10 @@ import {
   type CalendarEventParams,
 } from "@/shared/lib/google-calendar";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import {
+  formatDateWithWeekday,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import { OUTBOUND_RESERVATION_MARKER } from "./loop-prevention";
 import type { ReservationSyncData, SyncResult } from "./types";
 
@@ -45,11 +47,9 @@ import type { ReservationSyncData, SyncResult } from "./types";
  * 予約情報からカレンダーイベントパラメータを生成
  */
 function formatCalendarEvent(data: ReservationSyncData): CalendarEventParams {
-  const formattedDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const formattedStart = format(data.startTime, "HH:mm");
-  const formattedEnd = format(data.endTime, "HH:mm");
+  const formattedDate = formatDateWithWeekday(data.startTime);
+  const formattedStart = formatTimeShort(data.startTime);
+  const formattedEnd = formatTimeShort(data.endTime);
 
   const descriptionLines = [
     // inbound ループ防止マーカー（loop-prevention.ts の SSoT を使用）

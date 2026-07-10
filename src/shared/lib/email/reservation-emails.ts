@@ -7,8 +7,6 @@
  */
 
 import "server-only";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
@@ -28,6 +26,10 @@ import {
   createCancelToken,
 } from "@/shared/lib/reservation-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
+import {
+  formatDateWithWeekday,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -87,11 +89,9 @@ export async function sendReservationConfirmationEmail(
     await getEmailDeliverySettings();
   if (!enabled) return { ok: false, reason: "disabled" };
 
-  const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const startTime = format(data.startTime, "HH:mm", { locale: ja });
-  const endTime = format(data.endTime, "HH:mm", { locale: ja });
+  const reservationDate = formatDateWithWeekday(data.startTime);
+  const startTime = formatTimeShort(data.startTime);
+  const endTime = formatTimeShort(data.endTime);
 
   const [
     calendarSettings,
@@ -235,11 +235,9 @@ export async function sendReservationConfirmationEmail(
 export async function sendReservationUpdatedEmail(
   data: ReservationEmailData,
 ): Promise<EmailResult> {
-  const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const startTime = format(data.startTime, "HH:mm", { locale: ja });
-  const endTime = format(data.endTime, "HH:mm", { locale: ja });
+  const reservationDate = formatDateWithWeekday(data.startTime);
+  const startTime = formatTimeShort(data.startTime);
+  const endTime = formatTimeShort(data.endTime);
 
   const [
     calendarSettings,
@@ -366,11 +364,9 @@ export async function sendReservationUpdatedEmail(
 export async function sendReservationCancelledEmail(
   data: ReservationEmailData,
 ): Promise<EmailResult> {
-  const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const startTime = format(data.startTime, "HH:mm", { locale: ja });
-  const endTime = format(data.endTime, "HH:mm", { locale: ja });
+  const reservationDate = formatDateWithWeekday(data.startTime);
+  const startTime = formatTimeShort(data.startTime);
+  const endTime = formatTimeShort(data.endTime);
 
   const [calendarSettings, organizer, footer, cancellationPolicyUrl] =
     await Promise.all([
@@ -458,11 +454,9 @@ export async function sendReservationCancelledEmail(
 export async function sendReservationStatusChangedEmail(
   data: StatusChangeEmailData,
 ): Promise<EmailResult> {
-  const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const startTime = format(data.startTime, "HH:mm", { locale: ja });
-  const endTime = format(data.endTime, "HH:mm", { locale: ja });
+  const reservationDate = formatDateWithWeekday(data.startTime);
+  const startTime = formatTimeShort(data.startTime);
+  const endTime = formatTimeShort(data.endTime);
 
   const [calendarSettings, organizer, footer] = await Promise.all([
     getCalendarEmailSettings(),
@@ -587,11 +581,9 @@ export async function sendReservationAdminNotification(
 
   const footer = await getEmailFooterData();
 
-  const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const startTime = format(data.startTime, "HH:mm", { locale: ja });
-  const endTime = format(data.endTime, "HH:mm", { locale: ja });
+  const reservationDate = formatDateWithWeekday(data.startTime);
+  const startTime = formatTimeShort(data.startTime);
+  const endTime = formatTimeShort(data.endTime);
 
   const actionText = RESERVATION_ACTION_LABELS[action];
 

@@ -1,6 +1,5 @@
 import "server-only";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatDateWithWeekday } from "@/shared/lib/date-format";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
@@ -27,9 +26,7 @@ import type { EmailResult, ReminderEmailData } from "./types";
 export async function sendReservationReminderEmail(
   data: ReminderEmailData,
 ): Promise<EmailResult> {
-  const reservationDate = format(data.startTime, "yyyy年M月d日", {
-    locale: ja,
-  });
+  const reservationDate = formatDateWithWeekday(data.startTime);
 
   const [calendarSettings, deadlineSettings, organizer, footer] =
     await Promise.all([
