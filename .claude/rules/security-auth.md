@@ -38,10 +38,15 @@ paths:
 
 ## rate limit / クライアント IP
 
-- InMemory store は **Cloud Run max instance=1 前提**（autoscale 解禁には分散 backend 必須）
+- InMemory store は **Cloud Run max instance=1 前提**（`cloudbuild.yaml` の
+  `_MAX_INSTANCES: "1"` で実際に固定済み。autoscale 解禁には分散 backend が必須で、
+  現状は未実装 — 意図的に見送っている判断であり、autoscale 解禁時に再検討する）
 - 本番のクライアント IP は `cf-connecting-ip` + `x-cloudflare-origin-secret` の
   timing-safe 比較成功時のみ信頼。XFF fallback は非本番/localhost 専用
 - パス別の limiter 振分は `checkRateLimit()` が SSoT
+- 予約・イベント申込作成は IP 単位（`checkActionRateLimit`）に加え、顧客(メール)
+  単位の第二防壁を `checkEmailRateLimit` で重ねる。同一人物が複数IPから同じ
+  メールで大量作成するケースは IP 単位だけでは防げないため
 
 ## Turnstile
 

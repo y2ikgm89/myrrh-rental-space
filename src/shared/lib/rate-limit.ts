@@ -233,6 +233,35 @@ export const formSubmitRateLimiter = createRateLimiter({
   maxRequests: 5,
 });
 
+// 空間予約作成専用（5リクエスト/分/IP）— formSubmitRateLimiter から分離し、
+// 問い合わせ/レビュー等の他フォームの負荷から独立させる（予約荒らし対策の一環）。
+export const reservationSubmitRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 5,
+});
+
+// イベント申込作成専用（5リクエスト/分/IP）。reservationSubmitRateLimiter と対称。
+export const eventRegistrationSubmitRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 5,
+});
+
+// 空間予約作成の「顧客(メールアドレス)単位」の追加バケット（3回/時間/email）。
+// IP-only の reservationSubmitRateLimiter だけだと、同一人物が複数IP/複数ブラウザから
+// 同じメールアドレスで大量作成を試みるケースを防げない。cancelByReservationRateLimiter
+// と同型の「resource/identity単位の第二防壁」設計。
+export const reservationByEmailRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1時間
+  maxRequests: 3,
+});
+
+// イベント申込作成の「顧客(メールアドレス)単位」の追加バケット。
+// reservationByEmailRateLimiter と対称。
+export const eventRegistrationByEmailRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1時間
+  maxRequests: 3,
+});
+
 // 公開クエリ用（30リクエスト/分/IP）— DoS対策
 export const publicQueryRateLimiter = createRateLimiter({
   interval: 60 * 1000, // 1分

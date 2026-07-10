@@ -68,11 +68,14 @@ mock.module("@/shared/lib/action-helpers", () => ({
   // このファイルのテスト対象は使わないが、同一ファイルの submitReservation が
   // import するため、モジュール解決を通すために固定成功スタブを提供する。
   checkBotHeuristics: () => ({ success: true as const }),
+  checkEmailRateLimit: () => Promise.resolve({ success: true as const }),
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
   publicQueryRateLimiter: {},
+  reservationSubmitRateLimiter: {},
+  reservationByEmailRateLimiter: {},
   cancelByReservationRateLimiter: {
     check: mock(() => Promise.resolve({ success: true })),
   },

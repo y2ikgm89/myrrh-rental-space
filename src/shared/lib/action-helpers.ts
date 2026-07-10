@@ -17,6 +17,7 @@ import { verifyTurnstileToken, isTurnstileEnabled } from "./turnstile";
 import type { TurnstileAction } from "./turnstile-actions";
 import { serverEnv } from "./env/server";
 import { getClientIpFromHeaders } from "./rate-limit";
+import { normalizeEmailForIdentity } from "./email/normalize-email";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
 /**
@@ -178,6 +179,33 @@ export async function checkActionRateLimit(limiter: {
 }): Promise<RateLimitCheckResult> {
   const ip = await getClientIpFromHeaders();
   const result = await limiter.check(ip);
+  if (!result.success) {
+    return {
+      success: false,
+      error: "リクエストが多すぎます。しばらく経ってから再度お試しください。",
+    };
+  }
+  return { success: true };
+}
+
+/**
+ * 顧客(メールアドレス)単位でレート制限を適用する第二防壁。
+ *
+ * IP単位の `checkActionRateLimit` だけだと、同一人物が複数IP/複数ブラウザから
+ * 同じメールアドレスで大量作成を試みるケースを防げない。emailを
+ * `normalizeEmailForIdentity` で正規化してtokenにすることで、大文字小文字・
+ * 前後空白の違いによる回避を防ぐ（`cancelByReservationRateLimiter` と同型の
+ * 「resource/identity単位の追加バケット」設計）。
+ *
+ * @example
+ * const emailLimit = await checkEmailRateLimit(reservationByEmailRateLimiter, data.email);
+ * if (!emailLimit.success) return { ok: false, error: emailLimit.error };
+ */
+export async function checkEmailRateLimit(
+  limiter: { check(token: string): Promise<{ success: boolean }> },
+  email: string,
+): Promise<RateLimitCheckResult> {
+  const result = await limiter.check(normalizeEmailForIdentity(email));
   if (!result.success) {
     return {
       success: false,
