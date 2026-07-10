@@ -215,6 +215,21 @@ export function getClientIp(request: Request): string {
   );
 }
 
+/**
+ * `Headers` オブジェクトから信頼済み client IP を取得する SSoT helper。
+ *
+ * `getClientIp(request)` と `getClientIpFromHeaders()` の中間版で、
+ * 生の `Headers` を持っている caller（Server Action 経由でも Request 経由でもない
+ * 内部モジュール — 例: `admin-auth/audit.ts` の `recordAdminLoginSuccess`）が
+ * `x-forwarded-for` を無検証で読むのを避けるために使う。
+ *
+ * 本番では `cf-connecting-ip` + `x-cloudflare-origin-secret` timing-safe 一致時
+ * のみ信頼、非該当は `"unknown"`。
+ */
+export function extractClientIpFromHeaders(headers: Headers): string {
+  return extractClientIp((name) => headers.get(name), headers.get("host"));
+}
+
 // デフォルトのAPI用レート制限（100リクエスト/分/IP）
 export const apiRateLimiter = createRateLimiter({
   interval: 60 * 1000, // 1分
