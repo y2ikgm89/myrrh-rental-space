@@ -31,6 +31,7 @@ import {
   clearSwitchBotSettings as clearSwitchBotSettingsCommand,
   clearTurnstileSettings as clearTurnstileSettingsCommand,
   deleteCustomApiKey as deleteCustomApiKeyCommand,
+  ensureSwitchBotWebhookPathToken,
   recordGoogleMapsConnectionStatus,
   recordResendConnectionStatus,
   recordSwitchBotConnectionStatus,
@@ -40,8 +41,10 @@ import {
   updateSwitchBotSettings as updateSwitchBotSettingsCommand,
   updateTurnstileSettings as updateTurnstileSettingsCommand,
 } from "@/shared/domain/settings/api-key-commands";
+import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
+import { setupWebhook } from "@/shared/lib/smart-lock/switchbot-client";
 import { DomainError } from "@/shared/domain/domain-error";
-import { CACHE_TAGS } from "@/shared/lib/constants";
+import { CACHE_TAGS, getAppUrl } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const apiKeyIdSchema = z.string().min(1, { error: "APIキーIDが不正です" });
@@ -340,6 +343,41 @@ export async function clearSwitchBotKeys(): Promise<MutationResult> {
       return null;
     },
     afterSuccess: refreshSettingsCache,
+  });
+}
+
+/**
+ * SwitchBot Webhook URLを（未発行なら生成の上）SwitchBot側に登録する。
+ * inbound webhookの署名検証機構が公式に無いため、URLパスの難読化トークンで代替する。
+ */
+export async function registerSwitchBotWebhookAction(): Promise<
+  MutationResult<{ url: string }>
+> {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "manage",
+    execute: async () => {
+      const credentials = await getDecryptedSwitchBotCredentials();
+      if (!credentials) {
+        throw new DomainError(
+          "SwitchBot連携が未設定です。先にOpen Token/Secret Keyを保存してください",
+          "VALIDATION",
+        );
+      }
+
+      const token = await ensureSwitchBotWebhookPathToken();
+      const url = `${getAppUrl()}/api/webhooks/switchbot/${token}`;
+
+      const result = await setupWebhook(credentials, url);
+      if (!result.ok) {
+        throw new DomainError(
+          `Webhook登録に失敗しました: ${result.message}`,
+          "UNEXPECTED",
+        );
+      }
+
+      return { url };
+    },
   });
 }
 

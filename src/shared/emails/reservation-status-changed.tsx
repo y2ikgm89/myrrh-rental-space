@@ -47,6 +47,8 @@ type Props = {
   location?: string;
   addToCalendarLinks?: AddToCalendarUrls;
   memberReservationUrl?: string;
+  /** 予約復元等でCONFIRMEDに遷移した際に発行されたスマートロックの一時パスコード一覧 */
+  smartLockPasscodes?: { deviceName: string; passcode: string }[];
   footer: EmailFooterData;
 };
 
@@ -62,6 +64,7 @@ export function ReservationStatusChangedEmail({
   location,
   addToCalendarLinks,
   memberReservationUrl,
+  smartLockPasscodes,
   footer,
 }: Props) {
   const badgeColors = STATUS_BADGE_COLORS[newStatus] ?? DEFAULT_BADGE_COLORS;
@@ -134,6 +137,21 @@ export function ReservationStatusChangedEmail({
       </Section>
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
+
+      {smartLockPasscodes && smartLockPasscodes.length > 0 && (
+        <Section style={detailsSection}>
+          <Text style={detailsHeading}>スマートロック解錠用の暗証番号</Text>
+          <Hr style={hr} />
+          {smartLockPasscodes.map((entry) => (
+            <Text
+              key={`${entry.deviceName}-${entry.passcode}`}
+              style={detailItem}
+            >
+              <strong>{entry.deviceName}:</strong> {entry.passcode}
+            </Text>
+          ))}
+        </Section>
+      )}
 
       {memberReservationUrl && (
         <Text style={text}>

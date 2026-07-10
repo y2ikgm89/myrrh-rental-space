@@ -42,6 +42,7 @@ import {
   updateSwitchBotSettings,
   testSwitchBotConnectionAction,
   clearSwitchBotKeys,
+  registerSwitchBotWebhookAction,
 } from "@/admin/actions/api-keys";
 import { switchbotFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { SwitchBotConfig } from "@/admin/types/api-keys";
@@ -58,10 +59,15 @@ export function SwitchBotSection({ config }: SwitchBotSectionProps) {
   const confirmDialog = useConfirm();
   const [testPending, startTestTransition] = useTransition();
   const [clearPending, startClearTransition] = useTransition();
+  const [webhookPending, startWebhookTransition] = useTransition();
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
     note?: string;
+  } | null>(null);
+  const [webhookResult, setWebhookResult] = useState<{
+    success: boolean;
+    message: string;
   } | null>(null);
   const [showOpenTokenInput, setShowOpenTokenInput] = useState(false);
   const [showSecretKeyInput, setShowSecretKeyInput] = useState(false);
@@ -177,7 +183,29 @@ export function SwitchBotSection({ config }: SwitchBotSectionProps) {
     });
   };
 
-  const isBusy = isPending || testPending || clearPending;
+  const handleRegisterWebhook = () => {
+    startWebhookTransition(async () => {
+      setWebhookResult(null);
+      try {
+        const result = await registerSwitchBotWebhookAction();
+        if (!isMutationError(result)) {
+          setWebhookResult({
+            success: true,
+            message: `Webhookを登録しました: ${result.url}`,
+          });
+        } else {
+          setWebhookResult({ success: false, message: result.error });
+        }
+      } catch {
+        setWebhookResult({
+          success: false,
+          message: "Webhook登録でエラーが発生しました",
+        });
+      }
+    });
+  };
+
+  const isBusy = isPending || testPending || clearPending || webhookPending;
   const formErrors = form.errors;
 
   return (
@@ -415,6 +443,46 @@ export function SwitchBotSection({ config }: SwitchBotSectionProps) {
               )}
             </StatusBanner>
           )}
+
+          {config.enabled &&
+            (config.openTokenMasked || config.secretKeyMasked) && (
+              <div className="space-y-2 rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Webhook（パスコード確定通知）
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      SwitchBotからの発行結果通知を受け取るURLを登録します（未登録でも
+                      ポーリングにより発行自体は完了しますが、確定が早まります）
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegisterWebhook}
+                    disabled={isBusy}
+                  >
+                    {webhookPending ? "登録中..." : "Webhookを登録"}
+                  </Button>
+                </div>
+                {webhookResult && (
+                  <StatusBanner success={webhookResult.success}>
+                    <p
+                      className={cn(
+                        "text-sm break-all",
+                        webhookResult.success
+                          ? "text-success"
+                          : "text-destructive",
+                      )}
+                    >
+                      {webhookResult.message}
+                    </p>
+                  </StatusBanner>
+                )}
+              </div>
+            )}
 
           {formErrors && formErrors.length > 0 && (
             <div

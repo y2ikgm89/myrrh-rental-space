@@ -25,6 +25,11 @@ export type ReservationEmailData = {
    * 出し分けるために使う。
    */
   userId?: string | null;
+  /**
+   * 予約確定時に発行されたスマートロックの一時パスコード一覧。
+   * 対象スペースにスマートロックデバイスが無ければ undefined/空配列。
+   */
+  smartLockPasscodes?: { deviceName: string; passcode: string }[];
 };
 
 export type ContactEmailData = {
@@ -109,6 +114,8 @@ export type StatusChangeEmailData = {
   icsSequence: number;
   /** 会員予約の場合の User.id。ゲストなら null/undefined。 */
   userId?: string | null;
+  /** CONFIRMEDへの遷移時に発行されたスマートロックの一時パスコード一覧 */
+  smartLockPasscodes?: { deviceName: string; passcode: string }[];
 };
 
 /**
