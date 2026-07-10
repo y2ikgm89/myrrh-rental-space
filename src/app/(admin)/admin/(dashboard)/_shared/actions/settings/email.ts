@@ -24,6 +24,7 @@ import {
   notificationFormSchema,
 } from "./schemas/form-schemas-email-notification";
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
+import { resolveSenderEmailAddress } from "@/shared/lib/email/client";
 
 function buildSenderDomainError(verifiedDomains: readonly string[]): string {
   const list =
@@ -45,16 +46,19 @@ export async function updateEmailSettings(
       resource: "settings",
       action: "update",
       execute: async () => {
-        // 認可後に Resend で検証済みドメインかを確認する。
-        // 未検証ドメインを from に使うと全送信が 403 になるため保存前に弾く。
-        if (data.senderEmail) {
-          const check = await validateSenderDomain(data.senderEmail);
-          if (!check.ok) {
-            throw new DomainError(
-              buildSenderDomainError(check.verifiedDomains),
-              "VALIDATION",
-            );
-          }
+        // 認可後に Resend で検証済みドメインかを確認する。未検証ドメインを from に
+        // 使うと全送信が 403 になるため保存前に弾く。入力欄が空でも保存後の実効値は
+        // env EMAIL_FROM またはハードコード既定値にフォールバックするため、生の入力値
+        // ではなく resolveSenderEmailAddress() の解決結果を検証する。
+        const effectiveSenderEmail = resolveSenderEmailAddress(
+          emptyToNull(data.senderEmail),
+        );
+        const check = await validateSenderDomain(effectiveSenderEmail);
+        if (!check.ok) {
+          throw new DomainError(
+            buildSenderDomainError(check.verifiedDomains),
+            "VALIDATION",
+          );
         }
 
         await updateEmailSettingsCommand({

@@ -43,10 +43,23 @@ export async function getResendClient(): Promise<Resend | null> {
 }
 
 /**
+ * 送信元アドレスの解決順（env 優先・DB フォールバック）だけを返す:
+ *   env EMAIL_FROM → DB senderEmail → "noreply@example.com"
+ *
+ * `getFromAddress` と、送信前にドメイン検証したい呼び出し側
+ * （settings 保存 / テンプレートテスト送信）とで解決ロジックを共有するために切り出した。
+ * DB 値が null でも最終的にこのハードコード既定値が実際に使われるため、ドメイン検証は
+ * 生の DB 値ではなくこの関数の戻り値に対して行う必要がある。
+ */
+export function resolveSenderEmailAddress(senderEmail: string | null): string {
+  return serverEnv.EMAIL_FROM ?? senderEmail ?? "noreply@example.com";
+}
+
+/**
  * 送信元アドレスを `表示名 <アドレス>` 形式で組み立てる。
  *
  * 解決順は env 優先・DB フォールバック:
- *   アドレス: env EMAIL_FROM → DB senderEmail → "noreply@example.com"
+ *   アドレス: resolveSenderEmailAddress() 参照
  *   表示名:   env EMAIL_FROM_NAME → DB senderName → SITE_DEFAULTS.name
  *
  * 注: これは表示用の送信元アドレスであり、Stripe/Turnstile/Resendの秘密APIキー解決順
@@ -60,7 +73,7 @@ export function getFromAddress(
   senderEmail: string | null,
   senderName: string | null,
 ): string {
-  const email = serverEnv.EMAIL_FROM ?? senderEmail ?? "noreply@example.com";
+  const email = resolveSenderEmailAddress(senderEmail);
   const name = serverEnv.EMAIL_FROM_NAME ?? senderName ?? SITE_DEFAULTS.name;
   return `${name} <${email}>`;
 }

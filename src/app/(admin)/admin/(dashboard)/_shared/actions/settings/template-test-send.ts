@@ -27,6 +27,7 @@ import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notif
 import { getSeoSettings } from "@/shared/domain/settings/queries/site";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
+import { resolveSenderEmailAddress } from "@/shared/lib/email/client";
 import { type MutationResult } from "@/shared/lib/mutation-result";
 import {
   authMutationRateLimiter,
@@ -87,20 +88,24 @@ export async function sendTemplateTestAction(
         );
       }
 
-      // 2. sender domain gate（settings 保存と同 SSoT、`__infra_check` でも適用）
+      // 2. sender domain gate（settings 保存と同 SSoT、`__infra_check` でも適用）。
+      // delivery.senderEmail が null（未設定）でも実送信は resolveSenderEmailAddress の
+      // ハードコード既定値にフォールバックするため、そのフォールバック先を検証する
+      // （DB 値の有無で判定すると未検証ドメインへの実送信を見逃し Resend 403 になる）。
       const delivery = await getEmailDeliverySettings();
-      if (delivery.senderEmail) {
-        const check = await validateSenderDomain(delivery.senderEmail);
-        if (!check.ok) {
-          const list =
-            check.verifiedDomains.length > 0
-              ? check.verifiedDomains.join(", ")
-              : "（検証済みドメインがありません）";
-          throw new DomainError(
-            `送信元アドレスのドメインが Resend で検証されていません。検証済みドメイン: ${list}`,
-            "VALIDATION",
-          );
-        }
+      const effectiveSenderEmail = resolveSenderEmailAddress(
+        delivery.senderEmail,
+      );
+      const check = await validateSenderDomain(effectiveSenderEmail);
+      if (!check.ok) {
+        const list =
+          check.verifiedDomains.length > 0
+            ? check.verifiedDomains.join(", ")
+            : "（検証済みドメインがありません）";
+        throw new DomainError(
+          `送信元アドレスのドメインが Resend で検証されていません。検証済みドメイン: ${list}`,
+          "VALIDATION",
+        );
       }
 
       // 3. fixture override（useRealFooter のみ。__infra_check の identity 上書きは

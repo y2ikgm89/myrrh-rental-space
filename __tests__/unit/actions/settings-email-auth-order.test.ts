@@ -9,6 +9,8 @@ const mockUpdateEmailSettingsCommand = mock(async () => undefined);
 
 mock.module("next/cache", () => ({
   updateTag: mock(() => undefined),
+  cacheTag: mock(() => undefined),
+  cacheLife: mock(() => undefined),
 }));
 
 mock.module("@/shared/lib/forms/conform-action", () => ({
