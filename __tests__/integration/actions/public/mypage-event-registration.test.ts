@@ -46,10 +46,13 @@ mock.module("@/shared/lib/action-helpers", () => ({
   // cancelEventRegistration は使わないが、同一ファイルの registerForEvent が
   // import するため、モジュール解決を通すために固定成功スタブを提供する。
   checkBotHeuristics: () => ({ success: true as const }),
+  checkEmailRateLimit: () => Promise.resolve({ success: true as const }),
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
+  eventRegistrationSubmitRateLimiter: {},
+  eventRegistrationByEmailRateLimiter: {},
   getClientIpFromHeaders: mock(() => Promise.resolve("127.0.0.1")),
 }));
 

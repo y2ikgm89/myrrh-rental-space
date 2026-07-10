@@ -6,9 +6,14 @@ import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-re
 import {
   checkActionRateLimit,
   checkBotHeuristics,
+  checkEmailRateLimit,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
-import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import {
+  eventRegistrationByEmailRateLimiter,
+  eventRegistrationSubmitRateLimiter,
+  formSubmitRateLimiter,
+} from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
@@ -54,9 +59,19 @@ export async function registerForEvent(
     formData,
     publicEventRegistrationSchema,
     async (data) => {
-      const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+      const rateLimit = await checkActionRateLimit(
+        eventRegistrationSubmitRateLimiter,
+      );
       if (!rateLimit.success) {
         return { ok: false, error: rateLimit.error };
+      }
+
+      const emailRateLimit = await checkEmailRateLimit(
+        eventRegistrationByEmailRateLimiter,
+        data.email,
+      );
+      if (!emailRateLimit.success) {
+        return { ok: false, error: emailRateLimit.error };
       }
 
       const botCheck = checkBotHeuristics({

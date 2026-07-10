@@ -41,10 +41,16 @@ const mockCheckBotHeuristics = mock(
   (): { success: boolean; error?: string } => ({ success: true }),
 );
 
+const mockCheckEmailRateLimit = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
   checkActionRateLimit: mockCheckActionRateLimit,
   checkBotHeuristics: mockCheckBotHeuristics,
+  checkEmailRateLimit: mockCheckEmailRateLimit,
 }));
 
 const mockCreatePublicReservationCommand = mock(() =>
@@ -280,6 +286,7 @@ describe("submitReservation", () => {
     mockValidateTurnstile.mockClear();
     mockCheckActionRateLimit.mockClear();
     mockCheckBotHeuristics.mockClear();
+    mockCheckEmailRateLimit.mockClear();
     mockCreatePublicReservationCommand.mockClear();
     mockVerifySpaceBelongsToLocation.mockClear();
     mockSendReservationAdminNotification.mockClear();
@@ -300,6 +307,9 @@ describe("submitReservation", () => {
     mockCheckBotHeuristics.mockImplementation(() => ({
       success: true as const,
     }));
+    mockCheckEmailRateLimit.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
     mockCreatePublicReservationCommand.mockImplementation(() =>
       Promise.resolve({
         id: "reservation-001",
@@ -580,6 +590,48 @@ describe("submitReservation", () => {
       await submitReservation(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreatePublicReservationCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("異常系: 顧客(メール)単位レート制限", () => {
+    test("メール単位の制限超過時は formErrors にエラーを返す", async () => {
+      mockCheckEmailRateLimit.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error:
+            "リクエストが多すぎます。しばらく経ってから再度お試しください。",
+        }),
+      );
+
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      const result = await submitReservation(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      );
+      expectSubmissionLike(result);
+
+      expect(result.status).toBe("error");
+      const formErrors = result.error?.[""];
+      expect(formErrors?.[0]).toContain("リクエストが多すぎます");
+      expect(mockCreatePublicReservationCommand).not.toHaveBeenCalled();
+    });
+
+    test("メール単位の制限はbot対策より前に実行される", async () => {
+      mockCheckEmailRateLimit.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error: "リクエストが多すぎます。",
+        }),
+      );
+
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockCheckBotHeuristics).not.toHaveBeenCalled();
     });
   });
 

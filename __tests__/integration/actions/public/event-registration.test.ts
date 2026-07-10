@@ -27,11 +27,16 @@ const mockCheckActionRateLimit = mock(
 const mockCheckBotHeuristics = mock(
   (): { success: boolean; error?: string } => ({ success: true }),
 );
+const mockCheckEmailRateLimit = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
 
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
   checkActionRateLimit: mockCheckActionRateLimit,
   checkBotHeuristics: mockCheckBotHeuristics,
+  checkEmailRateLimit: mockCheckEmailRateLimit,
 }));
 
 const mockCreateEventRegistrationCommand = mock(() =>
@@ -173,6 +178,7 @@ describe("registerForEvent", () => {
     mockValidateTurnstile.mockClear();
     mockCheckActionRateLimit.mockClear();
     mockCheckBotHeuristics.mockClear();
+    mockCheckEmailRateLimit.mockClear();
     mockCreateEventRegistrationCommand.mockClear();
     mockGetRequiredTermsByScope.mockClear();
     mockRecordTermsAgreementsCommand.mockClear();
@@ -186,6 +192,9 @@ describe("registerForEvent", () => {
     mockCheckBotHeuristics.mockImplementation(() => ({
       success: true as const,
     }));
+    mockCheckEmailRateLimit.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
     mockGetRequiredTermsByScope.mockImplementation(() => Promise.resolve([]));
     mockCreateEventRegistrationCommand.mockImplementation(() =>
       Promise.resolve({
@@ -216,6 +225,48 @@ describe("registerForEvent", () => {
       // 成功時は resetForm: true → { initialValue: null }（status フィールドなし）
       expect(result.initialValue).toBeNull();
       expect(mockCreateEventRegistrationCommand).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("異常系: 顧客(メール)単位レート制限", () => {
+    test("メール単位の制限超過時は formErrors にエラーを返す", async () => {
+      mockCheckEmailRateLimit.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error:
+            "リクエストが多すぎます。しばらく経ってから再度お試しください。",
+        }),
+      );
+
+      const { registerForEvent } =
+        await import("@/app/(public)/_shared/actions/event-registration");
+
+      const result = await registerForEvent(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      );
+      expectSubmissionLike(result);
+
+      expect(result.status).toBe("error");
+      const formErrors = result.error?.[""];
+      expect(formErrors?.[0]).toContain("リクエストが多すぎます");
+      expect(mockCreateEventRegistrationCommand).not.toHaveBeenCalled();
+    });
+
+    test("メール単位の制限はbot対策より前に実行される", async () => {
+      mockCheckEmailRateLimit.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error: "リクエストが多すぎます。",
+        }),
+      );
+
+      const { registerForEvent } =
+        await import("@/app/(public)/_shared/actions/event-registration");
+
+      await registerForEvent(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockCheckBotHeuristics).not.toHaveBeenCalled();
     });
   });
 

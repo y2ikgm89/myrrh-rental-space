@@ -6,6 +6,7 @@ import { describe, test, expect, mock } from "bun:test";
 import { z, ZodError } from "zod";
 import {
   checkBotHeuristics,
+  checkEmailRateLimit,
   extractFieldErrors,
   isTransientError,
   withRetry,
@@ -157,6 +158,35 @@ describe("action-helpers", () => {
       if (!honeypotResult.success && !timingResult.success) {
         expect(honeypotResult.error).toBe(timingResult.error);
       }
+    });
+  });
+
+  describe("checkEmailRateLimit", () => {
+    test("制限内なら success", async () => {
+      const mockLimiter = {
+        check: mock(() => Promise.resolve({ success: true })),
+      };
+      const result = await checkEmailRateLimit(mockLimiter, "taro@example.com");
+      expect(result).toEqual({ success: true });
+    });
+
+    test("制限超過時はエラーメッセージを返す", async () => {
+      const mockLimiter = {
+        check: mock(() => Promise.resolve({ success: false })),
+      };
+      const result = await checkEmailRateLimit(mockLimiter, "taro@example.com");
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("リクエストが多すぎます");
+      }
+    });
+
+    test("emailはnormalizeEmailForIdentityで正規化してtokenに使う", async () => {
+      const mockLimiter = {
+        check: mock(() => Promise.resolve({ success: true })),
+      };
+      await checkEmailRateLimit(mockLimiter, "  Taro@EXAMPLE.com  ");
+      expect(mockLimiter.check).toHaveBeenCalledWith("taro@example.com");
     });
   });
 

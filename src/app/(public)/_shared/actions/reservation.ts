@@ -7,11 +7,13 @@ import { publicReservationSchema } from "@/shared/lib/validations/public-reserva
 import {
   checkActionRateLimit,
   checkBotHeuristics,
+  checkEmailRateLimit,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
-  formSubmitRateLimiter,
   getClientIpFromHeaders,
+  reservationByEmailRateLimiter,
+  reservationSubmitRateLimiter,
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -84,9 +86,19 @@ export async function submitReservation(
     formData,
     publicReservationSchema,
     async (data) => {
-      const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+      const rateLimit = await checkActionRateLimit(
+        reservationSubmitRateLimiter,
+      );
       if (!rateLimit.success) {
         return { ok: false, error: rateLimit.error };
+      }
+
+      const emailRateLimit = await checkEmailRateLimit(
+        reservationByEmailRateLimiter,
+        data.email,
+      );
+      if (!emailRateLimit.success) {
+        return { ok: false, error: emailRateLimit.error };
       }
 
       const botCheck = checkBotHeuristics({
