@@ -12,6 +12,12 @@ export { RISK_FLAG_REASON };
 
 const RAPID_BOOKING_WINDOW_MS = 24 * 60 * 60 * 1000;
 const RAPID_BOOKING_THRESHOLD = 3;
+// cron実行間隔(週次)をカバーするスキャン対象期間。rapid_bookingは「直近24時間の
+// バースト」を検知したいが、cronは週1回しか走らないため、直近24時間だけを見ると
+// 週の早い時点(例: 実行が月曜9時なら火曜〜日曜)のバーストを永久に見逃す。
+// 直近7日分を取得し、その中の任意の24時間ウィンドウでバーストが無いかを
+// スライディングウィンドウで判定する。
+const RAPID_BOOKING_LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 const CANCELLATION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const CANCELLATION_THRESHOLD = 3;
 const NO_SHOW_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
@@ -23,11 +29,50 @@ export type DetectedRiskyCustomer = {
 };
 
 /**
+ * ソート不問のタイムスタンプ配列に対し、`windowMs` 以内に `threshold` 件以上が
+ * 収まる区間が存在するかを判定する(スライディングウィンドウ)。
+ * 予約作成 + イベント申込作成のタイムスタンプを合算した配列を渡すことで、
+ * 「予約2件+申込1件で合計3件」のような混在バーストも検知できる。
+ */
+function hasBurstWithinWindow(
+  timestampsMs: readonly number[],
+  windowMs: number,
+  threshold: number,
+): boolean {
+  if (timestampsMs.length < threshold) return false;
+  const sorted = [...timestampsMs].sort((a, b) => a - b);
+  for (let i = 0; i + threshold - 1 < sorted.length; i++) {
+    const windowStart = sorted[i];
+    const windowEnd = sorted[i + threshold - 1];
+    if (windowStart === undefined || windowEnd === undefined) continue;
+    if (windowEnd - windowStart <= windowMs) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function groupTimestampsByCustomer(
+  rows: readonly { customerId: string | null; createdAt: Date }[],
+): Map<string, number[]> {
+  const grouped = new Map<string, number[]>();
+  for (const row of rows) {
+    if (!row.customerId) continue;
+    const arr = grouped.get(row.customerId) ?? [];
+    arr.push(row.createdAt.getTime());
+    grouped.set(row.customerId, arr);
+  }
+  return grouped;
+}
+
+/**
  * 不審な予約パターンを検知する(週次cronから呼ばれる)。
  *
  * 3パターンを個別に集計し、customerId単位でマージする:
- * - rapid_booking: 直近24時間で同一顧客が3件以上の予約/イベント申込を作成
- * - frequent_cancellation: 直近30日でキャンセル3回以上
+ * - rapid_booking: 予約+イベント申込を合算した作成タイムスタンプの中に、
+ *   24時間以内に3件以上収まる区間がある(直近7日分をスキャンし、cronの実行間隔を
+ *   跨いでもバーストを見逃さない。日付境界固定ではなくスライディングウィンドウ)
+ * - frequent_cancellation: 予約+イベント申込のキャンセルを合算して直近30日で3回以上
  * - repeated_no_show: 直近90日でNO_SHOW2回以上(空間予約のみ。
  *   RegistrationStatusにNO_SHOW相当が存在しないためイベント申込には適用できない)
  *
@@ -42,31 +87,29 @@ export type DetectedRiskyCustomer = {
 export async function detectSuspiciousCustomers(
   now: Date = new Date(),
 ): Promise<DetectedRiskyCustomer[]> {
-  const rapidBookingSince = new Date(now.getTime() - RAPID_BOOKING_WINDOW_MS);
+  const rapidBookingLookbackSince = new Date(
+    now.getTime() - RAPID_BOOKING_LOOKBACK_MS,
+  );
   const cancellationSince = new Date(now.getTime() - CANCELLATION_WINDOW_MS);
   const noShowSince = new Date(now.getTime() - NO_SHOW_WINDOW_MS);
 
   const [
-    rapidReservations,
-    rapidRegistrations,
-    frequentReservationCancellations,
-    frequentRegistrationCancellations,
+    reservationCreations,
+    registrationCreations,
+    reservationCancellations,
+    registrationCancellations,
     repeatedNoShows,
   ] = await Promise.all([
-    prisma.reservation.groupBy({
-      by: ["customerId"],
-      where: { createdAt: { gte: rapidBookingSince }, deletedAt: null },
-      _count: { _all: true },
-      having: { customerId: { _count: { gte: RAPID_BOOKING_THRESHOLD } } },
+    prisma.reservation.findMany({
+      where: { createdAt: { gte: rapidBookingLookbackSince }, deletedAt: null },
+      select: { customerId: true, createdAt: true },
     }),
-    prisma.eventRegistration.groupBy({
-      by: ["customerId"],
+    prisma.eventRegistration.findMany({
       where: {
-        createdAt: { gte: rapidBookingSince },
+        createdAt: { gte: rapidBookingLookbackSince },
         customerId: { not: null },
       },
-      _count: { _all: true },
-      having: { customerId: { _count: { gte: RAPID_BOOKING_THRESHOLD } } },
+      select: { customerId: true, createdAt: true },
     }),
     prisma.reservation.groupBy({
       by: ["customerId"],
@@ -76,7 +119,6 @@ export async function detectSuspiciousCustomers(
         deletedAt: null,
       },
       _count: { _all: true },
-      having: { customerId: { _count: { gte: CANCELLATION_THRESHOLD } } },
     }),
     prisma.eventRegistration.groupBy({
       by: ["customerId"],
@@ -86,7 +128,6 @@ export async function detectSuspiciousCustomers(
         customerId: { not: null },
       },
       _count: { _all: true },
-      having: { customerId: { _count: { gte: CANCELLATION_THRESHOLD } } },
     }),
     prisma.reservation.groupBy({
       by: ["customerId"],
@@ -113,18 +154,43 @@ export async function detectSuspiciousCustomers(
     reasonsByCustomer.set(customerId, existing);
   };
 
-  for (const row of rapidReservations) {
-    addReason(row.customerId, RISK_FLAG_REASON.RAPID_BOOKING);
+  // rapid_booking: 予約+申込のタイムスタンプを顧客単位で合算し、スライディング
+  // ウィンドウで24時間以内3件以上のバーストが無いかを判定する。
+  const timestampsByCustomer = groupTimestampsByCustomer([
+    ...reservationCreations,
+    ...registrationCreations,
+  ]);
+  for (const [customerId, timestamps] of timestampsByCustomer) {
+    if (
+      hasBurstWithinWindow(
+        timestamps,
+        RAPID_BOOKING_WINDOW_MS,
+        RAPID_BOOKING_THRESHOLD,
+      )
+    ) {
+      addReason(customerId, RISK_FLAG_REASON.RAPID_BOOKING);
+    }
   }
-  for (const row of rapidRegistrations) {
-    addReason(row.customerId, RISK_FLAG_REASON.RAPID_BOOKING);
+
+  // frequent_cancellation: 予約キャンセル数 + 申込キャンセル数を顧客単位で合算
+  // してから閾値判定する(個別テーブルでは閾値未満でも合計で超える場合がある)。
+  const cancellationCountByCustomer = new Map<string, number>();
+  for (const row of [
+    ...reservationCancellations,
+    ...registrationCancellations,
+  ]) {
+    if (!row.customerId) continue;
+    cancellationCountByCustomer.set(
+      row.customerId,
+      (cancellationCountByCustomer.get(row.customerId) ?? 0) + row._count._all,
+    );
   }
-  for (const row of frequentReservationCancellations) {
-    addReason(row.customerId, RISK_FLAG_REASON.FREQUENT_CANCELLATION);
+  for (const [customerId, count] of cancellationCountByCustomer) {
+    if (count >= CANCELLATION_THRESHOLD) {
+      addReason(customerId, RISK_FLAG_REASON.FREQUENT_CANCELLATION);
+    }
   }
-  for (const row of frequentRegistrationCancellations) {
-    addReason(row.customerId, RISK_FLAG_REASON.FREQUENT_CANCELLATION);
-  }
+
   for (const row of repeatedNoShows) {
     addReason(row.customerId, RISK_FLAG_REASON.REPEATED_NO_SHOW);
   }
