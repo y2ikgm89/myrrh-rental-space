@@ -1,6 +1,8 @@
 import { Hr, Link, Section, Text } from "@react-email/components";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import {
+  formatDateWithWeekday,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import { testEmailFixture } from "./test-email.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -25,7 +27,7 @@ type TestEmailProps = {
 };
 
 function formatJst(date: Date): string {
-  return `${format(date, "yyyy年M月d日 (EEEE) HH:mm:ss", { locale: ja })} JST`;
+  return `${formatDateWithWeekday(date)} ${formatTimeShort(date)} JST`;
 }
 
 export function TestEmail({

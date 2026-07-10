@@ -1,6 +1,8 @@
 import { Hr, Link, Section, Text } from "@react-email/components";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import {
+  formatDateWithWeekday,
+  formatTimeShort,
+} from "@/shared/lib/date-format";
 import { reservationReminderFixture } from "./reservation-reminder.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
@@ -48,11 +50,9 @@ export function ReservationReminderEmail({
   cancellationDeadlineHours,
   footer,
 }: Props) {
-  const reservationDate = format(startTime, "yyyy年M月d日 (EEEE)", {
-    locale: ja,
-  });
-  const startTimeFormatted = format(startTime, "HH:mm", { locale: ja });
-  const endTimeFormatted = format(endTime, "HH:mm", { locale: ja });
+  const reservationDate = formatDateWithWeekday(startTime);
+  const startTimeFormatted = formatTimeShort(startTime);
+  const endTimeFormatted = formatTimeShort(endTime);
   const danger = SECTION_VARIANT_STYLES.danger;
   const info = SECTION_VARIANT_STYLES.info;
 
