@@ -14,6 +14,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import { getDeviceStatus } from "@/shared/lib/smart-lock/switchbot-client";
+import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { buildPasscodeName } from "./issue-passcode";
 
 export type SwitchBotWebhookCommandResult = "success" | "failed" | "timeout";
@@ -61,10 +62,10 @@ export async function processSwitchBotChangeReport(
       where: {
         switchbotCommandId: payload.commandId,
         deviceId: device.id,
-        status: "PENDING",
+        status: SmartLockPasscodeStatus.PENDING,
       },
       data: {
-        status: "FAILED",
+        status: SmartLockPasscodeStatus.FAILED,
         failureReason: `SwitchBot webhook: ${payload.result}`,
       },
     });
@@ -76,7 +77,7 @@ export async function processSwitchBotChangeReport(
     where: {
       switchbotCommandId: payload.commandId,
       deviceId: device.id,
-      status: "PENDING",
+      status: SmartLockPasscodeStatus.PENDING,
     },
   });
   if (!passcodeRow) return false;
@@ -91,12 +92,12 @@ export async function processSwitchBotChangeReport(
   const match = statusResult.body.keyList?.find((key) => key.name === name);
   if (!match) return false;
 
-  // findFirstとの間にポーリング側が先に確定させていてもstatus="PENDING"ガードで
-  // 二重更新にはならない（count=0でno-op）。
+  // findFirst との間にポーリング側が先に確定させていても status=PENDING ガードで
+  // 二重更新にはならない (count=0 で no-op)。
   const updated = await prisma.smartLockPasscode.updateMany({
-    where: { id: passcodeRow.id, status: "PENDING" },
+    where: { id: passcodeRow.id, status: SmartLockPasscodeStatus.PENDING },
     data: {
-      status: "CONFIRMED",
+      status: SmartLockPasscodeStatus.CONFIRMED,
       switchbotKeyId: match.id,
       confirmedAt: new Date(),
     },

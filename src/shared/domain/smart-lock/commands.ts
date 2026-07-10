@@ -6,6 +6,7 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import { revokeOne } from "@/shared/domain/smart-lock/revoke-passcode";
+import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 function isUniqueConstraintError(error: unknown): boolean {
   return (
@@ -124,11 +125,19 @@ export async function deleteSmartLockDeviceCommand(
   }
 
   const livePasscodes = await prisma.smartLockPasscode.findMany({
-    where: { deviceId: id, status: { in: ["PENDING", "CONFIRMED"] } },
+    where: {
+      deviceId: id,
+      status: {
+        in: [
+          SmartLockPasscodeStatus.PENDING,
+          SmartLockPasscodeStatus.CONFIRMED,
+        ],
+      },
+    },
     select: { id: true, status: true, switchbotKeyId: true },
   });
 
-  if (livePasscodes.some((p) => p.status === "PENDING")) {
+  if (livePasscodes.some((p) => p.status === SmartLockPasscodeStatus.PENDING)) {
     throw new DomainError(
       "発行処理中のパスコードが残っているため削除できません。しばらく待ってから再試行してください",
       "VALIDATION",
@@ -136,7 +145,7 @@ export async function deleteSmartLockDeviceCommand(
   }
 
   const confirmedPasscodes = livePasscodes.filter(
-    (p) => p.status === "CONFIRMED",
+    (p) => p.status === SmartLockPasscodeStatus.CONFIRMED,
   );
   if (confirmedPasscodes.length > 0) {
     const credentials = await getDecryptedSwitchBotCredentials();

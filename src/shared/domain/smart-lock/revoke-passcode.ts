@@ -9,6 +9,10 @@ import { prisma } from "@/shared/db/prisma";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import { deletePasscode } from "@/shared/lib/smart-lock/switchbot-client";
 import {
+  ReservationStatus,
+  SmartLockPasscodeStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+import {
   logError,
   ErrorCategory,
   ErrorSeverity,
@@ -69,12 +73,15 @@ export async function revokeOne(
   }
 
   // deleteKey は既に成功しているため、この後の書込自体は失敗しても物理的な失効は
-  // 完了済み。ただし cancellation 経由とcronが同一行を同時に処理し得るため、
-  // status="CONFIRMED" をWHEREに含めて2回目以降の書込を無害なno-opにする
-  // （REVOKED上書き自体は無害だが、updatedAt等の余計な変更を避ける）。
+  // 完了済み。ただし cancellation 経由と cron が同一行を同時に処理し得るため、
+  // status=CONFIRMED を WHERE に含めて 2 回目以降の書込を無害な no-op にする
+  // (REVOKED 上書き自体は無害だが、updatedAt 等の余計な変更を避ける)。
   await prisma.smartLockPasscode.updateMany({
-    where: { id: passcode.id, status: "CONFIRMED" },
-    data: { status: "REVOKED", revokedAt: new Date() },
+    where: { id: passcode.id, status: SmartLockPasscodeStatus.CONFIRMED },
+    data: {
+      status: SmartLockPasscodeStatus.REVOKED,
+      revokedAt: new Date(),
+    },
   });
   return true;
 }
@@ -87,7 +94,7 @@ export async function revokeSmartLockPasscodesForReservation(
   reservationId: string,
 ): Promise<void> {
   const passcodes = await prisma.smartLockPasscode.findMany({
-    where: { reservationId, status: "CONFIRMED" },
+    where: { reservationId, status: SmartLockPasscodeStatus.CONFIRMED },
     select: {
       id: true,
       switchbotKeyId: true,
@@ -128,8 +135,11 @@ export async function findRevocableSmartLockPasscodes(
 ): Promise<RevocablePasscode[]> {
   return prisma.smartLockPasscode.findMany({
     where: {
-      status: "CONFIRMED",
-      OR: [{ endTime: { lt: now } }, { reservation: { status: "CANCELLED" } }],
+      status: SmartLockPasscodeStatus.CONFIRMED,
+      OR: [
+        { endTime: { lt: now } },
+        { reservation: { status: ReservationStatus.CANCELLED } },
+      ],
     },
     select: {
       id: true,
