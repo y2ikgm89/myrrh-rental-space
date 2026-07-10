@@ -5,10 +5,16 @@
  * - デスクトップ (>= 1024px): 固定サイドバー
  * - モバイル/タブレット: ドロワー形式
  *
- * Next.js 16 PPR対応:
- * - 静的シェル: サイドバー、ヘッダー構造
- * - 動的コンテンツ: 認証情報（Suspenseでラップ）
+ * Next.js 16 PPR (cacheComponents) 対応:
+ * - 静的シェル: layout 本体（Suspense fallback の shell だけ）
+ * - 動的コンテンツ: 認証情報・sidebar 権限フィルタ・最近閲覧リソースは Suspense 内
+ *   async SC (`DashboardChromeResolved`) 冒頭の `await connection()` に隔離する
  *
+ * layout 本体で `await connection()` を呼ぶと子ページの uncached read が
+ * cacheComponents の "blocking route" でビルドを落としうる規約違反になるため、
+ * canonical pattern（root layout の generateViewport / Suspense 内 async SC）に
+ * 揃える。root `(admin)/layout.tsx` の generateViewport で既に admin route 全体は
+ * 完全動的(ƒ)化されている。
  */
 
 import { Suspense } from "react";
@@ -42,7 +48,7 @@ import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
 import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions";
 import { getRecentAuditedResources } from "@/shared/domain/audit/recents-queries";
 
-export default async function DashboardLayout({
+async function DashboardChromeResolved({
   children,
 }: {
   children: ReactNode;
@@ -108,5 +114,24 @@ export default async function DashboardLayout({
         </ConfirmProvider>
       </NotificationPollingProvider>
     </AdminLayoutProvider>
+  );
+}
+
+// build 時 prerender / route entry の Suspense fallback。chrome (sidebar/topbar)
+// は auth resolve 後に描画するため、最小限の背景 shell のみ返す。children を
+// 含めないのは、認証未 resolve の状態で保護 route の中身を描画しないため。
+function DashboardChromeSkeleton(): ReactElement {
+  return <div className="min-h-dvh bg-background" aria-hidden />;
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}): ReactElement {
+  return (
+    <Suspense fallback={<DashboardChromeSkeleton />}>
+      <DashboardChromeResolved>{children}</DashboardChromeResolved>
+    </Suspense>
   );
 }
