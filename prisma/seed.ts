@@ -452,6 +452,17 @@ async function seedSettings(
       }
     : {};
 
+  // senderEmail/replyToEmail も同じ理由で架空値を本番に投入しない。特に replyToEmail は
+  // env フォールバック層が無く（送信元 From と違い env EMAIL_FROM 相当が存在しない）、
+  // DB 値がそのまま全送信メールの Reply-To ヘッダーになる。senderEmail は未設定なら
+  // client.ts のハードコード既定値に落ちるだけなので実害はないが、対称性のため揃える。
+  const emailPlaceholders = includeBusinessPlaceholders
+    ? {
+        senderEmail: "noreply@example.com",
+        replyToEmail: "support@example.com",
+      }
+    : { senderEmail: null, replyToEmail: null };
+
   const settingsData = {
     siteName: "Myrrh Rental Space",
     siteDescription:
@@ -473,9 +484,8 @@ async function seedSettings(
     footerLogoUrl: "/images/seed/logo-footer.svg",
 
     // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
-    senderEmail: "noreply@example.com",
     senderName: "Myrrh Rental Space",
-    replyToEmail: "support@example.com",
+    ...emailPlaceholders,
   };
 
   const featureModules = resolveSeedFeatureModules();
@@ -4728,7 +4738,7 @@ async function seedProduction(email: string | undefined, name: string) {
     "📝 テンプレートデータが作成されました。管理画面で本番データに更新してください:",
   );
   console.log(
-    "   /admin/settings  — 会社名・住所・連絡先（未設定です。必ず入力してください）",
+    "   /admin/settings  — 会社名・住所・連絡先・メール設定（未設定です。必ず入力してください）",
   );
   console.log("   /admin/locations — 実際の拠点情報");
   console.log("   /admin/spaces    — 実際のスペース・料金");
