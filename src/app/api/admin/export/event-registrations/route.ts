@@ -2,10 +2,12 @@ import { unstable_rethrow } from "next/navigation";
 import ExcelJS from "exceljs";
 import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getEventRegistrationsForExport } from "@/shared/domain/events/export-queries";
 import { generateCsv } from "@/shared/lib/csv";
 import { formatJstDateString, formatJstYmdHm } from "@/shared/lib/date-format";
 import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
   logError,
   ErrorCategory,
@@ -129,6 +131,17 @@ export async function GET(request: Request): Promise<Response> {
 
     const registrations = await getEventRegistrationsForExport(eventId);
     const dateSuffix = formatJstDateString(new Date()).replaceAll("-", "");
+
+    await createAuditLogRecord({
+      userId: auth.user.id,
+      action: AuditAction.EXPORT,
+      resource: "event",
+      resourceId: eventId,
+      metadata: {
+        format: formatParsed.data,
+        exportedCount: registrations.length,
+      },
+    });
 
     if (formatParsed.data === "xlsx") {
       const workbook = await generateEventRegistrationsWorkbook(registrations);

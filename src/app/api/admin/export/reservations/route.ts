@@ -1,5 +1,6 @@
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getReservationsForExport } from "@/shared/domain/reservations/export-queries";
 import { generateCsv } from "@/shared/lib/csv";
 import {
@@ -12,6 +13,7 @@ import {
   RESERVATION_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
   logError,
   ErrorCategory,
@@ -33,6 +35,16 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const reservations = await getReservationsForExport();
+
+    await createAuditLogRecord({
+      userId: auth.user.id,
+      action: AuditAction.EXPORT,
+      resource: "reservation",
+      metadata: {
+        format: "csv",
+        exportedCount: reservations.length,
+      },
+    });
 
     const csv = generateCsv(reservations, [
       { header: "予約ID", accessor: (r) => r.id.slice(0, 8).toUpperCase() },
