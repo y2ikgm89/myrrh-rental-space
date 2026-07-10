@@ -15,6 +15,7 @@ import {
   getDeviceStatus,
   type SwitchBotCredentials,
 } from "@/shared/lib/smart-lock/switchbot-client";
+import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   logError,
   normalizeError,
@@ -105,7 +106,7 @@ async function resolveAfterCreateConflict(
   const existing = await prisma.smartLockPasscode.findUnique({
     where: { reservationId_deviceId: { reservationId, deviceId } },
   });
-  if (!existing || existing.status !== "CONFIRMED") {
+  if (!existing || existing.status !== SmartLockPasscodeStatus.CONFIRMED) {
     return null;
   }
   return decryptConfirmedPasscode(
@@ -137,7 +138,7 @@ async function issueForDevice(
       data: {
         reservationId: input.reservationId,
         deviceId: device.id,
-        status: "PENDING",
+        status: SmartLockPasscodeStatus.PENDING,
         passcodeCiphertext: encrypt(password, {
           purpose: PASSCODE_CRYPTO_PURPOSE,
         }),
@@ -170,7 +171,10 @@ async function issueForDevice(
   if (!createResult.ok) {
     await prisma.smartLockPasscode.update({
       where: { id: passcodeRow.id },
-      data: { status: "FAILED", failureReason: createResult.message },
+      data: {
+        status: SmartLockPasscodeStatus.FAILED,
+        failureReason: createResult.message,
+      },
     });
     logError(new Error("SwitchBot createKey failed"), {
       category: ErrorCategory.EXTERNAL_API,
@@ -199,13 +203,13 @@ async function issueForDevice(
 
     const match = statusResult.body.keyList?.find((key) => key.name === name);
     if (match) {
-      // webhook側の高速パスが同じ行を先に確定/失効させている可能性があるため、
-      // status="PENDING"をWHEREに含めたclaim形で書き込む（webhook-commands.ts の
+      // webhook 側の高速パスが同じ行を先に確定/失効させている可能性があるため、
+      // status=PENDING を WHERE に含めた claim 形で書き込む（webhook-commands.ts の
       // processSwitchBotChangeReport と同型）。
       const updated = await prisma.smartLockPasscode.updateMany({
-        where: { id: passcodeRow.id, status: "PENDING" },
+        where: { id: passcodeRow.id, status: SmartLockPasscodeStatus.PENDING },
         data: {
-          status: "CONFIRMED",
+          status: SmartLockPasscodeStatus.CONFIRMED,
           switchbotKeyId: match.id,
           confirmedAt: new Date(),
         },
@@ -219,7 +223,7 @@ async function issueForDevice(
           where: { id: passcodeRow.id },
           select: { status: true },
         });
-        if (current?.status === "CONFIRMED") {
+        if (current?.status === SmartLockPasscodeStatus.CONFIRMED) {
           return { deviceName: device.deviceName, passcode: password };
         }
         return null;
@@ -231,7 +235,7 @@ async function issueForDevice(
   await prisma.smartLockPasscode.update({
     where: { id: passcodeRow.id },
     data: {
-      status: "FAILED",
+      status: SmartLockPasscodeStatus.FAILED,
       failureReason: "Get Device Statusでのkeyid確定がタイムアウトしました",
     },
   });
@@ -302,7 +306,7 @@ export async function issueSmartLockPasscodes(
     });
 
     if (existing) {
-      if (existing.status === "CONFIRMED") {
+      if (existing.status === SmartLockPasscodeStatus.CONFIRMED) {
         const resolved = decryptConfirmedPasscode(
           existing.passcodeCiphertext,
           device.deviceName,

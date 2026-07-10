@@ -60,6 +60,7 @@ export {
   EmailDeliveryStatus,
   TermsScope,
   SmartLockDeviceType,
+  SmartLockPasscodeStatus,
 } from "@generated/prisma/enums";
 
 // ---------------------------------------------------------------------------
