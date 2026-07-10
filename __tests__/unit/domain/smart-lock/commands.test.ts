@@ -21,15 +21,20 @@ const mockUpdateSpace = mock<(...args: unknown[]) => Promise<unknown>>(() =>
   Promise.resolve({}),
 );
 
+const txStub = {
+  $executeRaw: (..._args: unknown[]) => Promise.resolve(undefined),
+  space: {
+    findUnique: (...args: unknown[]) => mockFindUniqueSpace(...args),
+    update: (...args: unknown[]) => mockUpdateSpace(...args),
+  },
+  smartLockDevice: {
+    findUnique: (...args: unknown[]) => mockFindUniqueDevice(...args),
+  },
+};
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    space: {
-      findUnique: (...args: unknown[]) => mockFindUniqueSpace(...args),
-      update: (...args: unknown[]) => mockUpdateSpace(...args),
-    },
-    smartLockDevice: {
-      findUnique: (...args: unknown[]) => mockFindUniqueDevice(...args),
-    },
+    $transaction: (fn: (tx: typeof txStub) => Promise<unknown>) => fn(txStub),
   },
 }));
 
