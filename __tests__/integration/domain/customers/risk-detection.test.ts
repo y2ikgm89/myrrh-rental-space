@@ -11,7 +11,12 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { ReservationStatus } from "@generated/prisma/enums";
+import {
+  EventScheduleMode,
+  EventStatus,
+  ReservationStatus,
+  RegistrationStatus,
+} from "@generated/prisma/enums";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -89,6 +94,58 @@ async function cleanupFixture(
   await basePrisma.customer.deleteMany({ where: { id: customerId } });
 }
 
+async function createFixtureEvent(): Promise<{
+  eventId: string;
+  slotId: string;
+  ticketId: string;
+}> {
+  const suffix = crypto.randomUUID();
+  const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const end = new Date(Date.now() + 26 * 60 * 60 * 1000);
+
+  return prisma.$transaction(async (tx) => {
+    const event = await tx.event.create({
+      data: {
+        title: "Risk Detect Event",
+        slug: `risk-detect-event-${suffix}`,
+        descriptionJson: { type: "doc" },
+        descriptionHtml: "<p>t</p>",
+        descriptionPlainText: "t",
+        status: EventStatus.PUBLISHED,
+        scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+        registrationOpen: true,
+        firstSlotStartAt: start,
+        lastSlotEndAt: end,
+      },
+      select: { id: true },
+    });
+    const slot = await tx.eventTimeSlot.create({
+      data: { eventId: event.id, startAt: start, endAt: end, capacity: 1000 },
+      select: { id: true },
+    });
+    const ticket = await tx.eventTicket.create({
+      data: {
+        eventId: event.id,
+        name: "一般",
+        price: 0,
+        isAvailable: true,
+      },
+      select: { id: true },
+    });
+    return { eventId: event.id, slotId: slot.id, ticketId: ticket.id };
+  });
+}
+
+async function cleanupEventFixture(eventId: string): Promise<void> {
+  // eventTimeSlot は明示的に削除しない。SINGLE_OCCURRENCE events は
+  // 「ちょうど1つのslot」というDEFERRED制約を持つため、event本体より先に
+  // slotだけを消すとslot_count=0でトリガーが発火する。event削除のCascadeに
+  // slot削除を任せる(registration-overbooking.test.tsのcleanupEventと同じ順序)。
+  await basePrisma.eventRegistration.deleteMany({ where: { eventId } });
+  await basePrisma.eventTicket.deleteMany({ where: { eventId } });
+  await basePrisma.event.deleteMany({ where: { id: eventId } });
+}
+
 describeMaybe("detectSuspiciousCustomers", () => {
   beforeAll(async () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
@@ -158,6 +215,132 @@ describeMaybe("detectSuspiciousCustomers", () => {
 
       expect(match).toBeUndefined();
     } finally {
+      await cleanupFixture(locationId, spaceId, customerId);
+    }
+  }, 15_000);
+
+  test("6日前(週次cronの実行間隔内)の24時間バーストも検知する(P1回帰)", async () => {
+    // cronは週次実行だが、rapid_bookingは「直近24時間」の概念。もし単純に
+    // now-24hだけをスキャンすると、週の早い時点(6日前等)のバーストが
+    // 永久に検知漏れになる。直近7日分をスキャンしスライディングウィンドウで
+    // 判定することで、このケースも捉えられる必要がある。
+    const { locationId, spaceId } = await createFixtureSpace();
+    const customerId = await createFixtureCustomer();
+    const now = new Date();
+    const sixDaysAgo = now.getTime() - 6 * 24 * 60 * 60 * 1000;
+
+    try {
+      for (let i = 0; i < 3; i++) {
+        await basePrisma.reservation.create({
+          data: {
+            spaceId,
+            customerId,
+            startTime: new Date(sixDaysAgo + (i + 1) * 3 * 60 * 60 * 1000),
+            endTime: new Date(
+              sixDaysAgo + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
+            ),
+            status: ReservationStatus.CONFIRMED,
+            createdAt: new Date(sixDaysAgo + i * 60 * 60 * 1000),
+          },
+        });
+      }
+
+      const detected = await detectSuspiciousCustomers(now);
+      const match = detected.find((d) => d.customerId === customerId);
+
+      expect(match).toBeDefined();
+      expect(match?.reasons).toContain("rapid_booking");
+    } finally {
+      await cleanupFixture(locationId, spaceId, customerId);
+    }
+  }, 15_000);
+
+  test("予約2件+イベント申込1件の混在バーストを合算して検知する(P2回帰)", async () => {
+    const { locationId, spaceId } = await createFixtureSpace();
+    const { eventId, slotId, ticketId } = await createFixtureEvent();
+    const customerId = await createFixtureCustomer();
+    const now = new Date();
+
+    try {
+      for (let i = 0; i < 2; i++) {
+        await basePrisma.reservation.create({
+          data: {
+            spaceId,
+            customerId,
+            startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
+            endTime: new Date(
+              now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
+            ),
+            status: ReservationStatus.CONFIRMED,
+          },
+        });
+      }
+      await basePrisma.eventRegistration.create({
+        data: {
+          eventId,
+          slotId,
+          ticketId,
+          name: "検知 太郎",
+          email: "risk-detect-mixed@example.com",
+          quantity: 1,
+          status: RegistrationStatus.CONFIRMED,
+          customerId,
+        },
+      });
+
+      const detected = await detectSuspiciousCustomers(now);
+      const match = detected.find((d) => d.customerId === customerId);
+
+      expect(match).toBeDefined();
+      expect(match?.reasons).toContain("rapid_booking");
+    } finally {
+      await cleanupEventFixture(eventId);
+      await cleanupFixture(locationId, spaceId, customerId);
+    }
+  }, 15_000);
+
+  test("予約2回キャンセル+申込1回キャンセルの合算で frequent_cancellation を検知する(P2回帰)", async () => {
+    const { locationId, spaceId } = await createFixtureSpace();
+    const { eventId, slotId, ticketId } = await createFixtureEvent();
+    const customerId = await createFixtureCustomer();
+    const now = new Date();
+
+    try {
+      for (let i = 0; i < 2; i++) {
+        await basePrisma.reservation.create({
+          data: {
+            spaceId,
+            customerId,
+            startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
+            endTime: new Date(
+              now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
+            ),
+            status: ReservationStatus.CANCELLED,
+            cancelledAt: new Date(now.getTime() - i * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+      await basePrisma.eventRegistration.create({
+        data: {
+          eventId,
+          slotId,
+          ticketId,
+          name: "検知 太郎",
+          email: "risk-detect-mixed-cancel@example.com",
+          quantity: 1,
+          status: RegistrationStatus.CANCELLED,
+          cancelledAt: now,
+          customerId,
+        },
+      });
+
+      const detected = await detectSuspiciousCustomers(now);
+      const match = detected.find((d) => d.customerId === customerId);
+
+      expect(match).toBeDefined();
+      expect(match?.reasons).toContain("frequent_cancellation");
+    } finally {
+      await cleanupEventFixture(eventId);
       await cleanupFixture(locationId, spaceId, customerId);
     }
   }, 15_000);
