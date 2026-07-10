@@ -51,7 +51,7 @@ export default async function ReservationCompletePage({
 
   const isLoggedIn = user != null;
   const address = reservation?.space.location?.address ?? null;
-  const hasSmartLock = (reservation?.space.smartLockDevices.length ?? 0) > 0;
+  const hasSmartLock = reservation?.space.smartLockDevice?.isActive ?? false;
 
   const claimUrl =
     reservation && !isLoggedIn

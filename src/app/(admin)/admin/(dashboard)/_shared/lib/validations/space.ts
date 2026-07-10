@@ -357,6 +357,8 @@ export type SpaceWithStats = {
   updatedAt: string;
   locationId: string;
   categoryId: string | null;
+  /** 割り当てられたスマートロックデバイス（同一 Location 配下の登録簿から選択） */
+  smartLockDeviceId: string | null;
   /** 一覧・詳細でカテゴリ名表示用（Prisma include） */
   category: { id: string; name: string } | null;
   // 割引設定

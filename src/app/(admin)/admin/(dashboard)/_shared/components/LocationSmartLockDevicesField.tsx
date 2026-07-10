@@ -42,31 +42,31 @@ import { smartLockDeviceFormSchema } from "@/admin/lib/validations/smart-lock-de
 import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
 
 type CreateSmartLockDeviceAction = (
-  spaceId: string,
+  locationId: string,
   prev: SubmissionResult | undefined,
   formData: FormData,
 ) => Promise<SubmissionResult>;
 
 type UpdateSmartLockDeviceAction = (
-  spaceId: string,
+  locationId: string,
   deviceRowId: string,
   prev: SubmissionResult | undefined,
   formData: FormData,
 ) => Promise<SubmissionResult>;
 
 type DeleteSmartLockDeviceAction = (
-  spaceId: string,
+  locationId: string,
   deviceRowId: string,
 ) => Promise<MutationResult<{ id: string }>>;
 
 type ToggleSmartLockDeviceActiveAction = (
-  spaceId: string,
+  locationId: string,
   deviceRowId: string,
   isActive: boolean,
 ) => Promise<MutationResult<{ id: string; isActive: boolean }>>;
 
-interface SmartLockDevicesFieldProps {
-  readonly spaceId: string;
+interface LocationSmartLockDevicesFieldProps {
+  readonly locationId: string;
   readonly initialSmartLockDevices: readonly SmartLockDeviceData[];
   readonly createAction: CreateSmartLockDeviceAction;
   readonly updateAction: UpdateSmartLockDeviceAction;
@@ -85,21 +85,21 @@ const DEVICE_TYPE_VALUES: readonly SmartLockDeviceType[] = [
 type DialogState =
   { mode: "create" } | { mode: "edit"; device: SmartLockDeviceData };
 
-export function SmartLockDevicesField({
-  spaceId,
+export function LocationSmartLockDevicesField({
+  locationId,
   initialSmartLockDevices,
   createAction,
   updateAction,
   deleteAction,
   toggleActiveAction,
-}: SmartLockDevicesFieldProps) {
+}: LocationSmartLockDevicesFieldProps) {
   const router = useRouter();
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const handleDelete = (device: SmartLockDeviceData): void => {
     startDeleteTransition(async () => {
-      const result = await deleteAction(spaceId, device.id);
+      const result = await deleteAction(locationId, device.id);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
@@ -113,7 +113,7 @@ export function SmartLockDevicesField({
     deviceRowId: string,
     checked: boolean,
   ): Promise<MutationResult<{ id: string; isActive: boolean }>> => {
-    return toggleActiveAction(spaceId, deviceRowId, checked);
+    return toggleActiveAction(locationId, deviceRowId, checked);
   };
 
   return (
@@ -202,7 +202,7 @@ export function SmartLockDevicesField({
 
       {dialogState && (
         <SmartLockDeviceDialog
-          spaceId={spaceId}
+          locationId={locationId}
           mode={dialogState.mode}
           device={dialogState.mode === "edit" ? dialogState.device : undefined}
           createAction={createAction}
@@ -218,7 +218,7 @@ export function SmartLockDevicesField({
 }
 
 interface SmartLockDeviceDialogProps {
-  readonly spaceId: string;
+  readonly locationId: string;
   readonly mode: "create" | "edit";
   readonly device?: SmartLockDeviceData | undefined;
   readonly createAction: CreateSmartLockDeviceAction;
@@ -228,7 +228,7 @@ interface SmartLockDeviceDialogProps {
 }
 
 function SmartLockDeviceDialog({
-  spaceId,
+  locationId,
   mode,
   device,
   createAction,
@@ -239,8 +239,8 @@ function SmartLockDeviceDialog({
   const router = useRouter();
   const isEdit = mode === "edit" && device !== undefined;
   const boundAction = isEdit
-    ? updateAction.bind(null, spaceId, device.id)
-    : createAction.bind(null, spaceId);
+    ? updateAction.bind(null, locationId, device.id)
+    : createAction.bind(null, locationId);
   const [lastResult, action, isPending] = useActionState(
     boundAction,
     undefined,

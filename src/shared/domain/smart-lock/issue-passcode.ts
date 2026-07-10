@@ -162,28 +162,34 @@ async function issueForDevice(
 }
 
 /**
- * 予約に紐づくスペースのアクティブなスマートロックデバイスすべてに一時パスコードを発行する。
+ * 予約に紐づくスペースに割り当てられたスマートロックデバイスへ一時パスコードを発行する。
  *
- * - 対象デバイスが無い（スペースにスマートロック未設定）場合は no-op で空配列を返す。
+ * - スペースにデバイス未割り当て、またはデバイスが無効化されている場合は no-op で
+ *   空配列を返す（戻り値は将来の複数デバイス対応も見据えて配列のまま維持するが、
+ *   現在は0または1要素）。
  * - 同一予約・同一デバイスの組は既存レコードがあれば再発行しない（`@@unique`で保証、
  *   このチェックはAPI呼出前の重複防止用）。既にCONFIRMED済みなら復号して結果に含める。
  * - 発行成功・失敗どちらの場合も呼び出し元の処理（確認メール送信）をブロックしないよう
- *   例外は投げない設計とし、失敗したデバイスは戻り値に含めない（管理者はDBの
+ *   例外は投げない設計とし、失敗した場合は戻り値に含めない（管理者はDBの
  *   FAILEDレコードで事後確認できる）。
+ * - 同一デバイスが複数スペースから参照され得る（物理ロック共有）が、
+ *   `@@unique([reservationId, deviceId])`のため予約単位では重複発行されない。
  */
 export async function issueSmartLockPasscodes(
   input: IssueSmartLockPasscodesInput,
 ): Promise<IssuedSmartLockPasscode[]> {
-  const devices = await prisma.smartLockDevice.findMany({
-    where: { spaceId: input.spaceId, isActive: true },
+  const space = await prisma.space.findUnique({
+    where: { id: input.spaceId },
+    select: { smartLockDevice: true },
   });
-  if (devices.length === 0) return [];
+  const device = space?.smartLockDevice;
+  if (!device || !device.isActive) return [];
 
   const credentials = await getDecryptedSwitchBotCredentials();
   if (!credentials) {
     logError(
       new Error(
-        "SmartLockDeviceが登録されているがSwitchBot連携が未設定/無効です",
+        "SmartLockDeviceが割り当てられているがSwitchBot連携が未設定/無効です",
       ),
       {
         category: ErrorCategory.VALIDATION,
@@ -198,35 +204,28 @@ export async function issueSmartLockPasscodes(
     return [];
   }
 
-  // デバイスごとに独立してポーリング待ち（最大45秒）が発生するため、複数台登録時に
-  // 待ち時間が積み上がらないよう並行実行する。
-  const perDevice = await Promise.all(
-    devices.map(async (device) => {
-      const existing = await prisma.smartLockPasscode.findUnique({
-        where: {
-          reservationId_deviceId: {
-            reservationId: input.reservationId,
-            deviceId: device.id,
-          },
-        },
-      });
+  const existing = await prisma.smartLockPasscode.findUnique({
+    where: {
+      reservationId_deviceId: {
+        reservationId: input.reservationId,
+        deviceId: device.id,
+      },
+    },
+  });
 
-      if (existing) {
-        if (existing.status === "CONFIRMED") {
-          const passcode = decrypt(existing.passcodeCiphertext);
-          return { deviceName: device.deviceName, passcode };
-        }
-        return null;
-      }
+  if (existing) {
+    if (existing.status === "CONFIRMED") {
+      const passcode = decrypt(existing.passcodeCiphertext);
+      return [{ deviceName: device.deviceName, passcode }];
+    }
+    return [];
+  }
 
-      return issueForDevice(
-        device,
-        input,
-        credentials,
-        credentials.passcodeBufferMinutes,
-      );
-    }),
+  const issued = await issueForDevice(
+    device,
+    input,
+    credentials,
+    credentials.passcodeBufferMinutes,
   );
-
-  return perDevice.filter((r): r is IssuedSmartLockPasscode => r !== null);
+  return issued ? [issued] : [];
 }

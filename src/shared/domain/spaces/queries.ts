@@ -39,6 +39,7 @@ function formatSpaceToPlain(s: {
   updatedAt: Date;
   locationId: string;
   categoryId: string | null;
+  smartLockDeviceId: string | null;
   location: { address: string };
   category: { id: string; name: string } | null;
   discountType: string | null;
@@ -77,6 +78,7 @@ function formatSpaceToPlain(s: {
     updatedAt: s.updatedAt.toISOString(),
     locationId: s.locationId,
     categoryId: s.categoryId,
+    smartLockDeviceId: s.smartLockDeviceId,
     category: s.category,
     discountType: getValidDiscountType(s.discountType),
     discountValue: s.discountValue,
