@@ -363,16 +363,22 @@ model Location {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // スマートロックデバイス登録簿からの既定デバイス（任意）。新規Space作成時に
+  // Space.smartLockDeviceIdの初期値として継承される（登録し忘れ防止）。
+  defaultSmartLockDeviceId String? @db.Uuid
+
   // Relations
-  spaces           Space[]
-  events           Event[]
-  blockedDates     BlockedDate[]
-  smartLockDevices SmartLockDevice[]
+  spaces                 Space[]
+  events                  Event[]
+  blockedDates            BlockedDate[]
+  smartLockDevices        SmartLockDevice[]      @relation("LocationSmartLockDevices")
+  defaultSmartLockDevice  SmartLockDevice?        @relation("LocationDefaultSmartLockDevice", fields: [defaultSmartLockDeviceId], references: [id], onDelete: SetNull)
 
   @@unique([sortOrder], map: "locations_active_sortOrder_key", where: { isActive: true })
   @@index([isPublished, isActive])
   @@index([sortOrder])
   @@index([gbpSyncError])
+  @@index([defaultSmartLockDeviceId])
   @@map("locations")
 }
 
@@ -1883,9 +1889,10 @@ model SmartLockDevice {
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
-  location  Location            @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  spaces    Space[]
-  passcodes SmartLockPasscode[]
+  location            Location            @relation("LocationSmartLockDevices", fields: [locationId], references: [id], onDelete: Cascade)
+  defaultForLocations Location[]          @relation("LocationDefaultSmartLockDevice")
+  spaces              Space[]
+  passcodes           SmartLockPasscode[]
 
   @@index([locationId])
   @@map("smart_lock_devices")

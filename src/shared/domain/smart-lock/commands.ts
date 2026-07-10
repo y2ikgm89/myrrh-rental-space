@@ -169,3 +169,46 @@ export async function setSpaceSmartLockDeviceCommand(
 
   return { id: spaceId, smartLockDeviceId: deviceId };
 }
+
+/**
+ * 拠点の既定スマートロックデバイスを設定する（`null`で解除）。
+ * 新規Space作成時にSpace.smartLockDeviceIdの初期値としてここから継承される。
+ */
+export async function setLocationDefaultSmartLockDeviceCommand(
+  locationId: string,
+  deviceId: string | null,
+): Promise<{ id: string; defaultSmartLockDeviceId: string | null }> {
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
+    select: { id: true },
+  });
+  if (!location) {
+    throw new DomainError("拠点が見つかりません", "NOT_FOUND");
+  }
+
+  if (deviceId) {
+    const device = await prisma.smartLockDevice.findUnique({
+      where: { id: deviceId },
+      select: { id: true, locationId: true },
+    });
+    if (!device) {
+      throw new DomainError(
+        "スマートロックデバイスが見つかりません",
+        "NOT_FOUND",
+      );
+    }
+    if (device.locationId !== locationId) {
+      throw new DomainError(
+        "このデバイスは異なる拠点に登録されています",
+        "VALIDATION",
+      );
+    }
+  }
+
+  await prisma.location.update({
+    where: { id: locationId },
+    data: { defaultSmartLockDeviceId: deviceId },
+  });
+
+  return { id: locationId, defaultSmartLockDeviceId: deviceId };
+}

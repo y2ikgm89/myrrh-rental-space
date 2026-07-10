@@ -128,14 +128,17 @@ async function ensureSlugAvailable(
   }
 }
 
-async function ensureAssignableLocation(locationId: string): Promise<void> {
+async function ensureAssignableLocation(
+  locationId: string,
+): Promise<{ id: string; defaultSmartLockDeviceId: string | null }> {
   const location = await prisma.location.findFirst({
     where: { id: locationId, isActive: true },
-    select: { id: true },
+    select: { id: true, defaultSmartLockDeviceId: true },
   });
   if (!location) {
     throw new DomainError("拠点が見つからないか、無効です", "VALIDATION");
   }
+  return location;
 }
 
 async function ensureAssignableCategory(
@@ -171,11 +174,16 @@ export async function createSpaceCommand(
 ): Promise<{ id: string; slug: string }> {
   assertAllowedSpaceImages(input);
   await ensureSlugAvailable(input.slug);
-  await ensureAssignableLocation(input.locationId);
+  const location = await ensureAssignableLocation(input.locationId);
   await ensureAssignableCategory(input.categoryId);
 
+  // 拠点の既定スマートロックデバイスを新規スペースの初期値として継承する
+  // （設定し忘れ防止。個別に変更・解除したい場合はスペース編集画面から行う）。
   const space = await prisma.space.create({
-    data: buildSpaceData(input, input.isPublished ? new Date() : null),
+    data: {
+      ...buildSpaceData(input, input.isPublished ? new Date() : null),
+      smartLockDeviceId: location.defaultSmartLockDeviceId,
+    },
     select: { id: true, slug: true },
   });
 
