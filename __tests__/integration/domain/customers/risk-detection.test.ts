@@ -255,6 +255,82 @@ describeMaybe("detectSuspiciousCustomers", () => {
     }
   }, 15_000);
 
+  test("7日境界をまたぐバーストも検知する(週次スキャン境界の回帰)", async () => {
+    // 3件のうち2件が「直近7日」の境界より前、1件が境界より後に作成された場合。
+    // 前回スキャン時点では3件目がまだ存在せず未検知、今回スキャンが単純に
+    // 「直近7日」で切ると最初の2件が範囲外になり、どちらのスキャンでも
+    // このバーストは検知されない。クエリ範囲を7日+24時間に広げることで
+    // 1回のスキャンで完全な形を捉える必要がある。
+    const { locationId, spaceId } = await createFixtureSpace();
+    const customerId = await createFixtureCustomer();
+    const now = new Date();
+    const sevenDaysAgo = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    // 境界の4時間前・2時間前(直近7日の外)と、境界の2時間後(直近7日の内)
+    const timestamps = [
+      sevenDaysAgo - 4 * 60 * 60 * 1000,
+      sevenDaysAgo - 2 * 60 * 60 * 1000,
+      sevenDaysAgo + 2 * 60 * 60 * 1000,
+    ];
+
+    try {
+      for (const [i, ts] of timestamps.entries()) {
+        await basePrisma.reservation.create({
+          data: {
+            spaceId,
+            customerId,
+            startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
+            endTime: new Date(
+              now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
+            ),
+            status: ReservationStatus.CONFIRMED,
+            createdAt: new Date(ts),
+          },
+        });
+      }
+
+      const detected = await detectSuspiciousCustomers(now);
+      const match = detected.find((d) => d.customerId === customerId);
+
+      expect(match).toBeDefined();
+      expect(match?.reasons).toContain("rapid_booking");
+    } finally {
+      await cleanupFixture(locationId, spaceId, customerId);
+    }
+  }, 15_000);
+
+  test("7日より前に完全に終わったバーストは再報告しない", async () => {
+    // 3件全部が「直近7日」より前(8日前近辺)に完結している場合、前回スキャン時点
+    // で既に全件揃って検知されていたはずなので、今回のスキャンでは報告しない。
+    const { locationId, spaceId } = await createFixtureSpace();
+    const customerId = await createFixtureCustomer();
+    const now = new Date();
+    const eightDaysAgo = now.getTime() - 8 * 24 * 60 * 60 * 1000;
+
+    try {
+      for (let i = 0; i < 3; i++) {
+        await basePrisma.reservation.create({
+          data: {
+            spaceId,
+            customerId,
+            startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
+            endTime: new Date(
+              now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
+            ),
+            status: ReservationStatus.CONFIRMED,
+            createdAt: new Date(eightDaysAgo + i * 60 * 60 * 1000),
+          },
+        });
+      }
+
+      const detected = await detectSuspiciousCustomers(now);
+      const match = detected.find((d) => d.customerId === customerId);
+
+      expect(match).toBeUndefined();
+    } finally {
+      await cleanupFixture(locationId, spaceId, customerId);
+    }
+  }, 15_000);
+
   test("予約2件+イベント申込1件の混在バーストを合算して検知する(P2回帰)", async () => {
     const { locationId, spaceId } = await createFixtureSpace();
     const { eventId, slotId, ticketId } = await createFixtureEvent();
