@@ -14,7 +14,7 @@
 
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
-import { getDecryptedSwitchBotWebhookPathToken } from "@/shared/domain/settings/api-key-queries";
+import { getSwitchBotWebhookAuth } from "@/shared/domain/settings/api-key-queries";
 import {
   isKnownSmartLockDevice,
   processSwitchBotChangeReport,
@@ -44,8 +44,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { token } = await params;
 
-    const expectedToken = await getDecryptedSwitchBotWebhookPathToken();
-    if (!expectedToken || !timingSafeEqualStrings(token, expectedToken)) {
+    const { enabled, pathToken } = await getSwitchBotWebhookAuth();
+    if (!enabled || !pathToken || !timingSafeEqualStrings(token, pathToken)) {
       return jsonError("Not found", 404);
     }
 

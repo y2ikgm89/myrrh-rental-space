@@ -8,9 +8,9 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-const mockGetDecryptedSwitchBotWebhookPathToken = mock<
-  () => Promise<string | null>
->(() => Promise.resolve(null));
+const mockGetSwitchBotWebhookAuth = mock<
+  () => Promise<{ enabled: boolean; pathToken: string | null }>
+>(() => Promise.resolve({ enabled: false, pathToken: null }));
 const mockIsKnownSmartLockDevice = mock<
   (deviceMac: string) => Promise<boolean>
 >(() => Promise.resolve(false));
@@ -20,8 +20,7 @@ const mockProcessSwitchBotChangeReport = mock<
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
-  getDecryptedSwitchBotWebhookPathToken: () =>
-    mockGetDecryptedSwitchBotWebhookPathToken(),
+  getSwitchBotWebhookAuth: () => mockGetSwitchBotWebhookAuth(),
 }));
 
 mock.module("@/shared/domain/smart-lock/webhook-commands", () => ({
@@ -73,12 +72,15 @@ async function post(request: Request, token: string): Promise<Response> {
 
 describe("POST /api/webhooks/switchbot/[token]", () => {
   beforeEach(() => {
-    mockGetDecryptedSwitchBotWebhookPathToken.mockReset();
+    mockGetSwitchBotWebhookAuth.mockReset();
     mockIsKnownSmartLockDevice.mockReset();
     mockProcessSwitchBotChangeReport.mockReset();
     mockLogError.mockReset();
 
-    mockGetDecryptedSwitchBotWebhookPathToken.mockResolvedValue(EXPECTED_TOKEN);
+    mockGetSwitchBotWebhookAuth.mockResolvedValue({
+      enabled: true,
+      pathToken: EXPECTED_TOKEN,
+    });
     mockIsKnownSmartLockDevice.mockResolvedValue(false);
     mockProcessSwitchBotChangeReport.mockResolvedValue(false);
   });
@@ -98,7 +100,10 @@ describe("POST /api/webhooks/switchbot/[token]", () => {
     });
 
     test("webhookトークンが未設定(null)の場合も404を返す", async () => {
-      mockGetDecryptedSwitchBotWebhookPathToken.mockResolvedValue(null);
+      mockGetSwitchBotWebhookAuth.mockResolvedValue({
+        enabled: true,
+        pathToken: null,
+      });
 
       const response = await post(
         switchbotRequest({ eventType: "changeReport", context: VALID_CONTEXT }),
@@ -106,6 +111,23 @@ describe("POST /api/webhooks/switchbot/[token]", () => {
       );
 
       expect(response.status).toBe(404);
+    });
+
+    test("トークンが正しくてもSwitchBot連携が無効(enabled:false)なら404を返す", async () => {
+      mockGetSwitchBotWebhookAuth.mockResolvedValue({
+        enabled: false,
+        pathToken: EXPECTED_TOKEN,
+      });
+
+      const response = await post(
+        switchbotRequest({ eventType: "changeReport", context: VALID_CONTEXT }),
+        EXPECTED_TOKEN,
+      );
+      const data = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(data.error).toBe("Not found");
+      expect(mockIsKnownSmartLockDevice).not.toHaveBeenCalled();
     });
   });
 
