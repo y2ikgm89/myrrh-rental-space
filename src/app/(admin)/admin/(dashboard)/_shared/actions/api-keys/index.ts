@@ -7,6 +7,7 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   testGoogleMapsConnection,
   testResendConnection,
+  testSwitchBotConnection,
   testTurnstileConnection,
 } from "@/admin/lib/api-keys";
 import {
@@ -16,6 +17,7 @@ import {
 import {
   resendFormSchema,
   googleMapsFormSchema,
+  switchbotFormSchema,
   turnstileFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -26,13 +28,16 @@ import {
   addCustomApiKey as addCustomApiKeyCommand,
   clearGoogleMapsSettings as clearGoogleMapsSettingsCommand,
   clearResendSettings as clearResendSettingsCommand,
+  clearSwitchBotSettings as clearSwitchBotSettingsCommand,
   clearTurnstileSettings as clearTurnstileSettingsCommand,
   deleteCustomApiKey as deleteCustomApiKeyCommand,
   recordGoogleMapsConnectionStatus,
   recordResendConnectionStatus,
+  recordSwitchBotConnectionStatus,
   recordTurnstileConnectionStatus,
   updateGoogleMapsSettings as updateGoogleMapsSettingsCommand,
   updateResendSettings as updateResendSettingsCommand,
+  updateSwitchBotSettings as updateSwitchBotSettingsCommand,
   updateTurnstileSettings as updateTurnstileSettingsCommand,
 } from "@/shared/domain/settings/api-key-commands";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -253,6 +258,85 @@ export async function clearGoogleMapsKeys(): Promise<MutationResult> {
     action: "manage",
     execute: async () => {
       await clearGoogleMapsSettingsCommand();
+      return null;
+    },
+    afterSuccess: refreshSettingsCache,
+  });
+}
+
+/**
+ * SwitchBot 設定更新 — conform `useActionState` 統合経路。
+ *
+ * `useActionState` + `useForm` (conform) に clean break 移行。
+ */
+export async function updateSwitchBotSettings(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(formData, switchbotFormSchema, async (data) => {
+    const result = await executeAdminMutationResult({
+      resource: "settings",
+      action: "manage",
+      execute: async () => {
+        await updateSwitchBotSettingsCommand({
+          switchbotEnabled: data.switchbotEnabled,
+          switchbotOpenToken: data.switchbotOpenToken
+            ? data.switchbotOpenToken
+            : null,
+          switchbotSecretKey: data.switchbotSecretKey
+            ? data.switchbotSecretKey
+            : null,
+          switchbotPasscodeBufferMinutes: data.switchbotPasscodeBufferMinutes,
+        });
+        return null;
+      },
+      afterSuccess: refreshSettingsCache,
+    });
+    if (isMutationError(result)) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true };
+  });
+}
+
+export async function testSwitchBotConnectionAction(
+  openToken: string,
+  secretKey: string,
+): Promise<MutationResult<{ note?: string }>> {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "manage",
+    execute: async () => {
+      const result = await testSwitchBotConnection(openToken, secretKey);
+      await recordSwitchBotConnectionStatus(
+        result.success ? "connected" : "error",
+      );
+      refreshSettingsCache();
+
+      if (!result.success) {
+        throw new DomainError(
+          result.error || "接続テストに失敗しました",
+          "VALIDATION",
+        );
+      }
+
+      const deviceCount = result.metadata?.["deviceCount"];
+      return omitUndefined({
+        note:
+          typeof deviceCount === "number"
+            ? `${deviceCount}台のデバイスが見つかりました`
+            : undefined,
+      });
+    },
+  });
+}
+
+export async function clearSwitchBotKeys(): Promise<MutationResult> {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "manage",
+    execute: async () => {
+      await clearSwitchBotSettingsCommand();
       return null;
     },
     afterSuccess: refreshSettingsCache,

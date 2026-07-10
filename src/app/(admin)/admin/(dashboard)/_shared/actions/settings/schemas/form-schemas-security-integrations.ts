@@ -156,3 +156,16 @@ export const twoWaySyncFormSchema = z.object({
 });
 
 export type TwoWaySyncFormInput = z.infer<typeof twoWaySyncFormSchema>;
+
+// =============================================================================
+// Integrations > SwitchBot
+// =============================================================================
+
+export const switchbotFormSchema = z.object({
+  switchbotEnabled: switchBoolean(),
+  switchbotOpenToken: optionalText(500),
+  switchbotSecretKey: optionalText(500),
+  switchbotPasscodeBufferMinutes: z.coerce.number().int().min(0).max(180),
+});
+
+export type SwitchBotFormInput = z.infer<typeof switchbotFormSchema>;

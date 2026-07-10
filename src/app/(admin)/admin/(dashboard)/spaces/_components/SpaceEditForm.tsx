@@ -65,6 +65,14 @@ import {
   createSpaceBlockedDate,
   deleteSpaceBlockedDate,
 } from "@/admin/actions/space-blocked-dates";
+import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
+import { SmartLockDevicesField } from "@/admin/components/SmartLockDevicesField";
+import {
+  createSpaceSmartLockDevice,
+  updateSpaceSmartLockDevice,
+  deleteSpaceSmartLockDevice,
+  toggleSpaceSmartLockDeviceActive,
+} from "@/admin/actions/space-smart-lock-devices";
 
 const SPACE_EDIT_TAB_VALUES = [
   "basic",
@@ -73,6 +81,7 @@ const SPACE_EDIT_TAB_VALUES = [
   "details",
   "publish",
   "blocked-dates",
+  "smart-lock",
 ] as const satisfies readonly [string, ...string[]];
 
 type SpaceEditTabValue = (typeof SPACE_EDIT_TAB_VALUES)[number];
@@ -92,6 +101,7 @@ const SPACE_EDIT_TAB_LABELS: Record<SpaceEditTabValue, string> = {
   details: "詳細設定",
   publish: "公開・SEO",
   "blocked-dates": "臨時休業",
+  "smart-lock": "スマートロック",
 };
 
 const SELECT_NONE_VALUE = "__none__";
@@ -117,6 +127,7 @@ export type SpaceEditFormProps = {
   taxSettings: TaxSettings;
   reviewsFeatureEnabled: boolean;
   initialBlockedDates?: readonly BlockedDateData[];
+  initialSmartLockDevices?: readonly SmartLockDeviceData[];
 };
 
 type FacilityItem = { key: string; name: string; iconName: string };
@@ -148,6 +159,7 @@ export function SpaceEditForm({
   taxSettings = DEFAULT_TAX_SETTINGS,
   reviewsFeatureEnabled,
   initialBlockedDates = [],
+  initialSmartLockDevices = [],
 }: SpaceEditFormProps) {
   const isEdit = mode === "edit";
 
@@ -344,8 +356,9 @@ export function SpaceEditForm({
       fields.ogpDescription,
       fields.ogpImageUrl,
     ].filter((f) => fieldHasErrors(f.errors)).length,
-    // 臨時休業は独立 CRUD（このフォームの送信対象外）のため常に 0
+    // 臨時休業 / スマートロックは独立 CRUD（このフォームの送信対象外）のため常に 0
     "blocked-dates": 0,
+    "smart-lock": 0,
   };
 
   const onTabChange = (value: string) => {
@@ -492,7 +505,8 @@ export function SpaceEditForm({
       >
         <TabsList className="h-auto flex-wrap gap-1">
           {SPACE_EDIT_TAB_VALUES.filter(
-            (tab) => tab !== "blocked-dates" || isEdit,
+            (tab) =>
+              (tab !== "blocked-dates" && tab !== "smart-lock") || isEdit,
           ).map((tab) => {
             const errorCount = tabErrorCount[tab];
             return (
@@ -1568,6 +1582,31 @@ export function SpaceEditForm({
                   createAction={createSpaceBlockedDate}
                   deleteAction={deleteSpaceBlockedDate}
                   description="設備故障・点検などで特定の日付を予約不可にします（営業時間の定休日とは別管理）。"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ============ スマートロック（edit のみ・独立 CRUD） ============ */}
+        {isEdit && space && (
+          <TabsContent
+            value="smart-lock"
+            forceMount
+            className="data-[state=inactive]:hidden"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>スマートロック（SwitchBot）デバイス管理</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SmartLockDevicesField
+                  spaceId={space.id}
+                  initialSmartLockDevices={initialSmartLockDevices}
+                  createAction={createSpaceSmartLockDevice}
+                  updateAction={updateSpaceSmartLockDevice}
+                  deleteAction={deleteSpaceSmartLockDevice}
+                  toggleActiveAction={toggleSpaceSmartLockDeviceActive}
                 />
               </CardContent>
             </Card>

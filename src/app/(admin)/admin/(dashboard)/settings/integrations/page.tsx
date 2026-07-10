@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import {
   getResendConfig,
   getTurnstileConfig,
+  getSwitchBotConfig,
   getGoogleMapsConfig,
   getCustomApiKeys,
 } from "@/admin/queries/api-keys";
@@ -24,6 +25,7 @@ import { SettingsTabs } from "../_components/SettingsTabs";
 import {
   ResendSection,
   TurnstileSection,
+  SwitchBotSection,
   GoogleMapsSection,
   CustomApiKeysSection,
   GoogleCalendarSection,
@@ -66,6 +68,7 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
   const [
     resendConfig,
     turnstileConfig,
+    switchbotConfig,
     googleMapsConfig,
     customApiKeys,
     settings,
@@ -74,6 +77,7 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
   ] = await Promise.all([
     getResendConfig(),
     getTurnstileConfig(),
+    getSwitchBotConfig(),
     getGoogleMapsConfig(),
     getCustomApiKeys(),
     getSettings(),
@@ -95,6 +99,11 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
       value: "turnstile",
       label: "Turnstile",
       content: <TurnstileSection config={turnstileConfig} />,
+    },
+    {
+      value: "switchbot",
+      label: "SwitchBot",
+      content: <SwitchBotSection config={switchbotConfig} />,
     },
     {
       value: "google-maps",

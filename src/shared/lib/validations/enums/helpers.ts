@@ -32,6 +32,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
   EventStatus,
+  SmartLockDeviceType,
 } from "@generated/prisma/enums";
 import {
   isValidRole,
@@ -803,4 +804,19 @@ export const BLOCKED_DATE_TYPE_LABELS: Record<BlockedDateType, string> = {
   [BLOCKED_DATE_TYPE.MAINTENANCE]: "設備点検",
   [BLOCKED_DATE_TYPE.EMERGENCY]: "緊急休業",
   [BLOCKED_DATE_TYPE.OTHER]: "その他",
+};
+
+// =============================================================================
+// SmartLockDeviceType Labels（SwitchBot 製品名 SSoT）
+// =============================================================================
+
+export const SMART_LOCK_DEVICE_TYPE_LABELS: Record<
+  SmartLockDeviceType,
+  string
+> = {
+  KEYPAD: "Keypad",
+  KEYPAD_TOUCH: "Keypad Touch",
+  KEYPAD_VISION: "Keypad Vision",
+  KEYPAD_VISION_PRO: "Keypad Vision Pro",
+  LOCK_VISION_PRO: "Lock Vision Pro",
 };

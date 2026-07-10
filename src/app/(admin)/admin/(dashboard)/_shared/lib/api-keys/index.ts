@@ -16,3 +16,4 @@ import "server-only";
 export * from "./resend";
 export * from "./turnstile";
 export * from "./google-maps";
+export * from "./switchbot";

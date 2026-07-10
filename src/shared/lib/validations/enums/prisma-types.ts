@@ -59,6 +59,7 @@ export {
   MediaUsage,
   EmailDeliveryStatus,
   TermsScope,
+  SmartLockDeviceType,
 } from "@generated/prisma/enums";
 
 // ---------------------------------------------------------------------------

@@ -35,6 +35,7 @@ import {
   PaymentStatus,
   EventStatus,
   RegistrationStatus,
+  SmartLockDeviceType,
 } from "@generated/prisma/enums";
 import { SectionType, isSectionType } from "@/shared/lib/validations/section";
 
@@ -91,6 +92,9 @@ const VALID_PAYMENT_STATUSES = new Set<string>(Object.values(PaymentStatus));
 const VALID_EVENT_STATUSES = new Set<string>(Object.values(EventStatus));
 const VALID_REGISTRATION_STATUSES = new Set<string>(
   Object.values(RegistrationStatus),
+);
+const VALID_SMART_LOCK_DEVICE_TYPES = new Set<string>(
+  Object.values(SmartLockDeviceType),
 );
 
 // =============================================================================
@@ -251,4 +255,10 @@ export function isValidRegistrationStatus(
   value: unknown,
 ): value is RegistrationStatus {
   return typeof value === "string" && VALID_REGISTRATION_STATUSES.has(value);
+}
+
+export function isValidSmartLockDeviceType(
+  value: unknown,
+): value is SmartLockDeviceType {
+  return typeof value === "string" && VALID_SMART_LOCK_DEVICE_TYPES.has(value);
 }

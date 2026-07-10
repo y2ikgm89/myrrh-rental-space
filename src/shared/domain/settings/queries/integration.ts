@@ -36,3 +36,29 @@ export async function getStripeSettings() {
 
   return toPlainObject(result);
 }
+
+export async function getSwitchBotSettings() {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          switchbotEnabled: true,
+          switchbotOpenToken: true,
+          switchbotSecretKey: true,
+          switchbotWebhookPathToken: true,
+          switchbotPasscodeBufferMinutes: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getSwitchBotSettings",
+  });
+
+  return toPlainObject(result);
+}

@@ -18,4 +18,7 @@ export const SETTINGS_CRYPTO_PURPOSES = {
   customApiKey: "custom-api-key",
   googleCalendarServiceAccount: "google-calendar-service-account",
   googleBusinessProfileAuth: "google-business-profile-auth",
+  switchbotOpenToken: "switchbot-open-token",
+  switchbotSecretKey: "switchbot-secret-key",
+  switchbotWebhookPathToken: "switchbot-webhook-path-token",
 } as const;

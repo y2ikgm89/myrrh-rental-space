@@ -18,6 +18,7 @@ export { StripeSection } from "./StripeSection";
 // External Service API Keys
 export { ResendSection } from "./ResendSection";
 export { TurnstileSection } from "./TurnstileSection";
+export { SwitchBotSection } from "./SwitchBotSection";
 export { GoogleMapsSection } from "./GoogleMapsSection";
 export { GoogleCalendarSection } from "./GoogleCalendarSection";
 export { GoogleBusinessProfileSection } from "./GoogleBusinessProfileSection";

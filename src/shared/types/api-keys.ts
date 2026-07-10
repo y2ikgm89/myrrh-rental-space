@@ -47,6 +47,18 @@ export type GoogleMapsConfig = {
 };
 
 /**
+ * SwitchBot スマートロック連携設定
+ */
+export type SwitchBotConfig = {
+  enabled: boolean;
+  openTokenMasked: string | null;
+  secretKeyMasked: string | null;
+  passcodeBufferMinutes: number;
+  lastTestedAt: Date | null;
+  connectionStatus: ConnectionStatus;
+};
+
+/**
  * カスタムAPIキー（汎用）
  */
 export type CustomApiKeyData = {

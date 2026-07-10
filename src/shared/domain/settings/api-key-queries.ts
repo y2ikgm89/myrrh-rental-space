@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import {
   maskGoogleMapsKey,
   maskResendKey,
+  maskSwitchBotKey,
   maskTurnstileKey,
 } from "@/shared/lib/api-keys";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
@@ -14,6 +15,7 @@ import type {
   CustomApiKeyData,
   GoogleMapsConfig,
   ResendConfig,
+  SwitchBotConfig,
   TurnstileConfig,
 } from "@/shared/types/api-keys";
 import {
@@ -150,6 +152,92 @@ export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
   return safeDecrypt(settings.googleMapsApiKey);
 }
 
+export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
+  "use cache";
+  cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      switchbotEnabled: true,
+      switchbotOpenToken: true,
+      switchbotSecretKey: true,
+      switchbotPasscodeBufferMinutes: true,
+      switchbotLastTestedAt: true,
+      switchbotConnectionStatus: true,
+    },
+  });
+
+  return {
+    enabled: settings?.switchbotEnabled ?? false,
+    openTokenMasked: settings?.switchbotOpenToken
+      ? maskSwitchBotKey(safeDecrypt(settings.switchbotOpenToken) || "****")
+      : null,
+    secretKeyMasked: settings?.switchbotSecretKey
+      ? maskSwitchBotKey(safeDecrypt(settings.switchbotSecretKey) || "****")
+      : null,
+    passcodeBufferMinutes: settings?.switchbotPasscodeBufferMinutes ?? 15,
+    lastTestedAt: settings?.switchbotLastTestedAt || null,
+    connectionStatus: parseConnectionStatus(
+      settings?.switchbotConnectionStatus,
+    ),
+  };
+}
+
+/**
+ * SwitchBot API呼出に使う認証情報を復号して返す。DB未設定なら null
+ * （Stripe/Turnstile等と異なりenvフォールバックは持たない — 本連携はテナント固有の
+ * 外部SaaS資格情報であり、Secret Manager/本番env配線を新設しない設計のため）。
+ */
+export async function getDecryptedSwitchBotCredentials(): Promise<{
+  openToken: string;
+  secretKey: string;
+} | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      switchbotEnabled: true,
+      switchbotOpenToken: true,
+      switchbotSecretKey: true,
+    },
+  });
+
+  if (
+    !settings?.switchbotEnabled ||
+    !settings.switchbotOpenToken ||
+    !settings.switchbotSecretKey
+  ) {
+    return null;
+  }
+
+  const openToken = safeDecrypt(settings.switchbotOpenToken);
+  const secretKey = safeDecrypt(settings.switchbotSecretKey);
+  if (!openToken || !secretKey) {
+    return null;
+  }
+
+  return { openToken, secretKey };
+}
+
+/**
+ * Webhook URL難読化用トークンを復号して返す。未設定なら null。
+ */
+export async function getDecryptedSwitchBotWebhookPathToken(): Promise<
+  string | null
+> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: { switchbotWebhookPathToken: true },
+  });
+
+  if (!settings?.switchbotWebhookPathToken) {
+    return null;
+  }
+
+  return safeDecrypt(settings.switchbotWebhookPathToken);
+}
+
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
   const settings = await getApiKeySettings();
 
@@ -192,6 +280,7 @@ export async function getIntegrationHealthSummary(): Promise<{
   readonly stripe: boolean;
   readonly googleCalendar: boolean;
   readonly turnstile: boolean;
+  readonly switchbot: boolean;
 }> {
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
@@ -201,6 +290,9 @@ export async function getIntegrationHealthSummary(): Promise<{
       googleCalendarEnabled: true,
       googleCalendarConnectionStatus: true,
       turnstileSecretKey: true,
+      switchbotEnabled: true,
+      switchbotOpenToken: true,
+      switchbotSecretKey: true,
     },
   });
 
@@ -224,6 +316,14 @@ export async function getIntegrationHealthSummary(): Promise<{
       (settings?.turnstileSecretKey &&
         safeDecrypt(settings.turnstileSecretKey)) ||
       serverEnv.TURNSTILE_SECRET_KEY,
+    ),
+    // SwitchBotはenvフォールバックを持たないためDBのみで判定する。
+    switchbot: Boolean(
+      settings?.switchbotEnabled &&
+      settings.switchbotOpenToken &&
+      settings.switchbotSecretKey &&
+      safeDecrypt(settings.switchbotOpenToken) &&
+      safeDecrypt(settings.switchbotSecretKey),
     ),
   };
 }
