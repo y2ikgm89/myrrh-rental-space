@@ -159,7 +159,13 @@ async function ensureAssignableCategory(
 async function ensureSpaceExists(id: string) {
   const space = await prisma.space.findUnique({
     where: { id, isActive: true },
-    select: { id: true, isPublished: true, publishedAt: true },
+    select: {
+      id: true,
+      isPublished: true,
+      publishedAt: true,
+      locationId: true,
+      smartLockDeviceId: true,
+    },
   });
 
   if (!space) {
@@ -208,6 +214,12 @@ export async function updateSpaceCommand(
     publishedAt = null;
   }
 
+  // スペースの拠点(Location)が変更される場合、既存のsmartLockDeviceIdは旧拠点の
+  // デバイスを指しているため、そのまま残すと新拠点への移動後もissueSmartLockPasscodesが
+  // 誤った（旧拠点の）物理ドアへパスコードを発行し続けてしまう。拠点変更時は解除し、
+  // 新拠点のデバイスは管理者に改めて選び直してもらう（自動での付け替えは行わない）。
+  const isLocationChanging = input.locationId !== existingSpace.locationId;
+
   // Capture oldSlug + apply update atomically so a concurrent admin rename
   // can't slip in between the findUnique and the update.
   // Per CLAUDE.md: array form $transaction is banned; use interactive form.
@@ -221,7 +233,10 @@ export async function updateSpaceCommand(
     }
     const row = await tx.space.update({
       where: { id, isActive: true },
-      data: buildSpaceData(input, publishedAt),
+      data: {
+        ...buildSpaceData(input, publishedAt),
+        ...(isLocationChanging ? { smartLockDeviceId: null } : {}),
+      },
       select: { id: true, slug: true },
     });
     return { id: row.id, slug: row.slug, oldSlug: before.slug };
