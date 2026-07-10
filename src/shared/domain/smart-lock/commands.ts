@@ -135,14 +135,31 @@ export async function setSpaceSmartLockDeviceCommand(
 ): Promise<{ id: string; smartLockDeviceId: string | null }> {
   const space = await prisma.space.findUnique({
     where: { id: spaceId },
-    select: { id: true },
+    select: { id: true, locationId: true },
   });
   if (!space) {
     throw new DomainError("スペースが見つかりません", "NOT_FOUND");
   }
 
   if (deviceId) {
-    await ensureSmartLockDeviceExists(deviceId);
+    const device = await prisma.smartLockDevice.findUnique({
+      where: { id: deviceId },
+      select: { id: true, locationId: true },
+    });
+    if (!device) {
+      throw new DomainError(
+        "スマートロックデバイスが見つかりません",
+        "NOT_FOUND",
+      );
+    }
+    // デバイスはLocation所有のため、スペースと異なる拠点のデバイスを割り当てると
+    // issueSmartLockPasscodesが誤った物理ドアへパスコードを発行してしまう。
+    if (device.locationId !== space.locationId) {
+      throw new DomainError(
+        "このデバイスはスペースと異なる拠点に登録されています",
+        "VALIDATION",
+      );
+    }
   }
 
   await prisma.space.update({
