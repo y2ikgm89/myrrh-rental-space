@@ -65,6 +65,9 @@ const mockValidateTurnstile = mock(
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
   validateTurnstile: mockValidateTurnstile,
+  // このファイルのテスト対象は使わないが、同一ファイルの submitReservation が
+  // import するため、モジュール解決を通すために固定成功スタブを提供する。
+  checkBotHeuristics: () => ({ success: true as const }),
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({

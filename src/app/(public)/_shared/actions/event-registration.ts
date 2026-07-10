@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import {
   checkActionRateLimit,
+  checkBotHeuristics,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
@@ -56,6 +57,14 @@ export async function registerForEvent(
       const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
       if (!rateLimit.success) {
         return { ok: false, error: rateLimit.error };
+      }
+
+      const botCheck = checkBotHeuristics({
+        honeypot: data.website,
+        formRenderedAt: data.formRenderedAt,
+      });
+      if (!botCheck.success) {
+        return { ok: false, error: botCheck.error };
       }
 
       const turnstile = await validateTurnstile({

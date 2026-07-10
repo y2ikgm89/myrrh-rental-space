@@ -58,6 +58,16 @@ handler 冒頭で `checkActionRateLimit(formSubmitRateLimiter)` →
 `validateTurnstile({ token, expectedAction: TURNSTILE_ACTIONS.* })` の順に実行する。
 Turnstile token は一度の検証で消費されるため、失敗時は widget reset + token clear が必要。
 
+予約(reservation)・イベント申込(event-registration)は上記2つの間に
+`checkBotHeuristics({ honeypot, formRenderedAt })` を追加で挟む
+（`checkActionRateLimit` → `checkBotHeuristics` → `validateTurnstile`）。
+DB/外部API呼び出しを伴わない最安チェックを先に置く順序。honeypot フィールドは
+Zod スキーマ上では検証エラーにしない（`website` のような実在しない項目名を装い、
+botに何が原因か開示しないため）。フォーム側は視覚的に隠した hidden input
+（`aria-hidden` + `tabIndex={-1}` + 画面外配置）と、フォーム初回マウント時刻を
+埋め込む hidden input の2つを追加する。全公開フォームへの一般化はしていない
+（対象は予約・イベント申込のみ、他フォームへの適用は個別に検討する）。
+
 ## スキーマ配置
 
 設定系は `_shared/actions/settings/schemas/`、リソース系はコンポーネント隣接の
