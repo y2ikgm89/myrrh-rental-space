@@ -19,7 +19,6 @@ const INSTAGRAM_POST_URL_PATTERN =
  * Instagram投稿URLのバリデーションスキーマ
  */
 export const instagramPostUrlSchema = z
-  .string()
   .url({ error: "有効なURLを入力してください" })
   .refine((url) => INSTAGRAM_POST_URL_PATTERN.test(url), {
     error: "有効なInstagram投稿URLを入力してください",

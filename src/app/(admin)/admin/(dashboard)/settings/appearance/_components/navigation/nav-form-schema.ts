@@ -74,7 +74,7 @@ export const socialFormSchema = z.strictObject({
   url: z
     .string()
     .min(1, { error: "URLは必須です" })
-    .url({ error: "有効なURLを入力してください" }),
+    .pipe(z.url({ error: "有効なURLを入力してください" })),
   isActive: booleanFromCheckbox,
   showOnDesktop: booleanFromCheckbox,
   showOnMobile: booleanFromCheckbox,

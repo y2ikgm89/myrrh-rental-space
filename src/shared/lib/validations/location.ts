@@ -126,10 +126,12 @@ export const locationFormBaseSchema = z.strictObject({
       z.preprocess((value) => value === "on" || value === true, z.boolean()),
     )
     .default({}),
+  // 空文字は「必須」エラーを優先する必要がある (top-level z.url() だと URL 形式
+  // エラーが先に発火して custom min メッセージが消える)。string chain のまま維持。
   imageUrl: z
     .string()
     .min(1, { error: "建物画像URLを入力してください" })
-    .url({ error: "有効なURLを入力してください" }),
+    .pipe(z.url({ error: "有効なURLを入力してください" })),
   imageUrls: imageUrlsSchema,
   businessHours: z.preprocess((value) => {
     if (typeof value === "string") {

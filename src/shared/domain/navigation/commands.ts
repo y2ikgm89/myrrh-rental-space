@@ -53,7 +53,7 @@ export const socialLinkInputSchema = z.strictObject({
   url: z
     .string()
     .min(1, { error: "URLは必須です" })
-    .url({ error: "有効なURLを入力してください" }),
+    .pipe(z.url({ error: "有効なURLを入力してください" })),
   isActive: z.boolean().default(true),
   showOnDesktop: z.boolean().default(true),
   showOnMobile: z.boolean().default(true),

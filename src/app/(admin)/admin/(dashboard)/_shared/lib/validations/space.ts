@@ -198,10 +198,12 @@ export const spaceFormBaseSchema = z
         ]),
       )
       .optional(),
+    // 空文字は「必須」エラーを優先する必要がある (top-level z.url() だと URL 形式
+    // エラーが先に発火して custom min メッセージが消える)。string chain のまま維持。
     mainImageUrl: z
       .string()
       .min(1, { error: "メイン画像URLを入力してください" })
-      .url({ error: "有効なURLを入力してください" }),
+      .pipe(z.url({ error: "有効なURLを入力してください" })),
     gallery: gallerySchema,
     facilities: facilitiesFormSchema,
     isPublished: z.preprocess(coerceBoolean, z.boolean()),
@@ -214,7 +216,7 @@ export const spaceFormBaseSchema = z
     locationId: z
       .string()
       .min(1, { error: "拠点を選択してください" })
-      .uuid({ error: "拠点IDが無効です" }),
+      .pipe(z.uuid({ error: "拠点IDが無効です" })),
     categoryId: z
       .preprocess(
         emptyToNull,
