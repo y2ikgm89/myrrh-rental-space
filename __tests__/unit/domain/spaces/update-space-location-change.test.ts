@@ -4,6 +4,11 @@
  * スペースの拠点が変わると、既存のsmartLockDeviceIdは旧拠点のデバイスを指したままに
  * なり、issueSmartLockPasscodesが誤った物理ドアへパスコードを発行し続けてしまう
  * （Codexレビュー指摘 P2, PR#927）。拠点変更時はnullへリセットされることを検証する。
+ *
+ * isLocationChanging はトランザクション内で読み直した locationId（txStub 側）を基準に
+ * 判定する（トランザクション開始前の読み取りに基づくと同時編集レースに弱いという
+ * Codexレビュー指摘 P2, PR#928 への対応）。そのためテストのシナリオ分岐は
+ * txStub.space.findUnique が返す locationId で表現する。
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
@@ -21,9 +26,14 @@ const mockFindFirstCategory = mock<(...args: unknown[]) => Promise<unknown>>(
   () => Promise.resolve(null),
 );
 
+let txFindUniqueResult: { slug: string; locationId: string } = {
+  slug: "old-slug",
+  locationId: "location-a",
+};
+
 const txStub = {
   space: {
-    findUnique: (...args: unknown[]) => Promise.resolve({ slug: "old-slug" }),
+    findUnique: (...args: unknown[]) => Promise.resolve(txFindUniqueResult),
     update: (...args: unknown[]) => mockUpdateSpace(...args),
   },
 };
@@ -60,7 +70,6 @@ const { updateSpaceCommand } = await import("@/shared/domain/spaces/commands");
 const SPACE_ID = "aaaaaaaa-0000-0000-0000-000000000000";
 const LOCATION_A = "location-a";
 const LOCATION_B = "location-b";
-const DEVICE_ID = "device-1";
 
 function baseInput(locationId: string) {
   return {
@@ -92,6 +101,7 @@ beforeEach(() => {
     id: LOCATION_B,
     defaultSmartLockDeviceId: null,
   });
+  txFindUniqueResult = { slug: "old-slug", locationId: LOCATION_A };
 });
 
 describe("updateSpaceCommand - 拠点変更時のsmartLockDeviceIdリセット", () => {
@@ -100,9 +110,8 @@ describe("updateSpaceCommand - 拠点変更時のsmartLockDeviceIdリセット",
       id: SPACE_ID,
       isPublished: false,
       publishedAt: null,
-      locationId: LOCATION_A,
-      smartLockDeviceId: DEVICE_ID,
     });
+    txFindUniqueResult = { slug: "old-slug", locationId: LOCATION_A };
 
     await updateSpaceCommand(SPACE_ID, baseInput(LOCATION_A));
 
@@ -117,9 +126,8 @@ describe("updateSpaceCommand - 拠点変更時のsmartLockDeviceIdリセット",
       id: SPACE_ID,
       isPublished: false,
       publishedAt: null,
-      locationId: LOCATION_A,
-      smartLockDeviceId: DEVICE_ID,
     });
+    txFindUniqueResult = { slug: "old-slug", locationId: LOCATION_A };
 
     await updateSpaceCommand(SPACE_ID, baseInput(LOCATION_B));
 
@@ -134,11 +142,30 @@ describe("updateSpaceCommand - 拠点変更時のsmartLockDeviceIdリセット",
       id: SPACE_ID,
       isPublished: false,
       publishedAt: null,
-      locationId: LOCATION_A,
-      smartLockDeviceId: null,
     });
+    txFindUniqueResult = { slug: "old-slug", locationId: LOCATION_A };
 
     await updateSpaceCommand(SPACE_ID, baseInput(LOCATION_B));
+
+    const call = mockUpdateSpace.mock.calls[0]?.[0] as {
+      data: Record<string, unknown>;
+    };
+    expect(call.data["smartLockDeviceId"]).toBeNull();
+  });
+
+  test("トランザクション開始前の読み取り後に拠点が変更されていた場合、トランザクション内の最新値で判定する（TOCTOU対策）", async () => {
+    // ensureSpaceExists (トランザクション開始前の読み取り) はまだ旧拠点を返すが、
+    // その後トランザクション内で読み直すと、別の同時実行によって既に
+    // LOCATION_B へ変更済みだったケース。
+    mockFindUniqueSpace.mockResolvedValue({
+      id: SPACE_ID,
+      isPublished: false,
+      publishedAt: null,
+    });
+    txFindUniqueResult = { slug: "old-slug", locationId: LOCATION_B };
+
+    // 管理者は自分が開いた古いフォームの値(LOCATION_A、変更なしのつもり)のまま送信する。
+    await updateSpaceCommand(SPACE_ID, baseInput(LOCATION_A));
 
     const call = mockUpdateSpace.mock.calls[0]?.[0] as {
       data: Record<string, unknown>;

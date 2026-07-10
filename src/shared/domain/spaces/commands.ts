@@ -163,8 +163,6 @@ async function ensureSpaceExists(id: string) {
       id: true,
       isPublished: true,
       publishedAt: true,
-      locationId: true,
-      smartLockDeviceId: true,
     },
   });
 
@@ -214,23 +212,26 @@ export async function updateSpaceCommand(
     publishedAt = null;
   }
 
-  // スペースの拠点(Location)が変更される場合、既存のsmartLockDeviceIdは旧拠点の
-  // デバイスを指しているため、そのまま残すと新拠点への移動後もissueSmartLockPasscodesが
-  // 誤った（旧拠点の）物理ドアへパスコードを発行し続けてしまう。拠点変更時は解除し、
-  // 新拠点のデバイスは管理者に改めて選び直してもらう（自動での付け替えは行わない）。
-  const isLocationChanging = input.locationId !== existingSpace.locationId;
-
   // Capture oldSlug + apply update atomically so a concurrent admin rename
   // can't slip in between the findUnique and the update.
   // Per CLAUDE.md: array form $transaction is banned; use interactive form.
   return prisma.$transaction(async (tx) => {
     const before = await tx.space.findUnique({
       where: { id, isActive: true },
-      select: { slug: true },
+      select: { slug: true, locationId: true },
     });
     if (!before) {
       throw new DomainError("スペースが見つかりません", "NOT_FOUND");
     }
+
+    // スペースの拠点(Location)が変更される場合、既存のsmartLockDeviceIdは旧拠点の
+    // デバイスを指しているため、そのまま残すと新拠点への移動後もissueSmartLockPasscodesが
+    // 誤った（旧拠点の）物理ドアへパスコードを発行し続けてしまう。拠点変更時は解除し、
+    // 新拠点のデバイスは管理者に改めて選び直してもらう（自動での付け替えは行わない）。
+    // トランザクション内で直前に読み直した locationId で判定する（トランザクション開始前の
+    // 読み取りを使うと、他の同時編集が挟まった場合に古い判定のまま更新してしまうため）。
+    const isLocationChanging = input.locationId !== before.locationId;
+
     const row = await tx.space.update({
       where: { id, isActive: true },
       data: {
