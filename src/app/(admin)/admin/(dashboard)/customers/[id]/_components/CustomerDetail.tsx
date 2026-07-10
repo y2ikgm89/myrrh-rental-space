@@ -43,6 +43,7 @@ import {
   updateCustomerStatus,
   updateCustomerNotes,
   toggleCustomerActive,
+  clearCustomerRiskFlag,
 } from "@/admin/actions/customer";
 import type { CustomerWithReservationsAndAccount } from "@/shared/domain/customers/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -51,6 +52,7 @@ import { isValidCustomerStatus } from "@/shared/lib/validations/enums/guards";
 import {
   CUSTOMER_STATUS_LABELS,
   CUSTOMER_TYPE_LABELS,
+  getRiskFlagReasonLabel,
 } from "@/shared/lib/validations/enums/helpers";
 import { entriesOf } from "@/shared/lib/serialize";
 
@@ -103,6 +105,18 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
         return;
       }
       toast.success("アクティブ状態を変更しました");
+      router.refresh();
+    });
+  };
+
+  const handleClearRiskFlag = async () => {
+    startTransition(async () => {
+      const result = await clearCustomerRiskFlag(customer.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("要注意フラグを解除しました");
       router.refresh();
     });
   };
@@ -318,6 +332,36 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* 要注意フラグ（customer-risk-scan cronが検知した場合のみ表示） */}
+        {customer.flaggedForReviewAt ? (
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <CardTitle className="text-destructive">要注意</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {formatDateShort(customer.flaggedForReviewAt)} に不審な予約
+                パターンを検知しました。自動的にステータスは変更していません
+                （最終判断はこの画面で行ってください）。
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-sm">
+                {customer.flagReasons.map((reason) => (
+                  <li key={reason}>{getRiskFlagReasonLabel(reason)}</li>
+                ))}
+              </ul>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearRiskFlag}
+                disabled={isPending}
+                className="w-full"
+              >
+                誤検知として解除
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* メモ */}
         <Card>

@@ -56,6 +56,7 @@ JOBS=(
   "event-import|0 * * * *|/api/cron/event-import|GCal event import into Event model (hourly)"
   "faq-trash-cleanup|0 3 * * *|/api/cron/faq-trash-cleanup|FAQ recycle bin 30-day auto-purge (daily 03:00 JST)"
   "faq-stale-check|0 9 * * 1|/api/cron/faq-stale-check|Weekly stale FAQ notification (Mon 09:00 JST)"
+  "customer-risk-scan|0 9 * * 1|/api/cron/customer-risk-scan|Weekly suspicious booking pattern detection (Mon 09:00 JST)"
   "instagram-refresh|0 2 * * *|/api/cron/instagram-refresh|Instagram long-lived token refresh (daily 02:00 JST)"
   "instagram-sync|*/30 * * * *|/api/cron/instagram-sync|Instagram feed sync (every 30 min)"
   "notification-cleanup|0 4 * * *|/api/cron/notification-cleanup|Old notification cleanup 30d+ (daily 04:00 JST)"

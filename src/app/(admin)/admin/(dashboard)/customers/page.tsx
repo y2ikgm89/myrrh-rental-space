@@ -32,6 +32,7 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
       status,
       customerType: params.customerType,
       search: params.search || undefined,
+      flaggedOnly: params.flaggedOnly || undefined,
     }),
     {
       page: params.page,

@@ -650,6 +650,10 @@ model Customer {
   emailDeliveryUpdatedAt DateTime?
   /// Resend Webhook payload の bounce.message / suppression reason を保持（人間可読のラベル）。
   emailDeliveryReason    String?             @db.VarChar(500)
+  /// 不審検知cron(customer-risk-scan)が検知理由コードを書き込む。手動クリアで null に戻す。
+  /// 自動でBLACKLIST化・予約拒否はしない（最終判断は常に管理者、誤検知リスクの回避）。
+  flaggedForReviewAt     DateTime?
+  flagReasons            String[]            @default([])
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
@@ -675,6 +679,7 @@ model Customer {
   @@index([lastReservationAt])
   @@index([lastName, firstName])
   @@index([emailDeliveryStatus])
+  @@index([flaggedForReviewAt])
   @@map("customers")
 }
 

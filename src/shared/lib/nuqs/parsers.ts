@@ -382,6 +382,7 @@ export const adminCustomerSearchParamsParsers = {
   customerType: parseAsStringLiteral(customerTypeFilterValues).withDefault(
     CUSTOMER_TYPE_FILTER_ALL,
   ),
+  flaggedOnly: parseAsBoolean.withDefault(false),
   sortBy: parseAsStringLiteral(adminCustomerSortByValues).withDefault(
     "createdAt",
   ),

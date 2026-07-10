@@ -31,6 +31,8 @@ type CustomerRecord = {
   marketingOptIn: boolean;
   phoneContactOptIn: boolean;
   userId: string | null;
+  flaggedForReviewAt: Date | null;
+  flagReasons: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -82,6 +84,8 @@ export type CustomerFilters = {
   customerType?: CustomerType | "ALL";
   search?: string;
   isActive?: boolean;
+  /** customer-risk-scan cronが検知した要注意顧客のみに絞る(flaggedForReviewAt IS NOT NULL) */
+  flaggedOnly?: boolean;
 };
 
 export type CustomerSortBy =
