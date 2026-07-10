@@ -51,6 +51,7 @@ export default async function ReservationCompletePage({
 
   const isLoggedIn = user != null;
   const address = reservation?.space.location?.address ?? null;
+  const hasSmartLock = (reservation?.space.smartLockDevices.length ?? 0) > 0;
 
   const claimUrl =
     reservation && !isLoggedIn
@@ -85,6 +86,12 @@ export default async function ReservationCompletePage({
           <br className="hidden sm:inline" />
           内容をご確認ください。
         </p>
+        {hasSmartLock && (
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            スマートロックの解錠用暗証番号は、発行手続きの完了後に確認メールで
+            数分以内にお送りします。
+          </p>
+        )}
       </div>
 
       {reservation && (
