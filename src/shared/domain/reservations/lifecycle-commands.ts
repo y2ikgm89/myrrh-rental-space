@@ -72,6 +72,16 @@ export async function updateReservationStatusCommand(
     );
   }
 
+  // updateMany は更新後の行を返さないため、実際の icsSequence を読み直す。
+  // claim の WHERE は status のみを条件にしているため、読取からこの claim までの間に
+  // 別経路（詳細編集等）が icsSequence だけを進めていた場合、
+  // reservation.icsSequence + 1 は実際のDB値より小さくなり得る（古いSEQUENCEを
+  // カレンダーへ送ってしまう）。
+  const current = await prisma.reservation.findUnique({
+    where: { id },
+    select: { icsSequence: true },
+  });
+
   return {
     previousStatus,
     spaceId: reservation.spaceId,
@@ -86,7 +96,7 @@ export async function updateReservationStatusCommand(
       endTime: reservation.endTime,
       totalPrice: reservation.totalPrice,
       notes: reservation.notes,
-      icsSequence: reservation.icsSequence + 1,
+      icsSequence: current?.icsSequence ?? reservation.icsSequence + 1,
     }),
   };
 }

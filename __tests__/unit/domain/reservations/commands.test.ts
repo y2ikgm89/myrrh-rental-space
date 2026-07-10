@@ -851,6 +851,48 @@ describe("updateReservationStatusCommand", () => {
   });
 
   describe("正常系", () => {
+    test("claim後にicsSequenceを読み直し、読取後の他経路による増分も反映する", async () => {
+      let findUniqueCallCount = 0;
+      mockReservationFindUnique.mockImplementation(() => {
+        findUniqueCallCount += 1;
+        if (findUniqueCallCount === 1) {
+          // 初回読取: この時点ではicsSequence=5
+          return Promise.resolve({
+            id: "res-1",
+            status: ReservationStatus.PENDING,
+            googleCalendarEventId: null,
+            icsSequence: 5,
+            startTime: new Date("2024-06-15T10:00:00"),
+            endTime: new Date("2024-06-15T12:00:00"),
+            totalPrice: 2000,
+            notes: null,
+            space: {
+              name: "テストスペース",
+              addressDetail: null,
+              location: { address: "東京都渋谷区1-1-1" },
+            },
+            customer: {
+              firstName: "太郎",
+              lastName: "山田",
+              companyName: null,
+              email: "taro@example.com",
+            },
+          });
+        }
+        // claim後の読み直し: 別経路（詳細編集等）がicsSequenceだけを7まで進めていた
+        // 想定。claim自体はstatusのみを条件にするため成功するが、返却する
+        // icsSequenceは「読取時+1」ではなくこの実DB値でなければならない。
+        return Promise.resolve({ icsSequence: 7 });
+      });
+
+      const result = await updateReservationStatusCommand(
+        "res-1",
+        ReservationStatus.CONFIRMED,
+      );
+
+      expect(result.payload.icsSequence).toBe(7);
+    });
+
     test("PENDING → CONFIRMED への遷移が成功", async () => {
       mockReservationFindUnique.mockImplementation(() =>
         Promise.resolve({
