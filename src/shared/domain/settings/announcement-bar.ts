@@ -174,7 +174,6 @@ export const announcementBarInputSchema = z.strictObject({
       error: "メッセージは200文字以内で入力してください",
     }),
   linkUrl: z
-    .string()
     .url({ error: "有効なURLを入力してください" })
     .or(z.literal(""))
     .nullable()

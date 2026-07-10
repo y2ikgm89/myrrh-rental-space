@@ -114,7 +114,6 @@ export const updatePageSeoSchema = z.object({
     .max(200, { error: "OGP説明は200文字以内です" })
     .optional(),
   ogpImageUrl: z
-    .string()
     .url({ error: "有効なURLを入力してください" })
     .optional()
     .or(z.literal("")),
