@@ -15,7 +15,10 @@
  *   - channel ラベルが通知タイトルに反映される
  *
  * fireAndForget は内部で `after()` を試し失敗時に detached 実行する。
- * `Promise.all([sendX()])` の引数構築時点で各 mock は同期的に呼ばれるため、
+ * 顧客キャンセルメール・管理者通知メールは個別に fireAndForget される
+ * （Promise.all で束ねると片方の失敗で after() の実行時間延長がもう片方の
+ * 送信完了を待たずに解除されうるため）が、各 send*() 呼出自体は
+ * `applyCancellationSideEffects(...)` 実行時点で同期的に呼ばれるため、
  * `await applyCancellationSideEffects(...)` 直後に call 集合をそのまま検証できる
  * （await や setImmediate のジャグリング不要）。
  */
