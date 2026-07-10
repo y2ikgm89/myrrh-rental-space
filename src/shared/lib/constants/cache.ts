@@ -114,8 +114,6 @@ export const CACHE_TAGS = {
   PAGE_SECTIONS: "page-sections",
   /** 利用規約 */
   TERMS: "terms",
-  /** スタッフ */
-  STAFF: "staff",
   /** クーポン */
   COUPONS: "coupons",
   /** ビジネス設定（営業時間・NAP情報等） */
@@ -206,9 +204,6 @@ export const getCacheTag = {
   },
   media: {
     detail: (id: string) => `${CACHE_TAGS.MEDIA}-${id}`,
-  },
-  staff: {
-    detail: (id: string) => `${CACHE_TAGS.STAFF}-${id}`,
   },
   layoutSettings: {
     site: () => CACHE_TAGS.LAYOUT_SETTINGS,
