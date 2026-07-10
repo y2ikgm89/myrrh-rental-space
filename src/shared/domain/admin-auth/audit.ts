@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -27,11 +28,15 @@ type AdminAuthAuditUser = {
   role: Role;
 };
 
+// 本番の信頼できる client IP は `cf-connecting-ip` + `x-cloudflare-origin-secret`
+// timing-safe 一致時のみ、それ以外は `"unknown"`。`x-forwarded-for` / `x-real-ip`
+// 直読みは Cloudflare 前段があるインフラでは client 側追記で spoof 可能なので、
+// AuditLog に偽装 IP が焼き付くのを防ぐ。SSoT は rate-limit.ts の extractClientIp。
 function requestMetadata(headers: Headers): Record<string, string> {
-  const ipAddress = headers.get("x-forwarded-for") ?? headers.get("x-real-ip");
+  const ipAddress = extractClientIpFromHeaders(headers);
   const userAgent = headers.get("user-agent");
   return {
-    ...(ipAddress !== null ? { ipAddress } : {}),
+    ipAddress,
     ...(userAgent !== null ? { userAgent } : {}),
   };
 }
