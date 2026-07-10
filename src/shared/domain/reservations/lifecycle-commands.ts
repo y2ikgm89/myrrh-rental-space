@@ -50,8 +50,12 @@ export async function updateReservationStatusCommand(
     status === ReservationStatus.CANCELLED &&
     previousStatus !== ReservationStatus.CANCELLED;
 
-  const updated = await prisma.reservation.update({
-    where: { id, deletedAt: null },
+  // 読取時の status を WHERE に含めた claim で更新する。二重送信・複数管理者の
+  // 同時操作等で読取後に status が変わっていた場合は count=0 となり、古い
+  // previousStatus に基づく副作用（確認メール・スマートロックパスコード発行等）を
+  // 呼び出し元が二重発火しないようにする。
+  const updated = await prisma.reservation.updateMany({
+    where: { id, deletedAt: null, status: previousStatus },
     data: {
       status,
       icsSequence: { increment: 1 },
@@ -59,8 +63,14 @@ export async function updateReservationStatusCommand(
         ? { cancelledAt: new Date(), cancelledByType: CANCELLED_BY.ADMIN }
         : {}),
     },
-    select: { icsSequence: true },
   });
+
+  if (updated.count === 0) {
+    throw new DomainError(
+      "予約のステータスが他の操作により変更されています。最新の状態を確認してください",
+      "CONFLICT",
+    );
+  }
 
   return {
     previousStatus,
@@ -76,7 +86,7 @@ export async function updateReservationStatusCommand(
       endTime: reservation.endTime,
       totalPrice: reservation.totalPrice,
       notes: reservation.notes,
-      icsSequence: updated.icsSequence,
+      icsSequence: reservation.icsSequence + 1,
     }),
   };
 }

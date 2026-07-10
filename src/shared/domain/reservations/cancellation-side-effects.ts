@@ -248,21 +248,26 @@ export async function applyCancellationSideEffects(
   }
 
   // 3 & 4. 顧客向けキャンセル確認メール + 管理者通知メール
-  fireAndForget(
-    Promise.all([
-      sendReservationCancelledEmail(payload),
-      sendReservationAdminNotification(payload, "cancel"),
-    ]),
-    {
-      operation: "sendCancellationEmails",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        reservationId: input.reservationId,
-        channel: input.channel,
-      },
+  // 個別にfireAndForgetする（Promise.allで束ねると片方の失敗でafter()の実行時間
+  // 延長がもう片方の送信完了を待たずに解除されうる。詳細はasync-utils.tsのafter()コメント参照）。
+  fireAndForget(sendReservationCancelledEmail(payload), {
+    operation: "sendCancellationEmails",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.MEDIUM,
+    context: {
+      reservationId: input.reservationId,
+      channel: input.channel,
     },
-  );
+  });
+  fireAndForget(sendReservationAdminNotification(payload, "cancel"), {
+    operation: "sendCancellationEmails",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.MEDIUM,
+    context: {
+      reservationId: input.reservationId,
+      channel: input.channel,
+    },
+  });
 
   // 5. 管理者向け in-app 通知（PAID 自動返金時は要確認タイトルへ昇格）
   const notificationTitle = requiresRefund

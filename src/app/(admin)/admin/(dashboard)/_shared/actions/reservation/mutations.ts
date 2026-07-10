@@ -131,16 +131,24 @@ export const updateReservationStatus = async (
           });
         }
 
+        // 個別にfireAndForgetする（Promise.allで束ねると片方の失敗で
+        // after()の実行時間延長がもう片方の送信完了を待たずに解除されうる）。
         fireAndForget(
-          Promise.all([
-            issueSmartLockAndSendConfirmationEmail(payloadData, result.spaceId),
-            sendReservationAdminNotification(
-              payloadData,
-              result.previousStatus === ReservationStatus.PENDING
-                ? "new"
-                : "update",
-            ),
-          ]),
+          issueSmartLockAndSendConfirmationEmail(payloadData, result.spaceId),
+          {
+            operation: "sendConfirmationEmails",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: { reservationId: id },
+          },
+        );
+        fireAndForget(
+          sendReservationAdminNotification(
+            payloadData,
+            result.previousStatus === ReservationStatus.PENDING
+              ? "new"
+              : "update",
+          ),
           {
             operation: "sendConfirmationEmails",
             category: ErrorCategory.EXTERNAL_API,

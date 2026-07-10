@@ -68,6 +68,10 @@ const mockReservationUpdate = mock<() => Promise<unknown>>(() =>
   Promise.resolve({ id: "res-1" }),
 );
 
+const mockReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 1 }),
+);
+
 const mockCouponFindUnique = mock<() => Promise<unknown>>(() =>
   Promise.resolve(null),
 );
@@ -168,6 +172,7 @@ mock.module("@/shared/db/prisma", () => ({
       findUnique: mockReservationFindUnique,
       create: mockReservationCreate,
       update: mockReservationUpdate,
+      updateMany: mockReservationUpdateMany,
     },
     coupon: {
       findUnique: mockCouponFindUnique,
@@ -230,6 +235,7 @@ function resetAllMocks() {
   mockReservationFindUnique.mockClear();
   mockReservationCreate.mockClear();
   mockReservationUpdate.mockClear();
+  mockReservationUpdateMany.mockClear();
   mockCouponFindUnique.mockClear();
   mockCouponUpdate.mockClear();
   mockCouponUpdateMany.mockClear();
@@ -280,6 +286,9 @@ function resetAllMocks() {
   );
   mockReservationUpdate.mockImplementation(() =>
     Promise.resolve({ id: "res-1" }),
+  );
+  mockReservationUpdateMany.mockImplementation(() =>
+    Promise.resolve({ count: 1 }),
   );
   mockCouponFindUnique.mockImplementation(() => Promise.resolve(null));
   mockCouponUpdate.mockImplementation(() => Promise.resolve({}));
@@ -904,8 +913,12 @@ describe("updateReservationStatusCommand", () => {
         ReservationStatus.CANCELLED,
       );
 
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: expect.objectContaining({
+            id: "res-1",
+            status: ReservationStatus.CONFIRMED,
+          }),
           data: expect.objectContaining({
             status: ReservationStatus.CANCELLED,
             cancelledAt: expect.any(Date),
@@ -945,7 +958,7 @@ describe("updateReservationStatusCommand", () => {
       );
 
       // cancelledAt/cancelledByType が data に含まれないことを確認
-      const updateCall = mockReservationUpdate.mock.calls[0];
+      const updateCall = mockReservationUpdateMany.mock.calls[0];
       expect(updateCall).toBeDefined();
     });
 
@@ -992,6 +1005,38 @@ describe("updateReservationStatusCommand", () => {
           ReservationStatus.CONFIRMED,
         ),
       ).rejects.toThrow("予約が見つかりません");
+    });
+
+    test("読取後に他の操作でstatusが変わっていた場合(claim count=0)はCONFLICTエラー", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.PENDING,
+          googleCalendarEventId: null,
+          startTime: new Date("2024-06-15T10:00:00"),
+          endTime: new Date("2024-06-15T12:00:00"),
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+      mockReservationUpdateMany.mockImplementation(() =>
+        Promise.resolve({ count: 0 }),
+      );
+
+      await expect(
+        updateReservationStatusCommand("res-1", ReservationStatus.CONFIRMED),
+      ).rejects.toThrow(DomainError);
     });
 
     test("無効なステータス遷移でエラー", async () => {
