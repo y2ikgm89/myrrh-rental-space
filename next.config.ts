@@ -151,10 +151,12 @@ const nextConfig: NextConfig = {
 
   // Experimental features
   experimental: {
-    // Turbopack ファイルシステムキャッシュ: 開発サーバー再起動後もビルドキャッシュを永続化。
-    // ローカル切り分け時のみ NEXT_DISABLE_TURBOPACK_FS_CACHE=1 で無効化できる。
-    turbopackFileSystemCacheForDev:
-      process.env["NEXT_DISABLE_TURBOPACK_FS_CACHE"] !== "1",
+    // Turbopack ファイルシステムキャッシュは Next.js 16 でデフォルト true。
+    // ローカル切り分け時のみ NEXT_DISABLE_TURBOPACK_FS_CACHE=1 で opt-out できるよう
+    // kill switch 経路のみ明示的に false を設定する (常時 true 設定は default と重複)。
+    ...(process.env["NEXT_DISABLE_TURBOPACK_FS_CACHE"] === "1" && {
+      turbopackFileSystemCacheForDev: false,
+    }),
     // NOTE: experimental.cachedNavigations はあえて有効化しない（cacheComponents 必須の opt-in 実験機能）。
     // 有効化すると cacheComponents 下で searchParams のみのソフトナビ（管理タブの ?tab= 切替等）の
     // コンテンツが「一手前のタブのまま残る」stale を起こす。これは Next.js 16 の既知 OPEN
