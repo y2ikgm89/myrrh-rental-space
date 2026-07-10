@@ -1,18 +1,22 @@
+/**
+ * 公開イベント表示用の日時フォーマット helper。
+ *
+ * 実装は SSoT の `src/shared/lib/date-format.ts` にすべて委譲する。
+ * 独自 Intl.DateTimeFormat を再定義しない (旧実装で 8 種類重複していた分の再統合)。
+ * 命名 (`formatEventDateTimeRange` / `formatEventDate` 等) は公開イベント経路の
+ * 呼び出し側の可読性を保つためのラッパーで、内部は date-format.ts の JST 固定
+ * helper と formatPrice のみで構成する。
+ */
+
+import {
+  formatDateWithWeekday,
+  formatJstDateString,
+  formatJstDayOfMonth,
+  formatJstWeekdayShort,
+  formatTimeShort,
+  formatYearMonth,
+} from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
-
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-});
-
-const timeFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 export function formatEventDateTimeRange(
   startTime: string,
@@ -20,15 +24,12 @@ export function formatEventDateTimeRange(
 ): string {
   const start = new Date(startTime);
   const end = new Date(endTime);
-  const datePart = dateFormatter.format(start);
-  const startTimePart = timeFormatter.format(start);
-  const endTimePart = timeFormatter.format(end);
-  return `${datePart} ${startTimePart} - ${endTimePart}`;
+  return `${formatDateWithWeekday(start)} ${formatTimeShort(start)} - ${formatTimeShort(end)}`;
 }
 
 /** イベント開始日のみ（年・月・日・曜日）を `2026年5月15日(金)` 形式で返す。 */
 export function formatEventDate(startTime: string): string {
-  return dateFormatter.format(new Date(startTime));
+  return formatDateWithWeekday(new Date(startTime));
 }
 
 /** 開始〜終了時刻のみを `10:00 - 12:00` 形式で返す。 */
@@ -36,51 +37,23 @@ export function formatEventTimeRange(
   startTime: string,
   endTime: string,
 ): string {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  return `${timeFormatter.format(start)} - ${timeFormatter.format(end)}`;
+  return `${formatTimeShort(new Date(startTime))} - ${formatTimeShort(new Date(endTime))}`;
 }
 
-const monthYearFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "long",
-});
-
-const dayOnlyFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  day: "numeric",
-});
-
-const weekdayOnlyFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  weekday: "short",
-});
-
-const timeOnlyFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-const jstDateFormatter = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Tokyo",
-});
-
 export function formatMonthYear(date: Date): string {
-  return monthYearFormatter.format(date);
+  return formatYearMonth(date);
 }
 
 export function formatDay(date: Date): string {
-  return dayOnlyFormatter.format(date);
+  return formatJstDayOfMonth(date);
 }
 
 export function formatWeekday(date: Date): string {
-  return weekdayOnlyFormatter.format(date);
+  return formatJstWeekdayShort(date);
 }
 
 export function formatTime(date: Date): string {
-  return timeOnlyFormatter.format(date);
+  return formatTimeShort(date);
 }
 
 /** JST の年・月(0-indexed)・日を返す */
@@ -89,7 +62,7 @@ export function getJSTDateParts(date: Date): {
   month: number;
   day: number;
 } {
-  const s = jstDateFormatter.format(date);
+  const s = formatJstDateString(date);
   const [y, m, d] = s.split("-").map(Number);
   return { year: y ?? 0, month: (m ?? 1) - 1, day: d ?? 1 };
 }

@@ -29,8 +29,7 @@ import {
   InquiryStatusBadge,
 } from "@/admin/components/status-badges";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatMonthDayTime } from "@/shared/lib/date-format";
 
 export async function DashboardRecentSection() {
   await connection();
@@ -68,9 +67,7 @@ export async function DashboardRecentSection() {
                 {recentReservations.map((reservation) => (
                   <TableRow key={reservation.id}>
                     <TableCell className="text-sm">
-                      {format(reservation.startTime, "M/d HH:mm", {
-                        locale: ja,
-                      })}
+                      {formatMonthDayTime(reservation.startTime)}
                     </TableCell>
                     <TableCell>
                       <Link
@@ -118,7 +115,7 @@ export async function DashboardRecentSection() {
                 {recentInquiries.map((inquiry) => (
                   <TableRow key={inquiry.id}>
                     <TableCell className="text-sm">
-                      {format(inquiry.createdAt, "M/d HH:mm", { locale: ja })}
+                      {formatMonthDayTime(inquiry.createdAt)}
                     </TableCell>
                     <TableCell>
                       <Link
