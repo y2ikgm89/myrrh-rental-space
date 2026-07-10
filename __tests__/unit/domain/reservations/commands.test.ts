@@ -851,12 +851,12 @@ describe("updateReservationStatusCommand", () => {
   });
 
   describe("正常系", () => {
-    test("claim後にicsSequenceを読み直し、読取後の他経路による増分も反映する", async () => {
+    test("claim後にicsSequenceと予約内容を同じ読取から揃えて取得する(古い内容と新SEQUENCEの混在を防ぐ)", async () => {
       let findUniqueCallCount = 0;
       mockReservationFindUnique.mockImplementation(() => {
         findUniqueCallCount += 1;
         if (findUniqueCallCount === 1) {
-          // 初回読取: この時点ではicsSequence=5
+          // 初回読取: この時点ではicsSequence=5、開始時刻は10:00
           return Promise.resolve({
             id: "res-1",
             status: ReservationStatus.PENDING,
@@ -879,10 +879,31 @@ describe("updateReservationStatusCommand", () => {
             },
           });
         }
-        // claim後の読み直し: 別経路（詳細編集等）がicsSequenceだけを7まで進めていた
-        // 想定。claim自体はstatusのみを条件にするため成功するが、返却する
-        // icsSequenceは「読取時+1」ではなくこの実DB値でなければならない。
-        return Promise.resolve({ icsSequence: 7 });
+        // claim後の読み直し: 別経路（詳細編集）が開始時刻を11:00に変更しつつ
+        // icsSequenceを7まで進めていた想定。claim自体はstatusのみを条件にするため
+        // 成功するが、返却するicsSequence/開始時刻は両方この実DB値（読み直し結果）
+        // から取得しなければならない（新SEQUENCE+旧内容の混在を防ぐ）。
+        return Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          googleCalendarEventId: null,
+          icsSequence: 7,
+          startTime: new Date("2024-06-15T11:00:00"),
+          endTime: new Date("2024-06-15T13:00:00"),
+          totalPrice: 2000,
+          notes: "編集で追加されたメモ",
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        });
       });
 
       const result = await updateReservationStatusCommand(
@@ -891,6 +912,8 @@ describe("updateReservationStatusCommand", () => {
       );
 
       expect(result.payload.icsSequence).toBe(7);
+      expect(result.payload.startTime).toEqual(new Date("2024-06-15T11:00:00"));
+      expect(result.payload.notes).toBe("編集で追加されたメモ");
     });
 
     test("PENDING → CONFIRMED への遷移が成功", async () => {

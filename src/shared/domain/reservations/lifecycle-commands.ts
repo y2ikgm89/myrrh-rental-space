@@ -72,15 +72,27 @@ export async function updateReservationStatusCommand(
     );
   }
 
-  // updateMany は更新後の行を返さないため、実際の icsSequence を読み直す。
-  // claim の WHERE は status のみを条件にしているため、読取からこの claim までの間に
-  // 別経路（詳細編集等）が icsSequence だけを進めていた場合、
-  // reservation.icsSequence + 1 は実際のDB値より小さくなり得る（古いSEQUENCEを
-  // カレンダーへ送ってしまう）。
+  // updateMany は更新後の行を返さないため読み直す。claim の WHERE は status のみを
+  // 条件にしているため、読取からこの claim までの間に別経路（詳細編集等）が
+  // icsSequence や予約内容を進めていた場合がある。icsSequence だけを読み直して
+  // 古い reservation の内容（startTime/space/notes 等）と組み合わせると、
+  // 「新しいSEQUENCEなのに古い内容」というカレンダークライアントにとって最悪の
+  // 不整合（古い内容が正として上書きされる）を生む。buildPayload に渡す全フィールドを
+  // 同じ読取から揃えて取得する。
   const current = await prisma.reservation.findUnique({
     where: { id },
-    select: { icsSequence: true },
+    include: {
+      space: {
+        select: {
+          name: true,
+          addressDetail: true,
+          location: { select: { address: true } },
+        },
+      },
+      customer: { select: CUSTOMER_SELECT },
+    },
   });
+  const source = current ?? reservation;
 
   return {
     previousStatus,
@@ -90,13 +102,13 @@ export async function updateReservationStatusCommand(
     couponId: reservation.couponId,
     payload: buildPayload({
       reservationId: id,
-      customer: reservation.customer,
-      space: reservation.space,
-      startTime: reservation.startTime,
-      endTime: reservation.endTime,
-      totalPrice: reservation.totalPrice,
-      notes: reservation.notes,
-      icsSequence: current?.icsSequence ?? reservation.icsSequence + 1,
+      customer: source.customer,
+      space: source.space,
+      startTime: source.startTime,
+      endTime: source.endTime,
+      totalPrice: source.totalPrice,
+      notes: source.notes,
+      icsSequence: current ? current.icsSequence : reservation.icsSequence + 1,
     }),
   };
 }
