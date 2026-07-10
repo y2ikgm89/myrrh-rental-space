@@ -15,10 +15,12 @@ import {
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
+import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
 import {
   sendReservationAdminNotification,
   sendReservationConfirmationEmail,
 } from "@/shared/lib/email/reservation-emails";
+import type { ReservationEmailData } from "@/shared/lib/email/types";
 import { syncReservationToCalendar } from "@/shared/lib/calendar-sync/outbound";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -43,6 +45,32 @@ import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
 
 const COMPLETE_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 予約確定メール送信前に、スペースにアクティブなスマートロックデバイスがあれば
+ * 一時パスコードを発行し、確認メールのペイロードにマージする。
+ * `issueSmartLockPasscodes` は対象デバイスが無いスペースでは即座に空配列を返す
+ * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（DBクエリ1回分のみ）。
+ * デバイスが設定されているスペースでは SwitchBot 側の確定待ちで最大45秒程度
+ * ブロックし得るが、意図した設計。
+ */
+async function issueSmartLockAndSendConfirmationEmail(
+  payload: ReservationEmailData,
+  spaceId: string,
+): Promise<void> {
+  const smartLockPasscodes = await issueSmartLockPasscodes({
+    reservationId: payload.reservationId,
+    spaceId,
+    startTime: payload.startTime,
+    endTime: payload.endTime,
+  });
+
+  await sendReservationConfirmationEmail(
+    smartLockPasscodes.length > 0
+      ? { ...payload, smartLockPasscodes }
+      : payload,
+  );
+}
 
 export async function submitReservation(
   _prev: SubmissionResult | undefined,
@@ -130,10 +158,13 @@ export async function submitReservation(
           category: ErrorCategory.EXTERNAL_API,
         });
 
-        fireAndForget(sendReservationConfirmationEmail(payload), {
-          operation: "sendReservationConfirmationEmail",
-          category: ErrorCategory.EXTERNAL_API,
-        });
+        fireAndForget(
+          issueSmartLockAndSendConfirmationEmail(payload, data.spaceId),
+          {
+            operation: "sendReservationConfirmationEmail",
+            category: ErrorCategory.EXTERNAL_API,
+          },
+        );
 
         // 公開予約は作成時点で CONFIRMED のため、ここで Google Calendar に同期する。
         // 連携が無効・未接続なら syncReservationToCalendar 内で no-op になる。

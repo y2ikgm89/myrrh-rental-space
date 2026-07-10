@@ -1,10 +1,10 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
-import { encrypt } from "@/shared/lib/crypto";
+import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import type { CustomApiKeyInput } from "@/shared/types/api-keys";
 import { parseCustomApiKeysMap } from "@/shared/domain/settings/api-key-helpers";
@@ -192,6 +192,32 @@ export async function clearSwitchBotSettings(): Promise<void> {
     switchbotLastTestedAt: null,
     switchbotConnectionStatus: null,
   });
+}
+
+/**
+ * Webhook URL難読化用トークンを取得する。未発行なら生成して保存してから返す
+ * （webhook登録操作の直前に呼ぶことで、常に有効なトークンを保証する）。
+ */
+export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: { switchbotWebhookPathToken: true },
+  });
+
+  const existing = settings?.switchbotWebhookPathToken
+    ? safeDecrypt(settings.switchbotWebhookPathToken)
+    : null;
+  if (existing) return existing;
+
+  const token = randomBytes(24).toString("base64url");
+  await upsertSettings({
+    switchbotWebhookPathToken: encryptSecret(
+      token,
+      "Webhookトークンの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
+    ),
+  });
+  return token;
 }
 
 export async function addCustomApiKey(

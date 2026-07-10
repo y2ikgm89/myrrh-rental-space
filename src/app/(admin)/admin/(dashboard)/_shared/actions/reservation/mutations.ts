@@ -37,6 +37,8 @@ import {
   sendReservationConfirmationEmail,
   sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
+import type { ReservationEmailData } from "@/shared/lib/email/types";
+import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
 
 const updateStatusSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
@@ -52,6 +54,31 @@ const restoreStatusSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
   targetStatus: z.enum(ReservationStatus),
 });
+
+/**
+ * 確認メール送信前に、スペースにアクティブなスマートロックデバイスがあれば
+ * 一時パスコードを発行し、確認メールのペイロードにマージする。
+ * `issueSmartLockPasscodes` は対象デバイスが無いスペースでは即座に空配列を返す
+ * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（意図した設計、
+ * 詳細は `src/shared/domain/smart-lock/issue-passcode.ts`）。
+ */
+async function issueSmartLockAndSendConfirmationEmail(
+  payloadData: ReservationEmailData,
+  spaceId: string,
+) {
+  const smartLockPasscodes = await issueSmartLockPasscodes({
+    reservationId: payloadData.reservationId,
+    spaceId,
+    startTime: payloadData.startTime,
+    endTime: payloadData.endTime,
+  });
+
+  return sendReservationConfirmationEmail(
+    smartLockPasscodes.length > 0
+      ? { ...payloadData, smartLockPasscodes }
+      : payloadData,
+  );
+}
 
 export const updateReservationStatus = async (
   id: string,
@@ -106,7 +133,7 @@ export const updateReservationStatus = async (
 
         fireAndForget(
           Promise.all([
-            sendReservationConfirmationEmail(payloadData),
+            issueSmartLockAndSendConfirmationEmail(payloadData, result.spaceId),
             sendReservationAdminNotification(
               payloadData,
               result.previousStatus === ReservationStatus.PENDING
@@ -256,29 +283,57 @@ export const restoreReservationStatus = async (
         }
       }
 
-      fireAndForget(
-        sendReservationStatusChangedEmail({
-          reservationId: payloadData.reservationId,
-          customerEmail: payloadData.customerEmail,
-          customerName: payloadData.customerName,
-          spaceName: payloadData.spaceName,
-          startTime: payloadData.startTime,
-          endTime: payloadData.endTime,
-          totalPrice: payloadData.totalPrice,
-          oldStatus: result.previousStatus,
-          newStatus: result.targetStatus,
-          icsSequence: payloadData.icsSequence,
-          ...(payloadData.location != null
-            ? { location: payloadData.location }
-            : {}),
-        }),
-        {
-          operation: "restoreSendStatusChangedEmail",
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.MEDIUM,
-          context: { reservationId: id },
-        },
-      );
+      const statusChangedEmailData = {
+        reservationId: payloadData.reservationId,
+        customerEmail: payloadData.customerEmail,
+        customerName: payloadData.customerName,
+        spaceName: payloadData.spaceName,
+        startTime: payloadData.startTime,
+        endTime: payloadData.endTime,
+        totalPrice: payloadData.totalPrice,
+        oldStatus: result.previousStatus,
+        newStatus: result.targetStatus,
+        icsSequence: payloadData.icsSequence,
+        ...(payloadData.location != null
+          ? { location: payloadData.location }
+          : {}),
+      };
+
+      if (result.targetStatus === ReservationStatus.CONFIRMED) {
+        // CONFIRMED への復元はスマートロック対象スペースであればアクセス権限
+        // （一時パスコード）も再発行し、ステータス変更メールに同梱する
+        // （対象デバイス無しなら issueSmartLockPasscodes が即座に空配列を返す no-op）。
+        fireAndForget(
+          issueSmartLockPasscodes({
+            reservationId: payloadData.reservationId,
+            spaceId: result.spaceId,
+            startTime: payloadData.startTime,
+            endTime: payloadData.endTime,
+          }).then((smartLockPasscodes) =>
+            sendReservationStatusChangedEmail(
+              smartLockPasscodes.length > 0
+                ? { ...statusChangedEmailData, smartLockPasscodes }
+                : statusChangedEmailData,
+            ),
+          ),
+          {
+            operation: "restoreIssuePasscodesAndSendStatusChangedEmail",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: { reservationId: id },
+          },
+        );
+      } else {
+        fireAndForget(
+          sendReservationStatusChangedEmail(statusChangedEmailData),
+          {
+            operation: "restoreSendStatusChangedEmail",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: { reservationId: id },
+          },
+        );
+      }
 
       invalidateReservationCaches(id, result.customerId);
     },

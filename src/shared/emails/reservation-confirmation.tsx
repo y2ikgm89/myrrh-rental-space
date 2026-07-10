@@ -38,6 +38,8 @@ type Props = {
   modificationDeadlineHours?: number;
   /** 公開中のキャンセルポリシー規約 URL。無ければ本文はプレーンテキストにフォールバックする */
   cancellationPolicyUrl?: string;
+  /** 予約確定時に発行されたスマートロックの一時パスコード一覧 */
+  smartLockPasscodes?: { deviceName: string; passcode: string }[];
   footer: EmailFooterData;
 };
 
@@ -57,6 +59,7 @@ export function ReservationConfirmationEmail({
   cancellationDeadlineHours,
   modificationDeadlineHours,
   cancellationPolicyUrl,
+  smartLockPasscodes,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -101,6 +104,21 @@ export function ReservationConfirmationEmail({
       </Section>
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
+
+      {smartLockPasscodes && smartLockPasscodes.length > 0 && (
+        <Section style={detailsSection}>
+          <Text style={detailsHeading}>スマートロック解錠用の暗証番号</Text>
+          <Hr style={hr} />
+          {smartLockPasscodes.map((entry) => (
+            <Text
+              key={`${entry.deviceName}-${entry.passcode}`}
+              style={detailItem}
+            >
+              <strong>{entry.deviceName}:</strong> {entry.passcode}
+            </Text>
+          ))}
+        </Section>
+      )}
 
       {memberReservationUrl && (
         <Section

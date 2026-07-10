@@ -114,3 +114,116 @@ export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
 > {
   return request(credentials, "/devices");
 }
+
+export type SwitchBotPasscodeType =
+  "permanent" | "timeLimit" | "disposable" | "urgent";
+
+export type CreatePasscodeParams = {
+  readonly deviceId: string;
+  readonly name: string;
+  readonly type: SwitchBotPasscodeType;
+  /** 6〜12桁の数字（平文） */
+  readonly password: string;
+  /** timeLimit/disposable では必須。10桁Unixタイムスタンプ（秒） */
+  readonly startTime?: number;
+  readonly endTime?: number;
+};
+
+/**
+ * パスコードを作成する（`createKey`）。
+ *
+ * 注意: 公式ドキュメントは機種（無印Keypad / Keypad Touch / Keypad Vision /
+ * Keypad Vision Pro）によってリクエストボディの記載例が微妙に異なる（ドキュメント自体の
+ * 揺れ）。本実装は「Send device control commands」の一般形式
+ * `{commandType:"command", command:"createKey", parameter:{...}}` を全機種共通の
+ * 正本として採用する（v1.1 APIの一般コマンド送信エンドポイントの標準形式のため）。
+ * 実機での動作確認を推奨する。
+ *
+ * レスポンスの `commandId` はコマンド実行の相関確認用であり、パスコード自体のID
+ * （`deleteKey`に必要な`keyId`）ではない。keyIdは`getDeviceStatus`の`keyList`から
+ * `name`で突合して取得する（専用の取得APIが存在しないため）。
+ */
+export async function createPasscode(
+  credentials: SwitchBotCredentials,
+  { deviceId, ...parameter }: CreatePasscodeParams,
+): Promise<SwitchBotApiResult<{ commandId: string }>> {
+  return request(credentials, `/devices/${deviceId}/commands`, {
+    method: "POST",
+    body: { commandType: "command", command: "createKey", parameter },
+  });
+}
+
+export type SwitchBotKeyListItem = {
+  readonly id: string;
+  readonly name: string;
+  readonly type: SwitchBotPasscodeType;
+  /** 暗号化された値（SwitchBot側の暗号化であり本アプリの`encrypt()`とは無関係） */
+  readonly password: string;
+  readonly iv: string;
+  readonly status: "normal" | "expired";
+  readonly createTime: number;
+};
+
+/**
+ * デバイス状態を取得する。Keypad系デバイスの場合、`keyList`に発行済みパスコード
+ * 一覧が含まれる（`createKey`の`name`で自分の発行分を突合するために使う）。
+ */
+export async function getDeviceStatus(
+  credentials: SwitchBotCredentials,
+  deviceId: string,
+): Promise<SwitchBotApiResult<{ keyList?: SwitchBotKeyListItem[] }>> {
+  return request(credentials, `/devices/${deviceId}/status`);
+}
+
+/**
+ * パスコードを削除する（`deleteKey`）。`keyId`は`getDeviceStatus`の`keyList[].id`。
+ */
+export async function deletePasscode(
+  credentials: SwitchBotCredentials,
+  deviceId: string,
+  keyId: string,
+): Promise<SwitchBotApiResult<Record<string, never>>> {
+  return request(credentials, `/devices/${deviceId}/commands`, {
+    method: "POST",
+    body: {
+      commandType: "command",
+      command: "deleteKey",
+      parameter: { id: keyId },
+    },
+  });
+}
+
+/**
+ * Webhook受信URLを登録する。SwitchBotは現状 `deviceList: "ALL"` のみサポート
+ * （個別デバイス指定は不可）。
+ */
+export async function setupWebhook(
+  credentials: SwitchBotCredentials,
+  url: string,
+): Promise<SwitchBotApiResult<Record<string, never>>> {
+  return request(credentials, "/webhook/setupWebhook", {
+    method: "POST",
+    body: { action: "setupWebhook", url, deviceList: "ALL" },
+  });
+}
+
+/** 登録済みWebhook URLの一覧を取得する。 */
+export async function queryWebhookUrls(
+  credentials: SwitchBotCredentials,
+): Promise<SwitchBotApiResult<{ urls: string[] }>> {
+  return request(credentials, "/webhook/queryWebhook", {
+    method: "POST",
+    body: { action: "queryUrl" },
+  });
+}
+
+/** Webhook登録を解除する。 */
+export async function deleteWebhook(
+  credentials: SwitchBotCredentials,
+  url: string,
+): Promise<SwitchBotApiResult<Record<string, never>>> {
+  return request(credentials, "/webhook/deleteWebhook", {
+    method: "POST",
+    body: { action: "deleteWebhook", url },
+  });
+}

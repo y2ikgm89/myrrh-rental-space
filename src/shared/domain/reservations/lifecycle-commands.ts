@@ -64,6 +64,7 @@ export async function updateReservationStatusCommand(
 
   return {
     previousStatus,
+    spaceId: reservation.spaceId,
     googleCalendarEventId: reservation.googleCalendarEventId,
     customerId: reservation.customerId,
     couponId: reservation.couponId,
@@ -174,6 +175,7 @@ export async function restoreReservationStatusCommand(
   return {
     previousStatus,
     targetStatus,
+    spaceId: reservation.spaceId,
     googleCalendarEventId: reservation.googleCalendarEventId,
     customerId: reservation.customerId,
     couponId: reservation.couponId,

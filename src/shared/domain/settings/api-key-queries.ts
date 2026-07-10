@@ -193,6 +193,7 @@ export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
 export async function getDecryptedSwitchBotCredentials(): Promise<{
   openToken: string;
   secretKey: string;
+  passcodeBufferMinutes: number;
 } | null> {
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
@@ -200,6 +201,7 @@ export async function getDecryptedSwitchBotCredentials(): Promise<{
       switchbotEnabled: true,
       switchbotOpenToken: true,
       switchbotSecretKey: true,
+      switchbotPasscodeBufferMinutes: true,
     },
   });
 
@@ -217,7 +219,11 @@ export async function getDecryptedSwitchBotCredentials(): Promise<{
     return null;
   }
 
-  return { openToken, secretKey };
+  return {
+    openToken,
+    secretKey,
+    passcodeBufferMinutes: settings.switchbotPasscodeBufferMinutes,
+  };
 }
 
 /**
