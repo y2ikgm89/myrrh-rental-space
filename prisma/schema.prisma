@@ -364,9 +364,10 @@ model Location {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  spaces       Space[]
-  events       Event[]
-  blockedDates BlockedDate[]
+  spaces           Space[]
+  events           Event[]
+  blockedDates     BlockedDate[]
+  smartLockDevices SmartLockDevice[]
 
   @@unique([sortOrder], map: "locations_active_sortOrder_key", where: { isActive: true })
   @@index([isPublished, isActive])
@@ -449,14 +450,19 @@ model Space {
   locationId String  @db.Uuid
   categoryId String? @db.Uuid
 
+  // スマートロックデバイス（同一Locationに登録済みのデバイスから1台選択、任意）。
+  // デバイスはLocation所有のため、同じ物理ロックを複数Spaceで共有できる
+  // （例: 建物入口の共有ロックを複数の貸室が使う場合）。
+  smartLockDeviceId String? @db.Uuid
+
   // Relations
-  reservations     Reservation[]
-  reviews          SpaceReview[]
-  events           Event[]
-  blockedDates     BlockedDate[]
-  smartLockDevices SmartLockDevice[]
-  location         Location          @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  category         SpaceCategory?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  reservations    Reservation[]
+  reviews         SpaceReview[]
+  events          Event[]
+  blockedDates    BlockedDate[]
+  location        Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  category        SpaceCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  smartLockDevice SmartLockDevice? @relation(fields: [smartLockDeviceId], references: [id], onDelete: SetNull)
 
   // OR検索用インデックス
   @@index([name])
@@ -465,6 +471,7 @@ model Space {
   @@index([publishedAt, isActive])
   @@index([locationId])
   @@index([categoryId])
+  @@index([smartLockDeviceId])
   @@map("spaces")
 }
 
@@ -1862,11 +1869,13 @@ enum SmartLockPasscodeStatus {
   REVOKED
 }
 
-/// スペースに紐づく物理スマートロック（Keypad アクセサリ or Lock Vision Pro 単体）。
-/// 1 スペースに複数台（玄関 + 室内ドア等）を許容するため 1:N。
+/// 拠点（Location）に紐づく物理スマートロック（Keypad アクセサリ or Lock Vision Pro 単体）。
+/// 1 拠点に複数台を登録できる登録簿（1:N from Location）。各Spaceはこの登録簿から
+/// 最大1台を選んで使う（Space.smartLockDeviceId）ため、同じ物理ロックを複数Spaceで
+/// 共有できる（例: 建物入口の共有ロックを複数の貸室が使う場合）。
 model SmartLockDevice {
   id         String              @id @default(uuid()) @db.Uuid
-  spaceId    String              @db.Uuid
+  locationId String              @db.Uuid
   deviceId   String              @unique // SwitchBot 側の device ID（MAC アドレス）
   deviceName String
   deviceType SmartLockDeviceType
@@ -1874,10 +1883,11 @@ model SmartLockDevice {
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
-  space     Space               @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  location  Location            @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  spaces    Space[]
   passcodes SmartLockPasscode[]
 
-  @@index([spaceId])
+  @@index([locationId])
   @@map("smart_lock_devices")
 }
 

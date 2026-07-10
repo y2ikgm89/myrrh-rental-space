@@ -6,7 +6,7 @@ import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
 
 const SMART_LOCK_DEVICE_SELECT = {
   id: true,
-  spaceId: true,
+  locationId: true,
   deviceId: true,
   deviceName: true,
   deviceType: true,
@@ -17,7 +17,7 @@ const SMART_LOCK_DEVICE_SELECT = {
 
 function formatSmartLockDevice(row: {
   id: string;
-  spaceId: string;
+  locationId: string;
   deviceId: string;
   deviceName: string;
   deviceType: SmartLockDeviceType;
@@ -27,7 +27,7 @@ function formatSmartLockDevice(row: {
 }): SmartLockDeviceData {
   return {
     id: row.id,
-    spaceId: row.spaceId,
+    locationId: row.locationId,
     deviceId: row.deviceId,
     deviceName: row.deviceName,
     deviceType: row.deviceType,
@@ -37,12 +37,12 @@ function formatSmartLockDevice(row: {
   };
 }
 
-/** 当該スペースに紐づくスマートロックデバイス一覧（管理タブ用、登録順） */
-export async function getSmartLockDevicesForSpace(
-  spaceId: string,
+/** 当該拠点に登録されたスマートロックデバイス一覧（登録簿管理タブ用、登録順） */
+export async function getSmartLockDevicesForLocation(
+  locationId: string,
 ): Promise<SmartLockDeviceData[]> {
   const rows = await prisma.smartLockDevice.findMany({
-    where: { spaceId },
+    where: { locationId },
     orderBy: { createdAt: "asc" },
     select: SMART_LOCK_DEVICE_SELECT,
   });

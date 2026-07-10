@@ -12,13 +12,13 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-async function ensureSpaceExists(spaceId: string): Promise<void> {
-  const space = await prisma.space.findUnique({
-    where: { id: spaceId },
+async function ensureLocationExists(locationId: string): Promise<void> {
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
     select: { id: true },
   });
-  if (!space) {
-    throw new DomainError("スペースが見つかりません", "NOT_FOUND");
+  if (!location) {
+    throw new DomainError("拠点が見つかりません", "NOT_FOUND");
   }
 }
 
@@ -61,15 +61,15 @@ export type SmartLockDeviceCommandInput = {
 };
 
 export async function createSmartLockDeviceCommand(
-  spaceId: string,
+  locationId: string,
   data: SmartLockDeviceCommandInput,
 ): Promise<{ id: string }> {
-  await ensureSpaceExists(spaceId);
+  await ensureLocationExists(locationId);
 
   return withDuplicateDeviceIdGuard(async () => {
     const created = await prisma.smartLockDevice.create({
       data: {
-        spaceId,
+        locationId,
         deviceId: data.deviceId,
         deviceName: data.deviceName,
         deviceType: data.deviceType,
@@ -123,4 +123,32 @@ export async function toggleSmartLockDeviceActiveCommand(
   });
 
   return { id, isActive };
+}
+
+/**
+ * スペースに割り当てるスマートロックデバイスを設定する（`null`で解除）。
+ * 同一デバイスを複数スペースに設定できる（物理ロック共有のため制約なし）。
+ */
+export async function setSpaceSmartLockDeviceCommand(
+  spaceId: string,
+  deviceId: string | null,
+): Promise<{ id: string; smartLockDeviceId: string | null }> {
+  const space = await prisma.space.findUnique({
+    where: { id: spaceId },
+    select: { id: true },
+  });
+  if (!space) {
+    throw new DomainError("スペースが見つかりません", "NOT_FOUND");
+  }
+
+  if (deviceId) {
+    await ensureSmartLockDeviceExists(deviceId);
+  }
+
+  await prisma.space.update({
+    where: { id: spaceId },
+    data: { smartLockDeviceId: deviceId },
+  });
+
+  return { id: spaceId, smartLockDeviceId: deviceId };
 }

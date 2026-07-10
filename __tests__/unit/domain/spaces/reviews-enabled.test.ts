@@ -28,6 +28,7 @@ describe("SpaceWithStats type includes reviewsEnabled", () => {
       updatedAt: new Date().toISOString(),
       locationId: "00000000-0000-0000-0000-000000000002",
       categoryId: null,
+      smartLockDeviceId: null,
       category: null,
       discountType: "none" as const,
       discountValue: null,

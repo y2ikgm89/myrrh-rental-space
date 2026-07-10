@@ -3,6 +3,9 @@
  *
  * Prisma / SwitchBot API クライアント / settings クエリをすべてモックし、
  * ポーリングの `setTimeout` はスパイして即時実行させる（45秒の実待機を回避）。
+ *
+ * SmartLockDeviceはLocation所有・Spaceは`smartLockDeviceId`で単一デバイスを参照する
+ * モデルのため、`prisma.space.findUnique({select:{smartLockDevice:true}})`をモックする。
  */
 
 import {
@@ -53,12 +56,11 @@ type DeviceRow = {
   deviceId: string;
   deviceName: string;
   isActive: boolean;
-  spaceId: string;
 };
 
-const mockFindManyDevices = mock<(...args: unknown[]) => Promise<DeviceRow[]>>(
-  () => Promise.resolve([]),
-);
+const mockFindUniqueSpace = mock<
+  (...args: unknown[]) => Promise<{ smartLockDevice: DeviceRow | null } | null>
+>(() => Promise.resolve({ smartLockDevice: null }));
 const mockCreatePasscodeRow = mock<
   (...args: unknown[]) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "passcode-row-1" }));
@@ -110,8 +112,8 @@ const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    smartLockDevice: {
-      findMany: (...args: unknown[]) => mockFindManyDevices(...args),
+    space: {
+      findUnique: (...args: unknown[]) => mockFindUniqueSpace(...args),
     },
     smartLockPasscode: {
       create: (...args: unknown[]) => mockCreatePasscodeRow(...args),
@@ -151,12 +153,12 @@ const { issueSmartLockPasscodes, buildPasscodeName } =
   await import("@/shared/domain/smart-lock/issue-passcode");
 
 const RESERVATION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+const SPACE_ID = "space-1";
 const DEVICE_ROW: DeviceRow = {
   id: "11111111-2222-3333-4444-555555555555",
   deviceId: "AA:BB:CC:DD:EE:FF",
   deviceName: "玄関ドア",
   isActive: true,
-  spaceId: "space-1",
 };
 const START_TIME = new Date("2026-08-01T01:00:00.000Z");
 const END_TIME = new Date("2026-08-01T03:00:00.000Z");
@@ -164,7 +166,7 @@ const END_TIME = new Date("2026-08-01T03:00:00.000Z");
 function makeInput() {
   return {
     reservationId: RESERVATION_ID,
-    spaceId: DEVICE_ROW.spaceId,
+    spaceId: SPACE_ID,
     startTime: START_TIME,
     endTime: END_TIME,
   };
@@ -175,7 +177,7 @@ beforeEach(() => {
     immediateSetTimeout,
   );
 
-  mockFindManyDevices.mockReset();
+  mockFindUniqueSpace.mockReset();
   mockCreatePasscodeRow.mockReset();
   mockUpdatePasscodeRow.mockReset();
   mockFindUniquePasscodeRow.mockReset();
@@ -184,7 +186,7 @@ beforeEach(() => {
   mockGetDeviceStatus.mockReset();
   mockLogError.mockReset();
 
-  mockFindManyDevices.mockResolvedValue([]);
+  mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: null });
   mockCreatePasscodeRow.mockResolvedValue({ id: "passcode-row-1" });
   mockUpdatePasscodeRow.mockResolvedValue({});
   mockFindUniquePasscodeRow.mockResolvedValue(null);
@@ -220,8 +222,8 @@ describe("buildPasscodeName", () => {
 });
 
 describe("issueSmartLockPasscodes", () => {
-  test("対象デバイスが0件の場合はAPI呼出をせず空配列を返す", async () => {
-    mockFindManyDevices.mockResolvedValue([]);
+  test("スペースにデバイス未割り当ての場合はAPI呼出をせず空配列を返す", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: null });
 
     const result = await issueSmartLockPasscodes(makeInput());
 
@@ -231,8 +233,20 @@ describe("issueSmartLockPasscodes", () => {
     expect(mockGetDeviceStatus).not.toHaveBeenCalled();
   });
 
+  test("割り当てられたデバイスが無効化されている場合はAPI呼出をせず空配列を返す", async () => {
+    mockFindUniqueSpace.mockResolvedValue({
+      smartLockDevice: { ...DEVICE_ROW, isActive: false },
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result).toEqual([]);
+    expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
+    expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
+  });
+
   test("SwitchBot連携が未設定(credentials null)の場合はAPI呼出せず空配列を返す", async () => {
-    mockFindManyDevices.mockResolvedValue([DEVICE_ROW]);
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockGetDecryptedSwitchBotCredentials.mockResolvedValue(null);
 
     const result = await issueSmartLockPasscodes(makeInput());
@@ -243,7 +257,7 @@ describe("issueSmartLockPasscodes", () => {
   });
 
   test("createPasscodeが失敗した場合はDBレコードがFAILEDになり結果に含まれない", async () => {
-    mockFindManyDevices.mockResolvedValue([DEVICE_ROW]);
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue(null);
     mockCreatePasscodeApi.mockResolvedValue({
       ok: false,
@@ -268,7 +282,7 @@ describe("issueSmartLockPasscodes", () => {
   });
 
   test("getDeviceStatusが即座に一致するkeyListエントリを返す場合はCONFIRMEDになり結果に含まれる", async () => {
-    mockFindManyDevices.mockResolvedValue([DEVICE_ROW]);
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue(null);
     mockCreatePasscodeApi.mockResolvedValue({
       ok: true,
@@ -321,7 +335,7 @@ describe("issueSmartLockPasscodes", () => {
   });
 
   test("ポーリングが全回数keyListに一致無しで完了する場合はFAILEDになる（タイムアウト）", async () => {
-    mockFindManyDevices.mockResolvedValue([DEVICE_ROW]);
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue(null);
     mockCreatePasscodeApi.mockResolvedValue({
       ok: true,
@@ -345,7 +359,7 @@ describe("issueSmartLockPasscodes", () => {
 
   test("既にCONFIRMEDのレコードがある場合は再度API呼出せず復号して結果に含む", async () => {
     const existingPasscode = encrypt("654321");
-    mockFindManyDevices.mockResolvedValue([DEVICE_ROW]);
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue({
       id: "passcode-existing",
       status: "CONFIRMED",
@@ -363,7 +377,7 @@ describe("issueSmartLockPasscodes", () => {
   });
 
   test("既存レコードがCONFIRMED以外(PENDING等)の場合は何もせず結果から除外する", async () => {
-    mockFindManyDevices.mockResolvedValue([DEVICE_ROW]);
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue({
       id: "passcode-existing",
       status: "PENDING",

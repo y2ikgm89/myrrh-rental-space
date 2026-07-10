@@ -52,11 +52,19 @@ import {
 } from "@/admin/actions/location";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import type { BlockedDateData } from "@/shared/domain/blocked-dates/types";
+import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
 import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
+import { LocationSmartLockDevicesField } from "@/admin/components/LocationSmartLockDevicesField";
 import {
   createLocationBlockedDate,
   deleteLocationBlockedDate,
 } from "@/admin/actions/location-blocked-dates";
+import {
+  createLocationSmartLockDevice,
+  updateLocationSmartLockDevice,
+  deleteLocationSmartLockDevice,
+  toggleLocationSmartLockDeviceActive,
+} from "@/admin/actions/location-smart-lock-devices";
 import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
@@ -76,6 +84,7 @@ type LocationFormProps = {
   globals?: GlobalsMeoFlags;
   gbpEnabledGlobally?: boolean;
   initialBlockedDates?: readonly BlockedDateData[];
+  initialSmartLockDevices?: readonly SmartLockDeviceData[];
 };
 
 const DEFAULT_GLOBALS: GlobalsMeoFlags = {
@@ -256,6 +265,7 @@ export function LocationForm({
   globals = DEFAULT_GLOBALS,
   gbpEnabledGlobally = false,
   initialBlockedDates = [],
+  initialSmartLockDevices = [],
 }: LocationFormProps) {
   const dndContextId = useId();
   const accessLinesDndContextId = useId();
@@ -510,6 +520,11 @@ export function LocationForm({
           <TabsTrigger value="basic">基本情報</TabsTrigger>
           <TabsTrigger value="meo">MEO</TabsTrigger>
           {isEdit && <TabsTrigger value="blocked-dates">臨時休業</TabsTrigger>}
+          {isEdit && (
+            <TabsTrigger value="smart-lock-devices">
+              スマートロックデバイス
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent
@@ -1298,6 +1313,30 @@ export function LocationForm({
                   createAction={createLocationBlockedDate}
                   deleteAction={deleteLocationBlockedDate}
                   description="この拠点に登録された全スペースの予約を、指定した日付で受け付けません（拠点全体の臨時休業）。"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {isEdit && location && (
+          <TabsContent
+            value="smart-lock-devices"
+            forceMount
+            className="mt-6 data-[state=inactive]:hidden"
+          >
+            <Card>
+              <CardHeader>
+                <CardTitle>スマートロックデバイス</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LocationSmartLockDevicesField
+                  locationId={location.id}
+                  initialSmartLockDevices={initialSmartLockDevices}
+                  createAction={createLocationSmartLockDevice}
+                  updateAction={updateLocationSmartLockDevice}
+                  deleteAction={deleteLocationSmartLockDevice}
+                  toggleActiveAction={toggleLocationSmartLockDeviceActive}
                 />
               </CardContent>
             </Card>

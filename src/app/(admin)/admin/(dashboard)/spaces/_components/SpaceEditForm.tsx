@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useEffectEvent, useState } from "react";
 import { getFormProps, useForm, type FieldMetadata } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { IconHelpCircle, IconPhotoPlus, IconX } from "@tabler/icons-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { toast } from "sonner";
 import {
   Button,
   Card,
@@ -66,13 +68,11 @@ import {
   deleteSpaceBlockedDate,
 } from "@/admin/actions/space-blocked-dates";
 import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
-import { SmartLockDevicesField } from "@/admin/components/SmartLockDevicesField";
+import { setSpaceSmartLockDevice } from "@/admin/actions/space-smart-lock-devices";
 import {
-  createSpaceSmartLockDevice,
-  updateSpaceSmartLockDevice,
-  deleteSpaceSmartLockDevice,
-  toggleSpaceSmartLockDeviceActive,
-} from "@/admin/actions/space-smart-lock-devices";
+  isMutationError,
+  type MutationResult,
+} from "@/shared/lib/mutation-result";
 
 const SPACE_EDIT_TAB_VALUES = [
   "basic",
@@ -81,7 +81,6 @@ const SPACE_EDIT_TAB_VALUES = [
   "details",
   "publish",
   "blocked-dates",
-  "smart-lock",
 ] as const satisfies readonly [string, ...string[]];
 
 type SpaceEditTabValue = (typeof SPACE_EDIT_TAB_VALUES)[number];
@@ -101,7 +100,6 @@ const SPACE_EDIT_TAB_LABELS: Record<SpaceEditTabValue, string> = {
   details: "詳細設定",
   publish: "公開・SEO",
   "blocked-dates": "臨時休業",
-  "smart-lock": "スマートロック",
 };
 
 const SELECT_NONE_VALUE = "__none__";
@@ -127,7 +125,7 @@ export type SpaceEditFormProps = {
   taxSettings: TaxSettings;
   reviewsFeatureEnabled: boolean;
   initialBlockedDates?: readonly BlockedDateData[];
-  initialSmartLockDevices?: readonly SmartLockDeviceData[];
+  availableSmartLockDevices?: readonly SmartLockDeviceData[];
 };
 
 type FacilityItem = { key: string; name: string; iconName: string };
@@ -159,7 +157,7 @@ export function SpaceEditForm({
   taxSettings = DEFAULT_TAX_SETTINGS,
   reviewsFeatureEnabled,
   initialBlockedDates = [],
-  initialSmartLockDevices = [],
+  availableSmartLockDevices = [],
 }: SpaceEditFormProps) {
   const isEdit = mode === "edit";
 
@@ -356,9 +354,8 @@ export function SpaceEditForm({
       fields.ogpDescription,
       fields.ogpImageUrl,
     ].filter((f) => fieldHasErrors(f.errors)).length,
-    // 臨時休業 / スマートロックは独立 CRUD（このフォームの送信対象外）のため常に 0
+    // 臨時休業は独立 CRUD（このフォームの送信対象外）のため常に 0
     "blocked-dates": 0,
-    "smart-lock": 0,
   };
 
   const onTabChange = (value: string) => {
@@ -505,8 +502,7 @@ export function SpaceEditForm({
       >
         <TabsList className="h-auto flex-wrap gap-1">
           {SPACE_EDIT_TAB_VALUES.filter(
-            (tab) =>
-              (tab !== "blocked-dates" && tab !== "smart-lock") || isEdit,
+            (tab) => tab !== "blocked-dates" || isEdit,
           ).map((tab) => {
             const errorCount = tabErrorCount[tab];
             return (
@@ -1283,6 +1279,14 @@ export function SpaceEditForm({
                 )}
               </CardContent>
             </Card>
+
+            {isEdit && space && (
+              <SpaceSmartLockDeviceCard
+                spaceId={space.id}
+                initialDeviceId={space.smartLockDeviceId}
+                availableDevices={availableSmartLockDevices}
+              />
+            )}
           </div>
         </TabsContent>
 
@@ -1587,31 +1591,6 @@ export function SpaceEditForm({
             </Card>
           </TabsContent>
         )}
-
-        {/* ============ スマートロック（edit のみ・独立 CRUD） ============ */}
-        {isEdit && space && (
-          <TabsContent
-            value="smart-lock"
-            forceMount
-            className="data-[state=inactive]:hidden"
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle>スマートロック（SwitchBot）デバイス管理</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SmartLockDevicesField
-                  spaceId={space.id}
-                  initialSmartLockDevices={initialSmartLockDevices}
-                  createAction={createSpaceSmartLockDevice}
-                  updateAction={updateSpaceSmartLockDevice}
-                  deleteAction={deleteSpaceSmartLockDevice}
-                  toggleActiveAction={toggleSpaceSmartLockDeviceActive}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
 
       <div className="sticky bottom-0 z-10 mt-6 -mx-4 border-t bg-background px-4 py-4 md:-mx-6 md:px-6">
@@ -1630,5 +1609,107 @@ export function SpaceEditForm({
       {mainImagePicker.mediaPickerDialog}
       {ogpImagePicker.mediaPickerDialog}
     </form>
+  );
+}
+
+type SpaceSmartLockDeviceCardProps = {
+  readonly spaceId: string;
+  readonly initialDeviceId: string | null;
+  readonly availableDevices: readonly SmartLockDeviceData[];
+};
+
+type SetSpaceSmartLockDeviceState = MutationResult<{
+  id: string;
+  smartLockDeviceId: string | null;
+}> | null;
+
+/**
+ * スマートロックデバイスの割り当て（`Space.smartLockDeviceId`）専用の独立フォーム。
+ *
+ * カテゴリー等のスペース属性と異なり、割り当ては別モデル（SmartLockDevice、同一拠点の
+ * 登録簿）への参照更新であり、メインフォームの保存タイミングとは独立してすぐ反映したい
+ * 運用上の要請があるため、`useActionState` で `setSpaceSmartLockDevice` を直接呼び出す。
+ */
+function SpaceSmartLockDeviceCard({
+  spaceId,
+  initialDeviceId,
+  availableDevices,
+}: SpaceSmartLockDeviceCardProps) {
+  const router = useRouter();
+  const [deviceId, setDeviceId] = useState<string>(initialDeviceId ?? "");
+
+  const [saveResult, submitDeviceChange, isSaving] = useActionState<
+    SetSpaceSmartLockDeviceState,
+    string | null
+  >(async (_prevState, nextDeviceId) => {
+    return setSpaceSmartLockDevice(spaceId, nextDeviceId);
+  }, null);
+
+  useEffect(() => {
+    if (!saveResult) return;
+    if (isMutationError(saveResult)) {
+      toast.error(saveResult.error);
+      return;
+    }
+    toast.success("スマートロックデバイスの割り当てを保存しました");
+    router.refresh();
+  }, [saveResult, router]);
+
+  const activeDevices = availableDevices.filter((device) => device.isActive);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>スマートロックデバイス</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitDeviceChange(deviceId === "" ? null : deviceId);
+          }}
+          className="space-y-3"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="space-smartLockDeviceId">割り当てデバイス</Label>
+            {activeDevices.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                同一拠点内に有効なスマートロックデバイスが登録されていません。拠点管理画面から先に登録してください。
+              </p>
+            ) : (
+              <Select
+                value={deviceId === "" ? SELECT_NONE_VALUE : deviceId}
+                onValueChange={(value) =>
+                  setDeviceId(value === SELECT_NONE_VALUE ? "" : value)
+                }
+                disabled={isSaving}
+              >
+                <SelectTrigger id="space-smartLockDeviceId">
+                  <SelectValue placeholder="デバイスを選択（任意、同一拠点内の登録済みデバイスのみ選択可）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
+                  {activeDevices.map((device) => (
+                    <SelectItem key={device.id} value={device.id}>
+                      {device.deviceName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <p className="text-xs text-muted-foreground">
+              入退室パスコードの発行対象デバイスです（無効化されたデバイスは選択肢に表示されません）。デバイスの登録・編集は拠点管理画面から行います。この設定は保存すると即座に反映されます。
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <SubmitButton
+              isPending={isSaving}
+              label="保存"
+              pendingLabel="保存中..."
+            />
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { getLocationById } from "@/admin/queries/location";
 import { getSettings } from "@/admin/queries/settings";
 import { getBlockedDatesForLocation } from "@/shared/domain/blocked-dates/queries";
+import { getSmartLockDevicesForLocation } from "@/shared/domain/smart-lock/queries";
 import {
   getOrganizationSettings,
   getSocialLinkUrls,
@@ -40,14 +41,21 @@ export default async function EditLocationPage({ params }: PageProps) {
   await connection();
 
   const { id } = await params;
-  const [location, settings, socialLinks, fullSettings, initialBlockedDates] =
-    await Promise.all([
-      getLocationById(id),
-      getOrganizationSettings(),
-      getSocialLinkUrls(),
-      getSettings(),
-      getBlockedDatesForLocation(id),
-    ]);
+  const [
+    location,
+    settings,
+    socialLinks,
+    fullSettings,
+    initialBlockedDates,
+    initialSmartLockDevices,
+  ] = await Promise.all([
+    getLocationById(id),
+    getOrganizationSettings(),
+    getSocialLinkUrls(),
+    getSettings(),
+    getBlockedDatesForLocation(id),
+    getSmartLockDevicesForLocation(id),
+  ]);
 
   if (!location) {
     notFound();
@@ -73,6 +81,7 @@ export default async function EditLocationPage({ params }: PageProps) {
         globals={globals}
         gbpEnabledGlobally={fullSettings?.googleBusinessProfileEnabled ?? false}
         initialBlockedDates={initialBlockedDates}
+        initialSmartLockDevices={initialSmartLockDevices}
       />
     </AdminDetailLayout>
   );
