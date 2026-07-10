@@ -12,7 +12,10 @@ import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { getSwitchBotConfig } from "@/shared/domain/settings/api-key-queries";
-import { revokeExpiredSmartLockPasscodes } from "@/shared/domain/smart-lock/revoke-passcode";
+import {
+  findRevocableSmartLockPasscodes,
+  revokeExpiredSmartLockPasscodes,
+} from "@/shared/domain/smart-lock/revoke-passcode";
 import {
   logError,
   normalizeError,
@@ -34,7 +37,31 @@ export async function GET(request: Request) {
 
     const config = await getSwitchBotConfig();
     if (!config.enabled) {
-      return jsonSuccess({ skipped: true, reason: "switchbot_disabled" });
+      // SwitchBot連携が無効でも、失効すべきCONFIRMEDパスコードの蓄積は
+      // DBのみの読取(外部API呼出無し)で検知できる。無効化中に気づかず放置される
+      // （後日デバイス削除でcascade削除されると復元不能になる）のを防ぐため、
+      // 件数だけでも警告ログに残す。
+      const stuck = await findRevocableSmartLockPasscodes(new Date());
+      if (stuck.length > 0) {
+        logError(
+          new Error(
+            "SwitchBot連携が無効な間に失効待ちのパスコードが蓄積しています",
+          ),
+          {
+            category: ErrorCategory.VALIDATION,
+            severity: ErrorSeverity.HIGH,
+            context: {
+              operation: "smartLockCleanupCron",
+              stuckCount: stuck.length,
+            },
+          },
+        );
+      }
+      return jsonSuccess({
+        skipped: true,
+        reason: "switchbot_disabled",
+        stuckCount: stuck.length,
+      });
     }
 
     const { revoked, failed } = await revokeExpiredSmartLockPasscodes(

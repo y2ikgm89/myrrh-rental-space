@@ -17,6 +17,9 @@ const mockGetSwitchBotConfig = mock<() => Promise<{ enabled: boolean }>>(() =>
 const mockRevokeExpiredSmartLockPasscodes = mock<
   (now: Date) => Promise<{ revoked: number; failed: number }>
 >(() => Promise.resolve({ revoked: 0, failed: 0 }));
+const mockFindRevocableSmartLockPasscodes = mock<
+  (now: Date) => Promise<unknown[]>
+>(() => Promise.resolve([]));
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 const mockConnection = mock<() => Promise<void>>(() => Promise.resolve());
 const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
@@ -44,6 +47,8 @@ mock.module("@/shared/domain/settings/api-key-queries", () => ({
 mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeExpiredSmartLockPasscodes: (now: Date) =>
     mockRevokeExpiredSmartLockPasscodes(now),
+  findRevocableSmartLockPasscodes: (now: Date) =>
+    mockFindRevocableSmartLockPasscodes(now),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -82,6 +87,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
     mockAuthorizeCronRequest.mockReset();
     mockGetSwitchBotConfig.mockReset();
     mockRevokeExpiredSmartLockPasscodes.mockReset();
+    mockFindRevocableSmartLockPasscodes.mockReset();
     mockLogError.mockReset();
     mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
@@ -93,6 +99,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
       revoked: 0,
       failed: 0,
     });
+    mockFindRevocableSmartLockPasscodes.mockResolvedValue([]);
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
     });
@@ -119,8 +126,33 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual({ skipped: true, reason: "switchbot_disabled" });
+    expect(body).toEqual({
+      skipped: true,
+      reason: "switchbot_disabled",
+      stuckCount: 0,
+    });
     expect(mockRevokeExpiredSmartLockPasscodes).not.toHaveBeenCalled();
+    expect(mockLogError).not.toHaveBeenCalled();
+  });
+
+  test("SwitchBot連携がOFFで失効待ちが蓄積している → stuckCountを返しHIGHでlogErrorする", async () => {
+    mockGetSwitchBotConfig.mockResolvedValue({ enabled: false });
+    mockFindRevocableSmartLockPasscodes.mockResolvedValue([
+      { id: "p1" },
+      { id: "p2" },
+    ]);
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({
+      skipped: true,
+      reason: "switchbot_disabled",
+      stuckCount: 2,
+    });
+    expect(mockRevokeExpiredSmartLockPasscodes).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
   test("失効対象なし → revoked:0, failed:0 を返す", async () => {
