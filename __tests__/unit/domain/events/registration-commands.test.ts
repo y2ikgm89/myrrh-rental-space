@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { EventStatus, RegistrationStatus } from "@generated/prisma/enums";
+import {
+  CustomerStatus,
+  EventStatus,
+  RegistrationStatus,
+} from "@generated/prisma/enums";
 
 // ---------------------------------------------------------------------------
 // mock 関数定義（import より前）
@@ -71,6 +75,12 @@ const mockExecuteRaw = mock<(...args: unknown[]) => Promise<number>>(() =>
 const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
+const mockCustomerFindUnique = mock<
+  () => Promise<{ status: CustomerStatus } | null>
+>(() => Promise.resolve(null));
+const mockCustomerFindFirst = mock<
+  () => Promise<{ status: CustomerStatus } | null>
+>(() => Promise.resolve(null));
 
 mock.module("server-only", () => ({}));
 
@@ -90,6 +100,10 @@ mock.module("@/shared/db/prisma", () => {
       aggregate: mockRegistrationAggregate,
       create: mockRegistrationCreate,
     },
+    customer: {
+      findUnique: mockCustomerFindUnique,
+      findFirst: mockCustomerFindFirst,
+    },
   };
   return {
     prisma: {
@@ -104,6 +118,7 @@ mock.module("@/shared/db/prisma", () => {
 });
 
 mock.module("@generated/prisma/enums", () => ({
+  CustomerStatus,
   EventStatus,
   RegistrationStatus,
 }));
@@ -162,6 +177,8 @@ describe("createEventRegistrationCommand", () => {
     mockRegistrationAggregate.mockReset();
     mockRegistrationCreate.mockReset();
     mockIsFeatureEnabled.mockReset();
+    mockCustomerFindUnique.mockReset();
+    mockCustomerFindFirst.mockReset();
 
     mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
     mockEventFindFirst.mockImplementation(() => Promise.resolve(BASE_EVENT));
@@ -181,6 +198,8 @@ describe("createEventRegistrationCommand", () => {
         icsSequence: 0,
       }),
     );
+    mockCustomerFindUnique.mockImplementation(() => Promise.resolve(null));
+    mockCustomerFindFirst.mockImplementation(() => Promise.resolve(null));
   });
 
   afterEach(() => {
@@ -258,6 +277,45 @@ describe("createEventRegistrationCommand", () => {
       await expect(
         createEventRegistrationCommand({ ...VALID_INPUT, quantity: 5 }),
       ).rejects.toThrow("残り2枠");
+    });
+  });
+
+  describe("BLACKLIST guard", () => {
+    test("ログイン済み(customerId指定)のBLACKLIST顧客は拒否される", async () => {
+      mockCustomerFindUnique.mockImplementation(() =>
+        Promise.resolve({ status: CustomerStatus.BLACKLIST }),
+      );
+
+      await expect(
+        createEventRegistrationCommand({
+          ...VALID_INPUT,
+          customerId: "cust-blacklisted",
+        }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+      expect(mockRegistrationCreate).not.toHaveBeenCalled();
+    });
+
+    test("既存ゲストBLACKLIST Customerと同じメールのゲスト申込は拒否される", async () => {
+      mockCustomerFindFirst.mockImplementation(() =>
+        Promise.resolve({ status: CustomerStatus.BLACKLIST }),
+      );
+
+      await expect(
+        createEventRegistrationCommand({ ...VALID_INPUT }),
+      ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+      expect(mockCustomerFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { emailCanonical: "yamada@example.com", userId: null },
+        }),
+      );
+      expect(mockRegistrationCreate).not.toHaveBeenCalled();
+    });
+
+    test("BLACKLISTでなければ通常通り申込が作成される", async () => {
+      const result = await createEventRegistrationCommand(VALID_INPUT);
+      expect(result.registration.id).toBe("reg-1");
     });
   });
 
