@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { EventStatus, RegistrationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { applyEventRegistrationCancellation } from "./registration-cancel-core";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
@@ -42,6 +43,11 @@ export async function createEventRegistrationCommand(data: {
       // pg_advisory_xact_lock は void を返すため、結果セットを読まない $executeRaw を
       // 使う（$queryRaw は void 列の deserialize に失敗する）。
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(728350::int4, hashtext(${data.eventId}))`;
+
+      await ensureCustomerNotBlacklisted(
+        { customerId: data.customerId ?? null, email: data.email },
+        tx,
+      );
 
       const event = await tx.event.findFirst({
         where: {
