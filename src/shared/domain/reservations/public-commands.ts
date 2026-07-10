@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { CustomerType, ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { resolveOrCreateCustomer } from "@/shared/domain/reservations/resolve-customer";
 import {
@@ -152,6 +153,8 @@ export async function createPublicReservationCommand(
       },
       tx,
     );
+
+    await ensureCustomerNotBlacklisted({ customerId }, tx);
 
     const created = await tx.reservation.create({
       data: {
