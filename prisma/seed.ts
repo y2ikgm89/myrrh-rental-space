@@ -454,10 +454,13 @@ async function seedSettings(options: { resetFeatureModules?: boolean } = {}) {
     headerLogoUrl: "/images/seed/logo-header.svg",
     footerLogoUrl: "/images/seed/logo-footer.svg",
 
-    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
-    senderEmail: "noreply@example.com",
+    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）。
+    // senderEmail は未設定なら client.ts のハードコード既定値と同値になるため null で
+    // 開始して問題ない。replyToEmail は env レイヤーが無く DB 値がそのまま全送信メールの
+    // Reply-To になるため、実在しない example.com のダミー値を入れない（null=ヘッダー無し）。
+    senderEmail: null,
     senderName: "Myrrh Rental Space",
-    replyToEmail: "support@example.com",
+    replyToEmail: null,
   };
 
   const featureModules = resolveSeedFeatureModules();
@@ -4716,7 +4719,9 @@ async function seedProduction(email: string | undefined, name: string) {
   console.log(
     "📝 テンプレートデータが作成されました。管理画面で本番データに更新してください:",
   );
-  console.log("   /admin/settings  — 会社名・住所・連絡先");
+  console.log(
+    "   /admin/settings  — 会社名・住所・連絡先・メール設定（送信元/返信先）",
+  );
   console.log("   /admin/locations — 実際の拠点情報");
   console.log("   /admin/spaces    — 実際のスペース・料金");
   console.log("   /admin/pages     — 公開ページのコンテンツ");
