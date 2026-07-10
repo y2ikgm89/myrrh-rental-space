@@ -3,11 +3,13 @@
 import { useQueryStates } from "nuqs";
 import { BaseFilters, type StatusOption } from "@/admin/components/table";
 import {
+  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
 } from "@/admin/components/ui";
 import {
   CUSTOMER_TYPE_FILTER_ALL,
@@ -49,6 +51,10 @@ export function CustomerFilters() {
     void setParams({ customerType: next, page: 1 });
   };
 
+  const handleFlaggedOnlyChange = (checked: boolean) => {
+    void setParams({ flaggedOnly: checked, page: 1 });
+  };
+
   return (
     <BaseFilters
       statusOptions={CUSTOMER_STATUS_OPTIONS}
@@ -67,6 +73,16 @@ export function CustomerFilters() {
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          id="flagged-only"
+          checked={params.flaggedOnly}
+          onCheckedChange={handleFlaggedOnlyChange}
+        />
+        <Label htmlFor="flagged-only" className="whitespace-nowrap">
+          要注意のみ
+        </Label>
       </div>
     </BaseFilters>
   );

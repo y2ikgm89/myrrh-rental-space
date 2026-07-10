@@ -658,6 +658,7 @@ export const NOTIFICATION_TYPE = {
   EVENT_REGISTRATION: "event_registration",
   EVENT_REGISTRATION_CANCEL: "event_registration_cancel",
   FAQ_STALE: "faq_stale",
+  CUSTOMER_FLAGGED: "customer_flagged",
 } as const;
 
 export type NotificationType =
@@ -682,6 +683,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "イベント申込キャンセル",
   [NOTIFICATION_TYPE.FAQ_STALE]: "FAQ 鮮度チェック",
+  [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "要注意顧客の検知",
 };
 
 /**
@@ -703,7 +705,42 @@ export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "IconUsersGroup",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "IconX",
   [NOTIFICATION_TYPE.FAQ_STALE]: "IconQuestionMark",
+  [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "IconAlertTriangle",
 };
+
+// =============================================================================
+// Customer Risk Flag Reason（customer-risk-scan cronの検知理由コード）
+// =============================================================================
+
+export const RISK_FLAG_REASON = {
+  RAPID_BOOKING: "rapid_booking",
+  FREQUENT_CANCELLATION: "frequent_cancellation",
+  REPEATED_NO_SHOW: "repeated_no_show",
+} as const;
+
+export type RiskFlagReason =
+  (typeof RISK_FLAG_REASON)[keyof typeof RISK_FLAG_REASON];
+
+export const RISK_FLAG_REASON_LABELS: Record<RiskFlagReason, string> = {
+  [RISK_FLAG_REASON.RAPID_BOOKING]: "短時間に多数の予約/申込",
+  [RISK_FLAG_REASON.FREQUENT_CANCELLATION]: "繰り返しキャンセル",
+  [RISK_FLAG_REASON.REPEATED_NO_SHOW]: "無断キャンセル(NO_SHOW)多発",
+};
+
+const VALID_RISK_FLAG_REASONS = new Set<string>(
+  Object.values(RISK_FLAG_REASON),
+);
+
+export function isValidRiskFlagReason(value: string): value is RiskFlagReason {
+  return VALID_RISK_FLAG_REASONS.has(value);
+}
+
+/** DBに保存された理由コードをラベルに変換する。未知コードはそのまま表示する。 */
+export function getRiskFlagReasonLabel(reason: string): string {
+  return isValidRiskFlagReason(reason)
+    ? RISK_FLAG_REASON_LABELS[reason]
+    : reason;
+}
 
 export type ReservationAction = "new" | "update" | "cancel";
 
@@ -734,6 +771,7 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "destructive",
   [NOTIFICATION_TYPE.FAQ_STALE]: "warning",
+  [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "destructive",
 };
 
 // =============================================================================

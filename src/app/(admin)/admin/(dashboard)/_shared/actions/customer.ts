@@ -31,6 +31,7 @@ import {
   updateCustomerStatus as updateCustomerStatusCommand,
 } from "@/shared/domain/customers/commands";
 import { searchCustomers } from "@/shared/domain/customers/queries";
+import { clearRiskFlagCommand } from "@/shared/domain/customers/risk-detection";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -165,6 +166,34 @@ export async function toggleCustomerActive(
     resourceId: validated.data,
     execute: async () => {
       await toggleCustomerActiveCommand(validated.data);
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(validated.data));
+    },
+  });
+}
+
+/**
+ * customer-risk-scan cron が付与した要注意フラグを管理者が手動で解除する
+ * (誤検知時)。自動BLACKLIST化等は行わないため、フラグ解除自体は
+ * ステータス変更を伴わない単純なクリア操作。
+ */
+export async function clearCustomerRiskFlag(
+  id: string,
+): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      await clearRiskFlagCommand(validated.data);
       return null;
     },
     afterSuccess: () => {

@@ -48,6 +48,10 @@ function buildCustomerWhere(filters: CustomerFilters): CustomerWhereInput {
     where.isActive = filters.isActive;
   }
 
+  if (filters.flaggedOnly) {
+    where.flaggedForReviewAt = { not: null };
+  }
+
   if (filters.search) {
     where.OR = [
       { firstName: { contains: filters.search, mode: "insensitive" } },
@@ -101,6 +105,8 @@ export async function getCustomers(
         marketingOptIn: true,
         phoneContactOptIn: true,
         userId: true,
+        flaggedForReviewAt: true,
+        flagReasons: true,
         createdAt: true,
         updatedAt: true,
         reservations: {
@@ -140,6 +146,8 @@ export async function getCustomers(
       marketingOptIn: customer.marketingOptIn,
       phoneContactOptIn: customer.phoneContactOptIn,
       userId: customer.userId,
+      flaggedForReviewAt: customer.flaggedForReviewAt?.toISOString() ?? null,
+      flagReasons: customer.flagReasons,
       createdAt: customer.createdAt.toISOString(),
       updatedAt: customer.updatedAt.toISOString(),
       latestGuestName: latestReservation
@@ -219,6 +227,8 @@ export async function getCustomerById(
     marketingOptIn: customer.marketingOptIn,
     phoneContactOptIn: customer.phoneContactOptIn,
     userId: customer.userId,
+    flaggedForReviewAt: customer.flaggedForReviewAt?.toISOString() ?? null,
+    flagReasons: customer.flagReasons,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
     reservations: customer.reservations.map((reservation) => ({
