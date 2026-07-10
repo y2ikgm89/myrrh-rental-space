@@ -6,8 +6,9 @@
 
 import "server-only";
 import { randomInt } from "crypto";
+import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { decrypt, encrypt } from "@/shared/lib/crypto";
+import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import {
   createPasscode,
@@ -16,6 +17,7 @@ import {
 } from "@/shared/lib/smart-lock/switchbot-client";
 import {
   logError,
+  normalizeError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
@@ -47,17 +49,70 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
 /**
  * `createKey`実行時にSwitchBotへ送る`name`を決定論的に組み立てる。
  * Webhook受信側（`switchbotCommandId`からreservationId/deviceIdは分かるがnameは
  * 保持していない）が、同じ入力から同じ`name`を再計算して`keyList`突合に使うために
  * exportする。
+ *
+ * ハイフンを除去した上で16文字（64bit相当のエントロピー）を採る。8文字
+ * （32bit）のままだと、同一デバイスに対する予約が数万件規模に達した場合の
+ * 誕生日衝突で別予約のkeyListエントリを誤って突合してしまうリスクがあった。
  */
 export function buildPasscodeName(
   reservationId: string,
   deviceRowId: string,
 ): string {
-  return `res-${reservationId.slice(0, 8)}-${deviceRowId.slice(0, 8)}`;
+  const reservationPart = reservationId.replace(/-/g, "").slice(0, 16);
+  const devicePart = deviceRowId.replace(/-/g, "").slice(0, 16);
+  return `res-${reservationPart}-${devicePart}`;
+}
+
+function decryptConfirmedPasscode(
+  passcodeCiphertext: string,
+  deviceName: string,
+  reservationId: string,
+): IssuedSmartLockPasscode | null {
+  const passcode = safeDecrypt(passcodeCiphertext);
+  if (passcode === null) {
+    logError(new Error("既存のCONFIRMED済みパスコードの復号に失敗しました"), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: "issueSmartLockPasscodes", reservationId },
+    });
+    return null;
+  }
+  return { deviceName, passcode };
+}
+
+/**
+ * `@@unique([reservationId, deviceId])`の競合（同時issueForDevice呼出）を検知した際、
+ * 既に作成済みの行を読み直して結果を解決する。呼び出し元が例外を投げないための
+ * リカバリ経路。
+ */
+async function resolveAfterCreateConflict(
+  reservationId: string,
+  deviceId: string,
+  deviceName: string,
+): Promise<IssuedSmartLockPasscode | null> {
+  const existing = await prisma.smartLockPasscode.findUnique({
+    where: { reservationId_deviceId: { reservationId, deviceId } },
+  });
+  if (!existing || existing.status !== "CONFIRMED") {
+    return null;
+  }
+  return decryptConfirmedPasscode(
+    existing.passcodeCiphertext,
+    deviceName,
+    reservationId,
+  );
 }
 
 async function issueForDevice(
@@ -76,18 +131,32 @@ async function issueForDevice(
   const password = generatePasscode();
   const name = buildPasscodeName(input.reservationId, device.id);
 
-  const passcodeRow = await prisma.smartLockPasscode.create({
-    data: {
-      reservationId: input.reservationId,
-      deviceId: device.id,
-      status: "PENDING",
-      passcodeCiphertext: encrypt(password, {
-        purpose: PASSCODE_CRYPTO_PURPOSE,
-      }),
-      startTime: bufferedStart,
-      endTime: bufferedEnd,
-    },
-  });
+  let passcodeRow: { id: string };
+  try {
+    passcodeRow = await prisma.smartLockPasscode.create({
+      data: {
+        reservationId: input.reservationId,
+        deviceId: device.id,
+        status: "PENDING",
+        passcodeCiphertext: encrypt(password, {
+          purpose: PASSCODE_CRYPTO_PURPOSE,
+        }),
+        startTime: bufferedStart,
+        endTime: bufferedEnd,
+      },
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      // 同時に別のリクエストが同じ予約+デバイスの組で先にcreateしていた
+      // （二重送信・admin操作の同時実行等）。先勝ちの結果をそのまま採用する。
+      return resolveAfterCreateConflict(
+        input.reservationId,
+        device.id,
+        device.deviceName,
+      );
+    }
+    throw error;
+  }
 
   const createResult = await createPasscode(credentials, {
     deviceId: device.deviceId,
@@ -130,14 +199,31 @@ async function issueForDevice(
 
     const match = statusResult.body.keyList?.find((key) => key.name === name);
     if (match) {
-      await prisma.smartLockPasscode.update({
-        where: { id: passcodeRow.id },
+      // webhook側の高速パスが同じ行を先に確定/失効させている可能性があるため、
+      // status="PENDING"をWHEREに含めたclaim形で書き込む（webhook-commands.ts の
+      // processSwitchBotChangeReport と同型）。
+      const updated = await prisma.smartLockPasscode.updateMany({
+        where: { id: passcodeRow.id, status: "PENDING" },
         data: {
           status: "CONFIRMED",
           switchbotKeyId: match.id,
           confirmedAt: new Date(),
         },
       });
+      if (updated.count === 0) {
+        // 同一のcreateKey呼出・同一の物理パスコードに対する別経路（webhook）の
+        // 確定と競合した。既にCONFIRMEDならこの呼び出しのpasswordをそのまま
+        // 返してよい（webhookが記録したswitchbotKeyIdも同じkeyListエントリを
+        // 指すため）。FAILEDに倒れていた場合のみ発行失敗として扱う。
+        const current = await prisma.smartLockPasscode.findUnique({
+          where: { id: passcodeRow.id },
+          select: { status: true },
+        });
+        if (current?.status === "CONFIRMED") {
+          return { deviceName: device.deviceName, passcode: password };
+        }
+        return null;
+      }
       return { deviceName: device.deviceName, passcode: password };
     }
   }
@@ -170,62 +256,80 @@ async function issueForDevice(
  * - 同一予約・同一デバイスの組は既存レコードがあれば再発行しない（`@@unique`で保証、
  *   このチェックはAPI呼出前の重複防止用）。既にCONFIRMED済みなら復号して結果に含める。
  * - 発行成功・失敗どちらの場合も呼び出し元の処理（確認メール送信）をブロックしないよう
- *   例外は投げない設計とし、失敗した場合は戻り値に含めない（管理者はDBの
- *   FAILEDレコードで事後確認できる）。
+ *   例外は投げない設計。呼び出し元は全てfireAndForget経由でこの関数の完了を待って
+ *   から確認メールを送るため、ここで例外が漏れると確認メール自体が送られなくなる
+ *   （関数全体をtry/catchで包んで契約を保証する）。
  * - 同一デバイスが複数スペースから参照され得る（物理ロック共有）が、
  *   `@@unique([reservationId, deviceId])`のため予約単位では重複発行されない。
  */
 export async function issueSmartLockPasscodes(
   input: IssueSmartLockPasscodesInput,
 ): Promise<IssuedSmartLockPasscode[]> {
-  const space = await prisma.space.findUnique({
-    where: { id: input.spaceId },
-    select: { smartLockDevice: true },
-  });
-  const device = space?.smartLockDevice;
-  if (!device || !device.isActive) return [];
+  try {
+    const space = await prisma.space.findUnique({
+      where: { id: input.spaceId },
+      select: { smartLockDevice: true },
+    });
+    const device = space?.smartLockDevice;
+    if (!device || !device.isActive) return [];
 
-  const credentials = await getDecryptedSwitchBotCredentials();
-  if (!credentials) {
-    logError(
-      new Error(
-        "SmartLockDeviceが割り当てられているがSwitchBot連携が未設定/無効です",
-      ),
-      {
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.HIGH,
-        context: {
-          operation: "issueSmartLockPasscodes",
+    const credentials = await getDecryptedSwitchBotCredentials();
+    if (!credentials) {
+      logError(
+        new Error(
+          "SmartLockDeviceが割り当てられているがSwitchBot連携が未設定/無効です",
+        ),
+        {
+          category: ErrorCategory.VALIDATION,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "issueSmartLockPasscodes",
+            reservationId: input.reservationId,
+            spaceId: input.spaceId,
+          },
+        },
+      );
+      return [];
+    }
+
+    const existing = await prisma.smartLockPasscode.findUnique({
+      where: {
+        reservationId_deviceId: {
           reservationId: input.reservationId,
-          spaceId: input.spaceId,
+          deviceId: device.id,
         },
       },
-    );
-    return [];
-  }
+    });
 
-  const existing = await prisma.smartLockPasscode.findUnique({
-    where: {
-      reservationId_deviceId: {
-        reservationId: input.reservationId,
-        deviceId: device.id,
-      },
-    },
-  });
-
-  if (existing) {
-    if (existing.status === "CONFIRMED") {
-      const passcode = decrypt(existing.passcodeCiphertext);
-      return [{ deviceName: device.deviceName, passcode }];
+    if (existing) {
+      if (existing.status === "CONFIRMED") {
+        const resolved = decryptConfirmedPasscode(
+          existing.passcodeCiphertext,
+          device.deviceName,
+          input.reservationId,
+        );
+        return resolved ? [resolved] : [];
+      }
+      return [];
     }
+
+    const issued = await issueForDevice(
+      device,
+      input,
+      credentials,
+      credentials.passcodeBufferMinutes,
+    );
+    return issued ? [issued] : [];
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.UNKNOWN,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "issueSmartLockPasscodes",
+        reservationId: input.reservationId,
+        spaceId: input.spaceId,
+      },
+    });
     return [];
   }
-
-  const issued = await issueForDevice(
-    device,
-    input,
-    credentials,
-    credentials.passcodeBufferMinutes,
-  );
-  return issued ? [issued] : [];
 }

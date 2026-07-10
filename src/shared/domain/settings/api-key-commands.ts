@@ -8,6 +8,18 @@ import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import type { CustomApiKeyInput } from "@/shared/types/api-keys";
 import { parseCustomApiKeysMap } from "@/shared/domain/settings/api-key-helpers";
+import {
+  getDecryptedSwitchBotCredentials,
+  getSwitchBotWebhookAuth,
+} from "@/shared/domain/settings/api-key-queries";
+import { revokeOne } from "@/shared/domain/smart-lock/revoke-passcode";
+import { deleteWebhook } from "@/shared/lib/smart-lock/switchbot-client";
+import { getAppUrl } from "@/shared/lib/constants";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 
 async function upsertSettings(
   updateData: Omit<Prisma.SettingsCreateInput, "id">,
@@ -184,7 +196,75 @@ export async function recordSwitchBotConnectionStatus(
   });
 }
 
+/**
+ * SwitchBot連携をクリアする前に、まだ生きている（PENDING/CONFIRMED）パスコードを
+ * 現在の資格情報で失効させておく。クリア後は資格情報自体が失われ、二度と
+ * deleteKeyできなくなる（物理ドアのパスコードが失効不能なまま残る）ため。
+ */
 export async function clearSwitchBotSettings(): Promise<void> {
+  const credentials = await getDecryptedSwitchBotCredentials();
+  // 資格情報が既に復号できない（無効化済み・未設定等）場合はこれ以上できることが
+  // 無いため、そのままクリアを許可する。
+  if (credentials) {
+    const livePasscodes = await prisma.smartLockPasscode.findMany({
+      where: { status: { in: ["PENDING", "CONFIRMED"] } },
+      select: {
+        id: true,
+        status: true,
+        switchbotKeyId: true,
+        device: { select: { deviceId: true } },
+      },
+    });
+
+    if (livePasscodes.some((p) => p.status === "PENDING")) {
+      throw new DomainError(
+        "発行処理中のパスコードが残っているため連携をクリアできません。しばらく待ってから再試行してください",
+        "VALIDATION",
+      );
+    }
+
+    const confirmedPasscodes = livePasscodes.filter(
+      (p) => p.status === "CONFIRMED",
+    );
+    if (confirmedPasscodes.length > 0) {
+      const results = await Promise.all(
+        confirmedPasscodes.map((p) =>
+          revokeOne(credentials, {
+            id: p.id,
+            switchbotKeyId: p.switchbotKeyId,
+            device: { deviceId: p.device.deviceId },
+          }),
+        ),
+      );
+      if (results.some((ok) => !ok)) {
+        throw new DomainError(
+          "一部のパスコードの失効に失敗したため連携をクリアできません。時間をおいて再試行してください",
+          "VALIDATION",
+        );
+      }
+    }
+
+    // 資格情報が失われた後は二度とdeleteWebhookできず、SwitchBot側に古いwebhook登録が
+    // 残り続けてしまうため、クリアする前にベストエフォートで解除しておく
+    // （失敗してもクリア自体はブロックしない。既に未登録の場合もSwitchBot側がエラーを
+    // 返すだけで実害は無い）。
+    const { pathToken } = await getSwitchBotWebhookAuth();
+    if (pathToken) {
+      const url = `${getAppUrl()}/api/webhooks/switchbot/${pathToken}`;
+      const result = await deleteWebhook(credentials, url);
+      if (!result.ok) {
+        logError(new Error("SwitchBot webhook解除に失敗しました"), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "clearSwitchBotSettings",
+            message: result.message,
+          },
+        });
+      }
+    }
+  }
+
   await upsertSettings({
     switchbotEnabled: false,
     switchbotOpenToken: null,

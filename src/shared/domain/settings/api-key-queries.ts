@@ -227,21 +227,26 @@ export async function getDecryptedSwitchBotCredentials(): Promise<{
 }
 
 /**
- * Webhook URL難読化用トークンを復号して返す。未設定なら null。
+ * Webhook URL難読化用トークンと連携の有効状態を返す（webhook route の認可用）。
+ * `switchbotEnabled: false` の間は、正しいトークンでも常に無効として扱う
+ * （設定画面のトグルOFFがwebhook経路も含めた実効的なkill switchになるように）。
+ * "use cache" を使わず直接DBを読むのは、無効化の即時反映を保証するため。
  */
-export async function getDecryptedSwitchBotWebhookPathToken(): Promise<
-  string | null
-> {
+export async function getSwitchBotWebhookAuth(): Promise<{
+  readonly enabled: boolean;
+  readonly pathToken: string | null;
+}> {
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
-    select: { switchbotWebhookPathToken: true },
+    select: { switchbotEnabled: true, switchbotWebhookPathToken: true },
   });
 
-  if (!settings?.switchbotWebhookPathToken) {
-    return null;
-  }
-
-  return safeDecrypt(settings.switchbotWebhookPathToken);
+  return {
+    enabled: settings?.switchbotEnabled ?? false,
+    pathToken: settings?.switchbotWebhookPathToken
+      ? safeDecrypt(settings.switchbotWebhookPathToken)
+      : null,
+  };
 }
 
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
