@@ -23,7 +23,6 @@
  */
 
 import type Stripe from "stripe";
-import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import {
   claimReservationAsPaid,
@@ -32,7 +31,8 @@ import {
   savePaymentIntentId,
   findReservationByPaymentIntent,
 } from "@/shared/domain/reservations/payment-queries";
-import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { safeDecrypt } from "@/shared/lib/crypto";
 import {
   logError,
@@ -184,14 +184,18 @@ function extractReservationId(
 
 /**
  * 予約キャッシュを無効化（共通）
+ *
+ * webhook では `revalidateTag(tag, CACHE_LIFE.DYNAMIC_DATA)` の SWR ではなく
+ * `invalidateSiteWideCacheFromRouteHandler` 経由の `{expire:0}` を使う。
+ * Stripe 公式 fulfillment ガイドラインに沿った即時反映のため。
+ * @see https://docs.stripe.com/payments/checkout/fulfill-orders
  */
 function invalidateReservationCache(reservationId: string): void {
-  revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
-  revalidateTag(
+  invalidateSiteWideCacheFromRouteHandler([
+    CACHE_TAGS.RESERVATIONS,
     getCacheTag.reservations.detail(reservationId),
-    CACHE_LIFE.DYNAMIC_DATA,
-  );
-  revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
+    getCacheTag.reservations.calendar(),
+  ]);
 }
 
 /**

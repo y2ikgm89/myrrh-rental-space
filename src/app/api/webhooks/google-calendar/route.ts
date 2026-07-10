@@ -14,8 +14,8 @@
 
 import crypto from "node:crypto";
 import { unstable_rethrow } from "next/navigation";
-import { revalidateTag } from "next/cache";
-import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 
 /**
@@ -190,9 +190,14 @@ export async function POST(request: Request) {
       return acknowledgeNotification({ processing: "sync_failed" });
     }
 
-    // キャッシュ無効化: カレンダー同期後に予約データを最新化
-    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
-    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
+    // キャッシュ無効化: カレンダー同期後に予約データを最新化。
+    // webhook は Google Calendar 側の変更を反映する経路のため、SWR ではなく
+    // `{expire:0}` の blocking immediate-expire を使う（invalidateSiteWideCache-
+    // FromRouteHandler 経由。cron / Route Handler 用の canonical pattern）。
+    invalidateSiteWideCacheFromRouteHandler([
+      CACHE_TAGS.RESERVATIONS,
+      getCacheTag.reservations.calendar(),
+    ]);
 
     return acknowledgeNotification({
       processed: result.processed,

@@ -341,47 +341,40 @@ export async function findGuestCustomerByEmailExcept(
 }
 
 /**
- * sendEmail() の suppression 判定用に bulk fetch する。
+ * sendEmail() の suppression 判定用の canonical email Set を返す。
  *
- * 引数 `emails` の中で `emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED`
- * の宛先のみを `Set<email>` で返す。N×sequential `findUnique` を 1 回の
- * `findMany` + WHERE IN に置換することで hot path（送信前 check）の DB
- * round-trip を排除する。
+ * `emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED` の全 Customer の
+ * `emailCanonical` を `Set<canonical>` で返す。呼び出し側は
+ * `normalizeEmailForIdentity(recipient)` で canonicalize して `.has()` で判定する。
  *
- * Next.js 16 公式 `'use cache'` + `cacheTag(SUPPRESSED_EMAILS)` で短期 cache
- * に乗せ、Resend webhook（bounce / complaint 受信）の `revalidateTag` で
- * 即時 invalidate される。`cacheLife("minutes")` は webhook lag を許容する
- * 短期 staleness（最新の bounce 反映までの最大遅延）。
+ * ## Cache key に PII を焼き込まない設計
  *
- * 顧客が DB に存在しない宛先（system / staff / inquiry guest）は Set に含まれない
- * → 呼び出し側は「観測なし＝送信続行」として扱う。
+ * 以前は `getSuppressedEmailSet(emails: string[])` として raw recipient 配列を
+ * 引数に取り、Next.js の `'use cache'` semantics でその **raw email 配列自体が
+ * cache key** になる形になっていた（audit finding N16-1）。data cache に生の
+ * メールアドレスが焼き込まれる silent PII leak。引数を撤去し「全 suppressed
+ * emails を canonical 集合として返す」形にすることで cache key を撲滅する。
+ *
+ * suppressed emails は現実的に少数（bounce / complaint 受信分のみ）で
+ * `emailCanonical` に unique index があるため、全件返しても hot path 影響は無い。
+ * cache hit rate はむしろ上がる（全メール送信で単一 cache を共有）。
+ *
+ * ## Invalidation / 顧客不在の宛先
+ *
+ * `cacheTag(SUPPRESSED_EMAILS)` で Resend webhook (bounce/complaint) の
+ * `revalidateTag` で即時 invalidate。顧客 DB に存在しない宛先（system / staff /
+ * inquiry guest）は Set に含まれない → 呼び出し側は「観測なし＝送信続行」。
  *
  * @see https://nextjs.org/docs/app/api-reference/directives/use-cache
  * @see https://nextjs.org/docs/app/api-reference/functions/revalidateTag
  */
-export async function getSuppressedEmailSet(
-  emails: readonly string[],
-): Promise<Set<string>> {
+export async function getSuppressedEmailSet(): Promise<Set<string>> {
   "use cache";
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);
   cacheTag(CACHE_TAGS.SUPPRESSED_EMAILS);
 
-  if (emails.length === 0) return new Set();
-
-  const canonicalToOriginals = new Map<string, string[]>();
-  for (const email of emails) {
-    const canonical = normalizeEmailForIdentity(email);
-    const originals = canonicalToOriginals.get(canonical);
-    if (originals) {
-      originals.push(email);
-    } else {
-      canonicalToOriginals.set(canonical, [email]);
-    }
-  }
-
   const rows = await prisma.customer.findMany({
     where: {
-      emailCanonical: { in: [...canonicalToOriginals.keys()] },
       emailDeliveryStatus: {
         in: [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED],
       },
@@ -389,13 +382,7 @@ export async function getSuppressedEmailSet(
     select: { emailCanonical: true },
   });
 
-  const suppressed = new Set<string>();
-  for (const row of rows) {
-    for (const original of canonicalToOriginals.get(row.emailCanonical) ?? []) {
-      suppressed.add(original);
-    }
-  }
-  return suppressed;
+  return new Set(rows.map((row) => row.emailCanonical));
 }
 
 export async function getCustomerByUserId(userId: string) {
