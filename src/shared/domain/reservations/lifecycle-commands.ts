@@ -96,10 +96,15 @@ export async function updateReservationStatusCommand(
 
   return {
     previousStatus,
-    spaceId: reservation.spaceId,
-    googleCalendarEventId: reservation.googleCalendarEventId,
-    customerId: reservation.customerId,
-    couponId: reservation.couponId,
+    // spaceId 等も source（claim 後の読み直し）から取る。stale な reservation の
+    // spaceId のままだと、並行編集でスペースが差し替わっていた場合に
+    // issueSmartLockAndSendConfirmationEmail が古いスペース（＝古い物理ドア）へ
+    // パスコードを発行してしまう（確認メール自体は source ベースで新スペースの
+    // 内容を表示するため、内容とパスコード発行先が食い違う）。
+    spaceId: source.spaceId,
+    googleCalendarEventId: source.googleCalendarEventId,
+    customerId: source.customerId,
+    couponId: source.couponId,
     payload: buildPayload({
       reservationId: id,
       customer: source.customer,
