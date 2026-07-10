@@ -133,41 +133,48 @@ export async function setSpaceSmartLockDeviceCommand(
   spaceId: string,
   deviceId: string | null,
 ): Promise<{ id: string; smartLockDeviceId: string | null }> {
-  const space = await prisma.space.findUnique({
-    where: { id: spaceId },
-    select: { id: true, locationId: true },
-  });
-  if (!space) {
-    throw new DomainError("スペースが見つかりません", "NOT_FOUND");
-  }
+  return prisma.$transaction(async (tx) => {
+    // updateSpaceCommand の拠点変更判定（同じ 728352 lock namespace）と直列化する。
+    // ロックなしでは、この読取と update の間に拠点変更が挟まった場合、
+    // 異なる拠点のデバイスが残ってしまう（Codexレビュー指摘 P2, PR#929）。
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(728352::int4, hashtext(${spaceId}))`;
 
-  if (deviceId) {
-    const device = await prisma.smartLockDevice.findUnique({
-      where: { id: deviceId },
+    const space = await tx.space.findUnique({
+      where: { id: spaceId },
       select: { id: true, locationId: true },
     });
-    if (!device) {
-      throw new DomainError(
-        "スマートロックデバイスが見つかりません",
-        "NOT_FOUND",
-      );
+    if (!space) {
+      throw new DomainError("スペースが見つかりません", "NOT_FOUND");
     }
-    // デバイスはLocation所有のため、スペースと異なる拠点のデバイスを割り当てると
-    // issueSmartLockPasscodesが誤った物理ドアへパスコードを発行してしまう。
-    if (device.locationId !== space.locationId) {
-      throw new DomainError(
-        "このデバイスはスペースと異なる拠点に登録されています",
-        "VALIDATION",
-      );
-    }
-  }
 
-  await prisma.space.update({
-    where: { id: spaceId },
-    data: { smartLockDeviceId: deviceId },
+    if (deviceId) {
+      const device = await tx.smartLockDevice.findUnique({
+        where: { id: deviceId },
+        select: { id: true, locationId: true },
+      });
+      if (!device) {
+        throw new DomainError(
+          "スマートロックデバイスが見つかりません",
+          "NOT_FOUND",
+        );
+      }
+      // デバイスはLocation所有のため、スペースと異なる拠点のデバイスを割り当てると
+      // issueSmartLockPasscodesが誤った物理ドアへパスコードを発行してしまう。
+      if (device.locationId !== space.locationId) {
+        throw new DomainError(
+          "このデバイスはスペースと異なる拠点に登録されています",
+          "VALIDATION",
+        );
+      }
+    }
+
+    await tx.space.update({
+      where: { id: spaceId },
+      data: { smartLockDeviceId: deviceId },
+    });
+
+    return { id: spaceId, smartLockDeviceId: deviceId };
   });
-
-  return { id: spaceId, smartLockDeviceId: deviceId };
 }
 
 /**

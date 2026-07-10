@@ -216,6 +216,13 @@ export async function updateSpaceCommand(
   // can't slip in between the findUnique and the update.
   // Per CLAUDE.md: array form $transaction is banned; use interactive form.
   return prisma.$transaction(async (tx) => {
+    // このスペースに対する locationId 読取〜smartLockDeviceId 更新の判定を、
+    // setSpaceSmartLockDeviceCommand（同じ 728352 lock namespace）と直列化する。
+    // ロックなしでは、直後の findUnique と update の間に他のリクエストが
+    // smartLockDeviceId を書き換えても検知できず、異なる拠点のデバイスを
+    // 残したまま上書きしてしまう（Codexレビュー指摘 P2, PR#929）。
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(728352::int4, hashtext(${id}))`;
+
     const before = await tx.space.findUnique({
       where: { id, isActive: true },
       select: { slug: true, locationId: true },

@@ -32,6 +32,7 @@ let txFindUniqueResult: { slug: string; locationId: string } = {
 };
 
 const txStub = {
+  $executeRaw: (..._args: unknown[]) => Promise.resolve(undefined),
   space: {
     findUnique: (...args: unknown[]) => Promise.resolve(txFindUniqueResult),
     update: (...args: unknown[]) => mockUpdateSpace(...args),

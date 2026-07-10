@@ -39,6 +39,8 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
 - `pg_advisory_xact_lock` は void を返すため `$executeRaw` で呼ぶ（`$queryRaw` は失敗）
 - advisory lock 採番レジストリ（衝突禁止）: 728349=calendar-sync（session lock）、
   728350=イベント申込、728351=予約スペース + order-scope、
+  728352=スペースのlocationId/smartLockDeviceId整合性（`spaces/commands.ts`の
+  `updateSpaceCommand`と`smart-lock/commands.ts`の`setSpaceSmartLockDeviceCommand`で共有）、
   audit-log chain=int8 `6029451381908262157n`
 
 ## 'use cache' クエリの標準形

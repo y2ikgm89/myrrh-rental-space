@@ -35,6 +35,7 @@ interface PrismaMock {
   };
   location: { findFirst: typeof mockLocationFindFirst };
   spaceCategory: { findFirst: typeof mockSpaceCategoryFindFirst };
+  $executeRaw: (...args: unknown[]) => Promise<unknown>;
   $transaction: <T>(fn: (tx: PrismaMock) => Promise<T>) => Promise<T>;
 }
 
@@ -50,6 +51,7 @@ const prismaMock: PrismaMock = {
   spaceCategory: {
     findFirst: mockSpaceCategoryFindFirst,
   },
+  $executeRaw: (..._args: unknown[]) => Promise.resolve(undefined),
   $transaction: <T>(fn: (tx: PrismaMock) => Promise<T>): Promise<T> =>
     fn(prismaMock),
 };
