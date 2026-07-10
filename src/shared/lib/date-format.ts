@@ -379,3 +379,35 @@ export function formatJstMonthDay(date: Date | string): string {
     Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
   return `${lookup("month")}月${lookup("day")}日`;
 }
+
+const JST_WEEKDAY_SHORT_FORMATTER = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  weekday: "short",
+});
+
+/**
+ * 任意の datetime を JST の曜日短縮形（例 `"月"`）に整形する。
+ *
+ * カレンダー週ビュー / 日ビューの曜日ヘッダーで `date-fns format(d, "E", { locale: ja })`
+ * の silent UTC bug を防ぐ SSoT。
+ */
+export function formatJstWeekdayShort(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_WEEKDAY_SHORT_FORMATTER.format(value);
+}
+
+const JST_DAY_ONLY_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+  day: "numeric",
+});
+
+/**
+ * 任意の datetime を JST の日番号（例 `"1"`, `"12"`）に整形する。
+ *
+ * カレンダー週ビュー / 日ビューの日付セルで `date-fns format(d, "d")` の
+ * silent UTC bug を防ぐ SSoT（`date.getDate()` は browser local TZ 依存）。
+ */
+export function formatJstDayOfMonth(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  return JST_DAY_ONLY_FORMATTER.format(value);
+}

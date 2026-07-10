@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { format, isSameMonth, isToday } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isSameMonth, isToday } from "date-fns";
 import { cn } from "@/shared/lib/cn";
-import { formatJstDateString } from "@/shared/lib/date-format";
+import {
+  formatDateWithWeekday,
+  formatJstDateString,
+  formatJstDayOfMonth,
+} from "@/shared/lib/date-format";
 import {
   getWeekdayHeaders,
   getWeekdayColorClass,
@@ -33,7 +36,8 @@ export function MonthView({
   onDayClick,
 }: MonthViewProps) {
   const weekdays = getWeekdayHeaders();
-  const monthKey = format(dateRange.start, "yyyy-MM");
+  // JST 固定の月キー (browser local TZ 依存を避ける)。YYYY-MM-DD の先頭 7 文字を取る。
+  const monthKey = formatJstDateString(dateRange.start).slice(0, 7);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   // hydration mismatch 回避: useSyncExternalStore で client-only gate
   const isClient = useSyncExternalStore(
@@ -124,7 +128,7 @@ export function MonthView({
                     <div className="flex items-center justify-between">
                       <button
                         type="button"
-                        aria-label={`${format(day, "yyyy年M月d日 (E)", { locale: ja })} を日表示で開く`}
+                        aria-label={`${formatDateWithWeekday(day)} を日表示で開く`}
                         {...(todayCell
                           ? { "aria-current": "date" as const }
                           : {})}
@@ -139,7 +143,7 @@ export function MonthView({
                         )}
                         onClick={() => handleDayClick(day)}
                       >
-                        {format(day, "d")}
+                        {formatJstDayOfMonth(day)}
                       </button>
                       {dayEvents.length > 0 && (
                         <span

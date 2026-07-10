@@ -1,9 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { format, isToday } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isToday } from "date-fns";
 import { cn } from "@/shared/lib/cn";
+import {
+  formatJstDayOfMonth,
+  formatJstWeekdayShort,
+} from "@/shared/lib/date-format";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
@@ -75,7 +78,7 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
         <div
           className={cn("text-xs font-medium", getWeekdayColorClass(dayOfWeek))}
         >
-          {format(date, "E", { locale: ja })}
+          {formatJstWeekdayShort(date)}
         </div>
         <div
           className={cn(
@@ -83,7 +86,7 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
             today && "rounded-full bg-primary text-primary-foreground",
           )}
         >
-          {format(date, "d")}
+          {formatJstDayOfMonth(date)}
         </div>
       </div>
     ),

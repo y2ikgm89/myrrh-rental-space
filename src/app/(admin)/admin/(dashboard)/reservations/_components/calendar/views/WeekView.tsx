@@ -1,9 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { format, isToday } from "date-fns";
-import { ja } from "date-fns/locale";
+import { isToday } from "date-fns";
 import { cn } from "@/shared/lib/cn";
+import {
+  formatJstDayOfMonth,
+  formatJstWeekdayShort,
+} from "@/shared/lib/date-format";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
@@ -80,7 +83,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
           <div
             className={cn("text-xs font-medium", getWeekdayColorClass(index))}
           >
-            {format(day, "E", { locale: ja })}
+            {formatJstWeekdayShort(day)}
           </div>
           <div
             className={cn(
@@ -88,7 +91,7 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
               today && "rounded-full bg-primary text-primary-foreground",
             )}
           >
-            {format(day, "d")}
+            {formatJstDayOfMonth(day)}
           </div>
         </div>
       ),

@@ -20,8 +20,7 @@ import {
   TableRow,
 } from "@/admin/components/ui/table";
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatTimeShort } from "@/shared/lib/date-format";
 
 export async function DashboardTodaySection() {
   await connection();
@@ -54,8 +53,8 @@ export async function DashboardTodaySection() {
               {todayReservations.map((reservation) => (
                 <TableRow key={reservation.id}>
                   <TableCell>
-                    {format(reservation.startTime, "HH:mm", { locale: ja })} -{" "}
-                    {format(reservation.endTime, "HH:mm", { locale: ja })}
+                    {formatTimeShort(reservation.startTime)} -{" "}
+                    {formatTimeShort(reservation.endTime)}
                   </TableCell>
                   <TableCell>{reservation.spaceName}</TableCell>
                   <TableCell className="hidden md:table-cell">

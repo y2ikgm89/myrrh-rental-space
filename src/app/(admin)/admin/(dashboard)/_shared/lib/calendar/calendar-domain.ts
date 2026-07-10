@@ -12,12 +12,13 @@ import {
   subDays,
   subWeeks,
   subMonths,
-  format,
 } from "date-fns";
-import { ja } from "date-fns/locale";
 import {
+  formatDateWithWeekday,
   formatJstDateString,
   formatJstMonthDay,
+  formatJstWeekdayShort,
+  formatYearMonth,
 } from "@/shared/lib/date-format";
 import type {
   CalendarView,
@@ -407,7 +408,7 @@ export function getSpaceColorClass(spaceId: string, index?: number): string {
 export function formatDateLabel(date: Date, view: CalendarView): string {
   switch (view) {
     case "month":
-      return format(date, "yyyy年M月", { locale: ja });
+      return formatYearMonth(date);
     case "week": {
       const weekStart = startOfWeek(date, { weekStartsOn: 0 });
       const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
@@ -415,26 +416,26 @@ export function formatDateLabel(date: Date, view: CalendarView): string {
     }
     case "day":
     case "resource":
-      return format(date, "yyyy年M月d日 (E)", { locale: ja });
+      return formatDateWithWeekday(date);
   }
 }
 
 /** 曜日ヘッダー生成用の基準サンデー (2024-01-07 = 日曜) — モジュール解決時に 1 度だけ評価される pure な定数 */
 const WEEKDAY_REFERENCE_SUNDAY = new Date(2024, 0, 7);
 
-/** 曜日ヘッダー (narrow) を date-fns localize 経由で生成・モジュール初期化時に確定 */
+/** 曜日ヘッダー (JST 固定) を Intl.DateTimeFormat 経由で生成・モジュール初期化時に確定 */
 const WEEKDAY_HEADERS: readonly string[] = Array.from({ length: 7 }, (_, i) => {
   const d = new Date(WEEKDAY_REFERENCE_SUNDAY);
   d.setDate(WEEKDAY_REFERENCE_SUNDAY.getDate() + i);
-  return format(d, "EEEEE", { locale: ja });
+  return formatJstWeekdayShort(d);
 });
 
 /**
  * 曜日ヘッダーを生成 (日, 月, 火, 水, 木, 金, 土)
  *
- * date-fns + ja locale の narrow weekday で生成。hard-coded 配列との混在
- * (#634 系の locale 漏れリスク) を避けるため `format(d, "EEEEE", { locale: ja })`
- * で一元化。
+ * `formatJstWeekdayShort` (Intl.DateTimeFormat "Asia/Tokyo" 固定) 経由で生成し、
+ * hard-coded 配列との混在 (#634 系の locale 漏れリスク) と Cloud Run (UTC) 環境の
+ * silent TZ ずれを両方防ぐ。
  */
 export function getWeekdayHeaders(): readonly string[] {
   return WEEKDAY_HEADERS;
