@@ -14,7 +14,7 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 
-type RevocablePasscode = {
+export type RevocablePasscode = {
   readonly id: string;
   readonly switchbotKeyId: string | null;
   readonly device: { readonly deviceId: string };
@@ -25,9 +25,10 @@ type RevocablePasscode = {
  *
  * 成功時のみ`REVOKED`へ更新する。失敗時はCONFIRMEDのまま残し、呼び出し元
  * （cleanup cron）が再試行できるようにする（deleteKey自体は冪等なコマンド呼出の
- * ため、繰り返し呼んでも副作用は増えない）。
+ * ため、繰り返し呼んでも副作用は増えない）。deviceCommands.ts の
+ * deleteSmartLockDeviceCommand からも、削除前の生きたパスコード失効に再利用する。
  */
-async function revokeOne(
+export async function revokeOne(
   credentials: { openToken: string; secretKey: string },
   passcode: RevocablePasscode,
 ): Promise<boolean> {
@@ -67,8 +68,12 @@ async function revokeOne(
     return false;
   }
 
-  await prisma.smartLockPasscode.update({
-    where: { id: passcode.id },
+  // deleteKey は既に成功しているため、この後の書込自体は失敗しても物理的な失効は
+  // 完了済み。ただし cancellation 経由とcronが同一行を同時に処理し得るため、
+  // status="CONFIRMED" をWHEREに含めて2回目以降の書込を無害なno-opにする
+  // （REVOKED上書き自体は無害だが、updatedAt等の余計な変更を避ける）。
+  await prisma.smartLockPasscode.updateMany({
+    where: { id: passcode.id, status: "CONFIRMED" },
     data: { status: "REVOKED", revokedAt: new Date() },
   });
   return true;

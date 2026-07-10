@@ -67,6 +67,9 @@ const mockCreatePasscodeRow = mock<
 const mockUpdatePasscodeRow = mock<(...args: unknown[]) => Promise<unknown>>(
   () => Promise.resolve({}),
 );
+const mockUpdateManyPasscodeRow = mock<
+  (...args: unknown[]) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockFindUniquePasscodeRow = mock<
   (...args: unknown[]) => Promise<unknown | null>
 >(() => Promise.resolve(null));
@@ -110,6 +113,21 @@ const mockGetDeviceStatus = mock<
 
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
+class FakePrismaKnownRequestError extends Error {
+  code: string;
+  constructor(message: string, code: string) {
+    super(message);
+    this.name = "PrismaClientKnownRequestError";
+    this.code = code;
+  }
+}
+
+mock.module("@generated/prisma/client", () => ({
+  Prisma: {
+    PrismaClientKnownRequestError: FakePrismaKnownRequestError,
+  },
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     space: {
@@ -118,6 +136,7 @@ mock.module("@/shared/db/prisma", () => ({
     smartLockPasscode: {
       create: (...args: unknown[]) => mockCreatePasscodeRow(...args),
       update: (...args: unknown[]) => mockUpdatePasscodeRow(...args),
+      updateMany: (...args: unknown[]) => mockUpdateManyPasscodeRow(...args),
       findUnique: (...args: unknown[]) => mockFindUniquePasscodeRow(...args),
     },
   },
@@ -135,6 +154,8 @@ mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
 
 mock.module("@/shared/lib/errors/server", () => ({
   logError: (...args: unknown[]) => mockLogError(...args),
+  normalizeError: (error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
   ErrorCategory: {
     EXTERNAL_API: "EXTERNAL_API",
     VALIDATION: "VALIDATION",
@@ -180,6 +201,7 @@ beforeEach(() => {
   mockFindUniqueSpace.mockReset();
   mockCreatePasscodeRow.mockReset();
   mockUpdatePasscodeRow.mockReset();
+  mockUpdateManyPasscodeRow.mockReset();
   mockFindUniquePasscodeRow.mockReset();
   mockGetDecryptedSwitchBotCredentials.mockReset();
   mockCreatePasscodeApi.mockReset();
@@ -189,6 +211,7 @@ beforeEach(() => {
   mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: null });
   mockCreatePasscodeRow.mockResolvedValue({ id: "passcode-row-1" });
   mockUpdatePasscodeRow.mockResolvedValue({});
+  mockUpdateManyPasscodeRow.mockResolvedValue({ count: 1 });
   mockFindUniquePasscodeRow.mockResolvedValue(null);
   mockGetDecryptedSwitchBotCredentials.mockResolvedValue({
     openToken: "open-token",
@@ -207,16 +230,16 @@ afterEach(() => {
 });
 
 describe("buildPasscodeName", () => {
-  test("reservationId と deviceRowId の先頭8文字を res-xxx-yyy 形式で連結する", () => {
+  test("reservationId と deviceRowId のハイフンを除いた先頭16文字を res-xxx-yyy 形式で連結する", () => {
     expect(
       buildPasscodeName(
-        "12345678-abcd-efgh-ijkl-mnopqrstuvwx",
-        "87654321-zyxw-vuts-rqpo-nmlkjihgfedc",
+        "12345678-abcd-4efg-8hij-klmnopqrstuv",
+        "87654321-zyxw-4vut-8srq-ponmlkjihgfe",
       ),
-    ).toBe("res-12345678-87654321");
+    ).toBe("res-12345678abcd4efg-87654321zyxw4vut");
   });
 
-  test("8文字未満のidでも slice(0,8) の結果をそのまま使う", () => {
+  test("16文字未満のidでも除去・切詰め後の結果をそのまま使う", () => {
     expect(buildPasscodeName("short", "id")).toBe("res-short-id");
   });
 });
@@ -323,15 +346,92 @@ describe("issueSmartLockPasscodes", () => {
         type: "timeLimit",
       }),
     );
-    expect(mockUpdatePasscodeRow).toHaveBeenLastCalledWith(
+    expect(mockUpdateManyPasscodeRow).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "passcode-row-1" },
+        where: { id: "passcode-row-1", status: "PENDING" },
         data: expect.objectContaining({
           status: "CONFIRMED",
           switchbotKeyId: "key-1",
         }),
       }),
     );
+  });
+
+  test("確定writeがwebhookと競合(count=0)しても既にCONFIRMED済みならpasscodeを返す", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
+    mockFindUniquePasscodeRow.mockResolvedValue(null);
+    mockCreatePasscodeApi.mockResolvedValue({
+      ok: true,
+      body: { commandId: "cmd-1" },
+    });
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE_ROW.id);
+    mockGetDeviceStatus.mockResolvedValue({
+      ok: true,
+      body: {
+        keyList: [
+          {
+            id: "key-1",
+            name: expectedName,
+            type: "timeLimit",
+            password: "enc",
+            iv: "iv",
+            status: "normal",
+            createTime: 1_700_000_000,
+          },
+        ],
+      },
+    });
+    mockUpdateManyPasscodeRow.mockResolvedValue({ count: 0 });
+    mockFindUniquePasscodeRow.mockImplementation((...args: unknown[]) => {
+      const arg = args[0] as { select?: { status?: boolean } } | undefined;
+      if (arg?.select?.status) {
+        return Promise.resolve({ status: "CONFIRMED" });
+      }
+      return Promise.resolve(null);
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.passcode).toMatch(/^\d{6}$/);
+  });
+
+  test("確定writeがwebhookと競合(count=0)しFAILED済みならnullを返す(結果に含めない)", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
+    mockFindUniquePasscodeRow.mockResolvedValue(null);
+    mockCreatePasscodeApi.mockResolvedValue({
+      ok: true,
+      body: { commandId: "cmd-1" },
+    });
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE_ROW.id);
+    mockGetDeviceStatus.mockResolvedValue({
+      ok: true,
+      body: {
+        keyList: [
+          {
+            id: "key-1",
+            name: expectedName,
+            type: "timeLimit",
+            password: "enc",
+            iv: "iv",
+            status: "normal",
+            createTime: 1_700_000_000,
+          },
+        ],
+      },
+    });
+    mockUpdateManyPasscodeRow.mockResolvedValue({ count: 0 });
+    mockFindUniquePasscodeRow.mockImplementation((...args: unknown[]) => {
+      const arg = args[0] as { select?: { status?: boolean } } | undefined;
+      if (arg?.select?.status) {
+        return Promise.resolve({ status: "FAILED" });
+      }
+      return Promise.resolve(null);
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result).toEqual([]);
   });
 
   test("ポーリングが全回数keyListに一致無しで完了する場合はFAILEDになる（タイムアウト）", async () => {
@@ -376,6 +476,20 @@ describe("issueSmartLockPasscodes", () => {
     expect(mockGetDeviceStatus).not.toHaveBeenCalled();
   });
 
+  test("既存CONFIRMEDレコードの復号に失敗した場合は例外を投げず空配列を返す", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
+    mockFindUniquePasscodeRow.mockResolvedValue({
+      id: "passcode-existing",
+      status: "CONFIRMED",
+      passcodeCiphertext: "corrupted-not-a-real-ciphertext",
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result).toEqual([]);
+    expect(mockLogError).toHaveBeenCalled();
+  });
+
   test("既存レコードがCONFIRMED以外(PENDING等)の場合は何もせず結果から除外する", async () => {
     mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue({
@@ -390,5 +504,45 @@ describe("issueSmartLockPasscodes", () => {
     expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
     expect(mockGetDeviceStatus).not.toHaveBeenCalled();
+  });
+
+  test("createでの一意制約違反(P2002)は既存の先勝ちCONFIRMED行を読み直して返す(例外を投げない)", async () => {
+    mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
+    // 初回のdedupe checkはnull(まだ存在しない)、create()がP2002で失敗した後の
+    // リカバリ用findUniqueで先勝ち行を返す。
+    let callCount = 0;
+    mockFindUniquePasscodeRow.mockImplementation(() => {
+      callCount += 1;
+      if (callCount === 1) return Promise.resolve(null);
+      return Promise.resolve({
+        id: "passcode-winner",
+        status: "CONFIRMED",
+        passcodeCiphertext: encrypt("111222"),
+      });
+    });
+    mockCreatePasscodeRow.mockImplementation(() => {
+      throw new FakePrismaKnownRequestError(
+        "Unique constraint failed",
+        "P2002",
+      );
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result).toEqual([
+      { deviceName: DEVICE_ROW.deviceName, passcode: "111222" },
+    ]);
+    expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
+  });
+
+  test("想定外の例外(DB障害等)が起きても投げずに空配列を返す(呼び出し元のメール送信をブロックしない)", async () => {
+    mockFindUniqueSpace.mockImplementation(() => {
+      throw new Error("connection terminated unexpectedly");
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result).toEqual([]);
+    expect(mockLogError).toHaveBeenCalled();
   });
 });

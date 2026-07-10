@@ -1,9 +1,12 @@
 /**
- * setSpaceSmartLockDeviceCommand のテスト
+ * smart-lock/commands.ts のテスト。
  *
- * デバイスはLocation所有のため、スペースと異なる拠点のデバイスを割り当てようとした
- * 場合に拒否されることを検証する（さもないとissueSmartLockPasscodesが誤った
- * 物理ドアへパスコードを発行してしまう）。
+ * - setSpaceSmartLockDeviceCommand: デバイスはLocation所有のため、スペースと異なる
+ *   拠点のデバイスを割り当てようとした場合に拒否されることを検証する（さもないと
+ *   issueSmartLockPasscodesが誤った物理ドアへパスコードを発行してしまう）。
+ * - deleteSmartLockDeviceCommand: 削除前に生きたパスコード（PENDING/CONFIRMED）を
+ *   revokeし、失敗時は削除をブロックすることを検証する（さもないとcascadeで
+ *   keyId対応が失われ、物理ドアのパスコードを二度と失効できなくなる）。
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
@@ -32,13 +35,51 @@ const txStub = {
   },
 };
 
+const mockFindUniqueDeviceTopLevel = mock<
+  (...args: unknown[]) => Promise<{ id: string; deviceId: string } | null>
+>(() => Promise.resolve(null));
+const mockFindManyPasscodes = mock<
+  (
+    ...args: unknown[]
+  ) => Promise<{ id: string; status: string; switchbotKeyId: string | null }[]>
+>(() => Promise.resolve([]));
+const mockDeleteDevice = mock<(...args: unknown[]) => Promise<unknown>>(() =>
+  Promise.resolve({}),
+);
+const mockGetDecryptedSwitchBotCredentials = mock<
+  () => Promise<{
+    openToken: string;
+    secretKey: string;
+    passcodeBufferMinutes: number;
+  } | null>
+>(() => Promise.resolve(null));
+const mockRevokeOne = mock<(...args: unknown[]) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     $transaction: (fn: (tx: typeof txStub) => Promise<unknown>) => fn(txStub),
+    smartLockDevice: {
+      findUnique: (...args: unknown[]) => mockFindUniqueDeviceTopLevel(...args),
+      delete: (...args: unknown[]) => mockDeleteDevice(...args),
+    },
+    smartLockPasscode: {
+      findMany: (...args: unknown[]) => mockFindManyPasscodes(...args),
+    },
   },
 }));
 
-const { setSpaceSmartLockDeviceCommand } =
+mock.module("@/shared/domain/settings/api-key-queries", () => ({
+  getDecryptedSwitchBotCredentials: () =>
+    mockGetDecryptedSwitchBotCredentials(),
+}));
+
+mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
+  revokeOne: (...args: unknown[]) => mockRevokeOne(...args),
+}));
+
+const { setSpaceSmartLockDeviceCommand, deleteSmartLockDeviceCommand } =
   await import("@/shared/domain/smart-lock/commands");
 
 const SPACE_ID = "aaaaaaaa-0000-0000-0000-000000000000";
@@ -46,11 +87,34 @@ const DEVICE_ID = "bbbbbbbb-0000-0000-0000-000000000000";
 const LOCATION_A = "loc-a";
 const LOCATION_B = "loc-b";
 
+const DEVICE_ROW_ID = "cccccccc-0000-0000-0000-000000000000";
+const SWITCHBOT_DEVICE_ID = "AA:BB:CC:DD:EE:FF";
+const CREDENTIALS = {
+  openToken: "token",
+  secretKey: "secret",
+  passcodeBufferMinutes: 15,
+};
+
 beforeEach(() => {
   mockFindUniqueSpace.mockReset();
   mockFindUniqueDevice.mockReset();
   mockUpdateSpace.mockReset();
   mockUpdateSpace.mockResolvedValue({});
+
+  mockFindUniqueDeviceTopLevel.mockReset();
+  mockFindManyPasscodes.mockReset();
+  mockDeleteDevice.mockReset();
+  mockGetDecryptedSwitchBotCredentials.mockReset();
+  mockRevokeOne.mockReset();
+
+  mockFindUniqueDeviceTopLevel.mockResolvedValue({
+    id: DEVICE_ROW_ID,
+    deviceId: SWITCHBOT_DEVICE_ID,
+  });
+  mockFindManyPasscodes.mockResolvedValue([]);
+  mockDeleteDevice.mockResolvedValue({});
+  mockGetDecryptedSwitchBotCredentials.mockResolvedValue(CREDENTIALS);
+  mockRevokeOne.mockResolvedValue(true);
 });
 
 describe("setSpaceSmartLockDeviceCommand", () => {
@@ -129,5 +193,86 @@ describe("setSpaceSmartLockDeviceCommand", () => {
         data: { smartLockDeviceId: null },
       }),
     );
+  });
+});
+
+describe("deleteSmartLockDeviceCommand", () => {
+  test("デバイスが見つからない場合はNOT_FOUND", async () => {
+    mockFindUniqueDeviceTopLevel.mockResolvedValue(null);
+
+    await expect(deleteSmartLockDeviceCommand(DEVICE_ROW_ID)).rejects.toThrow(
+      "スマートロックデバイスが見つかりません",
+    );
+    expect(mockDeleteDevice).not.toHaveBeenCalled();
+  });
+
+  test("生きたパスコードが無ければそのまま削除できる", async () => {
+    mockFindManyPasscodes.mockResolvedValue([]);
+
+    const result = await deleteSmartLockDeviceCommand(DEVICE_ROW_ID);
+
+    expect(result).toEqual({ id: DEVICE_ROW_ID });
+    expect(mockDeleteDevice).toHaveBeenCalledWith({
+      where: { id: DEVICE_ROW_ID },
+    });
+  });
+
+  test("PENDINGのパスコードが残っている場合は削除できない", async () => {
+    mockFindManyPasscodes.mockResolvedValue([
+      { id: "passcode-1", status: "PENDING", switchbotKeyId: null },
+    ]);
+
+    await expect(deleteSmartLockDeviceCommand(DEVICE_ROW_ID)).rejects.toThrow(
+      "発行処理中のパスコードが残っているため削除できません",
+    );
+    expect(mockDeleteDevice).not.toHaveBeenCalled();
+    expect(mockRevokeOne).not.toHaveBeenCalled();
+  });
+
+  test("CONFIRMEDのパスコードは削除前にrevokeされる", async () => {
+    mockFindManyPasscodes.mockResolvedValue([
+      { id: "passcode-1", status: "CONFIRMED", switchbotKeyId: "key-1" },
+    ]);
+    mockRevokeOne.mockResolvedValue(true);
+
+    const result = await deleteSmartLockDeviceCommand(DEVICE_ROW_ID);
+
+    expect(result).toEqual({ id: DEVICE_ROW_ID });
+    expect(mockRevokeOne).toHaveBeenCalledWith(
+      CREDENTIALS,
+      expect.objectContaining({
+        id: "passcode-1",
+        switchbotKeyId: "key-1",
+        device: { deviceId: SWITCHBOT_DEVICE_ID },
+      }),
+    );
+    expect(mockDeleteDevice).toHaveBeenCalledWith({
+      where: { id: DEVICE_ROW_ID },
+    });
+  });
+
+  test("SwitchBot連携が無効でrevoke不能な場合は削除をブロックする", async () => {
+    mockFindManyPasscodes.mockResolvedValue([
+      { id: "passcode-1", status: "CONFIRMED", switchbotKeyId: "key-1" },
+    ]);
+    mockGetDecryptedSwitchBotCredentials.mockResolvedValue(null);
+
+    await expect(deleteSmartLockDeviceCommand(DEVICE_ROW_ID)).rejects.toThrow(
+      "有効なパスコードが残っているため削除できません",
+    );
+    expect(mockRevokeOne).not.toHaveBeenCalled();
+    expect(mockDeleteDevice).not.toHaveBeenCalled();
+  });
+
+  test("revoke失敗時は削除をブロックする", async () => {
+    mockFindManyPasscodes.mockResolvedValue([
+      { id: "passcode-1", status: "CONFIRMED", switchbotKeyId: "key-1" },
+    ]);
+    mockRevokeOne.mockResolvedValue(false);
+
+    await expect(deleteSmartLockDeviceCommand(DEVICE_ROW_ID)).rejects.toThrow(
+      "一部のパスコードの失効に失敗したため削除できません",
+    );
+    expect(mockDeleteDevice).not.toHaveBeenCalled();
   });
 });

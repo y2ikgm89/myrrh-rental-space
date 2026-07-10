@@ -64,6 +64,7 @@ function isSensitiveAuditKey(key: string): boolean {
     normalized === "apikey" ||
     normalized.endsWith("apikey") ||
     normalized.includes("password") ||
+    normalized.includes("passcode") ||
     normalized.includes("secret") ||
     normalized.includes("token") ||
     normalized.includes("credential") ||
