@@ -61,6 +61,7 @@ JOBS=(
   "notification-cleanup|0 4 * * *|/api/cron/notification-cleanup|Old notification cleanup 30d+ (daily 04:00 JST)"
   "reservation-reminder|0 * * * *|/api/cron/reservation-reminder|Reservation reminder email dispatch (hourly)"
   "event-reminder|0 * * * *|/api/cron/event-reminder|Event reminder email dispatch (hourly, opt-in via Settings.notifyEventReminder)"
+  "smart-lock-cleanup|*/15 * * * *|/api/cron/smart-lock-cleanup|SwitchBot passcode revoke for expired/cancelled reservations (every 15 min, opt-in via Settings.switchbotEnabled)"
 )
 
 # --- ヘルパー ---------------------------------------------------------------

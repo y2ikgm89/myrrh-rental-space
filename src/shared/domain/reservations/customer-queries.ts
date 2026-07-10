@@ -94,6 +94,11 @@ export async function getReservationForCompletion(reservationId: string) {
           name: true,
           slug: true,
           location: { select: { address: true } },
+          smartLockDevices: {
+            where: { isActive: true },
+            select: { id: true },
+            take: 1,
+          },
         },
       },
     },

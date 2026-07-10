@@ -12,6 +12,8 @@
  *   4. 管理者向け管理者通知メール
  *   5. 管理者向け in-app 通知（reason 含む）
  *   6. AuditLog 書き込み（actor / channel / IP / UA を記録）
+ *   7. SwitchBotスマートロックの発行済みパスコード失効（deleteKey、対象デバイス無し/
+ *      未発行なら no-op。失敗分は cleanup cron がフォールバック回収する）
  *
  * 呼び出し条件:
  *   `applyCancellation` が `success: true` を返した後にだけ呼ぶ。本関数は予約データの
@@ -40,6 +42,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
@@ -330,4 +333,15 @@ export async function applyCancellationSideEffects(
       },
     },
   );
+
+  // 7. スマートロックパスコード失効
+  fireAndForget(revokeSmartLockPasscodesForReservation(input.reservationId), {
+    operation: "revokeSmartLockPasscodesOnCancel",
+    category: ErrorCategory.EXTERNAL_API,
+    severity: ErrorSeverity.MEDIUM,
+    context: {
+      reservationId: input.reservationId,
+      channel: input.channel,
+    },
+  });
 }
