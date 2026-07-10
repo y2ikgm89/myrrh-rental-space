@@ -2076,7 +2076,8 @@ async function seedDevCustomerAndReservations() {
       notes: "[E2E] 未来・未決済予約（stripe-payment 「決済する」 UI）",
     },
     {
-      daysOffset: 14,
+      // 通常seedの同一スペース day+14 10:00-12:00 予約と衝突しない固定日。
+      daysOffset: 16,
       status: "PENDING" as const,
       paymentStatus: "UNPAID" as const,
       notes: "[E2E] 承認待ち予約（reservation-cancel-flow 起点）",

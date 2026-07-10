@@ -513,8 +513,19 @@ model Reservation {
   spaceId    String            @db.Uuid
   userId     String?           @db.Uuid
   customerId String            @db.Uuid
+  /// Space reservations are half-open intervals: [startTime, endTime).
+  /// DB invariant `reservations_time_order_check` enforces startTime < endTime.
   startTime  DateTime
   endTime    DateTime
+  /// Active inventory states are PENDING / CONFIRMED. DB invariant
+  /// `reservations_no_active_time_overlap_excl` prevents overlapping active,
+  /// non-deleted reservations for the same space by using PostgreSQL EXCLUDE
+  /// with `tsrange(startTime, endTime, '[)')`.
+  ///
+  /// Prisma schema DSL cannot express EXCLUDE constraints or CHECK constraints.
+  /// `prisma db pull` will not preserve these invariants; keep migration SQL,
+  /// comments, and `__tests__/integration/domain/reservations/db-invariants.test.ts`
+  /// in sync if this model changes.
   status     ReservationStatus @default(PENDING)
   totalPrice Decimal?          @db.Decimal(10, 2)
   notes      String?           @db.Text
