@@ -450,12 +450,13 @@ model Space {
   categoryId String? @db.Uuid
 
   // Relations
-  reservations Reservation[]
-  reviews      SpaceReview[]
-  events       Event[]
-  blockedDates BlockedDate[]
-  location     Location       @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  reservations     Reservation[]
+  reviews          SpaceReview[]
+  events           Event[]
+  blockedDates     BlockedDate[]
+  smartLockDevices SmartLockDevice[]
+  location         Location          @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  category         SpaceCategory?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   // OR検索用インデックス
   @@index([name])
@@ -559,11 +560,12 @@ model Reservation {
   guestCustomerType CustomerType?
 
   // Relations
-  space    Space        @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  user     User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
-  customer Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  coupon   Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  review   SpaceReview?
+  space              Space               @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user               User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customer           Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  coupon             Coupon?             @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  review             SpaceReview?
+  smartLockPasscodes SmartLockPasscode[]
 
   // Soft-delete
   deletedAt   DateTime?
@@ -1297,6 +1299,20 @@ model Settings {
   instagramUsername       String?
   instagramAccountType    String?
 
+  // ==============================================
+  // SwitchBot スマートロック連携
+  // ==============================================
+  switchbotEnabled               Boolean   @default(false)
+  switchbotOpenToken             String?   @db.Text // Encrypted
+  switchbotSecretKey             String?   @db.Text // Encrypted
+  switchbotConnectionStatus      String? // 'connected' | 'error'
+  switchbotLastTestedAt          DateTime?
+  // 予約開始/終了時刻の前後に持たせるパスコード有効バッファ（分）。早期到着・退出遅れの猶予。
+  switchbotPasscodeBufferMinutes Int       @default(15)
+  // Webhook URL 難読化用トークン（SwitchBot は inbound webhook の署名検証機構を提供しないため、
+  // 推測困難な URL パスセグメント + deviceMac 照合の二重防御で代替する）
+  switchbotWebhookPathToken      String?   @db.Text // Encrypted
+
   // Mypage Deadline Settings（マイページ操作期限）
   cancellationDeadlineHours Int @default(24) // キャンセル可能期限（時間前）
   modificationDeadlineHours Int @default(24) // 変更可能期限（時間前）
@@ -1821,4 +1837,75 @@ model AdminNotification {
   @@index([type])
   @@index([createdAt(sort: Desc)])
   @@map("admin_notification")
+}
+
+// =============================================================================
+// SwitchBot スマートロック連携
+// =============================================================================
+
+enum SmartLockDeviceType {
+  KEYPAD
+  KEYPAD_TOUCH
+  KEYPAD_VISION
+  KEYPAD_VISION_PRO
+  LOCK_VISION_PRO
+}
+
+enum SmartLockPasscodeStatus {
+  /// createKey 呼出済み、Get Device Status での keyId 確定待ち
+  PENDING
+  /// keyList 突合成功（switchbotKeyId 確定済み）
+  CONFIRMED
+  /// API 呼出失敗、または確定ポーリングがタイムアウト
+  FAILED
+  /// deleteKey 済み（チェックアウト後 or キャンセルによる失効）
+  REVOKED
+}
+
+/// スペースに紐づく物理スマートロック（Keypad アクセサリ or Lock Vision Pro 単体）。
+/// 1 スペースに複数台（玄関 + 室内ドア等）を許容するため 1:N。
+model SmartLockDevice {
+  id         String              @id @default(uuid()) @db.Uuid
+  spaceId    String              @db.Uuid
+  deviceId   String              @unique // SwitchBot 側の device ID（MAC アドレス）
+  deviceName String
+  deviceType SmartLockDeviceType
+  isActive   Boolean             @default(true)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  space     Space               @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  passcodes SmartLockPasscode[]
+
+  @@index([spaceId])
+  @@map("smart_lock_devices")
+}
+
+/// 予約 1 件・デバイス 1 台ごとに発行される一時パスコード。
+model SmartLockPasscode {
+  id            String                  @id @default(uuid()) @db.Uuid
+  reservationId String                  @db.Uuid
+  deviceId      String                  @db.Uuid
+  status        SmartLockPasscodeStatus @default(PENDING)
+  /// encrypt(purpose: "switchbot-guest-passcode") 済み。平文は DB に保持しない。
+  passcodeCiphertext String             @db.Text
+  /// createKey 呼出の同期レスポンス（相関確認用、keyId ではない）
+  switchbotCommandId String?
+  /// Get Device Status の keyList[].id（deleteKey に必須）
+  switchbotKeyId     String?
+  /// パスコード有効期間（予約時間 ± switchbotPasscodeBufferMinutes）
+  startTime     DateTime
+  endTime       DateTime
+  failureReason String?
+  confirmedAt   DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  reservation Reservation     @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  device      SmartLockDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([reservationId, deviceId])
+  @@index([status, endTime])
+  @@map("smart_lock_passcodes")
 }

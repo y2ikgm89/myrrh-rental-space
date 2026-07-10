@@ -55,3 +55,10 @@ export function maskTurnstileKey(key: string): string {
 export function maskGoogleMapsKey(key: string): string {
   return maskApiKey(key, 10, 4); // AIzaSyXXXX...xxxx
 }
+
+/**
+ * SwitchBot Open Token / Secret Key用のマスク
+ */
+export function maskSwitchBotKey(key: string): string {
+  return maskApiKey(key, 6, 4);
+}

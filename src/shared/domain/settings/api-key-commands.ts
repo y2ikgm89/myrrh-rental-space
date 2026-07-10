@@ -139,6 +139,61 @@ export async function clearGoogleMapsSettings(): Promise<void> {
   });
 }
 
+export async function updateSwitchBotSettings(data: {
+  switchbotEnabled?: boolean;
+  switchbotOpenToken?: string | null;
+  switchbotSecretKey?: string | null;
+  switchbotPasscodeBufferMinutes?: number;
+}): Promise<void> {
+  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {};
+
+  if (data.switchbotEnabled !== undefined) {
+    updateData.switchbotEnabled = data.switchbotEnabled;
+  }
+
+  if (data.switchbotOpenToken) {
+    updateData.switchbotOpenToken = encryptSecret(
+      data.switchbotOpenToken,
+      "Open Tokenの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.switchbotOpenToken,
+    );
+  }
+
+  if (data.switchbotSecretKey) {
+    updateData.switchbotSecretKey = encryptSecret(
+      data.switchbotSecretKey,
+      "シークレットキーの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.switchbotSecretKey,
+    );
+  }
+
+  if (data.switchbotPasscodeBufferMinutes !== undefined) {
+    updateData.switchbotPasscodeBufferMinutes =
+      data.switchbotPasscodeBufferMinutes;
+  }
+
+  await upsertSettings(updateData);
+}
+
+export async function recordSwitchBotConnectionStatus(
+  status: "connected" | "error",
+): Promise<void> {
+  await upsertSettings({
+    switchbotLastTestedAt: new Date(),
+    switchbotConnectionStatus: status,
+  });
+}
+
+export async function clearSwitchBotSettings(): Promise<void> {
+  await upsertSettings({
+    switchbotEnabled: false,
+    switchbotOpenToken: null,
+    switchbotSecretKey: null,
+    switchbotLastTestedAt: null,
+    switchbotConnectionStatus: null,
+  });
+}
+
 export async function addCustomApiKey(
   data: CustomApiKeyInput,
 ): Promise<{ id: string }> {

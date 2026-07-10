@@ -25,13 +25,14 @@ const OTHER_DOMAIN_PURPOSES = [
   "reservation-claim", // reservation-claim-token.ts
   "event-registration-claim", // event-registration-claim-token.ts
   "instagram", // instagram/commands.ts
+  "switchbot-guest-passcode", // smart-lock/issue-passcode.ts
   purposeFor("reservation"), // calendar-token.ts
   purposeFor("event"), // calendar-token.ts
 ];
 
 describe("crypto purpose registry", () => {
-  test("SETTINGS_CRYPTO_PURPOSES は期待通り8種類ちょうど", () => {
-    expect(Object.keys(SETTINGS_CRYPTO_PURPOSES)).toHaveLength(8);
+  test("SETTINGS_CRYPTO_PURPOSES は期待通り11種類ちょうど", () => {
+    expect(Object.keys(SETTINGS_CRYPTO_PURPOSES)).toHaveLength(11);
   });
 
   test("SETTINGS_CRYPTO_PURPOSES 単体で重複がない", () => {

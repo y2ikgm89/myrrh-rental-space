@@ -5,12 +5,14 @@ import {
   getCustomApiKeyValue as getCustomApiKeyValueQuery,
   getGoogleMapsConfig as getGoogleMapsConfigQuery,
   getResendConfig as getResendConfigQuery,
+  getSwitchBotConfig as getSwitchBotConfigQuery,
   getTurnstileConfig as getTurnstileConfigQuery,
 } from "@/shared/domain/settings/api-key-queries";
 import type {
   CustomApiKeyData,
   GoogleMapsConfig,
   ResendConfig,
+  SwitchBotConfig,
   TurnstileConfig,
 } from "@/shared/types/api-keys";
 import { requireAdminPermission } from "./_helpers";
@@ -19,6 +21,7 @@ export type {
   CustomApiKeyData,
   GoogleMapsConfig,
   ResendConfig,
+  SwitchBotConfig,
   TurnstileConfig,
 };
 
@@ -35,6 +38,11 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
   await requireAdminPermission("settings", "read");
   return getGoogleMapsConfigQuery();
+}
+
+export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
+  await requireAdminPermission("settings", "read");
+  return getSwitchBotConfigQuery();
 }
 
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
