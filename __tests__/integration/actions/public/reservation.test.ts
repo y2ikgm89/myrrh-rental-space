@@ -37,9 +37,14 @@ const mockCheckActionRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockCheckBotHeuristics = mock(
+  (): { success: boolean; error?: string } => ({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
   checkActionRateLimit: mockCheckActionRateLimit,
+  checkBotHeuristics: mockCheckBotHeuristics,
 }));
 
 const mockCreatePublicReservationCommand = mock(() =>
@@ -274,6 +279,7 @@ describe("submitReservation", () => {
   beforeEach(() => {
     mockValidateTurnstile.mockClear();
     mockCheckActionRateLimit.mockClear();
+    mockCheckBotHeuristics.mockClear();
     mockCreatePublicReservationCommand.mockClear();
     mockVerifySpaceBelongsToLocation.mockClear();
     mockSendReservationAdminNotification.mockClear();
@@ -291,6 +297,9 @@ describe("submitReservation", () => {
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockCheckBotHeuristics.mockImplementation(() => ({
+      success: true as const,
+    }));
     mockCreatePublicReservationCommand.mockImplementation(() =>
       Promise.resolve({
         id: "reservation-001",
@@ -571,6 +580,57 @@ describe("submitReservation", () => {
       await submitReservation(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreatePublicReservationCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("異常系: bot対策(honeypot/timing)", () => {
+    test("bot判定時は formErrors にエラーを返す", async () => {
+      mockCheckBotHeuristics.mockImplementation(() => ({
+        success: false as const,
+        error:
+          "セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。",
+      }));
+
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      const result = await submitReservation(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      );
+      expectSubmissionLike(result);
+
+      expect(result.status).toBe("error");
+      const formErrors = result.error?.[""];
+      expect(formErrors?.[0]).toContain("セキュリティ検証");
+    });
+
+    test("bot判定時は createPublicReservationCommand が呼ばれない", async () => {
+      mockCheckBotHeuristics.mockImplementation(() => ({
+        success: false as const,
+        error: "セキュリティ検証に失敗しました。",
+      }));
+
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockCreatePublicReservationCommand).not.toHaveBeenCalled();
+    });
+
+    test("bot判定はTurnstile検証より前に実行される", async () => {
+      mockCheckBotHeuristics.mockImplementation(() => ({
+        success: false as const,
+        error: "セキュリティ検証に失敗しました。",
+      }));
+
+      const { submitReservation } =
+        await import("@/app/(public)/_shared/actions/reservation");
+
+      await submitReservation(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockValidateTurnstile).not.toHaveBeenCalled();
     });
   });
 

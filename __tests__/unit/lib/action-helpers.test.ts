@@ -5,6 +5,7 @@
 import { describe, test, expect, mock } from "bun:test";
 import { z, ZodError } from "zod";
 import {
+  checkBotHeuristics,
   extractFieldErrors,
   isTransientError,
   withRetry,
@@ -98,6 +99,64 @@ describe("action-helpers", () => {
       expect(isTransientError(null)).toBe(false);
       expect(isTransientError(undefined)).toBe(false);
       expect(isTransientError({ message: "connection error" })).toBe(false);
+    });
+  });
+
+  describe("checkBotHeuristics", () => {
+    test("honeypot空 + formRenderedAtが十分過去 → success", () => {
+      const result = checkBotHeuristics({
+        honeypot: "",
+        formRenderedAt: Date.now() - 10_000,
+      });
+      expect(result).toEqual({ success: true });
+    });
+
+    test("honeypotが未入力(undefined) + formRenderedAt未指定 → success", () => {
+      const result = checkBotHeuristics({
+        honeypot: undefined,
+        formRenderedAt: undefined,
+      });
+      expect(result).toEqual({ success: true });
+    });
+
+    test("honeypotに値が入っている → bot判定でfailure", () => {
+      const result = checkBotHeuristics({
+        honeypot: "http://spam.example.com",
+        formRenderedAt: Date.now() - 10_000,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("formRenderedAtから3秒未満での送信 → bot判定でfailure", () => {
+      const result = checkBotHeuristics({
+        honeypot: "",
+        formRenderedAt: Date.now() - 500,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("formRenderedAtがちょうど3秒以上前 → success", () => {
+      const result = checkBotHeuristics({
+        honeypot: "",
+        formRenderedAt: Date.now() - 3_000,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("honeypotとtimingの両方に問題があっても同じエラーメッセージを返す(理由を開示しない)", () => {
+      const honeypotResult = checkBotHeuristics({
+        honeypot: "filled",
+        formRenderedAt: Date.now() - 10_000,
+      });
+      const timingResult = checkBotHeuristics({
+        honeypot: "",
+        formRenderedAt: Date.now(),
+      });
+      expect(honeypotResult.success).toBe(false);
+      expect(timingResult.success).toBe(false);
+      if (!honeypotResult.success && !timingResult.success) {
+        expect(honeypotResult.error).toBe(timingResult.error);
+      }
     });
   });
 

@@ -173,6 +173,9 @@ export function ReservationForm({
     CustomerType.PERSONAL,
   );
   const [turnstileToken, setTurnstileToken] = useState("");
+  // bot対策の時間トラップ: フォーム初回マウント時刻を記録し、
+  // Server Action側で送信までの経過時間が短すぎないか検証する。
+  const [formRenderedAt] = useState(() => Date.now());
   const [isFetchingSlots, startSlotTransition] = useTransition();
   const [blockedRanges, setBlockedRanges] = useState<
     readonly BlockedDateRange[]
@@ -524,6 +527,25 @@ export function ReservationForm({
           name={fields.turnstileToken.name}
           value={turnstileToken}
         />
+        <input
+          type="hidden"
+          name={fields.formRenderedAt.name}
+          value={formRenderedAt}
+        />
+        {/* bot対策のhoneypot: 実在しない項目("website")を装う。人には見えず、
+            機械的にフォームを埋めるbotだけが入力してしまう。 */}
+        <div
+          aria-hidden="true"
+          className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden"
+        >
+          <input
+            type="text"
+            name={fields.website.name}
+            tabIndex={-1}
+            autoComplete="off"
+            defaultValue=""
+          />
+        </div>
         {agreedTermsIds.map((id) => (
           <input
             key={id}

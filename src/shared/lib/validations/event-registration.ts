@@ -15,6 +15,13 @@ const eventRegistrationBaseSchema = z.object({
   email: z.email({ error: "有効なメールアドレスを入力してください" }),
   phone: z.string().max(20).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
+  // bot対策のhoneypotフィールド。フォームに実在しない項目("website")を装い、
+  // botが機械的に埋めやすい名前にする(OWASP Automated Threats Handbook推奨)。
+  // formRenderedAtは表示から3秒未満の送信を拒否する時間トラップ。
+  // どちらもZodではエラー化せずServer Action側のcheckBotHeuristicsで判定する
+  // (validationエラーとして出すとbotに手がかりを与えるため)。
+  website: z.string().optional(),
+  formRenderedAt: z.coerce.number().optional(),
 });
 
 export const publicEventRegistrationSchema = eventRegistrationBaseSchema.extend(

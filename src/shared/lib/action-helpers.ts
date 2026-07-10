@@ -122,6 +122,41 @@ export async function validateTurnstile(
 }
 
 // =============================================================================
+// Bot Heuristics for Server Actions (honeypot + submission-timing trap)
+// =============================================================================
+
+export type BotCheckResult =
+  | { readonly success: true }
+  | { readonly success: false; readonly error: string };
+
+/**
+ * honeypot が埋まっている、またはフォーム表示から極端に短時間(3秒未満)で
+ * 送信された場合に bot と判定する。理由をエラーメッセージで開示しない
+ * （回避策のヒントを与えないため、Turnstile 失敗時と同じ汎用文言を使う）。
+ */
+const MIN_FORM_FILL_TIME_MS = 3000;
+const BOT_DETECTED_ERROR =
+  "セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。";
+
+export function checkBotHeuristics(params: {
+  readonly honeypot: string | undefined;
+  readonly formRenderedAt: number | undefined;
+}): BotCheckResult {
+  if (params.honeypot) {
+    return { success: false, error: BOT_DETECTED_ERROR };
+  }
+
+  if (
+    params.formRenderedAt !== undefined &&
+    Date.now() - params.formRenderedAt < MIN_FORM_FILL_TIME_MS
+  ) {
+    return { success: false, error: BOT_DETECTED_ERROR };
+  }
+
+  return { success: true };
+}
+
+// =============================================================================
 // Rate Limiting for Server Actions
 // =============================================================================
 
