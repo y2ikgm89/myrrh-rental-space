@@ -6,6 +6,7 @@ import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
+import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { CustomApiKeyInput } from "@/shared/types/api-keys";
 import { parseCustomApiKeysMap } from "@/shared/domain/settings/api-key-helpers";
 import {
@@ -207,7 +208,14 @@ export async function clearSwitchBotSettings(): Promise<void> {
   // 無いため、そのままクリアを許可する。
   if (credentials) {
     const livePasscodes = await prisma.smartLockPasscode.findMany({
-      where: { status: { in: ["PENDING", "CONFIRMED"] } },
+      where: {
+        status: {
+          in: [
+            SmartLockPasscodeStatus.PENDING,
+            SmartLockPasscodeStatus.CONFIRMED,
+          ],
+        },
+      },
       select: {
         id: true,
         status: true,
@@ -216,7 +224,9 @@ export async function clearSwitchBotSettings(): Promise<void> {
       },
     });
 
-    if (livePasscodes.some((p) => p.status === "PENDING")) {
+    if (
+      livePasscodes.some((p) => p.status === SmartLockPasscodeStatus.PENDING)
+    ) {
       throw new DomainError(
         "発行処理中のパスコードが残っているため連携をクリアできません。しばらく待ってから再試行してください",
         "VALIDATION",
@@ -224,7 +234,7 @@ export async function clearSwitchBotSettings(): Promise<void> {
     }
 
     const confirmedPasscodes = livePasscodes.filter(
-      (p) => p.status === "CONFIRMED",
+      (p) => p.status === SmartLockPasscodeStatus.CONFIRMED,
     );
     if (confirmedPasscodes.length > 0) {
       const results = await Promise.all(
