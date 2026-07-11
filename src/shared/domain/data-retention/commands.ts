@@ -24,7 +24,7 @@ import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
  * | login_attempts     | DELETE     | createdAt < now - loginAttemptMonths        |
  * | Reservation.guest* | NULL 化    | endTime + reservationGuestMonths < now      |
  * | Inquiry            | DELETE     | createdAt < now - inquiryMonths             |
- * | Customer (INACTIVE)| PII 匿名化 | status=INACTIVE ∧ COALESCE(lastReservationAt, createdAt) < now - customerInactiveMonths |
+ * | Customer (INACTIVE)| PII 匿名化 | status=INACTIVE ∧ createdAt < cutoff ∧ ¬∃ reservation.endTime ≥ cutoff |
  *
  * ## 契約
  *
@@ -208,20 +208,32 @@ function buildAnonymizedEmail(): string {
 /**
  * status=INACTIVE かつ最終アクティビティが `months` を経過した Customer の PII を匿名化する。
  *
- * ## 「最終アクティビティ」の定義（Codex 指摘 #3564864835 + #3564883654）
+ * ## 「最終アクティビティ」の判定（Codex #3564864835 → #3564883654 → #3564905126 の deep-dive を反映）
  *
- * 優先順に:
+ * `Customer.lastReservationAt` は cached stat であり、`updateAdminReservationCommand`
+ * の予約再割当経路で新 customer の値が再計算されない bug が別途ある。cache に依存すると:
  *
- * 1. `lastReservationAt < cutoff` — 最終予約から `months` 経過
- * 2. `lastReservationAt IS NULL AND createdAt < cutoff AND 予約 0 件` — 予約履歴なしの
- *    dormant customer は `createdAt` に fallback。ただし **予約 0 件の保証** が必須:
- *    `updateAdminReservationCommand` は予約再割当時に新 customer の `lastReservationAt`
- *    を再計算しない bug が別途あり、`lastReservationAt=null` でも予約履歴を持つケースが
- *    存在し得る（Codex #3564883654）。`reservations: { none: {} }` で filter して、
- *    stale `lastReservationAt` による誤匿名化を構造的に防ぐ。
+ * - stale `null` の customer は「予約履歴なし」と誤判定される（#3564864835）
+ * - `AND: [null, createdAt, reservations.none({})]` の guard で修正しても、reassigned
+ *   old reservations を持つ customer が両枝で false になり永久放置される（#3564905126）
  *
- * `updatedAt` ではなく `createdAt` を使うのは意図的: admin が最近 INACTIVE に切り替えても
- * 「作成から `months` 経過していれば dormant PII として匿名化対象」という semantics のため。
+ * 対策: cache 値を判定に使わず、**Reservation 実履歴** で「recent/upcoming な予約があるか」を
+ * 直接問う。cutoff より新しい endTime を持つ予約が **1 件も無い** customer を dormant と定義する。
+ * この relation filter は Reservation.customerId の @@index で per-customer subquery が高速。
+ *
+ *   WHERE status = 'INACTIVE'
+ *     AND email NOT LIKE 'anonymized-%'
+ *     AND createdAt < cutoff                      -- fresh install 直後の customer を除外
+ *     AND NOT EXISTS (SELECT 1 FROM reservations  -- recent/upcoming 予約 0 件
+ *                     WHERE customerId = c.id AND endTime >= cutoff)
+ *
+ * この semantics で全 stale-stat パターンが correct になる:
+ *
+ * - `lastReservationAt=null` かつ実履歴 0 件: 匿名化対象
+ * - `lastReservationAt=null` かつ実履歴が全て cutoff 以前: 匿名化対象
+ * - `lastReservationAt=null` かつ recent/upcoming 予約あり: **保持**（cache 参照せず）
+ * - stale-high (`lastReservationAt < cutoff` だが実は recent 予約あり): **保持**
+ * - fresh installed customer (createdAt >= cutoff): 保持
  *
  * ## 匿名化仕様
  *
@@ -244,18 +256,10 @@ export async function anonymizeInactiveCustomers(
     where: {
       status: CustomerStatus.INACTIVE,
       email: { not: { startsWith: "anonymized-" } },
-      // 1) lastReservationAt が経過、または
-      // 2) 予約 0 件かつ createdAt が経過 (stale lastReservationAt に対する構造的ガード)
-      OR: [
-        { lastReservationAt: { lt: cutoff } },
-        {
-          AND: [
-            { lastReservationAt: null },
-            { createdAt: { lt: cutoff } },
-            { reservations: { none: {} } },
-          ],
-        },
-      ],
+      createdAt: { lt: cutoff },
+      // 予約の実履歴を relation filter で直接問う (cached stat は使わない)。
+      // cutoff より新しい endTime を持つ予約が 1 件でもある customer は「dormant」ではない。
+      reservations: { none: { endTime: { gte: cutoff } } },
     },
     select: { id: true },
   });

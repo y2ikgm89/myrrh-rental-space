@@ -352,7 +352,7 @@ describe("monthsAgo month-end overflow (Codex #3564864832)", () => {
   });
 });
 
-describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #3564864835 + #3564883654)", () => {
+describe("anonymizeInactiveCustomers WHERE contract (Codex #3564864835 → #3564883654 → #3564905126)", () => {
   beforeEach(() => {
     mockCustomerFindMany.mockClear();
     mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
@@ -362,71 +362,52 @@ describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #356
     );
   });
 
-  test("WHERE の OR は 2 枝: 予約履歴あり (lt cutoff) と 予約履歴なし (createdAt fallback + 予約 0 件 guard)", async () => {
+  test("WHERE は cached stat を使わず、Reservation 実履歴で recent/upcoming を判定する", async () => {
     await anonymizeInactiveCustomers(NOW, 84);
     const call = mockCustomerFindMany.mock.calls[0];
     if (!call) throw new Error("customer.findMany was not called");
     const args = call[0] as {
       where: {
-        OR: Array<
-          | { lastReservationAt: { lt: Date } }
-          | {
-              AND: Array<
-                | { lastReservationAt: null }
-                | { createdAt: { lt: Date } }
-                | { reservations: { none: Record<string, unknown> } }
-              >;
-            }
-        >;
+        status: string;
+        email: { not: { startsWith: string } };
+        createdAt: { lt: Date };
+        reservations: { none: { endTime: { gte: Date } } };
+        // 明示的に「使わない」ことを固定するため、OR と lastReservationAt は存在しない
+        OR?: unknown;
+        lastReservationAt?: unknown;
       };
     };
-    expect(args.where.OR).toHaveLength(2);
-    // 第1枝: lastReservationAt < cutoff
-    const branch1 = args.where.OR[0] as { lastReservationAt: { lt: Date } };
-    expect(branch1.lastReservationAt.lt).toBeInstanceOf(Date);
-    // 第2枝: lastReservationAt IS NULL AND createdAt < cutoff AND 予約 0 件
-    const branch2 = args.where.OR[1] as {
-      AND: Array<
-        | { lastReservationAt: null }
-        | { createdAt: { lt: Date } }
-        | { reservations: { none: Record<string, unknown> } }
-      >;
-    };
-    expect(branch2.AND).toHaveLength(3);
-    const [nullCond, createdAtCond, noReservationsCond] = branch2.AND;
-    expect(
-      (nullCond as { lastReservationAt: null }).lastReservationAt,
-    ).toBeNull();
-    expect(
-      (createdAtCond as { createdAt: { lt: Date } }).createdAt.lt,
-    ).toBeInstanceOf(Date);
-    // 予約 0 件 guard: stale lastReservationAt (updateAdminReservationCommand が
-    // 予約再割当時に新 customer の stats を再計算しない bug 由来) を持つ customer を
-    // createdAt fallback から構造的に除外する。
-    expect(
-      (
-        noReservationsCond as {
-          reservations: { none: Record<string, unknown> };
-        }
-      ).reservations,
-    ).toEqual({ none: {} });
-    // 両枝の cutoff は同一 Date 参照 (monthsAgo の 1 回計算を再利用)
-    expect((branch1.lastReservationAt.lt as Date).toISOString()).toBe(
-      (createdAtCond as { createdAt: { lt: Date } }).createdAt.lt.toISOString(),
+
+    // 1) status / email フィルタ
+    expect(args.where.status).toBe("INACTIVE");
+    expect(args.where.email.not.startsWith).toBe("anonymized-");
+
+    // 2) createdAt: fresh install 直後の customer を除外
+    expect(args.where.createdAt.lt).toBeInstanceOf(Date);
+
+    // 3) reservations relation filter: cutoff 以降の endTime を持つ予約が 0 件
+    expect(args.where.reservations.none.endTime.gte).toBeInstanceOf(Date);
+    // createdAt と reservations の cutoff は同一 Date (monthsAgo の 1 回計算を再利用)
+    expect(args.where.createdAt.lt.toISOString()).toBe(
+      args.where.reservations.none.endTime.gte.toISOString(),
     );
+
+    // 4) cached stat `lastReservationAt` は WHERE に **含めない**
+    //    stale-null / stale-high の両方向で信頼できないため、実履歴だけを唯一の根拠にする。
+    expect(args.where.lastReservationAt).toBeUndefined();
+    expect(args.where.OR).toBeUndefined();
   });
 
-  test("匿名化済み customer は email フィルタで除外される (idempotency)", async () => {
+  test("cutoff は monthsAgo(NOW, months) と一致する (時刻成分も伝搬)", async () => {
+    // NOW = 2027-01-15T00:00:00Z, months = 84 → 2020-01-15T00:00:00Z
     await anonymizeInactiveCustomers(NOW, 84);
     const call = mockCustomerFindMany.mock.calls[0];
     if (!call) throw new Error("customer.findMany was not called");
     const args = call[0] as {
-      where: {
-        email: { not: { startsWith: string } };
-        status: string;
-      };
+      where: { createdAt: { lt: Date } };
     };
-    expect(args.where.email.not.startsWith).toBe("anonymized-");
-    expect(args.where.status).toBe("INACTIVE");
+    expect(args.where.createdAt.lt.toISOString()).toBe(
+      "2020-01-15T00:00:00.000Z",
+    );
   });
 });
