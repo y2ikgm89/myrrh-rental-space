@@ -122,12 +122,17 @@ mock.module("@/shared/domain/settings/queries/integration", () => ({
   getStripeSettings: () => mockGetStripeSettings(),
 }));
 
-// 実際の crypto モジュールを re-export し、safeDecrypt のみオーバーライド
-// （不完全なモックは他テストファイルの crypto テストを壊す — Bun 既知制限）
+// 実際の crypto モジュールを re-export し、safeDecrypt / safeDecryptToString
+// のみオーバーライド（不完全なモックは他テストファイルの crypto テストを壊す
+// — Bun 既知制限）。route.ts は safeDecryptToString を経由するが、real 実装は
+// 同モジュール内 safeDecrypt を module-local に参照するため mock が届かない。
+// 両方を mockSafeDecrypt に紐付けて test を通す。
 const actualCrypto = await import("@/shared/lib/crypto");
 mock.module("@/shared/lib/crypto", () => ({
   ...actualCrypto,
   safeDecrypt: (value: string) => mockSafeDecrypt(value),
+  safeDecryptToString: (value: string | null | undefined) =>
+    value ? mockSafeDecrypt(value) : null,
 }));
 
 mock.module("@/shared/lib/stripe", () => ({

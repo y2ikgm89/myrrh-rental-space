@@ -19,7 +19,7 @@ import {
   refreshLongLivedToken,
   getTokenExpiryDays,
 } from "@/shared/lib/instagram";
-import { safeDecrypt } from "@/shared/lib/crypto";
+import { safeDecryptToString } from "@/shared/lib/crypto";
 import {
   logError,
   ErrorCategory,
@@ -78,10 +78,9 @@ export async function GET(request: Request) {
     }
 
     // トークンを復号
-    const decryptedToken =
-      safeDecrypt(settings.encryptedAccessToken, {
-        expectedPurpose: "instagram",
-      })?.toString("utf8") ?? null;
+    const decryptedToken = safeDecryptToString(settings.encryptedAccessToken, {
+      expectedPurpose: "instagram",
+    });
     if (!decryptedToken) {
       logError(new Error("Failed to decrypt Instagram access token"), {
         category: ErrorCategory.AUTHORIZATION,

@@ -22,8 +22,14 @@ mock.module("@/shared/lib/env/encryption", () => ({
   getPrimaryEncryptionKey: mockGetPrimary,
 }));
 
-const { encrypt, decrypt, isEncrypted, safeEncrypt, safeDecrypt } =
-  await import("@/shared/lib/crypto");
+const {
+  encrypt,
+  decrypt,
+  isEncrypted,
+  safeEncrypt,
+  safeDecrypt,
+  safeDecryptToString,
+} = await import("@/shared/lib/crypto");
 
 const DEFAULT_PURPOSE = "generic";
 
@@ -202,6 +208,68 @@ describe("crypto", () => {
       const encrypted = encrypt("secret", { purpose: "purpose-a" });
       expect(
         safeDecrypt(encrypted, { expectedPurpose: "purpose-b" }),
+      ).toBeNull();
+    });
+  });
+
+  describe("safeDecryptToString", () => {
+    test("正常な暗号文を utf-8 string に復号できる", () => {
+      const plaintext = "safe-to-string";
+      const encrypted = encrypt(plaintext);
+      expect(
+        safeDecryptToString(encrypted, { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toBe(plaintext);
+    });
+
+    test("日本語も utf-8 で復号できる", () => {
+      const plaintext = "秘密のメッセージ";
+      const encrypted = encrypt(plaintext, { purpose: "jp" });
+      expect(safeDecryptToString(encrypted, { expectedPurpose: "jp" })).toBe(
+        plaintext,
+      );
+    });
+
+    test("null ciphertext は null を返す", () => {
+      expect(
+        safeDecryptToString(null, { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toBeNull();
+    });
+
+    test("undefined ciphertext は null を返す", () => {
+      expect(
+        safeDecryptToString(undefined, { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toBeNull();
+    });
+
+    test("空文字 ciphertext は defensive に null を返す（decrypt を試みない）", () => {
+      expect(
+        safeDecryptToString("", { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toBeNull();
+    });
+
+    test("purpose 不一致は null を返す（defense-in-depth）", () => {
+      const encrypted = encrypt("secret", { purpose: "purpose-a" });
+      expect(
+        safeDecryptToString(encrypted, { expectedPurpose: "purpose-b" }),
+      ).toBeNull();
+    });
+
+    test("不正な wire format は null を返す", () => {
+      expect(
+        safeDecryptToString("not-a-ciphertext", {
+          expectedPurpose: DEFAULT_PURPOSE,
+        }),
+      ).toBeNull();
+    });
+
+    test("改ざんされた暗号文は null を返す", () => {
+      const encrypted = encrypt("tamper-target");
+      const parts = encrypted.split(":");
+      parts[5] = "tampered";
+      expect(
+        safeDecryptToString(parts.join(":"), {
+          expectedPurpose: DEFAULT_PURPOSE,
+        }),
       ).toBeNull();
     });
   });

@@ -4,7 +4,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
-import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
+import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { CustomApiKeyInput } from "@/shared/types/api-keys";
@@ -294,11 +294,9 @@ export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
     select: { switchbotWebhookPathToken: true },
   });
 
-  const existing = settings?.switchbotWebhookPathToken
-    ? (safeDecrypt(settings.switchbotWebhookPathToken, {
-        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
-      })?.toString("utf8") ?? null)
-    : null;
+  const existing = safeDecryptToString(settings?.switchbotWebhookPathToken, {
+    expectedPurpose: SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
+  });
   if (existing) return existing;
 
   const token = randomBytes(24).toString("base64url");

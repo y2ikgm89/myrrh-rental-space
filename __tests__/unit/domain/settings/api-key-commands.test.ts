@@ -60,6 +60,7 @@ mock.module("@/shared/db/prisma", () => ({
 mock.module("@/shared/lib/crypto", () => ({
   encrypt: (v: string) => `enc:${v}`,
   safeDecrypt: (v: string) => v,
+  safeDecryptToString: (v: string | null | undefined) => v ?? null,
 }));
 mock.module("@/shared/domain/settings/api-key-queries", () => ({
   getDecryptedSwitchBotCredentials: () =>

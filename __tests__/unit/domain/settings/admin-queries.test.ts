@@ -67,6 +67,7 @@ mock.module("@generated/prisma/enums", () => ({
 
 mock.module("@/shared/lib/crypto", () => ({
   safeDecrypt: mock(() => "decrypted-secret"),
+  safeDecryptToString: mock(() => "decrypted-secret"),
 }));
 
 mock.module("@/shared/lib/google-calendar/service-account", () => ({

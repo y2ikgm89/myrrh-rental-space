@@ -7,7 +7,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
+import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { getGoogleCalendarServiceAccountConfig } from "@/shared/domain/settings/admin-queries";
 import {
@@ -31,10 +31,12 @@ export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | 
     return null;
   }
 
-  const decryptedJson =
-    safeDecrypt(settings.encryptedServiceAccountJson, {
+  const decryptedJson = safeDecryptToString(
+    settings.encryptedServiceAccountJson,
+    {
       expectedPurpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
-    })?.toString("utf8") ?? null;
+    },
+  );
   if (!decryptedJson) {
     logError(new Error("Failed to decrypt service account credentials"), {
       category: ErrorCategory.UNKNOWN,

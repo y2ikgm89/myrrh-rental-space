@@ -8,7 +8,7 @@ import "server-only";
 import { randomInt } from "crypto";
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
+import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import {
   createPasscode,
@@ -81,10 +81,9 @@ function decryptConfirmedPasscode(
   deviceName: string,
   reservationId: string,
 ): IssuedSmartLockPasscode | null {
-  const passcode =
-    safeDecrypt(passcodeCiphertext, {
-      expectedPurpose: PASSCODE_CRYPTO_PURPOSE,
-    })?.toString("utf8") ?? null;
+  const passcode = safeDecryptToString(passcodeCiphertext, {
+    expectedPurpose: PASSCODE_CRYPTO_PURPOSE,
+  });
   if (passcode === null) {
     logError(new Error("既存のCONFIRMED済みパスコードの復号に失敗しました"), {
       category: ErrorCategory.UNKNOWN,
