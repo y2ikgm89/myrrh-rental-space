@@ -5,6 +5,10 @@ import {
   requireCompanyNameForCorporate,
   COMPANY_NAME_REFINE_ERROR,
 } from "./customer-type";
+import {
+  emailFieldSchema,
+  personNameFieldSchema,
+} from "./customer-shared-fields";
 
 export { CustomerType } from "./customer-type";
 
@@ -12,15 +16,9 @@ export const publicInquirySchema = z
   .object({
     customerType: customerTypeSchema,
     companyName: companyNameSchema,
-    lastName: z
-      .string()
-      .min(1, { error: "姓は必須です" })
-      .max(50, { error: "姓は50文字以内で入力してください" }),
-    firstName: z
-      .string()
-      .min(1, { error: "名は必須です" })
-      .max(50, { error: "名は50文字以内で入力してください" }),
-    email: z.email({ error: "有効なメールアドレスを入力してください" }),
+    lastName: personNameFieldSchema("姓"),
+    firstName: personNameFieldSchema("名"),
+    email: emailFieldSchema,
     subject: z
       .string()
       .min(1, { error: "件名は必須です" })

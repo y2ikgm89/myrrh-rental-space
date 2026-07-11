@@ -3,6 +3,10 @@ import {
   CustomerStatus,
   CustomerType,
 } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  emailFieldSchema,
+  personNameFieldSchema,
+} from "./customer-shared-fields";
 
 // =============================================================================
 // Customer Schemas
@@ -14,14 +18,8 @@ import {
  */
 export const customerFormSchema = z.object({
   customerType: z.enum(CustomerType).default(CustomerType.PERSONAL),
-  lastName: z
-    .string()
-    .min(1, { error: "姓は必須です" })
-    .max(50, { error: "姓は50文字以内で入力してください" }),
-  firstName: z
-    .string()
-    .min(1, { error: "名は必須です" })
-    .max(50, { error: "名は50文字以内で入力してください" }),
+  lastName: personNameFieldSchema("姓"),
+  firstName: personNameFieldSchema("名"),
   lastNameKana: z
     .string()
     .max(50, { error: "セイは50文字以内で入力してください" })
@@ -37,7 +35,7 @@ export const customerFormSchema = z.object({
     .max(100, { error: "会社名は100文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
-  email: z.email({ error: "有効なメールアドレスを入力してください" }),
+  email: emailFieldSchema,
   phoneNumber: z
     .string()
     .max(20, { error: "電話番号は20文字以内で入力してください" })
