@@ -1,0 +1,36 @@
+# Counts Prisma "connection pool exhausted" / "acquire timeout" errors emitted
+# by the runtime. Prisma surfaces P2024 and P2028 for the pool exhaustion /
+# transaction-scope timeout paths, plus the raw error message
+# "Timed out fetching a new connection from the connection pool" from pg-pool.
+#
+# Apply with:
+#   gcloud logging metrics create prisma_pool_timeout \
+#     --config-from-file=infra/monitoring/log-metrics/prisma-pool-timeout.yaml
+
+filter: |-
+  resource.type="cloud_run_revision"
+  resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+  (
+    textPayload:"Timed out fetching a new connection from the connection pool"
+    OR jsonPayload.message:"Timed out fetching a new connection from the connection pool"
+    OR jsonPayload.message:"P2024"
+    OR jsonPayload.message:"P2028"
+  )
+
+description: |-
+  Count of Prisma connection pool acquire timeouts / pool exhaustion signals
+  from the myrrh-rental-space runtime. Feeds the prisma-pool-timeout alert
+  policy.
+
+metricDescriptor:
+  metricKind: DELTA
+  valueType: INT64
+  unit: "1"
+  displayName: "Prisma pool acquire timeouts (myrrh-rental-space)"
+  labels:
+    - key: service_name
+      valueType: STRING
+      description: "Cloud Run service name that produced the error"
+
+labelExtractors:
+  service_name: EXTRACT(resource.labels.service_name)

@@ -1,0 +1,39 @@
+# Alert on ANY log line at Cloud Logging severity=CRITICAL from the runtime.
+# Our logger emits CRITICAL only for ErrorSeverity.CRITICAL — a rare, hand-
+# picked signal (mail send failure that cannot retry, migration integrity
+# violation, etc). One instance is worth paging.
+#
+# Uses a log-based condition (`conditionMatchedLog`), so no separate log
+# metric is required — the alert fires on the log entry itself.
+#
+# https://cloud.google.com/monitoring/alerts/log-based-incidents
+
+displayName: "myrrh-rental-space: CRITICAL severity log"
+combiner: OR
+enabled: true
+notificationChannels:
+  # - projects/myrrh-rental-space/notificationChannels/REPLACE_ME
+documentation:
+  content: |-
+    The myrrh-rental-space runtime emitted a log line at severity=CRITICAL. The
+    logger reserves CRITICAL for irrecoverable domain-level failures (mail
+    send failure that cannot retry, audit log integrity violation, encryption
+    key unavailable, etc). One occurrence is worth escalating.
+
+    Open the incident in Cloud Logging and follow the runbook the message points to.
+  mimeType: "text/markdown"
+
+conditions:
+  - displayName: "any CRITICAL log entry"
+    conditionMatchedLog:
+      filter: |-
+        resource.type="cloud_run_revision"
+        resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+        severity="CRITICAL"
+
+alertStrategy:
+  # notificationRateLimit avoids paging N times for N lines during the same
+  # cascading failure — one page per 5 min is more useful than 200.
+  notificationRateLimit:
+    period: 300s
+  autoClose: 3600s
