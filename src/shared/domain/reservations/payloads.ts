@@ -177,6 +177,54 @@ export async function incrementCustomerReservationStats(
   });
 }
 
+/**
+ * Customer の予約統計 (`totalReservations` / `totalSpent` / `firstReservationAt` /
+ * `lastReservationAt`) を Reservation テーブル実履歴から再計算する。
+ *
+ * ## いつ使うか
+ *
+ * increment/decrement で維持している stat が **customerId の変更 or merge で
+ * 追随できない場合**の再構築経路として使う。具体的には:
+ *
+ * - `mergeCustomerCommand` — source の全 relation を target に移管したあと、target の
+ *   stat を実履歴で確定する
+ * - `updateAdminReservationCommand` — 予約再割当時に旧 customer / 新 customer 両方の
+ *   stat を再計算する (Codex data-retention レビュー中に silently 発生することが発覚)
+ *
+ * ## 集計仕様
+ *
+ * - `deletedAt: null` の予約のみを対象 (soft-delete は「無かった」扱い)
+ * - `totalReservations` = COUNT
+ * - `totalSpent` = SUM(totalPriceWithTax) — 0 件なら null (Customer 列と一致)
+ * - `firstReservationAt` = MIN(createdAt)、`lastReservationAt` = MAX(createdAt)
+ *   (`incrementCustomerReservationStats` の `now` semantics と揃える — 予約の実施
+ *   時刻ではなく作成時刻。0 件なら null)
+ */
+export async function recomputeCustomerReservationStats(
+  tx: Tx,
+  customerId: string,
+): Promise<void> {
+  const stats = await tx.reservation.aggregate({
+    where: { customerId, deletedAt: null },
+    _count: true,
+    _sum: { totalPriceWithTax: true },
+    _min: { createdAt: true },
+    _max: { createdAt: true },
+  });
+
+  await tx.customer.update({
+    where: { id: customerId },
+    data: {
+      totalReservations: stats._count,
+      totalSpent: stats._sum.totalPriceWithTax
+        ? Number(stats._sum.totalPriceWithTax)
+        : null,
+      firstReservationAt: stats._min.createdAt,
+      lastReservationAt: stats._max.createdAt,
+    },
+  });
+}
+
 export function calculatePricing(params: {
   hourlyPrice: number;
   hours: number;

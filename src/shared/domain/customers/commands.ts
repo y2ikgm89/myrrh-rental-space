@@ -9,6 +9,7 @@ import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
+import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/payloads";
 import type { CustomerFormData } from "@/shared/lib/validations/customer";
 
 const GUEST_EMAIL_DUPLICATE_MESSAGE =
@@ -244,25 +245,10 @@ export async function mergeCustomerCommand(
       ],
     );
 
-    const stats = await tx.reservation.aggregate({
-      where: { customerId: targetId, deletedAt: null },
-      _count: true,
-      _sum: { totalPriceWithTax: true },
-      _min: { createdAt: true },
-      _max: { createdAt: true },
-    });
-
-    await tx.customer.update({
-      where: { id: targetId },
-      data: {
-        totalReservations: stats._count,
-        totalSpent: stats._sum.totalPriceWithTax
-          ? Number(stats._sum.totalPriceWithTax)
-          : null,
-        firstReservationAt: stats._min.createdAt,
-        lastReservationAt: stats._max.createdAt,
-      },
-    });
+    // target の予約統計を実履歴から再計算する。
+    // 同型の再計算経路は `updateAdminReservationCommand` の予約再割当時にもあり、
+    // 実装は `recomputeCustomerReservationStats` に集約されている。
+    await recomputeCustomerReservationStats(tx, targetId);
 
     await tx.customer.delete({ where: { id: sourceId } });
 
