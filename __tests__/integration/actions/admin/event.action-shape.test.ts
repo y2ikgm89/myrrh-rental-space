@@ -92,12 +92,11 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mock(() => {}),
 }));
 
-mock.module("next/cache", () => ({
-  updateTag: mock(() => {}),
-  revalidateTag: mock(() => {}),
-  cacheLife: mock(() => {}),
-  cacheTag: mock(() => {}),
-}));
+// 境界 mock: event.ts は `@/shared/lib/cache` (invalidateSiteWideCache /
+// purgeMarketingHomeTag / firePurgeAsync) 経由でしかキャッシュ無効化しない。
+// その境界を既に mock 済 (上の `@/shared/lib/cache` block) なので、
+// 内部の site-wide.ts → `next/cache` は evaluation 経路に載らない。
+// `next/cache` を追加 stub するのは新規 export 追加ごとに drift する anti-pattern。
 
 type ExecuteOpts<T> = {
   resource: string;

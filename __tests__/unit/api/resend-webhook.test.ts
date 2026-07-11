@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 const mockGetResendClient = mock(async () => null);
 const mockUpdateCustomerEmailDeliveryStatusByEmail = mock(async () => 0);
 
-mock.module("next/cache", () => ({
-  revalidateTag: mock(() => undefined),
-  // `invalidateSiteWideCache` (server action variant) は route handler で
-  // 使わないが site-wide.ts の named import は解決する必要がある。
-  updateTag: mock(() => undefined),
+// 境界 mock: route.ts が使う唯一の cache-invalidation entry point を差し替える。
+// `next/cache` を直 mock すると新規 export 追加ごとに追随が必要 (PR #945 fixup で
+// 13 test file の名前ズレを一括修正した反省)。boundary mock なら site-wide.ts の
+// 内部で使う revalidateTag / updateTag / expire オプション等が変わっても影響 0。
+mock.module("@/shared/lib/cache/site-wide", () => ({
+  invalidateSiteWideCacheFromRouteHandler: mock(() => undefined),
 }));
 
 mock.module("next/navigation", () => ({
