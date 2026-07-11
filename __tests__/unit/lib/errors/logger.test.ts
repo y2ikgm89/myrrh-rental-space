@@ -15,7 +15,11 @@ import {
 } from "bun:test";
 import { setNodeEnv } from "../../../helpers/env";
 import { expectRecord } from "../../../helpers/type-assertions";
-import { logError, createErrorLogger } from "@/shared/lib/errors/logger-core";
+import {
+  logError,
+  createErrorLogger,
+  logger,
+} from "@/shared/lib/errors/logger-core";
 import {
   normalizeError,
   getErrorMessage,
@@ -346,6 +350,233 @@ describe("logError", () => {
       expect(spy).toHaveBeenCalledWith(
         expect.stringContaining("Error: string error"),
       );
+    });
+  });
+});
+
+// =============================================================================
+// PII redaction contract (symmetric)
+// =============================================================================
+//
+// `redactContext` は #977 で config 済み。本ブロックは message / stack_trace の
+// symmetric contract を強制する: emit 直前に PII / secret が redact される
+// ことを adversarially 検証する。
+//
+// 生きた bug: `send.ts` の `new Error(\`Email suppressed: ${recipient}\`)` が
+// 顧客 email を Cloud Logging へ直流ししていた (Top 5 リスク #1)。
+
+describe("PII redaction contract (message and stack_trace)", () => {
+  const originalNodeEnv = process.env["NODE_ENV"];
+
+  afterAll(() => {
+    setNodeEnv(originalNodeEnv);
+  });
+
+  describe("logError - message (production)", () => {
+    beforeEach(() => {
+      setNodeEnv("production");
+    });
+
+    test("redacts email in Error.message", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error("Email suppressed: alice@example.com"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+      });
+      const firstCall = spy.mock.calls[0];
+      if (!firstCall) throw new Error("spy not called");
+      const parsed = parseLogRecord(firstCall[0]);
+      expect(String(parsed["message"])).not.toContain("alice@example.com");
+      expect(String(parsed["message"])).toContain("[REDACTED:email]");
+    });
+
+    test("redacts Japanese phone number in Error.message", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error("SMS failed: 090-1234-5678"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(String(parsed["message"])).not.toContain("090-1234-5678");
+      expect(String(parsed["message"])).toContain("[REDACTED:phone]");
+    });
+
+    test("redacts JWT in Error.message", () => {
+      const jwt =
+        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjMifQ.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9FYR3Cq6D8pow";
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error(`Auth failure: ${jwt}`), {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.HIGH,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(String(parsed["message"])).not.toContain(jwt);
+      expect(String(parsed["message"])).toContain("[REDACTED:jwt]");
+    });
+
+    test("redacts Bearer token in Error.message", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error("Upstream 401: Bearer abc123def456ghi789"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(String(parsed["message"])).not.toContain("abc123def456ghi789");
+      expect(String(parsed["message"])).toContain("[REDACTED:bearer]");
+    });
+
+    test("preserves UUIDs in Error.message (opaque identifiers, not secrets)", () => {
+      const uuid = "550e8400-e29b-41d4-a716-446655440000";
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error(`Reservation not found: ${uuid}`), {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(String(parsed["message"])).toContain(uuid);
+    });
+
+    test("redacts email in string error (non-Error input path)", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError("Failed for bob@example.com", {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.HIGH,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(String(parsed["message"])).not.toContain("bob@example.com");
+      expect(String(parsed["message"])).toContain("[REDACTED:email]");
+      // stack_trace fallback path も同経路で redact される
+      expect(String(parsed["stack_trace"])).not.toContain("bob@example.com");
+    });
+  });
+
+  describe("logError - stack_trace (production)", () => {
+    beforeEach(() => {
+      setNodeEnv("production");
+    });
+
+    test("redacts email carried in Error.stack at ERROR severity", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      // Error の 1 行目は "Error: <message>" — stack 全体に PII が乗る
+      logError(new Error("failure for leaked@example.com"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(parsed["stack_trace"]).toBeDefined();
+      expect(String(parsed["stack_trace"])).not.toContain("leaked@example.com");
+      expect(String(parsed["stack_trace"])).toContain("[REDACTED:email]");
+    });
+
+    test("redacts Bearer token in Error.stack", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error("Bearer abc123def456ghi789xyz"), {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.CRITICAL,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(String(parsed["stack_trace"])).not.toContain("abc123def456ghi789");
+      expect(String(parsed["stack_trace"])).toContain("[REDACTED:bearer]");
+    });
+
+    test("does not truncate typical stack traces (fits under 8 KB budget)", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error("boom"), {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.HIGH,
+      });
+      const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+      expect(String(parsed["stack_trace"])).not.toContain("[truncated]");
+      expect(String(parsed["stack_trace"])).toContain("Error: boom");
+    });
+  });
+
+  describe("logError - dev output", () => {
+    beforeEach(() => {
+      setNodeEnv("development");
+    });
+
+    test("redacts email in dev [Error] output message", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error("Email suppressed: dev@example.com"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+      });
+      expect(spy).toHaveBeenCalledWith(
+        "[Error]",
+        expect.objectContaining({
+          message: expect.stringContaining("[REDACTED:email]"),
+        }),
+      );
+      expect(spy).not.toHaveBeenCalledWith(
+        "[Error]",
+        expect.objectContaining({
+          message: expect.stringContaining("dev@example.com"),
+        }),
+      );
+    });
+  });
+
+  describe("logger.* generic emitter", () => {
+    describe("production", () => {
+      beforeEach(() => {
+        setNodeEnv("production");
+      });
+
+      test("logger.error redacts email in message", () => {
+        using spy = spyOn(console, "error").mockImplementation(() => {});
+        logger.error("Failed for user@example.com");
+        const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+        expect(String(parsed["message"])).not.toContain("user@example.com");
+        expect(String(parsed["message"])).toContain("[REDACTED:email]");
+      });
+
+      test("logger.warn redacts phone in message", () => {
+        using spy = spyOn(console, "warn").mockImplementation(() => {});
+        logger.warn("Anomalous call from 03-1234-5678");
+        const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+        expect(String(parsed["message"])).not.toContain("03-1234-5678");
+        expect(String(parsed["message"])).toContain("[REDACTED:phone]");
+      });
+
+      test("logger.info redacts email in message", () => {
+        using spy = spyOn(console, "log").mockImplementation(() => {});
+        logger.info("Signup: user@example.com");
+        const parsed = parseLogRecord(spy.mock.calls[0]?.[0]);
+        expect(String(parsed["message"])).not.toContain("user@example.com");
+        expect(String(parsed["message"])).toContain("[REDACTED:email]");
+      });
+    });
+
+    describe("development", () => {
+      beforeEach(() => {
+        setNodeEnv("development");
+      });
+
+      test("logger.error redacts email in dev prefixed output", () => {
+        using spy = spyOn(console, "error").mockImplementation(() => {});
+        logger.error("Failed for dev@example.com");
+        // dev 出力は "[ERROR]" prefix + message 単独引数 or (prefix, message, context)
+        // どちらの form でも message から email が消えている
+        for (const call of spy.mock.calls) {
+          for (const arg of call) {
+            expect(String(arg)).not.toContain("dev@example.com");
+          }
+        }
+        expect(spy).toHaveBeenCalledWith(
+          "[ERROR]",
+          expect.stringContaining("[REDACTED:email]"),
+        );
+      });
+
+      test("logger.debug redacts email even in dev-only debug channel", () => {
+        using spy = spyOn(console, "log").mockImplementation(() => {});
+        logger.debug("Debug: user@example.com");
+        expect(spy).toHaveBeenCalledWith(
+          "[DEBUG]",
+          expect.stringContaining("[REDACTED:email]"),
+        );
+      });
     });
   });
 });

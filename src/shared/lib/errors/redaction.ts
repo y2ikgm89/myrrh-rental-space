@@ -76,9 +76,12 @@ const REDACTION_KEY_PATTERNS: ReadonlyArray<RegExp> = [
 const RECURSION_MAX_DEPTH = 6;
 
 /**
- * https://cloud.google.com/logging/quotas – payload size cap. 個別 field で
+ * https://cloud.google.com/logging/quotas – payload size cap. 個別 context field で
  * 巨大 base64 blob を丸ごと持ち続けても意味がないので、長い string は
  * 頭尾を残して中央を切り詰める (最初/最後の 4 文字は debug に有用)。
+ *
+ * top-level log message / stack_trace は `redactString(value, { maxLength })` で
+ * 個別に緩めた閾値を指定する (現行: 2048 for message, 8192 for stack)。
  */
 const MAX_VALUE_LENGTH = 512;
 
@@ -118,6 +121,16 @@ const UUID_PLACEHOLDER_PATTERN = /UUID_(\d+)/g;
 // String-level redaction
 // ---------------------------------------------------------------------------
 
+export interface RedactStringOptions {
+  /**
+   * 最終出力の最大長。redaction 後にこの長さを超えた場合、末尾を切り詰めて
+   * `…[truncated]` を付与する。default は個別 context field 向けの
+   * {@link MAX_VALUE_LENGTH} (512)。log の top-level `message` / `stack_trace`
+   * には caller 側で長めの値を渡す。
+   */
+  maxLength?: number;
+}
+
 /**
  * 単一 string の redaction。純関数。
  *
@@ -131,8 +144,12 @@ const UUID_PLACEHOLDER_PATTERN = /UUID_(\d+)/g;
  * 5. Email → phone → 高エントロピー汎用置換
  * 6. UUID の復元
  */
-export function redactString(value: string): string {
+export function redactString(
+  value: string,
+  options?: RedactStringOptions,
+): string {
   if (!value) return value;
+  const maxLength = options?.maxLength ?? MAX_VALUE_LENGTH;
 
   // Step 1: UUID を placeholder に隔離
   const uuidMatches: string[] = [];
@@ -163,8 +180,8 @@ export function redactString(value: string): string {
     return uuidMatches[idx] ?? `UUID_${index}`;
   });
 
-  if (result.length > MAX_VALUE_LENGTH) {
-    result = `${result.slice(0, MAX_VALUE_LENGTH)}…[truncated]`;
+  if (result.length > maxLength) {
+    result = `${result.slice(0, maxLength)}…[truncated]`;
   }
 
   return result;

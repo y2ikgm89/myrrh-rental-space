@@ -19,7 +19,31 @@
 
 import type { ErrorLogContext } from "./types";
 import type { ErrorSeverity } from "./types";
-import { redactContext, redactRequestUrl } from "./redaction";
+import { redactContext, redactRequestUrl, redactString } from "./redaction";
+
+// ---------------------------------------------------------------------------
+// PII redaction contract (symmetric)
+// ---------------------------------------------------------------------------
+//
+// このモジュールから `console.*` に流れる string は **例外なく** `redactString`
+// を通す。context (`redactContext`) と requestUrl (`redactRequestUrl`) は個別に
+// 経路が確立しているが、top-level の `message` と `stack_trace` も同じ contract に
+// 揃える。理由:
+//
+// - `new Error(\`Email suppressed: ${recipient}\`)` のように caller が message に
+//   PII / secret を interpolate する pattern を構造的にゼロにできない
+// - Resend / Stripe など外部 API の error.message は content 保証がなく、
+//   顧客識別子や internal path が漏れうる
+// - Cloud Logging に流れた時点で Log Explorer 権限保持者に PII が晒される
+//   単一障害点になる — redaction は emit 直前の最終防衛線
+//
+// context の redaction が MAX_VALUE_LENGTH=512 で truncate されるのに対し、
+// top-level の message / stack は debug 情報として長さが必要。以下の閾値は
+// Cloud Error Reporting の推奨 (message ~2KB, stack < 8KB) に沿って設定する。
+// @see https://cloud.google.com/error-reporting/docs/formatting-error-messages
+
+const MAX_LOG_MESSAGE_LENGTH = 2048;
+const MAX_LOG_STACK_LENGTH = 8192;
 
 // ---------------------------------------------------------------------------
 // GCP severity マッピング
@@ -235,11 +259,16 @@ export function logError(
   logContext: ExtendedErrorLogContext,
 ): void {
   const gcpSeverity = SEVERITY_TO_GCP[logContext.severity];
-  const message = extractMessage(error);
-  const stack =
+  const rawMessage = extractMessage(error);
+  const rawStack =
     error instanceof Error
       ? (error.stack ?? `${error.name}: ${error.message}\n    at unknown`)
-      : `Error: ${message}\n    at unknown`;
+      : `Error: ${rawMessage}\n    at unknown`;
+
+  const message = redactString(rawMessage, {
+    maxLength: MAX_LOG_MESSAGE_LENGTH,
+  });
+  const stack = redactString(rawStack, { maxLength: MAX_LOG_STACK_LENGTH });
 
   const redactedContext = redactContext(logContext.context);
 
@@ -309,14 +338,17 @@ function emitGeneric(
   enrichment?: LogEnrichment,
 ): void {
   const redacted = redactContext(context);
+  const redactedMessage = redactString(message, {
+    maxLength: MAX_LOG_MESSAGE_LENGTH,
+  });
 
   if (process.env["NODE_ENV"] !== "production") {
     const prefix = `[${level.toUpperCase()}]`;
     const consoleFn = level === "debug" ? "log" : level;
     if (redacted) {
-      console[consoleFn](prefix, message, redacted);
+      console[consoleFn](prefix, redactedMessage, redacted);
     } else {
-      console[consoleFn](prefix, message);
+      console[consoleFn](prefix, redactedMessage);
     }
     return;
   }
@@ -326,7 +358,7 @@ function emitGeneric(
 
   const entry: GcpStructuredGenericLog = {
     severity: LEVEL_TO_GCP_SEVERITY[level],
-    message,
+    message: redactedMessage,
     timestamp: new Date().toISOString(),
   };
   if (redacted !== undefined) entry.context = redacted;
