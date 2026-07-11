@@ -20,6 +20,9 @@ const mockRevokeExpiredSmartLockPasscodes = mock<
 const mockFindRevocableSmartLockPasscodes = mock<
   (now: Date) => Promise<unknown[]>
 >(() => Promise.resolve([]));
+const mockExpireStalePendingSmartLockPasscodes = mock<
+  (now: Date) => Promise<number>
+>(() => Promise.resolve(0));
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 const mockConnection = mock<() => Promise<void>>(() => Promise.resolve());
 const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
@@ -49,6 +52,8 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
     mockRevokeExpiredSmartLockPasscodes(now),
   findRevocableSmartLockPasscodes: (now: Date) =>
     mockFindRevocableSmartLockPasscodes(now),
+  expireStalePendingSmartLockPasscodes: (now: Date) =>
+    mockExpireStalePendingSmartLockPasscodes(now),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -88,6 +93,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
     mockGetSwitchBotConfig.mockReset();
     mockRevokeExpiredSmartLockPasscodes.mockReset();
     mockFindRevocableSmartLockPasscodes.mockReset();
+    mockExpireStalePendingSmartLockPasscodes.mockReset();
     mockLogError.mockReset();
     mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
@@ -100,6 +106,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
       failed: 0,
     });
     mockFindRevocableSmartLockPasscodes.mockResolvedValue([]);
+    mockExpireStalePendingSmartLockPasscodes.mockResolvedValue(0);
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
     });
@@ -117,9 +124,11 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
     expect(response.status).toBe(401);
     expect(mockGetSwitchBotConfig).not.toHaveBeenCalled();
     expect(mockRevokeExpiredSmartLockPasscodes).not.toHaveBeenCalled();
+    // stale PENDING の救済経路も認可失敗時は呼ばれない (auth より後段)
+    expect(mockExpireStalePendingSmartLockPasscodes).not.toHaveBeenCalled();
   });
 
-  test("SwitchBot連携がOFF(enabled:false) → skipped:switchbot_disabled で早期return", async () => {
+  test("SwitchBot連携がOFF(enabled:false) → skipped:switchbot_disabled で早期return (stale PENDING 救済は先に走る)", async () => {
     mockGetSwitchBotConfig.mockResolvedValue({ enabled: false });
 
     const response = await GET(makeSchedulerRequest());
@@ -130,7 +139,10 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
       skipped: true,
       reason: "switchbot_disabled",
       stuckCount: 0,
+      stalePendingExpired: 0,
     });
+    // stale PENDING 救済は SwitchBot config check より前に一度走る (DB-only)
+    expect(mockExpireStalePendingSmartLockPasscodes).toHaveBeenCalledTimes(1);
     expect(mockRevokeExpiredSmartLockPasscodes).not.toHaveBeenCalled();
     expect(mockLogError).not.toHaveBeenCalled();
   });
@@ -141,6 +153,7 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
       { id: "p1" },
       { id: "p2" },
     ]);
+    mockExpireStalePendingSmartLockPasscodes.mockResolvedValue(3);
 
     const response = await GET(makeSchedulerRequest());
 
@@ -150,12 +163,13 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
       skipped: true,
       reason: "switchbot_disabled",
       stuckCount: 2,
+      stalePendingExpired: 3,
     });
     expect(mockRevokeExpiredSmartLockPasscodes).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
-  test("失効対象なし → revoked:0, failed:0 を返す", async () => {
+  test("失効対象なし → revoked:0, failed:0, stalePendingExpired:0 を返す", async () => {
     mockRevokeExpiredSmartLockPasscodes.mockResolvedValue({
       revoked: 0,
       failed: 0,
@@ -165,24 +179,26 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual({ revoked: 0, failed: 0 });
+    expect(body).toEqual({ revoked: 0, failed: 0, stalePendingExpired: 0 });
+    expect(mockExpireStalePendingSmartLockPasscodes).toHaveBeenCalledTimes(1);
     expect(mockLogError).not.toHaveBeenCalled();
   });
 
-  test("失効成功 → revoked件数を返しlogErrorは呼ばれない", async () => {
+  test("失効成功 + stale PENDING 救済が発火 → revoked件数 + stalePendingExpired 件数を返す", async () => {
     mockRevokeExpiredSmartLockPasscodes.mockResolvedValue({
       revoked: 2,
       failed: 0,
     });
+    mockExpireStalePendingSmartLockPasscodes.mockResolvedValue(5);
 
     const response = await GET(makeSchedulerRequest());
 
     const body = await response.json();
-    expect(body).toEqual({ revoked: 2, failed: 0 });
+    expect(body).toEqual({ revoked: 2, failed: 0, stalePendingExpired: 5 });
     expect(mockLogError).not.toHaveBeenCalled();
   });
 
-  test("一部失効に失敗(failed>0) → 200のままlogErrorが呼ばれる", async () => {
+  test("一部失効に失敗(failed>0) → 200のままlogErrorが呼ばれる (stalePendingExpired も payload に含む)", async () => {
     mockRevokeExpiredSmartLockPasscodes.mockResolvedValue({
       revoked: 1,
       failed: 1,
@@ -192,11 +208,11 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual({ revoked: 1, failed: 1 });
+    expect(body).toEqual({ revoked: 1, failed: 1, stalePendingExpired: 0 });
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
-  test("revokeExpiredSmartLockPasscodesが例外をスロー → 500を返す", async () => {
+  test("revokeExpiredSmartLockPasscodesが例外をスロー → 500を返す (stale PENDING 救済は既に走ってから throw)", async () => {
     const dbError = new Error("Database connection failed");
     mockRevokeExpiredSmartLockPasscodes.mockRejectedValue(dbError);
     mockUnstableRethrow.mockImplementation(() => {});
@@ -206,6 +222,23 @@ describe("GET /api/cron/smart-lock-cleanup", () => {
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body).toEqual({ error: "Internal error" });
+    expect(mockLogError).toHaveBeenCalledTimes(1);
+    // route の順序: expireStalePending → getSwitchBotConfig → revokeExpired
+    // なので revoke が throw する時点で expire は必ず 1 回実行されている。
+    expect(mockExpireStalePendingSmartLockPasscodes).toHaveBeenCalledTimes(1);
+  });
+
+  test("expireStalePendingSmartLockPasscodes 自体が throw → 500を返す (auth 直後に throw)", async () => {
+    const dbError = new Error("Stale PENDING sweep failed");
+    mockExpireStalePendingSmartLockPasscodes.mockRejectedValue(dbError);
+    mockUnstableRethrow.mockImplementation(() => {});
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(500);
+    // expire で throw した時点で SwitchBot config 分岐にも入らず、revoke も呼ばれない
+    expect(mockGetSwitchBotConfig).not.toHaveBeenCalled();
+    expect(mockRevokeExpiredSmartLockPasscodes).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
