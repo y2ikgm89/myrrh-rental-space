@@ -24,7 +24,7 @@ import {
 } from "@/shared/lib/errors/server";
 
 /** Settingsの暗号化フィールドとは無関係のローカルpurpose（SETTINGS_CRYPTO_PURPOSESには含めない）。 */
-const PASSCODE_CRYPTO_PURPOSE = "switchbot-guest-passcode";
+export const PASSCODE_CRYPTO_PURPOSE = "switchbot-guest-passcode";
 
 /** Get Device Statusでのkeyid確定ポーリング間隔・上限（SwitchBotのcommandタイムアウトは1分）。 */
 const POLL_INTERVAL_MS = 3_000;
