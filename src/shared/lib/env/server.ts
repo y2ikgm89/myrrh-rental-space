@@ -24,6 +24,8 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import type { StandardSchemaV1 } from "@t3-oss/env-core";
 import { z } from "zod";
 
+import { parseSecondaryEncryptionKeys } from "./parse-secondary-encryption-keys";
+
 const isBase64EncodedAesKey = (value: string): boolean => {
   if (
     !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(
@@ -179,6 +181,20 @@ export const serverEnv = createEnv({
           "ENCRYPTION_KEY_ID must be 1-32 chars of [a-zA-Z0-9_-] (e.g. 'v1', 'v2', 'k20260623')",
       })
       .optional(),
+    /**
+     * 鍵ローテーション時の secondary key list。書式は
+     * `kid1:hex64,kid2:hex64` のカンマ区切り。**復号のみに使う**（encrypt は常に
+     * primary）。値の詳細検証と parse は `getSecondaryEncryptionKeys()` が担う。
+     * schema 側では length と文字クラスの粗検査に留めて、operator が
+     * ダブル引用符 / 空白でうっかり壊した場合を運用時にも catch できるようにする。
+     */
+    SECONDARY_ENCRYPTION_KEYS: z
+      .string()
+      .regex(/^[a-zA-Z0-9_:,\s-]*$/u, {
+        error:
+          "SECONDARY_ENCRYPTION_KEYS must contain only [a-zA-Z0-9_-:,] characters",
+      })
+      .optional(),
 
     // Audit log integrity（本番必須 - ランタイム検証）
     // 監査ログ hash chain の HMAC-SHA256 鍵。DB 内に保存しないこと。
@@ -304,6 +320,7 @@ export const serverEnv = createEnv({
     NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:
       process.env["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"],
     ENCRYPTION_KEY_ID: process.env["ENCRYPTION_KEY_ID"],
+    SECONDARY_ENCRYPTION_KEYS: process.env["SECONDARY_ENCRYPTION_KEYS"],
     AUDIT_LOG_HMAC_KEY: process.env["AUDIT_LOG_HMAC_KEY"],
     AUDIT_LOG_HMAC_KEY_ID: process.env["AUDIT_LOG_HMAC_KEY_ID"],
     CRON_OIDC_AUDIENCE: process.env["CRON_OIDC_AUDIENCE"],
@@ -485,6 +502,13 @@ export function validateProductionEnv(): void {
       );
     }
   }
+
+  // Secondary encryption keys — parse eagerly so a malformed rotation window
+  // fails fast at startup instead of silently returning null from every
+  // decrypt call. `parseSecondaryEncryptionKeys` is a pure parser and lives
+  // in its own file so `server.ts` does not import through `encryption.ts`
+  // (which imports `serverEnv` from us and would form a cycle).
+  parseSecondaryEncryptionKeys(serverEnv.SECONDARY_ENCRYPTION_KEYS);
 
   // Rate limit backend vs Cloud Run max-instances contract.
   //

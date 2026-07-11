@@ -17,9 +17,21 @@ const PRIMARY: EncryptionKey = { kid: "v1", hex: "a".repeat(64) };
 const RETIRED_V0: EncryptionKey = { kid: "v0", hex: "b".repeat(64) };
 
 const mockGetPrimary = mock<() => EncryptionKey>(() => PRIMARY);
+const mockGetSecondary = mock<() => EncryptionKey[]>(() => []);
+
+function mockResolveByKid(kid: string): EncryptionKey | null {
+  const primary = mockGetPrimary();
+  if (primary.kid === kid) return primary;
+  for (const secondary of mockGetSecondary()) {
+    if (secondary.kid === kid) return secondary;
+  }
+  return null;
+}
 
 mock.module("@/shared/lib/env/encryption", () => ({
   getPrimaryEncryptionKey: mockGetPrimary,
+  getSecondaryEncryptionKeys: mockGetSecondary,
+  resolveEncryptionKeyByKid: mockResolveByKid,
 }));
 
 const {
@@ -135,7 +147,7 @@ describe("crypto", () => {
 
       expect(() =>
         decrypt(retiredEncrypted, { expectedPurpose: "stripe" }),
-      ).toThrow(/No primary encryption key available/);
+      ).toThrow(/No encryption key available for kid="v0"/);
     });
 
     test("未知の kid を持つ v2 暗号文は decrypt 失敗", () => {
@@ -143,7 +155,43 @@ describe("crypto", () => {
         "v2:unknown-kid:stripe:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==:dGVzdA==";
       expect(() =>
         decrypt(unknownKidCipher, { expectedPurpose: "stripe" }),
-      ).toThrow(/No primary encryption key available/);
+      ).toThrow(/No encryption key available for kid="unknown-kid"/);
+    });
+  });
+
+  describe("SECONDARY_ENCRYPTION_KEYS rotation window", () => {
+    test("旧鍵で暗号化した v2 ciphertext を secondary 鍵で復号できる", () => {
+      // 1. 旧鍵で暗号化した ciphertext を生成 (primary を一時差し替え)
+      mockGetPrimary.mockImplementationOnce(() => RETIRED_V0);
+      const oldCiphertext = encrypt("legacy-secret", { purpose: "stripe" });
+      expect(oldCiphertext).toContain(`:${RETIRED_V0.kid}:`);
+
+      // 2. 現行 primary は新鍵、旧鍵は SECONDARY として提供
+      mockGetSecondary.mockImplementationOnce(() => [RETIRED_V0]);
+
+      const decrypted = decryptString(oldCiphertext, "stripe");
+      expect(decrypted).toBe("legacy-secret");
+    });
+
+    test("secondary が空なら旧鍵 ciphertext は decrypt 失敗する", () => {
+      mockGetPrimary.mockImplementationOnce(() => RETIRED_V0);
+      const oldCiphertext = encrypt("legacy-secret", { purpose: "stripe" });
+
+      // secondary は default の [] のまま
+      expect(() =>
+        decrypt(oldCiphertext, { expectedPurpose: "stripe" }),
+      ).toThrow(/No encryption key available for kid="v0"/);
+    });
+
+    test("purpose 不一致は secondary lookup より先に catch する", () => {
+      mockGetPrimary.mockImplementationOnce(() => RETIRED_V0);
+      const oldCiphertext = encrypt("legacy-secret", { purpose: "stripe" });
+
+      mockGetSecondary.mockImplementationOnce(() => [RETIRED_V0]);
+
+      expect(() =>
+        decrypt(oldCiphertext, { expectedPurpose: "different-purpose" }),
+      ).toThrow(/purpose mismatch/);
     });
   });
 

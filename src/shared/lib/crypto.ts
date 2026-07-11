@@ -30,7 +30,11 @@ import {
   randomBytes,
   createHmac,
 } from "crypto";
-import { getPrimaryEncryptionKey, type EncryptionKey } from "./env/encryption";
+import {
+  getPrimaryEncryptionKey,
+  resolveEncryptionKeyByKid,
+  type EncryptionKey,
+} from "./env/encryption";
 import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 
 const ALGORITHM = "aes-256-gcm";
@@ -126,11 +130,20 @@ interface DecryptOptions {
 }
 
 /**
- * 暗号文を復号化。v2 の kid は primary key の kid と一致する必要がある。
+ * 暗号文を復号化。v2 の kid は primary key OR secondary rotation key の
+ * いずれかに一致する必要がある。
  *
  * 呼び出し側は `expectedPurpose` を必ず渡し、暗号文の埋め込み purpose と一致することを
  * 復号前に検証する（defense in depth）。purpose 不一致は GCM authTag 検証よりも
  * 前に throw されるため、他用途トークンの流用は無駄な暗号処理なしに拒否される。
+ *
+ * ## Rotation
+ *
+ * 新しい primary key に切り替える際、旧鍵を `SECONDARY_ENCRYPTION_KEYS` に
+ * `kid:hex` 形式で置くと、その旧鍵で暗号化された既存 ciphertext も引き続き
+ * 復号できる（**dual-read window**）。バッチ再暗号化が終わったら
+ * `SECONDARY_ENCRYPTION_KEYS` を空にして窓を閉じる。詳細は
+ * [docs/runbooks/encryption-key-rotation.md](../../../docs/runbooks/encryption-key-rotation.md)。
  */
 export function decrypt(ciphertext: string, options: DecryptOptions): Buffer {
   const parsed = parseCiphertext(ciphertext);
@@ -141,11 +154,11 @@ export function decrypt(ciphertext: string, options: DecryptOptions): Buffer {
     );
   }
 
-  const key: EncryptionKey = getPrimaryEncryptionKey();
+  const key: EncryptionKey | null = resolveEncryptionKeyByKid(parsed.kid);
 
-  if (parsed.kid !== key.kid) {
+  if (!key) {
     throw new Error(
-      `No primary encryption key available for kid="${parsed.kid}"`,
+      `No encryption key available for kid="${parsed.kid}" (checked primary and SECONDARY_ENCRYPTION_KEYS)`,
     );
   }
 
