@@ -6,6 +6,11 @@ import {
   requireCompanyNameForCorporate,
   COMPANY_NAME_REFINE_ERROR,
 } from "./customer-type";
+import {
+  emailFieldSchema,
+  optionalPhoneNumberSchema,
+  personNameFieldSchema,
+} from "./customer-shared-fields";
 
 const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
   error: "日付の形式が正しくありません（YYYY-MM-DD）",
@@ -29,20 +34,10 @@ export const publicReservationSchema = z
       .max(500, { error: "利用人数は500名以下です" }),
     customerType: customerTypeSchema,
     companyName: companyNameSchema,
-    lastName: z
-      .string()
-      .min(1, { error: "姓は必須です" })
-      .max(50, { error: "姓は50文字以内で入力してください" }),
-    firstName: z
-      .string()
-      .min(1, { error: "名は必須です" })
-      .max(50, { error: "名は50文字以内で入力してください" }),
-    email: z.email({ error: "有効なメールアドレスを入力してください" }),
-    phoneNumber: z
-      .string()
-      .max(20, { error: "電話番号は20文字以内で入力してください" })
-      .optional()
-      .or(z.literal("")),
+    lastName: personNameFieldSchema("姓"),
+    firstName: personNameFieldSchema("名"),
+    email: emailFieldSchema,
+    phoneNumber: optionalPhoneNumberSchema,
     notes: z
       .string()
       .max(2000, { error: "備考は2000文字以内で入力してください" })
