@@ -26,6 +26,42 @@ const STORAGE_KEY = "cookie-consent";
 
 export type CookieConsentStatus = "accepted" | "rejected" | null;
 
+/**
+ * Consent Mode v2: 全カテゴリ denied のペイロード。
+ *
+ * accept 後に user が同意を撤回した際、Google に対して "以後この user の追跡を
+ * 止めよ" と伝える。既にロード済みの gtag.js が現ページビューで送ろうとしている
+ * beacon は wait_for_update 期限内なら drop され、それ以降の遷移でも
+ * unattributed 扱いになる。
+ *
+ * cached script 自体を DOM から除去することはできない (React が Script を
+ * unmount しても browser は既に loaded)。完全クリアは `window.location.reload()`
+ * だけが実現できる — 撤回後の reload と併用する。
+ *
+ * @see https://support.google.com/analytics/answer/9976101
+ */
+const CONSENT_DENIED_ALL = {
+  ad_storage: "denied",
+  ad_user_data: "denied",
+  ad_personalization: "denied",
+  analytics_storage: "denied",
+  functionality_storage: "denied",
+} as const;
+
+/**
+ * 現在の window に gtag が存在すれば Consent Mode v2 の "update denied" を送る。
+ * 存在しない (accept 前、GA 未設定) 場合は no-op。gtag 内部で throw した場合も
+ * 撤回フロー自体を止めないよう swallow する。
+ */
+function notifyAnalyticsConsentDenied(): void {
+  if (typeof globalThis.gtag !== "function") return;
+  try {
+    globalThis.gtag("consent", "update", CONSENT_DENIED_ALL);
+  } catch {
+    // gtag が壊れていても consent 撤回フローは継続する
+  }
+}
+
 // 型ガード: localStorageの値がCookieConsentStatusかどうか
 function isValidConsentStatus(
   value: string | null,
@@ -194,16 +230,30 @@ export function getCookieConsentStatus(): CookieConsentStatus {
 }
 
 /**
- * Cookie同意をリセットするヘルパー関数
- * 設定ページからの再選択用
+ * Cookie同意をリセットするヘルパー関数（設定ページからの再選択用）。
+ *
+ * 撤回シナリオ (accept → 後日 reset) では以下の順序で完全クリアする:
+ *
+ * 1. `gtag('consent','update', denied all)` で Google 側の attribution を停止
+ * 2. `localStorage.removeItem` で永続状態をクリア
+ * 3. `cookie-consent-changed` イベントで React state を同期 (reload 前に
+ *    banner が再表示される猶予を与える必要はないが、既存 subscriber との
+ *    契約を維持)
+ * 4. `window.location.reload()` でロード済み gtag.js / GTM script を完全に
+ *    purge (script 自体は unmount しても browser cache に残り続けるため)
+ *
+ * accept していない状態から呼ばれた場合は gtag が存在しないので step 1 は
+ * no-op、他のステップは同じ。
  */
 export function resetCookieConsent(): void {
   if (typeof window === "undefined") return;
   try {
+    notifyAnalyticsConsentDenied();
     localStorage.removeItem(STORAGE_KEY);
     window.dispatchEvent(
       new CustomEvent("cookie-consent-changed", { detail: null }),
     );
+    window.location.reload();
   } catch (error) {
     logger.error("Failed to reset cookie consent", {
       error: getErrorMessage(error),
