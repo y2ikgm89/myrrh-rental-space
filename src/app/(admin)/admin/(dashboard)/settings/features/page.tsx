@@ -31,7 +31,7 @@ export default async function FeaturesSettingsPage() {
   const settings = await getSettings();
   const currentModules = parseFeatureModules(settings.featureModules);
 
-  // registry の全 9 module を network しつつ、未保存の key は false で初期化（fail-closed）
+  // registry の全 module を network しつつ、未保存の key は false で初期化（fail-closed）
   const initialValues: Record<FeatureModule, boolean> = {
     spaces: false,
     reservation: false,
@@ -42,6 +42,7 @@ export default async function FeaturesSettingsPage() {
     access: false,
     contact: false,
     reviews: false,
+    "data-retention": false,
   };
   for (const id of FEATURE_MODULES_LIST) {
     initialValues[id] = currentModules[id] === true;

@@ -12,6 +12,7 @@ describe("cron OIDC clean-break boundary", () => {
   const cronRoutePaths = [
     "src/app/api/cron/calendar-sync/route.ts",
     "src/app/api/cron/customer-risk-scan/route.ts",
+    "src/app/api/cron/data-retention/route.ts",
     "src/app/api/cron/event-import/route.ts",
     "src/app/api/cron/event-reminder/route.ts",
     "src/app/api/cron/faq-stale-check/route.ts",
