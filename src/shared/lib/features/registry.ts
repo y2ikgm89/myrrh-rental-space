@@ -26,6 +26,7 @@ export const FEATURE_MODULES_LIST = [
   "access",
   "contact",
   "reviews",
+  "data-retention",
 ] as const;
 
 export type FeatureModule = (typeof FEATURE_MODULES_LIST)[number];
@@ -145,6 +146,17 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     templates: [],
     cronPaths: [],
   },
+  "data-retention": {
+    id: "data-retention",
+    label: "データ保持ポリシーの自動適用",
+    description:
+      "個情法 22 条・GDPR 5(1)(e) 準拠の保持期間強制。保持期間経過後の Session / Verification / login_attempts の DELETE、Reservation.guest 情報の NULL 化、Inquiry の DELETE、INACTIVE Customer の PII 匿名化を毎日実行する。保持月数は Settings.dataRetention JSON が SSoT (0 で該当テーブルを opt-out)。opt-in — 有効化前に月数を業務ルールと合わせて確認すること。",
+    publicRoutes: [],
+    pageSlugs: [],
+    sectionTypes: [],
+    templates: [],
+    cronPaths: ["/api/cron/data-retention"],
+  },
 };
 
 /** 型ガード: 任意文字列が FeatureModule か判定 */
@@ -156,19 +168,26 @@ export function isFeatureModule(value: string): value is FeatureModule {
 /**
  * Feature Module の「初期値」を構築する。
  *
- * 全 9 module を ON で初期化し、`disabledIds` に含まれる module のみ OFF にする。
+ * `disabledIds` に含まれない module は ON で初期化する。
  * - seed.ts の新規 install 時の `Settings.featureModules` 初期化
  * - 管理画面の「すべて初期値に戻す」ボタン等の reset 用途
  *
  * env var driven override は呼び出し側で解決して `disabledIds` に渡す（このヘルパー
  * 自体は env を読まない pure function — テスト可能性のため）。
  *
+ * ## `data-retention` は常に OFF 初期化（デフォルト opt-out）
+ *
+ * データ保持ポリシー cron は誤設定で本番 PII を消し得るため、seed 時に自動 ON に
+ * しない — `disabledIds` に含まれるかどうかに関わらず必ず `false` を返す。
+ * 本番運用者が保持月数（Settings.dataRetention JSON）を業務ルールと突き合わせて
+ * 検証してから、管理 UI 経由で明示的に ON にする。
+ *
  * @example
  * buildInitialFeatureModules()
- * // => { spaces: true, reservation: true, ..., reviews: true }
+ * // => { spaces: true, reservation: true, ..., reviews: true, "data-retention": false }
  *
  * buildInitialFeatureModules(["events", "faq"])
- * // => { spaces: true, ..., events: false, faq: false, ... }
+ * // => { spaces: true, ..., events: false, faq: false, ..., "data-retention": false }
  */
 export function buildInitialFeatureModules(
   disabledIds: readonly string[] = [],
@@ -184,6 +203,8 @@ export function buildInitialFeatureModules(
   const access = !disabled.has("access");
   const contact = !disabled.has("contact");
   const reviews = !disabled.has("reviews");
+  // fail-closed by design: never seed data-retention as ON.
+  const dataRetention = false;
   return {
     spaces,
     reservation,
@@ -194,6 +215,7 @@ export function buildInitialFeatureModules(
     access,
     contact,
     reviews,
+    "data-retention": dataRetention,
   };
 }
 

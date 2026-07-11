@@ -10,8 +10,8 @@ import {
 import { SYSTEM_PAGE_SLUGS } from "@/shared/lib/validations/page";
 
 describe("FEATURE_MODULES_LIST", () => {
-  test("9 module を含む", () => {
-    expect(FEATURE_MODULES_LIST).toHaveLength(9);
+  test("10 module を含む", () => {
+    expect(FEATURE_MODULES_LIST).toHaveLength(10);
   });
 
   test("全 module 名が小文字英数字 hyphen のみ", () => {
@@ -149,7 +149,7 @@ describe("parseDisabledFeatureModulesEnv", () => {
 });
 
 describe("buildInitialFeatureModules", () => {
-  test("disabledIds 未指定で全 9 module true", () => {
+  test("disabledIds 未指定で全 module true（ただし data-retention は常に false）", () => {
     const result = buildInitialFeatureModules();
     expect(result.spaces).toBe(true);
     expect(result.reservation).toBe(true);
@@ -160,12 +160,23 @@ describe("buildInitialFeatureModules", () => {
     expect(result.access).toBe(true);
     expect(result.contact).toBe(true);
     expect(result.reviews).toBe(true);
+    // data-retention は誤設定で本番 PII を消し得るので seed 時に自動 ON にしない。
+    expect(result["data-retention"]).toBe(false);
   });
 
-  test("空配列でも全 9 module true（undefined と同等）", () => {
+  test("空配列でも全 module ON（ただし data-retention は false・undefined と同等）", () => {
     expect(buildInitialFeatureModules([])).toEqual(
       buildInitialFeatureModules(),
     );
+  });
+
+  test("data-retention は disabledIds に含めなくても常に false（opt-in ゲート）", () => {
+    // 通常 module は disabledIds に含めない → true になる。
+    // data-retention は同じ扱いで disabledIds 未指定でも false のままである
+    // ことを明示的に固定する（レビュー中に誤って自動 ON にする回帰を防ぐ）。
+    const result = buildInitialFeatureModules();
+    expect(result.reservation).toBe(true);
+    expect(result["data-retention"]).toBe(false);
   });
 
   test("disabledIds に含まれる module のみ false", () => {

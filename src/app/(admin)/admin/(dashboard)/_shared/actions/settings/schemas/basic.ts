@@ -130,6 +130,7 @@ export const featureModulesSettingsSchema = z.object({
   access: switchBoolean(),
   contact: switchBoolean(),
   reviews: switchBoolean(),
+  "data-retention": switchBoolean(),
 });
 
 export type FeatureModulesSettingsInput = z.infer<

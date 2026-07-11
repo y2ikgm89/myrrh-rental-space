@@ -217,3 +217,53 @@ export function parseFeatureModules(value: unknown): Record<string, boolean> {
   const result = featureModulesSchema.safeParse(value);
   return result.success ? result.data : {};
 }
+
+// =============================================================================
+// Data Retention Config（Settings.dataRetention JSON）
+// =============================================================================
+
+/**
+ * データ保持ポリシー — 保持期間経過後の PII 削除・匿名化に使う月数。
+ *
+ * - 各 key は非負整数（int）。`0` はその field を opt-out（対象テーブルを触らない）。
+ * - デフォルトは規約テンプレの保持期間に合わせる。管理 UI 経由で運用者が上書き可能。
+ * - 実 purge は feature module `data-retention` が ON かつ月数 > 0 の field についてのみ
+ *   `/api/cron/data-retention` から実行される（cron 側で feature-flag 済み）。
+ *
+ * fail-safe: パース失敗（欠損 key / 型不一致 / 負数）は `DEFAULT_DATA_RETENTION_CONFIG`
+ * にフォールバックする（サイレント無効化ではなく安全なデフォルト値を使う）。
+ */
+const dataRetentionConfigSchema = z.object({
+  sessionMonths: z.number().int().min(0),
+  verificationMonths: z.number().int().min(0),
+  loginAttemptMonths: z.number().int().min(0),
+  reservationGuestMonths: z.number().int().min(0),
+  inquiryMonths: z.number().int().min(0),
+  customerInactiveMonths: z.number().int().min(0),
+});
+
+export type DataRetentionConfig = z.infer<typeof dataRetentionConfigSchema>;
+
+/**
+ * 保持月数のデフォルト。schema.prisma の `dataRetention` 列の DEFAULT と数値を
+ * 揃えている（fresh install は SQL DEFAULT を使う、既存 install の欠損値
+ * フォールバックはこの const を使う）。値を変える際は両方セットで更新する。
+ *
+ * - Session/Verification/login_attempts: 6 mo — 認証セッション相当の短期
+ * - Reservation.guest*: 12 mo — 予約完了後 1 年
+ * - Inquiry: 36 mo — 問い合わせ 3 年
+ * - Customer (INACTIVE のみ): 84 mo — 電磁的記録の一般 7 年基準
+ */
+export const DEFAULT_DATA_RETENTION_CONFIG: DataRetentionConfig = {
+  sessionMonths: 6,
+  verificationMonths: 6,
+  loginAttemptMonths: 6,
+  reservationGuestMonths: 12,
+  inquiryMonths: 36,
+  customerInactiveMonths: 84,
+} as const;
+
+export function parseDataRetentionConfig(value: unknown): DataRetentionConfig {
+  const result = dataRetentionConfigSchema.safeParse(value);
+  return result.success ? result.data : DEFAULT_DATA_RETENTION_CONFIG;
+}

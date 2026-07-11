@@ -1339,10 +1339,17 @@ model Settings {
   eventImportSyncToken String? @db.Text
 
   /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
-  /// 形式: `Record<FeatureModule, boolean>` — 全 9 module（spaces / reservation / events / posts / news / faq / access / contact / reviews）。
+  /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / data-retention）。
   /// OFF module は public route 404 / nav prune / sitemap prune / section registry filter / cron 早期 return に伝播。
   /// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES。seed.ts と migration が全 module を explicit に保つ。
   featureModules Json @default("{}")
+
+  /// データ保持ポリシー — 保持期間経過後の PII 削除・匿名化に使う月数（0 = opt-out）。
+  /// 形式: `{ sessionMonths, verificationMonths, loginAttemptMonths, reservationGuestMonths, inquiryMonths, customerInactiveMonths }`。
+  /// SSoT: `parseDataRetentionConfig` (`src/shared/lib/json-validators.ts`)。
+  /// デフォルトは規約テンプレの保持期間に合わせた: Session/Verification/login_attempts 6mo、Reservation.guest* 12mo、Inquiry 36mo、INACTIVE Customer 84mo。
+  /// 実 purge は feature module `data-retention` が ON かつ月数 > 0 のときのみ cron から実行される (`/api/cron/data-retention`)。
+  dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"loginAttemptMonths\":6,\"reservationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}")
 
   // Webhook設定（Push Notifications）
   googleCalendarWebhookChannelId  String? // Webhook チャンネルID

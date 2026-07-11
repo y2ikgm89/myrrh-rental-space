@@ -47,12 +47,14 @@ describe("getEnabledFeatures", () => {
       access: true,
       contact: true,
       reviews: true,
+      "data-retention": true,
     });
 
     const enabled = await getEnabledFeatures();
-    expect(enabled.size).toBe(9);
+    expect(enabled.size).toBe(10);
     expect(enabled.has("spaces")).toBe(true);
     expect(enabled.has("reviews")).toBe(true);
+    expect(enabled.has("data-retention")).toBe(true);
   });
 
   test("空 map の場合、何も有効化されない（fail-closed）", async () => {
