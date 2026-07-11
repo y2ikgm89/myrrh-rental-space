@@ -215,3 +215,27 @@ export function safeDecrypt(
     return null;
   }
 }
+
+/**
+ * `safeDecrypt(...)?.toString("utf8") ?? null` の SSoT ラッパ。
+ *
+ * Prisma の nullable 暗号化列（`string | null`）や未検証入力を素通しで受け取り、
+ * plaintext string または null を返す。呼び出し側は「非 truthy チェック → 復号 →
+ * utf-8 化 → null fallback」の 4 手順を書かずに済む。
+ *
+ * defense-in-depth: 内部で `safeDecrypt` を経由するため purpose mismatch は
+ * ここで silent null になる（wire format の embedded purpose と
+ * `options.expectedPurpose` の不一致は `decrypt` 側で throw されるが、
+ * `safeDecrypt` が catch して `logError` + null 返しになる）。
+ *
+ * 空文字は defensive に null 扱いにする（DB スキーマ的には `null` と `""` は
+ * 別状態だが「復号結果として扱えない入力」として同一視する方が呼び出し側の
+ * `if (result)` チェックがそのまま働く）。
+ */
+export function safeDecryptToString(
+  ciphertext: string | null | undefined,
+  options: DecryptOptions,
+): string | null {
+  if (!ciphertext) return null;
+  return safeDecrypt(ciphertext, options)?.toString("utf8") ?? null;
+}

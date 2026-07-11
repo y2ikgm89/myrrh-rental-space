@@ -2,7 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { safeDecrypt } from "@/shared/lib/crypto";
+import { safeDecryptToString } from "@/shared/lib/crypto";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,
@@ -94,11 +94,9 @@ export async function getDecryptedInstagramToken(): Promise<string | null> {
     return null;
   }
 
-  return (
-    safeDecrypt(settings.instagramAccessToken, {
-      expectedPurpose: "instagram",
-    })?.toString("utf8") ?? null
-  );
+  return safeDecryptToString(settings.instagramAccessToken, {
+    expectedPurpose: "instagram",
+  });
 }
 
 export async function getInstagramRefreshState(): Promise<{
