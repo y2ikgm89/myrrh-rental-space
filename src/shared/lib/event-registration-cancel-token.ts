@@ -2,6 +2,7 @@ import "server-only";
 
 import { encrypt, decrypt } from "@/shared/lib/crypto";
 import { isRecord } from "@/shared/lib/serialize";
+import { tokenFingerprint as sharedTokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 
 /**
  * ゲストイベント参加申込キャンセル用トークン
@@ -19,8 +20,6 @@ import { isRecord } from "@/shared/lib/serialize";
  * **クリーンアップ cron は不要**: ステートレス（AES-GCM authTag + exp claim）で
  * DB 行を持たないため。
  */
-
-import { createHash } from "node:crypto";
 
 const PURPOSE = "event-registration-cancel";
 
@@ -92,13 +91,9 @@ export function createCancelToken(
 }
 
 /**
- * トークンの SHA-256 指紋を返す（先頭 16 文字）。
- *
- * 平文トークンを監査ログ・WARNING ログに残さないために使う。
+ * @deprecated 直接 `@/shared/lib/tokens/fingerprint` から import すること。
  */
-export function tokenFingerprint(token: string): string {
-  return createHash("sha256").update(token).digest("hex").slice(0, 16);
-}
+export const tokenFingerprint = sharedTokenFingerprint;
 
 /**
  * キャンセルトークンを検証する。

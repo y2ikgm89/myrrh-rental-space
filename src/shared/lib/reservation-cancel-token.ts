@@ -2,6 +2,7 @@ import "server-only";
 
 import { encrypt, decrypt } from "@/shared/lib/crypto";
 import { isRecord } from "@/shared/lib/serialize";
+import { tokenFingerprint as sharedTokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 
 /**
  * ゲスト予約キャンセル用トークン
@@ -20,8 +21,6 @@ import { isRecord } from "@/shared/lib/serialize";
  * DB 行を持たないため。漏洩面は受信者のメールボックスと Resend のログのみで、
  * `exp` まで有効、`exp` 経過後は decrypt 成功しても expired として拒否される。
  */
-
-import { createHash } from "node:crypto";
 
 const PURPOSE = "reservation-cancel";
 
@@ -105,15 +104,10 @@ export function createCancelToken(
 }
 
 /**
- * トークンの SHA-256 指紋を返す（先頭 16 文字）。
- *
- * 平文トークンを監査ログ・WARNING ログに残さないために使う。
- * 同一トークンが繰り返し試されているか / 異なるトークンが回されているかを
- * 識別できる程度の粒度。
+ * @deprecated 直接 `@/shared/lib/tokens/fingerprint` から import すること。
+ * 現時点の call site 互換性のため re-export で維持している。
  */
-export function tokenFingerprint(token: string): string {
-  return createHash("sha256").update(token).digest("hex").slice(0, 16);
-}
+export const tokenFingerprint = sharedTokenFingerprint;
 
 /**
  * キャンセルトークンを検証する。
