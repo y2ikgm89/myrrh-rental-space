@@ -10,7 +10,9 @@ import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import type { Resource } from "@/shared/lib/admin-resources";
 import type { RecentItem } from "@/shared/lib/command-palette-types";
 
-const SUPPORTED_RESOURCES: ReadonlySet<string> = new Set<string>([
+// `satisfies readonly Resource[]` により Resource union と drift すると compile error。
+// 集合追加時は Resource type にも該当 literal が居ることを型で強制する。
+const SUPPORTED_RESOURCE_LIST = [
   "space",
   "customer",
   "reservation",
@@ -22,7 +24,10 @@ const SUPPORTED_RESOURCES: ReadonlySet<string> = new Set<string>([
   "faq",
   "coupon",
   "location",
-]);
+] as const satisfies readonly Resource[];
+const SUPPORTED_RESOURCES: ReadonlySet<string> = new Set<string>(
+  SUPPORTED_RESOURCE_LIST,
+);
 
 function isSupported(resource: string): resource is Resource {
   return SUPPORTED_RESOURCES.has(resource);

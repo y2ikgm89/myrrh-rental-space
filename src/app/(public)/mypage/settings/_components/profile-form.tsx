@@ -12,6 +12,7 @@ import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
+import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { updateProfileAction } from "../../_shared/actions/profile";
 import type { z } from "zod";
 import { customerProfileSchema } from "@/shared/lib/validations/customer-profile";
@@ -36,10 +37,6 @@ interface ProfileFormProps {
     readonly phoneNumber: string;
   };
   readonly turnstileSiteKey: string | null;
-}
-
-function isCustomerType(value: unknown): value is CustomerType {
-  return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,7 +76,7 @@ export function ProfileForm({
   const turnstileTokenControl = useInputControl(fields.turnstileToken);
 
   const customerTypeValue = customerTypeControl.value;
-  const customerType: CustomerType = isCustomerType(customerTypeValue)
+  const customerType: CustomerType = isValidCustomerType(customerTypeValue)
     ? customerTypeValue
     : defaultValues.customerType;
 
