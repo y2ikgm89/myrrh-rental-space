@@ -15,6 +15,3 @@ export const BUSINESS_ATTRIBUTE_OPTIONS = [
   { key: "photography_allowed", label: "撮影可" },
   { key: "music_allowed", label: "楽器演奏可" },
 ] as const;
-
-export type BusinessAttributeKey =
-  (typeof BUSINESS_ATTRIBUTE_OPTIONS)[number]["key"];

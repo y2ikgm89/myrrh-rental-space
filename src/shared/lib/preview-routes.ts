@@ -29,10 +29,6 @@ export function getPagePreviewHref(slug: string): string {
   return `/preview/pages/${slug || "home"}`;
 }
 
-export function getPublicPageHref(slug: string): string {
-  return slug === "home" ? "/" : `/${slug}`;
-}
-
 /**
  * Preview URL を対応する本番 public URL に正規化する。
  *

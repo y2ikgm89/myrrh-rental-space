@@ -28,12 +28,7 @@ export type {
 
 // Functions
 export { checkReservationOverlap } from "./overlap-check";
-export {
-  getAvailableTimeSlots,
-  getAvailableDatesInMonth,
-  isBusinessDay,
-  getBusinessHoursSettings,
-} from "./time-slots";
+export { getAvailableTimeSlots, getBusinessHoursSettings } from "./time-slots";
 
 // Client-safe utilities
 export {

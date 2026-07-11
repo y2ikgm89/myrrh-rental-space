@@ -30,12 +30,6 @@ export const TURNSTILE_ACTIONS = {
 export type TurnstileAction =
   (typeof TURNSTILE_ACTIONS)[keyof typeof TURNSTILE_ACTIONS];
 
-const TURNSTILE_ACTION_SET = new Set<string>(Object.values(TURNSTILE_ACTIONS));
-
-export function isTurnstileAction(value: string): value is TurnstileAction {
-  return TURNSTILE_ACTION_SET.has(value);
-}
-
 /**
  * Cloudflare Turnstile widget 表示モード（公式 3 値）
  *

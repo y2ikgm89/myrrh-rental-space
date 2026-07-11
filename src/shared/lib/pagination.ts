@@ -42,35 +42,8 @@ export function paginate(input: {
 }
 
 /**
- * findMany 結果 (items) と count (total) を受け取り、
- * 一般的なページネーション応答 (`items`/`total`/`page`/`limit`/`totalPages`) を返す。
- *
- * - `total = 0` では `totalPages` は 0 を返す。
- * - 呼び出し側は `paginate()` 由来の `{ page, limit }` を渡すこと
- */
-export function toPageResult<T>(
-  items: T[],
-  total: number,
-  { page, limit }: { page: number; limit: number },
-): {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-} {
-  return {
-    items,
-    total,
-    page,
-    limit,
-    totalPages: calcTotalPages(total, limit),
-  };
-}
-
-/**
  * `Math.ceil(total / limit)` の SSoT。各 queries.ts が `items`/`page`/`limit` を
- * 自前で組み立てる場合（result の items キーが entity 毎に異なる場合）にのみ使う。
+ * 自前で組み立てる (result の items キーが entity 毎に異なる) 用途に統一。
  */
 export function calcTotalPages(total: number, limit: number): number {
   return Math.ceil(total / limit);
