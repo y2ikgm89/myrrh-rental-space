@@ -352,7 +352,7 @@ describe("monthsAgo month-end overflow (Codex #3564864832)", () => {
   });
 });
 
-describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #3564864835)", () => {
+describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #3564864835 + #3564883654)", () => {
   beforeEach(() => {
     mockCustomerFindMany.mockClear();
     mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
@@ -362,7 +362,7 @@ describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #356
     );
   });
 
-  test("WHERE の OR に lastReservationAt=null かつ createdAt < cutoff の分岐が含まれる", async () => {
+  test("WHERE の OR は 2 枝: 予約履歴あり (lt cutoff) と 予約履歴なし (createdAt fallback + 予約 0 件 guard)", async () => {
     await anonymizeInactiveCustomers(NOW, 84);
     const call = mockCustomerFindMany.mock.calls[0];
     if (!call) throw new Error("customer.findMany was not called");
@@ -372,7 +372,9 @@ describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #356
           | { lastReservationAt: { lt: Date } }
           | {
               AND: Array<
-                { lastReservationAt: null } | { createdAt: { lt: Date } }
+                | { lastReservationAt: null }
+                | { createdAt: { lt: Date } }
+                | { reservations: { none: Record<string, unknown> } }
               >;
             }
         >;
@@ -382,18 +384,32 @@ describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #356
     // 第1枝: lastReservationAt < cutoff
     const branch1 = args.where.OR[0] as { lastReservationAt: { lt: Date } };
     expect(branch1.lastReservationAt.lt).toBeInstanceOf(Date);
-    // 第2枝: lastReservationAt IS NULL AND createdAt < cutoff
+    // 第2枝: lastReservationAt IS NULL AND createdAt < cutoff AND 予約 0 件
     const branch2 = args.where.OR[1] as {
-      AND: Array<{ lastReservationAt: null } | { createdAt: { lt: Date } }>;
+      AND: Array<
+        | { lastReservationAt: null }
+        | { createdAt: { lt: Date } }
+        | { reservations: { none: Record<string, unknown> } }
+      >;
     };
-    expect(branch2.AND).toHaveLength(2);
-    const [nullCond, createdAtCond] = branch2.AND;
+    expect(branch2.AND).toHaveLength(3);
+    const [nullCond, createdAtCond, noReservationsCond] = branch2.AND;
     expect(
       (nullCond as { lastReservationAt: null }).lastReservationAt,
     ).toBeNull();
     expect(
       (createdAtCond as { createdAt: { lt: Date } }).createdAt.lt,
     ).toBeInstanceOf(Date);
+    // 予約 0 件 guard: stale lastReservationAt (updateAdminReservationCommand が
+    // 予約再割当時に新 customer の stats を再計算しない bug 由来) を持つ customer を
+    // createdAt fallback から構造的に除外する。
+    expect(
+      (
+        noReservationsCond as {
+          reservations: { none: Record<string, unknown> };
+        }
+      ).reservations,
+    ).toEqual({ none: {} });
     // 両枝の cutoff は同一 Date 参照 (monthsAgo の 1 回計算を再利用)
     expect((branch1.lastReservationAt.lt as Date).toISOString()).toBe(
       (createdAtCond as { createdAt: { lt: Date } }).createdAt.lt.toISOString(),
