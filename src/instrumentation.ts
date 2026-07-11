@@ -12,6 +12,7 @@
 
 import type { Instrumentation } from "next";
 import { isRecord } from "@/shared/lib/serialize";
+import { redactRequestUrl } from "@/shared/lib/errors/redaction";
 
 export async function register(): Promise<void> {
   if (process.env["NEXT_RUNTIME"] === "nodejs") {
@@ -114,13 +115,21 @@ export const onRequestError: Instrumentation.onRequestError = async (
   const proto =
     pickHeader(request.headers, "x-forwarded-proto") ??
     (process.env["NODE_ENV"] === "production" ? "https" : "http");
-  const requestUrl = host ? `${proto}://${host}${request.path}` : request.path;
+  // Next.js の `request.path` は query string を含む可能性がある
+  // (`InstrumentationOnRequestError` の型定義上 `path: string`)。
+  // Cloud Logging は Log Explorer 権限保持者に生流しになるため、instrumentation
+  // 段で先に redaction する。redactRequestUrl は query を必ず `?[redacted]` に
+  // 落とし、path のセグメント値 (UUID / slug) は残す。
+  const rawUrl = host ? `${proto}://${host}${request.path}` : request.path;
+  const requestUrl = redactRequestUrl(rawUrl);
+  const contextPath = redactRequestUrl(request.path);
+  const redactedReferer = referer ? redactRequestUrl(referer) : undefined;
 
   logError(error, {
     category: ErrorCategory.UNKNOWN,
     severity: ErrorSeverity.HIGH,
     context: {
-      path: request.path,
+      path: contextPath,
       method: request.method,
       routePath: context.routePath,
       routeType: context.routeType,
@@ -133,7 +142,7 @@ export const onRequestError: Instrumentation.onRequestError = async (
       requestMethod: request.method,
       requestUrl,
       ...(userAgent ? { userAgent } : {}),
-      ...(referer ? { referer } : {}),
+      ...(redactedReferer ? { referer: redactedReferer } : {}),
       ...(remoteIp ? { remoteIp } : {}),
       protocol: proto,
     },
