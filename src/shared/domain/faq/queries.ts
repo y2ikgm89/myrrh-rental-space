@@ -6,6 +6,7 @@ import {
   FAQ_RECENT_DAYS,
   FAQ_STALE_DAYS,
 } from "@/shared/domain/faq/constants";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type {
   FaqCategoryListResult,
@@ -165,14 +166,10 @@ function buildFaqItemWhere(filters: FaqItemFilters): FaqItemWhere {
   }
 
   if (filters.quickFilter === "recent") {
-    const recentThreshold = new Date(
-      Date.now() - FAQ_RECENT_DAYS * 24 * 60 * 60 * 1000,
-    );
+    const recentThreshold = new Date(Date.now() - FAQ_RECENT_DAYS * MS_PER_DAY);
     where.updatedAt = { gte: recentThreshold };
   } else if (filters.quickFilter === "stale") {
-    const staleThreshold = new Date(
-      Date.now() - FAQ_STALE_DAYS * 24 * 60 * 60 * 1000,
-    );
+    const staleThreshold = new Date(Date.now() - FAQ_STALE_DAYS * MS_PER_DAY);
     where.updatedAt = { lt: staleThreshold };
   } else if (filters.quickFilter === "low-rated") {
     where.notHelpfulCount = { gte: FAQ_LOW_RATED_MIN_NOT_HELPFUL };
@@ -251,9 +248,7 @@ export async function getFaqItems(
  */
 export async function getFaqHealthSummary(): Promise<FaqHealthSummary> {
   const base = { deletedAt: null, category: { deletedAt: null } } as const;
-  const staleThreshold = new Date(
-    Date.now() - FAQ_STALE_DAYS * 24 * 60 * 60 * 1000,
-  );
+  const staleThreshold = new Date(Date.now() - FAQ_STALE_DAYS * MS_PER_DAY);
 
   const [draftCount, staleCount, lowRatedCount] = await Promise.all([
     prisma.faqItem.count({ where: { ...base, isPublished: false } }),
@@ -292,7 +287,7 @@ export async function getFaqItemById(
  * 注: 親カテゴリが削除済みかどうかは問わない（親ごと削除されていても復元対象）
  */
 export async function getDeletedFaqItems(): Promise<FaqItemWithCategory[]> {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * MS_PER_DAY);
 
   const items = await prisma.faqItem.findMany({
     where: {
@@ -311,7 +306,7 @@ export async function getDeletedFaqItems(): Promise<FaqItemWithCategory[]> {
 export async function getDeletedFaqCategories(): Promise<
   FaqCategoryWithItems[]
 > {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * MS_PER_DAY);
 
   const categories = await prisma.faqCategory.findMany({
     where: {

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 import type { NotificationType } from "@/shared/lib/validations/enums/helpers";
 
 type CreateNotificationInput = {
@@ -57,7 +58,7 @@ export async function hasRecentNotificationOfType(
   type: NotificationType,
   withinDays: number,
 ): Promise<boolean> {
-  const since = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000);
+  const since = new Date(Date.now() - withinDays * MS_PER_DAY);
   const existing = await prisma.adminNotification.findFirst({
     where: { type, createdAt: { gte: since } },
     select: { id: true },

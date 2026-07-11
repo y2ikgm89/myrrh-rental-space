@@ -3,7 +3,7 @@ import "server-only";
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { InquiryStatus, ReservationStatus } from "@generated/prisma/enums";
-import { formatJstDateString } from "@/shared/lib/date-format";
+import { formatJstDateString, MS_PER_DAY } from "@/shared/lib/date-format";
 
 export type DashboardStats = {
   reservations: {
@@ -70,7 +70,7 @@ export type ReservationChartResult = {
 const DEFAULT_LIST_LIMIT = 5;
 const MAX_LIST_LIMIT = 50;
 const CHART_WINDOW_DAYS = 30;
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const ONE_DAY_MS = MS_PER_DAY;
 
 function calcChangePercent(current: number, previous: number): number {
   if (previous > 0) {
