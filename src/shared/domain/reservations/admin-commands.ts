@@ -17,6 +17,7 @@ import {
   validateCoupon,
   ensureNoOverlap,
   incrementCustomerReservationStats,
+  recomputeCustomerReservationStats,
   calculatePricing,
   buildPayload,
 } from "./payloads";
@@ -229,6 +230,9 @@ export async function updateAdminReservationCommand(
         endTime: true,
         totalPrice: true,
         couponId: true,
+        // 予約再割当時の旧 customer stat 再計算に必要 (Codex data-retention レビュー
+        // 経由で発覚した stale stat bug の修正 — 詳細は tx 内 comment 参照)
+        customerId: true,
         googleCalendarEventId: true,
         customer: { select: CUSTOMER_SELECT },
       },
@@ -345,6 +349,27 @@ export async function updateAdminReservationCommand(
           data: { usageCount: { increment: 1 } },
         });
       }
+    }
+
+    // 予約再割当時: 旧 customer と新 customer の両方の予約統計を
+    // Reservation 実履歴から再計算する。
+    //
+    // 修正前は customerId だけ書き換わり `Customer.totalReservations` /
+    // `totalSpent` / `firstReservationAt` / `lastReservationAt` が旧値のままで、
+    // 管理 UI の顧客カード、customer-risk-scan cron、data-retention cron の
+    // dormancy 判定 (最新実装は Reservation 実履歴で行うため直接影響しないが、
+    // 他消費面は cached stat を参照する) に stale 値が silently 伝播していた。
+    // Codex #3564883654 / #3564905126 の data-retention レビュー中に副次発覚。
+    //
+    // totalPrice のみ変更 (同一 customer) のケースは既存パターンに合わせて
+    // recompute しない — increment path 側でも totalSpent は維持していない
+    // 既知の pre-existing hole であり、本 PR のスコープ外。
+    if (currentReservation.customerId !== input.customerId) {
+      await recomputeCustomerReservationStats(
+        tx,
+        currentReservation.customerId,
+      );
+      await recomputeCustomerReservationStats(tx, input.customerId);
     }
   });
 
