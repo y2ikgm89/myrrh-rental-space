@@ -19,6 +19,8 @@ mock.module("server-only", () => ({}));
 mock.module("next/cache", () => ({
   cacheLife: () => {},
   cacheTag: () => {},
+  revalidateTag: mock(() => undefined),
+  updateTag: mock(() => undefined),
 }));
 
 mock.module("@/shared/db/prisma", () => ({

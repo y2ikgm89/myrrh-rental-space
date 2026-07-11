@@ -36,11 +36,12 @@ mock.module("@/shared/domain/settings/queries/notification", () => ({
 // Resend webhook suppression check (bulk fetch) を素通しさせる:
 // Bun 公式 re-export pattern で他の export を保ち `getSuppressedEmailSet` のみ
 // module-level mock に差し替える。デフォルトは空 Set (= 送信許可)。
+// 引数なし版 (PII cache leak fix)。
 const actualCustomersQueries =
   await import("@/shared/domain/customers/queries");
-const mockGetSuppressedEmailSet = mock<
-  (emails: readonly string[]) => Promise<Set<string>>
->(() => Promise.resolve(new Set()));
+const mockGetSuppressedEmailSet = mock<() => Promise<Set<string>>>(() =>
+  Promise.resolve(new Set()),
+);
 mock.module("@/shared/domain/customers/queries", () => ({
   ...actualCustomersQueries,
   getSuppressedEmailSet: mockGetSuppressedEmailSet,

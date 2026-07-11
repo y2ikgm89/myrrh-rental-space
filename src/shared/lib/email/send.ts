@@ -19,9 +19,13 @@ import {
   logError,
   normalizeError,
 } from "../errors/server";
-import { getSuppressedEmailSet } from "@/shared/domain/customers/queries";
+import {
+  getSuppressedEmailSet,
+  hashSuppressedEmailCandidate,
+} from "@/shared/domain/customers/queries";
 import { getEmailDeliverySettings } from "@/shared/domain/settings/queries/notification";
 import { getFromAddress, getResendClient, isEmailEnabled } from "./client";
+import { normalizeEmailForIdentity } from "./normalize-email";
 import { CreateEmailOptionsSchema } from "./schemas";
 import type { EmailResult } from "./types";
 
@@ -92,15 +96,23 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
 
   // === Resend Webhook 由来の suppression check（送信前） ===
   // 宛先のいずれかが HARD_BOUNCED / COMPLAINED なら no-op + audit log。
-  // 配信状態は Customer.email (unique) でのみ追跡しているため、
+  // 配信状態は Customer.emailCanonical でのみ追跡しているため、
   // staff / system 宛先（DB に Customer レコードなし）は素通りする。
-  // bulk fetch + 'use cache' + tag SUPPRESSED_EMAILS に乗せ、Resend webhook の
-  // revalidateTag で invalidate される（per-recipient N×round-trip を撲滅）。
+  //
+  // `getSuppressedEmailSet()` は「全 suppressed 顧客の canonical email を
+  // SHA-256 hash した集合」を単一 `'use cache'` エントリで返す (引数無し
+  // なので cache key に PII を焼き込まない + cache 値も非可逆 hash なので
+  // plaintext PII が Data Cache に残らない — Codex PR #945 review 対応)。
+  // 呼び出し側で recipient を canonical → hash してから .has() 判定する。
+  // cache は Resend webhook の revalidateTag で即時 invalidate される。
   const recipients = normalizeRecipients(payload.to);
   if (recipients.length > 0) {
-    const suppressedSet = await getSuppressedEmailSet(recipients);
+    const suppressedSet = await getSuppressedEmailSet();
     for (const recipient of recipients) {
-      if (suppressedSet.has(recipient)) {
+      const candidateHash = hashSuppressedEmailCandidate(
+        normalizeEmailForIdentity(recipient),
+      );
+      if (suppressedSet.has(candidateHash)) {
         logError(new Error(`Email suppressed: ${recipient}`), {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,

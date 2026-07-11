@@ -5,6 +5,9 @@ const mockUpdateCustomerEmailDeliveryStatusByEmail = mock(async () => 0);
 
 mock.module("next/cache", () => ({
   revalidateTag: mock(() => undefined),
+  // `invalidateSiteWideCache` (server action variant) は route handler で
+  // 使わないが site-wide.ts の named import は解決する必要がある。
+  updateTag: mock(() => undefined),
 }));
 
 mock.module("next/navigation", () => ({

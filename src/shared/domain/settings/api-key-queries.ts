@@ -133,11 +133,16 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
   };
 }
 
+/**
+ * Google Maps API キーを復号して返す（送信経路で使う）。
+ *
+ * `getDecryptedTurnstileSecretKey` / `getDecryptedResendApiKey` /
+ * `getDecryptedSwitchBotCredentials` と対称に `'use cache'` を通さず直接 DB
+ * を読む。復号済み plaintext を data cache に貯めると key rotation / kill switch
+ * の即時反映が失われ、かつ他 secret 系との drift になる。マスク済み表示用は
+ * `getGoogleMapsConfig` を使う（DB read のみ）。
+ */
 export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
-  "use cache";
-  cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
     select: {

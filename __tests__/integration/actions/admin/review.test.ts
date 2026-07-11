@@ -120,6 +120,9 @@ const actualNextCache = await import("next/cache");
 mock.module("next/cache", () => ({
   ...actualNextCache,
   updateTag: mockUpdateTag,
+  cacheLife: mock(() => undefined),
+  cacheTag: mock(() => undefined),
+  revalidateTag: mock(() => undefined),
 }));
 
 function getUpdatedTags(): string[] {

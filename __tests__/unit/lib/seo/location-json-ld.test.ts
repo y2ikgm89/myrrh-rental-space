@@ -19,6 +19,8 @@ mock.module("server-only", () => ({}));
 mock.module("next/cache", () => ({
   cacheLife: mock(() => {}),
   cacheTag: mock(() => {}),
+  revalidateTag: mock(() => undefined),
+  updateTag: mock(() => undefined),
 }));
 
 import { buildLocationLocalBusinessJsonLdData } from "@/public/lib/seo/location-json-ld";

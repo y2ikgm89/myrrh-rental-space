@@ -7,6 +7,17 @@ import {
   afterEach,
   spyOn,
 } from "bun:test";
+import { createHash } from "node:crypto";
+
+// send.ts の suppression 判定 (hashSuppressedEmailCandidate(normalizeEmailForIdentity(recipient)))
+// と bit-for-bit 同じ hash 値を生成するテストヘルパー。
+// normalizeEmailForIdentity は小文字化 + trim なので、単純 canonical (すでに小文字) は
+// そのまま SHA-256 に通せば良い。
+function hashForTest(canonicalEmail: string): string {
+  return createHash("sha256")
+    .update(canonicalEmail.trim().toLowerCase())
+    .digest("hex");
+}
 
 // setTimeout をモックして backoff sleep をスキップする
 // send.ts の sleep() は setTimeout を使用するため、グローバルを差し替える
@@ -111,11 +122,13 @@ mock.module("@/shared/lib/errors/server", () => ({
 // `getSuppressedEmailSet` のみ module-level mock に差し替える。
 // デフォルトは空 Set（= 全宛先送信許可）。suppression 検証は
 // describe("suppression branch") で per-test に mockResolvedValue で切替える。
+// 引数を取らない (PII cache leak fix: 引数を cache key にしないため、
+// 送信側で recipient を canonical に正規化して .has() 判定する)。
 const actualCustomersQueries =
   await import("@/shared/domain/customers/queries");
-const mockGetSuppressedEmailSet = mock<
-  (emails: readonly string[]) => Promise<Set<string>>
->(() => Promise.resolve(new Set()));
+const mockGetSuppressedEmailSet = mock<() => Promise<Set<string>>>(() =>
+  Promise.resolve(new Set()),
+);
 mock.module("@/shared/domain/customers/queries", () => ({
   ...actualCustomersQueries,
   getSuppressedEmailSet: mockGetSuppressedEmailSet,
@@ -633,15 +646,19 @@ describe("sendEmail()", () => {
   // suppression branch
   // -----------------------------------------------------------------------
   // PR #742 で追加した「Resend webhook 由来の HARD_BOUNCED / COMPLAINED 観測済み
-  // 宛先に送信を抑止」のロジックを 6 case で網羅する。production は
-  // `getSuppressedEmailSet(emails)` の bulk fetch + 'use cache' に乗っており、
-  // suppression set に該当する宛先が 1 件でも含まれていれば送信せず
-  // { ok: false, reason: "disabled" } + logError を返す（公式 Gmail Feb 2024
-  // / Yahoo bulk sender complaint rate < 0.3% 要件のアプリ層先取り）。
+  // 宛先に送信を抑止」のロジックを 6 case で網羅する。production は引数を取らない
+  // `getSuppressedEmailSet()` が全 suppressed 顧客の canonical email 集合を返し、
+  // 送信側で recipient を canonical に正規化して `.has()` 判定する (PII cache leak
+  // fix — 引数を cache key にしない設計)。suppression set に該当する宛先が
+  // 1 件でも含まれていれば送信せず { ok: false, reason: "disabled" } + logError
+  // を返す（公式 Gmail Feb 2024 / Yahoo bulk sender complaint rate < 0.3% 要件
+  // のアプリ層先取り）。
   describe("suppression branch", () => {
     test("1 recipient HARD_BOUNCED なら送信せず disabled + logError 1 回", async () => {
+      // Set は canonical email の SHA-256 hash を格納する契約 (queries.ts)。
+      // 送信側で recipient を hash して .has() 判定する。
       mockGetSuppressedEmailSet.mockResolvedValue(
-        new Set(["customer@example.com"]),
+        new Set([hashForTest("customer@example.com")]),
       );
 
       const result = await sendEmail(BASE_PARAMS);
@@ -665,8 +682,10 @@ describe("sendEmail()", () => {
     test("1 recipient COMPLAINED なら送信せず disabled + logError 1 回", async () => {
       // domain query 側で HARD_BOUNCED / COMPLAINED の両方が Set に入って返る
       // 仕様なので、test は「Set に入っているか」のみ確認すれば良い。
+      // Set は canonical email の SHA-256 hash を格納する契約 (queries.ts)。
+      // 送信側で recipient を hash して .has() 判定する。
       mockGetSuppressedEmailSet.mockResolvedValue(
-        new Set(["customer@example.com"]),
+        new Set([hashForTest("customer@example.com")]),
       );
 
       const result = await sendEmail(BASE_PARAMS);
@@ -700,7 +719,9 @@ describe("sendEmail()", () => {
     });
 
     test("複数宛先のうち 1 件のみ HARD_BOUNCED でも全送信を抑止 + logError", async () => {
-      mockGetSuppressedEmailSet.mockResolvedValue(new Set(["b@example.com"]));
+      mockGetSuppressedEmailSet.mockResolvedValue(
+        new Set([hashForTest("b@example.com")]),
+      );
 
       const result = await sendEmail({
         ...BASE_PARAMS,
@@ -720,14 +741,11 @@ describe("sendEmail()", () => {
           }),
         }),
       );
-      // bulk fetch なので getSuppressedEmailSet は 1 回だけ呼ばれる
-      // （per-recipient N×round-trip でないことの回帰防止）
+      // 引数なし版なので getSuppressedEmailSet は 1 回だけ、no-arg で呼ばれる
+      // （per-recipient N×round-trip でないことの回帰防止 + 引数を cache key に
+      // しない PII cache leak fix の回帰防止）
       expect(mockGetSuppressedEmailSet).toHaveBeenCalledTimes(1);
-      expect(mockGetSuppressedEmailSet).toHaveBeenCalledWith([
-        "a@example.com",
-        "b@example.com",
-        "c@example.com",
-      ]);
+      expect(mockGetSuppressedEmailSet).toHaveBeenCalledWith();
     });
 
     test("複数宛先が全て OK なら送信続行", async () => {

@@ -23,12 +23,12 @@
  * @module api/webhooks/resend
  */
 
-import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { EmailDeliveryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { updateCustomerEmailDeliveryStatusByEmail } from "@/shared/domain/customers/commands";
-import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 import { getResendClient } from "@/shared/lib/email/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
@@ -222,8 +222,18 @@ async function handleComplained(event: ResendWebhookEvent): Promise<void> {
 }
 
 function invalidateCustomerCache(): void {
-  revalidateTag(CACHE_TAGS.CUSTOMERS, CACHE_LIFE.DYNAMIC_DATA);
-  // sendEmail() 内の getSuppressedEmailSet() ('use cache') を invalidate して
-  // bounce / complaint を観測した宛先への次回送信を即時 suppress。
-  revalidateTag(CACHE_TAGS.SUPPRESSED_EMAILS, CACHE_LIFE.DYNAMIC_DATA);
+  // webhook では `{expire:0}` の blocking immediate-expire を使う。
+  // sendEmail() 内の getSuppressedEmailSet() ('use cache') が SWR で stale を
+  // 返し続けると、bounce / complaint を観測した直後の送信で silent に
+  // suppression が効かず、Gmail / Yahoo bulk sender の complaint rate 上限を
+  // 押し上げる silent bug になる。
+  //
+  // skipCdnPurge: true — CUSTOMERS / SUPPRESSED_EMAILS は共に admin-only の
+  // private tag (NEXTJS_TAGS_WITHOUT_CDN_MAPPING allowlist)。CDN 経路に emit
+  // されないため SITEMAP co-purge を Cloudflare に飛ばす意味が無い
+  // (Codex PR #945 review 対応)。
+  invalidateSiteWideCacheFromRouteHandler(
+    [CACHE_TAGS.CUSTOMERS, CACHE_TAGS.SUPPRESSED_EMAILS],
+    { skipCdnPurge: true },
+  );
 }
