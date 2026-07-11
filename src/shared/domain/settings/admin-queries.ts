@@ -15,6 +15,7 @@ import type {
   TwoWaySyncSettingsData,
 } from "@/shared/domain/settings/types";
 import { safeDecrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { extractServiceAccountEmail } from "@/shared/lib/google-calendar/service-account";
 import {
   parseBusinessHours,
@@ -242,15 +243,26 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
   const settings = await getOrCreateSettings();
 
   const stripeSecretKeyMasked = settings.stripeSecretKey
-    ? maskSecretKey(safeDecrypt(settings.stripeSecretKey) || "****")
+    ? maskSecretKey(
+        safeDecrypt(settings.stripeSecretKey, {
+          expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
+        })?.toString("utf8") || "****",
+      )
     : null;
   const stripeWebhookSecretMasked = settings.stripeWebhookSecret
-    ? maskSecretKey(safeDecrypt(settings.stripeWebhookSecret) || "****")
+    ? maskSecretKey(
+        safeDecrypt(settings.stripeWebhookSecret, {
+          expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeWebhookSecret,
+        })?.toString("utf8") || "****",
+      )
     : null;
 
   let googleCalendarServiceAccountEmailMasked: string | null = null;
   if (settings.googleCalendarServiceAccountJson) {
-    const decrypted = safeDecrypt(settings.googleCalendarServiceAccountJson);
+    const decrypted =
+      safeDecrypt(settings.googleCalendarServiceAccountJson, {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
+      })?.toString("utf8") ?? null;
     if (decrypted) {
       const email = extractServiceAccountEmail(decrypted);
       if (email) {

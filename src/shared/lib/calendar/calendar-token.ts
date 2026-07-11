@@ -120,21 +120,11 @@ export function verifyCalendarToken(
     return { valid: false, reason: "invalid" };
   }
 
-  // purpose を明示検証 (他用途トークンの流用や reservation⇔event 交差を decrypt 前に弾く)。
-  // wire format:
-  //   v1: "v1:<purpose>:iv:tag:ct"          → parts[1]
-  //   v2: "v2:<kid>:<purpose>:iv:tag:ct"    → parts[2]
-  const parts = ciphertext.split(":");
-  const version = parts[0];
-  const purposeFromWire =
-    version === "v2" ? parts[2] : version === "v1" ? parts[1] : null;
-  if (purposeFromWire !== purposeFor(expectedKind)) {
-    return { valid: false, reason: "invalid" };
-  }
-
   let raw: string;
   try {
-    raw = decrypt(ciphertext);
+    raw = decrypt(ciphertext, {
+      expectedPurpose: purposeFor(expectedKind),
+    }).toString("utf8");
   } catch {
     return { valid: false, reason: "invalid" };
   }

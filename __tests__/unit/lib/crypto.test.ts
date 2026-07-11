@@ -25,6 +25,12 @@ mock.module("@/shared/lib/env/encryption", () => ({
 const { encrypt, decrypt, isEncrypted, safeEncrypt, safeDecrypt } =
   await import("@/shared/lib/crypto");
 
+const DEFAULT_PURPOSE = "generic";
+
+function decryptString(ciphertext: string, expectedPurpose: string): string {
+  return decrypt(ciphertext, { expectedPurpose }).toString("utf8");
+}
+
 describe("crypto", () => {
   describe("encrypt / decrypt (v2 wire format)", () => {
     test("平文を暗号化して復号化できる（v2 形式で出力される）", () => {
@@ -34,18 +40,22 @@ describe("crypto", () => {
       expect(encrypted.startsWith("v2:")).toBe(true);
       expect(encrypted).toContain(`:${PRIMARY.kid}:`);
 
-      const decrypted = decrypt(encrypted);
+      const decrypted = decryptString(encrypted, DEFAULT_PURPOSE);
       expect(decrypted).toBe(plaintext);
     });
 
     test("日本語を暗号化して復号化できる", () => {
       const plaintext = "こんにちは、世界！";
-      expect(decrypt(encrypt(plaintext))).toBe(plaintext);
+      expect(decryptString(encrypt(plaintext), DEFAULT_PURPOSE)).toBe(
+        plaintext,
+      );
     });
 
     test("長いテキストを暗号化して復号化できる", () => {
       const plaintext = "a".repeat(10000);
-      expect(decrypt(encrypt(plaintext))).toBe(plaintext);
+      expect(decryptString(encrypt(plaintext), DEFAULT_PURPOSE)).toBe(
+        plaintext,
+      );
     });
 
     test("JSONを暗号化して復号化できる", () => {
@@ -55,7 +65,9 @@ describe("crypto", () => {
         private_key: "secret-key",
       };
       const plaintext = JSON.stringify(data);
-      expect(JSON.parse(decrypt(encrypt(plaintext)))).toEqual(data);
+      expect(
+        JSON.parse(decryptString(encrypt(plaintext), DEFAULT_PURPOSE)),
+      ).toEqual(data);
     });
 
     test("purpose を指定して暗号化できる", () => {
@@ -63,7 +75,7 @@ describe("crypto", () => {
       const encrypted = encrypt(plaintext, { purpose: "custom-purpose" });
 
       expect(encrypted).toContain(":custom-purpose:");
-      expect(decrypt(encrypted)).toBe(plaintext);
+      expect(decryptString(encrypted, "custom-purpose")).toBe(plaintext);
     });
 
     test("同じ平文でも毎回異なる暗号文になる（IV）", () => {
@@ -72,34 +84,39 @@ describe("crypto", () => {
       const e2 = encrypt(plaintext);
 
       expect(e1).not.toBe(e2);
-      expect(decrypt(e1)).toBe(plaintext);
-      expect(decrypt(e2)).toBe(plaintext);
+      expect(decryptString(e1, DEFAULT_PURPOSE)).toBe(plaintext);
+      expect(decryptString(e2, DEFAULT_PURPOSE)).toBe(plaintext);
     });
 
     test("不正な暗号文はエラーを投げる", () => {
-      expect(() => decrypt("invalid")).toThrow(
-        /Unsupported ciphertext version/,
-      );
-      expect(() => decrypt("v1:a:b:c")).toThrow(
-        /Unsupported ciphertext version/,
-      );
-      expect(() => decrypt("v3:test:a:b:c:d")).toThrow(
-        /Unsupported ciphertext version/,
-      );
+      expect(() =>
+        decrypt("invalid", { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toThrow(/Unsupported ciphertext version/);
+      expect(() =>
+        decrypt("v1:a:b:c", { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toThrow(/Unsupported ciphertext version/);
+      expect(() =>
+        decrypt("v3:test:a:b:c:d", { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toThrow(/Unsupported ciphertext version/);
     });
 
     test("改ざんされた暗号文はエラーを投げる", () => {
       const encrypted = encrypt("secret");
       const parts = encrypted.split(":");
       parts[5] = "tampered";
-      expect(() => decrypt(parts.join(":"))).toThrow();
+      expect(() =>
+        decrypt(parts.join(":"), { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toThrow();
     });
   });
 
   describe("unsupported ciphertext versions", () => {
     test("v1 形式は復号せずに拒否する", () => {
       expect(() =>
-        decrypt("v1:custom:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==:dGVzdA=="),
+        decrypt(
+          "v1:custom:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==:dGVzdA==",
+          { expectedPurpose: "custom" },
+        ),
       ).toThrow(/Unsupported ciphertext version/);
     });
   });
@@ -110,17 +127,17 @@ describe("crypto", () => {
       const retiredEncrypted = encrypt("old-data", { purpose: "stripe" });
       expect(retiredEncrypted).toContain(`:${RETIRED_V0.kid}:`);
 
-      expect(() => decrypt(retiredEncrypted)).toThrow(
-        /No primary encryption key available/,
-      );
+      expect(() =>
+        decrypt(retiredEncrypted, { expectedPurpose: "stripe" }),
+      ).toThrow(/No primary encryption key available/);
     });
 
     test("未知の kid を持つ v2 暗号文は decrypt 失敗", () => {
       const unknownKidCipher =
         "v2:unknown-kid:stripe:AAAAAAAAAAAAAAAA:AAAAAAAAAAAAAAAAAAAAAA==:dGVzdA==";
-      expect(() => decrypt(unknownKidCipher)).toThrow(
-        /No primary encryption key available/,
-      );
+      expect(() =>
+        decrypt(unknownKidCipher, { expectedPurpose: "stripe" }),
+      ).toThrow(/No primary encryption key available/);
     });
   });
 
@@ -146,11 +163,17 @@ describe("crypto", () => {
       if (encrypted === null) {
         throw new Error("safeEncrypt must return encrypted text");
       }
-      expect(safeDecrypt(encrypted)).toBe(plaintext);
+      const decrypted = safeDecrypt(encrypted, {
+        expectedPurpose: DEFAULT_PURPOSE,
+      });
+      expect(decrypted).not.toBeNull();
+      expect(decrypted?.toString("utf8")).toBe(plaintext);
     });
 
     test("safeDecrypt は不正な値に対して null を返す", () => {
-      expect(safeDecrypt("invalid")).toBeNull();
+      expect(
+        safeDecrypt("invalid", { expectedPurpose: DEFAULT_PURPOSE }),
+      ).toBeNull();
     });
 
     test("safeEncrypt は鍵未設定で null を返す", () => {
@@ -162,15 +185,24 @@ describe("crypto", () => {
     });
   });
 
-  describe("purpose 変更後の後方互換性", () => {
-    test("異なる purpose で暗号化された既存データも decrypt で復号できる（decrypt は暗号文自身に埋め込まれた purpose を使い、呼び出し側が期待する purpose とは無関係に鍵導出するため）", () => {
-      const legacyEncrypted = encrypt("legacy-value", { purpose: "generic" });
-      const migratedEncrypted = encrypt("legacy-value", {
-        purpose: "stripe-secret-key",
-      });
+  describe("expectedPurpose gate", () => {
+    test("expectedPurpose と暗号文の purpose が一致すれば復号できる", () => {
+      const encrypted = encrypt("hello", { purpose: "purpose-a" });
+      expect(decryptString(encrypted, "purpose-a")).toBe("hello");
+    });
 
-      expect(decrypt(legacyEncrypted)).toBe("legacy-value");
-      expect(decrypt(migratedEncrypted)).toBe("legacy-value");
+    test("expectedPurpose が暗号文の purpose と異なると明示エラーで拒否する", () => {
+      const encrypted = encrypt("secret", { purpose: "purpose-a" });
+      expect(() =>
+        decrypt(encrypted, { expectedPurpose: "purpose-b" }),
+      ).toThrow(/Ciphertext purpose mismatch/);
+    });
+
+    test("safeDecrypt は purpose 不一致で null を返す", () => {
+      const encrypted = encrypt("secret", { purpose: "purpose-a" });
+      expect(
+        safeDecrypt(encrypted, { expectedPurpose: "purpose-b" }),
+      ).toBeNull();
     });
   });
 });

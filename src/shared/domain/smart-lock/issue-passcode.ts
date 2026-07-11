@@ -81,7 +81,10 @@ function decryptConfirmedPasscode(
   deviceName: string,
   reservationId: string,
 ): IssuedSmartLockPasscode | null {
-  const passcode = safeDecrypt(passcodeCiphertext);
+  const passcode =
+    safeDecrypt(passcodeCiphertext, {
+      expectedPurpose: PASSCODE_CRYPTO_PURPOSE,
+    })?.toString("utf8") ?? null;
   if (passcode === null) {
     logError(new Error("既存のCONFIRMED済みパスコードの復号に失敗しました"), {
       category: ErrorCategory.UNKNOWN,

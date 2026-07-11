@@ -285,7 +285,9 @@ export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
   });
 
   const existing = settings?.switchbotWebhookPathToken
-    ? safeDecrypt(settings.switchbotWebhookPathToken)
+    ? (safeDecrypt(settings.switchbotWebhookPathToken, {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
+      })?.toString("utf8") ?? null)
     : null;
   if (existing) return existing;
 

@@ -107,21 +107,9 @@ export function verifyCancelToken(
 ): VerifyCancelTokenResult {
   const ciphertext = Buffer.from(token, "base64url").toString("utf8");
 
-  // purpose を明示検証（他用途トークンの流用を decrypt 前に拒否）。
-  // wire format に応じて purpose の位置が異なる:
-  //   v1: "v1:<purpose>:iv:tag:ct"          → parts[1]
-  //   v2: "v2:<kid>:<purpose>:iv:tag:ct"    → parts[2]
-  const parts = ciphertext.split(":");
-  const version = parts[0];
-  const purposeFromWire =
-    version === "v2" ? parts[2] : version === "v1" ? parts[1] : null;
-  if (purposeFromWire !== PURPOSE) {
-    return { valid: false, reason: "invalid" };
-  }
-
   let raw: string;
   try {
-    raw = decrypt(ciphertext);
+    raw = decrypt(ciphertext, { expectedPurpose: PURPOSE }).toString("utf8");
   } catch {
     return { valid: false, reason: "invalid" };
   }

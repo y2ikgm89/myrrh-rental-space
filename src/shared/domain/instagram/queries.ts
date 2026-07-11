@@ -94,7 +94,11 @@ export async function getDecryptedInstagramToken(): Promise<string | null> {
     return null;
   }
 
-  return safeDecrypt(settings.instagramAccessToken);
+  return (
+    safeDecrypt(settings.instagramAccessToken, {
+      expectedPurpose: "instagram",
+    })?.toString("utf8") ?? null
+  );
 }
 
 export async function getInstagramRefreshState(): Promise<{

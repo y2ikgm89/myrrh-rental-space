@@ -78,7 +78,10 @@ export async function GET(request: Request) {
     }
 
     // トークンを復号
-    const decryptedToken = safeDecrypt(settings.encryptedAccessToken);
+    const decryptedToken =
+      safeDecrypt(settings.encryptedAccessToken, {
+        expectedPurpose: "instagram",
+      })?.toString("utf8") ?? null;
     if (!decryptedToken) {
       logError(new Error("Failed to decrypt Instagram access token"), {
         category: ErrorCategory.AUTHORIZATION,
