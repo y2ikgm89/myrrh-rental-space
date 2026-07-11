@@ -19,12 +19,7 @@ import {
 } from "@/shared/domain/reservations/availability";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "./types";
-import {
-  getWeekdayKey,
-  parseTime,
-  generateSlotsFromBusinessHours,
-  isMonthlyClosureDate,
-} from "./time-slots-utils";
+import { parseTime, generateSlotsFromBusinessHours } from "./time-slots-utils";
 
 /**
  * DBから営業時間設定を取得
