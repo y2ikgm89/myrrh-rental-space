@@ -31,6 +31,7 @@ import {
 } from "@/shared/lib/features/check";
 import { isReservedPath } from "@/shared/lib/slug-validation";
 import { logger } from "@/shared/lib/errors/logger-core";
+import { getErrorMessage } from "@/shared/lib/errors/server";
 
 // =============================================================================
 // Types
@@ -123,7 +124,7 @@ export async function buildSitemap(): Promise<MetadataRoute.Sitemap> {
     logger.error(
       "sitemap() catastrophic failure — returning STATIC_PAGES only",
       {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         durationMs: Date.now() - startedAt,
       },
     );

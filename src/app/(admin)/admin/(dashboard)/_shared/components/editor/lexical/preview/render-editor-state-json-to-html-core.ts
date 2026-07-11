@@ -2,6 +2,7 @@ import { withDOM } from "@lexical/headless/dom";
 import { $generateHtmlFromNodes } from "@lexical/html";
 import { createProjectHeadlessEditor } from "../create-headless-lexical-editor";
 import { logger } from "@/shared/lib/errors/logger-core";
+import { getErrorMessage } from "@/shared/lib/errors/server";
 
 /**
  * Lexical EditorState JSON → HTML（環境非依存コア）。
@@ -29,7 +30,7 @@ export function renderEditorStateJsonToHtmlCore(
     });
   } catch (error) {
     logger.error("Failed to render editor JSON to HTML", {
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     });
     return "";
   }
