@@ -73,6 +73,34 @@ describe("redactString", () => {
   test("returns empty string unchanged", () => {
     expect(redactString("")).toBe("");
   });
+
+  test("honors an explicit maxLength larger than the default", () => {
+    // Plain text: no redaction pattern matches — pure length gate.
+    // (avoiding uppercase A×2000 which the high-entropy regex now treats as
+    // a candidate token; use a low-entropy sentence-shaped fill instead.)
+    const long = "abcdefghij ".repeat(300);
+    expect(long.length).toBeGreaterThan(2048);
+    const result = redactString(long, { maxLength: 4096 });
+    expect(result).toBe(long);
+    expect(result.length).toBe(long.length);
+    expect(result).not.toContain("[truncated]");
+  });
+
+  test("honors an explicit maxLength smaller than the default", () => {
+    const value = "hello world this is a fairly long sentence";
+    const result = redactString(value, { maxLength: 10 });
+    expect(result.startsWith("hello worl")).toBe(true);
+    expect(result).toContain("[truncated]");
+  });
+
+  test("still truncates at the given maxLength after redaction expands the string", () => {
+    // Each email → "[REDACTED:email]" (16 chars). Fits within 4096.
+    const value =
+      "context: " + Array.from({ length: 20 }, () => "a@b.co").join(" ");
+    const result = redactString(value, { maxLength: 4096 });
+    expect(result).not.toContain("a@b.co");
+    expect(result).toContain("[REDACTED:email]");
+  });
 });
 
 describe("redactRequestUrl", () => {
