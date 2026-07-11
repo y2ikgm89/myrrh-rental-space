@@ -18,6 +18,7 @@ import {
   spyOn,
 } from "bun:test";
 import { encrypt } from "@/shared/lib/crypto";
+import { PASSCODE_CRYPTO_PURPOSE } from "@/shared/domain/smart-lock/issue-passcode";
 
 // -----------------------------------------------------------------------
 // setTimeout スパイ（poll interval を即時解決させる。send.test.ts と同じ手法）
@@ -458,7 +459,9 @@ describe("issueSmartLockPasscodes", () => {
   }, 10_000);
 
   test("既にCONFIRMEDのレコードがある場合は再度API呼出せず復号して結果に含む", async () => {
-    const existingPasscode = encrypt("654321");
+    const existingPasscode = encrypt("654321", {
+      purpose: PASSCODE_CRYPTO_PURPOSE,
+    });
     mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue({
       id: "passcode-existing",
@@ -517,7 +520,9 @@ describe("issueSmartLockPasscodes", () => {
       return Promise.resolve({
         id: "passcode-winner",
         status: "CONFIRMED",
-        passcodeCiphertext: encrypt("111222"),
+        passcodeCiphertext: encrypt("111222", {
+          purpose: PASSCODE_CRYPTO_PURPOSE,
+        }),
       });
     });
     mockCreatePasscodeRow.mockImplementation(() => {

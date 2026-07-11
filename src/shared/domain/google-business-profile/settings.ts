@@ -83,7 +83,9 @@ export async function getGbpAuthState(): Promise<GbpAuthState | null> {
   if (!isEncryptedEnvelope(envelope)) return null;
 
   try {
-    const plaintext = decrypt(envelope.encrypted);
+    const plaintext = decrypt(envelope.encrypted, {
+      expectedPurpose: GBP_AUTH_PURPOSE,
+    }).toString("utf8");
     const parsed: unknown = JSON.parse(plaintext);
     if (!isGbpAuthState(parsed)) {
       throw new Error("Invalid GbpAuthState shape");

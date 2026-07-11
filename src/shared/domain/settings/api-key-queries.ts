@@ -10,7 +10,21 @@ import {
 } from "@/shared/lib/api-keys";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { safeDecrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { serverEnv } from "@/shared/lib/env/server";
+
+/**
+ * 呼び出し側で `safeDecrypt(...)?.toString("utf8") ?? null` を毎回書かないための
+ * per-file helper。Buffer を utf-8 string に橋渡しし、非 truthy な入力は素通り。
+ * ここでの purpose 明示は `crypto.ts` 側の必須 defense-in-depth に対応する。
+ */
+function decryptToString(
+  ciphertext: string | null | undefined,
+  expectedPurpose: string,
+): string | null {
+  if (!ciphertext) return null;
+  return safeDecrypt(ciphertext, { expectedPurpose })?.toString("utf8") ?? null;
+}
 import type {
   CustomApiKeyData,
   GoogleMapsConfig,
@@ -41,7 +55,12 @@ export async function getResendConfig(): Promise<ResendConfig> {
 
   return {
     apiKeyMasked: settings?.resendApiKey
-      ? maskResendKey(safeDecrypt(settings.resendApiKey) || "****")
+      ? maskResendKey(
+          decryptToString(
+            settings.resendApiKey,
+            SETTINGS_CRYPTO_PURPOSES.resendApiKey,
+          ) || "****",
+        )
       : null,
     lastTestedAt: settings?.resendLastTestedAt || null,
     connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
@@ -67,7 +86,10 @@ export async function getDecryptedResendApiKey(): Promise<string | null> {
     return null;
   }
 
-  return safeDecrypt(settings.resendApiKey);
+  return decryptToString(
+    settings.resendApiKey,
+    SETTINGS_CRYPTO_PURPOSES.resendApiKey,
+  );
 }
 
 export async function getTurnstileConfig(): Promise<TurnstileConfig> {
@@ -88,7 +110,12 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
   return {
     siteKey: settings?.turnstileSiteKey || null,
     secretKeyMasked: settings?.turnstileSecretKey
-      ? maskTurnstileKey(safeDecrypt(settings.turnstileSecretKey) || "****")
+      ? maskTurnstileKey(
+          decryptToString(
+            settings.turnstileSecretKey,
+            SETTINGS_CRYPTO_PURPOSES.turnstileSecretKey,
+          ) || "****",
+        )
       : null,
     lastTestedAt: settings?.turnstileLastTestedAt || null,
     connectionStatus: parseConnectionStatus(
@@ -109,7 +136,10 @@ export async function getDecryptedTurnstileSecretKey(): Promise<string | null> {
     return null;
   }
 
-  return safeDecrypt(settings.turnstileSecretKey);
+  return decryptToString(
+    settings.turnstileSecretKey,
+    SETTINGS_CRYPTO_PURPOSES.turnstileSecretKey,
+  );
 }
 
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
@@ -124,7 +154,12 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
 
   return {
     apiKeyMasked: settings?.googleMapsApiKey
-      ? maskGoogleMapsKey(safeDecrypt(settings.googleMapsApiKey) || "****")
+      ? maskGoogleMapsKey(
+          decryptToString(
+            settings.googleMapsApiKey,
+            SETTINGS_CRYPTO_PURPOSES.googleMapsApiKey,
+          ) || "****",
+        )
       : null,
     lastTestedAt: settings?.googleMapsLastTestedAt || null,
     connectionStatus: parseConnectionStatus(
@@ -154,7 +189,10 @@ export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
     return null;
   }
 
-  return safeDecrypt(settings.googleMapsApiKey);
+  return decryptToString(
+    settings.googleMapsApiKey,
+    SETTINGS_CRYPTO_PURPOSES.googleMapsApiKey,
+  );
 }
 
 export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
@@ -177,10 +215,20 @@ export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
   return {
     enabled: settings?.switchbotEnabled ?? false,
     openTokenMasked: settings?.switchbotOpenToken
-      ? maskSwitchBotKey(safeDecrypt(settings.switchbotOpenToken) || "****")
+      ? maskSwitchBotKey(
+          decryptToString(
+            settings.switchbotOpenToken,
+            SETTINGS_CRYPTO_PURPOSES.switchbotOpenToken,
+          ) || "****",
+        )
       : null,
     secretKeyMasked: settings?.switchbotSecretKey
-      ? maskSwitchBotKey(safeDecrypt(settings.switchbotSecretKey) || "****")
+      ? maskSwitchBotKey(
+          decryptToString(
+            settings.switchbotSecretKey,
+            SETTINGS_CRYPTO_PURPOSES.switchbotSecretKey,
+          ) || "****",
+        )
       : null,
     passcodeBufferMinutes: settings?.switchbotPasscodeBufferMinutes ?? 15,
     lastTestedAt: settings?.switchbotLastTestedAt || null,
@@ -218,8 +266,14 @@ export async function getDecryptedSwitchBotCredentials(): Promise<{
     return null;
   }
 
-  const openToken = safeDecrypt(settings.switchbotOpenToken);
-  const secretKey = safeDecrypt(settings.switchbotSecretKey);
+  const openToken = decryptToString(
+    settings.switchbotOpenToken,
+    SETTINGS_CRYPTO_PURPOSES.switchbotOpenToken,
+  );
+  const secretKey = decryptToString(
+    settings.switchbotSecretKey,
+    SETTINGS_CRYPTO_PURPOSES.switchbotSecretKey,
+  );
   if (!openToken || !secretKey) {
     return null;
   }
@@ -249,7 +303,10 @@ export async function getSwitchBotWebhookAuth(): Promise<{
   return {
     enabled: settings?.switchbotEnabled ?? false,
     pathToken: settings?.switchbotWebhookPathToken
-      ? safeDecrypt(settings.switchbotWebhookPathToken)
+      ? decryptToString(
+          settings.switchbotWebhookPathToken,
+          SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
+        )
       : null,
   };
 }
@@ -284,7 +341,10 @@ export async function getCustomApiKeyValue(id: string): Promise<string | null> {
     return null;
   }
 
-  return safeDecrypt(keysMap[id].keyValue);
+  return decryptToString(
+    keysMap[id].keyValue,
+    SETTINGS_CRYPTO_PURPOSES.customApiKey,
+  );
 }
 
 /**
@@ -317,29 +377,40 @@ export async function getIntegrationHealthSummary(): Promise<{
     // DB キーが正本のため、DB のみ設定／env のみ設定のどちらでも「接続済み」を
     // 正しく反映する（health が嘘をつかない）。
     resend: Boolean(
-      (settings?.resendApiKey && safeDecrypt(settings.resendApiKey)) ||
-      serverEnv.RESEND_API_KEY,
+      decryptToString(
+        settings?.resendApiKey,
+        SETTINGS_CRYPTO_PURPOSES.resendApiKey,
+      ) || serverEnv.RESEND_API_KEY,
     ),
     stripe: Boolean(
-      (settings?.stripeSecretKey && safeDecrypt(settings.stripeSecretKey)) ||
-      serverEnv.STRIPE_SECRET_KEY,
+      decryptToString(
+        settings?.stripeSecretKey,
+        SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
+      ) || serverEnv.STRIPE_SECRET_KEY,
     ),
     googleCalendar: Boolean(
       settings?.googleCalendarEnabled &&
       settings?.googleCalendarConnectionStatus === "connected",
     ),
     turnstile: Boolean(
-      (settings?.turnstileSecretKey &&
-        safeDecrypt(settings.turnstileSecretKey)) ||
-      serverEnv.TURNSTILE_SECRET_KEY,
+      decryptToString(
+        settings?.turnstileSecretKey,
+        SETTINGS_CRYPTO_PURPOSES.turnstileSecretKey,
+      ) || serverEnv.TURNSTILE_SECRET_KEY,
     ),
     // SwitchBotはenvフォールバックを持たないためDBのみで判定する。
     switchbot: Boolean(
       settings?.switchbotEnabled &&
       settings.switchbotOpenToken &&
       settings.switchbotSecretKey &&
-      safeDecrypt(settings.switchbotOpenToken) &&
-      safeDecrypt(settings.switchbotSecretKey),
+      decryptToString(
+        settings.switchbotOpenToken,
+        SETTINGS_CRYPTO_PURPOSES.switchbotOpenToken,
+      ) &&
+      decryptToString(
+        settings.switchbotSecretKey,
+        SETTINGS_CRYPTO_PURPOSES.switchbotSecretKey,
+      ),
     ),
   };
 }

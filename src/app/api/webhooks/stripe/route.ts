@@ -34,6 +34,7 @@ import {
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { safeDecrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import {
   logError,
   normalizeError,
@@ -73,7 +74,10 @@ export async function POST(request: Request) {
     }
 
     // 3. Webhook シークレットを復号
-    const webhookSecret = safeDecrypt(settings.stripeWebhookSecret);
+    const webhookSecret =
+      safeDecrypt(settings.stripeWebhookSecret, {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeWebhookSecret,
+      })?.toString("utf8") ?? null;
     if (!webhookSecret) {
       logError(new Error("Failed to decrypt Stripe webhook secret"), {
         category: ErrorCategory.EXTERNAL_API,

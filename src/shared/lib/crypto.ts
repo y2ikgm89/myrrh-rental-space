@@ -121,11 +121,25 @@ function parseCiphertext(ciphertext: string): ParsedCiphertext {
   };
 }
 
+interface DecryptOptions {
+  expectedPurpose: string;
+}
+
 /**
  * 暗号文を復号化。v2 の kid は primary key の kid と一致する必要がある。
+ *
+ * 呼び出し側は `expectedPurpose` を必ず渡し、暗号文の埋め込み purpose と一致することを
+ * 復号前に検証する（defense in depth）。purpose 不一致は GCM authTag 検証よりも
+ * 前に throw されるため、他用途トークンの流用は無駄な暗号処理なしに拒否される。
  */
-export function decrypt(ciphertext: string): string {
+export function decrypt(ciphertext: string, options: DecryptOptions): Buffer {
   const parsed = parseCiphertext(ciphertext);
+
+  if (parsed.purpose !== options.expectedPurpose) {
+    throw new Error(
+      `Ciphertext purpose mismatch: expected "${options.expectedPurpose}", got "${parsed.purpose}"`,
+    );
+  }
 
   const key: EncryptionKey = getPrimaryEncryptionKey();
 
@@ -142,10 +156,7 @@ export function decrypt(ciphertext: string): string {
   decipher.setAAD(aad);
   decipher.setAuthTag(parsed.authTag);
 
-  let decrypted = decipher.update(parsed.ct);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-
-  return decrypted.toString("utf8");
+  return Buffer.concat([decipher.update(parsed.ct), decipher.final()]);
 }
 
 /**
@@ -186,14 +197,20 @@ export function safeEncrypt(
 /**
  * 安全に復号化
  */
-export function safeDecrypt(ciphertext: string): string | null {
+export function safeDecrypt(
+  ciphertext: string,
+  options: DecryptOptions,
+): Buffer | null {
   try {
-    return decrypt(ciphertext);
+    return decrypt(ciphertext, options);
   } catch (error) {
     logError(error instanceof Error ? error : new Error("Decryption failed"), {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: "safeDecrypt" },
+      context: {
+        operation: "safeDecrypt",
+        expectedPurpose: options.expectedPurpose,
+      },
     });
     return null;
   }

@@ -68,18 +68,9 @@ export function verifyReservationClaimToken(
     return { valid: false };
   }
 
-  // purpose を明示検証（wire format: v1: parts[1] / v2: parts[2]）。
-  const parts = ciphertext.split(":");
-  const version = parts[0];
-  const purposeFromWire =
-    version === "v2" ? parts[2] : version === "v1" ? parts[1] : null;
-  if (purposeFromWire !== PURPOSE) {
-    return { valid: false };
-  }
-
   let raw: string;
   try {
-    raw = decrypt(ciphertext);
+    raw = decrypt(ciphertext, { expectedPurpose: PURPOSE }).toString("utf8");
   } catch {
     return { valid: false };
   }

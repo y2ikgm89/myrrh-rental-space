@@ -11,6 +11,7 @@
 import "server-only";
 import Stripe from "stripe";
 import { safeDecrypt } from "@/shared/lib/crypto";
+import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   logError,
@@ -104,7 +105,10 @@ export async function getStripeClient(dbSecretKey?: string | null): Promise<{
   source: StripeConfigSource;
 }> {
   if (dbSecretKey) {
-    const decryptedKey = safeDecrypt(dbSecretKey);
+    const decryptedKey =
+      safeDecrypt(dbSecretKey, {
+        expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
+      })?.toString("utf8") ?? null;
     if (decryptedKey) {
       return { client: createStripeClient(decryptedKey), source: "db" };
     }

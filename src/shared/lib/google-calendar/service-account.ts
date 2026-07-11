@@ -31,7 +31,10 @@ export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | 
     return null;
   }
 
-  const decryptedJson = safeDecrypt(settings.encryptedServiceAccountJson);
+  const decryptedJson =
+    safeDecrypt(settings.encryptedServiceAccountJson, {
+      expectedPurpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
+    })?.toString("utf8") ?? null;
   if (!decryptedJson) {
     logError(new Error("Failed to decrypt service account credentials"), {
       category: ErrorCategory.UNKNOWN,
