@@ -10,12 +10,18 @@
  * ため、`InMemoryRateLimitStore`（LRU bucket）でグローバル rate limit として
  * 十分に機能する。
  *
+ * **fail-fast startup guard**:
+ * `validateProductionEnv()` は `RATE_LIMIT_BACKEND=in-memory` と
+ * `MAX_INSTANCES_HINT>1` の組み合わせで hard-fail する。cloudbuild.yaml で
+ * `_MAX_INSTANCES` を上げた operator が「rate limit が壊れている」ことに
+ * 気付かず本番投入する silent regression を防ぐ。
+ *
  * **autoscale 解禁時の制約（未実装）:**
  * 将来 multi-instance autoscale（max>1）に移行する場合、各 instance が独立した
  * bucket を持ち「同一 IP が N instance × maxRequests/min を発行可能」になる
  * ため、distributed backend（Upstash Redis / Cloud Memorystore 等）の実装が
  * **必須**になる。本ファイルには Redis backend 実装は存在しない — autoscale
- * 解禁時は新規追加が必要。
+ * 解禁時は新規追加した上で `_RATE_LIMIT_BACKEND: "redis"` に切り替える。
  *
  * **多層防御:**
  * - Layer 1: `InMemoryRateLimitStore`（このファイル、Cloud Run max=1 でグローバル）

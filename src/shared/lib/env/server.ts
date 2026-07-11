@@ -258,6 +258,24 @@ export const serverEnv = createEnv({
     CLOUDFLARE_API_TOKEN: z.string().min(40).optional(),
     CLOUDFLARE_ORIGIN_HEADER_SECRET: z.string().min(32).optional(),
 
+    // Runtime scaling hints
+    //
+    // `RATE_LIMIT_BACKEND` describes which rate limit store the Cloud Run
+    // process runs against. Only `"in-memory"` is implemented today; adding
+    // `"redis"` requires a distributed store implementation in
+    // `src/shared/lib/rate-limit.ts`. When the backend is `"in-memory"`,
+    // `MAX_INSTANCES_HINT` MUST be `1`: multi-instance Cloud Run + LRUCache
+    // silently divides every rate limit N ways per instance, effectively
+    // multiplying every documented limit by `MAX_INSTANCES`. The instrumentation
+    // startup guard cross-checks the two.
+    //
+    // `MAX_INSTANCES_HINT` is a copy of the deploy-time Cloud Run
+    // `--max-instances` value, plumbed through as a runtime env var so the
+    // process can self-audit (Cloud Run does not expose the deploy config to
+    // the container). Populated by `cloudbuild.yaml` from `_MAX_INSTANCES`.
+    RATE_LIMIT_BACKEND: z.enum(["in-memory", "redis"]).default("in-memory"),
+    MAX_INSTANCES_HINT: z.coerce.number().int().positive().optional(),
+
     // Node environment
     NODE_ENV: z
       .enum(["development", "production", "test"])
@@ -319,6 +337,8 @@ export const serverEnv = createEnv({
     CLOUDFLARE_API_TOKEN: process.env["CLOUDFLARE_API_TOKEN"],
     CLOUDFLARE_ORIGIN_HEADER_SECRET:
       process.env["CLOUDFLARE_ORIGIN_HEADER_SECRET"],
+    RATE_LIMIT_BACKEND: process.env["RATE_LIMIT_BACKEND"],
+    MAX_INSTANCES_HINT: process.env["MAX_INSTANCES_HINT"],
     NODE_ENV: process.env["NODE_ENV"],
     CI: process.env["CI"],
   },
@@ -464,5 +484,32 @@ export function validateProductionEnv(): void {
         "ENCRYPTION_KEY must contain only hexadecimal characters (0-9, a-f, A-F). Generate with: openssl rand -hex 32",
       );
     }
+  }
+
+  // Rate limit backend vs Cloud Run max-instances contract.
+  //
+  // `InMemoryRateLimitStore` (LRUCache) is per-process. On a Cloud Run service
+  // with autoscaling max-instances > 1, every documented rate limit is silently
+  // multiplied by `MAX_INSTANCES` (each instance has its own bucket, XFF/IP
+  // hashing does not steer a client to a specific instance). That is an
+  // observable regression of security-sensitive limiters — brute-force
+  // protection, form spam gates, reservation flood control — so if the
+  // deploy-time hint contradicts the backend, fail-fast at startup with an
+  // actionable message instead of silently letting production run degraded.
+  //
+  // The remediation path is either (a) lower `_MAX_INSTANCES` back to 1 in
+  // `cloudbuild.yaml`, or (b) implement a distributed backend and set
+  // `RATE_LIMIT_BACKEND=redis` alongside the higher `_MAX_INSTANCES`.
+  if (
+    serverEnv.RATE_LIMIT_BACKEND === "in-memory" &&
+    typeof serverEnv.MAX_INSTANCES_HINT === "number" &&
+    serverEnv.MAX_INSTANCES_HINT > 1
+  ) {
+    throw new Error(
+      `RATE_LIMIT_BACKEND="in-memory" is incompatible with MAX_INSTANCES_HINT=${serverEnv.MAX_INSTANCES_HINT}. ` +
+        "Every rate limit is silently multiplied by MAX_INSTANCES because LRUCache is per-process. " +
+        "Either lower `_MAX_INSTANCES` in cloudbuild.yaml back to 1, or implement a distributed store " +
+        "in src/shared/lib/rate-limit.ts and set RATE_LIMIT_BACKEND=redis.",
+    );
   }
 }
