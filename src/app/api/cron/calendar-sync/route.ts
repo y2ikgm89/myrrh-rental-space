@@ -25,8 +25,8 @@
 
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
-import { revalidateTag } from "next/cache";
-import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import {
   releaseCalendarSyncLock,
   tryAcquireCalendarSyncLock,
@@ -171,12 +171,13 @@ export async function GET(request: Request) {
         return jsonError("Calendar sync failed", 503);
       }
 
-      // キャッシュ無効化: カレンダー同期後に予約データを最新化
-      revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
-      revalidateTag(
+      // カレンダー同期後に予約データを最新化。cron / Route Handler の canonical
+      // pattern (`invalidateSiteWideCacheFromRouteHandler` = {expire:0} + CDN purge)。
+      // GCal webhook 側 (/api/webhooks/google-calendar) と同型。
+      invalidateSiteWideCacheFromRouteHandler([
+        CACHE_TAGS.RESERVATIONS,
         getCacheTag.reservations.calendar(),
-        CACHE_LIFE.DYNAMIC_DATA,
-      );
+      ]);
 
       return jsonSuccess({
         processed: result.processed,
