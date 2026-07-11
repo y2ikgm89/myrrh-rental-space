@@ -234,22 +234,34 @@ async function issueForDevice(
     }
   }
 
-  await prisma.smartLockPasscode.update({
-    where: { id: passcodeRow.id },
-    data: {
-      status: SmartLockPasscodeStatus.FAILED,
-      failureReason: "Get Device Statusでのkeyid確定がタイムアウトしました",
+  // Poll がタイムアウトしても **status は PENDING のまま残す**。
+  //
+  // 旧実装は即 FAILED に倒していたが、これは webhook-commands.ts の
+  // processSwitchBotChangeReport が `status=PENDING` を WHERE に含めて claim
+  // する契約と競合し、遅延到着した webhook が CONFIRMED に upgrade できず
+  // 失敗記録が残る (`@@unique([reservationId, deviceId])` により再発行不可) race
+  // が発生していた。
+  //
+  // 現在の設計: poll で確定できなくても webhook の到着で CONFIRMED になる余地を
+  // 残す。webhook が最終的に来なかった場合の PENDING orphan は
+  // `expireStalePendingSmartLockPasscodes` (smart-lock-cleanup cron) が
+  // `createdAt + STALE_PENDING_THRESHOLD_MINUTES` 経過後に FAILED へ倒す
+  // (詳細は `revoke-passcode.ts` の同関数 JSDoc)。
+  logError(
+    new Error(
+      "SwitchBot passcode confirmation timed out (status left PENDING for late webhook)",
+    ),
+    {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "issueSmartLockPasscode",
+        reservationId: input.reservationId,
+        deviceRowId: device.id,
+        passcodeRowId: passcodeRow.id,
+      },
     },
-  });
-  logError(new Error("SwitchBot passcode confirmation timed out"), {
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.HIGH,
-    context: {
-      operation: "issueSmartLockPasscode",
-      reservationId: input.reservationId,
-      deviceRowId: device.id,
-    },
-  });
+  );
   return null;
 }
 

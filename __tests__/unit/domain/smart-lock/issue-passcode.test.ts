@@ -435,7 +435,7 @@ describe("issueSmartLockPasscodes", () => {
     expect(result).toEqual([]);
   });
 
-  test("ポーリングが全回数keyListに一致無しで完了する場合はFAILEDになる（タイムアウト）", async () => {
+  test("ポーリングタイムアウト時は status を PENDING のまま残し、警告ログのみ出す (webhook 到着余地を保つ)", async () => {
     mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue(null);
     mockCreatePasscodeApi.mockResolvedValue({
@@ -449,12 +449,21 @@ describe("issueSmartLockPasscodes", () => {
     expect(result).toEqual([]);
     // MAX_POLL_ATTEMPTS = 15 (3s * 15 = 45s、setTimeout はスパイ済みで即時)
     expect(mockGetDeviceStatus).toHaveBeenCalledTimes(15);
-    expect(mockUpdatePasscodeRow).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        where: { id: "passcode-row-1" },
-        data: expect.objectContaining({ status: "FAILED" }),
-      }),
+
+    // ポーリングタイムアウト時に FAILED へは倒さない —
+    // webhook-commands.ts の processSwitchBotChangeReport が status=PENDING の
+    // 行しか claim できないため、即 FAILED は遅延 webhook との race で復旧不能の
+    // 失敗確定を生む。stale PENDING の清算は smart-lock-cleanup cron の
+    // expireStalePendingSmartLockPasscodes に委譲。
+    const failedUpdateCalls = mockUpdatePasscodeRow.mock.calls.filter(
+      (call) => {
+        const args = call[0] as { data?: { status?: string } } | undefined;
+        return args?.data?.status === "FAILED";
+      },
     );
+    expect(failedUpdateCalls).toHaveLength(0);
+
+    // 警告ログは残す (運用者が Cloud Logging から検知して個別対応する導線)
     expect(mockLogError).toHaveBeenCalledTimes(1);
   }, 10_000);
 

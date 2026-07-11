@@ -169,3 +169,47 @@ export async function revokeExpiredSmartLockPasscodes(
   const revoked = results.filter(Boolean).length;
   return { revoked, failed: results.length - revoked };
 }
+
+/**
+ * webhook 待ち PENDING passcode を stale 判定して FAILED へ倒す閾値 (分単位)。
+ *
+ * SwitchBot webhook (`changeReport` `createKey`) は経験上数秒〜数分で到着する。
+ * 30 分経っても届かない passcode は「webhook がもう来ない」と判断して失敗確定にする。
+ * この閾値を短くしすぎると `issue-passcode.ts` の poll と webhook との race で PENDING
+ * 期間中に誤って FAILED に倒し得るため、poll 上限 (現状 45s) より十分に長くする。
+ */
+export const STALE_PENDING_THRESHOLD_MINUTES = 30;
+
+/**
+ * webhook 待ち PENDING passcode の停滞救済。
+ *
+ * `issue-passcode.ts` の poll がタイムアウトした場合、webhook 到着を待って CONFIRMED
+ * に upgrade できるよう status は PENDING のまま残される (旧実装は即 FAILED に倒して
+ * webhook との race を起こしていた)。
+ *
+ * この関数は、`createdAt + STALE_PENDING_THRESHOLD_MINUTES` が経過しても PENDING の
+ * ままの passcode を FAILED へ倒す。webhook がもう到着しないと判断する時点で失敗確定
+ * にすることで、次回同一 reservation の再発行経路 (`@@unique([reservationId, deviceId])`
+ * 制約下で PENDING が残っていると再発行できない) を回復させる。
+ *
+ * cleanup cron (`/api/cron/smart-lock-cleanup`) から呼ぶ。SwitchBot 未設定時でも
+ * DB 読取のみで完結するため常に実行して良い。
+ */
+export async function expireStalePendingSmartLockPasscodes(
+  now: Date,
+): Promise<number> {
+  const cutoff = new Date(
+    now.getTime() - STALE_PENDING_THRESHOLD_MINUTES * 60 * 1000,
+  );
+  const result = await prisma.smartLockPasscode.updateMany({
+    where: {
+      status: SmartLockPasscodeStatus.PENDING,
+      createdAt: { lt: cutoff },
+    },
+    data: {
+      status: SmartLockPasscodeStatus.FAILED,
+      failureReason: `Webhook から createKey 完了通知が ${STALE_PENDING_THRESHOLD_MINUTES} 分以内に届かなかったため失敗確定`,
+    },
+  });
+  return result.count;
+}
