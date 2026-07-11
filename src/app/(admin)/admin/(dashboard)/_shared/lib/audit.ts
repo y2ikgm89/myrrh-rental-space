@@ -13,6 +13,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   logError,
@@ -55,17 +56,17 @@ export type AuditLogMetadata = {
 // Helper Functions
 // =============================================================================
 
-/**
- * リクエストメタデータを取得
- */
+// 本番の信頼できる client IP は `cf-connecting-ip` + `x-cloudflare-origin-secret`
+// timing-safe 一致時のみ、それ以外は `"unknown"`。`x-forwarded-for` / `x-real-ip`
+// 直読みは Cloudflare 前段では client 側追記で spoof 可能なので AuditLog に偽装 IP が
+// 焼き付くのを防ぐ。SSoT は rate-limit.ts の extractClientIpFromHeaders。
 async function getRequestMetadata(): Promise<AuditLogMetadata> {
   try {
     const headersList = await headers();
-    const ipAddress =
-      headersList.get("x-forwarded-for") ?? headersList.get("x-real-ip");
+    const ipAddress = extractClientIpFromHeaders(headersList);
     const userAgent = headersList.get("user-agent");
     return {
-      ...(ipAddress !== null && { ipAddress }),
+      ipAddress,
       ...(userAgent !== null && { userAgent }),
     };
   } catch {
