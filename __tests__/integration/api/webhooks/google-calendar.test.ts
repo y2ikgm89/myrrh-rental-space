@@ -48,7 +48,14 @@ const mockIsTwoWaySyncEnabled = mock<() => Promise<boolean>>(() =>
 const mockSyncFromCalendar = mock<() => Promise<TwoWaySyncResult>>(() =>
   Promise.resolve(calendarSyncResult),
 );
-const mockRevalidateTag = mock(() => undefined);
+// 境界 mock: route.ts が使う唯一の cache-invalidation entry point を差し替える。
+// これで next/cache (updateTag / revalidateTag)・firePurgeAsync・fireAndForget・
+// CDN tag purge の全下位実装が touch されない。テスト境界は「Route Handler が
+// キャッシュ無効化ヘルパーを正しい tag セットで呼んだか」で、Next.js の
+// updateTag / revalidateTag といった実装詳細に依存すべきではない (PR #945)。
+const mockInvalidateSiteWideCacheFromRouteHandler = mock<
+  (tags: readonly string[], options?: unknown) => void
+>(() => undefined);
 const mockLogError = mock(() => undefined);
 
 mock.module("@/shared/domain/settings/admin-queries", () => ({
@@ -64,8 +71,9 @@ mock.module("@/shared/lib/calendar-sync/inbound", () => ({
   syncFromCalendar: mockSyncFromCalendar,
 }));
 
-mock.module("next/cache", () => ({
-  revalidateTag: mockRevalidateTag,
+mock.module("@/shared/lib/cache/site-wide", () => ({
+  invalidateSiteWideCacheFromRouteHandler:
+    mockInvalidateSiteWideCacheFromRouteHandler,
 }));
 
 mock.module("next/navigation", () => ({
@@ -214,7 +222,7 @@ describe("POST /api/webhooks/google-calendar", () => {
       processing: "sync_failed",
     });
     expect(mockSyncFromCalendar).toHaveBeenCalledTimes(1);
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
   test("同期成功時は200でackし予約キャッシュを無効化する", async () => {
@@ -229,6 +237,8 @@ describe("POST /api/webhooks/google-calendar", () => {
       updated: 1,
     });
     expect(mockSyncFromCalendar).toHaveBeenCalledTimes(1);
-    expect(mockRevalidateTag).toHaveBeenCalledTimes(2);
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
+      1,
+    );
   });
 });
