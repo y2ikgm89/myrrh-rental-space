@@ -336,6 +336,39 @@ describe("production deploy workflow", () => {
     );
   });
 
+  test("restores service scaling when migrate-execute fails in breaking migration mode", () => {
+    const migrateExecuteIndex = cloudBuildConfig.indexOf("id: migrate-execute");
+    const deployPublicIndex = cloudBuildConfig.indexOf("id: deploy-public");
+
+    expect(migrateExecuteIndex).toBeGreaterThanOrEqual(0);
+    expect(deployPublicIndex).toBeGreaterThan(migrateExecuteIndex);
+
+    const migrateExecuteStep = cloudBuildConfig.slice(
+      migrateExecuteIndex,
+      deployPublicIndex,
+    );
+
+    // Wrapped in bash so the failure branch can restore scaling before
+    // propagating a non-zero exit code back to Cloud Build.
+    expect(migrateExecuteStep).toContain("entrypoint: bash");
+    expect(migrateExecuteStep).toContain(
+      "gcloud run jobs execute ${_MIGRATE_JOB_NAME}",
+    );
+
+    // Recovery restores both services only in breaking mode.
+    expect(migrateExecuteStep).toContain(
+      'if [ "${_BREAKING_MIGRATION_DEPLOY}" = "true" ]; then',
+    );
+    expect(migrateExecuteStep).toContain("restore_scaling ${_SERVICE_NAME}");
+    expect(migrateExecuteStep).toContain(
+      "restore_scaling ${_ADMIN_SERVICE_NAME}",
+    );
+    expect(migrateExecuteStep).toContain("--scaling=auto");
+
+    // Failure must still propagate so Cloud Build aborts the deploy.
+    expect(migrateExecuteStep).toContain("exit 1");
+  });
+
   test("quiesces Cloud Run services before breaking migrations can run", () => {
     expect(workflow).toContain('BREAKING_MIGRATION_DEPLOY="false"');
     expect(workflow).toContain("prisma/migrations/**/migration.sql");

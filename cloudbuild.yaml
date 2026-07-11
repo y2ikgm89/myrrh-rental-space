@@ -32,6 +32,12 @@
 #   configured request timeout drain window, then deploy the new clean revision
 #   with automatic scaling restored. This is for intentional non-expand/contract
 #   migrations such as column renames/drops.
+#
+#   If `prisma migrate deploy` itself fails while both services are quiesced,
+#   Step 5b restores `--scaling=auto` on the previous revisions before
+#   propagating the failure. Without this, both services would stay at
+#   `--scaling=0` until an operator manually re-enabled them, giving the deploy
+#   an unbounded MTTR.
 
 substitutions:
   _REGION: asia-northeast1
@@ -446,18 +452,61 @@ steps:
         echo "Waiting ${_BREAKING_MIGRATION_DRAIN_SECONDS}s for old Cloud Run revisions to drain";
         sleep ${_BREAKING_MIGRATION_DRAIN_SECONDS}
 
-  # Step 5b: Execute Prisma migration (fail 時はデプロイ全体を止める)
+  # Step 5b: Execute Prisma migration.
+  #
+  # Failure semantics:
+  #   - non-breaking mode  : services never quiesced (Step 5a/5b skipped), so we
+  #     simply propagate the migrate failure and Cloud Build aborts the deploy.
+  #   - breaking mode      : both services were forced to `--scaling=0` before
+  #     the drain wait. If migrate execute fails now and we do nothing, both
+  #     revisions stay at scaling=0 indefinitely (MTTR unbounded, requires manual
+  #     `gcloud run services update --scaling=auto`). Restore auto scaling on
+  #     the *previous* revision before propagating the failure so the site is
+  #     available again while the migration issue is investigated.
+  #
+  # `--scaling=auto` on an already-serving Cloud Run service is a metadata-only
+  # traffic-safe update (no cold restart) and idempotent, so re-applying it in a
+  # failure branch is safe.
+  # Bash-local shell variables inside this step MUST be escaped with a doubled
+  # dollar sign in yaml so Cloud Build does not interpret them as substitution
+  # references. Cloud Build user substitutions (underscore-prefixed) stay
+  # single-dollar because they are resolved at Cloud Build parse time.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: migrate-execute
     waitFor: [wait-for-breaking-migration-drain]
-    entrypoint: gcloud
+    entrypoint: bash
     args:
-      - run
-      - jobs
-      - execute
-      - ${_MIGRATE_JOB_NAME}
-      - --region=${_REGION}
-      - --wait
+      - -ceu
+      - |
+        restore_scaling() {
+          local svc="$$1"
+          if ! gcloud run services describe "$$svc" \
+            --platform=managed \
+            --region=${_REGION} >/dev/null 2>&1; then
+            echo "Service $$svc does not exist; skipping scaling restore" >&2
+            return 0
+          fi
+          echo "Restoring --scaling=auto for $$svc after failed migration" >&2
+          gcloud run services update "$$svc" \
+            --platform=managed \
+            --region=${_REGION} \
+            --scaling=auto \
+            --quiet || echo "scaling restore for $$svc failed; manual intervention required" >&2
+        }
+
+        if gcloud run jobs execute ${_MIGRATE_JOB_NAME} \
+          --region=${_REGION} \
+          --wait; then
+          exit 0
+        fi
+
+        echo "prisma-migrate execution failed" >&2
+        if [ "${_BREAKING_MIGRATION_DEPLOY}" = "true" ]; then
+          echo "Breaking migration mode: restoring service scaling before aborting" >&2
+          restore_scaling ${_SERVICE_NAME}
+          restore_scaling ${_ADMIN_SERVICE_NAME}
+        fi
+        exit 1
 
   # Step 6a: Deploy public Cloud Run service
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
