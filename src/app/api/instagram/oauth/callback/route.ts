@@ -23,6 +23,7 @@ import {
 } from "@/shared/lib/instagram";
 import {
   logError,
+  normalizeError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
@@ -169,7 +170,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     unstable_rethrow(error);
-    logError(error instanceof Error ? error : new Error(String(error)), {
+    logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "instagramOAuthCallback" },

@@ -31,6 +31,7 @@ import {
   type TemplateKey,
 } from "@/shared/emails/_registry/data";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { getErrorMessage } from "@/shared/lib/errors/server";
 import {
   createMutationError,
   type MutationResult,
@@ -92,7 +93,7 @@ export async function previewTemplateAction(
     return { html };
   } catch (error) {
     return createMutationError(
-      `プレビュー生成に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+      `プレビュー生成に失敗しました: ${getErrorMessage(error)}`,
     );
   }
 }
