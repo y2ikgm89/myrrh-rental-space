@@ -453,13 +453,6 @@ export async function testInstagramConnection(
 // =============================================================================
 
 /**
- * Instagramトークンをマスク表示用に変換
- */
-export function maskInstagramToken(token: string): string {
-  return maskApiKey(token, 8, 4);
-}
-
-/**
  * トークンの有効期限までの残り日数を計算
  */
 export function getTokenExpiryDays(expiresAt: Date): number {

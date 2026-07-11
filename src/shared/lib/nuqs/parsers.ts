@@ -97,25 +97,6 @@ export async function loadSpaceSearchParams(
   return spaceSearchParamsCache.all();
 }
 
-const blogSearchParamsParsers = {
-  q: parseAsQuery,
-  page: parseAsPage,
-  perPage: parseAsPerPage,
-  category: parseAsString.withDefault(""),
-  tags: parseAsCommaSeparated.withDefault([]),
-  sort: parseAsSortOrder,
-};
-
-const blogSearchParamsCache = createSearchParamsCache(blogSearchParamsParsers);
-
-/** ブログ検索パラメータローダー */
-export async function loadBlogSearchParams(
-  searchParams: Promise<SearchParams>,
-) {
-  await blogSearchParamsCache.parse(searchParams);
-  return blogSearchParamsCache.all();
-}
-
 // ============================================================
 // 管理画面: イベント詳細 — 参加者一覧
 // ============================================================
@@ -560,24 +541,6 @@ export async function loadAdminReservationSearchParams(
 ) {
   await adminReservationSearchParamsCache.parse(searchParams);
   return adminReservationSearchParamsCache.all();
-}
-
-const adminTermsTabs = ["list"] as const;
-
-const adminTermsSearchParamsParsers = {
-  tab: parseAsStringLiteral(adminTermsTabs).withDefault("list"),
-};
-
-const adminTermsSearchParamsCache = createSearchParamsCache(
-  adminTermsSearchParamsParsers,
-);
-
-/** 管理画面利用規約検索パラメータローダー */
-export async function loadAdminTermsSearchParams(
-  searchParams: Promise<SearchParams>,
-) {
-  await adminTermsSearchParamsCache.parse(searchParams);
-  return adminTermsSearchParamsCache.all();
 }
 
 const adminPostTabs = ["posts", "categories", "tags"] as const;
