@@ -16,7 +16,6 @@ export type PaginationInput<TSortBy extends string = string> = {
  *
  * - `page` < 1 / 非整数 / undefined → 1 に clamp
  * - `limit` < 1 / 非整数 / undefined → 10 に clamp
- * - 結果型は `toPageResult` と組み合わせる前提（off-by-one 罠の温床を除去）
  *
  * 入力は `exactOptionalPropertyTypes: true` 配下で `{ page: undefined }`
  * を渡せるよう、明示 union を許容する（`PaginationInput` は厳密に optional のため
