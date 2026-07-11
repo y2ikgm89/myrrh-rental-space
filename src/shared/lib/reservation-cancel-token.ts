@@ -1,6 +1,7 @@
 import "server-only";
 
 import { encrypt, decrypt } from "@/shared/lib/crypto";
+import { MS_PER_HOUR } from "@/shared/lib/date-format";
 import { isRecord } from "@/shared/lib/serialize";
 import { tokenFingerprint as sharedTokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 
@@ -58,7 +59,7 @@ export function computeCancelTokenExpiresAt(
   now: Date = new Date(),
 ): Date {
   const policyExp =
-    startTime.getTime() - cancellationDeadlineHours * 60 * 60 * 1000;
+    startTime.getTime() - cancellationDeadlineHours * MS_PER_HOUR;
   const cappedExp = now.getTime() + MAX_CANCEL_TOKEN_LIFETIME_MS;
   return new Date(Math.min(policyExp, cappedExp));
 }
