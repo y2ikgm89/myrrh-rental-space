@@ -379,6 +379,11 @@ model Location {
   @@index([sortOrder])
   @@index([gbpSyncError])
   @@index([defaultSmartLockDeviceId])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' OR-branch coverage
+  // (searchLocations queries name OR address; PostgreSQL falls back to Seq
+  // Scan unless every OR branch is indexed).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "locations_name_trgm_idx")
+  @@index([address(ops: raw("gin_trgm_ops"))], type: Gin, map: "locations_address_trgm_idx")
   @@map("locations")
 }
 
@@ -478,6 +483,11 @@ model Space {
   @@index([locationId])
   @@index([categoryId])
   @@index([smartLockDeviceId])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchSpaces uses
+  // `OR: [{ name }, { slug }]`, so both branches need trigram to avoid a
+  // Seq Scan fallback (per Codex review on PR #986).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_name_trgm_idx")
+  @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_slug_trgm_idx")
   @@map("spaces")
 }
 
@@ -680,6 +690,13 @@ model Customer {
   @@index([lastName, firstName])
   @@index([emailDeliveryStatus])
   @@index([flaggedForReviewAt])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchCustomers ORs
+  // four columns; all four need trigram or PostgreSQL falls back to Seq Scan
+  // on `customers` (per Codex review on PR #986).
+  @@index([lastName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_last_name_trgm_idx")
+  @@index([firstName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_first_name_trgm_idx")
+  @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_email_trgm_idx")
+  @@index([companyName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_company_name_trgm_idx")
   @@map("customers")
 }
 
@@ -722,6 +739,10 @@ model Coupon {
   // @unique が自動的にインデックスを作成するため @@index([code]) は不要
   @@index([validFrom, validUntil])
   @@index([isActive])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' OR-branch coverage
+  // (searchCoupons uses `OR: [{ code }, { name }]`; both branches indexed).
+  @@index([code(ops: raw("gin_trgm_ops"))], type: Gin, map: "coupons_code_trgm_idx")
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "coupons_name_trgm_idx")
   @@map("coupons")
 }
 
@@ -752,6 +773,11 @@ model Inquiry {
   @@index([createdAt])
   @@index([createdAt, status])
   @@index([customerId])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchInquiries ORs
+  // name/email/subject; all three need trigram to avoid Seq Scan fallback.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_name_trgm_idx")
+  @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_email_trgm_idx")
+  @@index([subject(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_subject_trgm_idx")
   @@map("inquiries")
 }
 
@@ -781,6 +807,10 @@ model News {
   @@index([title])
   @@index([isPublished, publishedAt])
   @@index([createdAt])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchNews ORs
+  // title/slug; both branches need trigram to avoid Seq Scan fallback.
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "news_title_trgm_idx")
+  @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "news_slug_trgm_idx")
   @@map("news")
 }
 
@@ -842,6 +872,10 @@ model Post {
   @@index([authorId])
   @@index([status, publishedAt])
   @@index([categoryId, status, publishedAt])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchPosts ORs
+  // title/slug; both branches need trigram to avoid Seq Scan fallback.
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_title_trgm_idx")
+  @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_slug_trgm_idx")
   @@map("posts")
 }
 
@@ -921,6 +955,10 @@ model Page {
 
   @@index([isPublished, isActive])
   @@index([isSystemPage])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchPages ORs
+  // title/slug; both branches need trigram to avoid Seq Scan fallback.
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "pages_title_trgm_idx")
+  @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "pages_slug_trgm_idx")
   @@map("pages")
 }
 
@@ -1041,6 +1079,10 @@ model FaqItem {
   @@index([deletedAt])
   @@index([updatedAt])
   @@index([viewCount])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchFaqItems ORs
+  // question/answer; both branches need trigram to avoid Seq Scan fallback.
+  @@index([question(ops: raw("gin_trgm_ops"))], type: Gin, map: "faq_items_question_trgm_idx")
+  @@index([answer(ops: raw("gin_trgm_ops"))], type: Gin, map: "faq_items_answer_trgm_idx")
   @@map("faq_items")
 }
 
@@ -1759,6 +1801,10 @@ model Event {
   @@index([deletedAt])
   @@index([firstSlotStartAt])
   @@index([lastSlotEndAt])
+  // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchEvents ORs
+  // title/slug; both branches need trigram to avoid Seq Scan fallback.
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_title_trgm_idx")
+  @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_slug_trgm_idx")
   @@map("events")
 }
 
