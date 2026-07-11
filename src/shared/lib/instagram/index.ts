@@ -19,6 +19,7 @@ import { z } from "zod";
 import type { ApiKeyTestResult } from "@/shared/types/api-keys";
 import { isValidInstagramToken } from "@/shared/lib/validations/instagram";
 import { maskApiKey } from "@/shared/lib/api-keys";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { InstagramApiError, withInstagramApiRetry } from "./retry";
 
@@ -458,7 +459,7 @@ export async function testInstagramConnection(
 export function getTokenExpiryDays(expiresAt: Date): number {
   const now = new Date();
   const diffMs = expiresAt.getTime() - now.getTime();
-  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  return Math.max(0, Math.floor(diffMs / MS_PER_DAY));
 }
 
 /**
