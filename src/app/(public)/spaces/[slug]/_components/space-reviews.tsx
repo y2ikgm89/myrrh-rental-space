@@ -3,8 +3,8 @@ import {
   getPublishedReviewsForSpace,
   getSpaceReviewStats,
 } from "@/shared/domain/reviews/public-queries";
-import { Heading } from "../../../_shared/components/design-system/heading";
-import { StarRating } from "../../../_shared/components/ui/star-rating";
+import { Heading } from "@/public/components/design-system/heading";
+import { StarRating } from "@/public/components/ui/star-rating";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 
 // ---------------------------------------------------------------------------
