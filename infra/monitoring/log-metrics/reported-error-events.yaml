@@ -1,0 +1,37 @@
+# Cloud Logging log-based counter metric that counts every ReportedErrorEvent
+# emitted by our runtime (logger-core writes `@type` = the ReportedErrorEvent
+# proto on HIGH / CRITICAL severity). Cloud Error Reporting groups these,
+# but for alerting we need a countable metric that survives group churn.
+#
+# Apply with:
+#   gcloud logging metrics create reported_error_events \
+#     --config-from-file=infra/monitoring/log-metrics/reported-error-events.yaml
+#
+# Update by replacing the same-named metric:
+#   gcloud logging metrics update reported_error_events \
+#     --config-from-file=infra/monitoring/log-metrics/reported-error-events.yaml
+#
+# https://cloud.google.com/logging/docs/logs-based-metrics/counter-metrics
+
+filter: |-
+  resource.type="cloud_run_revision"
+  resource.labels.service_name=~"^myrrh-rental-space(-admin)?$"
+  jsonPayload."@type"="type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent"
+
+description: |-
+  Count of ReportedErrorEvent log entries emitted by the myrrh-rental-space
+  runtime (both public and admin surfaces). Feeds the reported-error-burst
+  alert policy.
+
+metricDescriptor:
+  metricKind: DELTA
+  valueType: INT64
+  unit: "1"
+  displayName: "Reported error events (myrrh-rental-space)"
+  labels:
+    - key: service_name
+      valueType: STRING
+      description: "Cloud Run service name that produced the error"
+
+labelExtractors:
+  service_name: EXTRACT(resource.labels.service_name)

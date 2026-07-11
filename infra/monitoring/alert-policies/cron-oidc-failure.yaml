@@ -1,0 +1,45 @@
+# Alert when /api/cron/* requests fail authorization or the fail-closed cron
+# config check. Cloud Scheduler retries silently, so without an alert a
+# permanently misconfigured cron job would just stop running with no signal.
+# Depends on `infra/monitoring/log-metrics/cron-oidc-failure.yaml`.
+
+displayName: "myrrh-rental-space: cron OIDC failure"
+combiner: OR
+enabled: true
+notificationChannels:
+  # - projects/myrrh-rental-space/notificationChannels/REPLACE_ME
+documentation:
+  content: |-
+    A cron endpoint (/api/cron/*) failed OIDC bearer token verification or the
+    fail-closed cron-config check. Silent failures here mean scheduled jobs
+    stopped running with no other symptom.
+
+    Diagnose:
+
+    1. Cloud Logging: filter on
+       `httpRequest.requestUrl=~"/api/cron/"` +
+       `(httpRequest.status=401 OR httpRequest.status=500)`
+    2. Compare `CRON_OIDC_AUDIENCE` and `CRON_SERVICE_ACCOUNT_EMAIL` in the
+       running revision against the Cloud Scheduler job config
+       (`scripts/setup-cloud-scheduler.sh`).
+    3. Runbook: docs/gcp-production-setup.md → "Cron / Cloud Scheduler".
+  mimeType: "text/markdown"
+
+conditions:
+  - displayName: "cron OIDC / config failures > 3 / 15 min"
+    conditionThreshold:
+      filter: |-
+        metric.type="logging.googleapis.com/user/cron_oidc_failure"
+        resource.type="cloud_run_revision"
+      aggregations:
+        - alignmentPeriod: 900s
+          perSeriesAligner: ALIGN_DELTA
+          crossSeriesReducer: REDUCE_SUM
+      comparison: COMPARISON_GT
+      thresholdValue: 3
+      duration: 0s
+      trigger:
+        count: 1
+
+alertStrategy:
+  autoClose: 3600s

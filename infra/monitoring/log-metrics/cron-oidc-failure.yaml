@@ -1,0 +1,36 @@
+# Counts /api/cron/* requests rejected by our OIDC bearer token gate
+# (authorizeCronRequest). We hit this via 401 responses whose Cloud Run
+# request log is scoped to the /api/cron path prefix, plus our own 500
+# fail-closed emissions when CRON_OIDC_AUDIENCE or CRON_SERVICE_ACCOUNT_EMAIL
+# is missing at runtime.
+#
+# Apply with:
+#   gcloud logging metrics create cron_oidc_failure \
+#     --config-from-file=infra/monitoring/log-metrics/cron-oidc-failure.yaml
+
+filter: |-
+  resource.type="cloud_run_revision"
+  resource.labels.service_name="myrrh-rental-space"
+  httpRequest.requestUrl=~"/api/cron/"
+  (httpRequest.status=401 OR httpRequest.status=500)
+
+description: |-
+  Count of /api/cron/* requests that failed the OIDC bearer token gate or the
+  cron-config fail-closed check. Feeds the cron-oidc-failure alert policy.
+
+metricDescriptor:
+  metricKind: DELTA
+  valueType: INT64
+  unit: "1"
+  displayName: "Cron OIDC failures (myrrh-rental-space)"
+  labels:
+    - key: request_url
+      valueType: STRING
+      description: "Cron endpoint URL"
+    - key: status
+      valueType: STRING
+      description: "HTTP status of the failed cron request"
+
+labelExtractors:
+  request_url: REGEXP_EXTRACT(httpRequest.requestUrl, "(/api/cron/[^?]*)")
+  status: EXTRACT(httpRequest.status)

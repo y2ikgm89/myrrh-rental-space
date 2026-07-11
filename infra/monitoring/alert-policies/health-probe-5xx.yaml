@@ -1,0 +1,42 @@
+# Alert on /api/health returning 5xx. /api/live is the startup + liveness
+# probe (DB-free, always returns 200 by design), so we specifically watch
+# /api/health, which does exercise DB and downstream integrations.
+#
+# Cloud Run request logs already have httpRequest.status without extra log
+# metrics, so we use conditionMatchedLog directly.
+
+displayName: "myrrh-rental-space: /api/health 5xx"
+combiner: OR
+enabled: true
+notificationChannels:
+  # - projects/myrrh-rental-space/notificationChannels/REPLACE_ME
+documentation:
+  content: |-
+    /api/health is returning 5xx. This endpoint exercises DB round-trip and the
+    critical downstream integrations (Cloudflare tag purge probe, R2 credential
+    probe). A single 5xx from it means either the database is unreachable, a
+    credential is missing, or the runtime is in a bad state.
+
+    Investigation order:
+    1. Cloud Run revision — is the freshly deployed revision serving? Recent
+       migrate-execute failure?
+    2. Prisma pool timeout alert — running at the same time?
+    3. Cloudflare / R2 credential rotation — startup probe (`assertCloudflareCredentials`)
+       fails visibly on cold-start when either is missing.
+
+    Runbook pointer: docs/gcp-production-setup.md and docs/observability/alerting.md.
+  mimeType: "text/markdown"
+
+conditions:
+  - displayName: "/api/health returned 5xx"
+    conditionMatchedLog:
+      filter: |-
+        resource.type="cloud_run_revision"
+        resource.labels.service_name="myrrh-rental-space"
+        httpRequest.requestUrl=~"/api/health($|\\?)"
+        httpRequest.status>=500
+
+alertStrategy:
+  notificationRateLimit:
+    period: 300s
+  autoClose: 3600s

@@ -1,0 +1,43 @@
+# Alert on Prisma connection pool acquire timeouts. Sustained pool
+# exhaustion is the fastest way we degrade under load — every request goes
+# from a millisecond query to a multi-second wait, then a hard failure.
+# Depends on `infra/monitoring/log-metrics/prisma-pool-timeout.yaml`.
+
+displayName: "myrrh-rental-space: Prisma pool acquire timeout"
+combiner: OR
+enabled: true
+notificationChannels:
+  # - projects/myrrh-rental-space/notificationChannels/REPLACE_ME
+documentation:
+  content: |-
+    Prisma is timing out while acquiring a connection from the pool. Either
+    Postgres is unreachable / saturated, our `DATABASE_POOL_MAX` is too small
+    for current traffic, or a long-running transaction is starving the pool.
+
+    Investigate:
+
+    1. Cloud SQL / Postgres metrics: connections in use, replication lag.
+    2. Recent deploys: did `DATABASE_POOL_MAX` change? Did we add a long
+       transaction (`prisma.$transaction` with slow work inside)?
+    3. Correlate with `Reported error events` — spike in one is often
+       driven by the other.
+  mimeType: "text/markdown"
+
+conditions:
+  - displayName: "pool acquire timeouts > 5 / 5 min"
+    conditionThreshold:
+      filter: |-
+        metric.type="logging.googleapis.com/user/prisma_pool_timeout"
+        resource.type="cloud_run_revision"
+      aggregations:
+        - alignmentPeriod: 300s
+          perSeriesAligner: ALIGN_DELTA
+          crossSeriesReducer: REDUCE_SUM
+      comparison: COMPARISON_GT
+      thresholdValue: 5
+      duration: 0s
+      trigger:
+        count: 1
+
+alertStrategy:
+  autoClose: 3600s

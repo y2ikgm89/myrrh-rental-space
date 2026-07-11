@@ -1,0 +1,57 @@
+# Alert when the runtime emits a burst of ReportedErrorEvent log entries.
+# Depends on `infra/monitoring/log-metrics/reported-error-events.yaml`.
+#
+# Threshold rationale: fewer than 5 events / 5 min is the natural background
+# for our surface — third-party 4xx errors, cold-start blips, retryable
+# operations. > 20 events / 5 min sustained for two windows is the smallest
+# signal that is worth waking someone.
+#
+# Apply with:
+#   gcloud alpha monitoring policies create \
+#     --policy-from-file=infra/monitoring/alert-policies/reported-error-burst.yaml
+#
+# Update by policy display-name — see docs/observability/alerting.md.
+
+displayName: "myrrh-rental-space: reported error burst"
+combiner: OR
+enabled: true
+notificationChannels:
+  # Fill in from `gcloud beta monitoring channels list` after creating the
+  # channels documented in docs/observability/alerting.md. Format:
+  #   projects/<project-id>/notificationChannels/<channel-id>
+  # - projects/myrrh-rental-space/notificationChannels/REPLACE_ME
+documentation:
+  content: |-
+    A burst of ReportedErrorEvent log entries was emitted by the myrrh-rental-space
+    runtime. Investigate at:
+
+    - Cloud Error Reporting: https://console.cloud.google.com/errors
+    - Cloud Logging (raw): filter for
+      `resource.type="cloud_run_revision"` AND
+      `jsonPayload."@type"="type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent"`
+
+    Common causes: fresh deploy regression, upstream API outage (Cloudflare / Stripe / Google APIs),
+    Prisma pool contention (see `prisma-pool-timeout` alert). Escalate to the on-call runbook if
+    the alert stays firing after a rollback.
+  mimeType: "text/markdown"
+
+conditions:
+  - displayName: "reported error events > 20 / 5 min"
+    conditionThreshold:
+      filter: |-
+        metric.type="logging.googleapis.com/user/reported_error_events"
+        resource.type="cloud_run_revision"
+      aggregations:
+        - alignmentPeriod: 300s
+          perSeriesAligner: ALIGN_DELTA
+          crossSeriesReducer: REDUCE_SUM
+          groupByFields:
+            - "metric.label.service_name"
+      comparison: COMPARISON_GT
+      thresholdValue: 20
+      duration: 300s
+      trigger:
+        count: 1
+
+alertStrategy:
+  autoClose: 3600s

@@ -1338,3 +1338,13 @@ The audited production target posture is:
 
 If the audit has not passed after the latest GCP-side change, treat the list
 above as the desired target state, not as proof of the current project state.
+
+## Alerting
+
+Cloud Monitoring alert policies and their supporting log-based metrics live
+under `infra/monitoring/`, with a one-page runbook at
+[`docs/observability/alerting.md`](observability/alerting.md). Five signals
+are wired: ReportedErrorEvent burst, severity=CRITICAL, `/api/health` 5xx,
+cron OIDC / config failure, and Prisma pool acquire-timeout. Any change to
+the runtime emit path (severity mapping, log message text, cron gate return
+codes) must ship together with the matching YAML update.
