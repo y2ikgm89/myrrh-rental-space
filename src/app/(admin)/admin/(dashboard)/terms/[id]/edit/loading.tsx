@@ -1,1 +1,1 @@
-export { default } from "../../../_shared/components/EditorLoading";
+export { default } from "@/admin/components/EditorLoading";

@@ -6,6 +6,7 @@
  * Secret Key は返さない（サーバー側検証のみで使用）。
  */
 
+import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { getTurnstileConfig } from "@/shared/domain/settings/api-key-queries";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
