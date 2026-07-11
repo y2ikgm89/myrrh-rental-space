@@ -1,8 +1,6 @@
 /**
  * 管理画面: フォーム送信は SubmitButton に統一する（admin-ui-patterns）。
  * `<Button type="submit">` や `<button type="submit">` の直書きを静的に禁止する。
- *
- * @see .agents/skills/admin-ui-review/SKILL.md
  */
 
 import { describe, expect, test } from "bun:test";
