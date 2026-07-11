@@ -18,7 +18,6 @@ import "server-only";
 import { z } from "zod";
 import type { ApiKeyTestResult } from "@/shared/types/api-keys";
 import { isValidInstagramToken } from "@/shared/lib/validations/instagram";
-import { maskApiKey } from "@/shared/lib/api-keys";
 import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { InstagramApiError, withInstagramApiRetry } from "./retry";
