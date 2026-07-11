@@ -19,6 +19,7 @@
 
 import type { ErrorLogContext } from "./types";
 import type { ErrorSeverity } from "./types";
+import { redactContext, redactRequestUrl } from "./redaction";
 
 // ---------------------------------------------------------------------------
 // GCP severity マッピング
@@ -176,8 +177,18 @@ function applyCloudLoggingFields(
     }
   }
   if (enrichment.httpRequest) {
-    target.httpRequest = enrichment.httpRequest;
+    target.httpRequest = sanitizeHttpRequest(enrichment.httpRequest);
   }
+}
+
+/**
+ * `httpRequest.requestUrl` は Cloud Logging に流す前に必ず query string を
+ * 落とす (認証トークンや email が URL クエリに載る流入経路が存在するため
+ * — 例: legacy magic link、外部 OAuth redirect、共有可能なゲスト予約 URL)。
+ */
+function sanitizeHttpRequest(payload: HttpRequestPayload): HttpRequestPayload {
+  if (!payload.requestUrl) return payload;
+  return { ...payload, requestUrl: redactRequestUrl(payload.requestUrl) };
 }
 
 // ---------------------------------------------------------------------------
@@ -230,6 +241,8 @@ export function logError(
       ? (error.stack ?? `${error.name}: ${error.message}\n    at unknown`)
       : `Error: ${message}\n    at unknown`;
 
+  const redactedContext = redactContext(logContext.context);
+
   if (process.env["NODE_ENV"] === "production") {
     const entry: GcpStructuredErrorLog = {
       severity: gcpSeverity,
@@ -238,7 +251,7 @@ export function logError(
       category: logContext.category,
       timestamp: (logContext.timestamp ?? new Date()).toISOString(),
     };
-    if (logContext.context !== undefined) entry.context = logContext.context;
+    if (redactedContext !== undefined) entry.context = redactedContext;
     if (logContext.userId !== undefined) entry.userId = logContext.userId;
 
     if (gcpSeverity === "CRITICAL" || gcpSeverity === "ERROR") {
@@ -250,18 +263,19 @@ export function logError(
 
     console.error(JSON.stringify(entry));
   } else {
+    const sanitizedHttpRequest = logContext.httpRequest
+      ? sanitizeHttpRequest(logContext.httpRequest)
+      : undefined;
     console.error("[Error]", {
       severity: gcpSeverity,
       message,
       stack,
       category: logContext.category,
-      context: logContext.context,
+      context: redactedContext,
       userId: logContext.userId,
       ...(logContext.traceId ? { traceId: logContext.traceId } : {}),
       ...(logContext.spanId ? { spanId: logContext.spanId } : {}),
-      ...(logContext.httpRequest
-        ? { httpRequest: logContext.httpRequest }
-        : {}),
+      ...(sanitizedHttpRequest ? { httpRequest: sanitizedHttpRequest } : {}),
     });
   }
 }
@@ -294,11 +308,13 @@ function emitGeneric(
   context?: Record<string, unknown>,
   enrichment?: LogEnrichment,
 ): void {
+  const redacted = redactContext(context);
+
   if (process.env["NODE_ENV"] !== "production") {
     const prefix = `[${level.toUpperCase()}]`;
     const consoleFn = level === "debug" ? "log" : level;
-    if (context) {
-      console[consoleFn](prefix, message, context);
+    if (redacted) {
+      console[consoleFn](prefix, message, redacted);
     } else {
       console[consoleFn](prefix, message);
     }
@@ -313,7 +329,7 @@ function emitGeneric(
     message,
     timestamp: new Date().toISOString(),
   };
-  if (context !== undefined) entry.context = context;
+  if (redacted !== undefined) entry.context = redacted;
   applyCloudLoggingFields(entry, enrichment);
 
   const consoleFn = level === "info" ? "log" : level;
