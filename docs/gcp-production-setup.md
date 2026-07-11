@@ -718,6 +718,15 @@ in-flight requests, runs `prisma migrate deploy`, then deploys the new revisions
 with `--scaling=auto`. This keeps the application and schema clean while
 preventing old revisions from serving against the migrated database.
 
+If `prisma migrate deploy` itself fails after the services have been quiesced,
+the migrate-execute step restores `--scaling=auto` on the previous revisions
+before propagating the failure back to Cloud Build. Without this recovery both
+services would stay at `--scaling=0` until an operator manually re-enabled
+them, giving the deploy an unbounded MTTR. The migration is not rolled back —
+Prisma migrations are one-way — so operators still need to investigate the
+migration error and either fix the migration SQL or hand-repair the database,
+but the site keeps serving on the previous revision while that happens.
+
 If an individual operator needs to run this emergency command before WIF is
 available, grant that person a
 temporary break-glass `roles/iam.serviceAccountUser` binding only on
