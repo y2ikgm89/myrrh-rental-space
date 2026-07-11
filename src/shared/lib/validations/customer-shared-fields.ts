@@ -2,9 +2,11 @@
  * 顧客系フォームで共通する Zod field schema SSoT。
  *
  * 顧客・予約・問い合わせフォームで一字一句同じ error message / 長さ制約を
- * 個別に書いていた drift を集約する。customer-profile.ts は独自 label
- * ("姓を入力してください") を維持しているため、対象は customer.ts /
- * public-reservation.ts / inquiry.ts の 3 file。
+ * 個別に書いていた drift を集約する。適用 file は customer.ts /
+ * public-reservation.ts / inquiry.ts / customer-profile.ts の 4 file。
+ * customer-profile.ts は lastName / firstName の独自 label ("姓を入力してください")
+ * を維持しているため personNameFieldSchema は使わないが、phoneNumber は
+ * `optionalPhoneNumberSchema` と byte 一致のため helper を経由する。
  */
 
 import { z } from "zod";
