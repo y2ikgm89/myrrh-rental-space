@@ -7,6 +7,7 @@ type CsvColumn = { header: string };
 const mockGenerateCsv = mock<(rows: unknown[], columns: CsvColumn[]) => string>(
   () => "",
 );
+const mockCreateAuditLogRecord = mock();
 
 mock.module("next/server", () => ({
   NextResponse,
@@ -26,6 +27,12 @@ mock.module("@/shared/domain/reservations/export-queries", () => ({
 mock.module("@/shared/lib/csv", () => ({
   generateCsv: (...args: Parameters<typeof mockGenerateCsv>) =>
     mockGenerateCsv(...args),
+}));
+
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: (
+    ...args: Parameters<typeof mockCreateAuditLogRecord>
+  ) => mockCreateAuditLogRecord(...args),
 }));
 
 // 実際のモジュールを re-export し、テストで必要なラベルのみオーバーライド
@@ -55,6 +62,7 @@ describe("GET /api/admin/export/reservations", () => {
     mockCheckPermission.mockReset();
     mockGetReservationsForExport.mockReset();
     mockGenerateCsv.mockReset();
+    mockCreateAuditLogRecord.mockReset();
   });
 
   test("権限なしの場合は 403 を返す", async () => {

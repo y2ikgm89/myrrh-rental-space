@@ -6,6 +6,7 @@ type CsvColumn = { header: string; accessor?: (row: unknown) => unknown };
 const mockGenerateCsv = mock<(rows: unknown[], columns: CsvColumn[]) => string>(
   () => "",
 );
+const mockCreateAuditLogRecord = mock();
 
 mock.module("@/admin/lib/action-auth", () => ({
   checkPermission: (...args: Parameters<typeof mockCheckPermission>) =>
@@ -23,6 +24,12 @@ mock.module("@/shared/lib/csv", () => ({
     mockGenerateCsv(...args),
 }));
 
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: (
+    ...args: Parameters<typeof mockCreateAuditLogRecord>
+  ) => mockCreateAuditLogRecord(...args),
+}));
+
 const { GET } =
   await import("@/app/api/admin/export/event-registrations/route");
 
@@ -31,6 +38,7 @@ describe("GET /api/admin/export/event-registrations", () => {
     mockCheckPermission.mockReset();
     mockGetEventRegistrationsForExport.mockReset();
     mockGenerateCsv.mockReset();
+    mockCreateAuditLogRecord.mockReset();
   });
 
   test("CUID の eventId でイベント申込 CSV を返す", async () => {
