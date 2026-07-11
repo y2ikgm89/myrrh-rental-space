@@ -12,6 +12,7 @@
  * @module shared/lib/action-helpers
  */
 
+import "server-only";
 import type { ZodError } from "zod";
 import { verifyTurnstileToken, isTurnstileEnabled } from "./turnstile";
 import type { TurnstileAction } from "./turnstile-actions";
