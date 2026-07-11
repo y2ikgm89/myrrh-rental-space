@@ -25,7 +25,7 @@ export function formatCurrency(value: number): string {
     currency: "JPY",
   }).format(value);
   // Intl.NumberFormat は全幅yen（￥）を返すため、半幅に統一（U+00A5）
-  return formatted.replace("￥", "\u00A5");
+  return formatted.replace("￥", "¥");
 }
 
 /** 価格フォーマット（null/undefined 対応） */
@@ -48,11 +48,11 @@ export function formatPriceWithTax(options: TaxPriceDisplayOptions): string {
 
   switch (displayMode) {
     case TaxDisplayMode.tax_excluded:
-      return `\u00A5${taxExcludedPrice.toLocaleString("ja-JP")}（税抜）`;
+      return `${formatCurrency(taxExcludedPrice)}（税抜）`;
     case TaxDisplayMode.tax_included:
-      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}（税込）`;
+      return `${formatCurrency(taxIncludedPrice)}（税込）`;
     case TaxDisplayMode.both:
-      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}（税込）/ \u00A5${taxExcludedPrice.toLocaleString("ja-JP")}（税抜）`;
+      return `${formatCurrency(taxIncludedPrice)}（税込）/ ${formatCurrency(taxExcludedPrice)}（税抜）`;
   }
 }
 
@@ -67,11 +67,11 @@ export function formatUnitPriceWithTax(
 
   switch (displayMode) {
     case TaxDisplayMode.tax_excluded:
-      return `\u00A5${taxExcludedPrice.toLocaleString("ja-JP")}${unit}（税抜）`;
+      return `${formatCurrency(taxExcludedPrice)}${unit}（税抜）`;
     case TaxDisplayMode.tax_included:
-      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}${unit}（税込）`;
+      return `${formatCurrency(taxIncludedPrice)}${unit}（税込）`;
     case TaxDisplayMode.both:
-      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}${unit}（税込）`;
+      return `${formatCurrency(taxIncludedPrice)}${unit}（税込）`;
   }
 }
 
@@ -94,7 +94,7 @@ export function formatDiscountAmount(type: CouponType, value: number): string {
   if (type === CouponType.PERCENTAGE) {
     return `${value}%OFF`;
   }
-  return `\u00A5${value.toLocaleString("ja-JP")}OFF`;
+  return `${formatCurrency(value)}OFF`;
 }
 
 /** 割引サマリーを生成（表示用） */
@@ -105,15 +105,15 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
     const label =
       calculation.appliedSpaceDiscount.type === DiscountType.percentage
         ? `${calculation.appliedSpaceDiscount.value}%OFF`
-        : `\u00A5${calculation.appliedSpaceDiscount.value.toLocaleString("ja-JP")}OFF`;
+        : `${formatCurrency(calculation.appliedSpaceDiscount.value)}OFF`;
     summaries.push(
-      `スペース割引（${label}）: -\u00A5${calculation.spaceDiscount.toLocaleString("ja-JP")}`,
+      `スペース割引（${label}）: -${formatCurrency(calculation.spaceDiscount)}`,
     );
   }
 
   if (calculation.appliedDurationRule) {
     summaries.push(
-      `長時間割引（${calculation.appliedDurationRule.hours}時間以上）: -\u00A5${calculation.durationDiscount.toLocaleString("ja-JP")}`,
+      `長時間割引（${calculation.appliedDurationRule.hours}時間以上）: -${formatCurrency(calculation.durationDiscount)}`,
     );
   }
 
@@ -123,7 +123,7 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
       calculation.appliedCoupon.discountValue,
     );
     summaries.push(
-      `クーポン「${calculation.appliedCoupon.code}」${couponLabel}: -\u00A5${calculation.couponDiscount.toLocaleString("ja-JP")}`,
+      `クーポン「${calculation.appliedCoupon.code}」${couponLabel}: -${formatCurrency(calculation.couponDiscount)}`,
     );
   }
 
