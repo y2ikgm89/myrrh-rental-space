@@ -24,6 +24,11 @@ const mockGetPrimary = mock<() => EncryptionKey>(() => PRIMARY);
 
 mock.module("@/shared/lib/env/encryption", () => ({
   getPrimaryEncryptionKey: mockGetPrimary,
+  getSecondaryEncryptionKeys: () => [],
+  resolveEncryptionKeyByKid: (kid: string) => {
+    const primary = mockGetPrimary();
+    return primary.kid === kid ? primary : null;
+  },
 }));
 
 const { encrypt } = await import("@/shared/lib/crypto");

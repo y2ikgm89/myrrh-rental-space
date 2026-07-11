@@ -216,4 +216,32 @@ describe("server production env validation", () => {
 
     expect(() => validateProductionEnv()).not.toThrow();
   });
+
+  test("fails fast on malformed SECONDARY_ENCRYPTION_KEYS", async () => {
+    setProductionEnv({
+      SECONDARY_ENCRYPTION_KEYS: "v0:tooshort",
+    });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).toThrow(
+      /SECONDARY_ENCRYPTION_KEYS.*exactly 64 hex/,
+    );
+  });
+
+  test("accepts empty SECONDARY_ENCRYPTION_KEYS", async () => {
+    setProductionEnv({ SECONDARY_ENCRYPTION_KEYS: "" });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).not.toThrow();
+  });
+
+  test("accepts a valid single-entry SECONDARY_ENCRYPTION_KEYS", async () => {
+    setProductionEnv({ SECONDARY_ENCRYPTION_KEYS: `v0:${"b".repeat(64)}` });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).not.toThrow();
+  });
 });

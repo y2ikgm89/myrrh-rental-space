@@ -44,6 +44,11 @@ const mockGetPrimaryOverride = mock<() => typeof TEST_PRIMARY>(
 );
 mock.module("@/shared/lib/env/encryption", () => ({
   getPrimaryEncryptionKey: mockGetPrimaryOverride,
+  getSecondaryEncryptionKeys: () => [],
+  resolveEncryptionKeyByKid: (kid: string) => {
+    const primary = mockGetPrimaryOverride();
+    return primary.kid === kid ? primary : null;
+  },
 }));
 
 function lastUpdate(): Record<string, unknown> {
