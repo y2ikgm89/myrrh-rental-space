@@ -183,7 +183,17 @@ export function formatJstDateString(date: Date | string): string {
   return JST_MACHINE_DATE_FORMATTER.format(value);
 }
 
-const MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
+/**
+ * ミリ秒単位の時間定数 SSoT。
+ *
+ * `24 * 60 * 60 * 1000` 系の inline magic number を repo 全域で散らさないため、
+ * ドメイン helper と cron 経路の相対時間計算はこれらを経由する。
+ * ドメイン特有の window (RAPID_BOOKING_WINDOW_MS 等) は当該定数を SSoT として
+ * これらの helper と乗算する形で表現する。
+ */
+export const MS_PER_MINUTE = 60 * 1000;
+export const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+export const MS_PER_DAY = 24 * MS_PER_HOUR;
 
 /**
  * 2 つの Date の差を「時間（hours）」で返す。小数を含む（30 分 = 0.5）。
@@ -192,7 +202,7 @@ const MILLISECONDS_PER_HOUR = 1000 * 60 * 60;
  * `(end - start) / (1000 * 60 * 60)` の magic number を散らさないための SSoT。
  */
 export function calculateDurationHours(start: Date, end: Date): number {
-  return (end.getTime() - start.getTime()) / MILLISECONDS_PER_HOUR;
+  return (end.getTime() - start.getTime()) / MS_PER_HOUR;
 }
 
 // =============================================================================

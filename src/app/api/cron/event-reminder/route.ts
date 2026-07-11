@@ -1,6 +1,6 @@
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
-import { formatJstDateString } from "@/shared/lib/date-format";
+import { formatJstDateString, MS_PER_DAY } from "@/shared/lib/date-format";
 import { findEventRegistrationsForReminderWindow } from "@/shared/domain/events/registration-queries";
 import {
   claimEventRegistrationReminder,
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
     // JST で翌日の日付を計算（Cloud Run は UTC 環境）
     const now = new Date();
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrow = new Date(now.getTime() + MS_PER_DAY);
     const tomorrowJstStr = formatJstDateString(tomorrow); // "YYYY-MM-DD"
 
     // JST の翌日 00:00:00 〜 23:59:59 を UTC に変換

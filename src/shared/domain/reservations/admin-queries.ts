@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@generated/prisma/enums";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
@@ -353,7 +354,7 @@ export async function getReservationStatsQuery() {
         deletedAt: null,
         startTime: {
           gte: today,
-          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+          lt: new Date(today.getTime() + MS_PER_DAY),
         },
       },
     }),

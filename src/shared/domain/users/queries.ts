@@ -3,6 +3,7 @@ import "server-only";
 import { Role } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DASHBOARD_ROLES, isDashboardRole } from "@/shared/lib/admin-roles";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type { Prisma } from "@generated/prisma/client";
 import type {
@@ -148,7 +149,7 @@ export async function getAccountProviders(userId: string): Promise<string[]> {
 }
 
 export async function getUserStats(): Promise<UserStats> {
-  const recentStaffCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const recentStaffCutoff = new Date(Date.now() - 30 * MS_PER_DAY);
   const [total, superAdmins, admins, editors, viewers, recentStaff] =
     await Promise.all([
       prisma.user.count({ where: { role: { in: STAFF_QUERY_ROLES } } }),

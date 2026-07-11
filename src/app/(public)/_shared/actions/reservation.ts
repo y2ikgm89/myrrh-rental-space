@@ -46,8 +46,9 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 
-const COMPLETE_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const COMPLETE_TOKEN_TTL_MS = MS_PER_DAY;
 
 /**
  * 予約確定メール送信前に、スペースにアクティブなスマートロックデバイスがあれば

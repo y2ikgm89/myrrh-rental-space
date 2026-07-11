@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 
 export async function incrementFaqItemViewCount(
   id: string,
@@ -23,7 +24,7 @@ export async function detectStaleFaqItems(
       "VALIDATION",
     );
   }
-  const threshold = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
+  const threshold = new Date(Date.now() - staleDays * MS_PER_DAY);
   return prisma.faqItem.findMany({
     where: { isPublished: true, deletedAt: null, updatedAt: { lt: threshold } },
     select: { id: true, question: true, updatedAt: true },
@@ -55,7 +56,7 @@ export async function permanentlyDeleteExpiredFaqTrash(
       "VALIDATION",
     );
   }
-  const threshold = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+  const threshold = new Date(Date.now() - retentionDays * MS_PER_DAY);
   const itemsResult = await prisma.faqItem.deleteMany({
     where: { deletedAt: { not: null, lt: threshold } },
   });

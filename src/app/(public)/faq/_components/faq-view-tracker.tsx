@@ -14,9 +14,10 @@
  */
 
 import { useEffect, useRef } from "react";
+import { MS_PER_DAY } from "@/shared/lib/date-format";
 
 const STORAGE_KEY_PREFIX = "faq:viewed:";
-const TTL_MS = 24 * 60 * 60 * 1000; // 24 時間
+const TTL_MS = MS_PER_DAY; // 24 時間
 
 function hasRecentlyViewed(id: string): boolean {
   try {
