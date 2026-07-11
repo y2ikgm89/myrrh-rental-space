@@ -108,6 +108,91 @@ const rows: Row[] = [
   },
 ];
 
+// -----------------------------------------------------------------------
+// PURPOSE golden values — WIRE FORMAT PIN
+//
+// Silent renames of `const PURPOSE = "..."` inside any token module would
+// invalidate every token already sitting in a customer inbox (HKDF derives
+// a different key). The module-private constants can't be imported, so we
+// pin the wire format by round-trip:
+//
+//   1. Encrypt a valid payload with the HARD-CODED literal below.
+//   2. Feed the resulting token to the module's verify().
+//   3. verify() succeeds ONLY if the module's internal PURPOSE equals the
+//      literal (crypto.ts derives the key from purpose and the payload
+//      passes because it matches the module's isXPayload guard).
+//
+// The literals must NEVER change without a coordinated migration plan.
+// -----------------------------------------------------------------------
+const PURPOSE_GOLDEN = {
+  "reservation-cancel": "reservation-cancel",
+  "reservation-complete": "reservation-complete",
+  "reservation-claim": "reservation-claim",
+  "event-registration-cancel": "event-registration-cancel",
+  "event-registration-claim": "event-registration-claim",
+  "calendar-reservation": "calendar-download-reservation",
+} as const;
+
+// Payload shape needed for each module's isXPayload guard to pass.
+// Every payload uses a far-future exp so the "happy path" HAPPY_NOW is valid.
+const FAR_FUTURE_EXP = FUTURE_EXP.getTime();
+const HAPPY_IAT = HAPPY_ISSUED.getTime();
+const PAYLOAD_FOR: Record<string, Record<string, unknown>> = {
+  "reservation-cancel": { rid: RID, exp: FAR_FUTURE_EXP, iat: HAPPY_IAT },
+  "reservation-complete": { rid: RID, exp: FAR_FUTURE_EXP },
+  "reservation-claim": { rid: RID, exp: FAR_FUTURE_EXP },
+  "event-registration-cancel": {
+    rid: EID,
+    exp: FAR_FUTURE_EXP,
+    iat: HAPPY_IAT,
+  },
+  "event-registration-claim": { eid: EID, exp: FAR_FUTURE_EXP },
+  "calendar-reservation": {
+    k: "reservation",
+    id: RID,
+    exp: FAR_FUTURE_EXP,
+    iat: HAPPY_IAT,
+  },
+};
+
+describe("PURPOSE golden values (wire-format pin — silent rename detector)", () => {
+  test("row.purpose entries match the hard-coded literal table (locks the test-side data)", () => {
+    for (const row of rows) {
+      expect(row.purpose).toBe(
+        PURPOSE_GOLDEN[row.name as keyof typeof PURPOSE_GOLDEN],
+      );
+    }
+  });
+
+  for (const row of rows) {
+    test(`${row.name}: encrypt-with-literal → verify() succeeds (proves module PURPOSE == "${row.purpose}")`, () => {
+      const payload = PAYLOAD_FOR[row.name];
+      if (payload === undefined) {
+        throw new Error(`missing PAYLOAD_FOR fixture for ${row.name}`);
+      }
+      // Hard-coded literal — NOT sourced from the module. If the module's
+      // PURPOSE drifted from this string, HKDF derives a different key and
+      // decrypt would throw → row.verify returns valid: false.
+      const literal = PURPOSE_GOLDEN[row.name as keyof typeof PURPOSE_GOLDEN];
+      const ciphertext = encrypt(JSON.stringify(payload), { purpose: literal });
+      const token = Buffer.from(ciphertext, "utf8").toString("base64url");
+      expect(row.verify(token, HAPPY_NOW).valid).toBe(true);
+    });
+  }
+});
+
+describe("calendar-token purposeFor() — exported joiner is stable", () => {
+  test('purposeFor("reservation") returns exactly "calendar-download-reservation"', async () => {
+    const { purposeFor } = await import("@/shared/lib/calendar/calendar-token");
+    expect(purposeFor("reservation")).toBe("calendar-download-reservation");
+  });
+
+  test('purposeFor("event") returns exactly "calendar-download-event"', async () => {
+    const { purposeFor } = await import("@/shared/lib/calendar/calendar-token");
+    expect(purposeFor("event")).toBe("calendar-download-event");
+  });
+});
+
 describe("token verify behavior matrix (post DUP-1 Alt-C)", () => {
   for (const row of rows) {
     describe(row.name, () => {
