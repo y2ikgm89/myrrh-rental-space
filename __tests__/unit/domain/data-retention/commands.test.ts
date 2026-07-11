@@ -5,27 +5,29 @@ import {
 } from "@/shared/lib/json-validators";
 
 // Prisma を mock で切り離す。domain 関数が呼び出す method の contract を interface で満たす。
+// mock 関数は WHERE 節を capture するため、args を pass-through で受け取る。
 
 type DeleteManyResult = { count: number };
+type MockArgs = Record<string, unknown> | undefined;
 
-const mockSessionDeleteMany = mock<() => Promise<DeleteManyResult>>(() =>
-  Promise.resolve({ count: 0 }),
-);
-const mockVerificationDeleteMany = mock<() => Promise<DeleteManyResult>>(() =>
-  Promise.resolve({ count: 0 }),
-);
-const mockLoginAttemptDeleteMany = mock<() => Promise<DeleteManyResult>>(() =>
-  Promise.resolve({ count: 0 }),
-);
-const mockReservationUpdateMany = mock<() => Promise<DeleteManyResult>>(() =>
-  Promise.resolve({ count: 0 }),
-);
-const mockInquiryDeleteMany = mock<() => Promise<DeleteManyResult>>(() =>
-  Promise.resolve({ count: 0 }),
-);
-const mockCustomerFindMany = mock<() => Promise<Array<{ id: string }>>>(() =>
-  Promise.resolve([]),
-);
+const mockSessionDeleteMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
+const mockVerificationDeleteMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
+const mockLoginAttemptDeleteMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
+const mockReservationUpdateMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
+const mockInquiryDeleteMany = mock<
+  (args?: MockArgs) => Promise<DeleteManyResult>
+>(() => Promise.resolve({ count: 0 }));
+const mockCustomerFindMany = mock<
+  (args?: MockArgs) => Promise<Array<{ id: string }>>
+>(() => Promise.resolve([]));
 const mockCustomerUpdate = mock<
   (args: { where: { id: string }; data: Record<string, unknown> }) => Promise<{
     id: string;
@@ -34,13 +36,19 @@ const mockCustomerUpdate = mock<
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    session: { deleteMany: () => mockSessionDeleteMany() },
-    verification: { deleteMany: () => mockVerificationDeleteMany() },
-    loginAttempt: { deleteMany: () => mockLoginAttemptDeleteMany() },
-    reservation: { updateMany: () => mockReservationUpdateMany() },
-    inquiry: { deleteMany: () => mockInquiryDeleteMany() },
+    session: { deleteMany: (args?: MockArgs) => mockSessionDeleteMany(args) },
+    verification: {
+      deleteMany: (args?: MockArgs) => mockVerificationDeleteMany(args),
+    },
+    loginAttempt: {
+      deleteMany: (args?: MockArgs) => mockLoginAttemptDeleteMany(args),
+    },
+    reservation: {
+      updateMany: (args?: MockArgs) => mockReservationUpdateMany(args),
+    },
+    inquiry: { deleteMany: (args?: MockArgs) => mockInquiryDeleteMany(args) },
     customer: {
-      findMany: () => mockCustomerFindMany(),
+      findMany: (args?: MockArgs) => mockCustomerFindMany(args),
       update: (args: {
         where: { id: string };
         data: Record<string, unknown>;
@@ -257,5 +265,152 @@ describe("purge commands", () => {
       inquiriesDeleted: 2,
       customersAnonymized: 1,
     });
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Codex review fix — regression tests
+// -----------------------------------------------------------------------------
+
+/**
+ * 各 purge 関数が Prisma へ渡す WHERE の `cutoff` (< 比較の右辺) を取り出す。
+ * mock の calls から最新呼び出しの WHERE 条件を掘り、cutoff Date を返す。
+ */
+function extractCutoffFromCall(
+  calls: ReadonlyArray<ReadonlyArray<unknown>>,
+  path: readonly string[],
+): Date {
+  const lastCall = calls[calls.length - 1];
+  if (!lastCall) throw new Error("prisma mock was not called");
+  let cursor: unknown = lastCall[0];
+  for (const key of path) {
+    if (typeof cursor !== "object" || cursor === null) {
+      throw new Error(`unexpected shape at ${key}`);
+    }
+    cursor = (cursor as Record<string, unknown>)[key];
+  }
+  if (!(cursor instanceof Date)) {
+    throw new Error("cutoff must be a Date instance");
+  }
+  return cursor;
+}
+
+describe("monthsAgo month-end overflow (Codex #3564864832)", () => {
+  beforeEach(() => {
+    mockSessionDeleteMany.mockClear();
+    mockSessionDeleteMany.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
+    mockCustomerFindMany.mockClear();
+    mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
+  });
+
+  test("2027-08-31 - 6mo は 2027-02-28（Feb-31 の overflow を防ぐ）", async () => {
+    // ネイティブ `setUTCMonth` は 2027-08-31 minus 6mo → 2027-03-03 になる。
+    // これを cutoff にすると Mar 1-2 に作られたレコードが 6mo 未満で誤削除される。
+    const augustEnd = new Date("2027-08-31T12:00:00Z");
+    await purgeExpiredSessions(augustEnd, 6);
+    const cutoff = extractCutoffFromCall(mockSessionDeleteMany.mock.calls, [
+      "where",
+      "createdAt",
+      "lt",
+    ]);
+    expect(cutoff.toISOString().slice(0, 10)).toBe("2027-02-28");
+  });
+
+  test("2028-08-31 - 6mo は 2028-02-29（閏年の末日にクランプする）", async () => {
+    const augustEndLeap = new Date("2028-08-31T12:00:00Z");
+    await purgeExpiredSessions(augustEndLeap, 6);
+    const cutoff = extractCutoffFromCall(mockSessionDeleteMany.mock.calls, [
+      "where",
+      "createdAt",
+      "lt",
+    ]);
+    expect(cutoff.toISOString().slice(0, 10)).toBe("2028-02-29");
+  });
+
+  test("2027-01-15 - 1mo は 2026-12-15（年跨ぎで day を保持する）", async () => {
+    const jan15 = new Date("2027-01-15T00:00:00Z");
+    await purgeExpiredSessions(jan15, 1);
+    const cutoff = extractCutoffFromCall(mockSessionDeleteMany.mock.calls, [
+      "where",
+      "createdAt",
+      "lt",
+    ]);
+    expect(cutoff.toISOString().slice(0, 10)).toBe("2026-12-15");
+  });
+
+  test("2027-03-31 - 1mo は 2027-02-28（31 → 28 クランプ、時刻成分は保持）", async () => {
+    const marEnd = new Date("2027-03-31T09:30:45.123Z");
+    await purgeExpiredSessions(marEnd, 1);
+    const cutoff = extractCutoffFromCall(mockSessionDeleteMany.mock.calls, [
+      "where",
+      "createdAt",
+      "lt",
+    ]);
+    expect(cutoff.toISOString()).toBe("2027-02-28T09:30:45.123Z");
+  });
+});
+
+describe("anonymizeInactiveCustomers lastReservationAt=null fallback (Codex #3564864835)", () => {
+  beforeEach(() => {
+    mockCustomerFindMany.mockClear();
+    mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
+    mockCustomerUpdate.mockClear();
+    mockCustomerUpdate.mockImplementation((args) =>
+      Promise.resolve({ id: args.where.id }),
+    );
+  });
+
+  test("WHERE の OR に lastReservationAt=null かつ createdAt < cutoff の分岐が含まれる", async () => {
+    await anonymizeInactiveCustomers(NOW, 84);
+    const call = mockCustomerFindMany.mock.calls[0];
+    if (!call) throw new Error("customer.findMany was not called");
+    const args = call[0] as {
+      where: {
+        OR: Array<
+          | { lastReservationAt: { lt: Date } }
+          | {
+              AND: Array<
+                { lastReservationAt: null } | { createdAt: { lt: Date } }
+              >;
+            }
+        >;
+      };
+    };
+    expect(args.where.OR).toHaveLength(2);
+    // 第1枝: lastReservationAt < cutoff
+    const branch1 = args.where.OR[0] as { lastReservationAt: { lt: Date } };
+    expect(branch1.lastReservationAt.lt).toBeInstanceOf(Date);
+    // 第2枝: lastReservationAt IS NULL AND createdAt < cutoff
+    const branch2 = args.where.OR[1] as {
+      AND: Array<{ lastReservationAt: null } | { createdAt: { lt: Date } }>;
+    };
+    expect(branch2.AND).toHaveLength(2);
+    const [nullCond, createdAtCond] = branch2.AND;
+    expect(
+      (nullCond as { lastReservationAt: null }).lastReservationAt,
+    ).toBeNull();
+    expect(
+      (createdAtCond as { createdAt: { lt: Date } }).createdAt.lt,
+    ).toBeInstanceOf(Date);
+    // 両枝の cutoff は同一 Date 参照 (monthsAgo の 1 回計算を再利用)
+    expect((branch1.lastReservationAt.lt as Date).toISOString()).toBe(
+      (createdAtCond as { createdAt: { lt: Date } }).createdAt.lt.toISOString(),
+    );
+  });
+
+  test("匿名化済み customer は email フィルタで除外される (idempotency)", async () => {
+    await anonymizeInactiveCustomers(NOW, 84);
+    const call = mockCustomerFindMany.mock.calls[0];
+    if (!call) throw new Error("customer.findMany was not called");
+    const args = call[0] as {
+      where: {
+        email: { not: { startsWith: string } };
+        status: string;
+      };
+    };
+    expect(args.where.email.not.startsWith).toBe("anonymized-");
+    expect(args.where.status).toBe("INACTIVE");
   });
 });
