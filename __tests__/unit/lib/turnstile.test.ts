@@ -41,6 +41,7 @@ mock.module("@/shared/lib/crypto", () => ({
   isEncrypted: (_value: string) => true,
   safeEncrypt: (value: string) => `v1:generic:iv:${value}:tag`,
   safeDecrypt: (value: string) => value,
+  safeDecryptToString: (value: string | null | undefined) => value ?? null,
 }));
 
 // getTurnstileConfig が 'use cache' (Next.js 16 公式 cache layer) 化されたため、
