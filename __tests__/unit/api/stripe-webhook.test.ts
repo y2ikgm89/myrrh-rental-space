@@ -70,8 +70,14 @@ const mockFindReservationByPaymentIntent =
   >();
 const mockClaimReservationAsRefunded = mock<(id: string) => Promise<boolean>>();
 
-// Next.js cache
-const mockRevalidateTag = mock<(tag: string, profile: string) => void>();
+// Site-wide cache invalidation (Route Handler variant)
+// route.ts の invalidateReservationCache() は
+// invalidateSiteWideCacheFromRouteHandler() を単一呼び出しで [3 tags] を渡す。
+// テスト境界は「Route Handler がキャッシュ無効化ヘルパーを正しい tag セットで
+// 呼んだか」で、Next.js の updateTag / revalidateTag / firePurgeAsync / CDN purge
+// といった実装詳細に依存すべきではない (Codex review 対応・PR #945)。
+const mockInvalidateSiteWideCacheFromRouteHandler =
+  mock<(tags: readonly string[], options?: unknown) => void>();
 
 // Next.js navigation
 const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
@@ -142,12 +148,15 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     mockClaimReservationAsRefunded(id),
 }));
 
-// 公式 Bun re-export pattern: actual を spread して必要 fn のみ override。
-const actualNextCache = await import("next/cache");
-mock.module("next/cache", () => ({
-  ...actualNextCache,
-  revalidateTag: (tag: string, profile: string) =>
-    mockRevalidateTag(tag, profile),
+// 境界 mock: route.ts が使う唯一の cache-invalidation entry point を差し替える。
+// これで next/cache (updateTag / revalidateTag)・firePurgeAsync・fireAndForget・
+// CDN tag purge の全下位実装が touch されない。CI/local の next/cache export 差
+// (updateTag の有無) にも耐性がある。
+mock.module("@/shared/lib/cache/site-wide", () => ({
+  invalidateSiteWideCacheFromRouteHandler: (
+    tags: readonly string[],
+    options?: unknown,
+  ) => mockInvalidateSiteWideCacheFromRouteHandler(tags, options),
 }));
 
 mock.module("next/navigation", () => ({
@@ -301,7 +310,7 @@ describe("POST /api/webhooks/stripe", () => {
     mockClaimReservationAsFailed.mockReset();
     mockFindReservationByPaymentIntent.mockReset();
     mockClaimReservationAsRefunded.mockReset();
-    mockRevalidateTag.mockReset();
+    mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockSendReservationConfirmationEmail.mockReset();
     mockLogError.mockReset();
@@ -453,7 +462,9 @@ describe("POST /api/webhooks/stripe", () => {
     });
 
     // キャッシュ無効化 (3点セット)
-    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
+      1,
+    );
 
     // メール送信が fireAndForget で呼ばれた
     expect(mockFireAndForget).toHaveBeenCalled();
@@ -504,7 +515,9 @@ describe("POST /api/webhooks/stripe", () => {
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
 
     // キャッシュ無効化は実行される
-    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
+      1,
+    );
 
     // メールは送信されない
     expect(mockFireAndForget).not.toHaveBeenCalled();
@@ -531,7 +544,7 @@ describe("POST /api/webhooks/stripe", () => {
     // claim 自体は呼ばれるが、null 戻り値で副作用がスキップされる
     expect(mockClaimReservationAsPaid).toHaveBeenCalledTimes(1);
     expect(mockFireAndForget).not.toHaveBeenCalled();
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------
@@ -594,7 +607,9 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
     expect(mockClaimReservationAsFailed).toHaveBeenCalledWith("res-789");
-    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
+      1,
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -622,7 +637,9 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
     expect(mockClaimReservationAsFailed).toHaveBeenCalledWith("res-exp");
-    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
+      1,
+    );
   });
 
   test("べき等性: checkout.session.expired で既に PAID → claim が false で cache invalidate スキップ", async () => {
@@ -646,7 +663,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     // claim は呼ばれるが false 戻り値で cache invalidate スキップ
     expect(mockClaimReservationAsFailed).toHaveBeenCalledTimes(1);
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------
@@ -671,7 +688,9 @@ describe("POST /api/webhooks/stripe", () => {
       "pi-refund-123",
     );
     expect(mockClaimReservationAsRefunded).toHaveBeenCalledWith("res-ref-1");
-    expect(mockRevalidateTag).toHaveBeenCalledTimes(3);
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
+      1,
+    );
   });
 
   test("べき等性: charge.refunded で既に REFUNDED → claim が false で cache invalidate スキップ", async () => {
@@ -688,7 +707,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect(response.status).toBe(200);
     // claim は呼ばれるが false 戻り値で cache invalidate スキップ
     expect(mockClaimReservationAsRefunded).toHaveBeenCalledTimes(1);
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
   test("charge.refunded で payment_intent が null → ログのみ、200 を返す", async () => {
@@ -895,7 +914,9 @@ describe("POST /api/webhooks/stripe", () => {
       expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
       expect(mockClaimReservationAsFailed).not.toHaveBeenCalled();
       expect(mockClaimReservationAsRefunded).not.toHaveBeenCalled();
-      expect(mockRevalidateTag).not.toHaveBeenCalled();
+      expect(
+        mockInvalidateSiteWideCacheFromRouteHandler,
+      ).not.toHaveBeenCalled();
     });
 
     test("payment_intent.succeeded fixture を改ざんすると署名検証が失敗 → 400", async () => {
