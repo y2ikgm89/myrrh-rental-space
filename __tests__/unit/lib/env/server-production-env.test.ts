@@ -170,4 +170,50 @@ describe("server production env validation", () => {
 
     expect(() => validateProductionEnv()).not.toThrow();
   });
+
+  test("fails fast when in-memory rate limit is paired with MAX_INSTANCES_HINT > 1", async () => {
+    setProductionEnv({
+      RATE_LIMIT_BACKEND: "in-memory",
+      MAX_INSTANCES_HINT: "3",
+    });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).toThrow(
+      /RATE_LIMIT_BACKEND="in-memory".*MAX_INSTANCES_HINT=3/,
+    );
+  });
+
+  test("accepts in-memory rate limit when MAX_INSTANCES_HINT is 1", async () => {
+    setProductionEnv({
+      RATE_LIMIT_BACKEND: "in-memory",
+      MAX_INSTANCES_HINT: "1",
+    });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).not.toThrow();
+  });
+
+  test("accepts multi-instance deploys once a distributed backend is claimed", async () => {
+    setProductionEnv({
+      RATE_LIMIT_BACKEND: "redis",
+      MAX_INSTANCES_HINT: "10",
+    });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).not.toThrow();
+  });
+
+  test("accepts deploys that omit MAX_INSTANCES_HINT entirely", async () => {
+    setProductionEnv({
+      RATE_LIMIT_BACKEND: "in-memory",
+      MAX_INSTANCES_HINT: undefined,
+    });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).not.toThrow();
+  });
 });
