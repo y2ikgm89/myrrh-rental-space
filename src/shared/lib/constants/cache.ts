@@ -114,6 +114,8 @@ export const CACHE_TAGS = {
   PAGE_SECTIONS: "page-sections",
   /** 利用規約 */
   TERMS: "terms",
+  /** 監査ログ (ユーザーごとの最近の閲覧履歴用) */
+  AUDIT_LOGS: "audit-logs",
   /** クーポン */
   COUPONS: "coupons",
   /** ビジネス設定（営業時間・NAP情報等） */
@@ -216,7 +218,7 @@ export const getCacheTag = {
     stats: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-stats-${spaceId}`,
   },
   auditLogs: {
-    recent: (userId: string) => `audit-logs:recent:${userId}`,
+    recent: (userId: string) => `${CACHE_TAGS.AUDIT_LOGS}:recent:${userId}`,
   },
 } as const;
 
