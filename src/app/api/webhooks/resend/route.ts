@@ -227,8 +227,13 @@ function invalidateCustomerCache(): void {
   // 返し続けると、bounce / complaint を観測した直後の送信で silent に
   // suppression が効かず、Gmail / Yahoo bulk sender の complaint rate 上限を
   // 押し上げる silent bug になる。
-  invalidateSiteWideCacheFromRouteHandler([
-    CACHE_TAGS.CUSTOMERS,
-    CACHE_TAGS.SUPPRESSED_EMAILS,
-  ]);
+  //
+  // skipCdnPurge: true — CUSTOMERS / SUPPRESSED_EMAILS は共に admin-only の
+  // private tag (NEXTJS_TAGS_WITHOUT_CDN_MAPPING allowlist)。CDN 経路に emit
+  // されないため SITEMAP co-purge を Cloudflare に飛ばす意味が無い
+  // (Codex PR #945 review 対応)。
+  invalidateSiteWideCacheFromRouteHandler(
+    [CACHE_TAGS.CUSTOMERS, CACHE_TAGS.SUPPRESSED_EMAILS],
+    { skipCdnPurge: true },
+  );
 }

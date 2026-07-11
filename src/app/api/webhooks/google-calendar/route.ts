@@ -194,10 +194,14 @@ export async function POST(request: Request) {
     // webhook は Google Calendar 側の変更を反映する経路のため、SWR ではなく
     // `{expire:0}` の blocking immediate-expire を使う（invalidateSiteWideCache-
     // FromRouteHandler 経由。cron / Route Handler 用の canonical pattern）。
-    invalidateSiteWideCacheFromRouteHandler([
-      CACHE_TAGS.RESERVATIONS,
-      getCacheTag.reservations.calendar(),
-    ]);
+    // skipCdnPurge: true — RESERVATIONS + calendar tag は全て admin-only の
+    // private tag。CDN 経路に emit されないため SITEMAP co-purge を Cloudflare に
+    // 飛ばす意味が無く、webhook 頻度で purge quota を不必要に消費するのを避ける
+    // (Codex PR #945 review 対応)。
+    invalidateSiteWideCacheFromRouteHandler(
+      [CACHE_TAGS.RESERVATIONS, getCacheTag.reservations.calendar()],
+      { skipCdnPurge: true },
+    );
 
     return acknowledgeNotification({
       processed: result.processed,

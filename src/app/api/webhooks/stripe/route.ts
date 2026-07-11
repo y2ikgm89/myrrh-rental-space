@@ -191,11 +191,18 @@ function extractReservationId(
  * @see https://docs.stripe.com/payments/checkout/fulfill-orders
  */
 function invalidateReservationCache(reservationId: string): void {
-  invalidateSiteWideCacheFromRouteHandler([
-    CACHE_TAGS.RESERVATIONS,
-    getCacheTag.reservations.detail(reservationId),
-    getCacheTag.reservations.calendar(),
-  ]);
+  // skipCdnPurge: true — RESERVATIONS + detail + calendar は全て admin-only の
+  // private tag (NEXTJS_TAGS_WITHOUT_CDN_MAPPING allowlist)。CDN 経路に emit されない
+  // ため、SITEMAP co-purge を Cloudflare に飛ばす意味が無く、purge quota を
+  // 不必要に消費する (Codex PR #945 review 対応)。
+  invalidateSiteWideCacheFromRouteHandler(
+    [
+      CACHE_TAGS.RESERVATIONS,
+      getCacheTag.reservations.detail(reservationId),
+      getCacheTag.reservations.calendar(),
+    ],
+    { skipCdnPurge: true },
+  );
 }
 
 /**
