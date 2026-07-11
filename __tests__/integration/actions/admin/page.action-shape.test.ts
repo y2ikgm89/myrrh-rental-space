@@ -51,6 +51,14 @@ mock.module("@/shared/lib/cache", () => ({
   firePurgeAsync: mock(() => {}),
 }));
 
+// 境界 mock: pages.ts は `@/shared/lib/cache/site-wide` の
+// `invalidateSiteWideCache` 経由でしかキャッシュ無効化しない。境界を差し替えれば
+// site-wide.ts の内部 (updateTag / revalidateTag / SITEMAP co-purge) は
+// evaluation 経路に載らず、`next/cache` の drift-prone stub を書く必要が消える。
+mock.module("@/shared/lib/cache/site-wide", () => ({
+  invalidateSiteWideCache: mock(() => {}),
+}));
+
 mock.module("@/shared/lib/cloudflare", () => ({
   purgeCloudflareDetailUrls: mock(async () => ({ success: true })),
   purgeCloudflareCache: mock(async () => ({ success: true })),
@@ -59,13 +67,6 @@ mock.module("@/shared/lib/cloudflare", () => ({
   purgeCloudflareCacheByTags: mock(async () => ({ success: true })),
   callPurgeApiPublic: mock(async () => ({ success: true })),
   getCloudflareCredentialsValidated: mock(() => null),
-}));
-
-mock.module("next/cache", () => ({
-  updateTag: mock(() => {}),
-  revalidateTag: mock(() => {}),
-  cacheLife: mock(() => {}),
-  cacheTag: mock(() => {}),
 }));
 
 type ExecuteOpts<T> = {
