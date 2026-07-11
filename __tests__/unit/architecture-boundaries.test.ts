@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { expectRecord } from "../helpers/type-assertions";
+import { collectSourceFiles } from "../helpers/architecture-fs";
 
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
@@ -392,25 +393,6 @@ function collectPrismaImportingFiles(): string[] {
   ];
   const set = new Set<string>([...seed, ...hits]);
   return [...set].sort();
-}
-
-function collectSourceFiles(dir: string): string[] {
-  const entries = readdirSync(dir, { withFileTypes: true });
-  const files: string[] = [];
-
-  for (const entry of entries) {
-    const fullPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...collectSourceFiles(fullPath));
-      continue;
-    }
-
-    if (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx")) {
-      files.push(fullPath);
-    }
-  }
-
-  return files;
 }
 
 /** TS / TSX / CSS を再帰収集（design token 廃止の横断 grep 用） */
@@ -2262,229 +2244,12 @@ describe("architecture boundaries", () => {
   });
 });
 
-describe("conform FieldMetadata generic invariance gate（方針: .claude/rules/type-safety.md）", () => {
-  test("`as unknown as FieldMetadata` cast は typed-input-control helper 内部のみ許可", () => {
-    const glob = new Bun.Glob("**/*.{ts,tsx}");
-    const allowedFile = join(
-      SRC_ROOT,
-      "shared",
-      "lib",
-      "conform",
-      "typed-input-control.ts",
-    );
-    const pattern = /as\s+unknown\s+as\s+FieldMetadata\b/;
-    const offenders: string[] = [];
-    for (const rel of glob.scanSync({ cwd: SRC_ROOT })) {
-      const abs = join(SRC_ROOT, rel);
-      if (abs === allowedFile) continue;
-      const content = readFileSync(abs, "utf-8");
-      if (pattern.test(content)) {
-        offenders.push(relative(ROOT, abs));
-      }
-    }
-    expect(offenders).toEqual([]);
-  }, 30000);
-
-  test("updateTag/revalidateTag する CACHE_TAGS は cacheTag producer を持つ（または invalidation-only 許可リスト）", () => {
-    // updateTag / revalidateTag に渡す CACHE_TAGS は、いずれかの use cache 関数が cacheTag で
-    // 生成していなければ no-op の死んだ無効化になり、「存在しない契約」を匂わせて将来の保守者を
-    // 惑わせる。下記は「管理エンティティの一覧が現状あえて未キャッシュ（admin は都度フレッシュ
-    // 取得）で、mutation 時の無効化のみ前方互換として置いている」意図的な invalidation-only タグ。
-    // この集合を機械的に固定し、(a) 新たな未生成タグの無効化が紛れ込む（producer を足すか本リストに
-    // 意図を明記するか二択を強制）/ (b) 既存 invalidation-only にキャッシュを足したのに本リストの
-    // 除去を忘れる、の双方向ドリフトを検出する。
-    const INVALIDATION_ONLY = [
-      "BLOCK_TEMPLATES",
-      "COUPONS",
-      "CUSTOMERS",
-      "INQUIRIES",
-      "MEDIA",
-      "RESERVATIONS",
-    ].sort();
-
-    const files = collectSourceFiles(SRC_ROOT);
-    const produced = new Set<string>();
-    const consumed = new Set<string>();
-    const TAG_RE = /CACHE_TAGS\.([A-Z_]+)/gu;
-
-    for (const file of files) {
-      const lines = readFileSync(file, "utf8").split(/\r?\n/u);
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
-        const isProducer = /\bcacheTag\(/u.test(line);
-        const isConsumer = /\b(?:updateTag|revalidateTag)\(/u.test(line);
-        if (!isProducer && !isConsumer) continue;
-        for (const match of line.matchAll(TAG_RE)) {
-          const tag = match[1];
-          if (!tag) continue;
-          if (isProducer) produced.add(tag);
-          if (isConsumer) consumed.add(tag);
-        }
-      }
-    }
-
-    const unproducedConsumed = [...consumed]
-      .filter((tag) => !produced.has(tag))
-      .sort();
-
-    expect(unproducedConsumed).toEqual(INVALIDATION_ONLY);
-  });
-});
-
-describe("SectionConfig union widening cast 構造解消済（方針: .claude/rules/type-safety.md）", () => {
-  test("`as SectionConfig` cast は src/ 全体で 0 件", () => {
-    const glob = new Bun.Glob("**/*.{ts,tsx}");
-    const pattern = /\bas\s+SectionConfig\b/;
-    const offenders: string[] = [];
-    for (const rel of glob.scanSync({ cwd: SRC_ROOT })) {
-      const abs = join(SRC_ROOT, rel);
-      const content = readFileSync(abs, "utf-8");
-      if (pattern.test(content)) {
-        offenders.push(relative(ROOT, abs));
-      }
-    }
-    expect(offenders).toEqual([]);
-  }, 30000);
-});
-
-import nextConfig from "../../next.config";
-import {
-  SITE_WIDE_CDN_TAGS,
-  PRIVATE_NO_TAG_PREFIXES,
-} from "@/shared/lib/constants/cdn-cache-tags";
-
-type HeaderEntry = { key: string; value: string };
-type SourceEntry = { source: string; headers: HeaderEntry[] };
-
-async function getHeaders(): Promise<SourceEntry[]> {
-  // next.config.ts exports default the config object; headers() is an async fn.
-  return (await nextConfig.headers?.()) ?? [];
-}
-
-function expectSourceEntry(
-  headers: SourceEntry[],
-  source: string,
-): SourceEntry {
-  const entry = headers.find((h) => h.source === source);
-  expect(entry, source).toBeDefined();
-  if (entry === undefined) {
-    throw new Error(`${source} header entry must exist`);
-  }
-  return entry;
-}
-
-function expectHeader(
-  entry: SourceEntry,
-  key: string,
-  message?: string,
-): HeaderEntry {
-  const header = entry.headers.find((h) => h.key === key);
-  expect(header, message).toBeDefined();
-  if (header === undefined) {
-    throw new Error(message ?? `${entry.source} must have ${key}`);
-  }
-  return header;
-}
-
-describe("next.config Cache-Tag emission contract", () => {
-  test("headers() returns at least one source entry", async () => {
-    const headers = await getHeaders();
-    expect(headers.length).toBeGreaterThan(0);
-  });
-
-  test("every per-public-collection Cache-Tag value contains the full site-wide set", async () => {
-    const headers = await getHeaders();
-    const publicCollections = [
-      "/blog/:path*",
-      "/category/:path*",
-      "/tag/:path*",
-      "/spaces/:path*",
-      "/news/:path*",
-      "/events/:path*",
-      "/faq/:path*",
-      "/terms/:path*",
-    ];
-    for (const source of publicCollections) {
-      const entry = expectSourceEntry(headers, source);
-      const tagHeader = expectHeader(
-        entry,
-        "Cache-Tag",
-        `${source} must have Cache-Tag`,
-      );
-      const tags = tagHeader.value.split(",");
-      for (const siteWide of SITE_WIDE_CDN_TAGS) {
-        expect(tags, `${source} missing site-wide tag ${siteWide}`).toContain(
-          siteWide,
-        );
-      }
-    }
-  });
-
-  test("home (/) and /about emit home-marketing-v1 in their Cache-Tag value", async () => {
-    const headers = await getHeaders();
-    for (const source of ["/", "/about"]) {
-      const entry = expectSourceEntry(headers, source);
-      const tagHeader = expectHeader(entry, "Cache-Tag");
-      expect(tagHeader.value.split(",")).toContain("home-marketing-v1");
-    }
-  });
-
-  test("private blocklist sources NEVER emit Cache-Tag", async () => {
-    const headers = await getHeaders();
-    for (const prefix of PRIVATE_NO_TAG_PREFIXES) {
-      const source = `${prefix}/:path*`;
-      const entry = expectSourceEntry(headers, source);
-      const tagHeader = entry.headers.find((h) => h.key === "Cache-Tag");
-      expect(
-        tagHeader,
-        `${source} must NOT have Cache-Tag (PII path)`,
-      ).toBeUndefined();
-      const ccHeader = entry.headers.find((h) => h.key === "Cache-Control");
-      expect(ccHeader?.value).toBe("private, no-store");
-    }
-  });
-
-  test("blanket /:path* emits Cache-Control only (no Cache-Tag) so private match-wins inherits no tag", async () => {
-    const headers = await getHeaders();
-    const blanket = expectSourceEntry(headers, "/:path*");
-    const tag = blanket.headers.find((h) => h.key === "Cache-Tag");
-    expect(tag).toBeUndefined();
-    const cc = blanket.headers.find((h) => h.key === "Cache-Control");
-    // canonical: public, max-age=0, must-revalidate, s-maxage=..., stale-while-revalidate=...
-    expect(cc?.value).toMatch(/^public, max-age=0, must-revalidate, s-maxage=/);
-  });
-
-  test("/sitemap.xml emits SITEMAP Cache-Tag only (purge target for site-wide co-purge)", async () => {
-    const headers = await getHeaders();
-    const entry = expectSourceEntry(headers, "/sitemap.xml");
-    const tag = entry.headers.find((h) => h.key === "Cache-Tag");
-    expect(tag?.value).toBe("sitemap-v1");
-    // Cache-Control inherited from blanket public (no per-source override).
-    const cc = entry.headers.find((h) => h.key === "Cache-Control");
-    expect(cc).toBeUndefined();
-  });
-
-  test("/sitemap.xml SITEMAP tag is NOT in any other public source (site-wide invalidation must only purge sitemap)", async () => {
-    const headers = await getHeaders();
-    const SITEMAP_TAG = "sitemap-v1";
-    for (const entry of headers) {
-      if (entry.source === "/sitemap.xml") continue;
-      const tag = entry.headers.find((h) => h.key === "Cache-Tag");
-      if (!tag) continue;
-      expect(
-        tag.value.split(","),
-        `${entry.source} must NOT contain SITEMAP tag`,
-      ).not.toContain(SITEMAP_TAG);
-    }
-  });
-
-  test("/sitemap.xml source appears exactly once (Next.js headers() は last-match-wins、複数 source は Cache-Tag を上書きする)", async () => {
-    const headers = await getHeaders();
-    const sitemapSources = headers.filter((h) => h.source === "/sitemap.xml");
-    expect(
-      sitemapSources,
-      "/sitemap.xml は exactly 1 つの source entry のみ持つこと（複製で SITEMAP tag 上書き bug 防止）",
-    ).toHaveLength(1);
-  });
-});
+// 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
+// 分離済み (2490 行 → 2263 行にスリム化。merge conflict hotspot 緩和が目的)。
+// 引継ぎ先:
+//   - __tests__/unit/architecture/type-safety-cast-and-cache-tag-drift.test.ts
+//     (conform FieldMetadata cast gate + CACHE_TAGS producer/consumer drift)
+//   - __tests__/unit/architecture/section-config-widening-cast.test.ts
+//     (as SectionConfig cast の 0 件強制)
+//   - __tests__/unit/architecture/next-config-cache-tag-emission.test.ts
+//     (next.config headers() Cache-Tag / Cache-Control 契約 8 test)
