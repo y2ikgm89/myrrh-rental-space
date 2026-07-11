@@ -12,6 +12,7 @@ import { getZodConstraint, parseWithZod } from "@conform-to/zod/v4";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
+import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
 import { submitInquiry } from "@/public/actions/inquiry";
@@ -77,10 +78,6 @@ function getSubmitLabel(
   return isPending ? "送信中..." : submitLabel;
 }
 
-function isCustomerType(value: unknown): value is CustomerType {
-  return value === CustomerType.PERSONAL || value === CustomerType.CORPORATE;
-}
-
 const OFFLINE_ERROR_MESSAGE =
   "ネットワーク接続がありません。接続を確認してから再度送信してください。";
 
@@ -143,7 +140,7 @@ export function PublicInquiryFormCard({
   const turnstileTokenControl = useInputControl(fields.turnstileToken);
 
   const customerTypeValue = customerTypeControl.value;
-  const customerType: CustomerType = isCustomerType(customerTypeValue)
+  const customerType: CustomerType = isValidCustomerType(customerTypeValue)
     ? customerTypeValue
     : initialCustomerType;
 
