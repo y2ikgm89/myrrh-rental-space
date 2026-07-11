@@ -208,11 +208,18 @@ function buildAnonymizedEmail(): string {
 /**
  * status=INACTIVE かつ最終アクティビティが `months` を経過した Customer の PII を匿名化する。
  *
- * ## 「最終アクティビティ」の定義（Codex 指摘 #3564864835）
+ * ## 「最終アクティビティ」の定義（Codex 指摘 #3564864835 + #3564883654）
  *
- * `lastReservationAt` を優先し、null（予約履歴なし）の場合は `createdAt` に fallback する。
- * `lastReservationAt` だけを判定に使うと、admin 手作成 / OAuth 連携直後に予約せず放置された
- * INACTIVE customer は永遠に匿名化されず個情法 22 条の PII 蓄積上限を超える。
+ * 優先順に:
+ *
+ * 1. `lastReservationAt < cutoff` — 最終予約から `months` 経過
+ * 2. `lastReservationAt IS NULL AND createdAt < cutoff AND 予約 0 件` — 予約履歴なしの
+ *    dormant customer は `createdAt` に fallback。ただし **予約 0 件の保証** が必須:
+ *    `updateAdminReservationCommand` は予約再割当時に新 customer の `lastReservationAt`
+ *    を再計算しない bug が別途あり、`lastReservationAt=null` でも予約履歴を持つケースが
+ *    存在し得る（Codex #3564883654）。`reservations: { none: {} }` で filter して、
+ *    stale `lastReservationAt` による誤匿名化を構造的に防ぐ。
+ *
  * `updatedAt` ではなく `createdAt` を使うのは意図的: admin が最近 INACTIVE に切り替えても
  * 「作成から `months` 経過していれば dormant PII として匿名化対象」という semantics のため。
  *
@@ -237,10 +244,17 @@ export async function anonymizeInactiveCustomers(
     where: {
       status: CustomerStatus.INACTIVE,
       email: { not: { startsWith: "anonymized-" } },
-      // lastReservationAt が経過 OR (予約履歴なし かつ createdAt が経過)
+      // 1) lastReservationAt が経過、または
+      // 2) 予約 0 件かつ createdAt が経過 (stale lastReservationAt に対する構造的ガード)
       OR: [
         { lastReservationAt: { lt: cutoff } },
-        { AND: [{ lastReservationAt: null }, { createdAt: { lt: cutoff } }] },
+        {
+          AND: [
+            { lastReservationAt: null },
+            { createdAt: { lt: cutoff } },
+            { reservations: { none: {} } },
+          ],
+        },
       ],
     },
     select: { id: true },
