@@ -11,7 +11,6 @@
  * @module api/cron/instagram-sync
  */
 
-import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { getDecryptedInstagramToken } from "@/shared/domain/instagram/queries";
@@ -24,8 +23,9 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
-import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
 /**
  * Instagram Feed Sync Cronエンドポイント
@@ -64,8 +64,10 @@ export async function GET(request: Request) {
     // DBに同期（全件入れ替え）
     await syncInstagramFeed(items);
 
-    // キャッシュを無効化
-    revalidateTag(CACHE_TAGS.INSTAGRAM_FEED, CACHE_LIFE.PUBLIC_CONTENT);
+    // cron / Route Handler では `{expire:0}` の blocking immediate-expire を使う
+    // canonical pattern (`invalidateSiteWideCacheFromRouteHandler` 経由)。
+    // SWR (`CACHE_LIFE.PUBLIC_CONTENT` 直渡し) だと同期直後の閲覧で stale が返る。
+    invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.INSTAGRAM_FEED);
 
     return jsonSuccess({
       synced: items.length,

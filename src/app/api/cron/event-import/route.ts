@@ -9,8 +9,8 @@
 
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
-import { revalidateTag } from "next/cache";
-import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { importCalendarEvents } from "@/shared/lib/calendar-sync/event-inbound";
 import { isGoogleCalendarEnabled } from "@/shared/lib/google-calendar";
 import { getEventImportSettings } from "@/shared/domain/settings/admin-queries";
@@ -79,9 +79,10 @@ export async function GET(request: Request) {
       return jsonError("Event import failed", 503);
     }
 
-    // 変更があった場合のみキャッシュ無効化
+    // 変更があった場合のみキャッシュ無効化。cron / Route Handler の canonical
+    // pattern (`invalidateSiteWideCacheFromRouteHandler` = {expire:0} + CDN purge)。
     if (result.imported > 0 || result.updated > 0) {
-      revalidateTag(CACHE_TAGS.EVENTS, CACHE_LIFE.PUBLIC_CONTENT);
+      invalidateSiteWideCacheFromRouteHandler(CACHE_TAGS.EVENTS);
     }
 
     return jsonSuccess({
