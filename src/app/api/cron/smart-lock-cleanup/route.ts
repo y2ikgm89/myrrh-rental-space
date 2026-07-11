@@ -13,6 +13,7 @@ import { connection } from "next/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { getSwitchBotConfig } from "@/shared/domain/settings/api-key-queries";
 import {
+  expireStalePendingSmartLockPasscodes,
   findRevocableSmartLockPasscodes,
   revokeExpiredSmartLockPasscodes,
 } from "@/shared/domain/smart-lock/revoke-passcode";
@@ -35,13 +36,21 @@ export async function GET(request: Request) {
       return authorizationResult;
     }
 
+    const now = new Date();
+
+    // Stale PENDING の救済は SwitchBot 連携 ON/OFF に関わらず実施する
+    // (DB 読み書きのみで完結、外部 API 呼び出しなし)。webhook 待ち PENDING が
+    // 30 分経っても届かなかった行を FAILED へ倒し、`@@unique([reservationId, deviceId])`
+    // 下で再発行不可の orphan を残さない。詳細は revoke-passcode.ts の JSDoc 参照。
+    const stalePendingExpired = await expireStalePendingSmartLockPasscodes(now);
+
     const config = await getSwitchBotConfig();
     if (!config.enabled) {
       // SwitchBot連携が無効でも、失効すべきCONFIRMEDパスコードの蓄積は
       // DBのみの読取(外部API呼出無し)で検知できる。無効化中に気づかず放置される
       // （後日デバイス削除でcascade削除されると復元不能になる）のを防ぐため、
       // 件数だけでも警告ログに残す。
-      const stuck = await findRevocableSmartLockPasscodes(new Date());
+      const stuck = await findRevocableSmartLockPasscodes(now);
       if (stuck.length > 0) {
         logError(
           new Error(
@@ -53,6 +62,7 @@ export async function GET(request: Request) {
             context: {
               operation: "smartLockCleanupCron",
               stuckCount: stuck.length,
+              stalePendingExpired,
             },
           },
         );
@@ -61,22 +71,26 @@ export async function GET(request: Request) {
         skipped: true,
         reason: "switchbot_disabled",
         stuckCount: stuck.length,
+        stalePendingExpired,
       });
     }
 
-    const { revoked, failed } = await revokeExpiredSmartLockPasscodes(
-      new Date(),
-    );
+    const { revoked, failed } = await revokeExpiredSmartLockPasscodes(now);
 
     if (failed > 0) {
       logError(new Error("Some SwitchBot passcodes failed to revoke"), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: "smartLockCleanupCron", revoked, failed },
+        context: {
+          operation: "smartLockCleanupCron",
+          revoked,
+          failed,
+          stalePendingExpired,
+        },
       });
     }
 
-    return jsonSuccess({ revoked, failed });
+    return jsonSuccess({ revoked, failed, stalePendingExpired });
   } catch (error) {
     unstable_rethrow(error);
     logError(normalizeError(error), {
