@@ -24,7 +24,7 @@ import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
  * | login_attempts     | DELETE     | createdAt < now - loginAttemptMonths        |
  * | Reservation.guest* | NULL 化    | endTime + reservationGuestMonths < now      |
  * | Inquiry            | DELETE     | createdAt < now - inquiryMonths             |
- * | Customer (INACTIVE)| PII 匿名化 | status=INACTIVE ∧ lastReservationAt < now - customerInactiveMonths |
+ * | Customer (INACTIVE)| PII 匿名化 | status=INACTIVE ∧ COALESCE(lastReservationAt, createdAt) < now - customerInactiveMonths |
  *
  * ## 契約
  *
@@ -56,10 +56,48 @@ export async function getDataRetentionConfig(): Promise<DataRetentionConfig> {
   return parseDataRetentionConfig(row?.dataRetention);
 }
 
+/**
+ * `now` から `months` ヶ月前の UTC 時刻を返す。
+ *
+ * ## 月末の day overflow に注意（Codex 指摘 #3564864832）
+ *
+ * ネイティブの `Date.setUTCMonth(m - months)` は「target month に該当日が存在しない」
+ * ケースを **翌月に overflow** させる仕様。例: `2027-08-31 - 6mo` は本来 2027-02 を
+ * 期待するが setUTCMonth は Feb-31 が存在しないため 2027-03-03 を返す。
+ *
+ * これを cutoff として使うと March 1-2 に作られたレコードが「6mo 未満」なのに purge
+ * 対象に入る（cutoff が本来より 3 日新しい）。データ保持契約の破壊。
+ *
+ * 対策: target month の最終日を計算し、元の day をその値でクランプする。
+ * `2027-08-31 - 6mo` は 2027-02-28、`2028-08-31 - 6mo` は 2028-02-29 (閏年)。
+ */
 function monthsAgo(now: Date, months: number): Date {
-  const cutoff = new Date(now);
-  cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
-  return cutoff;
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const day = now.getUTCDate();
+
+  // target year / month (負の月を modulo 演算で正規化)
+  const totalMonths = month - months;
+  const targetYear = year + Math.floor(totalMonths / 12);
+  const targetMonth = ((totalMonths % 12) + 12) % 12;
+
+  // target month の末日 (day 0 = 前月末) を計算し、元の day をクランプ
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(targetYear, targetMonth + 1, 0),
+  ).getUTCDate();
+  const targetDay = Math.min(day, lastDayOfTargetMonth);
+
+  return new Date(
+    Date.UTC(
+      targetYear,
+      targetMonth,
+      targetDay,
+      now.getUTCHours(),
+      now.getUTCMinutes(),
+      now.getUTCSeconds(),
+      now.getUTCMilliseconds(),
+    ),
+  );
 }
 
 /**
@@ -168,7 +206,17 @@ function buildAnonymizedEmail(): string {
 }
 
 /**
- * status=INACTIVE かつ最終予約が `months` を経過した Customer の PII を匿名化する。
+ * status=INACTIVE かつ最終アクティビティが `months` を経過した Customer の PII を匿名化する。
+ *
+ * ## 「最終アクティビティ」の定義（Codex 指摘 #3564864835）
+ *
+ * `lastReservationAt` を優先し、null（予約履歴なし）の場合は `createdAt` に fallback する。
+ * `lastReservationAt` だけを判定に使うと、admin 手作成 / OAuth 連携直後に予約せず放置された
+ * INACTIVE customer は永遠に匿名化されず個情法 22 条の PII 蓄積上限を超える。
+ * `updatedAt` ではなく `createdAt` を使うのは意図的: admin が最近 INACTIVE に切り替えても
+ * 「作成から `months` 経過していれば dormant PII として匿名化対象」という semantics のため。
+ *
+ * ## 匿名化仕様
  *
  * - email / emailCanonical は non-routable な `anonymized-<uuid>@myrrh-anon.invalid` に置換
  *   （UNIQUE 制約を破壊しないため per-record で uuid を発行、複数レコードで衝突しない）
@@ -188,8 +236,12 @@ export async function anonymizeInactiveCustomers(
   const targets = await prisma.customer.findMany({
     where: {
       status: CustomerStatus.INACTIVE,
-      lastReservationAt: { lt: cutoff },
       email: { not: { startsWith: "anonymized-" } },
+      // lastReservationAt が経過 OR (予約履歴なし かつ createdAt が経過)
+      OR: [
+        { lastReservationAt: { lt: cutoff } },
+        { AND: [{ lastReservationAt: null }, { createdAt: { lt: cutoff } }] },
+      ],
     },
     select: { id: true },
   });
