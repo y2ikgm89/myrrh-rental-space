@@ -115,6 +115,27 @@ const mockTransaction = mock<
 const mockExecuteRaw = mock<
   (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
 >(() => Promise.resolve(0));
+// recomputeCustomerReservationStats が updateAdminReservationCommand の予約再割当
+// 経路で発火した場合に返す形。デフォルトは 0 件 (updateMany-like semantics)。
+// 個別テストで stats を検証したい場合は mockQueryRaw.mockImplementationOnce で
+// 差し替える。
+const mockQueryRaw = mock<
+  (
+    strings: TemplateStringsArray,
+    ...values: unknown[]
+  ) => Promise<
+    Array<{
+      count: bigint;
+      sum: number | null;
+      first_created: Date | null;
+      last_created: Date | null;
+    }>
+  >
+>(() =>
+  Promise.resolve([
+    { count: 0n, sum: null, first_created: null, last_created: null },
+  ]),
+);
 const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
   Promise.resolve(null),
 );
@@ -156,6 +177,7 @@ const txClient = {
     findFirst: mockBlockedDateFindFirst,
   },
   $executeRaw: mockExecuteRaw,
+  $queryRaw: mockQueryRaw,
 };
 
 // ---------------------------------------------------------------------------
@@ -248,6 +270,12 @@ function resetAllMocks() {
   mockTransaction.mockClear();
   mockExecuteRaw.mockClear();
   mockExecuteRaw.mockResolvedValue(0);
+  mockQueryRaw.mockClear();
+  mockQueryRaw.mockImplementation(() =>
+    Promise.resolve([
+      { count: 0n, sum: null, first_created: null, last_created: null },
+    ]),
+  );
   mockBlockedDateFindFirst.mockClear();
   mockBlockedDateFindFirst.mockResolvedValue(null);
   mockTxReservationFindFirst.mockClear();
@@ -621,7 +649,10 @@ describe("updateAdminReservationCommand", () => {
 
   beforeEach(() => {
     resetAllMocks();
-    // 既存予約をセットアップ（日時は validInput と異なる値にし、diff 検知のデフォルトを true にする）
+    // 既存予約をセットアップ（日時は validInput と異なる値にし、diff 検知のデフォルトを true にする）。
+    // customerId は validInput.customerId と一致させて再割当経路を発火させない
+    // (PR #992 の recompute ガードは currentReservation.customerId !== input.customerId
+    // を invariant にしている)。
     mockReservationFindUnique.mockImplementation(() =>
       Promise.resolve({
         id: "res-1",
@@ -631,6 +662,7 @@ describe("updateAdminReservationCommand", () => {
         endTime: new Date("2024-06-15T10:00:00"),
         totalPrice: 1000,
         couponId: null,
+        customerId: "cust-1",
         googleCalendarEventId: null,
         customer: {
           firstName: "太郎",
@@ -668,6 +700,7 @@ describe("updateAdminReservationCommand", () => {
           endTime: new Date("2024-06-15T12:00:00"),
           totalPrice: 2000,
           couponId: null,
+          customerId: "cust-1",
           googleCalendarEventId: null,
           customer: {
             firstName: "太郎",
@@ -719,6 +752,7 @@ describe("updateAdminReservationCommand", () => {
           id: "res-1",
           status: ReservationStatus.PENDING,
           couponId: "old-coupon-id",
+          customerId: "cust-1",
           googleCalendarEventId: null,
           customer: {
             firstName: "太郎",

@@ -195,32 +195,53 @@ export async function incrementCustomerReservationStats(
  *
  * - `deletedAt: null` の予約のみを対象 (soft-delete は「無かった」扱い)
  * - `totalReservations` = COUNT
- * - `totalSpent` = SUM(totalPriceWithTax) — 0 件なら null (Customer 列と一致)
+ * - `totalSpent` = SUM(COALESCE(totalPriceWithTax, totalPrice, 0)) — 0 円 / 0 件は
+ *   null に折りたたむ (Customer.totalSpent の列 semantics と一致)。COALESCE fallback は
+ *   admin 経路の予約が totalPriceWithTax を populate しない (customer-commands.ts の
+ *   customer self-service update だけが setter) ため必須。fallback なしでは admin
+ *   作成予約が SUM から silently drop し、totalSpent が本番で恒常 null になる
+ *   (Codex #3564968552)。
  * - `firstReservationAt` = MIN(createdAt)、`lastReservationAt` = MAX(createdAt)
  *   (`incrementCustomerReservationStats` の `now` semantics と揃える — 予約の実施
  *   時刻ではなく作成時刻。0 件なら null)
+ *
+ * ## 実装
+ *
+ * Prisma の `_sum` は SQL COALESCE を直接受けられないため、単一 `$queryRaw` で
+ * COUNT / SUM(COALESCE) / MIN / MAX を一度に取る。float8 cast で JS 数値として
+ * 受ける (Customer.totalSpent は Decimal(10,2) だが小売レンジで float 精度で十分。
+ * 既存 `mergeCustomerCommand` の `Number(stats._sum.totalPriceWithTax)` cast と
+ * 同じ trade-off)。
  */
 export async function recomputeCustomerReservationStats(
   tx: Tx,
   customerId: string,
 ): Promise<void> {
-  const stats = await tx.reservation.aggregate({
-    where: { customerId, deletedAt: null },
-    _count: true,
-    _sum: { totalPriceWithTax: true },
-    _min: { createdAt: true },
-    _max: { createdAt: true },
-  });
+  const rows = await tx.$queryRaw<
+    Array<{
+      count: bigint;
+      sum: number | null;
+      first_created: Date | null;
+      last_created: Date | null;
+    }>
+  >`
+    SELECT
+      COUNT(*)::bigint AS count,
+      SUM(COALESCE("totalPriceWithTax", "totalPrice"))::float8 AS sum,
+      MIN("createdAt") AS first_created,
+      MAX("createdAt") AS last_created
+    FROM "reservations"
+    WHERE "customerId" = ${customerId} AND "deletedAt" IS NULL
+  `;
+  const stats = rows[0];
 
   await tx.customer.update({
     where: { id: customerId },
     data: {
-      totalReservations: stats._count,
-      totalSpent: stats._sum.totalPriceWithTax
-        ? Number(stats._sum.totalPriceWithTax)
-        : null,
-      firstReservationAt: stats._min.createdAt,
-      lastReservationAt: stats._max.createdAt,
+      totalReservations: stats ? Number(stats.count) : 0,
+      totalSpent: stats?.sum ? Number(stats.sum) : null,
+      firstReservationAt: stats?.first_created ?? null,
+      lastReservationAt: stats?.last_created ?? null,
     },
   });
 }
