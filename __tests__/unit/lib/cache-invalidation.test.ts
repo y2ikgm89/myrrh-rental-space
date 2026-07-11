@@ -22,6 +22,8 @@ mock.module("next/cache", () => ({
   ...actualNextCache,
   updateTag: mockUpdateTag,
   revalidateTag: mockRevalidateTag,
+  cacheLife: mock(() => undefined),
+  cacheTag: mock(() => undefined),
 }));
 mock.module("@/shared/lib/cloudflare", () => ({
   purgeCloudflareCacheByTags: mockPurgeByTags,

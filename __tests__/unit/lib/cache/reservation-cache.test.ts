@@ -8,6 +8,9 @@ const actualNextCache = await import("next/cache");
 mock.module("next/cache", () => ({
   ...actualNextCache,
   updateTag: updateTagMock,
+  cacheLife: mock(() => undefined),
+  cacheTag: mock(() => undefined),
+  revalidateTag: mock(() => undefined),
 }));
 
 const { invalidateReservationCaches } =
