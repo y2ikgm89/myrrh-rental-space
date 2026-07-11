@@ -110,6 +110,25 @@ describe("invalidateSiteWideCacheFromRouteHandler", () => {
     expect(mockRevalidateTag).toHaveBeenCalledWith("navigation", { expire: 0 });
     // fireAndForget invoked, purge thunk queued
     expect(mockFireAndForget).toHaveBeenCalled();
+    // Regression guard: without skipCdnPurge, the Route Handler variant fires
+    // Cloudflare purgeCloudflareCacheByTags directly (no batcher path).
+    expect(mockPurgeByTags).toHaveBeenCalled();
+    // Batcher path is Server-Action only — must not be touched here.
+    expect(mockQueueTagPurge).not.toHaveBeenCalled();
+  });
+
+  test("skipCdnPurge:true suppresses ALL CDN side effects (no purgeCloudflareCacheByTags, no fireAndForget, no queueTagPurge)", () => {
+    // Root-cause pin for cron/calendar-sync alignment with the sibling webhook
+    // route (PR #945). RESERVATIONS + calendar tags are admin-only private
+    // tags — the cron / webhook must NOT waste Cloudflare purge quota on them.
+    invalidateSiteWideCacheFromRouteHandler(
+      [CACHE_TAGS.RESERVATIONS, "reservations-calendar"],
+      { skipCdnPurge: true },
+    );
+    expect(mockRevalidateTag).toHaveBeenCalledTimes(2);
+    expect(mockPurgeByTags).not.toHaveBeenCalled();
+    expect(mockFireAndForget).not.toHaveBeenCalled();
+    expect(mockQueueTagPurge).not.toHaveBeenCalled();
   });
 });
 

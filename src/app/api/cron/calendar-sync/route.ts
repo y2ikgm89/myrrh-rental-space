@@ -174,10 +174,14 @@ export async function GET(request: Request) {
       // カレンダー同期後に予約データを最新化。cron / Route Handler の canonical
       // pattern (`invalidateSiteWideCacheFromRouteHandler` = {expire:0} + CDN purge)。
       // GCal webhook 側 (/api/webhooks/google-calendar) と同型。
-      invalidateSiteWideCacheFromRouteHandler([
-        CACHE_TAGS.RESERVATIONS,
-        getCacheTag.reservations.calendar(),
-      ]);
+      // skipCdnPurge: true — RESERVATIONS + calendar tag は全て admin-only の
+      // private tag。CDN 経路に emit されないため SITEMAP co-purge を Cloudflare に
+      // 飛ばす意味が無く、cron 頻度で purge quota を不必要に消費するのを避ける
+      // (PR #945 の webhook 側と同一根拠。sibling /api/webhooks/google-calendar 参照)。
+      invalidateSiteWideCacheFromRouteHandler(
+        [CACHE_TAGS.RESERVATIONS, getCacheTag.reservations.calendar()],
+        { skipCdnPurge: true },
+      );
 
       return jsonSuccess({
         processed: result.processed,
