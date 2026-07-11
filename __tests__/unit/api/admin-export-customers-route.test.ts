@@ -7,6 +7,7 @@ type CsvColumn = { header: string; accessor?: (row: unknown) => unknown };
 const mockGenerateCsv = mock<(rows: unknown[], columns: CsvColumn[]) => string>(
   () => "",
 );
+const mockCreateAuditLogRecord = mock();
 
 mock.module("next/server", () => ({
   NextResponse,
@@ -28,6 +29,12 @@ mock.module("@/shared/lib/csv", () => ({
     mockGenerateCsv(...args),
 }));
 
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: (
+    ...args: Parameters<typeof mockCreateAuditLogRecord>
+  ) => mockCreateAuditLogRecord(...args),
+}));
+
 const { GET } = await import("@/app/api/admin/export/customers/route");
 
 describe("GET /api/admin/export/customers", () => {
@@ -35,6 +42,7 @@ describe("GET /api/admin/export/customers", () => {
     mockCheckPermission.mockReset();
     mockGetCustomersForExport.mockReset();
     mockGenerateCsv.mockReset();
+    mockCreateAuditLogRecord.mockReset();
   });
 
   describe("正常系", () => {

@@ -1,5 +1,6 @@
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getCustomersForExport } from "@/shared/domain/customers/export-queries";
 import { generateCsv } from "@/shared/lib/csv";
 import {
@@ -12,6 +13,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
   CUSTOMER_STATUS_LABELS,
   CUSTOMER_TYPE_LABELS,
@@ -32,6 +34,19 @@ export async function GET(request: Request): Promise<Response> {
     }
 
     const customers = await getCustomersForExport();
+
+    // GDPR Art.30 / 個情法33条: PII 一括出力は AuditAction.EXPORT で証跡化する。
+    // 監査ログ内部エラーで 出力自体を落とさないよう createAuditLogRecord は先に
+    // 走らせ、失敗時は logError で残す（write は hash-chain 上の必要順序）。
+    await createAuditLogRecord({
+      userId: auth.user.id,
+      action: AuditAction.EXPORT,
+      resource: "customer",
+      metadata: {
+        format: "csv",
+        exportedCount: customers.length,
+      },
+    });
 
     const csv = generateCsv(customers, [
       { header: "顧客ID", accessor: (c) => c.id.slice(0, 8).toUpperCase() },

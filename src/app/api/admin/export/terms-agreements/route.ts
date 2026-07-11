@@ -1,5 +1,6 @@
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getAdminAgreements } from "@/shared/domain/terms/admin-queries";
 import { generateCsv } from "@/shared/lib/csv";
 import { formatJstDateString, formatJstYmdHm } from "@/shared/lib/date-format";
@@ -13,7 +14,10 @@ import {
   TERMS_SCOPE_LABELS,
   isTermsScope,
 } from "@/shared/lib/validations/terms";
-import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  type TermsScope,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
 
 /**
@@ -55,6 +59,21 @@ export async function GET(request: Request): Promise<Response> {
       ...(scope !== undefined && { scope }),
       ...(termsId !== undefined && { termsId }),
       ...(guestEmailKeyword !== undefined && { guestEmailKeyword }),
+    });
+
+    await createAuditLogRecord({
+      userId: auth.user.id,
+      action: AuditAction.EXPORT,
+      resource: "terms",
+      metadata: {
+        format: "csv",
+        exportedCount: items.length,
+        filters: {
+          ...(scope !== undefined && { scope }),
+          ...(termsId !== undefined && { termsId }),
+          ...(guestEmailKeyword !== undefined && { guestEmailKeyword }),
+        },
+      },
     });
 
     const csv = generateCsv(items, [
