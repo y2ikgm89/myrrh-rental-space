@@ -37,6 +37,8 @@ import type {
 } from "./ticket-types";
 import type { SlotInput } from "./slot-commands";
 import { syncEventTimeSlotsCommand } from "./slot-commands";
+import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
+import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -177,6 +179,31 @@ export async function createEventCommand(data: EventCommandInput) {
   const slug = await ensureUniqueSlug(data.slug);
 
   const event = await prisma.$transaction(async (tx) => {
+    // Space ↔ Reservation cross-table overlap check (Priority-10 audit #4)。
+    // Event が spaceId を持つ場合、advisory lock で Space スケジュール空間を直列化して
+    // 各スロットが Reservation / 他 Event と重複しないことを確認する。
+    if (data.spaceId) {
+      await lockSpaceForTransaction(tx, data.spaceId);
+      for (const slot of data.slots) {
+        const overlap = await checkSpaceOverlap(
+          {
+            spaceId: data.spaceId,
+            startTime: slot.startAt,
+            endTime: slot.endAt,
+          },
+          tx,
+        );
+        if (overlap.hasOverlap) {
+          throw new DomainError(
+            overlap.type === "reservation"
+              ? "選択された時間帯は既に予約されています。別の時間帯をお選びください。"
+              : "選択された時間帯は既に他のイベントで予約されています。別の時間帯をお選びください。",
+            "CONFLICT",
+          );
+        }
+      }
+    }
+
     const created = await tx.event.create({
       data: {
         title: data.title,
@@ -258,6 +285,33 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     data.status === EventStatus.PUBLISHED;
 
   await prisma.$transaction(async (tx) => {
+    // Space ↔ Reservation cross-table overlap check (Priority-10 audit #4)。
+    // spaceId が指定されていれば advisory lock で Space スケジュール空間を直列化し、
+    // 各スロットが Reservation / 他 Event と重複しないことを確認する。
+    // excludeEventId で自イベントの既存スロットは除外 (slot 差分同期の前提)。
+    if (data.spaceId) {
+      await lockSpaceForTransaction(tx, data.spaceId);
+      for (const slot of data.slots) {
+        const overlap = await checkSpaceOverlap(
+          {
+            spaceId: data.spaceId,
+            startTime: slot.startAt,
+            endTime: slot.endAt,
+            excludeEventId: id,
+          },
+          tx,
+        );
+        if (overlap.hasOverlap) {
+          throw new DomainError(
+            overlap.type === "reservation"
+              ? "選択された時間帯は既に予約されています。別の時間帯をお選びください。"
+              : "選択された時間帯は既に他のイベントで予約されています。別の時間帯をお選びください。",
+            "CONFLICT",
+          );
+        }
+      }
+    }
+
     await tx.event.update({
       where: { id, deletedAt: null },
       data: {
