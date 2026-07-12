@@ -25,6 +25,8 @@ import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import { CheckoutButton } from "./checkout-button";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -305,6 +307,18 @@ export function ReservationDetail({
           />
         </div>
       )}
+
+      {/* Stripe Checkout ボタン (PR#7): paymentStatus=UNPAID かつ totalPrice>0 のみ */}
+      {paymentStatusEnum === PaymentStatus.UNPAID &&
+        reservation.totalPrice !== null &&
+        reservation.totalPrice > 0 && (
+          <div className="border-t border-border px-4 py-4 sm:px-6">
+            <p className="mb-3 text-sm text-muted-foreground">
+              オンライン決済でお支払い頂けます。決済完了までは予約は仮確定状態です。
+            </p>
+            <CheckoutButton reservationId={id} />
+          </div>
+        )}
 
       {/* Footer: mobile は full-width tap area / sm+ は両端寄せ */}
       <div className="flex flex-col gap-2 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6">
