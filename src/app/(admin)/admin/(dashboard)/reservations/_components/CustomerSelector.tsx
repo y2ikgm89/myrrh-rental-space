@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import {
   IconSearch,
   IconUser,
@@ -54,6 +54,10 @@ export function CustomerSelector({
   allowNewCustomer = true,
   ariaDescribedBy,
 }: CustomerSelectorProps) {
+  const lastNameErrorId = useId();
+  const firstNameErrorId = useId();
+  const emailErrorId = useId();
+  const phoneNumberErrorId = useId();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<CustomerSearchResult[]>(
     [],
@@ -298,7 +302,16 @@ export function CustomerSelector({
         </div>
       )}
 
-      {/* 新規顧客入力モード（allowNewCustomer=true の場合のみ） */}
+      {/*
+       * 新規顧客入力モード（allowNewCustomer=true の場合のみ）
+       *
+       * 親フォーム (conform) の errors オブジェクトを受け取り、各 Input に
+       * aria-invalid + aria-describedby を配線して SR にエラーを伝達する。
+       * autoComplete は「新規顧客の情報を管理者が入力する」ユースケースであり、
+       * 管理者本人の profile とは異なるため section-token で分離し、
+       * autofill 誤動作を防ぎつつ family-name / given-name / email / tel の
+       * 意味情報だけ伝える。
+       */}
       {allowNewCustomer && isNewCustomer && (
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -310,14 +323,19 @@ export function CustomerSelector({
               <Input
                 id="new-customer-lastName"
                 type="text"
+                autoComplete="section-new-customer family-name"
                 placeholder="山田"
                 value={newCustomerForm.lastName}
                 onChange={(e) =>
                   handleNewCustomerInputChange("lastName", e.target.value)
                 }
+                aria-invalid={errors?.["lastName"] ? true : undefined}
+                aria-describedby={
+                  errors?.["lastName"] ? lastNameErrorId : undefined
+                }
               />
               {errors?.["lastName"] && (
-                <p className="text-sm text-destructive">
+                <p id={lastNameErrorId} className="text-sm text-destructive">
                   {errors["lastName"]?.[0]}
                 </p>
               )}
@@ -331,14 +349,19 @@ export function CustomerSelector({
               <Input
                 id="new-customer-firstName"
                 type="text"
+                autoComplete="section-new-customer given-name"
                 placeholder="太郎"
                 value={newCustomerForm.firstName}
                 onChange={(e) =>
                   handleNewCustomerInputChange("firstName", e.target.value)
                 }
+                aria-invalid={errors?.["firstName"] ? true : undefined}
+                aria-describedby={
+                  errors?.["firstName"] ? firstNameErrorId : undefined
+                }
               />
               {errors?.["firstName"] && (
-                <p className="text-sm text-destructive">
+                <p id={firstNameErrorId} className="text-sm text-destructive">
                   {errors["firstName"]?.[0]}
                 </p>
               )}
@@ -353,14 +376,19 @@ export function CustomerSelector({
             <Input
               id="new-customer-email"
               type="email"
+              autoComplete="section-new-customer email"
               placeholder="example@example.com"
               value={newCustomerForm.email}
               onChange={(e) =>
                 handleNewCustomerInputChange("email", e.target.value)
               }
+              aria-invalid={errors?.["email"] ? true : undefined}
+              aria-describedby={errors?.["email"] ? emailErrorId : undefined}
             />
             {errors?.["email"] && (
-              <p className="text-sm text-destructive">{errors["email"]?.[0]}</p>
+              <p id={emailErrorId} className="text-sm text-destructive">
+                {errors["email"]?.[0]}
+              </p>
             )}
           </div>
 
@@ -370,14 +398,19 @@ export function CustomerSelector({
             <Input
               id="new-customer-phoneNumber"
               type="tel"
+              autoComplete="section-new-customer tel"
               placeholder="090-1234-5678"
               value={newCustomerForm.phoneNumber}
               onChange={(e) =>
                 handleNewCustomerInputChange("phoneNumber", e.target.value)
               }
+              aria-invalid={errors?.["phoneNumber"] ? true : undefined}
+              aria-describedby={
+                errors?.["phoneNumber"] ? phoneNumberErrorId : undefined
+              }
             />
             {errors?.["phoneNumber"] && (
-              <p className="text-sm text-destructive">
+              <p id={phoneNumberErrorId} className="text-sm text-destructive">
                 {errors["phoneNumber"]?.[0]}
               </p>
             )}
