@@ -164,6 +164,21 @@ mock.module("@/shared/domain/reservations/customer-commands", () => ({
   updateCustomerReservation: mockUpdateCustomerReservation,
 }));
 
+// PR#14 で action が updateCustomerReservation の前に getReservationSnapshotForEdit を
+// 呼び (SwitchBot 再発行のための old snapshot 取得)、成功後に applyReservationEditSideEffects
+// を fireAndForget する。両者を no-op モックにする (mypage action test は
+// updateCustomerReservation の入出力のみを検証する scope)。
+mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
+  getReservationSnapshotForEdit: mock(() =>
+    Promise.resolve({
+      spaceId: "space-1",
+      startTime: new Date("2026-12-01T00:00:00.000Z"),
+      endTime: new Date("2026-12-01T02:00:00.000Z"),
+    }),
+  ),
+  applyReservationEditSideEffects: mock(() => Promise.resolve([])),
+}));
+
 // 設定クエリモック
 const mockGetReservationDeadlineSettings = mock(
   (): Promise<{

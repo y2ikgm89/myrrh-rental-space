@@ -27,5 +27,6 @@ export const reservationUpdatedFixture = {
   cancellationDeadlineHours: 24,
   modificationDeadlineHours: 24,
   cancellationPolicyUrl: "https://example.com/terms/cancellation-policy",
+  smartLockPasscodes: [{ deviceName: "エントランス", passcode: "482913" }],
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof ReservationUpdatedEmail>[0];

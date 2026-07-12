@@ -210,36 +210,41 @@ export async function updateReservationAction(
         });
 
         // PR#14: 変更前スナップショットと入力を比較し、spaceId or 時刻変更ありなら
-        // SwitchBot passcode の revoke + reissue を実行 (tx 外、fireAndForget)。
-        if (before) {
-          const newStartTime = buildDateTime(data.date, data.startTime);
-          const newEndTime = buildDateTime(data.date, data.endTime);
-          fireAndForget(
-            applyReservationEditSideEffects({
-              reservationId: data.reservationId,
-              oldSpaceId: before.spaceId,
-              oldStartTime: before.startTime,
-              oldEndTime: before.endTime,
-              newSpaceId: data.spaceId,
-              newStartTime,
-              newEndTime,
-            }),
-            {
-              operation: "applyReservationEditSideEffects",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.MEDIUM,
-              context: { reservationId: data.reservationId },
-            },
-          );
-        }
-
-        // 変更後の最新状態を再取得して顧客+管理者へ変更通知メールを送信。
-        // ステータス変更/キャンセル同様、重要取引通知として常時送信する。
+        // SwitchBot passcode の revoke + reissue を実行し (tx 外)、新パスコードを
+        // 顧客への変更通知メールに含めて送信する (Codex P1 対応)。
+        //
+        // side-effects → email を 1 つの fireAndForget で直列化することで、
+        // 発行された新パスコードが update email に載る動線を確保する。
+        // 発行失敗 (issueSmartLockPasscodes 内で処理) 時は空配列が返り、
+        // update email は passcode セクション無しで通常送信される。
         fireAndForget(
           (async () => {
+            let smartLockPasscodes: readonly {
+              deviceName: string;
+              passcode: string;
+            }[] = [];
+            if (before) {
+              const newStartTime = buildDateTime(data.date, data.startTime);
+              const newEndTime = buildDateTime(data.date, data.endTime);
+              smartLockPasscodes = await applyReservationEditSideEffects({
+                reservationId: data.reservationId,
+                oldSpaceId: before.spaceId,
+                oldStartTime: before.startTime,
+                oldEndTime: before.endTime,
+                newSpaceId: data.spaceId,
+                newStartTime,
+                newEndTime,
+              });
+            }
+
             const payload = await fetchReservationEmailData(data.reservationId);
             if (!payload) return;
-            const payloadData = omitUndefined(payload);
+            const payloadData = omitUndefined({
+              ...payload,
+              ...(smartLockPasscodes.length > 0
+                ? { smartLockPasscodes: [...smartLockPasscodes] }
+                : {}),
+            });
             await Promise.all([
               sendReservationUpdatedEmail(payloadData),
               sendReservationAdminNotification(payloadData, "update"),
