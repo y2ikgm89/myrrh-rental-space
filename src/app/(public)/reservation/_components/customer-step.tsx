@@ -211,6 +211,24 @@ export function CustomerStep({
             {...getInputProps(fields.phoneNumber, { type: "tel" })}
           />
 
+          <Input
+            label="クーポンコード（任意）"
+            placeholder="例: WELCOME10"
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby="coupon-code-hint"
+            {...(fields.couponCode.errors?.[0] !== undefined && {
+              error: fields.couponCode.errors[0],
+            })}
+            {...getInputProps(fields.couponCode, { type: "text" })}
+          />
+          <p
+            id="coupon-code-hint"
+            className="-mt-2 text-xs text-muted-foreground"
+          >
+            クーポンをお持ちの方は入力してください（大文字・数字）
+          </p>
+
           <Textarea
             label="備考（任意）"
             rows={3}

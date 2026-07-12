@@ -20,6 +20,7 @@ import {
   getReservationSettings,
   incrementCustomerReservationStats,
   buildPayload,
+  validateCoupon,
 } from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
 
@@ -52,6 +53,8 @@ type PublicReservationInput = {
   customerType?: CustomerType | undefined;
   notes?: string | null | undefined;
   userId?: string | null | undefined;
+  /** クーポンコード。空文字/undefined は「未入力」。サーバー側で validateCoupon が形式・有効性を検証。 */
+  couponCode?: string | null | undefined;
 };
 
 export async function createPublicReservationCommand(
@@ -105,8 +108,9 @@ export async function createPublicReservationCommand(
 
   // 公開予約フォームの料金確定はサーバー側 SSoT。スペース固有割引（Space モデル）と
   // 長時間割引（Settings）を calculateReservationPrice 経由で適用する。
-  // クーポンは公開フォームに code 入力 UI が無いため null（mypage 経路で適用）。
+  // クーポンは Step 3 の CouponCode 入力欄から。空文字/undefined は「未入力」で null 扱い。
   const settings = await getReservationSettings();
+  const validatedCoupon = await validateCoupon(input.couponCode, basePrice);
   const spaceDiscount =
     space.discountType !== "none" &&
     space.discountValue != null &&
@@ -117,15 +121,20 @@ export async function createPublicReservationCommand(
           durationDiscountOverride: space.durationDiscountOverride,
         }
       : null;
-  const { totalPrice, durationDiscountAmount, spaceDiscountAmount } =
-    calculatePricing({
-      hourlyPrice: space.hourlyPrice,
-      hours,
-      basePrice,
-      settings,
-      coupon: null,
-      spaceDiscount,
-    });
+  const {
+    totalPrice,
+    couponId,
+    couponDiscountAmount,
+    durationDiscountAmount,
+    spaceDiscountAmount,
+  } = calculatePricing({
+    hourlyPrice: space.hourlyPrice,
+    hours,
+    basePrice,
+    settings,
+    coupon: validatedCoupon,
+    spaceDiscount,
+  });
 
   const reservation = await prisma.$transaction(async (tx) => {
     await lockSpaceForTransaction(tx, input.spaceId);
@@ -164,6 +173,8 @@ export async function createPublicReservationCommand(
         endTime: endDateTime,
         basePrice,
         totalPrice,
+        couponId,
+        couponDiscountAmount,
         spaceDiscountAmount,
         durationDiscountAmount,
         status: ReservationStatus.CONFIRMED,
@@ -179,6 +190,28 @@ export async function createPublicReservationCommand(
       },
       include: { customer: { select: CUSTOMER_SELECT } },
     });
+
+    // Coupon usage の atomic claim (usageLimit null OR usageCount < usageLimit 条件で
+    // increment、race で claim 失敗なら CONFLICT を throw して tx rollback)。
+    // pre-tx validateCoupon で validity は確認済みだが、usageLimit の race を封じるために
+    // ここで conditional UPDATE を実行する (business-domain rule: 「updateMany の WHERE
+    // で claim」パターン; Prisma updateMany では column-to-column 比較不可のため
+    // $executeRaw を使う)。
+    if (couponId) {
+      const claimed = await tx.$executeRaw`
+        UPDATE "coupons"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "id" = ${couponId}::uuid
+          AND "isActive" = true
+          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+      `;
+      if (claimed === 0) {
+        throw new DomainError(
+          "クーポンが利用できません（利用上限に達した可能性があります）",
+          "CONFLICT",
+        );
+      }
+    }
 
     await incrementCustomerReservationStats(tx, customerId);
 
