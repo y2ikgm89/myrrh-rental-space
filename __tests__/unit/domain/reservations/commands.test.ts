@@ -219,6 +219,15 @@ mock.module("@/shared/lib/reservation", () => ({
   ),
 }));
 
+// PR#4: `ensureNoOverlap` (payloads.ts) が checkReservationOverlap →
+// checkSpaceOverlap に切替。Reservation ↔ Event cross-table 判定の SSoT なので
+// 個別テストで overlap を返したいケースでは mockCheckSpaceOverlap を差し替える。
+mock.module("@/shared/domain/spaces/overlap", () => ({
+  checkSpaceOverlap: mock<
+    () => Promise<{ hasOverlap: false } | { hasOverlap: true; type: string }>
+  >(() => Promise.resolve({ hasOverlap: false })),
+}));
+
 // `createPublicReservationCommand` は `isFeatureEnabled("reservation")` を直接呼ぶ
 // （reviews/commands.ts と同型の feature module gate）。settings.findUnique mock は不要。
 const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>

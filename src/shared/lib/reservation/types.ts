@@ -36,6 +36,16 @@ export interface PrismaTransactionClient {
       select?: Prisma.BlockedDateSelect;
     }) => Promise<{ reason: string | null } | null>;
   };
+  eventTimeSlot: {
+    findFirst: (args: {
+      where: Prisma.EventTimeSlotWhereInput;
+      select?: Prisma.EventTimeSlotSelect;
+    }) => Promise<{
+      id: string;
+      startAt: Date;
+      endAt: Date;
+    } | null>;
+  };
 }
 
 /**

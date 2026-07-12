@@ -10,6 +10,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
+import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
@@ -142,6 +143,34 @@ export async function validateCoupon(
 }
 
 export async function ensureNoOverlap(
+  params: {
+    spaceId: string;
+    startTime: Date;
+    endTime: Date;
+    excludeReservationId?: string;
+  },
+  tx?: Tx,
+): Promise<void> {
+  // Reservation ↔ Event cross-table overlap を SSoT で検査 (Priority-10 audit #4)。
+  // 旧 checkReservationOverlap は Reservation-only だったため、Event 側書込が同一 Space
+  // に生きたスロットを持っていても Reservation 側は素通りする race を放置していた。
+  // 現在は `checkSpaceOverlap` に一本化し、tx 経由呼出時は lockSpaceForTransaction で
+  // 直列化された空間で Reservation ↔ EventTimeSlot 両方を判定する。
+  const result = await checkSpaceOverlap(params, tx);
+  if (result.hasOverlap) {
+    const message =
+      result.type === "event"
+        ? "選択された時間帯は既にイベントで予約されています。別の時間帯をお選びください。"
+        : "選択された時間帯は既に予約されています。別の時間帯をお選びください。";
+    throw new DomainError(message, "CONFLICT");
+  }
+}
+
+/**
+ * @deprecated `ensureNoOverlap` (Reservation ↔ Event 双方チェック) を使うこと。
+ * Reservation-only チェックが必要な特殊経路 (例: iCal 同期の互換モード) 以外は使わない。
+ */
+export async function ensureNoReservationOverlapOnly(
   params: {
     spaceId: string;
     startTime: Date;
