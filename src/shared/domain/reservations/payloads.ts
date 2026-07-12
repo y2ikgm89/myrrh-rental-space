@@ -1,5 +1,8 @@
 import "server-only";
-import { calculateDurationHours } from "@/shared/lib/date-format";
+import {
+  calculateDurationHours,
+  parseDateTimeLocalAsJst,
+} from "@/shared/lib/date-format";
 
 import { prisma } from "@/shared/db/prisma";
 import { CouponType } from "@generated/prisma/enums";
@@ -59,7 +62,7 @@ export const CUSTOMER_SELECT = {
 // ---------------------------------------------------------------------------
 
 export function buildDateTime(date: string, time: string): Date {
-  return new Date(`${date}T${time}:00`);
+  return parseDateTimeLocalAsJst(`${date}T${time}`);
 }
 
 export function calculateHoursAndBasePrice(

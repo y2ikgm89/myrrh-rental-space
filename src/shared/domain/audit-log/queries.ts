@@ -109,9 +109,9 @@ function parseAuditDateBound(value: string, boundary: "start" | "end"): Date {
     return new Date(value);
   }
 
-  const time =
-    boundary === "start" ? "00:00:00.000+09:00" : "23:59:59.999+09:00";
-  return new Date(`${value}T${time}`);
+  const suffix =
+    boundary === "start" ? "T00:00:00.000+09:00" : "T23:59:59.999+09:00";
+  return new Date(`${value}${suffix}`);
 }
 
 function parseAuditLogMetadata(value: unknown): AuditLogMetadata {

@@ -5,6 +5,7 @@ import {
   calculateDurationHours,
   formatJstDateString,
   formatTimeShort,
+  parseDateTimeLocalAsJst,
 } from "@/shared/lib/date-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -150,8 +151,8 @@ export function ReservationEditForm({
   // 検証・適用されるため preview には含めない（手動 totalPrice 上書きで調整可能）。
   const priceCalc = (() => {
     if (!selectedSpace || !startTime || !endTime) return null;
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
+    const start = parseDateTimeLocalAsJst(`2000-01-01T${startTime}`);
+    const end = parseDateTimeLocalAsJst(`2000-01-01T${endTime}`);
     if (
       Number.isNaN(start.getTime()) ||
       Number.isNaN(end.getTime()) ||

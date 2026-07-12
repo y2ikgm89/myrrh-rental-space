@@ -2065,6 +2065,21 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("datetime-local を new Date(`${d}T${t}`) で naive parse しない (JST SSoT 強制)", () => {
+    // Cloud Run (TZ=UTC) 上で `new Date(`${date}T${time}:00`)` や
+    // `new Date(`${date}T${time}`)` は server-local として parse され、JST 意図の入力を
+    // +9h ずらして DB に保存する silent bug (predicate: 予約書込 4 経路の PR#1 fix)。
+    // SSoT は `src/shared/lib/date-format.ts:parseDateTimeLocalAsJst`
+    // (+09:00 offset を明示付与)、reservation 経路は `buildDateTime` で経由する。
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /new Date\(\s*`[^`]*T\$\{[^`]*\}(?::\d{2})?\s*`\s*\)/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
     // SDK 境界 cast の helper 強制（方針: .claude/rules/type-safety.md）
     // - LocationSchema.parse (googleapis Schema$Location)
