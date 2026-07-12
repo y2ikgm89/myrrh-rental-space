@@ -10,7 +10,14 @@ import {
 } from "@/shared/domain/reservations/customer-commands";
 import { createCheckoutSessionCommand } from "@/shared/domain/reservations/payment-commands";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
-import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
+import {
+  applyReservationEditSideEffects,
+  getReservationSnapshotForEdit,
+} from "@/shared/domain/reservations/edit-side-effects";
+import {
+  buildDateTime,
+  fetchReservationEmailData,
+} from "@/shared/domain/reservations/payloads";
 import {
   sendReservationAdminNotification,
   sendReservationUpdatedEmail,
@@ -179,6 +186,13 @@ export async function updateReservationAction(
       }
 
       try {
+        // PR#14: 変更 side-effect (SwitchBot 再発行) のため、変更前スナップショットを
+        // update の直前に取得する。startTime/endTime の変更判定に必要。
+        const before = await getReservationSnapshotForEdit(
+          data.reservationId,
+          customer.id,
+        );
+
         const settings = await getReservationDeadlineSettings();
         const result = await updateCustomerReservation(
           data.reservationId,
@@ -194,6 +208,30 @@ export async function updateReservationAction(
         invalidateReservationCaches(data.reservationId, customer.id, {
           coupons: true,
         });
+
+        // PR#14: 変更前スナップショットと入力を比較し、spaceId or 時刻変更ありなら
+        // SwitchBot passcode の revoke + reissue を実行 (tx 外、fireAndForget)。
+        if (before) {
+          const newStartTime = buildDateTime(data.date, data.startTime);
+          const newEndTime = buildDateTime(data.date, data.endTime);
+          fireAndForget(
+            applyReservationEditSideEffects({
+              reservationId: data.reservationId,
+              oldSpaceId: before.spaceId,
+              oldStartTime: before.startTime,
+              oldEndTime: before.endTime,
+              newSpaceId: data.spaceId,
+              newStartTime,
+              newEndTime,
+            }),
+            {
+              operation: "applyReservationEditSideEffects",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.MEDIUM,
+              context: { reservationId: data.reservationId },
+            },
+          );
+        }
 
         // 変更後の最新状態を再取得して顧客+管理者へ変更通知メールを送信。
         // ステータス変更/キャンセル同様、重要取引通知として常時送信する。
