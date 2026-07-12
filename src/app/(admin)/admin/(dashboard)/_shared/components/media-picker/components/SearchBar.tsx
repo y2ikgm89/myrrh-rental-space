@@ -3,31 +3,35 @@
 /**
  * SearchBar
  *
- * メディア検索入力
+ * メディア検索入力。shared `<Input leadingIcon>` SSoT に一本化しており、
+ * h-11 タッチ標的と `text-base md:text-sm` (iOS Safari のフォーカス時
+ * オートズーム回避) が自動的に適用される。
  */
 
-import { IconSearch } from "@tabler/icons-react";
+import { Input } from "@/admin/components/ui";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  "aria-label"?: string;
 }
 
 export function SearchBar({
   value,
   onChange,
   placeholder = "画像を検索...",
+  "aria-label": ariaLabel = "画像を検索",
 }: SearchBarProps) {
   return (
-    <div className="relative flex-1">
-      <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <input
+    <div className="flex-1">
+      <Input
         type="search"
+        leadingIcon="IconSearch"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={ariaLabel}
       />
     </div>
   );

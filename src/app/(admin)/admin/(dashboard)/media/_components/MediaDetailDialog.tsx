@@ -29,6 +29,14 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
 } from "@/admin/components/ui";
 import { USAGE_OPTIONS } from "./constants";
 import { isValidMediaUsage } from "@/admin/lib/validations/media";
@@ -214,80 +222,62 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                   {/* Edit Form */}
                   <div className="space-y-3">
                     {/* Usage */}
-                    <div>
-                      <label
-                        htmlFor={`${formId}-usage`}
-                        className="text-sm font-medium block mb-1"
-                      >
-                        用途
-                      </label>
-                      <select
-                        id={`${formId}-usage`}
+                    <div className="space-y-1">
+                      <Label htmlFor={`${formId}-usage`}>用途</Label>
+                      <Select
                         value={formData.usage}
-                        onChange={(e) => handleChange("usage", e.target.value)}
-                        className="w-full h-9 rounded-md border bg-background px-3 text-sm"
+                        onValueChange={(value) => handleChange("usage", value)}
                       >
-                        {USAGE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger id={`${formId}-usage`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {USAGE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {/* Alt */}
                     {item.type === "IMAGE" && (
-                      <div>
-                        <label
-                          htmlFor={`${formId}-alt`}
-                          className="text-sm font-medium block mb-1"
-                        >
+                      <div className="space-y-1">
+                        <Label htmlFor={`${formId}-alt`}>
                           代替テキスト（alt）
-                        </label>
-                        <input
+                        </Label>
+                        <Input
                           id={`${formId}-alt`}
                           type="text"
                           value={formData.alt}
                           onChange={(e) => handleChange("alt", e.target.value)}
-                          className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                           placeholder="画像の説明"
                         />
                       </div>
                     )}
 
                     {/* Title */}
-                    <div>
-                      <label
-                        htmlFor={`${formId}-title`}
-                        className="text-sm font-medium block mb-1"
-                      >
-                        タイトル
-                      </label>
-                      <input
+                    <div className="space-y-1">
+                      <Label htmlFor={`${formId}-title`}>タイトル</Label>
+                      <Input
                         id={`${formId}-title`}
                         type="text"
                         value={formData.title}
                         onChange={(e) => handleChange("title", e.target.value)}
-                        className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                         placeholder="管理用タイトル"
                       />
                     </div>
 
                     {/* Description */}
-                    <div>
-                      <label
-                        htmlFor={`${formId}-description`}
-                        className="text-sm font-medium block mb-1"
-                      >
-                        説明
-                      </label>
-                      <textarea
+                    <div className="space-y-1">
+                      <Label htmlFor={`${formId}-description`}>説明</Label>
+                      <Textarea
                         id={`${formId}-description`}
                         value={formData.description}
                         onChange={(e) =>
                           handleChange("description", e.target.value)
                         }
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm resize-none"
                         rows={3}
                         placeholder="メモ・説明"
                       />

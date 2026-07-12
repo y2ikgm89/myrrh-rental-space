@@ -3,10 +3,13 @@
 /**
  * DropZone
  *
- * ファイルドラッグ&ドロップエリア
+ * ファイルドラッグ&ドロップエリア。native `<label>` + `<input type="file">` の
+ * associate 構造で、キーボード（Tab で input にフォーカス → Enter / Space で
+ * ネイティブファイルダイアログ）とスクリーンリーダーの両方に対応する。
+ * `sr-only` (display:none ではない) が focusable のまま視覚的に隠す鍵。
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { IconUpload } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 
@@ -21,6 +24,7 @@ export function DropZone({
   accept = "image/*",
   disabled = false,
 }: DropZoneProps) {
+  const inputId = useId();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -45,11 +49,6 @@ export function DropZone({
     }
   };
 
-  const handleClick = () => {
-    if (disabled) return;
-    document.getElementById("media-picker-file-input")?.click();
-  };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -59,9 +58,11 @@ export function DropZone({
   };
 
   return (
-    <div
+    <label
+      htmlFor={inputId}
       className={cn(
         "flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 transition-colors",
+        "focus-within:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
         isDragOver
           ? "border-primary bg-primary/5"
           : "hover:border-primary hover:bg-primary/5",
@@ -70,20 +71,22 @@ export function DropZone({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onClick={handleClick}
     >
-      <IconUpload className="mb-2 h-12 w-12 text-muted-foreground" />
+      <IconUpload
+        className="mb-2 h-12 w-12 text-muted-foreground"
+        aria-hidden="true"
+      />
       <p className="text-muted-foreground">
         ドラッグ&ドロップ または クリックして選択
       </p>
       <input
-        id="media-picker-file-input"
+        id={inputId}
         type="file"
         accept={accept}
         onChange={handleFileChange}
-        className="hidden"
+        className="sr-only"
         disabled={disabled}
       />
-    </div>
+    </label>
   );
 }
