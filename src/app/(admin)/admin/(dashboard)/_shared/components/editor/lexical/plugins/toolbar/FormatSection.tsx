@@ -48,6 +48,8 @@ export function FormatSection({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onBold}
         title="太字"
+        aria-label="太字"
+        aria-pressed={isBold}
       >
         <IconBold className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
@@ -58,6 +60,8 @@ export function FormatSection({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onItalic}
         title="斜体"
+        aria-label="斜体"
+        aria-pressed={isItalic}
       >
         <IconItalic className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
@@ -68,6 +72,8 @@ export function FormatSection({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onUnderline}
         title="下線"
+        aria-label="下線"
+        aria-pressed={isUnderline}
       >
         <IconUnderline className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
@@ -78,6 +84,8 @@ export function FormatSection({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onStrikethrough}
         title="取り消し線"
+        aria-label="取り消し線"
+        aria-pressed={isStrikethrough}
       >
         <IconStrikethrough className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
@@ -88,6 +96,8 @@ export function FormatSection({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onSubscript}
         title="下付き文字"
+        aria-label="下付き文字"
+        aria-pressed={isSubscript}
       >
         <IconSubscript className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
@@ -98,6 +108,8 @@ export function FormatSection({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onSuperscript}
         title="上付き文字"
+        aria-label="上付き文字"
+        aria-pressed={isSuperscript}
       >
         <IconSuperscript className="h-5 w-5 md:h-4 md:w-4" />
       </Button>

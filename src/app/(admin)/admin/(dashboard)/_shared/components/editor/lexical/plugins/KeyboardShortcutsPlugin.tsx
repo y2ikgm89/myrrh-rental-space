@@ -25,9 +25,13 @@ import {
   UNGROUP_GROUP_COMMAND,
 } from "./GroupPlugin";
 import { $getSelectionBlockNodes } from "../lib/selection-helpers";
-import { createPortal } from "react-dom";
-import { IconX, IconKeyboard } from "@tabler/icons-react";
-import { Button } from "@/admin/components/ui/button";
+import { IconKeyboard } from "@tabler/icons-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/admin/components/ui/dialog";
 import type { DialogId } from "../dialogs/dialog-types";
 import { useInspectorSidebar } from "../inspector/inspector-sidebar-context";
 
@@ -79,33 +83,28 @@ const SHORTCUT_LIST: ShortcutEntry[] = [
 // Help Dialog
 // =============================================================================
 
-export function ShortcutsHelpDialog({ onClose }: { onClose: () => void }) {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full max-w-md rounded-lg border border-border bg-background shadow-xl">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2 font-semibold">
-            <IconKeyboard className="h-4 w-4" />
-            <span>キーボードショートカット</span>
-          </div>
-          <Button type="button" variant="ghost" size="icon" onClick={onClose}>
-            <IconX className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="max-h-80 overflow-y-auto p-4">
+/**
+ * Radix Dialog に一本化。role="dialog" + aria-modal / focus trap / initial
+ * focus / focus 復帰 / Escape 閉じ / overlay click 閉じ / close button は
+ * DialogContent SSoT が全て担うため、以前の自前 createPortal 実装は不要。
+ */
+export function ShortcutsHelpDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <IconKeyboard className="h-4 w-4" aria-hidden="true" />
+            キーボードショートカット
+          </DialogTitle>
+        </DialogHeader>
+        <div className="max-h-80 overflow-y-auto">
           <div className="space-y-2">
             {SHORTCUT_LIST.map((entry) => (
               <div
@@ -122,9 +121,8 @@ export function ShortcutsHelpDialog({ onClose }: { onClose: () => void }) {
             ))}
           </div>
         </div>
-      </div>
-    </div>,
-    document.body,
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -240,7 +238,5 @@ export function KeyboardShortcutsPlugin({
     );
   }, [editor, isInspectorAvailable, openDialog, toggleInspector]);
 
-  if (!showHelp) return null;
-
-  return <ShortcutsHelpDialog onClose={() => setShowHelp(false)} />;
+  return <ShortcutsHelpDialog open={showHelp} onOpenChange={setShowHelp} />;
 }

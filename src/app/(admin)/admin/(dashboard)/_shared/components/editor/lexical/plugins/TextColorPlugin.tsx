@@ -234,6 +234,8 @@ export function TextColorPlugin() {
           size="sm"
           className="h-8 gap-1"
           title="文字色"
+          aria-label="文字色"
+          aria-pressed={hasColor}
         >
           <div className="relative">
             <IconTypography className="h-4 w-4" />
@@ -376,6 +378,8 @@ export function TextColorCompact({
           size="icon"
           className="h-8 w-8"
           title="文字色"
+          aria-label="文字色"
+          aria-pressed={hasColor}
         >
           <div className="relative">
             <IconTypography className="h-4 w-4" />

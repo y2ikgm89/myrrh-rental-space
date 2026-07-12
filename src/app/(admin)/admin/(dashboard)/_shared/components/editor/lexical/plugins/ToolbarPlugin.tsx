@@ -410,9 +410,10 @@ export function ToolbarPlugin({
         open={showMarkdownImport}
         onClose={() => setShowMarkdownImport(false)}
       />
-      {showShortcuts && (
-        <ShortcutsHelpDialog onClose={() => setShowShortcuts(false)} />
-      )}
+      <ShortcutsHelpDialog
+        open={showShortcuts}
+        onOpenChange={setShowShortcuts}
+      />
     </>
   );
 }
