@@ -17,6 +17,11 @@ import {
   getSpaceLocationIdQuery,
   isDateBlocked,
 } from "@/shared/domain/reservations/availability";
+import {
+  formatJstDateString,
+  getJstMinutesOfDay,
+  parseDateTimeLocalAsJst,
+} from "@/shared/lib/date-format";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "./types";
 import { parseTime, generateSlotsFromBusinessHours } from "./time-slots-utils";
@@ -75,9 +80,12 @@ export async function getAvailableTimeSlots(
     }
   }
 
-  // その日の予約を取得
-  const dateStart = new Date(`${date}T00:00:00`);
-  const dateEnd = new Date(`${date}T23:59:59`);
+  // その日の予約を取得。JST カレンダー日の 00:00 / 23:59:59 を SSoT helper で
+  // JST 固定 parse する (Codex P1 #1009, comment 3566748512)。サーバ tz (Cloud Run = UTC) で
+  // `new Date(`${date}T00:00:00`)` すると server-local (=UTC) parse になり、JST 早朝の
+  // 予約 (UTC 前日夜) が窓外に落ちて availability から漏れる silent bug になる。
+  const dateStart = parseDateTimeLocalAsJst(`${date}T00:00`);
+  const dateEnd = parseDateTimeLocalAsJst(`${date}T23:59:59`);
 
   const reservations = await getReservationsForDateQuery(
     spaceId,
@@ -85,13 +93,13 @@ export async function getAvailableTimeSlots(
     dateEnd,
   );
 
-  // 予約済みの時間枠を unavailable にマーク
+  // 予約済みの時間枠を unavailable にマーク。
+  // 予約 datetime は UTC 保存だが、スロットラベル (BusinessHours 設定) は
+  // JST wall-clock。Cloud Run (UTC) で `.getHours()` を使うと 9 時間ずれる
+  // ため JST 固定の `getJstMinutesOfDay` SSoT で照合する。
   for (const reservation of reservations) {
-    const resStartMinutes =
-      reservation.startTime.getHours() * 60 +
-      reservation.startTime.getMinutes();
-    const resEndMinutes =
-      reservation.endTime.getHours() * 60 + reservation.endTime.getMinutes();
+    const resStartMinutes = getJstMinutesOfDay(reservation.startTime);
+    const resEndMinutes = getJstMinutesOfDay(reservation.endTime);
 
     for (const slot of slots) {
       const slotParsed = parseTime(slot.time);
@@ -103,13 +111,14 @@ export async function getAvailableTimeSlots(
     }
   }
 
-  // 今日の場合、過去の時間枠を unavailable にマーク
-  // NOTE: タイムゾーンはサーバーのローカル時間を使用（日本時間想定）
+  // 今日の場合、過去の時間枠を unavailable にマーク。
+  // Cloud Run (UTC) では `now.getFullYear() / getHours()` が UTC 値を返すため、
+  // JST 早朝は前日として扱われる silent bug が発生する。JST 固定 SSoT で判定する。
   const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const today = formatJstDateString(now);
 
   if (date === today) {
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentMinutes = getJstMinutesOfDay(now);
     for (const slot of slots) {
       const slotParsed = parseTime(slot.time);
       const slotMinutes = slotParsed.hour * 60 + slotParsed.minute;
