@@ -1,6 +1,7 @@
 import "server-only";
 import { calculateDurationHours } from "@/shared/lib/date-format";
 
+import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isWithinDeadline } from "./deadline";
@@ -150,6 +151,7 @@ export async function updateCustomerReservation(
       select: {
         id: true,
         status: true,
+        paymentStatus: true,
         startTime: true,
         taxRateType: true,
         taxRate: true,
@@ -178,6 +180,18 @@ export async function updateCustomerReservation(
 
     if (!CANCELLABLE_STATUSES.includes(reservation.status)) {
       return { success: false, error: "この予約は変更できません" };
+    }
+
+    // PAID edit gate: 決済確定/決済中の予約はセルフ変更を禁止 (業界標準の Peerspace/Airbnb
+    // パターン)。差額精算/返金の運用複雑さと silent regression を避けるため、
+    // 顧客には「キャンセル + 再予約」に誘導する。admin は SUPER_ADMIN 限定で override 可能
+    // (別 command)。REFUNDED は変更不能 (元の決済 IntentId が消失している)。
+    if (reservation.paymentStatus !== PaymentStatus.UNPAID) {
+      return {
+        success: false,
+        error:
+          "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+      };
     }
 
     if (
