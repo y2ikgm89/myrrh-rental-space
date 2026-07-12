@@ -71,6 +71,8 @@ mock.module("@/shared/lib/constants", () => ({
 }));
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mockLogError,
+  normalizeError: (e: unknown) =>
+    e instanceof Error ? e : new Error(String(e)),
   ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
   ErrorSeverity: { HIGH: "HIGH" },
 }));
@@ -144,8 +146,19 @@ describe("reservations/payment-commands", () => {
       },
     });
 
+    // 新実装は findUnique を 2 回呼ぶ (初期 read + claim 後の authoritative re-read)。
+    // authoritative は totalPrice/guestEmail/space/customer の subset のみ select。
+    const authoritativeSameAsInitial = () => ({
+      totalPrice: 5000,
+      guestEmail: "booked-address@example.com",
+      space: { name: "テストスペース" },
+      customer: { email: "current-customer@example.com" },
+    });
+
     test("Stripe Checkout customer_email は予約時メールを優先する (admin bypass)", async () => {
-      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
 
       await createCheckoutSessionCommand({
         reservationId: RESERVATION_ID,
@@ -160,7 +173,9 @@ describe("reservations/payment-commands", () => {
     });
 
     test("actorCustomerId が予約の customerId と一致すれば正常に決済セッション作成", async () => {
-      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
 
       const result = await createCheckoutSessionCommand({
         reservationId: RESERVATION_ID,
@@ -181,8 +196,9 @@ describe("reservations/payment-commands", () => {
 
       expect(error).toBeInstanceOf(DomainError);
       expect((error as DomainError).code).toBe("FORBIDDEN");
-      // FORBIDDEN 判定は Stripe API 呼出前に throw されるため checkout session は作らない
+      // FORBIDDEN 判定は claim 前に throw されるため checkout session も claim も呼ばない
       expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
     });
 
     test("存在しない reservationId は NOT_FOUND (FORBIDDEN より優先)", async () => {
@@ -194,6 +210,140 @@ describe("reservations/payment-commands", () => {
       }).catch((e: unknown) => e);
 
       expect((error as DomainError).code).toBe("NOT_FOUND");
+    });
+
+    test("Stripe session 作成 **前** に UNPAID → PENDING を atomic に claim する (Codex P1)", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+
+      // updateMany が呼ばれた時点で Stripe API は未実行、を実測
+      let checkoutCalledBeforeClaim = false;
+      let claimCalled = false;
+      mockReservationUpdateMany.mockImplementation(() => {
+        claimCalled = true;
+        if (mockCheckoutSessionCreate.mock.calls.length > 0) {
+          checkoutCalledBeforeClaim = true;
+        }
+        return Promise.resolve({ count: 1 });
+      });
+
+      await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
+
+      expect(claimCalled).toBe(true);
+      expect(checkoutCalledBeforeClaim).toBe(false);
+      // claim の WHERE に paymentStatus: UNPAID 述語が含まれることを確認
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            paymentStatus: PaymentStatus.UNPAID,
+          }),
+          data: expect.objectContaining({
+            paymentStatus: PaymentStatus.PENDING,
+          }),
+        }),
+      );
+    });
+
+    test("Claim 失敗 (別 request が先に PENDING に遷移) → CONFLICT & Stripe 未呼出", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      }).catch((e: unknown) => e);
+
+      expect((error as DomainError).code).toBe("CONFLICT");
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    });
+
+    test("Race 修正: claim 後 authoritative re-read で totalPrice が edit 済みなら新価格で Stripe 作成", async () => {
+      // 初期 read は totalPrice=5000
+      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+      // claim と authoritative re-read の間で edit が totalPrice を 8000 に変更 (race シナリオ)
+      mockReservationFindUnique.mockResolvedValueOnce({
+        totalPrice: 8000,
+        guestEmail: "booked-address@example.com",
+        space: { name: "テストスペース" },
+        customer: { email: "current-customer@example.com" },
+      });
+
+      await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
+
+      // Stripe には旧価格 5000 ではなく edit 後の 8000 が渡ることを assert
+      expect(mockCheckoutSessionCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          line_items: [
+            expect.objectContaining({
+              price_data: expect.objectContaining({
+                // JPY は zero-decimal 通貨で 100 倍しない
+                unit_amount: 8000,
+              }),
+            }),
+          ],
+        }),
+      );
+    });
+
+    test("Stripe 失敗時は PENDING → UNPAID に revert して顧客が再試行できる状態に戻す", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+      mockCheckoutSessionCreate.mockRejectedValueOnce(
+        new Error("Stripe API down"),
+      );
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      }).catch((e: unknown) => e);
+
+      expect((error as DomainError).code).toBe("UNEXPECTED");
+      // revert 用の updateMany が呼ばれる (2 回目: WHERE PENDING → UNPAID)
+      const calls = mockReservationUpdateMany.mock.calls;
+      expect(calls.length).toBe(2);
+      expect(calls[1]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          paymentStatus: PaymentStatus.PENDING,
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+      });
+    });
+
+    test("Authoritative re-read で totalPrice が消えたら PENDING → UNPAID revert + VALIDATION", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce({
+          totalPrice: null,
+          guestEmail: null,
+          space: { name: "テストスペース" },
+          customer: { email: "current-customer@example.com" },
+        });
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      }).catch((e: unknown) => e);
+
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+      // revert updateMany が呼ばれる
+      const calls = mockReservationUpdateMany.mock.calls;
+      expect(calls.length).toBe(2);
+      expect(calls[1]?.[0]).toMatchObject({
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+      });
     });
   });
 

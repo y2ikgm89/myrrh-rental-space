@@ -8,6 +8,7 @@ import { getStripeSettings } from "@/shared/domain/settings/queries/integration"
 import { getAppUrl } from "@/shared/lib/constants";
 import {
   logError,
+  normalizeError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
@@ -123,6 +124,67 @@ export async function createCheckoutSessionCommand(input: {
   const currency = stripeSettings.stripeCurrency ?? "jpy";
   const appUrl = getAppUrl();
 
+  // Race-free claim: 「Stripe session を作る前」に UNPAID → PENDING を atomic に確定する。
+  //
+  // 旧実装は Stripe session 作成 → paymentStatus 更新 の順で、以下の race を起こしていた
+  // (Codex Cloud Review P1, PR#1016):
+  //
+  //   1. checkout が UNPAID + totalPrice=1000 を読む
+  //   2. edit が UNPAID を確認 & updateMany で totalPrice=2000 に変更 (成功)
+  //   3. checkout が Stripe session を **totalPrice=1000** で作成
+  //   4. checkout が paymentStatus=PENDING + sessionId 書込
+  //   → Stripe セッションの金額 (1000) と reservation の金額 (2000) が乖離、
+  //      顧客は旧金額で決済 → 差額の回収不能な会計 mismatch
+  //
+  // 修正: (a) claim を先に打つ → 以降 edit の updateMany (WHERE UNPAID) が count=0
+  // で rollback される、(b) claim 直後に authoritative な totalPrice を再読み込みして
+  // Stripe に渡す (直前の edit を反映)、(c) Stripe 失敗時は UNPAID に revert して
+  // stuck state を残さない。
+  const claimed = await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      paymentStatus: PaymentStatus.UNPAID,
+    },
+    data: { paymentStatus: PaymentStatus.PENDING },
+  });
+  if (claimed.count === 0) {
+    // 別 request (別 checkout / 手動 admin refund 経路) が先に PENDING に遷移させた。
+    throw new DomainError(
+      "この予約は別のリクエストで既に決済処理が開始されています",
+      "CONFLICT",
+    );
+  }
+
+  // Claim 成功後の authoritative な reservation を再読み込みする。
+  // - totalPrice: claim 直前の edit を反映した最新値を Stripe に渡す
+  // - customer/space/email: edit で顧客差替や guestEmail 変更があった場合も追随
+  const authoritative = await prisma.reservation.findUnique({
+    where: { id: reservationId, deletedAt: null },
+    select: {
+      totalPrice: true,
+      guestEmail: true,
+      space: { select: { name: true } },
+      customer: { select: { email: true } },
+    },
+  });
+
+  if (
+    !authoritative ||
+    authoritative.totalPrice === null ||
+    authoritative.totalPrice <= 0
+  ) {
+    // 「claim 済みだが金額が消えた」異常状態。UNPAID に revert して stuck state を解消。
+    await prisma.reservation.updateMany({
+      where: { id: reservationId, paymentStatus: PaymentStatus.PENDING },
+      data: { paymentStatus: PaymentStatus.UNPAID },
+    });
+    throw new DomainError(
+      "料金が設定されていない予約は決済できません",
+      "VALIDATION",
+    );
+  }
+
   try {
     const session = await client.checkout.sessions.create({
       mode: "payment",
@@ -132,9 +194,9 @@ export async function createCheckoutSessionCommand(input: {
           price_data: {
             currency,
             product_data: {
-              name: `予約: ${reservation.space.name}`,
+              name: `予約: ${authoritative.space.name}`,
             },
-            unit_amount: toStripeUnitAmount(reservation.totalPrice, currency),
+            unit_amount: toStripeUnitAmount(authoritative.totalPrice, currency),
           },
           quantity: 1,
         },
@@ -142,17 +204,17 @@ export async function createCheckoutSessionCommand(input: {
       metadata: {
         reservationId,
       },
-      customer_email: reservation.guestEmail ?? reservation.customer.email,
+      customer_email: authoritative.guestEmail ?? authoritative.customer.email,
       success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
       cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
     });
 
+    // session id を確定書込。既に PENDING は claim 済みなので stripeCheckoutSessionId
+    // のみ更新する。stripeCheckoutSessionId は @unique なので session.id を保存できるのは
+    // 1 回のみ (二重 claim があった場合は Prisma エラーになるが、そもそも claim で防ぐ)。
     await prisma.reservation.update({
       where: { id: reservationId, deletedAt: null },
-      data: {
-        paymentStatus: PaymentStatus.PENDING,
-        stripeCheckoutSessionId: session.id,
-      },
+      data: { stripeCheckoutSessionId: session.id },
     });
 
     return {
@@ -161,10 +223,19 @@ export async function createCheckoutSessionCommand(input: {
       customerId: reservation.customerId,
     };
   } catch (error) {
-    logError(error, {
+    // Stripe session 作成 or session id 書込が失敗した。UNPAID に revert して顧客が
+    // 再試行できる状態に戻す。既に session が作られていても metadata.reservationId が
+    // 分かるので webhook 側で orphan session を identify できる (最悪ケース: session だけ
+    // 残るが webhook で reservation を PAID にできる。逆に reservation は UNPAID のまま
+    // なので新たな checkout も可能で、その場合 webhook 側で二重確定を防ぐ既存契約に委ねる)。
+    logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
       context: { operation: "createCheckoutSession", reservationId },
+    });
+    await prisma.reservation.updateMany({
+      where: { id: reservationId, paymentStatus: PaymentStatus.PENDING },
+      data: { paymentStatus: PaymentStatus.UNPAID },
     });
     throw new DomainError(
       "決済セッションの作成に失敗しました。しばらく経ってからお試しください。",
