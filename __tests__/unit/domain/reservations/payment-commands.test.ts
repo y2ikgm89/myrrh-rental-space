@@ -73,8 +73,14 @@ mock.module("@/shared/lib/errors/server", () => ({
   logError: mockLogError,
   normalizeError: (e: unknown) =>
     e instanceof Error ? e : new Error(String(e)),
-  ErrorCategory: { EXTERNAL_API: "EXTERNAL_API" },
-  ErrorSeverity: { HIGH: "HIGH" },
+  ErrorCategory: {
+    EXTERNAL_API: "EXTERNAL_API",
+    DATABASE: "DATABASE",
+  },
+  ErrorSeverity: {
+    HIGH: "HIGH",
+    MEDIUM: "MEDIUM",
+  },
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
@@ -218,12 +224,16 @@ describe("reservations/payment-commands", () => {
         .mockResolvedValueOnce(authoritativeSameAsInitial());
 
       // updateMany が呼ばれた時点で Stripe API は未実行、を実測
-      let checkoutCalledBeforeClaim = false;
-      let claimCalled = false;
+      // (最初の updateMany = UNPAID→PENDING claim。2 回目は session 確定書込で
+      // Stripe 後に呼ばれる想定なので、最初の呼出時のみをチェックする)
+      let checkoutCalledBeforeFirstClaim = false;
+      let firstClaimCalled = false;
       mockReservationUpdateMany.mockImplementation(() => {
-        claimCalled = true;
-        if (mockCheckoutSessionCreate.mock.calls.length > 0) {
-          checkoutCalledBeforeClaim = true;
+        if (!firstClaimCalled) {
+          firstClaimCalled = true;
+          if (mockCheckoutSessionCreate.mock.calls.length > 0) {
+            checkoutCalledBeforeFirstClaim = true;
+          }
         }
         return Promise.resolve({ count: 1 });
       });
@@ -233,8 +243,8 @@ describe("reservations/payment-commands", () => {
         actorCustomerId: null,
       });
 
-      expect(claimCalled).toBe(true);
-      expect(checkoutCalledBeforeClaim).toBe(false);
+      expect(firstClaimCalled).toBe(true);
+      expect(checkoutCalledBeforeFirstClaim).toBe(false);
       // claim の WHERE に paymentStatus: UNPAID 述語が含まれることを確認
       expect(mockReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -317,6 +327,67 @@ describe("reservations/payment-commands", () => {
           paymentStatus: PaymentStatus.UNPAID,
         }),
       });
+    });
+
+    test("Session 確定書込は updateMany + WHERE `notIn [PAID, REFUNDED]` + PENDING 再 assert で stale webhook FAILED を巻き戻す (Codex P1 #3)", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+
+      await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
+
+      // 3 回目の updateMany が session 確定書込 (1 回目: claim UNPAID→PENDING、
+      // 2 回目は無し (Stripe 成功なので revert 未実行)、3 回目: session settle)
+      const calls = mockReservationUpdateMany.mock.calls;
+      expect(calls.length).toBe(2);
+      // 1 回目: claim
+      expect(calls[0]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.PENDING,
+        }),
+      });
+      // 2 回目: session 確定書込 (updateMany + notIn [PAID, REFUNDED] + PENDING 再 assert)
+      expect(calls[1]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          paymentStatus: expect.objectContaining({
+            notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+          }),
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.PENDING,
+          stripeCheckoutSessionId: "cs_test_123",
+        }),
+      });
+      // stripeCheckoutSessionId のみを書く旧 `update` は使わない
+      expect(mockReservationUpdate).not.toHaveBeenCalled();
+    });
+
+    test("Session settle が PAID/REFUNDED race で count=0 でも session URL は返す (log 出力)", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+
+      // 1 回目 (claim): count=1、2 回目 (settle): count=0 で PAID/REFUNDED race を再現
+      mockReservationUpdateMany
+        .mockResolvedValueOnce({ count: 1 })
+        .mockResolvedValueOnce({ count: 0 });
+
+      const result = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
+
+      // Session URL は返す (webhook 側の冪等性に委任)
+      expect(result.sessionId).toBe("cs_test_123");
+      expect(result.sessionUrl).toBe("https://stripe.example/checkout");
+      // 異常状態を log で通知
+      expect(mockLogError).toHaveBeenCalled();
     });
 
     test("Authoritative re-read で totalPrice が消えたら PENDING → UNPAID revert + VALIDATION", async () => {

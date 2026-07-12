@@ -209,13 +209,50 @@ export async function createCheckoutSessionCommand(input: {
       cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
     });
 
-    // session id を確定書込。既に PENDING は claim 済みなので stripeCheckoutSessionId
-    // のみ更新する。stripeCheckoutSessionId は @unique なので session.id を保存できるのは
-    // 1 回のみ (二重 claim があった場合は Prisma エラーになるが、そもそも claim で防ぐ)。
-    await prisma.reservation.update({
-      where: { id: reservationId, deletedAt: null },
-      data: { stripeCheckoutSessionId: session.id },
+    // session id を確定書込 + paymentStatus: PENDING を再 assert する。
+    //
+    // Codex Cloud Review P1 (PR#1017): claim (UNPAID→PENDING) から本 write の間に、
+    // 古い/orphan の checkout.session.expired webhook が届くと `claimReservationAsFailed`
+    // が PENDING → FAILED に flip し、その後の本 write が stripeCheckoutSessionId だけ
+    // 書いて paymentStatus は FAILED のまま残す silent bug が発生する。結果:
+    //   - コマンドは live session URL を返す
+    //   - 顧客が Stripe で決済完了 → webhook checkout.session.completed 発火
+    //   - `claimReservationAsPaid` は UNPAID/PENDING のみ受け付ける (FAILED は拒否)
+    //   → 決済されたのに reservation が FAILED のまま滞留する会計 mismatch
+    //
+    // 修正: `updateMany` + WHERE `paymentStatus NOT IN [PAID, REFUNDED]` で
+    // 「終端に達していなければ PENDING を再 assert」する。FAILED も PENDING に
+    // 巻き戻して session URL 経由の決済を成立させる (session-specific webhook 分岐は
+    // 別 issue で対応予定)。PAID/REFUNDED (異常に速い webhook / manual admin refund) は
+    // 上書きしない — count === 0 になるが session URL は返す (webhook 側の冪等性に委任)。
+    const settled = await prisma.reservation.updateMany({
+      where: {
+        id: reservationId,
+        deletedAt: null,
+        paymentStatus: {
+          notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+        },
+      },
+      data: {
+        paymentStatus: PaymentStatus.PENDING,
+        stripeCheckoutSessionId: session.id,
+      },
     });
+    if (settled.count === 0) {
+      // PAID / REFUNDED が既に確定していた (異常に速い webhook / manual admin refund)。
+      // stripeCheckoutSessionId は書けないが session URL は既に有効なので顧客は決済でき、
+      // webhook 側の冪等 claim (UNPAID/PENDING のみ accept) がスキップしてくれる。
+      logError(
+        new Error(
+          "createCheckoutSessionCommand: session settled skipped (already PAID/REFUNDED)",
+        ),
+        {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+          context: { operation: "createCheckoutSession", reservationId },
+        },
+      );
+    }
 
     return {
       sessionId: session.id,
