@@ -14,10 +14,16 @@ type MockArgs = Record<string, unknown> | undefined;
 const mockUpdateMany = mock<(args?: MockArgs) => Promise<UpdateManyResult>>(
   () => Promise.resolve({ count: 0 }),
 );
+// PR#11: 実装が updateMany 前に findMany で対象 reservationId を取得して
+// dedupe 通知するようになった。デフォルトは 0 件を返す stub。
+const mockFindMany = mock<
+  (args?: MockArgs) => Promise<Array<{ id: string; reservationId: string }>>
+>(() => Promise.resolve([]));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     smartLockPasscode: {
+      findMany: (args?: MockArgs) => mockFindMany(args),
       updateMany: (args?: MockArgs) => mockUpdateMany(args),
     },
   },
@@ -35,6 +41,8 @@ mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
 
 mock.module("@/shared/lib/errors/server", () => ({
   logError: () => undefined,
+  normalizeError: (error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
   ErrorCategory: {
     DATABASE: "DATABASE",
     EXTERNAL_API: "EXTERNAL_API",
@@ -47,6 +55,15 @@ mock.module("@/shared/lib/errors/server", () => ({
     MEDIUM: "MEDIUM",
     LOW: "LOW",
   },
+}));
+
+// PR#11 で expireStalePendingSmartLockPasscodes が stale reservation ごとに
+// createNotificationCommand を fireAndForget で発火するようになった。
+// 実装は prisma.adminNotification.create を呼ぶが、この test file は
+// smartLockPasscode 系しか mock していないため、素通しだと fireAndForget が
+// catch → logError の予期せぬ呼出になる。
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: () => Promise.resolve(),
 }));
 
 const {
@@ -70,7 +87,16 @@ describe("STALE_PENDING_THRESHOLD_MINUTES", () => {
 describe("expireStalePendingSmartLockPasscodes", () => {
   beforeEach(() => {
     mockUpdateMany.mockClear();
+    mockFindMany.mockClear();
     mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 0 }));
+    // PR#11: findMany が空の場合は updateMany を呼ばず早期 return する。
+    // 個別 test で「呼ばれる」ケースを検証したい時はここを上書きする。
+    mockFindMany.mockImplementation(() =>
+      Promise.resolve([
+        { id: "pcode-1", reservationId: "res-1" },
+        { id: "pcode-2", reservationId: "res-2" },
+      ]),
+    );
   });
 
   test("cutoff = now - STALE_PENDING_THRESHOLD_MINUTES で PENDING のみを FAILED に倒す", async () => {
@@ -99,12 +125,21 @@ describe("expireStalePendingSmartLockPasscodes", () => {
   });
 
   test("対象 0 件でも 0 を返す (Prisma updateMany の count contract)", async () => {
+    // findMany 0 件で早期 return → updateMany 未呼出でも 0 を返す
+    mockFindMany.mockImplementation(() => Promise.resolve([]));
     mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 0 }));
     const result = await expireStalePendingSmartLockPasscodes(new Date());
     expect(result).toBe(0);
+    expect(mockUpdateMany).not.toHaveBeenCalled();
   });
 
   test("複数件マッチ時は Prisma の count をそのまま返す", async () => {
+    mockFindMany.mockImplementation(() =>
+      Promise.resolve([
+        { id: "p1", reservationId: "r1" },
+        { id: "p2", reservationId: "r2" },
+      ]),
+    );
     mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 7 }));
     const result = await expireStalePendingSmartLockPasscodes(new Date());
     expect(result).toBe(7);

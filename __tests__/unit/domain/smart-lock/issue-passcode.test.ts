@@ -171,6 +171,19 @@ mock.module("@/shared/lib/errors/server", () => ({
   },
 }));
 
+// PR#11 で issue-passcode.ts に追加された admin 通知発火経路をモックする。
+// 実装は fireAndForget(createNotificationCommand(...)) で発火するが、
+// createNotificationCommand は prisma.adminNotification.create を呼ぶため、
+// 未モックだと fireAndForget が catch して logError を追加で呼び出し、
+// 既存 test の toHaveBeenCalledTimes(1) 期待値を狂わせる。
+const mockCreateNotificationCommand = mock<
+  (...args: unknown[]) => Promise<void>
+>(() => Promise.resolve());
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: (...args: unknown[]) =>
+    mockCreateNotificationCommand(...args),
+}));
+
 const { issueSmartLockPasscodes, buildPasscodeName } =
   await import("@/shared/domain/smart-lock/issue-passcode");
 
