@@ -227,10 +227,31 @@ export async function expireStalePendingSmartLockPasscodes(
     },
   });
 
+  // Codex P2 (PR#1014, comment 3566818385): webhook 遅延で PENDING → CONFIRMED に
+  // flip した行は updateMany の status: PENDING 述語で弾かれる (result.count が
+  // snapshot より減る)。pre-snapshot の reservationId をそのまま通知に流すと、
+  // 実際は成功していたパスコードを「失敗」と管理者に誤報してしまう。count がズレた
+  // ときだけ post-update の実状態を再取得し、本当に FAILED になった行のみに絞り込む。
+  // count が一致する common path では、snapshot と updateMany 対象が subset 関係
+  // (新規 PENDING は createdAt ≥ now > cutoff で snapshot に入らない) なので同集合
+  // と判定でき、余分な round-trip を避ける。
+  const failedRows =
+    result.count === stale.length
+      ? stale
+      : await prisma.smartLockPasscode.findMany({
+          where: {
+            id: { in: stale.map((p) => p.id) },
+            status: SmartLockPasscodeStatus.FAILED,
+          },
+          select: { reservationId: true },
+        });
+
   // 各 stale passcode に対応する予約単位で admin 通知を発火する。
   // fireAndForget で cron 全体を通知失敗が巻き添えにしないよう分離。
   // reservationId で dedupe (同一予約に複数デバイスがあった場合も 1 通知に集約)。
-  const reservationIds = Array.from(new Set(stale.map((p) => p.reservationId)));
+  const reservationIds = Array.from(
+    new Set(failedRows.map((p) => p.reservationId)),
+  );
   for (const reservationId of reservationIds) {
     fireAndForget(
       createNotificationCommand({
