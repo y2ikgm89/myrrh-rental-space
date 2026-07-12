@@ -52,12 +52,19 @@ function getWidgetKey(widget: SidebarWidget): string {
   return widget.type === "custom" ? `custom:${widget.id}` : widget.type;
 }
 
-export function BlogSidebar({ widgets, data }: BlogSidebarProps): ReactElement {
+export function BlogSidebar({
+  widgets,
+  data,
+}: BlogSidebarProps): ReactElement | null {
   const enabledWidgets = widgets.filter((w) => w.enabled);
+  if (enabledWidgets.length === 0) return null;
 
   return (
-    <aside aria-label="ブログサイドバー" className="hidden lg:block">
-      <div className="sticky top-[calc(var(--header-height)+2rem)]">
+    <aside
+      aria-label="ブログサイドバー"
+      className="mt-12 border-t border-border pt-8 lg:mt-0 lg:border-t-0 lg:pt-0"
+    >
+      <div className="lg:sticky lg:top-[calc(var(--header-height)+2rem)]">
         {enabledWidgets.map((widget, index) => (
           <div
             key={getWidgetKey(widget)}
