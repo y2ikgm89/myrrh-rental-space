@@ -44,15 +44,29 @@ const mockCustomerDelete = mock<() => Promise<{ id: string }>>(() =>
 // モジュールモック（import より前に配置）
 mock.module("server-only", () => ({}));
 
+// `updateCustomerProfileByUserId` は interactive transaction を使うため、
+// mock の `$transaction(callback)` はコールバックに tx を渡して即時実行する
+// (customer.findUniqueOrThrow / update が同じモック関数を通るように tx も
+// 同一の customer プロキシを共有する)。
+const mockCustomerFindUniqueOrThrow = mock<
+  () => Promise<{ id: string; email: string | null }>
+>(() => Promise.resolve({ id: "customer-1", email: null }));
+
+const prismaCustomer = {
+  findUnique: mockCustomerFindUnique,
+  findUniqueOrThrow: mockCustomerFindUniqueOrThrow,
+  findFirst: mockCustomerFindFirst,
+  create: mockCustomerCreate,
+  update: mockCustomerUpdate,
+  delete: mockCustomerDelete,
+};
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    customer: {
-      findUnique: mockCustomerFindUnique,
-      findFirst: mockCustomerFindFirst,
-      create: mockCustomerCreate,
-      update: mockCustomerUpdate,
-      delete: mockCustomerDelete,
-    },
+    customer: prismaCustomer,
+    $transaction: <T>(
+      fn: (tx: { customer: typeof prismaCustomer }) => Promise<T>,
+    ) => fn({ customer: prismaCustomer }),
   },
 }));
 
@@ -98,6 +112,7 @@ const VALID_CUSTOMER_DATA = {
 describe("customers/commands", () => {
   beforeEach(() => {
     mockCustomerFindUnique.mockReset();
+    mockCustomerFindUniqueOrThrow.mockReset();
     mockCustomerFindFirst.mockReset();
     mockCustomerCreate.mockReset();
     mockCustomerUpdate.mockReset();
@@ -105,6 +120,12 @@ describe("customers/commands", () => {
 
     // デフォルト: 顧客が存在しない
     mockCustomerFindUnique.mockResolvedValue(null);
+    // updateCustomerProfileByUserId の tx.customer.findUniqueOrThrow に対する既定応答:
+    // 「LINE OAuth 顧客で email が未登録」ケースを模す (email 初回登録テストの前提)。
+    mockCustomerFindUniqueOrThrow.mockResolvedValue({
+      id: CUSTOMER_ID,
+      email: null,
+    });
     mockCustomerFindFirst.mockResolvedValue(null);
     mockCustomerCreate.mockResolvedValue({ id: "customer-1" });
     mockCustomerUpdate.mockResolvedValue({ id: CUSTOMER_ID });

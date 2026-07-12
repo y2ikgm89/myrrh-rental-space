@@ -136,6 +136,7 @@ type ProfileInputShape = {
   firstName: string;
   companyName?: string;
   phoneNumber?: string;
+  email?: string;
   turnstileToken?: string;
 };
 
@@ -158,6 +159,9 @@ function inputToFormData(input: ProfileInputShape): FormData {
   }
   if (input.phoneNumber !== undefined) {
     fd.append("phoneNumber", input.phoneNumber);
+  }
+  if (input.email !== undefined) {
+    fd.append("email", input.email);
   }
   if (input.turnstileToken !== undefined) {
     fd.append("turnstileToken", input.turnstileToken);
@@ -226,6 +230,7 @@ describe("updateProfileAction", () => {
           firstName: "太郎",
           companyName: null,
           phoneNumber: "090-1234-5678",
+          email: null,
         },
       );
     });
@@ -274,7 +279,41 @@ describe("updateProfileAction", () => {
           firstName: "太郎",
           companyName: null,
           phoneNumber: null,
+          email: null,
         },
+      );
+    });
+
+    // Codex P1 regression (comment_id=3566958375):
+    // 入力された email が command 層まで届くこと。届かないと LINE OAuth 顧客が
+    // 「保存成功したのに email 空のまま」で mypage layout に閉じ込められる。
+    test("email が入力されたとき updateCustomerProfileByUserId に string で渡される", async () => {
+      const { updateProfileAction } =
+        await import("@/app/(public)/mypage/_shared/actions/profile");
+
+      await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, email: "new@example.com" }),
+      );
+
+      expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
+        "user-001",
+        expect.objectContaining({ email: "new@example.com" }),
+      );
+    });
+
+    test("email が空文字列のとき updateCustomerProfileByUserId に null が渡される", async () => {
+      const { updateProfileAction } =
+        await import("@/app/(public)/mypage/_shared/actions/profile");
+
+      await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, email: "" }),
+      );
+
+      expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
+        "user-001",
+        expect.objectContaining({ email: null }),
       );
     });
   });

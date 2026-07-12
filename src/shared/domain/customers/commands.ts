@@ -172,17 +172,63 @@ export async function updateCustomerProfileByUserId(
     firstName: string;
     companyName: string | null;
     phoneNumber: string | null;
+    /**
+     * 初回 email 登録用 (LINE OAuth で email scope 未付与顧客の詰み状態解消)。
+     * `null` = 変更なし。string = 現在の Customer.email が空文字/null のとき **のみ** 適用可。
+     * 既に email 設定済みの顧客に対する変更は verification 経由の Better Auth
+     * changeEmail が canonical で、この関数の scope 外 (別 command として将来追加予定)。
+     */
+    email?: string | null;
   },
 ): Promise<void> {
-  await prisma.customer.update({
-    where: { userId },
-    data: {
-      customerType: data.customerType,
-      lastName: data.lastName,
-      firstName: data.firstName,
-      companyName: data.companyName,
-      phoneNumber: data.phoneNumber,
-    },
+  await prisma.$transaction(async (tx) => {
+    const current = await tx.customer.findUniqueOrThrow({
+      where: { userId },
+      select: { id: true, email: true },
+    });
+
+    // email 初回登録: 現在 email が空 かつ 新 email が有効値のとき **のみ** 適用
+    const shouldRegisterEmail =
+      data.email !== null &&
+      data.email !== undefined &&
+      data.email !== "" &&
+      (current.email === null ||
+        current.email === undefined ||
+        current.email === "");
+
+    if (
+      data.email !== null &&
+      data.email !== undefined &&
+      data.email !== "" &&
+      !shouldRegisterEmail
+    ) {
+      throw new DomainError(
+        "メールアドレスの変更は本人確認メールを経由して行う必要があります (未実装)",
+        "VALIDATION",
+      );
+    }
+
+    await tx.customer.update({
+      where: { userId },
+      data: {
+        customerType: data.customerType,
+        lastName: data.lastName,
+        firstName: data.firstName,
+        companyName: data.companyName,
+        phoneNumber: data.phoneNumber,
+        ...(shouldRegisterEmail && data.email
+          ? {
+              email: data.email,
+              emailCanonical: normalizeEmailForIdentity(data.email),
+            }
+          : {}),
+      },
+    });
+
+    // 注: Better Auth の User.email は auth plugin が独立管理する契約のため、
+    // ここでは Customer.email のみを更新する (reservation 通知等の customer-facing
+    // 用途に使うのは Customer.email 側)。User.email の同期は Better Auth の
+    // changeEmail plugin (verification 経由) が canonical で、別 PR で対応予定。
   });
 }
 
