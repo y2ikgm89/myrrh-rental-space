@@ -152,6 +152,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       Promise.resolve({
         id: "res-1",
         status: ReservationStatus.CONFIRMED,
+        paymentStatus: "UNPAID",
         startTime: new Date("2026-12-01T02:00:00Z"), // JST 11:00
         taxRateType: "STANDARD",
         taxRate: 0.1,
@@ -195,6 +196,60 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
     expect(mockReservationUpdate).toHaveBeenCalledTimes(1);
     // blocked date は tx 外 pre-check と tx 内二重ガードで 2 回呼ばれる
     expect(mockBlockedDateFindFirst).toHaveBeenCalledTimes(2);
+  });
+
+  test("PAID の予約は変更不可 (キャンセル+再予約に誘導、reservation.update 未呼出) — PR#13", async () => {
+    mockTxReservationFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        id: "res-1",
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: "PAID",
+        startTime: new Date("2026-12-01T02:00:00Z"),
+        taxRateType: "STANDARD",
+        taxRate: 0.1,
+        couponId: null,
+        coupon: null,
+      }),
+    );
+
+    const result = await updateCustomerReservation(
+      "res-1",
+      "cust-1",
+      validInput,
+      24,
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+    });
+    expect(mockReservationUpdate).not.toHaveBeenCalled();
+  });
+
+  test("PENDING 決済中の予約も変更不可 (checkout session 生成中の中断防止) — PR#13", async () => {
+    mockTxReservationFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        id: "res-1",
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: "PENDING",
+        startTime: new Date("2026-12-01T02:00:00Z"),
+        taxRateType: "STANDARD",
+        taxRate: 0.1,
+        couponId: null,
+        coupon: null,
+      }),
+    );
+
+    const result = await updateCustomerReservation(
+      "res-1",
+      "cust-1",
+      validInput,
+      24,
+    );
+
+    expect((result as { success: false; error: string }).success).toBe(false);
+    expect(mockReservationUpdate).not.toHaveBeenCalled();
   });
 
   test("spaceForBlockedCheck が見つからない場合 (削除済み/非公開) は 早期 return", async () => {
