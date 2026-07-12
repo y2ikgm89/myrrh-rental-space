@@ -94,19 +94,43 @@ export const buttonSection = {
   margin: "32px 0",
 };
 
+/**
+ * WCAG 2.5.5 AA (Target Size ≥ 44×44px) 準拠: content = fontSize × lineHeight
+ * (16 × 1.25 = 20px) + padding-y (14 × 2 = 28px) = 48px。lineHeight は
+ * MUA デフォルト (~1.2) 依存を避けるため必ず明示する。
+ */
 export const buttonPrimary = {
   backgroundColor: COLOR.primary,
   borderRadius: "6px",
   color: COLOR.primaryText,
   fontSize: "16px",
+  lineHeight: "20px",
   fontWeight: "600",
-  padding: "12px 24px",
+  padding: "14px 24px",
   textDecoration: "none",
 };
 
 export const buttonDanger = {
   ...buttonPrimary,
   backgroundColor: COLOR.danger,
+};
+
+/**
+ * 管理者宛メールの副次 CTA。primary と同じ 44px を満たしつつ、
+ * ブランド色と区別するため background は text 色 (#1f2937) を使う。
+ * 従来 admin-notification.tsx / event-admin-notification.tsx に個別に
+ * 定義されていた ADMIN_BUTTON_STYLE (14px + line-height 未指定で 40.8px と 44px 未達)
+ * を吸収した SSoT。
+ */
+export const buttonSecondary = {
+  backgroundColor: COLOR.text,
+  borderRadius: "6px",
+  color: COLOR.primaryText,
+  fontSize: "16px",
+  lineHeight: "20px",
+  fontWeight: "600",
+  padding: "14px 24px",
+  textDecoration: "none",
 };
 
 export const linkStyle = {

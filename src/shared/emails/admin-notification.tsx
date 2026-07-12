@@ -1,10 +1,11 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Section, Text } from "@react-email/components";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { adminNotificationReservationFixture } from "./admin-notification.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
+  buttonSecondary,
   buttonSection,
   detailItem,
   detailsHeading,
@@ -47,17 +48,6 @@ const ACTION_COLORS: Record<"new" | "update" | "cancel", string> = {
   new: "#15803d",
   update: "#a16207",
   cancel: "#b91c1c",
-};
-
-const ADMIN_BUTTON_STYLE = {
-  backgroundColor: COLOR.text,
-  borderRadius: "6px",
-  color: COLOR.primaryText,
-  fontSize: "14px",
-  fontWeight: "600",
-  padding: "12px 24px",
-  textDecoration: "none",
-  display: "inline-block",
 };
 
 const guestNameDiffStyle = {
@@ -128,9 +118,9 @@ function ReservationNotification({
       </Section>
 
       <Section style={buttonSection}>
-        <Link href={adminUrl} style={ADMIN_BUTTON_STYLE}>
+        <Button href={adminUrl} style={buttonSecondary}>
           管理画面で確認
-        </Link>
+        </Button>
       </Section>
     </EmailLayout>
   );
@@ -184,9 +174,9 @@ function InquiryNotification({
       </Section>
 
       <Section style={buttonSection}>
-        <Link href={adminUrl} style={ADMIN_BUTTON_STYLE}>
+        <Button href={adminUrl} style={buttonSecondary}>
           管理画面で確認
-        </Link>
+        </Button>
       </Section>
     </EmailLayout>
   );

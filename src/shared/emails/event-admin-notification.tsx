@@ -1,9 +1,9 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Section, Text } from "@react-email/components";
 import { eventAdminNotificationFixture } from "./event-admin-notification.fixture";
 import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
-  COLOR,
+  buttonSecondary,
   buttonSection,
   detailItem,
   detailsHeading,
@@ -25,17 +25,6 @@ type Props = {
   /** 管理画面のイベント詳細 URL（クリックで申込一覧を確認） */
   adminUrl?: string;
   footer: EmailFooterData;
-};
-
-const ADMIN_BUTTON_STYLE = {
-  backgroundColor: COLOR.text,
-  borderRadius: "6px",
-  color: COLOR.primaryText,
-  fontSize: "14px",
-  fontWeight: "600",
-  padding: "12px 24px",
-  textDecoration: "none",
-  display: "inline-block",
 };
 
 export function EventAdminNotificationEmail({
@@ -93,9 +82,9 @@ export function EventAdminNotificationEmail({
 
       {adminUrl && (
         <Section style={buttonSection}>
-          <Link href={adminUrl} style={ADMIN_BUTTON_STYLE}>
+          <Button href={adminUrl} style={buttonSecondary}>
             管理画面で確認
-          </Link>
+          </Button>
         </Section>
       )}
     </EmailLayout>

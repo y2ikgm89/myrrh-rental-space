@@ -15,7 +15,20 @@ interface Props {
 export function EmailLayout({ preview, footer, children }: Props) {
   return (
     <Html lang="ja">
-      <Head />
+      <Head>
+        {/*
+         * Apple Mail (macOS 12+ / iOS 15+) と Outlook.com の自動ダーク変換で
+         * detailsSection (#f9fafb) など淡色 surface だけが反転し、テキスト色
+         * が追随せずコントラストが崩れるのを防ぐ。styles.ts の COLOR パレット
+         * は light 前提の設計で SSoT であるため、light に固定する。
+         *
+         * refs:
+         * - https://developer.apple.com/documentation/mail-privacy/supporting-dark-mode-in-html-email
+         * - https://webkit.org/blog/8840/dark-mode-support-in-webkit/
+         */}
+        <meta name="color-scheme" content="light" />
+        <meta name="supported-color-schemes" content="light" />
+      </Head>
       <Preview>{preview}</Preview>
       <Body style={main}>
         <Container style={container}>
