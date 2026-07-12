@@ -1874,6 +1874,21 @@ model EventRegistration {
   // Reservation.reminderSentAt と同型の atomic claim パターンで二重送信を防ぐ。
   reminderSentAt DateTime?
 
+  // Payment (Stripe) — Reservation と同型。有料 EventTicket の Stripe Checkout 対応 (PR#9)。
+  // 決済フロー実装 (PR#10) はこの schema 追加を前提とする。無料チケット (price=0) は
+  // 従来通り UNPAID のまま CONFIRMED を確定させる (walk-in / 招待枠と同じ扱い)。
+  paymentStatus           PaymentStatus @default(UNPAID)
+  // Stripe Checkout Session の id。@unique で「同じ session が別 registration に紐づく」
+  // silent bug を防ぐ (Reservation 側と同型)。
+  stripeCheckoutSessionId String?       @unique
+  // Stripe PaymentIntent の id。session が payment_intent に紐付いた後の webhook で
+  // 保存。@unique で refund の idempotency key 用途にも使う。
+  stripePaymentIntentId   String?       @unique
+  // 決済確定時の請求金額のスナップショット (ticket.price × quantity)。
+  // 後日 ticket.price が変わっても返金額の算定根拠を残す (会計証跡)。
+  paidAmount              Int?
+  paidAt                  DateTime?
+
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
   ticket   EventTicket   @relation(fields: [ticketId], references: [id], onDelete: Restrict)
@@ -1887,6 +1902,8 @@ model EventRegistration {
   @@index([status])
   @@index([eventId, status, createdAt])
   @@index([eventId, attendedAt])
+  // Payment webhook / cron が「未確定 → PAID」の atomic claim で使う (Reservation 同型)
+  @@index([paymentStatus])
   @@map("event_registrations")
 }
 
