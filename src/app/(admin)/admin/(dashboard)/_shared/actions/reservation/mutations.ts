@@ -66,7 +66,7 @@ async function issueSmartLockAndSendConfirmationEmail(
   payloadData: ReservationEmailData,
   spaceId: string,
 ) {
-  const smartLockPasscodes = await issueSmartLockPasscodes({
+  const result = await issueSmartLockPasscodes({
     reservationId: payloadData.reservationId,
     spaceId,
     startTime: payloadData.startTime,
@@ -74,9 +74,11 @@ async function issueSmartLockAndSendConfirmationEmail(
   });
 
   return sendReservationConfirmationEmail(
-    smartLockPasscodes.length > 0
-      ? { ...payloadData, smartLockPasscodes }
-      : payloadData,
+    result.passcodes.length > 0
+      ? { ...payloadData, smartLockPasscodes: result.passcodes }
+      : result.issuanceFailed
+        ? { ...payloadData, smartLockIssuanceFailed: true }
+        : payloadData,
   );
 }
 
@@ -317,10 +319,13 @@ export const restoreReservationStatus = async (
             spaceId: result.spaceId,
             startTime: payloadData.startTime,
             endTime: payloadData.endTime,
-          }).then((smartLockPasscodes) =>
+          }).then((issueResult) =>
             sendReservationStatusChangedEmail(
-              smartLockPasscodes.length > 0
-                ? { ...statusChangedEmailData, smartLockPasscodes }
+              issueResult.passcodes.length > 0
+                ? {
+                    ...statusChangedEmailData,
+                    smartLockPasscodes: issueResult.passcodes,
+                  }
                 : statusChangedEmailData,
             ),
           ),

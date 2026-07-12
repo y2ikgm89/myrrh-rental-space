@@ -62,7 +62,7 @@ async function issueSmartLockAndSendConfirmationEmail(
   payload: ReservationEmailData,
   spaceId: string,
 ): Promise<void> {
-  const smartLockPasscodes = await issueSmartLockPasscodes({
+  const result = await issueSmartLockPasscodes({
     reservationId: payload.reservationId,
     spaceId,
     startTime: payload.startTime,
@@ -70,9 +70,11 @@ async function issueSmartLockAndSendConfirmationEmail(
   });
 
   await sendReservationConfirmationEmail(
-    smartLockPasscodes.length > 0
-      ? { ...payload, smartLockPasscodes }
-      : payload,
+    result.passcodes.length > 0
+      ? { ...payload, smartLockPasscodes: result.passcodes }
+      : result.issuanceFailed
+        ? { ...payload, smartLockIssuanceFailed: true }
+        : payload,
   );
 }
 

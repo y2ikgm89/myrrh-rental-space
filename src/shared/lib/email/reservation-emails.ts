@@ -210,6 +210,8 @@ export async function sendReservationConfirmationEmail(
           modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
           cancellationPolicyUrl,
           smartLockPasscodes: data.smartLockPasscodes,
+          smartLockIssuanceFailed: data.smartLockIssuanceFailed,
+          smartLockFallbackContact: data.smartLockFallbackContact,
           footer,
         }),
       ),

@@ -40,6 +40,18 @@ type Props = {
   cancellationPolicyUrl?: string;
   /** 予約確定時に発行されたスマートロックの一時パスコード一覧 */
   smartLockPasscodes?: { deviceName: string; passcode: string }[];
+  /**
+   * スマートロックのパスコード発行が失敗した際の代替入室手段案内 (PR#12)。
+   * true のとき「当日運営までお問い合わせください」の fallback セクションを描画。
+   * smartLockPasscodes を渡さず (発行なし) `smartLockIssuanceFailed=true` を渡すと
+   * 「本来発行される予定だったが失敗した」ケースを明示できる。
+   */
+  smartLockIssuanceFailed?: boolean;
+  /** 発行失敗時に案内する連絡先。null の場合は sender 情報にフォールバック。 */
+  smartLockFallbackContact?: {
+    readonly phone?: string | null;
+    readonly email?: string | null;
+  };
   footer: EmailFooterData;
 };
 
@@ -60,6 +72,8 @@ export function ReservationConfirmationEmail({
   modificationDeadlineHours,
   cancellationPolicyUrl,
   smartLockPasscodes,
+  smartLockIssuanceFailed,
+  smartLockFallbackContact,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -117,6 +131,50 @@ export function ReservationConfirmationEmail({
               <strong>{entry.deviceName}:</strong> {entry.passcode}
             </Text>
           ))}
+        </Section>
+      )}
+
+      {/* スマートロック発行失敗時の代替入室手段案内 (PR#12) */}
+      {smartLockIssuanceFailed && (
+        <Section
+          style={{
+            backgroundColor: danger.background,
+            borderRadius: "4px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: danger.heading,
+              marginBottom: "8px",
+            }}
+          >
+            スマートロックの暗証番号発行について
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            現在システムでの暗証番号の自動発行に失敗しております。当日のご入室に
+            つきましては、下記までお問い合わせください。ご不便をおかけして申し訳
+            ございません。
+          </Text>
+          {smartLockFallbackContact?.phone && (
+            <Text
+              style={{
+                fontSize: "14px",
+                lineHeight: "24px",
+                marginTop: "8px",
+              }}
+            >
+              <strong>お電話:</strong> {smartLockFallbackContact.phone}
+            </Text>
+          )}
+          {smartLockFallbackContact?.email && (
+            <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+              <strong>メール:</strong> {smartLockFallbackContact.email}
+            </Text>
+          )}
         </Section>
       )}
 

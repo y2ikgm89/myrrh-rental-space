@@ -30,6 +30,19 @@ export type ReservationEmailData = {
    * 対象スペースにスマートロックデバイスが無ければ undefined/空配列。
    */
   smartLockPasscodes?: { deviceName: string; passcode: string }[];
+  /**
+   * スマートロック発行が失敗した際の代替入室手段案内フラグ (PR#12)。
+   * true のとき確認メール内で「当日運営までお問い合わせください」の fallback
+   * セクションを描画する。設定するのは呼び出し側 (issueSmartLockAndSendConfirmationEmail)
+   * で、失敗判定は「issueSmartLockPasscodes が空を返し、かつ SmartLockPasscode 行が
+   * FAILED で存在」の条件。
+   */
+  smartLockIssuanceFailed?: boolean;
+  /** 発行失敗時に案内する連絡先 (null → sender 情報にフォールバック)。 */
+  smartLockFallbackContact?: {
+    readonly phone?: string | null;
+    readonly email?: string | null;
+  };
 };
 
 export type ContactEmailData = {
