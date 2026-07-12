@@ -5,7 +5,7 @@ import { CalendarSyncMethod, ReservationStatus } from "@generated/prisma/enums";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { formatDateTimeFull, formatTimeShort } from "@/shared/lib/date-format";
-import { lockReservationSpaceForTransaction } from "./locks";
+import { lockSpaceForTransaction } from "./space-locks";
 
 export type FailedCalendarSyncReservation = {
   id: string;
@@ -263,7 +263,7 @@ export async function applyCalendarTimeChange(input: {
     }
 > {
   return prisma.$transaction(async (tx) => {
-    await lockReservationSpaceForTransaction(tx, input.spaceId);
+    await lockSpaceForTransaction(tx, input.spaceId);
 
     const overlappingReservation = await tx.reservation.findFirst({
       where: {

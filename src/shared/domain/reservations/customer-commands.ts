@@ -16,7 +16,7 @@ import {
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
-import { lockReservationSpaceForTransaction } from "./locks";
+import { lockSpaceForTransaction } from "./space-locks";
 import { buildDateTime } from "./payloads";
 
 // ---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ export async function updateCustomerReservation(
       throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
     }
 
-    await lockReservationSpaceForTransaction(tx, input.spaceId);
+    await lockSpaceForTransaction(tx, input.spaceId);
 
     // BlockedDate の tx 内二重ガード (tx 外 pre-check と race する GLOBAL 休業日追加を封鎖)
     await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);

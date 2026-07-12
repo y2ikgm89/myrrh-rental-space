@@ -1,8 +1,8 @@
 /**
  * 予約スペース時間帯の二重予約防止（advisory lock 直列化）の統合テスト（実 DB 必須）。
  *
- * 空き確認は read-before-write のため、`lockReservationSpaceForTransaction`
- * （src/shared/domain/reservations/locks.ts、`pg_advisory_xact_lock(728351, hashtext(spaceId))`）
+ * 空き確認は read-before-write のため、`lockSpaceForTransaction`
+ * （src/shared/domain/reservations/space-locks.ts、`pg_advisory_xact_lock(728351, hashtext(spaceId))`）
  * による直列化が無いと、同一スペース・重複時間帯への同時申込が全部「空きあり」を
  * 観測して通過し、複数の CONFIRMED 予約が作成される（ダブルブッキング）TOCTOU 競合になる
  * （CLAUDE.md 絶対規約8 / .claude/rules/business-domain.md「予約の同時実行制御」）。
