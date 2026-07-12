@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PaymentStatus } from "@generated/prisma/enums";
+import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getStripeClient } from "@/shared/lib/stripe";
@@ -70,6 +70,7 @@ export async function createCheckoutSessionCommand(input: {
     select: {
       id: true,
       customerId: true,
+      status: true,
       totalPrice: true,
       paymentStatus: true,
       guestEmail: true,
@@ -92,6 +93,19 @@ export async function createCheckoutSessionCommand(input: {
       "この予約の決済を開始する権限がありません",
       "FORBIDDEN",
     );
+  }
+
+  // Codex Cloud Review P1 (PR #1022, comment 3566965666):
+  // cancel path は status=CANCELLED に遷移させるが paymentStatus は UNPAID の
+  // まま残す。ここで status を assert しないと、キャンセル済み予約の owner が
+  // マイページから決済を開始でき、webhook 経由で status=CANCELLED /
+  // paymentStatus=PAID の不整合ペアが焼き付く。COMPLETED / NO_SHOW も同様に
+  // billable 状態ではない。決済導線に入れるのは PENDING / CONFIRMED のみ。
+  if (
+    reservation.status !== ReservationStatus.PENDING &&
+    reservation.status !== ReservationStatus.CONFIRMED
+  ) {
+    throw new DomainError("キャンセル済みの予約は決済できません", "VALIDATION");
   }
 
   if (reservation.paymentStatus !== PaymentStatus.UNPAID) {
@@ -145,11 +159,16 @@ export async function createCheckoutSessionCommand(input: {
       id: reservationId,
       deletedAt: null,
       paymentStatus: PaymentStatus.UNPAID,
+      // Codex P1 (PR #1022): 初期 findUnique と claim の間で並行 cancel が
+      // 走ったケースを DB レベルで塞ぐ。status が active でなければ count=0 → CONFLICT。
+      status: {
+        in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+      },
     },
     data: { paymentStatus: PaymentStatus.PENDING },
   });
   if (claimed.count === 0) {
-    // 別 request (別 checkout / 手動 admin refund 経路) が先に PENDING に遷移させた。
+    // 別 request (別 checkout / 手動 admin refund / 並行 cancel) が先に状態を遷移させた。
     throw new DomainError(
       "この予約は別のリクエストで既に決済処理が開始されています",
       "CONFLICT",

@@ -9,6 +9,14 @@ const PaymentStatus = {
   FAILED: "FAILED",
 } as const;
 
+const ReservationStatus = {
+  PENDING: "PENDING",
+  CONFIRMED: "CONFIRMED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  NO_SHOW: "NO_SHOW",
+} as const;
+
 const mockReservationFindUnique = mock<
   (args: Record<string, unknown>) => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
@@ -50,7 +58,10 @@ const mockGetStripeClient = mock(() =>
 const mockLogError = mock(() => undefined);
 
 mock.module("server-only", () => ({}));
-mock.module("@generated/prisma/enums", () => ({ PaymentStatus }));
+mock.module("@generated/prisma/enums", () => ({
+  PaymentStatus,
+  ReservationStatus,
+}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: {
@@ -140,6 +151,9 @@ describe("reservations/payment-commands", () => {
     const unpaidReservation = () => ({
       id: RESERVATION_ID,
       customerId: CUSTOMER_ID,
+      // Codex P1 (PR #1022): status を fixture に含める。checkout gate は
+      // status ∈ {PENDING, CONFIRMED} 以外を弾く。
+      status: ReservationStatus.PENDING,
       totalPrice: 5000,
       paymentStatus: PaymentStatus.UNPAID,
       stripeCheckoutSessionId: null,
@@ -413,6 +427,47 @@ describe("reservations/payment-commands", () => {
       expect(calls[1]?.[0]).toMatchObject({
         data: expect.objectContaining({
           paymentStatus: PaymentStatus.UNPAID,
+        }),
+      });
+    });
+
+    // Codex Cloud Review P1 (PR#1022, comment_id=3566965666)
+    test("キャンセル済み予約 (status=CANCELLED, paymentStatus=UNPAID) は Stripe checkout 不可", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce({
+        ...unpaidReservation(),
+        status: ReservationStatus.CANCELLED,
+      });
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      // status gate は claim / Stripe / authoritative re-read の前に throw されるので
+      // updateMany も Stripe も呼ばれない。
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("Claim updateMany の WHERE に status IN [PENDING, CONFIRMED] を含む (並行 cancel race で count=0 → CONFLICT)", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+
+      await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
+
+      const firstClaim = mockReservationUpdateMany.mock.calls[0]?.[0];
+      expect(firstClaim).toMatchObject({
+        where: expect.objectContaining({
+          paymentStatus: PaymentStatus.UNPAID,
+          status: expect.objectContaining({
+            in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+          }),
         }),
       });
     });

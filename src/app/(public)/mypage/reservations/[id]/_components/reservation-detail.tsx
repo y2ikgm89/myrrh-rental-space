@@ -308,8 +308,12 @@ export function ReservationDetail({
         </div>
       )}
 
-      {/* Stripe Checkout ボタン (PR#7): paymentStatus=UNPAID かつ totalPrice>0 のみ */}
-      {paymentStatusEnum === PaymentStatus.UNPAID &&
+      {/* Stripe Checkout ボタン (PR#7 + Codex P1 PR#1022):
+        paymentStatus=UNPAID かつ totalPrice>0 かつ status ∈ {PENDING, CONFIRMED} のみ表示。
+        cancel path は status=CANCELLED / paymentStatus=UNPAID を残すので isActive gate 必須。
+        server 側 createCheckoutSessionCommand の terminal-status ガードと対称 (defense-in-depth)。 */}
+      {isActive &&
+        paymentStatusEnum === PaymentStatus.UNPAID &&
         reservation.totalPrice !== null &&
         reservation.totalPrice > 0 && (
           <div className="border-t border-border px-4 py-4 sm:px-6">
