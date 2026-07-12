@@ -10,7 +10,13 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
  */
 export default function FormLoading() {
   return (
-    <div className="space-y-6" aria-busy="true">
+    <div
+      className="space-y-6"
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="読み込み中"
+    >
       {/* Back button */}
       <Skeleton className="h-9 w-32" />
 

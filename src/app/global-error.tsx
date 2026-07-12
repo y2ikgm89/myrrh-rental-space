@@ -25,6 +25,15 @@ export default function GlobalError({ error, unstable_retry }: ErrorInfo) {
 
   return (
     <html lang="ja">
+      <head>
+        {/*
+         * "use client" のため viewport export で colorScheme を宣言できないので、
+         * React 19 の metadata hoisting を使い <meta> を JSX で直接描画する。
+         * ハードコード light 配色 (#fafafa / #111 / #dc2626) が Chrome Auto Dark
+         * Theme / Samsung Internet 強制ダーク / Apple Mail 自動反転で崩れるのを防ぐ。
+         */}
+        <meta name="color-scheme" content="light" />
+      </head>
       <body
         style={{
           fontFamily: '"Helvetica Neue", Arial, sans-serif',

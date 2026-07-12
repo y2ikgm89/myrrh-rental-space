@@ -16,7 +16,12 @@ const TOC_LINE_KEYS = ["t1", "t2", "t3", "t4", "t5"] as const;
 
 export default function BlogPostLoading(): ReactElement {
   return (
-    <div>
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="記事を読み込み中"
+    >
       <div className="bg-surface py-3">
         <div className="mx-auto max-w-[var(--container-site)] px-[var(--container-padding)]">
           <Skeleton className="h-4 w-48" />
