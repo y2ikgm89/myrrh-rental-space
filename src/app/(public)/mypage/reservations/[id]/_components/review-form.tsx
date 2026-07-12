@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import {
   getFormProps,
@@ -98,6 +98,7 @@ function ReviewFormInner({
   spaceName,
   turnstileSiteKey,
 }: ReviewFormInnerProps): ReactElement {
+  const ratingLabelId = useId();
   const [rating, setRating] = useState<number>(0);
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const [submitted, setSubmitted] = useState(false);
@@ -199,21 +200,23 @@ function ReviewFormInner({
 
         {/* Star Rating */}
         <div>
-          <label className="mb-2 block text-sm font-medium">
+          <span id={ratingLabelId} className="mb-2 block text-sm font-medium">
             評価
             <span aria-hidden="true" className="text-destructive">
               {" "}
               *
             </span>
-          </label>
-          <StarRating
-            mode="interactive"
-            rating={rating}
-            size={28}
-            onChange={(value) => {
-              setRating(value);
-            }}
-          />
+          </span>
+          <div role="group" aria-labelledby={ratingLabelId}>
+            <StarRating
+              mode="interactive"
+              rating={rating}
+              size={28}
+              onChange={(value) => {
+                setRating(value);
+              }}
+            />
+          </div>
           {ratingError !== undefined ? (
             <p className="mt-1 text-sm text-destructive" role="alert">
               {ratingError}

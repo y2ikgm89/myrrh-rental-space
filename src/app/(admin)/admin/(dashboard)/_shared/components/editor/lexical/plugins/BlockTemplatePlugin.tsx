@@ -388,6 +388,7 @@ function InsertTemplateDialog({
                     onClick={() => handleDelete(template.id)}
                     disabled={deletingId === template.id}
                     title="削除"
+                    aria-label={`テンプレート "${template.name}" を削除`}
                   >
                     {deletingId === template.id ? (
                       <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
