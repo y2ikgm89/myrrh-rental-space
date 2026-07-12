@@ -264,7 +264,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
     expect(mockGetDeviceStatus).not.toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
   });
@@ -288,7 +288,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
@@ -304,7 +304,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     expect(mockGetDeviceStatus).not.toHaveBeenCalled();
     expect(mockUpdatePasscodeRow).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -345,9 +345,9 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.deviceName).toBe(DEVICE_ROW.deviceName);
-    expect(result[0]?.passcode).toMatch(/^\d{6}$/);
+    expect(result.passcodes).toHaveLength(1);
+    expect(result.passcodes[0]?.deviceName).toBe(DEVICE_ROW.deviceName);
+    expect(result.passcodes[0]?.passcode).toMatch(/^\d{6}$/);
     expect(mockGetDeviceStatus).toHaveBeenCalledTimes(1);
     expect(mockCreatePasscodeApi).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -406,8 +406,8 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.passcode).toMatch(/^\d{6}$/);
+    expect(result.passcodes).toHaveLength(1);
+    expect(result.passcodes[0]?.passcode).toMatch(/^\d{6}$/);
   });
 
   test("確定writeがwebhookと競合(count=0)しFAILED済みならnullを返す(結果に含めない)", async () => {
@@ -445,7 +445,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
   });
 
   test("ポーリングタイムアウト時は status を PENDING のまま残し、警告ログのみ出す (webhook 到着余地を保つ)", async () => {
@@ -459,7 +459,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     // MAX_POLL_ATTEMPTS = 15 (3s * 15 = 45s、setTimeout はスパイ済みで即時)
     expect(mockGetDeviceStatus).toHaveBeenCalledTimes(15);
 
@@ -493,7 +493,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([
+    expect(result.passcodes).toEqual([
       { deviceName: DEVICE_ROW.deviceName, passcode: "654321" },
     ]);
     expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
@@ -511,7 +511,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     expect(mockLogError).toHaveBeenCalled();
   });
 
@@ -525,7 +525,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
     expect(mockGetDeviceStatus).not.toHaveBeenCalled();
@@ -556,7 +556,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([
+    expect(result.passcodes).toEqual([
       { deviceName: DEVICE_ROW.deviceName, passcode: "111222" },
     ]);
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
@@ -569,7 +569,7 @@ describe("issueSmartLockPasscodes", () => {
 
     const result = await issueSmartLockPasscodes(makeInput());
 
-    expect(result).toEqual([]);
+    expect(result.passcodes).toEqual([]);
     expect(mockLogError).toHaveBeenCalled();
   });
 });

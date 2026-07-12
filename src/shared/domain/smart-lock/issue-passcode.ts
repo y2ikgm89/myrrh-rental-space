@@ -73,6 +73,21 @@ export type IssuedSmartLockPasscode = {
   readonly passcode: string;
 };
 
+/**
+ * `issueSmartLockPasscodes` の戻り値。呼出側が「発行成功 (passcodes 非空)」
+ * 「発行失敗 (issuanceFailed=true)」「対象デバイスなし (issuanceFailed=false かつ空)」
+ * を区別できるようにする (PR#12)。
+ *
+ * - passcodes: 発行成功した passcode の配列
+ * - issuanceFailed: 対象スペースに smartLockDevice が割り当てられているのに
+ *   発行に失敗した場合のみ true。confirmation メールで代替入室手段の案内文言を
+ *   出すかどうかの判定に使う。
+ */
+export type IssueSmartLockPasscodesResult = {
+  readonly passcodes: IssuedSmartLockPasscode[];
+  readonly issuanceFailed: boolean;
+};
+
 function generatePasscode(): string {
   return randomInt(0, 1_000_000).toString().padStart(6, "0");
 }
@@ -326,14 +341,17 @@ async function issueForDevice(
  */
 export async function issueSmartLockPasscodes(
   input: IssueSmartLockPasscodesInput,
-): Promise<IssuedSmartLockPasscode[]> {
+): Promise<IssueSmartLockPasscodesResult> {
   try {
     const space = await prisma.space.findUnique({
       where: { id: input.spaceId },
       select: { smartLockDevice: true },
     });
     const device = space?.smartLockDevice;
-    if (!device || !device.isActive) return [];
+    // デバイスなし or 無効化 = そもそも発行対象外 (failure ではない)
+    if (!device || !device.isActive) {
+      return { passcodes: [], issuanceFailed: false };
+    }
 
     const credentials = await getDecryptedSwitchBotCredentials();
     if (!credentials) {
@@ -356,7 +374,8 @@ export async function issueSmartLockPasscodes(
         reason:
           "SmartLockDevice が割り当てられているが SwitchBot 連携が未設定/無効",
       });
-      return [];
+      // デバイス設定済みなのに credentials 欠損 = 発行失敗として顧客メールにも案内
+      return { passcodes: [], issuanceFailed: true };
     }
 
     const existing = await prisma.smartLockPasscode.findUnique({
@@ -375,9 +394,15 @@ export async function issueSmartLockPasscodes(
           device.deviceName,
           input.reservationId,
         );
-        return resolved ? [resolved] : [];
+        return resolved
+          ? { passcodes: [resolved], issuanceFailed: false }
+          : { passcodes: [], issuanceFailed: true };
       }
-      return [];
+      // PENDING/FAILED を発見 = すでに前回試行で失敗中の可能性が高いため failed 扱い
+      return {
+        passcodes: [],
+        issuanceFailed: existing.status === SmartLockPasscodeStatus.FAILED,
+      };
     }
 
     const issued = await issueForDevice(
@@ -386,7 +411,9 @@ export async function issueSmartLockPasscodes(
       credentials,
       credentials.passcodeBufferMinutes,
     );
-    return issued ? [issued] : [];
+    return issued
+      ? { passcodes: [issued], issuanceFailed: false }
+      : { passcodes: [], issuanceFailed: true };
   } catch (error) {
     const normalized = normalizeError(error);
     logError(normalized, {
@@ -402,6 +429,6 @@ export async function issueSmartLockPasscodes(
       reservationId: input.reservationId,
       reason: `予期しないエラー: ${normalized.message}`,
     });
-    return [];
+    return { passcodes: [], issuanceFailed: true };
   }
 }
