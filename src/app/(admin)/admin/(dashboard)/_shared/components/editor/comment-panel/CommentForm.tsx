@@ -63,6 +63,7 @@ export function CommentForm({
         onClick={handleSubmit}
         disabled={!content.trim() || disabled || isPending}
         title="送信 (Ctrl+Enter)"
+        aria-label="コメントを送信"
       >
         <IconSend className="h-4 w-4" />
       </Button>

@@ -21,6 +21,7 @@ export function HistorySection({ canUndo, canRedo, onUndo, onRedo }: Props) {
         onClick={onUndo}
         disabled={!canUndo}
         title="元に戻す"
+        aria-label="元に戻す"
       >
         <IconArrowBackUp className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
@@ -32,6 +33,7 @@ export function HistorySection({ canUndo, canRedo, onUndo, onRedo }: Props) {
         onClick={onRedo}
         disabled={!canRedo}
         title="やり直す"
+        aria-label="やり直す"
       >
         <IconArrowForwardUp className="h-5 w-5 md:h-4 md:w-4" />
       </Button>

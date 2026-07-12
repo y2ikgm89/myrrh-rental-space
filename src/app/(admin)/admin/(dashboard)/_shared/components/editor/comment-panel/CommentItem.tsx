@@ -60,6 +60,7 @@ export function CommentItem({
             className="h-7 w-7"
             onClick={() => onDelete(comment.id)}
             title="削除"
+            aria-label="コメントを削除"
           >
             <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
