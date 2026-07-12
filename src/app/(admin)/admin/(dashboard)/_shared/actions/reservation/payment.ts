@@ -15,7 +15,8 @@ export async function createCheckoutSession(
     resource: "reservation",
     action: "update",
     resourceId: reservationId,
-    execute: async () => createCheckoutSessionCommand(reservationId),
+    execute: async () =>
+      createCheckoutSessionCommand({ reservationId, actorCustomerId: null }),
     afterSuccess: (data) => {
       invalidateReservationCaches(reservationId, data.customerId);
     },

@@ -49,7 +49,21 @@ function toStripeUnitAmount(amount: number, currency: string): number {
 // Checkout Session
 // ---------------------------------------------------------------------------
 
-export async function createCheckoutSessionCommand(reservationId: string) {
+/**
+ * Stripe Checkout Session を作成する。
+ *
+ * `actorCustomerId`:
+ * - `null` = admin 経路（本人性検証を bypass、SUPER_ADMIN の代理決済 UI 用）
+ * - `string` = 公開経路（Better Auth 認証済み Customer の id、本人の予約のみ許可）
+ *
+ * 本人性検証は「reservationId のみで session を作れる」IDOR を封じるためのガード。
+ * mismatch は DomainError(FORBIDDEN) を throw する。
+ */
+export async function createCheckoutSessionCommand(input: {
+  reservationId: string;
+  actorCustomerId: string | null;
+}) {
+  const { reservationId, actorCustomerId } = input;
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId, deletedAt: null },
     select: {
@@ -66,6 +80,17 @@ export async function createCheckoutSessionCommand(reservationId: string) {
 
   if (!reservation) {
     throw new DomainError("予約が見つかりません", "NOT_FOUND");
+  }
+
+  if (actorCustomerId !== null && actorCustomerId !== reservation.customerId) {
+    // 他人の予約 id で checkout session を作ろうとする IDOR を封鎖。
+    // 存在しない予約と同じ NOT_FOUND を返さないのは意図的で、admin と紛らわしい
+    // FORBIDDEN を明示することで運用側の切り分けを容易にする（reservation 自体は
+    // 実在するので NOT_FOUND は誤り）。
+    throw new DomainError(
+      "この予約の決済を開始する権限がありません",
+      "FORBIDDEN",
+    );
   }
 
   if (reservation.paymentStatus !== PaymentStatus.UNPAID) {

@@ -129,29 +129,71 @@ describe("reservations/payment-commands", () => {
   });
 
   describe("createCheckoutSessionCommand", () => {
-    test("Stripe Checkout customer_email は予約時メールを優先する", async () => {
-      mockReservationFindUnique.mockResolvedValueOnce({
-        id: RESERVATION_ID,
-        customerId: CUSTOMER_ID,
-        totalPrice: 5000,
-        paymentStatus: PaymentStatus.UNPAID,
-        stripeCheckoutSessionId: null,
-        guestEmail: "booked-address@example.com",
-        space: { name: "テストスペース" },
-        customer: {
-          email: "current-customer@example.com",
-          lastName: "山田",
-          firstName: "太郎",
-        },
-      });
+    const unpaidReservation = () => ({
+      id: RESERVATION_ID,
+      customerId: CUSTOMER_ID,
+      totalPrice: 5000,
+      paymentStatus: PaymentStatus.UNPAID,
+      stripeCheckoutSessionId: null,
+      guestEmail: "booked-address@example.com",
+      space: { name: "テストスペース" },
+      customer: {
+        email: "current-customer@example.com",
+        lastName: "山田",
+        firstName: "太郎",
+      },
+    });
 
-      await createCheckoutSessionCommand(RESERVATION_ID);
+    test("Stripe Checkout customer_email は予約時メールを優先する (admin bypass)", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+
+      await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
 
       expect(mockCheckoutSessionCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           customer_email: "booked-address@example.com",
         }),
       );
+    });
+
+    test("actorCustomerId が予約の customerId と一致すれば正常に決済セッション作成", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+
+      const result = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      });
+
+      expect(result.sessionId).toBe("cs_test_123");
+      expect(mockCheckoutSessionCreate).toHaveBeenCalledTimes(1);
+    });
+
+    test("IDOR 防止: actorCustomerId が予約の customerId と不一致なら DomainError(FORBIDDEN)", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: "other-customer-id",
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("FORBIDDEN");
+      // FORBIDDEN 判定は Stripe API 呼出前に throw されるため checkout session は作らない
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    });
+
+    test("存在しない reservationId は NOT_FOUND (FORBIDDEN より優先)", async () => {
+      mockReservationFindUnique.mockResolvedValueOnce(null);
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: "nonexistent",
+        actorCustomerId: "any-customer",
+      }).catch((e: unknown) => e);
+
+      expect((error as DomainError).code).toBe("NOT_FOUND");
     });
   });
 
