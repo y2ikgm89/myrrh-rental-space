@@ -16,7 +16,7 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/not-found#global-not-foundjs
  */
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import type { ReactElement } from "react";
 import "./(public)/_styles/public.css";
 
@@ -27,6 +27,20 @@ export const metadata: Metadata = {
     index: false,
     follow: false,
   },
+};
+
+/**
+ * `(public)/layout.tsx` の generateViewport が返している `colorScheme: "only light"`
+ * (Chrome Auto Dark Theme / Samsung Internet 強制ダークの opt-out) を継承する
+ * ルートが無いため、ここで明示する。global-not-found は Root Layout を完全に
+ * バイパスして自前 `<html>` を描画する仕様のため viewport export が必要。
+ *
+ * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata#viewport-object
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  colorScheme: "only light",
 };
 
 export default function NotFound(): ReactElement {

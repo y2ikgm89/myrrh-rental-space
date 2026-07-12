@@ -15,7 +15,13 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 
 export default function DashboardLoading() {
   return (
-    <div className="space-y-6" aria-busy="true">
+    <div
+      className="space-y-6"
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="読み込み中"
+    >
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
@@ -32,27 +38,29 @@ export default function DashboardLoading() {
         <Skeleton className="h-11 w-full sm:w-32" />
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border bg-card">
-        {/* Table header */}
-        <div className="grid grid-cols-4 gap-4 border-b px-6 py-3">
-          {skeletonKeys(4, "col").map((key) => (
-            <Skeleton key={key} className="h-4 w-24" variant="text" />
-          ))}
-        </div>
-        {/* Table rows */}
-        <div className="divide-y">
-          {skeletonKeys(5, "row").map((key) => (
-            <div
-              key={key}
-              className="grid grid-cols-4 items-center gap-4 px-6 py-4"
-            >
-              <Skeleton className="h-4 w-32" variant="text" />
-              <Skeleton className="h-4 w-24" variant="text" />
-              <Skeleton className="h-5 w-20 rounded-full" />
-              <Skeleton className="ml-auto h-9 w-9" />
-            </div>
-          ))}
+      {/* Table (mobile: 2 cols, sm: 3 cols, md+: 4 cols) — real Table has overflow-auto SSoT, skeleton mirrors that responsively */}
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="overflow-x-auto">
+          {/* Table header */}
+          <div className="grid grid-cols-2 gap-4 border-b px-6 py-3 sm:grid-cols-3 md:grid-cols-4">
+            {skeletonKeys(4, "col").map((key) => (
+              <Skeleton key={key} className="h-4 w-24" variant="text" />
+            ))}
+          </div>
+          {/* Table rows */}
+          <div className="divide-y">
+            {skeletonKeys(5, "row").map((key) => (
+              <div
+                key={key}
+                className="grid grid-cols-2 items-center gap-4 px-6 py-4 sm:grid-cols-3 md:grid-cols-4"
+              >
+                <Skeleton className="h-4 w-32" variant="text" />
+                <Skeleton className="h-4 w-24" variant="text" />
+                <Skeleton className="hidden h-5 w-20 rounded-full sm:block" />
+                <Skeleton className="ml-auto hidden h-9 w-9 md:block" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
