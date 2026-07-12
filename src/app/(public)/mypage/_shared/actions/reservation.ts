@@ -8,6 +8,7 @@ import {
   cancelCustomerReservation,
   updateCustomerReservation,
 } from "@/shared/domain/reservations/customer-commands";
+import { createCheckoutSessionCommand } from "@/shared/domain/reservations/payment-commands";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
 import {
@@ -43,6 +44,44 @@ import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { z } from "zod";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
+
+/**
+ * 公開マイページから Stripe Checkout Session を開始する (PR#7)。
+ *
+ * `createCheckoutSessionCommand` に `actorCustomerId` として Better Auth 認証済み
+ * Customer.id を渡し、IDOR (他人の予約 id で checkout 作成) を封鎖する (PR#6 参照)。
+ *
+ * @returns Stripe Checkout Session の URL (成功時は呼出元で `redirect` する)。
+ */
+export async function startCheckoutSessionAction(
+  reservationId: string,
+): Promise<MutationResult<{ sessionUrl: string | null }>> {
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
+  const parsedId = reservationIdSchema.safeParse(reservationId);
+  if (!parsedId.success) return createMutationError("予約IDが不正です");
+
+  const session = await getCustomerSession();
+  if (!session) return createMutationError("認証が必要です");
+
+  const customer = await getCustomerByUserId(session.user.id);
+  if (!customer) return createMutationError("顧客情報が見つかりません");
+
+  try {
+    const result = await createCheckoutSessionCommand({
+      reservationId: parsedId.data,
+      actorCustomerId: customer.id,
+    });
+    invalidateReservationCaches(parsedId.data, customer.id);
+    return { sessionUrl: result.sessionUrl };
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
+  }
+}
 
 export async function cancelReservationAction(
   reservationId: string,
