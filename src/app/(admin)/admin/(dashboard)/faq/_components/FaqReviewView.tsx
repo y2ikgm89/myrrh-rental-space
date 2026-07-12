@@ -92,11 +92,20 @@ export function FaqReviewView({
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
-                    <TableRow key={item.id} className="group">
-                      <TableCell
-                        onClick={() => handleEdit(item)}
-                        className="cursor-pointer"
-                      >
+                    <TableRow
+                      key={item.id}
+                      tabIndex={0}
+                      aria-label={`${item.question} を編集`}
+                      onClick={() => handleEdit(item)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleEdit(item);
+                        }
+                      }}
+                      className="group cursor-pointer transition-colors hover:bg-muted/30 focus-visible:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    >
+                      <TableCell>
                         <span className="font-medium">{item.question}</span>
                       </TableCell>
                       <TableCell onClick={stopRowClick}>
@@ -107,19 +116,13 @@ export function FaqReviewView({
                           <Badge variant="outline">{item.category.name}</Badge>
                         </Link>
                       </TableCell>
-                      <TableCell
-                        className="hidden text-right lg:table-cell"
-                        onClick={() => handleEdit(item)}
-                      >
+                      <TableCell className="hidden text-right lg:table-cell">
                         <FaqHelpfulnessBadge
                           helpful={item.helpfulCount}
                           notHelpful={item.notHelpfulCount}
                         />
                       </TableCell>
-                      <TableCell
-                        className="hidden text-muted-foreground lg:table-cell"
-                        onClick={() => handleEdit(item)}
-                      >
+                      <TableCell className="hidden text-muted-foreground lg:table-cell">
                         {formatDateShort(item.updatedAt)}
                       </TableCell>
                       <TableCell
