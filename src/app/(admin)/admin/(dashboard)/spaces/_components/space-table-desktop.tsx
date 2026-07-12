@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Badge,
   Table,
@@ -13,7 +12,11 @@ import {
   TableRow,
   PublishSwitch,
 } from "@/admin/components/ui";
-import { CheckboxCell, stopRowClick } from "@/admin/components/table";
+import {
+  CheckboxCell,
+  ClickableTableRow,
+  stopRowClick,
+} from "@/admin/components/table";
 import { updateSpacePublished } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/pricing/format";
@@ -37,8 +40,6 @@ export function SpaceTableDesktop({
   onToggleAll,
   onToggleOne,
 }: SpaceTableDesktopProps) {
-  const router = useRouter();
-
   return (
     <div className="hidden overflow-hidden rounded-lg border bg-card md:block">
       <div className="overflow-x-auto">
@@ -70,12 +71,10 @@ export function SpaceTableDesktop({
           </TableHeader>
           <TableBody>
             {spaces.map((space) => (
-              <TableRow
+              <ClickableTableRow
                 key={space.id}
-                className="cursor-pointer"
-                onClick={() => {
-                  router.push(`/admin/spaces/${space.id}`);
-                }}
+                href={`/admin/spaces/${space.id}`}
+                aria-label={`${space.name} の詳細`}
               >
                 <TableCell onClick={stopRowClick}>
                   <CheckboxCell
@@ -149,7 +148,7 @@ export function SpaceTableDesktop({
                 >
                   <SpaceActionCell spaceId={space.id} />
                 </TableCell>
-              </TableRow>
+              </ClickableTableRow>
             ))}
           </TableBody>
         </Table>
