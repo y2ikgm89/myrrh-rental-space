@@ -60,9 +60,9 @@ const mockReservationRuleSettings = mock<() => Promise<unknown>>(() =>
   }),
 );
 
-const mockCheckReservationOverlap = mock<
-  () => Promise<{ hasOverlap: boolean }>
->(() => Promise.resolve({ hasOverlap: false }));
+const mockCheckSpaceOverlap = mock<() => Promise<{ hasOverlap: boolean }>>(() =>
+  Promise.resolve({ hasOverlap: false }),
+);
 
 const txClient = {
   reservation: {
@@ -90,8 +90,8 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/reservation", () => ({
-  checkReservationOverlap: mockCheckReservationOverlap,
+mock.module("@/shared/domain/spaces/overlap", () => ({
+  checkSpaceOverlap: mockCheckSpaceOverlap,
 }));
 
 mock.module("@/shared/domain/reservations/availability", () => ({
@@ -135,7 +135,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
     mockReservationUpdateMany.mockImplementation(() =>
       Promise.resolve({ count: 1 }),
     );
-    mockCheckReservationOverlap.mockClear();
+    mockCheckSpaceOverlap.mockClear();
 
     // reset to default (not blocked)
     mockBlockedDateFindFirst.mockImplementation(() => Promise.resolve(null));
