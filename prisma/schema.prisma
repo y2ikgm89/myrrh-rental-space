@@ -613,6 +613,10 @@ model Reservation {
   // 二重送信防止のため送信前に atomic claim で now を立て、送信失敗時は null に戻す。
   reminderSentAt DateTime?
 
+  // PR#16: 領収書 (適格請求書) の 1:1 relation (1 予約 = 1 領収書、再発行は
+  // Receipt.reissuedFromId で自参照)
+  receipt Receipt?
+
   @@index([spaceId])
   @@index([customerId])
   @@index([userId])
@@ -1893,6 +1897,8 @@ model EventRegistration {
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
   ticket   EventTicket   @relation(fields: [ticketId], references: [id], onDelete: Restrict)
   customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  // PR#16: 領収書 (適格請求書) の 1:1 relation
+  receipt  Receipt?
 
   @@index([eventId])
   @@index([slotId])
@@ -1905,6 +1911,70 @@ model EventRegistration {
   // Payment webhook / cron が「未確定 → PAID」の atomic claim で使う (Reservation 同型)
   @@index([paymentStatus])
   @@map("event_registrations")
+}
+
+// ==============================================
+// Receipt (PR#16) — 適格請求書 (インボイス制度) 対応
+// ==============================================
+
+/**
+ * 領収書 (適格請求書要件を満たす形式)。
+ *
+ * 発行対象: PAID 状態の Reservation と EventRegistration。
+ * 発行契機: Stripe webhook checkout.session.completed の trigger 側 tx 内で自動採番。
+ * 連番: ReceiptSequence の atomic increment (Postgres sequence の代替)。
+ *
+ * issuerSnapshot は Settings (invoiceNumber / 事業者名 / 所在地) の凍結 copy。
+ * Settings 側 invoiceNumber を後日書き換えても既発行分は影響を受けない
+ * (append-only の証跡性)。再発行 (reissuedFromId 参照) 時は元連番を維持し
+ * revision フラグで区別する (税務実務 standard、D4 決定)。
+ */
+model Receipt {
+  id              String   @id @default(uuid()) @db.Uuid
+  // 領収書番号 (グローバル連番、"YYYY-XXXXXX" 形式)
+  serialNo        String   @unique @db.VarChar(20)
+  issuedAt        DateTime @default(now()) @db.Timestamptz(6)
+  // 発行対象 (Reservation OR EventRegistration の polymorphic)
+  reservationId       String? @unique @db.Uuid
+  eventRegistrationId String? @unique @db.VarChar(30)
+  reservation         Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  eventRegistration   EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict)
+  // 適格請求書要件フィールド
+  recipientName   String  @db.VarChar(100)
+  subject         String  @default("スペース利用料として") @db.VarChar(100)
+  amount          Int
+  taxAmount       Int     @default(0)
+  taxRate         Decimal @db.Decimal(5, 2)
+  // 発行時点の Settings snapshot (凍結)
+  issuerSnapshot  Json    @db.JsonB
+  // 再発行系 (元連番を維持し revision で区別)
+  reissuedFromId  String?  @db.Uuid
+  reissuedFrom    Receipt? @relation("ReissuedReceipts", fields: [reissuedFromId], references: [id], onDelete: SetNull)
+  reissuedTo      Receipt[] @relation("ReissuedReceipts")
+  reissuedReason  String?  @db.Text
+  revision        Int      @default(0)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([reservationId])
+  @@index([eventRegistrationId])
+  @@index([issuedAt])
+  @@map("receipts")
+}
+
+/**
+ * 領収書連番採番テーブル (単一行、advisory lock で serialize)。
+ * Postgres sequence 代替: 「YYYY-XXXXXX」形式を年ごとに管理し、
+ * 年替わりで nextNo をリセットする運用に対応する。
+ */
+model ReceiptSequence {
+  id        String   @id @default("singleton") @db.VarChar(20)
+  year      Int      // 4 桁年
+  nextNo    Int      @default(1) // 次に発行する連番 (1-indexed)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("receipt_sequences")
 }
 
 // ==============================================
