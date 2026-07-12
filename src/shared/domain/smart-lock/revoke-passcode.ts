@@ -17,6 +17,12 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
 
 export type RevocablePasscode = {
   readonly id: string;
@@ -201,6 +207,15 @@ export async function expireStalePendingSmartLockPasscodes(
   const cutoff = new Date(
     now.getTime() - STALE_PENDING_THRESHOLD_MINUTES * 60 * 1000,
   );
+  const stale = await prisma.smartLockPasscode.findMany({
+    where: {
+      status: SmartLockPasscodeStatus.PENDING,
+      createdAt: { lt: cutoff },
+    },
+    select: { id: true, reservationId: true },
+  });
+  if (stale.length === 0) return 0;
+
   const result = await prisma.smartLockPasscode.updateMany({
     where: {
       status: SmartLockPasscodeStatus.PENDING,
@@ -211,5 +226,28 @@ export async function expireStalePendingSmartLockPasscodes(
       failureReason: `Webhook から createKey 完了通知が ${STALE_PENDING_THRESHOLD_MINUTES} 分以内に届かなかったため失敗確定`,
     },
   });
+
+  // 各 stale passcode に対応する予約単位で admin 通知を発火する。
+  // fireAndForget で cron 全体を通知失敗が巻き添えにしないよう分離。
+  // reservationId で dedupe (同一予約に複数デバイスがあった場合も 1 通知に集約)。
+  const reservationIds = Array.from(new Set(stale.map((p) => p.reservationId)));
+  for (const reservationId of reservationIds) {
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED,
+        title:
+          NOTIFICATION_TYPE_LABELS[
+            NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED
+          ],
+        message: `予約 ${reservationId} のスマートロックパスコードが ${STALE_PENDING_THRESHOLD_MINUTES} 分以上 PENDING のため失敗確定にしました (webhook 未到着)`,
+        resourceType: "reservation",
+        resourceId: reservationId,
+      }),
+      {
+        operation: "notifySmartLockPasscodeStalePendingFailed",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+  }
   return result.count;
 }
