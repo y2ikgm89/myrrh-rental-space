@@ -47,12 +47,24 @@ export async function updateProfileAction(
       }
 
       try {
+        // Codex P1 (comment_id=3566958375): 初回 email 登録を command 層へ届ける。
+        // email はスキーマ上 optional で `""` or 有効 email。空文字/未送信を null に
+        // 正規化して渡すことで、command 側の shouldRegisterEmail 判定
+        // (現 email が空 かつ 新 email が有効値のときのみ適用) に正しく載せる。
+        // これが無いと LINE OAuth 由来で Customer.email が空のユーザーは
+        // settings 保存が「成功したのに email が変わらず」mypage layout の
+        // `!customer.email` redirect で settings に閉じ込められる。
+        const emailInput =
+          typeof data.email === "string" && data.email.length > 0
+            ? data.email
+            : null;
         await updateCustomerProfileByUserId(session.user.id, {
           customerType: data.customerType,
           lastName: data.lastName,
           firstName: data.firstName,
           companyName: data.companyName || null,
           phoneNumber: data.phoneNumber || null,
+          email: emailInput,
         });
 
         const customer = await getCustomerByUserId(session.user.id);
