@@ -41,6 +41,7 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   728350=イベント申込、728351=Space スケジュール空間（Reservation + EventTimeSlot 書込 + order-scope）、
   728352=スペースのlocationId/smartLockDeviceId整合性（`spaces/commands.ts`の
   `updateSpaceCommand`と`smart-lock/commands.ts`の`setSpaceSmartLockDeviceCommand`で共有）、
+  728353=領収書連番採番（ReceiptSequence 単一行 + 予約単位 lock）、
   audit-log chain=int8 `6029451381908262157n`
 
 ## 'use cache' クエリの標準形
