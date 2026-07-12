@@ -183,21 +183,52 @@ export function ProfileForm({
         />
       </div>
 
-      {/* メールアドレス + 補助テキストはひと塊として space-y-1 でまとめ、
-          旧 `-mt-4` の脆弱な negative margin hack を廃止。 */}
+      {/* メールアドレス。既に登録済みなら readonly 表示、未登録なら (LINE OAuth で
+          email scope 未付与のケース) 入力欄を出して初回登録できるようにする (PR#15)。
+          変更 (既登録の書換) は Better Auth の verification 経由が canonical で別 PR。 */}
       <div className="space-y-1">
-        <Input
-          label="メールアドレス"
-          type="email"
-          value={defaultValues.email}
-          disabled
-          autoComplete="email"
-          leadingIcon="IconMail"
-          aria-describedby="profile-email-help"
-        />
-        <p id="profile-email-help" className="text-xs text-muted-foreground">
-          メールアドレスはソーシャルアカウントから取得されます
-        </p>
+        {defaultValues.email === "" || defaultValues.email === null ? (
+          <>
+            <Input
+              label="メールアドレス"
+              required
+              autoComplete="email"
+              placeholder="mail@example.com"
+              leadingIcon="IconMail"
+              aria-describedby="profile-email-help"
+              {...(fields.email.errors?.[0] !== undefined && {
+                error: fields.email.errors[0],
+              })}
+              {...getInputProps(fields.email, { type: "email" })}
+            />
+            <p
+              id="profile-email-help"
+              className="text-xs text-muted-foreground"
+            >
+              LINE
+              アカウントからメールアドレスが取得できませんでした。予約確定メール等の
+              受信のため、ご登録をお願いいたします。
+            </p>
+          </>
+        ) : (
+          <>
+            <Input
+              label="メールアドレス"
+              type="email"
+              value={defaultValues.email}
+              disabled
+              autoComplete="email"
+              leadingIcon="IconMail"
+              aria-describedby="profile-email-help"
+            />
+            <p
+              id="profile-email-help"
+              className="text-xs text-muted-foreground"
+            >
+              メールアドレスはソーシャルアカウントから取得されます
+            </p>
+          </>
+        )}
       </div>
 
       <Input
