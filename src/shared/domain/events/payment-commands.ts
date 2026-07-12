@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PaymentStatus } from "@generated/prisma/enums";
+import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getStripeClient } from "@/shared/lib/stripe";
@@ -51,6 +51,12 @@ function toStripeUnitAmount(amount: number, currency: string): number {
  * `actorCustomerId`:
  * - `null` = admin 経路 (本人性検証 bypass)
  * - `string` = 公開経路 (Better Auth Customer.id、本人の申込のみ許可)
+ *
+ * Codex Cloud Review P1 (PR#1026, comment_id=3567019751): pre-check と claim
+ * `updateMany.where` の両方で `status: CONFIRMED` を要求する。cancel 経路
+ * (registration-cancel-core.ts) は paymentStatus を触らず status のみ CANCELLED
+ * に遷移させるため、paymentStatus だけで gate すると CANCELLED + UNPAID を
+ * PENDING に格上げして live Stripe session URL を返す silent bug が発生する。
  */
 export async function createEventCheckoutSessionCommand(input: {
   registrationId: string;
@@ -66,6 +72,7 @@ export async function createEventCheckoutSessionCommand(input: {
       email: true,
       name: true,
       quantity: true,
+      status: true,
       paymentStatus: true,
       stripeCheckoutSessionId: true,
       ticket: { select: { name: true, price: true } },
@@ -81,6 +88,13 @@ export async function createEventCheckoutSessionCommand(input: {
     throw new DomainError(
       "この申込の決済を開始する権限がありません",
       "FORBIDDEN",
+    );
+  }
+
+  if (registration.status !== RegistrationStatus.CONFIRMED) {
+    throw new DomainError(
+      "この申込はキャンセル済み等のため決済できません",
+      "VALIDATION",
     );
   }
 
@@ -112,10 +126,13 @@ export async function createEventCheckoutSessionCommand(input: {
   const currency = stripeSettings.stripeCurrency ?? "jpy";
   const appUrl = getAppUrl();
 
-  // Claim-first: UNPAID → PENDING を atomic に確定 (edit との race を封鎖)
+  // Claim-first: UNPAID → PENDING を atomic に確定 (edit / 並行 cancel との race を封鎖)。
+  // `status: CONFIRMED` も WHERE で assert する (Codex P1 #1026, comment 3567019751):
+  // pre-check と claim の間で並行 cancel が走ったケースを DB レベルで塞ぐ。
   const claimed = await prisma.eventRegistration.updateMany({
     where: {
       id: registrationId,
+      status: RegistrationStatus.CONFIRMED,
       paymentStatus: PaymentStatus.UNPAID,
     },
     data: { paymentStatus: PaymentStatus.PENDING },
@@ -127,7 +144,10 @@ export async function createEventCheckoutSessionCommand(input: {
     );
   }
 
-  // Authoritative re-read (直前の edit を反映)
+  // Authoritative re-read (直前の edit を反映)。
+  // Codex P1 (PR#1026, comment 3567019753): return URL に event.slug が必要なので
+  // select に追加する (旧実装は `/events/registrations/{id}` を指し、存在しない
+  // ルートなので Stripe returnee が 404 する silent bug だった)。
   const authoritative = await prisma.eventRegistration.findUnique({
     where: { id: registrationId },
     select: {
@@ -135,7 +155,7 @@ export async function createEventCheckoutSessionCommand(input: {
       name: true,
       quantity: true,
       ticket: { select: { name: true, price: true } },
-      event: { select: { title: true } },
+      event: { select: { title: true, slug: true } },
     },
   });
 
@@ -177,8 +197,12 @@ export async function createEventCheckoutSessionCommand(input: {
         registrationId,
       },
       ...(authoritative.email ? { customer_email: authoritative.email } : {}),
-      success_url: `${appUrl}/events/registrations/${registrationId}?payment=success`,
-      cancel_url: `${appUrl}/events/registrations/${registrationId}?payment=cancelled`,
+      // Codex P1 (PR#1026, comment 3567019753): 旧実装の `/events/registrations/{id}`
+      // は存在しないルートで Stripe returnee が 404 していた。既存の公開イベント詳細
+      // `/events/[slug]` にリダイレクトし、`registration` クエリで status バナー用に
+      // 後続 PR がキーできるようにしておく。
+      success_url: `${appUrl}/events/${authoritative.event.slug}?payment=success&registration=${registrationId}`,
+      cancel_url: `${appUrl}/events/${authoritative.event.slug}?payment=cancelled&registration=${registrationId}`,
     });
 
     const settled = await prisma.eventRegistration.updateMany({
@@ -240,6 +264,13 @@ export async function createEventCheckoutSessionCommand(input: {
 /**
  * EventRegistration の Stripe webhook から呼ばれる atomic PAID 遷移。
  * Reservation の claimReservationAsPaid と同型 (updateMany WHERE で claim)。
+ *
+ * Codex Cloud Review P1 (PR#1026, comment_id=3567019751): claim は
+ * `status: CONFIRMED` も要求する。cancel 経路 (registration-cancel-core.ts) は
+ * paymentStatus を触らず status のみ CANCELLED に遷移させるため、paymentStatus
+ * だけで claim すると「pending checkout 中に cancel → Stripe 完了 webhook 到達」で
+ * CANCELLED な行に PAID が焼き付き、返金導線なしで会計 mismatch を起こす。
+ * count===0 の場合は呼び出し側 (webhook handler) が refund reconciliation を kick する。
  */
 export async function claimEventRegistrationAsPaid(
   registrationId: string,
@@ -248,6 +279,7 @@ export async function claimEventRegistrationAsPaid(
   const result = await prisma.eventRegistration.updateMany({
     where: {
       id: registrationId,
+      status: RegistrationStatus.CONFIRMED,
       paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.PENDING] },
     },
     data: {
