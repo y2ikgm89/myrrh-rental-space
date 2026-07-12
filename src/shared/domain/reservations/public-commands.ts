@@ -21,7 +21,7 @@ import {
   incrementCustomerReservationStats,
   buildPayload,
 } from "./payloads";
-import { lockReservationSpaceForTransaction } from "./locks";
+import { lockSpaceForTransaction } from "./space-locks";
 
 const SPACE_SELECT = {
   id: true,
@@ -128,7 +128,7 @@ export async function createPublicReservationCommand(
     });
 
   const reservation = await prisma.$transaction(async (tx) => {
-    await lockReservationSpaceForTransaction(tx, input.spaceId);
+    await lockSpaceForTransaction(tx, input.spaceId);
 
     await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
 

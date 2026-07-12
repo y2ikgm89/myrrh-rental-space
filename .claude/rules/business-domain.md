@@ -15,8 +15,9 @@ paths:
 ## 予約の同時実行制御（最重要）
 
 - 空き確認は read-before-write のため、可用性に影響する**全書込経路**は
-  `prisma.$transaction` 内で `lockReservationSpaceForTransaction(tx, spaceId)` を
-  overlap チェック・書込より先に取得する（`src/shared/domain/reservations/locks.ts`）
+  `prisma.$transaction` 内で `lockSpaceForTransaction(tx, spaceId)` を
+  overlap チェック・書込より先に取得する（`src/shared/domain/reservations/space-locks.ts`）。
+  Reservation と Event (EventTimeSlot) の書込は同一 Space namespace (728351) を共有する
 - 重複判定の SSoT は `checkReservationOverlapQuery`: deletedAt null +
   status ∈ {PENDING, CONFIRMED} + **半開区間 `startTime < end AND endTime > start`**。
   lt/gt を lte/gte に変えると隣接予約が誤検出になる（テストが where 句を pin）

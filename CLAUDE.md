@@ -66,7 +66,7 @@ section/registry 変更 → architecture-boundaries テスト、UI のみの変�
 7. 既存の `prisma/migrations/*/migration.sql` は編集禁止（pre-commit がブロック）。
    修正は新規 migration の追加で行う
 8. 予約・イベントの空き/定員に関わる書込は `prisma.$transaction` 内で advisory lock
-   （`lockReservationSpaceForTransaction` 等）を重複チェックより先に取得する
+   （`lockSpaceForTransaction` 等）を重複チェックより先に取得する
 9. `TermsAgreement` と `AuditLog` は append-only の証跡レコード（update/delete 禁止）
 10. 日付表示は `src/shared/lib/date-format.ts` の JST 固定 formatter を使う
     （date-fns `format()` 直呼びが UTC ずれを起こす理由は business-domain ルール参照）

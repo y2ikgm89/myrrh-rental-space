@@ -10,7 +10,7 @@ import {
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { validateStatusTransition } from "./status";
 import { CUSTOMER_SELECT, buildPayload } from "./payloads";
-import { lockReservationSpaceForTransaction } from "./locks";
+import { lockSpaceForTransaction } from "./space-locks";
 
 const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
   TERMINAL_RESERVATION_STATUSES,
@@ -173,7 +173,7 @@ export async function restoreReservationStatusCommand(
 
   const updated = await prisma.$transaction(async (tx) => {
     if (targetStatus === ReservationStatus.CONFIRMED) {
-      await lockReservationSpaceForTransaction(tx, reservation.spaceId);
+      await lockSpaceForTransaction(tx, reservation.spaceId);
 
       const overlap = await checkReservationOverlap(
         {
