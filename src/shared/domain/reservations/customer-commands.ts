@@ -9,7 +9,10 @@ import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
-import { getReservationRuleSettings } from "@/shared/domain/reservations/availability";
+import {
+  ensureDateNotBlocked,
+  getReservationRuleSettings,
+} from "@/shared/domain/reservations/availability";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
@@ -123,6 +126,23 @@ export async function updateCustomerReservation(
     return { success: false, error: durationError };
   }
 
+  // BlockedDate (臨時休業) の tx 外 pre-check。
+  // 変更経路は create 経路 (createPublicReservationCommand) と同じく公開顧客セルフ操作のため、
+  // admin override は許容せず休業日への移動を防ぐ (business-domain rule)。
+  // spaceId 存在確認と locationId 取得を先行 (public-commands.ts 同型パターン)。
+  const spaceForBlockedCheck = await prisma.space.findUnique({
+    where: { id: input.spaceId, isActive: true, isPublished: true },
+    select: { locationId: true },
+  });
+  if (!spaceForBlockedCheck) {
+    return { success: false, error: "指定されたスペースが見つかりません" };
+  }
+  await ensureDateNotBlocked(
+    input.spaceId,
+    spaceForBlockedCheck.locationId,
+    input.date,
+  );
+
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
       where: { id: reservationId, customerId, deletedAt: null },
@@ -177,6 +197,7 @@ export async function updateCustomerReservation(
       where: { id: input.spaceId, isActive: true, isPublished: true },
       select: {
         id: true,
+        locationId: true,
         hourlyPrice: true,
         discountType: true,
         discountValue: true,
@@ -189,6 +210,9 @@ export async function updateCustomerReservation(
     }
 
     await lockReservationSpaceForTransaction(tx, input.spaceId);
+
+    // BlockedDate の tx 内二重ガード (tx 外 pre-check と race する GLOBAL 休業日追加を封鎖)
+    await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
 
     // 重複チェック
     const overlapResult = await checkReservationOverlap(
