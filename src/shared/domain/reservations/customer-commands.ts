@@ -8,7 +8,6 @@ import { isWithinDeadline } from "./deadline";
 import { reservationDeadlineNow } from "./server-deadline-instant";
 import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
-import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
 import {
   ensureDateNotBlocked,
@@ -18,7 +17,7 @@ import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { lockSpaceForTransaction } from "./space-locks";
-import { buildDateTime } from "./payloads";
+import { buildDateTime, ensureNoOverlap } from "./payloads";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -145,6 +144,24 @@ export async function updateCustomerReservation(
     input.date,
   );
 
+  // Reservation ↔ Event cross-table overlap の tx 外 pre-check (Codex P1 #1019, comment 3566931085)。
+  // 本判定は tx 内 (lockSpaceForTransaction 後) の再チェックが担うが、ここで先に
+  // 早期 return し、無駄な advisory lock 取得を避ける (public-commands.ts /
+  // admin-commands.ts と同一パターン)。
+  try {
+    await ensureNoOverlap({
+      spaceId: input.spaceId,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      excludeReservationId: reservationId,
+    });
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "CONFLICT") {
+      return { success: false, error: error.message };
+    }
+    throw error;
+  }
+
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
       where: { id: reservationId, customerId, deletedAt: null },
@@ -229,23 +246,25 @@ export async function updateCustomerReservation(
     // BlockedDate の tx 内二重ガード (tx 外 pre-check と race する GLOBAL 休業日追加を封鎖)
     await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
 
-    // 重複チェック
-    const overlapResult = await checkReservationOverlap(
-      {
-        spaceId: input.spaceId,
-        startTime: startDateTime,
-        endTime: endDateTime,
-        excludeReservationId: reservationId,
-      },
-      tx,
-    );
-
-    if (overlapResult.hasOverlap) {
-      return {
-        success: false,
-        error:
-          "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-      };
+    // Reservation ↔ Event cross-table overlap SSoT (Codex P1 #1019, comment 3566931085)。
+    // ensureNoOverlap は EventTimeSlot 側の生きたスロットも union で検査し、
+    // event 由来の conflict は「選択された時間帯は既にイベントで予約されています。」
+    // 文言 (payloads.ts) に切り替わるため、ここは error.message を素通しする。
+    try {
+      await ensureNoOverlap(
+        {
+          spaceId: input.spaceId,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          excludeReservationId: reservationId,
+        },
+        tx,
+      );
+    } catch (error) {
+      if (error instanceof DomainError && error.code === "CONFLICT") {
+        return { success: false, error: error.message };
+      }
+      throw error;
     }
 
     // 割引設定を取得
