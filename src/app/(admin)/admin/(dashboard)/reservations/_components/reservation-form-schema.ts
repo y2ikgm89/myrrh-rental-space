@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { calculateDurationHours } from "@/shared/lib/date-format";
+import {
+  calculateDurationHours,
+  parseDateTimeLocalAsJst,
+} from "@/shared/lib/date-format";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { TIME_REGEX } from "@/shared/lib/validations/business-hours";
@@ -86,8 +89,8 @@ function refineTimeRange(
   data: { date: string; startTime: string; endTime: string },
   ctx: z.RefinementCtx,
 ): void {
-  const start = new Date(`${data.date}T${data.startTime}`);
-  const end = new Date(`${data.date}T${data.endTime}`);
+  const start = parseDateTimeLocalAsJst(`${data.date}T${data.startTime}`);
+  const end = parseDateTimeLocalAsJst(`${data.date}T${data.endTime}`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return;
   if (end <= start) {
     ctx.addIssue({

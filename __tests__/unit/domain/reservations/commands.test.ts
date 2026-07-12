@@ -658,8 +658,8 @@ describe("updateAdminReservationCommand", () => {
         id: "res-1",
         status: ReservationStatus.PENDING,
         spaceId: "space-1",
-        startTime: new Date("2024-06-15T09:00:00"),
-        endTime: new Date("2024-06-15T10:00:00"),
+        startTime: new Date("2024-06-15T09:00:00+09:00"),
+        endTime: new Date("2024-06-15T10:00:00+09:00"),
         totalPrice: 1000,
         couponId: null,
         customerId: "cust-1",
@@ -696,8 +696,8 @@ describe("updateAdminReservationCommand", () => {
           id: "res-1",
           status: ReservationStatus.PENDING,
           spaceId: "space-1",
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           couponId: null,
           customerId: "cust-1",
@@ -853,8 +853,8 @@ describe("updateAdminReservationCommand", () => {
           id: "res-1",
           status: ReservationStatus.CONFIRMED,
           spaceId: "space-1",
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           couponId: null,
           googleCalendarEventId: null,
@@ -899,8 +899,8 @@ describe("updateReservationStatusCommand", () => {
             spaceId: "space-a",
             customerId: "cust-a",
             couponId: "coupon-a",
-            startTime: new Date("2024-06-15T10:00:00"),
-            endTime: new Date("2024-06-15T12:00:00"),
+            startTime: new Date("2024-06-15T10:00:00+09:00"),
+            endTime: new Date("2024-06-15T12:00:00+09:00"),
             totalPrice: 2000,
             notes: null,
             space: {
@@ -929,8 +929,8 @@ describe("updateReservationStatusCommand", () => {
           spaceId: "space-b",
           customerId: "cust-a",
           couponId: "coupon-a",
-          startTime: new Date("2024-06-15T11:00:00"),
-          endTime: new Date("2024-06-15T13:00:00"),
+          startTime: new Date("2024-06-15T11:00:00+09:00"),
+          endTime: new Date("2024-06-15T13:00:00+09:00"),
           totalPrice: 2000,
           notes: "編集で追加されたメモ",
           space: {
@@ -953,7 +953,9 @@ describe("updateReservationStatusCommand", () => {
       );
 
       expect(result.payload.icsSequence).toBe(7);
-      expect(result.payload.startTime).toEqual(new Date("2024-06-15T11:00:00"));
+      expect(result.payload.startTime).toEqual(
+        new Date("2024-06-15T11:00:00+09:00"),
+      );
       expect(result.payload.notes).toBe("編集で追加されたメモ");
       // spaceIdは確認メールの内容(source)と一致していなければならない
       // （さもないとissueSmartLockAndSendConfirmationEmailが古いスペースの
@@ -967,8 +969,8 @@ describe("updateReservationStatusCommand", () => {
           id: "res-1",
           status: ReservationStatus.PENDING,
           googleCalendarEventId: null,
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           notes: null,
           space: {
@@ -1000,8 +1002,8 @@ describe("updateReservationStatusCommand", () => {
           id: "res-1",
           status: ReservationStatus.CONFIRMED,
           googleCalendarEventId: "cal-event-1",
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           notes: null,
           space: {
@@ -1044,8 +1046,8 @@ describe("updateReservationStatusCommand", () => {
           id: "res-1",
           status: ReservationStatus.CONFIRMED,
           googleCalendarEventId: null,
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           notes: null,
           space: {
@@ -1078,8 +1080,8 @@ describe("updateReservationStatusCommand", () => {
           id: "res-1",
           status: ReservationStatus.PENDING,
           googleCalendarEventId: "cal-event-id",
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           notes: null,
           space: {
@@ -1123,8 +1125,8 @@ describe("updateReservationStatusCommand", () => {
           id: "res-1",
           status: ReservationStatus.PENDING,
           googleCalendarEventId: null,
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           notes: null,
           space: {
@@ -1155,8 +1157,8 @@ describe("updateReservationStatusCommand", () => {
           id: "res-1",
           status: ReservationStatus.COMPLETED,
           googleCalendarEventId: null,
-          startTime: new Date("2024-06-15T10:00:00"),
-          endTime: new Date("2024-06-15T12:00:00"),
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
           totalPrice: 2000,
           notes: null,
           space: {

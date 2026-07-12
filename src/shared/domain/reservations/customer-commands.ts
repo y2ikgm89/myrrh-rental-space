@@ -14,6 +14,7 @@ import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { lockReservationSpaceForTransaction } from "./locks";
+import { buildDateTime } from "./payloads";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -110,8 +111,8 @@ export async function updateCustomerReservation(
   },
   modificationDeadlineHours: number,
 ): Promise<CommandResult<UpdatePayload>> {
-  const startDateTime = new Date(`${input.date}T${input.startTime}:00`);
-  const endDateTime = new Date(`${input.date}T${input.endTime}:00`);
+  const startDateTime = buildDateTime(input.date, input.startTime);
+  const endDateTime = buildDateTime(input.date, input.endTime);
 
   // 最小/最大予約時間（設定値）をサーバー側で強制する（新規予約と同一ルール）
   const rules = await getReservationRuleSettings();
