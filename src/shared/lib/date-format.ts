@@ -183,6 +183,32 @@ export function formatJstDateString(date: Date | string): string {
   return JST_MACHINE_DATE_FORMATTER.format(value);
 }
 
+const JST_HOUR_MINUTE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Tokyo",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * 任意の datetime を「JST 00:00 起算の経過分」(0..1439) に変換する。
+ *
+ * サーバ tz (Cloud Run = UTC・`TZ` 未設定) では `Date#getHours()` / `.getMinutes()`
+ * が UTC 時分を返すため、JST wall-clock (BusinessHours 設定・"HH:mm" スロットラベル)
+ * と直接比較すると 9 時間ずれる silent bug になる。予約可能性判定 / スロット照合の SSoT。
+ *
+ * `Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Tokyo", hourCycle: "h23" })` の
+ * `formatToParts` で 24 時間表記の JST "HH" / "mm" 部品を取得し、`hour * 60 + minute`
+ * を返す。ホスト tz に依存せずどこで実行しても同じ値を返す。
+ */
+export function getJstMinutesOfDay(date: Date | string): number {
+  const value = typeof date === "string" ? new Date(date) : date;
+  const parts = JST_HOUR_MINUTE_FORMATTER.formatToParts(value);
+  const lookup = (type: Intl.DateTimeFormatPartTypes): number =>
+    Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
+  return lookup("hour") * 60 + lookup("minute");
+}
+
 /**
  * ミリ秒単位の時間定数 SSoT。
  *

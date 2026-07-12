@@ -9,6 +9,7 @@ import {
   parseJstDateOnly,
   formatJstDateOnly,
   formatJstDateString,
+  getJstMinutesOfDay,
   calculateDurationHours,
   formatTimeShort,
   formatDateWithWeekday,
@@ -727,5 +728,40 @@ describe("formatJstMonthDay", () => {
 
   test("ISO 文字列を受け取れる", () => {
     expect(formatJstMonthDay("2026-12-01T15:00:00.000Z")).toBe("12月2日");
+  });
+});
+
+// =============================================================================
+// getJstMinutesOfDay (Codex P1 #1009 対応)
+// =============================================================================
+//
+// Cloud Run 本番は `TZ` 未設定で UTC 起動するため `Date#getHours()` が UTC 時を返す。
+// この helper は `Intl.DateTimeFormat({ timeZone: "Asia/Tokyo" })` で JST 固定 parse
+// するため、ホスト tz に依存せず同じ値を返さなければならない (`time-slots.ts` の
+// availability 判定で JST wall-clock スロットラベルと直接比較するための SSoT)。
+
+describe("getJstMinutesOfDay", () => {
+  test("UTC 03:00Z は JST 12:00 = 720 分", () => {
+    expect(getJstMinutesOfDay(new Date("2024-01-15T03:00:00.000Z"))).toBe(720);
+  });
+
+  test("UTC 11:00Z は JST 20:00 = 1200 分 (Codex issue の再現ケース)", () => {
+    // 20:00 JST の予約を UTC で表現した 11:00Z。
+    // 回帰時 (getHours() を使う実装) は 660 が返るため、この pin が守り。
+    expect(getJstMinutesOfDay(new Date("2024-01-15T11:00:00.000Z"))).toBe(1200);
+  });
+
+  test("UTC 15:00Z は JST 翌 00:00 = 0 分 (日付跨ぎ)", () => {
+    expect(getJstMinutesOfDay(new Date("2024-01-15T15:00:00.000Z"))).toBe(0);
+  });
+
+  test("UTC 14:59Z は JST 23:59 = 1439 分 (日付境界直前)", () => {
+    expect(getJstMinutesOfDay(new Date("2024-01-15T14:59:00.000Z"))).toBe(
+      23 * 60 + 59,
+    );
+  });
+
+  test("ISO 文字列も Date と同じ結果を返す", () => {
+    expect(getJstMinutesOfDay("2024-01-15T11:00:00.000Z")).toBe(1200);
   });
 });
