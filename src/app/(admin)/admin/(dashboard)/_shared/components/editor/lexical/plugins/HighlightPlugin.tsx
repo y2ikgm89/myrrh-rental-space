@@ -178,6 +178,8 @@ export function HighlightPlugin() {
           size="sm"
           className="h-8 gap-1"
           title="ハイライト"
+          aria-label="ハイライト"
+          aria-pressed={hasHighlight}
         >
           <div className="relative">
             <IconHighlight className="h-4 w-4" />
@@ -279,6 +281,8 @@ export function HighlightCompact({
           size="icon"
           className="h-8 w-8"
           title="ハイライト"
+          aria-label="ハイライト"
+          aria-pressed={hasHighlight}
         >
           <div className="relative">
             <IconHighlight className="h-4 w-4" />

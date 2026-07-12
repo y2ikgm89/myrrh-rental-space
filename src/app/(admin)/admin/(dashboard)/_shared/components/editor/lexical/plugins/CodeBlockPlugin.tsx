@@ -93,7 +93,8 @@ function CodeToolbar({
       <select
         value={codeNode.language}
         onChange={(e) => handleLanguageChange(e.target.value)}
-        className="h-6 rounded border-none bg-transparent px-1 text-xs text-muted-foreground focus:outline-none"
+        aria-label="コードブロックのプログラミング言語"
+        className="h-6 rounded border-none bg-transparent px-1 text-xs text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
       >
         {Object.entries(CODE_LANGUAGES).map(([value, label]) => (
           <option key={value} value={value}>
@@ -107,6 +108,7 @@ function CodeToolbar({
         size="icon"
         onClick={handleCopy}
         title="コードをコピー"
+        aria-label="コードをコピー"
       >
         {copied ? (
           <IconCheck className="h-3 w-3 text-success" />

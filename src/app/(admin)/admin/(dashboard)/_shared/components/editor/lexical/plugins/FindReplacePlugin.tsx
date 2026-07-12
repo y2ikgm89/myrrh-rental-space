@@ -254,6 +254,8 @@ function FindIconReplacePanel({
           className="h-11 w-11"
           onClick={() => setCaseSensitive(!caseSensitive)}
           title="大文字小文字を区別"
+          aria-label="大文字小文字を区別"
+          aria-pressed={caseSensitive}
         >
           <IconLetterCase
             className={cn(
@@ -270,6 +272,8 @@ function FindIconReplacePanel({
           className="h-11 w-11"
           onClick={goToPrevious}
           disabled={matchCount === 0}
+          title="前の一致"
+          aria-label="前の一致"
         >
           <IconChevronUp className="h-3.5 w-3.5" />
         </Button>
@@ -280,6 +284,8 @@ function FindIconReplacePanel({
           className="h-11 w-11"
           onClick={goToNext}
           disabled={matchCount === 0}
+          title="次の一致"
+          aria-label="次の一致"
         >
           <IconChevronDown className="h-3.5 w-3.5" />
         </Button>
@@ -291,6 +297,9 @@ function FindIconReplacePanel({
           className="h-11 w-11"
           onClick={() => setShowIconReplace(!showIconReplace)}
           title="置換"
+          aria-label="置換"
+          aria-pressed={showIconReplace}
+          aria-expanded={showIconReplace}
         >
           <IconReplace className="h-3.5 w-3.5" />
         </Button>
@@ -301,6 +310,8 @@ function FindIconReplacePanel({
           size="icon"
           className="h-11 w-11"
           onClick={onClose}
+          title="検索を閉じる"
+          aria-label="検索を閉じる"
         >
           <IconX className="h-3.5 w-3.5" />
         </Button>
