@@ -42,6 +42,9 @@ const mockTxReservationFindFirst = mock<() => Promise<unknown>>(() =>
 const mockReservationUpdate = mock<() => Promise<unknown>>(() =>
   Promise.resolve({ id: "res-1" }),
 );
+const mockReservationUpdateMany = mock<
+  (args: Record<string, unknown>) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockSettingsFindFirst = mock<() => Promise<unknown>>(() =>
   Promise.resolve({
     durationDiscountEnabled: false,
@@ -65,6 +68,7 @@ const txClient = {
   reservation: {
     findFirst: mockTxReservationFindFirst,
     update: mockReservationUpdate,
+    updateMany: mockReservationUpdateMany,
   },
   space: { findUnique: mockSpaceFindUniqueTx },
   settings: { findFirst: mockSettingsFindFirst },
@@ -127,6 +131,10 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
     mockBlockedDateFindFirst.mockClear();
     mockTxReservationFindFirst.mockClear();
     mockReservationUpdate.mockClear();
+    mockReservationUpdateMany.mockClear();
+    mockReservationUpdateMany.mockImplementation(() =>
+      Promise.resolve({ count: 1 }),
+    );
     mockCheckReservationOverlap.mockClear();
 
     // reset to default (not blocked)
@@ -193,9 +201,40 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       success: true,
       payload: { reservationId: "res-1" },
     });
-    expect(mockReservationUpdate).toHaveBeenCalledTimes(1);
+    // 最終書込は updateMany (atomic compare-and-swap with paymentStatus=UNPAID predicate)
+    expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);
+    expect(mockReservationUpdate).not.toHaveBeenCalled();
     // blocked date は tx 外 pre-check と tx 内二重ガードで 2 回呼ばれる
     expect(mockBlockedDateFindFirst).toHaveBeenCalledTimes(2);
+  });
+
+  test("TOCTOU race: read から updateMany の間に paymentStatus が変わった場合 rollback (Codex P1 対応) — PR#13", async () => {
+    // read 時は UNPAID を観測して gate 通過、update 時には別 tx で PENDING に
+    // 遷移していて updateMany.count === 0 で claim 失敗する race を再現する。
+    mockReservationUpdateMany.mockImplementation(() =>
+      Promise.resolve({ count: 0 }),
+    );
+
+    const result = await updateCustomerReservation(
+      "res-1",
+      "cust-1",
+      validInput,
+      24,
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+    });
+    expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);
+    // updateMany の WHERE に paymentStatus: UNPAID 述語が含まれることを assert
+    const call = mockReservationUpdateMany.mock.calls[0]?.[0];
+    expect(call).toMatchObject({
+      where: expect.objectContaining({
+        paymentStatus: "UNPAID",
+      }),
+    });
   });
 
   test("PAID の予約は変更不可 (キャンセル+再予約に誘導、reservation.update 未呼出) — PR#13", async () => {

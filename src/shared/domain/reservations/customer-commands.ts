@@ -308,8 +308,23 @@ export async function updateCustomerReservation(
     const taxRate = reservation.taxRate ? Number(reservation.taxRate) : 0;
     const taxAmount = Math.floor(priceResult.totalPrice * taxRate);
 
-    await tx.reservation.update({
-      where: { id: reservationId, deletedAt: null },
+    // PAID gate の atomic compare-and-swap (Codex P1 対応)。
+    //
+    // 上部の early return は tx 内 findFirst の観測時点でしか paymentStatus を検証
+    // していないため、その read と最終 update の間で `createCheckoutSessionCommand`
+    // (別 tx・別 request) が `UNPAID → PENDING` に遷移させる TOCTOU race を封じられない。
+    // Space 単位の advisory lock (`lockSpaceForTransaction`) は他予約との overlap
+    // 直列化用で、同一予約に対する `payment-commands.ts` の書込までは serialize しない。
+    //
+    // 対策: 最終 update を `paymentStatus: UNPAID` 述語付きの updateMany に置き換え、
+    // count === 0 なら「決済が同時に開始された」と判断して tx 全体を rollback する
+    // (business-domain rule 「updateMany の WHERE で claim」パターン)。
+    const updated = await tx.reservation.updateMany({
+      where: {
+        id: reservationId,
+        deletedAt: null,
+        paymentStatus: PaymentStatus.UNPAID,
+      },
       data: {
         spaceId: input.spaceId,
         startTime: startDateTime,
@@ -325,6 +340,15 @@ export async function updateCustomerReservation(
         icsSequence: { increment: 1 },
       },
     });
+
+    if (updated.count === 0) {
+      // read から update の間に決済が開始された。tx rollback でロールバック。
+      return {
+        success: false,
+        error:
+          "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+      };
+    }
 
     return { success: true, payload: { reservationId } };
   });
