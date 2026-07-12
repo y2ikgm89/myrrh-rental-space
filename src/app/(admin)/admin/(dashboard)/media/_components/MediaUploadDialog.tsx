@@ -19,6 +19,13 @@ import {
   DialogTitle,
   DialogFooter,
   Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/admin/components/ui";
 import { USAGE_OPTIONS } from "./constants";
 import {
@@ -223,42 +230,34 @@ export function MediaUploadDialog({
           {file && (
             <div className="space-y-3">
               {/* Usage */}
-              <div>
-                <label
-                  htmlFor={`${formId}-usage`}
-                  className="text-sm font-medium block mb-1"
-                >
-                  用途
-                </label>
-                <select
-                  id={`${formId}-usage`}
+              <div className="space-y-1">
+                <Label htmlFor={`${formId}-usage`}>用途</Label>
+                <Select
                   value={formData.usage}
-                  onChange={(e) => {
-                    const value = e.target.value;
+                  onValueChange={(value) => {
                     if (isValidMediaUsage(value)) {
                       setFormData({ ...formData, usage: value });
                     }
                   }}
-                  className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                 >
-                  {USAGE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id={`${formId}-usage`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {USAGE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Alt Text (for images) */}
               {file.type.startsWith("image/") && (
-                <div>
-                  <label
-                    htmlFor={`${formId}-alt`}
-                    className="text-sm font-medium block mb-1"
-                  >
-                    代替テキスト（alt）
-                  </label>
-                  <input
+                <div className="space-y-1">
+                  <Label htmlFor={`${formId}-alt`}>代替テキスト（alt）</Label>
+                  <Input
                     id={`${formId}-alt`}
                     type="text"
                     value={formData.alt}
@@ -266,20 +265,14 @@ export function MediaUploadDialog({
                       setFormData({ ...formData, alt: e.target.value })
                     }
                     placeholder="画像の説明"
-                    className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                   />
                 </div>
               )}
 
               {/* Title */}
-              <div>
-                <label
-                  htmlFor={`${formId}-title`}
-                  className="text-sm font-medium block mb-1"
-                >
-                  タイトル
-                </label>
-                <input
+              <div className="space-y-1">
+                <Label htmlFor={`${formId}-title`}>タイトル</Label>
+                <Input
                   id={`${formId}-title`}
                   type="text"
                   value={formData.title}
@@ -287,7 +280,6 @@ export function MediaUploadDialog({
                     setFormData({ ...formData, title: e.target.value })
                   }
                   placeholder="管理用タイトル（任意）"
-                  className="w-full h-9 rounded-md border bg-background px-3 text-sm"
                 />
               </div>
             </div>

@@ -3,12 +3,13 @@
 /**
  * UrlTab
  *
- * URL入力タブ
+ * URL 入力タブ。shared Input / Label SSoT に一本化しており、
+ * `<Label htmlFor>` で入力欄に紐付けている。
  */
 
-import { useState } from "react";
-import { IconLink, IconAlertCircle, IconPhoto } from "@tabler/icons-react";
-import { Button } from "@/admin/components/ui";
+import { useId, useState } from "react";
+import { IconAlertCircle, IconPhoto } from "@tabler/icons-react";
+import { Button, Input, Label } from "@/admin/components/ui";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
 import { acceptToLabel, acceptToUrlPlaceholder } from "../accept-helpers";
 
@@ -21,6 +22,9 @@ interface UrlTabProps {
 export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
   const acceptLabel = acceptToLabel(accept);
   const urlPlaceholder = acceptToUrlPlaceholder(accept);
+  const urlInputId = useId();
+  const altInputId = useId();
+  const errorId = useId();
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -76,40 +80,43 @@ export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">{acceptLabel}URL</label>
-        <div className="relative">
-          <IconLink className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={urlPlaceholder}
-            className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
+        <Label htmlFor={urlInputId}>{acceptLabel}URL</Label>
+        <Input
+          id={urlInputId}
+          type="url"
+          leadingIcon="IconLink"
+          value={url}
+          onChange={(e) => handleUrlChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={urlPlaceholder}
+          aria-invalid={error !== null || undefined}
+          aria-describedby={error !== null ? errorId : undefined}
+        />
         {error && (
-          <p className="flex items-center gap-1 text-sm text-destructive">
-            <IconAlertCircle className="h-3 w-3" />
+          <p
+            id={errorId}
+            className="flex items-center gap-1 text-sm text-destructive"
+          >
+            <IconAlertCircle className="h-3 w-3" aria-hidden="true" />
             {error}
           </p>
         )}
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium">代替テキスト（任意）</label>
-        <input
+        <Label htmlFor={altInputId}>代替テキスト（任意）</Label>
+        <Input
+          id={altInputId}
           type="text"
           value={alt}
           onChange={(e) => setAlt(e.target.value)}
           placeholder={`${acceptLabel}の説明`}
-          className="h-9 w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>
 
       {previewUrl && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">プレビュー</label>
+          <p className="text-sm font-medium">プレビュー</p>
           {/* bg-checker: 透過 PNG / SVG の透過部分を市松模様で可視化 */}
           <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border bg-checker">
             <img
