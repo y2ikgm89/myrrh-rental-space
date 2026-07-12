@@ -176,7 +176,9 @@ mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
       endTime: new Date("2026-12-01T02:00:00.000Z"),
     }),
   ),
-  applyReservationEditSideEffects: mock(() => Promise.resolve([])),
+  applyReservationEditSideEffects: mock(() =>
+    Promise.resolve({ passcodes: [], issuanceFailed: false }),
+  ),
 }));
 
 // 設定クエリモック

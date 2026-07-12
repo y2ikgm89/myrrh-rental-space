@@ -42,6 +42,16 @@ type Props = {
    * この本文で受け取れるようにする (Codex P1: comment_id=3566998624 対応)。
    */
   smartLockPasscodes?: { deviceName: string; passcode: string }[];
+  /**
+   * 再発行が失敗した場合の代替入室手段案内フラグ (PR#12 confirmation email と同型)。
+   * true のとき「当日運営までお問い合わせください」の fallback セクションを描画。
+   */
+  smartLockIssuanceFailed?: boolean;
+  /** 発行失敗時に案内する連絡先。null の場合は sender 情報にフォールバック。 */
+  smartLockFallbackContact?: {
+    readonly phone?: string | null;
+    readonly email?: string | null;
+  };
   footer: EmailFooterData;
 };
 
@@ -61,6 +71,8 @@ export function ReservationUpdatedEmail({
   modificationDeadlineHours,
   cancellationPolicyUrl,
   smartLockPasscodes,
+  smartLockIssuanceFailed,
+  smartLockFallbackContact,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -125,6 +137,50 @@ export function ReservationUpdatedEmail({
               <strong>{entry.deviceName}:</strong> {entry.passcode}
             </Text>
           ))}
+        </Section>
+      )}
+
+      {/* スマートロック再発行失敗時の代替入室手段案内 (PR#12 confirmation と同型) */}
+      {smartLockIssuanceFailed && (
+        <Section
+          style={{
+            backgroundColor: danger.background,
+            borderRadius: "4px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              fontWeight: 600,
+              color: danger.heading,
+              marginBottom: "8px",
+            }}
+          >
+            スマートロックの暗証番号再発行について
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            ご予約内容変更に伴い旧暗証番号は無効となりましたが、新しい暗証番号の
+            自動発行に失敗いたしました。当日のご入室につきましては、下記まで
+            お問い合わせください。ご不便をおかけして申し訳ございません。
+          </Text>
+          {smartLockFallbackContact?.phone && (
+            <Text
+              style={{
+                fontSize: "14px",
+                lineHeight: "24px",
+                marginTop: "8px",
+              }}
+            >
+              <strong>お電話:</strong> {smartLockFallbackContact.phone}
+            </Text>
+          )}
+          {smartLockFallbackContact?.email && (
+            <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+              <strong>メール:</strong> {smartLockFallbackContact.email}
+            </Text>
+          )}
         </Section>
       )}
 

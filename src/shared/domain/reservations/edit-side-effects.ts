@@ -7,7 +7,7 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import {
   issueSmartLockPasscodes,
-  type IssuedSmartLockPasscode,
+  type IssueSmartLockPasscodesResult,
 } from "@/shared/domain/smart-lock/issue-passcode";
 import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 import {
@@ -85,7 +85,11 @@ async function isSameSmartLockDevice(
  * 予約 update 本体が失敗すればこの副作用は走らない契約。
  *
  * status が CONFIRMED でない (PENDING/CANCELLED 等)、または startTime が過去の
- * 予約は再発行対象外 (無意味) — 空配列を返す。
+ * 予約は再発行対象外 (無意味) — 空配列 + issuanceFailed=false を返す。
+ *
+ * issuanceFailed の意味 (PR#12 の confirmation email と同じ SSoT):
+ * - true: 対象デバイスがある予定だったのに発行に失敗した (fallback 案内が必要)
+ * - false: 発行成功 or そもそも対象デバイスなし or 変更対象外
  */
 export async function applyReservationEditSideEffects(input: {
   reservationId: string;
@@ -95,7 +99,7 @@ export async function applyReservationEditSideEffects(input: {
   newSpaceId: string;
   newStartTime: Date;
   newEndTime: Date;
-}): Promise<IssuedSmartLockPasscode[]> {
+}): Promise<IssueSmartLockPasscodesResult> {
   const {
     reservationId,
     oldSpaceId,
@@ -112,7 +116,7 @@ export async function applyReservationEditSideEffects(input: {
     oldEndTime.getTime() !== newEndTime.getTime();
 
   if (!spaceChanged && !timeChanged) {
-    return [];
+    return { passcodes: [], issuanceFailed: false };
   }
 
   try {
@@ -126,7 +130,7 @@ export async function applyReservationEditSideEffects(input: {
       reservation.status !== ReservationStatus.CONFIRMED ||
       reservation.startTime.getTime() <= Date.now()
     ) {
-      return [];
+      return { passcodes: [], issuanceFailed: false };
     }
 
     // 2. 既発行の CONFIRMED パスコードを SwitchBot deleteKey で失効
@@ -153,8 +157,9 @@ export async function applyReservationEditSideEffects(input: {
       });
     }
 
-    // 4. 新 spaceId で再発行し、返却された passcode を caller (action) に渡す
-    //    (update email に含めて顧客へ配布する契約 — Codex P1 対応)
+    // 4. 新 spaceId で再発行。IssueSmartLockPasscodesResult をそのまま返し、
+    //    呼出側は passcodes を update email に、issuanceFailed=true 時は
+    //    fallback 案内文言をメールに載せる (PR#12 confirmation email と同型)。
     return await issueSmartLockPasscodes({
       reservationId,
       spaceId: newSpaceId,
@@ -164,6 +169,7 @@ export async function applyReservationEditSideEffects(input: {
   } catch (error) {
     // 副作用の失敗は予約変更本体を巻き戻さない。
     // cleanup cron / admin の再発行 UI がフォールバック。
+    // ここに到達 = 再発行を試みた過程で例外 → 顧客側には fallback 案内を出す。
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
@@ -174,6 +180,6 @@ export async function applyReservationEditSideEffects(input: {
         timeChanged,
       },
     });
-    return [];
+    return { passcodes: [], issuanceFailed: true };
   }
 }

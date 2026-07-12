@@ -345,6 +345,8 @@ export async function sendReservationUpdatedEmail(
           modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
           cancellationPolicyUrl,
           smartLockPasscodes: data.smartLockPasscodes,
+          smartLockIssuanceFailed: data.smartLockIssuanceFailed,
+          smartLockFallbackContact: data.smartLockFallbackContact,
           footer,
         }),
       ),

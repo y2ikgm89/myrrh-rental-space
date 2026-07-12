@@ -210,23 +210,24 @@ export async function updateReservationAction(
         });
 
         // PR#14: 変更前スナップショットと入力を比較し、spaceId or 時刻変更ありなら
-        // SwitchBot passcode の revoke + reissue を実行し (tx 外)、新パスコードを
-        // 顧客への変更通知メールに含めて送信する (Codex P1 対応)。
+        // SwitchBot passcode の revoke + reissue を実行し (tx 外)、新パスコード
+        // または発行失敗フラグを顧客への変更通知メールに含めて送信する
+        // (Codex P1 対応 + PR#12 fallback pattern 準拠)。
         //
         // side-effects → email を 1 つの fireAndForget で直列化することで、
-        // 発行された新パスコードが update email に載る動線を確保する。
-        // 発行失敗 (issueSmartLockPasscodes 内で処理) 時は空配列が返り、
-        // update email は passcode セクション無しで通常送信される。
+        // 発行された新パスコード / 失敗時 fallback 案内が update email に載る動線を
+        // 確保する。何も変更なしなら { passcodes: [], issuanceFailed: false } が返り、
+        // update email は smart-lock セクション無しで通常送信される。
         fireAndForget(
           (async () => {
-            let smartLockPasscodes: readonly {
-              deviceName: string;
-              passcode: string;
-            }[] = [];
+            let smartLockResult: {
+              passcodes: { deviceName: string; passcode: string }[];
+              issuanceFailed: boolean;
+            } = { passcodes: [], issuanceFailed: false };
             if (before) {
               const newStartTime = buildDateTime(data.date, data.startTime);
               const newEndTime = buildDateTime(data.date, data.endTime);
-              smartLockPasscodes = await applyReservationEditSideEffects({
+              const result = await applyReservationEditSideEffects({
                 reservationId: data.reservationId,
                 oldSpaceId: before.spaceId,
                 oldStartTime: before.startTime,
@@ -235,14 +236,21 @@ export async function updateReservationAction(
                 newStartTime,
                 newEndTime,
               });
+              smartLockResult = {
+                passcodes: [...result.passcodes],
+                issuanceFailed: result.issuanceFailed,
+              };
             }
 
             const payload = await fetchReservationEmailData(data.reservationId);
             if (!payload) return;
             const payloadData = omitUndefined({
               ...payload,
-              ...(smartLockPasscodes.length > 0
-                ? { smartLockPasscodes: [...smartLockPasscodes] }
+              ...(smartLockResult.passcodes.length > 0
+                ? { smartLockPasscodes: smartLockResult.passcodes }
+                : {}),
+              ...(smartLockResult.issuanceFailed
+                ? { smartLockIssuanceFailed: true }
                 : {}),
             });
             await Promise.all([
