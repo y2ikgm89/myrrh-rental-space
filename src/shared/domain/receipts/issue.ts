@@ -1,8 +1,10 @@
 import "server-only";
 
+import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
+import { formatJstDateString } from "@/shared/lib/date-format";
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -16,20 +18,34 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
  * - 発行時点の Settings snapshot を issuerSnapshot に凍結 (append-only 証跡)
  *
  * 連番: ReceiptSequence の atomic increment (advisory lock で serialize)。
- * 年替わりで nextNo を 1 にリセット (「YYYY-XXXXXX」フォーマット)。
+ * 年替わりで nextNo を 1 にリセット (「YYYY-XXXXXX」フォーマット、**JST 年**)。
  *
  * PDF レンダリング (@react-pdf/renderer 等) は別 PR。本 command は Receipt row の
  * 採番+永続化までを担当する。
  */
-const RECEIPT_SEQUENCE_LOCK_NAMESPACE = 728353;
+// advisory lock 採番 namespace (`.claude/rules/db-domain.md` の registry と一致)。
+// 予約単位ロック (hashtext(reservationId)) と ReceiptSequence 単一行ロック
+// (hashtext("receipt-sequence")) の両方で共有する。
+const RECEIPT_LOCK_NAMESPACE = 728353;
+
+/**
+ * JST の年を返す (「YYYY-XXXXXX」serialNo の年ロールオーバー判定用)。
+ *
+ * 業務日付規約は JST-based (`.claude/rules/business-domain.md`) のため、
+ * getUTCFullYear() や getFullYear() (server-local) は Cloud Run (TZ=UTC) 上で
+ * 「JST 00:00–08:59 on Jan 1 は UTC 前年」の 9h ずれを起こす。
+ * `formatJstDateString` (SSoT) で「YYYY-MM-DD in Asia/Tokyo」を得て年部分を切り出す。
+ */
+function getJstYear(): number {
+  return Number.parseInt(formatJstDateString(new Date()).slice(0, 4), 10);
+}
 
 async function claimNextSerialNo(tx: Tx): Promise<string> {
   // ReceiptSequence 単一行の advisory lock (year 跨ぎ race 防止)。
-  // hashtext("receipt-sequence") で固定 key。
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RECEIPT_SEQUENCE_LOCK_NAMESPACE}::int4, hashtext('receipt-sequence'))`;
+  // hashtext("receipt-sequence") 固定 key で全 issue tx を serialize する。
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RECEIPT_LOCK_NAMESPACE}::int4, hashtext('receipt-sequence'))`;
 
-  const now = new Date();
-  const currentYear = now.getUTCFullYear();
+  const currentYear = getJstYear();
 
   const existing = await tx.receiptSequence.findUnique({
     where: { id: "singleton" },
@@ -93,6 +109,13 @@ async function fetchIssuerSnapshot(tx: Tx): Promise<Record<string, unknown>> {
   };
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
 /**
  * Reservation の PAID 遷移直後に領収書を採番・発行する (冪等)。
  *
@@ -108,7 +131,21 @@ export async function issueReceiptForReservation(
   },
 ) {
   return prisma.$transaction(async (tx) => {
-    // 既発行なら idempotent に既存を返す
+    // ==============================
+    // 予約単位 advisory lock (Codex P2 #1 対応)
+    // ==============================
+    // Stripe webhook の at-least-once 配信で同一 reservationId の issueReceipt が
+    // 並列実行されうる。旧実装は tx 冒頭の findUnique で idempotent check を
+    // していたが、その check は advisory lock の前に走るため両 tx が同時に「無し」
+    // を観測し、後発が create で P2002 unique 制約違反を投げていた。
+    //
+    // 修正: 予約単位で advisory lock (namespace 728353 + hashtext(reservationId))
+    // を tx 冒頭で先取して、以降の findUnique + serialNo claim + create を
+    // 一つの critical section にする。lock 待ちに入った tx は先発の commit 後に
+    // findUnique で既存 Receipt を観測して early return する。
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RECEIPT_LOCK_NAMESPACE}::int4, hashtext(${reservationId}))`;
+
+    // Advisory lock 取得後の idempotent check (lock 取得前の check ではないので race free)
     const existing = await tx.receipt.findUnique({
       where: { reservationId },
     });
@@ -169,20 +206,33 @@ export async function issueReceiptForReservation(
     const serialNo = await claimNextSerialNo(tx);
     const issuerSnapshot = await fetchIssuerSnapshot(tx);
 
-    return tx.receipt.create({
-      data: {
-        serialNo,
-        reservationId,
-        recipientName,
-        subject: options?.subject ?? "スペース利用料として",
-        amount: totalAmount,
-        taxAmount: reservation.taxAmount ?? 0,
-        taxRate: reservation.taxRate ?? 0,
-        issuerSnapshot: asPrismaInputJsonValue(
-          issuerSnapshot,
-          "issuerSnapshot が不正です",
-        ),
-      },
-    });
+    // Belt-and-suspenders: 予約単位 lock で serialize しているが、advisory lock は
+    // session-level scope で稀に (別 pg connection pool 経由の重複配信等) 抜ける
+    // ケースがあり得るため、@unique(reservationId) 違反時は既存を read-back して返す。
+    try {
+      return await tx.receipt.create({
+        data: {
+          serialNo,
+          reservationId,
+          recipientName,
+          subject: options?.subject ?? "スペース利用料として",
+          amount: totalAmount,
+          taxAmount: reservation.taxAmount ?? 0,
+          taxRate: reservation.taxRate ?? 0,
+          issuerSnapshot: asPrismaInputJsonValue(
+            issuerSnapshot,
+            "issuerSnapshot が不正です",
+          ),
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        const winner = await tx.receipt.findUnique({
+          where: { reservationId },
+        });
+        if (winner) return winner;
+      }
+      throw error;
+    }
   });
 }
