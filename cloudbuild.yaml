@@ -82,16 +82,26 @@ substitutions:
   _TIMEOUT: "300"
   _BREAKING_MIGRATION_DEPLOY: "false"
   _BREAKING_MIGRATION_DRAIN_SECONDS: "310"
-  # PostgreSQL pool size per Cloud Run instance. Baseline was 10; with
-  # _CONCURRENCY=80 and _MAX_INSTANCES=1 the pool becomes the bottleneck on
-  # reservation-rush traffic (any single request that waits on the DB starves
-  # the next 70). Neon serverless caps concurrent connections at 30 on our
-  # plan, so 25 leaves 5-conn headroom for the migrate Job and ad-hoc `psql`
-  # investigation without breaching the cap. Revisit before enabling a Redis
-  # rate-limit backend + horizontal scale (_MAX_INSTANCES > 1) — total
-  # cluster-wide pool must stay ≤ 30 or the alert-policies/prisma-pool-timeout.yaml
-  # will start firing.
-  _DATABASE_POOL_MAX: "25"
+  # PostgreSQL pool size per Cloud Run instance.
+  #
+  # ## サイジング契約 (Codex #3564676717 対応)
+  #
+  # 同一値が public + admin の **2 サービス両方** に注入される (lines below の
+  # `DATABASE_POOL_MAX=${_DATABASE_POOL_MAX}`)。実測 pool 消費上限は:
+  #
+  #   total = _DATABASE_POOL_MAX × 2 (public + admin) × _MAX_INSTANCES
+  #
+  # 現状 _MAX_INSTANCES=1 で 12 × 2 × 1 = 24 conn。Neon serverless の 30 conn cap
+  # に対し 6 conn の headroom を残す — migrate Job (Prisma migrate 中に少数)、
+  # ad-hoc `psql` 調査、モニタリング接続 (Neon dashboard 経由) の合計をこの
+  # 6 conn 枠でまかなう。
+  #
+  # public 単独では 12 conn しかないため、reservation rush 時の pool 圧は初期の
+  # 10 conn 案よりわずかに緩和される程度 (Codex 前の 25 案は 50 conn = Neon cap
+  # 突破の bug で、rush 時に Neon 側で connection reject が起きる worse-than-before
+  # 挙動になっていた)。Redis rate-limit backend 化 + horizontal scale 解禁時に
+  # 本値の再検討が必須 — total 式で 30 を絶対に超えない範囲で最大化する。
+  _DATABASE_POOL_MAX: "12"
   # Dedicated service account email (Cloud Run runtime + Prisma migrate Job 共通、初回 1 回手動作成)
   _SERVICE_ACCOUNT: myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com
   # Dedicated Cloud Build service account. This build config is intentionally
