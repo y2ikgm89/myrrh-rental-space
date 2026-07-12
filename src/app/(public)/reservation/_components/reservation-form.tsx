@@ -222,6 +222,7 @@ export function ReservationForm({
       email: prefillData?.email ?? "",
       phoneNumber: prefillData?.phoneNumber ?? "",
       notes: "",
+      couponCode: "",
     },
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: publicReservationSchema });

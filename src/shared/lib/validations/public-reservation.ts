@@ -43,6 +43,13 @@ export const publicReservationSchema = z
       .max(2000, { error: "備考は2000文字以内で入力してください" })
       .optional()
       .or(z.literal("")),
+    // クーポンコード (大文字英数字 4-20 桁)。空文字/undefined は「未入力」として扱う。
+    // 実際の存在チェック・有効期限・利用回数チェックはサーバー側 validateCoupon で行う。
+    couponCode: z
+      .string()
+      .max(20, { error: "クーポンコードは20文字以内です" })
+      .optional()
+      .or(z.literal("")),
     agreedTermsIds: z
       .array(z.uuid({ error: "規約IDが不正です" }))
       .default([])
