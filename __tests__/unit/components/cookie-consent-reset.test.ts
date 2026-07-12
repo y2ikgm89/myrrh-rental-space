@@ -48,11 +48,30 @@ function removeGtag(): void {
   });
 }
 
+function installDataLayer(): unknown[] {
+  const dataLayer: unknown[] = [];
+  Object.defineProperty(window, "dataLayer", {
+    value: dataLayer,
+    writable: true,
+    configurable: true,
+  });
+  return dataLayer;
+}
+
+function removeDataLayer(): void {
+  Object.defineProperty(window, "dataLayer", {
+    value: undefined,
+    writable: true,
+    configurable: true,
+  });
+}
+
 describe("resetCookieConsent", () => {
   beforeEach(() => {
     installJSDOMForTests();
     localStorage.clear();
     removeGtag();
+    removeDataLayer();
   });
 
   test("removes the cookie-consent storage entry", () => {
@@ -141,6 +160,84 @@ describe("resetCookieConsent", () => {
 
     resetCookieConsent();
 
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // ---------------------------------------------------------------------------
+  // GTM (dataLayer) 経路 — Codex #3564716547 対応
+  // ---------------------------------------------------------------------------
+
+  test("GTM 経路 (gtag 不在 + dataLayer 存在): dataLayer に consent update denied を push する", () => {
+    using _reload = installReloadSpy();
+    const dataLayer = installDataLayer();
+    // gtag は beforeEach で undefined — GTM が gtag.js を注入しない実運用と一致
+    localStorage.setItem(STORAGE_KEY, "accepted");
+
+    resetCookieConsent();
+
+    // Google 公式 shim パターン: numeric index 0="consent", 1="update", 2=payload
+    // (arguments を dataLayer.push した shape と等価)
+    const pushed = dataLayer[0] as unknown[];
+    expect(Array.isArray(pushed)).toBe(true);
+    expect(pushed[0]).toBe("consent");
+    expect(pushed[1]).toBe("update");
+    expect(pushed[2]).toEqual({
+      ad_storage: "denied",
+      ad_user_data: "denied",
+      ad_personalization: "denied",
+      analytics_storage: "denied",
+      functionality_storage: "denied",
+    });
+  });
+
+  test("GA4 経路 (gtag 存在): dataLayer は使わず gtag 直接呼び出しを優先する", () => {
+    using _reload = installReloadSpy();
+    const dataLayer = installDataLayer();
+    const gtagSpy = installGtagSpy();
+
+    resetCookieConsent();
+
+    // gtag が優先されるため dataLayer は空のまま
+    expect(gtagSpy).toHaveBeenCalledTimes(1);
+    expect(dataLayer).toHaveLength(0);
+  });
+
+  test("GTM 経路: dataLayer.push が throw しても撤回フローは継続する", () => {
+    using _reload = installReloadSpy();
+    Object.defineProperty(window, "dataLayer", {
+      value: {
+        push: () => {
+          throw new Error("dataLayer broken");
+        },
+      },
+      writable: true,
+      configurable: true,
+    });
+    // Array.isArray チェックで dataLayer が Array でない場合は shim を呼ばない
+    // (broken push だけを埋め込む pathological ケースの防御)。
+    // ここでは Array を模擬した object を渡し、`Array.isArray` が false になる
+    // ため push は呼ばれず throw も伝播しない (defensive branch カバレッジ)。
+    localStorage.setItem(STORAGE_KEY, "accepted");
+
+    expect(() => resetCookieConsent()).not.toThrow();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  test("GTM 経路: 実際に Array の dataLayer で push が throw しても localStorage クリア + reload は継続", () => {
+    using reloadSpy = installReloadSpy();
+    const dataLayer: unknown[] = [];
+    dataLayer.push = () => {
+      throw new Error("dataLayer.push broken");
+    };
+    Object.defineProperty(window, "dataLayer", {
+      value: dataLayer,
+      writable: true,
+      configurable: true,
+    });
+    localStorage.setItem(STORAGE_KEY, "accepted");
+
+    expect(() => resetCookieConsent()).not.toThrow();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 });

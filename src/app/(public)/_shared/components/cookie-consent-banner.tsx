@@ -49,16 +49,47 @@ const CONSENT_DENIED_ALL = {
 } as const;
 
 /**
- * 現在の window に gtag が存在すれば Consent Mode v2 の "update denied" を送る。
- * 存在しない (accept 前、GA 未設定) 場合は no-op。gtag 内部で throw した場合も
+ * Consent Mode v2 の "update denied" を GA4 / GTM 両経路に送る。
+ *
+ * ## 経路別ハンドリング (Codex #3564716547 対応)
+ *
+ * - `AnalyticsType.ga4` 経路: `@next/third-parties/google` の
+ *   `<GoogleAnalytics>` が gtag.js を注入するため `globalThis.gtag` が存在する。
+ *   これを直接呼ぶ。
+ * - `AnalyticsType.gtm` 経路: `<GoogleTagManager>` は gtag.js を注入せず
+ *   `window.dataLayer` だけを露出する (公式 GTM snippet の実装)。この場合
+ *   `globalThis.gtag` は undefined のまま、dataLayer 側にだけ consent update
+ *   を push しないと GTM で管理している GA4 tag / Ads tag へ denied が届かない。
+ *   Google 公式ドキュメント通り「gtag 関数を dataLayer.push のシムとして
+ *   その場で定義して呼ぶ」パターンを使う (`function gtag(){dataLayer.push(arguments)}`)。
+ *
+ * どちらも無い (accept 前 / analytics 未設定) 場合は no-op。内部 throw は
  * 撤回フロー自体を止めないよう swallow する。
+ *
+ * @see https://developers.google.com/tag-platform/security/guides/consent
  */
 function notifyAnalyticsConsentDenied(): void {
-  if (typeof globalThis.gtag !== "function") return;
   try {
-    globalThis.gtag("consent", "update", CONSENT_DENIED_ALL);
+    if (typeof globalThis.gtag === "function") {
+      globalThis.gtag("consent", "update", CONSENT_DENIED_ALL);
+      return;
+    }
+    // GTM 経路: window.dataLayer 経由で consent update を push する。
+    // Google 公式 gtag shim パターン (`function gtag(){dataLayer.push(arguments)}`)
+    // を rest args 版で TS-safe に書き直したもの — GTM は dataLayer に push された
+    // array-like の numeric index (0="consent", 1="update", 2=payload) を読むため、
+    // `arguments` (Arguments object) と rest args (Array) は shape が等価。
+    const win = window as typeof window & {
+      dataLayer?: unknown[];
+    };
+    if (Array.isArray(win.dataLayer)) {
+      const gtag = (...args: unknown[]): void => {
+        win.dataLayer?.push(args);
+      };
+      gtag("consent", "update", CONSENT_DENIED_ALL);
+    }
   } catch {
-    // gtag が壊れていても consent 撤回フローは継続する
+    // gtag / dataLayer が壊れていても consent 撤回フローは継続する
   }
 }
 
