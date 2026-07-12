@@ -22,6 +22,37 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
+
+/**
+ * SwitchBot passcode 発行が失敗した際、admin 通知を発火して silent 障害を可視化する。
+ * fireAndForget で送信失敗が予約書込を巻き添えにしないよう分離する
+ * (通知 DB 書込 self-error は logError で拾う)。
+ */
+function notifyPasscodeFailure(input: {
+  reservationId: string;
+  reason: string;
+}): void {
+  fireAndForget(
+    createNotificationCommand({
+      type: NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED,
+      title:
+        NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED],
+      message: `予約 ${input.reservationId} のスマートロックパスコード発行に失敗しました: ${input.reason}`,
+      resourceType: "reservation",
+      resourceId: input.reservationId,
+    }),
+    {
+      operation: "notifySmartLockPasscodeFailure",
+      category: ErrorCategory.DATABASE,
+    },
+  );
+}
 
 /** Settingsの暗号化フィールドとは無関係のローカルpurpose（SETTINGS_CRYPTO_PURPOSESには含めない）。 */
 export const PASSCODE_CRYPTO_PURPOSE = "switchbot-guest-passcode";
@@ -188,6 +219,10 @@ async function issueForDevice(
         message: createResult.message,
       },
     });
+    notifyPasscodeFailure({
+      reservationId: input.reservationId,
+      reason: `SwitchBot createKey 失敗: ${createResult.message}`,
+    });
     return null;
   }
 
@@ -262,6 +297,15 @@ async function issueForDevice(
       },
     },
   );
+  // Poll timeout でも通知を発火する。webhook が最終的に PENDING → CONFIRMED に
+  // upgrade する余地は残るが、45 秒経過して確定していないので運用側の状況把握が必要。
+  // cleanup cron の STALE_PENDING_THRESHOLD 経過で FAILED に倒れた場合の通知は
+  // cron 経路 (revoke-passcode.ts の expireStalePending) で別途発火する。
+  notifyPasscodeFailure({
+    reservationId: input.reservationId,
+    reason:
+      "SwitchBot からの確定通知が 45 秒以内に届かず PENDING のまま (webhook 到着で自動リカバリの可能性あり)",
+  });
   return null;
 }
 
@@ -307,6 +351,11 @@ export async function issueSmartLockPasscodes(
           },
         },
       );
+      notifyPasscodeFailure({
+        reservationId: input.reservationId,
+        reason:
+          "SmartLockDevice が割り当てられているが SwitchBot 連携が未設定/無効",
+      });
       return [];
     }
 
@@ -339,7 +388,8 @@ export async function issueSmartLockPasscodes(
     );
     return issued ? [issued] : [];
   } catch (error) {
-    logError(normalizeError(error), {
+    const normalized = normalizeError(error);
+    logError(normalized, {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.HIGH,
       context: {
@@ -347,6 +397,10 @@ export async function issueSmartLockPasscodes(
         reservationId: input.reservationId,
         spaceId: input.spaceId,
       },
+    });
+    notifyPasscodeFailure({
+      reservationId: input.reservationId,
+      reason: `予期しないエラー: ${normalized.message}`,
     });
     return [];
   }

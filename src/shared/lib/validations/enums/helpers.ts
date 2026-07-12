@@ -659,6 +659,7 @@ export const NOTIFICATION_TYPE = {
   EVENT_REGISTRATION_CANCEL: "event_registration_cancel",
   FAQ_STALE: "faq_stale",
   CUSTOMER_FLAGGED: "customer_flagged",
+  SMART_LOCK_PASSCODE_FAILED: "smart_lock_passcode_failed",
 } as const;
 
 export type NotificationType =
@@ -684,6 +685,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "イベント申込キャンセル",
   [NOTIFICATION_TYPE.FAQ_STALE]: "FAQ 鮮度チェック",
   [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "要注意顧客の検知",
+  [NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED]: "スマートロック発行失敗",
 };
 
 /**
@@ -706,6 +708,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "IconX",
   [NOTIFICATION_TYPE.FAQ_STALE]: "IconQuestionMark",
   [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "IconAlertTriangle",
+  [NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED]: "IconLockOff",
 };
 
 // =============================================================================
@@ -772,6 +775,7 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL]: "destructive",
   [NOTIFICATION_TYPE.FAQ_STALE]: "warning",
   [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "destructive",
+  [NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED]: "destructive",
 };
 
 // =============================================================================
