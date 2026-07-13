@@ -11,14 +11,17 @@
 # ことを確認するまで merge しないこと。
 #
 # ## リソース名の前提
-# 既存 GCP 上の LB / IAP resource は以下の名前で作成されている前提:
-#   - global address (v4/v6): myrrh-admin-lb-ipv{4,6}
+# 既存 GCP 上の LB / IAP resource は以下の名前で作成されている前提
+# (docs/gcp-production-setup.md §LB / SSL certificate — SSoT):
+#   - global address v4:      myrrh-admin-lb-ip
+#   - global address v6:      myrrh-admin-lb-ipv6
 #   - NEG:                    myrrh-admin-neg
 #   - backend service:        myrrh-admin-backend
 #   - URL map:                myrrh-admin-url-map
-#   - SSL cert:               myrrh-admin-cert
+#   - SSL cert:               myrrh-admin-cert-20260705
 #   - HTTPS proxy:            myrrh-admin-https-proxy
-#   - forwarding rules:       myrrh-admin-https-v{4,6}
+#   - forwarding rule v4:     myrrh-admin-https-rule
+#   - forwarding rule v6:     myrrh-admin-https-rule-ipv6
 #
 # 既存 resource がこれと異なる名前で存在する場合、`terraform/lb_admin.tf` を
 # 実測名に合わせて修正してから import する。
@@ -61,7 +64,7 @@ import_one() {
 # Global addresses (v4 / v6)
 import_one \
   "google_compute_global_address.admin_lb_ipv4" \
-  "projects/${PROJECT_ID}/global/addresses/myrrh-admin-lb-ipv4"
+  "projects/${PROJECT_ID}/global/addresses/myrrh-admin-lb-ip"
 
 import_one \
   "google_compute_global_address.admin_lb_ipv6" \
@@ -85,7 +88,7 @@ import_one \
 # SSL cert (managed)
 import_one \
   "google_compute_managed_ssl_certificate.admin_cert" \
-  "projects/${PROJECT_ID}/global/sslCertificates/myrrh-admin-cert"
+  "projects/${PROJECT_ID}/global/sslCertificates/myrrh-admin-cert-20260705"
 
 # HTTPS proxy
 import_one \
@@ -95,13 +98,19 @@ import_one \
 # Forwarding rules
 import_one \
   "google_compute_global_forwarding_rule.admin_https_v4" \
-  "projects/${PROJECT_ID}/global/forwardingRules/myrrh-admin-https-v4"
+  "projects/${PROJECT_ID}/global/forwardingRules/myrrh-admin-https-rule"
 
 import_one \
   "google_compute_global_forwarding_rule.admin_https_v6" \
-  "projects/${PROJECT_ID}/global/forwardingRules/myrrh-admin-https-v6"
+  "projects/${PROJECT_ID}/global/forwardingRules/myrrh-admin-https-rule-ipv6"
 
-# IAP web binding (per admin group)
+# IAP web binding (Cloud Run direct IAP scope, per admin group)。
+# 空白区切りの 3-token 形式:
+#   <resource> <role> <member>
+# resource は Cloud Run service 単位のスコープ:
+#   projects/{project}/iap_web/cloud_run-{location}/services/{service}
+CLOUD_RUN_ADMIN_SERVICE="${CLOUD_RUN_ADMIN_SERVICE:-myrrh-rental-space-admin}"
+IAP_RESOURCE="projects/${PROJECT_ID}/iap_web/cloud_run-${REGION}/services/${CLOUD_RUN_ADMIN_SERVICE}"
 for group_key in super_admin admin editor viewer; do
   case "${group_key}" in
     super_admin) group_email="myrrh-super-admins@myrrh-jp.com" ;;
@@ -110,8 +119,8 @@ for group_key in super_admin admin editor viewer; do
     viewer)      group_email="myrrh-viewers@myrrh-jp.com" ;;
   esac
   import_one \
-    "google_iap_web_type_compute_iam_member.admin_access[\"${group_key}\"]" \
-    "projects/${PROJECT_ID}/iap_web/compute roles/iap.httpsResourceAccessor group:${group_email}"
+    "google_iap_web_cloud_run_service_iam_member.admin_access[\"${group_key}\"]" \
+    "${IAP_RESOURCE} roles/iap.httpsResourceAccessor group:${group_email}"
 done
 
 popd >/dev/null
