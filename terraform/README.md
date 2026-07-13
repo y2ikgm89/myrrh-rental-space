@@ -14,8 +14,8 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が唯一の正�
 | 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                                | ✅ 完了   |
 | 4     | Artifact Registry + Cloud Build worker pool                                                         | ✅ 完了   |
 | 5     | Service Accounts + project-level IAM + WIF Pool/Provider                                            | ✅ 完了   |
-| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b)               | 🚧 実装中 |
-| 7     | Load Balancer + IAP + DNS                                                                           | ⏳ 未着手 |
+| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b)               | ✅ 完了   |
+| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)                      | 🚧 実装中 |
 
 ## ファイル構成
 

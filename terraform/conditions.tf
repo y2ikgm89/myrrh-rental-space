@@ -100,3 +100,25 @@ resource "google_project_iam_member" "terraform_runner_run_admin" {
   role    = "roles/run.admin"
   member  = "serviceAccount:${var.terraform_runner_sa_email}"
 }
+
+# Phase 7: Compute Network admin (LB resources: address, backend service,
+# URL map, SSL cert, target proxy, forwarding rule)。
+resource "google_project_iam_member" "terraform_runner_compute_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
+
+# Phase 7: Compute Security admin (SSL cert)。
+resource "google_project_iam_member" "terraform_runner_compute_security_admin" {
+  project = var.project_id
+  role    = "roles/compute.securityAdmin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
+
+# Phase 7: IAP admin (OAuth client + resource IAM binding)。
+resource "google_project_iam_member" "terraform_runner_iap_admin" {
+  project = var.project_id
+  role    = "roles/iap.admin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
