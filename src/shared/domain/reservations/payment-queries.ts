@@ -77,15 +77,37 @@ export async function claimReservationAsPaid(
 /**
  * 決済失敗の atomic claim: PAID / REFUNDED 以外の予約のみ FAILED に遷移させる。
  *
- * @returns claim 成功時 `true`。既に PAID / REFUNDED や予約不在で no-op の場合 `false`。
+ * ## Session 一致必須 (Codex PR #1043 P1)
+ *
+ * `sessionId` を WHERE に含めることで「stale webhook が別 session を巻き込んで FAILED
+ * にする」race を封殺する。具体シナリオ:
+ *
+ * 1. OLD session: `checkout.session.expired` 発火 → FAILED
+ * 2. 顧客が再決済 (`createCheckoutSessionCommand`) → `stripeCheckoutSessionId`
+ *    が NEW session id に置換、paymentStatus は FAILED→PENDING に巻き戻し
+ * 3. Stripe が OLD session の expired webhook を再配信 (at-least-once 契約)
+ * 4. **旧実装**: reservationId のみで claim → NEW session の PENDING が FAILED に飛ぶ
+ * 5. NEW session の `checkout.session.completed` 到着 → `claimReservationAsPaid` は
+ *    FAILED を accept しない → 顧客は支払ったのに reservation は FAILED のまま停滞、
+ *    会計 mismatch (Stripe 側 charge あり × DB 側 unpaid) が焼き付く
+ *
+ * 修正: WHERE に `stripeCheckoutSessionId: sessionId` を追加。OLD session の webhook が
+ * 届いても NEW session と id が一致せず count=0 の no-op になる。
+ *
+ * @returns claim 成功時 `true`。既に PAID / REFUNDED や予約不在、または session id
+ *   不一致 (stale webhook) で no-op の場合 `false`。
  */
 export async function claimReservationAsFailed(
   reservationId: string,
+  sessionId: string,
 ): Promise<boolean> {
   const result = await prisma.reservation.updateMany({
     where: {
       id: reservationId,
       deletedAt: null,
+      // Session 一致必須。stale webhook が別 session に飛び火して PENDING を
+      // FAILED に巻き込むのを防ぐ (Codex PR #1043 P1)。
+      stripeCheckoutSessionId: sessionId,
       paymentStatus: {
         notIn: [
           PaymentStatus.PAID,
