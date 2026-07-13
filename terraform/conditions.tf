@@ -89,3 +89,14 @@ resource "google_project_iam_member" "terraform_runner_wif_admin" {
   role    = "roles/iam.workloadIdentityPoolAdmin"
   member  = "serviceAccount:${var.terraform_runner_sa_email}"
 }
+
+# Phase 6: Cloud Run admin (public / admin services + prisma-migrate job)。
+# Terraform runner が Cloud Run resource を管理するのに必要。
+# 実際のトラフィック管理 (traffic split 等) は Cloud Build が担うので、
+# runner は shape の変更に閉じる (image tag は ignore_changes で cloudbuild
+# 側に委譲、Phase 6b で完全移管予定)。
+resource "google_project_iam_member" "terraform_runner_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
