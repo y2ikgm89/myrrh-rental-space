@@ -52,6 +52,8 @@ import {
   STRIPE_PAYMENT_METHOD_TYPE_VALUES,
   STRIPE_PAYMENT_METHOD_CURRENCY_ALLOW,
   isStripePaymentMethodType,
+  isPaymentMethodAllowedForCurrency,
+  filterCompatiblePaymentMethods,
   type StripePaymentMethodType,
 } from "@/shared/lib/stripe-payment-methods";
 import { Checkbox } from "@/admin/components/ui";
@@ -142,6 +144,20 @@ export function StripeSection({ settings }: StripeSectionProps) {
   const enabled = enabledControl.value === "on";
   const currency = currencyControl.value ?? "jpy";
   const secretKeyValue = secretKeyControl.value ?? "";
+
+  // Currency 切替時に非対応 method を自動 drop する (Codex PR #1045 P2 fix)。
+  // 例: JPY で `konbini` 選択中 → USD に切替 → `konbini` は非対応なので配列から除外。
+  // 残りが空になったら "card" にフォールバック (server 側 min(1) 契約と対称)。
+  // render-time sync で useEffect 不使用 (React 公式 anti-pattern 回避)。
+  const [previousCurrency, setPreviousCurrency] = useState(currency);
+  if (currency !== previousCurrency) {
+    setPreviousCurrency(currency);
+    setSelectedMethods((prev) => {
+      const compatible = filterCompatiblePaymentMethods(prev, currency);
+      if (compatible.length === prev.length) return prev;
+      return compatible.length > 0 ? compatible : ["card"];
+    });
+  }
 
   // test / live は保存済み公開キーの接頭辞から自動判定（DB トグルは持たない）
   const savedMode: "test" | "live" | null = settings.stripePublishableKey
@@ -480,9 +496,10 @@ export function StripeSection({ settings }: StripeSectionProps) {
               {STRIPE_PAYMENT_METHOD_TYPE_VALUES.map((method) => {
                 const allowedCurrencies =
                   STRIPE_PAYMENT_METHOD_CURRENCY_ALLOW[method];
-                const disabledForCurrency =
-                  allowedCurrencies !== undefined &&
-                  !allowedCurrencies.includes(currency);
+                const disabledForCurrency = !isPaymentMethodAllowedForCurrency(
+                  method,
+                  currency,
+                );
                 const isChecked = selectedMethods.includes(method);
                 const inputId = `stripe-payment-method-${method}`;
                 return (

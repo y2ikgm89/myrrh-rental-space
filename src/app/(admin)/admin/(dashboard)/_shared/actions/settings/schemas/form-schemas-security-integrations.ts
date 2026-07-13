@@ -16,7 +16,11 @@ import {
   isValidWebhookSecret,
   keysHaveMatchingMode,
 } from "@/shared/lib/stripe-shared";
-import { STRIPE_PAYMENT_METHOD_TYPE_VALUES } from "@/shared/lib/stripe-payment-methods";
+import {
+  STRIPE_PAYMENT_METHOD_TYPE_VALUES,
+  STRIPE_PAYMENT_METHOD_LABELS,
+  isPaymentMethodAllowedForCurrency,
+} from "@/shared/lib/stripe-payment-methods";
 import { optionalText, switchBoolean } from "./form-schema-helpers";
 
 // =============================================================================
@@ -122,7 +126,25 @@ export const stripeFormSchema = z
         "公開可能キーとシークレットキーのモード（test/live）が一致していません",
       path: ["stripeSecretKey"],
     },
-  );
+  )
+  // method × currency 互換 gate (Codex PR #1045 P2 fix)。
+  // client 側 filter を bypass する経路 (直接 POST・SSRF ツール等) に対する server-side
+  // 防御。管理 UI 側でも currency 切替時に自動 filter するが、Zod でも reject して
+  // 誤設定が Settings に焼き付くのを防ぐ。superRefine で動的メッセージ生成。
+  .superRefine((data, ctx) => {
+    const invalid = data.stripePaymentMethodTypes.filter(
+      (m) => !isPaymentMethodAllowedForCurrency(m, data.stripeCurrency),
+    );
+    if (invalid.length === 0) return;
+    const names = invalid
+      .map((m) => STRIPE_PAYMENT_METHOD_LABELS[m])
+      .join(" / ");
+    ctx.addIssue({
+      code: "custom",
+      path: ["stripePaymentMethodTypes"],
+      message: `選択中の決済方法 (${names}) は通貨 ${data.stripeCurrency.toUpperCase()} に対応していません`,
+    });
+  });
 
 export type StripeFormInput = z.infer<typeof stripeFormSchema>;
 

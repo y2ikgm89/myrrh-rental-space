@@ -63,3 +63,30 @@ export function isStripePaymentMethodType(
 ): value is StripePaymentMethodType {
   return typeof value === "string" && STRIPE_PAYMENT_METHOD_TYPE_SET.has(value);
 }
+
+/**
+ * 指定 method が指定 currency 下で使用可能かを判定する。
+ *
+ * `STRIPE_PAYMENT_METHOD_CURRENCY_ALLOW` に登録が無い method は全通貨対応
+ * (undefined = 制約なし)、登録がある method は allow list に含まれる場合のみ true。
+ * `card` 等の全通貨対応 method は常に true。
+ */
+export function isPaymentMethodAllowedForCurrency(
+  method: StripePaymentMethodType,
+  currency: string,
+): boolean {
+  const allowed = STRIPE_PAYMENT_METHOD_CURRENCY_ALLOW[method];
+  if (allowed === undefined) return true;
+  return allowed.includes(currency.toLowerCase());
+}
+
+/**
+ * 指定 currency と互換な method のみ残して返す。空配列になるケースは
+ * caller 側 (UI / Zod / domain layer) で「最低 1 件」契約を守る責務。
+ */
+export function filterCompatiblePaymentMethods(
+  methods: ReadonlyArray<StripePaymentMethodType>,
+  currency: string,
+): StripePaymentMethodType[] {
+  return methods.filter((m) => isPaymentMethodAllowedForCurrency(m, currency));
+}
