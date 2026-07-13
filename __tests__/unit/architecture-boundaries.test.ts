@@ -1217,17 +1217,27 @@ describe("architecture boundaries", () => {
     );
   });
 
-  test("cloudbuild.yaml: --set-secrets= と grant-secret-access step の SECRETS list は drift しない", () => {
-    // Cloud Run `--set-secrets=` に新規 secret を追加した際、`grant-secret-access`
-    // step の SECRETS list への追加を忘れると、初回 deploy 時に runtime SA が
-    // その secret を読めず Permission denied で silent に revision 作成が失敗する
-    // (実例: PR #982 で SECONDARY_ENCRYPTION_KEYS を追加した際に発生し、
-    // deploy が 3 回連続で失敗した)。両 list を CI で drift 監視する。
-    const source = readFileSync(CLOUDBUILD_FILE, "utf8");
+  test("cloudbuild.yaml の --set-secrets= と scripts/setup-cloud-build-permissions.sh の SECRETS list は drift しない", () => {
+    // Cloud Run `--set-secrets=` に新規 secret を追加した際、setup script の
+    // SECRETS list への追加を忘れると、runtime SA がその secret を読めず deploy が
+    // Permission denied で silent に失敗する (実例: PR #982 で
+    // SECONDARY_ENCRYPTION_KEYS を追加した際に発生し、deploy が 3 回連続で失敗)。
+    // 両 list を CI で drift 監視することで、setup script の再実行忘れを
+    // deploy 前に unit test で検出する。
+    //
+    // 設計履歴: PR #1051-#1053 では Cloud Build の grant-secret-access step で
+    // 自動反映していたが、Cloud Build SA が持つ setIamPolicy が self-grant
+    // 経路になる security 問題 (Codex P1) のため撤去。IAM 管理は setup script
+    // (project owner 手動実行) が SSoT に戻った。
+    const cloudbuild = readFileSync(CLOUDBUILD_FILE, "utf8");
+    const setupScript = readFileSync(
+      join(ROOT, "scripts", "setup-cloud-build-permissions.sh"),
+      "utf8",
+    );
 
-    // deploy-public / deploy-admin 両方の `--set-secrets=` を集約する。
+    // deploy-public / deploy-admin / migrate-update の `--set-secrets=` を集約する。
     // pattern: ENV_NAME=SECRET_NAME:${_VERSION_VAR}
-    const setSecretsLines = [...source.matchAll(/--set-secrets=([^\n]+)/g)];
+    const setSecretsLines = [...cloudbuild.matchAll(/--set-secrets=([^\n]+)/g)];
     expect(setSecretsLines.length).toBeGreaterThan(0);
     const secretsInDeploy = new Set<string>();
     for (const match of setSecretsLines) {
@@ -1240,29 +1250,19 @@ describe("architecture boundaries", () => {
     }
     secretsInDeploy.delete("");
 
-    // grant-secret-access step 内の SECRETS='...' whitespace-separated list を抽出する
-    // (bracket 記法だと deploy-workflow の ${...} drift gate と衝突するため、両ゲート
-    // 互換の bracketless single-quoted 記法で保持)。
-    const grantMatch = source.match(/SECRETS='([\s\S]*?)'/);
-    expect(grantMatch).not.toBeNull();
-    const secretsInGrant = new Set(
-      (grantMatch?.[1] ?? "")
-        .split(/\s+/)
-        .map((s) => s.trim())
+    // setup script の SECRETS=( ... ) bash 配列を抽出する。行内 `#` コメントも
+    // 除去してから空白分割する。
+    const arrayMatch = setupScript.match(/SECRETS=\(([\s\S]*?)\)/);
+    expect(arrayMatch).not.toBeNull();
+    const secretsInSetup = new Set(
+      (arrayMatch?.[1] ?? "")
+        .split("\n")
+        .map((line) => line.replace(/#.*$/u, "").trim())
+        .flatMap((line) => line.split(/\s+/))
         .filter((s) => s.length > 0),
     );
 
-    // build 時に availableSecrets 経由で BUILD_SA に読ませる secret は runtime SA の
-    // IAM 対象ではないので除外する (Cloud Build image build で読む、Cloud Run runtime
-    // では読まない)。
-    const BUILD_ONLY_SECRETS = new Set(["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"]);
-    for (const s of BUILD_ONLY_SECRETS) {
-      // NEXT_SERVER_ACTIONS_ENCRYPTION_KEY は Cloud Run runtime にも注入されるため
-      // 実は runtime SA でも読まれる。grant list にも含める契約が正しい。除外しない。
-      void s;
-    }
-
-    expect([...secretsInGrant].sort()).toEqual([...secretsInDeploy].sort());
+    expect([...secretsInSetup].sort()).toEqual([...secretsInDeploy].sort());
   });
 
   test("管理 Better Auth canonical route handler は削除済み", () => {

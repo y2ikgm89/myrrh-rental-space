@@ -569,43 +569,37 @@ Add a version:
 printf '%s' "$SECRET_VALUE" | gcloud secrets versions add SECRET_NAME --data-file=-
 ```
 
-Runtime Secret Manager access for `$RUNTIME_SA` is bootstrapped through Cloud
-Build once and then owned by `cloudbuild.yaml` on every deploy — do not grant
-`roles/secretmanager.secretAccessor` to `$RUNTIME_SA` by hand. Grant Cloud
-Build's own SA the minimum right to manage those bindings, then let the deploy
-pipeline reapply the accessor role idempotently for every secret in the SECRETS
-list of `cloudbuild.yaml`'s `grant-secret-access` step:
+Runtime Secret Manager access for `$RUNTIME_SA` is bootstrapped once per
+project by `scripts/setup-cloud-build-permissions.sh` (project-owner run) and
+then re-run any time you add a new secret binding to `cloudbuild.yaml`. The
+Cloud Build SA is intentionally kept **without any Secret Manager IAM
+permission**: giving it `secretmanager.secrets.setIamPolicy` would let a
+compromised build identity self-grant `roles/secretmanager.secretAccessor` on
+`DATABASE_URL` / `ENCRYPTION_KEY` / any other runtime secret, and there is no
+IAM Condition on `iam.grantableRoles` that can safely restrict that path. So
+we do not delegate secret-IAM management to the build pipeline at all.
 
 ```bash
-export PROJECT_ID BUILD_SA
+export PROJECT_ID
 bash scripts/setup-cloud-build-permissions.sh
 ```
 
-The script creates a project-level custom role
-`projects/$PROJECT_ID/roles/secretIamManager` with exactly two permissions —
-`secretmanager.secrets.getIamPolicy` and `secretmanager.secrets.setIamPolicy` —
-and grants it to `$BUILD_SA`. This is strictly narrower than any documented
-role: the predefined `roles/secretmanager.admin` would also allow value read
-and version destroy across every runtime secret (DATABASE_URL, encryption
-keys, Cloudflare tokens, …), so a compromise of the build SA would leak or
-destroy every secret in the project. With the custom role Cloud Build can
-only modify IAM policies, not read or destroy secret values. The script also
-removes any earlier `roles/secretmanager.admin` binding on `$BUILD_SA`
-idempotently, so re-running it is safe. Every subsequent Cloud Build run then
-executes:
+The script does exactly two things and is fully idempotent:
 
-```
-gcloud secrets add-iam-policy-binding <secret> \
-  --member="serviceAccount:${_SERVICE_ACCOUNT}" \
-  --role="roles/secretmanager.secretAccessor"
-```
+1. Grants `roles/secretmanager.secretAccessor` on every secret listed in the
+   `SECRETS=(...)` array (which mirrors the Cloud Run `--set-secrets=` bindings
+   in `cloudbuild.yaml`) to `$RUNTIME_SA`. Adding a new secret is: update
+   `--set-secrets=` **and** the SECRETS array, then re-run the script.
+2. Removes any leftover `roles/secretmanager.admin` or the transitional
+   `projects/$PROJECT_ID/roles/secretIamManager` custom role from `$BUILD_SA`
+   (PR #1051-#1053 experimented with letting Cloud Build manage IAM; that path
+   is now closed). The revoke path fails hard on non-"NotFound" errors so the
+   operator is never falsely reassured that a stale admin binding is gone.
 
-for every secret named in the `grant-secret-access` step, so a newly added
-`--set-secrets=` binding self-heals on the next deploy instead of needing an
-out-of-band `gcloud secrets add-iam-policy-binding` call. When adding a new
-Cloud Run secret binding, add the same secret name to the `SECRETS=(...)` list
-inside that step — `architecture-boundaries.test.ts` gates that the deploy
-list and the grant list stay in sync.
+`architecture-boundaries.test.ts` gates that the SECRETS array in the script
+and the `--set-secrets=` bindings in `cloudbuild.yaml` stay in sync, so
+forgetting to update either side is caught by CI before merge — well before
+the deploy would fail with a Secret Manager Permission denied.
 
 Grant the build identity access only to the build-time secret (the deploy
 pipeline reads this one during image build via Cloud Build `availableSecrets`,
