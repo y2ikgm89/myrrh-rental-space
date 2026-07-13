@@ -3,6 +3,7 @@ import "server-only";
 import type {
   DiscountCombinationMode,
   PaymentStatus,
+  TaxRateType,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
@@ -33,6 +34,11 @@ export type ReservationWithRelations = {
   couponId: string | null;
   couponDiscountAmount: number | null;
   durationDiscountAmount: number | null;
+  spaceDiscountAmount: number | null;
+  taxRateType: TaxRateType | null;
+  taxRate: number | null;
+  taxAmount: number | null;
+  totalPriceWithTax: number | null;
   notes: string | null;
   deletedAt: string | null;
   createdAt: string;
