@@ -33,3 +33,15 @@ variable "terraform_runner_sa_email" {
   type        = string
   default     = "terraform-runner@myrrh-rental-space.iam.gserviceaccount.com"
 }
+
+variable "scheduler_sa_email" {
+  description = "Cloud Scheduler OIDC service account (Phase 2)"
+  type        = string
+  default     = "myrrh-rental-space-scheduler@myrrh-rental-space.iam.gserviceaccount.com"
+}
+
+variable "public_domain" {
+  description = "Public canonical domain (cron target URL prefix)"
+  type        = string
+  default     = "https://rental-space.myrrh-jp.com"
+}
