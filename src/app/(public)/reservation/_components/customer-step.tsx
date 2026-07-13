@@ -17,7 +17,7 @@ import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 import { TermsConsentChecklist } from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
 import { BookingSummary } from "./booking-summary";
-import { StickyBottomBar } from "./sticky-bottom-bar";
+import { StickyBottomBar } from "@/app/(public)/_shared/components/ui/sticky-bottom-bar";
 
 // ---------------------------------------------------------------------------
 // Types — conform fields SSoT
@@ -288,7 +288,7 @@ export function CustomerStep({
       </div>
 
       <div className="h-20 md:hidden" />
-      <StickyBottomBar>
+      <StickyBottomBar hiddenFrom="md">
         <div className="flex items-center justify-between gap-4">
           <Button
             type="button"

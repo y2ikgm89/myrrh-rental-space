@@ -40,7 +40,7 @@ import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
 import { CustomerStep } from "./customer-step";
-import { StickyBottomBar } from "./sticky-bottom-bar";
+import { StickyBottomBar } from "@/app/(public)/_shared/components/ui/sticky-bottom-bar";
 import { selectionReducer, EMPTY_SLOTS } from "./use-reservation-selection";
 import {
   scrollToTop,
@@ -443,7 +443,7 @@ export function ReservationForm({
 
         {/* Mobile */}
         <div className="h-20 md:hidden" />
-        <StickyBottomBar>
+        <StickyBottomBar hiddenFrom="md">
           <div className="flex items-center justify-between gap-4">
             {config.onBack ? (
               <Button
