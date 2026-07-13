@@ -3,6 +3,8 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { getAppUrl } from "@/shared/lib/constants";
+import { createWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 
 /**
  * 管理画面のキャンセル待ち一覧向けクエリ。
@@ -134,4 +136,49 @@ export async function findExpiredWaitlistOfferCandidates(now: Date) {
       email: true,
     },
   });
+}
+
+/**
+ * 繰り上げ当選メール (`sendEventWaitlistOffered`) の CTA 用 payment context を組み立てる。
+ *
+ * `ticket.price === 0` なら無料イベントの確定 URL（`/events/waitlist/confirm`）、
+ * それ以外は有料イベントの Stripe Checkout 起動 URL（`/events/waitlist/checkout/[token]`）
+ * を返す。両 URL とも `createWaitlistOfferToken` が発行する HMAC purpose-bound token
+ * を埋め込む（token 自体に exp claim は無く、有効期限は `EventRegistration.expiresAt`
+ * が正本 — `waitlist-offer-token.ts` の docblock 参照）。
+ *
+ * `createEventCheckoutSessionCommand`（`payment-commands.ts`）と同様、URL 組み立てに
+ * `getAppUrl()` をこの domain 層で直接呼ぶ（同ファイル内の既存 precedent）。
+ *
+ * registrationId に該当する申込が存在しない場合は null を返す（呼び出し側で
+ * 「既に処理済み/削除済み」を non-fatal に扱えるようにする）。
+ */
+export async function getEventWaitlistOfferPaymentContext(
+  registrationId: string,
+): Promise<
+  | { kind: "free"; confirmUrl: string }
+  | { kind: "paid"; checkoutUrl: string; price: number }
+  | null
+> {
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: { id: true, ticket: { select: { price: true } } },
+  });
+  if (!registration) return null;
+
+  const baseUrl = getAppUrl();
+  const token = createWaitlistOfferToken({ registrationId });
+
+  if (registration.ticket.price === 0) {
+    return {
+      kind: "free",
+      confirmUrl: `${baseUrl}/events/waitlist/confirm?token=${token}`,
+    };
+  }
+
+  return {
+    kind: "paid",
+    checkoutUrl: `${baseUrl}/events/waitlist/checkout/${token}`,
+    price: registration.ticket.price,
+  };
 }
