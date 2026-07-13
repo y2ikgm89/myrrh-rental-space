@@ -109,14 +109,21 @@ for secret in "${SECRETS[@]}"; do
 done
 
 # 2. 過渡期に Cloud Build SA に付与した Secret Manager 系権限を revoke。
+#
+#    `--all` を使うことで condition 付き / condition 無し 両方の binding を
+#    削除する (Codex Cloud Review P1: PR #1055 comment 3572307237)。
+#    `--condition=None` だと unconditional binding のみが対象で、attacker
+#    (or 過去の運用) が IAM Condition 付きで secretmanager.admin を残していた
+#    場合に silent に見逃す。self-grant 経路を残さないため全 conditions を revoke。
+#
 #    "binding が存在しない" 系エラーのみ許容し、他 error (permission 不足 /
 #    API error 等) では即 fail する。silent success で admin/self-grant 経路が
 #    残るのを防ぐ (Codex Cloud Review P2: PR #1053 comment 3572078678)。
 revoke_binding_strict() {
   local role="$1"
-  echo "[setup] Removing legacy binding ${role} from Cloud Build SA"
+  echo "[setup] Removing all ${role} bindings from Cloud Build SA"
   if [ "${DRY_RUN}" = "1" ]; then
-    printf '[setup][DRY_RUN] gcloud projects remove-iam-policy-binding %s --member=serviceAccount:%s --role=%s --condition=None --quiet\n' \
+    printf '[setup][DRY_RUN] gcloud projects remove-iam-policy-binding %s --member=serviceAccount:%s --role=%s --all --quiet\n' \
       "${PROJECT_ID}" "${BUILD_SA}" "${role}"
     return 0
   fi
@@ -126,21 +133,20 @@ revoke_binding_strict() {
   gcloud projects remove-iam-policy-binding "${PROJECT_ID}" \
     --member="serviceAccount:${BUILD_SA}" \
     --role="${role}" \
-    --condition=None \
+    --all \
     --quiet 2>"${err_file}" || rc=$?
   if [ "${rc}" -eq 0 ]; then
     rm -f "${err_file}"
     return 0
   fi
   # gcloud が "binding が無い" ケースで出す文言は API バージョンで揺れる。
-  # 実測メッセージ例:
-  #   - "Policy binding with the specified principal, role, and condition not found!"
-  #     (`--condition=None` 指定時、Codex Cloud Review P1 #1054 で判明)
+  # `--all` 使用時の実測メッセージ例:
+  #   - "Policy binding with the specified principal and role not found!"
   #   - "Policy binding with the specified member and role not found!" (古い版)
   #   - "does not have any bindings" (project に IAM policy 自体が空のケース)
   # "Policy binding" と "not found" が同一行に現れれば binding 不在と判定する。
-  # マッチしなければ即 fail (permission 不足 / API error / condition mismatch 等は
-  # silent success させない — Codex Cloud Review P2 #1053 の要求)。
+  # マッチしなければ即 fail (permission 不足 / API error 等は silent success
+  # させない — Codex Cloud Review P2 #1053 の要求)。
   if grep -qEi '(Policy binding.*not found|does not have any (bindings|matching binding))' "${err_file}"; then
     echo "[setup]   (no ${role} binding — nothing to remove)"
     rm -f "${err_file}"
