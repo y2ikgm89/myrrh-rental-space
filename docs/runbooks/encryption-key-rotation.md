@@ -35,7 +35,9 @@ format (`v2:<kid>:<purpose>:...`) and the lookup contract.
   listed in that step (including `SECONDARY_ENCRYPTION_KEYS`) on each deploy.
   This is one-time bootstrapped by
   `bash scripts/setup-cloud-build-permissions.sh`, which grants Cloud Build's
-  SA `roles/secretmanager.secretIamAdmin` on the project. Do not fall back to
+  SA `roles/secretmanager.admin` on the project (Google Cloud has no
+  `secretIamAdmin` role — `admin` is the smallest documented role that can
+  modify Secret Manager IAM policies at project scope). Do not fall back to
   granting the accessor role by hand — the deploy pipeline is the SSoT and
   ad-hoc grants drift out of the SECRETS list.
 
