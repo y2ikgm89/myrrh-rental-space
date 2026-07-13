@@ -1,40 +1,75 @@
 import "server-only";
 
 import { RegistrationStatus } from "@generated/prisma/enums";
-import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
+import {
+  CANCELLABLE_REGISTRATION_STATUSES,
+  type CancelledByType,
+} from "@/shared/lib/validations/enums/helpers";
+import { offerNextWaitlistEntryCommand } from "./waitlist-commands";
 
 /**
  * イベント参加申込キャンセルの共通コア
  *
  * 会員（マイページ）・ゲスト（メールリンク）・管理者（管理画面）の全キャンセル経路が
  * 共有する。本人性の確認（会員=customerId / ゲスト=トークン / 管理者=RBAC）は
- * 呼び出し側が行い、本関数は「キャンセル可否の判定 → CANCELLED 化（atomic claim）」を担う。
+ * 呼び出し側が行い、本関数は「キャンセル可否の判定 → CANCELLED 化（atomic claim）→
+ * （CONFIRMED 由来のみ）waitlist FIFO promote」を担う。
  *
- * **Atomic claim**: `updateMany` の WHERE 条件に現在の `status: CONFIRMED` を含めて
- * DB 側で claim する（`reservations/cancel-core.ts` の `applyCancellation` と同パターン）。
- * 二重 submit や admin/guest 同時操作で両 tx が CONFIRMED を読んでも、UPDATE は
+ * **Atomic claim**: `updateMany` の WHERE 条件に現在の `status ∈ CANCELLABLE_REGISTRATION_STATUSES`
+ * （CONFIRMED / WAITLISTED / WAITLISTED_OFFERED）を含めて DB 側で claim する
+ * （`reservations/cancel-core.ts` の `applyCancellation` と同パターン）。
+ * 二重 submit や admin/guest 同時操作で両 tx が同じ status を読んでも、UPDATE は
  * 必ずどちらか一方しか count=1 にならない（PostgreSQL の単一 UPDATE は atomic）。
  * これにより通知・メールの二重発火を構造的に防ぐ（従来の findFirst→update は
  * この保証が無かった）。
+ *
+ * **Waitlist promote**: キャンセル対象が CONFIRMED だった場合のみ（＝実際に枠が
+ * 1 つ空いた場合のみ）、同一 tx 内で {@link offerNextWaitlistEntryCommand} を呼び、
+ * 同じ (slotId, ticketId) の FIFO 先頭を WAITLISTED_OFFERED に昇格させる。
+ * WAITLISTED / WAITLISTED_OFFERED のセルフキャンセルは枠を消費していないため昇格対象外。
  */
 
 export interface ApplyEventRegistrationCancellationTx {
   readonly eventRegistration: {
     updateMany(args: object): Promise<{ count: number }>;
+    // offerNextWaitlistEntryCommand に tx をそのまま渡すために必要な最小構造
+    // （実装は呼ばないが、findFirst と揃えることで real Prisma tx との構造互換を保つ）。
+    findFirst(args: object): Promise<{
+      id: string;
+      email: string | null;
+    } | null>;
+    findUnique(args: object): Promise<{
+      id: string;
+      email: string | null;
+      offeredAt: Date | null;
+      expiresAt: Date | null;
+    } | null>;
   };
 }
-
-/** キャンセルを受け付ける申込ステータス */
-export const CANCELLABLE_REGISTRATION_STATUSES: readonly RegistrationStatus[] =
-  [RegistrationStatus.CONFIRMED];
 
 export interface CancellableEventRegistration {
   id: string;
   status: RegistrationStatus;
+  slotId: string;
+  ticketId: string;
 }
 
+/** offerNextWaitlistEntryCommand の戻り値から `promoted` の型だけを再利用する（定義を重複させない）。 */
+type WaitlistPromotionOutcome = Awaited<
+  ReturnType<typeof offerNextWaitlistEntryCommand>
+>["promoted"];
+
 export type CancellationResult =
-  { success: true } | { success: false; error: string };
+  | {
+      success: true;
+      previousStatus: RegistrationStatus;
+      /**
+       * FIFO で繰り上げ当選した申込（無ければ null）。呼び出し側の副作用ヘルパーが
+       * 非 null のとき「繰り上げ当選メール」の送信要否を判断する。
+       */
+      promoted: WaitlistPromotionOutcome;
+    }
+  | { success: false; error: string };
 
 export interface ApplyEventRegistrationCancellationOptions {
   now: Date;
@@ -64,12 +99,22 @@ export async function applyEventRegistrationCancellation(
   registration: CancellableEventRegistration,
   options: ApplyEventRegistrationCancellationOptions,
 ): Promise<CancellationResult> {
-  if (!CANCELLABLE_REGISTRATION_STATUSES.includes(registration.status)) {
+  // `.includes()` ではなく `.some()` で比較する: gateway 定数は `as const satisfies
+  // readonly RegistrationStatus[]` で意図的に狭い literal union 型のまま export されて
+  // おり（`readonly RegistrationStatus[]` へ widen していない）、`registration.status`
+  // （広い RegistrationStatus 型）を `.includes()` の引数に渡すと型エラーになる。
+  if (
+    !CANCELLABLE_REGISTRATION_STATUSES.some((s) => s === registration.status)
+  ) {
     return { success: false, error: "この申込はキャンセルできません" };
   }
 
-  // Atomic claim: WHERE に status: CONFIRMED（+ 指定時は customerId 期待値）を
-  // 含めて二重 submit / 同時操作 / claim との race を DB レベルで防ぐ。
+  const previousStatus = registration.status;
+  const previousSlotId = registration.slotId;
+  const previousTicketId = registration.ticketId;
+
+  // Atomic claim: WHERE に status ∈ CANCELLABLE_REGISTRATION_STATUSES（+ 指定時は
+  // customerId 期待値）を含めて二重 submit / 同時操作 / claim との race を DB レベルで防ぐ。
   const updateResult = await tx.eventRegistration.updateMany({
     where: {
       id: registration.id,
@@ -95,5 +140,18 @@ export async function applyEventRegistrationCancellation(
     };
   }
 
-  return { success: true };
+  // Waitlist promote: CONFIRMED だった申込がキャンセルされた場合のみ、空いた枠を
+  // FIFO で offer に昇格する。advisory lock 728350 は offerNextWaitlistEntryCommand
+  // 内部で同一 tx 上から取得するため、ここでは何もしない。
+  let promoted: WaitlistPromotionOutcome = null;
+  if (previousStatus === RegistrationStatus.CONFIRMED) {
+    const offer = await offerNextWaitlistEntryCommand(tx, {
+      slotId: previousSlotId,
+      ticketId: previousTicketId,
+      now: options.now,
+    });
+    promoted = offer.promoted;
+  }
+
+  return { success: true, previousStatus, promoted };
 }

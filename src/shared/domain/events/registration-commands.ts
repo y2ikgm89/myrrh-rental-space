@@ -179,6 +179,10 @@ export async function createEventRegistrationCommand(data: {
 const CANCEL_REGISTRATION_SELECT = {
   id: true,
   eventId: true,
+  // waitlist promote hook (applyEventRegistrationCancellation →
+  // offerNextWaitlistEntryCommand) が対象 (slotId, ticketId) を特定するために必要。
+  slotId: true,
+  ticketId: true,
   name: true,
   email: true,
   quantity: true,
@@ -241,7 +245,14 @@ async function cancelEventRegistrationWithClaim(
 
       return {
         success: true,
-        payload: { ...registration, icsSequence: updated.icsSequence },
+        payload: {
+          ...registration,
+          icsSequence: updated.icsSequence,
+          // FIFO で繰り上げ当選した申込 (CONFIRMED 由来のキャンセルのみ非 null)。
+          // 呼び出し側の副作用ヘルパーが「繰り上げ当選メール」送信要否を判断する
+          // (Task 6/8 で配線)。
+          promoted: claim.promoted,
+        },
       } as const;
     },
     { maxWait: 5000, timeout: 10000 },

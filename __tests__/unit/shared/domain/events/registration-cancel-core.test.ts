@@ -9,12 +9,34 @@ import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 const mockUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 1 }));
+// offerNextWaitlistEntryCommand の FIFO 候補検索用（CONFIRMED 由来のキャンセルでのみ呼ばれる）
+const mockFindFirst = mock<
+  (
+    args: Record<string, unknown>,
+  ) => Promise<{ id: string; email: string | null } | null>
+>(() => Promise.resolve(null));
+// ApplyEventRegistrationCancellationTx の構造要件を満たすためのスタブ（実装は呼ばない）
+const mockFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<{
+    id: string;
+    email: string | null;
+    offeredAt: Date | null;
+    expiresAt: Date | null;
+  } | null>
+>(() => Promise.resolve(null));
 
 const mockTx = {
-  eventRegistration: { updateMany: mockUpdateMany },
+  eventRegistration: {
+    updateMany: mockUpdateMany,
+    findFirst: mockFindFirst,
+    findUnique: mockFindUnique,
+  },
 };
 
 const NOW = new Date("2026-04-01T00:00:00Z");
+
+/** slotId/ticketId は offerNextWaitlistEntryCommand が候補検索に使う。 */
+const BASE_REGISTRATION = { id: "reg1", slotId: "slot1", ticketId: "ticket1" };
 
 function customerMypageOptions(
   overrides: Partial<ApplyEventRegistrationCancellationOptions> = {},
@@ -30,16 +52,24 @@ describe("applyEventRegistrationCancellation", () => {
   beforeEach(() => {
     mockUpdateMany.mockReset();
     mockUpdateMany.mockResolvedValue({ count: 1 });
+    mockFindFirst.mockReset();
+    mockFindFirst.mockResolvedValue(null); // 既定: waitlist 候補なし
+    mockFindUnique.mockReset();
+    mockFindUnique.mockResolvedValue(null);
   });
 
-  test("CONFIRMED なら CANCELLED に atomic claim して success", async () => {
+  test("CONFIRMED なら CANCELLED に atomic claim して success（waitlist 候補なしなら promoted: null）", async () => {
     const result = await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       customerMypageOptions(),
     );
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({
+      success: true,
+      previousStatus: RegistrationStatus.CONFIRMED,
+      promoted: null,
+    });
     expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -56,12 +86,76 @@ describe("applyEventRegistrationCancellation", () => {
         }),
       }),
     );
+    // CONFIRMED 由来のキャンセルなので offerNextWaitlistEntryCommand が同一 tx 上で呼ばれる
+    expect(mockFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          slotId: "slot1",
+          ticketId: "ticket1",
+          status: RegistrationStatus.WAITLISTED,
+        }),
+      }),
+    );
+  });
+
+  test("CONFIRMED キャンセルで waitlist 候補が居れば promoted に反映される", async () => {
+    mockFindFirst.mockResolvedValue({ id: "waiter1", email: "w@example.com" });
+
+    const result = await applyEventRegistrationCancellation(
+      mockTx,
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
+      customerMypageOptions(),
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.promoted).toEqual({
+        id: "waiter1",
+        email: "w@example.com",
+        offeredAt: NOW,
+        expiresAt: expect.any(Date),
+      });
+    }
+    // 昇格の claim も同じ updateMany 経由（2 回目の呼び出し）
+    expect(mockUpdateMany).toHaveBeenCalledTimes(2);
+  });
+
+  test("WAITLISTED も自己キャンセルできる（枠を消費していないため promote 対象外）", async () => {
+    const result = await applyEventRegistrationCancellation(
+      mockTx,
+      { ...BASE_REGISTRATION, status: RegistrationStatus.WAITLISTED },
+      customerMypageOptions(),
+    );
+
+    expect(result).toEqual({
+      success: true,
+      previousStatus: RegistrationStatus.WAITLISTED,
+      promoted: null,
+    });
+    // CONFIRMED 由来でないため offerNextWaitlistEntryCommand は呼ばれない
+    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mockUpdateMany).toHaveBeenCalledTimes(1);
+  });
+
+  test("WAITLISTED_OFFERED も自己キャンセルできる（promote 対象外）", async () => {
+    const result = await applyEventRegistrationCancellation(
+      mockTx,
+      { ...BASE_REGISTRATION, status: RegistrationStatus.WAITLISTED_OFFERED },
+      customerMypageOptions(),
+    );
+
+    expect(result).toEqual({
+      success: true,
+      previousStatus: RegistrationStatus.WAITLISTED_OFFERED,
+      promoted: null,
+    });
+    expect(mockFindFirst).not.toHaveBeenCalled();
   });
 
   test("CUSTOMER_TOKEN / ADMIN を渡すと cancelledByType にそのまま流れる", async () => {
     await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       { now: NOW, cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN },
     );
     expect(mockUpdateMany).toHaveBeenCalledWith(
@@ -74,7 +168,7 @@ describe("applyEventRegistrationCancellation", () => {
 
     await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       { now: NOW, cancelledByType: CANCELLED_BY.ADMIN },
     );
     expect(mockUpdateMany).toHaveBeenCalledWith(
@@ -87,7 +181,7 @@ describe("applyEventRegistrationCancellation", () => {
   test("既に CANCELLED ならエラーで更新しない", async () => {
     const result = await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CANCELLED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CANCELLED },
       customerMypageOptions(),
     );
 
@@ -102,7 +196,7 @@ describe("applyEventRegistrationCancellation", () => {
     mockUpdateMany.mockResolvedValueOnce({ count: 0 });
     const result = await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       customerMypageOptions(),
     );
 
@@ -110,12 +204,14 @@ describe("applyEventRegistrationCancellation", () => {
     if (!result.success) {
       expect(result.error).toContain("別の操作");
     }
+    // claim に失敗しているため promote chain には到達しない
+    expect(mockFindFirst).not.toHaveBeenCalled();
   });
 
   test("expectedCustomerId 省略時は WHERE に customerId を含めない", async () => {
     await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       customerMypageOptions(),
     );
 
@@ -129,7 +225,7 @@ describe("applyEventRegistrationCancellation", () => {
   test("expectedCustomerId 指定時は WHERE に customerId を含める（claim との race 対策）", async () => {
     await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       {
         now: NOW,
         cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
@@ -144,7 +240,7 @@ describe("applyEventRegistrationCancellation", () => {
 
     await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       {
         now: NOW,
         cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
@@ -164,7 +260,7 @@ describe("applyEventRegistrationCancellation", () => {
     mockUpdateMany.mockResolvedValueOnce({ count: 0 });
     const result = await applyEventRegistrationCancellation(
       mockTx,
-      { id: "reg1", status: RegistrationStatus.CONFIRMED },
+      { ...BASE_REGISTRATION, status: RegistrationStatus.CONFIRMED },
       {
         now: NOW,
         cancelledByType: CANCELLED_BY.CUSTOMER_TOKEN,
