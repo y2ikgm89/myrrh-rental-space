@@ -2,16 +2,27 @@
 
 ## 目的
 
-PR#5 で追加する CONSTRAINT TRIGGER (`event_time_slots_no_reservation_overlap`
-と `reservations_no_event_slot_overlap`) は、有効化時に既存データが違反していると
-migration が fail してデプロイを停止する (`ALTER TABLE ... ADD CONSTRAINT` は
-既存行を検証するため)。
+PR#5 で追加する CONSTRAINT TRIGGER (`reservations_no_event_slot_overlap_check`
+と `event_time_slots_no_reservation_overlap_check`) は PostgreSQL 仕様上
+**AFTER INSERT/UPDATE のみ発火**し、既存行は検査しない。したがって trigger
+単体では「既存本番データに違反があるとデプロイが止まる」保証にはならない
+(Codex P2 #1025 comment 3567006693 での指摘に従った修正)。
 
-本番適用の**前**に、この pre-check SQL を Neon 本番 (or staging) で実行し、
-違反行がゼロであることを確認する。違反があれば人手で Event 側/Reservation
-側のどちらを優先するか判断し、DELETE / UPDATE で解決してから migration を merge する。
+fail-close は 2 段構えで担保する:
 
-reservation-only EXCLUDE 制約導入時 (PR#922) と同じ運用ポリシー。
+1. **本 pre-check SQL を本番 (or staging) で実行**し、違反行がゼロであることを事前確認する。
+   違反があれば人手で Event 側/Reservation 側のどちらを優先するか判断し、
+   DELETE / UPDATE で解決してから migration を merge する。
+2. **follow-up migration `20260713060000_verify_event_reservation_cross_overlap_clean`**
+   が deploy 時に同一 predicate で最終検査を行い、違反が残っていれば
+   `RAISE EXCEPTION` で deploy を停止する (pre-check が skip されたり
+   別 DB に対して実行された場合の安全網)。
+3. **parent-row trigger `20260713060100_event_parent_row_cross_overlap_trigger`**
+   が `events.spaceId` / `status` / `deletedAt` の UPDATE で子スロットを
+   再検査 (Codex P2 #1025 comment 3567006692) — raw-SQL bypass 経路も封じる。
+
+reservation-only EXCLUDE 制約導入時 (PR#922) と同じ fail-close ポリシー
+(migration 内でデータ auto-repair は行わない)。
 
 ## Pre-check SQL
 
@@ -62,5 +73,5 @@ INSERT INTO reservations (
   ..., '<space_id_with_existing_event>',
   '<overlap_start>', '<overlap_end>', 'CONFIRMED'
 );
--- 期待: ERROR: reservations_no_event_slot_overlap
+-- 期待: ERROR: exclusion_violation (Reservation time overlaps with EventTimeSlot ...)
 ```
