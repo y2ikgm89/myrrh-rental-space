@@ -1761,6 +1761,11 @@ model EventTimeSlot {
   /// 同一イベントで同時刻スロット二重登録を防ぐ
   @@unique([eventId, startAt])
   @@index([eventId, startAt])
+  /// 手書き index（20260713044626_event_reservation_cross_overlap_constraint migration で追加）。
+  /// CONSTRAINT TRIGGER check_event_slot_no_reservation_overlap() のクロステーブル
+  /// range クエリ (startAt, endAt) を高速化する。DROP されると deferred trigger が劣化するため
+  /// diff engine に既存物として認識させる目的の宣言。
+  @@index([startAt, endAt], map: "event_time_slots_time_range_idx")
   @@map("event_time_slots")
 }
 
@@ -1831,6 +1836,12 @@ model Event {
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "events_slug_trgm_idx")
+  /// 手書き partial index（20260713044626_event_reservation_cross_overlap_constraint migration で追加）。
+  /// CONSTRAINT TRIGGER check_event_no_reservation_overlap() のクロステーブルクエリを高速化する。
+  /// partialIndexes preview feature は @@index の where にも対応する（@@unique 専用ではない、
+  /// `prisma migrate diff` で実証済み）。where 省略の base index 宣言だけでは diff engine が
+  /// 述語差分を検知し CREATE INDEX を再提案するため、実 DB と同一の predicate を明示する。
+  @@index([spaceId], map: "events_spaceId_alive_idx", where: { deletedAt: null, spaceId: { not: null } })
   @@map("events")
 }
 
@@ -1954,7 +1965,10 @@ model EventRegistration {
  * revision フラグで区別する (税務実務 standard、D4 決定)。
  */
 model Receipt {
-  id              String   @id @default(uuid()) @db.Uuid
+  /// DB 側 DEFAULT gen_random_uuid()（20260713045802_add_receipt_tables migration で手書き）。
+  /// Prisma 7 の diff engine は @default(uuid()) と DB 側 gen_random_uuid() を同値と見なさず
+  /// ALTER COLUMN ... DROP DEFAULT を提案するため dbgenerated で明示する。
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // 領収書番号 (グローバル連番、"YYYY-XXXXXX" 形式)
   serialNo        String   @unique @db.VarChar(20)
   issuedAt        DateTime @default(now()) @db.Timestamptz(6)
