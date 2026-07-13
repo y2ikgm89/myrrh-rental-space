@@ -543,17 +543,25 @@ steps:
         fi
         exit 1
 
-  # NOTE: 過去のバージョン (PR #1051-#1053) はここに `grant-secret-access` step
-  # を置き、Cloud Build SA が deploy 毎に runtime SA へ Secret Accessor role を
-  # 自動反映していた。しかし Cloud Build SA に `secretmanager.secrets.setIamPolicy`
-  # を持たせると、compromise 時に自分自身に secretAccessor を付与して全 secret を
-  # 読取れる self-grant 経路になる (Codex Cloud Review P1: PR #1053 comment
-  # 3572078673)。恒久解決は「Cloud Build SA から Secret Manager IAM 権限を完全に
-  # 外す」こと。runtime SA への Secret Accessor は project owner が
-  # `scripts/setup-cloud-build-permissions.sh` を bootstrap / 新規 secret 追加時
-  # に手動実行して idempotent 反映する。cloudbuild.yaml の `--set-secrets=` と
-  # setup script の SECRETS list の同期は `architecture-boundaries.test.ts` の
-  # drift gate が CI で強制する。
+  # NOTE: Secret Manager IAM (runtime SA / build SA への secretAccessor 付与)
+  # は Terraform (`terraform/secret_iam.tf`) が SSoT。cloudbuild.yaml は Cloud Run
+  # `--set-secrets=` binding を宣言するだけで、実際の IAM 反映は
+  # `.github/workflows/terraform.yml` の apply job が担う。
+  #
+  # 設計履歴:
+  #   PR #1051-#1053: Cloud Build に `grant-secret-access` step を置き自動反映
+  #     → Cloud Build SA が `secretmanager.secrets.setIamPolicy` を持つと、
+  #     compromise 時に self-grant で secretAccessor を付与し全 secret を読める
+  #     (Codex Cloud Review P1)。
+  #   PR #1054-#1056: setup script (bash) が project owner 手動実行の SSoT。
+  #   Terraform Phase 1: Terraform runner SA に Deny Policy
+  #     (secretmanager.googleapis.com/versions.access を deny) と IAM Conditions
+  #     (grantable roles を secretAccessor に限定) の二重防御を貼り、compromise
+  #     時にも secret 漏洩ゼロを設計層で保証。
+  #
+  # 新規 secret を追加する場合: cloudbuild.yaml の `--set-secrets=` と
+  # terraform/secret_iam.tf の `runtime_secrets` local を両方更新する。
+  # 同期は architecture-boundaries.test.ts の drift gate が CI で強制する。
 
   # Step 6a: Deploy public Cloud Run service
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk

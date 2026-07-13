@@ -30,23 +30,28 @@ format (`v2:<kid>:<purpose>:...`) and the lookup contract.
     format is invalid, so we fail closed at startup rather than at decrypt.
 - `cloudbuild.yaml` binds `SECONDARY_ENCRYPTION_KEYS` at the version pinned by
   `_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION` (default `"1"`).
-- `scripts/setup-cloud-build-permissions.sh` is the SSoT for runtime SA
-  Secret Manager IAM: it grants `roles/secretmanager.secretAccessor` on every
-  secret listed in its `SECRETS=(...)` array (including
-  `SECONDARY_ENCRYPTION_KEYS`) to the runtime SA. Re-run the script whenever
-  you add or rename a secret binding. Do not grant `secretAccessor` by hand —
-  `architecture-boundaries.test.ts` gates that the script and the
-  `cloudbuild.yaml` `--set-secrets=` bindings stay in sync.
+- `terraform/secret_iam.tf` is the SSoT for runtime SA Secret Manager IAM: it
+  declares `roles/secretmanager.secretAccessor` on every secret in the
+  `runtime_secrets` local (including `SECONDARY_ENCRYPTION_KEYS`) to the
+  runtime SA. Adding or renaming a secret binding means updating
+  `runtime_secrets` **and** the matching `cloudbuild.yaml` `--set-secrets=`
+  entry and opening a PR — `.github/workflows/terraform.yml` runs
+  `terraform plan` on the PR and `terraform apply` on merge. Do not grant
+  `secretAccessor` by hand; `architecture-boundaries.test.ts` gates that the
+  two lists stay in sync.
 - Cloud Build itself has **no Secret Manager IAM permission**. An earlier
   design (PR #1051-#1053) let Cloud Build reapply IAM automatically, but any
   role that includes `setIamPolicy` opens a self-grant path back to
   `secretAccessor`, so the pipeline is not the right place to hold that
-  privilege. Only the setup script (run by a project owner) writes secret
-  IAM bindings.
+  privilege. Terraform (Phase 1) inherited the SSoT role from the interim
+  bash setup script (PR #1054-#1056) and layered on an IAM Deny Policy plus
+  IAM Conditions on the Terraform runner SA so even a compromised runner
+  cannot read secret values (see `terraform/deny.tf` and
+  `terraform/conditions.tf`).
 
 If `SECONDARY_ENCRYPTION_KEYS` does not exist yet, create it once with an
-empty payload before the first rotation. The Cloud Build deploy that follows
-takes care of the IAM binding automatically:
+empty payload before the first rotation. The next `terraform apply` will
+attach the runtime SA IAM binding automatically:
 
 ```sh
 printf '' | gcloud secrets create SECONDARY_ENCRYPTION_KEYS \

@@ -569,47 +569,55 @@ Add a version:
 printf '%s' "$SECRET_VALUE" | gcloud secrets versions add SECRET_NAME --data-file=-
 ```
 
-Runtime Secret Manager access for `$RUNTIME_SA` is bootstrapped once per
-project by `scripts/setup-cloud-build-permissions.sh` (project-owner run) and
-then re-run any time you add a new secret binding to `cloudbuild.yaml`. The
-Cloud Build SA is intentionally kept **without any Secret Manager IAM
-permission**: giving it `secretmanager.secrets.setIamPolicy` would let a
-compromised build identity self-grant `roles/secretmanager.secretAccessor` on
-`DATABASE_URL` / `ENCRYPTION_KEY` / any other runtime secret, and there is no
-IAM Condition on `iam.grantableRoles` that can safely restrict that path. So
-we do not delegate secret-IAM management to the build pipeline at all.
+Runtime Secret Manager access for `$RUNTIME_SA` (and the build-time
+`$BUILD_SA` binding for `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`) is declaratively
+managed by Terraform (`terraform/secret_iam.tf`) and applied by
+`.github/workflows/terraform.yml` on every merge to `main`. **The Cloud Build
+SA has no Secret Manager IAM permission at all** — attempts to give it
+`secretmanager.secrets.setIamPolicy` would let a compromised build identity
+self-grant `roles/secretmanager.secretAccessor` on `DATABASE_URL` /
+`ENCRYPTION_KEY` / any other runtime secret, and no IAM Condition on
+`iam.grantableRoles` can safely restrict that path.
+
+The Terraform runner SA (`terraform-runner@...`) does hold
+`resourcemanager.projectIamAdmin` (needed to write Secret IAM), but two
+guardrails ensure a compromise cannot leak secret values:
+
+1. **IAM Deny Policy** (`terraform/deny.tf`) denies
+   `secretmanager.googleapis.com/versions.access` to the Terraform runner SA.
+   Deny policies take precedence over allow policies, so even a self-granted
+   `secretAccessor` cannot read secret payloads.
+2. **IAM Conditions** (`terraform/conditions.tf`) constrain the runner SA's
+   `projectIamAdmin` to only grant `roles/secretmanager.secretAccessor` via
+   the `modifiedGrantsByRole` attribute — no privilege escalation to
+   `secretmanager.admin` or unrelated roles.
+
+### First-time setup (project owner, once)
 
 ```bash
-export PROJECT_ID
-bash scripts/setup-cloud-build-permissions.sh
+export PROJECT_ID=myrrh-rental-space
+bash scripts/bootstrap-terraform.sh
 ```
 
-The script does exactly two things and is fully idempotent:
+The bootstrap script creates the Terraform state bucket, the runner SA, and
+the WIF binding for GitHub Actions. It is idempotent — safe to re-run. All
+subsequent Secret Manager IAM changes flow through `terraform apply`.
 
-1. Grants `roles/secretmanager.secretAccessor` on every secret listed in the
-   `SECRETS=(...)` array (which mirrors the Cloud Run `--set-secrets=` bindings
-   in `cloudbuild.yaml`) to `$RUNTIME_SA`. Adding a new secret is: update
-   `--set-secrets=` **and** the SECRETS array, then re-run the script.
-2. Removes any leftover `roles/secretmanager.admin` or the transitional
-   `projects/$PROJECT_ID/roles/secretIamManager` custom role from `$BUILD_SA`
-   (PR #1051-#1053 experimented with letting Cloud Build manage IAM; that path
-   is now closed). The revoke path fails hard on non-"NotFound" errors so the
-   operator is never falsely reassured that a stale admin binding is gone.
+### Adding a new secret
 
-`architecture-boundaries.test.ts` gates that the SECRETS array in the script
-and the `--set-secrets=` bindings in `cloudbuild.yaml` stay in sync, so
-forgetting to update either side is caught by CI before merge — well before
-the deploy would fail with a Secret Manager Permission denied.
+1. Update `cloudbuild.yaml` `--set-secrets=` to include the new secret name.
+2. Update `terraform/secret_iam.tf` `runtime_secrets` (or `build_secrets` if
+   Cloud Build needs to read it via `availableSecrets`) with the same name.
+3. Open a PR. `.github/workflows/terraform.yml` runs `terraform plan` on the
+   PR and posts the diff for review.
+4. On merge, `terraform apply` reflects the IAM change; the next Cloud Build
+   deploy picks up the new secret automatically.
 
-Grant the build identity access only to the build-time secret (the deploy
-pipeline reads this one during image build via Cloud Build `availableSecrets`,
-so it belongs to `$BUILD_SA`, not the runtime SA):
-
-```bash
-gcloud secrets add-iam-policy-binding NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
-  --member="serviceAccount:${BUILD_SA}" \
-  --role="roles/secretmanager.secretAccessor"
-```
+`architecture-boundaries.test.ts` gates that `runtime_secrets` in
+`terraform/secret_iam.tf` and the `--set-secrets=` bindings in
+`cloudbuild.yaml` stay in sync — so forgetting either side is caught by CI
+before merge, well before deploy would fail with a Secret Manager Permission
+denied.
 
 Do not grant `roles/secretmanager.secretAccessor` at the project level. Keep
 Secret Manager access resource-scoped: runtime secrets are reachable only from
