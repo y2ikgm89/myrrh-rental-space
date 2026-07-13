@@ -18,7 +18,7 @@ locals {
 # Reserved static IP (v4 / v6)
 resource "google_compute_global_address" "admin_lb_ipv4" {
   project      = var.project_id
-  name         = "myrrh-admin-lb-ipv4"
+  name         = "myrrh-admin-lb-ip"
   ip_version   = "IPV4"
   address_type = "EXTERNAL"
 
@@ -83,7 +83,7 @@ resource "google_compute_managed_ssl_certificate" "admin_cert" {
   provider = google-beta
 
   project = var.project_id
-  name    = "myrrh-admin-cert"
+  name    = "myrrh-admin-cert-20260705"
 
   managed {
     domains = [local.admin_domain]
@@ -105,7 +105,7 @@ resource "google_compute_target_https_proxy" "admin_https_proxy" {
 # Global forwarding rules (v4 + v6)
 resource "google_compute_global_forwarding_rule" "admin_https_v4" {
   project               = var.project_id
-  name                  = "myrrh-admin-https-v4"
+  name                  = "myrrh-admin-https-rule"
   target                = google_compute_target_https_proxy.admin_https_proxy.id
   port_range            = "443"
   ip_address            = google_compute_global_address.admin_lb_ipv4.address
@@ -118,7 +118,7 @@ resource "google_compute_global_forwarding_rule" "admin_https_v4" {
 
 resource "google_compute_global_forwarding_rule" "admin_https_v6" {
   project               = var.project_id
-  name                  = "myrrh-admin-https-v6"
+  name                  = "myrrh-admin-https-rule-ipv6"
   target                = google_compute_target_https_proxy.admin_https_proxy.id
   port_range            = "443"
   ip_address            = google_compute_global_address.admin_lb_ipv6.address

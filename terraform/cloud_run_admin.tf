@@ -8,7 +8,8 @@
 #   - default URL 無効化 (Terraform 側は `custom_audiences` などで再現できない
 #     ため、cloudbuild.yaml Step 6b が担っていた `--no-default-url` を revision
 #     ごとに反映する必要がある。Phase 6b でこの点も整理する)
-#   - IAP 経由の authenticated-only access (roles/run.invoker for IAP group)
+#   - IAP 経由の authenticated-only access (`iap_enabled = true` + iap.tf の
+#     `google_iap_web_cloud_run_service_iam_member`)
 
 resource "google_cloud_run_v2_service" "admin" {
   provider = google-beta
@@ -17,6 +18,13 @@ resource "google_cloud_run_v2_service" "admin" {
   project  = var.project_id
   location = var.region
   ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+
+  # Cloud Run direct IAP (docs/gcp-production-setup.md §admin service)。
+  # LB backend service には IAP を張らない契約 (同 docs L990-992)。
+  # 初回 setup で `gcloud run services update ... --iap` 実施済み。
+  # ここで宣言することで、再 import 後の apply が黙って IAP を無効化する
+  # regression (Codex P1 #1063 follow-up) を防ぐ。
+  iap_enabled = true
 
   template {
     service_account       = google_service_account.sa["runtime"].email
@@ -82,7 +90,8 @@ resource "google_cloud_run_v2_service" "admin" {
       template[0].containers[0].image,
       template[0].containers[0].env,
       template[0].revision,
-      # IAP + default URL 無効化は Phase 6b / 7 で細調整する。
+      # default URL 無効化 (--no-default-url) は Phase 6b で cloudbuild 側から
+      # Terraform 側に移管する予定。IAP は上の iap_enabled = true で管理下。
       custom_audiences,
     ]
   }

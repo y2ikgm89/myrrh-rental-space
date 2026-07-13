@@ -23,11 +23,19 @@ locals {
 # ここでは brand は宣言せず client のみ扱う。project owner が Console で
 # brand を作成しておく前提 (既存)。
 
-# 4 admin groups に httpsResourceAccessor を付与 (Cloud Run direct IAP 経由)
-resource "google_iap_web_type_compute_iam_member" "admin_access" {
+# 4 admin groups に httpsResourceAccessor を付与 (Cloud Run direct IAP のスコープ)。
+#
+# `google_iap_web_type_compute_iam_member` は Compute Engine backend
+# (LB backend service) のための resource で、Cloud Run direct IAP には
+# scope が合わない (実際 admin service に対する IAP アクセスを制御しない)。
+# docs/gcp-production-setup.md §admin service = Cloud Run direct IAP に合わせ、
+# `google_iap_web_cloud_run_service_iam_member` を使う (Codex P1 #1063 follow-up)。
+resource "google_iap_web_cloud_run_service_iam_member" "admin_access" {
   for_each = local.admin_role_groups
 
-  project = var.project_id
-  role    = "roles/iap.httpsResourceAccessor"
-  member  = "group:${each.value}"
+  project                = var.project_id
+  location               = var.region
+  cloud_run_service_name = google_cloud_run_v2_service.admin.name
+  role                   = "roles/iap.httpsResourceAccessor"
+  member                 = "group:${each.value}"
 }

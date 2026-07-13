@@ -45,6 +45,13 @@ bash scripts/bootstrap-terraform.sh
 2. Terraform runner service account (`terraform-runner@...`)
 3. Workload Identity Federation binding (既存 pool `github-actions` を再利用)
 4. state bucket への runner SA の書込許可 (`roles/storage.objectAdmin` @ bucket)
+5. runner SA への project-level roles bootstrap grant
+   (`conditions.tf` の各 role を最初の `terraform apply` が通せるようにする
+   chicken-egg 対策。conditional `projectIamAdmin` + `cloudscheduler.admin` /
+   `secretmanager.admin` / `artifactregistry.admin` / `cloudbuild.workerPoolOwner` /
+   `iam.serviceAccountAdmin` / `iam.workloadIdentityPoolAdmin` / `run.admin` /
+   `compute.networkAdmin` / `compute.securityAdmin` / `iap.admin`。同じ member+role を
+   `conditions.tf` が再宣言するため apply 後は Terraform 側の SSoT に取り込まれる)
 
 bootstrap 完了後、`.github/workflows/terraform.yml` が
 
