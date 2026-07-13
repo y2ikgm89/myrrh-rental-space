@@ -9,8 +9,8 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が唯一の正�
 
 | Phase | スコープ                                                                                            | 状態      |
 | ----- | --------------------------------------------------------------------------------------------------- | --------- |
-| 1     | Secret Manager IAM (runtime SA / build SA 全 secret への secretAccessor) + Deny Policy + Conditions | 🚧 実装中 |
-| 2     | Cloud Scheduler (12+ cron jobs)                                                                     | ⏳ 未着手 |
+| 1     | Secret Manager IAM (runtime SA / build SA 全 secret への secretAccessor) + Deny Policy + Conditions | ✅ 完了   |
+| 2     | Cloud Scheduler (13 cron jobs)                                                                      | 🚧 実装中 |
 | 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                                | ⏳ 未着手 |
 | 4     | Artifact Registry + Cloud Build worker pool                                                         | ⏳ 未着手 |
 | 5     | IAM bindings 全般 + WIF Pool/Provider                                                               | ⏳ 未着手 |
@@ -19,14 +19,15 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が唯一の正�
 
 ## ファイル構成
 
-| ファイル        | 責務                                                                                            |
-| --------------- | ----------------------------------------------------------------------------------------------- |
-| `versions.tf`   | Terraform / provider の version pin                                                             |
-| `backend.tf`    | GCS state backend (`myrrh-rental-space-terraform-state`)                                        |
-| `variables.tf`  | project_id / region / SA email 等の入力                                                         |
-| `secret_iam.tf` | Phase 1: `google_secret_manager_secret_iam_member` × 全 secret                                  |
-| `deny.tf`       | Phase 1: `google_iam_deny_policy` (Terraform runner SA から secret 値読取を deny)               |
-| `conditions.tf` | Phase 1: Terraform runner SA への conditional `projectIamAdmin` (secretAccessor のみ grantable) |
+| ファイル             | 責務                                                                                                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `versions.tf`        | Terraform / provider の version pin                                                                                                                                  |
+| `backend.tf`         | GCS state backend (`myrrh-rental-space-terraform-state`)                                                                                                             |
+| `variables.tf`       | project_id / region / SA email 等の入力                                                                                                                              |
+| `secret_iam.tf`      | Phase 1: `google_secret_manager_secret_iam_member` × 全 secret                                                                                                       |
+| `deny.tf`            | Phase 1: `google_iam_deny_policy` (Terraform runner SA から secret 値読取を deny)                                                                                    |
+| `conditions.tf`      | Phase 1: Terraform runner SA への conditional `projectIamAdmin` (secretAccessor のみ grantable) + Phase 2: cloudscheduler.admin / serviceAccountUser on scheduler SA |
+| `cloud_scheduler.tf` | Phase 2: `google_cloud_scheduler_job` × 13 cron jobs (Cloud Run `/api/cron/*` を OIDC で叩く)                                                                        |
 
 ## 初回セットアップ (1 度だけ、project owner が実行)
 
