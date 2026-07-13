@@ -48,10 +48,15 @@ bash scripts/bootstrap-terraform.sh
 5. runner SA への project-level roles bootstrap grant
    (`conditions.tf` の各 role を最初の `terraform apply` が通せるようにする
    chicken-egg 対策。conditional `projectIamAdmin` + `cloudscheduler.admin` /
-   `secretmanager.admin` / `artifactregistry.admin` / `cloudbuild.workerPoolOwner` /
-   `iam.serviceAccountAdmin` / `iam.workloadIdentityPoolAdmin` / `run.admin` /
-   `compute.networkAdmin` / `compute.securityAdmin` / `iap.admin`。同じ member+role を
-   `conditions.tf` が再宣言するため apply 後は Terraform 側の SSoT に取り込まれる)
+   `artifactregistry.admin` / `cloudbuild.workerPoolOwner` /
+   `iam.serviceAccountAdmin` / `iam.workloadIdentityPoolAdmin` /
+   `iam.denyAdmin` (Codex P1 F7 — deny.tf の `google_iam_deny_policy` refresh 用) /
+   `run.admin` / `compute.networkAdmin` / `compute.securityAdmin` / `iap.admin`。
+   同じ member+role を `conditions.tf` が再宣言するため apply 後は Terraform 側の
+   SSoT に取り込まれる。
+   `secretmanager.admin` は Codex P1 F1 で削除し、custom role
+   `terraformRunnerSecretManagerNoPolicyMgmt` に置換 — この custom role は
+   最初の apply (owner 実行) で生成される。)
 
 bootstrap 完了後、`.github/workflows/terraform.yml` が
 

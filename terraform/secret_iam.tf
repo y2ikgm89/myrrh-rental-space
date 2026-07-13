@@ -5,63 +5,49 @@
 # Cloud Run `--set-secrets=` の runtime SA 読取許可、および Cloud Build
 # `availableSecrets` 経由の build SA 読取許可を Terraform で宣言的に管理する。
 #
-# SSoT 契約:
-#   - runtime_secrets の内容は cloudbuild.yaml の `--set-secrets=` に登場する
-#     全 secret 名と一致させる (drift は architecture-boundaries.test.ts の
-#     Terraform gate が CI で強制)。
-#   - build_secrets の内容は cloudbuild.yaml の availableSecrets ブロックに
-#     登場する全 secret 名と一致させる。
+# ## 現行設計: project-level `secretAccessor` binding (Codex P1 F1 対応)
+#
+# 過去は `google_secret_manager_secret_iam_member` を secret 毎に for_each して
+# 個別 binding を発行していたが、これには 2 つの構造問題があった:
+#
+#   1. runner SA が `roles/secretmanager.admin` (predefined) を持つ必要があり、
+#      その中の `secretmanager.secrets.setIamPolicy` を経由すれば deny.tf の
+#      denied_principals 制限を無視して任意 principal に `secretAccessor` を
+#      grant できる self-grant 経路が残っていた (Codex P1 F1)。
+#   2. secret 新規追加時に cloudbuild.yaml と本ファイル両方の更新を要求し、
+#      片方だけの更新で deploy が silent fail する drift 問題があった
+#      (architecture-boundaries drift gate で拾っていたが、そもそもの構造問題)。
+#
+# 解決策:
+#   - custom role (conditions.tf の `terraform_runner_secretmanager`) から
+#     `setIamPolicy` / `getIamPolicy` を除外し、per-secret binding は禁止 (F1 主対策)。
+#   - runtime SA / build SA への `roles/secretmanager.secretAccessor` を
+#     **project-level** で付与する。conditions.tf の conditional
+#     `projectIamAdmin` (`hasOnly ['roles/secretmanager.secretAccessor']`) が
+#     runner に granting を許可しているため、runner 自身も idempotent に
+#     apply できる。
+#
+# ## セキュリティ上の等価性
+#
+# 過去 config 下の per-secret binding は runtime_secrets の 16 個全てに
+# `secretAccessor` を付与していた (= 事実上 project 内の全 secret に近い)。
+# project-level 化により runtime SA / build SA が読める secret が「今後
+# project に追加される全 secret」まで広がるが、そもそも runtime / build SA は
+# Cloud Run / Cloud Build 内部でのみ利用され、外部露出しない。値の秘匿性は
+# Cloud Run env 経由での漏洩を防ぐ既存対策 (server-only import, no client
+# bundling) に依存しており、追加リスクは実務上ない。
 #
 # 手動 gcloud add-iam-policy-binding は禁止 — terraform apply が唯一の更新
 # 経路 (drift は terraform plan で検出、PR review で審査)。
 
-locals {
-  # Cloud Run `--set-secrets=` で runtime SA が読む必要のある全 secret。
-  # 新規追加時は cloudbuild.yaml とここの両方を更新すること (drift gate が
-  # forgetting を CI で block する)。
-  runtime_secrets = [
-    "DATABASE_URL",
-    "BETTER_AUTH_SECRET",
-    "ENCRYPTION_KEY",
-    "SECONDARY_ENCRYPTION_KEYS",
-    "AUDIT_LOG_HMAC_KEY",
-    "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
-    "R2_ACCOUNT_ID",
-    "R2_ACCESS_KEY_ID",
-    "R2_SECRET_ACCESS_KEY",
-    "R2_BUCKET_NAME",
-    "R2_PUBLIC_URL",
-    "CLOUDFLARE_ZONE_ID",
-    "CLOUDFLARE_API_TOKEN",
-    "CLOUDFLARE_ORIGIN_HEADER_SECRET",
-    "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET",
-  ]
-
-  # Cloud Build が image build 時に availableSecrets 経由で読む secret。
-  # runtime SA だけでなく build SA にも secretAccessor が必要。
-  build_secrets = [
-    "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
-  ]
+resource "google_project_iam_member" "runtime_secret_accessor" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${var.runtime_sa_email}"
 }
 
-# runtime SA 全 secret 用の secretAccessor (non-authoritative =
-# 他 principal の binding を破壊しない)
-resource "google_secret_manager_secret_iam_member" "runtime_accessor" {
-  for_each = toset(local.runtime_secrets)
-
-  project   = var.project_id
-  secret_id = each.value
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${var.runtime_sa_email}"
-}
-
-# build SA build-time secret 用の secretAccessor
-resource "google_secret_manager_secret_iam_member" "build_accessor" {
-  for_each = toset(local.build_secrets)
-
-  project   = var.project_id
-  secret_id = each.value
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${var.build_sa_email}"
+resource "google_project_iam_member" "build_secret_accessor" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${var.build_sa_email}"
 }

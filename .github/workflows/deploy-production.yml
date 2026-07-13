@@ -36,8 +36,57 @@ env:
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: 0x4AAAAAADi6Bqavj97fu7JG
 
 jobs:
+  # Terraform apply を deploy より先に実行する (Codex P1 F6)。
+  #
+  # 過去は terraform.yml (push-to-main で terraform/** 変更に反応する path
+  # フィルタ付き) と本 workflow が push-to-main で並列トリガーされ、両者の
+  # concurrency group が別 (terraform-* / deploy-production) だったため実行
+  # 順序が保証されていなかった。secret_iam の binding が Cloud Run deploy
+  # より遅く反映されると `--set-secrets=` が Permission denied で silent fail
+  # する race があった。
+  #
+  # 解決: terraform apply を deploy の needs 前段として本 workflow に統合し、
+  # terraform.yml 側の push トリガー / apply job は廃止 (PR-only validate 化)。
+  # terraform apply は idempotent なので、terraform 差分ゼロでも数秒で終わる。
+  terraform-apply:
+    name: Terraform Apply (IAM prereq)
+    if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: terraform-runner@myrrh-rental-space.iam.gserviceaccount.com
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.10.0
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -input=false
+        env:
+          TF_IN_AUTOMATION: "1"
+
+      - name: Terraform apply
+        working-directory: terraform
+        run: terraform apply -input=false -auto-approve
+        env:
+          TF_IN_AUTOMATION: "1"
+
   deploy:
     name: Cloud Build Deploy
+    needs: terraform-apply
     if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90

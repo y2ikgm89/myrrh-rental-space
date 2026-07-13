@@ -1217,57 +1217,45 @@ describe("architecture boundaries", () => {
     );
   });
 
-  test("cloudbuild.yaml の --set-secrets= と terraform/secret_iam.tf の runtime_secrets は drift しない", () => {
-    // Cloud Run `--set-secrets=` に新規 secret を追加した際、Terraform config
-    // の runtime_secrets list への追加を忘れると、runtime SA がその secret を
-    // 読めず deploy が Permission denied で silent に失敗する (実例: PR #982
-    // で SECONDARY_ENCRYPTION_KEYS を追加した際に発生し、deploy が 3 回連続で
-    // 失敗)。両 list を CI で drift 監視することで、Terraform apply 前に unit
-    // test で検出する。
+  test("terraform/secret_iam.tf は project-level secretAccessor binding で構成される (Codex P1 F1)", () => {
+    // Codex P1 F1 以降、runtime SA / build SA への `secretAccessor` は
+    // **project-level** binding (google_project_iam_member) 経由で付与する。
     //
-    // 設計履歴:
-    //   PR #1051-#1053: Cloud Build の grant-secret-access step で自動反映 →
-    //     Cloud Build SA が持つ setIamPolicy が self-grant 経路になる security
-    //     問題 (Codex P1) のため撤去。
-    //   PR #1054-#1056: setup script (bash) を SSoT に。
-    //   Terraform Phase 1: Cloud Deploy パイプラインから完全に分離して
-    //     Terraform apply が唯一の更新経路になる。Deny Policy + Conditions で
-    //     Terraform runner SA compromise 時の secret 漏洩を設計層で防止。
-    const cloudbuild = readFileSync(CLOUDBUILD_FILE, "utf8");
+    // 過去は per-secret (google_secret_manager_secret_iam_member × 16) で発行し、
+    // runner SA は predefined `roles/secretmanager.admin` を要した。その中の
+    // `secretmanager.secrets.setIamPolicy` が、runner compromise 時に
+    // 任意 principal へ `secretAccessor` を grant する self-grant 経路になる
+    // (deny.tf の deny は grantee identity ベースで、他 principal 宛の grant は
+    // 素通りする)。conditions.tf を custom role
+    // `terraformRunnerSecretManagerNoPolicyMgmt` に切り替えて `setIamPolicy` /
+    // `getIamPolicy` を除外し、per-secret binding は禁止した。
+    //
+    // ゆえに:
+    //   - `google_secret_manager_secret_iam_member` は secret_iam.tf に **無い**
+    //   - runtime SA / build SA への `roles/secretmanager.secretAccessor`
+    //     project-level binding が **在る**
+    //
+    // これらを回帰防止として CI で強制する。cloudbuild.yaml の --set-secrets=
+    // と secret_iam.tf の drift 検査は project-level 化により意味を失った
+    // (追加 secret も既存 binding で自動 accessible) ので廃止。
     const terraformConfig = readFileSync(
       join(ROOT, "terraform", "secret_iam.tf"),
       "utf8",
     );
 
-    // deploy-public / deploy-admin / migrate-update の `--set-secrets=` を集約する。
-    // pattern: ENV_NAME=SECRET_NAME:${_VERSION_VAR}
-    const setSecretsLines = [...cloudbuild.matchAll(/--set-secrets=([^\n]+)/g)];
-    expect(setSecretsLines.length).toBeGreaterThan(0);
-    const secretsInDeploy = new Set<string>();
-    for (const match of setSecretsLines) {
-      const line = match[1] ?? "";
-      for (const entry of line.matchAll(
-        /[A-Z][A-Z0-9_]*=([A-Z][A-Z0-9_]*):/g,
-      )) {
-        secretsInDeploy.add(entry[1] ?? "");
-      }
-    }
-    secretsInDeploy.delete("");
-
-    // terraform/secret_iam.tf の `runtime_secrets = [ "SECRET", ... ]` を抽出。
-    // HCL local block なので、閉じ括弧 `]` までを greedy でない matcher で拾い、
-    // 各 quoted 要素を抽出する。行内 `#` コメントは除去。
-    const listMatch = terraformConfig.match(
-      /runtime_secrets\s*=\s*\[([\s\S]*?)\]/,
+    // per-secret binding resource は宣言禁止 (コメント言及は許容 — 移行履歴の記録用)。
+    expect(terraformConfig).not.toMatch(
+      /resource\s+"google_secret_manager_secret_iam_member"/u,
     );
-    expect(listMatch).not.toBeNull();
-    const secretsInTerraform = new Set(
-      [...(listMatch?.[1] ?? "").matchAll(/"([A-Z][A-Z0-9_]*)"/g)]
-        .map((m) => m[1] ?? "")
-        .filter((s) => s.length > 0),
+    expect(terraformConfig).toContain(
+      'resource "google_project_iam_member" "runtime_secret_accessor"',
     );
-
-    expect([...secretsInTerraform].sort()).toEqual([...secretsInDeploy].sort());
+    expect(terraformConfig).toContain(
+      'resource "google_project_iam_member" "build_secret_accessor"',
+    );
+    expect(terraformConfig).toContain(
+      'role    = "roles/secretmanager.secretAccessor"',
+    );
   });
 
   test("管理 Better Auth canonical route handler は削除済み", () => {

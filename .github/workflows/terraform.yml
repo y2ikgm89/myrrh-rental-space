@@ -1,48 +1,44 @@
 name: Terraform
 
+# push-to-main の apply は deploy-production.yml の `terraform-apply` job に
+# 統合済み (Codex P1 F6 対応)。本 workflow は PR 時の HCL syntax / provider
+# schema 検証のみ担う (cloud credentials を握らせない設計、Codex P1 F4)。
 on:
   pull_request:
     paths:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
-  push:
-    branches: [main]
-    paths:
-      - "terraform/**"
-      - ".github/workflows/terraform.yml"
 
+# NOTE: `pull-requests: write` (旧) は plan コメント自動 post のためだったが、
+# untrusted PR HEAD の terraform コードが自 workflow の credentials 権限
+# 経由で悪用される F4 リスクを縮小するため撤去。plan 出力は
+# deploy-production.yml の terraform-apply job の Actions log で確認する。
 permissions:
   contents: read
-  id-token: write
-  pull-requests: write
 
 env:
-  PROJECT_ID: myrrh-rental-space
-  TERRAFORM_SA: terraform-runner@myrrh-rental-space.iam.gserviceaccount.com
-  WORKLOAD_IDENTITY_PROVIDER: projects/626108938746/locations/global/workloadIdentityPools/github-actions/providers/github-myrrh-rental-space
   TF_VERSION: 1.10.0
   TF_WORKING_DIR: terraform
+  TF_IN_AUTOMATION: "1"
 
 concurrency:
   group: terraform-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  plan:
-    if: github.event_name == 'pull_request'
+  # PR 側は cloud credentials を握らせずに実行できる範囲だけ動かす。
+  # `terraform init -backend=false` + `terraform validate` + `terraform fmt -check`
+  # は provider schema と HCL syntax の検証で完結し、GCS backend / API 呼び出しは
+  # 不要。これにより untrusted PR HEAD (fork も含む) 由来のコード実行が
+  # OIDC token / SA credentials に触れる経路をゼロにする (Codex P1 F4)。
+  # plan の実 diff は push-to-main 時の apply job が事前実行するため、差分レビュー
+  # はその Actions log で確認する。
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
-        with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.TERRAFORM_SA }}
-          project_id: ${{ env.PROJECT_ID }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -53,43 +49,10 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform fmt -check -recursive
 
-      - name: Terraform init
+      - name: Terraform init (no backend)
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false
+        run: terraform init -input=false -backend=false
 
       - name: Terraform validate
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform validate
-
-      - name: Terraform plan
-        id: plan
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform plan -input=false -no-color
-
-  apply:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
-        with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ env.TERRAFORM_SA }}
-          project_id: ${{ env.PROJECT_ID }}
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
-      - name: Terraform init
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform init -input=false
-
-      - name: Terraform apply
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform apply -input=false -auto-approve

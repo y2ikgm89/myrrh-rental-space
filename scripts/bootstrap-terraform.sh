@@ -134,13 +134,25 @@ run gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --condition="expression=api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['roles/secretmanager.secretAccessor']),title=only_grant_secretmanager_secretAccessor,description=Restrict grantable roles to Secret Manager secretAccessor only (privilege escalation guard, Codex P1 #1053)"
 
 # conditions.tf の他 project-level roles を同期。role 追加時は両方を更新すること。
+#
+# `roles/secretmanager.admin` は 2026-07-14 (Codex P1 F1) で削除:
+#   compromise 時に per-secret `SetIamPolicy` から任意 principal へ
+#   `secretAccessor` を grant する self-grant 経路が残っていた。conditions.tf
+#   の custom role `terraformRunnerSecretManagerNoPolicyMgmt` が SSoT だが、
+#   custom role は最初の terraform apply で生成されるため、bootstrap 時点では
+#   まだ存在しない。project owner が最初の apply を実行する運用契約
+#   (terraform/README.md 参照) のため、bootstrap は runner SA へ
+#   secret manager 系 role を先付けしない。
+#
+# `roles/iam.denyAdmin` は Codex P1 F7 対応で追加:
+#   deny.tf の `google_iam_deny_policy` の refresh/update を runner が扱うのに必要。
 BOOTSTRAP_RUNNER_ROLES="\
 roles/cloudscheduler.admin \
-roles/secretmanager.admin \
 roles/artifactregistry.admin \
 roles/cloudbuild.workerPoolOwner \
 roles/iam.serviceAccountAdmin \
 roles/iam.workloadIdentityPoolAdmin \
+roles/iam.denyAdmin \
 roles/run.admin \
 roles/compute.networkAdmin \
 roles/compute.securityAdmin \
