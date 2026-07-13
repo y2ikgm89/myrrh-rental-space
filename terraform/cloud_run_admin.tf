@@ -18,6 +18,13 @@ resource "google_cloud_run_v2_service" "admin" {
   location = var.region
   ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
+  # Cloud Run direct IAP (docs/gcp-production-setup.md §admin service)。
+  # LB backend service には IAP を張らない契約 (同 docs L990-992)。
+  # 初回 setup で `gcloud run services update ... --iap` 実施済み。
+  # ここで宣言することで、再 import 後の apply が黙って IAP を無効化する
+  # regression (Codex P1 #1063 follow-up) を防ぐ。
+  iap_enabled = true
+
   template {
     service_account       = google_service_account.sa["runtime"].email
     execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
