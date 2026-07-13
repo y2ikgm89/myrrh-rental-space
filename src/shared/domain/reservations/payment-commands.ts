@@ -7,6 +7,7 @@ import { getStripeClient } from "@/shared/lib/stripe";
 import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
 import { getAppUrl } from "@/shared/lib/constants";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
+import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
 import {
   logError,
   normalizeError,
@@ -178,6 +179,13 @@ export async function createCheckoutSessionCommand(input: {
   // で rollback される、(b) claim 直後に authoritative な totalPrice を再読み込みして
   // Stripe に渡す (直前の edit を反映)、(c) Stripe 失敗時は UNPAID に revert して
   // stuck state を残さない。
+  //
+  // `paymentInitiatedAt` は fail-safe cron (`pending-reservation-expire`) が
+  // `PENDING_RESERVATION_EXPIRY_MINUTES` の cutoff 判定に使う SSoT。ここで now を
+  // 書き込むことで、予約作成から時間をおいて checkout を開始したケース
+  // (createdAt < cutoff だが checkout はまだ生きている) の誤爆を防ぎ、
+  // FAILED → PENDING の再 checkout でも refresh される (Codex P1: PR#1042)。
+  const claimedAt = new Date();
   const claimed = await prisma.reservation.updateMany({
     where: {
       id: reservationId,
@@ -193,7 +201,10 @@ export async function createCheckoutSessionCommand(input: {
         in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
       },
     },
-    data: { paymentStatus: PaymentStatus.PENDING },
+    data: {
+      paymentStatus: PaymentStatus.PENDING,
+      paymentInitiatedAt: claimedAt,
+    },
   });
   if (claimed.count === 0) {
     // 別 request (別 checkout / 手動 admin refund / 並行 cancel) が先に状態を遷移させた。
@@ -233,6 +244,17 @@ export async function createCheckoutSessionCommand(input: {
   }
 
   try {
+    // Stripe session の `expires_at` を fail-safe cron の cutoff (PENDING_RESERVATION_EXPIRY_MINUTES)
+    // と揃える (Codex P1: PR#1042 の silent orphan 予防)。
+    // Stripe 側で session が expired になると `checkout.session.expired` webhook が
+    // 発火し `claimReservationAsFailed` が PENDING → FAILED に遷移させる。cron 側は
+    // `paymentInitiatedAt < cutoff` で拾って CANCELLED にする。両者が同時刻付近に
+    // fire しても updateMany の WHERE claim が排他化するため副作用は 1 回限り。
+    // Stripe API 制約: expires_at は 30 分 ~ 24 時間の範囲、Unix seconds。
+    const expiresAt =
+      Math.floor(claimedAt.getTime() / 1000) +
+      PENDING_RESERVATION_EXPIRY_MINUTES * 60;
+
     const session = await client.checkout.sessions.create({
       mode: "payment",
       payment_method_types: paymentMethodTypes,
@@ -252,6 +274,7 @@ export async function createCheckoutSessionCommand(input: {
         reservationId,
       },
       customer_email: authoritative.guestEmail ?? authoritative.customer.email,
+      expires_at: expiresAt,
       success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
       cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
     });

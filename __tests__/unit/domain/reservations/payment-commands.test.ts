@@ -42,7 +42,9 @@ const mockRefundCreate = mock<
     options?: Record<string, unknown>,
   ) => Promise<{ id: string; status: string | null }>
 >(() => Promise.resolve({ id: "re_test_123", status: "succeeded" }));
-const mockCheckoutSessionCreate = mock(() =>
+const mockCheckoutSessionCreate = mock<
+  (args: Record<string, unknown>) => Promise<{ id: string; url: string }>
+>(() =>
   Promise.resolve({
     id: "cs_test_123",
     url: "https://stripe.example/checkout",
@@ -93,6 +95,9 @@ mock.module("@/shared/lib/errors/server", () => ({
     HIGH: "HIGH",
     MEDIUM: "MEDIUM",
   },
+}));
+mock.module("@/shared/domain/reservations/pending-expiry", () => ({
+  PENDING_RESERVATION_EXPIRY_MINUTES: 60,
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
@@ -363,6 +368,8 @@ describe("reservations/payment-commands", () => {
       const calls = mockReservationUpdateMany.mock.calls;
       expect(calls.length).toBe(2);
       // 1 回目: claim (UNPAID または FAILED から PENDING へ)
+      //         data には fail-safe cron の cutoff SSoT である paymentInitiatedAt が
+      //         Date として書き込まれる (Codex P1: PR#1042 対応)。
       expect(calls[0]?.[0]).toMatchObject({
         where: expect.objectContaining({
           paymentStatus: {
@@ -371,6 +378,7 @@ describe("reservations/payment-commands", () => {
         }),
         data: expect.objectContaining({
           paymentStatus: PaymentStatus.PENDING,
+          paymentInitiatedAt: expect.any(Date),
         }),
       });
       // 2 回目: session 確定書込 (updateMany + notIn [PAID, REFUNDED] + PENDING 再 assert)
@@ -387,6 +395,30 @@ describe("reservations/payment-commands", () => {
       });
       // stripeCheckoutSessionId のみを書く旧 `update` は使わない
       expect(mockReservationUpdate).not.toHaveBeenCalled();
+    });
+
+    test("Stripe session に expires_at (cron cutoff と同期) が指定される (silent orphan 予防、Codex P1 #1042)", async () => {
+      mockReservationFindUnique
+        .mockResolvedValueOnce(unpaidReservation())
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+
+      const before = Math.floor(Date.now() / 1000);
+      await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
+      const after = Math.floor(Date.now() / 1000);
+
+      const sessionArgs = mockCheckoutSessionCreate.mock.calls[0]?.[0] as
+        { expires_at?: number } | undefined;
+      expect(sessionArgs?.expires_at).toEqual(expect.any(Number));
+      // expires_at は claim 時刻 + PENDING_RESERVATION_EXPIRY_MINUTES (60) 分後 = 3600 秒後。
+      // fail-safe cron の cutoff と一致させることで、cron が生きた session を CANCELLED に
+      // してしまい顧客が Stripe で決済完了 → orphan (paid but cancelled) が発生する window を潰す。
+      const expected = before + 60 * 60;
+      const expectedMax = after + 60 * 60;
+      expect(sessionArgs?.expires_at).toBeGreaterThanOrEqual(expected);
+      expect(sessionArgs?.expires_at).toBeLessThanOrEqual(expectedMax);
     });
 
     test("Session settle が PAID/REFUNDED race で count=0 でも session URL は返す (log 出力)", async () => {
