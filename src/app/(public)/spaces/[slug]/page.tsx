@@ -14,6 +14,10 @@ import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
+import {
+  getBlockedDateRangesForSpace,
+  getBusinessHoursSettingsQuery,
+} from "@/shared/domain/reservations/availability";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getBaseUrl } from "@/shared/lib/constants";
@@ -34,6 +38,7 @@ import { ReservationWidget } from "./_components/reservation-widget";
 import { RelatedSpaces } from "./_components/related-spaces";
 import { SpaceReviews } from "./_components/space-reviews";
 import { MobileReserveCTA } from "./_components/mobile-reserve-cta";
+import { SpaceAvailabilityCalendar } from "./_components/space-availability-calendar";
 
 interface SpaceDetailPageProps {
   readonly params: Promise<{ slug: string }>;
@@ -76,15 +81,21 @@ export default async function SpaceDetailPage({
   const space = await getSpaceBySlug(slug);
   if (!space) notFound();
 
-  const [reviewStats, deadlineSettings, cancellationPolicy] = await Promise.all(
-    [
-      space.reviewsEnabled
-        ? getSpaceReviewStats(space.id)
-        : Promise.resolve({ averageRating: 0, totalCount: 0 }),
-      getReservationDeadlineSettings(),
-      getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
-    ],
-  );
+  const [
+    reviewStats,
+    deadlineSettings,
+    cancellationPolicy,
+    businessHours,
+    blockedRanges,
+  ] = await Promise.all([
+    space.reviewsEnabled
+      ? getSpaceReviewStats(space.id)
+      : Promise.resolve({ averageRating: 0, totalCount: 0 }),
+    getReservationDeadlineSettings(),
+    getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+    getBusinessHoursSettingsQuery(),
+    getBlockedDateRangesForSpace(space.id),
+  ]);
   const cancellationPolicyUrl = cancellationPolicy
     ? `/terms/${cancellationPolicy.slug}`
     : undefined;
@@ -229,6 +240,13 @@ export default async function SpaceDetailPage({
 
             {/* Body */}
             <SpaceInfo space={space} />
+
+            {/* 空き状況ミニカレンダー: 定休/休業/過去日を grey-out */}
+            <SpaceAvailabilityCalendar
+              spaceId={space.id}
+              businessHours={businessHours}
+              blockedRanges={blockedRanges}
+            />
 
             {space.reviewsEnabled ? (
               <Suspense fallback={null}>
