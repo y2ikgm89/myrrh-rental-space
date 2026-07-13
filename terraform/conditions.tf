@@ -43,3 +43,14 @@ resource "google_service_account_iam_member" "terraform_runner_uses_scheduler_sa
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${var.terraform_runner_sa_email}"
 }
+
+# Phase 3: Secret Manager admin for Terraform runner SA (secret metadata の CRUD)。
+# 値の read (versions.access) は deny.tf の Deny Policy で拒否されるため、
+# compromise 時にも secret 値の漏洩は起きない。値の write (versions.add) は
+# Terraform 側で扱わないため runner は使わない (runbook で project owner が
+# gcloud を直接叩く運用)。
+resource "google_project_iam_member" "terraform_runner_secretmanager_admin" {
+  project = var.project_id
+  role    = "roles/secretmanager.admin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
