@@ -197,6 +197,9 @@ enum EventScheduleMode {
 enum RegistrationStatus {
   CONFIRMED
   CANCELLED
+  WAITLISTED
+  WAITLISTED_OFFERED
+  EXPIRED
 }
 
 /// Resend Webhook (email.bounced / email.complained) で観測された配信状態。
@@ -1886,6 +1889,11 @@ model EventRegistration {
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
 
+  // Waitlist columns (Plan: 2026-07-13-event-waitlist)
+  waitlistedAt DateTime? @db.Timestamptz(6) // WAITLISTED になった時刻 (FIFO 用)
+  offeredAt    DateTime? @db.Timestamptz(6) // WAITLISTED_OFFERED になった時刻
+  expiresAt    DateTime? @db.Timestamptz(6) // WAITLISTED_OFFERED の 24h 期限、cron で判定
+
   // Reminder cron 冪等性: リマインダーメール送信済み日時（null = 未送信）。
   // Reservation.reminderSentAt と同型の atomic claim パターンで二重送信を防ぐ。
   reminderSentAt DateTime?
@@ -1922,6 +1930,10 @@ model EventRegistration {
   @@index([eventId, attendedAt])
   // Payment webhook / cron が「未確定 → PAID」の atomic claim で使う (Reservation 同型)
   @@index([paymentStatus])
+  // FIFO promote 用 (waitlist plan): 同一 slot/ticket 内の WAITLISTED を waitlistedAt 昇順で取得
+  @@index([slotId, ticketId, status, waitlistedAt])
+  // cron scan 用 (waitlist plan): WAITLISTED_OFFERED の期限切れを status+expiresAt で走査
+  @@index([status, expiresAt])
   @@map("event_registrations")
 }
 
