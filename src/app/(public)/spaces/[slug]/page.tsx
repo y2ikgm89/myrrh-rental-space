@@ -39,6 +39,8 @@ import { RelatedSpaces } from "./_components/related-spaces";
 import { SpaceReviews } from "./_components/space-reviews";
 import { MobileReserveCTA } from "./_components/mobile-reserve-cta";
 import { SpaceAvailabilityCalendar } from "./_components/space-availability-calendar";
+import { AccessMap } from "@/app/(public)/_components/access-map";
+import { ShareButtons } from "@/app/(public)/_shared/components/ui/share-buttons";
 
 interface SpaceDetailPageProps {
   readonly params: Promise<{ slug: string }>;
@@ -248,11 +250,48 @@ export default async function SpaceDetailPage({
               blockedRanges={blockedRanges}
             />
 
+            {/* Access map — Google Maps Embed API (server component, DB API key) */}
+            <section
+              id="space-access"
+              aria-labelledby="space-access-heading"
+              className="space-y-4"
+            >
+              <div>
+                <p className="text-xs uppercase tracking-eyebrow-wide text-accent">
+                  — Access —
+                </p>
+                <h2
+                  id="space-access-heading"
+                  className="mt-2 text-lg font-medium text-foreground"
+                >
+                  アクセス
+                </h2>
+                {space.location.address && (
+                  <p className="mt-2 text-sm text-foreground">
+                    {space.lineAddress || space.location.address}
+                  </p>
+                )}
+              </div>
+              <Suspense fallback={null}>
+                <AccessMap
+                  address={space.location.address}
+                  latitude={space.location.latitude}
+                  longitude={space.location.longitude}
+                  title={`Google Maps - ${space.name}のアクセスマップ`}
+                />
+              </Suspense>
+            </section>
+
             {space.reviewsEnabled ? (
               <Suspense fallback={null}>
                 <SpaceReviews spaceId={space.id} />
               </Suspense>
             ) : null}
+
+            {/* Share row — Kinfolk hairline + brand icon cluster */}
+            <div className="pt-4">
+              <ShareButtons url={spaceUrl} title={space.name} />
+            </div>
           </div>
 
           {/* Sticky pricing widget — 本文全体を追従 */}
