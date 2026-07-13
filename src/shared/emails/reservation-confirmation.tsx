@@ -47,7 +47,11 @@ type Props = {
    * 「本来発行される予定だったが失敗した」ケースを明示できる。
    */
   smartLockIssuanceFailed?: boolean;
-  /** 発行失敗時に案内する連絡先。null の場合は sender 情報にフォールバック。 */
+  /**
+   * 発行失敗時に案内する連絡先。未指定または個別フィールドが null の場合は
+   * `footer.phoneNumber` / `footer.contactEmail`（事業者情報）にフォールバックする。
+   * footer 側も未設定なら該当行は非表示。
+   */
   smartLockFallbackContact?: {
     readonly phone?: string | null;
     readonly email?: string | null;
@@ -77,6 +81,14 @@ export function ReservationConfirmationEmail({
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
+
+  // Codex P2 #1023 (comment 3566989901): JSDoc の契約通り、明示指定を優先し
+  // null/未指定なら footer.phoneNumber / footer.contactEmail にフォールバックする。
+  // 現行 3 callers (public 新規予約 / mypage 変更 / admin 変更) は
+  // smartLockFallbackContact を渡していないため、この解決が無いと失敗案内が
+  // 「連絡先ゼロ」で送出されていた。
+  const fallbackPhone = smartLockFallbackContact?.phone ?? footer.phoneNumber;
+  const fallbackEmail = smartLockFallbackContact?.email ?? footer.contactEmail;
 
   return (
     <EmailLayout
@@ -159,7 +171,7 @@ export function ReservationConfirmationEmail({
             つきましては、下記までお問い合わせください。ご不便をおかけして申し訳
             ございません。
           </Text>
-          {smartLockFallbackContact?.phone && (
+          {fallbackPhone && (
             <Text
               style={{
                 fontSize: "14px",
@@ -167,12 +179,12 @@ export function ReservationConfirmationEmail({
                 marginTop: "8px",
               }}
             >
-              <strong>お電話:</strong> {smartLockFallbackContact.phone}
+              <strong>お電話:</strong> {fallbackPhone}
             </Text>
           )}
-          {smartLockFallbackContact?.email && (
+          {fallbackEmail && (
             <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
-              <strong>メール:</strong> {smartLockFallbackContact.email}
+              <strong>メール:</strong> {fallbackEmail}
             </Text>
           )}
         </Section>
