@@ -129,6 +129,11 @@ export async function getReservationsQuery(
         couponId: true,
         couponDiscountAmount: true,
         durationDiscountAmount: true,
+        spaceDiscountAmount: true,
+        taxRateType: true,
+        taxRate: true,
+        taxAmount: true,
+        totalPriceWithTax: true,
         stripePaymentIntentId: true,
         paidAt: true,
         cancellationReason: true,
@@ -201,6 +206,14 @@ export async function getReservationByIdQuery(id: string) {
       couponId: true,
       couponDiscountAmount: true,
       durationDiscountAmount: true,
+      spaceDiscountAmount: true,
+      // 税情報（予約時点の値を記録）。populate 経路は customer-commands.ts
+      // (顧客セルフ変更経路) のみで、admin 経路は書き込まないため null が普通。
+      // 表示側で null 判定して条件付きで描画する（customer-facing detail と同型）。
+      taxRateType: true,
+      taxRate: true,
+      taxAmount: true,
+      totalPriceWithTax: true,
       notes: true,
       deletedAt: true,
       createdAt: true,

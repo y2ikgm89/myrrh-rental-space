@@ -42,7 +42,9 @@ import {
   RESERVATION_STATUS_LABELS,
   CANCELLED_BY,
   CANCELLED_BY_LABELS,
+  TAX_RATE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { isValidTaxRateType } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeFull } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 
@@ -60,6 +62,91 @@ const PAYMENT_BADGE_VARIANTS: Record<
 type ReservationDetailProps = {
   reservation: ReservationWithRelations;
 };
+
+function PriceBreakdown({
+  reservation,
+}: {
+  reservation: ReservationWithRelations;
+}) {
+  const {
+    basePrice,
+    couponDiscountAmount,
+    durationDiscountAmount,
+    spaceDiscountAmount,
+    totalPrice,
+    taxRateType,
+    taxRate,
+    taxAmount,
+    totalPriceWithTax,
+  } = reservation;
+  const couponDiscount = couponDiscountAmount ?? 0;
+  const durationDiscount = durationDiscountAmount ?? 0;
+  const spaceDiscount = spaceDiscountAmount ?? 0;
+  const hasDiscount =
+    couponDiscount > 0 || durationDiscount > 0 || spaceDiscount > 0;
+  const hasTax = taxAmount != null && taxAmount > 0;
+  const taxRateLabel =
+    taxRateType && isValidTaxRateType(taxRateType)
+      ? TAX_RATE_LABELS[taxRateType]
+      : taxRateType;
+
+  return (
+    <DetailSection title="料金明細">
+      <dl className="divide-y divide-border text-sm">
+        {hasDiscount && basePrice != null && (
+          <div className="flex items-baseline justify-between py-2">
+            <dt className="text-muted-foreground">基本料金</dt>
+            <dd>{formatPrice(basePrice)}</dd>
+          </div>
+        )}
+        {spaceDiscount > 0 && (
+          <div className="flex items-baseline justify-between py-2">
+            <dt className="text-muted-foreground">スペース割引</dt>
+            <dd className="text-success">−{formatPrice(spaceDiscount)}</dd>
+          </div>
+        )}
+        {durationDiscount > 0 && (
+          <div className="flex items-baseline justify-between py-2">
+            <dt className="text-muted-foreground">長時間割引</dt>
+            <dd className="text-success">−{formatPrice(durationDiscount)}</dd>
+          </div>
+        )}
+        {couponDiscount > 0 && (
+          <div className="flex items-baseline justify-between py-2">
+            <dt className="text-muted-foreground">クーポン割引</dt>
+            <dd className="text-success">−{formatPrice(couponDiscount)}</dd>
+          </div>
+        )}
+        <div className="flex items-baseline justify-between py-2">
+          <dt className={hasTax ? "text-muted-foreground" : "font-medium"}>
+            合計金額
+          </dt>
+          <dd className={hasTax ? "" : "text-base font-medium"}>
+            {formatPrice(totalPrice)}
+          </dd>
+        </div>
+        {hasTax && (
+          <>
+            <div className="flex items-baseline justify-between py-2">
+              <dt className="text-muted-foreground">
+                {`消費税${taxRateType ? `(${taxRateLabel}${taxRate != null ? ` ${taxRate}%` : ""})` : ""}`}
+              </dt>
+              <dd>{formatPrice(taxAmount)}</dd>
+            </div>
+            {totalPriceWithTax != null && (
+              <div className="flex items-baseline justify-between py-2">
+                <dt className="font-medium">税込合計</dt>
+                <dd className="text-base font-medium">
+                  {formatPrice(totalPriceWithTax)}
+                </dd>
+              </div>
+            )}
+          </>
+        )}
+      </dl>
+    </DetailSection>
+  );
+}
 
 export function ReservationDetail({ reservation }: ReservationDetailProps) {
   const router = useRouter();
@@ -201,10 +288,6 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           <DetailField label="スペース" value={reservation.space.name} />
           <DetailField
-            label="料金"
-            value={formatPrice(reservation.totalPrice)}
-          />
-          <DetailField
             label="開始日時"
             value={formatDateTimeFull(reservation.startTime)}
           />
@@ -222,6 +305,13 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
           />
         </div>
       </DetailSection>
+
+      {/* 料金明細
+        basePrice / 各割引 / totalPrice / taxAmount / totalPriceWithTax。
+        税フィールドは customer-commands.ts (顧客セルフ変更経路) のみ populate、
+        admin 経路 (public + admin) は書き込まないため null が普通。null 判定で
+        安全に条件描画する（customer-facing detail (mypage) と同一 SSoT パターン）。 */}
+      <PriceBreakdown reservation={reservation} />
 
       {/* 決済情報 */}
       <DetailSection title="決済情報">
