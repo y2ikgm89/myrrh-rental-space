@@ -565,8 +565,9 @@ steps:
   # ## 事前要件
   #
   # Cloud Build service account (${_BUILD_SERVICE_ACCOUNT}) に project レベルで
-  # `roles/secretmanager.secretIamAdmin` が必要 (IAM policy 変更のみ許可、値の
-  # 読み書きは付与しない最小権限)。初回 setup:
+  # `roles/secretmanager.admin` が必要 (`secretIamAdmin` は Google Cloud に
+  # 存在しないため、project-level で IAM policy を変更できる documented な
+  # 最小ロールは `admin`)。初回 setup:
   #   bash scripts/setup-cloud-build-permissions.sh
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: grant-secret-access

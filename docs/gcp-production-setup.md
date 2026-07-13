@@ -581,8 +581,14 @@ export PROJECT_ID BUILD_SA
 bash scripts/setup-cloud-build-permissions.sh
 ```
 
-The script grants `roles/secretmanager.secretIamAdmin` (IAM-policy editing only,
-no secret value read/write) to `$BUILD_SA` at the project level. Every
+The script grants `roles/secretmanager.admin` to `$BUILD_SA` at the project
+level. `roles/secretmanager.admin` is the smallest documented Google Cloud
+role that can modify Secret Manager IAM policies at project scope (a
+"secretIamAdmin" role does not exist in Secret Manager). It also includes
+secret CRUD and value read, which is broader than strictly necessary, but the
+Cloud Build SA already reads `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` through
+`availableSecrets` at image build time, so the effective net delta over the
+existing footprint is just `secretmanager.secrets.setIamPolicy`. Every
 subsequent Cloud Build run then executes:
 
 ```

@@ -5,19 +5,27 @@
 #
 # 本スクリプトは Cloud Build service account に、cloudbuild.yaml の
 # `grant-secret-access` step が実行する `gcloud secrets add-iam-policy-binding`
-# を呼び出すために必要な最小権限を付与する。
+# を呼び出すために必要な IAM を付与する。
 #
-# 付与する role: roles/secretmanager.secretIamAdmin (project レベル)
-#   - Secret Manager の IAM policy 変更のみ許可
-#   - Secret 値の読み書きは付与しない (最小権限原則)
+# 付与する role: roles/secretmanager.admin (project レベル)
+#   - Secret Manager の IAM policy を project-level で変更できる唯一の
+#     documented ロール (Google Cloud には `secretIamAdmin` は存在しない)
+#   - full admin: create / delete / read (accessSecretVersion) / IAM 管理
+#   - ただし Cloud Build SA は既に build 時に `availableSecrets` 経由で
+#     `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` を読んでおり、事実上の権限差分は
+#     `secretmanager.secrets.setIamPolicy` の追加のみ。最小権限にこだわる場合
+#     は custom role (getIamPolicy + setIamPolicy のみ) を作成する道もあるが、
+#     監査 / メンテコストと引き換えのため本 script は documented admin ロール
+#     を採用する。
 #
 # なぜこのスクリプトが必要か:
 #   Cloud Run の `--set-secrets=` は runtime SA が Secret Manager から secret
 #   を読む形で解決される。新規 secret を追加した際に手動で Secret Accessor role
 #   を付ける運用は setup 漏れによる silent deploy 失敗の温床だった。
 #   cloudbuild.yaml の `grant-secret-access` step で自動反映することで恒久解決
-#   するが、Cloud Build SA 自身が `secretIamAdmin` を持たないと IAM 変更を
-#   実行できない。本スクリプトはその 1 度きりの bootstrap を提供する。
+#   するが、Cloud Build SA 自身が `secretmanager.admin` を持たないと
+#   `add-iam-policy-binding` を実行できない。本スクリプトはその 1 度きりの
+#   bootstrap を提供する。
 #
 # 使い方:
 #   1. gcloud CLI 認証済み (`gcloud auth login`)、project owner 相当の権限が必要
@@ -35,8 +43,6 @@
 #     https://cloud.google.com/secret-manager/docs/access-control
 #   - Cloud Build user-specified service accounts:
 #     https://cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts
-#   - Least-privilege role recommendations:
-#     https://cloud.google.com/iam/docs/using-iam-securely#least_privilege
 # =============================================================================
 
 set -euo pipefail
@@ -47,12 +53,12 @@ DRY_RUN="${DRY_RUN:-0}"
 
 echo "[setup] Cloud Build SA: ${BUILD_SA}"
 echo "[setup] Project:        ${PROJECT_ID}"
-echo "[setup] Granting role:  roles/secretmanager.secretIamAdmin"
+echo "[setup] Granting role:  roles/secretmanager.admin"
 
 CMD=(
   gcloud projects add-iam-policy-binding "${PROJECT_ID}"
   --member="serviceAccount:${BUILD_SA}"
-  --role="roles/secretmanager.secretIamAdmin"
+  --role="roles/secretmanager.admin"
   --condition=None
   --quiet
 )
