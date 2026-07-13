@@ -28,7 +28,7 @@ import {
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { getAppUrl } from "@/shared/lib/constants";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
-import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
 import type { EmailResult } from "./types";
@@ -109,11 +109,17 @@ function buildMemberUrl(customerId: string | null): string | undefined {
 /**
  * FIFO キューにおける 1-indexed の現在順番を計算する。
  *
- * 同一 (slotId, ticketId) の WAITLISTED を `waitlistedAt` 昇順で数え、
- * 自分の `waitlistedAt` 以下の件数を返す（`offerNextWaitlistEntryCommand` の
- * FIFO 選定条件と同じ (slotId, ticketId) スコープ — スロット全体でなくチケット
- * 種別ごとに独立したキューのため、ticketId を落とすと表示上の順番が実際の
- * 繰り上げ順と食い違う）。
+ * 同一 (slotId, ticketId) の `WAITLIST_ACTIVE_STATUSES`（WAITLISTED +
+ * WAITLISTED_OFFERED）を `waitlistedAt` 昇順で数え、自分の `waitlistedAt` 以下の
+ * 件数を返す（`offerNextWaitlistEntryCommand` の FIFO 選定条件と同じ
+ * (slotId, ticketId) スコープ — スロット全体でなくチケット種別ごとに独立した
+ * キューのため、ticketId を落とすと表示上の順番が実際の繰り上げ順と食い違う）。
+ *
+ * status は WAITLISTED 単独ではなく、`getWaitlistQueue`
+ * （`waitlist-queries.ts`）と同じ SSoT `WAITLIST_ACTIVE_STATUSES` を使う:
+ * 自分より前に WAITLISTED_OFFERED（オファー提示中だがまだキューの席を離脱して
+ * いない）が存在する場合、それをカウントから除外すると実際より若い番号を
+ * 表示してしまう（under-report）。WAITLISTED 単独への絞り込みに戻さないこと。
  *
  * `waitlistedAt` が null（WAITLISTED 作成直後の不変条件が崩れた異常系）の
  * 場合は非致命的に 1 をフォールバック値として返す。
@@ -126,7 +132,7 @@ async function computeWaitlistPosition(
     where: {
       slotId: registration.slotId,
       ticketId: registration.ticketId,
-      status: RegistrationStatus.WAITLISTED,
+      status: { in: [...WAITLIST_ACTIVE_STATUSES] },
       waitlistedAt: { lte: registration.waitlistedAt },
     },
   });

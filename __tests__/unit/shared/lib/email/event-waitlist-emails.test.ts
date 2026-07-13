@@ -2,7 +2,9 @@
  * event-waitlist-emails.ts の sender wrapper テスト。
  *
  * - sendEventWaitlistRegistered: subject に site name + event title を含むこと、
- *   position が (slotId, ticketId) スコープの count() 結果をそのまま props に渡すこと
+ *   position が (slotId, ticketId) スコープの count() 結果をそのまま props に渡すこと、
+ *   count() の where 句が WAITLIST_ACTIVE_STATUSES（WAITLISTED +
+ *   WAITLISTED_OFFERED）を使うこと（OFFERED 中の先行者を under-report しない）
  * - sendEventWaitlistOffered: paymentContext.kind (free/paid) で subject/props が
  *   分岐すること（price 表示・actionUrl の出し分け）
  * - sendEventWaitlistExpired: idempotencyKey が `event-waitlist-expired/<id>` で
@@ -11,6 +13,7 @@
  *   を返し throw しないこと
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -161,6 +164,29 @@ describe("sendEventWaitlistRegistered", () => {
 
     const props = mockEventWaitlistRegisteredEmail.mock.calls.at(-1)?.[0];
     expect(props?.position).toBe(7);
+  });
+
+  test("queue position uses WAITLIST_ACTIVE_STATUSES to include OFFERED entries ahead", async () => {
+    await sendEventWaitlistRegistered({
+      registrationId: "reg-1",
+      to: "guest@example.com",
+    });
+
+    expect(mockCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          slotId: GUEST_REGISTRATION.slotId,
+          ticketId: GUEST_REGISTRATION.ticketId,
+          status: {
+            in: [
+              RegistrationStatus.WAITLISTED,
+              RegistrationStatus.WAITLISTED_OFFERED,
+            ],
+          },
+          waitlistedAt: expect.any(Object),
+        }),
+      }),
+    );
   });
 
   test("ゲスト（customerId なし）は claimUrl を発行し memberEventRegistrationUrl は発行しない", async () => {
