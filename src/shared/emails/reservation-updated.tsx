@@ -47,7 +47,11 @@ type Props = {
    * true のとき「当日運営までお問い合わせください」の fallback セクションを描画。
    */
   smartLockIssuanceFailed?: boolean;
-  /** 発行失敗時に案内する連絡先。null の場合は sender 情報にフォールバック。 */
+  /**
+   * 発行失敗時に案内する連絡先。未指定または個別フィールドが null の場合は
+   * `footer.phoneNumber` / `footer.contactEmail`（事業者情報）にフォールバックする。
+   * footer 側も未設定なら該当行は非表示。
+   */
   smartLockFallbackContact?: {
     readonly phone?: string | null;
     readonly email?: string | null;
@@ -76,6 +80,11 @@ export function ReservationUpdatedEmail({
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
+
+  // Codex P2 #1023 (comment 3566989901): confirmation template と同型のフォールバック。
+  // 明示指定を優先し、null/未指定なら footer.phoneNumber / footer.contactEmail にフォールバック。
+  const fallbackPhone = smartLockFallbackContact?.phone ?? footer.phoneNumber;
+  const fallbackEmail = smartLockFallbackContact?.email ?? footer.contactEmail;
 
   return (
     <EmailLayout
@@ -165,7 +174,7 @@ export function ReservationUpdatedEmail({
             自動発行に失敗いたしました。当日のご入室につきましては、下記まで
             お問い合わせください。ご不便をおかけして申し訳ございません。
           </Text>
-          {smartLockFallbackContact?.phone && (
+          {fallbackPhone && (
             <Text
               style={{
                 fontSize: "14px",
@@ -173,12 +182,12 @@ export function ReservationUpdatedEmail({
                 marginTop: "8px",
               }}
             >
-              <strong>お電話:</strong> {smartLockFallbackContact.phone}
+              <strong>お電話:</strong> {fallbackPhone}
             </Text>
           )}
-          {smartLockFallbackContact?.email && (
+          {fallbackEmail && (
             <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
-              <strong>メール:</strong> {smartLockFallbackContact.email}
+              <strong>メール:</strong> {fallbackEmail}
             </Text>
           )}
         </Section>
