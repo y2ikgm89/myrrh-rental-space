@@ -10,8 +10,8 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が唯一の正�
 | Phase | スコープ                                                                                            | 状態      |
 | ----- | --------------------------------------------------------------------------------------------------- | --------- |
 | 1     | Secret Manager IAM (runtime SA / build SA 全 secret への secretAccessor) + Deny Policy + Conditions | ✅ 完了   |
-| 2     | Cloud Scheduler (13 cron jobs)                                                                      | 🚧 実装中 |
-| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                                | ⏳ 未着手 |
+| 2     | Cloud Scheduler (13 cron jobs)                                                                      | ✅ 完了   |
+| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                                | 🚧 実装中 |
 | 4     | Artifact Registry + Cloud Build worker pool                                                         | ⏳ 未着手 |
 | 5     | IAM bindings 全般 + WIF Pool/Provider                                                               | ⏳ 未着手 |
 | 6     | Cloud Run services + Job (public / admin / prisma-migrate)                                          | ⏳ 未着手 |
@@ -28,6 +28,7 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が唯一の正�
 | `deny.tf`            | Phase 1: `google_iam_deny_policy` (Terraform runner SA から secret 値読取を deny)                                                                                    |
 | `conditions.tf`      | Phase 1: Terraform runner SA への conditional `projectIamAdmin` (secretAccessor のみ grantable) + Phase 2: cloudscheduler.admin / serviceAccountUser on scheduler SA |
 | `cloud_scheduler.tf` | Phase 2: `google_cloud_scheduler_job` × 13 cron jobs (Cloud Run `/api/cron/*` を OIDC で叩く)                                                                        |
+| `secrets.tf`         | Phase 3: `google_secret_manager_secret` × 16 secrets の metadata (値は Terraform 対象外、prevent_destroy で誤削除 block)                                             |
 
 ## 初回セットアップ (1 度だけ、project owner が実行)
 
