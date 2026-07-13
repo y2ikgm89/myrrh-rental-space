@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import type { ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { validateStatusTransition } from "./status";
 import {
   resolveOrCreateCustomer,
@@ -11,7 +12,6 @@ import {
 } from "@/shared/domain/reservations/resolve-customer";
 import {
   CUSTOMER_SELECT,
-  buildDateTime,
   calculateHoursAndBasePrice,
   getReservationSettings,
   validateCoupon,
@@ -78,8 +78,10 @@ export async function createAdminReservationCommand(input: {
     );
   }
 
-  const startDateTime = buildDateTime(input.date, input.startTime);
-  const endDateTime = buildDateTime(input.date, input.endTime);
+  const startDateTime = parseDateTimeLocalAsJst(
+    `${input.date}T${input.startTime}`,
+  );
+  const endDateTime = parseDateTimeLocalAsJst(`${input.date}T${input.endTime}`);
 
   const [space, , settings] = await Promise.all([
     prisma.space.findUnique({
@@ -216,8 +218,10 @@ export async function updateAdminReservationCommand(
     notes?: string | null | undefined;
   },
 ) {
-  const startDateTime = buildDateTime(input.date, input.startTime);
-  const endDateTime = buildDateTime(input.date, input.endTime);
+  const startDateTime = parseDateTimeLocalAsJst(
+    `${input.date}T${input.startTime}`,
+  );
+  const endDateTime = parseDateTimeLocalAsJst(`${input.date}T${input.endTime}`);
 
   const [currentReservation, space, settings] = await Promise.all([
     prisma.reservation.findUnique({

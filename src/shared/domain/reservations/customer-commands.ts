@@ -1,5 +1,8 @@
 import "server-only";
-import { calculateDurationHours } from "@/shared/lib/date-format";
+import {
+  calculateDurationHours,
+  parseDateTimeLocalAsJst,
+} from "@/shared/lib/date-format";
 
 import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
@@ -17,7 +20,7 @@ import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { lockSpaceForTransaction } from "./space-locks";
-import { buildDateTime, ensureNoOverlap } from "./payloads";
+import { ensureNoOverlap } from "./payloads";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -114,8 +117,10 @@ export async function updateCustomerReservation(
   },
   modificationDeadlineHours: number,
 ): Promise<CommandResult<UpdatePayload>> {
-  const startDateTime = buildDateTime(input.date, input.startTime);
-  const endDateTime = buildDateTime(input.date, input.endTime);
+  const startDateTime = parseDateTimeLocalAsJst(
+    `${input.date}T${input.startTime}`,
+  );
+  const endDateTime = parseDateTimeLocalAsJst(`${input.date}T${input.endTime}`);
 
   // 最小/最大予約時間（設定値）をサーバー側で強制する（新規予約と同一ルール）
   const rules = await getReservationRuleSettings();

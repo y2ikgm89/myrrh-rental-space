@@ -14,10 +14,8 @@ import {
   applyReservationEditSideEffects,
   getReservationSnapshotForEdit,
 } from "@/shared/domain/reservations/edit-side-effects";
-import {
-  buildDateTime,
-  fetchReservationEmailData,
-} from "@/shared/domain/reservations/payloads";
+import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   sendReservationAdminNotification,
   sendReservationUpdatedEmail,
@@ -225,8 +223,12 @@ export async function updateReservationAction(
               issuanceFailed: boolean;
             } = { passcodes: [], issuanceFailed: false };
             if (before) {
-              const newStartTime = buildDateTime(data.date, data.startTime);
-              const newEndTime = buildDateTime(data.date, data.endTime);
+              const newStartTime = parseDateTimeLocalAsJst(
+                `${data.date}T${data.startTime}`,
+              );
+              const newEndTime = parseDateTimeLocalAsJst(
+                `${data.date}T${data.endTime}`,
+              );
               const result = await applyReservationEditSideEffects({
                 reservationId: data.reservationId,
                 oldSpaceId: before.spaceId,
