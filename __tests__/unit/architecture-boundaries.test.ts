@@ -1240,8 +1240,10 @@ describe("architecture boundaries", () => {
     }
     secretsInDeploy.delete("");
 
-    // grant-secret-access step 内の SECRETS=( ... ) 配列を抽出する。
-    const grantMatch = source.match(/SECRETS=\(([\s\S]*?)\)/);
+    // grant-secret-access step 内の SECRETS='...' whitespace-separated list を抽出する
+    // (bracket 記法だと deploy-workflow の ${...} drift gate と衝突するため、両ゲート
+    // 互換の bracketless single-quoted 記法で保持)。
+    const grantMatch = source.match(/SECRETS='([\s\S]*?)'/);
     expect(grantMatch).not.toBeNull();
     const secretsInGrant = new Set(
       (grantMatch?.[1] ?? "")

@@ -575,7 +575,7 @@ steps:
     args:
       - -ceu
       - |
-        SECRETS=(
+        SECRETS='
           DATABASE_URL
           BETTER_AUTH_SECRET
           ENCRYPTION_KEY
@@ -592,8 +592,8 @@ steps:
           CLOUDFLARE_ORIGIN_HEADER_SECRET
           GOOGLE_CLIENT_ID
           GOOGLE_CLIENT_SECRET
-        )
-        for secret in "$${SECRETS[@]}"; do
+        '
+        for secret in $$SECRETS; do
           echo "Granting roles/secretmanager.secretAccessor on $$secret to ${_SERVICE_ACCOUNT}"
           gcloud secrets add-iam-policy-binding "$$secret" \
             --project="${PROJECT_ID}" \
