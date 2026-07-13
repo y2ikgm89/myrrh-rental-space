@@ -114,13 +114,27 @@ export function StripeSection({ settings }: StripeSectionProps) {
   // 選択中の payment_method_types を state で持ち、多値 hidden input として POST。
   // conform の getInputProps は multi-checkbox に直接対応しないため、状態管理は
   // 手動 + hidden input で fallback する (typed-input-control でも overkill)。
+  //
+  // Codex PR #1046 P2 (comment 3570245234): DB に既に invalid combination が
+  // 保存されている場合 (例: currency=usd + methods=[card, konbini]) の初回 render で、
+  // konbini が checked + disabled + hidden input で POST される状態を放置すると
+  // Zod superRefine が全 save を reject し admin が修復不能になる。初期化時に
+  // filterCompatiblePaymentMethods() を通して既存 stale state をクリーニングする。
   const [selectedMethods, setSelectedMethods] = useState<
     ReadonlyArray<StripePaymentMethodType>
   >(() => {
     // filter に type guard を渡すことで返り値が StripePaymentMethodType[] に narrow される
-    const seed: StripePaymentMethodType[] =
+    const validated: StripePaymentMethodType[] =
       settings.stripePaymentMethodTypes.filter(isStripePaymentMethodType);
-    return seed.length > 0 ? seed : ["card"];
+    // 現在の currency と互換な method のみ残す (DB の stale invalid state 修復)
+    const initialCurrency = isSupportedCurrency(settings.stripeCurrency)
+      ? settings.stripeCurrency
+      : "jpy";
+    const compatible = filterCompatiblePaymentMethods(
+      validated,
+      initialCurrency,
+    );
+    return compatible.length > 0 ? compatible : ["card"];
   });
 
   const toggleMethod = (method: StripePaymentMethodType, checked: boolean) => {
