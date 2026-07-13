@@ -283,6 +283,27 @@ export const eventRegistrationByEmailRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// イベント waitlist（キャンセル待ち）登録作成専用（3リクエスト/分/IP）。
+// eventRegistrationSubmitRateLimiter と対称。
+export const eventWaitlistRegistrationSubmitRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 3,
+});
+
+// イベント waitlist 登録作成の「顧客(メールアドレス)単位」の追加バケット
+// （3回/10分/email）。eventRegistrationByEmailRateLimiter と同型の第二防壁。
+export const eventWaitlistRegistrationByEmailRateLimiter = createRateLimiter({
+  interval: 10 * 60 * 1000, // 10分
+  maxRequests: 3,
+});
+
+// イベント waitlist 繰り上げ当選（offer）確認 URL の連打対策（5回/10分/token）。
+// cancelByReservationRateLimiter 等と同型の「resource（token）単位の第二防壁」。
+export const eventWaitlistConfirmRateLimiter = createRateLimiter({
+  interval: 10 * 60 * 1000, // 10分
+  maxRequests: 5,
+});
+
 // 公開クエリ用（30リクエスト/分/IP）— DoS対策
 export const publicQueryRateLimiter = createRateLimiter({
   interval: 60 * 1000, // 1分
