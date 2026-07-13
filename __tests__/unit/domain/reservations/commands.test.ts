@@ -810,6 +810,59 @@ describe("updateAdminReservationCommand", () => {
         }),
       );
     });
+
+    test("税額 recalc: 既存 taxRate から新 totalPrice の taxAmount / totalPriceWithTax を書き戻す (Codex P2 #1038)", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.PENDING,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T09:00:00+09:00"),
+          endTime: new Date("2024-06-15T10:00:00+09:00"),
+          totalPrice: 1000,
+          couponId: null,
+          customerId: "cust-1",
+          googleCalendarEventId: null,
+          // 予約時点のスナップショット (10% = 0.10、customer-commands.ts と同じ単位契約)
+          taxRate: 0.1,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      // hourlyPrice=1000 × 2h → totalPrice=2000、tax = floor(2000 × 0.10) = 200、withTax=2200
+      await updateAdminReservationCommand("res-1", validInput);
+
+      expect(mockReservationUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            totalPrice: 2000,
+            taxAmount: 200,
+            totalPriceWithTax: 2200,
+          }),
+        }),
+      );
+    });
+
+    test("税額 recalc: taxRate が null (税なし予約) なら taxAmount=0 / totalPriceWithTax=totalPrice", async () => {
+      // beforeEach の fixture は taxRate 未指定 = null 相当
+      await updateAdminReservationCommand("res-1", validInput);
+
+      // hourlyPrice=1000 × 2h → totalPrice=2000、tax=0、withTax=2000
+      expect(mockReservationUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            totalPrice: 2000,
+            taxAmount: 0,
+            totalPriceWithTax: 2000,
+          }),
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {

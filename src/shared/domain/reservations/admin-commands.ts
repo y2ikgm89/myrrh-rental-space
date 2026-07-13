@@ -238,6 +238,9 @@ export async function updateAdminReservationCommand(
         // 経由で発覚した stale stat bug の修正 — 詳細は tx 内 comment 参照)
         customerId: true,
         googleCalendarEventId: true,
+        // 税額 recalc に必要な予約時点のスナップショット (Codex P2 #1038 対応)。
+        // taxRate/taxRateType の変更経路は本 command のスコープ外 (別 UI で管理)。
+        taxRate: true,
         customer: { select: CUSTOMER_SELECT },
       },
     }),
@@ -297,6 +300,23 @@ export async function updateAdminReservationCommand(
   const oldCouponId = currentReservation.couponId;
   const couponChanged = oldCouponId !== newCouponId;
 
+  // 税額を予約時点の taxRate スナップショットで再計算する (Codex P2 #1038 対応)。
+  //
+  // 修正前は admin 編集で totalPrice/base/discount を書き換えても taxAmount と
+  // totalPriceWithTax が古い値のままで、予約詳細画面の税明細ブロックが新 subtotal と
+  // 古い税額を並べて表示する不整合が発生していた。
+  //
+  // taxRate は "予約時点で確定した税率のスナップショット" (Reservation.taxRate) を
+  // そのまま使う — 編集時に税率を切り替える経路は別 UI に切り出し、本 command は
+  // 金額変更に伴う税額の追従だけ担う。customer-commands.ts の updateCustomerReservation
+  // と同一の丸め (Math.floor) を採用し、両経路の税表示を揃える。
+  // taxRate が null (税なし予約) の場合は taxAmount=0 / totalPriceWithTax=calculatedPrice。
+  const taxRate = currentReservation.taxRate
+    ? Number(currentReservation.taxRate)
+    : 0;
+  const taxAmount = Math.floor(calculatedPrice * taxRate);
+  const totalPriceWithTax = calculatedPrice + taxAmount;
+
   // 顧客に影響する変更があった場合のみ、呼び出し側が変更通知メールを送る判断材料にする。
   const customerVisibleChanged =
     currentReservation.spaceId !== input.spaceId ||
@@ -333,6 +353,8 @@ export async function updateAdminReservationCommand(
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
         spaceDiscountAmount: pricing.spaceDiscountAmount,
+        taxAmount,
+        totalPriceWithTax,
         notes: input.notes || null,
         icsSequence: { increment: 1 },
       },
