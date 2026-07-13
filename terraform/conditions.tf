@@ -72,3 +72,20 @@ resource "google_project_iam_member" "terraform_runner_cloudbuild_workerpool_own
   role    = "roles/cloudbuild.workerPoolOwner"
   member  = "serviceAccount:${var.terraform_runner_sa_email}"
 }
+
+# Phase 5: Service Account admin (SA の CRUD / metadata 管理)。
+# 実際の SA impersonation (actAs) は roles/iam.serviceAccountUser で個別に
+# 管理し、runner 自身は他 SA として run する能力を持たない。
+resource "google_project_iam_member" "terraform_runner_iam_sa_admin" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountAdmin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
+
+# Phase 5: Workload Identity Pool admin (WIF Pool + Provider CRUD)。
+# 既存の `github-actions` pool を管理下に取るために必要。
+resource "google_project_iam_member" "terraform_runner_wif_admin" {
+  project = var.project_id
+  role    = "roles/iam.workloadIdentityPoolAdmin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
