@@ -19,13 +19,13 @@
 #      (architecture-boundaries drift gate で拾っていたが、そもそもの構造問題)。
 #
 # 解決策:
-#   - custom role (conditions.tf の `terraform_runner_secretmanager`) から
-#     `setIamPolicy` / `getIamPolicy` を除外し、per-secret binding は禁止 (F1 主対策)。
+#   - custom role (`terraformRunnerSecretManagerNoPolicyMgmt`、
+#     `scripts/bootstrap-terraform.sh` が SSoT) から `setIamPolicy` /
+#     `getIamPolicy` を除外し、per-secret binding は禁止 (F1 主対策)。
 #   - runtime SA / build SA への `roles/secretmanager.secretAccessor` を
-#     **project-level** で付与する。conditions.tf の conditional
-#     `projectIamAdmin` (`hasOnly ['roles/secretmanager.secretAccessor']`) が
-#     runner に granting を許可しているため、runner 自身も idempotent に
-#     apply できる。
+#     **project-level** で付与する。runner SA の conditional `projectIamAdmin`
+#     (bootstrap で付与、`hasOnly ['roles/secretmanager.secretAccessor']`) が
+#     granting を許可しているため、runner 自身も idempotent に apply できる。
 #
 # ## セキュリティ上の等価性
 #

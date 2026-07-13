@@ -1226,8 +1226,8 @@ describe("architecture boundaries", () => {
     // `secretmanager.secrets.setIamPolicy` が、runner compromise 時に
     // 任意 principal へ `secretAccessor` を grant する self-grant 経路になる
     // (deny.tf の deny は grantee identity ベースで、他 principal 宛の grant は
-    // 素通りする)。conditions.tf を custom role
-    // `terraformRunnerSecretManagerNoPolicyMgmt` に切り替えて `setIamPolicy` /
+    // 素通りする)。custom role `terraformRunnerSecretManagerNoPolicyMgmt`
+    // (bootstrap-terraform.sh が SSoT) に切り替えて `setIamPolicy` /
     // `getIamPolicy` を除外し、per-secret binding は禁止した。
     //
     // ゆえに:
