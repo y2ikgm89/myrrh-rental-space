@@ -134,6 +134,7 @@ function toSettingsData(
     stripePublishableKey: settings.stripePublishableKey,
     stripeAccountId: settings.stripeAccountId,
     stripeCurrency: settings.stripeCurrency,
+    stripePaymentMethodTypes: settings.stripePaymentMethodTypes,
     stripeLastTestedAt: settings.stripeLastTestedAt,
     stripeConnectionStatus: settings.stripeConnectionStatus,
     cookieConsentEnabled: settings.cookieConsentEnabled,

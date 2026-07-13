@@ -20,6 +20,7 @@ export type StripeSettingsInput = {
   stripeSecretKey?: string | null | undefined;
   stripeWebhookSecret?: string | null | undefined;
   stripeCurrency: string;
+  stripePaymentMethodTypes: readonly string[];
 };
 
 export type GoogleCalendarSettingsInput = {
@@ -62,6 +63,9 @@ export async function updateStripeSettings(
   const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {
     stripeEnabled: data.stripeEnabled,
     stripeCurrency: data.stripeCurrency,
+    // Prisma String[] は Prisma.SettingsCreateInput 側で
+    // `{ set: string[] }` 形 or plain array を受け付ける。plain array で渡す。
+    stripePaymentMethodTypes: Array.from(data.stripePaymentMethodTypes),
   };
 
   // 公開可能キーは管理 UI で「変更」ボタンによりロックされる公開キー。ロック中の保存は

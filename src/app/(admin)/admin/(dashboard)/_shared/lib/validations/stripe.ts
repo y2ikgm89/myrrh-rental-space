@@ -10,6 +10,7 @@ import {
   isValidWebhookSecret,
   keysHaveMatchingMode,
 } from "@/shared/lib/stripe-shared";
+import { STRIPE_PAYMENT_METHOD_TYPE_VALUES } from "@/shared/lib/stripe-payment-methods";
 
 // バリデーションメッセージ
 interface ValidationMessages {
@@ -64,6 +65,18 @@ export const stripeSettingsSchema = z
     stripeCurrency: z
       .enum(SUPPORTED_CURRENCY_VALUES)
       .default(SUPPORTED_CURRENCY_VALUES[0]),
+    // Stripe Checkout Session `payment_method_types` に渡す method 集合。
+    // Settings.stripePaymentMethodTypes が SSoT で最低 1 件必須。
+    // ハードコード fallback を持たないため空配列は許容しない (DB default `["card"]`
+    // で常に 1 件以上入っているため default に頼らない)。フィールド未提供時のみ
+    // 便宜的に `["card"]` に補完する (input 側の boundary normalization)。
+    stripePaymentMethodTypes: z
+      .array(z.enum(STRIPE_PAYMENT_METHOD_TYPE_VALUES))
+      .min(1, {
+        error: "少なくとも 1 種類の決済方法を有効にしてください",
+      })
+      .transform((methods) => Array.from(new Set(methods)))
+      .default(["card"]),
   })
   .refine(
     (data) => {

@@ -90,6 +90,7 @@ export type SettingsData = {
   stripeWebhookSecretMasked: string | null;
   stripeAccountId: string | null;
   stripeCurrency: string;
+  stripePaymentMethodTypes: string[];
   stripeLastTestedAt: Date | null;
   stripeConnectionStatus: string | null;
   cookieConsentEnabled: boolean;

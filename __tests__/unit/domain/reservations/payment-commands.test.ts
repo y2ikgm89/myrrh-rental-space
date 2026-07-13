@@ -33,6 +33,7 @@ const mockGetStripeSettings = mock<
   Promise.resolve({
     stripeEnabled: true,
     stripeSecretKey: "enc-stripe-secret",
+    stripePaymentMethodTypes: ["card"],
   }),
 );
 const mockRefundCreate = mock<
@@ -129,6 +130,7 @@ describe("reservations/payment-commands", () => {
     mockGetStripeSettings.mockResolvedValue({
       stripeEnabled: true,
       stripeSecretKey: "enc-stripe-secret",
+      stripePaymentMethodTypes: ["card"],
     });
     mockGetStripeClient.mockResolvedValue({
       client: {

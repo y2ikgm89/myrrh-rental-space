@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
+import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { getAppUrl } from "@/shared/lib/constants";
 import {
   logError,
@@ -126,6 +127,18 @@ export async function createEventCheckoutSessionCommand(input: {
   const currency = stripeSettings.stripeCurrency ?? "jpy";
   const appUrl = getAppUrl();
 
+  // Settings で許可された payment_method_types のみ Stripe に渡す
+  // (Reservation 側と同一 SSoT。ハードコード ["card"] fallback は禁止)。
+  const paymentMethodTypes = stripeSettings.stripePaymentMethodTypes.filter(
+    isStripePaymentMethodType,
+  );
+  if (paymentMethodTypes.length === 0) {
+    throw new DomainError(
+      "Stripe 決済方法が有効化されていません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+
   // Claim-first: UNPAID → PENDING を atomic に確定 (edit / 並行 cancel との race を封鎖)。
   // `status: CONFIRMED` も WHERE で assert する (Codex P1 #1026, comment 3567019751):
   // pre-check と claim の間で並行 cancel が走ったケースを DB レベルで塞ぐ。
@@ -173,7 +186,7 @@ export async function createEventCheckoutSessionCommand(input: {
   try {
     const session = await client.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      payment_method_types: paymentMethodTypes,
       line_items: [
         {
           price_data: {

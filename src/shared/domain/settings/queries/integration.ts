@@ -26,6 +26,7 @@ export async function getStripeSettings() {
           stripeWebhookSecret: true,
           stripeAccountId: true,
           stripeCurrency: true,
+          stripePaymentMethodTypes: true,
         },
       }),
     fallback: null,
