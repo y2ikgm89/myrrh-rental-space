@@ -12,6 +12,8 @@ import { NextResponse } from "next/server";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 import { getEventRegistrationForConfirm } from "@/shared/domain/events/waitlist-queries";
+import { createWaitlistOfferCheckoutSessionCommand } from "@/shared/domain/events/payment-commands";
+import { DomainError } from "@/shared/domain/domain-error";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { publicQueryRateLimiter, getClientIp } from "@/shared/lib/rate-limit";
 
@@ -57,10 +59,22 @@ export async function GET(
     return NextResponse.redirect(confirmUrl, 302);
   }
 
-  // TODO(task-9): createWaitlistOfferCheckoutSessionCommand({registrationId,
-  // offerToken: token}) で Stripe Checkout Session を作成し、
-  // NextResponse.redirect(session.url, 303) で実際の Stripe 決済へ誘導する。
-  // Task 9 未実装のため、現時点では有料チケットの繰り上げ当選確定を
-  // ソフトに expired へフォールバックさせる（機能停止であって 404/500 は返さない）。
-  return NextResponse.redirect(new URL(EXPIRED_PATH, request.url), 302);
+  try {
+    const session = await createWaitlistOfferCheckoutSessionCommand({
+      registrationId: verified.registrationId,
+      offerToken: token,
+    });
+    // 外部 (Stripe) への redirect は POST-safety の 303 (See Other) を使う。
+    // EXPIRED_PATH 等の内部ソフトリダイレクトの 302 とは意図的に区別する。
+    return NextResponse.redirect(session.url, 303);
+  } catch (error) {
+    // DomainError（既に決済処理が開始済み / Stripe 未設定等の運用上のエラー）は
+    // 500 を返さずソフトに expired へフォールバックする（機能停止であって
+    // 内部エラーではない — Task 8 の既存方針を踏襲）。想定外の例外はそのまま
+    // 投げて 500 で可視化する。
+    if (error instanceof DomainError) {
+      return NextResponse.redirect(new URL(EXPIRED_PATH, request.url), 302);
+    }
+    throw error;
+  }
 }
