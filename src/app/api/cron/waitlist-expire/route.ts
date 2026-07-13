@@ -72,17 +72,33 @@ export async function GET(request: Request) {
     let offered = 0;
 
     for (const [eventId, group] of byEvent) {
-      const result = await expireAndPromoteWaitlistForEventCommand({
-        eventId,
-        candidates: group,
-        now,
-      });
-      expired += result.expired.length;
-      offered += result.offered.length;
+      try {
+        const result = await expireAndPromoteWaitlistForEventCommand({
+          eventId,
+          candidates: group,
+          now,
+        });
+        expired += result.expired.length;
+        offered += result.offered.length;
 
-      // TODO(task-6): result.expired → sendEventWaitlistExpired、
-      // result.offered → sendEventWaitlistOffered (+
-      // getEventWaitlistOfferPaymentContext) を fireAndForget で送信する。
+        // TODO(task-6): result.expired → sendEventWaitlistExpired、
+        // result.offered → sendEventWaitlistOffered (+
+        // getEventWaitlistOfferPaymentContext) を fireAndForget で送信する。
+      } catch (error) {
+        // 1 event の失敗（例: ロック競合による $transaction timeout）で
+        // 残り event の処理を止めない。outer catch へ伝播させず次の event へ
+        // 継続する（outer catch は findExpiredWaitlistOfferCandidates 自体の
+        // 失敗など、event 単位に切り分けられない致命的な失敗専用に残す）。
+        logError(error, {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "waitlistExpireCron",
+            eventId,
+            candidateCount: group.length,
+          },
+        });
+      }
     }
 
     if (expired > 0 || offered > 0) {

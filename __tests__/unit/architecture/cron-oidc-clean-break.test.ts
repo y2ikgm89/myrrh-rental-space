@@ -22,6 +22,7 @@ describe("cron OIDC clean-break boundary", () => {
     "src/app/api/cron/notification-cleanup/route.ts",
     "src/app/api/cron/reservation-reminder/route.ts",
     "src/app/api/cron/smart-lock-cleanup/route.ts",
+    "src/app/api/cron/waitlist-expire/route.ts",
   ] as const;
 
   test("cron auth no longer accepts CRON_SECRET shared bearer fallback", () => {
