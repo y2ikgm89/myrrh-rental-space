@@ -142,7 +142,10 @@ export async function applyEventRegistrationCancellation(
 
   // Waitlist promote: CONFIRMED だった申込がキャンセルされた場合のみ、空いた枠を
   // FIFO で offer に昇格する。advisory lock 728350 は offerNextWaitlistEntryCommand
-  // 内部で同一 tx 上から取得するため、ここでは何もしない。
+  // の内部では取得しない（同関数の docstring 参照）。呼び出し元の
+  // cancelEventRegistrationWithClaim（registration-commands.ts）が
+  // applyEventRegistrationCancellation を呼ぶ直前に同一 tx 上で取得済みであるため、
+  // ここで改めて取得する必要はない。
   let promoted: WaitlistPromotionOutcome = null;
   if (previousStatus === RegistrationStatus.CONFIRMED) {
     const offer = await offerNextWaitlistEntryCommand(tx, {

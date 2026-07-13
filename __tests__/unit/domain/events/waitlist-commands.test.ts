@@ -67,6 +67,23 @@ describe("offerNextWaitlistEntryCommand", () => {
         orderBy: { waitlistedAt: "asc" },
       }),
     );
+    // 二重昇格防止の atomic claim: WHERE に id + status: WAITLISTED の両方が
+    // 揃っていないと、race で 2 箇所から呼ばれたときに同じ候補を二重に
+    // WAITLISTED_OFFERED へ昇格させてしまう（このテストが唯一の安全網）。
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: "reg-1",
+          status: RegistrationStatus.WAITLISTED,
+        }),
+        data: expect.objectContaining({
+          status: RegistrationStatus.WAITLISTED_OFFERED,
+          offeredAt: now,
+          expiresAt: new Date(now.getTime() + WAITLIST_OFFER_TTL_MS),
+        }),
+      }),
+    );
   });
 
   it("candidate found but updateMany count=0 → race lost → null", async () => {

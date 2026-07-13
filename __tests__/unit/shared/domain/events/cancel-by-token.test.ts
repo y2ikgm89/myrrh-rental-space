@@ -14,6 +14,11 @@ const mockFindUniqueOrThrow = mock<
 const mockFindUnique = mock<
   (args: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve(null));
+// cancelEventRegistrationWithClaim が applyEventRegistrationCancellation 呼び出し前に
+// advisory lock 728350 を取得する $executeRaw のスタブ（戻り値の影響行数は使わない）。
+const mockExecuteRaw = mock<(...args: unknown[]) => Promise<number>>(() =>
+  Promise.resolve(0),
+);
 
 const mockTx = {
   eventRegistration: {
@@ -22,6 +27,7 @@ const mockTx = {
     findUniqueOrThrow: mockFindUniqueOrThrow,
     findUnique: mockFindUnique,
   },
+  $executeRaw: mockExecuteRaw,
 };
 
 mock.module("@/shared/db/prisma", () => ({
@@ -54,6 +60,7 @@ function resetMocks() {
   mockUpdateMany.mockReset();
   mockFindUniqueOrThrow.mockReset();
   mockFindUnique.mockReset();
+  mockExecuteRaw.mockReset();
   // 既定は「見つからない」。findFirst は (1) cancel 対象の申込検索と (2) REG が
   // CONFIRMED の場合に applyEventRegistrationCancellation が内部で呼ぶ
   // offerNextWaitlistEntryCommand の waitlist 候補検索の 2 用途で共有される。
@@ -63,6 +70,7 @@ function resetMocks() {
   mockUpdateMany.mockResolvedValue({ count: 1 });
   mockFindUniqueOrThrow.mockResolvedValue({ icsSequence: 1 });
   mockFindUnique.mockResolvedValue(null);
+  mockExecuteRaw.mockResolvedValue(0);
 }
 
 describe("cancelEventRegistrationByToken（ゲスト・所有権フィルタなし）", () => {

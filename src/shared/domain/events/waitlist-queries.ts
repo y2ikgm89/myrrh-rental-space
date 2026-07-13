@@ -7,9 +7,9 @@ import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers
 /**
  * 管理画面のキャンセル待ち一覧向けクエリ。
  *
- * 表示順は「status ASC, waitlistedAt ASC」。RegistrationStatus の文字列順で
- * WAITLISTED < WAITLISTED_OFFERED となるため、`status: "asc"` だけで OFFERED を
- * 先に列挙できる（既に繰り上げ当選しているものを目立たせる意図）。
+ * 表示順は「status DESC, waitlistedAt ASC」。RegistrationStatus の文字列順で
+ * WAITLISTED < WAITLISTED_OFFERED となるため、`status: "desc"` とすることで
+ * 期限が迫る OFFERED（要対応）を一覧の先頭に表示できる。
  */
 export async function getWaitlistQueue(eventId: string) {
   const rows = await prisma.eventRegistration.findMany({
@@ -18,7 +18,7 @@ export async function getWaitlistQueue(eventId: string) {
       status: { in: [...WAITLIST_ACTIVE_STATUSES] },
     },
     orderBy: [
-      { status: "asc" }, // OFFERED を先、WAITLISTED を後 (視認性)
+      { status: "desc" }, // OFFERED を先、WAITLISTED を後 (視認性)
       { waitlistedAt: "asc" },
     ],
     select: {

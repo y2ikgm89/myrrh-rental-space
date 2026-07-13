@@ -6,6 +6,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { applyEventRegistrationCancellation } from "./registration-cancel-core";
+import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 
 export async function createEventRegistrationCommand(data: {
@@ -224,6 +225,17 @@ async function cancelEventRegistrationWithClaim(
           error: "申込が見つかりません",
         } as const;
       }
+
+      // offerNextWaitlistEntryCommand（applyEventRegistrationCancellation 内部で
+      // CONFIRMED 由来のキャンセル時のみ呼ばれる）は「呼び出し側が事前に advisory
+      // lock 728350（イベント単位）を保持している」ことを前提とする。ここで取得
+      // してから applyEventRegistrationCancellation に渡すことで、同一
+      // (slotId, ticketId) を対象とする複数のキャンセルが並行実行された場合でも
+      // FIFO 昇格の findFirst → updateMany claim が直列化される。ロックなしだと、
+      // 2 件目のキャンセルが 1 件目のコミット未了の行を READ COMMITTED で読んで
+      // 同じ waitlist 候補を取り合い、updateMany の WHERE が一致せず count=0 に
+      // なることで無昇格（本来 2 名昇格すべきところ 1 名しか昇格しない）が起こる。
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${registration.eventId}))`;
 
       const claim = await applyEventRegistrationCancellation(tx, registration, {
         now: new Date(),

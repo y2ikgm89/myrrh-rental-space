@@ -96,14 +96,42 @@ export async function registerWaitlistEntryCommand(data: {
           "NOT_FOUND",
         );
 
-      // Waitlist は「満員だから」登録される。CONFIRMED sum が capacity 未満なら
-      // 通常の CONFIRMED 経路を案内すべきエラーを返す (フォーム分岐との整合性ガード)
+      // Waitlist は「スロット全体 or 対象チケット種別のいずれかが満員だから」登録
+      // される。スロットに空きがあっても対象チケット種別だけ満員のケースがあり得る
+      // (createEventRegistrationCommand の per-ticket capacity 拒否と対になる導線 —
+      // ここを見落とすと「チケットが満員です」で弾かれた顧客が waitlist にも入れず
+      // 行き場を失う)。スロットとチケットの両方に空きがある場合のみ、通常の
+      // CONFIRMED 経路を案内するエラーを返す (フォーム分岐との整合性ガード)。
+      // interactive transaction の単一コネクションは並行クエリ不可のため、各
+      // aggregate は逐次 await する (createEventRegistrationCommand と同じ制約、
+      // Promise.all 不可)。
       const slotConfirmed = await tx.eventRegistration.aggregate({
         where: { slotId: data.slotId, status: RegistrationStatus.CONFIRMED },
         _sum: { quantity: true },
       });
       const slotRemaining = slot.capacity - (slotConfirmed._sum.quantity ?? 0);
-      if (slotRemaining >= data.quantity) {
+
+      const ticketConfirmed =
+        ticket.capacity != null
+          ? await tx.eventRegistration.aggregate({
+              where: {
+                eventId: event.id,
+                ticketId: ticket.id,
+                slotId: data.slotId,
+                status: RegistrationStatus.CONFIRMED,
+              },
+              _sum: { quantity: true },
+            })
+          : null;
+      const ticketRemaining =
+        ticket.capacity != null && ticketConfirmed
+          ? ticket.capacity - (ticketConfirmed._sum.quantity ?? 0)
+          : null;
+
+      const slotHasSpace = slotRemaining >= data.quantity;
+      const ticketHasSpace =
+        ticketRemaining === null || ticketRemaining >= data.quantity;
+      if (slotHasSpace && ticketHasSpace) {
         throw new DomainError(
           "現在このスロットには空きがあります。通常の申込フォームからお申し込みください",
           "CONFLICT",
@@ -242,6 +270,11 @@ export async function offerNextWaitlistEntryCommand(
 export async function confirmWaitlistOfferCommand(data: {
   registrationId: string;
   expectedCustomerId?: string | null;
+  /**
+   * Forward-compatible field: reserved for guest-verification symmetry with
+   * `cancelEventRegistrationByToken`. Not wired into any logic yet (Task 5+).
+   */
+  tokenFingerprint?: string;
   now: Date;
 }): Promise<{
   registration: { id: string; status: "CONFIRMED" | "EXPIRED" };
