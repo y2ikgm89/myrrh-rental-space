@@ -12,6 +12,7 @@ describe("stripeSettingsSchema", () => {
       stripeSecretKey: "sk_test_xyz789",
       stripeWebhookSecret: "whsec_test123",
       stripeCurrency: "jpy" as const,
+      stripePaymentMethodTypes: ["card"] as const,
     };
 
     const result = stripeSettingsSchema.safeParse(validData);
@@ -63,6 +64,7 @@ describe("stripeSettingsSchema", () => {
       stripeEnabled: true,
       stripePublishableKey: "pk_live_abc123",
       stripeCurrency: "jpy" as const,
+      stripePaymentMethodTypes: ["card"] as const,
     };
 
     const result = stripeSettingsSchema.safeParse(data);
@@ -89,6 +91,7 @@ describe("stripeSettingsSchema", () => {
       stripeEnabled: true,
       stripeSecretKey: "sk_live_xyz789",
       stripeCurrency: "jpy" as const,
+      stripePaymentMethodTypes: ["card"] as const,
     };
 
     const result = stripeSettingsSchema.safeParse(data);
@@ -116,6 +119,7 @@ describe("stripeSettingsSchema", () => {
       stripePublishableKey: "pk_test_abc123",
       stripeSecretKey: "sk_live_xyz789", // ミスマッチ
       stripeCurrency: "jpy" as const,
+      stripePaymentMethodTypes: ["card"] as const,
     };
 
     const result = stripeSettingsSchema.safeParse(data);
@@ -136,6 +140,7 @@ describe("stripeSettingsSchema", () => {
       stripePublishableKey: "pk_test_abc123",
       stripeSecretKey: "sk_test_xyz789",
       stripeCurrency: "jpy" as const,
+      stripePaymentMethodTypes: ["card"] as const,
     };
 
     const result = stripeSettingsSchema.safeParse(data);
@@ -148,6 +153,7 @@ describe("stripeSettingsSchema", () => {
       stripePublishableKey: "pk_live_abc123",
       stripeSecretKey: "sk_live_xyz789",
       stripeCurrency: "jpy" as const,
+      stripePaymentMethodTypes: ["card"] as const,
     };
 
     const result = stripeSettingsSchema.safeParse(data);
@@ -159,6 +165,7 @@ describe("stripeSettingsSchema", () => {
       stripeEnabled: false,
       stripePublishableKey: null,
       stripeCurrency: "jpy" as const,
+      stripePaymentMethodTypes: ["card"] as const,
     };
 
     const result = stripeSettingsSchema.safeParse(data);

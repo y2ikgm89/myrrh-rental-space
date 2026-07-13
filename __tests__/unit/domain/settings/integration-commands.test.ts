@@ -111,6 +111,7 @@ describe("updateStripeSettings", () => {
       await updateStripeSettings({
         stripeEnabled: true,
         stripeCurrency: "jpy",
+        stripePaymentMethodTypes: ["card"],
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
@@ -126,6 +127,7 @@ describe("updateStripeSettings", () => {
         stripeEnabled: true,
         stripeSecretKey: "sk_test_abc123",
         stripeCurrency: "jpy",
+        stripePaymentMethodTypes: ["card"],
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
@@ -151,6 +153,7 @@ describe("updateStripeSettings", () => {
         stripeEnabled: true,
         stripeWebhookSecret: "whsec_test123",
         stripeCurrency: "jpy",
+        stripePaymentMethodTypes: ["card"],
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
@@ -174,6 +177,7 @@ describe("updateStripeSettings", () => {
       await updateStripeSettings({
         stripeEnabled: false,
         stripeCurrency: "usd",
+        stripePaymentMethodTypes: ["card"],
       });
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
@@ -193,6 +197,7 @@ describe("updateStripeSettings", () => {
         stripeEnabled: true,
         stripePublishableKey: null,
         stripeCurrency: "jpy",
+        stripePaymentMethodTypes: ["card"],
       });
 
       expect(Object.keys(lastUpdate())).not.toContain("stripePublishableKey");
@@ -202,6 +207,7 @@ describe("updateStripeSettings", () => {
       const result = await updateStripeSettings({
         stripeEnabled: true,
         stripeCurrency: "jpy",
+        stripePaymentMethodTypes: ["card"],
       });
       expect(result).toBeUndefined();
     });
@@ -218,6 +224,7 @@ describe("updateStripeSettings", () => {
           stripeEnabled: true,
           stripeSecretKey: "sk_test_abc",
           stripeCurrency: "jpy",
+          stripePaymentMethodTypes: ["card"],
         }),
       ).rejects.toMatchObject({
         code: "VALIDATION",
@@ -235,6 +242,7 @@ describe("updateStripeSettings", () => {
           stripeEnabled: true,
           stripeWebhookSecret: "whsec_test",
           stripeCurrency: "jpy",
+          stripePaymentMethodTypes: ["card"],
         }),
       ).rejects.toMatchObject({
         code: "VALIDATION",

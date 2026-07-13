@@ -54,6 +54,7 @@ export async function updateStripeSettings(
           stripeSecretKey: data.stripeSecretKey || null,
           stripeWebhookSecret: data.stripeWebhookSecret || null,
           stripeCurrency: data.stripeCurrency,
+          stripePaymentMethodTypes: data.stripePaymentMethodTypes,
         });
         return null;
       },

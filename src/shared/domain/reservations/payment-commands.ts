@@ -6,6 +6,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
 import { getAppUrl } from "@/shared/lib/constants";
+import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import {
   logError,
   normalizeError,
@@ -148,6 +149,19 @@ export async function createCheckoutSessionCommand(input: {
   const currency = stripeSettings.stripeCurrency ?? "jpy";
   const appUrl = getAppUrl();
 
+  // Settings で許可された payment_method_types のみ Stripe に渡す。
+  // ハードコード `["card"]` fallback は禁止 — 空配列 / 全て invalid はドメインエラー。
+  // claim より前で validate することで PENDING に遷移させたまま stuck を残さない。
+  const paymentMethodTypes = stripeSettings.stripePaymentMethodTypes.filter(
+    isStripePaymentMethodType,
+  );
+  if (paymentMethodTypes.length === 0) {
+    throw new DomainError(
+      "Stripe 決済方法が有効化されていません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+
   // Race-free claim: 「Stripe session を作る前」に UNPAID → PENDING を atomic に確定する。
   //
   // 旧実装は Stripe session 作成 → paymentStatus 更新 の順で、以下の race を起こしていた
@@ -221,7 +235,7 @@ export async function createCheckoutSessionCommand(input: {
   try {
     const session = await client.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
+      payment_method_types: paymentMethodTypes,
       line_items: [
         {
           price_data: {

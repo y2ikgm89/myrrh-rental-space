@@ -16,6 +16,7 @@ import {
   isValidWebhookSecret,
   keysHaveMatchingMode,
 } from "@/shared/lib/stripe-shared";
+import { STRIPE_PAYMENT_METHOD_TYPE_VALUES } from "@/shared/lib/stripe-payment-methods";
 import { optionalText, switchBoolean } from "./form-schema-helpers";
 
 // =============================================================================
@@ -95,6 +96,16 @@ export const stripeFormSchema = z
       })
       .optional(),
     stripeCurrency: z.enum(SUPPORTED_CURRENCY_VALUES),
+    // Stripe `payment_method_types`。conform の FormData から複数値を受けるため
+    // z.array を使う。SSoT の値集合は `STRIPE_PAYMENT_METHOD_TYPE_VALUES` に集約。
+    // 最低 1 件必須 — ハードコード fallback を持たない (`createCheckoutSessionCommand`
+    // が空配列を VALIDATION エラー化する契約と対称)。フィールド未提供時のみ
+    // 便宜的に `["card"]` に補完する (input 側の boundary normalization、DB default 一致)。
+    stripePaymentMethodTypes: z
+      .array(z.enum(STRIPE_PAYMENT_METHOD_TYPE_VALUES))
+      .min(1, { error: "少なくとも 1 種類の決済方法を有効にしてください" })
+      .transform((methods) => Array.from(new Set(methods)))
+      .default(["card"]),
   })
   .refine(
     (data) => {

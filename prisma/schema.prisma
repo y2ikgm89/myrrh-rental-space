@@ -1244,6 +1244,11 @@ model Settings {
   stripeWebhookSecret    String?   @db.Text // 暗号化して保存
   stripeAccountId        String?
   stripeCurrency         String    @default("jpy")
+  /// Stripe Checkout Session の `payment_method_types` に渡す method 名配列。
+  /// 有効値は `STRIPE_PAYMENT_METHOD_TYPE_VALUES`
+  /// (src/shared/lib/stripe-payment-methods.ts) で列挙し Zod で強制。
+  /// 少なくとも 1 つ必要 (domain 層で assert)。既定は `["card"]`。
+  stripePaymentMethodTypes String[]  @default(["card"])
   stripeLastTestedAt     DateTime?
   stripeConnectionStatus String?
 

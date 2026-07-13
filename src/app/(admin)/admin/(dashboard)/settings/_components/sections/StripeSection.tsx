@@ -47,6 +47,14 @@ import {
   SUPPORTED_CURRENCY_VALUES,
   isTestKey,
 } from "@/shared/lib/stripe-shared";
+import {
+  STRIPE_PAYMENT_METHOD_LABELS,
+  STRIPE_PAYMENT_METHOD_TYPE_VALUES,
+  STRIPE_PAYMENT_METHOD_CURRENCY_ALLOW,
+  isStripePaymentMethodType,
+  type StripePaymentMethodType,
+} from "@/shared/lib/stripe-payment-methods";
+import { Checkbox } from "@/admin/components/ui";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { stripeFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { StatusBanner } from "../shared/StatusBanner";
@@ -93,8 +101,39 @@ export function StripeSection({ settings }: StripeSectionProps) {
       stripeCurrency: isSupportedCurrency(settings.stripeCurrency)
         ? settings.stripeCurrency
         : "jpy",
+      stripePaymentMethodTypes:
+        settings.stripePaymentMethodTypes.filter(isStripePaymentMethodType)
+          .length > 0
+          ? settings.stripePaymentMethodTypes.filter(isStripePaymentMethodType)
+          : ["card"],
     },
   });
+
+  // 選択中の payment_method_types を state で持ち、多値 hidden input として POST。
+  // conform の getInputProps は multi-checkbox に直接対応しないため、状態管理は
+  // 手動 + hidden input で fallback する (typed-input-control でも overkill)。
+  const [selectedMethods, setSelectedMethods] = useState<
+    ReadonlyArray<StripePaymentMethodType>
+  >(() => {
+    // filter に type guard を渡すことで返り値が StripePaymentMethodType[] に narrow される
+    const seed: StripePaymentMethodType[] =
+      settings.stripePaymentMethodTypes.filter(isStripePaymentMethodType);
+    return seed.length > 0 ? seed : ["card"];
+  });
+
+  const toggleMethod = (method: StripePaymentMethodType, checked: boolean) => {
+    setSelectedMethods((prev) => {
+      const set = new Set(prev);
+      if (checked) {
+        set.add(method);
+      } else {
+        set.delete(method);
+      }
+      // 最低 1 件維持 (ドメイン層の gate と対称)。全 uncheck を防ぐ。
+      if (set.size === 0) return prev;
+      return STRIPE_PAYMENT_METHOD_TYPE_VALUES.filter((m) => set.has(m));
+    });
+  };
 
   const enabledControl = useInputControl(fields.stripeEnabled);
   const currencyControl = useInputControl(fields.stripeCurrency);
@@ -191,6 +230,17 @@ export function StripeSection({ settings }: StripeSectionProps) {
         value={enabledControl.value ?? ""}
       />
       <input type="hidden" name={fields.stripeCurrency.name} value={currency} />
+      {/* 多値 checkbox の POST 経路: 選択した method を全て個別 hidden input で出力
+        (conform は同名 name の複数値を FormData.getAll() で拾える)。名前は Zod schema の
+        stripePaymentMethodTypes に一致させ、array Zod が受け取る形にする。 */}
+      {selectedMethods.map((method) => (
+        <input
+          key={method}
+          type="hidden"
+          name={fields.stripePaymentMethodTypes.name}
+          value={method}
+        />
+      ))}
 
       <Card>
         <CardHeader>
@@ -406,6 +456,78 @@ export function StripeSection({ settings }: StripeSectionProps) {
                 </p>
               )}
             </div>
+          </div>
+
+          {/* 決済方法 (payment_method_types) — 最低 1 件必須。ハードコード fallback なし */}
+          <div className="space-y-3">
+            <div>
+              <Label>有効化する決済方法</Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Stripe Checkout で提示する決済方法を選択します。少なくとも 1
+                種類を有効にしてください。
+              </p>
+            </div>
+            <div
+              role="group"
+              aria-label="有効化する決済方法"
+              aria-describedby={
+                fields.stripePaymentMethodTypes.errors
+                  ? fields.stripePaymentMethodTypes.errorId
+                  : undefined
+              }
+              className="space-y-2 rounded-lg border p-4"
+            >
+              {STRIPE_PAYMENT_METHOD_TYPE_VALUES.map((method) => {
+                const allowedCurrencies =
+                  STRIPE_PAYMENT_METHOD_CURRENCY_ALLOW[method];
+                const disabledForCurrency =
+                  allowedCurrencies !== undefined &&
+                  !allowedCurrencies.includes(currency);
+                const isChecked = selectedMethods.includes(method);
+                const inputId = `stripe-payment-method-${method}`;
+                return (
+                  <label
+                    key={method}
+                    htmlFor={inputId}
+                    className={cn(
+                      "flex items-start gap-3 cursor-pointer",
+                      disabledForCurrency && "opacity-50 cursor-not-allowed",
+                    )}
+                  >
+                    <Checkbox
+                      id={inputId}
+                      checked={isChecked}
+                      disabled={isPending || disabledForCurrency}
+                      onCheckedChange={(checked) =>
+                        toggleMethod(method, checked === true)
+                      }
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 leading-tight">
+                      <p className="text-sm font-medium">
+                        {STRIPE_PAYMENT_METHOD_LABELS[method]}
+                      </p>
+                      {disabledForCurrency && allowedCurrencies && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          対応通貨:{" "}
+                          {allowedCurrencies
+                            .map((c) => c.toUpperCase())
+                            .join(", ")}
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            {fields.stripePaymentMethodTypes.errors && (
+              <p
+                id={fields.stripePaymentMethodTypes.errorId}
+                className="text-sm text-destructive"
+              >
+                {fields.stripePaymentMethodTypes.errors.join(", ")}
+              </p>
+            )}
           </div>
 
           {/* 通貨設定 */}
