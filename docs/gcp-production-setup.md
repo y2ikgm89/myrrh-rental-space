@@ -569,33 +569,38 @@ Add a version:
 printf '%s' "$SECRET_VALUE" | gcloud secrets versions add SECRET_NAME --data-file=-
 ```
 
-Grant the runtime identity access to only the secrets it needs:
+Runtime Secret Manager access for `$RUNTIME_SA` is bootstrapped through Cloud
+Build once and then owned by `cloudbuild.yaml` on every deploy — do not grant
+`roles/secretmanager.secretAccessor` to `$RUNTIME_SA` by hand. Grant Cloud
+Build's own SA the minimum right to manage those bindings, then let the deploy
+pipeline reapply the accessor role idempotently for every secret in the SECRETS
+list of `cloudbuild.yaml`'s `grant-secret-access` step:
 
 ```bash
-for name in \
-  DATABASE_URL \
-  BETTER_AUTH_SECRET \
-  ENCRYPTION_KEY \
-  AUDIT_LOG_HMAC_KEY \
-  NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
-  R2_ACCOUNT_ID \
-  R2_ACCESS_KEY_ID \
-  R2_SECRET_ACCESS_KEY \
-  R2_BUCKET_NAME \
-  R2_PUBLIC_URL \
-  CLOUDFLARE_ZONE_ID \
-  CLOUDFLARE_API_TOKEN \
-  CLOUDFLARE_ORIGIN_HEADER_SECRET \
-  GOOGLE_CLIENT_ID \
-  GOOGLE_CLIENT_SECRET
-do
-  gcloud secrets add-iam-policy-binding "$name" \
-    --member="serviceAccount:${RUNTIME_SA}" \
-    --role="roles/secretmanager.secretAccessor"
-done
+export PROJECT_ID BUILD_SA
+bash scripts/setup-cloud-build-permissions.sh
 ```
 
-Grant the build identity access only to the build-time secret:
+The script grants `roles/secretmanager.secretIamAdmin` (IAM-policy editing only,
+no secret value read/write) to `$BUILD_SA` at the project level. Every
+subsequent Cloud Build run then executes:
+
+```
+gcloud secrets add-iam-policy-binding <secret> \
+  --member="serviceAccount:${_SERVICE_ACCOUNT}" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+for every secret named in the `grant-secret-access` step, so a newly added
+`--set-secrets=` binding self-heals on the next deploy instead of needing an
+out-of-band `gcloud secrets add-iam-policy-binding` call. When adding a new
+Cloud Run secret binding, add the same secret name to the `SECRETS=(...)` list
+inside that step — `architecture-boundaries.test.ts` gates that the deploy
+list and the grant list stay in sync.
+
+Grant the build identity access only to the build-time secret (the deploy
+pipeline reads this one during image build via Cloud Build `availableSecrets`,
+so it belongs to `$BUILD_SA`, not the runtime SA):
 
 ```bash
 gcloud secrets add-iam-policy-binding NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
@@ -604,12 +609,11 @@ gcloud secrets add-iam-policy-binding NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
 ```
 
 Do not grant `roles/secretmanager.secretAccessor` at the project level. Keep
-Secret Manager access on each secret resource with `gcloud secrets
-add-iam-policy-binding`. The runtime service account is the only accessor for
-runtime secrets; `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` additionally allows the
-dedicated build service account because the production image build reads it
-through Cloud Build `availableSecrets`. The legacy default Cloud Build service
-account must not have Secret Manager access.
+Secret Manager access resource-scoped: runtime secrets are reachable only from
+`$RUNTIME_SA` via the Cloud Build-managed bindings above, and
+`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` additionally allows `$BUILD_SA` for the
+build-time read. The legacy default Cloud Build service account must have no
+Secret Manager access.
 
 Secret generation rules used by this app:
 
