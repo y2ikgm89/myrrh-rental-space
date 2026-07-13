@@ -56,7 +56,8 @@ interface EventInfoPanelProps {
  * 1. **Eyebrow** — "— Event —" uppercase tracking (Kinfolk hairline pattern)
  * 2. **Status band** — Badge 単独配置（申込受付中 / 申込締切 等）
  * 3. **Detail list** — 開催日時 / 開催場所 / 定員 / 参加費（全 DetailRow）
- * 4. **CTA block** — sharp-edge bronze-bordered ボタン（`registration.kind === "open"` のみ）
+ * 4. **CTA block** — sharp-edge bronze-bordered ボタン
+ *    （`registration.kind === "open" | "waitlist-available"` のみ）
  *
  * `variant="sidebar"` は `lg+` で `ArticleLayout` の `toc` slot に渡され sticky 表示、
  * `variant="mobile"` は `<lg` で本文冒頭の inline カードとして展開される。
@@ -123,13 +124,16 @@ export function EventInfoPanel({
           </DetailRow>
         ) : null}
       </dl>
-      {registration.kind === "open" ? (
+      {registration.kind === "open" ||
+      registration.kind === "waitlist-available" ? (
         <div className="px-8 pb-7 sm:px-10">
           <Link
             href={`#${registerAnchorId}`}
             className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-6 text-sm tracking-[0.12em] text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            お申し込みへ進む
+            {registration.kind === "waitlist-available"
+              ? "キャンセル待ちに申し込む"
+              : "お申し込みへ進む"}
           </Link>
         </div>
       ) : null}
@@ -154,8 +158,8 @@ function RegistrationBadgeRow({
   switch (registration.kind) {
     case "open":
       return <Badge variant="success">申込受付中</Badge>;
-    case "full":
-      return <Badge variant="warning">満員</Badge>;
+    case "waitlist-available":
+      return <Badge variant="warning">キャンセル待ち受付中</Badge>;
     case "deadline-passed":
       return <OutlineBadge>申込締切</OutlineBadge>;
     case "closed":

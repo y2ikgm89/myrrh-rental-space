@@ -2,7 +2,10 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
-import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
+import {
+  publicEventRegistrationSchema,
+  publicEventWaitlistRegistrationSchema,
+} from "@/shared/lib/validations/event-registration";
 import {
   checkActionRateLimit,
   checkBotHeuristics,
@@ -12,6 +15,8 @@ import {
 import {
   eventRegistrationByEmailRateLimiter,
   eventRegistrationSubmitRateLimiter,
+  eventWaitlistRegistrationByEmailRateLimiter,
+  eventWaitlistRegistrationSubmitRateLimiter,
   formSubmitRateLimiter,
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
@@ -24,15 +29,18 @@ import {
   createEventRegistrationCommand,
   cancelEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
+import { registerWaitlistEntryCommand } from "@/shared/domain/events/waitlist-commands";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import {
   sendEventRegistrationConfirmation,
   sendEventAdminNotification,
 } from "@/shared/lib/email/event-emails";
+import { sendEventWaitlistRegistered } from "@/shared/lib/email/event-waitlist-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,
@@ -200,6 +208,140 @@ export async function registerForEvent(
           {
             operation: "createEventRegistrationNotification",
             category: ErrorCategory.DATABASE,
+          },
+        );
+
+        return { ok: true };
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
+      }
+    },
+  );
+}
+
+/**
+ * イベントのキャンセル待ち登録（公開フォーム、満員時）。
+ *
+ * `registerForEvent` と同型のパイプライン（rate limit → email rate limit →
+ * bot heuristics → Turnstile → 規約同意 → customer 解決 → command →
+ * 規約同意証跡 → cache invalidate → fire-and-forget メール）を、
+ * `registerWaitlistEntryCommand`（advisory lock 728350 で通常申込 / キャンセルと
+ * 直列化）に差し替えて実行する。
+ *
+ * `registerWaitlistEntryCommand` はスロット/チケットに実際は空きがある場合
+ * `DomainError(..., "CONFLICT")` を throw する（フォーム分岐との整合性ガード）。
+ * この場合も他の DomainError と同様 formErrors に表示する。
+ */
+export async function registerForEventWaitlist(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    publicEventWaitlistRegistrationSchema,
+    async (data) => {
+      const rateLimit = await checkActionRateLimit(
+        eventWaitlistRegistrationSubmitRateLimiter,
+      );
+      if (!rateLimit.success) {
+        return { ok: false, error: rateLimit.error };
+      }
+
+      const emailRateLimit = await checkEmailRateLimit(
+        eventWaitlistRegistrationByEmailRateLimiter,
+        data.email,
+      );
+      if (!emailRateLimit.success) {
+        return { ok: false, error: emailRateLimit.error };
+      }
+
+      const botCheck = checkBotHeuristics({
+        honeypot: data.website,
+        formRenderedAt: data.formRenderedAt,
+      });
+      if (!botCheck.success) {
+        return { ok: false, error: botCheck.error };
+      }
+
+      const turnstile = await validateTurnstile({
+        token: data.turnstileToken,
+        expectedAction: TURNSTILE_ACTIONS.event_waitlist_register,
+      });
+      if (!turnstile.success) {
+        return { ok: false, error: turnstile.error };
+      }
+
+      // Server-side consent gate (EVENT_REGISTRATION scope の必須規約強制。
+      // 通常申込と同一 scope を共有する)
+      try {
+        await assertAllRequiredTermsAgreed({
+          scope: TermsScope.EVENT_REGISTRATION,
+          agreedTermsIds: data.agreedTermsIds,
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          error:
+            error instanceof Error ? error.message : "規約への同意が必要です",
+        };
+      }
+
+      // Get current user (non-blocking — null if not logged in)
+      const session = await getCustomerSession();
+      const user = session?.user;
+      let customerId: string | null = null;
+      if (user) {
+        const customer = await getCustomerByUserId(user.id);
+        if (customer) {
+          customerId = customer.id;
+        }
+      }
+
+      const clientIp = await getClientIpFromHeaders();
+      const headersList = await headers();
+      const userAgent = headersList.get("user-agent");
+
+      try {
+        const result = await registerWaitlistEntryCommand({
+          eventId: data.eventId,
+          slotId: data.slotId,
+          ticketId: data.ticketId,
+          name: data.name,
+          email: data.email,
+          phone: data.phone ?? null,
+          note: data.note ?? null,
+          quantity: data.quantity,
+          customerId,
+        });
+
+        if (data.agreedTermsIds.length > 0) {
+          // 法務 evidence は await で確実に記録する。
+          await recordTermsAgreementsCommand({
+            termsIds: data.agreedTermsIds,
+            scope: TermsScope.EVENT_REGISTRATION,
+            resourceId: result.registration.id,
+            customerId,
+            guestEmail: customerId ? null : data.email,
+            ipAddress: clientIp,
+            userAgent: userAgent ?? null,
+          });
+        }
+
+        // CACHE_TAGS.EVENT_WAITLIST は未追加 (Task 12 の add-cache-tag chore で
+        // 導入予定)。現時点では公開イベントページの再検証に必要な EVENTS のみ。
+        invalidateSiteWideCache([CACHE_TAGS.EVENTS]);
+
+        fireAndForget(
+          sendEventWaitlistRegistered({
+            registrationId: result.registration.id,
+            to: data.email,
+          }),
+          {
+            operation: "sendEventWaitlistRegisteredEmail",
+            category: ErrorCategory.EXTERNAL_API,
           },
         );
 

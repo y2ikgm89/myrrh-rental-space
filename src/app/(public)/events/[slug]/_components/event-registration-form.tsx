@@ -20,7 +20,10 @@ import {
   type TurnstileInstance,
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import { registerForEvent } from "@/public/actions/event-registration";
+import {
+  registerForEvent,
+  registerForEventWaitlist,
+} from "@/public/actions/event-registration";
 import type { z } from "zod";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import {
@@ -48,6 +51,14 @@ interface EventRegistrationFormProps {
   readonly requiredTerms?: readonly ConsentTerm[];
   readonly isLoggedIn: boolean;
   readonly slug: string;
+  /**
+   * "register" = 通常の空き枠への申込 (registerForEvent)。
+   * "waitlist" = 満員時のキャンセル待ち登録 (registerForEventWaitlist)。
+   * action / Turnstile action / 送信文言 / 完了メッセージがこれで分岐する。
+   * 入力フィールド自体は publicEventRegistrationSchema /
+   * publicEventWaitlistRegistrationSchema が同一形状のため共通。
+   */
+  readonly mode: "register" | "waitlist";
 }
 
 export function EventRegistrationForm({
@@ -59,8 +70,17 @@ export function EventRegistrationForm({
   requiredTerms = [],
   isLoggedIn,
   slug,
+  mode,
 }: EventRegistrationFormProps): ReactElement {
-  const firstAvailableSlot = slots.find((slot) => slot.status === "available");
+  // waitlist モードでは定義上すべてのスロットが "available" ではない
+  // (derivePublicEventRegistrationState が "waitlist-available" を返すのは
+  // 登録期間内の全スロットが "sold-out" の場合のみ)。そのため選択可能な
+  // status を mode で分岐する: register は "available"、waitlist は
+  // "sold-out"（締切済みスロットへの登録待ちは受け付けない）。
+  const joinableSlotStatus = mode === "waitlist" ? "sold-out" : "available";
+  const firstAvailableSlot = slots.find(
+    (slot) => slot.status === joinableSlotStatus,
+  );
   const initialSlotId = firstAvailableSlot?.id ?? slots[0]?.id ?? "";
   const [selectedSlotId, setSelectedSlotId] = useState<string>(initialSlotId);
   const [selectedTicketId, setSelectedTicketId] = useState<string>(
@@ -85,10 +105,16 @@ export function EventRegistrationForm({
   };
 
   const [lastResult, formAction, isPending] = useActionState(
-    registerForEvent,
+    mode === "waitlist" ? registerForEventWaitlist : registerForEvent,
     undefined,
   );
 
+  // publicEventRegistrationSchema と publicEventWaitlistRegistrationSchema は
+  // 同一 base + 同一 extend 形状 (validations/event-registration.ts 参照)。
+  // client 側の conform constraint/validate は progressive enhancement 用の
+  // UX ヒントに過ぎず、実際の enforcement は各 Server Action 内部で mode ごとに
+  // 正しいスキーマを使う executeConformMutation が担う。そのため client 側は
+  // 常に片方の schema で代表させ、mode 分岐による型の union 化を避ける。
   const [form, fields] = useForm<z.input<typeof publicEventRegistrationSchema>>(
     {
       id: "event-registration-form",
@@ -144,10 +170,14 @@ export function EventRegistrationForm({
           aria-hidden
         />
         <Heading level={3} className="mt-4">
-          お申し込みを受け付けました
+          {mode === "waitlist"
+            ? "キャンセル待ちに登録しました"
+            : "お申し込みを受け付けました"}
         </Heading>
         <p className="mt-3 text-muted-foreground">
-          確認メールをお送りしましたのでご確認ください。
+          {mode === "waitlist"
+            ? "順番が来ましたらメールでご連絡します。"
+            : "確認メールをお送りしましたのでご確認ください。"}
         </p>
         {!isLoggedIn && (
           <p className="mt-2 text-sm text-muted-foreground">
@@ -167,11 +197,13 @@ export function EventRegistrationForm({
     scheduleMode,
     slots,
   });
+  // waitlist は定員という概念が無い (誰でも並べる) ため、"残り枠" (常に 0) では
+  // なく固定上限のみで quantity をキャップする。register は従来通り残枠でキャップ。
   const quantityMax =
-    selectedRemainingCapacity !== null
+    mode === "register" && selectedRemainingCapacity !== null
       ? Math.max(1, Math.min(selectedRemainingCapacity, 10))
       : 10;
-  const canSubmitSelectedSlot = selectedSlot?.status === "available";
+  const canSubmitSelectedSlot = selectedSlot?.status === joinableSlotStatus;
 
   return (
     <section aria-label="参加申込" className="space-y-4">
@@ -188,8 +220,10 @@ export function EventRegistrationForm({
         </p>
       )}
       <div className="space-y-1">
-        <Heading level={2}>参加申込</Heading>
-        {selectedRemainingCapacity !== null ? (
+        <Heading level={2}>
+          {mode === "waitlist" ? "キャンセル待ち登録" : "参加申込"}
+        </Heading>
+        {mode === "register" && selectedRemainingCapacity !== null ? (
           <p className="text-sm text-muted-foreground">
             {showSlotSelector ? "選択中の残り枠" : "残り枠"}:{" "}
             <span className="font-medium text-foreground">
@@ -257,7 +291,7 @@ export function EventRegistrationForm({
               {slots.map((slot) => {
                 const id = `slot-option-${slot.id}`;
                 const isSelected = selectedSlot?.id === slot.id;
-                const isDisabled = slot.status !== "available";
+                const isDisabled = slot.status !== joinableSlotStatus;
                 return (
                   <label
                     key={slot.id}
@@ -420,7 +454,11 @@ export function EventRegistrationForm({
         <TurnstileWidget
           ref={turnstileRef}
           siteKey={turnstileSiteKey}
-          action={TURNSTILE_ACTIONS.event_registration}
+          action={
+            mode === "waitlist"
+              ? TURNSTILE_ACTIONS.event_waitlist_register
+              : TURNSTILE_ACTIONS.event_registration
+          }
           onVerify={handleTurnstileVerify}
           onExpire={handleTurnstileExpire}
         />
@@ -452,7 +490,11 @@ export function EventRegistrationForm({
           disabled={isPending || !allTermsAgreed || !canSubmitSelectedSlot}
           className="w-full sm:w-auto"
         >
-          {isPending ? "送信中..." : "申し込む"}
+          {isPending
+            ? "送信中..."
+            : mode === "waitlist"
+              ? "キャンセル待ちに登録する"
+              : "申し込む"}
         </Button>
       </form>
     </section>

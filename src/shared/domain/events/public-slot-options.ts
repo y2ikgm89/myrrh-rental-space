@@ -19,7 +19,7 @@ export type PublicEventRegistrationState =
       readonly availableSlotCount: number;
       readonly remainingCapacity: number;
     }
-  | { readonly kind: "full" }
+  | { readonly kind: "waitlist-available" }
   | { readonly kind: "deadline-passed" }
   | { readonly kind: "closed" };
 
@@ -128,7 +128,7 @@ export function derivePublicEventRegistrationState(params: {
     registrationWindowSlots.length > 0 &&
     registrationWindowSlots.every((slot) => slot.status === "sold-out")
   ) {
-    return { kind: "full" };
+    return { kind: "waitlist-available" };
   }
 
   if (params.slots.every((slot) => slot.status === "deadline-passed")) {

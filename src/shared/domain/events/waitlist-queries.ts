@@ -5,6 +5,7 @@ import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types"
 import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { getAppUrl } from "@/shared/lib/constants";
 import { createWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
+import { formatEventVenue } from "./venue";
 
 /**
  * 管理画面のキャンセル待ち一覧向けクエリ。
@@ -59,7 +60,8 @@ export async function getWaitlistQueue(eventId: string) {
 }
 
 /**
- * 繰り上げ当選確認ページ (`/events/waitlist-offer/[id]` 想定) 向けの単票取得クエリ。
+ * 繰り上げ当選確認ページ (`/events/waitlist/confirm` および
+ * `/events/waitlist/checkout/[token]`) 向けの単票取得クエリ。
  *
  * WAITLISTED_OFFERED（確認待ち）/ CONFIRMED（確認済み）/ EXPIRED（期限切れ表示）の
  * 3 status のみ対象。WAITLISTED（まだ順番待ち）・CANCELLED はこのページの対象外。
@@ -93,7 +95,7 @@ export async function getEventRegistrationForConfirm(registrationId: string) {
           registrationDeadline: true,
         },
       },
-      slot: { select: { startAt: true, capacity: true } },
+      slot: { select: { startAt: true, endAt: true, capacity: true } },
     },
   });
   if (!registration) return null;
@@ -109,6 +111,68 @@ export async function getEventRegistrationForConfirm(registrationId: string) {
     expiresAt: registration.expiresAt,
     event: registration.event,
     slot: registration.slot,
+  };
+}
+
+/**
+ * `confirmWaitlistOfferAction` 成功直後（CONFIRMED 化した後）の確認メール
+ * (`sendEventRegistrationConfirmation`) 送信に必要なフィールドを取得する。
+ *
+ * `getEventRegistrationForConfirm` は `event.title/slug/registrationDeadline`
+ * のみを select しており name/email/customerId/icsSequence/location を含まない
+ * ため、`getEventRegistrationForCalendar`（`registration-queries.ts`）と同型の
+ * 専用クエリを設ける（同ファイルの「1 consumer = 1 query」方針を踏襲）。
+ */
+export async function getWaitlistConfirmationEmailDetails(
+  registrationId: string,
+): Promise<{
+  readonly id: string;
+  readonly name: string;
+  readonly email: string | null;
+  readonly customerId: string | null;
+  readonly quantity: number;
+  readonly icsSequence: number;
+  readonly eventTitle: string;
+  readonly startTime: Date;
+  readonly endTime: Date;
+  readonly location: string | null;
+} | null> {
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      customerId: true,
+      quantity: true,
+      icsSequence: true,
+      slot: { select: { startAt: true, endAt: true } },
+      event: {
+        select: {
+          title: true,
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!registration) return null;
+  return {
+    id: registration.id,
+    name: registration.name,
+    email: registration.email,
+    customerId: registration.customerId,
+    quantity: registration.quantity,
+    icsSequence: registration.icsSequence,
+    eventTitle: registration.event.title,
+    startTime: registration.slot.startAt,
+    endTime: registration.slot.endAt,
+    location: formatEventVenue({
+      location: registration.event.location,
+      space: registration.event.space,
+      addressDetail: registration.event.addressDetail,
+    }),
   };
 }
 
