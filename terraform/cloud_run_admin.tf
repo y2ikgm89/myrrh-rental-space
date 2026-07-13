@@ -5,9 +5,10 @@
 # 責務は cloud_run_public.tf と同型 (Phase 6a skeleton, Phase 6b で env/secrets 移管)。
 # 相違点:
 #   - ingress: internal-and-cloud-load-balancing (external LB 経由のみ)
-#   - default URL 無効化 (Terraform 側は `custom_audiences` などで再現できない
-#     ため、cloudbuild.yaml Step 6b が担っていた `--no-default-url` を revision
-#     ごとに反映する必要がある。Phase 6b でこの点も整理する)
+#   - default URL 無効化 (`default_uri_disabled = true`)。cloudbuild.yaml Step 6b
+#     が revision ごとに `--no-default-url` を再適用していたが、Terraform 側で
+#     宣言することで再 import 後の apply が黙って default URL を復活させる
+#     regression を防ぐ (docs/gcp-production-setup.md §admin service)。
 #   - IAP 経由の authenticated-only access (`iap_enabled = true` + iap.tf の
 #     `google_iap_web_cloud_run_service_iam_member`)
 
@@ -25,6 +26,12 @@ resource "google_cloud_run_v2_service" "admin" {
   # ここで宣言することで、再 import 後の apply が黙って IAP を無効化する
   # regression (Codex P1 #1063 follow-up) を防ぐ。
   iap_enabled = true
+
+  # default *.run.app URI を無効化 (`--no-default-url` 相当)。docs L115-118 /
+  # L925-931: admin は LB + IAP 経由でのみ到達可能とする契約。cloudbuild.yaml
+  # が revision ごとに再適用しているが、Terraform 側で宣言することで再 import
+  # 後の apply による regression を防ぐ。
+  default_uri_disabled = true
 
   template {
     service_account       = google_service_account.sa["runtime"].email
@@ -90,8 +97,8 @@ resource "google_cloud_run_v2_service" "admin" {
       template[0].containers[0].image,
       template[0].containers[0].env,
       template[0].revision,
-      # default URL 無効化 (--no-default-url) は Phase 6b で cloudbuild 側から
-      # Terraform 側に移管する予定。IAP は上の iap_enabled = true で管理下。
+      # default URL 無効化 は default_uri_disabled = true で管理。IAP は
+      # 上の iap_enabled = true で管理下。
       custom_audiences,
     ]
   }

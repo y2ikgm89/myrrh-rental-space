@@ -128,3 +128,58 @@ resource "google_compute_global_forwarding_rule" "admin_https_v6" {
     prevent_destroy = true
   }
 }
+
+# -----------------------------------------------------------------------------
+# HTTP -> HTTPS redirect chain (port 80)
+# -----------------------------------------------------------------------------
+#
+# docs/gcp-production-setup.md §LB / SSL certificate に基づき、port 80 の
+# 素の HTTP リクエストは 301 で HTTPS へ redirect する。既存 GCP 上の名前:
+#   - url map:        myrrh-admin-http-redirect
+#   - target proxy:   myrrh-admin-http-proxy
+#   - forwarding v4:  myrrh-admin-http-rule
+#   - forwarding v6:  myrrh-admin-http-rule-ipv6
+# import は scripts/import-phase-7.sh で state に取り込む。
+
+resource "google_compute_url_map" "admin_http_redirect" {
+  project = var.project_id
+  name    = "myrrh-admin-http-redirect"
+
+  default_url_redirect {
+    https_redirect         = true
+    redirect_response_code = "MOVED_PERMANENTLY_DEFAULT"
+    strip_query            = false
+  }
+}
+
+resource "google_compute_target_http_proxy" "admin_http_proxy" {
+  project = var.project_id
+  name    = "myrrh-admin-http-proxy"
+  url_map = google_compute_url_map.admin_http_redirect.id
+}
+
+resource "google_compute_global_forwarding_rule" "admin_http_v4" {
+  project               = var.project_id
+  name                  = "myrrh-admin-http-rule"
+  target                = google_compute_target_http_proxy.admin_http_proxy.id
+  port_range            = "80"
+  ip_address            = google_compute_global_address.admin_lb_ipv4.address
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "google_compute_global_forwarding_rule" "admin_http_v6" {
+  project               = var.project_id
+  name                  = "myrrh-admin-http-rule-ipv6"
+  target                = google_compute_target_http_proxy.admin_http_proxy.id
+  port_range            = "80"
+  ip_address            = google_compute_global_address.admin_lb_ipv6.address
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
