@@ -11,9 +11,9 @@ import {
   getReservationRuleSettings,
 } from "@/shared/domain/reservations/availability";
 import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   CUSTOMER_SELECT,
-  buildDateTime,
   calculateHoursAndBasePrice,
   calculatePricing,
   ensureNoOverlap,
@@ -70,8 +70,10 @@ export async function createPublicReservationCommand(
     );
   }
 
-  const startDateTime = buildDateTime(input.date, input.startTime);
-  const endDateTime = buildDateTime(input.date, input.endTime);
+  const startDateTime = parseDateTimeLocalAsJst(
+    `${input.date}T${input.startTime}`,
+  );
+  const endDateTime = parseDateTimeLocalAsJst(`${input.date}T${input.endTime}`);
 
   const space = await prisma.space.findUnique({
     where: { id: input.spaceId, isActive: true, isPublished: true },

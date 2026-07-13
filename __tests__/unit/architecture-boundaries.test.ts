@@ -2069,8 +2069,9 @@ describe("architecture boundaries", () => {
     // Cloud Run (TZ=UTC) 上で `new Date(`${date}T${time}:00`)` や
     // `new Date(`${date}T${time}`)` は server-local として parse され、JST 意図の入力を
     // +9h ずらして DB に保存する silent bug (predicate: 予約書込 4 経路の PR#1 fix)。
-    // SSoT は `src/shared/lib/date-format.ts:parseDateTimeLocalAsJst`
-    // (+09:00 offset を明示付与)、reservation 経路は `buildDateTime` で経由する。
+    // SSoT は `src/shared/lib/date-format.ts:parseDateTimeLocalAsJst` (+09:00 offset を
+    // 明示付与)。予約経路 (public/admin/customer commands + mypage action) は
+    // `buildDateTime` ラッパーを廃止し、この helper を直接呼ぶ。
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = collectNonCommentOffenders(
       sourceFiles,
