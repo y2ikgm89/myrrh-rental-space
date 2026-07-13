@@ -63,7 +63,8 @@ const mockClaimReservationAsPaid = mock<
 >();
 const mockSavePaymentIntentId =
   mock<(id: string, piId: string) => Promise<void>>();
-const mockClaimReservationAsFailed = mock<(id: string) => Promise<boolean>>();
+const mockClaimReservationAsFailed =
+  mock<(id: string, sessionId: string) => Promise<boolean>>();
 const mockFindReservationByPaymentIntent =
   mock<
     (piId: string) => Promise<{ id: string; paymentStatus: string } | null>
@@ -146,7 +147,8 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   ) => mockClaimReservationAsPaid(id, data),
   savePaymentIntentId: (id: string, piId: string) =>
     mockSavePaymentIntentId(id, piId),
-  claimReservationAsFailed: (id: string) => mockClaimReservationAsFailed(id),
+  claimReservationAsFailed: (id: string, sessionId: string) =>
+    mockClaimReservationAsFailed(id, sessionId),
   findReservationByPaymentIntent: (piId: string) =>
     mockFindReservationByPaymentIntent(piId),
   claimReservationAsRefunded: (id: string) =>
@@ -611,7 +613,11 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith("res-789");
+    // session.id が第 2 引数に渡ることを assert (Codex PR #1043 P1: session 一致 gate)
+    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith(
+      "res-789",
+      "cs_test_789",
+    );
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
@@ -641,7 +647,11 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith("res-exp");
+    // session.id が第 2 引数に渡ることを assert (Codex PR #1043 P1: session 一致 gate)
+    expect(mockClaimReservationAsFailed).toHaveBeenCalledWith(
+      "res-exp",
+      "cs_test_expired",
+    );
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );

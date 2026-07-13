@@ -326,7 +326,9 @@ async function handleAsyncPaymentFailed(session: Stripe.Checkout.Session) {
   );
   if (!reservationId) return;
 
-  const claimed = await claimReservationAsFailed(reservationId);
+  // session.id を渡して stale webhook が別 session の PENDING を巻き込むのを封殺
+  // (Codex PR #1043 P1: FAILED→PENDING re-checkout race)。
+  const claimed = await claimReservationAsFailed(reservationId, session.id);
   if (claimed) {
     invalidateReservationCache(reservationId);
   }
@@ -345,7 +347,9 @@ async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
   );
   if (!reservationId) return;
 
-  const claimed = await claimReservationAsFailed(reservationId);
+  // session.id を渡して stale webhook が別 session の PENDING を巻き込むのを封殺
+  // (Codex PR #1043 P1: FAILED→PENDING re-checkout race)。
+  const claimed = await claimReservationAsFailed(reservationId, session.id);
   if (claimed) {
     invalidateReservationCache(reservationId);
   }

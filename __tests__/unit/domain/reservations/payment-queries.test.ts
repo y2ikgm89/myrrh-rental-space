@@ -67,6 +67,7 @@ import {
 // テストデータ
 const RESERVATION_ID = "550e8400-e29b-41d4-a716-446655440001";
 const PAYMENT_INTENT_ID = "pi_test_1234567890";
+const SESSION_ID = "cs_test_session_9876543210";
 
 const FULFILL_DATA = {
   id: RESERVATION_ID,
@@ -181,10 +182,10 @@ describe("reservations/payment-queries", () => {
   // =============================================================================
 
   describe("claimReservationAsFailed", () => {
-    test("PAID / REFUNDED / FAILED 以外の予約のみ FAILED に遷移", async () => {
+    test("PAID / REFUNDED / FAILED 以外 かつ session id 一致の予約のみ FAILED に遷移", async () => {
       mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
-      const result = await claimReservationAsFailed(RESERVATION_ID);
+      const result = await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
 
       expect(result).toBe(true);
       expect(mockReservationUpdateMany).toHaveBeenCalledWith(
@@ -192,6 +193,8 @@ describe("reservations/payment-queries", () => {
           where: expect.objectContaining({
             id: RESERVATION_ID,
             deletedAt: null,
+            // Codex PR #1043 P1: session 一致必須で stale webhook を封殺
+            stripeCheckoutSessionId: SESSION_ID,
             paymentStatus: {
               notIn: [
                 PaymentStatus.PAID,
@@ -207,7 +210,18 @@ describe("reservations/payment-queries", () => {
 
     test("既に PAID / REFUNDED / FAILED → false（no-op）", async () => {
       mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
-      const result = await claimReservationAsFailed(RESERVATION_ID);
+      const result = await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
+      expect(result).toBe(false);
+    });
+
+    test("stale webhook (別 session id) → count=0 で false (Codex PR #1043 P1)", async () => {
+      // 新 session が PENDING で走っている状態で OLD session の expired webhook が
+      // 再配信された想定。WHERE の stripeCheckoutSessionId 述語で一致せず count=0。
+      mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+      const result = await claimReservationAsFailed(
+        RESERVATION_ID,
+        "cs_test_STALE_session_id",
+      );
       expect(result).toBe(false);
     });
   });
@@ -327,7 +341,7 @@ describe("reservations/payment-queries", () => {
 
     test("claimReservationAsFailed は deletedAt: null 条件を含む", async () => {
       mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
-      await claimReservationAsFailed(RESERVATION_ID);
+      await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
       expect(mockReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({ deletedAt: null }),
