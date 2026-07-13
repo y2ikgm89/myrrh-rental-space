@@ -45,3 +45,19 @@ variable "public_domain" {
   type        = string
   default     = "https://rental-space.myrrh-jp.com"
 }
+
+# WIF attribute assertions — bootstrap 済み provider の attribute_condition と
+# 一致させるために必要 (Codex P1 F3)。docs/gcp-production-setup.md §WIF で
+# 既存 provider を作成した際の値を tfvars に固定 (repository_id は GitHub
+# repository の数値 ID、repository_owner_id は owner user/org の数値 ID)。
+variable "github_repository_id" {
+  description = "GitHub repository numeric ID for WIF attribute_condition (immutable across renames — prevents mapping bypass; docs/gcp-production-setup.md L155)"
+  type        = string
+  default     = "1128842422"
+}
+
+variable "github_repository_owner_id" {
+  description = "GitHub repository owner (user/org) numeric ID for WIF attribute_condition (docs/gcp-production-setup.md L156)"
+  type        = string
+  default     = "69025248"
+}

@@ -45,13 +45,53 @@ resource "google_service_account_iam_member" "terraform_runner_uses_scheduler_sa
 }
 
 # Phase 3: Secret Manager admin for Terraform runner SA (secret metadata の CRUD)。
-# 値の read (versions.access) は deny.tf の Deny Policy で拒否されるため、
-# compromise 時にも secret 値の漏洩は起きない。値の write (versions.add) は
-# Terraform 側で扱わないため runner は使わない (runbook で project owner が
-# gcloud を直接叩く運用)。
+#
+# 過去は Google predefined `roles/secretmanager.admin` を無条件付与していたが、
+# それには `secretmanager.secrets.setIamPolicy` / `.getIamPolicy` が含まれるため、
+# runner compromise 時に per-secret `SetIamPolicy` を直接叩いて任意 principal に
+# `roles/secretmanager.secretAccessor` を付ける self-grant 経路が残っていた
+# (deny.tf の deny は grantee identity ベースなので、他 principal 宛の grant は
+# 素通りする — Codex P1 F1)。
+#
+# そこで custom role にして `setIamPolicy` / `getIamPolicy` を **明示的に除外** する。
+# secret metadata の CRUD (create/delete/get/list/update)、version 管理
+# (add/destroy/disable/enable/get/list) は残す — value の read (versions.access)
+# は deny.tf が二重に封じる。
+#
+# Secret Manager IAM 反映は project-level binding (secret_iam.tf) に一本化し、
+# per-secret SetIamPolicy は使わない (Google predefined `roles/secretmanager.admin`
+# が担っていた per-secret binding は削除)。project-level `secretAccessor` 付与は
+# conditions.tf 冒頭の conditional `projectIamAdmin`
+# (modifiedGrantsByRole hasOnly ['roles/secretmanager.secretAccessor']) で
+# 引き続き runner が実行できる。
+resource "google_project_iam_custom_role" "terraform_runner_secretmanager" {
+  project     = var.project_id
+  role_id     = "terraformRunnerSecretManagerNoPolicyMgmt"
+  title       = "TF Runner Secret Manager (no IAM policy mgmt)"
+  stage       = "GA"
+  description = "Closes Codex P1 F1: compromised runner otherwise grants secretAccessor to attacker-controlled principal via per-secret SetIamPolicy, bypassing deny.tf."
+  permissions = [
+    # secret metadata CRUD (含まれない: setIamPolicy / getIamPolicy → self-grant 遮断)
+    "secretmanager.secrets.create",
+    "secretmanager.secrets.delete",
+    "secretmanager.secrets.get",
+    "secretmanager.secrets.list",
+    "secretmanager.secrets.update",
+    # version 管理 (含まれない: versions.access → deny.tf が別途封鎖)
+    "secretmanager.versions.add",
+    "secretmanager.versions.destroy",
+    "secretmanager.versions.disable",
+    "secretmanager.versions.enable",
+    "secretmanager.versions.get",
+    "secretmanager.versions.list",
+    # provider が refresh のために project 情報を読む
+    "resourcemanager.projects.get",
+  ]
+}
+
 resource "google_project_iam_member" "terraform_runner_secretmanager_admin" {
   project = var.project_id
-  role    = "roles/secretmanager.admin"
+  role    = google_project_iam_custom_role.terraform_runner_secretmanager.id
   member  = "serviceAccount:${var.terraform_runner_sa_email}"
 }
 
@@ -120,5 +160,16 @@ resource "google_project_iam_member" "terraform_runner_compute_security_admin" {
 resource "google_project_iam_member" "terraform_runner_iap_admin" {
   project = var.project_id
   role    = "roles/iap.admin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
+
+# Codex P1 F7: deny.tf の `google_iam_deny_policy` を runner SA が subsequent
+# apply で refresh / update できるようにする。`iam.denypolicies.{get,create,
+# update,delete,setIamPolicy}` は Google predefined `roles/iam.denyAdmin` の
+# みが bundle しているため他に代替なし。projectIamAdmin の condition は
+# `modifiedGrantsByRole` のみを見るため、denyAdmin 経路とは干渉しない。
+resource "google_project_iam_member" "terraform_runner_deny_admin" {
+  project = var.project_id
+  role    = "roles/iam.denyAdmin"
   member  = "serviceAccount:${var.terraform_runner_sa_email}"
 }

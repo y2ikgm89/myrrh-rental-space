@@ -24,13 +24,28 @@ resource "google_iam_deny_policy" "block_terraform_runner_from_reading_secrets" 
   display_name = "Block Terraform runner SA from reading Secret Manager values"
 
   rules {
-    description = "Terraform runner needs to manage Secret Manager IAM policies, but must never read secret values, to close the self-grant path (Codex P1 #1053)."
+    description = "Terraform runner needs to manage Secret Manager IAM policies and secret containers, but must never read secret values or mutate secret versions, to close both the self-grant-and-read and self-grant-and-inject/destroy paths (Codex P1 #1053, F2 follow-up)."
     deny_rule {
       denied_principals = [
         "principal://iam.googleapis.com/projects/-/serviceAccounts/${var.terraform_runner_sa_email}",
       ]
       denied_permissions = [
+        # Read path (Codex P1 #1053).
         "secretmanager.googleapis.com/versions.access",
+        # Write / lifecycle path (Codex P1 F2). Terraform never adds versions —
+        # secret 値は Terraform 対象外 (secrets.tf のコメント参照) で、
+        # docs/runbook/encryption-key-rotation.md に従って project owner
+        # 相当 identity が `gcloud secrets versions add` で手動 rotate する
+        # 運用のため、runner SA から下記 4 permission を denyしても正規
+        # フローは影響を受けない。閉じるリスクは:
+        #   - versions.add:      attacker-controlled secret injection
+        #   - versions.destroy:  永続 DoS (compact 済み version は復旧不能)
+        #   - versions.disable:  可逆 DoS
+        #   - versions.enable:   compromised version の再有効化
+        "secretmanager.googleapis.com/versions.add",
+        "secretmanager.googleapis.com/versions.destroy",
+        "secretmanager.googleapis.com/versions.disable",
+        "secretmanager.googleapis.com/versions.enable",
       ]
     }
   }

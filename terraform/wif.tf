@@ -34,15 +34,31 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   }
 
   # GitHub の JWT claims → Google の attribute mapping。
-  # attribute.repository で「どの repo からの呼び出しか」を SA IAM 側で
-  # principalSet を絞る根拠になる (bootstrap-terraform.sh で使用)。
+  # 既存 provider (docs/gcp-production-setup.md §WIF で bootstrap 済み) の 9-key
+  # mapping と一致させる (Codex P1 F3)。過去の 4-key 版は state import 後の
+  # 初回 apply で mapping を "REPLACE" するため、`principalSet://.../
+  # attribute.repository_id/<id>` binding が動作しなくなる drift を発生させていた。
   attribute_mapping = {
-    "google.subject"       = "assertion.sub"
-    "attribute.repository" = "assertion.repository"
-    "attribute.actor"      = "assertion.actor"
-    "attribute.ref"        = "assertion.ref"
+    "google.subject"                = "assertion.sub"
+    "attribute.actor"               = "assertion.actor"
+    "attribute.repository"          = "assertion.repository"
+    "attribute.repository_id"       = "assertion.repository_id"
+    "attribute.repository_owner"    = "assertion.repository_owner"
+    "attribute.repository_owner_id" = "assertion.repository_owner_id"
+    "attribute.ref"                 = "assertion.ref"
+    "attribute.event_name"          = "assertion.event_name"
+    "attribute.workflow"            = "assertion.workflow"
   }
 
-  # attribute condition: 指定 repo からの JWT のみ許容 (repository lockdown)。
-  attribute_condition = "assertion.repository == \"${local.github_repo}\""
+  # attribute condition: repo lockdown に加え、rename-resistant な
+  # repository_id / repository_owner_id で fork や repository rename からの
+  # なりすましを封じる。ref / event_name は tf.yml plan の pull_request 経路を
+  # 塞がないため意図的に外し (F4 側で job-level guard する)、docs の
+  # 5-clause bootstrap のうち drift を起こさない範囲に絞る。
+  #   参考: docs/gcp-production-setup.md L881
+  attribute_condition = join(" && ", [
+    "assertion.repository == \"${local.github_repo}\"",
+    "assertion.repository_id == \"${var.github_repository_id}\"",
+    "assertion.repository_owner_id == \"${var.github_repository_owner_id}\"",
+  ])
 }
