@@ -12,8 +12,8 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が唯一の正�
 | 1     | Secret Manager IAM (runtime SA / build SA 全 secret への secretAccessor) + Deny Policy + Conditions | ✅ 完了   |
 | 2     | Cloud Scheduler (13 cron jobs)                                                                      | ✅ 完了   |
 | 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                                | ✅ 完了   |
-| 4     | Artifact Registry + Cloud Build worker pool                                                         | 🚧 実装中 |
-| 5     | IAM bindings 全般 + WIF Pool/Provider                                                               | ⏳ 未着手 |
+| 4     | Artifact Registry + Cloud Build worker pool                                                         | ✅ 完了   |
+| 5     | Service Accounts + project-level IAM + WIF Pool/Provider                                            | 🚧 実装中 |
 | 6     | Cloud Run services + Job (public / admin / prisma-migrate)                                          | ⏳ 未着手 |
 | 7     | Load Balancer + IAP + DNS                                                                           | ⏳ 未着手 |
 
