@@ -13,15 +13,19 @@
 # ## リソース名の前提
 # 既存 GCP 上の LB / IAP resource は以下の名前で作成されている前提
 # (docs/gcp-production-setup.md §LB / SSL certificate — SSoT):
-#   - global address v4:      myrrh-admin-lb-ip
-#   - global address v6:      myrrh-admin-lb-ipv6
-#   - NEG:                    myrrh-admin-neg
-#   - backend service:        myrrh-admin-backend
-#   - URL map:                myrrh-admin-url-map
-#   - SSL cert:               myrrh-admin-cert-20260705
-#   - HTTPS proxy:            myrrh-admin-https-proxy
-#   - forwarding rule v4:     myrrh-admin-https-rule
-#   - forwarding rule v6:     myrrh-admin-https-rule-ipv6
+#   - global address v4:         myrrh-admin-lb-ip
+#   - global address v6:         myrrh-admin-lb-ipv6
+#   - NEG:                       myrrh-admin-neg
+#   - backend service:           myrrh-admin-backend
+#   - URL map:                   myrrh-admin-url-map
+#   - SSL cert:                  myrrh-admin-cert-20260705
+#   - HTTPS proxy:               myrrh-admin-https-proxy
+#   - HTTPS forwarding rule v4:  myrrh-admin-https-rule
+#   - HTTPS forwarding rule v6:  myrrh-admin-https-rule-ipv6
+#   - HTTP redirect url map:     myrrh-admin-http-redirect
+#   - HTTP proxy:                myrrh-admin-http-proxy
+#   - HTTP forwarding rule v4:   myrrh-admin-http-rule
+#   - HTTP forwarding rule v6:   myrrh-admin-http-rule-ipv6
 #
 # 既存 resource がこれと異なる名前で存在する場合、`terraform/lb_admin.tf` を
 # 実測名に合わせて修正してから import する。
@@ -103,6 +107,23 @@ import_one \
 import_one \
   "google_compute_global_forwarding_rule.admin_https_v6" \
   "projects/${PROJECT_ID}/global/forwardingRules/myrrh-admin-https-rule-ipv6"
+
+# HTTP -> HTTPS redirect chain (port 80)
+import_one \
+  "google_compute_url_map.admin_http_redirect" \
+  "projects/${PROJECT_ID}/global/urlMaps/myrrh-admin-http-redirect"
+
+import_one \
+  "google_compute_target_http_proxy.admin_http_proxy" \
+  "projects/${PROJECT_ID}/global/targetHttpProxies/myrrh-admin-http-proxy"
+
+import_one \
+  "google_compute_global_forwarding_rule.admin_http_v4" \
+  "projects/${PROJECT_ID}/global/forwardingRules/myrrh-admin-http-rule"
+
+import_one \
+  "google_compute_global_forwarding_rule.admin_http_v6" \
+  "projects/${PROJECT_ID}/global/forwardingRules/myrrh-admin-http-rule-ipv6"
 
 # IAP web binding (Cloud Run direct IAP scope, per admin group)。
 # 空白区切りの 3-token 形式:
