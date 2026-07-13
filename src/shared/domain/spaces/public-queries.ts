@@ -148,12 +148,26 @@ export async function getPublishedSpacesPaginated(
 }
 
 /**
- * スラッグからスペース詳細を取得（公開済み・有効のみ）
+ * スラッグからスペース詳細を取得（公開済み・有効のみ）。
+ *
+ * ## cacheTag に LOCATIONS を含める理由 (Codex PR #1041 P2)
+ *
+ * このクエリは `location.address / latitude / longitude / accessLines / parkingInfo`
+ * を select し、`/spaces/[slug]` の `AccessMap` (Google Maps Embed) を駆動する。
+ * 管理画面の `updateLocationAction` 系ミューテーションは `CACHE_TAGS.LOCATIONS`
+ * のみを invalidate するため、SPACES tag だけだと Location 側の座標編集が
+ * 公開ページに反映されず PUBLIC_CONTENT lifetime いっぱいまで旧位置の地図が
+ * 表示され続ける silent bug が発生する。Location 依存フィールドを select する
+ * cached クエリは LOCATIONS tag も同時に貼るのが SSoT パターン。
  */
 export async function getSpaceBySlug(slug: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.SPACES, getCacheTag.spaces.detail(slug));
+  cacheTag(
+    CACHE_TAGS.SPACES,
+    CACHE_TAGS.LOCATIONS,
+    getCacheTag.spaces.detail(slug),
+  );
 
   const space = await safeFetch({
     fetch: () =>
@@ -185,6 +199,8 @@ export async function getSpaceBySlug(slug: string) {
               id: true,
               name: true,
               address: true,
+              latitude: true,
+              longitude: true,
               accessLines: true,
               parkingInfo: true,
             },
