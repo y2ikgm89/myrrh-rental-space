@@ -8,7 +8,11 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
-import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
+import {
+  WAITLIST_XACT_LOCK_NAMESPACE,
+  tryAcquireWaitlistPromoteSessionLock,
+  releaseWaitlistPromoteSessionLock,
+} from "./waitlist-locks";
 
 const OFFER_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -401,6 +405,111 @@ export async function expireWaitlistOfferCommand(data: {
       return { registration: { id: target.id, status: "EXPIRED" as const } };
     },
     { maxWait: 5000, timeout: 10000 },
+  );
+}
+
+/**
+ * cron `/api/cron/waitlist-expire` 用: 1 event 分の「期限切れ WAITLISTED_OFFERED を
+ * EXPIRED 化 → 空いた (slotId, ticketId) 枠に次の WAITLISTED を FIFO promote」を
+ * まとめて処理する。呼び出し側 (route.ts) は候補を eventId でグルーピングし、
+ * event ごとにこの関数を呼ぶ。
+ *
+ * **advisory lock の二重使い分け**（`.claude/rules/business-domain.md` 「Waitlist FIFO
+ * promote」節 / `waitlist-locks.ts` の JSDoc と同じ契約）:
+ * - 728354 (`WAITLIST_PROMOTE_LOCK_NAMESPACE`, session lock): この event の走査
+ *   バッチ全体を他プロセス（別 cron 起動・手動再実行の重複）と直列化する。session
+ *   lock は物理 connection scope のため、acquire ($transaction 開始直後) → 全
+ *   candidate 処理 → release (finally) を **同一 $transaction コールバック**
+ *   (= 同一物理 connection) に閉じるのが呼び出し側の責務。この関数はその契約を
+ *   自己完結させる（tx を外に漏らさない）。
+ * - 728350 (`WAITLIST_XACT_LOCK_NAMESPACE`, xact lock): candidate ごとに
+ *   `registerWaitlistEntryCommand` / `applyEventRegistrationCancellation` と
+ *   同じ namespace を再取得し、通常の申込・キャンセル経路と直列化する。728354
+ *   の内側にネストしても namespace が異なるため自己デッドロックしない。
+ *
+ * EXPIRED 遷移は `updateMany` の WHERE (id + status:WAITLISTED_OFFERED +
+ * expiresAt<now) で atomic claim する。claim できなかった candidate
+ * (`confirmWaitlistOfferCommand` 等の別経路が先に処理済みの race) は黙って
+ * skip する。claim できた場合のみ同じ tx 内で `offerNextWaitlistEntryCommand`
+ * を呼び FIFO promote を試みる（`promoted: null` = 待機者なし、は正常系）。
+ *
+ * session lock を獲得できなかった場合（他プロセスがこの event を処理中）は
+ * 空の結果を返して commit する。保持していないロックを release してはいけない
+ * ため、その場合は release も呼ばない。
+ */
+export async function expireAndPromoteWaitlistForEventCommand(args: {
+  eventId: string;
+  candidates: readonly {
+    id: string;
+    slotId: string;
+    ticketId: string;
+    name: string;
+    email: string | null;
+  }[];
+  now: Date;
+}): Promise<{
+  expired: { id: string; name: string; email: string | null }[];
+  offered: {
+    id: string;
+    email: string | null;
+    offeredAt: Date;
+    expiresAt: Date;
+  }[];
+}> {
+  return prisma.$transaction(
+    async (tx) => {
+      const expired: { id: string; name: string; email: string | null }[] = [];
+      const offered: {
+        id: string;
+        email: string | null;
+        offeredAt: Date;
+        expiresAt: Date;
+      }[] = [];
+
+      const acquired = await tryAcquireWaitlistPromoteSessionLock(
+        tx,
+        args.eventId,
+      );
+      if (!acquired) {
+        return { expired, offered };
+      }
+
+      try {
+        for (const candidate of args.candidates) {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${args.eventId}))`;
+
+          const claim = await tx.eventRegistration.updateMany({
+            where: {
+              id: candidate.id,
+              status: RegistrationStatus.WAITLISTED_OFFERED,
+              expiresAt: { lt: args.now },
+            },
+            data: { status: RegistrationStatus.EXPIRED },
+          });
+          if (claim.count === 0) continue;
+
+          expired.push({
+            id: candidate.id,
+            name: candidate.name,
+            email: candidate.email,
+          });
+
+          const { promoted } = await offerNextWaitlistEntryCommand(tx, {
+            slotId: candidate.slotId,
+            ticketId: candidate.ticketId,
+            now: args.now,
+          });
+          if (promoted) offered.push(promoted);
+        }
+      } finally {
+        await releaseWaitlistPromoteSessionLock(tx, args.eventId);
+      }
+
+      return { expired, offered };
+    },
+    // 1 event に複数 candidate が溜まるケース（長時間 cron 未実行後の初回実行等）を
+    // 見込み、単発コマンド (5s/10s) より余裕を持たせる。
+    { maxWait: 5000, timeout: 20000 },
   );
 }
 

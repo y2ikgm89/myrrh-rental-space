@@ -11,6 +11,7 @@ export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
   "__tests__/integration/reservations/claim-commands.test.ts",
   "__tests__/integration/events/claim-commands.test.ts",
+  "__tests__/integration/api/cron-waitlist-expire.test.ts",
 ]);
 
 type TestDatabaseUrlCheckResult =

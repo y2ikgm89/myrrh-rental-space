@@ -109,3 +109,29 @@ export async function getEventRegistrationForConfirm(registrationId: string) {
     slot: registration.slot,
   };
 }
+
+/**
+ * cron `/api/cron/waitlist-expire`（hourly）用の走査クエリ。
+ *
+ * 期限切れ（`expiresAt < now`）の WAITLISTED_OFFERED を全 event 横断で取得する。
+ * `@@index([status, expiresAt])` を使うため Seq Scan にならない。呼び出し側
+ * (route.ts) が eventId でグルーピングし、event 単位で
+ * `expireAndPromoteWaitlistForEventCommand` に渡す（advisory session lock が
+ * event scope のため、処理そのものは event 単位でしか行えない）。
+ */
+export async function findExpiredWaitlistOfferCandidates(now: Date) {
+  return prisma.eventRegistration.findMany({
+    where: {
+      status: RegistrationStatus.WAITLISTED_OFFERED,
+      expiresAt: { lt: now },
+    },
+    select: {
+      id: true,
+      eventId: true,
+      slotId: true,
+      ticketId: true,
+      name: true,
+      email: true,
+    },
+  });
+}
