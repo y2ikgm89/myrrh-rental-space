@@ -46,8 +46,10 @@ format (`v2:<kid>:<purpose>:...`) and the lookup contract.
   privilege. Terraform (Phase 1) inherited the SSoT role from the interim
   bash setup script (PR #1054-#1056) and layered on an IAM Deny Policy plus
   IAM Conditions on the Terraform runner SA so even a compromised runner
-  cannot read secret values (see `terraform/deny.tf` and
-  `terraform/conditions.tf`).
+  cannot read secret values (see `terraform/deny.tf`; the conditional
+  `projectIamAdmin` and the Secret Manager custom role are provisioned by
+  `scripts/bootstrap-terraform.sh`, which is the SSoT for runner IAM after
+  the 2026-07-14 bootstrap-only refactor).
 
 If `SECONDARY_ENCRYPTION_KEYS` does not exist yet, create it once with an
 empty payload before the first rotation. The next `terraform apply` will

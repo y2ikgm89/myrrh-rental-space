@@ -587,10 +587,14 @@ guardrails ensure a compromise cannot leak secret values:
    `secretmanager.googleapis.com/versions.access` to the Terraform runner SA.
    Deny policies take precedence over allow policies, so even a self-granted
    `secretAccessor` cannot read secret payloads.
-2. **IAM Conditions** (`terraform/conditions.tf`) constrain the runner SA's
+2. **IAM Conditions** (applied by `scripts/bootstrap-terraform.sh` via
+   `gcloud add-iam-policy-binding --condition`) constrain the runner SA's
    `projectIamAdmin` to only grant `roles/secretmanager.secretAccessor` via
    the `modifiedGrantsByRole` attribute — no privilege escalation to
-   `secretmanager.admin` or unrelated roles.
+   `secretmanager.admin` or unrelated roles. Bootstrap is the SSoT for runner
+   IAM after the 2026-07-14 bootstrap-only refactor; runner bindings are not
+   re-declared in Terraform to avoid the F8 chicken-egg with conditional
+   `projectIamAdmin`.
 
 ### First-time setup (project owner, once)
 
