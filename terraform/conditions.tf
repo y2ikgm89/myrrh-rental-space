@@ -54,3 +54,21 @@ resource "google_project_iam_member" "terraform_runner_secretmanager_admin" {
   role    = "roles/secretmanager.admin"
   member  = "serviceAccount:${var.terraform_runner_sa_email}"
 }
+
+# Phase 4: Artifact Registry admin (Docker repository の CRUD)。
+# repository への image push は build SA が担うので、runner は image を
+# push しない (metadata / IAM policy のみ管理)。
+resource "google_project_iam_member" "terraform_runner_artifactregistry_admin" {
+  project = var.project_id
+  role    = "roles/artifactregistry.admin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
+
+# Phase 4: Cloud Build worker pool owner (private pool の CRUD)。
+# 個別 build の submit 権限は含まないので、runner が deploy を横取りする経路は
+# 作らない (deploy-production.yml が build SA として submit する既存契約を維持)。
+resource "google_project_iam_member" "terraform_runner_cloudbuild_workerpool_owner" {
+  project = var.project_id
+  role    = "roles/cloudbuild.workerPoolOwner"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
