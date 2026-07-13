@@ -41,6 +41,9 @@ paths:
   を updateMany claim で `EXPIRED` に、その後 event 単位で 728354 session lock を握って
   空いた枠に次の WAITLISTED を再度 promote する。**session lock は commit で自動解放
   されない** ため release を finally で必ず呼ぶ
+- session lock は物理 connection scope のため、cron 側は acquire → work → release を
+  同じ `$transaction` callback または dedicated non-pooled client 経由で呼ぶ (pooled client
+  で分けて呼ぶと `pg_advisory_unlock` が silent-false を返して leak する)
 - WAITLISTED_OFFERED 中の quantity 変更は禁止 (`updateMany` の WHERE で status で claim 済み
   のため意味的に不整合)、変更したい場合は「キャンセル → 再 waitlist 登録」を促す
 

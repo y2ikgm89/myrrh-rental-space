@@ -8,6 +8,12 @@ import "server-only";
  *   のバッチを event 単位で直列化するために使う。同一 event を 2 プロセスが同時に走査すると
  *   updateMany claim の順序が非決定的になる (FIFO の tie-breaker が壊れる) ため session lock で防ぐ。
  * - session lock は tx 境界を超えて存続する。commit/rollback で自動解放しない → 必ず release する。
+ * - **重要 (caller の責務)**: session lock は connection scope。呼び出し側は
+ *   acquire → 作業 → release の全 span を単一物理 connection に pin する必要がある
+ *   (例: `prisma.$transaction(async (tx) => { await tryAcquire(tx, ...); ...; await release(tx, ...); })`)。
+ *   pooled top-level client で acquire と release を分けて呼ぶと別 connection にルーティング
+ *   され得るため、`pg_advisory_unlock` が silent-false を返してロックが元 connection に
+ *   leak し、そのイベントの waitlist promotion が pool 再利用まで止まる。
  *
  * (namespace registry は `.claude/rules/db-domain.md` を SSoT とし、728354 を採番済み)
  */
