@@ -38,7 +38,10 @@ import type {
 import type { SlotInput } from "./slot-commands";
 import { syncEventTimeSlotsCommand } from "./slot-commands";
 import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
-import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
+import {
+  checkSpaceOverlap,
+  isActiveEventStatus,
+} from "@/shared/domain/spaces/overlap";
 
 /**
  * Domain レイヤーの Event 書き込み入力型。
@@ -182,7 +185,9 @@ export async function createEventCommand(data: EventCommandInput) {
     // Space ↔ Reservation cross-table overlap check (Priority-10 audit #4)。
     // Event が spaceId を持つ場合、advisory lock で Space スケジュール空間を直列化して
     // 各スロットが Reservation / 他 Event と重複しないことを確認する。
-    if (data.spaceId) {
+    // Codex P2 #1019 (comment 3566931086): CANCELLED / ARCHIVED は Space を占有しない
+    // ため検査を skip (DB CONSTRAINT TRIGGER も同じ status で短絡: migration 20260713044626)。
+    if (data.spaceId && isActiveEventStatus(data.status)) {
       await lockSpaceForTransaction(tx, data.spaceId);
       for (const slot of data.slots) {
         const overlap = await checkSpaceOverlap(
@@ -289,7 +294,11 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     // spaceId が指定されていれば advisory lock で Space スケジュール空間を直列化し、
     // 各スロットが Reservation / 他 Event と重複しないことを確認する。
     // excludeEventId で自イベントの既存スロットは除外 (slot 差分同期の前提)。
-    if (data.spaceId) {
+    // Codex P2 #1019 (comment 3566931086): CANCELLED / ARCHIVED は Space を占有しない
+    // ため検査を skip (DB CONSTRAINT TRIGGER も同じ status で短絡: migration 20260713044626)。
+    // これにより「PUBLISHED → CANCELLED を保存したいがレガシー重複データが
+    // 存在するため CONFLICT で拒否される」正当遷移の誤 block を防ぐ。
+    if (data.spaceId && isActiveEventStatus(data.status)) {
       await lockSpaceForTransaction(tx, data.spaceId);
       for (const slot of data.slots) {
         const overlap = await checkSpaceOverlap(

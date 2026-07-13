@@ -5,10 +5,30 @@ import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/help
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { PrismaTransactionClient } from "@/shared/lib/reservation/types";
 
-const ACTIVE_EVENT_STATUSES: readonly EventStatus[] = [
+/**
+ * Space スケジュール空間を占有するアクティブな EventStatus。
+ *
+ * DRAFT / PUBLISHED のみが Space を占有し、CANCELLED / ARCHIVED は占有しない。
+ * この定義は DB 側の CONSTRAINT TRIGGER
+ * (`check_event_slot_no_reservation_overlap` /
+ *  `check_reservation_no_event_slot_overlap`, migration 20260713044626)
+ * の `event_status NOT IN ('DRAFT', 'PUBLISHED') → return NEW` 短絡と揃える。
+ * ここを変えた場合は migration 側 SQL の status リストも同時に更新すること。
+ */
+export const ACTIVE_EVENT_STATUSES: readonly EventStatus[] = [
   EventStatus.DRAFT,
   EventStatus.PUBLISHED,
 ];
+
+/**
+ * 引数の EventStatus が Space を占有するアクティブ状態かを判定する。
+ * `checkSpaceOverlap` を呼ぶ書込経路 (createEventCommand / updateEventCommand) で、
+ * CANCELLED / ARCHIVED への遷移では overlap 検査を skip するために使う
+ * (Space を占有しない terminal 状態には検査不要 — DB trigger と揃える)。
+ */
+export function isActiveEventStatus(status: EventStatus): boolean {
+  return ACTIVE_EVENT_STATUSES.includes(status);
+}
 
 export type SpaceOverlapParams = {
   spaceId: string;
