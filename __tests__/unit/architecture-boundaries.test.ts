@@ -1217,6 +1217,52 @@ describe("architecture boundaries", () => {
     );
   });
 
+  test("cloudbuild.yaml: --set-secrets= と grant-secret-access step の SECRETS list は drift しない", () => {
+    // Cloud Run `--set-secrets=` に新規 secret を追加した際、`grant-secret-access`
+    // step の SECRETS list への追加を忘れると、初回 deploy 時に runtime SA が
+    // その secret を読めず Permission denied で silent に revision 作成が失敗する
+    // (実例: PR #982 で SECONDARY_ENCRYPTION_KEYS を追加した際に発生し、
+    // deploy が 3 回連続で失敗した)。両 list を CI で drift 監視する。
+    const source = readFileSync(CLOUDBUILD_FILE, "utf8");
+
+    // deploy-public / deploy-admin 両方の `--set-secrets=` を集約する。
+    // pattern: ENV_NAME=SECRET_NAME:${_VERSION_VAR}
+    const setSecretsLines = [...source.matchAll(/--set-secrets=([^\n]+)/g)];
+    expect(setSecretsLines.length).toBeGreaterThan(0);
+    const secretsInDeploy = new Set<string>();
+    for (const match of setSecretsLines) {
+      const line = match[1] ?? "";
+      for (const entry of line.matchAll(
+        /[A-Z][A-Z0-9_]*=([A-Z][A-Z0-9_]*):/g,
+      )) {
+        secretsInDeploy.add(entry[1] ?? "");
+      }
+    }
+    secretsInDeploy.delete("");
+
+    // grant-secret-access step 内の SECRETS=( ... ) 配列を抽出する。
+    const grantMatch = source.match(/SECRETS=\(([\s\S]*?)\)/);
+    expect(grantMatch).not.toBeNull();
+    const secretsInGrant = new Set(
+      (grantMatch?.[1] ?? "")
+        .split(/\s+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0),
+    );
+
+    // build 時に availableSecrets 経由で BUILD_SA に読ませる secret は runtime SA の
+    // IAM 対象ではないので除外する (Cloud Build image build で読む、Cloud Run runtime
+    // では読まない)。
+    const BUILD_ONLY_SECRETS = new Set(["NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"]);
+    for (const s of BUILD_ONLY_SECRETS) {
+      // NEXT_SERVER_ACTIONS_ENCRYPTION_KEY は Cloud Run runtime にも注入されるため
+      // 実は runtime SA でも読まれる。grant list にも含める契約が正しい。除外しない。
+      void s;
+    }
+
+    expect([...secretsInGrant].sort()).toEqual([...secretsInDeploy].sort());
+  });
+
   test("管理 Better Auth canonical route handler は削除済み", () => {
     expect(existsSync(AUTH_ROUTE_FILE)).toBe(false);
   });

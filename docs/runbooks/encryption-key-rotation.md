@@ -30,18 +30,23 @@ format (`v2:<kid>:<purpose>:...`) and the lookup contract.
     format is invalid, so we fail closed at startup rather than at decrypt.
 - `cloudbuild.yaml` binds `SECONDARY_ENCRYPTION_KEYS` at the version pinned by
   `_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION` (default `"1"`).
+- Cloud Build's `grant-secret-access` step reapplies
+  `roles/secretmanager.secretAccessor` to the runtime SA for every secret
+  listed in that step (including `SECONDARY_ENCRYPTION_KEYS`) on each deploy.
+  This is one-time bootstrapped by
+  `bash scripts/setup-cloud-build-permissions.sh`, which grants Cloud Build's
+  SA `roles/secretmanager.secretIamAdmin` on the project. Do not fall back to
+  granting the accessor role by hand — the deploy pipeline is the SSoT and
+  ad-hoc grants drift out of the SECRETS list.
 
 If `SECONDARY_ENCRYPTION_KEYS` does not exist yet, create it once with an
-empty payload before the first rotation:
+empty payload before the first rotation. The Cloud Build deploy that follows
+takes care of the IAM binding automatically:
 
 ```sh
 printf '' | gcloud secrets create SECONDARY_ENCRYPTION_KEYS \
   --project="$PROJECT_ID" \
   --data-file=-
-gcloud secrets add-iam-policy-binding SECONDARY_ENCRYPTION_KEYS \
-  --project="$PROJECT_ID" \
-  --member="serviceAccount:$RUNTIME_SA" \
-  --role="roles/secretmanager.secretAccessor"
 ```
 
 ## Rotation flow
