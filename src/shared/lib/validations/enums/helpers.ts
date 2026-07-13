@@ -625,15 +625,18 @@ export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
  * - `CUSTOMER_MYPAGE`: マイページから会員自身が実行（明示版）
  * - `CUSTOMER_TOKEN`: 確認メールのキャンセルリンクから実行（ゲスト or 会員）
  * - `ADMIN`: 管理画面から管理者が実行
+ * - `SYSTEM`: システム（cron 経路等）が自動実行。stale PENDING の fail-safe 期限切れ
+ *   キャンセル (`/api/cron/pending-reservation-expire`) で使用。
  *
  * 既存データ（`CUSTOMER`）は `CUSTOMER_MYPAGE` 相当として扱う。新規書き込みは
- * 経路別 (`CUSTOMER_MYPAGE` / `CUSTOMER_TOKEN`) を必ず指定する。
+ * 経路別 (`CUSTOMER_MYPAGE` / `CUSTOMER_TOKEN` / `SYSTEM`) を必ず指定する。
  */
 export const CANCELLED_BY = {
   CUSTOMER: "CUSTOMER",
   CUSTOMER_MYPAGE: "CUSTOMER_MYPAGE",
   CUSTOMER_TOKEN: "CUSTOMER_TOKEN",
   ADMIN: "ADMIN",
+  SYSTEM: "SYSTEM",
 } as const;
 
 export type CancelledByType = (typeof CANCELLED_BY)[keyof typeof CANCELLED_BY];
@@ -643,6 +646,7 @@ export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
   [CANCELLED_BY.CUSTOMER_MYPAGE]: "顧客（マイページ）",
   [CANCELLED_BY.CUSTOMER_TOKEN]: "顧客（メールリンク）",
   [CANCELLED_BY.ADMIN]: "管理者",
+  [CANCELLED_BY.SYSTEM]: "システム（自動）",
 };
 
 // =============================================================================

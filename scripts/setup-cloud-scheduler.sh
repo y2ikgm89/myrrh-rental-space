@@ -63,6 +63,7 @@ JOBS=(
   "reservation-reminder|0 * * * *|/api/cron/reservation-reminder|Reservation reminder email dispatch (hourly)"
   "event-reminder|0 * * * *|/api/cron/event-reminder|Event reminder email dispatch (hourly, opt-in via Settings.notifyEventReminder)"
   "smart-lock-cleanup|*/15 * * * *|/api/cron/smart-lock-cleanup|SwitchBot passcode revoke for expired/cancelled reservations (every 15 min, opt-in via Settings.switchbotEnabled)"
+  "pending-reservation-expire|*/15 * * * *|/api/cron/pending-reservation-expire|Auto-cancel PENDING reservations older than the fail-safe window to release EXCLUDE-lock (every 15 min, feature module reservation gate)"
   "data-retention|30 3 * * *|/api/cron/data-retention|PII retention purge (Session/Verification/login_attempts/Reservation.guest*/Inquiry/INACTIVE Customer, daily 03:30 JST, opt-in via feature module data-retention)"
 )
 
