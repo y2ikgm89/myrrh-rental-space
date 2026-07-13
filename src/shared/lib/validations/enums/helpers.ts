@@ -589,12 +589,50 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
 };
 
 // =============================================================================
+// RegistrationStatus Sets（waitlist）
+// =============================================================================
+
+/**
+ * 顧客自身がキャンセル可能な status。
+ * EXPIRED / CANCELLED は既に終端のため対象外。
+ */
+export const CANCELLABLE_REGISTRATION_STATUSES = [
+  RegistrationStatus.CONFIRMED,
+  RegistrationStatus.WAITLISTED,
+  RegistrationStatus.WAITLISTED_OFFERED,
+] as const satisfies readonly RegistrationStatus[];
+
+/** マイページの「これから」タブで active 扱いする waitlist 系 status */
+export const WAITLIST_ACTIVE_STATUSES = [
+  RegistrationStatus.WAITLISTED,
+  RegistrationStatus.WAITLISTED_OFFERED,
+] as const satisfies readonly RegistrationStatus[];
+
+/** waitlist queue から除外する終端 status */
+export const WAITLIST_TERMINAL_STATUSES = [
+  RegistrationStatus.EXPIRED,
+  RegistrationStatus.CANCELLED,
+] as const satisfies readonly RegistrationStatus[];
+
+/** マイページの「これから」判定用（CONFIRMED + waitlist 系） */
+export const ACTIVE_REGISTRATION_STATUSES = [
+  RegistrationStatus.CONFIRMED,
+  ...WAITLIST_ACTIVE_STATUSES,
+] as const satisfies readonly RegistrationStatus[];
+
+/** unknown 値の RegistrationStatus narrowing（実装は guards.ts の SSoT を再 export） */
+export { isValidRegistrationStatus } from "./guards";
+
+// =============================================================================
 // RegistrationStatus Labels
 // =============================================================================
 
 export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> = {
   [RegistrationStatus.CONFIRMED]: "申込済み",
   [RegistrationStatus.CANCELLED]: "キャンセル済み",
+  [RegistrationStatus.WAITLISTED]: "キャンセル待ち",
+  [RegistrationStatus.WAITLISTED_OFFERED]: "繰り上げ当選中",
+  [RegistrationStatus.EXPIRED]: "期限切れ",
 };
 
 // =============================================================================
