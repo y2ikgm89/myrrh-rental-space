@@ -62,8 +62,12 @@ mock.module("@/shared/lib/errors/server", () => ({
 // 実装は prisma.adminNotification.create を呼ぶが、この test file は
 // smartLockPasscode 系しか mock していないため、素通しだと fireAndForget が
 // catch → logError の予期せぬ呼出になる。
+// Codex P2 #1014 (comment 3566818385) 対応の race 検証のため、tracked mock 化。
+const mockCreateNotification = mock<(args: unknown) => Promise<unknown>>(() =>
+  Promise.resolve(),
+);
 mock.module("@/shared/domain/notifications/commands", () => ({
-  createNotificationCommand: () => Promise.resolve(),
+  createNotificationCommand: (args: unknown) => mockCreateNotification(args),
 }));
 
 const {
@@ -88,6 +92,7 @@ describe("expireStalePendingSmartLockPasscodes", () => {
   beforeEach(() => {
     mockUpdateMany.mockClear();
     mockFindMany.mockClear();
+    mockCreateNotification.mockClear();
     mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 0 }));
     // PR#11: findMany が空の場合は updateMany を呼ばず早期 return する。
     // 個別 test で「呼ばれる」ケースを検証したい時はここを上書きする。
@@ -143,5 +148,63 @@ describe("expireStalePendingSmartLockPasscodes", () => {
     mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 7 }));
     const result = await expireStalePendingSmartLockPasscodes(new Date());
     expect(result).toBe(7);
+  });
+
+  // Codex P2 #1014 (comment 3566818385): notify only rows actually transitioned to FAILED
+  test("count が snapshot と一致すれば post-update findMany は skip する (common path)", async () => {
+    mockFindMany.mockImplementation(() =>
+      Promise.resolve([
+        { id: "p1", reservationId: "r1" },
+        { id: "p2", reservationId: "r2" },
+      ]),
+    );
+    mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 2 }));
+
+    await expireStalePendingSmartLockPasscodes(new Date());
+
+    // pre-snapshot の 1 回だけ (post-update 再取得は subset 完全一致で skip)。
+    expect(mockFindMany).toHaveBeenCalledTimes(1);
+    // dedupe 済み 2 件の reservation それぞれに通知が飛ぶ。
+    expect(mockCreateNotification).toHaveBeenCalledTimes(2);
+  });
+
+  test("PENDING → CONFIRMED に webhook で flip した行は通知しない (race 保護)", async () => {
+    // pre-snapshot は 2 件 stale。updateMany 直前に webhook が p2 を CONFIRMED に
+    // flip → status: PENDING 述語で弾かれて count = 1。post-update findMany は
+    // FAILED になった p1 だけを返す。通知は r1 のみに発火し、r2 (実は成功) には出ない。
+    mockFindMany
+      .mockImplementationOnce(() =>
+        Promise.resolve([
+          { id: "p1", reservationId: "r1" },
+          { id: "p2", reservationId: "r2" },
+        ]),
+      )
+      .mockImplementationOnce(() =>
+        Promise.resolve([{ id: "p1", reservationId: "r1" }]),
+      );
+    mockUpdateMany.mockImplementation(() => Promise.resolve({ count: 1 }));
+
+    await expireStalePendingSmartLockPasscodes(new Date());
+
+    // 2 回目の findMany は snapshot の id 集合を status: FAILED で絞り込む。
+    expect(mockFindMany).toHaveBeenCalledTimes(2);
+    const secondCall = mockFindMany.mock.calls[1];
+    if (!secondCall) throw new Error("post-update findMany was not called");
+    const secondArgs = secondCall[0] as {
+      where: { id: { in: string[] }; status: string };
+    };
+    expect(secondArgs.where.status).toBe("FAILED");
+    expect(secondArgs.where.id.in).toEqual(["p1", "p2"]);
+
+    // 通知は r1 のみ。r2 は実は confirmed 済みなので発火しないことを検証。
+    expect(mockCreateNotification).toHaveBeenCalledTimes(1);
+    const notifyCall = mockCreateNotification.mock.calls[0];
+    if (!notifyCall) throw new Error("notification was not fired");
+    const notifyArgs = notifyCall[0] as {
+      resourceType: string;
+      resourceId: string;
+    };
+    expect(notifyArgs.resourceType).toBe("reservation");
+    expect(notifyArgs.resourceId).toBe("r1");
   });
 });
