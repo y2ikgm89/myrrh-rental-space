@@ -14,15 +14,20 @@ import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 
 /**
- * PENDING 予約の fail-safe 有効期限（分）。この分数を超えて残った PENDING は
- * cron が自動 CANCELLED 遷移させる。
+ * PENDING 予約の fail-safe 有効期限（分）。**checkout 開始時刻** (Reservation.paymentInitiatedAt)
+ * からこの分数を超えて `paymentStatus = PENDING` のまま残っている予約を cron が自動 CANCELLED
+ * 遷移させる。
  *
  * Stripe Checkout Session の既定 expiration (24h) より短く、実運用の
  * 「決済に迷って離脱」パターンを吸収する余地を持たせて 60 分を採用。
- * `createCheckoutSessionCommand` の UNPAID→PENDING claim (payment-commands.ts)
+ * `createCheckoutSessionCommand` の UNPAID/FAILED → PENDING claim (payment-commands.ts)
  * と、`checkout.session.expired` webhook (`claimReservationAsFailed`) の
  * どちらも届かないケース (webhook 未設定、ネットワーク断、Stripe 側障害) に
  * 対する最終セーフティネット。
+ *
+ * 予約作成時刻 (createdAt) ではなく checkout 開始時刻で判定するため、予約作成から時間を
+ * おいて決済を開始したケース (Codex P1: PR#1042) を誤爆せず、FAILED → PENDING の
+ * 再 checkout でも refresh される。
  */
 export const PENDING_RESERVATION_EXPIRY_MINUTES = 60;
 
@@ -39,18 +44,25 @@ interface ExpirePendingReservationsResult {
 }
 
 /**
- * PENDING 状態のまま `PENDING_RESERVATION_EXPIRY_MINUTES` を超えた予約を CANCELLED に
- * 遷移させて空き枠（DB EXCLUDE 制約）を解放する。
+ * `paymentStatus = PENDING` のまま `PENDING_RESERVATION_EXPIRY_MINUTES` を超えた予約を
+ * CANCELLED に遷移させて空き枠（DB EXCLUDE 制約）を解放する。
  *
  * 冪等・at-least-once 安全:
- * - `updateMany` の WHERE で status/paymentStatus/createdAt/deletedAt を全て assert し、
- *   race で他経路（顧客の checkout / webhook / 管理者操作）が状態を進めていた予約は
- *   自動的に対象外になる
- * - `paymentStatus` は PAID/REFUNDED を除外（万一の PAID/PENDING mismatch や、
- *   webhook 遅延で PAID になった予約を巻き戻さない）
+ * - `updateMany` の WHERE で status / paymentStatus / paymentInitiatedAt / deletedAt を
+ *   全て assert し、race で他経路（顧客の checkout / webhook / 管理者操作）が状態を進めて
+ *   いた予約は自動的に対象外になる
  * - claim 対象を先に select してから updateMany の WHERE で id in [...] で
  *   claim する 2 段構え。監査ログ用のメタ情報 (spaceId / customerId / 年齢) を
  *   claim 後にも安定して取れる
+ *
+ * 判定軸 (Codex P1 対応):
+ * - `paymentStatus: PENDING`: PAID/REFUNDED は自動除外され、terminal な決済状態を
+ *   巻き戻さない
+ * - `status: PENDING | CONFIRMED`: 公開経路の予約は `status = CONFIRMED` + `paymentStatus = PENDING`
+ *   で作成される (`createPublicReservationCommand`)。admin 経路の PENDING も救う
+ * - `paymentInitiatedAt: { lt: cutoff }`: checkout 開始時刻を cutoff の基準とする。予約作成
+ *   から時間をおいて checkout を開始したケース (createdAt < cutoff でも checkout はまだ生きている)
+ *   の誤爆を防ぐ
  *
  * cron から呼ぶ想定 (`/api/cron/pending-reservation-expire`)。他経路からは呼ばない。
  */
@@ -60,21 +72,21 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
     now.getTime() - PENDING_RESERVATION_EXPIRY_MINUTES * MS_PER_MINUTE,
   );
 
-  // 1) 対象候補を select（監査ログ用の spaceId / customerId / createdAt を確保）
+  // 1) 対象候補を select（監査ログ用の spaceId / customerId / paymentInitiatedAt を確保）
   const candidates = await prisma.reservation.findMany({
     where: {
       deletedAt: null,
-      status: ReservationStatus.PENDING,
-      createdAt: { lt: cutoff },
-      paymentStatus: {
-        notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+      status: {
+        in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
       },
+      paymentStatus: PaymentStatus.PENDING,
+      paymentInitiatedAt: { lt: cutoff },
     },
     select: {
       id: true,
       customerId: true,
       spaceId: true,
-      createdAt: true,
+      paymentInitiatedAt: true,
     },
   });
 
@@ -89,11 +101,11 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
     where: {
       id: { in: candidateIds },
       deletedAt: null,
-      status: ReservationStatus.PENDING,
-      createdAt: { lt: cutoff },
-      paymentStatus: {
-        notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+      status: {
+        in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
       },
+      paymentStatus: PaymentStatus.PENDING,
+      paymentInitiatedAt: { lt: cutoff },
     },
     data: {
       status: ReservationStatus.CANCELLED,
@@ -121,10 +133,9 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
 
   const expiredLogs: ExpiredReservationLog[] = settled.map((row) => {
     const candidate = candidates.find((c) => c.id === row.id);
-    const ageMinutes = candidate
-      ? Math.floor(
-          (now.getTime() - candidate.createdAt.getTime()) / MS_PER_MINUTE,
-        )
+    const initiatedAt = candidate?.paymentInitiatedAt;
+    const ageMinutes = initiatedAt
+      ? Math.floor((now.getTime() - initiatedAt.getTime()) / MS_PER_MINUTE)
       : PENDING_RESERVATION_EXPIRY_MINUTES;
     return {
       id: row.id,

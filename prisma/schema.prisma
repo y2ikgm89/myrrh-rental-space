@@ -600,6 +600,13 @@ model Reservation {
   stripeCheckoutSessionId String?
   stripePaymentIntentId   String?
   paidAt                  DateTime?
+  /// checkout session を開始した (paymentStatus を PENDING に遷移させた) 最終時刻。
+  /// fail-safe cron (`/api/cron/pending-reservation-expire`) が
+  /// `PENDING_RESERVATION_EXPIRY_MINUTES` の cutoff 判定に使う。予約作成時刻
+  /// (createdAt) ではなく checkout 開始時刻で判定することで、予約作成から時間をおいて
+  /// 決済を開始したケース (createdAt < cutoff だが checkout はまだ生きている) を誤爆
+  /// せず、FAILED → PENDING の再 checkout でも refresh される。
+  paymentInitiatedAt      DateTime?
 
   // Cancellation tracking
   cancellationReason String?   @db.Text
