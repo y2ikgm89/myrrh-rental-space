@@ -30,17 +30,19 @@ format (`v2:<kid>:<purpose>:...`) and the lookup contract.
     format is invalid, so we fail closed at startup rather than at decrypt.
 - `cloudbuild.yaml` binds `SECONDARY_ENCRYPTION_KEYS` at the version pinned by
   `_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION` (default `"1"`).
-- Cloud Build's `grant-secret-access` step reapplies
-  `roles/secretmanager.secretAccessor` to the runtime SA for every secret
-  listed in that step (including `SECONDARY_ENCRYPTION_KEYS`) on each deploy.
-  This is one-time bootstrapped by
-  `bash scripts/setup-cloud-build-permissions.sh`, which creates a project
-  custom role (`getIamPolicy` + `setIamPolicy` only, no value access) and
-  grants it to Cloud Build's SA. The pre-defined `roles/secretmanager.admin`
-  is intentionally NOT used — it would let a compromised build SA read or
-  destroy every runtime secret in the project. Do not fall back to granting
-  the accessor role by hand — the deploy pipeline is the SSoT and ad-hoc
-  grants drift out of the SECRETS list.
+- `scripts/setup-cloud-build-permissions.sh` is the SSoT for runtime SA
+  Secret Manager IAM: it grants `roles/secretmanager.secretAccessor` on every
+  secret listed in its `SECRETS=(...)` array (including
+  `SECONDARY_ENCRYPTION_KEYS`) to the runtime SA. Re-run the script whenever
+  you add or rename a secret binding. Do not grant `secretAccessor` by hand —
+  `architecture-boundaries.test.ts` gates that the script and the
+  `cloudbuild.yaml` `--set-secrets=` bindings stay in sync.
+- Cloud Build itself has **no Secret Manager IAM permission**. An earlier
+  design (PR #1051-#1053) let Cloud Build reapply IAM automatically, but any
+  role that includes `setIamPolicy` opens a self-grant path back to
+  `secretAccessor`, so the pipeline is not the right place to hold that
+  privilege. Only the setup script (run by a project owner) writes secret
+  IAM bindings.
 
 If `SECONDARY_ENCRYPTION_KEYS` does not exist yet, create it once with an
 empty payload before the first rotation. The Cloud Build deploy that follows

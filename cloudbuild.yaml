@@ -543,73 +543,22 @@ steps:
         fi
         exit 1
 
-  # Step 5c: Grant runtime SA read access to every Secret Manager secret used by
-  # Cloud Run `--set-secrets=` bindings.
-  #
-  # Cloud Run resolves `--set-secrets=` by having the runtime service account
-  # (${_SERVICE_ACCOUNT}) read the referenced secret at revision-creation time.
-  # 新規 secret を追加したときに手動で `roles/secretmanager.secretAccessor` を
-  # 付与する運用は、runbook が読まれないと deploy が silent に落ちる温床だった
-  # (実例: SECONDARY_ENCRYPTION_KEYS 追加時に IAM 反映漏れで 3 回連続 deploy 失敗)。
-  #
-  # deploy 前に全 secret に対して IAM binding を idempotent に適用する。既に
-  # 付与済みなら no-op、新規 secret でも初回 deploy で自動反映される。
-  #
-  # ## SSoT 契約
-  #
-  # 下記の SECRETS list は Step 6a/6b の `--set-secrets=` で参照する secret 名の
-  # 一覧と一致させる。両者が drift すると `architecture-boundaries.test.ts` の
-  # gate が CI で fail する (production secret を追加した際は cloudbuild.yaml の
-  # `--set-secrets=` と本 SECRETS list の両方を更新すること)。
-  #
-  # ## 事前要件
-  #
-  # Cloud Build service account (${_BUILD_SERVICE_ACCOUNT}) は project 上の
-  # custom role (`projects/${PROJECT_ID}/roles/secretIamManager`、権限は
-  # `secretmanager.secrets.getIamPolicy` と `secretmanager.secrets.setIamPolicy`
-  # のみ) を持つ必要がある。documented な `roles/secretmanager.admin` は
-  # secret の値 read / destroy まで許可されるため採用しない (Codex P1 #1052)。
-  # 初回 setup:
-  #   bash scripts/setup-cloud-build-permissions.sh
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: grant-secret-access
-    waitFor: [migrate-execute]
-    entrypoint: bash
-    args:
-      - -ceu
-      - |
-        SECRETS='
-          DATABASE_URL
-          BETTER_AUTH_SECRET
-          ENCRYPTION_KEY
-          SECONDARY_ENCRYPTION_KEYS
-          AUDIT_LOG_HMAC_KEY
-          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
-          R2_ACCOUNT_ID
-          R2_ACCESS_KEY_ID
-          R2_SECRET_ACCESS_KEY
-          R2_BUCKET_NAME
-          R2_PUBLIC_URL
-          CLOUDFLARE_ZONE_ID
-          CLOUDFLARE_API_TOKEN
-          CLOUDFLARE_ORIGIN_HEADER_SECRET
-          GOOGLE_CLIENT_ID
-          GOOGLE_CLIENT_SECRET
-        '
-        for secret in $$SECRETS; do
-          echo "Granting roles/secretmanager.secretAccessor on $$secret to ${_SERVICE_ACCOUNT}"
-          gcloud secrets add-iam-policy-binding "$$secret" \
-            --project="${PROJECT_ID}" \
-            --member="serviceAccount:${_SERVICE_ACCOUNT}" \
-            --role="roles/secretmanager.secretAccessor" \
-            --condition=None \
-            --quiet
-        done
+  # NOTE: 過去のバージョン (PR #1051-#1053) はここに `grant-secret-access` step
+  # を置き、Cloud Build SA が deploy 毎に runtime SA へ Secret Accessor role を
+  # 自動反映していた。しかし Cloud Build SA に `secretmanager.secrets.setIamPolicy`
+  # を持たせると、compromise 時に自分自身に secretAccessor を付与して全 secret を
+  # 読取れる self-grant 経路になる (Codex Cloud Review P1: PR #1053 comment
+  # 3572078673)。恒久解決は「Cloud Build SA から Secret Manager IAM 権限を完全に
+  # 外す」こと。runtime SA への Secret Accessor は project owner が
+  # `scripts/setup-cloud-build-permissions.sh` を bootstrap / 新規 secret 追加時
+  # に手動実行して idempotent 反映する。cloudbuild.yaml の `--set-secrets=` と
+  # setup script の SECRETS list の同期は `architecture-boundaries.test.ts` の
+  # drift gate が CI で強制する。
 
   # Step 6a: Deploy public Cloud Run service
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-public
-    waitFor: [grant-secret-access]
+    waitFor: [migrate-execute]
     entrypoint: gcloud
     args:
       - run
@@ -649,7 +598,7 @@ steps:
   # disabled, so the canonical admin entrypoint is only https://admin.myrrh-jp.com.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-admin
-    waitFor: [grant-secret-access]
+    waitFor: [migrate-execute]
     entrypoint: gcloud
     args:
       - run
