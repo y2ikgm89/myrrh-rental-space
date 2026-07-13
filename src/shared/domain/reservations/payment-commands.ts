@@ -108,7 +108,17 @@ export async function createCheckoutSessionCommand(input: {
     throw new DomainError("キャンセル済みの予約は決済できません", "VALIDATION");
   }
 
-  if (reservation.paymentStatus !== PaymentStatus.UNPAID) {
+  // 再決済許容ステータス: UNPAID (未着手) と FAILED (前回失敗)。
+  // FAILED は checkout.session.expired webhook 経由で claimReservationAsFailed が
+  // 打った終端気味の状態だが、顧客が再度支払える経路を残さないと「一度離脱すると
+  // マイページから決済再開できない」体験になり、admin の手作業リセット必須になる。
+  // 下段の atomic claim (updateMany WHERE paymentStatus IN [UNPAID, FAILED]) と
+  // 整合させて FAILED→PENDING の巻き戻しを明示的に許可する。
+  // PENDING (別 request が進行中) / PAID (完了) / REFUNDED (返金済) は引き続き拒否。
+  if (
+    reservation.paymentStatus !== PaymentStatus.UNPAID &&
+    reservation.paymentStatus !== PaymentStatus.FAILED
+  ) {
     throw new DomainError(
       "この予約は既に決済処理が開始されています",
       "VALIDATION",
@@ -158,7 +168,11 @@ export async function createCheckoutSessionCommand(input: {
     where: {
       id: reservationId,
       deletedAt: null,
-      paymentStatus: PaymentStatus.UNPAID,
+      // 再決済許容: UNPAID (未着手) と FAILED (前回失敗) の両方から PENDING に
+      // 遷移する。上段の gate と対称化して claim の race を防ぐ。
+      paymentStatus: {
+        in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+      },
       // Codex P1 (PR #1022): 初期 findUnique と claim の間で並行 cancel が
       // 走ったケースを DB レベルで塞ぐ。status が active でなければ count=0 → CONFLICT。
       status: {
