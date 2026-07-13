@@ -132,9 +132,16 @@ revoke_binding_strict() {
     rm -f "${err_file}"
     return 0
   fi
-  # gcloud が "binding が無い" ケースで出す文言は API バージョンで揺れるため
-  # 主要パターンを網羅する。マッチしなければ即 fail。
-  if grep -qEi 'Policy binding( with condition)? not found|does not have any bindings|Policy binding not found' "${err_file}"; then
+  # gcloud が "binding が無い" ケースで出す文言は API バージョンで揺れる。
+  # 実測メッセージ例:
+  #   - "Policy binding with the specified principal, role, and condition not found!"
+  #     (`--condition=None` 指定時、Codex Cloud Review P1 #1054 で判明)
+  #   - "Policy binding with the specified member and role not found!" (古い版)
+  #   - "does not have any bindings" (project に IAM policy 自体が空のケース)
+  # "Policy binding" と "not found" が同一行に現れれば binding 不在と判定する。
+  # マッチしなければ即 fail (permission 不足 / API error / condition mismatch 等は
+  # silent success させない — Codex Cloud Review P2 #1053 の要求)。
+  if grep -qEi '(Policy binding.*not found|does not have any (bindings|matching binding))' "${err_file}"; then
     echo "[setup]   (no ${role} binding — nothing to remove)"
     rm -f "${err_file}"
     return 0
