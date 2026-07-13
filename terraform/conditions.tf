@@ -25,3 +25,21 @@ resource "google_project_iam_member" "terraform_runner_secret_iam_admin" {
     expression  = "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['roles/secretmanager.secretAccessor'])"
   }
 }
+
+# Phase 2: Cloud Scheduler resource admin for Terraform runner SA.
+# job の CRUD が必要。cloudscheduler.admin は Cloud Scheduler service に閉じた
+# 権限で、他 GCP resource への影響なし (data 漏洩 / privilege escalation なし)。
+resource "google_project_iam_member" "terraform_runner_scheduler_admin" {
+  project = var.project_id
+  role    = "roles/cloudscheduler.admin"
+  member  = "serviceAccount:${var.terraform_runner_sa_email}"
+}
+
+# Cloud Scheduler job は OIDC token 発行のために scheduler SA を service_account
+# として指定する。Terraform runner が job resource を作成する際、その SA を
+# `actAs` する権限が必要 (Google Cloud IAM の serviceAccountUser 契約)。
+resource "google_service_account_iam_member" "terraform_runner_uses_scheduler_sa" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${var.scheduler_sa_email}"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.terraform_runner_sa_email}"
+}
