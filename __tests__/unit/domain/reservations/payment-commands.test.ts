@@ -259,11 +259,14 @@ describe("reservations/payment-commands", () => {
 
       expect(firstClaimCalled).toBe(true);
       expect(checkoutCalledBeforeFirstClaim).toBe(false);
-      // claim の WHERE に paymentStatus: UNPAID 述語が含まれることを確認
+      // claim の WHERE に paymentStatus IN [UNPAID, FAILED] が含まれることを確認
+      // (#8 FAILED gate 緩和で再決済も同じ claim を通る)
       expect(mockReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            paymentStatus: PaymentStatus.UNPAID,
+            paymentStatus: {
+              in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+            },
           }),
           data: expect.objectContaining({
             paymentStatus: PaymentStatus.PENDING,
@@ -357,10 +360,12 @@ describe("reservations/payment-commands", () => {
       // 2 回目は無し (Stripe 成功なので revert 未実行)、3 回目: session settle)
       const calls = mockReservationUpdateMany.mock.calls;
       expect(calls.length).toBe(2);
-      // 1 回目: claim
+      // 1 回目: claim (UNPAID または FAILED から PENDING へ)
       expect(calls[0]?.[0]).toMatchObject({
         where: expect.objectContaining({
-          paymentStatus: PaymentStatus.UNPAID,
+          paymentStatus: {
+            in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+          },
         }),
         data: expect.objectContaining({
           paymentStatus: PaymentStatus.PENDING,
@@ -464,12 +469,59 @@ describe("reservations/payment-commands", () => {
       const firstClaim = mockReservationUpdateMany.mock.calls[0]?.[0];
       expect(firstClaim).toMatchObject({
         where: expect.objectContaining({
-          paymentStatus: PaymentStatus.UNPAID,
+          paymentStatus: {
+            in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+          },
           status: expect.objectContaining({
             in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
           }),
         }),
       });
+    });
+
+    test("FAILED 予約からも再決済セッションを作成できる (#8 gate 緩和)", async () => {
+      // 前回失敗 (webhook checkout.session.expired 経由で claimReservationAsFailed が
+      // 打った FAILED) からも再度 Stripe checkout を作れる。
+      mockReservationFindUnique
+        .mockResolvedValueOnce({
+          ...unpaidReservation(),
+          paymentStatus: PaymentStatus.FAILED,
+        })
+        .mockResolvedValueOnce(authoritativeSameAsInitial());
+
+      const result = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      });
+
+      expect(result.sessionId).toBeTruthy();
+      // Stripe が呼ばれた (VALIDATION で早期 throw されていないことを確認)
+      expect(mockCheckoutSessionCreate).toHaveBeenCalledTimes(1);
+    });
+
+    test("PENDING / PAID / REFUNDED は既存通り拒否 (再決済不可)", async () => {
+      for (const rejectedStatus of [
+        PaymentStatus.PENDING,
+        PaymentStatus.PAID,
+        PaymentStatus.REFUNDED,
+      ] as const) {
+        mockCheckoutSessionCreate.mockClear();
+        mockReservationUpdateMany.mockClear();
+        mockReservationFindUnique.mockResolvedValueOnce({
+          ...unpaidReservation(),
+          paymentStatus: rejectedStatus,
+        });
+
+        const error = await createCheckoutSessionCommand({
+          reservationId: RESERVATION_ID,
+          actorCustomerId: null,
+        }).catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(DomainError);
+        expect((error as DomainError).code).toBe("VALIDATION");
+        expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+        expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+      }
     });
   });
 

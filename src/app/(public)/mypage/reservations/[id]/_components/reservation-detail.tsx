@@ -308,17 +308,22 @@ export function ReservationDetail({
         </div>
       )}
 
-      {/* Stripe Checkout ボタン (PR#7 + Codex P1 PR#1022):
-        paymentStatus=UNPAID かつ totalPrice>0 かつ status ∈ {PENDING, CONFIRMED} のみ表示。
+      {/* Stripe Checkout ボタン (PR#7 + Codex P1 PR#1022 + #8 FAILED gate 緩和):
+        paymentStatus ∈ {UNPAID, FAILED} かつ totalPrice>0 かつ status ∈ {PENDING, CONFIRMED} のみ表示。
+        FAILED (前回決済失敗 / session.expired webhook で claim) からも再決済に進めるようにし、
+        「一度離脱すると admin 手動リセットまでマイページから支払えない」体験を解消する。
         cancel path は status=CANCELLED / paymentStatus=UNPAID を残すので isActive gate 必須。
         server 側 createCheckoutSessionCommand の terminal-status ガードと対称 (defense-in-depth)。 */}
       {isActive &&
-        paymentStatusEnum === PaymentStatus.UNPAID &&
+        (paymentStatusEnum === PaymentStatus.UNPAID ||
+          paymentStatusEnum === PaymentStatus.FAILED) &&
         reservation.totalPrice !== null &&
         reservation.totalPrice > 0 && (
           <div className="border-t border-border px-4 py-4 sm:px-6">
             <p className="mb-3 text-sm text-muted-foreground">
-              オンライン決済でお支払い頂けます。決済完了までは予約は仮確定状態です。
+              {paymentStatusEnum === PaymentStatus.FAILED
+                ? "前回の決済が完了しませんでした。もう一度お試しいただけます。"
+                : "オンライン決済でお支払い頂けます。決済完了までは予約は仮確定状態です。"}
             </p>
             <CheckoutButton reservationId={id} />
           </div>
