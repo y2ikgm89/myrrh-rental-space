@@ -33,6 +33,7 @@ import { SpaceInfo } from "./_components/space-info";
 import { ReservationWidget } from "./_components/reservation-widget";
 import { RelatedSpaces } from "./_components/related-spaces";
 import { SpaceReviews } from "./_components/space-reviews";
+import { MobileReserveCTA } from "./_components/mobile-reserve-cta";
 
 interface SpaceDetailPageProps {
   readonly params: Promise<{ slug: string }>;
@@ -261,6 +262,11 @@ export default async function SpaceDetailPage({
         />
       </Suspense>
       <SiteCTA />
+
+      <MobileReserveCTA
+        spaceId={space.id}
+        hourlyPrice={Number(space.hourlyPrice)}
+      />
     </>
   );
 }
