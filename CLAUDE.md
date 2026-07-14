@@ -116,7 +116,7 @@ OPEN を確認 — auto-merge 済みなら新 branch）。独立 topic / 別 dom
 | pre-commit               | eslint-fix + prettier-fix + `scripts/check-protected-files.sh`（並列）        |
 | pre-push                 | `type-check` → `architecture-boundaries.test.ts` を直列実行                   |
 | commit-msg               | `scripts/check-commit-msg.sh` で Conventional Commits 強制                    |
-| GitHub branch protection | main、required checks 7 件・force-push 禁止・branch 削除禁止・`strict: false` |
+| GitHub branch protection | main、required checks 8 件・force-push 禁止・branch 削除禁止・`strict: false` |
 
 ## 詳細ルール
 
