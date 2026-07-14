@@ -98,9 +98,16 @@ const eventStatusConfig: StatusConfig<EventStatus> = {
   ARCHIVED: { label: EVENT_STATUS_LABELS.ARCHIVED, variant: "outline" },
 };
 
+// WAITLISTED = warning（対応待ち）/ WAITLISTED_OFFERED = info（24h 以内に要対応）/
+// EXPIRED = outline（終端・中立、CANCELLED の destructive とは区別 — 顧客の意思
+// によるキャンセルではなく期限切れという事実状態のため）。
+// reservationStatusConfig の色意味付けコメントと同じ設計方針。
 const REGISTRATION_BADGE_VARIANTS: Record<RegistrationStatus, BadgeVariant> = {
   CONFIRMED: "default",
   CANCELLED: "destructive",
+  WAITLISTED: "warning",
+  WAITLISTED_OFFERED: "info",
+  EXPIRED: "outline",
 };
 
 // News はisPublished (boolean) 方式に移行

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Stack } from "@/public/components/design-system/stack";
@@ -17,7 +17,10 @@ import {
 import { cancelEventRegistration } from "@/public/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
-import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import {
+  CANCELLABLE_REGISTRATION_STATUSES,
+  REGISTRATION_STATUS_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { isValidRegistrationStatus } from "@/shared/lib/validations/enums/guards";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getAppUrl } from "@/shared/lib/constants";
@@ -39,6 +42,10 @@ export interface EventRegistrationListItem {
   readonly status: string;
   readonly cancelledAt: string | null;
   readonly createdAt: string;
+  readonly waitlistedAt: string | null;
+  readonly offeredAt: string | null;
+  readonly expiresAt: string | null;
+  readonly paymentStatus: string;
   readonly event: {
     readonly id: string;
     readonly title: string;
@@ -55,6 +62,8 @@ interface EventRegistrationListProps {
   readonly emptyMessage: string;
   readonly showBrowseCta?: boolean;
   readonly turnstileSiteKey: string | null;
+  /** RSC render 時点の ISO 時刻。WAITLISTED_OFFERED カウントダウンの hydration-safe な初期値算出に使う。 */
+  readonly nowIso: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,9 +72,14 @@ interface EventRegistrationListProps {
 
 type BadgeVariant = "default" | "success" | "warning" | "info";
 
+// public Badge は 4 variant のみ（admin の status-badges.tsx とは別 SSoT）。
+// EXPIRED は CANCELLED と同じ "default"（終端・中立）に寄せる。
 const REGISTRATION_STATUS_VARIANTS: Record<RegistrationStatus, BadgeVariant> = {
   [RegistrationStatus.CONFIRMED]: "success",
   [RegistrationStatus.CANCELLED]: "default",
+  [RegistrationStatus.WAITLISTED]: "warning",
+  [RegistrationStatus.WAITLISTED_OFFERED]: "info",
+  [RegistrationStatus.EXPIRED]: "default",
 };
 
 // ---------------------------------------------------------------------------
@@ -77,6 +91,7 @@ export function EventRegistrationList({
   emptyMessage,
   showBrowseCta = false,
   turnstileSiteKey,
+  nowIso,
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
@@ -103,6 +118,7 @@ export function EventRegistrationList({
           key={registration.id}
           registration={registration}
           turnstileSiteKey={turnstileSiteKey}
+          nowIso={nowIso}
         />
       ))}
     </Stack>
@@ -116,9 +132,11 @@ export function EventRegistrationList({
 function EventRegistrationCard({
   registration,
   turnstileSiteKey,
+  nowIso,
 }: {
   readonly registration: EventRegistrationListItem;
   readonly turnstileSiteKey: string | null;
+  readonly nowIso: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -127,7 +145,16 @@ function EventRegistrationCard({
   const turnstileRef = useRef<TurnstileInstance>(null);
   const router = useRouter();
 
-  const canCancel = registration.status === RegistrationStatus.CONFIRMED;
+  const status = isValidRegistrationStatus(registration.status)
+    ? registration.status
+    : null;
+
+  // CANCELLABLE_REGISTRATION_STATUSES は意図的に狭い literal union 型のまま
+  // export されている（registration-cancel-core.ts と同じ理由）ため `.includes()`
+  // ではなく `.some()` で比較する。
+  const canCancel =
+    status !== null &&
+    CANCELLABLE_REGISTRATION_STATUSES.some((s) => s === status);
 
   const handleConfirmCancel = () => {
     setError(null);
@@ -146,9 +173,6 @@ function EventRegistrationCard({
     });
   };
 
-  const status = isValidRegistrationStatus(registration.status)
-    ? registration.status
-    : null;
   const statusLabel = status
     ? REGISTRATION_STATUS_LABELS[status]
     : registration.status;
@@ -196,6 +220,27 @@ function EventRegistrationCard({
           <dd className="inline">{registration.quantity}名</dd>
         </div>
       </dl>
+
+      {registration.status === RegistrationStatus.WAITLISTED && (
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="text-sm text-muted-foreground">
+            順番が来ましたら、メールでご連絡します。
+          </p>
+        </div>
+      )}
+
+      {registration.status === RegistrationStatus.WAITLISTED_OFFERED &&
+        registration.expiresAt !== null && (
+          <div className="mt-4 border-t border-border pt-3">
+            <OfferCountdown
+              expiresAt={registration.expiresAt}
+              nowIso={nowIso}
+            />
+            <p className="mt-2 text-sm text-muted-foreground">
+              確定用のリンクをメールでお送りしています。期限内にメール記載のリンクからお手続きください。
+            </p>
+          </div>
+        )}
 
       {registration.status === RegistrationStatus.CONFIRMED && (
         <div className="mt-4 border-t border-border pt-3">
@@ -291,4 +336,65 @@ function EventRegistrationCard({
       )}
     </article>
   );
+}
+
+// ---------------------------------------------------------------------------
+// WAITLISTED_OFFERED countdown
+// ---------------------------------------------------------------------------
+
+const COUNTDOWN_TICK_MS = 60_000;
+
+/**
+ * WAITLISTED_OFFERED の確定期限（24h）までの残り時間を表示する。
+ *
+ * 初期値は `expiresAt`（サーバー算出）と `nowIso`（RSC render 時点の literal
+ * 値。`page.tsx` 参照）から算出するため、SSR 出力と client hydration の
+ * 初回描画が完全一致する（両者とも同じ literal 文字列から計算するだけで、
+ * どちらも独自に `Date.now()` を呼ばない）。以降は mount 後の `useEffect` 内
+ * `setInterval` でのみ実時計を参照して更新する
+ * （`NotificationPollingProvider.tsx` の polling と同型のパターン）。
+ */
+function OfferCountdown({
+  expiresAt,
+  nowIso,
+}: {
+  readonly expiresAt: string;
+  readonly nowIso: string;
+}) {
+  // 初期値は `nowIso`（SSR render 時点の literal 値）から算出するため、これで
+  // 既に正確（1 tick 分＝最大 60 秒のずれは許容範囲）。mount 直後に client の
+  // `Date.now()` で即座に上書きしない（`@eslint-react/set-state-in-effect` が
+  // 警告する effect 内即時 setState パターンを避ける。かつては `tick()` を
+  // effect 内で即呼びしていたが、E2E の frozen browser clock
+  // (`page.clock.install`) 下ではサーバー実時計ベースの `expiresAt` と食い違い
+  // 表示が乱れる副作用もあった）。
+  const [remainingMs, setRemainingMs] = useState(
+    () => new Date(expiresAt).getTime() - new Date(nowIso).getTime(),
+  );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRemainingMs(Math.max(0, new Date(expiresAt).getTime() - Date.now()));
+    }, COUNTDOWN_TICK_MS);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return (
+    <p className="text-sm font-medium text-info" aria-live="polite">
+      {formatOfferCountdown(remainingMs)}
+    </p>
+  );
+}
+
+function formatOfferCountdown(remainingMs: number): string {
+  if (remainingMs <= 0) {
+    return "まもなく確定期限になります";
+  }
+  const totalMinutes = Math.floor(remainingMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return `確定期限まで残り${String(hours)}時間${String(minutes)}分`;
+  }
+  return `確定期限まで残り${String(minutes)}分`;
 }
