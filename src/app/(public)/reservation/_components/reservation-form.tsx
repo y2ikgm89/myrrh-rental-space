@@ -276,6 +276,7 @@ export function ReservationForm({
   const [pricePreview, setPricePreview] =
     useState<ReservationPricingResult | null>(null);
   const [, startPricingTransition] = useTransition();
+  const requestIdRef = useRef(0);
 
   const dateString = state.date ? formatDateString(state.date) : null;
   const pricingWindow = resolvePricingWindow(
@@ -290,8 +291,11 @@ export function ReservationForm({
   // rate plan・祝日判定は client から Prisma に触れずには計算できないため、
   // スペース・日時が揃うたびにサーバーへ問い合わせる。クーポンは公開フォームでは
   // 送信時にサーバー側で検証・適用されるため preview には含めない。
+  // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする
+  // stale-response race を防ぐ（レビュー指摘）。
   useEffect(() => {
     if (!pricingWindow) return;
+    const requestId = ++requestIdRef.current;
     const { spaceId, startIso, endIso } = pricingWindow;
     startPricingTransition(async () => {
       const result = await fetchReservationPricingPreview(
@@ -299,6 +303,7 @@ export function ReservationForm({
         startIso,
         endIso,
       );
+      if (requestIdRef.current !== requestId) return; // stale response guard
       setPricePreview(result);
     });
   }, [pricingWindow]);

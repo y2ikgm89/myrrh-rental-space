@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   formatJstDateString,
   formatTimeShort,
@@ -176,6 +182,7 @@ export function ReservationEditForm({
   const [pricePreview, setPricePreview] =
     useState<ReservationPricingResult | null>(null);
   const [, startPricingTransition] = useTransition();
+  const requestIdRef = useRef(0);
 
   const pricingWindow = resolvePricingWindow(spaceId, date, startTime, endTime);
 
@@ -184,8 +191,12 @@ export function ReservationEditForm({
   // rate plan・祝日判定は client から Prisma に触れずには計算できないため、
   // スペース・日時が揃うたびにサーバーへ問い合わせる。クーポンはサーバー側で
   // 検証・適用されるため preview には含めない（手動 totalPrice 上書きで調整可能）。
+  // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする
+  // stale-response race を防ぐ（レビュー指摘）。管理者の手動 totalPrice 上書きが
+  // stale な価格で確定してしまう事故を防ぐ。
   useEffect(() => {
     if (!pricingWindow) return;
+    const requestId = ++requestIdRef.current;
     const { spaceId: previewSpaceId, startIso, endIso } = pricingWindow;
     startPricingTransition(async () => {
       const result = await previewReservationPricingAction(
@@ -193,6 +204,7 @@ export function ReservationEditForm({
         startIso,
         endIso,
       );
+      if (requestIdRef.current !== requestId) return; // stale response guard
       setPricePreview(result);
     });
   }, [pricingWindow]);
