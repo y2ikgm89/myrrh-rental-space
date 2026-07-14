@@ -9,6 +9,16 @@
 # 実運用中の repository を管理下に取るため、Phase 4 の terraform apply 前に
 # `scripts/import-phase-4.sh` で state に取り込む。
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+# -----------------------------------------------------------------------------
+import {
+  to = google_artifact_registry_repository.docker
+  id = "projects/${var.project_id}/locations/${var.region}/repositories/myrrh-rental-space"
+}
+
 resource "google_artifact_registry_repository" "docker" {
   project       = var.project_id
   location      = var.region

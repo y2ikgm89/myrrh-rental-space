@@ -15,6 +15,82 @@ locals {
   admin_domain  = "admin.myrrh-jp.com"
 }
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+#
+# LB HTTP → HTTPS redirect chain naming note: the HCL resource block names use
+# `admin_http_v4` / `admin_http_v6`, but the actual GCP forwarding-rule names
+# are `myrrh-admin-http-rule` / `myrrh-admin-http-rule-ipv6` (verified against
+# `gcloud compute forwarding-rules list --global` on 2026-07-14). This matches
+# Codex #1063 discrepancy note; import IDs use the GCP names, not the HCL names.
+# -----------------------------------------------------------------------------
+import {
+  to = google_compute_global_address.admin_lb_ipv4
+  id = "projects/${var.project_id}/global/addresses/myrrh-admin-lb-ip"
+}
+
+import {
+  to = google_compute_global_address.admin_lb_ipv6
+  id = "projects/${var.project_id}/global/addresses/myrrh-admin-lb-ipv6"
+}
+
+import {
+  to = google_compute_region_network_endpoint_group.admin_neg
+  id = "projects/${var.project_id}/regions/${var.region}/networkEndpointGroups/myrrh-admin-neg"
+}
+
+import {
+  to = google_compute_backend_service.admin_backend
+  id = "projects/${var.project_id}/global/backendServices/myrrh-admin-backend"
+}
+
+import {
+  to = google_compute_url_map.admin_url_map
+  id = "projects/${var.project_id}/global/urlMaps/myrrh-admin-url-map"
+}
+
+import {
+  to = google_compute_managed_ssl_certificate.admin_cert
+  id = "projects/${var.project_id}/global/sslCertificates/myrrh-admin-cert-20260705"
+}
+
+import {
+  to = google_compute_target_https_proxy.admin_https_proxy
+  id = "projects/${var.project_id}/global/targetHttpsProxies/myrrh-admin-https-proxy"
+}
+
+import {
+  to = google_compute_global_forwarding_rule.admin_https_v4
+  id = "projects/${var.project_id}/global/forwardingRules/myrrh-admin-https-rule"
+}
+
+import {
+  to = google_compute_global_forwarding_rule.admin_https_v6
+  id = "projects/${var.project_id}/global/forwardingRules/myrrh-admin-https-rule-ipv6"
+}
+
+import {
+  to = google_compute_url_map.admin_http_redirect
+  id = "projects/${var.project_id}/global/urlMaps/myrrh-admin-http-redirect"
+}
+
+import {
+  to = google_compute_target_http_proxy.admin_http_proxy
+  id = "projects/${var.project_id}/global/targetHttpProxies/myrrh-admin-http-proxy"
+}
+
+import {
+  to = google_compute_global_forwarding_rule.admin_http_v4
+  id = "projects/${var.project_id}/global/forwardingRules/myrrh-admin-http-rule"
+}
+
+import {
+  to = google_compute_global_forwarding_rule.admin_http_v6
+  id = "projects/${var.project_id}/global/forwardingRules/myrrh-admin-http-rule-ipv6"
+}
+
 # Reserved static IP (v4 / v6)
 resource "google_compute_global_address" "admin_lb_ipv4" {
   project      = var.project_id

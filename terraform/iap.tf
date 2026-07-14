@@ -17,6 +17,21 @@ locals {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+#
+# `google_iap_web_cloud_run_service_iam_member` import ID format is:
+#   projects/{project}/iap_web/cloud_run-{region}-{service} {role} {member}
+# (space-separated 3-part ID per Terraform google provider docs).
+# -----------------------------------------------------------------------------
+import {
+  for_each = local.admin_role_groups
+  to       = google_iap_web_cloud_run_service_iam_member.admin_access[each.key]
+  id       = "projects/${var.project_id}/iap_web/cloud_run-${var.region}-myrrh-rental-space-admin roles/iap.httpsResourceAccessor group:${each.value}"
+}
+
 # IAP OAuth brand + client は初回 setup で Console から作成される。
 # Terraform で新規作成すると本番 IAP を壊すため import 前提 (google_iap_brand
 # は project-level singleton、`google_iap_client` は brand への child)。

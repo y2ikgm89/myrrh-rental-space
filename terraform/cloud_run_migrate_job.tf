@@ -10,6 +10,16 @@
 # cloudbuild.yaml が毎 deploy で書き換え続ける (`--image=...:migrate-${SHORT_SHA}`)。
 # Phase 6b で cloudbuild.yaml Step 4 を削除し Terraform apply に完全移管する。
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+# -----------------------------------------------------------------------------
+import {
+  to = google_cloud_run_v2_job.prisma_migrate
+  id = "projects/${var.project_id}/locations/${var.region}/jobs/prisma-migrate"
+}
+
 resource "google_cloud_run_v2_job" "prisma_migrate" {
   provider = google-beta
 

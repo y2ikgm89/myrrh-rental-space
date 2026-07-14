@@ -8,6 +8,16 @@
 # 取り込む。取り込み後 `terraform plan` が「変更なし」で終わることを確認
 # してから merge。差分が出た場合は本 resource の attributes を実測値に合わせる。
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+# -----------------------------------------------------------------------------
+import {
+  to = google_cloudbuild_worker_pool.deploy_pool
+  id = "projects/${var.project_id}/locations/${var.region}/workerPools/myrrh-deploy-pool"
+}
+
 resource "google_cloudbuild_worker_pool" "deploy_pool" {
   name     = "myrrh-deploy-pool"
   location = var.region

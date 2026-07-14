@@ -1309,6 +1309,77 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("terraform/*.tf の pre-existing GCP resource には対応する import{} block が同一 file 内に存在する (段階 2: Deploy Production 409 対策)", () => {
+    // Deploy Production log で 409 "already exists" を吐いていた pre-existing
+    // GCP resource は全て Terraform 1.7+ の top-level `import {}` block で
+    // fresh state apply 時に自動 adopt される契約。この drift gate は「新規に
+    // resource 宣言だけ足して import block を書き忘れる」 regression を防ぐ:
+    //
+    //   - 対象 resource type は「Deploy Production log で 409 を出す = GCP 側
+    //     に既存する = terraform state に無ければ create を試みる」もの全て。
+    //   - 各 .tf file 内で `resource "<type>"` を declared したら、同じ file
+    //     内に `import {` block (`to = <type>.<name>` を含む) が存在すること
+    //     を機械強制する。import が for_each で書かれる場合も `to = X[each.key]`
+    //     形式で resource type を含むためこの grep で拾える。
+    //
+    // 例外: `google_cloud_run_v2_service_iam_member` (iam_cloud_run.tf) は
+    // resource-scoped IAM binding で 409 を出さない (同一 role/member への
+    // add は idempotent) ため対象外。同様に `google_artifact_registry_repository_iam_member`
+    // も対象外。純粋な resource skeleton の 409 だけを対象にする。
+    const TERRAFORM_DIR = join(ROOT, "terraform");
+    const tfFiles = readdirSync(TERRAFORM_DIR).filter((f) => f.endsWith(".tf"));
+
+    // 409 を吐く resource type (Deploy Production log で確認済み or
+    // 新規 fresh-state apply で create を試みるもの)。
+    const IMPORT_REQUIRED_RESOURCE_TYPES: readonly string[] = [
+      "google_secret_manager_secret",
+      "google_cloud_scheduler_job",
+      "google_artifact_registry_repository",
+      "google_cloudbuild_worker_pool",
+      "google_cloud_run_v2_service",
+      "google_cloud_run_v2_job",
+      "google_compute_global_address",
+      "google_compute_region_network_endpoint_group",
+      "google_compute_backend_service",
+      "google_compute_url_map",
+      "google_compute_managed_ssl_certificate",
+      "google_compute_target_https_proxy",
+      "google_compute_target_http_proxy",
+      "google_compute_global_forwarding_rule",
+      "google_iam_workload_identity_pool",
+      "google_iam_workload_identity_pool_provider",
+      "google_iap_web_cloud_run_service_iam_member",
+    ];
+
+    const offenders: string[] = [];
+    for (const file of tfFiles) {
+      const source = readFileSync(join(TERRAFORM_DIR, file), "utf8");
+      for (const resourceType of IMPORT_REQUIRED_RESOURCE_TYPES) {
+        // `resource "<type>"` が宣言されているか (行頭・空白許容、# コメント除外)。
+        const resourcePattern = new RegExp(
+          `^resource\\s+"${resourceType}"\\s`,
+          "mu",
+        );
+        if (!resourcePattern.test(source)) continue;
+
+        // 同一 file 内に `import {` から始まり `to = <type>` を含む block が
+        // 存在するか。for_each 版は `to = <type>.<name>[each.key]` 形式に、
+        // 単一 resource 版は `to = <type>.<name>` 形式になるため type 名の
+        // 部分文字列一致で拾える。
+        const importPattern = new RegExp(
+          `import\\s*\\{[\\s\\S]*?to\\s*=\\s*${resourceType}\\b`,
+          "u",
+        );
+        if (!importPattern.test(source)) {
+          offenders.push(
+            `terraform/${file}: resource "${resourceType}" is declared but no matching import{} block found (add one to avoid 409 on fresh-state apply)`,
+          );
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   test("scripts/bootstrap-terraform.sh は F1 structural closure に必要な grants を全て含む (bootstrap-owns-all-project-IAM SSoT)", () => {
     // F1 structural closure の実装が bootstrap script 側で維持されていることを
     // 回帰防止として grep gate で強制する:
