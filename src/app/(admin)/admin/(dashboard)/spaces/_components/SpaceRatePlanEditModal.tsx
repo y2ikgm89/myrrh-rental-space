@@ -236,7 +236,12 @@ export function SpaceRatePlanEditModal({
                 {allDaysSelected ? "選択解除" : "全曜日"}
               </Button>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-input p-3">
+            <div
+              className="flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-input p-3"
+              aria-describedby={
+                fields.daysOfWeek.errors ? fields.daysOfWeek.errorId : undefined
+              }
+            >
               {ALL_DAYS_OF_WEEK.map((day) => {
                 const checkboxId = `${form.id}-day-${day}`;
                 return (
@@ -278,6 +283,11 @@ export function SpaceRatePlanEditModal({
                 if (isHolidayModeValue(value)) holidayModeControl.change(value);
               }}
               className="gap-2"
+              aria-describedby={
+                fields.holidayMode.errors
+                  ? fields.holidayMode.errorId
+                  : undefined
+              }
             >
               {HOLIDAY_MODE_VALUES.map((mode) => {
                 const radioId = `${form.id}-holiday-${mode}`;
