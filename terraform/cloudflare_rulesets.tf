@@ -61,14 +61,25 @@
 # Import blocks (Terraform 1.7+) — fresh apply 時の adoption
 # ============================================================================
 
+# ⚠ Cloudflare provider v5 の `cloudflare_ruleset` は import ID に discriminator
+# prefix (`zones/` or `accounts/`) を必須とする (公式 docs: `<{accounts|zones}/
+# {account_id|zone_id}>/<ruleset_id>`)。v4 系の raw ID 形式は v5.22.0+ で reject
+# され `Error: invalid discriminator segment` で terraform plan が abort する。
+# 参考: https://github.com/cloudflare/terraform-provider-cloudflare/blob/main/docs/resources/ruleset.md
+#
+# PR #1098 は v4 相当の raw ID 形式で書いてしまい、その後 PR #1099 で lock file を
+# commit した際に provider が v5.22.0 に pin されて strict validation が発火、
+# 以降 4 連続の deploy-production terraform-apply が失敗していた (auto-merge は
+# required check のみ見るので post-merge apply 失敗が silent)。この commit で
+# discriminator prefix を追加、drift-detect gate で再発防止 (architecture-boundaries)。
 import {
   to = cloudflare_ruleset.cache_rules
-  id = "${var.cloudflare_zone_id}/10cdb82ec6da47b08a63ec3e280732d4"
+  id = "zones/${var.cloudflare_zone_id}/10cdb82ec6da47b08a63ec3e280732d4"
 }
 
 import {
   to = cloudflare_ruleset.transform_rules_late
-  id = "${var.cloudflare_zone_id}/8a8f3f173cd7443eb24296e21bf60f0f"
+  id = "zones/${var.cloudflare_zone_id}/8a8f3f173cd7443eb24296e21bf60f0f"
 }
 
 # ============================================================================
