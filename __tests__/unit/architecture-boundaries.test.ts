@@ -1211,10 +1211,39 @@ describe("architecture boundaries", () => {
   });
 
   test("Cloud Run deploy は Server Actions encryption key を runtime にも注入する", () => {
-    const source = readFileSync(CLOUDBUILD_FILE, "utf8");
+    // Phase 6b (2026-07-14) で Cloud Run secret binding は cloudbuild.yaml
+    // `--set-secrets=` から Terraform `google_cloud_run_v2_service.template.
+    // containers.env.value_source.secret_key_ref` に SSoT 移管。
+    // NEXT_SERVER_ACTIONS_ENCRYPTION_KEY は cloud_run_public.tf / cloud_run_admin.tf
+    // の dynamic env block が `var.cloud_run_secret_versions` map を回して自動注入する
+    // (secrets.tf `local.runtime_secrets` に含まれる)。
+    //
+    // 従来の cloudbuild.yaml assertion は build-time inline (`availableSecrets`)
+    // のみを検証する形に絞る (runtime binding は Terraform に移った)。
+    const cloudbuildSource = readFileSync(CLOUDBUILD_FILE, "utf8");
+    const variablesSource = readFileSync(
+      join(ROOT, "terraform", "variables.tf"),
+      "utf8",
+    );
+    const secretsSource = readFileSync(
+      join(ROOT, "terraform", "secrets.tf"),
+      "utf8",
+    );
 
-    expect(source).toContain(
-      "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION}",
+    // build-time: cloudbuild.yaml `availableSecrets` で NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+    // を Docker build stage の env として注入 (Next.js が client bundle に inline)。
+    expect(cloudbuildSource).toContain(
+      "projects/${PROJECT_ID}/secrets/NEXT_SERVER_ACTIONS_ENCRYPTION_KEY/versions/${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION}",
+    );
+
+    // runtime: Terraform `var.cloud_run_secret_versions` map と `secrets.tf`
+    // `local.runtime_secrets` の両方に NEXT_SERVER_ACTIONS_ENCRYPTION_KEY entry
+    // が存在することを assert。
+    expect(variablesSource).toMatch(
+      /cloud_run_secret_versions[\s\S]*NEXT_SERVER_ACTIONS_ENCRYPTION_KEY\s*=\s*"\d+"/,
+    );
+    expect(secretsSource).toMatch(
+      /runtime_secrets\s*=\s*\[[\s\S]*"NEXT_SERVER_ACTIONS_ENCRYPTION_KEY"/,
     );
   });
 

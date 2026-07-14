@@ -1,14 +1,12 @@
 # -----------------------------------------------------------------------------
-# Cloud Run Job: prisma-migrate (Phase 6a skeleton)
+# Cloud Run Job: prisma-migrate (Phase 6b — env/secrets Terraform 完全移管)
 # -----------------------------------------------------------------------------
 #
-# 現在 cloudbuild.yaml Step 4 (migrate-update) が `gcloud run jobs update` で
-# image / memory / command / args / DATABASE_URL secret を宣言的に再適用し、
-# Step 5b (migrate-execute) が `gcloud run jobs execute --wait` で実行する。
-#
-# Phase 6a では Terraform 側で Job resource の shape を宣言し、image は
-# cloudbuild.yaml が毎 deploy で書き換え続ける (`--image=...:migrate-${SHORT_SHA}`)。
-# Phase 6b で cloudbuild.yaml Step 4 を削除し Terraform apply に完全移管する。
+# cloudbuild.yaml Step 4 (migrate-update) の `--set-secrets=DATABASE_URL=...` は
+# 削除済で、Terraform が secret binding の SSoT (Phase 6b、2026-07-14 完成)。
+# Step 4 の残り (image / memory / command / args) も Terraform で declarative に
+# 宣言し、Cloud Build は `--image=...:migrate-${SHORT_SHA}` の image tag update
+# のみを実施する契約。Step 5b (migrate-execute) は job execute のみで env 変更なし。
 
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
@@ -50,6 +48,18 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
             memory = "1Gi"
           }
         }
+
+        # migrate Job は Prisma DATABASE_URL のみ必要 (他の env / secret は不要)。
+        # Cloud Run service 側と同じ Secret Manager container + version pinning。
+        env {
+          name = "DATABASE_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.secret["DATABASE_URL"].secret_id
+              version = var.cloud_run_secret_versions["DATABASE_URL"]
+            }
+          }
+        }
       }
     }
   }
@@ -57,8 +67,9 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
+      # image tag は Cloud Build が毎 deploy で書き換える (`--image=...:migrate-${SHORT_SHA}`)。
+      # env は Phase 6b で Terraform 完全管理 (ignore_changes 撤去)。
       template[0].template[0].containers[0].image,
-      template[0].template[0].containers[0].env,
     ]
   }
 }

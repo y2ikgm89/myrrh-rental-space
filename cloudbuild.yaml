@@ -107,34 +107,27 @@ substitutions:
   # Dedicated Cloud Build service account. This build config is intentionally
   # not compatible with the default Cloud Build service account path.
   _BUILD_SERVICE_ACCOUNT: myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com
-  # Secret versions (固定バージョン推奨)
-  _DATABASE_URL_SECRET_VERSION: "1"
-  _BETTER_AUTH_SECRET_VERSION: "1"
-  _ENCRYPTION_KEY_SECRET_VERSION: "1"
-  # Primary encryption key id (`kid` in the v2 wire format). Must flip in the
-  # same deploy as `_ENCRYPTION_KEY_SECRET_VERSION` — routing this via a Cloud
-  # Build substitution keeps the two atomically consistent. `--set-env-vars`
-  # on Cloud Run is destructive (replaces the full map), so setting
-  # `ENCRYPTION_KEY_ID` via a one-off `gcloud run services update` would be
-  # wiped on the next deploy. Runbook: docs/runbooks/encryption-key-rotation.md.
-  _ENCRYPTION_KEY_ID: "v1"
-  # Steady state: SECONDARY_ENCRYPTION_KEYS Secret Manager secret contains "".
-  # Rotation window: operator publishes a new version with `kid1:hex64,...`,
-  # then bumps this substitution. Runbook: docs/runbooks/encryption-key-rotation.md.
-  _SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION: "1"
-  _AUDIT_LOG_HMAC_KEY_SECRET_VERSION: "1"
-  _AUDIT_LOG_HMAC_KEY_ID: "v1"
+  # ---- Secret version pinning (Phase 6b、cloudbuild → Terraform 移管済) ----
+  #
+  # Cloud Run runtime の secret version は **Terraform 側 SSoT**
+  # (`terraform/variables.tf` の `cloud_run_secret_versions` map)。
+  # 以前ここで `_*_SECRET_VERSION` で pin していたのは全て cloudbuild.yaml Step 6a/6b
+  # の `--set-secrets=` 用途で、その step 自体が削除済のため対応 substitution も廃止。
+  #
+  # 例外: `_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION` は build-time にも
+  # 必要 (下記 `availableSecrets` block で参照、Next.js が client bundle に inline 化)。
+  # build-time と runtime で同じ version に pin する契約 (両者不整合で server actions が
+  # decrypt fail する)。
   _NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION: "1"
-  _R2_ACCOUNT_ID_SECRET_VERSION: "1"
-  _R2_ACCESS_KEY_ID_SECRET_VERSION: "1"
-  _R2_SECRET_ACCESS_KEY_SECRET_VERSION: "1"
-  _R2_BUCKET_NAME_SECRET_VERSION: "1"
-  _R2_PUBLIC_URL_SECRET_VERSION: "1"
-  _CLOUDFLARE_ZONE_ID_SECRET_VERSION: "1"
-  _CLOUDFLARE_API_TOKEN_SECRET_VERSION: "1"
-  _CLOUDFLARE_ORIGIN_HEADER_SECRET_VERSION: "1"
-  _GOOGLE_CLIENT_ID_SECRET_VERSION: "1"
-  _GOOGLE_CLIENT_SECRET_SECRET_VERSION: "1"
+  # ---- Encryption / audit key id (env vars、非 secret) ----
+  #
+  # 以下 2 個は "kid" (key id、v2 wire format) で、secret **本体** ではなく env として
+  # 注入される (`--set-env-vars=ENCRYPTION_KEY_ID=...`)。Phase 6b で Terraform の
+  # `var.encryption_key_id` / `var.audit_log_hmac_key_id` に SSoT 移管済。
+  # rotation 時は Terraform 側 default 値を bump し、対応 secret version も同時 bump。
+  # Runbook: docs/runbooks/encryption-key-rotation.md.
+  _ENCRYPTION_KEY_ID: "v1"
+  _AUDIT_LOG_HMAC_KEY_ID: "v1"
   # NEXT_PUBLIC_* (ビルド時インライン + ランタイム両方で使用)
   #
   # _NEXT_PUBLIC_BASE_URL / _NEXT_PUBLIC_APP_URL /
@@ -419,8 +412,10 @@ steps:
       # command / args も毎デプロイ再適用し、Job 作成後の手動変更による drift を防ぐ。
       - --command=bunx
       - --args=--bun,prisma,migrate,deploy
-      # DATABASE_URL を毎デプロイ宣言的に再適用（Job 作成時設定へのドリフト防止）。
-      - --set-secrets=DATABASE_URL=DATABASE_URL:${_DATABASE_URL_SECRET_VERSION}
+      # DATABASE_URL secret binding は Terraform 側 (cloud_run_migrate_job.tf) の
+      # SSoT に完全移管済 (Phase 6b、2026-07-14)。ここで再宣言すると Terraform apply
+      # との drift loop を起こすため削除。secret rotation は
+      # terraform/variables.tf の `cloud_run_secret_versions.DATABASE_URL` を bump。
 
   # Step 5a: For intentional breaking migrations, stop new requests before DB
   # schema changes. Cloud Run lets in-flight requests finish; the drain step
@@ -601,8 +596,10 @@ steps:
       # https://cloud.google.com/run/docs/configuring/healthchecks
       - --startup-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=1,periodSeconds=10,failureThreshold=9
       - --liveness-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=10,timeoutSeconds=1,periodSeconds=30,failureThreshold=3
-      - --set-env-vars=NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1,APP_SURFACE=public,ADMIN_APP_URL=${_ADMIN_APP_URL},DATABASE_POOL_MAX=${_DATABASE_POOL_MAX},AUDIT_LOG_HMAC_KEY_ID=${_AUDIT_LOG_HMAC_KEY_ID},ENCRYPTION_KEY_ID=${_ENCRYPTION_KEY_ID},CRON_OIDC_AUDIENCE=${_CRON_OIDC_AUDIENCE},CRON_SERVICE_ACCOUNT_EMAIL=${_CRON_SERVICE_ACCOUNT_EMAIL},NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL},NEXT_PUBLIC_APP_URL=${_NEXT_PUBLIC_APP_URL},NEXT_PUBLIC_TURNSTILE_SITE_KEY=${_NEXT_PUBLIC_TURNSTILE_SITE_KEY},NEXT_PUBLIC_GA_MEASUREMENT_ID=${_NEXT_PUBLIC_GA_MEASUREMENT_ID},BETTER_AUTH_URL=${_BETTER_AUTH_URL},MAX_INSTANCES_HINT=${_MAX_INSTANCES},RATE_LIMIT_BACKEND=${_RATE_LIMIT_BACKEND}
-      - --set-secrets=DATABASE_URL=DATABASE_URL:${_DATABASE_URL_SECRET_VERSION},BETTER_AUTH_SECRET=BETTER_AUTH_SECRET:${_BETTER_AUTH_SECRET_VERSION},ENCRYPTION_KEY=ENCRYPTION_KEY:${_ENCRYPTION_KEY_SECRET_VERSION},SECONDARY_ENCRYPTION_KEYS=SECONDARY_ENCRYPTION_KEYS:${_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION},AUDIT_LOG_HMAC_KEY=AUDIT_LOG_HMAC_KEY:${_AUDIT_LOG_HMAC_KEY_SECRET_VERSION},NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION},R2_ACCOUNT_ID=R2_ACCOUNT_ID:${_R2_ACCOUNT_ID_SECRET_VERSION},R2_ACCESS_KEY_ID=R2_ACCESS_KEY_ID:${_R2_ACCESS_KEY_ID_SECRET_VERSION},R2_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY:${_R2_SECRET_ACCESS_KEY_SECRET_VERSION},R2_BUCKET_NAME=R2_BUCKET_NAME:${_R2_BUCKET_NAME_SECRET_VERSION},R2_PUBLIC_URL=R2_PUBLIC_URL:${_R2_PUBLIC_URL_SECRET_VERSION},CLOUDFLARE_ZONE_ID=CLOUDFLARE_ZONE_ID:${_CLOUDFLARE_ZONE_ID_SECRET_VERSION},CLOUDFLARE_API_TOKEN=CLOUDFLARE_API_TOKEN:${_CLOUDFLARE_API_TOKEN_SECRET_VERSION},CLOUDFLARE_ORIGIN_HEADER_SECRET=CLOUDFLARE_ORIGIN_HEADER_SECRET:${_CLOUDFLARE_ORIGIN_HEADER_SECRET_VERSION},GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:${_GOOGLE_CLIENT_ID_SECRET_VERSION},GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:${_GOOGLE_CLIENT_SECRET_SECRET_VERSION}
+      # env / secret bindings は Terraform 側 (terraform/cloud_run_public.tf) が SSoT
+      # (Phase 6b、2026-07-14 完成)。cloudbuild.yaml は image tag + shape のみ再適用。
+      # secret rotation は terraform/variables.tf `cloud_run_secret_versions` map を bump。
+      # env 追加は terraform/locals_cloud_run.tf `cloud_run_public_env` を編集。
 
   # Step 6b: Deploy admin Cloud Run service. Direct IAP and authenticated-only
   # access are enabled once by the production setup runbook and verified by
@@ -637,8 +634,10 @@ steps:
       - --port=8080
       - --startup-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=1,periodSeconds=10,failureThreshold=9
       - --liveness-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=10,timeoutSeconds=1,periodSeconds=30,failureThreshold=3
-      - --set-env-vars=NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1,APP_SURFACE=admin,ADMIN_APP_URL=${_ADMIN_APP_URL},IAP_JWT_AUDIENCE=${_IAP_JWT_AUDIENCE},ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL=${_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL},ADMIN_ROLE_GROUP_ADMIN_EMAIL=${_ADMIN_ROLE_GROUP_ADMIN_EMAIL},ADMIN_ROLE_GROUP_EDITOR_EMAIL=${_ADMIN_ROLE_GROUP_EDITOR_EMAIL},ADMIN_ROLE_GROUP_VIEWER_EMAIL=${_ADMIN_ROLE_GROUP_VIEWER_EMAIL},DATABASE_POOL_MAX=${_DATABASE_POOL_MAX},AUDIT_LOG_HMAC_KEY_ID=${_AUDIT_LOG_HMAC_KEY_ID},ENCRYPTION_KEY_ID=${_ENCRYPTION_KEY_ID},CRON_OIDC_AUDIENCE=${_CRON_OIDC_AUDIENCE},CRON_SERVICE_ACCOUNT_EMAIL=${_CRON_SERVICE_ACCOUNT_EMAIL},NEXT_PUBLIC_BASE_URL=${_NEXT_PUBLIC_BASE_URL},NEXT_PUBLIC_APP_URL=${_ADMIN_APP_URL},NEXT_PUBLIC_TURNSTILE_SITE_KEY=${_NEXT_PUBLIC_TURNSTILE_SITE_KEY},NEXT_PUBLIC_GA_MEASUREMENT_ID=${_NEXT_PUBLIC_GA_MEASUREMENT_ID},BETTER_AUTH_URL=${_ADMIN_APP_URL},MAX_INSTANCES_HINT=${_MAX_INSTANCES},RATE_LIMIT_BACKEND=${_RATE_LIMIT_BACKEND}
-      - --set-secrets=DATABASE_URL=DATABASE_URL:${_DATABASE_URL_SECRET_VERSION},BETTER_AUTH_SECRET=BETTER_AUTH_SECRET:${_BETTER_AUTH_SECRET_VERSION},ENCRYPTION_KEY=ENCRYPTION_KEY:${_ENCRYPTION_KEY_SECRET_VERSION},SECONDARY_ENCRYPTION_KEYS=SECONDARY_ENCRYPTION_KEYS:${_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION},AUDIT_LOG_HMAC_KEY=AUDIT_LOG_HMAC_KEY:${_AUDIT_LOG_HMAC_KEY_SECRET_VERSION},NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION},R2_ACCOUNT_ID=R2_ACCOUNT_ID:${_R2_ACCOUNT_ID_SECRET_VERSION},R2_ACCESS_KEY_ID=R2_ACCESS_KEY_ID:${_R2_ACCESS_KEY_ID_SECRET_VERSION},R2_SECRET_ACCESS_KEY=R2_SECRET_ACCESS_KEY:${_R2_SECRET_ACCESS_KEY_SECRET_VERSION},R2_BUCKET_NAME=R2_BUCKET_NAME:${_R2_BUCKET_NAME_SECRET_VERSION},R2_PUBLIC_URL=R2_PUBLIC_URL:${_R2_PUBLIC_URL_SECRET_VERSION},CLOUDFLARE_ZONE_ID=CLOUDFLARE_ZONE_ID:${_CLOUDFLARE_ZONE_ID_SECRET_VERSION},CLOUDFLARE_API_TOKEN=CLOUDFLARE_API_TOKEN:${_CLOUDFLARE_API_TOKEN_SECRET_VERSION},CLOUDFLARE_ORIGIN_HEADER_SECRET=CLOUDFLARE_ORIGIN_HEADER_SECRET:${_CLOUDFLARE_ORIGIN_HEADER_SECRET_VERSION},GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:${_GOOGLE_CLIENT_ID_SECRET_VERSION},GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:${_GOOGLE_CLIENT_SECRET_SECRET_VERSION}
+      # env / secret bindings は Terraform 側 (terraform/cloud_run_admin.tf) が SSoT
+      # (Phase 6b、2026-07-14 完成)。cloudbuild.yaml は image tag + shape のみ再適用。
+      # admin 特有の IAP_JWT_AUDIENCE / ADMIN_ROLE_GROUP_*_EMAIL は
+      # terraform/locals_cloud_run.tf `cloud_run_admin_env` に集約。
 
 images:
   - ${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
