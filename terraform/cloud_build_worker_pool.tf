@@ -3,10 +3,10 @@
 # -----------------------------------------------------------------------------
 #
 # `cloudbuild.yaml` の options.pool で参照される private worker pool。
-# deploy pipeline がこの pool で走る。実運用中の pool を Terraform 管理下に
-# 取るため、Phase 4 の apply 前に `scripts/import-phase-4.sh` で state に
-# 取り込む。取り込み後 `terraform plan` が「変更なし」で終わることを確認
-# してから merge。差分が出た場合は本 resource の attributes を実測値に合わせる。
+# deploy pipeline がこの pool で走る。実運用中の pool は下部の `import{}`
+# block (Terraform 1.7+) で fresh state 時に自動 adopt される。取り込み後
+# `terraform plan` が「変更なし」で終わることを確認してから merge。差分が
+# 出た場合は本 resource の attributes を実測値に合わせる。
 
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state

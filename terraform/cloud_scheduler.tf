@@ -9,8 +9,8 @@
 # 追加時は locals.cron_jobs に 1 entry 追加して PR を出す。GitHub Actions が
 # terraform plan で差分を提示、merge で apply。
 #
-# 既存 jobs (script 版 SSoT だったもの) は初回 apply 前に project owner が
-# `scripts/import-cloud-scheduler.sh` で terraform import する。
+# 既存 jobs (script 版 SSoT だったもの) は下部の `import{}` block (Terraform
+# 1.7+) で fresh state 時に自動 adopt される。
 
 locals {
   cron_jobs = [

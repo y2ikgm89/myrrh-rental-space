@@ -221,7 +221,7 @@ resource "google_compute_global_forwarding_rule" "admin_https_v6" {
 #   - target proxy:   myrrh-admin-http-proxy
 #   - forwarding v4:  myrrh-admin-http-rule
 #   - forwarding v6:  myrrh-admin-http-rule-ipv6
-# import は scripts/import-phase-7.sh で state に取り込む。
+# import は本 file 冒頭の `import{}` blocks (Terraform 1.7+) で fresh state 時に自動 adopt。
 
 resource "google_compute_url_map" "admin_http_redirect" {
   project = var.project_id

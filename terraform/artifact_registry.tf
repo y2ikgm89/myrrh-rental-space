@@ -6,8 +6,8 @@
 # `:${SHORT_SHA}` / `:migrate-${SHORT_SHA}` / `:cache` tag で push している
 # (cloudbuild.yaml Step 3)。
 #
-# 実運用中の repository を管理下に取るため、Phase 4 の terraform apply 前に
-# `scripts/import-phase-4.sh` で state に取り込む。
+# 実運用中の repository は下部の `import{}` block (Terraform 1.7+) で fresh
+# state 時に自動 adopt される。
 
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
