@@ -1509,6 +1509,70 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("branch-protection.json の required contexts に対応する workflow は path filter を持たない (2026-07-14 PR #1103 で発覚した MISSING 検 chain の再発防止)", () => {
+    // GitHub branch protection の `required_status_checks.contexts` に登録された
+    // check name を提供する workflow が `on: pull_request: paths:` filter を持つと、
+    // 該当 paths を触らない PR で workflow が発火せず check が **MISSING** 扱いになる。
+    // MISSING は branch protection 上 unsatisfied → auto-merge が永久 block。
+    // 参考: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/troubleshooting-rulesets#pull-requests-are-blocked-when-status-checks-are-required-but-not-set-up
+    //
+    // PR #1103 (fix/ci-terraform-apply-visibility-and-health-gate) の Auto-merge が
+    // 全 checks green 後も BLOCKED のままだった: `Terraform / validate` (required) を
+    // 提供する `terraform.yml` が `paths: [terraform/**]` filter で発火しなかった。
+    // 対策: required check を提供する workflow から paths filter を撤去。
+    const WORKFLOWS_DIR = join(ROOT, ".github", "workflows");
+    const BRANCH_PROTECTION_PATH = join(
+      ROOT,
+      ".github",
+      "branch-protection.json",
+    );
+
+    const bp: unknown = JSON.parse(
+      readFileSync(BRANCH_PROTECTION_PATH, "utf8"),
+    );
+    expectRecord(bp);
+    const rsc = bp["required_status_checks"];
+    expectRecord(rsc);
+    const contexts = rsc["contexts"];
+    if (!Array.isArray(contexts)) {
+      throw new Error(
+        "branch-protection.json: required_status_checks.contexts must be an array",
+      );
+    }
+    const requiredNames = new Set(
+      contexts.filter((c): c is string => typeof c === "string"),
+    );
+
+    // 全 workflow を parse し、name / paths filter を抽出。
+    const workflowFiles = readdirSync(WORKFLOWS_DIR).filter(
+      (f) => f.endsWith(".yml") || f.endsWith(".yaml"),
+    );
+
+    const offenders: string[] = [];
+    for (const file of workflowFiles) {
+      const source = readFileSync(join(WORKFLOWS_DIR, file), "utf8");
+      // workflow 全体の name (`^name: X$`) と job 単位の name (`^\s+name: X$` in jobs)
+      // を抽出。branch protection の context 名は「job の name attribute」に対応。
+      const jobNames = [...source.matchAll(/^\s{4,}name:\s*(.+?)\s*$/gmu)]
+        .map((m) => m[1] ?? "")
+        .filter((n) => n.length > 0);
+      const providedRequired = jobNames.filter((n) => requiredNames.has(n));
+      if (providedRequired.length === 0) continue;
+
+      // このファイルが required context を提供している → paths filter を検査。
+      // `on:` block 内の `paths:` (含む `paths-ignore:`) を検出。
+      // 簡易 parser: `pull_request:` の直下 (~10 lines) に `paths:` があるか。
+      const onBlockMatch = source.match(/^on:\s*\n([\s\S]*?)(?=^\S)/mu);
+      const onBlock = onBlockMatch?.[1] ?? "";
+      if (/^\s+paths(-ignore)?:\s*$/mu.test(onBlock)) {
+        offenders.push(
+          `.github/workflows/${file}: provides required check(s) [${providedRequired.join(", ")}] but has path filter in on: block — remove path filter (required check would be MISSING when paths don't match, blocking auto-merge)`,
+        );
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   test("scripts/bootstrap-terraform.sh は F1 structural closure に必要な grants を全て含む (bootstrap-owns-all-project-IAM SSoT)", () => {
     // F1 structural closure の実装が bootstrap script 側で維持されていることを
     // 回帰防止として grep gate で強制する:

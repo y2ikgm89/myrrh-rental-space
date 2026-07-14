@@ -3,11 +3,21 @@ name: Terraform
 # push-to-main の apply は deploy-production.yml の `terraform-apply` job に
 # 統合済み (Codex P1 F6 対応)。本 workflow は PR 時の HCL syntax / provider
 # schema 検証のみ担う (cloud credentials を握らせない設計、Codex P1 F4)。
+#
+# ## `paths:` filter を故意に付けない (2026-07-14 anti-pattern 修正)
+#
+# `paths: [terraform/**]` で filter すると terraform 以外を触る PR で本 workflow が
+# 発火せず、`Terraform / validate` required check が **MISSING** 扱いになり
+# branch protection で auto-merge が **永久 block** される (GitHub 公式仕様)。
+# 参考: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/troubleshooting-rulesets#pull-requests-are-blocked-when-status-checks-are-required-but-not-set-up
+#
+# 対策: `paths:` filter を撤去し全 PR で走らせる。
+# 実行時間 ~1-2 分 (terraform init + validate + Trivy + TFLint、いずれも
+# read-only なので cloud 状態への影響なし) → CI 予算的に許容。
+# `architecture-boundaries.test.ts` に「required checks に path-filtered workflow を
+# 含めない」regression gate 追加済。
 on:
   pull_request:
-    paths:
-      - "terraform/**"
-      - ".github/workflows/terraform.yml"
 
 # NOTE: `pull-requests: write` (旧) は plan コメント自動 post のためだったが、
 # untrusted PR HEAD の terraform コードが自 workflow の credentials 権限
