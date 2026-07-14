@@ -105,11 +105,52 @@ locals {
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
 # instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
 # These are no-op after the first apply; safe to keep long-term for docs.
+#
+# 重要 (公式仕様): Terraform の import{} block は「既存の remote object を state に
+# adopt する」用途で、存在しない resource を import しようとすると
+# `Cannot import non-existent remote object` エラーで plan 失敗する
+# (https://developer.hashicorp.com/terraform/language/import — "Only pre-existing
+# objects can be imported"). そのため import block の for_each は「adopt 対象の
+# 既存 jobs」のみに絞り、新規追加した jobs は resource 側の for_each で apply-create
+# させる。
+#
+# 新規 job 追加時の運用:
+#   1. `local.cron_jobs` に entry 追加 (resource 側は自動で create される)
+#   2. `local.imported_cron_jobs` には追加しない (まだ GCP 側に存在しないため)
+#   3. apply 完了後、以降のメンテナンスでも `imported_cron_jobs` は変更不要
+#      (import block は fresh-state bootstrap 時にのみ意味を持ち、通常 apply では
+#      no-op のため一過性 — 既に state に入っている resource を再 import しても skip)
 # -----------------------------------------------------------------------------
+
+# GCP 側に既に存在し、Phase 2 (setup-cloud-scheduler.sh → Terraform) の bootstrap で
+# import 済みの jobs のみを列挙。新規 jobs はここに含めない (import 失敗の原因になる)。
+locals {
+  imported_cron_jobs = toset([
+    "calendar-sync",
+    "event-import",
+    "faq-trash-cleanup",
+    "faq-stale-check",
+    "customer-risk-scan",
+    "instagram-refresh",
+    "instagram-sync",
+    "notification-cleanup",
+    "reservation-reminder",
+    "event-reminder",
+    "smart-lock-cleanup",
+    "pending-reservation-expire",
+    "data-retention",
+    # NOTE: waitlist-expire は PR #1080 で新規追加。GCP 側に既存なしのため
+    # 意図的に除外 (import{} block からは対象外、resource 側の for_each で create される)。
+  ])
+}
+
 import {
-  for_each = { for j in local.cron_jobs : j.name => j }
-  to       = google_cloud_scheduler_job.job[each.key]
-  id       = "projects/${var.project_id}/locations/${var.region}/jobs/${each.key}"
+  for_each = {
+    for j in local.cron_jobs : j.name => j
+    if contains(local.imported_cron_jobs, j.name)
+  }
+  to = google_cloud_scheduler_job.job[each.key]
+  id = "projects/${var.project_id}/locations/${var.region}/jobs/${each.key}"
 }
 
 resource "google_cloud_scheduler_job" "job" {
