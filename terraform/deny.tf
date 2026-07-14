@@ -49,4 +49,14 @@ resource "google_iam_deny_policy" "block_terraform_runner_from_reading_secrets" 
       ]
     }
   }
+
+  # Defense in depth: bootstrap の custom role `terraformRunnerDenyPolicyManager`
+  # は `iam.denypolicies.delete` を意図的に omit しているため runner は gcloud
+  # 経由で本 policy を削除できない。terraform 側からも `terraform destroy`
+  # や config からの resource 削除で誤って apply-drift を出さないよう
+  # `prevent_destroy = true` で二重防御。break-glass = project owner が
+  # gcloud で削除 → 再作成。
+  lifecycle {
+    prevent_destroy = true
+  }
 }
