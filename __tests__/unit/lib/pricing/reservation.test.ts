@@ -161,6 +161,7 @@ import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import type {
   DurationDiscountRule,
   PriceCalculationParams,
+  PriceCalculationSettings,
   SpaceDiscountSettings,
   CouponLike,
 } from "@/shared/lib/pricing/types";
@@ -172,12 +173,24 @@ const BASE_DURATION_RULES: DurationDiscountRule[] = [
   { hours: 8, discountRate: 20 },
 ];
 
-const BASE_PARAMS: PriceCalculationParams = {
-  hourlyPrice: 1000,
-  hours: 2,
-  durationRules: [],
+const BASE_SPACE: SpaceDiscountSettings = {
+  discountType: "none",
+  discountValue: null,
+  durationDiscountOverride: "inherit",
+};
+
+const BASE_SETTINGS: PriceCalculationSettings = {
   durationDiscountEnabled: false,
-  combinationMode: "best",
+  durationDiscountRules: [],
+  discountCombinationMode: "best",
+};
+
+// basePrice = 1000 * 2（旧テストの hourlyPrice:1000, hours:2 相当）
+const BASE_PARAMS: PriceCalculationParams = {
+  basePrice: 2000,
+  totalHours: 2,
+  space: BASE_SPACE,
+  reservationSettings: BASE_SETTINGS,
   showWarning: true,
 };
 
@@ -203,44 +216,29 @@ const FIXED_COUPON: CouponLike = {
 
 // =============================================================================
 // calculateReservationPrice
+//
+// basePrice / totalHours は呼出元（rate-plan-resolver の resolveRateBreakdown）が
+// 計算済みの値を渡す前提のため、このテストでは「hourlyPrice × hours の floor 計算」
+// 自体は検証しない（その責務は rate-plan-resolver.test.ts の
+// 「Math.floor 丸め: hourlyPrice 3333 × 1.5h = 4999」に移動済み）。
 // =============================================================================
 
 describe("calculateReservationPrice", () => {
   describe("基本料金計算", () => {
-    test("時間単価 × 時間数で基本料金を計算する", () => {
+    test("basePrice をそのまま result.basePrice として返す", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 2000,
-        hours: 3,
+        basePrice: 6000,
+        totalHours: 3,
       });
       expect(result.basePrice).toBe(6000);
-    });
-
-    test("小数の時間数はフロアで処理する（Math.floor）", () => {
-      // Math.floor(1500 * 2.5) = Math.floor(3750) = 3750（割り切れる場合）
-      const result = calculateReservationPrice({
-        ...BASE_PARAMS,
-        hourlyPrice: 1500,
-        hours: 2.5,
-      });
-      expect(result.basePrice).toBe(3750);
-    });
-
-    test("時間単価 × 時間数が割り切れない場合はフロア", () => {
-      // Math.floor(1000 * 1.3) = Math.floor(1300) = 1300
-      const result = calculateReservationPrice({
-        ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 1.3,
-      });
-      expect(result.basePrice).toBe(1300);
     });
 
     test("割引なしの場合は全割引額が 0 で totalPrice が basePrice と等しい", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 3000,
-        hours: 2,
+        basePrice: 6000,
+        totalHours: 2,
       });
       expect(result.basePrice).toBe(6000);
       expect(result.spaceDiscount).toBe(0);
@@ -257,16 +255,16 @@ describe("calculateReservationPrice", () => {
 
   describe("スペース割引のみ", () => {
     test("パーセント割引が正しく適用される", () => {
-      const spaceDiscount: SpaceDiscountSettings = {
+      const space: SpaceDiscountSettings = {
         discountType: "percentage",
         discountValue: 10,
         durationDiscountOverride: "inherit",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        spaceDiscount,
+        basePrice: 5000,
+        totalHours: 5,
+        space,
       });
       expect(result.basePrice).toBe(5000);
       expect(result.spaceDiscount).toBe(500);
@@ -278,16 +276,16 @@ describe("calculateReservationPrice", () => {
     });
 
     test("固定額割引が正しく適用される", () => {
-      const spaceDiscount: SpaceDiscountSettings = {
+      const space: SpaceDiscountSettings = {
         discountType: "fixed",
         discountValue: 800,
         durationDiscountOverride: "inherit",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        spaceDiscount,
+        basePrice: 5000,
+        totalHours: 5,
+        space,
       });
       expect(result.basePrice).toBe(5000);
       expect(result.spaceDiscount).toBe(800);
@@ -295,32 +293,32 @@ describe("calculateReservationPrice", () => {
     });
 
     test("スペース割引のみの場合 durationDiscount と couponDiscount は 0", () => {
-      const spaceDiscount: SpaceDiscountSettings = {
+      const space: SpaceDiscountSettings = {
         discountType: "percentage",
         discountValue: 20,
         durationDiscountOverride: "inherit",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        spaceDiscount,
+        basePrice: 5000,
+        totalHours: 5,
+        space,
       });
       expect(result.durationDiscount).toBe(0);
       expect(result.couponDiscount).toBe(0);
     });
 
     test("総割引率を正しく計算する（パーセント割引 20% → 20%）", () => {
-      const spaceDiscount: SpaceDiscountSettings = {
+      const space: SpaceDiscountSettings = {
         discountType: "percentage",
         discountValue: 20,
         durationDiscountOverride: "inherit",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        spaceDiscount,
+        basePrice: 5000,
+        totalHours: 5,
+        space,
       });
       expect(result.totalDiscountRate).toBe(20);
     });
@@ -330,10 +328,13 @@ describe("calculateReservationPrice", () => {
     test("durationDiscountEnabled=true でルールが適用される", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+        },
       });
       // basePrice = 5000, priceAfterSpace = 5000, durationDiscount = Math.floor(5000 * 10%) = 500
       expect(result.durationDiscount).toBe(500);
@@ -346,10 +347,13 @@ describe("calculateReservationPrice", () => {
     test("durationDiscountEnabled=false では長時間割引が適用されない", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: false,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: false,
+        },
       });
       expect(result.durationDiscount).toBe(0);
       expect(result.appliedDurationRule).toBeNull();
@@ -358,10 +362,13 @@ describe("calculateReservationPrice", () => {
     test("ルールが空の場合は長時間割引なし", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: [],
-        durationDiscountEnabled: true,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: [],
+          durationDiscountEnabled: true,
+        },
       });
       expect(result.durationDiscount).toBe(0);
     });
@@ -369,28 +376,34 @@ describe("calculateReservationPrice", () => {
     test("閾値未満の時間では長時間割引なし", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 2,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 2000,
+        totalHours: 2,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+        },
       });
       // 2時間 < 最小閾値 3時間
       expect(result.durationDiscount).toBe(0);
     });
 
     test("スペース割引適用後の価格に対して長時間割引を計算する", () => {
-      const spaceDiscount: SpaceDiscountSettings = {
+      const space: SpaceDiscountSettings = {
         discountType: "fixed",
         discountValue: 1000,
         durationDiscountOverride: "inherit",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
-        spaceDiscount,
+        basePrice: 5000,
+        totalHours: 5,
+        space,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+        },
       });
       // basePrice = 5000, spaceDiscount = 1000, priceAfterSpace = 4000
       // durationDiscount = Math.floor(4000 * 10%) = 400
@@ -398,14 +411,32 @@ describe("calculateReservationPrice", () => {
       expect(result.spaceDiscount).toBe(1000);
       expect(result.durationDiscount).toBe(400);
     });
+
+    test("durationDiscountRules が不正な JSON の場合は長時間割引なし（parseDurationDiscountRules 内部化）", () => {
+      // calculateReservationPrice は reservationSettings.durationDiscountRules
+      // (Prisma Json の raw 値) を内部で parseDurationDiscountRules によりパースする。
+      // 不正な値（配列でない）は空ルールにフォールバックする。
+      const result = calculateReservationPrice({
+        ...BASE_PARAMS,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: "not-an-array",
+          durationDiscountEnabled: true,
+        },
+      });
+      expect(result.durationDiscount).toBe(0);
+      expect(result.appliedDurationRule).toBeNull();
+    });
   });
 
   describe("クーポン割引のみ", () => {
     test("パーセントクーポンが正しく適用される", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
+        basePrice: 5000,
+        totalHours: 5,
         coupon: PERCENTAGE_COUPON,
       });
       // basePrice = 5000, 20% → 1000
@@ -423,8 +454,8 @@ describe("calculateReservationPrice", () => {
     test("固定額クーポンが正しく適用される", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
+        basePrice: 5000,
+        totalHours: 5,
         coupon: FIXED_COUPON,
       });
       expect(result.couponDiscount).toBe(500);
@@ -432,20 +463,23 @@ describe("calculateReservationPrice", () => {
     });
 
     test("スペース割引・長時間割引適用後の価格にクーポンを計算する", () => {
-      const spaceDiscount: SpaceDiscountSettings = {
+      const space: SpaceDiscountSettings = {
         discountType: "fixed",
         discountValue: 500,
         durationDiscountOverride: "inherit",
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
-        spaceDiscount,
+        basePrice: 5000,
+        totalHours: 5,
+        space,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "both",
+        },
         coupon: PERCENTAGE_COUPON,
-        combinationMode: "both",
       });
       // basePrice = 5000, spaceDiscount = 500, priceAfterSpace = 4500
       // durationDiscount = Math.floor(4500 * 10%) = 450, priceAfterDuration = 4050
@@ -470,12 +504,15 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 8,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 8000,
+        totalHours: 8,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "best",
+        },
         coupon: smallCoupon,
-        combinationMode: "best",
       });
       // basePrice = 8000, durationDiscount = 8000 * 20% = 1600
       // couponDiscount = (8000 - 1600) * 10% = 640 → 実際は priceAfterSpace+duration で計算
@@ -503,12 +540,15 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 3,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 3000,
+        totalHours: 3,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "best",
+        },
         coupon: bigCoupon,
-        combinationMode: "best",
       });
       expect(result.durationDiscount).toBe(0);
       expect(result.appliedDurationRule).toBeNull();
@@ -521,11 +561,14 @@ describe("calculateReservationPrice", () => {
     test("割引が1種類しかない場合は警告なし", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
-        combinationMode: "best",
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "best",
+        },
       });
       expect(result.warnings).toEqual([]);
     });
@@ -542,12 +585,15 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 8,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 8000,
+        totalHours: 8,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "best",
+        },
         coupon: smallCoupon,
-        combinationMode: "best",
         showWarning: false,
       });
       expect(result.warnings).toEqual([]);
@@ -562,12 +608,15 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "both",
+        },
         coupon: combinableCoupon,
-        combinationMode: "both",
       });
       expect(result.durationDiscount).toBeGreaterThan(0);
       expect(result.couponDiscount).toBeGreaterThan(0);
@@ -580,12 +629,15 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "both",
+        },
         coupon: nonCombinableCoupon,
-        combinationMode: "both",
       });
       // クーポンが併用不可なのでクーポン優先、長時間割引を無効化
       expect(result.durationDiscount).toBe(0);
@@ -603,12 +655,15 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "both",
+        },
         coupon: combinableCoupon,
-        combinationMode: "both",
       });
       expect(result.warnings).toContain(
         "長時間割引とクーポン割引が両方適用されています",
@@ -622,12 +677,15 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "both",
+        },
         coupon: combinableCoupon,
-        combinationMode: "both",
         showWarning: false,
       });
       expect(result.warnings).toEqual([]);
@@ -638,11 +696,14 @@ describe("calculateReservationPrice", () => {
     test("override=inherit かつ durationDiscountEnabled=true で長時間割引が有効", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
-        spaceDiscount: {
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+        },
+        space: {
           discountType: "none",
           discountValue: null,
           durationDiscountOverride: "inherit",
@@ -654,11 +715,14 @@ describe("calculateReservationPrice", () => {
     test("override=inherit かつ durationDiscountEnabled=false で長時間割引が無効", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: false,
-        spaceDiscount: {
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: false,
+        },
+        space: {
           discountType: "none",
           discountValue: null,
           durationDiscountOverride: "inherit",
@@ -670,11 +734,14 @@ describe("calculateReservationPrice", () => {
     test("override=enabled の場合は durationDiscountEnabled の値に関わらず長時間割引が有効", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: false, // グローバルは無効
-        spaceDiscount: {
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: false, // グローバルは無効
+        },
+        space: {
           discountType: "none",
           discountValue: null,
           durationDiscountOverride: "enabled", // スペースで強制有効
@@ -686,11 +753,14 @@ describe("calculateReservationPrice", () => {
     test("override=disabled の場合は durationDiscountEnabled=true でも長時間割引が無効", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true, // グローバルは有効
-        spaceDiscount: {
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true, // グローバルは有効
+        },
+        space: {
           discountType: "none",
           discountValue: null,
           durationDiscountOverride: "disabled", // スペースで強制無効
@@ -709,9 +779,9 @@ describe("calculateReservationPrice", () => {
     test("20% スペース割引の場合は totalDiscountRate が 20", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        spaceDiscount: {
+        basePrice: 5000,
+        totalHours: 5,
+        space: {
           discountType: "percentage",
           discountValue: 20,
           durationDiscountOverride: "inherit",
@@ -725,16 +795,19 @@ describe("calculateReservationPrice", () => {
       // totalDiscount = 950, rate = Math.round(950/5000*100) = Math.round(19) = 19
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
-        spaceDiscount: {
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "both",
+        },
+        space: {
           discountType: "percentage",
           discountValue: 10,
           durationDiscountOverride: "inherit",
         },
-        combinationMode: "both",
       });
       // spaceDiscount = 500, priceAfterSpace = 4500, durationDiscount = 450
       // totalDiscount = 950, rate = Math.round(950/5000*100) = 19
@@ -755,13 +828,16 @@ describe("calculateReservationPrice", () => {
       };
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 5000,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "both",
+        },
         coupon: massiveCoupon,
-        combinationMode: "both",
-        spaceDiscount: {
+        space: {
           discountType: "percentage",
           discountValue: 50,
           durationDiscountOverride: "inherit",
@@ -772,25 +848,32 @@ describe("calculateReservationPrice", () => {
   });
 
   describe("エッジケース", () => {
-    test("hourlyPrice が 0 の場合は全価格が 0", () => {
+    test("basePrice が 0 の場合は全価格が 0", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 0,
-        hours: 5,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 0,
+        totalHours: 5,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+        },
         coupon: PERCENTAGE_COUPON,
       });
       expect(result.basePrice).toBe(0);
       expect(result.totalPrice).toBe(0);
     });
 
-    test("spaceDiscount が null の場合はスペース割引なし", () => {
+    test("space.discountType が none の場合はスペース割引なし", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
-        spaceDiscount: null,
+        basePrice: 5000,
+        totalHours: 5,
+        space: {
+          discountType: "none",
+          discountValue: null,
+          durationDiscountOverride: "inherit",
+        },
       });
       expect(result.spaceDiscount).toBe(0);
       expect(result.appliedSpaceDiscount).toBeNull();
@@ -799,8 +882,8 @@ describe("calculateReservationPrice", () => {
     test("coupon が null の場合はクーポン割引なし", () => {
       const result = calculateReservationPrice({
         ...BASE_PARAMS,
-        hourlyPrice: 1000,
-        hours: 5,
+        basePrice: 5000,
+        totalHours: 5,
         coupon: null,
       });
       expect(result.couponDiscount).toBe(0);
@@ -821,12 +904,15 @@ describe("calculateReservationPrice", () => {
       const { showWarning: _, ...paramsWithoutWarning } = BASE_PARAMS;
       const result = calculateReservationPrice({
         ...paramsWithoutWarning,
-        hourlyPrice: 1000,
-        hours: 8,
-        durationRules: BASE_DURATION_RULES,
-        durationDiscountEnabled: true,
+        basePrice: 8000,
+        totalHours: 8,
+        reservationSettings: {
+          ...BASE_SETTINGS,
+          durationDiscountRules: BASE_DURATION_RULES,
+          durationDiscountEnabled: true,
+          discountCombinationMode: "best",
+        },
         coupon: smallCoupon,
-        combinationMode: "best",
       });
       // best モードで両方あれば警告が出るはず（デフォルト showWarning=true）
       expect(result.warnings.length).toBeGreaterThan(0);

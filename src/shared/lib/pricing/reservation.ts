@@ -2,7 +2,8 @@
  * 予約料金計算（メイン統合関数）
  *
  * 計算順序:
- * 1. 基本料金 = hourlyPrice x hours
+ * 1. 基本料金 = 呼出元（rate-plan-resolver）が計算した basePrice をそのまま使う
+ *    （hourlyPrice × hours の二重計算はしない）
  * 2. スペース固有割引を計算（basePriceから）
  * 3. 長時間割引を計算（durationDiscountOverride考慮）
  * 4. クーポン割引を計算
@@ -22,6 +23,7 @@ import {
   calculateSpaceDiscount,
   calculateDurationDiscount,
   calculateCouponDiscount,
+  parseDurationDiscountRules,
 } from "./discount";
 
 /**
@@ -31,21 +33,18 @@ export function calculateReservationPrice(
   params: PriceCalculationParams,
 ): PriceCalculation {
   const {
-    hourlyPrice,
-    hours,
-    durationRules,
-    durationDiscountEnabled,
-    spaceDiscount,
+    basePrice,
+    totalHours,
+    space,
+    reservationSettings,
     coupon,
-    combinationMode,
     showWarning = true,
   } = params;
 
   const warnings: string[] = [];
-  const basePrice = Math.floor(hourlyPrice * hours);
 
   // スペース固有割引
-  const spaceDiscountResult = calculateSpaceDiscount(basePrice, spaceDiscount);
+  const spaceDiscountResult = calculateSpaceDiscount(basePrice, space);
   const finalSpaceDiscount = spaceDiscountResult.discount;
   const appliedSpaceDiscount = spaceDiscountResult.applied;
 
@@ -54,19 +53,22 @@ export function calculateReservationPrice(
   let appliedDurationRule: DurationDiscountRule | null = null;
 
   // オーバーライド設定を判定
-  const durationOverride =
-    spaceDiscount?.durationDiscountOverride ?? DurationDiscountOverride.inherit;
+  const durationOverride = space.durationDiscountOverride;
   const effectiveDurationEnabled =
     durationOverride === DurationDiscountOverride.inherit
-      ? durationDiscountEnabled
+      ? reservationSettings.durationDiscountEnabled
       : durationOverride === DurationDiscountOverride.enabled;
+
+  const durationRules = parseDurationDiscountRules(
+    reservationSettings.durationDiscountRules,
+  );
 
   if (effectiveDurationEnabled && durationRules.length > 0) {
     // スペース割引適用後の価格に対して長時間割引を計算
     const priceAfterSpaceDiscount = basePrice - finalSpaceDiscount;
     const result = calculateDurationDiscount(
       priceAfterSpaceDiscount,
-      hours,
+      totalHours,
       durationRules,
     );
     durationDiscount = result.discount;
@@ -95,6 +97,8 @@ export function calculateReservationPrice(
   // 注: スペース固有割引は常に適用（併用モードの対象外）
   let finalDurationDiscount = durationDiscount;
   let finalCouponDiscount = couponDiscount;
+
+  const combinationMode = reservationSettings.discountCombinationMode;
 
   if (
     combinationMode === DiscountCombinationMode.best &&

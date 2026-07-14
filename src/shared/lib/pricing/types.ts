@@ -4,6 +4,7 @@
 
 import type { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 import type {
+  DiscountCombinationMode,
   DiscountType,
   DurationDiscountOverride,
   TaxDisplayMode,
@@ -62,16 +63,29 @@ export type PriceCalculation = {
 };
 
 /**
+ * 長時間割引・併用モードの設定（Settings の一部）。
+ * durationDiscountRules は Prisma Json 列の raw 値をそのまま渡す
+ * （calculateReservationPrice 内で parseDurationDiscountRules によりパースする）。
+ */
+export type PriceCalculationSettings = {
+  durationDiscountEnabled: boolean;
+  durationDiscountRules: unknown;
+  discountCombinationMode: DiscountCombinationMode;
+};
+
+/**
  * 料金計算パラメータ
+ *
+ * basePrice は呼出元（rate-plan-resolver の resolveRateBreakdown が返す
+ * totalBasePrice）が計算した rate plan 適用後の価格を直接受け取る。
+ * hourlyPrice × hours の二重計算はしない。
  */
 export type PriceCalculationParams = {
-  hourlyPrice: number;
-  hours: number;
-  durationRules: DurationDiscountRule[];
-  durationDiscountEnabled: boolean;
-  spaceDiscount?: SpaceDiscountSettings | null;
+  basePrice: number;
+  totalHours: number;
+  space: SpaceDiscountSettings;
+  reservationSettings: PriceCalculationSettings;
   coupon?: CouponLike | null;
-  combinationMode: import("@/shared/lib/validations/enums/prisma-types").DiscountCombinationMode;
   showWarning?: boolean;
 };
 

@@ -1,5 +1,4 @@
 import "server-only";
-import { calculateDurationHours } from "@/shared/lib/date-format";
 
 import { prisma } from "@/shared/db/prisma";
 import { CouponType } from "@generated/prisma/enums";
@@ -58,16 +57,6 @@ export const CUSTOMER_SELECT = {
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
-
-export function calculateHoursAndBasePrice(
-  startDateTime: Date,
-  endDateTime: Date,
-  hourlyPrice: number,
-) {
-  const hours = calculateDurationHours(startDateTime, endDateTime);
-  const basePrice = Math.floor(hourlyPrice * hours);
-  return { hours, basePrice };
-}
 
 export async function getReservationSettings() {
   return prisma.settings.findUnique({
