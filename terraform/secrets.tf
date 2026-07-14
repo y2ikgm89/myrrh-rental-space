@@ -12,6 +12,36 @@
 # を rm する 2 段階手順を踏む (誤 destroy 防止)。
 
 locals {
+  # Cloud Run `--set-secrets=` で runtime SA が読む必要のある全 secret。
+  # cloudbuild.yaml の `--set-secrets=` に登場する全 secret 名と一致させる。
+  # 新規追加はここに 1 行追加 → terraform apply で container 生成 → project
+  # owner が gcloud secrets versions add で値を投入、の順。
+  runtime_secrets = [
+    "DATABASE_URL",
+    "BETTER_AUTH_SECRET",
+    "ENCRYPTION_KEY",
+    "SECONDARY_ENCRYPTION_KEYS",
+    "AUDIT_LOG_HMAC_KEY",
+    "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET_NAME",
+    "R2_PUBLIC_URL",
+    "CLOUDFLARE_ZONE_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ORIGIN_HEADER_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+  ]
+
+  # Cloud Build が image build 時に availableSecrets 経由で読む secret。
+  # runtime SA だけでなく build SA にも secretAccessor が必要 (project-level
+  # binding は secret_iam.tf、per-secret 個別付与は F1 対策で廃止)。
+  build_secrets = [
+    "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
+  ]
+
   # runtime_secrets と build_secrets の union (重複除去)。
   all_secrets = toset(concat(local.runtime_secrets, local.build_secrets))
 }
