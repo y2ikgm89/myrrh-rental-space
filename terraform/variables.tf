@@ -71,3 +71,9 @@ variable "cloudflare_zone_id" {
   type        = string
   default     = "71192d17d6e20d432b9fe0ad48291277"
 }
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID (Ikeakie@gmail.com's Account、Account API scope の resource 指定に使用 — R2 buckets / Turnstile widgets 等)"
+  type        = string
+  default     = "2c7478b2d4b8e06e50d1e62354026d66"
+}

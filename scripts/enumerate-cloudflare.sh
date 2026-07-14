@@ -81,14 +81,24 @@ printf '%s' "${RULESETS_JSON}" | pretty
 
 # ---- 4a. Ruleset detail (rules 配列を含む full body) ----
 # List だけでは各 ruleset 内の rules が返らないため、id ごとに GET し直す。
+#
+# ⚠ `tr -d '\r'` は Windows Python の `print()` が CRLF を出力し `read -r` が
+# trailing CR を拾って `.../rulesets/<id>\r` の malformed URL で curl exit 3 に
+# なるのを防ぐ (pipefail で script 全体が abort する)。macOS/Linux では no-op。
+#
+# 個別 ruleset の fetch が失敗しても後続 (R2 / Turnstile / Page Rules) の enumerate
+# を継続するため `|| true` で curl 失敗を吸収 (SET_E は subshell に継承されるが、
+# `|| true` が最終終了コードを 0 にする)。
 section "Ruleset detail (per-id)"
 printf '%s' "${RULESETS_JSON}" \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(r["id"]) for r in d.get("result",[])]' \
+  | tr -d '\r' \
   | while read -r RULESET_ID; do
+      [ -z "${RULESET_ID}" ] && continue
       echo
       echo "### Ruleset: ${RULESET_ID}"
       echo
-      cf_get "zones/${ZONE_ID}/rulesets/${RULESET_ID}" | pretty
+      cf_get "zones/${ZONE_ID}/rulesets/${RULESET_ID}" | pretty || echo "(fetch failed for ${RULESET_ID})"
     done
 
 # ---- 5. R2 buckets (account scope) ----
