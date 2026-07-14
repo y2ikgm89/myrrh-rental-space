@@ -150,11 +150,31 @@ run gcloud iam service-accounts add-iam-policy-binding "${TERRAFORM_SA}" \
 #    projectIamAdmin は今や本 binding が唯一の runner での用途 — runner の
 #    それ以外の project-level bindings は「自分自身への grant」なので、そもそも
 #    Terraform で self-declare しない (2026-07-14 bootstrap-only refactor)。
+#
+#    CEL 式内部にカンマ (`api.getAttribute('...', [])` の第 2 引数区切り) が
+#    含まれるため --condition の inline 指定は gcloud parser で誤分割されて
+#    `argument --condition: valid keys are [None, description, expression, title]`
+#    エラーになる。公式推奨の --condition-from-file で JSON 経由で渡す。
+CONDITION_FILE=$(mktemp -t bootstrap-projectIamAdmin-cond-XXXXXX.json)
+trap 'rm -f "${CONDITION_FILE}"' EXIT
+cat > "${CONDITION_FILE}" <<'CONDITION_JSON'
+{
+  "expression": "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['roles/secretmanager.secretAccessor'])",
+  "title": "only_grant_secretmanager_secretAccessor",
+  "description": "Restrict grantable roles to Secret Manager secretAccessor only (privilege escalation guard, Codex P1 #1053)"
+}
+CONDITION_JSON
+
+if [ "${DRY_RUN}" = "1" ]; then
+  echo "[bootstrap][DRY_RUN] projectIamAdmin condition JSON (written to ${CONDITION_FILE}):"
+  sed 's/^/[bootstrap][DRY_RUN]   /' "${CONDITION_FILE}"
+fi
+
 echo "[bootstrap] Granting runner SA conditional projectIamAdmin (secretAccessor grant 用)"
 run gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${TERRAFORM_SA}" \
   --role="roles/resourcemanager.projectIamAdmin" \
-  --condition="expression=api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['roles/secretmanager.secretAccessor']),title=only_grant_secretmanager_secretAccessor,description=Restrict grantable roles to Secret Manager secretAccessor only (privilege escalation guard, Codex P1 #1053)"
+  --condition-from-file="${CONDITION_FILE}"
 
 # 6. Secret Manager custom role (D1) - idempotent create/update
 #    過去は terraform/conditions.tf の `google_project_iam_custom_role` で
