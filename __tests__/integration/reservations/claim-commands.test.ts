@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { TaxRateType } from "@generated/prisma/enums";
 
 process.env["DATABASE_URL"] =
   process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
@@ -66,7 +67,22 @@ async function createGuestReservationWithCustomer() {
       customerId: guestCustomer.id,
       startTime: new Date("2026-05-01T01:00:00Z"),
       endTime: new Date("2026-05-01T02:00:00Z"),
+      basePrice: 1000,
       totalPrice: 1000,
+      // Task 3 (SpaceRatePlan migration) で NOT NULL 化。claim-commands のテストは
+      // customer 紐付けロジックのみを検証しており実額は無関係なため legacy 相当の固定値。
+      rateBreakdownJson: {
+        schemaVersion: 1,
+        segments: [],
+        totalHours: 0,
+        totalBasePrice: 0,
+        holidayFlags: {},
+        legacy: true,
+      },
+      taxRateType: TaxRateType.standard,
+      taxRate: 10,
+      taxAmount: 100,
+      totalPriceWithTax: 1100,
       guestLastName: "ゲスト",
       guestFirstName: "太郎",
       guestEmail: `guest-${suffix}@example.com`,

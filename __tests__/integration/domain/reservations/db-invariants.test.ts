@@ -114,7 +114,14 @@ async function createReservation(input: {
         "paymentStatus",
         "icsSequence",
         "createdAt",
-        "updatedAt"
+        "updatedAt",
+        "basePrice",
+        "totalPrice",
+        "rateBreakdownJson",
+        "taxRateType",
+        "taxRate",
+        "taxAmount",
+        "totalPriceWithTax"
       )
       VALUES (
         $1::uuid,
@@ -127,7 +134,14 @@ async function createReservation(input: {
         'PENDING'::"PaymentStatus",
         0,
         now(),
-        now()
+        now(),
+        1000,
+        1000,
+        '{"schemaVersion":1,"segments":[],"totalHours":0,"totalBasePrice":0,"holidayFlags":{},"legacy":true}'::jsonb,
+        'standard'::"TaxRateType",
+        10,
+        100,
+        1100
       )
     `,
       [

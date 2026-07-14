@@ -216,6 +216,24 @@ enum EmailDeliveryStatus {
   COMPLAINED
 }
 
+/// SpaceRatePlan の曜日制約。空配列 (daysOfWeek: []) は「全曜日」を意味する。
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+/// SpaceRatePlan の祝日マッチ条件。
+enum HolidayMode {
+  any // 祝日/平日どちらでもマッチ (default)
+  only // 祝日のみマッチ
+  exclude // 祝日は除外 (平日のみ)
+}
+
 // ==============================================
 // Better Auth Models
 // ==============================================
@@ -425,7 +443,6 @@ model Space {
   capacity             Int
   area                 Decimal?  @db.Decimal(10, 2)
   hourlyPrice          Decimal   @db.Decimal(10, 2)
-  dailyPrice           Decimal?  @db.Decimal(10, 2)
   mainImageUrl         String
   gallery              Json      @default("[]")
   /// 構造化された設備リスト（Airbnb / Booking.com 標準パターン）。
@@ -474,6 +491,7 @@ model Space {
   reviews         SpaceReview[]
   events          Event[]
   blockedDates    BlockedDate[]
+  ratePlans       SpaceRatePlan[]
   location        Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
   category        SpaceCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   smartLockDevice SmartLockDevice? @relation(fields: [smartLockDeviceId], references: [id], onDelete: SetNull)
@@ -492,6 +510,36 @@ model Space {
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_name_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_slug_trgm_idx")
   @@map("spaces")
+}
+
+/// 曜日別 / 時間帯別 / 特定期間 / 祝日料金プラン。マッチする plan がない時間帯は
+/// `Space.hourlyPrice` にフォールバックする。同一時間帯に複数 plan がマッチした場合は
+/// `updatedAt DESC`（last-updated-wins）で 1 件を採用する。解決ロジックは
+/// `src/shared/lib/pricing/rate-plan-resolver.ts`（Task 4 で追加）。
+/// CHECK 制約 4 本（hourlyPrice >= 0 / startTime・endTime の HH:MM 形式 / effectiveFrom <=
+/// effectiveTo）は Prisma 7 が `@@check` 属性を持たないため migration.sql に手書きしてある。
+/// `prisma db pull` で introspection すると欠落するため、再生成時は手で復元すること
+/// （BlockedDate の CHECK 制約と同じ注意点）。
+model SpaceRatePlan {
+  id      String @id @default(cuid()) @db.VarChar(30)
+  spaceId String @db.Uuid
+  space   Space  @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  name        String  @db.VarChar(100) // 例: "週末料金", "GW料金", "深夜料金", "祝日料金"
+  hourlyPrice Decimal @db.Decimal(10, 2)
+
+  daysOfWeek    DayOfWeek[] // 空配列 = 全曜日（曜日制約なし）
+  holidayMode   HolidayMode @default(any)
+  startTime     String?     @db.VarChar(5) // "HH:MM" (24h)、null = 00:00（開始）
+  endTime       String?     @db.VarChar(5) // "HH:MM"、null = 24:00（終了、半開区間）
+  effectiveFrom DateTime?   @db.Date // JST 日付、null = 期限なし
+  effectiveTo   DateTime?   @db.Date // JST 日付（inclusive）、null = 期限なし
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // last-updated-wins 優先度用
+
+  @@index([spaceId, updatedAt(sort: Desc)])
+  @@map("space_rate_plans")
 }
 
 /// 臨時休業 / 急な休み（businessHours の曜日別定休日を補完する日付範囲ベースの休業）。
@@ -554,7 +602,7 @@ model Reservation {
   /// comments, and `__tests__/integration/domain/reservations/db-invariants.test.ts`
   /// in sync if this model changes.
   status     ReservationStatus @default(PENDING)
-  totalPrice Decimal?          @db.Decimal(10, 2)
+  totalPrice Decimal           @db.Decimal(10, 2) // 割引後・税抜（NOT NULL、legacy row は migration backfill 済み）
   notes      String?           @db.Text
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
@@ -564,13 +612,19 @@ model Reservation {
   couponDiscountAmount   Decimal? @db.Decimal(10, 2) // クーポン割引額
   durationDiscountAmount Decimal? @db.Decimal(10, 2) // 長時間割引額
   spaceDiscountAmount    Decimal? @db.Decimal(10, 2) // スペース固有割引額
-  basePrice              Decimal? @db.Decimal(10, 2) // 割引前価格（記録用）
+  basePrice              Decimal  @db.Decimal(10, 2) // 割引前価格（NOT NULL、Σ segment.subtotal）
+  /// Rate plan 解決結果のスナップショット（`RateBreakdown` 型、`src/shared/lib/pricing/rate-breakdown.ts`）。
+  /// legacy row（本 migration の backfill 対象）は `{ legacy: true, segments: [], ... }` を持つ
+  /// （`isLegacyRateBreakdown` で判定、`receipts/issue.ts` 等は legacy 時のみ totalPrice フォールバックを維持）。
+  rateBreakdownJson Json
 
   // 税情報（予約時点の値を記録）
-  taxRateType       TaxRateType? // 適用された税率タイプ
-  taxRate           Decimal?     @db.Decimal(5, 2) // 適用税率（%）
-  taxAmount         Decimal?     @db.Decimal(10, 2) // 税額
-  totalPriceWithTax Decimal?     @db.Decimal(10, 2) // 税込み合計
+  taxRateType       TaxRateType // 適用された税率タイプ（NOT NULL、snapshot）
+  taxRate           Decimal     @db.Decimal(5, 2) // 適用税率（%）（NOT NULL、snapshot）
+  taxAmount         Decimal     @db.Decimal(10, 2) // 税額（NOT NULL）
+  totalPriceWithTax Decimal     @db.Decimal(10, 2) // 税込み合計（NOT NULL）
+  /// 管理者が計算値を手動上書きした場合の実行者 User.id（audit 目的）。null = 上書きなし。
+  priceOverriddenBy String?
 
   // Google Calendar Sync
   googleCalendarEventId String? // 共有カレンダーのイベントID
