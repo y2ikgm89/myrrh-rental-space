@@ -75,12 +75,18 @@ jobs:
   #   段階 3 完了後 → terraform apply が真に idempotent no-op → 別 PR で本
   #   continue-on-error を削除して strict blocking gate に戻す (Codex P1 F6 の
   #   secret race protect を復元)。
+  #
+  # 2026-07-14 段階 4 完了 (このPR): terraform apply が commit adb54eaf6 (PR #1079
+  # merge) で完全 success を確認 (import 44 + add 6 + change 7 + destroy 0 全て
+  # 適用済み)。continue-on-error を削除して strict blocking gate 復元 →
+  # terraform apply の失敗が deploy job を blocking する Codex P1 F6 race protect
+  # 復活。以降は「code に問題がある PR は main に到達しない (PR gate) + main の
+  # apply が失敗したら deploy も止まる (この strict gate)」の 2 層防御。
   terraform-apply:
     name: Terraform Apply (IAM prereq)
     if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: true # ⚠️ 2026-07-14 一時措置、上記コメント参照
     permissions:
       contents: read
       id-token: write
