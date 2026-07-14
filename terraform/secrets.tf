@@ -48,6 +48,17 @@ locals {
   all_secrets = toset(concat(local.runtime_secrets, local.build_secrets))
 }
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+# -----------------------------------------------------------------------------
+import {
+  for_each = local.all_secrets
+  to       = google_secret_manager_secret.secret[each.value]
+  id       = "projects/${var.project_id}/secrets/${each.value}"
+}
+
 resource "google_secret_manager_secret" "secret" {
   for_each = local.all_secrets
 

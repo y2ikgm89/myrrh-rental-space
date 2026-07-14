@@ -57,10 +57,24 @@ jobs:
   #     - `continue-on-error: true` で apply 失敗が deploy を blocking しない
   #     - deploy job は needs: terraform-apply を維持 (race 順序は保つ)
   #
-  #   段階 2 (別 PR、fix/terraform-import-blocks + runner IAM 完了後) で
-  #   Terraform 1.7+ `import{}` blocks を導入し既存 resources を宣言的に import
-  #   → apply が idempotent no-op になる → この continue-on-error を削除して
-  #   strict blocking gate に戻す。
+  #   段階 1 (PR #1075、この commit): continue-on-error を投入して production
+  #     deploy を復旧。次 main push で通常 deploy が走る (terraform apply の
+  #     成否に関係なく)。
+  #
+  #   段階 2 (PR #1076): pre-existing GCP resources を Terraform 1.7+
+  #     `import{}` blocks で state に宣言的に import → fresh-state apply が
+  #     idempotent no-op になり 409 "already exists" を根本的に解消。
+  #     terraform/*.tf の各 resource に対応する import block が同一 file に
+  #     共存し、architecture-boundaries.test.ts の drift-gate で欠落を強制検知。
+  #
+  #   段階 3 (未実施、user 手作業): user が `bash scripts/bootstrap-terraform.sh`
+  #     を local から再実行し、runner IAM (run.admin / compute.networkAdmin /
+  #     compute.securityAdmin / iap.admin / serviceAccountUser on runtime-sa
+  #     +scheduler-sa + serviceusage.serviceUsageAdmin) を完成させる。
+  #
+  #   段階 3 完了後 → terraform apply が真に idempotent no-op → 別 PR で本
+  #   continue-on-error を削除して strict blocking gate に戻す (Codex P1 F6 の
+  #   secret race protect を復元)。
   terraform-apply:
     name: Terraform Apply (IAM prereq)
     if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'

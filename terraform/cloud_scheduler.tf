@@ -95,6 +95,17 @@ locals {
   ]
 }
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+# -----------------------------------------------------------------------------
+import {
+  for_each = { for j in local.cron_jobs : j.name => j }
+  to       = google_cloud_scheduler_job.job[each.key]
+  id       = "projects/${var.project_id}/locations/${var.region}/jobs/${each.key}"
+}
+
 resource "google_cloud_scheduler_job" "job" {
   for_each = { for j in local.cron_jobs : j.name => j }
 

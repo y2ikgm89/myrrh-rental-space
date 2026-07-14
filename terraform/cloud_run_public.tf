@@ -15,6 +15,16 @@
 #
 # `prevent_destroy = true` で Terraform apply が service を消す事故は無条件 block。
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+# -----------------------------------------------------------------------------
+import {
+  to = google_cloud_run_v2_service.public
+  id = "projects/${var.project_id}/locations/${var.region}/services/myrrh-rental-space"
+}
+
 resource "google_cloud_run_v2_service" "public" {
   provider = google-beta
 

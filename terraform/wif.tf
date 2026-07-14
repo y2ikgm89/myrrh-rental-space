@@ -14,6 +14,21 @@ locals {
   github_repo     = "y2ikgm89/myrrh-rental-space"
 }
 
+# -----------------------------------------------------------------------------
+# Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
+# instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
+# These are no-op after the first apply; safe to keep long-term for docs.
+# -----------------------------------------------------------------------------
+import {
+  to = google_iam_workload_identity_pool.github_actions
+  id = "projects/${var.project_id}/locations/global/workloadIdentityPools/${local.wif_pool_id}"
+}
+
+import {
+  to = google_iam_workload_identity_pool_provider.github
+  id = "projects/${var.project_id}/locations/global/workloadIdentityPools/${local.wif_pool_id}/providers/${local.wif_provider_id}"
+}
+
 resource "google_iam_workload_identity_pool" "github_actions" {
   project                   = var.project_id
   workload_identity_pool_id = local.wif_pool_id
