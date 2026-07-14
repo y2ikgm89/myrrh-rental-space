@@ -258,7 +258,7 @@ run gcloud iam service-accounts add-iam-policy-binding "${TERRAFORM_SA}" \
 CUSTOM_ROLE_ID="terraformRunnerSecretManagerNoPolicyMgmt"
 CUSTOM_ROLE_PERMISSIONS="secretmanager.secrets.create,secretmanager.secrets.delete,secretmanager.secrets.get,secretmanager.secrets.list,secretmanager.secrets.update,secretmanager.versions.get,secretmanager.versions.list,resourcemanager.projects.get"
 CUSTOM_ROLE_TITLE="TF Runner Secret Manager (container CRUD only, no version writes, no IAM policy mgmt)"
-CUSTOM_ROLE_DESCRIPTION="F1+F2 structural closure: runner can create/update/delete secret containers and read version metadata, but cannot read/inject/destroy version values or delegate IAM. Combined with removed projectIamAdmin/serviceAccountAdmin, this leaves no allow-policy path to secret values (see terraform/README.md 'Runner IAM ownership contract')."
+CUSTOM_ROLE_DESCRIPTION="F1+F2: runner manages secret containers only (no versions.write, no IAM). Combined with removed projectIamAdmin/serviceAccountAdmin = no path to secret values. See terraform/README.md Runner IAM contract."
 
 if [ "${DRY_RUN}" != "1" ] \
    && gcloud iam roles describe "${CUSTOM_ROLE_ID}" \
