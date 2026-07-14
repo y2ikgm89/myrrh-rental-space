@@ -8,7 +8,8 @@
       "Type Check",
       "Unit Tests",
       "Smoke E2E (critical path)",
-      "Build (env validation)"
+      "Build (env validation)",
+      "Terraform / validate"
     ]
   },
   "enforce_admins": null,
