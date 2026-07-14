@@ -12,10 +12,14 @@ import {
 } from "@/shared/domain/reservations/availability";
 import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
+import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
+import { resolveRateBreakdown } from "@/shared/lib/pricing/rate-plan-resolver";
+import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
+import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
 import {
   CUSTOMER_SELECT,
-  calculateHoursAndBasePrice,
-  calculatePricing,
+  buildPricingSettings,
   ensureNoOverlap,
   getReservationSettings,
   incrementCustomerReservationStats,
@@ -33,6 +37,7 @@ const SPACE_SELECT = {
   discountType: true,
   discountValue: true,
   durationDiscountOverride: true,
+  taxRateType: true,
   location: { select: { address: true } },
 } as const;
 
@@ -102,40 +107,46 @@ export async function createPublicReservationCommand(
     endTime: endDateTime,
   });
 
-  const { hours, basePrice } = calculateHoursAndBasePrice(
+  // rate plan（曜日別/祝日別/期間限定料金）は read-only なので advisory lock の
+  // 取得前（tx の外）で取得する。
+  const ratePlans = await getSpaceRatePlans(input.spaceId);
+
+  // クーポンの最低利用額判定は rate plan 適用後の実 basePrice で行う必要があるため、
+  // 先に resolveRateBreakdown だけ呼んで basePrice を確定する。calculateReservationPricing
+  // 内部でも同じ純粋関数が再度呼ばれるが、DB I/O のない軽量な再計算のため許容する。
+  const rateBreakdownForCoupon = resolveRateBreakdown({
+    ratePlans,
+    spaceHourlyPrice: space.hourlyPrice,
     startDateTime,
     endDateTime,
-    space.hourlyPrice,
-  );
+    holidayJudge: isJapaneseHoliday,
+  });
 
-  // 公開予約フォームの料金確定はサーバー側 SSoT。スペース固有割引（Space モデル）と
-  // 長時間割引（Settings）を calculateReservationPrice 経由で適用する。
-  // クーポンは Step 3 の CouponCode 入力欄から。空文字/undefined は「未入力」で null 扱い。
+  // 公開予約フォームの料金確定はサーバー側 SSoT。rate plan・スペース固有割引（Space
+  // モデル）・長時間割引（Settings）・税額までを calculateReservationPricing 経由で
+  // 一気通貫に適用する。クーポンは Step 3 の CouponCode 入力欄から。空文字/undefined は
+  // 「未入力」で null 扱い。
   const settings = await getReservationSettings();
-  const validatedCoupon = await validateCoupon(input.couponCode, basePrice);
-  const spaceDiscount =
-    space.discountType !== "none" &&
-    space.discountValue != null &&
-    space.discountValue > 0
-      ? {
-          discountType: space.discountType,
-          discountValue: space.discountValue,
-          durationDiscountOverride: space.durationDiscountOverride,
-        }
-      : null;
-  const {
-    totalPrice,
-    couponId,
-    couponDiscountAmount,
-    durationDiscountAmount,
-    spaceDiscountAmount,
-  } = calculatePricing({
-    hourlyPrice: space.hourlyPrice,
-    hours,
-    basePrice,
-    settings,
+  const validatedCoupon = await validateCoupon(
+    input.couponCode,
+    rateBreakdownForCoupon.totalBasePrice,
+  );
+  const couponId = validatedCoupon?.id ?? null;
+
+  const pricing = calculateReservationPricing({
+    startDateTime,
+    endDateTime,
+    space: {
+      hourlyPrice: space.hourlyPrice,
+      discountType: space.discountType,
+      discountValue: space.discountValue,
+      durationDiscountOverride: space.durationDiscountOverride,
+      taxRateType: space.taxRateType,
+    },
+    ratePlans,
+    reservationSettings: buildPricingSettings(settings),
     coupon: validatedCoupon,
-    spaceDiscount,
+    holidayJudge: isJapaneseHoliday,
   });
 
   const reservation = await prisma.$transaction(async (tx) => {
@@ -173,12 +184,20 @@ export async function createPublicReservationCommand(
         customerId,
         startTime: startDateTime,
         endTime: endDateTime,
-        basePrice,
-        totalPrice,
+        basePrice: pricing.basePrice,
+        totalPrice: pricing.totalPrice,
+        rateBreakdownJson: asPrismaInputJsonValue(
+          pricing.rateBreakdown,
+          "料金内訳の生成に失敗しました",
+        ),
+        taxRateType: pricing.taxRateType,
+        taxRate: pricing.taxRate,
+        taxAmount: pricing.taxAmount,
+        totalPriceWithTax: pricing.totalPriceWithTax,
         couponId,
-        couponDiscountAmount,
-        spaceDiscountAmount,
-        durationDiscountAmount,
+        couponDiscountAmount: pricing.couponDiscountAmount,
+        spaceDiscountAmount: pricing.spaceDiscountAmount,
+        durationDiscountAmount: pricing.durationDiscountAmount,
         status: ReservationStatus.CONFIRMED,
         notes: input.notes || null,
         userId: input.userId || null,
@@ -236,7 +255,7 @@ export async function createPublicReservationCommand(
       space,
       startTime: startDateTime,
       endTime: endDateTime,
-      totalPrice,
+      totalPrice: pricing.totalPrice,
       notes: input.notes,
       guestName: guestNameDiff,
       icsSequence: reservation.icsSequence,

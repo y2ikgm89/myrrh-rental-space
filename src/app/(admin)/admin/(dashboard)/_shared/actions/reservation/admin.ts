@@ -81,7 +81,7 @@ export async function createReservationAction(
       const result = await executeAdminMutationResult({
         resource: "reservation",
         action: "create",
-        execute: async () => {
+        execute: async (user) => {
           mutationPayload = await createAdminReservationCommand(
             omitUndefined({
               spaceId: data.spaceId,
@@ -97,6 +97,7 @@ export async function createReservationAction(
                   : undefined,
               status: data.status,
               notes: data.notes && data.notes !== "" ? data.notes : undefined,
+              adminUserId: user.id,
             }),
           );
           return { id: mutationPayload.id };
@@ -197,7 +198,7 @@ export async function updateReservationAction(
         resource: "reservation",
         action: "update",
         resourceId: id,
-        execute: async () => {
+        execute: async (user) => {
           mutationPayload = await updateAdminReservationCommand(
             id,
             omitUndefined({
@@ -213,6 +214,7 @@ export async function updateReservationAction(
                   : undefined,
               status: data.status,
               notes: data.notes && data.notes !== "" ? data.notes : undefined,
+              adminUserId: user.id,
             }),
           );
           return null;

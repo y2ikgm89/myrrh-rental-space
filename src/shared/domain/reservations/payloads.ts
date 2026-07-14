@@ -3,12 +3,12 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { CouponType } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
-import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
-import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
+import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
+import type { ReservationPricingInput } from "@/shared/lib/pricing/calculate-reservation-pricing";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,8 +65,40 @@ export async function getReservationSettings() {
       durationDiscountEnabled: true,
       durationDiscountRules: true,
       discountCombinationMode: true,
+      taxStandardRate: true,
+      taxReducedRate: true,
+      taxDisplayModePublic: true,
+      showOriginalPrice: true,
     },
   });
+}
+
+/**
+ * `getReservationSettings()` の結果を `calculateReservationPricing` が要求する
+ * `reservationSettings` shape に変換する。Settings singleton 行が存在しない防御的
+ * ケース（`findUnique` が null を返す場合）は `tax.ts` の `DEFAULT_TAX_SETTINGS` /
+ * 各フィールドの Prisma `@default` 相当の値にフォールバックする。
+ *
+ * 3 つの予約コマンド経路（public/admin/customer-commands.ts）すべてで同一の
+ * マッピングが必要なため、ここに集約する（重複実装を防ぐ）。
+ */
+export function buildPricingSettings(
+  settings: Awaited<ReturnType<typeof getReservationSettings>>,
+): ReservationPricingInput["reservationSettings"] {
+  return {
+    taxStandardRate:
+      settings?.taxStandardRate ?? DEFAULT_TAX_SETTINGS.standardRate,
+    taxReducedRate:
+      settings?.taxReducedRate ?? DEFAULT_TAX_SETTINGS.reducedRate,
+    taxDisplayModePublic:
+      settings?.taxDisplayModePublic ?? DEFAULT_TAX_SETTINGS.displayModePublic,
+    durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
+    durationDiscountRules: settings?.durationDiscountRules,
+    discountCombinationMode: getValidDiscountCombinationMode(
+      settings?.discountCombinationMode ?? undefined,
+    ),
+    showOriginalPrice: settings?.showOriginalPrice ?? true,
+  };
 }
 
 export async function validateCoupon(
@@ -258,48 +290,6 @@ export async function recomputeCustomerReservationStats(
       lastReservationAt: stats?.last_created ?? null,
     },
   });
-}
-
-export function calculatePricing(params: {
-  hourlyPrice: number;
-  hours: number;
-  basePrice: number;
-  settings: Awaited<ReturnType<typeof getReservationSettings>>;
-  coupon: ValidatedCoupon;
-  spaceDiscount?:
-    import("@/shared/lib/pricing/types").SpaceDiscountSettings | null;
-}) {
-  const priceCalculation = calculateReservationPrice({
-    hourlyPrice: params.hourlyPrice,
-    hours: params.hours,
-    durationRules: parseDurationDiscountRules(
-      params.settings?.durationDiscountRules,
-    ),
-    durationDiscountEnabled: params.settings?.durationDiscountEnabled ?? false,
-    spaceDiscount: params.spaceDiscount ?? null,
-    coupon: params.coupon,
-    combinationMode: getValidDiscountCombinationMode(
-      params.settings?.discountCombinationMode,
-    ),
-    showWarning: false,
-  });
-
-  return {
-    totalPrice: priceCalculation.totalPrice,
-    couponId: priceCalculation.appliedCoupon?.id ?? null,
-    couponDiscountAmount:
-      priceCalculation.couponDiscount > 0
-        ? priceCalculation.couponDiscount
-        : null,
-    durationDiscountAmount:
-      priceCalculation.durationDiscount > 0
-        ? priceCalculation.durationDiscount
-        : null,
-    spaceDiscountAmount:
-      priceCalculation.spaceDiscount > 0
-        ? priceCalculation.spaceDiscount
-        : null,
-  };
 }
 
 export function buildPayload(params: {
