@@ -30,26 +30,21 @@ format (`v2:<kid>:<purpose>:...`) and the lookup contract.
     format is invalid, so we fail closed at startup rather than at decrypt.
 - `cloudbuild.yaml` binds `SECONDARY_ENCRYPTION_KEYS` at the version pinned by
   `_SECONDARY_ENCRYPTION_KEYS_SECRET_VERSION` (default `"1"`).
-- `terraform/secret_iam.tf` is the SSoT for runtime SA Secret Manager IAM: it
-  declares `roles/secretmanager.secretAccessor` on every secret in the
-  `runtime_secrets` local (including `SECONDARY_ENCRYPTION_KEYS`) to the
-  runtime SA. Adding or renaming a secret binding means updating
-  `runtime_secrets` **and** the matching `cloudbuild.yaml` `--set-secrets=`
-  entry and opening a PR — `.github/workflows/terraform.yml` runs
-  `terraform plan` on the PR and `terraform apply` on merge. Do not grant
-  `secretAccessor` by hand; `architecture-boundaries.test.ts` gates that the
-  two lists stay in sync.
-- Cloud Build itself has **no Secret Manager IAM permission**. An earlier
-  design (PR #1051-#1053) let Cloud Build reapply IAM automatically, but any
-  role that includes `setIamPolicy` opens a self-grant path back to
-  `secretAccessor`, so the pipeline is not the right place to hold that
-  privilege. Terraform (Phase 1) inherited the SSoT role from the interim
-  bash setup script (PR #1054-#1056) and layered on an IAM Deny Policy plus
-  IAM Conditions on the Terraform runner SA so even a compromised runner
-  cannot read secret values (see `terraform/deny.tf`; the conditional
-  `projectIamAdmin` and the Secret Manager custom role are provisioned by
-  `scripts/bootstrap-terraform.sh`, which is the SSoT for runner IAM after
-  the 2026-07-14 bootstrap-only refactor).
+- `scripts/bootstrap-terraform.sh` is the SSoT for **all** project-level IAM
+  bindings (2026-07-14 F1 refactor). Runtime-sa / build-sa hold project-level
+  `roles/secretmanager.secretAccessor` (granted once by bootstrap, idempotent
+  on re-run), so any new secret added to the project is automatically readable
+  — no per-secret binding or IAM step is required when adding a secret. The
+  new-secret PR only touches `terraform/secrets.tf` (metadata) and
+  `cloudbuild.yaml` (`--set-secrets=`).
+- Cloud Build itself has **no Secret Manager IAM management permission**. An
+  earlier design (PR #1051-#1053) let Cloud Build reapply IAM automatically,
+  but any role that includes `setIamPolicy` opens a self-grant path back to
+  `secretAccessor`. The 2026-07-14 F1 refactor completed the closure: runner
+  no longer holds `projectIamAdmin` nor `serviceAccountAdmin` at all, so it
+  cannot self-grant any privilege, and both the Deny Policy (belt-and-
+  suspenders, optional) and the custom `terraformRunnerSecretManagerNoPolicyMgmt`
+  role are provisioned by `scripts/bootstrap-terraform.sh`.
 
 If `SECONDARY_ENCRYPTION_KEYS` does not exist yet, create it once with an
 empty payload before the first rotation. The next `terraform apply` will

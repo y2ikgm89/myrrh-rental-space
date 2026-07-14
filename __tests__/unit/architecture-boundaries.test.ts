@@ -1217,45 +1217,139 @@ describe("architecture boundaries", () => {
     );
   });
 
-  test("terraform/secret_iam.tf は project-level secretAccessor binding で構成される (Codex P1 F1)", () => {
-    // Codex P1 F1 以降、runtime SA / build SA への `secretAccessor` は
-    // **project-level** binding (google_project_iam_member) 経由で付与する。
+  test("terraform/*.tf は project-level IAM binding と SA metadata を宣言しない (F1 structural closure、bootstrap-owns-all-project-IAM 契約)", () => {
+    // 2026-07-14 F1 refactor 以降、以下は Terraform では宣言せず
+    // `scripts/bootstrap-terraform.sh` が SSoT で管理する:
+    //   - `google_service_account`               (SA metadata; runtime/build/scheduler/runner)
+    //   - `google_project_iam_member`            (project-level bindings)
+    //   - `google_project_iam_custom_role`       (custom Secret Manager role D1)
+    //   - `google_project_iam_binding` / `_policy` (project-level bulk bindings)
+    //   - `google_service_account_iam_member`    (cross-SA impersonation)
+    //   - `google_service_account_iam_binding`   (cross-SA impersonation, bulk)
+    //   - `google_iam_deny_policy`               (Deny Policy — Google IAM 制約)
     //
-    // 過去は per-secret (google_secret_manager_secret_iam_member × 16) で発行し、
-    // runner SA は predefined `roles/secretmanager.admin` を要した。その中の
-    // `secretmanager.secrets.setIamPolicy` が、runner compromise 時に
-    // 任意 principal へ `secretAccessor` を grant する self-grant 経路になる
-    // (bootstrap 管理の IAM Deny Policy は grantee identity ベースで、他 principal
-    // 宛の grant は素通りする)。custom role `terraformRunnerSecretManagerNoPolicyMgmt`
-    // (bootstrap-terraform.sh が SSoT) に切り替えて `setIamPolicy` /
-    // `getIamPolicy` を除外し、per-secret binding は禁止した。
+    // これは 2 経路の privilege escalation (research: `f1-residual-attack-analysis`) を
+    // 構造的に閉じるため:
+    //   Chain 1: runner の projectIamAdmin (with CEL hasOnly) → 新規 SA 作成 →
+    //            secretAccessor 付与 → impersonate → secret 値読取
+    //   Chain 2: runner の serviceAccountAdmin → 任意 SA の setIamPolicy →
+    //            tokenCreator を自分に付与 → runtime-sa impersonate → secret 値読取
+    // 両 role を runner から外し (bootstrap-terraform.sh の BOOTSTRAP_RUNNER_ROLES
+    // 参照)、これらの binding を Terraform で self-declare する経路も封じる。
     //
-    // ゆえに:
-    //   - `google_secret_manager_secret_iam_member` は secret_iam.tf に **無い**
-    //   - runtime SA / build SA への `roles/secretmanager.secretAccessor`
-    //     project-level binding が **在る**
+    // 一方、resource-scoped IAM (Cloud Run service / Cloud Run job / Artifact
+    // Registry repo など) は Terraform 側で継続管理する:
+    //   - `google_cloud_run_v2_service_iam_member`
+    //   - `google_cloud_run_v2_job_iam_member`
+    //   - `google_artifact_registry_repository_iam_member`
+    //   - `google_iap_web_iam_member` / `google_iap_tunnel_iam_member` 等
+    // これらは各 resource の setIamPolicy 権限 (runner が run.admin /
+    // artifactregistry.admin 経由で持つ) で書けるので F1 対象外。
+    const TERRAFORM_DIR = join(ROOT, "terraform");
+    const tfFiles = readdirSync(TERRAFORM_DIR).filter((f) => f.endsWith(".tf"));
+
+    // 削除済ファイルは復活禁止 (bootstrap SSoT に移管済)。
+    expect(tfFiles).not.toContain("secret_iam.tf");
+    expect(tfFiles).not.toContain("iam_project.tf");
+
+    // 禁止 resource 種別: bootstrap の SSoT に移管したので Terraform 側の
+    // 宣言は F1 structural closure を破ることになる。コメント言及は許容
+    // (`resource "..."` のように行頭が resource 宣言のみ検出、# コメント除外)。
+    const FORBIDDEN_RESOURCE_PATTERNS: readonly {
+      pattern: RegExp;
+      reason: string;
+    }[] = [
+      {
+        pattern: /^resource\s+"google_service_account"\s/mu,
+        reason: "SA metadata は bootstrap-terraform.sh の SSoT",
+      },
+      {
+        pattern: /^resource\s+"google_project_iam_member"\s/mu,
+        reason: "project-level IAM binding は bootstrap-terraform.sh の SSoT",
+      },
+      {
+        pattern: /^resource\s+"google_project_iam_binding"\s/mu,
+        reason: "project-level IAM binding は bootstrap-terraform.sh の SSoT",
+      },
+      {
+        pattern: /^resource\s+"google_project_iam_policy"\s/mu,
+        reason: "project-level IAM policy は bootstrap-terraform.sh の SSoT",
+      },
+      {
+        pattern: /^resource\s+"google_project_iam_custom_role"\s/mu,
+        reason:
+          "custom role (D1 含む) は bootstrap-terraform.sh の SSoT (runner が iam.roles.create を持たないため fresh apply で F8 になる)",
+      },
+      {
+        pattern: /^resource\s+"google_service_account_iam_member"\s/mu,
+        reason:
+          "cross-SA impersonation は bootstrap-terraform.sh の SSoT (runner に serviceAccountAdmin を戻せない)",
+      },
+      {
+        pattern: /^resource\s+"google_service_account_iam_binding"\s/mu,
+        reason:
+          "cross-SA impersonation は bootstrap-terraform.sh の SSoT (runner に serviceAccountAdmin を戻せない)",
+      },
+      {
+        pattern: /^resource\s+"google_iam_deny_policy"\s/mu,
+        reason:
+          "Deny Policy は bootstrap-terraform.sh の SSoT (Google IAM 制約: roles/iam.denyAdmin は Org/Folder scope 専用)",
+      },
+    ];
+
+    const offenders: string[] = [];
+    for (const file of tfFiles) {
+      const source = readFileSync(join(TERRAFORM_DIR, file), "utf8");
+      for (const { pattern, reason } of FORBIDDEN_RESOURCE_PATTERNS) {
+        if (pattern.test(source)) {
+          offenders.push(`terraform/${file}: ${pattern.source} — ${reason}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("scripts/bootstrap-terraform.sh は F1 structural closure に必要な grants を全て含む (bootstrap-owns-all-project-IAM SSoT)", () => {
+    // F1 structural closure の実装が bootstrap script 側で維持されていることを
+    // 回帰防止として grep gate で強制する:
+    //   1. runner に projectIamAdmin / serviceAccountAdmin が付与されていない
+    //   2. runtime-sa / build-sa への project-level 直接 grants が存在
+    //   3. SA-scoped cross-SA impersonation grants が存在
     //
-    // これらを回帰防止として CI で強制する。cloudbuild.yaml の --set-secrets=
-    // と secret_iam.tf の drift 検査は project-level 化により意味を失った
-    // (追加 secret も既存 binding で自動 accessible) ので廃止。
-    const terraformConfig = readFileSync(
-      join(ROOT, "terraform", "secret_iam.tf"),
+    // これが崩れると F1 が再発する (research: `f1-residual-attack-analysis`)。
+    const source = readFileSync(
+      join(SCRIPTS_ROOT, "bootstrap-terraform.sh"),
       "utf8",
     );
 
-    // per-secret binding resource は宣言禁止 (コメント言及は許容 — 移行履歴の記録用)。
-    expect(terraformConfig).not.toMatch(
-      /resource\s+"google_secret_manager_secret_iam_member"/u,
+    // runner に付与されてはいけない role (F1 起点):
+    expect(source).not.toMatch(/^\s*roles\/resourcemanager\.projectIamAdmin/mu);
+    expect(source).not.toMatch(/^\s*roles\/iam\.serviceAccountAdmin/mu);
+
+    // runtime-sa / build-sa への project-level 直接 grants:
+    expect(source).toContain('serviceAccount:${RUNTIME_SA}"');
+    expect(source).toContain('serviceAccount:${BUILD_SA}"');
+    // secretAccessor は runtime + build 両方に付ける (旧 secret_iam.tf 相当)
+    expect(source).toContain('--role="roles/secretmanager.secretAccessor"');
+    // build-sa の追加 project bindings (旧 iam_project.tf 相当)
+    expect(source).toContain('--role="roles/cloudbuild.builds.builder"');
+    expect(source).toContain('--role="roles/logging.logWriter"');
+
+    // SA-scoped cross-SA impersonation grants (旧 iam_cloud_run.tf +
+    // service_accounts.tf 相当):
+    //   - build-sa uses runtime-sa (deploy 時 actAs)
+    //   - runner uses scheduler-sa (Cloud Scheduler job 作成時 actAs)
+    expect(source).toMatch(
+      /add-iam-policy-binding\s+"\$\{RUNTIME_SA\}"[\s\S]*?serviceAccount:\$\{BUILD_SA\}[\s\S]*?roles\/iam\.serviceAccountUser/u,
     );
-    expect(terraformConfig).toContain(
-      'resource "google_project_iam_member" "runtime_secret_accessor"',
+    expect(source).toMatch(
+      /add-iam-policy-binding\s+"\$\{SCHEDULER_SA\}"[\s\S]*?serviceAccount:\$\{TERRAFORM_SA\}[\s\S]*?roles\/iam\.serviceAccountUser/u,
     );
-    expect(terraformConfig).toContain(
-      'resource "google_project_iam_member" "build_secret_accessor"',
-    );
-    expect(terraformConfig).toContain(
-      'role    = "roles/secretmanager.secretAccessor"',
-    );
+
+    // SA 作成 (旧 service_accounts.tf 相当) が bootstrap 側で行われる:
+    expect(source).toContain("myrrh-rental-space-runtime");
+    expect(source).toContain("myrrh-rental-space-build");
+    expect(source).toContain("myrrh-rental-space-scheduler");
   });
 
   test("管理 Better Auth canonical route handler は削除済み", () => {

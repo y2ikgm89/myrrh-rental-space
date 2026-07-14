@@ -24,7 +24,7 @@ resource "google_cloud_run_v2_service" "public" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account       = google_service_account.sa["runtime"].email
+    service_account       = var.runtime_sa_email
     execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
 
     scaling {

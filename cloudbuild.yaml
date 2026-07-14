@@ -544,9 +544,11 @@ steps:
         exit 1
 
   # NOTE: Secret Manager IAM (runtime SA / build SA への secretAccessor 付与)
-  # は Terraform (`terraform/secret_iam.tf`) が SSoT。cloudbuild.yaml は Cloud Run
-  # `--set-secrets=` binding を宣言するだけで、実際の IAM 反映は
-  # `.github/workflows/terraform.yml` の apply job が担う。
+  # は `scripts/bootstrap-terraform.sh` が SSoT (bootstrap-owns-all-project-IAM
+  # 契約、2026-07-14 F1 refactor)。cloudbuild.yaml は Cloud Run `--set-secrets=`
+  # binding を宣言するだけで、IAM は既に project-level で付与済 (bootstrap
+  # section 8 参照)。project 内の全 secret が runtime/build SA から自動で
+  # accessible なので、新 secret 追加時の IAM step は不要。
   #
   # 設計履歴:
   #   PR #1051-#1053: Cloud Build に `grant-secret-access` step を置き自動反映
@@ -558,10 +560,14 @@ steps:
   #     (secretmanager.googleapis.com/versions.access を deny) と IAM Conditions
   #     (grantable roles を secretAccessor に限定) の二重防御を貼り、compromise
   #     時にも secret 漏洩ゼロを設計層で保証。
+  #   2026-07-14 F1 refactor: runner から projectIamAdmin と serviceAccountAdmin を
+  #     完全に外し (structural closure)、Terraform 側の project-level IAM 宣言も
+  #     全廃 (secret_iam.tf / iam_project.tf 削除)。全て bootstrap に集約し、
+  #     runner は「自 IAM も他 SA IAM も触れない」構造に。
   #
   # 新規 secret を追加する場合: cloudbuild.yaml の `--set-secrets=` と
-  # terraform/secret_iam.tf の `runtime_secrets` local を両方更新する。
-  # 同期は architecture-boundaries.test.ts の drift gate が CI で強制する。
+  # terraform/secrets.tf の `runtime_secrets` local を両方更新する
+  # (IAM は既に付与済のため触らない)。
 
   # Step 6a: Deploy public Cloud Run service
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
