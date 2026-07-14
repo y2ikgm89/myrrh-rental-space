@@ -14,16 +14,16 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 
 このディレクトリは Phase を追って全 GCP infra を段階的に取り込む:
 
-| Phase | スコープ                                                                              | 状態             |
-| ----- | ------------------------------------------------------------------------------------- | ---------------- |
-| 1     | Secret Manager IAM (bootstrap 化、詳細は下記契約 section)                             | ✅ 完了          |
-| 2     | Cloud Scheduler (13 cron jobs)                                                        | ✅ 完了          |
-| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                  | ✅ 完了          |
-| 4     | Artifact Registry + Cloud Build worker pool                                           | ✅ 完了          |
-| 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider               | ✅ 完了          |
-| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b) | ✅ 完了          |
-| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)        | 🚧 実装中        |
-| 8     | Cloudflare (myrrh-jp.com zone): DNS / Transform Rule / Cache Rules / R2 / Turnstile   | 🚧 Phase 2a 完了 |
+| Phase | スコープ                                                                              | 状態      |
+| ----- | ------------------------------------------------------------------------------------- | --------- |
+| 1     | Secret Manager IAM (bootstrap 化、詳細は下記契約 section)                             | ✅ 完了   |
+| 2     | Cloud Scheduler (13 cron jobs)                                                        | ✅ 完了   |
+| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                  | ✅ 完了   |
+| 4     | Artifact Registry + Cloud Build worker pool                                           | ✅ 完了   |
+| 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider               | ✅ 完了   |
+| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b) | ✅ 完了   |
+| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)        | 🚧 実装中 |
+| 8     | Cloudflare (myrrh-jp.com zone): DNS / Transform Rule / Cache Rules / R2 / Turnstile   | ✅ 完了   |
 
 ## ファイル構成
 
@@ -47,6 +47,9 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | `cloudflare_provider.tf`      | Phase 8 Foundation: Cloudflare provider (`~> 5`) の宣言のみ                                                               |
 | `cloudflare_dns.tf`           | Phase 8 Phase 2a: 8 DNS records (admin A/AAAA、rental-space CNAME、SES MX/SPF/DKIM、GSC TXT × 2) を import block で adopt |
 | `cloudflare_zone_settings.tf` | Phase 8 Phase 2a: 25 zone settings (security 8 / perf 6 / cache 4 / privacy 7) を import block で adopt                   |
+| `cloudflare_rulesets.tf`      | Phase 8 Phase 2b: Cache Rules + Transform Rules (x-cloudflare-origin-secret 注入、rate-limit trust chain) を import       |
+| `cloudflare_r2.tf`            | Phase 8 Phase 2b: R2 bucket `myrrh-rental-space` を import (location は import で state 追従)                             |
+| `cloudflare_turnstile.tf`     | Phase 8 Phase 2b: Turnstile widget `Myrrh Rental Space` (sitekey=0x4AAA..、mode=managed) を import                        |
 
 **削除済** (2026-07-14 F1 refactor):
 
