@@ -28,12 +28,6 @@ variable "build_sa_email" {
   default     = "myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com"
 }
 
-variable "terraform_runner_sa_email" {
-  description = "Service account used by the terraform apply GitHub Actions workflow"
-  type        = string
-  default     = "terraform-runner@myrrh-rental-space.iam.gserviceaccount.com"
-}
-
 variable "scheduler_sa_email" {
   description = "Cloud Scheduler OIDC service account (Phase 2)"
   type        = string

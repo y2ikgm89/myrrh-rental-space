@@ -26,7 +26,9 @@
 #
 # 何もない (このファイルはドキュメンテーション目的で残す)。他 SA を参照する
 # コードは `var.runtime_sa_email` / `var.build_sa_email` / `var.scheduler_sa_email`
-# / `var.terraform_runner_sa_email` を直接使う (variables.tf で default 済み)。
+# を直接使う (variables.tf で default 済み)。terraform-runner SA は Terraform
+# code から参照不要 (自分自身の credential で apply を走らせる、参照必要な
+# 場面もない) のため variable も削除済 (2026-07-14 F2 follow-up)。
 #
 # resource-scoped IAM (Cloud Run service ごと / Artifact Registry repo ごと等)
 # は `terraform/iam_cloud_run.tf` に集約 (runner は各 resource の setIamPolicy
