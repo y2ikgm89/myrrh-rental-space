@@ -1509,6 +1509,44 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("cloudbuild.yaml の substitutions block で定義された key は必ず body 内で参照される (2026-07-14 PR #1104 で発覚した Cloud Build INVALID_ARGUMENT の再発防止)", () => {
+    // Cloud Build の substitution 契約:
+    //   substitutions block に定義された `_KEY: "default"` は cloudbuild.yaml
+    //   body 内のいずれかで `${_KEY}` として参照される必要がある。参照 0 件だと
+    //   `gcloud builds submit` が `INVALID_ARGUMENT: key "_KEY" in the
+    //   substitution data is not matched in the template` で失敗する。
+    //
+    // PR #1101 (Phase 6b) で cloudbuild.yaml から `--set-env-vars=X=${_KEY}` を
+    // 削除、対応する substitutions block 定義側の掃除が漏れて post-merge
+    // deploy が連続失敗した (main 復旧に PR #1103 + #1104 の 2 回追加 fix 必要)。
+    //
+    // 参考: https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values
+    const CLOUDBUILD = readFileSync(join(ROOT, "cloudbuild.yaml"), "utf8");
+
+    // substitutions: block を抽出 (次の top-level key 直前まで)。
+    const subBlockMatch = CLOUDBUILD.match(/^substitutions:\n((?:  .*\n)*)/mu);
+    if (!subBlockMatch) {
+      throw new Error("cloudbuild.yaml: substitutions: block not found");
+    }
+    const subBlock = subBlockMatch[1] ?? "";
+    const defined = new Set(
+      [...subBlock.matchAll(/^ {2}(_[A-Z0-9_]+):/gmu)].map((m) => m[1] ?? ""),
+    );
+
+    // body 側の `${_KEY}` 参照を全 line から検出 (comment 行は除外 —
+    // Cloud Build は comment 内の substitution reference を count しない)。
+    const bodyLines = CLOUDBUILD.split("\n").filter(
+      (line) => !line.trimStart().startsWith("#"),
+    );
+    const body = bodyLines.join("\n");
+    const used = new Set(
+      [...body.matchAll(/\$\{(_[A-Z0-9_]+)\}/gu)].map((m) => m[1] ?? ""),
+    );
+
+    const unused = [...defined].filter((k) => !used.has(k)).sort();
+    expect(unused).toEqual([]);
+  });
+
   test("branch-protection.json の required contexts に対応する workflow は path filter を持たない (2026-07-14 PR #1103 で発覚した MISSING 検 chain の再発防止)", () => {
     // GitHub branch protection の `required_status_checks.contexts` に登録された
     // check name を提供する workflow が `on: pull_request: paths:` filter を持つと、

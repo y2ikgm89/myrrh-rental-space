@@ -73,35 +73,27 @@ substitutions:
   _CPU: "1"
   _MIN_INSTANCES: "0"
   _MAX_INSTANCES: "1"
-  # Runtime rate limit backend contract. Only "in-memory" is implemented; a
-  # distributed store must be added to src/shared/lib/rate-limit.ts before
-  # switching to "redis". The instrumentation startup guard cross-checks this
-  # against _MAX_INSTANCES and hard-fails when they are inconsistent.
-  _RATE_LIMIT_BACKEND: "in-memory"
   _CONCURRENCY: "80"
   _TIMEOUT: "300"
   _BREAKING_MIGRATION_DEPLOY: "false"
   _BREAKING_MIGRATION_DRAIN_SECONDS: "310"
-  # PostgreSQL pool size per Cloud Run instance.
+  # ---- Cloud Run runtime env は Terraform SSoT (Phase 6b、PR #1101) ----
   #
-  # ## サイジング契約 (Codex #3564676717 対応)
+  # 以下 4 個の env 値は **cloudbuild.yaml 対象外** で Terraform 側に集約済:
+  #   _RATE_LIMIT_BACKEND      → var.rate_limit_backend
+  #   _DATABASE_POOL_MAX       → var.database_pool_max
+  #   _ENCRYPTION_KEY_ID       → var.encryption_key_id
+  #   _AUDIT_LOG_HMAC_KEY_ID   → var.audit_log_hmac_key_id
   #
-  # 同一値が public + admin の **2 サービス両方** に注入される (lines below の
-  # `DATABASE_POOL_MAX=${_DATABASE_POOL_MAX}`)。実測 pool 消費上限は:
+  # 以前は cloudbuild.yaml `--set-env-vars=` で注入していたが、Phase 6b で
+  # `google_cloud_run_v2_service.template.containers.env` に完全移管済。
+  # substitutions block に定義を残しておくと Cloud Build が unmatched key で
+  # INVALID_ARGUMENT を返す (定義したが本文で参照されない substitution は仕様上禁止)。
   #
-  #   total = _DATABASE_POOL_MAX × 2 (public + admin) × _MAX_INSTANCES
-  #
-  # 現状 _MAX_INSTANCES=1 で 12 × 2 × 1 = 24 conn。Neon serverless の 30 conn cap
-  # に対し 6 conn の headroom を残す — migrate Job (Prisma migrate 中に少数)、
-  # ad-hoc `psql` 調査、モニタリング接続 (Neon dashboard 経由) の合計をこの
-  # 6 conn 枠でまかなう。
-  #
-  # public 単独では 12 conn しかないため、reservation rush 時の pool 圧は初期の
-  # 10 conn 案よりわずかに緩和される程度 (Codex 前の 25 案は 50 conn = Neon cap
-  # 突破の bug で、rush 時に Neon 側で connection reject が起きる worse-than-before
-  # 挙動になっていた)。Redis rate-limit backend 化 + horizontal scale 解禁時に
-  # 本値の再検討が必須 — total 式で 30 を絶対に超えない範囲で最大化する。
-  _DATABASE_POOL_MAX: "12"
+  # DATABASE_POOL サイジング契約 (Codex #3564676717):
+  #   total = database_pool_max × 2 (public + admin) × _MAX_INSTANCES
+  #   現状 _MAX_INSTANCES=1 で 12 × 2 × 1 = 24 conn < Neon 30 conn cap (headroom 6)
+  #   migrate Job + ad-hoc psql + Neon dashboard の合計を 6 conn 枠でまかなう。
   # Dedicated service account email (Cloud Run runtime + Prisma migrate Job 共通、初回 1 回手動作成)
   _SERVICE_ACCOUNT: myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com
   # Dedicated Cloud Build service account. This build config is intentionally
@@ -119,15 +111,6 @@ substitutions:
   # build-time と runtime で同じ version に pin する契約 (両者不整合で server actions が
   # decrypt fail する)。
   _NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION: "1"
-  # ---- Encryption / audit key id (env vars、非 secret) ----
-  #
-  # 以下 2 個は "kid" (key id、v2 wire format) で、secret **本体** ではなく env として
-  # 注入される (`--set-env-vars=ENCRYPTION_KEY_ID=...`)。Phase 6b で Terraform の
-  # `var.encryption_key_id` / `var.audit_log_hmac_key_id` に SSoT 移管済。
-  # rotation 時は Terraform 側 default 値を bump し、対応 secret version も同時 bump。
-  # Runbook: docs/runbooks/encryption-key-rotation.md.
-  _ENCRYPTION_KEY_ID: "v1"
-  _AUDIT_LOG_HMAC_KEY_ID: "v1"
   # NEXT_PUBLIC_* (ビルド時インライン + ランタイム両方で使用)
   #
   # _NEXT_PUBLIC_BASE_URL / _NEXT_PUBLIC_APP_URL /
