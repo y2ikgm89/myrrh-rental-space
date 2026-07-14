@@ -4,12 +4,6 @@ variable "project_id" {
   default     = "myrrh-rental-space"
 }
 
-variable "project_number" {
-  description = "GCP project number (required for IAM Deny Policy attachment point URL)"
-  type        = string
-  default     = "626108938746"
-}
-
 variable "region" {
   description = "Default GCP region"
   type        = string
@@ -76,4 +70,42 @@ variable "cloudflare_account_id" {
   description = "Cloudflare Account ID (Ikeakie@gmail.com's Account、Account API scope の resource 指定に使用 — R2 buckets / Turnstile widgets 等)"
   type        = string
   default     = "2c7478b2d4b8e06e50d1e62354026d66"
+}
+
+# -----------------------------------------------------------------------------
+# Cloudflare shared secret (Phase 8 Phase 2c、Option A: 完全 drift-detect)
+# -----------------------------------------------------------------------------
+# `x-cloudflare-origin-secret` header の値。以下 3 箇所で同一値を維持する契約:
+#   1. Cloudflare Transform Rule (この Terraform resource 経由で書き込む)
+#   2. Cloud Run runtime `CLOUDFLARE_ORIGIN_HEADER_SECRET` (Secret Manager)
+#   3. `src/shared/lib/rate-limit.ts:161` の timing-safe 比較の base
+#
+# **値は `.tf` / `.tfvars` に literal を書かず、GitHub Secret
+# `CLOUDFLARE_ORIGIN_HEADER_SECRET_TF` から `TF_VAR_cloudflare_origin_header_secret`
+# env 経由で供給する。** `.github/workflows/{deploy-production,terraform,terraform-drift}.yml`
+# の env: block 参照。
+#
+# ## Rotation 手順 (完全 IaC)
+#
+# 1. 新 value 生成: `openssl rand -base64 32 | tr -d '=' | head -c 43`
+# 2. Secret Manager に新 version 追加:
+#    `printf '%s' "$new_value" | gcloud secrets versions add CLOUDFLARE_ORIGIN_HEADER_SECRET --data-file=-`
+# 3. Cloud Run 新 revision deploy (新 Secret Manager version を参照):
+#    push-to-main の次回 CI で自動、または `gcloud run services update` で手動 trigger
+# 4. **数分待ち** (旧 revision draining 中に header ずれると rate-limit 誤 block 発火)
+# 5. GH Secret 更新: `printf '%s' "$new_value" | gh secret set CLOUDFLARE_ORIGIN_HEADER_SECRET_TF`
+# 6. 次回 push で `terraform apply` が Cloudflare Transform Rule を自動同期
+# -----------------------------------------------------------------------------
+
+variable "cloudflare_origin_header_secret" {
+  description = "Shared secret injected into `x-cloudflare-origin-secret` header by Cloudflare Transform Rule; must equal Cloud Run runtime `CLOUDFLARE_ORIGIN_HEADER_SECRET` Secret Manager value. Set via TF_VAR from GH Secret CLOUDFLARE_ORIGIN_HEADER_SECRET_TF."
+  type        = string
+  sensitive   = true
+  # No default — TF_VAR must be provided from env.
+  # Fail-closed: 空値だと `terraform apply` が validation error で abort
+  # (rate-limit trust chain の silent 破損を防ぐ)。
+  validation {
+    condition     = length(var.cloudflare_origin_header_secret) >= 32
+    error_message = "cloudflare_origin_header_secret must be at least 32 chars (rate-limit trust chain shared secret). Set TF_VAR_cloudflare_origin_header_secret from GH Secret CLOUDFLARE_ORIGIN_HEADER_SECRET_TF."
+  }
 }

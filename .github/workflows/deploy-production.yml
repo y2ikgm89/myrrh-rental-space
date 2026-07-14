@@ -162,6 +162,11 @@ jobs:
         env:
           TF_IN_AUTOMATION: "1"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TERRAFORM_API_TOKEN }}
+          # cloudflare_ruleset.transform_rules_late.value を Cloudflare へ書き込む
+          # sensitive TF_VAR (variables.tf cloudflare_origin_header_secret 参照)。
+          # rate-limit trust chain の共有 secret、Cloud Run 側 Secret Manager
+          # `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同一値を維持する契約。
+          TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
 
       - name: Render plan to text
         working-directory: terraform
@@ -218,6 +223,11 @@ jobs:
         env:
           TF_IN_AUTOMATION: "1"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TERRAFORM_API_TOKEN }}
+          # cloudflare_ruleset.transform_rules_late.value を Cloudflare へ書き込む
+          # sensitive TF_VAR (variables.tf cloudflare_origin_header_secret 参照)。
+          # rate-limit trust chain の共有 secret、Cloud Run 側 Secret Manager
+          # `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同一値を維持する契約。
+          TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
 
   deploy:
     name: Cloud Build Deploy

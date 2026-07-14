@@ -10,9 +10,7 @@
 # 実測値に合わせる。誤削除は prevent_destroy で block。
 
 locals {
-  admin_lb_ipv4 = "8.233.111.15"
-  admin_lb_ipv6 = "2600:1901:0:6b8e::"
-  admin_domain  = "admin.myrrh-jp.com"
+  admin_domain = "admin.myrrh-jp.com"
 }
 
 # -----------------------------------------------------------------------------

@@ -47,6 +47,12 @@ jobs:
   # plan の実 diff は push-to-main 時の apply job が事前実行するため、差分レビュー
   # はその Actions log で確認する。
   validate:
+    # 明示 `name:` で check-run 名を `Terraform / validate` に固定
+    # (branch-protection.json の required_status_checks.contexts と一致必須)。
+    # 未設定だと check name = job ID `validate` になり、branch protection の
+    # `Terraform / validate` context 要求と mismatch → MERGE BLOCKED になる
+    # (2026-07-14 PR #1100 で発覚、`ci.yml` 同型 `name: 表示名` パターンに揃える)。
+    name: Terraform / validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
