@@ -40,6 +40,7 @@ export type Reservation = ConvertDecimalFields<PrismaModels.Reservation>;
 export type Customer = ConvertDecimalFields<PrismaModels.Customer>;
 export type Settings = ConvertDecimalFields<PrismaModels.Settings>;
 export type Coupon = ConvertDecimalFields<PrismaModels.Coupon>;
+export type SpaceRatePlan = ConvertDecimalFields<PrismaModels.SpaceRatePlan>;
 
 // ---------------------------------------------------------------------------
 // Singleton: PrismaClient
