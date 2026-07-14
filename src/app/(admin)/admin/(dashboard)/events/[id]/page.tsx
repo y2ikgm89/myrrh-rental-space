@@ -8,6 +8,7 @@ import {
 } from "@tabler/icons-react";
 import { getEventById } from "@/shared/domain/events/admin-queries";
 import { getEventRegistrations } from "@/shared/domain/events/registration-queries";
+import { getWaitlistQueueCount } from "@/shared/domain/events/waitlist-queries";
 import { deleteEvent } from "@/admin/actions/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
@@ -56,9 +57,10 @@ export default async function EventDetailPage({
   const { id } = await params;
   const { page, perPage } =
     await loadAdminEventRegistrationsSearchParams(searchParams);
-  const [event, registrationPage] = await Promise.all([
+  const [event, registrationPage, waitlistCount] = await Promise.all([
     getEventById(id),
     getEventRegistrations(id, { page, perPage }),
+    getWaitlistQueueCount(id),
   ]);
 
   if (!event) {
@@ -221,6 +223,13 @@ export default async function EventDetailPage({
       </DetailSection>
 
       <DetailSection title={`参加者一覧（${String(confirmedCount)}名）`}>
+        <div className="mb-4 flex justify-end">
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/admin/events/${event.id}/waitlist`}>
+              キャンセル待ち（{waitlistCount}件）
+            </Link>
+          </Button>
+        </div>
         <EventRegistrationTable
           registrations={serializedRegistrations}
           total={registrationPage.total}

@@ -374,13 +374,162 @@ export async function confirmWaitlistOfferCommand(data: {
 }
 
 /**
+ * 管理画面から特定の WAITLISTED 申込を手動で繰り上げ当選 (WAITLISTED_OFFERED) にする。
+ *
+ * `offerNextWaitlistEntryCommand` は「呼び出し側が既に advisory lock 728350 を保持する
+ * 外側 tx の中で、(slotId, ticketId) の FIFO 先頭を自動選定する」設計（キャンセル直後の
+ * 自動繰り上げ専用）。管理者の手動操作は (1) 任意の特定 registrationId を対象にする
+ * (2) 外側 tx を持たない独立呼び出し、という 2 点で前提が異なるため専用コマンドとして
+ * 分離する（`expireWaitlistOfferCommand` と同型: 対象 ID から eventId を読んで解決し、
+ * 事前チェック読み取り → advisory lock → updateMany WHERE claim の順で処理する）。
+ *
+ * Idempotent: 対象が既に WAITLISTED_OFFERED（他の操作者が先に昇格させた）の場合は
+ * 新規処理をせず既存の offer 情報を返す（`alreadyOffered: true`）。手動操作の UX 上、
+ * 同時操作で失敗表示になるのは避けたい。CANCELLED / EXPIRED / CONFIRMED など終端 or
+ * 別状態の場合は CONFLICT を throw する（ユーザー起因のミス操作として扱う）。
+ *
+ * 容量 (capacity) の再チェックはしない。`offerNextWaitlistEntryCommand` も同様に
+ * 容量チェックをしない設計（1 キャンセル = 1 offer で収支が保たれる前提）。管理者の
+ * 手動 promote は意図的なオーバーライド操作のため、BlockedDate の admin 経路が
+ * `ensureDateNotBlocked` を意図的に呼ばないのと同じ思想で容量チェックを行わない。
+ */
+export async function adminPromoteWaitlistEntryCommand(data: {
+  registrationId: string;
+  now: Date;
+}): Promise<{
+  promoted: {
+    id: string;
+    email: string | null;
+    offeredAt: Date;
+    expiresAt: Date;
+  };
+  /** true = 対象は呼び出し前から既に WAITLISTED_OFFERED だった（冪等 no-op） */
+  alreadyOffered: boolean;
+}> {
+  return prisma.$transaction(
+    async (tx) => {
+      const target = await tx.eventRegistration.findUnique({
+        where: { id: data.registrationId },
+        select: {
+          id: true,
+          eventId: true,
+          email: true,
+          status: true,
+          offeredAt: true,
+          expiresAt: true,
+        },
+      });
+      if (!target)
+        throw new DomainError("対象の申込が見つかりません", "NOT_FOUND");
+
+      if (target.status === RegistrationStatus.WAITLISTED_OFFERED) {
+        // offeredAt/expiresAt は WAITLISTED_OFFERED への遷移と同時にのみ設定される
+        // 不変条件のため非 null のはずだが、select 型は nullable のまま届くため narrow する。
+        if (!target.offeredAt || !target.expiresAt) {
+          throw new DomainError(
+            "繰り上げ当選情報の取得に失敗しました",
+            "UNEXPECTED",
+          );
+        }
+        return {
+          promoted: {
+            id: target.id,
+            email: target.email,
+            offeredAt: target.offeredAt,
+            expiresAt: target.expiresAt,
+          },
+          alreadyOffered: true,
+        };
+      }
+
+      if (target.status !== RegistrationStatus.WAITLISTED) {
+        throw new DomainError(
+          "この申込はキャンセル待ち状態ではありません",
+          "CONFLICT",
+        );
+      }
+
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${target.eventId}))`;
+
+      const expiresAt = new Date(data.now.getTime() + OFFER_TTL_MS);
+
+      // Atomic claim (二重昇格防止): WHERE に id + status: WAITLISTED の両方が揃って
+      // いないと、race で 2 箇所から呼ばれたときに同じ対象を二重に昇格させてしまう。
+      const claim = await tx.eventRegistration.updateMany({
+        where: { id: target.id, status: RegistrationStatus.WAITLISTED },
+        data: {
+          status: RegistrationStatus.WAITLISTED_OFFERED,
+          offeredAt: data.now,
+          expiresAt,
+        },
+      });
+
+      if (claim.count === 0) {
+        // Race: 事前チェック読み取り後、lock 取得までの間に別操作者（cron の EXPIRED 化
+        // や別 admin の promote）が先に状態を変えた。再取得して idempotent 成功 or
+        // CONFLICT を判定する。
+        const recheck = await tx.eventRegistration.findUnique({
+          where: { id: target.id },
+          select: {
+            id: true,
+            email: true,
+            status: true,
+            offeredAt: true,
+            expiresAt: true,
+          },
+        });
+        if (
+          recheck?.status === RegistrationStatus.WAITLISTED_OFFERED &&
+          recheck.offeredAt &&
+          recheck.expiresAt
+        ) {
+          return {
+            promoted: {
+              id: recheck.id,
+              email: recheck.email,
+              offeredAt: recheck.offeredAt,
+              expiresAt: recheck.expiresAt,
+            },
+            alreadyOffered: true,
+          };
+        }
+        throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+      }
+
+      return {
+        promoted: {
+          id: target.id,
+          email: target.email,
+          offeredAt: data.now,
+          expiresAt,
+        },
+        alreadyOffered: false,
+      };
+    },
+    { maxWait: 5000, timeout: 10000 },
+  );
+}
+
+/**
  * Explicitly expire a WAITLISTED_OFFERED entry (called from cron / admin manual expire).
  * Idempotent: returns `{registration: null}` if the entry is no longer in OFFERED state.
+ *
+ * `email` / `name` は admin 手動 expire の呼び出し元
+ * (`adminExpireWaitlistOfferAction`) が `sendEventWaitlistExpired` 送信 / toast 表示に
+ * 必要とするため select に含める。tx 内で既に読んでいる行に列を足すだけで追加の
+ * DB round-trip は発生しない。
  */
 export async function expireWaitlistOfferCommand(data: {
   registrationId: string;
   now: Date;
-}): Promise<{ registration: { id: string; status: "EXPIRED" } | null }> {
+}): Promise<{
+  registration: {
+    id: string;
+    status: "EXPIRED";
+    email: string | null;
+    name: string;
+  } | null;
+}> {
   return prisma.$transaction(
     async (tx) => {
       const target = await tx.eventRegistration.findFirst({
@@ -388,7 +537,7 @@ export async function expireWaitlistOfferCommand(data: {
           id: data.registrationId,
           status: RegistrationStatus.WAITLISTED_OFFERED,
         },
-        select: { id: true, eventId: true },
+        select: { id: true, eventId: true, email: true, name: true },
       });
       if (!target) return { registration: null };
 
@@ -403,7 +552,14 @@ export async function expireWaitlistOfferCommand(data: {
       });
       if (claim.count === 0) return { registration: null };
 
-      return { registration: { id: target.id, status: "EXPIRED" as const } };
+      return {
+        registration: {
+          id: target.id,
+          status: "EXPIRED" as const,
+          email: target.email,
+          name: target.name,
+        },
+      };
     },
     { maxWait: 5000, timeout: 10000 },
   );

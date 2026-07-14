@@ -63,6 +63,23 @@ export async function getWaitlistQueue(eventId: string) {
 }
 
 /**
+ * イベント詳細ページの「キャンセル待ち (N件)」リンク表示用の軽量カウント。
+ *
+ * `getWaitlistQueue` は slot/ticket を join して一覧行を組み立てるため、件数だけが
+ * 欲しい呼び出し元 (`events/[id]/page.tsx`) ではこちらを使う（同ファイル内の
+ * 「1 consumer = 1 query」方針を踏襲）。WHERE 条件は `getWaitlistQueue` と同じ
+ * `WAITLIST_ACTIVE_STATUSES` を使い、表示件数の食い違いを防ぐ。
+ */
+export async function getWaitlistQueueCount(eventId: string): Promise<number> {
+  return prisma.eventRegistration.count({
+    where: {
+      eventId,
+      status: { in: [...WAITLIST_ACTIVE_STATUSES] },
+    },
+  });
+}
+
+/**
  * 繰り上げ当選確認ページ (`/events/waitlist/confirm` および
  * `/events/waitlist/checkout/[token]`) 向けの単票取得クエリ。
  *
