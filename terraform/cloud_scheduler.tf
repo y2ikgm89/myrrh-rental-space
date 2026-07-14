@@ -6,8 +6,9 @@
 # の /api/cron/* を OIDC token 付きで叩き、アプリ側は Bearer token の audience と
 # service account email を検証する (src/shared/lib/cron-auth.ts)。
 #
-# 追加時は locals.cron_jobs に 1 entry 追加して PR を出す。GitHub Actions が
-# terraform plan で差分を提示、merge で apply。
+# 追加時は locals.cron_jobs に 1 entry 追加して PR を出す (段階 A)。deploy 成功後は
+# 必ず follow-up PR で locals.imported_cron_jobs にも追加すること (段階 B、詳細は下部)。
+# GitHub Actions が terraform plan で差分を提示、merge で apply。
 #
 # 既存 jobs (script 版 SSoT だったもの) は下部の `import{}` block (Terraform
 # 1.7+) で fresh state 時に自動 adopt される。
@@ -114,14 +115,14 @@ locals {
 # 既存 jobs」のみに絞り、新規追加した jobs は resource 側の for_each で apply-create
 # させる。
 #
-# 新規 job 追加時の運用 (2 段階):
+# 新規 job 追加時の運用 (2 段階、waitlist-expire で完走した事例: PR #1080 → #1083 → 本 PR):
 #
-#   段階 A — 新規 job を追加する PR (今回の PR #1083 相当):
+#   段階 A — 新規 job を追加する PR:
 #     1. `local.cron_jobs` に entry 追加 (resource 側で apply-create される)
 #     2. `local.imported_cron_jobs` には**追加しない** (GCP 側にまだ存在しないため
 #        `Cannot import non-existent remote object` で plan 失敗する)
 #
-#   段階 B — 上記 PR の apply が成功して GCP に resource が作成されたら:
+#   段階 B — 段階 A の apply が成功して GCP に resource が作成されたら:
 #     3. **必ず follow-up PR** で `local.imported_cron_jobs` に新規 job 名を追加すること
 #        (state-rebuild recovery 防御のため必須)。忘れると tfstate 消失時の再 apply で
 #        「import block から skip → resource で create 試行 → 409 Already Exists」の
@@ -149,10 +150,7 @@ locals {
     "smart-lock-cleanup",
     "pending-reservation-expire",
     "data-retention",
-    # NOTE: waitlist-expire (PR #1080 追加、PR #1083 で apply-create される):
-    # 意図的に段階 A で除外中。
-    # TODO(follow-up): PR #1083 の deploy が成功して GCP 側に作成されたことを確認後、
-    # 別 PR で "waitlist-expire" をこの list に追加する (state-rebuild 防御、上記コメント参照)。
+    "waitlist-expire", # 段階 B 完了: PR #1080 で追加 → PR #1083 で apply-create → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
   ])
 }
 
