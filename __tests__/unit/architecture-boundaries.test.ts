@@ -38,6 +38,11 @@ const AUTH_ROUTE_FILE = join(
   "[...all]",
   "route.ts",
 );
+const SPACE_RATE_PLAN_QUERIES_FILE = join(
+  SHARED_DOMAIN_ROOT,
+  "spaces",
+  "rate-plan-queries.ts",
+);
 
 function expectRecordFieldArray(data: unknown, field: string): void {
   expectRecord(data);
@@ -1438,6 +1443,35 @@ describe("architecture boundaries", () => {
     );
 
     expect(offenders).toEqual([]);
+  });
+
+  test("SPACE_RATE_PLANS cache tag は cacheTag producer を持つ（rate-plan-queries.ts の getSpaceRatePlans）", () => {
+    const source = readFileSync(SPACE_RATE_PLAN_QUERIES_FILE, "utf8");
+    expect(source).toContain('"use cache"');
+    expect(source).toContain("cacheTag(CACHE_TAGS.SPACE_RATE_PLANS(");
+  });
+
+  test("SPACE_RATE_PLANS cache tag は id-keyed producer function のため CDN mapping 対象外が明示されている", async () => {
+    // CACHE_TAGS.SPACE_RATE_PLANS は spaceId を受け取るタグ生成関数であり、他の
+    // CACHE_TAGS エントリと違って固定文字列ではない。NEXTJS_TAG_TO_CDN_TAG は
+    // `[CACHE_TAGS.X]: CDN_CACHE_TAGS.Y` の computed key で構成されるため、関数値を
+    // そのまま key にはできない。cdn-cache-tags.test.ts 側の generic drift gate
+    // ("every CACHE_TAGS value is either mapped OR on the allowlist") は
+    // `typeof value === "function"` の場合のみ scope 外にしており、SPACE_RATE_PLANS が
+    // 現状唯一の対象。ここではその前提条件（関数値である事実）と、mapping 側への
+    // 事故混入がないことを SPACE_RATE_PLANS 単体で明示的に固定する。
+    const { CACHE_TAGS } = await import("@/shared/lib/constants/cache");
+    const { CDN_CACHE_TAGS, NEXTJS_TAG_TO_CDN_TAG } =
+      await import("@/shared/lib/constants/cdn-cache-tags");
+
+    expect(typeof CACHE_TAGS.SPACE_RATE_PLANS).toBe("function");
+
+    // 将来 CDN-cached surface を追加する際に inline できるよう CDN 側タグは予約済み
+    expect(CDN_CACHE_TAGS.SPACE_RATE_PLANS).toBe("space-rate-plans-v1");
+
+    // 現時点では NEXTJS_TAG_TO_CDN_TAG に事故的に混入していない
+    const mappedValues = Object.values(NEXTJS_TAG_TO_CDN_TAG);
+    expect(mappedValues).not.toContain(CDN_CACHE_TAGS.SPACE_RATE_PLANS);
   });
 
   test("cron route は shared helper 経由で認証する", () => {
