@@ -74,6 +74,22 @@ export const eventFixtures = {
 /** Public space seed contract used by reservation/review E2E specs. */
 export const spaceFixtures = {
   publicReservableSpaceSlug: "coworking-space",
+  /**
+   * 管理画面の料金プラン CRUD E2E（`space-rate-plan-crud.spec.ts`）専用ターゲット。
+   *
+   * `publicReservableSpaceSlug`（coworking-space）は
+   * `e2e/smoke/rate-plan-preview.smoke.spec.ts` が `"use cache"` の
+   * `cacheTag(CACHE_TAGS.SPACE_RATE_PLANS(spaceId))` を読む対象。このタグは
+   * spaceId（DB 行の UUID）キーのため（`src/shared/lib/constants/cache.ts`）、
+   * CRUD spec の create/update/delete（`invalidateSpaceRatePlansCache` → `updateTag`）
+   * が別 Space を対象にする限り構造的に別タグになり競合しない。かつて両 spec が
+   * 同一 coworking-space を対象にしていたため、CI `workers: 2` の並列実行下で
+   * smoke の価格アサーションが 15〜30 秒超まで遅延する flake が発生していた
+   * （Task 16 follow-up fix で解消）。この slug を smoke spec 側の price assertion
+   * 対象に**しない**こと（`seedSpaceRatePlans` は全 Space 共通で週末/祝日料金プランを
+   * 作成するため、CRUD spec の健全性チェックはこの Space でも成立する）。
+   */
+  adminRatePlanCrudTargetSlug: "seminar-room",
 } as const;
 
 /** Review seed contract used by public/customer review E2E specs. */

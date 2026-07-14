@@ -42,6 +42,15 @@ import { spaceFixtures, urls } from "../fixtures";
  * 現状このテストは green だが、根治には `EventCalendarSection` と同型の
  * `initialNowIso` 配線を `CalendarPicker`（および親の Server Component）まで
  * 通す production code 変更が必要であり、test-only fix である本 Task のスコープ外。
+ *
+ * 解消済みの過去の既知問題（Task 16 follow-up fix）: 以前は
+ * `e2e/authenticated/admin/space-rate-plan-crud.spec.ts` がこの spec と同一の
+ * `coworking-space` を対象にしており、CRUD の create/update/delete が呼ぶ
+ * `updateTag(SPACE_RATE_PLANS(spaceId))` とこの spec の `"use cache"` 読み取りが
+ * 同一タグ上で競合し、CI `workers: 2` の並列実行時に下記の価格アサーションが
+ * 15〜30 秒超まで遅延する flake（8 回中 7 回再現）が発生していた。CRUD spec の
+ * 対象を別 Space（`spaceFixtures.adminRatePlanCrudTargetSlug` =
+ * seminar-room。cache tag は spaceId キーのため構造的に別タグ）へ移し解消した。
  */
 
 const SEED_RESERVATION_MAX_DAYS_OFFSET = 30; // prisma/seed.ts seedReservations() の最大 daysOffset
@@ -104,21 +113,6 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
         "変更、本 Task のスコープ外）が必要。",
     });
 
-    // 既知の並列実行コンテンション（本 fix の検証run中に新規発見・未解決の残課題、
-    // Finding 1/2 とは別件）。詳細は末尾の価格アサーション直前のコメント参照。
-    test.info().annotations.push({
-      type: "known-issue",
-      description:
-        "chromium-admin の space-rate-plan-crud.spec.ts と同一 spaceId " +
-        "（coworking-space）の 'use cache' タグ（SPACE_RATE_PLANS）を共有するため、" +
-        "CI の workers:2 で両 project が並列実行されると、CRUD spec の " +
-        "create/update/delete が呼ぶ updateTag() とこのテストの価格プレビュー読み取り" +
-        "（'use cache'）が同一タグ上で競合し、末尾の価格アサーションが 15〜30 秒超に " +
-        "達することがある（単独実行時は 3 秒台で安定、8 回の検証run中 7 回この" +
-        "パターンで concurrent 実行時に timeout/flake を確認）。timeout 引き上げは" +
-        "緩和のみで根治ではない。",
-    });
-
     const dateOnly = pickNonHolidayFriday();
     // 12:00 JST（= 03:00 UTC）固定。既存 spec（events-calendar.spec.ts）と同じ
     // anchor 時刻を使い、ホスト側タイムゾーンに起因する日付境界のずれを避ける。
@@ -173,23 +167,16 @@ test.describe("smoke: 予約プレビュー - 週末料金プラン反映", () =
     // 予約内容サマリー（BookingSummary）の価格表示をロックダウンする。
     // ¥1,300（基本料金）ではなく ¥1,430（税込）になっていることが、週末料金
     // プラン（650円/時間）が基本時間料金（500円/時間）ではなく適用された証拠。
+    // この価格は `fetchReservationPricingPreview` Server Action 経由で
+    // `getSpaceRatePlans`（'use cache' + cacheTag `SPACE_RATE_PLANS(coworking-space)`）
+    // を読む。かつては `space-rate-plan-crud.spec.ts`（chromium-admin）が同じ
+    // spaceId を対象にしており、CI `workers: 2` の並列実行下でこのタグの
+    // 書込（updateTag）と読取が競合していた（ファイル冒頭コメント参照）。CRUD spec
+    // の対象を別 Space（spaceId が異なる = 別タグ）へ移して解消したため、既定の
+    // assertion timeout（5000ms）に戻している。
     const bookingSummaryHeader = page
       .getByRole("heading", { level: 3, name: "予約内容" })
       .locator("..");
-    // timeout を既定の 5000ms から明示的に伸ばす（検証run中に発見した既知の flake、
-    // Finding 1/2 とは別件・未解決の残課題）。この価格は `fetchReservationPricingPreview`
-    // Server Action 経由で `getSpaceRatePlans`（'use cache' + cacheTag
-    // `SPACE_RATE_PLANS(coworking-space)`）を読む。同じ spaceId に対して
-    // `space-rate-plan-crud.spec.ts`（chromium-admin）が create/update/delete の
-    // たびに `invalidateSpaceRatePlansCache` → `updateTag()` で同一タグを無効化する
-    // ため、CI の `workers: 2` で両 project が並列実行されると、この
-    // 書込（updateTag）と読取（'use cache' 読み取り）が同一タグ上で競合し、
-    // 実測で 15〜30 秒超に達することがある（単独実行時は 3 秒台で安定）。
-    // 15000ms への引き上げは緩和に過ぎず全消去はできていない — 恒久対応には
-    // Next.js Cache Components 側の挙動調査、または smoke/CRUD 両 spec が同一
-    // spaceId を共有しない構成への変更が要る（本 fix のスコープ外、follow-up 予定）。
-    await expect(bookingSummaryHeader).toContainText("¥1,430（税込）", {
-      timeout: 15000,
-    });
+    await expect(bookingSummaryHeader).toContainText("¥1,430（税込）");
   });
 });
