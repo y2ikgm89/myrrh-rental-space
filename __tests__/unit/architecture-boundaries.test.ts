@@ -1410,6 +1410,105 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("Cloudflare provider v5 の import ID は各 resource type ごとに公式 format と一致する (2026-07-14 4 連続 deploy-production 失敗の再発防止)", () => {
+    // Cloudflare provider v5.22.0+ は import ID を strict に validate する:
+    //
+    //   - cloudflare_ruleset:            <{accounts|zones}/{account_id|zone_id}>/<ruleset_id>
+    //     └ discriminator prefix (`zones/` or `accounts/`) 必須
+    //   - cloudflare_r2_bucket:          <account_id>/<bucket_name>/<jurisdiction>
+    //   - cloudflare_turnstile_widget:   <account_id>/<sitekey>
+    //   - cloudflare_zone_setting:       <zone_id>/<setting_id>
+    //   - cloudflare_dns_record:         <zone_id>/<record_id>
+    //
+    // PR #1098 で `cloudflare_ruleset` の import ID を `<zone_id>/<ruleset_id>` の
+    // v4 相当 raw ID 形式で書き、PR #1099 で lock file が provider を v5.22.0 に
+    // pin して以降 4 連続の deploy-production terraform-apply が
+    // `Error: invalid discriminator segment` で abort。auto-merge は required PR
+    // check のみ見るため post-merge apply 失敗が silent、user への通知経路もなし。
+    //
+    // この gate で「新規に Cloudflare resource 宣言 + import block を書く時、ID
+    // format が provider docs と一致すること」を機械強制。
+    // 参考: https://github.com/cloudflare/terraform-provider-cloudflare/blob/main/docs/resources/{ruleset,r2_bucket,turnstile_widget,zone_setting,dns_record}.md
+    const TERRAFORM_DIR = join(ROOT, "terraform");
+    const tfFiles = readdirSync(TERRAFORM_DIR).filter((f) => f.endsWith(".tf"));
+
+    // 各 resource type ごとに ID pattern を定義。
+    // ID string は `${var.xxx}/literal` の interpolation を含みうるので、
+    // interpolation 部分は `[^"/]+` 相当のセグメントとして match させる。
+    const CLOUDFLARE_IMPORT_ID_PATTERNS: ReadonlyArray<{
+      resourceType: string;
+      pattern: RegExp;
+      docsFormat: string;
+    }> = [
+      {
+        resourceType: "cloudflare_ruleset",
+        // discriminator (zones|accounts) + / + segment + / + segment
+        pattern: /^(?:zones|accounts)\/[^/]+\/[^/]+$/u,
+        docsFormat: "<{accounts|zones}/{account_id|zone_id}>/<ruleset_id>",
+      },
+      {
+        resourceType: "cloudflare_r2_bucket",
+        // account_id / bucket_name / jurisdiction (default|eu|fedramp)
+        pattern: /^[^/]+\/[^/]+\/(?:default|eu|fedramp)$/u,
+        docsFormat: "<account_id>/<bucket_name>/<jurisdiction>",
+      },
+      {
+        resourceType: "cloudflare_turnstile_widget",
+        // account_id / sitekey (Turnstile sitekey は英数字 + 先頭 `0x`)
+        pattern: /^[^/]+\/[^/]+$/u,
+        docsFormat: "<account_id>/<sitekey>",
+      },
+      {
+        resourceType: "cloudflare_zone_setting",
+        // zone_id / setting_id (0rtt / brotli / ssl 等の setting name)
+        pattern: /^[^/]+\/[^/]+$/u,
+        docsFormat: "<zone_id>/<setting_id>",
+      },
+      {
+        resourceType: "cloudflare_dns_record",
+        // zone_id / record_id (32-char hex)
+        pattern: /^[^/]+\/[^/]+$/u,
+        docsFormat: "<zone_id>/<record_id>",
+      },
+    ];
+
+    const offenders: string[] = [];
+    // すべての .tf file の import block を抽出。
+    // `import {` から `\n}` (行頭 `}`) までを lazy match し、その中の `to = <resource>` と
+    // `id = "<literal>"` を抽出する。`id = "${var.xxx}/..."` の interpolation は
+    // literal 部分だけで validate (interpolation の変数値までは grep gate では追わない)。
+    //
+    // ⚠ `[^{}]*?` を使うと `${var.xxx}` の `{` `}` を exclusion set が拾って
+    // import block そのものが match しなくなる (silent test bypass の元凶)。
+    // 代わりに `[\s\S]*?` + 行頭 `}` (`\n}`) で block 終端を確実に捕捉。
+    const importBlockRe = /import\s*\{([\s\S]*?)\n\}/gu;
+    for (const file of tfFiles) {
+      const source = readFileSync(join(TERRAFORM_DIR, file), "utf8");
+      const importBlocks = source.matchAll(importBlockRe);
+      for (const block of importBlocks) {
+        const body = block[1] ?? "";
+        const toMatch = body.match(/to\s*=\s*(cloudflare_[a-z_]+)/u);
+        const idMatch = body.match(/id\s*=\s*"([^"]+)"/u);
+        if (!toMatch || !idMatch) continue;
+        const resourceType = toMatch[1];
+        const idString = idMatch[1] ?? "";
+        // interpolation `${var.xxx}` を "V" placeholder に置換して pattern match を通す
+        // (実行時に variable が展開された後の形状を validate する意図)。
+        const idNormalized = idString.replaceAll(/\$\{[^}]+\}/gu, "V");
+        const rule = CLOUDFLARE_IMPORT_ID_PATTERNS.find(
+          (r) => r.resourceType === resourceType,
+        );
+        if (!rule) continue; // まだ table に無い CF resource type は skip (追加時にここへ登録)
+        if (!rule.pattern.test(idNormalized)) {
+          offenders.push(
+            `terraform/${file}: ${resourceType} import id "${idString}" does not match provider v5 format "${rule.docsFormat}"`,
+          );
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   test("scripts/bootstrap-terraform.sh は F1 structural closure に必要な grants を全て含む (bootstrap-owns-all-project-IAM SSoT)", () => {
     // F1 structural closure の実装が bootstrap script 側で維持されていることを
     // 回帰防止として grep gate で強制する:
