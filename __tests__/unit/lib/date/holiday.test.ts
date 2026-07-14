@@ -23,4 +23,8 @@ describe("isJapaneseHoliday", () => {
     // → 5/3 が日曜のため、5/6 水が振替休日
     expect(isJapaneseHoliday("2026-05-06")).toBe(true);
   });
+
+  test("不正な日付形式 (invalid-date) は false を返す", () => {
+    expect(isJapaneseHoliday("invalid-date")).toBe(false);
+  });
 });
