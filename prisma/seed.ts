@@ -723,7 +723,6 @@ async function seedSpaces(overridePublished?: boolean) {
       capacity: 8,
       area: new Prisma.Decimal(25.5),
       hourlyPrice: new Prisma.Decimal(3000),
-      dailyPrice: new Prisma.Decimal(20000),
       mainImageUrl: "/images/seed/meeting-room.svg",
       gallery: [],
       facilities: [
@@ -749,7 +748,6 @@ async function seedSpaces(overridePublished?: boolean) {
       capacity: 30,
       area: new Prisma.Decimal(60.0),
       hourlyPrice: new Prisma.Decimal(8000),
-      dailyPrice: new Prisma.Decimal(50000),
       mainImageUrl: "/images/seed/seminar-room.svg",
       gallery: [],
       facilities: [
@@ -776,7 +774,6 @@ async function seedSpaces(overridePublished?: boolean) {
       capacity: 20,
       area: new Prisma.Decimal(80.0),
       hourlyPrice: new Prisma.Decimal(500),
-      dailyPrice: new Prisma.Decimal(3000),
       mainImageUrl: "/images/seed/coworking.svg",
       gallery: [],
       facilities: [
@@ -815,6 +812,80 @@ async function seedSpaces(overridePublished?: boolean) {
     console.log(
       `✅ Enabled reviews for ${result.count.toString()} seed space(s)`,
     );
+  }
+}
+
+// =============================================================================
+// Space Rate Plans（週末 / 祝日料金プランのデモ、dev seed のみ）
+//
+// 本番 seed（seedProduction）からは意図的に呼ばない
+// （dev/prod 分離ポリシー、架空の rate plan 例を本番に投入しない）。
+// Task 16 の rate-plan-preview E2E smoke spec は「金曜」枠のプレビューに
+// 「週末料金」が反映されることを DOM 検証する前提（daysOfWeek に FRIDAY を含む）。
+// プラン名は e2e/fixtures/test-data.ts の ratePlanFixtures と文字列レベルで
+// 契約が取れている（import ではなく、他の seed fixture 定数と同じ運用）。
+// =============================================================================
+
+const SEED_WEEKEND_RATE_PLAN_NAME = "週末料金";
+const SEED_HOLIDAY_RATE_PLAN_NAME = "祝日料金";
+
+async function seedSpaceRatePlans() {
+  const spaces = await prisma.space.findMany({
+    select: { id: true, name: true, hourlyPrice: true },
+  });
+
+  for (const space of spaces) {
+    const existingWeekendPlan = await prisma.spaceRatePlan.findFirst({
+      where: { spaceId: space.id, name: SEED_WEEKEND_RATE_PLAN_NAME },
+    });
+    if (!existingWeekendPlan) {
+      await prisma.spaceRatePlan.create({
+        data: {
+          spaceId: space.id,
+          name: SEED_WEEKEND_RATE_PLAN_NAME,
+          hourlyPrice: Math.round(space.hourlyPrice * 1.3),
+          daysOfWeek: ["FRIDAY", "SATURDAY", "SUNDAY"],
+          holidayMode: "any",
+          startTime: null,
+          endTime: null,
+          effectiveFrom: null,
+          effectiveTo: null,
+        },
+      });
+      console.log(
+        `✅ Created rate plan: ${space.name} - ${SEED_WEEKEND_RATE_PLAN_NAME}`,
+      );
+    } else {
+      console.log(
+        `⏭️ Skipped existing rate plan: ${space.name} - ${SEED_WEEKEND_RATE_PLAN_NAME}`,
+      );
+    }
+
+    const existingHolidayPlan = await prisma.spaceRatePlan.findFirst({
+      where: { spaceId: space.id, name: SEED_HOLIDAY_RATE_PLAN_NAME },
+    });
+    if (!existingHolidayPlan) {
+      await prisma.spaceRatePlan.create({
+        data: {
+          spaceId: space.id,
+          name: SEED_HOLIDAY_RATE_PLAN_NAME,
+          hourlyPrice: Math.round(space.hourlyPrice * 1.5),
+          daysOfWeek: [],
+          holidayMode: "only",
+          startTime: null,
+          endTime: null,
+          effectiveFrom: null,
+          effectiveTo: null,
+        },
+      });
+      console.log(
+        `✅ Created rate plan: ${space.name} - ${SEED_HOLIDAY_RATE_PLAN_NAME}`,
+      );
+    } else {
+      console.log(
+        `⏭️ Skipped existing rate plan: ${space.name} - ${SEED_HOLIDAY_RATE_PLAN_NAME}`,
+      );
+    }
   }
 }
 
@@ -1463,6 +1534,36 @@ async function seedInquiries() {
 // Reservations (with Coupon relations)
 // =============================================================================
 
+// Reservation.taxRateType/taxRate/taxAmount/totalPriceWithTax/rateBreakdownJson は
+// SpaceRatePlan 導入 (migration 20260714111408) で NOT NULL 化された。以下の seed
+// 予約はいずれも rate plan resolver を経由しない直接 insert のため、同 migration の
+// backfill と同じ legacy パターン（`{ legacy: true, segments: [], ... }`、
+// isLegacyRateBreakdown が true 判定、receipts/issue.ts 等は totalPrice
+// フォールバックを維持）で税・内訳スナップショットを埋める。
+const SEED_LEGACY_TAX_RATE = 10;
+const SEED_LEGACY_RATE_BREAKDOWN = {
+  schemaVersion: 1,
+  segments: [],
+  totalHours: 0,
+  totalBasePrice: 0,
+  holidayFlags: {},
+  legacy: true,
+} as const;
+
+function buildSeedLegacyPricingSnapshot(totalPrice: number) {
+  const taxAmount = Math.round((totalPrice * SEED_LEGACY_TAX_RATE) / 100);
+  return {
+    taxRateType: "standard" as const,
+    taxRate: new Prisma.Decimal(SEED_LEGACY_TAX_RATE),
+    taxAmount: new Prisma.Decimal(taxAmount),
+    totalPriceWithTax: new Prisma.Decimal(totalPrice + taxAmount),
+    rateBreakdownJson: asPrismaInputJsonValue(
+      SEED_LEGACY_RATE_BREAKDOWN,
+      "seed rateBreakdownJson が不正です",
+    ),
+  };
+}
+
 async function seedReservations() {
   const spaces = await prisma.space.findMany({ where: { isActive: true } });
   const customers = await prisma.customer.findMany({
@@ -1989,6 +2090,7 @@ async function seedReservations() {
           couponDiscountAmount: couponDiscountAmount
             ? new Prisma.Decimal(couponDiscountAmount)
             : null,
+          ...buildSeedLegacyPricingSnapshot(totalPrice),
           ...(res.notes != null ? { notes: res.notes } : {}),
           ...(res.paymentStatus !== undefined
             ? { paymentStatus: res.paymentStatus }
@@ -2117,6 +2219,7 @@ async function seedDevCustomerAndReservations() {
         basePrice: new Prisma.Decimal(basePrice),
         totalPrice: new Prisma.Decimal(basePrice),
         notes: r.notes,
+        ...buildSeedLegacyPricingSnapshot(basePrice),
       },
     });
     created++;
@@ -3707,6 +3810,7 @@ async function seedPublicReviewE2EFixture() {
           basePrice: new Prisma.Decimal(basePrice),
           totalPrice: new Prisma.Decimal(basePrice),
           notes,
+          ...buildSeedLegacyPricingSnapshot(basePrice),
         },
         select: { id: true },
       });
@@ -4769,6 +4873,7 @@ async function seedDev() {
 
   // Phase 3: スペース（リレーション設定）
   await seedSpaces();
+  await seedSpaceRatePlans();
 
   // Phase 4: 顧客・問い合わせ・クーポン
   await seedCustomers();

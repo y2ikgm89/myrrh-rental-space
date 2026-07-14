@@ -80,3 +80,14 @@ export const spaceFixtures = {
 export const reviewFixtures = {
   publicReviewSpaceSlug: spaceFixtures.publicReservableSpaceSlug,
 } as const;
+
+/**
+ * SpaceRatePlan seed contract used by rate-plan preview E2E specs.
+ * `prisma/seed.ts`（`seedSpaceRatePlans`）が全 Space に対して同名で作成する
+ * 週末 / 祝日料金プラン。weekendPlanName は daysOfWeek に FRIDAY/SATURDAY/SUNDAY
+ * を含み holidayMode: "any" のため、平日と比べて金曜も含めた検証に使える。
+ */
+export const ratePlanFixtures = {
+  weekendPlanName: "週末料金",
+  holidayPlanName: "祝日料金",
+} as const;
