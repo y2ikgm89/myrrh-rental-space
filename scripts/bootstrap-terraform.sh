@@ -57,6 +57,8 @@
 #      (optional defense-in-depth — org-admin 権限がない場合は warning で skip)
 #  11. 残りの predefined roles (Phase 2-7 の resource CRUD 用の最小権限セット)
 #      の grant (projectIamAdmin / serviceAccountAdmin は含まれない)
+#  12. Google Cloud APIs の明示 enable (Console 誤 disable の audit trail、
+#      iap.googleapis.com stop = admin login 全停止 risk の事前防止)
 #
 # ## 追加 role の運用手順
 #
@@ -146,6 +148,15 @@ fi
 run gcloud storage buckets update "gs://${STATE_BUCKET}" \
   --project="${PROJECT_ID}" \
   --versioning
+
+# apply 毎に生成される noncurrent version が無期限累積するのを防ぐ:
+#   - live version (最新 state) は無期限保存 (Terraform state 本体を失わない)
+#   - noncurrent version は 90 日で削除 (監査 audit trail は 90 日で十分、
+#     storage コストを最適化)
+echo "[bootstrap] Applying state bucket lifecycle (90-day noncurrent delete)"
+run gcloud storage buckets update "gs://${STATE_BUCKET}" \
+  --project="${PROJECT_ID}" \
+  --lifecycle-file="$(dirname "$0")/bootstrap-state-lifecycle.json"
 
 # -----------------------------------------------------------------------------
 # 2. Terraform runner SA (idempotent)
@@ -461,6 +472,37 @@ for role in ${BOOTSTRAP_RUNNER_ROLES}; do
     --condition=None
 done
 
+# -----------------------------------------------------------------------------
+# 12. Google Cloud APIs explicit enablement (audit trail for accidental
+#     Console disable)
+#
+#     44 個の API を過去は手動 enable していたため、Console で誤 disable された
+#     場合の audit trail (誰がいつ enable したか) が残らなかった。特に
+#     iap.googleapis.com が disable されると admin login が全停止する。
+#
+#     本 section で明示宣言することで:
+#       - どの API に依存しているかがコード上の SSoT
+#       - Console 誤 disable 後の復旧が bootstrap 再実行で 1 コマンド
+#       - services enable は idempotent (既に enabled は silent no-op)
+# -----------------------------------------------------------------------------
+REQUIRED_APIS=(
+  "run.googleapis.com"
+  "iap.googleapis.com"
+  "cloudbuild.googleapis.com"
+  "cloudscheduler.googleapis.com"
+  "artifactregistry.googleapis.com"
+  "secretmanager.googleapis.com"
+  "compute.googleapis.com"
+  "iam.googleapis.com"
+  "iamcredentials.googleapis.com"
+  "serviceusage.googleapis.com"
+  "logging.googleapis.com"
+  "monitoring.googleapis.com"
+  "cloudresourcemanager.googleapis.com"
+)
+echo "[bootstrap] Enabling ${#REQUIRED_APIS[@]} required Google Cloud APIs..."
+run gcloud services enable "${REQUIRED_APIS[@]}" --project="${PROJECT_ID}"
+
 echo "[bootstrap] done."
 echo "[bootstrap]  - Terraform state bucket, all 4 SAs (runner + runtime + build +"
 echo "[bootstrap]    scheduler), WIF binding, all project-level IAM (custom role D1 +"
@@ -479,3 +521,7 @@ echo "[bootstrap]    IAM 追記は禁止 — F1 structural closure を破るこ�
 echo "[bootstrap]  - Modifying the Deny Policy: project owner が gcloud iam policies"
 echo "[bootstrap]    update を手動実行 (bootstrap は create のみで既存を上書きしない)。"
 echo "[bootstrap]  - Add or modify secrets via a PR that edits terraform/secrets.tf."
+echo "[bootstrap]  - State bucket lifecycle: 90-day noncurrent delete (live version は無期限)。"
+echo "[bootstrap]    Modify: edit scripts/bootstrap-state-lifecycle.json and re-run。"
+echo "[bootstrap]  - Google Cloud APIs: ${#REQUIRED_APIS[@]} APIs 明示宣言済み。"
+echo "[bootstrap]    Add: edit REQUIRED_APIS in this script (section 12) and re-run。"
