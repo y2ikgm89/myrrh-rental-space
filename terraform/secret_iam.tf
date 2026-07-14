@@ -11,9 +11,9 @@
 # 個別 binding を発行していたが、これには 2 つの構造問題があった:
 #
 #   1. runner SA が `roles/secretmanager.admin` (predefined) を持つ必要があり、
-#      その中の `secretmanager.secrets.setIamPolicy` を経由すれば deny.tf の
-#      denied_principals 制限を無視して任意 principal に `secretAccessor` を
-#      grant できる self-grant 経路が残っていた (Codex P1 F1)。
+#      その中の `secretmanager.secrets.setIamPolicy` を経由すれば bootstrap 管理の
+#      IAM Deny Policy の denied_principals 制限を無視して任意 principal に
+#      `secretAccessor` を grant できる self-grant 経路が残っていた (Codex P1 F1)。
 #   2. secret 新規追加時に cloudbuild.yaml と本ファイル両方の更新を要求し、
 #      片方だけの更新で deploy が silent fail する drift 問題があった
 #      (architecture-boundaries drift gate で拾っていたが、そもそもの構造問題)。
