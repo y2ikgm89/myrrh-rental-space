@@ -33,6 +33,8 @@ import {
   RegistrationStatus,
   EventStatus,
   SmartLockDeviceType,
+  DayOfWeek,
+  HolidayMode,
 } from "@generated/prisma/enums";
 import {
   isValidRole,
@@ -903,4 +905,41 @@ export const SMART_LOCK_DEVICE_TYPE_LABELS: Record<
   KEYPAD_VISION: "Keypad Vision",
   KEYPAD_VISION_PRO: "Keypad Vision Pro",
   LOCK_VISION_PRO: "Lock Vision Pro",
+};
+
+// =============================================================================
+// DayOfWeek / HolidayMode Labels（SpaceRatePlan 曜日・祝日設定 SSoT）
+//
+// `SpaceRatePlanList` / `SpaceRatePlanEditModal` の 2 コンポーネントで共有するため、
+// 両者の import 元をこのゲートウェイに一元化する（コンポーネント間の直接 import で
+// 発生していた循環参照を解消）。
+// =============================================================================
+
+/** 曜日チェックボックス・曜日表示の並び順 SSoT（月曜始まり）。 */
+export const ALL_DAYS_OF_WEEK: readonly DayOfWeek[] = [
+  DayOfWeek.MONDAY,
+  DayOfWeek.TUESDAY,
+  DayOfWeek.WEDNESDAY,
+  DayOfWeek.THURSDAY,
+  DayOfWeek.FRIDAY,
+  DayOfWeek.SATURDAY,
+  DayOfWeek.SUNDAY,
+];
+
+/** 曜日の日本語 1 文字ラベル SSoT。 */
+export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
+  [DayOfWeek.MONDAY]: "月",
+  [DayOfWeek.TUESDAY]: "火",
+  [DayOfWeek.WEDNESDAY]: "水",
+  [DayOfWeek.THURSDAY]: "木",
+  [DayOfWeek.FRIDAY]: "金",
+  [DayOfWeek.SATURDAY]: "土",
+  [DayOfWeek.SUNDAY]: "日",
+};
+
+/** 祝日の扱いラベル SSoT。 */
+export const HOLIDAY_MODE_LABELS: Record<HolidayMode, string> = {
+  [HolidayMode.any]: "平日・祝日を問わず適用",
+  [HolidayMode.only]: "祝日のみ適用",
+  [HolidayMode.exclude]: "祝日を除く（平日のみ適用）",
 };

@@ -34,31 +34,13 @@ import { deleteSpaceRatePlanAction } from "@/admin/actions/space-rate-plan";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { formatJstDateOnly } from "@/shared/lib/date-format";
-import { DayOfWeek } from "@/shared/lib/validations/enums/prisma-types";
+import type { DayOfWeek } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  ALL_DAYS_OF_WEEK,
+  DAY_OF_WEEK_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import type { SpaceRatePlanForResolver } from "@/shared/lib/pricing/rate-plan-resolver";
 import { SpaceRatePlanEditModal } from "./SpaceRatePlanEditModal";
-
-/** 曜日チェックボックス・曜日表示の並び順 SSoT（月曜始まり）。`SpaceRatePlanEditModal` と共有。 */
-export const ALL_DAYS_OF_WEEK: readonly DayOfWeek[] = [
-  DayOfWeek.MONDAY,
-  DayOfWeek.TUESDAY,
-  DayOfWeek.WEDNESDAY,
-  DayOfWeek.THURSDAY,
-  DayOfWeek.FRIDAY,
-  DayOfWeek.SATURDAY,
-  DayOfWeek.SUNDAY,
-];
-
-/** 曜日の日本語 1 文字ラベル SSoT。`SpaceRatePlanEditModal` のチェックボックスと共有。 */
-export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
-  [DayOfWeek.MONDAY]: "月",
-  [DayOfWeek.TUESDAY]: "火",
-  [DayOfWeek.WEDNESDAY]: "水",
-  [DayOfWeek.THURSDAY]: "木",
-  [DayOfWeek.FRIDAY]: "金",
-  [DayOfWeek.SATURDAY]: "土",
-  [DayOfWeek.SUNDAY]: "日",
-};
 
 function formatDaysOfWeek(days: readonly DayOfWeek[]): string {
   if (days.length === 0) return "全曜日";

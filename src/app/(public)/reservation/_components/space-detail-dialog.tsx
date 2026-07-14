@@ -98,11 +98,6 @@ export function SpaceDetailDialog({
               ) : null}
               <div className="text-base font-light text-accent">
                 {formatUnit(space.hourlyPrice, "/h")}
-                {space.dailyPrice != null ? (
-                  <span className="ml-2 text-sm text-muted-foreground">
-                    {formatUnit(space.dailyPrice, "/day")}
-                  </span>
-                ) : null}
               </div>
             </div>
 

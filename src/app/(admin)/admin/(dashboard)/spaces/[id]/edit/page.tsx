@@ -9,6 +9,7 @@ import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
 import { getBlockedDatesForSpace } from "@/shared/domain/blocked-dates/queries";
 import { getSmartLockDevicesForLocation } from "@/shared/domain/smart-lock/queries";
+import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
@@ -45,6 +46,7 @@ export default async function EditSpacePage({ params }: PageProps) {
     reviewsFeatureEnabled,
     initialBlockedDates,
     availableSmartLockDevices,
+    ratePlans,
   ] = await Promise.all([
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),
@@ -52,6 +54,7 @@ export default async function EditSpacePage({ params }: PageProps) {
     isFeatureEnabled("reviews"),
     getBlockedDatesForSpace(id),
     getSmartLockDevicesForLocation(space.locationId),
+    getSpaceRatePlans(space.id),
   ]);
 
   return (
@@ -90,6 +93,7 @@ export default async function EditSpacePage({ params }: PageProps) {
         reviewsFeatureEnabled={reviewsFeatureEnabled}
         initialBlockedDates={initialBlockedDates}
         availableSmartLockDevices={availableSmartLockDevices}
+        ratePlans={ratePlans}
       />
     </AdminDetailLayout>
   );

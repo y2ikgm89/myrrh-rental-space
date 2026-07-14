@@ -184,20 +184,6 @@ export const spaceFormBaseSchema = z
         .min(0, { error: "時間料金は0以上で入力してください" })
         .max(1000000, { error: "時間料金は1000000以下で入力してください" }),
     ),
-    dailyPrice: z
-      .preprocess(
-        coerceOptionalNumber,
-        z.union([
-          z.null(),
-          z
-            .number()
-            .min(0, { error: "日額料金は0以上で入力してください" })
-            .max(10000000, {
-              error: "日額料金は10000000以下で入力してください",
-            }),
-        ]),
-      )
-      .optional(),
     // 空文字は「必須」エラーを優先する必要がある (top-level z.url() だと URL 形式
     // エラーが先に発火して custom min メッセージが消える)。string chain のまま維持。
     mainImageUrl: z
@@ -291,7 +277,6 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   capacity: 10,
   area: null,
   hourlyPrice: 0,
-  dailyPrice: null,
   mainImageUrl: "",
   gallery: [],
   facilities: [],
@@ -343,7 +328,6 @@ export type SpaceWithStats = {
   capacity: number;
   area: number | null;
   hourlyPrice: number;
-  dailyPrice: number | null;
   mainImageUrl: string;
   gallery: GalleryItem[];
   facilities: { name: string; iconName: string }[];

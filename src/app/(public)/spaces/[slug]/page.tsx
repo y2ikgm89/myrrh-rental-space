@@ -300,7 +300,6 @@ export default async function SpaceDetailPage({
               spaceId={space.id}
               spaceName={space.name}
               hourlyPrice={Number(space.hourlyPrice)}
-              dailyPrice={space.dailyPrice ? Number(space.dailyPrice) : null}
               cancellationDeadlineHours={
                 deadlineSettings.cancellationDeadlineHours
               }

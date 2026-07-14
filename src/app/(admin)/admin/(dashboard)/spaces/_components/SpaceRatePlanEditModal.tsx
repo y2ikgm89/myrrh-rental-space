@@ -52,8 +52,12 @@ import {
   HolidayMode,
   type DayOfWeek,
 } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  ALL_DAYS_OF_WEEK,
+  DAY_OF_WEEK_LABELS,
+  HOLIDAY_MODE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import type { SpaceRatePlanForResolver } from "@/shared/lib/pricing/rate-plan-resolver";
-import { ALL_DAYS_OF_WEEK, DAY_OF_WEEK_LABELS } from "./SpaceRatePlanList";
 
 export type SpaceRatePlanEditModalProps = {
   readonly spaceId: string;
@@ -66,12 +70,6 @@ const HOLIDAY_MODE_VALUES: readonly HolidayMode[] = [
   HolidayMode.only,
   HolidayMode.exclude,
 ];
-
-const HOLIDAY_MODE_LABELS: Record<HolidayMode, string> = {
-  [HolidayMode.any]: "平日・祝日を問わず適用",
-  [HolidayMode.only]: "祝日のみ適用",
-  [HolidayMode.exclude]: "祝日を除く（平日のみ適用）",
-};
 
 const VALID_HOLIDAY_MODES = new Set<string>(HOLIDAY_MODE_VALUES);
 

@@ -40,7 +40,6 @@ const spaceListSelect = {
   capacity: true,
   area: true,
   hourlyPrice: true,
-  dailyPrice: true,
   mainImageUrl: true,
   gallery: true,
   facilities: true,
@@ -58,7 +57,6 @@ function mapSpaceListItem(s: SpaceListRow) {
   return {
     ...s,
     hourlyPrice: Number(s.hourlyPrice),
-    dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
     area: s.area ? Number(s.area) : null,
     gallery: parseGallery(s.gallery),
     facilities: parseFacilities(s.facilities),
@@ -183,7 +181,6 @@ export async function getSpaceBySlug(slug: string) {
           capacity: true,
           area: true,
           hourlyPrice: true,
-          dailyPrice: true,
           mainImageUrl: true,
           gallery: true,
           facilities: true,
@@ -228,7 +225,6 @@ export async function getSpaceBySlug(slug: string) {
       space.addressDetail,
     ),
     hourlyPrice: Number(space.hourlyPrice),
-    dailyPrice: space.dailyPrice ? Number(space.dailyPrice) : null,
   });
 }
 

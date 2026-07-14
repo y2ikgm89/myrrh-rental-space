@@ -22,7 +22,6 @@ const VALID_SPACE_INPUT = {
   capacity: 10,
   area: 50.5,
   hourlyPrice: 1000,
-  dailyPrice: 8000,
   mainImageUrl: "https://example.com/images/main.jpg",
   gallery: [
     { url: "https://example.com/images/1.jpg", alt: "", caption: "" },
@@ -283,35 +282,6 @@ describe("spaceFormSchema", () => {
     });
   });
 
-  describe("dailyPrice", () => {
-    test("nullは許可", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        dailyPrice: null,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("負の値はエラー", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        dailyPrice: -1,
-      });
-      expect(result.success).toBe(false);
-    });
-
-    test("10000001はエラー", () => {
-      const result = spaceFormSchema.safeParse({
-        ...VALID_SPACE_INPUT,
-        dailyPrice: 10000001,
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain("10000000以下");
-      }
-    });
-  });
-
   describe("mainImageUrl", () => {
     test("空文字はエラー", () => {
       const result = spaceFormSchema.safeParse({
@@ -495,7 +465,6 @@ describe("defaultSpaceFormValues", () => {
       capacity: 10,
       area: null,
       hourlyPrice: 0,
-      dailyPrice: null,
       mainImageUrl: "",
       gallery: [],
       facilities: [],

@@ -46,7 +46,6 @@ export type SpaceOption = {
   capacity: number;
   area: number | null;
   hourlyPrice: number;
-  dailyPrice: number | null;
   mainImageUrl: string;
   gallery: GalleryItem[];
   facilities: { name: string; iconName: string }[];
@@ -293,7 +292,6 @@ export async function getPublishedLocationsWithSpaces(): Promise<
               capacity: true,
               area: true,
               hourlyPrice: true,
-              dailyPrice: true,
               mainImageUrl: true,
               gallery: true,
               facilities: true,

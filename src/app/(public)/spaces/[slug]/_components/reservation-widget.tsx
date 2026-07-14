@@ -31,7 +31,6 @@ interface ReservationWidgetProps {
   readonly spaceId: string;
   readonly spaceName: string;
   readonly hourlyPrice: number;
-  readonly dailyPrice: number | null;
   /** キャンセル無料受付の期限（予約開始の X 時間前まで）。Settings 由来の実値 */
   readonly cancellationDeadlineHours: number;
   /** 公開中のキャンセルポリシー規約 URL。無ければリンクを出さない */
@@ -48,7 +47,7 @@ interface ReservationWidgetProps {
  *
  * 1. **Eyebrow** — "— Reservation —" uppercase tracking (Kinfolk hairline)
  * 2. **Status band** — Badge「即時予約可」(events `申込受付中` と同 success variant)
- * 3. **Price hero** — 時間料金 + 日料金 (sans + tabular-nums、Stripe / Airbnb 標準)
+ * 3. **Price hero** — 時間料金 (sans + tabular-nums、Stripe / Airbnb 標準)
  * 4. **Detail list** — 予約 / キャンセル / 決済 の USP を `<dl>` で構造化
  * 5. **CTA block** — Reserve this space (primary) + Inquiry (secondary)
  *
@@ -57,14 +56,11 @@ interface ReservationWidgetProps {
 export function ReservationWidget({
   spaceId,
   hourlyPrice,
-  dailyPrice,
   cancellationDeadlineHours,
   cancellationPolicyUrl,
 }: ReservationWidgetProps) {
   const { formatTotal, formatUnit } = useFormatPrice();
   const hourly = splitTaxedPrice(formatTotal(hourlyPrice));
-  const daily =
-    dailyPrice != null ? splitTaxedPrice(formatTotal(dailyPrice)) : null;
 
   return (
     <div className="border border-accent bg-background">
@@ -100,21 +96,6 @@ export function ReservationWidget({
             {formatUnit(hourlyPrice, "/h")}
           </p>
         )}
-        {daily ? (
-          <div className="mt-2 flex items-baseline gap-x-2">
-            <span className="text-xl font-medium leading-none tabular-nums text-foreground">
-              {daily.value}
-            </span>
-            <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-              / day
-            </span>
-            {daily.taxLabel ? (
-              <span className="text-xs text-muted-foreground">
-                （{daily.taxLabel}）
-              </span>
-            ) : null}
-          </div>
-        ) : null}
       </div>
       <dl className="px-8 sm:px-10">
         <DetailRow
