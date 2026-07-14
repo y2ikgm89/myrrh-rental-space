@@ -1126,6 +1126,99 @@ When migrating from a bootstrap individual grant, do this in order:
 3. remove any `user:*` IAP accessor grants;
 4. run `bun run gcp:audit-production-iap`.
 
+### IAP OAuth Admin API shutdown (2026-03-19) and Console-only rotation
+
+Google is shutting down the **IAP OAuth Admin API** — the API that backs
+`gcloud iap oauth-brands`, `gcloud iap oauth-clients`, and the Terraform
+`google_iap_brand` / `google_iap_client` resources. Timeline:
+
+- **2026-01-19**: creating new IAP-managed OAuth clients through the API is
+  blocked for new projects. Existing clients keep working; the shutdown does
+  not brick IAP itself.
+- **2026-03-19**: the API is fully shut down. `gcloud iap oauth-brands`,
+  `gcloud iap oauth-clients`, and Terraform `google_iap_client` /
+  `google_iap_brand` all stop functioning. Any subsequent create, rotation,
+  or delete of an IAP OAuth client must happen from the Cloud Console.
+
+Cloud Run direct IAP continues to enforce access end-to-end after the
+shutdown; only the _management surface_ for the underlying OAuth brand /
+client moves to Console-only. IAM bindings (the
+`google_iap_web_cloud_run_service_iam_member` resources in
+`terraform/iap.tf`) are unaffected — those live on a different API surface.
+
+#### Terraform posture
+
+This repository's `terraform/iap.tf` intentionally does **not** declare a
+`google_iap_client` or `google_iap_brand` resource. The OAuth brand and
+client are created once in the Console during first-time setup and never
+imported. Keep this posture:
+
+- do not add `google_iap_client` in Terraform. New `create` calls will fail
+  hard after 2026-03-19, and even an `import` before that date is pointless
+  because subsequent updates (secret rotation, redirect URIs) cannot round-
+  trip through the deprecated API.
+- if a project ever ends up with a `google_iap_client` in Terraform state
+  (from an old bootstrap or a branch that predates this note), either
+  `terraform state rm` the resource and let Console own it, or wrap it with
+
+  ```hcl
+  lifecycle {
+    ignore_changes = [
+      client_secret,
+      display_name,
+    ]
+  }
+  ```
+
+  to prevent Terraform from attempting doomed API calls during future plans.
+
+#### Rotate the IAP OAuth client secret (Console procedure)
+
+Rotate on suspected leak, offboarding of anyone who could have seen the
+secret, or on a scheduled cadence. All steps are Console-only from
+2026-03-19 onward and already work today.
+
+1. Google Cloud Console -> **APIs & Services** -> **Credentials**.
+2. Under **OAuth 2.0 Client IDs**, open the IAP client. The display name
+   typically matches the OAuth brand set during first-time setup (often
+   `IAP-App-Engine-app` or `$ADMIN_SERVICE_NAME`); confirm the client ID
+   matches the value shown on the IAP Applications page for
+   `$ADMIN_SERVICE_NAME`.
+3. Click **Add secret** (older UI: **Reset secret**). Google generates a new
+   secret while keeping the previous secret valid for a short overlap window
+   (48h at time of writing). Copy the new secret immediately — it is only
+   shown once.
+4. Verify the OAuth **client ID** has not changed. The ID is stable across
+   rotations; only the secret rotates. If the client ID did change, IAP was
+   reconfigured with a new client rather than a secret rotation — treat that
+   as first-time setup and re-run `bun run gcp:audit-production-iap`.
+5. For this repo's default setup (Cloud Run direct IAP enabled with
+   `gcloud run services update ... --iap` — see the setup command above),
+   the OAuth secret is stored inside IAP's own configuration. The app never
+   reads it, so no Cloud Run env var or Secret Manager update is required.
+   Verify by loading `${ADMIN_DOMAIN}/admin` in a browser signed in as an
+   admin group member; the sign-in flow must still succeed.
+6. If the secret was ever copied outside IAP (Secret Manager entry, an
+   external CI env var such as a hypothetical `IAP_CLIENT_SECRET`, a
+   `.env.*` file, third-party monitoring), update every copy within the
+   overlap window. This repo has no such copies today; check
+   `gcloud secrets list` and CI environment settings before assuming.
+7. Return to **APIs & Services** -> **Credentials** and revoke the previous
+   secret once all consumers use the new one, or wait for it to expire.
+
+If IAP was originally set up through the **Custom OAuth** path (orgless
+project bootstrap — step 4 of the console setup above), the OAuth consent
+screen lives under **APIs & Services -> OAuth consent screen**. Do not
+delete the consent screen during rotation; only the secret needs rotating.
+
+#### Post-rotation checks
+
+- `curl -I "${ADMIN_DOMAIN}/admin"` still redirects unauthenticated visitors
+  to the Google sign-in flow (not `502` and not `403`).
+- A member of one admin role group can still open `${ADMIN_DOMAIN}/admin`
+  end-to-end.
+- `bun run gcp:audit-production-iap` passes.
+
 ## Cloud Scheduler
 
 The app validates `/api/cron/*` calls with a Google OIDC ID token issued by

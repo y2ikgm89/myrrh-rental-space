@@ -43,6 +43,12 @@ import {
 # は project-level singleton、`google_iap_client` は brand への child)。
 # ここでは brand は宣言せず client のみ扱う。project owner が Console で
 # brand を作成しておく前提 (既存)。
+#
+# Rotation は Console 手動 (docs/gcp-production-setup.md §IAP OAuth Admin API
+# shutdown 参照)。IAP OAuth Admin API は 2026-03-19 に完全 shutdown 予定で、
+# 以後 `google_iap_client` / `google_iap_brand` は create/update とも不可。
+# 既存 state にある場合は `terraform state rm` するか lifecycle
+# `ignore_changes = [client_secret]` を付ける (再 import 不要)。
 
 # 4 admin groups に httpsResourceAccessor を付与 (Cloud Run direct IAP のスコープ)。
 #
