@@ -228,24 +228,37 @@ run gcloud iam service-accounts add-iam-policy-binding "${TERRAFORM_SA}" \
 
 # -----------------------------------------------------------------------------
 # 6. Secret Manager custom role (D1) - idempotent create/update
-#    過去は terraform/conditions.tf の `google_project_iam_custom_role` で
-#    宣言していたが、runner に `iam.roles.create` が無いため fresh apply で
-#    F8 chicken-egg が発生。bootstrap-only 契約に従い bootstrap 側の SSoT に
-#    移管。permissions は Terraform 版と厳密一致 (setIamPolicy / getIamPolicy
-#    を除外して F1 self-grant を封鎖、GA stage)。
+#    bootstrap-owns-all-project-IAM 契約下で runner が Terraform の
+#    google_secret_manager_secret (container 生成) を管理するのに必要な
+#    最小 permission セット。projectIamAdmin / serviceAccountAdmin が runner
+#    から外れているため F1 chain 1/2 は構造的に閉じており、この custom role
+#    自体は container CRUD + read-only version 参照だけを持つ (write 系
+#    permissions は削除、下記の 2026-07-14 F2 hardening 参照)。
 #
-#    permissions list (12 個):
-#      - secret metadata CRUD (5): create/delete/get/list/update
-#      - version 管理 (6): versions.add/destroy/disable/enable/get/list
+#    permissions list (8 個):
+#      - secret metadata CRUD (5): secrets.create/delete/get/list/update
+#      - version read-only (2): versions.get/list (Terraform state refresh 用)
 #      - provider refresh (1): resourcemanager.projects.get
-#    含まれない:
-#      - secretmanager.secrets.setIamPolicy / getIamPolicy (F1 self-grant guard)
-#      - secretmanager.versions.access (Deny Policy が二重封鎖、optional)
+#
+#    2026-07-14 F2 hardening: 下記 permissions は意図的に omit:
+#      - secrets.setIamPolicy / getIamPolicy — F1 self-grant guard
+#      - versions.access — 値読取封鎖 (Deny Policy が optional なので必ず外す)
+#      - versions.add — attacker-controlled secret injection の禁止
+#        (secret 値は project owner が gcloud secrets versions add で手動投入
+#         する運用が SSoT — docs/runbooks/encryption-key-rotation.md 参照)
+#      - versions.destroy — 永続 DoS (compact 済み version は復旧不能) の禁止
+#      - versions.disable — 可逆 DoS の禁止
+#      - versions.enable — compromised version の再有効化の禁止
+#
+#    これで runner は container の shape (labels, replication, etc.) だけを
+#    管理し、値 (versions) には触れられない = Deny Policy の主機能を role
+#    定義側で表現できているので Deny Policy が skip されても integrity は
+#    保たれる (confidentiality は structural closure が担当)。
 # -----------------------------------------------------------------------------
 CUSTOM_ROLE_ID="terraformRunnerSecretManagerNoPolicyMgmt"
-CUSTOM_ROLE_PERMISSIONS="secretmanager.secrets.create,secretmanager.secrets.delete,secretmanager.secrets.get,secretmanager.secrets.list,secretmanager.secrets.update,secretmanager.versions.add,secretmanager.versions.destroy,secretmanager.versions.disable,secretmanager.versions.enable,secretmanager.versions.get,secretmanager.versions.list,resourcemanager.projects.get"
-CUSTOM_ROLE_TITLE="TF Runner Secret Manager (no IAM policy mgmt)"
-CUSTOM_ROLE_DESCRIPTION="Closes Codex P1 F1: compromised runner otherwise grants secretAccessor to attacker-controlled principal via per-secret SetIamPolicy, bypassing deny.tf."
+CUSTOM_ROLE_PERMISSIONS="secretmanager.secrets.create,secretmanager.secrets.delete,secretmanager.secrets.get,secretmanager.secrets.list,secretmanager.secrets.update,secretmanager.versions.get,secretmanager.versions.list,resourcemanager.projects.get"
+CUSTOM_ROLE_TITLE="TF Runner Secret Manager (container CRUD only, no version writes, no IAM policy mgmt)"
+CUSTOM_ROLE_DESCRIPTION="F1+F2 structural closure: runner can create/update/delete secret containers and read version metadata, but cannot read/inject/destroy version values or delegate IAM. Combined with removed projectIamAdmin/serviceAccountAdmin, this leaves no allow-policy path to secret values (see terraform/README.md 'Runner IAM ownership contract')."
 
 if [ "${DRY_RUN}" != "1" ] \
    && gcloud iam roles describe "${CUSTOM_ROLE_ID}" \
@@ -321,6 +334,17 @@ echo "[bootstrap] Granting build-sa serviceAccountUser on runtime-sa (deploy 時
 run gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA}" \
   --project="${PROJECT_ID}" \
   --member="serviceAccount:${BUILD_SA}" \
+  --role="roles/iam.serviceAccountUser"
+
+echo "[bootstrap] Granting runner SA serviceAccountUser on runtime-sa (Cloud Run v2 apply/update 時 actAs)"
+# Terraform の google_cloud_run_v2_service / google_cloud_run_v2_job の
+# template.service_account = runtime-sa 指定は Cloud Run v2 API が create/update
+# 両方で iam.serviceAccounts.actAs を validate する。runner から
+# serviceAccountAdmin を外した (F1 structural closure) ため、SA-scoped で明示
+# 付与しないと apply/update が 403 で失敗する。
+run gcloud iam service-accounts add-iam-policy-binding "${RUNTIME_SA}" \
+  --project="${PROJECT_ID}" \
+  --member="serviceAccount:${TERRAFORM_SA}" \
   --role="roles/iam.serviceAccountUser"
 
 echo "[bootstrap] Granting runner SA serviceAccountUser on scheduler-sa (Cloud Scheduler job 作成時 actAs)"
