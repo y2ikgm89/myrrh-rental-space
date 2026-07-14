@@ -114,16 +114,26 @@ locals {
 # 既存 jobs」のみに絞り、新規追加した jobs は resource 側の for_each で apply-create
 # させる。
 #
-# 新規 job 追加時の運用:
-#   1. `local.cron_jobs` に entry 追加 (resource 側は自動で create される)
-#   2. `local.imported_cron_jobs` には追加しない (まだ GCP 側に存在しないため)
-#   3. apply 完了後、以降のメンテナンスでも `imported_cron_jobs` は変更不要
-#      (import block は fresh-state bootstrap 時にのみ意味を持ち、通常 apply では
-#      no-op のため一過性 — 既に state に入っている resource を再 import しても skip)
+# 新規 job 追加時の運用 (2 段階):
+#
+#   段階 A — 新規 job を追加する PR (今回の PR #1083 相当):
+#     1. `local.cron_jobs` に entry 追加 (resource 側で apply-create される)
+#     2. `local.imported_cron_jobs` には**追加しない** (GCP 側にまだ存在しないため
+#        `Cannot import non-existent remote object` で plan 失敗する)
+#
+#   段階 B — 上記 PR の apply が成功して GCP に resource が作成されたら:
+#     3. **必ず follow-up PR** で `local.imported_cron_jobs` に新規 job 名を追加すること
+#        (state-rebuild recovery 防御のため必須)。忘れると tfstate 消失時の再 apply で
+#        「import block から skip → resource で create 試行 → 409 Already Exists」の
+#        deploy block が再発する (この pattern は PR #1083 の Codex P2 review 指摘に基づく)
+#
+# import block は宣言的な "adopt existing resource" 構文で、一過性ではなく永続的に有効。
+# tfstate が保持されている通常運用では state に既に入った resource を再 import しても
+# no-op で skip されるが、state-rebuild シナリオでは import block の網羅性が正しさを担保する。
 # -----------------------------------------------------------------------------
 
-# GCP 側に既に存在し、Phase 2 (setup-cloud-scheduler.sh → Terraform) の bootstrap で
-# import 済みの jobs のみを列挙。新規 jobs はここに含めない (import 失敗の原因になる)。
+# GCP 側に既に存在し、import block による adopt 対象となる jobs を列挙。
+# 新規追加した job は段階 A では除外し、apply 成功後に段階 B の follow-up PR で追加する。
 locals {
   imported_cron_jobs = toset([
     "calendar-sync",
@@ -139,8 +149,10 @@ locals {
     "smart-lock-cleanup",
     "pending-reservation-expire",
     "data-retention",
-    # NOTE: waitlist-expire は PR #1080 で新規追加。GCP 側に既存なしのため
-    # 意図的に除外 (import{} block からは対象外、resource 側の for_each で create される)。
+    # NOTE: waitlist-expire (PR #1080 追加、PR #1083 で apply-create される):
+    # 意図的に段階 A で除外中。
+    # TODO(follow-up): PR #1083 の deploy が成功して GCP 側に作成されたことを確認後、
+    # 別 PR で "waitlist-expire" をこの list に追加する (state-rebuild 防御、上記コメント参照)。
   ])
 }
 
