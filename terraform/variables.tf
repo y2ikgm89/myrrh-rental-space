@@ -4,12 +4,6 @@ variable "project_id" {
   default     = "myrrh-rental-space"
 }
 
-variable "project_number" {
-  description = "GCP project number (required for IAM Deny Policy attachment point URL)"
-  type        = string
-  default     = "626108938746"
-}
-
 variable "region" {
   description = "Default GCP region"
   type        = string
