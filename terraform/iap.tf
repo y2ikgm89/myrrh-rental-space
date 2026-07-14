@@ -23,13 +23,19 @@ locals {
 # These are no-op after the first apply; safe to keep long-term for docs.
 #
 # `google_iap_web_cloud_run_service_iam_member` import ID format is:
-#   projects/{project}/iap_web/cloud_run-{region}-{service} {role} {member}
-# (space-separated 3-part ID per Terraform google provider docs).
+#   projects/{project}/iap_web/cloud_run-{location}/services/{service_name} {role} {member}
+# (space-separated 3-part ID per Terraform google provider docs)。
+#
+# PR #1076 は `cloud_run-{location}-{service_name}` (ハイフン連結) と書いて
+# しまい、`/services/` セパレータを欠落させた。結果 Terraform parser が
+# 全 ID を 1 個の URL segment として解釈し
+# `projects/projects/iap_web/cloud_run-myrrh-rental-space/services/iap_web`
+# という不正な URL を生成 → 403 Permission denied で fail。
 # -----------------------------------------------------------------------------
 import {
   for_each = local.admin_role_groups
   to       = google_iap_web_cloud_run_service_iam_member.admin_access[each.key]
-  id       = "projects/${var.project_id}/iap_web/cloud_run-${var.region}-myrrh-rental-space-admin roles/iap.httpsResourceAccessor group:${each.value}"
+  id       = "projects/${var.project_id}/iap_web/cloud_run-${var.region}/services/myrrh-rental-space-admin roles/iap.httpsResourceAccessor group:${each.value}"
 }
 
 # IAP OAuth brand + client は初回 setup で Console から作成される。
