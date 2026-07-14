@@ -1,9 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { RegistrationStatus } from "@generated/prisma/enums";
+import {
+  RegistrationStatus,
+  type PaymentStatus,
+} from "@generated/prisma/enums";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import { paginate } from "@/shared/lib/pagination";
+import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 /** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
 export const EVENT_REGISTRATIONS_PER_PAGE = 20;
@@ -222,6 +226,10 @@ const CUSTOMER_EVENT_REGISTRATION_SELECT = {
   status: true,
   cancelledAt: true,
   createdAt: true,
+  waitlistedAt: true,
+  offeredAt: true,
+  expiresAt: true,
+  paymentStatus: true,
   slot: {
     select: {
       startAt: true,
@@ -247,6 +255,10 @@ type CustomerEventRegistrationRow = {
   readonly status: RegistrationStatus;
   readonly cancelledAt: Date | null;
   readonly createdAt: Date;
+  readonly waitlistedAt: Date | null;
+  readonly offeredAt: Date | null;
+  readonly expiresAt: Date | null;
+  readonly paymentStatus: PaymentStatus;
   readonly slot: {
     readonly startAt: Date;
     readonly endAt: Date;
@@ -269,6 +281,10 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
     status: row.status,
     cancelledAt: row.cancelledAt,
     createdAt: row.createdAt,
+    waitlistedAt: row.waitlistedAt,
+    offeredAt: row.offeredAt,
+    expiresAt: row.expiresAt,
+    paymentStatus: row.paymentStatus,
     event: {
       id: row.event.id,
       title: row.event.title,
@@ -288,17 +304,28 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
 /**
  * 顧客のイベント申込を「これから / 過去」に分けて取得する。
  *
- * - active: CONFIRMED かつスロット終了時刻 > now（開始日時の近い順）
- * - past: CANCELLED またはスロット終了時刻 <= now（直近に終わった順）
+ * - active: ACTIVE_REGISTRATION_STATUSES（CONFIRMED / WAITLISTED /
+ *   WAITLISTED_OFFERED）かつスロット終了時刻 > now（開始日時の近い順）
+ * - past: CANCELLED / EXPIRED またはスロット終了時刻 <= now（直近に終わった順）
+ *   EXPIRED を明示条件に含めるのは、cron (`waitlist-expire`) が
+ *   WAITLISTED_OFFERED を EXPIRED に倒した後もスロット自体は未来のままの
+ *   ケースがあり、それを "スロット終了" 条件だけでは past に落とせないため
+ *   （EXPIRED は終端 status であり ACTIVE_REGISTRATION_STATUSES に含まれない
+ *   ので active 側には出ないが、past 側の OR に明示しないとどちらのタブにも
+ *   出現しなくなる）。
  *
  * 時刻判定をドメイン層で完結させることで、呼び出し側 (RSC) は `Date.now()` を
- * render 中に呼ばずに済む（React Compiler purity rule 準拠）。
+ * render 中に呼ばずに済む（React Compiler purity rule 準拠）。同じ理由で
+ * 判定に使った `now` 自体も戻り値に含める — 呼び出し側 (mypage/events/page.tsx)
+ * が WAITLISTED_OFFERED カウントダウンの初期値算出用に「render 時点の now」を
+ * 必要とするが、そこで改めて `new Date()` を呼ぶと同じ purity 違反になるため。
  */
 export async function getCustomerEventRegistrations(
   customerId: string,
 ): Promise<{
   readonly active: ReturnType<typeof mapCustomerEventRegistration>[];
   readonly past: ReturnType<typeof mapCustomerEventRegistration>[];
+  readonly now: Date;
 }> {
   const now = new Date();
   const baseEventWhere = { deletedAt: null } as const;
@@ -307,7 +334,7 @@ export async function getCustomerEventRegistrations(
     prisma.eventRegistration.findMany({
       where: {
         customerId,
-        status: RegistrationStatus.CONFIRMED,
+        status: { in: [...ACTIVE_REGISTRATION_STATUSES] },
         event: baseEventWhere,
         slot: { endAt: { gt: now } },
       },
@@ -320,6 +347,7 @@ export async function getCustomerEventRegistrations(
         event: baseEventWhere,
         OR: [
           { status: RegistrationStatus.CANCELLED },
+          { status: RegistrationStatus.EXPIRED },
           { slot: { endAt: { lte: now } } },
         ],
       },
@@ -331,6 +359,7 @@ export async function getCustomerEventRegistrations(
   return {
     active: activeRows.map(mapCustomerEventRegistration),
     past: pastRows.map(mapCustomerEventRegistration),
+    now,
   };
 }
 

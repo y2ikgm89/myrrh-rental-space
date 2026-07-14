@@ -89,7 +89,7 @@ describe("public event slot options", () => {
     ).toEqual({ kind: "deadline-passed" });
   });
 
-  test("future sold-out slots produce full state instead of deadline-passed", () => {
+  test("future sold-out slots produce waitlist-available state instead of deadline-passed", () => {
     const slots = buildPublicEventSlotOptions({
       now: NOW,
       registrationDeadline: null,
@@ -111,7 +111,7 @@ describe("public event slot options", () => {
         registrationOpen: true,
         slots,
       }),
-    ).toEqual({ kind: "full" });
+    ).toEqual({ kind: "waitlist-available" });
   });
 
   test("draft or closed events do not expose registration even with available slots", () => {

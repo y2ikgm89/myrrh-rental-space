@@ -92,6 +92,12 @@ locals {
       path        = "/api/cron/data-retention"
       description = "PII retention purge (Session/Verification/login_attempts/Reservation.guest*/Inquiry/INACTIVE Customer, daily 03:30 JST, opt-in via feature module data-retention)"
     },
+    {
+      name        = "waitlist-expire"
+      schedule    = "0 * * * *"
+      path        = "/api/cron/waitlist-expire"
+      description = "Event waitlist offer expiration (hourly). Expires WAITLISTED_OFFERED past 24h TTL and FIFO-promotes the next WAITLISTED per (slotId, ticketId). Feature-gated by events module."
+    },
   ]
 }
 

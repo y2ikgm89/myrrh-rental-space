@@ -25,6 +25,8 @@ export const TURNSTILE_ACTIONS = {
   guest_event_registration_cancel: "guest-event-registration-cancel",
   mypage_account_delete: "mypage-account-delete",
   customer_signup_terms: "customer-signup-terms",
+  event_waitlist_register: "event-waitlist-register",
+  event_waitlist_confirm: "event-waitlist-confirm",
 } as const;
 
 export type TurnstileAction =

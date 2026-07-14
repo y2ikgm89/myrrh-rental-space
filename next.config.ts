@@ -83,6 +83,7 @@ const NEWS_CACHE_TAG = joinWithSiteWide([
 ]);
 const EVENTS_CACHE_TAG = joinWithSiteWide([
   CDN_CACHE_TAGS.EVENT,
+  CDN_CACHE_TAGS.EVENT_WAITLIST,
   ...SIDEBAR_CDN_TAGS,
 ]);
 const FAQ_CACHE_TAG = joinWithSiteWide([CDN_CACHE_TAGS.FAQ]);

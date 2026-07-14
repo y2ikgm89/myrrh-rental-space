@@ -14,6 +14,8 @@ interface EventRegistrationTabsProps {
   readonly activeItems: readonly EventRegistrationListItem[];
   readonly pastItems: readonly EventRegistrationListItem[];
   readonly turnstileSiteKey: string | null;
+  /** RSC render 時点の ISO 時刻。WAITLISTED_OFFERED カウントダウンの hydration-safe な初期値算出に使う。 */
+  readonly nowIso: string;
 }
 
 // 予約タブ (reservation-tabs.tsx) と完全対称な class。
@@ -29,6 +31,7 @@ export function EventRegistrationTabs({
   activeItems,
   pastItems,
   turnstileSiteKey,
+  nowIso,
 }: EventRegistrationTabsProps) {
   // Pattern B: 親が 1 フェッチで全件取得し props で分割渡し → forceMount + shallow:true。
   // 履歴は #629 のタブ方針に合わせ replace。
@@ -69,6 +72,7 @@ export function EventRegistrationTabs({
           emptyMessage="これからのイベント申込はありません"
           showBrowseCta
           turnstileSiteKey={turnstileSiteKey}
+          nowIso={nowIso}
         />
       </Tabs.Content>
       <Tabs.Content
@@ -80,6 +84,7 @@ export function EventRegistrationTabs({
           registrations={pastItems}
           emptyMessage="過去のイベント申込はありません"
           turnstileSiteKey={turnstileSiteKey}
+          nowIso={nowIso}
         />
       </Tabs.Content>
     </Tabs.Root>

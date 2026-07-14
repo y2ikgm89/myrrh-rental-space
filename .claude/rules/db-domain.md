@@ -42,6 +42,8 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   728352=スペースのlocationId/smartLockDeviceId整合性（`spaces/commands.ts`の
   `updateSpaceCommand`と`smart-lock/commands.ts`の`setSpaceSmartLockDeviceCommand`で共有）、
   728353=領収書連番採番（ReceiptSequence 単一行 + 予約単位 lock）、
+  728354=イベントキャンセル待ち promote session lock（`events/waitlist-locks.ts` の
+  `tryAcquireWaitlistPromoteSessionLock` / cron `waitlist-expire` で全 slot 走査を event 単位に直列化）、
   audit-log chain=int8 `6029451381908262157n`
 
 ## 'use cache' クエリの標準形

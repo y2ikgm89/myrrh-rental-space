@@ -28,6 +28,25 @@ paths:
   残枠は **CONFIRMED 申込の quantity 合計**のみで判定
 - tx 内のクエリは逐次 await（理由は db-domain ルールの「トランザクション」参照）
 
+## Waitlist FIFO promote
+
+- 満員時の申込は `status: WAITLISTED` で create。`waitlistedAt` を tx 内 `now` で設定
+  (FIFO 用の ordering key)
+- 誰かがキャンセルすると `applyEventRegistrationCancellation` 完了直後に同一 tx 内で
+  `offerNextWaitlistEntryCommand(tx, {slotId, ticketId, now})` が呼ばれ、同じ
+  (slotId, ticketId) の WAITLISTED を `waitlistedAt ASC LIMIT 1` で選定して
+  updateMany WHERE claim で `WAITLISTED_OFFERED` に昇格 + `offeredAt = now`,
+  `expiresAt = now + 24h` を設定する。**別 tx で呼ぶと race する** ため必ず tx 内
+- cron `/api/cron/waitlist-expire` は hourly に `status: WAITLISTED_OFFERED AND expiresAt < now`
+  を updateMany claim で `EXPIRED` に、その後 event 単位で 728354 session lock を握って
+  空いた枠に次の WAITLISTED を再度 promote する。**session lock は commit で自動解放
+  されない** ため release を finally で必ず呼ぶ
+- session lock は物理 connection scope のため、cron 側は acquire → work → release を
+  同じ `$transaction` callback または dedicated non-pooled client 経由で呼ぶ (pooled client
+  で分けて呼ぶと `pg_advisory_unlock` が silent-false を返して leak する)
+- WAITLISTED_OFFERED 中の quantity 変更は禁止 (`updateMany` の WHERE で status で claim 済み
+  のため意味的に不整合)、変更したい場合は「キャンセル → 再 waitlist 登録」を促す
+
 ## 二重副作用防止 = 「updateMany の WHERE で claim」パターン
 
 キャンセル（status ∈ CANCELLABLE）/ 決済確定（paymentStatus ∈ {UNPAID, PENDING}）/

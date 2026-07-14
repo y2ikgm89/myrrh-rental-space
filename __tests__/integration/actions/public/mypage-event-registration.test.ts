@@ -53,6 +53,12 @@ mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
   eventRegistrationSubmitRateLimiter: {},
   eventRegistrationByEmailRateLimiter: {},
+  // registerForEventWaitlist（同一ファイル、cancelEventRegistration では未使用）が
+  // top-level import する limiter。値オブジェクトの import のため "not used"
+  // reject スタブではなく空 object で足りる（checkActionRateLimit 等の呼び出しは
+  // action-helpers 側の mock が既に固定成功を返す）。
+  eventWaitlistRegistrationSubmitRateLimiter: {},
+  eventWaitlistRegistrationByEmailRateLimiter: {},
   getClientIpFromHeaders: mock(() => Promise.resolve("127.0.0.1")),
 }));
 
@@ -99,6 +105,28 @@ mock.module("@/shared/lib/email/event-emails", () => ({
   sendEventAdminNotification: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
+}));
+
+// cancelEventRegistration は使わないが、同一ファイルの registerForEventWaitlist が
+// import するため、モジュール解決を通すために "not used" スタブを提供する
+// （event-waitlist-emails.ts は send.ts 経由で customers/queries.ts の
+// getSuppressedEmailSet を参照し、上の部分的な customers/queries mock と
+// 衝突して失敗する — 実体験済み）。
+mock.module("@/shared/domain/events/waitlist-commands", () => ({
+  registerWaitlistEntryCommand: mock(() =>
+    Promise.reject(new Error("not used in cancel test")),
+  ),
+}));
+
+mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+  sendEventWaitlistRegistered: mock(() =>
+    Promise.reject(new Error("not used in cancel test")),
+  ),
+}));
+
+mock.module("@/shared/lib/cache/site-wide", () => ({
+  invalidateSiteWideCache: mock(() => undefined),
+  invalidateSiteWideCacheFromRouteHandler: mock(() => undefined),
 }));
 
 mock.module("@/shared/lib/async-utils", () => ({

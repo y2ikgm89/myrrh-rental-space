@@ -116,7 +116,8 @@ export default async function EventDetailPage({
     registrationOpen: event.registrationOpen,
     slots: slotOptions,
   });
-  const canRegister = registration.kind === "open";
+  const canRegister =
+    registration.kind === "open" || registration.kind === "waitlist-available";
 
   const baseUrl = getBaseUrl();
   const eventUrl = `${baseUrl}/events/${slug}`;
@@ -215,7 +216,9 @@ export default async function EventDetailPage({
                     price: event.tickets[0]?.price ?? 0,
                     priceCurrency: "JPY",
                     availability:
-                      registration.kind === "full" ? "SoldOut" : "InStock",
+                      registration.kind === "waitlist-available"
+                        ? "SoldOut"
+                        : "InStock",
                     url: eventUrl,
                   },
                 }
@@ -274,7 +277,14 @@ export default async function EventDetailPage({
           <Heading level={2} accent>
             <span id="event-register-heading">お申し込み</span>
           </Heading>
-          <div className="mt-8">
+          <div className="mt-8 space-y-6">
+            {registration.kind === "waitlist-available" && (
+              <EventStatusNotice
+                variant="warning"
+                title="現在満員です"
+                description="キャンセル待ちにご登録いただけます。繰り上げ当選のご連絡から24時間以内にご確定ください。"
+              />
+            )}
             {canRegister ? (
               <EventRegistrationForm
                 key={event.id}
@@ -295,12 +305,11 @@ export default async function EventDetailPage({
                 }))}
                 isLoggedIn={user != null}
                 slug={slug}
-              />
-            ) : registration.kind === "full" ? (
-              <EventStatusNotice
-                variant="warning"
-                title="定員に達しました"
-                description="このイベントは満員のため、現在お申し込みいただけません。"
+                mode={
+                  registration.kind === "waitlist-available"
+                    ? "waitlist"
+                    : "register"
+                }
               />
             ) : registration.kind === "deadline-passed" ? (
               <EventStatusNotice

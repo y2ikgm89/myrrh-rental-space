@@ -103,6 +103,26 @@ mock.module("@/shared/lib/cache/event-cache", () => ({
   invalidateEventCaches: mock(() => undefined),
 }));
 
+// registerForEventWaitlist（同一ファイル内の別 Server Action）が使う top-level
+// import 群。registerForEvent 自体は使わないが、ESM はファイル全体を即座に
+// 評価するため mock しないと実体モジュールが読み込まれる（event-waitlist-emails.ts
+// は footer-data.ts 経由で terms/queries.getFooterTerms を参照し、上の部分的な
+// terms/queries mock と衝突して失敗する）。
+mock.module("@/shared/domain/events/waitlist-commands", () => ({
+  registerWaitlistEntryCommand: mock(() => Promise.resolve(null)),
+}));
+
+mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+  sendEventWaitlistRegistered: mock(() =>
+    Promise.resolve({ ok: true as const }),
+  ),
+}));
+
+mock.module("@/shared/lib/cache/site-wide", () => ({
+  invalidateSiteWideCache: mock(() => undefined),
+  invalidateSiteWideCacheFromRouteHandler: mock(() => undefined),
+}));
+
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {
     void promise.catch(() => {});

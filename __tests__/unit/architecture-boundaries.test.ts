@@ -926,6 +926,7 @@ describe("architecture boundaries", () => {
       [
         join(SRC_ROOT, "shared", "lib", "calendar-sync", "event-inbound.ts"),
         join(SRC_ROOT, "shared", "lib", "email", "event-emails.ts"),
+        join(SRC_ROOT, "shared", "lib", "email", "event-waitlist-emails.ts"),
         join(SRC_ROOT, "shared", "lib", "email", "inquiry-emails.ts"),
         join(
           SRC_ROOT,

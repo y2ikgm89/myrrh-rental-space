@@ -218,6 +218,7 @@ export async function cancelGuestEventRegistrationAction(
       channel: "customer-token",
       actorUserId: sessionUserId,
       request: { ip, userAgent, tokenFingerprint: tokenFingerprint(token) },
+      promoted: result.promoted,
     });
 
     return null;

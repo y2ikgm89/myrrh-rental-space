@@ -44,6 +44,12 @@ import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-regist
 import { eventRegistrationConfirmationFixture } from "@/shared/emails/event-registration-confirmation.fixture";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { eventUpdatedNotificationFixture } from "@/shared/emails/event-updated-notification.fixture";
+import { EventWaitlistRegisteredEmail } from "@/shared/emails/event-waitlist-registered";
+import { eventWaitlistRegisteredFixture } from "@/shared/emails/event-waitlist-registered.fixture";
+import { EventWaitlistOfferedEmail } from "@/shared/emails/event-waitlist-offered";
+import { eventWaitlistOfferedFixture } from "@/shared/emails/event-waitlist-offered.fixture";
+import { EventWaitlistExpiredEmail } from "@/shared/emails/event-waitlist-expired";
+import { eventWaitlistExpiredFixture } from "@/shared/emails/event-waitlist-expired.fixture";
 import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
 import { inquiryReplyFixture } from "@/shared/emails/inquiry-reply.fixture";
 import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-notification";
@@ -207,7 +213,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 20 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * 23 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {
@@ -265,6 +271,21 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "event-admin-notification",
     EventAdminNotificationEmail,
     eventAdminNotificationFixture,
+  ),
+  "event-waitlist-registered": defineEntry(
+    "event-waitlist-registered",
+    EventWaitlistRegisteredEmail,
+    eventWaitlistRegisteredFixture,
+  ),
+  "event-waitlist-offered": defineEntry(
+    "event-waitlist-offered",
+    EventWaitlistOfferedEmail,
+    eventWaitlistOfferedFixture,
+  ),
+  "event-waitlist-expired": defineEntry(
+    "event-waitlist-expired",
+    EventWaitlistExpiredEmail,
+    eventWaitlistExpiredFixture,
   ),
   "contact-confirmation": defineEntry(
     "contact-confirmation",

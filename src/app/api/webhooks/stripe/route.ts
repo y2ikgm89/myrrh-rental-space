@@ -2,21 +2,37 @@
  * Stripe Webhook API
  *
  * Stripe からの Webhook イベントを受信し、
- * 予約の決済ステータスを更新します。
+ * 予約 / イベント申込（直接購入・waitlist 繰り上げ当選）の決済ステータスを更新します。
  *
  * ## 処理イベント（Stripe 公式推奨の Checkout フルセット）
  * - checkout.session.completed: セッション完了（即時決済 → PAID / 非同期決済 → PENDING 維持）
- * - checkout.session.async_payment_succeeded: 非同期決済成功 → PAID
+ * - checkout.session.async_payment_succeeded: 非同期決済（konbini / bank transfer 等）
+ *   成功 → PAID（reservation / event-registration の直接購入・waitlist offer
+ *   全経路対応 — Fix commit, レビュー Important #2 で event-registration を追加配線。
+ *   waitlist offer は checkout.session.completed と同じく
+ *   `confirmWaitlistOfferCommand` の容量再チェックを PAID 確定より先に通す）
  * - checkout.session.async_payment_failed: 非同期決済失敗 → FAILED
  * - checkout.session.expired: セッション期限切れ → FAILED
- * - charge.refunded: 返金完了 → REFUNDED
+ * - charge.refunded: 返金完了 → REFUNDED（reservation のみ。event-registration の
+ *   自動返金導線は未実装 — 容量race時は CRITICAL ログで手動対応）
+ *
+ * ## 決済対象の判別（`extractPaymentSubject`）
+ * `session.metadata` の shape で reservation / event-registration を判別する
+ * （reservation は `metadata.reservationId` のみ、event-registration は
+ * `metadata.type === "event-registration"` + `metadata.registrationId`）。
+ * event-registration はさらに `metadata.source === "waitlist-offer"` で
+ * 「waitlist 繰り上げ当選経由」か「直接購入
+ * （`createEventCheckoutSessionCommand`）」かを区別する。前者のみ
+ * `confirmWaitlistOfferCommand`（容量再チェック）を PAID 確定より先に呼ぶ
+ * （直接購入は登録時点で既に status: CONFIRMED のため対象外）。
  *
  * ## べき等性（atomic claim）
- * 各 handler は `claimReservationAs*` の **WHERE 条件で paymentStatus を排他制御**する
- * 単一 UPDATE で状態遷移する。`findUnique → update` の 2 ステップでは race window
- * が残り、`session.completed` と `async_payment_succeeded` の並行配信で確認メールが
- * 二重送信される silent bug を起こすため、claim 成否（`updateMany.count > 0`）で
- * 後続副作用（メール送信 / cache invalidate）を gate する。
+ * 各 handler は `claimReservationAs*` / `claimEventRegistrationAs*` の
+ * **WHERE 条件で status/paymentStatus を排他制御**する単一 UPDATE で状態遷移する。
+ * `findUnique → update` の 2 ステップでは race window が残り、`session.completed` と
+ * `async_payment_succeeded` の並行配信で確認メールが二重送信される silent bug を
+ * 起こすため、claim 成否（`updateMany.count > 0`）で後続副作用（メール送信 /
+ * cache invalidate）を gate する。
  *
  * @see https://docs.stripe.com/payments/checkout/fulfill-orders
  * @module api/webhooks/stripe
@@ -31,6 +47,15 @@ import {
   savePaymentIntentId,
   findReservationByPaymentIntent,
 } from "@/shared/domain/reservations/payment-queries";
+import { DomainError } from "@/shared/domain/domain-error";
+import { confirmWaitlistOfferCommand } from "@/shared/domain/events/waitlist-commands";
+import {
+  claimEventRegistrationAsPaid,
+  claimEventRegistrationAsFailed,
+  saveEventRegistrationPaymentIntentId,
+} from "@/shared/domain/events/payment-commands";
+import { getWaitlistConfirmationEmailDetails } from "@/shared/domain/events/waitlist-queries";
+import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { safeDecryptToString } from "@/shared/lib/crypto";
@@ -167,22 +192,60 @@ export async function POST(request: Request) {
 // =============================================================================
 
 /**
- * Checkout Session から reservationId を取得（共通バリデーション）
+ * Checkout Session から決済対象（予約 or イベント申込）を判別する。
+ *
+ * - reservation は `metadata.reservationId` のみで判定される既存契約
+ *   （`createCheckoutSessionCommand` 参照、`type` フィールドは付与されない）
+ * - event-registration は `metadata.type === "event-registration"` +
+ *   `metadata.registrationId` で判定する（`createEventCheckoutSessionCommand` /
+ *   `createWaitlistOfferCheckoutSessionCommand` 参照）
+ *
+ * どちらにも合致しない場合は **throw せず null を返す**。未知/欠損 metadata で
+ * 500 を返すと Stripe が exponential backoff で再送し続ける無限リトライになる
+ * ため、呼び出し側は log のみで skip し 200 を返す。
  */
-function extractReservationId(
+type PaymentSubject =
+  | { kind: "reservation"; reservationId: string }
+  | { kind: "event-registration"; registrationId: string };
+
+function extractPaymentSubject(
   session: Stripe.Checkout.Session,
   operation: string,
-): string | null {
-  const reservationId = session.metadata?.["reservationId"];
-  if (!reservationId) {
-    logError(new Error("Missing reservationId in session metadata"), {
+): PaymentSubject | null {
+  const metadata = session.metadata;
+
+  if (metadata?.["type"] === "event-registration") {
+    const registrationId = metadata["registrationId"];
+    if (!registrationId) {
+      logError(
+        new Error(
+          "Missing registrationId in session metadata (type=event-registration)",
+        ),
+        {
+          category: ErrorCategory.VALIDATION,
+          severity: ErrorSeverity.MEDIUM,
+          context: { operation, sessionId: session.id },
+        },
+      );
+      return null;
+    }
+    return { kind: "event-registration", registrationId };
+  }
+
+  const reservationId = metadata?.["reservationId"];
+  if (reservationId) {
+    return { kind: "reservation", reservationId };
+  }
+
+  logError(
+    new Error("Missing or unrecognized payment subject in session metadata"),
+    {
       category: ErrorCategory.VALIDATION,
       severity: ErrorSeverity.MEDIUM,
       context: { operation, sessionId: session.id },
-    });
-    return null;
-  }
-  return reservationId;
+    },
+  );
+  return null;
 }
 
 /**
@@ -257,6 +320,142 @@ async function fulfillPaymentAtomically(
   );
 }
 
+/**
+ * イベント申込キャッシュを無効化（共通）
+ *
+ * `CACHE_TAGS.EVENTS` は公開イベント一覧/詳細ページの CDN tag にもマップされている
+ * （`confirmWaitlistOfferAction` が
+ * `invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.EVENT_WAITLIST])` を
+ * `skipCdnPurge` 無しで呼ぶのと同じ理由 — Reservation 側の `invalidateReservationCache`
+ * とは異なり、こちらは `skipCdnPurge: true` を **渡さない**。予約タグは admin-only の
+ * private tag だが、イベントタグは公開ページに影響するため CDN purge が必要）。
+ *
+ * `CACHE_TAGS.EVENT_WAITLIST` も無条件で含める: waitlist offer 経由の PAID 確定
+ * （`isWaitlistOffer` 分岐、WAITLISTED_OFFERED → CONFIRMED）は
+ * `confirmWaitlistOfferAction`（無料チケット）と同じ状態遷移の有料版のため対称に
+ * 揃える。直接購入（`isWaitlistOffer === false`）では no-op だが、
+ * EVENT_WAITLIST に producer が無いため過剰無効化のコストは無い。
+ */
+function invalidateEventRegistrationCache(): void {
+  invalidateSiteWideCacheFromRouteHandler([
+    CACHE_TAGS.EVENTS,
+    CACHE_TAGS.EVENT_WAITLIST,
+  ]);
+}
+
+/**
+ * イベント申込決済完了の atomic claim + (waitlist offer のみ) 容量再チェック +
+ * 確認メール + cache invalidation。
+ *
+ * `metadata.source === "waitlist-offer"` の場合のみ `confirmWaitlistOfferCommand`
+ * を PAID 確定より先に呼ぶ（WAITLISTED_OFFERED → CONFIRMED、容量再チェック付き）。
+ * 直接購入（`createEventCheckoutSessionCommand`）は登録時点で既に
+ * status: CONFIRMED のため対象外 — 無条件で呼ぶと「WAITLISTED_OFFERED が
+ * 見つからない」で常に DomainError(NOT_FOUND) になり、5xx→Stripe 再送の
+ * 無限リトライを引き起こす。
+ *
+ * capacity race（`confirmWaitlistOfferCommand` が `status: "EXPIRED"` を返す =
+ * 決済は成功したが容量再チェックで枠を失った）は `claimEventRegistrationAsPaid`
+ * を呼ばない。この状態は `claimEventRegistrationAsFailed`（paymentStatus=FAILED）
+ * でも正しく表現できない — 実際には Stripe 決済は成功しているため、FAILED は
+ * 会計上の虚偽表示になる。イベント側に自動返金導線が無い（`refunds` API 呼び出しの
+ * 実装が無い）ため、CRITICAL ログのみで手動返金・reconciliation に委ねる
+ * （Task 9 report の capacity-race decision 参照。follow-up: 自動返金導線の追加）。
+ */
+async function fulfillEventRegistrationPaymentAtomically(
+  registrationId: string,
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const paymentIntentId =
+    typeof session.payment_intent === "string" ? session.payment_intent : null;
+  const isWaitlistOffer = session.metadata?.["source"] === "waitlist-offer";
+
+  if (isWaitlistOffer) {
+    let confirmResult: Awaited<ReturnType<typeof confirmWaitlistOfferCommand>>;
+    try {
+      confirmResult = await confirmWaitlistOfferCommand({
+        registrationId,
+        now: new Date(),
+      });
+    } catch (error) {
+      if (error instanceof DomainError) {
+        // 既に CONFIRMED 済み（webhook 再送）/ 他経路で処理済み等、想定内の状態
+        // 不一致は冪等に skip する（500 にすると Stripe が無限リトライする）。
+        logError(error, {
+          category: ErrorCategory.VALIDATION,
+          severity: ErrorSeverity.LOW,
+          context: {
+            operation: "stripeWebhookConfirmWaitlistOffer",
+            registrationId,
+            sessionId: session.id,
+          },
+        });
+        return;
+      }
+      throw error;
+    }
+
+    if (confirmResult.registration.status === "EXPIRED") {
+      logError(
+        new Error(
+          "Waitlist offer payment succeeded but capacity recheck expired the offer — manual refund reconciliation required",
+        ),
+        {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.CRITICAL,
+          context: {
+            operation: "stripeWebhookWaitlistOfferCapacityRace",
+            registrationId,
+            sessionId: session.id,
+            paymentIntentId,
+          },
+        },
+      );
+      return;
+    }
+  }
+
+  const claimed = await claimEventRegistrationAsPaid(registrationId, {
+    stripePaymentIntentId: paymentIntentId,
+  });
+  if (!claimed) return;
+
+  invalidateEventRegistrationCache();
+
+  if (!isWaitlistOffer) return;
+
+  // 直接購入は `createEventRegistrationCommand` が登録直後に確認メールを
+  // 送信済みのため、ここで再送すると二重送信になる（送らない）。waitlist offer は
+  // WAITLISTED 登録時に「順番待ち登録受付」メールのみ送っており、CONFIRMED
+  // 化した今回が初めての「確定」通知になる。details lookup は await し、
+  // 実送信のみ fireAndForget する（Reservation 側の `fulfillPaymentAtomically`
+  // と同じ「呼出式を直接渡す」形。async IIFE でラップすると details 取得の完了を
+  // テストから observe しづらくなるため避ける）。
+  const details = await getWaitlistConfirmationEmailDetails(registrationId);
+  if (!details) return;
+
+  fireAndForget(
+    sendEventRegistrationConfirmation({
+      registrationId: details.id,
+      customerName: details.name,
+      customerEmail: details.email,
+      eventTitle: details.eventTitle,
+      eventStartTime: details.startTime,
+      eventEndTime: details.endTime,
+      location: details.location ?? undefined,
+      quantity: details.quantity,
+      icsSequence: details.icsSequence,
+      customerId: details.customerId,
+    }),
+    {
+      operation: "sendWaitlistOfferPaymentConfirmationEmail",
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { registrationId },
+    },
+  );
+}
+
 // =============================================================================
 // Event Handlers
 // =============================================================================
@@ -273,45 +472,90 @@ async function fulfillPaymentAtomically(
 async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
 ) {
-  const reservationId = extractReservationId(
+  const subject = extractPaymentSubject(
     session,
     "stripeWebhookCheckoutCompleted",
   );
-  if (!reservationId) return;
+  if (!subject) return;
 
+  if (subject.kind === "reservation") {
+    const { reservationId } = subject;
+    if (session.payment_status === "paid") {
+      // 即時決済（カード等）: atomic claim で fulfill
+      await fulfillPaymentAtomically(reservationId, session);
+    } else {
+      // 非同期決済（銀行振込等）: PaymentIntent ID のみ保存
+      // paymentStatus は PENDING のまま維持。async_payment_succeeded で fulfill される
+      const paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : null;
+
+      if (paymentIntentId) {
+        await savePaymentIntentId(reservationId, paymentIntentId);
+      }
+
+      invalidateReservationCache(reservationId);
+    }
+    return;
+  }
+
+  const { registrationId } = subject;
   if (session.payment_status === "paid") {
-    // 即時決済（カード等）: atomic claim で fulfill
-    await fulfillPaymentAtomically(reservationId, session);
+    await fulfillEventRegistrationPaymentAtomically(registrationId, session);
   } else {
-    // 非同期決済（銀行振込等）: PaymentIntent ID のみ保存
-    // paymentStatus は PENDING のまま維持。async_payment_succeeded で fulfill される
+    // 非同期決済（konbini / customer_balance）: PaymentIntent ID のみ保存。
+    // 決済が実際に確定するのは後続の checkout.session.async_payment_succeeded
+    // （`handleAsyncPaymentSucceeded` が `fulfillEventRegistrationPaymentAtomically`
+    // を呼ぶ — Fix commit, レビュー Important #2 で配線済み）。
     const paymentIntentId =
       typeof session.payment_intent === "string"
         ? session.payment_intent
         : null;
 
     if (paymentIntentId) {
-      await savePaymentIntentId(reservationId, paymentIntentId);
+      await saveEventRegistrationPaymentIntentId(
+        registrationId,
+        paymentIntentId,
+      );
     }
 
-    invalidateReservationCache(reservationId);
+    invalidateEventRegistrationCache();
   }
 }
 
 /**
  * checkout.session.async_payment_succeeded
  *
- * 銀行振込等の非同期決済が成功した場合に発火。
- * checkout.session.completed で "unpaid" だった予約を fulfill する。
+ * 銀行振込 / konbini 等の非同期決済が成功した場合に発火。
+ * checkout.session.completed で "unpaid" だった予約 / イベント申込を fulfill する。
+ *
+ * この event type は Stripe が非同期決済の成功確定時にのみ送出するため、
+ * checkout.session.completed と異なり `session.payment_status` による分岐は
+ * 不要（常に確定済み扱いで良い）。event-registration 側は
+ * `fulfillEventRegistrationPaymentAtomically` を共有する（waitlist offer は
+ * 同関数内で `confirmWaitlistOfferCommand` の容量再チェックを経由し、直接購入は
+ * 経由しない — checkout.session.completed と同じ分岐契約）。atomic claim
+ * （`paymentStatus not PAID` 相当の WHERE）が二重処理を防ぐため、
+ * checkout.session.completed（即時決済）と本 handler（非同期決済）の両方から
+ * 同じ registration/reservation に対して呼ばれても安全（Task 9 report 参照）。
  */
 async function handleAsyncPaymentSucceeded(session: Stripe.Checkout.Session) {
-  const reservationId = extractReservationId(
+  const subject = extractPaymentSubject(
     session,
     "stripeWebhookAsyncPaymentSucceeded",
   );
-  if (!reservationId) return;
+  if (!subject) return;
 
-  await fulfillPaymentAtomically(reservationId, session);
+  if (subject.kind === "reservation") {
+    await fulfillPaymentAtomically(subject.reservationId, session);
+    return;
+  }
+
+  await fulfillEventRegistrationPaymentAtomically(
+    subject.registrationId,
+    session,
+  );
 }
 
 /**
@@ -320,17 +564,33 @@ async function handleAsyncPaymentSucceeded(session: Stripe.Checkout.Session) {
  * 非同期決済が失敗した場合に発火。
  */
 async function handleAsyncPaymentFailed(session: Stripe.Checkout.Session) {
-  const reservationId = extractReservationId(
+  const subject = extractPaymentSubject(
     session,
     "stripeWebhookAsyncPaymentFailed",
   );
-  if (!reservationId) return;
+  if (!subject) return;
 
-  // session.id を渡して stale webhook が別 session の PENDING を巻き込むのを封殺
-  // (Codex PR #1043 P1: FAILED→PENDING re-checkout race)。
-  const claimed = await claimReservationAsFailed(reservationId, session.id);
+  if (subject.kind === "reservation") {
+    // session.id を渡して stale webhook が別 session の PENDING を巻き込むのを封殺
+    // (Codex PR #1043 P1: FAILED→PENDING re-checkout race)。
+    const claimed = await claimReservationAsFailed(
+      subject.reservationId,
+      session.id,
+    );
+    if (claimed) {
+      invalidateReservationCache(subject.reservationId);
+    }
+    return;
+  }
+
+  // WAITLISTED_OFFERED status には触れない（cron `waitlist-expire` が期限切れを
+  // 処理する）。paymentStatus のみ FAILED に claim する。
+  const claimed = await claimEventRegistrationAsFailed(
+    subject.registrationId,
+    session.id,
+  );
   if (claimed) {
-    invalidateReservationCache(reservationId);
+    invalidateEventRegistrationCache();
   }
 }
 
@@ -341,17 +601,33 @@ async function handleAsyncPaymentFailed(session: Stripe.Checkout.Session) {
  * PAID / REFUNDED 済みは `claimReservationAsFailed` 内で skip される。
  */
 async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
-  const reservationId = extractReservationId(
+  const subject = extractPaymentSubject(
     session,
     "stripeWebhookCheckoutExpired",
   );
-  if (!reservationId) return;
+  if (!subject) return;
 
-  // session.id を渡して stale webhook が別 session の PENDING を巻き込むのを封殺
-  // (Codex PR #1043 P1: FAILED→PENDING re-checkout race)。
-  const claimed = await claimReservationAsFailed(reservationId, session.id);
+  if (subject.kind === "reservation") {
+    // session.id を渡して stale webhook が別 session の PENDING を巻き込むのを封殺
+    // (Codex PR #1043 P1: FAILED→PENDING re-checkout race)。
+    const claimed = await claimReservationAsFailed(
+      subject.reservationId,
+      session.id,
+    );
+    if (claimed) {
+      invalidateReservationCache(subject.reservationId);
+    }
+    return;
+  }
+
+  // WAITLISTED_OFFERED status には触れない（cron `waitlist-expire` が期限切れを
+  // 処理する）。paymentStatus のみ FAILED に claim する。
+  const claimed = await claimEventRegistrationAsFailed(
+    subject.registrationId,
+    session.id,
+  );
   if (claimed) {
-    invalidateReservationCache(reservationId);
+    invalidateEventRegistrationCache();
   }
 }
 

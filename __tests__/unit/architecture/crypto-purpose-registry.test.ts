@@ -24,6 +24,7 @@ const OTHER_DOMAIN_PURPOSES = [
   "event-registration-cancel", // event-registration-cancel-token.ts
   "reservation-claim", // reservation-claim-token.ts
   "event-registration-claim", // event-registration-claim-token.ts
+  "event-waitlist-offer", // tokens/waitlist-offer-token.ts
   "instagram", // instagram/commands.ts
   "switchbot-guest-passcode", // smart-lock/issue-passcode.ts
   purposeFor("reservation"), // calendar-token.ts

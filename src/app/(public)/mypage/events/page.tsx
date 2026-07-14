@@ -26,10 +26,18 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
     redirect("/login");
   }
 
-  const [{ active, past }, turnstileSiteKey] = await Promise.all([
+  const [{ active, past, now }, turnstileSiteKey] = await Promise.all([
     getCustomerEventRegistrations(customer.id),
     getTurnstileSiteKey(),
   ]);
+
+  // WAITLISTED_OFFERED のカウントダウン初期値算出用。`getCustomerEventRegistrations`
+  // が active/past 判定に使った `now` をそのまま再利用する（ここで改めて
+  // `new Date()` を呼ぶと render 中の非決定的呼び出しになり React Compiler
+  // purity rule 違反になるため。ドメイン層で完結させる方針は同関数の docstring
+  // 参照）。client へは literal prop として渡すことで、hydration 時に client 側が
+  // 独自に `Date.now()` を呼ぶことによる SSR/CSR 不一致も避けられる。
+  const nowIso = now.toISOString();
 
   const serialize = (
     rows: Awaited<ReturnType<typeof getCustomerEventRegistrations>>["active"],
@@ -39,6 +47,9 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
         ...reg,
         createdAt: reg.createdAt.toISOString(),
         cancelledAt: reg.cancelledAt?.toISOString() ?? null,
+        waitlistedAt: reg.waitlistedAt?.toISOString() ?? null,
+        offeredAt: reg.offeredAt?.toISOString() ?? null,
+        expiresAt: reg.expiresAt?.toISOString() ?? null,
         event: {
           ...reg.event,
           startTime: reg.event.startTime.toISOString(),
@@ -54,6 +65,7 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
         activeItems={serialize(active)}
         pastItems={serialize(past)}
         turnstileSiteKey={turnstileSiteKey}
+        nowIso={nowIso}
       />
     </Stack>
   );
