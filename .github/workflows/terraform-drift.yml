@@ -1,0 +1,206 @@
+name: Terraform Drift Detection
+
+# 毎晩 (JST 03:00 / UTC 18:00) main branch の Terraform config と live GCP resource の
+# drift を検知する。F1 structural closure (bootstrap-owns-all-project-IAM) は
+# "attacker が runner 経由で IAM 付与" を防ぐが、"owner が Console/gcloud で
+# 手動変更" 後の drift を <24h に短縮する監視穴を補完する belt-and-suspenders。
+#
+# 段階 1-4 unblock saga (PR #1075/1076/1078/1079/1081) では 44 pre-existing GCP
+# resource が state と不整合な状態で apply が 409/403 で連続 fail してから
+# 判明した — この blind spot を毎晩の read-only plan で自動検知に変える。
+#
+# Read-only 契約:
+#   - `-lock=false` で state file lock を取らない (apply run と race しない)
+#   - `-detailed-exitcode` で 0=no diff / 1=error / 2=diff の 3 状態を捕捉
+#   - apply は絶対に呼ばない (drift 発生時は Issue に留め、人間が原因調査)
+#
+# False-positive 対策:
+#   - Console-mandatory 操作 (IAP OAuth client rotation / IAP admin group
+#     membership 変更 / Cloud Run revision deploy) は terraform config 側で
+#     `lifecycle { ignore_changes = [...] }` で吸収済 → plan diff に出ない
+#   - 実 diff が出るなら真の drift として Issue 化する
+#
+# 通知:
+#   - GITHUB_STEP_SUMMARY に diff 全文を貼る (Actions run 画面で即読める)
+#   - drift.plan (binary) + drift.txt (text) を artifact 化 (30d retention)
+#   - exit 2 (diff detected) → gh issue create で auto-open (label: drift-detection)
+
+on:
+  schedule:
+    # UTC 18:00 = JST 03:00 (深夜帯で他 workflow と競合しない)。GitHub Actions の
+    # scheduled event は runner queue 状況次第で数分〜数十分遅延する仕様なので
+    # SLA critical な time window に置かない。
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+# id-token: WIF impersonation (terraform-runner SA) — read-only plan のみ
+# contents: read: checkout
+# issues: write: drift 検知時に gh issue create で auto-open
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+env:
+  TF_VERSION: 1.10.0
+  TF_WORKING_DIR: terraform
+  TF_IN_AUTOMATION: "1"
+
+# 並行実行を抑止 (state file への lock は取らないが cost/log 見通しのため)。
+concurrency:
+  group: terraform-drift-detection
+  cancel-in-progress: false
+
+jobs:
+  drift-detect:
+    name: Terraform drift detection
+    # fork / 手動転送された repository の scheduled trigger 誤発火を防ぐガード
+    # (deploy-production.yml と同一 pattern)。
+    if: github.repository == 'y2ikgm89/myrrh-rental-space'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # WIF auth は terraform-apply job と同一契約 (terraform-runner SA)。
+      # runner は F1 refactor で project-level IAM 権限を絞られている
+      # (SA create / cross-SA impersonation grant 不可) が、`terraform plan` は
+      # provider API の read 呼び出しのみで実 mutation を伴わないため
+      # 現行 role set (run.admin / iap.admin / etc.) で十分。
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: projects/626108938746/locations/global/workloadIdentityPools/github-actions/providers/github-myrrh-rental-space
+          service_account: terraform-runner@myrrh-rental-space.iam.gserviceaccount.com
+          project_id: myrrh-rental-space
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # -lock-timeout=5m: GCS backend の conditional-write lock は通常瞬時に
+      # 取れるが、apply run と時間帯が万一衝突しても 5min 待つことで transient
+      # 競合を吸収する (それでも取れなければ error → drift 判定は次夜に持ち越し)。
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false -lock-timeout=5m
+
+      # -detailed-exitcode: 0=no changes / 1=error / 2=changes present
+      # -lock=false: state file lock を取らない (read-only plan、apply と race しない)
+      # -out=drift.plan: 後段の show / artifact 化のため binary 保存
+      - name: Terraform plan (drift detection)
+        id: plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          set +e
+          terraform plan -detailed-exitcode -lock=false -no-color -out=drift.plan
+          EXITCODE=$?
+          set -e
+          if [ "$EXITCODE" -eq 1 ]; then
+            echo "::error::terraform plan failed" >&2
+            exit 1
+          fi
+          echo "exitcode=$EXITCODE" >> "$GITHUB_OUTPUT"
+          if [ "$EXITCODE" -eq 2 ]; then
+            echo "Drift detected (exit 2) — will emit issue"
+          else
+            echo "No drift (exit 0)"
+          fi
+
+      - name: Render plan to text
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: terraform show -no-color drift.plan > drift.txt
+
+      - name: Upload drift artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: terraform-drift-${{ github.run_id }}
+          path: |
+            terraform/drift.plan
+            terraform/drift.txt
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Append drift to job summary
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          {
+            echo "## Terraform drift detection"
+            echo ""
+            echo "- Run: \`${GITHUB_RUN_ID}\` (\`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`)"
+            echo "- Plan exit code: \`${{ steps.plan.outputs.exitcode }}\` (0=no drift, 2=drift detected)"
+            echo "- Artifact: \`terraform-drift-${GITHUB_RUN_ID}\` (retention 30d)"
+            echo ""
+            echo '```hcl'
+            cat drift.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # exit 2 (drift detected) 時のみ Issue を auto-open。
+      # gh CLI は runner に pre-installed。GH_TOKEN は `permissions: issues: write`
+      # で発行された `github.token` を使う (secrets.GITHUB_TOKEN と等価)。
+      #
+      # drift-detection label は初回実行時に存在しない可能性があるため、
+      # `gh label create ... || true` で idempotent に用意してから issue 作成。
+      #
+      # Issue body 上限は 65,536 char (GitHub API 仕様)。drift.txt が大きい
+      # ケース (44 resource 全 recreate 相当) でも安全に収まるよう先頭 55,000 char
+      # に truncate し、超過分は artifact 参照へ誘導する。
+      - name: Open drift issue
+        if: steps.plan.outputs.exitcode == '2'
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Idempotent label create (label が既存でも fail しないよう `|| true`)
+          gh label create drift-detection \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "Terraform state drift detected by nightly cron" \
+            --color "d73a4a" 2>/dev/null || true
+
+          TODAY="$(date -u +%Y-%m-%d)"
+          # "Plan: N to add, M to change, K to destroy." 行から件数を抽出。
+          # ゼロ件でこの step が走ることは exit code guard で防いでいるが、
+          # parse 失敗時も title は生成できるよう fallback を用意。
+          CHANGES_LINE="$(grep -E '^Plan:' drift.txt | head -n 1 || true)"
+          if [ -z "${CHANGES_LINE}" ]; then
+            CHANGES_LINE="Plan: (unable to parse change count from drift.txt)"
+          fi
+          TITLE="[drift] ${TODAY} terraform plan detected changes"
+
+          BODY_FILE="$(mktemp)"
+          {
+            echo "**Drift detected** by scheduled Terraform plan (\`${TODAY}\` UTC)."
+            echo ""
+            echo "- ${CHANGES_LINE}"
+            echo "- Workflow run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Artifact (30d retention): \`terraform-drift-${GITHUB_RUN_ID}\`"
+            echo ""
+            echo "## Investigation"
+            echo ""
+            echo "1. Download the artifact from the workflow run above and inspect \`drift.txt\`."
+            echo "2. If a legitimate Console/gcloud change is missing from Terraform, add it to the module (and open a PR to reconcile config)."
+            echo "3. If unauthorized, revert via Console/gcloud or \`terraform apply\` on next PR merge."
+            echo "4. Close this issue once the state reconciles (next nightly run will confirm no drift)."
+            echo ""
+            echo "## Plan output (truncated to 55,000 chars)"
+            echo ""
+            echo '```hcl'
+            head -c 55000 drift.txt
+            echo ''
+            echo '```'
+          } > "${BODY_FILE}"
+
+          gh issue create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${TITLE}" \
+            --label "drift-detection" \
+            --body-file "${BODY_FILE}"
