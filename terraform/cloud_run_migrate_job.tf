@@ -22,7 +22,7 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
     task_count  = 1
 
     template {
-      service_account       = google_service_account.sa["runtime"].email
+      service_account       = var.runtime_sa_email
       execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
 
       timeout     = "600s"

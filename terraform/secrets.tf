@@ -37,7 +37,9 @@ locals {
 
   # Cloud Build が image build 時に availableSecrets 経由で読む secret。
   # runtime SA だけでなく build SA にも secretAccessor が必要 (project-level
-  # binding は secret_iam.tf、per-secret 個別付与は F1 対策で廃止)。
+  # binding は `scripts/bootstrap-terraform.sh` の section 8 で付与、
+  # per-secret 個別付与は F1 対策で廃止 — 2026-07-14 F1 refactor で Terraform
+  # 側の secret_iam.tf も削除して bootstrap の SSoT に完全集約)。
   build_secrets = [
     "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
   ]

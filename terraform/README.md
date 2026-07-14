@@ -1,115 +1,150 @@
 # terraform/
 
-Google Cloud infra の宣言的管理 (IaC)。**terraform apply が唯一の正規更新経路** で、
-手動 `gcloud add-iam-policy-binding` などは行わない (Terraform runner SA 自身の
-project-level IAM を除く — 下記 "Runner IAM ownership contract" 参照)。
+Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新経路** で、
+手動 `gcloud add-iam-policy-binding` などは行わない (**bootstrap-owns-all-project-IAM
+契約** に該当する project-level bindings と SA metadata を除く — 下記
+"Bootstrap-owns-all-project-IAM 契約" 参照)。
 
 ## Phase 進捗
 
 このディレクトリは Phase を追って全 GCP infra を段階的に取り込む:
 
-| Phase | スコープ                                                                                            | 状態      |
-| ----- | --------------------------------------------------------------------------------------------------- | --------- |
-| 1     | Secret Manager IAM (runtime SA / build SA 全 secret への secretAccessor) + Deny Policy + Conditions | ✅ 完了   |
-| 2     | Cloud Scheduler (13 cron jobs)                                                                      | ✅ 完了   |
-| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                                | ✅ 完了   |
-| 4     | Artifact Registry + Cloud Build worker pool                                                         | ✅ 完了   |
-| 5     | Service Accounts + project-level IAM + WIF Pool/Provider                                            | ✅ 完了   |
-| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b)               | ✅ 完了   |
-| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)                      | 🚧 実装中 |
+| Phase | スコープ                                                                              | 状態      |
+| ----- | ------------------------------------------------------------------------------------- | --------- |
+| 1     | Secret Manager IAM (bootstrap 化、詳細は下記契約 section)                             | ✅ 完了   |
+| 2     | Cloud Scheduler (13 cron jobs)                                                        | ✅ 完了   |
+| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                  | ✅ 完了   |
+| 4     | Artifact Registry + Cloud Build worker pool                                           | ✅ 完了   |
+| 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider               | ✅ 完了   |
+| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b) | ✅ 完了   |
+| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)        | 🚧 実装中 |
 
 ## ファイル構成
 
-| ファイル                     | 責務                                                                                                                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `versions.tf`                | Terraform / provider の version pin                                                                                                                                            |
-| `backend.tf`                 | GCS state backend (`myrrh-rental-space-terraform-state`)                                                                                                                       |
-| `variables.tf`               | project_id / region / SA email 等の入力                                                                                                                                        |
-| `secret_iam.tf`              | Phase 1: runtime SA / build SA への `roles/secretmanager.secretAccessor` project-level binding                                                                                 |
-| `service_accounts.tf`        | Phase 5: 4 SA (runtime / build / scheduler / terraform_runner) と cross-SA impersonation (runner → scheduler SA `actAs`, Phase 2)                                              |
-| `iam_project.tf`             | Phase 5: build SA への project-level bindings (cloudbuild.builds.builder / logging.logWriter)。runner 自身の bindings は Terraform で扱わない (bootstrap-only 契約 — 下記参照) |
-| `cloud_scheduler.tf`         | Phase 2: `google_cloud_scheduler_job` × 13 cron jobs (Cloud Run `/api/cron/*` を OIDC で叩く)                                                                                  |
-| `secrets.tf`                 | Phase 3: `google_secret_manager_secret` × 16 secrets の metadata (値は Terraform 対象外、prevent_destroy で誤削除 block)                                                       |
-| `artifact_registry.tf`       | Phase 4: `google_artifact_registry_repository` (Docker)                                                                                                                        |
-| `cloud_build_worker_pool.tf` | Phase 4: `google_cloudbuild_worker_pool` (myrrh-deploy-pool)                                                                                                                   |
-| `wif.tf`                     | Phase 5: Workload Identity Pool / Provider (`github-actions`)                                                                                                                  |
-| `iam_cloud_run.tf`           | Phase 6a: Cloud Run service resource-scoped IAM                                                                                                                                |
-| `cloud_run_public.tf`        | Phase 6a: public service skeleton                                                                                                                                              |
-| `cloud_run_admin.tf`         | Phase 6a: admin service skeleton                                                                                                                                               |
-| `cloud_run_migrate_job.tf`   | Phase 6a: prisma-migrate Cloud Run Job skeleton                                                                                                                                |
-| `lb_admin.tf`                | Phase 7: admin service 用 HTTPS LB (backend service + URL map + SSL cert + forwarding rule)                                                                                    |
-| `iap.tf`                     | Phase 7: IAP OAuth client + resource IAM binding                                                                                                                               |
+| ファイル                     | 責務                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `versions.tf`                | Terraform / provider の version pin                                                                                      |
+| `backend.tf`                 | GCS state backend (`myrrh-rental-space-terraform-state`)                                                                 |
+| `variables.tf`               | project_id / region / SA email 等の入力                                                                                  |
+| `service_accounts.tf`        | (ドキュメンテーション目的の空 config — SA metadata は bootstrap の SSoT)                                                 |
+| `cloud_scheduler.tf`         | Phase 2: `google_cloud_scheduler_job` × 13 cron jobs (Cloud Run `/api/cron/*` を OIDC で叩く)                            |
+| `secrets.tf`                 | Phase 3: `google_secret_manager_secret` × 16 secrets の metadata (値は Terraform 対象外、prevent_destroy で誤削除 block) |
+| `artifact_registry.tf`       | Phase 4: `google_artifact_registry_repository` (Docker)                                                                  |
+| `cloud_build_worker_pool.tf` | Phase 4: `google_cloudbuild_worker_pool` (myrrh-deploy-pool)                                                             |
+| `wif.tf`                     | Phase 5: Workload Identity Pool / Provider (`github-actions`)                                                            |
+| `iam_cloud_run.tf`           | Phase 6a: Cloud Run service **resource-scoped** IAM (project-level IAM は bootstrap の SSoT — 下記契約参照)              |
+| `cloud_run_public.tf`        | Phase 6a: public service skeleton                                                                                        |
+| `cloud_run_admin.tf`         | Phase 6a: admin service skeleton                                                                                         |
+| `cloud_run_migrate_job.tf`   | Phase 6a: prisma-migrate Cloud Run Job skeleton                                                                          |
+| `lb_admin.tf`                | Phase 7: admin service 用 HTTPS LB (backend service + URL map + SSL cert + forwarding rule)                              |
+| `iap.tf`                     | Phase 7: IAP OAuth client + resource IAM binding                                                                         |
 
-## Runner IAM ownership contract
+**削除済** (2026-07-14 F1 refactor):
 
-**Terraform runner SA (`terraform-runner@…`) の project-level IAM は
-`scripts/bootstrap-terraform.sh` が単一 SSoT。** Terraform config は runner
-自身の project-level bindings を宣言しない (設計不変式)。
+- `secret_iam.tf` — runtime-sa / build-sa への project-level `secretAccessor`
+  binding は bootstrap の SSoT に移管
+- `iam_project.tf` — build-sa への project-level `cloudbuild.builds.builder` /
+  `logging.logWriter` binding は bootstrap の SSoT に移管
+
+## Bootstrap-owns-all-project-IAM 契約
+
+**project-level IAM (project scope の `google_project_iam_member` 相当) と
+SA metadata (`google_service_account` resource) は `scripts/bootstrap-terraform.sh`
+が単一 SSoT。** Terraform config はこれらを一切宣言しない (設計不変式)。
+
+### なぜ
+
+過去は「runner 自身の bindings のみ bootstrap、他 SA の bindings は Terraform」
+の分割 SSoT だったが、以下 2 経路の privilege escalation が構造的に残っていた
+(research: `f1-residual-attack-analysis`):
+
+- **Chain 1 (`projectIamAdmin`)**: runner は conditional `projectIamAdmin`
+  (with CEL `hasOnly ['secretAccessor']`) を持つ。CEL は「grant する role」を
+  絞るが「grantee は誰か」は絞らない。attacker が新規 SA を作って
+  `secretAccessor` を付与、その SA を impersonate、で secret 値を読める chain が
+  残る (Deny Policy は runner-principal のみ block、他 SA には無効)。
+- **Chain 2 (`serviceAccountAdmin`)**: runner は任意 SA の
+  `iam.serviceAccounts.setIamPolicy` を呼べる → 任意 SA を impersonate する
+  tokenCreator を自分に付与 → runtime-sa を impersonate して secret 値を読める。
+
+**構造的閉じ方**: `projectIamAdmin` と `serviceAccountAdmin` を runner から
+外し、runner が触れない全 project-level IAM (SA create、SA-scoped
+impersonation、runtime/build SA への secretAccessor 等) を bootstrap に集約。
+runner は「自 IAM も他 SA IAM も触れない」構造になり両 chain が物理的に消える。
 
 これは Google 公式パターン
 [Set up CI/CD for Terraform](https://cloud.google.com/architecture/setup-terraform-cicd)
 と [terraform-google-bootstrap](https://github.com/terraform-google-modules/terraform-example-foundation/tree/master/0-bootstrap)
-の "runner authority は out-of-band、Terraform は downstream infra を管理"
-原則に沿う。過去の dual-SSoT (bootstrap と Terraform の両方で同じ binding を
-宣言) はチキンエッグを構造的に排除できず、下記 2 系統の障害を反復させた:
+の "0-bootstrap phase handles IAM the runner cannot self-manage" 原則に沿う。
 
-- **F8 chicken-egg**: 新規 role を Terraform 側に足すと、runner にはまだ
-  該当 permission が無いため apply が Permission denied で落ちる。bootstrap
-  も同時に更新すれば済むが、順序依存 (先に bootstrap 実行) が必須になり、
-  fresh project の初回セットアップと既存 project の追加変更で運用手順が分岐する。
-- **Codex P1 D1 fallout**: runner の `projectIamAdmin` に conditional
-  `modifiedGrantsByRole hasOnly ['roles/secretmanager.secretAccessor']` を
-  かけているため、runner が自分自身の bindings を再宣言する SetIamPolicy
-  呼び出しさえ 403 (grant 対象 role が secretAccessor 以外を含むと condition
-  で拒否)。dual-SSoT はこの条件と両立できない。
+### 現在の bootstrap-owned レイアウト
 
-### 現在の bootstrap-only レイアウト
+`scripts/bootstrap-terraform.sh` が 1 スクリプトで idempotent に構成する:
 
-`scripts/bootstrap-terraform.sh` が runner SA へ以下を idempotent に付与する
-(下記は [Set up CI/CD for Terraform](https://cloud.google.com/architecture/setup-terraform-cicd)
-の "grant the pipeline account the roles it needs to manage infrastructure"
-step と 1:1 対応):
+1. GCS state bucket (`gs://…-terraform-state`, versioning ON)
+2. terraform-runner SA
+3. runtime / build / scheduler SAs (旧 `service_accounts.tf` から移管)
+4. state bucket への runner SA の `roles/storage.objectAdmin` (bucket-scope)
+5. WIF binding (`github-actions` principalSet)
+6. Secret Manager custom role `terraformRunnerSecretManagerNoPolicyMgmt` の
+   create/update (`gcloud iam roles create/update --stage=GA`、12 permissions)
+7. custom role D1 の runner SA への grant
+8. runtime-sa / build-sa への project-level 直接 grants (旧 `secret_iam.tf` +
+   `iam_project.tf` から移管):
+   - runtime-sa: `roles/secretmanager.secretAccessor`
+   - build-sa: `roles/secretmanager.secretAccessor`
+   - build-sa: `roles/cloudbuild.builds.builder`
+   - build-sa: `roles/logging.logWriter`
+9. SA-scoped impersonation grants:
+   - build-sa uses runtime-sa (`roles/iam.serviceAccountUser`)
+   - runner uses scheduler-sa (`roles/iam.serviceAccountUser`)
+10. IAM Deny Policy `block-terraform-runner-secret-value-read`
+    (optional defense-in-depth — org-admin 権限がない環境では
+    `SKIP_DENY_POLICY=1` で明示 skip 可能、または permission denied で
+    自動 skip + warning)
+11. 残り predefined roles の runner grant (下表)
 
-| #   | Role                                                                    | 条件 / 備考                                                                                                     |
-| --- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| 1   | `roles/resourcemanager.projectIamAdmin`                                 | conditional (`modifiedGrantsByRole hasOnly ['roles/secretmanager.secretAccessor']`) — secretAccessor grant 専用 |
-| 2   | `projects/${PROJECT_ID}/roles/terraformRunnerSecretManagerNoPolicyMgmt` | custom role (GA、12 permissions)。setIamPolicy / getIamPolicy を除外し F1 self-grant 経路を封鎖                 |
-| 3   | `roles/cloudscheduler.admin`                                            | Phase 2: cron job CRUD                                                                                          |
-| 4   | `roles/artifactregistry.admin`                                          | Phase 4: Docker repository metadata / IAM                                                                       |
-| 5   | `roles/cloudbuild.workerPoolOwner`                                      | Phase 4: private pool CRUD (build submit 権限は含まず)                                                          |
-| 6   | `roles/iam.serviceAccountAdmin`                                         | Phase 5: 他 SA の CRUD                                                                                          |
-| 7   | `roles/iam.workloadIdentityPoolAdmin`                                   | Phase 5: WIF Pool / Provider CRUD                                                                               |
-| 8   | `roles/run.admin`                                                       | Phase 6a: Cloud Run resource shape 管理 (traffic split は Cloud Build)                                          |
-| 9   | `roles/compute.networkAdmin`                                            | Phase 7: LB address / backend service / URL map / target proxy / forwarding rule                                |
-| 10  | `roles/compute.securityAdmin`                                           | Phase 7: SSL cert                                                                                               |
-| 11  | `roles/iap.admin`                                                       | Phase 7: IAP OAuth client + resource IAM                                                                        |
+runner に付与される predefined roles (F1 structural closure の後):
 
-**Deny Policy 追加**: 上記 11 role に加えて、bootstrap は IAM Deny Policy `block-terraform-runner-secret-value-read` を project 直下に貼り、runner SA から `secretmanager.googleapis.com/versions.access/add/destroy/disable/enable` を deny する (Codex P1 #1053, F2, F7)。Terraform では扱わず bootstrap の SSoT (`roles/iam.denyAdmin` は Org/Folder 専用、`iam.denypolicies.*` は custom role にも含められない Google IAM 制約のため)。break-glass 修正は project owner の `gcloud iam policies update` 手動実行。
+| #   | Role                                                          | 用途                                                                                        |
+| --- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 1   | `roles/cloudscheduler.admin`                                  | Phase 2: cron job CRUD                                                                      |
+| 2   | `roles/artifactregistry.admin`                                | Phase 4: Docker repository metadata / IAM                                                   |
+| 3   | `roles/cloudbuild.workerPoolOwner`                            | Phase 4: private pool CRUD (build submit 権限は含まず)                                      |
+| 4   | `roles/iam.workloadIdentityPoolAdmin`                         | Phase 5: WIF Pool / Provider CRUD                                                           |
+| 5   | `roles/run.admin`                                             | Phase 6a: Cloud Run resource shape 管理                                                     |
+| 6   | `roles/compute.networkAdmin`                                  | Phase 7: LB address / backend / URL map / forwarding                                        |
+| 7   | `roles/compute.securityAdmin`                                 | Phase 7: SSL cert                                                                           |
+| 8   | `roles/iap.admin`                                             | Phase 7: IAP OAuth client + resource IAM                                                    |
+| 9   | `roles/serviceusage.serviceUsageAdmin`                        | `google_project_service` (API enablement)                                                   |
+| —   | (`projects/…/roles/terraformRunnerSecretManagerNoPolicyMgmt`) | custom role D1 (Secret Manager metadata / version CRUD、setIamPolicy / getIamPolicy を除外) |
 
-これに加えて `roles/storage.objectAdmin` を state bucket (`gs://…-terraform-state`)
-に bucket-scope で付与し、`roles/iam.workloadIdentityUser` を WIF principalSet
-に対して SA-level で付与する。
+**削除済** (F1 structural closure):
+
+- ~~`roles/resourcemanager.projectIamAdmin`~~ (with `hasOnly` CEL) —
+  Chain 1 の起点
+- ~~`roles/iam.serviceAccountAdmin`~~ — Chain 2 の起点
 
 ### 追加 role が必要になったら
 
-1. `scripts/bootstrap-terraform.sh` の該当箇所 (通常は `BOOTSTRAP_RUNNER_ROLES`) に追記
+1. `scripts/bootstrap-terraform.sh` の該当箇所 (通常は `BOOTSTRAP_RUNNER_ROLES`
+   または section 8 / 9) に追記
 2. commit / PR / merge
-3. project owner が bootstrap を再実行 (`bash scripts/bootstrap-terraform.sh`、idempotent)
+3. project owner が bootstrap を再実行 (`bash scripts/bootstrap-terraform.sh`、
+   idempotent)
 
-Terraform 側の追記は **禁止** (dual SSoT を再導入すると F8 が再発する)。
-break-glass 時は `gcloud projects add-iam-policy-binding` を owner 権限で
-直接叩いてもよいが、その場合も後で bootstrap script に反映して SSoT を維持する。
+Terraform 側の project-level `google_project_iam_member` 追記は **禁止**
+(F1 structural closure を破ることになる)。break-glass 時は
+`gcloud projects add-iam-policy-binding` を owner 権限で直接叩いてもよいが、
+その場合も後で bootstrap script に反映して SSoT を維持する。
 
-### Cross-SA impersonation は Terraform 側 SSoT
+### Resource-scoped IAM は Terraform 側 SSoT
 
-`service_accounts.tf` の
-`google_service_account_iam_member.terraform_runner_uses_scheduler_sa` (runner
-が scheduler SA を `actAs` する権限) は例外的に Terraform で宣言する。理由は
-grantor (runner) と grantee (scheduler SA) が異なる SA なので、runner が
-自分自身の policy を触るわけではなく、bootstrap-only 制約に抵触しない
-(project-level `projectIamAdmin` ではなく SA-level `serviceAccountUser` として
-scheduler SA の IAM policy に書き込む — runner の `iam.serviceAccountAdmin`
-権限で可能)。
+`iam_cloud_run.tf` の Cloud Run service / job IAM (build SA の run.admin、
+scheduler SA の run.invoker) と Artifact Registry repo IAM (build SA の
+artifactregistry.writer) は Terraform で継続管理する。これらは各 resource の
+setIamPolicy 権限で書き込むため (runner は `roles/run.admin` /
+`roles/artifactregistry.admin` を持つ)、F1 の構造上の問題は生じない。
 
 ## Custom role lifecycle (D1)
 
@@ -128,17 +163,12 @@ export PROJECT_ID=myrrh-rental-space
 bash scripts/bootstrap-terraform.sh
 ```
 
-上記は以下を idempotent に構成する:
-
-1. GCS state bucket (`gs://myrrh-rental-space-terraform-state`, versioning ON)
-2. Terraform runner service account (`terraform-runner@...`)
-3. state bucket への runner SA の書込許可 (`roles/storage.objectAdmin` @ bucket)
-4. Workload Identity Federation binding (既存 pool `github-actions` を再利用)
-5. runner SA への conditional `projectIamAdmin` (secretAccessor grant 専用)
-6. Secret Manager custom role `terraformRunnerSecretManagerNoPolicyMgmt` の
-   create/update (`gcloud iam roles create/update --stage=GA`、12 permissions)
-7. custom role の runner SA への grant
-8. 残り 10 個の predefined roles (Phase 2-7 に必要な最小権限セット) の grant
+**org-admin (`roles/iam.denyAdmin` at Organization / Folder scope) 権限は不要**
+(Deny Policy は optional defense-in-depth に降格した後は project-owner のみで
+完結する)。org-admin がない環境では Deny Policy step が warning で skip される
+(または `SKIP_DENY_POLICY=1` で明示 skip)。primary control は runner の
+structural closure (no `projectIamAdmin`, no `serviceAccountAdmin`) なので、
+Deny Policy がなくても F1 は塞がっている。
 
 bootstrap 完了後、`.github/workflows/terraform.yml` が
 
@@ -150,10 +180,14 @@ bootstrap 完了後、`.github/workflows/terraform.yml` が
 ## 通常運用 (secret 追加時のフロー)
 
 1. `cloudbuild.yaml` の `--set-secrets=` に新 secret を追加
-2. `terraform/secret_iam.tf` は無変更で OK (project-level binding なので新 secret も自動で accessible)
+2. `terraform/secrets.tf` の `runtime_secrets` (Cloud Build が読むなら
+   `build_secrets` も) に追加
 3. PR を出す → GitHub Actions で `terraform plan` が実行され差分表示
 4. PR merge → `terraform apply` (secret metadata のみ差分反映)
 5. Cloud Build deploy trigger → Cloud Run が新 secret を読める
+   (runtime/build SA への project-level `secretAccessor` binding は bootstrap
+   で既に付与済のため、追加 IAM 操作は不要 — project 内の全 secret に
+   automatic access)
 
 ## ローカル運用 (差分確認したいとき、任意)
 
@@ -164,90 +198,89 @@ terraform init
 terraform plan
 ```
 
-## Deny Policy と Conditions がある理由
+## F1 攻撃面のクロージャ理論
 
-`roles/resourcemanager.projectIamAdmin` を Terraform runner SA に付与すると、
-compromise 時に **self-grant で `secretmanager.secretAccessor` を得て全 secret を読む**
-経路が理論的に存在する (Codex Cloud Review P1 系列で反復指摘された)。
+`roles/resourcemanager.projectIamAdmin` (with CEL) と
+`roles/iam.serviceAccountAdmin` を runner から外したことで、runner
+compromise 時の secret 漏洩経路は以下いずれも塞がる:
 
-- **Conditions** (bootstrap の `--condition` フラグで CEL 適用): grantable roles を
-  `secretmanager.secretAccessor` のみに絞ることで、runner が他の role
-  (`secretmanager.admin` など) を self-grant して権限拡大するのを block。
-  過去は `terraform/conditions.tf` の `google_project_iam_member` に
-  `condition {}` block として宣言していたが、2026-07-14 の bootstrap-only
-  refactor でファイル自体を削除し、gcloud の `--condition` フラグで直接付与
-  する構成に移した (semantic は完全同一)。
-- **Deny Policy** (bootstrap-only): `scripts/bootstrap-terraform.sh` が
-  `gcloud iam policies create` で `block-terraform-runner-secret-value-read` を
-  project 直下に貼り、runner SA から
-  `secretmanager.googleapis.com/versions.access` / `.add` / `.destroy` /
-  `.disable` / `.enable` を deny する。self-grant で secretAccessor を得ても
-  secret 値そのものは読めない / 破壊できない (deny は allow policy に無条件優先)。
-  Terraform では触れない (runner に IAM 制御権限を与えないため物理的に触れない —
-  下記コラム参照)。break-glass 修正は project owner の `gcloud iam policies update`
-  手動実行。
+- **直接 read**: custom role D1 が `secretmanager.versions.access` を含まない
+  (custom role は Secret Manager metadata / version 管理のみ)
+- **runtime-sa impersonate**: `serviceAccountAdmin` がないため runtime-sa の
+  IAM policy に tokenCreator を書き込めない
+- **新 SA create → secretAccessor 付与**: `iam.serviceAccounts.create` が
+  runner に無い (serviceAccountAdmin の一部)。加えて `projectIamAdmin` が
+  無いため secretAccessor を新 SA に grant する経路もない
+- **create-then-grant chain**: 上記いずれもゼロなので合成攻撃も不成立
+
+追加の防御 (belt-and-suspenders):
+
 - **Custom role D1** (`terraformRunnerSecretManagerNoPolicyMgmt`, bootstrap 管理):
-  Secret Manager metadata / version 管理から `setIamPolicy` / `getIamPolicy`
-  を除外することで、per-secret `SetIamPolicy` 経由の任意 principal への
-  secretAccessor grant (Codex P1 F1) を封鎖。
+  Secret Manager metadata / version 管理から `setIamPolicy` / `getIamPolicy` を
+  除外することで、per-secret `SetIamPolicy` 経由の任意 principal への
+  secretAccessor grant を封鎖 (Codex P1 F1 のオリジナル対応)
+- **IAM Deny Policy** (optional、bootstrap 管理): runner-principal からの
+  `secretmanager.versions.access/add/destroy/disable/enable` を deny。
+  structural closure 後は理論上不要だが「後から手動 (Console) で runner に
+  強力 role を付けた場合の belt-and-suspenders」として維持する価値あり。
+  org-admin 権限がない環境では skip 可能。
 
-この 3 層防御 (Conditions + Deny Policy + Custom role D1) で **runner SA の
-compromise ケースでも secret 漏洩ゼロ** を保証する。
+## Appendix: 既存 project への one-time 移行 (2026-07-14 F1 refactor)
 
-### なぜ Deny Policy が Terraform 側に無いか (Codex P1 F7)
+過去 (dual-SSoT: 一部 IAM が Terraform 側にあった) から新契約 (bootstrap-only)
+への移行手順:
 
-Google Cloud IAM の制約により、runner に「deny policy を project scope で
-管理する権限」を渡す経路が物理的に存在しない:
-
-- `roles/iam.denyAdmin` は **Organization / Folder scope 専用** で project
-  への grant 不可 (2026-07-14 検証済)。
-- `iam.denypolicies.*` permissions は **custom role にも含められない**
-  (`gcloud iam roles create` が
-  `Permission iam.denypolicies.create is not supported in custom roles`
-  で reject)。
-
-つまり Terraform で管理するには runner に強い org-level 権限を渡す必要があり、
-それは Codex P1 F7 の趣旨 (compromised runner が guard を bypass 出来ない)
-と真っ向から対立する。runner IAM と同じ bootstrap-only 契約に統合し、runner
-自身が deny policy を触れない構造にする方が、公式推奨にも整合し (deny policy は
-attach 対象 principal 以外の identity が管理する) セキュリティ上望ましい。
-
-## Appendix: 既存 project への one-time 移行 (2026-07-14 refactor)
-
-過去の dual-SSoT (Terraform runner 自身の bindings が `conditions.tf` にも
-declare されていた) 状態から bootstrap-only へ移行する場合の手順:
-
-1. 本 PR を merge (`terraform/conditions.tf` 削除 + bootstrap script 拡張)
+1. 本 PR を merge (`terraform/secret_iam.tf` + `terraform/iam_project.tf`
+   削除、`service_accounts.tf` 内容の刈り込み、bootstrap script 拡張)
 2. project owner が `bash scripts/bootstrap-terraform.sh` を再実行
-   (`gcloud iam roles create/update` は既存 role でも idempotent に動く)
-3. Terraform state から下記 13 個の address を除去
+   (`gcloud iam service-accounts create` は既存 SA でも describe-first で skip、
+   `gcloud iam roles create/update` は idempotent、`gcloud …
+add-iam-policy-binding` も idempotent)
+3. Terraform state から下記 address を除去
    (GCP 側の実 binding は bootstrap で維持しているので `terraform state rm`
    のみで OK、実際の revocation は起きない):
 
    ```
-   google_project_iam_member.terraform_runner_secret_iam_admin
-   google_project_iam_member.terraform_runner_scheduler_admin
-   google_project_iam_custom_role.terraform_runner_secretmanager
-   google_project_iam_member.terraform_runner_secretmanager_admin
-   google_project_iam_member.terraform_runner_artifactregistry_admin
-   google_project_iam_member.terraform_runner_cloudbuild_workerpool_owner
-   google_project_iam_member.terraform_runner_iam_sa_admin
-   google_project_iam_member.terraform_runner_wif_admin
-   google_project_iam_member.terraform_runner_deny_admin
-   google_project_iam_member.terraform_runner_run_admin
-   google_project_iam_member.terraform_runner_compute_network_admin
-   google_project_iam_member.terraform_runner_compute_security_admin
-   google_project_iam_member.terraform_runner_iap_admin
+   google_service_account.sa["runtime"]
+   google_service_account.sa["build"]
+   google_service_account.sa["scheduler"]
+   google_service_account.sa["terraform_runner"]
+   google_project_iam_member.runtime_secret_accessor
+   google_project_iam_member.build_secret_accessor
+   google_project_iam_member.build_sa_cloudbuild_builder
+   google_project_iam_member.build_sa_log_writer
+   google_service_account_iam_member.terraform_runner_uses_scheduler_sa
+   google_service_account_iam_member.build_sa_uses_runtime_sa
    ```
 
-   `google_service_account_iam_member.terraform_runner_uses_scheduler_sa` は
-   ファイル移動 (conditions.tf → service_accounts.tf) だけで、address 自体は
-   変わらないので state 操作不要。
+4. `terraform apply` を実行し、drift ゼロ (No changes) を確認。
+   destructive な変更が plan に出た場合、state rm が不完全 → apply しない、
+   step 3 を再実行
 
-4. `terraform apply` を実行し、drift ゼロ (No changes) を確認
+新規 project (未 apply の fresh state) の場合は上記 step 3 は不要。
 
-新規 project (未 apply の fresh state) の場合は上記 step 3 は不要で、
-bootstrap 実行後に最初の `terraform apply` を通せばよい。
+## F1 structural closure の検証 (attacker simulation)
+
+以下いずれも `PERMISSION_DENIED` で失敗すれば F1 が塞がっている:
+
+```bash
+# Chain 2 の起点: 新規 SA 作成
+gcloud iam service-accounts create attacker-test \
+  --project="$PROJECT_ID" \
+  --impersonate-service-account="$TERRAFORM_SA"
+
+# Chain 1 の起点: project-level tokenCreator の付与
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$RUNTIME_SA" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --impersonate-service-account="$TERRAFORM_SA"
+
+# Chain 2: 任意 SA への setIamPolicy
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
+  --member="serviceAccount:$TERRAFORM_SA" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --impersonate-service-account="$TERRAFORM_SA"
+```
 
 ## References
 
@@ -258,6 +291,7 @@ bootstrap 実行後に最初の `terraform apply` を通せばよい。
 - [Running infrastructure code with the least privilege possible](https://cloud.google.com/blog/products/devops-sre/running-infrastructure-code-least-privilege-possible) —
   self-declare cycle を避ける設計指針
 - [Deny Policies overview](https://cloud.google.com/iam/docs/deny-overview) —
-  `deny.tf` の理論的裏付け
+  Deny Policy 理論的裏付け
 - [Setting limits on granting roles](https://cloud.google.com/iam/docs/setting-limits-on-granting-roles) —
   conditional `projectIamAdmin` の `modifiedGrantsByRole` CEL リファレンス
+  (廃止された旧設計の参考)

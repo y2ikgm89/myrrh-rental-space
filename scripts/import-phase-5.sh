@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Phase 5 (Service Accounts + WIF Pool/Provider) → Terraform state import
+# Phase 5 (WIF Pool/Provider) → Terraform state import
 # =============================================================================
 #
-# 既存の 4 SA と WIF Pool + Provider を Terraform 管理下に取り込む。
+# 既存の WIF Pool + Provider を Terraform 管理下に取り込む。
 # terraform apply 前に project owner が 1 度だけ実行。
 #
-# project-level IAM bindings (google_project_iam_member.* in iam_project.tf) は
-# non-authoritative なので import 不要 (存在 binding は Terraform apply が
-# 冪等に確認する)。
+# ## 2026-07-14 F1 refactor 以降の変更点
+#
+# 過去はここで 4 SA (runtime / build / scheduler / terraform_runner) と
+# project-level IAM を import していたが、`terraform/service_accounts.tf` +
+# `terraform/iam_project.tf` + `terraform/secret_iam.tf` を bootstrap の SSoT に
+# 集約し (bootstrap-owns-all-project-IAM 契約)、Terraform 側の宣言を全廃した。
+# ゆえに SA metadata と project-level IAM の import は不要 (state 内に該当
+# resource がなくなった)。
+#
+# 本 script は WIF Pool + Provider のみを import する。
 #
 # ## 前提
 #   - Terraform 1.10+
 #   - Phase 1-4 が既に merge 済 (順序性)
+#   - `bash scripts/bootstrap-terraform.sh` 実行済 (SA metadata + project-level
+#     IAM は bootstrap の SSoT)
 #
 # ## 使い方
 #   export PROJECT_ID=myrrh-rental-space
@@ -24,13 +33,6 @@ set -euo pipefail
 : "${PROJECT_ID:?PROJECT_ID is required (e.g. export PROJECT_ID=myrrh-rental-space)}"
 TF_DIR="${TF_DIR:-terraform}"
 DRY_RUN="${DRY_RUN:-0}"
-
-SERVICE_ACCOUNTS=(
-  "runtime|myrrh-rental-space-runtime"
-  "build|myrrh-rental-space-build"
-  "scheduler|myrrh-rental-space-scheduler"
-  "terraform_runner|terraform-runner"
-)
 
 WIF_POOL_ID="github-actions"
 WIF_PROVIDER_ID="github-myrrh-rental-space"
@@ -58,15 +60,6 @@ import_one() {
   terraform import -input=false "${addr}" "${id}"
 }
 
-# Service Accounts (map key : account_id)
-for entry in "${SERVICE_ACCOUNTS[@]}"; do
-  key="${entry%%|*}"
-  account_id="${entry##*|}"
-  import_one \
-    "google_service_account.sa[\"${key}\"]" \
-    "projects/${PROJECT_ID}/serviceAccounts/${account_id}@${PROJECT_ID}.iam.gserviceaccount.com"
-done
-
 # WIF Pool
 import_one \
   "google_iam_workload_identity_pool.github_actions" \
@@ -81,5 +74,5 @@ popd >/dev/null
 
 echo "[import-phase-5] done."
 echo "[import-phase-5]  - Run 'cd ${TF_DIR} && terraform plan' and verify 'No changes'."
-echo "[import-phase-5]  - If SA display_name / description differ, adjust service_accounts.tf."
 echo "[import-phase-5]  - If WIF attribute mapping differs, adjust wif.tf."
+echo "[import-phase-5]  - SA metadata / project-level IAM は bootstrap の SSoT (import 不要)."

@@ -9,9 +9,9 @@
 #
 # ## 前提
 #   - Terraform 1.10+
-#   - `bash scripts/bootstrap-terraform.sh` 実行済
-#   - Phase 1 が既に apply 済 (state 内に secret_iam.tf の bindings が存在) or
-#     Phase 3 と Phase 1 の同時 apply
+#   - `bash scripts/bootstrap-terraform.sh` 実行済 (SA metadata + project-level
+#     IAM bindings は bootstrap の SSoT — 2026-07-14 F1 refactor で
+#     terraform/secret_iam.tf は削除された)
 #
 # ## 使い方
 #   export PROJECT_ID=myrrh-rental-space
@@ -29,7 +29,7 @@ set -euo pipefail
 TF_DIR="${TF_DIR:-terraform}"
 DRY_RUN="${DRY_RUN:-0}"
 
-# terraform/secret_iam.tf の runtime_secrets + build_secrets と一致させる。
+# terraform/secrets.tf の runtime_secrets + build_secrets と一致させる。
 # drift gate はここ経由の import 時に手戻りを防ぐため、SECRETS list を
 # terraform config から自動生成することを推奨 (Phase 4 以降で自動化予定)。
 SECRETS=(
