@@ -105,6 +105,11 @@ jobs:
           # (terraform/cloudflare_provider.tf 参照)。plan は Cloudflare zone
           # state を read するため必須。read-only なので mutation は起きない。
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TERRAFORM_API_TOKEN }}
+          # cloudflare_ruleset.transform_rules_late で参照される sensitive var。
+          # plan は value を state と比較するため必須 (未設定だと variable validation
+          # error で plan abort)。drift 検知の base として GH Secret 側 value と
+          # Cloudflare API 現行 value が一致することを毎夜確認する意味も持つ。
+          TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
         run: |
           set +e
           terraform plan -detailed-exitcode -lock=false -no-color -out=drift.plan
