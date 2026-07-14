@@ -112,9 +112,101 @@ jobs:
         env:
           TF_IN_AUTOMATION: "1"
 
+      # 2026-07-14 Sprint 1 Item F: plan → artifact → summary → apply.
+      #
+      # 過去は `terraform apply -auto-approve` のみで、diff が Actions log
+      # (default 90d retention) にしか残らなかった。post-mortem 時に
+      # 「Tuesday 03:14 UTC に何が変わったか」を確認するには、log を retention
+      # 内に取得するか、当該 SHA 前後の git bisect で再構築する必要があった。
+      #
+      # 段階 1-4 unblock saga (PR #1075/1076/1078/1079/1081) で確立した監査 loop
+      # (drift detection + strict blocking gate) を完成させるため、apply 前に
+      # binary plan + 人間可読 text diff の両方を artifact として保存し、
+      # Actions run 画面の Summary tab で即読める形にする。
+      #
+      # 契約:
+      #   - artifact 名は `terraform-plan-${{ github.sha }}` で commit 固定
+      #   - retention は GitHub default (90d) — repo settings 変更不要
+      #   - plan は idempotent (段階 4 で apply 完全 success 確認済み) なので、
+      #     no-op run でも監査 record が残る
+      #   - plan 出力に secret 値は含まれない設計 (secrets.tf は container 管理
+      #     のみ・値は project owner が gcloud で手動投入) だが、grep gate で
+      #     literal value 混入を fail-fast で防ぐ
+      - name: Terraform plan
+        id: plan
+        working-directory: terraform
+        shell: bash
+        run: |
+          set +e
+          terraform plan -out=tfplan -input=false -detailed-exitcode -no-color
+          EXITCODE=$?
+          set -e
+          # -detailed-exitcode: 0=no changes, 1=error, 2=changes present
+          if [ "$EXITCODE" -eq 1 ]; then
+            echo "::error::terraform plan failed" >&2
+            exit 1
+          fi
+          echo "exitcode=$EXITCODE" >> "$GITHUB_OUTPUT"
+          if [ "$EXITCODE" -eq 2 ]; then
+            echo "Plan produced changes (exit 2) — proceeding to apply"
+          else
+            echo "Plan is a no-op (exit 0)"
+          fi
+        env:
+          TF_IN_AUTOMATION: "1"
+
+      - name: Render plan to text
+        working-directory: terraform
+        shell: bash
+        run: terraform show -no-color tfplan > tfplan.txt
+
+      - name: Verify plan does not leak secret values
+        working-directory: terraform
+        shell: bash
+        run: |
+          # secrets.tf 設計上、Terraform は secret container のみ管理し
+          # 値 (google_secret_manager_secret_version.secret_data 等) は
+          # project owner が gcloud で手動投入する契約 (Phase 3 SSoT)。
+          #
+          # 念のため plan output に literal secret 値が誤って混入していない
+          # ことを gate する。対象 attribute 名 (secret_id / password_policy /
+          # google_secret_manager_secret 等) の単純出現は無視し、値付き代入
+          # (`attr = "..."` / diff の `+ attr = "..."`) のみ検知:
+          if grep -Ein '^[[:space:]]*[+-]?[[:space:]]*(secret_data|password|private_key)[[:space:]]*=[[:space:]]*"[^"]+"' tfplan.txt; then
+            echo "::error::Plan appears to contain literal secret values — investigate the hits above before merging" >&2
+            exit 1
+          fi
+          echo "Secret-leak grep gate: OK"
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: terraform-plan-${{ github.sha }}
+          path: |
+            terraform/tfplan
+            terraform/tfplan.txt
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Append plan to job summary
+        working-directory: terraform
+        shell: bash
+        run: |
+          {
+            echo "## Terraform plan"
+            echo ""
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Plan exit code: \`${{ steps.plan.outputs.exitcode }}\` (0=no changes, 2=changes present)"
+            echo "- Artifact: \`terraform-plan-${GITHUB_SHA}\` (retention 90d)"
+            echo ""
+            echo '```hcl'
+            cat tfplan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Terraform apply
         working-directory: terraform
-        run: terraform apply -input=false -auto-approve
+        run: terraform apply -input=false tfplan
         env:
           TF_IN_AUTOMATION: "1"
 
