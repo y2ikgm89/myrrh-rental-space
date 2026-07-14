@@ -127,12 +127,18 @@ resource "google_compute_region_network_endpoint_group" "admin_neg" {
 }
 
 # Backend service (Cloud Run NEG)
+#
+# NOTE: Serverless NEG (Cloud Run) backends do NOT support `timeout_sec` per
+# Google Cloud LB constraint (400 "Timeout sec is not supported for a backend
+# service with Serverless network endpoint groups"). Request timeout is
+# controlled by the Cloud Run service itself (`google_cloud_run_v2_service`
+# の `template.timeout` フィールド、default 300s)。
+# https://cloud.google.com/load-balancing/docs/backend-service#timeout-setting
 resource "google_compute_backend_service" "admin_backend" {
   project               = var.project_id
   name                  = "myrrh-admin-backend"
   protocol              = "HTTPS"
   load_balancing_scheme = "EXTERNAL_MANAGED"
-  timeout_sec           = 300
 
   backend {
     group = google_compute_region_network_endpoint_group.admin_neg.id
