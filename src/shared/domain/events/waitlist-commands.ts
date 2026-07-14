@@ -298,8 +298,11 @@ export async function confirmWaitlistOfferCommand(data: {
           id: true,
           eventId: true,
           slotId: true,
+          ticketId: true,
           quantity: true,
           expiresAt: true,
+          // Codex P1-B: per-ticket capacity recheck 用（下記参照）
+          ticket: { select: { capacity: true } },
         },
       });
       if (!target)
@@ -353,6 +356,41 @@ export async function confirmWaitlistOfferCommand(data: {
         if (claim.count === 0)
           throw new DomainError("既に他の処理が完了しています", "CONFLICT");
         return { registration: { id: target.id, status: "EXPIRED" as const } };
+      }
+
+      // Codex P1-B (PR#1080 レビュー): スロット全体の容量チェックだけでは、
+      // waitlist の発生原因が per-ticket 容量 (EventTicket.capacity) だった
+      // ケースを見落とす。offer 中に別の通常申込がこのチケット種別の最後の枠を
+      // CONFIRMED で消費していると、スロット全体には空きがあっても対象チケット
+      // は実質満員 — createEventRegistrationCommand / registerWaitlistEntryCommand
+      // の per-ticket capacity 判定と対になるチェックをここでも行う
+      // (ticket.capacity が null = 無制限のチケットは対象外)。
+      if (target.ticket.capacity != null) {
+        const ticketConfirmed = await tx.eventRegistration.aggregate({
+          where: {
+            slotId: target.slotId,
+            ticketId: target.ticketId,
+            status: RegistrationStatus.CONFIRMED,
+          },
+          _sum: { quantity: true },
+        });
+        const ticketRemaining =
+          target.ticket.capacity - (ticketConfirmed._sum.quantity ?? 0);
+        if (target.quantity > ticketRemaining) {
+          // スロット全体の判定と同じ EXPIRED 遷移（上のブロックと同型）。
+          const claim = await tx.eventRegistration.updateMany({
+            where: {
+              id: target.id,
+              status: RegistrationStatus.WAITLISTED_OFFERED,
+            },
+            data: { status: RegistrationStatus.EXPIRED },
+          });
+          if (claim.count === 0)
+            throw new DomainError("既に他の処理が完了しています", "CONFLICT");
+          return {
+            registration: { id: target.id, status: "EXPIRED" as const },
+          };
+        }
       }
 
       const claim = await tx.eventRegistration.updateMany({
@@ -511,13 +549,28 @@ export async function adminPromoteWaitlistEntryCommand(data: {
 }
 
 /**
- * Explicitly expire a WAITLISTED_OFFERED entry (called from cron / admin manual expire).
+ * Explicitly expire a WAITLISTED_OFFERED entry (called from admin manual expire only —
+ * the cron path uses {@link expireAndPromoteWaitlistForEventCommand} instead).
  * Idempotent: returns `{registration: null}` if the entry is no longer in OFFERED state.
  *
  * `email` / `name` は admin 手動 expire の呼び出し元
  * (`adminExpireWaitlistOfferAction`) が `sendEventWaitlistExpired` 送信 / toast 表示に
  * 必要とするため select に含める。tx 内で既に読んでいる行に列を足すだけで追加の
  * DB round-trip は発生しない。
+ *
+ * Codex P1-C (PR#1080 レビュー): 対象が `paymentStatus: PENDING`（Stripe checkout
+ * 進行中）の場合は `DomainError("CONFLICT")` を throw し、EXPIRED 化を拒否する。
+ * cron 側 (`expireAndPromoteWaitlistForEventCommand`) は Codex review Critical #1
+ * (defense-in-depth #2) で既にこのガードを持つが、admin 手動経路にはこれまで
+ * 存在しなかった。admin が決済処理中の offer を EXPIRED 化すると、後続の
+ * `checkout.session.completed` webhook が呼ぶ `confirmWaitlistOfferCommand` は
+ * `status: WAITLISTED_OFFERED` を要求するため対象を見つけられず confirm できない
+ * （money captured / 確認不能の orphan payment）。throw は
+ * `prisma.$transaction` コールバック内で行う（`confirmWaitlistOfferCommand` /
+ * `adminPromoteWaitlistEntryCommand` と同じ本ファイルの既存方針。
+ * `cancelEventRegistrationWithClaim`（registration-cancel-core 経由）が
+ * tx 内 throw を避けているのは高頻度な顧客操作向けの別事情で、低頻度な admin
+ * 単発操作であるこの関数には適用しない）。
  */
 export async function expireWaitlistOfferCommand(data: {
   registrationId: string;
@@ -537,9 +590,22 @@ export async function expireWaitlistOfferCommand(data: {
           id: data.registrationId,
           status: RegistrationStatus.WAITLISTED_OFFERED,
         },
-        select: { id: true, eventId: true, email: true, name: true },
+        select: {
+          id: true,
+          eventId: true,
+          email: true,
+          name: true,
+          paymentStatus: true,
+        },
       });
       if (!target) return { registration: null };
+
+      if (target.paymentStatus === PaymentStatus.PENDING) {
+        throw new DomainError(
+          "決済処理中の繰り上げ当選は期限切れにできません。Stripeダッシュボードで決済セッションをキャンセルしてから再度お試しください。",
+          "CONFLICT",
+        );
+      }
 
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${target.eventId}))`;
 
@@ -547,6 +613,9 @@ export async function expireWaitlistOfferCommand(data: {
         where: {
           id: target.id,
           status: RegistrationStatus.WAITLISTED_OFFERED,
+          // pre-check (上) と claim の間で顧客が checkout を開始する race を
+          // 塞ぐ defense-in-depth（cron 側と同じ二重ガード方針）。
+          paymentStatus: { not: PaymentStatus.PENDING },
         },
         data: { status: RegistrationStatus.EXPIRED },
       });

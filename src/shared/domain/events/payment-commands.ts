@@ -400,6 +400,27 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     throw new DomainError("確定期限の情報が取得できませんでした", "VALIDATION");
   }
 
+  // Codex P1-A: claim（UNPAID/FAILED → PENDING）は status: WAITLISTED_OFFERED
+  // のみを見ており、offer 自体が既に期限切れ（expiresAt <= now）かどうかを見て
+  // いない。hourly cron（waitlist-expire）がまだ EXPIRED 化していないケースや、
+  // 下の `expiresAt` 計算コメントにある Stripe `expires_at` の 30 分下限フロアで
+  // Stripe session だけが offer 期限より長生きするケースでは、期限切れ後でも
+  // checkout session を開始・決済完了できてしまう。決済完了後に webhook が呼ぶ
+  // `confirmWaitlistOfferCommand` は現在時刻で改めて expiresAt を判定するため
+  // EXPIRED 遷移になり、支払い済みなのに確定できない money-handling 事故になる
+  // （PR#1080 Codex P1-A レビュー）。ここで claim 直後に再検証し、既に期限切れ
+  // なら PENDING を UNPAID に revert して（cron の通常 EXPIRED 化に委ねる）
+  // Stripe セッションを作らない。エラーメッセージは checkout route.ts の
+  // `isGenuineOfferExpiry` allowlist と密結合（変更時は両方更新する）。
+  const now = new Date();
+  if (authoritative.expiresAt.getTime() <= now.getTime()) {
+    await prisma.eventRegistration.updateMany({
+      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
+      data: { paymentStatus: PaymentStatus.UNPAID },
+    });
+    throw new DomainError("この繰り上げ当選は既に期限切れです", "VALIDATION");
+  }
+
   const authoritativeTotal =
     authoritative.ticket.price * authoritative.quantity;
 

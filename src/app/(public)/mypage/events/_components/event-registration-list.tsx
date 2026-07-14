@@ -22,7 +22,10 @@ import {
   REGISTRATION_STATUS_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { isValidRegistrationStatus } from "@/shared/lib/validations/enums/guards";
-import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  PaymentStatus,
+  RegistrationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { getAppUrl } from "@/shared/lib/constants";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
@@ -152,9 +155,21 @@ function EventRegistrationCard({
   // CANCELLABLE_REGISTRATION_STATUSES は意図的に狭い literal union 型のまま
   // export されている（registration-cancel-core.ts と同じ理由）ため `.includes()`
   // ではなく `.some()` で比較する。
+  //
+  // Codex P1-D (PR#1080 レビュー): WAITLISTED_OFFERED + paymentStatus: PENDING
+  // （Stripe checkout 進行中）はキャンセル対象から除外する。顧客が checkout を
+  // 開いた状態でこの画面からキャンセルすると、行が CANCELLED になり Stripe
+  // session は生きたまま残る。決済が完了すると webhook の
+  // `confirmWaitlistOfferCommand` は `status: WAITLISTED_OFFERED` を要求するため
+  // 対象を見つけられず confirm できない（money captured / 確認不能の orphan
+  // payment）。P1-C（admin 手動 expire の同種ガード）と対になる修正。
+  const isPendingWaitlistOffer =
+    status === RegistrationStatus.WAITLISTED_OFFERED &&
+    registration.paymentStatus === PaymentStatus.PENDING;
   const canCancel =
     status !== null &&
-    CANCELLABLE_REGISTRATION_STATUSES.some((s) => s === status);
+    CANCELLABLE_REGISTRATION_STATUSES.some((s) => s === status) &&
+    !isPendingWaitlistOffer;
 
   const handleConfirmCancel = () => {
     setError(null);
@@ -239,6 +254,11 @@ function EventRegistrationCard({
             <p className="mt-2 text-sm text-muted-foreground">
               確定用のリンクをメールでお送りしています。期限内にメール記載のリンクからお手続きください。
             </p>
+            {isPendingWaitlistOffer && (
+              <p className="mt-2 text-sm text-muted-foreground" role="status">
+                決済処理中のため、この繰り上げ当選はキャンセルできません。決済を完了するか、Stripeで決済セッションをキャンセルしてから再度お試しください。
+              </p>
+            )}
           </div>
         )}
 

@@ -27,7 +27,7 @@ const CHECKOUT_ERROR_PATH = "/events/waitlist/checkout-error";
 
 /**
  * `createWaitlistOfferCheckoutSessionCommand` が投げる `VALIDATION` の中で
- * 唯一「対象がもう WAITLISTED_OFFERED ではない」(= genuine expiry と同義。
+ * 「対象がもう WAITLISTED_OFFERED ではない」(= genuine expiry と同義。
  * EXPIRED 化済み / 既に CONFIRMED 済み / CANCELLED 済み等) ことを示すメッセージ。
  * 同コマンドの他の `VALIDATION`（Stripe 未設定・支払方法未有効化・チケット価格
  * 欠落・確定期限情報欠落）は運営側の設定不備/データ異常であり、genuine expiry
@@ -38,10 +38,22 @@ const CHECKOUT_ERROR_PATH = "/events/waitlist/checkout-error";
 const OFFER_NOT_ACTIVE_MESSAGE =
   "この繰り上げ当選は確定待ちの状態ではありません";
 
+/**
+ * Codex P1-A（PR#1080 レビュー）: `createWaitlistOfferCheckoutSessionCommand` が
+ * authoritative 再読み込み後に「offer 自身の expiresAt が既に過去」を検出した
+ * ときに投げる `VALIDATION` メッセージ。cron がまだ EXPIRED 化していない場合や
+ * Stripe `expires_at` の 30 分下限フロアで session だけが生き残っている場合に
+ * 到達する、genuine expiry の一種（`OFFER_NOT_ACTIVE_MESSAGE` と同じ
+ * EXPIRED_PATH へ誘導すべきで、CHECKOUT_ERROR_PATH の「system」扱いにしてはならない）。
+ */
+const OFFER_EXPIRED_MESSAGE = "この繰り上げ当選は既に期限切れです";
+
 function isGenuineOfferExpiry(error: DomainError): boolean {
   if (error.code === "NOT_FOUND") return true;
   return (
-    error.code === "VALIDATION" && error.message === OFFER_NOT_ACTIVE_MESSAGE
+    error.code === "VALIDATION" &&
+    (error.message === OFFER_NOT_ACTIVE_MESSAGE ||
+      error.message === OFFER_EXPIRED_MESSAGE)
   );
 }
 
