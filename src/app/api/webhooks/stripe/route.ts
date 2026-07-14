@@ -6,8 +6,11 @@
  *
  * ## 処理イベント（Stripe 公式推奨の Checkout フルセット）
  * - checkout.session.completed: セッション完了（即時決済 → PAID / 非同期決済 → PENDING 維持）
- * - checkout.session.async_payment_succeeded: 非同期決済成功 → PAID（reservation のみ。
- *   event-registration の配線は Task 9 スコープ外 — report の follow-up 参照）
+ * - checkout.session.async_payment_succeeded: 非同期決済（konbini / bank transfer 等）
+ *   成功 → PAID（reservation / event-registration の直接購入・waitlist offer
+ *   全経路対応 — Fix commit, レビュー Important #2 で event-registration を追加配線。
+ *   waitlist offer は checkout.session.completed と同じく
+ *   `confirmWaitlistOfferCommand` の容量再チェックを PAID 確定より先に通す）
  * - checkout.session.async_payment_failed: 非同期決済失敗 → FAILED
  * - checkout.session.expired: セッション期限切れ → FAILED
  * - charge.refunded: 返金完了 → REFUNDED（reservation のみ。event-registration の
@@ -187,25 +190,6 @@ export async function POST(request: Request) {
 // =============================================================================
 // Helpers
 // =============================================================================
-
-/**
- * Checkout Session から reservationId を取得（共通バリデーション）
- */
-function extractReservationId(
-  session: Stripe.Checkout.Session,
-  operation: string,
-): string | null {
-  const reservationId = session.metadata?.["reservationId"];
-  if (!reservationId) {
-    logError(new Error("Missing reservationId in session metadata"), {
-      category: ErrorCategory.VALIDATION,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation, sessionId: session.id },
-    });
-    return null;
-  }
-  return reservationId;
-}
 
 /**
  * Checkout Session から決済対象（予約 or イベント申込）を判別する。
@@ -511,9 +495,9 @@ async function handleCheckoutSessionCompleted(
     await fulfillEventRegistrationPaymentAtomically(registrationId, session);
   } else {
     // 非同期決済（konbini / customer_balance）: PaymentIntent ID のみ保存。
-    // event-registration の async_payment_succeeded 配線は Task 9 スコープ外
-    // （report の follow-up 参照）— 現状はここで保存した ID を後続 fulfill 経路が
-    // 自動では参照しない。
+    // 決済が実際に確定するのは後続の checkout.session.async_payment_succeeded
+    // （`handleAsyncPaymentSucceeded` が `fulfillEventRegistrationPaymentAtomically`
+    // を呼ぶ — Fix commit, レビュー Important #2 で配線済み）。
     const paymentIntentId =
       typeof session.payment_intent === "string"
         ? session.payment_intent
@@ -533,17 +517,35 @@ async function handleCheckoutSessionCompleted(
 /**
  * checkout.session.async_payment_succeeded
  *
- * 銀行振込等の非同期決済が成功した場合に発火。
- * checkout.session.completed で "unpaid" だった予約を fulfill する。
+ * 銀行振込 / konbini 等の非同期決済が成功した場合に発火。
+ * checkout.session.completed で "unpaid" だった予約 / イベント申込を fulfill する。
+ *
+ * この event type は Stripe が非同期決済の成功確定時にのみ送出するため、
+ * checkout.session.completed と異なり `session.payment_status` による分岐は
+ * 不要（常に確定済み扱いで良い）。event-registration 側は
+ * `fulfillEventRegistrationPaymentAtomically` を共有する（waitlist offer は
+ * 同関数内で `confirmWaitlistOfferCommand` の容量再チェックを経由し、直接購入は
+ * 経由しない — checkout.session.completed と同じ分岐契約）。atomic claim
+ * （`paymentStatus not PAID` 相当の WHERE）が二重処理を防ぐため、
+ * checkout.session.completed（即時決済）と本 handler（非同期決済）の両方から
+ * 同じ registration/reservation に対して呼ばれても安全（Task 9 report 参照）。
  */
 async function handleAsyncPaymentSucceeded(session: Stripe.Checkout.Session) {
-  const reservationId = extractReservationId(
+  const subject = extractPaymentSubject(
     session,
     "stripeWebhookAsyncPaymentSucceeded",
   );
-  if (!reservationId) return;
+  if (!subject) return;
 
-  await fulfillPaymentAtomically(reservationId, session);
+  if (subject.kind === "reservation") {
+    await fulfillPaymentAtomically(subject.reservationId, session);
+    return;
+  }
+
+  await fulfillEventRegistrationPaymentAtomically(
+    subject.registrationId,
+    session,
+  );
 }
 
 /**

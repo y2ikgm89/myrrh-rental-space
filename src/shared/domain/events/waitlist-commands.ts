@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import {
   EventStatus,
+  PaymentStatus,
   RegistrationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -428,10 +429,23 @@ export async function expireWaitlistOfferCommand(data: {
  *   の内側にネストしても namespace が異なるため自己デッドロックしない。
  *
  * EXPIRED 遷移は `updateMany` の WHERE (id + status:WAITLISTED_OFFERED +
- * expiresAt<now) で atomic claim する。claim できなかった candidate
- * (`confirmWaitlistOfferCommand` 等の別経路が先に処理済みの race) は黙って
- * skip する。claim できた場合のみ同じ tx 内で `offerNextWaitlistEntryCommand`
- * を呼び FIFO promote を試みる（`promoted: null` = 待機者なし、は正常系）。
+ * expiresAt<now + **paymentStatus not PENDING**) で atomic claim する。
+ * `paymentStatus: {not: PENDING}` (Codex review Critical #1, defense-in-depth
+ * #2): Stripe checkout session が live（決済処理中）の行は EXPIRED 化しない。
+ * 呼び出し側 `findExpiredWaitlistOfferCandidates` の select 時点で同じ条件で
+ * 既に除外しているが、その query 実行からこの updateMany 到達までの間に顧客が
+ * checkout を開始して paymentStatus が UNPAID/FAILED → PENDING に遷移する race
+ * を塞ぐため、claim 直前でも同じガードを再 assert する。除外しないと「cron が
+ * offer を先に EXPIRED 化 → 直後に顧客が Stripe 決済を完了」というレースで
+ * money captured なのに `confirmWaitlistOfferCommand` が WAITLISTED_OFFERED を
+ * 見つけられず webhook 側が severity LOW で静かに skip する事故になる。
+ * PENDING の行は webhook handler（`checkout.session.completed` /
+ * `async_payment_succeeded` / `expired` / `async_payment_failed`）が確定 or
+ * 失敗させるまでそのまま残し、cron の対象にはしない。claim できなかった
+ * candidate (`confirmWaitlistOfferCommand` 等の別経路が先に処理済みの race、
+ * または上記 PENDING 除外) は黙って skip する。claim できた場合のみ同じ tx 内で
+ * `offerNextWaitlistEntryCommand` を呼び FIFO promote を試みる（`promoted: null`
+ * = 待機者なし、は正常系）。
  *
  * session lock を獲得できなかった場合（他プロセスがこの event を処理中）は
  * 空の結果を返して commit する。保持していないロックを release してはいけない
@@ -483,6 +497,8 @@ export async function expireAndPromoteWaitlistForEventCommand(args: {
               id: candidate.id,
               status: RegistrationStatus.WAITLISTED_OFFERED,
               expiresAt: { lt: args.now },
+              // Codex review Critical #1 (defense-in-depth #2) — JSDoc 上部参照
+              paymentStatus: { not: PaymentStatus.PENDING },
             },
             data: { status: RegistrationStatus.EXPIRED },
           });

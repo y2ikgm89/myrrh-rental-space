@@ -340,6 +340,24 @@ function makeAsyncPaymentFailedEvent(
   };
 }
 
+function makeAsyncPaymentSucceededEvent(
+  metadata: Record<string, string>,
+  paymentIntent: string | null = "pi-async-succeeded-1",
+  sessionId = "cs_test_async_succeeded",
+): StripeWebhookEvent {
+  return {
+    type: "checkout.session.async_payment_succeeded",
+    data: {
+      object: {
+        id: sessionId,
+        payment_status: "paid",
+        payment_intent: paymentIntent,
+        metadata,
+      },
+    },
+  };
+}
+
 function makeRequest(body: string, signature: string | null = "sig-valid") {
   const headers: Record<string, string> = { "content-type": "text/plain" };
   if (signature !== null) {
@@ -785,6 +803,159 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
         "cs_test_async_fail_1",
       );
       expect(mockConfirmWaitlistOfferCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // checkout.session.async_payment_succeeded — Fix commit (レビュー Important #2):
+  // 非同期決済 (konbini / bank transfer) の event-registration 配線
+  // ---------------------------------------------------------------------------
+
+  describe("checkout.session.async_payment_succeeded — event-registration", () => {
+    test("reservation: 既存どおり claimReservationAsPaid が呼ばれる（byte-identical 回帰確認）", async () => {
+      const event = makeAsyncPaymentSucceededEvent(
+        { reservationId: "res-async-1" },
+        "pi-res-async-1",
+      );
+      mockConstructEvent.mockResolvedValue(event);
+      mockClaimReservationAsPaid.mockResolvedValueOnce({
+        id: "res-async-1",
+        totalPrice: 3000,
+        notes: null,
+        startTime: "2025-02-01T10:00:00.000Z",
+        endTime: "2025-02-01T12:00:00.000Z",
+        icsSequence: 0,
+        customer: {
+          email: "b@example.com",
+          lastName: "佐藤",
+          firstName: "花子",
+        },
+        space: { name: "スペースB", location: null },
+      });
+
+      const response = await POST(makeRequest("body"));
+      const body = await response.json();
+      expectReceivedResult(body);
+
+      expect(response.status).toBe(200);
+      expect(mockClaimReservationAsPaid).toHaveBeenCalledWith("res-async-1", {
+        stripePaymentIntentId: "pi-res-async-1",
+      });
+      expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
+      expect(mockConfirmWaitlistOfferCommand).not.toHaveBeenCalled();
+    });
+
+    test("直接購入（source なし）→ confirmWaitlistOfferCommand は呼ばれず claimEventRegistrationAsPaid のみ", async () => {
+      const event = makeAsyncPaymentSucceededEvent({
+        type: "event-registration",
+        registrationId: "reg-async-direct",
+      });
+      mockConstructEvent.mockResolvedValue(event);
+
+      const response = await POST(makeRequest("body"));
+      expect(response.status).toBe(200);
+
+      expect(mockConfirmWaitlistOfferCommand).not.toHaveBeenCalled();
+      expect(mockClaimEventRegistrationAsPaid).toHaveBeenCalledWith(
+        "reg-async-direct",
+        { stripePaymentIntentId: "pi-async-succeeded-1" },
+      );
+      expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
+      expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith(
+        ["events"],
+        undefined,
+      );
+    });
+
+    test("waitlist offer（source=waitlist-offer）→ confirmWaitlistOfferCommand が claimEventRegistrationAsPaid より先に呼ばれる（CALL ORDER）", async () => {
+      const callOrder: string[] = [];
+      mockConfirmWaitlistOfferCommand.mockImplementation(async (args) => {
+        callOrder.push("confirm");
+        return {
+          registration: { id: args.registrationId, status: "CONFIRMED" },
+        };
+      });
+      mockClaimEventRegistrationAsPaid.mockImplementation(async () => {
+        callOrder.push("claimPaid");
+        return true;
+      });
+
+      const event = makeAsyncPaymentSucceededEvent(
+        {
+          type: "event-registration",
+          registrationId: "reg-waitlist-1",
+          source: "waitlist-offer",
+        },
+        "pi-async-succeeded-waitlist",
+        "cs_test_async_succeeded_waitlist",
+      );
+      mockConstructEvent.mockResolvedValue(event);
+
+      const response = await POST(makeRequest("body"));
+      expect(response.status).toBe(200);
+
+      expect(callOrder).toEqual(["confirm", "claimPaid"]);
+      expect(mockConfirmWaitlistOfferCommand).toHaveBeenCalledWith({
+        registrationId: "reg-waitlist-1",
+        now: expect.any(Date),
+      });
+      expect(mockClaimEventRegistrationAsPaid).toHaveBeenCalledWith(
+        "reg-waitlist-1",
+        { stripePaymentIntentId: "pi-async-succeeded-waitlist" },
+      );
+
+      // waitlist offer の CONFIRMED 確定は初めての確定通知なのでメールを送る
+      await flushFireAndForget();
+      expect(mockGetWaitlistConfirmationEmailDetails).toHaveBeenCalledWith(
+        "reg-waitlist-1",
+      );
+      expect(mockSendEventRegistrationConfirmation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          registrationId: "reg-waitlist-1",
+          customerEmail: "waitlist@example.com",
+        }),
+      );
+    });
+
+    test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → claimEventRegistrationAsPaid は呼ばれず CRITICAL ログのみ", async () => {
+      mockConfirmWaitlistOfferCommand.mockResolvedValueOnce({
+        registration: { id: "reg-race-async", status: "EXPIRED" },
+      });
+
+      const event = makeAsyncPaymentSucceededEvent({
+        type: "event-registration",
+        registrationId: "reg-race-async",
+        source: "waitlist-offer",
+      });
+      mockConstructEvent.mockResolvedValue(event);
+
+      const response = await POST(makeRequest("body"));
+      expect(response.status).toBe(200);
+
+      expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
+      expect(
+        mockInvalidateSiteWideCacheFromRouteHandler,
+      ).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({ severity: "CRITICAL" }),
+      );
+      expect(mockClaimEventRegistrationAsFailed).not.toHaveBeenCalled();
+    });
+
+    test("不正/欠損 metadata → null（claim 系は一切呼ばれず 200 を返す）", async () => {
+      const event = makeAsyncPaymentSucceededEvent({});
+      mockConstructEvent.mockResolvedValue(event);
+
+      const response = await POST(makeRequest("body"));
+      const body = await response.json();
+      expectReceivedResult(body);
+
+      expect(response.status).toBe(200);
+      expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
+      expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
+      expect(mockConfirmWaitlistOfferCommand).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalled();
     });
   });
 });

@@ -25,6 +25,7 @@ import { NextResponse } from "next/server";
 import {
   EventScheduleMode,
   EventStatus,
+  PaymentStatus,
   RegistrationStatus,
 } from "@generated/prisma/enums";
 
@@ -247,6 +248,101 @@ describeMaybe("GET /api/cron/waitlist-expire — real Postgres", () => {
       expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith([
         "events",
       ]);
+    } finally {
+      await cleanupEvent(eventId);
+    }
+  }, 30_000);
+
+  test("paymentStatus=PENDING（Stripe checkout session が live）の期限切れ WAITLISTED_OFFERED は cron の対象から除外される（Codex review Critical #1）", async () => {
+    const { eventId, slotId, ticketId } = await createTestEvent();
+
+    try {
+      const nowMs = Date.now();
+
+      // 満員（capacity=1, CONFIRMED 1 件）
+      await prisma.eventRegistration.create({
+        data: {
+          eventId,
+          slotId,
+          ticketId,
+          name: "確定 太郎",
+          email: `confirmed-${crypto.randomUUID()}@example.com`,
+          quantity: 1,
+          status: RegistrationStatus.CONFIRMED,
+        },
+      });
+
+      // 期限切れだが Stripe checkout session が live (paymentStatus: PENDING) の
+      // WAITLISTED_OFFERED — cron がこれを EXPIRED 化すると、直後に顧客が Stripe
+      // 決済を完了させた場合 money captured / 確認不能の事故になる（Critical #1 の
+      // 再現条件）。
+      const pendingOffered = await prisma.eventRegistration.create({
+        data: {
+          eventId,
+          slotId,
+          ticketId,
+          name: "決済中 三郎",
+          email: `pending-${crypto.randomUUID()}@example.com`,
+          quantity: 1,
+          status: RegistrationStatus.WAITLISTED_OFFERED,
+          offeredAt: new Date(nowMs - 25 * 60 * 60 * 1000),
+          expiresAt: new Date(nowMs - 100),
+          paymentStatus: PaymentStatus.PENDING,
+          stripeCheckoutSessionId: `cs_test_pending_${crypto.randomUUID()}`,
+        },
+        select: { id: true },
+      });
+
+      // FIFO 先頭候補の WAITLISTED。枠が空かない限り昇格しないはず。
+      const waiting = await prisma.eventRegistration.create({
+        data: {
+          eventId,
+          slotId,
+          ticketId,
+          name: "待機 四郎",
+          email: `waiting2-${crypto.randomUUID()}@example.com`,
+          quantity: 1,
+          status: RegistrationStatus.WAITLISTED,
+          waitlistedAt: new Date(nowMs - 12 * 60 * 60 * 1000),
+        },
+        select: { id: true },
+      });
+
+      // このファイルの mock は beforeEach でリセットされず、直前のテストの呼出
+      // 履歴を引き継ぐ（module-scope の単一 mock インスタンス）。直後の
+      // `.not.toHaveBeenCalled()` を「この GET 呼出内で」の意味で成立させるため
+      // 明示的に clear する。
+      mockInvalidateSiteWideCacheFromRouteHandler.mockClear();
+
+      const { GET } = await import("@/app/api/cron/waitlist-expire/route");
+      const response = await GET(makeCronRequest());
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      // PENDING の行は候補から除外されるため expired/offered ともに 0
+      expect(body).toEqual({ expired: 0, offered: 0 });
+
+      const updatedPendingOffered =
+        await prisma.eventRegistration.findUniqueOrThrow({
+          where: { id: pendingOffered.id },
+          select: { status: true, paymentStatus: true },
+        });
+      // status は WAITLISTED_OFFERED のまま（EXPIRED 化されていない）
+      expect(updatedPendingOffered.status).toBe(
+        RegistrationStatus.WAITLISTED_OFFERED,
+      );
+      expect(updatedPendingOffered.paymentStatus).toBe(PaymentStatus.PENDING);
+
+      const updatedWaiting = await prisma.eventRegistration.findUniqueOrThrow({
+        where: { id: waiting.id },
+        select: { status: true },
+      });
+      // 枠が空いていないため昇格もしない
+      expect(updatedWaiting.status).toBe(RegistrationStatus.WAITLISTED);
+
+      expect(
+        mockInvalidateSiteWideCacheFromRouteHandler,
+      ).not.toHaveBeenCalled();
     } finally {
       await cleanupEvent(eventId);
     }

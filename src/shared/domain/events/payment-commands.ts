@@ -289,6 +289,12 @@ export async function createEventCheckoutSessionCommand(input: {
  *
  * token 自体が一次認可のため actorCustomerId チェックは行わない
  * （`confirmWaitlistOfferAction` / `checkout/[token]/route.ts` と同方針）。
+ *
+ * Stripe Checkout Session の `expires_at` を offer 自身の `expiresAt`（24h 期限）に
+ * 揃える（Fix commit, レビュー Critical #1 対応）。揃えないと cron
+ * `waitlist-expire` が offer を先に EXPIRED 化した後でも Stripe session だけ
+ * 生き残り、silent orphan（money captured だが確認不能）になる。詳細は下記
+ * try ブロック内コメント参照。
  */
 export async function createWaitlistOfferCheckoutSessionCommand(input: {
   registrationId: string;
@@ -367,6 +373,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     select: {
       email: true,
       quantity: true,
+      expiresAt: true,
       ticket: { select: { name: true, price: true } },
       event: { select: { title: true, slug: true } },
     },
@@ -381,10 +388,43 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     throw new DomainError("チケット料金が設定されていません", "VALIDATION");
   }
 
+  if (!authoritative.expiresAt) {
+    // WAITLISTED_OFFERED は offerNextWaitlistEntryCommand が status 遷移と同時に
+    // 必ず expiresAt を設定するため理論上到達しないが、列は nullable なので
+    // 型レベルで防御する（non-null assertion は使わない）。「claim 済みだが
+    // 期限情報が消えた」異常状態として、上と同じく UNPAID に revert する。
+    await prisma.eventRegistration.updateMany({
+      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
+      data: { paymentStatus: PaymentStatus.UNPAID },
+    });
+    throw new DomainError("確定期限の情報が取得できませんでした", "VALIDATION");
+  }
+
   const authoritativeTotal =
     authoritative.ticket.price * authoritative.quantity;
 
   try {
+    // Codex review Critical #1: Stripe Checkout Session の有効期限を offer 自身の
+    // expiresAt（24h 期限）に揃える。Reservation 側 createCheckoutSessionCommand の
+    // `expires_at` precedent（本ファイル兄弟 `src/shared/domain/reservations/
+    // payment-commands.ts`、Codex P1: PR#1042 の silent orphan 予防）と同じ設計
+    // 意図: 揃えないと、cron `waitlist-expire` が offer を先に EXPIRED 化した
+    // 後でも Stripe session だけ生き残り、顧客が決済を完了できてしまう。その場合
+    // `confirmWaitlistOfferCommand` は WAITLISTED_OFFERED を見つけられず
+    // DomainError(NOT_FOUND) を投げ、webhook 側は severity LOW で握り潰す（通常の
+    // 重複配信と区別不能）ため `claimEventRegistrationAsPaid` が呼ばれず、
+    // paymentStatus が PENDING のまま永久に stuck する「money captured / 確認不能」
+    // という金銭事故になる（cron 側は `findExpiredWaitlistOfferCandidates` /
+    // `expireAndPromoteWaitlistForEventCommand` 側の paymentStatus PENDING 除外
+    // ガードで defense-in-depth 済み）。Stripe 制約で expires_at は作成時刻から
+    // 最短 30 分 (`30 * 60`) 必要なため、offer 期限が近い（残り 30 分未満）
+    // ケースはその下限をフロアとして採用する（顧客が offer window の最後の
+    // 1 分に checkout を開いたエッジケース）。
+    const expiresAt = Math.max(
+      Math.floor(authoritative.expiresAt.getTime() / 1000),
+      Math.floor(Date.now() / 1000) + 30 * 60,
+    );
+
     const session = await client.checkout.sessions.create({
       mode: "payment",
       payment_method_types: paymentMethodTypes,
@@ -414,6 +454,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
         source: "waitlist-offer",
       },
       ...(authoritative.email ? { customer_email: authoritative.email } : {}),
+      expires_at: expiresAt,
       success_url: `${appUrl}/events/waitlist/confirm?token=${offerToken}`,
       cancel_url: `${appUrl}/events/${authoritative.event.slug}`,
     });
@@ -547,10 +588,14 @@ export async function claimEventRegistrationAsFailed(
  * (Reservation の `savePaymentIntentId` と同型)。
  *
  * `checkout.session.async_payment_succeeded` の event-registration 配線は
- * Task 9 のスコープ外（brief 未記載、report で follow-up として disclose 済み）
- * のため、この関数が保存する ID は現状 fulfill 経路から自動では参照されない。
- * `update`（存在しない id で throw）ではなく `updateMany` を使い、想定外の
- * race（該当行なし）で webhook 全体が 500 化しないようにする。
+ * Fix commit（レビュー Important #2）で追加済み: 非同期決済が成功すると
+ * `fulfillEventRegistrationPaymentAtomically` が呼ばれ `claimEventRegistrationAsPaid`
+ * が最終的な `stripePaymentIntentId` を確定させる（新しい webhook payload の
+ * `session.payment_intent` から独立して再取得するため、ここで保存した値を
+ * 読み返すわけではない）。この関数が保存する ID は PENDING 期間中の admin
+ * 可視性のための中間状態。`update`（存在しない id で throw）ではなく
+ * `updateMany` を使い、想定外の race（該当行なし）で webhook 全体が
+ * 500 化しないようにする。
  */
 export async function saveEventRegistrationPaymentIntentId(
   registrationId: string,

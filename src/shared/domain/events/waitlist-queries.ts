@@ -1,7 +1,10 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  PaymentStatus,
+  RegistrationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { getAppUrl } from "@/shared/lib/constants";
 import { createWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
@@ -65,6 +68,13 @@ export async function getWaitlistQueue(eventId: string) {
  *
  * WAITLISTED_OFFERED（確認待ち）/ CONFIRMED（確認済み）/ EXPIRED（期限切れ表示）の
  * 3 status のみ対象。WAITLISTED（まだ順番待ち）・CANCELLED はこのページの対象外。
+ *
+ * `paymentStatus` / `stripeCheckoutSessionId` は Fix commit（レビュー Important #3）
+ * で追加: confirm page が「status: EXPIRED + paymentStatus: PENDING +
+ * stripeCheckoutSessionId あり」を『決済は進行中/成功したがレース（cron や
+ * confirmWaitlistOfferCommand 自身の容量再チェック敗北）で offer が EXPIRED
+ * 化した』signal として検出し、一般的な（決済すらしていない）期限切れと区別した
+ * 案内を出すために使う。
  */
 export async function getEventRegistrationForConfirm(registrationId: string) {
   const registration = await prisma.eventRegistration.findFirst({
@@ -87,6 +97,8 @@ export async function getEventRegistrationForConfirm(registrationId: string) {
       status: true,
       customerId: true,
       expiresAt: true,
+      paymentStatus: true,
+      stripeCheckoutSessionId: true,
       ticket: { select: { price: true } },
       event: {
         select: {
@@ -109,6 +121,8 @@ export async function getEventRegistrationForConfirm(registrationId: string) {
     ticketPrice: registration.ticket.price,
     customerId: registration.customerId,
     expiresAt: registration.expiresAt,
+    paymentStatus: registration.paymentStatus,
+    stripeCheckoutSessionId: registration.stripeCheckoutSessionId,
     event: registration.event,
     slot: registration.slot,
   };
@@ -184,12 +198,21 @@ export async function getWaitlistConfirmationEmailDetails(
  * (route.ts) が eventId でグルーピングし、event 単位で
  * `expireAndPromoteWaitlistForEventCommand` に渡す（advisory session lock が
  * event scope のため、処理そのものは event 単位でしか行えない）。
+ *
+ * `paymentStatus: {not: PENDING}` (Codex review Critical #1, defense-in-depth #1):
+ * Stripe checkout session が live（決済処理中）の offer を候補から除外する。
+ * 除外しないと「cron が offer を EXPIRED 化した直後に顧客が Stripe 決済を完了する」
+ * レースで money captured / 確認不能状態になる
+ * （`createWaitlistOfferCheckoutSessionCommand` 側の Stripe session `expires_at`
+ * 整合と対になる二段防御。詳細は `expireAndPromoteWaitlistForEventCommand` の
+ * JSDoc も参照）。
  */
 export async function findExpiredWaitlistOfferCandidates(now: Date) {
   return prisma.eventRegistration.findMany({
     where: {
       status: RegistrationStatus.WAITLISTED_OFFERED,
       expiresAt: { lt: now },
+      paymentStatus: { not: PaymentStatus.PENDING },
     },
     select: {
       id: true,

@@ -10,8 +10,12 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 import { getEventRegistrationForConfirm } from "@/shared/domain/events/waitlist-queries";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
+import { getBusinessInfo } from "@/public/data/business";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
-import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  PaymentStatus,
+  RegistrationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import {
   publicQueryRateLimiter,
@@ -72,6 +76,23 @@ export default async function WaitlistConfirmPage({
   }
 
   if (registration.status === RegistrationStatus.EXPIRED) {
+    // money-in-flight signal（Fix commit, レビュー Important #3）: cron レース
+    // (Critical #1、query/claim 両側の paymentStatus PENDING 除外ガードで対策済)
+    // や `confirmWaitlistOfferCommand` 自身の容量再チェック敗北（Task 9 report の
+    // 「Capacity-race decision」— 決済成功後に別の確定が先着して枠を失うケース）
+    // により、決済は成功/進行中なのに offer が EXPIRED 化することがある。この場合
+    // paymentStatus は PENDING のまま維持され（会計上の虚偽表示になる FAILED は
+    // 焼き付けない設計、webhook route.ts 参照）、stripeCheckoutSessionId は
+    // checkout session 作成時のまま残る。両方揃うときのみ「決済確認中」の専用
+    // 案内を出し、それ以外（一度も checkout に進まなかった／決済自体が失敗した
+    // ケース）は従来どおり通常の期限切れページに送る。
+    if (
+      registration.paymentStatus === PaymentStatus.PENDING &&
+      registration.stripeCheckoutSessionId
+    ) {
+      const { email: contactEmail } = await getBusinessInfo();
+      return <PaymentInFlightView contactEmail={contactEmail} />;
+    }
     redirect("/events/waitlist/expired");
   }
 
@@ -210,6 +231,48 @@ function InvalidView({
           </Link>
           からご確認ください。
         </p>
+      </div>
+    </Layout>
+  );
+}
+
+/**
+ * money-in-flight 専用ビュー（Fix commit, レビュー Important #3）。
+ *
+ * 「決済（Stripe）は成功/進行中だが、cron や容量再チェックのレースで offer が
+ * EXPIRED 化した」ことを示す signal（status: EXPIRED + paymentStatus: PENDING +
+ * stripeCheckoutSessionId あり）を検出したときのみ表示する。通常の期限切れ
+ * （一度も決済に進まなかった／決済自体が失敗した）とは意図的に文言を分け、
+ * 「お金は取られたかもしれないが忘れられてはいない」ことを伝える。
+ */
+function PaymentInFlightView({
+  contactEmail,
+}: {
+  readonly contactEmail: string | null;
+}) {
+  return (
+    <Layout>
+      <div className="border border-border p-6 text-center">
+        <p className="text-base font-medium text-foreground">
+          決済を確認しております
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Stripe
+          での決済処理と当サイトのキャンセル待ち処理のタイミングが重なった可能性があります。
+          数時間以内に運営者から個別にご連絡いたしますので、お待ちください。
+        </p>
+        {contactEmail && (
+          <p className="mt-4 text-sm">
+            お急ぎの場合は
+            <a
+              href={`mailto:${contactEmail}`}
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              {contactEmail}
+            </a>
+            までご連絡ください。
+          </p>
+        )}
       </div>
     </Layout>
   );
