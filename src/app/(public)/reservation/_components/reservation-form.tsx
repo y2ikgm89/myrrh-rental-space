@@ -24,11 +24,14 @@ import {
   addMinutesToTime,
   formatDateString,
 } from "@/shared/lib/reservation/time-slots-utils";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
 import type { PublicDiscountSettings } from "@/shared/domain/settings/queries/discount";
-import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
-import { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
-import { submitReservation } from "@/public/actions/reservation";
+import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
+import {
+  fetchReservationPricingPreview,
+  submitReservation,
+} from "@/public/actions/reservation";
 import type { z } from "zod";
 import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import {
@@ -96,6 +99,35 @@ function resolveAutoIds(
   const spaceId =
     location?.spaces.length === 1 ? (location.spaces[0]?.id ?? null) : null;
   return { locationId, spaceId };
+}
+
+type PricingWindow = { spaceId: string; startIso: string; endIso: string };
+
+/**
+ * spaceId・日付・開始/終了時刻から料金プレビュー用の JST 日時範囲を解決する。
+ * 入力が揃っていない・不正な範囲（終了 <= 開始 等）の場合は null。
+ *
+ * render 内の呼出し結果を `useEffect` の依存配列にそのまま使うため、
+ * ここで null を返すことで「まだ計算できない」を synchronous に表現する
+ * （effect 内で setState(null) を呼ぶ react-hooks/set-state-in-effect 違反を避ける）。
+ */
+function resolvePricingWindow(
+  spaceId: string | null,
+  date: string | null,
+  startTime: string | null,
+  endTime: string | null,
+): PricingWindow | null {
+  if (!spaceId || !date || !startTime || !endTime) return null;
+  const start = parseDateTimeLocalAsJst(`${date}T${startTime}`);
+  const end = parseDateTimeLocalAsJst(`${date}T${endTime}`);
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end <= start
+  ) {
+    return null;
+  }
+  return { spaceId, startIso: start.toISOString(), endIso: end.toISOString() };
 }
 
 // ---------------------------------------------------------------------------
@@ -241,35 +273,38 @@ export function ReservationForm({
       ? addMinutesToTime(state.startTime, state.duration)
       : null;
 
+  const [pricePreview, setPricePreview] =
+    useState<ReservationPricingResult | null>(null);
+  const [, startPricingTransition] = useTransition();
+
+  const dateString = state.date ? formatDateString(state.date) : null;
+  const pricingWindow = resolvePricingWindow(
+    state.spaceId,
+    dateString,
+    state.startTime,
+    endTime,
+  );
+
   // 料金プレビューはサーバー側 createPublicReservationCommand と同じ
-  // calculateReservationPrice を SSoT として共有する。クーポンは公開フォームに
-  // 入力 UI が無いため null（mypage 経路で適用）。combinationMode はクーポン非対応
-  // のため計算結果に影響しないが API 整合のため best デフォルトを渡す。
-  const priceCalc =
-    currentSpace && state.duration
-      ? calculateReservationPrice({
-          hourlyPrice: currentSpace.hourlyPrice,
-          hours: state.duration / 60,
-          durationRules: discountSettings.durationDiscountRules,
-          durationDiscountEnabled: discountSettings.durationDiscountEnabled,
-          spaceDiscount:
-            currentSpace.discountType !== "none" &&
-            currentSpace.discountValue != null &&
-            currentSpace.discountValue > 0
-              ? {
-                  discountType: currentSpace.discountType,
-                  discountValue: currentSpace.discountValue,
-                  durationDiscountOverride:
-                    currentSpace.durationDiscountOverride,
-                }
-              : null,
-          coupon: null,
-          combinationMode: DiscountCombinationMode.best,
-          showWarning: false,
-        })
-      : null;
-  const basePrice = priceCalc?.basePrice ?? null;
-  const price = priceCalc?.totalPrice ?? null;
+  // calculateReservationPricing を Server Action 経由で呼び出す SSoT（Task 13）。
+  // rate plan・祝日判定は client から Prisma に触れずには計算できないため、
+  // スペース・日時が揃うたびにサーバーへ問い合わせる。クーポンは公開フォームでは
+  // 送信時にサーバー側で検証・適用されるため preview には含めない。
+  useEffect(() => {
+    if (!pricingWindow) return;
+    const { spaceId, startIso, endIso } = pricingWindow;
+    startPricingTransition(async () => {
+      const result = await fetchReservationPricingPreview(
+        spaceId,
+        startIso,
+        endIso,
+      );
+      setPricePreview(result);
+    });
+  }, [pricingWindow]);
+
+  const basePrice = pricingWindow ? (pricePreview?.basePrice ?? null) : null;
+  const price = pricingWindow ? (pricePreview?.totalPrice ?? null) : null;
 
   const isStep1Complete = state.locationId != null && state.spaceId != null;
   const isStep2Complete =
@@ -570,16 +605,22 @@ export function ReservationForm({
           summary={{
             locationName: currentLocation?.name ?? "",
             spaceName: currentSpace?.name ?? "",
-            date: state.date ? formatDateString(state.date) : "",
+            date: dateString ?? "",
             startTime: state.startTime ?? "",
             endTime: endTime ?? "",
             guests: state.guests,
             price,
             originalPrice: basePrice,
-            spaceDiscountAmount: priceCalc?.spaceDiscount ?? 0,
-            durationDiscountAmount: priceCalc?.durationDiscount ?? 0,
-            appliedDurationRate:
-              priceCalc?.appliedDurationRule?.discountRate ?? null,
+            spaceDiscountAmount: pricingWindow
+              ? (pricePreview?.spaceDiscountAmount ?? 0)
+              : 0,
+            durationDiscountAmount: pricingWindow
+              ? (pricePreview?.durationDiscountAmount ?? 0)
+              : 0,
+            // ReservationPricingResult は個別の長時間割引ルール（%）を保持しないため
+            // null 固定（booking-summary 側は null を「長時間割引適用」の汎用表示に
+            // フォールバックする）。詳細な内訳表示は将来対応（Task 13 スコープ外）。
+            appliedDurationRate: null,
             showOriginalPrice: discountSettings.showOriginalPrice,
           }}
           onCustomerTypeChange={handleCustomerTypeChange}

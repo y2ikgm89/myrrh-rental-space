@@ -1,10 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import {
-  calculateDurationHours,
-  parseDateTimeLocalAsJst,
-} from "@/shared/lib/date-format";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { useRouter } from "next/navigation";
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
@@ -27,15 +24,14 @@ import {
   SelectionBox,
   SubmitButton,
 } from "@/admin/components/ui";
-import { createReservationAction } from "@/admin/actions/reservation";
-import { formatCurrency } from "@/shared/lib/pricing/format";
 import {
-  DiscountCombinationMode,
-  ReservationStatus,
-} from "@/shared/lib/validations/enums/prisma-types";
+  createReservationAction,
+  previewReservationPricingAction,
+} from "@/admin/actions/reservation";
+import { formatCurrency } from "@/shared/lib/pricing/format";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
-import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
-import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
+import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { CustomerSelector } from "./CustomerSelector";
 import {
   RESERVATION_STATUS_OPTIONS,
@@ -48,11 +44,6 @@ import { createReservationFormSchema } from "./reservation-form-schema";
 
 type ReservationFormProps = {
   spaces: SpaceOption[];
-  discountSettings: {
-    durationDiscountEnabled: boolean;
-    durationDiscountRules: DurationDiscountRule[];
-    discountCombinationMode: DiscountCombinationMode;
-  };
 };
 
 const EMPTY_NEW_CUSTOMER: NewCustomerData = {
@@ -61,10 +52,36 @@ const EMPTY_NEW_CUSTOMER: NewCustomerData = {
   email: "",
 };
 
-export function ReservationForm({
-  spaces,
-  discountSettings,
-}: ReservationFormProps) {
+type PricingWindow = { spaceId: string; startIso: string; endIso: string };
+
+/**
+ * spaceId・日付・開始/終了時刻から料金プレビュー用の JST 日時範囲を解決する。
+ * 入力が揃っていない・不正な範囲（終了 <= 開始 等）の場合は null。
+ *
+ * render 内の呼出し結果を `useEffect` の依存配列にそのまま使うため、
+ * ここで null を返すことで「まだ計算できない」を synchronous に表現する
+ * （effect 内で setState(null) を呼ぶ react-hooks/set-state-in-effect 違反を避ける）。
+ */
+function resolvePricingWindow(
+  spaceId: string,
+  date: string,
+  startTime: string,
+  endTime: string,
+): PricingWindow | null {
+  if (!spaceId || !date || !startTime || !endTime) return null;
+  const start = parseDateTimeLocalAsJst(`${date}T${startTime}`);
+  const end = parseDateTimeLocalAsJst(`${date}T${endTime}`);
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end <= start
+  ) {
+    return null;
+  }
+  return { spaceId, startIso: start.toISOString(), endIso: end.toISOString() };
+}
+
+export function ReservationForm({ spaces }: ReservationFormProps) {
   const router = useRouter();
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 
@@ -75,6 +92,7 @@ export function ReservationForm({
     useState<NewCustomerData>(EMPTY_NEW_CUSTOMER);
 
   const [spaceId, setSpaceId] = useState<string>("");
+  const [date, setDate] = useState<string>("");
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [status, setStatus] = useState<ReservationStatus>(
@@ -116,48 +134,38 @@ export function ReservationForm({
     }
   };
 
-  const selectedSpace = spaces.find((s) => s.id === spaceId);
+  const [pricePreview, setPricePreview] =
+    useState<ReservationPricingResult | null>(null);
+  const [, startPricingTransition] = useTransition();
+
+  const pricingWindow = resolvePricingWindow(spaceId, date, startTime, endTime);
 
   // 料金プレビューはサーバー側 createAdminReservationCommand と同じ
-  // calculateReservationPrice を SSoT として共有する。クーポンはサーバー側で
+  // calculateReservationPricing を Server Action 経由で呼び出す SSoT（Task 13）。
+  // rate plan・祝日判定は client から Prisma に触れずには計算できないため、
+  // スペース・日時が揃うたびにサーバーへ問い合わせる。クーポンはサーバー側で
   // 検証・適用されるため preview には含めない（手動 totalPrice 上書きで調整可能）。
-  const priceCalc = (() => {
-    if (!selectedSpace || !startTime || !endTime) return null;
-    const start = parseDateTimeLocalAsJst(`2000-01-01T${startTime}`);
-    const end = parseDateTimeLocalAsJst(`2000-01-01T${endTime}`);
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime()) ||
-      end <= start
-    ) {
-      return null;
-    }
-    const hours = calculateDurationHours(start, end);
-    return calculateReservationPrice({
-      hourlyPrice: selectedSpace.hourlyPrice,
-      hours,
-      durationRules: discountSettings.durationDiscountRules,
-      durationDiscountEnabled: discountSettings.durationDiscountEnabled,
-      spaceDiscount:
-        selectedSpace.discountType !== "none" &&
-        selectedSpace.discountValue != null &&
-        selectedSpace.discountValue > 0
-          ? {
-              discountType: selectedSpace.discountType,
-              discountValue: selectedSpace.discountValue,
-              durationDiscountOverride: selectedSpace.durationDiscountOverride,
-            }
-          : null,
-      coupon: null,
-      combinationMode: discountSettings.discountCombinationMode,
-      showWarning: false,
+  useEffect(() => {
+    if (!pricingWindow) return;
+    const { spaceId: previewSpaceId, startIso, endIso } = pricingWindow;
+    startPricingTransition(async () => {
+      const result = await previewReservationPricingAction(
+        previewSpaceId,
+        startIso,
+        endIso,
+      );
+      setPricePreview(result);
     });
-  })();
+  }, [pricingWindow]);
 
-  const calculatedPrice = priceCalc?.totalPrice ?? null;
-  const basePrice = priceCalc?.basePrice ?? null;
-  const totalDiscount =
-    (priceCalc?.spaceDiscount ?? 0) + (priceCalc?.durationDiscount ?? 0);
+  const calculatedPrice = pricingWindow
+    ? (pricePreview?.totalPrice ?? null)
+    : null;
+  const basePrice = pricingWindow ? (pricePreview?.basePrice ?? null) : null;
+  const totalDiscount = pricingWindow
+    ? (pricePreview?.spaceDiscountAmount ?? 0) +
+      (pricePreview?.durationDiscountAmount ?? 0)
+    : 0;
   const displayPrice = manualPrice ?? calculatedPrice;
 
   return (
@@ -209,8 +217,9 @@ export function ReservationForm({
         name={fields.totalPrice.name}
         value={manualPrice ?? ""}
       />
-      {/* spaceId / startTime / endTime / status / sendEmail hidden inputs */}
+      {/* spaceId / date / startTime / endTime / status / sendEmail hidden inputs */}
       <input type="hidden" name={fields.spaceId.name} value={spaceId} />
+      <input type="hidden" name={fields.date.name} value={date} />
       <input type="hidden" name={fields.startTime.name} value={startTime} />
       <input type="hidden" name={fields.endTime.name} value={endTime} />
       <input type="hidden" name={fields.status.name} value={status} />
@@ -255,7 +264,7 @@ export function ReservationForm({
                 <SelectContent>
                   {spaces.map((space) => (
                     <SelectItem key={space.id} value={space.id}>
-                      {space.name} - {formatCurrency(space.hourlyPrice)}/時間
+                      {space.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -274,9 +283,16 @@ export function ReservationForm({
               <Label htmlFor={fields.date.id}>日付 *</Label>
               <div className="relative">
                 <Input
-                  {...getInputProps(fields.date, { type: "date" })}
+                  id={fields.date.id}
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                   disabled={isPending}
                   className="pr-10"
+                  aria-invalid={fields.date.errors ? true : undefined}
+                  aria-describedby={
+                    fields.date.errors ? fields.date.errorId : undefined
+                  }
                 />
                 <IconCalendar
                   aria-hidden="true"

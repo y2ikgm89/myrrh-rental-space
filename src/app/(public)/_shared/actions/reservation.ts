@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import type { SubmissionResult } from "@conform-to/react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -12,12 +13,15 @@ import {
 } from "@/shared/lib/action-helpers";
 import {
   getClientIpFromHeaders,
+  publicQueryRateLimiter,
   reservationByEmailRateLimiter,
   reservationSubmitRateLimiter,
 } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
+import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
+import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
 import {
   sendReservationAdminNotification,
@@ -250,4 +254,45 @@ export async function submitReservation(
   }
 
   return submissionResult;
+}
+
+const pricingPreviewSchema = z.object({
+  spaceId: z.uuid(),
+  startDateTime: z.iso.datetime(),
+  endDateTime: z.iso.datetime(),
+});
+
+/**
+ * 公開予約フォームの料金プレビュー。rate plan・スペース固有割引・長時間割引・税額の
+ * 確定値は `calculateReservationPricing`（Task 7 SSoT）だけが知っている。client
+ * component は Prisma に触れられないため、日時とスペース ID を渡すだけの Server
+ * Action として公開する。`createPublicReservationCommand` と同じ方針で、クーポンは
+ * 未検証のままプレビューに含めない（適用可否は送信時にサーバー側で確定する）。
+ *
+ * 無効な入力・レート制限超過・対象スペースなしはすべて `null` を返す
+ * （フォーム側は「まだ計算できない」として扱えばよく、専用のエラー UI は持たない）。
+ */
+export async function fetchReservationPricingPreview(
+  spaceId: string,
+  startDateTime: string,
+  endDateTime: string,
+): Promise<ReservationPricingResult | null> {
+  const rateLimit = await checkActionRateLimit(publicQueryRateLimiter);
+  if (!rateLimit.success) return null;
+
+  const parsed = pricingPreviewSchema.safeParse({
+    spaceId,
+    startDateTime,
+    endDateTime,
+  });
+  if (!parsed.success) return null;
+
+  return previewReservationPricing(
+    {
+      spaceId: parsed.data.spaceId,
+      startDateTime: new Date(parsed.data.startDateTime),
+      endDateTime: new Date(parsed.data.endDateTime),
+    },
+    { requirePublished: true },
+  );
 }

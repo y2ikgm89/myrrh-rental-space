@@ -1,8 +1,5 @@
 import { connection } from "next/server";
-import {
-  getReservationDiscountSettings,
-  getSpacesForReservation,
-} from "@/admin/queries/reservation";
+import { getSpacesForReservation } from "@/admin/queries/reservation";
 import { ReservationForm } from "../_components/ReservationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -14,10 +11,7 @@ export const metadata: Metadata = {
 export default async function NewReservationPage() {
   await connection();
 
-  const [spaces, discountSettings] = await Promise.all([
-    getSpacesForReservation(),
-    getReservationDiscountSettings(),
-  ]);
+  const spaces = await getSpacesForReservation();
 
   return (
     <AdminDetailLayout
@@ -25,7 +19,7 @@ export default async function NewReservationPage() {
       title="新規予約"
       subtitle="電話予約や対面予約など、管理者が手動で予約を入力します"
     >
-      <ReservationForm spaces={spaces} discountSettings={discountSettings} />
+      <ReservationForm spaces={spaces} />
     </AdminDetailLayout>
   );
 }
