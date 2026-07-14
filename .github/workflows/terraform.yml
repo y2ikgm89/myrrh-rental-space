@@ -14,10 +14,17 @@ on:
 # 経由で悪用される F4 リスクを縮小するため撤去。plan 出力は
 # deploy-production.yml の terraform-apply job の Actions log で確認する。
 #
-# `security-events: write` は tfsec SARIF を GitHub Code Scanning へ upload
-# するため (Sprint 1 Item E)。cloud credentials では*ない* — GitHub API
-# scope 内で findings tab を書き込むだけ。SARIF upload に失敗しても
-# validate job 全体は fail させない (`continue-on-error: true`)。
+# `security-events: write` は Trivy SARIF を GitHub Code Scanning へ upload
+# するため (Sprint 1 Item E、2026-07-14 tfsec から Trivy へ移行)。cloud
+# credentials では*ない* — GitHub API scope 内で findings tab を書き込むだけ。
+# SARIF upload に失敗しても validate job 全体は fail させない
+# (`continue-on-error: true`)。
+#
+# ## tfsec → Trivy 移行 (2026-07-14)
+# tfsec は Terraform 1.7+ の `import {}` blocks を parse できず
+# `Unsupported block type` で scan 失敗するため、aquasecurity が engineering
+# effort を移した後継 Trivy (`scan-type: config`) に置換。Trivy は import blocks
+# 対応、SARIF 出力互換、DB update 自動、rule 数も tfsec より多い。
 permissions:
   contents: read
   security-events: write
@@ -76,32 +83,37 @@ jobs:
       # (iap_enabled 削除 / ingress 誤設定 / IAM overprivilege) that only
       # PR review currently sees. Both tools are credentials-free — they
       # parse `.tf` files locally, no cloud API calls. F4 hardening 無影響。
-      - name: tfsec (High/Critical → fail)
-        id: tfsec
-        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.3
+      - name: Trivy IaC scan (High/Critical → fail)
+        id: trivy
+        # v0.36.0 — 2026-07-14 tfsec から移行 (tfsec が Terraform 1.7+
+        # `import {}` blocks を parse 不可 = deprecated 後継)。
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          working_directory: ${{ env.TF_WORKING_DIR }}
-          # `soft_fail: false` = exit non-zero on any surviving finding.
-          # `--minimum-severity HIGH` filters out MEDIUM/LOW so the gate
-          # only trips on High/Critical (per Sprint 1 scope). Loosen the
-          # min-severity later if false-positives dominate.
-          # `--out` path is relative to CWD (repo root when the action
-          # runs), NOT to working_directory — hence the top-level filename.
-          soft_fail: false
+          # `scan-type: config` = IaC scan (Terraform / Kubernetes / Dockerfile
+          # / etc)。`scan-ref` は scan 対象 path (repo root からの相対)。
+          scan-type: config
+          scan-ref: ${{ env.TF_WORKING_DIR }}
+          # HIGH と CRITICAL 発見時 exit-code=1 で job fail (tfsec 相当挙動)。
+          severity: HIGH,CRITICAL
+          exit-code: "1"
           format: sarif
-          additional_args: --minimum-severity HIGH --out tfsec.sarif
+          output: trivy.sarif
+          hide-progress: "true"
+          # `limit-severities-for-sarif` は severity 一致に関わらず全 finding
+          # が SARIF に入るのを防ぐ (Code Scanning tab のノイズ削減)。
+          limit-severities-for-sarif: "true"
 
-      - name: Upload tfsec SARIF to Code Scanning
-        # Runs even when tfsec fails so findings surface in the PR
+      - name: Upload Trivy SARIF to Code Scanning
+        # Runs even when Trivy fails so findings surface in the PR
         # "Files changed → Code scanning alerts" tab (otherwise the
         # developer only sees a red check). `continue-on-error` keeps
         # transient upload flakes from double-failing the job.
-        if: ${{ always() && steps.tfsec.conclusion != 'skipped' }}
+        if: ${{ always() && steps.trivy.conclusion != 'skipped' }}
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@99df26d4f13ea111d4ec1a7dddef6063f76b97e9 # v4.37.0
         with:
-          sarif_file: tfsec.sarif
-          category: tfsec
+          sarif_file: trivy.sarif
+          category: trivy
 
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4.1.1

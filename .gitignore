@@ -103,6 +103,22 @@ __pycache__/
 .claude/scheduled_tasks.lock
 tmpclaude-*-cwd
 
+# ─── Terraform local state / cache (Terraform 公式 gitignore に準拠) ─────────
+# 参考: https://developer.hashicorp.com/terraform/language/files/dependency-lock
+# `.terraform.lock.hcl` は commit (provider hash pinning、reproducible init)。
+# `terraform/.terraform/` (init が生成する provider binary cache) と state file
+# (remote GCS backend が SSoT、local に生成しない設計だが念のため fail-closed)
+# は絶対 commit しない。
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+!terraform/*.tfvars.example
+terraform/crash.log
+terraform/crash.*.log
+terraform/tfsec.sarif
+terraform/trivy.sarif
+
 # ─── Vendor deploy artifacts ─────────────────────────────────────────────────
 .vercel/
 
