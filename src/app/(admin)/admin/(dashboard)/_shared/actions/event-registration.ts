@@ -9,6 +9,7 @@ import {
   createWalkInRegistrationCommand,
   setEventRegistrationCheckInCommand,
 } from "@/shared/domain/events/registration-commands";
+import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
@@ -41,6 +42,8 @@ type CancelRegistrationData = {
   eventTitle: string;
   quantity: number;
   icsSequence: number;
+  /** FIFO で繰り上げ当選した申込（無ければ null）。afterSuccess の繰り上げ当選メール送信要否判定に使う。 */
+  promoted: WaitlistPromotionOutcome;
 };
 
 export async function adminCancelRegistration(
@@ -66,6 +69,7 @@ export async function adminCancelRegistration(
         eventTitle: registration.event.title,
         quantity: registration.quantity,
         icsSequence: registration.icsSequence,
+        promoted: registration.promoted,
       };
     },
     afterSuccess: (data) => {
@@ -83,6 +87,7 @@ export async function adminCancelRegistration(
             channel: "admin",
             actorUserId: null,
             request: { ip, userAgent },
+            promoted: data.promoted,
           });
         })(),
         {

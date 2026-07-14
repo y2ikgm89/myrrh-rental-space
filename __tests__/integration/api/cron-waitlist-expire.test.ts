@@ -70,13 +70,49 @@ mock.module("next/navigation", () => ({
   },
 }));
 
+// errors/server.ts は広範囲のドメイン層から参照される barrel module（safeFetch/
+// criticalFetch 含む）。部分的な mock factory だと「本テストの呼び出し経路が
+// 使わない export」を静的 import している到達ファイル（Task 6 の
+// sendEventWaitlistOffered/Expired 配線が実際に読み込む send.ts 等）で
+// `Export named 'X' not found` の SyntaxError になる（実測済み）。real module を
+// spread して `logError` だけ差し替える。
+const realErrorsServer = await import("@/shared/lib/errors/server");
 const mockLogError = mock<() => void>(() => undefined);
 mock.module("@/shared/lib/errors/server", () => ({
+  ...realErrorsServer,
   logError: (...args: Parameters<typeof mockLogError>) => mockLogError(...args),
-  normalizeError: (error: unknown) =>
-    error instanceof Error ? error : new Error(String(error)),
-  ErrorCategory: { DATABASE: "DATABASE", EXTERNAL_API: "EXTERNAL_API" },
-  ErrorSeverity: { HIGH: "HIGH", LOW: "LOW" },
+}));
+
+// final review I1: cron の EXPIRED 遷移・繰り上げ当選それぞれで送られる通知
+// メールを spy 化する（実 Resend 送信は避けつつ、呼び出し自体を検証する）。
+const mockSendEventWaitlistExpired = mock<
+  (args: { registrationId: string; to: string }) => Promise<{ ok: boolean }>
+>(() => Promise.resolve({ ok: true }));
+const mockSendEventWaitlistOffered = mock<
+  (args: {
+    registrationId: string;
+    to: string;
+    expiresAt: Date;
+    paymentContext: unknown;
+  }) => Promise<{ ok: boolean }>
+>(() => Promise.resolve({ ok: true }));
+mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+  sendEventWaitlistExpired: (
+    ...args: Parameters<typeof mockSendEventWaitlistExpired>
+  ) => mockSendEventWaitlistExpired(...args),
+  sendEventWaitlistOffered: (
+    ...args: Parameters<typeof mockSendEventWaitlistOffered>
+  ) => mockSendEventWaitlistOffered(...args),
+}));
+
+// fireAndForget を「発火した Promise を配列に集める」だけの同期的な mock に
+// 差し替える。ループ内のメール送信 fireAndForget はレスポンス完了を待たないため、
+// テスト側で `await Promise.all(firedPromises)` して決定的に完了を待ち合わせる。
+let firedPromises: Promise<unknown>[] = [];
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (promise: Promise<unknown>) => {
+    firedPromises.push(promise.catch(() => undefined));
+  },
 }));
 
 // 静的 import (ファイル冒頭) は mock 適用前に評価されるため、real NextResponse を
@@ -220,6 +256,9 @@ describeMaybe("GET /api/cron/waitlist-expire — real Postgres", () => {
 
       const { GET } = await import("@/app/api/cron/waitlist-expire/route");
       const response = await GET(makeCronRequest());
+      // ループ内のメール送信 fireAndForget はレスポンスを待たない。決定的に
+      // 完了を待ち合わせる（final review I1 の検証対象）。
+      await Promise.all(firedPromises);
 
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -244,6 +283,23 @@ describeMaybe("GET /api/cron/waitlist-expire — real Postgres", () => {
           updatedWaiting.offeredAt.getTime();
         expect(diffMs).toBe(24 * 60 * 60 * 1000);
       }
+
+      // final review I1: EXPIRED 遷移・繰り上げ当選それぞれで通知メールが
+      // 実際に送られる（旧実装は TODO(task-6) スタブのままで一切送信していな
+      // かった）。
+      expect(mockSendEventWaitlistExpired).toHaveBeenCalledTimes(1);
+      expect(mockSendEventWaitlistExpired).toHaveBeenCalledWith({
+        registrationId: offered.id,
+        to: expect.stringContaining("offered-"),
+      });
+      expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(1);
+      expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith(
+        expect.objectContaining({
+          registrationId: waiting.id,
+          to: expect.stringContaining("waiting-"),
+          expiresAt: updatedWaiting.expiresAt,
+        }),
+      );
 
       expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith([
         "events",
@@ -314,14 +370,21 @@ describeMaybe("GET /api/cron/waitlist-expire — real Postgres", () => {
       // `.not.toHaveBeenCalled()` を「この GET 呼出内で」の意味で成立させるため
       // 明示的に clear する。
       mockInvalidateSiteWideCacheFromRouteHandler.mockClear();
+      mockSendEventWaitlistExpired.mockClear();
+      mockSendEventWaitlistOffered.mockClear();
+      firedPromises.length = 0;
 
       const { GET } = await import("@/app/api/cron/waitlist-expire/route");
       const response = await GET(makeCronRequest());
+      await Promise.all(firedPromises);
 
       expect(response.status).toBe(200);
       const body = await response.json();
       // PENDING の行は候補から除外されるため expired/offered ともに 0
       expect(body).toEqual({ expired: 0, offered: 0 });
+      // 候補自体が対象から除外されるため、メール送信も一切発生しない。
+      expect(mockSendEventWaitlistExpired).not.toHaveBeenCalled();
+      expect(mockSendEventWaitlistOffered).not.toHaveBeenCalled();
 
       const updatedPendingOffered =
         await prisma.eventRegistration.findUniqueOrThrow({

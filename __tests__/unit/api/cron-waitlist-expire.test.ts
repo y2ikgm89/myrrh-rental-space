@@ -35,6 +35,45 @@ const mockExpireAndPromoteWaitlistForEventCommand = mock<
   }) => Promise<ExpirePromoteResult>
 >(() => Promise.resolve({ expired: [], offered: [] }));
 
+type PaymentContext =
+  | { kind: "free"; confirmUrl: string }
+  | { kind: "paid"; checkoutUrl: string; price: number };
+
+const mockGetEventWaitlistOfferPaymentContext = mock<
+  (registrationId: string) => Promise<PaymentContext | null>
+>(() =>
+  Promise.resolve({
+    kind: "free",
+    confirmUrl: "https://example.com/events/waitlist/confirm?token=t",
+  }),
+);
+
+const mockSendEventWaitlistExpired = mock<
+  (args: { registrationId: string; to: string }) => Promise<{ ok: boolean }>
+>(() => Promise.resolve({ ok: true }));
+
+const mockSendEventWaitlistOffered = mock<
+  (args: {
+    registrationId: string;
+    to: string;
+    expiresAt: Date;
+    paymentContext: PaymentContext;
+  }) => Promise<{ ok: boolean }>
+>(() => Promise.resolve({ ok: true }));
+
+// fireAndForget を「発火した Promise を配列に集める」だけの同期的な mock に
+// 差し替える。実装（after() 経由の完了追跡）はリクエストスコープ外で
+// 同期的に throw → 内部 catch でデタッチ実行にフォールバックするため本来は
+// 実体のままでも壊れないが、テスト側で「メール送信 mock が呼ばれ終わるまで
+// 確実に待つ」ための決定的な待ち合わせポイントが無いと race になる
+// （event-waitlist-register.test.ts と同じ理由・同じパターン）。
+let firedPromises: Promise<unknown>[] = [];
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (promise: Promise<unknown>) => {
+    firedPromises.push(promise.catch(() => undefined));
+  },
+}));
+
 const mockInvalidateSiteWideCacheFromRouteHandler = mock<
   (tags: readonly string[], options?: unknown) => void
 >(() => undefined);
@@ -72,12 +111,24 @@ mock.module("@/shared/domain/events/waitlist-queries", () => ({
   findExpiredWaitlistOfferCandidates: (
     ...args: Parameters<typeof mockFindExpiredWaitlistOfferCandidates>
   ) => mockFindExpiredWaitlistOfferCandidates(...args),
+  getEventWaitlistOfferPaymentContext: (
+    ...args: Parameters<typeof mockGetEventWaitlistOfferPaymentContext>
+  ) => mockGetEventWaitlistOfferPaymentContext(...args),
 }));
 
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
   expireAndPromoteWaitlistForEventCommand: (
     ...args: Parameters<typeof mockExpireAndPromoteWaitlistForEventCommand>
   ) => mockExpireAndPromoteWaitlistForEventCommand(...args),
+}));
+
+mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
+  sendEventWaitlistExpired: (
+    ...args: Parameters<typeof mockSendEventWaitlistExpired>
+  ) => mockSendEventWaitlistExpired(...args),
+  sendEventWaitlistOffered: (
+    ...args: Parameters<typeof mockSendEventWaitlistOffered>
+  ) => mockSendEventWaitlistOffered(...args),
 }));
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
@@ -162,6 +213,10 @@ describe("GET /api/cron/waitlist-expire", () => {
     mockIsFeatureEnabled.mockReset();
     mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
+    mockGetEventWaitlistOfferPaymentContext.mockReset();
+    mockSendEventWaitlistExpired.mockReset();
+    mockSendEventWaitlistOffered.mockReset();
+    firedPromises.length = 0;
 
     // デフォルト: 認証通過、feature ON、候補なし
     mockConnection.mockResolvedValue(undefined);
@@ -176,6 +231,12 @@ describe("GET /api/cron/waitlist-expire", () => {
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
     });
+    mockGetEventWaitlistOfferPaymentContext.mockResolvedValue({
+      kind: "free",
+      confirmUrl: "https://example.com/events/waitlist/confirm?token=t",
+    });
+    mockSendEventWaitlistExpired.mockResolvedValue({ ok: true });
+    mockSendEventWaitlistOffered.mockResolvedValue({ ok: true });
   });
 
   test("Cloud Scheduler OIDC 認証失敗 → authorizeCronRequest の返却値をそのまま返す (401)", async () => {
@@ -219,8 +280,9 @@ describe("GET /api/cron/waitlist-expire", () => {
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
-  test("候補あり（1 event）+ 成功 → expired/offered をカウントし cache を無効化する", async () => {
+  test("候補あり（1 event）+ 成功 → expired/offered をカウントし cache を無効化し、期限切れ/繰り上げ当選メールを送信する（final review I1）", async () => {
     mockFindExpiredWaitlistOfferCandidates.mockResolvedValue([makeCandidate()]);
+    const offeredExpiresAt = new Date("2026-07-15T00:00:00Z");
     mockExpireAndPromoteWaitlistForEventCommand.mockResolvedValue({
       expired: [
         { id: "reg-1", name: "山田 太郎", email: "customer@example.com" },
@@ -230,12 +292,14 @@ describe("GET /api/cron/waitlist-expire", () => {
           id: "reg-2",
           email: "next@example.com",
           offeredAt: new Date("2026-07-14T00:00:00Z"),
-          expiresAt: new Date("2026-07-15T00:00:00Z"),
+          expiresAt: offeredExpiresAt,
         },
       ],
     });
 
     const response = await GET(makeSchedulerRequest());
+    // ループ内の fireAndForget はレスポンスを待たない。決定的に完了を待ち合わせる。
+    await Promise.all(firedPromises);
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -250,6 +314,88 @@ describe("GET /api/cron/waitlist-expire", () => {
       CACHE_TAGS.EVENTS,
       CACHE_TAGS.EVENT_WAITLIST,
     ]);
+
+    // I1: cron の EXPIRED 遷移・繰り上げ当選それぞれで通知メールが送られる
+    // （旧実装は TODO(task-6) スタブのままで一切送信していなかった）。
+    expect(mockSendEventWaitlistExpired).toHaveBeenCalledTimes(1);
+    expect(mockSendEventWaitlistExpired).toHaveBeenCalledWith({
+      registrationId: "reg-1",
+      to: "customer@example.com",
+    });
+
+    expect(mockGetEventWaitlistOfferPaymentContext).toHaveBeenCalledWith(
+      "reg-2",
+    );
+    expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(1);
+    expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith({
+      registrationId: "reg-2",
+      to: "next@example.com",
+      expiresAt: offeredExpiresAt,
+      paymentContext: {
+        kind: "free",
+        confirmUrl: "https://example.com/events/waitlist/confirm?token=t",
+      },
+    });
+  });
+
+  test("expired/offered の email が null の候補はメール送信を skip する", async () => {
+    mockFindExpiredWaitlistOfferCandidates.mockResolvedValue([makeCandidate()]);
+    mockExpireAndPromoteWaitlistForEventCommand.mockResolvedValue({
+      expired: [{ id: "reg-1", name: "山田 太郎", email: null }],
+      offered: [
+        {
+          id: "reg-2",
+          email: null,
+          offeredAt: new Date("2026-07-14T00:00:00Z"),
+          expiresAt: new Date("2026-07-15T00:00:00Z"),
+        },
+      ],
+    });
+
+    const response = await GET(makeSchedulerRequest());
+    await Promise.all(firedPromises);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    // カウント自体は email の有無と無関係に反映される
+    expect(body).toEqual({ expired: 1, offered: 1 });
+    expect(mockSendEventWaitlistExpired).not.toHaveBeenCalled();
+    expect(mockGetEventWaitlistOfferPaymentContext).not.toHaveBeenCalled();
+    expect(mockSendEventWaitlistOffered).not.toHaveBeenCalled();
+  });
+
+  test("繰り上げ当選後に getEventWaitlistOfferPaymentContext が null（対象が直後に消えた極端な race）→ LOW で logError し送信は諦める", async () => {
+    mockFindExpiredWaitlistOfferCandidates.mockResolvedValue([makeCandidate()]);
+    mockExpireAndPromoteWaitlistForEventCommand.mockResolvedValue({
+      expired: [],
+      offered: [
+        {
+          id: "reg-2",
+          email: "next@example.com",
+          offeredAt: new Date("2026-07-14T00:00:00Z"),
+          expiresAt: new Date("2026-07-15T00:00:00Z"),
+        },
+      ],
+    });
+    mockGetEventWaitlistOfferPaymentContext.mockResolvedValue(null);
+
+    const response = await GET(makeSchedulerRequest());
+    await Promise.all(firedPromises);
+
+    expect(response.status).toBe(200);
+    expect(mockSendEventWaitlistOffered).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        category: "DATABASE",
+        severity: "LOW",
+        context: expect.objectContaining({
+          operation: "waitlistExpireCron",
+          registrationId: "reg-2",
+          eventId: "event-1",
+        }),
+      }),
+    );
   });
 
   test("複数 event: 1 event が例外 → 残りの event は継続処理し、例外は logError で記録する (500 にしない)", async () => {

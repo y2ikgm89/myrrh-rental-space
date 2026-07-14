@@ -404,6 +404,7 @@ export async function cancelEventRegistration(
       channel: "customer-mypage",
       actorUserId: session.user.id,
       request: { ip, userAgent },
+      promoted: registration.promoted,
     });
 
     return null;

@@ -54,8 +54,12 @@ export interface CancellableEventRegistration {
   ticketId: string;
 }
 
-/** offerNextWaitlistEntryCommand の戻り値から `promoted` の型だけを再利用する（定義を重複させない）。 */
-type WaitlistPromotionOutcome = Awaited<
+/**
+ * offerNextWaitlistEntryCommand の戻り値から `promoted` の型だけを再利用する（定義を重複させない）。
+ * `registration-cancellation-side-effects.ts` が「繰り上げ当選メール送信要否」の
+ * 判定に同じ型をそのまま使うため export する（形状の二重定義を避ける）。
+ */
+export type WaitlistPromotionOutcome = Awaited<
   ReturnType<typeof offerNextWaitlistEntryCommand>
 >["promoted"];
 

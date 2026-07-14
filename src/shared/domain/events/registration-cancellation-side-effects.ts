@@ -12,6 +12,10 @@
  *   2. 管理者向け管理者通知メール
  *   3. 管理者向け in-app 通知（channel 含む）
  *   4. AuditLog 書き込み（actor / channel / IP / UA を記録）
+ *   5. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
+ *      `applyEventRegistrationCancellation` が同一 tx 内で
+ *      `offerNextWaitlistEntryCommand` を呼び、CONFIRMED 由来のキャンセルで
+ *      空いた枠に次の WAITLISTED を昇格させた場合に送る）
  *
  * 呼び出し条件:
  *   `applyEventRegistrationCancellation` が `success: true` を返した後にだけ呼ぶ。
@@ -27,11 +31,14 @@ import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
+import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/waitlist-queries";
+import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
   sendEventAdminNotification,
   sendEventRegistrationCancelled,
 } from "@/shared/lib/email/event-emails";
+import { sendEventWaitlistOffered } from "@/shared/lib/email/event-waitlist-emails";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -59,6 +66,14 @@ export interface EventCancellationSideEffectInput {
     /** ステートレストークン経路でのみ意味を持つ。SHA-256 の先頭 16 文字。 */
     tokenFingerprint?: string | null;
   };
+  /**
+   * `applyEventRegistrationCancellation` の戻り値 `promoted` をそのまま渡す。
+   * CONFIRMED 由来のキャンセルで空いた枠に FIFO 先頭の WAITLISTED が
+   * 昇格した場合のみ非 null。呼び出し側（3 つの cancel 経路すべて）は
+   * ドメインコマンドの戻り値を素通しするだけでよい（このヘルパー内部で
+   * 「昇格していたら繰り上げ当選メールを送る」判断まで完結させる SSoT）。
+   */
+  promoted: WaitlistPromotionOutcome;
 }
 
 const CHANNEL_TO_CANCELLED_BY: Record<EventCancelChannel, CancelledByType> = {
@@ -240,4 +255,67 @@ export async function applyEventRegistrationCancellationSideEffects(
       },
     },
   );
+
+  // 5. FIFO 繰り上げ当選メール（cancel が CONFIRMED 由来で、空いた枠に次の
+  //    WAITLISTED を昇格させた場合のみ）。
+  //
+  // cron の期限切れ自動昇格・管理者の手動昇格（adminPromoteWaitlistEntryAction）は
+  // 昇格したら必ずオファーメールを送る契約になっている。キャンセル駆動の自動昇格
+  // （`applyEventRegistrationCancellation` が同一 tx 内で呼ぶ
+  // `offerNextWaitlistEntryCommand`）だけこの送信が欠けていると、繰り上げ当選者は
+  // 自分が当選したことを知る手段が無いまま 24h の確定期限を迎えて無為に
+  // 期限切れになる（Waitlist の主要ハッピーパスが機能しなくなる致命的な抜け穴）。
+  // email が null（waitlist 登録は公開フォーム側で必須のため実運用では発生しない
+  // 想定）の場合は静かに skip する（walk-in 登録が waitlist に紛れ込む異常系のみ
+  // 該当し得る）。
+  if (input.promoted !== null && input.promoted.email !== null) {
+    const promotedRegistrationId = input.promoted.id;
+    const promotedEmail = input.promoted.email;
+    const promotedExpiresAt = input.promoted.expiresAt;
+
+    fireAndForget(
+      (async () => {
+        const paymentContext = await getEventWaitlistOfferPaymentContext(
+          promotedRegistrationId,
+        );
+        if (!paymentContext) {
+          // 昇格させた行が直後の別操作（管理者の手動 expire 等）で消えた極端な
+          // race。状態遷移自体（昇格）は既に成功しているためロールバックせず、
+          // メール送信のみ諦めて非致命的にログする（冒頭の not-found ケースと
+          // 同じ扱い）。
+          logError(
+            new Error(
+              `Waitlist offer payment context not found after cancel-driven promote: registration ${promotedRegistrationId}`,
+            ),
+            {
+              category: ErrorCategory.DATABASE,
+              severity: ErrorSeverity.LOW,
+              context: {
+                operation: "applyEventRegistrationCancellationSideEffects",
+                registrationId: promotedRegistrationId,
+              },
+            },
+          );
+          return;
+        }
+
+        await sendEventWaitlistOffered({
+          registrationId: promotedRegistrationId,
+          to: promotedEmail,
+          expiresAt: promotedExpiresAt,
+          paymentContext,
+        });
+      })(),
+      {
+        operation: "sendEventWaitlistOfferedOnCancelPromote",
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          registrationId: input.registrationId,
+          promotedRegistrationId,
+          channel: input.channel,
+        },
+      },
+    );
+  }
 }

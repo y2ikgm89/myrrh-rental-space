@@ -1,7 +1,15 @@
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
-import { findExpiredWaitlistOfferCandidates } from "@/shared/domain/events/waitlist-queries";
+import {
+  findExpiredWaitlistOfferCandidates,
+  getEventWaitlistOfferPaymentContext,
+} from "@/shared/domain/events/waitlist-queries";
 import { expireAndPromoteWaitlistForEventCommand } from "@/shared/domain/events/waitlist-commands";
+import {
+  sendEventWaitlistExpired,
+  sendEventWaitlistOffered,
+} from "@/shared/lib/email/event-waitlist-emails";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
@@ -12,14 +20,6 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-
-// TODO(task-6): src/shared/lib/email/event-waitlist-emails.ts
-// (sendEventWaitlistExpired / sendEventWaitlistOffered /
-// getEventWaitlistOfferPaymentContext) が追加されたら、下のループ内で event 単位の
-// result.expired[] / result.offered[] を fireAndForget 送信する。Task 5 時点では
-// そのモジュールがまだ存在しないため、advisory lock によるバッチ処理自体は完成
-// させつつメール送信のみ意図的に保留する（cron のロック/状態遷移ロジックを
-// 未実装の Task 6 import でブロックしないため）。
 
 /**
  * Waitlist offer（`WAITLISTED_OFFERED`）の 24h TTL 期限切れ cron。hourly 実行。
@@ -81,9 +81,68 @@ export async function GET(request: Request) {
         expired += result.expired.length;
         offered += result.offered.length;
 
-        // TODO(task-6): result.expired → sendEventWaitlistExpired、
-        // result.offered → sendEventWaitlistOffered (+
-        // getEventWaitlistOfferPaymentContext) を fireAndForget で送信する。
+        // 期限切れ通知（cron の EXPIRED 遷移は admin 手動 expire
+        // (adminExpireWaitlistOfferAction) と同じ「遷移したら必ず通知する」契約）。
+        // email が null（waitlist 登録は公開フォーム側で必須のため実運用では
+        // 発生しない想定）の候補は静かに skip する。
+        for (const expiredEntry of result.expired) {
+          if (!expiredEntry.email) continue;
+          const email = expiredEntry.email;
+          fireAndForget(
+            sendEventWaitlistExpired({
+              registrationId: expiredEntry.id,
+              to: email,
+            }),
+            {
+              operation: "sendEventWaitlistExpiredFromCron",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.MEDIUM,
+              context: { registrationId: expiredEntry.id, eventId },
+            },
+          );
+        }
+
+        // 繰り上げ当選通知（cancel 駆動の自動昇格・admin 手動昇格と同じ契約）。
+        for (const offeredEntry of result.offered) {
+          if (!offeredEntry.email) continue;
+          const email = offeredEntry.email;
+          fireAndForget(
+            (async () => {
+              const paymentContext = await getEventWaitlistOfferPaymentContext(
+                offeredEntry.id,
+              );
+              if (!paymentContext) {
+                logError(
+                  new Error(
+                    `Waitlist offer payment context not found after cron promote: registration ${offeredEntry.id}`,
+                  ),
+                  {
+                    category: ErrorCategory.DATABASE,
+                    severity: ErrorSeverity.LOW,
+                    context: {
+                      operation: "waitlistExpireCron",
+                      registrationId: offeredEntry.id,
+                      eventId,
+                    },
+                  },
+                );
+                return;
+              }
+              await sendEventWaitlistOffered({
+                registrationId: offeredEntry.id,
+                to: email,
+                expiresAt: offeredEntry.expiresAt,
+                paymentContext,
+              });
+            })(),
+            {
+              operation: "sendEventWaitlistOfferedFromCron",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.MEDIUM,
+              context: { registrationId: offeredEntry.id, eventId },
+            },
+          );
+        }
       } catch (error) {
         // 1 event の失敗（例: ロック競合による $transaction timeout）で
         // 残り event の処理を止めない。outer catch へ伝播させず次の event へ
