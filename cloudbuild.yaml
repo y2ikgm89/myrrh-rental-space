@@ -543,70 +543,36 @@ steps:
         fi
         exit 1
 
-  # Step 5c: Grant runtime SA read access to every Secret Manager secret used by
-  # Cloud Run `--set-secrets=` bindings.
+  # NOTE: Secret Manager IAM (runtime SA / build SA への secretAccessor 付与)
+  # は `scripts/bootstrap-terraform.sh` が SSoT (bootstrap-owns-all-project-IAM
+  # 契約、2026-07-14 F1 refactor)。cloudbuild.yaml は Cloud Run `--set-secrets=`
+  # binding を宣言するだけで、IAM は既に project-level で付与済 (bootstrap
+  # section 8 参照)。project 内の全 secret が runtime/build SA から自動で
+  # accessible なので、新 secret 追加時の IAM step は不要。
   #
-  # Cloud Run resolves `--set-secrets=` by having the runtime service account
-  # (${_SERVICE_ACCOUNT}) read the referenced secret at revision-creation time.
-  # 新規 secret を追加したときに手動で `roles/secretmanager.secretAccessor` を
-  # 付与する運用は、runbook が読まれないと deploy が silent に落ちる温床だった
-  # (実例: SECONDARY_ENCRYPTION_KEYS 追加時に IAM 反映漏れで 3 回連続 deploy 失敗)。
+  # 設計履歴:
+  #   PR #1051-#1053: Cloud Build に `grant-secret-access` step を置き自動反映
+  #     → Cloud Build SA が `secretmanager.secrets.setIamPolicy` を持つと、
+  #     compromise 時に self-grant で secretAccessor を付与し全 secret を読める
+  #     (Codex Cloud Review P1)。
+  #   PR #1054-#1056: setup script (bash) が project owner 手動実行の SSoT。
+  #   Terraform Phase 1: Terraform runner SA に Deny Policy
+  #     (secretmanager.googleapis.com/versions.access を deny) と IAM Conditions
+  #     (grantable roles を secretAccessor に限定) の二重防御を貼り、compromise
+  #     時にも secret 漏洩ゼロを設計層で保証。
+  #   2026-07-14 F1 refactor: runner から projectIamAdmin と serviceAccountAdmin を
+  #     完全に外し (structural closure)、Terraform 側の project-level IAM 宣言も
+  #     全廃 (secret_iam.tf / iam_project.tf 削除)。全て bootstrap に集約し、
+  #     runner は「自 IAM も他 SA IAM も触れない」構造に。
   #
-  # deploy 前に全 secret に対して IAM binding を idempotent に適用する。既に
-  # 付与済みなら no-op、新規 secret でも初回 deploy で自動反映される。
-  #
-  # ## SSoT 契約
-  #
-  # 下記の SECRETS list は Step 6a/6b の `--set-secrets=` で参照する secret 名の
-  # 一覧と一致させる。両者が drift すると `architecture-boundaries.test.ts` の
-  # gate が CI で fail する (production secret を追加した際は cloudbuild.yaml の
-  # `--set-secrets=` と本 SECRETS list の両方を更新すること)。
-  #
-  # ## 事前要件
-  #
-  # Cloud Build service account (${_BUILD_SERVICE_ACCOUNT}) に project レベルで
-  # `roles/secretmanager.secretIamAdmin` が必要 (IAM policy 変更のみ許可、値の
-  # 読み書きは付与しない最小権限)。初回 setup:
-  #   bash scripts/setup-cloud-build-permissions.sh
-  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
-    id: grant-secret-access
-    waitFor: [migrate-execute]
-    entrypoint: bash
-    args:
-      - -ceu
-      - |
-        SECRETS='
-          DATABASE_URL
-          BETTER_AUTH_SECRET
-          ENCRYPTION_KEY
-          SECONDARY_ENCRYPTION_KEYS
-          AUDIT_LOG_HMAC_KEY
-          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
-          R2_ACCOUNT_ID
-          R2_ACCESS_KEY_ID
-          R2_SECRET_ACCESS_KEY
-          R2_BUCKET_NAME
-          R2_PUBLIC_URL
-          CLOUDFLARE_ZONE_ID
-          CLOUDFLARE_API_TOKEN
-          CLOUDFLARE_ORIGIN_HEADER_SECRET
-          GOOGLE_CLIENT_ID
-          GOOGLE_CLIENT_SECRET
-        '
-        for secret in $$SECRETS; do
-          echo "Granting roles/secretmanager.secretAccessor on $$secret to ${_SERVICE_ACCOUNT}"
-          gcloud secrets add-iam-policy-binding "$$secret" \
-            --project="${PROJECT_ID}" \
-            --member="serviceAccount:${_SERVICE_ACCOUNT}" \
-            --role="roles/secretmanager.secretAccessor" \
-            --condition=None \
-            --quiet
-        done
+  # 新規 secret を追加する場合: cloudbuild.yaml の `--set-secrets=` と
+  # terraform/secrets.tf の `runtime_secrets` local を両方更新する
+  # (IAM は既に付与済のため触らない)。
 
   # Step 6a: Deploy public Cloud Run service
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-public
-    waitFor: [grant-secret-access]
+    waitFor: [migrate-execute]
     entrypoint: gcloud
     args:
       - run
@@ -646,7 +612,7 @@ steps:
   # disabled, so the canonical admin entrypoint is only https://admin.myrrh-jp.com.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-admin
-    waitFor: [grant-secret-access]
+    waitFor: [migrate-execute]
     entrypoint: gcloud
     args:
       - run

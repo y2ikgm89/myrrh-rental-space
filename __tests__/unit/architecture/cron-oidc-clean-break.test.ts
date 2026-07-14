@@ -26,10 +26,14 @@ describe("cron OIDC clean-break boundary", () => {
   ] as const;
 
   test("cron auth no longer accepts CRON_SECRET shared bearer fallback", () => {
+    // Phase 2 で `scripts/setup-cloud-scheduler.sh` は撤廃され、Cloud Scheduler
+    // job の SSoT は `terraform/cloud_scheduler.tf` に移行済 (google_cloud_scheduler_job)。
+    // legacy CRON_SECRET shared bearer が復活していないことを、コード側 2 経路
+    // + Terraform config で確認する。
     for (const path of [
       "src/shared/lib/cron-auth.ts",
       "src/proxy.ts",
-      "scripts/setup-cloud-scheduler.sh",
+      "terraform/cloud_scheduler.tf",
     ]) {
       const source = read(path);
       expect(source).not.toContain("CRON_SECRET");
@@ -48,14 +52,19 @@ describe("cron OIDC clean-break boundary", () => {
     expect(cloudBuild).not.toContain("--update-secrets=");
   });
 
-  test("Cloud Scheduler setup clears legacy custom headers when applying OIDC", () => {
-    const source = read("scripts/setup-cloud-scheduler.sh");
+  test("Cloud Scheduler jobs use OIDC only (no shared-secret / custom auth headers)", () => {
+    // Phase 2: gcloud script が `--clear-headers` で legacy X-Cron-Secret を落と
+    // していた挙動を、Terraform では `google_cloud_scheduler_job` resource が
+    // 宣言的に代替する。resource 定義に `headers` block が無ければ HTTP header
+    // は OIDC Bearer だけになる (Terraform は resource 上に無い attribute は
+    // create/update で空扱いする)。
+    const source = read("terraform/cloud_scheduler.tf");
 
-    expect(source).toContain("--clear-headers");
-    expect(source).toContain(
-      '--oidc-service-account-email="${CRON_SERVICE_ACCOUNT_EMAIL}"',
-    );
-    expect(source).toContain('--oidc-token-audience="${CRON_OIDC_AUDIENCE}"');
+    expect(source).toContain("oidc_token {");
+    expect(source).toContain("service_account_email = var.scheduler_sa_email");
+    expect(source).toContain("audience              = var.public_domain");
+    expect(source).not.toContain("X-Cron-Secret");
+    expect(source).not.toContain("headers = {");
   });
 
   test("cron route unit tests model OIDC bearer calls, not shared-secret bearer calls", () => {

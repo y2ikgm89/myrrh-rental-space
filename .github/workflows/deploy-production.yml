@@ -36,8 +36,91 @@ env:
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: 0x4AAAAAADi6Bqavj97fu7JG
 
 jobs:
+  # Terraform apply を deploy より先に実行する (Codex P1 F6)。
+  #
+  # 過去は terraform.yml (push-to-main で terraform/** 変更に反応する path
+  # フィルタ付き) と本 workflow が push-to-main で並列トリガーされ、両者の
+  # concurrency group が別 (terraform-* / deploy-production) だったため実行
+  # 順序が保証されていなかった。secret_iam の binding が Cloud Run deploy
+  # より遅く反映されると `--set-secrets=` が Permission denied で silent fail
+  # する race があった。
+  #
+  # 解決: terraform apply を deploy の needs 前段として本 workflow に統合し、
+  # terraform.yml 側の push トリガー / apply job は廃止 (PR-only validate 化)。
+  # terraform apply は idempotent なので、terraform 差分ゼロでも数秒で終わる。
+  #
+  # ⚠️ 2026-07-14 一時措置 (production deploy unblock):
+  #   Terraform state が空 (既存 GCP resources 未 import) + runner IAM が不完全
+  #   (bootstrap 未完了) のため terraform apply が create attempt で 409/403 連発
+  #   → 全 main push で deploy が blocked していた。段階復旧のため:
+  #
+  #     - `continue-on-error: true` で apply 失敗が deploy を blocking しない
+  #     - deploy job は needs: terraform-apply を維持 (race 順序は保つ)
+  #
+  #   段階 1 (PR #1075、この commit): continue-on-error を投入して production
+  #     deploy を復旧。次 main push で通常 deploy が走る (terraform apply の
+  #     成否に関係なく)。
+  #
+  #   段階 2 (PR #1076): pre-existing GCP resources を Terraform 1.7+
+  #     `import{}` blocks で state に宣言的に import → fresh-state apply が
+  #     idempotent no-op になり 409 "already exists" を根本的に解消。
+  #     terraform/*.tf の各 resource に対応する import block が同一 file に
+  #     共存し、architecture-boundaries.test.ts の drift-gate で欠落を強制検知。
+  #
+  #   段階 3 (未実施、user 手作業): user が `bash scripts/bootstrap-terraform.sh`
+  #     を local から再実行し、runner IAM (run.admin / compute.networkAdmin /
+  #     compute.securityAdmin / iap.admin / serviceAccountUser on runtime-sa
+  #     +scheduler-sa + serviceusage.serviceUsageAdmin) を完成させる。
+  #
+  #   段階 3 完了後 → terraform apply が真に idempotent no-op → 別 PR で本
+  #   continue-on-error を削除して strict blocking gate に戻す (Codex P1 F6 の
+  #   secret race protect を復元)。
+  #
+  # 2026-07-14 段階 4 完了 (このPR): terraform apply が commit adb54eaf6 (PR #1079
+  # merge) で完全 success を確認 (import 44 + add 6 + change 7 + destroy 0 全て
+  # 適用済み)。continue-on-error を削除して strict blocking gate 復元 →
+  # terraform apply の失敗が deploy job を blocking する Codex P1 F6 race protect
+  # 復活。以降は「code に問題がある PR は main に到達しない (PR gate) + main の
+  # apply が失敗したら deploy も止まる (この strict gate)」の 2 層防御。
+  terraform-apply:
+    name: Terraform Apply (IAM prereq)
+    if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: terraform-runner@myrrh-rental-space.iam.gserviceaccount.com
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.10.0
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -input=false
+        env:
+          TF_IN_AUTOMATION: "1"
+
+      - name: Terraform apply
+        working-directory: terraform
+        run: terraform apply -input=false -auto-approve
+        env:
+          TF_IN_AUTOMATION: "1"
+
   deploy:
     name: Cloud Build Deploy
+    needs: terraform-apply
     if: github.repository == 'y2ikgm89/myrrh-rental-space' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 90

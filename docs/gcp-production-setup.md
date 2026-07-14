@@ -569,51 +569,90 @@ Add a version:
 printf '%s' "$SECRET_VALUE" | gcloud secrets versions add SECRET_NAME --data-file=-
 ```
 
-Runtime Secret Manager access for `$RUNTIME_SA` is bootstrapped through Cloud
-Build once and then owned by `cloudbuild.yaml` on every deploy — do not grant
-`roles/secretmanager.secretAccessor` to `$RUNTIME_SA` by hand. Grant Cloud
-Build's own SA the minimum right to manage those bindings, then let the deploy
-pipeline reapply the accessor role idempotently for every secret in the SECRETS
-list of `cloudbuild.yaml`'s `grant-secret-access` step:
+Runtime Secret Manager access for `$RUNTIME_SA` (and the build-time
+`$BUILD_SA` binding for `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`) is provisioned
+by `scripts/bootstrap-terraform.sh` (project-level `secretAccessor` for both
+SAs, applied once by the project owner, idempotent on re-run). **The Cloud
+Build SA has no Secret Manager IAM management permission** — attempts to give
+it `secretmanager.secrets.setIamPolicy` would let a compromised build identity
+self-grant `roles/secretmanager.secretAccessor` on `DATABASE_URL` /
+`ENCRYPTION_KEY` / any other runtime secret, and no IAM Condition on
+`iam.grantableRoles` can safely restrict that path.
+
+The Terraform runner SA (`terraform-runner@...`) is now **structurally
+prevented** from touching secret values, via the F1 closure landed in the
+2026-07-14 `bootstrap-owns-all-project-IAM` refactor:
+
+- **No `roles/resourcemanager.projectIamAdmin`**. Previously the runner held
+  a conditional `projectIamAdmin` (CEL `hasOnly ['secretAccessor']`). The CEL
+  restricts _which role_ can be granted but not _to whom_, so a compromised
+  runner could still mint a fresh SA, grant `secretAccessor` to it, and
+  impersonate it — the deny policy is scoped by principal and doesn't cover
+  that new SA. Removing `projectIamAdmin` outright closes the chain.
+- **No `roles/iam.serviceAccountAdmin`**. Previously the runner could call
+  `iam.serviceAccounts.setIamPolicy` on any SA, letting it grant itself
+  `tokenCreator` on runtime-sa and read every secret. Removing
+  `serviceAccountAdmin` closes that chain and also removes the SA-create
+  primitive used in Chain 1.
+- **Custom role `terraformRunnerSecretManagerNoPolicyMgmt`** (bootstrap SSoT,
+  12 permissions, GA) still gives the runner Secret Manager metadata / version
+  CRUD, but excludes `secretmanager.secrets.setIamPolicy` /
+  `secretmanager.secrets.getIamPolicy` — so it cannot per-secret grant
+  `secretAccessor` to another principal either.
+- **IAM Deny Policy** `block-terraform-runner-secret-value-read` (bootstrap
+  managed, **optional defense-in-depth**) denies
+  `secretmanager.googleapis.com/versions.access` / `.add` / `.destroy` /
+  `.disable` / `.enable` to the runner. After the structural closure this is
+  belt-and-suspenders (guards against future misconfiguration where someone
+  hand-adds a strong role via Console). It requires
+  `roles/iam.denyAdmin` at org/folder scope; environments without an
+  org-admin skip it via `SKIP_DENY_POLICY=1` or automatic warning-on-failure —
+  the primary control is the structural closure, so skipping is safe.
+
+The runner's remaining role set (see `terraform/README.md` §
+"Bootstrap-owned layout" for the full list) covers only resource-shape CRUD
+for Cloud Run / Cloud Scheduler / Artifact Registry / Cloud Build worker
+pool / WIF / LB / IAP / Service Usage plus the custom Secret Manager role —
+no path to Secret Manager IAM policies remains.
+
+### First-time setup (project owner, once)
 
 ```bash
-export PROJECT_ID BUILD_SA
-bash scripts/setup-cloud-build-permissions.sh
+export PROJECT_ID=myrrh-rental-space
+bash scripts/bootstrap-terraform.sh
 ```
 
-The script grants `roles/secretmanager.secretIamAdmin` (IAM-policy editing only,
-no secret value read/write) to `$BUILD_SA` at the project level. Every
-subsequent Cloud Build run then executes:
+The bootstrap script creates the Terraform state bucket, all 4 SAs (runner
 
-```
-gcloud secrets add-iam-policy-binding <secret> \
-  --member="serviceAccount:${_SERVICE_ACCOUNT}" \
-  --role="roles/secretmanager.secretAccessor"
-```
+- runtime + build + scheduler), the WIF binding for GitHub Actions, and every
+  project-level IAM binding (custom Secret Manager role + project-level grants
+  for runtime-sa / build-sa + cross-SA impersonation). It is idempotent — safe
+  to re-run. The bootstrap-owned bindings do **not** change from PR to PR;
+  subsequent secret / metadata / resource changes flow through `terraform
+apply`.
 
-for every secret named in the `grant-secret-access` step, so a newly added
-`--set-secrets=` binding self-heals on the next deploy instead of needing an
-out-of-band `gcloud secrets add-iam-policy-binding` call. When adding a new
-Cloud Run secret binding, add the same secret name to the `SECRETS=(...)` list
-inside that step — `architecture-boundaries.test.ts` gates that the deploy
-list and the grant list stay in sync.
+### Adding a new secret
 
-Grant the build identity access only to the build-time secret (the deploy
-pipeline reads this one during image build via Cloud Build `availableSecrets`,
-so it belongs to `$BUILD_SA`, not the runtime SA):
+1. Update `cloudbuild.yaml` `--set-secrets=` to include the new secret name.
+2. Update `terraform/secrets.tf` `runtime_secrets` (or `build_secrets` if
+   Cloud Build needs to read it via `availableSecrets`) with the same name.
+3. Open a PR. `.github/workflows/terraform.yml` runs `terraform plan` on the
+   PR and posts the diff for review.
+4. On merge, `terraform apply` creates the new secret container (metadata).
+   `runtime-sa` / `build-sa` already have project-level `secretAccessor`
+   (granted by `scripts/bootstrap-terraform.sh`), so no additional IAM step
+   is required — the next Cloud Build deploy picks up the new secret
+   automatically.
 
-```bash
-gcloud secrets add-iam-policy-binding NEXT_SERVER_ACTIONS_ENCRYPTION_KEY \
-  --member="serviceAccount:${BUILD_SA}" \
-  --role="roles/secretmanager.secretAccessor"
-```
-
-Do not grant `roles/secretmanager.secretAccessor` at the project level. Keep
-Secret Manager access resource-scoped: runtime secrets are reachable only from
-`$RUNTIME_SA` via the Cloud Build-managed bindings above, and
-`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` additionally allows `$BUILD_SA` for the
-build-time read. The legacy default Cloud Build service account must have no
-Secret Manager access.
+Runtime / build SA already hold `roles/secretmanager.secretAccessor` at the
+project level (granted by `scripts/bootstrap-terraform.sh`), so any secret
+added to the project is automatically readable by both SAs. This is a
+deliberate simplification: the previous per-secret binding pattern required
+two-file updates (`cloudbuild.yaml` + `terraform/secret_iam.tf`) and had
+drift-detection issues. Project-level scope is safe because runtime / build
+SA are only used inside Cloud Run / Cloud Build (never externally exposed).
+The legacy default Cloud Build service account must have no Secret Manager
+access.
 
 Secret generation rules used by this app:
 
