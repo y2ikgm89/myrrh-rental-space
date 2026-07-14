@@ -116,7 +116,9 @@ docs/api/
 prisma/migrations/section-design-migration-log.json
 
 # ─── Cloudflare enumerator output (Phase 8 準備、Terraform 化前の inventory) ─
-# `bash scripts/enumerate-cloudflare.sh > cloudflare-inventory.txt` で生成する
+# `bash scripts/enumerate-cloudflare.sh > cloudflare-inventory.txt` 等で生成する
 # API 応答 dump。zone metadata (account ID / ruleset ID / R2 bucket 名等) を
 # 含むため commit しない (Terraform 化後は state / config が SSoT になる)。
-cloudflare-inventory.txt
+# 部分 dump (rulesets-detail / r2 / turnstile / pagerules / inventory-part2 等) も
+# 同じ理由で除外するため glob で吸収。
+cloudflare-*.txt
