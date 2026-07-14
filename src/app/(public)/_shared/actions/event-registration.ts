@@ -330,9 +330,7 @@ export async function registerForEventWaitlist(
           });
         }
 
-        // CACHE_TAGS.EVENT_WAITLIST は未追加 (Task 12 の add-cache-tag chore で
-        // 導入予定)。現時点では公開イベントページの再検証に必要な EVENTS のみ。
-        invalidateSiteWideCache([CACHE_TAGS.EVENTS]);
+        invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.EVENT_WAITLIST]);
 
         fireAndForget(
           sendEventWaitlistRegistered({

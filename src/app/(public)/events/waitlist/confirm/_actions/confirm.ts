@@ -112,7 +112,7 @@ export async function confirmWaitlistOfferAction(
           };
         }
 
-        invalidateSiteWideCache([CACHE_TAGS.EVENTS]);
+        invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.EVENT_WAITLIST]);
 
         fireAndForget(
           (async () => {

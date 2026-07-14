@@ -60,6 +60,10 @@ export const CDN_CACHE_TAGS = {
   LOCATION: defineCdnTag("location-v1"),
   NEWS: defineCdnTag("news-v1"),
   EVENT: defineCdnTag("event-v1"),
+  // イベント詳細ページ内のキャンセル待ち枠 (EVENT と同一ページ表面)。EVENT と一緒に
+  // next.config.ts の EVENTS_CACHE_TAG へ inline する (EVENT_WAITLIST 単独無効化でも
+  // 同じページが purge されるようにするため。EVENT 側の producer と同じ表面を共有)。
+  EVENT_WAITLIST: defineCdnTag("event-waitlist-v1"),
   FAQ: defineCdnTag("faq-v1"),
   TERMS_DETAIL: defineCdnTag("terms-detail-v1"),
   SITEMAP: defineCdnTag("sitemap-v1"),
@@ -145,6 +149,7 @@ export const NEXTJS_TAG_TO_CDN_TAG = {
   [CACHE_TAGS.LOCATIONS]: CDN_CACHE_TAGS.LOCATION,
   [CACHE_TAGS.NEWS]: CDN_CACHE_TAGS.NEWS,
   [CACHE_TAGS.EVENTS]: CDN_CACHE_TAGS.EVENT,
+  [CACHE_TAGS.EVENT_WAITLIST]: CDN_CACHE_TAGS.EVENT_WAITLIST,
   [CACHE_TAGS.FAQ]: CDN_CACHE_TAGS.FAQ,
   [CACHE_TAGS.TERMS]: CDN_CACHE_TAGS.TERMS_DETAIL,
   [CACHE_TAGS.SITEMAP]: CDN_CACHE_TAGS.SITEMAP,

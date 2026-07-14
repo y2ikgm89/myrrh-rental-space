@@ -150,6 +150,8 @@ export const CACHE_TAGS = {
   FEATURE_MODULES: "feature-modules",
   /** イベント */
   EVENTS: "events",
+  /** イベントキャンセル待ち（producer なし。cron / 申込 action からの invalidation 専用） */
+  EVENT_WAITLIST: "event-waitlist",
   /** 送信前 suppression（Resend webhook で HARD_BOUNCED / COMPLAINED 観測済みの宛先 Set） */
   SUPPRESSED_EMAILS: "suppressed-emails",
 } as const;

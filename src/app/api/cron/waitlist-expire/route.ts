@@ -103,8 +103,10 @@ export async function GET(request: Request) {
 
     if (expired > 0 || offered > 0) {
       // Route Handler では revalidateTag {expire: 0} 経路（updateTag は throw する）。
-      // TODO(task-12): CACHE_TAGS.EVENT_WAITLIST 追加後はここに含める。
-      invalidateSiteWideCacheFromRouteHandler([CACHE_TAGS.EVENTS]);
+      invalidateSiteWideCacheFromRouteHandler([
+        CACHE_TAGS.EVENTS,
+        CACHE_TAGS.EVENT_WAITLIST,
+      ]);
     }
 
     return jsonSuccess({ expired, offered });

@@ -248,6 +248,7 @@ describe("GET /api/cron/waitlist-expire", () => {
     );
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith([
       CACHE_TAGS.EVENTS,
+      CACHE_TAGS.EVENT_WAITLIST,
     ]);
   });
 

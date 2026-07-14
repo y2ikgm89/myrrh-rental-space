@@ -324,13 +324,23 @@ async function fulfillPaymentAtomically(
  * イベント申込キャッシュを無効化（共通）
  *
  * `CACHE_TAGS.EVENTS` は公開イベント一覧/詳細ページの CDN tag にもマップされている
- * （`confirmWaitlistOfferAction` が `invalidateSiteWideCache([CACHE_TAGS.EVENTS])` を
+ * （`confirmWaitlistOfferAction` が
+ * `invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.EVENT_WAITLIST])` を
  * `skipCdnPurge` 無しで呼ぶのと同じ理由 — Reservation 側の `invalidateReservationCache`
  * とは異なり、こちらは `skipCdnPurge: true` を **渡さない**。予約タグは admin-only の
  * private tag だが、イベントタグは公開ページに影響するため CDN purge が必要）。
+ *
+ * `CACHE_TAGS.EVENT_WAITLIST` も無条件で含める: waitlist offer 経由の PAID 確定
+ * （`isWaitlistOffer` 分岐、WAITLISTED_OFFERED → CONFIRMED）は
+ * `confirmWaitlistOfferAction`（無料チケット）と同じ状態遷移の有料版のため対称に
+ * 揃える。直接購入（`isWaitlistOffer === false`）では no-op だが、
+ * EVENT_WAITLIST に producer が無いため過剰無効化のコストは無い。
  */
 function invalidateEventRegistrationCache(): void {
-  invalidateSiteWideCacheFromRouteHandler([CACHE_TAGS.EVENTS]);
+  invalidateSiteWideCacheFromRouteHandler([
+    CACHE_TAGS.EVENTS,
+    CACHE_TAGS.EVENT_WAITLIST,
+  ]);
 }
 
 /**

@@ -67,6 +67,8 @@ export const urls = {
 export const eventFixtures = {
   singleOccurrenceSlug: "yoga-mindfulness-workshop",
   timedEntrySlug: "photography-workshop",
+  /** capacity=1、1 CONFIRMED + 2 WAITLISTED + 1 WAITLISTED_OFFERED 固定の waitlist fixture */
+  waitlistTestSlug: "waitlist-test",
 } as const;
 
 /** Public space seed contract used by reservation/review E2E specs. */

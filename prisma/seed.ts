@@ -3235,6 +3235,26 @@ async function seedEvents() {
       registrationOpen: false,
       publishedAt: new Date("2026-02-15T09:00:00+09:00"),
     },
+    {
+      title: "陶芸体験ワークショップ",
+      slug: "waitlist-test",
+      description:
+        "少人数制の陶芸体験。定員1名の人気講座で、満席時はキャンセル待ちにご登録いただけます。",
+      scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+      slots: [
+        {
+          startAt: futureJstDate(60, 15),
+          endAt: futureJstDate(60, 17),
+          capacity: 1,
+        },
+      ],
+      price: 0,
+      locationId: honkanId,
+      addressDetail: "2F 陶芸スタジオ",
+      status: EventStatus.PUBLISHED,
+      registrationOpen: true,
+      publishedAt: new Date(),
+    },
   ];
 
   let createdCount = 0;
@@ -3301,7 +3321,12 @@ async function seedEvents() {
   }
 
   // PUBLISHED イベントにサンプル申込を追加
-  const seedEventSlugs = eventSeedSource.map((event) => event.slug);
+  // waitlist-test は専用の待機列 fixture（このあと個別に登録）を使うため除外する。
+  // capacity=1 にこの generic sample (CONFIRMED×2 + CANCELLED×1) を足すと
+  // 「1 CONFIRMED + 2 WAITLISTED + 1 WAITLISTED_OFFERED」の固定契約が崩れる。
+  const seedEventSlugs = eventSeedSource
+    .map((event) => event.slug)
+    .filter((slug) => slug !== "waitlist-test");
   const publishedEvents = await prisma.event.findMany({
     where: {
       status: EventStatus.PUBLISHED,
@@ -3409,6 +3434,102 @@ async function seedEvents() {
       },
     });
     registrationCount++;
+  }
+
+  // waitlist-test: capacity=1 を「1 CONFIRMED (満席) + 2 WAITLISTED (FIFO 順) +
+  // 1 WAITLISTED_OFFERED (24h TTL 内)」で固定する専用 fixture。
+  // `eventFixtures.waitlistTestSlug`（E2E）と管理画面キャンセル待ちキューの両方から参照する。
+  const waitlistTestEvent = await prisma.event.findUnique({
+    where: { slug: "waitlist-test" },
+    select: {
+      id: true,
+      tickets: {
+        select: { id: true },
+        orderBy: { sortOrder: "asc" as const },
+        take: 1,
+      },
+      slots: {
+        select: { id: true },
+        orderBy: { startAt: "asc" as const },
+        take: 1,
+      },
+    },
+  });
+  const waitlistTicketId = waitlistTestEvent?.tickets[0]?.id;
+  const waitlistSlotId = waitlistTestEvent?.slots[0]?.id;
+  if (waitlistTestEvent && waitlistTicketId && waitlistSlotId) {
+    const now = new Date();
+    const waitlistSeedData: Array<{
+      name: string;
+      email: string;
+      note: string;
+      quantity: number;
+      status: RegistrationStatus;
+      waitlistedAt: Date | null;
+      offeredAt: Date | null;
+      expiresAt: Date | null;
+    }> = [
+      {
+        name: "確定 花子",
+        email: "waitlist-confirmed@example.com",
+        note: "[E2E] waitlist-test: capacity を満たす CONFIRMED",
+        quantity: 1,
+        status: RegistrationStatus.CONFIRMED,
+        waitlistedAt: null,
+        offeredAt: null,
+        expiresAt: null,
+      },
+      {
+        name: "待機 一郎",
+        email: "waitlist-first@example.com",
+        note: "[E2E] waitlist-test: WAITLISTED (FIFO 1番目、繰り上げ待ち)",
+        quantity: 1,
+        status: RegistrationStatus.WAITLISTED,
+        waitlistedAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
+        offeredAt: null,
+        expiresAt: null,
+      },
+      {
+        name: "待機 二郎",
+        email: "waitlist-second@example.com",
+        note: "[E2E] waitlist-test: WAITLISTED (FIFO 2番目)",
+        quantity: 1,
+        status: RegistrationStatus.WAITLISTED,
+        waitlistedAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
+        offeredAt: null,
+        expiresAt: null,
+      },
+      {
+        name: "繰上 三郎",
+        email: "waitlist-offered@example.com",
+        note: "[E2E] waitlist-test: WAITLISTED_OFFERED (24h TTL の残り23h)",
+        quantity: 1,
+        status: RegistrationStatus.WAITLISTED_OFFERED,
+        // 待機列内で最も古い waitlistedAt (= FIFO 最先着) が繰り上げ当選した想定。
+        waitlistedAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
+        offeredAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
+        expiresAt: new Date(now.getTime() + 23 * 60 * 60 * 1000),
+      },
+    ];
+
+    for (const reg of waitlistSeedData) {
+      await prisma.eventRegistration.create({
+        data: {
+          eventId: waitlistTestEvent.id,
+          ticketId: waitlistTicketId,
+          slotId: waitlistSlotId,
+          name: reg.name,
+          email: reg.email,
+          note: reg.note,
+          quantity: reg.quantity,
+          status: reg.status,
+          waitlistedAt: reg.waitlistedAt,
+          offeredAt: reg.offeredAt,
+          expiresAt: reg.expiresAt,
+        },
+      });
+      registrationCount++;
+    }
   }
 
   console.log(`✅ Upserted ${createdCount.toString()} events`);

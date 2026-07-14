@@ -546,7 +546,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       // mock.module のラッパーが options を明示的に(undefined でも)前段する契約のため
       // 第2引数まで含めて assert する（呼び出し元は 1 引数のみ渡す）。
       expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith(
-        ["events"],
+        ["events", "event-waitlist"],
         undefined,
       );
       // 直接購入は登録時点で確認メール送信済みのため、ここでは送らない
@@ -717,7 +717,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expect(mockConfirmWaitlistOfferCommand).not.toHaveBeenCalled();
       expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
       expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith(
-        ["events"],
+        ["events", "event-waitlist"],
         undefined,
       );
     });
@@ -749,7 +749,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       // 「waitlist status に触れていない」ことを担保する。
       expect(mockConfirmWaitlistOfferCommand).not.toHaveBeenCalled();
       expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith(
-        ["events"],
+        ["events", "event-waitlist"],
         undefined,
       );
     });
@@ -862,7 +862,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       );
       expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
       expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith(
-        ["events"],
+        ["events", "event-waitlist"],
         undefined,
       );
     });

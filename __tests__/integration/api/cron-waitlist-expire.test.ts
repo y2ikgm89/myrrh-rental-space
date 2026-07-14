@@ -247,6 +247,7 @@ describeMaybe("GET /api/cron/waitlist-expire — real Postgres", () => {
 
       expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledWith([
         "events",
+        "event-waitlist",
       ]);
     } finally {
       await cleanupEvent(eventId);
