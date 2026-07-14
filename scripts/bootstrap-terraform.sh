@@ -265,8 +265,12 @@ run gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 #     を手動実行する (bootstrap では上書きしない)。
 #
 #     参考: https://cloud.google.com/iam/docs/deny-access-cli
+#     gcloud CLI は attachment-point の URL-encoding を自動処理するので、
+#     生のスラッシュ形式で渡す (URL-encoded 版は Terraform / REST API 向け、
+#     gcloud CLI に渡すと double-encode されて "wrong parent" エラーになる —
+#     Codex P1 #1071 で指摘)。
 DENY_POLICY_ID="block-terraform-runner-secret-value-read"
-DENY_POLICY_ATTACHMENT_POINT="cloudresourcemanager.googleapis.com%2Fprojects%2F${PROJECT_ID}"
+DENY_POLICY_ATTACHMENT_POINT="cloudresourcemanager.googleapis.com/projects/${PROJECT_ID}"
 DENY_POLICY_FILE=$(mktemp -t bootstrap-deny-policy-XXXXXX.json)
 trap 'rm -f "${DENY_POLICY_FILE}"' EXIT
 cat > "${DENY_POLICY_FILE}" <<DENY_POLICY_JSON
@@ -297,9 +301,13 @@ if [ "${DRY_RUN}" = "1" ]; then
   sed 's/^/[bootstrap][DRY_RUN]   /' "${DENY_POLICY_FILE}"
 fi
 
+# 存在チェックは `gcloud iam policies get` を使う (`describe` subcommand は
+# `gcloud iam policies` 配下に存在せず常に silent fail → 2 回目以降 create が
+# "already exists" で毎回落ちる Codex P2 #1071)。
 if [ "${DRY_RUN}" != "1" ] \
-   && gcloud iam policies describe "denypolicies/${DENY_POLICY_ID}" \
-        --attachment-point="${DENY_POLICY_ATTACHMENT_POINT}" >/dev/null 2>&1; then
+   && gcloud iam policies get "${DENY_POLICY_ID}" \
+        --attachment-point="${DENY_POLICY_ATTACHMENT_POINT}" \
+        --kind=denypolicies >/dev/null 2>&1; then
   echo "[bootstrap] Deny policy ${DENY_POLICY_ID} already exists — skipping"
   echo "[bootstrap]   To modify: project owner が \`gcloud iam policies update\` を手動実行"
 else
