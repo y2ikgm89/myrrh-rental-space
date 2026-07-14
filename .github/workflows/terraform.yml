@@ -58,6 +58,14 @@ jobs:
       - name: Terraform init (no backend)
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init -input=false -backend=false
+        env:
+          # Cloudflare provider v5 は `CLOUDFLARE_API_TOKEN` env var を自動採用
+          # (terraform/cloudflare_provider.tf 参照)。`terraform validate` 自体は
+          # provider API を叩かないが、初回 provider fetch (registry からの
+          # binary download) の一部 endpoints で 401/403 を招かないよう先行注入。
+          # PR job は cloud credentials を握らないため cloudflare 実 mutation
+          # は起きない (F4 hardening 契約は維持)。
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TERRAFORM_API_TOKEN }}
 
       - name: Terraform validate
         working-directory: ${{ env.TF_WORKING_DIR }}

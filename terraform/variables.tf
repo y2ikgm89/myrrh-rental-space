@@ -55,3 +55,19 @@ variable "github_repository_owner_id" {
   type        = string
   default     = "69025248"
 }
+
+# -----------------------------------------------------------------------------
+# Cloudflare (Phase 8)
+# -----------------------------------------------------------------------------
+# Cloudflare API token は変数化しない — provider v5 は環境変数
+# `CLOUDFLARE_API_TOKEN` を自動採用する契約 (CI 側 workflow の env: に
+# `CLOUDFLARE_TERRAFORM_API_TOKEN` secret を注入する)。tfvars / variables.tf に
+# 露出させないことで、`terraform plan` の diff 出力や state file への literal
+# token 漏洩リスクを最小化する。
+# -----------------------------------------------------------------------------
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID for myrrh-jp.com (Dashboard の Overview 右サイドバー 'API' 欄からコピー)"
+  type        = string
+  default     = "71192d17d6e20d432b9fe0ad48291277"
+}

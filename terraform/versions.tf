@@ -36,6 +36,22 @@ terraform {
       source  = "hashicorp/google-beta"
       version = "~> 6.14"
     }
+    # Cloudflare provider — Phase 8 (myrrh-jp.com zone を Terraform 化).
+    #
+    # `~> 5` = v5 major に pin (5.x の範囲で minor bump は許可、v6 major bump は拒否)。
+    # v5 は v4 からの完全な breaking rewrite:
+    #   - 全 resource が個別属性ベースに分解 (例:
+    #     `cloudflare_zone_settings_override` → `cloudflare_zone_setting × N`)
+    #   - `cloudflare_record` → `cloudflare_dns_record` (schema 完全再設計)
+    #   - `cloudflare_ruleset` (Cache Rules / Transform Rules) の rules block 構造刷新
+    #
+    # 本 project は v5 syntax で 0 から書き起こす (v4 → v5 の in-place migration は
+    # 行わない、`import {}` blocks 経由で existing state を新 schema へ adopt する)。
+    # 参考: https://developers.cloudflare.com/terraform/advanced-topics/version-5-upgrade/
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5"
+    }
   }
 }
 

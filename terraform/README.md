@@ -14,15 +14,16 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 
 このディレクトリは Phase を追って全 GCP infra を段階的に取り込む:
 
-| Phase | スコープ                                                                              | 状態      |
-| ----- | ------------------------------------------------------------------------------------- | --------- |
-| 1     | Secret Manager IAM (bootstrap 化、詳細は下記契約 section)                             | ✅ 完了   |
-| 2     | Cloud Scheduler (13 cron jobs)                                                        | ✅ 完了   |
-| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                  | ✅ 完了   |
-| 4     | Artifact Registry + Cloud Build worker pool                                           | ✅ 完了   |
-| 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider               | ✅ 完了   |
-| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b) | ✅ 完了   |
-| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)        | 🚧 実装中 |
+| Phase | スコープ                                                                              | 状態             |
+| ----- | ------------------------------------------------------------------------------------- | ---------------- |
+| 1     | Secret Manager IAM (bootstrap 化、詳細は下記契約 section)                             | ✅ 完了          |
+| 2     | Cloud Scheduler (13 cron jobs)                                                        | ✅ 完了          |
+| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                  | ✅ 完了          |
+| 4     | Artifact Registry + Cloud Build worker pool                                           | ✅ 完了          |
+| 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider               | ✅ 完了          |
+| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b) | ✅ 完了          |
+| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)        | 🚧 実装中        |
+| 8     | Cloudflare (myrrh-jp.com zone): DNS / Transform Rule / Cache Rules / R2 / Turnstile   | 🚧 Foundation 中 |
 
 ## ファイル構成
 
@@ -43,6 +44,7 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | `cloud_run_migrate_job.tf`   | Phase 6a: prisma-migrate Cloud Run Job skeleton                                                                          |
 | `lb_admin.tf`                | Phase 7: admin service 用 HTTPS LB (backend service + URL map + SSL cert + forwarding rule)                              |
 | `iap.tf`                     | Phase 7: IAP OAuth client + resource IAM binding                                                                         |
+| `cloudflare_provider.tf`     | Phase 8: Cloudflare provider (`~> 5`) の宣言のみ。実 resource は Step 2 で追加                                           |
 
 **削除済** (2026-07-14 F1 refactor):
 
@@ -285,6 +287,56 @@ gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
   --member="serviceAccount:$TERRAFORM_SA" \
   --role="roles/iam.serviceAccountTokenCreator" \
   --impersonate-service-account="$TERRAFORM_SA"
+```
+
+## Phase 8: Cloudflare (myrrh-jp.com zone)
+
+Cloudflare (DNS / edge cache / Transform Rule / R2 / Turnstile) はこれまで
+Dashboard 手動運用だったが、Sprint 3 で Terraform 管理下に取り込む
+(drift 検知の nightly `terraform plan` に統合)。
+
+**現状 (Foundation PR、この PR)**:
+
+- `terraform/cloudflare_provider.tf` — Cloudflare provider `~> 5` の宣言のみ
+- `terraform/versions.tf` の `required_providers` に `cloudflare = { source =
+"cloudflare/cloudflare", version = "~> 5" }` を追加
+- `terraform/variables.tf` に `cloudflare_zone_id` (default:
+  `71192d17d6e20d432b9fe0ad48291277`) を追加
+- CI 側 3 workflow (`deploy-production.yml` / `terraform.yml` /
+  `terraform-drift.yml`) の Terraform init/plan/apply step に
+  `CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TERRAFORM_API_TOKEN }}` を注入
+
+**現状の Foundation では実 resource は宣言しない** (v5 syntax は v4 と完全に
+非互換な破壊的 rewrite で、既存 Cloudflare state を安全に adopt するには
+`import {}` blocks と正確な resource ID mapping が必要)。次 PR (Phase 8 Step 2)
+で existing state の inventory を元に実 resource + import blocks を宣言する。
+
+### CLOUDFLARE_TERRAFORM_API_TOKEN
+
+GitHub repo secret に user が保管済 (project owner が Cloudflare Dashboard で
+発行、Zone.DNS Write / Zone.Zone Settings Write / Zone.Cache Rules Write /
+Zone.Transform Rules Write / Zone.Rulesets Write / Account.R2 Storage Write /
+Account.Turnstile Write を包含する広域 token)。
+
+runtime 側 (Cloud Run) の `CLOUDFLARE_API_TOKEN` (Secret Manager 管理、Zone.Cache
+Purge only) とは scope 分離してあり、rotation も独立して回す。詳細は
+`terraform/cloudflare_provider.tf` の header comment 参照。
+
+発行手順 (再発行時):
+[Cloudflare docs / Create API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/)
+を参照し、Zone Resources に "myrrh-jp.com" を limit するカスタム template で作成。
+
+### user 実行手順 (Phase 8 Step 2 準備)
+
+`scripts/enumerate-cloudflare.sh` が current Cloudflare state を dump する
+helper。user が local で実行して inventory を Claude に共有 → Claude が
+inventory 元に Phase 8 Step 2 PR (実 resource + import blocks) を書く。
+
+```bash
+# GitHub secret UI から CLOUDFLARE_TERRAFORM_API_TOKEN の値をコピー
+export CLOUDFLARE_API_TOKEN="cf-tf-..."
+bash scripts/enumerate-cloudflare.sh > cloudflare-inventory.txt
+# cloudflare-inventory.txt は .gitignore 対象 (commit しない)。Claude に貼り付ける
 ```
 
 ## 関連 runbook
