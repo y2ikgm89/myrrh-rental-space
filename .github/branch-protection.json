@@ -9,7 +9,8 @@
       "Unit Tests",
       "Smoke E2E (critical path)",
       "Build (env validation)",
-      "Terraform / validate"
+      "Terraform / validate",
+      "Main Terraform Health"
     ]
   },
   "enforce_admins": null,

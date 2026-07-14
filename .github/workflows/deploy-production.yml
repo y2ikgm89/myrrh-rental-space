@@ -90,6 +90,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      # 失敗時に GitHub Issue を auto-open するため (最後の step 参照)。
+      # PR #1097-#1101 の 4 連続 apply failure が silent に累積して user 検知
+      # まで ~2 時間 lag した saga への対策。
+      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -228,6 +232,85 @@ jobs:
           # rate-limit trust chain の共有 secret、Cloud Run 側 Secret Manager
           # `CLOUDFLARE_ORIGIN_HEADER_SECRET` と同一値を維持する契約。
           TF_VAR_cloudflare_origin_header_secret: ${{ secrets.CLOUDFLARE_ORIGIN_HEADER_SECRET_TF }}
+
+      # ---- Failure notification (2026-07-14 追加、apply silent failure 対策) ----
+      #
+      # terraform-plan / terraform-apply が失敗した場合、GitHub Issue を auto-open。
+      # `terraform-drift.yml` の drift 検知 issue と同じ pattern (label /
+      # body format / gh CLI で一貫させる)。
+      #
+      # 背景: PR #1097-#1101 で 4 連続の terraform-apply 失敗 (Cloudflare v5 ruleset
+      # 導入時の import ID 不備) が silent に累積、user 検知まで ~2 時間 lag。
+      # auto-merge が required PR check のみ見るため post-merge failure が可視化
+      # されない構造的問題。この step + `Main Terraform Health` gate
+      # (`.github/workflows/check-main-terraform-health.yml`) の 2 層で救済。
+      #
+      # 重複 issue 防止: `deploy-broken` label + 同一 SHA の未 close issue が
+      # あれば skip (idempotent)。
+      - name: Open apply failure issue
+        # 前段 step (Terraform plan / Terraform apply) いずれかが失敗した時のみ発火。
+        # `${{ failure() }}` は job 内で以前の step が failed かをチェックする。
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Idempotent label create
+          gh label create deploy-broken \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "Post-merge terraform-apply or deploy step failure on main" \
+            --color "b60205" 2>/dev/null || true
+
+          # 同 SHA の未 close issue が既にあれば skip
+          EXISTING="$(gh issue list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --label deploy-broken \
+            --state open \
+            --json title \
+            --jq '.[] | select(.title | contains("'"${GITHUB_SHA:0:8}"'")) | .title' \
+            | head -1 || true)"
+          if [ -n "${EXISTING}" ]; then
+            echo "Existing open issue for SHA ${GITHUB_SHA:0:8} — skip (${EXISTING})"
+            exit 0
+          fi
+
+          TODAY="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          TITLE="[deploy-broken] terraform-apply failed on main (${GITHUB_SHA:0:8})"
+
+          BODY_FILE="$(mktemp)"
+          {
+            echo "**Post-merge terraform-apply failure** on main at \`${TODAY}\` UTC."
+            echo ""
+            echo "- Failing SHA: \`${GITHUB_SHA}\`"
+            echo "- Actions run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "- Job: \`terraform-apply\` (deploy-production.yml)"
+            echo ""
+            echo "## Impact"
+            echo ""
+            echo "- \`deploy\` job is BLOCKED (Codex F6 strict gate)"
+            echo "- Cloud Run 新 revision は deploy されない (build & migrate も skipped)"
+            echo "- 以降の PR merge も \`Main Terraform Health\` check により block される"
+            echo "  (\`.github/workflows/check-main-terraform-health.yml\`)"
+            echo ""
+            echo "## Recovery"
+            echo ""
+            echo "1. Actions run の log で失敗原因を特定 (\`Terraform plan\` step 出力を確認)"
+            echo "2. 修正 PR を作成 (commit message に \`[skip-main-health]\` を含めて health gate bypass)"
+            echo "3. 修正 PR を merge → 次回 deploy-production run で復旧確認"
+            echo "4. 復旧確認できたら本 issue を close"
+            echo ""
+            echo "## References"
+            echo ""
+            echo "- Root cause runbook: docs/runbooks/deploy-recovery.md (未作成なら別 PR で作成推奨)"
+            echo "- Nightly drift detection: \`.github/workflows/terraform-drift.yml\`"
+          } > "${BODY_FILE}"
+
+          gh issue create \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${TITLE}" \
+            --label "deploy-broken" \
+            --body-file "${BODY_FILE}"
 
   deploy:
     name: Cloud Build Deploy
