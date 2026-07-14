@@ -399,8 +399,10 @@ jobs:
     # critical path は `smoke-e2e` job が毎 push でカバー。
     # - PR head branch が `codex/full-ci/` で始まる場合
     # - workflow_dispatch で run_full_ci=true 指定
-    # main への push では実行しない。本番デプロイ前検証は
-    # post-deploy-smoke skill (HTTP smoke) と Cloud Run staging で代替。
+    # main への push では実行しない (single-env 運用のため staging preflight は
+    # 存在しない — 参照: docs/adr/0001-single-env-terraform.md)。本番デプロイ
+    # 直後は post-deploy-smoke skill (HTTP smoke) が公開エンドポイントを
+    # 叩いて基本疎通を確認する。
     if: |
       (github.event_name == 'pull_request' && startsWith(github.head_ref, 'codex/full-ci/')) ||
       (github.event_name == 'workflow_dispatch' && inputs.run_full_ci)
@@ -449,7 +451,8 @@ jobs:
           # setup-customer が dev login ボタンをクリックできるようにする。
           # setup-admin は IAP-only のため、runtime env の ADMIN_TEST_IAP_EMAIL で
           # ローカル IAP identity を解決する。
-          # staging / production には絶対伝播させない（login bypass risk）。
+          # production には絶対伝播させない（login bypass risk — single-env
+          # 運用のため production = 唯一の非 CI 環境）。
           NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1"
           SKIP_ENV_VALIDATION: "true"
 
@@ -631,8 +634,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [lint-format, type-check]
-    # Lighthouse は重く Cloud Run staging URL での実測の方が本番に近い指標が得られる
-    # ため opt-in 実行にする。
+    # Lighthouse は重く実行時間が長いため opt-in 実行にする。single-env 運用
+    # (docs/adr/0001-single-env-terraform.md) のため staging URL は存在せず、
+    # CI 内 next start (localhost:3000) で計測する。本番相当の実測は
+    # 別途 PageSpeed Insights / Web Vitals API を production URL に対して
+    # 手動で叩く。
     # - PR head branch が `codex/full-ci/` で始まる場合
     # - workflow_dispatch で run_full_ci=true 指定
     if: |

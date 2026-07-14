@@ -5,6 +5,11 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 契約** に該当する project-level bindings と SA metadata を除く — 下記
 "Bootstrap-owns-all-project-IAM 契約" 参照)。
 
+**環境構成**: 単一環境 (prod only) で運用する。multi-env (dev/staging/prod)
+分離を提案する前に [ADR 0001](../docs/adr/0001-single-env-terraform.md) を
+読むこと (rejected alternatives と re-evaluate すべき migration triggers を
+記載)。
+
 ## Phase 進捗
 
 このディレクトリは Phase を追って全 GCP infra を段階的に取り込む:
