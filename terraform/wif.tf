@@ -3,8 +3,9 @@
 # -----------------------------------------------------------------------------
 #
 # GitHub Actions が Google Cloud SA を impersonate するための WIF Pool と
-# Provider。既存 pool `github-actions` + provider `github-myrrh-rental-space` を
-# `scripts/import-phase-5.sh` で state に取り込む。
+# Provider。既存 pool `github-actions` + provider `github-myrrh-rental-space` は
+# 本 file 下部の `import{}` block で fresh state 時に自動 hydration される
+# (Terraform 1.7+)。
 #
 # 参考: docs/gcp-production-setup.md の WIF setup section。
 
