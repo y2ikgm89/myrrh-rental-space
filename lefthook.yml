@@ -45,6 +45,24 @@ pre-commit:
     - name: protected-files
       run: bash scripts/check-protected-files.sh
 
+    # Terraform fmt: staged terraform/**/*.tf に対して auto-format。
+    # CI (terraform.yml validate job) は `terraform fmt -check -recursive` で
+    # gate しているが、fmt error は push 後に判明 → 修正 push → CI 再走の
+    # 1 ラウンドトリップを消費する。pre-commit で先に auto-fix すれば
+    # 開発ループが短縮される（CI gate は残るので regression risk ゼロ）。
+    #
+    # terraform CLI 未 install の dev 環境では graceful degrade (skip)。
+    # CI 側の -check が最終防衛線として残るため fmt 未適用 push は捕捉される。
+    - name: terraform-fmt
+      glob: "terraform/**/*.tf"
+      run: |
+        if command -v terraform >/dev/null 2>&1; then
+          terraform fmt {staged_files}
+        else
+          echo "[lefthook] terraform CLI not found — skipping fmt (CI will catch)"
+        fi
+      stage_fixed: true
+
 pre-push:
   parallel: false
   jobs:
