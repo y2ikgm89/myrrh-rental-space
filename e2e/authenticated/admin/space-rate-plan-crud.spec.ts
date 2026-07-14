@@ -15,6 +15,15 @@ import { ratePlanFixtures, urls } from "../../fixtures";
  * storageState 経由の IAP 模擬管理者、`.claude/skills/e2e-authoring` 準拠）。
  * 単一 test 内で create → edit → delete を直列に行うため、他 test との共有状態や
  * 並列実行の順序依存はない（自己完結・自己後片付け）。
+ *
+ * 作成する検証用プランは適用曜日を**月曜のみ**に限定する。このスペースは
+ * `e2e/smoke/rate-plan-preview.smoke.spec.ts` が金/土/日の週末料金プラン反映を
+ * 検証する対象と同一であり、`resolveRateBreakdown` は複数 plan 一致時に
+ * `updatedAt` 最新のものを優先する（last-updated-wins）。適用曜日を未指定
+ * （= 全曜日）のまま作成すると、このテストの生存期間中は smoke が対象とする
+ * 金/土/日にも一致してしまい、`workers: 2` の CI で両 spec が並列実行された際に
+ * smoke の ¥1,430 アサーションを壊し得る（レビュー Finding 1）。月曜のみに
+ * 限定すれば smoke の対象曜日と論理的に絶対に重ならない。
  */
 
 const ADMIN_SPACE_NAME = "コワーキングスペース"; // seed の coworking-space.name
@@ -61,6 +70,16 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
     await expect(createDialog).toBeVisible();
     await createDialog.getByLabel("プラン名 *").fill(planName);
     await createDialog.getByLabel("時間料金（円/時間）*").fill("1200");
+    // 適用曜日を月曜のみに限定する（未選択のままだと defaults to 全曜日 = 空配列）。
+    // このスペース（coworking-space）は e2e/smoke/rate-plan-preview.smoke.spec.ts が
+    // 金/土/日で週末料金プラン（daysOfWeek: [FRIDAY,SATURDAY,SUNDAY]）の反映を検証する
+    // 対象と同一で、resolveRateBreakdown は last-updated-wins のため、このテストが
+    // 作成した「全曜日」プランは生存期間中 smoke の対象曜日にも一致してしまい、
+    // CI workers:2 での並列実行時に smoke の ¥1,430 アサーションを壊し得る
+    // （レビュー Finding 1）。月曜のみに限定すれば金/土/日と絶対に重ならない。
+    await createDialog
+      .getByRole("checkbox", { name: "月", exact: true })
+      .check();
     await createDialog
       .getByRole("button", { name: "追加", exact: true })
       .click();
@@ -73,6 +92,9 @@ test.describe("管理画面 - スペース料金プラン CRUD", () => {
     });
     await expect(planRow).toBeVisible();
     await expect(planRow).toContainText("¥1,200");
+    // 上記の月曜限定チェックが実際に反映されたことの証拠（SpaceRatePlanList の
+    // formatDaysOfWeek は daysOfWeek=["MONDAY"] を "月" 単体で表示する）。
+    await expect(planRow).toContainText("月");
 
     // --- Edit ---
     await planRow
