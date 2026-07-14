@@ -1,0 +1,175 @@
+name: Main Terraform Health
+
+# PR 側で「main の最新 `deploy-production.yml` run の terraform-apply が成功
+# しているか」を pre-merge gate として検査する。
+#
+# ## 背景 (2026-07-14 PR #1097-#1101 の 4 連続 apply 失敗 saga)
+#
+# `deploy-production.yml` の `terraform-apply` job は Codex F6 strict gate として
+# `deploy` job を block する契約だが、**次 PR の auto-merge は block しない**。
+# GitHub branch protection の required check は「その PR の CI が green」しか
+# 見ないので、main 側の post-merge apply が壊れた状態で auto-merge が続くと
+# cascade failure (fix 4 hours 気付かれず) が発生する。
+#
+# 対策: main の最新 deploy-production run status を required check に昇格させ、
+# main が unhealthy な間は全 PR の auto-merge を physically block する。
+#
+# ## 判定ロジック
+#
+#   - SUCCESS: pass (通常運用)
+#   - IN_PROGRESS / QUEUED: pass (現在 deploy 中、次 push を待たず block しない)
+#   - 初回 (no prior run): pass (green field)
+#   - FAILURE / CANCELLED / TIMED_OUT: **fail** (最新 apply が壊れている、fix PR merge が先)
+#   - `[skip-main-health]` を含む commit message: pass (bypass、fix PR 自身の chicken-egg 回避)
+#
+# ## 適用範囲
+#
+# 全 `pull_request` event で発火 (path filter なし、docs-only PR も含む)。
+# main deploy failure は build config / migration / infra どれでも起こりうるため、
+# 何を触る PR でも一律 gate。ただし bypass tag で fix PR は override 可能。
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # actions:read で他 workflow の run history を query 可能 (gh api runs)。
+  actions: read
+  # pull-requests:read で PR の commit history を gh CLI 経由で取得 (bypass tag 検査)。
+  pull-requests: read
+
+concurrency:
+  group: main-terraform-health-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-main-health:
+    name: Main Terraform Health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # PR event では checkout 不要 (bypass tag は gh API から直接取得)。
+
+      - name: Check for bypass tag
+        id: bypass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # workflow_dispatch では pull_request context が空なので guard。
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${PR_NUMBER}" ]; then
+            # workflow_dispatch 経由: bypass 判定はスキップ (常に health check 走らせる)
+            echo "bypass=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # PR の全 commit message を gh API から取得して bypass tag を探す。
+          # pull_request event の HEAD は **merge commit** (`Merge NNN into main` の
+          # auto-generated message) で元の commit message が消えているため、
+          # `git log -1 HEAD` では bypass tag が見えない。gh pr view で commits[] から取得する。
+          COMMITS_JSON="$(gh pr view "${PR_NUMBER}" --repo "${GITHUB_REPO}" --json commits)"
+          if echo "${COMMITS_JSON}" | grep -qF '[skip-main-health]'; then
+            echo "bypass=true" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Main health check bypassed::PR commit message contains [skip-main-health]"
+          else
+            echo "bypass=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Query latest main deploy-production run
+        if: steps.bypass.outputs.bypass != 'true'
+        id: query
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 最新の main branch 上の deploy-production.yml run status を取得。
+          # `--limit 1` で最新 1 件、`--branch main` で PR run を除外。
+          # `event=push` で main への直 push (auto-merge 経由の squash commit も含む) のみ拾う。
+          RESPONSE="$(gh run list \
+            --repo "${GITHUB_REPO}" \
+            --workflow deploy-production.yml \
+            --branch main \
+            --event push \
+            --limit 1 \
+            --json databaseId,conclusion,status,createdAt,headSha,url)"
+
+          COUNT="$(echo "${RESPONSE}" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
+          if [ "${COUNT}" = "0" ]; then
+            # 初回 deploy 前 (green field)。gate は pass。
+            {
+              echo "state=first-run"
+              echo "conclusion="
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CONCLUSION="$(echo "${RESPONSE}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["conclusion"] or "")')"
+          STATUS="$(echo "${RESPONSE}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["status"] or "")')"
+          URL="$(echo "${RESPONSE}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["url"])')"
+          SHA="$(echo "${RESPONSE}" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d[0]["headSha"])')"
+
+          {
+            echo "state=complete"
+            echo "conclusion=${CONCLUSION}"
+            echo "status=${STATUS}"
+            echo "url=${URL}"
+            echo "sha=${SHA}"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice title=Latest main deploy::status=${STATUS} conclusion=${CONCLUSION} sha=${SHA:0:8}"
+
+      - name: Evaluate gate
+        if: steps.bypass.outputs.bypass != 'true'
+        env:
+          STATE: ${{ steps.query.outputs.state }}
+          CONCLUSION: ${{ steps.query.outputs.conclusion }}
+          STATUS: ${{ steps.query.outputs.status }}
+          URL: ${{ steps.query.outputs.url }}
+          SHA: ${{ steps.query.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${STATE}" = "first-run" ]; then
+            echo "✅ No prior deploy-production run — green field, gate passes"
+            exit 0
+          fi
+
+          # STATUS=in_progress / queued → deploy 進行中、次 PR を block しない
+          if [ "${STATUS}" = "in_progress" ] || [ "${STATUS}" = "queued" ]; then
+            echo "🕐 Latest main deploy is still running (status=${STATUS}) — not blocking"
+            echo "  Latest: ${URL}"
+            exit 0
+          fi
+
+          # STATUS=completed かつ CONCLUSION=success/skipped → 健全、gate pass
+          case "${CONCLUSION}" in
+            success | skipped)
+              echo "✅ Latest main deploy succeeded (sha=${SHA:0:8})"
+              exit 0
+              ;;
+            failure | cancelled | timed_out | startup_failure | action_required)
+              # main の deploy が壊れている → fix PR merge が先。cascade failure 防止のため fail する。
+              cat >&2 <<EOF
+          ::error title=Main deploy-production is broken::Latest run conclusion=${CONCLUSION}
+
+          Latest main deploy-production run (sha=${SHA}):
+            conclusion: ${CONCLUSION}
+            URL: ${URL}
+
+          Root cause fix PRs may bypass this gate with a commit message containing
+          [skip-main-health] (e.g., 'fix(terraform): recover main [skip-main-health]').
+
+          Non-fix PRs merged now would compound the failure and delay recovery.
+          Please wait for the fix PR to merge before proceeding.
+          EOF
+              exit 1
+              ;;
+            *)
+              echo "::warning::Unknown conclusion=${CONCLUSION}, treating as failure"
+              exit 1
+              ;;
+          esac
