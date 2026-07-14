@@ -1391,3 +1391,14 @@ are wired: ReportedErrorEvent burst, severity=CRITICAL, `/api/health` 5xx,
 cron OIDC / config failure, and Prisma pool acquire-timeout. Any change to
 the runtime emit path (severity mapping, log message text, cron gate return
 codes) must ship together with the matching YAML update.
+
+## Dead resource cleanup
+
+`CRON_SECRET` (Secret Manager) and
+`calendar-sync@myrrh-rental-space.iam.gserviceaccount.com` (service account)
+are orphaned after the Cloud Scheduler OIDC migration and the Google Calendar
+OAuth removal, respectively. The Claude harness cannot execute the delete
+verbs (`secretmanager.secrets.delete`, `iam.serviceAccounts.delete`) — a
+project owner must run them from a workstation. The pre-delete audit, exact
+delete commands, and post-delete verification live in the checklist at
+[`docs/runbooks/gcp-dead-resource-cleanup.md`](runbooks/gcp-dead-resource-cleanup.md).

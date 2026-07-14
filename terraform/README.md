@@ -282,6 +282,16 @@ gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
   --impersonate-service-account="$TERRAFORM_SA"
 ```
 
+## 関連 runbook
+
+- [`docs/runbooks/gcp-dead-resource-cleanup.md`](../docs/runbooks/gcp-dead-resource-cleanup.md)
+  — `CRON_SECRET` (Secret Manager) と
+  `calendar-sync@myrrh-rental-space.iam.gserviceaccount.com` (SA) の削除手順。
+  bootstrap-owned scope の破壊操作 (`secretmanager.secrets.delete` /
+  `iam.serviceAccounts.delete`) は runner に権限が無いため project owner が
+  手元で実行する。事前 grep 0-hits 確認 + gcloud delete + post-delete
+  `gcloud secrets list` / `gcloud iam service-accounts list` までを checklist 化。
+
 ## References
 
 - [Set up CI/CD for Terraform](https://cloud.google.com/architecture/setup-terraform-cicd) —
