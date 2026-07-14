@@ -382,22 +382,19 @@ jobs:
           SUBSTITUTIONS+=",_CRON_OIDC_AUDIENCE=${CRON_OIDC_AUDIENCE}"
           SUBSTITUTIONS+=",_CRON_SERVICE_ACCOUNT_EMAIL=${CRON_SERVICE_ACCOUNT_EMAIL}"
           SUBSTITUTIONS+=",_NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}"
-          SUBSTITUTIONS+=",_DATABASE_URL_SECRET_VERSION=1"
           SUBSTITUTIONS+=",_BREAKING_MIGRATION_DEPLOY=${BREAKING_MIGRATION_DEPLOY}"
-          SUBSTITUTIONS+=",_BETTER_AUTH_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_ENCRYPTION_KEY_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_AUDIT_LOG_HMAC_KEY_SECRET_VERSION=1"
+          # ---- Secret version substitutions (build-time inline のみ) ----
+          #
+          # Phase 6b (PR #1101, 2026-07-14) で Cloud Run runtime secret bindings は
+          # Terraform SSoT に完全移管 (terraform/variables.tf の
+          # `cloud_run_secret_versions` map)。cloudbuild.yaml の runtime 用
+          # `--set-secrets=` は削除済のため、対応する `_*_SECRET_VERSION`
+          # substitutions も撤去 (Cloud Build "unmatched key" INVALID_ARGUMENT
+          # 対策)。残存する _NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION は
+          # cloudbuild.yaml の availableSecrets block で **build-time inline** に
+          # 使用 (Next.js が client bundle に inline 化)。build-time と runtime の
+          # 両 SSoT を維持する必要あり (secret 値は同じだが用途が違う)。
           SUBSTITUTIONS+=",_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_R2_ACCOUNT_ID_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_R2_ACCESS_KEY_ID_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_R2_SECRET_ACCESS_KEY_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_R2_BUCKET_NAME_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_R2_PUBLIC_URL_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_CLOUDFLARE_ZONE_ID_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_CLOUDFLARE_API_TOKEN_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_CLOUDFLARE_ORIGIN_HEADER_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_GOOGLE_CLIENT_ID_SECRET_VERSION=1"
-          SUBSTITUTIONS+=",_GOOGLE_CLIENT_SECRET_SECRET_VERSION=1"
 
           gcloud beta builds submit \
             --project="${PROJECT_ID}" \
