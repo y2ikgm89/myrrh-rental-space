@@ -60,11 +60,14 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type CommandsModule =
   typeof import("@/shared/domain/spaces/rate-plan-commands");
 
+type DomainErrorModule = typeof import("@/shared/domain/domain-error");
+
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let createSpaceRatePlan: CommandsModule["createSpaceRatePlan"];
 let updateSpaceRatePlan: CommandsModule["updateSpaceRatePlan"];
 let deleteSpaceRatePlan: CommandsModule["deleteSpaceRatePlan"];
+let DomainError: DomainErrorModule["DomainError"];
 
 type SpaceFixture = {
   spaceId: string;
@@ -119,6 +122,7 @@ describeMaybe("SpaceRatePlan CRUD", () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     ({ createSpaceRatePlan, updateSpaceRatePlan, deleteSpaceRatePlan } =
       await import("@/shared/domain/spaces/rate-plan-commands"));
+    ({ DomainError } = await import("@/shared/domain/domain-error"));
     await basePrisma.$queryRaw`SELECT 1`;
   });
 
@@ -205,6 +209,37 @@ describeMaybe("SpaceRatePlan CRUD", () => {
       expect(found).toBeNull();
     } finally {
       await cleanup();
+    }
+  });
+
+  // `expect(promise).rejects` は実DB(複数 await I/O を経る)呼び出しに対して
+  // Bun 1.3.14 でハングする既知の問題があるため、明示 try/catch で検証する
+  // ([[feedback_bun-rejects-hang-and-npm-script-args]] 参照)。
+  test("updateSpaceRatePlan: 存在しない id は DomainError(NOT_FOUND) を throw する", async () => {
+    let caught: unknown;
+    try {
+      await updateSpaceRatePlan("nonexistent-rate-plan-id", {
+        hourlyPrice: 1000,
+      });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(DomainError);
+    if (caught instanceof DomainError) {
+      expect(caught.code).toBe("NOT_FOUND");
+    }
+  });
+
+  test("deleteSpaceRatePlan: 存在しない id は DomainError(NOT_FOUND) を throw する", async () => {
+    let caught: unknown;
+    try {
+      await deleteSpaceRatePlan("nonexistent-rate-plan-id");
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(DomainError);
+    if (caught instanceof DomainError) {
+      expect(caught.code).toBe("NOT_FOUND");
     }
   });
 

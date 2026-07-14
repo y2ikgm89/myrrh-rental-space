@@ -15,6 +15,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { SpaceRatePlan } from "@/shared/db/prisma";
+import { DomainError } from "@/shared/domain/domain-error";
 import { invalidateSpaceRatePlansCache } from "@/shared/lib/cache/space-rate-plan-cache";
 import type {
   DayOfWeek,
@@ -37,6 +38,25 @@ export type UpdateSpaceRatePlanInput = Partial<
   Omit<CreateSpaceRatePlanInput, "spaceId">
 >;
 
+/**
+ * 指定 id の SpaceRatePlan が存在することを保証する。
+ *
+ * `update` / `delete` は存在しない id を渡すと Prisma が生の
+ * `PrismaClientKnownRequestError`（P2025）を throw し、`isDomainError` の
+ * catch を素通りして未処理例外になる（`spaces/commands.ts` の
+ * `ensureSpaceExists` / `blocked-dates/commands.ts` の
+ * `ensureBlockedDateExists` と同型の pre-check で防ぐ）。
+ */
+async function ensureSpaceRatePlanExists(id: string): Promise<void> {
+  const existing = await prisma.spaceRatePlan.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+  if (!existing) {
+    throw new DomainError("料金プランが見つかりません", "NOT_FOUND");
+  }
+}
+
 /** SpaceRatePlan を新規作成し、対象 Space の rate plan キャッシュを無効化する。 */
 export async function createSpaceRatePlan(
   input: CreateSpaceRatePlanInput,
@@ -58,6 +78,8 @@ export async function updateSpaceRatePlan(
   id: string,
   input: UpdateSpaceRatePlanInput,
 ): Promise<SpaceRatePlan> {
+  await ensureSpaceRatePlanExists(id);
+
   const plan = await prisma.spaceRatePlan.update({
     where: { id },
     data: input,
@@ -68,6 +90,8 @@ export async function updateSpaceRatePlan(
 
 /** SpaceRatePlan を削除し、対象 Space の rate plan キャッシュを無効化する。 */
 export async function deleteSpaceRatePlan(id: string): Promise<void> {
+  await ensureSpaceRatePlanExists(id);
+
   const plan = await prisma.spaceRatePlan.delete({
     where: { id },
     select: { spaceId: true },
