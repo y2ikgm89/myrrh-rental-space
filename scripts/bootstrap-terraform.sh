@@ -34,12 +34,17 @@
 #   5. terraform-runner SA への conditional projectIamAdmin (A1)
 #   6. Secret Manager custom role `terraformRunnerSecretManagerNoPolicyMgmt` の
 #      create/update (D1、setIamPolicy / getIamPolicy を除外して F1 self-grant 経路を封鎖)
-#   7. custom role の runner SA への grant (A3)
+#   7. custom role D1 の runner SA への grant (A3)
+#   7b. Deny Policy custom role `terraformRunnerDenyPolicyManager` の
+#      create/update + runner への grant (D2、delete/setIamPolicy を除外して
+#      compromised runner が deny.tf を破棄・bypass する経路を封鎖)
 #   8. 残りの predefined roles (A2 / A4-A12) の grant
 #
 # IAM Deny Policy (Codex P1 対策) は `terraform/deny.tf` に定義され、apply で
-# 反映される (denyAdmin 権限は本スクリプトが bootstrap 済みなので runner が
-# refresh できる)。
+# 反映される (deny policy 管理権限は step 7b の custom role で bootstrap 済み)。
+# roles/iam.denyAdmin (predefined) は Organization/Folder scope 専用で project
+# には grant できないため、Codex F7 対応として project 用の custom role を
+# 別途用意する。
 #
 # ## 追加 role の運用手順
 #
@@ -223,16 +228,64 @@ run gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --role="projects/${PROJECT_ID}/roles/${CUSTOM_ROLE_ID}" \
   --condition=None
 
+# 7b. Deny Policy 管理用 custom role (D2) - idempotent create/update
+#     Codex P1 F7 対応。Terraform runner に deny.tf (`google_iam_deny_policy`) を
+#     project scope で管理させる必要があるが、predefined role `roles/iam.denyAdmin`
+#     は Organization / Folder scope 専用で project では grant 不可
+#     (https://cloud.google.com/iam/docs/roles-permissions/iam#iam.denyAdmin)。
+#
+#     公式推奨 (https://cloud.google.com/iam/docs/deny-access) に従い project scope で
+#     deny policy を管理する custom role を作成し runner に付ける。
+#
+#     permissions (4 個):
+#       - iam.denypolicies.create / get / list / update
+#     含まれない:
+#       - iam.denypolicies.delete: runner compromise 時に deny policy を消して guard を
+#         bypass する経路を封じる。deny.tf 側は `lifecycle { prevent_destroy = true }`
+#         で terraform apply からの delete も遮断 (break-glass = project owner が gcloud
+#         で削除)。
+#       - iam.denypolicies.setIamPolicy / getIamPolicy: deny policy 自身の meta IAM は
+#         触らせない (compromised runner が別 principal に管理権限を移譲する経路を封鎖)。
+DENY_POLICY_ROLE_ID="terraformRunnerDenyPolicyManager"
+DENY_POLICY_ROLE_PERMISSIONS="iam.denypolicies.create,iam.denypolicies.get,iam.denypolicies.list,iam.denypolicies.update"
+DENY_POLICY_ROLE_TITLE="TF Runner Deny Policy Manager (no delete, no IAM policy mgmt)"
+DENY_POLICY_ROLE_DESCRIPTION="Closes Codex P1 F7 at project scope: roles/iam.denyAdmin is Organization/Folder-only. Enables terraform apply of deny.tf without allowing compromised runner to delete the deny policy or delegate its IAM."
+
+if [ "${DRY_RUN}" != "1" ] \
+   && gcloud iam roles describe "${DENY_POLICY_ROLE_ID}" \
+        --project="${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "[bootstrap] Custom role ${DENY_POLICY_ROLE_ID} exists — updating (permissions drift check)"
+  run gcloud iam roles update "${DENY_POLICY_ROLE_ID}" \
+    --project="${PROJECT_ID}" \
+    --title="${DENY_POLICY_ROLE_TITLE}" \
+    --description="${DENY_POLICY_ROLE_DESCRIPTION}" \
+    --permissions="${DENY_POLICY_ROLE_PERMISSIONS}" \
+    --stage=GA
+else
+  echo "[bootstrap] Creating custom role ${DENY_POLICY_ROLE_ID}"
+  run gcloud iam roles create "${DENY_POLICY_ROLE_ID}" \
+    --project="${PROJECT_ID}" \
+    --title="${DENY_POLICY_ROLE_TITLE}" \
+    --description="${DENY_POLICY_ROLE_DESCRIPTION}" \
+    --permissions="${DENY_POLICY_ROLE_PERMISSIONS}" \
+    --stage=GA
+fi
+
+echo "[bootstrap] Granting runner SA custom role ${DENY_POLICY_ROLE_ID}"
+run gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${TERRAFORM_SA}" \
+  --role="projects/${PROJECT_ID}/roles/${DENY_POLICY_ROLE_ID}" \
+  --condition=None
+
 # 8. 残りの predefined roles (A2 / A4-A12) の grant
-#    - roles/iam.denyAdmin (Codex P1 F7): deny.tf の refresh/update に必要
-#    - 他は各 Phase の resource CRUD に必要な最小権限
+#    各 Phase の resource CRUD に必要な最小権限。
+#    (roles/iam.denyAdmin は 7b の custom role に置換済)
 BOOTSTRAP_RUNNER_ROLES="\
 roles/cloudscheduler.admin \
 roles/artifactregistry.admin \
 roles/cloudbuild.workerPoolOwner \
 roles/iam.serviceAccountAdmin \
 roles/iam.workloadIdentityPoolAdmin \
-roles/iam.denyAdmin \
 roles/run.admin \
 roles/compute.networkAdmin \
 roles/compute.securityAdmin \
@@ -249,10 +302,12 @@ done
 echo "[bootstrap] done."
 echo "[bootstrap]  - Terraform state bucket, runner SA, WIF binding, and full runner"
 echo "[bootstrap]    project-level IAM (conditional projectIamAdmin + Secret Manager"
-echo "[bootstrap]    custom role + 10 predefined roles) are provisioned."
+echo "[bootstrap]    custom role + Deny Policy manager custom role + 9 predefined"
+echo "[bootstrap]    roles) are provisioned."
 echo "[bootstrap]  - Deny Policy on the runner SA is applied by the next terraform apply"
-echo "[bootstrap]    (via GitHub Actions on merge to main), which uses the bootstrap-granted"
-echo "[bootstrap]    denyAdmin to refresh terraform/deny.tf."
+echo "[bootstrap]    (via GitHub Actions on merge to main), using the bootstrap-granted"
+echo "[bootstrap]    project-scope custom role terraformRunnerDenyPolicyManager to"
+echo "[bootstrap]    refresh terraform/deny.tf (delete/setIamPolicy 除外で guard bypass 封鎖)."
 echo "[bootstrap]  - Adding a new role for the runner: edit this script and re-run"
 echo "[bootstrap]    (bootstrap is now the SSoT for runner IAM; do NOT re-declare"
 echo "[bootstrap]    runner bindings in Terraform — that reintroduces the F8 chicken-egg)."
