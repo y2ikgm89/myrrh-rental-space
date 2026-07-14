@@ -277,7 +277,10 @@ describe("production deploy workflow", () => {
     expect(runbook).toContain('--role="roles/run.admin"');
   });
 
-  test("replaces Cloud Run runtime env and secret bindings during deploys", () => {
+  test("Cloud Run runtime env/secrets は Terraform SSoT で管理される (Phase 6b、2026-07-14)", () => {
+    // Phase 6b で cloudbuild.yaml `--set-env-vars=` / `--set-secrets=` は削除され、
+    // Terraform `google_cloud_run_v2_service.template.containers.env` が SSoT。
+    // cloudbuild.yaml は image tag + shape (memory/cpu/ingress 等) のみ再適用。
     const deployPublicIndex = cloudBuildConfig.indexOf("id: deploy-public");
     const deployAdminIndex = cloudBuildConfig.indexOf("id: deploy-admin");
     expect(deployPublicIndex).toBeGreaterThanOrEqual(0);
@@ -289,9 +292,10 @@ describe("production deploy workflow", () => {
     );
     const deployAdminStep = cloudBuildConfig.slice(deployAdminIndex);
 
+    // cloudbuild.yaml から env/secret 書換 flag が消えていること (drift loop 防止)
     for (const step of [deployPublicStep, deployAdminStep]) {
-      expect(step).toContain("--set-env-vars=");
-      expect(step).toContain("--set-secrets=");
+      expect(step).not.toContain("--set-env-vars=");
+      expect(step).not.toContain("--set-secrets=");
       expect(step).not.toContain("--remove-env-vars=");
       expect(step).not.toContain("--update-env-vars=");
       expect(step).not.toContain("--remove-secrets=");
@@ -299,12 +303,36 @@ describe("production deploy workflow", () => {
       expect(step).not.toContain("CRON_SECRET=CRON_SECRET");
       expect(step).not.toContain("ADMIN_LOGIN_TOKEN=ADMIN_LOGIN_TOKEN");
     }
+    // shape (image / ingress / default URL) は cloudbuild.yaml 側で再適用継続
     expect(deployPublicStep).toContain("--ingress=all");
     expect(deployPublicStep).not.toContain("--no-default-url");
     expect(deployAdminStep).toContain(
       "--ingress=internal-and-cloud-load-balancing",
     );
     expect(deployAdminStep).toContain("--no-default-url");
+
+    // Terraform 側で env/secret binding が dynamic block 経由で宣言されていること
+    const cloudRunPublicTf = readFileSync(
+      join(process.cwd(), "terraform", "cloud_run_public.tf"),
+      "utf8",
+    );
+    const cloudRunAdminTf = readFileSync(
+      join(process.cwd(), "terraform", "cloud_run_admin.tf"),
+      "utf8",
+    );
+    for (const tf of [cloudRunPublicTf, cloudRunAdminTf]) {
+      expect(tf).toMatch(
+        /dynamic\s+"env"[\s\S]*for_each\s*=\s*local\.cloud_run_/,
+      );
+      expect(tf).toMatch(
+        /dynamic\s+"env"[\s\S]*for_each\s*=\s*var\.cloud_run_secret_versions/,
+      );
+      expect(tf).toMatch(
+        /secret_key_ref[\s\S]*google_secret_manager_secret\.secret\[env\.key\]/,
+      );
+      // env が ignore_changes から撤去されていること (drift-detect 完全化)
+      expect(tf).not.toMatch(/ignore_changes[\s\S]*containers\[0\]\.env/);
+    }
   });
 
   test("reapplies the Cloud Run migrate Job service account during deploys", () => {
@@ -321,7 +349,17 @@ describe("production deploy workflow", () => {
     expect(migrateUpdateStep).toContain(
       "--service-account=${_SERVICE_ACCOUNT}",
     );
-    expect(migrateUpdateStep).toContain("--set-secrets=DATABASE_URL=");
+    // Phase 6b (2026-07-14): DATABASE_URL secret binding は Terraform SSoT に移管
+    // (terraform/cloud_run_migrate_job.tf の env block)。cloudbuild.yaml の
+    // `--set-secrets=` は削除、次回 deploy 前に Terraform apply が binding を宣言的に確立。
+    expect(migrateUpdateStep).not.toContain("--set-secrets=");
+    const cloudRunMigrateJobTf = readFileSync(
+      join(process.cwd(), "terraform", "cloud_run_migrate_job.tf"),
+      "utf8",
+    );
+    expect(cloudRunMigrateJobTf).toMatch(
+      /env[\s\S]*name\s*=\s*"DATABASE_URL"[\s\S]*secret_key_ref[\s\S]*google_secret_manager_secret\.secret\["DATABASE_URL"\]/,
+    );
     expect(migrateUpdateStep).toContain("--command=bunx");
     expect(migrateUpdateStep).toContain("--args=--bun,prisma,migrate,deploy");
     expect(migrateUpdateStep).toContain("--tasks=1");

@@ -1,16 +1,12 @@
 # -----------------------------------------------------------------------------
-# Cloud Run: admin service (Phase 6a skeleton)
+# Cloud Run: admin service (Phase 6b — env/secrets Terraform 完全移管)
 # -----------------------------------------------------------------------------
 #
-# 責務は cloud_run_public.tf と同型 (Phase 6a skeleton, Phase 6b で env/secrets 移管)。
-# 相違点:
+# 責務は cloud_run_public.tf と同型。相違点:
 #   - ingress: internal-and-cloud-load-balancing (external LB 経由のみ)
-#   - default URL 無効化 (`default_uri_disabled = true`)。cloudbuild.yaml Step 6b
-#     が revision ごとに `--no-default-url` を再適用していたが、Terraform 側で
-#     宣言することで再 import 後の apply が黙って default URL を復活させる
-#     regression を防ぐ (docs/gcp-production-setup.md §admin service)。
-#   - IAP 経由の authenticated-only access (`iap_enabled = true` + iap.tf の
-#     `google_iap_web_cloud_run_service_iam_member`)
+#   - default URL 無効化 (`default_uri_disabled = true`)
+#   - IAP 経由の authenticated-only access (`iap_enabled = true` + iap.tf)
+#   - env: `local.cloud_run_admin_env` (IAP_JWT_AUDIENCE + role groups が追加)
 
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
@@ -93,6 +89,29 @@ resource "google_cloud_run_v2_service" "admin" {
         period_seconds        = 30
         failure_threshold     = 3
       }
+
+      # ---- Plain env vars (Phase 6b) ----
+      dynamic "env" {
+        for_each = local.cloud_run_admin_env
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+
+      # ---- Secret env refs (Phase 6b、Secret Manager version pin) ----
+      dynamic "env" {
+        for_each = var.cloud_run_secret_versions
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.secret[env.key].secret_id
+              version = env.value
+            }
+          }
+        }
+      }
     }
   }
 
@@ -105,10 +124,10 @@ resource "google_cloud_run_v2_service" "admin" {
     prevent_destroy = true
     ignore_changes = [
       template[0].containers[0].image,
-      template[0].containers[0].env,
       template[0].revision,
       # default URL 無効化 は default_uri_disabled = true で管理。IAP は
       # 上の iap_enabled = true で管理下。
+      # env は Phase 6b で Terraform 完全管理 (ignore_changes 撤去)。
       custom_audiences,
     ]
   }

@@ -34,6 +34,131 @@ variable "public_domain" {
   default     = "https://rental-space.myrrh-jp.com"
 }
 
+# -----------------------------------------------------------------------------
+# Cloud Run env vars (Phase 6b、cloudbuild.yaml `--set-env-vars` から Terraform 化)
+# -----------------------------------------------------------------------------
+# default 値は `.github/workflows/deploy-production.yml` の env: block と
+# `cloudbuild.yaml` の substitutions block の現行値と一致させている。
+# 全て default を持つため CI 側 TF_VAR 追加不要 (drift-detect 完全化)。
+
+variable "admin_domain" {
+  description = "Admin service canonical URL (public URL の同型で BETTER_AUTH_URL/NEXT_PUBLIC_APP_URL に注入)"
+  type        = string
+  default     = "https://admin.myrrh-jp.com"
+  validation {
+    condition     = can(regex("^https://[^/]+$", var.admin_domain))
+    error_message = "admin_domain must be https URL without trailing slash (BETTER_AUTH_URL contract)."
+  }
+}
+
+variable "next_public_turnstile_site_key" {
+  description = "Cloudflare Turnstile widget sitekey (public, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` env)"
+  type        = string
+  default     = "0x4AAAAAADi6Bqavj97fu7JG"
+}
+
+variable "next_public_ga_measurement_id" {
+  description = "Google Analytics 4 measurement ID (optional、empty で GA disable)"
+  type        = string
+  default     = ""
+}
+
+variable "database_pool_max" {
+  description = "PostgreSQL pool size per Cloud Run instance (Neon cap 30 conn 上限: pool_max × 2 services × max_instances)"
+  type        = number
+  default     = 12
+}
+
+variable "encryption_key_id" {
+  description = "Primary encryption key id (kid in v2 wire format). Bumps in atomic pair with ENCRYPTION_KEY secret version rotation"
+  type        = string
+  default     = "v1"
+}
+
+variable "audit_log_hmac_key_id" {
+  description = "Primary AuditLog HMAC key id (v2 wire format). Bumps in atomic pair with AUDIT_LOG_HMAC_KEY secret version rotation"
+  type        = string
+  default     = "v1"
+}
+
+variable "max_instances_hint" {
+  description = "Cloud Run max instances hint (env, runtime rate-limit backend guard で使用)"
+  type        = string
+  default     = "1"
+}
+
+variable "rate_limit_backend" {
+  description = "Runtime rate-limit backend (in-memory | redis). instrumentation で max_instances_hint と cross-check"
+  type        = string
+  default     = "in-memory"
+  validation {
+    condition     = contains(["in-memory", "redis"], var.rate_limit_backend)
+    error_message = "rate_limit_backend must be one of: in-memory, redis."
+  }
+}
+
+variable "iap_jwt_audience" {
+  description = "IAP JWT audience string (/projects/PROJECT_NUMBER/locations/REGION/services/ADMIN_SERVICE_NAME 形式、iap-jwt-verify.ts で検証)"
+  type        = string
+  default     = "/projects/626108938746/locations/asia-northeast1/services/myrrh-rental-space-admin"
+}
+
+variable "admin_role_group_super_admin_email" {
+  description = "Admin role SUPER_ADMIN Google Group email (IAP identity から role 解決)"
+  type        = string
+  default     = "myrrh-super-admins@myrrh-jp.com"
+}
+
+variable "admin_role_group_admin_email" {
+  description = "Admin role ADMIN Google Group email"
+  type        = string
+  default     = "myrrh-admins@myrrh-jp.com"
+}
+
+variable "admin_role_group_editor_email" {
+  description = "Admin role EDITOR Google Group email"
+  type        = string
+  default     = "myrrh-editors@myrrh-jp.com"
+}
+
+variable "admin_role_group_viewer_email" {
+  description = "Admin role VIEWER Google Group email"
+  type        = string
+  default     = "myrrh-viewers@myrrh-jp.com"
+}
+
+# -----------------------------------------------------------------------------
+# Secret Manager version pinning (Phase 6b)
+# -----------------------------------------------------------------------------
+# 各 secret_id → version の map。cloudbuild.yaml の `_*_SECRET_VERSION` 相当。
+# rotation 時: (1) Secret Manager に新 version 追加 → (2) map の対応 entry を
+# bump → (3) terraform apply で Cloud Run が新 revision で新 version を pin。
+# 全 secret を "latest" にしないのは、rotation の atomicity 保護 (Cloud Run が
+# 明示的な version pin を持つことで、Secret Manager 側の意図しない自動追従を防ぐ)。
+
+variable "cloud_run_secret_versions" {
+  description = "Cloud Run env で pin する Secret Manager version の map (secret_id → version string)"
+  type        = map(string)
+  default = {
+    DATABASE_URL                       = "1"
+    BETTER_AUTH_SECRET                 = "1"
+    ENCRYPTION_KEY                     = "1"
+    SECONDARY_ENCRYPTION_KEYS          = "1"
+    AUDIT_LOG_HMAC_KEY                 = "1"
+    NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = "1"
+    R2_ACCOUNT_ID                      = "1"
+    R2_ACCESS_KEY_ID                   = "1"
+    R2_SECRET_ACCESS_KEY               = "1"
+    R2_BUCKET_NAME                     = "1"
+    R2_PUBLIC_URL                      = "1"
+    CLOUDFLARE_ZONE_ID                 = "1"
+    CLOUDFLARE_API_TOKEN               = "1"
+    CLOUDFLARE_ORIGIN_HEADER_SECRET    = "1"
+    GOOGLE_CLIENT_ID                   = "1"
+    GOOGLE_CLIENT_SECRET               = "1"
+  }
+}
+
 # WIF attribute assertions — bootstrap 済み provider の attribute_condition と
 # 一致させるために必要 (Codex P1 F3)。docs/gcp-production-setup.md §WIF で
 # 既存 provider を作成した際の値を tfvars に固定 (repository_id は GitHub

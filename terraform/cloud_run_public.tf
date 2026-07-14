@@ -1,19 +1,24 @@
 # -----------------------------------------------------------------------------
-# Cloud Run: public service (Phase 6a skeleton)
+# Cloud Run: public service (Phase 6b — env/secrets Terraform 完全移管)
 # -----------------------------------------------------------------------------
 #
-# 現状 cloudbuild.yaml Step 6a が `gcloud run deploy` で shape 込みで宣言的に
-# 毎 deploy 反映している。本 Phase 6a では **shape のうち可搬性の高い部分だけ**
-# を Terraform で宣言し、image / detail env vars / secret bindings の細部は
-# Phase 6b で cloudbuild.yaml の相当パラメータと入れ替える (別 PR)。
+# env / secret bindings は本 file で declarative に宣言 (Phase 6b、2026-07-14 完成)。
+# cloudbuild.yaml Step 6a の `--set-env-vars=` / `--set-secrets=` は削除済で、
+# 毎 deploy が触るのは image tag (`--image=...:${SHORT_SHA}`) のみ。
 #
-# Phase 6a の trade-off:
-#   - `template[0].containers[0].image` は毎 deploy の Cloud Build が書き換え
-#     続けるため `lifecycle.ignore_changes` で drift を無視する。
-#   - env vars / secret bindings は Phase 6b で Terraform 側に完全移管する
-#     まで、暫定的に ignore_changes で cloudbuild.yaml 側の書き込みを許容する。
+# ## Lifecycle policy
 #
-# `prevent_destroy = true` で Terraform apply が service を消す事故は無条件 block。
+# - `template[0].containers[0].image` は cloudbuild.yaml の毎 deploy `--image` で
+#   書き換え続けるため `ignore_changes` で drift 無視。
+# - `template[0].revision` は Cloud Run が自動採番するため ignore。
+# - `env` は Terraform 完全管理 (Phase 6b で ignore_changes 撤去、drift-detect ON)。
+# - `prevent_destroy = true` で Terraform apply が service を消す事故は無条件 block。
+#
+# ## env の source of truth
+#
+# - plain env: `terraform/locals_cloud_run.tf` の `local.cloud_run_public_env`
+# - secret refs: `terraform/secrets.tf` の `google_secret_manager_secret.secret[<id>]`
+#   version pinning は `var.cloud_run_secret_versions` (secret_id → version map)
 
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
@@ -86,6 +91,29 @@ resource "google_cloud_run_v2_service" "public" {
         period_seconds        = 30
         failure_threshold     = 3
       }
+
+      # ---- Plain env vars (Phase 6b) ----
+      dynamic "env" {
+        for_each = local.cloud_run_public_env
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+
+      # ---- Secret env refs (Phase 6b、Secret Manager version pin) ----
+      dynamic "env" {
+        for_each = var.cloud_run_secret_versions
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.secret[env.key].secret_id
+              version = env.value
+            }
+          }
+        }
+      }
     }
   }
 
@@ -97,10 +125,9 @@ resource "google_cloud_run_v2_service" "public" {
   lifecycle {
     prevent_destroy = true
     ignore_changes = [
-      # cloudbuild.yaml が毎 deploy で書き換えるフィールド。Phase 6b で
-      # Terraform 側に完全移管したら本 list を絞る。
+      # cloudbuild.yaml が毎 deploy で書き換える field のみ ignore。
+      # Phase 6b で env は Terraform 完全管理 (ignore_changes = [env] 撤去)。
       template[0].containers[0].image,
-      template[0].containers[0].env,
       template[0].revision,
     ]
   }
