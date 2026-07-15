@@ -692,6 +692,31 @@ export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
 };
 
 // =============================================================================
+// Refund Actor Type（`refunds.refundedByType` の VARCHAR 値 — Prisma enum ではない）
+//
+// DB 側の CHECK 制約 `refunds_refundedByType_check` と application 側の enum を
+// 二重防御する。返金の起点 (誰が発火したか) を AuditLog metadata と併用する。
+// =============================================================================
+
+export const REFUNDED_BY_TYPE = {
+  /** 管理者が admin UI から明示的に返金 */
+  ADMIN: "ADMIN",
+  /** キャンセル副作用 (`cancellation-side-effects.ts`) で自動発火した返金 */
+  AUTO_ON_CANCEL: "AUTO_ON_CANCEL",
+  /** Stripe Dashboard 経由の手動返金 (webhook 経由で back-fill) */
+  STRIPE_DASHBOARD: "STRIPE_DASHBOARD",
+} as const;
+
+export type RefundedByType =
+  (typeof REFUNDED_BY_TYPE)[keyof typeof REFUNDED_BY_TYPE];
+
+export const REFUNDED_BY_TYPE_LABELS: Record<RefundedByType, string> = {
+  [REFUNDED_BY_TYPE.ADMIN]: "管理者",
+  [REFUNDED_BY_TYPE.AUTO_ON_CANCEL]: "自動（キャンセル）",
+  [REFUNDED_BY_TYPE.STRIPE_DASHBOARD]: "Stripe Dashboard",
+};
+
+// =============================================================================
 // AdminNotification Type（DB VARCHAR 管理 — Prisma enum ではない）
 // =============================================================================
 

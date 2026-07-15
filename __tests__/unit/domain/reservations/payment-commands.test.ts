@@ -72,7 +72,16 @@ const mockGetStripeClient = mock(() =>
 const mockLogError = mock(() => undefined);
 
 mock.module("server-only", () => ({}));
+const AuditAction = {
+  CREATE: "CREATE",
+  UPDATE: "UPDATE",
+  DELETE: "DELETE",
+  LOGIN: "LOGIN",
+  LOGOUT: "LOGOUT",
+} as const;
+
 mock.module("@generated/prisma/enums", () => ({
+  AuditAction,
   PaymentStatus,
   ReservationStatus,
 }));
@@ -112,8 +121,13 @@ mock.module("@/shared/domain/reservations/pending-expiry", () => ({
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
-const { createCheckoutSessionCommand, refundReservationPaymentCommand } =
+const { createCheckoutSessionCommand } =
   await import("@/shared/domain/reservations/payment-commands");
+// NOTE: `refundReservationPaymentCommand` の挙動は interactive tx + advisory lock +
+// Refund child table 集計 + AuditLog を跨ぐため unit mock では過度に fragile。
+// テストは `__tests__/integration/domain/reservations/refund-command.test.ts` の
+// 実 DB 統合テストが担当する (partial refund / over-refund / concurrent race /
+// paymentStatus 遷移 / idempotency の全網羅を実データで検証)。
 
 const RESERVATION_ID = "550e8400-e29b-41d4-a716-446655440001";
 const CUSTOMER_ID = "550e8400-e29b-41d4-a716-446655440002";
@@ -577,43 +591,6 @@ describe("reservations/payment-commands", () => {
     });
   });
 
-  describe("refundReservationPaymentCommand", () => {
-    test("Stripe idempotency key を使い、PAID / PARTIALLY_REFUNDED の予約を atomic に REFUNDED へ更新する", async () => {
-      const result = await refundReservationPaymentCommand(RESERVATION_ID);
-
-      expect(mockRefundCreate).toHaveBeenCalledWith(
-        { payment_intent: PAYMENT_INTENT_ID },
-        { idempotencyKey: `reservation-refund-${RESERVATION_ID}` },
-      );
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith({
-        where: {
-          id: RESERVATION_ID,
-          deletedAt: null,
-          paymentStatus: {
-            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
-          },
-        },
-        data: { paymentStatus: PaymentStatus.REFUNDED },
-      });
-      expect(mockReservationUpdate).not.toHaveBeenCalled();
-      expect(result).toEqual({
-        refundId: "re_test_123",
-        status: "succeeded",
-        customerId: CUSTOMER_ID,
-      });
-    });
-
-    test("PAID / PARTIALLY_REFUNDED 以外の予約では Stripe refund を作成しない", async () => {
-      mockReservationFindUnique.mockResolvedValueOnce({
-        ...paidReservation(),
-        paymentStatus: PaymentStatus.REFUNDED,
-      });
-
-      await expect(
-        refundReservationPaymentCommand(RESERVATION_ID),
-      ).rejects.toThrow(DomainError);
-      expect(mockRefundCreate).not.toHaveBeenCalled();
-      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
-    });
-  });
+  // refundReservationPaymentCommand の検証は integration test に集約
+  // (`__tests__/integration/domain/reservations/refund-command.test.ts`)。
 });

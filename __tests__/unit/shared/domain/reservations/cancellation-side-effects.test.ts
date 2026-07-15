@@ -60,9 +60,15 @@ mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: mockCreateNotification,
 }));
 
-const mockRefund = mock<(reservationId: string) => Promise<unknown>>(() =>
-  Promise.resolve({ ok: true }),
-);
+const mockRefund = mock<
+  (input: {
+    reservationId: string;
+    amount?: number;
+    reason?: string;
+    actorType: string;
+    actorUserId?: string;
+  }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true }));
 mock.module("@/shared/domain/reservations/payment-commands", () => ({
   refundReservationPaymentCommand: mockRefund,
 }));
@@ -259,7 +265,10 @@ describe("applyCancellationSideEffects", () => {
     await applyCancellationSideEffects(baseInput());
 
     expect(mockRefund).toHaveBeenCalledTimes(1);
-    expect(mockRefund).toHaveBeenCalledWith(RID);
+    expect(mockRefund).toHaveBeenCalledWith({
+      reservationId: RID,
+      actorType: "AUTO_ON_CANCEL",
+    });
 
     // notification title が「要返金確認」へ昇格
     expect(mockCreateNotification).toHaveBeenCalledTimes(1);
