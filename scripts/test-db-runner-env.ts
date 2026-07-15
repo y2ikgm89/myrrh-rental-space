@@ -2,6 +2,7 @@ import { resolveTestDatabaseUrl } from "./test-db-url";
 
 export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/domain/reservations/cancel-by-token-roundtrip.test.ts",
+  "__tests__/integration/domain/reservations/cancellation-with-refund-policy.test.ts",
   "__tests__/integration/domain/reservations/db-invariants.test.ts",
   "__tests__/integration/domain/reservations/refund-command.test.ts",
   "__tests__/integration/domain/reservations/reminder-idempotency.test.ts",
