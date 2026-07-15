@@ -338,11 +338,10 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     );
   });
 
-  test("Stripe: 有効 Switch OFF + キー空欄でも success", () => {
+  test("Stripe: credentials 全空欄でも success (stripeEnabled は Feature Module に移管済み)", () => {
     expectSuccess(
       stripeFormSchema,
       form({
-        stripeEnabled: "",
         stripePublishableKey: "",
         stripeSecretKey: "",
         stripeWebhookSecret: "",
@@ -436,6 +435,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         "access",
         "contact",
         "reviews",
+        "payment",
         "data-retention",
       ]),
       { schema: featureModulesSettingsSchema },

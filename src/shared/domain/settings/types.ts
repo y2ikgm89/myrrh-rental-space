@@ -84,7 +84,6 @@ export type SettingsData = {
   taxDisplayModePublic: TaxDisplayMode;
   maintenanceMode: boolean;
   maintenanceMessage: string | null;
-  stripeEnabled: boolean;
   stripePublishableKey: string | null;
   stripeSecretKeyMasked: string | null;
   stripeWebhookSecretMasked: string | null;
@@ -146,9 +145,10 @@ export type SettingsData = {
   /**
    * Feature Module ON/OFF map.
    *
-   * 形式: `Record<FeatureModule, boolean>` — 9 module（spaces / reservation / events /
-   * posts / news / faq / access / contact / reviews）。SSoT: `@/shared/lib/features/registry`。
-   * 解決ロジック（依存伝播含む）は `@/shared/lib/features/check.ts`。
+   * 形式: `Record<FeatureModule, boolean>` — 11 module（spaces / reservation / events /
+   * posts / news / faq / access / contact / reviews / payment / data-retention）。
+   * SSoT: `@/shared/lib/features/registry`。解決ロジック（依存伝播含む）は
+   * `@/shared/lib/features/check.ts`。
    */
   featureModules: Record<string, boolean>;
   themeColor: string;

@@ -16,7 +16,7 @@ import {
  * 2. `FEATURE_MODULES[id].requires` の依存解決を伝播的に適用（A requires B & B OFF → A も OFF）
  *
  * fail-closed 原則: DB に key が存在しない / DB が空 / 不正値 → その module は OFF。
- * `seed.ts` と migration が全 9 module を explicit に保つことで運用上は全 ON で動作する。
+ * `seed.ts` と migration が全 11 module を explicit に保つことで運用上は全 ON で動作する。
  *
  * 内部の `getFeatureModulesSettings` が `'use cache'` で cross-request キャッシュを
  * 持つため、本関数は薄い解決ロジック層（メモ化不要）。
@@ -34,7 +34,7 @@ export async function getEnabledFeatures(): Promise<
   }
 
   // 依存解決: requires が全て enabled に含まれていなければ自身を除外
-  // 9 module の小規模グラフのため fixed-point iteration で十分
+  // 11 module の小規模グラフのため fixed-point iteration で十分
   for (let pass = 0; pass < FEATURE_MODULES_LIST.length; pass++) {
     let removed = false;
     for (const id of [...enabled]) {

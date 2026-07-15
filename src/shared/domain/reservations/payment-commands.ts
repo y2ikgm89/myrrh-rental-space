@@ -3,8 +3,8 @@ import "server-only";
 import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { getStripeClient } from "@/shared/lib/stripe";
-import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
 import { getAppUrl } from "@/shared/lib/constants";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
@@ -134,10 +134,7 @@ export async function createCheckoutSessionCommand(input: {
     );
   }
 
-  const stripeSettings = await getStripeSettings();
-  if (!stripeSettings?.stripeEnabled) {
-    throw new DomainError("Stripe 決済が有効になっていません", "VALIDATION");
-  }
+  const stripeSettings = await assertOnlinePaymentAvailable();
 
   const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
@@ -147,7 +144,7 @@ export async function createCheckoutSessionCommand(input: {
     );
   }
 
-  const currency = stripeSettings.stripeCurrency ?? "jpy";
+  const currency = stripeSettings.stripeCurrency;
   const appUrl = getAppUrl();
 
   // Settings で許可された payment_method_types のみ Stripe に渡す。
@@ -379,10 +376,7 @@ export async function refundReservationPaymentCommand(reservationId: string) {
     throw new DomainError("Stripe の決済情報が見つかりません", "VALIDATION");
   }
 
-  const stripeSettings = await getStripeSettings();
-  if (!stripeSettings?.stripeEnabled) {
-    throw new DomainError("Stripe 決済が有効になっていません", "VALIDATION");
-  }
+  const stripeSettings = await assertOnlinePaymentAvailable();
 
   const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {

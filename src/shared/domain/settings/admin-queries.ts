@@ -130,7 +130,6 @@ function toSettingsData(
     taxDisplayModePublic: settings.taxDisplayModePublic,
     maintenanceMode: settings.maintenanceMode,
     maintenanceMessage: settings.maintenanceMessage,
-    stripeEnabled: settings.stripeEnabled,
     stripePublishableKey: settings.stripePublishableKey,
     stripeAccountId: settings.stripeAccountId,
     stripeCurrency: settings.stripeCurrency,

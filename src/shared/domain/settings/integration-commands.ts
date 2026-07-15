@@ -15,7 +15,6 @@ import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/g
 // ---------------------------------------------------------------------------
 
 export type StripeSettingsInput = {
-  stripeEnabled: boolean;
   stripePublishableKey?: string | null | undefined;
   stripeSecretKey?: string | null | undefined;
   stripeWebhookSecret?: string | null | undefined;
@@ -61,7 +60,6 @@ export async function updateStripeSettings(
   data: StripeSettingsInput,
 ): Promise<void> {
   const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {
-    stripeEnabled: data.stripeEnabled,
     stripeCurrency: data.stripeCurrency,
     // Prisma String[] は Prisma.SettingsCreateInput 側で
     // `{ set: string[] }` 形 or plain array を受け付ける。plain array で渡す。

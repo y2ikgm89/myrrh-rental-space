@@ -4,10 +4,10 @@
  * Feature Module ON/OFF 切替フォーム
  *
  * Sanity / Stripe Capabilities 流の declarative composition pattern。
- * 9 module の boolean を一括 PATCH。`requires` 依存元が OFF の module は
+ * 11 module の boolean を一括 PATCH。`requires` 依存元が OFF の module は
  * Switch を disabled 化（保存値は実 UI 入力を保持し、runtime 解決で fail-closed）。
  *
- * clean break 移行。9 module の boolean Switch は `useInputControl` + hidden
+ * clean break 移行。11 module の boolean Switch は `useInputControl` + hidden
  * input で "on" / "" sync、`z.boolean()` で `parseWithZod` 自動 coerce。
  */
 

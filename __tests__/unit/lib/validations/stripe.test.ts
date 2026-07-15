@@ -7,7 +7,6 @@ import {
 describe("stripeSettingsSchema", () => {
   test("正常なテストモード設定が検証を通過する", () => {
     const validData = {
-      stripeEnabled: true,
       stripePublishableKey: "pk_test_abc123",
       stripeSecretKey: "sk_test_xyz789",
       stripeWebhookSecret: "whsec_test123",
@@ -21,7 +20,6 @@ describe("stripeSettingsSchema", () => {
 
   test("正常な本番モード設定が検証を通過する", () => {
     const validData = {
-      stripeEnabled: true,
       stripePublishableKey: "pk_live_abc123",
       stripeSecretKey: "sk_live_xyz789",
       stripeWebhookSecret: "whsec_live123",
@@ -33,9 +31,7 @@ describe("stripeSettingsSchema", () => {
   });
 
   test("stripeCurrency がデフォルトで jpy になる", () => {
-    const data = {
-      stripeEnabled: false,
-    };
+    const data = {};
 
     const result = stripeSettingsSchema.safeParse(data);
     expect(result.success).toBe(true);
@@ -46,7 +42,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripePublishableKey が pk_test_ で始まらない場合エラーになる", () => {
     const data = {
-      stripeEnabled: true,
       stripePublishableKey: "invalid_key",
     };
 
@@ -61,7 +56,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripePublishableKey が pk_live_ で始まる場合検証を通過する", () => {
     const data = {
-      stripeEnabled: true,
       stripePublishableKey: "pk_live_abc123",
       stripeCurrency: "jpy" as const,
       stripePaymentMethodTypes: ["card"] as const,
@@ -73,7 +67,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripeSecretKey が sk_test_ で始まらない場合エラーになる", () => {
     const data = {
-      stripeEnabled: true,
       stripeSecretKey: "invalid_secret",
     };
 
@@ -88,7 +81,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripeSecretKey が sk_live_ で始まる場合検証を通過する", () => {
     const data = {
-      stripeEnabled: true,
       stripeSecretKey: "sk_live_xyz789",
       stripeCurrency: "jpy" as const,
       stripePaymentMethodTypes: ["card"] as const,
@@ -100,7 +92,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripeWebhookSecret が whsec_ で始まらない場合エラーになる", () => {
     const data = {
-      stripeEnabled: true,
       stripeWebhookSecret: "invalid_webhook",
     };
 
@@ -115,7 +106,6 @@ describe("stripeSettingsSchema", () => {
 
   test("公開可能キーとシークレットキーのモード（test/live）が一致しない場合エラーになる", () => {
     const data = {
-      stripeEnabled: true,
       stripePublishableKey: "pk_test_abc123",
       stripeSecretKey: "sk_live_xyz789", // ミスマッチ
       stripeCurrency: "jpy" as const,
@@ -136,7 +126,6 @@ describe("stripeSettingsSchema", () => {
 
   test("公開可能キーとシークレットキーのモードが一致する場合検証を通過する（テストモード）", () => {
     const data = {
-      stripeEnabled: true,
       stripePublishableKey: "pk_test_abc123",
       stripeSecretKey: "sk_test_xyz789",
       stripeCurrency: "jpy" as const,
@@ -149,7 +138,6 @@ describe("stripeSettingsSchema", () => {
 
   test("公開可能キーとシークレットキーのモードが一致する場合検証を通過する（本番モード）", () => {
     const data = {
-      stripeEnabled: true,
       stripePublishableKey: "pk_live_abc123",
       stripeSecretKey: "sk_live_xyz789",
       stripeCurrency: "jpy" as const,
@@ -162,7 +150,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripePublishableKey が null の場合検証を通過する", () => {
     const data = {
-      stripeEnabled: false,
       stripePublishableKey: null,
       stripeCurrency: "jpy" as const,
       stripePaymentMethodTypes: ["card"] as const,
@@ -174,7 +161,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripePublishableKey が200文字を超える場合エラーになる", () => {
     const data = {
-      stripeEnabled: true,
       stripePublishableKey: "pk_test_" + "a".repeat(200),
     };
 
@@ -184,7 +170,6 @@ describe("stripeSettingsSchema", () => {
 
   test("stripeCurrency が許可された値以外の場合エラーになる", () => {
     const data = {
-      stripeEnabled: true,
       stripeCurrency: "gbp", // 未サポート
     };
 

@@ -109,7 +109,6 @@ describe("updateStripeSettings", () => {
   describe("正常系", () => {
     test("キーなしで基本設定を保存できる", async () => {
       await updateStripeSettings({
-        stripeEnabled: true,
         stripeCurrency: "jpy",
         stripePaymentMethodTypes: ["card"],
       });
@@ -124,7 +123,6 @@ describe("updateStripeSettings", () => {
 
     test("stripeSecretKey を指定すると暗号化して保存される", async () => {
       await updateStripeSettings({
-        stripeEnabled: true,
         stripeSecretKey: "sk_test_abc123",
         stripeCurrency: "jpy",
         stripePaymentMethodTypes: ["card"],
@@ -150,7 +148,6 @@ describe("updateStripeSettings", () => {
 
     test("stripeWebhookSecret を指定すると暗号化して保存される", async () => {
       await updateStripeSettings({
-        stripeEnabled: true,
         stripeWebhookSecret: "whsec_test123",
         stripeCurrency: "jpy",
         stripePaymentMethodTypes: ["card"],
@@ -173,9 +170,10 @@ describe("updateStripeSettings", () => {
       );
     });
 
-    test("stripeEnabled が false でも正常に保存できる", async () => {
+    test("通貨変更のみを保存できる", async () => {
+      // stripeEnabled トグルは廃止 (Feature Module `payment` が SSoT)。
+      // credentials 命令の副次的な設定変更 (通貨等) がキー投入なしで通ることを固定する。
       await updateStripeSettings({
-        stripeEnabled: false,
         stripeCurrency: "usd",
         stripePaymentMethodTypes: ["card"],
       });
@@ -184,17 +182,18 @@ describe("updateStripeSettings", () => {
       expect(mockSettingsUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
-            stripeEnabled: false,
+            stripeCurrency: "usd",
           }),
         }),
       );
+      // stripeEnabled 列は schema から削除済み — update に混入していないことを固定。
+      expect(Object.keys(lastUpdate())).not.toContain("stripeEnabled");
     });
 
     test("stripePublishableKey が null の場合は既存値を維持する（update に含めない）", async () => {
       // 公開可能キーはロック中の保存で空送信になるため、null（空）は「既存維持」。
       // クリアは clearStripeKeys 経由で行う（[[lockable-integration-key-fields]]）。
       await updateStripeSettings({
-        stripeEnabled: true,
         stripePublishableKey: null,
         stripeCurrency: "jpy",
         stripePaymentMethodTypes: ["card"],
@@ -205,7 +204,6 @@ describe("updateStripeSettings", () => {
 
     test("戻り値が void（undefined）", async () => {
       const result = await updateStripeSettings({
-        stripeEnabled: true,
         stripeCurrency: "jpy",
         stripePaymentMethodTypes: ["card"],
       });
@@ -221,7 +219,6 @@ describe("updateStripeSettings", () => {
 
       await expect(
         updateStripeSettings({
-          stripeEnabled: true,
           stripeSecretKey: "sk_test_abc",
           stripeCurrency: "jpy",
           stripePaymentMethodTypes: ["card"],
@@ -239,7 +236,6 @@ describe("updateStripeSettings", () => {
 
       await expect(
         updateStripeSettings({
-          stripeEnabled: true,
           stripeWebhookSecret: "whsec_test",
           stripeCurrency: "jpy",
           stripePaymentMethodTypes: ["card"],

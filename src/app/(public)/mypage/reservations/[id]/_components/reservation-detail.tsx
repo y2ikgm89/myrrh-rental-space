@@ -76,6 +76,11 @@ interface ReservationDetailProps {
   readonly deadlineSettings: DeadlineSettings | undefined;
   /** 公開中のキャンセルポリシー規約 URL。無ければリンクを出さない */
   readonly cancellationPolicyUrl: string | undefined;
+  /**
+   * オンライン決済 (Feature Module `payment`) が有効か。
+   * false なら CheckoutButton は表示しない (server 側 `assertOnlinePaymentAvailable` と対称)。
+   */
+  readonly paymentEnabled: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +112,7 @@ export function ReservationDetail({
   reservation,
   deadlineSettings,
   cancellationPolicyUrl,
+  paymentEnabled,
 }: ReservationDetailProps) {
   const {
     id,
@@ -309,12 +315,16 @@ export function ReservationDetail({
       )}
 
       {/* Stripe Checkout ボタン (PR#7 + Codex P1 PR#1022 + #8 FAILED gate 緩和):
-        paymentStatus ∈ {UNPAID, FAILED} かつ totalPrice>0 かつ status ∈ {PENDING, CONFIRMED} のみ表示。
+        paymentStatus ∈ {UNPAID, FAILED} かつ totalPrice>0 かつ status ∈ {PENDING, CONFIRMED}
+        かつ Feature Module `payment` ON のみ表示。
         FAILED (前回決済失敗 / session.expired webhook で claim) からも再決済に進めるようにし、
         「一度離脱すると admin 手動リセットまでマイページから支払えない」体験を解消する。
         cancel path は status=CANCELLED / paymentStatus=UNPAID を残すので isActive gate 必須。
-        server 側 createCheckoutSessionCommand の terminal-status ガードと対称 (defense-in-depth)。 */}
-      {isActive &&
+        `paymentEnabled` は server 側 `assertOnlinePaymentAvailable` と対称の feature gate
+        (旧 stripeEnabled トグルの UI 抜けを恒久解消)。server 側の terminal-status ガード
+        (createCheckoutSessionCommand) と重ねて defense-in-depth を成す。 */}
+      {paymentEnabled &&
+        isActive &&
         (paymentStatusEnum === PaymentStatus.UNPAID ||
           paymentStatusEnum === PaymentStatus.FAILED) &&
         reservation.totalPrice !== null &&

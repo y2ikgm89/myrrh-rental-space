@@ -61,9 +61,10 @@ describe("security-integration forms: ロック中保存の受理", () => {
 
   describe("stripe", () => {
     test("公開可能キー変更・シークレット/Webhook ロック（空）で保存できる（テストモード）", () => {
+      // stripeEnabled トグルは廃止 — Feature Module `payment` が SSoT。
+      // schema には credentials のみが残り、その空許容契約を固定する。
       const r = parseWithZod(
         fd({
-          stripeEnabled: "on",
           stripePublishableKey: "pk_test_abcdef",
           stripeSecretKey: "",
           stripeWebhookSecret: "",
@@ -77,7 +78,6 @@ describe("security-integration forms: ロック中保存の受理", () => {
     test("キーをすべて空（ロック）にしても保存できる", () => {
       const r = parseWithZod(
         fd({
-          stripeEnabled: "on",
           stripePublishableKey: "",
           stripeSecretKey: "",
           stripeWebhookSecret: "",
@@ -87,14 +87,17 @@ describe("security-integration forms: ロック中保存の受理", () => {
       );
       expect(r.status).toBe("success");
       if (r.status === "success") {
-        expect(r.value.stripeEnabled).toBe(true);
+        // stripeEnabled は schema から除外済み (Feature Module `payment` が SSoT)。
+        // parsed value に混入していないことを固定する。
+        expect(
+          (r.value as Record<string, unknown>)["stripeEnabled"],
+        ).toBeUndefined();
       }
     });
 
     test("無効な公開可能キーは引き続き拒否される", () => {
       const r = parseWithZod(
         fd({
-          stripeEnabled: "",
           stripePublishableKey: "invalid_key",
           stripeSecretKey: "",
           stripeWebhookSecret: "",

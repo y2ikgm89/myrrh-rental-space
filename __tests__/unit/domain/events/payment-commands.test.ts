@@ -27,15 +27,24 @@ const mockRegUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 0 }));
 
-const mockGetStripeSettings = mock<
-  () => Promise<Record<string, unknown> | null>
->(() =>
-  Promise.resolve({
-    stripeEnabled: true,
-    stripeSecretKey: "enc-stripe-secret",
-    stripePaymentMethodTypes: ["card"],
-    stripeCurrency: "jpy",
-  }),
+type MockCredentials = {
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
+  stripePublishableKey: string | null;
+  stripeAccountId: string | null;
+  stripeCurrency: string;
+  stripePaymentMethodTypes: readonly string[];
+};
+const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>(
+  () =>
+    Promise.resolve({
+      stripeSecretKey: "enc-stripe-secret",
+      stripeWebhookSecret: "enc-webhook-secret",
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
+    }),
 );
 const mockCheckoutSessionCreate = mock<
   (args: Record<string, unknown>) => Promise<{ id: string; url: string | null }>
@@ -68,8 +77,8 @@ mock.module("@/shared/db/prisma", () => ({
     },
   },
 }));
-mock.module("@/shared/domain/settings/queries/integration", () => ({
-  getStripeSettings: () => mockGetStripeSettings(),
+mock.module("@/shared/domain/payment/availability", () => ({
+  assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
 }));
 mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: () => mockGetStripeClient(),
@@ -137,7 +146,7 @@ describe("events/payment-commands", () => {
     mockRegFindUnique.mockReset();
     mockRegFindFirst.mockReset();
     mockRegUpdateMany.mockReset();
-    mockGetStripeSettings.mockReset();
+    mockAssertOnlinePaymentAvailable.mockReset();
     mockGetStripeClient.mockReset();
     mockCheckoutSessionCreate.mockReset();
     mockLogError.mockReset();
@@ -145,11 +154,13 @@ describe("events/payment-commands", () => {
     mockRegFindUnique.mockResolvedValue(initialRead());
     mockRegFindFirst.mockResolvedValue(authoritative());
     mockRegUpdateMany.mockResolvedValue({ count: 1 });
-    mockGetStripeSettings.mockResolvedValue({
-      stripeEnabled: true,
+    mockAssertOnlinePaymentAvailable.mockResolvedValue({
       stripeSecretKey: "enc-stripe-secret",
-      stripePaymentMethodTypes: ["card"],
+      stripeWebhookSecret: "enc-webhook-secret",
+      stripePublishableKey: null,
+      stripeAccountId: null,
       stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
     });
     mockGetStripeClient.mockResolvedValue({
       client: {

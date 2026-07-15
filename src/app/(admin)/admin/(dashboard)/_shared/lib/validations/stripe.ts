@@ -35,9 +35,10 @@ const MESSAGES: ValidationMessages = {
 /**
  * Stripe設定の更新スキーマ
  */
+// stripeEnabled トグルは廃止 — オンライン決済の ON/OFF は Feature Module registry の
+// `payment` module が SSoT。ここで credentials のみ扱う。
 export const stripeSettingsSchema = z
   .object({
-    stripeEnabled: z.boolean(),
     stripePublishableKey: z
       .string()
       .max(200, { error: MESSAGES.maxLength("公開可能キー") })

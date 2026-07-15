@@ -114,15 +114,21 @@ export default async function ReservationDetailPage({
 
   const isCompleted = reservation.status === ReservationStatus.COMPLETED;
 
-  const [existingReview, turnstileSiteKey, reviewsEnabled, cancellationPolicy] =
-    await Promise.all([
-      isCompleted
-        ? getReviewForReservation(reservation.id, customer.id)
-        : Promise.resolve(null),
-      getTurnstileSiteKey(),
-      isFeatureEnabled("reviews"),
-      getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
-    ]);
+  const [
+    existingReview,
+    turnstileSiteKey,
+    reviewsEnabled,
+    paymentEnabled,
+    cancellationPolicy,
+  ] = await Promise.all([
+    isCompleted
+      ? getReviewForReservation(reservation.id, customer.id)
+      : Promise.resolve(null),
+    getTurnstileSiteKey(),
+    isFeatureEnabled("reviews"),
+    isFeatureEnabled("payment"),
+    getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+  ]);
   const cancellationPolicyUrl = cancellationPolicy
     ? `/terms/${cancellationPolicy.slug}`
     : undefined;
@@ -173,6 +179,7 @@ export default async function ReservationDetailPage({
         reservation={serializedReservation}
         deadlineSettings={deadlineSettings}
         cancellationPolicyUrl={cancellationPolicyUrl}
+        paymentEnabled={paymentEnabled}
       />
 
       {(canEdit || canCancel) && (
