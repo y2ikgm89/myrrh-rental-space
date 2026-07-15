@@ -288,14 +288,15 @@ export async function updateCustomerReservation(
       },
     });
 
-    // 料金の再計算（クーポン・長時間割引・rate plan 含む）
+    // 料金の再計算（クーポン・長時間割引・rate plan 含む）。
+    // `Coupon.validUntil` は schema で optional（`DateTime?`）= 永続クーポンあり。
+    // 有効期間の判定意味論は `payloads.ts:validateCoupon` と揃える
+    // （「未設定なら期限なし」= truthy chain で short-circuit させない）。
     const coupon = reservation.coupon;
     const couponForCalc =
       coupon &&
-      coupon.validFrom &&
-      coupon.validUntil &&
       new Date(coupon.validFrom) <= startDateTime &&
-      new Date(coupon.validUntil) >= endDateTime
+      (!coupon.validUntil || new Date(coupon.validUntil) >= endDateTime)
         ? {
             id: coupon.id,
             code: coupon.code,
