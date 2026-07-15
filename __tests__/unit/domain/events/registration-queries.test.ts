@@ -11,6 +11,7 @@ type RegistrationEmailRow = {
     capacity: number;
   };
   event: {
+    title: string;
     addressDetail: string | null;
     location: { name: string } | null;
     space: { name: string } | null;
