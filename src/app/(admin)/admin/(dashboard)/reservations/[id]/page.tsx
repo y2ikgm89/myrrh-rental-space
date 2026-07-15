@@ -10,6 +10,7 @@ import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import type { Metadata } from "next";
 
@@ -40,9 +41,10 @@ export default async function ReservationDetailPage({ params }: PageProps) {
   await connection();
 
   const { id } = await params;
-  const [reservation, sessionUser] = await Promise.all([
+  const [reservation, sessionUser, paymentEnabled] = await Promise.all([
     getReservationById(id),
     verifyAdminSession(),
+    isFeatureEnabled("payment"),
   ]);
 
   if (!reservation) {
@@ -79,7 +81,11 @@ export default async function ReservationDetailPage({ params }: PageProps) {
         </>
       }
     >
-      <ReservationDetail key={reservation.id} reservation={reservation} />
+      <ReservationDetail
+        key={reservation.id}
+        reservation={reservation}
+        paymentEnabled={paymentEnabled}
+      />
     </AdminDetailLayout>
   );
 }
