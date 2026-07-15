@@ -17,10 +17,27 @@ name: Main Terraform Health
 # ## 判定ロジック
 #
 #   - SUCCESS: pass (通常運用)
-#   - IN_PROGRESS / QUEUED: pass (現在 deploy 中、次 push を待たず block しない)
+#   - STATUS != completed (queued / in_progress / pending / waiting / requested):
+#     pass (deploy 未完了、次 push を待たず block しない。future GitHub API で
+#     追加される新 status も全てここで pass 側に倒す)
 #   - 初回 (no prior run): pass (green field)
 #   - FAILURE / CANCELLED / TIMED_OUT: **fail** (最新 apply が壊れている、fix PR merge が先)
 #   - `[skip-main-health]` を含む commit message: pass (bypass、fix PR 自身の chicken-egg 回避)
+#
+# ## 「STATUS != completed 全部 pass」の設計判断 (2026-07-15 PR #1132 saga)
+#
+# GitHub Actions run の status は歴史的に queued / in_progress / completed の 3 値
+# だったが、public API は現在 pending / waiting / requested / action_required 等の
+# 中間 status も返す (workflow の approval 待ち・secrets 未 fetch 等)。旧実装は
+# in_progress / queued のみ pass にし、`pending` を "未知の status" として fail
+# 側に落としていた → PR #1131 の main deploy が transient に status=pending の間、
+# 後続 PR (#1132) の gate が unknown 判定で fail。数分後 deploy が success で
+# completed になっても、既 fail 判定された check は auto rerun されず手動介入が
+# 必要になっていた。
+#
+# STATUS=completed 以外は「deploy まだ確定していない → block する情報が無い」と
+# 解釈して pass に倒す。false negative (壊れた deploy を pass) は起きない (壊れれば
+# STATUS=completed CONCLUSION=failure に必ず落ちる)。
 #
 # ## 適用範囲
 #
@@ -143,9 +160,12 @@ jobs:
             exit 0
           fi
 
-          # STATUS=in_progress / queued → deploy 進行中、次 PR を block しない
-          if [ "${STATUS}" = "in_progress" ] || [ "${STATUS}" = "queued" ]; then
-            echo "🕐 Latest main deploy is still running (status=${STATUS}) — not blocking"
+          # STATUS != completed (queued / in_progress / pending / waiting / requested など
+          # deploy 未完了の全 status) → 「壊れた」情報が無いので block しない。
+          # 将来 GitHub API に追加される新 status も含めて false negative を防ぐ
+          # (詳細は workflow header の設計判断 comment 参照、PR #1132 saga で追加)。
+          if [ "${STATUS}" != "completed" ]; then
+            echo "🕐 Latest main deploy is not yet completed (status=${STATUS}) — not blocking"
             echo "  Latest: ${URL}"
             exit 0
           fi
