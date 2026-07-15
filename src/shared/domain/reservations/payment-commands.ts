@@ -371,7 +371,7 @@ export async function createCheckoutSessionCommand(input: {
 export interface RefundReservationInput {
   reservationId: string;
   /**
-   * 部分返金額 (円、正整数)。未指定なら残額全額 (totalPriceWithTax - Σrefunds.amount)。
+   * 部分返金額 (円、正整数)。未指定なら残額全額 (totalPrice - Σrefunds.amount)。
    * `1 <= amount <= remaining` を violation すると VALIDATION エラー。
    */
   amount?: number;
@@ -408,8 +408,8 @@ export interface RefundReservationResult {
  *
  * ## 契約
  * - `paymentStatus` が `PAID` または `PARTIALLY_REFUNDED` の予約のみ返金可能
- * - `amount` 未指定 → 残額全額 (`totalPriceWithTax - Σ既 refunds.amount`)
- * - 累積返金額が `totalPriceWithTax` に到達したら `REFUNDED`、未満なら `PARTIALLY_REFUNDED`
+ * - `amount` 未指定 → 残額全額 (`totalPrice - Σ既 refunds.amount`)
+ * - 累積返金額が `totalPrice` (charge 額) に到達したら `REFUNDED`、未満なら `PARTIALLY_REFUNDED`
  * - Stripe idempotency key = `reservation-refund-{reservationId}-{newCumulative}` で
  *   2 回目以降の部分返金でも unique になり、accidental retry (network glitch 等) は
  *   同一 amount + 同一 newCumulative で idempotent (safe)
@@ -461,7 +461,11 @@ export async function refundReservationPaymentCommand(
           customerId: true,
           paymentStatus: true,
           stripePaymentIntentId: true,
-          totalPriceWithTax: true,
+          // Codex P1 (PR #1125, comment 3588489519): checkout は `totalPrice` (割引後・税抜、
+          // schema.prisma:606) を Stripe に送っているため、実 charge 額と refund 上限は
+          // `totalPrice` を base にする。`totalPriceWithTax` を base にすると税額分の差で
+          // Stripe が「refund amount > charge amount」で reject する回帰を招く。
+          totalPrice: true,
         },
       });
 
@@ -487,10 +491,7 @@ export async function refundReservationPaymentCommand(
         );
       }
 
-      if (
-        reservation.totalPriceWithTax === null ||
-        reservation.totalPriceWithTax <= 0
-      ) {
+      if (reservation.totalPrice === null || reservation.totalPrice <= 0) {
         throw new DomainError(
           "料金が設定されていない予約は返金できません",
           "VALIDATION",
@@ -503,11 +504,11 @@ export async function refundReservationPaymentCommand(
         _sum: { amount: true },
       });
       const cumulativeSoFar = aggregate._sum.amount ?? 0;
-      const remaining = reservation.totalPriceWithTax - cumulativeSoFar;
+      const remaining = reservation.totalPrice - cumulativeSoFar;
 
       if (remaining <= 0) {
-        // paymentStatus が PARTIALLY_REFUNDED のまま累積が totalPriceWithTax に到達している
-        // 異常状態 (paymentStatus 側の flip が失敗)。次回 admin refund で顕在化する。
+        // paymentStatus が PARTIALLY_REFUNDED のまま累積が totalPrice (charge 額) に
+        // 到達している異常状態 (paymentStatus 側の flip が失敗)。次回 admin refund で顕在化する。
         throw new DomainError("この予約は既に全額返金済みです", "VALIDATION");
       }
 
@@ -527,8 +528,7 @@ export async function refundReservationPaymentCommand(
       }
 
       const newCumulative = cumulativeSoFar + amount;
-      const willBeFullyRefunded =
-        newCumulative === reservation.totalPriceWithTax;
+      const willBeFullyRefunded = newCumulative === reservation.totalPrice;
 
       // Stripe refund (idempotent、tx 内で lock 保持しつつ実行)
       let refund;

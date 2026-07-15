@@ -71,7 +71,14 @@ const mockFindReservationByPaymentIntent =
   mock<
     (piId: string) => Promise<{ id: string; paymentStatus: string } | null>
   >();
-const mockClaimReservationAsRefunded = mock<(id: string) => Promise<boolean>>();
+const mockApplyChargeRefundIdempotent = mock<
+  (input: {
+    reservationId: string;
+    chargeAmount: number;
+    amountRefunded: number;
+    latestRefund: { id: string; amount: number } | null;
+  }) => Promise<void>
+>(() => Promise.resolve());
 
 // Site-wide cache invalidation (Route Handler variant)
 // route.ts の invalidateReservationCache() は
@@ -163,8 +170,12 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     mockClaimReservationAsFailed(id, sessionId),
   findReservationByPaymentIntent: (piId: string) =>
     mockFindReservationByPaymentIntent(piId),
-  claimReservationAsRefunded: (id: string) =>
-    mockClaimReservationAsRefunded(id),
+  applyChargeRefundIdempotent: (input: {
+    reservationId: string;
+    chargeAmount: number;
+    amountRefunded: number;
+    latestRefund: { id: string; amount: number } | null;
+  }) => mockApplyChargeRefundIdempotent(input),
 }));
 
 // 境界 mock: route.ts が使う唯一の cache-invalidation entry point を差し替える。
@@ -307,13 +318,28 @@ function makeSessionCompletedEvent(
 /** charge.refunded イベントを作成するヘルパー */
 function makeChargeRefundedEvent(
   paymentIntent: string | null = "pi-123",
+  options: {
+    amount?: number;
+    amountRefunded?: number;
+    latestRefund?: { id: string; amount: number } | null;
+  } = {},
 ): StripeWebhookEvent {
+  const {
+    amount = 5000,
+    amountRefunded = 5000,
+    latestRefund = { id: "re_test_1", amount: amountRefunded },
+  } = options;
   return {
     type: "charge.refunded",
     data: {
       object: {
         id: "ch_test_123",
         payment_intent: paymentIntent,
+        amount,
+        amount_refunded: amountRefunded,
+        refunds: {
+          data: latestRefund ? [latestRefund] : [],
+        },
       },
     },
   };
@@ -347,7 +373,8 @@ describe("POST /api/webhooks/stripe", () => {
     mockSavePaymentIntentId.mockReset();
     mockClaimReservationAsFailed.mockReset();
     mockFindReservationByPaymentIntent.mockReset();
-    mockClaimReservationAsRefunded.mockReset();
+    mockApplyChargeRefundIdempotent.mockReset();
+    mockApplyChargeRefundIdempotent.mockImplementation(() => Promise.resolve());
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockSendReservationConfirmationEmail.mockReset();
@@ -390,7 +417,7 @@ describe("POST /api/webhooks/stripe", () => {
     });
     mockSavePaymentIntentId.mockResolvedValue(undefined);
     mockClaimReservationAsFailed.mockResolvedValue(true);
-    mockClaimReservationAsRefunded.mockResolvedValue(true);
+    // applyChargeRefundIdempotent は default で Promise.resolve() を返す (上の mockImplementation)
     mockFindReservationByPaymentIntent.mockResolvedValue(null);
   });
 
@@ -716,8 +743,12 @@ describe("POST /api/webhooks/stripe", () => {
   // charge.refunded
   // ---------------------------------------------------------------------------
 
-  test("charge.refunded → REFUNDED", async () => {
-    const event = makeChargeRefundedEvent("pi-refund-123");
+  test("charge.refunded (全額返金) → applyChargeRefundIdempotent に amount==amount_refunded を渡す", async () => {
+    const event = makeChargeRefundedEvent("pi-refund-123", {
+      amount: 5000,
+      amountRefunded: 5000,
+      latestRefund: { id: "re_test_full", amount: 5000 },
+    });
     mockConstructEvent.mockResolvedValue(event);
     mockFindReservationByPaymentIntent.mockResolvedValue({
       id: "res-ref-1",
@@ -733,27 +764,59 @@ describe("POST /api/webhooks/stripe", () => {
     expect(mockFindReservationByPaymentIntent).toHaveBeenCalledWith(
       "pi-refund-123",
     );
-    expect(mockClaimReservationAsRefunded).toHaveBeenCalledWith("res-ref-1");
+    expect(mockApplyChargeRefundIdempotent).toHaveBeenCalledWith({
+      reservationId: "res-ref-1",
+      chargeAmount: 5000,
+      amountRefunded: 5000,
+      latestRefund: { id: "re_test_full", amount: 5000 },
+    });
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
   });
 
-  test("べき等性: charge.refunded で既に REFUNDED → claim が false で cache invalidate スキップ", async () => {
-    const event = makeChargeRefundedEvent("pi-refund-123");
+  test("charge.refunded (部分返金) → amount_refunded < amount を helper に渡す (helper 側で PARTIALLY_REFUNDED 遷移)", async () => {
+    const event = makeChargeRefundedEvent("pi-partial-123", {
+      amount: 5000,
+      amountRefunded: 2000,
+      latestRefund: { id: "re_test_partial", amount: 2000 },
+    });
     mockConstructEvent.mockResolvedValue(event);
     mockFindReservationByPaymentIntent.mockResolvedValue({
-      id: "res-ref-1",
-      paymentStatus: "REFUNDED",
+      id: "res-partial-1",
+      paymentStatus: "PAID",
     });
-    mockClaimReservationAsRefunded.mockResolvedValueOnce(false);
 
     const response = await POST(makeRequest("body"));
-
     expect(response.status).toBe(200);
-    // claim は呼ばれるが false 戻り値で cache invalidate スキップ
-    expect(mockClaimReservationAsRefunded).toHaveBeenCalledTimes(1);
-    expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
+    expect(mockApplyChargeRefundIdempotent).toHaveBeenCalledWith({
+      reservationId: "res-partial-1",
+      chargeAmount: 5000,
+      amountRefunded: 2000,
+      latestRefund: { id: "re_test_partial", amount: 2000 },
+    });
+  });
+
+  test("charge.refunded で refunds.data 空 → latestRefund=null を渡す (paymentStatus 遷移のみ、Refund child 書込は skip)", async () => {
+    const event = makeChargeRefundedEvent("pi-empty-123", {
+      amount: 5000,
+      amountRefunded: 5000,
+      latestRefund: null,
+    });
+    mockConstructEvent.mockResolvedValue(event);
+    mockFindReservationByPaymentIntent.mockResolvedValue({
+      id: "res-empty-1",
+      paymentStatus: "PAID",
+    });
+
+    const response = await POST(makeRequest("body"));
+    expect(response.status).toBe(200);
+    expect(mockApplyChargeRefundIdempotent).toHaveBeenCalledWith({
+      reservationId: "res-empty-1",
+      chargeAmount: 5000,
+      amountRefunded: 5000,
+      latestRefund: null,
+    });
   });
 
   test("charge.refunded で payment_intent が null → ログのみ、200 を返す", async () => {
@@ -766,7 +829,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockClaimReservationAsRefunded).not.toHaveBeenCalled();
+    expect(mockApplyChargeRefundIdempotent).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalled();
   });
 
@@ -781,7 +844,7 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(body.received).toBe(true);
-    expect(mockClaimReservationAsRefunded).not.toHaveBeenCalled();
+    expect(mockApplyChargeRefundIdempotent).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalled();
   });
 
@@ -959,7 +1022,7 @@ describe("POST /api/webhooks/stripe", () => {
       // → 副作用なし（claim/email/cache invalidate いずれも呼ばれない）
       expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
       expect(mockClaimReservationAsFailed).not.toHaveBeenCalled();
-      expect(mockClaimReservationAsRefunded).not.toHaveBeenCalled();
+      expect(mockApplyChargeRefundIdempotent).not.toHaveBeenCalled();
       expect(
         mockInvalidateSiteWideCacheFromRouteHandler,
       ).not.toHaveBeenCalled();
