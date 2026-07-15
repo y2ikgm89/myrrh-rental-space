@@ -93,7 +93,18 @@ export function RefundDialog({
     // amount 未指定 → 全額返金
     let amountNum: number | undefined;
     if (!isFullRefund) {
-      const parsed = Number.parseInt(amountStr, 10);
+      // Codex P2 (PR #1127) 対応: `Number.parseInt` は "1.9" → 1、"1e3" → 1 のように
+      // 先頭数字だけ切り出して truncate するため、fractional / exponent 入力を silent に
+      // 別金額へ変換してしまう。正規表現で「正の整数のみ (符号・小数点・指数・
+      // カンマ・空白 NG)」を厳格に validate する。
+      const trimmed = amountStr.trim();
+      if (!/^\d+$/.test(trimmed)) {
+        setError(
+          "金額は正の整数のみ入力できます (小数点・指数・カンマ・空白は不可)。",
+        );
+        return;
+      }
+      const parsed = Number(trimmed);
       if (!Number.isInteger(parsed) || parsed <= 0) {
         setError("金額は 1 以上の整数で入力してください。");
         return;
