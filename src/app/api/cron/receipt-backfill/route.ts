@@ -39,6 +39,32 @@ export async function GET(request: Request) {
     }
 
     const summary = await backfillReceipts();
+
+    // Codex P2 対応: row-level エラーが 1 件以上あれば 500 を返して Cloud Scheduler の
+    // exponential backoff retry (max_retry_attempts=3) をトリガーする。
+    // - `errorReservations` / `errorEventRegistrations` は VALIDATION 以外の実 error
+    //   (DB 一時障害 / 予期しない domain 例外 / ネットワーク等) をカウント済
+    // - issueReceipt* は冪等 (@unique + advisory lock 728353) のため retry で重複発行なし
+    // - 200 で返すと Cloud Scheduler が「成功」と解釈 → 次回日次実行まで transient error が
+    //   放置される。日次 03:15 JST 実行のため最悪 24h の遅延を防ぐ
+    const totalErrors =
+      summary.errorReservations + summary.errorEventRegistrations;
+    if (totalErrors > 0) {
+      logError(
+        new Error(
+          `Receipt backfill completed with ${totalErrors} row-level errors`,
+        ),
+        {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+          context: { operation: "receiptBackfillCron", summary },
+        },
+      );
+      return jsonError(
+        `Receipt backfill had ${totalErrors} errors — Cloud Scheduler will retry with backoff`,
+        500,
+      );
+    }
     return jsonSuccess(summary);
   } catch (error) {
     unstable_rethrow(error);

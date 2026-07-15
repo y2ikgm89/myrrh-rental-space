@@ -136,4 +136,40 @@ describe("/api/cron/receipt-backfill", () => {
     expect(res.status).toBe(500);
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
+
+  test("errorReservations / errorEventRegistrations が 1 件以上なら 500 で Cloud Scheduler retry を trigger (Codex P2 対応)", async () => {
+    mockAuthorize.mockResolvedValueOnce(null);
+    mockIsFeatureEnabled.mockResolvedValueOnce(true);
+    mockBackfill.mockResolvedValueOnce({
+      issuedReservations: 5,
+      skippedReservations: 2,
+      errorReservations: 1, // ← transient error
+      issuedEventRegistrations: 3,
+      skippedEventRegistrations: 0,
+      errorEventRegistrations: 0,
+    });
+
+    const res = await GET(makeRequest());
+
+    expect(res.status).toBe(500);
+    expect(mockLogError).toHaveBeenCalledTimes(1);
+  });
+
+  test("errors 0 なら通常通り 200 (VALIDATION による skipped は errors ではない)", async () => {
+    mockAuthorize.mockResolvedValueOnce(null);
+    mockIsFeatureEnabled.mockResolvedValueOnce(true);
+    mockBackfill.mockResolvedValueOnce({
+      issuedReservations: 5,
+      skippedReservations: 3, // VALIDATION skipped は問題なし
+      errorReservations: 0,
+      issuedEventRegistrations: 2,
+      skippedEventRegistrations: 1,
+      errorEventRegistrations: 0,
+    });
+
+    const res = await GET(makeRequest());
+
+    expect(res.status).toBe(200);
+    expect(mockLogError).not.toHaveBeenCalled();
+  });
 });
