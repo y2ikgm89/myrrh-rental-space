@@ -66,6 +66,18 @@ export type ReservationWithRelations = {
     code: string;
     name: string;
   } | null;
+  // task #7 PR#6 (領収書再発行): 現在有効な Receipt (@unique(reservationId) により最新
+  // 1 件のみ返る、orphan 化された過去 revision は含まれない)。receipt が非 null なら
+  // admin UI で「領収書を再発行」button を表示する。detail query のみで include、
+  // list query は select しないため optional (undefined = list、null = detail 未発行、
+  // object = detail 発行済)。
+  receipt?: {
+    id: string;
+    serialNo: string;
+    revision: number;
+    reissuedFromId: string | null;
+    issuedAt: string;
+  } | null;
 };
 
 export type GetReservationsResult = {
