@@ -1321,6 +1321,14 @@ model Settings {
   stripeLastTestedAt     DateTime?
   stripeConnectionStatus String?
 
+  // Refund Policy (task #9 PR#5): tier ベース返金率の JSON snapshot。
+  // Schema: `{ tiers: Array<{ hoursBefore: number; refundRate: number (0-100) }>, defaultRefundRate: number (0-100) }`
+  // 例: `{ tiers: [{ hoursBefore: 168, refundRate: 100 }, { hoursBefore: 72, refundRate: 50 }], defaultRefundRate: 0 }`
+  // = 7 日前まで 100%、3 日前まで 50%、それ以降 0%。
+  // null なら policy 未設定 (現状の「auto refund 時は全額」動作を維持、後方互換)。
+  // 参照: `cancellation-side-effects.ts` の auto refund 経路 + admin settings UI (次 PR で実装)。
+  refundPolicy           Json?     @db.JsonB
+
   // Cookie Consent Settings
   cookieConsentEnabled    Boolean @default(false)
   cookieConsentMessage    String? @db.Text
