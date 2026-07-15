@@ -12,6 +12,7 @@ import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
+import { findReceiptSerialNoByReservationId } from "@/shared/domain/receipts/queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
@@ -120,6 +121,7 @@ export default async function ReservationDetailPage({
     reviewsEnabled,
     paymentEnabled,
     cancellationPolicy,
+    receiptSerialNo,
   ] = await Promise.all([
     isCompleted
       ? getReviewForReservation(reservation.id, customer.id)
@@ -128,6 +130,7 @@ export default async function ReservationDetailPage({
     isFeatureEnabled("reviews"),
     isFeatureEnabled("payment"),
     getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
+    findReceiptSerialNoByReservationId(reservation.id),
   ]);
   const cancellationPolicyUrl = cancellationPolicy
     ? `/terms/${cancellationPolicy.slug}`
@@ -180,6 +183,7 @@ export default async function ReservationDetailPage({
         deadlineSettings={deadlineSettings}
         cancellationPolicyUrl={cancellationPolicyUrl}
         paymentEnabled={paymentEnabled}
+        receiptSerialNo={receiptSerialNo}
       />
 
       {(canEdit || canCancel) && (
