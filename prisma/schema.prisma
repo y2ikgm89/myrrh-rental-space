@@ -666,6 +666,20 @@ model Reservation {
   /// せず、FAILED → PENDING の再 checkout でも refresh される。
   paymentInitiatedAt      DateTime?
 
+  /// 返金の会計証跡列 (Foundation gap analysis 2026-07-15 task #9 の PR#1)。
+  /// 現状は refundReservationPaymentCommand が全額 REFUNDED に一括遷移する挙動のみで
+  /// 保存されていないが、後続 PR で部分返金 / reason 記録 / idempotency に活用する。
+  /// - refundedAt: 最初の返金 tx 完了時刻 (追加返金では null 更新しない、最初の refund)
+  /// - refundedAmount: 累積返金額 (円、部分返金の複数回対応)
+  /// - refundReason: 管理者入力の理由テキスト (顧客通知メール文面にも掲載予定)
+  /// - stripeRefundId: Stripe の refund object id (@unique で二重返金防止 + webhook idempotency)
+  /// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "STRIPE_DASHBOARD" の記録 (AuditLog と併用)
+  refundedAt              DateTime?
+  refundedAmount          Int?
+  refundReason            String?       @db.Text
+  stripeRefundId          String?       @unique
+  refundedByType          String?       @db.VarChar(20)
+
   // Cancellation tracking
   cancellationReason String?   @db.Text
   cancelledAt        DateTime?
@@ -1980,6 +1994,15 @@ model EventRegistration {
   // 後日 ticket.price が変わっても返金額の算定根拠を残す (会計証跡)。
   paidAmount              Int?
   paidAt                  DateTime?
+
+  /// 返金の会計証跡列 (Foundation gap analysis 2026-07-15 task #9 の PR#1、Reservation と対称)。
+  /// event 側は現状 charge.refunded webhook 未配線 (Foundation task #10 = event-refund-flow で
+  /// 追加予定) のため今は保存経路がないが、後続 PR の準備として schema に列を用意する。
+  refundedAt              DateTime?
+  refundedAmount          Int?
+  refundReason            String?       @db.Text
+  stripeRefundId          String?       @unique
+  refundedByType          String?       @db.VarChar(20)
 
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
