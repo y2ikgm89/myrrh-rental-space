@@ -1397,6 +1397,10 @@ export function getRequiredWifProviderConditionFragments(
     "assertion.ref == 'refs/heads/main'",
     "assertion.event_name == 'push'",
     "assertion.event_name == 'workflow_dispatch'",
+    // schedule: terraform-drift.yml (nightly cron) が WIF 経由 terraform-runner
+    // 認証に依存。scheduled workflow は default branch (main) で実行される GitHub 仕様
+    // のため ref 制限との整合性あり。
+    "assertion.event_name == 'schedule'",
   ];
 }
 
@@ -1408,7 +1412,7 @@ export function getExpectedWifProviderCondition(
     `assertion.repository_id == '${identity.repositoryId}'`,
     `assertion.repository_owner_id == '${identity.repositoryOwnerId}'`,
     "assertion.ref == 'refs/heads/main'",
-    "(assertion.event_name == 'push' || assertion.event_name == 'workflow_dispatch')",
+    "(assertion.event_name == 'push' || assertion.event_name == 'workflow_dispatch' || assertion.event_name == 'schedule')",
   ].join(" && ");
 }
 
