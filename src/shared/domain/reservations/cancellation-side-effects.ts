@@ -46,6 +46,7 @@ import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lo
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
+  REFUNDED_BY_TYPE,
   type CancelledByType,
 } from "@/shared/lib/validations/enums/helpers";
 import { PaymentStatus, type ReservationStatus } from "@generated/prisma/enums";
@@ -217,10 +218,15 @@ export async function applyCancellationSideEffects(
     reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
   const requiresRefund = wasPaid && reservation.stripePaymentIntentId !== null;
 
-  // 1. Stripe refund（PAID のみ自動・失敗は in-app 通知タイトルで要返金確認をフラグ）
+  // 1. Stripe refund（PAID / PARTIALLY_REFUNDED のみ自動・失敗は in-app 通知タイトルで要返金確認をフラグ）
+  // actorType=AUTO_ON_CANCEL、amount 未指定 → 残額全額を返金する。
+  // actorUserId は system 起動のため常に null。
   if (requiresRefund) {
     fireAndForget(
-      refundReservationPaymentCommand(input.reservationId).then(() => {
+      refundReservationPaymentCommand({
+        reservationId: input.reservationId,
+        actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      }).then(() => {
         return;
       }),
       {

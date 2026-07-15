@@ -44,6 +44,9 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   728353=領収書連番採番（ReceiptSequence 単一行 + 予約単位 lock）、
   728354=イベントキャンセル待ち promote session lock（`events/waitlist-locks.ts` の
   `tryAcquireWaitlistPromoteSessionLock` / cron `waitlist-expire` で全 slot 走査を event 単位に直列化）、
+  728355=予約単位 refund 直列化（`reservations/payment-commands.ts` の
+  `refundReservationPaymentCommand` で Refund 累積計算 + Stripe API call + Refund 書込 +
+  paymentStatus 遷移を interactive tx で serialize、over-refund/idempotency 破壊を防ぐ）、
   audit-log chain=int8 `6029451381908262157n`
 
 ## 'use cache' クエリの標準形
