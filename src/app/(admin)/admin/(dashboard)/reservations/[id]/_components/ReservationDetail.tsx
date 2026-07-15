@@ -24,6 +24,7 @@ import {
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { RefundDialog } from "./RefundDialog";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
 import {
   updateReservationStatus,
@@ -228,15 +229,20 @@ export function ReservationDetail({
     });
   };
 
-  const handleRefund = () => {
+  const handleRefund = (options: { amount?: number; reason?: string }) => {
     startPaymentTransition(async () => {
-      const result = await refundReservationPayment(reservation.id);
+      const result = await refundReservationPayment(reservation.id, options);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
 
-      toast.success("返金処理が完了しました");
+      // partial vs full の情報を toast 文言に反映 (data は成功時に residual 情報を含む)
+      const message =
+        result.newPaymentStatus === PaymentStatus.PARTIALLY_REFUNDED
+          ? `部分返金を実行しました (${result.refundAmount.toLocaleString()} 円、累計 ${result.cumulativeAmount.toLocaleString()} 円)`
+          : "全額返金を実行しました";
+      toast.success(message);
       setRefundDialogOpen(false);
       router.refresh();
     });
@@ -507,11 +513,10 @@ export function ReservationDetail({
         </CardContent>
       </Card>
 
-      <DeleteConfirmDialog
+      <RefundDialog
         open={refundDialogOpen}
         onOpenChange={setRefundDialogOpen}
-        title="返金確認"
-        description="この予約の決済を返金しますか？この操作は取り消せません。"
+        totalPriceWithTax={Number(reservation.totalPriceWithTax ?? 0)}
         onConfirm={handleRefund}
         isPending={isPaymentPending}
       />
