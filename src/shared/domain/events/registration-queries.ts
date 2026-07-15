@@ -50,6 +50,12 @@ export async function getEventRegistrations(
         cancelledAt: true,
         attendedAt: true,
         createdAt: true,
+        // task #9 PR#5 task B (admin event refund UI): 表側で refund ボタンの表示可否と
+        // RefundDialog の残額計算に使う。既存の cancel カラムはそのまま。
+        paymentStatus: true,
+        paidAmount: true,
+        stripePaymentIntentId: true,
+        refunds: { select: { amount: true } },
         slot: {
           select: {
             startAt: true,

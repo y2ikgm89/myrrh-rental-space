@@ -67,14 +67,30 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  const serializedRegistrations = registrationPage.registrations.map((r) => ({
-    ...r,
-    cancelledAt: r.cancelledAt?.toISOString() ?? null,
-    attendedAt: r.attendedAt?.toISOString() ?? null,
-    createdAt: r.createdAt.toISOString(),
-    slotStartAt: r.slot.startAt.toISOString(),
-    slotEndAt: r.slot.endAt.toISOString(),
-  }));
+  const serializedRegistrations = registrationPage.registrations.map((r) => {
+    const cumulativeRefunded = r.refunds.reduce(
+      (sum, refund) => sum + refund.amount,
+      0,
+    );
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      phone: r.phone,
+      note: r.note,
+      quantity: r.quantity,
+      status: r.status,
+      paymentStatus: r.paymentStatus,
+      paidAmount: r.paidAmount,
+      stripePaymentIntentId: r.stripePaymentIntentId,
+      cumulativeRefunded,
+      cancelledAt: r.cancelledAt?.toISOString() ?? null,
+      attendedAt: r.attendedAt?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
+      slotStartAt: r.slot.startAt.toISOString(),
+      slotEndAt: r.slot.endAt.toISOString(),
+    };
+  });
 
   const confirmedCount = registrationPage.confirmedCount;
 

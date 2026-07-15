@@ -9,6 +9,10 @@ import {
   createWalkInRegistrationCommand,
   setEventRegistrationCheckInCommand,
 } from "@/shared/domain/events/registration-commands";
+import {
+  refundEventRegistrationPaymentCommand,
+  type RefundEventRegistrationResult,
+} from "@/shared/domain/events/payment-commands";
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -20,6 +24,7 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
+  REFUNDED_BY_TYPE,
 } from "@/shared/lib/validations/enums/helpers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -95,6 +100,55 @@ export async function adminCancelRegistration(
           category: ErrorCategory.EXTERNAL_API,
         },
       );
+    },
+  });
+}
+
+// =============================================================================
+// 管理者による返金 (task #9 PR#5 task B: event admin refund UI)
+// =============================================================================
+
+/**
+ * 管理者による event registration 返金 (Reservation 側 `refundReservationPayment` の対称)。
+ *
+ * actorType=ADMIN で `refundEventRegistrationPaymentCommand` を呼び出す。amount 未指定 →
+ * `Refund` 集計後の残額全額を返金 (PAID 申込なら paidAmount、PARTIALLY_REFUNDED 申込なら
+ * paidAmount - Σ既 refunds)。actorUserId は Better Auth session の管理者 id。
+ *
+ * @param registrationId 対象 event registration ID
+ * @param options 部分返金 amount / 返金理由。両方省略で残額全額返金 + reason なし
+ */
+export async function refundEventRegistrationPayment(
+  registrationId: string,
+  options?: {
+    /** 部分返金額 (円、正整数)。省略で残額全額。 */
+    amount?: number;
+    /** 返金理由 (Refund.reason + AuditLog metadata に記録)。 */
+    reason?: string;
+  },
+): Promise<MutationResult<RefundEventRegistrationResult>> {
+  const validated = eventRegistrationIdSchema.safeParse(registrationId);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: validated.data,
+    execute: async (user) => {
+      return refundEventRegistrationPaymentCommand({
+        registrationId: validated.data,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        actorUserId: user.id,
+        ...(options?.amount !== undefined ? { amount: options.amount } : {}),
+        ...(options?.reason !== undefined && options.reason !== ""
+          ? { reason: options.reason }
+          : {}),
+      });
+    },
+    afterSuccess: () => {
+      // 公開側は refund で残枠が変わらないため EVENTS collection のみ無効化
+      // (reservation 側と同型)
+      invalidateEventCaches();
     },
   });
 }
