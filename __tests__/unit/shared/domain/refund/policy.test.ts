@@ -180,4 +180,47 @@ describe("parseRefundPolicy", () => {
     const parsed = parseRefundPolicy({ tiers: [], defaultRefundRate: 25 });
     expect(parsed).toEqual({ tiers: [], defaultRefundRate: 25 });
   });
+
+  // Codex P2 (PR #1134, comment 3589594663) 対応
+  test("hoursBefore が負数の tier は null (誤返金防止)", () => {
+    expect(
+      parseRefundPolicy({
+        tiers: [{ hoursBefore: -1, refundRate: 100 }],
+        defaultRefundRate: 0,
+      }),
+    ).toBeNull();
+  });
+
+  test("hoursBefore / refundRate が NaN / Infinity の tier は null", () => {
+    expect(
+      parseRefundPolicy({
+        tiers: [{ hoursBefore: Number.NaN, refundRate: 50 }],
+        defaultRefundRate: 0,
+      }),
+    ).toBeNull();
+    expect(
+      parseRefundPolicy({
+        tiers: [{ hoursBefore: Number.POSITIVE_INFINITY, refundRate: 50 }],
+        defaultRefundRate: 0,
+      }),
+    ).toBeNull();
+    expect(
+      parseRefundPolicy({
+        tiers: [{ hoursBefore: 24, refundRate: Number.NaN }],
+        defaultRefundRate: 0,
+      }),
+    ).toBeNull();
+  });
+
+  test("defaultRefundRate が NaN / Infinity は null", () => {
+    expect(
+      parseRefundPolicy({ tiers: [], defaultRefundRate: Number.NaN }),
+    ).toBeNull();
+    expect(
+      parseRefundPolicy({
+        tiers: [],
+        defaultRefundRate: Number.POSITIVE_INFINITY,
+      }),
+    ).toBeNull();
+  });
 });
