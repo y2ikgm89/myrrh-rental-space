@@ -1284,6 +1284,7 @@ model Settings {
   notifyReservationCancel    Boolean  @default(true)
   notifyNewInquiry           Boolean  @default(true)
   notifyEventRegistration    Boolean  @default(true)
+  notifyEventWaitlistRegistration Boolean @default(true)
   notifyEventCancellation    Boolean  @default(true)
   // 通知先: スタッフ(User.id 配列・送信時に現在メールへ解決) ＋ カスタムメール
   notificationStaffIds       String[] @default([])

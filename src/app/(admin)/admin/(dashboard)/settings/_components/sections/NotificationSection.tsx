@@ -87,6 +87,9 @@ export function NotificationSection({ settings }: NotificationSectionProps) {
       notifyReservationCancel: settings.notifyReservationCancel ? "on" : "",
       notifyNewInquiry: settings.notifyNewInquiry ? "on" : "",
       notifyEventRegistration: settings.notifyEventRegistration ? "on" : "",
+      notifyEventWaitlistRegistration: settings.notifyEventWaitlistRegistration
+        ? "on"
+        : "",
       notifyEventCancellation: settings.notifyEventCancellation ? "on" : "",
     },
   });
@@ -139,6 +142,12 @@ export function NotificationSection({ settings }: NotificationSectionProps) {
               field={fields.notifyEventRegistration}
               title="イベント申込"
               description="イベントに申し込まれたとき"
+              disabled={isPending}
+            />
+            <NotificationToggle
+              field={fields.notifyEventWaitlistRegistration}
+              title="イベントキャンセル待ち登録"
+              description="満員のイベントにキャンセル待ちで登録されたとき"
               disabled={isPending}
             />
             <NotificationToggle

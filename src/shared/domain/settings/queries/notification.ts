@@ -69,6 +69,8 @@ export type EmailDeliverySettings = {
   notifyNewInquiry: boolean;
   /** 新規イベント申込の管理者通知を送るか */
   notifyEventRegistration: boolean;
+  /** イベントキャンセル待ち登録の管理者通知を送るか (満員状態の needs-attention シグナル) */
+  notifyEventWaitlistRegistration: boolean;
   /** イベント申込キャンセルの管理者通知を送るか */
   notifyEventCancellation: boolean;
   /** イベント前日リマインダーを参加者へ送るか（既定 false = opt-in） */
@@ -104,6 +106,7 @@ export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings>
           notifyReservationCancel: true,
           notifyNewInquiry: true,
           notifyEventRegistration: true,
+          notifyEventWaitlistRegistration: true,
           notifyEventCancellation: true,
           notifyEventReminder: true,
           senderEmail: true,
@@ -125,6 +128,8 @@ export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings>
     notifyReservationCancel: settings?.notifyReservationCancel ?? true,
     notifyNewInquiry: settings?.notifyNewInquiry ?? true,
     notifyEventRegistration: settings?.notifyEventRegistration ?? true,
+    notifyEventWaitlistRegistration:
+      settings?.notifyEventWaitlistRegistration ?? true,
     notifyEventCancellation: settings?.notifyEventCancellation ?? true,
     // schema の @default(false) と揃える（他の notify* とは既定値が異なる）
     notifyEventReminder: settings?.notifyEventReminder ?? false,

@@ -59,6 +59,7 @@ export const notificationFormSchema = z.object({
   notifyReservationCancel: switchBoolean(),
   notifyNewInquiry: switchBoolean(),
   notifyEventRegistration: switchBoolean(),
+  notifyEventWaitlistRegistration: switchBoolean(),
   notifyEventCancellation: switchBoolean(),
 });
 

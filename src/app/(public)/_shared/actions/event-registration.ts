@@ -333,12 +333,40 @@ export async function registerForEventWaitlist(
         invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.EVENT_WAITLIST]);
 
         fireAndForget(
-          sendEventWaitlistRegistered({
-            registrationId: result.registration.id,
-            to: data.email,
-          }),
+          (async () => {
+            // 参加者宛と admin 宛を並列送信。admin 通知は satisfies 網羅型で type
+            // 追加漏れを compile-time に検知させる。eventTitle / capacity /
+            // confirmedCount は getEventRegistrationDetailsForEmail 経由で load
+            // (registerForEvent path と対称)。
+            const event = await getEventRegistrationDetailsForEmail(
+              result.registration.id,
+            );
+
+            await Promise.all([
+              sendEventWaitlistRegistered({
+                registrationId: result.registration.id,
+                to: data.email,
+              }),
+              event
+                ? sendEventAdminNotification(
+                    {
+                      registrationId: result.registration.id,
+                      eventId: data.eventId,
+                      participantName: data.name,
+                      participantEmail: data.email,
+                      eventTitle: event.eventTitle,
+                      eventStartTime: event.startTime,
+                      quantity: data.quantity,
+                      currentRegistrations: event.confirmedCount,
+                      capacity: event.capacity,
+                    },
+                    "waitlist_registration",
+                  )
+                : Promise.resolve(),
+            ]);
+          })(),
           {
-            operation: "sendEventWaitlistRegisteredEmail",
+            operation: "sendEventWaitlistRegistrationEmails",
             category: ErrorCategory.EXTERNAL_API,
           },
         );

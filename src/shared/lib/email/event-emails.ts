@@ -434,13 +434,15 @@ type EventAdminNotificationData = {
  */
 export async function sendEventAdminNotification(
   data: EventAdminNotificationData,
-  type: "registration" | "cancellation",
+  type: "registration" | "waitlist_registration" | "cancellation",
 ): Promise<EmailResult> {
   const toggles = await getEmailDeliverySettings();
-  const enabledByType =
-    type === "registration"
-      ? toggles.notifyEventRegistration
-      : toggles.notifyEventCancellation;
+  // Record 網羅で type 追加漏れを compile-time に検知させる。
+  const enabledByType: boolean = {
+    registration: toggles.notifyEventRegistration,
+    waitlist_registration: toggles.notifyEventWaitlistRegistration,
+    cancellation: toggles.notifyEventCancellation,
+  }[type];
   if (!enabledByType) return { ok: false, reason: "disabled" };
 
   const notificationEmails = await getNotificationEmailAddresses();
@@ -450,8 +452,11 @@ export async function sendEventAdminNotification(
 
   const eventDate = formatDateWithWeekday(data.eventStartTime);
 
-  const actionText =
-    type === "registration" ? "新規イベント申込" : "イベント申込キャンセル";
+  const actionText: string = {
+    registration: "新規イベント申込",
+    waitlist_registration: "イベントキャンセル待ち登録",
+    cancellation: "イベント申込キャンセル",
+  }[type];
 
   return sendEmail({
     payload: {

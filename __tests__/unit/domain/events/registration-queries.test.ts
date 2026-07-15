@@ -87,6 +87,7 @@ describe("event registration query slot consistency", () => {
         capacity: 8,
       },
       event: {
+        title: "テストイベント",
         addressDetail: "3F",
         location: { name: "青山" },
         space: { name: "Room A" },
@@ -99,6 +100,7 @@ describe("event registration query slot consistency", () => {
     const details = await getEventRegistrationDetailsForEmail("reg-1");
 
     expect(details).toEqual({
+      eventTitle: "テストイベント",
       startTime: selectedStart,
       endTime: selectedEnd,
       location: "青山 / Room A（3F）",

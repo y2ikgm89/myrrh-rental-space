@@ -75,6 +75,7 @@ export type SettingsData = {
   notifyReservationCancel: boolean;
   notifyNewInquiry: boolean;
   notifyEventRegistration: boolean;
+  notifyEventWaitlistRegistration: boolean;
   notifyEventCancellation: boolean;
   notifyEventReminder: boolean;
   notificationStaffIds: string[];
