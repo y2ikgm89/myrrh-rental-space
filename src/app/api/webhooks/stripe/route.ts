@@ -68,6 +68,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendReservationConfirmationEmail } from "@/shared/lib/email/reservation-emails";
+import { issueReceiptForReservation } from "@/shared/domain/receipts/issue";
 import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
@@ -299,6 +300,30 @@ async function fulfillPaymentAtomically(
   invalidateReservationCache(reservationId);
 
   if (reservation.status === ReservationStatus.CONFIRMED) return;
+
+  // 領収書 (Receipt) の atomic 採番・発行を await で実行する。
+  // - fireAndForget 禁止: 失敗が webhook から見えないと Stripe 再送で確定した予約に
+  //   Receipt が発行されない silent failure になる (Foundation gap analysis で確定した契約)
+  // - VALIDATION エラー (金額 0 / paymentStatus mismatch 等) は業務的にスキップ (Stripe
+  //   再送しても解消しないため webhook 側で握り潰し、log で監視)
+  // - それ以外 (DB 一時障害 等) は rethrow して Stripe の retry (exponential backoff /
+  //   最大 3 日) に委ねる。at-least-once + advisory lock 728353 で二重発行は防止済み。
+  try {
+    await issueReceiptForReservation(reservation.id);
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "VALIDATION") {
+      logError(error, {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "issueReceiptForReservation",
+          reservationId: reservation.id,
+        },
+      });
+    } else {
+      throw error;
+    }
+  }
 
   fireAndForget(
     sendReservationConfirmationEmail(

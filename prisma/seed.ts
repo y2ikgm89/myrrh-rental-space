@@ -442,6 +442,12 @@ async function seedSettings(
         businessNameKana: "カブシキガイシャサンプル",
         representativeName: "山田 太郎",
         registrationNumber: "1234567890123",
+        // 適格請求書発行事業者登録番号 (T + 13桁)。receipt-full-wiring gap の
+        // issueReceiptForReservation が issuerSnapshot に凍結し、PDF 領収書の
+        // 「登録番号: T…」欄に出力される。dev 領収書発行の動作確認容易化のため
+        // 明示値を入れる (production seed は includeBusinessPlaceholders=false で
+        // この分岐に入らないため空欄のまま = admin が実登録番号を設定)。
+        invoiceNumber: "T1234567890123",
         phoneNumber: "03-1234-5678",
         email: "info@example.com",
         postalCode: "150-0001",
