@@ -168,7 +168,17 @@ export function ReservationDetail({
   const [notes, setNotes] = useState(reservation.notes || "");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
   const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
+  // Codex P2 (PR #1131) 対応: reissue 成功後に parent 直呼びで close → 再オープン時に
+  // Dialog の internal form state (reason 等) が残る問題を防ぐため、open 発火のたびに
+  // `key` を bump して Dialog を re-mount し fresh state に戻す
+  // (React docs "Adjusting Some State When a Prop Changes" pattern)。
+  const [reissueDialogInstance, setReissueDialogInstance] = useState(0);
   const [isReissuePending, startReissueTransition] = useTransition();
+
+  const openReissueDialog = () => {
+    setReissueDialogInstance((n) => n + 1);
+    setReissueDialogOpen(true);
+  };
   const [isUpdateCustomerPending, startUpdateCustomerTransition] =
     useTransition();
 
@@ -410,7 +420,7 @@ export function ReservationDetail({
                 variant="outline"
                 size="sm"
                 disabled={isReissuePending}
-                onClick={() => setReissueDialogOpen(true)}
+                onClick={openReissueDialog}
               >
                 {isReissuePending ? "処理中..." : "領収書を再発行"}
               </Button>
@@ -564,6 +574,7 @@ export function ReservationDetail({
 
       {reservation.receipt != null ? (
         <ReissueReceiptDialog
+          key={`reissue-${reissueDialogInstance}`}
           open={reissueDialogOpen}
           onOpenChange={setReissueDialogOpen}
           currentSerialNo={reservation.receipt.serialNo}
