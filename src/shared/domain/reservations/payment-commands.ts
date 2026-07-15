@@ -297,7 +297,11 @@ export async function createCheckoutSessionCommand(input: {
         id: reservationId,
         deletedAt: null,
         paymentStatus: {
-          notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+          notIn: [
+            PaymentStatus.PAID,
+            PaymentStatus.PARTIALLY_REFUNDED,
+            PaymentStatus.REFUNDED,
+          ],
         },
       },
       data: {
@@ -306,9 +310,9 @@ export async function createCheckoutSessionCommand(input: {
       },
     });
     if (settled.count === 0) {
-      // PAID / REFUNDED が既に確定していた (異常に速い webhook / manual admin refund)。
-      // stripeCheckoutSessionId は書けないが session URL は既に有効なので顧客は決済でき、
-      // webhook 側の冪等 claim (UNPAID/PENDING のみ accept) がスキップしてくれる。
+      // PAID / PARTIALLY_REFUNDED / REFUNDED が既に確定していた (異常に速い webhook /
+      // manual admin refund)。stripeCheckoutSessionId は書けないが session URL は既に有効なので
+      // 顧客は決済でき、webhook 側の冪等 claim (UNPAID/PENDING のみ accept) がスキップしてくれる。
       logError(
         new Error(
           "createCheckoutSessionCommand: session settled skipped (already PAID/REFUNDED)",
@@ -368,8 +372,17 @@ export async function refundReservationPaymentCommand(reservationId: string) {
     throw new DomainError("予約が見つかりません", "NOT_FOUND");
   }
 
-  if (reservation.paymentStatus !== PaymentStatus.PAID) {
-    throw new DomainError("支払い済みの予約のみ返金できます", "VALIDATION");
+  // PAID + PARTIALLY_REFUNDED の両方から返金可能 (残額計算・複数回返金対応は後続 PR)。
+  // 本 PR では PAID→REFUNDED の全額返金挙動を維持しつつ、PARTIALLY_REFUNDED からの
+  // 追加返金 (残額全額) も受け付ける gate 緩和のみ行う。
+  if (
+    reservation.paymentStatus !== PaymentStatus.PAID &&
+    reservation.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
+  ) {
+    throw new DomainError(
+      "支払い済み・一部返金済みの予約のみ返金できます",
+      "VALIDATION",
+    );
   }
 
   if (!reservation.stripePaymentIntentId) {
@@ -400,7 +413,9 @@ export async function refundReservationPaymentCommand(reservationId: string) {
       where: {
         id: reservationId,
         deletedAt: null,
-        paymentStatus: PaymentStatus.PAID,
+        paymentStatus: {
+          in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+        },
       },
       data: {
         paymentStatus: PaymentStatus.REFUNDED,

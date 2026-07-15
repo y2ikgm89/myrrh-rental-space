@@ -60,6 +60,7 @@ enum PaymentStatus {
   UNPAID
   PENDING
   PAID
+  PARTIALLY_REFUNDED
   REFUNDED
   FAILED
 }

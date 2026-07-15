@@ -129,11 +129,13 @@ export function ReservationCard({
             <p className="font-medium text-foreground">
               {formatTotal(totalPrice, "未定")}
             </p>
-            {paymentStatusEnum !== "PAID" && (
-              <Badge variant={PAYMENT_BADGE_VARIANTS[paymentStatusEnum]}>
-                {PAYMENT_STATUS_LABELS[paymentStatusEnum]}
-              </Badge>
-            )}
+            {paymentStatusEnum !== "PAID" &&
+              paymentStatusEnum !== "PARTIALLY_REFUNDED" &&
+              paymentStatusEnum !== "REFUNDED" && (
+                <Badge variant={PAYMENT_BADGE_VARIANTS[paymentStatusEnum]}>
+                  {PAYMENT_STATUS_LABELS[paymentStatusEnum]}
+                </Badge>
+              )}
           </div>
 
           {/* アクション群: mobile は w-full sm:w-auto で full-width タップ標的、

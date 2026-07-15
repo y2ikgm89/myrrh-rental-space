@@ -5,6 +5,7 @@ const PaymentStatus = {
   UNPAID: "UNPAID",
   PENDING: "PENDING",
   PAID: "PAID",
+  PARTIALLY_REFUNDED: "PARTIALLY_REFUNDED",
   REFUNDED: "REFUNDED",
   FAILED: "FAILED",
 } as const;
@@ -182,7 +183,7 @@ describe("reservations/payment-queries", () => {
   // =============================================================================
 
   describe("claimReservationAsFailed", () => {
-    test("PAID / REFUNDED / FAILED 以外 かつ session id 一致の予約のみ FAILED に遷移", async () => {
+    test("PAID / PARTIALLY_REFUNDED / REFUNDED / FAILED 以外 かつ session id 一致の予約のみ FAILED に遷移", async () => {
       mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
 
       const result = await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
@@ -198,6 +199,7 @@ describe("reservations/payment-queries", () => {
             paymentStatus: {
               notIn: [
                 PaymentStatus.PAID,
+                PaymentStatus.PARTIALLY_REFUNDED,
                 PaymentStatus.REFUNDED,
                 PaymentStatus.FAILED,
               ],
@@ -208,7 +210,7 @@ describe("reservations/payment-queries", () => {
       );
     });
 
-    test("既に PAID / REFUNDED / FAILED → false（no-op）", async () => {
+    test("既に PAID / PARTIALLY_REFUNDED / REFUNDED / FAILED → false（no-op）", async () => {
       mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
       const result = await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
       expect(result).toBe(false);
