@@ -62,7 +62,6 @@ export async function getShowcaseSpaces(
           descriptionPlainText: true,
           capacity: true,
           hourlyPrice: true,
-          dailyPrice: true,
           area: true,
           mainImageUrl: true,
           gallery: true,
@@ -84,7 +83,6 @@ export async function getShowcaseSpaces(
     spaces.map((s) => ({
       ...s,
       hourlyPrice: Number(s.hourlyPrice),
-      dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
       area: s.area ? Number(s.area) : null,
       gallery: parseGallery(s.gallery),
       facilities: parseFacilities(s.facilities),

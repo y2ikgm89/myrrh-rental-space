@@ -21,6 +21,7 @@ const mockSpaceFindUniqueTx = mock<() => Promise<unknown>>(() =>
     discountType: "none",
     discountValue: null,
     durationDiscountOverride: "use_global",
+    taxRateType: "standard",
   }),
 );
 const mockBlockedDateFindFirst = mock<
@@ -34,7 +35,10 @@ const mockTxReservationFindFirst = mock<() => Promise<unknown>>(() =>
     // beforeEach で `future` を代入する。ここは placeholder。
     startTime: new Date("2099-01-01T00:00:00Z"),
     taxRateType: "STANDARD",
-    taxRate: 0.1,
+    // % 単位 (10 = 10%)。tax.ts の calculateTaxAmount / Settings.taxStandardRate と
+    // 同じ単位契約 (Task 8: 旧 0.1 は Math.floor(x*taxRate) の /100 抜けバグを
+    // 偶然相殺していた表記だったため是正)。
+    taxRate: 10,
     couponId: null,
     coupon: null,
   }),
@@ -50,6 +54,10 @@ const mockSettingsFindFirst = mock<() => Promise<unknown>>(() =>
     durationDiscountEnabled: false,
     durationDiscountRules: null,
     discountCombinationMode: "best",
+    taxStandardRate: 10,
+    taxReducedRate: 8,
+    taxDisplayModePublic: "tax_included",
+    showOriginalPrice: true,
   }),
 );
 const mockExecuteRaw = mock<() => Promise<number>>(() => Promise.resolve(0));
@@ -63,6 +71,16 @@ const mockReservationRuleSettings = mock<() => Promise<unknown>>(() =>
 const mockCheckSpaceOverlap = mock<() => Promise<{ hasOverlap: boolean }>>(() =>
   Promise.resolve({ hasOverlap: false }),
 );
+
+// getSpaceRatePlans: rate plan 統合 (Task 8)。既定は空配列（rate plan 未設定）で
+// 従来通り space.hourlyPrice が使われる。
+const mockGetSpaceRatePlans = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+
+mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
+  getSpaceRatePlans: mockGetSpaceRatePlans,
+}));
 
 const txClient = {
   reservation: {
@@ -136,6 +154,8 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       Promise.resolve({ count: 1 }),
     );
     mockCheckSpaceOverlap.mockClear();
+    mockGetSpaceRatePlans.mockClear();
+    mockGetSpaceRatePlans.mockResolvedValue([]);
 
     // reset to default (not blocked)
     mockBlockedDateFindFirst.mockImplementation(() => Promise.resolve(null));
@@ -152,6 +172,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         discountType: "none",
         discountValue: null,
         durationDiscountOverride: "use_global",
+        taxRateType: "standard",
       }),
     );
 
@@ -163,7 +184,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         paymentStatus: "UNPAID",
         startTime: new Date("2026-12-01T02:00:00Z"), // JST 11:00
         taxRateType: "STANDARD",
-        taxRate: 0.1,
+        taxRate: 10,
         couponId: null,
         coupon: null,
       }),
@@ -245,7 +266,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         paymentStatus: "PAID",
         startTime: new Date("2026-12-01T02:00:00Z"),
         taxRateType: "STANDARD",
-        taxRate: 0.1,
+        taxRate: 10,
         couponId: null,
         coupon: null,
       }),
@@ -274,7 +295,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         paymentStatus: "PENDING",
         startTime: new Date("2026-12-01T02:00:00Z"),
         taxRateType: "STANDARD",
-        taxRate: 0.1,
+        taxRate: 10,
         couponId: null,
         coupon: null,
       }),

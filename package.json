@@ -51,6 +51,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@google-analytics/data": "^6.1.0",
     "@gsap/react": "2.1.2",
+    "@holiday-jp/holiday_jp": "^2.5.1",
     "@lexical/code": "0.46.0",
     "@lexical/extension": "0.46.0",
     "@lexical/headless": "0.46.0",

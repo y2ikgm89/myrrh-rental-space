@@ -26,6 +26,10 @@ const mockSettingsFindUnique = mock<() => Promise<unknown>>(() =>
     durationDiscountEnabled: false,
     durationDiscountRules: null,
     discountCombinationMode: "best",
+    taxStandardRate: 10,
+    taxReducedRate: 8,
+    taxDisplayModePublic: "tax_included",
+    showOriginalPrice: true,
   }),
 );
 
@@ -38,10 +42,22 @@ const mockSpaceFindUnique = mock<() => Promise<unknown>>(() =>
     discountType: "none",
     discountValue: null,
     durationDiscountOverride: "use_global",
+    taxRateType: "standard",
     locationId: "loc-1",
     location: { address: "東京都渋谷区1-1-1" },
   }),
 );
+
+// getSpaceRatePlans: rate plan 統合 (Task 8)。既定は空配列（rate plan 未設定）で
+// 従来通り space.hourlyPrice が使われる。個別テストで曜日別 rate plan を検証したい
+// 場合は mockGetSpaceRatePlans.mockImplementationOnce で差し替える。
+const mockGetSpaceRatePlans = mock<() => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
+
+mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
+  getSpaceRatePlans: mockGetSpaceRatePlans,
+}));
 
 // BlockedDate cascade（ensureDateNotBlocked / isDateBlocked）用。default は未休業。
 const mockBlockedDateFindFirst = mock<
@@ -288,6 +304,8 @@ function resetAllMocks() {
   mockBlockedDateFindFirst.mockClear();
   mockBlockedDateFindFirst.mockResolvedValue(null);
   mockTxReservationFindFirst.mockClear();
+  mockGetSpaceRatePlans.mockClear();
+  mockGetSpaceRatePlans.mockResolvedValue([]);
 
   // Reset to default implementations
   mockSettingsFindUnique.mockImplementation(() =>
@@ -295,6 +313,10 @@ function resetAllMocks() {
       durationDiscountEnabled: false,
       durationDiscountRules: null,
       discountCombinationMode: "best",
+      taxStandardRate: 10,
+      taxReducedRate: 8,
+      taxDisplayModePublic: "tax_included",
+      showOriginalPrice: true,
     }),
   );
   mockSpaceFindUnique.mockImplementation(() =>
@@ -306,6 +328,7 @@ function resetAllMocks() {
       discountType: "none",
       discountValue: null,
       durationDiscountOverride: "use_global",
+      taxRateType: "standard",
       location: { address: "東京都渋谷区1-1-1" },
     }),
   );
@@ -475,6 +498,7 @@ describe("createAdminReservationCommand", () => {
     endTime: "12:00",
     customerId: "cust-1",
     status: ReservationStatus.PENDING,
+    adminUserId: "admin-1",
   };
 
   beforeEach(() => {
@@ -582,6 +606,7 @@ describe("createAdminReservationCommand", () => {
           discountType: "percentage",
           discountValue: 20,
           durationDiscountOverride: "use_global",
+          taxRateType: "standard",
           location: { address: "東京都渋谷区1-1-1" },
         }),
       );
@@ -638,6 +663,7 @@ describe("createAdminReservationCommand", () => {
         startTime: validInput.startTime,
         endTime: validInput.endTime,
         status: validInput.status,
+        adminUserId: validInput.adminUserId,
       };
       await expect(
         createAdminReservationCommand(inputWithoutCustomer),
@@ -654,6 +680,7 @@ describe("updateAdminReservationCommand", () => {
     endTime: "12:00",
     customerId: "cust-1",
     status: ReservationStatus.CONFIRMED,
+    adminUserId: "admin-1",
   };
 
   beforeEach(() => {
@@ -736,6 +763,7 @@ describe("updateAdminReservationCommand", () => {
           discountType: "percentage",
           discountValue: 20,
           durationDiscountOverride: "use_global",
+          taxRateType: "standard",
           location: { address: "東京都渋谷区1-1-1" },
         }),
       );
@@ -823,8 +851,12 @@ describe("updateAdminReservationCommand", () => {
           couponId: null,
           customerId: "cust-1",
           googleCalendarEventId: null,
-          // 予約時点のスナップショット (10% = 0.10、customer-commands.ts と同じ単位契約)
-          taxRate: 0.1,
+          // 予約時点のスナップショット (taxRate は % 単位、例: 10 = 10%。
+          // Reservation.taxRate 列 / Settings.taxStandardRate と同じ単位契約
+          // — tax.ts の calculateTaxAmount 参照。旧テストは 0.1 (割合) を使っており
+          // Math.floor(x * taxRate) の /100 抜けバグを偶然相殺していた。Task 8 で
+          // バグ修正 (Math.round(x * taxRate / 100)) に伴い正しい単位へ修正)
+          taxRate: 10,
           customer: {
             firstName: "太郎",
             lastName: "山田",
@@ -834,7 +866,7 @@ describe("updateAdminReservationCommand", () => {
         }),
       );
 
-      // hourlyPrice=1000 × 2h → totalPrice=2000、tax = floor(2000 × 0.10) = 200、withTax=2200
+      // hourlyPrice=1000 × 2h → totalPrice=2000、tax = round(2000 × 10 / 100) = 200、withTax=2200
       await updateAdminReservationCommand("res-1", validInput);
 
       expect(mockReservationUpdate).toHaveBeenCalledWith(
@@ -1596,6 +1628,7 @@ describe("createPublicReservationCommand", () => {
         discountType: "none",
         discountValue: null,
         durationDiscountOverride: "use_global",
+        taxRateType: "standard",
         locationId: "loc-1",
         location: { address: "東京都渋谷区1-1-1" },
       }),

@@ -86,6 +86,12 @@ export const CACHE_TAGS = {
   SPACES: "spaces",
   /** スペースカテゴリ */
   SPACE_CATEGORIES: "space-categories",
+  /**
+   * スペース毎の rate plan 一覧（id-keyed producer）。
+   * `SpaceRatePlan` は必ず特定 spaceId に紐づくため、他エントリと異なり
+   * 固定文字列ではなく spaceId を受け取るタグ生成関数として定義する。
+   */
+  SPACE_RATE_PLANS: (spaceId: string) => `space:${spaceId}:rate-plans`,
   /** ロケーション */
   LOCATIONS: "locations",
   /** カスタムページ */

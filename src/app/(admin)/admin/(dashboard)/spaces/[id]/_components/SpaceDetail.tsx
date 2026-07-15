@@ -146,32 +146,17 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
 
       {/* 料金 */}
       <DetailSection title="料金">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <DetailField
-            label="時間料金"
-            value={
-              <span className="text-xl font-bold">
-                {formatCurrency(space.hourlyPrice)}
-                <span className="text-sm font-normal text-muted-foreground">
-                  /時間
-                </span>
+        <DetailField
+          label="時間料金"
+          value={
+            <span className="text-xl font-bold">
+              {formatCurrency(space.hourlyPrice)}
+              <span className="text-sm font-normal text-muted-foreground">
+                /時間
               </span>
-            }
-          />
-          {space.dailyPrice && (
-            <DetailField
-              label="日額料金"
-              value={
-                <span className="text-xl font-bold">
-                  {formatCurrency(space.dailyPrice)}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    /日
-                  </span>
-                </span>
-              }
-            />
-          )}
-        </div>
+            </span>
+          }
+        />
       </DetailSection>
 
       {/* 画像 */}

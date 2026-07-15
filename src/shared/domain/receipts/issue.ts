@@ -5,6 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { formatJstDateString } from "@/shared/lib/date-format";
+import { isLegacyRateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -159,6 +160,7 @@ export async function issueReceiptForReservation(
         taxAmount: true,
         taxRate: true,
         paymentStatus: true,
+        rateBreakdownJson: true,
         customer: {
           select: {
             lastName: true,
@@ -183,8 +185,10 @@ export async function issueReceiptForReservation(
       );
     }
 
-    const totalAmount =
-      reservation.totalPriceWithTax ?? reservation.totalPrice ?? 0;
+    const isLegacy = isLegacyRateBreakdown(reservation.rateBreakdownJson);
+    const totalAmount = isLegacy
+      ? (reservation.totalPriceWithTax ?? reservation.totalPrice ?? 0)
+      : (reservation.totalPriceWithTax ?? 0);
     if (totalAmount <= 0) {
       throw new DomainError(
         "金額 0 の予約は領収書を発行しません",

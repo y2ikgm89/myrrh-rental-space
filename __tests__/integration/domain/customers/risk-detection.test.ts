@@ -16,12 +16,35 @@ import {
   EventStatus,
   ReservationStatus,
   RegistrationStatus,
+  TaxRateType,
 } from "@generated/prisma/enums";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
   process.env["DATABASE_URL"] = TEST_DB_URL;
 }
+
+/**
+ * Task 3 (SpaceRatePlan migration) で NOT NULL 化された価格・税フィールドの
+ * 既定値。このテストは検知ロジック（件数集計）のみを検証しており実額は無関係なため、
+ * legacy backfill と同じ形の固定値を使う。
+ */
+const DEFAULT_RESERVATION_PRICING = {
+  basePrice: 1000,
+  totalPrice: 1000,
+  rateBreakdownJson: {
+    schemaVersion: 1,
+    segments: [],
+    totalHours: 0,
+    totalBasePrice: 0,
+    holidayFlags: {},
+    legacy: true,
+  },
+  taxRateType: TaxRateType.standard,
+  taxRate: 10,
+  taxAmount: 100,
+  totalPriceWithTax: 1100,
+};
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
@@ -171,6 +194,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -201,6 +225,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -235,6 +260,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(sixDaysAgo + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               sixDaysAgo + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -278,6 +304,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -312,6 +339,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -343,6 +371,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -387,6 +416,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -432,6 +462,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(now.getTime() + (i + 1) * 3 * 60 * 60 * 1000),
             endTime: new Date(
               now.getTime() + (i + 1) * 3 * 60 * 60 * 1000 + 60 * 60 * 1000,
@@ -463,6 +494,7 @@ describeMaybe("detectSuspiciousCustomers", () => {
           data: {
             spaceId,
             customerId,
+            ...DEFAULT_RESERVATION_PRICING,
             startTime: new Date(
               now.getTime() - (i + 1) * 10 * 24 * 60 * 60 * 1000,
             ),

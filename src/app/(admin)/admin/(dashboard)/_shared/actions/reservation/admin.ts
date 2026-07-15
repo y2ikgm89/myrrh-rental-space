@@ -1,8 +1,15 @@
 "use server";
 
+import { z } from "zod";
 import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import {
+  apiRateLimiter,
+  getClientIpFromHeaders,
+} from "@/shared/lib/rate-limit";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -14,6 +21,8 @@ import {
   createAdminReservationCommand,
   updateAdminReservationCommand,
 } from "@/shared/domain/reservations/admin-commands";
+import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
+import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import {
   syncReservationToCalendar,
   updateCalendarSync,
@@ -81,7 +90,7 @@ export async function createReservationAction(
       const result = await executeAdminMutationResult({
         resource: "reservation",
         action: "create",
-        execute: async () => {
+        execute: async (user) => {
           mutationPayload = await createAdminReservationCommand(
             omitUndefined({
               spaceId: data.spaceId,
@@ -97,6 +106,7 @@ export async function createReservationAction(
                   : undefined,
               status: data.status,
               notes: data.notes && data.notes !== "" ? data.notes : undefined,
+              adminUserId: user.id,
             }),
           );
           return { id: mutationPayload.id };
@@ -197,7 +207,7 @@ export async function updateReservationAction(
         resource: "reservation",
         action: "update",
         resourceId: id,
-        execute: async () => {
+        execute: async (user) => {
           mutationPayload = await updateAdminReservationCommand(
             id,
             omitUndefined({
@@ -213,6 +223,7 @@ export async function updateReservationAction(
                   : undefined,
               status: data.status,
               notes: data.notes && data.notes !== "" ? data.notes : undefined,
+              adminUserId: user.id,
             }),
           );
           return null;
@@ -298,4 +309,52 @@ export async function updateReservationAction(
   }
 
   return submissionResult;
+}
+
+const previewPricingSchema = z.object({
+  spaceId: z.uuid(),
+  startDateTime: z.iso.datetime(),
+  endDateTime: z.iso.datetime(),
+});
+
+/**
+ * 管理画面 予約作成・編集フォームの料金プレビュー（read-only / 非 mutation）。
+ *
+ * `executeAdminMutationResult` を経由しない理由は template-preview.ts と同型:
+ * 副作用ゼロの read 操作を mutation 用ラッパー（監査ログ強制）に通すと、日時を
+ * 変更するたびに `reservation:read` の偽 audit が積まれてしまう。代わりに同等の
+ * セキュリティガード（認証 → RBAC `reservation:read` → rate-limit）を手書きで通す。
+ *
+ * 計算そのものは `previewReservationPricing`（Task 13 SSoT）に委譲する。認証/権限
+ * 不足・レート制限超過・不正入力・対象スペースなしはすべて `null` を返す
+ * （フォーム側は「まだ計算できない」として扱えばよい）。
+ */
+export async function previewReservationPricingAction(
+  spaceId: string,
+  startDateTime: string,
+  endDateTime: string,
+): Promise<ReservationPricingResult | null> {
+  const parsed = previewPricingSchema.safeParse({
+    spaceId,
+    startDateTime,
+    endDateTime,
+  });
+  if (!parsed.success) return null;
+
+  const auth = await checkAdminAuth();
+  if (!auth.success) return null;
+  if (!hasPermission(auth.user.role, "reservation", "read")) return null;
+
+  const ip = await getClientIpFromHeaders();
+  const limit = await apiRateLimiter.check(ip);
+  if (!limit.success) return null;
+
+  return previewReservationPricing(
+    {
+      spaceId: parsed.data.spaceId,
+      startDateTime: new Date(parsed.data.startDateTime),
+      endDateTime: new Date(parsed.data.endDateTime),
+    },
+    { requirePublished: false },
+  );
 }

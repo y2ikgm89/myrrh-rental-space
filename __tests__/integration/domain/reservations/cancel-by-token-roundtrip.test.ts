@@ -26,7 +26,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { ReservationStatus } from "@generated/prisma/enums";
+import { ReservationStatus, TaxRateType } from "@generated/prisma/enums";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
 // gateway を読む前に実テスト DB へ向け直す（静的 import は gateway を引かないため、
@@ -57,6 +57,28 @@ type Fixture = {
 };
 
 let nextFixtureLocationSortOrder = 1_200_000_000;
+
+/**
+ * Task 3 (SpaceRatePlan migration) で NOT NULL 化された価格・税フィールドの既定値。
+ * このテストはトークン round-trip の不変条件のみを検証しており実額は無関係なため、
+ * legacy backfill と同じ形の固定値を使う。
+ */
+const DEFAULT_RESERVATION_PRICING = {
+  basePrice: 1000,
+  totalPrice: 1000,
+  rateBreakdownJson: {
+    schemaVersion: 1,
+    segments: [],
+    totalHours: 0,
+    totalBasePrice: 0,
+    holidayFlags: {},
+    legacy: true,
+  },
+  taxRateType: TaxRateType.standard,
+  taxRate: 10,
+  taxAmount: 100,
+  totalPriceWithTax: 1100,
+};
 
 /** Location → Space → Customer → Reservation を 1 件作る最小 fixture（reminder-idempotency と同型）。 */
 async function createReservationFixture(opts?: {
@@ -111,6 +133,7 @@ async function createReservationFixture(opts?: {
       startTime,
       endTime,
       status: opts?.status ?? ReservationStatus.CONFIRMED,
+      ...DEFAULT_RESERVATION_PRICING,
     },
     select: { id: true, icsSequence: true },
   });

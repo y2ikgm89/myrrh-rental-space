@@ -1,8 +1,5 @@
 import "server-only";
-import {
-  calculateDurationHours,
-  parseDateTimeLocalAsJst,
-} from "@/shared/lib/date-format";
+import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 
 import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
@@ -16,11 +13,12 @@ import {
   ensureDateNotBlocked,
   getReservationRuleSettings,
 } from "@/shared/domain/reservations/availability";
-import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
-import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
-import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
+import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
+import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
+import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { lockSpaceForTransaction } from "./space-locks";
-import { ensureNoOverlap } from "./payloads";
+import { buildPricingSettings, ensureNoOverlap } from "./payloads";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -167,6 +165,10 @@ export async function updateCustomerReservation(
     throw error;
   }
 
+  // rate plan は read-only なので advisory lock の取得前（tx の外）で取得する
+  // (public-commands.ts / admin-commands.ts と同一パターン)。
+  const ratePlans = await getSpaceRatePlans(input.spaceId);
+
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
       where: { id: reservationId, customerId, deletedAt: null },
@@ -239,6 +241,7 @@ export async function updateCustomerReservation(
         discountType: true,
         discountValue: true,
         durationDiscountOverride: true,
+        taxRateType: true,
       },
     });
 
@@ -272,30 +275,20 @@ export async function updateCustomerReservation(
       throw error;
     }
 
-    // 割引設定を取得
+    // 割引・税設定を取得
     const settings = await tx.settings.findFirst({
       select: {
         durationDiscountEnabled: true,
         durationDiscountRules: true,
         discountCombinationMode: true,
+        taxStandardRate: true,
+        taxReducedRate: true,
+        taxDisplayModePublic: true,
+        showOriginalPrice: true,
       },
     });
 
-    // 料金の再計算（クーポン・長時間割引含む）
-    const hours = calculateDurationHours(startDateTime, endDateTime);
-
-    const spaceDiscount:
-      import("@/shared/lib/pricing/types").SpaceDiscountSettings | null =
-      space.discountType !== "none" &&
-      space.discountValue != null &&
-      space.discountValue > 0
-        ? {
-            discountType: space.discountType,
-            discountValue: space.discountValue,
-            durationDiscountOverride: space.durationDiscountOverride,
-          }
-        : null;
-
+    // 料金の再計算（クーポン・長時間割引・rate plan 含む）
     const coupon = reservation.coupon;
     const couponForCalc =
       coupon &&
@@ -315,22 +308,31 @@ export async function updateCustomerReservation(
           }
         : null;
 
-    const priceResult = calculateReservationPrice({
-      hourlyPrice: space.hourlyPrice,
-      hours,
-      spaceDiscount,
-      durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
-      durationRules: parseDurationDiscountRules(
-        settings?.durationDiscountRules,
-      ),
+    const pricing = calculateReservationPricing({
+      startDateTime,
+      endDateTime,
+      space: {
+        hourlyPrice: space.hourlyPrice,
+        discountType: space.discountType,
+        discountValue: space.discountValue,
+        durationDiscountOverride: space.durationDiscountOverride,
+        taxRateType: space.taxRateType,
+      },
+      ratePlans,
+      reservationSettings: buildPricingSettings(settings),
       coupon: couponForCalc,
-      combinationMode: getValidDiscountCombinationMode(
-        settings?.discountCombinationMode ?? undefined,
-      ),
+      holidayJudge: isJapaneseHoliday,
     });
 
+    // 税額は予約作成時点の taxRate スナップショット (reservation.taxRate) を維持し、
+    // 変更後の totalPrice に対して再計算する。taxRateType/taxRate 自体は customer
+    // セルフ変更経路では切り替えない（admin-commands.ts の
+    // updateAdminReservationCommand と同一方針）。
+    // 旧実装は `Math.floor(priceResult.totalPrice * taxRate)` で `/ 100` が抜けており、
+    // taxRate が % 単位 (例: 10) の場合に税額が 100 倍になるバグだった
+    // (tax.ts の calculateTaxAmount と揃える)。
     const taxRate = reservation.taxRate ? Number(reservation.taxRate) : 0;
-    const taxAmount = Math.floor(priceResult.totalPrice * taxRate);
+    const taxAmount = Math.round((pricing.totalPrice * taxRate) / 100);
 
     // PAID gate の atomic compare-and-swap (Codex P1 対応)。
     //
@@ -353,13 +355,22 @@ export async function updateCustomerReservation(
         spaceId: input.spaceId,
         startTime: startDateTime,
         endTime: endDateTime,
-        basePrice: priceResult.basePrice,
-        totalPrice: priceResult.totalPrice,
-        spaceDiscountAmount: priceResult.spaceDiscount,
-        durationDiscountAmount: priceResult.durationDiscount,
-        couponDiscountAmount: priceResult.couponDiscount,
+        basePrice: pricing.basePrice,
+        totalPrice: pricing.totalPrice,
+        rateBreakdownJson: asPrismaInputJsonValue(
+          pricing.rateBreakdown,
+          "料金内訳の生成に失敗しました",
+        ),
+        spaceDiscountAmount: pricing.spaceDiscountAmount,
+        durationDiscountAmount: pricing.durationDiscountAmount,
+        couponDiscountAmount: pricing.couponDiscountAmount,
         taxAmount,
-        totalPriceWithTax: priceResult.totalPrice + taxAmount,
+        totalPriceWithTax: pricing.totalPrice + taxAmount,
+        // customer セルフ変更経路は totalPrice の手動 override 機能を持たないため、
+        // 過去に admin が override した予約が編集された場合も含め、常に「手動上書き
+        // なし」に戻す（admin override の履歴が新しい自動計算額に紐付いたまま残る
+        // stale 表示を防ぐ）。
+        priceOverriddenBy: null,
         couponId: couponForCalc ? reservation.couponId : null,
         icsSequence: { increment: 1 },
       },

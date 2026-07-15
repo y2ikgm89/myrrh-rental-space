@@ -14,6 +14,10 @@ export {
   updateCustomerFromReservation,
 } from "./mutations";
 
-export { createReservationAction, updateReservationAction } from "./admin";
+export {
+  createReservationAction,
+  updateReservationAction,
+  previewReservationPricingAction,
+} from "./admin";
 
 export { createCheckoutSession, refundReservationPayment } from "./payment";

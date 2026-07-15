@@ -26,7 +26,6 @@ function formatSpaceToPlain(s: {
   capacity: number;
   area: number | null;
   hourlyPrice: number;
-  dailyPrice: number | null;
   mainImageUrl: string;
   gallery: unknown;
   facilities: unknown;
@@ -65,7 +64,6 @@ function formatSpaceToPlain(s: {
     capacity: s.capacity,
     area: s.area,
     hourlyPrice: s.hourlyPrice,
-    dailyPrice: s.dailyPrice,
     mainImageUrl: s.mainImageUrl,
     gallery: parseGallery(s.gallery),
     facilities: parseFacilities(s.facilities),

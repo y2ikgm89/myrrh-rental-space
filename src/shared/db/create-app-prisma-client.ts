@@ -69,13 +69,15 @@ export function createAppPrismaClient(base: PrismaClient) {
           needs: { hourlyPrice: true },
           compute: (s) => decimalToNumberStrict(s.hourlyPrice),
         },
-        dailyPrice: {
-          needs: { dailyPrice: true },
-          compute: (s) => decimalToNumber(s.dailyPrice),
-        },
         discountValue: {
           needs: { discountValue: true },
           compute: (s) => decimalToNumber(s.discountValue),
+        },
+      },
+      spaceRatePlan: {
+        hourlyPrice: {
+          needs: { hourlyPrice: true },
+          compute: (p) => decimalToNumberStrict(p.hourlyPrice),
         },
       },
       customer: {

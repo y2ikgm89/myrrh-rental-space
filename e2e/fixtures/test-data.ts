@@ -74,9 +74,36 @@ export const eventFixtures = {
 /** Public space seed contract used by reservation/review E2E specs. */
 export const spaceFixtures = {
   publicReservableSpaceSlug: "coworking-space",
+  /**
+   * 管理画面の料金プラン CRUD E2E（`space-rate-plan-crud.spec.ts`）専用ターゲット。
+   *
+   * `publicReservableSpaceSlug`（coworking-space）は
+   * `e2e/smoke/rate-plan-preview.smoke.spec.ts` が `"use cache"` の
+   * `cacheTag(CACHE_TAGS.SPACE_RATE_PLANS(spaceId))` を読む対象。このタグは
+   * spaceId（DB 行の UUID）キーのため（`src/shared/lib/constants/cache.ts`）、
+   * CRUD spec の create/update/delete（`invalidateSpaceRatePlansCache` → `updateTag`）
+   * が別 Space を対象にする限り構造的に別タグになり競合しない。かつて両 spec が
+   * 同一 coworking-space を対象にしていたため、CI `workers: 2` の並列実行下で
+   * smoke の価格アサーションが 15〜30 秒超まで遅延する flake が発生していた
+   * （Task 16 follow-up fix で解消）。この slug を smoke spec 側の price assertion
+   * 対象に**しない**こと（`seedSpaceRatePlans` は全 Space 共通で週末/祝日料金プランを
+   * 作成するため、CRUD spec の健全性チェックはこの Space でも成立する）。
+   */
+  adminRatePlanCrudTargetSlug: "seminar-room",
 } as const;
 
 /** Review seed contract used by public/customer review E2E specs. */
 export const reviewFixtures = {
   publicReviewSpaceSlug: spaceFixtures.publicReservableSpaceSlug,
+} as const;
+
+/**
+ * SpaceRatePlan seed contract used by rate-plan preview E2E specs.
+ * `prisma/seed.ts`（`seedSpaceRatePlans`）が全 Space に対して同名で作成する
+ * 週末 / 祝日料金プラン。weekendPlanName は daysOfWeek に FRIDAY/SATURDAY/SUNDAY
+ * を含み holidayMode: "any" のため、平日と比べて金曜も含めた検証に使える。
+ */
+export const ratePlanFixtures = {
+  weekendPlanName: "週末料金",
+  holidayPlanName: "祝日料金",
 } as const;

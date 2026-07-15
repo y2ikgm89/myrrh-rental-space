@@ -28,6 +28,17 @@ mock.module("@/shared/lib/features/check", () => ({
   isFeatureEnabled: () => Promise.resolve(true),
 }));
 
+// createPublicReservationCommand (Task 8 以降) は rate plan 解決のため
+// getSpaceRatePlans を呼ぶ。実体は `"use cache"` + cacheLife/cacheTag
+// (next/cache) を使っており、Next.js の cacheComponents ランタイム外
+// (この bun test プロセス) では `cacheLife() is only available with the
+// cacheComponents config` で必ず throw する。本テストの検証対象は BLACKLIST
+// ガードのみで rate plan 解決ロジックとは無関係なため、getSpaceRatePlans を
+// モックしてこの経路を迂回する（space-overlap-concurrency.test.ts と同型）。
+mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
+  getSpaceRatePlans: () => Promise.resolve([]),
+}));
+
 type PrismaModule = typeof import("@/shared/db/prisma");
 type CommandsModule =
   typeof import("@/shared/domain/reservations/public-commands");

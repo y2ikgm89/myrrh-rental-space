@@ -1,8 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
 import {
-  calculateDurationHours,
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import {
   formatJstDateString,
   formatTimeShort,
   parseDateTimeLocalAsJst,
@@ -34,7 +39,10 @@ import {
   SelectionBox,
   SubmitButton,
 } from "@/admin/components/ui";
-import { updateReservationAction } from "@/admin/actions/reservation";
+import {
+  updateReservationAction,
+  previewReservationPricingAction,
+} from "@/admin/actions/reservation";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
@@ -44,20 +52,13 @@ import {
   RESERVATION_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
-import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
-import type { DiscountCombinationMode } from "@/shared/lib/validations/enums/prisma-types";
-import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
+import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import { updateReservationFormSchema } from "./reservation-form-schema";
 import { type SpaceOption } from "./reservation-form-helpers";
 
 type ReservationEditFormProps = {
   reservation: ReservationWithRelations;
   spaces: SpaceOption[];
-  discountSettings: {
-    durationDiscountEnabled: boolean;
-    durationDiscountRules: DurationDiscountRule[];
-    discountCombinationMode: DiscountCombinationMode;
-  };
 };
 
 const STATUS_DESCRIPTIONS: Record<ReservationStatus, string> = {
@@ -104,12 +105,49 @@ const TIME_OPTIONS = Array.from({ length: 13 }, (_, i) => {
   return `${hour.toString().padStart(2, "0")}:00`;
 });
 
+type PricingWindow = { spaceId: string; startIso: string; endIso: string };
+
+/**
+ * spaceId・日付・開始/終了時刻から料金プレビュー用の JST 日時範囲を解決する。
+ * 入力が揃っていない・不正な範囲（終了 <= 開始 等）の場合は null。
+ *
+ * render 内の呼出し結果を `useEffect` の依存配列にそのまま使うため、
+ * ここで null を返すことで「まだ計算できない」を synchronous に表現する
+ * （effect 内で setState(null) を呼ぶ react-hooks/set-state-in-effect 違反を避ける）。
+ */
+function resolvePricingWindow(
+  spaceId: string,
+  date: string,
+  startTime: string,
+  endTime: string,
+): PricingWindow | null {
+  if (!spaceId || !date || !startTime || !endTime) return null;
+  const start = parseDateTimeLocalAsJst(`${date}T${startTime}`);
+  const end = parseDateTimeLocalAsJst(`${date}T${endTime}`);
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end <= start
+  ) {
+    return null;
+  }
+  return { spaceId, startIso: start.toISOString(), endIso: end.toISOString() };
+}
+
 export function ReservationEditForm({
   reservation,
   spaces,
-  discountSettings,
 }: ReservationEditFormProps) {
   const router = useRouter();
+  // Codex P1 (#1105): 以前は現在の totalPrice で事前入力していたが、それだと
+  // 価格に一切触れない通常の日時/スペース編集保存でも hidden totalPrice input が
+  // 常に非空になり、updateAdminReservationCommand が「明示 override」と誤認して
+  // 毎回 priceOverriddenBy を上書きしてしまっていた。空で開始し、現在価格は
+  // Input の placeholder でヒント表示するだけにする（下記 JSX 参照）。
+  // 「no-op 保存で既存の priceOverriddenBy が消える」問題（Task 8 handoff の
+  // 元々の懸念）はサーバー側で解決する: updateAdminReservationCommand は
+  // input.totalPrice が undefined の場合、priceOverriddenBy フィールド自体を
+  // update payload から省略し既存 DB 値を保持する。
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 
   // datetime は JST 固定で整形する（ローカル tz 依存だと SSR=UTC / CSR=JST で
@@ -119,6 +157,7 @@ export function ReservationEditForm({
   const initialEndTime = formatTimeShort(reservation.endTime);
 
   const [spaceId, setSpaceId] = useState<string>(reservation.spaceId);
+  const [date, setDate] = useState<string>(initialDate);
   const [startTime, setStartTime] = useState<string>(initialStartTime);
   const [endTime, setEndTime] = useState<string>(initialEndTime);
   const [status, setStatus] = useState<ReservationStatus>(reservation.status);
@@ -138,54 +177,52 @@ export function ReservationEditForm({
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
-      date: initialDate,
       couponCode: reservation.coupon?.code ?? "",
       notes: reservation.notes ?? "",
     },
   });
 
-  const selectedSpace = spaces.find((s) => s.id === spaceId);
+  const [pricePreview, setPricePreview] =
+    useState<ReservationPricingResult | null>(null);
+  const [, startPricingTransition] = useTransition();
+  const requestIdRef = useRef(0);
+
+  const pricingWindow = resolvePricingWindow(spaceId, date, startTime, endTime);
 
   // 料金プレビューはサーバー側 updateAdminReservationCommand と同じ
-  // calculateReservationPrice を SSoT として共有する。クーポンはサーバー側で
+  // calculateReservationPricing を Server Action 経由で呼び出す SSoT（Task 13）。
+  // rate plan・祝日判定は client から Prisma に触れずには計算できないため、
+  // スペース・日時が揃うたびにサーバーへ問い合わせる。クーポンはサーバー側で
   // 検証・適用されるため preview には含めない（手動 totalPrice 上書きで調整可能）。
-  const priceCalc = (() => {
-    if (!selectedSpace || !startTime || !endTime) return null;
-    const start = parseDateTimeLocalAsJst(`2000-01-01T${startTime}`);
-    const end = parseDateTimeLocalAsJst(`2000-01-01T${endTime}`);
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime()) ||
-      end <= start
-    ) {
-      return null;
-    }
-    const hours = calculateDurationHours(start, end);
-    return calculateReservationPrice({
-      hourlyPrice: selectedSpace.hourlyPrice,
-      hours,
-      durationRules: discountSettings.durationDiscountRules,
-      durationDiscountEnabled: discountSettings.durationDiscountEnabled,
-      spaceDiscount:
-        selectedSpace.discountType !== "none" &&
-        selectedSpace.discountValue != null &&
-        selectedSpace.discountValue > 0
-          ? {
-              discountType: selectedSpace.discountType,
-              discountValue: selectedSpace.discountValue,
-              durationDiscountOverride: selectedSpace.durationDiscountOverride,
-            }
-          : null,
-      coupon: null,
-      combinationMode: discountSettings.discountCombinationMode,
-      showWarning: false,
+  // request-id ガード: 連続入力変更で古いレスポンスが後発レスポンスを上書きする
+  // stale-response race を防ぐ（レビュー指摘）。管理者の手動 totalPrice 上書きが
+  // stale な価格で確定してしまう事故を防ぐ。
+  useEffect(() => {
+    if (!pricingWindow) return;
+    const requestId = ++requestIdRef.current;
+    const { spaceId: previewSpaceId, startIso, endIso } = pricingWindow;
+    startPricingTransition(async () => {
+      const result = await previewReservationPricingAction(
+        previewSpaceId,
+        startIso,
+        endIso,
+      );
+      if (requestIdRef.current !== requestId) return; // stale response guard
+      setPricePreview(result);
     });
-  })();
+    // pricingWindow 自体は render のたびに再生成される新規オブジェクトのため
+    // deps に入れると setPricePreview 完了 → 再 render → 新 pricingWindow →
+    // 再実行の無限ループになる（Codex P1 #1105）。プリミティブ値のみを deps にする。
+  }, [pricingWindow?.spaceId, pricingWindow?.startIso, pricingWindow?.endIso]);
 
-  const calculatedPrice = priceCalc?.totalPrice ?? null;
-  const basePrice = priceCalc?.basePrice ?? null;
-  const totalDiscount =
-    (priceCalc?.spaceDiscount ?? 0) + (priceCalc?.durationDiscount ?? 0);
+  const calculatedPrice = pricingWindow
+    ? (pricePreview?.totalPrice ?? null)
+    : null;
+  const basePrice = pricingWindow ? (pricePreview?.basePrice ?? null) : null;
+  const totalDiscount = pricingWindow
+    ? (pricePreview?.spaceDiscountAmount ?? 0) +
+      (pricePreview?.durationDiscountAmount ?? 0)
+    : 0;
   const displayPrice = manualPrice ?? calculatedPrice;
 
   return (
@@ -197,6 +234,7 @@ export function ReservationEditForm({
         value={reservation.customerId}
       />
       <input type="hidden" name={fields.spaceId.name} value={spaceId} />
+      <input type="hidden" name={fields.date.name} value={date} />
       <input type="hidden" name={fields.startTime.name} value={startTime} />
       <input type="hidden" name={fields.endTime.name} value={endTime} />
       <input type="hidden" name={fields.status.name} value={status} />
@@ -241,7 +279,7 @@ export function ReservationEditForm({
                 <SelectContent>
                   {spaces.map((space) => (
                     <SelectItem key={space.id} value={space.id}>
-                      {space.name} - {formatCurrency(space.hourlyPrice)}/時間
+                      {space.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -260,9 +298,16 @@ export function ReservationEditForm({
               <Label htmlFor={fields.date.id}>日付 *</Label>
               <div className="relative">
                 <Input
-                  {...getInputProps(fields.date, { type: "date" })}
+                  id={fields.date.id}
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                   disabled={isPending}
                   className="pr-10"
+                  aria-invalid={fields.date.errors ? true : undefined}
+                  aria-describedby={
+                    fields.date.errors ? fields.date.errorId : undefined
+                  }
                 />
                 <IconCalendar
                   aria-hidden="true"
@@ -387,11 +432,16 @@ export function ReservationEditForm({
                     e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
-                placeholder="手動で料金を入力（任意）"
+                placeholder={
+                  reservation.totalPrice != null
+                    ? `現在の価格: ${formatCurrency(reservation.totalPrice)}（空欄なら自動計算）`
+                    : "手動で料金を入力（任意）"
+                }
                 disabled={isPending}
               />
               <p className="text-sm text-muted-foreground">
-                割引や追加料金がある場合に手動で調整できます
+                空欄のまま保存すると rate plan
+                に基づき自動計算されます。割引や特別価格を適用する場合のみ入力してください。
               </p>
             </div>
 

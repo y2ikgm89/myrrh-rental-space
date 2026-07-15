@@ -58,6 +58,8 @@ export {
   MediaType,
   MediaUsage,
   EmailDeliveryStatus,
+  DayOfWeek,
+  HolidayMode,
   TermsScope,
   SmartLockDeviceType,
   SmartLockPasscodeStatus,

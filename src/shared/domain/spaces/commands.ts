@@ -35,7 +35,6 @@ type SpaceCommandInput = {
   capacity: number;
   area?: number | null | undefined;
   hourlyPrice: number;
-  dailyPrice?: number | null | undefined;
   mainImageUrl: string;
   gallery: readonly GalleryItem[];
   facilities: { name: string; iconName: string }[];
@@ -75,7 +74,6 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     capacity: input.capacity,
     area: input.area ?? null,
     hourlyPrice: input.hourlyPrice,
-    dailyPrice: input.dailyPrice ?? null,
     mainImageUrl: input.mainImageUrl,
     gallery: asPrismaInputJsonValue(input.gallery, "gallery が不正です"),
     facilities: input.facilities,
@@ -339,7 +337,6 @@ export async function duplicateSpaceCommand(
       capacity: true,
       area: true,
       hourlyPrice: true,
-      dailyPrice: true,
       mainImageUrl: true,
       gallery: true,
       facilities: true,
@@ -390,7 +387,6 @@ export async function duplicateSpaceCommand(
       capacity: source.capacity,
       area: source.area,
       hourlyPrice: source.hourlyPrice,
-      dailyPrice: source.dailyPrice,
       mainImageUrl: source.mainImageUrl,
       gallery: asPrismaInputJsonValue(sourceGallery, "gallery が不正です"),
       facilities: asPrismaInputJsonValue(

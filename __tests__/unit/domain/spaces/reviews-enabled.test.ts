@@ -15,7 +15,6 @@ describe("SpaceWithStats type includes reviewsEnabled", () => {
       capacity: 10,
       area: null,
       hourlyPrice: 1000,
-      dailyPrice: null,
       mainImageUrl: "https://example.com/image.jpg",
       gallery: [],
       facilities: [],

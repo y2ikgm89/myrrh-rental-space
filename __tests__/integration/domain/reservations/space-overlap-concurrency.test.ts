@@ -24,7 +24,7 @@
  * describe ごと skip する（dev DB を誤って汚染しないための安全弁）。
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { ReservationStatus } from "@generated/prisma/enums";
 
 // グローバル preload (__tests__/setup.ts) は DATABASE_URL をダミー値に固定する。
@@ -36,6 +36,18 @@ if (TEST_DB_URL) {
 }
 
 const describeMaybe = TEST_DB_URL ? describe : describe.skip;
+
+// createAdminReservationCommand (Task 8 以降) は rate plan 解決のため
+// getSpaceRatePlans を呼ぶ。実体は `"use cache"` + cacheLife/cacheTag
+// (next/cache) を使っており、Next.js の cacheComponents ランタイム外
+// (この bun test プロセス) では `cacheLife() is only available with the
+// cacheComponents config` で必ず throw する。本テストの検証対象は advisory lock
+// による二重予約防止のみで rate plan 解決ロジックとは無関係なため、
+// getSpaceRatePlans をモックしてこの経路を迂回する（動的 import より前に宣言する
+// 必要があるため、beforeAll ではなくモジュールトップレベルに置く）。
+mock.module("@/shared/domain/spaces/rate-plan-queries", () => ({
+  getSpaceRatePlans: () => Promise.resolve([]),
+}));
 
 type PrismaModule = typeof import("@/shared/db/prisma");
 type AdminCommandsModule =
@@ -122,6 +134,7 @@ async function reserveConcurrently(
         endTime: "12:00",
         customerId,
         status: ReservationStatus.CONFIRMED,
+        adminUserId: "concurrency-test-admin",
       }),
     ),
   );

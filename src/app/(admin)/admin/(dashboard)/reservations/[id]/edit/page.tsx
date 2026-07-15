@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import {
   getReservationById,
-  getReservationDiscountSettings,
   getSpacesForReservation,
 } from "@/admin/queries/reservation";
 import { ReservationEditForm } from "../../_components/ReservationEditForm";
@@ -37,10 +36,9 @@ export default async function ReservationEditPage({ params }: PageProps) {
 
   const { id } = await params;
 
-  const [reservation, spaces, discountSettings] = await Promise.all([
+  const [reservation, spaces] = await Promise.all([
     getReservationById(id),
     getSpacesForReservation(),
-    getReservationDiscountSettings(),
   ]);
 
   if (!reservation) {
@@ -59,7 +57,6 @@ export default async function ReservationEditPage({ params }: PageProps) {
         key={reservation.id}
         reservation={reservation}
         spaces={spaces}
-        discountSettings={discountSettings}
       />
     </AdminDetailLayout>
   );
