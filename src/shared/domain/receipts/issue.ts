@@ -247,3 +247,130 @@ export async function issueReceiptForReservation(
     }
   });
 }
+
+/**
+ * EventRegistration の PAID 遷移直後に領収書を採番・発行する (冪等)。
+ *
+ * `issueReceiptForReservation` の event-registration 対称実装。呼出契約・advisory
+ * lock 設計・serialNo 採番・issuerSnapshot 凍結・P2002 read-back すべて同一。
+ *
+ * 税率: **10% 内税固定** で計算する (Foundation gap analysis 判断)。
+ * event チケットは通常割引無し・単一税率のため、Reservation の rateBreakdownJson の
+ * ような複雑 breakdown は不要。EventRegistration schema 変更なしで完結する。
+ * 内税から税額を逆算: taxExcluded = floor(paidAmount * 100 / 110), taxAmount = paidAmount - taxExcluded。
+ * 端数処理は税率区分ごとに 1 回のみ (インボイス制度 Q&A 問57 準拠、floor)。
+ *
+ * @param registrationId 対象 EventRegistration ID
+ * @param options 宛名・但書 (未指定なら customer / 申込者名 / event.title から自動)
+ * @returns 発行または既存の Receipt レコード
+ */
+export async function issueReceiptForEventRegistration(
+  registrationId: string,
+  options?: {
+    recipientName?: string;
+    subject?: string;
+  },
+) {
+  return prisma.$transaction(async (tx) => {
+    // 申込単位 advisory lock (issueReceiptForReservation と同じ namespace / pattern)。
+    // Stripe webhook の at-least-once 配信で同一 registrationId の並列発行を防ぐ。
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RECEIPT_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
+
+    const existing = await tx.receipt.findUnique({
+      where: { eventRegistrationId: registrationId },
+    });
+    if (existing) return existing;
+
+    const registration = await tx.eventRegistration.findFirst({
+      where: { id: registrationId, event: { deletedAt: null } },
+      select: {
+        id: true,
+        name: true,
+        paidAmount: true,
+        paymentStatus: true,
+        event: { select: { title: true } },
+        customer: {
+          select: {
+            lastName: true,
+            firstName: true,
+            companyName: true,
+          },
+        },
+      },
+    });
+
+    if (!registration) {
+      throw new DomainError("イベント申込が見つかりません", "NOT_FOUND");
+    }
+
+    // Reservation 側と同じく PAID / PARTIALLY_REFUNDED の両方から発行可能
+    // (部分返金後に受領額分の領収書再発行に備える)
+    if (
+      registration.paymentStatus !== PaymentStatus.PAID &&
+      registration.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
+    ) {
+      throw new DomainError(
+        "決済確定 (PAID) または一部返金済み (PARTIALLY_REFUNDED) 状態のイベント申込のみ領収書を発行できます",
+        "VALIDATION",
+      );
+    }
+
+    const totalAmount = registration.paidAmount ?? 0;
+    if (totalAmount <= 0) {
+      throw new DomainError(
+        "金額 0 の申込は領収書を発行しません",
+        "VALIDATION",
+      );
+    }
+
+    // 10% 内税固定で内税から税額を逆算 (Foundation 判断)
+    const TAX_RATE = 10;
+    const taxExcludedAmount = Math.floor(
+      (totalAmount * 100) / (100 + TAX_RATE),
+    );
+    const taxAmount = totalAmount - taxExcludedAmount;
+
+    // 宛名: options 優先 → customer.companyName → customer 姓名 → registration.name (ゲスト)
+    const customerName = registration.customer
+      ? registration.customer.companyName
+        ? registration.customer.companyName
+        : `${registration.customer.lastName} ${registration.customer.firstName}`.trim()
+      : null;
+    const recipientName =
+      options?.recipientName ??
+      (customerName && customerName.length > 0
+        ? customerName
+        : registration.name);
+
+    const serialNo = await claimNextSerialNo(tx);
+    const issuerSnapshot = await fetchIssuerSnapshot(tx);
+
+    // Belt-and-suspenders: @unique(eventRegistrationId) 違反時は read-back して返す。
+    try {
+      return await tx.receipt.create({
+        data: {
+          serialNo,
+          eventRegistrationId: registrationId,
+          recipientName,
+          subject:
+            options?.subject ?? `${registration.event.title} 参加費として`,
+          amount: totalAmount,
+          taxAmount,
+          taxRate: TAX_RATE,
+          issuerSnapshot: asPrismaInputJsonValue(
+            issuerSnapshot,
+            "issuerSnapshot が不正です",
+          ),
+        },
+      });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        const winner = await tx.receipt.findUnique({
+          where: { eventRegistrationId: registrationId },
+        });
+        if (winner) return winner;
+      }
+      throw error;
+    }
+  });
+}

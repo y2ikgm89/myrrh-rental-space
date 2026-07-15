@@ -97,11 +97,15 @@ const mockFireAndForget =
 const mockSendReservationConfirmationEmail =
   mock<(data: unknown) => Promise<void>>();
 
-// Receipts (issueReceiptForReservation は fulfillPaymentAtomically 内で await される。
-// receipt-full-wiring gap PR#1 で配線された、default では成功を返す stub)
+// Receipts (issueReceiptForReservation / issueReceiptForEventRegistration は
+// fulfill*PaymentAtomically 内で await される。receipt-full-wiring gap PR#1/#2 で配線
+// された、default では成功を返す stub)
 const mockIssueReceiptForReservation = mock<
   (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
 >(() => Promise.resolve({ id: "receipt-mock", serialNo: "2026-000001" }));
+const mockIssueReceiptForEventRegistration = mock<
+  (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
+>(() => Promise.resolve({ id: "receipt-event-mock", serialNo: "2026-000002" }));
 
 // Errors
 const mockLogError = mock<(error: unknown, opts?: unknown) => void>();
@@ -207,6 +211,8 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: (id: string, options?: unknown) =>
     mockIssueReceiptForReservation(id, options),
+  issueReceiptForEventRegistration: (id: string, options?: unknown) =>
+    mockIssueReceiptForEventRegistration(id, options),
 }));
 
 const actualErrors = await import("@/shared/lib/errors/server");

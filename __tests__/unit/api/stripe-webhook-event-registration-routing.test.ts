@@ -210,6 +210,22 @@ mock.module("@/shared/lib/email/event-emails", () => ({
     mockSendEventRegistrationConfirmation(data),
 }));
 
+// receipt-full-wiring gap PR#2 で webhook が issueReceiptForEventRegistration を await
+// 呼出するようになったため、実 DB を叩かないよう境界差替 (default で成功を返す stub)。
+// issueReceiptForReservation も同 module 内なので同時 mock (PR#1 の reservation 経路対称)。
+const mockIssueReceiptForReservation = mock<
+  (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
+>(() => Promise.resolve({ id: "receipt-mock", serialNo: "2026-000001" }));
+const mockIssueReceiptForEventRegistration = mock<
+  (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
+>(() => Promise.resolve({ id: "receipt-event-mock", serialNo: "2026-000002" }));
+mock.module("@/shared/domain/receipts/issue", () => ({
+  issueReceiptForReservation: (id: string, options?: unknown) =>
+    mockIssueReceiptForReservation(id, options),
+  issueReceiptForEventRegistration: (id: string, options?: unknown) =>
+    mockIssueReceiptForEventRegistration(id, options),
+}));
+
 mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCacheFromRouteHandler: (
     tags: readonly string[],
