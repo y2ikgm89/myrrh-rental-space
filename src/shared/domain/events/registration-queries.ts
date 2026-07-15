@@ -142,6 +142,7 @@ export async function getEventRegistrationForGuestCancel(
 export async function getEventRegistrationDetailsForEmail(
   registrationId: string,
 ): Promise<{
+  readonly eventTitle: string;
   readonly startTime: Date;
   readonly endTime: Date;
   readonly location: string | null;
@@ -163,6 +164,7 @@ export async function getEventRegistrationDetailsForEmail(
       },
       event: {
         select: {
+          title: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -181,6 +183,7 @@ export async function getEventRegistrationDetailsForEmail(
   });
 
   return {
+    eventTitle: registration.event.title,
     startTime: registration.slot.startAt,
     endTime: registration.slot.endAt,
     location: formatEventVenue({

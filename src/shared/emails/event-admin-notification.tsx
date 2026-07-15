@@ -13,7 +13,7 @@ import {
 } from "./_shared/styles";
 
 type Props = {
-  type: "registration" | "cancellation";
+  type: "registration" | "waitlist_registration" | "cancellation";
   participantName: string;
   // walk-in (当日参加) では null。「未登録 / 当日参加」と表示する
   participantEmail: string | null;
@@ -25,6 +25,19 @@ type Props = {
   /** 管理画面のイベント詳細 URL（クリックで申込一覧を確認） */
   adminUrl?: string;
   footer: EmailFooterData;
+};
+
+// admin 側の視認性重視: registration=success/green、waitlist=warning/amber、cancellation=danger/red。
+// waitlist は「満員状態が発生している」needs-attention シグナルとして amber で目立たせる。
+const ACTION_TEXT: Record<Props["type"], string> = {
+  registration: "新規イベント申込",
+  waitlist_registration: "イベントキャンセル待ち登録",
+  cancellation: "イベント申込キャンセル",
+};
+const ACTION_COLOR: Record<Props["type"], string> = {
+  registration: "#15803d",
+  waitlist_registration: "#a16207",
+  cancellation: "#b91c1c",
 };
 
 export function EventAdminNotificationEmail({
@@ -39,11 +52,8 @@ export function EventAdminNotificationEmail({
   adminUrl,
   footer,
 }: Props) {
-  const isRegistration = type === "registration";
-  const actionText = isRegistration
-    ? "新規イベント申込"
-    : "イベント申込キャンセル";
-  const actionColor = isRegistration ? "#15803d" : "#b91c1c";
+  const actionText = ACTION_TEXT[type];
+  const actionColor = ACTION_COLOR[type];
 
   const capacityText =
     capacity != null
