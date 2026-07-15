@@ -34,9 +34,15 @@ const mockFindUnique = mock<
   (args: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve(null));
 
+// task #9 PR#5: cancellation の auto refund で Settings.refundPolicy を fetch する
+const mockSettingsFindUnique = mock<
+  (args: Record<string, unknown>) => Promise<{ refundPolicy: unknown } | null>
+>(() => Promise.resolve(null));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: { findUnique: mockFindUnique },
+    settings: { findUnique: mockSettingsFindUnique },
   },
 }));
 
@@ -218,6 +224,8 @@ function baseInput(
 describe("applyCancellationSideEffects", () => {
   beforeEach(() => {
     mockFindUnique.mockReset();
+    mockSettingsFindUnique.mockReset();
+    mockSettingsFindUnique.mockResolvedValue(null);
     mockCreateAuditLog.mockReset();
     mockCreateNotification.mockReset();
     mockRefund.mockReset();
