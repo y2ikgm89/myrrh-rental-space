@@ -37,6 +37,7 @@
 
 import { LRUCache } from "lru-cache";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
+import { isLocalProductionE2ERuntime } from "@/shared/lib/e2e-runtime";
 
 export interface RateLimitResult {
   success: boolean;
@@ -305,10 +306,40 @@ export const eventWaitlistConfirmRateLimiter = createRateLimiter({
 });
 
 // 公開クエリ用（30リクエスト/分/IP）— DoS対策
-export const publicQueryRateLimiter = createRateLimiter({
+//
+// **E2E bypass**: `isLocalProductionE2ERuntime()` 成立時（NODE_ENV=production +
+// E2E_RUNTIME=1 + ADMIN_APP_URL / BETTER_AUTH_URL / NEXT_PUBLIC_BASE_URL /
+// NEXT_PUBLIC_APP_URL の 4 URL 全て localhost）のみ bypass する。localhost URL
+// check により staging/prod へは構造的に漏れず、`isCustomerE2ELoginEnabled` と
+// 同型の triple-gate。他の limiter（reservationSubmit / authMutation / turnstile 等）
+// は E2E でも実動作を検証し続ける。
+//
+// 理由: playwright は `retries: 2` + `workers: 2` で並行実行され、単一 test の
+// 再試行が page reload → blocked-dates / slots fetch を再発火するため、単独で
+// 30 req/分 budget に接近する。この limiter は 8 endpoint の公開読み取りで共有
+// されており、E2E 内での多重 fetch が偽陽性 flake の原因になる。書き込み系
+// endpoint は個別 limiter（reservationSubmit 等）で守られており影響しない。
+const _publicQueryRateLimiterBase = createRateLimiter({
   interval: 60 * 1000, // 1分
   maxRequests: 30,
 });
+
+export const publicQueryRateLimiter: {
+  check: (token: string) => Promise<RateLimitResult>;
+  reset: (token: string) => Promise<void>;
+} = {
+  check: (token) => {
+    if (isLocalProductionE2ERuntime()) {
+      return Promise.resolve({
+        success: true,
+        remaining: 30,
+        reset: Date.now() + 60 * 1000,
+      });
+    }
+    return _publicQueryRateLimiterBase.check(token);
+  },
+  reset: (token) => _publicQueryRateLimiterBase.reset(token),
+};
 
 // ゲストキャンセル「予約 ID 単位」の追加バケット（3 attempts / hour / reservation）。
 // IP-only の formSubmitRateLimiter だけだと Cloud Run multi-instance × XFF spoof で

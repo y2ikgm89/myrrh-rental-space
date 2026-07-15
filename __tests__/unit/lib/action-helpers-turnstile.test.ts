@@ -13,6 +13,10 @@ const mockServerEnv: Record<string, string | undefined> = {
 
 mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
+  // isLocalhostUrl は e2e-runtime.ts が env/server から import する transitive dep。
+  // rate-limit.ts → e2e-runtime.ts → env/server の chain で必要になる。
+  // このテスト環境では E2E bypass を発動させないため常に false を返す。
+  isLocalhostUrl: () => false,
 }));
 
 mock.module("@/shared/lib/turnstile", () => ({

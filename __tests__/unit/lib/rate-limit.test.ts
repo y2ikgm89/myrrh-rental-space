@@ -2,7 +2,7 @@
  * レート制限ユーティリティテスト
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, mock } from "bun:test";
 import {
   createRateLimiter,
   getClientIp,
@@ -238,5 +238,43 @@ describe("checkRateLimit", () => {
     expect(result.success).toBe(true);
     // デフォルトリミッターは maxRequests: 100
     expect(result.remaining).toBe(99);
+  });
+});
+
+describe("publicQueryRateLimiter E2E bypass", () => {
+  // mock.module は全 export を差し替えるため、e2e-runtime 全 export を必ず宣言する
+  // (isCustomerE2ELoginEnabled が undefined になると他 code path が壊れる保険)。
+  test("bypass 非適用時は 30/分の制限が有効（31 回目で拒否）", async () => {
+    mock.module("@/shared/lib/e2e-runtime", () => ({
+      isLocalProductionE2ERuntime: () => false,
+      isCustomerE2ELoginEnabled: () => false,
+    }));
+
+    const { publicQueryRateLimiter } = await import("@/shared/lib/rate-limit");
+
+    const token = "public-query-bypass-off-test";
+    for (let i = 0; i < 30; i += 1) {
+      const result = await publicQueryRateLimiter.check(token);
+      expect(result.success).toBe(true);
+    }
+    const blocked = await publicQueryRateLimiter.check(token);
+    expect(blocked.success).toBe(false);
+    expect(blocked.remaining).toBe(0);
+  });
+
+  test("bypass 適用時は 30 回超えても success を返し続ける", async () => {
+    mock.module("@/shared/lib/e2e-runtime", () => ({
+      isLocalProductionE2ERuntime: () => true,
+      isCustomerE2ELoginEnabled: () => false,
+    }));
+
+    const { publicQueryRateLimiter } = await import("@/shared/lib/rate-limit");
+
+    const token = "public-query-bypass-on-test";
+    for (let i = 0; i < 50; i += 1) {
+      const result = await publicQueryRateLimiter.check(token);
+      expect(result.success).toBe(true);
+      expect(result.remaining).toBe(30);
+    }
   });
 });
