@@ -252,6 +252,17 @@ export async function getReservationByIdQuery(id: string) {
           name: true,
         },
       },
+      // task #7 PR#6: active な Receipt (再発行済み orphan は reservationId が NULL のため
+      // ここでは選ばれない、常に「現在有効な領収書」1 件のみ)。admin 再発行 UI で使う。
+      receipt: {
+        select: {
+          id: true,
+          serialNo: true,
+          revision: true,
+          reissuedFromId: true,
+          issuedAt: true,
+        },
+      },
     },
   });
 
@@ -266,6 +277,12 @@ export async function getReservationByIdQuery(id: string) {
     createdAt: reservation.createdAt.toISOString(),
     updatedAt: reservation.updatedAt.toISOString(),
     paidAt: reservation.paidAt?.toISOString() ?? null,
+    receipt: reservation.receipt
+      ? {
+          ...reservation.receipt,
+          issuedAt: reservation.receipt.issuedAt.toISOString(),
+        }
+      : null,
   });
 }
 

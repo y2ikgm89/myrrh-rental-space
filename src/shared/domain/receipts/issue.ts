@@ -374,3 +374,127 @@ export async function issueReceiptForEventRegistration(
     }
   });
 }
+
+// ============================================================
+// Reissue
+// ============================================================
+
+/**
+ * 既発行の Receipt を「訂正版」として再発行する (task #7 PR#6)。
+ *
+ * ## 呼出契約
+ * - `originalReceiptId` は現在 active な Receipt (reservationId or eventRegistrationId が
+ *   非 NULL) を指す必要がある。既に別の receipt に再発行済 (orphan) の Receipt を
+ *   base にする再発行は禁止 (VALIDATION reject) — chain の分岐を防ぐ
+ * - `reason` は required (顧客への説明責任 + 監査証跡)
+ * - `actorUserId` は admin 経路の userId (AuditLog に記録)
+ *
+ * ## 挙動
+ * - 元 Receipt の `reservationId` / `eventRegistrationId` を NULL に update (orphan 化)
+ *   → chain 経由 (`reissuedTo`) でのみ辿れる。@unique(reservationId) 制約を守るために必須
+ * - 新 Receipt を create:
+ *   - 新 serialNo (`claimNextSerialNo`)
+ *   - 元の `reservationId` / `eventRegistrationId` を新 Receipt に付け替え
+ *   - `reissuedFromId` = 元 Receipt id
+ *   - `revision` = 元.revision + 1
+ *   - `reissuedReason` = reason
+ *   - `recipientName` / `subject` / `amount` / `taxAmount` / `taxRate` は元 Receipt を継承
+ *   - `issuerSnapshot` は **再発行時点** の Settings を再取得 (訂正版の意味)
+ * - AuditLog は呼出側 admin action で記録
+ *
+ * ## 並行制御
+ * - `RECEIPT_LOCK_NAMESPACE + hashtext(originalReceiptId)` で reissue の並行を直列化
+ * - 元 Receipt の orphan 化 + 新 Receipt create + serialNo 採番の 3 op を advisory lock 内で完了
+ *
+ * @throws DomainError NOT_FOUND / VALIDATION
+ */
+export async function reissueReceiptCommand(input: {
+  readonly originalReceiptId: string;
+  readonly reason: string;
+  readonly actorUserId: string;
+}) {
+  const { originalReceiptId, reason } = input;
+
+  if (reason.trim().length === 0) {
+    throw new DomainError("再発行理由の入力が必要です", "VALIDATION");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // Original Receipt lookup 前に advisory lock (concurrent reissue serialize)。
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RECEIPT_LOCK_NAMESPACE}::int4, hashtext(${originalReceiptId}))`;
+
+    const original = await tx.receipt.findUnique({
+      where: { id: originalReceiptId },
+      select: {
+        id: true,
+        serialNo: true,
+        reservationId: true,
+        eventRegistrationId: true,
+        recipientName: true,
+        subject: true,
+        amount: true,
+        taxAmount: true,
+        taxRate: true,
+        revision: true,
+      },
+    });
+
+    if (!original) {
+      throw new DomainError("元領収書が見つかりません", "NOT_FOUND");
+    }
+
+    // Chain 分岐防止: 既に他の Receipt に再発行された (orphan) は base にできない。
+    if (
+      original.reservationId === null &&
+      original.eventRegistrationId === null
+    ) {
+      throw new DomainError(
+        "既に再発行済みの領収書を base に再発行することはできません",
+        "VALIDATION",
+      );
+    }
+
+    // 新 serialNo 採番 + 再発行時点の issuer snapshot 取得
+    const serialNo = await claimNextSerialNo(tx);
+    const issuerSnapshot = await fetchIssuerSnapshot(tx);
+
+    // 元 Receipt の reservationId / eventRegistrationId を NULL に update (orphan 化)。
+    // これで @unique(reservationId) / @unique(eventRegistrationId) 制約を violate せずに
+    // 新 Receipt を同 reservation / event_registration に付け替えられる。
+    await tx.receipt.update({
+      where: { id: originalReceiptId },
+      data: {
+        reservationId: null,
+        eventRegistrationId: null,
+      },
+    });
+
+    // 新 Receipt を create (元の内容を継承 + reissuedFromId chain + revision +1)。
+    const newReceipt = await tx.receipt.create({
+      data: {
+        serialNo,
+        // 元の紐付け先を新 Receipt に付け替え
+        ...(original.reservationId !== null
+          ? { reservationId: original.reservationId }
+          : {}),
+        ...(original.eventRegistrationId !== null
+          ? { eventRegistrationId: original.eventRegistrationId }
+          : {}),
+        recipientName: original.recipientName,
+        subject: original.subject,
+        amount: original.amount,
+        taxAmount: original.taxAmount,
+        taxRate: original.taxRate,
+        issuerSnapshot: asPrismaInputJsonValue(
+          issuerSnapshot,
+          "issuerSnapshot が不正です",
+        ),
+        reissuedFromId: originalReceiptId,
+        reissuedReason: reason,
+        revision: original.revision + 1,
+      },
+    });
+
+    return newReceipt;
+  });
+}
