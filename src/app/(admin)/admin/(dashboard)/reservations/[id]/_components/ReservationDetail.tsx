@@ -31,9 +31,11 @@ import {
   updateReservationNotes,
   createCheckoutSession,
   refundReservationPayment,
+  reissueReservationReceipt,
   updateCustomerFromReservation,
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
+import { ReissueReceiptDialog } from "./ReissueReceiptDialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -165,6 +167,8 @@ export function ReservationDetail({
   const [isPaymentPending, startPaymentTransition] = useTransition();
   const [notes, setNotes] = useState(reservation.notes || "");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
+  const [isReissuePending, startReissueTransition] = useTransition();
   const [isUpdateCustomerPending, startUpdateCustomerTransition] =
     useTransition();
 
@@ -244,6 +248,25 @@ export function ReservationDetail({
           : "全額返金を実行しました";
       toast.success(message);
       setRefundDialogOpen(false);
+      router.refresh();
+    });
+  };
+
+  const handleReissueReceipt = (reason: string) => {
+    if (reservation.receipt == null) return;
+    const originalReceiptId = reservation.receipt.id;
+    startReissueTransition(async () => {
+      const result = await reissueReservationReceipt(
+        reservation.id,
+        originalReceiptId,
+        reason,
+      );
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`領収書を再発行しました (No. ${result.serialNo})`);
+      setReissueDialogOpen(false);
       router.refresh();
     });
   };
@@ -382,7 +405,25 @@ export function ReservationDetail({
                 返金する
               </Button>
             ) : null}
+            {reservation.receipt != null ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isReissuePending}
+                onClick={() => setReissueDialogOpen(true)}
+              >
+                {isReissuePending ? "処理中..." : "領収書を再発行"}
+              </Button>
+            ) : null}
           </div>
+          {reservation.receipt != null ? (
+            <p className="text-xs text-muted-foreground">
+              現在の領収書: No. {reservation.receipt.serialNo}
+              {reservation.receipt.revision > 0
+                ? ` (訂正 rev.${reservation.receipt.revision})`
+                : ""}
+            </p>
+          ) : null}
           {!paymentEnabled &&
             (reservation.paymentStatus === PaymentStatus.UNPAID ||
               reservation.paymentStatus === PaymentStatus.PAID ||
@@ -520,6 +561,17 @@ export function ReservationDetail({
         onConfirm={handleRefund}
         isPending={isPaymentPending}
       />
+
+      {reservation.receipt != null ? (
+        <ReissueReceiptDialog
+          open={reissueDialogOpen}
+          onOpenChange={setReissueDialogOpen}
+          currentSerialNo={reservation.receipt.serialNo}
+          currentRevision={reservation.receipt.revision}
+          onConfirm={handleReissueReceipt}
+          isPending={isReissuePending}
+        />
+      ) : null}
     </div>
   );
 }
