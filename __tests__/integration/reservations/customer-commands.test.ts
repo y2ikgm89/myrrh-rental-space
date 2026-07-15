@@ -330,6 +330,13 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
       // couponId が silently drop されないこと（真のバグ）。
       expect(after.couponId).toBe(coupon.id);
       // クーポン割引額が 0 に戻らず再計算後も適用されていること。
+      // basePrice/couponDiscountAmount は NOT NULL 列だが result 拡張の型は
+      // number | null（decimalToNumber の防御的シグネチャ）のため narrow する。
+      if (after.basePrice === null || after.couponDiscountAmount === null) {
+        throw new Error(
+          "basePrice / couponDiscountAmount must not be null after reprice",
+        );
+      }
       expect(after.couponDiscountAmount).toBeGreaterThan(0);
       // basePrice は 2h × 1000 で不変、totalPrice は couponDiscount 適用済み。
       expect(after.basePrice).toBe(2000);
