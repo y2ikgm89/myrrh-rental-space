@@ -43,7 +43,7 @@ import { unstable_rethrow } from "next/navigation";
 import {
   claimReservationAsPaid,
   claimReservationAsFailed,
-  claimReservationAsRefunded,
+  applyChargeRefundIdempotent,
   savePaymentIntentId,
   findReservationByPaymentIntent,
 } from "@/shared/domain/reservations/payment-queries";
@@ -689,7 +689,11 @@ async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
 /**
  * charge.refunded
  *
- * 返金完了。stripePaymentIntentId で予約を検索し REFUNDED に atomic claim。
+ * 返金完了。stripePaymentIntentId で予約を検索し、charge の amount / amount_refunded で
+ * partial / full を判定して paymentStatus を遷移する。Refund child は idempotent write。
+ *
+ * Codex P1 (PR #1125, comment 3588489513) 対応: 旧実装は unconditional REFUNDED flip で、
+ * `refundReservationPaymentCommand` が設定した PARTIALLY_REFUNDED を上書きしていた。
  */
 async function handleChargeRefunded(charge: Stripe.Charge) {
   const paymentIntentId =
@@ -724,8 +728,19 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     return;
   }
 
-  const claimed = await claimReservationAsRefunded(reservation.id);
-  if (claimed) {
-    invalidateReservationCache(reservation.id);
-  }
+  // Stripe webhook payload の `charge.refunds` は default で 10 件まで含まれる (docs 参照)。
+  // 通常は 1 event = 1 新規 refund。data[0] が最新 (Stripe の list は desc order)。
+  const latestRefundData = charge.refunds?.data[0];
+  const latestRefund = latestRefundData
+    ? { id: latestRefundData.id, amount: latestRefundData.amount }
+    : null;
+
+  await applyChargeRefundIdempotent({
+    reservationId: reservation.id,
+    chargeAmount: charge.amount,
+    amountRefunded: charge.amount_refunded,
+    latestRefund,
+  });
+
+  invalidateReservationCache(reservation.id);
 }

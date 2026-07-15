@@ -167,3 +167,72 @@ export async function claimReservationAsRefunded(
   });
   return result.count > 0;
 }
+
+/**
+ * `charge.refunded` webhook から呼ぶ、部分/全額返金対応の idempotent 反映処理。
+ *
+ * Codex P1 (PR #1125, comment 3588489513) 対応。旧実装 (`claimReservationAsRefunded`) は
+ * partial refund でも fire する `charge.refunded` event に対して常に REFUNDED へ flip する
+ * ため、`refundReservationPaymentCommand` が PARTIALLY_REFUNDED に設定した状態を
+ * 上書きし追加返金経路を潰していた。
+ *
+ * 修正: Stripe charge の `amount` / `amount_refunded` で partial/full を判定し、
+ * paymentStatus を PARTIALLY_REFUNDED / REFUNDED に atomic 遷移する。
+ * Refund child table は `stripeRefundId @unique` で idempotent 書込 (command 経由で
+ * 先書きされている場合は skip、Dashboard 手動 refund 経路のみ書込)。
+ *
+ * @param input.reservationId       対象予約 ID
+ * @param input.chargeAmount        `charge.amount` (実 charge 額、Stripe unit_amount 単位)
+ * @param input.amountRefunded      `charge.amount_refunded` (累積返金額、Stripe unit_amount 単位)
+ * @param input.latestRefund        `charge.refunds?.data[0]` から取り出した最新 refund の id と amount
+ *                                  (webhook payload の refunds は default で 10 件まで含まれる;
+ *                                  無い場合は paymentStatus 遷移のみで Refund child 書込は skip)
+ */
+export async function applyChargeRefundIdempotent(input: {
+  readonly reservationId: string;
+  readonly chargeAmount: number;
+  readonly amountRefunded: number;
+  readonly latestRefund: {
+    readonly id: string;
+    readonly amount: number;
+  } | null;
+}): Promise<void> {
+  const { reservationId, chargeAmount, amountRefunded, latestRefund } = input;
+
+  if (latestRefund) {
+    // Refund child への idempotent write。command 経由で先書きされている場合は skip
+    // (`refundReservationPaymentCommand` 内でも同 stripeRefundId が既存なら skip する belt-and-suspenders)。
+    const existing = await prisma.refund.findUnique({
+      where: { stripeRefundId: latestRefund.id },
+    });
+    if (!existing) {
+      // command 経由でない = Stripe Dashboard から手動 refund の想定 (refundedByType=STRIPE_DASHBOARD)
+      await prisma.refund.create({
+        data: {
+          reservationId,
+          amount: latestRefund.amount,
+          stripeRefundId: latestRefund.id,
+          refundedByType: "STRIPE_DASHBOARD",
+        },
+      });
+    }
+  }
+
+  const isFullRefund = amountRefunded >= chargeAmount;
+  const newStatus = isFullRefund
+    ? PaymentStatus.REFUNDED
+    : PaymentStatus.PARTIALLY_REFUNDED;
+
+  // paymentStatus 遷移 (updateMany の WHERE で status guard、REFUNDED を PARTIALLY_REFUNDED に
+  // 巻き戻すことは絶対にしない)。
+  await prisma.reservation.updateMany({
+    where: {
+      id: reservationId,
+      deletedAt: null,
+      paymentStatus: {
+        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+      },
+    },
+    data: { paymentStatus: newStatus },
+  });
+}

@@ -66,6 +66,14 @@ const mockFindReservationByPaymentIntent =
     (piId: string) => Promise<{ id: string; paymentStatus: string } | null>
   >();
 const mockClaimReservationAsRefunded = mock<(id: string) => Promise<boolean>>();
+const mockApplyChargeRefundIdempotent = mock<
+  (input: {
+    reservationId: string;
+    chargeAmount: number;
+    amountRefunded: number;
+    latestRefund: { id: string; amount: number } | null;
+  }) => Promise<void>
+>(() => Promise.resolve());
 const mockSendReservationConfirmationEmail =
   mock<(data: unknown) => Promise<void>>();
 
@@ -174,6 +182,12 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     mockFindReservationByPaymentIntent(piId),
   claimReservationAsRefunded: (id: string) =>
     mockClaimReservationAsRefunded(id),
+  applyChargeRefundIdempotent: (input: {
+    reservationId: string;
+    chargeAmount: number;
+    amountRefunded: number;
+    latestRefund: { id: string; amount: number } | null;
+  }) => mockApplyChargeRefundIdempotent(input),
 }));
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
