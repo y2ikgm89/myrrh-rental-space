@@ -7,6 +7,10 @@ mock.module("@/shared/lib/env/server", () => ({
     NODE_ENV: "production",
     R2_PUBLIC_URL: undefined,
   },
+  // isLocalhostUrl は e2e-runtime.ts が env/server から import する transitive dep。
+  // rate-limit.ts → e2e-runtime.ts → env/server の chain で必要になる。
+  // このテスト環境では E2E bypass を発動させないため常に false を返す。
+  isLocalhostUrl: () => false,
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
