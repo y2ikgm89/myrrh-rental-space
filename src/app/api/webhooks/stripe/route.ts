@@ -294,22 +294,22 @@ async function fulfillPaymentAtomically(
     stripePaymentIntentId: paymentIntentId,
   });
 
-  // claim 失敗（既に PAID / 予約不在）→ 副作用 skip
-  if (!reservation) return;
-
-  invalidateReservationCache(reservationId);
-
-  if (reservation.status === ReservationStatus.CONFIRMED) return;
-
   // 領収書 (Receipt) の atomic 採番・発行を await で実行する。
   // - fireAndForget 禁止: 失敗が webhook から見えないと Stripe 再送で確定した予約に
-  //   Receipt が発行されない silent failure になる (Foundation gap analysis で確定した契約)
-  // - VALIDATION エラー (金額 0 / paymentStatus mismatch 等) は業務的にスキップ (Stripe
-  //   再送しても解消しないため webhook 側で握り潰し、log で監視)
-  // - それ以外 (DB 一時障害 等) は rethrow して Stripe の retry (exponential backoff /
-  //   最大 3 日) に委ねる。at-least-once + advisory lock 728353 で二重発行は防止済み。
+  //   Receipt が発行されない silent failure になる (Foundation gap analysis 契約)
+  // - claim の成否に関係なく呼び出す (Codex review PR#1115 P1 / PR#1116 P2 対応):
+  //   * P1: reservation は create 時に status=CONFIRMED が書き込まれる
+  //     (public-commands.ts:201) ため、下記の CONFIRMED early return より前でないと
+  //     通常フローで発行に到達しない
+  //   * P2: transient error 後の Stripe retry で claim=null (既に PAID) になった場合も
+  //     issueReceipt を再試行する必要がある (冪等契約 @unique(reservationId) + advisory
+  //     lock 728353 により重複発行はない)
+  //   * issueReceipt の gate (paymentStatus === PAID/PARTIALLY_REFUNDED 必須) が
+  //     false positive (未払時発行) を防ぐ
+  // - VALIDATION エラー (金額 0 / paymentStatus mismatch 等) は業務的にスキップ
+  // - それ以外 (DB 一時障害 等) は rethrow して Stripe の retry に委ねる
   try {
-    await issueReceiptForReservation(reservation.id);
+    await issueReceiptForReservation(reservationId);
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION") {
       logError(error, {
@@ -317,13 +317,24 @@ async function fulfillPaymentAtomically(
         severity: ErrorSeverity.LOW,
         context: {
           operation: "issueReceiptForReservation",
-          reservationId: reservation.id,
+          reservationId,
         },
       });
     } else {
       throw error;
     }
   }
+
+  // claim 失敗（既に PAID / 予約不在）→ メール送信 / cache invalidate skip
+  // (issueReceipt は冪等契約により既に上で処理済み)
+  if (!reservation) return;
+
+  invalidateReservationCache(reservationId);
+
+  // メール送信 skip: create 時 CONFIRMED (public-commands.ts:201) は create action が
+  // 「予約受付」メールを既に送信済みのため、webhook で「決済完了」メールを送ると二重送信になる
+  // (この gate の意味は Foundation gap analysis で確認、既存挙動を保持)
+  if (reservation.status === ReservationStatus.CONFIRMED) return;
 
   fireAndForget(
     sendReservationConfirmationEmail(
