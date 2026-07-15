@@ -1,5 +1,8 @@
 import "server-only";
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import {
   Document,
   Font,
@@ -22,13 +25,16 @@ import type { ReactElement } from "react";
  * 5. 税率区分ごとの消費税額
  * 6. 宛名 (書類の交付を受ける者の氏名または名称)
  *
- * ## フォント (Noto Sans JP)
- * 日本語グリフを含むフォントを Font.register で登録する。CDN (jsdelivr) 経由で
- * googlefonts/noto-cjk リポジトリの OTF を fetch する。
- * - CDN URL は @react-pdf/renderer の内部 fetch (server-side、CSP 非関与) で一度だけ取得され、
- *   同一ランタイム内で in-memory cache される
- * - production の cold start 影響 (~1s 初回 fetch) は許容範囲。subset 化して repo に
- *   含める最適化は receipt-full-wiring PR#7 で対応予定
+ * ## フォント (Noto Sans JP、Japanese subset を repo 同梱、PR#7)
+ * Fontsource の `@fontsource/noto-sans-jp` から Japanese subset (JIS 90 相当、~500KB) の
+ * WOFF ファイルを npm 経由で取得し、@react-pdf/renderer の Font.register に **absolute path**
+ * で渡す (Buffer 直渡しは非対応、WOFF2 も非対応 — TTF と WOFF のみ)。
+ * - 旧実装は CDN (jsdelivr) から NotoSansCJKjp-Regular.otf (~5MB fullset) を毎 cold start で
+ *   fetch していた (~1s 初回遅延)。npm 同梱に切替え、cold start ~1s → ~0ms へ短縮。
+ * - Next.js standalone build は `outputFileTracing` で node_modules 内の参照ファイルを自動追跡
+ *   するが、runtime `require.resolve` の path はビルド時に静的解決できないため、
+ *   `next.config.ts` の `outputFileTracingIncludes` で明示 include している。
+ * - フォントは Open Font License (OFL 1.1)、商用配布可、subset 派生も OFL 継承で問題なし。
  *
  * ## Hyphenation の無効化
  * デフォルトの hyphenation は英語の単語区切り前提で、日本語テキスト (Text ノードの各文字)
@@ -36,14 +42,30 @@ import type { ReactElement } from "react";
  * `Font.registerHyphenationCallback((word) => [word])` で無効化する。
  */
 
-const NOTO_SANS_JP_URL =
-  "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf";
+// Noto Sans JP Japanese subset (~500KB compressed WOFF、OFL 1.1 派生) を repo に直接
+// 同梱し、module 相対 path で参照する。
+//
+// **方針**: 旧実装は Fontsource npm package (`@fontsource/noto-sans-jp`) を `require.resolve`
+// で参照していたが、Turbopack が (1) `.woff` を直接 require すると "Unknown module type"、
+// (2) `package.json` を require.resolve すると bundle module id (integer) に変換される
+// 2 段の bundling 問題を起こしていた。`serverExternalPackages` に追加しても後者は解消しない。
+// repo 内 relative path なら Turbopack の bundling 対象外で確実に動く。
+//
+// **outputFileTracing との統合**: font file は `src/shared/pdf/fonts/` に置いてあり、
+// Next.js の nft (node file tracer) が module import graph から font-tracer 用の meta hint
+// なしに追跡できるよう `next.config.ts` の `outputFileTracingIncludes` で明示 include している。
+const CURRENT_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const NOTO_SANS_JP_PATH = path.join(
+  CURRENT_FILE_DIR,
+  "fonts",
+  "noto-sans-jp-japanese-400-normal.woff",
+);
 
 // 副作用は module load 時に 1 回だけ実行される。@react-pdf/renderer の Font store は
 // process-global シングルトンのため多重 register は最新値で上書きされる (害はない)。
 Font.register({
   family: "Noto Sans JP",
-  src: NOTO_SANS_JP_URL,
+  src: NOTO_SANS_JP_PATH,
 });
 
 Font.registerHyphenationCallback((word) => [word]);

@@ -113,6 +113,19 @@ const nextConfig: NextConfig = {
   // (Windows の Turbopack が node: protocol をファイル名に含めるため standalone コピーが失敗する)
   ...(process.env["STANDALONE"] === "true" && { output: "standalone" }),
 
+  // Receipt PDF 描画用 Noto Sans JP フォント (Japanese subset、repo 同梱 WOFF) を
+  // standalone build に含める。`fileURLToPath(import.meta.url)` 経由の runtime path 解決は
+  // Next.js の自動 outputFileTracing (nft static analysis) では検出できないため、明示的に include する。
+  // task #7 PR#7 (2026-07-15 receipt-full-wiring)。
+  outputFileTracingIncludes: {
+    "/api/receipts/**": [
+      "./src/shared/pdf/fonts/noto-sans-jp-japanese-400-normal.woff",
+    ],
+    "/api/cron/receipt-backfill": [
+      "./src/shared/pdf/fonts/noto-sans-jp-japanese-400-normal.woff",
+    ],
+  },
+
   // Image optimization
   images: {
     remotePatterns: [
