@@ -21,3 +21,5 @@ export {
 } from "./admin";
 
 export { createCheckoutSession, refundReservationPayment } from "./payment";
+
+export { reissueReservationReceipt } from "./receipt";
