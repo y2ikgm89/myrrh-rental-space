@@ -167,7 +167,10 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
       if (requestIdRef.current !== requestId) return; // stale response guard
       setPricePreview(result);
     });
-  }, [pricingWindow]);
+    // pricingWindow 自体は render のたびに再生成される新規オブジェクトのため
+    // deps に入れると setPricePreview 完了 → 再 render → 新 pricingWindow →
+    // 再実行の無限ループになる（Codex P1 #1105）。プリミティブ値のみを deps にする。
+  }, [pricingWindow?.spaceId, pricingWindow?.startIso, pricingWindow?.endIso]);
 
   const calculatedPrice = pricingWindow
     ? (pricePreview?.totalPrice ?? null)

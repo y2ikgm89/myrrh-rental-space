@@ -360,5 +360,89 @@ describeMaybe(
         await cleanup();
       }
     });
+
+    test("update で totalPrice を省略すると既存の priceOverriddenBy が保持される（no-op 保存で override フラグが消える Codex P1 #1105 の回帰防止）", async () => {
+      const { spaceId, customerId, cleanup } = await createSpaceFixture(1000);
+      try {
+        // override ありで作成: totalPrice=10000（計算値は 2000 = 1000×2h）
+        const created = await createAdminReservationCommand({
+          spaceId,
+          date: FRIDAY_DATE,
+          startTime: "10:00",
+          endTime: "12:00",
+          customerId,
+          status: "CONFIRMED",
+          totalPrice: 10000,
+          adminUserId: ADMIN_USER_ID,
+        });
+
+        // 別の管理者が totalPrice を指定せずに update する
+        // （manualPrice が空のまま送信される通常の日時/スペース編集保存を模す —
+        // Task 8 handoff の pre-fill 撤去後の client 挙動）。
+        const updateResult = await updateAdminReservationCommand(created.id, {
+          spaceId,
+          date: FRIDAY_DATE,
+          startTime: "10:00",
+          endTime: "12:00",
+          customerId,
+          status: "CONFIRMED",
+          adminUserId: OTHER_ADMIN_USER_ID,
+        });
+        expect(updateResult.payload.reservationId).toBe(created.id);
+
+        const reservation = await prisma.reservation.findUniqueOrThrow({
+          where: { id: created.id },
+        });
+
+        // priceOverriddenBy は「今回の update 呼び出し元 (OTHER_ADMIN_USER_ID)」
+        // ではなく、元の override 実行者のまま保持される
+        // （totalPrice 省略時はフィールド自体を update payload に書かないため）。
+        expect(reservation.priceOverriddenBy).toBe(ADMIN_USER_ID);
+        // totalPrice は override 値 (10000) ではなく、現在の rate plan から
+        // 再計算された値 (1000×2h=2000) になる。仕様: totalPrice 省略時は
+        // 常に再計算する。保持されるのは priceOverriddenBy フラグのみ
+        // （「過去に手動調整されたことがある」という監査情報）。
+        expect(reservation.totalPrice).toBe(2000);
+      } finally {
+        await cleanup();
+      }
+    });
+
+    test("update で totalPrice を省略しても未 override の予約は priceOverriddenBy が null のまま（regression）", async () => {
+      const { spaceId, customerId, cleanup } = await createSpaceFixture(1000);
+      try {
+        // override なしで作成: priceOverriddenBy=null
+        const created = await createAdminReservationCommand({
+          spaceId,
+          date: FRIDAY_DATE,
+          startTime: "10:00",
+          endTime: "12:00",
+          customerId,
+          status: "CONFIRMED",
+          adminUserId: ADMIN_USER_ID,
+        });
+
+        const updateResult = await updateAdminReservationCommand(created.id, {
+          spaceId,
+          date: FRIDAY_DATE,
+          startTime: "10:00",
+          endTime: "12:00",
+          customerId,
+          status: "CONFIRMED",
+          notes: "メモのみ変更",
+          adminUserId: OTHER_ADMIN_USER_ID,
+        });
+        expect(updateResult.payload.reservationId).toBe(created.id);
+
+        const reservation = await prisma.reservation.findUniqueOrThrow({
+          where: { id: created.id },
+        });
+
+        expect(reservation.priceOverriddenBy).toBeNull();
+        expect(reservation.totalPrice).toBe(2000);
+      } finally {
+        await cleanup();
+      }
+    });
   },
 );

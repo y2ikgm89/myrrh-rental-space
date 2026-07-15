@@ -352,8 +352,13 @@ export async function updateAdminReservationCommand(
 
   // Admin override policy（create と同一契約 — 詳細は createAdminReservationCommand
   // のコメント参照）。totalPrice を明示指定した場合のみ計算値を上書きする。
+  //
+  // priceOverriddenBy は override 時 (input.totalPrice != null) のみ update payload に
+  // 含める。totalPrice 省略時はフィールド自体を書かず既存 DB 値を保持する
+  // (Codex P1 #1105: 以前は totalPrice 省略時に毎回 null を書き込んでいたため、
+  // 価格に触れない通常の日時/スペース編集保存のたびに既存の手動上書きフラグが
+  // silently 消えてしまっていた)。実際の書込みは下記 tx 内の data で条件分岐する。
   const finalTotalPrice = input.totalPrice ?? pricing.totalPrice;
-  const priceOverriddenBy = input.totalPrice != null ? input.adminUserId : null;
 
   // 税額を予約時点の taxRate スナップショットで再計算する (Codex P2 #1038 対応)。
   //
@@ -412,7 +417,9 @@ export async function updateAdminReservationCommand(
           pricing.rateBreakdown,
           "料金内訳の生成に失敗しました",
         ),
-        priceOverriddenBy,
+        ...(input.totalPrice != null && {
+          priceOverriddenBy: input.adminUserId,
+        }),
         couponId: newCouponId,
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
