@@ -666,20 +666,6 @@ model Reservation {
   /// せず、FAILED → PENDING の再 checkout でも refresh される。
   paymentInitiatedAt      DateTime?
 
-  /// 返金の会計証跡列 (Foundation gap analysis 2026-07-15 task #9 の PR#1)。
-  /// 現状は refundReservationPaymentCommand が全額 REFUNDED に一括遷移する挙動のみで
-  /// 保存されていないが、後続 PR で部分返金 / reason 記録 / idempotency に活用する。
-  /// - refundedAt: 最初の返金 tx 完了時刻 (追加返金では null 更新しない、最初の refund)
-  /// - refundedAmount: 累積返金額 (円、部分返金の複数回対応)
-  /// - refundReason: 管理者入力の理由テキスト (顧客通知メール文面にも掲載予定)
-  /// - stripeRefundId: Stripe の refund object id (@unique で二重返金防止 + webhook idempotency)
-  /// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "STRIPE_DASHBOARD" の記録 (AuditLog と併用)
-  refundedAt              DateTime?
-  refundedAmount          Int?
-  refundReason            String?       @db.Text
-  stripeRefundId          String?       @unique
-  refundedByType          String?       @db.VarChar(20)
-
   // Cancellation tracking
   cancellationReason String?   @db.Text
   cancelledAt        DateTime?
@@ -695,6 +681,8 @@ model Reservation {
   // PR#16: 領収書 (適格請求書) の 1:1 relation (1 予約 = 1 領収書、再発行は
   // Receipt.reissuedFromId で自参照)
   receipt Receipt?
+  // task #9 PR#1: 部分返金の repeatable child records (append-only)
+  refunds Refund[]
 
   @@index([spaceId])
   @@index([customerId])
@@ -1995,21 +1983,14 @@ model EventRegistration {
   paidAmount              Int?
   paidAt                  DateTime?
 
-  /// 返金の会計証跡列 (Foundation gap analysis 2026-07-15 task #9 の PR#1、Reservation と対称)。
-  /// event 側は現状 charge.refunded webhook 未配線 (Foundation task #10 = event-refund-flow で
-  /// 追加予定) のため今は保存経路がないが、後続 PR の準備として schema に列を用意する。
-  refundedAt              DateTime?
-  refundedAmount          Int?
-  refundReason            String?       @db.Text
-  stripeRefundId          String?       @unique
-  refundedByType          String?       @db.VarChar(20)
-
   event    Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   slot     EventTimeSlot @relation(fields: [slotId], references: [id], onDelete: Restrict)
   ticket   EventTicket   @relation(fields: [ticketId], references: [id], onDelete: Restrict)
   customer Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   // PR#16: 領収書 (適格請求書) の 1:1 relation
   receipt  Receipt?
+  // task #9 PR#1: 部分返金の repeatable child records (append-only)
+  refunds  Refund[]
 
   @@index([eventId])
   @@index([slotId])
@@ -2044,6 +2025,42 @@ model EventRegistration {
  * (append-only の証跡性)。再発行 (reissuedFromId 参照) 時は元連番を維持し
  * revision フラグで区別する (税務実務 standard、D4 決定)。
  */
+/// Refund — 部分返金 (partial refund) を repeatable な子レコードとして表現する。
+///
+/// Foundation gap analysis (2026-07-15) task #9 PR#1、Codex review P2 (PR #1123) 対応。
+/// 累積 refundedAmount + 単一 stripeRefundId scalar 設計では 2 回目以降の部分返金で
+/// Stripe refund id / reason / actor が失われるため、child table に refactor した。
+///
+/// - reservationId / eventRegistrationId は polymorphic (どちらか片方が非 null、CHECK 制約で強制)
+/// - amount は各 refund event の 個別 金額 (円、正整数)。累積は `Refund` 集計 SUM で算出
+/// - stripeRefundId は Stripe refund object の id (@unique で二重返金防止 + webhook idempotency)
+/// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "STRIPE_DASHBOARD" (AuditLog と併用)
+/// - append-only (update / delete 想定なし、Refund オブジェクト 1 個 = 1 tx 完了)
+model Refund {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// 対象 Reservation (polymorphic、eventRegistrationId と排他)
+  reservationId       String?  @db.Uuid
+  /// 対象 EventRegistration (polymorphic、reservationId と排他)
+  eventRegistrationId String?  @db.VarChar(30)
+  /// この refund event の金額 (円、正整数)
+  amount              Int
+  /// 管理者入力の理由 (顧客通知メール文面にも掲載予定)
+  reason              String?  @db.Text
+  /// Stripe refund object の id (`re_...`)。@unique で二重返金防止 + webhook idempotency key。
+  stripeRefundId      String   @unique
+  /// "ADMIN" | "AUTO_ON_CANCEL" | "STRIPE_DASHBOARD" (AuditLog と併用)
+  refundedByType      String   @db.VarChar(20)
+  createdAt           DateTime @default(now()) @db.Timestamptz(6)
+
+  reservation       Reservation?       @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  eventRegistration EventRegistration? @relation(fields: [eventRegistrationId], references: [id], onDelete: Restrict)
+
+  @@index([reservationId])
+  @@index([eventRegistrationId])
+  @@index([createdAt])
+  @@map("refunds")
+}
+
 model Receipt {
   /// DB 側 DEFAULT gen_random_uuid()（20260713045802_add_receipt_tables migration で手書き）。
   /// Prisma 7 の diff engine は @default(uuid()) と DB 側 gen_random_uuid() を同値と見なさず
