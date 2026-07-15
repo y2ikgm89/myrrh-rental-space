@@ -16,6 +16,10 @@ interface EventRegistrationTabsProps {
   readonly turnstileSiteKey: string | null;
   /** RSC render 時点の ISO 時刻。WAITLISTED_OFFERED カウントダウンの hydration-safe な初期値算出に使う。 */
   readonly nowIso: string;
+  /** registrationId → Receipt.serialNo (発行済のみ)。DL リンク表示判定に使う。 */
+  readonly receiptSerialNoMap: Readonly<Record<string, string>>;
+  /** registrationId → FIFO waitlist 順位 (1-indexed)。WAITLIST_ACTIVE のみ。 */
+  readonly waitlistPositionMap: Readonly<Record<string, number>>;
 }
 
 // 予約タブ (reservation-tabs.tsx) と完全対称な class。
@@ -32,6 +36,8 @@ export function EventRegistrationTabs({
   pastItems,
   turnstileSiteKey,
   nowIso,
+  receiptSerialNoMap,
+  waitlistPositionMap,
 }: EventRegistrationTabsProps) {
   // Pattern B: 親が 1 フェッチで全件取得し props で分割渡し → forceMount + shallow:true。
   // 履歴は #629 のタブ方針に合わせ replace。
@@ -73,6 +79,8 @@ export function EventRegistrationTabs({
           showBrowseCta
           turnstileSiteKey={turnstileSiteKey}
           nowIso={nowIso}
+          receiptSerialNoMap={receiptSerialNoMap}
+          waitlistPositionMap={waitlistPositionMap}
         />
       </Tabs.Content>
       <Tabs.Content
@@ -85,6 +93,8 @@ export function EventRegistrationTabs({
           emptyMessage="過去のイベント申込はありません"
           turnstileSiteKey={turnstileSiteKey}
           nowIso={nowIso}
+          receiptSerialNoMap={receiptSerialNoMap}
+          waitlistPositionMap={waitlistPositionMap}
         />
       </Tabs.Content>
     </Tabs.Root>
