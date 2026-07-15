@@ -14,6 +14,7 @@ import {
   getSettings,
   getDiscountSettings,
   getTaxSettings,
+  getRefundPolicySettings,
 } from "@/admin/queries/settings";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { SettingsLayout } from "../_components/SettingsLayout";
@@ -22,16 +23,19 @@ import {
   StripeSection,
   DiscountSection,
   TaxSection,
+  RefundPolicySection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
 
 async function BillingSettingsContent(): Promise<ReactElement> {
   await connection();
-  const [settings, discountSettings, taxSettings] = await Promise.all([
-    getSettings(),
-    getDiscountSettings(),
-    getTaxSettings(),
-  ]);
+  const [settings, discountSettings, taxSettings, refundPolicy] =
+    await Promise.all([
+      getSettings(),
+      getDiscountSettings(),
+      getTaxSettings(),
+      getRefundPolicySettings(),
+    ]);
 
   if (!settings) {
     return (
@@ -57,6 +61,11 @@ async function BillingSettingsContent(): Promise<ReactElement> {
       label: "消費税",
       content: <TaxSection settings={taxSettings} />,
     },
+    {
+      value: "refund-policy",
+      label: "返金ポリシー",
+      content: <RefundPolicySection settings={refundPolicy} />,
+    },
   ];
 
   return <SettingsTabs tabs={tabs} defaultTab="payment" />;
@@ -81,7 +90,7 @@ export default async function BillingSettingsPage(): Promise<ReactElement> {
   return (
     <SettingsLayout
       title="課金・決済"
-      description="Stripe オンライン決済・割引・消費税の設定"
+      description="Stripe オンライン決済・割引・消費税・返金ポリシーの設定"
     >
       <Suspense fallback={<BillingSettingsLoading />}>
         <BillingSettingsContent />

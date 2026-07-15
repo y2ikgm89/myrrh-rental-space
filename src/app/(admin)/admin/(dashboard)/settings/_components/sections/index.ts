@@ -11,6 +11,7 @@ export { NotificationSection } from "./NotificationSection";
 export { ReservationSection } from "./ReservationSection";
 export { DiscountSection } from "./DiscountSection";
 export { TaxSection } from "./TaxSection";
+export { RefundPolicySection } from "./RefundPolicySection";
 export { MaintenanceSection } from "./MaintenanceSection";
 export { CookieConsentSection } from "./CookieConsentSection";
 export { StripeSection } from "./StripeSection";

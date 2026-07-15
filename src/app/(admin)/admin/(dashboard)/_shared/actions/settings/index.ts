@@ -143,3 +143,11 @@ export { updateTaxSettings } from "./tax";
 
 export type { TaxSettings } from "@/shared/domain/settings/types";
 export type { TaxSettingsInput } from "./schemas";
+
+// =============================================================================
+// Refund Policy Actions
+// =============================================================================
+
+export { updateRefundPolicySettings } from "./refund-policy";
+
+export type { RefundPolicyFormInput } from "./schemas/refund-policy";

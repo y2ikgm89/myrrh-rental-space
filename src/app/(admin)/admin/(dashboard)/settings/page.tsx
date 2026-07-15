@@ -85,11 +85,11 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   },
   {
     title: "課金・決済",
-    description: "Stripe オンライン決済・割引・消費税",
+    description: "Stripe オンライン決済・割引・消費税・返金ポリシー",
     href: "/admin/settings/billing",
     icon: IconCreditCard,
     requiredPermission: { resource: "settings", action: "manage" },
-    items: ["決済", "割引", "消費税"],
+    items: ["決済", "割引", "消費税", "返金ポリシー"],
   },
   {
     title: "メール・通知",
