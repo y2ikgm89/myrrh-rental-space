@@ -113,7 +113,10 @@ export const businessInfoFormSchema = z.object({
     .optional(),
   invoiceNumber: z
     .string()
-    .max(20, { error: "20文字以内で入力してください" })
+    .regex(/^T\d{13}$/, {
+      error:
+        "適格請求書発行事業者登録番号は T + 13桁の数字で入力してください (例: T1234567890123)",
+    })
     .optional(),
   businessDescription: z
     .string()
