@@ -155,13 +155,13 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     id: "payment",
     label: "オンライン決済",
     description:
-      "Stripe を使った予約・イベントのオンライン決済。OFF にすると checkout / 返金 / webhook が全て無効化される（credentials は「Stripe 連携」で別途設定）。",
+      "Stripe を使った予約・イベントのオンライン決済と適格請求書 (領収書) 発行。OFF にすると checkout / 返金 / webhook / 領収書 backfill が全て無効化される（credentials は「Stripe 連携」で別途設定）。",
     requires: ["reservation"],
     publicRoutes: [],
     pageSlugs: [],
     sectionTypes: [],
     templates: [],
-    cronPaths: [],
+    cronPaths: ["/api/cron/receipt-backfill"],
   },
   "data-retention": {
     id: "data-retention",
