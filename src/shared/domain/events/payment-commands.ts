@@ -1,18 +1,31 @@
 import "server-only";
 
-import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
+import {
+  AuditAction,
+  PaymentStatus,
+  RegistrationStatus,
+} from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { getAppUrl } from "@/shared/lib/constants";
+import { type RefundedByType } from "@/shared/lib/validations/enums/helpers";
 import {
   logError,
   normalizeError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+
+/**
+ * `refundEventRegistrationPaymentCommand` の advisory lock namespace。
+ * `.claude/rules/db-domain.md` の registry と一致
+ * (Reservation の 728355 と同型、event registration 単位で serialize)。
+ */
+const EVENT_REFUND_LOCK_NAMESPACE = 728356;
 
 // Reservation の payment-commands と共通の unit_amount 通貨変換
 const ZERO_DECIMAL_CURRENCIES = new Set([
@@ -619,5 +632,321 @@ export async function saveEventRegistrationPaymentIntentId(
   await prisma.eventRegistration.updateMany({
     where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
     data: { stripePaymentIntentId: paymentIntentId },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Refund (Reservation 側の refundReservationPaymentCommand の event 対称版、task #6)
+// ---------------------------------------------------------------------------
+
+export interface RefundEventRegistrationInput {
+  registrationId: string;
+  /**
+   * 部分返金額 (円、正整数)。未指定なら残額全額 (paidAmount - Σrefunds.amount)。
+   */
+  amount?: number;
+  /**
+   * 管理者入力の理由。Refund.reason に保存し、AuditLog metadata にも流す。
+   */
+  reason?: string;
+  /**
+   * 「誰が」返金を主導したか。DB CHECK 制約と application 側 enum で二重防御。
+   */
+  actorType: RefundedByType;
+  /**
+   * AuditLog.userId に書く。ADMIN 経路は admin userId、AUTO_ON_CANCEL / STRIPE_DASHBOARD は
+   * null (system / 外部起動)。
+   */
+  actorUserId?: string;
+}
+
+export interface RefundEventRegistrationResult {
+  refundId: string;
+  status: string | null;
+  newPaymentStatus:
+    typeof PaymentStatus.PARTIALLY_REFUNDED | typeof PaymentStatus.REFUNDED;
+  /** 累積返金額 (今回の refund を含めた合計、円) */
+  cumulativeAmount: number;
+  /** 今回 refund した金額 (円) */
+  refundAmount: number;
+}
+
+/**
+ * EventRegistration の返金 (部分返金対応、Stripe idempotent、Refund child + AuditLog 書込)。
+ *
+ * ## 契約
+ * - `paymentStatus` が `PAID` または `PARTIALLY_REFUNDED` の申込のみ返金可能
+ * - `amount` 未指定 → 残額全額 (`paidAmount - Σ既 refunds.amount`)
+ * - 累積返金額が `paidAmount` に到達したら `REFUNDED`、未満なら `PARTIALLY_REFUNDED`
+ * - Stripe idempotency key = `event-registration-refund-{registrationId}-{newCumulative}` で
+ *   2 回目以降の部分返金でも unique
+ *
+ * ## 並行制御
+ * - interactive tx 冒頭で `pg_advisory_xact_lock(EVENT_REFUND_LOCK_NAMESPACE, hashtext(registrationId))`
+ * - Stripe API 呼び出しは tx 内 (Reservation 側と同様、正確性優先)、timeout / maxWait: 30_000ms
+ *
+ * @throws DomainError NOT_FOUND / VALIDATION / UNEXPECTED
+ */
+export async function refundEventRegistrationPaymentCommand(
+  input: RefundEventRegistrationInput,
+): Promise<RefundEventRegistrationResult> {
+  const {
+    registrationId,
+    amount: requestedAmount,
+    reason,
+    actorType,
+    actorUserId,
+  } = input;
+
+  const stripeSettings = await assertOnlinePaymentAvailable();
+  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  if (!client) {
+    throw new DomainError(
+      "Stripe の設定が正しくありません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+
+  const stripeCurrency = stripeSettings.stripeCurrency;
+
+  const result = await prisma.$transaction(
+    async (tx) => {
+      // 申込単位 advisory lock (concurrent refund 直列化 + over-refund 防止)
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EVENT_REFUND_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
+
+      const registration = await tx.eventRegistration.findFirst({
+        where: { id: registrationId, event: { deletedAt: null } },
+        select: {
+          id: true,
+          paymentStatus: true,
+          stripePaymentIntentId: true,
+          paidAmount: true,
+        },
+      });
+
+      if (!registration) {
+        throw new DomainError("イベント申込が見つかりません", "NOT_FOUND");
+      }
+
+      // PAID + PARTIALLY_REFUNDED の両方から返金可能
+      if (
+        registration.paymentStatus !== PaymentStatus.PAID &&
+        registration.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
+      ) {
+        throw new DomainError(
+          "決済確定・一部返金済みのイベント申込のみ返金できます",
+          "VALIDATION",
+        );
+      }
+
+      if (!registration.stripePaymentIntentId) {
+        throw new DomainError(
+          "Stripe の決済情報が見つかりません",
+          "VALIDATION",
+        );
+      }
+
+      if (registration.paidAmount === null || registration.paidAmount <= 0) {
+        throw new DomainError(
+          "受領額が記録されていないイベント申込は返金できません",
+          "VALIDATION",
+        );
+      }
+
+      // 既 refund 累積額 (advisory lock 内で読むので TOCTOU なし)
+      const aggregate = await tx.refund.aggregate({
+        where: { eventRegistrationId: registrationId },
+        _sum: { amount: true },
+      });
+      const cumulativeSoFar = aggregate._sum.amount ?? 0;
+      const remaining = registration.paidAmount - cumulativeSoFar;
+
+      if (remaining <= 0) {
+        throw new DomainError(
+          "このイベント申込は既に全額返金済みです",
+          "VALIDATION",
+        );
+      }
+
+      const amount = requestedAmount ?? remaining;
+
+      if (!Number.isInteger(amount) || amount <= 0) {
+        throw new DomainError(
+          "返金額は 1 円以上の整数で指定してください",
+          "VALIDATION",
+        );
+      }
+      if (amount > remaining) {
+        throw new DomainError(
+          `返金額が残額を超えています (残額: ${remaining} 円)`,
+          "VALIDATION",
+        );
+      }
+
+      const newCumulative = cumulativeSoFar + amount;
+      const willBeFullyRefunded = newCumulative === registration.paidAmount;
+
+      // Stripe refund (idempotent、tx 内で lock 保持しつつ実行)
+      let refund;
+      try {
+        refund = await client.refunds.create(
+          {
+            payment_intent: registration.stripePaymentIntentId,
+            amount: toStripeUnitAmount(amount, stripeCurrency),
+            ...(reason ? { metadata: { reason } } : {}),
+          },
+          {
+            idempotencyKey: `event-registration-refund-${registrationId}-${newCumulative}`,
+          },
+        );
+      } catch (error) {
+        logError(normalizeError(error), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "refundEventRegistrationPayment",
+            registrationId,
+          },
+        });
+        throw new DomainError(
+          "返金処理に失敗しました。しばらく経ってからお試しください。",
+          "UNEXPECTED",
+        );
+      }
+
+      // Belt-and-suspenders: webhook (charge.refunded) が先に同 stripeRefundId で
+      // Refund を書いていた場合、@unique(stripeRefundId) で二重 insert が reject される。
+      const existing = await tx.refund.findUnique({
+        where: { stripeRefundId: refund.id },
+      });
+      if (!existing) {
+        await tx.refund.create({
+          data: {
+            eventRegistrationId: registrationId,
+            amount,
+            ...(reason ? { reason } : {}),
+            stripeRefundId: refund.id,
+            refundedByType: actorType,
+          },
+        });
+      }
+
+      // paymentStatus 遷移 (updateMany で status guard)
+      await tx.eventRegistration.updateMany({
+        where: {
+          id: registrationId,
+          paymentStatus: {
+            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+          },
+        },
+        data: {
+          paymentStatus: willBeFullyRefunded
+            ? PaymentStatus.REFUNDED
+            : PaymentStatus.PARTIALLY_REFUNDED,
+        },
+      });
+
+      return {
+        refundId: refund.id,
+        status: refund.status,
+        newPaymentStatus: willBeFullyRefunded
+          ? PaymentStatus.REFUNDED
+          : PaymentStatus.PARTIALLY_REFUNDED,
+        cumulativeAmount: newCumulative,
+        refundAmount: amount,
+      } satisfies RefundEventRegistrationResult;
+    },
+    {
+      timeout: 30_000,
+      maxWait: 30_000,
+    },
+  );
+
+  // AuditLog (tx 外)
+  await createAuditLogRecord({
+    ...(actorUserId ? { userId: actorUserId } : {}),
+    action: AuditAction.UPDATE,
+    resource: "eventRegistration",
+    resourceId: registrationId,
+    newValue: {
+      paymentStatus: result.newPaymentStatus,
+      refundedAmount: result.cumulativeAmount,
+    },
+    metadata: {
+      actorType,
+      refundAmount: result.refundAmount,
+      cumulativeAmount: result.cumulativeAmount,
+      stripeRefundId: result.refundId,
+      ...(reason ? { reason } : {}),
+    },
+  });
+
+  return result;
+}
+
+/**
+ * stripePaymentIntentId で EventRegistration を検索
+ * (`findReservationByPaymentIntent` の event 対称版)。
+ */
+export async function findEventRegistrationByPaymentIntent(
+  paymentIntentId: string,
+) {
+  return prisma.eventRegistration.findFirst({
+    where: {
+      stripePaymentIntentId: paymentIntentId,
+      event: { deletedAt: null },
+    },
+    select: { id: true, paymentStatus: true, paidAmount: true },
+  });
+}
+
+/**
+ * `charge.refunded` webhook から呼ぶ event registration 版の idempotent refund 反映。
+ *
+ * Reservation 側 `applyChargeRefundIdempotent` (payment-queries.ts) の対称版:
+ * - Stripe charge の `amount` / `amount_refunded` で partial/full を判定
+ * - Refund child table への idempotent write (`stripeRefundId @unique`)
+ * - EventRegistration.paymentStatus を PARTIALLY_REFUNDED / REFUNDED に atomic 遷移
+ */
+export async function applyEventChargeRefundIdempotent(input: {
+  readonly registrationId: string;
+  readonly chargeAmount: number;
+  readonly amountRefunded: number;
+  readonly latestRefund: {
+    readonly id: string;
+    readonly amount: number;
+  } | null;
+}): Promise<void> {
+  const { registrationId, chargeAmount, amountRefunded, latestRefund } = input;
+
+  if (latestRefund) {
+    const existing = await prisma.refund.findUnique({
+      where: { stripeRefundId: latestRefund.id },
+    });
+    if (!existing) {
+      await prisma.refund.create({
+        data: {
+          eventRegistrationId: registrationId,
+          amount: latestRefund.amount,
+          stripeRefundId: latestRefund.id,
+          refundedByType: "STRIPE_DASHBOARD",
+        },
+      });
+    }
+  }
+
+  const isFullRefund = amountRefunded >= chargeAmount;
+  const newStatus = isFullRefund
+    ? PaymentStatus.REFUNDED
+    : PaymentStatus.PARTIALLY_REFUNDED;
+
+  await prisma.eventRegistration.updateMany({
+    where: {
+      id: registrationId,
+      paymentStatus: {
+        in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+      },
+    },
+    data: { paymentStatus: newStatus },
   });
 }

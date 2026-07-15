@@ -212,6 +212,10 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
     mockClaimEventRegistrationAsFailed(id, sessionId),
   saveEventRegistrationPaymentIntentId: (id: string, paymentIntentId: string) =>
     mockSaveEventRegistrationPaymentIntentId(id, paymentIntentId),
+  // task #6: 新規追加関数 (この test file 内では charge.refunded route を叩かないため
+  // no-op stub で十分。import 解決のみを満たす)
+  findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
+  applyEventChargeRefundIdempotent: () => Promise.resolve(),
 }));
 
 mock.module("@/shared/domain/events/waitlist-queries", () => ({
