@@ -60,17 +60,23 @@ test.describe("smoke: cron auth (fail-closed)", () => {
     });
   }
 
-  test("/api/cron/* は proxy rate limit 対象外 (20 連続 unauthorized req が全て 401、429 混入なし)", async ({
+  test("/api/cron/* は proxy rate limit 対象外 (apiRateLimiter budget 超の req が全て 401、429 混入なし)", async ({
     request,
   }) => {
     // Cloud Scheduler は分あたり複数回 hit するため /api/cron 全体を rate limit から
     // 除外する契約 (proxy.ts の `!pathname.startsWith("/api/cron")` gate)。
     // 除外が壊れると認可 fail 前に 429 で弾かれ、逆に Cloud Scheduler が正常時にも
-    // rate limit hit で silent skip する silent regression を招く。20 req は
-    // apiRateLimiter (100/min) の 1/5 で E2E 実行時間を短く保ちつつ十分な検出力。
+    // rate limit hit で silent skip する silent regression を招く。
+    //
+    // Codex review PR#1141 対応: apiRateLimiter は 100 req/min/IP (`shared/lib/rate-limit.ts`
+    // の maxRequests: 100)。budget 未満の req 数 (例: 20) だと exemption が壊れても
+    // 401 のみで通ってしまい contract を pin できない。budget を明確に超える 110 req を
+    // 送り、exemption 動作時 → 全 401、exemption 破壊時 → 100 req 後は 429 混入で
+    // 差が出るように補強する。
     const endpoint = CRON_ENDPOINTS[0];
+    const REQUEST_COUNT = 110;
     const responses = await Promise.all(
-      Array.from({ length: 20 }, () => request.get(endpoint)),
+      Array.from({ length: REQUEST_COUNT }, () => request.get(endpoint)),
     );
 
     const statuses = responses.map((r) => r.status());
