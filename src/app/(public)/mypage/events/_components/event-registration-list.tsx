@@ -49,6 +49,8 @@ export interface EventRegistrationListItem {
   readonly offeredAt: string | null;
   readonly expiresAt: string | null;
   readonly paymentStatus: string;
+  readonly slotId: string;
+  readonly ticketId: string;
   readonly event: {
     readonly id: string;
     readonly title: string;
@@ -67,6 +69,19 @@ interface EventRegistrationListProps {
   readonly turnstileSiteKey: string | null;
   /** RSC render 時点の ISO 時刻。WAITLISTED_OFFERED カウントダウンの hydration-safe な初期値算出に使う。 */
   readonly nowIso: string;
+  /**
+   * registrationId → Receipt.serialNo の対応表。発行済みの場合のみ含まれる。
+   * 領収書 (適格請求書) ダウンロードリンクを出すかを決める。
+   * Foundation gap analysis (2026-07-15) task #8。
+   */
+  readonly receiptSerialNoMap: Readonly<Record<string, string>>;
+  /**
+   * registrationId → FIFO waitlist 位置 (1-indexed) の対応表。
+   * WAITLISTED / WAITLISTED_OFFERED の registration のみ含まれる。
+   * event-waitlist-emails.ts の computeWaitlistPosition と同 SSoT
+   * (WAITLIST_ACTIVE_STATUSES + waitlistedAt lte 自分)。
+   */
+  readonly waitlistPositionMap: Readonly<Record<string, number>>;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +110,8 @@ export function EventRegistrationList({
   showBrowseCta = false,
   turnstileSiteKey,
   nowIso,
+  receiptSerialNoMap,
+  waitlistPositionMap,
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
@@ -122,6 +139,8 @@ export function EventRegistrationList({
           registration={registration}
           turnstileSiteKey={turnstileSiteKey}
           nowIso={nowIso}
+          receiptSerialNo={receiptSerialNoMap[registration.id] ?? null}
+          waitlistPosition={waitlistPositionMap[registration.id] ?? null}
         />
       ))}
     </Stack>
@@ -136,10 +155,14 @@ function EventRegistrationCard({
   registration,
   turnstileSiteKey,
   nowIso,
+  receiptSerialNo,
+  waitlistPosition,
 }: {
   readonly registration: EventRegistrationListItem;
   readonly turnstileSiteKey: string | null;
   readonly nowIso: string;
+  readonly receiptSerialNo: string | null;
+  readonly waitlistPosition: number | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -238,9 +261,24 @@ function EventRegistrationCard({
 
       {registration.status === RegistrationStatus.WAITLISTED && (
         <div className="mt-4 border-t border-border pt-3">
-          <p className="text-sm text-muted-foreground">
-            順番が来ましたら、メールでご連絡します。
-          </p>
+          {/* Foundation gap analysis task #8: waitlist 順位表示 (mypage UI)。
+            event-waitlist-emails.ts の computeWaitlistPosition と同 SSoT
+            (WAITLIST_ACTIVE_STATUSES + waitlistedAt lte) で bulk 計算した値を
+            props で受け取る。位置が算出できない場合 (waitlistedAt null 等) は
+            順位表示なしのフォールバックメッセージのみ。 */}
+          {waitlistPosition !== null ? (
+            <p className="text-sm text-muted-foreground">
+              現在
+              <span className="mx-1 font-medium text-foreground tabular-nums">
+                {waitlistPosition}
+              </span>
+              番目です。順番が来ましたら、メールでご連絡します。
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              順番が来ましたら、メールでご連絡します。
+            </p>
+          )}
         </div>
       )}
 
@@ -251,6 +289,15 @@ function EventRegistrationCard({
               expiresAt={registration.expiresAt}
               nowIso={nowIso}
             />
+            {waitlistPosition !== null && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                （現在の待機列順位:
+                <span className="mx-1 font-medium text-foreground tabular-nums">
+                  {waitlistPosition}
+                </span>
+                番目 / 前方の繰り上げ当選者を含みます）
+              </p>
+            )}
             <p className="mt-2 text-sm text-muted-foreground">
               確定用のリンクをメールでお送りしています。期限内にメール記載のリンクからお手続きください。
             </p>
@@ -280,6 +327,21 @@ function EventRegistrationCard({
               icsDownloadUrl: `${getAppUrl()}/api/calendar/event/${registration.id}`,
             })}
           />
+        </div>
+      )}
+
+      {/* 領収書 DL リンク (Receipt 発行済のみ表示)。Route Handler は
+        Better Auth session 経由で ownership 検証、Link コンポーネントは
+        page 遷移用のため API route には使わない。Foundation task #8。 */}
+      {receiptSerialNo && (
+        <div className="mt-4 border-t border-border pt-3">
+          <a
+            href={`/api/receipts/${receiptSerialNo}/pdf`}
+            download={`receipt-${receiptSerialNo}.pdf`}
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+          >
+            領収書をダウンロード
+          </a>
         </div>
       )}
 

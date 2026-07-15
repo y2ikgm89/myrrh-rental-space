@@ -69,3 +69,27 @@ export async function findReceiptSerialNoByEventRegistrationId(
   });
   return receipt?.serialNo ?? null;
 }
+
+/**
+ * 一覧表示 (mypage/events) 用の bulk lookup。N+1 回避のため findMany で
+ * 一括取得し Map で返す。存在しない registrationId は Map に含まれない (呼出側で
+ * has() チェックまたは get()===undefined フォールバック)。
+ *
+ * Foundation gap analysis (2026-07-15) task #8 (mypage waitlist 順位 + 領収書 UI)。
+ */
+export async function findReceiptSerialNoMapByEventRegistrationIds(
+  eventRegistrationIds: readonly string[],
+): Promise<Map<string, string>> {
+  if (eventRegistrationIds.length === 0) return new Map();
+  const receipts = await prisma.receipt.findMany({
+    where: { eventRegistrationId: { in: [...eventRegistrationIds] } },
+    select: { serialNo: true, eventRegistrationId: true },
+  });
+  const map = new Map<string, string>();
+  for (const receipt of receipts) {
+    if (receipt.eventRegistrationId !== null) {
+      map.set(receipt.eventRegistrationId, receipt.serialNo);
+    }
+  }
+  return map;
+}

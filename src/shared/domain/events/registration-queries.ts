@@ -233,6 +233,10 @@ const CUSTOMER_EVENT_REGISTRATION_SELECT = {
   offeredAt: true,
   expiresAt: true,
   paymentStatus: true,
+  // slotId / ticketId は mypage の waitlist 順位計算 (bulk lookup) 用。
+  // Foundation gap analysis task #8 (mypage waitlist 順位 UI) で追加。
+  slotId: true,
+  ticketId: true,
   slot: {
     select: {
       startAt: true,
@@ -262,6 +266,8 @@ type CustomerEventRegistrationRow = {
   readonly offeredAt: Date | null;
   readonly expiresAt: Date | null;
   readonly paymentStatus: PaymentStatus;
+  readonly slotId: string;
+  readonly ticketId: string;
   readonly slot: {
     readonly startAt: Date;
     readonly endAt: Date;
@@ -288,6 +294,8 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
     offeredAt: row.offeredAt,
     expiresAt: row.expiresAt,
     paymentStatus: row.paymentStatus,
+    slotId: row.slotId,
+    ticketId: row.ticketId,
     event: {
       id: row.event.id,
       title: row.event.title,

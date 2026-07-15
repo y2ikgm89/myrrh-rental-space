@@ -11,6 +11,71 @@ import { createWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-tok
 import { formatEventVenue } from "./venue";
 
 /**
+ * mypage 一覧用の bulk 順位取得。
+ *
+ * 顧客が持つ waitlist 系 registration (WAITLISTED / WAITLISTED_OFFERED) に対して、
+ * それぞれの FIFO 位置を 1-indexed で返す。event-waitlist-emails.ts の
+ * `computeWaitlistPosition` と同じ SSoT (WAITLIST_ACTIVE_STATUSES + waitlistedAt
+ * lte 自分) を bulk 取得で N+1 化を避ける。
+ *
+ * Foundation gap analysis (2026-07-15) task #8 (mypage waitlist 順位 UI)。
+ *
+ * @returns registrationId → 1-indexed position の Map。waitlistedAt が null の
+ *   registration は Map に含まれない (UI 側で「順位計算不可」として非表示)。
+ */
+export async function getWaitlistPositionMapForRegistrations(
+  registrations: readonly {
+    readonly id: string;
+    readonly slotId: string;
+    readonly ticketId: string;
+    readonly waitlistedAt: Date | null;
+  }[],
+): Promise<Map<string, number>> {
+  const targets = registrations.filter(
+    (r): r is (typeof registrations)[number] & { waitlistedAt: Date } =>
+      r.waitlistedAt !== null,
+  );
+  if (targets.length === 0) return new Map();
+
+  // 対象 registration が属する (slotId, ticketId) 集合の全 WAITLIST_ACTIVE 一覧を
+  // 一括取得。1 query + in-memory position 計算 = N+1 完全回避。
+  const rows = await prisma.eventRegistration.findMany({
+    where: {
+      OR: targets.map((r) => ({ slotId: r.slotId, ticketId: r.ticketId })),
+      status: { in: [...WAITLIST_ACTIVE_STATUSES] },
+    },
+    select: {
+      id: true,
+      slotId: true,
+      ticketId: true,
+      waitlistedAt: true,
+    },
+    orderBy: { waitlistedAt: "asc" },
+  });
+
+  const groupKey = (slotId: string, ticketId: string) =>
+    `${slotId}:${ticketId}`;
+  const groups = new Map<
+    string,
+    Array<{ id: string; waitlistedAt: Date | null }>
+  >();
+  for (const row of rows) {
+    const key = groupKey(row.slotId, row.ticketId);
+    const existing = groups.get(key) ?? [];
+    existing.push({ id: row.id, waitlistedAt: row.waitlistedAt });
+    groups.set(key, existing);
+  }
+
+  const positions = new Map<string, number>();
+  for (const target of targets) {
+    const group = groups.get(groupKey(target.slotId, target.ticketId)) ?? [];
+    const idx = group.findIndex((row) => row.id === target.id);
+    positions.set(target.id, idx >= 0 ? idx + 1 : 1);
+  }
+  return positions;
+}
+
+/**
  * 管理画面のキャンセル待ち一覧向けクエリ。
  *
  * 表示順は「status DESC, waitlistedAt ASC」。RegistrationStatus の文字列順で

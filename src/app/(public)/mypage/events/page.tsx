@@ -10,6 +10,8 @@ import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
+import { findReceiptSerialNoMapByEventRegistrationIds } from "@/shared/domain/receipts/queries";
+import { getWaitlistPositionMapForRegistrations } from "@/shared/domain/events/waitlist-queries";
 import { toPlainArray } from "@/shared/lib/serialize";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
@@ -39,6 +41,19 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
   // 独自に `Date.now()` を呼ぶことによる SSR/CSR 不一致も避けられる。
   const nowIso = now.toISOString();
 
+  // Foundation gap analysis (2026-07-15) task #8: mypage 領収書 UI + waitlist 順位。
+  // bulk lookup で N+1 回避 (find*Map: 1 query、getWaitlistPositionMap: 1 query =
+  // 合計 2 追加 query、全 registration に対して線形メモリ計算)。
+  const allRegistrations = [...active, ...past];
+  const allRegistrationIds = allRegistrations.map((reg) => reg.id);
+  const [receiptSerialNoMapRaw, waitlistPositionMapRaw] = await Promise.all([
+    findReceiptSerialNoMapByEventRegistrationIds(allRegistrationIds),
+    getWaitlistPositionMapForRegistrations(allRegistrations),
+  ]);
+  // client component に渡すため plain object 化 (Map は Serialization Barrier で NG)。
+  const receiptSerialNoMap = Object.fromEntries(receiptSerialNoMapRaw);
+  const waitlistPositionMap = Object.fromEntries(waitlistPositionMapRaw);
+
   const serialize = (
     rows: Awaited<ReturnType<typeof getCustomerEventRegistrations>>["active"],
   ) =>
@@ -66,6 +81,8 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
         pastItems={serialize(past)}
         turnstileSiteKey={turnstileSiteKey}
         nowIso={nowIso}
+        receiptSerialNoMap={receiptSerialNoMap}
+        waitlistPositionMap={waitlistPositionMap}
       />
     </Stack>
   );
