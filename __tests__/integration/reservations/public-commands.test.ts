@@ -34,6 +34,12 @@ mock.module("next/cache", () => ({
   revalidateTag: () => undefined,
 }));
 
+// createPublicReservationCommand は isFeatureEnabled("reservation") を直接呼ぶ。
+// CI seed で reservation feature が OFF の可能性を封じる。
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: () => Promise.resolve(true),
+}));
+
 type PrismaModule = typeof import("@/shared/db/prisma");
 type PublicCommandsModule =
   typeof import("@/shared/domain/reservations/public-commands");
