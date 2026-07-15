@@ -21,11 +21,6 @@ mock.module("sonner", () => ({
   },
 }));
 
-mock.module("@/admin/actions/event-registration", () => ({
-  adminCancelRegistration: (...args: Parameters<typeof cancelMock>) =>
-    cancelMock(...args),
-}));
-
 mock.module("@/shared/lib/date-format", () => ({
   formatDateTimeShort: (value: string | Date) => `fmt:${String(value)}`,
 }));
@@ -70,6 +65,43 @@ mock.module("@/admin/components/ui", () => ({
     <thead>{children}</thead>
   ),
   TableRow: ({ children }: { children?: ReactNode }) => <tr>{children}</tr>,
+  // task #9 PR#5 task B: EventRegistrationTable が RefundDialog を import する経路で
+  // Dialog / Input / Label / Select / Textarea も module 解決を要求する。
+  // 実 render は refundTarget が set された時のみ発生するため、no-op stub で十分。
+  Dialog: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  DialogContent: ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogDescription: ({ children }: { children?: ReactNode }) => (
+    <p>{children}</p>
+  ),
+  DialogFooter: ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogHeader: ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogTitle: ({ children }: { children?: ReactNode }) => <h2>{children}</h2>,
+  Input: () => <input />,
+  Label: ({ children }: { children?: ReactNode }) => <label>{children}</label>,
+  Select: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  SelectContent: ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  SelectItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  SelectTrigger: ({ children }: { children?: ReactNode }) => (
+    <div>{children}</div>
+  ),
+  SelectValue: () => <span />,
+  Textarea: () => <textarea />,
+}));
+
+// task #9 PR#5 task B: refundEventRegistrationPayment action も event-registration
+// mock に追加 (未使用ケースだが module 解決に必要)。
+mock.module("@/admin/actions/event-registration", () => ({
+  adminCancelRegistration: (...args: Parameters<typeof cancelMock>) =>
+    cancelMock(...args),
+  refundEventRegistrationPayment: mock(),
 }));
 
 const { EventRegistrationTable } =
@@ -88,6 +120,12 @@ function makeRegistration(overrides: Partial<Registration> = {}): Registration {
     note: null,
     quantity: 2,
     status: "CONFIRMED",
+    // task #9 PR#5 task B (admin event refund UI) で追加。デフォルトは
+    // 「Stripe 決済なし」= 返金ボタン非表示。
+    paymentStatus: "UNPAID",
+    paidAmount: null,
+    stripePaymentIntentId: null,
+    cumulativeRefunded: 0,
     cancelledAt: null,
     attendedAt: null,
     createdAt: "2026-06-01T00:00:00.000Z",
