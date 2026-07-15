@@ -116,7 +116,7 @@ export type ReservationSettingsInput = z.infer<
 // =============================================================================
 // Feature Modules（Sanity / Stripe Capabilities 流の declarative composition）
 // =============================================================================
-// 全 9 module を boolean として扱う。client は Switch（"on" / ""）で送るため
+// 全 11 module を boolean として扱う。client は Switch（"on" / ""）で送るため
 // `switchBoolean()` で OFF（未送信）= false を担保する。
 // SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES_LIST。
 // 新規 module 追加時はここにキーを追加（4 箇所同時更新の 1 つ）。
@@ -130,6 +130,7 @@ export const featureModulesSettingsSchema = z.object({
   access: switchBoolean(),
   contact: switchBoolean(),
   reviews: switchBoolean(),
+  payment: switchBoolean(),
   "data-retention": switchBoolean(),
 });
 

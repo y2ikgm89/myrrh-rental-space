@@ -7,6 +7,7 @@
  */
 
 import { useActionState, useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/lib/cn";
@@ -33,7 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
   SubmitButton,
-  Switch,
 } from "@/admin/components/ui";
 import {
   updateStripeSettings,
@@ -96,7 +96,6 @@ export function StripeSection({ settings }: StripeSectionProps) {
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
     defaultValue: {
-      stripeEnabled: settings.stripeEnabled ? "on" : "",
       stripePublishableKey: settings.stripePublishableKey ?? "",
       stripeSecretKey: "",
       stripeWebhookSecret: "",
@@ -151,11 +150,9 @@ export function StripeSection({ settings }: StripeSectionProps) {
     });
   };
 
-  const enabledControl = useInputControl(fields.stripeEnabled);
   const currencyControl = useInputControl(fields.stripeCurrency);
   const secretKeyControl = useInputControl(fields.stripeSecretKey);
 
-  const enabled = enabledControl.value === "on";
   const currency = currencyControl.value ?? "jpy";
   const secretKeyValue = secretKeyControl.value ?? "";
 
@@ -254,11 +251,6 @@ export function StripeSection({ settings }: StripeSectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action}>
-      <input
-        type="hidden"
-        name={fields.stripeEnabled.name}
-        value={enabledControl.value ?? ""}
-      />
       <input type="hidden" name={fields.stripeCurrency.name} value={currency} />
       {/* 多値 checkbox の POST 経路: 選択した method を全て個別 hidden input で出力
         (conform は同名 name の複数値を FormData.getAll() で拾える)。名前は Zod schema の
@@ -286,30 +278,19 @@ export function StripeSection({ settings }: StripeSectionProps) {
             Stripe設定
           </CardTitle>
           <CardDescription>
-            オンライン決済のためのStripe設定を行います
+            オンライン決済のための Stripe credentials を設定します。
+            <br />
+            決済機能の ON/OFF は「
+            <Link
+              href="/admin/settings/features"
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              機能モジュール
+            </Link>
+            」の「オンライン決済」で切り替えます。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* 有効/無効 */}
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor={fields.stripeEnabled.id}>
-                Stripe決済を有効にする
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                予約時にオンライン決済を受け付けます
-              </p>
-            </div>
-            <Switch
-              id={fields.stripeEnabled.id}
-              checked={enabled}
-              onCheckedChange={(checked) =>
-                enabledControl.change(checked ? "on" : "")
-              }
-              disabled={isPending}
-            />
-          </div>
-
           {/* 動作モード（APIキーから自動判定・読み取り専用） */}
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">

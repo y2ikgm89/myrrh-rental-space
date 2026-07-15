@@ -3,8 +3,8 @@ import "server-only";
 import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { getStripeClient } from "@/shared/lib/stripe";
-import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { getAppUrl } from "@/shared/lib/constants";
 import {
@@ -111,10 +111,7 @@ export async function createEventCheckoutSessionCommand(input: {
     throw new DomainError("無料チケットは決済できません", "VALIDATION");
   }
 
-  const stripeSettings = await getStripeSettings();
-  if (!stripeSettings?.stripeEnabled) {
-    throw new DomainError("Stripe 決済が有効になっていません", "VALIDATION");
-  }
+  const stripeSettings = await assertOnlinePaymentAvailable();
 
   const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
@@ -124,7 +121,7 @@ export async function createEventCheckoutSessionCommand(input: {
     );
   }
 
-  const currency = stripeSettings.stripeCurrency ?? "jpy";
+  const currency = stripeSettings.stripeCurrency;
   const appUrl = getAppUrl();
 
   // Settings で許可された payment_method_types のみ Stripe に渡す
@@ -321,10 +318,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     );
   }
 
-  const stripeSettings = await getStripeSettings();
-  if (!stripeSettings?.stripeEnabled) {
-    throw new DomainError("Stripe 決済が有効になっていません", "VALIDATION");
-  }
+  const stripeSettings = await assertOnlinePaymentAvailable();
 
   const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
@@ -334,7 +328,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     );
   }
 
-  const currency = stripeSettings.stripeCurrency ?? "jpy";
+  const currency = stripeSettings.stripeCurrency;
   const appUrl = getAppUrl();
 
   const paymentMethodTypes = stripeSettings.stripePaymentMethodTypes.filter(

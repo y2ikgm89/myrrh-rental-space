@@ -20,7 +20,6 @@ export async function getStripeSettings() {
       prisma.settings.findUnique({
         where: { id: "singleton" },
         select: {
-          stripeEnabled: true,
           stripePublishableKey: true,
           stripeSecretKey: true,
           stripeWebhookSecret: true,

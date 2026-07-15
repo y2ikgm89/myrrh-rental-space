@@ -422,7 +422,7 @@ export async function updateEventImportEnabled(
 /**
  * Feature Module ON/OFF map を Settings.featureModules JSON column に書き込む。
  *
- * 入力は schema 層（`featureModulesSettingsSchema`）で全 9 module の boolean 必須に
+ * 入力は schema 層（`featureModulesSettingsSchema`）で全 11 module の boolean 必須に
  * 検証済みのため、ここでは純粋な write を行うのみ。依存解決は read 側
  * (`@/shared/lib/features/check.ts` の `getEnabledFeatures`) で行う。
  */

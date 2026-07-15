@@ -9,14 +9,16 @@ import { DomainError } from "@/shared/domain/domain-error";
 // 1. モック関数定義（import より前に必須）
 // =============================================================================
 
-// Settings / Crypto
-const mockGetStripeSettings = mock<
-  () => Promise<{
-    stripeEnabled: boolean;
-    stripeSecretKey: string | null;
-    stripeWebhookSecret: string | null;
-  } | null>
->();
+// Payment availability gate (feature module + credentials)
+type MockCredentials = {
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
+  stripePublishableKey: string | null;
+  stripeAccountId: string | null;
+  stripeCurrency: string;
+  stripePaymentMethodTypes: readonly string[];
+};
+const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>();
 const mockSafeDecrypt = mock<(value: string) => string | null>();
 
 // Stripe Client — route が読む webhook event の最小 contract に固定する。
@@ -143,8 +145,8 @@ const mockOmitUndefined = mock<
 // 2. mock.module() — import より前に宣言
 // =============================================================================
 
-mock.module("@/shared/domain/settings/queries/integration", () => ({
-  getStripeSettings: () => mockGetStripeSettings(),
+mock.module("@/shared/domain/payment/availability", () => ({
+  assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
 }));
 
 const actualCrypto = await import("@/shared/lib/crypto");
@@ -268,10 +270,13 @@ const { POST } = await import("@/app/api/webhooks/stripe/route");
 // テストヘルパー
 // =============================================================================
 
-const DEFAULT_SETTINGS = {
-  stripeEnabled: true,
+const DEFAULT_SETTINGS: MockCredentials = {
   stripeSecretKey: "enc-secret-key",
   stripeWebhookSecret: "enc-webhook-secret",
+  stripePublishableKey: null,
+  stripeAccountId: null,
+  stripeCurrency: "jpy",
+  stripePaymentMethodTypes: ["card"],
 };
 
 const DEFAULT_WAITLIST_DETAILS = {
@@ -383,7 +388,7 @@ async function flushFireAndForget(): Promise<void> {
 
 describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", () => {
   beforeEach(() => {
-    mockGetStripeSettings.mockReset();
+    mockAssertOnlinePaymentAvailable.mockReset();
     mockSafeDecrypt.mockReset();
     mockGetStripeClient.mockReset();
     mockConstructEvent.mockReset();
@@ -426,7 +431,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       throw error;
     });
 
-    mockGetStripeSettings.mockResolvedValue(DEFAULT_SETTINGS);
+    mockAssertOnlinePaymentAvailable.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
     mockGetStripeClient.mockResolvedValue({
       client: {

@@ -47,13 +47,15 @@ describe("getEnabledFeatures", () => {
       access: true,
       contact: true,
       reviews: true,
+      payment: true,
       "data-retention": true,
     });
 
     const enabled = await getEnabledFeatures();
-    expect(enabled.size).toBe(10);
+    expect(enabled.size).toBe(11);
     expect(enabled.has("spaces")).toBe(true);
     expect(enabled.has("reviews")).toBe(true);
+    expect(enabled.has("payment")).toBe(true);
     expect(enabled.has("data-retention")).toBe(true);
   });
 
@@ -64,11 +66,15 @@ describe("getEnabledFeatures", () => {
     expect(enabled.size).toBe(0);
   });
 
-  test("spaces OFF の場合、reservation / reviews も自動 OFF（依存解決）", async () => {
+  test("spaces OFF の場合、reservation / reviews / payment も自動 OFF（cascade）", async () => {
+    // payment は reservation を require し、reservation は spaces を require する。
+    // spaces OFF → reservation OFF → payment OFF の 2 hop cascade を fixed-point 解決で
+    // 到達確認する（依存グラフの depth が伸びても収束することの回帰防止）。
     setStored({
       spaces: false,
       reservation: true,
       reviews: true,
+      payment: true,
       events: true,
       posts: true,
       news: true,
@@ -81,8 +87,22 @@ describe("getEnabledFeatures", () => {
     expect(enabled.has("spaces")).toBe(false);
     expect(enabled.has("reservation")).toBe(false);
     expect(enabled.has("reviews")).toBe(false);
+    expect(enabled.has("payment")).toBe(false);
     expect(enabled.has("events")).toBe(true);
     expect(enabled.has("posts")).toBe(true);
+  });
+
+  test("reservation OFF の場合、payment も自動 OFF（単一 hop）", async () => {
+    setStored({
+      spaces: true,
+      reservation: false,
+      payment: true,
+    });
+
+    const enabled = await getEnabledFeatures();
+    expect(enabled.has("spaces")).toBe(true);
+    expect(enabled.has("reservation")).toBe(false);
+    expect(enabled.has("payment")).toBe(false);
   });
 
   test("explicit false は即時 OFF", async () => {

@@ -15,14 +15,16 @@ import Stripe from "stripe";
 // 1. モック関数定義（import より前に必須）
 // =============================================================================
 
-// Settings / Crypto
-const mockGetStripeSettings = mock<
-  () => Promise<{
-    stripeEnabled: boolean;
-    stripeSecretKey: string | null;
-    stripeWebhookSecret: string | null;
-  } | null>
->();
+// Payment availability gate (feature module + credentials 両検証を 1 関数に集約)
+type MockCredentials = {
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
+  stripePublishableKey: string | null;
+  stripeAccountId: string | null;
+  stripeCurrency: string;
+  stripePaymentMethodTypes: readonly string[];
+};
+const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>();
 const mockSafeDecrypt = mock<(value: string) => string | null>();
 
 // Stripe Client — route が読む webhook event の最小 contract に固定する。
@@ -119,8 +121,8 @@ const mockOmitUndefined = mock<
 // 2. mock.module() — import より前に宣言
 // =============================================================================
 
-mock.module("@/shared/domain/settings/queries/integration", () => ({
-  getStripeSettings: () => mockGetStripeSettings(),
+mock.module("@/shared/domain/payment/availability", () => ({
+  assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
 }));
 
 // 実際の crypto モジュールを re-export し、safeDecrypt / safeDecryptToString
@@ -240,10 +242,13 @@ const { POST } = await import("@/app/api/webhooks/stripe/route");
 // テストヘルパー
 // =============================================================================
 
-const DEFAULT_SETTINGS = {
-  stripeEnabled: true,
+const DEFAULT_SETTINGS: MockCredentials = {
   stripeSecretKey: "enc-secret-key",
   stripeWebhookSecret: "enc-webhook-secret",
+  stripePublishableKey: null,
+  stripeAccountId: null,
+  stripeCurrency: "jpy",
+  stripePaymentMethodTypes: ["card"],
 };
 
 const DEFAULT_RESERVATION = {
@@ -317,7 +322,7 @@ function makeRequest(body: string, signature: string | null = "sig-valid") {
 describe("POST /api/webhooks/stripe", () => {
   beforeEach(() => {
     // モックをリセット
-    mockGetStripeSettings.mockReset();
+    mockAssertOnlinePaymentAvailable.mockReset();
     mockSafeDecrypt.mockReset();
     mockGetStripeClient.mockReset();
     mockConstructEvent.mockReset();
@@ -353,7 +358,7 @@ describe("POST /api/webhooks/stripe", () => {
     });
 
     // デフォルトの正常系設定
-    mockGetStripeSettings.mockResolvedValue(DEFAULT_SETTINGS);
+    mockAssertOnlinePaymentAvailable.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
     mockGetStripeClient.mockResolvedValue({
       client: {
@@ -405,12 +410,10 @@ describe("POST /api/webhooks/stripe", () => {
   // Stripe 未設定
   // ---------------------------------------------------------------------------
 
-  test("Stripe が無効（stripeEnabled=false）→ 503", async () => {
-    mockGetStripeSettings.mockResolvedValue({
-      stripeEnabled: false,
-      stripeSecretKey: "enc-key",
-      stripeWebhookSecret: "enc-secret",
-    });
+  test("payment feature OFF → assertOnlinePaymentAvailable が throw → 503", async () => {
+    mockAssertOnlinePaymentAvailable.mockRejectedValue(
+      new Error("オンライン決済機能が無効になっています"),
+    );
 
     const response = await POST(makeRequest("body"));
     const body = await response.json();
@@ -420,8 +423,10 @@ describe("POST /api/webhooks/stripe", () => {
     expect(body.error).toContain("not configured");
   });
 
-  test("Stripe 設定が null → 503", async () => {
-    mockGetStripeSettings.mockResolvedValue(null);
+  test("credentials 欠損 → assertOnlinePaymentAvailable が throw → 503", async () => {
+    mockAssertOnlinePaymentAvailable.mockRejectedValue(
+      new Error("Stripe の設定が正しくありません"),
+    );
 
     const response = await POST(makeRequest("body"));
     const body = await response.json();

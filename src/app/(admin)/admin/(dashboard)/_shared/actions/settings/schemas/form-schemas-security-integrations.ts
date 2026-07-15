@@ -72,9 +72,10 @@ export type DiscountFormInput = z.infer<typeof discountFormSchema>;
 // Integrations > Stripe
 // =============================================================================
 
+// stripeEnabled トグルは廃止 — オンライン決済の ON/OFF は Feature Module registry の
+// `payment` module (Settings.featureModules.payment) が SSoT。ここで credentials のみ扱う。
 export const stripeFormSchema = z
   .object({
-    stripeEnabled: switchBoolean(),
     stripePublishableKey: z
       .string()
       .max(200, { error: "公開可能キーは200文字以内で入力してください" })

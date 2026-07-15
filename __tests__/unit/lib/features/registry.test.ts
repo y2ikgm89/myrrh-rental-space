@@ -10,8 +10,8 @@ import {
 import { SYSTEM_PAGE_SLUGS } from "@/shared/lib/validations/page";
 
 describe("FEATURE_MODULES_LIST", () => {
-  test("10 module を含む", () => {
-    expect(FEATURE_MODULES_LIST).toHaveLength(10);
+  test("11 module を含む", () => {
+    expect(FEATURE_MODULES_LIST).toHaveLength(11);
   });
 
   test("全 module 名が小文字英数字 hyphen のみ", () => {
@@ -46,9 +46,10 @@ describe("FEATURE_MODULES metadata", () => {
     }
   });
 
-  test("循環依存がない（reservation/reviews → spaces）", () => {
+  test("循環依存がない（reservation/reviews → spaces、payment → reservation）", () => {
     expect(FEATURE_MODULES.reservation.requires).toContain("spaces");
     expect(FEATURE_MODULES.reviews.requires).toContain("spaces");
+    expect(FEATURE_MODULES.payment.requires).toContain("reservation");
     expect(FEATURE_MODULES.spaces.requires ?? []).toEqual([]);
   });
 
@@ -160,6 +161,7 @@ describe("buildInitialFeatureModules", () => {
     expect(result.access).toBe(true);
     expect(result.contact).toBe(true);
     expect(result.reviews).toBe(true);
+    expect(result.payment).toBe(true);
     // data-retention は誤設定で本番 PII を消し得るので seed 時に自動 ON にしない。
     expect(result["data-retention"]).toBe(false);
   });

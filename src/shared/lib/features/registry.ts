@@ -26,6 +26,7 @@ export const FEATURE_MODULES_LIST = [
   "access",
   "contact",
   "reviews",
+  "payment",
   "data-retention",
 ] as const;
 
@@ -150,6 +151,18 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     templates: [],
     cronPaths: [],
   },
+  payment: {
+    id: "payment",
+    label: "オンライン決済",
+    description:
+      "Stripe を使った予約・イベントのオンライン決済。OFF にすると checkout / 返金 / webhook が全て無効化される（credentials は「Stripe 連携」で別途設定）。",
+    requires: ["reservation"],
+    publicRoutes: [],
+    pageSlugs: [],
+    sectionTypes: [],
+    templates: [],
+    cronPaths: [],
+  },
   "data-retention": {
     id: "data-retention",
     label: "データ保持ポリシーの自動適用",
@@ -207,6 +220,7 @@ export function buildInitialFeatureModules(
   const access = !disabled.has("access");
   const contact = !disabled.has("contact");
   const reviews = !disabled.has("reviews");
+  const payment = !disabled.has("payment");
   // fail-closed by design: never seed data-retention as ON.
   const dataRetention = false;
   return {
@@ -219,6 +233,7 @@ export function buildInitialFeatureModules(
     access,
     contact,
     reviews,
+    payment,
     "data-retention": dataRetention,
   };
 }

@@ -68,7 +68,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendReservationConfirmationEmail } from "@/shared/lib/email/reservation-emails";
-import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
+import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -87,10 +87,15 @@ export async function POST(request: Request) {
       return jsonError("Missing stripe-signature header", 400);
     }
 
-    // 2. Stripe 設定を取得
-    const settings = await getStripeSettings();
-    if (!settings?.stripeEnabled || !settings.stripeWebhookSecret) {
-      logError(new Error("Stripe webhook not configured"), {
+    // 2. オンライン決済 gate (feature module + credentials) をドメイン層で検証。
+    //    feature OFF / credentials 欠損はどちらも 503 で Stripe に「一時的に受けられない」と
+    //    伝える（Stripe は 503 を exponential backoff で 3 日間再送するため、admin が
+    //    設定を復旧すれば配送に成功する）。
+    let settings;
+    try {
+      settings = await assertOnlinePaymentAvailable();
+    } catch (error) {
+      logError(error instanceof Error ? error : new Error(String(error)), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
         context: { operation: "stripeWebhook" },
