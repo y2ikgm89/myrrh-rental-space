@@ -623,8 +623,15 @@ describe("architecture boundaries", () => {
   });
 
   test("source theme は配信していない Web font 名を参照しない", () => {
+    // src/shared/pdf/** は @react-pdf/renderer の Font.register (server-side PDF 埋込
+    // フォント) 用で、Tailwind theme / Web CSS の Web font 参照とは context が異なるため
+    // 除外する。PDF の Noto Sans JP は jsdelivr CDN 経由で runtime fetch → PDF 内部に
+    // subset embed され、Web ページの font-family として配信されるわけではない。
+    const pdfDirPrefix = join(SRC_ROOT, "shared", "pdf");
     const offenders = collectNonCommentOffenders(
-      collectStyleSourceFiles(SRC_ROOT),
+      collectStyleSourceFiles(SRC_ROOT).filter(
+        (file) => !file.startsWith(pdfDirPrefix),
+      ),
       /(?:Noto Sans JP|Cormorant Garamond)/u,
     );
 
