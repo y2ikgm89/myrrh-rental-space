@@ -47,6 +47,11 @@ export function ReissueReceiptDialog({
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
+      // DialogOverlay/X ボタン経由の close で state reset。
+      // parent 直呼び (成功時の `setReissueDialogOpen(false)` 等) 経由の close は
+      // parent 側で `key` prop を bump することで Dialog を re-mount し fresh state に戻す
+      // pattern を推奨 (React docs "Adjusting Some State When a Prop Changes" 準拠)。
+      // Codex P2 (PR #1131) 対応。
       setReason("");
       setError(null);
     }
