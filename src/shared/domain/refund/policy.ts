@@ -146,6 +146,10 @@ export function parseRefundPolicy(raw: unknown): RefundPolicy | null {
   const defaultRateRaw = raw["defaultRefundRate"];
   if (!Array.isArray(tiersRaw)) return null;
   if (typeof defaultRateRaw !== "number") return null;
+  // Codex P2 (PR #1134): defaultRefundRate も finite check で NaN / Infinity を reject。
+  // clamp は `calculateRefundRate` で 0-100 に normalize されるが parse 境界で早期 reject
+  // することで shape 破壊状態の Settings 全体を「未設定」扱いに fall back させる。
+  if (!Number.isFinite(defaultRateRaw)) return null;
 
   const tiers: RefundPolicyTier[] = [];
   for (const tier of tiersRaw) {
@@ -154,6 +158,12 @@ export function parseRefundPolicy(raw: unknown): RefundPolicy | null {
     const refundRate = tier["refundRate"];
     if (typeof hoursBefore !== "number") return null;
     if (typeof refundRate !== "number") return null;
+    // Codex P2 (PR #1134, comment 3589594663): 契約上 hoursBefore は正 (0 以上)。
+    // 手入力 JSON で -1 等が入ると `hoursUntilStart >= -1` が常に true になり、
+    // 意図した defaultRefundRate を上書きして誤返金を招くため境界で reject。
+    // Infinity / NaN も同時に排除 (`calculateRefundRate` の sort が非決定的になる)。
+    if (!Number.isFinite(hoursBefore) || hoursBefore < 0) return null;
+    if (!Number.isFinite(refundRate)) return null;
     tiers.push({ hoursBefore, refundRate });
   }
 
