@@ -31,6 +31,10 @@ export async function reissueReservationReceipt(
         originalReceiptId,
         reason,
         actorUserId: user.id,
+        // Codex P2 (PR #1129, comment 3589127456) binding check: stale/crafted call で
+        // reservation A の action が別 reservation B (or event registration) の receipt を
+        // mutate するのを domain 層で FORBIDDEN reject する。
+        expectedReservationId: reservationId,
       });
 
       // AuditLog: 再発行を記録 (append-only、元 Receipt / 新 Receipt の両方 id + reason を metadata)

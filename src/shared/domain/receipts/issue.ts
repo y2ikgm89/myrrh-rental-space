@@ -406,14 +406,36 @@ export async function issueReceiptForEventRegistration(
  * - `RECEIPT_LOCK_NAMESPACE + hashtext(originalReceiptId)` で reissue の並行を直列化
  * - 元 Receipt の orphan 化 + 新 Receipt create + serialNo 採番の 3 op を advisory lock 内で完了
  *
- * @throws DomainError NOT_FOUND / VALIDATION
+ * ## Binding check (Codex P2, PR #1129, comment 3589127456)
+ * `expectedReservationId` / `expectedEventRegistrationId` が渡された場合、元 Receipt の
+ * `reservationId` / `eventRegistrationId` と一致するか (かつ他方が NULL であるか) を
+ * 検証し、mismatch は FORBIDDEN reject。stale/crafted server action call で reservation A
+ * の action が別 reservation B の receipt を mutate する silent bug を防ぐ。
+ *
+ * @throws DomainError NOT_FOUND / VALIDATION / FORBIDDEN
  */
 export async function reissueReceiptCommand(input: {
   readonly originalReceiptId: string;
   readonly reason: string;
   readonly actorUserId: string;
+  /**
+   * Binding check: 指定された場合、元 Receipt が **この reservationId に紐づき**、
+   * かつ eventRegistrationId が NULL であることを assert。admin reservation action から
+   * 呼ぶ際に必須指定。
+   */
+  readonly expectedReservationId?: string;
+  /**
+   * Binding check: 指定された場合、元 Receipt が **この eventRegistrationId に紐づき**、
+   * かつ reservationId が NULL であることを assert。admin event action から呼ぶ際に必須指定。
+   */
+  readonly expectedEventRegistrationId?: string;
 }) {
-  const { originalReceiptId, reason } = input;
+  const {
+    originalReceiptId,
+    reason,
+    expectedReservationId,
+    expectedEventRegistrationId,
+  } = input;
 
   if (reason.trim().length === 0) {
     throw new DomainError("再発行理由の入力が必要です", "VALIDATION");
@@ -441,6 +463,38 @@ export async function reissueReceiptCommand(input: {
 
     if (!original) {
       throw new DomainError("元領収書が見つかりません", "NOT_FOUND");
+    }
+
+    // Codex P2 (PR #1129, comment 3589127456) binding check:
+    // stale / crafted server action call で reservation A の action が別 reservation B
+    // (or event registration) の receipt を mutate する silent bug を防ぐ。
+    if (expectedReservationId !== undefined) {
+      if (original.reservationId !== expectedReservationId) {
+        throw new DomainError(
+          "指定された領収書はこの予約に属していません",
+          "FORBIDDEN",
+        );
+      }
+      if (original.eventRegistrationId !== null) {
+        throw new DomainError(
+          "予約経路の再発行にイベント申込の領収書を指定することはできません",
+          "FORBIDDEN",
+        );
+      }
+    }
+    if (expectedEventRegistrationId !== undefined) {
+      if (original.eventRegistrationId !== expectedEventRegistrationId) {
+        throw new DomainError(
+          "指定された領収書はこのイベント申込に属していません",
+          "FORBIDDEN",
+        );
+      }
+      if (original.reservationId !== null) {
+        throw new DomainError(
+          "イベント申込経路の再発行に予約の領収書を指定することはできません",
+          "FORBIDDEN",
+        );
+      }
     }
 
     // Chain 分岐防止: 既に他の Receipt に再発行された (orphan) は base にできない。

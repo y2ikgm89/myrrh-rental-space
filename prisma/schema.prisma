@@ -2022,8 +2022,14 @@ model EventRegistration {
  *
  * issuerSnapshot は Settings (invoiceNumber / 事業者名 / 所在地) の凍結 copy。
  * Settings 側 invoiceNumber を後日書き換えても既発行分は影響を受けない
- * (append-only の証跡性)。再発行 (reissuedFromId 参照) 時は元連番を維持し
- * revision フラグで区別する (税務実務 standard、D4 決定)。
+ * (append-only の証跡性)。
+ *
+ * 再発行 (reissuedFromId 参照) 時は **新しい serialNo を採番** し、元 Receipt の
+ * `reservationId` / `eventRegistrationId` を NULL 化 (orphan 化) することで
+ * @unique(reservationId) / @unique(eventRegistrationId) 制約を維持したまま新 Receipt を
+ * 同予約 / イベント申込に付け替える。revision は「何回目の再発行か」を示す counter
+ * (元 = 0、1 回目 reissue = 1)。元 Receipt は監査証跡として残り、reissuedTo chain 経由で辿れる。
+ * これは Codex P1 (PR #1129, comment 3589127451) を機に明文化した business contract。
  */
 /// Refund — 部分返金 (partial refund) を repeatable な子レコードとして表現する。
 ///
@@ -2082,7 +2088,9 @@ model Receipt {
   taxRate         Decimal @db.Decimal(5, 2)
   // 発行時点の Settings snapshot (凍結)
   issuerSnapshot  Json    @db.JsonB
-  // 再発行系 (元連番を維持し revision で区別)
+  // 再発行系: 新 serialNo を採番し、元 Receipt の reservationId/eventRegistrationId を NULL 化。
+  // 元 Receipt は監査証跡として残り、chain (reissuedTo) 経由で辿れる。
+  // revision は「何回目の再発行か」を示す counter (元 = 0、1 回目 reissue = 1)。
   reissuedFromId  String?  @db.Uuid
   reissuedFrom    Receipt? @relation("ReissuedReceipts", fields: [reissuedFromId], references: [id], onDelete: SetNull)
   reissuedTo      Receipt[] @relation("ReissuedReceipts")
