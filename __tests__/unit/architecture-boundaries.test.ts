@@ -1514,6 +1514,63 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("`REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS` は `terraform/cloud_scheduler.tf` の cron_jobs と完全同期する (2026-07-15 audit gap #4 再発防止)", () => {
+    // audit script の expected cron job list (`REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS`)
+    // と Terraform state (`terraform/cloud_scheduler.tf` の `local.cron_jobs`) を強制同期。
+    // 差分あれば `bun run gcp:audit-production-iap` が false-positive で fail する
+    // (2026-07-15 6 個の cron job が audit 側で "unexpected" 判定されたのが今回契機)。
+    const AUDIT_MODEL = readFileSync(
+      join(SCRIPTS_ROOT, "gcp-production-audit-model.ts"),
+      "utf8",
+    );
+    const SCHEDULER_TF = readFileSync(
+      join(ROOT, "terraform", "cloud_scheduler.tf"),
+      "utf8",
+    );
+
+    // audit model の array literal を extract
+    const auditListMatch = AUDIT_MODEL.match(
+      /REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS\s*=\s*\[([\s\S]*?)\]/u,
+    );
+    if (!auditListMatch) {
+      throw new Error(
+        "REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS array literal not found in scripts/gcp-production-audit-model.ts",
+      );
+    }
+    const auditJobIds = new Set(
+      [...(auditListMatch[1]?.matchAll(/"([^"]+)"/gu) ?? [])].map(
+        (m) => m[1] ?? "",
+      ),
+    );
+
+    // Terraform side: `local.cron_jobs` の name field を extract
+    const tfCronBlockMatch = SCHEDULER_TF.match(
+      /cron_jobs\s*=\s*\[([\s\S]*?)^\s*\]/mu,
+    );
+    if (!tfCronBlockMatch) {
+      throw new Error(
+        "cron_jobs array literal not found in terraform/cloud_scheduler.tf",
+      );
+    }
+    const tfJobNames = new Set(
+      [...(tfCronBlockMatch[1]?.matchAll(/name\s*=\s*"([^"]+)"/gu) ?? [])].map(
+        (m) => m[1] ?? "",
+      ),
+    );
+
+    const missingInAudit = [...tfJobNames].filter((n) => !auditJobIds.has(n));
+    const missingInTf = [...auditJobIds].filter((n) => !tfJobNames.has(n));
+
+    expect(
+      missingInAudit,
+      "cron jobs in terraform/cloud_scheduler.tf but not in REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS",
+    ).toEqual([]);
+    expect(
+      missingInTf,
+      "cron jobs in REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS but not in terraform/cloud_scheduler.tf",
+    ).toEqual([]);
+  });
+
   test("cloudbuild.yaml の substitutions block で定義された key は必ず body 内で参照される (2026-07-14 PR #1104 で発覚した Cloud Build INVALID_ARGUMENT の再発防止)", () => {
     // Cloud Build の substitution 契約:
     //   substitutions block に定義された `_KEY: "default"` は cloudbuild.yaml
