@@ -290,6 +290,17 @@ const THIN_ADMIN_ACTION_FILES = [
     "_shared",
     "actions",
     "settings",
+    "refund-policy.ts",
+  ),
+  join(
+    SRC_ROOT,
+    "app",
+    "(admin)",
+    "admin",
+    "(dashboard)",
+    "_shared",
+    "actions",
+    "settings",
     "google-calendar.ts",
   ),
   join(

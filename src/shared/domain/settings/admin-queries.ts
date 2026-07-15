@@ -27,6 +27,8 @@ import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
+import { parseRefundPolicy } from "@/shared/domain/refund/policy";
+import type { RefundPolicy } from "@/shared/domain/refund/policy";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
@@ -414,6 +416,23 @@ export async function getTaxSettings(): Promise<TaxSettings> {
     reducedRate: settings.taxReducedRate,
     displayModePublic: parseTaxDisplayMode(settings.taxDisplayModePublic),
   };
+}
+
+/**
+ * `Settings.refundPolicy` を parse して RefundPolicy か null で返す。
+ *
+ * 未設定 (null) / shape 破損の両方を null に集約する fail-open 動作は
+ * `parseRefundPolicy` に集約されている。UI 側は null を「policy 未設定 =
+ * cancellation 時は残額全額返金」として表示する。
+ */
+export async function getRefundPolicySettings(): Promise<RefundPolicy | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: { refundPolicy: true },
+  });
+
+  if (!settings) return null;
+  return parseRefundPolicy(settings.refundPolicy);
 }
 
 export async function getEventImportSettings(): Promise<{

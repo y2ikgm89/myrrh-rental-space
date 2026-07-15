@@ -15,6 +15,7 @@ import type {
 } from "@/shared/domain/settings/types";
 import type { AnnouncementBarCarouselSettingsInput } from "@/shared/domain/settings/announcement-bar";
 import type { Serialized } from "@/shared/lib/serialize";
+import type { RefundPolicy } from "@/shared/domain/refund/policy";
 import { requireAdminPermission } from "./_helpers";
 
 export type {
@@ -52,6 +53,11 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
 export async function getTaxSettings(): Promise<TaxSettings> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getTaxSettings();
+}
+
+export async function getRefundPolicySettings(): Promise<RefundPolicy | null> {
+  await requireAdminPermission("settings", "read");
+  return adminQueries.getRefundPolicySettings();
 }
 
 export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettingsInput> {

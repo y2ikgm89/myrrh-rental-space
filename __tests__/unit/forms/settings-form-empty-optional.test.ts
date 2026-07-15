@@ -54,6 +54,7 @@ import {
   notificationFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import { featureModulesSettingsSchema } from "@/admin/actions/settings/schemas/basic";
+import { refundPolicyFormSchema } from "@/admin/actions/settings/schemas/refund-policy";
 import type { z } from "zod";
 
 /** Record → FormData（値は全て文字列。空欄 / OFF は "" を渡す）。 */
@@ -336,6 +337,28 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       }),
       "discount",
     );
+  });
+
+  test("返金ポリシー: Switch OFF + tier 空 + defaultRefundRate=0 でも success (policy null 保存)", () => {
+    expectSuccess(
+      refundPolicyFormSchema,
+      form({
+        refundPolicyEnabled: "",
+        refundPolicyDefaultRefundRate: "0",
+      }),
+      "refundPolicy",
+    );
+  });
+
+  test("返金ポリシー: enabled=true + tier 空はエラー (有効時は 1 つ以上必要)", () => {
+    const result = parseWithZod(
+      form({
+        refundPolicyEnabled: "on",
+        refundPolicyDefaultRefundRate: "0",
+      }),
+      { schema: refundPolicyFormSchema },
+    );
+    expect(result.status).toBe("error");
   });
 
   test("Stripe: credentials 全空欄でも success (stripeEnabled は Feature Module に移管済み)", () => {

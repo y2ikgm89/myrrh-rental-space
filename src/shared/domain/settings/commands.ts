@@ -16,6 +16,7 @@ import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-ima
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
+import type { RefundPolicy } from "@/shared/domain/refund/policy";
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
@@ -409,6 +410,35 @@ export async function updateTaxSettings(data: TaxSettingsInput): Promise<void> {
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
+  });
+}
+
+/**
+ * `Settings.refundPolicy` (Json?) を書き込む。
+ *
+ * - `policy === null` → `Prisma.JsonNull` を書き込み「policy 未設定」に戻す
+ *   (cancellation-side-effects の後方互換動作 = 残額全額返金 に fallback)。
+ * - `policy` が RefundPolicy shape → `asPrismaInputJsonValue` で JSON 化して write。
+ *   parseRefundPolicy 側の境界 check (hoursBefore >= 0, refundRate finite,
+ *   defaultRefundRate finite) は書き込み前の schema 層で保証済みなので、ここでは
+ *   純粋な upsert のみを行う。
+ *
+ * 参照: `src/shared/domain/refund/policy.ts` の parseRefundPolicy / calculateRefundAmount。
+ */
+export async function updateRefundPolicy(
+  policy: RefundPolicy | null,
+): Promise<void> {
+  const updateData = {
+    refundPolicy:
+      policy === null
+        ? Prisma.JsonNull
+        : asPrismaInputJsonValue(policy, "返金ポリシーの形式が不正です"),
+  };
+
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...updateData },
+    update: updateData,
   });
 }
 
