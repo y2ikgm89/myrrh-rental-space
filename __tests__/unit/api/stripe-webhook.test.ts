@@ -79,6 +79,22 @@ const mockApplyChargeRefundIdempotent = mock<
     latestRefund: { id: string; amount: number } | null;
   }) => Promise<void>
 >(() => Promise.resolve());
+// task #6: event registration 経路 mock
+const mockFindEventRegistrationByPaymentIntent = mock<
+  (piId: string) => Promise<{
+    id: string;
+    paymentStatus: string;
+    paidAmount: number | null;
+  } | null>
+>(() => Promise.resolve(null));
+const mockApplyEventChargeRefundIdempotent = mock<
+  (input: {
+    registrationId: string;
+    chargeAmount: number;
+    amountRefunded: number;
+    latestRefund: { id: string; amount: number } | null;
+  }) => Promise<void>
+>(() => Promise.resolve());
 
 // Site-wide cache invalidation (Route Handler variant)
 // route.ts の invalidateReservationCache() は
@@ -176,6 +192,22 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     amountRefunded: number;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyChargeRefundIdempotent(input),
+}));
+
+// task #6: event registration 経路も webhook.route.ts が使うので mock を追加
+// (reservation で見つからない場合の fallback 経路)。
+mock.module("@/shared/domain/events/payment-commands", () => ({
+  claimEventRegistrationAsPaid: () => Promise.resolve(false),
+  claimEventRegistrationAsFailed: () => Promise.resolve(false),
+  saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
+  findEventRegistrationByPaymentIntent: (piId: string) =>
+    mockFindEventRegistrationByPaymentIntent(piId),
+  applyEventChargeRefundIdempotent: (input: {
+    registrationId: string;
+    chargeAmount: number;
+    amountRefunded: number;
+    latestRefund: { id: string; amount: number } | null;
+  }) => mockApplyEventChargeRefundIdempotent(input),
 }));
 
 // 境界 mock: route.ts が使う唯一の cache-invalidation entry point を差し替える。
@@ -375,6 +407,14 @@ describe("POST /api/webhooks/stripe", () => {
     mockFindReservationByPaymentIntent.mockReset();
     mockApplyChargeRefundIdempotent.mockReset();
     mockApplyChargeRefundIdempotent.mockImplementation(() => Promise.resolve());
+    mockFindEventRegistrationByPaymentIntent.mockReset();
+    mockFindEventRegistrationByPaymentIntent.mockImplementation(() =>
+      Promise.resolve(null),
+    );
+    mockApplyEventChargeRefundIdempotent.mockReset();
+    mockApplyEventChargeRefundIdempotent.mockImplementation(() =>
+      Promise.resolve(),
+    );
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockSendReservationConfirmationEmail.mockReset();

@@ -53,6 +53,8 @@ import {
   claimEventRegistrationAsPaid,
   claimEventRegistrationAsFailed,
   saveEventRegistrationPaymentIntentId,
+  findEventRegistrationByPaymentIntent,
+  applyEventChargeRefundIdempotent,
 } from "@/shared/domain/events/payment-commands";
 import { getWaitlistConfirmationEmailDetails } from "@/shared/domain/events/waitlist-queries";
 import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
@@ -711,23 +713,6 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     return;
   }
 
-  const reservation = await findReservationByPaymentIntent(paymentIntentId);
-
-  if (!reservation) {
-    logError(
-      new Error("No reservation found for payment_intent on charge.refunded"),
-      {
-        category: ErrorCategory.VALIDATION,
-        severity: ErrorSeverity.LOW,
-        context: {
-          operation: "stripeWebhookChargeRefunded",
-          paymentIntentId,
-        },
-      },
-    );
-    return;
-  }
-
   // Stripe webhook payload の `charge.refunds` は default で 10 件まで含まれる (docs 参照)。
   // 通常は 1 event = 1 新規 refund。data[0] が最新 (Stripe の list は desc order)。
   const latestRefundData = charge.refunds?.data[0];
@@ -735,12 +720,44 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     ? { id: latestRefundData.id, amount: latestRefundData.amount }
     : null;
 
-  await applyChargeRefundIdempotent({
-    reservationId: reservation.id,
-    chargeAmount: charge.amount,
-    amountRefunded: charge.amount_refunded,
-    latestRefund,
-  });
+  // 1. Reservation 経路をまず try
+  const reservation = await findReservationByPaymentIntent(paymentIntentId);
+  if (reservation) {
+    await applyChargeRefundIdempotent({
+      reservationId: reservation.id,
+      chargeAmount: charge.amount,
+      amountRefunded: charge.amount_refunded,
+      latestRefund,
+    });
+    invalidateReservationCache(reservation.id);
+    return;
+  }
 
-  invalidateReservationCache(reservation.id);
+  // 2. EventRegistration 経路 (task #6): Reservation で見つからなければ event 側を検索。
+  const registration =
+    await findEventRegistrationByPaymentIntent(paymentIntentId);
+  if (registration) {
+    await applyEventChargeRefundIdempotent({
+      registrationId: registration.id,
+      chargeAmount: charge.amount,
+      amountRefunded: charge.amount_refunded,
+      latestRefund,
+    });
+    invalidateEventRegistrationCache();
+    return;
+  }
+
+  logError(
+    new Error(
+      "No reservation or event registration found for payment_intent on charge.refunded",
+    ),
+    {
+      category: ErrorCategory.VALIDATION,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "stripeWebhookChargeRefunded",
+        paymentIntentId,
+      },
+    },
+  );
 }

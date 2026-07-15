@@ -64,7 +64,16 @@ const mockGetStripeClient = mock(() =>
 const mockLogError = mock(() => undefined);
 
 mock.module("server-only", () => ({}));
+const AuditAction = {
+  CREATE: "CREATE",
+  UPDATE: "UPDATE",
+  DELETE: "DELETE",
+  LOGIN: "LOGIN",
+  LOGOUT: "LOGOUT",
+} as const;
+
 mock.module("@generated/prisma/enums", () => ({
+  AuditAction,
   PaymentStatus,
   RegistrationStatus,
 }));

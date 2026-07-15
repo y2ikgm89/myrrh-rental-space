@@ -47,6 +47,8 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   728355=予約単位 refund 直列化（`reservations/payment-commands.ts` の
   `refundReservationPaymentCommand` で Refund 累積計算 + Stripe API call + Refund 書込 +
   paymentStatus 遷移を interactive tx で serialize、over-refund/idempotency 破壊を防ぐ）、
+  728356=イベント申込単位 refund 直列化（`events/payment-commands.ts` の
+  `refundEventRegistrationPaymentCommand` で 728355 と同型の serialize、event registration 側 refund flow）、
   audit-log chain=int8 `6029451381908262157n`
 
 ## 'use cache' クエリの標準形
