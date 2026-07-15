@@ -81,6 +81,13 @@ interface ReservationDetailProps {
    * false なら CheckoutButton は表示しない (server 側 `assertOnlinePaymentAvailable` と対称)。
    */
   readonly paymentEnabled: boolean;
+  /**
+   * 発行済み領収書の serialNo。未発行 (未払 / event 側の receipt 未発行状態) は null。
+   * 値がある場合は「領収書ダウンロード」リンクを表示する。ダウンロード経路は
+   * Better Auth session 経由の ownership 検証 (Route Handler
+   * `/api/receipts/[serialNo]/pdf`) を使う。
+   */
+  readonly receiptSerialNo: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +120,7 @@ export function ReservationDetail({
   deadlineSettings,
   cancellationPolicyUrl,
   paymentEnabled,
+  receiptSerialNo,
 }: ReservationDetailProps) {
   const {
     id,
@@ -338,6 +346,26 @@ export function ReservationDetail({
             <CheckoutButton reservationId={id} />
           </div>
         )}
+
+      {/* 領収書ダウンロード (Receipt 発行済のみ)。
+        Route Handler `/api/receipts/[serialNo]/pdf` に Better Auth session 経由で
+        アクセス、Route 側で ownership を突合する。同一 origin の GET なので通常の
+        `<a>` で download 属性を付ける (Link コンポーネントは page 遷移用のため
+        API route には使わない)。 */}
+      {receiptSerialNo && (
+        <div className="border-t border-border px-4 py-4 sm:px-6">
+          <p className="mb-3 text-sm text-muted-foreground">
+            適格請求書 (領収書) は PDF でダウンロードできます。
+          </p>
+          <a
+            href={`/api/receipts/${receiptSerialNo}/pdf`}
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+            download={`receipt-${receiptSerialNo}.pdf`}
+          >
+            領収書をダウンロード
+          </a>
+        </div>
+      )}
 
       {/* Footer: mobile は full-width tap area / sm+ は両端寄せ */}
       <div className="flex flex-col gap-2 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6">
