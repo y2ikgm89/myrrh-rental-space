@@ -582,6 +582,7 @@ describe("GCP production audit model", () => {
       "assertion.ref == 'refs/heads/main'",
       "assertion.event_name == 'push'",
       "assertion.event_name == 'workflow_dispatch'",
+      "assertion.event_name == 'schedule'",
     ]);
   });
 
@@ -601,6 +602,7 @@ describe("GCP production audit model", () => {
       "assertion.ref == 'refs/heads/main'",
       "assertion.event_name == 'push'",
       "assertion.event_name == 'workflow_dispatch'",
+      "assertion.event_name == 'schedule'",
     ]);
   });
 
