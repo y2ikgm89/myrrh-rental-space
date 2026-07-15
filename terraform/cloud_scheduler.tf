@@ -99,6 +99,12 @@ locals {
       path        = "/api/cron/waitlist-expire"
       description = "Event waitlist offer expiration (hourly). Expires WAITLISTED_OFFERED past 24h TTL and FIFO-promotes the next WAITLISTED per (slotId, ticketId). Feature-gated by events module."
     },
+    {
+      name        = "receipt-backfill"
+      schedule    = "15 3 * * *"
+      path        = "/api/cron/receipt-backfill"
+      description = "Issue Receipt for PAID/PARTIALLY_REFUNDED reservations & event registrations that pre-date the webhook auto-issue wiring (daily 03:15 JST, feature-gated by payment module)."
+    },
   ]
 }
 
