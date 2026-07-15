@@ -1120,12 +1120,27 @@ async function main(): Promise<void> {
     broadProjectIamDeployGrantErrors.length === 0,
     `grants=${broadProjectIamDeployGrantErrors.join(",") || "none"}`,
   );
+  // F1 refactor (PR #1073、2026-07-14) 以降:
+  //   runtime-sa / build-sa の `roles/secretmanager.secretAccessor` は
+  //   scripts/bootstrap-terraform.sh が **project-level SSoT** で管理する。
+  //   旧 secret_iam.tf (per-secret binding) は F1 refactor で削除。
+  //   詳細は terraform/README.md "Bootstrap-owns-all-project-IAM 契約"。
+  //
+  // 従って本 audit は runtime-sa + build-sa 2 principal のみ expected として許容し、
+  // それ以外の project-level secretAccessor binding は error 扱いする。
+  const expectedProjectSecretAccessorMembers = [
+    `serviceAccount:${runtimeServiceAccount}`,
+    `serviceAccount:${buildServiceAccount}`,
+  ];
   const projectSecretManagerAccessorErrors =
-    readProjectSecretManagerAccessorErrors(projectIam);
+    readProjectSecretManagerAccessorErrors(
+      projectIam,
+      expectedProjectSecretAccessorMembers,
+    );
   addCheck(
-    "project IAM has no broad Secret Manager accessor grants",
+    "project IAM has no unexpected Secret Manager accessor grants",
     projectSecretManagerAccessorErrors.length === 0,
-    `errors=${projectSecretManagerAccessorErrors.join(",") || "none"}`,
+    `errors=${projectSecretManagerAccessorErrors.join(",") || "none"} expected=${expectedProjectSecretAccessorMembers.join(",")}`,
   );
   const buildServiceAccountProjectIamRoleErrors =
     readBuildServiceAccountProjectIamRoleErrors(
@@ -1256,12 +1271,23 @@ async function main(): Promise<void> {
   ]);
   const serviceAccountUserRole = "roles/iam.serviceAccountUser";
   const serviceAccountTokenCreatorRole = "roles/iam.serviceAccountTokenCreator";
+  // F1 refactor (PR #1073) 以降:
+  //   runtime-sa の `roles/iam.serviceAccountUser` は build-sa (Cloud Build deploy 用) と
+  //   terraform-runner-sa (Terraform apply が Cloud Run resource 更新用に impersonate) の
+  //   2 principal のみ許容する。terraform-runner の付与は bootstrap-terraform.sh の
+  //   SA-scoped cross-SA impersonation grants section で管理 (詳細は
+  //   terraform/README.md "Bootstrap-owns-all-project-IAM 契約")。
+  const terraformRunnerServiceAccount = `terraform-runner@${projectId}.iam.gserviceaccount.com`;
+  const expectedRuntimeActAsMembers = [
+    ...expectedBuildServiceAccountUsers,
+    `serviceAccount:${terraformRunnerServiceAccount}`,
+  ];
   const runtimeServiceAccountActAsErrors = readIamRoleMembershipErrors(
     runtimeServiceAccountIamPolicy,
     {
       resourceName: `runtime service account ${runtimeServiceAccount}`,
       role: serviceAccountUserRole,
-      expectedMembers: expectedBuildServiceAccountUsers,
+      expectedMembers: expectedRuntimeActAsMembers,
     },
   );
   const runtimeServiceAccountActAsRemovalCommands =
@@ -1271,15 +1297,16 @@ async function main(): Promise<void> {
       members: unexpectedMembersForRole(
         runtimeServiceAccountIamPolicy,
         serviceAccountUserRole,
-        expectedBuildServiceAccountUsers,
+        expectedRuntimeActAsMembers,
       ),
       additionalArgs: [`  --project="${projectId}"`],
     });
   addCheck(
-    "runtime service account actAs grant is limited to build service account",
+    "runtime service account actAs grant is limited to build + terraform-runner service accounts",
     runtimeServiceAccountActAsErrors.length === 0,
     [
       `errors=${runtimeServiceAccountActAsErrors.join(",") || "none"}`,
+      `expected=${expectedRuntimeActAsMembers.join(",")}`,
       `removeCommands=${runtimeServiceAccountActAsRemovalCommands.join(" | ") || "none"}`,
     ].join(" "),
   );

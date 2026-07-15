@@ -152,15 +152,25 @@ const CLOUD_BUILD_REGIONS = [
   "us-west4",
 ] as const;
 
+// SSoT: `terraform/cloud_scheduler.tf` `local.cron_jobs` の name field 全て。
+// 追加時は Terraform 側の for_each で `google_cloud_scheduler_job.job[...]` が
+// 自動作成され、post-merge terraform-apply で GCP に反映される。本 list は
+// 完全同期契約 (drift-detect gate に相当、audit で unexpected/missing を検出)。
 export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "calendar-sync",
+  "customer-risk-scan",
+  "data-retention",
   "event-import",
-  "faq-trash-cleanup",
+  "event-reminder",
   "faq-stale-check",
+  "faq-trash-cleanup",
   "instagram-refresh",
   "instagram-sync",
   "notification-cleanup",
+  "pending-reservation-expire",
   "reservation-reminder",
+  "smart-lock-cleanup",
+  "waitlist-expire",
 ] as const;
 
 export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
@@ -518,11 +528,21 @@ export function readAmbiguousAdminRolePrincipalErrors(
 
 export function readProjectSecretManagerAccessorErrors(
   value: unknown,
+  expectedMembers: readonly string[] = [],
 ): string[] {
+  // F1 refactor (PR #1073、2026-07-14) 以降、runtime-sa / build-sa への
+  // `roles/secretmanager.secretAccessor` は **project-level SSoT** で bootstrap-
+  // terraform.sh が SSoT (旧 secret_iam.tf は削除済)。per-secret 個別 binding は
+  // Terraform 側で廃止した。expected members を渡された時はそれを許容し、
+  // 想定外の member のみ error として返す。
+  //
+  // 未指定時 (後方互換): 全 project-level member を error 扱いする旧挙動。
+  const expectedSet = new Set(expectedMembers);
   return readIamPolicyMembersForRole(
     value,
     "roles/secretmanager.secretAccessor",
   )
+    .filter((member) => !expectedSet.has(member))
     .sort()
     .map((member) => {
       return `roles/secretmanager.secretAccessor project-level grant must be removed for ${member}`;

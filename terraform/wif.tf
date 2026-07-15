@@ -66,15 +66,32 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.workflow"            = "assertion.workflow"
   }
 
-  # attribute condition: repo lockdown に加え、rename-resistant な
-  # repository_id / repository_owner_id で fork や repository rename からの
-  # なりすましを封じる。ref / event_name は tf.yml plan の pull_request 経路を
-  # 塞がないため意図的に外し (F4 側で job-level guard する)、docs の
-  # 5-clause bootstrap のうち drift を起こさない範囲に絞る。
-  #   参考: docs/gcp-production-setup.md L881
+  # attribute condition (5-clause 完全版、2026-07-15 audit gap fix):
+  #
+  # 1. repository name lockdown (rename 前の識別)
+  # 2. repository_id lockdown (rename-resistant、fork 詐称防御)
+  # 3. repository_owner_id lockdown (owner rename-resistant)
+  # 4. ref == 'refs/heads/main' (branch-based abuse 防御 = malicious branch push で
+  #    build-sa impersonation ができない)
+  # 5. event_name in ('push', 'workflow_dispatch') (pull_request event での cloud
+  #    impersonation を物理的に閉じる、F4 hardening と多重防御)
+  #
+  # Note on quote style: WIF condition の CEL は double / single quote 両方許容
+  # だが、`scripts/audit-gcp-production-iap.ts` の `readWifProviderConditionErrors`
+  # が fragment 文字列一致で single quote を要求するため、**single quote に統一**。
+  #
+  # PR-triggered workflow (terraform.yml validate、check-main-terraform-health.yml)
+  # は WIF auth を使わない (`terraform init -backend=false` + `terraform validate` +
+  # gh CLI のみ) ため、この condition tightening で真の break はしない。
+  #
+  # 参考:
+  #   - Google 公式 WIF best practices: https://cloud.google.com/iam/docs/best-practices-for-using-and-managing-workload-identity-federation
+  #   - GitHub OIDC docs: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
   attribute_condition = join(" && ", [
-    "assertion.repository == \"${local.github_repo}\"",
-    "assertion.repository_id == \"${var.github_repository_id}\"",
-    "assertion.repository_owner_id == \"${var.github_repository_owner_id}\"",
+    "assertion.repository == '${local.github_repo}'",
+    "assertion.repository_id == '${var.github_repository_id}'",
+    "assertion.repository_owner_id == '${var.github_repository_owner_id}'",
+    "assertion.ref == 'refs/heads/main'",
+    "(assertion.event_name == 'push' || assertion.event_name == 'workflow_dispatch')",
   ])
 }

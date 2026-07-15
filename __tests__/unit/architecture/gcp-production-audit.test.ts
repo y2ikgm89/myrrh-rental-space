@@ -1688,7 +1688,7 @@ describe("GCP production audit model", () => {
       "Cloud Run deploy admin grants are limited to build service account",
     );
     expect(auditScript).toContain(
-      "runtime service account actAs grant is limited to build service account",
+      "runtime service account actAs grant is limited to build + terraform-runner service accounts",
     );
     expect(auditScript).toContain(
       "runtime service account tokenCreator grants are absent",
@@ -1796,7 +1796,7 @@ describe("GCP production audit model", () => {
       "formatSecretManagerSecretAccessorRemovalCommands",
     );
     expect(auditScript).toContain(
-      "project IAM has no broad Secret Manager accessor grants",
+      "project IAM has no unexpected Secret Manager accessor grants",
     );
     expect(auditScript).toContain(
       "required Secret Manager accessor IAM is least privilege",
