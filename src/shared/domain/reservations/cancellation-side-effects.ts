@@ -29,6 +29,10 @@ import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { refundReservationPaymentCommand } from "@/shared/domain/reservations/payment-commands";
+import {
+  calculateRefundAmount,
+  parseRefundPolicy,
+} from "@/shared/domain/refund/policy";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { deleteCalendarSync } from "@/shared/lib/calendar-sync/outbound";
 import {
@@ -218,27 +222,66 @@ export async function applyCancellationSideEffects(
     reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
   const requiresRefund = wasPaid && reservation.stripePaymentIntentId !== null;
 
-  // 1. Stripe refund（PAID / PARTIALLY_REFUNDED のみ自動・失敗は in-app 通知タイトルで要返金確認をフラグ）
-  // actorType=AUTO_ON_CANCEL、amount 未指定 → 残額全額を返金する。
-  // actorUserId は system 起動のため常に null。
+  // 1. Stripe refund (task #9 PR#5)
+  //   - actorType=AUTO_ON_CANCEL
+  //   - Settings.refundPolicy が設定されていれば tier ベース計算で amount を決定
+  //   - policy 未設定なら amount 未指定 (残額全額を返金、後方互換動作)
+  //   - policy 適用結果が 0 円なら refund 全 skip (キャンセル自体は続行、in-app 通知の
+  //     「要返金確認」タイトルは維持して運用側の判断を仰ぐ)
   if (requiresRefund) {
-    fireAndForget(
-      refundReservationPaymentCommand({
-        reservationId: input.reservationId,
-        actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-      }).then(() => {
-        return;
-      }),
-      {
-        operation: "autoRefundOnCancel",
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.HIGH,
-        context: {
+    const settings = await prisma.settings.findUnique({
+      where: { id: "singleton" },
+      select: { refundPolicy: true },
+    });
+    const policy = parseRefundPolicy(settings?.refundPolicy);
+
+    // policy 未設定 (null) → 残額全額返金 (現状の後方互換動作を維持)
+    // policy 設定あり → tier 選定で amount 計算 (0 なら refund skip)
+    let refundAmount: number | undefined;
+    if (policy !== null && reservation.totalPrice !== null) {
+      refundAmount = calculateRefundAmount(
+        policy,
+        Number(reservation.totalPrice),
+        reservation.startTime,
+        new Date(),
+      );
+    }
+
+    if (refundAmount === undefined || refundAmount > 0) {
+      fireAndForget(
+        refundReservationPaymentCommand({
           reservationId: input.reservationId,
-          channel: input.channel,
+          actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+          ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
+        }).then(() => {
+          return;
+        }),
+        {
+          operation: "autoRefundOnCancel",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            reservationId: input.reservationId,
+            channel: input.channel,
+            ...(refundAmount !== undefined
+              ? { policyRefundAmount: refundAmount }
+              : {}),
+          },
         },
-      },
-    );
+      );
+    } else {
+      // Policy による refundRate=0% → 返金 skip。運用側の「要返金確認」通知タイトル
+      // (下段の requiresRefund 分岐) はそのまま昇格させて、admin 側で手動対応を明示的に促す。
+      logError(new Error("Auto refund skipped: policy refund rate is 0%"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "autoRefundOnCancel",
+          reservationId: input.reservationId,
+          reason: "policyRefundRateZero",
+        },
+      });
+    }
   }
 
   // 2. GCal 同期イベント削除
