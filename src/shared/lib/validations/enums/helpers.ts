@@ -575,6 +575,7 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.UNPAID]: "未払い",
   [PaymentStatus.PENDING]: "決済待ち",
   [PaymentStatus.PAID]: "支払い済み",
+  [PaymentStatus.PARTIALLY_REFUNDED]: "一部返金済み",
   [PaymentStatus.REFUNDED]: "返金済み",
   [PaymentStatus.FAILED]: "決済失敗",
 };
@@ -650,6 +651,7 @@ export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
   [PaymentStatus.UNPAID]: "secondary",
   [PaymentStatus.PENDING]: "warning",
   [PaymentStatus.PAID]: "success",
+  [PaymentStatus.PARTIALLY_REFUNDED]: "warning",
   [PaymentStatus.REFUNDED]: "outline",
   [PaymentStatus.FAILED]: "destructive",
 };

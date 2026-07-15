@@ -210,7 +210,11 @@ export async function applyCancellationSideEffects(
   }
 
   const payload = buildEmailPayload(reservation);
-  const wasPaid = reservation.paymentStatus === PaymentStatus.PAID;
+  // PAID / PARTIALLY_REFUNDED (追加返金分が残っているケース) の両方をキャンセル時
+  // auto-refund の対象とする。REFUNDED / UNPAID / PENDING / FAILED は対象外。
+  const wasPaid =
+    reservation.paymentStatus === PaymentStatus.PAID ||
+    reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
   const requiresRefund = wasPaid && reservation.stripePaymentIntentId !== null;
 
   // 1. Stripe refund（PAID のみ自動・失敗は in-app 通知タイトルで要返金確認をフラグ）

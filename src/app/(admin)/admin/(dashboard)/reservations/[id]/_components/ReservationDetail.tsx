@@ -49,12 +49,13 @@ import { formatDateTimeFull } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 
 const PAYMENT_BADGE_VARIANTS: Record<
-  string,
+  PaymentStatus,
   "secondary" | "warning" | "success" | "outline" | "destructive"
 > = {
   [PaymentStatus.UNPAID]: "secondary",
   [PaymentStatus.PENDING]: "warning",
   [PaymentStatus.PAID]: "success",
+  [PaymentStatus.PARTIALLY_REFUNDED]: "warning",
   [PaymentStatus.REFUNDED]: "outline",
   [PaymentStatus.FAILED]: "destructive",
 };
@@ -344,7 +345,8 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
               {isPaymentPending ? "作成中..." : "決済リンクを作成"}
             </Button>
           ) : null}
-          {reservation.paymentStatus === PaymentStatus.PAID ? (
+          {reservation.paymentStatus === PaymentStatus.PAID ||
+          reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ? (
             <Button
               variant="destructive"
               size="sm"

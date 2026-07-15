@@ -111,6 +111,7 @@ export async function claimReservationAsFailed(
       paymentStatus: {
         notIn: [
           PaymentStatus.PAID,
+          PaymentStatus.PARTIALLY_REFUNDED,
           PaymentStatus.REFUNDED,
           PaymentStatus.FAILED,
         ],

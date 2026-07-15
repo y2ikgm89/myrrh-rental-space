@@ -6,6 +6,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { isLegacyRateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -178,9 +179,15 @@ export async function issueReceiptForReservation(
       throw new DomainError("予約が見つかりません", "NOT_FOUND");
     }
 
-    if (reservation.paymentStatus !== "PAID") {
+    // PARTIALLY_REFUNDED も受領額分の領収書再発行 (revision 継承) を許可する。
+    // 部分返金後に「返金分を差し引いた新しい領収書」を発行するユースケースに備える。
+    // gateway 経由の enum 参照で文字列 drift を防ぐ。
+    if (
+      reservation.paymentStatus !== PaymentStatus.PAID &&
+      reservation.paymentStatus !== PaymentStatus.PARTIALLY_REFUNDED
+    ) {
       throw new DomainError(
-        "決済確定 (PAID) 状態の予約のみ領収書を発行できます",
+        "決済確定 (PAID) または一部返金済み (PARTIALLY_REFUNDED) 状態の予約のみ領収書を発行できます",
         "VALIDATION",
       );
     }

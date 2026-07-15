@@ -28,6 +28,7 @@ export const PAYMENT_BADGE_VARIANTS: Record<
   UNPAID: "warning",
   PENDING: "warning",
   PAID: "success",
+  PARTIALLY_REFUNDED: "warning",
   REFUNDED: "info",
   FAILED: "default",
 };

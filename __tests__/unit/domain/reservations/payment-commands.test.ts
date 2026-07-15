@@ -5,6 +5,7 @@ const PaymentStatus = {
   UNPAID: "UNPAID",
   PENDING: "PENDING",
   PAID: "PAID",
+  PARTIALLY_REFUNDED: "PARTIALLY_REFUNDED",
   REFUNDED: "REFUNDED",
   FAILED: "FAILED",
 } as const;
@@ -394,11 +395,15 @@ describe("reservations/payment-commands", () => {
           paymentInitiatedAt: expect.any(Date),
         }),
       });
-      // 2 回目: session 確定書込 (updateMany + notIn [PAID, REFUNDED] + PENDING 再 assert)
+      // 2 回目: session 確定書込 (updateMany + notIn [PAID, PARTIALLY_REFUNDED, REFUNDED] + PENDING 再 assert)
       expect(calls[1]?.[0]).toMatchObject({
         where: expect.objectContaining({
           paymentStatus: expect.objectContaining({
-            notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+            notIn: [
+              PaymentStatus.PAID,
+              PaymentStatus.PARTIALLY_REFUNDED,
+              PaymentStatus.REFUNDED,
+            ],
           }),
         }),
         data: expect.objectContaining({
@@ -573,7 +578,7 @@ describe("reservations/payment-commands", () => {
   });
 
   describe("refundReservationPaymentCommand", () => {
-    test("Stripe idempotency key を使い、PAID の予約だけ atomic に REFUNDED へ更新する", async () => {
+    test("Stripe idempotency key を使い、PAID / PARTIALLY_REFUNDED の予約を atomic に REFUNDED へ更新する", async () => {
       const result = await refundReservationPaymentCommand(RESERVATION_ID);
 
       expect(mockRefundCreate).toHaveBeenCalledWith(
@@ -584,7 +589,9 @@ describe("reservations/payment-commands", () => {
         where: {
           id: RESERVATION_ID,
           deletedAt: null,
-          paymentStatus: PaymentStatus.PAID,
+          paymentStatus: {
+            in: [PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED],
+          },
         },
         data: { paymentStatus: PaymentStatus.REFUNDED },
       });
@@ -596,7 +603,7 @@ describe("reservations/payment-commands", () => {
       });
     });
 
-    test("PAID 以外の予約では Stripe refund を作成しない", async () => {
+    test("PAID / PARTIALLY_REFUNDED 以外の予約では Stripe refund を作成しない", async () => {
       mockReservationFindUnique.mockResolvedValueOnce({
         ...paidReservation(),
         paymentStatus: PaymentStatus.REFUNDED,

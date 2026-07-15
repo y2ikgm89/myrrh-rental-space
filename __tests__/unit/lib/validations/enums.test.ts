@@ -375,6 +375,7 @@ describe("isValidPaymentStatus", () => {
     expect(isValidPaymentStatus("UNPAID")).toBe(true);
     expect(isValidPaymentStatus("PENDING")).toBe(true);
     expect(isValidPaymentStatus("PAID")).toBe(true);
+    expect(isValidPaymentStatus("PARTIALLY_REFUNDED")).toBe(true);
     expect(isValidPaymentStatus("REFUNDED")).toBe(true);
     expect(isValidPaymentStatus("FAILED")).toBe(true);
   });
@@ -391,6 +392,9 @@ describe("isValidPaymentStatus", () => {
 describe("getValidPaymentStatus", () => {
   test("有効な決済ステータスの場合そのステータスを返す", () => {
     expect(getValidPaymentStatus("PAID")).toBe(PaymentStatus.PAID);
+    expect(getValidPaymentStatus("PARTIALLY_REFUNDED")).toBe(
+      PaymentStatus.PARTIALLY_REFUNDED,
+    );
     expect(getValidPaymentStatus("REFUNDED")).toBe(PaymentStatus.REFUNDED);
     expect(getValidPaymentStatus("UNPAID")).toBe(PaymentStatus.UNPAID);
     expect(getValidPaymentStatus("PENDING")).toBe(PaymentStatus.PENDING);

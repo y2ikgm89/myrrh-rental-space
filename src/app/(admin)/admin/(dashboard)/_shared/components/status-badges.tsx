@@ -87,6 +87,10 @@ const paymentStatusConfig: StatusConfig<PaymentStatus> = {
   UNPAID: { label: PAYMENT_STATUS_LABELS.UNPAID, variant: "secondary" },
   PENDING: { label: PAYMENT_STATUS_LABELS.PENDING, variant: "warning" },
   PAID: { label: PAYMENT_STATUS_LABELS.PAID, variant: "success" },
+  PARTIALLY_REFUNDED: {
+    label: PAYMENT_STATUS_LABELS.PARTIALLY_REFUNDED,
+    variant: "warning",
+  },
   REFUNDED: { label: PAYMENT_STATUS_LABELS.REFUNDED, variant: "outline" },
   FAILED: { label: PAYMENT_STATUS_LABELS.FAILED, variant: "destructive" },
 };
