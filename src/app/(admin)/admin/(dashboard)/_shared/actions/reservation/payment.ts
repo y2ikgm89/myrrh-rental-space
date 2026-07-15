@@ -26,7 +26,10 @@ export async function createCheckoutSession(
 }
 
 /**
- * 管理者による返金 (現状 UI は「全額返金」のみ、部分返金入力は task #9 PR#4 で追加予定)。
+ * 管理者による返金 (task #9 PR#3 で command 拡張、task #9 PR#4 で UI で amount/reason 入力対応)。
+ *
+ * @param reservationId 対象予約 ID
+ * @param options 部分返金 amount / 返金理由。両方省略で残額全額返金 + reason なし
  *
  * actorType=ADMIN で `refundReservationPaymentCommand` を呼び出す。amount 未指定 →
  * `Refund` 集計後の残額全額を返金 (PAID 予約なら totalPriceWithTax、PARTIALLY_REFUNDED
@@ -34,6 +37,12 @@ export async function createCheckoutSession(
  */
 export async function refundReservationPayment(
   reservationId: string,
+  options?: {
+    /** 部分返金額 (円、正整数)。省略で残額全額。 */
+    amount?: number;
+    /** 返金理由 (Refund.reason + AuditLog metadata に記録)。 */
+    reason?: string;
+  },
 ): Promise<MutationResult<RefundReservationResult>> {
   return executeAdminMutationResult({
     resource: "reservation",
@@ -44,6 +53,10 @@ export async function refundReservationPayment(
         reservationId,
         actorType: REFUNDED_BY_TYPE.ADMIN,
         actorUserId: user.id,
+        ...(options?.amount !== undefined ? { amount: options.amount } : {}),
+        ...(options?.reason !== undefined && options.reason !== ""
+          ? { reason: options.reason }
+          : {}),
       });
     },
     afterSuccess: (data) => {
