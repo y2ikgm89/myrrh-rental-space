@@ -62,6 +62,12 @@ const PAYMENT_BADGE_VARIANTS: Record<
 
 type ReservationDetailProps = {
   reservation: ReservationWithRelations;
+  /**
+   * Feature Module `payment` (Settings.featureModules.payment) が有効か。
+   * false 時は Stripe 決済リンク作成・返金ボタンを disabled + explanatory text 表示
+   * （domain 層 `assertOnlinePaymentAvailable` が VALIDATION エラーで弾く UI の対称）。
+   */
+  paymentEnabled: boolean;
 };
 
 function PriceBreakdown({
@@ -149,7 +155,10 @@ function PriceBreakdown({
   );
 }
 
-export function ReservationDetail({ reservation }: ReservationDetailProps) {
+export function ReservationDetail({
+  reservation,
+  paymentEnabled,
+}: ReservationDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isPaymentPending, startPaymentTransition] = useTransition();
@@ -334,28 +343,49 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
             />
           ) : null}
         </div>
-        <div className="mt-4 flex items-center gap-2">
-          {reservation.paymentStatus === PaymentStatus.UNPAID ? (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isPaymentPending}
-              onClick={() => void handleCreateCheckoutSession()}
-            >
-              {isPaymentPending ? "作成中..." : "決済リンクを作成"}
-            </Button>
-          ) : null}
-          {reservation.paymentStatus === PaymentStatus.PAID ||
-          reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ? (
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={isPaymentPending}
-              onClick={() => setRefundDialogOpen(true)}
-            >
-              返金する
-            </Button>
-          ) : null}
+        <div className="mt-4 flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            {reservation.paymentStatus === PaymentStatus.UNPAID ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPaymentPending || !paymentEnabled}
+                onClick={() => void handleCreateCheckoutSession()}
+                title={
+                  paymentEnabled
+                    ? undefined
+                    : "オンライン決済機能が無効です (機能モジュールで有効化できます)"
+                }
+              >
+                {isPaymentPending ? "作成中..." : "決済リンクを作成"}
+              </Button>
+            ) : null}
+            {reservation.paymentStatus === PaymentStatus.PAID ||
+            reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isPaymentPending || !paymentEnabled}
+                onClick={() => setRefundDialogOpen(true)}
+                title={
+                  paymentEnabled
+                    ? undefined
+                    : "オンライン決済機能が無効のため返金操作を実行できません"
+                }
+              >
+                返金する
+              </Button>
+            ) : null}
+          </div>
+          {!paymentEnabled &&
+            (reservation.paymentStatus === PaymentStatus.UNPAID ||
+              reservation.paymentStatus === PaymentStatus.PAID ||
+              reservation.paymentStatus ===
+                PaymentStatus.PARTIALLY_REFUNDED) && (
+              <p className="text-xs text-muted-foreground">
+                オンライン決済機能が無効です。「機能モジュール」で有効化するとこの操作が実行できます。
+              </p>
+            )}
         </div>
       </DetailSection>
 
