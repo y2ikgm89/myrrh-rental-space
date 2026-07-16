@@ -123,6 +123,7 @@ export async function createCalendarEvent(
       success: true,
       eventId: response.data.id ?? undefined,
       eventUrl: response.data.htmlLink ?? undefined,
+      event: response.data,
     });
   } catch (error) {
     logError(normalizeError(error), {

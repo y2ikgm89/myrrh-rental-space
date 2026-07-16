@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import type { calendar_v3 } from "googleapis";
 
 // =============================================================================
 // Mock helpers BEFORE importing the SUT
@@ -6,7 +7,15 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 const mockIsEnabled = mock<() => Promise<boolean>>(() => Promise.resolve(true));
 const mockCreate = mock<
-  () => Promise<{ success: boolean; eventId?: string; error?: string }>
+  (
+    params: unknown,
+    options?: { withMeet?: boolean },
+  ) => Promise<{
+    success: boolean;
+    eventId?: string;
+    error?: string;
+    event?: calendar_v3.Schema$Event;
+  }>
 >(() => Promise.resolve({ success: true, eventId: "gcal-event-123" }));
 const mockUpdate = mock<
   () => Promise<{ success: boolean; eventId?: string; error?: string }>
@@ -41,12 +50,16 @@ const mockMarkError = mock<() => Promise<void>>(() => Promise.resolve());
 const mockGetForSync = mock<() => Promise<unknown>>(() =>
   Promise.resolve(null),
 );
+const mockWriteBackMeetingUrl = mock<
+  (params: { eventId: string; meetingUrl: string }) => Promise<void>
+>(() => Promise.resolve());
 
 mock.module("@/shared/domain/events/calendar-sync", () => ({
   saveEventGoogleCalendarEventId: mockSave,
   clearEventGoogleCalendarEventId: mockClear,
   markEventCalendarSyncError: mockMarkError,
   getEventSlotsForCalendarSync: mockGetForSync,
+  writeBackMeetingUrl: mockWriteBackMeetingUrl,
 }));
 
 // =============================================================================
@@ -73,6 +86,7 @@ const baseEventData: EventSyncData = {
   endTime: new Date("2026-05-01T12:00:00+09:00"),
   location: "東京都渋谷区 / テストスペース",
   publicUrl: "https://example.com/events/test-event",
+  meetingProvider: "MANUAL",
 };
 
 // =============================================================================
@@ -83,11 +97,15 @@ describe("syncEventToCalendar", () => {
   beforeEach(() => {
     mockIsEnabled.mockClear();
     mockCreate.mockClear();
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({ success: true, eventId: "gcal-event-123" }),
+    );
     mockUpdate.mockClear();
     mockDelete.mockClear();
     mockSave.mockClear();
     mockClear.mockClear();
     mockMarkError.mockClear();
+    mockWriteBackMeetingUrl.mockClear();
   });
 
   test("GCal disabled → no-op { success: true }", async () => {
@@ -148,12 +166,15 @@ describe("syncEventToCalendar", () => {
     await syncEventToCalendar(baseEventData);
 
     // description の先頭行に inbound ループ防止キーが含まれることを検証
+    // (第2引数は withMeet オプション — Phase B.1 task 8 で createCalendarEvent が
+    // 常に2引数で呼ばれるようになったため expect.any(Object) で受ける)
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         description: expect.stringContaining(
           `イベントID: ${baseEventData.eventId}`,
         ),
       }),
+      expect.any(Object),
     );
     // かつ description の分割結果で先頭行を確認
     expect(mockCreate).toHaveBeenCalledWith(
@@ -162,6 +183,7 @@ describe("syncEventToCalendar", () => {
           new RegExp(`^イベントID: ${baseEventData.eventId}`),
         ),
       }),
+      expect.any(Object),
     );
   });
 
@@ -176,7 +198,118 @@ describe("syncEventToCalendar", () => {
     // attendeeEmail は omitUndefined により存在しない（undefined プロパティは除去される）
     expect(mockCreate).not.toHaveBeenCalledWith(
       expect.objectContaining({ attendeeEmail: expect.anything() }),
+      expect.any(Object),
     );
+  });
+
+  // ===========================================================================
+  // Phase B.1 task 8: withMeet 判定 + Meet URL write-back
+  // ===========================================================================
+
+  test("meetingProvider=MANUAL → createCalendarEvent に withMeet:false を渡し、writeBackMeetingUrl は呼ばれない", async () => {
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({ success: true, eventId: "gcal-manual-1" }),
+    );
+
+    await syncEventToCalendar({ ...baseEventData, meetingProvider: "MANUAL" });
+
+    expect(mockCreate).toHaveBeenCalledWith(expect.any(Object), {
+      withMeet: false,
+    });
+    expect(mockWriteBackMeetingUrl).not.toHaveBeenCalled();
+  });
+
+  test("meetingProvider=GOOGLE_MEET → createCalendarEvent に withMeet:true を渡す", async () => {
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({ success: true, eventId: "gcal-meet-1" }),
+    );
+
+    await syncEventToCalendar({
+      ...baseEventData,
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(expect.any(Object), {
+      withMeet: true,
+    });
+  });
+
+  test("GOOGLE_MEET + hangoutLink 応答 → writeBackMeetingUrl(eventId, hangoutLink) を呼ぶ", async () => {
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({
+        success: true,
+        eventId: "gcal-meet-2",
+        event: { hangoutLink: "https://meet.google.com/abc-defg-hij" },
+      }),
+    );
+
+    await syncEventToCalendar({
+      ...baseEventData,
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(mockWriteBackMeetingUrl).toHaveBeenCalledTimes(1);
+    expect(mockWriteBackMeetingUrl).toHaveBeenCalledWith({
+      eventId: baseEventData.eventId,
+      meetingUrl: "https://meet.google.com/abc-defg-hij",
+    });
+  });
+
+  test("GOOGLE_MEET + hangoutLink 無し + conferenceData.entryPoints[video] あり → その uri を write-back する", async () => {
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({
+        success: true,
+        eventId: "gcal-meet-3",
+        event: {
+          conferenceData: {
+            entryPoints: [
+              { entryPointType: "phone", uri: "tel:+81-3-0000-0000" },
+              {
+                entryPointType: "video",
+                uri: "https://meet.google.com/fallback-uri",
+              },
+            ],
+          },
+        },
+      }),
+    );
+
+    await syncEventToCalendar({
+      ...baseEventData,
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(mockWriteBackMeetingUrl).toHaveBeenCalledWith({
+      eventId: baseEventData.eventId,
+      meetingUrl: "https://meet.google.com/fallback-uri",
+    });
+  });
+
+  test("GOOGLE_MEET だが hangoutLink も conferenceData も無い → writeBackMeetingUrl は呼ばれない", async () => {
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({ success: true, eventId: "gcal-meet-4" }),
+    );
+
+    await syncEventToCalendar({
+      ...baseEventData,
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(mockWriteBackMeetingUrl).not.toHaveBeenCalled();
+  });
+
+  test("GOOGLE_MEET だが createCalendarEvent 失敗 → writeBackMeetingUrl は呼ばれない", async () => {
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({ success: false, error: "quota exceeded" }),
+    );
+
+    const result = await syncEventToCalendar({
+      ...baseEventData,
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(result.success).toBe(false);
+    expect(mockWriteBackMeetingUrl).not.toHaveBeenCalled();
   });
 });
 

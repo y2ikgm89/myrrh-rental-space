@@ -97,6 +97,8 @@ export async function syncReservationToCalendar(
     }
 
     const eventParams = formatCalendarEvent(data);
+    // options を省略 = withMeet: false 固定（業界標準に従い物理 space 予約に Meet URL は
+    // 付与しない。Phase B.1 task 8 で確定 — ここに withMeet: true を足さないこと）。
     const result = await createCalendarEvent(eventParams);
 
     if (result.success && result.eventId) {

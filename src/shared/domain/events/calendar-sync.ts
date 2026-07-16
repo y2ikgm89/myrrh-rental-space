@@ -102,5 +102,6 @@ export async function getEventSlotsForCalendarSync(
     location,
     publicUrl,
     googleCalendarEventId: slot.googleCalendarEventId,
+    meetingProvider: event.meetingProvider,
   }));
 }
