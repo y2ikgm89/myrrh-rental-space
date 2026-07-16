@@ -2,6 +2,7 @@ import "server-only";
 
 import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
 
 const PAYMENT_EMAIL_SELECT = {
   id: true,
@@ -184,6 +185,8 @@ export async function claimReservationAsRefunded(
  * @param input.reservationId       対象予約 ID
  * @param input.chargeAmount        `charge.amount` (実 charge 額、Stripe unit_amount 単位)
  * @param input.amountRefunded      `charge.amount_refunded` (累積返金額、Stripe unit_amount 単位)
+ * @param input.currency            `charge.currency` (ISO 4217、Refund.amount を app 単位で
+ *                                  保存するための逆変換に使用)
  * @param input.latestRefund        `charge.refunds?.data[0]` から取り出した最新 refund の id と amount
  *                                  (webhook payload の refunds は default で 10 件まで含まれる;
  *                                  無い場合は paymentStatus 遷移のみで Refund child 書込は skip)
@@ -192,12 +195,19 @@ export async function applyChargeRefundIdempotent(input: {
   readonly reservationId: string;
   readonly chargeAmount: number;
   readonly amountRefunded: number;
+  readonly currency: string;
   readonly latestRefund: {
     readonly id: string;
     readonly amount: number;
   } | null;
 }): Promise<void> {
-  const { reservationId, chargeAmount, amountRefunded, latestRefund } = input;
+  const {
+    reservationId,
+    chargeAmount,
+    amountRefunded,
+    currency,
+    latestRefund,
+  } = input;
 
   if (latestRefund) {
     // Refund child への idempotent write。command 経由で先書きされている場合は skip
@@ -206,11 +216,14 @@ export async function applyChargeRefundIdempotent(input: {
       where: { stripeRefundId: latestRefund.id },
     });
     if (!existing) {
-      // command 経由でない = Stripe Dashboard から手動 refund の想定 (refundedByType=STRIPE_DASHBOARD)
+      // command 経由でない = Stripe Dashboard から手動 refund の想定 (refundedByType=STRIPE_DASHBOARD)。
+      // `Refund.amount` は app 単位 (JPY 円 / USD ドル) で保存する必要があるため、Stripe
+      // unit_amount からの逆変換が必須。JPY (zero-decimal) では偶然一致するが、USD/EUR 等では
+      // 100 倍で保存されて後続の refund 集計・残額判定が壊れる (PR #1126 Codex P1 対応)。
       await prisma.refund.create({
         data: {
           reservationId,
-          amount: latestRefund.amount,
+          amount: fromStripeUnitAmount(latestRefund.amount, currency),
           stripeRefundId: latestRefund.id,
           refundedByType: "STRIPE_DASHBOARD",
         },

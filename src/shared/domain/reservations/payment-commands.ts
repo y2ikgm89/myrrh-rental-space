@@ -10,6 +10,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
+import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { getAppUrl } from "@/shared/lib/constants";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
@@ -26,39 +27,6 @@ import {
  * `.claude/rules/db-domain.md` の registry と一致 (単一予約単位の concurrent refund 直列化)。
  */
 const REFUND_LOCK_NAMESPACE = 728355;
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** JPY など小数点なし通貨（unit_amount がそのまま最小単位） */
-const ZERO_DECIMAL_CURRENCIES = new Set([
-  "jpy",
-  "krw",
-  "vnd",
-  "bif",
-  "clp",
-  "djf",
-  "gnf",
-  "kmf",
-  "mga",
-  "pyg",
-  "rwf",
-  "ugx",
-  "xaf",
-  "xof",
-  "xpf",
-]);
-
-/**
- * 通貨に応じた Stripe unit_amount を計算
- * JPY 等のゼロ小数点通貨はそのまま、それ以外は 100 倍
- */
-function toStripeUnitAmount(amount: number, currency: string): number {
-  return ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
-    ? amount
-    : Math.round(amount * 100);
-}
 
 // ---------------------------------------------------------------------------
 // Checkout Session

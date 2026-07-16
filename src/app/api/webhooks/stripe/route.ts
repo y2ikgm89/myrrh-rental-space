@@ -727,6 +727,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       reservationId: reservation.id,
       chargeAmount: charge.amount,
       amountRefunded: charge.amount_refunded,
+      currency: charge.currency,
       latestRefund,
     });
     invalidateReservationCache(reservation.id);
@@ -741,6 +742,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       registrationId: registration.id,
       chargeAmount: charge.amount,
       amountRefunded: charge.amount_refunded,
+      currency: charge.currency,
       latestRefund,
     });
     invalidateEventRegistrationCache();
