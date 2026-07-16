@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { act, type ReactElement } from "react";
+import { act, useState, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { useForm } from "@conform-to/react";
+import { useForm, type SubmissionResult } from "@conform-to/react";
+import { parseWithZod } from "@conform-to/zod/v4";
 import type { z } from "zod";
 import { EventLocationSpaceSelector } from "@/app/(admin)/admin/(dashboard)/events/_components/EventLocationSpaceSelector";
 import { eventFormSchema } from "@/app/(admin)/admin/(dashboard)/events/_components/event-form-schema";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import {
   EVENT_FORMAT,
   MEETING_PROVIDER,
@@ -25,9 +27,10 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
  */
 type EventFormValues = z.input<typeof eventFormSchema>;
 
-function useEventFormFieldsForTest() {
+function useEventFormFieldsForTest(lastResult?: SubmissionResult) {
   const [, fields] = useForm<EventFormValues>({
     id: "event-location-space-selector-test",
+    lastResult,
     defaultValue: {
       title: "",
       slug: "",
@@ -51,20 +54,26 @@ type HarnessProps = {
 };
 
 /**
- * EventLocationSpaceSelector は format/meetingProvider/meetingUrl を内部 useState
- * として自己完結で保持する（EventForm.tsx への配線・schema 追加は Task 13 の scope
- * のため、conform の fields からは取得できない）。このテストでは `fields` prop の
- * 用意にのみ最小限の harness を使う。
+ * EventLocationSpaceSelector (Task 13 以降) は format/meetingProvider/meetingUrl を
+ * 自前で保持しない — 親 (実装では EventForm.tsx) がリフトした controlled state を
+ * props で受け取る（locationId/spaceId と同じパターン）。このテストの Harness は
+ * EventForm.tsx の役割を最小限で肩代わりし、`useState` で 3 値を保持して
+ * value/onChange props として橋渡しする。
  */
 function Harness({
-  initialFormat,
-  initialMeetingProvider,
-  initialMeetingUrl,
+  initialFormat = EVENT_FORMAT.OFFLINE,
+  initialMeetingProvider = MEETING_PROVIDER.MANUAL,
+  initialMeetingUrl = null,
 }: HarnessProps): ReactElement {
   const fields = useEventFormFieldsForTest();
+  const [format, setFormat] = useState<EventFormatValue>(initialFormat);
+  const [meetingProvider, setMeetingProvider] = useState<MeetingProviderValue>(
+    initialMeetingProvider,
+  );
+  const [meetingUrl, setMeetingUrl] = useState<string | null>(
+    initialMeetingUrl,
+  );
 
-  // exactOptionalPropertyTypes: true のため、省略時は key 自体を渡さない
-  // (`initialFormat={undefined}` は「明示的に undefined を代入」扱いで型エラーになる)。
   return (
     <EventLocationSpaceSelector
       fields={fields}
@@ -75,13 +84,47 @@ function Harness({
       spaceId={null}
       onLocationChange={() => {}}
       onSpaceChange={() => {}}
-      {...(initialFormat !== undefined ? { initialFormat } : {})}
-      {...(initialMeetingProvider !== undefined
-        ? { initialMeetingProvider }
-        : {})}
-      {...(initialMeetingUrl !== undefined ? { initialMeetingUrl } : {})}
+      format={format}
+      onFormatChange={setFormat}
+      meetingProvider={meetingProvider}
+      onMeetingProviderChange={setMeetingProvider}
+      meetingUrl={meetingUrl}
+      onMeetingUrlChange={setMeetingUrl}
     />
   );
+}
+
+/** 有効な EventForm 送信データのベースライン (event.test.ts の validInput と同型)。 */
+function buildValidFormData(overrides: Record<string, string> = {}): FormData {
+  const formData = new FormData();
+  formData.set("title", "テストイベント");
+  formData.set("slug", "test-event");
+  formData.set("descriptionJson", EMPTY_LEXICAL_EDITOR_STATE_JSON);
+  formData.set("scheduleMode", EventScheduleMode.SINGLE_OCCURRENCE);
+  formData.set(
+    "slots",
+    JSON.stringify([
+      { startAt: "2026-05-01T10:00", endAt: "2026-05-01T12:00", capacity: 10 },
+    ]),
+  );
+  formData.set("status", "DRAFT");
+  formData.set(
+    "tickets",
+    JSON.stringify([
+      {
+        name: "一般",
+        description: null,
+        price: 5000,
+        capacity: null,
+        unitSize: 1,
+        isAvailable: true,
+      },
+    ]),
+  );
+  for (const [key, value] of Object.entries(overrides)) {
+    formData.set(key, value);
+  }
+  return formData;
 }
 
 describe("EventLocationSpaceSelector", () => {
@@ -232,5 +275,88 @@ describe("EventLocationSpaceSelector", () => {
     // クリック操作なしで GOOGLE_MEET 状態が初期描画される
     expect(byId("event-meetingUrl")).toBeNull();
     expect(container?.querySelector('[role="alert"]')).not.toBeNull();
+  });
+
+  // -------------------------------------------------------------------
+  // refine エラー surfacing (Task 13 expanded scope)
+  //
+  // format/meetingUrl/meetingProvider は event-form-schema.ts の
+  // eventFormSchema に定義済みのため、conform の lastResult 経由で渡された
+  // 検証エラーが fields.meetingUrl.errors として実際にレンダリングされることを
+  // end-to-end (schema → conform reply → fields metadata → DOM) で検証する。
+  // -------------------------------------------------------------------
+  describe("refine エラー surfacing (fields.meetingUrl.errors)", () => {
+    function ErrorHarness({
+      lastResult,
+    }: {
+      lastResult: SubmissionResult;
+    }): ReactElement {
+      const fields = useEventFormFieldsForTest(lastResult);
+      return (
+        <EventLocationSpaceSelector
+          fields={fields}
+          isPending={false}
+          locations={[]}
+          spaces={[]}
+          locationId={null}
+          spaceId={null}
+          onLocationChange={() => {}}
+          onSpaceChange={() => {}}
+          format={EVENT_FORMAT.ONLINE}
+          onFormatChange={() => {}}
+          meetingProvider={MEETING_PROVIDER.MANUAL}
+          onMeetingProviderChange={() => {}}
+          meetingUrl={null}
+          onMeetingUrlChange={() => {}}
+        />
+      );
+    }
+
+    test("ONLINE + MANUAL + meetingUrl 未入力の submit 結果が URL 欄に inline 表示される", async () => {
+      // meetingUrl を意図的に省略した FormData で実際に parseWithZod → reply() を
+      // 通し、EventForm.tsx が useActionState から受け取るのと同じ形の
+      // SubmissionResult を作る。
+      const formData = buildValidFormData({
+        format: EVENT_FORMAT.ONLINE,
+        meetingProvider: MEETING_PROVIDER.MANUAL,
+      });
+      const submission = parseWithZod(formData, { schema: eventFormSchema });
+      expect(submission.status).toBe("error");
+      const lastResult = submission.reply();
+
+      await act(async () => {
+        root?.render(<ErrorHarness lastResult={lastResult} />);
+      });
+
+      const urlInput = byId<HTMLInputElement>("event-meetingUrl");
+      expect(urlInput).not.toBeNull();
+      expect(urlInput?.getAttribute("aria-invalid")).toBe("true");
+
+      const describedBy = urlInput?.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      const errorEl = describedBy ? byId(describedBy) : null;
+      expect(errorEl?.textContent).toBe(
+        "オンライン開催・ハイブリッド開催で手入力の場合は会議 URL が必須です",
+      );
+    });
+
+    test("有効な https URL を含む submit 結果ではエラーが表示されない", async () => {
+      const formData = buildValidFormData({
+        format: EVENT_FORMAT.ONLINE,
+        meetingProvider: MEETING_PROVIDER.MANUAL,
+        meetingUrl: "https://meet.example.com/room",
+      });
+      const submission = parseWithZod(formData, { schema: eventFormSchema });
+      expect(submission.status).toBe("success");
+      const lastResult = submission.reply();
+
+      await act(async () => {
+        root?.render(<ErrorHarness lastResult={lastResult} />);
+      });
+
+      const urlInput = byId<HTMLInputElement>("event-meetingUrl");
+      expect(urlInput?.getAttribute("aria-invalid")).toBeNull();
+      expect(urlInput?.getAttribute("aria-describedby")).toBeNull();
+    });
   });
 });

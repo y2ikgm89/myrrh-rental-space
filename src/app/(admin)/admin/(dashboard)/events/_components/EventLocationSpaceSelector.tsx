@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { getInputProps } from "@conform-to/react";
 import {
   Input,
@@ -67,18 +67,20 @@ type EventLocationSpaceSelectorProps = {
   onLocationChange: (locationId: string | null) => void;
   onSpaceChange: (spaceId: string | null) => void;
   /**
-   * 開催形態 / オンライン会議設定の初期値 (Phase B.1)。編集時に既存 Event の値を
-   * 渡すための seed 用 prop（省略時は新規作成 = OFFLINE / MANUAL / 空URL）。
-   *
-   * この 3 field はまだ `event-form-schema.ts` の Zod schema に定義されていない
-   * ため（EventForm.tsx への配線は Task 13 の scope）、conform の `fields` からは
-   * 取得できない。コンポーネント内部で `useState` として保持し、`name` 属性付きの
-   * input を自前でレンダリングして FormData に乗せる（`<form>` 配下であれば
-   * conform の `getFormProps` を経由しない native input も submit 時に収集される）。
+   * 開催形態 / オンライン会議設定 (Phase B.1)。`format`/`meetingUrl`/`meetingProvider`
+   * は `event-form-schema.ts` の Zod schema に定義済みのため、`fields.format` /
+   * `fields.meetingUrl` / `fields.meetingProvider` から conform の metadata
+   * （`.errors` / `.errorId` 等）を取得できる。値自体は EventForm.tsx にリフトされた
+   * controlled state を受け取る（locationId/spaceId と同じパターン）。
+   * ToggleGroup/RadioGroup が条件付きレンダリングで unmount されても入力値が
+   * 消えないよう、親コンポーネントで state を保持する設計。
    */
-  initialFormat?: EventFormatValue;
-  initialMeetingProvider?: MeetingProviderValue;
-  initialMeetingUrl?: string | null;
+  format: EventFormatValue;
+  onFormatChange: (format: EventFormatValue) => void;
+  meetingProvider: MeetingProviderValue;
+  onMeetingProviderChange: (meetingProvider: MeetingProviderValue) => void;
+  meetingUrl: string | null;
+  onMeetingUrlChange: (meetingUrl: string) => void;
 };
 
 type PhysicalVenueFieldsProps = {
@@ -266,6 +268,7 @@ function PhysicalVenueFields({
 }
 
 type OnlineMeetingFieldsProps = {
+  fields: EventFormFields;
   isPending: boolean;
   meetingProvider: MeetingProviderValue;
   onMeetingProviderChange: (meetingProvider: MeetingProviderValue) => void;
@@ -275,6 +278,7 @@ type OnlineMeetingFieldsProps = {
 
 /** オンライン会議設定（発行元 RadioGroup + 手入力 URL / Google Meet 案内）。ONLINE / HYBRID で表示。 */
 function OnlineMeetingFields({
+  fields,
   isPending,
   meetingProvider,
   onMeetingProviderChange,
@@ -326,14 +330,26 @@ function OnlineMeetingFields({
           <Input
             id="event-meetingUrl"
             type="url"
-            name="meetingUrl"
+            name={fields.meetingUrl.name}
             value={meetingUrl ?? ""}
             onChange={(event) => onMeetingUrlChange(event.target.value)}
             placeholder="https://..."
             required
             pattern="https://.*"
             disabled={isPending}
+            aria-invalid={fields.meetingUrl.errors ? true : undefined}
+            aria-describedby={
+              fields.meetingUrl.errors ? fields.meetingUrl.errorId : undefined
+            }
           />
+          {fields.meetingUrl.errors && (
+            <p
+              id={fields.meetingUrl.errorId}
+              className="mt-1 text-sm text-destructive"
+            >
+              {fields.meetingUrl.errors.join(", ")}
+            </p>
+          )}
         </div>
       )}
 
@@ -357,22 +373,17 @@ export function EventLocationSpaceSelector({
   spaceId,
   onLocationChange,
   onSpaceChange,
-  initialFormat = EVENT_FORMAT.OFFLINE,
-  initialMeetingProvider = MEETING_PROVIDER.MANUAL,
-  initialMeetingUrl = null,
+  format,
+  onFormatChange,
+  meetingProvider,
+  onMeetingProviderChange,
+  meetingUrl,
+  onMeetingUrlChange,
 }: EventLocationSpaceSelectorProps): ReactElement {
-  const [format, setFormat] = useState<EventFormatValue>(initialFormat);
-  const [meetingProvider, setMeetingProvider] = useState<MeetingProviderValue>(
-    initialMeetingProvider,
-  );
-  const [meetingUrl, setMeetingUrl] = useState<string | null>(
-    initialMeetingUrl,
-  );
-
   const handleFormatChange = (value: string) => {
     // ToggleGroup type="single" はアクティブ item の再クリックで "" (未選択) を
     // emit できるが、開催形態は必須項目のため無視する（既存選択を維持）。
-    if (isEventFormatValue(value)) setFormat(value);
+    if (isEventFormatValue(value)) onFormatChange(value);
   };
 
   const showPhysicalVenue =
@@ -386,12 +397,6 @@ export function EventLocationSpaceSelector({
         <CardTitle>会場</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* format / meetingProvider は Radix 駆動のため native input ではない。
-            FormData に載せるための hidden input を自前で用意する
-            (name は Task 13 が event-form-schema.ts へ追加する予定のフィールド名と一致させる)。 */}
-        <input type="hidden" name="format" value={format} />
-        <input type="hidden" name="meetingProvider" value={meetingProvider} />
-
         <div>
           <Label id="event-format-label">開催形態</Label>
           <ToggleGroup
@@ -438,11 +443,12 @@ export function EventLocationSpaceSelector({
 
         {showOnlineMeeting && (
           <OnlineMeetingFields
+            fields={fields}
             isPending={isPending}
             meetingProvider={meetingProvider}
-            onMeetingProviderChange={setMeetingProvider}
+            onMeetingProviderChange={onMeetingProviderChange}
             meetingUrl={meetingUrl}
-            onMeetingUrlChange={setMeetingUrl}
+            onMeetingUrlChange={onMeetingUrlChange}
           />
         )}
       </CardContent>

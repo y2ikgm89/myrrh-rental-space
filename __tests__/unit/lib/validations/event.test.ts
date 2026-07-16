@@ -276,4 +276,161 @@ describe("eventFormSchema (conform)", () => {
       expect(result.data.addressDetail).toBeNull();
     }
   });
+
+  // ---------------------------------------------------------------------
+  // format / meetingUrl / meetingProvider (Phase B.1 Task 13)
+  //
+  // ロジックは src/shared/domain/events/commands.ts の `eventInputSchema`
+  // (L106-132) と完全一致させる: OFFLINE は対象外、GOOGLE_MEET は write-back
+  // 待ちのため meetingUrl 未設定を許容、それ以外 (ONLINE/HYBRID + MANUAL) は
+  // meetingUrl 必須。
+  // ---------------------------------------------------------------------
+  describe("format / meetingUrl / meetingProvider", () => {
+    it("format/meetingProvider を省略すると OFFLINE/MANUAL がデフォルトになる", () => {
+      const result = eventFormSchema.safeParse(validInput);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.format).toBe("OFFLINE");
+        expect(result.data.meetingProvider).toBe("MANUAL");
+      }
+    });
+
+    it("ONLINE + MANUAL で meetingUrl 未指定はエラー (会議URL必須)", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "ONLINE",
+        meetingProvider: "MANUAL",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find(
+          (i) => i.path.join(".") === "meetingUrl",
+        );
+        expect(issue?.message).toBe(
+          "オンライン開催・ハイブリッド開催で手入力の場合は会議 URL が必須です",
+        );
+      }
+    });
+
+    it("ONLINE + MANUAL で meetingUrl が空文字でもエラーは1件だけ（形式エラーと二重にならない）", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "ONLINE",
+        meetingProvider: "MANUAL",
+        meetingUrl: "",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const meetingUrlIssues = result.error.issues.filter(
+          (i) => i.path.join(".") === "meetingUrl",
+        );
+        expect(meetingUrlIssues).toHaveLength(1);
+        expect(meetingUrlIssues[0]?.message).toBe(
+          "オンライン開催・ハイブリッド開催で手入力の場合は会議 URL が必須です",
+        );
+      }
+    });
+
+    it("ONLINE + MANUAL + 有効な https URL は成功する", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "ONLINE",
+        meetingProvider: "MANUAL",
+        meetingUrl: "https://meet.example.com/room",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.meetingUrl).toBe("https://meet.example.com/room");
+      }
+    });
+
+    it("ONLINE + GOOGLE_MEET は meetingUrl 未指定でも成功する (write-back 待ち)", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "ONLINE",
+        meetingProvider: "GOOGLE_MEET",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("HYBRID + MANUAL で meetingUrl 未指定はエラー", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "HYBRID",
+        meetingProvider: "MANUAL",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("HYBRID + GOOGLE_MEET は meetingUrl 未指定でも成功する", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "HYBRID",
+        meetingProvider: "GOOGLE_MEET",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("OFFLINE では meetingProvider に関わらず meetingUrl 未指定で成功する", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "OFFLINE",
+        meetingProvider: "MANUAL",
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("meetingUrl が https:// で始まらない場合エラー", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "ONLINE",
+        meetingProvider: "MANUAL",
+        meetingUrl: "http://meet.example.com/room",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find(
+          (i) => i.path.join(".") === "meetingUrl",
+        );
+        expect(issue?.message).toBe(
+          "会議 URL は https:// で始まる必要があります",
+        );
+      }
+    });
+
+    it("meetingUrl が500文字を超える場合エラー", () => {
+      const longUrl = `https://example.com/${"a".repeat(500)}`;
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "ONLINE",
+        meetingProvider: "MANUAL",
+        meetingUrl: longUrl,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issue = result.error.issues.find(
+          (i) => i.path.join(".") === "meetingUrl",
+        );
+        expect(issue?.message).toBe("会議 URL は500文字以内で入力してください");
+      }
+    });
+
+    it("無効な format 値を拒否する", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "INVALID_FORMAT",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("無効な meetingProvider 値を拒否する", () => {
+      const result = eventFormSchema.safeParse({
+        ...validInput,
+        format: "ONLINE",
+        meetingProvider: "INVALID_PROVIDER",
+        meetingUrl: "https://example.com",
+      });
+      expect(result.success).toBe(false);
+    });
+  });
 });
