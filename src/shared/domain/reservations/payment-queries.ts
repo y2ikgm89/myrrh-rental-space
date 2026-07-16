@@ -2,6 +2,7 @@ import "server-only";
 
 import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
 
 const PAYMENT_EMAIL_SELECT = {
@@ -210,26 +211,30 @@ export async function applyChargeRefundIdempotent(input: {
   } = input;
 
   if (latestRefund) {
-    // Refund child への idempotent write (PR #1126 Codex P2 対応: findUnique → create の
-    // 2 ステップは非 atomic で、同 stripeRefundId 用の並行 webhook 配信または
-    // command/webhook race で両方が create 分岐に入り `refunds_stripeRefundId_key` 一意
-    // 制約違反で 500 化する。upsert に置き換えて PostgreSQL の INSERT ... ON CONFLICT で
-    // atomic に処理する — 既存があれば no-op、なければ Stripe Dashboard 手動 refund の
-    // 想定で refundedByType=STRIPE_DASHBOARD として insert)。
-    // `Refund.amount` は app 単位 (JPY 円 / USD ドル) で保存する必要があるため、Stripe
-    // unit_amount からの逆変換が必須 (PR #1126 Codex P1 対応)。JPY (zero-decimal) では
-    // 偶然一致するが、USD/EUR 等では 100 倍で保存されて後続の refund 集計・残額判定が壊れる。
-    await prisma.refund.upsert({
-      where: { stripeRefundId: latestRefund.id },
-      create: {
-        reservationId,
-        amount: fromStripeUnitAmount(latestRefund.amount, currency),
-        stripeRefundId: latestRefund.id,
-        refundedByType: "STRIPE_DASHBOARD",
-      },
-      // 既存 = command 経由で先書きされているケース。上書きしない (書込主体・金額を保持)。
-      update: {},
-    });
+    // Refund child への真 atomic な idempotent write (PR #1146 Codex P2 追加対応):
+    // Prisma の `upsert({where, create, update: {}})` は SELECT+INSERT に compile される
+    // ため並行 create で `refunds_stripeRefundId_key` 一意制約違反が依然発生する
+    // (Prisma issue #20229)。 単一 `create` + `catch (P2002)` で idempotent success 化する
+    // (INSERT statement 自体は PostgreSQL レベルで atomic なので race window なし)。
+    // 既存 = command 経由で先書きされているケース。silent skip で書込主体・金額を保持する
+    // belt-and-suspenders 契約は不変。
+    //
+    // `Refund.amount` は app 単位 (JPY 円 / USD ドル) 保存 (PR #1126 P1 対応)。JPY
+    // (zero-decimal) では偶然一致するが、USD/EUR 等では 100 倍で保存されて後続の refund
+    // 集計・残額判定が壊れるため Stripe unit_amount からの逆変換が必須。
+    try {
+      await prisma.refund.create({
+        data: {
+          reservationId,
+          amount: fromStripeUnitAmount(latestRefund.amount, currency),
+          stripeRefundId: latestRefund.id,
+          refundedByType: "STRIPE_DASHBOARD",
+        },
+      });
+    } catch (error) {
+      if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) throw error;
+      // P2002 on stripeRefundId = 別経路 (command / 並行 webhook) が先着書込済 = idempotent success
+    }
   }
 
   const isFullRefund = amountRefunded >= chargeAmount;

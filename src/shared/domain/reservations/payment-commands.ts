@@ -12,6 +12,7 @@ import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { getAppUrl } from "@/shared/lib/constants";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
 import { type RefundedByType } from "@/shared/lib/validations/enums/helpers";
@@ -527,24 +528,36 @@ export async function refundReservationPaymentCommand(
       }
 
       // Belt-and-suspenders: webhook (charge.refunded) が先に同 stripeRefundId で
-      // Refund を書いていた場合、@unique(stripeRefundId) で二重 insert が reject される。
-      // Codex PR #1145 追加指摘 (P2): findUnique → create の 2 ステップは非 atomic で、
-      // webhook 側 upsert (`applyChargeRefundIdempotent`) と command 側 create の間で
-      // race window が残る。webhook が先に upsert すると command 側の create が
-      // `refunds_stripeRefundId_key` で abort、tx rollback で admin に「refund failed」と
-      // 報告されるが Stripe 側は既に処理済 = 会計 mismatch。upsert で atomic に処理する
-      // (update: {} で既存 = webhook 経由の書込を上書きしない belt-and-suspenders 契約は不変)。
-      await tx.refund.upsert({
-        where: { stripeRefundId: refund.id },
-        create: {
-          reservationId,
-          amount,
-          ...(reason ? { reason } : {}),
-          stripeRefundId: refund.id,
-          refundedByType: actorType,
-        },
-        update: {},
-      });
+      // Refund を書いていた場合の idempotent 処理。
+      //
+      // Codex PR #1146 追加指摘 (P2): Prisma の `upsert({where, create, update: {}})` は
+      // SELECT+INSERT に compile されるため並行 create で `refunds_stripeRefundId_key`
+      // 一意制約違反が依然発生する (Prisma issue #20229)。単一 `create` + `catch (P2002)` が
+      // 真 atomic pattern だが、interactive tx 内で query fail すると tx 全体が abort 状態
+      // になる (PostgreSQL の semantics)。そのため PostgreSQL SAVEPOINT で局所 rollback を
+      // 挟んで tx 全体を保護する。
+      //
+      // savepoint 名は tx 内で unique であれば良い (call site 単位で衝突しない)。
+      try {
+        await tx.$executeRaw`SAVEPOINT refund_create_reservation`;
+        await tx.refund.create({
+          data: {
+            reservationId,
+            amount,
+            ...(reason ? { reason } : {}),
+            stripeRefundId: refund.id,
+            refundedByType: actorType,
+          },
+        });
+        await tx.$executeRaw`RELEASE SAVEPOINT refund_create_reservation`;
+      } catch (error) {
+        if (!isPrismaUniqueConstraintError(error, "stripeRefundId"))
+          throw error;
+        // P2002 on stripeRefundId = webhook 経由が先着書込済 = idempotent success。
+        // savepoint に rollback して tx 全体は継続 (paymentStatus 遷移等の後続 query は
+        // 通常通り実行される)。書込主体・金額を保持する belt-and-suspenders 契約は不変。
+        await tx.$executeRaw`ROLLBACK TO SAVEPOINT refund_create_reservation`;
+      }
 
       // paymentStatus 遷移 (updateMany で status guard)
       await tx.reservation.updateMany({
