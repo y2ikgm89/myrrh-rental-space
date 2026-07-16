@@ -1,5 +1,6 @@
 import "server-only";
 
+import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { asPrismaInputJsonValue, parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
@@ -24,8 +25,12 @@ import {
 } from "@/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import {
+  EventFormat,
   EventScheduleMode,
   EventStatus,
+  MeetingProvider,
+  EVENT_FORMAT_VALUES,
+  MEETING_PROVIDER_VALUES,
 } from "@/shared/lib/validations/enums/prisma-types";
 import {
   gallerySchema,
@@ -74,9 +79,59 @@ export interface EventCommandInput {
   registrationOpen?: boolean;
   tickets?: readonly EventTicketInput[];
   slots: readonly SlotInput[];
+  /** 開催形態 (Phase B.1)。省略時は OFFLINE として扱われる。 */
+  format?: (typeof EventFormat)[keyof typeof EventFormat];
+  /**
+   * オンライン会議 URL。ONLINE/HYBRID 開催かつ meetingProvider が MANUAL の場合は
+   * 必須（`eventInputSchema` が検証）。format が OFFLINE に更新される場合、
+   * updateEventCommand が null に明示リセットする。
+   */
+  meetingUrl?: string | null;
+  /** 会議 URL の発行元。省略時は MANUAL として扱われる。 */
+  meetingProvider?: (typeof MeetingProvider)[keyof typeof MeetingProvider];
 }
 
 export type { SlotInput };
+
+/**
+ * format / meetingUrl / meetingProvider の入力検証 (Phase B.1)。
+ *
+ * イベント入力全体（タイトル・スロット等）は Server Action 層の
+ * `eventFormSchema`（event-form-schema.ts）が FormData 由来の transit を検証するため、
+ * 本 schema はオンライン開催関連の 3 フィールドのみを対象にした部分スキーマとして
+ * 定義する。ONLINE・HYBRID 開催で meetingProvider が MANUAL（手入力）の場合のみ
+ * meetingUrl（HTTPS URL・500文字以内）を必須にする。GOOGLE_MEET は GCal API 応答からの
+ * write-back 待ちのため、この時点では meetingUrl 未設定を許容する。
+ */
+export const eventInputSchema = z
+  .object({
+    format: z.enum(EVENT_FORMAT_VALUES).default(EventFormat.OFFLINE),
+    meetingUrl: z
+      .url({ error: "有効な会議 URL を入力してください" })
+      .startsWith("https://", {
+        error: "会議 URL は https:// で始まる必要があります",
+      })
+      .max(500, { error: "会議 URL は500文字以内で入力してください" })
+      .nullable()
+      .optional(),
+    meetingProvider: z
+      .enum(MEETING_PROVIDER_VALUES)
+      .default(MeetingProvider.MANUAL),
+  })
+  .refine(
+    (data) => {
+      if (data.format === EventFormat.OFFLINE) return true;
+      if (data.meetingProvider === MeetingProvider.GOOGLE_MEET) return true;
+      return typeof data.meetingUrl === "string" && data.meetingUrl.length > 0;
+    },
+    {
+      error:
+        "オンライン開催・ハイブリッド開催で手入力の場合は会議 URL が必須です",
+      path: ["meetingUrl"],
+    },
+  );
+
+export type EventMeetingInput = z.infer<typeof eventInputSchema>;
 
 /**
  * status と registrationOpen の不変条件を server-side で強制。
@@ -143,6 +198,24 @@ function assertEventScheduleInvariant(data: EventCommandInput): void {
   }
 }
 
+/**
+ * format/meetingUrl/meetingProvider の組合せ不変条件を server-side で強制。
+ * 検証ロジックは `eventInputSchema`（Zod）に一本化し、失敗時は DomainError に変換する
+ * （他の assert* 関数と同じ例外契約に揃える）。
+ */
+function assertEventMeetingUrlInvariant(data: EventCommandInput): void {
+  const result = eventInputSchema.safeParse({
+    format: data.format,
+    meetingUrl: data.meetingUrl,
+    meetingProvider: data.meetingProvider,
+  });
+  if (!result.success) {
+    const message =
+      result.error.issues[0]?.message ?? "オンライン開催の入力が不正です";
+    throw new DomainError(message, "VALIDATION");
+  }
+}
+
 function assertAllowedEventImageUrl(label: string, url: string | null): void {
   if (url === null) return;
   if (
@@ -174,6 +247,7 @@ function assertAllowedEventImageUrls(params: {
 
 export async function createEventCommand(data: EventCommandInput) {
   assertEventScheduleInvariant(data);
+  assertEventMeetingUrlInvariant(data);
   assertAllowedEventImageUrls(data);
   assertAllowedManagedImageSourcesInJson(
     "イベント本文画像",
@@ -229,6 +303,9 @@ export async function createEventCommand(data: EventCommandInput) {
         spaceId: data.spaceId ?? null,
         status: data.status,
         scheduleMode: data.scheduleMode,
+        format: data.format ?? EventFormat.OFFLINE,
+        meetingUrl: data.meetingUrl ?? null,
+        meetingProvider: data.meetingProvider ?? MeetingProvider.MANUAL,
         registrationOpen: normalizeRegistrationOpen(
           data.status,
           data.registrationOpen,
@@ -258,6 +335,7 @@ export async function createEventCommand(data: EventCommandInput) {
 
 export async function updateEventCommand(id: string, data: EventCommandInput) {
   assertEventScheduleInvariant(data);
+  assertEventMeetingUrlInvariant(data);
   assertAllowedEventImageUrls(data);
   assertAllowedManagedImageSourcesInJson(
     "イベント本文画像",
@@ -288,6 +366,15 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
   const wasPublished =
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
+
+  // format が OFFLINE に変更される場合、meetingUrl/meetingProvider を明示リセットする
+  // (validation ではなく domain 側の書込み内容の正規化。UI が消し忘れた残骸を防ぐ)
+  const resolvedFormat = data.format ?? EventFormat.OFFLINE;
+  const isOfflineUpdate = resolvedFormat === EventFormat.OFFLINE;
+  const resolvedMeetingUrl = isOfflineUpdate ? null : (data.meetingUrl ?? null);
+  const resolvedMeetingProvider = isOfflineUpdate
+    ? MeetingProvider.MANUAL
+    : (data.meetingProvider ?? MeetingProvider.MANUAL);
 
   await prisma.$transaction(async (tx) => {
     // Space ↔ Reservation cross-table overlap check (Priority-10 audit #4)。
@@ -342,6 +429,9 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         spaceId: data.spaceId ?? null,
         status: data.status,
         scheduleMode: data.scheduleMode,
+        format: resolvedFormat,
+        meetingUrl: resolvedMeetingUrl,
+        meetingProvider: resolvedMeetingProvider,
         registrationOpen: normalizeRegistrationOpen(
           data.status,
           data.registrationOpen,
