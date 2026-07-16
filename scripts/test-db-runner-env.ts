@@ -10,6 +10,7 @@ export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/domain/coupons/coupon-status-filter.test.ts",
   "__tests__/integration/domain/events/registration-overbooking.test.ts",
   "__tests__/integration/domain/events/cancel-by-token-roundtrip.test.ts",
+  "__tests__/integration/domain/events/online-format.test.ts",
   "__tests__/integration/actions/public/event-waitlist-register.test.ts",
   "__tests__/integration/actions/public/event-cancel-promotes-waitlist.test.ts",
   "__tests__/integration/domain/blocked-dates/scope-check-constraint.test.ts",
