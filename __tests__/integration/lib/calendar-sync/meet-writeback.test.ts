@@ -434,15 +434,16 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
       }),
     );
 
-    // prisma.event.update（writeBackMeetingUrl の実装）を throw させる
-    const originalUpdate = prisma.event.update;
+    // prisma.event.updateMany（writeBackMeetingUrl の実装、Codex P1 fix で
+    // first-write-wins のため updateMany に変更済）を throw させる
+    const originalUpdateMany = prisma.event.updateMany;
     let writeBackAttempted = false;
-    prisma.event.update = mock(async (params: any) => {
+    prisma.event.updateMany = mock(async (params: any) => {
       if (params.data?.meetingUrl) {
         writeBackAttempted = true;
         throw new Error("Database connection timeout during write-back");
       }
-      return originalUpdate.call(prisma.event, params);
+      return originalUpdateMany.call(prisma.event, params);
     }) as any;
 
     try {
@@ -468,8 +469,36 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
       // write-back は試みられたことを確認
       expect(writeBackAttempted).toBe(true);
     } finally {
-      // restore original update
-      prisma.event.update = originalUpdate;
+      // restore original updateMany
+      prisma.event.updateMany = originalUpdateMany;
     }
+  });
+
+  test("writeBackMeetingUrl は first-write-wins: 既存 meetingUrl があれば上書きしない (Codex PR #1149 P1)", async () => {
+    const { eventId } = await createEventWithSlot({
+      format: EVENT_FORMAT.ONLINE,
+      meetingProvider: MEETING_PROVIDER.GOOGLE_MEET,
+      meetingUrl: "https://meet.google.com/first-slot-original",
+    });
+
+    // GCal イベント作成成功、新しい Meet URL を返す
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({
+        success: true,
+        eventId: "gcal-second-slot",
+        event: { hangoutLink: "https://meet.google.com/second-slot-new" },
+      }),
+    );
+
+    const contexts = await getEventSlotsForCalendarSync(eventId);
+    await syncEventToCalendar(contexts[0]!);
+
+    const updatedEvent = await prisma.event.findUniqueOrThrow({
+      where: { id: eventId },
+    });
+    // 既存 URL のまま、新しい URL で上書きされない (last-write-wins bug を防止)
+    expect(updatedEvent.meetingUrl).toBe(
+      "https://meet.google.com/first-slot-original",
+    );
   });
 });

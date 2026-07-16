@@ -530,6 +530,54 @@ describe("createEventCommand", () => {
       expect(mockEventCreate).not.toHaveBeenCalled();
     });
   });
+
+  describe("Codex PR #1149 fixes", () => {
+    test("P2: OFFLINE + GOOGLE_MEET (stale hidden state) → normalize to MANUAL + null on create", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        format: "OFFLINE",
+        meetingProvider: "GOOGLE_MEET",
+        meetingUrl: "https://meet.google.com/stale",
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            format: "OFFLINE",
+            meetingProvider: "MANUAL",
+            meetingUrl: null,
+          }),
+        }),
+      );
+    });
+
+    test("P1: TIMED_ENTRY + GOOGLE_MEET → DomainError (assertOnlineScheduleCompatibility)", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          scheduleMode: EventScheduleMode.TIMED_ENTRY,
+          slots: [
+            {
+              startAt: new Date("2026-08-01T10:00:00Z"),
+              endAt: new Date("2026-08-01T11:00:00Z"),
+              capacity: 10,
+            },
+            {
+              startAt: new Date("2026-08-01T13:00:00Z"),
+              endAt: new Date("2026-08-01T14:00:00Z"),
+              capacity: 10,
+            },
+          ],
+          format: "ONLINE",
+          meetingProvider: "GOOGLE_MEET",
+        }),
+      ).rejects.toThrow(
+        /時間枠制.*Google Meet.*自動発行はサポートしていません/,
+      );
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("eventInputSchema (Phase B.1)", () => {

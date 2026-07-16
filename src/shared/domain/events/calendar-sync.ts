@@ -33,12 +33,25 @@ export async function clearEventGoogleCalendarEventId(params: {
   });
 }
 
+/**
+ * GCal API 応答で発行された Meet URL を Event.meetingUrl に書き戻す。
+ *
+ * **first-write-wins semantics (Codex PR #1149 P1 fix)**: TIMED_ENTRY イベントは
+ * スロット単位で GCal event が作成され、各スロットが独立した Meet URL を返す。
+ * Event.meetingUrl は単一 field のため、単純 update すると最後に完了した非同期同期の
+ * URL で上書きされ、他スロット登録者のメール/mypage/ICS で誤 URL が表示される。
+ * `updateMany` + `meetingUrl: null` の WHERE で既存 URL が未設定のときのみ書き込む。
+ *
+ * TIMED_ENTRY + GOOGLE_MEET の禁止は `assertOnlineScheduleCompatibility` で create/update
+ * 双方に validation を敷いているが、既存データや過去の migration 経路への防衛として
+ * 本 helper 側でも first-write-wins を保証する（多重防御）。
+ */
 export async function writeBackMeetingUrl(params: {
   eventId: string;
   meetingUrl: string;
 }): Promise<void> {
-  await prisma.event.update({
-    where: { id: params.eventId },
+  await prisma.event.updateMany({
+    where: { id: params.eventId, meetingUrl: null },
     data: { meetingUrl: params.meetingUrl },
   });
 }
