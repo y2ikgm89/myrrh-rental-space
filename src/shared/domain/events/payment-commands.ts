@@ -14,6 +14,7 @@ import {
   fromStripeUnitAmount,
   toStripeUnitAmount,
 } from "@/shared/lib/stripe-shared";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { getAppUrl } from "@/shared/lib/constants";
 import { type RefundedByType } from "@/shared/lib/validations/enums/helpers";
@@ -793,21 +794,26 @@ export async function refundEventRegistrationPaymentCommand(
         );
       }
 
-      // Belt-and-suspenders: webhook (charge.refunded) が先に同 stripeRefundId で
-      // Refund を書いていた場合、@unique(stripeRefundId) で二重 insert が reject される。
-      // Codex PR #1145 追加指摘 (P2): Reservation 側と同型の race を排除するため upsert 化
-      // (`update: {}` で既存 = webhook 経由の書込を上書きしない belt-and-suspenders 契約は不変)。
-      await tx.refund.upsert({
-        where: { stripeRefundId: refund.id },
-        create: {
-          eventRegistrationId: registrationId,
-          amount,
-          ...(reason ? { reason } : {}),
-          stripeRefundId: refund.id,
-          refundedByType: actorType,
-        },
-        update: {},
-      });
+      // Belt-and-suspenders: Reservation 側 (`refundReservationPaymentCommand`) と同型。
+      // Codex PR #1146 追加指摘 (P2、Prisma upsert issue #20229): tx 内で単一 create +
+      // savepoint + catch(P2002) の真 atomic pattern に統一 (詳細は Reservation 側 comment 参照)。
+      try {
+        await tx.$executeRaw`SAVEPOINT refund_create_event`;
+        await tx.refund.create({
+          data: {
+            eventRegistrationId: registrationId,
+            amount,
+            ...(reason ? { reason } : {}),
+            stripeRefundId: refund.id,
+            refundedByType: actorType,
+          },
+        });
+        await tx.$executeRaw`RELEASE SAVEPOINT refund_create_event`;
+      } catch (error) {
+        if (!isPrismaUniqueConstraintError(error, "stripeRefundId"))
+          throw error;
+        await tx.$executeRaw`ROLLBACK TO SAVEPOINT refund_create_event`;
+      }
 
       // paymentStatus 遷移 (updateMany で status guard)
       await tx.eventRegistration.updateMany({
@@ -905,18 +911,21 @@ export async function applyEventChargeRefundIdempotent(input: {
   } = input;
 
   if (latestRefund) {
-    // Reservation 側と同型: upsert で atomic 化 (PR #1126 P2 対応、両経路 bundle)。
-    // Stripe unit_amount からアプリ単位への逆変換 (PR #1130 P2、PR #1126 P1 と同型) も継続。
-    await prisma.refund.upsert({
-      where: { stripeRefundId: latestRefund.id },
-      create: {
-        eventRegistrationId: registrationId,
-        amount: fromStripeUnitAmount(latestRefund.amount, currency),
-        stripeRefundId: latestRefund.id,
-        refundedByType: "STRIPE_DASHBOARD",
-      },
-      update: {},
-    });
+    // Reservation 側と同型: 単一 create + catch(P2002) で真 atomic idempotent (PR #1146
+    // Codex P2 追加対応、Prisma upsert issue #20229 回避)。Stripe unit_amount からアプリ
+    // 単位への逆変換 (PR #1130 P2、PR #1126 P1 と同型) も継続。
+    try {
+      await prisma.refund.create({
+        data: {
+          eventRegistrationId: registrationId,
+          amount: fromStripeUnitAmount(latestRefund.amount, currency),
+          stripeRefundId: latestRefund.id,
+          refundedByType: "STRIPE_DASHBOARD",
+        },
+      });
+    } catch (error) {
+      if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) throw error;
+    }
   }
 
   const isFullRefund = amountRefunded >= chargeAmount;
