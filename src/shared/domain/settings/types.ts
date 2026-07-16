@@ -117,14 +117,6 @@ export type SettingsData = {
   googleCalendarLastTestedAt: Date | null;
   googleCalendarConnectionStatus: string | null;
   googleBusinessProfileEnabled: boolean;
-  /**
-   * @deprecated `Settings.googleCalendarMeetEnabled` 列は Phase B.1 task 1 の migration
-   * で DROP 済み（Meet 発行は per-event `Event.meetingProvider` に置換）。`toSettingsData`
-   * は常に `false` を返す write-ignored な残存 field。参照元
-   * （`GoogleCalendarSection.tsx` / `google-calendar.ts` action /
-   * `form-schemas-security-integrations.ts`）の除去は Phase B.1 task 11（PR 2）で行う。
-   */
-  googleCalendarMeetEnabled: boolean;
   googleCalendarReminderMinutes: number | null;
   icalAttachmentEnabled: boolean;
   addToCalendarLinksEnabled: boolean;

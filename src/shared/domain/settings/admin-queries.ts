@@ -162,9 +162,6 @@ function toSettingsData(
     googleCalendarLastTestedAt: settings.googleCalendarLastTestedAt,
     googleCalendarConnectionStatus: settings.googleCalendarConnectionStatus,
     googleBusinessProfileEnabled: settings.googleBusinessProfileEnabled,
-    // Settings.googleCalendarMeetEnabled 列は DROP 済み（SettingsData の @deprecated
-    // コメント参照）。読取元を持たないため常に false（write-ignored、Task 11 で除去）。
-    googleCalendarMeetEnabled: false,
     googleCalendarReminderMinutes: settings.googleCalendarReminderMinutes,
     icalAttachmentEnabled: settings.icalAttachmentEnabled,
     addToCalendarLinksEnabled: settings.addToCalendarLinksEnabled,

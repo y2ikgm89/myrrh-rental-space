@@ -169,7 +169,6 @@ export const googleCalendarFormSchema = z.object({
   serviceAccountJson: z.string().optional(),
   icalAttachmentEnabled: switchBoolean(),
   addToCalendarLinksEnabled: switchBoolean(),
-  googleCalendarMeetEnabled: switchBoolean(),
   /**
    * フォーム上では null=既定 / 0=無効 / N=N分前
    * `<input type="number">` の空欄は conform で undefined になるため `.nullish()`

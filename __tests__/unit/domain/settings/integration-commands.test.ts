@@ -364,7 +364,6 @@ describe("updateGoogleCalendarSettings", () => {
         serviceAccountJson: null,
         icalAttachmentEnabled: false,
         addToCalendarLinksEnabled: true,
-        googleCalendarMeetEnabled: false,
         googleCalendarReminderMinutes: null,
       });
 
@@ -383,7 +382,6 @@ describe("updateGoogleCalendarSettings", () => {
         serviceAccountJson: VALID_GOOGLE_SERVICE_ACCOUNT_JSON,
         icalAttachmentEnabled: true,
         addToCalendarLinksEnabled: true,
-        googleCalendarMeetEnabled: false,
         googleCalendarReminderMinutes: null,
       });
 
@@ -409,7 +407,6 @@ describe("updateGoogleCalendarSettings", () => {
         serviceAccountJson: null,
         icalAttachmentEnabled: false,
         addToCalendarLinksEnabled: false,
-        googleCalendarMeetEnabled: false,
         googleCalendarReminderMinutes: null,
       });
 
@@ -424,7 +421,6 @@ describe("updateGoogleCalendarSettings", () => {
         serviceAccountJson: null,
         icalAttachmentEnabled: false,
         addToCalendarLinksEnabled: false,
-        googleCalendarMeetEnabled: false,
         googleCalendarReminderMinutes: null,
       });
 
@@ -444,7 +440,6 @@ describe("updateGoogleCalendarSettings", () => {
         serviceAccountJson: null,
         icalAttachmentEnabled: false,
         addToCalendarLinksEnabled: false,
-        googleCalendarMeetEnabled: false,
         googleCalendarReminderMinutes: null,
       });
       expect(result).toBeUndefined();
@@ -460,7 +455,6 @@ describe("updateGoogleCalendarSettings", () => {
           serviceAccountJson: INVALID_SERVICE_ACCOUNT_JSON,
           icalAttachmentEnabled: false,
           addToCalendarLinksEnabled: false,
-          googleCalendarMeetEnabled: false,
           googleCalendarReminderMinutes: null,
         }),
       ).rejects.toMatchObject({
@@ -477,7 +471,6 @@ describe("updateGoogleCalendarSettings", () => {
           serviceAccountJson: "not-a-json",
           icalAttachmentEnabled: false,
           addToCalendarLinksEnabled: false,
-          googleCalendarMeetEnabled: false,
           googleCalendarReminderMinutes: null,
         }),
       ).rejects.toMatchObject({
@@ -493,7 +486,6 @@ describe("updateGoogleCalendarSettings", () => {
           serviceAccountJson: INVALID_SERVICE_ACCOUNT_JSON,
           icalAttachmentEnabled: false,
           addToCalendarLinksEnabled: false,
-          googleCalendarMeetEnabled: false,
           googleCalendarReminderMinutes: null,
         }),
       ).rejects.toThrow(DomainError);
