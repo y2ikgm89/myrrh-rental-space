@@ -162,7 +162,9 @@ function toSettingsData(
     googleCalendarLastTestedAt: settings.googleCalendarLastTestedAt,
     googleCalendarConnectionStatus: settings.googleCalendarConnectionStatus,
     googleBusinessProfileEnabled: settings.googleBusinessProfileEnabled,
-    googleCalendarMeetEnabled: settings.googleCalendarMeetEnabled,
+    // Settings.googleCalendarMeetEnabled 列は DROP 済み（SettingsData の @deprecated
+    // コメント参照）。読取元を持たないため常に false（write-ignored、Task 11 で除去）。
+    googleCalendarMeetEnabled: false,
     googleCalendarReminderMinutes: settings.googleCalendarReminderMinutes,
     icalAttachmentEnabled: settings.icalAttachmentEnabled,
     addToCalendarLinksEnabled: settings.addToCalendarLinksEnabled,
@@ -292,7 +294,6 @@ export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSetting
       googleCalendarId: true,
       googleCalendarConnectionStatus: true,
       googleCalendarLastTestedAt: true,
-      googleCalendarMeetEnabled: true,
       googleCalendarReminderMinutes: true,
     },
   });
@@ -304,7 +305,6 @@ export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSetting
       settings?.googleCalendarConnectionStatus ?? null,
     ),
     lastTestedAt: settings?.googleCalendarLastTestedAt ?? null,
-    meetEnabled: settings?.googleCalendarMeetEnabled ?? false,
     reminderMinutes: settings?.googleCalendarReminderMinutes ?? null,
   };
 }

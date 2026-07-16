@@ -28,6 +28,14 @@ export type GoogleCalendarSettingsInput = {
   serviceAccountJson: string | null;
   icalAttachmentEnabled: boolean;
   addToCalendarLinksEnabled: boolean;
+  /**
+   * @deprecated `Settings.googleCalendarMeetEnabled` は Phase B.1 task 1 の migration で
+   * DROP 済み（Meet 発行は per-event `Event.meetingProvider` に置換）。この field は
+   * `updateGoogleCalendarSettings` の書込先を持たない（write-ignored）。呼出元
+   * （`google-calendar.ts` action / `googleCalendarFormSchema`）の除去は Phase B.1
+   * task 11（PR 2）で行う。型からの削除も同 task で行う（先行削除すると action 側の
+   * object literal が excess-property エラーで type-crash するため単独では削除しない）。
+   */
   googleCalendarMeetEnabled: boolean;
   /** null = Google Calendar 既定を使う, 0 = 通知なし, N = N分前にメール通知 */
   googleCalendarReminderMinutes: number | null;
@@ -159,7 +167,8 @@ export async function updateGoogleCalendarSettings(
     googleCalendarEnabled: data.googleCalendarEnabled,
     icalAttachmentEnabled: data.icalAttachmentEnabled,
     addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
-    googleCalendarMeetEnabled: data.googleCalendarMeetEnabled,
+    // data.googleCalendarMeetEnabled は書込先列が DROP 済みのため意図的に無視する
+    // （GoogleCalendarSettingsInput 側の @deprecated コメント参照）。
     googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
   };
 
