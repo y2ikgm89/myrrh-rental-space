@@ -25,6 +25,12 @@ const publicEventSelect = {
   status: true,
   scheduleMode: true,
   registrationOpen: true,
+  // Phase B.1: 開催形態 (schema.org eventAttendanceMode 用) + オンライン会議情報。
+  // meetingUrl は SELECT のみ — 公開 JSX での直接 render は禁止（会員向け画面
+  // 限定の business rule。architecture-boundaries gate は Task 19 で追加）。
+  format: true,
+  meetingUrl: true,
+  meetingProvider: true,
   location: { select: { id: true, name: true, address: true } },
   space: { select: { id: true, name: true, slug: true } },
   slots: {

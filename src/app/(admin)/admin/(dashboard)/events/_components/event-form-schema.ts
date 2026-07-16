@@ -1,8 +1,14 @@
 import { z } from "zod";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
+  EventFormat,
   EventScheduleMode,
   EventStatus,
+  MeetingProvider,
+  EVENT_FORMAT_VALUES,
+  MEETING_PROVIDER_VALUES,
+  type EventFormatValue,
+  type MeetingProviderValue,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
@@ -20,10 +26,15 @@ import { gallerySchema } from "@/shared/lib/validations/gallery";
  * - `slots`  は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
  *   （startAt/endAt は datetime-local 文字列 → parseDateTimeLocalAsJst で Date 変換）
  * - sentinel `EVENT_FORM_NONE_VALUE` で `locationId` / `spaceId` の「外部会場」「会場全体」を表現、preprocess で null 化
+ * - `format` / `meetingProvider` は ToggleGroup / RadioGroup 由来の hidden input で常時送信、
+ *   `meetingUrl` は条件付きで表示される url input（空文字は preprocess で null 化）
  * - cross-field refine:
  *   - SINGLE_OCCURRENCE はスロット 1 件のみ
  *   - TIMED_ENTRY はスロット 2 件以上
  *   - registrationDeadline ≤ 最初スロット開始時刻
+ *   - format が ONLINE/HYBRID かつ meetingProvider が MANUAL の場合は meetingUrl 必須
+ *     （`src/shared/domain/events/commands.ts` の `eventInputSchema` と同一ロジック。
+ *     server-side の domain 層でも同じ invariant を二重に強制している）
  */
 
 /** Radix Select の `value=""` 予約を回避する「未選択」sentinel（会場 / スペース共通）。 */
@@ -168,6 +179,30 @@ const eventFormBaseSchema = z.object({
   ),
   locationId: nullableUuidWithSentinel(EVENT_FORM_NONE_VALUE),
   spaceId: nullableUuidWithSentinel(EVENT_FORM_NONE_VALUE),
+  /** 開催形態 (Phase B.1)。ToggleGroup 由来の hidden input で常時送信される。 */
+  format: z
+    .enum(EVENT_FORMAT_VALUES, { error: "無効な開催形態です" })
+    .default(EventFormat.OFFLINE),
+  /**
+   * オンライン会議 URL。ONLINE/HYBRID 開催かつ meetingProvider が MANUAL の場合のみ
+   * `refineEvent` が必須化する。空文字は preprocess で null 化してから `.url()` の
+   * 形式チェックにかけるため、未入力時は形式エラーと必須エラーが二重に出ない。
+   */
+  meetingUrl: z.preprocess(
+    emptyOrNullToNull,
+    z
+      .url({ error: "有効な会議 URL を入力してください" })
+      .startsWith("https://", {
+        error: "会議 URL は https:// で始まる必要があります",
+      })
+      .max(500, { error: "会議 URL は500文字以内で入力してください" })
+      .nullable()
+      .optional(),
+  ),
+  /** オンライン会議の発行元。RadioGroup 由来の hidden input で常時送信される。 */
+  meetingProvider: z
+    .enum(MEETING_PROVIDER_VALUES, { error: "無効な発行元です" })
+    .default(MeetingProvider.MANUAL),
   status: z.enum(EventStatus, { error: "無効なステータスです" }),
   scheduleMode: z.enum(EventScheduleMode, {
     error: "無効な開催方式です",
@@ -189,6 +224,9 @@ function refineEvent(
     scheduleMode: keyof typeof EventScheduleMode;
     slots: Array<{ startAt: Date }>;
     registrationDeadline?: string | null | undefined;
+    format: EventFormatValue;
+    meetingUrl?: string | null | undefined;
+    meetingProvider: MeetingProviderValue;
   },
   ctx: z.RefinementCtx,
 ): void {
@@ -229,6 +267,25 @@ function refineEvent(
         path: ["registrationDeadline"],
       });
     }
+  }
+
+  // オンライン開催関連の必須 URL チェック。ロジックは commands.ts の
+  // `eventInputSchema`（domain 層の同一 invariant、二重防御として維持）と
+  // 完全一致させる: OFFLINE は対象外、GOOGLE_MEET は GCal write-back 待ちのため
+  // meetingUrl 未設定を許容、それ以外 (ONLINE/HYBRID + MANUAL) は必須。
+  const meetingUrlRequired =
+    data.format !== EventFormat.OFFLINE &&
+    data.meetingProvider !== MeetingProvider.GOOGLE_MEET;
+  if (
+    meetingUrlRequired &&
+    !(typeof data.meetingUrl === "string" && data.meetingUrl.length > 0)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message:
+        "オンライン開催・ハイブリッド開催で手入力の場合は会議 URL が必須です",
+      path: ["meetingUrl"],
+    });
   }
 }
 

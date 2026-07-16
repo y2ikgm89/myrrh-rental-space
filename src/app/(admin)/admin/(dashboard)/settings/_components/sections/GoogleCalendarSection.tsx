@@ -79,7 +79,6 @@ export function GoogleCalendarSection({
       serviceAccountJson: "",
       icalAttachmentEnabled: settings.icalAttachmentEnabled ? "on" : "",
       addToCalendarLinksEnabled: settings.addToCalendarLinksEnabled ? "on" : "",
-      googleCalendarMeetEnabled: settings.googleCalendarMeetEnabled ? "on" : "",
       googleCalendarReminderMinutes:
         settings.googleCalendarReminderMinutes === null
           ? ""
@@ -92,7 +91,6 @@ export function GoogleCalendarSection({
   const addToCalendarControl = useInputControl(
     fields.addToCalendarLinksEnabled,
   );
-  const meetEnabledControl = useInputControl(fields.googleCalendarMeetEnabled);
   const reminderControl = useInputControl(fields.googleCalendarReminderMinutes);
   const serviceAccountControl = useInputControl(fields.serviceAccountJson);
   const calendarIdControl = useInputControl(fields.googleCalendarId);
@@ -100,7 +98,6 @@ export function GoogleCalendarSection({
   const calendarEnabled = calendarEnabledControl.value === "on";
   const icalAttachment = icalAttachmentControl.value === "on";
   const addToCalendar = addToCalendarControl.value === "on";
-  const meetEnabled = meetEnabledControl.value === "on";
   const reminderRaw = reminderControl.value ?? "";
   const calendarId = calendarIdControl.value ?? "";
   const serviceAccountJson = serviceAccountControl.value ?? "";
@@ -206,11 +203,6 @@ export function GoogleCalendarSection({
         type="hidden"
         name={fields.addToCalendarLinksEnabled.name}
         value={addToCalendarControl.value ?? ""}
-      />
-      <input
-        type="hidden"
-        name={fields.googleCalendarMeetEnabled.name}
-        value={meetEnabledControl.value ?? ""}
       />
 
       <Card>
@@ -434,31 +426,11 @@ export function GoogleCalendarSection({
             )}
           </div>
 
-          {/* カレンダーイベント設定（Meet + リマインダー） */}
+          {/* カレンダーイベント設定（リマインダー） */}
           <fieldset className="space-y-4 rounded-lg border p-4">
             <legend className="px-1 text-sm font-medium">
               カレンダーイベント設定
             </legend>
-
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <Label htmlFor={fields.googleCalendarMeetEnabled.id}>
-                  Google Meet を自動生成
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  予約イベントに Google Meet
-                  ビデオ会議リンクを自動追加します（OAuth 連携必須）
-                </p>
-              </div>
-              <Switch
-                id={fields.googleCalendarMeetEnabled.id}
-                checked={meetEnabled}
-                onCheckedChange={(checked) =>
-                  meetEnabledControl.change(checked ? "on" : "")
-                }
-                disabled={isPending}
-              />
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor={fields.googleCalendarReminderMinutes.id}>

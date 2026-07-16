@@ -17,8 +17,12 @@ import {
 } from "@/admin/components/ui";
 import { createEventAction, updateEventAction } from "@/admin/actions/event";
 import {
+  EventFormat,
   EventScheduleMode,
   EventStatus,
+  MeetingProvider,
+  type EventFormatValue,
+  type MeetingProviderValue,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { formatDateTimeLocalInJst } from "@/shared/lib/date-format";
@@ -142,6 +146,18 @@ export function EventForm({
     event?.locationId ?? null,
   );
   const [spaceId, setSpaceId] = useState<string | null>(event?.spaceId ?? null);
+  // 開催形態 / オンライン会議設定 (Phase B.1)。EventLocationSpaceSelector 内の
+  // ToggleGroup/RadioGroup が条件付きレンダリングで unmount されても入力値が
+  // 消えないよう、locationId/spaceId と同じくここ (EventForm) にリフトして保持する。
+  const [format, setFormat] = useState<EventFormatValue>(
+    event?.format ?? EventFormat.OFFLINE,
+  );
+  const [meetingProvider, setMeetingProvider] = useState<MeetingProviderValue>(
+    event?.meetingProvider ?? MeetingProvider.MANUAL,
+  );
+  const [meetingUrl, setMeetingUrl] = useState<string | null>(
+    event?.meetingUrl ?? null,
+  );
   const [tickets, setTickets] = useState<EventTicketInput[]>(() => {
     if (event && event.tickets.length > 0) {
       return event.tickets.map((t) => ({
@@ -235,9 +251,14 @@ export function EventForm({
       fields.registrationOpen,
     ].filter((f) => fieldHasErrors(f.errors)).length,
     tickets: [fields.tickets].filter((f) => fieldHasErrors(f.errors)).length,
-    location: [fields.locationId, fields.spaceId, fields.addressDetail].filter(
-      (f) => fieldHasErrors(f.errors),
-    ).length,
+    location: [
+      fields.locationId,
+      fields.spaceId,
+      fields.addressDetail,
+      fields.format,
+      fields.meetingUrl,
+      fields.meetingProvider,
+    ].filter((f) => fieldHasErrors(f.errors)).length,
     seo: [
       fields.ogpTitle,
       fields.ogpDescription,
@@ -283,6 +304,12 @@ export function EventForm({
         value={locationId ?? ""}
       />
       <input type="hidden" name={fields.spaceId.name} value={spaceId ?? ""} />
+      <input type="hidden" name={fields.format.name} value={format} />
+      <input
+        type="hidden"
+        name={fields.meetingProvider.name}
+        value={meetingProvider}
+      />
       <input
         type="hidden"
         name={fields.slots.name}
@@ -430,6 +457,12 @@ export function EventForm({
                 }
               }
             }}
+            format={format}
+            onFormatChange={setFormat}
+            meetingProvider={meetingProvider}
+            onMeetingProviderChange={setMeetingProvider}
+            meetingUrl={meetingUrl}
+            onMeetingUrlChange={setMeetingUrl}
           />
         </TabsContent>
 

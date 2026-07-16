@@ -28,7 +28,6 @@ export type GoogleCalendarSettingsInput = {
   serviceAccountJson: string | null;
   icalAttachmentEnabled: boolean;
   addToCalendarLinksEnabled: boolean;
-  googleCalendarMeetEnabled: boolean;
   /** null = Google Calendar 既定を使う, 0 = 通知なし, N = N分前にメール通知 */
   googleCalendarReminderMinutes: number | null;
 };
@@ -159,7 +158,6 @@ export async function updateGoogleCalendarSettings(
     googleCalendarEnabled: data.googleCalendarEnabled,
     icalAttachmentEnabled: data.icalAttachmentEnabled,
     addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
-    googleCalendarMeetEnabled: data.googleCalendarMeetEnabled,
     googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
   };
 

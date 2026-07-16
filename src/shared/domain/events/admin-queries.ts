@@ -57,6 +57,12 @@ const eventDetailSelect = {
   locationId: true,
   spaceId: true,
   updatedAt: true,
+  // Phase B.1: 開催形態 + オンライン会議情報。admin は全 field 参照可能なため
+  // 3 つとも detail select に追加する（一覧テーブルには不要なため eventListSelect
+  // には追加しない — EventForm 編集画面 (getEventById 経由) が唯一の消費者）。
+  format: true,
+  meetingUrl: true,
+  meetingProvider: true,
   slots: {
     select: {
       id: true,

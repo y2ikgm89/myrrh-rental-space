@@ -9,7 +9,13 @@
 
 import "server-only";
 
-import { normalizeError } from "@/shared/lib/errors/server";
+import type { calendar_v3 } from "googleapis";
+import {
+  normalizeError,
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 import {
   createCalendarEvent,
   updateCalendarEvent,
@@ -21,8 +27,10 @@ import {
   clearEventGoogleCalendarEventId,
   markEventCalendarSyncError,
   saveEventGoogleCalendarEventId,
+  writeBackMeetingUrl,
 } from "@/shared/domain/events/calendar-sync";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { MEETING_PROVIDER } from "@/shared/lib/validations/enums/prisma-types";
 import { OUTBOUND_EVENT_MARKER } from "./loop-prevention";
 import type { EventSyncData, SyncResult } from "./types";
 
@@ -55,6 +63,25 @@ function formatEventCalendarEvent(data: EventSyncData): CalendarEventParams {
   });
 }
 
+/**
+ * `createCalendarEvent` の生レスポンスから Meet URL を抽出する。
+ *
+ * `hangoutLink`（deprecated だが依然として最も確実に埋まるフィールド）を優先し、
+ * 無ければ `conferenceData.entryPoints` から video entry point の `uri` を探す。
+ * どちらも無ければ null（Meet 発行が API 側で完了していない状態）。
+ */
+function extractMeetingUrl(
+  event: calendar_v3.Schema$Event | undefined,
+): string | null {
+  return (
+    event?.hangoutLink ??
+    event?.conferenceData?.entryPoints?.find(
+      (ep) => ep.entryPointType === "video",
+    )?.uri ??
+    null
+  );
+}
+
 // =============================================================================
 // Sync Operations
 // =============================================================================
@@ -62,7 +89,11 @@ function formatEventCalendarEvent(data: EventSyncData): CalendarEventParams {
 /**
  * イベント作成時のカレンダー同期
  *
- * バックグラウンドで実行され、失敗してもイベント自体は成功とする
+ * バックグラウンドで実行され、失敗してもイベント自体は成功とする。
+ *
+ * `data.meetingProvider === "GOOGLE_MEET"` のときのみ `createCalendarEvent` に
+ * `withMeet: true` を渡し、応答から Meet URL を抽出して `Event.meetingUrl` に
+ * write-back する（Phase B.1 task 8）。
  */
 export async function syncEventToCalendar(
   data: EventSyncData,
@@ -73,14 +104,43 @@ export async function syncEventToCalendar(
       return { success: true }; // 無効の場合は何もしない
     }
 
+    const withMeet = data.meetingProvider === MEETING_PROVIDER.GOOGLE_MEET;
     const eventParams = formatEventCalendarEvent(data);
-    const result = await createCalendarEvent(eventParams);
+    const result = await createCalendarEvent(eventParams, { withMeet });
 
     if (result.success && result.eventId) {
       await saveEventGoogleCalendarEventId({
         slotId: data.slotId,
         googleCalendarEventId: result.eventId,
       });
+
+      // Meet URL 抽出・write-back を独立した try/catch で包む。
+      // write-back が失敗してもGCal イベント作成とgoogleCalendarEventId 保存は済んでいるため、
+      // 外側の sync は成功を返す。write-back エラーはサイレント化（logError で記録）。
+      if (withMeet) {
+        try {
+          const meetingUrl = extractMeetingUrl(result.event);
+          if (meetingUrl) {
+            await writeBackMeetingUrl({ eventId: data.eventId, meetingUrl });
+          }
+        } catch (error) {
+          // write-back エラーを記録するが、propagate しない
+          const message =
+            error instanceof Error
+              ? error.message
+              : normalizeError(error).message;
+          logError(new Error(`Failed to write back meeting URL: ${message}`), {
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: {
+              operation: "writeBackMeetingUrl",
+              eventId: data.eventId,
+              googleCalendarEventId: result.eventId,
+            },
+          });
+          // Note: この時点で meetingUrl は null のまま。follow-up で別タスク化予定
+        }
+      }
 
       return {
         success: true,

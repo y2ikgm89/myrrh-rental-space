@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { calendar_v3 } from "googleapis";
 import type { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
@@ -19,6 +20,13 @@ export interface CalendarEventResult {
   success: boolean;
   eventId?: string;
   eventUrl?: string;
+  /**
+   * Google Calendar API の生レスポンス（`events.insert` の `response.data`）。
+   * `createCalendarEvent` の成功時のみ設定される。呼出元は `withMeet: true` 時に
+   * `event.hangoutLink`（deprecated）または `event.conferenceData.entryPoints`
+   * から video entry point の `uri` を抽出して Meet URL を取得する（Phase B.1 task 8）。
+   */
+  event?: calendar_v3.Schema$Event;
   error?: string;
 }
 

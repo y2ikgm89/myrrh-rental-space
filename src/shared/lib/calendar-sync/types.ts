@@ -4,6 +4,8 @@
  * @module shared/lib/calendar-sync/types
  */
 
+import type { MeetingProviderValue } from "@/shared/lib/validations/enums/prisma-types";
+
 export interface ReservationSyncData {
   reservationId: string;
   spaceName: string;
@@ -33,6 +35,11 @@ export interface EventSyncData {
   location: string | null;
   /** 公開ページ URL（管理者が GCal から公開ページに飛べるようにする） */
   publicUrl: string;
+  /**
+   * Meet URL の発行元 (Phase B.1)。`GOOGLE_MEET` のとき `createCalendarEvent` に
+   * `withMeet: true` を渡し、応答の hangoutLink を `Event.meetingUrl` に write-back する。
+   */
+  meetingProvider: MeetingProviderValue;
 }
 
 export interface SyncResult {

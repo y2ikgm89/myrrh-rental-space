@@ -25,7 +25,9 @@ import { isValidRegistrationStatus } from "@/shared/lib/validations/enums/guards
 import {
   PaymentStatus,
   RegistrationStatus,
+  type EventFormatValue,
 } from "@/shared/lib/validations/enums/prisma-types";
+import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
 import { getAppUrl } from "@/shared/lib/constants";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
@@ -59,6 +61,10 @@ export interface EventRegistrationListItem {
     readonly endTime: string;
     readonly location: string | null;
     readonly status: string;
+    /** Phase B.1: 参加 URL 表示可否の判定に使う（isEventVirtualAccessible）。 */
+    readonly format: EventFormatValue;
+    /** オンライン会議 URL。ONLINE/HYBRID + write-back 未反映時は null。 */
+    readonly meetingUrl: string | null;
   };
 }
 
@@ -253,6 +259,22 @@ function EventRegistrationCard({
             <dd>{registration.event.location}</dd>
           </div>
         )}
+        {isEventVirtualAccessible(registration.event) &&
+          registration.event.meetingUrl && (
+            <div>
+              <dt className="sr-only">参加 URL</dt>
+              <dd>
+                <a
+                  href={registration.event.meetingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="break-all text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-accent"
+                >
+                  {registration.event.meetingUrl}
+                </a>
+              </dd>
+            </div>
+          )}
         <div>
           <dt className="inline">参加人数: </dt>
           <dd className="inline">{registration.quantity}名</dd>

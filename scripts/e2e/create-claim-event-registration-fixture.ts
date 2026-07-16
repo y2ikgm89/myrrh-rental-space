@@ -58,7 +58,7 @@ Bun.plugin({
 // module load 時に Zod パースするため、上記の env 上書き後に動的 import する。
 const { createEventRegistrationClaimToken } =
   await import("@/shared/lib/event-registration-claim-token");
-const { EventScheduleMode, EventStatus } =
+const { EventFormat, EventScheduleMode, EventStatus } =
   await import("../../generated/prisma/client");
 const { buildParagraphEditorStateJson, buildParagraphHtml } =
   await import("@/shared/lib/lexical/description-defaults");
@@ -76,6 +76,11 @@ async function main(): Promise<void> {
     const descriptionHtml = buildParagraphHtml(
       "E2E claim テスト用イベントです。",
     );
+    // Phase B.1 task 17: claim ページ / mypage イベント一覧の「参加 URL」表示
+    // (isEventVirtualAccessible gate) を E2E で検証するため HYBRID + meetingUrl
+    // を持つイベントを作る。meetingProvider は既定 MANUAL のため CHECK 制約
+    // (event_online_meeting_url_required) を満たすには meetingUrl 必須。
+    const meetingUrl = `https://meet.example.com/e2e-claim-${unique}`;
 
     // 過去/既存 seed データと重ならない、十分未来の固定枠を使う
     // （直接 Prisma insert のため定員チェックは走らない）。
@@ -105,6 +110,8 @@ async function main(): Promise<void> {
           publishedAt: new Date(),
           firstSlotStartAt: startAt,
           lastSlotEndAt: endAt,
+          format: EventFormat.HYBRID,
+          meetingUrl,
         },
         select: { id: true },
       });
@@ -155,6 +162,7 @@ async function main(): Promise<void> {
       JSON.stringify({
         eventRegistrationId: registration.id,
         eventTitle,
+        meetingUrl,
         token,
       }),
     );

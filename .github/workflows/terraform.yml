@@ -134,10 +134,12 @@ jobs:
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4.1.1
         with:
-          # `latest` inside setup-tflint@v4 resolves via Octokit at
-          # action-run time. Pinning here would drift from the ruleset
-          # min-version guarantee (google plugin needs tflint >= v0.46).
-          tflint_version: latest
+          # 2026-07-16 (PR #1149): `latest` が sigstore-go bundle.TlogEntries で
+          # nil pointer panic を起こす TFLint リリースを resolve するため一時 pin。
+          # google plugin の min-version >= v0.46 を満たしていれば良いので v0.58.0
+          # (widely used stable) を選択。sigstore panic の fix が上流に入ったら latest に戻す。
+          # 修正済上流バージョンが判明したらこの pin を撤去。
+          tflint_version: v0.58.0
 
       - name: TFLint init (install ruleset plugins)
         working-directory: ${{ env.TF_WORKING_DIR }}

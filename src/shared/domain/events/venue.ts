@@ -1,3 +1,5 @@
+import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
+
 /**
  * イベント会場の表示文字列を構築する共通ヘルパー。
  *
@@ -51,4 +53,44 @@ export function formatEventAddress(parts: VenueAddressParts): string | null {
   if (baseAddress) return baseAddress;
   if (detail) return detail;
   return null;
+}
+
+/**
+ * イベント開催形態に応じた UI 向け表示文字列を構築する。
+ *
+ * - OFFLINE: 物理会場のみを primary に表示
+ * - ONLINE: "オンライン開催" を primary に表示
+ * - HYBRID: 物理会場を primary、"オンラインでも参加可" を secondary に表示
+ */
+type EventVenueDisplayInput = {
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
+  readonly location?: { readonly name: string } | null;
+  readonly space?: { readonly name: string } | null;
+  readonly addressDetail?: string | null;
+};
+
+export function formatEventVenueDisplay(event: EventVenueDisplayInput): {
+  primary: string | null;
+  secondary: string | null;
+} {
+  const physical = formatEventVenue(event);
+  switch (event.format) {
+    case "OFFLINE":
+      return { primary: physical, secondary: null };
+    case "ONLINE":
+      return { primary: "オンライン開催", secondary: null };
+    case "HYBRID":
+      return { primary: physical, secondary: "オンラインでも参加可" };
+  }
+}
+
+/**
+ * イベントがオンラインでのアクセスに対応しているか判定する。
+ * ONLINE / HYBRID の場合 true、OFFLINE の場合 false。
+ */
+export function isEventVirtualAccessible(event: {
+  readonly format: EventFormatValue;
+}): boolean {
+  return event.format === "ONLINE" || event.format === "HYBRID";
 }

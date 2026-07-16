@@ -115,6 +115,8 @@ describe("buildEventCalendar", () => {
         sequence: 0,
         organizerName: "Myrrh",
         organizerEmail: "noreply@example.com",
+        format: "OFFLINE",
+        meetingUrl: null,
       },
       "example.com",
     );
@@ -139,6 +141,8 @@ describe("buildEventCancelCalendar", () => {
         sequence: 1,
         organizerName: "Myrrh",
         organizerEmail: "noreply@example.com",
+        format: "OFFLINE",
+        meetingUrl: null,
       },
       "example.com",
     );

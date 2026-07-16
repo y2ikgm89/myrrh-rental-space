@@ -8,6 +8,7 @@ import {
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import { paginate } from "@/shared/lib/pagination";
 import { ACTIVE_REGISTRATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
 
 /** 管理画面イベント詳細の参加者一覧 1 ページあたり件数。 */
 export const EVENT_REGISTRATIONS_PER_PAGE = 20;
@@ -154,6 +155,8 @@ export async function getEventRegistrationDetailsForEmail(
   readonly location: string | null;
   readonly capacity: number;
   readonly confirmedCount: number;
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
 } | null> {
   const registration = await prisma.eventRegistration.findFirst({
     where: { id: registrationId, event: { deletedAt: null } },
@@ -171,6 +174,8 @@ export async function getEventRegistrationDetailsForEmail(
       event: {
         select: {
           title: true,
+          format: true,
+          meetingUrl: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -199,6 +204,8 @@ export async function getEventRegistrationDetailsForEmail(
     }),
     capacity: registration.slot.capacity,
     confirmedCount: confirmed._sum.quantity ?? 0,
+    format: registration.event.format,
+    meetingUrl: registration.event.meetingUrl,
   };
 }
 
@@ -214,18 +221,26 @@ export async function getEventRegistrationForClaim(
 ): Promise<{
   readonly eventTitle: string;
   readonly startTime: Date;
+  // Phase B.1: claim ページ (会員紐付け後の /mypage/events 遷移前に一瞬表示)
+  // でもオンライン開催の参加 URL 案内を出せるよう select しておく
+  // （meetingProvider は表示判定に不要なため含めない — isEventVirtualAccessible
+  // は format のみで判定できる）。
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
 } | null> {
   const registration = await prisma.eventRegistration.findFirst({
     where: { id: registrationId, event: { deletedAt: null } },
     select: {
       slot: { select: { startAt: true } },
-      event: { select: { title: true } },
+      event: { select: { title: true, format: true, meetingUrl: true } },
     },
   });
   if (!registration) return null;
   return {
     eventTitle: registration.event.title,
     startTime: registration.slot.startAt,
+    format: registration.event.format,
+    meetingUrl: registration.event.meetingUrl,
   };
 }
 
@@ -256,6 +271,14 @@ const CUSTOMER_EVENT_REGISTRATION_SELECT = {
       slug: true,
       addressDetail: true,
       status: true,
+      // Phase B.1: mypage イベント一覧で「参加 URL」表示に使う（登録済ユーザー
+      // 限定 — 公開ページの publicEventSelect とは異なり render 制約は無い）。
+      // meetingProvider は表示に不要（CHECK 制約により format∈{ONLINE,HYBRID}
+      // かつ meetingUrl=null は「GOOGLE_MEET write-back 待ち」を含意するため、
+      // provider を別途持たなくても isEventVirtualAccessible + meetingUrl の
+      // null 判定だけで表示可否が決まる）。
+      format: true,
+      meetingUrl: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
     },
@@ -284,6 +307,8 @@ type CustomerEventRegistrationRow = {
     readonly slug: string;
     readonly addressDetail: string | null;
     readonly status: string;
+    readonly format: EventFormatValue;
+    readonly meetingUrl: string | null;
     readonly location: { readonly name: string } | null;
     readonly space: { readonly name: string } | null;
   };
@@ -309,6 +334,8 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
       startTime: row.slot.startAt,
       endTime: row.slot.endAt,
       status: row.event.status,
+      format: row.event.format,
+      meetingUrl: row.event.meetingUrl,
       location: formatEventVenue({
         location: row.event.location,
         space: row.event.space,
@@ -419,6 +446,8 @@ export async function findEventRegistrationsForReminderWindow(
       event: {
         select: {
           title: true,
+          format: true,
+          meetingUrl: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -441,6 +470,8 @@ export async function getEventRegistrationForCalendar(params: {
   quantity: number;
   icsSequence: number;
   status: RegistrationStatus;
+  format: EventFormatValue;
+  meetingUrl: string | null;
 } | null> {
   const reg = await prisma.eventRegistration.findFirst({
     where: {
@@ -462,6 +493,8 @@ export async function getEventRegistrationForCalendar(params: {
       event: {
         select: {
           title: true,
+          format: true,
+          meetingUrl: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -484,5 +517,7 @@ export async function getEventRegistrationForCalendar(params: {
     quantity: reg.quantity,
     icsSequence: reg.icsSequence,
     status: reg.status,
+    format: reg.event.format,
+    meetingUrl: reg.event.meetingUrl,
   };
 }

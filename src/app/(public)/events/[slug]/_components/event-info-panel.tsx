@@ -37,6 +37,17 @@ interface EventInfoPanelProps {
   readonly startTime: string;
   readonly endTime: string;
   readonly venues: readonly EventInfoPanelVenue[];
+  /**
+   * `formatEventVenueDisplay(event)` の出力（Phase B.1）。primary は
+   * OFFLINE/HYBRID で物理会場文字列、ONLINE で「オンライン開催」固定文言。
+   * secondary は HYBRID の「オンラインでも参加可」補足のみ non-null。
+   */
+  readonly venueDisplay: {
+    readonly primary: string | null;
+    readonly secondary: string | null;
+  };
+  /** `isEventVirtualAccessible(event)` の出力。true なら参加 URL のメール案内を表示。 */
+  readonly virtualAccessible: boolean;
   readonly scheduleMode: PublicEventScheduleMode;
   readonly slots: readonly PublicEventSlotOption[];
   readonly tickets: readonly EventTicketSummary[];
@@ -67,6 +78,8 @@ export function EventInfoPanel({
   startTime,
   endTime,
   venues,
+  venueDisplay,
+  virtualAccessible,
   scheduleMode,
   slots,
   tickets,
@@ -115,12 +128,26 @@ export function EventInfoPanel({
             </span>
           )}
         </DetailRow>
-        {venues.length > 0 ? (
+        {venueDisplay.primary !== null || venueDisplay.secondary !== null ? (
           <DetailRow
             icon={<IconMapPin className="h-4 w-4" aria-hidden="true" />}
             label="開催場所"
           >
-            <VenueList venues={venues} />
+            {venues.length > 0 ? (
+              <VenueList venues={venues} />
+            ) : venueDisplay.primary !== null ? (
+              <p>{venueDisplay.primary}</p>
+            ) : null}
+            {venueDisplay.secondary !== null ? (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {venueDisplay.secondary}
+              </p>
+            ) : null}
+            {virtualAccessible ? (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                参加 URL は登録完了時にメールでお送りします
+              </p>
+            ) : null}
           </DetailRow>
         ) : null}
       </dl>

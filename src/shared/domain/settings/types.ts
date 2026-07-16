@@ -117,7 +117,6 @@ export type SettingsData = {
   googleCalendarLastTestedAt: Date | null;
   googleCalendarConnectionStatus: string | null;
   googleBusinessProfileEnabled: boolean;
-  googleCalendarMeetEnabled: boolean;
   googleCalendarReminderMinutes: number | null;
   icalAttachmentEnabled: boolean;
   addToCalendarLinksEnabled: boolean;
@@ -169,7 +168,6 @@ export type GoogleCalendarSettingsData = {
   calendarId: string | null;
   connectionStatus: "connected" | "error" | null;
   lastTestedAt: Date | null;
-  meetEnabled: boolean;
   /** null = Google Calendar 既定を使う, 0 = 通知なし, N = N分前にメール通知 */
   reminderMinutes: number | null;
 };

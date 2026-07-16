@@ -131,6 +131,8 @@ export async function confirmWaitlistOfferAction(
               quantity: details.quantity,
               icsSequence: details.icsSequence,
               customerId: details.customerId,
+              format: details.format,
+              meetingUrl: details.meetingUrl,
             });
           })(),
           {

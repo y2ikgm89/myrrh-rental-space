@@ -8,6 +8,7 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { verifyEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getEventRegistrationForClaim } from "@/shared/domain/events/registration-queries";
+import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
@@ -88,6 +89,19 @@ export default async function ClaimEventRegistrationPage(): Promise<ReactElement
             day: "numeric",
           })}
         </p>
+        {isEventVirtualAccessible(registration) && registration.meetingUrl && (
+          <p className="mt-2 break-all text-sm text-muted-foreground">
+            参加 URL:{" "}
+            <a
+              href={registration.meetingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-accent"
+            >
+              {registration.meetingUrl}
+            </a>
+          </p>
+        )}
       </div>
 
       {user ? (

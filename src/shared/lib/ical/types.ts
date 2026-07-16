@@ -4,6 +4,8 @@
  * @module shared/lib/ical/types
  */
 
+import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
+
 /** Add to Calendar ボタン用の 3 プロバイダ URL */
 export type AddToCalendarUrls = {
   /** Google Calendar 追加リンク（`calendar.google.com/calendar/render`） */
@@ -54,4 +56,6 @@ export type EventCalendarParams = {
   readonly url?: string;
   readonly organizerName?: string;
   readonly organizerEmail?: string;
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
 };

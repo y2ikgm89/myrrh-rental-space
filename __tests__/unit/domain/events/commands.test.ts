@@ -202,6 +202,7 @@ import {
   cancelEventCommand,
   archiveEventCommand,
   upsertEventFromCalendar,
+  eventInputSchema,
 } from "@/shared/domain/events/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -494,6 +495,172 @@ describe("createEventCommand", () => {
 
       expect(mockEventCreate).not.toHaveBeenCalled();
     });
+  });
+
+  describe("オンライン開催境界 (Phase B.1)", () => {
+    test("format/meetingUrl/meetingProvider を指定すると保存データに反映される", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        format: "ONLINE",
+        meetingProvider: "MANUAL",
+        meetingUrl: "https://meet.example.com/room-1",
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            format: "ONLINE",
+            meetingProvider: "MANUAL",
+            meetingUrl: "https://meet.example.com/room-1",
+          }),
+        }),
+      );
+    });
+
+    test("ONLINE + MANUAL + meetingUrl 未指定は DomainError を投げる", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          format: "ONLINE",
+          meetingProvider: "MANUAL",
+          meetingUrl: null,
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Codex PR #1149 fixes", () => {
+    test("P2: OFFLINE + GOOGLE_MEET (stale hidden state) → normalize to MANUAL + null on create", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        format: "OFFLINE",
+        meetingProvider: "GOOGLE_MEET",
+        meetingUrl: "https://meet.google.com/stale",
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            format: "OFFLINE",
+            meetingProvider: "MANUAL",
+            meetingUrl: null,
+          }),
+        }),
+      );
+    });
+
+    test("P1: TIMED_ENTRY + GOOGLE_MEET → DomainError (assertOnlineScheduleCompatibility)", async () => {
+      await expect(
+        createEventCommand({
+          ...VALID_EVENT_INPUT,
+          scheduleMode: EventScheduleMode.TIMED_ENTRY,
+          slots: [
+            {
+              startAt: new Date("2026-08-01T10:00:00Z"),
+              endAt: new Date("2026-08-01T11:00:00Z"),
+              capacity: 10,
+            },
+            {
+              startAt: new Date("2026-08-01T13:00:00Z"),
+              endAt: new Date("2026-08-01T14:00:00Z"),
+              capacity: 10,
+            },
+          ],
+          format: "ONLINE",
+          meetingProvider: "GOOGLE_MEET",
+        }),
+      ).rejects.toThrow(
+        /時間枠制.*Google Meet.*自動発行はサポートしていません/,
+      );
+
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("eventInputSchema (Phase B.1)", () => {
+  test("OFFLINE: meetingUrl / meetingProvider 未指定でも valid", () => {
+    const result = eventInputSchema.safeParse({ format: "OFFLINE" });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("ONLINE + MANUAL + meetingUrl 未指定 → invalid", () => {
+    const result = eventInputSchema.safeParse({
+      format: "ONLINE",
+      meetingProvider: "MANUAL",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["meetingUrl"]);
+      expect(result.error.issues[0]?.message).toContain("会議 URL");
+    }
+  });
+
+  test("ONLINE + MANUAL + meetingUrl 指定 → valid", () => {
+    const result = eventInputSchema.safeParse({
+      format: "ONLINE",
+      meetingProvider: "MANUAL",
+      meetingUrl: "https://meet.example.com/room-1",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("ONLINE + GOOGLE_MEET + meetingUrl 未指定 → valid (自動発行で write-back)", () => {
+    const result = eventInputSchema.safeParse({
+      format: "ONLINE",
+      meetingProvider: "GOOGLE_MEET",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("HYBRID + MANUAL + meetingUrl 未指定 → invalid", () => {
+    const result = eventInputSchema.safeParse({
+      format: "HYBRID",
+      meetingProvider: "MANUAL",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["meetingUrl"]);
+      expect(result.error.issues[0]?.message).toContain("会議 URL");
+    }
+  });
+
+  test("meetingUrl が http:// → invalid (HTTPS 必須)", () => {
+    const result = eventInputSchema.safeParse({
+      format: "ONLINE",
+      meetingProvider: "MANUAL",
+      meetingUrl: "http://meet.example.com/room-1",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["meetingUrl"]);
+      expect(result.error.issues[0]?.message).toContain("https://");
+    }
+  });
+
+  test("meetingUrl が 501 chars → invalid (500 char 上限)", () => {
+    const base = "https://example.com/";
+    const meetingUrl = base + "a".repeat(501 - base.length);
+    expect(meetingUrl.length).toBe(501);
+
+    const result = eventInputSchema.safeParse({
+      format: "ONLINE",
+      meetingProvider: "MANUAL",
+      meetingUrl,
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["meetingUrl"]);
+    }
   });
 });
 
@@ -897,6 +1064,77 @@ describe("updateEventCommand", () => {
       expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
       expect(mockEventTicketUpdate).toHaveBeenCalledTimes(2);
       expect(mockEventTicketCreateMany).not.toHaveBeenCalled();
+    });
+
+    test("format を OFFLINE に更新すると meetingUrl は null、meetingProvider は MANUAL にリセットされる", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        format: "OFFLINE",
+        // 旧 ONLINE 設定の残骸を模擬（UI が正しくクリアし忘れた場合の防御的リセット）
+        meetingUrl: "https://stale.example.com/room",
+        meetingProvider: "GOOGLE_MEET",
+      });
+
+      expect(mockEventUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            format: "OFFLINE",
+            meetingUrl: null,
+            meetingProvider: "MANUAL",
+          }),
+        }),
+      );
+    });
+
+    test("format を OFFLINE に更新すると、非 https の stale meetingUrl 残骸があっても DomainError を投げずリセットされる（Task 4 review Important finding の回帰テスト）", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      // assertEventMeetingUrlInvariant が正規化前の raw data を検証すると、
+      // meetingUrl の shape check（https:// 必須）が format に関わらず無条件に
+      // かかるため、OFFLINE 更新でも非 https の stale 残骸だけで DomainError に
+      // なってしまう回帰を防ぐ（正規化後は meetingUrl: null になり shape check
+      // 自体にかからない）。
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        format: "OFFLINE",
+        // 旧 ONLINE 設定の非 https 残骸（UI が消し忘れた不正な形式の URL）
+        meetingUrl: "http://old.example.com/room",
+        meetingProvider: "GOOGLE_MEET",
+      });
+
+      expect(mockEventUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            format: "OFFLINE",
+            meetingUrl: null,
+            meetingProvider: "MANUAL",
+          }),
+        }),
+      );
     });
   });
 

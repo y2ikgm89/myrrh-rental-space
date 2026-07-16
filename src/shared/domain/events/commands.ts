@@ -1,5 +1,6 @@
 import "server-only";
 
+import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { asPrismaInputJsonValue, parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
@@ -24,8 +25,12 @@ import {
 } from "@/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import {
+  EventFormat,
   EventScheduleMode,
   EventStatus,
+  MeetingProvider,
+  EVENT_FORMAT_VALUES,
+  MEETING_PROVIDER_VALUES,
 } from "@/shared/lib/validations/enums/prisma-types";
 import {
   gallerySchema,
@@ -74,9 +79,59 @@ export interface EventCommandInput {
   registrationOpen?: boolean;
   tickets?: readonly EventTicketInput[];
   slots: readonly SlotInput[];
+  /** 開催形態 (Phase B.1)。省略時は OFFLINE として扱われる。 */
+  format?: (typeof EventFormat)[keyof typeof EventFormat];
+  /**
+   * オンライン会議 URL。ONLINE/HYBRID 開催かつ meetingProvider が MANUAL の場合は
+   * 必須（`eventInputSchema` が検証）。format が OFFLINE に更新される場合、
+   * updateEventCommand が null に明示リセットする。
+   */
+  meetingUrl?: string | null;
+  /** 会議 URL の発行元。省略時は MANUAL として扱われる。 */
+  meetingProvider?: (typeof MeetingProvider)[keyof typeof MeetingProvider];
 }
 
 export type { SlotInput };
+
+/**
+ * format / meetingUrl / meetingProvider の入力検証 (Phase B.1)。
+ *
+ * イベント入力全体（タイトル・スロット等）は Server Action 層の
+ * `eventFormSchema`（event-form-schema.ts）が FormData 由来の transit を検証するため、
+ * 本 schema はオンライン開催関連の 3 フィールドのみを対象にした部分スキーマとして
+ * 定義する。ONLINE・HYBRID 開催で meetingProvider が MANUAL（手入力）の場合のみ
+ * meetingUrl（HTTPS URL・500文字以内）を必須にする。GOOGLE_MEET は GCal API 応答からの
+ * write-back 待ちのため、この時点では meetingUrl 未設定を許容する。
+ */
+export const eventInputSchema = z
+  .object({
+    format: z.enum(EVENT_FORMAT_VALUES).default(EventFormat.OFFLINE),
+    meetingUrl: z
+      .url({ error: "有効な会議 URL を入力してください" })
+      .startsWith("https://", {
+        error: "会議 URL は https:// で始まる必要があります",
+      })
+      .max(500, { error: "会議 URL は500文字以内で入力してください" })
+      .nullable()
+      .optional(),
+    meetingProvider: z
+      .enum(MEETING_PROVIDER_VALUES)
+      .default(MeetingProvider.MANUAL),
+  })
+  .refine(
+    (data) => {
+      if (data.format === EventFormat.OFFLINE) return true;
+      if (data.meetingProvider === MeetingProvider.GOOGLE_MEET) return true;
+      return typeof data.meetingUrl === "string" && data.meetingUrl.length > 0;
+    },
+    {
+      error:
+        "オンライン開催・ハイブリッド開催で手入力の場合は会議 URL が必須です",
+      path: ["meetingUrl"],
+    },
+  );
+
+export type EventMeetingInput = z.infer<typeof eventInputSchema>;
 
 /**
  * status と registrationOpen の不変条件を server-side で強制。
@@ -143,6 +198,44 @@ function assertEventScheduleInvariant(data: EventCommandInput): void {
   }
 }
 
+/**
+ * scheduleMode と meetingProvider の互換性を強制 (Codex PR #1149 P1 fix)。
+ *
+ * TIMED_ENTRY (日時選択制) はスロット単位で GCal event が作成され、それぞれ独立した
+ * Meet URL が発行される。Event.meetingUrl は単一 field のため、GOOGLE_MEET を選ぶと
+ * 最終同期の URL で上書きされ他スロット登録者へ誤 URL が届く。single-URL 前提を
+ * 満たせないため、TIMED_ENTRY + GOOGLE_MEET は create/update 双方で禁止する。
+ */
+function assertOnlineScheduleCompatibility(data: EventCommandInput): void {
+  if (
+    data.scheduleMode === EventScheduleMode.TIMED_ENTRY &&
+    data.meetingProvider === MeetingProvider.GOOGLE_MEET
+  ) {
+    throw new DomainError(
+      "時間枠制 (TIMED_ENTRY) のイベントで Google Meet の自動発行はサポートしていません。会議 URL を手動で入力してください。",
+      "VALIDATION",
+    );
+  }
+}
+
+/**
+ * format/meetingUrl/meetingProvider の組合せ不変条件を server-side で強制。
+ * 検証ロジックは `eventInputSchema`（Zod）に一本化し、失敗時は DomainError に変換する
+ * （他の assert* 関数と同じ例外契約に揃える）。
+ */
+function assertEventMeetingUrlInvariant(data: EventCommandInput): void {
+  const result = eventInputSchema.safeParse({
+    format: data.format,
+    meetingUrl: data.meetingUrl,
+    meetingProvider: data.meetingProvider,
+  });
+  if (!result.success) {
+    const message =
+      result.error.issues[0]?.message ?? "オンライン開催の入力が不正です";
+    throw new DomainError(message, "VALIDATION");
+  }
+}
+
 function assertAllowedEventImageUrl(label: string, url: string | null): void {
   if (url === null) return;
   if (
@@ -174,6 +267,25 @@ function assertAllowedEventImageUrls(params: {
 
 export async function createEventCommand(data: EventCommandInput) {
   assertEventScheduleInvariant(data);
+  // OFFLINE 開催で meetingUrl/meetingProvider の stale hidden state を持ち込む
+  // create 経路 (Codex PR #1149 P2 fix) に対して update と同じ normalization を適用。
+  // 「OFFLINE イベントに GOOGLE_MEET が残り Meet URL が誤自動発行される」bug を防ぐ。
+  const createResolvedFormat = data.format ?? EventFormat.OFFLINE;
+  const isOfflineCreate = createResolvedFormat === EventFormat.OFFLINE;
+  const createResolvedMeetingUrl = isOfflineCreate
+    ? null
+    : (data.meetingUrl ?? null);
+  const createResolvedMeetingProvider = isOfflineCreate
+    ? MeetingProvider.MANUAL
+    : (data.meetingProvider ?? MeetingProvider.MANUAL);
+  const normalizedCreateData: EventCommandInput = {
+    ...data,
+    format: createResolvedFormat,
+    meetingUrl: createResolvedMeetingUrl,
+    meetingProvider: createResolvedMeetingProvider,
+  };
+  assertEventMeetingUrlInvariant(normalizedCreateData);
+  assertOnlineScheduleCompatibility(normalizedCreateData);
   assertAllowedEventImageUrls(data);
   assertAllowedManagedImageSourcesInJson(
     "イベント本文画像",
@@ -229,6 +341,9 @@ export async function createEventCommand(data: EventCommandInput) {
         spaceId: data.spaceId ?? null,
         status: data.status,
         scheduleMode: data.scheduleMode,
+        format: createResolvedFormat,
+        meetingUrl: createResolvedMeetingUrl,
+        meetingProvider: createResolvedMeetingProvider,
         registrationOpen: normalizeRegistrationOpen(
           data.status,
           data.registrationOpen,
@@ -258,17 +373,27 @@ export async function createEventCommand(data: EventCommandInput) {
 
 export async function updateEventCommand(id: string, data: EventCommandInput) {
   assertEventScheduleInvariant(data);
-  assertAllowedEventImageUrls(data);
-  assertAllowedManagedImageSourcesInJson(
-    "イベント本文画像",
-    data.descriptionJson,
-  );
+
+  // format が OFFLINE に変更される場合、meetingUrl/meetingProvider を明示リセットする
+  // (validation ではなく domain 側の書込み内容の正規化。UI が消し忘れた残骸を防ぐ)
+  // assertEventMeetingUrlInvariant より前に正規化することで、検証対象を
+  // OFFLINE リセット後の meetingUrl: null にする。raw data のまま検証すると
+  // meetingUrl の shape check（https:// 必須・500文字以内）が format に関わらず
+  // 無条件にかかるため、過去 ONLINE 時の不正な stale meetingUrl が残っているだけで
+  // OFFLINE 更新が誤って DomainError になってしまう（Task 4 review Important finding）。
+  const resolvedFormat = data.format ?? EventFormat.OFFLINE;
+  const isOfflineUpdate = resolvedFormat === EventFormat.OFFLINE;
+  const resolvedMeetingProvider = isOfflineUpdate
+    ? MeetingProvider.MANUAL
+    : (data.meetingProvider ?? MeetingProvider.MANUAL);
+
   const existing = await prisma.event.findFirst({
     where: { id, deletedAt: null },
     select: {
       id: true,
       slug: true,
       status: true,
+      meetingUrl: true,
       slots: {
         select: { id: true, startAt: true, endAt: true, capacity: true },
         orderBy: { startAt: "asc" as const },
@@ -279,6 +404,36 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     },
   });
   if (!existing) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+
+  // Codex PR #1149 P1 fix: GOOGLE_MEET provider を維持したまま無関係な field を編集すると
+  // form が meetingUrl 入力欄を unmount して送らないため `data.meetingUrl` が undefined/empty で
+  // 届き、`?? null` で既存 Meet URL を消去してしまう。update sync は Meet 再発行しないため
+  // 永続的に URL 消失。GOOGLE_MEET かつ入力欄が空のときは DB 既存値を preserve。
+  const inputMeetingUrlEmpty =
+    data.meetingUrl == null || data.meetingUrl === "";
+  const shouldPreserveExistingMeetUrl =
+    !isOfflineUpdate &&
+    resolvedMeetingProvider === MeetingProvider.GOOGLE_MEET &&
+    inputMeetingUrlEmpty;
+  const resolvedMeetingUrl = isOfflineUpdate
+    ? null
+    : shouldPreserveExistingMeetUrl
+      ? existing.meetingUrl
+      : (data.meetingUrl ?? null);
+
+  const normalizedUpdateData: EventCommandInput = {
+    ...data,
+    format: resolvedFormat,
+    meetingUrl: resolvedMeetingUrl,
+    meetingProvider: resolvedMeetingProvider,
+  };
+  assertEventMeetingUrlInvariant(normalizedUpdateData);
+  assertOnlineScheduleCompatibility(normalizedUpdateData);
+  assertAllowedEventImageUrls(data);
+  assertAllowedManagedImageSourcesInJson(
+    "イベント本文画像",
+    data.descriptionJson,
+  );
 
   const slug =
     data.slug !== existing.slug
@@ -342,6 +497,9 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         spaceId: data.spaceId ?? null,
         status: data.status,
         scheduleMode: data.scheduleMode,
+        format: resolvedFormat,
+        meetingUrl: resolvedMeetingUrl,
+        meetingProvider: resolvedMeetingProvider,
         registrationOpen: normalizeRegistrationOpen(
           data.status,
           data.registrationOpen,

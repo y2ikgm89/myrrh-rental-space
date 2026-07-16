@@ -50,40 +50,6 @@ interface ArticleData {
   };
 }
 
-type EventStatusType =
-  "EventScheduled" | "EventCancelled" | "EventPostponed" | "EventRescheduled";
-
-type EventAttendanceModeType =
-  | "OfflineEventAttendanceMode"
-  | "OnlineEventAttendanceMode"
-  | "MixedEventAttendanceMode";
-
-type OfferAvailability =
-  "InStock" | "SoldOut" | "LimitedAvailability" | "PreOrder";
-
-interface EventData {
-  name: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-  url: string;
-  image?: string;
-  eventStatus?: EventStatusType;
-  eventAttendanceMode?: EventAttendanceModeType;
-  location?: {
-    name: string;
-    address?: string;
-    url?: string;
-  };
-  offers?: {
-    price: number;
-    priceCurrency?: string;
-    availability?: OfferAvailability;
-    url?: string;
-  };
-  maximumAttendeeCapacity?: number;
-}
-
 interface BreadcrumbItem {
   name: string;
   url: string;
@@ -306,77 +272,6 @@ export function ArticleJsonLd({
       },
     }),
     publisher: {
-      "@type": "Organization",
-      name: SITE_DEFAULTS.name,
-      url: baseUrl,
-    },
-  };
-
-  return <JsonLd data={data} />;
-}
-
-/**
- * Event構造化データ（イベント詳細ページ向け）
- *
- * Google リッチリザルト対応:
- * - name / startDate / location: 必須
- * - eventStatus / eventAttendanceMode: 推奨（ハイブリッド/中止表示対応）
- * - offers: price + priceCurrency で参加費リッチリザルト
- *
- * @see https://schema.org/Event
- * @see https://developers.google.com/search/docs/appearance/structured-data/event
- */
-export function EventJsonLd({
-  name,
-  description,
-  startDate,
-  endDate,
-  url,
-  image,
-  eventStatus = "EventScheduled",
-  eventAttendanceMode = "OfflineEventAttendanceMode",
-  location,
-  offers,
-  maximumAttendeeCapacity,
-}: EventData): ReactElement {
-  const baseUrl = getBaseUrl();
-  const data = {
-    "@context": "https://schema.org",
-    "@type": "Event",
-    name,
-    ...(description && { description }),
-    startDate,
-    endDate,
-    url,
-    ...(image && { image }),
-    eventStatus: `https://schema.org/${eventStatus}`,
-    eventAttendanceMode: `https://schema.org/${eventAttendanceMode}`,
-    ...(location && {
-      location: {
-        "@type": "Place",
-        name: location.name,
-        ...(location.address && {
-          address: {
-            "@type": "PostalAddress",
-            streetAddress: location.address,
-            addressCountry: "JP",
-          },
-        }),
-        ...(location.url && { url: location.url }),
-      },
-    }),
-    ...(offers && {
-      offers: {
-        "@type": "Offer",
-        price: offers.price,
-        priceCurrency: offers.priceCurrency || "JPY",
-        availability: `https://schema.org/${offers.availability || "InStock"}`,
-        ...(offers.url && { url: offers.url }),
-        validFrom: startDate,
-      },
-    }),
-    ...(maximumAttendeeCapacity !== undefined && { maximumAttendeeCapacity }),
-    organizer: {
       "@type": "Organization",
       name: SITE_DEFAULTS.name,
       url: baseUrl,

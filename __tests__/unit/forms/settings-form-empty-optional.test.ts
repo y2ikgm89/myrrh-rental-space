@@ -397,7 +397,6 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         serviceAccountJson: "",
         icalAttachmentEnabled: "",
         addToCalendarLinksEnabled: "",
-        googleCalendarMeetEnabled: "",
         googleCalendarReminderMinutes: "",
       }),
       "googleCalendar",

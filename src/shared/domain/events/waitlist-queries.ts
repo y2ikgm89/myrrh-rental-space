@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import {
   PaymentStatus,
   RegistrationStatus,
+  type EventFormatValue,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { getAppUrl } from "@/shared/lib/constants";
@@ -232,6 +233,8 @@ export async function getWaitlistConfirmationEmailDetails(
   readonly startTime: Date;
   readonly endTime: Date;
   readonly location: string | null;
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
 } | null> {
   const registration = await prisma.eventRegistration.findUnique({
     where: { id: registrationId },
@@ -246,6 +249,8 @@ export async function getWaitlistConfirmationEmailDetails(
       event: {
         select: {
           title: true,
+          format: true,
+          meetingUrl: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -269,6 +274,8 @@ export async function getWaitlistConfirmationEmailDetails(
       space: registration.event.space,
       addressDetail: registration.event.addressDetail,
     }),
+    format: registration.event.format,
+    meetingUrl: registration.event.meetingUrl,
   };
 }
 

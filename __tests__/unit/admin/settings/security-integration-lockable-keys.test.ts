@@ -118,7 +118,6 @@ describe("security-integration forms: ロック中保存の受理", () => {
           serviceAccountJson: "",
           icalAttachmentEnabled: "",
           addToCalendarLinksEnabled: "",
-          googleCalendarMeetEnabled: "",
           googleCalendarReminderMinutes: "",
         }),
         { schema: googleCalendarFormSchema },

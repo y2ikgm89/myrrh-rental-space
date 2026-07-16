@@ -37,16 +37,20 @@ function toReminders(
  * Asia/Tokyo タイムゾーンのカレンダーイベント構築ヘルパー。
  *
  * - `reminders` は Settings の `reminderMinutes` を反映（null=default, 0=無効, N=N分前メール）
- * - `conferenceData` は `settings.meetEnabled` が true かつ `withMeet=true` のときのみ付与
+ * - `conferenceData` は `options.withMeet === true` のときのみ付与（per-event 判定。
+ *   site-wide の `settings.meetEnabled` トグルは Phase B.1 で廃止済み — 呼出元が
+ *   `Event.meetingProvider === "GOOGLE_MEET"` 等イベント単位の条件で判定する）
  *   （Google Meet は OAuth ユーザーコンテキスト or Domain-Wide Delegation が必要）
+ *
+ * `export` は直接ユニットテスト用（`@/shared/lib/google-calendar` の公開バレルには
+ * 含めない — 内部実装のまま）。
  */
-function buildEventBody(
+export function buildEventBody(
   params: CalendarEventParams,
   settings: GoogleCalendarSettingsData,
   options: { includeAttendee?: boolean; withMeet?: boolean },
 ): calendar_v3.Schema$Event {
-  const withMeet =
-    options.withMeet === true && settings.meetEnabled && params.startTime;
+  const withMeet = options.withMeet === true && params.startTime;
   const conferenceRequestId = withMeet
     ? `myrrh-${params.startTime.getTime()}-${Math.random().toString(36).slice(2, 10)}`
     : undefined;
@@ -81,9 +85,13 @@ function buildEventBody(
 
 /**
  * カレンダーにイベントを作成
+ *
+ * `options.withMeet` は呼出元がイベント単位で指定する（例: `Event.meetingProvider ===
+ * "GOOGLE_MEET"`）。未指定時は `false` 扱い（backward compat — Meet を発行しない）。
  */
 export async function createCalendarEvent(
   params: CalendarEventParams,
+  options?: { withMeet?: boolean },
 ): Promise<CalendarEventResult> {
   const client = await getServiceAccountClient();
   if (!client) {
@@ -97,16 +105,17 @@ export async function createCalendarEvent(
   }
 
   try {
+    const withMeet = options?.withMeet === true;
     const requestBody = buildEventBody(params, settings, {
       includeAttendee: true,
-      withMeet: settings.meetEnabled,
+      withMeet,
     });
     const response = await withGoogleApiRetry(() =>
       client.events.insert({
         calendarId,
         requestBody,
         sendUpdates: "none",
-        ...(settings.meetEnabled ? { conferenceDataVersion: 1 } : {}),
+        ...(withMeet ? { conferenceDataVersion: 1 } : {}),
       }),
     );
 
@@ -114,6 +123,7 @@ export async function createCalendarEvent(
       success: true,
       eventId: response.data.id ?? undefined,
       eventUrl: response.data.htmlLink ?? undefined,
+      event: response.data,
     });
   } catch (error) {
     logError(normalizeError(error), {
