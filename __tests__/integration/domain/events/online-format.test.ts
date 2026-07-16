@@ -322,4 +322,28 @@ describeMaybe("Event online format (integration)", () => {
       expect(claimDetail?.meetingUrl).toBeNull();
     });
   });
+
+  describe("writeBackMeetingUrl", () => {
+    test("Event.meetingUrl を上書き保存する", async () => {
+      const { eventId } = await createEventWithSlotAndTicket({
+        ...baseEventData("writeback"),
+        format: EVENT_FORMAT.ONLINE,
+        meetingProvider: MEETING_PROVIDER.GOOGLE_MEET,
+        meetingUrl: null,
+      });
+      createdEventIds.push(eventId);
+
+      const { writeBackMeetingUrl } =
+        await import("@/shared/domain/events/calendar-sync");
+      await writeBackMeetingUrl({
+        eventId,
+        meetingUrl: "https://meet.google.com/generated",
+      });
+
+      const updated = await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+      });
+      expect(updated.meetingUrl).toBe("https://meet.google.com/generated");
+    });
+  });
 });

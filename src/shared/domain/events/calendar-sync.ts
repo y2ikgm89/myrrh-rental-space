@@ -33,6 +33,16 @@ export async function clearEventGoogleCalendarEventId(params: {
   });
 }
 
+export async function writeBackMeetingUrl(params: {
+  eventId: string;
+  meetingUrl: string;
+}): Promise<void> {
+  await prisma.event.update({
+    where: { id: params.eventId },
+    data: { meetingUrl: params.meetingUrl },
+  });
+}
+
 export async function markEventCalendarSyncError(params: {
   eventId: string;
   error: string;
@@ -56,6 +66,9 @@ export async function getEventSlotsForCalendarSync(
       slug: true,
       descriptionPlainText: true,
       addressDetail: true,
+      format: true,
+      meetingUrl: true,
+      meetingProvider: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
       slots: {
