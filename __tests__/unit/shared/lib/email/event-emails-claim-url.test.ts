@@ -14,6 +14,7 @@
  * props を検証することで、出し分けの向きを固定する回帰テスト。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
 
 type DeliverySettings = {
   sendReservationConfirmationEmail: boolean;
@@ -106,7 +107,19 @@ import {
   sendEventReminderEmail,
 } from "@/shared/lib/email/event-emails";
 
-const REGISTRATION_DATA = {
+const REGISTRATION_DATA: {
+  registrationId: string;
+  customerName: string;
+  customerEmail: string;
+  eventTitle: string;
+  eventStartTime: Date;
+  eventEndTime: Date;
+  location: undefined;
+  quantity: number;
+  icsSequence: number;
+  format: EventFormatValue;
+  meetingUrl: null;
+} = {
   registrationId: "registration-abcd12",
   customerName: "山田太郎",
   customerEmail: "participant@example.com",
@@ -116,9 +129,23 @@ const REGISTRATION_DATA = {
   location: undefined,
   quantity: 1,
   icsSequence: 0,
+  format: "OFFLINE",
+  meetingUrl: null,
 };
 
-const REMINDER_DATA = {
+const REMINDER_DATA: {
+  registrationId: string;
+  customerName: string;
+  customerEmail: string;
+  eventTitle: string;
+  eventStartTime: Date;
+  eventEndTime: Date;
+  location: undefined;
+  quantity: number;
+  icsSequence: number;
+  format: EventFormatValue;
+  meetingUrl: null;
+} = {
   registrationId: "registration-abcd12",
   customerName: "山田太郎",
   customerEmail: "participant@example.com",
@@ -128,6 +155,8 @@ const REMINDER_DATA = {
   location: undefined,
   quantity: 1,
   icsSequence: 0,
+  format: "OFFLINE",
+  meetingUrl: null,
 };
 
 const CLAIM_URL_PATTERN = /\/claim\/event-registration\?token=[A-Za-z0-9_-]+$/;

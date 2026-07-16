@@ -174,6 +174,8 @@ export async function registerForEvent(
                 quantity: result.registration.quantity,
                 icsSequence: result.registration.icsSequence,
                 customerId,
+                format: event.format,
+                meetingUrl: event.meetingUrl,
               }),
               sendEventAdminNotification(
                 {

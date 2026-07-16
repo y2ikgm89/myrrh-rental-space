@@ -23,6 +23,7 @@ import ical, {
   type ICalCalendar,
 } from "ical-generator";
 import { formatJstYmd, formatTimeShort } from "@/shared/lib/date-format";
+import { formatEventVenueDisplay } from "@/shared/domain/events/venue";
 import { buildEventRegistrationUid, buildReservationUid } from "./uid";
 import type { EventCalendarParams, ReservationCalendarParams } from "./types";
 
@@ -156,8 +157,24 @@ export function buildEventCalendar(
     busystatus: ICalEventBusyStatus.BUSY,
     sequence: params.sequence,
   });
-  if (params.location !== undefined) event.location(params.location);
-  if (params.url !== undefined) event.url(params.url);
+
+  // LOCATION: use formatEventVenueDisplay to determine primary location
+  const venueDisplay = formatEventVenueDisplay({
+    format: params.format,
+    meetingUrl: params.meetingUrl,
+    location: params.location ? { name: params.location } : null,
+  });
+  if (venueDisplay.primary !== null) {
+    event.location(venueDisplay.primary);
+  }
+
+  // URL: set if meetingUrl is provided
+  if (params.meetingUrl !== null) {
+    event.url(params.meetingUrl);
+  } else if (params.url !== undefined) {
+    event.url(params.url);
+  }
+
   if (
     params.organizerName !== undefined &&
     params.organizerEmail !== undefined
@@ -184,7 +201,22 @@ export function buildEventCancelCalendar(
     status: ICalEventStatus.CANCELLED,
     sequence: params.sequence,
   });
-  if (params.location !== undefined) event.location(params.location);
+
+  // LOCATION: use formatEventVenueDisplay to determine primary location
+  const venueDisplay = formatEventVenueDisplay({
+    format: params.format,
+    meetingUrl: params.meetingUrl,
+    location: params.location ? { name: params.location } : null,
+  });
+  if (venueDisplay.primary !== null) {
+    event.location(venueDisplay.primary);
+  }
+
+  // URL: set if meetingUrl is provided
+  if (params.meetingUrl !== null) {
+    event.url(params.meetingUrl);
+  }
+
   if (
     params.organizerName !== undefined &&
     params.organizerEmail !== undefined

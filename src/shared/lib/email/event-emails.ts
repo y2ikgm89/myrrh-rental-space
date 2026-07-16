@@ -7,6 +7,7 @@
  */
 
 import "server-only";
+import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
 import {
   formatDateWithWeekday,
   formatTimeShort,
@@ -79,6 +80,8 @@ type EventRegistrationConfirmationData = {
   icsSequence: number;
   // customerId が非null（会員）の場合は claimUrl を生成しない
   customerId: string | null;
+  format: EventFormatValue;
+  meetingUrl: string | null;
 };
 
 /**
@@ -115,6 +118,8 @@ export async function sendEventRegistrationConfirmation(
     sequence: data.icsSequence,
     organizerName: organizer.name,
     organizerEmail: organizer.email,
+    format: data.format,
+    meetingUrl: data.meetingUrl,
   });
 
   // ゲストでもログイン不要で .ics をダウンロードできるよう、署名付きトークンを URL に付与する。
@@ -219,6 +224,8 @@ type EventReminderEmailData = {
   icsSequence: number;
   // customerId が非null（会員）の場合は claimUrl を生成しない
   customerId: string | null;
+  format: EventFormatValue;
+  meetingUrl: string | null;
 };
 
 /**
@@ -261,6 +268,8 @@ export async function sendEventReminderEmail(
     sequence: data.icsSequence,
     organizerName: organizer.name,
     organizerEmail: organizer.email,
+    format: data.format,
+    meetingUrl: data.meetingUrl,
   });
 
   // リマインダ送信時点でキャンセル期限内なら、キャンセル URL を再発行する。
@@ -336,6 +345,8 @@ type EventRegistrationCancelledData = {
   location: string | undefined;
   quantity: number;
   icsSequence: number;
+  format: EventFormatValue;
+  meetingUrl: string | null;
 };
 
 /**
@@ -369,6 +380,8 @@ export async function sendEventRegistrationCancelled(
     sequence: data.icsSequence,
     organizerName: organizer.name,
     organizerEmail: organizer.email,
+    format: data.format,
+    meetingUrl: data.meetingUrl,
   });
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
@@ -495,6 +508,8 @@ export async function sendEventCancelledToAllParticipants(
     where: { id: eventId, deletedAt: null },
     select: {
       title: true,
+      format: true,
+      meetingUrl: true,
       updatedAt: true,
       addressDetail: true,
       location: { select: { name: true } },
@@ -562,6 +577,8 @@ export async function sendEventCancelledToAllParticipants(
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
             organizerEmail: organizer.email,
+            format: event.format,
+            meetingUrl: event.meetingUrl,
           });
           attachments = [
             {
@@ -637,6 +654,8 @@ export async function sendEventUpdatedToAllParticipants(
     where: { id: eventId, deletedAt: null },
     select: {
       title: true,
+      format: true,
+      meetingUrl: true,
       updatedAt: true,
       addressDetail: true,
       location: { select: { name: true } },
@@ -712,6 +731,8 @@ export async function sendEventUpdatedToAllParticipants(
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
             organizerEmail: organizer.email,
+            format: event.format,
+            meetingUrl: event.meetingUrl,
           });
           attachments = [
             {

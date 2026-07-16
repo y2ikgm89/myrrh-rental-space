@@ -142,6 +142,8 @@ export async function GET(
         : {}),
       organizerName: organizer.name,
       organizerEmail: organizer.email,
+      format: registration.format,
+      meetingUrl: registration.meetingUrl,
     };
 
     const isCancelled = registration.status === "CANCELLED";

@@ -503,6 +503,8 @@ async function fulfillEventRegistrationPaymentAtomically(
       quantity: details.quantity,
       icsSequence: details.icsSequence,
       customerId: details.customerId,
+      format: details.format,
+      meetingUrl: details.meetingUrl,
     }),
     {
       operation: "sendWaitlistOfferPaymentConfirmationEmail",

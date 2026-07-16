@@ -92,6 +92,8 @@ export async function GET(request: Request) {
           quantity: registration.quantity,
           icsSequence: registration.icsSequence,
           customerId: registration.customerId,
+          format: registration.event.format,
+          meetingUrl: registration.event.meetingUrl,
         });
 
         // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。

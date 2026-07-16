@@ -164,6 +164,8 @@ export async function applyEventRegistrationCancellationSideEffects(
         location: details.location ?? undefined,
         quantity: registration.quantity,
         icsSequence: registration.icsSequence,
+        format: details.format,
+        meetingUrl: details.meetingUrl,
       }),
       sendEventAdminNotification(
         {

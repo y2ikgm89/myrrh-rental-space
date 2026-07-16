@@ -155,6 +155,8 @@ export async function getEventRegistrationDetailsForEmail(
   readonly location: string | null;
   readonly capacity: number;
   readonly confirmedCount: number;
+  readonly format: EventFormatValue;
+  readonly meetingUrl: string | null;
 } | null> {
   const registration = await prisma.eventRegistration.findFirst({
     where: { id: registrationId, event: { deletedAt: null } },
@@ -172,6 +174,8 @@ export async function getEventRegistrationDetailsForEmail(
       event: {
         select: {
           title: true,
+          format: true,
+          meetingUrl: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -200,6 +204,8 @@ export async function getEventRegistrationDetailsForEmail(
     }),
     capacity: registration.slot.capacity,
     confirmedCount: confirmed._sum.quantity ?? 0,
+    format: registration.event.format,
+    meetingUrl: registration.event.meetingUrl,
   };
 }
 
@@ -440,6 +446,8 @@ export async function findEventRegistrationsForReminderWindow(
       event: {
         select: {
           title: true,
+          format: true,
+          meetingUrl: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -462,6 +470,8 @@ export async function getEventRegistrationForCalendar(params: {
   quantity: number;
   icsSequence: number;
   status: RegistrationStatus;
+  format: EventFormatValue;
+  meetingUrl: string | null;
 } | null> {
   const reg = await prisma.eventRegistration.findFirst({
     where: {
@@ -483,6 +493,8 @@ export async function getEventRegistrationForCalendar(params: {
       event: {
         select: {
           title: true,
+          format: true,
+          meetingUrl: true,
           addressDetail: true,
           location: { select: { name: true } },
           space: { select: { name: true } },
@@ -505,5 +517,7 @@ export async function getEventRegistrationForCalendar(params: {
     quantity: reg.quantity,
     icsSequence: reg.icsSequence,
     status: reg.status,
+    format: reg.event.format,
+    meetingUrl: reg.event.meetingUrl,
   };
 }

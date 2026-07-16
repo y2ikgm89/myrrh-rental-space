@@ -12,6 +12,8 @@ type RegistrationEmailRow = {
   };
   event: {
     title: string;
+    format: string;
+    meetingUrl: string | null;
     addressDetail: string | null;
     location: { name: string } | null;
     space: { name: string } | null;
@@ -92,6 +94,8 @@ describe("event registration query slot consistency", () => {
         addressDetail: "3F",
         location: { name: "青山" },
         space: { name: "Room A" },
+        format: "OFFLINE",
+        meetingUrl: null,
       },
     });
     mockRegistrationAggregate.mockResolvedValue({
@@ -107,6 +111,8 @@ describe("event registration query slot consistency", () => {
       location: "青山 / Room A（3F）",
       capacity: 8,
       confirmedCount: 6,
+      format: "OFFLINE",
+      meetingUrl: null,
     });
     expect(mockRegistrationAggregate).toHaveBeenCalledWith({
       where: {
