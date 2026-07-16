@@ -1,5 +1,7 @@
 import { Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
+import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
+import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
 import { eventRegistrationConfirmationFixture } from "./event-registration-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
 import { EmailLayout } from "./_shared/EmailLayout";
@@ -13,6 +15,7 @@ import {
   heading,
   hr,
   linkDangerStyle,
+  linkStyle,
   text,
 } from "./_shared/styles";
 
@@ -23,6 +26,10 @@ type Props = {
   startTime: string;
   endTime: string;
   location?: string;
+  /** 開催形態。ONLINE/HYBRID のとき「オンライン参加 URL」section を表示する。 */
+  format: EventFormatValue;
+  /** オンライン会議 URL。ONLINE/HYBRID + GOOGLE_MEET provider で write-back 未反映時は null。 */
+  meetingUrl: string | null;
   quantity: number;
   registrationId: string;
   addToCalendarLinks?: AddToCalendarUrls;
@@ -42,6 +49,8 @@ export function EventRegistrationConfirmationEmail({
   startTime,
   endTime,
   location,
+  format,
+  meetingUrl,
   quantity,
   registrationId,
   addToCalendarLinks,
@@ -89,6 +98,43 @@ export function EventRegistrationConfirmationEmail({
           <strong>参加人数:</strong> {String(quantity)}名
         </Text>
       </Section>
+
+      {isEventVirtualAccessible({ format }) && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              ...detailsHeading,
+              color: SECTION_VARIANT_STYLES.info.heading,
+            }}
+          >
+            オンライン参加 URL
+          </Text>
+          <Hr style={hr} />
+          {meetingUrl ? (
+            <>
+              <Text style={detailItem}>
+                <Link href={meetingUrl} style={linkStyle}>
+                  {meetingUrl}
+                </Link>
+              </Text>
+              <Text style={detailItem}>
+                開始時刻の 5 分前に上記 URL からご参加ください
+              </Text>
+            </>
+          ) : (
+            <Text style={detailItem}>
+              URL は開催が近づき次第、別途お知らせします
+            </Text>
+          )}
+        </Section>
+      )}
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 

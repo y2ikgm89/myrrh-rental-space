@@ -192,6 +192,8 @@ export async function sendEventRegistrationConfirmation(
           startTime,
           endTime,
           location: data.location,
+          format: data.format,
+          meetingUrl: data.meetingUrl,
           quantity: data.quantity,
           registrationId: data.registrationId.slice(0, 8).toUpperCase(),
           addToCalendarLinks,
