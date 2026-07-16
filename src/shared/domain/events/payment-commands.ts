@@ -10,6 +10,10 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
+import {
+  fromStripeUnitAmount,
+  toStripeUnitAmount,
+} from "@/shared/lib/stripe-shared";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { getAppUrl } from "@/shared/lib/constants";
 import { type RefundedByType } from "@/shared/lib/validations/enums/helpers";
@@ -26,31 +30,6 @@ import {
  * (Reservation の 728355 と同型、event registration 単位で serialize)。
  */
 const EVENT_REFUND_LOCK_NAMESPACE = 728356;
-
-// Reservation の payment-commands と共通の unit_amount 通貨変換
-const ZERO_DECIMAL_CURRENCIES = new Set([
-  "jpy",
-  "krw",
-  "vnd",
-  "bif",
-  "clp",
-  "djf",
-  "gnf",
-  "kmf",
-  "mga",
-  "pyg",
-  "rwf",
-  "ugx",
-  "xaf",
-  "xof",
-  "xpf",
-]);
-
-function toStripeUnitAmount(amount: number, currency: string): number {
-  return ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
-    ? amount
-    : Math.round(amount * 100);
-}
 
 /**
  * EventRegistration の Stripe Checkout Session を作成する (PR#10)。
@@ -912,22 +891,31 @@ export async function applyEventChargeRefundIdempotent(input: {
   readonly registrationId: string;
   readonly chargeAmount: number;
   readonly amountRefunded: number;
+  readonly currency: string;
   readonly latestRefund: {
     readonly id: string;
     readonly amount: number;
   } | null;
 }): Promise<void> {
-  const { registrationId, chargeAmount, amountRefunded, latestRefund } = input;
+  const {
+    registrationId,
+    chargeAmount,
+    amountRefunded,
+    currency,
+    latestRefund,
+  } = input;
 
   if (latestRefund) {
     const existing = await prisma.refund.findUnique({
       where: { stripeRefundId: latestRefund.id },
     });
     if (!existing) {
+      // Reservation 側と同型: Stripe unit_amount からアプリ単位への逆変換必須
+      // (PR #1130 Codex P2 対応、PR #1126 P1 と bundle fix)
       await prisma.refund.create({
         data: {
           eventRegistrationId: registrationId,
-          amount: latestRefund.amount,
+          amount: fromStripeUnitAmount(latestRefund.amount, currency),
           stripeRefundId: latestRefund.id,
           refundedByType: "STRIPE_DASHBOARD",
         },

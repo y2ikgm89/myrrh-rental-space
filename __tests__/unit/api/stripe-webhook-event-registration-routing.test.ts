@@ -186,6 +186,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     reservationId: string;
     chargeAmount: number;
     amountRefunded: number;
+    currency: string;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyChargeRefundIdempotent(input),
 }));

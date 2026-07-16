@@ -28,6 +28,72 @@ export const SUPPORTED_CURRENCIES: readonly CurrencyOption[] = [
 ];
 
 // =============================================================================
+// unit_amount 変換 (Stripe 最小単位 ↔ アプリ単位)
+// =============================================================================
+
+/**
+ * Stripe が最小単位を保持しない (= 表示単位 = 最小単位) 通貨集合。
+ *
+ * 例: JPY 5000 は Stripe 側でも `unit_amount: 5000` (¥5,000)。
+ *     USD 50 は Stripe 側で `unit_amount: 5000` (5000 cents = $50)。
+ *
+ * Stripe API 公式リストからの subset (アプリでサポートし得る主要通貨)。
+ * 未知の通貨は「小数点あり (100 倍)」として扱う (default 挙動)。
+ * Ref: https://docs.stripe.com/currencies#zero-decimal
+ */
+export const ZERO_DECIMAL_CURRENCIES: ReadonlySet<string> = new Set([
+  "bif",
+  "clp",
+  "djf",
+  "gnf",
+  "isk",
+  "jpy",
+  "kmf",
+  "krw",
+  "mga",
+  "pyg",
+  "rwf",
+  "ugx",
+  "vnd",
+  "vuv",
+  "xaf",
+  "xof",
+  "xpf",
+]);
+
+/**
+ * アプリ単位金額 → Stripe unit_amount 変換
+ *
+ * JPY 等のゼロ小数点通貨はそのまま。それ以外は 100 倍 (dollars → cents)。
+ * currency は case-insensitive で判定する。
+ */
+export function toStripeUnitAmount(amount: number, currency: string): number {
+  return ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
+    ? amount
+    : Math.round(amount * 100);
+}
+
+/**
+ * Stripe unit_amount → アプリ単位金額 変換 (`toStripeUnitAmount` の逆関数)
+ *
+ * webhook 経由で受け取る `charge.amount` / `refund.amount` は常に Stripe 最小単位。
+ * DB (`Refund.amount` 等) はアプリ単位 (JPY 円 / USD ドル) で保存するため、書込前に
+ * この関数で通貨に応じた逆変換が必要。
+ *
+ * `toStripeUnitAmount` が `Math.round(amount * 100)` で入力を丸めるため、逆方向は
+ * 単純除算で対称。丸め漏れが問題になるケースは Stripe 側では発生しない (Stripe が
+ * 整数最小単位以外を受理しない)。
+ */
+export function fromStripeUnitAmount(
+  unitAmount: number,
+  currency: string,
+): number {
+  return ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase())
+    ? unitAmount
+    : unitAmount / 100;
+}
+
+// =============================================================================
 // キープレフィックス（秘密情報なし）
 // =============================================================================
 

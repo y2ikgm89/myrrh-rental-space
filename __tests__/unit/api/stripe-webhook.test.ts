@@ -190,6 +190,7 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
     reservationId: string;
     chargeAmount: number;
     amountRefunded: number;
+    currency: string;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyChargeRefundIdempotent(input),
 }));
@@ -206,6 +207,7 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
     registrationId: string;
     chargeAmount: number;
     amountRefunded: number;
+    currency: string;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyEventChargeRefundIdempotent(input),
 }));
@@ -353,12 +355,14 @@ function makeChargeRefundedEvent(
   options: {
     amount?: number;
     amountRefunded?: number;
+    currency?: string;
     latestRefund?: { id: string; amount: number } | null;
   } = {},
 ): StripeWebhookEvent {
   const {
     amount = 5000,
     amountRefunded = 5000,
+    currency = "jpy",
     latestRefund = { id: "re_test_1", amount: amountRefunded },
   } = options;
   return {
@@ -369,6 +373,7 @@ function makeChargeRefundedEvent(
         payment_intent: paymentIntent,
         amount,
         amount_refunded: amountRefunded,
+        currency,
         refunds: {
           data: latestRefund ? [latestRefund] : [],
         },
@@ -808,6 +813,7 @@ describe("POST /api/webhooks/stripe", () => {
       reservationId: "res-ref-1",
       chargeAmount: 5000,
       amountRefunded: 5000,
+      currency: "jpy",
       latestRefund: { id: "re_test_full", amount: 5000 },
     });
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
@@ -833,6 +839,7 @@ describe("POST /api/webhooks/stripe", () => {
       reservationId: "res-partial-1",
       chargeAmount: 5000,
       amountRefunded: 2000,
+      currency: "jpy",
       latestRefund: { id: "re_test_partial", amount: 2000 },
     });
   });
@@ -855,7 +862,35 @@ describe("POST /api/webhooks/stripe", () => {
       reservationId: "res-empty-1",
       chargeAmount: 5000,
       amountRefunded: 5000,
+      currency: "jpy",
       latestRefund: null,
+    });
+  });
+
+  test("charge.refunded (USD) → charge.currency が applyChargeRefundIdempotent に伝播する (Refund child 書込で Stripe cents → USD ドル逆変換の入力)", async () => {
+    // PR #1126 Codex P1 対応の回帰テスト:
+    // 通貨情報が webhook → helper に伝わらないと Refund.amount が Stripe 最小単位
+    // (USD/EUR で 100 倍) で保存され、後続 refund 集計・残額判定が壊れる。
+    const event = makeChargeRefundedEvent("pi-usd-123", {
+      amount: 5000, // Stripe cents = $50
+      amountRefunded: 5000,
+      currency: "usd",
+      latestRefund: { id: "re_test_usd", amount: 5000 },
+    });
+    mockConstructEvent.mockResolvedValue(event);
+    mockFindReservationByPaymentIntent.mockResolvedValue({
+      id: "res-usd-1",
+      paymentStatus: "PAID",
+    });
+
+    const response = await POST(makeRequest("body"));
+    expect(response.status).toBe(200);
+    expect(mockApplyChargeRefundIdempotent).toHaveBeenCalledWith({
+      reservationId: "res-usd-1",
+      chargeAmount: 5000,
+      amountRefunded: 5000,
+      currency: "usd",
+      latestRefund: { id: "re_test_usd", amount: 5000 },
     });
   });
 
