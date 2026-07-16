@@ -186,6 +186,8 @@ describe("event registration query slot consistency", () => {
         event: {
           select: {
             title: true,
+            format: true,
+            meetingUrl: true,
             addressDetail: true,
             location: { select: { name: true } },
             space: { select: { name: true } },
