@@ -795,20 +795,19 @@ export async function refundEventRegistrationPaymentCommand(
 
       // Belt-and-suspenders: webhook (charge.refunded) が先に同 stripeRefundId で
       // Refund を書いていた場合、@unique(stripeRefundId) で二重 insert が reject される。
-      const existing = await tx.refund.findUnique({
+      // Codex PR #1145 追加指摘 (P2): Reservation 側と同型の race を排除するため upsert 化
+      // (`update: {}` で既存 = webhook 経由の書込を上書きしない belt-and-suspenders 契約は不変)。
+      await tx.refund.upsert({
         where: { stripeRefundId: refund.id },
+        create: {
+          eventRegistrationId: registrationId,
+          amount,
+          ...(reason ? { reason } : {}),
+          stripeRefundId: refund.id,
+          refundedByType: actorType,
+        },
+        update: {},
       });
-      if (!existing) {
-        await tx.refund.create({
-          data: {
-            eventRegistrationId: registrationId,
-            amount,
-            ...(reason ? { reason } : {}),
-            stripeRefundId: refund.id,
-            refundedByType: actorType,
-          },
-        });
-      }
 
       // paymentStatus 遷移 (updateMany で status guard)
       await tx.eventRegistration.updateMany({

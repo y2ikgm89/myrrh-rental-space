@@ -528,21 +528,23 @@ export async function refundReservationPaymentCommand(
 
       // Belt-and-suspenders: webhook (charge.refunded) が先に同 stripeRefundId で
       // Refund を書いていた場合、@unique(stripeRefundId) で二重 insert が reject される。
-      // findUnique で存在確認し、あれば skip (idempotent)。
-      const existing = await tx.refund.findUnique({
+      // Codex PR #1145 追加指摘 (P2): findUnique → create の 2 ステップは非 atomic で、
+      // webhook 側 upsert (`applyChargeRefundIdempotent`) と command 側 create の間で
+      // race window が残る。webhook が先に upsert すると command 側の create が
+      // `refunds_stripeRefundId_key` で abort、tx rollback で admin に「refund failed」と
+      // 報告されるが Stripe 側は既に処理済 = 会計 mismatch。upsert で atomic に処理する
+      // (update: {} で既存 = webhook 経由の書込を上書きしない belt-and-suspenders 契約は不変)。
+      await tx.refund.upsert({
         where: { stripeRefundId: refund.id },
+        create: {
+          reservationId,
+          amount,
+          ...(reason ? { reason } : {}),
+          stripeRefundId: refund.id,
+          refundedByType: actorType,
+        },
+        update: {},
       });
-      if (!existing) {
-        await tx.refund.create({
-          data: {
-            reservationId,
-            amount,
-            ...(reason ? { reason } : {}),
-            stripeRefundId: refund.id,
-            refundedByType: actorType,
-          },
-        });
-      }
 
       // paymentStatus 遷移 (updateMany で status guard)
       await tx.reservation.updateMany({
