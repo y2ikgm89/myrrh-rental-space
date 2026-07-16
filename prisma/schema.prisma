@@ -195,6 +195,24 @@ enum EventScheduleMode {
   TIMED_ENTRY
 }
 
+/// オンライン開催対応 (Phase B.1)。schema.org eventAttendanceMode に対応。
+enum EventFormat {
+  /// schema.org OfflineEventAttendanceMode
+  OFFLINE
+  /// schema.org OnlineEventAttendanceMode
+  ONLINE
+  /// schema.org MixedEventAttendanceMode
+  HYBRID
+}
+
+/// Event.meetingUrl の発行元 (Phase B.1)。
+enum MeetingProvider {
+  /// 管理者手入力の URL (Zoom / Teams / Whereby / 独自 URL 等)
+  MANUAL
+  /// GCal API 経由で自動発行、応答の URL は Event.meetingUrl に write-back
+  GOOGLE_MEET
+}
+
 enum RegistrationStatus {
   CONFIRMED
   CANCELLED
@@ -1398,8 +1416,9 @@ model Settings {
   googleBusinessProfileEnabled Boolean @default(false)
   googleBusinessProfileAuth    Json? // { encrypted: string } envelope (中身は { accessToken, refreshToken, expiresAt, accountId } を encrypt() した ciphertext)
 
-  // Google Meet ビデオ会議自動生成
-  googleCalendarMeetEnabled Boolean @default(false)
+  // Google Meet ビデオ会議自動生成は per-event Event.meetingProvider === GOOGLE_MEET に置換 (Phase B.1)。
+  // site-wide gate は「per-event で ON にしても発行されないケース」の混乱源だったため DROP。
+  // Workspace 権限失敗は per-event GCal API 呼出時に surface され、admin UI に表示される。
 
   // リマインダー設定: null=Googleカレンダー既定を使う, 0=通知なし, N=N分前にメール通知
   googleCalendarReminderMinutes Int?
@@ -1892,6 +1911,15 @@ model Event {
   registrations EventRegistration[]
   tickets       EventTicket[]
   slots         EventTimeSlot[]
+
+  /// 開催形態 (Phase B.1)。OFFLINE = 既存の物理会場のみ運用と同一 (デフォルト)。
+  format          EventFormat     @default(OFFLINE)
+  /// オンライン会議 URL。ONLINE/HYBRID + MANUAL provider では必須 (DB CHECK
+  /// event_online_meeting_url_required で担保)。GOOGLE_MEET provider では
+  /// 発行前は null、発行後に write-back される。公開ページ・JSON-LD には出力しない。
+  meetingUrl      String?         @db.VarChar(500)
+  /// meetingUrl の発行元。
+  meetingProvider MeetingProvider @default(MANUAL)
 
   @@index([status])
   @@index([locationId])
