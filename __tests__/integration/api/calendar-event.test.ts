@@ -79,6 +79,8 @@ describe("GET /api/calendar/event/[registrationId]", () => {
           quantity: 2,
           icsSequence: 0,
           status: "CONFIRMED",
+          format: "OFFLINE",
+          meetingUrl: null,
         }),
       ),
     }));
