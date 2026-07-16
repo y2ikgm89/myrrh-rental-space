@@ -1,7 +1,6 @@
 import "server-only";
 
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   Document,
@@ -43,7 +42,7 @@ import type { ReactElement } from "react";
  */
 
 // Noto Sans JP Japanese subset (~500KB compressed WOFF、OFL 1.1 派生) を repo に直接
-// 同梱し、module 相対 path で参照する。
+// 同梱し、`process.cwd()` 基準の project-root 相対 path で参照する。
 //
 // **方針**: 旧実装は Fontsource npm package (`@fontsource/noto-sans-jp`) を `require.resolve`
 // で参照していたが、Turbopack が (1) `.woff` を直接 require すると "Unknown module type"、
@@ -51,13 +50,22 @@ import type { ReactElement } from "react";
 // 2 段の bundling 問題を起こしていた。`serverExternalPackages` に追加しても後者は解消しない。
 // repo 内 relative path なら Turbopack の bundling 対象外で確実に動く。
 //
+// **path 解決を `process.cwd()` 基準にする理由 (PR #1128 Codex P1 対応)**:
+// - dev / test / build (Node 直接起動): `process.cwd()` = project root、`src/shared/pdf/fonts/...`
+//   は repo 内 file と一致する。
+// - Cloud Run standalone runtime: `node server.js` は `.next/standalone/` を cwd として起動され、
+//   `outputFileTracingIncludes` (next.config.ts) が WOFF を `.next/standalone/src/shared/pdf/fonts/...`
+//   へコピーする。cwd 基準の相対 path で解決できる。
+// - 旧実装 (`path.dirname(fileURLToPath(import.meta.url))`) は Cloud Run standalone で emit された
+//   chunk file (`.next/standalone/.next/server/chunks/*`) の dir を指し、そこから相対の `fonts/`
+//   に font file は存在しない → runtime で `Failed to fetch font` の 500 化。
+//
 // **outputFileTracing との統合**: font file は `src/shared/pdf/fonts/` に置いてあり、
 // Next.js の nft (node file tracer) が module import graph から font-tracer 用の meta hint
 // なしに追跡できるよう `next.config.ts` の `outputFileTracingIncludes` で明示 include している。
-const CURRENT_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const NOTO_SANS_JP_PATH = path.join(
-  CURRENT_FILE_DIR,
-  "fonts",
+  process.cwd(),
+  "src/shared/pdf/fonts",
   "noto-sans-jp-japanese-400-normal.woff",
 );
 
