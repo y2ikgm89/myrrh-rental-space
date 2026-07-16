@@ -21,11 +21,16 @@ import {
 import {
   formatEventAddress,
   formatEventVenue,
+  formatEventVenueDisplay,
+  isEventVirtualAccessible,
 } from "@/shared/domain/events/venue";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
-import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  EVENT_FORMAT,
+  TermsScope,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
@@ -137,24 +142,35 @@ export default async function EventDetailPage({
     location: event.location,
     addressDetail: event.addressDetail,
   });
+  // Phase B.1: 3 format (OFFLINE/ONLINE/HYBRID) 対応の会場表示。primary/secondary
+  // は formatEventVenueDisplay が format を SSoT に構築する。event.meetingUrl は
+  // 型を満たすため event ごと渡すのみで destructure しない（公開 JSX に render 禁止）。
+  const venueDisplay = formatEventVenueDisplay(event);
+  const virtualAccessible = isEventVirtualAccessible(event);
 
+  // ONLINE では物理会場を表示しない。admin フォームは ONLINE 選択時に
+  // PhysicalVenueFields を隠すだけで location/space/addressDetail の state は
+  // 消去しないため、過去に OFFLINE/HYBRID で設定した値が DB に残存し得る。
+  // 表示は format を正とする（formatEventVenueDisplay と同じ判断基準）。
   const venues: EventInfoPanelVenue[] = [];
-  if (event.space) {
-    venues.push({
-      kind: "space",
-      slug: event.space.slug,
-      name: event.space.name,
-    });
-  }
-  if (event.location) {
-    venues.push({
-      kind: "location",
-      name: event.location.name,
-      address: event.location.address ?? null,
-    });
-  }
-  if (event.addressDetail) {
-    venues.push({ kind: "addressDetail", text: event.addressDetail });
+  if (event.format !== EVENT_FORMAT.ONLINE) {
+    if (event.space) {
+      venues.push({
+        kind: "space",
+        slug: event.space.slug,
+        name: event.space.name,
+      });
+    }
+    if (event.location) {
+      venues.push({
+        kind: "location",
+        name: event.location.name,
+        address: event.location.address ?? null,
+      });
+    }
+    if (event.addressDetail) {
+      venues.push({ kind: "addressDetail", text: event.addressDetail });
+    }
   }
 
   const resolvedDescriptionHtml = await resolveInternalLinkCards(
@@ -165,6 +181,8 @@ export default async function EventDetailPage({
     startTime: event.startTime,
     endTime: event.endTime,
     venues,
+    venueDisplay,
+    virtualAccessible,
     scheduleMode: event.scheduleMode,
     slots: slotOptions,
     tickets: event.tickets,
