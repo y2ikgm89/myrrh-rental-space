@@ -47,7 +47,7 @@ describe("buildEventCalendar (Phase B.1)", () => {
     );
     const ics = cal;
     expect(ics).toContain("LOCATION:東京都渋谷区");
-    expect(ics).not.toContain("URL:");
+    expect(ics).not.toContain("URL;VALUE=URI:");
   });
 
   test("HYBRID: LOCATION=物理会場、URL=meetingUrl 両方出力", () => {
@@ -115,6 +115,6 @@ describe("buildEventCalendar (Phase B.1)", () => {
     );
     const ics = cal;
     expect(ics).toContain("LOCATION:オンライン開催");
-    expect(ics).not.toContain("URL:");
+    expect(ics).not.toContain("URL;VALUE=URI:");
   });
 });
