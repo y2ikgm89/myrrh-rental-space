@@ -63,6 +63,8 @@ export {
   TermsScope,
   SmartLockDeviceType,
   SmartLockPasscodeStatus,
+  EventFormat,
+  MeetingProvider,
 } from "@generated/prisma/enums";
 
 // ---------------------------------------------------------------------------
@@ -107,3 +109,31 @@ export {
 // で生成・利用する。
 // ---------------------------------------------------------------------------
 export type { Prisma } from "@generated/prisma/browser";
+
+// EventFormat: 開催形態 (schema.org eventAttendanceMode 3 値と 1:1)
+export const EVENT_FORMAT = {
+  OFFLINE: "OFFLINE",
+  ONLINE: "ONLINE",
+  HYBRID: "HYBRID",
+} as const;
+export type EventFormatValue = (typeof EVENT_FORMAT)[keyof typeof EVENT_FORMAT];
+export const EVENT_FORMAT_VALUES = Object.values(
+  EVENT_FORMAT,
+) as EventFormatValue[];
+
+export const EVENT_FORMAT_TO_SCHEMA_ORG = {
+  OFFLINE: "OfflineEventAttendanceMode",
+  ONLINE: "OnlineEventAttendanceMode",
+  HYBRID: "MixedEventAttendanceMode",
+} as const satisfies Record<EventFormatValue, string>;
+
+// MeetingProvider: オンライン会議発行元
+export const MEETING_PROVIDER = {
+  MANUAL: "MANUAL",
+  GOOGLE_MEET: "GOOGLE_MEET",
+} as const;
+export type MeetingProviderValue =
+  (typeof MEETING_PROVIDER)[keyof typeof MEETING_PROVIDER];
+export const MEETING_PROVIDER_VALUES = Object.values(
+  MEETING_PROVIDER,
+) as MeetingProviderValue[];
