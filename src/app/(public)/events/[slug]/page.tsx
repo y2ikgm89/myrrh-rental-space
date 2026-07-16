@@ -9,7 +9,6 @@ import { Heading } from "@/public/components/design-system/heading";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { Prose } from "@/public/components/design-system/prose";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
-import { EventJsonLd } from "@/public/components/seo/json-ld";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
@@ -46,6 +45,7 @@ import { EventCalendarDisclosure } from "./_components/event-calendar-disclosure
 import { EventStatusNotice } from "./_components/event-status-notice";
 import { EventRegistrationForm } from "./_components/event-registration-form";
 import { RelatedEvents } from "./_components/related-events";
+import { EventJsonLd } from "./_components/event-json-ld";
 import { GalleryGrid } from "@/shared/components/gallery/GalleryGrid";
 
 interface PageProps {
@@ -216,10 +216,10 @@ export default async function EventDetailPage({
             url={eventUrl}
             {...(event.thumbnailUrl ? { image: event.thumbnailUrl } : {})}
             eventStatus="EventScheduled"
-            eventAttendanceMode="OfflineEventAttendanceMode"
+            format={event.format}
             {...(venueName
               ? {
-                  location: {
+                  venue: {
                     name: venueName,
                     ...(venueAddress ? { address: venueAddress } : {}),
                     ...(event.space?.slug
