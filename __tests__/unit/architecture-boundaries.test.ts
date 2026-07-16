@@ -2804,6 +2804,32 @@ describe("architecture boundaries", () => {
       expect(stringInItem.success).toBe(false);
     }
   });
+
+  describe("Phase B.1: public JSX で event.meetingUrl を render しない", () => {
+    test("src/app/(public)/events/[slug]/ で event.meetingUrl の JSX 参照ゼロ", async () => {
+      const { globSync } = await import("glob");
+      const files = globSync("src/app/(public)/events/[slug]/**/*.tsx", {
+        cwd: ROOT,
+        absolute: false,
+      });
+
+      for (const file of files) {
+        const content = readFileSync(join(ROOT, file), "utf8");
+        // JSX 内で {event.meetingUrl} や {meetingUrl} を直接 render している行を検出
+        // マイページ (mypage/events/[registrationId]) は許可 (登録者限定なので render OK)
+        const forbiddenPatterns = [
+          /\{event\.meetingUrl\}/,
+          /\{meetingUrl\}/, // destructure された変数の直接 render
+        ];
+        for (const pattern of forbiddenPatterns) {
+          expect(
+            content,
+            `${file}: 公開ページで meetingUrl を JSX render するのは禁止 (登録完了者のみ開示)`,
+          ).not.toMatch(pattern);
+        }
+      }
+    });
+  });
 });
 
 // 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
