@@ -350,6 +350,20 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     );
   });
 
+  test("返金ポリシー: Switch OFF で defaultRefundRate 未送信でも success (UI OFF branch から null 保存経路が到達可能)", () => {
+    // Codex review PR #1138 対応: UI の `{enabled && (...)}` が defaultRefundRate input
+    // ごと隠すため、OFF submit の FormData に refundPolicyDefaultRefundRate が含まれない。
+    // これで validation が落ちると、documented な OFF=null 保存経路が UI から到達不能になる。
+    expectSuccess(
+      refundPolicyFormSchema,
+      form({
+        refundPolicyEnabled: "",
+        // refundPolicyDefaultRefundRate は UI で隠されて送信されない状態を再現
+      }),
+      "refundPolicy: OFF from UI",
+    );
+  });
+
   test("返金ポリシー: enabled=true + tier 空はエラー (有効時は 1 つ以上必要)", () => {
     const result = parseWithZod(
       form({
