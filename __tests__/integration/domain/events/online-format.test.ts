@@ -149,10 +149,17 @@ describeMaybe("Event online format (integration)", () => {
   });
 
   afterAll(async () => {
-    // 子テーブル (slot/ticket/registration) は Event の onDelete: Cascade で
-    // 一緒に消える。Customer/User は Event の子ではないため個別に削除する
-    // （Registration→Customer は onDelete: SetNull のため削除順序は無関係）。
+    // EventRegistration は EventTicket/EventTimeSlot に対して onDelete: Restrict
+    // を持つため、削除順序は固定: 登録 → チケット → スロット → イベント。
+    // ticket/slot は Event の onDelete: Cascade で消えるが、registration を先に
+    // 削除しないと ticket 削除時に FK 制約で失敗する。
     if (createdEventIds.length > 0) {
+      await prisma.eventRegistration.deleteMany({
+        where: { eventId: { in: createdEventIds } },
+      });
+      await prisma.eventTicket.deleteMany({
+        where: { eventId: { in: createdEventIds } },
+      });
       await prisma.event.deleteMany({ where: { id: { in: createdEventIds } } });
     }
     if (createdCustomerIds.length > 0) {
