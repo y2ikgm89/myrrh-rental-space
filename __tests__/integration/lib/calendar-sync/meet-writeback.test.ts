@@ -417,4 +417,59 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
       await cleanup();
     }
   });
+
+  test("writeBackMeetingUrl が throw → 外側の sync は success=true（GCal event 作成済み、googleCalendarEventId 保存済み）", async () => {
+    const { eventId, slotId } = await createEventWithSlot({
+      format: EVENT_FORMAT.ONLINE,
+      meetingProvider: MEETING_PROVIDER.GOOGLE_MEET,
+      meetingUrl: null,
+    });
+
+    // GCal イベント作成は成功、Meet URL は返される
+    mockCreate.mockImplementation(() =>
+      Promise.resolve({
+        success: true,
+        eventId: "gcal-writeback-fail",
+        event: { hangoutLink: "https://meet.google.com/xyz-123-abc" },
+      }),
+    );
+
+    // prisma.event.update（writeBackMeetingUrl の実装）を throw させる
+    const originalUpdate = prisma.event.update;
+    let writeBackAttempted = false;
+    prisma.event.update = mock(async (params: any) => {
+      if (params.data?.meetingUrl) {
+        writeBackAttempted = true;
+        throw new Error("Database connection timeout during write-back");
+      }
+      return originalUpdate.call(prisma.event, params);
+    }) as any;
+
+    try {
+      const contexts = await getEventSlotsForCalendarSync(eventId);
+      const result = await syncEventToCalendar(contexts[0]!);
+
+      // 外側の sync は成功を返す（内側の write-back エラーをサイレント化）
+      expect(result.success).toBe(true);
+      expect(result.eventId).toBe("gcal-writeback-fail");
+
+      // GCal イベント ID は保存されている
+      const updatedSlot = await prisma.eventTimeSlot.findUniqueOrThrow({
+        where: { id: slotId },
+      });
+      expect(updatedSlot.googleCalendarEventId).toBe("gcal-writeback-fail");
+
+      // meetingUrl は write-back が失敗したため null のまま（ストランド状態）
+      const updatedEvent = await prisma.event.findUniqueOrThrow({
+        where: { id: eventId },
+      });
+      expect(updatedEvent.meetingUrl).toBeNull();
+
+      // write-back は試みられたことを確認
+      expect(writeBackAttempted).toBe(true);
+    } finally {
+      // restore original update
+      prisma.event.update = originalUpdate;
+    }
+  });
 });

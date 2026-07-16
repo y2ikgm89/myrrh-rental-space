@@ -10,7 +10,12 @@
 import "server-only";
 
 import type { calendar_v3 } from "googleapis";
-import { normalizeError } from "@/shared/lib/errors/server";
+import {
+  normalizeError,
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 import {
   createCalendarEvent,
   updateCalendarEvent,
@@ -109,10 +114,31 @@ export async function syncEventToCalendar(
         googleCalendarEventId: result.eventId,
       });
 
+      // Meet URL 抽出・write-back を独立した try/catch で包む。
+      // write-back が失敗してもGCal イベント作成とgoogleCalendarEventId 保存は済んでいるため、
+      // 外側の sync は成功を返す。write-back エラーはサイレント化（logError で記録）。
       if (withMeet) {
-        const meetingUrl = extractMeetingUrl(result.event);
-        if (meetingUrl) {
-          await writeBackMeetingUrl({ eventId: data.eventId, meetingUrl });
+        try {
+          const meetingUrl = extractMeetingUrl(result.event);
+          if (meetingUrl) {
+            await writeBackMeetingUrl({ eventId: data.eventId, meetingUrl });
+          }
+        } catch (error) {
+          // write-back エラーを記録するが、propagate しない
+          const message =
+            error instanceof Error
+              ? error.message
+              : normalizeError(error).message;
+          logError(new Error(`Failed to write back meeting URL: ${message}`), {
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: {
+              operation: "writeBackMeetingUrl",
+              eventId: data.eventId,
+              googleCalendarEventId: result.eventId,
+            },
+          });
+          // Note: この時点で meetingUrl は null のまま。follow-up で別タスク化予定
         }
       }
 
