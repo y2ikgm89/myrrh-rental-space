@@ -79,6 +79,9 @@ describe("GET /api/calendar/event/[registrationId]", () => {
           quantity: 2,
           icsSequence: 0,
           status: "CONFIRMED",
+          // Phase B.1: buildEventCalendar が format / meetingUrl を要求 (Task 9)
+          format: "OFFLINE" as const,
+          meetingUrl: null,
         }),
       ),
     }));
