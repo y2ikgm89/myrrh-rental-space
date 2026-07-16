@@ -906,21 +906,18 @@ export async function applyEventChargeRefundIdempotent(input: {
   } = input;
 
   if (latestRefund) {
-    const existing = await prisma.refund.findUnique({
+    // Reservation 側と同型: upsert で atomic 化 (PR #1126 P2 対応、両経路 bundle)。
+    // Stripe unit_amount からアプリ単位への逆変換 (PR #1130 P2、PR #1126 P1 と同型) も継続。
+    await prisma.refund.upsert({
       where: { stripeRefundId: latestRefund.id },
+      create: {
+        eventRegistrationId: registrationId,
+        amount: fromStripeUnitAmount(latestRefund.amount, currency),
+        stripeRefundId: latestRefund.id,
+        refundedByType: "STRIPE_DASHBOARD",
+      },
+      update: {},
     });
-    if (!existing) {
-      // Reservation 側と同型: Stripe unit_amount からアプリ単位への逆変換必須
-      // (PR #1130 Codex P2 対応、PR #1126 P1 と bundle fix)
-      await prisma.refund.create({
-        data: {
-          eventRegistrationId: registrationId,
-          amount: fromStripeUnitAmount(latestRefund.amount, currency),
-          stripeRefundId: latestRefund.id,
-          refundedByType: "STRIPE_DASHBOARD",
-        },
-      });
-    }
   }
 
   const isFullRefund = amountRefunded >= chargeAmount;
