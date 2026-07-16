@@ -1050,6 +1050,44 @@ describe("updateEventCommand", () => {
         }),
       );
     });
+
+    test("format を OFFLINE に更新すると、非 https の stale meetingUrl 残骸があっても DomainError を投げずリセットされる（Task 4 review Important finding の回帰テスト）", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      // assertEventMeetingUrlInvariant が正規化前の raw data を検証すると、
+      // meetingUrl の shape check（https:// 必須）が format に関わらず無条件に
+      // かかるため、OFFLINE 更新でも非 https の stale 残骸だけで DomainError に
+      // なってしまう回帰を防ぐ（正規化後は meetingUrl: null になり shape check
+      // 自体にかからない）。
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        format: "OFFLINE",
+        // 旧 ONLINE 設定の非 https 残骸（UI が消し忘れた不正な形式の URL）
+        meetingUrl: "http://old.example.com/room",
+        meetingProvider: "GOOGLE_MEET",
+      });
+
+      expect(mockEventUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            format: "OFFLINE",
+            meetingUrl: null,
+            meetingProvider: "MANUAL",
+          }),
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {

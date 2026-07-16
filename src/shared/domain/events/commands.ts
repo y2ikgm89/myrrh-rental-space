@@ -335,7 +335,27 @@ export async function createEventCommand(data: EventCommandInput) {
 
 export async function updateEventCommand(id: string, data: EventCommandInput) {
   assertEventScheduleInvariant(data);
-  assertEventMeetingUrlInvariant(data);
+
+  // format が OFFLINE に変更される場合、meetingUrl/meetingProvider を明示リセットする
+  // (validation ではなく domain 側の書込み内容の正規化。UI が消し忘れた残骸を防ぐ)
+  // assertEventMeetingUrlInvariant より前に正規化することで、検証対象を
+  // OFFLINE リセット後の meetingUrl: null にする。raw data のまま検証すると
+  // meetingUrl の shape check（https:// 必須・500文字以内）が format に関わらず
+  // 無条件にかかるため、過去 ONLINE 時の不正な stale meetingUrl が残っているだけで
+  // OFFLINE 更新が誤って DomainError になってしまう（Task 4 review Important finding）。
+  const resolvedFormat = data.format ?? EventFormat.OFFLINE;
+  const isOfflineUpdate = resolvedFormat === EventFormat.OFFLINE;
+  const resolvedMeetingUrl = isOfflineUpdate ? null : (data.meetingUrl ?? null);
+  const resolvedMeetingProvider = isOfflineUpdate
+    ? MeetingProvider.MANUAL
+    : (data.meetingProvider ?? MeetingProvider.MANUAL);
+
+  assertEventMeetingUrlInvariant({
+    ...data,
+    format: resolvedFormat,
+    meetingUrl: resolvedMeetingUrl,
+    meetingProvider: resolvedMeetingProvider,
+  });
   assertAllowedEventImageUrls(data);
   assertAllowedManagedImageSourcesInJson(
     "イベント本文画像",
@@ -366,15 +386,6 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
   const wasPublished =
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
-
-  // format が OFFLINE に変更される場合、meetingUrl/meetingProvider を明示リセットする
-  // (validation ではなく domain 側の書込み内容の正規化。UI が消し忘れた残骸を防ぐ)
-  const resolvedFormat = data.format ?? EventFormat.OFFLINE;
-  const isOfflineUpdate = resolvedFormat === EventFormat.OFFLINE;
-  const resolvedMeetingUrl = isOfflineUpdate ? null : (data.meetingUrl ?? null);
-  const resolvedMeetingProvider = isOfflineUpdate
-    ? MeetingProvider.MANUAL
-    : (data.meetingProvider ?? MeetingProvider.MANUAL);
 
   await prisma.$transaction(async (tx) => {
     // Space ↔ Reservation cross-table overlap check (Priority-10 audit #4)。
