@@ -210,25 +210,26 @@ export async function applyChargeRefundIdempotent(input: {
   } = input;
 
   if (latestRefund) {
-    // Refund child への idempotent write。command 経由で先書きされている場合は skip
-    // (`refundReservationPaymentCommand` 内でも同 stripeRefundId が既存なら skip する belt-and-suspenders)。
-    const existing = await prisma.refund.findUnique({
+    // Refund child への idempotent write (PR #1126 Codex P2 対応: findUnique → create の
+    // 2 ステップは非 atomic で、同 stripeRefundId 用の並行 webhook 配信または
+    // command/webhook race で両方が create 分岐に入り `refunds_stripeRefundId_key` 一意
+    // 制約違反で 500 化する。upsert に置き換えて PostgreSQL の INSERT ... ON CONFLICT で
+    // atomic に処理する — 既存があれば no-op、なければ Stripe Dashboard 手動 refund の
+    // 想定で refundedByType=STRIPE_DASHBOARD として insert)。
+    // `Refund.amount` は app 単位 (JPY 円 / USD ドル) で保存する必要があるため、Stripe
+    // unit_amount からの逆変換が必須 (PR #1126 Codex P1 対応)。JPY (zero-decimal) では
+    // 偶然一致するが、USD/EUR 等では 100 倍で保存されて後続の refund 集計・残額判定が壊れる。
+    await prisma.refund.upsert({
       where: { stripeRefundId: latestRefund.id },
+      create: {
+        reservationId,
+        amount: fromStripeUnitAmount(latestRefund.amount, currency),
+        stripeRefundId: latestRefund.id,
+        refundedByType: "STRIPE_DASHBOARD",
+      },
+      // 既存 = command 経由で先書きされているケース。上書きしない (書込主体・金額を保持)。
+      update: {},
     });
-    if (!existing) {
-      // command 経由でない = Stripe Dashboard から手動 refund の想定 (refundedByType=STRIPE_DASHBOARD)。
-      // `Refund.amount` は app 単位 (JPY 円 / USD ドル) で保存する必要があるため、Stripe
-      // unit_amount からの逆変換が必須。JPY (zero-decimal) では偶然一致するが、USD/EUR 等では
-      // 100 倍で保存されて後続の refund 集計・残額判定が壊れる (PR #1126 Codex P1 対応)。
-      await prisma.refund.create({
-        data: {
-          reservationId,
-          amount: fromStripeUnitAmount(latestRefund.amount, currency),
-          stripeRefundId: latestRefund.id,
-          refundedByType: "STRIPE_DASHBOARD",
-        },
-      });
-    }
   }
 
   const isFullRefund = amountRefunded >= chargeAmount;
