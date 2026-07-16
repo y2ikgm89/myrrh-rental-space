@@ -99,7 +99,7 @@ Phase B.1 spec (`docs/superpowers/specs/2026-07-16-online-events-phase-b1-design
 4. iCal 出力は RFC 5545 準拠で master UID + RRULE (`.repeating(rrule)`) を使い、単一 event 招待で N instance を表現
 5. Google Calendar sync は `event.recurrence: string[]` に RRULE を投げて master event 1 個生成、Google が展開する child instance ID (`{masterId}_{yyyymmddTHHMMSSZ}`) を各 `Reservation.googleCalendarEventId` に write-back
 6. SwitchBot passcode は per-instance 発行 (SwitchBot API 制約で不可避)、既存 issuance flow を series の各 instance が独立して trigger
-7. TermsAgreement は series 作成時に 1 同意証跡 (`AgreementScope` に `RESERVATION_SERIES` enum 値追加)
+7. TermsAgreement は series 作成時に 1 同意証跡 (`TermsScope` に `RESERVATION_SERIES` enum 値追加)
 8. Admin form に client-side RRULE preview (「毎週火/木、10 回、次回 2026-07-22」) を rrule.js で表示
 9. Public reservation ページには**繰返し予約作成 UI を含めない** (admin-only feature、将来 phase で customer 開放判断)。ただし顧客側の instance 表示 + キャンセル 3 択 UI は含む
 10. Advisory lock `728357` = series 単位で新設 (series 全体書込直列化)、既存 `728351` (Space) は各 instance 書込で継続共有
@@ -128,7 +128,7 @@ enum ReservationSeriesFreq {
   MONTHLY
 }
 
-enum AgreementScope {
+enum TermsScope {
   // 既存: RESERVATION / INQUIRY / EVENT_REGISTRATION / LOGIN_SIGNUP
   RESERVATION_SERIES  // 新規追加
 }
@@ -158,7 +158,13 @@ model ReservationSeries {
   deletedBy             User?    @relation(fields: [deletedById], references: [id], onDelete: SetNull)
   instances             Reservation[]
 
-  @@unique([spaceId, dtstart], name: "reservation_series_space_dtstart_unique")
+  // **注意 (Codex P2 #3599414660 fix)**: soft-delete 済 series は空き扱いにする必要があるため、
+  // Prisma `@@unique` (無条件) は使わず migration.sql で partial unique index を直接定義する:
+  //   CREATE UNIQUE INDEX "reservation_series_space_dtstart_active_unique"
+  //     ON "reservation_series" ("spaceId", "dtstart") WHERE "deletedAt" IS NULL;
+  // series-all キャンセル (soft-delete) 後、admin が同 (spaceId, dtstart) で再作成する経路を保証。
+  // reservation の EXCLUDE 制約 (deletedAt filter) と一貫。schema には index のみ宣言し unique は raw SQL:
+  @@index([spaceId, dtstart])
   @@index([customerId])
   @@index([spaceId])
   @@index([createdAt])
@@ -176,6 +182,13 @@ model Reservation {
   @@index([seriesId, recurrenceInstanceIndex])
 }
 
+// **重要 (Codex P2 #3599414656 fix)**: series の instance では `Reservation.couponId = null` を強制。
+// Coupon は `ReservationSeries.couponId` に集約保持し、既存 `applyCancellation` (cancel-core.ts:106-110)
+// の `coupon.usageCount { decrement: 1 }` が instance-couponId 判定なので、instance-side null で自動 skip。
+// this-only キャンセルが残り instance の割引を破壊しない安全設計。series-all キャンセル時のみ
+// `cancelReservationSeriesCommand` が明示的に `series.couponId` を basis に 1 usage decrement。
+// 単発予約 (`seriesId = null`) は既存通り `Reservation.couponId` を持つ (無関係、契約温存)。
+
 model Settings {
   // ... existing fields ...
   maxRecurrenceInstances  Int  @default(26)  // admin 設定可、series の最大 instance 数 upper bound
@@ -189,7 +202,7 @@ model Settings {
 ```sql
 -- add enums
 CREATE TYPE "ReservationSeriesFreq" AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY');
-ALTER TYPE "AgreementScope" ADD VALUE 'RESERVATION_SERIES';
+ALTER TYPE "TermsScope" ADD VALUE 'RESERVATION_SERIES';
 
 -- new table
 CREATE TABLE "reservation_series" (
@@ -213,7 +226,11 @@ CREATE TABLE "reservation_series" (
   CONSTRAINT "reservation_series_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "reservation_series_space_dtstart_unique"
+-- Codex P2 #3599414660 fix: partial unique で soft-delete 後の同 (spaceId, dtstart) 再作成を許可
+CREATE UNIQUE INDEX "reservation_series_space_dtstart_active_unique"
+  ON "reservation_series" ("spaceId", "dtstart") WHERE "deletedAt" IS NULL;
+-- 通常 index (deletedAt 無関係の query 用) は別途
+CREATE INDEX "reservation_series_spaceId_dtstart_idx"
   ON "reservation_series" ("spaceId", "dtstart");
 CREATE INDEX "reservation_series_customerId_idx" ON "reservation_series" ("customerId");
 CREATE INDEX "reservation_series_spaceId_idx" ON "reservation_series" ("spaceId");
@@ -263,8 +280,8 @@ export const RESERVATION_SERIES_FREQ_VALUES = Object.values(
   RESERVATION_SERIES_FREQ,
 ) as ReservationSeriesFreqValue[];
 
-// AGREEMENT_SCOPE の VALUES に "RESERVATION_SERIES" を追加
-export const AGREEMENT_SCOPE = {
+// TERMS_SCOPE の VALUES に "RESERVATION_SERIES" を追加
+export const TERMS_SCOPE = {
   // ... existing
   RESERVATION_SERIES: "RESERVATION_SERIES",
 } as const;
@@ -298,7 +315,7 @@ export async function cancelReservationSeriesCommand(input: {
    b. `pg_advisory_xact_lock(728351, hashtext(spaceId))` で Space 単位直列化 (既存)
    c. rrule.js で instance dates を展開 (最大 `maxInstances`)
    d. 各 instance の `checkReservationOverlapQuery` を実行、重複あれば DomainError CONFLICT (「N 回目 (YYYY-MM-DD) の時間帯は既に予約されています」)
-   e. `TermsAgreement` を series scope で 1 レコード append (`assertAllRequiredTermsAgreed` の RESERVATION_SERIES scope 実装は §4.2 参照)
+   e. `TermsAgreement` を series scope で **各 required 文書ごとに 1 行 append** (`resourceId = series.id`)、既存 `recordTermsAgreements` (`src/shared/domain/terms/commands.ts:403-420`) の 1-doc-per-row pattern を継承。3 required 文書なら 3 行 insert。`assertAllRequiredTermsAgreed` の RESERVATION_SERIES scope 実装は §4.3 参照。`agreementSnapshot` (§1 の series field) は series row にも fingerprint を独立に保持 (append-only 契約温存 + query 最適化 SSoT)
    f. `Coupon.usageCount { increment: 1 }` (series 全体で 1 usage、既存 pattern 温存)
    g. `tx.reservationSeries.create({...templateData, rrule, dtstart, instanceCount})`
    h. `tx.reservation.createMany({ data: instances.map(...) })` で N rows 一括 insert (EXCLUDE 制約に依り重複自動拒否、CROSS-TABLE TRIGGER も自動追従)
@@ -313,9 +330,9 @@ export async function cancelReservationSeriesCommand(input: {
 **cancelReservationSeriesCommand の実装フロー**:
 
 1. scope 分岐:
-   - `this-only`: 既存 `applyCancellation(fromInstanceId)` を流用、series の `instanceCount` は減算しない (履歴保持)
-   - `this-and-following`: `updateMany({ where: { seriesId, startTime: { gte: from.startTime }, status: { in: CANCELLABLE_STATUSES } } })` + `series.rrule` の UNTIL を `from.startTime - 1min` に更新 (今後 instance の materialize が起きないよう先行 lock、ただし既存 instance は残存)
-   - `series-all`: `updateMany({ where: { seriesId, status: { in: CANCELLABLE_STATUSES } } })` + `series.cancelledAt = now, cancelledByType, cancellationReason` + `series.deletedAt = now, deletedById` (soft-delete)
+   - `this-only`: 既存 `applyCancellation(fromInstanceId)` を流用、series の `instanceCount` は減算しない (履歴保持)。**instance 側は `couponId = null` (Codex fix §1 の設計、coupon は series row のみに保持) のため、既存 `applyCancellation` の `coupon.usageCount { decrement: 1 }` (cancel-core.ts:106-110) 経路は自動 skip され、残り instance の割引を保護できる**
+   - `this-and-following`: `updateMany({ where: { seriesId, startTime: { gte: from.startTime }, status: { in: CANCELLABLE_STATUSES } } })` + `series.rrule` の UNTIL を `from.startTime - 1min` に更新 (今後 instance の materialize が起きないよう先行 lock、ただし既存 instance は残存)。coupon は series-level のため触らない
+   - `series-all`: `updateMany({ where: { seriesId, status: { in: CANCELLABLE_STATUSES } } })` + `series.cancelledAt = now, cancelledByType, cancellationReason` + `series.deletedAt = now, deletedById` (soft-delete) + `tx.coupon.updateMany({ where: { id: series.couponId, usageCount: { gt: 0 } }, data: { usageCount: { decrement: 1 } } })` (series 全体キャンセルで初めて 1 usage 戻す)
 2. tx 外で `applyBulkCancellationSideEffects(reservationIds: string[])`:
    - 各 id で既存 `applyCancellationSideEffects` を逐次発火 (順序保証、AuditLog chain / Stripe rate limit 回避)
    - GCal 側: `this-only` は既存 `deleteCalendarSync(instanceEventId)`、`this-and-following` は master event を events.patch で新 UNTIL 適用、`series-all` は master event を events.delete で一括削除
@@ -370,11 +387,28 @@ export function validateRruleForSeries(input: {
 
 #### 4.5 `src/shared/domain/reservations/cancellation-side-effects.ts` (拡張)
 
-- `applyBulkCancellationSideEffects(input: { reservationIds: string[]; scope: "this-only"|"this-and-following"|"series-all"; ... })` を追加
-- 各 id で既存 `applyCancellationSideEffects` を逐次 (`for-await`、Promise.all は AuditLog chain 順序破壊)
-- メール:
-  - `this-only`: 1 通 (既存 template 流用)
-  - `this-and-following` / `series-all`: 1 通に集約、`bulkReservationCancelledEmailTemplate` (新規) を追加、body に対象 instance 一覧 + `buildReservationCancelCalendar` の bulk 版で ics CANCEL 1 個添付
+- **既存 `CancellationSideEffectInput` に `SideEffectSuppressFlags` を追加** (Codex P2 #3599414659 fix):
+  ```ts
+  export interface CancellationSideEffectInput {
+    // ... existing fields ...
+    suppress?: {
+      customerEmail?: boolean; // bulk aggregate 通信時に true、per-instance 個別メール抑止
+      adminEmail?: boolean;
+      gcalDelete?: boolean; // series-all で master event 一括 delete に置換するとき true
+    };
+  }
+  ```
+- **既存 `applyCancellationSideEffects` を suppress flag 対応に拡張** (単発予約経路は `suppress` 未指定 = 従前挙動、既存契約温存)
+- `applyBulkCancellationSideEffects(input: { reservationIds: string[]; scope: "this-only"|"this-and-following"|"series-all"; ... })` を追加:
+  - `for-await` で各 id ごとに `applyCancellationSideEffects` を発火 (Promise.all は AuditLog chain 順序破壊)
+  - **`this-only` 以外の scope では `suppress: { customerEmail: true, adminEmail: true, gcalDelete: true }` を全 instance に渡す** — per-instance 個別メール (顧客 N 通 + 管理者 N 通 = 2N 通スパム) と per-instance GCal 削除 API 呼出 (rate limit / master event 再削除 race) を根本抑止
+  - Loop 完了後、集約 email + master GCal event 操作を 1 回だけ実行:
+    - `this-and-following`: master event `events.patch(masterId, { recurrence: [new-rrule-with-UNTIL] })` 1 回
+    - `series-all`: master event `events.delete(masterId)` 1 回
+    - 顧客集約メール 1 通 (`bulkReservationCancelledEmailTemplate` 新規、対象 instance 一覧 + ics CANCEL 1 個添付)
+    - 管理者集約メール 1 通
+    - 集約 AuditLog 1 レコード (chain の末尾に「series bulk cancel: N 件」)
+- **`this-only` は既存 `applyCancellation(fromInstanceId)` + suppress 無し** — 単発予約と同じ 1 通メール / 1 GCal delete で完結、bulk 経路を通らない
 
 ### 5. iCal 出力改修 (`src/shared/lib/ical/`)
 
@@ -549,9 +583,9 @@ Phase B.2 全体を **6 PR** で分割 (Phase B.1 の 2 PR より多い、scope 
 
 ### PR 1: schema + migration + enum SSoT + Settings
 
-- prisma/schema.prisma に `ReservationSeries` model + `Reservation.seriesId/recurrenceInstanceIndex` + `Settings.maxRecurrenceInstances` + `ReservationSeriesFreq` / `AgreementScope.RESERVATION_SERIES`
+- prisma/schema.prisma に `ReservationSeries` model + `Reservation.seriesId/recurrenceInstanceIndex` + `Settings.maxRecurrenceInstances` + `ReservationSeriesFreq` / `TermsScope.RESERVATION_SERIES`
 - 新規 migration file (add-only、非破壊)
-- `prisma-types.ts` に SSoT + `AGREEMENT_SCOPE.RESERVATION_SERIES`
+- `prisma-types.ts` に SSoT + `TERMS_SCOPE.RESERVATION_SERIES`
 - unit test (enum SSoT / architecture-boundaries gate 追加)
 - **見積り**: 6-8 file、200-300 行
 
