@@ -4,7 +4,7 @@ import {
   RESERVATION_SERIES_FREQ_VALUES,
   ReservationSeriesFreq,
   TERMS_SCOPE,
-  TERMS_SCOPE_VALUES,
+  TERMS_SCOPE_ALL_VALUES,
 } from "@/shared/lib/validations/enums/prisma-types";
 
 describe("RESERVATION_SERIES_FREQ", () => {
@@ -33,6 +33,6 @@ describe("RESERVATION_SERIES_FREQ", () => {
 describe("TERMS_SCOPE.RESERVATION_SERIES", () => {
   test("Phase B.2 で追加された値を持つ", () => {
     expect(TERMS_SCOPE.RESERVATION_SERIES).toBe("RESERVATION_SERIES");
-    expect(TERMS_SCOPE_VALUES).toContain("RESERVATION_SERIES");
+    expect(TERMS_SCOPE_ALL_VALUES).toContain("RESERVATION_SERIES");
   });
 });

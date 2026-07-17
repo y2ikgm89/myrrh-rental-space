@@ -163,4 +163,8 @@ export const TERMS_SCOPE = {
   RESERVATION_SERIES: "RESERVATION_SERIES", // Phase B.2
 } as const;
 export type TermsScopeValue = (typeof TERMS_SCOPE)[keyof typeof TERMS_SCOPE];
-export const TERMS_SCOPE_VALUES: TermsScopeValue[] = Object.values(TERMS_SCOPE);
+// 全 5 値（`terms.ts` の `TERMS_SCOPE_VALUES` と同名衝突を避けるため `_ALL_` を明示。
+// あちらは admin 規約編集 UI の scope チェックボックスが直接 iterate する配列で、
+// 値は本配列と一致するが所有 SSoT が異なるため個別に定義している — 詳細は同ファイル参照）
+export const TERMS_SCOPE_ALL_VALUES: TermsScopeValue[] =
+  Object.values(TERMS_SCOPE);
