@@ -9,7 +9,11 @@ import {
 } from "@/shared/lib/errors/server";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types";
-import type { CalendarEventParams, CalendarEventResult } from "./types";
+import type {
+  CalendarEventInstance,
+  CalendarEventParams,
+  CalendarEventResult,
+} from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
@@ -70,6 +74,12 @@ export function buildEventBody(
     attendees:
       options.includeAttendee && params.attendeeEmail
         ? [{ email: params.attendeeEmail }]
+        : undefined,
+    // Phase B.2 task 16: recurrence 指定時は master event として recurring event を作成
+    // (Google Calendar API 契約、`RRULE:` prefix 込みの完全形で渡す)。空配列時は omit。
+    recurrence:
+      params.recurrence !== undefined && params.recurrence.length > 0
+        ? params.recurrence
         : undefined,
     reminders: toReminders(settings.reminderMinutes),
     conferenceData: withMeet
@@ -258,6 +268,62 @@ export async function getCalendarEvent(eventId: string): Promise<{
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.LOW,
       context: { operation: "getCalendarEvent", eventId },
+    });
+    return { success: false, error: formatGoogleApiError(error) };
+  }
+}
+
+/**
+ * Recurring event の master ID から展開済み occurrence 一覧を取得する
+ * (Phase B.2 task 16)。
+ *
+ * Google Calendar API `events.instances(masterId)` の wrapper。RRULE から展開された
+ * 各 occurrence の child event ID (`{masterId}_{yyyymmddTHHMMSSZ}` 形式) と
+ * 開始時刻を返し、呼出側 (calendar-sync/outbound.ts の write-back 経路) が
+ * Reservation.googleCalendarEventId に紐付ける。`showDeleted: false` で
+ * キャンセル済 occurrence は除外。
+ */
+export async function fetchEventInstances(masterEventId: string): Promise<{
+  success: boolean;
+  instances?: CalendarEventInstance[];
+  error?: string;
+}> {
+  const client = await getServiceAccountClient();
+  if (!client) {
+    return { success: false, error: "Google Calendar is not configured" };
+  }
+
+  const settings = await getGoogleCalendarSettings();
+  const calendarId = settings.calendarId;
+  if (!calendarId) {
+    return { success: false, error: "Calendar ID is not configured" };
+  }
+
+  try {
+    const response = await withGoogleApiRetry(() =>
+      client.events.instances({
+        calendarId,
+        eventId: masterEventId,
+        showDeleted: false,
+        maxResults: 250,
+      }),
+    );
+
+    const items = response.data.items ?? [];
+    const instances: CalendarEventInstance[] = [];
+    for (const item of items) {
+      const id = item.id;
+      const startDateTime = item.start?.dateTime;
+      if (id === undefined || id === null) continue;
+      if (startDateTime === undefined || startDateTime === null) continue;
+      instances.push({ id, startTime: new Date(startDateTime) });
+    }
+    return { success: true, instances };
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "fetchEventInstances", masterEventId },
     });
     return { success: false, error: formatGoogleApiError(error) };
   }

@@ -28,14 +28,19 @@ import {
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
+  fetchEventInstances,
   isGoogleCalendarEnabled,
+  type CalendarEventInstance,
   type CalendarEventParams,
+  type CalendarEventResult,
 } from "@/shared/lib/google-calendar";
+import { prisma } from "@/shared/db/prisma";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   formatDateWithWeekday,
   formatTimeShort,
 } from "@/shared/lib/date-format";
+import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { OUTBOUND_RESERVATION_MARKER } from "./loop-prevention";
 import type { ReservationSyncData, SyncResult } from "./types";
 
@@ -288,6 +293,181 @@ export async function retryFailedSyncs(): Promise<{
     succeeded,
     failed,
   };
+}
+
+// =============================================================================
+// Reservation Series (Phase B.2 task 16)
+// =============================================================================
+
+/**
+ * 各 instance の startTime → GCal child eventId map を作成する。
+ *
+ * child eventId (`{masterId}_{yyyymmddTHHMMSSZ}`) は Google Calendar が RRULE を
+ * 展開して生成する契約。startTime 完全一致で結び付ける。tolerance を持たせない
+ * (GCal は master の DTSTART と同じ UTC 時刻を展開点として使うため、application
+ * 側 series.dtstart + duration 経由の instance startTime と bit-for-bit 一致する)。
+ */
+function buildInstanceIdMapByStartTime(
+  instances: readonly CalendarEventInstance[],
+): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const inst of instances) {
+    map.set(inst.startTime.getTime(), inst.id);
+  }
+  return map;
+}
+
+/**
+ * 各 Reservation.googleCalendarEventId に GCal child eventId を write-back する
+ * (Phase B.2 task 16)。
+ *
+ * 一致条件: `Reservation.seriesId === input.seriesId` かつ
+ * `Reservation.startTime` が GCal instance の startTime と一致するもの。
+ * 未マッチ (GCal instance が欠落) の Reservation は skip し、
+ * `matched` と `total` を返して呼出側で監査ログに残せるようにする。
+ */
+export async function writeBackInstanceGoogleCalendarEventIds(input: {
+  seriesId: string;
+  instances: readonly CalendarEventInstance[];
+}): Promise<{ matched: number; total: number }> {
+  const reservations = await prisma.reservation.findMany({
+    where: { seriesId: input.seriesId, deletedAt: null },
+    select: { id: true, startTime: true },
+  });
+  const idByStart = buildInstanceIdMapByStartTime(input.instances);
+
+  let matched = 0;
+  for (const r of reservations) {
+    const gcalId = idByStart.get(r.startTime.getTime());
+    if (gcalId === undefined) continue;
+    await prisma.reservation.update({
+      where: { id: r.id, deletedAt: null },
+      data: {
+        googleCalendarEventId: gcalId,
+        calendarSyncedAt: new Date(),
+        calendarSyncError: null,
+      },
+    });
+    matched += 1;
+  }
+
+  return { matched, total: reservations.length };
+}
+
+/**
+ * 定期予約 (ReservationSeries) を Google Calendar に master event として同期する
+ * (Phase B.2 task 16)。
+ *
+ * flow: fetch series + first instance → createCalendarEvent with `recurrence`
+ * → fetchEventInstances(masterId) → writeBackInstanceGoogleCalendarEventIds。
+ * Google Calendar 無効時は no-op success。master event ID の永続化は本 phase 未実装
+ * (将来 phase で ReservationSeries に列追加、`series-outbound.ts` の
+ * `getSeriesGcalMasterEventId` stub 差替え時に配線)。
+ */
+export async function syncReservationSeriesToCalendar(
+  seriesId: string,
+): Promise<CalendarEventResult> {
+  try {
+    const isEnabled = await isGoogleCalendarEnabled();
+    if (!isEnabled) {
+      return { success: true };
+    }
+
+    const series = await prisma.reservationSeries.findUnique({
+      where: { id: seriesId, deletedAt: null },
+      select: {
+        id: true,
+        rrule: true,
+        dtstart: true,
+        duration: true,
+        space: {
+          select: {
+            name: true,
+            addressDetail: true,
+            location: { select: { address: true } },
+          },
+        },
+        customer: {
+          select: { lastName: true, firstName: true, email: true },
+        },
+      },
+    });
+    if (!series) {
+      return { success: false, error: `Series ${seriesId} not found` };
+    }
+
+    const endTime = new Date(
+      series.dtstart.getTime() + series.duration * 60_000,
+    );
+    const customerName =
+      `${series.customer.lastName} ${series.customer.firstName}`.trim();
+    const lineAddress = formatSpaceLineAddress(
+      series.space.location.address,
+      series.space.addressDetail,
+    );
+
+    const eventParams: CalendarEventParams = omitUndefined({
+      summary: `【定期予約】${series.space.name} - ${customerName}様`,
+      description: [
+        `${OUTBOUND_RESERVATION_MARKER} ${series.id.slice(0, 8).toUpperCase()}`,
+        `お客様: ${customerName}`,
+        `メール: ${series.customer.email}`,
+        `繰返し: ${series.rrule}`,
+      ].join("\n"),
+      location: lineAddress,
+      startTime: series.dtstart,
+      endTime,
+      attendeeEmail: series.customer.email,
+      // Google Calendar API は `RRULE:` prefix 込みの完全形を要求する。
+      recurrence: [`RRULE:${series.rrule}`],
+    });
+
+    const result = await createCalendarEvent(eventParams);
+    if (!result.success || result.eventId === undefined) {
+      logError(new Error(result.error ?? "createCalendarEvent failed"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: "syncReservationSeriesToCalendar", seriesId },
+      });
+      return result;
+    }
+
+    const masterEventId = result.eventId;
+    const instancesResult = await fetchEventInstances(masterEventId);
+    if (!instancesResult.success || instancesResult.instances === undefined) {
+      logError(
+        new Error(instancesResult.error ?? "fetchEventInstances failed"),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "syncReservationSeriesToCalendar.fetchInstances",
+            seriesId,
+            masterEventId,
+          },
+        },
+      );
+      // master 作成は成功しているので result は返す (呼出側は master delete で cleanup 判断)。
+      return result;
+    }
+
+    await writeBackInstanceGoogleCalendarEventIds({
+      seriesId,
+      instances: instancesResult.instances,
+    });
+
+    return result;
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "syncReservationSeriesToCalendar", seriesId },
+    });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
 }
 
 /**
