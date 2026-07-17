@@ -171,6 +171,14 @@ const mockUpdateCustomerReservation = mock<
 mock.module("@/shared/domain/reservations/customer-commands", () => ({
   cancelCustomerReservation: mockCancelCustomerReservation,
   updateCustomerReservation: mockUpdateCustomerReservation,
+  // Phase B.2.1 Task 4: customer series cancel path。mock.module は module 全体を
+  // 差し替えるため、export に加えないと本 test が起動時 undefined を掴んで落ちる。
+  cancelCustomerReservationSeries: mock(() =>
+    Promise.resolve({
+      success: true,
+      payload: { cancelledCount: 0 },
+    }),
+  ),
 }));
 
 // PR#14 で action が updateCustomerReservation の前に getReservationSnapshotForEdit を

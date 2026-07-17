@@ -192,6 +192,7 @@ function baseInput(overrides: {
     reservationIds: overrides.reservationIds,
     scope: overrides.scope,
     seriesId: SERIES_ID,
+    channel: "admin",
     ...(overrides.cancellationReason !== undefined
       ? { cancellationReason: overrides.cancellationReason }
       : {}),

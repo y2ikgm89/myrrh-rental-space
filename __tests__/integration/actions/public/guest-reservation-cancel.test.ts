@@ -87,11 +87,15 @@ const mockCancelByToken = mock<
 mock.module("@/shared/domain/reservations/customer-commands", () => ({
   cancelReservationByToken: mockCancelByToken,
   // mock.module は process-global なので他テスト import の cancelCustomerReservation /
-  // updateCustomerReservation も互換のため stub 値を含めておく（呼ばれない）
+  // updateCustomerReservation / cancelCustomerReservationSeries (Phase B.2.1 Task 4) も
+  // 互換のため stub 値を含めておく（本 file では呼ばれない）
   cancelCustomerReservation: mock(() =>
     Promise.resolve({ success: false, error: "not used in guest test" }),
   ),
   updateCustomerReservation: mock(() =>
+    Promise.resolve({ success: false, error: "not used in guest test" }),
+  ),
+  cancelCustomerReservationSeries: mock(() =>
     Promise.resolve({ success: false, error: "not used in guest test" }),
   ),
 }));

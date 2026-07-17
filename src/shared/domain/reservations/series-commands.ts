@@ -36,6 +36,7 @@ import { applyBulkCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import {
   applyBulkCancellationSideEffects,
   applyCancellationSideEffects,
+  type CancelChannel,
   type CancelRequestContext,
 } from "./cancellation-side-effects";
 import { lockReservationSeriesForTransaction } from "./series-advisory-lock";
@@ -295,6 +296,12 @@ export interface CancelReservationSeriesInput {
   fromInstanceId?: string;
   cancellationReason?: string;
   cancelledByType: string;
+  /**
+   * どこから / 誰がキャンセルしたか (per-instance 副作用の AuditLog channel + 通知
+   * タイトル分岐に伝播)。admin / customer-mypage / customer-token を受け付ける
+   * (Phase B.2.1 Task 4 で customer 経路対応)。
+   */
+  channel: CancelChannel;
   actorUserId?: string;
   request: CancelRequestContext;
   now: Date;
@@ -304,15 +311,6 @@ export interface CancelReservationSeriesResult {
   cancelledCount: number;
   cancelledReservationIds: string[];
 }
-
-/**
- * 現行 Phase B.2 は admin-only（spec 非ゴール: 顧客セルフ series キャンセルは
- * `Settings.customerCanCancelSeriesInFull` 込みで将来 PR）。`applyCancellationSideEffects`
- * の `channel` は監査ログ・通知文言の分岐にのみ使われ、DB へ書き込む実際の
- * `cancelledByType` は呼出側が渡す `input.cancelledByType` が SSoT（両者は独立した
- * 値だが、admin-only の現行 scope では常に整合させて呼び出すこと）。
- */
-const CANCEL_SIDE_EFFECT_CHANNEL = "admin";
 
 export async function cancelReservationSeriesCommand(
   input: CancelReservationSeriesInput,
@@ -377,7 +375,7 @@ export async function cancelReservationSeriesCommand(
         await applyCancellationSideEffects({
           reservationId: firstId,
           cancellationReason: input.cancellationReason ?? null,
-          channel: CANCEL_SIDE_EFFECT_CHANNEL,
+          channel: input.channel,
           actorUserId: input.actorUserId ?? null,
           request: input.request,
         });
@@ -387,6 +385,7 @@ export async function cancelReservationSeriesCommand(
         reservationIds: cancelledIds,
         scope: input.scope,
         seriesId: input.seriesId,
+        channel: input.channel,
         request: input.request,
         now: input.now,
         ...(input.cancellationReason !== undefined && {

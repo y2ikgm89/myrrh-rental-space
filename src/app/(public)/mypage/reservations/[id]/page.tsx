@@ -194,6 +194,7 @@ export default async function ReservationDetailPage({
         <CustomerSeriesInfo
           series={seriesInfo}
           customerCanCancelSeriesInFull={customerCanCancelSeriesInFull}
+          turnstileSiteKey={turnstileSiteKey}
         />
       )}
 

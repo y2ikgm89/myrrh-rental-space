@@ -7,6 +7,8 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { isWithinDeadline } from "./deadline";
 import { reservationDeadlineNow } from "./server-deadline-instant";
 import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
+import { cancelReservationSeriesCommand } from "./series-commands";
+import type { CancelRequestContext } from "./cancellation-side-effects";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
 import {
@@ -62,6 +64,54 @@ export async function cancelCustomerReservation(
 
     return { success: true, payload: { reservationId } };
   });
+}
+
+/**
+ * 顧客セルフの定期予約 (ReservationSeries) 一括キャンセル (Phase B.2.1 Task 4)。
+ *
+ * ownership check (findFirst で customerId 一致 + deletedAt=null) を最初に行い、
+ * 満たさなければ non-existent 相当のエラーを返す (existence probe を封鎖)。
+ * 通過したら `cancelReservationSeriesCommand` を `scope: "series-all"` + `channel:
+ * "customer-mypage"` で invoke する。副作用チェーン (集約メール / GCal master 削除 /
+ * 集約 AuditLog) は admin 経路と同一。
+ *
+ * Settings gate (`customerCanCancelSeriesInFull=true`) は呼出側 (action) の責務。
+ * 本関数は「顧客本人が対象 series を series-all キャンセルする」というインテントを
+ * atomic に実行する。
+ */
+export async function cancelCustomerReservationSeries(
+  seriesId: string,
+  customerId: string,
+  cancellationReason: string | null,
+  request: CancelRequestContext,
+): Promise<CommandResult<{ cancelledCount: number }>> {
+  const series = await prisma.reservationSeries.findFirst({
+    where: { id: seriesId, customerId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!series) {
+    return { success: false, error: "定期予約が見つかりません" };
+  }
+  try {
+    const result = await cancelReservationSeriesCommand({
+      seriesId,
+      scope: "series-all",
+      cancelledByType: CANCELLED_BY.CUSTOMER_MYPAGE,
+      channel: "customer-mypage",
+      ...(cancellationReason ? { cancellationReason } : {}),
+      request,
+      now: new Date(),
+    });
+    return {
+      success: true,
+      payload: { cancelledCount: result.cancelledCount },
+    };
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return { success: false, error: error.message };
+    }
+    throw error;
+  }
 }
 
 /**
