@@ -452,6 +452,12 @@ export interface BulkCancellationSideEffectInput {
   reservationIds: string[];
   scope: BulkCancellationScope;
   seriesId: string;
+  /**
+   * どこから / 誰がキャンセルしたか (per-instance 副作用の channel + 集約 AuditLog
+   * metadata に伝播)。admin / customer 経由の両方から呼ばれるため input で受け取る
+   * (Phase B.2.1 Task 4)。
+   */
+  channel: CancelChannel;
   cancellationReason?: string;
   actorUserId?: string;
   request: CancelRequestContext;
@@ -526,7 +532,7 @@ export async function applyBulkCancellationSideEffects(
       await applyCancellationSideEffects({
         reservationId,
         cancellationReason,
-        channel: "admin",
+        channel: input.channel,
         actorUserId,
         request: input.request,
         suppress: {
@@ -629,7 +635,7 @@ export async function applyBulkCancellationSideEffects(
         cancellationReason,
       },
       metadata: {
-        channel: "admin",
+        channel: input.channel,
         ip: input.request.ip,
         userAgent: input.request.userAgent,
         ...(input.request.tokenFingerprint

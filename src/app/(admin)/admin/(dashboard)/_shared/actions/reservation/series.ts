@@ -205,6 +205,7 @@ export async function cancelReservationSeriesAction(
               ? { cancellationReason: data.cancellationReason }
               : {}),
             cancelledByType: "ADMIN",
+            channel: "admin",
             actorUserId: user.id,
             request,
             now: new Date(),

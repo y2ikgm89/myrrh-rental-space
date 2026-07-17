@@ -234,6 +234,7 @@ describeMaybe(
           scope: "this-only",
           fromInstanceId: target,
           cancelledByType: "ADMIN",
+          channel: "admin",
           cancellationReason: "テスト都合",
           request: REQUEST_CONTEXT,
           now: new Date(),
@@ -281,6 +282,7 @@ describeMaybe(
           scope: "this-and-following",
           fromInstanceId: fromId,
           cancelledByType: "ADMIN",
+          channel: "admin",
           request: REQUEST_CONTEXT,
           now: new Date(),
         });
@@ -332,6 +334,7 @@ describeMaybe(
           seriesId,
           scope: "series-all",
           cancelledByType: "ADMIN",
+          channel: "admin",
           cancellationReason: "series 全体キャンセル",
           request: REQUEST_CONTEXT,
           now: new Date(),
@@ -399,6 +402,7 @@ describeMaybe(
           scope: "this-only",
           fromInstanceId: target,
           cancelledByType: "ADMIN",
+          channel: "admin",
           request: REQUEST_CONTEXT,
           now: new Date(),
         });
@@ -428,6 +432,7 @@ describeMaybe(
           seriesId,
           scope: "series-all",
           cancelledByType: "ADMIN",
+          channel: "admin",
           request: REQUEST_CONTEXT,
           now: new Date(),
         });
@@ -450,6 +455,7 @@ describeMaybe(
             seriesId,
             scope: "series-all",
             cancelledByType: "ADMIN",
+            channel: "admin",
             request: REQUEST_CONTEXT,
             now: new Date(),
           });
