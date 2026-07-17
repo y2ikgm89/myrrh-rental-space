@@ -10,6 +10,7 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 const refreshMock = mock(() => {});
 const toggleMock = mock();
 const createWalkInMock = mock();
+const createProxyMock = mock();
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({ refresh: refreshMock }),
@@ -26,6 +27,7 @@ mock.module("@tabler/icons-react", () => ({
   IconRefresh: () => <span aria-hidden="true" />,
   IconSearch: () => <span aria-hidden="true" />,
   IconUserPlus: () => <span aria-hidden="true" />,
+  IconCalendarUser: () => <span aria-hidden="true" />,
   IconCheck: () => <span aria-hidden="true" />,
 }));
 
@@ -34,6 +36,8 @@ mock.module("@/admin/actions/event-registration", () => ({
     toggleMock(...args),
   createWalkInRegistration: (...args: Parameters<typeof createWalkInMock>) =>
     createWalkInMock(...args),
+  createAdminProxyRegistration: (...args: Parameters<typeof createProxyMock>) =>
+    createProxyMock(...args),
 }));
 
 mock.module("@/admin/components/ui", () => ({
