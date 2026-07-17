@@ -406,3 +406,41 @@ export async function markSeriesInstanceCalendarSyncSuccess(input: {
     },
   });
 }
+
+/**
+ * ReservationSeries に紐づく Google Calendar master event ID を取得する
+ * (Phase B.2.1 Task 5)。
+ *
+ * bulk cancel 経路 (`applyBulkCancellationSideEffects`) が master event に対する
+ * scope 別操作 (`this-and-following` → UNTIL 更新、`series-all` → 削除) を
+ * 発火するかどうかの gate として使う。null なら master GCal 操作は no-op。
+ *
+ * 呼出は `shared/lib/calendar-sync/series-outbound.ts` 経由 (placement gate)。
+ */
+export async function getSeriesGcalMasterEventId(
+  seriesId: string,
+): Promise<string | null> {
+  const series = await prisma.reservationSeries.findUnique({
+    where: { id: seriesId },
+    select: { googleCalendarMasterEventId: true },
+  });
+  return series?.googleCalendarMasterEventId ?? null;
+}
+
+/**
+ * ReservationSeries に Google Calendar master event ID を永続化する
+ * (Phase B.2.1 Task 5)。
+ *
+ * `syncReservationSeriesToCalendar` が master event 作成に成功した直後に呼び出し、
+ * 以降の bulk cancel 経路が master event を操作できるようにする。
+ * soft-deleted (`deletedAt IS NOT NULL`) の series は対象外 (where 句 gate)。
+ */
+export async function markSeriesMasterEventCreated(input: {
+  seriesId: string;
+  masterEventId: string;
+}): Promise<void> {
+  await prisma.reservationSeries.update({
+    where: { id: input.seriesId, deletedAt: null },
+    data: { googleCalendarMasterEventId: input.masterEventId },
+  });
+}
