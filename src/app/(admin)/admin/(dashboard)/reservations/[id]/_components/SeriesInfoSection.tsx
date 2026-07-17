@@ -17,11 +17,11 @@
 import { useActionState, type ReactElement } from "react";
 import { useFormStatus } from "react-dom";
 import {
-  Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { cancelReservationSeriesAction } from "@/admin/actions/reservation";
@@ -151,14 +151,12 @@ function CancelSubmitButton({
 }): ReactElement {
   const { pending } = useFormStatus();
   return (
-    <Button
-      type="submit"
+    <SubmitButton
+      isPending={pending}
+      label={label}
+      pendingLabel="処理中..."
       size="sm"
       variant={variant}
-      disabled={pending}
-      aria-busy={pending}
-    >
-      {pending ? "処理中..." : label}
-    </Button>
+    />
   );
 }

@@ -109,7 +109,7 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
           // Phase B.2 task 22: series instance の視覚マーカー
           <span
             aria-hidden="true"
-            className="ml-auto shrink-0 rounded bg-slate-200/70 px-1 text-[0.6rem] font-medium text-slate-700 leading-none"
+            className="ml-auto shrink-0 rounded bg-muted px-1 text-[0.6rem] font-medium text-muted-foreground leading-none"
           >
             定期
           </span>
@@ -181,7 +181,7 @@ export function EventBadge({
         // Phase B.2 task 22: series instance の視覚マーカー (月ビュー版)
         <span
           aria-hidden="true"
-          className="ml-auto shrink-0 rounded bg-slate-200/70 px-1 text-[0.55rem] font-medium text-slate-700 leading-none"
+          className="ml-auto shrink-0 rounded bg-muted px-1 text-[0.55rem] font-medium text-muted-foreground leading-none"
         >
           定期
         </span>
