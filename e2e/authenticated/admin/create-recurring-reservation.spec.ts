@@ -27,7 +27,7 @@
  * 完全な end-to-end (form → command → cancel) は Task 20 UI follow-up 後に有効化される。
  */
 
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("admin recurring reservation golden path (Phase B.2 task 27)", () => {
   test.fixme("form UI wiring 完了までは skip (Task 20 follow-up)", async ({
