@@ -58,6 +58,7 @@
         "react-dom": "^19.2.7",
         "recharts": "^3.9.0",
         "resend": "^6.16.0",
+        "rrule": "^2.8.1",
         "sanitize-html": "^2.17.5",
         "server-only": "^0.0.1",
         "sonner": "^2.0.7",
@@ -2258,6 +2259,8 @@
     "robots-parser": ["robots-parser@3.0.1", "", {}, "sha512-s+pyvQeIKIZ0dx5iJiQk1tPLJAWln39+MI5jtM8wnyws+G5azk+dMnMX0qfbqNetKKNgcWWOdi0sfm+FbQbgdQ=="],
 
     "rou3": ["rou3@0.7.12", "", {}, "sha512-iFE4hLDuloSWcD7mjdCDhx2bKcIsYbtOTpfH5MHHLSKMOUyjqQXTeZVa289uuwEGEKFoE/BAPbhaU4B774nceg=="],
+
+    "rrule": ["rrule@2.8.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-hM3dHSBMeaJ0Ktp7W38BJZ7O1zOgaFEsn41PDk+yHoEtfLV+PoJt9E9xAlZiWgf/iqEqionN0ebHFZIDAp+iGw=="],
 
     "run-async": ["run-async@2.4.1", "", {}, "sha512-tvVnVv01b8c1RrA6Ep7JkStj85Guv/YrMcwqYQnwjsAS2cTmmPGBBjAjpCW7RrSodNSoE2/qg9O4bceNvUuDgQ=="],
 
