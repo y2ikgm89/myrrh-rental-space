@@ -293,6 +293,11 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
               }
               onBlur={customerCanCancelSeriesInFullControl.blur}
               disabled={isPending}
+              aria-describedby={
+                fields.customerCanCancelSeriesInFull.errors
+                  ? fields.customerCanCancelSeriesInFull.errorId
+                  : undefined
+              }
             />
             <input
               type="hidden"
