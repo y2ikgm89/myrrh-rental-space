@@ -11,7 +11,10 @@ import { connection } from "next/server";
 import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
+import {
+  getCustomerReservationDetail,
+  getCustomerReservationSeriesInfo,
+} from "@/shared/domain/reservations/customer-queries";
 import { findReceiptSerialNoByReservationId } from "@/shared/domain/receipts/queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
@@ -30,6 +33,8 @@ import { Divider } from "@/public/components/design-system/divider";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { ReservationDetail } from "./_components/reservation-detail";
 import { CancelButton } from "./_components/cancel-button";
+import { CustomerSeriesInfo } from "./_components/customer-series-info";
+import { getCustomerCanCancelSeriesInFull } from "@/shared/domain/reservations/payloads";
 import { ReviewForm } from "./_components/review-form";
 import { ReviewDisplay } from "./_components/review-display";
 import { toAppRoute } from "@/shared/lib/typed-routes";
@@ -75,9 +80,16 @@ export default async function ReservationDetailPage({
     redirect("/login");
   }
 
-  const [reservation, deadlineSettings] = await Promise.all([
+  const [
+    reservation,
+    deadlineSettings,
+    seriesInfo,
+    customerCanCancelSeriesInFull,
+  ] = await Promise.all([
     getCustomerReservationDetail(id, customer.id),
     getReservationDeadlineSettings(),
+    getCustomerReservationSeriesInfo(id, customer.id),
+    getCustomerCanCancelSeriesInFull(),
   ]);
 
   if (!reservation) {
@@ -176,6 +188,13 @@ export default async function ReservationDetailPage({
             )}
           </p>
         </div>
+      )}
+
+      {seriesInfo && (
+        <CustomerSeriesInfo
+          series={seriesInfo}
+          customerCanCancelSeriesInFull={customerCanCancelSeriesInFull}
+        />
       )}
 
       <ReservationDetail
