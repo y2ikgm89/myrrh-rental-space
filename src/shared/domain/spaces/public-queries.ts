@@ -26,7 +26,7 @@ import {
   EventStatus,
   ReservationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
-import type { SpaceSort } from "@/public/lib/search-params";
+import type { SpaceSort } from "@/shared/domain/spaces/space-sort";
 
 /**
  * 公開スペースクエリの共通 where 句。Space model に deletedAt 列はないため

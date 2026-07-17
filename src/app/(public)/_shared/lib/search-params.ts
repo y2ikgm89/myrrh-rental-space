@@ -13,6 +13,14 @@ import {
   parseAsStringLiteral,
 } from "nuqs/server";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
+import {
+  SPACE_SORT_VALUES,
+  isSpaceSort,
+  type SpaceSort,
+} from "@/shared/domain/spaces/space-sort";
+
+export { SPACE_SORT_VALUES, isSpaceSort };
+export type { SpaceSort };
 
 export const paginationSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
@@ -21,26 +29,6 @@ export const paginationSearchParamsParsers = {
 export const paginationSearchParams = createSearchParamsCache(
   paginationSearchParamsParsers,
 );
-
-/**
- * 公開スペース検索 facet の sort 軸 SSoT。
- * - `recommended` = name asc（推奨・既定）
- * - `capacity-asc` / `capacity-desc` = capacity 昇降
- * - `price-asc` / `price-desc` = hourlyPrice 昇降
- */
-export const SPACE_SORT_VALUES = [
-  "recommended",
-  "capacity-asc",
-  "capacity-desc",
-  "price-asc",
-  "price-desc",
-] as const;
-export type SpaceSort = (typeof SPACE_SORT_VALUES)[number];
-
-const spaceSortSet = new Set<string>(SPACE_SORT_VALUES);
-export function isSpaceSort(value: string): value is SpaceSort {
-  return spaceSortSet.has(value);
-}
 
 /**
  * 公開 /spaces facet 検索の URL パラメータ SSoT。
