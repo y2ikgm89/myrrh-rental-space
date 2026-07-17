@@ -71,6 +71,7 @@ export const TERMS_SCOPE_VALUES = [
   TermsScope.RESERVATION,
   TermsScope.INQUIRY,
   TermsScope.EVENT_REGISTRATION,
+  TermsScope.RESERVATION_SERIES,
 ] as const;
 export const isTermsScope = createTypeGuard(TERMS_SCOPE_VALUES);
 
@@ -79,6 +80,7 @@ export const TERMS_SCOPE_LABELS: Record<TermsScope, string> = {
   [TermsScope.RESERVATION]: "スペース予約フォーム",
   [TermsScope.INQUIRY]: "お問い合わせフォーム",
   [TermsScope.EVENT_REGISTRATION]: "イベント申込フォーム",
+  [TermsScope.RESERVATION_SERIES]: "繰返し予約フォーム",
 };
 
 export const TERMS_SCOPE_DESCRIPTIONS: Record<TermsScope, string> = {
@@ -88,6 +90,8 @@ export const TERMS_SCOPE_DESCRIPTIONS: Record<TermsScope, string> = {
   [TermsScope.INQUIRY]: "/contact など contact-form セクションでチェック必須",
   [TermsScope.EVENT_REGISTRATION]:
     "/events/[slug] の申込フォームでチェック必須",
+  [TermsScope.RESERVATION_SERIES]:
+    "/admin/reservations の繰返し予約作成フォームでチェック必須 (Phase B.2、admin-only MVP。公開UIには未提供)",
 };
 
 const slugSchema = z
@@ -111,15 +115,13 @@ const titleSchema = z
   .min(1, { error: "タイトルを入力してください" })
   .max(100, { error: "タイトルは100文字以内です" });
 
-const termsScopeSchema = z.enum(
-  [
-    TermsScope.LOGIN_SIGNUP,
-    TermsScope.RESERVATION,
-    TermsScope.INQUIRY,
-    TermsScope.EVENT_REGISTRATION,
-  ] as const,
-  { error: "不正な scope です" },
-);
+// 受理する scope は TERMS_SCOPE_VALUES（TermsScope の全 5 値、RESERVATION_SERIES
+// 含む）と同一。以前は管理画面 scope 選択 UI が RESERVATION_SERIES 未対応だったため
+// ここだけ独自に 5 値 literal を持たせていたが、UI 側にも追加し両者が一致したため
+// 二重管理をやめてここから直接参照する。
+const termsScopeSchema = z.enum(TERMS_SCOPE_VALUES, {
+  error: "不正な scope です",
+});
 
 /**
  * 規約作成・編集フォームスキーマ

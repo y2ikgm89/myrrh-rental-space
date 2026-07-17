@@ -28,6 +28,7 @@
 export {
   Role,
   ReservationStatus,
+  ReservationSeriesFreq,
   InquiryStatus,
   CustomerStatus,
   CustomerType,
@@ -137,3 +138,33 @@ export type MeetingProviderValue =
 export const MEETING_PROVIDER_VALUES = Object.values(
   MEETING_PROVIDER,
 ) as MeetingProviderValue[];
+
+// ReservationSeriesFreq: 繰返し予約 (ReservationSeries) の周期 (Phase B.2)
+export const RESERVATION_SERIES_FREQ = {
+  DAILY: "DAILY",
+  WEEKLY: "WEEKLY",
+  MONTHLY: "MONTHLY",
+} as const;
+export type ReservationSeriesFreqValue =
+  (typeof RESERVATION_SERIES_FREQ)[keyof typeof RESERVATION_SERIES_FREQ];
+export const RESERVATION_SERIES_FREQ_VALUES = Object.values(
+  RESERVATION_SERIES_FREQ,
+) as ReservationSeriesFreqValue[];
+
+// TermsScope: 規約同意が必要な UI 導線の scope（SCREAMING_CASE ミラー、Object.values
+// ergonomics 用。raw `TermsScope`（上記 re-export）との二重定義だが EVENT_FORMAT /
+// MEETING_PROVIDER と同型の既存パターンを踏襲。値は @generated/prisma/enums の
+// TermsScope と同期させること）
+export const TERMS_SCOPE = {
+  RESERVATION: "RESERVATION",
+  INQUIRY: "INQUIRY",
+  EVENT_REGISTRATION: "EVENT_REGISTRATION",
+  LOGIN_SIGNUP: "LOGIN_SIGNUP",
+  RESERVATION_SERIES: "RESERVATION_SERIES", // Phase B.2
+} as const;
+export type TermsScopeValue = (typeof TERMS_SCOPE)[keyof typeof TERMS_SCOPE];
+// 全 5 値（`terms.ts` の `TERMS_SCOPE_VALUES` と同名衝突を避けるため `_ALL_` を明示。
+// あちらは admin 規約編集 UI の scope チェックボックスが直接 iterate する配列で、
+// 値は本配列と一致するが所有 SSoT が異なるため個別に定義している — 詳細は同ファイル参照）
+export const TERMS_SCOPE_ALL_VALUES: TermsScopeValue[] =
+  Object.values(TERMS_SCOPE);
