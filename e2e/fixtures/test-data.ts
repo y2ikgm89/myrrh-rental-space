@@ -107,3 +107,22 @@ export const ratePlanFixtures = {
   weekendPlanName: "週末料金",
   holidayPlanName: "祝日料金",
 } as const;
+
+/**
+ * ReservationSeries seed contract used by admin recurring reservation E2E specs.
+ *
+ * `prisma/seed.ts` の `seedRecurringReservationSeriesFixture` が dev customer +
+ * 既存 space に対して WEEKLY BYDAY=TU COUNT=3 の series を 1 件と 3 instance を
+ * seed する。以下の値を変更したら seed 側も同時更新すること (memory 契約:
+ * seed と e2e/fixtures の二重定義結合)。
+ */
+export const seriesFixtures = {
+  /** notes に付く prefix。instance の findFirst 検索 key として使う。 */
+  markerNotesPrefix: "[E2E] recurring series (Phase B.2.1 Task B)",
+  /** RRULE (WEEKLY BYDAY=TU COUNT=3)。 */
+  rrule: "FREQ=WEEKLY;BYDAY=TU;COUNT=3",
+  /** dtstart (固定 UTC、2027-05-04 は火曜)。 */
+  dtstartIso: "2027-05-04T14:00:00.000Z",
+  /** instance 総数。 */
+  instanceCount: 3,
+} as const;
