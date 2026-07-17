@@ -1,4 +1,5 @@
 export type {
+  CalendarEventInstance,
   CalendarEventParams,
   CalendarEventResult,
   CalendarConnectionTestResult,
@@ -22,6 +23,7 @@ export {
   createCalendarEvent,
   updateCalendarEvent,
   deleteCalendarEvent,
+  fetchEventInstances,
   getCalendarEvent,
 } from "./events";
 

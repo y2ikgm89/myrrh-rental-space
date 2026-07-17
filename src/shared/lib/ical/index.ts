@@ -24,8 +24,16 @@ import ical, {
 } from "ical-generator";
 import { formatJstYmd, formatTimeShort } from "@/shared/lib/date-format";
 import { formatEventVenueDisplay } from "@/shared/domain/events/venue";
-import { buildEventRegistrationUid, buildReservationUid } from "./uid";
-import type { EventCalendarParams, ReservationCalendarParams } from "./types";
+import {
+  buildEventRegistrationUid,
+  buildReservationSeriesUid,
+  buildReservationUid,
+} from "./uid";
+import type {
+  EventCalendarParams,
+  ReservationCalendarParams,
+  ReservationSeriesCalendarParams,
+} from "./types";
 
 const PRODID = "-//Myrrh Rental Space//Reservation System//JP";
 
@@ -111,6 +119,108 @@ export function buildReservationCancelCalendar(
     status: ICalEventStatus.CANCELLED,
     sequence: params.sequence,
   });
+  if (params.location !== undefined) event.location(params.location);
+  if (
+    params.organizerName !== undefined &&
+    params.organizerEmail !== undefined
+  ) {
+    event.organizer({
+      name: params.organizerName,
+      email: params.organizerEmail,
+    });
+  }
+  return cal.toString();
+}
+
+// =============================================================================
+// Reservation series (Phase B.2 task 15)
+// =============================================================================
+
+function buildReservationSeriesDescription(
+  params: ReservationSeriesCalendarParams,
+): string {
+  const formattedDate = formatJstYmd(params.dtstart);
+  const formattedStart = formatTimeShort(params.dtstart);
+  const endDate = new Date(params.dtstart.getTime() + params.duration * 60_000);
+  const formattedEnd = formatTimeShort(endDate);
+
+  const lines = [
+    `series ID: ${params.seriesId.slice(0, 8).toUpperCase()}`,
+    `スペース: ${params.spaceName}`,
+    `初回日時: ${formattedDate} ${formattedStart} - ${formattedEnd}`,
+    `お名前: ${params.customerName}`,
+    `繰返し: ${params.rrule}`,
+  ];
+  if (params.notes !== undefined && params.notes.length > 0) {
+    lines.push(`備考: ${params.notes}`);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * 定期予約 (ReservationSeries) の RFC 5545 master ICS を生成する。
+ *
+ * 各 instance を個別 VEVENT で並べず、`event.repeating(rrule)` により RRULE を
+ * master VEVENT に貼り付ける。受信側カレンダー (Google Calendar / Apple Calendar
+ * / Outlook) が RRULE から occurrence を展開するのが業界標準の recurring event
+ * 表現 (spec §5)。UID は series 全体で単一 (`reservation-series-<id>@<host>`)。
+ */
+export function buildReservationSeriesCalendar(
+  params: ReservationSeriesCalendarParams,
+  host: string,
+): string {
+  const cal = createCalendar(ICalCalendarMethod.REQUEST);
+  const endTime = new Date(params.dtstart.getTime() + params.duration * 60_000);
+  const event = cal.createEvent({
+    id: buildReservationSeriesUid(params.seriesId, host),
+    start: params.dtstart,
+    end: endTime,
+    summary: `【定期予約】${params.spaceName}`,
+    description: buildReservationSeriesDescription(params),
+    status: ICalEventStatus.CONFIRMED,
+    busystatus: ICalEventBusyStatus.BUSY,
+    sequence: params.sequence,
+  });
+  event.repeating(params.rrule);
+  if (params.location !== undefined) event.location(params.location);
+  if (params.url !== undefined) event.url(params.url);
+  if (
+    params.organizerName !== undefined &&
+    params.organizerEmail !== undefined
+  ) {
+    event.organizer({
+      name: params.organizerName,
+      email: params.organizerEmail,
+    });
+  }
+  return cal.toString();
+}
+
+/**
+ * 定期予約 (series-all scope) キャンセルの ICS を生成する。
+ *
+ * METHOD:CANCEL + STATUS:CANCELLED + 同じ master UID + RRULE 保持で、受信側
+ * カレンダーが「master + 全 occurrence」を連動削除する (spec §5)。
+ * this-and-following scope の場合は master UID を保ったまま RRULE の UNTIL
+ * を打ち切りに更新した REQUEST を送るのが本来だが、その経路は `cancellation-side-effects`
+ * の scope 判定側で分岐する (本 helper は series-all の master 全削除専用)。
+ */
+export function buildReservationSeriesCancelCalendar(
+  params: ReservationSeriesCalendarParams,
+  host: string,
+): string {
+  const cal = createCalendar(ICalCalendarMethod.CANCEL);
+  const endTime = new Date(params.dtstart.getTime() + params.duration * 60_000);
+  const event = cal.createEvent({
+    id: buildReservationSeriesUid(params.seriesId, host),
+    start: params.dtstart,
+    end: endTime,
+    summary: `【定期予約キャンセル】${params.spaceName}`,
+    description: buildReservationSeriesDescription(params),
+    status: ICalEventStatus.CANCELLED,
+    sequence: params.sequence,
+  });
+  event.repeating(params.rrule);
   if (params.location !== undefined) event.location(params.location);
   if (
     params.organizerName !== undefined &&
@@ -246,10 +356,12 @@ export type {
   CalendarEventInput,
   EventCalendarParams,
   ReservationCalendarParams,
+  ReservationSeriesCalendarParams,
 } from "./types";
 
 export {
   buildEventRegistrationUid,
   buildEventUid,
+  buildReservationSeriesUid,
   buildReservationUid,
 } from "./uid";

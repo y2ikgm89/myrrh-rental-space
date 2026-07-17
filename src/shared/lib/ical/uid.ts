@@ -41,3 +41,18 @@ export function buildEventRegistrationUid(
 export function buildEventUid(eventId: string, host: string): string {
   return `event-${eventId}@${normalizeHost(host)}`;
 }
+
+/**
+ * ReservationSeries (定期予約 master) の iCal UID を生成する
+ * （`reservation-series-<seriesId>@<host>`）。
+ *
+ * 各 instance ではなく series 全体で単一 UID を使う (RFC 5545 recurring event
+ * 契約: master VEVENT + RRULE で全 occurrence を表現)。受信側カレンダーは
+ * この UID で「同じ recurring event」として認識し、CANCEL で連動削除する。
+ */
+export function buildReservationSeriesUid(
+  seriesId: string,
+  host: string,
+): string {
+  return `reservation-series-${seriesId}@${normalizeHost(host)}`;
+}
