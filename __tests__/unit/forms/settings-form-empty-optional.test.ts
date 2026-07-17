@@ -53,7 +53,10 @@ import {
   emailFormSchema,
   notificationFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
-import { featureModulesSettingsSchema } from "@/admin/actions/settings/schemas/basic";
+import {
+  featureModulesSettingsSchema,
+  reservationSettingsSchema,
+} from "@/admin/actions/settings/schemas/basic";
 import { refundPolicyFormSchema } from "@/admin/actions/settings/schemas/refund-policy";
 import type { z } from "zod";
 
@@ -477,5 +480,40 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       { schema: featureModulesSettingsSchema },
     );
     expect(result.status).toBe("success");
+  });
+
+  // ---------------------------------------------------------------------------
+  // 予約設定: customerCanCancelSeriesInFull（Phase B.2 goal 9 Switch）
+  // ---------------------------------------------------------------------------
+  test("予約設定: customerCanCancelSeriesInFull Switch OFF (未送信) が false 保存", () => {
+    const fd = form({
+      defaultTimeSlot: "30",
+      minReservationDuration: "60",
+      maxReservationDuration: "480",
+      cancellationDeadlineHours: "24",
+      modificationDeadlineHours: "24",
+      customerCanCancelSeriesInFull: "",
+    });
+    const result = parseWithZod(fd, { schema: reservationSettingsSchema });
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.value.customerCanCancelSeriesInFull).toBe(false);
+    }
+  });
+
+  test("予約設定: customerCanCancelSeriesInFull Switch ON が true 保存", () => {
+    const fd = form({
+      defaultTimeSlot: "30",
+      minReservationDuration: "60",
+      maxReservationDuration: "480",
+      cancellationDeadlineHours: "24",
+      modificationDeadlineHours: "24",
+      customerCanCancelSeriesInFull: "on",
+    });
+    const result = parseWithZod(fd, { schema: reservationSettingsSchema });
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.value.customerCanCancelSeriesInFull).toBe(true);
+    }
   });
 });

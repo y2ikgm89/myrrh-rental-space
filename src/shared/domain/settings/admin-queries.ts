@@ -117,6 +117,7 @@ function toSettingsData(
     maxReservationDuration: settings.maxReservationDuration,
     cancellationDeadlineHours: settings.cancellationDeadlineHours,
     modificationDeadlineHours: settings.modificationDeadlineHours,
+    customerCanCancelSeriesInFull: settings.customerCanCancelSeriesInFull,
     sendReservationConfirmationEmail: settings.sendReservationConfirmationEmail,
     notifyNewReservation: settings.notifyNewReservation,
     notifyReservationChange: settings.notifyReservationChange,

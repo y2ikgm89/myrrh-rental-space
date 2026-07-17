@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
   SubmitButton,
+  Switch,
 } from "@/admin/components/ui";
 import { updateReservationSettings } from "@/admin/actions/settings";
 import { reservationSettingsSchema } from "@/admin/actions/settings/schemas/basic";
@@ -69,6 +70,9 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
       maxReservationDuration: String(settings.maxReservationDuration),
       cancellationDeadlineHours: String(settings.cancellationDeadlineHours),
       modificationDeadlineHours: String(settings.modificationDeadlineHours),
+      customerCanCancelSeriesInFull: settings.customerCanCancelSeriesInFull
+        ? "on"
+        : "",
     },
   });
 
@@ -78,6 +82,11 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
   const modificationDeadline = useInputControl(
     fields.modificationDeadlineHours,
   );
+  const customerCanCancelSeriesInFullControl = useInputControl(
+    fields.customerCanCancelSeriesInFull,
+  );
+  const customerCanCancelSeriesInFullOn =
+    customerCanCancelSeriesInFullControl.value === "on";
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
@@ -251,6 +260,50 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
                 value={modificationDeadline.value ?? ""}
               />
             </div>
+          </div>
+
+          <div className="flex items-start justify-between rounded-lg border p-4">
+            <div className="space-y-1">
+              <label
+                htmlFor={fields.customerCanCancelSeriesInFull.id}
+                className="cursor-pointer text-sm font-medium text-foreground"
+              >
+                顧客が定期予約全体をキャンセルできる
+              </label>
+              <p className="text-xs text-muted-foreground">
+                ON: 顧客はマイページから「定期予約すべてキャンセル」ボタンで
+                series 全体を まとめてキャンセルできます。OFF:
+                個別の予約は各自キャンセルできますが、series 全体のキャンセルは
+                管理者への問い合わせのみ受け付けます。
+              </p>
+              {fields.customerCanCancelSeriesInFull.errors && (
+                <p
+                  id={fields.customerCanCancelSeriesInFull.errorId}
+                  className="text-xs text-destructive"
+                >
+                  {fields.customerCanCancelSeriesInFull.errors.join(", ")}
+                </p>
+              )}
+            </div>
+            <Switch
+              id={fields.customerCanCancelSeriesInFull.id}
+              checked={customerCanCancelSeriesInFullOn}
+              onCheckedChange={(checked) =>
+                customerCanCancelSeriesInFullControl.change(checked ? "on" : "")
+              }
+              onBlur={customerCanCancelSeriesInFullControl.blur}
+              disabled={isPending}
+              aria-describedby={
+                fields.customerCanCancelSeriesInFull.errors
+                  ? fields.customerCanCancelSeriesInFull.errorId
+                  : undefined
+              }
+            />
+            <input
+              type="hidden"
+              name={fields.customerCanCancelSeriesInFull.name}
+              value={customerCanCancelSeriesInFullControl.value ?? ""}
+            />
           </div>
 
           {formErrors && formErrors.length > 0 && (

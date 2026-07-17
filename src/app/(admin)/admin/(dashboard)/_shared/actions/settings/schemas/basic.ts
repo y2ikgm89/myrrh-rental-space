@@ -107,6 +107,10 @@ export const reservationSettingsSchema = z.object({
   maxReservationDuration: z.number().int().min(60).max(1440),
   cancellationDeadlineHours: z.number().int().min(1).max(720),
   modificationDeadlineHours: z.number().int().min(1).max(720),
+  // Phase B.2 goal 9: 顧客が定期予約全体を series-all キャンセルできるか。
+  // OFF (未送信) を許容するため switchBoolean() 経由 (bare z.boolean() は
+  // parseWithZod で undefined 弾き)。
+  customerCanCancelSeriesInFull: switchBoolean(),
 });
 
 export type ReservationSettingsInput = z.infer<
