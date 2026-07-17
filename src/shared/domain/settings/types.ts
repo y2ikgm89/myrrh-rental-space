@@ -69,6 +69,12 @@ export type SettingsData = {
   maxReservationDuration: number;
   cancellationDeadlineHours: number;
   modificationDeadlineHours: number;
+  /**
+   * 顧客がマイページから定期予約 (ReservationSeries) 全体を series-all スコープで
+   * 自らキャンセルできるか (Phase B.2 goal 9)。false = 顧客は個別 instance のみ
+   * キャンセル可、series 全体は「管理者に問い合わせ」導線のみ。
+   */
+  customerCanCancelSeriesInFull: boolean;
   sendReservationConfirmationEmail: boolean;
   notifyNewReservation: boolean;
   notifyReservationChange: boolean;
