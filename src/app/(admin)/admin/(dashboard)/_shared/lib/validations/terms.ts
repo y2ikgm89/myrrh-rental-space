@@ -1,6 +1,8 @@
 import { z } from "zod";
-import { isTermsTypeValue } from "@/shared/lib/validations/terms";
-import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  TERMS_SCOPE_VALUES,
+  isTermsTypeValue,
+} from "@/shared/lib/validations/terms";
 
 const slugSchema = z
   .string()
@@ -33,17 +35,7 @@ const termsScopesField = z.preprocess(
     return v;
   },
   z
-    .array(
-      z.enum(
-        [
-          TermsScope.LOGIN_SIGNUP,
-          TermsScope.RESERVATION,
-          TermsScope.INQUIRY,
-          TermsScope.EVENT_REGISTRATION,
-        ] as const,
-        { error: "不正な scope です" },
-      ),
-    )
+    .array(z.enum(TERMS_SCOPE_VALUES, { error: "不正な scope です" }))
     .default([]),
 );
 
