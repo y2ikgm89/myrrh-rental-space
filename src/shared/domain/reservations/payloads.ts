@@ -74,6 +74,19 @@ export async function getReservationSettings() {
 }
 
 /**
+ * Phase B.2 task 21: 繰返し予約 (ReservationSeries) 上限を form validation で
+ * 早期 reject するための単発 read。`createReservationSeriesCommand` 側でも
+ * validateRruleForSeries が上限を強制するため defense-in-depth。
+ */
+export async function getMaxRecurrenceInstances(): Promise<number> {
+  const settings = await prisma.settings.findUniqueOrThrow({
+    where: { id: "singleton" },
+    select: { maxRecurrenceInstances: true },
+  });
+  return settings.maxRecurrenceInstances;
+}
+
+/**
  * `getReservationSettings()` の結果を `calculateReservationPricing` が要求する
  * `reservationSettings` shape に変換する。Settings singleton 行が存在しない防御的
  * ケース（`findUnique` が null を返す場合）は `tax.ts` の `DEFAULT_TAX_SETTINGS` /

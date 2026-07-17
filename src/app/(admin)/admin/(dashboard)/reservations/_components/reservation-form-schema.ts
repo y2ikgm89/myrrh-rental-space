@@ -298,9 +298,8 @@ export type RecurringReservationFormInput = z.input<
 export function parseRecurringReservationForm(
   data: unknown,
   opts: { maxRecurrenceInstances: number },
-): z.SafeParseReturnType<
-  RecurringReservationFormInput,
-  RecurringReservationFormData
+): ReturnType<
+  ReturnType<typeof createRecurringReservationFormSchema>["safeParse"]
 > {
   return createRecurringReservationFormSchema(opts).safeParse(data);
 }
