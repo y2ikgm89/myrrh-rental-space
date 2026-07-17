@@ -1,10 +1,13 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import { parsePrismaInputJson } from "@/shared/db/json";
-import { Prisma } from "@generated/prisma/client";
-import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import { Prisma, type TermsAgreement } from "@generated/prisma/client";
+import type {
+  TermsScope,
+  TermsScopeValue,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { assertAllowedManagedImageSourcesInJson } from "@/shared/domain/media/managed-image-assertions";
 import {
@@ -419,4 +422,91 @@ export async function recordTermsAgreementsCommand(input: {
 
   const result = await prisma.termsAgreement.createMany({ data });
   return { count: result.count };
+}
+
+/**
+ * `recordTermsAgreements` 専用の最小 tx クライアント型。
+ * 型互換性の理由は `src/shared/domain/terms/queries.ts` の
+ * `TermsDocumentGateClient` コメント参照。
+ */
+type TermsAgreementWriteClient = {
+  termsDocument: {
+    findMany: (args: {
+      where: Prisma.TermsDocumentWhereInput;
+      select?: Prisma.TermsDocumentSelect;
+    }) => Promise<{ id: string; contentHtml: string }[]>;
+  };
+  termsAgreement: {
+    createMany: (args: {
+      data: Prisma.TermsAgreementCreateManyInput[];
+    }) => Promise<{ count: number }>;
+  };
+};
+
+export type RecordTermsAgreementsInput = {
+  readonly scope: TermsScopeValue;
+  readonly agreements: readonly { termsId: string }[];
+  readonly customerId?: string | null;
+  readonly resourceId?: string | null;
+  readonly guestEmail?: string | null;
+  readonly ipAddress?: string | null;
+  readonly userAgent?: string | null;
+  readonly tx?: TermsAgreementWriteClient;
+};
+
+/**
+ * 同意記録の作成（tx 対応・scope 汎用版、Phase B.2 task 10）
+ *
+ * `recordTermsAgreementsCommand`（既存、`termsIds: string[]` ベース・tx 非対応・
+ * `Promise<{count}>` 返却）と同じ「1 required doc につき 1 TermsAgreement row」
+ * パターンを踏襲する（Codex fix 3599414654: series 全体で 1 行にまとめない）。
+ * 既存 consumer（signup/reservation/inquiry/event-registration の各 action）は
+ * 既存関数を使い続ける（非破壊）。
+ *
+ * `createReservationSeriesCommand`（Task 13）が interactive tx 内から呼び、
+ * 作成した TermsAgreement 行を `ReservationSeries.agreementSnapshot` 構築に
+ * 使う想定のため、`count` ではなく作成行そのものを返す。`termsAgreement.createMany`
+ * は作成行を返さないので、id/agreedAt を呼出前に生成し、その同一オブジェクトを
+ * createMany の data と戻り値の双方に使う（挿入内容と返却値が必ず一致する）。
+ *
+ * 該当 docs が公開されていない/削除済みなら silent skip（既存パターンと同様、
+ * 本コマンドは append-only の証跡なので該当なしは空配列を返す）。
+ */
+export async function recordTermsAgreements(
+  input: RecordTermsAgreementsInput,
+): Promise<TermsAgreement[]> {
+  if (input.agreements.length === 0) return [];
+
+  const client = input.tx ?? prisma;
+  const termsIds = input.agreements.map((a) => a.termsId);
+
+  const docs = await client.termsDocument.findMany({
+    where: {
+      id: { in: termsIds },
+      deletedAt: null,
+      isPublished: true,
+    },
+    select: { id: true, contentHtml: true },
+  });
+
+  if (docs.length === 0) return [];
+
+  const agreedAt = new Date();
+  const records: TermsAgreement[] = docs.map((doc) => ({
+    id: randomUUID(),
+    termsId: doc.id,
+    customerId: input.customerId ?? null,
+    guestEmail: input.guestEmail ?? null,
+    contentSnapshot: doc.contentHtml,
+    contentHash: createHash("sha256").update(doc.contentHtml).digest("hex"),
+    agreedAt,
+    scope: input.scope,
+    resourceId: input.resourceId ?? null,
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+  }));
+
+  await client.termsAgreement.createMany({ data: records });
+
+  return records;
 }

@@ -3,6 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
+import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   ErrorCategory,
@@ -11,7 +12,10 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import type {
+  TermsScope,
+  TermsScopeValue,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 公開ページ向け規約クエリ
@@ -225,4 +229,71 @@ export async function getRequiredTermsByScope(
   });
 
   return toPlainArray(result);
+}
+
+/**
+ * `assertAllRequiredTermsAgreed` 専用の最小 tx クライアント型。
+ *
+ * Prisma 拡張クライアント（`$extends` 済み `prisma`、`src/shared/db/prisma.ts`）の
+ * interactive tx コールバック引数は、生成 Prisma の `Prisma.TransactionClient`
+ * （拡張前の基底型）と `exactOptionalPropertyTypes: true` 下で構造的に非互換
+ * （拡張後 model メソッドの `SelectSubset` 引数型が食い違う。詳細は
+ * `src/shared/domain/reservations/series-advisory-lock.ts` のコメント参照）。
+ * `src/shared/lib/reservation/types.ts` の `PrismaTransactionClient` と同型の
+ * パターンで、`termsDocument.findMany` のみを要求する最小構造型にする。
+ */
+type TermsDocumentGateClient = {
+  termsDocument: {
+    findMany: (args: {
+      where: Prisma.TermsDocumentWhereInput;
+      select?: Prisma.TermsDocumentSelect;
+    }) => Promise<{ id: string }[]>;
+  };
+};
+
+export type AssertAllRequiredTermsAgreedInput = {
+  readonly scope: TermsScopeValue;
+  readonly agreements: readonly { termsId: string }[];
+  readonly tx?: TermsDocumentGateClient;
+};
+
+/**
+ * 指定 scope の必須規約に全て同意済みかを server-side で強制する gate（tx 対応版）。
+ *
+ * `src/shared/lib/terms-consent-gate.ts` の同名関数（`agreedTermsIds: string[]`
+ * ベース・"use cache" な `getRequiredTermsByScope` 経由・tx 非対応・
+ * `Promise<{matchedTermsIds}>` 返却）とは別物。公開 4 経路
+ * (signup/reservation/inquiry/event-registration) の既存 consumer は
+ * そちらを使い続ける（非破壊）。
+ *
+ * 本関数は RESERVATION_SERIES scope（Phase B.2 繰返し予約）向けに追加した。
+ * `createReservationSeriesCommand`（Task 13）が interactive tx 内
+ * （advisory lock 取得後）から呼べるよう、"use cache" を経由せず生 Prisma
+ * クエリで実装する（cache 対象関数は tx オブジェクトを引数に取れない）。
+ * tx 省略時は既定の `prisma` を使う。
+ *
+ * `scopes: { has: scope }` は既存 `getRequiredTermsByScope` と同じ SSoT filter
+ * のため、Task 1/2 で `TermsScope` enum に追加済みの RESERVATION_SERIES を
+ * 自動的に pick up する。
+ */
+export async function assertAllRequiredTermsAgreed(
+  input: AssertAllRequiredTermsAgreedInput,
+): Promise<void> {
+  const client = input.tx ?? prisma;
+
+  const requiredDocs = await client.termsDocument.findMany({
+    where: {
+      scopes: { has: input.scope },
+      isPublished: true,
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+
+  const agreedIds = new Set(input.agreements.map((a) => a.termsId));
+  const hasMissing = requiredDocs.some((doc) => !agreedIds.has(doc.id));
+
+  if (hasMissing) {
+    throw new DomainError("すべての必須規約への同意が必要です", "VALIDATION");
+  }
 }
