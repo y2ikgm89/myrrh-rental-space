@@ -75,31 +75,10 @@ export const parseAsBoolean = createParser<boolean>({
 });
 
 // ============================================================
-// 公開・ブログ・ニュース（Server のみ Client 共有不要）
-// ============================================================
-
-const spaceSearchParamsParsers = {
-  q: parseAsQuery,
-  page: parseAsPage,
-  perPage: parseAsPerPage,
-  sort: parseAsSortOrder,
-};
-
-const spaceSearchParamsCache = createSearchParamsCache(
-  spaceSearchParamsParsers,
-);
-
-/** スペース検索パラメータローダー */
-export async function loadSpaceSearchParams(
-  searchParams: Promise<SearchParams>,
-) {
-  await spaceSearchParamsCache.parse(searchParams);
-  return spaceSearchParamsCache.all();
-}
-
-// ============================================================
 // 管理画面: イベント詳細 — 参加者一覧
 // ============================================================
+// NOTE: 公開スペース検索の SSoT は `src/app/(public)/_shared/lib/search-params.ts`
+//       の `spaceSearchParamsParsers`。ここに重複定義は置かない。
 
 const adminEventRegistrationsSearchParamsCache = createSearchParamsCache({
   page: parseAsPage,
