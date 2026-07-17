@@ -2830,6 +2830,29 @@ describe("architecture boundaries", () => {
       }
     });
   });
+
+  describe("Phase B.2: rrule package import restriction", () => {
+    test("rrule import は domain layer + admin form utils のみ許可", async () => {
+      const files = collectSourceFiles(SRC_ROOT);
+      const allowedPatterns = [
+        /src[/\\]shared[/\\]domain[/\\]reservations[/\\]/,
+        /src[/\\]app[/\\]\(admin\)[/\\]admin[/\\]\(dashboard\)[/\\]reservations[/\\]_components[/\\]rrule-utils\.ts$/,
+      ];
+      for (const file of files) {
+        const content = readFileSync(file, "utf8");
+        const importsRrule =
+          /from ["']rrule["']/.test(content) ||
+          /import\s+.*\s+from\s+["']rrule["']/.test(content);
+        if (importsRrule) {
+          const isAllowed = allowedPatterns.some((p) => p.test(file));
+          expect(
+            isAllowed,
+            `${relative(ROOT, file)}: rrule import は domain layer + rrule-utils.ts のみ許可`,
+          ).toBe(true);
+        }
+      }
+    });
+  });
 });
 
 // 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
