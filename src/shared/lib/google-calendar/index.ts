@@ -22,6 +22,7 @@ export {
 export {
   createCalendarEvent,
   updateCalendarEvent,
+  patchCalendarEvent,
   deleteCalendarEvent,
   fetchEventInstances,
   getCalendarEvent,

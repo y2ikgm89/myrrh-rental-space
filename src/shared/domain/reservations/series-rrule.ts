@@ -116,3 +116,36 @@ function toIcalDate(d: Date): string {
   const s = String(d.getUTCSeconds()).padStart(2, "0");
   return `${y}${mo}${day}T${h}${mi}${s}Z`;
 }
+
+/**
+ * 既存 RRULE 文字列に UNTIL を注入して再構築する (Phase B.2.1 non-goal Task C)。
+ *
+ * this-and-following scope で「これ以降の instance を打ち切る」ために master event
+ * の RRULE を更新する用途。RFC 5545 の COUNT/UNTIL 相互排他契約に従い、既存
+ * RRULE に COUNT が含まれる場合は削除して UNTIL 一本に統一する。
+ *
+ * 戻り値は `RRULE:` prefix なしの本体文字列 (呼出側で `RRULE:${result}` として
+ * Google Calendar API `recurrence` に載せる)。
+ */
+export function rebuildRruleWithUntil(
+  rrule: string,
+  dtstart: Date,
+  until: Date,
+): string {
+  const rule = parseRruleString(rrule, dtstart);
+  const rebuilt = new RRule({
+    ...rule.origOptions,
+    until,
+    count: null,
+  });
+  // RRule.toString() は options に dtstart を含む場合 "DTSTART:...\nRRULE:..." を、
+  // 含まない場合 "RRULE:..." を返す。安全のため RRULE 行を抽出する。
+  const lines = rebuilt.toString().split("\n");
+  const rruleLine = lines.find((l) => l.startsWith("RRULE:"));
+  if (!rruleLine) {
+    throw new Error(
+      "RRule.toString() did not include RRULE line (rrule.js contract broken)",
+    );
+  }
+  return rruleLine.replace(/^RRULE:/u, "");
+}

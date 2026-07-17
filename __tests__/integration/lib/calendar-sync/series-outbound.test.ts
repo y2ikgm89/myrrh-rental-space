@@ -70,11 +70,19 @@ const mockCreate = mock<
 const mockFetchInstances = mock<
   (masterId: string) => Promise<MockFetchInstancesResult>
 >(() => Promise.resolve({ success: true, instances: [] }));
+// Phase B.2.1 Task C: patchGcalMasterUntil が events.patch を呼ぶため mock 追加。
+const mockPatch = mock<
+  (
+    eventId: string,
+    patch: Record<string, unknown>,
+  ) => Promise<{ success: boolean; error?: string; eventId?: string }>
+>(() => Promise.resolve({ success: true }));
 
 mock.module("@/shared/lib/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
   createCalendarEvent: mockCreate,
   fetchEventInstances: mockFetchInstances,
+  patchCalendarEvent: mockPatch,
   // outbound.ts が barrel から import する残りの export は本テストで未使用、
   // モジュール全体差し替えのため無害スタブを置く。
   updateCalendarEvent: mock(() => Promise.resolve({ success: true })),
@@ -253,6 +261,8 @@ describeMaybe(
       mockFetchInstances.mockImplementation(() =>
         Promise.resolve({ success: true, instances: [] }),
       );
+      mockPatch.mockClear();
+      mockPatch.mockImplementation(() => Promise.resolve({ success: true }));
     });
 
     test("recurrence 付き createCalendarEvent 呼出 → child eventId が各 Reservation に write-back される", async () => {
@@ -444,6 +454,49 @@ describeMaybe(
       } finally {
         await fixture.cleanup();
       }
+    }, 30_000);
+
+    test("patchGcalMasterUntil: 既存 series の RRULE を parse → UNTIL 注入 → events.patch に送る (Phase B.2.1 Task C)", async () => {
+      const fixture = await createSeriesFixture();
+      try {
+        const { patchGcalMasterUntil } =
+          await import("@/shared/lib/calendar-sync/series-outbound");
+        // fixture の series は "FREQ=WEEKLY;BYDAY=TU;COUNT=3" / dtstart=2028-01-04
+        // until を 2 番目 instance 直後 (2028-01-11 10:00Z) にセット → COUNT 消える
+        const until = new Date("2028-01-11T10:00:00.000Z");
+        await patchGcalMasterUntil({
+          masterEventId: "master-for-patch",
+          seriesId: fixture.seriesId,
+          until,
+        });
+
+        expect(mockPatch).toHaveBeenCalledTimes(1);
+        const call = mockPatch.mock.calls[0];
+        if (!call) throw new Error("mockPatch call missing");
+        expect(call[0]).toBe("master-for-patch");
+        const recurrence = (call[1] as { recurrence?: string[] }).recurrence;
+        expect(recurrence).toHaveLength(1);
+        const rrule = recurrence?.[0] ?? "";
+        expect(rrule).toMatch(/^RRULE:/u);
+        expect(rrule).toMatch(/FREQ=WEEKLY/u);
+        expect(rrule).toMatch(/BYDAY=TU/u);
+        expect(rrule).toMatch(/UNTIL=20280111T100000Z/u);
+        expect(rrule).not.toMatch(/COUNT=/u);
+      } finally {
+        await fixture.cleanup();
+      }
+    }, 30_000);
+
+    test("patchGcalMasterUntil: series が見つからなければ patch を呼ばず silent skip", async () => {
+      const { patchGcalMasterUntil } =
+        await import("@/shared/lib/calendar-sync/series-outbound");
+      const bogusId = "00000000-0000-0000-0000-000000000000";
+      await patchGcalMasterUntil({
+        masterEventId: "master-ghost",
+        seriesId: bogusId,
+        until: new Date(),
+      });
+      expect(mockPatch).not.toHaveBeenCalled();
     }, 30_000);
   },
 );

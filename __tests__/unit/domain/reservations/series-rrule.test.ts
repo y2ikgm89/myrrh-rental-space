@@ -4,6 +4,7 @@ import {
   expandInstances,
   countInstances,
   validateRruleForSeries,
+  rebuildRruleWithUntil,
 } from "@/shared/domain/reservations/series-rrule";
 
 // 2026-07-21 は火曜日（UTC）。BYDAY=TU の RRULE と一致させるため
@@ -136,5 +137,55 @@ describe("validateRruleForSeries", () => {
       maxInstances: 26,
     });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("rebuildRruleWithUntil (Phase B.2.1 Task C)", () => {
+  test("WEEKLY BYDAY=TU COUNT=10 → UNTIL 注入で COUNT 消える", () => {
+    const until = new Date("2026-08-11T10:00:00Z");
+    const result = rebuildRruleWithUntil(
+      "FREQ=WEEKLY;BYDAY=TU;COUNT=10",
+      dtstart,
+      until,
+    );
+    expect(result).toMatch(/FREQ=WEEKLY/u);
+    expect(result).toMatch(/BYDAY=TU/u);
+    expect(result).toMatch(/UNTIL=20260811T100000Z/u);
+    expect(result).not.toMatch(/COUNT=/u);
+  });
+
+  test("DAILY INTERVAL=2 → UNTIL 追加", () => {
+    const until = new Date("2026-08-01T10:00:00Z");
+    const result = rebuildRruleWithUntil(
+      "FREQ=DAILY;INTERVAL=2",
+      dtstart,
+      until,
+    );
+    expect(result).toMatch(/FREQ=DAILY/u);
+    expect(result).toMatch(/INTERVAL=2/u);
+    expect(result).toMatch(/UNTIL=20260801T100000Z/u);
+  });
+
+  test("MONTHLY BYMONTHDAY=15 COUNT=6 → UNTIL 注入", () => {
+    const until = new Date("2027-01-15T10:00:00Z");
+    const result = rebuildRruleWithUntil(
+      "FREQ=MONTHLY;BYMONTHDAY=15;COUNT=6",
+      new Date("2026-07-15T10:00:00Z"),
+      until,
+    );
+    expect(result).toMatch(/FREQ=MONTHLY/u);
+    expect(result).toMatch(/BYMONTHDAY=15/u);
+    expect(result).toMatch(/UNTIL=20270115T100000Z/u);
+    expect(result).not.toMatch(/COUNT=/u);
+  });
+
+  test("戻り値は RRULE: prefix なしの本体 (呼出側で prefix 付与する契約)", () => {
+    const result = rebuildRruleWithUntil(
+      "FREQ=WEEKLY;COUNT=5",
+      dtstart,
+      new Date("2026-08-04T10:00:00Z"),
+    );
+    expect(result).not.toMatch(/^RRULE:/u);
+    expect(result).not.toMatch(/^DTSTART:/u);
   });
 });
