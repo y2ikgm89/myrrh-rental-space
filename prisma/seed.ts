@@ -2257,7 +2257,15 @@ async function seedDevCustomerAndReservations() {
     });
   }
 
-  // 5) Inquiry を 2 件 seed（NEW + RESOLVED、customerId 紐付け）
+  // 5) ReservationSeries fixture (Phase B.2.1 Task B: admin recurring E2E 用)
+  //    WEEKLY BYDAY=TU COUNT=3 で dev customer + 既存 space に 1 series + 3 instance を
+  //    idempotent に seed する。SeriesInfoSection / 3 択キャンセル UI の E2E で使う。
+  await seedRecurringReservationSeriesFixture({
+    space,
+    customer,
+  });
+
+  // 6) Inquiry を 2 件 seed（NEW + RESOLVED、customerId 紐付け）
   const inquiryFixtures: Array<{
     subject: string;
     message: string;
@@ -2308,6 +2316,105 @@ async function seedDevCustomerAndReservations() {
 
   console.log(
     `✅ Seeded dev customer (${DEV_CUSTOMER_EMAIL}) + ${created.toString()} reservation(s) + review/inquiry (${inquiryCreated.toString()})`,
+  );
+}
+
+// =============================================================================
+// ReservationSeries fixture (Phase B.2.1 Task B: admin recurring E2E golden path)
+// =============================================================================
+
+/** E2E spec `create-recurring-reservation.spec.ts` が参照する定期予約 seed marker。 */
+const SERIES_E2E_MARKER = "[E2E] recurring series (Phase B.2.1 Task B)";
+
+/** E2E 用 series の dtstart (固定 UTC、2027-05-04 は火曜)。 */
+const SERIES_E2E_DTSTART = new Date("2027-05-04T14:00:00.000Z");
+
+/** E2E 用 series の RRULE (WEEKLY BYDAY=TU COUNT=3)。 */
+const SERIES_E2E_RRULE = "FREQ=WEEKLY;BYDAY=TU;COUNT=3";
+
+/** 1 instance の予約時間 (分)。 */
+const SERIES_E2E_DURATION_MINUTES = 120;
+
+async function seedRecurringReservationSeriesFixture(input: {
+  space: { id: string; hourlyPrice: Prisma.Decimal | number };
+  customer: { id: string };
+}): Promise<void> {
+  // idempotent: marker が既存 series の agreementSnapshot に含まれていれば skip
+  const existingSeries = await prisma.reservationSeries.findFirst({
+    where: {
+      customerId: input.customer.id,
+      spaceId: input.space.id,
+      dtstart: SERIES_E2E_DTSTART,
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+  if (existingSeries) {
+    console.log("⏭️ Skipped existing E2E recurring series fixture");
+    return;
+  }
+
+  const basePrice = Number(input.space.hourlyPrice) * 2;
+  const templateData = asPrismaInputJsonValue(
+    {
+      totalPrice: basePrice,
+      basePrice,
+      rateBreakdownJson: SEED_LEGACY_RATE_BREAKDOWN,
+      taxRateType: "standard",
+      taxRate: SEED_LEGACY_TAX_RATE,
+      taxAmount: Math.round((basePrice * SEED_LEGACY_TAX_RATE) / 100),
+      totalPriceWithTax:
+        basePrice + Math.round((basePrice * SEED_LEGACY_TAX_RATE) / 100),
+      durationDiscountAmount: 0,
+      spaceDiscountAmount: 0,
+    },
+    "series templateData が不正です",
+  );
+  const agreementSnapshot = asPrismaInputJsonValue(
+    { marker: SERIES_E2E_MARKER, agreements: [] },
+    "series agreementSnapshot が不正です",
+  );
+
+  const series = await prisma.reservationSeries.create({
+    data: {
+      spaceId: input.space.id,
+      customerId: input.customer.id,
+      rrule: SERIES_E2E_RRULE,
+      dtstart: SERIES_E2E_DTSTART,
+      duration: SERIES_E2E_DURATION_MINUTES,
+      instanceCount: 3,
+      templateData,
+      agreementSnapshot,
+    },
+    select: { id: true },
+  });
+
+  const instances = Array.from({ length: 3 }, (_, i) => {
+    const startTime = new Date(
+      SERIES_E2E_DTSTART.getTime() + i * 7 * 24 * 60 * 60 * 1000,
+    );
+    const endTime = new Date(
+      startTime.getTime() + SERIES_E2E_DURATION_MINUTES * 60 * 1000,
+    );
+    return {
+      spaceId: input.space.id,
+      customerId: input.customer.id,
+      seriesId: series.id,
+      recurrenceInstanceIndex: i,
+      startTime,
+      endTime,
+      status: "CONFIRMED" as const,
+      paymentStatus: "UNPAID" as const,
+      basePrice: new Prisma.Decimal(basePrice),
+      totalPrice: new Prisma.Decimal(basePrice),
+      notes: `${SERIES_E2E_MARKER} ${(i + 1).toString()}/3`,
+      ...buildSeedLegacyPricingSnapshot(basePrice),
+    };
+  });
+  await prisma.reservation.createMany({ data: instances });
+
+  console.log(
+    `✅ Seeded recurring series fixture (${SERIES_E2E_MARKER}) with 3 instances`,
   );
 }
 
