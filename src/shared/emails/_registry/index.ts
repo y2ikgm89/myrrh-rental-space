@@ -34,6 +34,8 @@ import { ContactConfirmationEmail } from "@/shared/emails/contact-confirmation";
 import { contactConfirmationFixture } from "@/shared/emails/contact-confirmation.fixture";
 import { EventAdminNotificationEmail } from "@/shared/emails/event-admin-notification";
 import { eventAdminNotificationFixture } from "@/shared/emails/event-admin-notification.fixture";
+import { EventBroadcastEmail } from "@/shared/emails/event-broadcast";
+import { eventBroadcastFixture } from "@/shared/emails/event-broadcast.fixture";
 import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled-notification";
 import { eventCancelledNotificationFixture } from "@/shared/emails/event-cancelled-notification.fixture";
 import { EventReminderEmail } from "@/shared/emails/event-reminder";
@@ -215,7 +217,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 24 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * 25 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {
@@ -268,6 +270,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "event-updated-notification",
     EventUpdatedNotificationEmail,
     eventUpdatedNotificationFixture,
+  ),
+  "event-broadcast": defineEntry(
+    "event-broadcast",
+    EventBroadcastEmail,
+    eventBroadcastFixture,
   ),
   "event-reminder": defineEntry(
     "event-reminder",

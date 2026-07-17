@@ -358,6 +358,17 @@ export const cancelByEventRegistrationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// 管理者オーサリング型 event broadcast (T12) — event 単位で 1 時間あたり 3 回まで。
+// event-broadcast は参加者全員に送信する重い操作 (100 名の申込があれば 100 通の Resend
+// API 呼出) のため、`cancelByReservationRateLimiter` と同型の「resource (eventId) 単位の
+// 追加バケット」で暴走を構造的に抑制する。管理者 IP は変わり得るため IP 単位でなく
+// eventId 単位を採用 (同一イベントへ短時間で 4 回目以降の送信が来たら 429 相当で
+// 停める)。executeAdminMutationResult 側の RBAC + AuditLog と多層防御で機能する。
+export const eventBroadcastRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 3,
+});
+
 // 管理画面の「重い」内部 API 用（60 リクエスト/分/IP）— defense-in-depth。
 // 認証済みスタッフでも、外向き fetch (OGP プレビュー) や全件 LIKE スキャン
 // (customer 検索) のような副作用 / コスト大の endpoint は単独でレート制限する。

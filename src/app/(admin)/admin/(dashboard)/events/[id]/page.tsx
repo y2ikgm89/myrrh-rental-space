@@ -5,6 +5,7 @@ import {
   IconDownload,
   IconPencil,
   IconClipboardCheck,
+  IconSend,
 } from "@tabler/icons-react";
 import { getEventById } from "@/shared/domain/events/admin-queries";
 import { getEventRegistrations } from "@/shared/domain/events/registration-queries";
@@ -138,6 +139,12 @@ export default async function EventDetailPage({
             <Link href={`/admin/events/${event.id}/check-in`}>
               <IconClipboardCheck className="mr-2 h-4 w-4" />
               出欠確認
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/admin/events/${event.id}/broadcast`}>
+              <IconSend className="mr-2 h-4 w-4" />
+              一斉配信
             </Link>
           </Button>
           <Button asChild size="sm">
