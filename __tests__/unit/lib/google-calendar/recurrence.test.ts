@@ -23,19 +23,9 @@ import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types"
 const DEFAULT_SETTINGS: GoogleCalendarSettingsData = {
   enabled: true,
   calendarId: "test-calendar",
-  serviceAccountJson: null,
   connectionStatus: "connected",
   lastTestedAt: null,
   reminderMinutes: null,
-  twoWaySyncEnabled: false,
-  syncMethod: "polling",
-  lastSyncedAt: null,
-  syncToken: null,
-  webhookChannelId: null,
-  webhookResourceId: null,
-  webhookExpiration: null,
-  webhookToken: null,
-  oauthEnabled: false,
 };
 
 const BASE_PARAMS: CalendarEventParams = {
