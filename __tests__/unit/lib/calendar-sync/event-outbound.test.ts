@@ -31,6 +31,12 @@ mock.module("@/shared/lib/google-calendar", () => ({
   deleteCalendarEvent: mockDelete,
   // 他の export もスタブで返す（テスト汚染防止）
   getCalendarEvent: mock(() => Promise.resolve(null)),
+  // Phase B.2 task 16 で追加された fetchEventInstances。outbound.ts が
+  // syncReservationSeriesToCalendar 経由で import するため mock stub 必須
+  // (未追加時に SyntaxError: Export named 'fetchEventInstances' not found)。
+  fetchEventInstances: mock(() =>
+    Promise.resolve({ success: true, instances: [] }),
+  ),
   getServiceAccountClient: mock(() => Promise.resolve(null)),
   encryptServiceAccountJson: mock(() => Promise.resolve("")),
   extractServiceAccountEmail: mock(() => ""),
