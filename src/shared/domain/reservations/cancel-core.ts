@@ -112,3 +112,89 @@ export async function applyCancellation(
 
   return { success: true };
 }
+
+/**
+ * `applyBulkCancellation` 用の最小構造型 tx。
+ *
+ * 生成 Prisma の `Prisma.TransactionClient`（拡張前の基底型）は `$extends` 済み
+ * app 標準 client（`src/shared/db/prisma.ts` の `prisma`）の tx コールバック型と
+ * `exactOptionalPropertyTypes: true` 下で構造的に非互換（TS2345）なため使わない
+ * （`series-advisory-lock.ts` の `SeriesLockClient` と同じ理由・同じ回避）。
+ */
+export interface ApplyBulkCancellationTx {
+  readonly reservation: {
+    updateMany(args: object): Promise<{ count: number }>;
+    findMany(args: object): Promise<Array<{ id: string }>>;
+  };
+}
+
+export type BulkCancelOptions = {
+  cancellationReason?: string;
+  cancelledByType: string;
+  now: Date;
+};
+
+export type BulkCancelResult = {
+  cancelledIds: string[];
+};
+
+/**
+ * 複数 Reservation を一括キャンセル（series 全体 / this-and-following 用）。
+ *
+ * `applyCancellation`（単一 id）と同じ「updateMany の WHERE で claim」パターンを
+ * 複数 id に拡張したもの。status ∈ CANCELLABLE_STATUSES を WHERE に含めて DB 側で
+ * claim するため、二重 submit や他経路との競合時も対象 id ごとに一度しか副作用が
+ * 発火しない。
+ *
+ * `updateMany` は何件更新したかの count のみを返し、どの id が実際に claim された
+ * かは返さないため、直後の `findMany`（status=CANCELLED かつ cancelledAt=now で
+ * 絞込）で claim できた id 集合を確定する。
+ *
+ * coupon usageCount の decrement はここでは行わない。series の couponId は
+ * instance（Reservation）側ではなく ReservationSeries 側に持つため、series 全体
+ * キャンセル時のクーポン戻しは呼び出し側（`cancelReservationSeriesCommand`）が
+ * `series.couponId` を basis に別途処理する。
+ *
+ * 副作用（メール / GCal delete / Stripe refund / SwitchBot revoke / AuditLog）は
+ * 本関数では発火しない。`applyBulkCancellationSideEffects`
+ * （`cancellation-side-effects.ts`）が claim 成功分の cancelledIds を受けて発火する。
+ *
+ * @returns cancelledIds = 実際に status が変わった予約 id（claim 成功分のみ）
+ */
+export async function applyBulkCancellation(
+  tx: ApplyBulkCancellationTx,
+  ids: string[],
+  options: BulkCancelOptions,
+): Promise<BulkCancelResult> {
+  if (ids.length === 0) return { cancelledIds: [] };
+
+  const claimResult = await tx.reservation.updateMany({
+    where: {
+      id: { in: ids },
+      deletedAt: null,
+      status: { in: [...CANCELLABLE_STATUSES] },
+    },
+    data: {
+      status: ReservationStatus.CANCELLED,
+      cancelledAt: options.now,
+      cancelledByType: options.cancelledByType,
+      icsSequence: { increment: 1 },
+      ...(options.cancellationReason
+        ? { cancellationReason: options.cancellationReason }
+        : {}),
+    },
+  });
+
+  if (claimResult.count === 0) return { cancelledIds: [] };
+
+  const cancelled = await tx.reservation.findMany({
+    where: {
+      id: { in: ids },
+      status: ReservationStatus.CANCELLED,
+      cancelledAt: options.now,
+    },
+    select: { id: true },
+  });
+
+  return { cancelledIds: cancelled.map((r) => r.id) };
+}
