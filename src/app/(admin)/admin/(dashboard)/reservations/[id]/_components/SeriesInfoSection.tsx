@@ -44,8 +44,11 @@ export function SeriesInfoSection({
   reservationId,
   series,
 }: Props): ReactElement {
-  const isSeriesCancelled =
-    series.cancelledAt !== null || series.deletedAt !== null;
+  const cancelDate = series.cancelledAt ?? series.deletedAt;
+  const isSeriesCancelled = cancelDate !== null;
+  const cancelledMessage = cancelDate
+    ? `この series は既にキャンセル済み (${formatJstDateString(cancelDate)})`
+    : "この series は既にキャンセル済み";
 
   return (
     <Card>
@@ -76,13 +79,7 @@ export function SeriesInfoSection({
         </dl>
 
         {isSeriesCancelled ? (
-          <p className="text-sm text-muted-foreground">
-            この series は既にキャンセル済み ({" "}
-            {series.cancelledAt
-              ? formatJstDateString(series.cancelledAt)
-              : formatJstDateString(series.deletedAt ?? new Date())}
-            )
-          </p>
+          <p className="text-sm text-muted-foreground">{cancelledMessage}</p>
         ) : (
           <div className="flex flex-wrap gap-2 pt-2">
             <CancelForm

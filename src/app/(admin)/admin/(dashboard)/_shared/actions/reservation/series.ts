@@ -23,7 +23,6 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import { DomainError } from "@/shared/domain/domain-error";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   cancelReservationSeriesCommand,
@@ -87,8 +86,6 @@ export async function createRecurringReservationAction(
         ? { count: data.count }
         : { until: data.until }),
     });
-
-    const request = await buildRequestContext();
 
     type SeriesPayload = {
       readonly id: string;
