@@ -113,6 +113,24 @@ export type DeleteAccountVerificationEmailData = {
   deletionUrl: string;
 };
 
+/**
+ * Phase B.2: series 一括キャンセルの集約通知メール用データ。
+ *
+ * 顧客向け（`sendBulkReservationCancelledEmail`）・管理者向け
+ * （`sendBulkAdminNotification`）の両方が同じ形状を共有する
+ * （`cancellation-side-effects.ts` の `applyBulkCancellationSideEffects` が
+ * 1 回だけ組み立てて両関数に渡す）。
+ */
+export type BulkReservationCancelledEmailData = {
+  seriesId: string;
+  customerEmail: string;
+  customerName: string;
+  spaceName: string;
+  /** キャンセル対象になった各 instance の日時（表示用整形は sender 側で行う）。 */
+  instances: { startTime: Date; endTime: Date }[];
+  reason?: string;
+};
+
 export type StatusChangeEmailData = {
   reservationId: string;
   customerEmail: string;
