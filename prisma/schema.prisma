@@ -36,6 +36,12 @@ enum ReservationStatus {
   NO_SHOW
 }
 
+enum ReservationSeriesFreq {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
 enum InquiryStatus {
   NEW
   IN_PROGRESS
@@ -281,15 +287,16 @@ model User {
   pageAssignments UserPageAssignment[]
 
   // FK: createdBy / resolvedBy / deletedBy リレーション
-  createdCommentThreads  EditorCommentThread[] @relation("CommentThreadCreator")
-  resolvedCommentThreads EditorCommentThread[] @relation("CommentThreadResolver")
-  createdEditorComments  EditorComment[]       @relation("EditorCommentCreator")
-  deletedEditorComments  EditorComment[]       @relation("EditorCommentDeleter")
-  inquiryReplies         Inquiry[]             @relation("InquiryReplies")
-  reservationDeletions   Reservation[]         @relation("ReservationDeletions")
-  eventDeletions         Event[]               @relation("EventDeletions")
-  createdBlockTemplates  BlockTemplate[]       @relation("BlockTemplateCreator")
-  repliedSpaceReviews    SpaceReview[]         @relation("SpaceReviewReplyAuthor")
+  createdCommentThreads    EditorCommentThread[] @relation("CommentThreadCreator")
+  resolvedCommentThreads   EditorCommentThread[] @relation("CommentThreadResolver")
+  createdEditorComments    EditorComment[]       @relation("EditorCommentCreator")
+  deletedEditorComments    EditorComment[]       @relation("EditorCommentDeleter")
+  inquiryReplies           Inquiry[]             @relation("InquiryReplies")
+  reservationDeletions     Reservation[]         @relation("ReservationDeletions")
+  deletedReservationSeries ReservationSeries[]   @relation("ReservationSeriesDeletedBy")
+  eventDeletions           Event[]               @relation("EventDeletions")
+  createdBlockTemplates    BlockTemplate[]       @relation("BlockTemplateCreator")
+  repliedSpaceReviews      SpaceReview[]         @relation("SpaceReviewReplyAuthor")
 
   // OR検索用インデックス
   @@index([name])
@@ -506,14 +513,15 @@ model Space {
   smartLockDeviceId String? @db.Uuid
 
   // Relations
-  reservations    Reservation[]
-  reviews         SpaceReview[]
-  events          Event[]
-  blockedDates    BlockedDate[]
-  ratePlans       SpaceRatePlan[]
-  location        Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
-  category        SpaceCategory?   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  smartLockDevice SmartLockDevice? @relation(fields: [smartLockDeviceId], references: [id], onDelete: SetNull)
+  reservations      Reservation[]
+  reservationSeries ReservationSeries[]
+  reviews           SpaceReview[]
+  events            Event[]
+  blockedDates      BlockedDate[]
+  ratePlans         SpaceRatePlan[]
+  location          Location            @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  category          SpaceCategory?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  smartLockDevice   SmartLockDevice?    @relation(fields: [smartLockDeviceId], references: [id], onDelete: SetNull)
 
   // OR検索用インデックス
   @@index([name])
@@ -600,6 +608,40 @@ model BlockedDate {
   @@index([spaceId, startDate, endDate])
   @@index([locationId, startDate, endDate])
   @@map("blocked_dates")
+}
+
+model ReservationSeries {
+  id                 String    @id @default(uuid()) @db.Uuid
+  spaceId            String    @db.Uuid
+  customerId         String    @db.Uuid
+  couponId           String?   @db.Uuid
+  rrule              String    @db.VarChar(500)
+  dtstart            DateTime  @db.Timestamp(6)
+  duration           Int
+  instanceCount      Int
+  templateData       Json
+  agreementSnapshot  Json
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  cancelledAt        DateTime?
+  cancelledByType    String?   @db.VarChar(20)
+  cancellationReason String?   @db.Text
+  deletedAt          DateTime?
+  deletedById        String?   @db.Uuid
+
+  space    Space              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  customer Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  coupon   Coupon?            @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  deletedBy User?             @relation("ReservationSeriesDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  instances Reservation[]
+
+  // partial UNIQUE (WHERE deletedAt IS NULL) は migration.sql で raw SQL で定義。
+  // Prisma @@unique は無条件のため schema には非 unique index のみ宣言。
+  @@index([spaceId, dtstart])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@map("reservation_series")
 }
 
 model Reservation {
@@ -702,6 +744,11 @@ model Reservation {
   // task #9 PR#1: 部分返金の repeatable child records (append-only)
   refunds Refund[]
 
+  // Phase B.2: 繰返し予約 (RRULE) の親 series への参照。単発予約は両方 null。
+  seriesId                String?            @db.Uuid
+  recurrenceInstanceIndex Int?
+  series                  ReservationSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+
   @@index([spaceId])
   @@index([customerId])
   @@index([userId])
@@ -715,6 +762,7 @@ model Reservation {
   @@index([deletedAt])
   @@index([paymentStatus])
   @@index([stripePaymentIntentId])
+  @@index([seriesId, recurrenceInstanceIndex])
   @@map("reservations")
 }
 
@@ -762,6 +810,7 @@ model Customer {
 
   // Relations
   reservations       Reservation[]
+  reservationSeries  ReservationSeries[]
   inquiries          Inquiry[]
   reviews            SpaceReview[]
   eventRegistrations EventRegistration[]
@@ -823,7 +872,8 @@ model Coupon {
   updatedAt DateTime @updatedAt
 
   // Relations
-  reservations Reservation[]
+  reservations      Reservation[]
+  reservationSeries ReservationSeries[]
 
   // @unique が自動的にインデックスを作成するため @@index([code]) は不要
   @@index([validFrom, validUntil])
@@ -1286,6 +1336,8 @@ model Settings {
   minReservationDuration           Int     @default(60)
   maxReservationDuration           Int     @default(480)
   sendReservationConfirmationEmail Boolean @default(true)
+  // Phase B.2: 繰返し予約 (RRULE) の 1 series あたり最大 instance 数 upper bound (admin 設定可)
+  maxRecurrenceInstances           Int     @default(26)
 
   // Discount Settings (割引設定) - Enum化
   durationDiscountEnabled Boolean                 @default(false)
@@ -1663,6 +1715,7 @@ enum TermsScope {
   RESERVATION // スペース予約フォーム (/reservation step3)
   INQUIRY // お問い合わせフォーム (/contact + 各 ContactFormSection)
   EVENT_REGISTRATION // イベント申込フォーム (/events/[slug] 申込)
+  RESERVATION_SERIES // 繰返し予約フォーム (Phase B.2)
 }
 
 /// 規約マスター（最新版を直接保存。バージョン履歴は同意記録の contentSnapshot で代替）
