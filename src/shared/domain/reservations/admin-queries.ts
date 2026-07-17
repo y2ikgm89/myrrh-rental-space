@@ -191,6 +191,61 @@ export async function getReservationsQuery(
   });
 }
 
+/**
+ * Phase B.2 task 23: 予約が series の一部かを判定する thin query。
+ * 予約詳細ページ (`/admin/reservations/[id]/page.tsx`) が SeriesInfoSection
+ * のレンダリングに使う。null 返却時は単発予約 (series なし)。
+ */
+export type ReservationSeriesInfo = {
+  readonly id: string;
+  readonly rrule: string;
+  readonly dtstart: Date;
+  readonly duration: number;
+  readonly instanceCount: number;
+  readonly cancelledAt: Date | null;
+  readonly deletedAt: Date | null;
+  readonly recurrenceInstanceIndex: number;
+};
+
+export async function getReservationSeriesInfoQuery(
+  reservationId: string,
+): Promise<ReservationSeriesInfo | null> {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId, deletedAt: null },
+    select: {
+      recurrenceInstanceIndex: true,
+      series: {
+        select: {
+          id: true,
+          rrule: true,
+          dtstart: true,
+          duration: true,
+          instanceCount: true,
+          cancelledAt: true,
+          deletedAt: true,
+        },
+      },
+    },
+  });
+  if (
+    !reservation ||
+    !reservation.series ||
+    reservation.recurrenceInstanceIndex === null
+  ) {
+    return null;
+  }
+  return {
+    id: reservation.series.id,
+    rrule: reservation.series.rrule,
+    dtstart: reservation.series.dtstart,
+    duration: reservation.series.duration,
+    instanceCount: reservation.series.instanceCount,
+    cancelledAt: reservation.series.cancelledAt,
+    deletedAt: reservation.series.deletedAt,
+    recurrenceInstanceIndex: reservation.recurrenceInstanceIndex,
+  };
+}
+
 export async function getReservationByIdQuery(id: string) {
   const reservation = await prisma.reservation.findUnique({
     where: { id, deletedAt: null },

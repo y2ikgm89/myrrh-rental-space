@@ -29,7 +29,28 @@ type EventCellStyle = CSSProperties & {
 function buildAriaLabel(event: CalendarEvent): string {
   const time = `${formatTimeShort(event.startTime)} から ${formatTimeShort(event.endTime)}`;
   const status = RESERVATION_STATUS_LABELS[event.status];
-  return `${time}・${event.title}・スペース ${event.spaceName}・${status}`;
+  // Phase B.2 task 22: series instance であれば「N 回目 / 全 M 回」を aria-label に追加
+  const series = formatSeriesLabel(event);
+  return `${time}・${event.title}・スペース ${event.spaceName}・${status}${series ? `・${series}` : ""}`;
+}
+
+/**
+ * Phase B.2 task 22: series instance label 生成。
+ * `recurrenceInstanceIndex` は 0-based、表示は 1-based で「N 回目」形式。
+ */
+function formatSeriesLabel(event: CalendarEvent): string | null {
+  if (!event.seriesId) return null;
+  if (
+    event.recurrenceInstanceIndex === undefined ||
+    event.recurrenceInstanceIndex === null
+  ) {
+    return "定期予約";
+  }
+  const nth = event.recurrenceInstanceIndex + 1;
+  if (event.seriesInstanceCount) {
+    return `定期予約 ${nth} 回目 / 全 ${event.seriesInstanceCount} 回`;
+  }
+  return `定期予約 ${nth} 回目`;
 }
 
 /**
@@ -84,6 +105,15 @@ export function EventCell({ event, onClick, isPast = false }: EventCellProps) {
       <div className="flex items-center gap-1 font-semibold leading-tight tabular-nums">
         <CuratedIcon name={iconName} className="h-3 w-3 shrink-0" />
         <span className="truncate">{formatTimeShort(event.startTime)}</span>
+        {event.seriesId && (
+          // Phase B.2 task 22: series instance の視覚マーカー
+          <span
+            aria-hidden="true"
+            className="ml-auto shrink-0 rounded bg-muted px-1 text-[0.6rem] font-medium text-muted-foreground leading-none"
+          >
+            定期
+          </span>
+        )}
       </div>
       {showTitle && (
         <div
@@ -147,6 +177,15 @@ export function EventBadge({
       <span className={cn("truncate", isCancelled && "line-through")}>
         {event.title}
       </span>
+      {event.seriesId && (
+        // Phase B.2 task 22: series instance の視覚マーカー (月ビュー版)
+        <span
+          aria-hidden="true"
+          className="ml-auto shrink-0 rounded bg-muted px-1 text-[0.55rem] font-medium text-muted-foreground leading-none"
+        >
+          定期
+        </span>
+      )}
     </button>
   );
 }

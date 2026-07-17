@@ -58,6 +58,21 @@ export interface CalendarEvent {
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
+  /**
+   * Phase B.2 task 22: 繰返し予約 (ReservationSeries) の instance の場合、
+   * 元 series ID を保持する。null/undefined は単発予約。
+   */
+  seriesId?: string | null;
+  /**
+   * Phase B.2 task 22: series 内のインデックス (0-based)。
+   * 表示は「N 回目」形式で 1-based。
+   */
+  recurrenceInstanceIndex?: number | null;
+  /**
+   * Phase B.2 task 22: 表示ツールチップ用の全 instance 数 (series の instanceCount)。
+   * 「N 回目 / 全 M 回」表示に使う。
+   */
+  seriesInstanceCount?: number | null;
 }
 
 /**

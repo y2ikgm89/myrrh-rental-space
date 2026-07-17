@@ -20,6 +20,11 @@ export {
   previewReservationPricingAction,
 } from "./admin";
 
+export {
+  createRecurringReservationAction,
+  cancelReservationSeriesAction,
+} from "./series";
+
 export { createCheckoutSession, refundReservationPayment } from "./payment";
 
 export { reissueReservationReceipt } from "./receipt";

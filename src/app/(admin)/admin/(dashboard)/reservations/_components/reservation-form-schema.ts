@@ -3,9 +3,13 @@ import {
   calculateDurationHours,
   parseDateTimeLocalAsJst,
 } from "@/shared/lib/date-format";
-import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  RESERVATION_SERIES_FREQ,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { TIME_REGEX } from "@/shared/lib/validations/business-hours";
+import { WEEKDAYS } from "./rrule-utils";
 
 /**
  * ReservationForm / ReservationEditForm (conform) form schema
@@ -199,3 +203,103 @@ export const updateReservationFormSchema = z
 export type UpdateReservationFormData = z.output<
   typeof updateReservationFormSchema
 >;
+
+// =============================================================================
+// Recurring reservation schema (Phase B.2 task 20)
+// =============================================================================
+
+const weekdayEnum = z.enum(WEEKDAYS);
+const freqEnum = z.enum(RESERVATION_SERIES_FREQ);
+const endModeEnum = z.enum(["count", "until"]);
+
+/**
+ * `createRecurringReservationCommand` に渡すための conform + Zod schema。
+ * 呼出側は `Settings.maxRecurrenceInstances` を渡して `count` の上限を注入する
+ * (Task 1 で確定した Settings 上限を form 側で早期 reject するため)。
+ */
+export function createRecurringReservationFormSchema(opts: {
+  maxRecurrenceInstances: number;
+}) {
+  return z
+    .object({
+      customerId: z.uuid({ error: "顧客を選択してください" }),
+      spaceId: z.uuid({ error: "スペースを選択してください" }),
+      date: dateStringSchema,
+      startTime: timeStringSchema,
+      endTime: timeStringSchema,
+      freq: freqEnum,
+      interval: z.coerce
+        .number({ error: "インターバルは数値で入力してください" })
+        .int()
+        .min(1, { error: "インターバルは 1 以上で入力してください" })
+        .default(1),
+      byday: z.array(weekdayEnum).default([]),
+      endMode: endModeEnum,
+      // COUNT / UNTIL は endMode ごとに条件付き必須。schema 側では緩めに受けて
+      // superRefine で分岐 validate する (empty 文字列を undefined に coerce しない)。
+      count: z.coerce.number().int().min(0).default(0),
+      until: z
+        .string()
+        .default("")
+        .refine((v) => v === "" || /^\d{4}-\d{2}-\d{2}$/u.test(v), {
+          error: "終了日は YYYY-MM-DD 形式で入力してください",
+        }),
+    })
+    .superRefine((data, ctx) => {
+      // 単発 form と同じ時間帯 refine を継承
+      refineTimeRange(data, ctx);
+
+      // WEEKLY: byday が少なくとも 1 要素
+      if (data.freq === "WEEKLY" && data.byday.length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: "曜日を 1 つ以上選択してください",
+          path: ["byday"],
+        });
+      }
+
+      if (data.endMode === "count") {
+        if (data.count < 1) {
+          ctx.addIssue({
+            code: "custom",
+            message: "回数は 1 回以上で入力してください",
+            path: ["count"],
+          });
+        } else if (data.count > opts.maxRecurrenceInstances) {
+          ctx.addIssue({
+            code: "custom",
+            message: `回数は ${opts.maxRecurrenceInstances} 回以下で入力してください`,
+            path: ["count"],
+          });
+        }
+      } else if (data.endMode === "until") {
+        if (!data.until) {
+          ctx.addIssue({
+            code: "custom",
+            message: "終了日を入力してください",
+            path: ["until"],
+          });
+        }
+      }
+    });
+}
+
+export type RecurringReservationFormData = z.output<
+  ReturnType<typeof createRecurringReservationFormSchema>
+>;
+export type RecurringReservationFormInput = z.input<
+  ReturnType<typeof createRecurringReservationFormSchema>
+>;
+
+/**
+ * ヘルパー: schema を組み立てて `safeParse` を返す薄い wrapper。
+ * server action + client の両方から呼ばれる。
+ */
+export function parseRecurringReservationForm(
+  data: unknown,
+  opts: { maxRecurrenceInstances: number },
+): ReturnType<
+  ReturnType<typeof createRecurringReservationFormSchema>["safeParse"]
+> {
+  return createRecurringReservationFormSchema(opts).safeParse(data);
+}

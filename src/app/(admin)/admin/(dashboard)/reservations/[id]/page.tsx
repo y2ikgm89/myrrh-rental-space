@@ -2,9 +2,13 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
-import { getReservationById } from "@/admin/queries/reservation";
+import {
+  getReservationById,
+  getReservationSeriesInfo,
+} from "@/admin/queries/reservation";
 import { ReservationDetail } from "./_components/ReservationDetail";
 import { RestoreReservationStatusButton } from "./_components/RestoreReservationStatusButton";
+import { SeriesInfoSection } from "./_components/SeriesInfoSection";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
@@ -41,11 +45,13 @@ export default async function ReservationDetailPage({ params }: PageProps) {
   await connection();
 
   const { id } = await params;
-  const [reservation, sessionUser, paymentEnabled] = await Promise.all([
-    getReservationById(id),
-    verifyAdminSession(),
-    isFeatureEnabled("payment"),
-  ]);
+  const [reservation, sessionUser, paymentEnabled, seriesInfo] =
+    await Promise.all([
+      getReservationById(id),
+      verifyAdminSession(),
+      isFeatureEnabled("payment"),
+      getReservationSeriesInfo(id),
+    ]);
 
   if (!reservation) {
     notFound();
@@ -81,11 +87,19 @@ export default async function ReservationDetailPage({ params }: PageProps) {
         </>
       }
     >
-      <ReservationDetail
-        key={reservation.id}
-        reservation={reservation}
-        paymentEnabled={paymentEnabled}
-      />
+      <div className="space-y-6">
+        {seriesInfo && (
+          <SeriesInfoSection
+            reservationId={reservation.id}
+            series={seriesInfo}
+          />
+        )}
+        <ReservationDetail
+          key={reservation.id}
+          reservation={reservation}
+          paymentEnabled={paymentEnabled}
+        />
+      </div>
     </AdminDetailLayout>
   );
 }
