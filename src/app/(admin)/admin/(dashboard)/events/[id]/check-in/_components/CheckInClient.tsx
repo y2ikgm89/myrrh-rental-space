@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  IconMailForward,
+  IconCalendarUser,
   IconRefresh,
   IconSearch,
   IconUserPlus,
@@ -222,7 +222,7 @@ function CheckInClientState({
               size="sm"
               onClick={() => setProxyOpen(true)}
             >
-              <IconMailForward className="mr-2 h-4 w-4" />
+              <IconCalendarUser className="mr-2 h-4 w-4" />
               代行登録
             </Button>
             <Button size="sm" onClick={() => setWalkInOpen(true)}>
