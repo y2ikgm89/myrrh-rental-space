@@ -25,6 +25,7 @@ import { Pagination } from "@/public/components/pagination";
 import { FilterBar } from "@/public/components/ui/filter-bar";
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
+import type { SpaceSort } from "@/public/lib/search-params";
 
 import {
   SpaceListSimpleView,
@@ -60,6 +61,22 @@ interface CatalogSpace {
   readonly location: { readonly name: string };
 }
 
+/**
+ * catalog variant の facet 状態。Pagination の preservedQuery にそのままエコーする
+ * 契約なので、URL に写る key と 1:1 で対応する。
+ */
+export interface CatalogFilterState {
+  readonly categoryId: string | null;
+  readonly locationId: string | null;
+  readonly q: string;
+  readonly minCapacity: number | null;
+  readonly facilities: readonly string[];
+  readonly date: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly sort: SpaceSort;
+}
+
 export type SpaceListMode =
   | { readonly kind: "simple"; readonly spaces: readonly SpaceListData[] }
   | {
@@ -67,12 +84,12 @@ export type SpaceListMode =
       readonly spaces: readonly CatalogSpace[];
       readonly categories: readonly FilterOption[];
       readonly locations: readonly FilterOption[];
+      readonly facilityOptions: readonly string[];
       readonly reviewStats: Readonly<Record<string, ReviewStats>>;
       readonly currentPage: number;
       readonly totalPages: number;
       readonly totalCount: number;
-      readonly categoryId: string | null;
-      readonly locationId: string | null;
+      readonly filter: CatalogFilterState;
     };
 
 interface SpaceListSectionProps {
@@ -81,13 +98,50 @@ interface SpaceListSectionProps {
   readonly mode: SpaceListMode;
 }
 
+/**
+ * catalog variant の URL facet を Pagination の preservedQuery 形式に flatten する。
+ * ページ切替で filter が silent に落ちる regression を防ぐため、追加 facet はすべて
+ * ここに列挙する（`filter.*` の key と Pagination 側の URL key を 1:1 対応させる）。
+ */
+function buildPreservedQuery(
+  filter: CatalogFilterState,
+): Readonly<Record<string, string | undefined>> {
+  const q: Record<string, string | undefined> = {};
+  if (filter.categoryId) q["category"] = filter.categoryId;
+  if (filter.locationId) q["location"] = filter.locationId;
+  if (filter.q) q["q"] = filter.q;
+  if (filter.minCapacity !== null)
+    q["minCapacity"] = String(filter.minCapacity);
+  if (filter.facilities.length > 0)
+    q["facilities"] = filter.facilities.join(",");
+  if (filter.date) q["date"] = filter.date;
+  if (filter.startTime) q["startTime"] = filter.startTime;
+  if (filter.endTime) q["endTime"] = filter.endTime;
+  if (filter.sort !== "recommended") q["sort"] = filter.sort;
+  return q;
+}
+
+function hasAnyFacetActive(filter: CatalogFilterState): boolean {
+  return (
+    filter.categoryId !== null ||
+    filter.locationId !== null ||
+    filter.q !== "" ||
+    filter.minCapacity !== null ||
+    filter.facilities.length > 0 ||
+    filter.date !== "" ||
+    filter.startTime !== "" ||
+    filter.endTime !== "" ||
+    filter.sort !== "recommended"
+  );
+}
+
 export function SpaceListSection({
   config,
   style,
   mode,
 }: SpaceListSectionProps): ReactElement {
   if (mode.kind === "catalog") {
-    const hasFilters = mode.categoryId !== null || mode.locationId !== null;
+    const hasFilters = hasAnyFacetActive(mode.filter);
     const hasTitle = config.title.length > 0;
 
     return (
@@ -117,6 +171,7 @@ export function SpaceListSection({
             <FilterBar
               categories={mode.categories}
               locations={mode.locations}
+              facilityOptions={mode.facilityOptions}
               resultCount={mode.totalCount}
             />
           </div>
@@ -135,10 +190,7 @@ export function SpaceListSection({
             currentPage={mode.currentPage}
             totalPages={mode.totalPages}
             basePath="/spaces"
-            preservedQuery={{
-              ...(mode.categoryId ? { category: mode.categoryId } : {}),
-              ...(mode.locationId ? { location: mode.locationId } : {}),
-            }}
+            preservedQuery={buildPreservedQuery(mode.filter)}
           />
         </div>
       </SectionWrapper>

@@ -61,11 +61,14 @@ import {
 } from "@/shared/domain/locations/public-queries";
 import {
   getActiveCategories,
+  getPublicSpaceFacilityNames,
   getPublishedSpacesPaginated,
+  getPublishedSpacesPaginatedWithAvailability,
 } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
 import {
   newsSearchParams,
+  parseSpaceTimeRange,
   postsSearchParams,
   reservationSearchParams,
   spaceSearchParams,
@@ -200,22 +203,31 @@ export async function SectionRenderer({
       const config = getSpaceListConfig(section.config);
 
       if (config.displayLayout === "catalog") {
-        const sp = searchParams
-          ? await spaceSearchParams.parse(searchParams)
-          : { page: 1, category: null, location: null };
+        const sp = await spaceSearchParams.parse(
+          searchParams ?? Promise.resolve({}),
+        );
+        const filter = {
+          page: Math.max(1, sp.page),
+          categoryId: sp.category ?? undefined,
+          locationId: sp.location ?? undefined,
+          q: sp.q,
+          minCapacity: sp.minCapacity ?? undefined,
+          facilities: sp.facilities,
+          sort: sp.sort,
+        };
+        const timeRange = parseSpaceTimeRange(sp);
         const [
           { items, totalCount, totalPages, currentPage },
           categories,
           locations,
+          facilityOptions,
         ] = await Promise.all([
-          getPublishedSpacesPaginated(
-            Math.max(1, sp.page),
-            undefined,
-            sp.category ?? undefined,
-            sp.location ?? undefined,
-          ),
+          timeRange
+            ? getPublishedSpacesPaginatedWithAvailability(filter, timeRange)
+            : getPublishedSpacesPaginated(filter),
           getActiveCategories(),
           getActiveLocations(),
+          getPublicSpaceFacilityNames(),
         ]);
         const reviewStats = await getSpaceReviewStatsMultiple(
           items.map((s) => s.id),
@@ -229,12 +241,22 @@ export async function SectionRenderer({
               spaces: items,
               categories,
               locations,
+              facilityOptions,
               reviewStats,
               currentPage,
               totalPages,
               totalCount,
-              categoryId: sp.category,
-              locationId: sp.location,
+              filter: {
+                categoryId: sp.category,
+                locationId: sp.location,
+                q: sp.q,
+                minCapacity: sp.minCapacity,
+                facilities: sp.facilities,
+                date: sp.date,
+                startTime: sp.startTime,
+                endTime: sp.endTime,
+                sort: sp.sort,
+              },
             }}
           />
         );

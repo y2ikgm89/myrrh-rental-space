@@ -22,6 +22,11 @@ import {
 } from "@/shared/lib/json-validators";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import {
+  EventStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+import type { SpaceSort } from "@/public/lib/search-params";
 
 /**
  * 公開スペースクエリの共通 where 句。Space model に deletedAt 列はないため
@@ -64,85 +69,225 @@ function mapSpaceListItem(s: SpaceListRow) {
   };
 }
 
+// =============================================================================
+// Facet filter contract
+// =============================================================================
+
 /**
- * 公開済み・有効なスペース一覧を取得（カテゴリ + 拠点フィルタ）
+ * 公開 /spaces catalog の facet 検索入力。
+ *
+ * `date` / `startTime` / `endTime` は本入力には含めない — 時間帯 facet は
+ * `runSpacesPaginated` の内部を bypass して {@link getPublishedSpacesPaginatedWithAvailability}
+ * が Reservation + EventTimeSlot と cross overlap 検査した上で `excludeSpaceIds` として
+ * 差し込む（時間帯有効時は cache 経路が dynamic に切り替わる契約）。
  */
-export async function getPublishedSpaces(
-  categoryId?: string,
-  locationId?: string,
-) {
-  "use cache";
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.SPACES);
-
-  const spaces = await safeFetch({
-    fetch: () =>
-      prisma.space.findMany({
-        where: {
-          ...PUBLIC_WHERE,
-          ...(categoryId ? { categoryId } : {}),
-          ...(locationId ? { locationId } : {}),
-        },
-        select: spaceListSelect,
-        orderBy: { name: "asc" },
-      }),
-    fallback: [],
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getPublishedSpaces",
-  });
-
-  return toPlainArray(spaces.map(mapSpaceListItem));
+export interface SpaceCatalogFilter {
+  readonly page?: number | undefined;
+  readonly perPage?: number | undefined;
+  readonly categoryId?: string | undefined;
+  readonly locationId?: string | undefined;
+  readonly q?: string | undefined;
+  readonly minCapacity?: number | undefined;
+  readonly facilities?: readonly string[] | undefined;
+  readonly sort?: SpaceSort | undefined;
 }
 
+interface RunSpacesInput extends SpaceCatalogFilter {
+  readonly excludeSpaceIds?: readonly string[] | undefined;
+}
+
+function buildSpaceWhereClause(input: RunSpacesInput): Prisma.SpaceWhereInput {
+  const where: Prisma.SpaceWhereInput = { ...PUBLIC_WHERE };
+
+  if (input.categoryId) where.categoryId = input.categoryId;
+  if (input.locationId) where.locationId = input.locationId;
+
+  const q = input.q?.trim();
+  if (q) {
+    where.OR = [
+      { name: { contains: q, mode: "insensitive" } },
+      { descriptionPlainText: { contains: q, mode: "insensitive" } },
+      { addressDetail: { contains: q, mode: "insensitive" } },
+      { location: { name: { contains: q, mode: "insensitive" } } },
+      { location: { address: { contains: q, mode: "insensitive" } } },
+    ];
+  }
+
+  if (typeof input.minCapacity === "number" && input.minCapacity > 0) {
+    where.capacity = { gte: input.minCapacity };
+  }
+
+  const facilityNames = (input.facilities ?? []).filter(
+    (name) => name.trim().length > 0,
+  );
+  if (facilityNames.length > 0) {
+    // Postgres JSONB containment `@>` は「配列に部分オブジェクトを含む」判定なので
+    // `iconName` を指定せず `{ name: X }` だけで facility 名一致になる。
+    // 複数指定は AND (すべてを備えるスペースのみ)。
+    where.AND = facilityNames.map((name) => ({
+      facilities: { array_contains: [{ name }] },
+    }));
+  }
+
+  if (input.excludeSpaceIds && input.excludeSpaceIds.length > 0) {
+    where.id = { notIn: [...input.excludeSpaceIds] };
+  }
+
+  return where;
+}
+
+function buildSpaceOrderBy(
+  sort: SpaceSort | undefined,
+): Prisma.SpaceOrderByWithRelationInput {
+  switch (sort) {
+    case "capacity-asc":
+      return { capacity: "asc" };
+    case "capacity-desc":
+      return { capacity: "desc" };
+    case "price-asc":
+      return { hourlyPrice: "asc" };
+    case "price-desc":
+      return { hourlyPrice: "desc" };
+    case "recommended":
+    case undefined:
+      return { name: "asc" };
+  }
+}
+
+async function runSpacesPaginated(input: RunSpacesInput) {
+  const page = Math.max(1, input.page ?? 1);
+  const perPage = input.perPage ?? PAGINATION_DEFAULTS.public.default;
+  const where = buildSpaceWhereClause(input);
+  const orderBy = buildSpaceOrderBy(input.sort);
+  const { skip, take } = paginate({ page, limit: perPage });
+
+  const [rawItems, totalCount] = await Promise.all([
+    prisma.space.findMany({
+      where,
+      select: spaceListSelect,
+      orderBy,
+      skip,
+      take,
+    }),
+    prisma.space.count({ where }),
+  ]);
+
+  return {
+    items: toPlainArray(rawItems.map((s) => mapSpaceListItem(s))),
+    totalCount,
+    totalPages: calcTotalPages(totalCount, perPage),
+    currentPage: page,
+  };
+}
+
+// =============================================================================
+// 公開 API
+// =============================================================================
+
+export type PaginatedSpaces = Awaited<ReturnType<typeof runSpacesPaginated>>;
+
 /**
- * 公開済み・有効なスペース一覧をページネーション付きで取得
+ * 公開済み・有効なスペース一覧をページネーション付きで取得（facet 対応）。
+ *
+ * 時間帯 facet を含まない cache-safe 経路。時間帯 facet を使う場合は
+ * {@link getPublishedSpacesPaginatedWithAvailability} を呼ぶ。
  */
-export async function getPublishedSpacesPaginated(
-  page: number = 1,
-  perPage: number = PAGINATION_DEFAULTS.public.default,
-  categoryId?: string,
-  locationId?: string,
-) {
+export async function getPublishedSpacesPaginated(input: SpaceCatalogFilter) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
-  const where = {
-    ...PUBLIC_WHERE,
-    ...(categoryId ? { categoryId } : {}),
-    ...(locationId ? { locationId } : {}),
-  };
-
-  const { skip, take } = paginate({ page, limit: perPage });
-
-  const result = await safeFetch({
-    fetch: async () => {
-      const [rawItems, totalCount] = await Promise.all([
-        prisma.space.findMany({
-          where,
-          select: spaceListSelect,
-          orderBy: { name: "asc" },
-          skip,
-          take,
-        }),
-        prisma.space.count({ where }),
-      ]);
-
-      return {
-        items: toPlainArray(rawItems.map((s) => mapSpaceListItem(s))),
-        totalCount,
-        totalPages: calcTotalPages(totalCount, perPage),
-        currentPage: page,
-      };
+  return safeFetch({
+    fetch: () => runSpacesPaginated(input),
+    fallback: {
+      items: [],
+      totalCount: 0,
+      totalPages: 0,
+      currentPage: Math.max(1, input.page ?? 1),
     },
-    fallback: { items: [], totalCount: 0, totalPages: 0, currentPage: page },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
     operationName: "getPublishedSpacesPaginated",
   });
+}
 
-  return result;
+/**
+ * 時間帯 facet 込みの検索。指定期間で Reservation / EventTimeSlot と overlap する
+ * space を除外した結果を返す。dynamic 経路（cache なし）— SectionRenderer が
+ * `await connection()` 済みで呼ぶ前提。
+ *
+ * `range.from < endTime AND range.to > startTime` の半開区間 overlap を Space namespace
+ * (Reservation.spaceId + EventTimeSlot.spaceId, いずれも非 null かつ event.status = PUBLISHED) で判定。
+ * どちらかに衝突があれば「空きなし」とみなし id を除外リストに積む。
+ */
+export async function getPublishedSpacesPaginatedWithAvailability(
+  input: SpaceCatalogFilter,
+  range: { from: Date; to: Date },
+) {
+  const unavailable = await getUnavailableSpaceIds(range.from, range.to);
+  return safeFetch({
+    fetch: () =>
+      runSpacesPaginated({
+        ...input,
+        excludeSpaceIds: [...unavailable],
+      }),
+    fallback: {
+      items: [],
+      totalCount: 0,
+      totalPages: 0,
+      currentPage: Math.max(1, input.page ?? 1),
+    },
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedSpacesPaginatedWithAvailability",
+  });
+}
+
+/**
+ * 指定期間と overlap する予約・イベントスロットを持つ Space ID の集合を返す。
+ *
+ * - Reservation: `status ∈ {PENDING, CONFIRMED}` かつ `deletedAt IS NULL`
+ * - EventTimeSlot: `event.status = PUBLISHED` かつ event 未削除 かつ `event.spaceId` が対象
+ *   （EventTimeSlot 自身は spaceId を持たず、Event.spaceId 経由。null 会場は空間検索対象外）
+ * - 半開区間: `startTime < range.to AND endTime > range.from`
+ */
+async function getUnavailableSpaceIds(
+  from: Date,
+  to: Date,
+): Promise<ReadonlySet<string>> {
+  const [reservations, eventSlots] = await Promise.all([
+    prisma.reservation.findMany({
+      where: {
+        deletedAt: null,
+        status: {
+          in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+        },
+        startTime: { lt: to },
+        endTime: { gt: from },
+      },
+      select: { spaceId: true },
+      distinct: ["spaceId"],
+    }),
+    prisma.eventTimeSlot.findMany({
+      where: {
+        event: {
+          status: EventStatus.PUBLISHED,
+          deletedAt: null,
+          spaceId: { not: null },
+        },
+        startAt: { lt: to },
+        endAt: { gt: from },
+      },
+      select: { event: { select: { spaceId: true } } },
+    }),
+  ]);
+
+  const busy = new Set<string>();
+  for (const r of reservations) busy.add(r.spaceId);
+  for (const s of eventSlots) {
+    if (s.event.spaceId) busy.add(s.event.spaceId);
+  }
+  return busy;
 }
 
 /**
@@ -276,9 +421,6 @@ export async function getRelatedSpaces(
 }
 
 /**
- * 有効なスペースカテゴリ一覧を取得（フィルター UI 用）
- */
-/**
  * スペースが指定ロケーションに属するか検証する（予約フォーム用）
  * キャッシュなし（ミューテーション前の整合性チェック用途）
  */
@@ -293,6 +435,9 @@ export async function verifySpaceBelongsToLocation(
   return space !== null && space.locationId === locationId;
 }
 
+/**
+ * 有効なスペースカテゴリ一覧を取得（フィルター UI 用）
+ */
 export async function getActiveCategories() {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
@@ -312,6 +457,40 @@ export async function getActiveCategories() {
   });
 
   return toPlainArray(categories);
+}
+
+/**
+ * 公開済み・有効スペースに紐付く facility 名の集合。
+ * `Space.facilities` は `{name, iconName}[]` の JSON。全 space 分をアプリ側で
+ * 重複除去して返す（現状のカーディナリティは施設あたり数百件 * facility 数個で
+ * 十分軽い + `'use cache'` で 1 リクエスト内はメモ化される）。
+ */
+export async function getPublicSpaceFacilityNames(): Promise<
+  readonly string[]
+> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.SPACES);
+
+  const rows = await safeFetch({
+    fetch: () =>
+      prisma.space.findMany({
+        where: PUBLIC_WHERE,
+        select: { facilities: true },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublicSpaceFacilityNames",
+  });
+
+  const names = new Set<string>();
+  for (const row of rows) {
+    for (const item of parseFacilities(row.facilities)) {
+      names.add(item.name);
+    }
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, "ja"));
 }
 
 /**
