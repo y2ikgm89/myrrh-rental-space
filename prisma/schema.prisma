@@ -1339,6 +1339,11 @@ model Settings {
   // Phase B.2: 繰返し予約 (RRULE) の 1 series あたり最大 instance 数 upper bound (admin 設定可)
   maxRecurrenceInstances           Int     @default(26)
 
+  // Phase B.2 task 25: 顧客が定期予約を series-all スコープで自らキャンセルできるか。
+  // false (default): 顧客はマイページで series-all キャンセルできず、admin へ問い合わせ導線のみ。
+  // true: マイページからも「定期予約すべてをキャンセル」ボタンが表示される。
+  customerCanCancelSeriesInFull    Boolean @default(false)
+
   // Discount Settings (割引設定) - Enum化
   durationDiscountEnabled Boolean                 @default(false)
   durationDiscountRules   Json                    @default("[]")
