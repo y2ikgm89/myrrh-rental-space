@@ -13,9 +13,12 @@ import {
   clearReservationCalendarEvent,
   getCalendarSyncRuntimeState,
   getFailedCalendarSyncReservations,
+  getSeriesForCalendarSync,
+  getSeriesInstanceStartTimes,
   markReservationCalendarSyncError,
   markReservationCalendarSyncSuccess,
   markReservationCalendarSyncUpdated,
+  markSeriesInstanceCalendarSyncSuccess,
 } from "@/shared/domain/reservations/calendar-sync";
 import {
   logError,
@@ -34,7 +37,6 @@ import {
   type CalendarEventParams,
   type CalendarEventResult,
 } from "@/shared/lib/google-calendar";
-import { prisma } from "@/shared/db/prisma";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   formatDateWithWeekday,
@@ -330,23 +332,16 @@ export async function writeBackInstanceGoogleCalendarEventIds(input: {
   seriesId: string;
   instances: readonly CalendarEventInstance[];
 }): Promise<{ matched: number; total: number }> {
-  const reservations = await prisma.reservation.findMany({
-    where: { seriesId: input.seriesId, deletedAt: null },
-    select: { id: true, startTime: true },
-  });
+  const reservations = await getSeriesInstanceStartTimes(input.seriesId);
   const idByStart = buildInstanceIdMapByStartTime(input.instances);
 
   let matched = 0;
   for (const r of reservations) {
     const gcalId = idByStart.get(r.startTime.getTime());
     if (gcalId === undefined) continue;
-    await prisma.reservation.update({
-      where: { id: r.id, deletedAt: null },
-      data: {
-        googleCalendarEventId: gcalId,
-        calendarSyncedAt: new Date(),
-        calendarSyncError: null,
-      },
+    await markSeriesInstanceCalendarSyncSuccess({
+      reservationId: r.id,
+      googleCalendarEventId: gcalId,
     });
     matched += 1;
   }
@@ -373,25 +368,7 @@ export async function syncReservationSeriesToCalendar(
       return { success: true };
     }
 
-    const series = await prisma.reservationSeries.findUnique({
-      where: { id: seriesId, deletedAt: null },
-      select: {
-        id: true,
-        rrule: true,
-        dtstart: true,
-        duration: true,
-        space: {
-          select: {
-            name: true,
-            addressDetail: true,
-            location: { select: { address: true } },
-          },
-        },
-        customer: {
-          select: { lastName: true, firstName: true, email: true },
-        },
-      },
-    });
+    const series = await getSeriesForCalendarSync(seriesId);
     if (!series) {
       return { success: false, error: `Series ${seriesId} not found` };
     }
@@ -400,24 +377,24 @@ export async function syncReservationSeriesToCalendar(
       series.dtstart.getTime() + series.duration * 60_000,
     );
     const customerName =
-      `${series.customer.lastName} ${series.customer.firstName}`.trim();
+      `${series.customerLastName} ${series.customerFirstName}`.trim();
     const lineAddress = formatSpaceLineAddress(
-      series.space.location.address,
-      series.space.addressDetail,
+      series.locationAddress,
+      series.spaceAddressDetail,
     );
 
     const eventParams: CalendarEventParams = omitUndefined({
-      summary: `【定期予約】${series.space.name} - ${customerName}様`,
+      summary: `【定期予約】${series.spaceName} - ${customerName}様`,
       description: [
         `${OUTBOUND_RESERVATION_MARKER} ${series.id.slice(0, 8).toUpperCase()}`,
         `お客様: ${customerName}`,
-        `メール: ${series.customer.email}`,
+        `メール: ${series.customerEmail}`,
         `繰返し: ${series.rrule}`,
       ].join("\n"),
       location: lineAddress,
       startTime: series.dtstart,
       endTime,
-      attendeeEmail: series.customer.email,
+      attendeeEmail: series.customerEmail,
       // Google Calendar API は `RRULE:` prefix 込みの完全形を要求する。
       recurrence: [`RRULE:${series.rrule}`],
     });

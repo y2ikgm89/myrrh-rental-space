@@ -317,3 +317,92 @@ export async function applyCalendarTimeChange(input: {
     return { success: true as const };
   });
 }
+
+// =============================================================================
+// ReservationSeries → GCal 同期 (Phase B.2 task 16)
+// =============================================================================
+
+/**
+ * Series → GCal 同期に必要な最小データを取得する。placement gate で
+ * shared/lib からの prisma 直呼を避けるため domain 側に配置。
+ */
+export type ReservationSeriesCalendarSyncData = {
+  id: string;
+  rrule: string;
+  dtstart: Date;
+  duration: number;
+  spaceName: string;
+  spaceAddressDetail: string | null;
+  locationAddress: string;
+  customerLastName: string;
+  customerFirstName: string;
+  customerEmail: string;
+};
+
+export async function getSeriesForCalendarSync(
+  seriesId: string,
+): Promise<ReservationSeriesCalendarSyncData | null> {
+  const series = await prisma.reservationSeries.findUnique({
+    where: { id: seriesId, deletedAt: null },
+    select: {
+      id: true,
+      rrule: true,
+      dtstart: true,
+      duration: true,
+      space: {
+        select: {
+          name: true,
+          addressDetail: true,
+          location: { select: { address: true } },
+        },
+      },
+      customer: {
+        select: { lastName: true, firstName: true, email: true },
+      },
+    },
+  });
+  if (!series) return null;
+  return {
+    id: series.id,
+    rrule: series.rrule,
+    dtstart: series.dtstart,
+    duration: series.duration,
+    spaceName: series.space.name,
+    spaceAddressDetail: series.space.addressDetail,
+    locationAddress: series.space.location.address,
+    customerLastName: series.customer.lastName,
+    customerFirstName: series.customer.firstName,
+    customerEmail: series.customer.email,
+  };
+}
+
+/**
+ * Series の未削除 instance の `Reservation.startTime` を読み取り、呼出側
+ * (calendar-sync/outbound.ts) が GCal child ID との突合を行う際の入力にする。
+ */
+export async function getSeriesInstanceStartTimes(
+  seriesId: string,
+): Promise<{ id: string; startTime: Date }[]> {
+  return prisma.reservation.findMany({
+    where: { seriesId, deletedAt: null },
+    select: { id: true, startTime: true },
+  });
+}
+
+/**
+ * GCal child ID を各 Reservation.googleCalendarEventId に write-back する。
+ * calendar-sync/outbound.ts から呼ばれる placement gate 対応の domain helper。
+ */
+export async function markSeriesInstanceCalendarSyncSuccess(input: {
+  reservationId: string;
+  googleCalendarEventId: string;
+}): Promise<void> {
+  await prisma.reservation.update({
+    where: { id: input.reservationId, deletedAt: null },
+    data: {
+      googleCalendarEventId: input.googleCalendarEventId,
+      calendarSyncedAt: new Date(),
+      calendarSyncError: null,
+    },
+  });
+}
