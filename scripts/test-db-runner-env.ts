@@ -7,6 +7,8 @@ export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/domain/reservations/refund-command.test.ts",
   "__tests__/integration/domain/reservations/reminder-idempotency.test.ts",
   "__tests__/integration/domain/reservations/series-advisory-lock.test.ts",
+  "__tests__/integration/domain/reservations/series-cancel-scopes.test.ts",
+  "__tests__/integration/domain/reservations/series-overlap.test.ts",
   "__tests__/integration/domain/reservations/space-overlap-concurrency.test.ts",
   "__tests__/integration/domain/coupons/coupon-status-filter.test.ts",
   "__tests__/integration/domain/events/registration-overbooking.test.ts",
