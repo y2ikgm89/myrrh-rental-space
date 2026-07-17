@@ -59,6 +59,47 @@ export async function getCustomerReservationDetail(
   });
 }
 
+/**
+ * Phase B.2 task 26: 顧客マイページで series 情報表示するための thin query。
+ * 予約が series に属していない (seriesId null) 場合は null。
+ * `Settings.customerCanCancelSeriesInFull` の gate 判定は呼出側 (page.tsx) が行う。
+ */
+export async function getCustomerReservationSeriesInfo(
+  reservationId: string,
+  customerId: string,
+) {
+  const row = await prisma.reservation.findFirst({
+    where: { id: reservationId, customerId, deletedAt: null },
+    select: {
+      recurrenceInstanceIndex: true,
+      series: {
+        select: {
+          id: true,
+          rrule: true,
+          dtstart: true,
+          duration: true,
+          instanceCount: true,
+          cancelledAt: true,
+          deletedAt: true,
+        },
+      },
+    },
+  });
+  if (!row || !row.series || row.recurrenceInstanceIndex === null) {
+    return null;
+  }
+  return {
+    id: row.series.id,
+    rrule: row.series.rrule,
+    dtstart: row.series.dtstart,
+    duration: row.series.duration,
+    instanceCount: row.series.instanceCount,
+    cancelledAt: row.series.cancelledAt,
+    deletedAt: row.series.deletedAt,
+    recurrenceInstanceIndex: row.recurrenceInstanceIndex,
+  };
+}
+
 export async function getReservationForGuestCancel(reservationId: string) {
   return prisma.reservation.findFirst({
     where: { id: reservationId, deletedAt: null },

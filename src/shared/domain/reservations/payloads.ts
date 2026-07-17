@@ -87,6 +87,18 @@ export async function getMaxRecurrenceInstances(): Promise<number> {
 }
 
 /**
+ * Phase B.2 task 25: 顧客 mypage で「定期予約すべてキャンセル」ボタンを表示するか。
+ * Task 26 で顧客マイページ (`page.tsx`) の gate 判定に使う。
+ */
+export async function getCustomerCanCancelSeriesInFull(): Promise<boolean> {
+  const settings = await prisma.settings.findUniqueOrThrow({
+    where: { id: "singleton" },
+    select: { customerCanCancelSeriesInFull: true },
+  });
+  return settings.customerCanCancelSeriesInFull;
+}
+
+/**
  * `getReservationSettings()` の結果を `calculateReservationPricing` が要求する
  * `reservationSettings` shape に変換する。Settings singleton 行が存在しない防御的
  * ケース（`findUnique` が null を返す場合）は `tax.ts` の `DEFAULT_TAX_SETTINGS` /
