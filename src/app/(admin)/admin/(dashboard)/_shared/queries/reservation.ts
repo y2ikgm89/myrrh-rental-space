@@ -9,6 +9,7 @@ import type { ReservationTabFilter } from "@/shared/lib/nuqs";
 import type { PaginationInput } from "@/shared/lib/pagination";
 import {
   getReservationByIdQuery,
+  getReservationSeriesInfoQuery,
   getReservationsForCalendarQuery,
   getReservationsQuery,
   getReservationStatsQuery,
@@ -111,6 +112,15 @@ export async function getReservationById(
 ): Promise<ReservationWithRelations | null> {
   await requireAdminPermission("reservation", "read");
   return getReservationByIdQuery(id);
+}
+
+/**
+ * Phase B.2 task 23: 予約詳細ページで SeriesInfoSection を描画するための thin wrapper。
+ * `requireAdminPermission("reservation", "read")` を通してから domain query を呼ぶ。
+ */
+export async function getReservationSeriesInfo(id: string) {
+  await requireAdminPermission("reservation", "read");
+  return getReservationSeriesInfoQuery(id);
 }
 
 export async function getReservationsForCalendar(
