@@ -135,6 +135,16 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
     d: Record<string, unknown>,
     action: string,
   ) => mockSendAdminNotification(d, action),
+  // Task 12 で追加された bulk 系 export。本 test では使わないが、
+  // mock.module の process-global live binding が他 test file の実 import に
+  // 干渉して "Export named ... not found" SyntaxError を起こすため必須
+  // ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+  sendBulkReservationCancelledEmail: mock(() =>
+    Promise.resolve({ ok: false, reason: "disabled" }),
+  ),
+  sendBulkAdminNotification: mock(() =>
+    Promise.resolve({ ok: false, reason: "disabled" }),
+  ),
 }));
 
 // SwitchBot revoke: 外部 API を叩くため mock。

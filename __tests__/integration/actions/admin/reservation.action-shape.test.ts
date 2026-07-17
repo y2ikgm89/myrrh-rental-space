@@ -104,6 +104,17 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mock(async () => {}),
   sendReservationConfirmationEmail: mock(async () => {}),
   sendReservationStatusChangedEmail: mock(async () => {}),
+  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
+  // process-global live binding が他 test file の実 import に干渉して
+  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+  sendBulkReservationCancelledEmail: mock(async () => ({
+    ok: false,
+    reason: "disabled",
+  })),
+  sendBulkAdminNotification: mock(async () => ({
+    ok: false,
+    reason: "disabled",
+  })),
 }));
 
 mock.module("@/shared/lib/async-utils", () => ({

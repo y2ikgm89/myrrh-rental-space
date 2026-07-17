@@ -96,6 +96,15 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationUpdatedEmail: mock(() =>
     Promise.resolve({ ok: true, messageId: "msg_test" }),
   ),
+  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
+  // process-global live binding が他 test file の実 import に干渉して
+  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+  sendBulkReservationCancelledEmail: mock(() =>
+    Promise.resolve({ ok: false, reason: "disabled" }),
+  ),
+  sendBulkAdminNotification: mock(() =>
+    Promise.resolve({ ok: false, reason: "disabled" }),
+  ),
 }));
 
 // auth モック
