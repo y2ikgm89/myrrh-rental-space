@@ -1,22 +1,27 @@
 /**
- * Phase B.2 task 27 / Phase B.2.1 Task 3: admin 繰返し予約
- * (ReservationSeries) の form UI 表示と /admin/reservations/new からの導線 smoke。
+ * Phase B.2 task 27 / Phase B.2.1 Task 3/B (final): admin 繰返し予約
+ * (ReservationSeries) の form UI 表示 + `/admin/reservations/new` 導線 smoke +
+ * seed 済 series の SeriesInfoSection + 3 択キャンセル full flow。
  *
  * 現在の実装状況:
- *   - Task 20 form UI 統合 (/admin/reservations/new-recurring route +
- *     RecurringReservationForm) ✅ Phase B.2.1 Task 1 で完了
+ *   - Task 20 form UI (/admin/reservations/new-recurring) ✅ Task 1
  *   - Task 21 server action (createRecurringReservationAction) ✅
  *   - Task 22 calendar view 「定期」バッジ ✅
  *   - Task 23 admin SeriesInfoSection ✅
  *   - Task 26 customer mypage SeriesInfoSection ✅
- *
- * 本 spec は form UI と link 導線が実装されていることを smoke レベルで検証する
- * (fixme 解除)。full end-to-end (form 送信 → 実 DB 書込 → calendar 定期バッジ →
- * SeriesInfoSection 3 択 → cancel) は fixture (space + customer seed) と
- * customer 検索 API mock が揃ってから追加する future work。
+ *   - Task B seed fixture (`seedRecurringReservationSeriesFixture`) + 定数 SSoT ✅
+ *   - Task B follow-up: Turnstile localhost bypass (`isLocalProductionE2ERuntime`) +
+ *     `getSeededSeriesFirstInstanceId` / `getSeededSeriesId` /
+ *     `isSeededSeriesCancelled` helper ✅ 本 spec で有効化
  */
 
 import { test, expect } from "@playwright/test";
+import { seriesFixtures } from "../../fixtures/test-data";
+import {
+  getSeededSeriesFirstInstanceId,
+  getSeededSeriesId,
+  isSeededSeriesCancelled,
+} from "../../helpers/seeded-fixtures";
 
 test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
   test("form が表示され、繰返し設定 fields が render される (smoke)", async ({
@@ -63,22 +68,53 @@ test.describe("admin recurring reservation form (Phase B.2.1 Task 3)", () => {
     ).toBeVisible();
   });
 
-  test.fixme("DB-seeded series の SeriesInfoSection + 3 択キャンセルフロー (future work)", async ({
+  test("seed 済 series の SeriesInfoSection + 3 択キャンセル full flow", async ({
     page,
   }) => {
-    // TODO (future PR): prisma/seed.ts + e2e/fixtures/test-data.ts に
-    //   ReservationSeries fixture を追加し、以下を検証する mini golden path:
-    //   1. admin としてログイン
-    //   2. /admin/reservations/[instanceId] へ navigate
-    //   3. SeriesInfoSection が visible、3 択 button (this-only /
-    //      this-and-following / series-all) が表示される
-    //   4. "定期予約すべてをキャンセル" を click → confirm
-    //   5. success message + reload で series が cancelled 表示になる
-    //
-    // 本 phase では form UI wiring (Task 20) と form-driven action (Task 21)
-    // が完成しているため、実際は "form submit → 全 instance CANCELLED" の
-    // full E2E も書ける。ただし customer 検索 API は fetchAdminJson 経由で
-    // seed 依存が濃く、API mock を e2e/helpers/ に切り出す必要がある。
-    void page;
+    // Task B seed fixture (dev customer + WEEKLY BYDAY=TU COUNT=3) の instance ID を lookup
+    const instanceId = await getSeededSeriesFirstInstanceId(
+      seriesFixtures.markerNotesPrefix,
+    );
+    const seriesId = await getSeededSeriesId(seriesFixtures.markerNotesPrefix);
+
+    await page.goto(`/admin/reservations/${instanceId}`);
+
+    // SeriesInfoSection の heading と 3 択キャンセル button 3 種
+    await expect(
+      page.getByRole("heading", { name: "定期予約情報" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "この予約のみキャンセル" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "この予約以降を全てキャンセル" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "定期予約すべてをキャンセル" }),
+    ).toBeVisible();
+
+    // series-all scope で cancel 発火 (admin 経路、Turnstile 呼出なし、
+    // executeAdminMutationResult 経由で cancelReservationSeriesCommand が実行される)
+    await page
+      .getByRole("button", { name: "定期予約すべてをキャンセル" })
+      .click();
+
+    // DB 側で series.deletedAt が set されるまで polling
+    // (Server Action → applyBulkCancellationSideEffects → cache invalidate の完了待ち)
+    await expect
+      .poll(() => isSeededSeriesCancelled(seriesId), {
+        timeout: 15_000,
+        intervals: [500, 1000, 2000],
+      })
+      .toBe(true);
+
+    // UI 側の cache が invalidate 済のため reload で cancelled 表示に切替
+    await page.reload();
+    await expect(
+      page.getByText(/この series は既にキャンセル済み/u),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "定期予約すべてをキャンセル" }),
+    ).not.toBeVisible();
   });
 });
