@@ -196,6 +196,65 @@ export async function updateCalendarEvent(
 }
 
 /**
+ * カレンダーイベントを部分更新 (Phase B.2.1 non-goal Task C)。
+ *
+ * 公式推奨: recurrence だけを更新する場合は `events.update` (full replace) より
+ * `events.patch` (partial update) を使う (他の event body field を保護できる)。
+ * https://developers.google.com/calendar/api/v3/reference/events/patch
+ *
+ * Task C 主用途: series の this-and-following scope キャンセルで master recurring
+ * event の RRULE に UNTIL を注入して打ち切る (`recurrence: [rebuiltRrule]`)。
+ */
+export async function patchCalendarEvent(
+  eventId: string,
+  patch: Partial<
+    Pick<
+      calendar_v3.Schema$Event,
+      "summary" | "description" | "location" | "recurrence"
+    >
+  >,
+): Promise<CalendarEventResult> {
+  const client = await getServiceAccountClient();
+  if (!client) {
+    return { success: false, error: "Google Calendar is not configured" };
+  }
+
+  const settings = await getGoogleCalendarSettings();
+  const calendarId = settings.calendarId;
+  if (!calendarId) {
+    return { success: false, error: "Calendar ID is not configured" };
+  }
+
+  try {
+    const requestBody = omitUndefined(patch);
+    const response = await withGoogleApiRetry(() =>
+      client.events.patch({
+        calendarId,
+        eventId,
+        requestBody,
+        sendUpdates: "none",
+      }),
+    );
+
+    return omitUndefined({
+      success: true,
+      eventId: response.data.id ?? undefined,
+      eventUrl: response.data.htmlLink ?? undefined,
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "patchCalendarEvent", eventId },
+    });
+    return {
+      success: false,
+      error: formatGoogleApiError(error),
+    };
+  }
+}
+
+/**
  * カレンダーイベントを削除
  */
 export async function deleteCalendarEvent(

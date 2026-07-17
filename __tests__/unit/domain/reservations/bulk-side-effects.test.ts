@@ -78,7 +78,11 @@ const mockGetSeriesGcalMasterEventId = mock<
   (seriesId: string) => Promise<string | null>
 >(() => Promise.resolve(null));
 const mockPatchGcalMasterUntil = mock<
-  (masterEventId: string, until: Date) => Promise<void>
+  (input: {
+    masterEventId: string;
+    seriesId: string;
+    until: Date;
+  }) => Promise<void>
 >(() => Promise.resolve());
 const mockDeleteGcalMaster = mock<(masterEventId: string) => Promise<void>>(
   () => Promise.resolve(),
@@ -305,7 +309,11 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     );
 
     expect(mockPatchGcalMasterUntil).toHaveBeenCalledTimes(1);
-    expect(mockPatchGcalMasterUntil).toHaveBeenCalledWith(MASTER_EVENT_ID, NOW);
+    expect(mockPatchGcalMasterUntil).toHaveBeenCalledWith({
+      masterEventId: MASTER_EVENT_ID,
+      seriesId: SERIES_ID,
+      until: NOW,
+    });
     expect(mockDeleteGcalMaster).not.toHaveBeenCalled();
 
     // 集約 AuditLog にも scope="this-and-following" が反映される

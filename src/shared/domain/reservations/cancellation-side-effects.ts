@@ -559,7 +559,12 @@ export async function applyBulkCancellationSideEffects(
     const masterEventId = await getSeriesGcalMasterEventId(input.seriesId);
     if (masterEventId) {
       if (input.scope === "this-and-following") {
-        await patchGcalMasterUntil(masterEventId, input.now);
+        // Phase B.2.1 Task C: RRULE 再構築 + events.patch で UNTIL 注入 (実装済)
+        await patchGcalMasterUntil({
+          masterEventId,
+          seriesId: input.seriesId,
+          until: input.now,
+        });
       } else {
         await deleteGcalMaster(masterEventId);
       }
