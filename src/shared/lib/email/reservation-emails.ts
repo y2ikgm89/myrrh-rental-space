@@ -8,6 +8,7 @@
 
 import "server-only";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
+import { BulkReservationCancelledEmail } from "@/shared/emails/bulk-reservation-cancelled";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
 import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
@@ -51,6 +52,7 @@ import {
 import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
 import type {
+  BulkReservationCancelledEmailData,
   EmailResult,
   ReservationEmailData,
   StatusChangeEmailData,
@@ -619,6 +621,99 @@ export async function sendReservationAdminNotification(
     context: {
       reservationId: data.reservationId,
       action,
+    },
+  });
+}
+
+/** `BulkReservationCancelledEmailData.instances` を表示用の日付/時刻文字列に整形する。 */
+function formatBulkInstanceList(
+  instances: BulkReservationCancelledEmailData["instances"],
+): { date: string; time: string }[] {
+  return instances.map((instance) => ({
+    date: formatDateWithWeekday(instance.startTime),
+    time: `${formatTimeShort(instance.startTime)} - ${formatTimeShort(instance.endTime)}`,
+  }));
+}
+
+/**
+ * Phase B.2 task 12: series 一括キャンセルの集約通知メール（顧客向け・1 通）。
+ *
+ * `applyBulkCancellationSideEffects` が各 instance の
+ * `sendReservationCancelledEmail` を suppress した上で、series 単位にまとめて
+ * 本関数を 1 回だけ呼ぶ（N 通スパム防止、Codex fix 3599414659 / spec §4.5）。
+ */
+export async function sendBulkReservationCancelledEmail(
+  data: BulkReservationCancelledEmailData,
+): Promise<EmailResult> {
+  const footer = await getEmailFooterData();
+  const reservationList = formatBulkInstanceList(data.instances);
+
+  return sendEmail({
+    payload: omitUndefined({
+      to: data.customerEmail,
+      subject: `【予約キャンセル】${data.spaceName} 定期予約（${String(data.instances.length)}件）`,
+      react: BulkReservationCancelledEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          seriesTitle: data.spaceName,
+          instanceCount: data.instances.length,
+          reservationList,
+          reason: data.reason,
+          footer,
+        }),
+      ),
+    }),
+    idempotencyKey: `bulk-reservation-cancel/${data.seriesId}`,
+    operation: "sendBulkReservationCancelledEmail",
+    context: {
+      seriesId: data.seriesId,
+      instanceCount: data.instances.length,
+    },
+  });
+}
+
+/**
+ * Phase B.2 task 12: series 一括キャンセルの集約通知メール（管理者向け・1 通）。
+ *
+ * 既存の `sendReservationAdminNotification` と同じ通知トグル
+ * （`notifyReservationCancel`）・宛先解決（`getNotificationEmailAddresses`）で
+ * gating する。本文は顧客向けと同じ skeleton テンプレートを流用する
+ * （管理者専用の文言・deep link は Task 27 で最終調整）。
+ */
+export async function sendBulkAdminNotification(
+  data: BulkReservationCancelledEmailData,
+): Promise<EmailResult> {
+  const toggles = await getEmailDeliverySettings();
+  if (!toggles.notifyReservationCancel) {
+    return { ok: false, reason: "disabled" };
+  }
+
+  const notificationEmails = await getNotificationEmailAddresses();
+  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+
+  const footer = await getEmailFooterData();
+  const reservationList = formatBulkInstanceList(data.instances);
+
+  return sendEmail({
+    payload: {
+      to: notificationEmails,
+      subject: `【定期予約一括キャンセル】${data.spaceName} - ${data.customerName}様`,
+      react: BulkReservationCancelledEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          seriesTitle: data.spaceName,
+          instanceCount: data.instances.length,
+          reservationList,
+          reason: data.reason,
+          footer,
+        }),
+      ),
+    },
+    idempotencyKey: `bulk-reservation-cancel-admin/${data.seriesId}`,
+    operation: "sendBulkAdminNotification",
+    context: {
+      seriesId: data.seriesId,
+      instanceCount: data.instances.length,
     },
   });
 }

@@ -95,6 +95,15 @@ const mockSendAdminNotification = mock<
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationCancelledEmail: mockSendCancelledEmail,
   sendReservationAdminNotification: mockSendAdminNotification,
+  // Phase B.2 task 12 で追加された bulk 系 export。mock.module の
+  // process-global live binding が他 test file の実 import に干渉して
+  // SyntaxError を起こすため必須 ([[feedback_stale-branch-name-reuse-and-mock-module-coverage]])。
+  sendBulkReservationCancelledEmail: mock(() =>
+    Promise.resolve({ ok: false, reason: "disabled" }),
+  ),
+  sendBulkAdminNotification: mock(() =>
+    Promise.resolve({ ok: false, reason: "disabled" }),
+  ),
 }));
 
 const mockLogError = mock<(err: Error, ctx: Record<string, unknown>) => void>(

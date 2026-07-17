@@ -64,6 +64,8 @@ import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
 import { reservationUpdatedFixture } from "@/shared/emails/reservation-updated.fixture";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
 import { reservationReminderFixture } from "@/shared/emails/reservation-reminder.fixture";
+import { BulkReservationCancelledEmail } from "@/shared/emails/bulk-reservation-cancelled";
+import { bulkReservationCancelledFixture } from "@/shared/emails/bulk-reservation-cancelled.fixture";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import { reservationStatusChangedFixture } from "@/shared/emails/reservation-status-changed.fixture";
 import { ReviewReplyEmail } from "@/shared/emails/review-reply";
@@ -213,7 +215,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 23 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * 24 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {
@@ -241,6 +243,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "reservation-reminder",
     ReservationReminderEmail,
     reservationReminderFixture,
+  ),
+  "bulk-reservation-cancelled": defineEntry(
+    "bulk-reservation-cancelled",
+    BulkReservationCancelledEmail,
+    bulkReservationCancelledFixture,
   ),
   "event-registration-confirmation": defineEntry(
     "event-registration-confirmation",
