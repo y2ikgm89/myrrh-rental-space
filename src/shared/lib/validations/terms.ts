@@ -79,6 +79,7 @@ export const TERMS_SCOPE_LABELS: Record<TermsScope, string> = {
   [TermsScope.RESERVATION]: "スペース予約フォーム",
   [TermsScope.INQUIRY]: "お問い合わせフォーム",
   [TermsScope.EVENT_REGISTRATION]: "イベント申込フォーム",
+  [TermsScope.RESERVATION_SERIES]: "繰返し予約フォーム",
 };
 
 export const TERMS_SCOPE_DESCRIPTIONS: Record<TermsScope, string> = {
@@ -88,6 +89,8 @@ export const TERMS_SCOPE_DESCRIPTIONS: Record<TermsScope, string> = {
   [TermsScope.INQUIRY]: "/contact など contact-form セクションでチェック必須",
   [TermsScope.EVENT_REGISTRATION]:
     "/events/[slug] の申込フォームでチェック必須",
+  [TermsScope.RESERVATION_SERIES]:
+    "/admin/reservations の繰返し予約作成フォームでチェック必須 (Phase B.2、admin-only MVP。公開UIには未提供)",
 };
 
 const slugSchema = z
@@ -111,12 +114,18 @@ const titleSchema = z
   .min(1, { error: "タイトルを入力してください" })
   .max(100, { error: "タイトルは100文字以内です" });
 
+// 受理する scope は `TermsScope` の全値（TERMS_SCOPE_VALUES は UI で選択可能な
+// 値のみを意図的に絞った別配列のため、ここでは使わない）。RESERVATION_SERIES は
+// 管理画面の scope 選択 UI 未実装 (Phase B.2 Task 25 で対応) だが、
+// AdminTermsDetail.scopes（DB 由来、raw TermsScope 型）を経由する保存経路の型を
+// 通すために受理だけ先行させる。
 const termsScopeSchema = z.enum(
   [
     TermsScope.LOGIN_SIGNUP,
     TermsScope.RESERVATION,
     TermsScope.INQUIRY,
     TermsScope.EVENT_REGISTRATION,
+    TermsScope.RESERVATION_SERIES,
   ] as const,
   { error: "不正な scope です" },
 );
