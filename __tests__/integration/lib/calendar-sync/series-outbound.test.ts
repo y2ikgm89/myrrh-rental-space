@@ -307,6 +307,67 @@ describeMaybe(
         for (const r of updated) {
           expect(r.googleCalendarEventId).toMatch(/^master-abc_/);
         }
+
+        // Phase B.2.1 Task 5: master event ID が ReservationSeries に永続化される
+        const persistedSeries = await prisma.reservationSeries.findUnique({
+          where: { id: fixture.seriesId },
+          select: { googleCalendarMasterEventId: true },
+        });
+        expect(persistedSeries?.googleCalendarMasterEventId).toBe("master-abc");
+      } finally {
+        await fixture.cleanup();
+      }
+    }, 30_000);
+
+    test("master event 作成成功後 ReservationSeries.googleCalendarMasterEventId が永続化される (Phase B.2.1 Task 5)", async () => {
+      const fixture = await createSeriesFixture();
+      try {
+        mockCreate.mockImplementation(() =>
+          Promise.resolve({ success: true, eventId: "master-persist-only" }),
+        );
+        // fetchEventInstances が失敗しても master event ID の永続化は事前に走る
+        mockFetchInstances.mockImplementation(() =>
+          Promise.resolve({ success: false, error: "network error" }),
+        );
+
+        const result = await syncReservationSeriesToCalendar(fixture.seriesId);
+        // fetchEventInstances 失敗でも result.success は true (master 作成は成功)
+        expect(result.success).toBe(true);
+        expect(result.eventId).toBe("master-persist-only");
+
+        const persisted = await prisma.reservationSeries.findUnique({
+          where: { id: fixture.seriesId },
+          select: { googleCalendarMasterEventId: true },
+        });
+        expect(persisted?.googleCalendarMasterEventId).toBe(
+          "master-persist-only",
+        );
+
+        // series-outbound.ts の getSeriesGcalMasterEventId が正しく永続値を返す
+        const { getSeriesGcalMasterEventId } =
+          await import("@/shared/lib/calendar-sync/series-outbound");
+        const fetched = await getSeriesGcalMasterEventId(fixture.seriesId);
+        expect(fetched).toBe("master-persist-only");
+      } finally {
+        await fixture.cleanup();
+      }
+    }, 30_000);
+
+    test("createCalendarEvent 失敗時は googleCalendarMasterEventId 永続化されない", async () => {
+      const fixture = await createSeriesFixture();
+      try {
+        mockCreate.mockImplementation(() =>
+          Promise.resolve({ success: false, error: "api error" }),
+        );
+
+        const result = await syncReservationSeriesToCalendar(fixture.seriesId);
+        expect(result.success).toBe(false);
+
+        const persisted = await prisma.reservationSeries.findUnique({
+          where: { id: fixture.seriesId },
+          select: { googleCalendarMasterEventId: true },
+        });
+        expect(persisted?.googleCalendarMasterEventId).toBeNull();
       } finally {
         await fixture.cleanup();
       }

@@ -19,6 +19,7 @@ import {
   markReservationCalendarSyncSuccess,
   markReservationCalendarSyncUpdated,
   markSeriesInstanceCalendarSyncSuccess,
+  markSeriesMasterEventCreated,
 } from "@/shared/domain/reservations/calendar-sync";
 import {
   logError,
@@ -351,13 +352,15 @@ export async function writeBackInstanceGoogleCalendarEventIds(input: {
 
 /**
  * 定期予約 (ReservationSeries) を Google Calendar に master event として同期する
- * (Phase B.2 task 16)。
+ * (Phase B.2 task 16 + B.2.1 Task 5)。
  *
  * flow: fetch series + first instance → createCalendarEvent with `recurrence`
- * → fetchEventInstances(masterId) → writeBackInstanceGoogleCalendarEventIds。
- * Google Calendar 無効時は no-op success。master event ID の永続化は本 phase 未実装
- * (将来 phase で ReservationSeries に列追加、`series-outbound.ts` の
- * `getSeriesGcalMasterEventId` stub 差替え時に配線)。
+ * → markSeriesMasterEventCreated (永続化) → fetchEventInstances(masterId)
+ * → writeBackInstanceGoogleCalendarEventIds。Google Calendar 無効時は no-op success。
+ *
+ * master event ID は `ReservationSeries.googleCalendarMasterEventId` に永続化される
+ * (Phase B.2.1 Task 5 で追加)。bulk cancel の series-level GCal 操作 (deleteGcalMaster
+ * / patchGcalMasterUntil) は非 null 時のみ発火する。
  */
 export async function syncReservationSeriesToCalendar(
   seriesId: string,
@@ -410,6 +413,12 @@ export async function syncReservationSeriesToCalendar(
     }
 
     const masterEventId = result.eventId;
+
+    // master event ID を ReservationSeries に永続化 (Phase B.2.1 Task 5)。
+    // fetchEventInstances より先に呼ぶことで、write-back 失敗時でも series cancel の
+    // series-level GCal 操作 (deleteGcalMaster) が master event に届く状態を保証する。
+    await markSeriesMasterEventCreated({ seriesId, masterEventId });
+
     const instancesResult = await fetchEventInstances(masterEventId);
     if (!instancesResult.success || instancesResult.instances === undefined) {
       logError(
