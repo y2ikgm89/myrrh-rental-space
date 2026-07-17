@@ -122,6 +122,41 @@ export async function getEventCheckInAttendees(eventId: string) {
 }
 
 /**
+ * 管理者オーサリング型 event broadcast (T12) の宛先集計。
+ *
+ * compose UI (`/admin/events/[id]/broadcast`) が事前に「何人に配信するか」を
+ * 表示する目的で使う。実際の送信 (`sendEventBroadcast`) は再度自分で
+ * `event.findFirst` を走らせるため、この集計はあくまで UI 表示用の
+ * best-effort snapshot (送信までの間に新規申込や解除があれば実際の宛先数は
+ * 少しずれる可能性がある)。
+ *
+ * @returns `{eligible, skipped}` — CONFIRMED かつ email !== null の人数、
+ *   および email=null で送れない申込 (walk-in 由来) の人数。
+ */
+export async function getEventBroadcastRecipientCounts(
+  eventId: string,
+): Promise<{ eligible: number; skipped: number }> {
+  const [eligible, total] = await Promise.all([
+    prisma.eventRegistration.count({
+      where: {
+        eventId,
+        event: { deletedAt: null },
+        status: RegistrationStatus.CONFIRMED,
+        email: { not: null },
+      },
+    }),
+    prisma.eventRegistration.count({
+      where: {
+        eventId,
+        event: { deletedAt: null },
+        status: RegistrationStatus.CONFIRMED,
+      },
+    }),
+  ]);
+  return { eligible, skipped: total - eligible };
+}
+
+/**
  * ゲストキャンセルページ向けに申込を取得する。
  *
  * `customerId` フィルタを掛けない（トークン検証側でアクセス権を担保する。

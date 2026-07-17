@@ -386,6 +386,16 @@ const THIN_ADMIN_ACTION_FILES = [
     "reservation",
     "admin.ts",
   ),
+  join(
+    SRC_ROOT,
+    "app",
+    "(admin)",
+    "admin",
+    "(dashboard)",
+    "_shared",
+    "actions",
+    "event-broadcast.ts",
+  ),
 ];
 /**
  * `@/shared/db/prisma` を import する src 配下の全ファイルを動的に列挙する。

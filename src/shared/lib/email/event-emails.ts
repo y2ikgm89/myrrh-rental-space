@@ -13,6 +13,7 @@ import {
   formatTimeShort,
 } from "@/shared/lib/date-format";
 import { EventAdminNotificationEmail } from "@/shared/emails/event-admin-notification";
+import { EventBroadcastEmail } from "@/shared/emails/event-broadcast";
 import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled-notification";
 import { EventReminderEmail } from "@/shared/emails/event-reminder";
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
@@ -793,4 +794,123 @@ export async function sendEventUpdatedToAllParticipants(
       }
     }
   }
+}
+
+// =============================================================================
+// Admin-authored broadcast (T12)
+// =============================================================================
+
+export type EventBroadcastResult = {
+  ok: boolean;
+  /** Resend への送信リクエストが成功した宛先数 (Resend の suppression により実配信されない可能性はある) */
+  sent: number;
+  /** email=null (walk-in) や status!=CONFIRMED でスキップされた申込数 */
+  skipped: number;
+};
+
+/**
+ * 管理者が任意の件名・本文で申込済み参加者全員へ一斉配信するメール送信関数 (T12)。
+ *
+ * `event-cancelled` / `event-updated` の自動発火型と同じ fan-out shape (Promise.allSettled
+ * で個別失敗を分離) を踏襲する。設計上の判断:
+ *
+ * - **送信対象**: `status = CONFIRMED AND email !== null` の申込のみ。walk-in 由来
+ *   (email=null) はメール送信対象外なので skipped にカウントする。WAITLISTED /
+ *   CANCELLED は対象外 (キャンセル済み参加者に配信通知を送るのは spam)
+ * - **idempotencyKey**: `event-broadcast/${eventId}/${hashForKey(email)}/${broadcastNonce}`。
+ *   同一イベントの再配信でも Resend が silent drop しないよう broadcastNonce (呼出側
+ *   の crypto.randomUUID) を混ぜる。event.updatedAt を使わない理由: broadcast は event
+ *   本体を触らないため updatedAt が変わらず、複数回配信で idempotencyKey が衝突する
+ * - **rate limit**: このレイヤでは実施しない (呼出側の Server Action で
+ *   `eventBroadcastRateLimiter` を先に発火する)
+ *
+ * @returns `{ok, sent, skipped}` — 呼出側 (Server Action) が UI 表示や AuditLog metadata に
+ *   使う。イベント自体が存在しない場合は `{ok: false, sent: 0, skipped: 0}`。
+ */
+export async function sendEventBroadcast(
+  eventId: string,
+  params: {
+    subject: string;
+    body: string;
+    broadcastNonce: string;
+  },
+): Promise<EventBroadcastResult> {
+  const event = await prisma.event.findFirst({
+    where: { id: eventId, deletedAt: null },
+    select: {
+      title: true,
+      slug: true,
+      registrations: {
+        where: { status: RegistrationStatus.CONFIRMED },
+        select: {
+          id: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!event) return { ok: false, sent: 0, skipped: 0 };
+
+  const totalRegistrations = event.registrations.length;
+  // walk-in 由来 (email=null) は宛先が無いため除外し skipped にカウント
+  const recipients = event.registrations.filter(
+    (r): r is typeof r & { email: string } => r.email !== null,
+  );
+  const skipped = totalRegistrations - recipients.length;
+
+  if (recipients.length === 0) {
+    // 送信対象 0 でも ok は true とする (UI 表示は sent=0 で reflect される)
+    return { ok: true, sent: 0, skipped };
+  }
+
+  const footer = await getEmailFooterData();
+  const appUrl = getAppUrl();
+  const eventUrl = `${appUrl}/events/${event.slug}`;
+
+  const results = await Promise.allSettled(
+    recipients.map((registration) =>
+      sendEmail({
+        payload: {
+          to: registration.email,
+          subject: params.subject,
+          react: EventBroadcastEmail({
+            eventTitle: event.title,
+            eventUrl,
+            subject: params.subject,
+            bodyText: params.body,
+            footer,
+          }),
+        },
+        idempotencyKey: `event-broadcast/${eventId}/${hashForKey(registration.email)}/${params.broadcastNonce}`,
+        operation: "sendEventBroadcast",
+        context: {
+          eventId,
+          participantEmail: registration.email,
+        },
+      }),
+    ),
+  );
+
+  let sent = 0;
+  for (const [i, result] of results.entries()) {
+    if (result.status === "fulfilled" && result.value.ok) {
+      sent += 1;
+    } else if (result.status === "rejected") {
+      const registration = recipients[i];
+      if (registration) {
+        logError(normalizeError(result.reason), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "sendEventBroadcast",
+            eventId,
+            participantEmail: registration.email,
+          },
+        });
+      }
+    }
+  }
+
+  return { ok: true, sent, skipped };
 }

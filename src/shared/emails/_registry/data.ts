@@ -12,7 +12,7 @@
  * Zod schema は `z.enum(TEMPLATE_KEYS, …)` で SSoT 直参照。
  */
 
-/** 全 24 エントリの key 列挙。`as const` で literal tuple として固定。 */
+/** 全 25 エントリの key 列挙。`as const` で literal tuple として固定。 */
 export const TEMPLATE_KEYS = [
   "reservation-confirmation",
   "reservation-updated",
@@ -24,6 +24,7 @@ export const TEMPLATE_KEYS = [
   "event-registration-cancelled",
   "event-cancelled-notification",
   "event-updated-notification",
+  "event-broadcast",
   "event-reminder",
   "event-admin-notification",
   "event-waitlist-registered",
@@ -131,6 +132,13 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     key: "event-updated-notification",
     label: "イベント内容変更のお知らせ",
     description: "イベント情報が変更された時に申込済み全員へ送信。",
+    category: "event",
+  },
+  {
+    key: "event-broadcast",
+    label: "イベント一斉配信",
+    description:
+      "管理者が任意の件名・本文で申込済み参加者全員へ送信するお知らせメール (T12)。",
     category: "event",
   },
   {
