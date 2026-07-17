@@ -6,9 +6,15 @@ import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   adminCancelEventRegistrationCommand,
+  createAdminProxyRegistrationCommand,
   createWalkInRegistrationCommand,
   setEventRegistrationCheckInCommand,
 } from "@/shared/domain/events/registration-commands";
+import {
+  sendEventAdminNotification,
+  sendEventRegistrationConfirmation,
+} from "@/shared/lib/email/event-emails";
+import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import {
   refundEventRegistrationPaymentCommand,
   type RefundEventRegistrationResult,
@@ -277,6 +283,149 @@ export async function createWalkInRegistration(
         }),
         {
           operation: "createWalkInRegistrationNotification",
+          category: ErrorCategory.DATABASE,
+        },
+      );
+    },
+  });
+}
+
+// =============================================================================
+// 事前代行登録 (admin proxy) — 電話・口頭申込を admin が代理登録し、確認メールも送る
+// =============================================================================
+
+const adminProxySchema = z.object({
+  eventId: eventIdSchema,
+  slotId: eventTimeSlotIdSchema,
+  ticketId: eventTicketIdSchema,
+  name: z.string().trim().min(1, "氏名を入力してください").max(100),
+  // 代行登録では確認メールを送るため必須。空文字は Zod がエラーとする。
+  email: z
+    .string()
+    .trim()
+    .min(1, "メールアドレスを入力してください")
+    .max(255)
+    .pipe(z.email({ error: "メールアドレスの形式が不正です" })),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+  note: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+  quantity: z.number().int().min(1).max(100).default(1),
+});
+
+export type AdminProxyRegistrationInput = z.input<typeof adminProxySchema>;
+
+type AdminProxyRegistrationData = {
+  registrationId: string;
+  eventId: string;
+  name: string;
+  email: string;
+  quantity: number;
+  icsSequence: number;
+};
+
+export async function createAdminProxyRegistration(
+  input: AdminProxyRegistrationInput,
+): Promise<MutationResult<AdminProxyRegistrationData>> {
+  const parsed = adminProxySchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: parsed.data.eventId,
+    execute: async () => {
+      // DomainError は executeAdminMutationResult が外側で MutationError に変換する
+      const result = await createAdminProxyRegistrationCommand({
+        eventId: parsed.data.eventId,
+        slotId: parsed.data.slotId,
+        ticketId: parsed.data.ticketId,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        note: parsed.data.note,
+        quantity: parsed.data.quantity,
+      });
+      // email は Zod で必須検証済 (string 保証)。DB 返り値の
+      // `EventRegistration.email` は `string | null` 型なので、渡した値を再利用
+      // することで narrowing する（parsed.data.email 由来なので同一値）。
+      return {
+        registrationId: result.registration.id,
+        eventId: result.registration.eventId,
+        name: result.registration.name,
+        email: parsed.data.email,
+        quantity: result.registration.quantity,
+        icsSequence: result.registration.icsSequence,
+      };
+    },
+    afterSuccess: (data) => {
+      // admin proxy は新規行作成 → 公開側の定員残数表示にも影響するため EVENTS を無効化
+      invalidateEventCaches();
+
+      // 確認メール（参加者宛 + admin 通知）を fire-and-forget で送信。
+      // 公開申込 path (registerForEvent) と同じ getEventRegistrationDetailsForEmail
+      // 経由でスロット時刻・定員・残数を解決してから送る。
+      fireAndForget(
+        (async () => {
+          const details = await getEventRegistrationDetailsForEmail(
+            data.registrationId,
+          );
+          if (!details) return;
+
+          await Promise.all([
+            sendEventRegistrationConfirmation({
+              registrationId: data.registrationId,
+              customerName: data.name,
+              customerEmail: data.email,
+              eventTitle: details.eventTitle,
+              eventStartTime: details.startTime,
+              eventEndTime: details.endTime,
+              location: details.location ?? undefined,
+              quantity: data.quantity,
+              icsSequence: data.icsSequence,
+              customerId: null,
+              format: details.format,
+              meetingUrl: details.meetingUrl,
+            }),
+            sendEventAdminNotification(
+              {
+                registrationId: data.registrationId,
+                eventId: data.eventId,
+                participantName: data.name,
+                participantEmail: data.email,
+                eventTitle: details.eventTitle,
+                eventStartTime: details.startTime,
+                quantity: data.quantity,
+                currentRegistrations: details.confirmedCount,
+                capacity: details.capacity,
+              },
+              "registration",
+            ),
+          ]);
+        })(),
+        {
+          operation: "sendAdminProxyRegistrationEmails",
+          category: ErrorCategory.EXTERNAL_API,
+        },
+      );
+
+      fireAndForget(
+        createNotificationCommand({
+          type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
+          message: `${data.name}様の申込を代行登録しました`,
+          resourceType: "event",
+        }),
+        {
+          operation: "createAdminProxyRegistrationNotification",
           category: ErrorCategory.DATABASE,
         },
       );

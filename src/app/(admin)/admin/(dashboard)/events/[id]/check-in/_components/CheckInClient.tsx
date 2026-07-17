@@ -2,15 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { IconUserPlus, IconRefresh, IconSearch } from "@tabler/icons-react";
+import {
+  IconCalendarUser,
+  IconRefresh,
+  IconSearch,
+  IconUserPlus,
+} from "@tabler/icons-react";
 import { Button, Input } from "@/admin/components/ui";
 import { toast } from "sonner";
 import {
-  toggleEventRegistrationCheckIn,
+  createAdminProxyRegistration,
   createWalkInRegistration,
+  toggleEventRegistrationCheckIn,
 } from "@/admin/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { CheckInRow } from "./CheckInRow";
+import { ProxyRegistrationDialog } from "./ProxyRegistrationDialog";
 import { WalkInDialog } from "./WalkInDialog";
 
 type Attendee = {
@@ -85,6 +92,7 @@ function CheckInClientState({
   const [attendees, setAttendees] = useState<Attendee[]>(initialAttendees);
   const [query, setQuery] = useState("");
   const [walkInOpen, setWalkInOpen] = useState(false);
+  const [proxyOpen, setProxyOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const totalQuantity = attendees.reduce((sum, a) => sum + a.quantity, 0);
@@ -171,6 +179,12 @@ function CheckInClientState({
     toast.success("当日参加を受け付けました");
   }
 
+  function handleProxySuccess() {
+    setProxyOpen(false);
+    router.refresh();
+    toast.success("事前代行登録を受け付けました");
+  }
+
   return (
     <div className="space-y-4">
       {/* ヘッダー: 進捗カウンタ + 操作 */}
@@ -202,6 +216,14 @@ function CheckInClientState({
             >
               <IconRefresh className="mr-2 h-4 w-4" />
               再読込
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setProxyOpen(true)}
+            >
+              <IconCalendarUser className="mr-2 h-4 w-4" />
+              代行登録
             </Button>
             <Button size="sm" onClick={() => setWalkInOpen(true)}>
               <IconUserPlus className="mr-2 h-4 w-4" />
@@ -253,6 +275,16 @@ function CheckInClientState({
         slots={slots}
         onSuccess={handleWalkInSuccess}
         action={createWalkInRegistration}
+      />
+
+      <ProxyRegistrationDialog
+        open={proxyOpen}
+        onOpenChange={setProxyOpen}
+        eventId={eventId}
+        tickets={tickets}
+        slots={slots}
+        onSuccess={handleProxySuccess}
+        action={createAdminProxyRegistration}
       />
     </div>
   );

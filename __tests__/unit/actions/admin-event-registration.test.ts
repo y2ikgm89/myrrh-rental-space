@@ -30,6 +30,7 @@ mock.module("@/shared/domain/events/registration-commands", () => ({
   adminCancelEventRegistrationCommand: (
     ...args: Parameters<typeof mockAdminCancelEventRegistrationCommand>
   ) => mockAdminCancelEventRegistrationCommand(...args),
+  createAdminProxyRegistrationCommand: mock(),
   createWalkInRegistrationCommand: mock(),
   setEventRegistrationCheckInCommand: (
     ...args: Parameters<typeof mockSetEventRegistrationCheckInCommand>
