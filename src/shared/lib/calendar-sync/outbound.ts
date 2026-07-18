@@ -13,7 +13,9 @@ import {
   clearReservationCalendarEvent,
   getCalendarSyncRuntimeState,
   getFailedCalendarSyncReservations,
+  getFailedCalendarSyncSeriesIds,
   getSeriesForCalendarSync,
+  getSeriesGcalMasterEventId,
   getSeriesInstanceStartTimes,
   markReservationCalendarSyncError,
   markReservationCalendarSyncSuccess,
@@ -256,9 +258,31 @@ export async function deleteCalendarSync(
 // =============================================================================
 
 /**
- * 未同期の予約を一括同期（リトライ機能）
+ * 未同期の予約を一括同期 (リトライ機能)。
+ *
+ * standalone 予約は `syncReservationToCalendar` (RRULE 無し createCalendarEvent) で
+ * 再送する。GCAL-RETRY-04: series-child の instance は `getFailedCalendarSyncReservations`
+ * の `seriesId: null` gate で除外されており、代わりに `retryFailedSeriesCalendarSyncs`
+ * が既存の master event に対する `fetchEventInstances` + write-back を再試行する。
+ * 両者を並列 (順序依存無し、独立した失敗集合) で走らせ、合計を返す。
  */
 export async function retryFailedSyncs(): Promise<{
+  total: number;
+  succeeded: number;
+  failed: number;
+}> {
+  const [standalone, series] = await Promise.all([
+    retryFailedStandaloneCalendarSyncs(),
+    retryFailedSeriesCalendarSyncs(),
+  ]);
+  return {
+    total: standalone.total + series.total,
+    succeeded: standalone.succeeded + series.succeeded,
+    failed: standalone.failed + series.failed,
+  };
+}
+
+async function retryFailedStandaloneCalendarSyncs(): Promise<{
   total: number;
   succeeded: number;
   failed: number;
@@ -296,6 +320,93 @@ export async function retryFailedSyncs(): Promise<{
     succeeded,
     failed,
   };
+}
+
+/**
+ * GCAL-RETRY-04: series-child の instance を standalone `createCalendarEvent` に
+ * かけると master の RRULE 展開との時刻二重招待になるため、series-child は
+ * 独立経路で「既存 master に対する `fetchEventInstances` + write-back」だけを再試行する。
+ *
+ * `syncReservationSeriesToCalendar` を呼ばない: あれは `createCalendarEvent` を必ず
+ * 発火するため、master が既存 (`markSeriesMasterEventCreated` 済) の series で呼ぶと
+ * 二重の master event が作成される。retry pool に来る失敗 series は
+ * `syncReservationSeriesToCalendar` 内の `fetchEventInstances` 失敗経路
+ * (partial success) が唯一で、そこは master 永続化を完了させた後にしか到達しない。
+ * ゆえに master 未永続な series はこの retry では拾えず、logError で可視化する。
+ */
+async function retryFailedSeriesCalendarSyncs(): Promise<{
+  total: number;
+  succeeded: number;
+  failed: number;
+}> {
+  const seriesIds = await getFailedCalendarSyncSeriesIds();
+
+  let total = 0;
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const seriesId of seriesIds) {
+    const masterEventId = await getSeriesGcalMasterEventId(seriesId);
+    if (!masterEventId) {
+      // 想定外: retry pool に来ている series の master が永続化されていない。
+      // markAllSeriesInstancesAsFailed は master 永続化後にしか呼ばれないため
+      // 通常は起きない。監査ログに残して次サイクルで再試行する。
+      const startTimes = await getSeriesInstanceStartTimes(seriesId);
+      total += startTimes.length;
+      failed += startTimes.length;
+      logError(
+        new Error(
+          `series ${seriesId} has failed instances but no master eventId; skipping`,
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "retryFailedSeriesCalendarSyncs.missingMaster",
+            seriesId,
+          },
+        },
+      );
+      continue;
+    }
+
+    const instancesResult = await fetchEventInstances(masterEventId);
+    if (
+      !instancesResult.success ||
+      instancesResult.instances === undefined ||
+      instancesResult.instances.length === 0
+    ) {
+      const startTimes = await getSeriesInstanceStartTimes(seriesId);
+      total += startTimes.length;
+      failed += startTimes.length;
+      logError(
+        new Error(
+          instancesResult.error ?? "fetchEventInstances failed during retry",
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "retryFailedSeriesCalendarSyncs.fetchInstances",
+            seriesId,
+            masterEventId,
+          },
+        },
+      );
+      continue;
+    }
+
+    const { matched, total: seriesTotal } =
+      await writeBackInstanceGoogleCalendarEventIds({
+        seriesId,
+        instances: instancesResult.instances,
+      });
+    total += seriesTotal;
+    succeeded += matched;
+    failed += seriesTotal - matched;
+  }
+
+  return { total, succeeded, failed };
 }
 
 // =============================================================================

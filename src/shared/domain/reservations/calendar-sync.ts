@@ -97,12 +97,18 @@ export async function clearReservationCalendarEvent(
 export async function getFailedCalendarSyncReservations(
   limit: number = 50,
 ): Promise<FailedCalendarSyncReservation[]> {
+  // GCAL-RETRY-04: seriesId != null の instance は standalone retry pool から除外する。
+  // 単発の syncReservationToCalendar (RRULE 無し createCalendarEvent) を series-child に
+  // 適用すると master 側の RRULE 展開と時刻二重の GCal 招待になり、series-all bulk cancel
+  // で master 削除しても孤児化する。series 側は retryFailedSeriesCalendarSyncs 経由で
+  // fetchEventInstances + write-back のみを再試行する。
   const rows = await prisma.reservation.findMany({
     where: {
       googleCalendarEventId: null,
       calendarSyncError: { not: null },
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
       deletedAt: null,
+      seriesId: null,
     },
     select: {
       id: true,
@@ -146,6 +152,32 @@ export async function getFailedCalendarSyncReservations(
     },
     customer: r.customer,
   }));
+}
+
+/**
+ * GCAL-RETRY-04: standalone retry pool から除外した series-child のうち
+ * `calendarSyncError` が残る series の一意な seriesId 一覧を返す。
+ *
+ * `retryFailedSeriesCalendarSyncs` が per-series に `fetchEventInstances` →
+ * `writeBackInstanceGoogleCalendarEventIds` を再試行する対象を絞る用途。
+ * Prisma に `distinct` findMany を使う (groupBy より index 相性が良い)。
+ */
+export async function getFailedCalendarSyncSeriesIds(
+  limit: number = 50,
+): Promise<string[]> {
+  const rows = await prisma.reservation.findMany({
+    where: {
+      googleCalendarEventId: null,
+      calendarSyncError: { not: null },
+      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+      deletedAt: null,
+      seriesId: { not: null },
+    },
+    select: { seriesId: true },
+    distinct: ["seriesId"],
+    take: limit,
+  });
+  return rows.map((r) => r.seriesId).filter((id): id is string => id !== null);
 }
 
 export async function getCalendarSyncRuntimeState(): Promise<{
