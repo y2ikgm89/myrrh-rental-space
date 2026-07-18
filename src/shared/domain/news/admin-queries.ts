@@ -33,7 +33,11 @@ function buildNewsWhere(filters: NewsFilters): NewsWhereInput {
   return where;
 }
 
+// JST-DRIFT-03: timeZone 未指定だと server-local (Cloud Run UTC) で解釈され
+// publishedAt / createdAt / updatedAt の JST 表示が 9 時間ずれる silent bug。
+// date-format.ts の SSoT 契約 (CLAUDE.md 絶対規約 10) に従い明示的に JST 固定。
 const adminDateTimeFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",

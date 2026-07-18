@@ -6,6 +6,7 @@ import type {
   SearchResultItem,
 } from "@/shared/lib/command-palette-types";
 import type { Resource } from "@/shared/lib/admin-resources";
+import { formatJstDateString } from "@/shared/lib/date-format";
 import { keysOf } from "@/shared/lib/serialize";
 
 const SEARCH_LIMIT_PER_RESOURCE = 5;
@@ -75,7 +76,10 @@ async function searchReservations(query: string): Promise<SearchResultItem[]> {
     id: r.id,
     resource: "reservation" as const,
     label: `${r.customer?.lastName ?? ""} ${r.space?.name ?? ""}`.trim(),
-    description: r.startTime.toISOString().slice(0, 10),
+    // JST-DRIFT-01: toISOString().slice(0,10) は UTC 日付を返し、日本ローカル時刻の
+    // 「深夜〜午前 9 時前」に当たる予約が前日日付で表示される silent bug。
+    // date-format.ts の JST 固定 formatter (formatJstDateString) を使う。
+    description: formatJstDateString(r.startTime),
     href: `/admin/reservations/${r.id}`,
   }));
 }
