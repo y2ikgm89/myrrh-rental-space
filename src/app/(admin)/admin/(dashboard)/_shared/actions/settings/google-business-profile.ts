@@ -2,7 +2,6 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { updateTag } from "next/cache";
 
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkPermission } from "@/admin/lib/action-auth";
@@ -10,6 +9,9 @@ import {
   syncLocationToGbpCommand,
   toggleLocationGbpSyncCommand,
 } from "@/shared/domain/locations/gbp-sync-commands";
+// CACHE-INVALIDATE-01: LOCATIONS tag は CDN Cache-Tag に emit されるため helper 経由必須
+// (詳細は location.ts の同 finding コメント参照)。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
@@ -89,7 +91,7 @@ export async function triggerGbpSync(
     resourceId: locationId,
     execute: () => syncLocationToGbpCommand({ locationId }),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.LOCATIONS);
+      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
     },
   });
 }
@@ -107,7 +109,7 @@ export async function toggleLocationGbpSync(
     resourceId: locationId,
     execute: () => toggleLocationGbpSyncCommand({ locationId, enabled }),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.LOCATIONS);
+      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
     },
   });
 }

@@ -2,7 +2,6 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { redirect } from "next/navigation";
-import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
@@ -19,6 +18,11 @@ import {
 import { syncLocationToGbpCommand } from "@/shared/domain/locations/gbp-sync-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
+// CACHE-INVALIDATE-01: LOCATIONS は cdn-cache-tags.ts で LOCATION に mapped され
+// /spaces / /spaces/[slug] の CDN Cache-Tag に emit されるため、raw updateTag では
+// Cloudflare edge に伝播せず (数時間の s-maxage の間) 旧住所 / 座標が配信され続けた。
+// invalidateSiteWideCache 経由で updateTag + Cloudflare purge_by_tags を一括発火する。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -68,7 +72,7 @@ export async function createLocationAction(
         action: "create",
         execute: async () => createLocationCommand(data),
         afterSuccess: (payload) => {
-          updateTag(CACHE_TAGS.LOCATIONS);
+          invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
           fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
             operation: "syncLocationToGbp",
             category: ErrorCategory.EXTERNAL_API,
@@ -123,7 +127,7 @@ export async function updateLocationAction(
         resourceId: locationId,
         execute: async () => updateLocationCommand(locationId, data),
         afterSuccess: (payload) => {
-          updateTag(CACHE_TAGS.LOCATIONS);
+          invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
           fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
             operation: "syncLocationToGbp",
             category: ErrorCategory.EXTERNAL_API,
@@ -162,7 +166,7 @@ export async function updateLocationPublished(
     execute: async () =>
       updateLocationPublishedCommand(parsed.data.id, parsed.data.isPublished),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.LOCATIONS);
+      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
     },
     resolveAuditResourceId: (result) => result.id,
   });
@@ -181,7 +185,7 @@ export async function updateLocationOrder(
     action: "update",
     execute: async () => updateLocationOrderCommand(parsed.data),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.LOCATIONS);
+      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
     },
   });
 }
@@ -200,7 +204,7 @@ export async function deleteLocation(
     resourceId: validated.data,
     execute: async () => deleteLocationCommand(validated.data),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.LOCATIONS);
+      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
     },
     resolveAuditResourceId: (result) => result.id,
   });
