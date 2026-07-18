@@ -30,10 +30,13 @@ import { headers } from "next/headers";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { isCustomerActiveForMypage } from "@/shared/domain/customers/guard";
+import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
 import { IncompleteProfileNotice } from "./_components/incomplete-profile-notice";
 import { SignupTermsConsumer } from "./_components/signup-terms-consumer";
+import { isReagreeAllowlisted } from "./_lib/reagree-allowlist";
 
 export const metadata: Metadata = {
   title: "マイページ",
@@ -66,12 +69,28 @@ async function MypageAuthGate({
     redirect("/login?error=account_suspended");
   }
 
+  // pathname は 2 つの gate (email 未登録・LOGIN_SIGNUP 再同意) で共用するため一括取得。
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+
   // LINE メール未登録時: settings 以外のページなら settings にリダイレクト（循環防止）
-  if (!customer.email) {
-    const headerList = await headers();
-    const pathname = headerList.get("x-pathname") ?? "";
-    if (!pathname.startsWith("/mypage/settings")) {
-      redirect("/mypage/settings?require_email=true");
+  if (!customer.email && !pathname.startsWith("/mypage/settings")) {
+    redirect("/mypage/settings?require_email=true");
+  }
+
+  // LOGIN_SIGNUP scope の必須規約が新版に差し替わっている / 未同意なら reagree ページに強制送致。
+  // 「証跡アクセスは agreement 前提外」の原則に従い、read-only 履歴閲覧経路は allowlist で通す
+  // (`_lib/reagree-allowlist.ts`)。email 未登録 → settings の gate が優先されるので、settings は
+  // allowlist に含めて循環回避する (同じ理由で terms/reagree 本体も allowlist)。
+  if (!isReagreeAllowlisted(pathname)) {
+    const pending = await getReagreeRequiredTermsForCustomer(customer.id);
+    if (pending.length > 0) {
+      const returnTo = pathname || "/mypage";
+      redirect(
+        toAppRoute(
+          `/mypage/terms/reagree?returnTo=${encodeURIComponent(returnTo)}`,
+        ),
+      );
     }
   }
 
