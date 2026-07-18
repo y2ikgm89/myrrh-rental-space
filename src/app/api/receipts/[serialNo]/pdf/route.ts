@@ -55,6 +55,14 @@ import { receiptDownloadBySerialNoRateLimiter } from "@/shared/lib/rate-limit";
  *
  * どちらも該当しなければ 404 (存在自体を隠蔽して brute force 探索を防ぐ)。
  *
+ * ## AuditLog カバレッジ (OBS-01/AUTHZ-03)
+ * - **GET session 経路** — DL 成功時に `AuditAction.READ` を fire-and-forget で append。
+ *   session hijack 検知 / 退会後の履歴保全 / 訂正時の DL 監査を hash chain 保護された
+ *   証跡として残す。userId=session.user.id、ownerCustomerId=customer.id、
+ *   path="session" を metadata に記録。
+ * - **POST token 経路** — 従来通り `AuditAction.UPDATE` (usedAt 刻印を伴う書込) を
+ *   fire-and-forget で append。path="token"。
+ *
  * ## Response
  * - Content-Type: application/pdf
  * - Content-Disposition: attachment; filename=receipt-<serialNo>.pdf
@@ -141,7 +149,10 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  return renderSessionPdf(receipt);
+  return renderSessionPdf(receipt, {
+    userId: session.user.id,
+    customerId: customer.id,
+  });
 }
 
 /**
@@ -257,9 +268,40 @@ function buildRenderInput(receipt: ReceiptForDownload) {
 
 async function renderSessionPdf(
   receipt: ReceiptForDownload,
+  session: { userId: string; customerId: string },
 ): Promise<Response> {
   try {
     const buffer = await renderReceiptPdf(buildRenderInput(receipt));
+
+    // OBS-01/AUTHZ-03: session 経路 DL 成功時に AuditLog READ を fire-and-forget 記録。
+    // 従来 session 経路は監査ゼロで session hijack 検知 / 退会後の履歴保全 / 訂正時の
+    // DL 監査ができなかった。READ action は state 変化を伴わない純粋な read アクセスを
+    // 意味的に正しく表す (POST 経路の usedAt 刻印は UPDATE)。
+    // fire-and-forget: audit chain lock timeout 等で DL 応答を遅延させないため。
+    // 失敗時は audit-log 側 logger に記録される (mypage-reservation.ts の UPDATE 経路と同型)。
+    const auditPromise = (async () => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      await createAuditLogRecord({
+        action: AuditAction.READ,
+        resource: "receipt",
+        resourceId: receipt.id,
+        userId: session.userId,
+        metadata: {
+          path: "session",
+          serialNo: receipt.serialNo,
+          ownerCustomerId: session.customerId,
+          ...(ip !== null && { ip }),
+          ...(userAgent !== null && { userAgent }),
+        },
+      });
+    })();
+    fireAndForget(auditPromise, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      operation: "receiptPdfDownloadAuditLog",
+      context: { serialNo: receipt.serialNo, path: "session" },
+    });
+
     return buildPdfResponse(buffer, receipt.serialNo);
   } catch (error) {
     logError(normalizeError(error), {

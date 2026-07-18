@@ -1641,6 +1641,7 @@ enum AuditAction {
   CREATE
   UPDATE
   DELETE
+  READ // 参照アクセス（領収書 PDF DL 等のセキュリティ観点で追跡する read）
   PUBLISH
   EXPORT
   LOGIN_SUCCESS

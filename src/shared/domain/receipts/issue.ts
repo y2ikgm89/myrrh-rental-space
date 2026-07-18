@@ -6,7 +6,13 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import { isLegacyRateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
-import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -119,10 +125,86 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 /**
+ * 領収書発行元 (source) の enum discriminator。
+ *
+ * OBS-02 対応: 初回発行の AuditLog metadata に載せて「どの経路で自動発行されたか」を
+ * hash chain 保護された証跡として残す。呼出側 (Stripe webhook / receipt-backfill cron /
+ * seed 等) は必ず明示指定すること。
+ *
+ * - "stripe-webhook": Stripe webhook (`checkout.session.completed` 等) の PAID 遷移直後
+ * - "backfill-cron": `/api/cron/receipt-backfill` の未発行 orphan 検知バッチ
+ * - "seed": prisma/seed.ts のデモデータ生成 (dev 用、prod では実行されない)
+ * - "e2e-fixture": E2E fixture 生成 (`scripts/e2e/create-receipt-download-fixture.ts`)
+ * - "admin": 管理画面から手動発行 (現状未実装、将来的な UI 用に予約)
+ */
+export type ReceiptIssueSource =
+  "stripe-webhook" | "backfill-cron" | "seed" | "e2e-fixture" | "admin";
+
+/**
+ * 発行成功 (新規 create) の AuditLog を fire-and-forget で記録する。
+ *
+ * OBS-02 (receipt-audit-log-coverage) の中核: Stripe webhook / cron 経由で採番される
+ * 領収書に hash chain 保護された発行証跡を残す。すでに receipt row は commit 済みのため
+ * audit 書込の失敗は fire-and-forget で握り潰し、logError 経由の Cloud Logging notice で
+ * 監視する (mypage-reservation.ts の UPDATE 経路と同型)。
+ *
+ * 冪等契約: idempotent early-return (既存 receipt を返す) の場合は呼ばれない。
+ * 呼出側 (webhook / cron) の at-least-once retry でも二重 audit にはならない。
+ */
+function fireReceiptCreateAuditLog(input: {
+  readonly receiptId: string;
+  readonly serialNo: string;
+  readonly reservationId?: string;
+  readonly eventRegistrationId?: string;
+  readonly amount: number;
+  readonly recipientName: string;
+  readonly source: ReceiptIssueSource | "unknown";
+}): void {
+  fireAndForget(
+    createAuditLogRecord({
+      action: AuditAction.CREATE,
+      resource: "receipt",
+      resourceId: input.receiptId,
+      // 初回自動発行 (webhook/cron) は system-issued のため userId は null。
+      // admin による reissue は別 action (`reissueReservationReceipt` 等) で
+      // userId 付きで記録される。
+      newValue: {
+        serialNo: input.serialNo,
+        revision: 0,
+        ...(input.reservationId !== undefined
+          ? { reservationId: input.reservationId }
+          : {}),
+        ...(input.eventRegistrationId !== undefined
+          ? { eventRegistrationId: input.eventRegistrationId }
+          : {}),
+        amount: input.amount,
+        recipientName: input.recipientName,
+      },
+      metadata: {
+        source: input.source,
+      },
+    }),
+    {
+      operation: "issueReceiptAuditLog",
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        receiptId: input.receiptId,
+        serialNo: input.serialNo,
+        source: input.source,
+      },
+    },
+  );
+}
+
+/**
  * Reservation の PAID 遷移直後に領収書を採番・発行する (冪等)。
  *
  * @param reservationId 対象予約 ID
- * @param options 宛名・但書 (未指定なら customer 情報から自動)
+ * @param options 宛名・但書 (未指定なら customer 情報から自動) と発行元 discriminator。
+ *   OBS-02: `source` は AuditLog metadata へ載せて hash chain 保護された発行証跡を残すため
+ *   呼出側 (webhook / cron / seed / e2e-fixture) で必ず明示指定する。未指定時は
+ *   "unknown" を記録 (静的解析では検知できないため runtime での fail-safe)。
  * @returns 発行または既存の Receipt レコード
  */
 export async function issueReceiptForReservation(
@@ -130,9 +212,14 @@ export async function issueReceiptForReservation(
   options?: {
     recipientName?: string;
     subject?: string;
+    source?: ReceiptIssueSource;
   },
 ) {
-  return prisma.$transaction(async (tx) => {
+  // 既存 receipt を idempotent early-return したのか、新規 create したのかを外側で
+  // 判別するためのフラグ。tx callback の closure から参照する。true の場合のみ
+  // 発行 AuditLog を書く (OBS-02、既存 receipt には既に発行時 audit が入っている前提)。
+  let created = false;
+  const receipt = await prisma.$transaction(async (tx) => {
     // ==============================
     // 予約単位 advisory lock (Codex P2 #1 対応)
     // ==============================
@@ -221,7 +308,7 @@ export async function issueReceiptForReservation(
     // session-level scope で稀に (別 pg connection pool 経由の重複配信等) 抜ける
     // ケースがあり得るため、@unique(reservationId) 違反時は既存を read-back して返す。
     try {
-      return await tx.receipt.create({
+      const newReceipt = await tx.receipt.create({
         data: {
           serialNo,
           reservationId,
@@ -236,6 +323,8 @@ export async function issueReceiptForReservation(
           ),
         },
       });
+      created = true;
+      return newReceipt;
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         const winner = await tx.receipt.findUnique({
@@ -246,6 +335,21 @@ export async function issueReceiptForReservation(
       throw error;
     }
   });
+
+  // OBS-02: 新規発行時のみ AuditLog CREATE を fire-and-forget で書く。
+  // 既存 receipt を idempotent early-return したケースでは追加 audit を書かない
+  // (発行時 audit は最初の呼出で既に書かれている前提)。
+  if (created) {
+    fireReceiptCreateAuditLog({
+      receiptId: receipt.id,
+      serialNo: receipt.serialNo,
+      reservationId,
+      amount: Number(receipt.amount),
+      recipientName: receipt.recipientName,
+      source: options?.source ?? "unknown",
+    });
+  }
+  return receipt;
 }
 
 /**
@@ -269,9 +373,13 @@ export async function issueReceiptForEventRegistration(
   options?: {
     recipientName?: string;
     subject?: string;
+    source?: ReceiptIssueSource;
   },
 ) {
-  return prisma.$transaction(async (tx) => {
+  // reservation 側と同型: created フラグを tx 外に共有して idempotent early-return と
+  // 新規 create を区別する (新規時のみ AuditLog CREATE を追記)。
+  let created = false;
+  const receipt = await prisma.$transaction(async (tx) => {
     // 申込単位 advisory lock (issueReceiptForReservation と同じ namespace / pattern)。
     // Stripe webhook の at-least-once 配信で同一 registrationId の並列発行を防ぐ。
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${RECEIPT_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
@@ -347,7 +455,7 @@ export async function issueReceiptForEventRegistration(
 
     // Belt-and-suspenders: @unique(eventRegistrationId) 違反時は read-back して返す。
     try {
-      return await tx.receipt.create({
+      const newReceipt = await tx.receipt.create({
         data: {
           serialNo,
           eventRegistrationId: registrationId,
@@ -363,6 +471,8 @@ export async function issueReceiptForEventRegistration(
           ),
         },
       });
+      created = true;
+      return newReceipt;
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         const winner = await tx.receipt.findUnique({
@@ -373,6 +483,20 @@ export async function issueReceiptForEventRegistration(
       throw error;
     }
   });
+
+  // OBS-02: 新規発行時のみ AuditLog CREATE を fire-and-forget で書く
+  // (reservation 側と同型)。
+  if (created) {
+    fireReceiptCreateAuditLog({
+      receiptId: receipt.id,
+      serialNo: receipt.serialNo,
+      eventRegistrationId: registrationId,
+      amount: Number(receipt.amount),
+      recipientName: receipt.recipientName,
+      source: options?.source ?? "unknown",
+    });
+  }
+  return receipt;
 }
 
 // ============================================================
