@@ -312,6 +312,35 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
     expect(mockReservationUpdate).not.toHaveBeenCalled();
   });
 
+  test("過去の日時への変更は advisory lock 取得前に早期 return (MYPAGE-EDIT-01)", async () => {
+    // parseDateTimeLocalAsJst は +09:00 固定で JST を Date に変換する。
+    // 2020-01-01T10:00+09:00 は Date.now() より遥かに過去のため過去時刻ガードに引っかかる。
+    const pastInput = {
+      spaceId: "space-1",
+      date: "2020-01-01",
+      startTime: "10:00",
+      endTime: "12:00",
+    };
+
+    const result = await updateCustomerReservation(
+      "res-1",
+      "cust-1",
+      pastInput,
+      24,
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: "過去の日時には変更できません",
+    });
+    // 早期 return なので DB /書込は一切走らない (beforeEach でクリアされる mock 群のみ検証)
+    expect(mockSpaceFindUniqueOuter).not.toHaveBeenCalled();
+    expect(mockBlockedDateFindFirst).not.toHaveBeenCalled();
+    expect(mockTxReservationFindFirst).not.toHaveBeenCalled();
+    expect(mockReservationUpdate).not.toHaveBeenCalled();
+    expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+  });
+
   test("spaceForBlockedCheck が見つからない場合 (削除済み/非公開) は 早期 return", async () => {
     mockSpaceFindUniqueOuter.mockImplementation(() => Promise.resolve(null));
 
