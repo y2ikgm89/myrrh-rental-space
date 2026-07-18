@@ -32,7 +32,10 @@ import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
-import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import {
+  assertAllRequiredTermsAgreed,
+  assertLoginSignupReagreed,
+} from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function submitInquiry(
@@ -77,6 +80,7 @@ export async function submitInquiry(
         // 従来通り domain 層の ensureCustomerNotBlacklisted が email 起点で守る。
         try {
           await assertCustomerActive(customer.id);
+          await assertLoginSignupReagreed(customer.id);
         } catch (error) {
           if (error instanceof DomainError) {
             return { ok: false, error: error.message };

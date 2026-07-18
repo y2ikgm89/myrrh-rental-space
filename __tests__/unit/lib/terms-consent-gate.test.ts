@@ -11,17 +11,28 @@ const getRequiredTermsByScopeMock =
     >
   >();
 
+const getReagreeRequiredTermsForCustomerMock =
+  mock<
+    (
+      customerId: string,
+    ) => Promise<
+      Array<{ id: string; slug: string; title: string; contentHtml: string }>
+    >
+  >();
+
 mock.module("@/shared/domain/terms/queries", () => ({
   getRequiredTermsByScope: getRequiredTermsByScopeMock,
+  getReagreeRequiredTermsForCustomer: getReagreeRequiredTermsForCustomerMock,
 }));
 
 mock.module("server-only", () => ({}));
 
-const { assertAllRequiredTermsAgreed } =
+const { assertAllRequiredTermsAgreed, assertLoginSignupReagreed } =
   await import("@/shared/lib/terms-consent-gate");
 
 afterEach(() => {
   getRequiredTermsByScopeMock.mockReset();
+  getReagreeRequiredTermsForCustomerMock.mockReset();
 });
 
 describe("assertAllRequiredTermsAgreed", () => {
@@ -71,5 +82,47 @@ describe("assertAllRequiredTermsAgreed", () => {
     expect(getRequiredTermsByScopeMock).toHaveBeenCalledWith(
       TermsScope.EVENT_REGISTRATION,
     );
+  });
+});
+
+describe("assertLoginSignupReagreed", () => {
+  test("pending が空なら no-op (throw しない)", async () => {
+    getReagreeRequiredTermsForCustomerMock.mockResolvedValueOnce([]);
+    await assertLoginSignupReagreed("cus-1");
+    expect(getReagreeRequiredTermsForCustomerMock).toHaveBeenCalledWith(
+      "cus-1",
+    );
+  });
+
+  test("pending > 0 なら DomainError(FORBIDDEN) を throw", async () => {
+    getReagreeRequiredTermsForCustomerMock.mockResolvedValueOnce([
+      {
+        id: "doc-terms",
+        slug: "terms-of-use",
+        title: "利用規約",
+        contentHtml: "<p>v2</p>",
+      },
+    ]);
+    await expect(assertLoginSignupReagreed("cus-1")).rejects.toThrow(
+      /マイページで再同意/,
+    );
+  });
+
+  test("error message に /mypage/terms/reagree の誘導パスを含む", async () => {
+    getReagreeRequiredTermsForCustomerMock.mockResolvedValueOnce([
+      {
+        id: "doc-terms",
+        slug: "terms-of-use",
+        title: "T",
+        contentHtml: "",
+      },
+    ]);
+    try {
+      await assertLoginSignupReagreed("cus-1");
+      throw new Error("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toContain("/mypage/terms/reagree");
+    }
   });
 });

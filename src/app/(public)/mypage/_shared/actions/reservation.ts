@@ -5,6 +5,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import {
   cancelCustomerReservation,
   updateCustomerReservation,
@@ -83,6 +84,7 @@ export async function startCheckoutSessionAction(
 
   try {
     await assertCustomerActive(customer.id);
+    await assertLoginSignupReagreed(customer.id);
     const result = await createCheckoutSessionCommand({
       reservationId: parsedId.data,
       actorCustomerId: customer.id,
@@ -122,6 +124,7 @@ export async function cancelReservationAction(
 
   try {
     await assertCustomerActive(customer.id);
+    await assertLoginSignupReagreed(customer.id);
     const settings = await getReservationDeadlineSettings();
     const trimmedReason =
       cancellationReason && cancellationReason.trim().length > 0
@@ -202,6 +205,7 @@ export async function updateReservationAction(
 
       try {
         await assertCustomerActive(customer.id);
+        await assertLoginSignupReagreed(customer.id);
       } catch (error) {
         if (error instanceof DomainError) {
           return { ok: false, error: error.message };

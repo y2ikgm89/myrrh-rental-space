@@ -22,6 +22,7 @@ import { createMutationError } from "@/shared/lib/mutation-result";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import { DomainError } from "@/shared/domain/domain-error";
 import { cancelCustomerReservationSeries } from "@/shared/domain/reservations/customer-commands";
 import { getCustomerCanCancelSeriesInFull } from "@/shared/domain/reservations/payloads";
@@ -61,6 +62,7 @@ export async function cancelReservationSeriesCustomerAction(
 
   try {
     await assertCustomerActive(customer.id);
+    await assertLoginSignupReagreed(customer.id);
   } catch (error) {
     if (error instanceof DomainError) {
       return createMutationError(error.message);
