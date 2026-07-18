@@ -195,6 +195,12 @@ export const updateReservationFormSchema = z
     couponCode: couponCodeSchema,
     status: z.enum(ReservationStatus).default(ReservationStatus.CONFIRMED),
     notes: notesSchema,
+    // 楽観制御: form が予約を load した時点の version を hidden で持ち回る。
+    // updateAdminReservationCommand が updateMany の WHERE 述語で claim する。
+    version: z.coerce
+      .number({ error: "バージョンが不正です" })
+      .int({ error: "バージョンが不正です" })
+      .nonnegative({ error: "バージョンが不正です" }),
   })
   .superRefine((data, ctx) => {
     refineTimeRange(data, ctx);
