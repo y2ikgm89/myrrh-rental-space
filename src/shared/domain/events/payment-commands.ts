@@ -638,6 +638,12 @@ export interface RefundEventRegistrationInput {
    * null (system / 外部起動)。
    */
   actorUserId?: string;
+  /**
+   * UA-HORIZ-04: リクエスト由来のフォレンジック context。admin action は
+   * `buildAuditRequestContext()` から取得して渡す。webhook / system 起動経路は
+   * `undefined` で呼び出し可 (metadata に ip/userAgent キーは付かない)。
+   */
+  request?: { ip: string | null; userAgent: string | null };
 }
 
 export interface RefundEventRegistrationResult {
@@ -676,6 +682,7 @@ export async function refundEventRegistrationPaymentCommand(
     reason,
     actorType,
     actorUserId,
+    request,
   } = input;
 
   const stripeSettings = await assertOnlinePaymentAvailable();
@@ -862,6 +869,8 @@ export async function refundEventRegistrationPaymentCommand(
       cumulativeAmount: result.cumulativeAmount,
       stripeRefundId: result.refundId,
       ...(reason ? { reason } : {}),
+      ...(request?.ip != null ? { ip: request.ip } : {}),
+      ...(request?.userAgent != null ? { userAgent: request.userAgent } : {}),
     },
   });
 

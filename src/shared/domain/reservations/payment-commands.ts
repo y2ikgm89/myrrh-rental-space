@@ -358,6 +358,12 @@ export interface RefundReservationInput {
    * AuditLog.userId に書く。ADMIN 経路は admin userId、AUTO_ON_CANCEL では null (system 起動)。
    */
   actorUserId?: string;
+  /**
+   * UA-HORIZ-04: リクエスト由来のフォレンジック context。admin action は
+   * `buildAuditRequestContext()` から取得して渡す。AUTO_ON_CANCEL / webhook 経路は
+   * `undefined` で呼び出し可 (metadata に ip/userAgent キーは付かない)。
+   */
+  request?: { ip: string | null; userAgent: string | null };
 }
 
 export interface RefundReservationResult {
@@ -405,6 +411,7 @@ export async function refundReservationPaymentCommand(
     reason,
     actorType,
     actorUserId,
+    request,
   } = input;
 
   const stripeSettings = await assertOnlinePaymentAvailable();
@@ -612,6 +619,8 @@ export async function refundReservationPaymentCommand(
       cumulativeAmount: result.cumulativeAmount,
       stripeRefundId: result.refundId,
       ...(reason ? { reason } : {}),
+      ...(request?.ip != null ? { ip: request.ip } : {}),
+      ...(request?.userAgent != null ? { userAgent: request.userAgent } : {}),
     },
   });
 

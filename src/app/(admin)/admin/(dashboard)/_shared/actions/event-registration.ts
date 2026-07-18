@@ -33,6 +33,7 @@ import {
   REFUNDED_BY_TYPE,
 } from "@/shared/lib/validations/enums/helpers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   prismaCuid2IdSchema,
@@ -141,10 +142,14 @@ export async function refundEventRegistrationPayment(
     action: "update",
     resourceId: validated.data,
     execute: async (user) => {
+      // UA-HORIZ-04: admin session hijack シナリオでの forensics 対称化のため
+      // ip / userAgent を AuditLog metadata に載せる (cancel / receipt / waitlist と同型)。
+      const request = await buildAuditRequestContext();
       return refundEventRegistrationPaymentCommand({
         registrationId: validated.data,
         actorType: REFUNDED_BY_TYPE.ADMIN,
         actorUserId: user.id,
+        request,
         ...(options?.amount !== undefined ? { amount: options.amount } : {}),
         ...(options?.reason !== undefined && options.reason !== ""
           ? { reason: options.reason }

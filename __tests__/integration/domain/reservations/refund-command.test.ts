@@ -445,6 +445,71 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
     }
   }, 30_000);
 
+  // UA-HORIZ-04: request が渡されたら AuditLog metadata に ip/userAgent が載る。
+  // 渡されなければ (webhook / AUTO_ON_CANCEL の後方互換) キーが付かない。
+  test("UA-HORIZ-04: request 指定時は AuditLog metadata に ip/userAgent が載る", async () => {
+    const { reservationId, cleanup } = await createPaidReservationFixture(5000);
+    try {
+      await refundReservationPaymentCommand({
+        reservationId,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        actorUserId: "admin-user-id",
+        request: { ip: "203.0.113.42", userAgent: "test-admin-agent/1.0" },
+      });
+
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+        metadata: Record<string, unknown>;
+      };
+      expect(auditInput.metadata).toMatchObject({
+        ip: "203.0.113.42",
+        userAgent: "test-admin-agent/1.0",
+      });
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
+  test("UA-HORIZ-04: request 未指定なら AuditLog metadata に ip/userAgent キーが付かない", async () => {
+    const { reservationId, cleanup } = await createPaidReservationFixture(5000);
+    try {
+      await refundReservationPaymentCommand({
+        reservationId,
+        actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      });
+
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+        metadata: Record<string, unknown>;
+      };
+      expect(auditInput.metadata).not.toHaveProperty("ip");
+      expect(auditInput.metadata).not.toHaveProperty("userAgent");
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
+  test("UA-HORIZ-04: request.ip=null / userAgent=null は metadata に載せない", async () => {
+    const { reservationId, cleanup } = await createPaidReservationFixture(5000);
+    try {
+      await refundReservationPaymentCommand({
+        reservationId,
+        actorType: REFUNDED_BY_TYPE.ADMIN,
+        actorUserId: "admin-user-id",
+        request: { ip: null, userAgent: null },
+      });
+
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+      const auditInput = mockCreateAuditLogRecord.mock.calls[0]![0] as {
+        metadata: Record<string, unknown>;
+      };
+      expect(auditInput.metadata).not.toHaveProperty("ip");
+      expect(auditInput.metadata).not.toHaveProperty("userAgent");
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
   test("concurrent race: 3 並行 refund tx で advisory lock により over-refund 防止", async () => {
     const { reservationId, cleanup } = await createPaidReservationFixture(5000);
     try {

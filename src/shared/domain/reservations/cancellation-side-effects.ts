@@ -301,6 +301,14 @@ export async function applyCancellationSideEffects(
         refundReservationPaymentCommand({
           reservationId: input.reservationId,
           actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+          // UA-HORIZ-04: 起点のキャンセル request context (ip / userAgent) を継承し、
+          // AUTO_ON_CANCEL 経由の refund AuditLog にも forensic ヘッダーを載せる。
+          // `CancelRequestContext` は tokenFingerprint も持つが、refund command は
+          // ip / userAgent のみ受け取る (session hijack 検知に十分)。
+          request: {
+            ip: input.request.ip,
+            userAgent: input.request.userAgent,
+          },
           ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
         }).then(() => {
           return;
