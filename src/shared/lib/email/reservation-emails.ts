@@ -445,7 +445,11 @@ export async function sendReservationCancelledEmail(
       ),
       attachments,
     }),
-    idempotencyKey: `reservation-cancel/${data.reservationId}`,
+    // icsSequence を含めることで、SUPER_ADMIN restore で CANCELLED→CONFIRMED に
+    // 戻した後、24h 内に再度キャンセルされた場合でも idempotency key が衝突せず
+    // Resend が `invalid_idempotent_request` で silent drop することを防ぐ
+    // （sendReservationUpdatedEmail / sendReservationStatusChangedEmail と対称）。
+    idempotencyKey: `reservation-cancel/${data.reservationId}/${data.icsSequence}`,
     operation: "sendReservationCancelledEmail",
     context: {
       reservationId: data.reservationId,
@@ -616,7 +620,10 @@ export async function sendReservationAdminNotification(
         }),
       ),
     },
-    idempotencyKey: `reservation-admin/${data.reservationId}/${action}`,
+    // icsSequence を含めることで、SUPER_ADMIN restore で CANCELLED→CONFIRMED に
+    // 戻した後、24h 内に再度同一 action の管理者通知が発火しても idempotency key が
+    // 衝突せず Resend が silent drop することを防ぐ（顧客向け通知と対称）。
+    idempotencyKey: `reservation-admin/${data.reservationId}/${action}/${data.icsSequence}`,
     operation: "sendReservationAdminNotification",
     context: {
       reservationId: data.reservationId,
