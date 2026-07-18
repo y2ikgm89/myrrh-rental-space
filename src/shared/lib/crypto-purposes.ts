@@ -21,4 +21,5 @@ export const SETTINGS_CRYPTO_PURPOSES = {
   switchbotOpenToken: "switchbot-open-token",
   switchbotSecretKey: "switchbot-secret-key",
   switchbotWebhookPathToken: "switchbot-webhook-path-token",
+  googleCalendarWebhookToken: "google-calendar-webhook-token",
 } as const;

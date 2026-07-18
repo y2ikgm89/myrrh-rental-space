@@ -359,11 +359,22 @@ export async function getGoogleCalendarWebhookState(): Promise<GoogleCalendarWeb
     },
   });
 
+  // Webhook トークンは encrypt-at-rest（SwitchBot webhook path token と同じ posture）。
+  // 復号失敗（レガシー平文・破損・kid不一致など）は "有効なトークンが無い" 扱いにする:
+  // route.ts の !settings.token 分岐で 503 になり、admin 側は webhook 未登録として表示される。
+  // 再登録時に新値が encrypt-at-rest で書き直される（renewal cron / admin action）。
+  const decryptedToken = safeDecryptToString(
+    settings?.googleCalendarWebhookToken,
+    {
+      expectedPurpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarWebhookToken,
+    },
+  );
+
   return {
     calendarId: settings?.googleCalendarId ?? null,
     channelId: settings?.googleCalendarWebhookChannelId ?? null,
     resourceId: settings?.googleCalendarWebhookResourceId ?? null,
-    token: settings?.googleCalendarWebhookToken ?? null,
+    token: decryptedToken,
     expiration: settings?.googleCalendarWebhookExpiration ?? null,
   };
 }

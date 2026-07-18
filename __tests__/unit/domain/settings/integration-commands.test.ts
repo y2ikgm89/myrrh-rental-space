@@ -670,14 +670,27 @@ describe("saveGoogleCalendarWebhookToken", () => {
   });
 
   describe("正常系", () => {
-    test("Webhook トークンを保存できる", async () => {
+    test("Webhook トークンを暗号化して保存する（平文はDBに送らない）", async () => {
+      // WEBHOOK-01: googleCalendarWebhookToken は SwitchBot webhook path token と同じ
+      // encrypt-at-rest posture (HKDF purpose "google-calendar-webhook-token")。
+      // DB dump / snapshot 経由での漏洩から webhook 認証トークンを守る。
       await saveGoogleCalendarWebhookToken("token-xyz-123");
 
       expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      // 暗号化されているため元のトークン文字列と一致してはいけない
       expect(mockSettingsUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "singleton" },
-          update: { googleCalendarWebhookToken: "token-xyz-123" },
+          update: expect.objectContaining({
+            googleCalendarWebhookToken:
+              expect.not.stringContaining("token-xyz-123"),
+          }),
+        }),
+      );
+      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            googleCalendarWebhookToken: expect.any(String),
+          }),
         }),
       );
     });
@@ -685,6 +698,21 @@ describe("saveGoogleCalendarWebhookToken", () => {
     test("戻り値が void（undefined）", async () => {
       const result = await saveGoogleCalendarWebhookToken("some-token");
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("異常系", () => {
+    test("ENCRYPTION_KEY が設定されていない場合 VALIDATION エラーをスローする", async () => {
+      mockGetPrimaryOverride.mockImplementationOnce(() => {
+        throw new Error("ENCRYPTION_KEY is not set");
+      });
+
+      await expect(
+        saveGoogleCalendarWebhookToken("token-xyz-123"),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: expect.stringContaining("暗号化に失敗しました"),
+      });
     });
   });
 });
