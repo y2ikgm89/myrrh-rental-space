@@ -233,4 +233,39 @@ describeMaybe("claimReservationReminder — cron 冪等性", () => {
       await cleanup();
     }
   });
+
+  test("CANCELLED 予約は claim できない（status guard で DB 層で拒否）", async () => {
+    const { reservationId, cleanup } = await createReservationFixture({
+      status: ReservationStatus.CANCELLED,
+    });
+    try {
+      expect(await claimReservationReminder(reservationId)).toBe(false);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("findMany 後に CANCELLED へ遷移した予約は claim できない（TOCTOU 防御）", async () => {
+    // cron の findMany が active status で返した予約でも、findMany と claim の
+    // 間に別 tx が cancel した場合、claim は status guard で拒否されるべき。
+    // 修正前は WHERE に status filter が無く、cancel 済みに reminder が送られていた。
+    const { reservationId, cleanup } = await createReservationFixture({
+      status: ReservationStatus.CONFIRMED,
+    });
+    try {
+      // findMany 直後にキャンセルが commit された race を simulate
+      await prisma.reservation.update({
+        where: { id: reservationId },
+        data: {
+          status: ReservationStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancelledByType: "CUSTOMER_MYPAGE",
+        },
+      });
+
+      expect(await claimReservationReminder(reservationId)).toBe(false);
+    } finally {
+      await cleanup();
+    }
+  });
 });
