@@ -7,6 +7,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { getAppUrl } from "@/shared/lib/constants";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
+import type { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 /** ensureCustomerLinked で使用する仮名（LINE ログイン時に name がない場合） */
 export const CUSTOMER_PLACEHOLDER_NAME = "未設定";
@@ -18,6 +19,7 @@ const CUSTOMER_LINK_SELECT = {
   firstName: true,
   userId: true,
   isActive: true,
+  status: true,
 } as const;
 
 export interface LinkedCustomer {
@@ -27,6 +29,7 @@ export interface LinkedCustomer {
   firstName: string;
   userId: string | null;
   isActive: boolean;
+  status: CustomerStatus;
 }
 
 export interface EnsureCustomerLinkedResult {
