@@ -42,11 +42,18 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
-import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+  normalizeError,
+} from "@/shared/lib/errors/server";
 import { z } from "zod";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
@@ -163,9 +170,24 @@ export async function updateReservationAction(
     formData,
     customerReservationEditSchema,
     async (data) => {
+      // UPDATE-ORDER-01 / SEC-MYPAGE-03:
+      // 順序 SSoT (rules/forms-mutations.md) の
+      // `checkActionRateLimit → validateTurnstile → session → customer →
+      //  assertCustomerActive → mutation`
+      // を厳守する。Turnstile 検証は DB / 外部 API を触らない最安のチェックなので、
+      // session 取得 (Better Auth cookie parse + Customer 引き当て) より前に置き、
+      // bot による認証済み経路 hitting を早期遮断する。
       const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
       if (!rateLimit.success) {
         return { ok: false, error: "リクエストが多すぎます" };
+      }
+
+      const turnstile = await validateTurnstile({
+        token: data.turnstileToken,
+        expectedAction: TURNSTILE_ACTIONS.mypage_reservation_edit,
+      });
+      if (!turnstile.success) {
+        return { ok: false, error: turnstile.error };
       }
 
       const session = await getCustomerSession();
@@ -185,14 +207,6 @@ export async function updateReservationAction(
           return { ok: false, error: error.message };
         }
         throw error;
-      }
-
-      const turnstile = await validateTurnstile({
-        token: data.turnstileToken,
-        expectedAction: TURNSTILE_ACTIONS.mypage_reservation_edit,
-      });
-      if (!turnstile.success) {
-        return { ok: false, error: turnstile.error };
       }
 
       try {
@@ -292,6 +306,66 @@ export async function updateReservationAction(
           {
             operation: "createCustomerUpdateNotification",
             category: ErrorCategory.DATABASE,
+          },
+        );
+
+        // SEC-MYPAGE-01: 顧客セルフ変更経路にも AuditLog を残す。
+        // admin 経路は `executeAdminMutationResult` が自動書き込みするが、
+        // customer 経路はラッパーが無いため自前で発火する
+        // (cancellation-side-effects の AuditLog パターンと同型)。
+        // AuditLog chain は append-only + hash-chain 契約のため
+        // fireAndForget + catch 内 logError で送出して action 応答を
+        // ブロックしない。before === null (該当予約が見つからなかった)
+        // ケースは、その前段の updateCustomerReservation で既に error 応答
+        // (success: false) を返しているため、ここに到達したら before は
+        // 必ず存在する (defensive に oldValue を null で送るだけ)。
+        const auditNewValue = {
+          spaceId: data.spaceId,
+          startTime: parseDateTimeLocalAsJst(
+            `${data.date}T${data.startTime}`,
+          ).toISOString(),
+          endTime: parseDateTimeLocalAsJst(
+            `${data.date}T${data.endTime}`,
+          ).toISOString(),
+        };
+        const auditOldValue = before
+          ? {
+              spaceId: before.spaceId,
+              startTime: before.startTime.toISOString(),
+              endTime: before.endTime.toISOString(),
+            }
+          : null;
+        const requestHeaders = await headers();
+        const ip = await getClientIpFromHeaders();
+        const userAgent = requestHeaders.get("user-agent");
+        fireAndForget(
+          createAuditLogRecord({
+            userId: session.user.id,
+            action: AuditAction.UPDATE,
+            resource: "reservation",
+            resourceId: data.reservationId,
+            ...(auditOldValue ? { oldValue: auditOldValue } : {}),
+            newValue: auditNewValue,
+            metadata: {
+              channel: "customer-mypage",
+              ip,
+              userAgent,
+            },
+          }).catch((error: unknown) => {
+            logError(normalizeError(error), {
+              category: ErrorCategory.DATABASE,
+              severity: ErrorSeverity.HIGH,
+              context: {
+                operation: "auditLogCustomerReservationUpdate",
+                reservationId: data.reservationId,
+              },
+            });
+          }),
+          {
+            operation: "auditLogCustomerReservationUpdate",
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.HIGH,
+            context: { reservationId: data.reservationId },
           },
         );
 
