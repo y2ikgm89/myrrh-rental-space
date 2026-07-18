@@ -52,11 +52,31 @@ export async function ensureCustomerNotBlacklisted(
 }
 
 // ---------------------------------------------------------------------------
+// isCustomerActiveForMypage — mypage の read / write を許可するかの pure 判定
+// ---------------------------------------------------------------------------
+// - `Customer.isActive === false`（管理側停止）または
+//   `Customer.status === BLACKLIST`（予約荒らし対策で status のみ更新される経路）
+//   のいずれかに該当した場合、mypage read + Server Action write の両方から締め出す
+//   ための SSoT predicate。
+// - `assertCustomerActive`（Server Action ガード）と `MypageAuthGate`（SC 描画層）
+//   の両方から参照される。read/write で判定基準が乖離すると MYPAGE-AUTH-02 の
+//   ような「status=BLACKLIST + isActive=true 顧客が mypage read を素通し」の
+//   silent bypass が生じるため、判定を必ず本 helper に集約する。
+// ---------------------------------------------------------------------------
+
+export function isCustomerActiveForMypage(customer: {
+  readonly isActive: boolean;
+  readonly status: CustomerStatus;
+}): boolean {
+  return customer.isActive && customer.status !== CustomerStatus.BLACKLIST;
+}
+
+// ---------------------------------------------------------------------------
 // assertCustomerActive — 認証済み顧客のアクション実行前の active/BLACKLIST 判定
 // ---------------------------------------------------------------------------
 // - customerId から Customer.isActive + Customer.status を単一クエリで検証する。
-// - Customer.isActive === false（管理側停止）or Customer.status === BLACKLIST の
-//   いずれかで DomainError(FORBIDDEN) を throw する。
+// - 判定は `isCustomerActiveForMypage` に委譲し、false なら DomainError(FORBIDDEN)
+//   を throw する。
 // - 該当 Customer が存在しなければ NOT_FOUND を throw する（呼出側は既に
 //   `getCustomerByUserId` 等で存在確認済みが前提だが、TOCTOU を潰す）。
 // - MypageAuthGate (SC) と同じセマンティクスを Server Action 側でも強制する
@@ -92,7 +112,7 @@ export async function assertCustomerActive(
     throw new DomainError("顧客情報が見つかりません", "NOT_FOUND");
   }
 
-  if (!customer.isActive || customer.status === CustomerStatus.BLACKLIST) {
+  if (!isCustomerActiveForMypage(customer)) {
     throw new DomainError(ACCOUNT_SUSPENDED_MESSAGE, "FORBIDDEN");
   }
 }
