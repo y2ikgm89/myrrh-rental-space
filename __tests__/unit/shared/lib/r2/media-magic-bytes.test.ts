@@ -91,13 +91,45 @@ describe("detectMediaMimeFromMagicBytes — 画像", () => {
 });
 
 describe("detectMediaMimeFromMagicBytes — 動画", () => {
-  test("MP4 ftyp box を検出", () => {
-    // 0-3: any size, 4-7: "ftyp"
+  // ftyp box を "video/mp4" と認めるのは major brand が MP4 系のときだけ。
+  // 0-3: box size (any), 4-7: "ftyp" (66 74 79 70), 8-11: major brand。
+  test("MP4 ftyp box (major brand isom) を検出", () => {
     expect(
       detectMediaMimeFromMagicBytes(
         buf([
-          0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f,
+          0x00,
+          0x00,
+          0x00,
+          0x20,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
+          0x69,
+          0x73,
+          0x6f,
+          0x6d, // "isom"
+        ]),
+      ),
+    ).toBe("video/mp4");
+  });
+
+  test("MP4 ftyp box (major brand mp42) を検出", () => {
+    expect(
+      detectMediaMimeFromMagicBytes(
+        buf([
+          0x00,
+          0x00,
+          0x00,
+          0x20,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
           0x6d,
+          0x70,
+          0x34,
+          0x32, // "mp42"
         ]),
       ),
     ).toBe("video/mp4");
@@ -172,6 +204,92 @@ describe("detectMediaMimeFromMagicBytes — 拒否ケース", () => {
     expect(
       detectMediaMimeFromMagicBytes(
         buf([0x00, 0x00, 0x00, 0x20, 0x66, 0x6f, 0x6f, 0x70]),
+      ),
+    ).toBe(null);
+  });
+
+  // ftyp box は MP4 だけでなく HEIC / M4A / QuickTime / 3GP も共有する。
+  // major brand が MP4 系以外の場合は per-type サイズ上限回避を防ぐため null。
+  test("HEIC (major brand heic) は null", () => {
+    expect(
+      detectMediaMimeFromMagicBytes(
+        buf([
+          0x00,
+          0x00,
+          0x00,
+          0x18,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
+          0x68,
+          0x65,
+          0x69,
+          0x63, // "heic"
+        ]),
+      ),
+    ).toBe(null);
+  });
+
+  test("HEIC (major brand mif1) は null", () => {
+    expect(
+      detectMediaMimeFromMagicBytes(
+        buf([
+          0x00,
+          0x00,
+          0x00,
+          0x18,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
+          0x6d,
+          0x69,
+          0x66,
+          0x31, // "mif1"
+        ]),
+      ),
+    ).toBe(null);
+  });
+
+  test("M4A (major brand 'M4A ' with trailing space) は null", () => {
+    expect(
+      detectMediaMimeFromMagicBytes(
+        buf([
+          0x00,
+          0x00,
+          0x00,
+          0x20,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
+          0x4d,
+          0x34,
+          0x41,
+          0x20, // "M4A " (trailing space)
+        ]),
+      ),
+    ).toBe(null);
+  });
+
+  test("QuickTime (major brand 'qt  ' with trailing spaces) は null", () => {
+    expect(
+      detectMediaMimeFromMagicBytes(
+        buf([
+          0x00,
+          0x00,
+          0x00,
+          0x20,
+          0x66,
+          0x74,
+          0x79,
+          0x70,
+          0x71,
+          0x74,
+          0x20,
+          0x20, // "qt  " (two trailing spaces)
+        ]),
       ),
     ).toBe(null);
   });

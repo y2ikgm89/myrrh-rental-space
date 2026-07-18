@@ -158,13 +158,39 @@ export function detectMediaMimeFromMagicBytes(
   // MP4: ISO Base Media File Format box header
   //   offset 4-7: "ftyp" (66 74 79 70)
   //   offset 8-11: major brand (e.g. "isom" / "mp42" / "iso5" / "avc1")
+  //
+  // ftyp box は MP4 だけでなく HEIC (heic/heif/mif1) / M4A (M4A ) /
+  // QuickTime (qt  ) / 3GP (3gp5 等) も共有する。major brand を確認せず
+  // 常に "video/mp4" を返すと、これらの派生形式が per-type サイズ上限を
+  // 回避して upload できてしまう（HEIC で image 上限、M4A で audio 上限を
+  // すり抜ける）。未対応 brand は「危険/未対応は永続的に非対応」の設計方針
+  // （SVG と同様）に従い null を返す。
   if (
     bytes[4] === 0x66 && // f
     bytes[5] === 0x74 && // t
     bytes[6] === 0x79 && // y
     bytes[7] === 0x70 // p
   ) {
-    return "video/mp4";
+    // bytes.length >= 12 は関数先頭で保証済み。noUncheckedIndexedAccess 対応で ?? 0 fallback。
+    const brand = String.fromCharCode(
+      bytes[8] ?? 0,
+      bytes[9] ?? 0,
+      bytes[10] ?? 0,
+      bytes[11] ?? 0,
+    );
+    const MP4_BRANDS = new Set([
+      "isom",
+      "iso2",
+      "iso5",
+      "iso6",
+      "mp41",
+      "mp42",
+      "avc1",
+      "dash",
+      "mmp4",
+    ]);
+    if (MP4_BRANDS.has(brand)) return "video/mp4";
+    return null;
   }
 
   // WebM / Matroska: EBML header signature 1A 45 DF A3
