@@ -6,12 +6,17 @@
  * @module admin/actions/settings/google-calendar
  */
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+// CACHE-DRIFT-SETTLE: INTEGRATION_SETTINGS は NEXTJS_TAG_TO_CDN_TAG 上「type-cleanliness
+// のためだけの mapping」で、実 surface は admin-only (private,no-store)。RESERVATIONS は
+// NEXTJS_TAGS_WITHOUT_CDN_MAPPING allowlist の admin-only tag。いずれも CDN 経路には
+// 露出しないため skipCdnPurge:true。helper 経由で local/no-raw-updatetag-for-cdn-mapped-
+// cache-tag drift gate を通過させる。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 import { updateEventImportEnabled } from "@/shared/domain/settings/commands";
@@ -51,8 +56,16 @@ import {
 } from "./schemas/form-schemas-security-integrations";
 
 function invalidateCalendarSyncCache(): void {
-  updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-  updateTag(CACHE_TAGS.RESERVATIONS);
+  invalidateSiteWideCache(
+    [CACHE_TAGS.INTEGRATION_SETTINGS, CACHE_TAGS.RESERVATIONS],
+    { skipCdnPurge: true },
+  );
+}
+
+function refreshIntegrationSettings(): void {
+  invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
+    skipCdnPurge: true,
+  });
 }
 
 /**
@@ -83,9 +96,7 @@ export async function updateGoogleCalendarSettings(
           });
           return null;
         },
-        afterSuccess: () => {
-          updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-        },
+        afterSuccess: refreshIntegrationSettings,
       });
       if (isMutationError(result)) {
         return { ok: false, error: result.error };
@@ -142,9 +153,7 @@ export async function testGoogleCalendarConnectionAction(
         accountEmail: result.accountEmail ?? "",
       };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
+    afterSuccess: refreshIntegrationSettings,
   });
 }
 
@@ -156,9 +165,7 @@ export async function clearGoogleCalendarServiceAccount(): Promise<MutationResul
       await clearGoogleCalendarServiceAccountCommand();
       return null;
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
+    afterSuccess: refreshIntegrationSettings,
   });
 }
 
@@ -181,9 +188,7 @@ export async function updateTwoWaySyncSettings(
           await updateTwoWaySyncSettingsCommand(data);
           return null;
         },
-        afterSuccess: () => {
-          updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-        },
+        afterSuccess: refreshIntegrationSettings,
       });
       if (isMutationError(result)) {
         return { ok: false, error: result.error };
@@ -227,9 +232,7 @@ export async function setupCalendarWebhook(): Promise<
 
       return { expiration: result.expiration };
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
+    afterSuccess: refreshIntegrationSettings,
   });
 }
 
@@ -257,9 +260,7 @@ export async function stopCalendarWebhook(): Promise<MutationResult> {
       await clearGoogleCalendarWebhook();
       return null;
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
+    afterSuccess: refreshIntegrationSettings,
   });
 }
 
@@ -273,9 +274,7 @@ export async function toggleEventImport(
       await updateEventImportEnabled(enabled);
       return null;
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
-    },
+    afterSuccess: refreshIntegrationSettings,
   });
 }
 

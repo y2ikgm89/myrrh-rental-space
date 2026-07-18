@@ -53,12 +53,10 @@ export const CDN_MAPPED_CACHE_TAGS_KEYS = [
 
 /**
  * Files that currently violate the rule and are grandfathered until a
- * follow-up migration routes them through invalidateSiteWideCache. The list
- * is expected to shrink over time — do not add new entries.
+ * follow-up migration routes them through invalidateSiteWideCache.
+ *
+ * All grandfathered files migrated as of PR CACHE-DRIFT-SETTLE (final 4
+ * Settings integrations). Any new violation now triggers a lint error —
+ * the drift gate is fully enforced. Do NOT re-populate this list.
  */
-export const LEGACY_RAW_UPDATETAG_FILES = [
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/api-keys/index.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-business-profile.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-calendar.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe.ts",
-];
+export const LEGACY_RAW_UPDATETAG_FILES = [];

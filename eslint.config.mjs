@@ -8,10 +8,7 @@ import tseslint from "typescript-eslint";
 import globals from "globals";
 import prettier from "eslint-config-prettier/flat";
 import localPlugin from "./eslint-rules/index.mjs";
-import {
-  CDN_MAPPED_CACHE_TAGS_KEYS,
-  LEGACY_RAW_UPDATETAG_FILES,
-} from "./eslint-rules/cdn-mapped-cache-tag-drift-gate-config.mjs";
+import { CDN_MAPPED_CACHE_TAGS_KEYS } from "./eslint-rules/cdn-mapped-cache-tag-drift-gate-config.mjs";
 
 const reactCompilerRestrictedImports = [
   {
@@ -257,17 +254,9 @@ const eslintConfig = defineConfig([
     },
   },
 
-  // Legacy grandfather: files that predate the drift-gate rule and still call
-  // raw updateTag(CACHE_TAGS.X) for CDN-mapped X. Follow-up PRs migrate each
-  // file to invalidateSiteWideCache and remove it from this list. The list
-  // must only shrink — the companion test enforces every path still exists.
-  {
-    name: "cdn-mapped-cache-tag-drift-gate-legacy",
-    files: LEGACY_RAW_UPDATETAG_FILES,
-    rules: {
-      "local/no-raw-updatetag-for-cdn-mapped-cache-tag": "off",
-    },
-  },
+  // (Legacy grandfather block removed — all 4 files migrated by
+  // CACHE-DRIFT-SETTLE. `LEGACY_RAW_UPDATETAG_FILES` is now empty and the
+  // drift gate is fully enforced.)
 
   // Stripe webhook helpers: ban sync constructEvent / generateTestHeaderString.
   // Bun runtime（Web Crypto / SubtleCryptoProvider 経路）では sync 版が
