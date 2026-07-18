@@ -73,7 +73,10 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: ["reservation"],
     sectionTypes: ["reservation-form"],
     templates: ["reservation"],
-    cronPaths: ["/api/cron/reservation-reminder"],
+    cronPaths: [
+      "/api/cron/reservation-reminder",
+      "/api/cron/pending-reservation-expire",
+    ],
   },
   events: {
     id: "events",

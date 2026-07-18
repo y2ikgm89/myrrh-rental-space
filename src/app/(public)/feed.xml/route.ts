@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { getPublishedPostsList } from "@/shared/domain/posts/queries";
 import { getBaseUrl } from "@/shared/lib/constants";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 
 function escapeXml(str: string): string {
   return str
@@ -13,6 +15,10 @@ function escapeXml(str: string): string {
 
 export async function GET(): Promise<Response> {
   await connection();
+
+  if (!(await isFeatureEnabled("posts"))) {
+    notFound();
+  }
 
   const baseUrl = getBaseUrl();
   const result = await getPublishedPostsList(1, 20);
