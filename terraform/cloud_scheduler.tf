@@ -111,6 +111,13 @@ locals {
       path        = "/api/cron/calendar-sync-retry"
       description = "Retry outbound Google Calendar syncs for reservations stuck with calendarSyncError (every 15 min, feature-gated by Google Calendar enabled)."
     },
+    # 段階 A: STRIPE-DEDUP-B で apply-create. 段階 B follow-up PR で imported_cron_jobs にも登録すること (tfstate rebuild 防御)
+    {
+      name        = "stripe-event-cleanup"
+      schedule    = "0 3 * * *"
+      path        = "/api/cron/stripe-event-cleanup"
+      description = "StripeEvent dedup table retention (delete rows older than 90 days) + crash-recovery unblock (delete processedAt=null rows older than 10 min so Stripe retry can re-claim). Daily 03:00 JST."
+    },
   ]
 }
 
