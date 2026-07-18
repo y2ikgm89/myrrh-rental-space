@@ -336,16 +336,24 @@ export async function writeBackInstanceGoogleCalendarEventIds(input: {
   const reservations = await getSeriesInstanceStartTimes(input.seriesId);
   const idByStart = buildInstanceIdMapByStartTime(input.instances);
 
-  let matched = 0;
-  for (const r of reservations) {
-    const gcalId = idByStart.get(r.startTime.getTime());
-    if (gcalId === undefined) continue;
-    await markSeriesInstanceCalendarSyncSuccess({
-      reservationId: r.id,
-      googleCalendarEventId: gcalId,
-    });
-    matched += 1;
-  }
+  // PERF-04: 各 update は互いに独立 (tx / advisory lock 無し、順序依存無し) のため
+  // Promise.all で並列化する。sequential await だと 52-instance の年 series で
+  // Cloud Run→Neon RTT を 52 回積み上げ ~500ms-1.5s の空 latency が admin action
+  // (T10 admin proxy registration 経路含む) の完了時間に乗っていた。
+  // db-domain.md 「tx 内 Promise.all 禁止」ルールは interactive tx callback 内の
+  // 話で、ここは tx 外の独立 write なので Prisma pool の並列 acquire で問題なし。
+  const results = await Promise.all(
+    reservations.map(async (r) => {
+      const gcalId = idByStart.get(r.startTime.getTime());
+      if (gcalId === undefined) return false;
+      await markSeriesInstanceCalendarSyncSuccess({
+        reservationId: r.id,
+        googleCalendarEventId: gcalId,
+      });
+      return true;
+    }),
+  );
+  const matched = results.filter(Boolean).length;
 
   return { matched, total: reservations.length };
 }
