@@ -248,6 +248,8 @@ export async function updateAdminReservationCommand(
     notes?: string | null | undefined;
     /** 手動 totalPrice override の実行者 (admin User.id)。監査目的で priceOverriddenBy に記録する。 */
     adminUserId: string;
+    /** 楽観制御: form が予約を load した時点の version。updateMany の WHERE 述語で claim する。 */
+    version: number;
   },
 ) {
   const startDateTime = parseDateTimeLocalAsJst(
@@ -403,8 +405,15 @@ export async function updateAdminReservationCommand(
       tx,
     );
 
-    const updatedReservation = await tx.reservation.update({
-      where: { id, deletedAt: null },
+    // 楽観制御 (optimistic concurrency): WHERE に version 述語を追加して claim する。
+    // updateMany は select 不可のため、icsSequence は claim 成功後に別 SELECT で取得する
+    // (詳細は下記 findUniqueOrThrow のコメント参照)。
+    const updateResult = await tx.reservation.updateMany({
+      where: {
+        id,
+        deletedAt: null,
+        version: input.version,
+      },
       data: {
         spaceId: input.spaceId,
         customerId: input.customerId,
@@ -428,10 +437,25 @@ export async function updateAdminReservationCommand(
         totalPriceWithTax,
         notes: input.notes || null,
         icsSequence: { increment: 1 },
+        version: { increment: 1 },
       },
+    });
+
+    if (updateResult.count === 0) {
+      throw new DomainError(
+        "予約情報が別の画面で変更されました。予約詳細画面に戻って再読み込みしてから、もう一度お試しください。",
+        "CONFLICT",
+      );
+    }
+
+    // updateMany は select 不可のため icsSequence を別 SELECT で取得する。
+    // 同 tx 内・claim 成功後の read であり、version は既に increment 済みなので
+    // stale read の懸念はない。
+    const refreshed = await tx.reservation.findUniqueOrThrow({
+      where: { id },
       select: { icsSequence: true },
     });
-    updatedIcsSequence = updatedReservation.icsSequence;
+    updatedIcsSequence = refreshed.icsSequence;
 
     if (couponChanged) {
       if (oldCouponId) {

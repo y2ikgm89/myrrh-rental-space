@@ -156,11 +156,24 @@ const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
   Promise.resolve(null),
 );
 
+// updateAdminReservationCommand の楽観制御 (version) claim 用。tx.reservation.updateMany
+// (claim) + tx.reservation.findUniqueOrThrow (claim 成功後の icsSequence 別 SELECT)。
+// 既定は count:1 (claim 成功) / icsSequence:1。version conflict (count:0) を検証する
+// テストは mockImplementationOnce で count:0 に差し替える。
+const mockTxReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 1 }),
+);
+const mockTxReservationFindUniqueOrThrow = mock<
+  () => Promise<{ icsSequence: number }>
+>(() => Promise.resolve({ icsSequence: 1 }));
+
 const txClient = {
   reservation: {
     findFirst: mockTxReservationFindFirst,
     create: mockReservationCreate,
     update: mockReservationUpdate,
+    updateMany: mockTxReservationUpdateMany,
+    findUniqueOrThrow: mockTxReservationFindUniqueOrThrow,
   },
   coupon: {
     findUnique: mockCouponFindUnique,
@@ -304,6 +317,14 @@ function resetAllMocks() {
   mockBlockedDateFindFirst.mockClear();
   mockBlockedDateFindFirst.mockResolvedValue(null);
   mockTxReservationFindFirst.mockClear();
+  mockTxReservationUpdateMany.mockClear();
+  mockTxReservationUpdateMany.mockImplementation(() =>
+    Promise.resolve({ count: 1 }),
+  );
+  mockTxReservationFindUniqueOrThrow.mockClear();
+  mockTxReservationFindUniqueOrThrow.mockImplementation(() =>
+    Promise.resolve({ icsSequence: 1 }),
+  );
   mockGetSpaceRatePlans.mockClear();
   mockGetSpaceRatePlans.mockResolvedValue([]);
 
@@ -681,6 +702,10 @@ describe("updateAdminReservationCommand", () => {
     customerId: "cust-1",
     status: ReservationStatus.CONFIRMED,
     adminUserId: "admin-1",
+    // 楽観制御: beforeEach の既存予約 fixture は version 未指定 (mock 上は無視され、
+    // tx.reservation.updateMany の WHERE 述語に渡るだけ)。既定 mock は count:1 を
+    // 返す (claim 成功) ため 0 で固定する。
+    version: 0,
   };
 
   beforeEach(() => {
@@ -771,7 +796,7 @@ describe("updateAdminReservationCommand", () => {
       await updateAdminReservationCommand("res-1", validInput);
 
       // hourlyPrice=1000 × 2h = basePrice=2000、20% 割引 = -400 → totalPrice=1600
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             basePrice: 2000,
@@ -869,7 +894,7 @@ describe("updateAdminReservationCommand", () => {
       // hourlyPrice=1000 × 2h → totalPrice=2000、tax = round(2000 × 10 / 100) = 200、withTax=2200
       await updateAdminReservationCommand("res-1", validInput);
 
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             totalPrice: 2000,
@@ -885,12 +910,29 @@ describe("updateAdminReservationCommand", () => {
       await updateAdminReservationCommand("res-1", validInput);
 
       // hourlyPrice=1000 × 2h → totalPrice=2000、tax=0、withTax=2000
-      expect(mockReservationUpdate).toHaveBeenCalledWith(
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             totalPrice: 2000,
             taxAmount: 0,
             totalPriceWithTax: 2000,
+          }),
+        }),
+      );
+    });
+
+    test("楽観制御: updateMany の WHERE に id/deletedAt/version 述語、data に version increment", async () => {
+      await updateAdminReservationCommand("res-1", validInput);
+
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: "res-1",
+            deletedAt: null,
+            version: 0,
+          }),
+          data: expect.objectContaining({
+            version: { increment: 1 },
           }),
         }),
       );
@@ -969,6 +1011,24 @@ describe("updateAdminReservationCommand", () => {
       ).rejects.toThrow(
         "このステータスへの変更は予約詳細画面のステータス変更から行ってください",
       );
+    });
+
+    test("楽観制御: version mismatch (updateMany count=0) で DomainError CONFLICT", async () => {
+      mockTxReservationUpdateMany.mockImplementation(() =>
+        Promise.resolve({ count: 0 }),
+      );
+
+      await expect(
+        updateAdminReservationCommand("res-1", validInput),
+      ).rejects.toThrow("予約情報が別の画面で変更されました");
+
+      try {
+        await updateAdminReservationCommand("res-1", validInput);
+        throw new Error("expected rejection");
+      } catch (error) {
+        expect(error).toBeInstanceOf(DomainError);
+        expect((error as DomainError).code).toBe("CONFLICT");
+      }
     });
   });
 });
