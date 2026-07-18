@@ -9,7 +9,7 @@ import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 const mockUpdateMany = mock<
   (args: Record<string, unknown>) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 1 }));
-// offerNextWaitlistEntryCommand の FIFO 候補検索用（CONFIRMED 由来のキャンセルでのみ呼ばれる）
+// offerNextWaitlistEntryCommand の FIFO 候補検索用（CONFIRMED または WAITLISTED_OFFERED 由来のキャンセルで呼ばれる）
 const mockFindFirst = mock<
   (
     args: Record<string, unknown>,
@@ -137,7 +137,45 @@ describe("applyEventRegistrationCancellation", () => {
     expect(mockUpdateMany).toHaveBeenCalledTimes(1);
   });
 
-  test("WAITLISTED_OFFERED も自己キャンセルできる（promote 対象外）", async () => {
+  test("WAITLISTED_OFFERED を自己キャンセルすると空いた枠を FIFO で次の WAITLISTED に offer する（MYPAGE-EVENT-03）", async () => {
+    // 24h 期限内の offer は「対象顧客のために予約された枠」を専有するため、
+    // 顧客がその offer をセルフキャンセルした場合も cron `waitlist-expire` の
+    // 期限切れ経路と同じく次の WAITLISTED を promote する必要がある。
+    mockFindFirst.mockResolvedValue({ id: "waiter2", email: "w2@example.com" });
+
+    const result = await applyEventRegistrationCancellation(
+      mockTx,
+      { ...BASE_REGISTRATION, status: RegistrationStatus.WAITLISTED_OFFERED },
+      customerMypageOptions(),
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.previousStatus).toBe(RegistrationStatus.WAITLISTED_OFFERED);
+      expect(result.promoted).toEqual({
+        id: "waiter2",
+        email: "w2@example.com",
+        offeredAt: NOW,
+        expiresAt: expect.any(Date),
+      });
+    }
+    // FIFO 先頭の WAITLISTED を検索する findFirst と、そのステータス遷移の
+    // updateMany の 2 経路が呼ばれる。
+    expect(mockFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          slotId: "slot1",
+          ticketId: "ticket1",
+          status: RegistrationStatus.WAITLISTED,
+        }),
+      }),
+    );
+    // 元 offer 行の CANCELLED 化 + 次候補の WAITLISTED_OFFERED 化で 2 回。
+    expect(mockUpdateMany).toHaveBeenCalledTimes(2);
+  });
+
+  test("WAITLISTED_OFFERED キャンセルで waitlist が空なら promoted: null（誤発火防止の回帰ガード）", async () => {
+    // 既定の mockFindFirst.mockResolvedValue(null) を使用（beforeEach で設定済み）
     const result = await applyEventRegistrationCancellation(
       mockTx,
       { ...BASE_REGISTRATION, status: RegistrationStatus.WAITLISTED_OFFERED },
@@ -149,7 +187,9 @@ describe("applyEventRegistrationCancellation", () => {
       previousStatus: RegistrationStatus.WAITLISTED_OFFERED,
       promoted: null,
     });
-    expect(mockFindFirst).not.toHaveBeenCalled();
+    expect(mockFindFirst).toHaveBeenCalledTimes(1);
+    // findFirst が null を返すため 2 回目の updateMany (promote claim) は走らない
+    expect(mockUpdateMany).toHaveBeenCalledTimes(1);
   });
 
   test("CUSTOMER_TOKEN / ADMIN を渡すと cancelledByType にそのまま流れる", async () => {

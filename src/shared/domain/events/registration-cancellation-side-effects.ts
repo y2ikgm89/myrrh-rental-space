@@ -14,8 +14,9 @@
  *   4. AuditLog 書き込み（actor / channel / IP / UA を記録）
  *   5. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
  *      `applyEventRegistrationCancellation` が同一 tx 内で
- *      `offerNextWaitlistEntryCommand` を呼び、CONFIRMED 由来のキャンセルで
- *      空いた枠に次の WAITLISTED を昇格させた場合に送る）
+ *      `offerNextWaitlistEntryCommand` を呼び、CONFIRMED または WAITLISTED_OFFERED
+ *      由来のキャンセルで空いた枠に次の WAITLISTED を昇格させた場合に送る。
+ *      WAITLISTED_OFFERED を対象に含める理由は MYPAGE-EVENT-03 を参照）
  *
  * 呼び出し条件:
  *   `applyEventRegistrationCancellation` が `success: true` を返した後にだけ呼ぶ。
@@ -68,10 +69,10 @@ export interface EventCancellationSideEffectInput {
   };
   /**
    * `applyEventRegistrationCancellation` の戻り値 `promoted` をそのまま渡す。
-   * CONFIRMED 由来のキャンセルで空いた枠に FIFO 先頭の WAITLISTED が
-   * 昇格した場合のみ非 null。呼び出し側（3 つの cancel 経路すべて）は
-   * ドメインコマンドの戻り値を素通しするだけでよい（このヘルパー内部で
-   * 「昇格していたら繰り上げ当選メールを送る」判断まで完結させる SSoT）。
+   * CONFIRMED または WAITLISTED_OFFERED 由来のキャンセルで空いた枠に FIFO
+   * 先頭の WAITLISTED が昇格した場合のみ非 null。呼び出し側（3 つの cancel
+   * 経路すべて）はドメインコマンドの戻り値を素通しするだけでよい（このヘルパー
+   * 内部で「昇格していたら繰り上げ当選メールを送る」判断まで完結させる SSoT）。
    */
   promoted: WaitlistPromotionOutcome;
 }
