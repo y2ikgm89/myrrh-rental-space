@@ -11,7 +11,13 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import { CouponType, DayOfWeek, HolidayMode } from "@generated/prisma/enums";
+import {
+  CouponType,
+  DayOfWeek,
+  HolidayMode,
+  PaymentStatus,
+  ReservationStatus,
+} from "@generated/prisma/enums";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -38,6 +44,8 @@ type PublicCommandsModule =
   typeof import("@/shared/domain/reservations/public-commands");
 type CustomerCommandsModule =
   typeof import("@/shared/domain/reservations/customer-commands");
+type PaymentQueriesModule =
+  typeof import("@/shared/domain/reservations/payment-queries");
 type RatePlanCommandsModule =
   typeof import("@/shared/domain/spaces/rate-plan-commands");
 type RateBreakdownModule = typeof import("@/shared/lib/pricing/rate-breakdown");
@@ -46,6 +54,8 @@ let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let createPublicReservationCommand: PublicCommandsModule["createPublicReservationCommand"];
 let updateCustomerReservation: CustomerCommandsModule["updateCustomerReservation"];
+let cancelCustomerReservation: CustomerCommandsModule["cancelCustomerReservation"];
+let claimReservationAsPaid: PaymentQueriesModule["claimReservationAsPaid"];
 let createSpaceRatePlan: RatePlanCommandsModule["createSpaceRatePlan"];
 let updateSpaceRatePlan: RatePlanCommandsModule["updateSpaceRatePlan"];
 let rateBreakdownSchema: RateBreakdownModule["rateBreakdownSchema"];
@@ -54,6 +64,7 @@ let rateBreakdownSchema: RateBreakdownModule["rateBreakdownSchema"];
 const THURSDAY_DATE = "2027-03-18";
 const FRIDAY_DATE = "2027-03-19";
 const MODIFICATION_DEADLINE_HOURS = 48;
+const CANCEL_DEADLINE_HOURS = 24;
 
 let nextFixtureLocationSortOrder = 1_500_000_000;
 
@@ -190,8 +201,10 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     ({ createPublicReservationCommand } =
       await import("@/shared/domain/reservations/public-commands"));
-    ({ updateCustomerReservation } =
+    ({ updateCustomerReservation, cancelCustomerReservation } =
       await import("@/shared/domain/reservations/customer-commands"));
+    ({ claimReservationAsPaid } =
+      await import("@/shared/domain/reservations/payment-queries"));
     ({ createSpaceRatePlan, updateSpaceRatePlan } =
       await import("@/shared/domain/spaces/rate-plan-commands"));
     ({ rateBreakdownSchema } =
@@ -561,6 +574,75 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           MODIFICATION_DEADLINE_HOURS,
         );
         expect(retry.success).toBe(true);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+  });
+
+  describe("非 form path は version を touch しない (spec §3.1.1 gate)", () => {
+    test("cancel-core (cancelCustomerReservation) 経由の書込後、version は不変", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        // まず form path で version を 0 → 1 に進める
+        const updateResult = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(updateResult.success).toBe(true);
+        const beforeCancel = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true },
+        });
+        expect(beforeCancel.version).toBe(1);
+
+        // cancel-core (非 form path) 実行。applyCancellation は version を
+        // WHERE 述語にも SET 句にも含まない (icsSequence のみ increment)。
+        const cancelResult = await cancelCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          CANCEL_DEADLINE_HOURS,
+          "test cancel",
+        );
+        expect(cancelResult.success).toBe(true);
+
+        const afterCancel = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true, status: true },
+        });
+        expect(afterCancel.status).toBe(ReservationStatus.CANCELLED);
+        expect(afterCancel.version).toBe(1); // 不変
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    test("claimReservationAsPaid (非 form path、webhook 由来の paymentStatus 遷移) 経由でも version は不変", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        // createPublicReservationCommand は status=CONFIRMED / paymentStatus=UNPAID
+        // (schema @default) で作成する。claimReservationAsPaid は Stripe webhook
+        // (checkout.session.completed) から呼ばれる想定の atomic claim で、
+        // WHERE/SET のいずれにも version を含めない。
+        const claimed = await claimReservationAsPaid(fixture.reservationId, {
+          stripePaymentIntentId: null,
+        });
+        expect(claimed).not.toBeNull();
+        expect(claimed?.paymentStatus).toBe(PaymentStatus.PAID);
+
+        const after = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true },
+        });
+        expect(after.version).toBe(0); // 不変
       } finally {
         await fixture.cleanup();
       }
