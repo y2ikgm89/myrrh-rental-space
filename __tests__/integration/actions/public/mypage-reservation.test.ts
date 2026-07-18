@@ -204,6 +204,22 @@ mock.module("@/shared/domain/reservations/edit-side-effects", () => ({
   ),
 }));
 
+// SEC-MYPAGE-01: updateReservationAction が成功後に fireAndForget で
+// createAuditLogRecord を呼ぶ (customer 経路にも AuditLog を残す fix)。
+// 実 DB / hash chain を触らないよう no-op モック化する。
+const mockCreateAuditLogRecord = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: mockCreateAuditLogRecord,
+}));
+
+// 変更通知メールで fetchReservationEmailData が呼ばれる。DB 経路を触らないよう
+// no-op モック化する (payload なし → send{Reservation,Admin} は skip される)。
+mock.module("@/shared/domain/reservations/payloads", () => ({
+  fetchReservationEmailData: mock(() => Promise.resolve(null)),
+}));
+
 // 設定クエリモック
 const mockGetReservationDeadlineSettings = mock(
   (): Promise<{
@@ -545,6 +561,7 @@ describe("updateReservationAction", () => {
     mockCheckActionRateLimit.mockClear();
     mockValidateTurnstile.mockClear();
     mockUpdateTag.mockClear();
+    mockCreateAuditLogRecord.mockClear();
 
     mockGetSession.mockImplementation(() =>
       Promise.resolve({
@@ -856,6 +873,77 @@ describe("updateReservationAction", () => {
       await expect(
         updateReservationAction(undefined, inputToFormData(VALID_UPDATE_INPUT)),
       ).rejects.toThrow("予期しない DB エラー");
+    });
+  });
+
+  // SEC-MYPAGE-01 / UPDATE-ORDER-01 / SEC-MYPAGE-03:
+  // customer 経路にも AuditLog を残す + Turnstile 順序 SSoT 準拠を固定する。
+  describe("Turnstile 順序 (UPDATE-ORDER-01 / SEC-MYPAGE-03)", () => {
+    test("Turnstile 検証は session/customer 取得より前に走る", async () => {
+      // Turnstile が fail した場合、session/customer は呼ばれない = order 証明。
+      mockValidateTurnstile.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error: "Turnstile 検証に失敗しました",
+        }),
+      );
+
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      const result = await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+      expectSubmissionLike(result);
+
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("Turnstile 検証に失敗しました");
+      expect(mockValidateTurnstile).toHaveBeenCalledTimes(1);
+      // 順序 SSoT: Turnstile fail → session/customer は取得されない
+      expect(mockGetSession).not.toHaveBeenCalled();
+      expect(mockGetCustomerByUserId).not.toHaveBeenCalled();
+      expect(mockUpdateCustomerReservation).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("AuditLog (SEC-MYPAGE-01)", () => {
+    test("成功時に createAuditLogRecord が userId + resource='reservation' で呼ばれる", async () => {
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+      const call = mockCreateAuditLogRecord.mock.calls[0]?.[0] ?? {};
+      expect(call["userId"]).toBe("user-001");
+      expect(call["action"]).toBe("UPDATE");
+      expect(call["resource"]).toBe("reservation");
+      expect(call["resourceId"]).toBe(VALID_RESERVATION_ID);
+      expect(call["newValue"]).toBeDefined();
+      expect(call["metadata"]).toBeDefined();
+    });
+
+    test("update が success:false を返すと AuditLog は書かれない", async () => {
+      mockUpdateCustomerReservation.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error: "変更期限を過ぎています",
+        }),
+      );
+
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+
+      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
     });
   });
 
