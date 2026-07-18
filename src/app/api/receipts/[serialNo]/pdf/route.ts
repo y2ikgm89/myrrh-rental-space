@@ -76,7 +76,11 @@ export async function GET(
     }
   }
 
+  // OBS-01/AUTHZ-03: session 経路の AuditLog metadata (userId / ownerCustomerId) に
+  // 使うため、ownership 検証で参照した customer を top-level に hoist する
+  // (session 経路 DL 成功時に fireReceiptSessionReadAuditLog へ渡す)。
   let sessionAuthorized = false;
+  let sessionCustomer: { id: string; userId: string } | null = null;
   if (!tokenValid) {
     const session = await getCustomerSession();
     if (session) {
@@ -94,6 +98,11 @@ export async function GET(
         try {
           await assertCustomerActive(customer.id);
           sessionAuthorized = true;
+          // customer.userId は Prisma schema 上 nullable (`String?`) だが、
+          // 直前の `getCustomerByUserId(session.user.id)` で解決した customer なので
+          // 必ず session.user.id と一致する (unique 制約 + 検索キー)。TypeScript の
+          // narrowing が届かないため session 側の id で確定させる。
+          sessionCustomer = { id: customer.id, userId: session.user.id };
         } catch (error) {
           if (error instanceof DomainError && error.code === "FORBIDDEN") {
             return new Response("Forbidden", { status: 403 });
@@ -185,6 +194,42 @@ export async function GET(
   // ==============================
   try {
     const buffer = await renderReceiptPdf(renderInput);
+
+    // OBS-01/AUTHZ-03: session 経路 DL も AuditLog に append (token 経路と同型)。
+    // 現状 session 経路は監査ゼロで session hijack 検知・退会後の履歴保全・訂正時の
+    // DL 監査ができない。READ action で読取アクセスを hash chain 保護された証跡に残す
+    // (token 経路の usedAt 刻印は UPDATE 相当だが session 経路は state 変化を伴わない
+    // 純粋な read のため意味的に正しい READ を採用)。
+    //
+    // fire-and-forget: audit chain lock timeout 等で DL 応答を遅延させないため。
+    // 失敗時は audit-log/commands.ts 側の logger に記録される。ここでは
+    // sessionAuthorized=true の分岐で hoist した sessionCustomer を再利用する
+    // (再取得は避ける — ownership 検証で解決済み + Prisma round-trip 節約)。
+    if (sessionCustomer !== null) {
+      const auditPromise = (async () => {
+        const { ip, userAgent } = await buildAuditRequestContext();
+        await createAuditLogRecord({
+          action: AuditAction.READ,
+          resource: "receipt",
+          resourceId: receipt.id,
+          userId: sessionCustomer.userId,
+          metadata: {
+            path: "session",
+            serialNo: receipt.serialNo,
+            ownerCustomerId: sessionCustomer.id,
+            ...(ip !== null && { ip }),
+            ...(userAgent !== null && { userAgent }),
+          },
+        });
+      })();
+      fireAndForget(auditPromise, {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+        operation: "receiptPdfDownloadAuditLog",
+        context: { serialNo: receipt.serialNo, path: "session" },
+      });
+    }
+
     return buildPdfResponse(buffer, receipt.serialNo);
   } catch (error) {
     logError(normalizeError(error), {

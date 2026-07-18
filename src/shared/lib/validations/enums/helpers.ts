@@ -526,6 +526,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AuditAction.CREATE]: "作成",
   [AuditAction.UPDATE]: "更新",
   [AuditAction.DELETE]: "削除",
+  [AuditAction.READ]: "参照",
   [AuditAction.PUBLISH]: "公開",
   [AuditAction.EXPORT]: "エクスポート",
   [AuditAction.LOGIN_SUCCESS]: "ログイン成功",
