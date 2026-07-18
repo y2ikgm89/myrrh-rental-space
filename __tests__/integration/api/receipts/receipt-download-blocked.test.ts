@@ -6,6 +6,11 @@
  * 成立しても Customer.isActive === false or status === BLACKLIST なら 403 を返し、
  * 領収書 (適格請求書 = 課税事業者情報を含む文書) の DL を封鎖することを確認する。
  *
+ * ## HTTP-02 (2026-07) 以降の経路分割
+ * GET は Better Auth session 専用に変更 (token 経路の GET は削除、POST に移動)。
+ * 本テストは session 経路 (mypage) の active/BLACKLIST ガードを検証する。
+ * token 経路のテストは `token-post-only.test.ts` を参照。
+ *
  * 実 Postgres は使わず mock.module ベースで route の応答を verify する
  * (`calendar-reservation.test.ts` と同じスタイル)。
  */
@@ -54,12 +59,6 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
 
     mock.module("@/shared/domain/customers/queries", () => ({
       getCustomerByUserId: mock(() => Promise.resolve({ id: CUSTOMER_ID })),
-    }));
-
-    // token 経路は使わない (session 経路の gate を検証するため)。verify は
-    // 常に invalid を返す = token cookieless path で必ず session path に落ちる。
-    mock.module("@/shared/lib/receipt-download-token", () => ({
-      verifyReceiptDownloadToken: mock(() => ({ valid: false })),
     }));
 
     mock.module("@/shared/lib/errors/server", () => ({

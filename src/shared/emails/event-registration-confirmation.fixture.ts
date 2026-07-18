@@ -26,7 +26,7 @@ export const eventRegistrationConfirmationFixture = {
   cancelUrl: "https://example.com/events/cancel?token=DEMO-TOKEN-DO-NOT-USE",
   claimUrl: "https://example.com/claim/event-registration?token=preview-token",
   receiptDownloadUrl:
-    "https://example.com/api/receipts/2026-000002/pdf?token=DEMO-RECEIPT-TOKEN",
+    "https://example.com/receipts/2026-000002/download?token=DEMO-RECEIPT-TOKEN",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof EventRegistrationConfirmationEmail>[0];
 

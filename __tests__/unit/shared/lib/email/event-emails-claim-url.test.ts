@@ -240,10 +240,12 @@ describe("sendEventRegistrationConfirmation() の memberEventRegistrationUrl 出
   });
 });
 
-// RECEIPT-GUEST-01: ゲスト申込かつ receiptSerialNo が渡された場合のみ、
-// 領収書 PDF ダウンロード署名 URL を発行する。会員はマイページ経由で DL。
+// RECEIPT-GUEST-01 / HTTP-02: ゲスト申込かつ receiptSerialNo が渡された場合のみ、
+// 領収書 PDF ダウンロード confirm page 経由の署名 URL を発行する。
+// HTTP-02 以降は直リンク (`/api/receipts/...`) を発行せず、confirm page
+// (`/receipts/[serialNo]/download?token=`) 経由に切り替え済み (link scanner 対策)。
 describe("sendEventRegistrationConfirmation() の receiptDownloadUrl 出し分け", () => {
-  test("ゲスト申込 + receiptSerialNo あり → receiptDownloadUrl を発行する", async () => {
+  test("ゲスト申込 + receiptSerialNo あり → receiptDownloadUrl を confirm page 向けに発行する", async () => {
     await sendEventRegistrationConfirmation({
       ...REGISTRATION_DATA,
       customerId: null,
@@ -252,8 +254,10 @@ describe("sendEventRegistrationConfirmation() の receiptDownloadUrl 出し分�
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.receiptDownloadUrl).toMatch(
-      /\/api\/receipts\/2026-000042\/pdf\?token=[A-Za-z0-9_-]+$/,
+      /\/receipts\/2026-000042\/download\?token=[A-Za-z0-9_-]+$/,
     );
+    // HTTP-02: 旧 API 直リンクは発行しない
+    expect(props?.receiptDownloadUrl).not.toContain("/api/receipts/");
   });
 
   test("会員申込 + receiptSerialNo あり → receiptDownloadUrl は発行しない", async () => {

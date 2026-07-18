@@ -609,6 +609,9 @@ describe("architecture boundaries", () => {
       'source: "/login/:path*"',
       'source: "/preview/:path*"',
       'source: "/contact/:path*"',
+      // HTTP-02: ゲスト向け領収書 confirm page 経路。署名トークン URL 経由で
+      // 個別ユーザーの領収書にアクセスするため CDN キャッシュ不可 (private route)。
+      'source: "/receipts/:path*"',
     ]) {
       const specificIndex = source.indexOf(specificSource);
       expect(specificIndex).toBeGreaterThanOrEqual(0);

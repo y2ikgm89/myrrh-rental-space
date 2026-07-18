@@ -164,11 +164,13 @@ export async function sendEventRegistrationConfirmation(
       ? `${appUrl}/events/cancel?token=${createEventCancelToken(data.registrationId, cancelDeadline)}`
       : undefined;
 
-  // ゲスト申込かつ Receipt 採番済みなら、領収書 PDF ダウンロード署名 URL を発行する
-  // (RECEIPT-GUEST-01)。会員はマイページから DL できるため署名 URL は不要。
+  // ゲスト申込かつ Receipt 採番済みなら、領収書 PDF ダウンロード確認ページ URL を
+  // 発行する (RECEIPT-GUEST-01 / HTTP-02)。会員はマイページから DL できるため
+  // 署名 URL は不要。詳細は `reservation-emails.ts` の同名フィールドコメント参照
+  // (link scanner による usedAt 消費対策の切り分けは対称)。
   const receiptDownloadUrl =
     !data.customerId && data.receiptSerialNo
-      ? `${appUrl}/api/receipts/${data.receiptSerialNo}/pdf?token=${createReceiptDownloadToken(data.receiptSerialNo)}`
+      ? `${appUrl}/receipts/${data.receiptSerialNo}/download?token=${createReceiptDownloadToken(data.receiptSerialNo)}`
       : undefined;
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
