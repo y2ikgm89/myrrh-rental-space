@@ -9,7 +9,7 @@
  * `_executeAdminMutationResult-rbac.test.ts` を参照。
  *
  * 対象: updateCustomerStatus / updateCustomerNotes / toggleCustomerActive /
- * deleteCustomer / mergeCustomers
+ * anonymizeCustomer / mergeCustomers
  *
  * conform 系 (createCustomer / updateCustomer) は customerFormSchema が
  * 巨大なため後続タスクで分離。
@@ -23,7 +23,19 @@ mock.module("server-only", () => ({}));
 const mockUpdateStatus = mock(async () => {});
 const mockUpdateNotes = mock(async () => {});
 const mockToggleActive = mock(async () => {});
-const mockDeleteCustomer = mock(async () => {});
+const mockAnonymizeCustomer = mock<
+  (input: { customerId: string; reason: string }) => Promise<{
+    customerId: string;
+    anonymizedAt: Date;
+    reason: string;
+    hadUserId: boolean;
+  }>
+>(async ({ customerId, reason }) => ({
+  customerId,
+  anonymizedAt: new Date(),
+  reason,
+  hadUserId: false,
+}));
 const mockMerge = mock(async () => ({
   transferredReservations: 1,
   transferredInquiries: 0,
@@ -37,7 +49,7 @@ mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerStatus: mockUpdateStatus,
   updateCustomerNotes: mockUpdateNotes,
   toggleCustomerActive: mockToggleActive,
-  deleteCustomer: mockDeleteCustomer,
+  anonymizeCustomerCommand: mockAnonymizeCustomer,
   mergeCustomerCommand: mockMerge,
   updateCustomerFromGuestData: mock(async () => {}),
 }));
@@ -81,7 +93,7 @@ const {
   updateCustomerStatus,
   updateCustomerNotes,
   toggleCustomerActive,
-  deleteCustomer,
+  anonymizeCustomer,
   mergeCustomers,
 } = await import("@/app/(admin)/admin/(dashboard)/_shared/actions/customer");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
@@ -151,19 +163,29 @@ describe("toggleCustomerActive (action shape)", () => {
   });
 });
 
-describe("deleteCustomer (action shape)", () => {
+describe("anonymizeCustomer (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
-    mockDeleteCustomer.mockClear();
+    mockAnonymizeCustomer.mockClear();
   });
 
   test("無効な id は validation error", async () => {
-    const r = await deleteCustomer("bad");
+    const r = await anonymizeCustomer("bad", "customer-requested");
     expect(isMutationError(r)).toBe(true);
   });
 
-  test("正常系: resource=customer, action=delete", async () => {
-    await deleteCustomer(VALID_UUID);
+  test("無効な reason は validation error", async () => {
+    // 意図的に schema 外の値を渡して VALIDATION 分岐に到達させる。
+    // enum を無効化するため runtime 側キャストで型を騙す。
+    const invalidReason = "invalid-reason" as unknown as Parameters<
+      typeof anonymizeCustomer
+    >[1];
+    const r = await anonymizeCustomer(VALID_UUID, invalidReason);
+    expect(isMutationError(r)).toBe(true);
+  });
+
+  test("正常系: resource=customer, action=delete, reason 伝搬", async () => {
+    await anonymizeCustomer(VALID_UUID, "admin-purge");
     expect(mockExecute).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "customer",
@@ -171,7 +193,10 @@ describe("deleteCustomer (action shape)", () => {
         resourceId: VALID_UUID,
       }),
     );
-    expect(mockDeleteCustomer).toHaveBeenCalledWith(VALID_UUID);
+    expect(mockAnonymizeCustomer).toHaveBeenCalledWith({
+      customerId: VALID_UUID,
+      reason: "admin-purge",
+    });
   });
 });
 

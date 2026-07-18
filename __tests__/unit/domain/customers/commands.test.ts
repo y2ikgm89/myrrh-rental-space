@@ -22,6 +22,7 @@ const mockCustomerFindUnique = mock<
     id: string;
     isActive?: boolean;
     userId?: string | null;
+    anonymizedAt?: Date | null;
   } | null>
 >(() => Promise.resolve(null));
 
@@ -37,8 +38,8 @@ const mockCustomerUpdate = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "customer-1" }),
 );
 
-const mockCustomerDelete = mock<() => Promise<{ id: string }>>(() =>
-  Promise.resolve({ id: "customer-1" }),
+const mockUserDelete = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "user-1" }),
 );
 
 // モジュールモック（import より前に配置）
@@ -84,7 +85,6 @@ const prismaCustomer = {
   findFirst: mockCustomerFindFirst,
   create: mockCustomerCreate,
   update: mockCustomerUpdate,
-  delete: mockCustomerDelete,
 };
 
 const prismaPending = {
@@ -96,6 +96,7 @@ const prismaPending = {
 
 const prismaUser = {
   findFirst: mockUserFindFirst,
+  delete: mockUserDelete,
 };
 
 mock.module("@/shared/db/prisma", () => ({
@@ -125,6 +126,7 @@ mock.module("@generated/prisma/enums", () => ({
 
 import { DomainError } from "@/shared/domain/domain-error";
 import {
+  anonymizeCustomerCommand,
   consumeCustomerEmailChangeCommand,
   createCustomer,
   updateCustomerStatus,
@@ -132,7 +134,6 @@ import {
   toggleCustomerActive,
   updateCustomer,
   updateCustomerProfileByUserId,
-  deleteCustomer,
   requestCustomerEmailChangeCommand,
 } from "@/shared/domain/customers/commands";
 
@@ -166,7 +167,7 @@ describe("customers/commands", () => {
     mockCustomerFindFirst.mockReset();
     mockCustomerCreate.mockReset();
     mockCustomerUpdate.mockReset();
-    mockCustomerDelete.mockReset();
+    mockUserDelete.mockReset();
     mockPendingCreate.mockReset();
     mockPendingDeleteMany.mockReset();
     mockPendingFindUnique.mockReset();
@@ -184,7 +185,7 @@ describe("customers/commands", () => {
     mockCustomerFindFirst.mockResolvedValue(null);
     mockCustomerCreate.mockResolvedValue({ id: "customer-1" });
     mockCustomerUpdate.mockResolvedValue({ id: CUSTOMER_ID });
-    mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
+    mockUserDelete.mockResolvedValue({ id: USER_ID });
     mockPendingCreate.mockResolvedValue({ id: "pending-1" });
     mockPendingDeleteMany.mockResolvedValue({ count: 0 });
     mockPendingFindUnique.mockResolvedValue(null);
@@ -948,37 +949,151 @@ describe("customers/commands", () => {
   });
 
   // =============================================================================
-  // deleteCustomer
+  // anonymizeCustomerCommand (STATE-03)
   // =============================================================================
 
-  describe("deleteCustomer", () => {
+  describe("anonymizeCustomerCommand", () => {
     describe("正常系", () => {
-      test("存在する顧客を削除できる", async () => {
+      test("存在する顧客を匿名化できる (PII 置換 + anonymizedAt 刻印)", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
           id: CUSTOMER_ID,
-          isActive: true,
+          userId: null,
+          anonymizedAt: null,
         });
 
-        await expect(deleteCustomer(CUSTOMER_ID)).resolves.toBeUndefined();
+        const result = await anonymizeCustomerCommand({
+          customerId: CUSTOMER_ID,
+          reason: "customer-requested",
+        });
 
-        expect(mockCustomerDelete).toHaveBeenCalledWith(
+        expect(result.customerId).toBe(CUSTOMER_ID);
+        expect(result.reason).toBe("customer-requested");
+        expect(result.hadUserId).toBe(false);
+        expect(result.anonymizedAt).toBeInstanceOf(Date);
+
+        // Customer.update に placeholder PII と anonymizedAt が渡る
+        expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
             where: { id: CUSTOMER_ID },
+            data: expect.objectContaining({
+              email: `deleted+${CUSTOMER_ID}@anonymized.local`,
+              emailCanonical: `deleted+${CUSTOMER_ID}@anonymized.local`,
+              lastName: "削除済み",
+              firstName: "",
+              lastNameKana: null,
+              firstNameKana: null,
+              phoneNumber: null,
+              companyName: null,
+              postalCode: null,
+              prefecture: null,
+              city: null,
+              streetAddress: null,
+              building: null,
+              notes: null,
+              isActive: false,
+              marketingOptIn: false,
+              phoneContactOptIn: false,
+              userId: null,
+              anonymizedReason: "customer-requested",
+            }),
+          }),
+        );
+        // userId が null なら User.delete は呼ばれない
+        expect(mockUserDelete).not.toHaveBeenCalled();
+      });
+
+      test("userId が非 null の顧客を匿名化すると Better Auth User も削除される", async () => {
+        mockCustomerFindUnique.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          userId: USER_ID,
+          anonymizedAt: null,
+        });
+
+        const result = await anonymizeCustomerCommand({
+          customerId: CUSTOMER_ID,
+          reason: "admin-purge",
+        });
+
+        expect(result.hadUserId).toBe(true);
+        expect(mockUserDelete).toHaveBeenCalledWith({
+          where: { id: USER_ID },
+        });
+      });
+
+      test("data-retention 理由も受け付ける", async () => {
+        mockCustomerFindUnique.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          userId: null,
+          anonymizedAt: null,
+        });
+
+        const result = await anonymizeCustomerCommand({
+          customerId: CUSTOMER_ID,
+          reason: "data-retention",
+        });
+
+        expect(result.reason).toBe("data-retention");
+        expect(mockCustomerUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              anonymizedReason: "data-retention",
+            }),
           }),
         );
       });
     });
 
     describe("異常系", () => {
-      test("存在しない顧客 ID で NOT_FOUND エラーをスローする", async () => {
+      test("存在しない顧客 ID は NOT_FOUND エラー", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce(null);
 
-        await expect(deleteCustomer(CUSTOMER_ID)).rejects.toMatchObject({
+        await expect(
+          anonymizeCustomerCommand({
+            customerId: CUSTOMER_ID,
+            reason: "customer-requested",
+          }),
+        ).rejects.toMatchObject({
           code: "NOT_FOUND",
           message: "顧客が見つかりません",
         });
 
-        expect(mockCustomerDelete).not.toHaveBeenCalled();
+        expect(mockCustomerUpdate).not.toHaveBeenCalled();
+      });
+
+      test("既に匿名化済みの顧客は CONFLICT エラー (冪等性チェック)", async () => {
+        mockCustomerFindUnique.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          userId: null,
+          anonymizedAt: new Date("2026-01-01T00:00:00Z"),
+        });
+
+        await expect(
+          anonymizeCustomerCommand({
+            customerId: CUSTOMER_ID,
+            reason: "customer-requested",
+          }),
+        ).rejects.toMatchObject({
+          code: "CONFLICT",
+          message: "この顧客は既に匿名化済みです",
+        });
+
+        expect(mockCustomerUpdate).not.toHaveBeenCalled();
+        expect(mockUserDelete).not.toHaveBeenCalled();
+      });
+
+      test("throw の場合 DomainError インスタンスであること", async () => {
+        mockCustomerFindUnique.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          userId: null,
+          anonymizedAt: new Date(),
+        });
+
+        await expect(
+          anonymizeCustomerCommand({
+            customerId: CUSTOMER_ID,
+            reason: "admin-purge",
+          }),
+        ).rejects.toBeInstanceOf(DomainError);
       });
     });
   });

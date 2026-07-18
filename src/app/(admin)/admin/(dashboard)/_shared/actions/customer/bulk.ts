@@ -8,10 +8,11 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   bulkToggleActiveCustomersCommand,
-  bulkDeleteCustomersCommand,
+  bulkAnonymizeCustomersCommand,
   type BulkToggleActiveCustomersResult,
-  type BulkDeleteCustomersResult,
+  type BulkAnonymizeCustomersResult,
 } from "@/shared/domain/customers/bulk-commands";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   bulkSetStatusCustomersCommand,
@@ -26,6 +27,13 @@ const bulkInputSchema = z.object({
     .refine((ids) => new Set(ids).size === ids.length, {
       error: "重複した顧客IDが含まれています",
     }),
+});
+
+const bulkAnonymizeInputSchema = bulkInputSchema.extend({
+  reason: z.enum(
+    ["customer-requested", "admin-purge", "data-retention"] as const,
+    { error: "匿名化理由が不正です" },
+  ),
 });
 
 function invalidateCustomerCachesForIds(ids: string[]): void {
@@ -53,16 +61,25 @@ export async function bulkToggleActiveCustomers(
   });
 }
 
-export async function bulkDeleteCustomers(
+/**
+ * STATE-03: 複数顧客を一括匿名化する Server Action。
+ *
+ * 決済歴のある顧客は物理削除できないため、旧 `bulkDeleteCustomers` は
+ * `bulkAnonymizeCustomers` に置換された (破壊的変更)。RBAC は
+ * `resource: "customer", action: "delete"` を維持。
+ */
+export async function bulkAnonymizeCustomers(
   ids: string[],
-): Promise<MutationResult<BulkDeleteCustomersResult>> {
-  const parsed = bulkInputSchema.safeParse({ ids });
+  reason: AnonymizeCustomerReason,
+): Promise<MutationResult<BulkAnonymizeCustomersResult>> {
+  const parsed = bulkAnonymizeInputSchema.safeParse({ ids, reason });
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   return executeAdminMutationResult({
     resource: "customer",
     action: "delete",
-    execute: async () => bulkDeleteCustomersCommand(parsed.data.ids),
+    execute: async () =>
+      bulkAnonymizeCustomersCommand(parsed.data.ids, parsed.data.reason),
     afterSuccess: (data) => {
       invalidateCustomerCachesForIds(data.affectedIds);
     },

@@ -22,15 +22,20 @@ const mockBulkToggleActiveCustomersCommand = mock<
   }),
 );
 
-const mockBulkDeleteCustomersCommand = mock<
-  (ids: string[]) => Promise<{
+const mockBulkAnonymizeCustomersCommand = mock<
+  (
+    ids: string[],
+    reason: string,
+  ) => Promise<{
     count: number;
     affectedIds: string[];
+    skippedIds: string[];
   }>
 >(() =>
   Promise.resolve({
     count: 0,
     affectedIds: [],
+    skippedIds: [],
   }),
 );
 
@@ -55,7 +60,7 @@ const mockBulkSetStatusCustomersCommand = mock<
 
 mock.module("@/shared/domain/customers/bulk-commands", () => ({
   bulkToggleActiveCustomersCommand: mockBulkToggleActiveCustomersCommand,
-  bulkDeleteCustomersCommand: mockBulkDeleteCustomersCommand,
+  bulkAnonymizeCustomersCommand: mockBulkAnonymizeCustomersCommand,
 }));
 
 mock.module("@/shared/domain/customers/bulk-status-commands", () => ({
@@ -118,7 +123,7 @@ mock.module("@/shared/lib/cloudflare", () => ({
 
 const {
   bulkToggleActiveCustomers,
-  bulkDeleteCustomers,
+  bulkAnonymizeCustomers,
   bulkSetStatusCustomers,
 } = await import("@/admin/actions/customer/bulk");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
@@ -257,19 +262,19 @@ describe("bulkToggleActiveCustomers", () => {
 });
 
 // =============================================================================
-// bulkDeleteCustomers
+// bulkAnonymizeCustomers (STATE-03)
 // =============================================================================
 
-describe("bulkDeleteCustomers", () => {
+describe("bulkAnonymizeCustomers", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
-    mockBulkDeleteCustomersCommand.mockClear();
+    mockBulkAnonymizeCustomersCommand.mockClear();
     mockUpdateTag.mockClear();
   });
 
   describe("バリデーション", () => {
     test("空配列は validation error", async () => {
-      const result = await bulkDeleteCustomers([]);
+      const result = await bulkAnonymizeCustomers([], "customer-requested");
 
       expect(isMutationError(result)).toBe(true);
       expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
@@ -281,7 +286,30 @@ describe("bulkDeleteCustomers", () => {
         return `00000000-0000-4000-8000-${hex}`;
       });
 
-      const result = await bulkDeleteCustomers(ids);
+      const result = await bulkAnonymizeCustomers(ids, "customer-requested");
+
+      expect(isMutationError(result)).toBe(true);
+      expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+    });
+
+    test("非 UUID の ID は validation error", async () => {
+      const result = await bulkAnonymizeCustomers(
+        ["not-a-uuid", VALID_UUID_A],
+        "customer-requested",
+      );
+
+      expect(isMutationError(result)).toBe(true);
+      expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+    });
+
+    test("無効な reason は validation error", async () => {
+      const invalidReason = "invalid-reason" as unknown as Parameters<
+        typeof bulkAnonymizeCustomers
+      >[1];
+      const result = await bulkAnonymizeCustomers(
+        [VALID_UUID_A],
+        invalidReason,
+      );
 
       expect(isMutationError(result)).toBe(true);
       expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
@@ -290,12 +318,16 @@ describe("bulkDeleteCustomers", () => {
 
   describe("正常系", () => {
     test("executeAdminMutationResult が resource: customer, action: delete で呼ばれる", async () => {
-      mockBulkDeleteCustomersCommand.mockResolvedValueOnce({
+      mockBulkAnonymizeCustomersCommand.mockResolvedValueOnce({
         count: 2,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        skippedIds: [],
       });
 
-      const result = await bulkDeleteCustomers([VALID_UUID_A, VALID_UUID_B]);
+      const result = await bulkAnonymizeCustomers(
+        [VALID_UUID_A, VALID_UUID_B],
+        "admin-purge",
+      );
 
       expect(mockExecuteAdminMutationResult).toHaveBeenCalledTimes(1);
       expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
@@ -304,23 +336,43 @@ describe("bulkDeleteCustomers", () => {
           action: "delete",
         }),
       );
-      expect(mockBulkDeleteCustomersCommand).toHaveBeenCalledWith([
-        VALID_UUID_A,
-        VALID_UUID_B,
-      ]);
+      expect(mockBulkAnonymizeCustomersCommand).toHaveBeenCalledWith(
+        [VALID_UUID_A, VALID_UUID_B],
+        "admin-purge",
+      );
       expect(result).toMatchObject({ count: 2 });
     });
 
     test("afterSuccess で updateTag が affectedIds 分 + ベースタグで呼ばれる", async () => {
-      mockBulkDeleteCustomersCommand.mockResolvedValueOnce({
+      mockBulkAnonymizeCustomersCommand.mockResolvedValueOnce({
         count: 2,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        skippedIds: [],
       });
 
-      await bulkDeleteCustomers([VALID_UUID_A, VALID_UUID_B]);
+      await bulkAnonymizeCustomers(
+        [VALID_UUID_A, VALID_UUID_B],
+        "customer-requested",
+      );
 
       // ベースタグ 1 + detail tags 2 = 3 calls
       expect(mockUpdateTag).toHaveBeenCalledTimes(3);
+    });
+
+    test("skippedIds が返っても affectedIds のみ cache invalidate される", async () => {
+      mockBulkAnonymizeCustomersCommand.mockResolvedValueOnce({
+        count: 1,
+        affectedIds: [VALID_UUID_A],
+        skippedIds: [VALID_UUID_B],
+      });
+
+      await bulkAnonymizeCustomers(
+        [VALID_UUID_A, VALID_UUID_B],
+        "data-retention",
+      );
+
+      // ベース 1 + affectedIds detail 1 = 2 calls (skipped は含まない)
+      expect(mockUpdateTag).toHaveBeenCalledTimes(2);
     });
   });
 });

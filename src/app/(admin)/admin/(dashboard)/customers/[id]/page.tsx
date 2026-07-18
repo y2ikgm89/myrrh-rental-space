@@ -7,8 +7,7 @@ import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { Button } from "@/admin/components/ui/button";
 import { CustomerDetail } from "./_components/CustomerDetail";
 import { CustomerDetailActions } from "./_components/CustomerDetailActions";
-import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
-import { deleteCustomer } from "@/admin/actions/customer";
+import { AnonymizeCustomerButton } from "./_components/AnonymizeCustomerButton";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -53,11 +52,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       subtitle={customer.email}
       actions={
         <>
-          <DetailDeleteButton
-            itemName={`${customer.lastName} ${customer.firstName}`}
-            onDelete={deleteCustomer.bind(null, customer.id)}
+          <AnonymizeCustomerButton
+            customerId={customer.id}
+            displayName={`${customer.lastName} ${customer.firstName}`}
             redirectTo="/admin/customers"
-            successMessage="顧客を削除しました"
           />
           <CustomerDetailActions
             customer={{
