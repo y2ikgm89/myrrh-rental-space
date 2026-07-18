@@ -1,10 +1,11 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import { paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 管理画面向け規約クエリ
@@ -138,6 +139,78 @@ export async function getAdminTermsById(
   });
 
   return result ? toPlainObject(result) : null;
+}
+
+/**
+ * 管理: TermsDocument 編集の想定影響件数 (現状 hash 未同意者数)。
+ *
+ * 「保存すると N 名の顧客に再同意を求めます」という admin 側 inline warning
+ * の元データ。TERMS-REAGREE-P3B。
+ *
+ * 判定ロジック:
+ *   - 対象 doc の LOGIN_SIGNUP scope 有無を確認し、未含なら影響件数ゼロで即返却
+ *   - 現行 `contentHtml` の sha256 hash を計算
+ *   - `Customer.isActive: true` の顧客のうち、以下の全てを満たす者は「同意済み」:
+ *       (customerId, scope=LOGIN_SIGNUP, contentHash が現行 hash と一致) の
+ *       TermsAgreement が 1 件以上存在
+ *   - 「同意済みでない active 顧客数」= 影響件数
+ *
+ * 計算モデルは Phase 1 の `getReagreeRequiredTermsForCustomer` と同じ差分検出
+ * (hash 一致 = 同意済み) を全 active customer に集約適用したもの。
+ *
+ * @returns
+ *   `{ affected, totalActiveCustomers, scopeApplies }`
+ *   `scopeApplies: false` なら影響件数は常に 0 (LOGIN_SIGNUP scope 外の doc)。
+ */
+export async function getReagreeAffectedCustomerCount(
+  termsId: string,
+): Promise<{
+  readonly affected: number;
+  readonly totalActiveCustomers: number;
+  readonly scopeApplies: boolean;
+}> {
+  const doc = await prisma.termsDocument.findUnique({
+    where: { id: termsId },
+    select: {
+      contentHtml: true,
+      scopes: true,
+      deletedAt: true,
+      isPublished: true,
+    },
+  });
+  if (!doc) {
+    return { affected: 0, totalActiveCustomers: 0, scopeApplies: false };
+  }
+
+  const totalActiveCustomers = await prisma.customer.count({
+    where: { isActive: true },
+  });
+
+  const scopeApplies = doc.scopes.includes(TermsScope.LOGIN_SIGNUP);
+  if (!scopeApplies) {
+    return { affected: 0, totalActiveCustomers, scopeApplies: false };
+  }
+
+  const currentHash = createHash("sha256")
+    .update(doc.contentHtml)
+    .digest("hex");
+
+  const affected = await prisma.customer.count({
+    where: {
+      isActive: true,
+      NOT: {
+        termsAgreements: {
+          some: {
+            termsId,
+            scope: TermsScope.LOGIN_SIGNUP,
+            contentHash: currentHash,
+          },
+        },
+      },
+    },
+  });
+
+  return { affected, totalActiveCustomers, scopeApplies: true };
 }
 
 /**
