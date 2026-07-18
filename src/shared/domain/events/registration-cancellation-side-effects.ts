@@ -3,8 +3,8 @@
  *
  * 会員（マイページ）/ ゲスト（メールリンク）/ 管理者（管理画面）の全キャンセル経路が
  * 同じ副作用チェーンを通ることを保証する SSoT。
- * 設計は `reservations/cancellation-side-effects.ts` と同型（Stripe 返金・GCal 同期
- * 削除は EventRegistration に決済/カレンダー同期フィールドが無いため対象外）。
+ * 設計は `reservations/cancellation-side-effects.ts` と同型
+ * （GCal 同期削除は EventRegistration にカレンダー同期フィールドが無いため対象外）。
  *
  * ## CRITIC-6 fix: 副作用 outcome を AuditLog に構造化記録する
  *
@@ -18,12 +18,30 @@
  * mypage レスポンス latency を維持するため、副作用チェーン全体を
  * `fireAndForget` で `after()` に委譲する。
  *
+ * ## MYPAGE-EVENT-02 fix: 顧客セルフキャンセル時に自動 Stripe refund を発火する
+ *
+ * 従来はイベント側のみ手動対応必須で、`/mypage/events` からセルフキャンセルした
+ * PAID 参加者は policy 内でも返金されず support ticket 経由に流れていた。
+ * 現在は `reservations/cancellation-side-effects.ts` と対称に、
+ * `paymentStatus === PAID | PARTIALLY_REFUNDED` かつ `stripePaymentIntentId` あり の
+ * ときに `refundEventRegistrationPaymentCommand(actorType=AUTO_ON_CANCEL)` を発火する。
+ * `Settings.refundPolicy` があれば tier ベースで返金額を算出し、未設定なら残額全額。
+ * policy 適用結果が 0 円なら refund 全 skip し、admin 通知タイトルを
+ * 「要返金確認」に昇格して手動対応を明示的に促す。
+ *
  * 含まれる副作用:
- *   1. 参加者向けキャンセル確認メール（CANCEL ICS 添付）
- *   2. 管理者向け管理者通知メール
- *   3. 管理者向け in-app 通知（channel 含む）
- *   4. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes）
- *   5. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
+ *   1. Stripe refund（`paymentStatus === PAID | PARTIALLY_REFUNDED` かつ
+ *      `stripePaymentIntentId` あり のときのみ自動発火）。
+ *      `Settings.refundPolicy` が設定されていれば tier ベースで返金額を算出し、
+ *      未設定なら残額全額を返金する。policy 適用結果が 0 円なら refund 全 skip。
+ *      MYPAGE-EVENT-02: 予約キャンセル (`reservations/cancellation-side-effects.ts`)
+ *      と対称の挙動を保証する（従来はイベント側のみ手動対応必須で顧客誤解の原因）。
+ *   2. 参加者向けキャンセル確認メール（CANCEL ICS 添付）
+ *   3. 管理者向け管理者通知メール
+ *   4. 管理者向け in-app 通知（channel 含む、PAID 自動返金時は要確認タイトルへ昇格）
+ *   5. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes +
+ *      requiresRefund / wasPaid を記録）
+ *   6. FIFO 繰り上げ当選メール（`input.promoted` が非 null のときのみ。
  *      `applyEventRegistrationCancellation` が同一 tx 内で
  *      `offerNextWaitlistEntryCommand` を呼び、CONFIRMED または WAITLISTED_OFFERED
  *      由来のキャンセルで空いた枠に次の WAITLISTED を昇格させた場合に送る。
@@ -38,12 +56,18 @@
 
 import "server-only";
 
-import { AuditAction } from "@generated/prisma/enums";
+import { AuditAction, PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/waitlist-queries";
+import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
+import {
+  calculateRefundAmount,
+  parseRefundPolicy,
+  type RefundPolicy,
+} from "@/shared/domain/refund/policy";
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
@@ -61,6 +85,7 @@ import {
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
+  REFUNDED_BY_TYPE,
   type CancelledByType,
 } from "@/shared/lib/validations/enums/helpers";
 
@@ -87,6 +112,15 @@ export interface EventCancellationSideEffectInput {
    * 内部で「昇格していたら繰り上げ当選メールを送る」判断まで完結させる SSoT）。
    */
   promoted: WaitlistPromotionOutcome;
+  /**
+   * MYPAGE-EVENT-02: 呼出側が `Settings.refundPolicy` を事前に取得済ならその snapshot を
+   * 渡す（`reservations/cancellation-side-effects.ts` の同名フィールドと同型契約）。
+   *
+   * - 省略 (undefined) → 従前どおり per-call で `Settings.findUnique` を実行
+   * - `RefundPolicy` → その snapshot を使用
+   * - `null` → 「policy 未設定 = 残額全額」を明示 (parseRefundPolicy が返す null を snapshot 化)
+   */
+  refundPolicySnapshot?: RefundPolicy | null;
 }
 
 // -----------------------------------------------------------------------------
@@ -102,6 +136,7 @@ export type EventCancellationEffectOutcome = {
 
 /** 全副作用の outcome を並べた集約構造。AuditLog metadata.sideEffects に格納される。 */
 export type EventCancellationSideEffectOutcomes = {
+  refund: EventCancellationEffectOutcome;
   customerEmail: EventCancellationEffectOutcome;
   adminEmail: EventCancellationEffectOutcome;
   notification: EventCancellationEffectOutcome;
@@ -121,7 +156,11 @@ interface SideEffectRegistration {
   email: string | null;
   quantity: number;
   icsSequence: number;
+  paymentStatus: PaymentStatus;
+  stripePaymentIntentId: string | null;
+  paidAmount: number | null;
   event: { title: string };
+  slot: { startAt: Date };
 }
 
 async function fetchRegistrationForSideEffects(
@@ -136,7 +175,13 @@ async function fetchRegistrationForSideEffects(
       email: true,
       quantity: true,
       icsSequence: true,
+      // MYPAGE-EVENT-02: PAID / PARTIALLY_REFUNDED 判定・Stripe refund 起票・
+      // policy tier 計算 (slot.startAt = イベント開始時刻) に必要なフィールドを追加。
+      paymentStatus: true,
+      stripePaymentIntentId: true,
+      paidAmount: true,
       event: { select: { title: true } },
+      slot: { select: { startAt: true } },
     },
   });
 }
@@ -171,6 +216,103 @@ function mapEmailResultToOutcome(
 type RegistrationEmailDetails = NonNullable<
   Awaited<ReturnType<typeof getEventRegistrationDetailsForEmail>>
 >;
+
+/**
+ * MYPAGE-EVENT-02: Stripe 自動返金ステップ。Reservation 側 (autoRefundStep 相当) と対称。
+ *
+ * - `paymentStatus === PAID | PARTIALLY_REFUNDED` かつ `stripePaymentIntentId` あり
+ *   のときのみ実行し、それ以外は status="skipped" を返す。
+ * - Policy が snapshot 経由で渡されればそれを使用、未渡し時は per-call で
+ *   Settings.findUnique から取得する。
+ * - Policy 適用結果 amount=0 は refund skip (Notification 側で「要返金確認」に昇格して
+ *   運用側の判断を仰ぐ)。
+ */
+async function runRefundStep(args: {
+  input: EventCancellationSideEffectInput;
+  registration: SideEffectRegistration;
+}): Promise<EventCancellationEffectOutcome> {
+  const { input, registration } = args;
+  const wasPaid =
+    registration.paymentStatus === PaymentStatus.PAID ||
+    registration.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
+  const requiresRefund = wasPaid && registration.stripePaymentIntentId !== null;
+
+  if (!requiresRefund) {
+    return {
+      status: "skipped",
+      reason: wasPaid ? "no_stripe_payment_intent" : "not_paid",
+    };
+  }
+
+  try {
+    const policy: RefundPolicy | null =
+      input.refundPolicySnapshot !== undefined
+        ? input.refundPolicySnapshot
+        : parseRefundPolicy(
+            (
+              await prisma.settings.findUnique({
+                where: { id: "singleton" },
+                select: { refundPolicy: true },
+              })
+            )?.refundPolicy,
+          );
+
+    let refundAmount: number | undefined;
+    if (policy !== null && registration.paidAmount !== null) {
+      refundAmount = calculateRefundAmount(
+        policy,
+        registration.paidAmount,
+        registration.slot.startAt,
+        new Date(),
+      );
+    }
+
+    if (refundAmount !== undefined && refundAmount === 0) {
+      // Policy による refundRate=0% → 返金 skip。
+      // Notification 側の「要返金確認」タイトル (requiresRefund=true 分岐) は
+      // そのまま昇格させて admin 側で手動対応を明示的に促す。
+      return {
+        status: "skipped",
+        reason: "policy_refund_rate_zero",
+        detail: { policyRefundAmount: 0 },
+      };
+    }
+
+    await refundEventRegistrationPaymentCommand({
+      registrationId: input.registrationId,
+      actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      // UA-HORIZ-04: 起点のキャンセル request context (ip / userAgent) を継承し、
+      // AUTO_ON_CANCEL 経由の refund AuditLog にも forensic ヘッダーを載せる
+      // (Reservation 側と同型)。
+      request: {
+        ip: input.request.ip,
+        userAgent: input.request.userAgent,
+      },
+      ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
+    });
+
+    return {
+      status: "ok",
+      detail: {
+        ...(refundAmount !== undefined
+          ? { refundAmount }
+          : { refundAmount: "full_remaining" }),
+      },
+    };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "autoRefundEventRegistrationOnCancel",
+        registrationId: input.registrationId,
+        channel: input.channel,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
 
 async function runCustomerEmailStep(args: {
   input: EventCancellationSideEffectInput;
@@ -247,21 +389,31 @@ async function runAdminEmailStep(args: {
   }
 }
 
+/**
+ * 管理者 in-app 通知。MYPAGE-EVENT-02: `requiresRefund` が true のときは
+ * 「PAID イベント申込のキャンセル — 要返金確認」タイトルに昇格して手動対応を促す
+ * (Reservation 側の同型パターン)。返金 policy=0% で skip したケースでも同じ
+ * タイトルにする。
+ */
 async function runNotificationStep(args: {
   input: EventCancellationSideEffectInput;
   registration: SideEffectRegistration;
+  requiresRefund: boolean;
 }): Promise<EventCancellationEffectOutcome> {
-  const { input, registration } = args;
+  const { input, registration, requiresRefund } = args;
   try {
+    const title = requiresRefund
+      ? "PAID イベント申込のキャンセル — 要返金確認"
+      : `イベント申込キャンセル（${channelLabel(input.channel)}）`;
     // resourceId は AdminNotification.resourceId（@db.Uuid）を意図した項目だが、
     // Event.id は cuid()（VarChar(30)）であり UUID ではないため渡さない。
     await createNotificationCommand({
       type: NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL,
-      title: `イベント申込キャンセル（${channelLabel(input.channel)}）`,
+      title,
       message: `${registration.name}様が「${registration.event.title}」の申込をキャンセルしました`,
       resourceType: "event",
     });
-    return { status: "ok" };
+    return { status: "ok", detail: { escalated: requiresRefund } };
   } catch (err) {
     const normalized = normalizeError(err);
     logError(normalized, {
@@ -280,8 +432,8 @@ async function runNotificationStep(args: {
 async function runWaitlistOfferStep(
   input: EventCancellationSideEffectInput,
 ): Promise<EventCancellationEffectOutcome> {
-  // 5. FIFO 繰り上げ当選メール（cancel が CONFIRMED 由来で、空いた枠に次の
-  //    WAITLISTED を昇格させた場合のみ）。
+  // 6. FIFO 繰り上げ当選メール（cancel が CONFIRMED / WAITLISTED_OFFERED 由来で、
+  //    空いた枠に次の WAITLISTED を昇格させた場合のみ）。
   //
   // cron の期限切れ自動昇格・管理者の手動昇格（adminPromoteWaitlistEntryAction）は
   // 昇格したら必ずオファーメールを送る契約になっている。キャンセル駆動の自動昇格
@@ -386,15 +538,27 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
 }): Promise<void> {
   const { input, registration, details } = args;
 
+  // MYPAGE-EVENT-02: refund 判定を先に走らせ、その結果 (skipped/ok/error) を
+  // Notification 側のタイトル escalation と AuditLog metadata の
+  // requiresRefund / wasPaid に反映する。
+  // refund は決済系副作用のため他の副作用 (email/notification/audit) と並行させず、
+  // 判定結果を後続に伝播する必要があるので独立 await する。
+  const wasPaid =
+    registration.paymentStatus === PaymentStatus.PAID ||
+    registration.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
+  const requiresRefund = wasPaid && registration.stripePaymentIntentId !== null;
+  const refund = await runRefundStep({ input, registration });
+
   const [customerEmail, adminEmail, notification, waitlistOffer] =
     await Promise.all([
       runCustomerEmailStep({ input, registration, details }),
       runAdminEmailStep({ input, registration, details }),
-      runNotificationStep({ input, registration }),
+      runNotificationStep({ input, registration, requiresRefund }),
       runWaitlistOfferStep(input),
     ]);
 
   const outcomes: EventCancellationSideEffectOutcomes = {
+    refund,
     customerEmail,
     adminEmail,
     notification,
@@ -418,6 +582,9 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
         ...(input.request.tokenFingerprint
           ? { tokenFingerprint: input.request.tokenFingerprint }
           : {}),
+        // MYPAGE-EVENT-02: reservation-symmetric forensics。
+        requiresRefund,
+        wasPaid,
         sideEffects: outcomes,
       },
     });
@@ -439,8 +606,9 @@ async function runEventCancellationSideEffectsAndFlushAudit(args: {
  * registration / details fetch 以外は `fireAndForget` で `after()` に委譲するため、
  * 呼び出し側の response latency は fetch 時間のみ（従来と同じ）。
  * 全副作用の outcome は集約 AuditLog metadata (`sideEffects`) に記録され、
- * Resend suppression / waitlist offer メール未達などが「完了表示 vs 実挙動」の
- * 乖離としてカスタマーサポート起点で観測可能になる（CRITIC-6）。
+ * Resend suppression / waitlist offer メール未達 / Stripe refund 失敗などが
+ * 「完了表示 vs 実挙動」の乖離としてカスタマーサポート起点で観測可能になる
+ * (CRITIC-6 + MYPAGE-EVENT-02)。
  */
 export async function applyEventRegistrationCancellationSideEffects(
   input: EventCancellationSideEffectInput,
