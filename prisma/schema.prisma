@@ -818,12 +818,13 @@ model Customer {
   user   User?   @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
 
   // Relations
-  reservations       Reservation[]
-  reservationSeries  ReservationSeries[]
-  inquiries          Inquiry[]
-  reviews            SpaceReview[]
-  eventRegistrations EventRegistration[]
-  termsAgreements    TermsAgreement[]
+  reservations         Reservation[]
+  reservationSeries    ReservationSeries[]
+  inquiries            Inquiry[]
+  reviews              SpaceReview[]
+  eventRegistrations   EventRegistration[]
+  termsAgreements      TermsAgreement[]
+  pendingEmailChanges  PendingCustomerEmailChange[]
 
   @@index([lastName])
   @@index([firstName])
@@ -845,6 +846,36 @@ model Customer {
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_email_trgm_idx")
   @@index([companyName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_company_name_trgm_idx")
   @@map("customers")
+}
+
+// ==============================================
+// PendingCustomerEmailChange (SETTINGS-02 followup)
+// ==============================================
+//
+// マイページからの初回 email 登録 (LINE OAuth で email scope 未付与顧客の
+// 詰み状態解消) を本人確認 URL 経由に限定するための短命トークン台帳。
+// PR #1217 の同時 uniqueness 検査 (未リンク顧客に既存の同 email 顧客が居ないこと)
+// はここで確認しつつ、Customer.email への実書込は URL クリック後の
+// /api/customer/verify-email 経由でのみ発生する。
+//
+// - id / tokenHash は verify Route Handler が hash 参照するため index を張る
+// - consumedAt は「クリック済み」を single-use で強制する (2 回目クリックは 410 相当)
+// - expiresAt は cron でなく verify Route Handler の compare で判定する
+//   (削除は次回の request 時に customerId 既存行を上書きするため蓄積しない)
+model PendingCustomerEmailChange {
+  id                String    @id @default(uuid()) @db.Uuid
+  customerId        String    @db.Uuid
+  customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  newEmail          String    @db.VarChar(320)
+  newEmailCanonical String    @db.VarChar(320)
+  tokenHash         String    @unique @db.VarChar(64) // sha256 hex
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([customerId])
+  @@index([expiresAt])
+  @@map("pending_customer_email_changes")
 }
 
 // ==============================================

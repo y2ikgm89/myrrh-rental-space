@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash, randomBytes } from "node:crypto";
 import {
   CustomerStatus,
   CustomerType,
@@ -163,7 +164,12 @@ export async function updateCustomer(
   }
 }
 
-/** 顧客が自身のプロフィールを更新（userId ベース） */
+/** 顧客が自身のプロフィールを更新（userId ベース）
+ *
+ * email はこの command では書き込まない。初回 email 登録は
+ * `requestCustomerEmailChangeCommand` → verification URL クリック →
+ * `consumeCustomerEmailChangeCommand` の 3 段階でのみ Customer.email に反映される。
+ */
 export async function updateCustomerProfileByUserId(
   userId: string,
   data: {
@@ -172,63 +178,186 @@ export async function updateCustomerProfileByUserId(
     firstName: string;
     companyName: string | null;
     phoneNumber: string | null;
-    /**
-     * 初回 email 登録用 (LINE OAuth で email scope 未付与顧客の詰み状態解消)。
-     * `null` = 変更なし。string = 現在の Customer.email が空文字/null のとき **のみ** 適用可。
-     * 既に email 設定済みの顧客に対する変更は verification 経由の Better Auth
-     * changeEmail が canonical で、この関数の scope 外 (別 command として将来追加予定)。
-     */
-    email?: string | null;
   },
 ): Promise<void> {
-  await prisma.$transaction(async (tx) => {
+  await prisma.customer.update({
+    where: { userId },
+    data: {
+      customerType: data.customerType,
+      lastName: data.lastName,
+      firstName: data.firstName,
+      companyName: data.companyName,
+      phoneNumber: data.phoneNumber,
+    },
+  });
+}
+
+// =============================================================================
+// SETTINGS-02 followup: Email verification for initial Customer.email registration
+// =============================================================================
+
+/** verification token の TTL (1 時間)。email テンプレの文言と揃える。 */
+const EMAIL_CHANGE_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+/** URL に載せる raw token の byte 長 → base64url 43 文字。 */
+const EMAIL_CHANGE_TOKEN_BYTES = 32;
+
+const EMAIL_ALREADY_SET_MESSAGE =
+  "メールアドレスは既に登録済みです。変更するには別の手続きが必要です。";
+
+const EMAIL_TAKEN_MESSAGE =
+  "このメールアドレスは他の顧客が使用しているため登録できません。";
+
+const VERIFICATION_INVALID_MESSAGE =
+  "確認 URL が無効か有効期限が切れています。再度メールアドレスを入力してください。";
+
+const VERIFICATION_ALREADY_APPLIED_MESSAGE =
+  "この確認 URL は既に使用済みです。";
+
+function hashEmailChangeToken(rawToken: string): string {
+  return createHash("sha256").update(rawToken).digest("hex");
+}
+
+/**
+ * verification token を生成し、PendingCustomerEmailChange 行を差し替え発行する。
+ *
+ * - Customer.email が既に非空なら VALIDATION (この command は「初回登録」限定)
+ * - 同 canonical の別の未リンク顧客が既に居るなら CONFLICT (PR #1217 の uniqueness
+ *   をここへ移設 — 攻撃者が「他人の email を仮登録して token を横取り」する経路を塞ぐ)
+ * - 既存の未消費 pending 行があれば削除して新規発行 (最新の 1 件だけが有効)
+ *
+ * verification token は raw のまま呼び出し側 (Server Action) に返す。DB には
+ * SHA-256 ハッシュのみ保存し、raw は URL クリック時にのみ突合される
+ * (メールクライアント・プロキシ経由でも DB 上の値だけでは URL を再構成できない)。
+ */
+export async function requestCustomerEmailChangeCommand(
+  userId: string,
+  newEmail: string,
+): Promise<{ rawToken: string; expiresAt: Date; customerId: string }> {
+  const trimmed = newEmail.trim();
+  if (trimmed.length === 0) {
+    throw new DomainError("メールアドレスを入力してください", "VALIDATION");
+  }
+  const canonical = normalizeEmailForIdentity(trimmed);
+
+  const rawToken = randomBytes(EMAIL_CHANGE_TOKEN_BYTES).toString("base64url");
+  const tokenHash = hashEmailChangeToken(rawToken);
+  const expiresAt = new Date(Date.now() + EMAIL_CHANGE_TOKEN_TTL_MS);
+
+  return prisma.$transaction(async (tx) => {
     const current = await tx.customer.findUniqueOrThrow({
       where: { userId },
       select: { id: true, email: true },
     });
 
-    // email 初回登録: 現在 email が空 かつ 新 email が有効値のとき **のみ** 適用
-    const shouldRegisterEmail =
-      data.email !== null &&
-      data.email !== undefined &&
-      data.email !== "" &&
-      (current.email === null ||
-        current.email === undefined ||
-        current.email === "");
-
-    if (
-      data.email !== null &&
-      data.email !== undefined &&
-      data.email !== "" &&
-      !shouldRegisterEmail
-    ) {
-      throw new DomainError(
-        "メールアドレスの変更は本人確認メールを経由して行う必要があります (未実装)",
-        "VALIDATION",
-      );
+    if (current.email !== null && current.email !== "") {
+      throw new DomainError(EMAIL_ALREADY_SET_MESSAGE, "VALIDATION");
     }
 
-    await tx.customer.update({
-      where: { userId },
+    // uniqueness: 未リンク顧客への「他人 email 横取り」を塞ぐ (SETTINGS-02)。
+    // リンク済み顧客 (userId != null) はこの制約から除外する — 既に本人性が
+    // OAuth 経由で保証されており、future feature で User.email と Customer.email を
+    // 二重管理するケースを潰さないため。
+    const conflicting = await tx.customer.findFirst({
+      where: {
+        emailCanonical: canonical,
+        userId: null,
+        NOT: { id: current.id },
+      },
+      select: { id: true },
+    });
+    if (conflicting) {
+      throw new DomainError(EMAIL_TAKEN_MESSAGE, "CONFLICT");
+    }
+
+    // 同一顧客の未消費 pending は上書き (最新の 1 件だけを有効にする)。
+    await tx.pendingCustomerEmailChange.deleteMany({
+      where: { customerId: current.id, consumedAt: null },
+    });
+
+    await tx.pendingCustomerEmailChange.create({
       data: {
-        customerType: data.customerType,
-        lastName: data.lastName,
-        firstName: data.firstName,
-        companyName: data.companyName,
-        phoneNumber: data.phoneNumber,
-        ...(shouldRegisterEmail && data.email
-          ? {
-              email: data.email,
-              emailCanonical: normalizeEmailForIdentity(data.email),
-            }
-          : {}),
+        customerId: current.id,
+        newEmail: trimmed,
+        newEmailCanonical: canonical,
+        tokenHash,
+        expiresAt,
       },
     });
 
-    // 注: Better Auth の User.email は auth plugin が独立管理する契約のため、
-    // ここでは Customer.email のみを更新する (reservation 通知等の customer-facing
-    // 用途に使うのは Customer.email 側)。User.email の同期は Better Auth の
-    // changeEmail plugin (verification 経由) が canonical で、別 PR で対応予定。
+    return { rawToken, expiresAt, customerId: current.id };
+  });
+}
+
+/**
+ * verification URL クリック時: token を突合して Customer.email に反映する。
+ *
+ * - token 不一致・期限切れ → VALIDATION (`VERIFICATION_INVALID_MESSAGE`)
+ * - 既に consumed → VALIDATION (`VERIFICATION_ALREADY_APPLIED_MESSAGE`)
+ * - 期間中に他の未リンク顧客がその email を使い始めていた → CONFLICT
+ *
+ * consumedAt は single-use を強制するため必ずマークする (期限切れ判定より先に
+ * トークンを見つけたら再検証は不可 = 期限内 1 回のみ有効)。
+ */
+export async function consumeCustomerEmailChangeCommand(
+  rawToken: string,
+): Promise<{ customerId: string; newEmail: string }> {
+  const tokenHash = hashEmailChangeToken(rawToken);
+
+  return prisma.$transaction(async (tx) => {
+    const pending = await tx.pendingCustomerEmailChange.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        customerId: true,
+        newEmail: true,
+        newEmailCanonical: true,
+        expiresAt: true,
+        consumedAt: true,
+      },
+    });
+
+    if (!pending) {
+      throw new DomainError(VERIFICATION_INVALID_MESSAGE, "VALIDATION");
+    }
+
+    if (pending.consumedAt !== null) {
+      throw new DomainError(VERIFICATION_ALREADY_APPLIED_MESSAGE, "VALIDATION");
+    }
+
+    if (pending.expiresAt.getTime() <= Date.now()) {
+      throw new DomainError(VERIFICATION_INVALID_MESSAGE, "VALIDATION");
+    }
+
+    // request 時点で uniqueness を通していても、click までの間に別の未リンク
+    // 顧客がその email を使い始める可能性があるため、consume 時に再チェック。
+    const conflicting = await tx.customer.findFirst({
+      where: {
+        emailCanonical: pending.newEmailCanonical,
+        userId: null,
+        NOT: { id: pending.customerId },
+      },
+      select: { id: true },
+    });
+    if (conflicting) {
+      throw new DomainError(EMAIL_TAKEN_MESSAGE, "CONFLICT");
+    }
+
+    // single-use を先にマーク (Customer.update が失敗しても再クリックは無効化)
+    await tx.pendingCustomerEmailChange.update({
+      where: { id: pending.id },
+      data: { consumedAt: new Date() },
+    });
+
+    await tx.customer.update({
+      where: { id: pending.customerId },
+      data: {
+        email: pending.newEmail,
+        emailCanonical: pending.newEmailCanonical,
+      },
+    });
+
+    return { customerId: pending.customerId, newEmail: pending.newEmail };
   });
 }
 
