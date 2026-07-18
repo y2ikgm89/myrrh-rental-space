@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -432,6 +433,13 @@ export function ReservationDetail({
               {reservation.receipt.revision > 0
                 ? ` (訂正 rev.${reservation.receipt.revision})`
                 : ""}
+              {" · "}
+              <Link
+                href={`/admin/receipts/${reservation.receipt.serialNo}`}
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                詳細
+              </Link>
             </p>
           ) : null}
           {!paymentEnabled &&
