@@ -172,6 +172,7 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "receipt-backfill",
   "reservation-reminder",
   "smart-lock-cleanup",
+  "stripe-event-cleanup",
   "waitlist-expire",
 ] as const;
 
