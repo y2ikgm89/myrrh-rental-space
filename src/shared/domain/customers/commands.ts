@@ -177,6 +177,11 @@ export async function updateCustomerProfileByUserId(
      * `null` = 変更なし。string = 現在の Customer.email が空文字/null のとき **のみ** 適用可。
      * 既に email 設定済みの顧客に対する変更は verification 経由の Better Auth
      * changeEmail が canonical で、この関数の scope 外 (別 command として将来追加予定)。
+     *
+     * SETTINGS-02: 初回登録時も所有権検証は本来必須 (verification email flow) だが、
+     * まず uniqueness チェックのみを強制して「第三者の email を Customer.email に設定
+     * できる」問題を塞ぐ。完全な verification flow (Better Auth changeEmail 相当の
+     * PendingEmailChange + token + Resend send) は followup PR で実装する。
      */
     email?: string | null;
   },
@@ -208,22 +213,75 @@ export async function updateCustomerProfileByUserId(
       );
     }
 
-    await tx.customer.update({
-      where: { userId },
-      data: {
-        customerType: data.customerType,
-        lastName: data.lastName,
-        firstName: data.firstName,
-        companyName: data.companyName,
-        phoneNumber: data.phoneNumber,
-        ...(shouldRegisterEmail && data.email
-          ? {
-              email: data.email,
-              emailCanonical: normalizeEmailForIdentity(data.email),
-            }
-          : {}),
-      },
-    });
+    // SETTINGS-02: 初回登録時 uniqueness チェック。
+    // 所有権検証 (verification link 経由) は followup PR で実装するが、
+    // uniqueness チェックだけでも「第三者の既存 email を Customer.email に
+    // 設定できる」問題は塞げる (登録済み email は攻撃者が奪えなくなる)。
+    // 検証範囲は Better Auth の User.email (canonical 認証 identity) と
+    // 他 Customer の emailCanonical (未リンク guest 顧客含む) の両方。
+    if (shouldRegisterEmail && data.email) {
+      const canonical = normalizeEmailForIdentity(data.email);
+
+      // 1. Better Auth User.email との衝突チェック (現ユーザー自身は除外)
+      const conflictingUser = await tx.user.findFirst({
+        where: {
+          email: { equals: canonical, mode: "insensitive" },
+          NOT: { id: userId },
+        },
+        select: { id: true },
+      });
+      if (conflictingUser) {
+        throw new DomainError(
+          "このメールアドレスは既に使用されています",
+          "CONFLICT",
+        );
+      }
+
+      // 2. 他 Customer.emailCanonical との衝突チェック (自レコードは除外)
+      const conflictingCustomer = await tx.customer.findFirst({
+        where: {
+          emailCanonical: canonical,
+          NOT: { id: current.id },
+        },
+        select: { id: true },
+      });
+      if (conflictingCustomer) {
+        throw new DomainError(
+          "このメールアドレスは既に使用されています",
+          "CONFLICT",
+        );
+      }
+    }
+
+    try {
+      await tx.customer.update({
+        where: { userId },
+        data: {
+          customerType: data.customerType,
+          lastName: data.lastName,
+          firstName: data.firstName,
+          companyName: data.companyName,
+          phoneNumber: data.phoneNumber,
+          ...(shouldRegisterEmail && data.email
+            ? {
+                email: data.email,
+                emailCanonical: normalizeEmailForIdentity(data.email),
+              }
+            : {}),
+        },
+      });
+    } catch (error) {
+      // race condition (findFirst 後・update 前に他 tx が同 email を挿入) 対応。
+      // Customer.emailCanonical は unique index を持たないため P2002 は基本
+      // User.email 側で起こるが、将来の unique 化にも耐える防御的キャッチ。
+      if (isUniqueConstraintError(error)) {
+        throw new DomainError(
+          "このメールアドレスは既に使用されています",
+          "CONFLICT",
+        );
+      }
+      throw error;
+    }
 
     // 注: Better Auth の User.email は auth plugin が独立管理する契約のため、
     // ここでは Customer.email のみを更新する (reservation 通知等の customer-facing
