@@ -58,18 +58,7 @@ export const CDN_MAPPED_CACHE_TAGS_KEYS = [
  */
 export const LEGACY_RAW_UPDATETAG_FILES = [
   "src/app/(admin)/admin/(dashboard)/_shared/actions/api-keys/index.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/customer.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/event-registration.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/faq.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/global-blocked-dates.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/location-blocked-dates.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/location-smart-lock-devices.ts",
   "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-business-profile.ts",
   "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/google-calendar.ts",
   "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/smart-lock-devices.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/space-blocked-dates.ts",
-  "src/app/(admin)/admin/(dashboard)/_shared/actions/space-smart-lock-devices.ts",
-  "src/shared/lib/cache/event-cache.ts",
-  "src/shared/lib/cache/review-cache.ts",
 ];
