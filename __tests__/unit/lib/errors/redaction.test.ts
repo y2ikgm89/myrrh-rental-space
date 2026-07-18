@@ -133,6 +133,108 @@ describe("redactRequestUrl", () => {
     const result = redactRequestUrl("/reservations/abc?token=secret");
     expect(result).not.toContain("token=secret");
   });
+
+  // ---------------------------------------------------------------------------
+  // PII-LOG-01 regression: path segments carrying secrets.
+  //
+  // These endpoints put a shared secret directly into a URL path segment.
+  // Before the fix, `redactRequestUrl` only touched the query string, so the
+  // URL segment (= the raw secret) was written to Cloud Logging on every
+  // instrumentation error. Each test proves that a *known* leak vector is
+  // masked while triage-useful identifiers (UUIDs, slugs) remain intact.
+  // ---------------------------------------------------------------------------
+  describe("path segment redaction (PII-LOG-01)", () => {
+    test("masks 64-char base64url path token (SwitchBot webhook shape)", () => {
+      // 64-char base64url (well above HIGH_ENTROPY_PATTERN's 40-char threshold).
+      // Deliberately contains a 10-digit run "0123456789" — proves the
+      // whole-segment redaction protects against PHONE_PATTERN eating a
+      // subsequence and leaving the remaining 50+ chars of the secret in
+      // the log line (partial-leak regression).
+      const pathToken =
+        "AbCdEf0123456789ghijklMNOPQR-_stuvwxyzABCDEF0123456789ghijklmnopqr";
+      expect(pathToken.length).toBeGreaterThanOrEqual(40);
+      const result = redactRequestUrl(
+        `https://example.com/api/webhooks/switchbot/${pathToken}`,
+      );
+      // Full secret is gone AND no fragment of it survives
+      expect(result).not.toContain(pathToken);
+      expect(result).not.toContain("AbCdEf");
+      expect(result).not.toContain("mnopqr");
+      expect(result).toContain("[REDACTED:secret]");
+      // Preserve the routable prefix for triage
+      expect(result).toContain("/api/webhooks/switchbot/");
+    });
+
+    test("masks JWT-shape path token (waitlist checkout URL)", () => {
+      const jwt =
+        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyZWctYWJjIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9FYR3Cq6D8pow";
+      const result = redactRequestUrl(
+        `https://example.com/events/waitlist/checkout/${jwt}`,
+      );
+      expect(result).not.toContain(jwt);
+      expect(result).toContain("[REDACTED:jwt]");
+      expect(result).toContain("/events/waitlist/checkout/");
+    });
+
+    test("preserves UUID path segments (triage identifiers, not secrets)", () => {
+      const uuid = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+      const result = redactRequestUrl(
+        `https://example.com/reservations/${uuid}/cancel`,
+      );
+      expect(result).toContain(`/reservations/${uuid}/cancel`);
+      expect(result).not.toContain("[REDACTED");
+    });
+
+    test("preserves slug path segments (studio-a etc.)", () => {
+      const result = redactRequestUrl(
+        "https://example.com/spaces/studio-a/detail",
+      );
+      expect(result).toBe("https://example.com/spaces/studio-a/detail");
+    });
+
+    test("query string masking still works alongside path masking", () => {
+      const pathToken =
+        "AbCdEf0123456789ghijklMNOPQR-_stuvwxyzABCDEF0123456789ghijklmnopqr";
+      const result = redactRequestUrl(
+        `https://example.com/api/webhooks/switchbot/${pathToken}?debug=1&session=abc`,
+      );
+      // Query stripped
+      expect(result).not.toContain("session=abc");
+      expect(result).not.toContain("debug=1");
+      expect(result).toContain("[redacted]");
+      // Path segment masked
+      expect(result).not.toContain(pathToken);
+      expect(result).toContain("[REDACTED:secret]");
+    });
+
+    test("masks path secrets even in relative URLs (fail-safe branch)", () => {
+      const pathToken =
+        "AbCdEf0123456789ghijklMNOPQR-_stuvwxyzABCDEF0123456789ghijklmnopqr";
+      const result = redactRequestUrl(
+        `/api/webhooks/switchbot/${pathToken}?whatever=1`,
+      );
+      expect(result).not.toContain(pathToken);
+      expect(result).toContain("[REDACTED:secret]");
+      expect(result).toContain("/api/webhooks/switchbot/");
+    });
+
+    test("masks known secret prefix embedded in path (Stripe key shape)", () => {
+      const stripeKey = ["sk", "live", "51ABCabcABCabcABCabcABCabc"].join("_");
+      const result = redactRequestUrl(
+        `https://example.com/api/debug/${stripeKey}/echo`,
+      );
+      expect(result).not.toContain(stripeKey);
+      expect(result).toContain("[REDACTED:secret]");
+      expect(result).toContain("/api/debug/");
+      expect(result).toContain("/echo");
+    });
+
+    test("root path stays unchanged", () => {
+      expect(redactRequestUrl("https://example.com/")).toBe(
+        "https://example.com/",
+      );
+    });
+  });
 });
 
 describe("redactContext", () => {

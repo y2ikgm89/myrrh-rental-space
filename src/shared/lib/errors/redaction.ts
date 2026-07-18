@@ -31,10 +31,15 @@ import { isRecord } from "@/shared/lib/serialize";
  *
  * ## URL の redaction
  *
- * `redactRequestUrl` は query string を必ず `?[redacted]` に置き換える。
- * path 部分にはトークン埋め込み URL (例 /reservations/[id]/cancel?token=...)
- * が入る可能性があるが、path のセグメント値 (UUID 等) は log として保持する
- * ほうが調査に有用なので触らない。
+ * `redactRequestUrl` は 2 段階で削る:
+ *
+ * 1. **query string** は必ず `?[redacted]` に置き換える (キー名にも値にも
+ *    秘密が入りうる)。hash も同格の危険度なので落とす。
+ * 2. **path segment** ごとに {@link redactString} を通す。トークンを path に
+ *    埋め込むエンドポイント (例: `/api/webhooks/switchbot/<64-char-base64url>`,
+ *    `/events/waitlist/checkout/<encrypted-token>`) が Cloud Logging に
+ *    そのまま流れることを防ぐ。UUID・slug・数値 id 等は {@link redactString}
+ *    の pattern battery が触らないので調査キーとして残る。
  */
 
 // ---------------------------------------------------------------------------
@@ -191,10 +196,52 @@ export function redactString(
 // URL redaction
 // ---------------------------------------------------------------------------
 
+const UUID_EXACT_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * requestUrl の query string を必ず落とす。path の UUID / slug は残す。
+ * 単一 path segment を検査してマスクする。
  *
- * URL parse 失敗時は fail-safe に query 区切り以降を捨てる文字列操作に落とす。
+ * ## whole-segment 置換
+ *
+ * `redactString` を素直に流すと、base64url secret の中の 10-桁数字連 (例:
+ * "0123456789") を PHONE_PATTERN が先に食って残り 40+ char を短く分割する
+ * → HIGH_ENTROPY_PATTERN の 40-char 閾値を割って **secret の残り半分が
+ * ログに残る**。path segment は routing key の単位そのものなので、疑わしい
+ * ものはセグメント丸ごと 1 つの placeholder に置き換える。
+ *
+ * ## 優先順
+ *
+ * 1. UUID 完全一致 → そのまま (triage 識別子)
+ * 2. 明示的な secret prefix (Stripe / OpenAI / GitHub PAT)
+ * 3. JWT (`eyJ...` 3-dot 構造)
+ * 4. Bearer プレフィクス (path に来ることは稀だが対称性のため)
+ * 5. 40+ base64url 連 (waitlist offer token, SwitchBot pathToken 等)
+ */
+function redactUrlSegment(segment: string): string {
+  if (!segment) return segment;
+  if (UUID_EXACT_PATTERN.test(segment)) return segment;
+  if (segment.match(KNOWN_SECRET_PREFIX_PATTERN)) return REDACTED_KIND.secret;
+  if (segment.match(JWT_PATTERN)) return REDACTED_KIND.jwt;
+  if (segment.match(BEARER_PATTERN)) return REDACTED_KIND.bearer;
+  if (segment.match(HIGH_ENTROPY_PATTERN)) return REDACTED_KIND.secret;
+  return segment;
+}
+
+/**
+ * path 全体を segment 単位で {@link redactUrlSegment} に通す。
+ * leading `/` や連続 `//` から出る空 segment は形を保ったまま素通し。
+ */
+function redactUrlPath(pathname: string): string {
+  if (!pathname || pathname === "/") return pathname;
+  return pathname.split("/").map(redactUrlSegment).join("/");
+}
+
+/**
+ * requestUrl の query string を必ず落とし、path segment 内のトークンもマスクする。
+ *
+ * URL parse 失敗時は fail-safe に query/hash 区切り以降を捨てて、
+ * 残った相対 path にも segment-level redaction を通す。
  */
 export function redactRequestUrl(url: string): string {
   if (!url) return url;
@@ -204,10 +251,12 @@ export function redactRequestUrl(url: string): string {
     parsed.search = hasQuery ? "?[redacted]" : "";
     // hash も query 相当の危険度なので落とす
     if (parsed.hash) parsed.hash = "";
+    parsed.pathname = redactUrlPath(parsed.pathname);
     return parsed.toString();
   } catch {
     const [pathOnly] = url.split(/[?#]/);
-    return pathOnly ?? url;
+    if (!pathOnly) return url;
+    return redactUrlPath(pathOnly);
   }
 }
 
