@@ -319,8 +319,14 @@ async function fulfillPaymentAtomically(
   // 返し早期 return → issueReceipt が二度と呼ばれず PAID + Receipt 無しで stuck する。
   // これを毎時実行の `/api/cron/receipt-backfill` (`backfillReceipts`) が
   // `paymentStatus IN [PAID, PARTIALLY_REFUNDED] AND receipt: null` 走査で reconcile する。
+  //
+  // receiptSerialNo は発行成功時のみゲスト予約の確認メールへ渡して署名 URL を組み立てる
+  // (RECEIPT-GUEST-01)。VALIDATION スキップ / 恒久 throw で undefined のままなら
+  // 領収書 CTA は表示されない (backfill 経路がフォローする)。
+  let receiptSerialNo: string | undefined;
   try {
-    await issueReceiptForReservation(reservation.id);
+    const receipt = await issueReceiptForReservation(reservation.id);
+    receiptSerialNo = receipt.serialNo;
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION") {
       logError(error, {
@@ -350,6 +356,7 @@ async function fulfillPaymentAtomically(
         notes: reservation.notes ?? undefined,
         icsSequence: reservation.icsSequence,
         userId: reservation.userId,
+        receiptSerialNo,
       }),
     ),
     {
@@ -486,8 +493,13 @@ async function fulfillEventRegistrationPaymentAtomically(
   // event registration 側の orphan (paymentStatus IN [PAID, PARTIALLY_REFUNDED] AND
   // receipt: null) を毎時走査して発行を再試行する (`backfillReceipts` の
   // `registrationRows` 経路)。
+  //
+  // receiptSerialNo は発行成功時のみゲスト申込の確認メール (waitlist offer 経路) へ
+  // 渡して署名 URL を組み立てる (RECEIPT-GUEST-01)。
+  let receiptSerialNo: string | undefined;
   try {
-    await issueReceiptForEventRegistration(registrationId);
+    const receipt = await issueReceiptForEventRegistration(registrationId);
+    receiptSerialNo = receipt.serialNo;
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION") {
       logError(error, {
@@ -529,6 +541,7 @@ async function fulfillEventRegistrationPaymentAtomically(
       customerId: details.customerId,
       format: details.format,
       meetingUrl: details.meetingUrl,
+      ...(receiptSerialNo !== undefined ? { receiptSerialNo } : {}),
     }),
     {
       operation: "sendWaitlistOfferPaymentConfirmationEmail",

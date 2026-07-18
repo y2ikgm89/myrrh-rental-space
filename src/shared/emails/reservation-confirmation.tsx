@@ -32,6 +32,12 @@ type Props = {
   memberReservationUrl?: string;
   /** ゲスト向け: マイページに予約を追加する claim リンク（会員は表示しない） */
   claimUrl?: string;
+  /**
+   * ゲスト向け: 領収書 PDF ダウンロード URL (RECEIPT-GUEST-01)。
+   * `createReceiptDownloadToken` 由来の署名 URL (60 分有効)。
+   * 会員はマイページから領収書を DL するため未指定。
+   */
+  receiptDownloadUrl?: string;
   /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
   cancellationDeadlineHours?: number;
   /** 変更受付期限の時間数（予約開始の X 時間前まで）。キャンセルと独立に設定可能 */
@@ -72,6 +78,7 @@ export function ReservationConfirmationEmail({
   cancelUrl,
   memberReservationUrl,
   claimUrl,
+  receiptDownloadUrl,
   cancellationDeadlineHours,
   modificationDeadlineHours,
   cancellationPolicyUrl,
@@ -245,6 +252,36 @@ export function ReservationConfirmationEmail({
               style={{ color: COLOR.link, textDecoration: "underline" }}
             >
               マイページに追加する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
+      {receiptDownloadUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            適格請求書（領収書）PDF を下記のリンクからダウンロードいただけます
+            （60 分間有効）。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={receiptDownloadUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              領収書 PDF をダウンロードする
             </Link>
           </Text>
         </Section>

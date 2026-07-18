@@ -62,6 +62,7 @@ const mockGetCalendarEmailSettings = mock<
 type ClaimUrlProps = {
   claimUrl?: string;
   memberEventRegistrationUrl?: string;
+  receiptDownloadUrl?: string;
 };
 const mockEventRegistrationConfirmationEmail = mock(
   (props: ClaimUrlProps) => props,
@@ -236,6 +237,44 @@ describe("sendEventRegistrationConfirmation() の memberEventRegistrationUrl 出
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.memberEventRegistrationUrl).toBeUndefined();
+  });
+});
+
+// RECEIPT-GUEST-01: ゲスト申込かつ receiptSerialNo が渡された場合のみ、
+// 領収書 PDF ダウンロード署名 URL を発行する。会員はマイページ経由で DL。
+describe("sendEventRegistrationConfirmation() の receiptDownloadUrl 出し分け", () => {
+  test("ゲスト申込 + receiptSerialNo あり → receiptDownloadUrl を発行する", async () => {
+    await sendEventRegistrationConfirmation({
+      ...REGISTRATION_DATA,
+      customerId: null,
+      receiptSerialNo: "2026-000042",
+    });
+
+    const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.receiptDownloadUrl).toMatch(
+      /\/api\/receipts\/2026-000042\/pdf\?token=[A-Za-z0-9_-]+$/,
+    );
+  });
+
+  test("会員申込 + receiptSerialNo あり → receiptDownloadUrl は発行しない", async () => {
+    await sendEventRegistrationConfirmation({
+      ...REGISTRATION_DATA,
+      customerId: "customer-1",
+      receiptSerialNo: "2026-000042",
+    });
+
+    const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.receiptDownloadUrl).toBeUndefined();
+  });
+
+  test("ゲスト申込 + receiptSerialNo なし → receiptDownloadUrl は発行しない", async () => {
+    await sendEventRegistrationConfirmation({
+      ...REGISTRATION_DATA,
+      customerId: null,
+    });
+
+    const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.receiptDownloadUrl).toBeUndefined();
   });
 });
 

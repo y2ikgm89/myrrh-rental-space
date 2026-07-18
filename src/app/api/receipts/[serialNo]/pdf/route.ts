@@ -36,6 +36,11 @@ import {
  * cacheComponents:true との整合上、`export const dynamic` 等の segment config は禁止
  * (architecture-boundaries.test.ts の 0 件強制)。Route Handler は default dynamic のため
  * 明示 config は不要。
+ *
+ * ## TODO: single-use 硬化 (RECEIPT-GUEST-01 follow-up)
+ * 現状トークンは 60 分の TTL 内であれば同じ URL を複数回踏んでも DL 可能。将来的に
+ * `Receipt.usedAt` 列を追加して初回 DL で刻印 + 検証すると single-use に硬化できるが、
+ * schema 変更を伴うため別 PR に分離する。
  */
 export async function GET(
   request: Request,
