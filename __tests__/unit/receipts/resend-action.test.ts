@@ -19,9 +19,9 @@ const domainSpy = mock<
   (input: { serialNo: string; email: string }) => Promise<unknown>
 >(() => Promise.resolve(null));
 
-const sendReceiptResendEmailSpy = mock<() => Promise<{ ok: boolean }>>(() =>
-  Promise.resolve({ ok: true }),
-);
+const sendReceiptResendEmailSpy = mock<
+  (input: unknown) => Promise<{ ok: boolean }>
+>(() => Promise.resolve({ ok: true }));
 
 type LimitResult = { readonly success: boolean; readonly error?: string };
 const ipCheckSpy = mock<() => Promise<LimitResult>>(() =>
