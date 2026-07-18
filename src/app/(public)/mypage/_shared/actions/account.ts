@@ -3,6 +3,9 @@
 import { headers } from "next/headers";
 import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { DomainError } from "@/shared/domain/domain-error";
 import {
   createMutationError,
   type MutationResult,
@@ -27,6 +30,19 @@ export async function getAccountLinksAction(): Promise<
 
   const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
+
+  // OAUTH-BETTER-AUTH-01: Customer.isActive / status BLACKLIST を Server Action
+  // 側でも強制する（MypageAuthGate は SC 描画層のみカバー）。
+  const customer = await getCustomerByUserId(session.user.id);
+  if (!customer) return createMutationError("顧客情報が見つかりません");
+  try {
+    await assertCustomerActive(customer.id);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
+  }
 
   const providers = await getAccountProviders(session.user.id);
   return { accounts: providers };
@@ -56,6 +72,19 @@ export async function deleteAccountAction(
 
   const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
+
+  // OAUTH-BETTER-AUTH-01: 停止/BLACKLIST 顧客からの削除試行を Server Action 側で
+  // 拒否する（管理側の review 前に自削除で証跡消失するのを防ぐ）。
+  const customer = await getCustomerByUserId(session.user.id);
+  if (!customer) return createMutationError("顧客情報が見つかりません");
+  try {
+    await assertCustomerActive(customer.id);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
+  }
 
   try {
     await customerAuth.api.deleteUser({

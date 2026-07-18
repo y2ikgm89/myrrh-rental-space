@@ -11,6 +11,7 @@ import { cancelReservationByToken } from "@/shared/domain/reservations/customer-
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import {
@@ -159,6 +160,18 @@ export async function cancelGuestReservationAction(
       return createMutationError(
         "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください",
       );
+    }
+    // OAUTH-BETTER-AUTH-01: session 経由で解決した Customer は
+    // isActive / status BLACKLIST を強制する（ownership 一致でも停止アカウントは拒否）。
+    if (customer) {
+      try {
+        await assertCustomerActive(customer.id);
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return createMutationError(error.message);
+        }
+        throw error;
+      }
     }
   }
 

@@ -75,6 +75,12 @@ mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mock(() => Promise.resolve(null)),
 }));
 
+// OAUTH-BETTER-AUTH-01: session-authenticated Customer は assertCustomerActive を通す。
+mock.module("@/shared/domain/customers/guard", () => ({
+  assertCustomerActive: mock(() => Promise.resolve(undefined)),
+  ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
+}));
+
 // registerWaitlistEntryCommand は isFeatureEnabled("events") を実際に呼ぶ
 // (registration-overbooking.test.ts と同じ理由で bypass する — 'use cache' 付き
 // Settings 読取りは advisory lock 直列化の検証と無関係)。

@@ -2895,6 +2895,65 @@ describe("architecture boundaries", () => {
     });
   });
 
+  describe("Customer.isActive / BLACKLIST gate は Server Action 側で強制する (OAUTH-BETTER-AUTH-01 再発防止)", () => {
+    // MypageAuthGate は Server Component 描画層のみカバー。Server Action
+    // (mypage / claim / session-owner cancel) は独立の request context のため、
+    // getCustomerByUserId で解決した customer に対し assertCustomerActive を
+    // 呼ばない限り、停止/BLACKLIST 顧客の書込を通してしまう。
+    // 各 Server Action で customer.id 解決直後に assertCustomerActive を呼ぶこと
+    // を drift gate として強制する。
+    test("`use server` かつ getCustomerByUserId を使う (public) 配下のファイルは assertCustomerActive も呼ぶ", () => {
+      const targets = collectSourceFiles(PUBLIC_APP_ROOT).filter((file) => {
+        // Server Action = `"use server"` directive を含むファイル。
+        if (!/(?:^|[\\/])[^\\/]+\.ts$/u.test(file)) return false;
+        const source = readFileSync(file, "utf8");
+        if (!/^\s*["']use server["']/mu.test(source)) return false;
+        return /\bgetCustomerByUserId\b/u.test(source);
+      });
+
+      // 存在確認: gate が 0 件と誤検知するのを防ぐため、少なくとも 1 ファイル
+      // が対象 pattern に該当していることを確認する。
+      expect(targets.length).toBeGreaterThan(0);
+
+      const offenders = targets
+        .filter((file) => {
+          const source = readFileSync(file, "utf8");
+          return !/\bassertCustomerActive\b/u.test(source);
+        })
+        .map((file) => relative(ROOT, file));
+
+      expect(
+        offenders,
+        `Server Action で getCustomerByUserId を使うファイルは assertCustomerActive も呼ぶこと。src/shared/domain/customers/guard.ts の helper を import して customer.id 解決直後に呼び出す (OAUTH-BETTER-AUTH-01)。`,
+      ).toEqual([]);
+    });
+
+    // claim/reservation, claim/event-registration は ensureCustomerLinked から
+    // 直接 customer を得るため getCustomerByUserId を呼ばない。個別に強制する。
+    test("(public)/claim/**/_actions/*.ts は assertCustomerActive を呼ぶ", () => {
+      const CLAIM_ACTION_FILES = [
+        join(PUBLIC_APP_ROOT, "claim", "reservation", "_actions", "claim.ts"),
+        join(
+          PUBLIC_APP_ROOT,
+          "claim",
+          "event-registration",
+          "_actions",
+          "claim.ts",
+        ),
+      ];
+      const offenders = CLAIM_ACTION_FILES.filter((file) => {
+        expect(existsSync(file)).toBe(true);
+        const source = readFileSync(file, "utf8");
+        return !/\bassertCustomerActive\b/u.test(source);
+      }).map((file) => relative(ROOT, file));
+
+      expect(
+        offenders,
+        `(public)/claim/**/_actions/*.ts で assertCustomerActive の呼出が漏れています (OAUTH-BETTER-AUTH-01)。ensureCustomerLinked 直後に呼ぶこと。`,
+      ).toEqual([]);
+    });
+  });
+
   describe("実 DB integration テストの SERIAL_DB_TESTS 登録 (TEST-01 再発防止)", () => {
     // `.claude/rules/testing-unit.md` の SSoT 契約:「新規の実 DB テストは
     // SERIAL_DB_TESTS にフルパス登録必須（未登録だと parallel bucket に入り共有 DB で

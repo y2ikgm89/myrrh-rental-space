@@ -5,6 +5,8 @@ import { updateTag } from "next/cache";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { updateCustomerProfileByUserId } from "@/shared/domain/customers/commands";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   checkActionRateLimit,
@@ -36,6 +38,23 @@ export async function updateProfileAction(
       const session = await getCustomerSession();
       if (!session) {
         return { ok: false, error: "認証が必要です" };
+      }
+
+      // OAUTH-BETTER-AUTH-01: Customer.isActive / status BLACKLIST を Server Action
+      // 側でも強制する（MypageAuthGate は SC 描画層のみカバー）。
+      // updateCustomerProfileByUserId は userId 起点のため、事前に customer.id へ
+      // 解決してから active gate を通す。
+      const preCustomer = await getCustomerByUserId(session.user.id);
+      if (!preCustomer) {
+        return { ok: false, error: "顧客情報が見つかりません" };
+      }
+      try {
+        await assertCustomerActive(preCustomer.id);
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
       }
 
       const turnstile = await validateTurnstile({

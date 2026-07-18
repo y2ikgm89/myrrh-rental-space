@@ -160,6 +160,12 @@ mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mockGetCustomerByUserId,
 }));
 
+// OAUTH-BETTER-AUTH-01: Server Action は assertCustomerActive を通す。
+mock.module("@/shared/domain/customers/guard", () => ({
+  assertCustomerActive: mock(() => Promise.resolve(undefined)),
+  ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
+}));
+
 mock.module("@/shared/domain/events/registration-queries", () => ({
   getEventRegistrationDetailsForEmail: mock(() =>
     Promise.reject(new Error("not used in cancel test")),

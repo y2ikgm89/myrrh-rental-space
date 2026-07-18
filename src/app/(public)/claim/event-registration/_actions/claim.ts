@@ -5,6 +5,8 @@ import { verifyEventRegistrationClaimToken } from "@/shared/lib/event-registrati
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { claimEventRegistrationForCustomer } from "@/shared/domain/events/claim-commands";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
@@ -60,6 +62,15 @@ export async function claimEventRegistrationAction(): Promise<
   }
 
   const { customer, isNew } = await ensureCustomerLinked(session.user);
+  // OAUTH-BETTER-AUTH-01: 認証済み Customer は isActive / status BLACKLIST を強制する。
+  try {
+    await assertCustomerActive(customer.id);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
+  }
   await consumeSignupTermsAction({ isNew });
 
   const result = await claimEventRegistrationForCustomer(

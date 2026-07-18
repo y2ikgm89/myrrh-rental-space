@@ -109,6 +109,13 @@ mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mockGetCustomerByUserId,
 }));
 
+// OAUTH-BETTER-AUTH-01: session 経由の Customer は Server Action 側で
+// assertCustomerActive を通す。テストでは常時素通りに固定する。
+mock.module("@/shared/domain/customers/guard", () => ({
+  assertCustomerActive: mock(() => Promise.resolve(undefined)),
+  ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
+}));
+
 const mockGetCustomerSession = mock<
   () => Promise<{ user: { id: string } } | null>
 >(() => Promise.resolve(null));

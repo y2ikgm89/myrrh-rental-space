@@ -49,6 +49,7 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
@@ -119,6 +120,16 @@ export async function registerForEvent(
       if (user) {
         const customer = await getCustomerByUserId(user.id);
         if (customer) {
+          // OAUTH-BETTER-AUTH-01: 認証済みセッションで解決した Customer は
+          // isActive / status BLACKLIST を強制する。
+          try {
+            await assertCustomerActive(customer.id);
+          } catch (error) {
+            if (error instanceof DomainError) {
+              return { ok: false, error: error.message };
+            }
+            throw error;
+          }
           customerId = customer.id;
         }
       }
@@ -298,6 +309,16 @@ export async function registerForEventWaitlist(
       if (user) {
         const customer = await getCustomerByUserId(user.id);
         if (customer) {
+          // OAUTH-BETTER-AUTH-01: 認証済みセッションで解決した Customer は
+          // isActive / status BLACKLIST を強制する。
+          try {
+            await assertCustomerActive(customer.id);
+          } catch (error) {
+            if (error instanceof DomainError) {
+              return { ok: false, error: error.message };
+            }
+            throw error;
+          }
           customerId = customer.id;
         }
       }
@@ -413,6 +434,9 @@ export async function cancelEventRegistration(
 
   // 6. Cancel registration（atomic claim + 統一副作用実行）
   try {
+    // OAUTH-BETTER-AUTH-01: Customer.isActive / status BLACKLIST を
+    // Server Action 側でも強制する（MypageAuthGate は SC 描画層のみカバー）。
+    await assertCustomerActive(customer.id);
     const registration = await cancelEventRegistrationCommand(
       registrationId,
       customer.id,

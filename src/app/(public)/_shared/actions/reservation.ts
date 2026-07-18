@@ -49,6 +49,8 @@ import {
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
 import { MS_PER_DAY } from "@/shared/lib/date-format";
 
@@ -151,6 +153,24 @@ export async function submitReservation(
       }
 
       const user = await getCurrentCustomerUser();
+
+      // OAUTH-BETTER-AUTH-01: 認証済みセッションで解決した Customer は
+      // isActive / status BLACKLIST を Server Action 側で強制する
+      // （domain 層の ensureCustomerNotBlacklisted は BLACKLIST のみ）。
+      // 未ログインゲストは従来通り domain 層 guard に委ねる。
+      if (user) {
+        const authedCustomer = await getCustomerByUserId(user.id);
+        if (authedCustomer) {
+          try {
+            await assertCustomerActive(authedCustomer.id);
+          } catch (error) {
+            if (error instanceof DomainError) {
+              return { ok: false, error: error.message };
+            }
+            throw error;
+          }
+        }
+      }
 
       const clientIp = await getClientIpFromHeaders();
       const headersList = await headers();

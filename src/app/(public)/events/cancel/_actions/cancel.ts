@@ -9,6 +9,7 @@ import { cancelEventRegistrationByToken } from "@/shared/domain/events/registrat
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { getEventRegistrationForGuestCancel } from "@/shared/domain/events/registration-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import {
   createMutationError,
@@ -196,6 +197,18 @@ export async function cancelGuestEventRegistrationAction(
       return createMutationError(
         "このリンクは別のお客様のご参加申込です。マイページからご自身の申込をご確認ください",
       );
+    }
+    // OAUTH-BETTER-AUTH-01: session 経由で解決した Customer は
+    // isActive / status BLACKLIST を強制する（ownership 一致でも停止アカウントは拒否）。
+    if (customer) {
+      try {
+        await assertCustomerActive(customer.id);
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return createMutationError(error.message);
+        }
+        throw error;
+      }
     }
     expectedCustomerId = registration.customerId;
   }

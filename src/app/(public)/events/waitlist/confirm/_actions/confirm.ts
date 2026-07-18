@@ -23,6 +23,7 @@ import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 
 /**
  * イベント waitlist 繰り上げ当選の確定（無料チケット、公開フォーム）。
@@ -90,6 +91,18 @@ export async function confirmWaitlistOfferAction(
             error:
               "このリンクは別のお客様の繰り上げ当選です。マイページからご確認ください",
           };
+        }
+        // OAUTH-BETTER-AUTH-01: session 経由で解決した Customer は
+        // isActive / status BLACKLIST を強制する。
+        if (customer) {
+          try {
+            await assertCustomerActive(customer.id);
+          } catch (error) {
+            if (error instanceof DomainError) {
+              return { ok: false, error: error.message };
+            }
+            throw error;
+          }
         }
         expectedCustomerId = registration.customerId;
       }
