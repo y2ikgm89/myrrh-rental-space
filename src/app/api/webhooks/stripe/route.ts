@@ -26,14 +26,29 @@
  * `confirmWaitlistOfferCommand`（容量再チェック）を PAID 確定より先に呼ぶ
  * （直接購入は登録時点で既に status: CONFIRMED のため対象外）。
  *
- * ## べき等性（atomic claim）
- * 各 handler は `claimReservationAs*` / `claimEventRegistrationAs*` の
- * **WHERE 条件で status/paymentStatus を排他制御**する単一 UPDATE で状態遷移する。
- * `findUnique → update` の 2 ステップでは race window が残り、`session.completed` と
- * `async_payment_succeeded` の並行配信で確認メールが二重送信される silent bug を
- * 起こすため、claim 成否（`updateMany.count > 0`）で後続副作用（メール送信 /
- * cache invalidate）を gate する。
+ * ## べき等性（2 層の defense-in-depth）
+ * ### (a) Primary chokepoint: `StripeEvent` unique table (STRIPE-DEDUP-A)
+ * signature verification 直後に `claimStripeEventForProcessing` で
+ * `event.id` を primary key として INSERT を試みる (Stripe 公式推奨パターン
+ * <https://docs.stripe.com/webhooks#handle-duplicate-events>)。P2002 unique
+ * conflict = 別配送で受領済み → 副作用ゼロで `200 { duplicate: true }` を返す
+ * (cache invalidate も skip)。TOCTOU race を SELECT+INSERT ではなく create+catch
+ * で回避するため、event.id が同一な並行 delivery でも 1 プロセスだけが handler を
+ * 実行できる。handler 全成功後に `markStripeEventProcessed` で `processedAt` を
+ * 書込む (tx 外の post-write のため、途中で throw すると null で残り、
+ * STRIPE-DEDUP-B の retention/reconcile cron が拾う想定)。
  *
+ * ### (b) Backstop: 各 handler の atomic claim (`claimReservationAs*` /
+ * `claimEventRegistrationAs*` の WHERE 条件で status/paymentStatus を排他制御する
+ * 単一 UPDATE)。`findUnique → update` の 2 ステップでは race window が残り、
+ * `session.completed` と `async_payment_succeeded` の並行配信で確認メールが
+ * 二重送信される silent bug を起こすため、claim 成否 (`updateMany.count > 0`) で
+ * 後続副作用（メール送信 / cache invalidate）を gate する。(a) だけでも十分に
+ * 見えるが、handler crash → Stripe retry の crash-recovery 経路では (a) が
+ * duplicate 短絡してしまうため、当該 event の再配送前に retention cron が
+ * `processedAt=null` な stale event row を削除する契約で完結する。
+ *
+ * @see https://docs.stripe.com/webhooks#handle-duplicate-events
  * @see https://docs.stripe.com/payments/checkout/fulfill-orders
  * @module api/webhooks/stripe
  */
@@ -47,6 +62,10 @@ import {
   savePaymentIntentId,
   findReservationByPaymentIntent,
 } from "@/shared/domain/reservations/payment-queries";
+import {
+  claimStripeEventForProcessing,
+  markStripeEventProcessed,
+} from "@/shared/domain/stripe-events/dedup";
 import { DomainError } from "@/shared/domain/domain-error";
 import { confirmWaitlistOfferCommand } from "@/shared/domain/events/waitlist-commands";
 import {
@@ -153,7 +172,24 @@ export async function POST(request: Request) {
       return jsonError("Invalid signature", 400);
     }
 
-    // 5. イベント処理（Stripe 公式推奨の Checkout フルセット）
+    // 5. Primary dedup chokepoint (STRIPE-DEDUP-A)
+    //
+    // Stripe 公式 "handle-duplicate-events" 推奨実装。event.id で INSERT を試み、
+    // P2002 unique conflict なら副作用ゼロで 200 短絡する
+    // (`invalidateSiteWideCacheFromRouteHandler` も呼ばない — 初回配送で成功済み
+    // のキャッシュに再度 CF purge を投げても reflection しないうえ、無駄に purge
+    // quota を消費するため)。
+    //
+    // @see https://docs.stripe.com/webhooks#handle-duplicate-events
+    const claimResult = await claimStripeEventForProcessing({
+      eventId: event.id,
+      eventType: event.type,
+    });
+    if (claimResult === "duplicate") {
+      return jsonSuccess({ received: true, duplicate: true });
+    }
+
+    // 6. イベント処理（Stripe 公式推奨の Checkout フルセット）
     switch (event.type) {
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(event.data.object);
@@ -179,6 +215,11 @@ export async function POST(request: Request) {
         // 未対応イベントは無視（200 を返す）
         break;
     }
+
+    // 7. handler が throw せず全て走り切ったので、chokepoint 行に processedAt を刻印。
+    //    途中 throw 時は catch 側の 500 return に落ちて processedAt は null のまま残る
+    //    (STRIPE-DEDUP-B の retention/reconcile cron 用の crash-recovery signal)。
+    await markStripeEventProcessed(event.id);
 
     return jsonSuccess({ received: true });
   } catch (error) {
