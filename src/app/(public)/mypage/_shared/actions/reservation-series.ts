@@ -21,6 +21,8 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { createMutationError } from "@/shared/lib/mutation-result";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { DomainError } from "@/shared/domain/domain-error";
 import { cancelCustomerReservationSeries } from "@/shared/domain/reservations/customer-commands";
 import { getCustomerCanCancelSeriesInFull } from "@/shared/domain/reservations/payloads";
 import {
@@ -58,6 +60,15 @@ export async function cancelReservationSeriesCustomerAction(
 
   const customer = await getCustomerByUserId(session.user.id);
   if (!customer) return createMutationError("顧客情報が見つかりません");
+
+  try {
+    await assertCustomerActive(customer.id);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
+  }
 
   // Settings gate (spec §goal 9): false のときはボタンが露出しない設計だが、
   // 直接 action を叩かれるケースに備えて server 側でも fail-closed する。

@@ -5,6 +5,8 @@ import { verifyReservationClaimToken } from "@/shared/lib/reservation-claim-toke
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { claimReservationForCustomer } from "@/shared/domain/reservations/claim-commands";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
@@ -58,6 +60,15 @@ export async function claimReservationAction(): Promise<
   }
 
   const { customer, isNew } = await ensureCustomerLinked(session.user);
+  // OAUTH-BETTER-AUTH-01: 認証済み Customer は isActive / status BLACKLIST を強制する。
+  try {
+    await assertCustomerActive(customer.id);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
+  }
   await consumeSignupTermsAction({ isNew });
 
   const result = await claimReservationForCustomer(

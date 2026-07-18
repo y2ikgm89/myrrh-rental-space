@@ -88,6 +88,12 @@ mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mockGetCustomerByUserId,
 }));
 
+// OAUTH-BETTER-AUTH-01: session-authenticated Customer は assertCustomerActive を通す。
+mock.module("@/shared/domain/customers/guard", () => ({
+  assertCustomerActive: mock(() => Promise.resolve(undefined)),
+  ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
+}));
+
 // 既存 3 種の副作用（キャンセル確認メール・管理者通知メール）は実
 // registration-cancellation-side-effects.ts から実際に呼ばれるが、本テストの
 // 対象ではないため no-op 化する（Resend への実送信を避ける）。

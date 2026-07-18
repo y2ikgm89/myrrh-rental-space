@@ -91,6 +91,12 @@ mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mock(() => Promise.resolve(null)),
 }));
 
+// OAUTH-BETTER-AUTH-01: session-authenticated Customer は assertCustomerActive を通す。
+mock.module("@/shared/domain/customers/guard", () => ({
+  assertCustomerActive: mock(() => Promise.resolve(undefined)),
+  ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
+}));
+
 mock.module("@/shared/domain/events/registration-queries", () => ({
   getEventRegistrationDetailsForEmail: mock(() => Promise.resolve(null)),
 }));

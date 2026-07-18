@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import type { SubmissionResult } from "@conform-to/react";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import {
   cancelCustomerReservation,
   updateCustomerReservation,
@@ -74,6 +75,7 @@ export async function startCheckoutSessionAction(
   if (!customer) return createMutationError("顧客情報が見つかりません");
 
   try {
+    await assertCustomerActive(customer.id);
     const result = await createCheckoutSessionCommand({
       reservationId: parsedId.data,
       actorCustomerId: customer.id,
@@ -112,6 +114,7 @@ export async function cancelReservationAction(
   if (!customer) return createMutationError("顧客情報が見つかりません");
 
   try {
+    await assertCustomerActive(customer.id);
     const settings = await getReservationDeadlineSettings();
     const trimmedReason =
       cancellationReason && cancellationReason.trim().length > 0
@@ -173,6 +176,15 @@ export async function updateReservationAction(
       const customer = await getCustomerByUserId(session.user.id);
       if (!customer) {
         return { ok: false, error: "顧客情報が見つかりません" };
+      }
+
+      try {
+        await assertCustomerActive(customer.id);
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
+        }
+        throw error;
       }
 
       const turnstile = await validateTurnstile({

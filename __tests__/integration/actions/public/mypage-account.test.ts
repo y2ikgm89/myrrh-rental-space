@@ -69,6 +69,30 @@ mock.module("@/shared/domain/users/queries", () => ({
   getAccountProviders: mockGetAccountProviders,
 }));
 
+// OAUTH-BETTER-AUTH-01: Server Action は getCustomerByUserId + assertCustomerActive
+// を通ってから mutation を実行する。テストはドメインクエリ / ガードを両方 mock する。
+const mockGetCustomerByUserId = mock(
+  (): Promise<{ id: string; lastName: string; firstName: string } | null> =>
+    Promise.resolve({
+      id: "customer-001",
+      lastName: "山田",
+      firstName: "太郎",
+    }),
+);
+
+mock.module("@/shared/domain/customers/queries", () => ({
+  getCustomerByUserId: mockGetCustomerByUserId,
+}));
+
+const mockAssertCustomerActive = mock((): Promise<void> =>
+  Promise.resolve(undefined),
+);
+
+mock.module("@/shared/domain/customers/guard", () => ({
+  assertCustomerActive: mockAssertCustomerActive,
+  ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
+}));
+
 // auth モック
 const mockDeleteUser = mock(() => Promise.resolve(undefined));
 const mockGetSession = mock(

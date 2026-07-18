@@ -114,6 +114,13 @@ function createCustomerAuth() {
         // "Authentication Requirements" が OAuth ユーザーに明示的にこの callback を推奨）。
         // 設定するだけで deleteUser API は「即時削除」から「確認メール送信」に切り替わる。
         sendDeleteAccountVerification: async ({ user, url }) => {
+          // OAUTH-BETTER-AUTH-02: 送信失敗を握りつぶすと Better Auth 側は「削除
+          // 申請成功」を返すが、ユーザーは確認メールを受け取れずに zombie 削除
+          // 状態に陥る（Better Auth 内部で pending deletion がマークされ、
+          // 顧客はメール内リンクを踏めないため deletion を完了できない）。
+          // logError で HIGH severity を残しつつ re-throw して deleteUser API 側
+          // にエラーを propagate し、UI で「送信に失敗しました」を retryable に
+          // 表示させる。
           try {
             await sendDeleteAccountVerificationEmail({
               email: user.email,
@@ -126,6 +133,7 @@ function createCustomerAuth() {
               severity: ErrorSeverity.HIGH,
               context: { operation: "sendDeleteAccountVerification" },
             });
+            throw error;
           }
         },
         // 実際の削除は本人がメール内リンクを踏んだ時点（Better Auth 内部の

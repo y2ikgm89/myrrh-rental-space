@@ -50,3 +50,49 @@ export async function ensureCustomerNotBlacklisted(
     throw new DomainError(BLACKLISTED_MESSAGE, "FORBIDDEN");
   }
 }
+
+// ---------------------------------------------------------------------------
+// assertCustomerActive — 認証済み顧客のアクション実行前の active/BLACKLIST 判定
+// ---------------------------------------------------------------------------
+// - customerId から Customer.isActive + Customer.status を単一クエリで検証する。
+// - Customer.isActive === false（管理側停止）or Customer.status === BLACKLIST の
+//   いずれかで DomainError(FORBIDDEN) を throw する。
+// - 該当 Customer が存在しなければ NOT_FOUND を throw する（呼出側は既に
+//   `getCustomerByUserId` 等で存在確認済みが前提だが、TOCTOU を潰す）。
+// - MypageAuthGate (SC) と同じセマンティクスを Server Action 側でも強制する
+//   （OAUTH-BETTER-AUTH-01: セッションレベルの revocation が UI 層でしか効いて
+//   いなかった問題への修正）。全 mypage / claim / cancel-by-session の Server
+//   Action が `getCustomerByUserId` の直後にこれを呼ぶことを architecture-boundaries
+//   の drift gate が強制する。
+// ---------------------------------------------------------------------------
+
+const ACCOUNT_SUSPENDED_MESSAGE =
+  "このアカウントは現在ご利用いただけません。お手数ですがお問い合わせフォームよりご連絡ください。";
+
+export interface ActiveGuardTx {
+  readonly customer: {
+    findUnique(
+      args: object,
+    ): Promise<{ isActive: boolean; status: CustomerStatus } | null>;
+  };
+}
+
+export async function assertCustomerActive(
+  customerId: string,
+  tx?: ActiveGuardTx,
+): Promise<void> {
+  const db = tx ?? prisma;
+
+  const customer = await db.customer.findUnique({
+    where: { id: customerId },
+    select: { isActive: true, status: true },
+  });
+
+  if (!customer) {
+    throw new DomainError("顧客情報が見つかりません", "NOT_FOUND");
+  }
+
+  if (!customer.isActive || customer.status === CustomerStatus.BLACKLIST) {
+    throw new DomainError(ACCOUNT_SUSPENDED_MESSAGE, "FORBIDDEN");
+  }
+}
