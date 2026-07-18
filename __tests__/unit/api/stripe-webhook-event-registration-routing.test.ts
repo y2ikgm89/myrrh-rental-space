@@ -678,7 +678,15 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expect(mockClaimEventRegistrationAsFailed).not.toHaveBeenCalled();
     });
 
-    test("冪等性: confirmWaitlistOfferCommand が DomainError(NOT_FOUND) を投げる（再送 webhook）→ 500 にせず skip", async () => {
+    test("STRIPE-01 fix: confirmWaitlistOfferCommand が DomainError(NOT_FOUND) を投げても claim にフォールスルーして idempotent recovery する (初回 confirm 成功後の claim 失敗 → Stripe retry で NOT_FOUND シナリオ)", async () => {
+      // STRIPE-01 (HIGH): 以前は DomainError catch 時に early return していたため、
+      // 初回 confirm 成功 → 直後 claim 失敗 (DB 障害等) → Stripe retry → 再度 confirm →
+      // NOT_FOUND (既に CONFIRMED) で early return → claim が二度と呼ばれず paymentStatus
+      // が PENDING/UNPAID のまま永久 stuck の money captured + DB unpaid silent mismatch
+      // だった。fix 後: DomainError でも fall through して claimEventRegistrationAsPaid
+      // を試行する (claim の WHERE は status=CONFIRMED + paymentStatus IN [UNPAID, PENDING]
+      // の厳格 guard 付きで idempotent — 既に PAID なら count=0 no-op、UNPAID/PENDING なら
+      // 正しく PAID に flip して retry recovery 成功)。
       mockConfirmWaitlistOfferCommand.mockRejectedValueOnce(
         new DomainError("対象の繰り上げ当選申込が見つかりません", "NOT_FOUND"),
       );
@@ -695,7 +703,12 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expectReceivedResult(body);
 
       expect(response.status).toBe(200);
-      expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
+      // fall through で claim が呼ばれる (idempotent recovery)
+      expect(mockClaimEventRegistrationAsPaid).toHaveBeenCalledWith(
+        "reg-redelivered",
+        expect.objectContaining({ stripePaymentIntentId: expect.any(String) }),
+      );
+      // DomainError は LOW 重要度で記録 (以前と同じ)
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(DomainError),
         expect.objectContaining({ severity: "LOW" }),
