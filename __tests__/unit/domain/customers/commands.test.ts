@@ -61,12 +61,26 @@ const prismaCustomer = {
   delete: mockCustomerDelete,
 };
 
+// SETTINGS-02: 初回 email 登録 uniqueness チェックは Better Auth の User.email
+// (`prisma.user.findFirst`) と Customer.emailCanonical の両方を tx 内で照会する。
+const mockUserFindFirst = mock<() => Promise<{ id: string } | null>>(() =>
+  Promise.resolve(null),
+);
+
+const prismaUser = {
+  findFirst: mockUserFindFirst,
+};
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     customer: prismaCustomer,
+    user: prismaUser,
     $transaction: <T>(
-      fn: (tx: { customer: typeof prismaCustomer }) => Promise<T>,
-    ) => fn({ customer: prismaCustomer }),
+      fn: (tx: {
+        customer: typeof prismaCustomer;
+        user: typeof prismaUser;
+      }) => Promise<T>,
+    ) => fn({ customer: prismaCustomer, user: prismaUser }),
   },
 }));
 
@@ -117,6 +131,7 @@ describe("customers/commands", () => {
     mockCustomerCreate.mockReset();
     mockCustomerUpdate.mockReset();
     mockCustomerDelete.mockReset();
+    mockUserFindFirst.mockReset();
 
     // デフォルト: 顧客が存在しない
     mockCustomerFindUnique.mockResolvedValue(null);
@@ -130,6 +145,7 @@ describe("customers/commands", () => {
     mockCustomerCreate.mockResolvedValue({ id: "customer-1" });
     mockCustomerUpdate.mockResolvedValue({ id: CUSTOMER_ID });
     mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
+    mockUserFindFirst.mockResolvedValue(null);
   });
 
   // =============================================================================
@@ -563,6 +579,176 @@ describe("customers/commands", () => {
             },
           }),
         );
+      });
+    });
+
+    // -------------------------------------------------------------------------
+    // SETTINGS-02: 初回 email 登録 uniqueness チェック
+    // -------------------------------------------------------------------------
+    // 修正前は「所有権検証も一意性チェックも無い」ため、第三者の既存 email を
+    // Customer.email に設定できてしまう問題があった。所有権検証 (verification
+    // link) は followup PR で実装するが、uniqueness チェックだけでも
+    // 「既に別ユーザーが使っている email を奪える」問題は塞がる。
+    describe("SETTINGS-02: 初回 email 登録 uniqueness", () => {
+      test("email 未登録顧客が新規 email を登録できる (競合なし)", async () => {
+        // 現 email が空 → 初回登録経路
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: null,
+        });
+        // User / Customer 側とも競合なし
+        mockUserFindFirst.mockResolvedValueOnce(null);
+        mockCustomerFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          updateCustomerProfileByUserId(USER_ID, {
+            customerType: CustomerType.PERSONAL,
+            lastName: "山田",
+            firstName: "花子",
+            companyName: null,
+            phoneNumber: null,
+            email: "new@example.com",
+          }),
+        ).resolves.toBeUndefined();
+
+        expect(mockCustomerUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              email: "new@example.com",
+              emailCanonical: "new@example.com",
+            }),
+          }),
+        );
+      });
+
+      test("同 email の別 User (Better Auth) が存在する場合 CONFLICT", async () => {
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: null,
+        });
+        // 他人が既に Better Auth 側 (User.email) で登録済み
+        mockUserFindFirst.mockResolvedValueOnce({ id: "other-user-id" });
+        mockCustomerFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          updateCustomerProfileByUserId(USER_ID, {
+            customerType: CustomerType.PERSONAL,
+            lastName: "山田",
+            firstName: "花子",
+            companyName: null,
+            phoneNumber: null,
+            email: "taken@example.com",
+          }),
+        ).rejects.toMatchObject({
+          code: "CONFLICT",
+          message: "このメールアドレスは既に使用されています",
+        });
+        expect(mockCustomerUpdate).not.toHaveBeenCalled();
+      });
+
+      test("同 canonical email の別 Customer が存在する場合 CONFLICT", async () => {
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: null,
+        });
+        mockUserFindFirst.mockResolvedValueOnce(null);
+        // 他 Customer (guest 含む) が同 canonical email を保持
+        mockCustomerFindFirst.mockResolvedValueOnce({ id: "other-customer" });
+
+        await expect(
+          updateCustomerProfileByUserId(USER_ID, {
+            customerType: CustomerType.PERSONAL,
+            lastName: "山田",
+            firstName: "花子",
+            companyName: null,
+            phoneNumber: null,
+            email: "guest-used@example.com",
+          }),
+        ).rejects.toMatchObject({
+          code: "CONFLICT",
+          message: "このメールアドレスは既に使用されています",
+        });
+        expect(mockCustomerUpdate).not.toHaveBeenCalled();
+      });
+
+      test("大文字混在の入力でも canonical (小文字) で uniqueness チェックが走る", async () => {
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: null,
+        });
+        mockUserFindFirst.mockResolvedValueOnce(null);
+        mockCustomerFindFirst.mockResolvedValueOnce(null);
+
+        await updateCustomerProfileByUserId(USER_ID, {
+          customerType: CustomerType.PERSONAL,
+          lastName: "山田",
+          firstName: "花子",
+          companyName: null,
+          phoneNumber: null,
+          email: "Mixed.Case@Example.COM",
+        });
+
+        // User 側は case-insensitive で canonical 値を照会
+        expect(mockUserFindFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              email: { equals: "mixed.case@example.com", mode: "insensitive" },
+              NOT: { id: USER_ID },
+            }),
+          }),
+        );
+        // Customer 側は emailCanonical (小文字) と自レコード除外
+        expect(mockCustomerFindFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              emailCanonical: "mixed.case@example.com",
+              NOT: { id: CUSTOMER_ID },
+            }),
+          }),
+        );
+      });
+
+      test("email を渡さない場合は uniqueness チェックを走らせない", async () => {
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: "existing@example.com",
+        });
+
+        await updateCustomerProfileByUserId(USER_ID, {
+          customerType: CustomerType.PERSONAL,
+          lastName: "山田",
+          firstName: "花子",
+          companyName: null,
+          phoneNumber: null,
+        });
+
+        expect(mockUserFindFirst).not.toHaveBeenCalled();
+        expect(mockCustomerFindFirst).not.toHaveBeenCalled();
+      });
+
+      test("既に email 登録済み顧客が email を渡すと VALIDATION (uniqueness は走らない)", async () => {
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: "existing@example.com",
+        });
+
+        await expect(
+          updateCustomerProfileByUserId(USER_ID, {
+            customerType: CustomerType.PERSONAL,
+            lastName: "山田",
+            firstName: "花子",
+            companyName: null,
+            phoneNumber: null,
+            email: "attacker@example.com",
+          }),
+        ).rejects.toMatchObject({
+          code: "VALIDATION",
+        });
+
+        // shouldRegisterEmail=false なので uniqueness チェックまで到達しない
+        expect(mockUserFindFirst).not.toHaveBeenCalled();
+        expect(mockCustomerFindFirst).not.toHaveBeenCalled();
+        expect(mockCustomerUpdate).not.toHaveBeenCalled();
       });
     });
   });
