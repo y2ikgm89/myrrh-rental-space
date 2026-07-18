@@ -19,6 +19,7 @@ import { Stack } from "@/public/components/design-system/stack";
 import { Divider } from "@/public/components/design-system/divider";
 import { ProfileForm } from "./_components/profile-form";
 import { AccountLinking } from "./_components/account-linking";
+import { FlashMessage } from "../_components/flash-message";
 
 export default async function SettingsPage({
   searchParams,
@@ -28,7 +29,7 @@ export default async function SettingsPage({
   await connection();
 
   const params = await searchParams;
-  const requireEmail = params["require_email"] === "true";
+  const requireEmailParam = params["require_email"] === "true";
 
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);
@@ -36,6 +37,11 @@ export default async function SettingsPage({
   if (!customer) {
     redirect("/login");
   }
+
+  // email 未登録の場合のみ banner を出す (既に登録済 = 保存後 reload の永続表示を防ぐ).
+  // Customer.email は schema 上 non-null だが LINE 経由の legacy row は空文字あり
+  // (layout.tsx の `if (!customer.email)` と同じ判定).
+  const showRequireEmail = requireEmailParam && !customer.email;
 
   const [accountResult, turnstileSiteKey] = await Promise.all([
     getAccountLinksAction(),
@@ -49,13 +55,10 @@ export default async function SettingsPage({
     <Stack gap="xl">
       <Heading level={1}>アカウント設定</Heading>
 
-      {requireEmail && (
-        <div
-          className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground"
-          role="alert"
-        >
+      {showRequireEmail && (
+        <FlashMessage queryKey="require_email" variant="notice">
           サービスをご利用いただくには、メールアドレスの登録が必要です。
-        </div>
+        </FlashMessage>
       )}
 
       <section className="space-y-6">
