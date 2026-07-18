@@ -2,6 +2,8 @@ import { claimReceiptForSingleUseTokenDownload } from "@/shared/domain/receipts/
 import { findReceiptForDownload } from "@/shared/domain/receipts/queries";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { DomainError } from "@/shared/domain/domain-error";
 import { renderReceiptPdf } from "@/shared/pdf/render-receipt-pdf";
 import { verifyReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import {
@@ -26,7 +28,10 @@ import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
  *    場合に必須)。verifyReceiptDownloadToken でトークン内 serialNo と URL の serialNo を
  *    突合。有効期限 24 時間 (RECEIPT-USEDAT-P1)。
  * 2. **Better Auth session** — 認証済み顧客が mypage から DL する場合。session の
- *    customer.id と Receipt.reservation.customerId / eventRegistration.customerId を突合。
+ *    customer.id と Receipt.reservation.customerId / eventRegistration.customerId を
+ *    突合し、更に `assertCustomerActive` で Customer.isActive + status !== BLACKLIST を
+ *    検証する (CRITIC-2)。session cookie が有効でも管理側停止 / BLACKLIST に落ちた顧客は
+ *    領収書 (適格請求書 = 課税事業者情報を含む文書) を DL できない。403 を返す。
  *
  * どちらも該当しなければ 404 (存在自体を隠蔽して brute force 探索を防ぐ)。
  *
@@ -81,7 +86,24 @@ export async function GET(
         receipt.eventRegistration?.customerId ??
         null;
       if (customer && ownerId !== null && ownerId === customer.id) {
-        sessionAuthorized = true;
+        // CRITIC-2: session cookie + ownership が揃っていても、
+        // Customer.isActive === false (管理側停止) or status === BLACKLIST の
+        // 顧客は領収書 (適格請求書) を DL できない。MypageAuthGate が UI で
+        // 遮断するのと同じセマンティクスを、並行して露出しているこの
+        // Route Handler でも強制する。session 有効なので 401 ではなく 403。
+        try {
+          await assertCustomerActive(customer.id);
+          sessionAuthorized = true;
+        } catch (error) {
+          if (error instanceof DomainError && error.code === "FORBIDDEN") {
+            return new Response("Forbidden", { status: 403 });
+          }
+          // NOT_FOUND (customer が消えた TOCTOU) や他 DomainError は
+          // 下段の 404 (存在隠蔽) にそのまま fall-through する
+          if (!(error instanceof DomainError)) {
+            throw error;
+          }
+        }
       }
     }
   }
