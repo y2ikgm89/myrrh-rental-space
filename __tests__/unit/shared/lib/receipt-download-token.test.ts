@@ -11,16 +11,23 @@ import {
 } from "@/shared/lib/receipt-download-token";
 
 describe("createReceiptDownloadToken + verifyReceiptDownloadToken", () => {
+  test("TTL は 24 時間で固定 (RECEIPT-USEDAT-P1 業界水準)", () => {
+    // single-use gate (Receipt.usedAt) が主防御、TTL は fallback。
+    // freee / Money Forward Cloud 等の請求書 SaaS の 24h 水準に揃える。
+    expect(MAX_RECEIPT_DOWNLOAD_TOKEN_LIFETIME_MS).toBe(24 * 60 * 60 * 1000);
+  });
+
   test("round-trip で serialNo が復元される", () => {
     const issuedAt = new Date("2026-07-15T00:00:00Z");
     const token = createReceiptDownloadToken("2026-000001", issuedAt);
-    const now = new Date("2026-07-15T00:30:00Z"); // 30 分後 (有効期限 60 分以内)
+    // 12 時間後 (有効期限 24 時間以内) でも valid
+    const now = new Date("2026-07-15T12:00:00Z");
     const result = verifyReceiptDownloadToken(token, now);
     if (!result.valid) throw new Error("token should be valid");
     expect(result.serialNo).toBe("2026-000001");
   });
 
-  test("有効期限 60 分を過ぎると invalid", () => {
+  test("有効期限 24 時間を過ぎると invalid", () => {
     const issuedAt = new Date("2026-07-15T00:00:00Z");
     const token = createReceiptDownloadToken("2026-000002", issuedAt);
     const nowAfterExpiry = new Date(

@@ -17,17 +17,33 @@ import { isRecord } from "@/shared/lib/serialize";
  * ## 経路 2: 署名 URL (本トークン)
  * ゲスト予約 (customerId=null) からメール本文リンク経由で DL する場合、
  * Better Auth session が存在しないため署名トークン検証で ownership を担保する。
- * メールから発行 → 60 分有効。
+ * メールから発行 → **24 時間有効** (RECEIPT-USEDAT-P1)。
  *
  * ## 設計
  * `event-registration-claim-token.ts` と同型 (crypto.ts の encrypt/decrypt + purpose 分離
  * + payload の exp)。purpose を "receipt-download" として分離することで、トークン漏洩時に
  * 他 purpose (claim / cancel) の悪用を封じる。
+ *
+ * ## TTL 24h の根拠 (RECEIPT-USEDAT-P1)
+ * 本トークンの主防御は `Receipt.usedAt` による **single-use gate** (`route.ts` の
+ * advisory-lock tx で「未使用なら DL 成功 + usedAt 刻印、以降 404」)。TTL は
+ * fallback (ユーザーがメールを翌朝開くフロー等) の窓口として機能する。
+ *
+ * 24h は freee / Money Forward Cloud 等の請求書 SaaS が採用する「単発トークン化
+ * された領収書 URL」の業界水準と一致する。旧 60 分は「メール受信直後に DL」を
+ * 前提としており、実運用のフローと乖離していた (問い合わせが多発)。
  */
 
 const PURPOSE = "receipt-download";
 
-export const MAX_RECEIPT_DOWNLOAD_TOKEN_LIFETIME_MS = 60 * 60 * 1000; // 60 分
+/**
+ * 領収書 DL トークンの有効期限 = 24 時間。
+ *
+ * `Receipt.usedAt` の single-use gate が漏洩対策の主防御であり、TTL は
+ * 「メールを翌朝開く」ユースケース向けの fallback。旧 60 分から延長した
+ * 理由と業界水準の詳細はモジュール docstring 参照。
+ */
+export const MAX_RECEIPT_DOWNLOAD_TOKEN_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 interface DownloadTokenPayload {
   /** Receipt.serialNo (「YYYY-XXXXXX」形式) */
