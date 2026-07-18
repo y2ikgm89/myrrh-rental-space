@@ -18,6 +18,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { getReservationForCalendar } from "@/shared/domain/reservations/customer-queries";
 import {
   buildReservationCalendar,
@@ -46,6 +47,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    // FEAT-3PLANE-04: reservation feature OFF 時に 404 (公開 /reservation と対称)。
+    // ical download は customer 通知メールから叩かれるが、feature OFF 後は module
+    // 全体が公開停止扱いのため .ics も配信停止するのが可視性契約に一致。
+    if (!(await isFeatureEnabled("reservation"))) {
+      return new NextResponse(null, { status: 404 });
+    }
+
     // 1. アクセス権判定: session 経路は path validation より先に fail closed
     const url = new URL(request.url);
     const token = url.searchParams.get("token");

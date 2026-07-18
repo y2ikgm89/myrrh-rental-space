@@ -10,6 +10,7 @@ import {
   verifyCancelToken,
   tokenFingerprint,
 } from "@/shared/lib/event-registration-cancel-token";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getEventRegistrationForGuestCancel } from "@/shared/domain/events/registration-queries";
 import { eventDeadlineNow } from "@/shared/domain/events/server-deadline-instant";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
@@ -45,6 +46,10 @@ const EVENT_CANCEL_TOKEN_COOKIE_NAME = "event-cancel-token";
 
 export default async function GuestEventCancelPage(): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-03: events feature OFF 時に 404。token-gated utility でも同じ
+  // fail-closed 契約を守る (公開 /events と対称)。
+  await requireFeatureEnabled("events");
 
   // proxy（middleware）が `?token=...` を HttpOnly cookie に転写済み。
   // ここでは cookie のみ読み、URL クエリにトークンを残さない（ログ・履歴漏洩遮断）。
