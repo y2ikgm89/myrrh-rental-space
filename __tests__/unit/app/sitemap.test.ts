@@ -76,8 +76,6 @@ const allOnContext = (
   disabledRoutes: [],
   disabledPageSlugs: new Set<string>(),
   disabledSectionTypes: new Set<string>(),
-  disabledTemplates: new Set<string>(),
-  disabledCronPaths: new Set<string>(),
   ...overrides,
 });
 
