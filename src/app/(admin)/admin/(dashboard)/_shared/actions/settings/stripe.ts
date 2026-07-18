@@ -6,11 +6,15 @@
  * @module admin/actions/settings/stripe
  */
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+// CACHE-DRIFT-SETTLE: INTEGRATION_SETTINGS は NEXTJS_TAG_TO_CDN_TAG 上「type-cleanliness
+// のためだけの mapping」で、実 surface は admin-only (private,no-store)。CDN 経路には
+// 露出しないため skipCdnPurge:true。helper 経由で local/no-raw-updatetag-for-cdn-mapped-
+// cache-tag drift gate を通過させる。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import * as stripeLib from "@/shared/lib/stripe";
 import { stripeFormSchema } from "./schemas/form-schemas-security-integrations";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -58,7 +62,9 @@ export async function updateStripeSettings(
         return null;
       },
       afterSuccess: () => {
-        updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+        invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
+          skipCdnPurge: true,
+        });
       },
     });
     if (isMutationError(result)) {
@@ -102,7 +108,9 @@ export async function testStripeConnectionAction(
       };
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+      invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
+        skipCdnPurge: true,
+      });
     },
   });
 }
@@ -119,7 +127,9 @@ export async function clearStripeKeys(): Promise<MutationResult> {
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+      invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
+        skipCdnPurge: true,
+      });
     },
   });
 }

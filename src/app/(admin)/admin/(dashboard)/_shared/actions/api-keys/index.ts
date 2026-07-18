@@ -1,6 +1,5 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -44,13 +43,20 @@ import {
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import { setupWebhook } from "@/shared/lib/smart-lock/switchbot-client";
 import { DomainError } from "@/shared/domain/domain-error";
+// CACHE-DRIFT-SETTLE: INTEGRATION_SETTINGS は NEXTJS_TAG_TO_CDN_TAG 上「type-cleanliness
+// のためだけの mapping」で、実 surface は admin-only (private,no-store)。CDN 経路には
+// 露出しないため skipCdnPurge:true。helper 経由で local/no-raw-updatetag-for-cdn-mapped-
+// cache-tag drift gate を通過させる。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getAppUrl } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const apiKeyIdSchema = z.string().min(1, { error: "APIキーIDが不正です" });
 
 function refreshSettingsCache(): void {
-  updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+  invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
+    skipCdnPurge: true,
+  });
 }
 
 /**
