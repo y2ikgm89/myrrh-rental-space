@@ -23,10 +23,21 @@ import { offerNextWaitlistEntryCommand } from "./waitlist-commands";
  * これにより通知・メールの二重発火を構造的に防ぐ（従来の findFirst→update は
  * この保証が無かった）。
  *
- * **Waitlist promote**: キャンセル対象が CONFIRMED だった場合のみ（＝実際に枠が
- * 1 つ空いた場合のみ）、同一 tx 内で {@link offerNextWaitlistEntryCommand} を呼び、
+ * **Waitlist promote**: キャンセル対象が CONFIRMED **または WAITLISTED_OFFERED**
+ * だった場合、同一 tx 内で {@link offerNextWaitlistEntryCommand} を呼び、
  * 同じ (slotId, ticketId) の FIFO 先頭を WAITLISTED_OFFERED に昇格させる。
- * WAITLISTED / WAITLISTED_OFFERED のセルフキャンセルは枠を消費していないため昇格対象外。
+ *
+ * - CONFIRMED: 確定枠を実消費していた行が抜けたので、次の WAITLISTED を offer する。
+ * - WAITLISTED_OFFERED: 24h 期限内の offer は「その顧客のために予約されている枠」
+ *   として実質的に一枠を専有している（cron `waitlist-expire` が offer 期限切れで
+ *   EXPIRED 化する経路も同じ理由で `offerNextWaitlistEntryCommand` を必ず呼ぶ）。
+ *   ここで promoter を呼ばないと、offer 中のキャンセル → 次の WAITLISTED が
+ *   永久に silent に stall する（MYPAGE-EVENT-03）。
+ * - WAITLISTED（未 offer）のセルフキャンセルは枠を消費していないため昇格対象外。
+ *
+ * promoter は `updateMany` の WHERE claim で idempotent なため、cron
+ * `waitlist-expire` の重複呼び出しがあっても二重昇格しない（`waitlist-commands.ts`
+ * の `offerNextWaitlistEntryCommand` docstring 参照）。
  */
 
 export interface ApplyEventRegistrationCancellationTx {
@@ -144,14 +155,28 @@ export async function applyEventRegistrationCancellation(
     };
   }
 
-  // Waitlist promote: CONFIRMED だった申込がキャンセルされた場合のみ、空いた枠を
-  // FIFO で offer に昇格する。advisory lock 728350 は offerNextWaitlistEntryCommand
-  // の内部では取得しない（同関数の docstring 参照）。呼び出し元の
-  // cancelEventRegistrationWithClaim（registration-commands.ts）が
-  // applyEventRegistrationCancellation を呼ぶ直前に同一 tx 上で取得済みであるため、
-  // ここで改めて取得する必要はない。
+  // Waitlist promote: CONFIRMED または WAITLISTED_OFFERED だった申込がキャンセル
+  // された場合、空いた枠（実確定 or offer 中で予約されていた枠）を FIFO で offer
+  // に昇格する。WAITLISTED_OFFERED を含めないと、offer 中の顧客がセルフキャンセル
+  // したときに次の WAITLISTED が silent に stall する（MYPAGE-EVENT-03）。
+  //
+  // advisory lock 728350 は offerNextWaitlistEntryCommand の内部では取得しない
+  // （同関数の docstring 参照）。呼び出し元の cancelEventRegistrationWithClaim
+  // （registration-commands.ts）が applyEventRegistrationCancellation を呼ぶ直前に
+  // 同一 tx 上で取得済みであるため、ここで改めて取得する必要はない。
+  //
+  // 24h 期限切れ (waitlist-expire cron) 経路と WAITLISTED_OFFERED セルフキャンセルが
+  // 同時に走った場合でも二重昇格はしない: (1) 元 offer 行の遷移は本関数の updateMany
+  // (status ∈ CANCELLABLE) と cron の updateMany (status = WAITLISTED_OFFERED) が
+  // 両方 status で claim するため、どちらか一方だけが成功する。(2) 成功側が呼ぶ
+  // offerNextWaitlistEntryCommand も同じ (slotId, ticketId) の WAITLISTED を
+  // updateMany で atomic claim するため、外側 tx が 728350 で直列化されている限り
+  // FIFO 先頭は 1 回しか昇格しない。
   let promoted: WaitlistPromotionOutcome = null;
-  if (previousStatus === RegistrationStatus.CONFIRMED) {
+  if (
+    previousStatus === RegistrationStatus.CONFIRMED ||
+    previousStatus === RegistrationStatus.WAITLISTED_OFFERED
+  ) {
     const offer = await offerNextWaitlistEntryCommand(tx, {
       slotId: previousSlotId,
       ticketId: previousTicketId,
