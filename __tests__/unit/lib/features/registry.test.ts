@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, test, expect } from "bun:test";
 import {
   FEATURE_MODULES,
@@ -88,6 +90,67 @@ describe("FEATURE_MODULES routing alignment", () => {
     for (const id of FEATURE_MODULES_LIST) {
       for (const slug of FEATURE_MODULES[id].pageSlugs) {
         expect(SYSTEM_PAGE_SLUGS).toContain(slug);
+      }
+    }
+  });
+});
+
+describe("cron route ↔ registry.cronPaths drift gate", () => {
+  // src/app/api/cron/*/route.ts で isFeatureEnabled("<id>") を呼ぶ cron は
+  // 対応する FEATURE_MODULES[id].cronPaths にその route path (`/api/cron/<dir>`)
+  // が登録されていなければならない (add-cron-job skill 契約)。
+  // 登録漏れがあると「reservation 系 cron を全停止」等の運用判断で対象漏れが発生する。
+  const CRON_ROOT = join(process.cwd(), "src/app/api/cron");
+  const FEATURE_GATE_PATTERN = /isFeatureEnabled\(\s*["']([^"']+)["']\s*\)/g;
+
+  const gatedRoutes: Array<{ path: string; moduleId: string; dir: string }> =
+    (() => {
+      const dirs = readdirSync(CRON_ROOT).filter((entry) => {
+        return statSync(join(CRON_ROOT, entry)).isDirectory();
+      });
+      const collected: Array<{ path: string; moduleId: string; dir: string }> =
+        [];
+      for (const dir of dirs) {
+        const routeFile = join(CRON_ROOT, dir, "route.ts");
+        let source: string;
+        try {
+          source = readFileSync(routeFile, "utf-8");
+        } catch {
+          continue;
+        }
+        const matches = [...source.matchAll(FEATURE_GATE_PATTERN)];
+        for (const match of matches) {
+          const moduleId = match[1];
+          if (!moduleId) continue;
+          collected.push({
+            path: `/api/cron/${dir}`,
+            moduleId,
+            dir,
+          });
+        }
+      }
+      return collected;
+    })();
+
+  test("cron route が実在する feature module を gate する (registry drift 検知)", () => {
+    expect(gatedRoutes.length).toBeGreaterThan(0);
+    for (const gated of gatedRoutes) {
+      expect(isFeatureModule(gated.moduleId)).toBe(true);
+    }
+  });
+
+  test("各 gated cron の route path は対応 module.cronPaths に登録済", () => {
+    for (const gated of gatedRoutes) {
+      const moduleDef = FEATURE_MODULES[gated.moduleId as FeatureModule];
+      expect(moduleDef.cronPaths).toContain(gated.path);
+    }
+  });
+
+  test("registry.cronPaths の各 path は実在する cron route に対応する", () => {
+    const actualCronPaths = new Set(gatedRoutes.map((r) => r.path));
+    for (const id of FEATURE_MODULES_LIST) {
+      for (const cronPath of FEATURE_MODULES[id].cronPaths) {
+        expect(actualCronPaths).toContain(cronPath);
       }
     }
   });
