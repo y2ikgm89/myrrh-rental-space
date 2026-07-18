@@ -313,6 +313,12 @@ async function fulfillPaymentAtomically(
   //   再送しても解消しないため webhook 側で握り潰し、log で監視)
   // - それ以外 (DB 一時障害 等) は rethrow して Stripe の retry (exponential backoff /
   //   最大 3 日) に委ねる。at-least-once + advisory lock 728353 で二重発行は防止済み。
+  //
+  // STRIPE-03 backstop: Stripe の retry でも issueReceipt が回復しない場合、初回失敗時に
+  // claim* は既に成功して paymentStatus=PAID に flip 済みのため、retry の claim* は null
+  // 返し早期 return → issueReceipt が二度と呼ばれず PAID + Receipt 無しで stuck する。
+  // これを毎時実行の `/api/cron/receipt-backfill` (`backfillReceipts`) が
+  // `paymentStatus IN [PAID, PARTIALLY_REFUNDED] AND receipt: null` 走査で reconcile する。
   try {
     await issueReceiptForReservation(reservation.id);
   } catch (error) {
@@ -474,6 +480,12 @@ async function fulfillEventRegistrationPaymentAtomically(
   // - VALIDATION エラー (金額 0 / paymentStatus mismatch 等) は logError で握り潰し
   // - それ以外 (DB 一時障害 等) は throw して Stripe の retry に委ねる
   // - 冪等契約 (@unique(eventRegistrationId) + advisory lock 728353) で at-least-once 安全
+  //
+  // STRIPE-03 backstop: reservation 側と同型で、claim* 成功→issueReceipt* 恒久 throw の
+  // 場合 (Stripe retry でも回復しない DB 障害等) は `/api/cron/receipt-backfill` が
+  // event registration 側の orphan (paymentStatus IN [PAID, PARTIALLY_REFUNDED] AND
+  // receipt: null) を毎時走査して発行を再試行する (`backfillReceipts` の
+  // `registrationRows` 経路)。
   try {
     await issueReceiptForEventRegistration(registrationId);
   } catch (error) {

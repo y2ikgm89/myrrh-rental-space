@@ -101,9 +101,9 @@ locals {
     },
     {
       name        = "receipt-backfill"
-      schedule    = "15 3 * * *"
+      schedule    = "15 * * * *"
       path        = "/api/cron/receipt-backfill"
-      description = "Issue Receipt for PAID/PARTIALLY_REFUNDED reservations & event registrations that pre-date the webhook auto-issue wiring (daily 03:15 JST, feature-gated by payment module)."
+      description = "Reconcile missing Receipts for PAID/PARTIALLY_REFUNDED reservations & event registrations (hourly at :15 JST, feature-gated by payment module). Covers (1) historical orphans pre-dating webhook auto-issue wiring, and (2) STRIPE-03 mitigation — webhook-retry-stuck orphans where claim* succeeded but issueReceipt* threw before Stripe retry, leaving Receipt-less PAID rows since claim* early-returns on retry."
     },
   ]
 }

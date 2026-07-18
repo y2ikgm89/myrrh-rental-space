@@ -15,15 +15,21 @@ import {
  * cron: 領収書 (Receipt) 未発行の PAID / PARTIALLY_REFUNDED 予約・イベント申込を
  * バッチ発行する。
  *
- * Foundation gap analysis (2026-07-15) task #7 receipt-full-wiring PR#7 (backfill 部分)。
- * 目的: webhook 経由の自動発行 (PR#1-#2) より前に確定した既存 PAID レコードの Receipt
- * を後追いで発行する。日次実行を想定。
+ * ## 2 系統の orphan を同一 batch で reconcile
+ * 1. **Historical orphans** — webhook 経由の自動発行配線 (2026-07-15) より前に確定した
+ *    既存 PAID レコード (Foundation gap analysis task #7 の当初目的)。
+ * 2. **STRIPE-03 mitigation — webhook-retry-stuck orphans** — webhook が claim* 成功
+ *    後に issueReceipt* transient throw → Stripe retry → claim* が null 返し early
+ *    return → issueReceipt* が呼ばれず PAID + Receipt 無しで stuck する race を backstop する。
+ *    詳細は `src/shared/domain/receipts/backfill.ts` の docstring 参照。
  *
- * Feature Module: `payment` OFF なら skip (Stripe 決済自体が無効化されている環境で
- * receipt 発行を試みる意味がない)。
- *
- * 冪等契約: `issueReceiptFor*` は `@unique` + advisory lock 728353 で at-least-once
- * 呼出でも重複発行なし。cron の retry (最大 3 回) でも安全。
+ * ## 実行契約
+ * - 実行頻度: 毎時 :15 (STRIPE-03 の recovery 窓を最大 1h に抑える)
+ * - Feature Module: `payment` OFF なら skip (Stripe 決済自体が無効化されている環境で
+ *   receipt 発行を試みる意味がない)
+ * - 冪等: `issueReceiptFor*` は `@unique` + advisory lock 728353 で at-least-once 呼出
+ *   でも重複発行なし。cron の retry (Cloud Scheduler max=3) と webhook 同時実行の
+ *   double-issue も同 lock が防ぐ
  */
 export async function GET(request: Request) {
   try {
