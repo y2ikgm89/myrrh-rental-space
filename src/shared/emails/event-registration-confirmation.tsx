@@ -41,7 +41,7 @@ type Props = {
   cancelUrl?: string;
   /**
    * ゲスト向け: 領収書 PDF ダウンロード URL (RECEIPT-GUEST-01)。
-   * `createReceiptDownloadToken` 由来の署名 URL (60 分有効)。
+   * `createReceiptDownloadToken` 由来の署名 URL (24 時間有効・1 回のみ)。
    * 会員はマイページから領収書を DL するため未指定。
    */
   receiptDownloadUrl?: string;
@@ -221,7 +221,7 @@ export function EventRegistrationConfirmationEmail({
             }}
           >
             適格請求書（領収書）PDF を下記のリンクからダウンロードいただけます
-            （60 分間有効）。
+            （24 時間有効・1 回のみ）。保存後は大切に保管してください。
           </Text>
           <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
             <Link

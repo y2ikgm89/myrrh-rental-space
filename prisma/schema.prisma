@@ -2199,6 +2199,10 @@ model Receipt {
   reissuedTo      Receipt[] @relation("ReissuedReceipts")
   reissuedReason  String?  @db.Text
   revision        Int      @default(0)
+  /// ゲスト署名 URL 経路 (Receipt-USEDAT-P1) で 1 回だけ DL を許可するための刻印。
+  /// NULL = 未使用、非 NULL = その時刻に DL 済み (以降 token 経路は 404)。
+  /// Better Auth session 経路 (mypage) では参照・更新せず、常時 DL 可能。
+  usedAt          DateTime? @db.Timestamptz(6)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)

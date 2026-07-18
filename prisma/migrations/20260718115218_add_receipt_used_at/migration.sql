@@ -1,0 +1,16 @@
+-- RECEIPT-USEDAT-P1: Receipt.usedAt (single-use gate for guest signed-URL DL).
+--
+-- ゲスト予約経由の Receipt PDF DL は署名 URL (`/api/receipts/[serialNo]/pdf?token=`)
+-- 経由で行われる。従来はトークン有効期限 (旧 60 分 → 本 PR で 24h に延長) 内であれば
+-- 何度でも再取得可能で、メール漏洩時に無制限 DL される抜け穴が残っていた。
+-- 本 migration で追加する `usedAt` 列に「初回 DL 成功時刻」を刻印し、以降の token
+-- 経路 DL を advisory lock で serialize したうえで 404 に落とす (=シングルユース化)。
+--
+-- - expand-only: 列 1 個追加のみ・NULL 許容・default なし。既存行は NULL のまま維持。
+-- - Better Auth session 経路 (mypage) からの DL は本列を参照・更新せず、無制限維持。
+-- - index は追加しない (アクセス経路は id / serialNo unique のみで、usedAt を WHERE に
+--   使う一覧 API は現時点で存在しない)。
+--
+-- 計画ダウンタイム対象外: DROP/RENAME を含まないため、deploy workflow は breaking
+-- migration mode に入らず、通常のローリングデプロイで反映される。
+ALTER TABLE "receipts" ADD COLUMN "usedAt" TIMESTAMPTZ(6);
