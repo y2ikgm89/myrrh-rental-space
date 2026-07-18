@@ -50,10 +50,18 @@ describe("type-safety casts / cache-tag drift", () => {
     // この集合を機械的に固定し、(a) 新たな未生成タグの無効化が紛れ込む（producer を足すか本リストに
     // 意図を明記するか二択を強制）/ (b) 既存 invalidation-only にキャッシュを足したのに本リストの
     // 除去を忘れる、の双方向ドリフトを検出する。
+    //
+    // consumer 判定は 2 系統:
+    // 1. 直接呼び: `updateTag(CACHE_TAGS.X)` / `revalidateTag(CACHE_TAGS.X)` — 単一行スキャン
+    // 2. SSoT helper: `invalidateSiteWideCache([CACHE_TAGS.X, ...])` /
+    //    `invalidateSiteWideCacheFromRouteHandler([...])` — 引数リストが複数行にまたがるので
+    //    balanced-paren で丸ごと抽出して CACHE_TAGS.X を拾う。helper 経由の consumer が
+    //    line-scanner から漏れていた bug (CACHE-01) の修正。
     const INVALIDATION_ONLY = [
       "BLOCK_TEMPLATES",
       "COUPONS",
       "CUSTOMERS",
+      "EVENT_WAITLIST",
       "INQUIRIES",
       "MEDIA",
       "RESERVATIONS",
@@ -63,9 +71,32 @@ describe("type-safety casts / cache-tag drift", () => {
     const produced = new Set<string>();
     const consumed = new Set<string>();
     const TAG_RE = /CACHE_TAGS\.([A-Z_]+)/gu;
+    const SITE_WIDE_START_RE =
+      /\b(?:invalidateSiteWideCache|invalidateSiteWideCacheFromRouteHandler)\s*\(/gu;
 
     for (const file of files) {
-      const lines = readFileSync(file, "utf8").split(/\r?\n/u);
+      const content = readFileSync(file, "utf8");
+
+      // (2) SSoT helper 呼び出しは引数リストが複数行になる: balanced-paren で丸ごと抽出。
+      for (const match of content.matchAll(SITE_WIDE_START_RE)) {
+        const startIdx = (match.index ?? 0) + match[0].length;
+        let depth = 1;
+        let idx = startIdx;
+        while (idx < content.length && depth > 0) {
+          const c = content[idx];
+          if (c === "(") depth += 1;
+          else if (c === ")") depth -= 1;
+          idx += 1;
+        }
+        const argBlock = content.slice(startIdx, Math.max(startIdx, idx - 1));
+        for (const tagMatch of argBlock.matchAll(TAG_RE)) {
+          const tag = tagMatch[1];
+          if (tag) consumed.add(tag);
+        }
+      }
+
+      // (1) 直接呼び + producer は行単位スキャン (既存挙動を維持)。
+      const lines = content.split(/\r?\n/u);
       for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.startsWith("//") || trimmed.startsWith("*")) continue;
