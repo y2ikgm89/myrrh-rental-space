@@ -25,6 +25,7 @@ export type ReservationWithRelations = {
   startTime: string;
   endTime: string;
   status: ReservationStatus;
+  version: number;
   totalPrice: number | null;
   basePrice: number | null;
   couponId: string | null;
