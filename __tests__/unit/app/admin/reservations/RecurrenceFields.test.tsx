@@ -152,6 +152,24 @@ describe("RecurrenceFields — Phase B.2 task 19", () => {
     expect(lastCall?.interval).toBe(3);
   });
 
+  test("interval Label はバッククォート文字を含まない（A11Y-DIALOGS-01 #9）", async () => {
+    // JSX text で `${...}` を挟むと backtick が DOM 文字列として残り、
+    // 一部 SR で「backtick 日 ごと backtick」と読み上げる欠陥があったため、
+    // 出力文字列に literal backtick が現れないことを回帰テストで固定する。
+    const onChange = mock<(next: RecurrenceState) => void>();
+    await renderNode(
+      <RecurrenceFields
+        value={{ ...INITIAL_STATE, freq: "DAILY" }}
+        onChange={onChange}
+      />,
+    );
+    const label = container?.querySelector('label[for="recurrence-interval"]');
+    expect(label).not.toBeNull();
+    const text = label?.textContent ?? "";
+    expect(text).not.toContain("`");
+    expect(text).toContain("日ごと");
+  });
+
   test("endMode=until を選ぶと date input が表示され count input が消える", async () => {
     const onChange = mock<(next: RecurrenceState) => void>();
     await renderNode(

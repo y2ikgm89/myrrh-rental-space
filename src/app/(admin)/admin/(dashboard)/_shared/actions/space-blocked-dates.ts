@@ -1,10 +1,13 @@
 "use server";
 
 import type { SubmissionResult } from "@conform-to/react";
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
+// CACHE-INVALIDATE-04: SPACES は CDN `space-v1` にマップされ /spaces / /spaces/[slug]
+// に emit されるため、raw updateTag では edge の stale HTML が残る。
+// invalidateSiteWideCache 経由で Cloudflare CDN purge + sitemap 自動 purge を発火。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { BLOCKED_DATE_SCOPE } from "@/shared/lib/validations/enums/helpers";
 import type { BlockedDateFormData } from "@/shared/lib/validations/blocked-date";
@@ -47,7 +50,7 @@ export async function createSpaceBlockedDate(
         execute: async (user) =>
           createBlockedDateCommand(input, { id: user.id }),
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.SPACES);
+          invalidateSiteWideCache(CACHE_TAGS.SPACES);
         },
       });
 
@@ -80,7 +83,7 @@ export async function deleteSpaceBlockedDate(
     resourceId: parsedSpace.data,
     execute: async () => deleteBlockedDateCommand(parsedBlocked.data),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACES);
+      invalidateSiteWideCache(CACHE_TAGS.SPACES);
     },
   });
 }

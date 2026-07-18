@@ -301,6 +301,69 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     });
   });
 
+  // PERF-02-FIX (audit 2026-07-18)
+  //
+  // 回帰テスト: bulk 冒頭の Settings.findUnique が失敗した際、
+  // snapshot を `null` として per-instance に渡すと、受け手側の
+  // `input.refundPolicySnapshot !== undefined` gate を通過してしまい
+  // 「policy 未設定 = 残額全額返金」動作に fallback して意図せず
+  // Stripe に全額返金が飛ぶ。fix 後は snapshot を undefined のまま
+  // に保ち、conditional spread により受け手側の refundPolicySnapshot
+  // キー自体を送らない → per-instance で Settings.findUnique を
+  // 再 fetch → policy に基づく amount 計算に載る、を検証する。
+  test("Settings.findUnique が失敗しても per-instance で再 fetch → policy 計算値で refund (全額返金化しない)", async () => {
+    const ids = makeReservationIds(1);
+
+    // PAID + stripePaymentIntentId 付きに差し替え (auto-refund 経路を起動)
+    mockReservationFindUnique.mockResolvedValue({
+      ...baseReservation,
+      paymentStatus: "PAID",
+      stripePaymentIntentId: "pi_test_perf02fix",
+      totalPrice: 10000,
+    });
+
+    // 1 回目 (bulk 冒頭) は transient error、2 回目以降 (per-instance) は valid policy
+    mockSettingsFindUnique.mockImplementationOnce(() =>
+      Promise.reject(new Error("transient DB error")),
+    );
+    mockSettingsFindUnique.mockImplementation(() =>
+      Promise.resolve({
+        refundPolicy: {
+          tiers: [{ hoursBefore: 0, refundRate: 50 }],
+          defaultRefundRate: 50,
+        },
+      }),
+    );
+
+    await applyBulkCancellationSideEffects(
+      baseInput({ reservationIds: ids, scope: "series-all" }),
+    );
+
+    // Settings.findUnique が bulk 1 回 + per-instance 1 回 = 計 2 回以上呼ばれる
+    // (fix 前は snapshot=null で 1 回のみ、再 fetch されない)
+    expect(mockSettingsFindUnique.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    // bulk 冒頭失敗は logError 済み → 例外は外に漏れない (関数は resolve)
+    const snapshotLogCalls = mockLogError.mock.calls.filter(
+      (call) =>
+        (call[1]?.["context"] as Record<string, unknown> | undefined)?.[
+          "operation"
+        ] === "applyBulkCancellationSideEffects.settingsSnapshot",
+    );
+    expect(snapshotLogCalls).toHaveLength(1);
+
+    // Refund は amount 明示 (policy 計算値) で呼ばれる。
+    // amount === undefined は「全額返金」を意味するため NG。
+    expect(mockRefund).toHaveBeenCalledTimes(1);
+    const refundArg = mockRefund.mock.calls[0]?.[0];
+    expect(refundArg).toBeDefined();
+    expect(refundArg).toMatchObject({
+      reservationId: ids[0],
+    });
+    expect(refundArg?.["amount"]).toBe(5000); // 10000 * 50% = 5000
+    expect(refundArg?.["amount"]).not.toBeUndefined();
+  });
+
   test("this-and-following → GCal events.patch(newUNTIL) が呼ばれ、events.delete は呼ばれない", async () => {
     const ids = makeReservationIds(2);
 

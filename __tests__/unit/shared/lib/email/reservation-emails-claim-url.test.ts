@@ -80,6 +80,7 @@ type ClaimUrlProps = {
   cancellationPolicyUrl?: string;
   cancellationDeadlineHours?: number;
   modificationDeadlineHours?: number;
+  receiptDownloadUrl?: string;
 };
 const mockReservationConfirmationEmail = mock((props: ClaimUrlProps) => props);
 const mockReservationReminderEmail = mock((props: ClaimUrlProps) => props);
@@ -206,6 +207,44 @@ describe("sendReservationConfirmationEmail() の claimUrl 出し分け", () => {
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
     expect(props?.claimUrl).toBeUndefined();
+  });
+});
+
+// RECEIPT-GUEST-01: receiptSerialNo が渡された場合、ゲスト予約のみ
+// 領収書 PDF ダウンロード署名 URL を発行する (会員はマイページ経由で DL するため未発行)。
+describe("sendReservationConfirmationEmail() の receiptDownloadUrl 出し分け", () => {
+  test("ゲスト予約 + receiptSerialNo あり → receiptDownloadUrl を発行する", async () => {
+    await sendReservationConfirmationEmail({
+      ...CONFIRMATION_DATA,
+      userId: null,
+      receiptSerialNo: "2026-000042",
+    });
+
+    const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.receiptDownloadUrl).toMatch(
+      /\/api\/receipts\/2026-000042\/pdf\?token=[A-Za-z0-9_-]+$/,
+    );
+  });
+
+  test("会員予約 + receiptSerialNo あり → receiptDownloadUrl は発行しない", async () => {
+    await sendReservationConfirmationEmail({
+      ...CONFIRMATION_DATA,
+      userId: "user-1",
+      receiptSerialNo: "2026-000042",
+    });
+
+    const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.receiptDownloadUrl).toBeUndefined();
+  });
+
+  test("ゲスト予約 + receiptSerialNo なし → receiptDownloadUrl は発行しない", async () => {
+    await sendReservationConfirmationEmail({
+      ...CONFIRMATION_DATA,
+      userId: null,
+    });
+
+    const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
+    expect(props?.receiptDownloadUrl).toBeUndefined();
   });
 });
 

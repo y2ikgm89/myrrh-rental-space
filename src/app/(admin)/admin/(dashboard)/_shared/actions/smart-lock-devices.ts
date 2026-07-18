@@ -12,11 +12,13 @@
  */
 
 import type { SubmissionResult } from "@conform-to/react";
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+// CACHE-INVALIDATE-04: SPACES は CDN `space-v1` に emit されるため、raw updateTag では
+// edge の stale HTML が残る。invalidateSiteWideCache 経由で CDN purge も併発する。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import {
   createSmartLockDeviceCommand,
@@ -49,7 +51,7 @@ export async function createSmartLockDevice(
             isActive: data.isActive,
           }),
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.SPACES);
+          invalidateSiteWideCache(CACHE_TAGS.SPACES);
         },
       });
 
@@ -92,7 +94,7 @@ export async function updateSmartLockDevice(
             isActive: data.isActive,
           }),
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.SPACES);
+          invalidateSiteWideCache(CACHE_TAGS.SPACES);
         },
       });
 
@@ -118,7 +120,7 @@ export async function deleteSmartLockDevice(
     action: "manage",
     execute: async () => deleteSmartLockDeviceCommand(parsedDevice.data),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACES);
+      invalidateSiteWideCache(CACHE_TAGS.SPACES);
     },
   });
 }
@@ -139,7 +141,7 @@ export async function toggleSmartLockDeviceActive(
     execute: async () =>
       toggleSmartLockDeviceActiveCommand(parsedDevice.data, isActive),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACES);
+      invalidateSiteWideCache(CACHE_TAGS.SPACES);
     },
   });
 }

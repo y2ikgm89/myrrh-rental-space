@@ -34,6 +34,7 @@ import {
 } from "@/shared/lib/event-registration-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
+import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
@@ -83,6 +84,12 @@ type EventRegistrationConfirmationData = {
   customerId: string | null;
   format: EventFormatValue;
   meetingUrl: string | null;
+  /**
+   * PAID 遷移直後に採番された Receipt.serialNo (「YYYY-XXXXXX」形式)。
+   * ゲスト申込 (customerId=null) の確認メールに領収書 PDF DL 署名 URL を組み込む
+   * (RECEIPT-GUEST-01)。会員はマイページから DL できるため未指定で OK。
+   */
+  receiptSerialNo?: string;
 };
 
 /**
@@ -157,6 +164,13 @@ export async function sendEventRegistrationConfirmation(
       ? `${appUrl}/events/cancel?token=${createEventCancelToken(data.registrationId, cancelDeadline)}`
       : undefined;
 
+  // ゲスト申込かつ Receipt 採番済みなら、領収書 PDF ダウンロード署名 URL を発行する
+  // (RECEIPT-GUEST-01)。会員はマイページから DL できるため署名 URL は不要。
+  const receiptDownloadUrl =
+    !data.customerId && data.receiptSerialNo
+      ? `${appUrl}/api/receipts/${data.receiptSerialNo}/pdf?token=${createReceiptDownloadToken(data.receiptSerialNo)}`
+      : undefined;
+
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
     try {
@@ -201,6 +215,7 @@ export async function sendEventRegistrationConfirmation(
           memberEventRegistrationUrl,
           claimUrl,
           cancelUrl,
+          receiptDownloadUrl,
           footer,
         }),
       ),

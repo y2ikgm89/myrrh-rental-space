@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getCustomerInquiries } from "../_lib/inquiry-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
@@ -17,6 +18,11 @@ import { InquiryList } from "./_components/inquiry-list";
 
 export default async function MypageInquiriesPage(): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-04: mypage sub-page も公開 /contact と対称に contact feature
+  // OFF 時に 404 (fail-closed)。gate 無しだと会員は自分のお問い合わせ一覧を
+  // 見られてしまい、feature module の可視性契約が破れる。
+  await requireFeatureEnabled("contact");
 
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);

@@ -15,6 +15,10 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkPermission } from "@/admin/lib/action-auth";
+// CACHE-INVALIDATE-04: mergeCustomers は公開側の EVENTS collection (CDN `event-v1`)
+// にも波及するため helper 経由で CDN purge も併発する。CUSTOMERS/RESERVATIONS/
+// INQUIRIES/REVIEWS は admin-only (private,no-store) なので raw updateTag のまま。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import {
   customerFormSchema,
@@ -253,7 +257,8 @@ export async function mergeCustomers(
       updateTag(CACHE_TAGS.RESERVATIONS);
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(CACHE_TAGS.REVIEWS);
-      updateTag(CACHE_TAGS.EVENTS);
+      // EVENTS は CDN `event-v1` にマップされているため helper 経由で CDN purge も発火。
+      invalidateSiteWideCache(CACHE_TAGS.EVENTS);
     },
   });
 }

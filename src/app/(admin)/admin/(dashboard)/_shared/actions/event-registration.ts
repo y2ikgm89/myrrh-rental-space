@@ -1,7 +1,6 @@
 "use server";
 
 import { headers } from "next/headers";
-import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -24,7 +23,6 @@ import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/e
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS } from "@/shared/lib/constants";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -33,6 +31,7 @@ import {
   REFUNDED_BY_TYPE,
 } from "@/shared/lib/validations/enums/helpers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   prismaCuid2IdSchema,
@@ -84,7 +83,9 @@ export async function adminCancelRegistration(
       };
     },
     afterSuccess: (data) => {
-      updateTag(CACHE_TAGS.EVENTS);
+      // CACHE-INVALIDATE-04: 公開イベントページ (Cache-Tag `event-v1`) が edge に
+      // 残り続けないよう helper 経由で Cloudflare CDN purge も併発する。
+      invalidateEventCaches();
 
       // メール / 通知 / 監査ログを一括で副作用ヘルパーへ委譲
       // （会員・ゲスト経路と SSoT 共有。reservations の admin 経路と同型）。
@@ -141,10 +142,14 @@ export async function refundEventRegistrationPayment(
     action: "update",
     resourceId: validated.data,
     execute: async (user) => {
+      // UA-HORIZ-04: admin session hijack シナリオでの forensics 対称化のため
+      // ip / userAgent を AuditLog metadata に載せる (cancel / receipt / waitlist と同型)。
+      const request = await buildAuditRequestContext();
       return refundEventRegistrationPaymentCommand({
         registrationId: validated.data,
         actorType: REFUNDED_BY_TYPE.ADMIN,
         actorUserId: user.id,
+        request,
         ...(options?.amount !== undefined ? { amount: options.amount } : {}),
         ...(options?.reason !== undefined && options.reason !== ""
           ? { reason: options.reason }

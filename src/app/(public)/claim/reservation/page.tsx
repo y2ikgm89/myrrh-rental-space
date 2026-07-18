@@ -11,6 +11,7 @@ import { getReservationForGuestCancel } from "@/shared/domain/reservations/custo
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import {
@@ -37,6 +38,10 @@ export const metadata: Metadata = {
  */
 export default async function ClaimReservationPage(): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-04: /reservation と対称に reservation feature OFF 時は 404。
+  // claim 経路も予約を露出する経路のため、可視性契約を破らないよう先に閉じる。
+  await requireFeatureEnabled("reservation");
 
   // GET ページにも rate-limit を貼る。有効トークン 1 本で uncached DB findFirst を
   // 無制限ヒットできる経路を遮断する（`reservation/cancel` ページと同方針）。
