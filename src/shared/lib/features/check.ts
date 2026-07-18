@@ -61,22 +61,27 @@ export async function isFeatureEnabled(
 /**
  * フィルタリング用コンテキスト（disabled module の SSoT エントリを集約）。
  *
- * sitemap / navigation / SectionRenderer / cron route handler の filter は
- * 全てこの context を経由する。
+ * sitemap / navigation / SectionRenderer の filter は全てこの context を経由する。
  *
  * - `disabledRoutes`: nav 内部リンク URL prefix 比較に使う（external link は影響なし）
  * - `disabledPageSlugs`: sitemap の `/slug` URL filter に使う
  * - `disabledSectionTypes`: SectionRenderer の早期 return / AddSectionDialog 除外に使う
- * - `disabledTemplates`: PAGE_TEMPLATES selector の除外に使う
- * - `disabledCronPaths`: cron route handler の早期 return マッチング用
+ *
+ * ## registry.cronPaths / registry.templates は metadata-only
+ *
+ * cron route handler は `isFeatureEnabled(id)` を各 route が直接呼ぶ (add-cron-job
+ * skill 契約)。`FEATURE_MODULES[id].cronPaths` は「その module に紐づく cron route
+ * の運用停止範囲を示す doc」であって、runtime gate ではない (registry.test.ts の
+ * drift gate が「isFeatureEnabled 引数 ↔ cronPaths 実体」の双方向対応を強制する)。
+ * templates も同様に PAGE_TEMPLATES selector 側は現状 registry を参照しない
+ * (metadata-only)。以前は `disabledTemplates` / `disabledCronPaths` を Set として
+ * 集約していたが consumer 皆無で SSoT drift の温床になっていたため削除 (WIRE-04)。
  */
 export interface FeatureFilterContext {
   readonly enabled: ReadonlySet<FeatureModule>;
   readonly disabledRoutes: readonly string[];
   readonly disabledPageSlugs: ReadonlySet<string>;
   readonly disabledSectionTypes: ReadonlySet<string>;
-  readonly disabledTemplates: ReadonlySet<string>;
-  readonly disabledCronPaths: ReadonlySet<string>;
 }
 
 export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
@@ -84,8 +89,6 @@ export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
   const disabledRoutes: string[] = [];
   const disabledPageSlugs = new Set<string>();
   const disabledSectionTypes = new Set<string>();
-  const disabledTemplates = new Set<string>();
-  const disabledCronPaths = new Set<string>();
 
   for (const id of FEATURE_MODULES_LIST) {
     if (enabled.has(id)) continue;
@@ -93,8 +96,6 @@ export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
     disabledRoutes.push(...def.publicRoutes);
     for (const slug of def.pageSlugs) disabledPageSlugs.add(slug);
     for (const type of def.sectionTypes) disabledSectionTypes.add(type);
-    for (const tpl of def.templates) disabledTemplates.add(tpl);
-    for (const path of def.cronPaths) disabledCronPaths.add(path);
   }
 
   return {
@@ -102,8 +103,6 @@ export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
     disabledRoutes,
     disabledPageSlugs,
     disabledSectionTypes,
-    disabledTemplates,
-    disabledCronPaths,
   };
 }
 
