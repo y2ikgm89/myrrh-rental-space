@@ -40,7 +40,11 @@ export interface FeatureModuleDef {
   readonly description: string;
   /** 依存 module（OFF なら自身も自動 OFF） */
   readonly requires?: readonly FeatureModule[];
-  /** 404 ガード対象の公開ルート（次フェーズで `requireFeatureEnabled` を配線） */
+  /**
+   * 404 ガード対象の公開ルート。配下の全 page.tsx / route.ts で
+   * `await requireFeatureEnabled(<id>)` を呼ぶ (OFF 時に notFound())。
+   * 実装対象は grep 済で 18 file (src/app/(public) 配下の page.tsx + waitlist route)。
+   */
   readonly publicRoutes: readonly string[];
   /** Page table の slug（管理画面で feature OFF 警告表示用） */
   readonly pageSlugs: readonly string[];
