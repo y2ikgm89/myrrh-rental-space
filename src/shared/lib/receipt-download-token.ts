@@ -10,14 +10,31 @@ import { isRecord } from "@/shared/lib/serialize";
  * 適格請求書 PDF のダウンロード経路 2 種のうち、**署名 URL 経路**用のトークン発行/検証。
  *
  * ## 経路 1: Better Auth session
- * 認証済み顧客が mypage から DL する場合、Route Handler が Better Auth session の
- * customer.id と Receipt.reservation.customerId / eventRegistration.customerId を突合する。
- * トークン不要。
+ * 認証済み顧客が mypage から DL する場合、Route Handler の GET が Better Auth session
+ * の customer.id と Receipt.reservation.customerId / eventRegistration.customerId を
+ * 突合する。トークン不要。
  *
- * ## 経路 2: 署名 URL (本トークン)
+ * ## 経路 2: 署名 URL (本トークン) — 2-step flow (HTTP-02)
  * ゲスト予約 (customerId=null) からメール本文リンク経由で DL する場合、
  * Better Auth session が存在しないため署名トークン検証で ownership を担保する。
  * メールから発行 → **24 時間有効** (RECEIPT-USEDAT-P1)。
+ *
+ * 実際のフローは以下の 2-step:
+ * 1. メール内リンク: `/receipts/[serialNo]/download?token=<sig>` (公開 confirm page)
+ * 2. ユーザーが「領収書 PDF をダウンロードする」ボタンを押下
+ *    → `<form method="POST">` が `/api/receipts/[serialNo]/pdf` を叩く
+ *    → Route Handler POST が `verifyReceiptDownloadToken` + `claimReceiptForSingleUseTokenDownload`
+ *
+ * ## HTTP-02: POST claim にした理由
+ * 旧: メール本文リンクを直接 `/api/receipts/[serialNo]/pdf?token=` に繋げていた。
+ * Outlook SafeLinks / Gmail preview / Slack unfurl / iMessage / Discord embed 等の
+ * link scanner が GET プリフェッチで実 URL を fetch → `usedAt` が消費され、
+ * ゲスト本人のクリック時に 404 になる fail mode が発覚。実質的に全ゲストが
+ * 領収書を受け取れない状態だった。
+ *
+ * 対策: RFC 9110 の safe-method 契約 (POST は副作用を伴う可能性を認識して scanner
+ * がスキップする) を利用し、実 claim を POST 経由に切り分けた。GET は confirm page
+ * 描画 (副作用ゼロ) と Better Auth session 経路 (mypage) のみを受け持つ。
  *
  * ## 設計
  * `event-registration-claim-token.ts` と同型 (crypto.ts の encrypt/decrypt + purpose 分離
