@@ -17,8 +17,11 @@ paths:
 - **main への push = 即・本番デプロイ**（deploy-production.yml →
   `gcloud beta builds submit`）。PR merge は本番リリースを意味する
 - workflow が migration diff を grep し、DROP COLUMN / RENAME COLUMN / RENAME TO /
-  DROP TABLE / DROP TYPE を検出すると自動で breaking migration mode
-  （両サービス scaling=0 + 310 秒 drain = 計画ダウンタイム）に切り替わる
+  DROP TABLE / DROP TYPE / ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL を
+  検出すると自動で breaking migration mode（両サービス scaling=0 + 310 秒 drain =
+  計画ダウンタイム）に切り替わる。`ALTER COLUMN ... TYPE` と `SET NOT NULL` は
+  Postgres がテーブル全体書換 + 排他ロックを取るため destructive 扱い
+  （regression: `__tests__/unit/architecture/breaking-migration-detection.test.ts`）
 - 単一 runner イメージを APP_SURFACE env の違いで public / admin の 2 サービスに配る
 
 ## Dockerfile（6 ステージ、順序に意味がある）
