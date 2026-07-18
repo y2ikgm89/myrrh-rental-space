@@ -32,6 +32,7 @@ import { refundReservationPaymentCommand } from "@/shared/domain/reservations/pa
 import {
   calculateRefundAmount,
   parseRefundPolicy,
+  type RefundPolicy,
 } from "@/shared/domain/refund/policy";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { deleteCalendarSync } from "@/shared/lib/calendar-sync/outbound";
@@ -103,6 +104,16 @@ export interface CancellationSideEffectInput {
   request: CancelRequestContext;
   /** Phase B.2: bulk cancel 経路で per-instance の副作用を抑止する（既存 caller は未指定=従前挙動）。 */
   suppress?: SideEffectSuppressFlags;
+  /**
+   * PERF-02: 呼出側が `Settings.refundPolicy` を事前に取得済ならその snapshot を渡す。
+   * bulk cancel 経路 (`applyBulkCancellationSideEffects`) が per-instance の
+   * Settings.findUnique N+1 を避けるために hoist して渡す。
+   *
+   * - 省略 (undefined) → 従前どおり per-call で Settings.findUnique を実行
+   * - `RefundPolicy` → その snapshot を使用 (bulk 経路の hoist 値)
+   * - `null` → 「policy 未設定 = 残額全額」を明示 (parseRefundPolicy が返す null を snapshot 化)
+   */
+  refundPolicySnapshot?: RefundPolicy | null;
 }
 
 const CHANNEL_TO_CANCELLED_BY: Record<CancelChannel, CancelledByType> = {
@@ -259,11 +270,19 @@ export async function applyCancellationSideEffects(
   //   - policy 適用結果が 0 円なら refund 全 skip (キャンセル自体は続行、in-app 通知の
   //     「要返金確認」タイトルは維持して運用側の判断を仰ぐ)
   if (requiresRefund) {
-    const settings = await prisma.settings.findUnique({
-      where: { id: "singleton" },
-      select: { refundPolicy: true },
-    });
-    const policy = parseRefundPolicy(settings?.refundPolicy);
+    // PERF-02: bulk 経路が snapshot を渡してきたらそれを使う (N+1 回避)。
+    // 単発 caller は snapshot 未指定 → per-call で Settings.findUnique (従前挙動)。
+    const policy: RefundPolicy | null =
+      input.refundPolicySnapshot !== undefined
+        ? input.refundPolicySnapshot
+        : parseRefundPolicy(
+            (
+              await prisma.settings.findUnique({
+                where: { id: "singleton" },
+                select: { refundPolicy: true },
+              })
+            )?.refundPolicy,
+          );
 
     // policy 未設定 (null) → 残額全額返金 (現状の後方互換動作を維持)
     // policy 設定あり → tier 選定で amount 計算 (0 なら refund skip)
@@ -536,6 +555,31 @@ export async function applyBulkCancellationSideEffects(
   const cancellationReason = input.cancellationReason ?? null;
   const actorUserId = input.actorUserId ?? null;
 
+  // PERF-02: Settings.refundPolicy を bulk 開始時に 1 回だけ fetch し per-instance
+  // に snapshot として渡す。refund policy は series 一括キャンセル中 (数十秒スケール)
+  // で変化しないビジネスセマンティクスであり、per-instance の Settings.findUnique
+  // 呼び出しは Cloud Run→Neon RTT を N-1 回積み上げる無駄なラウンドトリップだった
+  // (52 instance で ~500ms-1.5s の空 latency)。Step 1 前段の 1 fetch にまとめる。
+  let refundPolicySnapshot: RefundPolicy | null = null;
+  try {
+    const settings = await prisma.settings.findUnique({
+      where: { id: "singleton" },
+      select: { refundPolicy: true },
+    });
+    refundPolicySnapshot = parseRefundPolicy(settings?.refundPolicy);
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: "applyBulkCancellationSideEffects.settingsSnapshot",
+        seriesId: input.seriesId,
+      },
+    });
+    // Settings 取得失敗時は per-instance で再 fetch を試みるため snapshot 未指定に
+    // フォールバック (refundPolicySnapshot=undefined を渡すために per-call 分岐)。
+  }
+
   // Step 1: per-instance 副作用（customerEmail / adminEmail / gcalDelete のみ suppress）
   for (const reservationId of input.reservationIds) {
     try {
@@ -550,6 +594,7 @@ export async function applyBulkCancellationSideEffects(
           adminEmail: true,
           gcalDelete: true,
         },
+        refundPolicySnapshot,
       });
     } catch (error) {
       logError(normalizeError(error), {
