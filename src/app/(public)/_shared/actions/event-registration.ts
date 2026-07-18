@@ -52,7 +52,10 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
-import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import {
+  assertAllRequiredTermsAgreed,
+  assertLoginSignupReagreed,
+} from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { headers } from "next/headers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
@@ -122,8 +125,10 @@ export async function registerForEvent(
         if (customer) {
           // OAUTH-BETTER-AUTH-01: 認証済みセッションで解決した Customer は
           // isActive / status BLACKLIST を強制する。
+          // TERMS-REAGREE-P2: LOGIN_SIGNUP scope の再同意 pending も同ゲートで拒否。
           try {
             await assertCustomerActive(customer.id);
+            await assertLoginSignupReagreed(customer.id);
           } catch (error) {
             if (error instanceof DomainError) {
               return { ok: false, error: error.message };
@@ -311,8 +316,10 @@ export async function registerForEventWaitlist(
         if (customer) {
           // OAUTH-BETTER-AUTH-01: 認証済みセッションで解決した Customer は
           // isActive / status BLACKLIST を強制する。
+          // TERMS-REAGREE-P2: LOGIN_SIGNUP scope の再同意 pending も同ゲートで拒否。
           try {
             await assertCustomerActive(customer.id);
+            await assertLoginSignupReagreed(customer.id);
           } catch (error) {
             if (error instanceof DomainError) {
               return { ok: false, error: error.message };
@@ -436,7 +443,9 @@ export async function cancelEventRegistration(
   try {
     // OAUTH-BETTER-AUTH-01: Customer.isActive / status BLACKLIST を
     // Server Action 側でも強制する（MypageAuthGate は SC 描画層のみカバー）。
+    // TERMS-REAGREE-P2: LOGIN_SIGNUP scope の再同意 pending も同ゲートで拒否。
     await assertCustomerActive(customer.id);
+    await assertLoginSignupReagreed(customer.id);
     const registration = await cancelEventRegistrationCommand(
       registrationId,
       customer.id,

@@ -40,7 +40,10 @@ import {
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
-import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import {
+  assertAllRequiredTermsAgreed,
+  assertLoginSignupReagreed,
+} from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   NOTIFICATION_TYPE,
@@ -163,6 +166,7 @@ export async function submitReservation(
         if (authedCustomer) {
           try {
             await assertCustomerActive(authedCustomer.id);
+            await assertLoginSignupReagreed(authedCustomer.id);
           } catch (error) {
             if (error instanceof DomainError) {
               return { ok: false, error: error.message };
