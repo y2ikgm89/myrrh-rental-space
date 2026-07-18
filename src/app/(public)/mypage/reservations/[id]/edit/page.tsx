@@ -10,6 +10,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
@@ -38,6 +39,11 @@ export default async function ReservationEditPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-02: mypage sub-page も公開 /reservation と対称に reservation
+  // feature OFF 時に 404 (fail-closed)。gate 無しだと会員は「予約変更」画面を
+  // 使えてしまい、reservation module の可視性契約が破れる。
+  await requireFeatureEnabled("reservation");
 
   const { id } = await params;
 

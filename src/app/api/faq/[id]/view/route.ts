@@ -13,6 +13,7 @@ import {
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
@@ -24,6 +25,12 @@ type RouteContext = {
 
 export async function POST(_request: Request, context: RouteContext) {
   try {
+    // FEAT-3PLANE-01: faq module OFF 時に 404 で塞ぐ (公開 /faq page が
+    // requireFeatureEnabled で 404 になっているのと対称)。gate 無しだと
+    // viewCount が「表示されない項目」に対して増え続ける silent bug。
+    if (!(await isFeatureEnabled("faq"))) {
+      return jsonError("Not found", 404);
+    }
     const { id } = await context.params;
     const parsed = idSchema.safeParse(id);
     if (!parsed.success) {
