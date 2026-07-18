@@ -397,11 +397,129 @@ export async function consumeCustomerEmailChangeCommand(
   });
 }
 
-export async function deleteCustomer(id: string): Promise<void> {
-  await ensureCustomerExists(id);
+/**
+ * STATE-03: 顧客匿名化 (anonymize) command。
+ *
+ * 決済歴 (Receipt 発行済) のある Customer は物理削除できない
+ * (`Reservation.customer` は `onDelete: Cascade`、`Receipt.reservation` は
+ * `onDelete: Restrict` のため cascade が Receipt の Restrict でブロックされる)。
+ * 物理削除の代わりに PII を placeholder に置換して `anonymizedAt` を刻印し、
+ * Reservation / Receipt の customerId 参照を残す (会計証跡・不変性の保全)。
+ *
+ * 匿名化される列:
+ * - email          → `deleted+<customer.id>@anonymized.local` (unique 制約維持)
+ * - emailCanonical → 同上
+ * - lastName       → "削除済み" (NOT NULL 制約のため placeholder 必須)
+ * - firstName      → "" (NOT NULL 制約のため empty string)
+ * - lastNameKana / firstNameKana / phoneNumber / companyName / postalCode /
+ *   prefecture / city / streetAddress / building / notes → null
+ * - isActive       → false (以降ログイン・予約作成不可)
+ * - marketingOptIn → false (メール送信不可)
+ * - phoneContactOptIn → false
+ * - anonymizedAt   → now() (append-only 証跡)
+ * - anonymizedReason → input.reason (append-only 証跡)
+ * - userId         → null (Better Auth 側 User を切り離す)
+ *
+ * さらに Better Auth 側 User が紐付いていた場合はその User を削除
+ * (Session / Account が onDelete: Cascade で連鎖削除、以降ログイン不可)。
+ *
+ * Reservation / Receipt / Inquiry / SpaceReview / EventRegistration /
+ * TermsAgreement は削除せず customerId 参照を維持する。JOIN で PII に到達しても
+ * 全て redacted 値になる。
+ *
+ * AuditLog: action=UPDATE / resource=customer / oldValue には PII を含めず
+ * `{ hadUserId }` のみ、newValue は `{ anonymizedAt, anonymizedReason }`、
+ * metadata は `{ source, actorUserId }`。
+ *
+ * 冪等: 既に anonymizedAt が非 null なら DomainError (`ALREADY_ANONYMIZED`) を throw。
+ */
+export type AnonymizeCustomerReason =
+  "customer-requested" | "admin-purge" | "data-retention";
 
-  await prisma.customer.delete({
-    where: { id },
+const CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME = "削除済み";
+const CUSTOMER_ANONYMIZE_PLACEHOLDER_FIRST_NAME = "";
+
+function buildAnonymizedEmail(customerId: string): {
+  email: string;
+  emailCanonical: string;
+} {
+  const placeholder = `deleted+${customerId}@anonymized.local`;
+  return {
+    email: placeholder,
+    emailCanonical: normalizeEmailForIdentity(placeholder),
+  };
+}
+
+export async function anonymizeCustomerCommand(input: {
+  customerId: string;
+  reason: AnonymizeCustomerReason;
+}): Promise<{
+  customerId: string;
+  anonymizedAt: Date;
+  reason: AnonymizeCustomerReason;
+  hadUserId: boolean;
+}> {
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.customer.findUnique({
+      where: { id: input.customerId },
+      select: {
+        id: true,
+        userId: true,
+        anonymizedAt: true,
+      },
+    });
+
+    if (!existing) {
+      throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+    }
+
+    if (existing.anonymizedAt !== null) {
+      throw new DomainError("この顧客は既に匿名化済みです", "CONFLICT");
+    }
+
+    const anonymizedEmail = buildAnonymizedEmail(existing.id);
+    const anonymizedAt = new Date();
+
+    await tx.customer.update({
+      where: { id: existing.id },
+      data: {
+        email: anonymizedEmail.email,
+        emailCanonical: anonymizedEmail.emailCanonical,
+        lastName: CUSTOMER_ANONYMIZE_PLACEHOLDER_LAST_NAME,
+        firstName: CUSTOMER_ANONYMIZE_PLACEHOLDER_FIRST_NAME,
+        lastNameKana: null,
+        firstNameKana: null,
+        phoneNumber: null,
+        companyName: null,
+        postalCode: null,
+        prefecture: null,
+        city: null,
+        streetAddress: null,
+        building: null,
+        notes: null,
+        isActive: false,
+        marketingOptIn: false,
+        phoneContactOptIn: false,
+        userId: null,
+        anonymizedAt,
+        anonymizedReason: input.reason,
+      },
+    });
+
+    // Better Auth 側 User (顧客ログイン用) を明示削除する。
+    // Session / Account は User に対して onDelete: Cascade のため連鎖削除される。
+    // Reservation / AuditLog の userId は User に対して onDelete: SetNull のため
+    // 予約履歴・監査証跡は残る。
+    if (existing.userId !== null) {
+      await tx.user.delete({ where: { id: existing.userId } });
+    }
+
+    return {
+      customerId: existing.id,
+      anonymizedAt,
+      reason: input.reason,
+      hadUserId: existing.userId !== null,
+    };
   });
 }
 
