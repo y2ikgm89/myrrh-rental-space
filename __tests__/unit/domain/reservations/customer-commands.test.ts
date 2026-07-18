@@ -326,6 +326,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       date: "2020-01-01",
       startTime: "10:00",
       endTime: "12:00",
+      version: 0,
     };
 
     const result = await updateCustomerReservation(
