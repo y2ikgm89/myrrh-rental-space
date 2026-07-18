@@ -195,6 +195,16 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   }) => mockApplyChargeRefundIdempotent(input),
 }));
 
+// STRIPE-DEDUP-A: route.ts が signature verification 直後に呼ぶ chokepoint
+// (claimStripeEventForProcessing) と handler 成功後の processedAt 刻印
+// (markStripeEventProcessed) を境界で stub。default では "claimed" (=新規受領)
+// を返して既存テストの流れを維持する。duplicate 分岐は
+// stripe-webhook-event-dedup.test.ts で個別検証。
+mock.module("@/shared/domain/stripe-events/dedup", () => ({
+  claimStripeEventForProcessing: () => Promise.resolve("claimed"),
+  markStripeEventProcessed: () => Promise.resolve(),
+}));
+
 // task #6: event registration 経路も webhook.route.ts が使うので mock を追加
 // (reservation で見つからない場合の fallback 経路)。
 mock.module("@/shared/domain/events/payment-commands", () => ({
