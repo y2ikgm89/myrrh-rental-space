@@ -1,11 +1,13 @@
 "use server";
 
 import type { SubmissionResult } from "@conform-to/react";
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+// CACHE-INVALIDATE-04: SPACES/LOCATIONS はいずれも CDN Cache-Tag に emit されるため、
+// raw updateTag では edge の stale HTML が残る。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { BLOCKED_DATE_SCOPE } from "@/shared/lib/validations/enums/helpers";
 import type { BlockedDateFormData } from "@/shared/lib/validations/blocked-date";
@@ -19,8 +21,7 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 const idSchema = uuidIdSchema("ブロック日");
 
 function invalidateGlobalBlockedCaches(): void {
-  updateTag(CACHE_TAGS.SPACES);
-  updateTag(CACHE_TAGS.LOCATIONS);
+  invalidateSiteWideCache([CACHE_TAGS.SPACES, CACHE_TAGS.LOCATIONS]);
 }
 
 /**

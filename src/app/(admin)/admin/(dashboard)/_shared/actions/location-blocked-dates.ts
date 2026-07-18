@@ -1,11 +1,13 @@
 "use server";
 
 import type { SubmissionResult } from "@conform-to/react";
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+// CACHE-INVALIDATE-04: LOCATIONS/SPACES はいずれも CDN (`location-v1` / `space-v1`)
+// に emit されるため、raw updateTag では edge の stale HTML が残る。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { BLOCKED_DATE_SCOPE } from "@/shared/lib/validations/enums/helpers";
 import type { BlockedDateFormData } from "@/shared/lib/validations/blocked-date";
@@ -47,8 +49,7 @@ export async function createLocationBlockedDate(
         execute: async (user) =>
           createBlockedDateCommand(input, { id: user.id }),
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.LOCATIONS);
-          updateTag(CACHE_TAGS.SPACES);
+          invalidateSiteWideCache([CACHE_TAGS.LOCATIONS, CACHE_TAGS.SPACES]);
         },
       });
 
@@ -77,8 +78,7 @@ export async function deleteLocationBlockedDate(
     resourceId: parsedLocation.data,
     execute: async () => deleteBlockedDateCommand(parsedBlocked.data),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.LOCATIONS);
-      updateTag(CACHE_TAGS.SPACES);
+      invalidateSiteWideCache([CACHE_TAGS.LOCATIONS, CACHE_TAGS.SPACES]);
     },
   });
 }
