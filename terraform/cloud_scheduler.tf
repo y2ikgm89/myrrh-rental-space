@@ -105,6 +105,12 @@ locals {
       path        = "/api/cron/receipt-backfill"
       description = "Issue Receipt for PAID/PARTIALLY_REFUNDED reservations & event registrations that pre-date the webhook auto-issue wiring (daily 03:15 JST, feature-gated by payment module)."
     },
+    {
+      name        = "calendar-sync-retry"
+      schedule    = "*/15 * * * *"
+      path        = "/api/cron/calendar-sync-retry"
+      description = "Retry outbound Google Calendar syncs for reservations stuck with calendarSyncError (every 15 min, feature-gated by Google Calendar enabled)."
+    },
   ]
 }
 

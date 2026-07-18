@@ -287,6 +287,9 @@ describeMaybe(
         const result = await syncReservationSeriesToCalendar(fixture.seriesId);
 
         expect(result.success).toBe(true);
+        if (result.success !== true) {
+          throw new Error("expected success result");
+        }
         expect(result.eventId).toBe("master-abc");
 
         // createCalendarEvent 呼出時の param 検証
@@ -329,21 +332,29 @@ describeMaybe(
       }
     }, 30_000);
 
-    test("master event 作成成功後 ReservationSeries.googleCalendarMasterEventId が永続化される (Phase B.2.1 Task 5)", async () => {
+    test("master event 作成成功後 ReservationSeries.googleCalendarMasterEventId が永続化される (Phase B.2.1 Task 5 + GCAL-RETRY-03 partial)", async () => {
       const fixture = await createSeriesFixture();
       try {
         mockCreate.mockImplementation(() =>
           Promise.resolve({ success: true, eventId: "master-persist-only" }),
         );
-        // fetchEventInstances が失敗しても master event ID の永続化は事前に走る
+        // fetchEventInstances が失敗しても master event ID の永続化は事前に走る。
+        // GCAL-RETRY-03: fetch 失敗時は result.success は "partial" に変更
+        // (旧実装の silent success:true → child eventId 未 write-back の放置を回避)。
         mockFetchInstances.mockImplementation(() =>
           Promise.resolve({ success: false, error: "network error" }),
         );
 
         const result = await syncReservationSeriesToCalendar(fixture.seriesId);
-        // fetchEventInstances 失敗でも result.success は true (master 作成は成功)
-        expect(result.success).toBe(true);
-        expect(result.eventId).toBe("master-persist-only");
+        // fetchEventInstances 失敗 = master 作成成功 + write-back 失敗 = partial
+        expect(result.success).toBe("partial");
+        if (result.success !== "partial") {
+          throw new Error("expected partial result");
+        }
+        expect(result.masterCreated).toBe(true);
+        expect(result.masterEventId).toBe("master-persist-only");
+        expect(result.instancesWriteBack).toBe(false);
+        expect(result.error).toContain("network error");
 
         const persisted = await prisma.reservationSeries.findUnique({
           where: { id: fixture.seriesId },
@@ -358,6 +369,23 @@ describeMaybe(
           await import("@/shared/lib/calendar-sync/series-outbound");
         const fetched = await getSeriesGcalMasterEventId(fixture.seriesId);
         expect(fetched).toBe("master-persist-only");
+
+        // GCAL-RETRY-03: partial 時に全 instance が FAILED (calendarSyncError 有 +
+        // googleCalendarEventId 未設定) にマークされ、次回 retry cron で拾える状態。
+        const reservations = await prisma.reservation.findMany({
+          where: { seriesId: fixture.seriesId },
+          select: {
+            id: true,
+            googleCalendarEventId: true,
+            calendarSyncError: true,
+          },
+          orderBy: { startTime: "asc" },
+        });
+        expect(reservations).toHaveLength(3);
+        for (const r of reservations) {
+          expect(r.googleCalendarEventId).toBeNull();
+          expect(r.calendarSyncError).toContain("instances fetch failed");
+        }
       } finally {
         await fixture.cleanup();
       }

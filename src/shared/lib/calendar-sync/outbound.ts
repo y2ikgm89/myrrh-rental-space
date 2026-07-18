@@ -359,8 +359,57 @@ export async function writeBackInstanceGoogleCalendarEventIds(input: {
 }
 
 /**
+ * `syncReservationSeriesToCalendar` の戻り値。
+ *
+ * - `success: true` — master event 作成 + 全 instance の write-back まで完了 (eventId 有)。
+ *   Google Calendar 無効時の no-op success (eventId 無) も同じ arm を使う。
+ * - `success: false` — series not found / `createCalendarEvent` 失敗 / 予期せぬ例外。
+ *   master event 自体が未作成、GCal 側に痕跡なし。
+ * - `success: "partial"` — master event は GCal 上に作成済で
+ *   `ReservationSeries.googleCalendarMasterEventId` にも永続化された。ただし
+ *   `fetchEventInstances` (または write-back) が失敗し、child eventId の書き戻しが
+ *   できなかった。全 instance の `Reservation.calendarSyncError` を埋めて
+ *   `/api/cron/calendar-sync-retry` の対象に載せる (GCAL-RETRY-03)。呼出側は
+ *   master delete による cleanup 判断が可能。
+ */
+export type SeriesCalendarSyncResult =
+  | (CalendarEventResult & { success: true })
+  | { success: false; error: string }
+  | {
+      success: "partial";
+      masterCreated: true;
+      masterEventId: string;
+      instancesWriteBack: false;
+      error: string;
+    };
+
+/**
+ * fetchEventInstances 失敗時に、series 配下の全 Reservation を FAILED として
+ * marker し `/api/cron/calendar-sync-retry` で拾えるようにする。
+ *
+ * `Promise.all` で並列に write する (順序依存無し、tx 外の独立 update)。
+ * `Promise.allSettled` ではなく `Promise.all` を選択: 個別 write が失敗した場合
+ * は上位 catch で丸めて logError → partial 返却する (write が全滅した場合は
+ * 次サイクルで再試行されないため、上位で明示的にエラー扱いする)。
+ */
+async function markAllSeriesInstancesAsFailed(input: {
+  seriesId: string;
+  error: string;
+}): Promise<void> {
+  const reservations = await getSeriesInstanceStartTimes(input.seriesId);
+  await Promise.all(
+    reservations.map((r) =>
+      markReservationCalendarSyncError({
+        reservationId: r.id,
+        error: input.error,
+      }),
+    ),
+  );
+}
+
+/**
  * 定期予約 (ReservationSeries) を Google Calendar に master event として同期する
- * (Phase B.2 task 16 + B.2.1 Task 5)。
+ * (Phase B.2 task 16 + B.2.1 Task 5 + GCAL-RETRY-03)。
  *
  * flow: fetch series + first instance → createCalendarEvent with `recurrence`
  * → markSeriesMasterEventCreated (永続化) → fetchEventInstances(masterId)
@@ -369,13 +418,19 @@ export async function writeBackInstanceGoogleCalendarEventIds(input: {
  * master event ID は `ReservationSeries.googleCalendarMasterEventId` に永続化される
  * (Phase B.2.1 Task 5 で追加)。bulk cancel の series-level GCal 操作 (deleteGcalMaster
  * / patchGcalMasterUntil) は非 null 時のみ発火する。
+ *
+ * GCAL-RETRY-03: fetchEventInstances (または write-back) が失敗した場合、
+ * 各 Reservation.calendarSyncError を埋めて `/api/cron/calendar-sync-retry`
+ * で再試行できる状態にし、`success: "partial"` を返す (旧実装は silent `success: true`
+ * を返して child eventId が null のまま放置されていた)。
  */
 export async function syncReservationSeriesToCalendar(
   seriesId: string,
-): Promise<CalendarEventResult> {
+): Promise<SeriesCalendarSyncResult> {
   try {
     const isEnabled = await isGoogleCalendarEnabled();
     if (!isEnabled) {
+      // 他の outbound sync 関数と同じく「無効 = no-op success」の慣例に揃える。
       return { success: true };
     }
 
@@ -412,12 +467,13 @@ export async function syncReservationSeriesToCalendar(
 
     const result = await createCalendarEvent(eventParams);
     if (!result.success || result.eventId === undefined) {
-      logError(new Error(result.error ?? "createCalendarEvent failed"), {
+      const errMsg = result.error ?? "createCalendarEvent failed";
+      logError(new Error(errMsg), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
         context: { operation: "syncReservationSeriesToCalendar", seriesId },
       });
-      return result;
+      return { success: false, error: errMsg };
     }
 
     const masterEventId = result.eventId;
@@ -428,21 +484,54 @@ export async function syncReservationSeriesToCalendar(
     await markSeriesMasterEventCreated({ seriesId, masterEventId });
 
     const instancesResult = await fetchEventInstances(masterEventId);
-    if (!instancesResult.success || instancesResult.instances === undefined) {
-      logError(
-        new Error(instancesResult.error ?? "fetchEventInstances failed"),
-        {
-          category: ErrorCategory.EXTERNAL_API,
+    if (
+      !instancesResult.success ||
+      instancesResult.instances === undefined ||
+      instancesResult.instances.length === 0
+    ) {
+      // GCAL-RETRY-03: 旧実装は success:true を返して child eventId 未 write-back の
+      // まま放置していた。以降 admin から GCal API 経由で instance を cancel/update
+      // できない状態が silent に発生していたため、全 instance を FAILED にして
+      // calendar-sync-retry で pickup される状態にする。
+      const errMsg =
+        instancesResult.error ??
+        (instancesResult.success && instancesResult.instances?.length === 0
+          ? "fetchEventInstances returned empty"
+          : "fetchEventInstances failed");
+      logError(new Error(errMsg), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "syncReservationSeriesToCalendar.fetchInstances",
+          seriesId,
+          masterEventId,
+        },
+      });
+      try {
+        await markAllSeriesInstancesAsFailed({
+          seriesId,
+          error: `series ${seriesId} instances fetch failed: ${errMsg}`,
+        });
+      } catch (markError) {
+        // marker 自体が失敗しても partial 返却は継続する (呼出側の判断材料を優先)。
+        logError(normalizeError(markError), {
+          category: ErrorCategory.DATABASE,
           severity: ErrorSeverity.MEDIUM,
           context: {
-            operation: "syncReservationSeriesToCalendar.fetchInstances",
+            operation:
+              "syncReservationSeriesToCalendar.markInstancesFailedAfterFetch",
             seriesId,
             masterEventId,
           },
-        },
-      );
-      // master 作成は成功しているので result は返す (呼出側は master delete で cleanup 判断)。
-      return result;
+        });
+      }
+      return {
+        success: "partial",
+        masterCreated: true,
+        masterEventId,
+        instancesWriteBack: false,
+        error: errMsg,
+      };
     }
 
     await writeBackInstanceGoogleCalendarEventIds({
@@ -450,7 +539,14 @@ export async function syncReservationSeriesToCalendar(
       instances: instancesResult.instances,
     });
 
-    return result;
+    // 型上 eventId は string 必須 (masterEventId は既に確定した非 undefined 値)。
+    // eventUrl / event は optional なので omitUndefined 経由で除去する。
+    return omitUndefined({
+      success: true as const,
+      eventId: masterEventId,
+      eventUrl: result.eventUrl,
+      event: result.event,
+    });
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
