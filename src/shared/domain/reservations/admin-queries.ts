@@ -3,7 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@generated/prisma/enums";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
-import { MS_PER_DAY } from "@/shared/lib/date-format";
+import { MS_PER_DAY, formatJstDateString } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
@@ -404,11 +404,23 @@ export async function getSpacesForCalendarQuery() {
 }
 
 export async function getReservationStatsQuery() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // JST 固定で "今日" と "今週" の窓を計算する。process TZ (Cloud Run=UTC) 依存の
+  // setHours(0, 0, 0, 0) / setDate(getDate() - getDay()) を使うと JST 00:00-09:00
+  // の予約が "今日" から漏れて "昨日" にカウントされる silent bug になる (JST=UTC+9)。
+  // `+09:00` offset 付き ISO 文字列を new Date() に渡す方式は
+  // reservation-reminder cron と同型 (business-domain.md の JST SSoT ルール準拠)。
+  // parseJstDateOnly は `@db.Date` 保存用に「JST 日付を UTC 深夜として」返す
+  // 関数なので startTime (DateTime) の窓境界には流用できない。
+  const now = new Date();
+  const todayJstStr = formatJstDateString(now); // "YYYY-MM-DD" (JST)
+  const todayStart = new Date(`${todayJstStr}T00:00:00+09:00`); // JST 00:00 = UTC 前日 15:00
+  const tomorrowStart = new Date(todayStart.getTime() + MS_PER_DAY);
 
-  const weekStart = new Date(today);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  // 週の始まり (JST の日曜 00:00) を求める。todayJstStr を UTC 深夜として parse
+  // すれば、getUTCDay が JST 日の曜日を返す (parse 先 TZ 依存を排除)。
+  const jstDateAsUtc = new Date(`${todayJstStr}T00:00:00Z`);
+  const dayOfWeek = jstDateAsUtc.getUTCDay(); // 0..6 (Sun..Sat) in JST
+  const weekStart = new Date(todayStart.getTime() - dayOfWeek * MS_PER_DAY);
 
   const [
     total,
@@ -440,8 +452,8 @@ export async function getReservationStatsQuery() {
       where: {
         deletedAt: null,
         startTime: {
-          gte: today,
-          lt: new Date(today.getTime() + MS_PER_DAY),
+          gte: todayStart,
+          lt: tomorrowStart,
         },
       },
     }),
