@@ -105,6 +105,12 @@ locals {
       path        = "/api/cron/receipt-backfill"
       description = "Reconcile missing Receipts for PAID/PARTIALLY_REFUNDED reservations & event registrations (hourly at :15 JST, feature-gated by payment module). Covers (1) historical orphans pre-dating webhook auto-issue wiring, and (2) STRIPE-03 mitigation — webhook-retry-stuck orphans where claim* succeeded but issueReceipt* threw before Stripe retry, leaving Receipt-less PAID rows since claim* early-returns on retry."
     },
+    {
+      name        = "calendar-sync-retry"
+      schedule    = "*/15 * * * *"
+      path        = "/api/cron/calendar-sync-retry"
+      description = "Retry outbound Google Calendar syncs for reservations stuck with calendarSyncError (every 15 min, feature-gated by Google Calendar enabled)."
+    },
   ]
 }
 

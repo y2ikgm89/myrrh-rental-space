@@ -158,6 +158,7 @@ const CLOUD_BUILD_REGIONS = [
 // 完全同期契約 (drift-detect gate に相当、audit で unexpected/missing を検出)。
 export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "calendar-sync",
+  "calendar-sync-retry",
   "customer-risk-scan",
   "data-retention",
   "event-import",
