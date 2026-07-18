@@ -27,10 +27,8 @@ import {
   checkActionRateLimit,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
-import {
-  formSubmitRateLimiter,
-  getClientIpFromHeaders,
-} from "@/shared/lib/rate-limit";
+import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 
@@ -68,12 +66,15 @@ export async function cancelReservationSeriesCustomerAction(
     );
   }
 
-  const ip = await getClientIpFromHeaders();
+  // UA-HORIZ-01: 以前は userAgent=null 固定で、顧客セッション濫用時の forensics
+  // (UA fingerprint 不一致検知) が silently 弱かった。admin 側 series キャンセル
+  // (buildAuditRequestContext) と経路を揃え、AuditLog metadata の対称性を担保する。
+  const request = await buildAuditRequestContext();
   const result = await cancelCustomerReservationSeries(
     parsedId.data,
     customer.id,
     cancellationReason,
-    { ip, userAgent: null },
+    request,
   );
   if (!result.success) return createMutationError(result.error);
 
