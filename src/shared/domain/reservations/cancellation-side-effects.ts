@@ -462,6 +462,16 @@ export interface BulkCancellationSideEffectInput {
   actorUserId?: string;
   request: CancelRequestContext;
   now: Date;
+  /**
+   * `this-and-following` scope の GCal master RRULE UNTIL に渡す時刻。
+   * 呼出側 (`cancelReservationSeriesCommand`) が `fromInstance.startTime - 1s`
+   * を計算して渡す。省略時は後方互換のため `now` にフォールバックするが、
+   * `this-and-following` 経路では必ず指定すること
+   * (RECENT-01: 指定しないと `now < fromInstance.startTime` のケースで GCal master
+   * RRULE が cancel 実行時刻で truncate され、DB では CONFIRMED のまま残る
+   * 過去 instance が GCal 上から silent に消失する)。
+   */
+  gcalUntil?: Date;
 }
 
 interface SeriesInfoForBulkEmail {
@@ -559,11 +569,14 @@ export async function applyBulkCancellationSideEffects(
     const masterEventId = await getSeriesGcalMasterEventId(input.seriesId);
     if (masterEventId) {
       if (input.scope === "this-and-following") {
-        // Phase B.2.1 Task C: RRULE 再構築 + events.patch で UNTIL 注入 (実装済)
+        // Phase B.2.1 Task C: RRULE 再構築 + events.patch で UNTIL 注入 (実装済)。
+        // UNTIL は fromInstance.startTime - 1s (呼出側計算) を優先し、後方互換の
+        // ため未指定時のみ `input.now` にフォールバック。詳細は RECENT-01 fix
+        // (BulkCancellationSideEffectInput.gcalUntil の JSDoc)。
         await patchGcalMasterUntil({
           masterEventId,
           seriesId: input.seriesId,
-          until: input.now,
+          until: input.gcalUntil ?? input.now,
         });
       } else {
         await deleteGcalMaster(masterEventId);
