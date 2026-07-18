@@ -315,7 +315,7 @@ export interface CancelReservationSeriesResult {
 export async function cancelReservationSeriesCommand(
   input: CancelReservationSeriesInput,
 ): Promise<CancelReservationSeriesResult> {
-  const cancelledIds = await prisma.$transaction(async (tx) => {
+  const resolved = await prisma.$transaction(async (tx) => {
     await lockReservationSeriesForTransaction(tx, input.seriesId);
 
     const series = await tx.reservationSeries.findUnique({
@@ -331,7 +331,7 @@ export async function cancelReservationSeriesCommand(
 
     const idsToCancel = await resolveIdsToCancel(tx, input);
 
-    const result = await applyBulkCancellation(tx, idsToCancel, {
+    const result = await applyBulkCancellation(tx, idsToCancel.ids, {
       cancelledByType: input.cancelledByType,
       now: input.now,
       ...(input.cancellationReason !== undefined && {
@@ -362,8 +362,13 @@ export async function cancelReservationSeriesCommand(
       }
     }
 
-    return result.cancelledIds;
+    return {
+      cancelledIds: result.cancelledIds,
+      fromInstanceStartTime: idsToCancel.fromInstanceStartTime,
+    };
   });
+
+  const cancelledIds = resolved.cancelledIds;
 
   // tx 外で副作用を発火する（claim 成功分が 0 件なら何も送らない）。
   if (cancelledIds.length > 0) {
@@ -381,6 +386,17 @@ export async function cancelReservationSeriesCommand(
         });
       }
     } else {
+      // this-and-following: patchGcalMasterUntil に渡す UNTIL を fromInstance
+      // 直前 (startTime - 1s) に設定して、DB でキャンセルされていない過去 instance
+      // (fromInstance より前) が GCal 上に残るようにする。cancel 実行時刻 `now` を
+      // そのまま渡すと now < fromInstance.startTime のケースで GCal master が
+      // 過度に truncate される silent regression (RECENT-01)。
+      // series-all では master 自体を削除するため gcalUntil は不要 (undefined)。
+      const gcalUntil =
+        input.scope === "this-and-following" &&
+        resolved.fromInstanceStartTime !== null
+          ? new Date(resolved.fromInstanceStartTime.getTime() - 1000)
+          : undefined;
       await applyBulkCancellationSideEffects({
         reservationIds: cancelledIds,
         scope: input.scope,
@@ -388,6 +404,7 @@ export async function cancelReservationSeriesCommand(
         channel: input.channel,
         request: input.request,
         now: input.now,
+        ...(gcalUntil !== undefined && { gcalUntil }),
         ...(input.cancellationReason !== undefined && {
           cancellationReason: input.cancellationReason,
         }),
@@ -419,6 +436,24 @@ type CancelSeriesTx = {
 };
 
 /**
+ * `resolveIdsToCancel` の結果。
+ *
+ * - `ids`: キャンセル対象の Reservation.id 集合
+ * - `fromInstanceStartTime`: this-and-following で必要な GCal master RRULE UNTIL の
+ *   計算基準になる fromInstance.startTime。他 scope では null。呼出側 (bulk
+ *   side-effects) は `fromInstanceStartTime - 1s` を patchGcalMasterUntil の
+ *   `until` に渡して GCal master を「fromInstance 直前まで」で切り詰める
+ *   (RECENT-01 fix: 以前は cancel 実行時刻 `now` を渡していたため、`now <
+ *   fromInstance.startTime` の一般的な pre-scheduled cancel で GCal master
+ *   RRULE が cancel 時刻で truncate され、DB では CONFIRMED のまま残る instance
+ *   (fromInstance より前・now より後) が silent に消失していた)。
+ */
+interface ResolveIdsToCancelResult {
+  ids: string[];
+  fromInstanceStartTime: Date | null;
+}
+
+/**
  * scope ごとに対象 instance id を決定する。
  *
  * - `series-all`: series 内の CANCELLABLE_STATUSES 全 instance
@@ -432,7 +467,7 @@ type CancelSeriesTx = {
 async function resolveIdsToCancel(
   tx: CancelSeriesTx,
   input: CancelReservationSeriesInput,
-): Promise<string[]> {
+): Promise<ResolveIdsToCancelResult> {
   if (input.scope === "series-all") {
     const targets = await tx.reservation.findMany({
       where: {
@@ -442,7 +477,7 @@ async function resolveIdsToCancel(
       },
       select: { id: true },
     });
-    return targets.map((r) => r.id);
+    return { ids: targets.map((r) => r.id), fromInstanceStartTime: null };
   }
 
   if (!input.fromInstanceId) {
@@ -462,7 +497,7 @@ async function resolveIdsToCancel(
   }
 
   if (input.scope === "this-only") {
-    return [fromInstanceId];
+    return { ids: [fromInstanceId], fromInstanceStartTime: null };
   }
 
   // this-and-following: fromInstance.startTime 以降の CANCELLABLE instance を対象にする。
@@ -479,5 +514,8 @@ async function resolveIdsToCancel(
     },
     select: { id: true },
   });
-  return targets.map((r) => r.id);
+  return {
+    ids: targets.map((r) => r.id),
+    fromInstanceStartTime: fromInstance.startTime,
+  };
 }
