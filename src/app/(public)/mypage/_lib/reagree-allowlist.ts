@@ -17,6 +17,9 @@ export const REAGREE_ALLOWLIST_PREFIXES: readonly string[] = [
   "/mypage/reservations",
   "/mypage/inquiries",
   "/mypage/events",
+  // STATE-02: 領収書 (適格請求書) は税務保管義務のある証跡。再同意 pending でも
+  // 恒常アクセスを担保する ("証跡アクセスは agreement 前提外" 原則)。
+  "/mypage/receipts",
 ];
 
 /**
