@@ -17,6 +17,12 @@ export const customerReservationEditSchema = z
     }),
     numberOfGuests: z.number().int().min(1, { error: "利用人数は1名以上です" }),
     turnstileToken: z.string().optional(),
+    // 楽観制御: form が予約を load した時点の version を hidden で持ち回る。
+    // domain command が updateMany の WHERE 述語で claim する (§3.2 spec)。
+    version: z
+      .number()
+      .int({ error: "バージョンが不正です" })
+      .nonnegative({ error: "バージョンが不正です" }),
   })
   .refine(
     (data) => {

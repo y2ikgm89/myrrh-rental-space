@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
+import type { z } from "zod";
 import {
   IconCalendar,
   IconMail,
@@ -168,7 +169,7 @@ export function ReservationEditForm({
     undefined,
   );
 
-  const [form, fields] = useForm({
+  const [form, fields] = useForm<z.input<typeof updateReservationFormSchema>>({
     id: `reservation-edit-${reservation.id}`,
     lastResult,
     onValidate({ formData }) {
@@ -179,6 +180,7 @@ export function ReservationEditForm({
     defaultValue: {
       couponCode: reservation.coupon?.code ?? "",
       notes: reservation.notes ?? "",
+      version: String(reservation.version),
     },
   });
 
@@ -242,6 +244,11 @@ export function ReservationEditForm({
         type="hidden"
         name={fields.totalPrice.name}
         value={manualPrice ?? ""}
+      />
+      <input
+        type="hidden"
+        name={fields.version.name}
+        value={String(reservation.version)}
       />
 
       {form.errors && form.errors.length > 0 && (

@@ -11,7 +11,13 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import { CouponType, DayOfWeek, HolidayMode } from "@generated/prisma/enums";
+import {
+  CouponType,
+  DayOfWeek,
+  HolidayMode,
+  PaymentStatus,
+  ReservationStatus,
+} from "@generated/prisma/enums";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -38,6 +44,8 @@ type PublicCommandsModule =
   typeof import("@/shared/domain/reservations/public-commands");
 type CustomerCommandsModule =
   typeof import("@/shared/domain/reservations/customer-commands");
+type PaymentQueriesModule =
+  typeof import("@/shared/domain/reservations/payment-queries");
 type RatePlanCommandsModule =
   typeof import("@/shared/domain/spaces/rate-plan-commands");
 type RateBreakdownModule = typeof import("@/shared/lib/pricing/rate-breakdown");
@@ -46,6 +54,8 @@ let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let createPublicReservationCommand: PublicCommandsModule["createPublicReservationCommand"];
 let updateCustomerReservation: CustomerCommandsModule["updateCustomerReservation"];
+let cancelCustomerReservation: CustomerCommandsModule["cancelCustomerReservation"];
+let claimReservationAsPaid: PaymentQueriesModule["claimReservationAsPaid"];
 let createSpaceRatePlan: RatePlanCommandsModule["createSpaceRatePlan"];
 let updateSpaceRatePlan: RatePlanCommandsModule["updateSpaceRatePlan"];
 let rateBreakdownSchema: RateBreakdownModule["rateBreakdownSchema"];
@@ -54,6 +64,7 @@ let rateBreakdownSchema: RateBreakdownModule["rateBreakdownSchema"];
 const THURSDAY_DATE = "2027-03-18";
 const FRIDAY_DATE = "2027-03-19";
 const MODIFICATION_DEADLINE_HOURS = 48;
+const CANCEL_DEADLINE_HOURS = 24;
 
 let nextFixtureLocationSortOrder = 1_500_000_000;
 
@@ -148,13 +159,52 @@ async function createInitialReservation(
   return { reservationId: result.id, customerId: result.customerId };
 }
 
+type ReservationFixture = {
+  reservationId: string;
+  customerId: string;
+  spaceId: string;
+  date: string;
+  cleanup: () => Promise<void>;
+};
+
+/**
+ * optimistic concurrency (version) テスト用の予約 fixture。
+ * Location → Space → Reservation を 1 件ずつ作る (createSpaceFixture +
+ * createInitialReservation の合成)。Reservation.version は schema
+ * `@default(0)` のため常に 0 で作成される。`opts.version` は呼出側の意図明示用
+ * (現状 0 以外はサポートしない — fresh reservation は必ず version=0 で始まる)。
+ */
+async function createReservationFixture(opts?: {
+  version?: number;
+}): Promise<ReservationFixture> {
+  if (opts?.version !== undefined && opts.version !== 0) {
+    throw new Error(
+      "createReservationFixture は version: 0 のみサポート (新規予約は常に version=0 で作成される)",
+    );
+  }
+  const { spaceId, cleanup } = await createSpaceFixture(1000);
+  const { reservationId, customerId } = await createInitialReservation(
+    spaceId,
+    FRIDAY_DATE,
+  );
+  return {
+    reservationId,
+    customerId,
+    spaceId,
+    date: FRIDAY_DATE,
+    cleanup,
+  };
+}
+
 describeMaybe("updateCustomerReservation — rate plan 統合", () => {
   beforeAll(async () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     ({ createPublicReservationCommand } =
       await import("@/shared/domain/reservations/public-commands"));
-    ({ updateCustomerReservation } =
+    ({ updateCustomerReservation, cancelCustomerReservation } =
       await import("@/shared/domain/reservations/customer-commands"));
+    ({ claimReservationAsPaid } =
+      await import("@/shared/domain/reservations/payment-queries"));
     ({ createSpaceRatePlan, updateSpaceRatePlan } =
       await import("@/shared/domain/spaces/rate-plan-commands"));
     ({ rateBreakdownSchema } =
@@ -184,6 +234,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "14:00",
           endTime: "16:00",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -247,6 +298,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "10:00",
           endTime: "12:00",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -319,6 +371,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "14:00",
           endTime: "16:00",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -380,6 +433,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "10:30",
           endTime: "12:30",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -402,5 +456,196 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
     } finally {
       await cleanup();
     }
+  });
+
+  describe("optimistic concurrency (version)", () => {
+    test("regression: 単発 update で version が 0 → 1 に increment", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        const result = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(result.success).toBe(true);
+        const after = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true },
+        });
+        expect(after.version).toBe(1);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    test("customer タブ間 race: 同じ version=0 の 2 update で 1 succeed / 1 CONFLICT", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        const [firstResult, secondResult] = await Promise.all([
+          updateCustomerReservation(
+            fixture.reservationId,
+            fixture.customerId,
+            {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "10:00",
+              endTime: "11:00",
+              version: 0,
+            },
+            MODIFICATION_DEADLINE_HOURS,
+          ),
+          updateCustomerReservation(
+            fixture.reservationId,
+            fixture.customerId,
+            {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "14:00",
+              endTime: "15:00",
+              version: 0,
+            },
+            MODIFICATION_DEADLINE_HOURS,
+          ),
+        ]);
+
+        const successes = [firstResult, secondResult].filter((r) => r.success);
+        const failures = [firstResult, secondResult].filter((r) => !r.success);
+        expect(successes).toHaveLength(1);
+        expect(failures).toHaveLength(1);
+        expect(failures[0]!.success ? "" : failures[0]!.error).toContain(
+          "予約情報が別のデバイスまたはタブで変更されました",
+        );
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    test("再試行: conflict 後、最新 version=1 で再 submit → 成功", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        // 1 回目: version=0 で成功
+        const first = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(first.success).toBe(true);
+
+        // 2 回目: 古い version=0 で conflict
+        const stale = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "14:00",
+            endTime: "15:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(stale.success).toBe(false);
+
+        // 3 回目: 最新 version=1 で成功
+        const retry = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "14:00",
+            endTime: "15:00",
+            version: 1,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(retry.success).toBe(true);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+  });
+
+  describe("非 form path は version を touch しない (spec §3.1.1 gate)", () => {
+    test("cancel-core (cancelCustomerReservation) 経由の書込後、version は不変", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        // まず form path で version を 0 → 1 に進める
+        const updateResult = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(updateResult.success).toBe(true);
+        const beforeCancel = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true },
+        });
+        expect(beforeCancel.version).toBe(1);
+
+        // cancel-core (非 form path) 実行。applyCancellation は version を
+        // WHERE 述語にも SET 句にも含まない (icsSequence のみ increment)。
+        const cancelResult = await cancelCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          CANCEL_DEADLINE_HOURS,
+          "test cancel",
+        );
+        expect(cancelResult.success).toBe(true);
+
+        const afterCancel = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true, status: true },
+        });
+        expect(afterCancel.status).toBe(ReservationStatus.CANCELLED);
+        expect(afterCancel.version).toBe(1); // 不変
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    test("claimReservationAsPaid (非 form path、webhook 由来の paymentStatus 遷移) 経由でも version は不変", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        // createPublicReservationCommand は status=CONFIRMED / paymentStatus=UNPAID
+        // (schema @default) で作成する。claimReservationAsPaid は Stripe webhook
+        // (checkout.session.completed) から呼ばれる想定の atomic claim で、
+        // WHERE/SET のいずれにも version を含めない。
+        const claimed = await claimReservationAsPaid(fixture.reservationId, {
+          stripePaymentIntentId: null,
+        });
+        expect(claimed).not.toBeNull();
+        expect(claimed?.paymentStatus).toBe(PaymentStatus.PAID);
+
+        const after = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true },
+        });
+        expect(after.version).toBe(0); // 不変
+      } finally {
+        await fixture.cleanup();
+      }
+    });
   });
 });

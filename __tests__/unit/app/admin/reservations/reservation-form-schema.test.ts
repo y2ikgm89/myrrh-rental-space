@@ -18,7 +18,9 @@ import { describe, expect, test } from "bun:test";
 import {
   createRecurringReservationFormSchema,
   parseRecurringReservationForm,
+  updateReservationFormSchema,
 } from "@/app/(admin)/admin/(dashboard)/reservations/_components/reservation-form-schema";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const VALID_BASE = {
   customerId: "11111111-1111-4111-8111-111111111111",
@@ -153,5 +155,43 @@ describe("createRecurringReservationFormSchema — Phase B.2 task 20", () => {
       expect(result.data.byday).toEqual(["TU"]);
       expect(result.data.count).toBe(10);
     }
+  });
+});
+
+describe("updateReservationFormSchema (admin) version field", () => {
+  const validBase = {
+    spaceId: "00000000-0000-4000-8000-000000000001",
+    date: "2099-01-01",
+    startTime: "10:00",
+    endTime: "11:00",
+    customerId: "00000000-0000-4000-8000-000000000002",
+    status: ReservationStatus.CONFIRMED,
+    couponCode: "",
+    notes: "",
+    totalPrice: "",
+  };
+
+  test("version 必須: 欠損は parse fail", () => {
+    const result = updateReservationFormSchema.safeParse(validBase);
+    expect(result.success).toBe(false);
+  });
+
+  test("version は文字列 '0' から coerce される (FormData 想定)", () => {
+    const result = updateReservationFormSchema.safeParse({
+      ...validBase,
+      version: "0",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.version).toBe(0);
+    }
+  });
+
+  test("version は非負整数: 負数は reject", () => {
+    const result = updateReservationFormSchema.safeParse({
+      ...validBase,
+      version: "-1",
+    });
+    expect(result.success).toBe(false);
   });
 });

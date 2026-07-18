@@ -162,6 +162,7 @@ export async function updateCustomerReservation(
     date: string;
     startTime: string;
     endTime: string;
+    version: number;
   },
   modificationDeadlineHours: number,
 ): Promise<CommandResult<UpdatePayload>> {
@@ -412,6 +413,7 @@ export async function updateCustomerReservation(
         id: reservationId,
         deletedAt: null,
         paymentStatus: PaymentStatus.UNPAID,
+        version: input.version,
       },
       data: {
         spaceId: input.spaceId,
@@ -435,15 +437,19 @@ export async function updateCustomerReservation(
         priceOverriddenBy: null,
         couponId: couponForCalc ? reservation.couponId : null,
         icsSequence: { increment: 1 },
+        version: { increment: 1 },
       },
     });
 
     if (updated.count === 0) {
-      // read から update の間に決済が開始された。tx rollback でロールバック。
+      // paymentStatus gate は tx 開始時点でしか検知しないため、findFirst→updateMany 間の
+      // TOCTOU race (createCheckoutSessionCommand との別 tx 衝突) は version mismatch と
+      // 同一 count=0 分岐に落ちる。稀ケースとして UX は後者優先文言に統一し、error code
+      // 分岐は将来課題 (spec §3.2)。
       return {
         success: false,
         error:
-          "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+          "予約情報が別のデバイスまたはタブで変更されました。ページを再読み込みしてから、もう一度お試しください。",
       };
     }
 

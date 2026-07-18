@@ -672,6 +672,12 @@ model Reservation {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
 
+  /// Optimistic concurrency (Rails ActiveRecord lock_version / Hibernate @Version と同型)。
+  /// form-driven update path (updateCustomerReservation / updateAdminReservationCommand) が
+  /// updateMany の WHERE 述語で claim + increment する。cron / payment / calendar-sync 等の
+  /// 非 form path は touch しない (Rails .update_all / Hibernate native query と同型)。
+  version Int @default(0)
+
   // 割引情報
   couponId               String?  @db.Uuid // 適用されたクーポンID
   couponDiscountAmount   Decimal? @db.Decimal(10, 2) // クーポン割引額

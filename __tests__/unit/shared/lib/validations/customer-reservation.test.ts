@@ -10,6 +10,7 @@ describe("customerReservationEditSchema", () => {
     startTime: "10:00",
     endTime: "12:00",
     numberOfGuests: 3,
+    version: 0,
   };
 
   test("有効なデータで success", () => {
@@ -54,5 +55,46 @@ describe("customerReservationEditSchema", () => {
       numberOfGuests: 0,
     });
     expect(result.success).toBe(false);
+  });
+
+  describe("version field (optimistic concurrency)", () => {
+    const validBase = {
+      reservationId: "00000000-0000-4000-8000-000000000000",
+      spaceId: "00000000-0000-4000-8000-000000000001",
+      date: "2099-01-01",
+      startTime: "10:00",
+      endTime: "11:00",
+      numberOfGuests: 1,
+      turnstileToken: "tok",
+    };
+
+    test("version 必須: 欠損は parse fail", () => {
+      const result = customerReservationEditSchema.safeParse(validBase);
+      expect(result.success).toBe(false);
+    });
+
+    test("version は非負整数: 0 は許容", () => {
+      const result = customerReservationEditSchema.safeParse({
+        ...validBase,
+        version: 0,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("version は非負整数: 負数は reject", () => {
+      const result = customerReservationEditSchema.safeParse({
+        ...validBase,
+        version: -1,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("version は非負整数: 小数は reject", () => {
+      const result = customerReservationEditSchema.safeParse({
+        ...validBase,
+        version: 1.5,
+      });
+      expect(result.success).toBe(false);
+    });
   });
 });

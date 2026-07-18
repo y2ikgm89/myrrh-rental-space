@@ -7,7 +7,13 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
-import { TaxRateType, DayOfWeek, HolidayMode } from "@generated/prisma/enums";
+import {
+  TaxRateType,
+  DayOfWeek,
+  HolidayMode,
+  ReservationStatus,
+} from "@generated/prisma/enums";
+import { DomainError } from "@/shared/domain/domain-error";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -26,6 +32,8 @@ mock.module("next/cache", () => ({
 type PrismaModule = typeof import("@/shared/db/prisma");
 type AdminCommandsModule =
   typeof import("@/shared/domain/reservations/admin-commands");
+type CustomerCommandsModule =
+  typeof import("@/shared/domain/reservations/customer-commands");
 type RatePlanCommandsModule =
   typeof import("@/shared/domain/spaces/rate-plan-commands");
 type RateBreakdownModule = typeof import("@/shared/lib/pricing/rate-breakdown");
@@ -34,6 +42,7 @@ let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let createAdminReservationCommand: AdminCommandsModule["createAdminReservationCommand"];
 let updateAdminReservationCommand: AdminCommandsModule["updateAdminReservationCommand"];
+let updateCustomerReservation: CustomerCommandsModule["updateCustomerReservation"];
 let createSpaceRatePlan: RatePlanCommandsModule["createSpaceRatePlan"];
 let updateSpaceRatePlan: RatePlanCommandsModule["updateSpaceRatePlan"];
 let rateBreakdownSchema: RateBreakdownModule["rateBreakdownSchema"];
@@ -42,6 +51,8 @@ let rateBreakdownSchema: RateBreakdownModule["rateBreakdownSchema"];
 const FRIDAY_DATE = "2027-03-19";
 const ADMIN_USER_ID = "00000000-0000-4000-9000-000000000001";
 const OTHER_ADMIN_USER_ID = "00000000-0000-4000-9000-000000000002";
+// customer-commands.test.ts と同値 (顧客 vs admin race テスト用)。
+const MODIFICATION_DEADLINE_HOURS = 48;
 
 let nextFixtureLocationSortOrder = 1_450_000_000;
 
@@ -110,6 +121,50 @@ async function createSpaceFixture(hourlyPrice = 1000): Promise<SpaceFixture> {
   };
 }
 
+type AdminReservationFixture = {
+  reservationId: string;
+  spaceId: string;
+  customerId: string;
+  date: string;
+  adminUserId: string;
+  cleanup: () => Promise<void>;
+};
+
+/**
+ * optimistic concurrency (version) テスト用の予約 fixture。
+ * createSpaceFixture (Location → Space → Customer) + createAdminReservationCommand
+ * の合成で予約を 1 件作る。Reservation.version は schema `@default(0)` のため
+ * 常に 0 で作成される。`opts.version` は呼出側の意図明示用
+ * (現状 0 以外はサポートしない — fresh reservation は必ず version=0 で始まる)。
+ */
+async function createAdminReservationFixture(opts?: {
+  version?: number;
+}): Promise<AdminReservationFixture> {
+  if (opts?.version !== undefined && opts.version !== 0) {
+    throw new Error(
+      "createAdminReservationFixture は version: 0 のみサポート (新規予約は常に version=0 で作成される)",
+    );
+  }
+  const { spaceId, customerId, cleanup } = await createSpaceFixture(1000);
+  const created = await createAdminReservationCommand({
+    spaceId,
+    date: FRIDAY_DATE,
+    startTime: "09:00",
+    endTime: "10:00",
+    customerId,
+    status: ReservationStatus.CONFIRMED,
+    adminUserId: ADMIN_USER_ID,
+  });
+  return {
+    reservationId: created.id,
+    spaceId,
+    customerId,
+    date: FRIDAY_DATE,
+    adminUserId: ADMIN_USER_ID,
+    cleanup,
+  };
+}
+
 /** Settings singleton を既知値へ揃える（schema の @default と同値、他テストへの副作用ゼロ）。 */
 async function ensureKnownSettings(): Promise<void> {
   const data = {
@@ -141,6 +196,8 @@ describeMaybe(
       ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
       ({ createAdminReservationCommand, updateAdminReservationCommand } =
         await import("@/shared/domain/reservations/admin-commands"));
+      ({ updateCustomerReservation } =
+        await import("@/shared/domain/reservations/customer-commands"));
       ({ createSpaceRatePlan, updateSpaceRatePlan } =
         await import("@/shared/domain/spaces/rate-plan-commands"));
       ({ rateBreakdownSchema } =
@@ -342,6 +399,7 @@ describeMaybe(
           status: "CONFIRMED",
           totalPrice: 5000, // override
           adminUserId: OTHER_ADMIN_USER_ID,
+          version: 0,
         });
         expect(updateResult.payload.reservationId).toBe(created.id);
 
@@ -387,6 +445,7 @@ describeMaybe(
           customerId,
           status: "CONFIRMED",
           adminUserId: OTHER_ADMIN_USER_ID,
+          version: 0,
         });
         expect(updateResult.payload.reservationId).toBe(created.id);
 
@@ -431,6 +490,7 @@ describeMaybe(
           status: "CONFIRMED",
           notes: "メモのみ変更",
           adminUserId: OTHER_ADMIN_USER_ID,
+          version: 0,
         });
         expect(updateResult.payload.reservationId).toBe(created.id);
 
@@ -443,6 +503,155 @@ describeMaybe(
       } finally {
         await cleanup();
       }
+    });
+
+    describe("optimistic concurrency (version)", () => {
+      test("regression: 単発 admin update で version が 0 → 1 に increment", async () => {
+        const fixture = await createAdminReservationFixture({ version: 0 });
+        try {
+          await updateAdminReservationCommand(fixture.reservationId, {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            customerId: fixture.customerId,
+            status: ReservationStatus.CONFIRMED,
+            adminUserId: fixture.adminUserId,
+            version: 0,
+          });
+          const after = await prisma.reservation.findUniqueOrThrow({
+            where: { id: fixture.reservationId },
+            select: { version: true },
+          });
+          expect(after.version).toBe(1);
+        } finally {
+          await fixture.cleanup();
+        }
+      });
+
+      test("admin タブ間 race: 同 version=0 の 2 update で 1 succeed / 1 CONFLICT", async () => {
+        const fixture = await createAdminReservationFixture({ version: 0 });
+        try {
+          const results = await Promise.allSettled([
+            updateAdminReservationCommand(fixture.reservationId, {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "10:00",
+              endTime: "11:00",
+              customerId: fixture.customerId,
+              status: ReservationStatus.CONFIRMED,
+              adminUserId: fixture.adminUserId,
+              version: 0,
+            }),
+            updateAdminReservationCommand(fixture.reservationId, {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "14:00",
+              endTime: "15:00",
+              customerId: fixture.customerId,
+              status: ReservationStatus.CONFIRMED,
+              adminUserId: fixture.adminUserId,
+              version: 0,
+            }),
+          ]);
+          const fulfilled = results.filter((r) => r.status === "fulfilled");
+          const rejected = results.filter((r) => r.status === "rejected");
+          expect(fulfilled).toHaveLength(1);
+          expect(rejected).toHaveLength(1);
+          const err = (rejected[0]! as PromiseRejectedResult).reason;
+          expect(err).toBeInstanceOf(DomainError);
+          expect((err as DomainError).code).toBe("CONFLICT");
+        } finally {
+          await fixture.cleanup();
+        }
+      });
+
+      test("顧客 vs admin race: 顧客が version=0 で保持中に admin が版数を進める → 顧客 submit が CONFLICT", async () => {
+        const fixture = await createAdminReservationFixture({ version: 0 });
+        try {
+          // admin が version=0 で update → version=1
+          await updateAdminReservationCommand(fixture.reservationId, {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            customerId: fixture.customerId,
+            status: ReservationStatus.CONFIRMED,
+            adminUserId: fixture.adminUserId,
+            version: 0,
+          });
+
+          // 顧客は古い version=0 のまま submit → CONFLICT
+          const customerResult = await updateCustomerReservation(
+            fixture.reservationId,
+            fixture.customerId,
+            {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "14:00",
+              endTime: "15:00",
+              version: 0,
+            },
+            MODIFICATION_DEADLINE_HOURS,
+          );
+          expect(customerResult.success).toBe(false);
+          if (!customerResult.success) {
+            expect(customerResult.error).toContain(
+              "予約情報が別のデバイスまたはタブで変更されました",
+            );
+          }
+        } finally {
+          await fixture.cleanup();
+        }
+      });
+
+      test("admin vs 顧客 race (逆方向): 顧客が version=0 で版数を進めた後、admin が古い version=0 で submit すると CONFLICT", async () => {
+        const fixture = await createAdminReservationFixture({ version: 0 });
+        try {
+          // 顧客が version=0 で update → version=1
+          const customerResult = await updateCustomerReservation(
+            fixture.reservationId,
+            fixture.customerId,
+            {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "10:00",
+              endTime: "11:00",
+              version: 0,
+            },
+            MODIFICATION_DEADLINE_HOURS,
+          );
+          expect(customerResult.success).toBe(true);
+
+          // 顧客の $transaction commit 直後に admin 側の最初の非 tx query
+          // (prisma.reservation.findUnique) を同一 microtask chain で発行すると、
+          // この test 環境 (bun 1.3.14 + @prisma/adapter-pg) では commit 後の
+          // コネクション解放が完了する前に次の query が dispatch され、Postgres
+          // 側 (pg_stat_activity / pg_locks) に到達すらしないまま無期限に hang する
+          // ことを実機で確認した (setImmediate 1 tick 挿入のみで再現しなくなる純粋な
+          // microtask race)。既存の admin→顧客方向のテスト (直前の describe) は
+          // admin 側の書込 tx の後に軽い customer 側 outer read が続くだけで発生
+          // しないため方向依存。本番は顧客 request と admin request が別 HTTP
+          // request = 別 event loop tick のため影響しない test-only の quirk。
+          await new Promise((resolve) => setImmediate(resolve));
+
+          // admin は古い version=0 のまま submit → CONFLICT
+          await expect(
+            updateAdminReservationCommand(fixture.reservationId, {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "14:00",
+              endTime: "15:00",
+              customerId: fixture.customerId,
+              status: ReservationStatus.CONFIRMED,
+              adminUserId: fixture.adminUserId,
+              version: 0,
+            }),
+          ).rejects.toMatchObject({ code: "CONFLICT" });
+        } finally {
+          await fixture.cleanup();
+        }
+      });
     });
   },
 );

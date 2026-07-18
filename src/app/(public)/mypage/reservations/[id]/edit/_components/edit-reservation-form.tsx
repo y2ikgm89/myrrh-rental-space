@@ -49,6 +49,7 @@ interface EditReservationFormProps {
   readonly spaces: readonly SpaceOption[];
   readonly initialValues: InitialValues;
   readonly turnstileSiteKey: string | null;
+  readonly version: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +80,7 @@ export function EditReservationForm({
   spaces,
   initialValues,
   turnstileSiteKey,
+  version,
 }: EditReservationFormProps): ReactElement {
   const router = useRouter();
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
@@ -108,6 +110,7 @@ export function EditReservationForm({
         startTime: initialValues.startTime,
         endTime: initialValues.endTime,
         numberOfGuests,
+        version,
       },
       onValidate({ formData }) {
         return parseWithZod(formData, {
@@ -173,6 +176,7 @@ export function EditReservationForm({
         name={fields.turnstileToken.name}
         value={turnstileTokenControl.value ?? ""}
       />
+      <input type="hidden" name={fields.version.name} value={String(version)} />
 
       {formErrorMessage !== null && (
         <div

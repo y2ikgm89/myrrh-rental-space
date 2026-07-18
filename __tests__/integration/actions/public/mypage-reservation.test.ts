@@ -315,6 +315,7 @@ type UpdateInputShape = {
   endTime: string;
   numberOfGuests: number;
   turnstileToken?: string;
+  version: number;
 };
 
 const VALID_UPDATE_INPUT: UpdateInputShape = {
@@ -324,6 +325,7 @@ const VALID_UPDATE_INPUT: UpdateInputShape = {
   startTime: "10:00",
   endTime: "12:00",
   numberOfGuests: 5,
+  version: 0,
 };
 
 function inputToFormData(input: UpdateInputShape): FormData {
@@ -334,6 +336,7 @@ function inputToFormData(input: UpdateInputShape): FormData {
   fd.append("startTime", input.startTime);
   fd.append("endTime", input.endTime);
   fd.append("numberOfGuests", String(input.numberOfGuests));
+  fd.append("version", String(input.version));
   if (input.turnstileToken !== undefined) {
     fd.append("turnstileToken", input.turnstileToken);
   }
@@ -959,6 +962,7 @@ describe("updateReservationAction", () => {
         startTime: "10:00",
         endTime: "12:00",
         numberOfGuests: 1,
+        version: 0,
       });
 
       expect(result.success).toBe(true);

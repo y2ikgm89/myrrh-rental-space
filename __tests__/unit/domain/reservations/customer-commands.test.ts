@@ -196,6 +196,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
     date: "2026-12-15",
     startTime: "10:00",
     endTime: "12:00",
+    version: 0,
   };
 
   test("blocked date の場合 tx 外 pre-check で DomainError(CONFLICT) を throw する (reservation.update 未呼出)", async () => {
@@ -243,17 +244,22 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       24,
     );
 
+    // Task 3 (optimistic concurrency): paymentStatus gate は tx 開始時点でしか検知
+    // しないため、findFirst→updateMany 間の TOCTOU race (createCheckoutSessionCommand
+    // との別 tx 衝突) は version mismatch と同一 count=0 分岐に落ちる。稀ケースとして
+    // UX は後者優先文言に統一し、error code 分岐は将来課題 (spec §3.2)。
     expect(result).toEqual({
       success: false,
       error:
-        "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+        "予約情報が別のデバイスまたはタブで変更されました。ページを再読み込みしてから、もう一度お試しください。",
     });
     expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);
-    // updateMany の WHERE に paymentStatus: UNPAID 述語が含まれることを assert
+    // updateMany の WHERE に paymentStatus: UNPAID と version 述語が含まれることを assert
     const call = mockReservationUpdateMany.mock.calls[0]?.[0];
     expect(call).toMatchObject({
       where: expect.objectContaining({
         paymentStatus: "UNPAID",
+        version: 0,
       }),
     });
   });
@@ -320,6 +326,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       date: "2020-01-01",
       startTime: "10:00",
       endTime: "12:00",
+      version: 0,
     };
 
     const result = await updateCustomerReservation(

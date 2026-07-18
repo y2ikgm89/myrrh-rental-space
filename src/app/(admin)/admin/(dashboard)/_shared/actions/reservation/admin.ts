@@ -224,6 +224,7 @@ export async function updateReservationAction(
               status: data.status,
               notes: data.notes && data.notes !== "" ? data.notes : undefined,
               adminUserId: user.id,
+              version: data.version,
             }),
           );
           return null;
