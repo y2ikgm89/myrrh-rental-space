@@ -148,6 +148,43 @@ async function createInitialReservation(
   return { reservationId: result.id, customerId: result.customerId };
 }
 
+type ReservationFixture = {
+  reservationId: string;
+  customerId: string;
+  spaceId: string;
+  date: string;
+  cleanup: () => Promise<void>;
+};
+
+/**
+ * optimistic concurrency (version) テスト用の予約 fixture。
+ * Location → Space → Reservation を 1 件ずつ作る (createSpaceFixture +
+ * createInitialReservation の合成)。Reservation.version は schema
+ * `@default(0)` のため常に 0 で作成される。`opts.version` は呼出側の意図明示用
+ * (現状 0 以外はサポートしない — fresh reservation は必ず version=0 で始まる)。
+ */
+async function createReservationFixture(opts?: {
+  version?: number;
+}): Promise<ReservationFixture> {
+  if (opts?.version !== undefined && opts.version !== 0) {
+    throw new Error(
+      "createReservationFixture は version: 0 のみサポート (新規予約は常に version=0 で作成される)",
+    );
+  }
+  const { spaceId, cleanup } = await createSpaceFixture(1000);
+  const { reservationId, customerId } = await createInitialReservation(
+    spaceId,
+    FRIDAY_DATE,
+  );
+  return {
+    reservationId,
+    customerId,
+    spaceId,
+    date: FRIDAY_DATE,
+    cleanup,
+  };
+}
+
 describeMaybe("updateCustomerReservation — rate plan 統合", () => {
   beforeAll(async () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
@@ -184,6 +221,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "14:00",
           endTime: "16:00",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -247,6 +285,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "10:00",
           endTime: "12:00",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -319,6 +358,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "14:00",
           endTime: "16:00",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -380,6 +420,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
           date: FRIDAY_DATE,
           startTime: "10:30",
           endTime: "12:30",
+          version: 0,
         },
         MODIFICATION_DEADLINE_HOURS,
       );
@@ -402,5 +443,127 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
     } finally {
       await cleanup();
     }
+  });
+
+  describe("optimistic concurrency (version)", () => {
+    test("regression: 単発 update で version が 0 → 1 に increment", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        const result = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(result.success).toBe(true);
+        const after = await prisma.reservation.findUniqueOrThrow({
+          where: { id: fixture.reservationId },
+          select: { version: true },
+        });
+        expect(after.version).toBe(1);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    test("customer タブ間 race: 同じ version=0 の 2 update で 1 succeed / 1 CONFLICT", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        const [firstResult, secondResult] = await Promise.all([
+          updateCustomerReservation(
+            fixture.reservationId,
+            fixture.customerId,
+            {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "10:00",
+              endTime: "11:00",
+              version: 0,
+            },
+            MODIFICATION_DEADLINE_HOURS,
+          ),
+          updateCustomerReservation(
+            fixture.reservationId,
+            fixture.customerId,
+            {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "14:00",
+              endTime: "15:00",
+              version: 0,
+            },
+            MODIFICATION_DEADLINE_HOURS,
+          ),
+        ]);
+
+        const successes = [firstResult, secondResult].filter((r) => r.success);
+        const failures = [firstResult, secondResult].filter((r) => !r.success);
+        expect(successes).toHaveLength(1);
+        expect(failures).toHaveLength(1);
+        expect(failures[0]!.success ? "" : failures[0]!.error).toContain(
+          "予約情報が別のデバイスまたはタブで変更されました",
+        );
+      } finally {
+        await fixture.cleanup();
+      }
+    });
+
+    test("再試行: conflict 後、最新 version=1 で再 submit → 成功", async () => {
+      const fixture = await createReservationFixture({ version: 0 });
+      try {
+        // 1 回目: version=0 で成功
+        const first = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "10:00",
+            endTime: "11:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(first.success).toBe(true);
+
+        // 2 回目: 古い version=0 で conflict
+        const stale = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "14:00",
+            endTime: "15:00",
+            version: 0,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(stale.success).toBe(false);
+
+        // 3 回目: 最新 version=1 で成功
+        const retry = await updateCustomerReservation(
+          fixture.reservationId,
+          fixture.customerId,
+          {
+            spaceId: fixture.spaceId,
+            date: fixture.date,
+            startTime: "14:00",
+            endTime: "15:00",
+            version: 1,
+          },
+          MODIFICATION_DEADLINE_HOURS,
+        );
+        expect(retry.success).toBe(true);
+      } finally {
+        await fixture.cleanup();
+      }
+    });
   });
 });

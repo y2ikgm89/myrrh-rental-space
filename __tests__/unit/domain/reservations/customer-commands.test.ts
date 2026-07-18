@@ -196,6 +196,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
     date: "2026-12-15",
     startTime: "10:00",
     endTime: "12:00",
+    version: 0,
   };
 
   test("blocked date の場合 tx 外 pre-check で DomainError(CONFLICT) を throw する (reservation.update 未呼出)", async () => {
@@ -243,17 +244,22 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       24,
     );
 
+    // Task 3 (optimistic concurrency): count=0 は paymentStatus TOCTOU と
+    // version mismatch を union で受けるため、顧客向けメッセージは後者の
+    // 汎用文言に統一される (前者は既に上部の paymentStatus gate で
+    // 「決済処理が開始された...」が表示済のため、ここでの重複表示は不要)。
     expect(result).toEqual({
       success: false,
       error:
-        "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+        "予約情報が別のデバイスまたはタブで変更されました。ページを再読み込みしてから、もう一度お試しください。",
     });
     expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);
-    // updateMany の WHERE に paymentStatus: UNPAID 述語が含まれることを assert
+    // updateMany の WHERE に paymentStatus: UNPAID と version 述語が含まれることを assert
     const call = mockReservationUpdateMany.mock.calls[0]?.[0];
     expect(call).toMatchObject({
       where: expect.objectContaining({
         paymentStatus: "UNPAID",
+        version: 0,
       }),
     });
   });

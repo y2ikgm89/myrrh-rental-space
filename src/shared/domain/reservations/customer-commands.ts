@@ -162,6 +162,7 @@ export async function updateCustomerReservation(
     date: string;
     startTime: string;
     endTime: string;
+    version: number;
   },
   modificationDeadlineHours: number,
 ): Promise<CommandResult<UpdatePayload>> {
@@ -401,6 +402,7 @@ export async function updateCustomerReservation(
         id: reservationId,
         deletedAt: null,
         paymentStatus: PaymentStatus.UNPAID,
+        version: input.version,
       },
       data: {
         spaceId: input.spaceId,
@@ -424,15 +426,18 @@ export async function updateCustomerReservation(
         priceOverriddenBy: null,
         couponId: couponForCalc ? reservation.couponId : null,
         icsSequence: { increment: 1 },
+        version: { increment: 1 },
       },
     });
 
     if (updated.count === 0) {
-      // read から update の間に決済が開始された。tx rollback でロールバック。
+      // 決済 TOCTOU（paymentStatus 変化）と optimistic lock 失敗（version mismatch）の
+      // 2 種を union で受ける。顧客向けメッセージは後者（別タブ変更）を優先表示する
+      // （前者は既に上部の paymentStatus gate で「決済処理が開始された...」が表示済）。
       return {
         success: false,
         error:
-          "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
+          "予約情報が別のデバイスまたはタブで変更されました。ページを再読み込みしてから、もう一度お試しください。",
       };
     }
 
