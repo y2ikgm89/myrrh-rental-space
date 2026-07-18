@@ -58,6 +58,8 @@ import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-n
 import { inquiryStatusNotificationFixture } from "@/shared/emails/inquiry-status-notification.fixture";
 import { DeleteAccountVerificationEmail } from "@/shared/emails/delete-account-verification";
 import { deleteAccountVerificationFixture } from "@/shared/emails/delete-account-verification.fixture";
+import { ChangeEmailVerificationEmail } from "@/shared/emails/change-email-verification";
+import { changeEmailVerificationFixture } from "@/shared/emails/change-email-verification.fixture";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { reservationCancelledFixture } from "@/shared/emails/reservation-cancelled.fixture";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
@@ -331,6 +333,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "delete-account-verification",
     DeleteAccountVerificationEmail,
     deleteAccountVerificationFixture,
+  ),
+  "change-email-verification": defineEntry(
+    "change-email-verification",
+    ChangeEmailVerificationEmail,
+    changeEmailVerificationFixture,
   ),
   "review-reply": defineEntry(
     "review-reply",

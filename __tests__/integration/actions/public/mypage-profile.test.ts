@@ -51,14 +51,22 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockCheckEmailRateLimit = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
+  checkEmailRateLimit: mockCheckEmailRateLimit,
   validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
   publicQueryRateLimiter: {},
+  emailVerificationRequestRateLimiter: {},
+  emailVerificationByEmailRateLimiter: {},
 }));
 
 // domain コマンドモック
@@ -66,17 +74,52 @@ const mockUpdateCustomerProfileByUserId = mock((): Promise<void> =>
   Promise.resolve(),
 );
 
+const mockRequestCustomerEmailChangeCommand = mock(
+  (): Promise<{ rawToken: string; expiresAt: Date; customerId: string }> =>
+    Promise.resolve({
+      rawToken: "raw-token-abc",
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      customerId: "customer-001",
+    }),
+);
+
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerProfileByUserId: mockUpdateCustomerProfileByUserId,
+  requestCustomerEmailChangeCommand: mockRequestCustomerEmailChangeCommand,
 }));
 
-// customer query mock
+// customer query mock: getCustomerByUserId は Server Action 内で 2 回呼ばれる
+// (pre-active check と save 後の cache invalidate)。email 分岐の判定には
+// 2 回目の呼び出しの返り値を使うため、default では email: null を返す
+// (LINE OAuth 顧客 = email 未設定の起点)。個別テストで override 可能。
 const mockGetCustomerByUserId = mock(() =>
-  Promise.resolve({ id: "customer-001" }),
+  Promise.resolve({ id: "customer-001", email: null as string | null }),
 );
 
 mock.module("@/shared/domain/customers/queries", () => ({
   getCustomerByUserId: mockGetCustomerByUserId,
+}));
+
+// email 送信 sender ラッパーはモック (Server Action からの副作用として呼ばれる)
+const mockSendChangeEmailVerificationEmail = mock(() =>
+  Promise.resolve({ ok: true as const, id: "message-1" }),
+);
+
+mock.module("@/shared/lib/email/change-email-emails", () => ({
+  sendChangeEmailVerificationEmail: mockSendChangeEmailVerificationEmail,
+}));
+
+// URL 組み立て用に getAppUrl を明示 mock (constants を丸ごと mock しない)。
+mock.module("@/shared/lib/constants", () => ({
+  CACHE_TAGS: {
+    CUSTOMERS: "customers",
+  },
+  getCacheTag: {
+    customers: {
+      detail: (id: string) => `customers:${id}`,
+    },
+  },
+  getAppUrl: () => "https://example.com",
 }));
 
 // OAUTH-BETTER-AUTH-01: Server Action は assertCustomerActive を通す。
@@ -183,7 +226,11 @@ describe("updateProfileAction", () => {
   beforeEach(() => {
     mockGetSession.mockClear();
     mockUpdateCustomerProfileByUserId.mockClear();
+    mockRequestCustomerEmailChangeCommand.mockClear();
+    mockSendChangeEmailVerificationEmail.mockClear();
+    mockGetCustomerByUserId.mockClear();
     mockCheckActionRateLimit.mockClear();
+    mockCheckEmailRateLimit.mockClear();
     mockValidateTurnstile.mockClear();
     mockUpdateTag.mockClear();
 
@@ -196,11 +243,24 @@ describe("updateProfileAction", () => {
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockCheckEmailRateLimit.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
     mockValidateTurnstile.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
     mockUpdateCustomerProfileByUserId.mockImplementation(() =>
       Promise.resolve(),
+    );
+    mockRequestCustomerEmailChangeCommand.mockImplementation(() =>
+      Promise.resolve({
+        rawToken: "raw-token-abc",
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        customerId: "customer-001",
+      }),
+    );
+    mockGetCustomerByUserId.mockImplementation(() =>
+      Promise.resolve({ id: "customer-001", email: null as string | null }),
     );
   });
 
@@ -221,7 +281,7 @@ describe("updateProfileAction", () => {
       expect(result.initialValue).not.toBeNull();
     });
 
-    test("updateCustomerProfileByUserId が userId とパースデータを引数に呼ばれる", async () => {
+    test("updateCustomerProfileByUserId が userId とパースデータを引数に呼ばれる (email 引数は含まない)", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
@@ -236,7 +296,6 @@ describe("updateProfileAction", () => {
           firstName: "太郎",
           companyName: null,
           phoneNumber: "090-1234-5678",
-          email: null,
         },
       );
     });
@@ -285,15 +344,15 @@ describe("updateProfileAction", () => {
           firstName: "太郎",
           companyName: null,
           phoneNumber: null,
-          email: null,
         },
       );
     });
 
-    // Codex P1 regression (comment_id=3566958375):
-    // 入力された email が command 層まで届くこと。届かないと LINE OAuth 顧客が
-    // 「保存成功したのに email 空のまま」で mypage layout に閉じ込められる。
-    test("email が入力されたとき updateCustomerProfileByUserId に string で渡される", async () => {
+    // SETTINGS-02 followup: email が入力されたとき (現在の Customer.email が空の顧客)
+    // は `updateCustomerProfileByUserId` に email を渡すのではなく、
+    // `requestCustomerEmailChangeCommand` + `sendChangeEmailVerificationEmail`
+    // を経由する。Customer.email 直接反映は verification URL クリック後にのみ発生する。
+    test("email 入力時: requestCustomerEmailChangeCommand が呼ばれ、profile update に email は渡らない", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
@@ -304,11 +363,57 @@ describe("updateProfileAction", () => {
 
       expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
         "user-001",
-        expect.objectContaining({ email: "new@example.com" }),
+        expect.not.objectContaining({ email: expect.anything() }),
+      );
+      expect(mockRequestCustomerEmailChangeCommand).toHaveBeenCalledTimes(1);
+      expect(mockRequestCustomerEmailChangeCommand).toHaveBeenCalledWith(
+        "user-001",
+        "new@example.com",
       );
     });
 
-    test("email が空文字列のとき updateCustomerProfileByUserId に null が渡される", async () => {
+    test("email 入力時: 確認メール送信ラッパーに verification URL が渡される", async () => {
+      const { updateProfileAction } =
+        await import("@/app/(public)/mypage/_shared/actions/profile");
+
+      await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, email: "new@example.com" }),
+      );
+
+      expect(mockSendChangeEmailVerificationEmail).toHaveBeenCalledTimes(1);
+      expect(mockSendChangeEmailVerificationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: "new@example.com",
+          newEmail: "new@example.com",
+          verificationUrl: expect.stringContaining(
+            "/api/customer/verify-email?token=",
+          ),
+        }),
+      );
+    });
+
+    test("email 入力時でも Customer.email が既に登録済みなら verification フローは起動しない", async () => {
+      mockGetCustomerByUserId.mockImplementation(() =>
+        Promise.resolve({
+          id: "customer-001",
+          email: "already@example.com" as string | null,
+        }),
+      );
+
+      const { updateProfileAction } =
+        await import("@/app/(public)/mypage/_shared/actions/profile");
+
+      await updateProfileAction(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, email: "new@example.com" }),
+      );
+
+      expect(mockRequestCustomerEmailChangeCommand).not.toHaveBeenCalled();
+      expect(mockSendChangeEmailVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    test("email 空文字列時は verification フローも Customer.email 更新も起動しない", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
@@ -317,9 +422,11 @@ describe("updateProfileAction", () => {
         inputToFormData({ ...VALID_INPUT, email: "" }),
       );
 
+      expect(mockRequestCustomerEmailChangeCommand).not.toHaveBeenCalled();
+      expect(mockSendChangeEmailVerificationEmail).not.toHaveBeenCalled();
       expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
         "user-001",
-        expect.objectContaining({ email: null }),
+        expect.not.objectContaining({ email: expect.anything() }),
       );
     });
   });

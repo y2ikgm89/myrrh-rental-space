@@ -123,6 +123,14 @@ export type DeleteAccountVerificationEmailData = {
   deletionUrl: string;
 };
 
+export type ChangeEmailVerificationEmailData = {
+  /** 送信先 = 登録リクエストされた新しいメールアドレス。 */
+  email: string;
+  name: string;
+  newEmail: string;
+  verificationUrl: string;
+};
+
 /**
  * Phase B.2: series 一括キャンセルの集約通知メール用データ。
  *
