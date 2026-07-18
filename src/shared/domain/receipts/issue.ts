@@ -417,7 +417,6 @@ export async function issueReceiptForEventRegistration(
 export async function reissueReceiptCommand(input: {
   readonly originalReceiptId: string;
   readonly reason: string;
-  readonly actorUserId: string;
   /**
    * Binding check: 指定された場合、元 Receipt が **この reservationId に紐づき**、
    * かつ eventRegistrationId が NULL であることを assert。admin reservation action から

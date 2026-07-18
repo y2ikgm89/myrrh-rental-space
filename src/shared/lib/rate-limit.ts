@@ -394,6 +394,30 @@ export const cancelByEventRegistrationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// ゲスト向け領収書再送信リクエスト (Case B/C 救済フロー) — IP 単位（5 attempts /
+// hour / IP）。formSubmitRateLimiter (5/分) より狭い時間窓で、受信メアド enumeration
+// と外部 SMTP 濫用の総量を構造的に抑える (emailVerificationRequestRateLimiter と同型)。
+export const receiptResendRequestRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 5,
+});
+
+// 同上の「領収書番号単位」の追加バケット (3 attempts / hour / serialNo)。
+// IP-only だと Cloud Run multi-instance × XFF spoof で単一領収書への攻撃が抜ける。
+// cancelByReservationRateLimiter と同型の「resource 単位の第二防壁」。
+export const receiptResendBySerialNoRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 3,
+});
+
+// 同上の「宛先メールアドレス単位」の追加バケット (3 attempts / hour / email)。
+// reservationByEmailRateLimiter / emailVerificationByEmailRateLimiter と同型の
+// 第二防壁で、同一人物が複数 IP から同じメアドで再送 spam を叩くのを防ぐ。
+export const receiptResendByEmailRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 3,
+});
+
 // 管理者オーサリング型 event broadcast (T12) — event 単位で 1 時間あたり 3 回まで。
 // event-broadcast は参加者全員に送信する重い操作 (100 名の申込があれば 100 通の Resend
 // API 呼出) のため、`cancelByReservationRateLimiter` と同型の「resource (eventId) 単位の
