@@ -49,6 +49,10 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   paymentStatus 遷移を interactive tx で serialize、over-refund/idempotency 破壊を防ぐ）、
   728356=イベント申込単位 refund 直列化（`events/payment-commands.ts` の
   `refundEventRegistrationPaymentCommand` で 728355 と同型の serialize、event registration 側 refund flow）、
+  728357=ReservationSeries 単位（`src/shared/domain/reservations/series-advisory-lock.ts` の
+  `lockReservationSeriesForTransaction`。`createReservationSeriesCommand` や一括キャンセルなど
+  series 全体にまたがる書込を tx 単位で serialize。Space namespace 728351 と併用する場合は
+  必ず 728357 → 728351 の順で取得する（deadlock 予防）)、
   audit-log chain=int8 `6029451381908262157n`
 
 ## 'use cache' クエリの標準形
