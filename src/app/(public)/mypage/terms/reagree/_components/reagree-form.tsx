@@ -106,6 +106,24 @@ export function ReagreeForm({
                 className="prose prose-sm max-w-none"
               />
             </div>
+
+            {/* Phase 3.A (TERMS-REAGREE-P3A): 前回同意した版がある場合、
+                <details> 折り畳みで併記する。native disclosure なので JS 不要、
+                SSR-safe、a11y 標準 (改正民法 定型約款変更判例で求められる
+                「変更内容の明示」への対応。差分ハイライトは Phase 3+ で検討)。 */}
+            {term.previousSnapshot ? (
+              <details className="border border-border/60 bg-muted/30 text-sm">
+                <summary className="cursor-pointer px-3 py-2 font-medium">
+                  以前同意した内容を表示
+                </summary>
+                <div className="max-h-72 overflow-y-auto border-t border-border/40 bg-background p-3">
+                  <SanitizedHtml
+                    html={term.previousSnapshot}
+                    className="prose prose-sm max-w-none"
+                  />
+                </div>
+              </details>
+            ) : null}
             <label className="flex items-start gap-2 text-sm">
               <input
                 type="checkbox"

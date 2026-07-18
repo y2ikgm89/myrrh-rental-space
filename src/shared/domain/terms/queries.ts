@@ -82,6 +82,16 @@ export interface RequiredTerm {
   readonly slug: string;
   readonly title: string;
   readonly contentHtml: string;
+  /**
+   * Phase 3.A (TERMS-REAGREE-P3A): 顧客の直近 `TermsAgreement.contentSnapshot`
+   * (前回同意した HTML 全文)。初回同意 pending (未同意) なら null。
+   * reagree UI で「以前同意した内容」を折り畳み表示するために使う。
+   *
+   * `getRequiredTermsByScope` (公開 4 経路の gate 用) では null で返る
+   * (customer 依存でないため)。`getReagreeRequiredTermsForCustomer` のみが
+   * agreement 履歴を join して値を埋める。
+   */
+  readonly previousSnapshot?: string | null;
 }
 
 /**
@@ -277,10 +287,15 @@ export async function getReagreeRequiredTermsForCustomer(
     },
     orderBy: { agreedAt: "desc" },
     distinct: ["termsId"],
-    select: { termsId: true, contentHash: true },
+    // Phase 3.A (TERMS-REAGREE-P3A): contentSnapshot も select して
+    // 「以前同意した内容」の折り畳み表示に使う。
+    select: { termsId: true, contentHash: true, contentSnapshot: true },
   });
   const agreedHashByTermsId = new Map(
     latestAgreements.map((a) => [a.termsId, a.contentHash]),
+  );
+  const previousSnapshotByTermsId = new Map(
+    latestAgreements.map((a) => [a.termsId, a.contentSnapshot]),
   );
 
   const pending = requiredDocs.filter((doc) => {
@@ -296,6 +311,7 @@ export async function getReagreeRequiredTermsForCustomer(
       slug: doc.slug,
       title: doc.title,
       contentHtml: doc.contentHtml,
+      previousSnapshot: previousSnapshotByTermsId.get(doc.id) ?? null,
     })),
   );
 }

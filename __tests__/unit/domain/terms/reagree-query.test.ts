@@ -17,6 +17,7 @@ type TermsDocRow = {
 type AgreementRow = {
   termsId: string;
   contentHash: string;
+  contentSnapshot: string;
 };
 
 const mockTermsDocFindMany = mock<
@@ -105,10 +106,12 @@ describe("getReagreeRequiredTermsForCustomer", () => {
       {
         termsId: TERMS_OF_USE.id,
         contentHash: sha256(TERMS_OF_USE.contentHtml),
+        contentSnapshot: TERMS_OF_USE.contentHtml,
       },
       {
         termsId: PRIVACY_POLICY.id,
         contentHash: sha256(PRIVACY_POLICY.contentHtml),
+        contentSnapshot: PRIVACY_POLICY.contentHtml,
       },
     ]);
 
@@ -120,10 +123,15 @@ describe("getReagreeRequiredTermsForCustomer", () => {
   test("1 doc の hash 不一致ならその doc のみ返す (版違い検出)", async () => {
     mockTermsDocFindMany.mockResolvedValueOnce([TERMS_OF_USE, PRIVACY_POLICY]);
     mockTermsAgreementFindMany.mockResolvedValueOnce([
-      { termsId: TERMS_OF_USE.id, contentHash: "outdated-hash" },
+      {
+        termsId: TERMS_OF_USE.id,
+        contentHash: "outdated-hash",
+        contentSnapshot: "<p>利用規約 v0 (旧版)</p>",
+      },
       {
         termsId: PRIVACY_POLICY.id,
         contentHash: sha256(PRIVACY_POLICY.contentHtml),
+        contentSnapshot: PRIVACY_POLICY.contentHtml,
       },
     ]);
 
@@ -138,6 +146,7 @@ describe("getReagreeRequiredTermsForCustomer", () => {
       {
         termsId: TERMS_OF_USE.id,
         contentHash: sha256(TERMS_OF_USE.contentHtml),
+        contentSnapshot: TERMS_OF_USE.contentHtml,
       },
     ]);
 
@@ -160,6 +169,37 @@ describe("getReagreeRequiredTermsForCustomer", () => {
     });
     expect(call?.orderBy).toEqual({ agreedAt: "desc" });
     expect(call?.distinct).toEqual(["termsId"]);
+    // Phase 3.A: contentSnapshot も select する
+    expect(call?.select).toMatchObject({
+      termsId: true,
+      contentHash: true,
+      contentSnapshot: true,
+    });
+  });
+
+  // Phase 3.A (TERMS-REAGREE-P3A): previousSnapshot の埋め込み挙動
+  test("版違い doc の previousSnapshot に前回同意した contentSnapshot が入る", async () => {
+    mockTermsDocFindMany.mockResolvedValueOnce([TERMS_OF_USE]);
+    mockTermsAgreementFindMany.mockResolvedValueOnce([
+      {
+        termsId: TERMS_OF_USE.id,
+        contentHash: "outdated-hash",
+        contentSnapshot: "<p>利用規約 v0 (旧版)</p>",
+      },
+    ]);
+
+    const result = await getReagreeRequiredTermsForCustomer(CUSTOMER_ID);
+
+    expect(result[0]?.previousSnapshot).toBe("<p>利用規約 v0 (旧版)</p>");
+  });
+
+  test("未同意 (agreement 無し) doc の previousSnapshot は null", async () => {
+    mockTermsDocFindMany.mockResolvedValueOnce([TERMS_OF_USE]);
+    mockTermsAgreementFindMany.mockResolvedValueOnce([]);
+
+    const result = await getReagreeRequiredTermsForCustomer(CUSTOMER_ID);
+
+    expect(result[0]?.previousSnapshot).toBeNull();
   });
 
   test("doc クエリの where 句に isPublished + deletedAt:null + scopes has LOGIN_SIGNUP が入る", async () => {
