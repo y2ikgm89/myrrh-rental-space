@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { findReceiptSerialNoMapByEventRegistrationIds } from "@/shared/domain/receipts/queries";
 import { getWaitlistPositionMapForRegistrations } from "@/shared/domain/events/waitlist-queries";
@@ -20,6 +21,11 @@ import { EventRegistrationTabs } from "./_components/event-registration-tabs";
 
 export default async function MypageEventsPage(): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-02: mypage sub-page も公開 /events と対称に events feature
+  // OFF 時に 404 (fail-closed). gate 無しだと会員は自分の event 申込一覧を
+  // 見られてしまい、feature module の可視性契約が破れる。
+  await requireFeatureEnabled("events");
 
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);
