@@ -222,8 +222,10 @@ function hashEmailChangeToken(rawToken: string): string {
  * verification token を生成し、PendingCustomerEmailChange 行を差し替え発行する。
  *
  * - Customer.email が既に非空なら VALIDATION (この command は「初回登録」限定)
- * - 同 canonical の別の未リンク顧客が既に居るなら CONFLICT (PR #1217 の uniqueness
- *   をここへ移設 — 攻撃者が「他人の email を仮登録して token を横取り」する経路を塞ぐ)
+ * - Better Auth 側 User.email との衝突 → CONFLICT (main SETTINGS-02 の
+ *   canonical 認証 identity レベル check を継承)
+ * - 同 canonical の別 Customer (guest / linked 問わず) との衝突 → CONFLICT
+ *   (SETTINGS-02: 未リンク顧客への「他人 email 横取り」を塞ぐ)
  * - 既存の未消費 pending 行があれば削除して新規発行 (最新の 1 件だけが有効)
  *
  * verification token は raw のまま呼び出し側 (Server Action) に返す。DB には
@@ -254,19 +256,31 @@ export async function requestCustomerEmailChangeCommand(
       throw new DomainError(EMAIL_ALREADY_SET_MESSAGE, "VALIDATION");
     }
 
-    // uniqueness: 未リンク顧客への「他人 email 横取り」を塞ぐ (SETTINGS-02)。
-    // リンク済み顧客 (userId != null) はこの制約から除外する — 既に本人性が
-    // OAuth 経由で保証されており、future feature で User.email と Customer.email を
-    // 二重管理するケースを潰さないため。
-    const conflicting = await tx.customer.findFirst({
+    // 1. Better Auth 側 User.email と衝突するなら CONFLICT。
+    //    main の SETTINGS-02 (PR #1217) が canonical 認証 identity レベルの
+    //    check を要求しているためここでも継続する。case-insensitive で
+    //    比較して大文字混在入力による回避も塞ぐ。
+    const conflictingUser = await tx.user.findFirst({
+      where: {
+        email: { equals: canonical, mode: "insensitive" },
+        NOT: { id: userId },
+      },
+      select: { id: true },
+    });
+    if (conflictingUser) {
+      throw new DomainError(EMAIL_TAKEN_MESSAGE, "CONFLICT");
+    }
+
+    // 2. 同 canonical の別 Customer と衝突するなら CONFLICT。
+    //    リンク済み・未リンク問わず全 Customer が対象 (main SETTINGS-02 と同じスコープ)。
+    const conflictingCustomer = await tx.customer.findFirst({
       where: {
         emailCanonical: canonical,
-        userId: null,
         NOT: { id: current.id },
       },
       select: { id: true },
     });
-    if (conflicting) {
+    if (conflictingCustomer) {
       throw new DomainError(EMAIL_TAKEN_MESSAGE, "CONFLICT");
     }
 
@@ -329,17 +343,39 @@ export async function consumeCustomerEmailChangeCommand(
       throw new DomainError(VERIFICATION_INVALID_MESSAGE, "VALIDATION");
     }
 
-    // request 時点で uniqueness を通していても、click までの間に別の未リンク
-    // 顧客がその email を使い始める可能性があるため、consume 時に再チェック。
-    const conflicting = await tx.customer.findFirst({
+    // 現行 Customer 情報 (userId 除外用) を取得。
+    const currentCustomer = await tx.customer.findUniqueOrThrow({
+      where: { id: pending.customerId },
+      select: { userId: true },
+    });
+
+    // request 時点で uniqueness を通していても、click までの間に別の Customer /
+    // User がその email を使い始める可能性があるため、consume 時に再チェック。
+    // scope は request 時と同じ (Better Auth User.email + 全 Customer.emailCanonical)。
+    // 自 Customer に紐づく User は self 除外する (LINE OAuth 経由で account link 済みの
+    // ケースで自 User.email が偶然一致するのを false-positive にしないため)。
+    const userExclusion = currentCustomer.userId
+      ? { NOT: { id: currentCustomer.userId } }
+      : {};
+    const conflictingUser = await tx.user.findFirst({
+      where: {
+        email: { equals: pending.newEmailCanonical, mode: "insensitive" },
+        ...userExclusion,
+      },
+      select: { id: true },
+    });
+    if (conflictingUser) {
+      throw new DomainError(EMAIL_TAKEN_MESSAGE, "CONFLICT");
+    }
+
+    const conflictingCustomer = await tx.customer.findFirst({
       where: {
         emailCanonical: pending.newEmailCanonical,
-        userId: null,
         NOT: { id: pending.customerId },
       },
       select: { id: true },
     });
-    if (conflicting) {
+    if (conflictingCustomer) {
       throw new DomainError(EMAIL_TAKEN_MESSAGE, "CONFLICT");
     }
 

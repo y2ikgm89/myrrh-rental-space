@@ -154,7 +154,11 @@ function ReviewFormInner({
 
   if (submitted) {
     return (
-      <div className="mt-4 md:mt-8 border border-border p-4 sm:p-6">
+      <div
+        role="status"
+        aria-live="polite"
+        className="mt-4 md:mt-8 border border-border p-4 sm:p-6"
+      >
         <div className="flex items-center gap-2">
           <Badge variant="success">送信完了</Badge>
           <p className="text-sm text-muted-foreground">

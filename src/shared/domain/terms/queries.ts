@@ -297,3 +297,34 @@ export async function assertAllRequiredTermsAgreed(
     throw new DomainError("すべての必須規約への同意が必要です", "VALIDATION");
   }
 }
+
+/**
+ * 指定 customer + scope + termsIds のいずれかで TermsAgreement が既に記録済みかを返す。
+ *
+ * 用途: `consumeSignupTermsAction` (MYPAGE-AUTH-03) の retry idempotency guard。
+ * TermsAgreement には (customerId, scope, termsId) の DB uniqueness 制約が無いため、
+ * リトライ経路 (insert 成功後に cookie 削除が persist しなかった等) で同一 cookie を
+ * 再度消費すると duplicate row が積まれる。cookie 消費前に本関数で pre-check し、
+ * 既存があれば insert を skip して cookie だけ削除する (append-only 契約は維持)。
+ *
+ * `"use cache"` は付けない — LOGIN_SIGNUP の消費経路は書込直後の read-your-own-writes
+ * が必要で、Data Cache の incoming は許容できない。
+ */
+export async function hasTermsAgreementRecorded(input: {
+  readonly customerId: string;
+  readonly scope: TermsScope;
+  readonly termsIds: readonly string[];
+}): Promise<boolean> {
+  if (input.termsIds.length === 0) return false;
+
+  const found = await prisma.termsAgreement.findFirst({
+    where: {
+      customerId: input.customerId,
+      scope: input.scope,
+      termsId: { in: [...input.termsIds] },
+    },
+    select: { id: true },
+  });
+
+  return found !== null;
+}

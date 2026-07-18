@@ -73,6 +73,11 @@ const mockPendingUpdate = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "pending-1" }),
 );
 
+// Better Auth 側 User.email との衝突チェック用 (main SETTINGS-02 と同じ scope)。
+const mockUserFindFirst = mock<() => Promise<{ id: string } | null>>(() =>
+  Promise.resolve(null),
+);
+
 const prismaCustomer = {
   findUnique: mockCustomerFindUnique,
   findUniqueOrThrow: mockCustomerFindUniqueOrThrow,
@@ -89,19 +94,26 @@ const prismaPending = {
   update: mockPendingUpdate,
 };
 
+const prismaUser = {
+  findFirst: mockUserFindFirst,
+};
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     customer: prismaCustomer,
     pendingCustomerEmailChange: prismaPending,
+    user: prismaUser,
     $transaction: <T>(
       fn: (tx: {
         customer: typeof prismaCustomer;
         pendingCustomerEmailChange: typeof prismaPending;
+        user: typeof prismaUser;
       }) => Promise<T>,
     ) =>
       fn({
         customer: prismaCustomer,
         pendingCustomerEmailChange: prismaPending,
+        user: prismaUser,
       }),
   },
 }));
@@ -159,6 +171,7 @@ describe("customers/commands", () => {
     mockPendingDeleteMany.mockReset();
     mockPendingFindUnique.mockReset();
     mockPendingUpdate.mockReset();
+    mockUserFindFirst.mockReset();
 
     // デフォルト: 顧客が存在しない
     mockCustomerFindUnique.mockResolvedValue(null);
@@ -176,6 +189,7 @@ describe("customers/commands", () => {
     mockPendingDeleteMany.mockResolvedValue({ count: 0 });
     mockPendingFindUnique.mockResolvedValue(null);
     mockPendingUpdate.mockResolvedValue({ id: "pending-1" });
+    mockUserFindFirst.mockResolvedValue(null);
   });
 
   // =============================================================================
@@ -651,13 +665,25 @@ describe("customers/commands", () => {
           }),
         );
 
-        // uniqueness ガード: 未リンク顧客の同 canonical を探しに行っている
+        // uniqueness ガード: 全 Customer の canonical を探しに行っている
+        // (main SETTINGS-02 のスコープ = linked/guest 両方を対象)。
         expect(mockCustomerFindFirst).toHaveBeenCalledWith(
           expect.objectContaining({
             where: expect.objectContaining({
               emailCanonical: "new@example.com",
-              userId: null,
               NOT: { id: CUSTOMER_ID },
+            }),
+          }),
+        );
+        // Better Auth User.email 側も case-insensitive で照会する
+        expect(mockUserFindFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              email: {
+                equals: "new@example.com",
+                mode: "insensitive",
+              },
+              NOT: { id: USER_ID },
             }),
           }),
         );
@@ -722,12 +748,13 @@ describe("customers/commands", () => {
         expect(mockPendingCreate).not.toHaveBeenCalled();
       });
 
-      test("他の未リンク顧客が同じ canonical email を持つなら CONFLICT", async () => {
+      test("他の Customer が同じ canonical email を持つなら CONFLICT (未リンク・リンク済問わず)", async () => {
         mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
           id: CUSTOMER_ID,
           email: null,
         });
-        mockCustomerFindFirst.mockResolvedValueOnce({ id: "other-guest" });
+        mockUserFindFirst.mockResolvedValueOnce(null);
+        mockCustomerFindFirst.mockResolvedValueOnce({ id: "other-customer" });
 
         await expect(
           requestCustomerEmailChangeCommand(USER_ID, "conflict@example.com"),
@@ -735,6 +762,56 @@ describe("customers/commands", () => {
           code: "CONFLICT",
         });
         expect(mockPendingCreate).not.toHaveBeenCalled();
+      });
+
+      test("Better Auth User.email に同じ email がある場合も CONFLICT", async () => {
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: null,
+        });
+        mockUserFindFirst.mockResolvedValueOnce({ id: "other-user-id" });
+        mockCustomerFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          requestCustomerEmailChangeCommand(USER_ID, "taken@example.com"),
+        ).rejects.toMatchObject({
+          code: "CONFLICT",
+        });
+        expect(mockPendingCreate).not.toHaveBeenCalled();
+      });
+
+      test("大文字混在入力でも canonical (小文字) + case-insensitive で uniqueness をチェック", async () => {
+        mockCustomerFindUniqueOrThrow.mockResolvedValueOnce({
+          id: CUSTOMER_ID,
+          email: null,
+        });
+        mockUserFindFirst.mockResolvedValueOnce(null);
+        mockCustomerFindFirst.mockResolvedValueOnce(null);
+
+        await requestCustomerEmailChangeCommand(
+          USER_ID,
+          "Mixed.Case@Example.COM",
+        );
+
+        expect(mockUserFindFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              email: {
+                equals: "mixed.case@example.com",
+                mode: "insensitive",
+              },
+              NOT: { id: USER_ID },
+            }),
+          }),
+        );
+        expect(mockCustomerFindFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              emailCanonical: "mixed.case@example.com",
+              NOT: { id: CUSTOMER_ID },
+            }),
+          }),
+        );
       });
     });
   });

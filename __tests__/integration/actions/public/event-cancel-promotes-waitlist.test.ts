@@ -382,6 +382,112 @@ describeMaybe(
       }
     }, 30_000);
 
+    test("WAITLISTED_OFFERED を自己キャンセルすると次の WAITLISTED が昇格しメールが送られる（MYPAGE-EVENT-03 回帰ガード）", async () => {
+      // MYPAGE-EVENT-03: 24h 期限内の offer 中に顧客がセルフキャンセルすると、
+      // 空いた枠に次の WAITLISTED が offer されず FIFO が silent に stall していた。
+      // このテストは cancel core が WAITLISTED_OFFERED → CANCELLED 遷移でも
+      // promoter を呼び、次候補にオファーメールが 1 回だけ送られることを検証する。
+      const { eventId, slotId, ticketId } = await createTestEvent();
+      const customer = await createGuestCustomer("offered-self-cancel");
+
+      try {
+        // capacity=1 のスロットに CONFIRMED が既に居る前提。offered/waiter は
+        // 待機列で offered_at 順 (WAITLISTED は waitlistedAt 順) に並ぶ。
+        await prisma.eventRegistration.create({
+          data: {
+            eventId,
+            slotId,
+            ticketId,
+            name: "確定 太郎",
+            email: "confirmed-solo-2@example.com",
+            quantity: 1,
+            status: RegistrationStatus.CONFIRMED,
+          },
+          select: { id: true },
+        });
+
+        // 顧客本人 (offered) — WAITLISTED_OFFERED でセルフキャンセルする対象
+        const offeredEmail = `offered-${crypto.randomUUID()}@example.com`;
+        const offered = await prisma.eventRegistration.create({
+          data: {
+            eventId,
+            slotId,
+            ticketId,
+            name: "繰上げ 花子",
+            email: offeredEmail,
+            quantity: 1,
+            status: RegistrationStatus.WAITLISTED_OFFERED,
+            waitlistedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+            offeredAt: new Date(Date.now() - 30 * 60 * 1000),
+            expiresAt: new Date(Date.now() + 23 * 60 * 60 * 1000),
+            customerId: customer.id,
+          },
+          select: { id: true },
+        });
+
+        // 次に控える待機者
+        const nextWaiterEmail = `next-waiter-${crypto.randomUUID()}@example.com`;
+        const nextWaiter = await prisma.eventRegistration.create({
+          data: {
+            eventId,
+            slotId,
+            ticketId,
+            name: "待機 次郎",
+            email: nextWaiterEmail,
+            quantity: 1,
+            status: RegistrationStatus.WAITLISTED,
+            waitlistedAt: new Date(Date.now() - 30 * 60 * 1000),
+          },
+          select: { id: true },
+        });
+
+        mockGetCustomerSession.mockResolvedValue({
+          user: { id: "user-under-test" },
+        });
+        mockGetCustomerByUserId.mockResolvedValue({ id: customer.id });
+
+        const result = await cancelEventRegistration(
+          offered.id,
+          "turnstile-token",
+        );
+        expect(result).toBeNull();
+
+        await Promise.all(firedPromises);
+
+        // 元 offer 行は CANCELLED
+        const updatedOffered = await prisma.eventRegistration.findUniqueOrThrow(
+          {
+            where: { id: offered.id },
+            select: { status: true },
+          },
+        );
+        expect(updatedOffered.status).toBe(RegistrationStatus.CANCELLED);
+
+        // 次候補が WAITLISTED_OFFERED に昇格していること
+        const updatedNext = await prisma.eventRegistration.findUniqueOrThrow({
+          where: { id: nextWaiter.id },
+          select: { status: true, offeredAt: true, expiresAt: true },
+        });
+        expect(updatedNext.status).toBe(RegistrationStatus.WAITLISTED_OFFERED);
+        expect(updatedNext.offeredAt).toBeInstanceOf(Date);
+        expect(updatedNext.expiresAt).toBeInstanceOf(Date);
+
+        // 繰上げ当選メールが次候補宛てに 1 回だけ送られること
+        expect(mockSendEventWaitlistOffered).toHaveBeenCalledTimes(1);
+        expect(mockSendEventWaitlistOffered).toHaveBeenCalledWith(
+          expect.objectContaining({
+            registrationId: nextWaiter.id,
+            to: nextWaiterEmail,
+            expiresAt: updatedNext.expiresAt,
+            paymentContext: expect.objectContaining({ kind: "free" }),
+          }),
+        );
+      } finally {
+        await cleanupEvent(eventId);
+        await prisma.customer.deleteMany({ where: { id: customer.id } });
+      }
+    }, 30_000);
+
     test("waitlist キューが空のまま cancel しても sendEventWaitlistOffered は呼ばれない（誤発火防止の回帰ガード）", async () => {
       const { eventId, slotId, ticketId } = await createTestEvent();
       const customer = await createGuestCustomer("no-waitlist");

@@ -29,6 +29,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
+import { isCustomerActiveForMypage } from "@/shared/domain/customers/guard";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
 import { IncompleteProfileNotice } from "./_components/incomplete-profile-notice";
@@ -56,8 +57,12 @@ async function MypageAuthGate({
   const { user } = await verifyCustomerSession();
   const { customer, isNew } = await ensureCustomerLinked(user);
 
-  // 停止・ブラックリスト顧客はマイページアクセス不可
-  if (!customer.isActive) {
+  // 停止・BLACKLIST 顧客は mypage アクセス不可（read + write の判定基準を
+  // Server Action ガード `assertCustomerActive` と揃えるため、SSoT の
+  // `isCustomerActiveForMypage` に委譲する。過去の `!customer.isActive` のみの
+  // 判定は `status=BLACKLIST + isActive=true` (bulkSetStatusCustomersCommand が
+  // 生成する状態) の顧客に read を素通しさせていた — MYPAGE-AUTH-02）。
+  if (!isCustomerActiveForMypage(customer)) {
     redirect("/login?error=account_suspended");
   }
 
