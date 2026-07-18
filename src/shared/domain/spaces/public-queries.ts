@@ -224,7 +224,22 @@ export async function getPublishedSpacesPaginatedWithAvailability(
   input: SpaceCatalogFilter,
   range: { from: Date; to: Date },
 ) {
-  const unavailable = await getUnavailableSpaceIds(range.from, range.to);
+  // RECENT-04: getUnavailableSpaceIds は Reservation + EventTimeSlot への 2 クエリ
+  // を発火する。以前は safeFetch の外側で await していたため、DB 接続断や
+  // statement_timeout でここが throw すると SpaceListSection catalog 経路
+  // (section-renderer.tsx) が丸ごと error boundary に落ち、時間帯 facet 経路だけ
+  // 非対称に落ちる non-uniform degrade を発生させていた (facet 未使用の
+  // getPublishedSpacesPaginated 側は safeFetch fallback で degrade 保護済み)。
+  // ここでも safeFetch でラップし、fallback として「availability 判定なし=
+  // 全 space 表示」に degrade する (facet 検索は失敗せず ideal 挙動から劣化するだけ)。
+  const unavailable = await safeFetch({
+    fetch: () => getUnavailableSpaceIds(range.from, range.to),
+    fallback: new Set<string>() as ReadonlySet<string>,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName:
+      "getPublishedSpacesPaginatedWithAvailability.getUnavailableSpaceIds",
+  });
   return safeFetch({
     fetch: () =>
       runSpacesPaginated({
