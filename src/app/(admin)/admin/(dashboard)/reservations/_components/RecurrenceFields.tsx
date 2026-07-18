@@ -133,13 +133,13 @@ export function RecurrenceFields({
 
         <div>
           <Label htmlFor="recurrence-interval">
-            インターバル (`
-            {value.freq === "DAILY"
-              ? "日"
-              : value.freq === "WEEKLY"
-                ? "週"
-                : "月"}
-            ごと`)
+            {`インターバル (${
+              value.freq === "DAILY"
+                ? "日"
+                : value.freq === "WEEKLY"
+                  ? "週"
+                  : "月"
+            }ごと)`}
           </Label>
           <Input
             id="recurrence-interval"
