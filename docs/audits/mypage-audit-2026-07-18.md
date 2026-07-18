@@ -11,7 +11,7 @@
 主な観点は「公式推奨で後方互換性のないクリーン実装か」「各機能連携」「実装の穴」。
 結論: 全体設計は健全 (cacheComponents / connection() / Suspense / Server Action 経由の cookie mutation は canonical)、
 だが認可・decision-integrity 系に silent bug が広範囲。今回で HIGH 5 件 + 認可 critic 2 件を含む全 21 confirmed + critic 5 件を修正済み。
-残り deferred は critic-4 (optimistic concurrency) と critic-7 (Terms 再同意) — critic-7 は 別セッションが #1230 で完了。
+残り deferred は critic-4 (optimistic concurrency) と critic-7 (Terms 再同意) — critic-4 は 2026-07-19 に別セッションが [#1236](https://github.com/y2ikgm89/myrrh-rental-space/pull/1236) で完了、critic-7 は別セッションが [#1230](https://github.com/y2ikgm89/myrrh-rental-space/pull/1230) で完了。
 
 **再 litigate 禁止事項** (下記の finding × PR 対応表と本監査の設計判断)。
 
@@ -82,17 +82,17 @@ Multiple Root Layouts への影響ゼロ、cookie mutation は全て Server Acti
 
 ## Critic の 7 missed angles → 対応
 
-| #   | Angle                                                                                                          | 対応                                                                                                                             |
-| --- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Better Auth `trustedProviders: ["line"]` による silent account-takeover                                        | [#1212](https://github.com/y2ikgm89/myrrh-rental-space/pull/1212) merged (LINE を trusted から除去)                              |
-| 2   | `/api/receipts` Route Handler が assertCustomerActive を通していない                                           | [#1221](https://github.com/y2ikgm89/myrrh-rental-space/pull/1221) merged                                                         |
-| 3   | unlinkAccount で LINE/Google upstream OAuth token を revoke していない                                         | [#1215](https://github.com/y2ikgm89/myrrh-rental-space/pull/1215) merged (SETTINGS-01 と同 PR)                                   |
-| 4   | 予約変更に optimistic concurrency (version 列) がなく lost-update                                              | **deferred** — task_b48d4d14 (spawn_task chip 化)。schema migration + UI 変更で design phase 必要                                |
-| 5   | series キャンセルの cache-tag semantic (seriesId → reservationId 混入)                                         | [#1225](https://github.com/y2ikgm89/myrrh-rental-space/pull/1225) open                                                           |
-| 6   | cancellation 側 external notification の観測性 (Resend suppression / LINE unfriend / GCal 429 が silent no-op) | [#1226](https://github.com/y2ikgm89/myrrh-rental-space/pull/1226) merged (reservation + event 両方)                              |
-| 7   | TermsAgreement 規約 version up 時の再同意 UI が存在しない                                                      | [#1230](https://github.com/y2ikgm89/myrrh-rental-space/pull/1230) merged (別セッションが完了) — task_1e507755 chip は superseded |
+| #   | Angle                                                                                                          | 対応                                                                                                                                                       |
+| --- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Better Auth `trustedProviders: ["line"]` による silent account-takeover                                        | [#1212](https://github.com/y2ikgm89/myrrh-rental-space/pull/1212) merged (LINE を trusted から除去)                                                        |
+| 2   | `/api/receipts` Route Handler が assertCustomerActive を通していない                                           | [#1221](https://github.com/y2ikgm89/myrrh-rental-space/pull/1221) merged                                                                                   |
+| 3   | unlinkAccount で LINE/Google upstream OAuth token を revoke していない                                         | [#1215](https://github.com/y2ikgm89/myrrh-rental-space/pull/1215) merged (SETTINGS-01 と同 PR)                                                             |
+| 4   | 予約変更に optimistic concurrency (version 列) がなく lost-update                                              | [#1236](https://github.com/y2ikgm89/myrrh-rental-space/pull/1236) merged (Reservation.version + form-driven update path 全体 + 非 form path 版数不変 gate) |
+| 5   | series キャンセルの cache-tag semantic (seriesId → reservationId 混入)                                         | [#1225](https://github.com/y2ikgm89/myrrh-rental-space/pull/1225) open                                                                                     |
+| 6   | cancellation 側 external notification の観測性 (Resend suppression / LINE unfriend / GCal 429 が silent no-op) | [#1226](https://github.com/y2ikgm89/myrrh-rental-space/pull/1226) merged (reservation + event 両方)                                                        |
+| 7   | TermsAgreement 規約 version up 時の再同意 UI が存在しない                                                      | [#1230](https://github.com/y2ikgm89/myrrh-rental-space/pull/1230) merged (別セッションが完了) — task_1e507755 chip は superseded                           |
 
-**5 件 merged + 1 open (#1225) + 1 deferred (critic-4 のみ)**。
+**6 件 merged + 1 open (#1225)** (critic-4 は 2026-07-19 に #1236 で完了、deferred なし)。
 
 ---
 
@@ -149,13 +149,17 @@ Multiple Root Layouts への影響ゼロ、cookie mutation は全て Server Acti
 
 ## 未対応 (deferred)
 
-### critic-4: 予約変更の optimistic concurrency
+### critic-4: 予約変更の optimistic concurrency (2026-07-19 完了)
 
-- task chip `task_b48d4d14` として spawn_task 化済
-- 内容: Reservation / ReservationSeries に version 列追加 + UPDATE WHERE version 一致検証 + form 側 hidden field + form 側 conflict error 表示
-- 影響範囲: schema migration + admin edit form + edit-reservation-form.tsx + advisory lock との併用検証
-- design doc 予定パス: `docs/superpowers/specs/2026-07-XX-reservation-optimistic-concurrency-design.md`
-- **判断**: 現状 lost-update は observability として AuditLog に「最後の書込」のみ残る silent behavior。事故率低いため P2 扱いで別 session に委譲
+- 2026-07-19 に [#1236](https://github.com/y2ikgm89/myrrh-rental-space/pull/1236) で完了 (別セッション)
+- 実装内容: Reservation テーブルに `version Int @default(0)` 追加、form-driven update path (customer + admin) が `updateMany` の WHERE 述語で claim + increment、cron / payment / calendar-sync 等の非 form path は Rails `.update_all` / Hibernate native query と同型で touch しない
+- 対象 race: 顧客タブ間 / admin タブ間 / 顧客 vs admin の 3 種を DB レベルで防止
+- UX: form 上警告 + 詳細に戻るリンク (差分表示 / 自動 reload は不採用)
+- gate: `architecture-boundaries.test.ts` の static grep gate で「`version: { increment` / `version: input.version` は 2 file 限定」を機械保証。将来非 form path が version を触ったら即 fail
+- 対象外: ReservationSeries.cancel (既存 status claim で idempotent) と EventRegistration.cancel (同上) と Inquiry (顧客セルフ更新経路なし)。design doc §2 non-goal 参照
+- design doc: `docs/superpowers/specs/2026-07-18-reservation-optimistic-concurrency-design.md`
+- 実装計画: `docs/superpowers/plans/2026-07-18-reservation-optimistic-concurrency.md`
+- **再 litigate 禁止**: 楽観制御は form-driven update path のみに適用する (Rails / Hibernate 公式挙動と同型)。非 form path (cron / payment / calendar-sync 等) は既存の status / paymentStatus / cron 冪等 flag が race を吸収済なので version 触らない
 
 ### SETTINGS-02 P2 (email verification)
 
