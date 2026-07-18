@@ -2895,6 +2895,56 @@ describe("architecture boundaries", () => {
     });
   });
 
+  describe("Reservation.version 楽観制御は form-driven update path 限定 (spec §3.1.1 gate)", () => {
+    // spec (docs/superpowers/specs/2026-07-18-reservation-optimistic-concurrency-design.md)
+    // §3.1.1 の設計境界: version 列の WHERE claim / increment は customer-commands.ts
+    // (updateCustomerReservation) と admin-commands.ts (updateAdminReservationCommand) の
+    // form-driven update path のみが触ってよい。cancel-core / payment-commands /
+    // payment-queries / pending-expiry / reminder-commands / calendar-sync /
+    // lifecycle-commands / claim-commands / data-retention 等の非 form path
+    // (cron・webhook・bulk 遷移) は Rails `.update_all` / Hibernate native query と
+    // 同型の「楽観制御対象外」領域であり、silent に version 述語/increment を
+    // 追加すると spec の境界が崩れる。
+    //
+    // 実 DB 統合テスト (customer-commands.test.ts の「非 form path は version を
+    // touch しない」describe) は代表的な 2 経路 (cancelCustomerReservation,
+    // claimReservationAsPaid) しか動的にカバーしないため、静的 grep で
+    // reservations domain 配下の全ファイルを走査し、allowlist 外の出現を機械検知する。
+    test("`version: { increment` / `version: input.version` の出現は customer-commands.ts と admin-commands.ts の 2 file に限定する", () => {
+      const RESERVATIONS_DOMAIN_ROOT = join(SHARED_DOMAIN_ROOT, "reservations");
+      const ALLOWLIST = new Set([
+        join(RESERVATIONS_DOMAIN_ROOT, "customer-commands.ts"),
+        join(RESERVATIONS_DOMAIN_ROOT, "admin-commands.ts"),
+      ]);
+      const PATTERNS = [
+        /version:\s*\{\s*increment/u,
+        /version:\s*input\.version/u,
+      ];
+
+      // sanity: allowlist file 自体が対象 pattern を含むこと（refactor で表現が
+      // 変わり gate が silently vacuous になるのを防ぐ）。
+      const allowlistSource = [...ALLOWLIST]
+        .map((file) => readFileSync(file, "utf8"))
+        .join("\n");
+      expect(PATTERNS.some((pattern) => pattern.test(allowlistSource))).toBe(
+        true,
+      );
+
+      const offenders = collectSourceFiles(RESERVATIONS_DOMAIN_ROOT)
+        .filter((file) => !ALLOWLIST.has(file))
+        .filter((file) => {
+          const source = readFileSync(file, "utf8");
+          return PATTERNS.some((pattern) => pattern.test(source));
+        })
+        .map((file) => relative(ROOT, file));
+
+      expect(
+        offenders,
+        `src/shared/domain/reservations/ 配下で version 述語/increment の出現が customer-commands.ts / admin-commands.ts の外に見つかりました。楽観制御は form-driven update path 限定 (spec §3.1.1)。非 form path (cron/webhook/bulk) が version を touch すべきでないなら他の gate (status/paymentStatus/冪等 flag) を使うこと。`,
+      ).toEqual([]);
+    });
+  });
+
   describe("Customer.isActive / BLACKLIST gate は Server Action 側で強制する (OAUTH-BETTER-AUTH-01 再発防止)", () => {
     // MypageAuthGate は Server Component 描画層のみカバー。Server Action
     // (mypage / claim / session-owner cancel) は独立の request context のため、

@@ -604,6 +604,54 @@ describeMaybe(
           await fixture.cleanup();
         }
       });
+
+      test("admin vs 顧客 race (逆方向): 顧客が version=0 で版数を進めた後、admin が古い version=0 で submit すると CONFLICT", async () => {
+        const fixture = await createAdminReservationFixture({ version: 0 });
+        try {
+          // 顧客が version=0 で update → version=1
+          const customerResult = await updateCustomerReservation(
+            fixture.reservationId,
+            fixture.customerId,
+            {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "10:00",
+              endTime: "11:00",
+              version: 0,
+            },
+            MODIFICATION_DEADLINE_HOURS,
+          );
+          expect(customerResult.success).toBe(true);
+
+          // 顧客の $transaction commit 直後に admin 側の最初の非 tx query
+          // (prisma.reservation.findUnique) を同一 microtask chain で発行すると、
+          // この test 環境 (bun 1.3.14 + @prisma/adapter-pg) では commit 後の
+          // コネクション解放が完了する前に次の query が dispatch され、Postgres
+          // 側 (pg_stat_activity / pg_locks) に到達すらしないまま無期限に hang する
+          // ことを実機で確認した (setImmediate 1 tick 挿入のみで再現しなくなる純粋な
+          // microtask race)。既存の admin→顧客方向のテスト (直前の describe) は
+          // admin 側の書込 tx の後に軽い customer 側 outer read が続くだけで発生
+          // しないため方向依存。本番は顧客 request と admin request が別 HTTP
+          // request = 別 event loop tick のため影響しない test-only の quirk。
+          await new Promise((resolve) => setImmediate(resolve));
+
+          // admin は古い version=0 のまま submit → CONFLICT
+          await expect(
+            updateAdminReservationCommand(fixture.reservationId, {
+              spaceId: fixture.spaceId,
+              date: fixture.date,
+              startTime: "14:00",
+              endTime: "15:00",
+              customerId: fixture.customerId,
+              status: ReservationStatus.CONFIRMED,
+              adminUserId: fixture.adminUserId,
+              version: 0,
+            }),
+          ).rejects.toMatchObject({ code: "CONFLICT" });
+        } finally {
+          await fixture.cleanup();
+        }
+      });
     });
   },
 );

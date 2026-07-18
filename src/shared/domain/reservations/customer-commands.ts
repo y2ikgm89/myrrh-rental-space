@@ -431,9 +431,10 @@ export async function updateCustomerReservation(
     });
 
     if (updated.count === 0) {
-      // 決済 TOCTOU（paymentStatus 変化）と optimistic lock 失敗（version mismatch）の
-      // 2 種を union で受ける。顧客向けメッセージは後者（別タブ変更）を優先表示する
-      // （前者は既に上部の paymentStatus gate で「決済処理が開始された...」が表示済）。
+      // paymentStatus gate は tx 開始時点でしか検知しないため、findFirst→updateMany 間の
+      // TOCTOU race (createCheckoutSessionCommand との別 tx 衝突) は version mismatch と
+      // 同一 count=0 分岐に落ちる。稀ケースとして UX は後者優先文言に統一し、error code
+      // 分岐は将来課題 (spec §3.2)。
       return {
         success: false,
         error:

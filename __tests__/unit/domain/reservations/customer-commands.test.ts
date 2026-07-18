@@ -244,10 +244,10 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       24,
     );
 
-    // Task 3 (optimistic concurrency): count=0 は paymentStatus TOCTOU と
-    // version mismatch を union で受けるため、顧客向けメッセージは後者の
-    // 汎用文言に統一される (前者は既に上部の paymentStatus gate で
-    // 「決済処理が開始された...」が表示済のため、ここでの重複表示は不要)。
+    // Task 3 (optimistic concurrency): paymentStatus gate は tx 開始時点でしか検知
+    // しないため、findFirst→updateMany 間の TOCTOU race (createCheckoutSessionCommand
+    // との別 tx 衝突) は version mismatch と同一 count=0 分岐に落ちる。稀ケースとして
+    // UX は後者優先文言に統一し、error code 分岐は将来課題 (spec §3.2)。
     expect(result).toEqual({
       success: false,
       error:
