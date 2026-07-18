@@ -560,7 +560,13 @@ export async function applyBulkCancellationSideEffects(
   // で変化しないビジネスセマンティクスであり、per-instance の Settings.findUnique
   // 呼び出しは Cloud Run→Neon RTT を N-1 回積み上げる無駄なラウンドトリップだった
   // (52 instance で ~500ms-1.5s の空 latency)。Step 1 前段の 1 fetch にまとめる。
-  let refundPolicySnapshot: RefundPolicy | null = null;
+  //
+  // fetch 成功時: RefundPolicy | null (null = 「policy 未設定 = 残額全額返金」を明示)。
+  // fetch 失敗時: undefined のまま catch を抜け、受け手 (applyCancellationSideEffects)
+  //   の `!== undefined` 判定で per-instance の再 fetch にフォールバックさせる。
+  //   ここで null を残すと「全額返金」として受け取られ、Stripe 全額返金を招く
+  //   （PERF-02-FIX、audit 2026-07-18）。
+  let refundPolicySnapshot: RefundPolicy | null | undefined = undefined;
   try {
     const settings = await prisma.settings.findUnique({
       where: { id: "singleton" },
@@ -576,8 +582,9 @@ export async function applyBulkCancellationSideEffects(
         seriesId: input.seriesId,
       },
     });
-    // Settings 取得失敗時は per-instance で再 fetch を試みるため snapshot 未指定に
-    // フォールバック (refundPolicySnapshot=undefined を渡すために per-call 分岐)。
+    // refundPolicySnapshot は undefined のまま。以降の呼出しで conditional spread
+    // により受け手側に refundPolicySnapshot キー自体を渡さず、per-instance の
+    // Settings.findUnique 再 fetch を発動させる。
   }
 
   // Step 1: per-instance 副作用（customerEmail / adminEmail / gcalDelete のみ suppress）
@@ -594,7 +601,8 @@ export async function applyBulkCancellationSideEffects(
           adminEmail: true,
           gcalDelete: true,
         },
-        refundPolicySnapshot,
+        // exactOptionalPropertyTypes: undefined を明示代入せず conditional spread。
+        ...(refundPolicySnapshot !== undefined ? { refundPolicySnapshot } : {}),
       });
     } catch (error) {
       logError(normalizeError(error), {
