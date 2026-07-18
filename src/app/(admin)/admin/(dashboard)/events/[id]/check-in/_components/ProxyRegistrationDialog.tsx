@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import type { AdminProxyRegistrationInput } from "@/admin/actions/event-registration";
+import { useRadioGroupKeyboard } from "@/public/lib/a11y/use-radio-group-keyboard";
 
 type Ticket = {
   id: string;
@@ -102,6 +103,24 @@ export function ProxyRegistrationDialog({
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  // WAI-ARIA APG radio group: roving tabindex + ArrowLeft/Right/Up/Down +
+  // Home/End + selection follows focus。button 要素に radio role を付ける
+  // 独自実装のため、公開側で使用中の共通 hook を再利用する。
+  const slotRadio = useRadioGroupKeyboard<SlotInfo, string, HTMLButtonElement>({
+    items: slots,
+    selected: slotId,
+    onSelect: setSlotId,
+    getKey: (s) => s.id,
+    disabled: slots.length <= 1,
+  });
+  const ticketRadio = useRadioGroupKeyboard<Ticket, string, HTMLButtonElement>({
+    items: tickets,
+    selected: ticketId,
+    onSelect: setTicketId,
+    getKey: (t) => t.id,
+    disabled: tickets.length <= 1,
+  });
 
   function reset() {
     setTicketId(firstTicketId);
@@ -197,14 +216,18 @@ export function ProxyRegistrationDialog({
                 aria-label="タイムスロット"
                 className="flex flex-wrap gap-2"
               >
-                {slots.map((s) => {
+                {slots.map((s, index) => {
                   const selected = slotId === s.id;
+                  const itemProps = slotRadio.getItemProps(s, index);
                   return (
                     <button
                       key={s.id}
                       type="button"
                       role="radio"
                       aria-checked={selected}
+                      ref={itemProps.ref}
+                      tabIndex={itemProps.tabIndex}
+                      onKeyDown={itemProps.onKeyDown}
                       onClick={() => setSlotId(s.id)}
                       className={
                         selected
@@ -229,14 +252,18 @@ export function ProxyRegistrationDialog({
                 aria-label="チケット種別"
                 className="flex flex-wrap gap-2"
               >
-                {tickets.map((t) => {
+                {tickets.map((t, index) => {
                   const selected = ticketId === t.id;
+                  const itemProps = ticketRadio.getItemProps(t, index);
                   return (
                     <button
                       key={t.id}
                       type="button"
                       role="radio"
                       aria-checked={selected}
+                      ref={itemProps.ref}
+                      tabIndex={itemProps.tabIndex}
+                      onKeyDown={itemProps.onKeyDown}
                       onClick={() => setTicketId(t.id)}
                       className={
                         selected
