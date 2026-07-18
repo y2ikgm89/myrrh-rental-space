@@ -1,8 +1,10 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+// CACHE-INVALIDATE-04: SPACES は CDN `space-v1` に emit されるため helper 経由で
+// Cloudflare CDN purge も併発する。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { setLocationDefaultSmartLockDeviceCommand } from "@/shared/domain/smart-lock/commands";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
@@ -40,7 +42,7 @@ export async function setLocationDefaultSmartLockDevice(
         parsedDevice.data,
       ),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACES);
+      invalidateSiteWideCache(CACHE_TAGS.SPACES);
     },
   });
 }

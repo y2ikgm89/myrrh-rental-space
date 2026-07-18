@@ -1,7 +1,6 @@
 "use server";
 
 import { headers } from "next/headers";
-import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -24,7 +23,6 @@ import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/e
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS } from "@/shared/lib/constants";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -84,7 +82,9 @@ export async function adminCancelRegistration(
       };
     },
     afterSuccess: (data) => {
-      updateTag(CACHE_TAGS.EVENTS);
+      // CACHE-INVALIDATE-04: 公開イベントページ (Cache-Tag `event-v1`) が edge に
+      // 残り続けないよう helper 経由で Cloudflare CDN purge も併発する。
+      invalidateEventCaches();
 
       // メール / 通知 / 監査ログを一括で副作用ヘルパーへ委譲
       // （会員・ゲスト経路と SSoT 共有。reservations の admin 経路と同型）。

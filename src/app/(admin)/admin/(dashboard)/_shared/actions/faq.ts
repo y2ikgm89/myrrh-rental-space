@@ -1,6 +1,5 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
@@ -68,10 +67,9 @@ const faqItemOrderSchema = z
     },
   );
 
-function invalidateFaqCaches(): void {
-  updateTag(CACHE_TAGS.FAQ);
-}
-
+// CACHE-INVALIDATE-04: `invalidateSiteWideCache(CACHE_TAGS.FAQ)` は内部で
+// updateTag と CDN queueTagPurge を一括発火する。以前ここに存在した
+// `invalidateFaqCaches`（raw `updateTag` 呼び出し）は同一タグへの二重発火だったため削除。
 function purgeFaqCaches(): void {
   invalidateSiteWideCache(CACHE_TAGS.FAQ);
   void firePurgeAsync(() => purgeCloudflareDetailUrls(["/faq"]), {
@@ -100,7 +98,6 @@ export async function createFaqCategory(
             isActive: data.isActive,
           }),
         afterSuccess: () => {
-          invalidateFaqCaches();
           purgeFaqCaches();
         },
         resolveAuditResourceId: (created) => created.id,
@@ -142,7 +139,6 @@ export async function updateFaqCategory(
           return null;
         },
         afterSuccess: () => {
-          invalidateFaqCaches();
           purgeFaqCaches();
         },
       });
@@ -175,7 +171,6 @@ export async function updateFaqCategoryActive(
     execute: async () =>
       updateFaqCategoryActiveCommand(validated.data, parsedActive.data),
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -196,7 +191,6 @@ export async function deleteFaqCategory(id: string): Promise<MutationResult> {
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -218,7 +212,6 @@ export async function reorderFaqCategories(
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -240,7 +233,6 @@ export async function createFaqItem(
           isPublished: data.isPublished,
         }),
       afterSuccess: () => {
-        invalidateFaqCaches();
         purgeFaqCaches();
       },
       resolveAuditResourceId: (created) => created.id,
@@ -277,7 +269,6 @@ export async function updateFaqItem(
         return null;
       },
       afterSuccess: () => {
-        invalidateFaqCaches();
         purgeFaqCaches();
       },
     });
@@ -303,7 +294,6 @@ export async function deleteFaqItem(id: string): Promise<MutationResult> {
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -332,7 +322,6 @@ export async function reorderFaqItems(
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -354,7 +343,6 @@ export async function updateFaqItemPublished(
     execute: async () =>
       updateFaqItemPublishedCommand(validated.data, isPublished),
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -378,7 +366,6 @@ export async function bulkPublishFaqItems(
     action: "update",
     execute: async () => bulkPublishFaqItemsCommand(parsed.data, isPublished),
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -397,7 +384,6 @@ export async function bulkDeleteFaqItems(
     action: "delete",
     execute: async () => bulkDeleteFaqItemsCommand(parsed.data),
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -418,7 +404,6 @@ export async function bulkMoveFaqItems(input: {
     execute: async () =>
       bulkMoveFaqItemsCommand(parsed.data.ids, parsed.data.newCategoryId),
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -443,7 +428,6 @@ export async function restoreFaqCategory(id: string): Promise<MutationResult> {
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -464,7 +448,6 @@ export async function restoreFaqItem(id: string): Promise<MutationResult> {
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -487,7 +470,6 @@ export async function permanentlyDeleteFaqCategory(
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
@@ -510,7 +492,6 @@ export async function permanentlyDeleteFaqItem(
       return null;
     },
     afterSuccess: () => {
-      invalidateFaqCaches();
       purgeFaqCaches();
     },
   });
