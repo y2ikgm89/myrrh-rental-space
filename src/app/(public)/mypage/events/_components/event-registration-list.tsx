@@ -260,7 +260,8 @@ function EventRegistrationCard({
           </div>
         )}
         {isEventVirtualAccessible(registration.event) &&
-          registration.event.meetingUrl && (
+          registration.event.meetingUrl &&
+          (status === RegistrationStatus.CONFIRMED ? (
             <div>
               <dt className="sr-only">参加 URL</dt>
               <dd>
@@ -274,7 +275,20 @@ function EventRegistrationCard({
                 </a>
               </dd>
             </div>
-          )}
+          ) : (
+            // MYPAGE-EVENT-01: 参加 URL (Zoom/Meet) は「参加確定 (CONFIRMED)」の
+            // registration にだけ露出する。WAITLISTED / WAITLISTED_OFFERED /
+            // CANCELLED / EXPIRED は URL を伏せて placeholder のみ出す。
+            // - WAITLISTED_OFFERED は「繰り上げ当選確定」前 (confirm するまで
+            //   CONFIRMED に遷移しない) のため URL は出さない。
+            // - CANCELLED / EXPIRED は言うまでもなく非公開。
+            // 有料オンラインイベントで status に関わらず URL を出すのは
+            // content bypass に該当するため gate 必須。
+            <div>
+              <dt className="sr-only">参加 URL</dt>
+              <dd>参加確定後に表示されます</dd>
+            </div>
+          ))}
         <div>
           <dt className="inline">参加人数: </dt>
           <dd className="inline">{registration.quantity}名</dd>
