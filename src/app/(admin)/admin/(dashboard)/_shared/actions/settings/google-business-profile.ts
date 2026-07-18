@@ -2,6 +2,10 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+// updateTag は revokeGbpAuth の INTEGRATION_SETTINGS 用 (private admin-only tag,
+// CDN mapping なしのため raw updateTag が正)。Location 系は CDN-mapped のため
+// invalidateSiteWideCache 経由 (CACHE-INVALIDATE-01)。
+import { updateTag } from "next/cache";
 
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkPermission } from "@/admin/lib/action-auth";
