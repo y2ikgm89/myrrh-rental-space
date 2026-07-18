@@ -10,6 +10,7 @@ import {
   verifyCancelToken,
   tokenFingerprint,
 } from "@/shared/lib/reservation-cancel-token";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
@@ -51,6 +52,10 @@ const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
 
 export default async function GuestCancelPage(): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-03: reservation feature OFF 時に 404。token-gated utility でも
+  // 同じ fail-closed 契約を守る (公開 /reservation と対称)。
+  await requireFeatureEnabled("reservation");
 
   // proxy（middleware）が `?token=...` を HttpOnly cookie に転写済み。
   // ここでは cookie のみ読み、URL クエリにトークンを残さない（ログ・履歴漏洩遮断）。

@@ -3,6 +3,11 @@ import { describe, expect, test, mock, beforeEach } from "bun:test";
 describe("GET /api/calendar/event/[registrationId]", () => {
   beforeEach(() => {
     mock.restore();
+    // route が冒頭で isFeatureEnabled('events') を呼ぶため (FEAT-3PLANE-04)、
+    // features/check を feature ON で mock。個別 test はこの上に上書きできる。
+    mock.module("@/shared/lib/features/check", () => ({
+      isFeatureEnabled: () => Promise.resolve(true),
+    }));
   });
 
   test("returns 401 when not authenticated", async () => {
