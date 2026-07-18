@@ -262,10 +262,22 @@ export async function updateTwoWaySyncSettings(
 export async function saveGoogleCalendarWebhookToken(
   token: string,
 ): Promise<void> {
+  let encryptedToken: string;
+  try {
+    encryptedToken = encrypt(token, {
+      purpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarWebhookToken,
+    });
+  } catch {
+    throw new DomainError(
+      "Webhookトークンの暗号化に失敗しました。ENCRYPTION_KEYが設定されていることを確認してください。",
+      "VALIDATION",
+    );
+  }
+
   await prisma.settings.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", googleCalendarWebhookToken: token },
-    update: { googleCalendarWebhookToken: token },
+    create: { id: "singleton", googleCalendarWebhookToken: encryptedToken },
+    update: { googleCalendarWebhookToken: encryptedToken },
   });
 }
 

@@ -1526,7 +1526,7 @@ model Settings {
   googleCalendarWebhookChannelId  String? // Webhook チャンネルID
   googleCalendarWebhookResourceId String? // Webhook リソースID
   googleCalendarWebhookExpiration DateTime? // Webhook 有効期限
-  googleCalendarWebhookToken      String? // Webhook 認証トークン (x-goog-channel-token)
+  googleCalendarWebhookToken      String?   @db.Text // Webhook 認証トークン (x-goog-channel-token) // Encrypted
 
   // ==============================================
   // Instagram連携 - Enum化

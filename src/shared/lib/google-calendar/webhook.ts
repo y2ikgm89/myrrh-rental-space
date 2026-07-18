@@ -11,6 +11,7 @@ import {
   getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
 import {
+  clearGoogleCalendarWebhook,
   saveGoogleCalendarWebhook,
   saveGoogleCalendarWebhookToken,
 } from "@/shared/domain/settings/integration-commands";
@@ -154,14 +155,24 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
     return { success: true, renewed: false };
   }
 
-  // 2日前判定
-  const now = new Date();
-  const threshold = new Date(now);
-  threshold.setDate(threshold.getDate() + WEBHOOK_RENEWAL_THRESHOLD_DAYS);
+  // 認証トークン復号失敗（レガシー平文 / kid 不一致 / 破損）の場合は強制再登録する。
+  // getGoogleCalendarWebhookState は復号失敗時に token を null にして返すため、
+  // channelId は残っているのに token が null という状態はこの状況を意味する。
+  // route.ts の !settings.token 分岐で webhook 到達も 503 で拒否されているため、
+  // 期限を待たず即座に clear + 再登録して encrypt-at-rest ciphertext を書き直す。
+  const tokenNeedsReregistration =
+    !!webhookState.channelId && webhookState.token === null;
 
-  if (webhookState.expiration > threshold) {
-    // まだ更新不要
-    return { success: true, renewed: false };
+  if (!tokenNeedsReregistration) {
+    // 2日前判定
+    const now = new Date();
+    const threshold = new Date(now);
+    threshold.setDate(threshold.getDate() + WEBHOOK_RENEWAL_THRESHOLD_DAYS);
+
+    if (webhookState.expiration > threshold) {
+      // まだ更新不要
+      return { success: true, renewed: false };
+    }
   }
 
   try {
@@ -180,6 +191,14 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
           },
         });
       });
+    }
+
+    // トークン復号失敗による強制再登録では、setupWebhookWatch が新チャネルを
+    // 登録する前に古いレコードをクリアする。これは saveGoogleCalendarWebhookToken
+    // 直後に setupWebhookWatch が Google 側 channel を作るまで一瞬 token / channel が
+    // 不整合になる時間帯を作らないため。
+    if (tokenNeedsReregistration) {
+      await clearGoogleCalendarWebhook();
     }
 
     // 新しいWebhookを設定（getAppUrl は production で env 未設定なら throw）
