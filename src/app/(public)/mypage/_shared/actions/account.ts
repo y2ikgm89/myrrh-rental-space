@@ -1,11 +1,15 @@
 "use server";
 
 import { headers } from "next/headers";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import {
   createMutationError,
   type MutationResult,
@@ -174,6 +178,37 @@ export async function deleteAccountAction(
       headers: await headers(),
       body: { callbackURL: "/" },
     });
+
+    // SEC-MYPAGE-02: 実削除は本人が確認メールリンクを踏んだ時点
+    // (Better Auth 内 delete-user callback) に発生するが、この Action が
+    // 呼ばれた時点で「顧客が自らアカウント削除を申請した」意思が確定するため、
+    // customer-mypage 経路の証跡として AuditLog を残す。実削除の side-effect
+    // (afterDelete で site-wide cache invalidation) は customer-auth.ts 側で
+    // 実施済み。fire-and-forget で書込失敗は削除申請自体を巻き戻さない。
+    // buildAuditRequestContext も含めて IIFE 全体を wrap することで context 取得
+    // 側の失敗も fireAndForget の logError に集約する。
+    fireAndForget(
+      (async () => {
+        const request = await buildAuditRequestContext();
+        await createAuditLogRecord({
+          userId: session.user.id,
+          action: AuditAction.DELETE,
+          resource: "customer",
+          resourceId: customer.id,
+          metadata: {
+            channel: "customer-mypage",
+            operation: "customer_account_delete_requested",
+            ip: request.ip,
+            userAgent: request.userAgent,
+          },
+        });
+      })(),
+      {
+        operation: "auditCustomerAccountDeleteRequest",
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+      },
+    );
 
     return null;
   } catch (error) {

@@ -13,11 +13,13 @@ mock.module("next/cache", () => ({
   revalidateTag: mock(() => undefined),
 }));
 
-const { invalidateReservationCaches } =
+const { invalidateReservationCaches, invalidateReservationSeriesCaches } =
   await import("@/shared/lib/cache/reservation-cache");
 
 const RESERVATION_ID = "res-1";
 const CUSTOMER_ID = "cust-1";
+const SERIES_ID = "series-1";
+const INSTANCE_IDS = ["inst-1", "inst-2", "inst-3"];
 
 describe("invalidateReservationCaches", () => {
   beforeEach(() => {
@@ -77,5 +79,71 @@ describe("invalidateReservationCaches", () => {
       expect(updateTagMock).not.toHaveBeenCalledWith(CACHE_TAGS.COUPONS);
       expect(updateTagMock).toHaveBeenCalledTimes(4);
     });
+  });
+});
+
+// -----------------------------------------------------------------------------
+// invalidateReservationSeriesCaches (CRITIC-5)
+//
+// series 経路で dead tag `reservations-<seriesId>` を emit しないことを固定する。
+// 「seriesId は tag emit の材料にしない、代わりに instance detail を必要に応じて
+// 展開する」という契約を実測で保証する。
+// -----------------------------------------------------------------------------
+describe("invalidateReservationSeriesCaches (CRITIC-5)", () => {
+  beforeEach(() => {
+    updateTagMock.mockClear();
+  });
+
+  test("最小: RESERVATIONS + calendar + CUSTOMERS の 3 タグを emit する (dead tag 無し)", () => {
+    invalidateReservationSeriesCaches(SERIES_ID, null);
+
+    expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.RESERVATIONS);
+    expect(updateTagMock).toHaveBeenCalledWith(
+      getCacheTag.reservations.calendar(),
+    );
+    expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.CUSTOMERS);
+    expect(updateTagMock).toHaveBeenCalledTimes(3);
+
+    // CRITIC-5: 以前の regression では `reservations-<seriesId>` が dead tag
+    // として emit されていた。この関数では絶対に emit されないことを固定。
+    expect(updateTagMock).not.toHaveBeenCalledWith(
+      getCacheTag.reservations.detail(SERIES_ID),
+    );
+  });
+
+  test("customerId 指定時は customers.detail も emit する", () => {
+    invalidateReservationSeriesCaches(SERIES_ID, CUSTOMER_ID);
+
+    expect(updateTagMock).toHaveBeenCalledWith(
+      getCacheTag.customers.detail(CUSTOMER_ID),
+    );
+    expect(updateTagMock).toHaveBeenCalledTimes(4);
+  });
+
+  test("options.instanceIds で各 instance detail タグを emit する", () => {
+    invalidateReservationSeriesCaches(SERIES_ID, CUSTOMER_ID, {
+      instanceIds: INSTANCE_IDS,
+    });
+
+    for (const instanceId of INSTANCE_IDS) {
+      expect(updateTagMock).toHaveBeenCalledWith(
+        getCacheTag.reservations.detail(instanceId),
+      );
+    }
+    // 3 (base) + 1 (customer.detail) + 3 (instances)
+    expect(updateTagMock).toHaveBeenCalledTimes(7);
+    // dead tag は emit しない
+    expect(updateTagMock).not.toHaveBeenCalledWith(
+      getCacheTag.reservations.detail(SERIES_ID),
+    );
+  });
+
+  test("options.coupons で COUPONS を追加 emit する", () => {
+    invalidateReservationSeriesCaches(SERIES_ID, CUSTOMER_ID, {
+      coupons: true,
+    });
+
+    expect(updateTagMock).toHaveBeenCalledWith(CACHE_TAGS.COUPONS);
+    expect(updateTagMock).toHaveBeenCalledTimes(5);
   });
 });

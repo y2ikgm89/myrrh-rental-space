@@ -21,7 +21,10 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
+import {
+  invalidateReservationCaches,
+  invalidateReservationSeriesCaches,
+} from "@/shared/lib/cache/reservation-cache";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
@@ -215,12 +218,18 @@ export async function cancelReservationSeriesAction(
             cancelledReservationIds: cancelled.cancelledReservationIds,
           };
         },
-        afterSuccess: () => {
+        afterSuccess: (payload) => {
           // series 全体のキャンセルは複数 instance を対象にするため customer id は
           // ここでは特定できない (Task 13 の command が seriesId から解決)。
           // cache は全域で invalidate する保守的方針で、他予約検索の stale を防ぐ。
-          invalidateReservationCaches(data.seriesId, null, {
+          //
+          // CRITIC-5: 以前は seriesId を `invalidateReservationCaches` の
+          // reservationId slot に流し込んで `reservations-<seriesId>` という
+          // dead tag を emit していた。command から返る cancelledReservationIds
+          // をそのまま instance detail タグに展開する。
+          invalidateReservationSeriesCaches(data.seriesId, null, {
             coupons: false,
+            instanceIds: payload.cancelledReservationIds,
           });
         },
         resolveAuditResourceId: () => data.seriesId,

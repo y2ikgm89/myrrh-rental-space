@@ -3007,6 +3007,43 @@ describe("architecture boundaries", () => {
     });
   });
 
+  describe("ReservationSeries キャッシュ無効化の SSoT (CRITIC-5 再発防止)", () => {
+    // `invalidateReservationCaches(reservationId, customerId, ...)` の第一引数
+    // (reservationId) に seriesId を流し込むと、`getCacheTag.reservations.detail`
+    // が `reservations-<seriesId>` という producer なしの dead tag を emit する。
+    // site-wide `RESERVATIONS` タグでも invalidate 対象は覆えるため現状は
+    // silent regression だが、detail-only invalidator を分離した瞬間 stale が
+    // 表面化する。series 経路は `invalidateReservationSeriesCaches` を使うこと。
+    //
+    // grep gate: `invalidateReservationCaches(` の第一引数に `series` を含む
+    // 識別子 (seriesId / data.seriesId / parsedId.seriesId 等) を渡している箇所を
+    // 0 件強制する。単純な pattern check だが、call site 側の変数名を
+    // `seriesId` に統一する規律で十分に slip を捕まえられる。
+    test("invalidateReservationCaches の reservationId slot に *seriesId* 変数を渡さない", () => {
+      const OFFENDER_RE =
+        /\binvalidateReservationCaches\s*\(\s*[A-Za-z0-9_.]*[Ss]eriesId\b/;
+      // 行コメント / ブロックコメントを剥がしてから grep する
+      // (説明コメント内の pattern が false positive にならないようにする)。
+      const stripComments = (source: string): string => {
+        return source
+          .replace(/\/\*[\s\S]*?\*\//g, "") // block comment
+          .replace(/(^|[^:])\/\/[^\n]*/g, "$1"); // line comment (`http://` は除外)
+      };
+      const offenders: string[] = [];
+      for (const file of collectSourceFiles(SRC_ROOT)) {
+        if (!/\.(ts|tsx)$/u.test(file)) continue;
+        const source = readFileSync(file, "utf8");
+        if (OFFENDER_RE.test(stripComments(source))) {
+          offenders.push(relative(ROOT, file));
+        }
+      }
+      expect(
+        offenders,
+        `invalidateReservationCaches の reservationId slot に seriesId 変数を渡している箇所があります。series 経路は @/shared/lib/cache/reservation-cache の invalidateReservationSeriesCaches を使ってください (CRITIC-5)。`,
+      ).toEqual([]);
+    });
+  });
+
   describe("実 DB integration テストの SERIAL_DB_TESTS 登録 (TEST-01 再発防止)", () => {
     // `.claude/rules/testing-unit.md` の SSoT 契約:「新規の実 DB テストは
     // SERIAL_DB_TESTS にフルパス登録必須（未登録だと parallel bucket に入り共有 DB で

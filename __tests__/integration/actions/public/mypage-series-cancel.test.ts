@@ -152,8 +152,10 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
 }));
 
 const mockInvalidateReservationCaches = mock(() => undefined);
+const mockInvalidateReservationSeriesCaches = mock(() => undefined);
 mock.module("@/shared/lib/cache/reservation-cache", () => ({
   invalidateReservationCaches: mockInvalidateReservationCaches,
+  invalidateReservationSeriesCaches: mockInvalidateReservationSeriesCaches,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -198,6 +200,7 @@ beforeEach(async () => {
     Promise.resolve({ success: true, payload: { cancelledCount: 3 } }),
   );
   mockInvalidateReservationCaches.mockClear();
+  mockInvalidateReservationSeriesCaches.mockClear();
   const module =
     await import("@/app/(public)/mypage/_shared/actions/reservation-series");
   cancelReservationSeriesCustomerAction =
@@ -291,10 +294,13 @@ describe("cancelReservationSeriesCustomerAction (Phase B.2.1 Task A)", () => {
     expect(isMutationError(result)).toBe(true);
     if (isMutationError(result))
       expect(result.error).toBe("定期予約が見つかりません");
+    // CRITIC-5: 以前は invalidateReservationCaches を呼んでいたが、series 経路
+    // では invalidateReservationSeriesCaches に切り替え済み (dead tag 防止)。
+    expect(mockInvalidateReservationSeriesCaches).not.toHaveBeenCalled();
     expect(mockInvalidateReservationCaches).not.toHaveBeenCalled();
   });
 
-  test("success: cancelledCount 返却 + invalidateReservationCaches 呼出", async () => {
+  test("success: cancelledCount 返却 + invalidateReservationSeriesCaches 呼出 (CRITIC-5)", async () => {
     const result = await cancelReservationSeriesCustomerAction(
       VALID_SERIES_ID,
       "都合により",
@@ -303,12 +309,15 @@ describe("cancelReservationSeriesCustomerAction (Phase B.2.1 Task A)", () => {
     expect(isMutationError(result)).toBe(false);
     if (!isMutationError(result)) expect(result.cancelledCount).toBe(3);
     expect(mockCancelSeries).toHaveBeenCalledTimes(1);
-    expect(mockInvalidateReservationCaches).toHaveBeenCalledTimes(1);
-    expect(mockInvalidateReservationCaches).toHaveBeenCalledWith(
+    // CRITIC-5: series 経路は invalidateReservationSeriesCaches を呼ぶこと。
+    // dead tag `reservations-<seriesId>` を emit しない invalidator を使う。
+    expect(mockInvalidateReservationSeriesCaches).toHaveBeenCalledTimes(1);
+    expect(mockInvalidateReservationSeriesCaches).toHaveBeenCalledWith(
       VALID_SERIES_ID,
       "customer-001",
       { coupons: true },
     );
+    expect(mockInvalidateReservationCaches).not.toHaveBeenCalled();
   });
 
   test("domain 呼出しに (seriesId, customerId, cancellationReason, request) が渡る (channel は domain 側で 'customer-mypage' 固定)", async () => {
