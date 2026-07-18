@@ -7,6 +7,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { AddToCalendar } from "@/public/components/ui/add-to-calendar";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { verifyCompleteToken } from "@/shared/lib/reservation-complete-token";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
@@ -33,6 +34,12 @@ export default async function ReservationCompletePage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-04: /reservation と対称に reservation feature OFF 時は 404。
+  // 完了ページはトークン検証で予約詳細を露出するため、feature OFF 時に
+  // 残しておくと「予約は無効化されているが完了画面だけ生きている」という
+  // 可視性契約破りになる。
+  await requireFeatureEnabled("reservation");
 
   const sp = await searchParams;
   const token = typeof sp["token"] === "string" ? sp["token"] : null;
