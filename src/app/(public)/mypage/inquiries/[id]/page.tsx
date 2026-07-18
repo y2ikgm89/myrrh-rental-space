@@ -11,6 +11,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { getCustomerInquiryById } from "../../_lib/inquiry-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { Badge } from "@/public/components/design-system/badge";
@@ -33,6 +34,9 @@ export default async function MypageInquiryDetailPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-04: 一覧ページと同じ contact gate。
+  await requireFeatureEnabled("contact");
 
   const { id } = await params;
 
