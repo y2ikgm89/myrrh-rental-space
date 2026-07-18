@@ -2,18 +2,37 @@
  * 予約キャンセル後の副作用を統一的に実行する。
  *
  * 会員（マイページ）/ ゲスト（メールリンク）/ 管理者（管理画面）の全キャンセル経路が
- * 同じ副作用チェーンを通ることを保証する SSoT。各副作用は `fireAndForget` 並列で
- * 投げ、個別失敗は `logError` で記録（メール送信失敗で監査ログが落ちる等の連鎖を避ける）。
+ * 同じ副作用チェーンを通ることを保証する SSoT。
+ *
+ * ## CRITIC-6 fix: 副作用 outcome を AuditLog に構造化記録する
+ *
+ * 以前は各副作用（refund / GCal / メール / notification / SmartLock）を個別に
+ * `fireAndForget` で束ねていたため、Resend suppression / GCal 429 / SwitchBot
+ * 通信失敗などが silent no-op で握りつぶされ、mypage UI は「キャンセル完了」を
+ * 表示するのに顧客側は確認メールを受け取っていない状態になり、サポートチケットの
+ * 典型的な発生経路が観測不能だった。
+ *
+ * 現在は次の構造にしてある:
+ *   1. 各副作用を run*Step ヘルパーに分離し、内部で await + try/catch して
+ *      `CancellationEffectOutcome`（`status: "ok" | "skipped" | "error"`）を返す。
+ *      個別 error は従来通り `logError` に詳細（category / severity / context）を残す
+ *      （観測用 Cloud Logging と AuditLog の 2 系統に流す）。
+ *   2. 全副作用の outcome を単一の AuditLog metadata `sideEffects` に集約して
+ *      1 レコード書く。運用は AuditLog 1 件で「refund は sent / 顧客メールは
+ *      Resend suppression で skipped」といった発行結果を辿れる。
+ *   3. mypage レスポンス latency を維持するため、`applyCancellationSideEffects`
+ *      本体では reservation fetch のみ await し、副作用チェーン全体を
+ *      `fireAndForget` で `after()` に委譲する。以前の各副作用個別の
+ *      fireAndForget と同じレスポンスタイム特性を保つ。
  *
  * 含まれる副作用:
- *   1. Stripe refund（`paymentStatus === PAID` のときのみ自動発火）
+ *   1. Stripe refund（`paymentStatus === PAID` / `PARTIALLY_REFUNDED` のときのみ発火）
  *   2. Google Calendar 同期イベント削除（`googleCalendarEventId` があるときのみ）
  *   3. 顧客向けキャンセル確認メール（CANCEL ICS 添付）
  *   4. 管理者向け管理者通知メール
  *   5. 管理者向け in-app 通知（reason 含む）
- *   6. AuditLog 書き込み（actor / channel / IP / UA を記録）
- *   7. SwitchBotスマートロックの発行済みパスコード失効（deleteKey、対象デバイス無し/
- *      未発行なら no-op。失敗分は cleanup cron がフォールバック回収する）
+ *   6. AuditLog 書き込み（actor / channel / IP / UA + sideEffects outcomes）
+ *   7. SwitchBot スマートロックの発行済みパスコード失効
  *
  * 呼び出し条件:
  *   `applyCancellation` が `success: true` を返した後にだけ呼ぶ。本関数は予約データの
@@ -64,6 +83,7 @@ import {
 import { PaymentStatus, type ReservationStatus } from "@generated/prisma/enums";
 import type {
   BulkReservationCancelledEmailData,
+  EmailResult,
   ReservationEmailData,
 } from "@/shared/lib/email/types";
 
@@ -115,6 +135,35 @@ export interface CancellationSideEffectInput {
    */
   refundPolicySnapshot?: RefundPolicy | null;
 }
+
+// -----------------------------------------------------------------------------
+// CRITIC-6: 副作用 outcome 型と集約 metadata 形式
+// -----------------------------------------------------------------------------
+
+/** 単一副作用の実行結果。AuditLog metadata と in-code のフロー分岐に共通で使う。 */
+export type CancellationEffectOutcome = {
+  /**
+   * - `"ok"` — 副作用が実際に外部へ反映された（メール送信受理 / GCal 削除 / DB 書込成功）
+   * - `"skipped"` — 意図的に発火しなかった（対象データ無し / suppress flag / feature 無効 /
+   *   Resend suppression list / policy=0% など）
+   * - `"error"` — 発火したが失敗した（外部 API エラー / DB エラー / 予期せぬ throw）
+   */
+  status: "ok" | "skipped" | "error";
+  /** skipped / error の場合の理由（machine-readable enum-like 文字列を優先）。 */
+  reason?: string;
+  /** amount / messageId / durationMs 等の副次情報（AuditLog に直接乗せる）。 */
+  detail?: Record<string, string | number | boolean | null>;
+};
+
+/** 全副作用の outcome を並べた集約構造。AuditLog metadata.sideEffects に格納される。 */
+export type CancellationSideEffectOutcomes = {
+  refund: CancellationEffectOutcome;
+  gcal: CancellationEffectOutcome;
+  customerEmail: CancellationEffectOutcome;
+  adminEmail: CancellationEffectOutcome;
+  notification: CancellationEffectOutcome;
+  smartLock: CancellationEffectOutcome;
+};
 
 const CHANNEL_TO_CANCELLED_BY: Record<CancelChannel, CancelledByType> = {
   admin: CANCELLED_BY.ADMIN,
@@ -228,11 +277,342 @@ function channelLabel(channel: CancelChannel): string {
   }
 }
 
+// -----------------------------------------------------------------------------
+// 個別副作用ヘルパー: 実行 + outcome capture。throw しない (orchestrator 保護)。
+// -----------------------------------------------------------------------------
+
+function mapEmailResultToOutcome(
+  result: EmailResult,
+): CancellationEffectOutcome {
+  if (result.ok) {
+    return { status: "ok", detail: { messageId: result.messageId } };
+  }
+  if (result.reason === "disabled") {
+    return { status: "skipped", reason: "disabled_or_suppressed" };
+  }
+  return { status: "error", reason: result.error };
+}
+
+async function runRefundStep(args: {
+  input: CancellationSideEffectInput;
+  reservation: SideEffectReservation;
+  requiresRefund: boolean;
+  wasPaid: boolean;
+}): Promise<CancellationEffectOutcome> {
+  const { input, reservation, requiresRefund, wasPaid } = args;
+
+  if (!requiresRefund) {
+    return {
+      status: "skipped",
+      reason: wasPaid ? "noPaymentIntent" : "notPaid",
+    };
+  }
+
+  try {
+    // PERF-02: bulk 経路が snapshot を渡してきたらそれを使う (N+1 回避)。
+    // 単発 caller は snapshot 未指定 → per-call で Settings.findUnique (従前挙動)。
+    const policy: RefundPolicy | null =
+      input.refundPolicySnapshot !== undefined
+        ? input.refundPolicySnapshot
+        : parseRefundPolicy(
+            (
+              await prisma.settings.findUnique({
+                where: { id: "singleton" },
+                select: { refundPolicy: true },
+              })
+            )?.refundPolicy,
+          );
+
+    let refundAmount: number | undefined;
+    if (policy !== null && reservation.totalPrice !== null) {
+      refundAmount = calculateRefundAmount(
+        policy,
+        Number(reservation.totalPrice),
+        reservation.startTime,
+        new Date(),
+      );
+    }
+
+    if (refundAmount !== undefined && refundAmount <= 0) {
+      // Policy による refundRate=0% → 返金 skip。運用側の「要返金確認」通知タイトル
+      // (下段の requiresRefund 分岐) はそのまま昇格させて、admin 側で手動対応を明示的に促す。
+      logError(new Error("Auto refund skipped: policy refund rate is 0%"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "autoRefundOnCancel",
+          reservationId: input.reservationId,
+          reason: "policyRefundRateZero",
+        },
+      });
+      return { status: "skipped", reason: "policyRefundRateZero" };
+    }
+
+    const result = await refundReservationPaymentCommand({
+      reservationId: input.reservationId,
+      actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
+      // UA-HORIZ-04: 起点のキャンセル request context (ip / userAgent) を継承し、
+      // AUTO_ON_CANCEL 経由の refund AuditLog にも forensic ヘッダーを載せる。
+      request: {
+        ip: input.request.ip,
+        userAgent: input.request.userAgent,
+      },
+      ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
+    });
+    return {
+      status: "ok",
+      detail: {
+        refundAmount: result.refundAmount,
+        cumulativeAmount: result.cumulativeAmount,
+        newPaymentStatus: result.newPaymentStatus,
+      },
+    };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "autoRefundOnCancel",
+        reservationId: input.reservationId,
+        channel: input.channel,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
+async function runGcalStep(args: {
+  input: CancellationSideEffectInput;
+  reservation: SideEffectReservation;
+}): Promise<CancellationEffectOutcome> {
+  const { input, reservation } = args;
+  if (input.suppress?.gcalDelete) {
+    return { status: "skipped", reason: "suppressed_by_bulk" };
+  }
+  if (!reservation.googleCalendarEventId) {
+    return { status: "skipped", reason: "noEventId" };
+  }
+  try {
+    const result = await deleteCalendarSync(
+      input.reservationId,
+      reservation.googleCalendarEventId,
+    );
+    if (result.success) {
+      return { status: "ok" };
+    }
+    logError(new Error(`deleteCalendarSync failed: ${result.error}`), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "deleteCalendarSync",
+        reservationId: input.reservationId,
+      },
+    });
+    return { status: "error", reason: result.error };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "deleteCalendarSync",
+        reservationId: input.reservationId,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
+async function runCustomerEmailStep(args: {
+  input: CancellationSideEffectInput;
+  payload: ReservationEmailData;
+}): Promise<CancellationEffectOutcome> {
+  const { input, payload } = args;
+  if (input.suppress?.customerEmail) {
+    return { status: "skipped", reason: "suppressed_by_bulk" };
+  }
+  try {
+    const result = await sendReservationCancelledEmail(payload);
+    return mapEmailResultToOutcome(result);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: "sendCancellationEmails",
+        reservationId: input.reservationId,
+        channel: input.channel,
+        recipient: "customer",
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
+async function runAdminEmailStep(args: {
+  input: CancellationSideEffectInput;
+  payload: ReservationEmailData;
+}): Promise<CancellationEffectOutcome> {
+  const { input, payload } = args;
+  if (input.suppress?.adminEmail) {
+    return { status: "skipped", reason: "suppressed_by_bulk" };
+  }
+  try {
+    const result = await sendReservationAdminNotification(payload, "cancel");
+    return mapEmailResultToOutcome(result);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: "sendCancellationEmails",
+        reservationId: input.reservationId,
+        channel: input.channel,
+        recipient: "admin",
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
+async function runNotificationStep(args: {
+  input: CancellationSideEffectInput;
+  requiresRefund: boolean;
+}): Promise<CancellationEffectOutcome> {
+  const { input, requiresRefund } = args;
+  const notificationTitle = requiresRefund
+    ? "PAID 予約のキャンセル — 要返金確認"
+    : `予約キャンセル（${channelLabel(input.channel)}）`;
+  const notificationMessage = input.cancellationReason
+    ? `理由: ${input.cancellationReason}`
+    : "理由: 入力なし";
+
+  try {
+    await createNotificationCommand({
+      type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
+      title: notificationTitle,
+      message: notificationMessage,
+      resourceType: "reservation",
+      resourceId: input.reservationId,
+    });
+    return { status: "ok" };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "createCancellationNotification",
+        reservationId: input.reservationId,
+        channel: input.channel,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
+async function runSmartLockStep(
+  input: CancellationSideEffectInput,
+): Promise<CancellationEffectOutcome> {
+  try {
+    await revokeSmartLockPasscodesForReservation(input.reservationId);
+    return { status: "ok" };
+  } catch (err) {
+    const normalized = normalizeError(err);
+    logError(normalized, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: "revokeSmartLockPasscodesOnCancel",
+        reservationId: input.reservationId,
+        channel: input.channel,
+      },
+    });
+    return { status: "error", reason: normalized.message };
+  }
+}
+
+/**
+ * 副作用チェーンの本体。全 sub-effect を並列実行し、outcome を集約 AuditLog に書く。
+ * 個別 sub-effect の失敗は run*Step 内で完結し、throw をここまで伝播させない。
+ * `applyCancellationSideEffects` から `fireAndForget` 越しに `after()` 内で実行される。
+ */
+async function runCancellationSideEffectsAndFlushAudit(args: {
+  input: CancellationSideEffectInput;
+  reservation: SideEffectReservation;
+  payload: ReservationEmailData;
+  wasPaid: boolean;
+  requiresRefund: boolean;
+}): Promise<void> {
+  const { input, reservation, payload, wasPaid, requiresRefund } = args;
+
+  // 副作用は互いに独立。並列で発火し、それぞれ独立に outcome 化する。
+  const [refund, gcal, customerEmail, adminEmail, notification, smartLock] =
+    await Promise.all([
+      runRefundStep({ input, reservation, requiresRefund, wasPaid }),
+      runGcalStep({ input, reservation }),
+      runCustomerEmailStep({ input, payload }),
+      runAdminEmailStep({ input, payload }),
+      runNotificationStep({ input, requiresRefund }),
+      runSmartLockStep(input),
+    ]);
+
+  const outcomes: CancellationSideEffectOutcomes = {
+    refund,
+    gcal,
+    customerEmail,
+    adminEmail,
+    notification,
+    smartLock,
+  };
+
+  try {
+    await createAuditLogRecord({
+      ...(input.actorUserId ? { userId: input.actorUserId } : {}),
+      action: AuditAction.UPDATE,
+      resource: "reservation",
+      resourceId: input.reservationId,
+      newValue: {
+        status: "CANCELLED" satisfies ReservationStatus,
+        cancelledByType: CHANNEL_TO_CANCELLED_BY[input.channel],
+        cancellationReason: input.cancellationReason,
+      },
+      metadata: {
+        channel: input.channel,
+        ip: input.request.ip,
+        userAgent: input.request.userAgent,
+        ...(input.request.tokenFingerprint
+          ? { tokenFingerprint: input.request.tokenFingerprint }
+          : {}),
+        requiresRefund,
+        wasPaid,
+        sideEffects: outcomes,
+      },
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "auditLogCancellation",
+        reservationId: input.reservationId,
+        channel: input.channel,
+      },
+    });
+  }
+}
+
 /**
  * キャンセル後の副作用統一実行。
  *
- * fireAndForget を集約することで、呼び出し側 action を読みやすく保ち、
- * 副作用 1 つの追加・除去が全経路に等しく反映されることを保証する。
+ * reservation fetch 以外は `fireAndForget` で `after()` に委譲するため、
+ * 呼び出し側の response latency は fetch 時間のみ（従来と同じ）。
+ * 全副作用の outcome は集約 AuditLog metadata (`sideEffects`) に記録され、
+ * Resend suppression / GCal 429 / SwitchBot 通信失敗などが「完了表示 vs 実挙動」の
+ * 乖離としてカスタマーサポート起点で観測可能になる（CRITIC-6）。
  */
 export async function applyCancellationSideEffects(
   input: CancellationSideEffectInput,
@@ -263,209 +643,24 @@ export async function applyCancellationSideEffects(
     reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
   const requiresRefund = wasPaid && reservation.stripePaymentIntentId !== null;
 
-  // 1. Stripe refund (task #9 PR#5)
-  //   - actorType=AUTO_ON_CANCEL
-  //   - Settings.refundPolicy が設定されていれば tier ベース計算で amount を決定
-  //   - policy 未設定なら amount 未指定 (残額全額を返金、後方互換動作)
-  //   - policy 適用結果が 0 円なら refund 全 skip (キャンセル自体は続行、in-app 通知の
-  //     「要返金確認」タイトルは維持して運用側の判断を仰ぐ)
-  if (requiresRefund) {
-    // PERF-02: bulk 経路が snapshot を渡してきたらそれを使う (N+1 回避)。
-    // 単発 caller は snapshot 未指定 → per-call で Settings.findUnique (従前挙動)。
-    const policy: RefundPolicy | null =
-      input.refundPolicySnapshot !== undefined
-        ? input.refundPolicySnapshot
-        : parseRefundPolicy(
-            (
-              await prisma.settings.findUnique({
-                where: { id: "singleton" },
-                select: { refundPolicy: true },
-              })
-            )?.refundPolicy,
-          );
-
-    // policy 未設定 (null) → 残額全額返金 (現状の後方互換動作を維持)
-    // policy 設定あり → tier 選定で amount 計算 (0 なら refund skip)
-    let refundAmount: number | undefined;
-    if (policy !== null && reservation.totalPrice !== null) {
-      refundAmount = calculateRefundAmount(
-        policy,
-        Number(reservation.totalPrice),
-        reservation.startTime,
-        new Date(),
-      );
-    }
-
-    if (refundAmount === undefined || refundAmount > 0) {
-      fireAndForget(
-        refundReservationPaymentCommand({
-          reservationId: input.reservationId,
-          actorType: REFUNDED_BY_TYPE.AUTO_ON_CANCEL,
-          // UA-HORIZ-04: 起点のキャンセル request context (ip / userAgent) を継承し、
-          // AUTO_ON_CANCEL 経由の refund AuditLog にも forensic ヘッダーを載せる。
-          // `CancelRequestContext` は tokenFingerprint も持つが、refund command は
-          // ip / userAgent のみ受け取る (session hijack 検知に十分)。
-          request: {
-            ip: input.request.ip,
-            userAgent: input.request.userAgent,
-          },
-          ...(refundAmount !== undefined ? { amount: refundAmount } : {}),
-        }).then(() => {
-          return;
-        }),
-        {
-          operation: "autoRefundOnCancel",
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            reservationId: input.reservationId,
-            channel: input.channel,
-            ...(refundAmount !== undefined
-              ? { policyRefundAmount: refundAmount }
-              : {}),
-          },
-        },
-      );
-    } else {
-      // Policy による refundRate=0% → 返金 skip。運用側の「要返金確認」通知タイトル
-      // (下段の requiresRefund 分岐) はそのまま昇格させて、admin 側で手動対応を明示的に促す。
-      logError(new Error("Auto refund skipped: policy refund rate is 0%"), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.LOW,
-        context: {
-          operation: "autoRefundOnCancel",
-          reservationId: input.reservationId,
-          reason: "policyRefundRateZero",
-        },
-      });
-    }
-  }
-
-  // 2. GCal 同期イベント削除（Phase B.2: suppress.gcalDelete で抑止。bulk 経路は
-  //    series の master event に対する 1 回操作に一本化するため individual delete は不要）
-  if (reservation.googleCalendarEventId && !input.suppress?.gcalDelete) {
-    fireAndForget(
-      deleteCalendarSync(
-        input.reservationId,
-        reservation.googleCalendarEventId,
-      ),
-      {
-        operation: "deleteCalendarSync",
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.LOW,
-        context: { reservationId: input.reservationId },
-      },
-    );
-  }
-
-  // 3 & 4. 顧客向けキャンセル確認メール + 管理者通知メール
-  // 個別にfireAndForgetする（Promise.allで束ねると片方の失敗でafter()の実行時間
-  // 延長がもう片方の送信完了を待たずに解除されうる。詳細はasync-utils.tsのafter()コメント参照）。
-  // Phase B.2: suppress.customerEmail / suppress.adminEmail で抑止（bulk 経路は集約
-  // メール 1 通に一本化するため per-instance 送信は不要、2N 通スパム防止）。
-  if (!input.suppress?.customerEmail) {
-    fireAndForget(sendReservationCancelledEmail(payload), {
-      operation: "sendCancellationEmails",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        reservationId: input.reservationId,
-        channel: input.channel,
-      },
-    });
-  }
-  if (!input.suppress?.adminEmail) {
-    fireAndForget(sendReservationAdminNotification(payload, "cancel"), {
-      operation: "sendCancellationEmails",
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        reservationId: input.reservationId,
-        channel: input.channel,
-      },
-    });
-  }
-
-  // 5. 管理者向け in-app 通知（PAID 自動返金時は要確認タイトルへ昇格）
-  const notificationTitle = requiresRefund
-    ? "PAID 予約のキャンセル — 要返金確認"
-    : `予約キャンセル（${channelLabel(input.channel)}）`;
-  const notificationMessage = input.cancellationReason
-    ? `理由: ${input.cancellationReason}`
-    : "理由: 入力なし";
-
   fireAndForget(
-    createNotificationCommand({
-      type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
-      title: notificationTitle,
-      message: notificationMessage,
-      resourceType: "reservation",
-      resourceId: input.reservationId,
+    runCancellationSideEffectsAndFlushAudit({
+      input,
+      reservation,
+      payload,
+      wasPaid,
+      requiresRefund,
     }),
     {
-      operation: "createCancellationNotification",
+      operation: "applyCancellationSideEffects",
       category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
+      severity: ErrorSeverity.MEDIUM,
       context: {
         reservationId: input.reservationId,
         channel: input.channel,
       },
     },
   );
-
-  // 6. AuditLog 書き込み（actor + channel + IP + UA + token fingerprint）
-  fireAndForget(
-    createAuditLogRecord({
-      ...(input.actorUserId ? { userId: input.actorUserId } : {}),
-      action: AuditAction.UPDATE,
-      resource: "reservation",
-      resourceId: input.reservationId,
-      newValue: {
-        status: "CANCELLED" satisfies ReservationStatus,
-        cancelledByType: CHANNEL_TO_CANCELLED_BY[input.channel],
-        cancellationReason: input.cancellationReason,
-      },
-      metadata: {
-        channel: input.channel,
-        ip: input.request.ip,
-        userAgent: input.request.userAgent,
-        ...(input.request.tokenFingerprint
-          ? { tokenFingerprint: input.request.tokenFingerprint }
-          : {}),
-        requiresRefund,
-        wasPaid,
-      },
-    }).catch((error: unknown) => {
-      logError(normalizeError(error), {
-        category: ErrorCategory.DATABASE,
-        severity: ErrorSeverity.HIGH,
-        context: {
-          operation: "auditLogCancellation",
-          reservationId: input.reservationId,
-        },
-      });
-    }),
-    {
-      operation: "auditLogCancellation",
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.HIGH,
-      context: {
-        reservationId: input.reservationId,
-        channel: input.channel,
-      },
-    },
-  );
-
-  // 7. スマートロックパスコード失効
-  fireAndForget(revokeSmartLockPasscodesForReservation(input.reservationId), {
-    operation: "revokeSmartLockPasscodesOnCancel",
-    category: ErrorCategory.EXTERNAL_API,
-    severity: ErrorSeverity.MEDIUM,
-    context: {
-      reservationId: input.reservationId,
-      channel: input.channel,
-    },
-  });
 }
 
 // =============================================================================
