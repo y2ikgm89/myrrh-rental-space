@@ -406,7 +406,8 @@ async function fulfillEventRegistrationPaymentAtomically(
   const isWaitlistOffer = session.metadata?.["source"] === "waitlist-offer";
 
   if (isWaitlistOffer) {
-    let confirmResult: Awaited<ReturnType<typeof confirmWaitlistOfferCommand>>;
+    let confirmResult:
+      Awaited<ReturnType<typeof confirmWaitlistOfferCommand>> | undefined;
     try {
       confirmResult = await confirmWaitlistOfferCommand({
         registrationId,
@@ -416,6 +417,16 @@ async function fulfillEventRegistrationPaymentAtomically(
       if (error instanceof DomainError) {
         // 既に CONFIRMED 済み（webhook 再送）/ 他経路で処理済み等、想定内の状態
         // 不一致は冪等に skip する（500 にすると Stripe が無限リトライする）。
+        //
+        // STRIPE-01 (HIGH) fix: ここで early return すると、初回 confirm 成功→
+        // 直後 claim 失敗 (DB 障害等) で Stripe が retry した際に retry 側の
+        // confirm が NOT_FOUND で throw → early return → claim が二度と呼ばれず
+        // paymentStatus=UNPAID/PENDING のまま焼き付く silent 会計 mismatch を
+        // 引き起こす。confirmResult=undefined のまま fall through して claim を
+        // 試行する (claimEventRegistrationAsPaid は status=CONFIRMED +
+        // paymentStatus IN [UNPAID, PENDING] の状態でのみ flip する厳格 guard
+        // 付きなので、既に PAID なら idempotent no-op、PENDING/UNPAID なら
+        // 正しく PAID に flip する)。
         logError(error, {
           category: ErrorCategory.VALIDATION,
           severity: ErrorSeverity.LOW,
@@ -425,12 +436,13 @@ async function fulfillEventRegistrationPaymentAtomically(
             sessionId: session.id,
           },
         });
-        return;
+        // fall through to claim recovery (confirmResult remains undefined)
+      } else {
+        throw error;
       }
-      throw error;
     }
 
-    if (confirmResult.registration.status === "EXPIRED") {
+    if (confirmResult && confirmResult.registration.status === "EXPIRED") {
       logError(
         new Error(
           "Waitlist offer payment succeeded but capacity recheck expired the offer — manual refund reconciliation required",
