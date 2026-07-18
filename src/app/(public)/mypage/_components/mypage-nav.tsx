@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Route } from "next";
+import { isMypageNavActive } from "./mypage-nav-active";
 
 /**
  * /mypage 配下のセクションナビ。
@@ -29,12 +30,6 @@ const NAV_ITEMS = [
   { href: "/mypage/settings", label: "設定" },
 ] satisfies readonly { href: Route; label: string }[];
 
-function isActive(pathname: string, href: string): boolean {
-  return href === "/mypage"
-    ? pathname === "/mypage"
-    : pathname.startsWith(href);
-}
-
 export function MypageNav() {
   const pathname = usePathname();
 
@@ -48,7 +43,9 @@ export function MypageNav() {
           <li key={item.href} className="md:shrink-0">
             <Link
               href={item.href}
-              {...(isActive(pathname, item.href) && { "aria-current": "page" })}
+              {...(isMypageNavActive(pathname, item.href) && {
+                "aria-current": "page",
+              })}
               className="flex min-h-[var(--touch-target-min)] items-center justify-center px-2 py-3 text-center text-sm text-muted-foreground underline decoration-2 decoration-transparent underline-offset-[6px] transition-colors hover:text-foreground aria-[current=page]:text-accent aria-[current=page]:decoration-accent md:whitespace-nowrap md:px-5 md:text-base md:tracking-[0.12em]"
             >
               {item.label}
