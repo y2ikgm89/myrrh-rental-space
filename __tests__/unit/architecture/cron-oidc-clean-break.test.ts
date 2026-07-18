@@ -24,6 +24,7 @@ describe("cron OIDC clean-break boundary", () => {
     "src/app/api/cron/receipt-backfill/route.ts",
     "src/app/api/cron/reservation-reminder/route.ts",
     "src/app/api/cron/smart-lock-cleanup/route.ts",
+    "src/app/api/cron/stripe-event-cleanup/route.ts",
     "src/app/api/cron/waitlist-expire/route.ts",
   ] as const;
 

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { cacheLife, cacheTag } from "next/cache";
 import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
@@ -12,10 +13,8 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import type {
-  TermsScope,
-  TermsScopeValue,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import type { TermsScopeValue } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 公開ページ向け規約クエリ
@@ -232,6 +231,76 @@ export async function getRequiredTermsByScope(
 }
 
 /**
+ * 顧客単位で LOGIN_SIGNUP scope の再同意が必要な規約一覧を返す。
+ *
+ * 差分検出は `TermsAgreement.contentHash` (同意時の sha256 スナップショット) と
+ * 現行 `TermsDocument.contentHtml` から on-the-fly で計算した sha256 の比較。
+ * hash 一致なら「同版に同意済み」と判定し skip、不一致 (=版違い) または agreement
+ * 未存在 (=cookie 消費失敗リカバリ、または scope 後付け追加) なら pending として返す。
+ *
+ * PII の customerId を含むため `"use cache"` は使えない (cache PII leak 監査)。
+ * safeFetch で fallback を空にしない: 「差分なし」と誤認して redirect gate をすり抜ける
+ * silent failure になるため、DB 例外は bubble させて mypage の error boundary で拾う
+ * (fail-closed)。
+ *
+ * 対象 scope が LOGIN_SIGNUP のみである理由: RESERVATION / INQUIRY /
+ * EVENT_REGISTRATION / RESERVATION_SERIES の各 scope は送信時に
+ * `assertAllRequiredTermsAgreed` で「その時点の最新必須規約全件」を強制するため、
+ * フォームを開いた時点で常に新版へ同意させる構造になっている。LOGIN_SIGNUP scope は
+ * 初回サインアップの `SIGNUP_TERMS_COOKIE` 消費でしか記録されないため、再同意 gate が
+ * 別途必要。
+ */
+export async function getReagreeRequiredTermsForCustomer(
+  customerId: string,
+): Promise<RequiredTerm[]> {
+  const requiredDocs = await prisma.termsDocument.findMany({
+    where: {
+      deletedAt: null,
+      isPublished: true,
+      scopes: { has: TermsScope.LOGIN_SIGNUP },
+    },
+    orderBy: [{ displayOrder: "asc" }, { title: "asc" }],
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      contentHtml: true,
+    },
+  });
+  if (requiredDocs.length === 0) return [];
+
+  const latestAgreements = await prisma.termsAgreement.findMany({
+    where: {
+      customerId,
+      scope: TermsScope.LOGIN_SIGNUP,
+      termsId: { in: requiredDocs.map((doc) => doc.id) },
+    },
+    orderBy: { agreedAt: "desc" },
+    distinct: ["termsId"],
+    select: { termsId: true, contentHash: true },
+  });
+  const agreedHashByTermsId = new Map(
+    latestAgreements.map((a) => [a.termsId, a.contentHash]),
+  );
+
+  const pending = requiredDocs.filter((doc) => {
+    const currentHash = createHash("sha256")
+      .update(doc.contentHtml)
+      .digest("hex");
+    return agreedHashByTermsId.get(doc.id) !== currentHash;
+  });
+
+  return toPlainArray(
+    pending.map((doc) => ({
+      id: doc.id,
+      slug: doc.slug,
+      title: doc.title,
+      contentHtml: doc.contentHtml,
+    })),
+  );
+}
+
+/**
  * `assertAllRequiredTermsAgreed` 専用の最小 tx クライアント型。
  *
  * Prisma 拡張クライアント（`$extends` 済み `prisma`、`src/shared/db/prisma.ts`）の
@@ -296,4 +365,35 @@ export async function assertAllRequiredTermsAgreed(
   if (hasMissing) {
     throw new DomainError("すべての必須規約への同意が必要です", "VALIDATION");
   }
+}
+
+/**
+ * 指定 customer + scope + termsIds のいずれかで TermsAgreement が既に記録済みかを返す。
+ *
+ * 用途: `consumeSignupTermsAction` (MYPAGE-AUTH-03) の retry idempotency guard。
+ * TermsAgreement には (customerId, scope, termsId) の DB uniqueness 制約が無いため、
+ * リトライ経路 (insert 成功後に cookie 削除が persist しなかった等) で同一 cookie を
+ * 再度消費すると duplicate row が積まれる。cookie 消費前に本関数で pre-check し、
+ * 既存があれば insert を skip して cookie だけ削除する (append-only 契約は維持)。
+ *
+ * `"use cache"` は付けない — LOGIN_SIGNUP の消費経路は書込直後の read-your-own-writes
+ * が必要で、Data Cache の incoming は許容できない。
+ */
+export async function hasTermsAgreementRecorded(input: {
+  readonly customerId: string;
+  readonly scope: TermsScope;
+  readonly termsIds: readonly string[];
+}): Promise<boolean> {
+  if (input.termsIds.length === 0) return false;
+
+  const found = await prisma.termsAgreement.findFirst({
+    where: {
+      customerId: input.customerId,
+      scope: input.scope,
+      termsId: { in: [...input.termsIds] },
+    },
+    select: { id: true },
+  });
+
+  return found !== null;
 }

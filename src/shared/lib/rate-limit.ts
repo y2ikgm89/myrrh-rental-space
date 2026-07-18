@@ -341,6 +341,31 @@ export const publicQueryRateLimiter: {
   reset: (token) => _publicQueryRateLimiterBase.reset(token),
 };
 
+// マイページからの初回メールアドレス登録の確認メール送信 (IP 単位、3 回/時)。
+// verification token を含む URL 付きメールをメール入力欄経由で任意アドレスへ
+// 送出できるため、外部への SMTP スパムに悪用されないよう厳しめの上限を敷く。
+// formSubmitRateLimiter (5/分) より狭い時間 × 少ない回数で二層目として機能する。
+export const emailVerificationRequestRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 3,
+});
+
+// 同上の「宛先メールアドレス単位」の追加バケット (2 回/時)。
+// IP-only だと同一人物が異なる IP から同じ new-email を大量に叩いて外部宛の
+// SMTP スパム化できる。`reservationByEmailRateLimiter` と同型の第二防壁で、
+// 宛先を canonical 正規化して token 化する。
+export const emailVerificationByEmailRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 2,
+});
+
+// マイページ email verification URL の GET 側連打対策 (token 単位、5 回/10 分)。
+// eventWaitlistConfirmRateLimiter と同型の「resource (token) 単位の第二防壁」。
+export const emailVerificationConfirmRateLimiter = createRateLimiter({
+  interval: 10 * 60 * 1000, // 10 分
+  maxRequests: 5,
+});
+
 // ゲストキャンセル「予約 ID 単位」の追加バケット（3 attempts / hour / reservation）。
 // IP-only の formSubmitRateLimiter だけだと Cloud Run multi-instance × XFF spoof で
 // 単一予約に対する分散攻撃が抜けるため、reservationId をキーにした第二防壁を貼る。

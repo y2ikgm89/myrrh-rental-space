@@ -824,12 +824,13 @@ model Customer {
   user   User?   @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
 
   // Relations
-  reservations       Reservation[]
-  reservationSeries  ReservationSeries[]
-  inquiries          Inquiry[]
-  reviews            SpaceReview[]
-  eventRegistrations EventRegistration[]
-  termsAgreements    TermsAgreement[]
+  reservations         Reservation[]
+  reservationSeries    ReservationSeries[]
+  inquiries            Inquiry[]
+  reviews              SpaceReview[]
+  eventRegistrations   EventRegistration[]
+  termsAgreements      TermsAgreement[]
+  pendingEmailChanges  PendingCustomerEmailChange[]
 
   @@index([lastName])
   @@index([firstName])
@@ -851,6 +852,36 @@ model Customer {
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_email_trgm_idx")
   @@index([companyName(ops: raw("gin_trgm_ops"))], type: Gin, map: "customers_company_name_trgm_idx")
   @@map("customers")
+}
+
+// ==============================================
+// PendingCustomerEmailChange (SETTINGS-02 followup)
+// ==============================================
+//
+// マイページからの初回 email 登録 (LINE OAuth で email scope 未付与顧客の
+// 詰み状態解消) を本人確認 URL 経由に限定するための短命トークン台帳。
+// PR #1217 の同時 uniqueness 検査 (未リンク顧客に既存の同 email 顧客が居ないこと)
+// はここで確認しつつ、Customer.email への実書込は URL クリック後の
+// /api/customer/verify-email 経由でのみ発生する。
+//
+// - id / tokenHash は verify Route Handler が hash 参照するため index を張る
+// - consumedAt は「クリック済み」を single-use で強制する (2 回目クリックは 410 相当)
+// - expiresAt は cron でなく verify Route Handler の compare で判定する
+//   (削除は次回の request 時に customerId 既存行を上書きするため蓄積しない)
+model PendingCustomerEmailChange {
+  id                String    @id @default(uuid()) @db.Uuid
+  customerId        String    @db.Uuid
+  customer          Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  newEmail          String    @db.VarChar(320)
+  newEmailCanonical String    @db.VarChar(320)
+  tokenHash         String    @unique @db.VarChar(64) // sha256 hex
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([customerId])
+  @@index([expiresAt])
+  @@map("pending_customer_email_changes")
 }
 
 // ==============================================
@@ -2326,4 +2357,38 @@ model SmartLockPasscode {
   @@unique([reservationId, deviceId])
   @@index([status, endTime])
   @@map("smart_lock_passcodes")
+}
+
+// =============================================================================
+// Stripe Webhook Event Dedup (STRIPE-DEDUP-A)
+// =============================================================================
+
+/// Stripe webhook event を id primary key で dedup する chokepoint テーブル。
+///
+/// Stripe 公式の "handle-duplicate-events" 推奨パターン
+/// (https://docs.stripe.com/webhooks#handle-duplicate-events) 実装。
+/// route handler は signature verification 直後に `create` を試み、`P2002`
+/// unique conflict なら「既に受領済み (in-flight retry or completed)」として
+/// 副作用なしで 200 短絡する。handler が全て成功した後に `processedAt` を書込。
+///
+/// 既存の updateMany claim guard (`claimReservationAsPaid` 等) は defense-in-depth
+/// として保持し、crash-recovery backstop として機能する (`processedAt` null で
+/// stuck した event は Stripe retry が再配送し、claim 側の idempotent 契約が
+/// 二重副作用を防止する)。
+///
+/// Retention: 90 日超は cron `/api/cron/stripe-event-cleanup` (STRIPE-DEDUP-B、
+/// follow-up PR) が定期削除する。
+model StripeEvent {
+  /// Stripe event.id (`evt_...`)。既に受領済み判定の primary key。
+  id          String    @id @db.VarChar(80)
+  /// event.type (`checkout.session.completed` 等)。監査/デバッグ用。
+  type        String    @db.VarChar(80)
+  /// signature verification 直後に record を作成した時刻 = 初回受領時刻。
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(6)
+  /// handler が全て成功して switch block を抜けた時刻。null = 実行中 or crash-recovery 待ち。
+  processedAt DateTime? @db.Timestamptz(6)
+
+  /// retention cron 用: receivedAt で古い順に削除するため。
+  @@index([receivedAt])
+  @@map("stripe_events")
 }

@@ -1,4 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // ---------------------------------------------------------------------------
 // 1. モック関数定義（TDZ 回避のため import より前）
@@ -11,6 +12,7 @@ type CustomerRecord = {
   firstName: string;
   userId: string | null;
   isActive: boolean;
+  status: CustomerStatus;
 };
 
 const mockFindUnique = mock<
@@ -27,6 +29,7 @@ const mockUpdate = mock<
     firstName: "",
     userId: "user-1",
     isActive: true,
+    status: CustomerStatus.REGULAR,
   }),
 );
 
@@ -40,6 +43,7 @@ const mockCreate = mock<
     firstName: "",
     userId: "user-1",
     isActive: true,
+    status: CustomerStatus.REGULAR,
   }),
 );
 
@@ -105,6 +109,7 @@ const LINKED_CUSTOMER: CustomerRecord = {
   firstName: "太郎",
   userId: "user-1",
   isActive: true,
+  status: CustomerStatus.REGULAR,
 };
 
 const UNLINKED_CUSTOMER: CustomerRecord = {
@@ -114,6 +119,7 @@ const UNLINKED_CUSTOMER: CustomerRecord = {
   firstName: "太郎",
   userId: null,
   isActive: true,
+  status: CustomerStatus.REGULAR,
 };
 
 const OTHER_USER_CUSTOMER: CustomerRecord = {
@@ -123,6 +129,7 @@ const OTHER_USER_CUSTOMER: CustomerRecord = {
   firstName: "太郎",
   userId: "user-other",
   isActive: true,
+  status: CustomerStatus.REGULAR,
 };
 
 const NEW_CUSTOMER: CustomerRecord = {
@@ -132,6 +139,7 @@ const NEW_CUSTOMER: CustomerRecord = {
   firstName: "",
   userId: "user-1",
   isActive: true,
+  status: CustomerStatus.NEW,
 };
 
 // ---------------------------------------------------------------------------

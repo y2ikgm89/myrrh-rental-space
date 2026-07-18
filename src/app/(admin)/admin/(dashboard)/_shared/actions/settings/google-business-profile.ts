@@ -2,19 +2,18 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-// updateTag は revokeGbpAuth の INTEGRATION_SETTINGS 用 (private admin-only tag,
-// CDN mapping なしのため raw updateTag が正)。Location 系は CDN-mapped のため
-// invalidateSiteWideCache 経由 (CACHE-INVALIDATE-01)。
-import { updateTag } from "next/cache";
-
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { checkPermission } from "@/admin/lib/action-auth";
 import {
   syncLocationToGbpCommand,
   toggleLocationGbpSyncCommand,
 } from "@/shared/domain/locations/gbp-sync-commands";
-// CACHE-INVALIDATE-01: LOCATIONS tag は CDN Cache-Tag に emit されるため helper 経由必須
-// (詳細は location.ts の同 finding コメント参照)。
+// CACHE-INVALIDATE-01 / CACHE-DRIFT-SETTLE: LOCATIONS tag は CDN Cache-Tag に emit
+// されるため helper 経由必須 (詳細は location.ts の同 finding コメント参照)。
+// INTEGRATION_SETTINGS は NEXTJS_TAG_TO_CDN_TAG 上「type-cleanliness のためだけの
+// mapping」で、実 surface は admin-only (private,no-store)。CDN 経路に露出しない
+// ため skipCdnPurge:true を渡す — local/no-raw-updatetag-for-cdn-mapped-cache-tag
+// drift gate を通過させるための helper 経由。
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { serverEnv } from "@/shared/lib/env/server";
@@ -78,7 +77,9 @@ export async function revokeGbpAuth(): Promise<MutationResult<null>> {
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+      invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
+        skipCdnPurge: true,
+      });
     },
   });
 }

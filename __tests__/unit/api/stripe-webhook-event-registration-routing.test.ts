@@ -208,6 +208,13 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   ),
 }));
 
+// STRIPE-DEDUP-A: route.ts が signature verification 直後に chokepoint を呼ぶため
+// stub。default では "claimed" を返して既存テストの流れを維持する。
+mock.module("@/shared/domain/stripe-events/dedup", () => ({
+  claimStripeEventForProcessing: () => Promise.resolve("claimed"),
+  markStripeEventProcessed: () => Promise.resolve(),
+}));
+
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
   confirmWaitlistOfferCommand: (args: { registrationId: string; now: Date }) =>
     mockConfirmWaitlistOfferCommand(args),

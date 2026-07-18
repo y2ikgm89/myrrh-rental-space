@@ -240,11 +240,12 @@ export function EditReservationForm({
       />
 
       {/* Action row (mobile-first canonical):
-       *  - mobile は縦並びで「変更する=下=thumb-zone」「キャンセル=上」
-       *    (旧 flex-col-reverse 系 anti-pattern は使わず JSX 順 = visual 順)。
+       *  - mobile は縦並びで「変更する=下=thumb-zone」「キャンセル=上」を
+       *    JSX 順 = visual 順で書く (flex-col-reverse は「変更する」を上に
+       *    追い出してしまう anti-pattern、DialogFooter 規約と矛盾)。
        *  - sm+ で横並びに戻し justify-end で右寄せ。
        *  - 各 Button に w-full sm:w-auto で full-width tap target を担保。 */}
-      <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-3">
+      <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-3">
         <Button
           variant="secondary"
           href={toAppRoute(`/mypage/reservations/${reservationId}`)}

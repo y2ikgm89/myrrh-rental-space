@@ -32,6 +32,27 @@ import { serverEnv } from "./env/server";
 
 const appUrl = serverEnv.BETTER_AUTH_URL ?? getAppUrl();
 
+/**
+ * Better Auth `accountLinking.trustedProviders` の SSoT。
+ *
+ * ここに列挙した provider は、同一 email を持つ既存アカウントに対して
+ * email 検証なしで silently auto-link される（Better Auth 公式仕様）。
+ * したがって upstream IdP 側で email verification を **強制** している
+ * provider のみを列挙する。
+ *
+ * - `google`: OK。Google は identity-provider 層で email verification を
+ *   必須化しているため、Google から取得した email は attacker が任意に
+ *   偽装できない。
+ * - `line`: **NG（列挙禁止）**。LINE Login は openid + email scope 付与でも
+ *   upstream で email 検証を必須化していない（LINE プロフィール登録時に
+ *   ユーザーが任意入力した email をそのまま返す）。列挙すると attacker が
+ *   victim の email で LINE アカウントを作り初回サインインするだけで
+ *   既存 Google 紐付き Customer に silently attach 可能になる。
+ *
+ * @see https://www.better-auth.com/docs/concepts/users-accounts#account-linking
+ */
+export const CUSTOMER_TRUSTED_PROVIDERS = ["google"] as const;
+
 function createCustomerAuth() {
   const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
   const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
@@ -96,7 +117,9 @@ function createCustomerAuth() {
       encryptOAuthTokens: true,
       accountLinking: {
         enabled: true,
-        trustedProviders: ["google", "line"],
+        // CRITIC-1: LINE Login は upstream で email 検証を必須化していないため
+        // trustedProviders から除外（詳細は CUSTOMER_TRUSTED_PROVIDERS の docstring）。
+        trustedProviders: [...CUSTOMER_TRUSTED_PROVIDERS],
       },
     },
     user: {

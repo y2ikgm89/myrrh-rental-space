@@ -37,6 +37,7 @@ export const TEMPLATE_KEYS = [
   "admin-notification-inquiry",
   "welcome",
   "delete-account-verification",
+  "change-email-verification",
   "review-reply",
   "__infra_check",
 ] as const;
@@ -213,6 +214,13 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     key: "delete-account-verification",
     label: "アカウント削除の確認",
     description: "マイページからのアカウント削除申請時にお客様へ送信。",
+    category: "account",
+  },
+  {
+    key: "change-email-verification",
+    label: "メールアドレスの確認",
+    description:
+      "マイページからの初回メールアドレス登録時に本人確認 URL をお客様へ送信。",
     category: "account",
   },
   {

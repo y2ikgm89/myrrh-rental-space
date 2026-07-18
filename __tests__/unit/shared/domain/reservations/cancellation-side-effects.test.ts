@@ -52,6 +52,37 @@ mock.module("next/server", () => ({
   after: () => {},
 }));
 
+// CRITIC-6: applyCancellationSideEffects は sub-effect chain 全体を fireAndForget
+// でラップし、AuditLog 書込を sub-effect 完了後 (Promise.all resolve 後) に置く。
+// テスト側で orchestrator promise を drain してから assert しないと、
+// mockCreateAuditLog / mockRefund など「orchestrator の後半で呼ばれる mock」の
+// 記録がまだ入っていない状態で assertion が走り false negative になる。
+const pendingSideEffects: Promise<unknown>[] = [];
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (p: Promise<unknown>, _opts: unknown) => {
+    pendingSideEffects.push(p.catch(() => {}));
+  },
+}));
+async function drainSideEffects(): Promise<void> {
+  const pending = pendingSideEffects.splice(0);
+  await Promise.all(pending);
+}
+
+// GCal series-outbound は本 test では触らないが、mock.module の live binding が
+// 他 test file の実 import に干渉するのを避けるため空 stub を置く
+// (feedback_stale-branch-name-reuse-and-mock-module-coverage)。
+mock.module("@/shared/lib/calendar-sync/series-outbound", () => ({
+  deleteGcalMaster: () => Promise.resolve(),
+  getSeriesGcalMasterEventId: () => Promise.resolve(null),
+  patchGcalMasterUntil: () => Promise.resolve(),
+}));
+
+// SmartLock revoke: mock しないと prisma.smartLockPasscode が undefined で TypeError。
+// runSmartLockStep の try/catch は捕捉するが noise になるので明示 mock。
+mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
+  revokeSmartLockPasscodesForReservation: () => Promise.resolve(),
+}));
+
 const mockCreateAuditLog = mock<
   (input: Record<string, unknown>) => Promise<void>
 >(() => Promise.resolve());
@@ -80,8 +111,11 @@ mock.module("@/shared/domain/reservations/payment-commands", () => ({
 }));
 
 const mockDeleteCalendarSync = mock<
-  (reservationId: string, eventId: string) => Promise<void>
->(() => Promise.resolve());
+  (
+    reservationId: string,
+    eventId: string,
+  ) => Promise<{ success: true } | { success: false; error: string }>
+>(() => Promise.resolve({ success: true }));
 mock.module("@/shared/lib/calendar-sync/outbound", () => ({
   deleteCalendarSync: mockDeleteCalendarSync,
 }));
@@ -245,16 +279,44 @@ describe("applyCancellationSideEffects", () => {
     mockFindUnique.mockResolvedValue(null);
     mockCreateAuditLog.mockResolvedValue(undefined);
     mockCreateNotification.mockResolvedValue(undefined);
-    mockRefund.mockResolvedValue({ ok: true });
-    mockDeleteCalendarSync.mockResolvedValue(undefined);
-    mockSendCancelledEmail.mockResolvedValue({ ok: true });
-    mockSendAdminNotification.mockResolvedValue({ ok: true });
+    mockRefund.mockResolvedValue({
+      refundId: "re_test",
+      status: "succeeded",
+      customerId: "cust_1",
+      newPaymentStatus: "REFUNDED",
+      cumulativeAmount: 5000,
+      refundAmount: 5000,
+    });
+    mockDeleteCalendarSync.mockResolvedValue({ success: true });
+    mockSendCancelledEmail.mockResolvedValue({
+      ok: true,
+      messageId: "customer_msg",
+    });
+    mockSendAdminNotification.mockResolvedValue({
+      ok: true,
+      messageId: "admin_msg",
+    });
+    pendingSideEffects.length = 0;
   });
+
+  /**
+   * CRITIC-6: `applyCancellationSideEffects` は sub-effect chain 全体を fireAndForget
+   * でラップし、AuditLog 書込を Promise.all resolve 後に置く。テスト側で orchestrator
+   * promise を drain してから assert しないと、後半で呼ばれる mock (createAuditLog /
+   * refund など) が未記録の状態で assertion が走り false negative になる。
+   */
+  async function applyAndDrain(
+    input: CancellationSideEffectInput,
+  ): Promise<void> {
+    await applyCancellationSideEffects(input);
+    const pending = pendingSideEffects.splice(0);
+    await Promise.all(pending);
+  }
 
   test("予約が見つからない場合: 副作用は一切発火せず logError が呼ばれる", async () => {
     mockFindUnique.mockResolvedValue(null);
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockRefund).not.toHaveBeenCalled();
     expect(mockDeleteCalendarSync).not.toHaveBeenCalled();
@@ -279,7 +341,7 @@ describe("applyCancellationSideEffects", () => {
       stripePaymentIntentId: "pi_test_123",
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockRefund).toHaveBeenCalledTimes(1);
     // UA-HORIZ-04: 起点キャンセルの request context (ip / userAgent) を refund へ継承する
@@ -310,7 +372,7 @@ describe("applyCancellationSideEffects", () => {
       stripePaymentIntentId: null,
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockRefund).not.toHaveBeenCalled();
     expect(mockCreateAuditLog.mock.calls[0]?.[0]).toMatchObject({
@@ -329,7 +391,7 @@ describe("applyCancellationSideEffects", () => {
       stripePaymentIntentId: null,
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockRefund).not.toHaveBeenCalled();
     expect(mockCreateAuditLog.mock.calls[0]?.[0]).toMatchObject({
@@ -343,7 +405,7 @@ describe("applyCancellationSideEffects", () => {
       googleCalendarEventId: "gcal-event-abc",
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockDeleteCalendarSync).toHaveBeenCalledTimes(1);
     expect(mockDeleteCalendarSync).toHaveBeenCalledWith(RID, "gcal-event-abc");
@@ -355,7 +417,7 @@ describe("applyCancellationSideEffects", () => {
       googleCalendarEventId: null,
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockDeleteCalendarSync).not.toHaveBeenCalled();
   });
@@ -363,7 +425,7 @@ describe("applyCancellationSideEffects", () => {
   test("顧客キャンセルメール + 管理者通知メールは常時発火", async () => {
     mockFindUnique.mockResolvedValue(baseReservation);
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockSendCancelledEmail).toHaveBeenCalledTimes(1);
     expect(mockSendAdminNotification).toHaveBeenCalledTimes(1);
@@ -387,7 +449,7 @@ describe("applyCancellationSideEffects", () => {
   test("cancellationReason が null のとき通知 message は『理由: 入力なし』", async () => {
     mockFindUnique.mockResolvedValue(baseReservation);
 
-    await applyCancellationSideEffects(baseInput({ cancellationReason: null }));
+    await applyAndDrain(baseInput({ cancellationReason: null }));
 
     expect(mockCreateNotification.mock.calls[0]?.[0]).toMatchObject({
       message: "理由: 入力なし",
@@ -397,9 +459,7 @@ describe("applyCancellationSideEffects", () => {
   test("channel='admin': 通知タイトルに『管理者』が反映され CANCELLED_BY も ADMIN", async () => {
     mockFindUnique.mockResolvedValue(baseReservation);
 
-    await applyCancellationSideEffects(
-      baseInput({ channel: "admin", actorUserId: USER_ID }),
-    );
+    await applyAndDrain(baseInput({ channel: "admin", actorUserId: USER_ID }));
 
     expect(mockCreateNotification.mock.calls[0]?.[0]).toMatchObject({
       title: "予約キャンセル（管理者）",
@@ -414,7 +474,7 @@ describe("applyCancellationSideEffects", () => {
   test("channel='customer-mypage': タイトルは『顧客（マイページ）』+ CUSTOMER_MYPAGE", async () => {
     mockFindUnique.mockResolvedValue(baseReservation);
 
-    await applyCancellationSideEffects(
+    await applyAndDrain(
       baseInput({ channel: "customer-mypage", actorUserId: USER_ID }),
     );
 
@@ -429,7 +489,7 @@ describe("applyCancellationSideEffects", () => {
   test("channel='customer-token': CUSTOMER_TOKEN + tokenFingerprint が metadata に乗る", async () => {
     mockFindUnique.mockResolvedValue(baseReservation);
 
-    await applyCancellationSideEffects(
+    await applyAndDrain(
       baseInput({
         channel: "customer-token",
         actorUserId: null,
@@ -455,7 +515,7 @@ describe("applyCancellationSideEffects", () => {
   test("tokenFingerprint=null: metadata に tokenFingerprint キーを焼かない（条件付き spread）", async () => {
     mockFindUnique.mockResolvedValue(baseReservation);
 
-    await applyCancellationSideEffects(
+    await applyAndDrain(
       baseInput({ channel: "admin", tokenFingerprint: null }),
     );
 
@@ -474,7 +534,7 @@ describe("applyCancellationSideEffects", () => {
       guestFirstName: "花子",
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockSendCancelledEmail.mock.calls[0]?.[0]).toMatchObject({
       guestName: "鈴木 花子",
@@ -488,7 +548,7 @@ describe("applyCancellationSideEffects", () => {
       guestFirstName: "太郎",
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     const payload = mockSendCancelledEmail.mock.calls[0]?.[0];
     expectRecord(payload);
@@ -505,7 +565,7 @@ describe("applyCancellationSideEffects", () => {
       },
     });
 
-    await applyCancellationSideEffects(baseInput());
+    await applyAndDrain(baseInput());
 
     expect(mockSendCancelledEmail.mock.calls[0]?.[0]).toMatchObject({
       customerEmail: "booked-address@example.com",

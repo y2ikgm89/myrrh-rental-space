@@ -18,6 +18,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { ReservationTabs } from "./_components/reservation-tabs";
+import { FlashMessage } from "./_components/flash-message";
 
 const ACTIVE_STATUS_SET = new Set<string>(ACTIVE_RESERVATION_STATUSES);
 
@@ -31,7 +32,9 @@ export default async function MypagePage({
   await connection();
 
   const sp = await searchParams;
-  const justCancelled = sp["cancelled"] === "ok";
+  const cancelledParam = sp["cancelled"];
+  const justCancelledSingle = cancelledParam === "ok";
+  const justCancelledSeries = cancelledParam === "series";
 
   const { user } = await verifyCustomerSession();
   const customer = await getCustomerByUserId(user.id);
@@ -68,17 +71,21 @@ export default async function MypagePage({
   return (
     <Stack gap="lg">
       <Heading level={1}>予約</Heading>
-      {justCancelled && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="border border-success/30 bg-success/5 p-4 text-sm text-foreground"
-        >
+      {justCancelledSingle && (
+        <FlashMessage queryKey="cancelled">
           <p className="font-medium">予約をキャンセルしました</p>
           <p className="mt-1 text-muted-foreground">
             キャンセル完了の確認メールをお送りしました。
           </p>
-        </div>
+        </FlashMessage>
+      )}
+      {justCancelledSeries && (
+        <FlashMessage queryKey="cancelled">
+          <p className="font-medium">連続予約をすべてキャンセルしました</p>
+          <p className="mt-1 text-muted-foreground">
+            シリーズに含まれる予約をまとめてキャンセルしました。確認メールをお送りしています。
+          </p>
+        </FlashMessage>
       )}
       <ReservationTabs activeItems={activeItems} pastItems={pastItems} />
     </Stack>

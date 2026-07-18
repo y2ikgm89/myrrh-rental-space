@@ -227,14 +227,15 @@ async function cancelEventRegistrationWithClaim(
       }
 
       // offerNextWaitlistEntryCommand（applyEventRegistrationCancellation 内部で
-      // CONFIRMED 由来のキャンセル時のみ呼ばれる）は「呼び出し側が事前に advisory
-      // lock 728350（イベント単位）を保持している」ことを前提とする。ここで取得
-      // してから applyEventRegistrationCancellation に渡すことで、同一
-      // (slotId, ticketId) を対象とする複数のキャンセルが並行実行された場合でも
-      // FIFO 昇格の findFirst → updateMany claim が直列化される。ロックなしだと、
-      // 2 件目のキャンセルが 1 件目のコミット未了の行を READ COMMITTED で読んで
-      // 同じ waitlist 候補を取り合い、updateMany の WHERE が一致せず count=0 に
-      // なることで無昇格（本来 2 名昇格すべきところ 1 名しか昇格しない）が起こる。
+      // CONFIRMED または WAITLISTED_OFFERED 由来のキャンセル時に呼ばれる）は
+      // 「呼び出し側が事前に advisory lock 728350（イベント単位）を保持している」
+      // ことを前提とする。ここで取得してから applyEventRegistrationCancellation
+      // に渡すことで、同一 (slotId, ticketId) を対象とする複数のキャンセルが
+      // 並行実行された場合でも FIFO 昇格の findFirst → updateMany claim が
+      // 直列化される。ロックなしだと、2 件目のキャンセルが 1 件目のコミット未了
+      // の行を READ COMMITTED で読んで同じ waitlist 候補を取り合い、updateMany
+      // の WHERE が一致せず count=0 になることで無昇格（本来 2 名昇格すべき
+      // ところ 1 名しか昇格しない）が起こる。
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${WAITLIST_XACT_LOCK_NAMESPACE}::int4, hashtext(${registration.eventId}))`;
 
       const claim = await applyEventRegistrationCancellation(tx, registration, {
@@ -260,9 +261,9 @@ async function cancelEventRegistrationWithClaim(
         payload: {
           ...registration,
           icsSequence: updated.icsSequence,
-          // FIFO で繰り上げ当選した申込 (CONFIRMED 由来のキャンセルのみ非 null)。
-          // 呼び出し側の副作用ヘルパーが「繰り上げ当選メール」送信要否を判断する
-          // (Task 6/8 で配線)。
+          // FIFO で繰り上げ当選した申込 (CONFIRMED または WAITLISTED_OFFERED
+          // 由来のキャンセルで空き枠が発生した場合のみ非 null)。呼び出し側の副作用
+          // ヘルパーが「繰り上げ当選メール」送信要否を判断する。
           promoted: claim.promoted,
         },
       } as const;
