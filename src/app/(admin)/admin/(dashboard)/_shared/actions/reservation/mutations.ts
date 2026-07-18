@@ -1,10 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
-import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -371,9 +369,7 @@ export const updateReservationNotes = async (
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(id));
-      updateTag(getCacheTag.reservations.calendar());
+      invalidateReservationCaches(id, null);
     },
   });
 };
@@ -493,10 +489,7 @@ export async function updateCustomerFromReservation(
       return { customerId: reservation.customerId };
     },
     afterSuccess: (data) => {
-      updateTag(CACHE_TAGS.CUSTOMERS);
-      updateTag(getCacheTag.customers.detail(data.customerId));
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.calendar());
+      invalidateReservationCaches(reservationId, data.customerId);
     },
   });
 }
