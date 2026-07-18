@@ -170,6 +170,17 @@ export async function updateCustomerReservation(
   );
   const endDateTime = parseDateTimeLocalAsJst(`${input.date}T${input.endTime}`);
 
+  // 過去時刻への変更を封殺する (MYPAGE-EDIT-01)。
+  // 既存の modificationDeadline チェック (tx 内) は「予約開始 N 時間前を過ぎたら
+  // 変更禁止」のみを判定するため、deadline が現在時刻より過去に設定されている場合や
+  // 顧客が変更フォームで「昨日 10:00」等の過去 datetime を submit した場合を
+  // 素通りさせる欠陥があった。advisory lock (`lockSpaceForTransaction`) 取得前に
+  // 早期 return し、過去日時での書込 (recap / status transition 等の cron 破壊要因)
+  // を物理的に発生させない 2 段構えのガードとして独立に置く。
+  if (startDateTime.getTime() <= Date.now()) {
+    return { success: false, error: "過去の日時には変更できません" };
+  }
+
   // 最小/最大予約時間（設定値）をサーバー側で強制する（新規予約と同一ルール）
   const rules = await getReservationRuleSettings();
   const durationError = checkReservationDuration(
