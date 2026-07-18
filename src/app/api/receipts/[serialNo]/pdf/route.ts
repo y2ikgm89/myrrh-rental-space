@@ -16,6 +16,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import { receiptDownloadBySerialNoRateLimiter } from "@/shared/lib/rate-limit";
 
 /**
  * 領収書 PDF ダウンロード Route Handler.
@@ -49,16 +50,47 @@ import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
  * - Content-Disposition: attachment; filename=receipt-<serialNo>.pdf
  * - Cache-Control: private, no-store (次 config.ts の headers() が更に強制するが二重防御)
  *
+ * ## Method allowlist (HTTP-01)
+ * Next.js 16 App Router は `HEAD` handler 未定義 + `GET` 定義済みの場合、HEAD 要求を
+ * 内部的に GET へ auto-fallback する。そのまま放置すると `HEAD /api/receipts/YYYY-NNNNNN/pdf?token=<sig>`
+ * だけで `claimReceiptForSingleUseTokenDownload` が実行され `usedAt` が消費される
+ * (レスポンス body は捨てられるが DB 副作用が残り、正規顧客の DL が `already_used` で 404 になる)。
+ * これを防ぐため HEAD / OPTIONS は明示的に 405 で reject し、Allow ヘッダで GET のみを告知する。
+ *
+ * ## Per-serialNo rate limit (HTTP-03)
+ * proxy.ts の checkRateLimit は汎用 apiRateLimiter (100/min/IP) のみで、同一 serialNo への
+ * brute-force / usedAt 焼き潰し DoS が抜ける。`cancelByReservationRateLimiter` と同型の
+ * 「resource (serialNo) 単位の第二防壁」として 10 attempts/hour/serialNo を追加する。
+ * 429 は本文最小 (存在隠蔽) で返す。
+ *
  * ## 未使用の Route segment config
  * cacheComponents:true との整合上、`export const dynamic` 等の segment config は禁止
  * (architecture-boundaries.test.ts の 0 件強制)。Route Handler は default dynamic のため
  * 明示 config は不要。
  */
+export async function HEAD(): Promise<Response> {
+  // HTTP-01: Next.js 16 の GET auto-fallback を封殺。HEAD が GET へフォールバックすると
+  // usedAt が silent に消費されるため、明示的に 405 を返す。
+  return new Response(null, { status: 405, headers: { Allow: "GET" } });
+}
+
+export async function OPTIONS(): Promise<Response> {
+  // HTTP-01 と同型。CORS preflight を許容しない (same-origin only) 明示。
+  return new Response(null, { status: 405, headers: { Allow: "GET" } });
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ serialNo: string }> },
 ): Promise<Response> {
   const { serialNo } = await params;
+
+  // HTTP-03: per-serialNo rate limit (10/hour)。findReceiptForDownload (DB read) より
+  // 先に in-memory bucket でカットオフし、brute-force 探索 × usedAt 焼き潰しの単価を下げる。
+  const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
+  if (!rateLimit.success) {
+    return new Response("Too many requests", { status: 429 });
+  }
 
   const receipt = await findReceiptForDownload(serialNo);
   if (!receipt) {
