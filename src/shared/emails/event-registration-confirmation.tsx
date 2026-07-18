@@ -39,6 +39,12 @@ type Props = {
   claimUrl?: string;
   /** ゲスト向け: 期限内のみ生成される暗号化トークン付きキャンセル URL */
   cancelUrl?: string;
+  /**
+   * ゲスト向け: 領収書 PDF ダウンロード URL (RECEIPT-GUEST-01)。
+   * `createReceiptDownloadToken` 由来の署名 URL (60 分有効)。
+   * 会員はマイページから領収書を DL するため未指定。
+   */
+  receiptDownloadUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -57,6 +63,7 @@ export function EventRegistrationConfirmationEmail({
   memberEventRegistrationUrl,
   claimUrl,
   cancelUrl,
+  receiptDownloadUrl,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -192,6 +199,36 @@ export function EventRegistrationConfirmationEmail({
               style={{ color: COLOR.link, textDecoration: "underline" }}
             >
               マイページに追加する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
+      {receiptDownloadUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            適格請求書（領収書）PDF を下記のリンクからダウンロードいただけます
+            （60 分間有効）。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={receiptDownloadUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              領収書 PDF をダウンロードする
             </Link>
           </Text>
         </Section>

@@ -22,6 +22,7 @@ import {
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
+import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,
@@ -166,6 +167,14 @@ export async function sendReservationConfirmationEmail(
     ? undefined
     : `${appUrl}/claim/reservation?token=${createReservationClaimToken(data.reservationId)}`;
 
+  // ゲスト予約かつ Receipt 採番済みなら、領収書 PDF ダウンロード署名 URL を発行する
+  // (RECEIPT-GUEST-01)。会員はマイページから DL できるため署名 URL は不要。
+  // Receipt 未発行 (未 PAID / 管理者経路等) では serialNo 未指定で CTA 非表示。
+  const receiptDownloadUrl =
+    !data.userId && data.receiptSerialNo
+      ? `${appUrl}/api/receipts/${data.receiptSerialNo}/pdf?token=${createReceiptDownloadToken(data.receiptSerialNo)}`
+      : undefined;
+
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
     try {
@@ -208,6 +217,7 @@ export async function sendReservationConfirmationEmail(
           cancelUrl,
           memberReservationUrl,
           claimUrl,
+          receiptDownloadUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
           modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
           cancellationPolicyUrl,

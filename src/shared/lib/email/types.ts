@@ -43,6 +43,16 @@ export type ReservationEmailData = {
     readonly phone?: string | null;
     readonly email?: string | null;
   };
+  /**
+   * PAID 遷移直後に採番された Receipt.serialNo (「YYYY-XXXXXX」形式)。
+   *
+   * ゲスト予約 (userId=null) の確認メールでは、この serialNo から
+   * `createReceiptDownloadToken` 経由の署名 URL を組み立てて
+   * 「領収書 PDF をダウンロード」CTA を描画する (RECEIPT-GUEST-01)。
+   * 会員予約 (userId あり) はマイページ経由でアクセスできるため URL は生成しない。
+   * 未指定なら CTA を非表示 (PAID 前・領収書対象外・admin 手動作成等)。
+   */
+  receiptSerialNo?: string;
 };
 
 export type ContactEmailData = {
