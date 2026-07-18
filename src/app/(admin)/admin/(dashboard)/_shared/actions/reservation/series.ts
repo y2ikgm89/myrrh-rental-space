@@ -17,6 +17,7 @@
  */
 
 import type { SubmissionResult } from "@conform-to/react";
+import { headers } from "next/headers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -245,8 +246,16 @@ async function buildRequestContext(): Promise<{
   ip: string | null;
   userAgent: string | null;
 }> {
+  // RECENT-03: 以前は「userAgent は cancellation-side-effects.ts 側で headers() から
+  // 取り直す」と誤ったコメントを付けて null を返していたが、cancellation-side-effects
+  // 側は input.request.userAgent を metadata にそのまま書き込むだけで headers() 再取得
+  // は一切行わないため、admin 経由 series キャンセルの全 AuditLog (per-instance + 集約)
+  // に userAgent=null が記録されていた。単発 admin cancel (mutations.ts 経由) は
+  // headers() で UA を正しく取得しており、series 経路だけ audit trail が非対称。
+  // 事後 forensics での UA fingerprint 検知 (admin session hijack シナリオ) が弱体化
+  // していたため、mutations.ts 側と同じく本経路でも headers() から明示取得する。
+  const requestHeaders = await headers();
   const ip = await getClientIpFromHeaders();
-  // userAgent は cancellation-side-effects.ts 側で headers() から取り直すため
-  // ここでは null で構わない。監査ログの補完のためだけに ip のみを渡す。
-  return { ip, userAgent: null };
+  const userAgent = requestHeaders.get("user-agent");
+  return { ip, userAgent };
 }
