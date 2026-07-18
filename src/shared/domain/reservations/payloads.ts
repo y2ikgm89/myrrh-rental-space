@@ -3,7 +3,6 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { CouponType } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
@@ -202,28 +201,6 @@ export async function ensureNoOverlap(
         ? "選択された時間帯は既にイベントで予約されています。別の時間帯をお選びください。"
         : "選択された時間帯は既に予約されています。別の時間帯をお選びください。";
     throw new DomainError(message, "CONFLICT");
-  }
-}
-
-/**
- * @deprecated `ensureNoOverlap` (Reservation ↔ Event 双方チェック) を使うこと。
- * Reservation-only チェックが必要な特殊経路 (例: iCal 同期の互換モード) 以外は使わない。
- */
-export async function ensureNoReservationOverlapOnly(
-  params: {
-    spaceId: string;
-    startTime: Date;
-    endTime: Date;
-    excludeReservationId?: string;
-  },
-  tx?: Tx,
-): Promise<void> {
-  const result = await checkReservationOverlap(params, tx);
-  if (result.hasOverlap) {
-    throw new DomainError(
-      "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-      "CONFLICT",
-    );
   }
 }
 

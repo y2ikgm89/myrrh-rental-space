@@ -2863,6 +2863,37 @@ describe("architecture boundaries", () => {
       }
     });
   });
+
+  describe("reservation overlap SSoT (payloads.ts)", () => {
+    // `ensureNoOverlap` (Reservation + Event 両方の overlap をチェックする関数) が
+    // business-domain.md 契約の SSoT。過去に `ensureNoReservationOverlapOnly` という
+    // Reservation-only チェックだけの @deprecated helper が残っていたが、call site 0 で
+    // 削除済 (CLEAN-01)。将来「片側だけ」の overlap helper (例:
+    // ensureNoReservationOverlapOnly / ensureNoEventOverlapOnly) が再導入されると、
+    // Space namespace 728351 advisory lock 直列化下でも overlap 判定ロジック自身が
+    // Reservation-only になっている経路で Reservation ↔ Event の silent overlap を
+    // 許容しかねない。payloads.ts で `Only` suffix の overlap-related export を禁止する。
+    test("payloads.ts で `Only` suffix overlap helper を export しない (CLEAN-01 再発防止)", () => {
+      const payloadsFile = join(
+        SRC_ROOT,
+        "shared",
+        "domain",
+        "reservations",
+        "payloads.ts",
+      );
+      const content = readFileSync(payloadsFile, "utf-8");
+      const OFFENDER_RE =
+        /export\s+(?:async\s+)?function\s+(ensure[A-Za-z]*Only)\b/g;
+      const offenders: string[] = [];
+      for (const match of content.matchAll(OFFENDER_RE)) {
+        if (match[1]) offenders.push(match[1]);
+      }
+      expect(
+        offenders,
+        `payloads.ts で "Only" suffix overlap helper (例: ensureNoReservationOverlapOnly) を export すると Reservation ↔ Event の片側チェックだけを匂わせて silent overlap の温床になる。SSoT は ensureNoOverlap (Reservation + Event 双方チェック) — Only suffix export は禁止 (CLEAN-01)。`,
+      ).toEqual([]);
+    });
+  });
 });
 
 // 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
