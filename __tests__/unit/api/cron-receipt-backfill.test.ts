@@ -172,4 +172,39 @@ describe("/api/cron/receipt-backfill", () => {
     expect(res.status).toBe(200);
     expect(mockLogError).not.toHaveBeenCalled();
   });
+
+  test("STRIPE-03 reconciliation: webhook-retry-stuck orphan (PAID + Receipt 無) を pick up して issuedReservations にカウントする", async () => {
+    // STRIPE-03: webhook の fulfillPaymentAtomically は claim* → issueReceipt* の順で
+    // 実行するため、claim* 成功後の issueReceipt* transient throw で Stripe が retry
+    // した際、retry 側の claim* は「既に PAID」で null 返し early return → issueReceipt*
+    // は二度と呼ばれない。この cron が `paymentStatus IN [PAID, PARTIALLY_REFUNDED] AND
+    // receipt: null` を毎時走査して発行を再試行することで STRIPE-03 の永久 orphan を防ぐ。
+    //
+    // ここでは domain 層を境界 mock している (backfillReceipts の実クエリは integration
+    // でしか観測できない) ため、STRIPE-03 の代表シナリオである「reservation 側 orphan と
+    // event registration 側 orphan の混合を同一 batch で issue し summary を返す」ことを
+    // 検証する。実 query は `receipt: null` フィルタで自然に webhook-retry-stuck を拾う。
+    mockAuthorize.mockResolvedValueOnce(null);
+    mockIsFeatureEnabled.mockResolvedValueOnce(true);
+    mockBackfill.mockResolvedValueOnce({
+      issuedReservations: 1, // 1 件の PAID-but-Receipt-less reservation を reconcile
+      skippedReservations: 0,
+      errorReservations: 0,
+      issuedEventRegistrations: 1, // 1 件の PAID-but-Receipt-less event registration を reconcile
+      skippedEventRegistrations: 0,
+      errorEventRegistrations: 0,
+    });
+
+    const res = await GET(makeRequest());
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      issuedReservations?: number;
+      issuedEventRegistrations?: number;
+    };
+    expect(body.issuedReservations).toBe(1);
+    expect(body.issuedEventRegistrations).toBe(1);
+    expect(mockBackfill).toHaveBeenCalledTimes(1);
+    expect(mockLogError).not.toHaveBeenCalled();
+  });
 });

@@ -16,17 +16,31 @@ import {
 /**
  * 既存 PAID / PARTIALLY_REFUNDED 予約・イベント申込の Receipt 未発行分をバッチ発行する。
  *
- * Foundation gap analysis (2026-07-15) task #7 receipt-full-wiring PR#7 (backfill 部分)。
- * receipt PR#1-#4 で webhook 経由の自動発行を配線したが、Stripe webhook 経由の PAID 遷移
- * より前 (PR#1-2 merge 前) に確定した既存の PAID 予約は Receipt が発行されていない。
- * cron `/api/cron/receipt-backfill` で 1 日 1 回、古い順に定量ずつ発行する。
+ * ## カバレッジ (2 系統の orphan を同一 query で reconcile)
+ * 1. **Historical orphans** — receipt PR#1-#4 の webhook 経由自動発行が配線される前
+ *    (2026-07-15 以前) に確定した PAID 予約は Receipt が発行されていない。この cron で
+ *    後追い発行する (Foundation gap analysis task #7 receipt-full-wiring PR#7 の当初目的)。
+ * 2. **STRIPE-03 mitigation — webhook-retry-stuck orphans** — Stripe webhook の
+ *    `fulfillPaymentAtomically` / `fulfillEventRegistrationPaymentAtomically` は
+ *    `claimReservationAsPaid` (or event 側の対称関数) を **先に** 呼んで
+ *    paymentStatus=PAID に flip し、その後で `issueReceiptForReservation` を await する。
+ *    issueReceipt が transient DB 障害等で throw すると webhook は 500 を返し Stripe が
+ *    retry するが、retry 時は `claim*` が「既に PAID (count=0)」を検知して null を返し
+ *    早期 return するため、issueReceipt は二度と呼ばれず PAID + Receipt 無しの
+ *    orphan が焼き付く。この cron が `paymentStatus IN [PAID, PARTIALLY_REFUNDED] AND
+ *    receipt: null` を毎時走査して発行を再試行することで backstop する。
  *
- * 冪等契約: issueReceiptFor{Reservation,EventRegistration} は
+ * ## 冪等契約
+ * `issueReceiptFor{Reservation,EventRegistration}` は
  * `@unique(reservationId)` / `@unique(eventRegistrationId)` + advisory lock 728353 で
- * at-least-once 呼出でも重複発行なし。VALIDATION エラー (金額 0 / paymentStatus mismatch 等)
- * は業務的にスキップし error にカウントしない (再送しても解消しない、次回 cron でも再スキップ)。
+ * at-least-once 呼出でも重複発行なし。**webhook と cron が同時に走った場合も同 lock で
+ * serialize されるため double-issue しない**。VALIDATION エラー (金額 0 / paymentStatus
+ * mismatch 等) は業務的にスキップし error にカウントしない (再送しても解消しない、
+ * 次回 cron でも再スキップ)。
  *
- * @param options.limit reservation / eventRegistration それぞれの最大処理件数 (default 100)
+ * @param options.limit reservation / eventRegistration それぞれの最大処理件数 (default 100)。
+ *   cron の 1 回起動あたりの上限。上限に達した場合は次回 cron 起動で残りが処理される
+ *   (古い順に処理するため FIFO 進捗)。
  * @returns バッチ結果サマリ (issued / skipped / errors / processed*)
  */
 export async function backfillReceipts(options?: {
