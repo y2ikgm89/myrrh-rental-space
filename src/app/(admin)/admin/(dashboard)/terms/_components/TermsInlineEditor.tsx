@@ -42,6 +42,16 @@ type TermsInlineEditorProps = {
   mode: "create" | "edit";
   initialTemplateJson?: string;
   initialTitle?: string;
+  /**
+   * TERMS-REAGREE-P3B: LOGIN_SIGNUP scope 顧客への影響件数 (現状 hash 未同意者数)。
+   * edit mode の時のみ page 側で `getReagreeAffectedCustomerCount` を先読みして渡す。
+   * `scopeApplies: false` or `affected: 0` なら banner を出さない。
+   */
+  reagreeAffected?: {
+    readonly affected: number;
+    readonly totalActiveCustomers: number;
+    readonly scopeApplies: boolean;
+  };
 };
 
 // =============================================================================
@@ -53,6 +63,7 @@ export function TermsInlineEditor({
   mode,
   initialTemplateJson,
   initialTitle,
+  reagreeAffected,
 }: TermsInlineEditorProps) {
   const editor = useTermsEditor({
     mode,
@@ -128,8 +139,30 @@ export function TermsInlineEditor({
     onShowInFooterChange: editor.handleShowInFooterChange,
   } satisfies TermsSidePanelExtra;
 
+  // TERMS-REAGREE-P3B: LOGIN_SIGNUP scope 顧客への影響件数を保存前に可視化する
+  // inline warning banner。affected: 0 or scope 外なら出さない。
+  const showReagreeBanner =
+    mode === "edit" &&
+    reagreeAffected !== undefined &&
+    reagreeAffected.scopeApplies &&
+    reagreeAffected.affected > 0;
+
   return (
     <>
+      {showReagreeBanner && reagreeAffected ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-900 dark:text-amber-100"
+        >
+          <span aria-hidden="true">⚠️ </span>
+          この規約を保存すると、LOGIN_SIGNUP scope の顧客
+          <strong className="mx-1">{reagreeAffected.affected}名</strong>/
+          {reagreeAffected.totalActiveCustomers}名
+          にマイページで再同意を求めます。誤字修正など軽微な変更でも hash
+          が変わり 全員が再同意対象になるためご注意ください。
+        </div>
+      ) : null}
       <InlineEditorShell
         onSave={editor.handleSave}
         isDirty={editor.isDirty}
