@@ -8,7 +8,8 @@ description: サイト機能モジュール (Feature Module) を新規追加す�
 ## アーキテクチャ（前提 3 点）
 
 - **registry はメタデータのみ**: `src/shared/lib/features/registry.ts` の `FEATURE_MODULES_LIST`
-  (const tuple、現在 9 module) と `FEATURE_MODULES` Record。`defaultEnabled` は持たない。
+  (const tuple、現在 11 module — 実数は同 file の tuple length で確認) と `FEATURE_MODULES` Record。
+  `defaultEnabled` は持たない。
 - **ON/OFF 値の SSoT は DB**: `Settings.featureModules` JSONB column（singleton 行、DB default `'{}'`）。
   読み出しは `src/shared/domain/settings/queries/features.ts` の `getFeatureModulesSettings`
   （`'use cache'` + `CACHE_TAGS.FEATURE_MODULES`）→ `parseFeatureModules`
@@ -132,11 +133,12 @@ await requireFeatureEnabled("<id>");
 ### Step 7: テスト更新
 
 - `__tests__/unit/lib/features/registry.test.ts` — `FEATURE_MODULES_LIST` の
-  `toHaveLength(9)` を実数に更新。`pageSlugs` ⊆ `SYSTEM_PAGE_SLUGS`
+  `toHaveLength(<N>)` を実数に更新 (registry.ts の tuple length で確認、N+1 に増える)。
+  `pageSlugs` ⊆ `SYSTEM_PAGE_SLUGS`
   (`src/shared/lib/validations/page.ts` の `SYSTEM_PAGES`) の不変条件があるため、
   Page-backed なシステムページを持つ module は `SYSTEM_PAGES` への追加が先。
 - `__tests__/unit/lib/features/check.test.ts` — 全 module を列挙する fixture
-  （全 ON で size 9 等）を更新。requires を持たせたなら依存解決ケースを追加。
+  (全 ON で size が registry と一致) を更新。requires を持たせたなら依存解決ケースを追加。
 - `__tests__/unit/app/sitemap-static-pages.test.ts` — `STATIC_PAGES` に entry を足した場合、
   feature gate 対象 path は「exactly 1 module の publicRoutes に出現」が強制される。
 - `__tests__/unit/forms/settings-form-empty-optional.test.ts` — featureModules の

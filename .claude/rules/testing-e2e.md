@@ -6,9 +6,11 @@ paths: ["e2e/**", "playwright.config.ts", "playwright/**"]
 
 ## project 構成と実行
 
-- 7 project: setup-customer / setup-admin / chromium-smoke（e2e/smoke）/
-  chromium（e2e/public + e2e/a11y）/ chromium-customer / chromium-admin /
-  chromium-visual（e2e/visual）
+- 13 project: setup-customer / setup-admin / chromium-smoke（e2e/smoke）/
+  chromium（e2e/public + e2e/a11y）/ chromium-mobile / webkit-mobile /
+  chromium-customer / chromium-customer-mobile / webkit-customer-mobile /
+  chromium-admin / chromium-admin-mobile / webkit-admin-mobile /
+  chromium-visual（e2e/visual）。mobile / webkit 系 6 project は opt-in。
 - CI の毎 push required gate は chromium-smoke のみ（APP_SURFACE=public と admin の 2 回）。
   広域 E2E・visual・Lighthouse は opt-in（full CI dispatch）
 - webServer は migrate → seed →（ローカルのみ production build）→ next start を毎回実行し
