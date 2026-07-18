@@ -11,6 +11,11 @@
  * AuditLog READ が append されることを検証する (session hijack 検知 / 退会後の履歴保全 /
  * 訂正時 DL 監査を hash chain 保護された証跡として残すため)。
  *
+ * ## HTTP-02 (2026-07) 以降の経路分割
+ * GET は Better Auth session 専用に変更 (token 経路の GET は削除、POST に移動)。
+ * 本テストは session 経路 (mypage) の active/BLACKLIST ガードを検証する。
+ * token 経路のテストは `token-post-only.test.ts` を参照。
+ *
  * 実 Postgres は使わず mock.module ベースで route の応答を verify する
  * (`calendar-reservation.test.ts` と同じスタイル)。
  */
@@ -66,6 +71,14 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
       Promise.resolve({ ip: "127.0.0.1", userAgent: "test-user-agent" }),
     );
 
+    // HTTP-03: per-serialNo rate limiter が session 経路 GET 冒頭で叩かれる。
+    // check() は默认で success=true を返す stub にしておく (429 発火は別 test)。
+    mock.module("@/shared/lib/rate-limit", () => ({
+      receiptDownloadBySerialNoRateLimiter: {
+        check: mock(() => Promise.resolve({ success: true })),
+      },
+    }));
+
     mock.module("@/shared/domain/receipts/queries", () => ({
       findReceiptForDownload: mock(() => Promise.resolve(OWNED_RECEIPT)),
     }));
@@ -82,12 +95,6 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
       ),
     }));
 
-    // token 経路は使わない (session 経路の gate を検証するため)。verify は
-    // 常に invalid を返す = token cookieless path で必ず session path に落ちる。
-    mock.module("@/shared/lib/receipt-download-token", () => ({
-      verifyReceiptDownloadToken: mock(() => ({ valid: false })),
-    }));
-
     // OBS-01/AUTHZ-03: session 経路 DL の AuditLog READ 発火追跡。
     mock.module("@/shared/domain/audit-log/commands", () => ({
       createAuditLogRecord: (input: Record<string, unknown>) =>
@@ -97,11 +104,6 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
     mock.module("@/shared/lib/audit-request-context", () => ({
       buildAuditRequestContext: () => mockBuildAuditRequestContext(),
     }));
-
-    // fireAndForget は promise を即座に実行するので mock の call count は同期的に立つ。
-    // ここでは Next.js の `after` に依存する分岐が unit 環境で throw して silent detach
-    // するため実装をそのまま流用する (import すると next/server 全体が要る)。
-    // route.ts の import は preload の server-only stub 経由で解決される。
 
     mock.module("@/shared/lib/errors/server", () => ({
       ErrorCategory: {

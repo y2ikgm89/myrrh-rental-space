@@ -4,24 +4,34 @@ import { promisify } from "node:util";
 import { test, expect } from "@playwright/test";
 
 /**
- * ゲスト署名 URL 経由の領収書 PDF ダウンロード - single-use 強制 E2E (E2E-03)
+ * ゲスト経由の領収書 PDF ダウンロード - single-use 強制 E2E (E2E-03)
  *
  * ## 対象
- * `GET /api/receipts/[serialNo]/pdf?token=<signed>` (public / 未認証)
+ * `POST /api/receipts/[serialNo]/pdf` (public / 未認証、body に token)
  * = RECEIPT-USEDAT-P1 (PR #1211) が追加した `Receipt.usedAt` 刻印 +
  * advisory-lock tx の regression gate。
+ *
+ * ## HTTP-02 経路変更 (2026-07)
+ * 旧: `GET /api/receipts/[serialNo]/pdf?token=<sig>` 直リンクをメールから叩く。
+ * 新: `/receipts/[serialNo]/download?token=<sig>` confirm page 経由で、
+ *     ユーザーが POST フォームを submit した時点で claim が発生する。
+ * 変更理由: link scanner (Outlook SafeLinks / Gmail preview 等) が GET プリフェッチで
+ * `usedAt` を消費してしまう fail mode を根治するため、GET は session 経路 (mypage) 専用に
+ * 縮小し、token 経路の claim を POST に切り分けた。
  *
  * ## シナリオ
  * 1. fixture スクリプト経由でゲスト予約 (Customer.userId=null) + PAID + Receipt
  *    (usedAt=NULL) + 有効な download token を作成する
- * 2. 1 回目 GET → 200 + Content-Type: application/pdf + 非空 body
+ * 2. 1 回目 POST → 200 + Content-Type: application/pdf + 非空 body
  *    (`claimReceiptForSingleUseTokenDownload` が render + usedAt 刻印を atomically 実行)
- * 3. 2 回目 GET (同一トークン) → 404
+ * 3. 2 回目 POST (同一トークン) → 404
  *    (usedAt !== null のため single-use gate が hit)
+ * 4. 追加: GET (token query 付き) → 404 (session なしの GET は必ず 404、
+ *    link scanner の GET プリフェッチが usedAt を消費しないことを保証)
  *
  * ## Better Auth session 経路について
- * `route.ts` の docstring 通り、session 経路は本 gate を通らず無制限 DL 可能
- * (mypage で会員が自分の領収書を反復 DL する要件)。同経路のテストは
+ * `route.ts` の docstring 通り、session 経路 (mypage GET) は本 gate を通らず無制限
+ * DL 可能 (mypage で会員が自分の領収書を反復 DL する要件)。同経路のテストは
  * `chromium-customer` project に置く必要があり、fixture の customer.userId
  * 紐付けが必要になるため、本 spec は E2E-03 の core 目的 = single-use gate の
  * regression 検出 に集中する (session bypass は unit test で担保、
@@ -60,20 +70,19 @@ async function createReceiptDownloadFixture(): Promise<ReceiptDownloadFixture> {
   return JSON.parse(stdout.trim()) as ReceiptDownloadFixture;
 }
 
-test.describe("領収書 PDF ダウンロード - ゲスト token 経路 single-use 強制", () => {
-  test("1 回目 GET は 200 + PDF、2 回目は 404 (usedAt gate)", async ({
+test.describe("領収書 PDF ダウンロード - ゲスト token 経路 single-use 強制 (POST)", () => {
+  test("1 回目 POST は 200 + PDF、2 回目は 404 (usedAt gate)", async ({
     request,
   }) => {
     const fixture = await createReceiptDownloadFixture();
-
-    const url = `/api/receipts/${fixture.serialNo}/pdf?token=${encodeURIComponent(
-      fixture.token,
-    )}`;
+    const apiUrl = `/api/receipts/${fixture.serialNo}/pdf`;
 
     // ==============================
-    // 1 回目: 200 + application/pdf
+    // 1 回目 POST: 200 + application/pdf
     // ==============================
-    const first = await request.get(url);
+    const first = await request.post(apiUrl, {
+      form: { token: fixture.token },
+    });
     expect(first.status()).toBe(200);
     expect(first.headers()["content-type"]).toBe("application/pdf");
     expect(first.headers()["content-disposition"]).toContain(
@@ -91,12 +100,14 @@ test.describe("領収書 PDF ダウンロード - ゲスト token 経路 single-
     expect(buffer.subarray(0, 5).toString("utf8")).toBe("%PDF-");
 
     // ==============================
-    // 2 回目: 404 (single-use gate)
+    // 2 回目 POST: 404 (single-use gate)
     // ==============================
     // 同一トークンでの再取得は `claimReceiptForSingleUseTokenDownload` の
     // 「usedAt IS NULL」check で hit し、302/500 ではなく 404 が返る
     // (存在自体を隠蔽する brute-force 対策)。
-    const second = await request.get(url);
+    const second = await request.post(apiUrl, {
+      form: { token: fixture.token },
+    });
     expect(second.status()).toBe(404);
   });
 
@@ -104,11 +115,33 @@ test.describe("領収書 PDF ダウンロード - ゲスト token 経路 single-
     const fixture = await createReceiptDownloadFixture();
 
     // 実在する serialNo + 壊れた token → route handler は 404 を返す。
-    // (verifyReceiptDownloadToken が invalid、かつ session なしで
-    // sessionAuthorized=false のため fall-through)。
-    const response = await request.get(
-      `/api/receipts/${fixture.serialNo}/pdf?token=not-a-valid-token`,
+    // (verifyReceiptDownloadToken が invalid)。
+    const response = await request.post(
+      `/api/receipts/${fixture.serialNo}/pdf`,
+      { form: { token: "not-a-valid-token" } },
     );
     expect(response.status()).toBe(404);
+  });
+
+  test("HTTP-02: GET with token は 404 で usedAt を消費しない (link scanner defense)", async ({
+    request,
+  }) => {
+    const fixture = await createReceiptDownloadFixture();
+
+    // link scanner (Outlook SafeLinks / Gmail preview 等) を模擬:
+    // GET method で token を投げても Route Handler は session なしと判断し 404 を返し、
+    // 一切 usedAt に触れない。POST に移行した実 claim エンドポイントの正当性の gate。
+    const scannerGet = await request.get(
+      `/api/receipts/${fixture.serialNo}/pdf?token=${encodeURIComponent(fixture.token)}`,
+    );
+    expect(scannerGet.status()).toBe(404);
+
+    // 続く正規の POST は成功 (link scanner の GET が usedAt を汚染していないため)
+    const legitPost = await request.post(
+      `/api/receipts/${fixture.serialNo}/pdf`,
+      { form: { token: fixture.token } },
+    );
+    expect(legitPost.status()).toBe(200);
+    expect(legitPost.headers()["content-type"]).toBe("application/pdf");
   });
 });

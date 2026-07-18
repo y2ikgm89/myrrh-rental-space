@@ -325,6 +325,14 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
+        // ゲスト向け領収書 confirm page (`/receipts/[serialNo]/download`) は
+        // 署名トークン URL 経由で個別ユーザーの適格請求書 (領収書) にアクセスする
+        // 経路。Cloudflare CDN / edge にキャッシュされると別ユーザーに漏洩し得るため
+        // origin で `private, no-store` を強制する (defense-in-depth)。
+        source: "/receipts/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
+      },
+      {
         source: "/api/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
