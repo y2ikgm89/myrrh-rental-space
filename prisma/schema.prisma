@@ -798,8 +798,13 @@ model Customer {
   /// Resend Webhook で観測された配信状態。HARD_BOUNCED / COMPLAINED は送信前にスキップ。
   /// 詳細は EmailDeliveryStatus enum 参照。
   emailDeliveryStatus    EmailDeliveryStatus @default(OK)
+  /// [write-only audit trail] Resend Webhook 観測時刻。現状 admin UI 未配線 (src/ read consumer 0)。
+  /// 単独 DROP は 310s 計画ダウンタイム発生のため次の必然的 destructive migration に bundle 予定
+  /// (memory: dead-taxinputmode-bundle-deferred-2026-07-11 と同方針)。
   emailDeliveryUpdatedAt DateTime?
-  /// Resend Webhook payload の bounce.message / suppression reason を保持（人間可読のラベル）。
+  /// [write-only audit trail] Resend Webhook payload の bounce.message / suppression reason (人間可読のラベル)。
+  /// 現状 admin UI 未配線 (src/ read consumer 0)。単独 DROP は 310s 計画ダウンタイム発生のため
+  /// 次の必然的 destructive migration に bundle 予定。誤って未使用と判断して単独 DROP しないこと。
   emailDeliveryReason    String?             @db.VarChar(500)
   /// 不審検知cron(customer-risk-scan)が検知理由コードを書き込む。手動クリアで null に戻す。
   /// 自動でBLACKLIST化・予約拒否はしない（最終判断は常に管理者、誤検知リスクの回避）。
