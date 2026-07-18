@@ -423,7 +423,10 @@ export async function sendEventRegistrationCancelled(
       }),
       attachments,
     }),
-    idempotencyKey: `event-reg-cancel/${data.registrationId}`,
+    // icsSequence を含めることで、将来 restore path が追加されて 24h 内に同一
+    // registration が再キャンセルされる可能性が生まれても idempotency key が
+    // 衝突しないよう SSoT で対称化する（reservation-cancel と同方針）。
+    idempotencyKey: `event-reg-cancel/${data.registrationId}/${data.icsSequence}`,
     operation: "sendEventRegistrationCancelled",
     context: {
       registrationId: data.registrationId,

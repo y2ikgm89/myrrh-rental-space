@@ -91,8 +91,10 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 /**
  * Webhook更新通知メールを送信
  *
- * 各更新実行は一意のため idempotency key は不要（24 時間以内の同じ更新イベントは
- * 理論上発生しない）
+ * Resend の自動 retry でも重複しないよう `<event-type>/<entity-id>` 形式の
+ * idempotencyKey を付与する（他 sendEmail 呼び出しと対称化）。webhook renewal は
+ * 単一エンティティを持たないため「結果 (ok/err) + 時間バケット (hour)」を entity id
+ * として使う — 同一結果を同一 1 時間内に再送しない = 24h 内のノイズを抑える。
  */
 export async function sendWebhookRenewalNotification(data: {
   success: boolean;
@@ -136,12 +138,20 @@ ${getAdminUrl("/settings")}
       `.trim();
   }
 
+  // 時間バケット (hourly): 同じ結果 (ok/err) は 1 時間に 1 通に集約する。
+  // 24h 保持の Resend idempotency 窓の範囲内でノイズを抑え、renewal が数分間隔で
+  // 何度も trigger されるケース (webhook 更新 cron の race や手動リトライ) でも
+  // 管理者受信箱を溢れさせない。
+  const hourBucket = new Date().toISOString().slice(0, 13);
+  const outcomeKey = data.success ? "ok" : "err";
+
   return sendEmail({
     payload: {
       to: notificationEmails,
       subject,
       text: textContent,
     },
+    idempotencyKey: `webhook-renewal/${outcomeKey}/${hourBucket}`,
     operation: "sendWebhookRenewalNotification",
   });
 }
