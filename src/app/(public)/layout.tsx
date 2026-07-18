@@ -62,6 +62,7 @@ import {
   type PublicTaxDisplay,
 } from "@/public/contexts/tax-settings";
 import { skeletonKeys } from "@/shared/lib/skeleton-keys";
+import { getFeedAlternates } from "@/public/lib/seo/feed-alternates";
 import "./_styles/public.css";
 
 type MainShellStyle = CSSProperties & {
@@ -70,10 +71,19 @@ type MainShellStyle = CSSProperties & {
 
 export async function generateMetadata(): Promise<Metadata> {
   // favicon は静的 URL `/icon` で `<link rel="icon">` を注入し、実体は dynamic icon
-  // Route Handler (`src/app/icon/route.tsx`) が DB driven で配信する。generateMetadata
-  // 自体は静的 literal のみ返し DB query しないため、PR #699 が懸念した build-time
-  // prerender 汚染は構造的に発生しない。PWA manifest は公開 root metadata からだけ
-  // 明示リンクし、IAP-protected admin root では取得自体を発生させない。
+  // Route Handler (`src/app/icon/route.tsx`) が DB driven で配信する。favicon 部分は
+  // 静的 literal のみで PR #699 が懸念した build-time prerender 汚染は発生しない。
+  // `alternates` は posts feature module 状態に依存するため getFeedAlternates で
+  // 動的解決する。`getFeedAlternates` は内部で `'use cache' + safeFetch` を持つ
+  // `getFeatureModulesSettings` を呼ぶため、`await connection()` で runtime resume を
+  // 強制しないと build 時 placeholder DATABASE_URL の fallback (posts OFF) が静的シェルに
+  // 焼き込まれる (rule .claude/rules/caching.md `build prerender の焼き込み防止` 参照)。
+  // 同 pattern: generateViewport の footerSettings.themeColor 解決 (下 121 行〜)。
+  // posts OFF 時に `/feed.xml` が 404 を返す構造 (feed.xml/route.ts) と integrity 維持。
+  // PWA manifest は公開 root metadata からだけ明示リンクし、IAP-protected admin root
+  // では取得自体を発生させない。
+  await connection();
+  const feedAlternates = await getFeedAlternates();
   return {
     metadataBase: new URL(getBaseUrl()),
     title: {
@@ -86,11 +96,7 @@ export async function generateMetadata(): Promise<Metadata> {
       icon: "/icon",
       apple: "/apple-icon",
     },
-    alternates: {
-      types: {
-        "application/rss+xml": "/feed.xml",
-      },
-    },
+    ...(feedAlternates !== null && { alternates: feedAlternates }),
     // OG / Twitter のサイト共通ベース。画像は file-based opengraph-image / twitter-image
     // が自動注入する。各ページの generateMetadata が openGraph を export すると
     // shallow 置換されるため、siteName / locale 等はページ側でも明示する必要がある。
