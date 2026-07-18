@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
+import { hasTermsAgreementRecorded } from "@/shared/domain/terms/queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   SIGNUP_TERMS_COOKIE_NAME,
@@ -30,22 +31,29 @@ import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
  * 法務的順序保証: `recordTermsAgreementsCommand` を await した後に cookie を削除する。
  * 旧版は cookie を先に消していたため、記録失敗時に同意 evidence が永久消失していた
  * (法務的に致命的 — 「ユーザーが同意した証跡」が残らない)。
+ *
+ * MYPAGE-AUTH-03 (2026-07-18): isNew による早期 return を廃止。
+ *   旧版は `if (!isNew) return` していたため、初回訪問で TermsAgreement insert が
+ *   一時的 DB error 等で失敗した場合、次回訪問時は isNew=false なので cookie が
+ *   残っていても retry されず、同意 evidence が永久消失していた。
+ *   現版は cookie の presence を判定基準にし、insert 成功時にのみ cookie 削除する
+ *   (transient failure からの自動回復)。retry で duplicate row を積まないよう、
+ *   insert 前に `hasTermsAgreementRecorded` で idempotency 判定する
+ *   (append-only 契約は維持 — upsert しない、既存があれば skip)。
+ *
+ *   `isNew` 引数は既存 caller (SignupTermsConsumer / claim/*) との後方互換のため
+ *   signature に残すが、内部ロジックからは参照しない (unused-input として意図的に受ける)。
  */
-export async function consumeSignupTermsAction(input: {
+export async function consumeSignupTermsAction(_input: {
   isNew: boolean;
 }): Promise<void> {
   const cookieStore = await cookies();
   const signupCookie = cookieStore.get(SIGNUP_TERMS_COOKIE_NAME);
   if (!signupCookie) return;
 
-  if (!input.isNew) {
-    // 再利用防止のため既存顧客でも cookie を削除（Server Action なので合法）
-    cookieStore.delete(SIGNUP_TERMS_COOKIE_NAME);
-    return;
-  }
-
   const termsIds = decodeSignupTermsCookie(signupCookie.value);
   if (termsIds.length === 0) {
+    // cookie が改竄 / 期限切れ → 削除して終了 (retry 対象外)。
     cookieStore.delete(SIGNUP_TERMS_COOKIE_NAME);
     return;
   }
@@ -54,12 +62,27 @@ export async function consumeSignupTermsAction(input: {
   const { user } = await verifyCustomerSession();
   const { customer } = await ensureCustomerLinked(user);
 
+  // Idempotency: 同じ customer + LOGIN_SIGNUP scope + 該当 termsIds のいずれかで
+  // 既に TermsAgreement が記録されていれば cookie は「消費済みだが削除が persist
+  // しなかった residual」と見做し、insert せず cookie だけ削除する。
+  // append-only 契約 (upsert しない、insert only + collision → skip) を維持。
+  const alreadyRecorded = await hasTermsAgreementRecorded({
+    customerId: customer.id,
+    scope: TermsScope.LOGIN_SIGNUP,
+    termsIds,
+  });
+  if (alreadyRecorded) {
+    cookieStore.delete(SIGNUP_TERMS_COOKIE_NAME);
+    return;
+  }
+
   const clientIp = await getClientIpFromHeaders();
   const headersList = await headers();
   const userAgent = headersList.get("user-agent");
 
   // 先に記録を確定 → 成功後に cookie 削除。recordTermsAgreementsCommand 内で throw
-  // した場合は cookie を残し、ユーザーが再ログインした際に再度処理されるようにする。
+  // した場合は cookie を残し、次回訪問時に retry されるようにする
+  // (MYPAGE-AUTH-03: transient DB failure からの自動回復)。
   await recordTermsAgreementsCommand({
     termsIds,
     scope: TermsScope.LOGIN_SIGNUP,
