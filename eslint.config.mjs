@@ -7,6 +7,11 @@ import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import tseslint from "typescript-eslint";
 import globals from "globals";
 import prettier from "eslint-config-prettier/flat";
+import localPlugin from "./eslint-rules/index.mjs";
+import {
+  CDN_MAPPED_CACHE_TAGS_KEYS,
+  LEGACY_RAW_UPDATETAG_FILES,
+} from "./eslint-rules/cdn-mapped-cache-tag-drift-gate-config.mjs";
 
 const reactCompilerRestrictedImports = [
   {
@@ -219,6 +224,48 @@ const eslintConfig = defineConfig([
             "prisma.$transaction(items.map(...)) の動的配列形式も pg deprecation 'client is already executing a query' を誘発するため禁止。原子性不要なら Promise.all(items.map(...))、必要なら interactive transaction `prisma.$transaction(async (tx) => { ... })` を使ってください。",
         },
       ],
+    },
+  },
+
+  // CDN-mapped CACHE_TAGS drift-gate.
+  //
+  // Raw `updateTag(CACHE_TAGS.X)` / `revalidateTag(CACHE_TAGS.X)` only invalidate
+  // the Next.js Data Cache — Cloudflare CDN is left stale for tags that map to
+  // a CDN cache tag in NEXTJS_TAG_TO_CDN_TAG. The rule forces those call sites
+  // through invalidateSiteWideCache / invalidateSiteWideCacheFromRouteHandler
+  // so the Cloudflare purge is enqueued alongside the Next.js update.
+  //
+  // The site-wide.ts helper itself is the sanctioned entry point — it wraps
+  // updateTag / revalidateTag internally and is the file this rule is designed
+  // to funnel callers into. It is excluded from the rule for that reason.
+  //
+  // SSoT for the mapped-key list: src/shared/lib/constants/cdn-cache-tags.ts
+  // NEXTJS_TAG_TO_CDN_TAG. Drift is caught by
+  // __tests__/unit/architecture/eslint-cdn-mapped-tag-rule.test.ts.
+  {
+    name: "cdn-mapped-cache-tag-drift-gate",
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/shared/lib/cache/site-wide.ts"],
+    plugins: {
+      local: localPlugin,
+    },
+    rules: {
+      "local/no-raw-updatetag-for-cdn-mapped-cache-tag": [
+        "error",
+        { mappedKeys: CDN_MAPPED_CACHE_TAGS_KEYS },
+      ],
+    },
+  },
+
+  // Legacy grandfather: files that predate the drift-gate rule and still call
+  // raw updateTag(CACHE_TAGS.X) for CDN-mapped X. Follow-up PRs migrate each
+  // file to invalidateSiteWideCache and remove it from this list. The list
+  // must only shrink — the companion test enforces every path still exists.
+  {
+    name: "cdn-mapped-cache-tag-drift-gate-legacy",
+    files: LEGACY_RAW_UPDATETAG_FILES,
+    rules: {
+      "local/no-raw-updatetag-for-cdn-mapped-cache-tag": "off",
     },
   },
 
