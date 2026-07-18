@@ -28,6 +28,7 @@ export const TURNSTILE_ACTIONS = {
   customer_signup_terms: "customer-signup-terms",
   event_waitlist_register: "event-waitlist-register",
   event_waitlist_confirm: "event-waitlist-confirm",
+  guest_receipt_resend_request: "guest-receipt-resend",
 } as const;
 
 export type TurnstileAction =
