@@ -30,8 +30,36 @@ export function isPrismaUniqueConstraintError(
 
   const meta = error["meta"];
   if (!isRecord(meta)) return false;
+
+  // Legacy shape (Prisma 6 rust engine / SQL Server 系):
+  //   meta: { target: ["id"] } または meta: { target: "Refund_stripeRefundId_key" }
   const target = meta["target"];
-  if (Array.isArray(target)) return target.includes(targetField);
-  if (typeof target === "string") return target.includes(targetField);
+  if (Array.isArray(target) && target.includes(targetField)) return true;
+  if (typeof target === "string" && target.includes(targetField)) return true;
+
+  // Prisma 7 + `@prisma/adapter-pg` shape:
+  //   meta: {
+  //     modelName: "StripeEvent",
+  //     driverAdapterError: {
+  //       name: "DriverAdapterError",
+  //       cause: {
+  //         originalCode: "23505",
+  //         kind: "UniqueConstraintViolation",
+  //         constraint: { fields: ["id"] }
+  //       }
+  //     }
+  //   }
+  // legacy shape に fallthrough させず driverAdapterError.cause.constraint.fields
+  // まで潜って比較する (この経路が壊れると webhook / refund の idempotency chokepoint
+  // が silent に 500 で throw して Stripe 再送の無限リトライを引き起こす)。
+  const driverAdapterError = meta["driverAdapterError"];
+  if (!isRecord(driverAdapterError)) return false;
+  const cause = driverAdapterError["cause"];
+  if (!isRecord(cause)) return false;
+  if (cause["kind"] !== "UniqueConstraintViolation") return false;
+  const constraint = cause["constraint"];
+  if (!isRecord(constraint)) return false;
+  const fields = constraint["fields"];
+  if (Array.isArray(fields) && fields.includes(targetField)) return true;
   return false;
 }

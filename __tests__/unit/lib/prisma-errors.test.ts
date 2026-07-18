@@ -92,4 +92,54 @@ describe("isPrismaUniqueConstraintError", () => {
     };
     expect(isPrismaUniqueConstraintError(error, "stripeRefundId")).toBe(true);
   });
+
+  test("Prisma 7 + adapter-pg 形状 (driverAdapterError.cause.constraint.fields) で正しく判定", () => {
+    // Prisma 7 (`@prisma/adapter-pg`) は P2002 の meta shape が旧 rust engine と
+    // 異なり、field 名は `meta.driverAdapterError.cause.constraint.fields` に
+    // 埋め込まれる。旧 shape の `meta.target` は付与されないため、helper が
+    // 新旧両方の shape を正しく判定できることを機械強制する。
+    // これが壊れると STRIPE-DEDUP-A chokepoint / Refund idempotency が全 500 化する
+    // silent bug になる (E2E `e2e/public/stripe-webhook-dedup-replay.spec.ts` の
+    // replay 検証はこの判定を貫通する回帰 gate)。
+    const error = {
+      name: "PrismaClientKnownRequestError",
+      code: "P2002",
+      clientVersion: "7.0.0",
+      meta: {
+        modelName: "StripeEvent",
+        driverAdapterError: {
+          name: "DriverAdapterError",
+          cause: {
+            originalCode: "23505",
+            originalMessage:
+              'duplicate key value violates unique constraint "stripe_events_pkey"',
+            kind: "UniqueConstraintViolation",
+            constraint: { fields: ["id"] },
+          },
+        },
+      },
+    };
+    expect(isPrismaUniqueConstraintError(error, "id")).toBe(true);
+    // targetField 省略時も true
+    expect(isPrismaUniqueConstraintError(error)).toBe(true);
+    // 別 field 指定なら false (silent skip 防止)
+    expect(isPrismaUniqueConstraintError(error, "stripeRefundId")).toBe(false);
+  });
+
+  test("Prisma 7 + adapter-pg 形状で kind が UniqueConstraintViolation でない場合は false", () => {
+    // 同じ driverAdapterError shape でも kind が異なる (foreign key, not-null 等)
+    // 場合は unique constraint 判定にしない。
+    const error = {
+      code: "P2002",
+      meta: {
+        driverAdapterError: {
+          cause: {
+            kind: "ForeignKeyViolation",
+            constraint: { fields: ["userId"] },
+          },
+        },
+      },
+    };
+    expect(isPrismaUniqueConstraintError(error, "userId")).toBe(false);
+  });
 });
