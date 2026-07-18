@@ -129,6 +129,7 @@ export default async function ReservationEditPage({
         reservationId={reservation.id}
         numberOfGuests={1}
         spaces={spaces}
+        version={reservation.version}
         initialValues={{
           spaceId: reservation.spaceId,
           date: dateStr,

@@ -31,6 +31,7 @@ export async function getCustomerReservationDetail(
     where: { id: reservationId, customerId, deletedAt: null },
     select: {
       ...CUSTOMER_RESERVATION_SELECT,
+      version: true,
       couponId: true,
       couponDiscountAmount: true,
       durationDiscountAmount: true,
