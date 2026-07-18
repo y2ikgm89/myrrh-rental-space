@@ -282,9 +282,11 @@ describe("applyCancellationSideEffects", () => {
     await applyCancellationSideEffects(baseInput());
 
     expect(mockRefund).toHaveBeenCalledTimes(1);
+    // UA-HORIZ-04: 起点キャンセルの request context (ip / userAgent) を refund へ継承する
     expect(mockRefund).toHaveBeenCalledWith({
       reservationId: RID,
       actorType: "AUTO_ON_CANCEL",
+      request: { ip: "203.0.113.10", userAgent: "Mozilla/5.0 (Test)" },
     });
 
     // notification title が「要返金確認」へ昇格
