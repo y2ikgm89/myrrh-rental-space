@@ -7,12 +7,18 @@
  * input ベース (table 経由) で残置。
  */
 
-import { updateTag } from "next/cache";
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+// CACHE-INVALIDATE-02: SPACE_CATEGORIES は cdn-cache-tags.ts で SPACE_CATEGORY に
+// mapped され /spaces / /spaces/[slug] の CDN Cache-Tag に emit されるため、
+// raw updateTag では Cloudflare edge に伝播せず (数時間の s-maxage の間)
+// 旧カテゴリ名 / 並び順 / 公開状態が配信され続ける silent stale が発生する。
+// invalidateSiteWideCache 経由で updateTag (Next.js Data Cache) + queueTagPurge
+// (Cloudflare CDN) + Sitemap 自動 purge を一括発火する (SSoT: .claude/rules/caching.md)。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -58,7 +64,7 @@ export async function createSpaceCategory(
         action: "create",
         execute: async () => createSpaceCategoryCommand(data),
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.SPACE_CATEGORIES);
+          invalidateSiteWideCache(CACHE_TAGS.SPACE_CATEGORIES);
         },
         resolveAuditResourceId: (result) => result.id,
       });
@@ -89,7 +95,7 @@ export async function updateSpaceCategory(
         resourceId: idValid.data,
         execute: async () => updateSpaceCategoryCommand(idValid.data, data),
         afterSuccess: () => {
-          updateTag(CACHE_TAGS.SPACE_CATEGORIES);
+          invalidateSiteWideCache(CACHE_TAGS.SPACE_CATEGORIES);
         },
         resolveAuditResourceId: (result) => result.id,
       });
@@ -114,7 +120,7 @@ export async function updateSpaceCategoryOrder(
     action: "update",
     execute: async () => updateSpaceCategoryOrderCommand(parsed.data),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACE_CATEGORIES);
+      invalidateSiteWideCache(CACHE_TAGS.SPACE_CATEGORIES);
     },
   });
 }
@@ -133,7 +139,7 @@ export async function deleteSpaceCategory(
     resourceId: validated.data,
     execute: async () => deleteSpaceCategoryCommand(validated.data),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACE_CATEGORIES);
+      invalidateSiteWideCache(CACHE_TAGS.SPACE_CATEGORIES);
     },
     resolveAuditResourceId: (result) => result.id,
   });
@@ -155,7 +161,7 @@ export async function updateSpaceCategoryActive(
     execute: async () =>
       updateSpaceCategoryActiveCommand(validated.data, isActive),
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SPACE_CATEGORIES);
+      invalidateSiteWideCache(CACHE_TAGS.SPACE_CATEGORIES);
     },
   });
 }

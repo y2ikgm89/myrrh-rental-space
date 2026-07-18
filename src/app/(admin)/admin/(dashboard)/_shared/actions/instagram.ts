@@ -1,12 +1,18 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   disconnectInstagram as disconnectInstagramCommand,
   saveInstagramToken as saveInstagramTokenCommand,
 } from "@/shared/domain/instagram/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+// CACHE-INVALIDATE-03: INSTAGRAM_FEED は cdn-cache-tags.ts で INSTAGRAM_FEED (CDN 側) に
+// mapped され SITE_WIDE_CDN_TAGS に含まれるため全公開ページの Cache-Tag に emit される。
+// raw updateTag では Cloudflare edge に伝播せず (数時間の s-maxage の間) 旧トークンで
+// 取得した stale フィードが配信され続ける (トークン失効時の空表示も含む) silent stale。
+// invalidateSiteWideCache 経由で updateTag (Next.js Data Cache) + queueTagPurge
+// (Cloudflare CDN) + Sitemap 自動 purge を一括発火する (SSoT: .claude/rules/caching.md)。
+import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { instagramTokenSchema } from "@/shared/lib/validations/instagram";
 import { testInstagramConnection } from "@/shared/lib/instagram";
@@ -14,7 +20,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { DomainError } from "@/shared/domain/domain-error";
 
 function invalidateInstagramCaches(): void {
-  updateTag(CACHE_TAGS.INSTAGRAM_FEED);
+  invalidateSiteWideCache(CACHE_TAGS.INSTAGRAM_FEED);
 }
 
 export async function saveManualToken(
