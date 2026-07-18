@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PaymentStatus } from "@generated/prisma/enums";
+import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
@@ -52,10 +52,20 @@ export async function claimReservationAsPaid(
     stripePaymentIntentId: string | null;
   },
 ) {
+  // STRIPE-02 (HIGH): status ガード追加。cancel-core.ts の cancel path は
+  // status=CANCELLED に flip するが paymentStatus は UNPAID/PENDING のまま残す
+  // (payment-commands.ts:82-92 コメント明示)。ここで status ガード無しだと、
+  // Stripe Checkout URL が cancel 後も生きているため顧客が古いタブに戻って決済完了 →
+  // webhook 到達 → paymentStatus=PENDING に一致 count=1 で PAID に flip →
+  // status=CANCELLED / paymentStatus=PAID の不整合ペア焼き付き (自動返金導線なし
+  // で silent 会計 mismatch)。events/payment-commands.ts:548
+  // (claimEventRegistrationAsPaid) が status: CONFIRMED を含めているのと対称化。
+  // createCheckoutSessionCommand の Codex P1 (PR#1022) と同型の status guard。
   const result = await prisma.reservation.updateMany({
     where: {
       id: reservationId,
       deletedAt: null,
+      status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
       paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.PENDING] },
     },
     data: {
