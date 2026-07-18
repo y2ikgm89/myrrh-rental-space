@@ -182,6 +182,10 @@ mock.module("@/shared/lib/terms-consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.reject(new Error("not used in cancel test")),
   ),
+  // Phase 2 (TERMS-REAGREE-P2): Server Action の handler 冒頭 gate。
+  // 既存 fixture の customer は LOGIN_SIGNUP scope 同意履歴を持たないため、
+  // module 全体差し替え mock ではここに no-op を明示して cancel flow を通す。
+  assertLoginSignupReagreed: mock(() => Promise.resolve()),
 }));
 
 // =============================================================================

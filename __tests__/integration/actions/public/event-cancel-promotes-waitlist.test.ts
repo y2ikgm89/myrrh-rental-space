@@ -94,6 +94,17 @@ mock.module("@/shared/domain/customers/guard", () => ({
   ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
 }));
 
+// Phase 2 (TERMS-REAGREE-P2): Server Action handler 冒頭に assertLoginSignupReagreed
+// を追加したため、fixture 顧客 (LOGIN_SIGNUP scope 同意履歴なし) を通すため no-op に。
+// assertAllRequiredTermsAgreed は本テストで未使用だが module 全体差し替えのため併記
+// (未 mock だと undefined 化で参照側 TypeError になる)。
+mock.module("@/shared/lib/terms-consent-gate", () => ({
+  assertAllRequiredTermsAgreed: mock(() =>
+    Promise.resolve({ matchedTermsIds: [] }),
+  ),
+  assertLoginSignupReagreed: mock(() => Promise.resolve()),
+}));
+
 // 既存 3 種の副作用（キャンセル確認メール・管理者通知メール）は実
 // registration-cancellation-side-effects.ts から実際に呼ばれるが、本テストの
 // 対象ではないため no-op 化する（Resend への実送信を避ける）。

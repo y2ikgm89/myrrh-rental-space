@@ -155,6 +155,17 @@ mock.module("@/shared/domain/customers/guard", () => ({
   ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
 }));
 
+// Phase 2 (TERMS-REAGREE-P2): Server Action handler 冒頭に assertLoginSignupReagreed
+// を追加したため、fixture 顧客 (LOGIN_SIGNUP scope 同意履歴なし) を通すため no-op に。
+// assertAllRequiredTermsAgreed は本テストで未使用だが module 全体差し替えのため併記
+// (未 mock だと undefined 化で参照側 TypeError になる)。
+mock.module("@/shared/lib/terms-consent-gate", () => ({
+  assertAllRequiredTermsAgreed: mock(() =>
+    Promise.resolve({ matchedTermsIds: [] }),
+  ),
+  assertLoginSignupReagreed: mock(() => Promise.resolve()),
+}));
+
 // domain コマンドモック
 const mockCancelCustomerReservation = mock<
   () => Promise<

@@ -78,6 +78,10 @@ const mockRecordTermsAgreementsCommand = mock(() =>
 );
 mock.module("@/shared/domain/terms/queries", () => ({
   getRequiredTermsByScope: mockGetRequiredTermsByScope,
+  // Phase 2 (TERMS-REAGREE-P2): terms-consent-gate.ts が本 module から
+  // getReagreeRequiredTermsForCustomer を新規 import したため、
+  // module 全体差し替え mock ではここに no-op を明示する必要がある。
+  getReagreeRequiredTermsForCustomer: mock(() => Promise.resolve([])),
 }));
 mock.module("@/shared/domain/terms/commands", () => ({
   recordTermsAgreementsCommand: mockRecordTermsAgreementsCommand,
