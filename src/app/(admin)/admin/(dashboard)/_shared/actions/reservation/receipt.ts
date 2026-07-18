@@ -6,6 +6,7 @@ import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cach
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { reissueReceiptCommand } from "@/shared/domain/receipts/issue";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 
 /**
  * 管理者による領収書再発行 (task #7 PR#6)。
@@ -27,6 +28,12 @@ export async function reissueReservationReceipt(
     action: "update",
     resourceId: reservationId,
     execute: async (user) => {
+      // UA-HORIZ-02: 領収書再発行の AuditLog に ip / userAgent を metadata として
+      // 載せる (admin session hijack シナリオでの forensics 対称化)。
+      // buildAuditRequestContext は headers() ベースで cf-connecting-ip を trust する
+      // SSoT (`@/shared/lib/audit-request-context`)。
+      const { ip, userAgent } = await buildAuditRequestContext();
+
       const receipt = await reissueReceiptCommand({
         originalReceiptId,
         reason,
@@ -51,6 +58,8 @@ export async function reissueReservationReceipt(
           reissuedFromId: originalReceiptId,
           reissuedReason: reason,
           reservationId,
+          ...(ip !== null && { ip }),
+          ...(userAgent !== null && { userAgent }),
         },
       });
 

@@ -17,7 +17,6 @@
  */
 
 import type { SubmissionResult } from "@conform-to/react";
-import { headers } from "next/headers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -32,7 +31,7 @@ import {
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import { syncReservationSeriesToCalendar } from "@/shared/lib/calendar-sync/outbound";
 import { getMaxRecurrenceInstances } from "@/shared/domain/reservations/payloads";
-import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { z } from "zod";
 import { createRecurringReservationFormSchema } from "../../../reservations/_components/reservation-form-schema";
 import { buildRruleString } from "../../../reservations/_components/rrule-utils";
@@ -184,7 +183,7 @@ export async function cancelReservationSeriesAction(
     formData,
     cancelInputSchema,
     async (data) => {
-      const request = await buildRequestContext();
+      const request = await buildAuditRequestContext();
 
       type CancelPayload = {
         readonly cancelledCount: number;
@@ -241,21 +240,7 @@ export async function cancelReservationSeriesAction(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-async function buildRequestContext(): Promise<{
-  ip: string | null;
-  userAgent: string | null;
-}> {
-  // RECENT-03: 以前は「userAgent は cancellation-side-effects.ts 側で headers() から
-  // 取り直す」と誤ったコメントを付けて null を返していたが、cancellation-side-effects
-  // 側は input.request.userAgent を metadata にそのまま書き込むだけで headers() 再取得
-  // は一切行わないため、admin 経由 series キャンセルの全 AuditLog (per-instance + 集約)
-  // に userAgent=null が記録されていた。単発 admin cancel (mutations.ts 経由) は
-  // headers() で UA を正しく取得しており、series 経路だけ audit trail が非対称。
-  // 事後 forensics での UA fingerprint 検知 (admin session hijack シナリオ) が弱体化
-  // していたため、mutations.ts 側と同じく本経路でも headers() から明示取得する。
-  const requestHeaders = await headers();
-  const ip = await getClientIpFromHeaders();
-  const userAgent = requestHeaders.get("user-agent");
-  return { ip, userAgent };
-}
+// RECENT-03 系: request context (ip/userAgent) は
+// `@/shared/lib/audit-request-context` の `buildAuditRequestContext` に集約済み。
+// admin / customer 両サイドで同じ経路を使うことで、series キャンセル AuditLog に
+// userAgent=null が焼き込まれる非対称を根治している (UA-HORIZ-01/02/03)。

@@ -48,6 +48,13 @@ mock.module("@/shared/lib/email/event-waitlist-emails", () => ({
   ) => mockSendEventWaitlistExpired(...args),
 }));
 
+// UA-HORIZ-03: buildAuditRequestContext は next/headers に依存する Server Action 内
+// helper なので、unit test では固定値を返す stub に差し替える。
+mock.module("@/shared/lib/audit-request-context", () => ({
+  buildAuditRequestContext: () =>
+    Promise.resolve({ ip: "127.0.0.1", userAgent: "test-user-agent" }),
+}));
+
 // fireAndForget は本来 await しない設計だが、テストでは afterSuccess 内で発火された
 // 副作用 Promise を捕まえて明示的に await できるよう、実行開始済みの Promise を
 // 配列に積むだけの stub に差し替える（admin-event-registration.test.ts と同型）。

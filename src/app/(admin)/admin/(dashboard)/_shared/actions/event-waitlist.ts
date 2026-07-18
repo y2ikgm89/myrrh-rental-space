@@ -24,6 +24,7 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 
 const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 
@@ -39,6 +40,13 @@ type PromoteWaitlistEntryData = {
   actorUserId: string;
   /** true = 対象は呼び出し前から既に WAITLISTED_OFFERED だった（冪等 no-op） */
   alreadyOffered: boolean;
+  /**
+   * UA-HORIZ-03: AuditLog forensics (admin session hijack 検知) 用の request context。
+   * execute 内で `buildAuditRequestContext` を通じ headers() から取得し、afterSuccess
+   * に持ち越して createAuditLogRecord の metadata へ載せる。
+   */
+  ip: string | null;
+  userAgent: string | null;
 };
 
 /**
@@ -64,6 +72,10 @@ export async function adminPromoteWaitlistEntryAction(
     action: "update",
     resourceId: validated.data,
     execute: async (user) => {
+      // UA-HORIZ-03: request context (ip/userAgent) は execute 内 = request scope で
+      // 取得し data に持ち越す。afterSuccess は fireAndForget 越しに走るため
+      // headers() を後から呼ぶと request scope 外の可能性がある。
+      const { ip, userAgent } = await buildAuditRequestContext();
       const { promoted, alreadyOffered } =
         await adminPromoteWaitlistEntryCommand({
           registrationId: validated.data,
@@ -76,6 +88,8 @@ export async function adminPromoteWaitlistEntryAction(
         expiresAt: promoted.expiresAt,
         actorUserId: user.id,
         alreadyOffered,
+        ip,
+        userAgent,
       };
     },
     afterSuccess: (data) => {
@@ -102,6 +116,8 @@ export async function adminPromoteWaitlistEntryAction(
             previousStatus: RegistrationStatus.WAITLISTED,
             newStatus: RegistrationStatus.WAITLISTED_OFFERED,
             actorUserId: data.actorUserId,
+            ...(data.ip !== null && { ip: data.ip }),
+            ...(data.userAgent !== null && { userAgent: data.userAgent }),
           },
         }),
         {
@@ -167,6 +183,9 @@ type ExpireWaitlistOfferData = {
   actorUserId: string;
   /** true = この呼び出しで実際に EXPIRED 化した。false = 冪等 no-op（対象が既に OFFERED でなかった） */
   expired: boolean;
+  /** UA-HORIZ-03: AuditLog forensics 用 request context (詳細は Promote 側参照)。 */
+  ip: string | null;
+  userAgent: string | null;
 };
 
 /**
@@ -186,6 +205,8 @@ export async function adminExpireWaitlistOfferAction(
     action: "update",
     resourceId: validated.data,
     execute: async (user) => {
+      // UA-HORIZ-03: request scope 内で ip/userAgent を回収し data に持ち越す。
+      const { ip, userAgent } = await buildAuditRequestContext();
       const { registration } = await expireWaitlistOfferCommand({
         registrationId: validated.data,
         now: new Date(),
@@ -195,6 +216,8 @@ export async function adminExpireWaitlistOfferAction(
         email: registration?.email ?? null,
         actorUserId: user.id,
         expired: registration !== null,
+        ip,
+        userAgent,
       };
     },
     afterSuccess: (data) => {
@@ -220,6 +243,8 @@ export async function adminExpireWaitlistOfferAction(
             previousStatus: RegistrationStatus.WAITLISTED_OFFERED,
             newStatus: RegistrationStatus.EXPIRED,
             actorUserId: data.actorUserId,
+            ...(data.ip !== null && { ip: data.ip }),
+            ...(data.userAgent !== null && { userAgent: data.userAgent }),
           },
         }),
         {
