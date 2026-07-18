@@ -16,8 +16,11 @@ import {
 } from "@/public/components/design-system/dialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getErrorMessage } from "@/shared/lib/errors";
-import { linkSocial, unlinkAccount } from "@/shared/lib/customer-auth-client";
-import { deleteAccountAction } from "../../_shared/actions/account";
+import { linkSocial } from "@/shared/lib/customer-auth-client";
+import {
+  deleteAccountAction,
+  unlinkAccountAction,
+} from "../../_shared/actions/account";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -77,7 +80,13 @@ export function AccountLinking({
 
     startTransition(async () => {
       try {
-        await unlinkAccount({ providerId });
+        // CRITIC-3: Better Auth SDK の unlinkAccount は DB row 削除のみで upstream
+        // OAuth grant は残る。Server Action 経由で revoke → DB unlink を順に実行する。
+        const result = await unlinkAccountAction(providerId);
+        if (isMutationError(result)) {
+          setError(result.error);
+          return;
+        }
         router.refresh();
       } catch (error) {
         console.error("Failed to unlink account", getErrorMessage(error));

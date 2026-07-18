@@ -21,13 +21,15 @@ import {
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { revokeOAuthGrantForProvider } from "@/shared/lib/oauth-revoke";
 
 export async function getAccountLinksAction(): Promise<
   MutationResult<{ accounts: string[] }>
 > {
-  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
-  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
-
+  // SETTINGS-01: read query に write-form の rate limit を掛けると Server Component の
+  // 描画のたびに quota を消費し、上限到達で連携表示が silent に空配列 fallback して
+  // ユーザーが自分の連携状態を見失う。cost gate は MypageAuthGate の redirect と
+  // Better Auth session cookie の presence 検証で十分（未認証は SC 描画に到達しない）。
   const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
@@ -46,6 +48,87 @@ export async function getAccountLinksAction(): Promise<
 
   const providers = await getAccountProviders(session.user.id);
   return { accounts: providers };
+}
+
+/**
+ * ソーシャルアカウントの連携を解除する。
+ *
+ * DB row の削除だけでは Google / LINE 側の OAuth grant が残り、UI 上「解除」の
+ * 心証と乖離する（GDPR 第 17 条の propagation 論点）。DB row 削除の前に upstream の
+ * revoke endpoint を best-effort で叩く（失敗しても unlink 自体は完了させる）。
+ *
+ * client の Better Auth SDK 経由（`unlinkAccount({ providerId })`）は DB row 削除
+ * だけを行うため、revoke を絡めるにはこの Server Action 経由に切り替える必要がある。
+ */
+export async function unlinkAccountAction(
+  providerId: string,
+): Promise<MutationResult<null>> {
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
+  const session = await getCustomerSession();
+  if (!session) return createMutationError("認証が必要です");
+
+  const customer = await getCustomerByUserId(session.user.id);
+  if (!customer) return createMutationError("顧客情報が見つかりません");
+  try {
+    await assertCustomerActive(customer.id);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
+  }
+
+  if (providerId !== "google" && providerId !== "line") {
+    return createMutationError("対応していない連携プロバイダーです");
+  }
+
+  // 1) upstream revoke: getAccessToken は Better Auth 側で復号（`encryptOAuthTokens`）
+  //    + 期限切れ auto-refresh を行うため、素の access_token が得られる。失敗しても
+  //    DB unlink を止めないよう try/catch で握りつぶす（logError で MEDIUM を残す）。
+  try {
+    const requestHeaders = await headers();
+    const tokenResult = await customerAuth.api.getAccessToken({
+      body: { providerId, userId: session.user.id },
+      headers: requestHeaders,
+    });
+    const accessToken = tokenResult?.accessToken;
+    if (accessToken) {
+      await revokeOAuthGrantForProvider(providerId, accessToken);
+    }
+  } catch (error) {
+    logError(error, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: "unlinkAccount.revoke",
+        providerId,
+        userId: session.user.id,
+      },
+    });
+  }
+
+  // 2) DB unlink: Better Auth の accountLinking 保護（最低 1 連携が必要 /
+  //    `allowUnlinkingAll` 未有効）を通す。失敗時は MutationError を返す。
+  try {
+    await customerAuth.api.unlinkAccount({
+      body: { providerId },
+      headers: await headers(),
+    });
+    return null;
+  } catch (error) {
+    logError(error, {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "unlinkAccount",
+        providerId,
+        userId: session.user.id,
+      },
+    });
+    return createMutationError("連携解除に失敗しました");
+  }
 }
 
 /**

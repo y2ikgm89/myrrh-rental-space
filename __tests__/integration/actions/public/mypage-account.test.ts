@@ -5,13 +5,15 @@
  *
  * テスト対象:
  * - getAccountLinksAction: アカウントプロバイダー一覧取得
+ * - unlinkAccountAction: ソーシャル連携解除 (upstream revoke + DB unlink)
  * - deleteAccountAction: アカウント削除
  *
  * モック方針:
  * - getSession: auth をモック（認証状態を制御）
  * - getAccountProviders: domain クエリをモック
- * - auth.api.deleteUser: Better Auth API をモック
+ * - auth.api.deleteUser / unlinkAccount / getAccessToken: Better Auth API をモック
  * - checkActionRateLimit: action-helpers をモック
+ * - oauth-revoke: upstream revoke ヘルパーをモック
  * - headers: next/headers をモック
  */
 
@@ -95,6 +97,10 @@ mock.module("@/shared/domain/customers/guard", () => ({
 
 // auth モック
 const mockDeleteUser = mock(() => Promise.resolve(undefined));
+const mockUnlinkAccountApi = mock(() => Promise.resolve(undefined));
+const mockGetAccessToken = mock((): Promise<{ accessToken: string } | null> =>
+  Promise.resolve({ accessToken: "test-access-token" }),
+);
 const mockGetSession = mock(
   (): Promise<{ user: { id: string; name: string } } | null> =>
     Promise.resolve({
@@ -107,12 +113,25 @@ mock.module("@/shared/lib/customer-auth", () => ({
   customerAuth: {
     api: {
       deleteUser: mockDeleteUser,
+      unlinkAccount: mockUnlinkAccountApi,
+      getAccessToken: mockGetAccessToken,
     },
   },
   getCurrentCustomerUser: mock(() => Promise.resolve(null)),
   verifyCustomerSession: mock(() => Promise.resolve(null)),
   getCustomerSessionUser: () => null,
   isValidRole: () => false,
+}));
+
+// upstream revoke ヘルパーモック
+const mockRevokeOAuthGrantForProvider = mock((): Promise<void> =>
+  Promise.resolve(undefined),
+);
+
+mock.module("@/shared/lib/oauth-revoke", () => ({
+  revokeOAuthGrantForProvider: mockRevokeOAuthGrantForProvider,
+  revokeGoogleOAuthGrant: mock(() => Promise.resolve(undefined)),
+  revokeLineOAuthGrant: mock(() => Promise.resolve(undefined)),
 }));
 
 mock.module("@/shared/lib/admin-auth", () => ({
@@ -228,7 +247,123 @@ describe("getAccountLinksAction", () => {
     });
   });
 
-  describe("異常系: レート制限", () => {
+  // SETTINGS-01: read query から write-form rate limit を撤去したため、
+  // レート制限系のテストは廃止。cost gate は MypageAuthGate の redirect と
+  // Better Auth session cookie の presence 検証で行う。
+  describe("SETTINGS-01: rate-limit を消費しない", () => {
+    test("getAccountLinksAction は checkActionRateLimit を呼ばない", async () => {
+      const { getAccountLinksAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      await getAccountLinksAction();
+
+      expect(mockCheckActionRateLimit).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("unlinkAccountAction (CRITIC-3)", () => {
+  beforeEach(() => {
+    mockGetSession.mockClear();
+    mockCheckActionRateLimit.mockClear();
+    mockUnlinkAccountApi.mockClear();
+    mockGetAccessToken.mockClear();
+    mockRevokeOAuthGrantForProvider.mockClear();
+
+    mockGetSession.mockImplementation(() =>
+      Promise.resolve({
+        user: { id: "user-001", name: "テストユーザー" },
+      }),
+    );
+    mockCheckActionRateLimit.mockImplementation(() =>
+      Promise.resolve({ success: true as const }),
+    );
+    mockGetAccessToken.mockImplementation(() =>
+      Promise.resolve({ accessToken: "test-access-token" }),
+    );
+    mockUnlinkAccountApi.mockImplementation(() => Promise.resolve(undefined));
+    mockRevokeOAuthGrantForProvider.mockImplementation(() =>
+      Promise.resolve(undefined),
+    );
+  });
+
+  describe("正常系: revoke + DB unlink の両方が実行される", () => {
+    test("google 連携解除で upstream revoke → DB unlink が呼ばれる", async () => {
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("google");
+
+      expect(result).toBeNull();
+      expect(mockRevokeOAuthGrantForProvider).toHaveBeenCalledTimes(1);
+      expect(mockRevokeOAuthGrantForProvider).toHaveBeenCalledWith(
+        "google",
+        "test-access-token",
+      );
+      expect(mockUnlinkAccountApi).toHaveBeenCalledTimes(1);
+      expect(mockUnlinkAccountApi).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: { providerId: "google" },
+        }),
+      );
+    });
+
+    test("line 連携解除でも upstream revoke → DB unlink が呼ばれる", async () => {
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("line");
+
+      expect(result).toBeNull();
+      expect(mockRevokeOAuthGrantForProvider).toHaveBeenCalledWith(
+        "line",
+        "test-access-token",
+      );
+    });
+
+    test("upstream revoke が失敗しても DB unlink は続行する (best-effort)", async () => {
+      mockRevokeOAuthGrantForProvider.mockImplementation(() =>
+        Promise.reject(new Error("upstream 503")),
+      );
+
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("google");
+
+      // upstream 失敗は握りつぶし、DB unlink は成功
+      expect(result).toBeNull();
+      expect(mockUnlinkAccountApi).toHaveBeenCalledTimes(1);
+    });
+
+    test("access token が取れなかった場合は revoke をスキップし DB unlink のみ実行", async () => {
+      mockGetAccessToken.mockImplementation(() => Promise.resolve(null));
+
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("google");
+
+      expect(result).toBeNull();
+      expect(mockRevokeOAuthGrantForProvider).not.toHaveBeenCalled();
+      expect(mockUnlinkAccountApi).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("異常系", () => {
+    test("未認証時は認証エラーを返す", async () => {
+      mockGetSession.mockImplementation(() => Promise.resolve(null));
+
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("google");
+
+      expectErrorResult(result);
+      expect(result.error).toBe("認証が必要です");
+      expect(mockUnlinkAccountApi).not.toHaveBeenCalled();
+    });
+
     test("レート制限超過時はエラーを返す", async () => {
       mockCheckActionRateLimit.mockImplementation(() =>
         Promise.resolve({
@@ -237,29 +372,39 @@ describe("getAccountLinksAction", () => {
         }),
       );
 
-      const { getAccountLinksAction } =
+      const { unlinkAccountAction } =
         await import("@/app/(public)/mypage/_shared/actions/account");
 
-      const result = await getAccountLinksAction();
+      const result = await unlinkAccountAction("google");
 
       expectErrorResult(result);
       expect(result.error).toBe("リクエストが多すぎます");
+      expect(mockUnlinkAccountApi).not.toHaveBeenCalled();
     });
 
-    test("レート制限超過時は getSession が呼ばれない", async () => {
-      mockCheckActionRateLimit.mockImplementation(() =>
-        Promise.resolve({
-          success: false as const,
-          error: "リクエストが多すぎます",
-        }),
-      );
-
-      const { getAccountLinksAction } =
+    test("未対応 provider は拒否する", async () => {
+      const { unlinkAccountAction } =
         await import("@/app/(public)/mypage/_shared/actions/account");
 
-      await getAccountLinksAction();
+      const result = await unlinkAccountAction("facebook");
 
-      expect(mockGetSession).not.toHaveBeenCalled();
+      expectErrorResult(result);
+      expect(result.error).toBe("対応していない連携プロバイダーです");
+      expect(mockUnlinkAccountApi).not.toHaveBeenCalled();
+    });
+
+    test("DB unlink が失敗した場合は MutationError を返す", async () => {
+      mockUnlinkAccountApi.mockImplementation(() =>
+        Promise.reject(new Error("last account cannot be unlinked")),
+      );
+
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("google");
+
+      expectErrorResult(result);
+      expect(result.error).toBe("連携解除に失敗しました");
     });
   });
 });
