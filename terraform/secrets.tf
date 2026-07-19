@@ -33,12 +33,26 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    # RESEND_WEBHOOK_SECRET (2026-07-19): Tier 1 → Tier 2 (DB canonical) 移行完了。
+    # RESEND_WEBHOOK_SECRET (2026-07-19): Tier 1 → Tier 2 (DB canonical) 移行済 (PR #1292)。
     # 秘密は `Settings.resendWebhookSecret` (暗号化) + admin UI で rotate する。
     # Cloud Run env への注入は不要 (env は local dev fallback のみ、cloudbuild.yaml
-    # には元々未配線)。Secret Manager container 側は operator が follow-up ops
-    # task として `gcloud secrets delete RESEND_WEBHOOK_SECRET` で削除する
-    # ([[project_integration-secrets-two-tier-split-2026-07-06]])。
+    # には元々未配線)。
+    #
+    # ただし GCP Secret Manager 側の container は Terraform state に残っており、
+    # runtime_secrets から削除すると `lifecycle.prevent_destroy = true` により
+    # `Instance cannot be destroyed` で apply が fail する
+    # ([run 29689132885](https://github.com/y2ikgm89/myrrh-rental-space/actions/runs/29689132885))。
+    #
+    # 「container は残すが Cloud Run では消費しない orphan」状態を維持するため、
+    # runtime_secrets には残置する。実際に消費されるのは cloud_run_secret_versions
+    # (variables.tf) に entry がある secret のみで、RESEND_WEBHOOK_SECRET は既に
+    # PR #1288 で除去済のため Cloud Run からは参照されない。
+    #
+    # 将来 container 自体を削除するときは:
+    # 1. gcloud secrets delete RESEND_WEBHOOK_SECRET (operator)
+    # 2. Terraform config から entry を削除 + `removed { from = ..., lifecycle { destroy = false } }`
+    #    block を追加 (Terraform 1.7+ syntax) して state から forget
+    "RESEND_WEBHOOK_SECRET",
     "SUPPRESSION_HASH_SECRET",
   ]
 
@@ -90,11 +104,12 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    # RESEND_WEBHOOK_SECRET (2026-07-19): Tier 1 → Tier 2 移行 (このPR) で
-    # runtime_secrets から削除済み (上記 comment 参照)。imported_secrets からも
-    # 外し、Secret Manager container は operator の follow-up ops task で削除
-    # する予定。それまで container は orphan として残るが Cloud Run からは
-    # 参照されないため harmless。
+    # RESEND_WEBHOOK_SECRET (2026-07-19): runtime_secrets 側で orphan として残置
+    # している (Tier 1 → Tier 2 移行後の container は Cloud Run 未参照だが、
+    # `prevent_destroy = true` の safety net を尊重して state 保持)。
+    # 詳細は上の runtime_secrets 内 docblock を参照。import 経由で再 adoption
+    # できるよう imported_secrets にも維持する。
+    "RESEND_WEBHOOK_SECRET",
     #
     # SUPPRESSION_HASH_SECRET (2026-07-19、PR-K #1276): Phase A のみ (runtime_secrets
     # にのみ追加)。上の docblock の 3-phase rollout に従い、operator が Phase B
