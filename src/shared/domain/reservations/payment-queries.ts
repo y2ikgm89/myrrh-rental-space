@@ -4,6 +4,10 @@ import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
+import {
+  REFUNDED_BY_TYPE,
+  isValidRefundedByType,
+} from "@/shared/lib/validations/enums/helpers";
 
 const PAYMENT_EMAIL_SELECT = {
   id: true,
@@ -210,6 +214,11 @@ export async function applyChargeRefundIdempotent(input: {
   readonly latestRefund: {
     readonly id: string;
     readonly amount: number;
+    /**
+     * Stripe refund.metadata.initiator: app 側 refund path が仕込んだ RefundedByType。
+     * webhook が先着した race で attribution 復元用。無ければ "STRIPE_DASHBOARD" fallback。
+     */
+    readonly metadata?: Record<string, string | undefined> | null | undefined;
   } | null;
 }): Promise<void> {
   const {
@@ -233,12 +242,20 @@ export async function applyChargeRefundIdempotent(input: {
     // (zero-decimal) では偶然一致するが、USD/EUR 等では 100 倍で保存されて後続の refund
     // 集計・残額判定が壊れるため Stripe unit_amount からの逆変換が必須。
     try {
+      // Stripe refund.metadata.initiator に app 側が仕込んだ attribution が
+      // あればそれを使う (webhook が command 側の書込より先着した race で
+      // AUTO_ON_CANCEL / ADMIN の refund が "STRIPE_DASHBOARD" と mislabel
+      // されるのを防ぐ)。metadata が空 / 未知値なら真の Stripe Dashboard 発行として扱う。
+      const initiatorMeta = latestRefund.metadata?.["initiator"];
+      const refundedByType = isValidRefundedByType(initiatorMeta)
+        ? initiatorMeta
+        : REFUNDED_BY_TYPE.STRIPE_DASHBOARD;
       await prisma.refund.create({
         data: {
           reservationId,
           amount: fromStripeUnitAmount(latestRefund.amount, currency),
           stripeRefundId: latestRefund.id,
-          refundedByType: "STRIPE_DASHBOARD",
+          refundedByType,
         },
       });
     } catch (error) {

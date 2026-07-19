@@ -17,7 +17,11 @@ import {
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { getAppUrl } from "@/shared/lib/constants";
-import { type RefundedByType } from "@/shared/lib/validations/enums/helpers";
+import {
+  REFUNDED_BY_TYPE,
+  isValidRefundedByType,
+  type RefundedByType,
+} from "@/shared/lib/validations/enums/helpers";
 import {
   logError,
   normalizeError,
@@ -780,7 +784,13 @@ export async function refundEventRegistrationPaymentCommand(
           {
             payment_intent: registration.stripePaymentIntentId,
             amount: toStripeUnitAmount(amount, stripeCurrency),
-            ...(reason ? { metadata: { reason } } : {}),
+            // metadata.initiator: charge.refunded webhook がこの refund を Stripe
+            // から受信したとき、正しい attribution (ADMIN / AUTO_ON_CANCEL) を
+            // 復元するための hint (Reservation 側と同型)。
+            metadata: {
+              initiator: actorType,
+              ...(reason ? { reason } : {}),
+            },
           },
           {
             idempotencyKey: `event-registration-refund-${registrationId}-${newCumulative}`,
@@ -909,6 +919,11 @@ export async function applyEventChargeRefundIdempotent(input: {
   readonly latestRefund: {
     readonly id: string;
     readonly amount: number;
+    /**
+     * Stripe refund.metadata.initiator: app 側 refund path が仕込んだ RefundedByType。
+     * webhook が先着した race で attribution 復元用。無ければ "STRIPE_DASHBOARD" fallback。
+     */
+    readonly metadata?: Record<string, string | undefined> | null | undefined;
   } | null;
 }): Promise<void> {
   const {
@@ -923,13 +938,20 @@ export async function applyEventChargeRefundIdempotent(input: {
     // Reservation 側と同型: 単一 create + catch(P2002) で真 atomic idempotent (PR #1146
     // Codex P2 追加対応、Prisma upsert issue #20229 回避)。Stripe unit_amount からアプリ
     // 単位への逆変換 (PR #1130 P2、PR #1126 P1 と同型) も継続。
+    // Reservation 側 payment-queries と同型: Stripe refund.metadata.initiator が
+    // 既知の RefundedByType なら attribution を復元、無い / 未知なら
+    // "STRIPE_DASHBOARD" fallback (webhook 先着 race の mislabel を防ぐ)。
+    const initiatorMeta = latestRefund.metadata?.["initiator"];
+    const refundedByType = isValidRefundedByType(initiatorMeta)
+      ? initiatorMeta
+      : REFUNDED_BY_TYPE.STRIPE_DASHBOARD;
     try {
       await prisma.refund.create({
         data: {
           eventRegistrationId: registrationId,
           amount: fromStripeUnitAmount(latestRefund.amount, currency),
           stripeRefundId: latestRefund.id,
-          refundedByType: "STRIPE_DASHBOARD",
+          refundedByType,
         },
       });
     } catch (error) {

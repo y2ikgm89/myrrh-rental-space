@@ -717,6 +717,21 @@ export const REFUNDED_BY_TYPE_LABELS: Record<RefundedByType, string> = {
   [REFUNDED_BY_TYPE.STRIPE_DASHBOARD]: "Stripe Dashboard",
 };
 
+/**
+ * Stripe refund object の `metadata.initiator` 値が既知の RefundedByType かを判定する。
+ * webhook (`applyChargeRefundIdempotent`) が Stripe から受け取った refund の attribution
+ * を Refund.refundedByType に書き戻すときの narrow に使う。
+ *
+ * app 側 refund (`refundReservation/EventRegistrationPaymentCommand`) は Stripe API 呼び出し
+ * 時に metadata.initiator = actorType を仕込むため、webhook がその refund を先に受信して
+ * Refund 行を作るときも正しい attribution が復元できる (hardcode "STRIPE_DASHBOARD" 時代の
+ * race-mislabel を防ぐ)。metadata が空 / 未知値なら真の Stripe Dashboard 発行として fallback。
+ */
+export function isValidRefundedByType(v: unknown): v is RefundedByType {
+  if (typeof v !== "string") return false;
+  return Object.values(REFUNDED_BY_TYPE).some((t) => t === v);
+}
+
 // =============================================================================
 // AdminNotification Type（DB VARCHAR 管理 — Prisma enum ではない）
 // =============================================================================
