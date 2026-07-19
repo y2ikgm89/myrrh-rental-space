@@ -214,6 +214,14 @@ export const serverEnv = createEnv({
       })
       .optional(),
 
+    // Suppression set hashing secret（本番推奨・任意 - M6）
+    // `hashSuppressedEmailCandidate` で HMAC-SHA256 の鍵として使う。
+    // 未設定時は plain SHA-256 に fallback する（`getSuppressedEmailSet` の
+    // Data Cache dump が dictionary attack で全 suppression set を復元される
+    // リスクが残る）。未設定時は `validateProductionEnv()` が WARN を出す。
+    // Recommended: 64+ random hex chars (`openssl rand -hex 64`).
+    SUPPRESSION_HASH_SECRET: z.string().optional(),
+
     // Cron（本番必須 - ランタイム検証）
     // Cloud Scheduler OIDC token の audience と発行元 service account を検証する。
     CRON_OIDC_AUDIENCE: noTrailingSlashUrl.optional(),
@@ -323,6 +331,7 @@ export const serverEnv = createEnv({
     SECONDARY_ENCRYPTION_KEYS: process.env["SECONDARY_ENCRYPTION_KEYS"],
     AUDIT_LOG_HMAC_KEY: process.env["AUDIT_LOG_HMAC_KEY"],
     AUDIT_LOG_HMAC_KEY_ID: process.env["AUDIT_LOG_HMAC_KEY_ID"],
+    SUPPRESSION_HASH_SECRET: process.env["SUPPRESSION_HASH_SECRET"],
     CRON_OIDC_AUDIENCE: process.env["CRON_OIDC_AUDIENCE"],
     CRON_SERVICE_ACCOUNT_EMAIL: process.env["CRON_SERVICE_ACCOUNT_EMAIL"],
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
@@ -501,6 +510,20 @@ export function validateProductionEnv(): void {
         "ENCRYPTION_KEY must contain only hexadecimal characters (0-9, a-f, A-F). Generate with: openssl rand -hex 32",
       );
     }
+  }
+
+  // M6: SUPPRESSION_HASH_SECRET — 未設定は fail-safe (plain SHA-256 fallback) だが
+  // Data Cache dump からの dictionary attack で全 suppression set が復元可能な
+  // 攻撃面が残る。本番では operator が drift を検知できるように WARN を出す
+  // (fail-closed ではなく WARN なのは、絶対必須にすると既存デプロイが break する
+  // ため — 段階的に secret を投入する運用余地を残す)。
+  if (!serverEnv.SUPPRESSION_HASH_SECRET) {
+    console.warn(
+      "[env] SUPPRESSION_HASH_SECRET is unset. hashSuppressedEmailCandidate() " +
+        "falls back to plain SHA-256, which is reversible via dictionary attack " +
+        "if the Next.js Data Cache is leaked. Set with `gcloud secrets create " +
+        "SUPPRESSION_HASH_SECRET` + `openssl rand -hex 64` and terraform apply. (M6)",
+    );
   }
 
   // Secondary encryption keys — parse eagerly so a malformed rotation window
