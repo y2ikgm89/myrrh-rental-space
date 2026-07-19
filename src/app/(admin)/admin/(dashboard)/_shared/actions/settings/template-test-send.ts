@@ -135,6 +135,12 @@ export async function sendTemplateTestAction(
             "VALIDATION",
           );
         }
+        if (result.reason === "suppressed") {
+          throw new DomainError(
+            "送信先は配信停止（バウンス/苦情）登録済みのため送信できません",
+            "VALIDATION",
+          );
+        }
         throw new DomainError(result.error, "UNEXPECTED");
       }
 

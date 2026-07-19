@@ -191,10 +191,15 @@ export type StatusChangeEmailData = {
  * メール送信結果。
  *
  * - `{ ok: true; messageId }` — Resend が受理（API レベル成功、配信は別途 webhook で観測）
- * - `{ ok: false; reason: "disabled" }` — RESEND_API_KEY 未設定で no-op
+ * - `{ ok: false; reason: "disabled" }` — RESEND_API_KEY 未設定 / 送信機能自体が OFF で no-op
+ * - `{ ok: false; reason: "suppressed"; suppressedRecipients }` —
+ *   全宛先が suppression list（HARD_BOUNCED / COMPLAINED）に該当し送信できなかった。
+ *   一部宛先のみ suppressed のケースは対象を除外して送信を継続するため、この分岐には入らない
+ *   （drop したアドレスは warning log のみ）。
  * - `{ ok: false; reason: "error"; error }` — Resend API エラー（retry 尽きた後）
  */
 export type EmailResult =
   | { ok: true; messageId: string }
   | { ok: false; reason: "disabled" }
+  | { ok: false; reason: "suppressed"; suppressedRecipients: readonly string[] }
   | { ok: false; reason: "error"; error: string };

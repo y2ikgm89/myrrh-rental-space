@@ -646,15 +646,17 @@ describe("sendEmail()", () => {
   // suppression branch
   // -----------------------------------------------------------------------
   // PR #742 で追加した「Resend webhook 由来の HARD_BOUNCED / COMPLAINED 観測済み
-  // 宛先に送信を抑止」のロジックを 6 case で網羅する。production は引数を取らない
+  // 宛先を送信対象から除外」する挙動を網羅する。production は引数を取らない
   // `getSuppressedEmailSet()` が全 suppressed 顧客の canonical email 集合を返し、
   // 送信側で recipient を canonical に正規化して `.has()` 判定する (PII cache leak
-  // fix — 引数を cache key にしない設計)。suppression set に該当する宛先が
-  // 1 件でも含まれていれば送信せず { ok: false, reason: "disabled" } + logError
-  // を返す（公式 Gmail Feb 2024 / Yahoo bulk sender complaint rate < 0.3% 要件
-  // のアプリ層先取り）。
+  // fix — 引数を cache key にしない設計)。
+  //
+  // 単一宛先または全宛先が suppressed なら送信せず
+  // `{ ok: false, reason: "suppressed", suppressedRecipients }` を返す。
+  // 一部宛先のみ suppressed の場合は該当宛先を除外して残宛先で送信を継続する
+  // （M1: 1 名の suppression で legitimate 共同受信者を巻き添えにしないため）。
   describe("suppression branch", () => {
-    test("1 recipient HARD_BOUNCED なら送信せず disabled + logError 1 回", async () => {
+    test("1 recipient HARD_BOUNCED なら送信せず suppressed + logError 1 回", async () => {
       // Set は canonical email の SHA-256 hash を格納する契約 (queries.ts)。
       // 送信側で recipient を hash して .has() 判定する。
       mockGetSuppressedEmailSet.mockResolvedValue(
@@ -663,7 +665,11 @@ describe("sendEmail()", () => {
 
       const result = await sendEmail(BASE_PARAMS);
 
-      expect(result).toEqual({ ok: false, reason: "disabled" });
+      expect(result).toEqual({
+        ok: false,
+        reason: "suppressed",
+        suppressedRecipients: ["customer@example.com"],
+      });
       expect(mockResendSend).not.toHaveBeenCalled();
       expect(mockLogError).toHaveBeenCalledTimes(1);
       expect(mockLogError).toHaveBeenCalledWith(
@@ -673,24 +679,26 @@ describe("sendEmail()", () => {
           severity: "LOW",
           context: expect.objectContaining({
             operation: "testOperation",
-            recipient: "customer@example.com",
+            suppressedRecipients: ["customer@example.com"],
           }),
         }),
       );
     });
 
-    test("1 recipient COMPLAINED なら送信せず disabled + logError 1 回", async () => {
+    test("1 recipient COMPLAINED なら送信せず suppressed + logError 1 回", async () => {
       // domain query 側で HARD_BOUNCED / COMPLAINED の両方が Set に入って返る
       // 仕様なので、test は「Set に入っているか」のみ確認すれば良い。
-      // Set は canonical email の SHA-256 hash を格納する契約 (queries.ts)。
-      // 送信側で recipient を hash して .has() 判定する。
       mockGetSuppressedEmailSet.mockResolvedValue(
         new Set([hashForTest("customer@example.com")]),
       );
 
       const result = await sendEmail(BASE_PARAMS);
 
-      expect(result).toEqual({ ok: false, reason: "disabled" });
+      expect(result).toEqual({
+        ok: false,
+        reason: "suppressed",
+        suppressedRecipients: ["customer@example.com"],
+      });
       expect(mockResendSend).not.toHaveBeenCalled();
       expect(mockLogError).toHaveBeenCalledTimes(1);
     });
@@ -718,7 +726,7 @@ describe("sendEmail()", () => {
       expect(mockResendSend).toHaveBeenCalledTimes(1);
     });
 
-    test("複数宛先のうち 1 件のみ HARD_BOUNCED でも全送信を抑止 + logError", async () => {
+    test("複数宛先のうち 1 件のみ HARD_BOUNCED は該当宛先を除外して残りで送信続行 (M1)", async () => {
       mockGetSuppressedEmailSet.mockResolvedValue(
         new Set([hashForTest("b@example.com")]),
       );
@@ -731,13 +739,23 @@ describe("sendEmail()", () => {
         },
       });
 
-      expect(result).toEqual({ ok: false, reason: "disabled" });
-      expect(mockResendSend).not.toHaveBeenCalled();
+      // 残宛先に送信成功
+      expect(result).toEqual({ ok: true, messageId: "email-1" });
+      // Resend には suppressed b@ を除外したリストで送られる
+      expect(mockResendSend).toHaveBeenCalledTimes(1);
+      expect(mockResendSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: ["a@example.com", "c@example.com"],
+        }),
+      );
+      // drop したアドレスは warning log に残る
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({
+          severity: "LOW",
           context: expect.objectContaining({
-            recipient: "b@example.com",
+            droppedRecipients: ["b@example.com"],
+            remainingRecipients: ["a@example.com", "c@example.com"],
           }),
         }),
       );
@@ -746,6 +764,36 @@ describe("sendEmail()", () => {
       // しない PII cache leak fix の回帰防止）
       expect(mockGetSuppressedEmailSet).toHaveBeenCalledTimes(1);
       expect(mockGetSuppressedEmailSet).toHaveBeenCalledWith();
+    });
+
+    test("複数宛先が全て suppressed なら送信せず suppressed + 全アドレスを返す", async () => {
+      mockGetSuppressedEmailSet.mockResolvedValue(
+        new Set([
+          hashForTest("a@example.com"),
+          hashForTest("b@example.com"),
+          hashForTest("c@example.com"),
+        ]),
+      );
+
+      const result = await sendEmail({
+        ...BASE_PARAMS,
+        payload: {
+          ...VALID_PAYLOAD,
+          to: ["a@example.com", "b@example.com", "c@example.com"],
+        },
+      });
+
+      expect(result).toEqual({
+        ok: false,
+        reason: "suppressed",
+        suppressedRecipients: [
+          "a@example.com",
+          "b@example.com",
+          "c@example.com",
+        ],
+      });
+      expect(mockResendSend).not.toHaveBeenCalled();
+      expect(mockLogError).toHaveBeenCalledTimes(1);
     });
 
     test("複数宛先が全て OK なら送信続行", async () => {
