@@ -90,14 +90,20 @@ locals {
     # `gcloud secrets versions add RESEND_WEBHOOK_SECRET` で real value を
     # 投入した前提でここに追加する。以降 terraform apply は import で adopt する。
     "RESEND_WEBHOOK_SECRET",
-    # SUPPRESSION_HASH_SECRET (2026-07-19): operator が gcloud secrets create
-    # + versions add で container + version 1 を事前投入した前提。
-    # (`gcloud secrets create SUPPRESSION_HASH_SECRET --replication-policy=automatic` →
-    #  `openssl rand -hex 64 | gcloud secrets versions add SUPPRESSION_HASH_SECRET --data-file=-`)
-    # Cloud Run env 配線 (`cloud_run_secret_versions` への entry 追加) は
-    # Phase C follow-up PR で行う。それまで hashSuppressedEmailCandidate は
-    # plain sha256 fallback + WARN log で動作する (src/shared/lib/env/server.ts)。
-    "SUPPRESSION_HASH_SECRET",
+    # SUPPRESSION_HASH_SECRET (2026-07-19、PR-K #1276): Phase A のみ (runtime_secrets
+    # にのみ追加)。上の docblock の 3-phase rollout に従い、operator が Phase B
+    # (`gcloud secrets create SUPPRESSION_HASH_SECRET --replication-policy=automatic`
+    # → `openssl rand -hex 64 | gcloud secrets versions add SUPPRESSION_HASH_SECRET
+    # --data-file=-`) を完了した後の Phase C follow-up PR でここへ追加する。
+    # それまで hashSuppressedEmailCandidate は plain sha256 fallback + WARN log で
+    # 動作する (src/shared/lib/env/server.ts)。
+    # ------------------------------------------------------------------
+    # 元 PR #1276 は「operator が事前 populate 済み」と仮定してここに追加していたが、
+    # 実際は auto-flow で container 未作成のまま apply が走り
+    # `Cannot import non-existent remote object` で main deploy blocked
+    # (run 29685080757)。3-phase rule 違反の再発 = Round 3 で codify したのに
+    # 同 saga が Round 4 として再現した。root fix はこの entry の削除 = auto-flow
+    # を復元する。
   ])
 }
 
