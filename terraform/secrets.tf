@@ -33,6 +33,7 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
+    "RESEND_WEBHOOK_SECRET",
   ]
 
   # Cloud Build が image build 時に availableSecrets 経由で読む secret。
