@@ -144,6 +144,7 @@
     "unrs-resolver"
   ],
   "overrides": {
+    "@grpc/grpc-js": "^1.14.4",
     "pg": "^8.22.0",
     "protobufjs": "^8.6.5",
     "minimatch": "^10.2.5",
