@@ -124,3 +124,47 @@ resource "google_secret_manager_secret" "secret" {
     ignore_changes = [labels, annotations]
   }
 }
+
+# -----------------------------------------------------------------------------
+# Bootstrap placeholder version for newly-added secrets
+# -----------------------------------------------------------------------------
+# Cloud Run service (`google_cloud_run_v2_service.{public,admin}`) は
+# `variables.tf` の `cloud_run_secret_versions` map で pin された version
+# (通常 "1") を `secret_key_ref` として要求する。新規 secret container を
+# 作成した直後は operator が実 value を投入していないため version 1 が
+# 存在せず、apply が
+#     Error: spec.template.spec.containers[0].env[N].value_from
+#       .secret_key_ref.name: Secret ... /versions/1 was not found
+# で fail してしまう卵と鶏問題を回避する (root-fix: run 29671898405)。
+#
+# 対象は `setsubtract(all_secrets, imported_secrets)` = 新規追加 secret の
+# みで、既存 (imported_secrets 収録済) の secret はそのまま — operator が
+# 既に実 value を投入しているため触らない。
+#
+# lifecycle.ignore_changes = [secret_data, enabled] により、operator が
+# 後から `gcloud secrets versions add <NAME> --data-file=<real>` で新
+# version を投入して古い placeholder version を disable しても、次回
+# terraform apply が「戻し」に来ない (real value を上書きしない safety net)。
+#
+# ⚠️ operator による webhook 実効化フロー:
+# 1. この PR merge 済 → `terraform apply` で placeholder version 1 が作成
+#    される (main deploy 復旧)。
+# 2. operator が
+#      gcloud secrets versions add <NAME> --data-file=<real-value>
+#    で version 2 (real value) を投入。
+# 3. follow-up PR で `terraform/variables.tf` の `cloud_run_secret_versions`
+#    の該当 entry を "2" (or "latest") に更新 → apply で Cloud Run が
+#    real value を読み込む。
+# 4. 該当 secret が消費される機能 (RESEND_WEBHOOK_SECRET なら Resend
+#    webhook) が復旧する。
+
+resource "google_secret_manager_secret_version" "bootstrap" {
+  for_each = setsubtract(local.all_secrets, local.imported_secrets)
+
+  secret      = google_secret_manager_secret.secret[each.value].id
+  secret_data = "bootstrap-placeholder-please-rotate"
+
+  lifecycle {
+    ignore_changes = [secret_data, enabled]
+  }
+}
