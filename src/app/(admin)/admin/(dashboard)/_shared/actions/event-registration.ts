@@ -28,8 +28,8 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
-  REFUNDED_BY_TYPE,
 } from "@/shared/lib/validations/enums/helpers";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import type { MutationResult } from "@/shared/lib/mutation-result";

@@ -692,45 +692,10 @@ export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
   [CANCELLED_BY.SYSTEM]: "システム（自動）",
 };
 
-// =============================================================================
-// Refund Actor Type（`refunds.refundedByType` の VARCHAR 値 — Prisma enum ではない）
-//
-// DB 側の CHECK 制約 `refunds_refundedByType_check` と application 側の enum を
-// 二重防御する。返金の起点 (誰が発火したか) を AuditLog metadata と併用する。
-// =============================================================================
-
-export const REFUNDED_BY_TYPE = {
-  /** 管理者が admin UI から明示的に返金 */
-  ADMIN: "ADMIN",
-  /** キャンセル副作用 (`cancellation-side-effects.ts`) で自動発火した返金 */
-  AUTO_ON_CANCEL: "AUTO_ON_CANCEL",
-  /** Stripe Dashboard 経由の手動返金 (webhook 経由で back-fill) */
-  STRIPE_DASHBOARD: "STRIPE_DASHBOARD",
-} as const;
-
-export type RefundedByType =
-  (typeof REFUNDED_BY_TYPE)[keyof typeof REFUNDED_BY_TYPE];
-
-export const REFUNDED_BY_TYPE_LABELS: Record<RefundedByType, string> = {
-  [REFUNDED_BY_TYPE.ADMIN]: "管理者",
-  [REFUNDED_BY_TYPE.AUTO_ON_CANCEL]: "自動（キャンセル）",
-  [REFUNDED_BY_TYPE.STRIPE_DASHBOARD]: "Stripe Dashboard",
-};
-
-/**
- * Stripe refund object の `metadata.initiator` 値が既知の RefundedByType かを判定する。
- * webhook (`applyChargeRefundIdempotent`) が Stripe から受け取った refund の attribution
- * を Refund.refundedByType に書き戻すときの narrow に使う。
- *
- * app 側 refund (`refundReservation/EventRegistrationPaymentCommand`) は Stripe API 呼び出し
- * 時に metadata.initiator = actorType を仕込むため、webhook がその refund を先に受信して
- * Refund 行を作るときも正しい attribution が復元できる (hardcode "STRIPE_DASHBOARD" 時代の
- * race-mislabel を防ぐ)。metadata が空 / 未知値なら真の Stripe Dashboard 発行として fallback。
- */
-export function isValidRefundedByType(v: unknown): v is RefundedByType {
-  if (typeof v !== "string") return false;
-  return Object.values(REFUNDED_BY_TYPE).some((t) => t === v);
-}
+// Refund Actor Type (`refunds.refundedByType`) は `./refund-attribution` に分離した。
+// helpers.ts が `./guards` を transitive load して SocialPlatform (Prisma enum) を要求するため、
+// 消費側 (webhook / refund path) の test mock で `@generated/prisma/enums` を差し替えると
+// SyntaxError で落ちる。attribution 4 items だけを持つ最小モジュールに切り出して依存を断つ。
 
 // =============================================================================
 // AdminNotification Type（DB VARCHAR 管理 — Prisma enum ではない）

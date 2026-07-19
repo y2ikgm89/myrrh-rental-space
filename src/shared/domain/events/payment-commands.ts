@@ -21,7 +21,7 @@ import {
   REFUNDED_BY_TYPE,
   isValidRefundedByType,
   type RefundedByType,
-} from "@/shared/lib/validations/enums/helpers";
+} from "@/shared/lib/validations/enums/refund-attribution";
 import {
   logError,
   normalizeError,

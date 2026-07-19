@@ -15,7 +15,7 @@ import { getAppUrl } from "@/shared/lib/constants";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
-import { type RefundedByType } from "@/shared/lib/validations/enums/helpers";
+import { type RefundedByType } from "@/shared/lib/validations/enums/refund-attribution";
 import {
   logError,
   normalizeError,

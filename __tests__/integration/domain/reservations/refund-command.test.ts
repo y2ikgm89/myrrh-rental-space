@@ -99,7 +99,8 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type PaymentCommandsModule =
   typeof import("@/shared/domain/reservations/payment-commands");
 type PrismaEnumsModule = typeof import("@generated/prisma/enums");
-type HelpersModule = typeof import("@/shared/lib/validations/enums/helpers");
+type HelpersModule =
+  typeof import("@/shared/lib/validations/enums/refund-attribution");
 
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
@@ -221,7 +222,7 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
       await import("@/shared/domain/reservations/payment-commands"));
     ({ PaymentStatus } = await import("@generated/prisma/enums"));
     ({ REFUNDED_BY_TYPE } =
-      await import("@/shared/lib/validations/enums/helpers"));
+      await import("@/shared/lib/validations/enums/refund-attribution"));
 
     // 接続プール warm-up (cold start が並行クエリをずらして race を隠すのを防ぐ)。
     await prisma.$queryRaw`SELECT 1`;

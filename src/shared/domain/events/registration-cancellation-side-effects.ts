@@ -85,9 +85,9 @@ import {
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
-  REFUNDED_BY_TYPE,
   type CancelledByType,
 } from "@/shared/lib/validations/enums/helpers";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 
 export type EventCancelChannel = "admin" | "customer-mypage" | "customer-token";
 

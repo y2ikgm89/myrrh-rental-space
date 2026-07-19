@@ -204,7 +204,8 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 type SideEffectsModule =
   typeof import("@/shared/domain/reservations/cancellation-side-effects");
 type PrismaEnumsModule = typeof import("@generated/prisma/enums");
-type HelpersModule = typeof import("@/shared/lib/validations/enums/helpers");
+type HelpersModule =
+  typeof import("@/shared/lib/validations/enums/refund-attribution");
 
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
@@ -362,7 +363,7 @@ describeMaybe(
         await import("@/shared/domain/reservations/cancellation-side-effects"));
       ({ PaymentStatus } = await import("@generated/prisma/enums"));
       ({ REFUNDED_BY_TYPE } =
-        await import("@/shared/lib/validations/enums/helpers"));
+        await import("@/shared/lib/validations/enums/refund-attribution"));
 
       await prisma.$queryRaw`SELECT 1`;
 

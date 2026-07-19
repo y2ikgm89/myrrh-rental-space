@@ -77,9 +77,9 @@ import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lo
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
-  REFUNDED_BY_TYPE,
   type CancelledByType,
 } from "@/shared/lib/validations/enums/helpers";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { PaymentStatus, type ReservationStatus } from "@generated/prisma/enums";
 import type {
   BulkReservationCancelledEmailData,

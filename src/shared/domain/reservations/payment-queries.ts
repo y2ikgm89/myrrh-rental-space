@@ -7,7 +7,7 @@ import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import {
   REFUNDED_BY_TYPE,
   isValidRefundedByType,
-} from "@/shared/lib/validations/enums/helpers";
+} from "@/shared/lib/validations/enums/refund-attribution";
 
 const PAYMENT_EMAIL_SELECT = {
   id: true,
