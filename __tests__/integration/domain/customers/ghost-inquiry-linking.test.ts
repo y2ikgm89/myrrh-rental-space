@@ -29,9 +29,24 @@ let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let ensureCustomerLinked: LinkModule["ensureCustomerLinked"];
 
+/**
+ * PR #1282 で Inquiry.receiptNumber (@unique) が NOT NULL 化されたため、
+ * fixture 毎に一意の "INQ-XXXXXXXX" を採番する（production の
+ * generateReceiptNumberCandidate と同型式）。
+ */
+function generateTestReceiptNumber(): string {
+  const raw = crypto
+    .randomUUID()
+    .replaceAll("-", "")
+    .substring(0, 8)
+    .toUpperCase();
+  return `INQ-${raw}`;
+}
+
 async function createGuestInquiry(email: string): Promise<string> {
   const inquiry = await basePrisma.inquiry.create({
     data: {
+      receiptNumber: generateTestReceiptNumber(),
       name: "ゲスト太郎",
       email,
       subject: "テスト",
@@ -153,6 +168,7 @@ describeMaybe("ensureCustomerLinked (INQ-MP-01)", () => {
     });
     const linkedInquiry = await basePrisma.inquiry.create({
       data: {
+        receiptNumber: generateTestReceiptNumber(),
         name: "他人経由",
         email, // 同じ email
         subject: "テスト",
