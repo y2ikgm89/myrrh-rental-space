@@ -133,20 +133,36 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   const delivery = await getEmailDeliverySettings();
   const resolvedReplyTo = payload.replyTo ?? delivery.replyToEmail ?? undefined;
 
-  // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
-  // `Omit<U, "from">` + spread does not round-trip back to the original union under
-  // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
-  const fullPayload = CreateEmailOptionsSchema.parse({
-    ...payload,
-    from: getFromAddress(delivery.senderEmail, delivery.senderName),
-    ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
-  });
-
   const errorContext = {
     ...context,
     operation,
     ...(idempotencyKey !== undefined && { idempotencyKey }),
   };
+
+  // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
+  // `Omit<U, "from">` + spread does not round-trip back to the original union under
+  // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
+  //
+  // `getFromAddress` は `resolveSenderEmailAddress` を経由する。env `EMAIL_FROM` と
+  // DB `Settings.senderEmail` が両方 unset の場合は remediation 付き Error を throw する
+  // （旧仕様のハードコード既定値 "noreply@example.com" fallback は廃止）。ここで catch
+  // して他の失敗と同じ `{ ok: false, reason: "error" }` に変換し、audit log 経由で
+  // operator に設定不備を surface する。
+  let fullPayload: CreateEmailOptions;
+  try {
+    fullPayload = CreateEmailOptionsSchema.parse({
+      ...payload,
+      from: getFromAddress(delivery.senderEmail, delivery.senderName),
+      ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: errorContext,
+    });
+    return { ok: false, reason: "error", error: "メール送信に失敗しました" };
+  }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
