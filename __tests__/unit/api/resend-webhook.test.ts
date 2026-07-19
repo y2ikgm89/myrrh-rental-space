@@ -29,6 +29,7 @@ const mockUpdateCustomerEmailDeliveryStatusByEmail = mock<UpdateFn>(
 );
 
 // invalidateSiteWideCacheFromRouteHandler の呼び出しを捕捉する。
+// L2 では tag 配列を assert する。
 const invalidateCalls: Array<{
   tags: readonly string[];
   options?: { skipCdnPurge?: boolean };
@@ -249,6 +250,230 @@ describe("POST /api/webhooks/resend", () => {
   });
 
   // -----------------------------------------------------------------
+  // M2: BounceDetailsSchema の語彙拡張（Transient / Undetermined / unknown）
+  // -----------------------------------------------------------------
+
+  test("M2: bounce.type='Transient' は SOFT_BOUNCED としてマップされる", async () => {
+    const applied: Array<{ email: string; status: EmailDeliveryStatus }> = [];
+    updateImpl = async (email, status) => {
+      applied.push({ email, status });
+      return 1;
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: {
+          email_id: "email_1",
+          to: ["a@example.com"],
+          bounce: { type: "Transient", message: "mailbox full" },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(applied).toEqual([
+      { email: "a@example.com", status: EmailDeliveryStatus.SOFT_BOUNCED },
+    ]);
+  });
+
+  test("M2: bounce.type='Undetermined' は SOFT_BOUNCED としてマップされる", async () => {
+    const applied: EmailDeliveryStatus[] = [];
+    updateImpl = async (_email, status) => {
+      applied.push(status);
+      return 1;
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: {
+          email_id: "email_2",
+          to: ["b@example.com"],
+          bounce: { type: "Undetermined" },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(applied).toEqual([EmailDeliveryStatus.SOFT_BOUNCED]);
+  });
+
+  test("M2: 完全に未知の bounce.type は SOFT_BOUNCED 既定 + breadcrumb 用途で受理される", async () => {
+    const applied: EmailDeliveryStatus[] = [];
+    updateImpl = async (_email, status) => {
+      applied.push(status);
+      return 1;
+    };
+
+    // Zod parse で弾かれず handler に届くこと（旧実装はここで
+    // safeParse.success=false → handled:false 200-ack の silent bug）。
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: {
+          email_id: "email_3",
+          to: ["c@example.com"],
+          bounce: { type: "SomeFutureCategoryFromResend" },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(applied).toEqual([EmailDeliveryStatus.SOFT_BOUNCED]);
+  });
+
+  test("M2: bounce.type='Permanent' は引き続き HARD_BOUNCED", async () => {
+    const applied: EmailDeliveryStatus[] = [];
+    updateImpl = async (_email, status) => {
+      applied.push(status);
+      return 1;
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: {
+          email_id: "email_4",
+          to: ["d@example.com"],
+          bounce: { type: "Permanent" },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(applied).toEqual([EmailDeliveryStatus.HARD_BOUNCED]);
+  });
+
+  // -----------------------------------------------------------------
+  // M3: recipient ごとのエラー分離
+  // -----------------------------------------------------------------
+
+  test("M3: 1 件目の recipient で Prisma が throw しても 2 件目は処理され、handler は 500 を返す", async () => {
+    const processed: string[] = [];
+    updateImpl = async (email) => {
+      if (email === "a@example.com") {
+        throw new Error("prisma pool exhausted");
+      }
+      processed.push(email);
+      return 1;
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.complained",
+        data: {
+          email_id: "email_5",
+          to: ["a@example.com", "b@example.com"],
+        },
+      }),
+    );
+
+    // b@example.com は必ず処理されている（loop が中断されていない）。
+    expect(processed).toEqual(["b@example.com"]);
+    // Resend 再配信を促す（domain 側 notIn 保護節が成功済み recipient を no-op にする）。
+    expect(response.status).toBe(500);
+    // 2 件呼ばれている（1 件目の throw は catch されて 2 件目に進んでいる）。
+    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).toHaveBeenCalledTimes(
+      2,
+    );
+  });
+
+  test("M3: 全 recipient が正常なら 200 を返し、cache invalidation が発火する", async () => {
+    updateImpl = async () => 1;
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.complained",
+        data: {
+          to: ["a@example.com", "b@example.com"],
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockInvalidateSiteWide).toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------
+  // L2: SOFT_BOUNCED は SUPPRESSED_EMAILS を invalidate しない
+  // -----------------------------------------------------------------
+
+  test("L2: SOFT_BOUNCED イベントは CUSTOMERS のみ invalidate し SUPPRESSED_EMAILS は触らない", async () => {
+    updateImpl = async () => 1;
+
+    await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: {
+          to: ["a@example.com"],
+          bounce: { type: "Transient" },
+        },
+      }),
+    );
+
+    expect(invalidateCalls).toHaveLength(1);
+    const call = invalidateCalls[0];
+    if (!call) throw new Error("expected invalidation call");
+    // "customers" は含む
+    expect(call.tags).toContain("customers");
+    // "suppressed-emails" は含まない（SOFT_BOUNCED は suppression 対象外）
+    expect(call.tags).not.toContain("suppressed-emails");
+    // skipCdnPurge は保持されている。
+    expect(call.options?.skipCdnPurge).toBe(true);
+  });
+
+  test("L2: HARD_BOUNCED イベントは CUSTOMERS + SUPPRESSED_EMAILS の両方を invalidate する", async () => {
+    updateImpl = async () => 1;
+
+    await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: {
+          to: ["a@example.com"],
+          bounce: { type: "Permanent" },
+        },
+      }),
+    );
+
+    expect(invalidateCalls).toHaveLength(1);
+    const call = invalidateCalls[0];
+    if (!call) throw new Error("expected invalidation call");
+    expect(call.tags).toContain("customers");
+    expect(call.tags).toContain("suppressed-emails");
+  });
+
+  test("L2: COMPLAINED イベントは CUSTOMERS + SUPPRESSED_EMAILS の両方を invalidate する", async () => {
+    updateImpl = async () => 1;
+
+    await POST(
+      makeSignedRequest({
+        type: "email.complained",
+        data: { to: ["a@example.com"] },
+      }),
+    );
+
+    expect(invalidateCalls).toHaveLength(1);
+    const call = invalidateCalls[0];
+    if (!call) throw new Error("expected invalidation call");
+    expect(call.tags).toContain("customers");
+    expect(call.tags).toContain("suppressed-emails");
+  });
+
+  test("L2: processed=0（全 recipient が notIn 保護で no-op）なら invalidation は発火しない", async () => {
+    updateImpl = async () => 0;
+
+    await POST(
+      makeSignedRequest({
+        type: "email.complained",
+        data: { to: ["a@example.com"] },
+      }),
+    );
+
+    expect(invalidateCalls).toHaveLength(0);
+  });
+
+  // -----------------------------------------------------------------
   // L3: email.failed / email.suppressed handlers
   // -----------------------------------------------------------------
 
@@ -385,7 +610,8 @@ describe("POST /api/webhooks/resend", () => {
 
     // b@example.com は必ず処理されている（PR-J1 の per-recipient try/catch pattern と同じ）
     expect(processed).toEqual(["b@example.com"]);
-    expect(response.status).toBe(200);
+    // M3 aggregator: 1件でも failed が出れば top-level は 500 を返す (Resend 再配信)。
+    expect(response.status).toBe(500);
     expect(mockUpdateCustomerEmailDeliveryStatusByEmail).toHaveBeenCalledTimes(
       2,
     );
