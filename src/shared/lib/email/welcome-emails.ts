@@ -1,7 +1,7 @@
 import "server-only";
 import { WelcomeEmail } from "@/shared/emails/welcome";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
-import { hashForKey, sendEmail } from "./send";
+import { sendEmail } from "./send";
 import type { EmailResult, WelcomeEmailData } from "./types";
 
 export async function sendWelcomeEmail(
@@ -20,7 +20,11 @@ export async function sendWelcomeEmail(
         footer,
       }),
     },
-    idempotencyKey: `welcome/${hashForKey(data.customerEmail)}`,
+    // Customer.id is unique per registration lifecycle (cuid, never recycled
+    // across delete-account → re-signup). Keying on the email hash instead
+    // collides within Resend's 24h idempotency TTL and silent-drops the
+    // welcome email for the re-registered customer (RESEND-AUDIT L5).
+    idempotencyKey: `welcome/${data.customerId}`,
     operation: "sendWelcomeEmail",
     context: {
       email: data.customerEmail,

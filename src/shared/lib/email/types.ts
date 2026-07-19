@@ -98,6 +98,13 @@ export type ReviewReplyEmailData = {
 };
 
 export type WelcomeEmailData = {
+  /**
+   * Customer.id (cuid). idempotencyKey に含めることで、同一メールアドレスで
+   * delete-account → 24h 内に re-signup したときの Resend 409
+   * (`invalid_idempotent_request`) を防ぐ。新規登録ごとに Customer は必ず
+   * 新規採番されるため collision しない（RESEND-AUDIT L5）。
+   */
+  customerId: string;
   customerName: string;
   customerEmail: string;
   loginUrl: string;
