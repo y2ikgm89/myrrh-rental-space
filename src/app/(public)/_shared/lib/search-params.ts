@@ -157,3 +157,13 @@ export function isMypageEventTab(value: string): value is MypageEventTab {
 export const mypageEventsSearchParamsParsers = {
   tab: parseAsStringLiteral(MYPAGE_EVENT_TABS),
 };
+
+// mypage /receipts (STATE-02) 用の page cursor。 offset ページング。
+// createSearchParamsCache で server 側の parse を SSoT 化 (existing news / posts と同型)。
+export const mypageReceiptsSearchParamsParsers = {
+  page: parseAsInteger.withDefault(1),
+};
+
+export const mypageReceiptsSearchParams = createSearchParamsCache(
+  mypageReceiptsSearchParamsParsers,
+);
