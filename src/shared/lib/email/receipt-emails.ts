@@ -29,10 +29,13 @@ import type { EmailResult } from "./types";
  * `Receipt.usedAt` は Case B では NULL、Case C では新 Receipt なので当然 NULL。
  *
  * ## Idempotency
- * `receipt-resend/<serialNo>/<issuedAtEpoch>` を key に採用する。同一 Receipt に対する
- * 短時間の連続リクエストは rate limiter (receiptResendBySerialNoRateLimiter) で
- * 別途遮断されるため、Date.now() ではなく `issuedAt` を含めることで冪等性を保持する
- * (`Receipt.issuedAt` は Case B なら不変、Case C なら新規発行日時になる)。
+ * `receipt-resend/<serialNo>/<issuedAtEpoch>/<nowEpoch>` を key に採用する。
+ * `Date.now()` を含めるのは、初回配信が Resend 側 quarantine / 経路上の消失で
+ * 届かなかった場合の正当なリトライにも新しい key を割り当てるため
+ * (静的 key + token 再暗号化で payload が変わると Resend が
+ * `invalid_idempotent_request` 409 を返し silent drop になる)。
+ * abuse 側の連打対策は per-serial rate limiter (`receiptResendBySerialNoRateLimiter`,
+ * 3req/hour) が独立に担うため、**idempotency と rate limiting を混同しない** こと。
  */
 export async function sendReceiptResendEmail(input: {
   readonly recipientEmail: string;
@@ -46,7 +49,7 @@ export async function sendReceiptResendEmail(input: {
 }): Promise<EmailResult> {
   const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
-  const receiptDownloadUrl = `${appUrl}/api/receipts/${input.serialNo}/pdf?token=${createReceiptDownloadToken(input.serialNo)}`;
+  const receiptDownloadUrl = `${appUrl}/receipts/${input.serialNo}/download?token=${createReceiptDownloadToken(input.serialNo)}`;
 
   return sendEmail({
     payload: {
@@ -65,7 +68,7 @@ export async function sendReceiptResendEmail(input: {
         }),
       ),
     },
-    idempotencyKey: `receipt-resend/${input.serialNo}/${input.issuedAt.getTime()}`,
+    idempotencyKey: `receipt-resend/${input.serialNo}/${input.issuedAt.getTime()}/${Date.now()}`,
     operation: "sendReceiptResendEmail",
     context: {
       serialNo: input.serialNo,
