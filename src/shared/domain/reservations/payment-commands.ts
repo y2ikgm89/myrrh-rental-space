@@ -15,7 +15,7 @@ import { getAppUrl } from "@/shared/lib/constants";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
-import { type RefundedByType } from "@/shared/lib/validations/enums/helpers";
+import { type RefundedByType } from "@/shared/lib/validations/enums/refund-attribution";
 import {
   logError,
   normalizeError,
@@ -513,7 +513,14 @@ export async function refundReservationPaymentCommand(
           {
             payment_intent: reservation.stripePaymentIntentId,
             amount: toStripeUnitAmount(amount, stripeCurrency),
-            ...(reason ? { metadata: { reason } } : {}),
+            // metadata.initiator: charge.refunded webhook が この refund を Stripe から
+            // 受信したとき、正しい attribution (ADMIN / AUTO_ON_CANCEL) を復元するための
+            // hint。無いと `applyChargeRefundIdempotent` の fallback で
+            // "STRIPE_DASHBOARD" と mislabel される (webhook 先着 race)。
+            metadata: {
+              initiator: actorType,
+              ...(reason ? { reason } : {}),
+            },
           },
           {
             // 累積後の合計額を key に含めることで、同一 reservation の 2 回目以降の

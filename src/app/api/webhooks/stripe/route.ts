@@ -804,7 +804,14 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   // 通常は 1 event = 1 新規 refund。data[0] が最新 (Stripe の list は desc order)。
   const latestRefundData = charge.refunds?.data[0];
   const latestRefund = latestRefundData
-    ? { id: latestRefundData.id, amount: latestRefundData.amount }
+    ? {
+        id: latestRefundData.id,
+        amount: latestRefundData.amount,
+        // metadata.initiator: app 側 refund path が仕込んだ RefundedByType を復元し
+        // て、webhook 先着 race で attribution が "STRIPE_DASHBOARD" と mislabel
+        // されるのを防ぐ。metadata が空 / 未知値なら fallback で STRIPE_DASHBOARD。
+        metadata: latestRefundData.metadata,
+      }
     : null;
 
   // 1. Reservation 経路をまず try
