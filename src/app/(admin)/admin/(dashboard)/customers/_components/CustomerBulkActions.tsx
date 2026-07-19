@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import {
   IconUserCheck,
   IconUserOff,
-  IconTrash,
   IconX,
   IconLoader2,
   IconChevronDown,
@@ -18,16 +17,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/admin/components/ui";
-import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { AnonymizeCustomerConfirmDialog } from "@/admin/components/AnonymizeCustomerConfirmDialog";
 import {
   bulkToggleActiveCustomers,
-  bulkDeleteCustomers,
+  bulkAnonymizeCustomers,
   bulkSetStatusCustomers,
 } from "@/admin/actions/customer/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { keysOf } from "@/shared/lib/serialize";
 import { CUSTOMER_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
 
 interface CustomerBulkActionsProps {
   selectedIds: string[];
@@ -40,7 +40,7 @@ export function CustomerBulkActions({
 }: CustomerBulkActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [anonymizeOpen, setAnonymizeOpen] = useState(false);
 
   if (selectedIds.length === 0) return null;
 
@@ -82,17 +82,22 @@ export function CustomerBulkActions({
     });
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkAnonymize = (reason: AnonymizeCustomerReason) => {
     startTransition(async () => {
-      const result = await bulkDeleteCustomers(selectedIds);
+      const result = await bulkAnonymizeCustomers(selectedIds, reason);
       if (isMutationError(result)) {
         toast.error(result.error);
-        setDeleteOpen(false);
+        setAnonymizeOpen(false);
         return;
       }
 
-      toast.success(`${result.count}件の顧客を削除しました`);
-      setDeleteOpen(false);
+      const baseMessage = `${result.count}件の顧客を匿名化しました`;
+      const message =
+        result.skippedIds.length > 0
+          ? `${baseMessage}（${result.skippedIds.length}件は既に匿名化済みのためスキップ）`
+          : baseMessage;
+      toast.success(message);
+      setAnonymizeOpen(false);
       onClear();
       router.refresh();
     });
@@ -162,11 +167,11 @@ export function CustomerBulkActions({
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => setAnonymizeOpen(true)}
             disabled={isPending}
           >
-            <IconTrash className="mr-1 h-4 w-4" />
-            一括削除
+            <IconUserOff className="mr-1 h-4 w-4" />
+            一括匿名化
           </Button>
 
           <div className="h-4 w-px bg-border" />
@@ -183,12 +188,12 @@ export function CustomerBulkActions({
         </div>
       </div>
 
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title={`${selectedIds.length}件の顧客を削除しますか？`}
-        description="この操作は取り消せません。関連する予約・お問い合わせ等は紐づきが解除されます。"
-        onConfirm={handleBulkDelete}
+      <AnonymizeCustomerConfirmDialog
+        open={anonymizeOpen}
+        onOpenChange={setAnonymizeOpen}
+        title={`${selectedIds.length}件の顧客を匿名化しますか？`}
+        description="この操作は取り消せません。予約・領収書・お問い合わせは残りますが、個人情報は削除されます。以降のログインは不可になります。"
+        onConfirm={handleBulkAnonymize}
         isPending={isPending}
       />
     </>

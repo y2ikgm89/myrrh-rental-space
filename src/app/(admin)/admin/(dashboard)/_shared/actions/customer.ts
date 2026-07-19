@@ -26,14 +26,15 @@ import {
   updateCustomerStatusSchema,
 } from "@/shared/lib/validations/customer";
 import {
+  anonymizeCustomerCommand,
   createCustomer as createCustomerCommand,
-  deleteCustomer as deleteCustomerCommand,
   mergeCustomerCommand,
   toggleCustomerActive as toggleCustomerActiveCommand,
   updateCustomer as updateCustomerCommand,
   updateCustomerNotes as updateCustomerNotesCommand,
   updateCustomerStatus as updateCustomerStatusCommand,
 } from "@/shared/domain/customers/commands";
+import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
 import { searchCustomers } from "@/shared/domain/customers/queries";
 import { clearRiskFlagCommand } from "@/shared/domain/customers/risk-detection";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -207,22 +208,47 @@ export async function clearCustomerRiskFlag(
   });
 }
 
-export async function deleteCustomer(id: string): Promise<MutationResult> {
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationMutationError(validated.error);
+/**
+ * STATE-03: 顧客匿名化 Server Action。
+ *
+ * 決済歴 (Receipt 発行済) のある顧客は物理削除できない (Receipt.reservation
+ * onDelete: Restrict) ため、旧 deleteCustomer 相当の操作は匿名化に置換された。
+ *
+ * `resource: "customer", action: "delete"` の RBAC は維持 (「顧客レコードから
+ * PII を消す」= 破壊的操作扱い、EDITOR ロール以下では実行不可)。
+ */
+const anonymizeReasonSchema = z.enum(
+  ["customer-requested", "admin-purge", "data-retention"] as const,
+  { error: "匿名化理由が不正です" },
+);
+
+export async function anonymizeCustomer(
+  id: string,
+  reason: AnonymizeCustomerReason,
+): Promise<MutationResult> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationMutationError(validatedId.error);
+  }
+  const validatedReason = anonymizeReasonSchema.safeParse(reason);
+  if (!validatedReason.success) {
+    return createValidationMutationError(validatedReason.error);
   }
 
   return executeAdminMutationResult({
     resource: "customer",
     action: "delete",
-    resourceId: validated.data,
+    resourceId: validatedId.data,
     execute: async () => {
-      await deleteCustomerCommand(validated.data);
+      await anonymizeCustomerCommand({
+        customerId: validatedId.data,
+        reason: validatedReason.data,
+      });
       return null;
     },
     afterSuccess: () => {
       updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(validatedId.data));
     },
   });
 }

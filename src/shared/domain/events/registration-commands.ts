@@ -326,6 +326,11 @@ export async function cancelEventRegistrationByToken(
  *
  * 二重押し / 多端末からの並列実行は last-write-wins。check-in には capacity 制約が
  * 無いため advisory lock は不要。CANCELLED 済の申込には適用できない。
+ *
+ * TOCTOU 防御: findFirst と update の間で顧客セルフキャンセル等が別 tx で
+ * CANCELLED へ遷移させた場合でも、update ではなく updateMany + WHERE
+ * `status: { not: CANCELLED }` で claim することで DB 層でも invariant を維持する。
+ * count=0 はレース経路で CANCELLED になったケースで、通常の VALIDATION として throw する。
  */
 export async function setEventRegistrationCheckInCommand(params: {
   eventId: string;
@@ -369,17 +374,28 @@ export async function setEventRegistrationCheckInCommand(params: {
     };
   }
 
-  const updated = await prisma.eventRegistration.update({
-    where: { id: existing.id },
+  // findFirst と update の間に別 tx が CANCELLED へ遷移させた TOCTOU を防ぐため、
+  // update ではなく updateMany + status guard で claim する。
+  const claim = await prisma.eventRegistration.updateMany({
+    where: {
+      id: existing.id,
+      status: { not: RegistrationStatus.CANCELLED },
+    },
     data: { attendedAt: nextAttendedAt },
-    select: { attendedAt: true },
   });
+
+  if (claim.count === 0) {
+    throw new DomainError(
+      "キャンセル済の申込は出席登録できません",
+      "VALIDATION",
+    );
+  }
 
   return {
     registrationId: existing.id,
     eventId: existing.eventId,
     before: existing.attendedAt,
-    after: updated.attendedAt,
+    after: nextAttendedAt,
     changed: true,
   };
 }

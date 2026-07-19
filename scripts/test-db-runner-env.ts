@@ -29,7 +29,9 @@ export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/spaces/rate-plan-commands.test.ts",
   "__tests__/integration/domain/reservations/blacklist-guard.test.ts",
   "__tests__/integration/domain/customers/risk-detection.test.ts",
+  "__tests__/integration/domain/customers/anonymize-command.test.ts",
   "__tests__/integration/domain/receipts/single-use-download.test.ts",
+  "__tests__/integration/domain/receipts/issue-audit-log.test.ts",
   "__tests__/integration/domain/receipts/customer-list-query.test.ts",
 ]);
 

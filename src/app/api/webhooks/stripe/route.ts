@@ -366,7 +366,11 @@ async function fulfillPaymentAtomically(
   // 領収書 CTA は表示されない (backfill 経路がフォローする)。
   let receiptSerialNo: string | undefined;
   try {
-    const receipt = await issueReceiptForReservation(reservation.id);
+    // OBS-02: source を明示指定して AuditLog CREATE の metadata に載せる
+    // (webhook 経路の自動発行を hash chain 保護された証跡として区別)。
+    const receipt = await issueReceiptForReservation(reservation.id, {
+      source: "stripe-webhook",
+    });
     receiptSerialNo = receipt.serialNo;
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION") {
@@ -539,7 +543,10 @@ async function fulfillEventRegistrationPaymentAtomically(
   // 渡して署名 URL を組み立てる (RECEIPT-GUEST-01)。
   let receiptSerialNo: string | undefined;
   try {
-    const receipt = await issueReceiptForEventRegistration(registrationId);
+    // OBS-02: source を明示指定 (reservation 側と同型)。
+    const receipt = await issueReceiptForEventRegistration(registrationId, {
+      source: "stripe-webhook",
+    });
     receiptSerialNo = receipt.serialNo;
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION") {

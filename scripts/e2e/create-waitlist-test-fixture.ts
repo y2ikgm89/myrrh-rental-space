@@ -57,6 +57,13 @@ interface WaitlistTestFixture {
   readonly eventTitle: string;
   readonly eventId: string;
   readonly waitlistedRegistrationId: string;
+  /**
+   * 定員を埋めている CONFIRMED 申込 (dev customer とは別のゲスト) の id。
+   * `waitlist-auto-promotion-on-cancel.spec.ts` がこれを cancel 対象に指定し、
+   * dev customer の WAITLISTED が WAITLISTED_OFFERED に FIFO 昇格する挙動を検証する。
+   * waitlist.spec.ts は本フィールドを参照しない (後方互換の追加のみ)。
+   */
+  readonly fillerRegistrationId: string;
 }
 
 async function main(): Promise<void> {
@@ -139,7 +146,7 @@ async function main(): Promise<void> {
     });
 
     // 定員を埋める CONFIRMED 申込（無関係なゲスト）
-    await prisma.eventRegistration.create({
+    const filler = await prisma.eventRegistration.create({
       data: {
         eventId: event.id,
         slotId: slot.id,
@@ -149,6 +156,7 @@ async function main(): Promise<void> {
         quantity: 1,
         status: RegistrationStatus.CONFIRMED,
       },
+      select: { id: true },
     });
 
     // dev customer の WAITLISTED 申込（マイページ表示 + キャンセル UI smoke 用）
@@ -172,6 +180,7 @@ async function main(): Promise<void> {
       eventTitle,
       eventId: event.id,
       waitlistedRegistrationId: waitlisted.id,
+      fillerRegistrationId: filler.id,
     };
 
     console.log(JSON.stringify(fixture));

@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { getAdminTermsById } from "@/shared/domain/terms/admin-queries";
+import {
+  getAdminTermsById,
+  getReagreeAffectedCustomerCount,
+} from "@/shared/domain/terms/admin-queries";
 import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
 
 interface PageProps {
@@ -31,5 +34,16 @@ export default async function EditTermsPage({ params }: PageProps) {
     notFound();
   }
 
-  return <TermsInlineEditor key={terms.id} mode="edit" terms={terms} />;
+  // TERMS-REAGREE-P3B: LOGIN_SIGNUP scope 顧客への影響件数を先読みして
+  // TermsInlineEditor 上部の inline warning に渡す。
+  const reagreeAffected = await getReagreeAffectedCustomerCount(terms.id);
+
+  return (
+    <TermsInlineEditor
+      key={terms.id}
+      mode="edit"
+      terms={terms}
+      reagreeAffected={reagreeAffected}
+    />
+  );
 }

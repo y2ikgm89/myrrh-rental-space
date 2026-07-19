@@ -375,11 +375,46 @@ export const cancelByReservationRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// 領収書 PDF DL の「serialNo 単位」の追加バケット（10 attempts / hour / serialNo）。
+// IP-only の apiRateLimiter (100/分) だけだと同一 serialNo への brute force / usedAt
+// 焼き潰し (単発 DL gate を連打で消費させる DoS) が抜けるため、serialNo をキーにした
+// 第二防壁を貼る (`cancelByReservationRateLimiter` と同型の「resource 単位」設計)。
+// token 経路の usedAt 消費 × DB 書き込みコストと、session 経路の PDF 生成コスト
+// (react-pdf のフル描画) の上限を構造的に制約する。
+export const receiptDownloadBySerialNoRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 10,
+});
+
 // ゲストイベント参加キャンセル「申込 ID 単位」の追加バケット（3 attempts / hour /
 // registration）。cancelByReservationRateLimiter と同じ設計判断（IP-only では
 // Cloud Run multi-instance × XFF spoof で単一申込への分散攻撃が抜ける）。
 export const cancelByEventRegistrationRateLimiter = createRateLimiter({
   interval: 60 * 60 * 1000, // 1時間
+  maxRequests: 3,
+});
+
+// ゲスト向け領収書再送信リクエスト (Case B/C 救済フロー) — IP 単位（5 attempts /
+// hour / IP）。formSubmitRateLimiter (5/分) より狭い時間窓で、受信メアド enumeration
+// と外部 SMTP 濫用の総量を構造的に抑える (emailVerificationRequestRateLimiter と同型)。
+export const receiptResendRequestRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 5,
+});
+
+// 同上の「領収書番号単位」の追加バケット (3 attempts / hour / serialNo)。
+// IP-only だと Cloud Run multi-instance × XFF spoof で単一領収書への攻撃が抜ける。
+// cancelByReservationRateLimiter と同型の「resource 単位の第二防壁」。
+export const receiptResendBySerialNoRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 3,
+});
+
+// 同上の「宛先メールアドレス単位」の追加バケット (3 attempts / hour / email)。
+// reservationByEmailRateLimiter / emailVerificationByEmailRateLimiter と同型の
+// 第二防壁で、同一人物が複数 IP から同じメアドで再送 spam を叩くのを防ぐ。
+export const receiptResendByEmailRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
   maxRequests: 3,
 });
 

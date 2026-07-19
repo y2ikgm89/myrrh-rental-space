@@ -77,7 +77,8 @@ export async function backfillReceipts(options?: {
 
   for (const row of reservationRows) {
     try {
-      await issueReceiptForReservation(row.id);
+      // OBS-02: source="backfill-cron" を AuditLog metadata に載せて webhook 経路と区別。
+      await issueReceiptForReservation(row.id, { source: "backfill-cron" });
       issuedReservations++;
     } catch (error) {
       if (error instanceof DomainError && error.code === "VALIDATION") {
@@ -117,7 +118,10 @@ export async function backfillReceipts(options?: {
 
   for (const row of registrationRows) {
     try {
-      await issueReceiptForEventRegistration(row.id);
+      // OBS-02: source="backfill-cron" を AuditLog metadata に載せる (対称化)。
+      await issueReceiptForEventRegistration(row.id, {
+        source: "backfill-cron",
+      });
       issuedEventRegistrations++;
     } catch (error) {
       if (error instanceof DomainError && error.code === "VALIDATION") {

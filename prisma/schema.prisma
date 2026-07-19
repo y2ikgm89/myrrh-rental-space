@@ -816,6 +816,17 @@ model Customer {
   /// 自動でBLACKLIST化・予約拒否はしない（最終判断は常に管理者、誤検知リスクの回避）。
   flaggedForReviewAt     DateTime?
   flagReasons            String[]            @default([])
+  /// STATE-03: 匿名化 (anonymize) 実施時刻。非 null = 匿名化済み。
+  /// 決済歴 (Receipt 発行済) のある Customer は物理削除できないため
+  /// (Receipt.reservation は onDelete: Restrict)、PII を placeholder に置換して
+  /// Reservation / Receipt の customerId を残す。関連の会計証跡は不変。
+  /// append-only の証跡列 (再設定禁止、reset は別 workflow)。
+  anonymizedAt           DateTime?
+  /// STATE-03: 匿名化理由コード。
+  /// - "customer-requested": 顧客本人からの削除依頼 (GDPR 相当)
+  /// - "admin-purge":        管理者による purge (誤登録・重複クリーンアップ)
+  /// - "data-retention":     データ保持期限経過による自動 purge
+  anonymizedReason       String?             @db.VarChar(50)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
@@ -1630,6 +1641,7 @@ enum AuditAction {
   CREATE
   UPDATE
   DELETE
+  READ // 参照アクセス（領収書 PDF DL 等のセキュリティ観点で追跡する read）
   PUBLISH
   EXPORT
   LOGIN_SUCCESS
