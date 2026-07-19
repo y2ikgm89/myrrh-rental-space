@@ -56,8 +56,18 @@ mock.module("@/admin/lib/admin-action", () => ({
   },
 }));
 
+// PR #1274 (L4) が sendTemplateTestAction の rate limiter を authMutationRateLimiter
+// から専用の templateTestSendRateLimiter (10 / 15min / user.id) に切り替えたため、
+// mock は両者を持つ必要がある — 実装は templateTestSendRateLimiter のみを直接 import
+// するが、mock.module は module 全体を差し替えるので、他の consumer 側の import が
+// 未 mock export に触ると `Export named 'X' not found in module 'Y'` で SyntaxError。
+// 実装が触る export を欠くと bun test process 起動時点で fail する (PR-I + PR-H の
+// merge 後に main で発火した regression の修正)。
 mock.module("@/shared/lib/rate-limit", () => ({
   authMutationRateLimiter: {
+    check: mock(async () => ({ success: true })),
+  },
+  templateTestSendRateLimiter: {
     check: mock(async () => ({ success: true })),
   },
   getClientIpFromHeaders: mock(async () => "127.0.0.1"),
