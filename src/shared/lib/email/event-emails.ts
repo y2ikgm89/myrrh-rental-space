@@ -346,7 +346,11 @@ export async function sendEventReminderEmail(
       ),
       attachments,
     }),
-    idempotencyKey: `event-reminder/${data.registrationId}`,
+    // NOTE: registrationId 単体では claimUrl / cancelUrl の再暗号化で payload が
+    // 毎回差分化するため、cron 再走時に Resend が 409 invalid_idempotent_request
+    // で silent drop してしまう。Date.now() を混ぜて invocation ごとに fresh
+    // key を発行する。冪等性の権威は reminderSentAt claim gate 側にある。
+    idempotencyKey: `event-reminder/${data.registrationId}/${Date.now()}`,
     operation: "sendEventReminderEmail",
     context: {
       registrationId: data.registrationId,
@@ -538,7 +542,19 @@ export async function sendEventCancelledToAllParticipants(
       location: { select: { name: true } },
       space: { select: { name: true } },
       registrations: {
-        where: { status: RegistrationStatus.CONFIRMED },
+        // CONFIRMED だけでなく WAITLISTED_OFFERED (24h の pay-now offer 保持中の
+        // 参加者) と WAITLISTED (待機中) にも中止通知を届ける。イベントが中止
+        // されれば offer は決済しても意味が無く、待機順も消えるため送信すべき。
+        // CANCELLED / EXPIRED は元々連絡不要なので除外する。
+        where: {
+          status: {
+            in: [
+              RegistrationStatus.CONFIRMED,
+              RegistrationStatus.WAITLISTED_OFFERED,
+              RegistrationStatus.WAITLISTED,
+            ],
+          },
+        },
         select: {
           id: true,
           name: true,
@@ -546,6 +562,7 @@ export async function sendEventCancelledToAllParticipants(
           quantity: true,
           icsSequence: true,
           customerId: true,
+          status: true,
           slot: {
             select: { startAt: true, endAt: true },
           },
@@ -587,7 +604,13 @@ export async function sendEventCancelledToAllParticipants(
         registration.customerId,
       );
       let attachments: { filename: string; content: Buffer }[] | undefined;
-      if (calendarSettings.icalAttachmentEnabled) {
+      // CANCEL ICS は CONFIRMED (元々 REQUEST ICS を送っていた) 参加者のみに
+      // 送る。WAITLISTED / WAITLISTED_OFFERED は既存のカレンダーエントリを
+      // 持たないため CANCEL ICS を届けても取り消す対象が無い。
+      if (
+        calendarSettings.icalAttachmentEnabled &&
+        registration.status === RegistrationStatus.CONFIRMED
+      ) {
         try {
           const calendarParams = omitUndefined({
             registrationId: registration.id,
