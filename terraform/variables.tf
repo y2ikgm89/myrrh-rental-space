@@ -156,7 +156,10 @@ variable "cloud_run_secret_versions" {
     CLOUDFLARE_ORIGIN_HEADER_SECRET    = "1"
     GOOGLE_CLIENT_ID                   = "1"
     GOOGLE_CLIENT_SECRET               = "1"
-    RESEND_WEBHOOK_SECRET              = "1"
+    # RESEND_WEBHOOK_SECRET is intentionally NOT bound here in Phase A of the
+    # 3-phase secret rollout. See `terraform/secrets.tf` `imported_secrets`
+    # docblock for the full flow; the Phase C follow-up PR adds it back after
+    # the operator has run `gcloud secrets versions add`.
   }
 }
 

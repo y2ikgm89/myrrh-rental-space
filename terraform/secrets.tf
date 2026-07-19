@@ -54,19 +54,42 @@ locals {
   # https://developer.hashicorp.com/terraform/language/block/import
   # "Only pre-existing objects can be imported.")。
   #
-  # ⚠️ 新規 secret 追加の正しい 2 段階手順:
-  # 1. `runtime_secrets` / `build_secrets` に entry を追加してこの PR を merge。
-  #    `imported_secrets` にはまだ入れない → `terraform apply` は import では
-  #    なく create として扱い、GCP 側に新 container が作られる。
-  #    (Post-merge operator action: `gcloud secrets versions add <NAME>
-  #    --data-file=<file>` で値を投入)
-  # 2. `terraform apply` 成功後 (= main deploy 緑) の follow-up PR で
-  #    `imported_secrets` にも同 entry を追加。state 消失時の再 adoption
-  #    safety net が復活する。
+  # ⚠️ 新規 secret 追加の正しい 3 段階手順:
   #
-  # 逆手順 (最初から `imported_secrets` に入れる) を踏むと plan 段階で
-  # "Cannot import non-existent remote object" で fail し main deploy が
-  # blocked になる (root-fix commit: このコメント追加の commit を参照)。
+  # Phase A (このタイプの PR — container 作成のみ):
+  # - `runtime_secrets` / `build_secrets` に entry を追加。
+  # - `imported_secrets` にはまだ入れない (Terraform 公式仕様、上の docblock)。
+  # - **`terraform/variables.tf` の `cloud_run_secret_versions` にもまだ入れない**
+  #   (Cloud Run env の `secret_key_ref` は "version が既に存在すること" を要求
+  #   する。新 secret は container だけで version 未投入なので、同 apply cycle
+  #   内で bind すると "Secret .../versions/1 was not found" で fail し main
+  #   deploy が壊れる — root-fix: run 29671898405 / run 29673008431)。
+  # - PR merge → `terraform apply` は container だけを create → apply pass。
+  #
+  # Phase B (operator manual — Terraform の外で実行、CI 経路の外):
+  # - `gcloud secrets versions add <NAME> --data-file=<real-value>` で
+  #   version 1 (実 value) を投入。
+  #
+  # Phase C (Phase B 完了後の follow-up PR — Cloud Run 配線 + 状態保全):
+  # - `imported_secrets` に entry を追加 (state reset 時の re-adoption safety
+  #   net を復元)。
+  # - `variables.tf` の `cloud_run_secret_versions.<NAME> = "1"` を追加
+  #   (Cloud Run env に secret 参照を配線)。
+  # - PR merge → `terraform apply` で Cloud Run が real value を bind →
+  #   該当機能 (RESEND_WEBHOOK_SECRET なら Resend webhook svix verify) 実効化。
+  #
+  # 逆順 (Phase A の PR で `imported_secrets` or `cloud_run_secret_versions` を
+  # 同時に触る) を踏むと apply が `Cannot import non-existent remote object` or
+  # `Secret .../versions/1 was not found` で fail し main deploy が blocked。
+  # PR #1280 (import cascade) / PR #1283 (bootstrap attempt, reverted) /
+  # このコメントを codify した PR の 3 段 saga で確立された運用契約。
+  #
+  # なぜ Terraform で secret_version 自動作成しないか:
+  # `google_secret_manager_secret_version` を Terraform で create すると runner
+  # SA に `secretmanager.versions.add` 権限が必要になり、"secret 値は Terraform
+  # 対象外" (このファイル冒頭の設計原則) と "runner IAM は bootstrap-only"
+  # ([[project_terraform-full-adoption-2026-07-14]]) の両規約を破ることになる。
+  # 3 段階に分けて Phase B を operator 手動に留めるのが公式推奨。
   imported_secrets = toset([
     "DATABASE_URL",
     "BETTER_AUTH_SECRET",
@@ -84,8 +107,10 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    # RESEND_WEBHOOK_SECRET は 2026-07-19 に新規追加。first `terraform apply`
-    # 成功 (= GCP 側に container 作成完了) 後の follow-up PR でここに追加する。
+    # RESEND_WEBHOOK_SECRET は 2026-07-19 に新規追加 (Phase A 済)。operator が
+    # Phase B (`gcloud secrets versions add`) を完了したら、Phase C follow-up
+    # PR でここに entry 追加 + `variables.tf` の `cloud_run_secret_versions`
+    # にも `"RESEND_WEBHOOK_SECRET" = "1"` を追加。
   ])
 }
 
@@ -122,49 +147,5 @@ resource "google_secret_manager_secret" "secret" {
     # google_secret_manager_secret_version リソースで別途扱うが、本設計では
     # 値は Terraform に取り込まない)。
     ignore_changes = [labels, annotations]
-  }
-}
-
-# -----------------------------------------------------------------------------
-# Bootstrap placeholder version for newly-added secrets
-# -----------------------------------------------------------------------------
-# Cloud Run service (`google_cloud_run_v2_service.{public,admin}`) は
-# `variables.tf` の `cloud_run_secret_versions` map で pin された version
-# (通常 "1") を `secret_key_ref` として要求する。新規 secret container を
-# 作成した直後は operator が実 value を投入していないため version 1 が
-# 存在せず、apply が
-#     Error: spec.template.spec.containers[0].env[N].value_from
-#       .secret_key_ref.name: Secret ... /versions/1 was not found
-# で fail してしまう卵と鶏問題を回避する (root-fix: run 29671898405)。
-#
-# 対象は `setsubtract(all_secrets, imported_secrets)` = 新規追加 secret の
-# みで、既存 (imported_secrets 収録済) の secret はそのまま — operator が
-# 既に実 value を投入しているため触らない。
-#
-# lifecycle.ignore_changes = [secret_data, enabled] により、operator が
-# 後から `gcloud secrets versions add <NAME> --data-file=<real>` で新
-# version を投入して古い placeholder version を disable しても、次回
-# terraform apply が「戻し」に来ない (real value を上書きしない safety net)。
-#
-# ⚠️ operator による webhook 実効化フロー:
-# 1. この PR merge 済 → `terraform apply` で placeholder version 1 が作成
-#    される (main deploy 復旧)。
-# 2. operator が
-#      gcloud secrets versions add <NAME> --data-file=<real-value>
-#    で version 2 (real value) を投入。
-# 3. follow-up PR で `terraform/variables.tf` の `cloud_run_secret_versions`
-#    の該当 entry を "2" (or "latest") に更新 → apply で Cloud Run が
-#    real value を読み込む。
-# 4. 該当 secret が消費される機能 (RESEND_WEBHOOK_SECRET なら Resend
-#    webhook) が復旧する。
-
-resource "google_secret_manager_secret_version" "bootstrap" {
-  for_each = setsubtract(local.all_secrets, local.imported_secrets)
-
-  secret      = google_secret_manager_secret.secret[each.value].id
-  secret_data = "bootstrap-placeholder-please-rotate"
-
-  lifecycle {
-    ignore_changes = [secret_data, enabled]
   }
 }
