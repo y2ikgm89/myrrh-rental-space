@@ -99,6 +99,7 @@
     "sanitize-html": "^2.17.5",
     "server-only": "^0.0.1",
     "sonner": "^2.0.7",
+    "standardwebhooks": "1.0.0",
     "stripe": "^22.3.0",
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.2.2",
