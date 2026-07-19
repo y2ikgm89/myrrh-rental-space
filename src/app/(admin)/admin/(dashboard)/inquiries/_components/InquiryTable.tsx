@@ -103,6 +103,10 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                   <div className="max-w-xs truncate font-medium">
                     {inquiry.subject}
                   </div>
+                  {/* Inquiry Overhaul Phase 1: 受付番号 (INQ-XXXXXXXX) を副次表示 */}
+                  <div className="text-xs text-muted-foreground">
+                    {inquiry.receiptNumber}
+                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <div className="font-medium">{inquiry.name}</div>

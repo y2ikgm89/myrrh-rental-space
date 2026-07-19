@@ -100,6 +100,7 @@ export async function submitInquiry(
         name: `${data.lastName} ${data.firstName}`,
         companyName: data.companyName || null,
         email: data.email,
+        phoneNumber: data.phoneNumber ?? null,
         subject: data.subject,
         message: data.message,
         customerType: data.customerType,

@@ -35,9 +35,12 @@ type InquiryNotificationProps = {
   type: "inquiry";
   name: string;
   email: string;
+  /** ゲスト入力の電話番号。折り返し先として管理者へ表示する。無ければ非表示。 */
+  phoneNumber?: string | null;
   subject: string;
   message: string;
-  inquiryId: string;
+  /** Inquiry.receiptNumber (「INQ-XXXXXXXX」)。管理者側でも突合の主キー。 */
+  receiptNumber: string;
   adminUrl: string;
   footer: EmailFooterData;
 };
@@ -129,15 +132,16 @@ function ReservationNotification({
 function InquiryNotification({
   name,
   email,
+  phoneNumber,
   subject,
   message,
-  inquiryId,
+  receiptNumber,
   adminUrl,
   footer,
 }: InquiryNotificationProps) {
   return (
     <EmailLayout
-      preview={`[新規お問い合わせ] ${subject} - ${name}様`}
+      preview={`[新規お問い合わせ] ${subject} - ${name}様 [${receiptNumber}]`}
       footer={footer}
     >
       <Text style={{ ...heading, color: "#1d4ed8" }}>【新規お問い合わせ】</Text>
@@ -146,7 +150,7 @@ function InquiryNotification({
         <Text style={detailsHeading}>お問い合わせ情報</Text>
         <Hr style={hr} />
         <Text style={detailItem}>
-          <strong>ID:</strong> {inquiryId}
+          <strong>受付番号:</strong> {receiptNumber}
         </Text>
         <Text style={detailItem}>
           <strong>お名前:</strong> {name}
@@ -154,6 +158,11 @@ function InquiryNotification({
         <Text style={detailItem}>
           <strong>メール:</strong> {email}
         </Text>
+        {phoneNumber && (
+          <Text style={detailItem}>
+            <strong>電話番号:</strong> {phoneNumber}
+          </Text>
+        )}
         <Text style={detailItem}>
           <strong>件名:</strong> {subject}
         </Text>

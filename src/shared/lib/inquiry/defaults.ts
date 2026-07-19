@@ -16,5 +16,12 @@ export type InquiryDefaults = {
   readonly lastName?: string;
   readonly firstName?: string;
   readonly email?: string;
+  /**
+   * 会員時 prefill 用: Customer.phoneNumber を流す。
+   * Inquiry Overhaul Phase 1 で Inquiry.phoneNumber カラムが追加され、
+   * `createInquiryCommand` が受け入れる形になったのに合わせて追加。
+   * public フォーム側はまだ prefill 対応前のため optional（後続 PR で配線）。
+   */
+  readonly phoneNumber?: string;
   readonly subject?: string;
 };

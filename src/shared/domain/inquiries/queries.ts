@@ -12,22 +12,61 @@ import type {
   GetInquiriesResult,
   InquiryFilters,
   InquiryPagination,
+  InquiryReplyItem,
   InquiryStats,
   InquiryWithCustomer,
 } from "@/shared/domain/inquiries/types";
+
+/**
+ * findMany の select で返す reply 生形状（author を string に平坦化する前）。
+ * queries.ts / customer-queries.ts で共有する。
+ */
+export const REPLY_SELECT_INTERNAL = {
+  id: true,
+  body: true,
+  authorType: true,
+  createdAt: true,
+  author: { select: { name: true } },
+} as const;
+
+type RawReply = {
+  id: string;
+  body: string;
+  authorType: InquiryReplyItem["authorType"];
+  createdAt: Date;
+  author: { name: string } | null;
+};
+
+export function flattenReply(r: RawReply): InquiryReplyItem {
+  return {
+    id: r.id,
+    body: r.body,
+    authorType: r.authorType,
+    authorName: r.author?.name ?? null,
+    createdAt: r.createdAt,
+  };
+}
 
 export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {},
 ): Promise<Serialized<GetInquiriesResult>> {
-  const { status, search } = filters;
+  const { status, search, assigneeId, includeDeleted } = filters;
   const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
   const { skip, take, page, limit } = paginate(pagination);
 
   const where: InquiryWhereInput = {};
 
+  if (!includeDeleted) {
+    where.deletedAt = null;
+  }
+
   if (status && status !== "ALL") {
     where.status = status;
+  }
+
+  if (assigneeId) {
+    where.assigneeId = assigneeId;
   }
 
   if (search) {
@@ -36,6 +75,7 @@ export async function getInquiries(
       { email: { contains: search, mode: "insensitive" } },
       { subject: { contains: search, mode: "insensitive" } },
       { message: { contains: search, mode: "insensitive" } },
+      { receiptNumber: { contains: search, mode: "insensitive" } },
     ];
   }
 
@@ -45,16 +85,24 @@ export async function getInquiries(
       where,
       select: {
         id: true,
+        receiptNumber: true,
         name: true,
         companyName: true,
         email: true,
+        phoneNumber: true,
         subject: true,
         message: true,
         status: true,
         customerId: true,
-        replyMessage: true,
-        repliedAt: true,
-        repliedBy: { select: { name: true } },
+        assigneeId: true,
+        assignee: { select: { name: true } },
+        slaExpiresAt: true,
+        deletedAt: true,
+        anonymizedAt: true,
+        replies: {
+          orderBy: { createdAt: "asc" },
+          select: REPLY_SELECT_INTERNAL,
+        },
         customer: {
           select: {
             id: true,
@@ -75,8 +123,30 @@ export async function getInquiries(
     }),
   ]);
 
+  const shaped: InquiryWithCustomer[] = inquiries.map((i) => ({
+    id: i.id,
+    receiptNumber: i.receiptNumber,
+    name: i.name,
+    companyName: i.companyName,
+    email: i.email,
+    phoneNumber: i.phoneNumber,
+    subject: i.subject,
+    message: i.message,
+    status: i.status,
+    customerId: i.customerId,
+    assigneeId: i.assigneeId,
+    assigneeName: i.assignee?.name ?? null,
+    slaExpiresAt: i.slaExpiresAt,
+    deletedAt: i.deletedAt,
+    anonymizedAt: i.anonymizedAt,
+    replies: i.replies.map(flattenReply),
+    customer: i.customer,
+    createdAt: i.createdAt,
+    updatedAt: i.updatedAt,
+  }));
+
   return {
-    inquiries: toPlainArray(inquiries),
+    inquiries: toPlainArray(shaped),
     total,
     page,
     limit,
@@ -91,16 +161,24 @@ export async function getInquiryById(
     where: { id },
     select: {
       id: true,
+      receiptNumber: true,
       name: true,
       companyName: true,
       email: true,
+      phoneNumber: true,
       subject: true,
       message: true,
       status: true,
       customerId: true,
-      replyMessage: true,
-      repliedAt: true,
-      repliedBy: { select: { name: true } },
+      assigneeId: true,
+      assignee: { select: { name: true } },
+      slaExpiresAt: true,
+      deletedAt: true,
+      anonymizedAt: true,
+      replies: {
+        orderBy: { createdAt: "asc" },
+        select: REPLY_SELECT_INTERNAL,
+      },
       customer: {
         select: {
           id: true,
@@ -115,17 +193,57 @@ export async function getInquiryById(
     },
   });
 
-  return toPlainObject(inquiry);
+  if (!inquiry) return null;
+
+  const shaped: InquiryWithCustomer = {
+    id: inquiry.id,
+    receiptNumber: inquiry.receiptNumber,
+    name: inquiry.name,
+    companyName: inquiry.companyName,
+    email: inquiry.email,
+    phoneNumber: inquiry.phoneNumber,
+    subject: inquiry.subject,
+    message: inquiry.message,
+    status: inquiry.status,
+    customerId: inquiry.customerId,
+    assigneeId: inquiry.assigneeId,
+    assigneeName: inquiry.assignee?.name ?? null,
+    slaExpiresAt: inquiry.slaExpiresAt,
+    deletedAt: inquiry.deletedAt,
+    anonymizedAt: inquiry.anonymizedAt,
+    replies: inquiry.replies.map(flattenReply),
+    customer: inquiry.customer,
+    createdAt: inquiry.createdAt,
+    updatedAt: inquiry.updatedAt,
+  };
+
+  return toPlainObject(shaped);
 }
 
 export async function getInquiryStats(): Promise<InquiryStats> {
-  const [total, newCount, inProgress, resolved, closed] = await Promise.all([
-    prisma.inquiry.count(),
-    prisma.inquiry.count({ where: { status: InquiryStatus.NEW } }),
-    prisma.inquiry.count({ where: { status: InquiryStatus.IN_PROGRESS } }),
-    prisma.inquiry.count({ where: { status: InquiryStatus.RESOLVED } }),
-    prisma.inquiry.count({ where: { status: InquiryStatus.CLOSED } }),
-  ]);
+  const notDeleted: InquiryWhereInput = { deletedAt: null };
+  const [total, newCount, inProgress, resolved, closed, flagged, spam] =
+    await Promise.all([
+      prisma.inquiry.count({ where: notDeleted }),
+      prisma.inquiry.count({
+        where: { ...notDeleted, status: InquiryStatus.NEW },
+      }),
+      prisma.inquiry.count({
+        where: { ...notDeleted, status: InquiryStatus.IN_PROGRESS },
+      }),
+      prisma.inquiry.count({
+        where: { ...notDeleted, status: InquiryStatus.RESOLVED },
+      }),
+      prisma.inquiry.count({
+        where: { ...notDeleted, status: InquiryStatus.CLOSED },
+      }),
+      prisma.inquiry.count({
+        where: { ...notDeleted, status: InquiryStatus.FLAGGED },
+      }),
+      prisma.inquiry.count({
+        where: { ...notDeleted, status: InquiryStatus.SPAM },
+      }),
+    ]);
 
   return {
     total,
@@ -133,5 +251,7 @@ export async function getInquiryStats(): Promise<InquiryStats> {
     inProgress,
     resolved,
     closed,
+    flagged,
+    spam,
   };
 }

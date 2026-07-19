@@ -3,6 +3,10 @@ import { InquiryStatus } from "@generated/prisma/enums";
 
 // =============================================================================
 // Mocks (must be defined before importing target module)
+//
+// Phase 1 overhaul:
+// - bulkDeleteInquiriesCommand: soft delete 化 (戻り値の shape は変わらず)
+// - bulkSetStatusInquiriesCommand: 第 3 引数 changedById 追加
 // =============================================================================
 
 const mockBulkDeleteInquiriesCommand = mock<
@@ -21,6 +25,8 @@ const mockBulkSetStatusInquiriesCommand = mock<
   (
     ids: string[],
     newStatus: InquiryStatus,
+    changedById: string | null,
+    reason?: string,
   ) => Promise<{
     count: number;
     newStatus: InquiryStatus;
@@ -60,10 +66,12 @@ type ExecuteOpts<T> = {
   afterSuccess?: (data: T) => void | Promise<void>;
 };
 
+const ADMIN_USER_ID = "admin-user-id";
+
 const mockExecuteAdminMutationResult = mock<
   <T>(opts: ExecuteOpts<T>) => Promise<T | { error: string }>
 >(async <T>(opts: ExecuteOpts<T>) => {
-  const data = await opts.execute({ id: "admin-user-id", role: "ADMIN" });
+  const data = await opts.execute({ id: ADMIN_USER_ID, role: "ADMIN" });
   if (opts.afterSuccess) {
     await opts.afterSuccess(data);
   }
@@ -291,9 +299,11 @@ describe("bulkSetStatusInquiries", () => {
           action: "update",
         }),
       );
+      // Phase 1 overhaul: 第 3 引数 changedById が渡される
       expect(mockBulkSetStatusInquiriesCommand).toHaveBeenCalledWith(
         [VALID_UUID_A, VALID_UUID_B],
         InquiryStatus.RESOLVED,
+        ADMIN_USER_ID,
       );
       expect(result).toMatchObject({
         count: 2,

@@ -28,6 +28,7 @@ import {
   ReservationStatusBadge,
   InquiryStatusBadge,
 } from "@/admin/components/status-badges";
+import { Badge } from "@/admin/components/ui/badge";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { formatMonthDayTime } from "@/shared/lib/date-format";
 
@@ -108,6 +109,7 @@ export async function DashboardRecentSection() {
                 <TableRow>
                   <TableHead>日時</TableHead>
                   <TableHead>件名</TableHead>
+                  <TableHead>対応</TableHead>
                   <TableHead>ステータス</TableHead>
                 </TableRow>
               </TableHeader>
@@ -122,8 +124,20 @@ export async function DashboardRecentSection() {
                         href={`/admin/inquiries/${inquiry.id}`}
                         className="hover:underline"
                       >
+                        <span className="text-muted-foreground mr-2 text-xs">
+                          {inquiry.receiptNumber}
+                        </span>
                         {inquiry.subject}
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      {/* Inquiry Overhaul Phase 1: 旧 replyMessage 列は DROP されたため
+                          replies 件数の 0/1+ 派生で「返信済み / 未対応」を表示する */}
+                      {inquiry.hasReplies ? (
+                        <Badge variant="success">返信済み</Badge>
+                      ) : (
+                        <Badge variant="warning">未対応</Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <InquiryStatusBadge status={inquiry.status} />

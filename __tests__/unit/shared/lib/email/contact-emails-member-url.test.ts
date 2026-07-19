@@ -60,6 +60,7 @@ import type { ContactEmailData } from "@/shared/lib/email/types";
 
 const DATA: ContactEmailData = {
   inquiryId: "inquiry-abcdef123456",
+  receiptNumber: "INQ-ABCDEF12",
   name: "山田太郎",
   email: "customer@example.com",
   subject: "テストの件",
