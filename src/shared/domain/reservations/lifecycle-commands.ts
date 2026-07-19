@@ -7,7 +7,7 @@ import {
   CANCELLED_BY,
   TERMINAL_RESERVATION_STATUSES,
 } from "@/shared/lib/validations/enums/helpers";
-import { checkReservationOverlap } from "@/shared/lib/reservation";
+import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 import { validateStatusTransition } from "./status";
 import { CUSTOMER_SELECT, buildPayload } from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
@@ -175,7 +175,12 @@ export async function restoreReservationStatusCommand(
     if (targetStatus === ReservationStatus.CONFIRMED) {
       await lockSpaceForTransaction(tx, reservation.spaceId);
 
-      const overlap = await checkReservationOverlap(
+      // Reservation と EventTimeSlot の両方で重複を検査する SSoT。旧実装は
+      // `checkReservationOverlap` (Reservation-only) しか呼ばず、EventTimeSlot と
+      // の cross-table 重複は DB 側 CONSTRAINT TRIGGER の raw error だけが最終
+      // 防衛線になっていた。domain 層で先に検出することで、admin に人間可読な
+      // VALIDATION 理由 (event/reservation どちらの重複か) を返す。
+      const overlap = await checkSpaceOverlap(
         {
           spaceId: reservation.spaceId,
           startTime: reservation.startTime,
@@ -186,7 +191,9 @@ export async function restoreReservationStatusCommand(
       );
       if (overlap.hasOverlap) {
         throw new DomainError(
-          "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
+          overlap.type === "event"
+            ? "同一スペース・同一時間帯に有効なイベントが存在するため復元できません"
+            : "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
           "VALIDATION",
         );
       }
