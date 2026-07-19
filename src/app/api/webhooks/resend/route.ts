@@ -10,26 +10,36 @@
  * - email.bounced (bounce.type=Permanent) → HARD_BOUNCED
  * - email.bounced (bounce.type=Temporary) → SOFT_BOUNCED
  * - email.complained → COMPLAINED
+ * - email.failed → HARD_BOUNCED（permanent send failure、L3）
+ * - email.suppressed → HARD_BOUNCED（Resend 側 suppression list ヒットで
+ *   送信ブロック。ローカルの suppression 状態も同期しておく、L3）
  * - その他 (sent / delivered / opened / clicked / delivery_delayed 等) は 200 で ack
  *
- * ## 署名検証
- * Resend は Webhook の署名を svix 形式で送信する。SDK の
- * `resend.webhooks.verify` が svix-id / svix-timestamp / svix-signature の
- * 3 ヘッダを使って HMAC 検証を行い、不正なら throw する（official pattern）。
+ * ## 署名検証（M4）
+ * Resend は Webhook の署名を Standard Webhooks 仕様（旧 svix 形式）で送信する。
+ * 検証は `standardwebhooks` パッケージ (Resend SDK が内部で使う同じ実装) の
+ * `new Webhook(secret).verify(payload, headers)` を直接呼ぶ。
+ *
+ * 旧実装は `resend.webhooks.verify` を経由していたため、outbound 送信用の
+ * API キー (env or DB) が未設定だと webhook まで 503 で落ちる silent bug に
+ * なっていた（API キーローテーション中は全イベントが drop）。署名検証には
+ * `RESEND_WEBHOOK_SECRET` のみ必要で API キーは無関係のため、outbound
+ * client と decoupling する（M4）。
  *
  * @see https://resend.com/docs/webhooks/verify-webhooks-requests
  * @see https://resend.com/docs/webhooks/emails/bounced
  * @see https://resend.com/docs/webhooks/emails/complained
+ * @see https://www.standardwebhooks.com/
  * @module api/webhooks/resend
  */
 
 import { unstable_rethrow } from "next/navigation";
+import { Webhook } from "standardwebhooks";
 import { z } from "zod";
 import { EmailDeliveryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { updateCustomerEmailDeliveryStatusByEmail } from "@/shared/domain/customers/commands";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { getResendClient } from "@/shared/lib/email/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   ErrorCategory,
@@ -51,6 +61,13 @@ const BounceDetailsSchema = z.object({
   message: z.string().optional(),
 });
 
+// email.failed / email.suppressed の追加情報。
+// Resend は失敗理由を data.reason（or data.message）で返す事があるため両方許容。
+const FailureDetailsSchema = z.object({
+  reason: z.string().optional(),
+  message: z.string().optional(),
+});
+
 // 全イベント共通: type / created_at / data.to / data.email_id を持つ。
 const ResendWebhookEventSchema = z.object({
   type: z.string(),
@@ -59,6 +76,10 @@ const ResendWebhookEventSchema = z.object({
     email_id: z.string().optional(),
     to: z.array(z.string()).optional(),
     bounce: BounceDetailsSchema.optional(),
+    // email.failed / email.suppressed で使う失敗理由フィールド。
+    reason: z.string().optional(),
+    message: z.string().optional(),
+    failure: FailureDetailsSchema.optional(),
   }),
 });
 
@@ -89,31 +110,22 @@ export async function POST(request: Request) {
       return jsonError("Resend webhook not configured", 503);
     }
 
-    // 3. Resend client（envOR DB の API キーから）
-    const resend = await getResendClient();
-    if (!resend) {
-      logError(new Error("Resend client not available"), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.HIGH,
-        context: { operation: "resendWebhook" },
-      });
-      return jsonError("Resend webhook not configured", 503);
-    }
-
-    // 4. raw body 取得（署名検証に必須 — JSON.parse は使わない）
+    // 3. raw body 取得（署名検証に必須 — JSON.parse は使わない）
     const payload = await request.text();
 
-    // 5. svix 署名検証（throws on invalid）
+    // 4. 署名検証（M4）—— standardwebhooks を直接呼ぶ。
+    //    outbound Resend client (getResendClient) は API キー起因で null に
+    //    なりうるため、署名検証を outbound client に依存させると API キー
+    //    ローテーション中に webhook が全 drop する silent bug になる。
+    //    Resend SDK 内部と同じ header name remap を行う
+    //    (svix-* → webhook-*、Standard Webhooks 仕様準拠)。
     let verified: unknown;
     try {
-      verified = resend.webhooks.verify({
-        payload,
-        headers: {
-          id: svixId,
-          timestamp: svixTimestamp,
-          signature: svixSignature,
-        },
-        webhookSecret,
+      const wh = new Webhook(webhookSecret);
+      verified = wh.verify(payload, {
+        "webhook-id": svixId,
+        "webhook-timestamp": svixTimestamp,
+        "webhook-signature": svixSignature,
       });
     } catch (verifyError) {
       logError(normalizeError(verifyError), {
@@ -124,7 +136,7 @@ export async function POST(request: Request) {
       return jsonError("Invalid signature", 400);
     }
 
-    // 6. payload を Zod で narrow（SDK の戻りは unknown 相当）
+    // 5. payload を Zod で narrow（verify は string を JSON.parse して unknown を返す）
     const parsed = ResendWebhookEventSchema.safeParse(verified);
     if (!parsed.success) {
       logError(new Error("Resend webhook payload validation failed"), {
@@ -139,7 +151,7 @@ export async function POST(request: Request) {
       return jsonSuccess({ received: true, handled: false });
     }
 
-    // 7. event 処理
+    // 6. event 処理
     await handleEvent(parsed.data);
 
     return jsonSuccess({ received: true });
@@ -167,6 +179,19 @@ async function handleEvent(event: ResendWebhookEvent): Promise<void> {
     case "email.complained":
       await handleComplained(event);
       break;
+    case "email.failed":
+      // L3: permanent send failure → HARD_BOUNCED としてローカル状態を同期。
+      // Resend 側が再送を試みない失敗（ドメイン拒否など）はローカルでも suppress。
+      await handleFailedOrSuppressed(event, extractFailureReason(event));
+      break;
+    case "email.suppressed":
+      // L3: Resend の suppression list ヒットで送信ブロックされた宛先も
+      //     HARD_BOUNCED に落として同期（次回 sendEmail() を local-side で防止）。
+      await handleFailedOrSuppressed(
+        event,
+        extractFailureReason(event) ?? "Blocked by Resend suppression list",
+      );
+      break;
     default:
       // sent / delivered / opened / clicked / delivery_delayed 等は ack のみ
       break;
@@ -190,14 +215,12 @@ async function handleBounced(event: ResendWebhookEvent): Promise<void> {
       ? EmailDeliveryStatus.HARD_BOUNCED
       : EmailDeliveryStatus.SOFT_BOUNCED;
 
-  let totalUpdated = 0;
-  for (const recipient of recipients) {
-    totalUpdated += await updateCustomerEmailDeliveryStatusByEmail(
-      recipient,
-      status,
-      reason,
-    );
-  }
+  const totalUpdated = await applyStatusPerRecipient(
+    recipients,
+    status,
+    reason,
+    "resendWebhook.handleBounced",
+  );
 
   if (totalUpdated > 0) invalidateCustomerCache();
 }
@@ -209,16 +232,88 @@ async function handleComplained(event: ResendWebhookEvent): Promise<void> {
   const recipients = event.data.to ?? [];
   if (recipients.length === 0) return;
 
-  let totalUpdated = 0;
-  for (const recipient of recipients) {
-    totalUpdated += await updateCustomerEmailDeliveryStatusByEmail(
-      recipient,
-      EmailDeliveryStatus.COMPLAINED,
-      "Recipient marked email as spam",
-    );
-  }
+  const totalUpdated = await applyStatusPerRecipient(
+    recipients,
+    EmailDeliveryStatus.COMPLAINED,
+    "Recipient marked email as spam",
+    "resendWebhook.handleComplained",
+  );
 
   if (totalUpdated > 0) invalidateCustomerCache();
+}
+
+/**
+ * L3: email.failed / email.suppressed 共通ハンドラ。
+ * どちらも「Resend 側で送信できなかった／ブロックされた宛先」なので
+ * HARD_BOUNCED として suppression 対象に載せる。
+ */
+async function handleFailedOrSuppressed(
+  event: ResendWebhookEvent,
+  reason: string | null,
+): Promise<void> {
+  const recipients = event.data.to ?? [];
+  if (recipients.length === 0) return;
+
+  const totalUpdated = await applyStatusPerRecipient(
+    recipients,
+    EmailDeliveryStatus.HARD_BOUNCED,
+    reason,
+    `resendWebhook.${event.type}`,
+  );
+
+  if (totalUpdated > 0) invalidateCustomerCache();
+}
+
+function extractFailureReason(event: ResendWebhookEvent): string | null {
+  return (
+    event.data.reason ??
+    event.data.message ??
+    event.data.failure?.reason ??
+    event.data.failure?.message ??
+    null
+  );
+}
+
+/**
+ * PR-J1 (M3) と同じ pattern: recipient ごとに try/catch で分離し、
+ * 1 件の Prisma error が残り宛先を巻き添えにしないようにする。
+ * domain 側 `updateCustomerEmailDeliveryStatusByEmail` は notIn 保護節で
+ * 成功済み recipient を no-op に丸めるため idempotent（再配信で二重処理 OK）。
+ */
+async function applyStatusPerRecipient(
+  recipients: readonly string[],
+  status: EmailDeliveryStatus,
+  reason: string | null,
+  operation: string,
+): Promise<number> {
+  let totalUpdated = 0;
+  for (const recipient of recipients) {
+    try {
+      totalUpdated += await updateCustomerEmailDeliveryStatusByEmail(
+        recipient,
+        status,
+        reason,
+      );
+    } catch (recipientError) {
+      unstable_rethrow(recipientError);
+      logError(normalizeError(recipientError), {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation,
+          // recipient そのものは PII のため長さ + 先頭 1 文字だけ残す。
+          recipientHint: hashRecipient(recipient),
+        },
+      });
+    }
+  }
+  return totalUpdated;
+}
+
+function hashRecipient(email: string): string {
+  const trimmed = email.trim();
+  const head = trimmed.slice(0, 1);
+  return `${head}***(len=${trimmed.length})`;
 }
 
 function invalidateCustomerCache(): void {

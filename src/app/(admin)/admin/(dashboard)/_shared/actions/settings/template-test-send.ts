@@ -29,10 +29,7 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
 import { resolveSenderEmailAddress } from "@/shared/lib/email/client";
 import { type MutationResult } from "@/shared/lib/mutation-result";
-import {
-  authMutationRateLimiter,
-  getClientIpFromHeaders,
-} from "@/shared/lib/rate-limit";
+import { templateTestSendRateLimiter } from "@/shared/lib/rate-limit";
 
 const keySchema = z.enum(TEMPLATE_KEYS, {
   error: "テンプレート種別が不正です",
@@ -78,9 +75,12 @@ export async function sendTemplateTestAction(
     resource: "settings",
     action: "update",
     execute: async (user) => {
-      // 1. rate-limit（IP 単位、authMutationRateLimiter: 20/15min を再利用）
-      const ip = await getClientIpFromHeaders();
-      const limit = await authMutationRateLimiter.check(ip);
+      // 1. rate-limit（user.id 単位、templateTestSendRateLimiter: 10/15min の
+      //    専用バケット）。IP 単位の authMutationRateLimiter (20/15min) を再利用すると
+      //    Better Auth 顧客サインインと同じ egress IP バケットに結合してしまい、
+      //    管理者の全テンプレ検証が顧客ログインを 15 分ロックする（逆も同様）ため、
+      //    user.id にキーを移して per-admin の独立バケットで防御する。
+      const limit = await templateTestSendRateLimiter.check(user.id);
       if (!limit.success) {
         throw new DomainError(
           "リクエストが多すぎます。しばらくしてからお試しください",
@@ -142,6 +142,12 @@ export async function sendTemplateTestAction(
         if (result.reason === "disabled") {
           throw new DomainError(
             "メール送信が無効です（RESEND_API_KEY が設定されていません）",
+            "VALIDATION",
+          );
+        }
+        if (result.reason === "suppressed") {
+          throw new DomainError(
+            "送信先は配信停止（バウンス/苦情）登録済みのため送信できません",
             "VALIDATION",
           );
         }

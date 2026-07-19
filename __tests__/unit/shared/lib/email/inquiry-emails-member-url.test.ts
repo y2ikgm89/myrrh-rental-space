@@ -7,6 +7,11 @@
  * resolveOrCreateGuestInquiryCustomer が発行する userId=null のゲスト shell を
  * 指し得るため、customerId の有無ではなく customer.userId を見る必要がある —
  * この区別を誤ると全てのお問い合わせにマイページリンクが出る/出ない事故になる。
+ *
+ * Phase 1 (inquiry overhaul):
+ * - `InquiryReplyEmailData.originalSubject` → `subject` に rename
+ * - `InquiryReplyEmailData.originalMessage` → `message` に rename
+ * - `InquiryReplyEmailData.receiptNumber` が必須追加 (件名・本文で受付番号表示)
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
@@ -64,6 +69,7 @@ mock.module("@/shared/emails/inquiry-status-notification", () => ({
 
 type InquiryRow = {
   id: string;
+  receiptNumber: string;
   name: string;
   email: string;
   subject: string;
@@ -73,6 +79,7 @@ type InquiryRow = {
 
 const MEMBER_INQUIRY: InquiryRow = {
   id: "inquiry-member-01",
+  receiptNumber: "INQ-MEMBER01",
   name: "会員 太郎",
   email: "member@example.com",
   subject: "会員からの問い合わせ",
@@ -82,6 +89,7 @@ const MEMBER_INQUIRY: InquiryRow = {
 
 const GUEST_INQUIRY: InquiryRow = {
   id: "inquiry-guest-01",
+  receiptNumber: "INQ-GUEST001",
   name: "ゲスト 花子",
   email: "guest@example.com",
   subject: "ゲストからの問い合わせ",
@@ -106,10 +114,11 @@ import type { InquiryReplyEmailData } from "@/shared/lib/email/types";
 
 const REPLY_DATA: InquiryReplyEmailData = {
   inquiryId: "inquiry-abc123",
+  receiptNumber: "INQ-ABC12345",
   customerName: "山田太郎",
   customerEmail: "yamada@example.com",
-  originalSubject: "件名",
-  originalMessage: "本文",
+  subject: "件名",
+  message: "本文",
   replyMessage: "回答内容",
   repliedByName: "サポート担当",
 };

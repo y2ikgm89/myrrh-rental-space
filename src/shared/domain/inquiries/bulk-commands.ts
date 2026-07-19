@@ -8,11 +8,10 @@ export type BulkDeleteInquiriesResult = {
 };
 
 /**
- * 複数のお問い合わせを一括削除する。
+ * 複数のお問い合わせを一括 soft delete する。
  *
- * - hard delete（`Inquiry` に soft delete カラムなし）
- * - `Customer.inquiries` への onDelete cascade はないが Inquiry → Customer は SetNull のため衝突なし
- * - 戻り値の `affectedIds` は cache invalidation 用（削除成功分のみ）
+ * hard delete は data-retention cron の inquiryMonths 満了時のみ実行する。
+ * すでに削除済み (deletedAt IS NOT NULL) は対象外。
  */
 export async function bulkDeleteInquiriesCommand(
   ids: string[],
@@ -21,7 +20,7 @@ export async function bulkDeleteInquiriesCommand(
     return { count: 0, affectedIds: [] };
   }
   const targets = await prisma.inquiry.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, deletedAt: null },
     select: { id: true },
   });
   if (targets.length === 0) {
@@ -29,8 +28,10 @@ export async function bulkDeleteInquiriesCommand(
   }
 
   const affectedIds = targets.map((t) => t.id);
-  const result = await prisma.inquiry.deleteMany({
+  const now = new Date();
+  const result = await prisma.inquiry.updateMany({
     where: { id: { in: affectedIds } },
+    data: { deletedAt: now },
   });
 
   return { count: result.count, affectedIds };

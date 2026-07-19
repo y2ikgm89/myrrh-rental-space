@@ -14,6 +14,8 @@ import {
 
 type Props = {
   customerName: string;
+  /** Inquiry.receiptNumber (「INQ-XXXXXXXX」)。件名末尾・本文冒頭で目立つ位置に表示する。 */
+  receiptNumber: string;
   inquirySubject: string;
   newStatus: "RESOLVED" | "CLOSED";
   /** 会員向け: ログイン後のマイページ問い合わせ詳細 URL */
@@ -33,8 +35,20 @@ const MESSAGES: Record<Props["newStatus"], string> = {
     "お問い合わせを終了いたしました。\n再度ご相談の際は、新規のお問い合わせとしてご連絡ください。",
 };
 
+const receiptNumberStyle = {
+  ...text,
+  fontWeight: 700,
+  color: COLOR.text,
+  backgroundColor: COLOR.surface,
+  padding: "8px 12px",
+  borderRadius: "4px",
+  border: `1px solid ${COLOR.border}`,
+  margin: "16px 0",
+};
+
 export function InquiryStatusNotificationEmail({
   customerName,
+  receiptNumber,
   inquirySubject,
   newStatus,
   memberInquiryUrl,
@@ -44,7 +58,7 @@ export function InquiryStatusNotificationEmail({
 
   return (
     <EmailLayout
-      preview={`${HEADINGS[newStatus]} - ${inquirySubject}`}
+      preview={`${HEADINGS[newStatus]} - ${inquirySubject} [${receiptNumber}]`}
       footer={footer}
     >
       <Text style={{ ...heading, color: COLOR.infoHeading }}>
@@ -52,6 +66,8 @@ export function InquiryStatusNotificationEmail({
       </Text>
 
       <Text style={text}>{customerName} 様</Text>
+
+      <Text style={receiptNumberStyle}>受付番号: {receiptNumber}</Text>
 
       <Section
         style={{
@@ -65,6 +81,9 @@ export function InquiryStatusNotificationEmail({
           お問い合わせ内容
         </Text>
         <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>受付番号:</strong> {receiptNumber}
+        </Text>
         <Text style={detailItem}>
           <strong>件名:</strong> {inquirySubject}
         </Text>

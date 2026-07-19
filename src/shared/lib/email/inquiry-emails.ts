@@ -25,11 +25,12 @@ export async function sendInquiryReplyEmail(
   return sendEmail({
     payload: {
       to: data.customerEmail,
-      subject: `【お問い合わせ回答】${data.originalSubject}`,
+      subject: `【お問い合わせ回答】${data.subject} [${data.receiptNumber}]`,
       react: InquiryReplyEmail({
         customerName: data.customerName,
-        originalSubject: data.originalSubject,
-        originalMessage: data.originalMessage,
+        receiptNumber: data.receiptNumber,
+        subject: data.subject,
+        message: data.message,
         replyMessage: data.replyMessage,
         repliedByName: data.repliedByName,
         ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
@@ -61,6 +62,7 @@ export async function sendInquiryStatusNotificationToAll(
     where: { id: { in: inquiryIds } },
     select: {
       id: true,
+      receiptNumber: true,
       name: true,
       email: true,
       subject: true,
@@ -83,9 +85,10 @@ export async function sendInquiryStatusNotificationToAll(
       return sendEmail({
         payload: {
           to: inquiry.email,
-          subject: `【お問い合わせ${statusLabel}】${inquiry.subject}`,
+          subject: `【お問い合わせ${statusLabel}】${inquiry.subject} [${inquiry.receiptNumber}]`,
           react: InquiryStatusNotificationEmail({
             customerName: inquiry.name,
+            receiptNumber: inquiry.receiptNumber,
             inquirySubject: inquiry.subject,
             newStatus,
             ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),

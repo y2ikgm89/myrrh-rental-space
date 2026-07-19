@@ -418,6 +418,17 @@ export const receiptResendByEmailRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// 管理画面テンプレートテスト送信 — user.id 単位で 15 分あたり 10 回まで。
+//
+// authMutationRateLimiter (20/15min/IP) を再利用すると、同じ egress IP を共有する
+// Better Auth の顧客サインインバケットに結合する。管理者が全 25 テンプレートを一括
+// 検証すると同一オフィス / VPN NAT から顧客ログインを 15 分ロックし、逆も起きる。
+// user.id (=管理者個人) にキーを移し、独立バケットで per-admin 予算にする。
+export const templateTestSendRateLimiter = createRateLimiter({
+  interval: 15 * 60 * 1000, // 15 分
+  maxRequests: 10,
+});
+
 // 管理者オーサリング型 event broadcast (T12) — event 単位で 1 時間あたり 3 回まで。
 // event-broadcast は参加者全員に送信する重い操作 (100 名の申込があれば 100 通の Resend
 // API 呼出) のため、`cancelByReservationRateLimiter` と同型の「resource (eventId) 単位の

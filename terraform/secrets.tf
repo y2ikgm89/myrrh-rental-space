@@ -33,6 +33,7 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
+    "RESEND_WEBHOOK_SECRET",
   ]
 
   # Cloud Build が image build 時に availableSecrets 経由で読む secret。
@@ -46,15 +47,62 @@ locals {
 
   # runtime_secrets と build_secrets の union (重複除去)。
   all_secrets = toset(concat(local.runtime_secrets, local.build_secrets))
+
+  # GCP Secret Manager 側に既に存在する secret のみを列挙する。
+  # `import { for_each }` は「pre-existing remote object のみ」対象にする
+  # (Terraform 公式:
+  # https://developer.hashicorp.com/terraform/language/block/import
+  # "Only pre-existing objects can be imported.")。
+  #
+  # ⚠️ 新規 secret 追加の正しい 2 段階手順:
+  # 1. `runtime_secrets` / `build_secrets` に entry を追加してこの PR を merge。
+  #    `imported_secrets` にはまだ入れない → `terraform apply` は import では
+  #    なく create として扱い、GCP 側に新 container が作られる。
+  #    (Post-merge operator action: `gcloud secrets versions add <NAME>
+  #    --data-file=<file>` で値を投入)
+  # 2. `terraform apply` 成功後 (= main deploy 緑) の follow-up PR で
+  #    `imported_secrets` にも同 entry を追加。state 消失時の再 adoption
+  #    safety net が復活する。
+  #
+  # 逆手順 (最初から `imported_secrets` に入れる) を踏むと plan 段階で
+  # "Cannot import non-existent remote object" で fail し main deploy が
+  # blocked になる (root-fix commit: このコメント追加の commit を参照)。
+  imported_secrets = toset([
+    "DATABASE_URL",
+    "BETTER_AUTH_SECRET",
+    "ENCRYPTION_KEY",
+    "SECONDARY_ENCRYPTION_KEYS",
+    "AUDIT_LOG_HMAC_KEY",
+    "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
+    "R2_ACCOUNT_ID",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET_NAME",
+    "R2_PUBLIC_URL",
+    "CLOUDFLARE_ZONE_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ORIGIN_HEADER_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    # RESEND_WEBHOOK_SECRET (2026-07-19): container は既に PR-D (#1269) の
+    # apply で GCP 側に作成済 (run 29671898405)。operator が
+    # `gcloud secrets versions add RESEND_WEBHOOK_SECRET` で real value を
+    # 投入した前提でここに追加する。以降 terraform apply は import で adopt する。
+    "RESEND_WEBHOOK_SECRET",
+  ])
 }
 
 # -----------------------------------------------------------------------------
 # Import blocks (Terraform 1.7+) — adopt pre-existing GCP resources into state
 # instead of attempting create (avoids 409 on fresh state, first-time bootstrap).
 # These are no-op after the first apply; safe to keep long-term for docs.
+#
+# for_each は `local.imported_secrets` (= 既に GCP に存在する secret) のみを
+# 対象にする。新規追加 secret はここに入れず、`terraform apply` に create
+# させる。詳細は `imported_secrets` の docblock を参照。
 # -----------------------------------------------------------------------------
 import {
-  for_each = local.all_secrets
+  for_each = local.imported_secrets
   to       = google_secret_manager_secret.secret[each.value]
   id       = "projects/${var.project_id}/secrets/${each.value}"
 }
@@ -79,3 +127,39 @@ resource "google_secret_manager_secret" "secret" {
     ignore_changes = [labels, annotations]
   }
 }
+
+# -----------------------------------------------------------------------------
+# 新規 secret 追加の operator フロー (bootstrap resource 廃止)
+# -----------------------------------------------------------------------------
+# PR #1283 で導入された `google_secret_manager_secret_version.bootstrap` は
+# `scripts/bootstrap-terraform.sh` の IAM Deny Policy
+# (`block-terraform-runner-secret-value-read`, Codex P1 #1053 / F2 / F7) と
+# 設計矛盾する。terraform-runner SA は `secretmanager.googleapis.com/versions.add`
+# を deny 拒否されており、bootstrap version resource の CREATE は必ず 403 で失敗する。
+#
+# structural closure の SSoT は「terraform は container のみ扱う、versions は
+# operator が gcloud で投入する」であり、これを尊重する。新規 secret を追加する
+# 手順は以下 3 段階 (PR 1 本には収まらない — 2 PR + operator 介入が必須):
+#
+# **手順 1: 新規 container 追加 (PR-a)**
+#   - `runtime_secrets` (or `build_secrets`) に新 entry を追加。
+#   - `cloud_run_common_env` / `cloud_run_public_env` / `cloud_run_admin_env` の
+#     いずれかに `secret_key_ref` を **追加しない** (この段階では版が無いため refresh fail する)。
+#   - この PR を merge → terraform apply で container のみが作成される (versions は空)。
+#
+# **手順 2: operator が版を投入**
+#   ```
+#   printf '%s' '<real-value>' | \
+#     gcloud secrets versions add <NAME> --project=myrrh-rental-space --data-file=-
+#   ```
+#
+# **手順 3: Cloud Run 配線 + imported_secrets 追加 (PR-b)**
+#   - `cloud_run_common_env` 等に `secret_key_ref` を追加。
+#   - `imported_secrets` に entry を追加 (次回 state 消失時の再 adoption 用)。
+#   - `cloud_run_secret_versions` map の pin を `"1"` (最初の版) に設定。
+#   - この PR を merge → terraform apply で Cloud Run が secret を読み込む。
+#
+# 既存の PR-D (#1269, RESEND_WEBHOOK_SECRET) や PR-K (#1276, SUPPRESSION_HASH_SECRET)
+# のように 1 PR で container 追加と Cloud Run 配線を同時に行うと、この revert PR で
+# imported_secrets に entry を追加する follow-up PR + operator の版投入 が必要になる
+# (本 PR で RESEND_WEBHOOK_SECRET は imported_secrets に追加済み)。

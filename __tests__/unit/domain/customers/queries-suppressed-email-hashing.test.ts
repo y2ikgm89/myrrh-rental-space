@@ -16,7 +16,10 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { createHash } from "node:crypto";
 import { EmailDeliveryStatus } from "@generated/prisma/enums";
 
-type CustomerRow = { emailCanonical: string };
+type CustomerRow = {
+  emailCanonical: string;
+  suppressedEmailHash: string | null;
+};
 
 const mockFindMany = mock<
   (args: Record<string, unknown>) => Promise<CustomerRow[]>
@@ -59,7 +62,10 @@ describe("getSuppressedEmailSet — hashing invariant (PII must NOT leak into Da
 
   test("every Set entry is a 64-char SHA-256 hex digest, never the plaintext email", async () => {
     mockFindMany.mockResolvedValueOnce(
-      CANONICAL_EMAILS.map((emailCanonical) => ({ emailCanonical })),
+      CANONICAL_EMAILS.map((emailCanonical) => ({
+        emailCanonical,
+        suppressedEmailHash: null,
+      })),
     );
 
     const set = await getSuppressedEmailSet();
@@ -77,7 +83,10 @@ describe("getSuppressedEmailSet — hashing invariant (PII must NOT leak into Da
 
   test("hashSuppressedEmailCandidate applied to the same canonical email hits the Set (semantic equivalence)", async () => {
     mockFindMany.mockResolvedValueOnce(
-      CANONICAL_EMAILS.map((emailCanonical) => ({ emailCanonical })),
+      CANONICAL_EMAILS.map((emailCanonical) => ({
+        emailCanonical,
+        suppressedEmailHash: null,
+      })),
     );
 
     const set = await getSuppressedEmailSet();
@@ -99,25 +108,82 @@ describe("getSuppressedEmailSet — hashing invariant (PII must NOT leak into Da
     }
   });
 
-  test("prisma is queried for HARD_BOUNCED / COMPLAINED customers only (regression guard for the filter shape)", async () => {
+  test("prisma is queried for HARD_BOUNCED / COMPLAINED OR persisted suppressedEmailHash (regression guard for the filter shape)", async () => {
     mockFindMany.mockResolvedValueOnce([]);
 
     await getSuppressedEmailSet();
 
+    // RESEND-AUDIT M7: union of two suppression sources —
+    //   (a) 通常 Customer で emailDeliveryStatus が抑制系
+    //   (b) 匿名化/マージで持ち越された suppressedEmailHash (NOT NULL)
     expect(mockFindMany).toHaveBeenCalledTimes(1);
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          emailDeliveryStatus: {
-            in: [
-              EmailDeliveryStatus.HARD_BOUNCED,
-              EmailDeliveryStatus.COMPLAINED,
-            ],
-          },
+          OR: [
+            {
+              emailDeliveryStatus: {
+                in: [
+                  EmailDeliveryStatus.HARD_BOUNCED,
+                  EmailDeliveryStatus.COMPLAINED,
+                ],
+              },
+            },
+            { suppressedEmailHash: { not: null } },
+          ],
         },
-        select: { emailCanonical: true },
+        select: { emailCanonical: true, suppressedEmailHash: true },
       }),
     );
+  });
+
+  // ---------------------------------------------------------------------------
+  // RESEND-AUDIT M7: suppressedEmailHash 経路
+  // ---------------------------------------------------------------------------
+
+  test("suppressedEmailHash が set された行はその hash 値がそのまま Set に含まれる (anonymize/merge で持ち越された suppression が読める)", async () => {
+    // 実 email の hash (原本) を simulate — 匿名化前の "real@example.com" が
+    // HARD_BOUNCED だったケース。emailCanonical は placeholder に置換済み。
+    const originalEmailHash = sha256Hex("real@example.com");
+    mockFindMany.mockResolvedValueOnce([
+      {
+        emailCanonical: "deleted+abc-123@anonymized.local",
+        suppressedEmailHash: originalEmailHash,
+      },
+    ]);
+
+    const set = await getSuppressedEmailSet();
+
+    // 送信側で `hashSuppressedEmailCandidate("real@example.com")` を計算すると
+    // 保存された hash と一致 → suppression が持続する (M7 の中核不変条件)。
+    expect(set.has(originalEmailHash)).toBe(true);
+    expect(set.has(hashSuppressedEmailCandidate("real@example.com"))).toBe(
+      true,
+    );
+  });
+
+  test("emailDeliveryStatus 抑制列と suppressedEmailHash 列は両方 Set に取り込まれる (union)", async () => {
+    const originalEmailHash = sha256Hex("real@example.com");
+    mockFindMany.mockResolvedValueOnce([
+      {
+        // 通常 Customer (HARD_BOUNCED) — emailCanonical hash が入る
+        emailCanonical: "bounce@example.com",
+        suppressedEmailHash: null,
+      },
+      {
+        // 匿名化済み Customer — suppressedEmailHash 経路
+        emailCanonical: "deleted+xyz@anonymized.local",
+        suppressedEmailHash: originalEmailHash,
+      },
+    ]);
+
+    const set = await getSuppressedEmailSet();
+
+    // 両者が独立に含まれる (placeholder emailCanonical hash + 実 email hash)
+    expect(set.has(hashSuppressedEmailCandidate("bounce@example.com"))).toBe(
+      true,
+    );
+    expect(set.has(originalEmailHash)).toBe(true);
   });
 
   test("empty DB rows produce an empty Set (no accidental sentinel entries)", async () => {

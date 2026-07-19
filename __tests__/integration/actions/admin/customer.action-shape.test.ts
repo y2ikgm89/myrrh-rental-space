@@ -52,6 +52,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
   anonymizeCustomerCommand: mockAnonymizeCustomer,
   mergeCustomerCommand: mockMerge,
   updateCustomerFromGuestData: mock(async () => {}),
+  resetCustomerEmailDeliveryStatusCommand: mock(async () => ({
+    previous: "OK",
+  })),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({
