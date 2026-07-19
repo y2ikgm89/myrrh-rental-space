@@ -687,7 +687,7 @@ export async function sendBulkReservationCancelledEmail(
         }),
       ),
     }),
-    idempotencyKey: `bulk-reservation-cancel/${data.seriesId}`,
+    idempotencyKey: `bulk-reservation-cancel/${data.seriesId}/${data.batchNonce}`,
     operation: "sendBulkReservationCancelledEmail",
     context: {
       seriesId: data.seriesId,
@@ -733,7 +733,7 @@ export async function sendBulkAdminNotification(
         }),
       ),
     },
-    idempotencyKey: `bulk-reservation-cancel-admin/${data.seriesId}`,
+    idempotencyKey: `bulk-reservation-cancel-admin/${data.seriesId}/${data.batchNonce}`,
     operation: "sendBulkAdminNotification",
     context: {
       seriesId: data.seriesId,

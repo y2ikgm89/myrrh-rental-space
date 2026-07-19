@@ -154,6 +154,19 @@ export type BulkReservationCancelledEmailData = {
   /** キャンセル対象になった各 instance の日時（表示用整形は sender 側で行う）。 */
   instances: { startTime: Date; endTime: Date }[];
   reason?: string;
+  /**
+   * 24h 内の複数回 partial cancel を Resend の idempotency 409 で silent drop
+   * させないための batch 識別子（RESEND-AUDIT L6）。
+   *
+   * 呼出側 (`applyBulkCancellationSideEffects`) が batch 開始時に
+   * `crypto.randomUUID()` で 1 度だけ生成し、顧客向け・管理者向けの両送信で
+   * 同じ値を共有する（この batch の 2 通は同じ nonce で冪等リトライ可）。
+   * 別 batch では別 nonce になるため、Resend の同一キー再送で payload が
+   * 異なる (instances[]/reason 差分) 場合の 409 = 送信 skip を回避する。
+   *
+   * `sendEventBroadcast` の `broadcastNonce` と同じ設計。
+   */
+  batchNonce: string;
 };
 
 export type StatusChangeEmailData = {
