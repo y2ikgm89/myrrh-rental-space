@@ -43,6 +43,7 @@
 
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { AuditAction } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
@@ -77,9 +78,9 @@ import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lo
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
-  REFUNDED_BY_TYPE,
   type CancelledByType,
 } from "@/shared/lib/validations/enums/helpers";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { PaymentStatus, type ReservationStatus } from "@generated/prisma/enums";
 import type {
   BulkReservationCancelledEmailData,
@@ -287,7 +288,7 @@ function mapEmailResultToOutcome(
   if (result.ok) {
     return { status: "ok", detail: { messageId: result.messageId } };
   }
-  if (result.reason === "disabled") {
+  if (result.reason === "disabled" || result.reason === "suppressed") {
     return { status: "skipped", reason: "disabled_or_suppressed" };
   }
   return { status: "error", reason: result.error };
@@ -758,6 +759,15 @@ export async function applyBulkCancellationSideEffects(
   const cancellationReason = input.cancellationReason ?? null;
   const actorUserId = input.actorUserId ?? null;
 
+  // RESEND-AUDIT L6: 24h 内に同じ series を partial-cancel を複数回行った際、
+  // seriesId だけを idempotencyKey に使うと 2 回目以降の payload
+  // (instances[]/reason 差分) が Resend 409 (invalid_idempotent_request) で
+  // silent drop され、後発 batch の顧客・管理者双方への通知が届かなくなる。
+  // batch 開始時に 1 度だけ nonce を生成し、この batch の顧客向け・管理者向け
+  // 送信 2 通は同じ nonce で共有 (retry 冪等性維持)、別 batch では別 nonce
+  // となる (payload 差異による 409 回避)。sendEventBroadcast の broadcastNonce と同型。
+  const batchNonce = randomUUID();
+
   // PERF-02: Settings.refundPolicy を bulk 開始時に 1 回だけ fetch し per-instance
   // に snapshot として渡す。refund policy は series 一括キャンセル中 (数十秒スケール)
   // で変化しないビジネスセマンティクスであり、per-instance の Settings.findUnique
@@ -876,6 +886,7 @@ export async function applyBulkCancellationSideEffects(
           `${series.customer.lastName} ${series.customer.firstName}`.trim(),
         spaceName: series.space.name,
         instances,
+        batchNonce,
         ...(input.cancellationReason
           ? { reason: input.cancellationReason }
           : {}),

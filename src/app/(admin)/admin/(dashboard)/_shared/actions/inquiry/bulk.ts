@@ -67,8 +67,14 @@ export async function bulkSetStatusInquiries(
   return executeAdminMutationResult({
     resource: "inquiry",
     action: "update",
-    execute: async () =>
-      bulkSetStatusInquiriesCommand(parsed.data.ids, parsed.data.newStatus),
+    execute: async (user) =>
+      // Inquiry Overhaul Phase 1: 第 3 引数 changedById が必須。実行者の
+      // User.id を渡し、InquiryStatusHistory に監査ラインを残す。
+      bulkSetStatusInquiriesCommand(
+        parsed.data.ids,
+        parsed.data.newStatus,
+        user.id,
+      ),
     afterSuccess: (data) => {
       invalidateInquiryCachesForIds(data.affectedIds);
       if (

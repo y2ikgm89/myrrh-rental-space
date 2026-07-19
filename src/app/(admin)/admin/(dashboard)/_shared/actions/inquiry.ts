@@ -38,8 +38,14 @@ export async function updateInquiryStatus(
     resource: "inquiry",
     action: "update",
     resourceId: parsed.data.id,
-    execute: async () => {
-      await updateInquiryStatusCommand(parsed.data.id, parsed.data.status);
+    execute: async (user) => {
+      // Inquiry Overhaul Phase 1: 第 3 引数 changedById が必須。実行者の
+      // User.id を渡し、InquiryStatusHistory に監査ラインを残す。
+      await updateInquiryStatusCommand(
+        parsed.data.id,
+        parsed.data.status,
+        user.id,
+      );
       return null;
     },
     afterSuccess: () => {
@@ -100,8 +106,13 @@ export async function replyToInquiry(
           inquiryId: parsed.data.id,
           customerName: emailContext.name,
           customerEmail: emailContext.email,
-          originalSubject: emailContext.subject,
-          originalMessage: emailContext.message,
+          // Inquiry Overhaul Phase 1: emailContext は
+          // `{ name, email, subject, message, receiptNumber, customerUserId }` に変更。
+          // 旧 originalSubject / originalMessage は subject / message に rename、
+          // receiptNumber ("INQ-XXXXXXXX") が新規追加。
+          subject: emailContext.subject,
+          message: emailContext.message,
+          receiptNumber: emailContext.receiptNumber,
           replyMessage: parsed.data.replyMessage,
           repliedByName: user.name ?? "スタッフ",
           customerUserId: emailContext.customerUserId,

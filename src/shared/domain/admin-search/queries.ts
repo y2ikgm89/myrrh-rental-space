@@ -165,16 +165,24 @@ async function searchEvents(query: string): Promise<SearchResultItem[]> {
 async function searchInquiries(query: string): Promise<SearchResultItem[]> {
   const rows = await prisma.inquiry.findMany({
     where: {
-      OR: [{ name: ci(query) }, { email: ci(query) }, { subject: ci(query) }],
+      // Inquiry Overhaul Phase 1: soft-deleted は command palette から除外
+      deletedAt: null,
+      OR: [
+        { name: ci(query) },
+        { email: ci(query) },
+        { subject: ci(query) },
+        // ユーザー可視の受付番号 (INQ-XXXXXXXX) 検索 — subject 検索と同型で ILIKE 一致
+        { receiptNumber: ci(query) },
+      ],
     },
-    select: { id: true, name: true, subject: true },
+    select: { id: true, name: true, subject: true, receiptNumber: true },
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
     id: r.id,
     resource: "inquiry" as const,
     label: r.subject,
-    description: r.name,
+    description: `${r.receiptNumber}  ${r.name}`,
     href: `/admin/inquiries/${r.id}`,
   }));
 }

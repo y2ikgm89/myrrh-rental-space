@@ -29,10 +29,7 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
 import { resolveSenderEmailAddress } from "@/shared/lib/email/client";
 import { type MutationResult } from "@/shared/lib/mutation-result";
-import {
-  authMutationRateLimiter,
-  getClientIpFromHeaders,
-} from "@/shared/lib/rate-limit";
+import { templateTestSendRateLimiter } from "@/shared/lib/rate-limit";
 
 const keySchema = z.enum(TEMPLATE_KEYS, {
   error: "テンプレート種別が不正です",
@@ -78,9 +75,12 @@ export async function sendTemplateTestAction(
     resource: "settings",
     action: "update",
     execute: async (user) => {
-      // 1. rate-limit（IP 単位、authMutationRateLimiter: 20/15min を再利用）
-      const ip = await getClientIpFromHeaders();
-      const limit = await authMutationRateLimiter.check(ip);
+      // 1. rate-limit（user.id 単位、templateTestSendRateLimiter: 10/15min の
+      //    専用バケット）。IP 単位の authMutationRateLimiter (20/15min) を再利用すると
+      //    Better Auth 顧客サインインと同じ egress IP バケットに結合してしまい、
+      //    管理者の全テンプレ検証が顧客ログインを 15 分ロックする（逆も同様）ため、
+      //    user.id にキーを移して per-admin の独立バケットで防御する。
+      const limit = await templateTestSendRateLimiter.check(user.id);
       if (!limit.success) {
         throw new DomainError(
           "リクエストが多すぎます。しばらくしてからお試しください",
@@ -90,12 +90,22 @@ export async function sendTemplateTestAction(
 
       // 2. sender domain gate（settings 保存と同 SSoT、`__infra_check` でも適用）。
       // delivery.senderEmail が null（未設定）でも実送信は resolveSenderEmailAddress の
-      // ハードコード既定値にフォールバックするため、そのフォールバック先を検証する
+      // env `EMAIL_FROM` フォールバックが効くため、そのフォールバック先を検証する
       // （DB 値の有無で判定すると未検証ドメインへの実送信を見逃し Resend 403 になる）。
+      //
+      // env / DB のどちらにも sender が無い場合は resolveSenderEmailAddress が throw する
+      // （silent fallback を廃止した M11 fix）。テスト送信は絶対に成功しないため、
+      // DomainError に変換して operator に設定不備を surface する。
       const delivery = await getEmailDeliverySettings();
-      const effectiveSenderEmail = resolveSenderEmailAddress(
-        delivery.senderEmail,
-      );
+      let effectiveSenderEmail: string;
+      try {
+        effectiveSenderEmail = resolveSenderEmailAddress(delivery.senderEmail);
+      } catch {
+        throw new DomainError(
+          "送信元アドレスが未設定です。管理画面のメール設定で送信元メールアドレスを入力してください。",
+          "VALIDATION",
+        );
+      }
       const check = await validateSenderDomain(effectiveSenderEmail);
       if (!check.ok) {
         const list =
@@ -132,6 +142,12 @@ export async function sendTemplateTestAction(
         if (result.reason === "disabled") {
           throw new DomainError(
             "メール送信が無効です（RESEND_API_KEY が設定されていません）",
+            "VALIDATION",
+          );
+        }
+        if (result.reason === "suppressed") {
+          throw new DomainError(
+            "送信先は配信停止（バウンス/苦情）登録済みのため送信できません",
             "VALIDATION",
           );
         }

@@ -57,9 +57,19 @@ export type ReservationEmailData = {
 
 export type ContactEmailData = {
   inquiryId: string;
+  /**
+   * Inquiry.receiptNumber (「INQ-XXXXXXXX」形式)。顧客向け・管理者向けの両メールで
+   * 目立つ位置に表示し、以後の問い合わせ突合の主キーとして案内する (Medium #16)。
+   */
+  receiptNumber: string;
   name: string;
   companyName?: string | null;
   email: string;
+  /**
+   * Inquiry.phoneNumber。ゲストから電話番号が入力されていれば設定される。
+   * 管理者通知メールで折り返し先として表示する。未入力なら null/undefined。
+   */
+  phoneNumber?: string | null;
   subject: string;
   message: string;
   /**
@@ -72,10 +82,15 @@ export type ContactEmailData = {
 
 export type InquiryReplyEmailData = {
   inquiryId: string;
+  /**
+   * Inquiry.receiptNumber (「INQ-XXXXXXXX」形式)。返信メールの件名・本文で
+   * 目立つ位置に表示し、以後の問い合わせ突合の主キーとして案内する (Medium #16)。
+   */
+  receiptNumber: string;
   customerName: string;
   customerEmail: string;
-  originalSubject: string;
-  originalMessage: string;
+  subject: string;
+  message: string;
   replyMessage: string;
   repliedByName: string;
   /** 問い合わせに紐づく Customer の User.id。ログイン可能な実アカウントが無ければ null。 */
@@ -98,6 +113,13 @@ export type ReviewReplyEmailData = {
 };
 
 export type WelcomeEmailData = {
+  /**
+   * Customer.id (cuid). idempotencyKey に含めることで、同一メールアドレスで
+   * delete-account → 24h 内に re-signup したときの Resend 409
+   * (`invalid_idempotent_request`) を防ぐ。新規登録ごとに Customer は必ず
+   * 新規採番されるため collision しない（RESEND-AUDIT L5）。
+   */
+  customerId: string;
   customerName: string;
   customerEmail: string;
   loginUrl: string;
@@ -147,6 +169,19 @@ export type BulkReservationCancelledEmailData = {
   /** キャンセル対象になった各 instance の日時（表示用整形は sender 側で行う）。 */
   instances: { startTime: Date; endTime: Date }[];
   reason?: string;
+  /**
+   * 24h 内の複数回 partial cancel を Resend の idempotency 409 で silent drop
+   * させないための batch 識別子（RESEND-AUDIT L6）。
+   *
+   * 呼出側 (`applyBulkCancellationSideEffects`) が batch 開始時に
+   * `crypto.randomUUID()` で 1 度だけ生成し、顧客向け・管理者向けの両送信で
+   * 同じ値を共有する（この batch の 2 通は同じ nonce で冪等リトライ可）。
+   * 別 batch では別 nonce になるため、Resend の同一キー再送で payload が
+   * 異なる (instances[]/reason 差分) 場合の 409 = 送信 skip を回避する。
+   *
+   * `sendEventBroadcast` の `broadcastNonce` と同じ設計。
+   */
+  batchNonce: string;
 };
 
 export type StatusChangeEmailData = {
@@ -171,10 +206,15 @@ export type StatusChangeEmailData = {
  * メール送信結果。
  *
  * - `{ ok: true; messageId }` — Resend が受理（API レベル成功、配信は別途 webhook で観測）
- * - `{ ok: false; reason: "disabled" }` — RESEND_API_KEY 未設定で no-op
+ * - `{ ok: false; reason: "disabled" }` — RESEND_API_KEY 未設定 / 送信機能自体が OFF で no-op
+ * - `{ ok: false; reason: "suppressed"; suppressedRecipients }` —
+ *   全宛先が suppression list（HARD_BOUNCED / COMPLAINED）に該当し送信できなかった。
+ *   一部宛先のみ suppressed のケースは対象を除外して送信を継続するため、この分岐には入らない
+ *   （drop したアドレスは warning log のみ）。
  * - `{ ok: false; reason: "error"; error }` — Resend API エラー（retry 尽きた後）
  */
 export type EmailResult =
   | { ok: true; messageId: string }
   | { ok: false; reason: "disabled" }
+  | { ok: false; reason: "suppressed"; suppressedRecipients: readonly string[] }
   | { ok: false; reason: "error"; error: string };

@@ -60,9 +60,10 @@ export async function sendContactConfirmationEmail(
   return sendEmail({
     payload: {
       to: data.email,
-      subject: `【お問い合わせ受付】${data.subject}`,
+      subject: `【お問い合わせ受付】${data.subject} [${data.receiptNumber}]`,
       react: ContactConfirmationEmail({
         name: data.name,
+        receiptNumber: data.receiptNumber,
         subject: data.subject,
         message: data.message,
         ...(memberInquiryUrl !== undefined ? { memberInquiryUrl } : {}),
@@ -96,14 +97,15 @@ export async function sendContactAdminNotification(
   return sendEmail({
     payload: {
       to: notificationEmails,
-      subject: `【新規お問い合わせ】${data.subject} - ${data.name}様`,
+      subject: `【新規お問い合わせ】${data.subject} - ${data.name}様 [${data.receiptNumber}]`,
       react: AdminNotificationEmail({
         type: "inquiry",
         name: data.name,
         email: data.email,
+        ...(data.phoneNumber != null ? { phoneNumber: data.phoneNumber } : {}),
         subject: data.subject,
         message: data.message,
-        inquiryId: data.inquiryId.slice(0, 8).toUpperCase(),
+        receiptNumber: data.receiptNumber,
         adminUrl: getAdminUrl(`/inquiries/${data.inquiryId}`),
         footer,
       }),

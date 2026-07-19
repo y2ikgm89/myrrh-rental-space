@@ -35,6 +35,7 @@ import {
   SmartLockDeviceType,
   DayOfWeek,
   HolidayMode,
+  EmailDeliveryStatus,
 } from "@generated/prisma/enums";
 import {
   isValidRole,
@@ -416,7 +417,12 @@ export const CUSTOMER_STATUS_TRANSITIONS: Readonly<
 };
 
 /**
- * Inquiry ステータス遷移ルール（forward only）
+ * Inquiry ステータス遷移ルール。
+ *
+ * - 通常フロー (NEW → IN_PROGRESS → RESOLVED → CLOSED) は forward only
+ * - `FLAGGED` は要注意フラグ。任意状態から遷移可能、対応再開・完了・SPAM 降格・NEW 巻き戻し
+ *   まで全方向へ再遷移できる (誤判定訂正のため)
+ * - `SPAM` は最終判定に近いが、誤判定訂正のため CLOSED への遷移のみ許可
  */
 export const INQUIRY_STATUS_TRANSITIONS: Readonly<
   Record<InquiryStatus, readonly InquiryStatus[]>
@@ -425,10 +431,25 @@ export const INQUIRY_STATUS_TRANSITIONS: Readonly<
     InquiryStatus.IN_PROGRESS,
     InquiryStatus.RESOLVED,
     InquiryStatus.CLOSED,
+    InquiryStatus.FLAGGED,
+    InquiryStatus.SPAM,
   ],
-  [InquiryStatus.IN_PROGRESS]: [InquiryStatus.RESOLVED, InquiryStatus.CLOSED],
-  [InquiryStatus.RESOLVED]: [InquiryStatus.CLOSED],
+  [InquiryStatus.IN_PROGRESS]: [
+    InquiryStatus.RESOLVED,
+    InquiryStatus.CLOSED,
+    InquiryStatus.FLAGGED,
+    InquiryStatus.SPAM,
+  ],
+  [InquiryStatus.RESOLVED]: [InquiryStatus.CLOSED, InquiryStatus.FLAGGED],
   [InquiryStatus.CLOSED]: [],
+  [InquiryStatus.FLAGGED]: [
+    InquiryStatus.NEW,
+    InquiryStatus.IN_PROGRESS,
+    InquiryStatus.RESOLVED,
+    InquiryStatus.CLOSED,
+    InquiryStatus.SPAM,
+  ],
+  [InquiryStatus.SPAM]: [InquiryStatus.CLOSED],
 };
 
 /**
@@ -469,6 +490,19 @@ export const CUSTOMER_STATUS_LABELS: Record<CustomerStatus, string> = {
 };
 
 // =============================================================================
+// EmailDeliveryStatus Labels
+// =============================================================================
+
+/** Resend Webhook が観測した配信状態の顧客向け表示ラベル。 */
+export const EMAIL_DELIVERY_STATUS_LABELS: Record<EmailDeliveryStatus, string> =
+  {
+    [EmailDeliveryStatus.OK]: "配信可",
+    [EmailDeliveryStatus.SOFT_BOUNCED]: "一時エラー",
+    [EmailDeliveryStatus.HARD_BOUNCED]: "配信停止 (恒久エラー)",
+    [EmailDeliveryStatus.COMPLAINED]: "配信停止 (苦情申告)",
+  };
+
+// =============================================================================
 // InquiryStatus Labels
 // =============================================================================
 
@@ -477,6 +511,10 @@ export const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
   [InquiryStatus.IN_PROGRESS]: "対応中",
   [InquiryStatus.RESOLVED]: "解決済み",
   [InquiryStatus.CLOSED]: "クローズ",
+  // Inquiry Overhaul Phase 1: FLAGGED / SPAM を InquiryStatus enum に追加。
+  // Record<InquiryStatus, ...> の網羅性のため、ここも同時に更新する。
+  [InquiryStatus.FLAGGED]: "要注意",
+  [InquiryStatus.SPAM]: "スパム",
 };
 
 // =============================================================================
@@ -526,6 +564,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   [AuditAction.CREATE]: "作成",
   [AuditAction.UPDATE]: "更新",
   [AuditAction.DELETE]: "削除",
+  [AuditAction.READ]: "参照",
   [AuditAction.PUBLISH]: "公開",
   [AuditAction.EXPORT]: "エクスポート",
   [AuditAction.LOGIN_SUCCESS]: "ログイン成功",
@@ -691,30 +730,10 @@ export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
   [CANCELLED_BY.SYSTEM]: "システム（自動）",
 };
 
-// =============================================================================
-// Refund Actor Type（`refunds.refundedByType` の VARCHAR 値 — Prisma enum ではない）
-//
-// DB 側の CHECK 制約 `refunds_refundedByType_check` と application 側の enum を
-// 二重防御する。返金の起点 (誰が発火したか) を AuditLog metadata と併用する。
-// =============================================================================
-
-export const REFUNDED_BY_TYPE = {
-  /** 管理者が admin UI から明示的に返金 */
-  ADMIN: "ADMIN",
-  /** キャンセル副作用 (`cancellation-side-effects.ts`) で自動発火した返金 */
-  AUTO_ON_CANCEL: "AUTO_ON_CANCEL",
-  /** Stripe Dashboard 経由の手動返金 (webhook 経由で back-fill) */
-  STRIPE_DASHBOARD: "STRIPE_DASHBOARD",
-} as const;
-
-export type RefundedByType =
-  (typeof REFUNDED_BY_TYPE)[keyof typeof REFUNDED_BY_TYPE];
-
-export const REFUNDED_BY_TYPE_LABELS: Record<RefundedByType, string> = {
-  [REFUNDED_BY_TYPE.ADMIN]: "管理者",
-  [REFUNDED_BY_TYPE.AUTO_ON_CANCEL]: "自動（キャンセル）",
-  [REFUNDED_BY_TYPE.STRIPE_DASHBOARD]: "Stripe Dashboard",
-};
+// Refund Actor Type (`refunds.refundedByType`) は `./refund-attribution` に分離した。
+// helpers.ts が `./guards` を transitive load して SocialPlatform (Prisma enum) を要求するため、
+// 消費側 (webhook / refund path) の test mock で `@generated/prisma/enums` を差し替えると
+// SyntaxError で落ちる。attribution 4 items だけを持つ最小モジュールに切り出して依存を断つ。
 
 // =============================================================================
 // AdminNotification Type（DB VARCHAR 管理 — Prisma enum ではない）

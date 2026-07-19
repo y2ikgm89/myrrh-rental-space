@@ -28,10 +28,11 @@ export const adminNotificationInquiryFixture = {
   type: "inquiry" as const,
   name: "山田 太郎",
   email: "yamada@example.com",
+  phoneNumber: "090-1234-5678",
   subject: "施設利用に関するお問い合わせ",
   message:
     "来月の研修利用について、空き状況を確認したくご連絡しました。\n希望日時: 2026年8月10日（月）13:00-17:00\n参加人数: 約20名",
-  inquiryId: "0123ABCD",
+  receiptNumber: "INQ-ABCD1234",
   adminUrl:
     "https://example.com/admin/inquiries/abcdef-0123-4567-89ab-cdef01234567",
   footer: DEMO_FOOTER,

@@ -16,7 +16,7 @@ describe("isReagreeAllowlisted", () => {
     expect(isReagreeAllowlisted("/mypage/settings")).toBe(true);
   });
 
-  test("reservations / inquiries / events は履歴閲覧のため allowlist", () => {
+  test("reservations / inquiries / events / receipts は履歴閲覧のため allowlist", () => {
     expect(isReagreeAllowlisted("/mypage/reservations")).toBe(true);
     expect(isReagreeAllowlisted("/mypage/reservations/abc-123")).toBe(true);
     expect(isReagreeAllowlisted("/mypage/reservations/abc-123/edit")).toBe(
@@ -25,6 +25,10 @@ describe("isReagreeAllowlisted", () => {
     expect(isReagreeAllowlisted("/mypage/inquiries")).toBe(true);
     expect(isReagreeAllowlisted("/mypage/inquiries/abc-123")).toBe(true);
     expect(isReagreeAllowlisted("/mypage/events")).toBe(true);
+    expect(isReagreeAllowlisted("/mypage/receipts")).toBe(true);
+    expect(isReagreeAllowlisted("/mypage/receipts?returnTo=/mypage")).toBe(
+      true,
+    );
   });
 
   test("dashboard (/mypage) 直下は allowlist ではない (最短で trip wire)", () => {
@@ -38,13 +42,14 @@ describe("isReagreeAllowlisted", () => {
     expect(isReagreeAllowlisted("/admin/settings")).toBe(false);
   });
 
-  test("REAGREE_ALLOWLIST_PREFIXES は 5 件 (SSoT 契約の回帰テスト)", () => {
+  test("REAGREE_ALLOWLIST_PREFIXES は 6 件 (SSoT 契約の回帰テスト)", () => {
     expect(REAGREE_ALLOWLIST_PREFIXES).toEqual([
       "/mypage/terms/reagree",
       "/mypage/settings",
       "/mypage/reservations",
       "/mypage/inquiries",
       "/mypage/events",
+      "/mypage/receipts",
     ]);
   });
 });

@@ -138,13 +138,24 @@ export async function createReservationSeriesCommand(
     "料金内訳の生成に失敗しました",
   );
 
+  // series.id を tx 外で事前生成する。理由:
+  // (1) advisory lock 728357 の key を series 単位に統一するため (cancel/update
+  //     経路と一致させる)。旧実装は `${spaceId}:${customerId}` を使っており、
+  //     cancelReservationSeriesCommand (input.seriesId をそのまま key に使用) と
+  //     別 hash になるため、同一 series を触る書込が 728357 の namespace 上で
+  //     serialize されない cross-flow gap があった (Space lock 728351 が別途
+  //     直列化するので実運用の破綻は無いが、728357 が本来担うべき
+  //     "series-scope の書込を tx 単位で serialize する" 契約が破れていた)。
+  // (2) TermsAgreement.resourceId に series.id を紐付けたいが、agreementSnapshot
+  //     は記録した TermsAgreement 行から構築するため、「series 行を先に作る」だと
+  //     resourceId が無く、「TermsAgreement を先に作る」だと series.id が未確定
+  //     というチキンエッグになる (Task 10 踏襲)。
+  const seriesId = randomUUID();
+
   return await prisma.$transaction(async (tx) => {
     // series 単位 lock (728357) → Space 単位 lock (728351、既存契約) の順で取得する。
     // 全経路がこの順序を守ることで deadlock を予防する（series-advisory-lock.ts 参照）。
-    await lockReservationSeriesForTransaction(
-      tx,
-      `${input.spaceId}:${input.customerId}`,
-    );
+    await lockReservationSeriesForTransaction(tx, seriesId);
     await lockSpaceForTransaction(tx, input.spaceId);
 
     // 各 instance の overlap 事前 check（spec risk-1 対策）。createMany を実行する前に
@@ -176,13 +187,7 @@ export async function createReservationSeriesCommand(
       tx,
     });
 
-    // series.id を事前生成する: TermsAgreement.resourceId に series.id を紐付けたいが、
-    // agreementSnapshot（series 行自身の列）は記録した TermsAgreement 行から構築するため、
-    // 「series 行を先に作る」と resourceId が無く、「TermsAgreement を先に作る」と
-    // series.id が未確定というチキンエッグになる。id を先に払い出すことで両立させる
-    // （`recordTermsAgreements` 自身も同じ理由で id を呼出前に生成する設計、Task 10 踏襲）。
-    const seriesId = randomUUID();
-
+    // seriesId は関数冒頭で pre-generate 済 (lock key と共用、上のコメント参照)。
     const recordedAgreements = await recordTermsAgreements({
       scope: TERMS_SCOPE.RESERVATION_SERIES,
       customerId: input.customerId,
@@ -199,11 +204,24 @@ export async function createReservationSeriesCommand(
     );
 
     // coupon usage increment（series 全体で 1 usage、既存単発予約と同じ pattern）。
+    // atomic claim: public-commands.ts と同型の $executeRaw で
+    // `usageLimit IS NULL OR usageCount < usageLimit` を WHERE 条件で強制する。
+    // 素の `updateMany` では pre-tx validateCoupon 通過後の race で usageLimit
+    // 超過を許すため、business-domain rule の「updateMany の WHERE で claim」パターンで統一。
     if (input.couponId) {
-      await tx.coupon.updateMany({
-        where: { id: input.couponId },
-        data: { usageCount: { increment: 1 } },
-      });
+      const claimed = await tx.$executeRaw`
+        UPDATE "coupons"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "id" = ${input.couponId}::uuid
+          AND "isActive" = true
+          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+      `;
+      if (claimed === 0) {
+        throw new DomainError(
+          "クーポンが利用できません（利用上限に達した可能性があります）",
+          "CONFLICT",
+        );
+      }
     }
 
     const series = await tx.reservationSeries.create({

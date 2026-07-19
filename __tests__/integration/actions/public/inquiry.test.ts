@@ -10,6 +10,9 @@
  *   - `submission.reply({ formErrors: [msg] })` で top-level errors (rate limit / Turnstile / DomainError)
  *   - `submission.reply({ resetForm: true })` で success
  *
+ * Phase 1 inquiry overhaul:
+ * - `createInquiryCommand` の戻り値 payload に receiptNumber / phoneNumber が加わる
+ *
  * モック方針:
  * - validateTurnstile: action-helpers をモック(常に成功を返す)
  * - createInquiryCommand: domain コマンドをモック
@@ -41,14 +44,19 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
 }));
 
+const DEFAULT_RECEIPT_NUMBER = "INQ-ABCDEF12";
+
 const mockCreateInquiryCommand = mock(() =>
   Promise.resolve({
     id: "inquiry-001",
+    receiptNumber: DEFAULT_RECEIPT_NUMBER,
     payload: {
       inquiryId: "inquiry-001",
+      receiptNumber: DEFAULT_RECEIPT_NUMBER,
       name: "テスト太郎",
       companyName: null,
       email: "test@example.com",
+      phoneNumber: null,
       subject: "テスト件名",
       message: "テストメッセージ",
     },
@@ -157,6 +165,7 @@ type InquiryInputShape = {
   lastName: string;
   firstName: string;
   email: string;
+  phoneNumber?: string;
   subject: string;
   message: string;
   companyName?: string;
@@ -184,6 +193,9 @@ function inputToFormData(input: InquiryInputShape): FormData {
   fd.append("message", input.message);
   if (input.companyName !== undefined) {
     fd.append("companyName", input.companyName);
+  }
+  if (input.phoneNumber !== undefined) {
+    fd.append("phoneNumber", input.phoneNumber);
   }
   if (input.turnstileToken !== undefined) {
     fd.append("turnstileToken", input.turnstileToken);
@@ -221,11 +233,14 @@ describe("submitInquiry", () => {
     mockCreateInquiryCommand.mockImplementation(() =>
       Promise.resolve({
         id: "inquiry-001",
+        receiptNumber: DEFAULT_RECEIPT_NUMBER,
         payload: {
           inquiryId: "inquiry-001",
+          receiptNumber: DEFAULT_RECEIPT_NUMBER,
           name: `${VALID_INPUT.lastName} ${VALID_INPUT.firstName}`,
           companyName: null,
           email: VALID_INPUT.email,
+          phoneNumber: null,
           subject: VALID_INPUT.subject,
           message: VALID_INPUT.message,
         },
@@ -257,15 +272,33 @@ describe("submitInquiry", () => {
       await submitInquiry(undefined, inputToFormData(VALID_INPUT));
 
       expect(mockCreateInquiryCommand).toHaveBeenCalledTimes(1);
-      expect(mockCreateInquiryCommand).toHaveBeenCalledWith({
-        name: `${VALID_INPUT.lastName} ${VALID_INPUT.firstName}`,
-        companyName: null,
-        customerId: null,
-        customerType: VALID_INPUT.customerType,
-        email: VALID_INPUT.email,
-        subject: VALID_INPUT.subject,
-        message: VALID_INPUT.message,
-      });
+      expect(mockCreateInquiryCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: `${VALID_INPUT.lastName} ${VALID_INPUT.firstName}`,
+          companyName: null,
+          customerId: null,
+          customerType: VALID_INPUT.customerType,
+          email: VALID_INPUT.email,
+          subject: VALID_INPUT.subject,
+          message: VALID_INPUT.message,
+        }),
+      );
+    });
+
+    test("phoneNumber が入力されると createInquiryCommand に渡される", async () => {
+      const { submitInquiry } =
+        await import("@/app/(public)/_shared/actions/inquiry");
+
+      await submitInquiry(
+        undefined,
+        inputToFormData({ ...VALID_INPUT, phoneNumber: "090-1234-5678" }),
+      );
+
+      expect(mockCreateInquiryCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phoneNumber: "090-1234-5678",
+        }),
+      );
     });
 
     test("updateTag がキャッシュ無効化のために呼ばれる", async () => {

@@ -76,9 +76,13 @@ function normalizeRecipients(to: CreateEmailOptions["to"]): string[] {
  * テスト送信機能は `reason: "disabled"` を「警告」、`reason: "error"` を「エラー」として UI 上区別する。
  *
  * ## Resend Webhook suppression (Gmail Feb 2024 / Yahoo bulk sender 要件 — complaint rate < 0.3%)
- * 宛先の `Customer.emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED` のときは送信せず
- * `{ ok: false, reason: "disabled" }` を返し、監査ログに残す（Resend 側の suppression list を
- * アプリ層で先取りし、API quota / sender reputation を保護）。
+ * 宛先の `Customer.emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED` のときは送信を抑止する
+ * （Resend 側の suppression list をアプリ層で先取りし、API quota / sender reputation を保護）。
+ *
+ * - 複数宛先の一部が suppressed → 該当宛先だけ除外して残りに送信を継続する
+ *   （drop したアドレスは LOW severity で log）。
+ * - 全宛先が suppressed → 送信せず `{ ok: false, reason: "suppressed", suppressedRecipients }`。
+ *   （呼出側でテスト送信 UI 等が「配信停止済み」を disabled と区別して提示できるようにする）
  */
 export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   if (!(await isEmailEnabled())) return { ok: false, reason: "disabled" };
@@ -95,9 +99,9 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   } = params;
 
   // === Resend Webhook 由来の suppression check（送信前） ===
-  // 宛先のいずれかが HARD_BOUNCED / COMPLAINED なら no-op + audit log。
-  // 配信状態は Customer.emailCanonical でのみ追跡しているため、
-  // staff / system 宛先（DB に Customer レコードなし）は素通りする。
+  // 宛先のうち HARD_BOUNCED / COMPLAINED を除外する。全滅なら送信せず
+  // `reason: "suppressed"` を返す。一部だけなら残りで送信を継続する
+  // （legitimate co-recipient が 1 件の suppressed で巻き添えにならないため）。
   //
   // `getSuppressedEmailSet()` は「全 suppressed 顧客の canonical email を
   // SHA-256 hash した集合」を単一 `'use cache'` エントリで返す (引数無し
@@ -106,25 +110,64 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   // 呼び出し側で recipient を canonical → hash してから .has() 判定する。
   // cache は Resend webhook の revalidateTag で即時 invalidate される。
   const recipients = normalizeRecipients(payload.to);
+  const suppressedRecipients: string[] = [];
+  let filteredRecipients: string[] = recipients;
   if (recipients.length > 0) {
     const suppressedSet = await getSuppressedEmailSet();
+    filteredRecipients = [];
     for (const recipient of recipients) {
       const candidateHash = hashSuppressedEmailCandidate(
         normalizeEmailForIdentity(recipient),
       );
       if (suppressedSet.has(candidateHash)) {
-        logError(new Error(`Email suppressed: ${recipient}`), {
+        suppressedRecipients.push(recipient);
+      } else {
+        filteredRecipients.push(recipient);
+      }
+    }
+
+    if (suppressedRecipients.length > 0 && filteredRecipients.length === 0) {
+      // 全宛先 suppressed → 送信中止。
+      logError(
+        new Error(
+          `All recipients suppressed: ${suppressedRecipients.join(", ")}`,
+        ),
+        {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,
           context: {
             ...context,
             operation,
             ...(idempotencyKey !== undefined && { idempotencyKey }),
-            recipient,
+            suppressedRecipients,
           },
-        });
-        return { ok: false, reason: "disabled" };
-      }
+        },
+      );
+      return {
+        ok: false,
+        reason: "suppressed",
+        suppressedRecipients,
+      };
+    }
+
+    if (suppressedRecipients.length > 0) {
+      // 一部宛先 suppressed → warning log を残して残宛先で送信続行。
+      logError(
+        new Error(
+          `Dropping suppressed recipients: ${suppressedRecipients.join(", ")}`,
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: {
+            ...context,
+            operation,
+            ...(idempotencyKey !== undefined && { idempotencyKey }),
+            droppedRecipients: suppressedRecipients,
+            remainingRecipients: filteredRecipients,
+          },
+        },
+      );
     }
   }
 
@@ -133,20 +176,40 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   const delivery = await getEmailDeliverySettings();
   const resolvedReplyTo = payload.replyTo ?? delivery.replyToEmail ?? undefined;
 
-  // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
-  // `Omit<U, "from">` + spread does not round-trip back to the original union under
-  // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
-  const fullPayload = CreateEmailOptionsSchema.parse({
-    ...payload,
-    from: getFromAddress(delivery.senderEmail, delivery.senderName),
-    ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
-  });
-
   const errorContext = {
     ...context,
     operation,
     ...(idempotencyKey !== undefined && { idempotencyKey }),
   };
+
+  // Resend `CreateEmailOptions` is a discriminated union (react / html / text / template variants).
+  // `Omit<U, "from">` + spread does not round-trip back to the original union under
+  // `exactOptionalPropertyTypes: true`. Zod 4 公式 `z.custom<T>` で SDK 境界を narrow する。
+  // 一部宛先を suppression で drop した場合は payload.to をフィルタ後リストで上書きする。
+  //
+  // `getFromAddress` は `resolveSenderEmailAddress` を経由する。env `EMAIL_FROM` と
+  // DB `Settings.senderEmail` が両方 unset の場合は remediation 付き Error を throw する
+  // （旧仕様のハードコード既定値 "noreply@example.com" fallback は廃止）。ここで catch
+  // して他の失敗と同じ `{ ok: false, reason: "error" }` に変換し、audit log 経由で
+  // operator に設定不備を surface する。
+  const shouldRewriteTo =
+    recipients.length > 0 && suppressedRecipients.length > 0;
+  let fullPayload: CreateEmailOptions;
+  try {
+    fullPayload = CreateEmailOptionsSchema.parse({
+      ...payload,
+      from: getFromAddress(delivery.senderEmail, delivery.senderName),
+      ...(shouldRewriteTo ? { to: filteredRecipients } : {}),
+      ...(resolvedReplyTo !== undefined ? { replyTo: resolvedReplyTo } : {}),
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: errorContext,
+    });
+    return { ok: false, reason: "error", error: "メール送信に失敗しました" };
+  }
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {

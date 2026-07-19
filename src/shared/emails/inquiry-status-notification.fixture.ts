@@ -3,6 +3,7 @@ import type { InquiryStatusNotificationEmail } from "./inquiry-status-notificati
 
 export const inquiryStatusNotificationFixture = {
   customerName: "山田 太郎",
+  receiptNumber: "INQ-ABCD1234",
   inquirySubject: "施設利用に関するお問い合わせ",
   newStatus: "RESOLVED" as const,
   memberInquiryUrl:

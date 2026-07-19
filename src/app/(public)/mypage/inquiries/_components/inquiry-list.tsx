@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { Badge } from "@/public/components/design-system/badge";
 import { Stack } from "@/public/components/design-system/stack";
@@ -7,9 +6,16 @@ import { INQUIRY_STATUS_CONFIG } from "./inquiry-status";
 
 interface InquiryItem {
   readonly id: string;
+  /** "INQ-XXXXXXXX" 形式の受付番号。問い合わせ先での照合キー。 */
+  readonly receiptNumber: string;
   readonly subject: string;
-  readonly status: InquiryStatus;
-  readonly replyMessage: string | null;
+  /**
+   * Prisma InquiryStatus 由来だが、UI 側では NEW/IN_PROGRESS/RESOLVED/CLOSED に加えて
+   * FLAGGED/SPAM も届く可能性がある。config lookup で `??` fallback するため string 型で受ける。
+   */
+  readonly status: string;
+  /** スタッフ返信件数。0 なら「返信あり」バッジを出さない。 */
+  readonly replyCount: number;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -36,9 +42,13 @@ export function InquiryList({
                 <p className="truncate font-medium text-foreground">
                   {inquiry.subject}
                 </p>
+                {/* 受付番号は subject 下に小さく (照合用の補助情報)。 */}
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  受付番号: {inquiry.receiptNumber}
+                </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>{formatSerializedDate(inquiry.createdAt)}</span>
-                  {inquiry.replyMessage !== null && (
+                  {inquiry.replyCount > 0 && (
                     // 旧 plain text <span> から Badge に格上げ。color-only な
                     // 「返信あり」の WCAG 1.4.1 (Use of Color) 違反を解消し、
                     // ステータスバッジ群と視覚一貫性を持たせる。

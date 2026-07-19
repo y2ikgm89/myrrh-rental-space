@@ -68,6 +68,8 @@ import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
 import { reservationUpdatedFixture } from "@/shared/emails/reservation-updated.fixture";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
 import { reservationReminderFixture } from "@/shared/emails/reservation-reminder.fixture";
+import { ReceiptResendEmail } from "@/shared/emails/receipt-resend";
+import { receiptResendFixture } from "@/shared/emails/receipt-resend.fixture";
 import { BulkReservationCancelledEmail } from "@/shared/emails/bulk-reservation-cancelled";
 import { bulkReservationCancelledFixture } from "@/shared/emails/bulk-reservation-cancelled.fixture";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
@@ -247,6 +249,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "reservation-reminder",
     ReservationReminderEmail,
     reservationReminderFixture,
+  ),
+  "receipt-resend": defineEntry(
+    "receipt-resend",
+    ReceiptResendEmail,
+    receiptResendFixture,
   ),
   "bulk-reservation-cancelled": defineEntry(
     "bulk-reservation-cancelled",

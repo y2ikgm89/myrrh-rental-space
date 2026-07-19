@@ -48,11 +48,24 @@ export async function updateEmailSettings(
       execute: async () => {
         // 認可後に Resend で検証済みドメインかを確認する。未検証ドメインを from に
         // 使うと全送信が 403 になるため保存前に弾く。入力欄が空でも保存後の実効値は
-        // env EMAIL_FROM またはハードコード既定値にフォールバックするため、生の入力値
-        // ではなく resolveSenderEmailAddress() の解決結果を検証する。
-        const effectiveSenderEmail = resolveSenderEmailAddress(
-          emptyToNull(data.senderEmail),
-        );
+        // env EMAIL_FROM にフォールバックするため、生の入力値ではなく
+        // resolveSenderEmailAddress() の解決結果を検証する。
+        //
+        // env / DB のどちらにも sender が無い場合は resolveSenderEmailAddress が throw
+        // する（silent fallback を廃止した M11 fix）。管理画面 UI 上は「入力欄空 + env 未配線」
+        // で保存を試みたケースに相当するため、DomainError に変換して validation エラーとして
+        // 返す（executeAdminMutationResult の isDomainError 分岐が MutationError に変換する）。
+        let effectiveSenderEmail: string;
+        try {
+          effectiveSenderEmail = resolveSenderEmailAddress(
+            emptyToNull(data.senderEmail),
+          );
+        } catch {
+          throw new DomainError(
+            "送信元アドレスが未設定です。送信元メールアドレスを入力してください。",
+            "VALIDATION",
+          );
+        }
         const check = await validateSenderDomain(effectiveSenderEmail);
         if (!check.ok) {
           throw new DomainError(

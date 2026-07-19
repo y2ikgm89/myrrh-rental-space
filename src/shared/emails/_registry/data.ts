@@ -19,6 +19,7 @@ export const TEMPLATE_KEYS = [
   "reservation-cancelled",
   "reservation-status-changed",
   "reservation-reminder",
+  "receipt-resend",
   "bulk-reservation-cancelled",
   "event-registration-confirmation",
   "event-registration-cancelled",
@@ -102,6 +103,13 @@ export const EMAIL_TEMPLATE_INDEX: ReadonlyArray<EmailTemplateIndexItem> = [
     key: "reservation-reminder",
     label: "予約リマインダー",
     description: "予約前日にお客様へ送信（cron）。",
+    category: "reservation",
+  },
+  {
+    key: "receipt-resend",
+    label: "領収書再送信",
+    description:
+      "ゲスト再送信フォームで領収書ダウンロードリンクをリクエストされた時にお客様へ送信。訂正版再発行時 (Case C) は元番号も明示。",
     category: "reservation",
   },
   {

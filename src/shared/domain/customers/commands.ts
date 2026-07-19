@@ -10,8 +10,21 @@ import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
+import { hashSuppressedEmailCandidate } from "@/shared/domain/customers/queries";
 import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/payloads";
 import type { CustomerFormData } from "@/shared/lib/validations/customer";
+
+/**
+ * RESEND-AUDIT M7: `emailDeliveryStatus` が suppression 対象
+ * (HARD_BOUNCED / COMPLAINED) かを判定する SSoT。anonymize / merge で
+ * `suppressedEmailHash` に元の emailCanonical の hash を保存すべきかを決める。
+ */
+function isSuppressedDeliveryStatus(status: EmailDeliveryStatus): boolean {
+  return (
+    status === EmailDeliveryStatus.HARD_BOUNCED ||
+    status === EmailDeliveryStatus.COMPLAINED
+  );
+}
 
 const GUEST_EMAIL_DUPLICATE_MESSAGE =
   "同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。";
@@ -458,6 +471,8 @@ export async function anonymizeCustomerCommand(input: {
   anonymizedAt: Date;
   reason: AnonymizeCustomerReason;
   hadUserId: boolean;
+  /** RESEND-AUDIT M7: 匿名化前の suppression 状態を hash として持ち越したか。 */
+  preservedSuppression: boolean;
 }> {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.customer.findUnique({
@@ -466,6 +481,10 @@ export async function anonymizeCustomerCommand(input: {
         id: true,
         userId: true,
         anonymizedAt: true,
+        // RESEND-AUDIT M7: 匿名化前の suppression 状態を保存するため
+        // emailCanonical と emailDeliveryStatus を tx 内で pre-read する。
+        emailCanonical: true,
+        emailDeliveryStatus: true,
       },
     });
 
@@ -479,6 +498,15 @@ export async function anonymizeCustomerCommand(input: {
 
     const anonymizedEmail = buildAnonymizedEmail(existing.id);
     const anonymizedAt = new Date();
+    // RESEND-AUDIT M7: HARD_BOUNCED / COMPLAINED の Customer は匿名化後も
+    // 送信 suppression が持続する必要がある (再登録した同じ実 email に
+    // 送信して sender reputation を悪化させない)。emailCanonical を
+    // placeholder に置換する前に、元の canonical の hash を保存しておく。
+    const preservedSuppressionHash = isSuppressedDeliveryStatus(
+      existing.emailDeliveryStatus,
+    )
+      ? hashSuppressedEmailCandidate(existing.emailCanonical)
+      : null;
 
     await tx.customer.update({
       where: { id: existing.id },
@@ -503,6 +531,11 @@ export async function anonymizeCustomerCommand(input: {
         userId: null,
         anonymizedAt,
         anonymizedReason: input.reason,
+        // suppression 対象でなければ NULL のまま (通常 Customer が anonymize
+        // される多数派経路)。suppressedEmailHash は書き換え専用 (再設定なし)。
+        ...(preservedSuppressionHash !== null
+          ? { suppressedEmailHash: preservedSuppressionHash }
+          : {}),
       },
     });
 
@@ -519,6 +552,7 @@ export async function anonymizeCustomerCommand(input: {
       anonymizedAt,
       reason: input.reason,
       hadUserId: existing.userId !== null,
+      preservedSuppression: preservedSuppressionHash !== null,
     };
   });
 }
@@ -532,6 +566,8 @@ export async function mergeCustomerCommand(
   transferredInquiries: number;
   transferredReviews: number;
   transferredRegistrations: number;
+  /** RESEND-AUDIT M7: source の suppression を target に持ち越したか。 */
+  preservedSuppression: boolean;
 }> {
   if (sourceId === targetId) {
     throw new DomainError("同じ顧客をマージすることはできません", "VALIDATION");
@@ -540,17 +576,68 @@ export async function mergeCustomerCommand(
   const [source, target] = await Promise.all([
     prisma.customer.findUnique({
       where: { id: sourceId },
-      select: { id: true },
+      // RESEND-AUDIT M7: source が suppression 状態 (HARD_BOUNCED /
+      // COMPLAINED) なら、source を物理削除する前にその emailCanonical hash を
+      // target の `suppressedEmailHash` に持ち越す (実 email の suppression が
+      // silently 失われないようにする)。既に source が anonymized 済みで
+      // suppressedEmailHash を持っているなら、その hash をそのまま持ち越す
+      // (再 hash せず「元の実 email」の hash を維持)。
+      select: {
+        id: true,
+        emailCanonical: true,
+        emailDeliveryStatus: true,
+        suppressedEmailHash: true,
+      },
     }),
     prisma.customer.findUnique({
       where: { id: targetId },
-      select: { id: true },
+      select: {
+        id: true,
+        emailCanonical: true,
+        emailDeliveryStatus: true,
+        suppressedEmailHash: true,
+      },
     }),
   ]);
   if (!source)
     throw new DomainError("マージ元の顧客が見つかりません", "NOT_FOUND");
   if (!target)
     throw new DomainError("マージ先の顧客が見つかりません", "NOT_FOUND");
+
+  // RESEND-AUDIT M7: source から target へ持ち越す suppression hash を決定する。
+  // 優先順:
+  //   1. source が既に anonymized で suppressedEmailHash を持つ → その値
+  //      (匿名化前の元 emailCanonical の hash が既に保存されている)
+  //   2. source の emailDeliveryStatus が suppression 対象 → 現 emailCanonical
+  //      を hash 化した値
+  //   3. それ以外 → null (持ち越さない)
+  //
+  // 条件:
+  //   - source の hash が target の実 emailCanonical と等価な場合の hash と
+  //     一致しない限り、target が既に自分の email で suppression 状態でない
+  //     ときのみ書き込む (target 側の既存 emailDeliveryStatus を上書きしない)。
+  //   - target が既に suppressedEmailHash を持っている場合は上書きしない
+  //     (別の元 email の hash を消してしまわない)。
+  //   - target が自分の emailCanonical で suppression 状態のときは書き込まない
+  //     (getSuppressedEmailSet で target の emailCanonical hash 経路で既にカバーされる)。
+  const sourceSuppressionHash =
+    source.suppressedEmailHash !== null
+      ? source.suppressedEmailHash
+      : isSuppressedDeliveryStatus(source.emailDeliveryStatus)
+        ? hashSuppressedEmailCandidate(source.emailCanonical)
+        : null;
+
+  const targetOwnHash = hashSuppressedEmailCandidate(target.emailCanonical);
+  const targetAlreadySuppressed = isSuppressedDeliveryStatus(
+    target.emailDeliveryStatus,
+  );
+
+  const shouldPreserveOnTarget =
+    sourceSuppressionHash !== null &&
+    target.suppressedEmailHash === null &&
+    // target 自身の canonical email が既に SUPPRESSED_EMAILS で拾える場合は
+    // 別ソースの hash を書く意味が薄い (かつ hash が一致するなら no-op)。
+    !(targetAlreadySuppressed && sourceSuppressionHash === targetOwnHash);
 
   return prisma.$transaction(async (tx) => {
     const [reservations, inquiries, reviews, registrations] = await Promise.all(
@@ -579,6 +666,15 @@ export async function mergeCustomerCommand(
     // 実装は `recomputeCustomerReservationStats` に集約されている。
     await recomputeCustomerReservationStats(tx, targetId);
 
+    // RESEND-AUDIT M7: source を削除する前に、必要なら suppression hash を
+    // target に転記する (source と target で email が異なるケースをカバー)。
+    if (shouldPreserveOnTarget) {
+      await tx.customer.update({
+        where: { id: targetId },
+        data: { suppressedEmailHash: sourceSuppressionHash },
+      });
+    }
+
     await tx.customer.delete({ where: { id: sourceId } });
 
     return {
@@ -586,6 +682,7 @@ export async function mergeCustomerCommand(
       transferredInquiries: inquiries.count,
       transferredReviews: reviews.count,
       transferredRegistrations: registrations.count,
+      preservedSuppression: shouldPreserveOnTarget,
     };
   });
 }
@@ -614,10 +711,35 @@ export async function updateCustomerFromGuestData(
 }
 
 /**
+ * 状態遷移の保護マトリクス（L1）。
+ *
+ * key = これから書き込もうとする status、value = 「その status で上書きしては
+ * いけない既存 status」の配列。
+ *
+ * - COMPLAINED は最強（受信者本人の spam 報告シグナル）。何にも上書きさせない。
+ * - HARD_BOUNCED は SOFT_BOUNCED を上書き可、ただし COMPLAINED は保護。
+ * - SOFT_BOUNCED は HARD_BOUNCED / COMPLAINED どちらも保護（旧実装と同等）。
+ * - OK（明示リセット）は現状 admin UI 経由のみで本 write 経路には来ない。
+ *
+ * これにより Resend が古い bounce webhook を re-deliver した際に、新しい
+ * COMPLAINED を古い HARD_BOUNCED が clobber する事故を防ぐ。
+ */
+const PROTECTED_BY: Record<EmailDeliveryStatus, EmailDeliveryStatus[]> = {
+  [EmailDeliveryStatus.OK]: [],
+  [EmailDeliveryStatus.SOFT_BOUNCED]: [
+    EmailDeliveryStatus.HARD_BOUNCED,
+    EmailDeliveryStatus.COMPLAINED,
+  ],
+  [EmailDeliveryStatus.HARD_BOUNCED]: [EmailDeliveryStatus.COMPLAINED],
+  [EmailDeliveryStatus.COMPLAINED]: [],
+};
+
+/**
  * Resend Webhook (email.bounced / email.complained) から配信状態を更新する。
  *
  * - email が DB の Customer に紐づかない場合は no-op（unknown 宛先）。
- * - 既に COMPLAINED の Customer に SOFT_BOUNCED を上書きしない（強い終端状態を保護）。
+ * - 状態遷移の保護は `PROTECTED_BY` マトリクスに従う（COMPLAINED > HARD_BOUNCED
+ *   > SOFT_BOUNCED > OK の強さ順、L1）。
  * - 同 email に紐づく Customer が複数（履歴・テスト由来）なら `updateMany` で全件更新。
  *
  * @returns 更新行数（0 = 該当顧客なし / 1+ = 更新済み）
@@ -628,12 +750,12 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
   reason: string | null,
 ): Promise<number> {
   const emailCanonical = normalizeEmailForIdentity(email);
-  // 強い終端状態（HARD_BOUNCED / COMPLAINED）は SOFT_BOUNCED で上書きしない。
-  // OK へのリセットは管理 UI 経由を想定（本 PR 範囲外）。
-  const protectedStates: EmailDeliveryStatus[] =
-    status === EmailDeliveryStatus.SOFT_BOUNCED
-      ? [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED]
-      : [];
+  // L1 (PR #1270): 状態遷移の保護マトリクス。
+  // COMPLAINED は誰にも上書き不可、HARD_BOUNCED は COMPLAINED のみ保護、
+  // SOFT_BOUNCED は HARD_BOUNCED / COMPLAINED 両方を保護。旧実装 (main) の
+  // 「SOFT_BOUNCED のみ inline gate」より広くカバーする。
+  // OK へのリセット (`resetCustomerEmailDeliveryStatusCommand`) は管理 UI 経由。
+  const protectedStates: EmailDeliveryStatus[] = PROTECTED_BY[status];
 
   const result = await prisma.customer.updateMany({
     where: {
@@ -650,4 +772,51 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
   });
 
   return result.count;
+}
+
+/**
+ * RESEND-AUDIT M8: 管理者が Customer.emailDeliveryStatus を OK にリセットする。
+ *
+ * Resend Webhook が `HARD_BOUNCED` / `COMPLAINED` を書き込むと、当該顧客は
+ * `getSuppressedEmailSet()` 経由で全メール送信から除外される (予約確認・
+ * 領収書・リマインダー含む)。DNS 一時障害や誤配信で終端状態が付いてしまった
+ * 正規顧客を復旧させる唯一のパスがこの command。
+ *
+ * 契約:
+ * - 既に `OK` の顧客に対する呼び出しは no-op として `{ previous: OK }` を返す
+ *   (冪等 — action 側が `!== OK` で AuditLog をゲートできるようにする)。
+ * - `emailDeliveryUpdatedAt` はリセット時刻で上書き、`emailDeliveryReason` は
+ *   null に戻す (旧 bounce reason を残さない)。
+ * - AuditLog 書込は行わない。actor userId / ip / userAgent を持つ Server Action
+ *   側 (`resetCustomerEmailDelivery`) の afterSuccess で `previous` 付き詳細ログを
+ *   残す (event-waitlist と同型)。
+ * - 呼び出し側は `SUPPRESSED_EMAILS` cache tag を invalidate すること
+ *   (sendEmail の suppression 判定を即時反映するため)。
+ */
+export async function resetCustomerEmailDeliveryStatusCommand(
+  customerId: string,
+): Promise<{ previous: EmailDeliveryStatus }> {
+  const existing = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { id: true, emailDeliveryStatus: true },
+  });
+
+  if (!existing) {
+    throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+  }
+
+  if (existing.emailDeliveryStatus === EmailDeliveryStatus.OK) {
+    return { previous: EmailDeliveryStatus.OK };
+  }
+
+  await prisma.customer.update({
+    where: { id: customerId },
+    data: {
+      emailDeliveryStatus: EmailDeliveryStatus.OK,
+      emailDeliveryUpdatedAt: new Date(),
+      emailDeliveryReason: null,
+    },
+  });
+
+  return { previous: existing.emailDeliveryStatus };
 }

@@ -85,9 +85,9 @@ import {
 import {
   CANCELLED_BY,
   NOTIFICATION_TYPE,
-  REFUNDED_BY_TYPE,
   type CancelledByType,
 } from "@/shared/lib/validations/enums/helpers";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 
 export type EventCancelChannel = "admin" | "customer-mypage" | "customer-token";
 
@@ -203,7 +203,7 @@ function mapEmailResultToOutcome(
   if (result.ok) {
     return { status: "ok", detail: { messageId: result.messageId } };
   }
-  if (result.reason === "disabled") {
+  if (result.reason === "disabled" || result.reason === "suppressed") {
     return { status: "skipped", reason: "disabled_or_suppressed" };
   }
   return { status: "error", reason: result.error };
@@ -492,7 +492,7 @@ async function runWaitlistOfferStep(
         },
       };
     }
-    if (result.reason === "disabled") {
+    if (result.reason === "disabled" || result.reason === "suppressed") {
       return {
         status: "skipped",
         reason: "disabled_or_suppressed",

@@ -37,7 +37,6 @@ export async function reissueReservationReceipt(
       const receipt = await reissueReceiptCommand({
         originalReceiptId,
         reason,
-        actorUserId: user.id,
         // Codex P2 (PR #1129, comment 3589127456) binding check: stale/crafted call で
         // reservation A の action が別 reservation B (or event registration) の receipt を
         // mutate するのを domain 層で FORBIDDEN reject する。

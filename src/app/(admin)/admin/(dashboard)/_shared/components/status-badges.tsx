@@ -57,6 +57,11 @@ const inquiryStatusConfig: StatusConfig<InquiryStatus> = {
   IN_PROGRESS: { label: INQUIRY_STATUS_LABELS.IN_PROGRESS, variant: "pending" },
   RESOLVED: { label: INQUIRY_STATUS_LABELS.RESOLVED, variant: "success" },
   CLOSED: { label: INQUIRY_STATUS_LABELS.CLOSED, variant: "outline" },
+  // Inquiry Overhaul Phase 1: FLAGGED / SPAM 追加。
+  // - FLAGGED (要注意): warning variant で「対応要判断」を強調
+  // - SPAM: destructive variant で明確な拒否を伝える
+  FLAGGED: { label: INQUIRY_STATUS_LABELS.FLAGGED, variant: "warning" },
+  SPAM: { label: INQUIRY_STATUS_LABELS.SPAM, variant: "destructive" },
 };
 
 // 予約ステータスの色割当 SSoT。calendar の getStatusColorClass と意味色を完全一致させる。
@@ -236,6 +241,7 @@ const auditActionConfig = {
   CREATE: { label: AUDIT_ACTION_LABELS.CREATE, variant: "default" },
   UPDATE: { label: AUDIT_ACTION_LABELS.UPDATE, variant: "secondary" },
   DELETE: { label: AUDIT_ACTION_LABELS.DELETE, variant: "destructive" },
+  READ: { label: AUDIT_ACTION_LABELS.READ, variant: "outline" },
   PUBLISH: { label: AUDIT_ACTION_LABELS.PUBLISH, variant: "default" },
   EXPORT: { label: AUDIT_ACTION_LABELS.EXPORT, variant: "outline" },
   LOGIN_SUCCESS: {

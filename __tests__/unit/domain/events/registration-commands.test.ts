@@ -370,10 +370,12 @@ describe("setEventRegistrationCheckInCommand", () => {
   beforeEach(() => {
     mockRegistrationFindFirst.mockReset();
     mockRegistrationUpdate.mockReset();
+    mockRegistrationUpdateMany.mockReset();
     mockRegistrationFindFirst.mockImplementation(() => Promise.resolve(null));
     mockRegistrationUpdate.mockImplementation(() =>
       Promise.resolve({ attendedAt: new Date("2026-07-01T00:00:00.000Z") }),
     );
+    mockRegistrationUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   afterEach(() => {
@@ -406,6 +408,86 @@ describe("setEventRegistrationCheckInCommand", () => {
       },
     });
     expect(mockRegistrationUpdate).not.toHaveBeenCalled();
+    expect(mockRegistrationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("CANCELLED を stale read で見た場合は VALIDATION throw で updateMany を呼ばない", async () => {
+    const eventId = "cm0event1234567890123456";
+    const registrationId = "cm0reg12345678901234567";
+
+    mockRegistrationFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        id: registrationId,
+        eventId,
+        attendedAt: null,
+        status: RegistrationStatus.CANCELLED,
+      }),
+    );
+
+    await expect(
+      setEventRegistrationCheckInCommand({
+        eventId,
+        registrationId,
+        attended: true,
+      }),
+    ).rejects.toThrow("キャンセル済の申込は出席登録できません");
+
+    expect(mockRegistrationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("CONFIRMED & attendedAt=null で attended=true → updateMany + status guard で claim", async () => {
+    const eventId = "cm0event1234567890123456";
+    const registrationId = "cm0reg12345678901234567";
+
+    mockRegistrationFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        id: registrationId,
+        eventId,
+        attendedAt: null,
+        status: RegistrationStatus.CONFIRMED,
+      }),
+    );
+
+    const result = await setEventRegistrationCheckInCommand({
+      eventId,
+      registrationId,
+      attended: true,
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.after).toBeInstanceOf(Date);
+    expect(mockRegistrationUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: registrationId,
+        status: { not: RegistrationStatus.CANCELLED },
+      },
+      data: { attendedAt: expect.any(Date) },
+    });
+  });
+
+  test("TOCTOU: findFirst 後に別 tx で CANCELLED 遷移 → updateMany count=0 → VALIDATION throw", async () => {
+    const eventId = "cm0event1234567890123456";
+    const registrationId = "cm0reg12345678901234567";
+
+    // findFirst 時は CONFIRMED (stale read)
+    mockRegistrationFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        id: registrationId,
+        eventId,
+        attendedAt: null,
+        status: RegistrationStatus.CONFIRMED,
+      }),
+    );
+    // updateMany 実行時には別 tx で既に CANCELLED になっていた想定 (count=0)
+    mockRegistrationUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      setEventRegistrationCheckInCommand({
+        eventId,
+        registrationId,
+        attended: true,
+      }),
+    ).rejects.toThrow("キャンセル済の申込は出席登録できません");
   });
 });
 

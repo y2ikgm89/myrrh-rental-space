@@ -1,0 +1,339 @@
+/**
+ * イベントメール Fixes 回帰テスト (RESEND-AUDIT H2 / M10)
+ *
+ * H2: sendEventReminderEmail() の idempotencyKey は registrationId 単体だと
+ * claimUrl / cancelUrl の再暗号化で payload が毎回差分化するため、cron 再走時に
+ * Resend が 409 (invalid_idempotent_request) で silent drop する。
+ * → Date.now() を混ぜて invocation ごとに fresh key を発行する。
+ *
+ * M10: sendEventCancelledToAllParticipants() は CONFIRMED だけを対象にしていた
+ * ため、WAITLISTED_OFFERED (24h の pay-now offer 保持中) 参加者や WAITLISTED
+ * 参加者にイベント中止が届かなかった。
+ * → status IN (CONFIRMED, WAITLISTED_OFFERED, WAITLISTED) を対象にする。
+ * → CANCEL ICS は元々 REQUEST ICS を発行済みの CONFIRMED のみに添付する。
+ */
+import { describe, test, expect, mock, beforeEach } from "bun:test";
+import type { EventFormatValue } from "@/shared/lib/validations/enums/prisma-types";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+
+// ---------------------------------------------------------------------------
+// Shared mocks (used by both H2 and M10 test suites)
+// ---------------------------------------------------------------------------
+
+mock.module("server-only", () => ({}));
+
+type DeliverySettings = {
+  sendReservationConfirmationEmail: boolean;
+  notifyNewReservation: boolean;
+  notifyReservationChange: boolean;
+  notifyReservationCancel: boolean;
+  notifyNewInquiry: boolean;
+  notifyEventRegistration: boolean;
+  notifyEventCancellation: boolean;
+  replyToEmail: string | null;
+};
+
+const DELIVERY_DEFAULTS: DeliverySettings = {
+  sendReservationConfirmationEmail: true,
+  notifyNewReservation: true,
+  notifyReservationChange: true,
+  notifyReservationCancel: true,
+  notifyNewInquiry: true,
+  notifyEventRegistration: true,
+  notifyEventCancellation: true,
+  replyToEmail: null,
+};
+
+type CapturedSendEmailParams = {
+  idempotencyKey?: string;
+  payload?: {
+    to?: string;
+    attachments?: { filename: string; content: Buffer }[];
+  };
+};
+
+const mockSendEmail = mock<
+  (params: CapturedSendEmailParams) => Promise<{ ok: true; messageId: string }>
+>(() => Promise.resolve({ ok: true, messageId: "msg_test" }));
+
+const mockGetEmailDeliverySettings = mock<() => Promise<DeliverySettings>>(() =>
+  Promise.resolve(DELIVERY_DEFAULTS),
+);
+const mockGetNotificationEmailAddresses = mock<() => Promise<string[]>>(() =>
+  Promise.resolve(["admin@example.com"]),
+);
+// icalAttachmentEnabled: true にすることで CANCEL ICS 添付ロジックを起動させ、
+// M10 の per-status 出し分けを検証できる。
+const mockGetCalendarEmailSettings = mock<
+  () => Promise<{
+    icalAttachmentEnabled: boolean;
+    addToCalendarLinksEnabled: boolean;
+  }>
+>(() =>
+  Promise.resolve({
+    icalAttachmentEnabled: true,
+    addToCalendarLinksEnabled: false,
+  }),
+);
+
+type EventRow = {
+  title: string;
+  format: EventFormatValue;
+  meetingUrl: string | null;
+  updatedAt: Date;
+  addressDetail: string | null;
+  location: { name: string } | null;
+  space: { name: string } | null;
+  registrations: {
+    id: string;
+    name: string;
+    email: string | null;
+    quantity: number;
+    icsSequence: number;
+    customerId: string | null;
+    status: (typeof RegistrationStatus)[keyof typeof RegistrationStatus];
+    slot: { startAt: Date; endAt: Date };
+  }[];
+};
+
+// findFirst の第 1 引数 (Prisma FindFirstArgs 相当) を型付きで捕捉し、
+// M10 の where.status.in の中身を検証できるようにする。
+type FindFirstArgs = {
+  where?: unknown;
+  select?: {
+    registrations?: {
+      where?: {
+        status?: {
+          in?: (typeof RegistrationStatus)[keyof typeof RegistrationStatus][];
+        };
+      };
+    };
+  };
+};
+
+const mockFindFirst = mock<(args: FindFirstArgs) => Promise<EventRow | null>>(
+  () => Promise.resolve(null),
+);
+
+mock.module("@/shared/lib/email/send", () => ({
+  sendEmail: mockSendEmail,
+  hashForKey: (s: string) => s,
+}));
+mock.module("@/shared/domain/settings/queries/notification", () => ({
+  getEmailDeliverySettings: mockGetEmailDeliverySettings,
+  getNotificationEmailAddresses: mockGetNotificationEmailAddresses,
+  getCalendarEmailSettings: mockGetCalendarEmailSettings,
+}));
+mock.module("@/shared/domain/settings/queries/organization", () => ({
+  getIcalOrganizer: () =>
+    Promise.resolve({ name: "Org", email: "org@example.com" }),
+}));
+mock.module("@/shared/db/prisma", () => ({
+  prisma: { event: { findFirst: mockFindFirst } },
+  basePrisma: {},
+}));
+mock.module("@/shared/emails/_shared/footer-data", () => ({
+  getEmailFooterData: () =>
+    Promise.resolve({
+      businessName: "Org",
+      address: "",
+      phoneNumber: null,
+      contactEmail: null,
+      siteName: "Org",
+      siteUrl: "https://example.com",
+      legalLinks: [],
+    }),
+}));
+
+mock.module("@/shared/lib/errors/server", () => ({
+  logError: mock(() => undefined),
+  normalizeError: (e: unknown) =>
+    e instanceof Error ? e : new Error(String(e)),
+  ErrorCategory: { UNKNOWN: "UNKNOWN", EXTERNAL_API: "EXTERNAL_API" },
+  ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM" },
+}));
+
+// eslint-disable-next-line import-x/first -- mock.module must precede imports
+import {
+  sendEventReminderEmail,
+  sendEventCancelledToAllParticipants,
+} from "@/shared/lib/email/event-emails";
+// eslint-disable-next-line import-x/first -- mock.module must precede imports
+import { EventFormat } from "@/shared/lib/validations/enums/prisma-types";
+
+const REMINDER_DATA = {
+  registrationId: "registration-abcd12",
+  customerName: "山田太郎",
+  customerEmail: "participant@example.com",
+  eventTitle: "ワークショップ",
+  eventStartTime: new Date("2099-01-01T01:00:00Z"),
+  eventEndTime: new Date("2099-01-01T03:00:00Z"),
+  location: undefined,
+  quantity: 1,
+  icsSequence: 0,
+  customerId: null,
+  format: EventFormat.OFFLINE,
+  meetingUrl: null,
+} satisfies Parameters<typeof sendEventReminderEmail>[0];
+
+function lastKey(): string | undefined {
+  return mockSendEmail.mock.calls.at(-1)?.[0]?.idempotencyKey;
+}
+
+beforeEach(() => {
+  mockSendEmail.mockReset();
+  mockSendEmail.mockResolvedValue({ ok: true, messageId: "msg_test" });
+  mockGetEmailDeliverySettings.mockReset();
+  mockGetEmailDeliverySettings.mockResolvedValue(DELIVERY_DEFAULTS);
+  mockGetNotificationEmailAddresses.mockReset();
+  mockGetNotificationEmailAddresses.mockResolvedValue(["admin@example.com"]);
+  mockGetCalendarEmailSettings.mockReset();
+  mockGetCalendarEmailSettings.mockResolvedValue({
+    icalAttachmentEnabled: true,
+    addToCalendarLinksEnabled: false,
+  });
+  mockFindFirst.mockReset();
+});
+
+// ===========================================================================
+// H2: sendEventReminderEmail() の idempotencyKey は cron 呼び出しごとに fresh
+// ===========================================================================
+describe("H2: sendEventReminderEmail() idempotencyKey drift 回避", () => {
+  test("同一 registrationId の 2 回連続呼び出しで異なる idempotencyKey を発行する", async () => {
+    await sendEventReminderEmail({ ...REMINDER_DATA });
+    const firstKey = lastKey();
+
+    // 別 tick を挟むことで Date.now() の増分を保証する
+    await new Promise((r) => setTimeout(r, 2));
+
+    await sendEventReminderEmail({ ...REMINDER_DATA });
+    const secondKey = lastKey();
+
+    expect(firstKey).toBeDefined();
+    expect(secondKey).toBeDefined();
+    expect(firstKey).not.toBe(secondKey);
+  });
+
+  test("キーは `event-reminder/<registrationId>/<timestamp>` 形式で始まる", async () => {
+    await sendEventReminderEmail({ ...REMINDER_DATA });
+
+    const key = lastKey();
+    expect(key).toBeDefined();
+    expect(
+      key?.startsWith(`event-reminder/${REMINDER_DATA.registrationId}/`),
+    ).toBe(true);
+    // 末尾は Date.now() の数値
+    const suffix = key?.split("/").at(-1) ?? "";
+    expect(Number.isFinite(Number(suffix))).toBe(true);
+    expect(Number(suffix)).toBeGreaterThan(0);
+  });
+});
+
+// ===========================================================================
+// M10: sendEventCancelledToAllParticipants() は waitlist にも送る + ICS は
+// CONFIRMED のみに添付
+// ===========================================================================
+describe("M10: sendEventCancelledToAllParticipants() の waitlist 網羅と ICS 出し分け", () => {
+  test("recipients query は CONFIRMED / WAITLISTED_OFFERED / WAITLISTED を含む", async () => {
+    mockFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        title: "夏祭りワークショップ",
+        format: EventFormat.OFFLINE,
+        meetingUrl: null,
+        updatedAt: new Date("2099-01-01T00:00:00Z"),
+        addressDetail: null,
+        location: null,
+        space: { name: "本館ホール" },
+        registrations: [],
+      }),
+    );
+
+    await sendEventCancelledToAllParticipants("evt-1", "講師都合のため中止");
+
+    const findFirstArgs = mockFindFirst.mock.calls.at(-1)?.[0];
+    const statusIn = findFirstArgs?.select?.registrations?.where?.status?.in;
+    expect(statusIn).toBeDefined();
+    expect(statusIn).toContain(RegistrationStatus.CONFIRMED);
+    expect(statusIn).toContain(RegistrationStatus.WAITLISTED_OFFERED);
+    expect(statusIn).toContain(RegistrationStatus.WAITLISTED);
+    expect(statusIn).not.toContain(RegistrationStatus.CANCELLED);
+    expect(statusIn).not.toContain(RegistrationStatus.EXPIRED);
+  });
+
+  test("CANCEL ICS 添付は CONFIRMED のみ。WAITLISTED / WAITLISTED_OFFERED には無添付", async () => {
+    mockFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        title: "夏祭りワークショップ",
+        format: EventFormat.OFFLINE,
+        meetingUrl: null,
+        updatedAt: new Date("2099-01-01T00:00:00Z"),
+        addressDetail: null,
+        location: null,
+        space: { name: "本館ホール" },
+        registrations: [
+          {
+            id: "reg-confirmed",
+            name: "確定 太郎",
+            email: "confirmed@example.com",
+            quantity: 1,
+            icsSequence: 0,
+            customerId: null,
+            status: RegistrationStatus.CONFIRMED,
+            slot: {
+              startAt: new Date("2099-01-01T01:00:00Z"),
+              endAt: new Date("2099-01-01T03:00:00Z"),
+            },
+          },
+          {
+            id: "reg-offered",
+            name: "オファー中 花子",
+            email: "offered@example.com",
+            quantity: 1,
+            icsSequence: 0,
+            customerId: null,
+            status: RegistrationStatus.WAITLISTED_OFFERED,
+            slot: {
+              startAt: new Date("2099-01-01T01:00:00Z"),
+              endAt: new Date("2099-01-01T03:00:00Z"),
+            },
+          },
+          {
+            id: "reg-waitlisted",
+            name: "待機 次郎",
+            email: "waitlisted@example.com",
+            quantity: 1,
+            icsSequence: 0,
+            customerId: null,
+            status: RegistrationStatus.WAITLISTED,
+            slot: {
+              startAt: new Date("2099-01-01T01:00:00Z"),
+              endAt: new Date("2099-01-01T03:00:00Z"),
+            },
+          },
+        ],
+      }),
+    );
+
+    await sendEventCancelledToAllParticipants("evt-1", "講師都合のため中止");
+
+    const calls = mockSendEmail.mock.calls.map((c) => c[0]);
+    expect(calls.length).toBe(3);
+
+    const byRecipient = new Map<string, CapturedSendEmailParams>();
+    for (const c of calls) {
+      const to = c?.payload?.to;
+      if (typeof to === "string") byRecipient.set(to, c);
+    }
+
+    const confirmedCall = byRecipient.get("confirmed@example.com");
+    const offeredCall = byRecipient.get("offered@example.com");
+    const waitlistedCall = byRecipient.get("waitlisted@example.com");
+
+    expect(confirmedCall?.payload?.attachments?.length).toBe(1);
+    expect(confirmedCall?.payload?.attachments?.[0]?.filename).toContain(
+      "event-cancel-",
+    );
+    expect(offeredCall?.payload?.attachments).toBeUndefined();
+    expect(waitlistedCall?.payload?.attachments).toBeUndefined();
+  });
+});

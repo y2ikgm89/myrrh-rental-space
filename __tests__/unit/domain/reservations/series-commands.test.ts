@@ -284,20 +284,60 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(seriesCreateArgs.data["couponId"]).toBe("coupon-1");
   });
 
-  test("coupon usage 加算: couponId 指定時のみ usageCount increment", async () => {
+  test("advisory lock 728357 の key は seriesId で cancel と統一 (旧 spaceId:customerId ではない)", async () => {
+    await createReservationSeriesCommand(baseCreateInput());
+
+    // series.create に渡された data.id が pre-generated seriesId
+    const seriesCreateArgs = mockSeriesCreate.mock.calls[0]?.[0] as {
+      data: Record<string, unknown>;
+    };
+    const seriesId = seriesCreateArgs.data["id"];
+    expect(typeof seriesId).toBe("string");
+
+    // pg_advisory_xact_lock(728357, hashtext(${key})) の第 2 引数 = key
+    const seriesLockCall = mockExecuteRaw.mock.calls[0];
+    expect(seriesLockCall).toBeDefined();
+    expect(seriesLockCall?.[1]).toBe(seriesId);
+
+    // 旧実装の `${spaceId}:${customerId}` (":" を含む文字列) ではないこと
+    expect(String(seriesLockCall?.[1])).not.toContain(":");
+  });
+
+  test("coupon usage 加算: couponId 指定時は $executeRaw で atomic claim (usageLimit ガード)", async () => {
     await createReservationSeriesCommand(
       baseCreateInput({ couponId: "coupon-1" }),
     );
-    expect(mockCouponUpdateMany).toHaveBeenCalledTimes(1);
-    expect(mockCouponUpdateMany).toHaveBeenCalledWith({
-      where: { id: "coupon-1" },
-      data: { usageCount: { increment: 1 } },
-    });
+    // advisory lock 2 回 (728357, 728351) + coupon claim 1 回 = 3 回
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(3);
+    const couponSql = mockExecuteRaw.mock.calls[2]?.[0]?.join("");
+    expect(couponSql).toContain("UPDATE");
+    expect(couponSql).toContain("coupons");
+    expect(couponSql).toContain("usageCount");
+    expect(couponSql).toContain("usageLimit");
+    expect(couponSql).toContain("isActive");
+    // updateMany 経路には呼ばれない ($executeRaw に統一済)
+    expect(mockCouponUpdateMany).not.toHaveBeenCalled();
   });
 
-  test("coupon usage 加算: couponId 未指定なら usageCount 加算しない", async () => {
+  test("coupon usage 加算: couponId 未指定なら $executeRaw は advisory lock 2 回のみ", async () => {
     await createReservationSeriesCommand(baseCreateInput());
+    // couponId なしなら coupon claim SQL は発行されない
+    expect(mockExecuteRaw).toHaveBeenCalledTimes(2);
     expect(mockCouponUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test("coupon usage 加算: race で claim=0 なら CONFLICT (usageLimit 超過)", async () => {
+    let callCount = 0;
+    mockExecuteRaw.mockImplementation(() => {
+      callCount++;
+      // 3 番目の call (coupon claim SQL) だけ 0 を返して race 敗北を simulate。
+      // advisory lock (1, 2 番目) は undefined を返す (pg_advisory_xact_lock は void)。
+      return Promise.resolve(callCount === 3 ? 0 : undefined);
+    });
+
+    await expect(
+      createReservationSeriesCommand(baseCreateInput({ couponId: "coupon-1" })),
+    ).rejects.toThrow("クーポンが利用できません");
   });
 
   test("termsAgreement N 行: recordTermsAgreements の返り値から agreementSnapshot を N 件構築する", async () => {

@@ -47,6 +47,13 @@ enum InquiryStatus {
   IN_PROGRESS
   RESOLVED
   CLOSED
+  FLAGGED
+  SPAM
+}
+
+enum InquiryReplyAuthorType {
+  STAFF
+  CUSTOMER
 }
 
 enum CustomerType {
@@ -291,7 +298,14 @@ model User {
   resolvedCommentThreads   EditorCommentThread[] @relation("CommentThreadResolver")
   createdEditorComments    EditorComment[]       @relation("EditorCommentCreator")
   deletedEditorComments    EditorComment[]       @relation("EditorCommentDeleter")
-  inquiryReplies           Inquiry[]             @relation("InquiryReplies")
+  // Inquiry Overhaul Phase 1: 旧 1:1 の replyMessage/repliedBy を廃止。
+  // 複数返信スレッド (InquiryReply) と担当者アサイン (Inquiry.assignee) に分割し、
+  // status 変更履歴・添付・内部メモの author も User FK として持つ。
+  assignedInquiries          Inquiry[]              @relation("InquiryAssignee")
+  authoredInquiryReplies     InquiryReply[]         @relation("InquiryReplyAuthor")
+  authoredInquiryStatusChanges InquiryStatusHistory[] @relation("InquiryStatusHistoryChangedBy")
+  uploadedInquiryAttachments InquiryAttachment[]    @relation("InquiryAttachmentUploadedByUser")
+  authoredInquiryNotes       InquiryInternalNote[]  @relation("InquiryInternalNoteAuthor")
   reservationDeletions     Reservation[]         @relation("ReservationDeletions")
   deletedReservationSeries ReservationSeries[]   @relation("ReservationSeriesDeletedBy")
   eventDeletions           Event[]               @relation("EventDeletions")
@@ -827,6 +841,15 @@ model Customer {
   /// - "admin-purge":        管理者による purge (誤登録・重複クリーンアップ)
   /// - "data-retention":     データ保持期限経過による自動 purge
   anonymizedReason       String?             @db.VarChar(50)
+  /// RESEND-AUDIT M7: anonymize / merge で emailCanonical が placeholder に
+  /// 書き換えられる際、その時点の emailCanonical (= 実 email) の
+  /// `hashSuppressedEmailCandidate` 値を保存する。`getSuppressedEmailSet` は
+  /// 「`emailDeliveryStatus ∈ {HARD_BOUNCED, COMPLAINED}` の emailCanonical hash」と
+  /// 「`suppressedEmailHash IS NOT NULL` の直接値」の union を返す。
+  /// これにより「匿名化前に HARD_BOUNCED / COMPLAINED だった email」への
+  /// 再送信を suppression list で継続的に弾ける (sender reputation 保護)。
+  /// 通常 Customer では NULL、匿名化・マージ後の永続 hash 記録用。
+  suppressedEmailHash    String?             @db.VarChar(128)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 
@@ -842,6 +865,8 @@ model Customer {
   eventRegistrations   EventRegistration[]
   termsAgreements      TermsAgreement[]
   pendingEmailChanges  PendingCustomerEmailChange[]
+  // Inquiry Overhaul Phase 1: 顧客が添付した inquiry_attachments 行 (uploadedByCustomerId)
+  uploadedInquiryAttachments InquiryAttachment[] @relation("InquiryAttachmentUploadedByCustomer")
 
   @@index([lastName])
   @@index([firstName])
@@ -943,38 +968,168 @@ model Coupon {
 }
 
 model Inquiry {
-  id           String        @id @default(uuid()) @db.Uuid
-  name         String
-  companyName  String? // 会社名・団体名（法人の場合）
-  customerType CustomerType?
-  email        String
-  subject      String
-  message      String        @db.Text
-  status       InquiryStatus @default(NEW)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id            String        @id @default(uuid()) @db.Uuid
+  /// ユーザー可視の受付番号 (INQ-XXXXXXXX)。application 層で採番、UNIQUE 制約 + retry。
+  receiptNumber String        @unique @db.VarChar(20)
+  name          String
+  companyName   String? // 会社名・団体名（法人の場合）
+  customerType  CustomerType?
+  email         String
+  /// 任意入力の連絡先電話番号 (public フォーム + 会員 prefill 対応)
+  phoneNumber   String?
+  subject       String
+  message       String        @db.Text
+  status        InquiryStatus @default(NEW)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  // Reply（管理者からの返信）
-  replyMessage String?   @db.Text
-  repliedAt    DateTime?
-  repliedById  String?   @db.Uuid
-  repliedBy    User?     @relation("InquiryReplies", fields: [repliedById], references: [id], onDelete: SetNull)
+  // Inquiry Overhaul Phase 1: 担当者アサイン (SLA 対応期限とセットで運用)
+  assigneeId   String? @db.Uuid
+  assignee     User?   @relation("InquiryAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  slaExpiresAt DateTime?
+
+  // Soft delete: admin UI の削除は deletedAt を刻むだけ。hard delete は
+  // data-retention cron (`purgeExpiredInquiries`) が唯一の経路。
+  deletedAt        DateTime?
+  // GDPR / PIPA 22 対応の PII 匿名化タイムスタンプ + 理由 (Phase 6 で anonymize command 実装)
+  anonymizedAt     DateTime?
+  anonymizedReason String?   @db.VarChar(50)
 
   // Customer Link（ログインユーザーのお問い合わせ紐づけ）
   customerId String?   @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // 複数返信スレッド / 状態履歴 / 添付 / 内部メモ / タグ
+  replies       InquiryReply[]
+  statusHistory InquiryStatusHistory[]
+  attachments   InquiryAttachment[]
+  internalNotes InquiryInternalNote[]
+  tags          InquiryTagOnInquiry[]
 
   @@index([email])
   @@index([status])
   @@index([createdAt])
   @@index([createdAt, status])
   @@index([customerId])
+  @@index([customerId, createdAt])
+  @@index([customerId, status])
+  @@index([assigneeId])
+  @@index([deletedAt])
+  @@index([slaExpiresAt])
+  @@index([anonymizedAt])
   // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchInquiries ORs
   // name/email/subject; all three need trigram to avoid Seq Scan fallback.
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_name_trgm_idx")
   @@index([email(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_email_trgm_idx")
   @@index([subject(ops: raw("gin_trgm_ops"))], type: Gin, map: "inquiries_subject_trgm_idx")
   @@map("inquiries")
+}
+
+/// Inquiry の返信スレッド (STAFF / CUSTOMER 双方向)。作成順に createdAt 昇順で並べる。
+model InquiryReply {
+  id         String                 @id @default(uuid()) @db.Uuid
+  inquiryId  String                 @db.Uuid
+  authorType InquiryReplyAuthorType
+  /// STAFF 返信時の User.id (User 削除で SetNull)。CUSTOMER 返信では別の識別で解決。
+  authorId   String?                @db.Uuid
+  body       String                 @db.Text
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  inquiry     Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author      User?               @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  attachments InquiryAttachment[]
+
+  @@index([inquiryId, createdAt])
+  @@index([authorId])
+  @@map("inquiry_replies")
+}
+
+/// Inquiry.status の変更履歴 (append-only)。fromStatus = NULL は creation。
+model InquiryStatusHistory {
+  id          String         @id @default(uuid()) @db.Uuid
+  inquiryId   String         @db.Uuid
+  fromStatus  InquiryStatus?
+  toStatus    InquiryStatus
+  changedById String?        @db.Uuid
+  reason      String?        @db.VarChar(200)
+  createdAt   DateTime       @default(now())
+
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation("InquiryStatusHistoryChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([inquiryId, createdAt])
+  @@map("inquiry_status_history")
+}
+
+/// Inquiry 本文または個別 InquiryReply に紐づく添付ファイル (R2 保管)。
+model InquiryAttachment {
+  id                   String   @id @default(uuid()) @db.Uuid
+  inquiryId            String   @db.Uuid
+  /// 特定の返信への添付なら非 null (返信削除で cascade 削除)
+  replyId              String?  @db.Uuid
+  /// R2 object key (UNIQUE)。physical uniqueness の source of truth。
+  r2Key                String   @unique
+  mimeType             String   @db.VarChar(100)
+  sizeBytes            Int
+  filename             String   @db.VarChar(255)
+  /// アップロード主体: STAFF (uploadedById) または CUSTOMER (uploadedByCustomerId) のいずれか。
+  uploadedById         String?  @db.Uuid
+  uploadedByCustomerId String?  @db.Uuid
+  createdAt            DateTime @default(now())
+
+  inquiry            Inquiry       @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  reply              InquiryReply? @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  uploadedByUser     User?         @relation("InquiryAttachmentUploadedByUser", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedByCustomer Customer?     @relation("InquiryAttachmentUploadedByCustomer", fields: [uploadedByCustomerId], references: [id], onDelete: SetNull)
+
+  @@index([inquiryId, createdAt])
+  @@index([replyId])
+  @@map("inquiry_attachments")
+}
+
+/// スタッフ間 internal メモ (顧客には見えない)。author 削除は Restrict で保護。
+model InquiryInternalNote {
+  id        String   @id @default(uuid()) @db.Uuid
+  inquiryId String   @db.Uuid
+  authorId  String   @db.Uuid
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inquiry Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author  User    @relation("InquiryInternalNoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([inquiryId, createdAt])
+  @@index([authorId])
+  @@map("inquiry_internal_notes")
+}
+
+/// タグマスタ (name UNIQUE)。カラーコードは省略可 (default UI 色)。
+model InquiryTag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique @db.VarChar(50)
+  color     String?  @db.VarChar(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inquiries InquiryTagOnInquiry[]
+
+  @@map("inquiry_tags")
+}
+
+/// Inquiry ↔ InquiryTag 中間テーブル。
+model InquiryTagOnInquiry {
+  inquiryId String   @db.Uuid
+  tagId     String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  inquiry Inquiry    @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  tag     InquiryTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([inquiryId, tagId])
+  @@index([tagId])
+  @@map("inquiry_tag_on_inquiries")
 }
 
 model News {
@@ -1641,6 +1796,7 @@ enum AuditAction {
   CREATE
   UPDATE
   DELETE
+  READ // 参照アクセス（領収書 PDF DL 等のセキュリティ観点で追跡する read）
   PUBLISH
   EXPORT
   LOGIN_SUCCESS

@@ -38,10 +38,16 @@ export type RecentReservation = {
 
 export type RecentInquiry = {
   id: string;
+  receiptNumber: string;
   name: string;
   email: string;
   subject: string;
   status: InquiryStatus;
+  /**
+   * Inquiry Overhaul Phase 1: replies relation (旧 `replyMessage` を置き換え)。
+   * 「未対応 / 返信済み」の派生表示に使う（テーブル UI 側で判定）。
+   */
+  hasReplies: boolean;
   createdAt: Date;
 };
 
@@ -169,10 +175,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       _sum: { totalPrice: true },
     }),
     prisma.inquiry.count({
-      where: { status: InquiryStatus.NEW },
+      // soft-deleted は除外 (deletedAt IS NOT NULL のものは新規対応対象外)
+      where: { status: InquiryStatus.NEW, deletedAt: null },
     }),
     prisma.inquiry.count({
-      where: { createdAt: { gte: thisMonthStart } },
+      // 今月受付件数も soft-deleted は除外
+      where: { createdAt: { gte: thisMonthStart }, deletedAt: null },
     }),
     prisma.space.count({
       where: { isPublished: true, isActive: true },
@@ -237,24 +245,32 @@ export async function getRecentInquiries(
   limit = DEFAULT_LIST_LIMIT,
 ): Promise<RecentInquiry[]> {
   const inquiries = await prisma.inquiry.findMany({
+    // Inquiry Overhaul Phase 1: soft-deleted は最近リストから除外
+    where: { deletedAt: null },
     take: normalizeLimit(limit),
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
+      receiptNumber: true,
       name: true,
       email: true,
       subject: true,
       status: true,
       createdAt: true,
+      // 返信済み/未対応 の派生表示用に replies 件数の 0/1+ 判定を軽量に取得。
+      // 旧 `replyMessage` 列は Phase 1 で DROP されたため、relation 経由で問い合わせる。
+      _count: { select: { replies: true } },
     },
   });
 
   return inquiries.map((inquiry) => ({
     id: inquiry.id,
+    receiptNumber: inquiry.receiptNumber,
     name: inquiry.name,
     email: inquiry.email,
     subject: inquiry.subject,
     status: inquiry.status,
+    hasReplies: inquiry._count.replies > 0,
     createdAt: inquiry.createdAt,
   }));
 }

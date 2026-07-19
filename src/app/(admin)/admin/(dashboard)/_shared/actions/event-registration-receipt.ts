@@ -40,7 +40,6 @@ export async function reissueEventRegistrationReceipt(
       const receipt = await reissueReceiptCommand({
         originalReceiptId,
         reason,
-        actorUserId: user.id,
         expectedEventRegistrationId: eventRegistrationId,
       });
 
