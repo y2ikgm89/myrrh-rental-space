@@ -9,6 +9,6 @@ export const receiptResendFixture = {
   serialNo: "2026-000042",
   previousSerialNo: "2026-000012",
   receiptDownloadUrl:
-    "https://example.com/api/receipts/2026-000042/pdf?token=DEMO-RECEIPT-TOKEN",
+    "https://example.com/receipts/2026-000042/download?token=DEMO-RECEIPT-TOKEN",
   footer: DEMO_FOOTER,
 } satisfies Parameters<typeof ReceiptResendEmail>[0];

@@ -156,6 +156,7 @@ variable "cloud_run_secret_versions" {
     CLOUDFLARE_ORIGIN_HEADER_SECRET    = "1"
     GOOGLE_CLIENT_ID                   = "1"
     GOOGLE_CLIENT_SECRET               = "1"
+    RESEND_WEBHOOK_SECRET              = "1"
   }
 }
 

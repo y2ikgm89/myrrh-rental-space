@@ -119,7 +119,12 @@ export async function sendReservationReminderEmail(
       ),
       attachments,
     }),
-    idempotencyKey: `reservation-reminder/${data.reservationId}`,
+    // NOTE: 静的キー (reservationId のみ) だと Resend が 409 invalid_idempotent_request を
+    // 返す再送 race が発生する。cron が transient 失敗で reminderSentAt claim を release し
+    // 同予約を再 pick したとき、新規に暗号化された cancelUrl/claimUrl payload を同一キーで
+    // 再送するため。実際の重複送信抑止は reminderSentAt WHERE (claim 済みは pick しない)
+    // が担うので、キーは呼び出し毎に fresh にして 409 を回避する。
+    idempotencyKey: `reservation-reminder/${data.reservationId}/${Date.now()}`,
     operation: "sendReservationReminderEmail",
     context: {
       reservationId: data.reservationId,

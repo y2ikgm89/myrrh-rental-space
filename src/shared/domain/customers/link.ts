@@ -67,6 +67,7 @@ export async function ensureCustomerLinked(user: {
 
     fireAndForget(
       sendWelcomeEmail({
+        customerId: customer.id,
         customerName: customer.lastName ?? user.name ?? "お客様",
         customerEmail: user.email,
         loginUrl: `${getAppUrl()}/mypage`,

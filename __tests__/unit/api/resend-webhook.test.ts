@@ -76,10 +76,14 @@ mock.module("next/navigation", () => ({
   unstable_rethrow: () => undefined,
 }));
 
+// route.ts は毎回 `serverEnv.RESEND_WEBHOOK_SECRET` を property access で読むため、
+// mutable object にしておくとテスト毎に override / 復元できる。
+const mockServerEnv: { RESEND_WEBHOOK_SECRET?: string | undefined } = {
+  RESEND_WEBHOOK_SECRET: "whsec_test",
+};
+
 mock.module("@/shared/lib/env/server", () => ({
-  serverEnv: {
-    RESEND_WEBHOOK_SECRET: "whsec_test",
-  },
+  serverEnv: mockServerEnv,
 }));
 
 mock.module("@/shared/lib/email/client", () => ({
@@ -122,6 +126,18 @@ function makeRequestWithoutSvixHeaders(onText: () => Promise<string>): Request {
   return request;
 }
 
+function makeRequestWithSvixHeaders(onText: () => Promise<string>): Request {
+  const request = new Request("https://example.com/api/webhooks/resend", {
+    headers: {
+      "svix-id": "msg_test",
+      "svix-timestamp": "1700000000",
+      "svix-signature": "v1,dGVzdA==",
+    },
+  });
+  Object.defineProperty(request, "text", { value: onText });
+  return request;
+}
+
 function resetMocks() {
   mockGetResendClient.mockClear();
   mockUpdateCustomerEmailDeliveryStatusByEmail.mockClear();
@@ -129,6 +145,7 @@ function resetMocks() {
   invalidateCalls.length = 0;
   updateImpl = async () => 1;
   verifyImpl = ({ payload }) => JSON.parse(payload);
+  mockServerEnv.RESEND_WEBHOOK_SECRET = "whsec_test";
 }
 
 // -----------------------------------------------------------------------------
@@ -374,5 +391,26 @@ describe("POST /api/webhooks/resend", () => {
     );
 
     expect(invalidateCalls).toHaveLength(0);
+  });
+
+  // H4 regression guard: RESEND_WEBHOOK_SECRET が Cloud Run env に配線されて
+  // いないと `/api/webhooks/resend` が全リクエスト 503 になり、
+  // bounce / complaint suppression が silent に壊れる (Gmail Feb 2024 /
+  // Yahoo bulk sender の complaint-rate <0.3% 保護が非機能化)。
+  // Terraform SSoT (runtime_secrets + cloud_run_secret_versions) が secret を
+  // Cloud Run に注入し、serverEnv 経由でここに露出する契約を守る。
+  test("RESEND_WEBHOOK_SECRET 未設定 → body を読まずに 503 を返す", async () => {
+    delete mockServerEnv.RESEND_WEBHOOK_SECRET;
+    const text = mock(async () => {
+      throw new Error("body should not be read when secret is missing");
+    });
+
+    const response = await POST(makeRequestWithSvixHeaders(text));
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(503);
+    expect(body.error).toContain("not configured");
+    expect(text).not.toHaveBeenCalled();
+    expect(mockGetResendClient).not.toHaveBeenCalled();
   });
 });
