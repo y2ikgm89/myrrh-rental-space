@@ -44,15 +44,34 @@ export async function getResendClient(): Promise<Resend | null> {
 
 /**
  * 送信元アドレスの解決順（env 優先・DB フォールバック）だけを返す:
- *   env EMAIL_FROM → DB senderEmail → "noreply@example.com"
+ *   env EMAIL_FROM → DB senderEmail → throw
  *
  * `getFromAddress` と、送信前にドメイン検証したい呼び出し側
  * （settings 保存 / テンプレートテスト送信）とで解決ロジックを共有するために切り出した。
- * DB 値が null でも最終的にこのハードコード既定値が実際に使われるため、ドメイン検証は
- * 生の DB 値ではなくこの関数の戻り値に対して行う必要がある。
+ *
+ * ## 未設定時は throw する（silent fallback しない）
+ *
+ * 以前はハードコード既定値 `"noreply@example.com"` にフォールバックしていたが、
+ * 本番では env `EMAIL_FROM` を配線しない設計（cloudbuild.yaml 側で unset）で
+ * かつ初回インストール時は DB `Settings.senderEmail` も null になる。この状態で
+ * 送信すると全メールが未検証ドメインの From になり Resend が `validation_error`
+ * で拒否する（RETRYABLE_ERROR_NAMES に含まれないため retry もされず audit log に
+ * silent 失敗が蓄積するだけになる）。
+ *
+ * 明確な remediation メッセージ付きで throw することで、`sendEmail` 側の catch が
+ * `{ ok: false, reason: "error" }` に変換し、audit log 経由で operator に
+ * 実際の設定不備を surface する（Resend 403 loop を追いかける代わりに）。
  */
 export function resolveSenderEmailAddress(senderEmail: string | null): string {
-  return serverEnv.EMAIL_FROM ?? senderEmail ?? "noreply@example.com";
+  const resolved = serverEnv.EMAIL_FROM ?? senderEmail;
+  if (!resolved) {
+    throw new Error(
+      "Email sender address is not configured. Set env EMAIL_FROM " +
+        "or configure Settings.senderEmail in /admin/settings/integrations. " +
+        "The address must belong to a Resend-verified domain.",
+    );
+  }
+  return resolved;
 }
 
 /**

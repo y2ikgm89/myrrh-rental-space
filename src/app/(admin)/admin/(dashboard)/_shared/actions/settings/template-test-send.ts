@@ -90,12 +90,22 @@ export async function sendTemplateTestAction(
 
       // 2. sender domain gate（settings 保存と同 SSoT、`__infra_check` でも適用）。
       // delivery.senderEmail が null（未設定）でも実送信は resolveSenderEmailAddress の
-      // ハードコード既定値にフォールバックするため、そのフォールバック先を検証する
+      // env `EMAIL_FROM` フォールバックが効くため、そのフォールバック先を検証する
       // （DB 値の有無で判定すると未検証ドメインへの実送信を見逃し Resend 403 になる）。
+      //
+      // env / DB のどちらにも sender が無い場合は resolveSenderEmailAddress が throw する
+      // （silent fallback を廃止した M11 fix）。テスト送信は絶対に成功しないため、
+      // DomainError に変換して operator に設定不備を surface する。
       const delivery = await getEmailDeliverySettings();
-      const effectiveSenderEmail = resolveSenderEmailAddress(
-        delivery.senderEmail,
-      );
+      let effectiveSenderEmail: string;
+      try {
+        effectiveSenderEmail = resolveSenderEmailAddress(delivery.senderEmail);
+      } catch {
+        throw new DomainError(
+          "送信元アドレスが未設定です。管理画面のメール設定で送信元メールアドレスを入力してください。",
+          "VALIDATION",
+        );
+      }
       const check = await validateSenderDomain(effectiveSenderEmail);
       if (!check.ok) {
         const list =
