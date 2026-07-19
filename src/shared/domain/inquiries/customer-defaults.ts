@@ -33,6 +33,11 @@ export async function getInquiryDefaultsForCurrentCustomer(): Promise<InquiryDef
     ...(customer.companyName !== null && {
       companyName: customer.companyName,
     }),
+    // Inquiry Overhaul Phase 1: Inquiry.phoneNumber を prefill 用に流す。
+    // exactOptionalPropertyTypes 契約 (undefined 明示禁止) のため spread で条件付き付与。
+    ...(customer.phoneNumber !== null && {
+      phoneNumber: customer.phoneNumber,
+    }),
   };
   return defaults;
 }

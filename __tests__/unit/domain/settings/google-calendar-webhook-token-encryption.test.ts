@@ -167,8 +167,16 @@ describe("WEBHOOK-01: googleCalendarWebhookToken encrypt-at-rest", () => {
     const good = encrypt("gcal-webhook-token", {
       purpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarWebhookToken,
     });
-    // 末尾 ct を1文字ずらして GCM authTag 検証を落とす
-    const tampered = `${good.slice(0, -1)}X`;
+    // Wire format `v2:kid:purpose:iv:tag:ct` の tag セグメント（authTag）を
+    // decode → 先頭バイトを XOR 反転 → 再 encode で決定的に破壊する。
+    // 「末尾 char を "X" に差し替える」旧実装は、base64 の最後の char が
+    // 偶然 "X" になった run で no-op となり AES-GCM が正規復号する
+    // （randomBytes(IV) 由来の flake、確率 ~1/64）。
+    const parts = good.split(":");
+    const authTagBuf = Buffer.from(parts[4], "base64");
+    authTagBuf[0] = authTagBuf[0] ^ 0xff;
+    parts[4] = authTagBuf.toString("base64");
+    const tampered = parts.join(":");
     settingsRow.googleCalendarWebhookToken = tampered;
 
     const state = await getGoogleCalendarWebhookState();

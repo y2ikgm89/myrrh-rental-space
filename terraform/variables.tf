@@ -156,8 +156,12 @@ variable "cloud_run_secret_versions" {
     CLOUDFLARE_ORIGIN_HEADER_SECRET    = "1"
     GOOGLE_CLIENT_ID                   = "1"
     GOOGLE_CLIENT_SECRET               = "1"
-    RESEND_WEBHOOK_SECRET              = "1"
-    SUPPRESSION_HASH_SECRET            = "1"
+    # RESEND_WEBHOOK_SECRET と SUPPRESSION_HASH_SECRET は 3-phase secret rollout の
+    # Phase A 状態のためここに入れない (Cloud Run env に version=1 を bind すると
+    # operator が `gcloud secrets versions add` を実行するまで
+    # `Secret .../versions/1 was not found` で apply が fail する)。
+    # 詳細は `terraform/secrets.tf` の `imported_secrets` docblock 参照。
+    # Phase C follow-up PR で `= "1"` として復活させる。
   }
 }
 

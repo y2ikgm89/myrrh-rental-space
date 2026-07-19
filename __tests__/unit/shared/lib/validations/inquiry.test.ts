@@ -89,4 +89,29 @@ describe("publicInquirySchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  // ---------------------------------------------------------------------------
+  // phoneNumber (Phase 1 overhaul で追加された任意フィールド)
+  // ---------------------------------------------------------------------------
+
+  test("valid phoneNumber passes", () => {
+    const result = publicInquirySchema.safeParse({
+      ...VALID_PERSONAL,
+      phoneNumber: "090-1234-5678",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("omitted phoneNumber passes (optional)", () => {
+    const result = publicInquirySchema.safeParse(VALID_PERSONAL);
+    expect(result.success).toBe(true);
+  });
+
+  test("empty phoneNumber passes (treated as omitted by conform)", () => {
+    const result = publicInquirySchema.safeParse({
+      ...VALID_PERSONAL,
+      phoneNumber: "",
+    });
+    expect(result.success).toBe(true);
+  });
 });

@@ -193,11 +193,13 @@ describe("getRecentInquiries", () => {
     mockInquiryFindMany.mockResolvedValueOnce([
       {
         id: "i1",
+        receiptNumber: "INQ-ABCD1234",
         name: "佐藤花子",
         email: "hanako@example.com",
         subject: "予約の確認",
         status: "NEW",
         createdAt: new Date("2025-06-01T00:00:00Z"),
+        _count: { replies: 0 },
       },
     ]);
 
@@ -206,10 +208,34 @@ describe("getRecentInquiries", () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       id: "i1",
+      receiptNumber: "INQ-ABCD1234",
       name: "佐藤花子",
       email: "hanako@example.com",
       subject: "予約の確認",
       status: "NEW",
+      hasReplies: false,
+    });
+  });
+
+  test("_count.replies > 0 なら hasReplies=true にする", async () => {
+    mockInquiryFindMany.mockResolvedValueOnce([
+      {
+        id: "i2",
+        receiptNumber: "INQ-EFGH5678",
+        name: "山田太郎",
+        email: "taro@example.com",
+        subject: "見積依頼",
+        status: "IN_PROGRESS",
+        createdAt: new Date("2025-06-02T00:00:00Z"),
+        _count: { replies: 2 },
+      },
+    ]);
+
+    const result = await getRecentInquiries();
+
+    expect(result[0]).toMatchObject({
+      id: "i2",
+      hasReplies: true,
     });
   });
 });

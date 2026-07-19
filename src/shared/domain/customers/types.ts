@@ -1,6 +1,7 @@
 import type {
   CustomerStatus,
   CustomerType,
+  EmailDeliveryStatus,
   ReservationStatus,
 } from "@generated/prisma/enums";
 import type { PaginationInput } from "@/shared/lib/pagination";
@@ -68,6 +69,13 @@ export type CustomerWithReservationsAndAccount = Serialized<
     user: {
       accounts: CustomerAccountInfo[];
     } | null;
+    /**
+     * Resend Webhook が観測した配信状態。HARD_BOUNCED / COMPLAINED / SOFT_BOUNCED は
+     * sendEmail() の suppression 判定に使われ、それらの状態では以降のメール送信が
+     * silent に drop される。管理画面から `resetCustomerEmailDelivery` action で
+     * OK にリセットできる (RESEND-AUDIT M8)。
+     */
+    emailDeliveryStatus: EmailDeliveryStatus;
   }
 >;
 
