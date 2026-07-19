@@ -199,11 +199,24 @@ export async function createReservationSeriesCommand(
     );
 
     // coupon usage increment（series 全体で 1 usage、既存単発予約と同じ pattern）。
+    // atomic claim: public-commands.ts と同型の $executeRaw で
+    // `usageLimit IS NULL OR usageCount < usageLimit` を WHERE 条件で強制する。
+    // 素の `updateMany` では pre-tx validateCoupon 通過後の race で usageLimit
+    // 超過を許すため、business-domain rule の「updateMany の WHERE で claim」パターンで統一。
     if (input.couponId) {
-      await tx.coupon.updateMany({
-        where: { id: input.couponId },
-        data: { usageCount: { increment: 1 } },
-      });
+      const claimed = await tx.$executeRaw`
+        UPDATE "coupons"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "id" = ${input.couponId}::uuid
+          AND "isActive" = true
+          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+      `;
+      if (claimed === 0) {
+        throw new DomainError(
+          "クーポンが利用できません（利用上限に達した可能性があります）",
+          "CONFLICT",
+        );
+      }
     }
 
     const series = await tx.reservationSeries.create({
