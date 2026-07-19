@@ -614,10 +614,35 @@ export async function updateCustomerFromGuestData(
 }
 
 /**
+ * 状態遷移の保護マトリクス（L1）。
+ *
+ * key = これから書き込もうとする status、value = 「その status で上書きしては
+ * いけない既存 status」の配列。
+ *
+ * - COMPLAINED は最強（受信者本人の spam 報告シグナル）。何にも上書きさせない。
+ * - HARD_BOUNCED は SOFT_BOUNCED を上書き可、ただし COMPLAINED は保護。
+ * - SOFT_BOUNCED は HARD_BOUNCED / COMPLAINED どちらも保護（旧実装と同等）。
+ * - OK（明示リセット）は現状 admin UI 経由のみで本 write 経路には来ない。
+ *
+ * これにより Resend が古い bounce webhook を re-deliver した際に、新しい
+ * COMPLAINED を古い HARD_BOUNCED が clobber する事故を防ぐ。
+ */
+const PROTECTED_BY: Record<EmailDeliveryStatus, EmailDeliveryStatus[]> = {
+  [EmailDeliveryStatus.OK]: [],
+  [EmailDeliveryStatus.SOFT_BOUNCED]: [
+    EmailDeliveryStatus.HARD_BOUNCED,
+    EmailDeliveryStatus.COMPLAINED,
+  ],
+  [EmailDeliveryStatus.HARD_BOUNCED]: [EmailDeliveryStatus.COMPLAINED],
+  [EmailDeliveryStatus.COMPLAINED]: [],
+};
+
+/**
  * Resend Webhook (email.bounced / email.complained) から配信状態を更新する。
  *
  * - email が DB の Customer に紐づかない場合は no-op（unknown 宛先）。
- * - 既に COMPLAINED の Customer に SOFT_BOUNCED を上書きしない（強い終端状態を保護）。
+ * - 状態遷移の保護は `PROTECTED_BY` マトリクスに従う（COMPLAINED > HARD_BOUNCED
+ *   > SOFT_BOUNCED > OK の強さ順、L1）。
  * - 同 email に紐づく Customer が複数（履歴・テスト由来）なら `updateMany` で全件更新。
  *
  * @returns 更新行数（0 = 該当顧客なし / 1+ = 更新済み）
@@ -628,12 +653,7 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
   reason: string | null,
 ): Promise<number> {
   const emailCanonical = normalizeEmailForIdentity(email);
-  // 強い終端状態（HARD_BOUNCED / COMPLAINED）は SOFT_BOUNCED で上書きしない。
-  // OK へのリセットは管理 UI 経由を想定（本 PR 範囲外）。
-  const protectedStates: EmailDeliveryStatus[] =
-    status === EmailDeliveryStatus.SOFT_BOUNCED
-      ? [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED]
-      : [];
+  const protectedStates: EmailDeliveryStatus[] = PROTECTED_BY[status];
 
   const result = await prisma.customer.updateMany({
     where: {
