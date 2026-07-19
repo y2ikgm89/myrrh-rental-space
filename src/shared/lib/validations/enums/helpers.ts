@@ -416,7 +416,12 @@ export const CUSTOMER_STATUS_TRANSITIONS: Readonly<
 };
 
 /**
- * Inquiry ステータス遷移ルール（forward only）
+ * Inquiry ステータス遷移ルール。
+ *
+ * - 通常フロー (NEW → IN_PROGRESS → RESOLVED → CLOSED) は forward only
+ * - `FLAGGED` は要注意フラグ。任意状態から遷移可能、対応再開・完了・SPAM 降格・NEW 巻き戻し
+ *   まで全方向へ再遷移できる (誤判定訂正のため)
+ * - `SPAM` は最終判定に近いが、誤判定訂正のため CLOSED への遷移のみ許可
  */
 export const INQUIRY_STATUS_TRANSITIONS: Readonly<
   Record<InquiryStatus, readonly InquiryStatus[]>
@@ -425,10 +430,25 @@ export const INQUIRY_STATUS_TRANSITIONS: Readonly<
     InquiryStatus.IN_PROGRESS,
     InquiryStatus.RESOLVED,
     InquiryStatus.CLOSED,
+    InquiryStatus.FLAGGED,
+    InquiryStatus.SPAM,
   ],
-  [InquiryStatus.IN_PROGRESS]: [InquiryStatus.RESOLVED, InquiryStatus.CLOSED],
-  [InquiryStatus.RESOLVED]: [InquiryStatus.CLOSED],
+  [InquiryStatus.IN_PROGRESS]: [
+    InquiryStatus.RESOLVED,
+    InquiryStatus.CLOSED,
+    InquiryStatus.FLAGGED,
+    InquiryStatus.SPAM,
+  ],
+  [InquiryStatus.RESOLVED]: [InquiryStatus.CLOSED, InquiryStatus.FLAGGED],
   [InquiryStatus.CLOSED]: [],
+  [InquiryStatus.FLAGGED]: [
+    InquiryStatus.NEW,
+    InquiryStatus.IN_PROGRESS,
+    InquiryStatus.RESOLVED,
+    InquiryStatus.CLOSED,
+    InquiryStatus.SPAM,
+  ],
+  [InquiryStatus.SPAM]: [InquiryStatus.CLOSED],
 };
 
 /**
@@ -477,6 +497,10 @@ export const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
   [InquiryStatus.IN_PROGRESS]: "対応中",
   [InquiryStatus.RESOLVED]: "解決済み",
   [InquiryStatus.CLOSED]: "クローズ",
+  // Inquiry Overhaul Phase 1: FLAGGED / SPAM を InquiryStatus enum に追加。
+  // Record<InquiryStatus, ...> の網羅性のため、ここも同時に更新する。
+  [InquiryStatus.FLAGGED]: "要注意",
+  [InquiryStatus.SPAM]: "スパム",
 };
 
 // =============================================================================

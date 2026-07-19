@@ -182,10 +182,29 @@ export async function anonymizeExpiredGuestReservations(
 }
 
 /**
- * 保持期限を過ぎた Inquiry を削除する。
+ * 保持期限を過ぎた Inquiry を hard delete する。
  *
  * Inquiry は subject / message にも PII が入り得るため partial NULL 化ではなく完全削除する。
  * customer 紐付きは onDelete: SetNull ではなく単純に inquiry を消すだけ（customer は保持）。
+ *
+ * ## soft delete との関係 (Medium #23, Phase 1)
+ *
+ * Inquiry Overhaul Phase 1 で `deletedAt` (soft delete) を導入した。admin UI の
+ * 「削除」は soft delete で `deletedAt` に now() を刻むだけとなり、**本 cron が
+ * hard delete を実行する唯一の経路**になる。
+ *
+ * Phase 1 minimum の WHERE 条件は 2 分岐の OR で構成する:
+ *
+ * - `createdAt < cutoff`: 従来通り「作成後 N ヶ月経過」で hard delete する retention 経路。
+ *   live のまま放置されているものも soft-deleted も両方対象になる（deleteMany は
+ *   deletedAt を暗黙にフィルタしないため cascade 契約は変わらない）
+ * - `deletedAt < cutoff`: soft-deleted から N ヶ月経過したものは createdAt が cutoff より
+ *   新しくても hard delete する。運用上 admin が最近作成された inquiry を早めに
+ *   soft-delete した場合に、retention 経路（createdAt < cutoff）だけでは purge されない
+ *   ケースをカバーする
+ *
+ * Phase 6 で soft-deleted 用の短い grace period（例: 14 日）を config field として
+ * 分離する余地は残しつつ、Phase 1 では単一の inquiryMonths cutoff を両分岐で共有する。
  */
 export async function purgeExpiredInquiries(
   now: Date,
@@ -194,7 +213,9 @@ export async function purgeExpiredInquiries(
   if (months <= 0) return 0;
   const cutoff = monthsAgo(now, months);
   const result = await prisma.inquiry.deleteMany({
-    where: { createdAt: { lt: cutoff } },
+    where: {
+      OR: [{ createdAt: { lt: cutoff } }, { deletedAt: { lt: cutoff } }],
+    },
   });
   return result.count;
 }
