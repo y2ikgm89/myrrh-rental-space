@@ -35,22 +35,45 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+// profile.ts は `checkEmailRateLimit` を top-level import する
+// (email verification 分岐で使う)。audit テストは分岐に入らないため
+// success 固定の stub でよい。
+const mockCheckEmailRateLimit = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
 mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckActionRateLimit,
+  checkEmailRateLimit: mockCheckEmailRateLimit,
   validateTurnstile: mockValidateTurnstile,
 }));
 
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
   publicQueryRateLimiter: {},
+  // profile.ts が top-level import する email verification 系 rate limiter。
+  // audit テストは verification 分岐に入らないため空 object スタブで足りる。
+  emailVerificationRequestRateLimiter: {},
+  emailVerificationByEmailRateLimiter: {},
   getClientIpFromHeaders: mock(() => Promise.resolve("test-ip")),
 }));
 
 const mockUpdateCustomerProfileByUserId = mock((): Promise<void> =>
   Promise.resolve(),
 );
+// profile.ts が email verification 分岐で top-level import する。audit テストは
+// 分岐に入らないため呼出は発生しないが、named import 解決のためのスタブが必要。
+const mockRequestCustomerEmailChangeCommand = mock(
+  (): Promise<{ rawToken: string; expiresAt: Date; customerId: string }> =>
+    Promise.resolve({
+      rawToken: "raw-token-unused",
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      customerId: "customer-001",
+    }),
+);
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerProfileByUserId: mockUpdateCustomerProfileByUserId,
+  requestCustomerEmailChangeCommand: mockRequestCustomerEmailChangeCommand,
 }));
 
 const mockGetCustomerByUserId = mock(() =>
@@ -151,6 +174,20 @@ mock.module("@/shared/lib/async-utils", () => ({
   },
   settleAllWithLogging: mock(() => Promise.resolve([])),
   withTimeout: mock((p: Promise<unknown>) => p),
+}));
+
+// profile.ts は `sendChangeEmailVerificationEmail` を top-level import する。
+// 真の実装は shared/lib/email/send.ts → shared/domain/customers/queries.ts の
+// `getSuppressedEmailSet` を辿るが、上で customers/queries を getCustomerByUserId
+// のみに mock 上書きしているため、そのままだと send.ts の named import が
+// 「SyntaxError: Export named 'getSuppressedEmailSet' not found」で落ちる。
+// sibling の mypage-profile.test.ts と同じく sender ラッパを直接 mock 化して
+// email pipeline 全体を短絡する (audit テストは email verification 分岐を
+// 触らないため sender の返り値は成功固定でよい)。
+mock.module("@/shared/lib/email/change-email-emails", () => ({
+  sendChangeEmailVerificationEmail: mock(() =>
+    Promise.resolve({ ok: true as const, id: "message-1" }),
+  ),
 }));
 
 // =============================================================================
