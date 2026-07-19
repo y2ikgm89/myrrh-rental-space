@@ -77,6 +77,9 @@ export async function updateResendSettings(
       execute: async () => {
         await updateResendSettingsCommand({
           resendApiKey: data.resendApiKey ? data.resendApiKey : null,
+          resendWebhookSecret: data.resendWebhookSecret
+            ? data.resendWebhookSecret
+            : null,
         });
         return null;
       },

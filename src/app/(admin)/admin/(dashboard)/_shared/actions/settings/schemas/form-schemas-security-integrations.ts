@@ -155,6 +155,17 @@ export type StripeFormInput = z.infer<typeof stripeFormSchema>;
 
 export const resendFormSchema = z.object({
   resendApiKey: z.string().optional(),
+  // Resend Webhook 署名秘密 (svix `whsec_...`)。Tier 2 (DB canonical + admin UI 管理)。
+  // stripeWebhookSecret と同じ posture: 200 文字上限 + 前置詞 refine + optional。
+  resendWebhookSecret: z
+    .string()
+    .max(200, {
+      error: "Webhookシークレットは200文字以内で入力してください",
+    })
+    .refine((val) => !val || val.startsWith("whsec_"), {
+      error: "Webhookシークレットは whsec_ で始まる必要があります",
+    })
+    .optional(),
 });
 
 export type ResendFormInput = z.infer<typeof resendFormSchema>;

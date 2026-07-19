@@ -35,6 +35,7 @@ export async function getResendConfig(): Promise<ResendConfig> {
     where: { id: "singleton" },
     select: {
       resendApiKey: true,
+      resendWebhookSecret: true,
       resendLastTestedAt: true,
       resendConnectionStatus: true,
     },
@@ -48,9 +49,42 @@ export async function getResendConfig(): Promise<ResendConfig> {
           }) || "****",
         )
       : null,
+    webhookSecretMasked: settings?.resendWebhookSecret
+      ? maskResendKey(
+          safeDecryptToString(settings.resendWebhookSecret, {
+            expectedPurpose: SETTINGS_CRYPTO_PURPOSES.resendWebhookSecret,
+          }) || "****",
+        )
+      : null,
     lastTestedAt: settings?.resendLastTestedAt || null,
     connectionStatus: parseConnectionStatus(settings?.resendConnectionStatus),
   };
+}
+
+/**
+ * Resend Webhook 署名検証秘密を返す (DB canonical、env は local dev fallback)。
+ *
+ * `stripeWebhookSecret` と同じ Tier 2 パターン。管理画面 (`ResendSection`) で
+ * 設定・rotate される暗号化済み値を優先し、未設定なら `RESEND_WEBHOOK_SECRET`
+ * env にフォールバックする。route handler (`/api/webhooks/resend`) は本関数の
+ * 返す値で `standardwebhooks` の `Webhook` を初期化する。
+ */
+export async function getResendWebhookSecret(): Promise<string | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      resendWebhookSecret: true,
+    },
+  });
+
+  if (settings?.resendWebhookSecret) {
+    const decrypted = safeDecryptToString(settings.resendWebhookSecret, {
+      expectedPurpose: SETTINGS_CRYPTO_PURPOSES.resendWebhookSecret,
+    });
+    if (decrypted) return decrypted;
+  }
+
+  return serverEnv.RESEND_WEBHOOK_SECRET ?? null;
 }
 
 /**

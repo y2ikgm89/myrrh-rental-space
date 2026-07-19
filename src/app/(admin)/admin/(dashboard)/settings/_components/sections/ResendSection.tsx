@@ -15,7 +15,12 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -56,6 +61,7 @@ export function ResendSection({ config }: ResendSectionProps) {
     message: string;
   } | null>(null);
   const [showKeyInput, setShowKeyInput] = useState(false);
+  const [showWebhookSecretInput, setShowWebhookSecretInput] = useState(false);
 
   const [lastResult, action, isPending] = useActionState(
     updateResendSettings,
@@ -72,6 +78,7 @@ export function ResendSection({ config }: ResendSectionProps) {
     shouldRevalidate: "onInput",
     defaultValue: {
       resendApiKey: "",
+      resendWebhookSecret: "",
     },
   });
 
@@ -87,6 +94,7 @@ export function ResendSection({ config }: ResendSectionProps) {
     setPreviousLastResult(lastResult);
     if (isSuccess) {
       setShowKeyInput(false);
+      setShowWebhookSecretInput(false);
     }
   }
 
@@ -222,6 +230,56 @@ export function ResendSection({ config }: ResendSectionProps) {
                 className="text-sm text-destructive"
               >
                 {fields.resendApiKey.errors.join(", ")}
+              </p>
+            )}
+          </div>
+
+          {/* Webhook 署名秘密 (Tier 2、DB canonical → env fallback) */}
+          <div className="space-y-2">
+            <Label htmlFor={fields.resendWebhookSecret.id}>
+              Webhook 署名秘密（任意）
+            </Label>
+            {config.webhookSecretMasked && !showWebhookSecretInput ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="text"
+                  value={config.webhookSecretMasked}
+                  disabled
+                  className="font-mono"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowWebhookSecretInput(true)}
+                >
+                  変更
+                </Button>
+              </div>
+            ) : (
+              <Input
+                {...getInputProps(fields.resendWebhookSecret, {
+                  type: "text",
+                })}
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
+                className="font-mono [&:not(:placeholder-shown)]:[-webkit-text-security:disc]"
+                placeholder="whsec_..."
+                disabled={isBusy}
+              />
+            )}
+            <p className="text-xs text-muted-foreground">
+              Resend Dashboard → Webhooks → Signing Secret (whsec_...)
+              を貼り付けます。暗号化して DB に保存されます
+              (`/api/webhooks/resend` の署名検証に使用)。
+            </p>
+            {fields.resendWebhookSecret.errors && (
+              <p
+                id={fields.resendWebhookSecret.errorId}
+                className="text-sm text-destructive"
+              >
+                {fields.resendWebhookSecret.errors.join(", ")}
               </p>
             )}
           </div>

@@ -85,14 +85,14 @@ mock.module("next/navigation", () => ({
   unstable_rethrow: () => undefined,
 }));
 
-// route.ts は毎回 `serverEnv.RESEND_WEBHOOK_SECRET` を property access で読むため、
-// mutable object にしておくとテスト毎に override / 復元できる。
-const mockServerEnv: { RESEND_WEBHOOK_SECRET?: string | undefined } = {
-  RESEND_WEBHOOK_SECRET: "whsec_test",
-};
+// route.ts は毎回 `getResendWebhookSecret()` を呼ぶため、mutable ref で
+// テスト毎に override / 復元できるようにする (DB canonical + env fallback の
+// 二段解決は resolver 側でカバーされるため、ここでは resolver 単位でモック)。
+let resendWebhookSecretResolver: () => Promise<string | null> = async () =>
+  "whsec_test";
 
-mock.module("@/shared/lib/env/server", () => ({
-  serverEnv: mockServerEnv,
+mock.module("@/shared/domain/settings/api-key-queries", () => ({
+  getResendWebhookSecret: () => resendWebhookSecretResolver(),
 }));
 
 mock.module("@/shared/domain/customers/commands", () => ({
@@ -155,7 +155,7 @@ function resetMocks() {
       typeof payload === "string" ? payload : payload.toString("utf8");
     return JSON.parse(asString);
   };
-  mockServerEnv.RESEND_WEBHOOK_SECRET = "whsec_test";
+  resendWebhookSecretResolver = async () => "whsec_test";
 }
 
 // -----------------------------------------------------------------------------
@@ -617,14 +617,14 @@ describe("POST /api/webhooks/resend", () => {
     );
   });
 
-  // H4 regression guard: RESEND_WEBHOOK_SECRET が Cloud Run env に配線されて
-  // いないと `/api/webhooks/resend` が全リクエスト 503 になり、
-  // bounce / complaint suppression が silent に壊れる (Gmail Feb 2024 /
-  // Yahoo bulk sender の complaint-rate <0.3% 保護が非機能化)。
-  // Terraform SSoT (runtime_secrets + cloud_run_secret_versions) が secret を
-  // Cloud Run に注入し、serverEnv 経由でここに露出する契約を守る。
-  test("RESEND_WEBHOOK_SECRET 未設定 → body を読まずに 503 を返す", async () => {
-    delete mockServerEnv.RESEND_WEBHOOK_SECRET;
+  // H4 regression guard: DB (Settings.resendWebhookSecret canonical) にも
+  // env (`RESEND_WEBHOOK_SECRET` local dev fallback) にも値が無いと
+  // `/api/webhooks/resend` が全リクエスト 503 になり、bounce / complaint
+  // suppression が silent に壊れる (Gmail Feb 2024 / Yahoo bulk sender の
+  // complaint-rate <0.3% 保護が非機能化)。Tier 2 (DB canonical) 移行後は
+  // resolver = `getResendWebhookSecret()` が両方の解決を包む。
+  test("Resend webhook secret 未設定 (DB + env どちらも null) → body を読まずに 503 を返す", async () => {
+    resendWebhookSecretResolver = async () => null;
     const text = mock(async () => {
       throw new Error("body should not be read when secret is missing");
     });

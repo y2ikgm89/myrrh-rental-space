@@ -132,10 +132,12 @@ export const serverEnv = createEnv({
     EMAIL_FROM: z.string().optional(),
     EMAIL_FROM_NAME: z.string().optional(),
     /**
-     * Resend Webhook 署名検証用シークレット（svix 形式 `whsec_...`）。
-     * Resend Dashboard → Webhooks → Signing Secret から取得。
-     * 設定されていない場合 `/api/webhooks/resend` は 503 を返す。
+     * Resend Webhook 署名検証用シークレット（svix 形式 `whsec_...`）— local dev fallback。
+     * 本番の canonical は `Settings.resendWebhookSecret` (DB 暗号化 + admin UI 管理、
+     * Tier 2)。`getResendWebhookSecret()` が DB → env の順で解決する。DB / env どちらも
+     * 未設定なら `/api/webhooks/resend` は 503 を返す。
      * @see https://resend.com/docs/webhooks/verify-webhooks-requests
+     * @see [[project_integration-secrets-two-tier-split-2026-07-06]]
      */
     RESEND_WEBHOOK_SECRET: z.string().optional(),
 

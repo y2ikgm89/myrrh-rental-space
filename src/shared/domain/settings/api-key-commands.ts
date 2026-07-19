@@ -46,6 +46,7 @@ function encryptSecret(
 
 export async function updateResendSettings(data: {
   resendApiKey?: string | null;
+  resendWebhookSecret?: string | null;
 }): Promise<void> {
   const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {};
 
@@ -54,6 +55,16 @@ export async function updateResendSettings(data: {
       data.resendApiKey,
       "APIキーの暗号化に失敗しました",
       SETTINGS_CRYPTO_PURPOSES.resendApiKey,
+    );
+  }
+
+  // Webhook 署名秘密。空 (falsy) は「既存値を維持」として扱う
+  // (stripeWebhookSecret と同じ意味論、クリアは clearResendSettings 経由)。
+  if (data.resendWebhookSecret) {
+    updateData.resendWebhookSecret = encryptSecret(
+      data.resendWebhookSecret,
+      "Webhookシークレットの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.resendWebhookSecret,
     );
   }
 
@@ -72,6 +83,7 @@ export async function recordResendConnectionStatus(
 export async function clearResendSettings(): Promise<void> {
   await upsertSettings({
     resendApiKey: null,
+    resendWebhookSecret: null,
     resendLastTestedAt: null,
     resendConnectionStatus: null,
   });
