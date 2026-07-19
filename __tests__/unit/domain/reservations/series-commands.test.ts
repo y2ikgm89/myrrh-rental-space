@@ -284,6 +284,25 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(seriesCreateArgs.data["couponId"]).toBe("coupon-1");
   });
 
+  test("advisory lock 728357 の key は seriesId で cancel と統一 (旧 spaceId:customerId ではない)", async () => {
+    await createReservationSeriesCommand(baseCreateInput());
+
+    // series.create に渡された data.id が pre-generated seriesId
+    const seriesCreateArgs = mockSeriesCreate.mock.calls[0]?.[0] as {
+      data: Record<string, unknown>;
+    };
+    const seriesId = seriesCreateArgs.data["id"];
+    expect(typeof seriesId).toBe("string");
+
+    // pg_advisory_xact_lock(728357, hashtext(${key})) の第 2 引数 = key
+    const seriesLockCall = mockExecuteRaw.mock.calls[0];
+    expect(seriesLockCall).toBeDefined();
+    expect(seriesLockCall?.[1]).toBe(seriesId);
+
+    // 旧実装の `${spaceId}:${customerId}` (":" を含む文字列) ではないこと
+    expect(String(seriesLockCall?.[1])).not.toContain(":");
+  });
+
   test("coupon usage 加算: couponId 指定時は $executeRaw で atomic claim (usageLimit ガード)", async () => {
     await createReservationSeriesCommand(
       baseCreateInput({ couponId: "coupon-1" }),
