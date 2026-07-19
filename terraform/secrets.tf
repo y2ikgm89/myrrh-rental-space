@@ -84,8 +84,11 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    # RESEND_WEBHOOK_SECRET は 2026-07-19 に新規追加。first `terraform apply`
-    # 成功 (= GCP 側に container 作成完了) 後の follow-up PR でここに追加する。
+    # RESEND_WEBHOOK_SECRET (2026-07-19): container は既に PR-D (#1269) の
+    # apply で GCP 側に作成済 (run 29671898405)。operator が
+    # `gcloud secrets versions add RESEND_WEBHOOK_SECRET` で real value を
+    # 投入した前提でここに追加する。以降 terraform apply は import で adopt する。
+    "RESEND_WEBHOOK_SECRET",
   ])
 }
 
@@ -126,45 +129,37 @@ resource "google_secret_manager_secret" "secret" {
 }
 
 # -----------------------------------------------------------------------------
-# Bootstrap placeholder version for newly-added secrets
+# 新規 secret 追加の operator フロー (bootstrap resource 廃止)
 # -----------------------------------------------------------------------------
-# Cloud Run service (`google_cloud_run_v2_service.{public,admin}`) は
-# `variables.tf` の `cloud_run_secret_versions` map で pin された version
-# (通常 "1") を `secret_key_ref` として要求する。新規 secret container を
-# 作成した直後は operator が実 value を投入していないため version 1 が
-# 存在せず、apply が
-#     Error: spec.template.spec.containers[0].env[N].value_from
-#       .secret_key_ref.name: Secret ... /versions/1 was not found
-# で fail してしまう卵と鶏問題を回避する (root-fix: run 29671898405)。
+# PR #1283 で導入された `google_secret_manager_secret_version.bootstrap` は
+# `scripts/bootstrap-terraform.sh` の IAM Deny Policy
+# (`block-terraform-runner-secret-value-read`, Codex P1 #1053 / F2 / F7) と
+# 設計矛盾する。terraform-runner SA は `secretmanager.googleapis.com/versions.add`
+# を deny 拒否されており、bootstrap version resource の CREATE は必ず 403 で失敗する。
 #
-# 対象は `setsubtract(all_secrets, imported_secrets)` = 新規追加 secret の
-# みで、既存 (imported_secrets 収録済) の secret はそのまま — operator が
-# 既に実 value を投入しているため触らない。
+# structural closure の SSoT は「terraform は container のみ扱う、versions は
+# operator が gcloud で投入する」であり、これを尊重する。新規 secret を追加する
+# 手順は以下 3 段階 (PR 1 本には収まらない — 2 PR + operator 介入が必須):
 #
-# lifecycle.ignore_changes = [secret_data, enabled] により、operator が
-# 後から `gcloud secrets versions add <NAME> --data-file=<real>` で新
-# version を投入して古い placeholder version を disable しても、次回
-# terraform apply が「戻し」に来ない (real value を上書きしない safety net)。
+# **手順 1: 新規 container 追加 (PR-a)**
+#   - `runtime_secrets` (or `build_secrets`) に新 entry を追加。
+#   - `cloud_run_common_env` / `cloud_run_public_env` / `cloud_run_admin_env` の
+#     いずれかに `secret_key_ref` を **追加しない** (この段階では版が無いため refresh fail する)。
+#   - この PR を merge → terraform apply で container のみが作成される (versions は空)。
 #
-# ⚠️ operator による webhook 実効化フロー:
-# 1. この PR merge 済 → `terraform apply` で placeholder version 1 が作成
-#    される (main deploy 復旧)。
-# 2. operator が
-#      gcloud secrets versions add <NAME> --data-file=<real-value>
-#    で version 2 (real value) を投入。
-# 3. follow-up PR で `terraform/variables.tf` の `cloud_run_secret_versions`
-#    の該当 entry を "2" (or "latest") に更新 → apply で Cloud Run が
-#    real value を読み込む。
-# 4. 該当 secret が消費される機能 (RESEND_WEBHOOK_SECRET なら Resend
-#    webhook) が復旧する。
-
-resource "google_secret_manager_secret_version" "bootstrap" {
-  for_each = setsubtract(local.all_secrets, local.imported_secrets)
-
-  secret      = google_secret_manager_secret.secret[each.value].id
-  secret_data = "bootstrap-placeholder-please-rotate"
-
-  lifecycle {
-    ignore_changes = [secret_data, enabled]
-  }
-}
+# **手順 2: operator が版を投入**
+#   ```
+#   printf '%s' '<real-value>' | \
+#     gcloud secrets versions add <NAME> --project=myrrh-rental-space --data-file=-
+#   ```
+#
+# **手順 3: Cloud Run 配線 + imported_secrets 追加 (PR-b)**
+#   - `cloud_run_common_env` 等に `secret_key_ref` を追加。
+#   - `imported_secrets` に entry を追加 (次回 state 消失時の再 adoption 用)。
+#   - `cloud_run_secret_versions` map の pin を `"1"` (最初の版) に設定。
+#   - この PR を merge → terraform apply で Cloud Run が secret を読み込む。
+#
+# 既存の PR-D (#1269, RESEND_WEBHOOK_SECRET) や PR-K (#1276, SUPPRESSION_HASH_SECRET)
+# のように 1 PR で container 追加と Cloud Run 配線を同時に行うと、この revert PR で
+# imported_secrets に entry を追加する follow-up PR + operator の版投入 が必要になる
+# (本 PR で RESEND_WEBHOOK_SECRET は imported_secrets に追加済み)。
