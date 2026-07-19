@@ -23,8 +23,12 @@
  * 旧実装は `resend.webhooks.verify` を経由していたため、outbound 送信用の
  * API キー (env or DB) が未設定だと webhook まで 503 で落ちる silent bug に
  * なっていた（API キーローテーション中は全イベントが drop）。署名検証には
- * `RESEND_WEBHOOK_SECRET` のみ必要で API キーは無関係のため、outbound
- * client と decoupling する（M4）。
+ * webhook secret のみ必要で API キーは無関係のため、outbound client と
+ * decoupling する（M4）。
+ *
+ * 秘密は Settings.resendWebhookSecret (DB 暗号化 canonical、Tier 2) →
+ * `RESEND_WEBHOOK_SECRET` env fallback (local dev 用) の順で解決する
+ * (`getResendWebhookSecret`、stripeWebhookSecret と同パターン)。
  *
  * @see https://resend.com/docs/webhooks/verify-webhooks-requests
  * @see https://resend.com/docs/webhooks/emails/bounced
@@ -38,9 +42,9 @@ import { Webhook } from "standardwebhooks";
 import { z } from "zod";
 import { EmailDeliveryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { updateCustomerEmailDeliveryStatusByEmail } from "@/shared/domain/customers/commands";
+import { getResendWebhookSecret } from "@/shared/domain/settings/api-key-queries";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import { serverEnv } from "@/shared/lib/env/server";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -107,10 +111,13 @@ export async function POST(request: Request) {
       return jsonError("Missing svix-* headers", 400);
     }
 
-    // 2. Webhook シークレット（env-only — admin UI から設定させない）
-    const webhookSecret = serverEnv.RESEND_WEBHOOK_SECRET;
+    // 2. Webhook シークレット (DB canonical → env fallback、Tier 2)。
+    // [[project_integration-secrets-two-tier-split-2026-07-06]] に従い
+    // stripeWebhookSecret と同型で admin UI から rotate 可能な DB 管理を優先。
+    // env (`RESEND_WEBHOOK_SECRET`) は local dev 用の fallback のみ。
+    const webhookSecret = await getResendWebhookSecret();
     if (!webhookSecret) {
-      logError(new Error("RESEND_WEBHOOK_SECRET not configured"), {
+      logError(new Error("Resend webhook secret not configured"), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
         context: { operation: "resendWebhook" },

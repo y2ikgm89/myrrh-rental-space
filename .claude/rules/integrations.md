@@ -48,6 +48,11 @@ env 側は `cloudbuild.yaml` に配線されておらず本番では常に undef
 新しい統合キーを追加する際もこのパターンに従うこと（`turnstile.ts` の
 `getTurnstileSecretKey()` をお手本にする）。
 
+Webhook 署名秘密 (`stripeWebhookSecret` / `resendWebhookSecret`) も同様に Tier 2
+(DB 暗号化 + admin UI からの rotate/test) で管理する。route handler は
+`getResendWebhookSecret()` / `settings.stripeWebhookSecret` 経由で解決し、
+env はローカル開発 fallback のみ ([[project_integration-secrets-two-tier-split-2026-07-06]])。
+
 ## R2（Cloudflare、S3 互換）
 
 - アップロードは magic-byte 検出 MIME で Content-Type / 拡張子を確定する fail-closed 設計

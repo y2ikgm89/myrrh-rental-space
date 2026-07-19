@@ -15,6 +15,7 @@ export const SETTINGS_CRYPTO_PURPOSES = {
   turnstileSecretKey: "turnstile-secret-key",
   googleMapsApiKey: "google-maps-api-key",
   resendApiKey: "resend-api-key",
+  resendWebhookSecret: "resend-webhook-secret",
   customApiKey: "custom-api-key",
   googleCalendarServiceAccount: "google-calendar-service-account",
   googleBusinessProfileAuth: "google-business-profile-auth",

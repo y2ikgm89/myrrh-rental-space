@@ -1649,6 +1649,10 @@ model Settings {
 
   // Resend Email Service
   resendApiKey           String?   @db.Text // Encrypted
+  // Webhook 署名検証用シークレット (svix `whsec_...`)。DB canonical、env
+  // (`RESEND_WEBHOOK_SECRET`) は local dev fallback のみ。
+  // stripeWebhookSecret と同じ Tier 2 (DB 暗号化 + admin UI 管理) パターン。
+  resendWebhookSecret    String?   @db.Text // Encrypted
   resendLastTestedAt     DateTime?
   resendConnectionStatus String? // 'connected' | 'error'
 

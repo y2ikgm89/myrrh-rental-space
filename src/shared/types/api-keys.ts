@@ -23,6 +23,7 @@ export type ApiKeyTestResult = {
  */
 export type ResendConfig = {
   apiKeyMasked: string | null;
+  webhookSecretMasked: string | null;
   lastTestedAt: Date | null;
   connectionStatus: ConnectionStatus;
 };
