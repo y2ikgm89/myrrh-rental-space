@@ -1,9 +1,10 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { cacheLife, cacheTag } from "next/cache";
 import { CustomerStatus, EmailDeliveryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { serverEnv } from "@/shared/lib/env/server";
 import type {
   CustomerData,
   CustomerFilters,
@@ -426,8 +427,18 @@ export async function getSuppressedEmailSet(): Promise<Set<string>> {
  * `getSuppressedEmailSet()` (data cache 側) と `sendEmail()` (呼び出し側)
  * の両方でこの関数を通すことで、hash 空間で `.has()` 判定できる。
  * `normalizeEmailForIdentity` の後に必ずこれに通す前提。
+ *
+ * M6: `SUPPRESSION_HASH_SECRET` が設定されていれば HMAC-SHA256 で keyed hash を
+ * 計算し、Data Cache dump からの dictionary attack (共通メールアドレス ~10M件で
+ * 全 suppression set を復元可能) を防ぐ。未設定時は plain SHA-256 に fallback
+ * するが、`validateProductionEnv()` が起動時に WARN を出す。cache 値は再生成で
+ * 自動移行するため migration 不要。
  */
 export function hashSuppressedEmailCandidate(canonicalEmail: string): string {
+  const secret = serverEnv.SUPPRESSION_HASH_SECRET;
+  if (secret && secret.length > 0) {
+    return createHmac("sha256", secret).update(canonicalEmail).digest("hex");
+  }
   return createHash("sha256").update(canonicalEmail).digest("hex");
 }
 
