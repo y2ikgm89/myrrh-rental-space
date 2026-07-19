@@ -198,7 +198,7 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
 
   test("有効トークン（cookie 経由）でキャンセル成功し null を返す", async () => {
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction(null, "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, null, "ts");
     expect(result).toBeNull();
     expect(mockCancelByToken).toHaveBeenCalledTimes(1);
     expect(mockCancelByToken).toHaveBeenCalledWith(VALID_UUID, 24, null);
@@ -207,7 +207,7 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
   test("cookie に token が無いとエラー", async () => {
     mockCookieGet.mockImplementation(() => undefined);
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction(null, "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, null, "ts");
     expect(result).toHaveProperty(
       "error",
       "キャンセルリンクが無効または期限切れです",
@@ -218,7 +218,7 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
   test("期限切れトークンは統合文言でエラー（invalid / expired を区別しない）", async () => {
     mockVerifyCancelToken.mockReturnValue({ valid: false, reason: "expired" });
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction(null, "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, null, "ts");
     expect(result).toHaveProperty(
       "error",
       "キャンセルリンクが無効または期限切れです",
@@ -229,7 +229,7 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
   test("無効トークンも同一文言でエラー（弱オラクル遮断）", async () => {
     mockVerifyCancelToken.mockReturnValue({ valid: false, reason: "invalid" });
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction(null, "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, null, "ts");
     expect(result).toHaveProperty(
       "error",
       "キャンセルリンクが無効または期限切れです",
@@ -243,7 +243,7 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
       error: "認証に失敗しました",
     });
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction(null, "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, null, "ts");
     expect(result).toHaveProperty("error", "認証に失敗しました");
     expect(mockCancelByToken).not.toHaveBeenCalled();
   });
@@ -254,7 +254,7 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
       error: "リクエストが多すぎます",
     });
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction(null, "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, null, "ts");
     expect(result).toHaveProperty("error", "リクエストが多すぎます");
     expect(mockVerifyCancelToken).not.toHaveBeenCalled();
   });
@@ -266,7 +266,7 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
       reset: Date.now() + 3600000,
     });
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction(null, "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, null, "ts");
     expect(result).toHaveProperty("error");
     expect(mockCancelByToken).not.toHaveBeenCalled();
   });
@@ -277,7 +277,20 @@ describe("cancelGuestReservationAction (cookie 経路)", () => {
       error: "この予約はキャンセルできません",
     });
     const { cancelGuestReservationAction } = await import(IMPORT_PATH);
-    const result = await cancelGuestReservationAction("理由", "ts");
+    const result = await cancelGuestReservationAction(VALID_UUID, "理由", "ts");
     expect(result).toHaveProperty("error", "この予約はキャンセルできません");
+  });
+
+  test("expectedReservationId が cookie トークン復号後の id と不一致なら stale-tab 誤操作で拒否", async () => {
+    // events/cancel と同型の contract。cookie が別リンクで上書きされた状態で
+    // 送信された場合、ドメインを呼ばずに拒否する。
+    const OTHER_UUID = "22222222-2222-4222-8222-222222222222";
+    const { cancelGuestReservationAction } = await import(IMPORT_PATH);
+    const result = await cancelGuestReservationAction(OTHER_UUID, null, "ts");
+    expect(result).toHaveProperty(
+      "error",
+      "表示中のページが最新ではありません。ページを再読み込みしてから再度お試しください",
+    );
+    expect(mockCancelByToken).not.toHaveBeenCalled();
   });
 });

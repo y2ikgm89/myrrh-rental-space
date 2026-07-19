@@ -54,12 +54,20 @@ const reasonSchema = z
  *  1. IP rate-limit（formSubmitRateLimiter / 5 req/min/IP）
  *  2. Turnstile（bot 防御）
  *  3. cookie からトークン取り出し → 暗号検証
- *  4. **member-ownership ガード** — ログイン中ユーザーが別人の予約に作用するのを遮断
- *  5. **per-reservation rate-limit** (3 req/hour/reservationId) — 分散攻撃 / XFF spoof 対策
- *  6. cancelReservationByToken の atomic claim（status race を防ぐ）
- *  7. applyCancellationSideEffects（refund / GCal / メール / 通知 / 監査）
+ *  4. **表示中予約との突合** — cookie が別リンクで上書きされた stale-tab 誤操作を遮断
+ *  5. **member-ownership ガード** — ログイン中ユーザーが別人の予約に作用するのを遮断
+ *  6. **per-reservation rate-limit** (3 req/hour/reservationId) — 分散攻撃 / XFF spoof 対策
+ *  7. cancelReservationByToken の atomic claim（status race を防ぐ）
+ *  8. applyCancellationSideEffects（refund / GCal / メール / 通知 / 監査）
+ *
+ * @param expectedReservationId フォーム表示時点の予約 ID（秘密情報ではない）。
+ *   同一ブラウザで複数のキャンセルリンクを別タブで開くと `cancel-token` cookie は
+ *   最後に開いたリンクのトークンで上書きされる。この値と cookie 復号後の
+ *   reservationId が一致しない場合は、画面に表示されている予約と異なる予約を
+ *   キャンセルしてしまうため拒否する (events/cancel と同設計)。
  */
 export async function cancelGuestReservationAction(
+  expectedReservationId: string,
   cancellationReason: string | null = null,
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
@@ -118,6 +126,23 @@ export async function cancelGuestReservationAction(
   // 返すパスを構造的に遮断）。
   const parsedId = reservationIdSchema.safeParse(verified.reservationId);
   if (!parsedId.success) return createMutationError("予約IDが不正です");
+
+  // 表示中予約との突合。同一ブラウザで複数のキャンセルリンクを別タブで開くと
+  // `cancel-token` cookie は最後に開いたリンクのトークンで上書きされるため、
+  // 送信前に画面表示と一致するか確認する (events/cancel と同設計)。
+  if (parsedId.data !== expectedReservationId) {
+    logError(new Error("Guest cancel reservation id mismatch (stale tab)"), {
+      category: ErrorCategory.AUTHORIZATION,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "guestCancelAction",
+        ip: await getClientIpFromHeaders(),
+      },
+    });
+    return createMutationError(
+      "表示中のページが最新ではありません。ページを再読み込みしてから再度お試しください",
+    );
+  }
 
   const parsedReason = reasonSchema.safeParse(cancellationReason ?? undefined);
   if (!parsedReason.success) {

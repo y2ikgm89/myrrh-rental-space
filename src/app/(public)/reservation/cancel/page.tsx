@@ -228,7 +228,10 @@ export default async function GuestCancelPage(): Promise<ReactElement> {
         </div>
       </div>
 
-      <GuestCancelForm turnstileSiteKey={turnstileSiteKey} />
+      <GuestCancelForm
+        expectedReservationId={reservation.id}
+        turnstileSiteKey={turnstileSiteKey}
+      />
     </Layout>
   );
 }
