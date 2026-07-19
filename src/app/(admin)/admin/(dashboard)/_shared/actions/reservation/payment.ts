@@ -8,7 +8,7 @@ import {
   refundReservationPaymentCommand,
   type RefundReservationResult,
 } from "@/shared/domain/reservations/payment-commands";
-import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/helpers";
+import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 
 export async function createCheckoutSession(
