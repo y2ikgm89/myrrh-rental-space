@@ -258,6 +258,11 @@ export async function anonymizeCustomer(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(validatedId.data));
+      // RESEND-AUDIT M7: anonymize は suppression 状態を持つ Customer に対しては
+      // `suppressedEmailHash` を書き込むため getSuppressedEmailSet() の結果集合が
+      // 変化する。SUPPRESSED_EMAILS タグも invalidate する
+      // (Resend webhook 経路 → invalidateSiteWideCacheFromRouteHandler と同型)。
+      updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
     },
   });
 }
@@ -292,6 +297,10 @@ export async function mergeCustomers(
       updateTag(CACHE_TAGS.RESERVATIONS);
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(CACHE_TAGS.REVIEWS);
+      // RESEND-AUDIT M7: merge も source 側 suppression 状態を target に
+      // 持ち越す可能性があるため SUPPRESSED_EMAILS を invalidate。
+      // 持ち越しが発生しないケースでも即時 no-op で害はない。
+      updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
       // EVENTS は CDN `event-v1` にマップされているため helper 経由で CDN purge も発火。
       invalidateSiteWideCache(CACHE_TAGS.EVENTS);
     },

@@ -43,6 +43,17 @@ function invalidateCustomerCachesForIds(ids: string[]): void {
   }
 }
 
+/**
+ * RESEND-AUDIT M7: anonymize 系 (bulk 版) の cache invalidation。
+ * customer 通常の tag に加えて SUPPRESSED_EMAILS も invalidate する
+ * (suppressedEmailHash が書き込まれる可能性があるため、getSuppressedEmailSet
+ * の cache を stale で返し続けさせない)。
+ */
+function invalidateCustomerCachesForAnonymize(ids: string[]): void {
+  invalidateCustomerCachesForIds(ids);
+  updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
+}
+
 export async function bulkToggleActiveCustomers(
   ids: string[],
   isActive: boolean,
@@ -81,7 +92,7 @@ export async function bulkAnonymizeCustomers(
     execute: async () =>
       bulkAnonymizeCustomersCommand(parsed.data.ids, parsed.data.reason),
     afterSuccess: (data) => {
-      invalidateCustomerCachesForIds(data.affectedIds);
+      invalidateCustomerCachesForAnonymize(data.affectedIds);
     },
   });
 }

@@ -841,6 +841,15 @@ model Customer {
   /// - "admin-purge":        管理者による purge (誤登録・重複クリーンアップ)
   /// - "data-retention":     データ保持期限経過による自動 purge
   anonymizedReason       String?             @db.VarChar(50)
+  /// RESEND-AUDIT M7: anonymize / merge で emailCanonical が placeholder に
+  /// 書き換えられる際、その時点の emailCanonical (= 実 email) の
+  /// `hashSuppressedEmailCandidate` 値を保存する。`getSuppressedEmailSet` は
+  /// 「`emailDeliveryStatus ∈ {HARD_BOUNCED, COMPLAINED}` の emailCanonical hash」と
+  /// 「`suppressedEmailHash IS NOT NULL` の直接値」の union を返す。
+  /// これにより「匿名化前に HARD_BOUNCED / COMPLAINED だった email」への
+  /// 再送信を suppression list で継続的に弾ける (sender reputation 保護)。
+  /// 通常 Customer では NULL、匿名化・マージ後の永続 hash 記録用。
+  suppressedEmailHash    String?             @db.VarChar(128)
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
 

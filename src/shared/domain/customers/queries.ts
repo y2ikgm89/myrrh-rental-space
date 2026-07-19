@@ -346,10 +346,20 @@ export async function findGuestCustomerByEmailExcept(
  * sendEmail() の suppression 判定用に、canonical email の **SHA-256 hash 集合**
  * を返す。
  *
- * `emailDeliveryStatus` が `HARD_BOUNCED` / `COMPLAINED` の全 Customer の
- * `emailCanonical` を hash 化して `Set<hexDigest>` で返す。呼び出し側は
- * recipient を `hashSuppressedEmailCandidate(email)` で hash してから
- * `.has()` で判定する。
+ * 2 系統の suppression source の union を返す:
+ *
+ * 1. `emailDeliveryStatus ∈ {HARD_BOUNCED, COMPLAINED}` の Customer 群 →
+ *    `emailCanonical` を hash 化 (通常経路)。
+ * 2. `suppressedEmailHash IS NOT NULL` の Customer 群 → 保存済み hash を
+ *    そのまま採用 (RESEND-AUDIT M7)。anonymize / merge で emailCanonical が
+ *    placeholder に書き換わる際、元の実 email の hash を持ち越すことで、
+ *    再登録された同じ実 email への送信を継続的に弾く (sender reputation 保護)。
+ *    single-column の直接 hash で再現しないため、`emailDeliveryStatus` の
+ *    リセット (RESET-EMAIL-DELIVERY M8) を経由しても suppression は残り続ける
+ *    設計 (persistent audit trail)。
+ *
+ * 呼び出し側は recipient を `hashSuppressedEmailCandidate(email)` で hash して
+ * から `.has()` で判定する。
  *
  * ## Cache に **plaintext PII を焼かない**設計 (Codex review, PR #945)
  *
@@ -358,15 +368,17 @@ export async function findGuestCustomerByEmailExcept(
  * には suppression list 全体の canonical email が plaintext で残っていた
  * (Data Cache 側に PII 残存)。
  *
- * SHA-256 に通した非可逆 hash に変えることで、cache 値からも plaintext を
- * 除去する。呼び出し側は既知の canonical email を同じ hash 関数に通して
- * `.has()` で判定するため、意味論は等価 (deterministic hash + Set 判定)。
+ * SHA-256 (HMAC 化は PR-K で入る予定) に通した非可逆 hash に変えることで、
+ * cache 値からも plaintext を除去する。呼び出し側は既知の canonical email を
+ * 同じ hash 関数に通して `.has()` で判定するため、意味論は等価
+ * (deterministic hash + Set 判定)。
  *
  * ## Invalidation / 顧客不在の宛先
  *
- * `cacheTag(SUPPRESSED_EMAILS)` で Resend webhook (bounce/complaint) の
- * `revalidateTag` で即時 invalidate。顧客 DB に存在しない宛先 (system / staff /
- * inquiry guest) は Set に含まれない → 呼び出し側は「観測なし＝送信続行」。
+ * `cacheTag(SUPPRESSED_EMAILS)` で Resend webhook (bounce/complaint) と
+ * anonymize / merge の Server Action で invalidate。顧客 DB に存在しない
+ * 宛先 (system / staff / inquiry guest) は Set に含まれない → 呼び出し側は
+ * 「観測なし＝送信続行」。
  *
  * @see https://nextjs.org/docs/app/api-reference/directives/use-cache
  * @see https://nextjs.org/docs/app/api-reference/functions/revalidateTag
@@ -376,18 +388,36 @@ export async function getSuppressedEmailSet(): Promise<Set<string>> {
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);
   cacheTag(CACHE_TAGS.SUPPRESSED_EMAILS);
 
+  // Union query: 「emailDeliveryStatus 抑制」 OR 「suppressedEmailHash 保存済み」。
+  // 通常 Customer は 1 経路目、anonymized / merged で持ち越された行は 2 経路目で
+  // ヒットする。同一 Customer が両方の列を持つケース (匿名化前に COMPLAINED、
+  // 匿名化で hash 保存) は placeholder emailCanonical hash と保存 hash の
+  // 2 値になるが、後者だけが実 email に一致するため OK (前者は誰にも match しない)。
   const rows = await prisma.customer.findMany({
     where: {
-      emailDeliveryStatus: {
-        in: [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED],
-      },
+      OR: [
+        {
+          emailDeliveryStatus: {
+            in: [
+              EmailDeliveryStatus.HARD_BOUNCED,
+              EmailDeliveryStatus.COMPLAINED,
+            ],
+          },
+        },
+        { suppressedEmailHash: { not: null } },
+      ],
     },
-    select: { emailCanonical: true },
+    select: { emailCanonical: true, suppressedEmailHash: true },
   });
 
-  return new Set(
-    rows.map((row) => hashSuppressedEmailCandidate(row.emailCanonical)),
-  );
+  const hashes = new Set<string>();
+  for (const row of rows) {
+    hashes.add(hashSuppressedEmailCandidate(row.emailCanonical));
+    if (row.suppressedEmailHash !== null) {
+      hashes.add(row.suppressedEmailHash);
+    }
+  }
+  return hashes;
 }
 
 /**
