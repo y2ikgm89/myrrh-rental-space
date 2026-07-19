@@ -19,6 +19,10 @@ export const publicInquirySchema = z
     lastName: personNameFieldSchema("姓"),
     firstName: personNameFieldSchema("名"),
     email: emailFieldSchema,
+    phoneNumber: z
+      .string()
+      .max(20, { error: "電話番号は20文字以内で入力してください" })
+      .optional(),
     subject: z
       .string()
       .min(1, { error: "件名は必須です" })
