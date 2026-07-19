@@ -151,6 +151,10 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
     });
   };
 
+  // Phase 1: 最新の STAFF 返信 1 件だけ表示する（Phase 4 でスレッド UI に拡張）。
+  const staffReplies = inquiry.replies.filter((r) => r.authorType === "STAFF");
+  const latestStaffReply = staffReplies[staffReplies.length - 1] ?? null;
+
   return (
     <div className="grid gap-6 md:grid-cols-3">
       {/* メイン情報 */}
@@ -176,10 +180,11 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
           </div>
         </DetailSection>
 
-        {/* 件名 + 受付日時 */}
+        {/* 件名 + 受付日時 + 受付番号 */}
         <DetailSection title="お問い合わせ詳細">
           <div className="space-y-4">
             <DetailField label="件名" value={inquiry.subject} />
+            <DetailField label="受付番号" value={inquiry.receiptNumber} />
             <DetailField
               label="受付日時"
               value={formatDate(inquiry.createdAt, true)}
@@ -199,63 +204,72 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
           </CardContent>
         </Card>
 
-        {/* 返信済み表示 */}
-        {inquiry.replyMessage ? (
+        {/*
+          Inquiry Overhaul Phase 1: 旧 `replyMessage` (単一列上書き) を
+          `replies: InquiryReply[]` (createdAt asc の複数返信) に再設計。
+          Phase 1 では最小変更で「最新のスタッフ返信 1 件のみ表示」+「追加返信可能」に
+          切り替える。Phase 4 で完全なスレッド UI に拡張予定。
+          React Compiler が最適化できるよう IIFE を使わず、上位関数本体で計算した
+          `latestStaffReply` を条件付き render で表示する。
+        */}
+        {latestStaffReply ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-base font-semibold">
-                回答内容
+                回答内容 (最新)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="whitespace-pre-wrap">{inquiry.replyMessage}</p>
+              <p className="whitespace-pre-wrap">{latestStaffReply.body}</p>
               <p className="text-xs text-muted-foreground">
-                {inquiry.repliedBy?.name ?? "スタッフ"} -{" "}
-                {inquiry.repliedAt ? formatDate(inquiry.repliedAt, true) : ""}
+                {latestStaffReply.authorName ?? "スタッフ"} -{" "}
+                {formatDate(latestStaffReply.createdAt, true)}
               </p>
             </CardContent>
           </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                回答を送信
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="回答内容を入力してください..."
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                rows={6}
-                disabled={isReplying}
+        ) : null}
+
+        {/*
+          Phase 1: 返信済みでも「追加返信」が可能。旧 UI は返信済み Inquiry に対して
+          form 自体を隠していたため、続報返信ができなかった (single replyMessage の
+          上書き問題)。replies に append する新モデルではフォーム常時表示が正。
+        */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">
+              {inquiry.replies.length > 0 ? "追加返信を送信" : "回答を送信"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder="回答内容を入力してください..."
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              rows={6}
+              disabled={isReplying}
+            />
+            <div className="flex justify-end">
+              <SubmitButton
+                isPending={isReplying}
+                label="回答を送信"
+                pendingLabel="送信中..."
+                disabled={!replyText.trim()}
+                onClick={() => {
+                  startReplyTransition(async () => {
+                    const result = await replyToInquiry(inquiry.id, replyText);
+                    if (isMutationError(result)) {
+                      toast.error(result.error);
+                    } else {
+                      toast.success("回答を送信しました");
+                      setReplyText("");
+                      router.refresh();
+                    }
+                  });
+                }}
               />
-              <div className="flex justify-end">
-                <SubmitButton
-                  isPending={isReplying}
-                  label="回答を送信"
-                  pendingLabel="送信中..."
-                  disabled={!replyText.trim()}
-                  onClick={() => {
-                    startReplyTransition(async () => {
-                      const result = await replyToInquiry(
-                        inquiry.id,
-                        replyText,
-                      );
-                      if (isMutationError(result)) {
-                        toast.error(result.error);
-                      } else {
-                        toast.success("回答を送信しました");
-                        setReplyText("");
-                        router.refresh();
-                      }
-                    });
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* サイドバー */}
@@ -285,6 +299,9 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
                 <SelectItem value="IN_PROGRESS">対応中</SelectItem>
                 <SelectItem value="RESOLVED">解決済み</SelectItem>
                 <SelectItem value="CLOSED">クローズ</SelectItem>
+                {/* Inquiry Overhaul Phase 1: FLAGGED / SPAM 追加 */}
+                <SelectItem value="FLAGGED">要注意</SelectItem>
+                <SelectItem value="SPAM">スパム</SelectItem>
               </SelectContent>
             </Select>
           </CardContent>

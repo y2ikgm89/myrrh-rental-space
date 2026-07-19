@@ -1522,13 +1522,18 @@ async function seedInquiries() {
     },
   ];
 
-  for (const inquiry of inquiries) {
+  for (const [i, inquiry] of inquiries.entries()) {
     const existing = await prisma.inquiry.findFirst({
       where: { email: inquiry.email, subject: inquiry.subject },
     });
 
     if (!existing) {
-      await prisma.inquiry.create({ data: inquiry });
+      await prisma.inquiry.create({
+        data: {
+          ...inquiry,
+          receiptNumber: `INQ-SEED${String(i + 1).padStart(4, "0")}`,
+        },
+      });
       console.log(`✅ Created inquiry: ${inquiry.subject}`);
     } else {
       console.log(`⏭️ Skipped existing inquiry: ${inquiry.subject}`);
@@ -2287,15 +2292,16 @@ async function seedDevCustomerAndReservations() {
     },
   ];
   let inquiryCreated = 0;
-  for (const fixture of inquiryFixtures) {
+  for (const [i, fixture] of inquiryFixtures.entries()) {
     const existingInquiry = await prisma.inquiry.findFirst({
       where: { customerId: customer.id, subject: fixture.subject },
       select: { id: true },
     });
     if (existingInquiry) continue;
 
-    await prisma.inquiry.create({
+    const createdInquiry = await prisma.inquiry.create({
       data: {
+        receiptNumber: `INQ-E2E${String(i + 1).padStart(5, "0")}`,
         customerId: customer.id,
         name: `${customer.lastName} ${customer.firstName}`,
         email: customer.email,
@@ -2303,14 +2309,22 @@ async function seedDevCustomerAndReservations() {
         subject: fixture.subject,
         message: fixture.message,
         status: fixture.status,
-        ...(fixture.replyMessage !== undefined
-          ? {
-              replyMessage: fixture.replyMessage,
-              repliedAt: new Date(),
-            }
-          : {}),
       },
+      select: { id: true },
     });
+
+    // Inquiry Overhaul Phase 1: replyMessage は InquiryReply table へ移行済み。
+    // 旧 fixture の replyMessage は STAFF 返信の初期投稿として書き込む。
+    if (fixture.replyMessage !== undefined) {
+      await prisma.inquiryReply.create({
+        data: {
+          inquiryId: createdInquiry.id,
+          authorType: "STAFF",
+          authorId: null,
+          body: fixture.replyMessage,
+        },
+      });
+    }
     inquiryCreated++;
   }
 

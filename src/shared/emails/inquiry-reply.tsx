@@ -16,8 +16,10 @@ import {
 
 type Props = {
   customerName: string;
-  originalSubject: string;
-  originalMessage: string;
+  /** Inquiry.receiptNumber (「INQ-XXXXXXXX」)。件名・本文で目立つ位置に表示する。 */
+  receiptNumber: string;
+  subject: string;
+  message: string;
   replyMessage: string;
   repliedByName: string;
   /** 会員向け: ログイン後のマイページ問い合わせ詳細 URL */
@@ -40,10 +42,22 @@ const messageBox = {
   border: `1px solid ${COLOR.border}`,
 };
 
+const receiptNumberStyle = {
+  ...text,
+  fontWeight: 700,
+  color: COLOR.text,
+  backgroundColor: COLOR.surface,
+  padding: "8px 12px",
+  borderRadius: "4px",
+  border: `1px solid ${COLOR.border}`,
+  margin: "16px 0",
+};
+
 export function InquiryReplyEmail({
   customerName,
-  originalSubject,
-  originalMessage,
+  receiptNumber,
+  subject,
+  message,
   replyMessage,
   repliedByName,
   memberInquiryUrl,
@@ -53,12 +67,14 @@ export function InquiryReplyEmail({
 
   return (
     <EmailLayout
-      preview={`お問い合わせへの回答: ${originalSubject}`}
+      preview={`お問い合わせへの回答: ${subject} [${receiptNumber}]`}
       footer={footer}
     >
       <Text style={heading}>お問い合わせへの回答</Text>
 
       <Text style={text}>{customerName} 様</Text>
+
+      <Text style={receiptNumberStyle}>受付番号: {receiptNumber}</Text>
 
       <Text style={text}>
         お問い合わせいただきありがとうございます。 以下の通り回答いたします。
@@ -82,12 +98,15 @@ export function InquiryReplyEmail({
         <Text style={detailsHeading}>お問い合わせ内容</Text>
         <Hr style={hr} />
         <Text style={detailItem}>
-          <strong>件名:</strong> {originalSubject}
+          <strong>受付番号:</strong> {receiptNumber}
+        </Text>
+        <Text style={detailItem}>
+          <strong>件名:</strong> {subject}
         </Text>
         <Text style={detailItem}>
           <strong>内容:</strong>
         </Text>
-        <Text style={messageBox}>{originalMessage}</Text>
+        <Text style={messageBox}>{message}</Text>
       </Section>
 
       {memberInquiryUrl && (
@@ -105,6 +124,7 @@ export function InquiryReplyEmail({
 
       <Text style={text}>
         ご不明な点が残りましたら、再度お問い合わせください。
+        お問い合わせの際は上記の受付番号をお伝えください。
       </Text>
     </EmailLayout>
   );

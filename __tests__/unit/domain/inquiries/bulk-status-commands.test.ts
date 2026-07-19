@@ -1,5 +1,23 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { InquiryStatus } from "@generated/prisma/enums";
+
+// =============================================================================
+// Enum stub (FLAGGED / SPAM 追加後の 6 値)
+//
+// helpers.ts が `@generated/prisma/enums` から多数の enum を transitive import する
+// ため、`mock.module` は spread 前提で作る（override は InquiryStatus のみ）。
+// =============================================================================
+
+const InquiryStatus = {
+  NEW: "NEW",
+  IN_PROGRESS: "IN_PROGRESS",
+  RESOLVED: "RESOLVED",
+  CLOSED: "CLOSED",
+  FLAGGED: "FLAGGED",
+  SPAM: "SPAM",
+} as const;
+type InquiryStatus = (typeof InquiryStatus)[keyof typeof InquiryStatus];
+
+const actualEnums = await import("@generated/prisma/enums");
 
 // =============================================================================
 // Mocks (must be defined before importing target module)
@@ -9,7 +27,7 @@ mock.module("server-only", () => ({}));
 
 const mockFindMany = mock<
   (args: {
-    where: { id: { in: string[] } };
+    where: { id: { in: string[] }; deletedAt: null };
     select: { id: boolean; status: boolean };
   }) => Promise<{ id: string; status: InquiryStatus }[]>
 >(() => Promise.resolve([]));
@@ -21,13 +39,44 @@ const mockUpdateMany = mock<
   }) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 0 }));
 
+const mockStatusHistoryCreateMany = mock<
+  (args: {
+    data: Array<{
+      inquiryId: string;
+      fromStatus: InquiryStatus;
+      toStatus: InquiryStatus;
+      changedById: string | null;
+      reason: string | null;
+    }>;
+  }) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 0 }));
+
+const prismaInquiry = {
+  findMany: mockFindMany,
+  updateMany: mockUpdateMany,
+};
+const prismaInquiryStatusHistory = { createMany: mockStatusHistoryCreateMany };
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    inquiry: {
-      findMany: mockFindMany,
-      updateMany: mockUpdateMany,
-    },
+    inquiry: prismaInquiry,
+    inquiryStatusHistory: prismaInquiryStatusHistory,
+    $transaction: <T>(
+      fn: (tx: {
+        inquiry: typeof prismaInquiry;
+        inquiryStatusHistory: typeof prismaInquiryStatusHistory;
+      }) => Promise<T>,
+    ) =>
+      fn({
+        inquiry: prismaInquiry,
+        inquiryStatusHistory: prismaInquiryStatusHistory,
+      }),
   },
+}));
+
+mock.module("@generated/prisma/enums", () => ({
+  ...actualEnums,
+  InquiryStatus,
 }));
 
 // =============================================================================
@@ -44,6 +93,7 @@ const { bulkSetStatusInquiriesCommand } =
 const UUID_A = "11111111-1111-4111-8111-111111111111";
 const UUID_B = "22222222-2222-4222-8222-222222222222";
 const UUID_C = "33333333-3333-4333-8333-333333333333";
+const CHANGED_BY = "99999999-9999-4999-8999-999999999999";
 
 // =============================================================================
 // Tests
@@ -53,6 +103,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
   beforeEach(() => {
     mockFindMany.mockClear();
     mockUpdateMany.mockClear();
+    mockStatusHistoryCreateMany.mockClear();
   });
 
   describe("空配列", () => {
@@ -60,6 +111,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [],
         InquiryStatus.RESOLVED,
+        CHANGED_BY,
       );
 
       expect(result).toEqual({
@@ -70,6 +122,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       });
       expect(mockFindMany).not.toHaveBeenCalled();
       expect(mockUpdateMany).not.toHaveBeenCalled();
+      expect(mockStatusHistoryCreateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -82,16 +135,18 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.RESOLVED,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(0);
       expect(result.affectedIds).toEqual([]);
       expect(result.rejectedIds).toEqual([]);
       expect(mockUpdateMany).not.toHaveBeenCalled();
+      expect(mockStatusHistoryCreateMany).not.toHaveBeenCalled();
     });
   });
 
-  describe("forward-only 遷移検証", () => {
+  describe("状態遷移検証", () => {
     test("NEW → IN_PROGRESS への遷移", async () => {
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
@@ -101,6 +156,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.IN_PROGRESS,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(1);
@@ -117,6 +173,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.RESOLVED,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(1);
@@ -132,6 +189,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.RESOLVED,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(1);
@@ -147,6 +205,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.CLOSED,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(1);
@@ -160,6 +219,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.NEW,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(0);
@@ -176,6 +236,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.IN_PROGRESS,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(0);
@@ -191,6 +252,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A, UUID_B],
         InquiryStatus.RESOLVED,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(0);
@@ -199,9 +261,9 @@ describe("bulkSetStatusInquiriesCommand", () => {
     });
 
     test("混在（一部 valid / 一部 backward）の場合", async () => {
-      // UUID_A: NEW → RESOLVED (valid forward)
+      // UUID_A: NEW → RESOLVED (valid)
       // UUID_B: CLOSED → RESOLVED (backward = rejected)
-      // UUID_C: IN_PROGRESS → RESOLVED (valid forward)
+      // UUID_C: IN_PROGRESS → RESOLVED (valid)
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: InquiryStatus.NEW },
         { id: UUID_B, status: InquiryStatus.CLOSED },
@@ -212,11 +274,206 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A, UUID_B, UUID_C],
         InquiryStatus.RESOLVED,
+        CHANGED_BY,
       );
 
       expect(result.count).toBe(2);
       expect(result.affectedIds).toEqual([UUID_A, UUID_C]);
       expect(result.rejectedIds).toEqual([UUID_B]);
+    });
+  });
+
+  describe("新遷移: FLAGGED / SPAM", () => {
+    test("NEW → FLAGGED が許可される", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.NEW },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.FLAGGED,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(1);
+      expect(result.affectedIds).toEqual([UUID_A]);
+    });
+
+    test("NEW → SPAM が許可される", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.NEW },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.SPAM,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(1);
+    });
+
+    test("FLAGGED → NEW への逆方向遷移が許可される (reversible)", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.FLAGGED },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.NEW,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(1);
+      expect(result.affectedIds).toEqual([UUID_A]);
+    });
+
+    test("FLAGGED → SPAM への遷移が許可される", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.FLAGGED },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.SPAM,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(1);
+    });
+
+    test("SPAM → CLOSED は許可される (誤判定訂正)", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.SPAM },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.CLOSED,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(1);
+    });
+
+    test("SPAM → NEW は禁止で rejectedIds に積まれる", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.SPAM },
+      ]);
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.NEW,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(0);
+      expect(result.rejectedIds).toEqual([UUID_A]);
+      expect(mockUpdateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("StatusHistory 記録", () => {
+    test("成功遷移時に InquiryStatusHistory.createMany が呼ばれる (changedById + reason 反映)", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.NEW },
+        { id: UUID_B, status: InquiryStatus.IN_PROGRESS },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 2 });
+
+      await bulkSetStatusInquiriesCommand(
+        [UUID_A, UUID_B],
+        InquiryStatus.RESOLVED,
+        CHANGED_BY,
+        "bulk-close",
+      );
+
+      expect(mockStatusHistoryCreateMany).toHaveBeenCalledTimes(1);
+      expect(mockStatusHistoryCreateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              inquiryId: UUID_A,
+              fromStatus: InquiryStatus.NEW,
+              toStatus: InquiryStatus.RESOLVED,
+              changedById: CHANGED_BY,
+              reason: "bulk-close",
+            }),
+            expect.objectContaining({
+              inquiryId: UUID_B,
+              fromStatus: InquiryStatus.IN_PROGRESS,
+              toStatus: InquiryStatus.RESOLVED,
+              changedById: CHANGED_BY,
+              reason: "bulk-close",
+            }),
+          ]),
+        }),
+      );
+    });
+
+    test("changedById に null (システム経路) を渡すと history に null が保存される", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.NEW },
+      ]);
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.RESOLVED,
+        null,
+      );
+
+      expect(mockStatusHistoryCreateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              inquiryId: UUID_A,
+              changedById: null,
+              reason: null,
+            }),
+          ]),
+        }),
+      );
+    });
+
+    test("全件 rejected の場合は StatusHistory.createMany が呼ばれない", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.CLOSED },
+      ]);
+
+      await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.RESOLVED,
+        CHANGED_BY,
+      );
+
+      expect(mockStatusHistoryCreateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("soft-deleted 除外", () => {
+    test("findMany の where 条件に deletedAt: null が含まれる", async () => {
+      mockFindMany.mockResolvedValueOnce([]);
+
+      await bulkSetStatusInquiriesCommand(
+        [UUID_A],
+        InquiryStatus.RESOLVED,
+        CHANGED_BY,
+      );
+
+      expect(mockFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: { in: [UUID_A] },
+            deletedAt: null,
+          }),
+        }),
+      );
     });
   });
 
@@ -230,6 +487,7 @@ describe("bulkSetStatusInquiriesCommand", () => {
       const result = await bulkSetStatusInquiriesCommand(
         [UUID_A],
         InquiryStatus.CLOSED,
+        CHANGED_BY,
       );
 
       expect(result.newStatus).toBe(InquiryStatus.CLOSED);

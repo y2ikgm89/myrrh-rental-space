@@ -288,7 +288,7 @@ function mapEmailResultToOutcome(
   if (result.ok) {
     return { status: "ok", detail: { messageId: result.messageId } };
   }
-  if (result.reason === "disabled") {
+  if (result.reason === "disabled" || result.reason === "suppressed") {
     return { status: "skipped", reason: "disabled_or_suppressed" };
   }
   return { status: "error", reason: result.error };

@@ -57,9 +57,19 @@ export type ReservationEmailData = {
 
 export type ContactEmailData = {
   inquiryId: string;
+  /**
+   * Inquiry.receiptNumber (「INQ-XXXXXXXX」形式)。顧客向け・管理者向けの両メールで
+   * 目立つ位置に表示し、以後の問い合わせ突合の主キーとして案内する (Medium #16)。
+   */
+  receiptNumber: string;
   name: string;
   companyName?: string | null;
   email: string;
+  /**
+   * Inquiry.phoneNumber。ゲストから電話番号が入力されていれば設定される。
+   * 管理者通知メールで折り返し先として表示する。未入力なら null/undefined。
+   */
+  phoneNumber?: string | null;
   subject: string;
   message: string;
   /**
@@ -72,10 +82,15 @@ export type ContactEmailData = {
 
 export type InquiryReplyEmailData = {
   inquiryId: string;
+  /**
+   * Inquiry.receiptNumber (「INQ-XXXXXXXX」形式)。返信メールの件名・本文で
+   * 目立つ位置に表示し、以後の問い合わせ突合の主キーとして案内する (Medium #16)。
+   */
+  receiptNumber: string;
   customerName: string;
   customerEmail: string;
-  originalSubject: string;
-  originalMessage: string;
+  subject: string;
+  message: string;
   replyMessage: string;
   repliedByName: string;
   /** 問い合わせに紐づく Customer の User.id。ログイン可能な実アカウントが無ければ null。 */
@@ -191,10 +206,15 @@ export type StatusChangeEmailData = {
  * メール送信結果。
  *
  * - `{ ok: true; messageId }` — Resend が受理（API レベル成功、配信は別途 webhook で観測）
- * - `{ ok: false; reason: "disabled" }` — RESEND_API_KEY 未設定で no-op
+ * - `{ ok: false; reason: "disabled" }` — RESEND_API_KEY 未設定 / 送信機能自体が OFF で no-op
+ * - `{ ok: false; reason: "suppressed"; suppressedRecipients }` —
+ *   全宛先が suppression list（HARD_BOUNCED / COMPLAINED）に該当し送信できなかった。
+ *   一部宛先のみ suppressed のケースは対象を除外して送信を継続するため、この分岐には入らない
+ *   （drop したアドレスは warning log のみ）。
  * - `{ ok: false; reason: "error"; error }` — Resend API エラー（retry 尽きた後）
  */
 export type EmailResult =
   | { ok: true; messageId: string }
   | { ok: false; reason: "disabled" }
+  | { ok: false; reason: "suppressed"; suppressedRecipients: readonly string[] }
   | { ok: false; reason: "error"; error: string };

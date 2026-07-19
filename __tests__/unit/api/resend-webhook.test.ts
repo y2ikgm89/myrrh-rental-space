@@ -44,29 +44,38 @@ const mockInvalidateSiteWide = mock<
   invalidateCalls.push({ tags, ...(options ? { options } : {}) });
 });
 
-// getResendClient は「webhooks.verify が payload を JSON.parse して返すだけ」の
-// 偽装クライアントを返す。svix 署名検証そのものは本 PR のスコープ外
-// （PR-J2 で decouple 予定）。
-type FakeResend = {
-  webhooks: {
-    verify: (args: {
-      payload: string;
-      headers: Record<string, string>;
-      webhookSecret: string;
-    }) => unknown;
-  };
+// M4: standardwebhooks の Webhook.verify を差し替えて payload を JSON.parse で返す
+// 偽装実装にする。実 HMAC 検証は本 PR のスコープ外（署名 fixture 生成は runtime に依存）。
+type VerifyFn = (
+  payload: string | Buffer,
+  headers: Record<string, string>,
+) => unknown;
+
+let verifyImpl: VerifyFn = (payload) => {
+  const asString =
+    typeof payload === "string" ? payload : payload.toString("utf8");
+  return JSON.parse(asString);
 };
 
-let verifyImpl: FakeResend["webhooks"]["verify"] = ({ payload }) =>
-  JSON.parse(payload);
-
-const mockGetResendClient = mock<() => Promise<FakeResend>>(() =>
-  Promise.resolve({
-    webhooks: {
-      verify: (args) => verifyImpl(args),
-    },
-  } satisfies FakeResend),
+const mockVerify = mock<VerifyFn>((payload, headers) =>
+  verifyImpl(payload, headers),
 );
+
+// Webhook constructor 呼び出し回数の観測（secret 引数が渡されている事を assert）。
+const webhookConstructorCalls: Array<{ secret: string | Uint8Array }> = [];
+
+class MockWebhook {
+  constructor(secret: string | Uint8Array) {
+    webhookConstructorCalls.push({ secret });
+  }
+  verify(payload: string | Buffer, headers: Record<string, string>): unknown {
+    return mockVerify(payload, headers);
+  }
+}
+
+mock.module("standardwebhooks", () => ({
+  Webhook: MockWebhook,
+}));
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCacheFromRouteHandler: mockInvalidateSiteWide,
@@ -84,10 +93,6 @@ const mockServerEnv: { RESEND_WEBHOOK_SECRET?: string | undefined } = {
 
 mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
-}));
-
-mock.module("@/shared/lib/email/client", () => ({
-  getResendClient: mockGetResendClient,
 }));
 
 mock.module("@/shared/domain/customers/commands", () => ({
@@ -139,12 +144,17 @@ function makeRequestWithSvixHeaders(onText: () => Promise<string>): Request {
 }
 
 function resetMocks() {
-  mockGetResendClient.mockClear();
   mockUpdateCustomerEmailDeliveryStatusByEmail.mockClear();
   mockInvalidateSiteWide.mockClear();
+  mockVerify.mockClear();
   invalidateCalls.length = 0;
+  webhookConstructorCalls.length = 0;
   updateImpl = async () => 1;
-  verifyImpl = ({ payload }) => JSON.parse(payload);
+  verifyImpl = (payload) => {
+    const asString =
+      typeof payload === "string" ? payload : payload.toString("utf8");
+    return JSON.parse(asString);
+  };
   mockServerEnv.RESEND_WEBHOOK_SECRET = "whsec_test";
 }
 
@@ -166,7 +176,77 @@ describe("POST /api/webhooks/resend", () => {
 
     expect(response.status).toBe(400);
     expect(text).not.toHaveBeenCalled();
-    expect(mockGetResendClient).not.toHaveBeenCalled();
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------
+  // M4: signature verify を outbound API client と decouple
+  // -----------------------------------------------------------------
+
+  test("M4: getResendClient が null / 未 mock でも署名検証は成立する（env secret 直読み）", async () => {
+    // getResendClient を明示 mock しない — route.ts が import しないことを
+    // 前提とする本 PR の decoupling を fail-loud で保証する（もし import が
+    // 残ればテスト実行時に unresolved module error になる）。
+    updateImpl = async () => 1;
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: {
+          email_id: "email_m4",
+          to: ["a@example.com"],
+          bounce: { type: "Permanent" },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(webhookConstructorCalls).toHaveLength(1);
+    const call = webhookConstructorCalls[0];
+    if (!call) throw new Error("expected Webhook constructor call");
+    expect(call.secret).toBe("whsec_test");
+    expect(mockVerify).toHaveBeenCalledTimes(1);
+  });
+
+  test("M4: standardwebhooks の verify が throw したら 400 を返し body は既に読了", async () => {
+    verifyImpl = () => {
+      throw new Error("No matching signature found");
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: { to: ["x@example.com"] },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    // update は呼ばれない（署名検証で止まる）
+    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).not.toHaveBeenCalled();
+  });
+
+  test("M4: svix-* header は webhook-* にリマップして渡される（Standard Webhooks 準拠）", async () => {
+    const capturedHeaders: Array<Record<string, string>> = [];
+    verifyImpl = (payload, headers) => {
+      capturedHeaders.push(headers);
+      const asString =
+        typeof payload === "string" ? payload : payload.toString("utf8");
+      return JSON.parse(asString);
+    };
+
+    await POST(
+      makeSignedRequest({
+        type: "email.complained",
+        data: { to: ["a@example.com"] },
+      }),
+    );
+
+    expect(capturedHeaders).toHaveLength(1);
+    expect(capturedHeaders[0]).toEqual({
+      "webhook-id": "msg_test",
+      "webhook-timestamp": "1700000000",
+      "webhook-signature": "v1,fake",
+    });
   });
 
   // -----------------------------------------------------------------
@@ -393,6 +473,150 @@ describe("POST /api/webhooks/resend", () => {
     expect(invalidateCalls).toHaveLength(0);
   });
 
+  // -----------------------------------------------------------------
+  // L3: email.failed / email.suppressed handlers
+  // -----------------------------------------------------------------
+
+  test("L3: email.failed イベントは全 recipient を HARD_BOUNCED でマークする", async () => {
+    const applied: Array<{
+      email: string;
+      status: EmailDeliveryStatus;
+      reason: string | null;
+    }> = [];
+    updateImpl = async (email, status, reason) => {
+      applied.push({ email, status, reason });
+      return 1;
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.failed",
+        data: {
+          email_id: "email_failed_1",
+          to: ["a@example.com", "b@example.com"],
+          reason: "domain refused connection",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(applied).toEqual([
+      {
+        email: "a@example.com",
+        status: EmailDeliveryStatus.HARD_BOUNCED,
+        reason: "domain refused connection",
+      },
+      {
+        email: "b@example.com",
+        status: EmailDeliveryStatus.HARD_BOUNCED,
+        reason: "domain refused connection",
+      },
+    ]);
+    // cache invalidation が発火している（processed > 0）
+    expect(mockInvalidateSiteWide).toHaveBeenCalled();
+  });
+
+  test("L3: email.failed で reason が data.failure.message にある場合も拾える", async () => {
+    const applied: Array<{ reason: string | null }> = [];
+    updateImpl = async (_email, _status, reason) => {
+      applied.push({ reason });
+      return 1;
+    };
+
+    await POST(
+      makeSignedRequest({
+        type: "email.failed",
+        data: {
+          to: ["a@example.com"],
+          failure: { message: "smtp 550 mailbox does not exist" },
+        },
+      }),
+    );
+
+    expect(applied).toEqual([{ reason: "smtp 550 mailbox does not exist" }]);
+  });
+
+  test("L3: email.suppressed は HARD_BOUNCED + Resend suppression 文脈を reason に残す", async () => {
+    const applied: Array<{
+      email: string;
+      status: EmailDeliveryStatus;
+      reason: string | null;
+    }> = [];
+    updateImpl = async (email, status, reason) => {
+      applied.push({ email, status, reason });
+      return 1;
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.suppressed",
+        data: {
+          email_id: "email_suppressed_1",
+          to: ["c@example.com"],
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(applied).toEqual([
+      {
+        email: "c@example.com",
+        status: EmailDeliveryStatus.HARD_BOUNCED,
+        reason: "Blocked by Resend suppression list",
+      },
+    ]);
+  });
+
+  test("L3: email.suppressed で明示的 reason があればそれを優先する", async () => {
+    const applied: Array<{ reason: string | null }> = [];
+    updateImpl = async (_email, _status, reason) => {
+      applied.push({ reason });
+      return 1;
+    };
+
+    await POST(
+      makeSignedRequest({
+        type: "email.suppressed",
+        data: {
+          to: ["c@example.com"],
+          reason: "recipient on account-level suppression list",
+        },
+      }),
+    );
+
+    expect(applied).toEqual([
+      { reason: "recipient on account-level suppression list" },
+    ]);
+  });
+
+  test("L3: email.failed で recipient の updateMany が throw しても loop は中断されない", async () => {
+    const processed: string[] = [];
+    updateImpl = async (email) => {
+      if (email === "a@example.com") {
+        throw new Error("prisma pool exhausted");
+      }
+      processed.push(email);
+      return 1;
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.failed",
+        data: {
+          to: ["a@example.com", "b@example.com"],
+        },
+      }),
+    );
+
+    // b@example.com は必ず処理されている（PR-J1 の per-recipient try/catch pattern と同じ）
+    expect(processed).toEqual(["b@example.com"]);
+    // M3 aggregator: 1件でも failed が出れば top-level は 500 を返す (Resend 再配信)。
+    expect(response.status).toBe(500);
+    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).toHaveBeenCalledTimes(
+      2,
+    );
+  });
+
   // H4 regression guard: RESEND_WEBHOOK_SECRET が Cloud Run env に配線されて
   // いないと `/api/webhooks/resend` が全リクエスト 503 になり、
   // bounce / complaint suppression が silent に壊れる (Gmail Feb 2024 /
@@ -411,6 +635,6 @@ describe("POST /api/webhooks/resend", () => {
     expect(response.status).toBe(503);
     expect(body.error).toContain("not configured");
     expect(text).not.toHaveBeenCalled();
-    expect(mockGetResendClient).not.toHaveBeenCalled();
+    expect(mockVerify).not.toHaveBeenCalled();
   });
 });
