@@ -35,6 +35,7 @@ import {
   SmartLockDeviceType,
   DayOfWeek,
   HolidayMode,
+  EmailDeliveryStatus,
 } from "@generated/prisma/enums";
 import {
   isValidRole,
@@ -487,6 +488,19 @@ export const CUSTOMER_STATUS_LABELS: Record<CustomerStatus, string> = {
   [CustomerStatus.INACTIVE]: "休眠",
   [CustomerStatus.BLACKLIST]: "ブラックリスト",
 };
+
+// =============================================================================
+// EmailDeliveryStatus Labels
+// =============================================================================
+
+/** Resend Webhook が観測した配信状態の顧客向け表示ラベル。 */
+export const EMAIL_DELIVERY_STATUS_LABELS: Record<EmailDeliveryStatus, string> =
+  {
+    [EmailDeliveryStatus.OK]: "配信可",
+    [EmailDeliveryStatus.SOFT_BOUNCED]: "一時エラー",
+    [EmailDeliveryStatus.HARD_BOUNCED]: "配信停止 (恒久エラー)",
+    [EmailDeliveryStatus.COMPLAINED]: "配信停止 (苦情申告)",
+  };
 
 // =============================================================================
 // InquiryStatus Labels

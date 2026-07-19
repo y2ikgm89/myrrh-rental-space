@@ -29,20 +29,29 @@ import {
   anonymizeCustomerCommand,
   createCustomer as createCustomerCommand,
   mergeCustomerCommand,
+  resetCustomerEmailDeliveryStatusCommand,
   toggleCustomerActive as toggleCustomerActiveCommand,
   updateCustomer as updateCustomerCommand,
   updateCustomerNotes as updateCustomerNotesCommand,
   updateCustomerStatus as updateCustomerStatusCommand,
 } from "@/shared/domain/customers/commands";
 import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { searchCustomers } from "@/shared/domain/customers/queries";
 import { clearRiskFlagCommand } from "@/shared/domain/customers/risk-detection";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
-import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  CustomerStatus,
+  EmailDeliveryStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 const idSchema = uuidIdSchema("顧客");
 
@@ -297,4 +306,92 @@ export async function searchCustomersAction(
   const auth = await checkPermission("customer", "read");
   if (!auth.success) return [];
   return searchCustomers(query);
+}
+
+/**
+ * RESEND-AUDIT M8: Customer.emailDeliveryStatus を OK にリセットする。
+ *
+ * Resend Webhook が `HARD_BOUNCED` / `COMPLAINED` を刻んだ顧客は、
+ * `sendEmail()` の suppression 判定 (`getSuppressedEmailSet()`) により以降の
+ * メールが silent に drop される。DNS 一時障害や誤配信で終端状態が付いた
+ * 正規顧客を管理者が復旧させるための唯一のパス。
+ *
+ * - RBAC は customer:update (BLACKLIST 化などと同カテゴリの状態変更)。
+ * - `previous` が既に OK の呼び出しは冪等 no-op として AuditLog を残さない。
+ * - AuditLog は `resource: "customer.emailDeliveryStatus"` で actor + previous +
+ *   ip / userAgent を含めて残す (event-waitlist と同型)。
+ * - キャッシュ無効化: SUPPRESSED_EMAILS (send suppression の即時反映) +
+ *   CUSTOMERS 一覧 + customers.detail。いずれも admin-only tag のため raw
+ *   `updateTag`。
+ */
+export async function resetCustomerEmailDelivery(id: string): Promise<
+  MutationResult<{
+    customerId: string;
+    previous: EmailDeliveryStatus;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "update",
+    resourceId: validated.data,
+    execute: async (user) => {
+      // UA-HORIZ-03: ip/userAgent は execute 内 = request scope で回収し
+      // afterSuccess (fireAndForget 経由) に持ち越す。
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const { previous } = await resetCustomerEmailDeliveryStatusCommand(
+        validated.data,
+      );
+      return {
+        customerId: validated.data,
+        previous,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+      };
+    },
+    afterSuccess: (data) => {
+      if (data.previous === EmailDeliveryStatus.OK) {
+        // 冪等 no-op: 既に OK。sendEmail の suppression set にも入っていないため
+        // cache invalidation も AuditLog も不要 (audit noise を減らす)。
+        return;
+      }
+
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
+      updateTag(getCacheTag.customers.detail(data.customerId));
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: data.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.emailDeliveryStatus",
+          resourceId: data.customerId,
+          oldValue: { emailDeliveryStatus: data.previous },
+          newValue: { emailDeliveryStatus: EmailDeliveryStatus.OK },
+          metadata: {
+            customerId: data.customerId,
+            previousStatus: data.previous,
+            newStatus: EmailDeliveryStatus.OK,
+            actorUserId: data.actorUserId,
+            ...(data.ip !== null && { ip: data.ip }),
+            ...(data.userAgent !== null && { userAgent: data.userAgent }),
+          },
+        }),
+        {
+          operation: "auditLogResetCustomerEmailDelivery",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+          context: { customerId: data.customerId },
+        },
+      );
+    },
+  });
 }
