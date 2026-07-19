@@ -343,7 +343,7 @@ describe("bulkAnonymizeCustomers", () => {
       expect(result).toMatchObject({ count: 2 });
     });
 
-    test("afterSuccess で updateTag が affectedIds 分 + ベースタグで呼ばれる", async () => {
+    test("afterSuccess で updateTag が affectedIds 分 + ベースタグ + SUPPRESSED_EMAILS で呼ばれる", async () => {
       mockBulkAnonymizeCustomersCommand.mockResolvedValueOnce({
         count: 2,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
@@ -355,8 +355,10 @@ describe("bulkAnonymizeCustomers", () => {
         "customer-requested",
       );
 
-      // ベースタグ 1 + detail tags 2 = 3 calls
-      expect(mockUpdateTag).toHaveBeenCalledTimes(3);
+      // ベースタグ 1 + detail tags 2 + SUPPRESSED_EMAILS 1 = 4 calls
+      // (RESEND-AUDIT M7: anonymize は suppressedEmailHash を書く可能性があるため
+      // getSuppressedEmailSet の 'use cache' を invalidate する)
+      expect(mockUpdateTag).toHaveBeenCalledTimes(4);
     });
 
     test("skippedIds が返っても affectedIds のみ cache invalidate される", async () => {
@@ -371,8 +373,9 @@ describe("bulkAnonymizeCustomers", () => {
         "data-retention",
       );
 
-      // ベース 1 + affectedIds detail 1 = 2 calls (skipped は含まない)
-      expect(mockUpdateTag).toHaveBeenCalledTimes(2);
+      // ベース 1 + affectedIds detail 1 + SUPPRESSED_EMAILS 1 = 3 calls
+      // (skipped は detail invalidation に含まない、SUPPRESSED_EMAILS は 1 回)
+      expect(mockUpdateTag).toHaveBeenCalledTimes(3);
     });
   });
 });

@@ -10,8 +10,21 @@ import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
+import { hashSuppressedEmailCandidate } from "@/shared/domain/customers/queries";
 import { recomputeCustomerReservationStats } from "@/shared/domain/reservations/payloads";
 import type { CustomerFormData } from "@/shared/lib/validations/customer";
+
+/**
+ * RESEND-AUDIT M7: `emailDeliveryStatus` が suppression 対象
+ * (HARD_BOUNCED / COMPLAINED) かを判定する SSoT。anonymize / merge で
+ * `suppressedEmailHash` に元の emailCanonical の hash を保存すべきかを決める。
+ */
+function isSuppressedDeliveryStatus(status: EmailDeliveryStatus): boolean {
+  return (
+    status === EmailDeliveryStatus.HARD_BOUNCED ||
+    status === EmailDeliveryStatus.COMPLAINED
+  );
+}
 
 const GUEST_EMAIL_DUPLICATE_MESSAGE =
   "同じメールアドレスの未リンク顧客が既に存在します。既存顧客を編集するか、顧客マージを行ってください。";
@@ -458,6 +471,8 @@ export async function anonymizeCustomerCommand(input: {
   anonymizedAt: Date;
   reason: AnonymizeCustomerReason;
   hadUserId: boolean;
+  /** RESEND-AUDIT M7: 匿名化前の suppression 状態を hash として持ち越したか。 */
+  preservedSuppression: boolean;
 }> {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.customer.findUnique({
@@ -466,6 +481,10 @@ export async function anonymizeCustomerCommand(input: {
         id: true,
         userId: true,
         anonymizedAt: true,
+        // RESEND-AUDIT M7: 匿名化前の suppression 状態を保存するため
+        // emailCanonical と emailDeliveryStatus を tx 内で pre-read する。
+        emailCanonical: true,
+        emailDeliveryStatus: true,
       },
     });
 
@@ -479,6 +498,15 @@ export async function anonymizeCustomerCommand(input: {
 
     const anonymizedEmail = buildAnonymizedEmail(existing.id);
     const anonymizedAt = new Date();
+    // RESEND-AUDIT M7: HARD_BOUNCED / COMPLAINED の Customer は匿名化後も
+    // 送信 suppression が持続する必要がある (再登録した同じ実 email に
+    // 送信して sender reputation を悪化させない)。emailCanonical を
+    // placeholder に置換する前に、元の canonical の hash を保存しておく。
+    const preservedSuppressionHash = isSuppressedDeliveryStatus(
+      existing.emailDeliveryStatus,
+    )
+      ? hashSuppressedEmailCandidate(existing.emailCanonical)
+      : null;
 
     await tx.customer.update({
       where: { id: existing.id },
@@ -503,6 +531,11 @@ export async function anonymizeCustomerCommand(input: {
         userId: null,
         anonymizedAt,
         anonymizedReason: input.reason,
+        // suppression 対象でなければ NULL のまま (通常 Customer が anonymize
+        // される多数派経路)。suppressedEmailHash は書き換え専用 (再設定なし)。
+        ...(preservedSuppressionHash !== null
+          ? { suppressedEmailHash: preservedSuppressionHash }
+          : {}),
       },
     });
 
@@ -519,6 +552,7 @@ export async function anonymizeCustomerCommand(input: {
       anonymizedAt,
       reason: input.reason,
       hadUserId: existing.userId !== null,
+      preservedSuppression: preservedSuppressionHash !== null,
     };
   });
 }
@@ -532,6 +566,8 @@ export async function mergeCustomerCommand(
   transferredInquiries: number;
   transferredReviews: number;
   transferredRegistrations: number;
+  /** RESEND-AUDIT M7: source の suppression を target に持ち越したか。 */
+  preservedSuppression: boolean;
 }> {
   if (sourceId === targetId) {
     throw new DomainError("同じ顧客をマージすることはできません", "VALIDATION");
@@ -540,17 +576,68 @@ export async function mergeCustomerCommand(
   const [source, target] = await Promise.all([
     prisma.customer.findUnique({
       where: { id: sourceId },
-      select: { id: true },
+      // RESEND-AUDIT M7: source が suppression 状態 (HARD_BOUNCED /
+      // COMPLAINED) なら、source を物理削除する前にその emailCanonical hash を
+      // target の `suppressedEmailHash` に持ち越す (実 email の suppression が
+      // silently 失われないようにする)。既に source が anonymized 済みで
+      // suppressedEmailHash を持っているなら、その hash をそのまま持ち越す
+      // (再 hash せず「元の実 email」の hash を維持)。
+      select: {
+        id: true,
+        emailCanonical: true,
+        emailDeliveryStatus: true,
+        suppressedEmailHash: true,
+      },
     }),
     prisma.customer.findUnique({
       where: { id: targetId },
-      select: { id: true },
+      select: {
+        id: true,
+        emailCanonical: true,
+        emailDeliveryStatus: true,
+        suppressedEmailHash: true,
+      },
     }),
   ]);
   if (!source)
     throw new DomainError("マージ元の顧客が見つかりません", "NOT_FOUND");
   if (!target)
     throw new DomainError("マージ先の顧客が見つかりません", "NOT_FOUND");
+
+  // RESEND-AUDIT M7: source から target へ持ち越す suppression hash を決定する。
+  // 優先順:
+  //   1. source が既に anonymized で suppressedEmailHash を持つ → その値
+  //      (匿名化前の元 emailCanonical の hash が既に保存されている)
+  //   2. source の emailDeliveryStatus が suppression 対象 → 現 emailCanonical
+  //      を hash 化した値
+  //   3. それ以外 → null (持ち越さない)
+  //
+  // 条件:
+  //   - source の hash が target の実 emailCanonical と等価な場合の hash と
+  //     一致しない限り、target が既に自分の email で suppression 状態でない
+  //     ときのみ書き込む (target 側の既存 emailDeliveryStatus を上書きしない)。
+  //   - target が既に suppressedEmailHash を持っている場合は上書きしない
+  //     (別の元 email の hash を消してしまわない)。
+  //   - target が自分の emailCanonical で suppression 状態のときは書き込まない
+  //     (getSuppressedEmailSet で target の emailCanonical hash 経路で既にカバーされる)。
+  const sourceSuppressionHash =
+    source.suppressedEmailHash !== null
+      ? source.suppressedEmailHash
+      : isSuppressedDeliveryStatus(source.emailDeliveryStatus)
+        ? hashSuppressedEmailCandidate(source.emailCanonical)
+        : null;
+
+  const targetOwnHash = hashSuppressedEmailCandidate(target.emailCanonical);
+  const targetAlreadySuppressed = isSuppressedDeliveryStatus(
+    target.emailDeliveryStatus,
+  );
+
+  const shouldPreserveOnTarget =
+    sourceSuppressionHash !== null &&
+    target.suppressedEmailHash === null &&
+    // target 自身の canonical email が既に SUPPRESSED_EMAILS で拾える場合は
+    // 別ソースの hash を書く意味が薄い (かつ hash が一致するなら no-op)。
+    !(targetAlreadySuppressed && sourceSuppressionHash === targetOwnHash);
 
   return prisma.$transaction(async (tx) => {
     const [reservations, inquiries, reviews, registrations] = await Promise.all(
@@ -579,6 +666,15 @@ export async function mergeCustomerCommand(
     // 実装は `recomputeCustomerReservationStats` に集約されている。
     await recomputeCustomerReservationStats(tx, targetId);
 
+    // RESEND-AUDIT M7: source を削除する前に、必要なら suppression hash を
+    // target に転記する (source と target で email が異なるケースをカバー)。
+    if (shouldPreserveOnTarget) {
+      await tx.customer.update({
+        where: { id: targetId },
+        data: { suppressedEmailHash: sourceSuppressionHash },
+      });
+    }
+
     await tx.customer.delete({ where: { id: sourceId } });
 
     return {
@@ -586,6 +682,7 @@ export async function mergeCustomerCommand(
       transferredInquiries: inquiries.count,
       transferredReviews: reviews.count,
       transferredRegistrations: registrations.count,
+      preservedSuppression: shouldPreserveOnTarget,
     };
   });
 }
