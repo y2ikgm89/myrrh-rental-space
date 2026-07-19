@@ -629,7 +629,7 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
 ): Promise<number> {
   const emailCanonical = normalizeEmailForIdentity(email);
   // 強い終端状態（HARD_BOUNCED / COMPLAINED）は SOFT_BOUNCED で上書きしない。
-  // OK へのリセットは管理 UI 経由を想定（本 PR 範囲外）。
+  // OK へのリセット (`resetCustomerEmailDeliveryStatusCommand`) は管理 UI 経由。
   const protectedStates: EmailDeliveryStatus[] =
     status === EmailDeliveryStatus.SOFT_BOUNCED
       ? [EmailDeliveryStatus.HARD_BOUNCED, EmailDeliveryStatus.COMPLAINED]
@@ -650,4 +650,51 @@ export async function updateCustomerEmailDeliveryStatusByEmail(
   });
 
   return result.count;
+}
+
+/**
+ * RESEND-AUDIT M8: 管理者が Customer.emailDeliveryStatus を OK にリセットする。
+ *
+ * Resend Webhook が `HARD_BOUNCED` / `COMPLAINED` を書き込むと、当該顧客は
+ * `getSuppressedEmailSet()` 経由で全メール送信から除外される (予約確認・
+ * 領収書・リマインダー含む)。DNS 一時障害や誤配信で終端状態が付いてしまった
+ * 正規顧客を復旧させる唯一のパスがこの command。
+ *
+ * 契約:
+ * - 既に `OK` の顧客に対する呼び出しは no-op として `{ previous: OK }` を返す
+ *   (冪等 — action 側が `!== OK` で AuditLog をゲートできるようにする)。
+ * - `emailDeliveryUpdatedAt` はリセット時刻で上書き、`emailDeliveryReason` は
+ *   null に戻す (旧 bounce reason を残さない)。
+ * - AuditLog 書込は行わない。actor userId / ip / userAgent を持つ Server Action
+ *   側 (`resetCustomerEmailDelivery`) の afterSuccess で `previous` 付き詳細ログを
+ *   残す (event-waitlist と同型)。
+ * - 呼び出し側は `SUPPRESSED_EMAILS` cache tag を invalidate すること
+ *   (sendEmail の suppression 判定を即時反映するため)。
+ */
+export async function resetCustomerEmailDeliveryStatusCommand(
+  customerId: string,
+): Promise<{ previous: EmailDeliveryStatus }> {
+  const existing = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { id: true, emailDeliveryStatus: true },
+  });
+
+  if (!existing) {
+    throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+  }
+
+  if (existing.emailDeliveryStatus === EmailDeliveryStatus.OK) {
+    return { previous: EmailDeliveryStatus.OK };
+  }
+
+  await prisma.customer.update({
+    where: { id: customerId },
+    data: {
+      emailDeliveryStatus: EmailDeliveryStatus.OK,
+      emailDeliveryUpdatedAt: new Date(),
+      emailDeliveryReason: null,
+    },
+  });
+
+  return { previous: existing.emailDeliveryStatus };
 }

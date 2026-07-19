@@ -227,6 +227,7 @@ export async function getCustomerById(
     isActive: customer.isActive,
     marketingOptIn: customer.marketingOptIn,
     phoneContactOptIn: customer.phoneContactOptIn,
+    emailDeliveryStatus: customer.emailDeliveryStatus,
     userId: customer.userId,
     flaggedForReviewAt: customer.flaggedForReviewAt?.toISOString() ?? null,
     flagReasons: customer.flagReasons,

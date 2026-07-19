@@ -47,14 +47,19 @@ import {
 } from "@/admin/actions/customer";
 import type { CustomerWithReservationsAndAccount } from "@/shared/domain/customers/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  EmailDeliveryStatus,
+  type CustomerStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { isValidCustomerStatus } from "@/shared/lib/validations/enums/guards";
 import {
   CUSTOMER_STATUS_LABELS,
   CUSTOMER_TYPE_LABELS,
+  EMAIL_DELIVERY_STATUS_LABELS,
   getRiskFlagReasonLabel,
 } from "@/shared/lib/validations/enums/helpers";
 import { entriesOf } from "@/shared/lib/serialize";
+import { ResetEmailDeliveryButton } from "./ResetEmailDeliveryButton";
 
 type CustomerDetailProps = {
   customer: CustomerWithReservationsAndAccount;
@@ -332,6 +337,33 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* メール配信状態（HARD_BOUNCED / COMPLAINED / SOFT_BOUNCED のときのみ表示） */}
+        {customer.emailDeliveryStatus !== EmailDeliveryStatus.OK ? (
+          <Card className="border-warning/40">
+            <CardHeader>
+              <CardTitle>メール配信</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  現在:{" "}
+                  {EMAIL_DELIVERY_STATUS_LABELS[customer.emailDeliveryStatus]}
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  Resend Webhook
+                  が観測したバウンス・苦情申告のため、この顧客宛の
+                  メール送信は自動でスキップされています。 DNS
+                  一時障害や誤配信が原因の場合はここから解除できます。
+                </p>
+              </div>
+              <ResetEmailDeliveryButton
+                customerId={customer.id}
+                currentStatus={customer.emailDeliveryStatus}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* 要注意フラグ（customer-risk-scan cronが検知した場合のみ表示） */}
         {customer.flaggedForReviewAt ? (
