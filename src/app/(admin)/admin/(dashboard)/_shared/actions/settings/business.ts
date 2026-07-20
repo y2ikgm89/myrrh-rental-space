@@ -60,7 +60,21 @@ export async function updateBusinessInfo(
           return null;
         },
         afterSuccess: () => {
-          invalidateSiteWideCache(CACHE_TAGS.ORGANIZATION_SETTINGS);
+          // updateBusinessInfo は businessName / businessNameKana /
+          // representativeName / establishedDate / registrationNumber /
+          // invoiceNumber / businessDescription を書く。これらは
+          //   - ORGANIZATION_SETTINGS: getOrganizationSettings (businessName,
+          //     businessNameKana, businessDescription, establishedDate)
+          //   - BUSINESS_SETTINGS: getPublicBusinessSettings / getIcalOrganizer
+          //     (businessName ほか全 7 列)
+          // の両方に読まれるため、ORGANIZATION_SETTINGS だけを invalidate すると
+          // BUSINESS_SETTINGS 側の公開 producer (getPublicBusinessSettings ほか)
+          // が stale で返り続ける (Round-3 audit Finding #13 / medium)。
+          // updateContactInfo が既に同じ 2 tag を invalidate している対称形。
+          invalidateSiteWideCache([
+            CACHE_TAGS.ORGANIZATION_SETTINGS,
+            CACHE_TAGS.BUSINESS_SETTINGS,
+          ]);
         },
       });
       if (isMutationError(result)) {

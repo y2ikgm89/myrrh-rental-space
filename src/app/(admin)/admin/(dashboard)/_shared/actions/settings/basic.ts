@@ -62,7 +62,30 @@ export async function updateBasicInfo(
         return null;
       },
       afterSuccess: () => {
-        invalidateSiteWideCache(CACHE_TAGS.LAYOUT_SETTINGS);
+        // updateBasicInfo は siteName / siteDescription / faviconUrl /
+        // defaultOgpImageUrl / headerLogoUrl / footerLogoUrl / footerCopyright /
+        // useHeaderLogo / useFooterLogo を書く。これらの列は複数の 'use cache'
+        // producer に読まれる:
+        //   - LAYOUT_SETTINGS: getSiteLayoutSettings / getMaintenanceSettings /
+        //     getAdminBrandingSettings (favicon/logo/footer 系)
+        //   - SEO_SETTINGS: getSeoSettings (siteName/siteDescription/
+        //     defaultOgpImageUrl)
+        //   - ORGANIZATION_SETTINGS: getOrganizationSettings /
+        //     getAdminBrandingSettings (siteName/siteDescription/headerLogoUrl/
+        //     useHeaderLogo)
+        //   - BUSINESS_SETTINGS: getPublicBusinessSettings (siteName/
+        //     siteDescription)
+        // LAYOUT_SETTINGS だけを invalidate すると SEO / ORG / BUSINESS 系の
+        // 公開 producer が数時間〜数日 stale で返り続ける (Round-3 audit
+        // Finding #5 / high)。列 → タグ mapping は
+        // __tests__/unit/actions/settings-cache-tag-coverage.test.ts が
+        // 機械強制する。
+        invalidateSiteWideCache([
+          CACHE_TAGS.LAYOUT_SETTINGS,
+          CACHE_TAGS.SEO_SETTINGS,
+          CACHE_TAGS.ORGANIZATION_SETTINGS,
+          CACHE_TAGS.BUSINESS_SETTINGS,
+        ]);
       },
     });
     if (isMutationError(result)) {
@@ -207,7 +230,15 @@ export async function updateSearchVerification(
           return null;
         },
         afterSuccess: () => {
-          invalidateSiteWideCache(CACHE_TAGS.SEO_SETTINGS);
+          // updateSearchVerification は googleSearchConsoleId /
+          // bingWebmasterToolsId を書く。両方は ANALYTICS_CONFIG producer
+          // (getAnalyticsConfig — site.ts:81) の select に含まれるため、
+          // SEO_SETTINGS のみを invalidate すると analytics 系公開 producer が
+          // stale で返り続ける (Round-3 audit Finding #22 / low)。
+          invalidateSiteWideCache([
+            CACHE_TAGS.SEO_SETTINGS,
+            CACHE_TAGS.ANALYTICS_CONFIG,
+          ]);
         },
       });
       if (isMutationError(result)) {
