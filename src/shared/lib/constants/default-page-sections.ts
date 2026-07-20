@@ -22,11 +22,13 @@ function button(
   text: string,
   url: string,
   variant: "primary" | "secondary" | "outline" | "ghost" = "primary",
+  size?: "sm" | "md" | "lg",
 ) {
   return {
     label: [createSpan(text)],
     url,
     variant,
+    ...(size && { size }),
   };
 }
 
@@ -324,8 +326,9 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         description: block(
           "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
         ),
+        variant: "centered",
         buttons: [
-          button("予約する", "/reservation"),
+          button("予約する", "/reservation", "primary", "md"),
           button("スペースを見る", "/spaces", "secondary"),
         ],
         layout: {
