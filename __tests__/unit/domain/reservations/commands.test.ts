@@ -163,9 +163,13 @@ const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
 const mockTxReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
 );
-const mockTxReservationFindUniqueOrThrow = mock<
-  () => Promise<{ icsSequence: number }>
->(() => Promise.resolve({ icsSequence: 1 }));
+// Return type is intentionally `unknown` so tests can swap in either the
+// bare `{ icsSequence }` shape (updateAdminReservationCommand path) or a
+// full reservation shape (updateReservationStatusCommand tx reload path)
+// via mockImplementation. Runtime shape is enforced by production code.
+const mockTxReservationFindUniqueOrThrow = mock<() => Promise<unknown>>(() =>
+  Promise.resolve({ icsSequence: 1 }),
+);
 
 const txClient = {
   reservation: {
@@ -1044,8 +1048,8 @@ describe("updateReservationStatusCommand", () => {
     // で claim 後の reload の 2 回読む。両方が同じ shape を必要とするため、
     // tx 側の findUniqueOrThrow を prisma 側 mock に相乗りさせる。個別 test は
     // mockReservationFindUnique を mockImplementation で組めば両 read に反映される。
-    mockTxReservationFindUniqueOrThrow.mockImplementation(
-      (...args: unknown[]) => mockReservationFindUnique(...args),
+    mockTxReservationFindUniqueOrThrow.mockImplementation(() =>
+      mockReservationFindUnique(),
     );
   });
 
