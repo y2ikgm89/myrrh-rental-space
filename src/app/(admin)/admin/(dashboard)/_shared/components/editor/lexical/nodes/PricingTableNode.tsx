@@ -99,7 +99,11 @@ export class PricingTableContainerNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(): false {
+  override updateDOM(_prevNode: this, dom: HTMLElement): false {
+    // data-pricing-columns はプラン数から導出される値（stateConfig ではない）。
+    // インスペクターからのプラン列追加・削除でも grid-template-columns が
+    // 追従するよう、更新のたびに実子ノード数へ揃え直す。
+    dom.setAttribute("data-pricing-columns", String(this.getChildren().length));
     return false;
   }
 

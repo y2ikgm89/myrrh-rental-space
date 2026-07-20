@@ -35,6 +35,20 @@ import {
   BookmarkNode,
   $createBookmarkNode,
 } from "@/admin/components/editor/lexical/nodes/BookmarkNode";
+import {
+  InternalLinkCardNode,
+  $createInternalLinkCardNode,
+} from "@/admin/components/editor/lexical/nodes/InternalLinkCardNode";
+import {
+  InlineIconNode,
+  $createInlineIconNode,
+} from "@/admin/components/editor/lexical/nodes/InlineIconNode";
+import {
+  PricingTableContainerNode,
+  PricingPlanNode,
+  $createPricingTableContainerNode,
+  $createPricingPlanNode,
+} from "@/admin/components/editor/lexical/nodes/PricingTableNode";
 
 // =============================================================================
 // Test Setup
@@ -43,7 +57,16 @@ import {
 function createTestEditor(): LexicalEditor {
   return createHeadlessEditor({
     namespace: "test",
-    nodes: [ButtonNode, ImageNode, CalloutNode, BookmarkNode],
+    nodes: [
+      ButtonNode,
+      ImageNode,
+      CalloutNode,
+      BookmarkNode,
+      InternalLinkCardNode,
+      InlineIconNode,
+      PricingTableContainerNode,
+      PricingPlanNode,
+    ],
     onError: (error) => {
       throw error;
     },
@@ -143,6 +166,58 @@ describe("inspectable-nodes", () => {
         expect(info?.nodeType).toBe("bookmark");
         expect(info?.node).toBe(bookmarkNode);
         expect(info?.nodeKey).toBe(bookmarkNode.getKey());
+      });
+    });
+
+    test("InternalLinkCardNodeに対してinternalLinkCard型の情報を返す", async () => {
+      await editor.update(() => {
+        const root = $getRoot();
+        root.clear();
+        const internalLinkCardNode = $createInternalLinkCardNode({
+          contentType: "post",
+          contentId: "test-post-id",
+        });
+        root.append(internalLinkCardNode);
+
+        const info = getInspectableInfo(internalLinkCardNode);
+
+        expect(info).not.toBeNull();
+        expect(info?.nodeType).toBe("internalLinkCard");
+        expect(info?.node).toBe(internalLinkCardNode);
+        expect(info?.nodeKey).toBe(internalLinkCardNode.getKey());
+      });
+    });
+
+    test("InlineIconNodeに対してinlineIcon型の情報を返す", async () => {
+      await editor.update(() => {
+        const root = $getRoot();
+        root.clear();
+        const inlineIconNode = $createInlineIconNode("star");
+        root.append(inlineIconNode);
+
+        const info = getInspectableInfo(inlineIconNode);
+
+        expect(info).not.toBeNull();
+        expect(info?.nodeType).toBe("inlineIcon");
+        expect(info?.node).toBe(inlineIconNode);
+        expect(info?.nodeKey).toBe(inlineIconNode.getKey());
+      });
+    });
+
+    test("PricingTableContainerNodeに対してpricingTableContainer型の情報を返す", async () => {
+      await editor.update(() => {
+        const root = $getRoot();
+        root.clear();
+        const containerNode = $createPricingTableContainerNode();
+        containerNode.append($createPricingPlanNode({ name: "テストプラン" }));
+        root.append(containerNode);
+
+        const info = getInspectableInfo(containerNode);
+
+        expect(info).not.toBeNull();
+        expect(info?.nodeType).toBe("pricingTableContainer");
+        expect(info?.node).toBe(containerNode);
+        expect(info?.nodeKey).toBe(containerNode.getKey());
       });
     });
   });

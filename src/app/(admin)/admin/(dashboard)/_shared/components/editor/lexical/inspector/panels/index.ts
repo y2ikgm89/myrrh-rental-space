@@ -7,6 +7,8 @@ export { ImageInspectorPanel } from "./ImageInspectorPanel";
 export { GroupInspectorPanel } from "./GroupInspectorPanel";
 export { CalloutInspectorPanel } from "./CalloutInspectorPanel";
 export { BookmarkInspectorPanel } from "./BookmarkInspectorPanel";
+export { InternalLinkCardInspectorPanel } from "./InternalLinkCardInspectorPanel";
+export { InlineIconInspectorPanel } from "./InlineIconInspectorPanel";
 export { PullQuoteInspectorPanel } from "./PullQuoteInspectorPanel";
 export { RubyInspectorPanel } from "./RubyInspectorPanel";
 export { TooltipInspectorPanel } from "./TooltipInspectorPanel";
@@ -29,6 +31,7 @@ export { GalleryContainerInspectorPanel } from "./GalleryContainerInspectorPanel
 export { GalleryItemInspectorPanel } from "./GalleryItemInspectorPanel";
 export { TimelineContainerInspectorPanel } from "./TimelineContainerInspectorPanel";
 export { TimelineItemInspectorPanel } from "./TimelineItemInspectorPanel";
+export { PricingTableContainerInspectorPanel } from "./PricingTableContainerInspectorPanel";
 export { PricingPlanInspectorPanel } from "./PricingPlanInspectorPanel";
 export { PricingFeatureInspectorPanel } from "./PricingFeatureInspectorPanel";
 export { InlineImageInspectorPanel } from "./InlineImageInspectorPanel";
