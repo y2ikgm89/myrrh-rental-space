@@ -13,6 +13,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { notifyPermissionDeniedSpikeIfNeeded } from "@/shared/domain/audit-log/security-alerts";
 import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -159,4 +160,6 @@ export async function logPermissionDenied(
     resourceId,
     metadata: { attemptedAction: action },
   });
+
+  await notifyPermissionDeniedSpikeIfNeeded(userId);
 }

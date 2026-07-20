@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { verifyAuditLogIntegrity } from "@/shared/domain/audit-log/integrity";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   logError,
   ErrorCategory,
@@ -10,6 +11,10 @@ import {
 } from "@/shared/lib/errors/server";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 /**
  * 監査ログ (AuditLog) の HMAC ハッシュチェーン完全性を定期検証する。
@@ -53,6 +58,26 @@ export async function GET(request: Request) {
           firstFailure: result.failures[0],
         },
       });
+
+      // 日次実行のため dedupe 不要（未解消なら翌日も再通知されるのが望ましい）。
+      // 通知失敗で cron 自体を 500 にはしない。
+      try {
+        await createNotificationCommand({
+          type: NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED,
+          title:
+            NOTIFICATION_TYPE_LABELS[
+              NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED
+            ],
+          message: `監査ログのハッシュチェーン検証で${result.failures.length.toString()}件の不整合を検出しました（検査対象${result.checkedCount.toString()}件）。改ざんの可能性があるため至急確認してください。`,
+          resourceType: "auditLog",
+        });
+      } catch (notifyError) {
+        logError(notifyError, {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          context: { operation: "auditLogIntegrityCron.notify" },
+        });
+      }
     } else {
       logger.info("Audit log integrity check completed", {
         checkedCount: result.checkedCount,
