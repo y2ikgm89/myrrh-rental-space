@@ -182,6 +182,8 @@ locals {
     "receipt-backfill",
     # 段階 B 完了: PR #1198 で追加 → apply-create 完了 → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "calendar-sync-retry",
+    # 段階 B 完了: PR #1313 で追加 → apply-create 完了 (2026-07-20T10:18:42Z 本番作成確認済み) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
+    "audit-log-integrity",
   ])
 }
 
