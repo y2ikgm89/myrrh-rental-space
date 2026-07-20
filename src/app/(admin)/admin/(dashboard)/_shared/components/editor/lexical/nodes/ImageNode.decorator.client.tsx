@@ -19,10 +19,14 @@ import {
   registerLexicalDecorator,
 } from "./decorator-registry";
 
+// exportDOM（ImageNode.ts）は <figure data-image-alignment> に text-align を
+// 適用し、inline-block の img と figcaption をこの1プロパティだけで揃えて縦積みする
+// （lexical-content.css の [data-image-alignment]）。編集画面も同じ text-align 方式を
+// 使うことで、キャプション位置とアライメントの見た目を保存後と一致させる。
 const ALIGNMENT_CLASSES: Record<ImageAlignment, string> = {
-  left: "justify-start",
-  center: "justify-center",
-  right: "justify-end",
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
 };
 
 function ImageComponent({
@@ -89,9 +93,9 @@ function ImageComponent({
   const alignClass = ALIGNMENT_CLASSES[alignment];
 
   return (
-    <div
+    <figure
       data-lexical-node-key={nodeKey}
-      className={cn("relative my-6 flex", alignClass)}
+      className={cn("relative my-6", alignClass)}
     >
       <div className="relative inline-block">
         <img
@@ -115,11 +119,11 @@ function ImageComponent({
         {isResizing && <div className="absolute inset-0 bg-primary/10" />}
       </div>
       {caption && (
-        <figcaption className="text-sm text-muted-foreground text-center mt-2">
+        <figcaption className="text-sm text-muted-foreground mt-2">
           {caption}
         </figcaption>
       )}
-    </div>
+    </figure>
   );
 }
 
