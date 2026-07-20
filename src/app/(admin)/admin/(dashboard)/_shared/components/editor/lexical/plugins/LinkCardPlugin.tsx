@@ -12,7 +12,8 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { z } from "zod";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
@@ -71,17 +72,87 @@ type LinkCardPluginProps = {
   onClose: () => void;
 };
 
+const contentTypesResponseSchema = z.object({
+  contentTypes: z.array(z.string()),
+});
+
+/**
+ * 有効な Feature Module に対応する content-type 一覧を取得する。
+ *
+ * ダイアログが開くたびに再取得する（設定変更を即座に反映するため）。取得前
+ * （読み込み中）は `null`、取得失敗時は `null` のまま据え置く — いずれも
+ * 呼び出し側で「制限なし（全種別表示）」にフォールバックさせ、この UI 側の
+ * フィルタが fail-open でも公開側の 404 ガードが最終防衛線になるようにする。
+ */
+function useEnabledLinkCardContentTypes(
+  isOpen: boolean,
+): readonly LinkCardContentType[] | null {
+  const [enabledContentTypes, setEnabledContentTypes] = useState<
+    readonly LinkCardContentType[] | null
+  >(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    fetchAdminJson(
+      "/admin/api/link-cards/content-types",
+      { cache: "no-store" },
+      contentTypesResponseSchema,
+    )
+      .then((result) => {
+        if (cancelled) return;
+        setEnabledContentTypes(
+          result.contentTypes.filter(isLinkCardContentType),
+        );
+      })
+      .catch((fetchError: unknown) => {
+        logger.warn("LinkCardPlugin: content-types fetch failed", {
+          error:
+            fetchError instanceof Error
+              ? fetchError.message
+              : String(fetchError),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
+
+  return enabledContentTypes;
+}
+
 // =============================================================================
 // 内部タブ
 // =============================================================================
 
-function InternalTab({ onInserted }: { onInserted: () => void }) {
+function InternalTab({
+  onInserted,
+  enabledContentTypes,
+}: {
+  onInserted: () => void;
+  enabledContentTypes: readonly LinkCardContentType[] | null;
+}) {
   const [editor] = useLexicalComposerContext();
   const [contentType, setContentType] = useState<LinkCardContentType>("post");
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<LinkCardSearchItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // 読み込み中 or 取得失敗 or 全種別 OFF（未設定な異常系）は fail-open で全種別を表示する。
+  // 公開側は requireFeatureEnabled が最終防衛線のため、このセレクタはあくまで UX 上の防止策。
+  const selectableTypes =
+    enabledContentTypes && enabledContentTypes.length > 0
+      ? enabledContentTypes
+      : LINK_CARD_CONTENT_TYPES;
+
+  // 現在の選択が有効な種別一覧に無ければ（feature 無効化 / 取得直後の初期値ずれ）
+  // 描画時に先頭の種別へ補正する。Effect で setState すると cascading render になる
+  // ため（react-hooks/set-state-in-effect）、"props/state からの派生値" として
+  // render 中に計算する（state 自体は handleTypeChange 経由でのみ更新する）
+  const selectedContentType = selectableTypes.includes(contentType)
+    ? contentType
+    : (selectableTypes[0] ?? contentType);
 
   const runSearch = (nextType: LinkCardContentType, nextQuery: string) => {
     setError(null);
@@ -128,12 +199,12 @@ function InternalTab({ onInserted }: { onInserted: () => void }) {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <Select value={contentType} onValueChange={handleTypeChange}>
+        <Select value={selectedContentType} onValueChange={handleTypeChange}>
           <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {LINK_CARD_CONTENT_TYPES.map((type) => (
+            {selectableTypes.map((type) => (
               <SelectItem key={type} value={type}>
                 {LINK_CARD_TYPE_LABELS[type]}
               </SelectItem>
@@ -146,7 +217,7 @@ function InternalTab({ onInserted }: { onInserted: () => void }) {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              runSearch(contentType, query);
+              runSearch(selectedContentType, query);
             }
           }}
           placeholder="タイトルで検索"
@@ -155,7 +226,7 @@ function InternalTab({ onInserted }: { onInserted: () => void }) {
         <Button
           type="button"
           variant="secondary"
-          onClick={() => runSearch(contentType, query)}
+          onClick={() => runSearch(selectedContentType, query)}
           disabled={isPending}
         >
           {isPending ? (
@@ -363,6 +434,8 @@ function ExternalTab({ onInserted }: { onInserted: () => void }) {
 // =============================================================================
 
 export function LinkCardPlugin({ isOpen, onClose }: LinkCardPluginProps) {
+  const enabledContentTypes = useEnabledLinkCardContentTypes(isOpen);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[560px]">
@@ -375,7 +448,10 @@ export function LinkCardPlugin({ isOpen, onClose }: LinkCardPluginProps) {
             <TabsTrigger value="external">外部 URL</TabsTrigger>
           </TabsList>
           <TabsContent value="internal" className="pt-4">
-            <InternalTab onInserted={onClose} />
+            <InternalTab
+              onInserted={onClose}
+              enabledContentTypes={enabledContentTypes}
+            />
           </TabsContent>
           <TabsContent value="external" className="pt-4">
             <ExternalTab onInserted={onClose} />
