@@ -73,6 +73,7 @@ import { logger } from "@/shared/lib/errors/logger-core";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { LexicalEditorProps } from "./types";
 import { EDITOR_PADDING_HORIZONTAL } from "./editor-layout-constants";
+import { MediaUsageContext, DEFAULT_MEDIA_USAGE } from "./media-usage-context";
 
 // =============================================================================
 // EditorInner - LexicalComposer内で使用
@@ -400,12 +401,17 @@ function LexicalEditorDesktopMounted({
     },
   }));
 
-  const { contentJson: _contentJsonForInitialStateOnly, ...editorInnerProps } =
-    props;
+  const {
+    contentJson: _contentJsonForInitialStateOnly,
+    mediaUsage,
+    ...editorInnerProps
+  } = props;
 
   return (
-    <LexicalComposer initialConfig={initialConfig}>
-      <EditorInner {...editorInnerProps} />
-    </LexicalComposer>
+    <MediaUsageContext value={mediaUsage ?? DEFAULT_MEDIA_USAGE}>
+      <LexicalComposer initialConfig={initialConfig}>
+        <EditorInner {...editorInnerProps} />
+      </LexicalComposer>
+    </MediaUsageContext>
   );
 }

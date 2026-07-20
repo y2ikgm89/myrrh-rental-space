@@ -24,6 +24,7 @@ import { InspectorFields } from "../InspectorFields";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Button, Input, Label } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { useMediaUsage } from "../../media-usage-context";
 
 // =============================================================================
 // Types
@@ -40,6 +41,7 @@ type FileInspectorPanelProps = {
 
 export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const updateNode = useNodeUpdater(nodeKey, $isFileNode);
 
   const [url, setUrl] = useState(() =>
@@ -68,7 +70,7 @@ export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
 
   const filePicker = useSingleMediaPicker({
     accept: "file",
-    defaultUsage: "GENERAL",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

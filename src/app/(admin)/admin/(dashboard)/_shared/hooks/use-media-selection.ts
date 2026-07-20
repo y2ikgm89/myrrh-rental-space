@@ -24,6 +24,28 @@ interface UseMediaSelectionOptions {
   initialSelected?: SelectedMedia[];
 }
 
+/**
+ * ライブラリ選択された `MediaData` を `SelectedMedia` に変換する。
+ *
+ * `width` / `height` / `title` はここで伝播する（drop すると ImagePlugin 等の
+ * 挿入経路で画像の intrinsic size / 音声タイトル初期値が失われる）。
+ * 純関数として切り出し、hook 本体（React state）とは独立に unit test できるようにしている。
+ */
+export function mediaDataToSelectedMedia(media: MediaData): SelectedMedia {
+  return {
+    id: media.id,
+    url: media.url,
+    ...(media.alt != null && { alt: media.alt }),
+    filename: media.filename,
+    mimeType: media.mimeType,
+    size: media.size,
+    ...(media.width != null && { width: media.width }),
+    ...(media.height != null && { height: media.height }),
+    ...(media.title != null && { title: media.title }),
+    source: "library",
+  };
+}
+
 interface UseMediaSelectionReturn {
   selectedIds: Set<string>;
   selectedMedia: SelectedMedia[];
@@ -55,17 +77,7 @@ export function useMediaSelection({
 
   const toggleSelection = (media: MediaData) => {
     if (mode === "single") {
-      setSelectedMedia([
-        {
-          id: media.id,
-          url: media.url,
-          ...(media.alt != null && { alt: media.alt }),
-          filename: media.filename,
-          mimeType: media.mimeType,
-          size: media.size,
-          source: "library",
-        },
-      ]);
+      setSelectedMedia([mediaDataToSelectedMedia(media)]);
     } else {
       setSelectedMedia((prev) => {
         const isAlreadySelected = prev.some((m) => m.id === media.id);
@@ -78,18 +90,7 @@ export function useMediaSelection({
           return prev;
         }
 
-        return [
-          ...prev,
-          {
-            id: media.id,
-            url: media.url,
-            ...(media.alt != null && { alt: media.alt }),
-            filename: media.filename,
-            mimeType: media.mimeType,
-            size: media.size,
-            source: "library",
-          },
-        ];
+        return [...prev, mediaDataToSelectedMedia(media)];
       });
     }
   };

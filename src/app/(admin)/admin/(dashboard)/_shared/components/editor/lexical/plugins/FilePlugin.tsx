@@ -17,6 +17,7 @@ import { MediaPickerDialog } from "@/admin/components/media-picker/MediaPickerDi
 import type { SelectedMedia } from "@/admin/types/media-picker";
 import { $createFileNode } from "../nodes/FileNode";
 import type { DialogPluginProps } from "../config/dialog-registry";
+import { useMediaUsage } from "../media-usage-context";
 
 // =============================================================================
 // Helpers
@@ -37,6 +38,7 @@ function extractFilenameFromUrl(url: string): string {
 
 export function FilePlugin({ isOpen, onClose }: DialogPluginProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
 
   const handleSelect = (media: SelectedMedia[]) => {
     const selected = media[0];
@@ -70,7 +72,7 @@ export function FilePlugin({ isOpen, onClose }: DialogPluginProps) {
       onClose={onClose}
       onSelect={handleSelect}
       selectionMode="single"
-      defaultUsage="GENERAL"
+      defaultUsage={mediaUsage}
       accept="file"
     />
   );

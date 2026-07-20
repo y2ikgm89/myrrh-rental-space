@@ -22,6 +22,7 @@ import { InspectorFields } from "../InspectorFields";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Button, Input, Label } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { useMediaUsage } from "../../media-usage-context";
 
 // =============================================================================
 // Types
@@ -41,6 +42,7 @@ export function AudioInspectorPanel({
   node,
 }: AudioInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const updateNode = useNodeUpdater(nodeKey, $isAudioNode);
 
   const [url, setUrl] = useState(() =>
@@ -65,7 +67,7 @@ export function AudioInspectorPanel({
 
   const audioPicker = useSingleMediaPicker({
     accept: "audio",
-    defaultUsage: "GENERAL",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

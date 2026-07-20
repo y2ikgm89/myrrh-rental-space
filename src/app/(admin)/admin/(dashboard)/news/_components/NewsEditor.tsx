@@ -161,6 +161,7 @@ export function NewsEditor({
           showToolbar
           flush
           height="100%"
+          mediaUsage="NEWS"
           onMarkClick={mode === "edit" && news ? editor.selectMark : undefined}
           onAddComment={
             mode === "edit" && news ? editor.handleAddComment : undefined

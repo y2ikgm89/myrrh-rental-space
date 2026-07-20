@@ -229,6 +229,7 @@ export function PostEditor({
           showToolbar
           flush
           height="100%"
+          mediaUsage="POST"
           onMarkClick={mode === "edit" && post ? editor.selectMark : undefined}
           onAddComment={
             mode === "edit" && post ? editor.handleAddComment : undefined

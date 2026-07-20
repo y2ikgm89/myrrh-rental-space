@@ -190,6 +190,7 @@ export function TermsInlineEditor({
           showToolbar
           flush
           height="100%"
+          mediaUsage="GENERAL"
           {...(TERMS_EDITOR_CONTENT_WIDTH_PX != null && {
             contentWidth: TERMS_EDITOR_CONTENT_WIDTH_PX,
           })}

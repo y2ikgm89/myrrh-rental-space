@@ -17,6 +17,7 @@ import { MediaPickerDialog } from "@/admin/components/media-picker/MediaPickerDi
 import type { SelectedMedia } from "@/admin/types/media-picker";
 import { $createAudioNode } from "../nodes/AudioNode";
 import type { DialogPluginProps } from "../config/dialog-registry";
+import { useMediaUsage } from "../media-usage-context";
 
 // =============================================================================
 // Component
@@ -24,6 +25,7 @@ import type { DialogPluginProps } from "../config/dialog-registry";
 
 export function AudioPlugin({ isOpen, onClose }: DialogPluginProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
 
   const handleSelect = (media: SelectedMedia[]) => {
     const selected = media[0];
@@ -35,7 +37,7 @@ export function AudioPlugin({ isOpen, onClose }: DialogPluginProps) {
     editor.update(() => {
       const audioNode = $createAudioNode({
         url: selected.url,
-        title: selected.alt ?? "",
+        title: selected.title ?? selected.filename ?? "",
         artist: "",
       });
       $insertNodeToNearestRoot(audioNode);
@@ -50,7 +52,7 @@ export function AudioPlugin({ isOpen, onClose }: DialogPluginProps) {
       onClose={onClose}
       onSelect={handleSelect}
       selectionMode="single"
-      defaultUsage="GENERAL"
+      defaultUsage={mediaUsage}
       accept="audio"
     />
   );
