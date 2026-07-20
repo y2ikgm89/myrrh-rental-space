@@ -121,12 +121,23 @@ export class MapEmbedNode extends DecoratorNode<ReactElement> {
     });
   }
 
+  // 修正: 従来は `div` タグを無条件 (要素チェックなし) にマッチさせていたため、
+  // Lexical の importDOM 選定アルゴリズム (`getConversionFunction`) が
+  // 同一 priority の他 div ベースカスタムノード (ButtonNode 等) を EDITOR_NODES
+  // 登録順で後勝ちに上書きしてしまい、無関係な <div> の HTML round-trip が
+  // サイレントに破壊されていた。GalleryContainerNode/PageBreakNode と同じ
+  // 「outer 関数で属性チェック → 非マッチは null」パターンに揃える。
   static override importDOM(): DOMConversionMap | null {
     return {
-      div: () => ({
-        conversion: $convertMapEmbedElement,
-        priority: 1,
-      }),
+      div: (element: HTMLElement) => {
+        if (element.hasAttribute("data-map")) {
+          return {
+            conversion: $convertMapEmbedElement,
+            priority: 1,
+          };
+        }
+        return null;
+      },
     };
   }
 
