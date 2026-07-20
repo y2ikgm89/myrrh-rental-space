@@ -102,13 +102,56 @@ export async function updateCustomer(
       resource: "customer",
       action: "update",
       resourceId: idValid.data,
-      execute: async () => {
-        await updateCustomerCommand(idValid.data, data);
-        return null;
+      execute: async (user) => {
+        const { previous } = await updateCustomerCommand(idValid.data, data);
+        const { ip, userAgent } = await buildAuditRequestContext();
+        return { previous, actorUserId: user.id, ip, userAgent };
       },
-      afterSuccess: () => {
+      afterSuccess: (outcome) => {
         updateTag(CACHE_TAGS.CUSTOMERS);
         updateTag(getCacheTag.customers.detail(idValid.data));
+
+        // 顧客プロフィールの改ざん（予約通知メールの横取り等）を追跡できるよう、
+        // executeAdminMutationResult の自動ログとは別に customer.profile として
+        // 変更前後を明示的に記録する。
+        fireAndForget(
+          createAuditLogRecord({
+            userId: outcome.actorUserId,
+            action: AuditAction.UPDATE,
+            resource: "customer.profile",
+            resourceId: idValid.data,
+            oldValue: outcome.previous,
+            newValue: {
+              lastName: data.lastName,
+              firstName: data.firstName,
+              lastNameKana: data.lastNameKana || null,
+              firstNameKana: data.firstNameKana || null,
+              companyName: data.companyName || null,
+              customerType: data.customerType,
+              email: data.email,
+              phoneNumber: data.phoneNumber || null,
+              postalCode: data.postalCode || null,
+              prefecture: data.prefecture || null,
+              city: data.city || null,
+              streetAddress: data.streetAddress || null,
+              building: data.building || null,
+              notes: data.notes || null,
+              marketingOptIn: data.marketingOptIn,
+              phoneContactOptIn: data.phoneContactOptIn,
+            },
+            metadata: {
+              ...(outcome.ip !== null && { ip: outcome.ip }),
+              ...(outcome.userAgent !== null && {
+                userAgent: outcome.userAgent,
+              }),
+            },
+          }),
+          {
+            operation: "auditLogUpdateCustomerProfile",
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+          },
+        );
       },
     });
     if (isMutationError(result)) {
@@ -118,10 +161,22 @@ export async function updateCustomer(
   });
 }
 
+/**
+ * 顧客ステータス変更（ACTIVE/INACTIVE/BLACKLIST 等）は予約可否に直結するため、
+ * executeAdminMutationResult の自動ログ（resource/action のみ）とは別に、
+ * `customer.status` として before/after を明示的に記録する。
+ */
 export async function updateCustomerStatus(
   id: string,
   status: CustomerStatus,
-): Promise<MutationResult> {
+): Promise<
+  MutationResult<{
+    previousStatus: CustomerStatus;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const parsed = updateCustomerStatusSchema.safeParse({ id, status });
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -131,13 +186,44 @@ export async function updateCustomerStatus(
     resource: "customer",
     action: "update",
     resourceId: parsed.data.id,
-    execute: async () => {
-      await updateCustomerStatusCommand(parsed.data.id, parsed.data.status);
-      return null;
+    execute: async (user) => {
+      const { previousStatus } = await updateCustomerStatusCommand(
+        parsed.data.id,
+        parsed.data.status,
+      );
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { previousStatus, actorUserId: user.id, ip, userAgent };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(parsed.data.id));
+
+      if (outcome.previousStatus === parsed.data.status) {
+        // 冪等 no-op: ステータスが実際には変化していない (audit noise を減らす)
+        return;
+      }
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.status",
+          resourceId: parsed.data.id,
+          oldValue: { status: outcome.previousStatus },
+          newValue: { status: parsed.data.status },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogUpdateCustomerStatus",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }
@@ -231,10 +317,41 @@ const anonymizeReasonSchema = z.enum(
   { error: "匿名化理由が不正です" },
 );
 
+// 匿名化で null 化される PII フィールド名（anonymizeCustomerCommand と同期）。
+// 「何が消えたか」の forensic 記録に値そのものは含めない — 匿名化イベントの
+// AuditLog に生 PII を永続保存すると、削除自体の趣旨（データ最小化）と衝突するため。
+const ANONYMIZED_CUSTOMER_FIELDS = [
+  "email",
+  "emailCanonical",
+  "lastName",
+  "firstName",
+  "lastNameKana",
+  "firstNameKana",
+  "phoneNumber",
+  "companyName",
+  "postalCode",
+  "prefecture",
+  "city",
+  "streetAddress",
+  "building",
+  "notes",
+  "isActive",
+  "marketingOptIn",
+  "phoneContactOptIn",
+  "userId",
+] as const;
+
 export async function anonymizeCustomer(
   id: string,
   reason: AnonymizeCustomerReason,
-): Promise<MutationResult> {
+): Promise<
+  MutationResult<{
+    anonymized: Awaited<ReturnType<typeof anonymizeCustomerCommand>>;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
     return createValidationMutationError(validatedId.error);
@@ -248,14 +365,15 @@ export async function anonymizeCustomer(
     resource: "customer",
     action: "delete",
     resourceId: validatedId.data,
-    execute: async () => {
-      await anonymizeCustomerCommand({
+    execute: async (user) => {
+      const anonymized = await anonymizeCustomerCommand({
         customerId: validatedId.data,
         reason: validatedReason.data,
       });
-      return null;
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { anonymized, actorUserId: user.id, ip, userAgent };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(validatedId.data));
       // RESEND-AUDIT M7: anonymize は suppression 状態を持つ Customer に対しては
@@ -263,6 +381,37 @@ export async function anonymizeCustomer(
       // 変化する。SUPPRESSED_EMAILS タグも invalidate する
       // (Resend webhook 経路 → invalidateSiteWideCacheFromRouteHandler と同型)。
       updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
+
+      // STATE-03: これまで anonymizeCustomerCommand の戻り値（reason/hadUserId/
+      // preservedSuppression 等）は破棄され、executeAdminMutationResult の自動ログ
+      // （resource/action/resourceId のみ）しか残らなかった。生 PII は載せず、
+      // 「何が匿名化されたか」を customer.anonymization として明示的に記録する。
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.anonymization",
+          resourceId: validatedId.data,
+          newValue: {
+            reason: outcome.anonymized.reason,
+            anonymizedAt: outcome.anonymized.anonymizedAt.toISOString(),
+            hadUserId: outcome.anonymized.hadUserId,
+            preservedSuppression: outcome.anonymized.preservedSuppression,
+            anonymizedFields: ANONYMIZED_CUSTOMER_FIELDS,
+          },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogAnonymizeCustomer",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+        },
+      );
     },
   });
 }
