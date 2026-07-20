@@ -69,10 +69,20 @@ export async function uploadMedia(
   });
 }
 
+const singleIdSchema = z.uuid();
+
 export async function updateMedia(
   id: string,
   data: MediaUpdateInput,
 ): Promise<MutationResult> {
+  // deleteMedia と対称に id を Zod で narrow する。素の string を
+  // resourceId / updateMediaCommand の WHERE に流すと、非 UUID 入力で
+  // Prisma P2023 の raw error を投げるか、AuditLog に garbage の resourceId
+  // が焼き付いて forensic クエリを壊す (Round-3 audit Finding #21 / low)。
+  const parsedId = singleIdSchema.safeParse(id);
+  if (!parsedId.success) {
+    return createValidationMutationError(parsedId.error);
+  }
   const parsed = mediaUpdateSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -81,10 +91,10 @@ export async function updateMedia(
   return executeAdminMutationResult({
     resource: "media",
     action: "update",
-    resourceId: id,
+    resourceId: parsedId.data,
     execute: async (user) => {
       await updateMediaCommand({
-        id,
+        id: parsedId.data,
         userId: user.id,
         restrictToOwnUploads: isEditorRole(user.role),
         alt: parsed.data.alt ?? null,
@@ -96,12 +106,10 @@ export async function updateMedia(
       return null;
     },
     afterSuccess: () => {
-      revalidateMedia(id);
+      revalidateMedia(parsedId.data);
     },
   });
 }
-
-const singleIdSchema = z.uuid();
 
 export async function deleteMedia(id: string): Promise<MutationResult> {
   const parsed = singleIdSchema.safeParse(id);
