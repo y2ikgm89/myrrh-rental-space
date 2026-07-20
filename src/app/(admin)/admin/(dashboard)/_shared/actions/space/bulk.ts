@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { emitBulkAuditRecords } from "@/admin/lib/audit";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
 import {
@@ -10,6 +11,8 @@ import {
   purgeMarketingHomeTag,
   firePurgeAsync,
 } from "@/shared/lib/cache";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
@@ -56,6 +59,17 @@ function invalidateSpaceCachesForTargets(
   purgeMarketingHomeTag();
 }
 
+function buildBulkAuditMetadata(args: {
+  ip: string | null;
+  userAgent: string | null;
+}): Record<string, unknown> {
+  return {
+    channel: "admin",
+    ...(args.ip !== null && { ip: args.ip }),
+    ...(args.userAgent !== null && { userAgent: args.userAgent }),
+  };
+}
+
 export async function bulkTogglePublishedSpaces(
   ids: string[],
   publish: boolean,
@@ -66,10 +80,29 @@ export async function bulkTogglePublishedSpaces(
   return executeAdminMutationResult({
     resource: "space",
     action: "publish",
-    execute: async () =>
-      bulkTogglePublishedSpacesCommand(parsed.data.ids, publish),
-    afterSuccess: (data) => {
-      invalidateSpaceCachesForTargets(data.affected);
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkTogglePublishedSpacesCommand(
+        parsed.data.ids,
+        publish,
+      );
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateSpaceCachesForTargets(outcome.affected);
+      emitBulkAuditRecords({
+        resource: "space.publish",
+        userId: outcome.actorUserId,
+        records: outcome.affected.map((a) => ({
+          resourceId: a.id,
+          action: AuditAction.UPDATE,
+          newValue: { isPublished: outcome.isPublished, slug: a.slug },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }
@@ -83,9 +116,27 @@ export async function bulkDeleteSpaces(
   return executeAdminMutationResult({
     resource: "space",
     action: "delete",
-    execute: async () => bulkDeleteSpacesCommand(parsed.data.ids),
-    afterSuccess: (data) => {
-      invalidateSpaceCachesForTargets(data.affected);
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkDeleteSpacesCommand(parsed.data.ids);
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateSpaceCachesForTargets(outcome.affected);
+      emitBulkAuditRecords({
+        resource: "space",
+        userId: outcome.actorUserId,
+        records: outcome.affected.map((a) => ({
+          resourceId: a.id,
+          action: AuditAction.DELETE,
+          oldValue: { slug: a.slug, isActive: true },
+          newValue: { isActive: false, isPublished: false, publishedAt: null },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }

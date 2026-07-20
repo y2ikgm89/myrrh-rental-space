@@ -3,7 +3,11 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { emitBulkAuditRecords } from "@/admin/lib/audit";
+import { ANONYMIZED_CUSTOMER_FIELDS } from "@/admin/actions/customer";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
@@ -54,6 +58,24 @@ function invalidateCustomerCachesForAnonymize(ids: string[]): void {
   updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
 }
 
+/**
+ * Shared metadata shape for bulk-customer audit records — the request context
+ * (ip / userAgent) is captured once at execute() time and shared across the
+ * per-id records so all rows within one bulk operation carry the same forensic
+ * headers. `channel: "admin"` mirrors the SSoT used by
+ * applyCancellationSideEffects for reservation cancels.
+ */
+function buildBulkAuditMetadata(args: {
+  ip: string | null;
+  userAgent: string | null;
+}): Record<string, unknown> {
+  return {
+    channel: "admin",
+    ...(args.ip !== null && { ip: args.ip }),
+    ...(args.userAgent !== null && { userAgent: args.userAgent }),
+  };
+}
+
 export async function bulkToggleActiveCustomers(
   ids: string[],
   isActive: boolean,
@@ -64,10 +86,29 @@ export async function bulkToggleActiveCustomers(
   return executeAdminMutationResult({
     resource: "customer",
     action: "update",
-    execute: async () =>
-      bulkToggleActiveCustomersCommand(parsed.data.ids, isActive),
-    afterSuccess: (data) => {
-      invalidateCustomerCachesForIds(data.affectedIds);
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkToggleActiveCustomersCommand(
+        parsed.data.ids,
+        isActive,
+      );
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateCustomerCachesForIds(outcome.affectedIds);
+      emitBulkAuditRecords({
+        resource: "customer.isActive",
+        userId: outcome.actorUserId,
+        records: outcome.affectedIds.map((id) => ({
+          resourceId: id,
+          action: AuditAction.UPDATE,
+          newValue: { isActive: outcome.isActive },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }
@@ -78,6 +119,10 @@ export async function bulkToggleActiveCustomers(
  * 決済歴のある顧客は物理削除できないため、旧 `bulkDeleteCustomers` は
  * `bulkAnonymizeCustomers` に置換された (破壊的変更)。RBAC は
  * `resource: "customer", action: "delete"` を維持。
+ *
+ * per-id audit は `resource: "customer.anonymization"` で発行し、
+ * 匿名化理由 / anonymizedAt / hadUserId / preservedSuppression /
+ * anonymizedFields を record する (`anonymizeCustomer` 単発版と同型)。
  */
 export async function bulkAnonymizeCustomers(
   ids: string[],
@@ -89,10 +134,35 @@ export async function bulkAnonymizeCustomers(
   return executeAdminMutationResult({
     resource: "customer",
     action: "delete",
-    execute: async () =>
-      bulkAnonymizeCustomersCommand(parsed.data.ids, parsed.data.reason),
-    afterSuccess: (data) => {
-      invalidateCustomerCachesForAnonymize(data.affectedIds);
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkAnonymizeCustomersCommand(
+        parsed.data.ids,
+        parsed.data.reason,
+      );
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateCustomerCachesForAnonymize(outcome.affectedIds);
+      emitBulkAuditRecords({
+        resource: "customer.anonymization",
+        userId: outcome.actorUserId,
+        records: outcome.affected.map((a) => ({
+          resourceId: a.id,
+          action: AuditAction.UPDATE,
+          newValue: {
+            reason: a.reason,
+            anonymizedAt: a.anonymizedAt.toISOString(),
+            hadUserId: a.hadUserId,
+            preservedSuppression: a.preservedSuppression,
+            anonymizedFields: ANONYMIZED_CUSTOMER_FIELDS,
+          },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }
@@ -115,10 +185,30 @@ export async function bulkSetStatusCustomers(
   return executeAdminMutationResult({
     resource: "customer",
     action: "update",
-    execute: async () =>
-      bulkSetStatusCustomersCommand(parsed.data.ids, parsed.data.newStatus),
-    afterSuccess: (data) => {
-      invalidateCustomerCachesForIds(data.affectedIds);
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkSetStatusCustomersCommand(
+        parsed.data.ids,
+        parsed.data.newStatus,
+      );
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateCustomerCachesForIds(outcome.affectedIds);
+      emitBulkAuditRecords({
+        resource: "customer.status",
+        userId: outcome.actorUserId,
+        records: outcome.affected.map((a) => ({
+          resourceId: a.id,
+          action: AuditAction.UPDATE,
+          oldValue: { status: a.previousStatus },
+          newValue: { status: outcome.newStatus },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }

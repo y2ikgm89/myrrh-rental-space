@@ -17,6 +17,7 @@ const mockAnonymizeCustomerCommand = mock<
     anonymizedAt: Date;
     reason: string;
     hadUserId: boolean;
+    preservedSuppression: boolean;
   }>
 >(({ customerId, reason }) =>
   Promise.resolve({
@@ -24,6 +25,7 @@ const mockAnonymizeCustomerCommand = mock<
     anonymizedAt: new Date(),
     reason,
     hadUserId: false,
+    preservedSuppression: false,
   }),
 );
 
@@ -145,6 +147,7 @@ describe("bulkAnonymizeCustomersCommand", () => {
         anonymizedAt: new Date(),
         reason,
         hadUserId: false,
+        preservedSuppression: false,
       }),
     );
   });
@@ -159,6 +162,7 @@ describe("bulkAnonymizeCustomersCommand", () => {
       expect(result).toEqual({
         count: 0,
         affectedIds: [],
+        affected: [],
         skippedIds: [],
       });
       expect(mockAnonymizeCustomerCommand).not.toHaveBeenCalled();
@@ -172,6 +176,10 @@ describe("bulkAnonymizeCustomersCommand", () => {
 
       expect(result.count).toBe(2);
       expect(result.affectedIds).toEqual([CUSTOMER_A.id, CUSTOMER_B.id]);
+      expect(result.affected.map((a) => a.id)).toEqual([
+        CUSTOMER_A.id,
+        CUSTOMER_B.id,
+      ]);
       expect(result.skippedIds).toEqual([]);
       expect(mockAnonymizeCustomerCommand).toHaveBeenCalledTimes(2);
       expect(mockAnonymizeCustomerCommand).toHaveBeenNthCalledWith(1, {
@@ -197,6 +205,7 @@ describe("bulkAnonymizeCustomersCommand", () => {
             anonymizedAt: new Date(),
             reason,
             hadUserId: false,
+            preservedSuppression: false,
           }),
       );
 
