@@ -25,9 +25,18 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import * as settingsCommands from "@/shared/domain/settings/commands";
+import { getRefundPolicySettings } from "@/shared/domain/settings/admin-queries";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 
 import { refundPolicyFormSchema } from "./schemas/refund-policy";
 
+/**
+ * 返金ポリシー変更 — 返金額の算定ルールに直結するため、変更前後を AuditLog に残す
+ * （executeAdminMutationResult の自動ログは resource/action のみで diff を持たない）。
+ */
 export async function updateRefundPolicySettings(
   _prev: SubmissionResult | undefined,
   formData: FormData,
@@ -39,7 +48,8 @@ export async function updateRefundPolicySettings(
       const result = await executeAdminMutationResult({
         resource: "settings",
         action: "manage",
-        execute: async () => {
+        execute: async (user) => {
+          const previous = await getRefundPolicySettings();
           const policy = data.refundPolicyEnabled
             ? {
                 tiers: data.refundPolicyTiers,
@@ -47,10 +57,32 @@ export async function updateRefundPolicySettings(
               }
             : null;
           await settingsCommands.updateRefundPolicy(policy);
-          return null;
+          const { ip, userAgent } = await buildAuditRequestContext();
+          return { previous, policy, actorUserId: user.id, ip, userAgent };
         },
-        afterSuccess: () => {
+        afterSuccess: (outcome) => {
           invalidateSiteWideCache(CACHE_TAGS.BUSINESS_SETTINGS);
+
+          fireAndForget(
+            createAuditLogRecord({
+              userId: outcome.actorUserId,
+              action: "UPDATE",
+              resource: "settings.refundPolicy",
+              oldValue: { refundPolicy: outcome.previous },
+              newValue: { refundPolicy: outcome.policy },
+              metadata: {
+                ...(outcome.ip !== null && { ip: outcome.ip }),
+                ...(outcome.userAgent !== null && {
+                  userAgent: outcome.userAgent,
+                }),
+              },
+            }),
+            {
+              operation: "auditLogUpdateRefundPolicy",
+              category: ErrorCategory.DATABASE,
+              severity: ErrorSeverity.MEDIUM,
+            },
+          );
         },
       });
       if (isMutationError(result)) {
