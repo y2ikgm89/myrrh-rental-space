@@ -125,10 +125,21 @@ export class InstagramNode extends DecoratorNode<ReactElement> {
         }
         return null;
       },
-      iframe: () => ({
-        conversion: $convertInstagramElement,
-        priority: 2, // YouTubeNode (priority: 0), XNode (priority: 1) より高い優先度
-      }),
+      // 修正: 従来は `iframe` タグを無条件 (src チェックなし) にマッチさせていたため、
+      // priority が最も高い本マッチャーが YouTube/Vimeo/X の iframe も含めた
+      // 「あらゆる iframe」の候補として無条件に選ばれ、それらの HTML round-trip を
+      // サイレントに破壊していた。他の埋め込みノードと同じ
+      // 「outer 関数で src チェック → 非マッチは null」パターンに揃える。
+      iframe: (element: HTMLElement) => {
+        const src = element.getAttribute("src") ?? "";
+        if (!/instagram\.com\/p\/[a-zA-Z0-9_-]+\/embed/.test(src)) {
+          return null;
+        }
+        return {
+          conversion: $convertInstagramElement,
+          priority: 2, // YouTubeNode/VimeoNode (priority: 0), XNode (priority: 1) より高い優先度
+        };
+      },
     };
   }
 

@@ -35,6 +35,26 @@ import {
   cellBackgroundColorState,
 } from "@/admin/components/editor/lexical/nodes/CustomTableCellNode";
 import { $createCustomTableNode } from "@/admin/components/editor/lexical/nodes/CustomTableNode";
+import {
+  $createYouTubeNode,
+  $isYouTubeNode,
+  videoIdState as youTubeVideoIdState,
+} from "@/admin/components/editor/lexical/nodes/YouTubeNode";
+import {
+  $createVimeoNode,
+  $isVimeoNode,
+  vimeoVideoIdState,
+} from "@/admin/components/editor/lexical/nodes/VimeoNode";
+import {
+  $createXNode,
+  $isXNode,
+  tweetIdState,
+} from "@/admin/components/editor/lexical/nodes/XNode";
+import {
+  $createInstagramNode,
+  $isInstagramNode,
+  postIdState,
+} from "@/admin/components/editor/lexical/nodes/InstagramNode";
 import { createInlineIcon, createSpan } from "@/shared/lib/portable-text";
 import {
   EMPTY_LEXICAL_EDITOR_STATE_JSON,
@@ -203,6 +223,64 @@ describe("exportDOM/importDOM round-trip parity", () => {
       expect($getState(cellNode, cellBackgroundColorState)).toBe(
         "rgb(255, 0, 0)",
       );
+    });
+  });
+
+  test("YouTube/Vimeo/X/Instagram: 混在ドキュメントでも各iframeが自ノード型として round-trip で復元される", () => {
+    const editor = createProjectHeadlessEditor();
+
+    editor.update(
+      () => {
+        const root = $getRoot();
+        root.clear();
+        root.append(
+          $createYouTubeNode({ videoId: "dQw4w9WgXcQ" }),
+          $createVimeoNode({ videoId: "76979871" }),
+          $createXNode({ tweetId: "1234567890123456" }),
+          $createInstagramNode({ postId: "CqIbCzYMi5C" }),
+        );
+      },
+      { discrete: true },
+    );
+
+    const json = JSON.stringify(editor.getEditorState().toJSON());
+    const html = renderEditorStateJsonToHtmlCore(json);
+    expect(html).toContain("youtube.com/embed/dQw4w9WgXcQ");
+    expect(html).toContain("player.vimeo.com/video/76979871");
+    expect(html).toContain("Tweet.html?id=1234567890123456");
+    expect(html).toContain("instagram.com/p/CqIbCzYMi5C/embed");
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const nodes = $dfs().map(({ node }) => node);
+
+      const youTubeNode = nodes.find($isYouTubeNode);
+      expect(youTubeNode).toBeDefined();
+      if (youTubeNode) {
+        expect($getState(youTubeNode, youTubeVideoIdState)).toBe("dQw4w9WgXcQ");
+      }
+
+      const vimeoNode = nodes.find($isVimeoNode);
+      expect(vimeoNode).toBeDefined();
+      if (vimeoNode) {
+        expect($getState(vimeoNode, vimeoVideoIdState)).toBe("76979871");
+      }
+
+      const xNode = nodes.find($isXNode);
+      expect(xNode).toBeDefined();
+      if (xNode) {
+        expect($getState(xNode, tweetIdState)).toBe("1234567890123456");
+      }
+
+      const instagramNode = nodes.find($isInstagramNode);
+      expect(instagramNode).toBeDefined();
+      if (instagramNode) {
+        expect($getState(instagramNode, postIdState)).toBe("CqIbCzYMi5C");
+      }
     });
   });
 });

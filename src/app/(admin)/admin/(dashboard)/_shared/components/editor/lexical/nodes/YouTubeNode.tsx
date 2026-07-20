@@ -121,12 +121,21 @@ export class YouTubeNode extends DecoratorNode<ReactElement> {
     });
   }
 
+  // 修正: 従来は `iframe` タグを無条件 (src チェックなし) にマッチさせていたため、
+  // Lexical の importDOM 選定アルゴリズム (`getConversionFunction`) が候補として
+  // 常に非 null を返し、priority がより高い InstagramNode に無条件で敗れて
+  // YouTube の HTML round-trip がサイレントに破壊されていた。MapEmbedNode と同じ
+  // 「outer 関数で src チェック → 非マッチは null」パターンに揃える。
   static override importDOM(): DOMConversionMap | null {
     return {
-      iframe: () => ({
-        conversion: $convertYouTubeElement,
-        priority: 0,
-      }),
+      iframe: (element: HTMLElement) => {
+        const src = element.getAttribute("src") ?? "";
+        if (!/youtube\.com\/embed\/[a-zA-Z0-9_-]+/.test(src)) return null;
+        return {
+          conversion: $convertYouTubeElement,
+          priority: 0,
+        };
+      },
     };
   }
 

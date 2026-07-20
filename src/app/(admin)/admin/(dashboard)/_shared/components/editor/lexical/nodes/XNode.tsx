@@ -103,12 +103,23 @@ export class XNode extends DecoratorNode<ReactElement> {
     });
   }
 
+  // 修正: 従来は `iframe` タグを無条件 (src チェックなし) にマッチさせていたため、
+  // Lexical の importDOM 選定アルゴリズム (`getConversionFunction`) が候補として
+  // 常に非 null を返し、priority がより高い InstagramNode に無条件で敗れて
+  // X の HTML round-trip がサイレントに破壊されていた。MapEmbedNode と同じ
+  // 「outer 関数で src チェック → 非マッチは null」パターンに揃える。
   static override importDOM(): DOMConversionMap | null {
     return {
-      iframe: () => ({
-        conversion: $convertXElement,
-        priority: 1, // YouTubeNode (priority: 0) より高い優先度
-      }),
+      iframe: (element: HTMLElement) => {
+        const src = element.getAttribute("src") ?? "";
+        if (!/platform\.twitter\.com\/embed\/Tweet\.html\?id=\d+/.test(src)) {
+          return null;
+        }
+        return {
+          conversion: $convertXElement,
+          priority: 1, // YouTubeNode/VimeoNode (priority: 0) より高い優先度
+        };
+      },
     };
   }
 
