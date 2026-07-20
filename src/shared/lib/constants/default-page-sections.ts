@@ -328,7 +328,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ),
         variant: "centered",
         buttons: [
-          button("予約する", "/reservation", "primary", "md"),
+          button("予約する", "/reservation"),
           button("スペースを見る", "/spaces", "secondary"),
         ],
         layout: {
