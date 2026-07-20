@@ -15,6 +15,9 @@
  * - checkActionRateLimit: action-helpers をモック
  * - oauth-revoke: upstream revoke ヘルパーをモック
  * - headers: next/headers をモック
+ * - createAuditLogRecord / buildAuditRequestContext / fireAndForget:
+ *   unlinkAccountAction の SEC-MYPAGE-02 系 audit 記録をモック
+ *   （mypage-profile-audit.test.ts と同一パターン）
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
@@ -166,9 +169,49 @@ mock.module("@/shared/lib/errors/server", () => ({
   criticalFetch: mock(() => Promise.resolve(null)),
 }));
 
+// unlinkAccountAction の SEC-MYPAGE-02 系 audit 記録を捕捉する
+type CreateAuditLogRecordInput = {
+  readonly userId?: string;
+  readonly action: string;
+  readonly resource: string;
+  readonly resourceId?: string;
+  readonly newValue?: unknown;
+  readonly metadata?: unknown;
+};
+const mockCreateAuditLogRecord = mock(
+  (_input: CreateAuditLogRecordInput): Promise<void> => Promise.resolve(),
+);
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: mockCreateAuditLogRecord,
+}));
+
+mock.module("@/shared/lib/audit-request-context", () => ({
+  buildAuditRequestContext: mock(() =>
+    Promise.resolve({ ip: "test-ip", userAgent: "test-ua" }),
+  ),
+}));
+
+// fireAndForget は next/server の `after()` に依存しリクエストスコープ外では
+// 内部 catch でフォールバックするが、テストでは audit 呼び出しを確実に捕捉する
+// ため同期的に promise を実行するだけのスタブに置き換える
+// （mypage-profile-audit.test.ts と同一パターン）。
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (promise: Promise<unknown>) => {
+    void promise.catch(() => undefined);
+  },
+  settleAllWithLogging: mock(() => Promise.resolve([])),
+  withTimeout: mock((p: Promise<unknown>) => p),
+}));
+
 // =============================================================================
 // テスト本体
 // =============================================================================
+
+async function flushMicrotasks(): Promise<void> {
+  // fireAndForget モックが仕込む `promise.catch` の microtask を排出する。
+  await Promise.resolve();
+  await Promise.resolve();
+}
 
 describe("getAccountLinksAction", () => {
   beforeEach(() => {
@@ -269,6 +312,7 @@ describe("unlinkAccountAction (CRITIC-3)", () => {
     mockUnlinkAccountApi.mockClear();
     mockGetAccessToken.mockClear();
     mockRevokeOAuthGrantForProvider.mockClear();
+    mockCreateAuditLogRecord.mockClear();
 
     mockGetSession.mockImplementation(() =>
       Promise.resolve({
@@ -347,6 +391,78 @@ describe("unlinkAccountAction (CRITIC-3)", () => {
       expect(result).toBeNull();
       expect(mockRevokeOAuthGrantForProvider).not.toHaveBeenCalled();
       expect(mockUnlinkAccountApi).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("SEC-MYPAGE-02: audit記録", () => {
+    test("成功時に customer リソースへ UPDATE の AuditLog を記録する", async () => {
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      const result = await unlinkAccountAction("google");
+      await flushMicrotasks();
+
+      expect(result).toBeNull();
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+      const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+      expect(call).toBeDefined();
+      if (!call) throw new Error("call is undefined");
+      expect(call.action).toBe("UPDATE");
+      expect(call.resource).toBe("customer");
+      expect(call.resourceId).toBe("customer-001");
+      expect(call.userId).toBe("user-001");
+      const metadata =
+        call.metadata && typeof call.metadata === "object"
+          ? (call.metadata as Record<string, unknown>)
+          : {};
+      expect(metadata["channel"]).toBe("customer-mypage");
+      expect(metadata["operation"]).toBe("customer_oauth_account_unlinked");
+      expect(metadata["providerId"]).toBe("google");
+      expect(metadata["ip"]).toBe("test-ip");
+      expect(metadata["userAgent"]).toBe("test-ua");
+    });
+
+    test("line 連携解除では providerId=line で記録する", async () => {
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      await unlinkAccountAction("line");
+      await flushMicrotasks();
+
+      const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+      expect(call).toBeDefined();
+      if (!call) throw new Error("call is undefined");
+      const metadata =
+        call.metadata && typeof call.metadata === "object"
+          ? (call.metadata as Record<string, unknown>)
+          : {};
+      expect(metadata["providerId"]).toBe("line");
+    });
+
+    test("未認証時は createAuditLogRecord が呼ばれない", async () => {
+      mockGetSession.mockImplementation(() => Promise.resolve(null));
+
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      await unlinkAccountAction("google");
+      await flushMicrotasks();
+
+      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+    });
+
+    test("DB unlink 失敗時は createAuditLogRecord が呼ばれない", async () => {
+      mockUnlinkAccountApi.mockImplementation(() =>
+        Promise.reject(new Error("last account cannot be unlinked")),
+      );
+
+      const { unlinkAccountAction } =
+        await import("@/app/(public)/mypage/_shared/actions/account");
+
+      await unlinkAccountAction("google");
+      await flushMicrotasks();
+
+      expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
     });
   });
 
