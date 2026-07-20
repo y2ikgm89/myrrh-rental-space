@@ -80,6 +80,9 @@ export class CustomHeadingNode extends HeadingNode {
         const originalConversion = output.conversion;
         return {
           ...output,
+          // Node Replacement で登録される生 HeadingNode.importDOM() の重複エントリと
+          // priority が同点だと tie-break で登録順が後の方が勝つため、常に上回るよう明示する
+          priority: 1,
           conversion: (element: HTMLElement) => {
             const converted = originalConversion(element);
             if (!converted) return null;
