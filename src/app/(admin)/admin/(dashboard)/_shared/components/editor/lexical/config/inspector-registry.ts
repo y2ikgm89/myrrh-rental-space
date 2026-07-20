@@ -19,6 +19,8 @@ import { $isButtonNode } from "../nodes/ButtonNode";
 import { $isImageNode } from "../nodes/ImageNode";
 import { $isCalloutNode } from "../nodes/CalloutNode";
 import { $isBookmarkNode } from "../nodes/BookmarkNode";
+import { $isInternalLinkCardNode } from "../nodes/InternalLinkCardNode";
+import { $isInlineIconNode } from "../nodes/InlineIconNode";
 import { $isPullQuoteNode } from "../nodes/PullQuoteNode";
 import { $isRubyNode } from "../nodes/RubyNode";
 import { $isTooltipNode } from "../nodes/TooltipNode";
@@ -45,6 +47,7 @@ import {
   $isTimelineItemNode,
 } from "../nodes/TimelineNode";
 import {
+  $isPricingTableContainerNode,
   $isPricingPlanNode,
   $isPricingFeatureNode,
 } from "../nodes/PricingTableNode";
@@ -86,6 +89,9 @@ export function getInspectableInfoFromRegistry(
   if ($isGroupNode(node)) return { nodeType: "group", node, nodeKey };
   if ($isCalloutNode(node)) return { nodeType: "callout", node, nodeKey };
   if ($isBookmarkNode(node)) return { nodeType: "bookmark", node, nodeKey };
+  if ($isInternalLinkCardNode(node))
+    return { nodeType: "internalLinkCard", node, nodeKey };
+  if ($isInlineIconNode(node)) return { nodeType: "inlineIcon", node, nodeKey };
   if ($isPullQuoteNode(node)) return { nodeType: "pullQuote", node, nodeKey };
   if ($isRubyNode(node)) return { nodeType: "ruby", node, nodeKey };
   if ($isTooltipNode(node)) return { nodeType: "tooltip", node, nodeKey };
@@ -114,6 +120,8 @@ export function getInspectableInfoFromRegistry(
     return { nodeType: "timelineContainer", node, nodeKey };
   if ($isTimelineItemNode(node))
     return { nodeType: "timelineItem", node, nodeKey };
+  if ($isPricingTableContainerNode(node))
+    return { nodeType: "pricingTableContainer", node, nodeKey };
   if ($isPricingPlanNode(node))
     return { nodeType: "pricingPlan", node, nodeKey };
   if ($isPricingFeatureNode(node))
@@ -147,6 +155,8 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
     "group",
     "callout",
     "bookmark",
+    "internalLinkCard",
+    "inlineIcon",
     "pullQuote",
     "ruby",
     "tooltip",
@@ -169,6 +179,7 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
     "galleryItem",
     "timelineContainer",
     "timelineItem",
+    "pricingTableContainer",
     "pricingPlan",
     "pricingFeature",
     "inlineImage",

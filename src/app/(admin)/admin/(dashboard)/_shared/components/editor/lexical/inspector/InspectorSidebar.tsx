@@ -11,12 +11,15 @@ import {
   type SelectedNodeInfo,
 } from "./hooks/use-selected-node";
 import { useInspectorSidebar } from "./inspector-sidebar-context";
+import { logger } from "@/shared/lib/errors/logger-core";
 import {
   ButtonInspectorPanel,
   ImageInspectorPanel,
   GroupInspectorPanel,
   CalloutInspectorPanel,
   BookmarkInspectorPanel,
+  InternalLinkCardInspectorPanel,
+  InlineIconInspectorPanel,
   PullQuoteInspectorPanel,
   RubyInspectorPanel,
   TooltipInspectorPanel,
@@ -39,6 +42,7 @@ import {
   GalleryItemInspectorPanel,
   TimelineContainerInspectorPanel,
   TimelineItemInspectorPanel,
+  PricingTableContainerInspectorPanel,
   PricingPlanInspectorPanel,
   PricingFeatureInspectorPanel,
   InlineImageInspectorPanel,
@@ -70,6 +74,11 @@ const INSPECTOR_PANEL_ID = "lexical-block-inspector-panel";
 function renderPanel(info: SelectedNodeInfo) {
   if (!info) return null;
 
+  // switch の各 case で info を絞り込むため、default 到達時（drift 検知時）は
+  // info の型が never に narrowing される。ログ用の nodeType はここで
+  // switch に入る前（絞り込み前）に読み出しておく。
+  const rawNodeType: string = info.nodeType;
+
   switch (info.nodeType) {
     case "button":
       return <ButtonInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
@@ -81,6 +90,17 @@ function renderPanel(info: SelectedNodeInfo) {
       return <CalloutInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
     case "bookmark":
       return <BookmarkInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "internalLinkCard":
+      return (
+        <InternalLinkCardInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
+    case "inlineIcon":
+      return (
+        <InlineIconInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
     case "pullQuote":
       return (
         <PullQuoteInspectorPanel nodeKey={info.nodeKey} node={info.node} />
@@ -145,6 +165,13 @@ function renderPanel(info: SelectedNodeInfo) {
       return (
         <TimelineItemInspectorPanel nodeKey={info.nodeKey} node={info.node} />
       );
+    case "pricingTableContainer":
+      return (
+        <PricingTableContainerInspectorPanel
+          nodeKey={info.nodeKey}
+          node={info.node}
+        />
+      );
     case "pricingPlan":
       return (
         <PricingPlanInspectorPanel nodeKey={info.nodeKey} node={info.node} />
@@ -197,6 +224,17 @@ function renderPanel(info: SelectedNodeInfo) {
       return (
         <TableCellInspectorPanel nodeKey={info.nodeKey} node={info.node} />
       );
+    default:
+      // Discriminated Union の exhaustive check。ここに到達するのは
+      // inspector-registry.ts / inspectable-nodes.ts の SelectedNodeInfo に
+      // nodeType が追加されたのに、このパネル分岐（手順4）が未実装のまま
+      // drift した場合のみ（本来コンパイルエラーで検知される）。
+      // 実行時にも silent null render にせず dev 時に検知できるよう記録する。
+      logger.warn(
+        "InspectorSidebar: 未対応の nodeType が選択されました（registry drift の可能性）",
+        { nodeType: rawNodeType },
+      );
+      return null;
   }
 }
 

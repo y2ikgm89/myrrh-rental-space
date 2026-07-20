@@ -17,6 +17,8 @@ import type { ButtonNode } from "../../nodes/ButtonNode";
 import type { ImageNode } from "../../nodes/ImageNode";
 import type { CalloutNode } from "../../nodes/CalloutNode";
 import type { BookmarkNode } from "../../nodes/BookmarkNode";
+import type { InternalLinkCardNode } from "../../nodes/InternalLinkCardNode";
+import type { InlineIconNode } from "../../nodes/InlineIconNode";
 import type { PullQuoteNode } from "../../nodes/PullQuoteNode";
 import type { CollapsibleContainerNode } from "../../nodes/CollapsibleContainerNode";
 import type { StepsContainerNode } from "../../nodes/StepsContainerNode";
@@ -41,6 +43,7 @@ import type {
   TimelineItemNode,
 } from "../../nodes/TimelineNode";
 import type {
+  PricingTableContainerNode,
   PricingPlanNode,
   PricingFeatureNode,
 } from "../../nodes/PricingTableNode";
@@ -71,6 +74,8 @@ export type InspectableNodeType =
   | "group"
   | "callout"
   | "bookmark"
+  | "internalLinkCard"
+  | "inlineIcon"
   | "pullQuote"
   | "ruby"
   | "tooltip"
@@ -93,6 +98,7 @@ export type InspectableNodeType =
   | "galleryItem"
   | "timelineContainer"
   | "timelineItem"
+  | "pricingTableContainer"
   | "pricingPlan"
   | "pricingFeature"
   | "inlineImage"
@@ -117,6 +123,12 @@ export type SelectedNodeInfo =
   | { nodeType: "group"; node: GroupNode; nodeKey: NodeKey }
   | { nodeType: "callout"; node: CalloutNode; nodeKey: NodeKey }
   | { nodeType: "bookmark"; node: BookmarkNode; nodeKey: NodeKey }
+  | {
+      nodeType: "internalLinkCard";
+      node: InternalLinkCardNode;
+      nodeKey: NodeKey;
+    }
+  | { nodeType: "inlineIcon"; node: InlineIconNode; nodeKey: NodeKey }
   | { nodeType: "pullQuote"; node: PullQuoteNode; nodeKey: NodeKey }
   | { nodeType: "ruby"; node: RubyNode; nodeKey: NodeKey }
   | { nodeType: "tooltip"; node: TooltipNode; nodeKey: NodeKey }
@@ -151,6 +163,11 @@ export type SelectedNodeInfo =
       nodeKey: NodeKey;
     }
   | { nodeType: "timelineItem"; node: TimelineItemNode; nodeKey: NodeKey }
+  | {
+      nodeType: "pricingTableContainer";
+      node: PricingTableContainerNode;
+      nodeKey: NodeKey;
+    }
   | { nodeType: "pricingPlan"; node: PricingPlanNode; nodeKey: NodeKey }
   | { nodeType: "pricingFeature"; node: PricingFeatureNode; nodeKey: NodeKey }
   | { nodeType: "inlineImage"; node: InlineImageNode; nodeKey: NodeKey }
