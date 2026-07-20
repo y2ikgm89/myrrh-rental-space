@@ -479,10 +479,24 @@ export async function updateAdminReservationCommand(
         });
       }
       if (newCouponId) {
-        await tx.coupon.update({
-          where: { id: newCouponId },
-          data: { usageCount: { increment: 1 } },
-        });
+        // atomic claim: createAdminReservationCommand と同型の $executeRaw で
+        // usageLimit cap を強制する。素の increment だと、pre-tx の
+        // validateCoupon 後に別 admin が同じ coupon を limit まで使い切った
+        // race で 2 admin が同時に claim したときに usageCount > usageLimit の
+        // over-use を許してしまう (Round-3 audit Finding #9 / medium)。
+        const claimed = await tx.$executeRaw`
+          UPDATE "coupons"
+          SET "usageCount" = "usageCount" + 1
+          WHERE "id" = ${newCouponId}::uuid
+            AND "isActive" = true
+            AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+        `;
+        if (claimed === 0) {
+          throw new DomainError(
+            "クーポンが利用できません（利用上限に達した可能性があります）",
+            "CONFLICT",
+          );
+        }
       }
     }
 

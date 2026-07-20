@@ -50,49 +50,68 @@ export async function updateReservationStatusCommand(
     status === ReservationStatus.CANCELLED &&
     previousStatus !== ReservationStatus.CANCELLED;
 
-  // 読取時の status を WHERE に含めた claim で更新する。二重送信・複数管理者の
-  // 同時操作等で読取後に status が変わっていた場合は count=0 となり、古い
-  // previousStatus に基づく副作用（確認メール・スマートロックパスコード発行等）を
-  // 呼び出し元が二重発火しないようにする。
-  const updated = await prisma.reservation.updateMany({
-    where: { id, deletedAt: null, status: previousStatus },
-    data: {
-      status,
-      icsSequence: { increment: 1 },
-      ...(isCancellation
-        ? { cancelledAt: new Date(), cancelledByType: CANCELLED_BY.ADMIN }
-        : {}),
-    },
-  });
-
-  if (updated.count === 0) {
-    throw new DomainError(
-      "予約のステータスが他の操作により変更されています。最新の状態を確認してください",
-      "CONFLICT",
-    );
-  }
-
-  // updateMany は更新後の行を返さないため読み直す。claim の WHERE は status のみを
-  // 条件にしているため、読取からこの claim までの間に別経路（詳細編集等）が
-  // icsSequence や予約内容を進めていた場合がある。icsSequence だけを読み直して
-  // 古い reservation の内容（startTime/space/notes 等）と組み合わせると、
-  // 「新しいSEQUENCEなのに古い内容」というカレンダークライアントにとって最悪の
-  // 不整合（古い内容が正として上書きされる）を生む。buildPayload に渡す全フィールドを
-  // 同じ読取から揃えて取得する。
-  const current = await prisma.reservation.findUnique({
-    where: { id },
-    include: {
-      space: {
-        select: {
-          name: true,
-          addressDetail: true,
-          location: { select: { address: true } },
-        },
+  // 全書込を interactive tx に包む。旧実装は updateMany と coupon 復元が
+  // 別 tx で走っており、更新側 commit 後 coupon 復元前に process crash が
+  // 起きると Coupon.usageCount が予約分だけ残る silent inconsistency に
+  // なっていた (deleteReservationCommand の tx 化と対称化)。
+  //
+  // 併せて、admin キャンセル経路で couponId 保有予約の usageCount 戻しが
+  // 完全に欠落していたバグ (Round-3 audit Finding #4 / high) を修正する:
+  // status = CANCELLED 遷移時に deleteReservationCommand と同型の
+  // updateMany claim (gt: 0 ガード付き) で decrement する。既存の
+  // applyCancellationSideEffects は decrement を行わないため、これがない
+  // と 30 件の CONFIRMED を admin が bulk cancel した瞬間に usageCount が
+  // 30 予約分だけ実 使用量から乖離し、以後のクーポン発行判定が false-limit に
+  // 到達して正当な顧客の申込みまで拒否される。
+  const current = await prisma.$transaction(async (tx) => {
+    const updated = await tx.reservation.updateMany({
+      where: { id, deletedAt: null, status: previousStatus },
+      data: {
+        status,
+        icsSequence: { increment: 1 },
+        ...(isCancellation
+          ? { cancelledAt: new Date(), cancelledByType: CANCELLED_BY.ADMIN }
+          : {}),
       },
-      customer: { select: CUSTOMER_SELECT },
-    },
+    });
+
+    if (updated.count === 0) {
+      throw new DomainError(
+        "予約のステータスが他の操作により変更されています。最新の状態を確認してください",
+        "CONFLICT",
+      );
+    }
+
+    if (isCancellation && reservation.couponId !== null) {
+      await tx.coupon.updateMany({
+        where: { id: reservation.couponId, usageCount: { gt: 0 } },
+        data: { usageCount: { decrement: 1 } },
+      });
+    }
+
+    // claim の WHERE は status のみを条件にしているため、読取からこの claim までの間に
+    // 別経路（詳細編集等）が icsSequence や予約内容を進めていた場合がある。
+    // icsSequence だけを読み直して古い reservation の内容 (startTime/space/notes 等) と
+    // 組み合わせると、「新しい SEQUENCE なのに古い内容」というカレンダークライアントに
+    // とって最悪の不整合（古い内容が正として上書きされる）を生む。buildPayload に渡す
+    // 全フィールドを同じ読取から揃えて取得する。同 tx 内・claim 成功後の read の
+    // ため予約が同時に消えることはなく findUniqueOrThrow で narrow できる。
+    return tx.reservation.findUniqueOrThrow({
+      where: { id },
+      include: {
+        space: {
+          select: {
+            name: true,
+            addressDetail: true,
+            location: { select: { address: true } },
+          },
+        },
+        customer: { select: CUSTOMER_SELECT },
+      },
+    });
   });
-  const source = current ?? reservation;
+
+  const source = current;
 
   return {
     previousStatus,
@@ -113,7 +132,7 @@ export async function updateReservationStatusCommand(
       endTime: source.endTime,
       totalPrice: source.totalPrice,
       notes: source.notes,
-      icsSequence: current ? current.icsSequence : reservation.icsSequence + 1,
+      icsSequence: source.icsSequence,
     }),
   };
 }
@@ -199,8 +218,14 @@ export async function restoreReservationStatusCommand(
       }
     }
 
-    return tx.reservation.update({
-      where: { id, deletedAt: null },
+    // updateMany + status guard による atomic claim。読取後 tx 内 write 前に
+    // 別 admin (or SUPER_ADMIN) が同じ予約を復元 / 再キャンセル / 削除して
+    // status を変えているケースでは count=0 となり CONFLICT で abort する。
+    // 素の update({where: {id, deletedAt: null}}) だと stale な previousStatus
+    // に基づく副作用 (icsSequence 巻き戻し / notification 二重) を silent に
+    // 通してしまう (Round-3 audit Finding #14 / medium)。
+    const claim = await tx.reservation.updateMany({
+      where: { id, deletedAt: null, status: previousStatus },
       data: {
         status: targetStatus,
         icsSequence: { increment: 1 },
@@ -212,6 +237,17 @@ export async function restoreReservationStatusCommand(
             }
           : {}),
       },
+    });
+
+    if (claim.count === 0) {
+      throw new DomainError(
+        "予約のステータスが他の操作により変更されています。最新の状態を確認してください",
+        "CONFLICT",
+      );
+    }
+
+    return tx.reservation.findUniqueOrThrow({
+      where: { id },
       select: { icsSequence: true },
     });
   });
@@ -359,10 +395,23 @@ export async function restoreReservationCommand(id: string) {
     });
 
     if (reservation.couponId) {
-      await tx.coupon.update({
-        where: { id: reservation.couponId },
-        data: { usageCount: { increment: 1 } },
-      });
+      // atomic claim: createAdminReservationCommand / updateAdminReservationCommand と
+      // 同型の $executeRaw で usageLimit cap を強制する。素の increment だと、
+      // 削除中に別経路で usageLimit まで消費された coupon を復元時に silently
+      // over-limit に押し上げる (Round-3 audit Finding #10 / medium)。
+      const claimed = await tx.$executeRaw`
+        UPDATE "coupons"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "id" = ${reservation.couponId}::uuid
+          AND "isActive" = true
+          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+      `;
+      if (claimed === 0) {
+        throw new DomainError(
+          "クーポンが利用できません（無効化されたか、利用上限に達した可能性があります）",
+          "CONFLICT",
+        );
+      }
     }
   });
 
