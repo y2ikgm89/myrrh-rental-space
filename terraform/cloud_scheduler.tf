@@ -118,6 +118,13 @@ locals {
       path        = "/api/cron/stripe-event-cleanup"
       description = "StripeEvent dedup table retention (delete rows older than 90 days) + crash-recovery unblock (delete processedAt=null rows older than 10 min so Stripe retry can re-claim). Daily 03:00 JST."
     },
+    # 段階 A: 監査ログ強化で apply-create. 段階 B follow-up PR で imported_cron_jobs にも登録すること (tfstate rebuild 防御)
+    {
+      name        = "audit-log-integrity"
+      schedule    = "30 4 * * *"
+      path        = "/api/cron/audit-log-integrity"
+      description = "AuditLog HMAC hash-chain tamper detection (previously manual-only via SUPER_ADMIN dashboard button). Daily 04:30 JST; logs CRITICAL on failure."
+    },
   ]
 }
 

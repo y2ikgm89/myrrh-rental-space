@@ -157,6 +157,7 @@ const CLOUD_BUILD_REGIONS = [
 // 自動作成され、post-merge terraform-apply で GCP に反映される。本 list は
 // 完全同期契約 (drift-detect gate に相当、audit で unexpected/missing を検出)。
 export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
+  "audit-log-integrity",
   "calendar-sync",
   "calendar-sync-retry",
   "customer-risk-scan",
