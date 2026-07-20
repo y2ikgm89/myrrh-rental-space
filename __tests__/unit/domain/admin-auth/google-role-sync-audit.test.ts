@@ -6,6 +6,7 @@ const mockFindUnique = mock();
 const mockUserCreate = mock();
 const mockUserUpdate = mock();
 const mockCreateAuditLogRecord = mock();
+const mockCreateNotificationCommand = mock();
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -19,6 +20,15 @@ mock.module("@/shared/db/prisma", () => ({
 
 mock.module("@/shared/domain/audit-log/commands", () => ({
   createAuditLogRecord: mockCreateAuditLogRecord,
+}));
+
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: mockCreateNotificationCommand,
+}));
+
+mock.module("@/shared/lib/validations/enums/helpers", () => ({
+  NOTIFICATION_TYPE: { SECURITY_ROLE_CHANGE: "security_role_change" },
+  NOTIFICATION_TYPE_LABELS: { security_role_change: "管理者ロール変更" },
 }));
 
 mock.module("@/shared/lib/google-workspace/cloud-identity-groups", () => ({
@@ -55,9 +65,11 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
     mockUserCreate.mockReset();
     mockUserUpdate.mockReset();
     mockCreateAuditLogRecord.mockReset();
+    mockCreateNotificationCommand.mockReset();
+    mockCreateNotificationCommand.mockResolvedValue(undefined);
   });
 
-  test("Google グループ同期で管理ユーザーを新規作成したら監査ログを残す", async () => {
+  test("Google グループ同期で管理ユーザーを新規作成したら監査ログを残す（通知は送らない）", async () => {
     mockFindUnique.mockResolvedValueOnce(null);
     mockUserCreate.mockResolvedValueOnce({
       id: "11111111-1111-4111-8111-111111111111",
@@ -82,6 +94,8 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
         }),
       }),
     );
+    // 新規作成は「ロール変更」ではないため通知対象外
+    expect(mockCreateNotificationCommand).not.toHaveBeenCalled();
   });
 
   test("Google グループ同期でロールが変わったら ROLE_CHANGE を残す", async () => {
@@ -117,5 +131,66 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
         }),
       }),
     );
+    expect(mockCreateNotificationCommand).toHaveBeenCalledTimes(1);
+    expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "security_role_change",
+        resourceType: "user",
+        message: expect.stringContaining("VIEWER → ADMIN"),
+      }),
+    );
+  });
+
+  test("ロールが変わらない同期（emailVerified等の更新のみ）では通知しない", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      id: "33333333-3333-4333-8333-333333333333",
+      email: "admin@example.com",
+      name: "admin",
+      image: null,
+      role: "ADMIN",
+      emailVerified: false,
+    });
+    mockUserUpdate.mockResolvedValueOnce({
+      id: "33333333-3333-4333-8333-333333333333",
+      email: "admin@example.com",
+      name: "admin",
+      image: null,
+      role: "ADMIN",
+      emailVerified: true,
+    });
+
+    await syncAdminAuthUserFromGoogleGroups("admin@example.com");
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "UPDATE" }),
+    );
+    expect(mockCreateNotificationCommand).not.toHaveBeenCalled();
+  });
+
+  test("通知の書込が失敗しても syncAdminAuthUserFromGoogleGroups 自体は成功する", async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      id: "44444444-4444-4444-8444-444444444444",
+      email: "admin@example.com",
+      name: "admin",
+      image: null,
+      role: "VIEWER",
+      emailVerified: true,
+    });
+    const updated = {
+      id: "44444444-4444-4444-8444-444444444444",
+      email: "admin@example.com",
+      name: "admin",
+      image: null,
+      role: "ADMIN",
+      emailVerified: true,
+    } as const;
+    mockUserUpdate.mockResolvedValueOnce(updated);
+    mockCreateNotificationCommand.mockRejectedValueOnce(
+      new Error("notification db error"),
+    );
+
+    const result = await syncAdminAuthUserFromGoogleGroups("admin@example.com");
+
+    expect(result).toEqual(updated);
   });
 });

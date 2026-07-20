@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { isGoogleWorkspaceGroupMember } from "@/shared/lib/google-workspace/cloud-identity-groups";
 import { DASHBOARD_ROLES, isDashboardRole } from "@/shared/lib/admin-roles";
 import {
@@ -11,6 +12,10 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { AdminAuthUser } from "./queries";
 
@@ -107,6 +112,30 @@ async function writeGoogleRoleSyncAudit(input: {
   }
 }
 
+async function notifyRoleChange(input: {
+  email: string;
+  oldRole: Role;
+  newRole: Role;
+}): Promise<void> {
+  try {
+    await createNotificationCommand({
+      type: NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE,
+      title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE],
+      message: `${input.email} のロールが ${input.oldRole} → ${input.newRole} に変更されました（Google Workspace グループ同期）`,
+      resourceType: "user",
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "syncAdminAuthUserFromGoogleGroups.notifyRoleChange",
+        targetEmail: input.email,
+      },
+    });
+  }
+}
+
 export function isAdminRoleGroupSyncConfigured(): boolean {
   return readConfiguredRoleGroups() !== null;
 }
@@ -188,22 +217,28 @@ export async function syncAdminAuthUserFromGoogleGroups(
       },
     });
 
+    const roleChanged = existing.role !== updated.role;
+
     await writeGoogleRoleSyncAudit({
-      action:
-        existing.role === updated.role
-          ? AuditAction.UPDATE
-          : AuditAction.ROLE_CHANGE,
+      action: roleChanged ? AuditAction.ROLE_CHANGE : AuditAction.UPDATE,
       email,
       resourceId: updated.id,
-      oldValue:
-        existing.role === updated.role
-          ? { emailVerified: existing.emailVerified }
-          : { role: existing.role },
+      oldValue: roleChanged
+        ? { role: existing.role }
+        : { emailVerified: existing.emailVerified },
       newValue: {
         role: updated.role,
         emailVerified: updated.emailVerified,
       },
     });
+
+    if (roleChanged) {
+      await notifyRoleChange({
+        email,
+        oldRole: existing.role,
+        newRole: updated.role,
+      });
+    }
 
     return updated;
   }

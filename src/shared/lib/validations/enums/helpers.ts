@@ -750,6 +750,10 @@ export const NOTIFICATION_TYPE = {
   FAQ_STALE: "faq_stale",
   CUSTOMER_FLAGGED: "customer_flagged",
   SMART_LOCK_PASSCODE_FAILED: "smart_lock_passcode_failed",
+  SECURITY_LOGIN_FAILED_SPIKE: "security_login_failed_spike",
+  SECURITY_PERMISSION_DENIED: "security_permission_denied",
+  SECURITY_ROLE_CHANGE: "security_role_change",
+  SECURITY_AUDIT_INTEGRITY_FAILED: "security_audit_integrity_failed",
 } as const;
 
 export type NotificationType =
@@ -776,6 +780,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.FAQ_STALE]: "FAQ 鮮度チェック",
   [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "要注意顧客の検知",
   [NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED]: "スマートロック発行失敗",
+  [NOTIFICATION_TYPE.SECURITY_LOGIN_FAILED_SPIKE]: "管理者ログイン失敗の急増",
+  [NOTIFICATION_TYPE.SECURITY_PERMISSION_DENIED]: "権限エラーの多発",
+  [NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE]: "管理者ロール変更",
+  [NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED]: "監査ログ改ざん検出",
 };
 
 /**
@@ -799,6 +807,10 @@ export const NOTIFICATION_TYPE_ICONS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.FAQ_STALE]: "IconQuestionMark",
   [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "IconAlertTriangle",
   [NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED]: "IconLockOff",
+  [NOTIFICATION_TYPE.SECURITY_LOGIN_FAILED_SPIKE]: "IconShield",
+  [NOTIFICATION_TYPE.SECURITY_PERMISSION_DENIED]: "IconAlertCircle",
+  [NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE]: "IconUserCheck",
+  [NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED]: "IconAlertTriangle",
 };
 
 // =============================================================================
@@ -866,6 +878,10 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.FAQ_STALE]: "warning",
   [NOTIFICATION_TYPE.CUSTOMER_FLAGGED]: "destructive",
   [NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED]: "destructive",
+  [NOTIFICATION_TYPE.SECURITY_LOGIN_FAILED_SPIKE]: "destructive",
+  [NOTIFICATION_TYPE.SECURITY_PERMISSION_DENIED]: "destructive",
+  [NOTIFICATION_TYPE.SECURITY_ROLE_CHANGE]: "secondary",
+  [NOTIFICATION_TYPE.SECURITY_AUDIT_INTEGRITY_FAILED]: "destructive",
 };
 
 // =============================================================================

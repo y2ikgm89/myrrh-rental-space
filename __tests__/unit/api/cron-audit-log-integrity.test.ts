@@ -26,6 +26,10 @@ const mockVerifyAuditLogIntegrity = mock<() => Promise<IntegrityResult>>(() =>
   }),
 );
 
+const mockCreateNotificationCommand = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+
 const mockLogError = mock<() => void>(() => undefined);
 const mockLoggerInfo = mock<() => void>(() => undefined);
 
@@ -60,6 +64,21 @@ mock.module("@/shared/domain/audit-log/integrity", () => ({
   verifyAuditLogIntegrity: (
     ...args: Parameters<typeof mockVerifyAuditLogIntegrity>
   ) => mockVerifyAuditLogIntegrity(...args),
+}));
+
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: (
+    ...args: Parameters<typeof mockCreateNotificationCommand>
+  ) => mockCreateNotificationCommand(...args),
+}));
+
+mock.module("@/shared/lib/validations/enums/helpers", () => ({
+  NOTIFICATION_TYPE: {
+    SECURITY_AUDIT_INTEGRITY_FAILED: "security_audit_integrity_failed",
+  },
+  NOTIFICATION_TYPE_LABELS: {
+    security_audit_integrity_failed: "監査ログ改ざん検出",
+  },
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -124,6 +143,7 @@ describe("GET /api/cron/audit-log-integrity", () => {
   beforeEach(() => {
     mockCreateAuditLogRecord.mockReset();
     mockVerifyAuditLogIntegrity.mockReset();
+    mockCreateNotificationCommand.mockReset();
     mockLogError.mockReset();
     mockLoggerInfo.mockReset();
     mockAuthorizeCronRequest.mockReset();
@@ -133,6 +153,7 @@ describe("GET /api/cron/audit-log-integrity", () => {
     mockConnection.mockResolvedValue(undefined);
     mockAuthorizeCronRequest.mockResolvedValue(null);
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
+    mockCreateNotificationCommand.mockResolvedValue(undefined);
     mockVerifyAuditLogIntegrity.mockResolvedValue({
       ok: true,
       checkedCount: 0,
@@ -202,6 +223,7 @@ describe("GET /api/cron/audit-log-integrity", () => {
     });
     expect(mockLoggerInfo).toHaveBeenCalledTimes(1);
     expect(mockLogError).not.toHaveBeenCalled();
+    expect(mockCreateNotificationCommand).not.toHaveBeenCalled();
   });
 
   test("改ざん検出時 → 200 のまま（cron のリトライでは解消しないため）だが CRITICAL で logError する", async () => {
@@ -243,6 +265,37 @@ describe("GET /api/cron/audit-log-integrity", () => {
       }),
     );
     expect(mockLoggerInfo).not.toHaveBeenCalled();
+    expect(mockCreateNotificationCommand).toHaveBeenCalledTimes(1);
+    expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "security_audit_integrity_failed",
+        resourceType: "auditLog",
+      }),
+    );
+  });
+
+  test("改ざん検出時に通知の書込自体が失敗しても cron は 200 のまま（通知失敗は握りつぶす）", async () => {
+    mockVerifyAuditLogIntegrity.mockResolvedValue({
+      ok: false,
+      checkedCount: 1,
+      latestSequence: "1",
+      latestHash: "abc",
+      checkedAt: "2026-07-20T04:30:00.000Z",
+      failures: [{ sequence: "1", id: "row-1", reason: "SEQUENCE_GAP" }],
+    });
+    mockCreateNotificationCommand.mockRejectedValue(
+      new Error("notification db error"),
+    );
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual(
+      expect.objectContaining({ ok: false, failureCount: 1 }),
+    );
+    // CRITICAL (改ざん本体) + LOW (通知失敗) の2回 logError される
+    expect(mockLogError).toHaveBeenCalledTimes(2);
   });
 
   test("verifyAuditLogIntegrity が例外をスロー → 500 を返す", async () => {
