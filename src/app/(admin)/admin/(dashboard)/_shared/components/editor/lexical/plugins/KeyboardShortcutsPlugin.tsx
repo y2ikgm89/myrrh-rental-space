@@ -44,7 +44,7 @@ type ShortcutEntry = {
   description: string;
 };
 
-const HEADING_TAGS = new Set<string>(["h1", "h2", "h3", "h4"]);
+const HEADING_TAGS = new Set<string>(["h1", "h2", "h3", "h4", "h5", "h6"]);
 
 function isHeadingTag(value: string): value is HeadingTagType {
   return HEADING_TAGS.has(value);
@@ -64,6 +64,8 @@ const SHORTCUT_LIST: ShortcutEntry[] = [
   { keys: "Ctrl+Shift+2", description: "見出し2" },
   { keys: "Ctrl+Shift+3", description: "見出し3" },
   { keys: "Ctrl+Shift+4", description: "見出し4" },
+  { keys: "Ctrl+Shift+5", description: "見出し5" },
+  { keys: "Ctrl+Shift+6", description: "見出し6" },
   { keys: "Ctrl+Shift+7", description: "番号付きリスト" },
   { keys: "Ctrl+Shift+8", description: "箇条書き" },
   { keys: "Ctrl+Shift+K", description: "リンク挿入" },
@@ -77,6 +79,14 @@ const SHORTCUT_LIST: ShortcutEntry[] = [
     keys: "Ctrl+Shift+0",
     description: "ブロック設定パネル表示切替（本文ブロック用）",
   },
+  // ルビ / ツールチップは専用キーバインドを割り当てない設計判断:
+  // - 空いている単一文字キーのうち意味の通る候補（R/T）は Ctrl+Shift+T が
+  //   主要ブラウザで「閉じたタブを再度開く」に予約済みで JS に届かず実用にならない
+  // - 選択範囲がなくても「/」コマンド・挿入メニューから起動でき（本 PR で追加）、
+  //   ボタン/アイコン挿入等の他 dialog 系ウィジェットと同様に新規キーバインドなしで
+  //   発見可能なため、フローティングツールバー起動と合わせてここに記載するのみとする
+  { keys: "「/」または挿入メニュー", description: "ルビを挿入" },
+  { keys: "「/」または挿入メニュー", description: "ツールチップを挿入" },
 ];
 
 // =============================================================================
@@ -108,7 +118,7 @@ export function ShortcutsHelpDialog({
           <div className="space-y-2">
             {SHORTCUT_LIST.map((entry) => (
               <div
-                key={entry.keys}
+                key={entry.description}
                 className="flex items-center justify-between text-sm"
               >
                 <span className="text-muted-foreground">
@@ -156,8 +166,8 @@ export function KeyboardShortcutsPlugin({
           return true;
         }
 
-        // Ctrl+Shift+1~4: 見出し
-        if (event.key >= "1" && event.key <= "4") {
+        // Ctrl+Shift+1~6: 見出し
+        if (event.key >= "1" && event.key <= "6") {
           event.preventDefault();
           const tag = `h${event.key}`;
           if (!isHeadingTag(tag)) return false;
