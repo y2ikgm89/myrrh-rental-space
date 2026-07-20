@@ -18,11 +18,21 @@ const noTrailingSlash = z.url().refine((v) => !v.endsWith("/"), {
   message: "must not end with trailing slash (paths are concatenated)",
 });
 
+/**
+ * ローカル開発の既定値。`.env.example` が案内する値と同じ（`bun run dev` は
+ * public/admin を同一プロセス・同一ポートで動かすため両方これでよい）。
+ * 本番必須の実体チェックは server.ts の `validateProductionEnv()` が
+ * `NODE_ENV=production` 時に起動時 fail-fast する（server.ts の他の
+ * 「本番のみ必須」変数と同じ「schema は optional/default、実体チェックは
+ * ランタイムで一元化」パターンに揃える）。
+ */
+const LOCAL_DEV_BASE_URL = "http://localhost:3000";
+
 export const clientEnv = createEnv({
   client: {
-    // Base URLs
-    NEXT_PUBLIC_BASE_URL: noTrailingSlash,
-    NEXT_PUBLIC_APP_URL: noTrailingSlash,
+    // Base URLs（本番必須の検証は validateProductionEnv() 側で行う）
+    NEXT_PUBLIC_BASE_URL: noTrailingSlash.default(LOCAL_DEV_BASE_URL),
+    NEXT_PUBLIC_APP_URL: noTrailingSlash.default(LOCAL_DEV_BASE_URL),
 
     // Turnstile (optional)
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
