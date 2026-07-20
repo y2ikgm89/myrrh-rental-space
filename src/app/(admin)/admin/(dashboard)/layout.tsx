@@ -26,6 +26,7 @@ import { NotificationPollingProvider } from "./_components/NotificationPollingPr
 import { ResponsiveSidebar } from "./_components/ResponsiveSidebar";
 import { DashboardShell } from "./_components/DashboardShell";
 import { DashboardMain } from "./_components/DashboardMain";
+import { SkipToMainContentLink } from "./_components/SkipToMainContentLink";
 import { TopBar } from "./_components/TopBar";
 import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
 import type { ReactElement, ReactNode } from "react";
@@ -78,6 +79,11 @@ async function DashboardChromeResolved({
               recents={recents}
             >
               <div className="min-h-dvh bg-background">
+                {/* WCAG 2.4.1 bypass-blocks: 通常は視覚的に隠し、focus 時のみ
+                    表示。href="#main-content" が DashboardMain の <main id> に
+                    ジャンプする。dashboard 配下の全ページに適用される。 */}
+                <SkipToMainContentLink />
+
                 {/* レスポンシブサイドバー */}
                 <ResponsiveSidebar
                   groups={sidebarGroups}
