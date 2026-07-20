@@ -1,16 +1,17 @@
 /**
- * CTASection — Call-to-action with accent background + MagneticButton
+ * CTASection — Call-to-action with accent background
  *
- * Single MagneticButton for Reserve Now + underline-reveal text link for Contact.
+ * Primary/secondary とも design-system Button(variant="editorial") で統一表示。
+ * SiteCTA / MobileReserveCTA と同じくマグネット追従アニメーションは使わない
+ * （サイト全体でホバーのみのシンプルな挙動に統一する方針）。
  * ScrollReveal entrance animation.
  */
 
 import type { ReactElement } from "react";
-import Link from "next/link";
 import { cn } from "@/shared/lib/cn";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
-import { MagneticButton } from "@/public/components/animations/magnetic-button";
+import { Button } from "@/public/components/design-system/button";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
@@ -21,8 +22,6 @@ import {
 } from "@/public/components/sections/section-style-helpers";
 import type { CtaConfig } from "@/shared/lib/validations/section";
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
-import { toAppRoute } from "@/shared/lib/typed-routes";
-import { spansToPlainText } from "@/shared/lib/portable-text";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 
@@ -55,10 +54,10 @@ function CTAButtons({
         )}
       >
         {primaryButton && primaryButton.label.length > 0 && (
-          <MagneticButton
+          <Button
+            variant="editorial"
+            size="lg"
             href={primaryButton.url}
-            strength={0.35}
-            size={primaryButton.size}
             label={primaryButton.label}
             {...(primaryButton.backgroundColor && {
               customBackgroundColor: primaryButton.backgroundColor,
@@ -66,29 +65,23 @@ function CTAButtons({
             {...(primaryButton.textColor && {
               customTextColor: primaryButton.textColor,
             })}
-            openInNewTab={primaryButton.openInNewTab}
+            {...(primaryButton.openInNewTab && { target: "_blank" as const })}
           />
         )}
-        {secondaryButton && (
-          <Link
-            href={toAppRoute(secondaryButton.url)}
-            className="group relative inline-block text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground"
-            {...(secondaryButton.openInNewTab && { target: "_blank" as const })}
-            {...((secondaryButton.backgroundColor ||
-              secondaryButton.textColor) && {
-              style: {
-                ...(secondaryButton.backgroundColor && {
-                  backgroundColor: secondaryButton.backgroundColor,
-                }),
-                ...(secondaryButton.textColor && {
-                  color: secondaryButton.textColor,
-                }),
-              },
+        {secondaryButton && secondaryButton.label.length > 0 && (
+          <Button
+            variant="editorial"
+            size="lg"
+            href={secondaryButton.url}
+            label={secondaryButton.label}
+            {...(secondaryButton.backgroundColor && {
+              customBackgroundColor: secondaryButton.backgroundColor,
             })}
-          >
-            {spansToPlainText(secondaryButton.label)}
-            <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
-          </Link>
+            {...(secondaryButton.textColor && {
+              customTextColor: secondaryButton.textColor,
+            })}
+            {...(secondaryButton.openInNewTab && { target: "_blank" as const })}
+          />
         )}
       </div>
     </ScrollReveal>
