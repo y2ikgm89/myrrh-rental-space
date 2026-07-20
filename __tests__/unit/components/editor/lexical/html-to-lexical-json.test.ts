@@ -1,6 +1,6 @@
 /**
  * @description `tryConvertHtmlStringToLexicalJsonString` の smoke テスト
- * + ImageNode/ButtonNode/CustomTableCellNode の exportDOM→importDOM round-trip テスト
+ * + ImageNode/ButtonNode/CustomTableCellNode/CustomHeadingNode の exportDOM→importDOM round-trip テスト
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
@@ -35,6 +35,11 @@ import {
   cellBackgroundColorState,
 } from "@/admin/components/editor/lexical/nodes/CustomTableCellNode";
 import { $createCustomTableNode } from "@/admin/components/editor/lexical/nodes/CustomTableNode";
+import {
+  $createCustomHeadingNode,
+  $isCustomHeadingNode,
+  anchorIdState,
+} from "@/admin/components/editor/lexical/nodes/CustomHeadingNode";
 import {
   $createYouTubeNode,
   $isYouTubeNode,
@@ -223,6 +228,41 @@ describe("exportDOM/importDOM round-trip parity", () => {
       expect($getState(cellNode, cellBackgroundColorState)).toBe(
         "rgb(255, 0, 0)",
       );
+    });
+  });
+
+  test("CustomHeadingNode: anchorId が round-trip で復元される", () => {
+    const editor = createProjectHeadlessEditor();
+
+    editor.update(
+      () => {
+        const root = $getRoot();
+        root.clear();
+        root.append(
+          $createCustomHeadingNode("h2", "my-anchor").append(
+            $createTextNode("見出し"),
+          ),
+        );
+      },
+      { discrete: true },
+    );
+
+    const json = JSON.stringify(editor.getEditorState().toJSON());
+    const html = renderEditorStateJsonToHtmlCore(json);
+    expect(html).toContain('id="my-anchor"');
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const headingNode = $dfs()
+        .map(({ node }) => node)
+        .find($isCustomHeadingNode);
+      expect(headingNode).toBeDefined();
+      if (!headingNode) return;
+      expect($getState(headingNode, anchorIdState)).toBe("my-anchor");
     });
   });
 
