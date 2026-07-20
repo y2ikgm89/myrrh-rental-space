@@ -19,10 +19,28 @@ const CustomerType = {
 // Prisma モック関数（mock.module より先に定義）
 const mockCustomerFindUnique = mock<
   () => Promise<{
-    id: string;
+    id?: string;
     isActive?: boolean;
     userId?: string | null;
     anonymizedAt?: Date | null;
+    status?: CustomerStatus;
+    lastName?: string;
+    firstName?: string;
+    lastNameKana?: string | null;
+    firstNameKana?: string | null;
+    companyName?: string | null;
+    customerType?: string;
+    email?: string;
+    emailCanonical?: string;
+    phoneNumber?: string | null;
+    postalCode?: string | null;
+    prefecture?: string | null;
+    city?: string | null;
+    streetAddress?: string | null;
+    building?: string | null;
+    notes?: string | null;
+    marketingOptIn?: boolean;
+    phoneContactOptIn?: boolean;
   } | null>
 >(() => Promise.resolve(null));
 
@@ -306,13 +324,12 @@ describe("customers/commands", () => {
     describe("正常系", () => {
       test("存在する顧客のステータスを更新できる", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
-          id: CUSTOMER_ID,
-          isActive: true,
+          status: CustomerStatus.NEW,
         });
 
         await expect(
           updateCustomerStatus(CUSTOMER_ID, CustomerStatus.REGULAR),
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ previousStatus: CustomerStatus.NEW });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -325,14 +342,13 @@ describe("customers/commands", () => {
       test("各ステータス値で更新できる", async () => {
         for (const status of Object.values(CustomerStatus)) {
           mockCustomerFindUnique.mockResolvedValueOnce({
-            id: CUSTOMER_ID,
-            isActive: true,
+            status: CustomerStatus.NEW,
           });
           mockCustomerUpdate.mockResolvedValueOnce({ id: CUSTOMER_ID });
 
           await expect(
             updateCustomerStatus(CUSTOMER_ID, status),
-          ).resolves.toBeUndefined();
+          ).resolves.toEqual({ previousStatus: CustomerStatus.NEW });
         }
       });
     });
@@ -470,15 +486,14 @@ describe("customers/commands", () => {
     describe("正常系", () => {
       test("存在する顧客の情報を更新できる", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
-          id: CUSTOMER_ID,
-          isActive: true,
           userId: null,
+          lastName: "旧姓",
         });
         mockCustomerFindFirst.mockResolvedValueOnce(null);
 
         await expect(
           updateCustomer(CUSTOMER_ID, VALID_CUSTOMER_DATA),
-        ).resolves.toBeUndefined();
+        ).resolves.toMatchObject({ previous: { lastName: "旧姓" } });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -495,15 +510,14 @@ describe("customers/commands", () => {
 
       test("同じメールアドレスで更新できる", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
-          id: CUSTOMER_ID,
-          isActive: true,
           userId: null,
+          lastName: "旧姓",
         });
         mockCustomerFindFirst.mockResolvedValueOnce(null);
 
         await expect(
           updateCustomer(CUSTOMER_ID, VALID_CUSTOMER_DATA),
-        ).resolves.toBeUndefined();
+        ).resolves.toMatchObject({ previous: { lastName: "旧姓" } });
 
         expect(mockCustomerFindFirst).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -539,15 +553,14 @@ describe("customers/commands", () => {
 
       test("リンク済み顧客は他の顧客が使用中のメールアドレスでも更新できる", async () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
-          id: CUSTOMER_ID,
-          isActive: true,
           userId: USER_ID,
+          lastName: "旧姓",
         });
         mockCustomerFindFirst.mockResolvedValueOnce({ id: "other-customer" });
 
         await expect(
           updateCustomer(CUSTOMER_ID, VALID_CUSTOMER_DATA),
-        ).resolves.toBeUndefined();
+        ).resolves.toMatchObject({ previous: { lastName: "旧姓" } });
         expect(mockCustomerFindFirst).not.toHaveBeenCalled();
       });
 

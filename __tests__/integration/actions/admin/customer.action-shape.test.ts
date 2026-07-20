@@ -20,7 +20,9 @@ import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
-const mockUpdateStatus = mock(async () => {});
+const mockUpdateStatus = mock(async () => ({
+  previousStatus: CustomerStatus.NEW,
+}));
 const mockUpdateNotes = mock(async () => {});
 const mockToggleActive = mock(async () => {});
 const mockAnonymizeCustomer = mock<
@@ -29,12 +31,14 @@ const mockAnonymizeCustomer = mock<
     anonymizedAt: Date;
     reason: string;
     hadUserId: boolean;
+    preservedSuppression: boolean;
   }>
 >(async ({ customerId, reason }) => ({
   customerId,
   anonymizedAt: new Date(),
   reason,
   hadUserId: false,
+  preservedSuppression: false,
 }));
 const mockMerge = mock(async () => ({
   transferredReservations: 1,
@@ -45,7 +49,7 @@ const mockMerge = mock(async () => ({
 
 mock.module("@/shared/domain/customers/commands", () => ({
   createCustomer: mock(async () => ({ id: "x" })),
-  updateCustomer: mock(async () => {}),
+  updateCustomer: mock(async () => ({ previous: {} })),
   updateCustomerStatus: mockUpdateStatus,
   updateCustomerNotes: mockUpdateNotes,
   toggleCustomerActive: mockToggleActive,
@@ -70,6 +74,26 @@ mock.module("next/cache", () => ({
   revalidateTag: mock(() => {}),
   cacheLife: mock(() => {}),
   cacheTag: mock(() => {}),
+}));
+
+// updateCustomerStatus / anonymizeCustomer が customer.status / customer.anonymization
+// として明示的な監査ログを追加したための mock（このファイル自体は監査ログの内容は
+// 検証しない — 冒頭コメントの scope note どおり、shape のみ）。
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: mock(async () => undefined),
+}));
+
+mock.module("@/shared/lib/audit-request-context", () => ({
+  buildAuditRequestContext: mock(async () => ({
+    ip: "test-ip",
+    userAgent: "test-ua",
+  })),
+}));
+
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (promise: Promise<unknown>) => {
+    void promise.catch(() => undefined);
+  },
 }));
 
 type ExecuteOpts<T> = {

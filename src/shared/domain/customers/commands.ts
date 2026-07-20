@@ -117,13 +117,21 @@ export async function createCustomer(
 export async function updateCustomerStatus(
   id: string,
   status: CustomerStatus,
-): Promise<void> {
-  await ensureCustomerExists(id);
+): Promise<{ previousStatus: CustomerStatus }> {
+  const existing = await prisma.customer.findUnique({
+    where: { id },
+    select: { status: true },
+  });
+  if (!existing) {
+    throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+  }
 
   await prisma.customer.update({
     where: { id },
     data: { status },
   });
+
+  return { previousStatus: existing.status };
 }
 
 export async function updateCustomerNotes(
@@ -157,8 +165,33 @@ export async function toggleCustomerActive(id: string): Promise<void> {
 export async function updateCustomer(
   id: string,
   data: CustomerFormData,
-): Promise<void> {
-  const customer = await ensureCustomerExists(id);
+): Promise<{ previous: ReturnType<typeof toCustomerData> }> {
+  const customer = await prisma.customer.findUnique({
+    where: { id },
+    select: {
+      userId: true,
+      lastName: true,
+      firstName: true,
+      lastNameKana: true,
+      firstNameKana: true,
+      companyName: true,
+      customerType: true,
+      email: true,
+      emailCanonical: true,
+      phoneNumber: true,
+      postalCode: true,
+      prefecture: true,
+      city: true,
+      streetAddress: true,
+      building: true,
+      notes: true,
+      marketingOptIn: true,
+      phoneContactOptIn: true,
+    },
+  });
+  if (!customer) {
+    throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+  }
 
   if (customer.userId === null) {
     await ensureGuestEmailAvailable(data.email, id);
@@ -175,6 +208,9 @@ export async function updateCustomer(
     }
     throw error;
   }
+
+  const { userId: _userId, ...previous } = customer;
+  return { previous };
 }
 
 /** 顧客が自身のプロフィールを更新（userId ベース）
