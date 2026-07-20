@@ -11,6 +11,7 @@ import { $insertNodes } from "lexical";
 import { MediaPickerDialog } from "@/admin/components/media-picker";
 import { $createImageNode } from "../nodes/ImageNode";
 import type { SelectedMedia } from "@/admin/types/media-picker";
+import { useMediaUsage } from "../media-usage-context";
 
 // =============================================================================
 // Types
@@ -27,6 +28,7 @@ type ImagePluginProps = {
 
 export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
 
   const handleSelect = (media: SelectedMedia[]) => {
     if (media.length === 0) return;
@@ -36,6 +38,8 @@ export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
         $createImageNode({
           src: m.url,
           alt: m.alt ?? "",
+          ...(m.width !== undefined && { width: m.width }),
+          ...(m.height !== undefined && { height: m.height }),
         }),
       );
       $insertNodes(nodes);
@@ -50,7 +54,7 @@ export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
       onClose={onClose}
       onSelect={handleSelect}
       selectionMode="single"
-      defaultUsage="POST"
+      defaultUsage={mediaUsage}
       accept="image"
     />
   );

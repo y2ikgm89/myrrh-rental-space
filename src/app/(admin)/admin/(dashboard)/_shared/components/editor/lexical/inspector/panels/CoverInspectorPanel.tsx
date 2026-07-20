@@ -49,6 +49,7 @@ import { Button } from "@/admin/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 import { IconPhoto, IconPhotoOff, IconTrash } from "@tabler/icons-react";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { useMediaUsage } from "../../media-usage-context";
 
 // =============================================================================
 // Types
@@ -92,6 +93,7 @@ export function CoverInspectorPanel({
   node,
 }: CoverInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const updateNode = useNodeUpdater(nodeKey, $isCoverNode);
 
   const backgroundImageUrl = editor.read(() =>
@@ -109,7 +111,7 @@ export function CoverInspectorPanel({
 
   const imagePicker = useSingleMediaPicker({
     accept: "image",
-    defaultUsage: "POST",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

@@ -52,6 +52,7 @@ import {
   type AccentColor,
 } from "../config/accent-colors";
 import { useState } from "react";
+import { useMediaUsage } from "../media-usage-context";
 
 // =============================================================================
 // Types
@@ -92,6 +93,7 @@ const CONTENT_POSITION_LABELS: Record<CoverContentPosition, string> = {
 
 export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
   const [overlayColor, setOverlayColor] = useState<AccentColor>("default");
   const [overlayOpacity, setOverlayOpacity] = useState<CoverOverlayOpacity>(40);
@@ -102,7 +104,7 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
 
   const imagePicker = useSingleMediaPicker({
     accept: "image",
-    defaultUsage: "POST",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

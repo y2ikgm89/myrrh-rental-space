@@ -76,6 +76,37 @@ function $convertImageElement(
   return null;
 }
 
+// exportDOM が出力する `<figure data-image data-image-alignment="...">` を購読し、
+// alignment と figcaption キャプションを復元する。figure に包まれていない素の <img>
+// (`$convertImageElement` / 上記) は既存 fallback として引き続き機能させる。
+// DecoratorNode の子は append されない (Lexical 公式挙動) ため、figure の子である
+// <img> / <figcaption> が個別に走る importDOM 変換結果は自動的に破棄される。
+function $convertImageFigureElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const img = element.querySelector("img");
+  if (!(img instanceof HTMLImageElement)) return null;
+  const src = img.getAttribute("src");
+  if (!src) return null;
+
+  const alt = img.getAttribute("alt") ?? "";
+  const alignmentAttr = element.getAttribute("data-image-alignment");
+  const alignment: ImageAlignment =
+    alignmentAttr && isImageAlignment(alignmentAttr) ? alignmentAttr : "center";
+  const figcaption = element.querySelector("figcaption[data-image-caption]");
+  const caption = figcaption?.textContent ?? "";
+
+  const node = $createImageNode({
+    src,
+    alt,
+    ...(img.width && { width: img.width }),
+    ...(img.height && { height: img.height }),
+    alignment,
+    caption,
+  });
+  return { node };
+}
+
 export class ImageNode extends DecoratorNode<ReactElement | null> {
   override $config() {
     return this.config("image", {
@@ -93,6 +124,15 @@ export class ImageNode extends DecoratorNode<ReactElement | null> {
 
   static override importDOM(): DOMConversionMap | null {
     return {
+      figure: (element: HTMLElement) => {
+        if (element.hasAttribute("data-image")) {
+          return {
+            conversion: $convertImageFigureElement,
+            priority: 1,
+          };
+        }
+        return null;
+      },
       img: () => ({
         conversion: $convertImageElement,
         priority: 0,

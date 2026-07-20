@@ -11,6 +11,7 @@ import { $getSelection, $insertNodes, $isRangeSelection } from "lexical";
 import { MediaPickerDialog } from "@/admin/components/media-picker";
 import { $createInlineImageNode } from "../nodes/InlineImageNode";
 import type { SelectedMedia } from "@/admin/types/media-picker";
+import { useMediaUsage } from "../media-usage-context";
 
 // =============================================================================
 // Types
@@ -27,6 +28,7 @@ type InlineImagePluginProps = {
 
 export function InlineImagePlugin({ isOpen, onClose }: InlineImagePluginProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
 
   const handleSelect = (media: SelectedMedia[]) => {
     if (media.length === 0) return;
@@ -54,7 +56,7 @@ export function InlineImagePlugin({ isOpen, onClose }: InlineImagePluginProps) {
       onClose={onClose}
       onSelect={handleSelect}
       selectionMode="single"
-      defaultUsage="POST"
+      defaultUsage={mediaUsage}
       accept="image"
     />
   );

@@ -72,8 +72,47 @@ export class CustomTableCellNode extends TableCellNode {
     return result;
   }
 
+  // 基底 TableCellNode.importDOM() が返す converter を wrap し、生成された node が
+  // CustomTableCellNode であれば `element.style.backgroundColor` を読んで
+  // cellBackgroundColorState を復元する。CustomHeadingNode.importDOM() と同一パターン。
   static override importDOM(): DOMConversionMap | null {
-    return TableCellNode.importDOM();
+    const base = TableCellNode.importDOM();
+    if (!base) return null;
+
+    const result: DOMConversionMap = {};
+    for (const [tag, converter] of Object.entries(base)) {
+      if (!converter) continue;
+      result[tag] = (node: HTMLElement) => {
+        const output = converter(node);
+        if (!output) return null;
+        const originalConversion = output.conversion;
+        return {
+          ...output,
+          // Node Replacement (config/nodes.ts の `{replace: TableCellNode, withKlass:
+          // CustomTableCellNode}`) により、editor は raw TableCellNode.importDOM()
+          // （このラップを経由しない無印の base 変換、priority 0）も 'tablecell' type
+          // として td/th に別途登録する。同一 priority の場合 Lexical の tie-break は
+          // 「EDITOR_NODES 配列内で後に登録された方が勝つ」ため、登録順次第でこのラップ
+          // (cellBackgroundColorState 復元) が silently 無効化されるリスクがある。
+          // priority を明示的に base (0) より1段階高くし、登録順に依存せず常に本ラップが
+          // 選ばれるようにする。
+          priority: 1,
+          conversion: (element: HTMLElement) => {
+            const converted = originalConversion(element);
+            if (!converted) return null;
+            const { node: convertedNode } = converted;
+            if (convertedNode instanceof CustomTableCellNode) {
+              const bg = element.style.backgroundColor;
+              if (bg) {
+                $setState(convertedNode, cellBackgroundColorState, bg);
+              }
+            }
+            return converted;
+          },
+        };
+      };
+    }
+    return result;
   }
 }
 

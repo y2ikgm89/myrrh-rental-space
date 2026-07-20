@@ -182,6 +182,77 @@ describe("EDITOR_TRANSFORMERS round-trip", () => {
     });
   });
 
+  test("Table: パイプを含むセルはエスケープされ、隣接セルの境界を壊さない", () => {
+    const editor = createEditor();
+    const cellTexts = ["a|b", "c|d|e"];
+
+    editor.update(
+      () => {
+        const root = $getRoot();
+        root.clear();
+
+        const row = $createTableRowNode();
+        for (const text of cellTexts) {
+          const cell = $createCustomTableCellNode();
+          const paragraph = $createParagraphNode();
+          paragraph.append($createTextNode(text));
+          cell.append(paragraph);
+          row.append(cell);
+        }
+        const table = $createCustomTableNode();
+        table.append(row);
+        root.append(table);
+      },
+      { discrete: true },
+    );
+
+    const markdown = readMarkdown(editor);
+    importMarkdown(editor, markdown);
+
+    editor.read(() => {
+      const table = $getRoot().getFirstChild();
+      expect($isTableNode(table)).toBe(true);
+      if (!$isTableNode(table)) return;
+      const rows = table.getChildren().filter($isTableRowNode);
+      // ヘッダー行として吸収されるため 1 行のみ（Table transformer の仕様どおり）
+      expect(rows).toHaveLength(1);
+      const cells = rows[0]?.getChildren().filter($isTableCellNode) ?? [];
+      expect(cells.map((cell) => cell.getTextContent())).toEqual(cellTexts);
+    });
+  });
+
+  test("Table: エスケープされたバックスラッシュ・パイプを含む行を正しくデコードする (CodeQL: incomplete escaping)", () => {
+    // Lexical の $convertToMarkdownString はテーブルに限らず全ての text export で
+    // 単独のバックスラッシュ文字を除去してしまう（別の、より広範な既存の制約であり
+    // 本テストのスコープ外）。そのため実際の export が `\\` / `\|` エスケープ列を
+    // 生成するケースは現状発生しないが、TABLE transformer の decode 側
+    // （splitTableRowCells）がこれらのエスケープ列を正しく解釈できることは
+    // 独立して保証する必要がある（CodeQL が指摘した encode 側の
+    // 「バックスラッシュを先にエスケープしていない」問題への対応と対になる修正）。
+    // ここでは手書きの markdown 行を直接 import し、decode ロジック単体の
+    // 正しさを検証する。
+    const editor = createEditor();
+    const handAuthoredMarkdown = ["| a\\\\b | c\\|d |", "| --- | --- |"].join(
+      "\n",
+    );
+
+    importMarkdown(editor, handAuthoredMarkdown);
+
+    editor.read(() => {
+      const table = $getRoot().getFirstChild();
+      expect($isTableNode(table)).toBe(true);
+      if (!$isTableNode(table)) return;
+      const rows = table.getChildren().filter($isTableRowNode);
+      expect(rows).toHaveLength(1);
+      const cells = rows[0]?.getChildren().filter($isTableCellNode) ?? [];
+      // "a\\b"（バックスラッシュのエスケープ）→ "a\b"、"c\|d"（パイプのエスケープ）→ "c|d"
+      expect(cells.map((cell) => cell.getTextContent())).toEqual([
+        "a\\b",
+        "c|d",
+      ]);
+    });
+  });
+
   test("Callout: type と複数段落が > [!type] 形式で round-trip する", () => {
     const editor = createEditor();
     editor.update(

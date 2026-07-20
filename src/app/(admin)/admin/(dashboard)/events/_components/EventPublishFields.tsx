@@ -260,6 +260,7 @@ export function EventPublishFields({
                 ? fields.descriptionJson.errorId
                 : undefined
             }
+            mediaUsage="EVENT"
           />
           {fields.descriptionJson.errors && (
             <p

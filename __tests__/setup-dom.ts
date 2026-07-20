@@ -66,6 +66,13 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "HTMLTextAreaElement", window.HTMLTextAreaElement);
   defineGlobal(globalThis, "HTMLButtonElement", window.HTMLButtonElement);
   defineGlobal(globalThis, "HTMLFormElement", window.HTMLFormElement);
+  // Lexical ImageNode の importDOM (`element instanceof HTMLImageElement`) が
+  // 参照するため必要（bare <img> / figure>img 双方の round-trip テストで使用）。
+  defineGlobal(globalThis, "HTMLImageElement", window.HTMLImageElement);
+  // YouTube/Vimeo/X/Instagram の importDOM (`element instanceof HTMLIFrameElement` /
+  // `instanceof HTMLDivElement`) が参照するため必要（iframe round-trip テストで使用）。
+  defineGlobal(globalThis, "HTMLIFrameElement", window.HTMLIFrameElement);
+  defineGlobal(globalThis, "HTMLDivElement", window.HTMLDivElement);
   defineGlobal(globalThis, "SVGElement", window.SVGElement);
   defineGlobal(globalThis, "Node", window.Node);
   defineGlobal(globalThis, "Text", window.Text);
