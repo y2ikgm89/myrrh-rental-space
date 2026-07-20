@@ -19,7 +19,10 @@ import {
   Input,
   Label,
 } from "@/admin/components/ui";
-import { $createYouTubeNode } from "../nodes/YouTubeNode";
+import {
+  $createYouTubeNode,
+  extractYouTubeVideoId,
+} from "../nodes/YouTubeNode";
 
 // =============================================================================
 // Types
@@ -31,35 +34,6 @@ type YouTubePluginProps = {
 };
 
 // =============================================================================
-// Utilities
-// =============================================================================
-
-/**
- * YouTube URLからビデオIDを抽出する
- */
-function extractVideoId(url: string): string | null {
-  // 短縮URL: youtu.be/VIDEO_ID
-  const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-  if (shortMatch?.[1]) {
-    return shortMatch[1];
-  }
-
-  // 通常URL: youtube.com/watch?v=VIDEO_ID
-  const normalMatch = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
-  if (normalMatch?.[1]) {
-    return normalMatch[1];
-  }
-
-  // 埋め込みURL: youtube.com/embed/VIDEO_ID
-  const embedMatch = url.match(/embed\/([a-zA-Z0-9_-]+)/);
-  if (embedMatch?.[1]) {
-    return embedMatch[1];
-  }
-
-  return null;
-}
-
-// =============================================================================
 // Component
 // =============================================================================
 
@@ -69,7 +43,7 @@ export function YouTubePlugin({ isOpen, onClose }: YouTubePluginProps) {
   const [error, setError] = useState("");
 
   const handleSubmit = () => {
-    const videoId = extractVideoId(url);
+    const videoId = extractYouTubeVideoId(url);
 
     if (!videoId) {
       setError("有効なYouTube URLを入力してください");
