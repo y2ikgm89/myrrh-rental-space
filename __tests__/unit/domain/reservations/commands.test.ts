@@ -163,9 +163,13 @@ const mockTxReservationFindFirst = mock<() => Promise<null>>(() =>
 const mockTxReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
 );
-const mockTxReservationFindUniqueOrThrow = mock<
-  () => Promise<{ icsSequence: number }>
->(() => Promise.resolve({ icsSequence: 1 }));
+// Return type is intentionally `unknown` so tests can swap in either the
+// bare `{ icsSequence }` shape (updateAdminReservationCommand path) or a
+// full reservation shape (updateReservationStatusCommand tx reload path)
+// via mockImplementation. Runtime shape is enforced by production code.
+const mockTxReservationFindUniqueOrThrow = mock<() => Promise<unknown>>(() =>
+  Promise.resolve({ icsSequence: 1 }),
+);
 
 const txClient = {
   reservation: {
@@ -844,6 +848,11 @@ describe("updateAdminReservationCommand", () => {
         }),
       );
 
+      // atomic claim: new coupon の increment は $executeRaw で cap を強制する
+      // (createAdminReservationCommand と同型)。既定 mockExecuteRaw は 0 を返す
+      // ので明示的に 1 (claim 成功) を返させる。
+      mockExecuteRaw.mockImplementation(() => Promise.resolve(1));
+
       await updateAdminReservationCommand("res-1", {
         ...validInput,
         couponCode: "NEW2024",
@@ -856,12 +865,10 @@ describe("updateAdminReservationCommand", () => {
         }),
       );
 
-      // 新クーポンのインクリメント
-      expect(mockCouponUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ id: "new-coupon-id" }),
-        }),
-      );
+      // 新クーポンのインクリメント: 素の tx.coupon.update は禁止 (drift-gate) のため
+      // raw SQL 経由で実行される。coupon.update mock は呼ばれない。
+      expect(mockCouponUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).toHaveBeenCalled();
     });
 
     test("税額 recalc: 既存 taxRate から新 totalPrice の taxAmount / totalPriceWithTax を書き戻す (Codex P2 #1038)", async () => {
@@ -1036,6 +1043,14 @@ describe("updateAdminReservationCommand", () => {
 describe("updateReservationStatusCommand", () => {
   beforeEach(() => {
     resetAllMocks();
+    // updateReservationStatusCommand は 1) prisma.reservation.findUnique で
+    // 初回 read (validateStatusTransition の入力) と 2) tx.reservation.findUniqueOrThrow
+    // で claim 後の reload の 2 回読む。両方が同じ shape を必要とするため、
+    // tx 側の findUniqueOrThrow を prisma 側 mock に相乗りさせる。個別 test は
+    // mockReservationFindUnique を mockImplementation で組めば両 read に反映される。
+    mockTxReservationFindUniqueOrThrow.mockImplementation(() =>
+      mockReservationFindUnique(),
+    );
   });
 
   describe("正常系", () => {
@@ -1179,7 +1194,9 @@ describe("updateReservationStatusCommand", () => {
         ReservationStatus.CANCELLED,
       );
 
-      expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+      // updateReservationStatusCommand は claim + coupon 復元 + reload を interactive
+      // tx に包む (Round-3 audit fix)。updateMany 呼出しは tx client 経由。
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             id: "res-1",
@@ -1223,9 +1240,120 @@ describe("updateReservationStatusCommand", () => {
         ReservationStatus.CONFIRMED,
       );
 
-      // cancelledAt/cancelledByType が data に含まれないことを確認
-      const updateCall = mockReservationUpdateMany.mock.calls[0];
+      // cancelledAt/cancelledByType が data に含まれないことを確認 (tx 側 updateMany)
+      const updateCall = mockTxReservationUpdateMany.mock.calls[0];
       expect(updateCall).toBeDefined();
+    });
+
+    test("CANCELLED 遷移でクーポン付き予約は coupon.usageCount を decrement する (Round-3 audit fix)", async () => {
+      // regression guard: admin cancel path の couponId decrement 欠落バグ。
+      // deleteReservationCommand と同型の updateMany + gt:0 guard で戻す。
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          googleCalendarEventId: null,
+          couponId: "coupon-1",
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await updateReservationStatusCommand(
+        "res-1",
+        ReservationStatus.CANCELLED,
+      );
+
+      expect(mockCouponUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: "coupon-1",
+            usageCount: expect.objectContaining({ gt: 0 }),
+          }),
+          data: expect.objectContaining({
+            usageCount: expect.objectContaining({ decrement: 1 }),
+          }),
+        }),
+      );
+    });
+
+    test("CANCELLED 遷移でクーポンなし予約は coupon 書込を発火しない", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          googleCalendarEventId: null,
+          couponId: null,
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await updateReservationStatusCommand(
+        "res-1",
+        ReservationStatus.CANCELLED,
+      );
+
+      expect(mockCouponUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("非 CANCELLED 遷移 (PENDING → CONFIRMED) では coupon 書込を発火しない", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.PENDING,
+          googleCalendarEventId: null,
+          couponId: "coupon-1",
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await updateReservationStatusCommand(
+        "res-1",
+        ReservationStatus.CONFIRMED,
+      );
+
+      expect(mockCouponUpdateMany).not.toHaveBeenCalled();
     });
 
     test("googleCalendarEventId が返される", async () => {
@@ -1296,7 +1424,8 @@ describe("updateReservationStatusCommand", () => {
           },
         }),
       );
-      mockReservationUpdateMany.mockImplementation(() =>
+      // tx 内 claim (updateMany) の count=0 を模擬 → CONFLICT DomainError
+      mockTxReservationUpdateMany.mockImplementation(() =>
         Promise.resolve({ count: 0 }),
       );
 
@@ -1604,7 +1733,7 @@ describe("restoreReservationCommand", () => {
       );
     });
 
-    test("クーポン付き予約の復元で使用数がインクリメントされる", async () => {
+    test("クーポン付き予約の復元で atomic claim ($executeRaw) がインクリメントを発火", async () => {
       mockReservationFindUnique.mockImplementation(() =>
         Promise.resolve({
           id: "res-1",
@@ -1612,17 +1741,30 @@ describe("restoreReservationCommand", () => {
           couponId: "coupon-1",
         }),
       );
+      // atomic claim: usageLimit cap を強制する $executeRaw が 1 を返す = claim 成功。
+      mockExecuteRaw.mockImplementationOnce(() => Promise.resolve(1));
 
       await restoreReservationCommand("res-1");
 
-      expect(mockCouponUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ id: "coupon-1" }),
-          data: expect.objectContaining({
-            usageCount: expect.objectContaining({ increment: 1 }),
-          }),
+      // 素の tx.coupon.update は禁止 (drift-gate). raw SQL 経由で increment されるため
+      // coupon.update mock は呼ばれない。
+      expect(mockCouponUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).toHaveBeenCalled();
+    });
+
+    test("クーポン付き予約の復元で claim=0 (limit 到達) は CONFLICT", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          deletedAt: new Date("2024-06-15"),
+          couponId: "coupon-1",
         }),
       );
+      mockExecuteRaw.mockImplementationOnce(() => Promise.resolve(0));
+
+      await expect(restoreReservationCommand("res-1")).rejects.toMatchObject({
+        code: "CONFLICT",
+      });
     });
 
     test("クーポンなし予約の復元ではクーポン更新されない", async () => {
