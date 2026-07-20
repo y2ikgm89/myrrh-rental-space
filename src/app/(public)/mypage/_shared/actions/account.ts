@@ -1,11 +1,15 @@
 "use server";
 
 import { headers } from "next/headers";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import {
   createMutationError,
   type MutationResult,
@@ -116,6 +120,34 @@ export async function unlinkAccountAction(
       body: { providerId },
       headers: await headers(),
     });
+
+    // SEC-MYPAGE-02 系: OAuth 連携解除は資格情報の状態変更にあたるため、
+    // deleteAccountAction と対称に customer-mypage 経路の証跡を残す。
+    // fire-and-forget で書込失敗は連携解除自体を巻き戻さない。
+    fireAndForget(
+      (async () => {
+        const request = await buildAuditRequestContext();
+        await createAuditLogRecord({
+          userId: session.user.id,
+          action: AuditAction.UPDATE,
+          resource: "customer",
+          resourceId: customer.id,
+          metadata: {
+            channel: "customer-mypage",
+            operation: "customer_oauth_account_unlinked",
+            providerId,
+            ip: request.ip,
+            userAgent: request.userAgent,
+          },
+        });
+      })(),
+      {
+        operation: "auditCustomerAccountUnlink",
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+      },
+    );
+
     return null;
   } catch (error) {
     logError(error, {
