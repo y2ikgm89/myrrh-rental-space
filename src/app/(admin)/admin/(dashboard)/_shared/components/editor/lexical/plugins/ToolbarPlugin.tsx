@@ -51,6 +51,7 @@ import { TextColorPlugin } from "./TextColorPlugin";
 import { TextCasePlugin } from "./TextCasePlugin";
 import { getToolbarInsertItems } from "../config/insert-items";
 import { EDITOR_TRANSFORMERS } from "../MarkdownTransformers";
+import { $hasUnrepresentableMarkdownContent } from "../markdown-loss-detection";
 import type { DialogId } from "../dialogs/dialog-types";
 import type { LayoutToolbarContext } from "./LayoutToolbarSection";
 import { LayoutToolbarSection } from "./LayoutToolbarSection";
@@ -70,6 +71,7 @@ import {
   InsertSection,
   InspectorControls,
   MarkdownImportDialog,
+  MarkdownExportWarningDialog,
   isAlignmentType,
   isBlockType,
   isHeadingTag,
@@ -107,6 +109,8 @@ export function ToolbarPlugin({
   const [blockType, setBlockType] = useState<BlockType>("paragraph");
   const [elementFormat, setElementFormat] = useState<AlignmentType>("left");
   const [showMarkdownImport, setShowMarkdownImport] = useState(false);
+  const [showMarkdownExportWarning, setShowMarkdownExportWarning] =
+    useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [layoutToolbarContext, setLayoutToolbarContext] =
     useState<LayoutToolbarContext | null>(null);
@@ -265,11 +269,22 @@ export function ToolbarPlugin({
     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, format);
   };
 
-  const handleCopyMarkdown = () => {
+  const copyMarkdownToClipboard = () => {
     editor.read(() => {
       const md = $convertToMarkdownString(EDITOR_TRANSFORMERS);
       void navigator.clipboard.writeText(md);
     });
+  };
+
+  const handleCopyMarkdown = () => {
+    const hasUnrepresentableContent = editor.read(() =>
+      $hasUnrepresentableMarkdownContent(),
+    );
+    if (hasUnrepresentableContent) {
+      setShowMarkdownExportWarning(true);
+      return;
+    }
+    copyMarkdownToClipboard();
   };
 
   const handleCopyHtml = () => {
@@ -409,6 +424,11 @@ export function ToolbarPlugin({
       <MarkdownImportDialog
         open={showMarkdownImport}
         onClose={() => setShowMarkdownImport(false)}
+      />
+      <MarkdownExportWarningDialog
+        open={showMarkdownExportWarning}
+        onClose={() => setShowMarkdownExportWarning(false)}
+        onConfirm={copyMarkdownToClipboard}
       />
       <ShortcutsHelpDialog
         open={showShortcuts}

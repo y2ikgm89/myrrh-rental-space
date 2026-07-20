@@ -6,6 +6,7 @@ export { HistorySection } from "./HistorySection";
 export { InsertSection } from "./InsertSection";
 export { InspectorControls } from "./InspectorControls";
 export { MarkdownImportDialog } from "./MarkdownImportDialog";
+export { MarkdownExportWarningDialog } from "./MarkdownExportWarningDialog";
 export { ToolbarInsertMenuItems } from "./ToolbarInsertMenu";
 export {
   ALIGNMENT_CONFIG,
