@@ -583,6 +583,7 @@ export function SpaceEditForm({
                         ? fields.descriptionJson.errorId
                         : undefined
                     }
+                    mediaUsage="SPACE"
                   />
                 </div>
                 {fields.descriptionJson.errors && (

@@ -34,6 +34,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { useMediaUsage } from "../../media-usage-context";
 
 // =============================================================================
 // Constants
@@ -69,6 +70,7 @@ export function ImageInspectorPanel({
   node,
 }: ImageInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const updateNode = useNodeUpdater(nodeKey, $isImageNode);
 
   const { src, alt, width, height, alignment, caption } = editor.read(() => ({
@@ -82,15 +84,19 @@ export function ImageInspectorPanel({
 
   const imagePicker = useSingleMediaPicker({
     accept: "image",
-    defaultUsage: "POST",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;
       updateNode((n) => {
         $setState(n, srcState, selected.url);
         $setState(n, altState, selected.alt ?? "");
-        $setState(n, widthState, undefined);
-        $setState(n, heightState, undefined);
+        // 新しい width/height が取得できていればそれを使う。
+        // 取得できない場合（URL 手入力等）は手編集済みの既存値を破壊しない。
+        const existingWidth = $getState(n, widthState);
+        const existingHeight = $getState(n, heightState);
+        $setState(n, widthState, selected.width ?? existingWidth);
+        $setState(n, heightState, selected.height ?? existingHeight);
       });
     },
   });

@@ -4,6 +4,8 @@
  * @description エディタコンポーネントの型定義
  */
 
+import type { MediaUsage } from "@/admin/lib/validations/media";
+
 /**
  * コメント追加ペイロード
  */
@@ -65,4 +67,12 @@ export type LexicalEditorProps = {
    * InspectorSidebar と同じ高さ位置から始まる。
    */
   trailingPanel?: import("react").ReactNode;
+  /**
+   * 画像/音声/ファイルの挿入・アップロード時に付与する MediaUsage。
+   * 省略時は既存挙動と互換の既定値（"POST"）にフォールバックする
+   * （`media-usage-context.ts` の `DEFAULT_MEDIA_USAGE`）。
+   * 呼び出し元（Post/News/Event/Space/Terms 編集フォーム等）は
+   * 対応する用途を明示的に渡すこと。
+   */
+  mediaUsage?: MediaUsage | undefined;
 };

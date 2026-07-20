@@ -22,6 +22,7 @@ import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Input, Label } from "@/admin/components/ui";
 import { Button } from "@/admin/components/ui/button";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { useMediaUsage } from "../../media-usage-context";
 
 // =============================================================================
 // Types
@@ -41,6 +42,7 @@ export function GalleryItemInspectorPanel({
   node,
 }: GalleryItemInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const updateNode = useNodeUpdater(nodeKey, $isGalleryItemNode);
 
   const { src, alt, caption } = editor.read(() => ({
@@ -51,7 +53,7 @@ export function GalleryItemInspectorPanel({
 
   const imagePicker = useSingleMediaPicker({
     accept: "image",
-    defaultUsage: "POST",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

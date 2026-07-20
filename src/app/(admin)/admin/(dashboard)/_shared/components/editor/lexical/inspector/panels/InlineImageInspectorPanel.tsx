@@ -32,6 +32,7 @@ import {
 } from "@tabler/icons-react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { useMediaUsage } from "../../media-usage-context";
 
 // =============================================================================
 // Constants
@@ -67,6 +68,7 @@ export function InlineImageInspectorPanel({
   node,
 }: InlineImageInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const updateNode = useNodeUpdater(nodeKey, $isInlineImageNode);
 
   const { src, altText, position, width } = editor.read(() => ({
@@ -78,7 +80,7 @@ export function InlineImageInspectorPanel({
 
   const imagePicker = useSingleMediaPicker({
     accept: "image",
-    defaultUsage: "POST",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

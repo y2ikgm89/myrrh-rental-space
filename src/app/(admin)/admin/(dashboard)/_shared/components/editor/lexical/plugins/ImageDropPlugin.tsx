@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { uploadMedia } from "@/admin/actions/media";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { $createImageNode } from "../nodes/ImageNode";
+import { useMediaUsage } from "../media-usage-context";
 
 // =============================================================================
 // Utilities
@@ -41,6 +42,7 @@ function getImageFiles(dataTransfer: DataTransfer): File[] {
 
 export function ImageDropPlugin() {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
 
   useEffect(() => {
     const handleImageUpload = async (files: File[]) => {
@@ -50,7 +52,7 @@ export function ImageDropPlugin() {
         try {
           const formData = new FormData();
           formData.append("file", file);
-          formData.append("usage", "POST");
+          formData.append("usage", mediaUsage);
 
           const result = await uploadMedia(formData);
 
@@ -130,7 +132,7 @@ export function ImageDropPlugin() {
       removeDropCommand();
       removePasteCommand();
     };
-  }, [editor]);
+  }, [editor, mediaUsage]);
 
   return null;
 }

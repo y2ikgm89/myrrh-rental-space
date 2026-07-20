@@ -32,6 +32,7 @@ import {
 } from "@/admin/components/ui/select";
 import { IconPhoto, IconUser, IconTrash } from "@tabler/icons-react";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { useMediaUsage } from "../../media-usage-context";
 
 // =============================================================================
 // Constants
@@ -63,6 +64,7 @@ export function TestimonialItemInspectorPanel({
   node,
 }: TestimonialItemInspectorPanelProps) {
   const [editor] = useLexicalComposerContext();
+  const mediaUsage = useMediaUsage();
   const updateNode = useNodeUpdater(nodeKey, $isTestimonialItemNode);
 
   const { authorName, authorTitle, avatarUrl, rating, date } = editor.read(
@@ -89,7 +91,7 @@ export function TestimonialItemInspectorPanel({
 
   const imagePicker = useSingleMediaPicker({
     accept: "image",
-    defaultUsage: "POST",
+    defaultUsage: mediaUsage,
     onSelect: (media) => {
       const selected = media[0];
       if (!selected) return;

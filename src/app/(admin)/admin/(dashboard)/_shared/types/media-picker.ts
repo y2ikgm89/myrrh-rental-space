@@ -77,6 +77,12 @@ export interface SelectedMedia {
   mimeType?: string | undefined;
   /** ファイルサイズ（バイト。ライブラリ選択 / アップロード時のみ） */
   size?: number | undefined;
+  /** 画像の幅（px。ライブラリ選択時のみ。CLS 防止のため node 側へ伝播する） */
+  width?: number | undefined;
+  /** 画像の高さ（px。ライブラリ選択時のみ。CLS 防止のため node 側へ伝播する） */
+  height?: number | undefined;
+  /** タイトル（ライブラリ選択時のみ。音声等のタイトル初期値に使用） */
+  title?: string | undefined;
   /** 選択元 */
   source: "library" | "url" | "upload";
 }
