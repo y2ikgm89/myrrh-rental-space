@@ -31,7 +31,11 @@ import {
   DecoratorNode,
 } from "lexical";
 import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
-import { createSpan, type PortableTextSpan } from "@/shared/lib/portable-text";
+import {
+  createInlineIcon,
+  createSpan,
+  type PortableTextSpan,
+} from "@/shared/lib/portable-text";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
 import {
   createEnumGuard,
@@ -112,13 +116,42 @@ function appendButtonIconToken(link: HTMLElement, iconName: string): void {
   link.appendChild(el);
 }
 
+// exportDOM は label (PortableTextSpan[]) の各要素を anchor 内の子として
+// text span → プレーン <span>、icon span → `data-icon-name` 付き <span>
+// (appendButtonIconToken) の形で出力する。importDOM 側はこの構造を歩いて
+// span 配列を再構築する。data-icon-name を持つ要素は icon span、それ以外の
+// 要素/テキストは text span として扱う。span 構造を持たない (手書き HTML 等の)
+// フラットテキストは後方互換として1つの text span にフォールバックする。
+function $convertButtonLabelSpans(link: HTMLElement): PortableTextSpan[] {
+  const spans: PortableTextSpan[] = [];
+  for (const child of Array.from(link.childNodes)) {
+    if (child instanceof HTMLElement) {
+      const iconName = child.getAttribute("data-icon-name");
+      if (iconName) {
+        spans.push(createInlineIcon(iconName));
+        continue;
+      }
+      const text = child.textContent ?? "";
+      if (text) spans.push(createSpan(text));
+    } else if (child.nodeType === Node.TEXT_NODE) {
+      const text = child.textContent ?? "";
+      if (text) spans.push(createSpan(text));
+    }
+  }
+  if (spans.length === 0) {
+    const text = link.textContent ?? "";
+    if (text) spans.push(createSpan(text));
+  }
+  return spans;
+}
+
 function $convertButtonElement(
   element: HTMLElement,
 ): null | DOMConversionOutput {
   const link = element.querySelector("a");
   if (!link) return null;
 
-  const text = link.textContent ?? "";
+  const label = $convertButtonLabelSpans(link);
   const href = link.getAttribute("href") ?? "#";
   const variantAttr = element.getAttribute("data-button-variant");
   const sizeAttr = element.getAttribute("data-button-size");
@@ -137,7 +170,7 @@ function $convertButtonElement(
     colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
 
   const node = $createButtonNode({
-    label: text ? [createSpan(text)] : [],
+    label,
     href,
     variant,
     size,
