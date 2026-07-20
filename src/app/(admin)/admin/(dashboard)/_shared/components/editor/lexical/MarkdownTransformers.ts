@@ -252,8 +252,9 @@ function splitTableRowCells(rowContent: string): string[] {
   let current = "";
   for (let i = 0; i < rowContent.length; i++) {
     const ch = rowContent[i];
-    if (ch === "\\" && rowContent[i + 1] === "|") {
-      current += "|";
+    const next = rowContent[i + 1];
+    if (ch === "\\" && (next === "|" || next === "\\")) {
+      current += next;
       i++;
     } else if (ch === "|") {
       cells.push(current.trim());
@@ -278,6 +279,10 @@ const TABLE: ElementTransformer = {
       const cells = row.getChildren().filter($isTableCellNode);
       const cellTexts = cells.map((cell) =>
         exportChildren(cell)
+          // バックスラッシュ自身を先にエスケープしてからパイプをエスケープする
+          // （逆順だとエスケープ文字と区切り文字の境界が曖昧になり、
+          // 特定の入力で round-trip が破綻する。CodeQL: incomplete escaping）
+          .replace(/\\/g, "\\\\")
           .replace(/\|/g, "\\|")
           .replace(/\r?\n/g, " ")
           .trim(),
