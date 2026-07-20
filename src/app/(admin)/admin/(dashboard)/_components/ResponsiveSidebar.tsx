@@ -198,6 +198,7 @@ export function ResponsiveSidebar({
                       <li key={item.href}>
                         <Link
                           href={toAppRoute(item.href)}
+                          aria-current={isActive ? "page" : undefined}
                           className={cn(
                             classes.navItem(),
                             isActive && classes.navItemActive(),

@@ -36,6 +36,7 @@ export function MediaItem({
     return (
       <button
         type="button"
+        aria-pressed={isSelected}
         onClick={handleClick}
         disabled={disabled}
         className={cn(
@@ -65,6 +66,7 @@ export function MediaItem({
   return (
     <button
       type="button"
+      aria-pressed={isSelected}
       onClick={handleClick}
       disabled={disabled}
       className={cn(

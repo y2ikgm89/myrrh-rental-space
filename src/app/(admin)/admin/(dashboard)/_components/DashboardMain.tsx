@@ -21,7 +21,22 @@ type DashboardMainProps = {
   children: ReactNode;
 };
 
+/**
+ * `id="main-content"` は WCAG 2.4.1 bypass-blocks の SSoT anchor。
+ * dashboard/layout.tsx が最上段に描画する `SkipToMainContentLink` の
+ * `href="#main-content"` と対応する。tabIndex={-1} は focus() 経由の
+ * ジャンプでフォーカスを主コンテンツに置くために必要 (nav 内 Tab を
+ * 何十回も押さずに済ませるためのキーボードユーザー向け bypass)。
+ */
 export function DashboardMain({ children }: DashboardMainProps) {
   const { isFullscreen } = useAdminLayout();
-  return <main className={mainStyles({ isFullscreen })}>{children}</main>;
+  return (
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className={mainStyles({ isFullscreen })}
+    >
+      {children}
+    </main>
+  );
 }

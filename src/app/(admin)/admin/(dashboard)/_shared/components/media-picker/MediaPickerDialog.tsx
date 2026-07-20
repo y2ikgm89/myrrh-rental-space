@@ -105,6 +105,39 @@ export function MediaPickerDialog({
     onClose();
   };
 
+  // Tab pattern keyboard navigation: ArrowLeft/Right でタブを巡回、Home/End で
+  // 端に移動。tabpanel 側でのショートカット (Ctrl+PageUp/Down) は未対応
+  // (WAI-ARIA APG では optional)。
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs: MediaPickerTab[] = ["library"];
+    if (showUrlTab) tabs.push("url");
+    tabs.push("upload");
+    const currentIndex = tabs.indexOf(activeTab);
+    if (currentIndex === -1) return;
+
+    let nextIndex: number | null = null;
+    switch (event.key) {
+      case "ArrowLeft":
+        nextIndex = currentIndex === 0 ? tabs.length - 1 : currentIndex - 1;
+        break;
+      case "ArrowRight":
+        nextIndex = currentIndex === tabs.length - 1 ? 0 : currentIndex + 1;
+        break;
+      case "Home":
+        nextIndex = 0;
+        break;
+      case "End":
+        nextIndex = tabs.length - 1;
+        break;
+      default:
+        return;
+    }
+    if (nextIndex === null) return;
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    if (nextTab !== undefined) setActiveTab(nextTab);
+  };
+
   return (
     <Dialog
       open={isOpen}
@@ -121,11 +154,26 @@ export function MediaPickerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Tabs */}
-        <div className="flex shrink-0 border-b px-4">
+        {/*
+          Tabs — WAI-ARIA Authoring Practices tab pattern の最小実装:
+          - role="tablist" + orientation="horizontal"
+          - 各 button: role="tab" + aria-selected + aria-controls + id + tabIndex
+          - 対応 content: role="tabpanel" + aria-labelledby + id + tabIndex={0}
+          - ArrowLeft/ArrowRight/Home/End で tab を巡回 (activeTab を変える)
+          - selected tab のみが tab-order に載る (roving tabIndex)
+        */}
+        <div
+          role="tablist"
+          aria-label="メディアソース"
+          aria-orientation="horizontal"
+          onKeyDown={handleTabKeyDown}
+          className="flex shrink-0 border-b px-4"
+        >
           <TabButton
             active={activeTab === "library"}
             onClick={() => setActiveTab("library")}
+            id="media-picker-tab-library"
+            controlsId="media-picker-panel-library"
             icon={<IconPhoto className="mr-1 h-4 w-4" />}
             label="ライブラリ"
           />
@@ -133,6 +181,8 @@ export function MediaPickerDialog({
             <TabButton
               active={activeTab === "url"}
               onClick={() => setActiveTab("url")}
+              id="media-picker-tab-url"
+              controlsId="media-picker-panel-url"
               icon={<IconLink className="mr-1 h-4 w-4" />}
               label="URL入力"
             />
@@ -140,35 +190,58 @@ export function MediaPickerDialog({
           <TabButton
             active={activeTab === "upload"}
             onClick={() => setActiveTab("upload")}
+            id="media-picker-tab-upload"
+            controlsId="media-picker-panel-upload"
             icon={<IconUpload className="mr-1 h-4 w-4" />}
             label="アップロード"
           />
         </div>
 
-        {/* Content */}
+        {/* Content — 各 panel は自分の tab の id を aria-labelledby で参照する */}
         <div className="flex-1 overflow-y-auto p-4">
           {activeTab === "library" && (
-            <LibraryTab
-              selectedIds={selectedIds}
-              onSelect={handleLibrarySelect}
-              canSelectMore={canSelectMore}
-              accept={accept}
-            />
+            <div
+              role="tabpanel"
+              id="media-picker-panel-library"
+              aria-labelledby="media-picker-tab-library"
+              tabIndex={0}
+            >
+              <LibraryTab
+                selectedIds={selectedIds}
+                onSelect={handleLibrarySelect}
+                canSelectMore={canSelectMore}
+                accept={accept}
+              />
+            </div>
           )}
           {activeTab === "url" && showUrlTab && (
-            <UrlTab
-              onAdd={handleUrlAdd}
-              canAddMore={canSelectMore}
-              accept={accept}
-            />
+            <div
+              role="tabpanel"
+              id="media-picker-panel-url"
+              aria-labelledby="media-picker-tab-url"
+              tabIndex={0}
+            >
+              <UrlTab
+                onAdd={handleUrlAdd}
+                canAddMore={canSelectMore}
+                accept={accept}
+              />
+            </div>
           )}
           {activeTab === "upload" && (
-            <UploadTab
-              onUploadComplete={handleUploadComplete}
-              usage={defaultUsage}
-              canAddMore={canSelectMore}
-              accept={accept}
-            />
+            <div
+              role="tabpanel"
+              id="media-picker-panel-upload"
+              aria-labelledby="media-picker-tab-upload"
+              tabIndex={0}
+            >
+              <UploadTab
+                onUploadComplete={handleUploadComplete}
+                usage={defaultUsage}
+                canAddMore={canSelectMore}
+                accept={accept}
+              />
+            </div>
           )}
         </div>
 
@@ -216,12 +289,28 @@ interface TabButtonProps {
   onClick: () => void;
   icon: ReactNode;
   label: string;
+  /** tabpanel から aria-labelledby で参照される。 */
+  id: string;
+  /** 対応する tabpanel の id (aria-controls)。 */
+  controlsId: string;
 }
 
-function TabButton({ active, onClick, icon, label }: TabButtonProps) {
+function TabButton({
+  active,
+  onClick,
+  icon,
+  label,
+  id,
+  controlsId,
+}: TabButtonProps) {
   return (
     <button
       type="button"
+      role="tab"
+      id={id}
+      aria-controls={controlsId}
+      aria-selected={active}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
       className={cn(
         "-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors",
