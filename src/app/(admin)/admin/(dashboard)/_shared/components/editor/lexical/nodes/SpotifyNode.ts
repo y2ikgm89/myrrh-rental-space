@@ -21,6 +21,7 @@ import {
 } from "lexical";
 import { createEnumGuard, parseString } from "../config/type-guards";
 import { renderLexicalDecorator } from "./decorator-registry";
+import { isAllowedLexicalIframeHostname } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export type SpotifyContentType =
   "track" | "album" | "playlist" | "episode" | "show";
@@ -90,9 +91,11 @@ export class SpotifyNode extends DecoratorNode<ReactElement | null> {
         return {
           conversion: (element) => {
             const iframe = element.querySelector("iframe");
+            const embedUrl = iframe?.getAttribute("src") ?? "";
+            if (!isAllowedLexicalIframeHostname(embedUrl)) return null;
             const rawType = element.getAttribute("data-spotify-type") ?? "";
             const node = $createSpotifyNode({
-              embedUrl: iframe?.getAttribute("src") ?? "",
+              embedUrl,
               contentType: isSpotifyContentType(rawType) ? rawType : "track",
             });
             return { node };

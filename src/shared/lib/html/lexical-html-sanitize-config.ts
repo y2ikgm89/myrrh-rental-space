@@ -26,7 +26,37 @@ export const LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES = [
   "target",
   "rel",
   "loading",
+  "referrerpolicy",
 ] as const;
+
+/**
+ * Lexical の埋め込み系 node（YouTube / Vimeo / Spotify / Figma / Instagram / X / MapEmbed）
+ * が生成する iframe の許可ホスト名 SSoT。
+ *
+ * - `sanitize-content-html-core.ts` の `allowedIframeHostnames`（保存時）
+ * - 各 node の `importDOM`（ペースト取込時。Spotify/Figma/MapEmbed は保存済み URL を
+ *   検証なしで読むため、ここでの再検証が唯一のガード）
+ * の両方から参照する。新しい埋め込み node を追加する際はここに追記する。
+ */
+export const LEXICAL_ALLOWED_IFRAME_HOSTNAMES: readonly string[] = [
+  "www.youtube.com",
+  "player.vimeo.com",
+  "open.spotify.com",
+  "www.figma.com",
+  "www.instagram.com",
+  "platform.twitter.com",
+  "www.google.com",
+];
+
+/** `LEXICAL_ALLOWED_IFRAME_HOSTNAMES` に含まれるホスト名かどうかを判定する */
+export function isAllowedLexicalIframeHostname(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname;
+    return LEXICAL_ALLOWED_IFRAME_HOSTNAMES.includes(hostname);
+  } catch {
+    return false;
+  }
+}
 
 /** Tabler curated icon SVG サブツリー（sanitize-html / DOMPurify 共通） */
 export const LEXICAL_CURATED_ICON_SVG_TAGS = [

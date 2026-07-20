@@ -33,11 +33,71 @@ describe("sanitizeContentHtml", () => {
     expect(result).toContain('rel="noopener noreferrer"');
   });
 
-  test("<iframe> と <object> も除去する", () => {
-    const html = '<p>OK</p><iframe src="x"></iframe><object data="x"></object>';
-    const result = sanitizeContentHtml(html);
-    expect(result).not.toContain("<iframe");
+  test("<object> は常に除去する", () => {
+    const result = sanitizeContentHtml('<p>OK</p><object data="x"></object>');
     expect(result).not.toContain("<object");
+  });
+
+  test("許可ホスト以外の <iframe> src は除去する", () => {
+    const html = '<iframe src="https://evil.example.com/x"></iframe>';
+    const result = sanitizeContentHtml(html);
+    expect(result).not.toContain("evil.example.com");
+  });
+
+  test("許可ホスト（YouTube 等）の <iframe> は属性ごと保持する", () => {
+    const html =
+      '<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="YouTube video" allow="encrypted-media" allowfullscreen loading="lazy"></iframe>';
+    const result = sanitizeContentHtml(html);
+    expect(result).toContain('src="https://www.youtube.com/embed/dQw4w9WgXcQ"');
+    expect(result).toContain('title="YouTube video"');
+    expect(result).toContain("allowfullscreen");
+    expect(result).toContain('loading="lazy"');
+  });
+
+  test("Google Maps 埋め込みの referrerpolicy 属性を保持する", () => {
+    const html =
+      '<iframe src="https://www.google.com/maps/embed?pb=1" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+    const result = sanitizeContentHtml(html);
+    expect(result).toContain('referrerpolicy="no-referrer-when-downgrade"');
+  });
+
+  test("audio / details・summary / ruby・rt / figure・figcaption / button / abbr / colgroup・col を保持する", () => {
+    const html =
+      '<audio src="https://cdn.example.com/a.mp3" controls preload="none"></audio>' +
+      "<details open><summary>質問</summary><div>回答</div></details>" +
+      "<ruby>漢字<rt>かんじ</rt></ruby>" +
+      '<figure data-image><img src="https://cdn.example.com/x.png" alt="x" /><figcaption data-image-caption>説明</figcaption></figure>' +
+      '<button role="tab" data-tab-index="0">タブ</button>' +
+      '<abbr data-tooltip="説明" tabindex="0">用語</abbr>' +
+      '<table><colgroup><col style="width:100px;" /></colgroup><tbody><tr><td>1</td></tr></tbody></table>';
+    const result = sanitizeContentHtml(html);
+    expect(result).toContain("<audio");
+    expect(result).toContain("controls");
+    expect(result).toContain('preload="none"');
+    expect(result).toContain("<details");
+    expect(result).toContain("open");
+    expect(result).toContain("<summary>");
+    expect(result).toContain("<ruby>");
+    expect(result).toContain("<rt>");
+    expect(result).toContain("<figure");
+    expect(result).toContain("<figcaption");
+    expect(result).toContain('<button role="tab"');
+    expect(result).toContain("<abbr");
+    expect(result).toContain('tabindex="0"');
+    expect(result).toContain("<colgroup>");
+    expect(result).toContain("<col");
+    expect(result).toMatch(/style="width:100px;?"/);
+  });
+
+  test("div / span / img / table 系 style 属性は保持するが、<p> の style は除去する（既存規約）", () => {
+    const html =
+      '<div style="background-image:url(https://cdn.example.com/bg.png)">帯</div>' +
+      '<span style="width:120px;">幅</span>' +
+      '<p style="color:red;">本文</p>';
+    const result = sanitizeContentHtml(html);
+    expect(result).toContain("background-image");
+    expect(result).toMatch(/<span style="width:120px;?">/);
+    expect(result).not.toMatch(/<p style=/);
   });
 
   test("class / id 属性は保持する (装飾用)", () => {
