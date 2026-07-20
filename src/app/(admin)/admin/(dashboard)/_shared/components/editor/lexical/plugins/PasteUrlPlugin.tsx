@@ -2,8 +2,10 @@
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
-import type { LexicalEditor } from "lexical";
+import type { LexicalEditor, LexicalNode } from "lexical";
 import {
+  $createParagraphNode,
+  $createTextNode,
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
@@ -13,9 +15,33 @@ import {
 import { useEffect } from "react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { logger } from "@/shared/lib/errors/logger-core";
+import {
+  detectPasteEmbed,
+  type PasteEmbedMatch,
+} from "../config/paste-embed-detector";
 import { $createBookmarkNode } from "../nodes/BookmarkNode";
+import { $createFigmaNode } from "../nodes/FigmaNode";
+import { $createSpotifyNode } from "../nodes/SpotifyNode";
+import { $createVimeoNode } from "../nodes/VimeoNode";
+import { $createYouTubeNode } from "../nodes/YouTubeNode";
 
-const URL_PATTERN = /^https?:\/\/[^\s]+$/;
+/**
+ * ペースト可能な URL かどうかを判定する
+ *
+ * `new URL()` でパース可能、かつ hostname がドット区切りの妥当な形式（または
+ * localhost）であることを確認する。厳密な公開サフィックス検証までは行わず、
+ * `https://a` や `https://` のような明らかに不正な形式だけを弾く簡易チェック。
+ */
+function isPasteableUrl(text: string): boolean {
+  if (!/^https?:\/\//.test(text)) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(text);
+  } catch {
+    return false;
+  }
+  return parsed.hostname === "localhost" || parsed.hostname.includes(".");
+}
 
 type OgpPreview = {
   url: string;
@@ -44,7 +70,7 @@ export function PasteUrlPlugin() {
           event instanceof ClipboardEvent ? event.clipboardData : null;
         const text = clipboardData?.getData("text/plain")?.trim();
 
-        if (!text || !URL_PATTERN.test(text)) return false;
+        if (!text || !isPasteableUrl(text)) return false;
 
         const selection = $getSelection();
         if (!$isRangeSelection(selection) || !selection.isCollapsed())
@@ -59,7 +85,15 @@ export function PasteUrlPlugin() {
         if (!isEmptyParagraph) return false;
 
         event.preventDefault();
-        void insertBookmarkFromUrl(editor, text);
+
+        const embed = detectPasteEmbed(text);
+        if (embed) {
+          editor.update(() => {
+            $insertNodeToNearestRoot($createEmbedNode(embed));
+          });
+        } else {
+          void insertBookmarkFromUrl(editor, text);
+        }
         return true;
       },
       COMMAND_PRIORITY_LOW,
@@ -67,6 +101,25 @@ export function PasteUrlPlugin() {
   }, [editor]);
 
   return null;
+}
+
+/**
+ * 埋め込み種別判定結果（{@link detectPasteEmbed}）から対応する DecoratorNode を生成する
+ */
+function $createEmbedNode(embed: PasteEmbedMatch): LexicalNode {
+  switch (embed.type) {
+    case "youtube":
+      return $createYouTubeNode({ videoId: embed.videoId });
+    case "vimeo":
+      return $createVimeoNode({ videoId: embed.videoId });
+    case "spotify":
+      return $createSpotifyNode({
+        embedUrl: embed.embedUrl,
+        contentType: embed.contentType,
+      });
+    case "figma":
+      return $createFigmaNode({ embedUrl: embed.embedUrl });
+  }
 }
 
 async function insertBookmarkFromUrl(
@@ -92,6 +145,17 @@ async function insertBookmarkFromUrl(
       );
     });
   } catch {
-    logger.warn("PasteUrlPlugin: OGP fetch failed", { url });
+    // OGP 取得失敗時もペースト内容を消失させないよう、プレーンテキストとして URL を挿入する
+    logger.warn(
+      "PasteUrlPlugin: OGP fetch failed, inserting URL as plain text",
+      {
+        url,
+      },
+    );
+    editor.update(() => {
+      $insertNodeToNearestRoot(
+        $createParagraphNode().append($createTextNode(url)),
+      );
+    });
   }
 }
