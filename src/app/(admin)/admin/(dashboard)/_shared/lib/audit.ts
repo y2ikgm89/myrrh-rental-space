@@ -160,22 +160,3 @@ export async function logPermissionDenied(
     metadata: { attemptedAction: action },
   });
 }
-
-/**
- * ロール変更を記録
- */
-export async function logRoleChange(
-  userId: string,
-  targetUserId: string,
-  oldRole: string,
-  newRole: string,
-): Promise<void> {
-  await createAuditLog({
-    userId,
-    action: AuditAction.ROLE_CHANGE,
-    resource: "user",
-    resourceId: targetUserId,
-    oldValue: { role: oldRole },
-    newValue: { role: newRole },
-  });
-}

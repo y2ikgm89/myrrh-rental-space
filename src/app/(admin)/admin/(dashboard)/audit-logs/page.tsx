@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
-import { getAuditLogs } from "@/admin/queries/audit-log";
+import { getAuditLogResources, getAuditLogs } from "@/admin/queries/audit-log";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
 import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -50,6 +50,12 @@ async function AuditLogList({ searchParams }: PageProps) {
   );
 }
 
+async function AuditLogFiltersSection() {
+  await connection();
+  const resources = await getAuditLogResources();
+  return <AuditLogFilters resources={resources} />;
+}
+
 export default async function AuditLogsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
@@ -70,7 +76,7 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
 
       {/* フィルター */}
       <Suspense fallback={<LoadingState variant="inline" />}>
-        <AuditLogFilters />
+        <AuditLogFiltersSection />
       </Suspense>
 
       {/* テーブル + ページネーション */}
