@@ -32,6 +32,13 @@ import { $isTabsContainerNode } from "./nodes/TabsContainerNode";
 import { $isLayoutContainerNode } from "./nodes/LayoutContainerNode";
 import { $isInlineIconNode } from "./nodes/InlineIconNode";
 import { $isInternalLinkCardNode } from "./nodes/InternalLinkCardNode";
+import { $isPageBreakNode } from "./nodes/PageBreakNode";
+import { $isTooltipNode } from "./nodes/TooltipNode";
+import { $isPricingTableContainerNode } from "./nodes/PricingTableNode";
+import { $isInlineImageNode } from "./nodes/InlineImageNode";
+import { $isFeatureIconListContainerNode } from "./nodes/FeatureIconListNode";
+import { $isCaptionBoxNode } from "./nodes/CaptionBoxNode";
+import { $isGroupNode } from "./nodes/GroupNode";
 
 /**
  * Markdown へ変換できない（= コピー時に silent に消える）コンテナ/embed ノードか判定する。
@@ -58,7 +65,14 @@ function isUnrepresentableInMarkdown(node: LexicalNode): boolean {
     $isTabsContainerNode(node) ||
     $isLayoutContainerNode(node) ||
     $isInlineIconNode(node) ||
-    $isInternalLinkCardNode(node)
+    $isInternalLinkCardNode(node) ||
+    $isPageBreakNode(node) ||
+    $isTooltipNode(node) ||
+    $isPricingTableContainerNode(node) ||
+    $isInlineImageNode(node) ||
+    $isFeatureIconListContainerNode(node) ||
+    $isCaptionBoxNode(node) ||
+    $isGroupNode(node)
   );
 }
 

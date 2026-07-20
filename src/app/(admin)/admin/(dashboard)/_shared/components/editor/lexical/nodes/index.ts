@@ -11,6 +11,7 @@ export {
   widthState,
   heightState,
   alignmentState,
+  captionState,
 } from "./ImageNode";
 export type { ImageAlignment } from "./ImageNode";
 export { IMAGE_ALIGNMENTS } from "./ImageNode";
