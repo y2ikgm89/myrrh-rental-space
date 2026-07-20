@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import { AUDIT_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { RESOURCE_LABELS } from "@/shared/lib/admin-resources";
+import { RESOURCE_LABELS, type Resource } from "@/shared/lib/admin-resources";
 import { entriesOf } from "@/shared/lib/serialize";
 
 const ACTION_OPTIONS = [
@@ -27,12 +27,31 @@ const ACTION_OPTIONS = [
   })),
 ];
 
-const RESOURCE_OPTIONS = [
-  { value: "ALL", label: "すべて" },
-  ...entriesOf(RESOURCE_LABELS).map(([value, label]) => ({ value, label })),
-];
+const KNOWN_RESOURCES = new Set<string>(Object.keys(RESOURCE_LABELS));
 
-export function AuditLogFilters() {
+export function isKnownResource(value: string): value is Resource {
+  return KNOWN_RESOURCES.has(value);
+}
+
+// RBAC の Resource（画面の権限単位）と AuditLog.resource（ドメイン層が自由文字列で
+// 書き込む実データ、例: "customer.status" / "settings.tax" / "adminAuth"）は別の語彙。
+// RESOURCE_LABELS で日本語化できるものはラベルを、できないものは生の文字列を表示する。
+export function resourceLabel(value: string): string {
+  return isKnownResource(value) ? RESOURCE_LABELS[value] : value;
+}
+
+type AuditLogFiltersProps = {
+  readonly resources: readonly string[];
+};
+
+export function AuditLogFilters({ resources }: AuditLogFiltersProps) {
+  const resourceOptions = [
+    { value: "ALL", label: "すべて" },
+    ...resources
+      .map((value) => ({ value, label: resourceLabel(value) }))
+      .sort((a, b) => a.label.localeCompare(b.label, "ja")),
+  ];
+
   const [params, setParams] = useQueryStates(adminAuditLogSearchParamsParsers, {
     history: "replace",
     shallow: false,
@@ -140,13 +159,24 @@ export function AuditLogFilters() {
           <SelectValue placeholder="リソース" />
         </SelectTrigger>
         <SelectContent>
-          {RESOURCE_OPTIONS.map((opt) => (
+          {resourceOptions.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
+
+      <Input
+        type="search"
+        aria-label="ユーザーID"
+        placeholder="ユーザーID (UUID)"
+        value={params.userId}
+        onChange={(e) =>
+          void setParams({ userId: e.target.value || null, page: 1 })
+        }
+        className="w-[160px]"
+      />
 
       <Input
         type="search"
