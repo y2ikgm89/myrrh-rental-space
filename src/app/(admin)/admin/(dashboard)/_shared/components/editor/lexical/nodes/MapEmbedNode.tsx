@@ -20,6 +20,7 @@ import {
   DecoratorNode,
 } from "lexical";
 import { parseString } from "../config/type-guards";
+import { isAllowedLexicalIframeHostname } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 // =============================================================================
 // State
@@ -66,10 +67,10 @@ function $convertMapEmbedElement(
 ): null | DOMConversionOutput {
   if (!element.hasAttribute("data-map")) return null;
   const iframe = element.querySelector("iframe");
+  const embedUrl = iframe?.getAttribute("src") ?? "";
+  if (!isAllowedLexicalIframeHostname(embedUrl)) return null;
   const mapNode = $create(MapEmbedNode);
-  if (iframe) {
-    $setState(mapNode, embedUrlState, iframe.getAttribute("src") ?? "");
-  }
+  $setState(mapNode, embedUrlState, embedUrl);
   $setState(
     mapNode,
     mapLabelState,

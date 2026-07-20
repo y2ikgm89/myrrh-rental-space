@@ -21,6 +21,7 @@ import {
 } from "lexical";
 import { parseString } from "../config/type-guards";
 import { renderLexicalDecorator } from "./decorator-registry";
+import { isAllowedLexicalIframeHostname } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export function toFigmaEmbedUrl(url: string): string | null {
   try {
@@ -63,8 +64,10 @@ export class FigmaNode extends DecoratorNode<ReactElement | null> {
         return {
           conversion: (element) => {
             const iframe = element.querySelector("iframe");
+            const embedUrl = iframe?.getAttribute("src") ?? "";
+            if (!isAllowedLexicalIframeHostname(embedUrl)) return null;
             const node = $createFigmaNode({
-              embedUrl: iframe?.getAttribute("src") ?? "",
+              embedUrl,
               label: element.getAttribute("data-figma-label") ?? "",
             });
             return { node };
