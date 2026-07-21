@@ -1578,6 +1578,87 @@ details[data-collapsible-item]
 }
 
 /* --------------------------------------------------------------------------
+ * 1g-3. Space Card Embed (resolved)
+ *
+ * 公開描画時に resolveSpaceCardEmbeds が出力するリッチカード。
+ * data-space-card-embed-resolved: コンテナ
+ * data-space-card-embed-image: 写真リンク
+ * data-space-card-embed-body: テキスト列
+ * data-space-card-embed-title: タイトルリンク
+ * data-space-card-embed-meta: 定員・料金
+ * data-space-card-embed-cta: 予約するボタン
+ * -------------------------------------------------------------------------- */
+
+[data-space-card-embed-resolved] {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+[data-space-card-embed-image] {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background-color: var(--color-muted);
+}
+
+[data-space-card-embed-image] > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-space-card-embed-body] {
+  padding: 1rem 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+[data-space-card-embed-title] {
+  text-decoration: none;
+  color: inherit;
+}
+
+[data-space-card-embed-title] > h4 {
+  font-weight: 500;
+  font-size: 1rem;
+  margin: 0;
+}
+
+[data-space-card-embed-meta] {
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground);
+  margin: 0;
+}
+
+[data-space-card-embed-cta] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  padding: 0.5rem 1.25rem;
+  min-height: var(--touch-target-min, 44px);
+  border: 1px solid var(--color-foreground);
+  border-radius: 0;
+  font-size: 0.8125rem;
+  text-decoration: none;
+  color: var(--color-foreground);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+[data-space-card-embed-cta]:hover {
+  background-color: var(--color-foreground);
+  color: var(--color-background);
+}
+
+/* --------------------------------------------------------------------------
  * 1h. Image
  *
  * data-image: コンテナ
