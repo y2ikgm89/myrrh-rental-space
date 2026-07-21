@@ -1,41 +1,27 @@
 "use client";
 
-import { useTransition } from "react";
-import { toast } from "sonner";
 import {
   ActionDropdown,
   ActionDropdownItem,
 } from "@/admin/components/ActionDropdown";
-import { updateNewsPublished } from "@/admin/actions/news";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 type NewsActionCellProps = {
   newsId: string;
-  isPublished: boolean;
 };
 
-export function NewsActionCell({ newsId, isPublished }: NewsActionCellProps) {
-  const [isPending, startTransition] = useTransition();
-
-  const handleTogglePublish = () => {
-    startTransition(async () => {
-      const result = await updateNewsPublished(newsId, !isPublished);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success(result.isPublished ? "公開しました" : "下書きに戻しました");
-    });
-  };
-
+/**
+ * お知らせ管理一覧の ActionDropdown。
+ *
+ * 公開 / 下書きの切替は同行の `PublishSwitch` で inline 変更するため、
+ * 本 cell からは publish / unpublish menu を削除済み
+ * （業界標準: WordPress / Notion / Linear ステータス inline 切替パターン。
+ * PostActionCell.tsx 参照）。
+ */
+export function NewsActionCell({ newsId }: NewsActionCellProps) {
   return (
-    <ActionDropdown disabled={isPending}>
+    <ActionDropdown>
       <ActionDropdownItem href={`/admin/news/${newsId}`}>
         編集
-      </ActionDropdownItem>
-      <ActionDropdownItem onClick={handleTogglePublish}>
-        {isPublished ? "下書きに戻す" : "公開する"}
       </ActionDropdownItem>
     </ActionDropdown>
   );
