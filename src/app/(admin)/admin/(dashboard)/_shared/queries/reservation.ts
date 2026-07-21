@@ -3,6 +3,7 @@ import "server-only";
 import type {
   PaymentStatus,
   TaxRateType,
+  CustomerType,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { ReservationTabFilter } from "@/shared/lib/nuqs";
@@ -48,8 +49,10 @@ export type ReservationWithRelations = {
   cancelledByType: string | null;
   guestLastName: string | null;
   guestFirstName: string | null;
+  guestEmail: string | null;
   guestPhone: string | null;
   guestCompanyName: string | null;
+  guestCustomerType: CustomerType | null;
   space: {
     id: string;
     name: string;

@@ -171,8 +171,10 @@ export async function getReservationsQuery(
         cancelledByType: true,
         guestLastName: true,
         guestFirstName: true,
+        guestEmail: true,
         guestPhone: true,
         guestCompanyName: true,
+        guestCustomerType: true,
         notes: true,
         deletedAt: true,
         createdAt: true,
@@ -312,8 +314,10 @@ export async function getReservationByIdQuery(id: string) {
       cancelledByType: true,
       guestLastName: true,
       guestFirstName: true,
+      guestEmail: true,
       guestPhone: true,
       guestCompanyName: true,
+      guestCustomerType: true,
       space: {
         select: {
           id: true,
