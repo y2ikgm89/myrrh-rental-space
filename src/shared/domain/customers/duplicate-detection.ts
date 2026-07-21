@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { RISK_FLAG_REASON } from "@/shared/lib/validations/enums/helpers";
+import type { CustomerSearchResult } from "./types";
 import { reconcileFlagReasonsCommand } from "./risk-detection";
 
 const DUPLICATE_DETECTION_OWNED_REASONS = [
@@ -12,12 +13,8 @@ export type DetectedDuplicateCustomer = {
   readonly customerId: string;
 };
 
-export type DuplicateCandidateResult = {
-  readonly id: string;
-  readonly lastName: string;
-  readonly firstName: string;
-  readonly email: string;
-};
+/** マージダイアログのプリフィル用。CustomerSearchResult と互換な型。 */
+export type DuplicateCandidateResult = CustomerSearchResult;
 
 /**
  * `emailCanonical` 一致または `phoneNumber` 完全一致（ファジーマッチは対象外、
@@ -108,7 +105,17 @@ export async function findDuplicateCandidateFor(
         ...(self.phoneNumber ? [{ phoneNumber: self.phoneNumber }] : []),
       ],
     },
-    select: { id: true, lastName: true, firstName: true, email: true },
+    select: {
+      id: true,
+      lastName: true,
+      firstName: true,
+      companyName: true,
+      customerType: true,
+      email: true,
+      phoneNumber: true,
+      status: true,
+      userId: true,
+    },
     orderBy: { createdAt: "asc" },
   });
 

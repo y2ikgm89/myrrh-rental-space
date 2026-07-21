@@ -38,7 +38,9 @@ import {
 import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { searchCustomers } from "@/shared/domain/customers/queries";
+import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { clearRiskFlagCommand } from "@/shared/domain/customers/risk-detection";
+import { findDuplicateCandidateFor } from "@/shared/domain/customers/duplicate-detection";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
@@ -768,6 +770,34 @@ export async function resetCustomerEmailDelivery(id: string): Promise<
           context: { customerId: data.customerId },
         },
       );
+    },
+  });
+}
+
+/**
+ * Phase 4: 重複顧客検出cronが検知した候補を、マージダイアログの初期選択状態に
+ * プリフィルするための薄い wrapper。customer:read 権限で動く read-only action。
+ * 一致する相手が無い場合は null を返す。
+ */
+export async function findDuplicateCandidateForCustomer(
+  customerId: string,
+): Promise<
+  MutationResult<{
+    candidate: CustomerSearchResult | null;
+  }>
+> {
+  const validated = idSchema.safeParse(customerId);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "read",
+    resourceId: validated.data,
+    execute: async () => {
+      const candidate = await findDuplicateCandidateFor(validated.data);
+      return { candidate };
     },
   });
 }

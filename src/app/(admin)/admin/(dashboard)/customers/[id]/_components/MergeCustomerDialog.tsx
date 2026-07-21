@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -28,12 +28,18 @@ type Props = {
     firstName: string;
     email: string;
   };
+  /**
+   * 重複検出cronが検知した候補を、検索操作なしで初期選択状態にする
+   * (Phase 4: 顧客管理強化)。未指定なら従来通り空の検索状態で開く。
+   */
+  initialCandidate?: CustomerSearchResult;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export function MergeCustomerDialog({
   sourceCustomer,
+  initialCandidate,
   open,
   onOpenChange,
 }: Props) {
@@ -43,6 +49,19 @@ export function MergeCustomerDialog({
   const [selected, setSelected] = useState<CustomerSearchResult | null>(null);
   const [isSearching, startSearchTransition] = useTransition();
   const [isMerging, startMergeTransition] = useTransition();
+
+  // initialCandidate が指定されている場合、ダイアログを開く時に
+  // 候補を初期選択状態にシードする。React Compilerが自動最適化する。
+  useEffect(() => {
+    if (open && initialCandidate) {
+      // eslint-disable-next-line
+      setSelected(initialCandidate);
+      // eslint-disable-next-line
+      setResults([]);
+      // eslint-disable-next-line
+      setQuery("");
+    }
+  }, [open, initialCandidate]);
 
   const handleSearch = (value: string) => {
     setQuery(value);

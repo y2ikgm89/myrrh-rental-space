@@ -63,6 +63,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
               lastName: customer.lastName,
               firstName: customer.firstName,
               email: customer.email,
+              flagReasons: customer.flagReasons,
             }}
           />
           <Button size="sm" asChild>
