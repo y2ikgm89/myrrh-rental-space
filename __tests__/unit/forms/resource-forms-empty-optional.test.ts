@@ -47,16 +47,18 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import type { z } from "zod";
 
-const EMPTY_DESC_TICKET = JSON.stringify([
-  {
-    name: "一般",
-    description: null,
-    price: 1000,
-    capacity: null,
-    unitSize: 1,
-    isAvailable: true,
-  },
-]);
+/**
+ * Option (a) 移行後: tickets は conform の field.array 経由で `tickets[N].<field>` の
+ * native FormData として送信されるため、JSON string ではなく個別の entry で組む。
+ */
+const EMPTY_DESC_TICKET_ENTRIES: Record<string, string> = {
+  "tickets[0].name": "一般",
+  "tickets[0].description": "",
+  "tickets[0].price": "1000",
+  "tickets[0].capacity": "",
+  "tickets[0].unitSize": "1",
+  "tickets[0].isAvailable": "on",
+};
 
 function form(entries: Record<string, string>): FormData {
   const fd = new FormData();
@@ -394,7 +396,7 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
           },
         ]),
         registrationDeadline: "",
-        tickets: EMPTY_DESC_TICKET,
+        ...EMPTY_DESC_TICKET_ENTRIES,
         addressDetail: "",
         locationId: EVENT_FORM_NONE_VALUE,
         spaceId: EVENT_FORM_NONE_VALUE,
@@ -410,7 +412,7 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
     );
   });
 
-  test("event: チケット JSON の旧 sortOrder は拒否する", () => {
+  test("event: チケットの旧 sortOrder フィールドは拒否する (strictObject)", () => {
     expectError(
       eventFormSchema,
       form({
@@ -427,17 +429,13 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
           },
         ]),
         registrationDeadline: "",
-        tickets: JSON.stringify([
-          {
-            name: "一般",
-            description: null,
-            price: 1000,
-            capacity: null,
-            unitSize: 1,
-            sortOrder: 0,
-            isAvailable: true,
-          },
-        ]),
+        "tickets[0].name": "一般",
+        "tickets[0].description": "",
+        "tickets[0].price": "1000",
+        "tickets[0].capacity": "",
+        "tickets[0].unitSize": "1",
+        "tickets[0].sortOrder": "0",
+        "tickets[0].isAvailable": "on",
         addressDetail: "",
         locationId: EVENT_FORM_NONE_VALUE,
         spaceId: EVENT_FORM_NONE_VALUE,

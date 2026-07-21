@@ -45,11 +45,6 @@ import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
 import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
-import { countTicketFieldErrorGroups } from "./ticket-errors";
-import {
-  createDefaultTicket,
-  type EventTicketInput,
-} from "@/shared/domain/events/ticket-types";
 
 type EventData = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 type SpaceOption = Awaited<ReturnType<typeof getSpacesForEvent>>[number];
@@ -93,10 +88,20 @@ function fieldHasErrors(errors: ConformFieldErrors): boolean {
   return Array.isArray(errors) && errors.length > 0;
 }
 
-function serializeTicket(ticket: EventTicketInput) {
-  const { _key, ...serializableTicket } = ticket;
-  void _key;
-  return serializableTicket;
+/**
+ * tickets タブのエラーバッジ count。conform native の field.array に移行したため、
+ * `fields.tickets.allErrors` (prefix filter 済み Record<string, string[]>) の
+ * non-empty entry 数がそのままバッジ数字になる。
+ * top-level array error (min(1) 等) と個別の `tickets[N].<field>` を一律にカウント。
+ */
+function countTicketErrorGroups(
+  allErrors: Readonly<Record<string, readonly string[] | null | undefined>>,
+): number {
+  let count = 0;
+  for (const messages of Object.values(allErrors)) {
+    if (messages && messages.length > 0) count += 1;
+  }
+  return count;
 }
 
 /**
@@ -159,22 +164,6 @@ export function EventForm({
   const [meetingUrl, setMeetingUrl] = useState<string | null>(
     event?.meetingUrl ?? null,
   );
-  const [tickets, setTickets] = useState<EventTicketInput[]>(() => {
-    if (event && event.tickets.length > 0) {
-      return event.tickets.map((t) => ({
-        _key: t.id,
-        id: t.id,
-        name: t.name,
-        description: t.description,
-        price: t.price,
-        capacity: t.capacity,
-        unitSize: t.unitSize,
-        isAvailable: t.isAvailable,
-      }));
-    }
-    return [createDefaultTicket()];
-  });
-
   const [slots, setSlots] = useState<SlotFormItem[]>(() => {
     if (event && event.slots.length > 0) {
       return event.slots.map((s) => ({
@@ -220,6 +209,27 @@ export function EventForm({
           metaDescription: event.metaDescription ?? "",
           metaKeywords: event.metaKeywords ?? "",
           gallery: parseGallery(event.gallery),
+          tickets:
+            event.tickets.length > 0
+              ? event.tickets.map((t) => ({
+                  id: t.id,
+                  name: t.name,
+                  description: t.description ?? "",
+                  price: t.price,
+                  capacity: t.capacity,
+                  unitSize: t.unitSize,
+                  isAvailable: t.isAvailable,
+                }))
+              : [
+                  {
+                    name: "",
+                    description: "",
+                    price: 0,
+                    capacity: null,
+                    unitSize: 1,
+                    isAvailable: true,
+                  },
+                ],
         }
       : {
           title: "",
@@ -232,6 +242,16 @@ export function EventForm({
           metaDescription: "",
           metaKeywords: "",
           gallery: [],
+          tickets: [
+            {
+              name: "",
+              description: "",
+              price: 0,
+              capacity: null,
+              unitSize: 1,
+              isAvailable: true,
+            },
+          ],
         },
   });
 
@@ -251,7 +271,7 @@ export function EventForm({
       fields.status,
       fields.registrationOpen,
     ].filter((f) => fieldHasErrors(f.errors)).length,
-    tickets: countTicketFieldErrorGroups(fields.tickets.allErrors),
+    tickets: countTicketErrorGroups(fields.tickets.allErrors),
     location: [
       fields.locationId,
       fields.spaceId,
@@ -317,11 +337,6 @@ export function EventForm({
         value={JSON.stringify(
           slots.map(({ clientKey: _clientKey, ...slot }) => slot),
         )}
-      />
-      <input
-        type="hidden"
-        name={fields.tickets.name}
-        value={JSON.stringify(tickets.map(serializeTicket))}
       />
 
       {form.errors && form.errors.length > 0 && (
@@ -417,9 +432,16 @@ export function EventForm({
           className="data-[state=inactive]:hidden"
         >
           <TicketsField
-            tickets={tickets}
-            onChange={setTickets}
-            fieldErrors={fields.tickets.allErrors ?? undefined}
+            field={fields.tickets}
+            onInsertTicket={(defaultValue) =>
+              form.insert({ name: fields.tickets.name, defaultValue })
+            }
+            onRemoveTicket={(index) =>
+              form.remove({ name: fields.tickets.name, index })
+            }
+            onReorderTicket={(from, to) =>
+              form.reorder({ name: fields.tickets.name, from, to })
+            }
             isPending={isPending}
           />
         </TabsContent>
