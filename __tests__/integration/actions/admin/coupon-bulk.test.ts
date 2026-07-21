@@ -25,11 +25,13 @@ const mockBulkDeleteCouponsCommand = mock<
   (ids: string[]) => Promise<{
     count: number;
     affectedIds: string[];
+    deleted: { id: string; code: string; name: string }[];
   }>
 >(() =>
   Promise.resolve({
     count: 0,
     affectedIds: [],
+    deleted: [],
   }),
 );
 
@@ -252,6 +254,10 @@ describe("bulkDeleteCoupons", () => {
       mockBulkDeleteCouponsCommand.mockResolvedValueOnce({
         count: 2,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        deleted: [
+          { id: VALID_UUID_A, code: "SAVE10", name: "10%オフ" },
+          { id: VALID_UUID_B, code: "SAVE20", name: "20%オフ" },
+        ],
       });
 
       const result = await bulkDeleteCoupons([VALID_UUID_A, VALID_UUID_B]);

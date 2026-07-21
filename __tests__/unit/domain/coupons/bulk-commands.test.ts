@@ -27,8 +27,16 @@ mock.module("@/shared/db/prisma", () => ({
 const { bulkToggleActiveCouponsCommand, bulkDeleteCouponsCommand } =
   await import("@/shared/domain/coupons/bulk-commands");
 
-const COUPON_A = { id: "11111111-1111-4111-8111-111111111111" };
-const COUPON_B = { id: "22222222-2222-4222-8222-222222222222" };
+const COUPON_A = {
+  id: "11111111-1111-4111-8111-111111111111",
+  code: "SAVE10",
+  name: "10%オフ",
+};
+const COUPON_B = {
+  id: "22222222-2222-4222-8222-222222222222",
+  code: "SAVE20",
+  name: "20%オフ",
+};
 
 describe("bulkToggleActiveCouponsCommand", () => {
   beforeEach(() => {
@@ -106,6 +114,7 @@ describe("bulkDeleteCouponsCommand", () => {
       expect(result).toEqual({
         count: 0,
         affectedIds: [],
+        deleted: [],
       });
       expect(mockFindMany).not.toHaveBeenCalled();
       expect(mockDeleteMany).not.toHaveBeenCalled();
@@ -120,6 +129,7 @@ describe("bulkDeleteCouponsCommand", () => {
       expect(result).toEqual({
         count: 2,
         affectedIds: [COUPON_A.id, COUPON_B.id],
+        deleted: [COUPON_A, COUPON_B],
       });
       expect(mockDeleteMany).toHaveBeenCalledTimes(1);
     });
@@ -132,6 +142,7 @@ describe("bulkDeleteCouponsCommand", () => {
       expect(result).toEqual({
         count: 0,
         affectedIds: [],
+        deleted: [],
       });
       expect(mockDeleteMany).not.toHaveBeenCalled();
     });
