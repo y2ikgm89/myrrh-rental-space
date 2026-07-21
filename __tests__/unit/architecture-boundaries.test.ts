@@ -3222,6 +3222,64 @@ describe("architecture boundaries", () => {
       ).toEqual([]);
     });
   });
+
+  describe("admin BulkActions primitive (Cluster J mobile UX)", () => {
+    // Round-4 audit Cluster J / Finding #12: 各 BulkActions が
+    // `fixed bottom-6 left-1/2 -translate-x-1/2` + 単列 flex を直書きしていたため、
+    // 375px viewport (iPhone SE) で 5 ボタン程度のバーが左右にオーバーフローし、
+    // 「一括有効化」「X 閉じる」が画面外に飛び出していた。
+    // FloatingBulkActionBar が新たな SSoT で、safe-area + flex-wrap を担う。
+    // 全 10 BulkActions の primitive 移行と drift-gate は Cluster J2 で完了予定。
+    const ADMIN_DASHBOARD_ROOT = join(
+      APP_ROUTE_ROOT,
+      "(admin)",
+      "admin",
+      "(dashboard)",
+    );
+    const BULK_ACTIONS_PRIMITIVE_FILE = join(
+      ADMIN_DASHBOARD_ROOT,
+      "_shared",
+      "components",
+      "FloatingBulkActionBar.tsx",
+    );
+
+    test("primitive ファイルが存在する", () => {
+      expect(existsSync(BULK_ACTIONS_PRIMITIVE_FILE)).toBe(true);
+    });
+  });
+
+  describe("<input> / <textarea> は 16px 未満 font-size を単独指定しない (Cluster J iOS auto-zoom)", () => {
+    // Round-4 audit Cluster J / Finding #17 (medium): iOS Safari は focus 対象
+    // input が font-size < 16px だとページを auto-zoom し、dialog / モーダル内の
+    // レイアウトが横に押し出される。text-sm (14px) 単独指定は mobile (md 未満) で
+    // 必ず zoom される。SSoT パターンは `text-base md:text-sm` — mobile は 16px を
+    // 強制し、md+ でデザイン通り 14px に戻す。該当 primitive: Input / Textarea /
+    // CommandInput (admin + public 各々)。
+    test("JSX 内の <input> / <textarea> は text-sm を単独指定しない", () => {
+      const files = collectSourceFiles(SRC_ROOT).filter((file) =>
+        file.endsWith(".tsx"),
+      );
+      // opening タグ全体 (attribute 部を含む) を lazy match。多行 opening tag
+      // (`<input\n type={...}\n className={cn(...)}\n />`) を [\s\S]*? で吸収。
+      // `>` を quoted attribute 内に含む極端なケースは実 codebase では出ない。
+      const tagRe = /<(?:input|textarea)\b[\s\S]*?>/gu;
+      const offenders: string[] = [];
+      for (const file of files) {
+        const source = readFileSync(file, "utf8");
+        for (const match of source.matchAll(tagRe)) {
+          const tag = match[0];
+          if (!/\btext-sm\b/u.test(tag)) continue;
+          if (/\btext-base\b/u.test(tag)) continue;
+          offenders.push(relative(ROOT, file));
+        }
+      }
+
+      expect(
+        [...new Set(offenders)],
+        `<input> / <textarea> に text-sm を単独指定すると iOS Safari が focus 時に auto-zoom します。text-base md:text-sm に置き換えてください (Input.tsx / Textarea.tsx / command.tsx の pattern に準拠)。`,
+      ).toEqual([]);
+    });
+  });
 });
 
 // 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
