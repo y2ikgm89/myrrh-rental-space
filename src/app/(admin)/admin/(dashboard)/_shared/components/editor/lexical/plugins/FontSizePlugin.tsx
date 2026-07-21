@@ -151,15 +151,72 @@ export function FontSizePlugin() {
   };
 
   // キーボードイベントハンドラー
+  //
+  // PR#1342 フォローアップ（Codexレビュー指摘, スレッド
+  // PRRT_kwDOQ0jEts6SfWgO）: この input は Toolbar.Button asChild で
+  // ロービングフォーカスグループの単一 Tab ストップに参加する（下記 JSX）。
+  // ArrowLeft/ArrowRight/Home/End は、テキスト境界にいない限りキャレット
+  // 移動として自前で処理してから preventDefault する。RovingFocusGroupItem
+  // 内部の矢印キー処理は composeEventHandlers 経由で
+  // event.defaultPrevented を見てから実行されるため、preventDefault する
+  // と Radix 側のロービング移動（隣接ボタンへのフォーカス移動）は実行され
+  // ない（実ブラウザで動作検証済み。radix-ui@1.6.0 /
+  // @radix-ui/react-toolbar@1.1.13 / @radix-ui/react-roving-focus@1.1.13）。
+  // テキスト先頭で ArrowLeft・末尾で ArrowRight を押した場合のみ
+  // preventDefault せず Radix 側へ委譲し、隣接ボタンへ抜けられるようにする。
+  // Shift/Ctrl/Alt/Meta 修飾時は Radix 側の矢印キー処理自体が元々スキップ
+  // するため何もしない（選択範囲拡張・単語単位移動は素通しでネイティブ
+  // 挙動のまま）。Home/End は常にテキストフィールド内の移動として扱い
+  // ロービンググループへは委譲しない（テキスト入力の慣習的挙動を優先。
+  // WAI-ARIA APG toolbar パターンの Home/End はロービング対象としては
+  // Optional 扱い）。
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleInputBlur();
       e.currentTarget.blur();
-    } else if (e.key === "Escape") {
+      return;
+    }
+    if (e.key === "Escape") {
       e.preventDefault();
       setInputValue(fontSize);
       e.currentTarget.blur();
+      return;
+    }
+
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) {
+      return;
+    }
+
+    const input = e.currentTarget;
+    const selectionStart = input.selectionStart ?? 0;
+    const selectionEnd = input.selectionEnd ?? 0;
+
+    if (e.key === "ArrowLeft") {
+      if (selectionStart === 0 && selectionEnd === 0) {
+        return; // テキスト先頭: Radix のロービング移動へ委譲
+      }
+      e.preventDefault();
+      const collapsed = Math.min(selectionStart, selectionEnd);
+      const next = selectionStart !== selectionEnd ? collapsed : collapsed - 1;
+      input.setSelectionRange(next, next);
+    } else if (e.key === "ArrowRight") {
+      if (
+        selectionStart === input.value.length &&
+        selectionEnd === input.value.length
+      ) {
+        return; // テキスト末尾: Radix のロービング移動へ委譲
+      }
+      e.preventDefault();
+      const collapsed = Math.max(selectionStart, selectionEnd);
+      const next = selectionStart !== selectionEnd ? collapsed : collapsed + 1;
+      input.setSelectionRange(next, next);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      input.setSelectionRange(0, 0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      input.setSelectionRange(input.value.length, input.value.length);
     }
   };
 
@@ -180,18 +237,22 @@ export function FontSizePlugin() {
           <IconMinus className="h-3 w-3" />
         </Button>
       </Toolbar.Button>
-      {/* 自由入力の text input。矢印キーはキャレット移動に使うため
-          Toolbar.Button では包まず素の独立 Tab ストップのまま残す */}
-      <Input
-        type="text"
-        inputMode="numeric"
-        value={inputValue}
-        onChange={handleInputChange}
-        onBlur={handleInputBlur}
-        onKeyDown={handleKeyDown}
-        className="h-8 w-12 px-1 text-center text-xs"
-        title="フォントサイズ"
-      />
+      {/* 自由入力の text input。Toolbar.Button asChild でラップし、
+          ロービングフォーカスグループの単一 Tab ストップとして参加させる
+          （矢印キーのキャレット移動は上記 handleKeyDown で自前実装し、
+          テキスト境界でのみ Radix 側の移動に委譲する） */}
+      <Toolbar.Button asChild>
+        <Input
+          type="text"
+          inputMode="numeric"
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onKeyDown={handleKeyDown}
+          className="h-8 w-12 px-1 text-center text-xs"
+          title="フォントサイズ"
+        />
+      </Toolbar.Button>
       <Toolbar.Button asChild disabled={currentSize >= MAX_FONT_SIZE}>
         <Button
           type="button"
