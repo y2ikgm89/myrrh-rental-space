@@ -324,6 +324,67 @@ test.describe("Lexical ToolbarPlugin - roving tabindex（WAI-ARIA APG toolbar pa
     await expect(decrementButton).toBeDisabled();
   });
 
+  test("既に境界値で確定済み（定常的に disabled）の増減ボタンは、矢印キー1回でロービング対象として読み飛ばされフォーカスが input 内に閉じ込められない（PR#1355 再フォローアップ, Codexレビュー指摘スレッド PRRT_kwDOQ0jEts6Sin1U）", async ({
+    page,
+  }) => {
+    await page.goto(NEW_POST_PATH);
+    const toolbar = page.getByRole("toolbar", { name: TOOLBAR_NAME });
+    await expect(toolbar).toBeVisible({ timeout: 15000 });
+    const fontSizeInput = toolbar.getByRole("textbox", {
+      name: "フォントサイズ",
+    });
+    const incrementButton = toolbar.getByRole("button", {
+      name: "フォントサイズを大きく",
+    });
+    const decrementButton = toolbar.getByRole("button", {
+      name: "フォントサイズを小さく",
+    });
+
+    // まず 72(MAX) へ確定させ、増加ボタンを「このキー操作で新たに
+    // disabled になる」のではなく「既に確定済みで定常的に disabled」の
+    // 状態にする
+    await fontSizeInput.click();
+    await fontSizeInput.fill("72");
+    await page.keyboard.press("Enter");
+    await expect(fontSizeInput).toHaveValue("72");
+    await expect(incrementButton).toBeDisabled();
+
+    // 再度 input へフォーカスし末尾で ArrowRight。修正前は
+    // `willAdjacentButtonBecomeDisabled` が遷移ケースと定常 disabled
+    // ケースを区別せず常に preventDefault していたため、Radix への委譲
+    // 自体が起きず、本来なら disabled な増加ボタンを自動的に読み飛ばして
+    // 次の有効な項目へ抜けられるはずのロービング移動が機能せず
+    // フォーカスが input 内に閉じ込められていた
+    await fontSizeInput.click();
+    await fontSizeInput.evaluate((el: HTMLInputElement) =>
+      el.setSelectionRange(el.value.length, el.value.length),
+    );
+    await page.keyboard.press("ArrowRight");
+
+    await expect(fontSizeInput).not.toBeFocused();
+    // disabled 要素は HTML 仕様上フォーカスを保持できないため、
+    // 増加ボタンではなく toolbar 内の別の有効なコントロールへ抜けている
+    await expect(incrementButton).not.toBeFocused();
+    await expect(toolbar.locator(":focus")).toBeVisible();
+
+    // 対称: MIN(8) 側も検証
+    await fontSizeInput.click();
+    await fontSizeInput.fill("8");
+    await page.keyboard.press("Enter");
+    await expect(fontSizeInput).toHaveValue("8");
+    await expect(decrementButton).toBeDisabled();
+
+    await fontSizeInput.click();
+    await fontSizeInput.evaluate((el: HTMLInputElement) =>
+      el.setSelectionRange(0, 0),
+    );
+    await page.keyboard.press("ArrowLeft");
+
+    await expect(fontSizeInput).not.toBeFocused();
+    await expect(decrementButton).not.toBeFocused();
+    await expect(toolbar.locator(":focus")).toBeVisible();
+  });
+
   test("フォントサイズ input 内で Home/End は常にテキストフィールド内の移動として扱われる（ロービング移動に委譲しない）", async ({
     page,
   }) => {

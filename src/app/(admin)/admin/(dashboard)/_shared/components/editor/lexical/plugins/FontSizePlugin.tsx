@@ -120,7 +120,8 @@ export function FontSizePlugin() {
     setInputValue(`${clampedSize}`);
   };
 
-  // 委譲先の増減ボタンが blur 確定後に disabled 化されるかどうかを判定する
+  // 委譲先の増減ボタンが「現在すでに disabled か」「blur 確定後に新たに
+  // disabled 化されるか」を判定する
   //
   // PR#1351 フォローアップ（Codexレビュー指摘, スレッド
   // PRRT_kwDOQ0jEts6ShRqe）: handleKeyDown が境界（先頭/末尾）で Radix の
@@ -140,6 +141,31 @@ export function FontSizePlugin() {
   // してキャレットをその場に留める）。React の state を同期的に flush
   // する手段（`flushSync`）はこのリポジトリの ESLint ルール
   // `@eslint-react/dom-no-flush-sync` で禁止されているため使わない。
+  //
+  // PR#1355 再フォローアップ（Codexレビュー指摘, スレッド
+  // PRRT_kwDOQ0jEts6Sin1U）: 上記ガードは「これから disabled になる
+  // （enabled → disabled の遷移）」だけでなく「値が確定済みで既に
+  // disabled な定常状態（例: 既に 72 の状態で末尾 ArrowRight）」でも
+  // 誤って preventDefault してしまい、Radix のロービングフォーカスが
+  // 本来持つ「disabled 項目を自動的に読み飛ばして隣の有効な項目へ移る」
+  // 挙動を妨げ、逆に input 内へフォーカスを閉じ込めてしまっていた。
+  // 定常的に disabled な項目は Radix にそのまま委譲すれば安全に読み
+  // 飛ばされるため、ガードは「現在は enabled だが、この操作の確定に
+  // よって新たに disabled化される」という遷移が起きる場合に限定する
+  // 必要がある。`isAdjacentButtonCurrentlyDisabled` で実際にボタンの
+  // `disabled` prop を決めている committed `fontSize`（inputValue では
+  // ない）を基準に現在の disabled 状態を判定し、
+  // `willAdjacentButtonBecomeDisabled` の判定と組み合わせて遷移
+  // ケースのみを検出する。
+  const isAdjacentButtonCurrentlyDisabled = (
+    direction: "increment" | "decrement",
+  ): boolean => {
+    const currentSize = parseInt(fontSize, 10) || DEFAULT_FONT_SIZE;
+    return direction === "increment"
+      ? currentSize >= MAX_FONT_SIZE
+      : currentSize <= MIN_FONT_SIZE;
+  };
+
   const willAdjacentButtonBecomeDisabled = (
     direction: "increment" | "decrement",
   ): boolean => {
@@ -154,6 +180,15 @@ export function FontSizePlugin() {
       ? pendingSize >= MAX_FONT_SIZE
       : pendingSize <= MIN_FONT_SIZE;
   };
+
+  // 「今は enabled だが、この操作の確定で新たに disabled になる」遷移
+  // ケースだけを真とする。既に disabled な定常状態では false を返し、
+  // Radix への委譲（= disabled 項目の自動読み飛ばし）を妨げない。
+  const shouldTrapFocusToAvoidDisabledHandoff = (
+    direction: "increment" | "decrement",
+  ): boolean =>
+    !isAdjacentButtonCurrentlyDisabled(direction) &&
+    willAdjacentButtonBecomeDisabled(direction);
 
   // 増減ハンドラー
   const handleIncrement = () => {
@@ -229,10 +264,12 @@ export function FontSizePlugin() {
 
     if (e.key === "ArrowLeft") {
       if (selectionStart === 0 && selectionEnd === 0) {
-        if (willAdjacentButtonBecomeDisabled("decrement")) {
+        if (shouldTrapFocusToAvoidDisabledHandoff("decrement")) {
           // 委譲すると blur で直後に disabled 化される減少ボタンへ
           // フォーカスが移ってしまうため、委譲せずキャレットをその場に
-          // 留める（上記 willAdjacentButtonBecomeDisabled のコメント参照）
+          // 留める（enabled→disabled の遷移ケースのみ。既に disabled な
+          // 定常状態では下の return で通常通り Radix に委譲し、disabled
+          // 項目の自動読み飛ばしに任せる。上記コメント参照）
           e.preventDefault();
           return;
         }
@@ -247,10 +284,12 @@ export function FontSizePlugin() {
         selectionStart === input.value.length &&
         selectionEnd === input.value.length
       ) {
-        if (willAdjacentButtonBecomeDisabled("increment")) {
+        if (shouldTrapFocusToAvoidDisabledHandoff("increment")) {
           // 委譲すると blur で直後に disabled 化される増加ボタンへ
           // フォーカスが移ってしまうため、委譲せずキャレットをその場に
-          // 留める（上記 willAdjacentButtonBecomeDisabled のコメント参照）
+          // 留める（enabled→disabled の遷移ケースのみ。既に disabled な
+          // 定常状態では下の return で通常通り Radix に委譲し、disabled
+          // 項目の自動読み飛ばしに任せる。上記コメント参照）
           e.preventDefault();
           return;
         }
