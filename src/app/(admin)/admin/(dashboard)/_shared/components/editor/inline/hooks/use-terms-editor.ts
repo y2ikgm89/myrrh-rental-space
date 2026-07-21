@@ -273,6 +273,9 @@ export function useTermsEditor({
         }
         return null;
       }
+      // create mode の下書きキー ("terms-new") は id 確定後に不要になるため明示的に破棄する
+      // (Post/News の createDraftPost/createDraftNews と同型)
+      clearDraft(autoSaveKey);
       return result.id;
     } catch (error) {
       logger.error("作成中にエラーが発生しました", {
