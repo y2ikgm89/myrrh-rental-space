@@ -236,7 +236,13 @@ export async function sendReservationConfirmationEmail(
       ),
       attachments,
     }),
-    idempotencyKey: `reservation-confirm/${data.reservationId}`,
+    // icsSequence を含めることで、同一予約が PENDING で 1 通目 → 別経路で
+    // CONFIRMED に遷移して 2 通目を送るような復元/再送ケースでも idempotency key が
+    // 衝突せず Resend が `invalid_idempotent_request` で silent drop することを防ぐ
+    // (updated / cancelled / statusChanged と対称)。version discriminator を欠くと
+    // Cluster H #16 のような silent drop 回帰を招くため、この形状は architecture-
+    // boundaries.test.ts の drift gate で強制する。
+    idempotencyKey: `reservation-confirm/${data.reservationId}/${data.icsSequence}`,
     operation: "sendReservationConfirmationEmail",
     context: {
       reservationId: data.reservationId,

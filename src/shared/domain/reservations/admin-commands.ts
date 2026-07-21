@@ -398,11 +398,14 @@ export async function updateAdminReservationCommand(
   const totalPriceWithTax = finalTotalPrice + taxAmount;
 
   // 顧客に影響する変更があった場合のみ、呼び出し側が変更通知メールを送る判断材料にする。
+  // ステータス変更 (PENDING↔CONFIRMED) も顧客にとって重要な変化 (確定通知/保留戻し)
+  // なので、admin editor 経由の status flip を silent にしない (Cluster H #9)。
   const customerVisibleChanged =
     currentReservation.spaceId !== input.spaceId ||
     currentReservation.startTime.getTime() !== startDateTime.getTime() ||
     currentReservation.endTime.getTime() !== endDateTime.getTime() ||
-    currentReservation.totalPrice !== finalTotalPrice;
+    currentReservation.totalPrice !== finalTotalPrice ||
+    currentReservation.status !== input.status;
 
   let updatedIcsSequence = 0;
 
@@ -526,6 +529,12 @@ export async function updateAdminReservationCommand(
     googleCalendarEventId: currentReservation.googleCalendarEventId,
     customerId: input.customerId,
     customerVisibleChanged,
+    // Cluster H #9: 呼び出し側 (updateReservationAction) が status 遷移に応じて
+    // 適切な通知 (PENDING→CONFIRMED=確認+スマートロック, CONFIRMED→PENDING=
+    // ステータス変更, unchanged=汎用 update) に分岐できるようにする。
+    previousStatus: currentReservation.status,
+    newStatus: input.status,
+    spaceId: input.spaceId,
     payload: buildPayload({
       reservationId: id,
       customer: currentReservation.customer,

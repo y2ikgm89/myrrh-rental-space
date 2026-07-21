@@ -759,7 +759,9 @@ describe("updateAdminReservationCommand", () => {
       mockReservationFindUnique.mockImplementation(() =>
         Promise.resolve({
           id: "res-1",
-          status: ReservationStatus.PENDING,
+          // Cluster H #9: status も customerVisibleChanged 判定に含まれるため、
+          // "何も変わらない" ケースは validInput.status と一致させる。
+          status: ReservationStatus.CONFIRMED,
           spaceId: "space-1",
           startTime: new Date("2024-06-15T10:00:00+09:00"),
           endTime: new Date("2024-06-15T12:00:00+09:00"),
@@ -780,6 +782,36 @@ describe("updateAdminReservationCommand", () => {
       const result = await updateAdminReservationCommand("res-1", validInput);
 
       expect(result.customerVisibleChanged).toBe(false);
+    });
+
+    test("Cluster H #9: PENDING → CONFIRMED の status flip で customerVisibleChanged: true (silent 化されない)", async () => {
+      // beforeEach の既存予約 status=PENDING、validInput.status=CONFIRMED。
+      // 日時/スペース/料金は同一でも status flip 単独で顧客通知が要る (確認メール発火)。
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.PENDING,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          couponId: null,
+          customerId: "cust-1",
+          googleCalendarEventId: null,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      const result = await updateAdminReservationCommand("res-1", validInput);
+
+      expect(result.customerVisibleChanged).toBe(true);
+      expect(result.previousStatus).toBe(ReservationStatus.PENDING);
+      expect(result.newStatus).toBe(ReservationStatus.CONFIRMED);
     });
 
     test("スペース固有割引(percentage)が適用され spaceDiscountAmount が永続化される", async () => {
