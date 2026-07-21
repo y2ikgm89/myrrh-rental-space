@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import { Suspense } from "react";
 import { IconArrowLeft } from "@tabler/icons-react";
 import {
   Badge,
@@ -14,98 +15,66 @@ import {
   TableRow,
   TableShell,
 } from "@/admin/components/ui";
-import { getAdminAgreements } from "@/shared/domain/terms/admin-queries";
+import { LoadingState } from "@/admin/components/LoadingState";
+import {
+  getAdminAgreements,
+  getAdminTermsList,
+} from "@/shared/domain/terms/admin-queries";
+import { TermsAgreementsFilters } from "./_components/TermsAgreementsFilters";
 import {
   TERMS_TYPE_LABELS,
   TERMS_SCOPE_LABELS,
   isTermsScope,
 } from "@/shared/lib/validations/terms";
-import type { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import { loadAdminTermsAgreementsSearchParams } from "@/shared/lib/nuqs";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 
 export const metadata: Metadata = {
   title: "規約同意記録 | Myrrh Rental Space",
 };
 
-const DEFAULT_PER_PAGE = 50;
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
-function parsePositiveInt(
-  value: string | string[] | undefined,
-): number | undefined {
-  if (typeof value !== "string") return undefined;
-  const n = Number.parseInt(value, 10);
-  return Number.isFinite(n) && n > 0 ? n : undefined;
+type PageProps = {
+  searchParams: SearchParams;
+};
+
+async function TermsAgreementsFiltersWrapper() {
+  await connection();
+  const terms = await getAdminTermsList();
+  return (
+    <TermsAgreementsFilters
+      termsOptions={terms.map((t) => ({ id: t.id, title: t.title }))}
+    />
+  );
 }
 
-function parseScope(
-  value: string | string[] | undefined,
-): TermsScope | undefined {
-  if (typeof value !== "string") return undefined;
-  return isTermsScope(value) ? value : undefined;
-}
-
-function parseString(value: string | string[] | undefined): string | undefined {
-  if (typeof value !== "string" || value.length === 0) return undefined;
-  return value;
-}
-
-export default async function AdminTermsAgreementsPage({
+async function TermsAgreementsList({
   searchParams,
 }: {
-  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: SearchParams;
 }) {
   await connection();
-
-  const sp = await searchParams;
-  const page = parsePositiveInt(sp["page"]) ?? 1;
-  const perPage = parsePositiveInt(sp["perPage"]) ?? DEFAULT_PER_PAGE;
-  const scope = parseScope(sp["scope"]);
-  const termsId = parseString(sp["termsId"]);
-  const guestEmailKeyword = parseString(sp["guestEmail"]);
+  const params = await loadAdminTermsAgreementsSearchParams(searchParams);
+  const scope = isTermsScope(params.scope) ? params.scope : undefined;
 
   const { items, total } = await getAdminAgreements({
-    page,
-    perPage,
+    page: params.page,
+    perPage: params.perPage,
     ...(scope !== undefined && { scope }),
-    ...(termsId !== undefined && { termsId }),
-    ...(guestEmailKeyword !== undefined && { guestEmailKeyword }),
+    ...(params.termsId !== "" && { termsId: params.termsId }),
+    ...(params.guestEmail !== "" && {
+      guestEmailKeyword: params.guestEmail,
+    }),
   });
 
-  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const totalPages = Math.max(1, Math.ceil(total / params.perPage));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            規約同意記録
-          </h1>
-          <p className="text-muted-foreground">
-            合計 {total.toLocaleString()} 件の同意記録（証跡）
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/terms">
-              <IconArrowLeft className="mr-2 h-4 w-4" />
-              規約一覧に戻る
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link
-              href={`/api/admin/export/terms-agreements?${new URLSearchParams({
-                ...(scope !== undefined && { scope: String(scope) }),
-                ...(termsId !== undefined && { termsId }),
-                ...(guestEmailKeyword !== undefined && {
-                  guestEmail: guestEmailKeyword,
-                }),
-              }).toString()}`}
-            >
-              CSV エクスポート
-            </Link>
-          </Button>
-        </div>
-      </div>
+    <>
+      <p className="text-muted-foreground">
+        合計 {total.toLocaleString()} 件の同意記録（証跡）
+      </p>
 
       {items.length === 0 ? (
         <div className="rounded-lg border bg-card p-12 text-center">
@@ -185,14 +154,62 @@ export default async function AdminTermsAgreementsPage({
             </Table>
           </TableShell>
           <Pagination
-            currentPage={page}
+            currentPage={params.page}
             totalPages={totalPages}
             total={total}
-            perPage={perPage}
-            defaultPerPage={DEFAULT_PER_PAGE}
+            perPage={params.perPage}
+            defaultPerPage={50}
           />
         </>
       )}
+    </>
+  );
+}
+
+export default async function AdminTermsAgreementsPage({
+  searchParams,
+}: PageProps) {
+  const params = await loadAdminTermsAgreementsSearchParams(searchParams);
+  const scope = isTermsScope(params.scope) ? params.scope : undefined;
+
+  // Round-4 audit Finding #19: CSV export も一覧と同じ filter を引き継ぐ
+  // (AuditLogFilters.tsx / reservations の export href と同型パターン)。
+  const exportParams = new URLSearchParams();
+  if (scope !== undefined) exportParams.set("scope", scope);
+  if (params.termsId) exportParams.set("termsId", params.termsId);
+  if (params.guestEmail) exportParams.set("guestEmail", params.guestEmail);
+  const exportHref = `/api/admin/export/terms-agreements${
+    exportParams.size > 0 ? `?${exportParams.toString()}` : ""
+  }`;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            規約同意記録
+          </h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/terms">
+              <IconArrowLeft className="mr-2 h-4 w-4" />
+              規約一覧に戻る
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <a href={exportHref}>CSV エクスポート</a>
+          </Button>
+        </div>
+      </div>
+
+      <Suspense fallback={<LoadingState variant="inline" />}>
+        <TermsAgreementsFiltersWrapper />
+      </Suspense>
+
+      <Suspense fallback={<LoadingState />}>
+        <TermsAgreementsList searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

@@ -9,7 +9,10 @@ import {
 import { WAITLIST_ACTIVE_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { getAppUrl } from "@/shared/lib/constants";
 import { createWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
+import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { formatEventVenue } from "./venue";
+
+export const WAITLIST_QUEUE_PER_PAGE = 20;
 
 /**
  * mypage 一覧用の bulk 順位取得。
@@ -82,50 +85,83 @@ export async function getWaitlistPositionMapForRegistrations(
  * 表示順は「status DESC, waitlistedAt ASC」。RegistrationStatus の文字列順で
  * WAITLISTED < WAITLISTED_OFFERED となるため、`status: "desc"` とすることで
  * 期限が迫る OFFERED（要対応）を一覧の先頭に表示できる。
+ *
+ * Round-4 audit Finding #20 / medium: 旧実装は take/skip なしの無条件 findMany
+ * だった。人気イベントでキャンセル待ちが数百件溜まると全件を一度に fetch +
+ * シリアライズ + DOM 描画することになり、ページが開くたびに重くなる。
+ * events/[id]/page.tsx の参加者一覧 (getEventRegistrations) と同じ
+ * ページネーション pattern に揃える。
  */
-export async function getWaitlistQueue(eventId: string) {
-  const rows = await prisma.eventRegistration.findMany({
-    where: {
-      eventId,
-      status: { in: [...WAITLIST_ACTIVE_STATUSES] },
-    },
-    orderBy: [
-      { status: "desc" }, // OFFERED を先、WAITLISTED を後 (視認性)
-      { waitlistedAt: "asc" },
-    ],
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      quantity: true,
-      slotId: true,
-      slot: { select: { startAt: true } },
-      ticketId: true,
-      ticket: { select: { name: true } },
-      status: true,
-      waitlistedAt: true,
-      offeredAt: true,
-      expiresAt: true,
-    },
+export async function getWaitlistQueue(
+  eventId: string,
+  options: { page?: number; perPage?: number } = {},
+) {
+  const {
+    skip,
+    take,
+    page,
+    limit: perPage,
+  } = paginate({
+    page: options.page,
+    limit: options.perPage ?? WAITLIST_QUEUE_PER_PAGE,
   });
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    email: r.email,
-    quantity: r.quantity,
-    slotId: r.slotId,
-    slotStartAt: r.slot.startAt,
-    ticketId: r.ticketId,
-    ticketName: r.ticket.name,
-    // `where: {status: {in: WAITLIST_ACTIVE_STATUSES}}` により実行時は WAITLISTED /
-    // WAITLISTED_OFFERED のみだが、Prisma の select 型は絞り込みを型に反映しないため
-    // RegistrationStatus のまま返す（literal union への cast は避ける。呼び出し側は
-    // RegistrationStatus.WAITLISTED / WAITLISTED_OFFERED と比較すればよい）。
-    status: r.status,
-    waitlistedAt: r.waitlistedAt,
-    offeredAt: r.offeredAt,
-    expiresAt: r.expiresAt,
-  }));
+
+  const where = {
+    eventId,
+    status: { in: [...WAITLIST_ACTIVE_STATUSES] },
+  };
+
+  const [total, rows] = await Promise.all([
+    prisma.eventRegistration.count({ where }),
+    prisma.eventRegistration.findMany({
+      where,
+      orderBy: [
+        { status: "desc" }, // OFFERED を先、WAITLISTED を後 (視認性)
+        { waitlistedAt: "asc" },
+      ],
+      skip,
+      take,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        quantity: true,
+        slotId: true,
+        slot: { select: { startAt: true } },
+        ticketId: true,
+        ticket: { select: { name: true } },
+        status: true,
+        waitlistedAt: true,
+        offeredAt: true,
+        expiresAt: true,
+      },
+    }),
+  ]);
+
+  return {
+    entries: rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      quantity: r.quantity,
+      slotId: r.slotId,
+      slotStartAt: r.slot.startAt,
+      ticketId: r.ticketId,
+      ticketName: r.ticket.name,
+      // `where: {status: {in: WAITLIST_ACTIVE_STATUSES}}` により実行時は WAITLISTED /
+      // WAITLISTED_OFFERED のみだが、Prisma の select 型は絞り込みを型に反映しないため
+      // RegistrationStatus のまま返す（literal union への cast は避ける。呼び出し側は
+      // RegistrationStatus.WAITLISTED / WAITLISTED_OFFERED と比較すればよい）。
+      status: r.status,
+      waitlistedAt: r.waitlistedAt,
+      offeredAt: r.offeredAt,
+      expiresAt: r.expiresAt,
+    })),
+    total,
+    page,
+    perPage,
+    totalPages: calcTotalPages(total, perPage),
+  };
 }
 
 /**
