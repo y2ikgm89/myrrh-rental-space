@@ -332,9 +332,14 @@ export async function updateCustomerNotes(
   });
 }
 
-export async function toggleCustomerActive(
-  id: string,
-): Promise<MutationResult> {
+export async function toggleCustomerActive(id: string): Promise<
+  MutationResult<{
+    previousActive: boolean;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);
@@ -344,13 +349,38 @@ export async function toggleCustomerActive(
     resource: "customer",
     action: "update",
     resourceId: validated.data,
-    execute: async () => {
-      await toggleCustomerActiveCommand(validated.data);
-      return null;
+    execute: async (user) => {
+      const { previousActive } = await toggleCustomerActiveCommand(
+        validated.data,
+      );
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { previousActive, actorUserId: user.id, ip, userAgent };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(validated.data));
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.active",
+          resourceId: validated.data,
+          oldValue: { isActive: outcome.previousActive },
+          newValue: { isActive: !outcome.previousActive },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogToggleCustomerActive",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }

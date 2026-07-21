@@ -437,9 +437,9 @@ describe("customers/commands", () => {
           isActive: true,
         });
 
-        await expect(
-          toggleCustomerActive(CUSTOMER_ID),
-        ).resolves.toBeUndefined();
+        await expect(toggleCustomerActive(CUSTOMER_ID)).resolves.toEqual({
+          previousActive: true,
+        });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -455,9 +455,9 @@ describe("customers/commands", () => {
           isActive: false,
         });
 
-        await expect(
-          toggleCustomerActive(CUSTOMER_ID),
-        ).resolves.toBeUndefined();
+        await expect(toggleCustomerActive(CUSTOMER_ID)).resolves.toEqual({
+          previousActive: false,
+        });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({

@@ -105,6 +105,10 @@ const mockUpdateCustomerNotesCommand = mock<
   () => Promise<{ previousNotes: string | null }>
 >(() => Promise.resolve({ previousNotes: null }));
 
+const mockToggleCustomerActiveCommand = mock<
+  () => Promise<{ previousActive: boolean }>
+>(() => Promise.resolve({ previousActive: true }));
+
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerStatus: (
     ...args: Parameters<typeof mockUpdateCustomerStatusCommand>
@@ -119,7 +123,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerNotes: (
     ...args: Parameters<typeof mockUpdateCustomerNotesCommand>
   ) => mockUpdateCustomerNotesCommand(...args),
-  toggleCustomerActive: mock(() => Promise.resolve(undefined)),
+  toggleCustomerActive: (
+    ...args: Parameters<typeof mockToggleCustomerActiveCommand>
+  ) => mockToggleCustomerActiveCommand(...args),
   mergeCustomerCommand: mock(() =>
     Promise.resolve({
       transferredReservations: 0,
@@ -394,5 +400,31 @@ describe("updateCustomerNotes の AuditLog diff (customer.notes)", () => {
     await flushMicrotasks();
 
     expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe("toggleCustomerActive の AuditLog diff (customer.active)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockToggleCustomerActiveCommand.mockReset();
+    mockToggleCustomerActiveCommand.mockResolvedValue({
+      previousActive: true,
+    });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("有効→無効の切替を oldValue/newValue に記録する", async () => {
+    await toggleCustomerActive(CUSTOMER_UUID);
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.active");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["oldValue"]).toEqual({ isActive: true });
+    expect(call["newValue"]).toEqual({ isActive: false });
   });
 });
