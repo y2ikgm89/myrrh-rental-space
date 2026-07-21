@@ -6,6 +6,15 @@
  * - ローディングUI組み込み
  * - next/dynamic公式パターン準拠
  * - LexicalMountErrorBoundaryによる副防御付き
+ *
+ * `LexicalMountErrorBoundary` は class component である都合上ここで static
+ * import しているが、それ自体は軽量（class 定義 + Notice UI 2 種のみ）。
+ * Lexical コア + 全カスタム node class を抱える重量モジュール
+ * （`config/registered-node-types` → `config/nodes`）は boundary 側が
+ * 実際にエラーを捕捉した後にのみ動的 `import()` するため、この static import
+ * によって `LexicalEditorDynamic` の code splitting 契約（本体の遅延取得）は
+ * 破られない（PR#1346 レビュー指摘 P2 対応）。boundary 側で再び
+ * `registered-node-types` / `config/nodes` を static import しないこと。
  */
 
 "use client";
