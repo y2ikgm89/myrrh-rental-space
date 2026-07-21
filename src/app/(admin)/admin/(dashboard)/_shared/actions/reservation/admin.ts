@@ -41,6 +41,7 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
+import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 import {
   createReservationFormSchema,
   updateReservationFormSchema,
@@ -348,6 +349,19 @@ export async function updateReservationAction(
                 context: { reservationId: id },
               },
             );
+            // Round-5 audit Finding #8: 編集フォーム経由でも CONFIRMED → PENDING
+            // 格下げが起きうる (statusFlipToPending は previousStatus が CONFIRMED
+            // 限定ではないが、CREATABLE/遷移許可上ここに到達するのは実質 CONFIRMED
+            // 起点のみ)。発行済みスマートロック passcode は「確認済み」前提のため
+            // 失効させる (updateReservationStatus の afterSuccess と同じ helper)。
+            if (previousStatus === ReservationStatus.CONFIRMED) {
+              fireAndForget(revokeSmartLockPasscodesForReservation(id), {
+                operation: "revokeSmartLockPasscodesForReservation",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.MEDIUM,
+                context: { reservationId: id },
+              });
+            }
           } else if (mutationPayload.customerVisibleChanged) {
             // status 不変で日時/スペース/料金のみ変更 (既存の汎用 update 通知)
             fireAndForget(
