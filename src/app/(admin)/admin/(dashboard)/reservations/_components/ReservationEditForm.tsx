@@ -45,7 +45,10 @@ import {
   previewReservationPricingAction,
 } from "@/admin/actions/reservation";
 import { formatCurrency } from "@/shared/lib/pricing/format";
-import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  ReservationStatus,
+  CustomerType,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import {
   CREATABLE_RESERVATION_STATUSES,
@@ -162,6 +165,9 @@ export function ReservationEditForm({
   const [startTime, setStartTime] = useState<string>(initialStartTime);
   const [endTime, setEndTime] = useState<string>(initialEndTime);
   const [status, setStatus] = useState<ReservationStatus>(reservation.status);
+  const [guestCustomerType, setGuestCustomerType] = useState<
+    CustomerType | undefined
+  >(reservation.guestCustomerType ?? undefined);
 
   const boundAction = updateReservationAction.bind(null, reservation.id);
   const [lastResult, action, isPending] = useActionState(
@@ -181,6 +187,12 @@ export function ReservationEditForm({
       couponCode: reservation.coupon?.code ?? "",
       notes: reservation.notes ?? "",
       version: String(reservation.version),
+      guestLastName: reservation.guestLastName ?? "",
+      guestFirstName: reservation.guestFirstName ?? "",
+      guestEmail: reservation.guestEmail ?? "",
+      guestPhone: reservation.guestPhone ?? "",
+      guestCompanyName: reservation.guestCompanyName ?? "",
+      guestCustomerType: reservation.guestCustomerType ?? undefined,
     },
   });
 
@@ -512,6 +524,134 @@ export function ReservationEditForm({
                     </span>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>予約時のゲスト連絡先（任意）</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                この予約が入力された時点の連絡先スナップショットです。顧客マスタ
+                ({reservation.customer.lastName}{" "}
+                {reservation.customer.firstName}) には反映されません。
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor={fields.guestLastName.id}>姓</Label>
+                  <Input
+                    id={fields.guestLastName.id}
+                    name={fields.guestLastName.name}
+                    defaultValue={fields.guestLastName.initialValue}
+                    disabled={isPending}
+                    aria-invalid={
+                      fields.guestLastName.errors ? true : undefined
+                    }
+                    aria-describedby={
+                      fields.guestLastName.errors
+                        ? fields.guestLastName.errorId
+                        : undefined
+                    }
+                  />
+                  {fields.guestLastName.errors && (
+                    <p
+                      id={fields.guestLastName.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.guestLastName.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={fields.guestFirstName.id}>名</Label>
+                  <Input
+                    id={fields.guestFirstName.id}
+                    name={fields.guestFirstName.name}
+                    defaultValue={fields.guestFirstName.initialValue}
+                    disabled={isPending}
+                    aria-invalid={
+                      fields.guestFirstName.errors ? true : undefined
+                    }
+                  />
+                  {fields.guestFirstName.errors && (
+                    <p className="text-sm text-destructive">
+                      {fields.guestFirstName.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={fields.guestEmail.id}>メールアドレス</Label>
+                  <Input
+                    id={fields.guestEmail.id}
+                    name={fields.guestEmail.name}
+                    type="email"
+                    defaultValue={fields.guestEmail.initialValue}
+                    disabled={isPending}
+                    aria-invalid={fields.guestEmail.errors ? true : undefined}
+                  />
+                  {fields.guestEmail.errors && (
+                    <p className="text-sm text-destructive">
+                      {fields.guestEmail.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={fields.guestPhone.id}>電話番号</Label>
+                  <Input
+                    id={fields.guestPhone.id}
+                    name={fields.guestPhone.name}
+                    defaultValue={fields.guestPhone.initialValue}
+                    disabled={isPending}
+                    aria-invalid={fields.guestPhone.errors ? true : undefined}
+                  />
+                  {fields.guestPhone.errors && (
+                    <p className="text-sm text-destructive">
+                      {fields.guestPhone.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor={fields.guestCompanyName.id}>
+                    会社名・団体名
+                  </Label>
+                  <Input
+                    id={fields.guestCompanyName.id}
+                    name={fields.guestCompanyName.name}
+                    defaultValue={fields.guestCompanyName.initialValue}
+                    disabled={isPending}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guestCustomerTypeSelect">顧客種別</Label>
+                  <input
+                    type="hidden"
+                    name={fields.guestCustomerType.name}
+                    value={guestCustomerType ?? ""}
+                  />
+                  <Select
+                    value={guestCustomerType ?? ""}
+                    onValueChange={(value) =>
+                      setGuestCustomerType(
+                        value === "" ? undefined : (value as CustomerType),
+                      )
+                    }
+                    disabled={isPending}
+                  >
+                    <SelectTrigger id="guestCustomerTypeSelect">
+                      <SelectValue placeholder="未設定" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={CustomerType.PERSONAL}>
+                        個人
+                      </SelectItem>
+                      <SelectItem value={CustomerType.CORPORATE}>
+                        法人
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>

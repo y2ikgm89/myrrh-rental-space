@@ -229,6 +229,27 @@ export async function updateReservationAction(
               notes: data.notes && data.notes !== "" ? data.notes : undefined,
               adminUserId: user.id,
               version: data.version,
+              guestLastName:
+                data.guestLastName && data.guestLastName !== ""
+                  ? data.guestLastName
+                  : undefined,
+              guestFirstName:
+                data.guestFirstName && data.guestFirstName !== ""
+                  ? data.guestFirstName
+                  : undefined,
+              guestEmail:
+                data.guestEmail && data.guestEmail !== ""
+                  ? data.guestEmail
+                  : undefined,
+              guestPhone:
+                data.guestPhone && data.guestPhone !== ""
+                  ? data.guestPhone
+                  : undefined,
+              guestCompanyName:
+                data.guestCompanyName && data.guestCompanyName !== ""
+                  ? data.guestCompanyName
+                  : undefined,
+              guestCustomerType: data.guestCustomerType,
             }),
           );
           return null;
