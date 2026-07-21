@@ -109,10 +109,48 @@ describeMaybe("updateEventRegistrationCommand", () => {
     await basePrisma.$disconnect();
   });
 
-  // Pool drain: fire-and-forget functions in rapid succession can exhaust the
-  // Prisma connection pool. A 1s sleep between tests allows it to drain.
-  const sleep = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+  /**
+   * 根本原因調査（task-1-report.md 追記参照）: `updateEventRegistrationCommand` は
+   * fire-and-forget 副作用を一切持たない純粋な Prisma ドメインコマンドのため、
+   * cancel 系コマンド（`applyCancellationSideEffects` の detached promise）向けの
+   * 「1s sleep で pool drain」パターンはそもそも適用対象外だった（前実装者の誤流用）。
+   *
+   * 実測: `pg_stat_activity` を polling すると、失敗時の接続は
+   * `state=idle in transaction, wait_event=ClientRead, query=BEGIN` のまま
+   * 10秒以上停止していた。これは Postgres 側がクライアントからの次コマンドを
+   * 待っている状態であり、DB 側のロック競合ではない。同時に、開発機上で複数の
+   * 並行 Claude セッションが `bun run validate`（type-check、CPU 高負荷）を
+   * 実行中であることを確認しており、その CPU 競合が本 Bun test サブプロセスの
+   * イベントループ応答を遅延させ、Prisma の interactive transaction が `maxWait`
+   * 以内に次のクエリを送れず "Unable to start a transaction in the given time"
+   * を起こしたと推定される。固定 sleep は「他プロセスの CPU 負荷がどれだけ続くか」
+   * という不確定要素に対して信頼性がないため、この特定の transient エラーだけを
+   * 対象にしたリトライで代替する（本番コードの maxWait/timeout 拡大はしない）。
+   */
+  const POOL_ACQUIRE_TIMEOUT_MESSAGE =
+    "Unable to start a transaction in the given time";
+
+  async function updateWithPoolRetry(
+    params: Parameters<typeof updateEventRegistrationCommand>[0],
+  ): ReturnType<typeof updateEventRegistrationCommand> {
+    const maxAttempts = 4;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await updateEventRegistrationCommand(params);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const isPoolAcquireTimeout = message.includes(
+          POOL_ACQUIRE_TIMEOUT_MESSAGE,
+        );
+        if (!isPoolAcquireTimeout || attempt === maxAttempts) {
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      }
+    }
+    // unreachable: 上のループは必ず return か throw で抜ける
+    throw new Error("unreachable");
+  }
 
   test("氏名・email・電話・備考・数量を変更でき、変更前の値を previous として返す", async () => {
     const fixture = await createFixtureEvent(10);
@@ -121,7 +159,7 @@ describeMaybe("updateEventRegistrationCommand", () => {
     });
 
     try {
-      const result = await updateEventRegistrationCommand({
+      const result = await updateWithPoolRetry({
         registrationId,
         name: "更新太郎",
         email: "updated@example.com",
@@ -145,9 +183,8 @@ describeMaybe("updateEventRegistrationCommand", () => {
       expect(updated.quantity).toBe(3);
     } finally {
       await cleanupFixture(fixture.eventId);
-      await sleep(1000);
     }
-  });
+  }, 30_000);
 
   test("定員超過になる数量変更は CONFLICT で拒否される", async () => {
     const fixture = await createFixtureEvent(3);
@@ -158,19 +195,22 @@ describeMaybe("updateEventRegistrationCommand", () => {
     await createFixtureRegistration(fixture, { quantity: 1 });
 
     try {
-      await expect(
-        updateEventRegistrationCommand({
+      let caught: unknown = null;
+      try {
+        await updateWithPoolRetry({
           registrationId,
           name: "更新太郎",
           email: null,
           phone: null,
           note: null,
           quantity: 3, // 既存2件で定員3を使い切っているため+1は超過
-        }),
-      ).rejects.toMatchObject({ code: "VALIDATION" });
+        });
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toMatchObject({ code: "VALIDATION" });
     } finally {
       await cleanupFixture(fixture.eventId);
-      await sleep(1000);
     }
   }, 30_000);
 
@@ -182,19 +222,22 @@ describeMaybe("updateEventRegistrationCommand", () => {
     });
 
     try {
-      await expect(
-        updateEventRegistrationCommand({
+      let caught: unknown = null;
+      try {
+        await updateWithPoolRetry({
           registrationId,
           name: "更新太郎",
           email: null,
           phone: null,
           note: null,
           quantity: 2,
-        }),
-      ).rejects.toMatchObject({ code: "VALIDATION" });
+        });
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toMatchObject({ code: "VALIDATION" });
     } finally {
       await cleanupFixture(fixture.eventId);
-      await sleep(1000);
     }
   }, 30_000);
 
@@ -206,7 +249,7 @@ describeMaybe("updateEventRegistrationCommand", () => {
     });
 
     try {
-      const result = await updateEventRegistrationCommand({
+      const result = await updateWithPoolRetry({
         registrationId,
         name: "更新太郎",
         email: null,
@@ -218,7 +261,7 @@ describeMaybe("updateEventRegistrationCommand", () => {
     } finally {
       await cleanupFixture(fixture.eventId);
     }
-  });
+  }, 30_000);
 
   test("CANCELLED な参加登録は編集できず CONFLICT を返す", async () => {
     const fixture = await createFixtureEvent(10);
@@ -227,32 +270,39 @@ describeMaybe("updateEventRegistrationCommand", () => {
     });
 
     try {
-      await expect(
-        updateEventRegistrationCommand({
+      let caught: unknown = null;
+      try {
+        await updateWithPoolRetry({
           registrationId,
           name: "更新太郎",
           email: null,
           phone: null,
           note: null,
           quantity: 1,
-        }),
-      ).rejects.toMatchObject({ code: "CONFLICT" });
+        });
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toMatchObject({ code: "CONFLICT" });
     } finally {
       await cleanupFixture(fixture.eventId);
-      await sleep(1000);
     }
   }, 30_000);
 
   test("存在しない registrationId は NOT_FOUND を返す", async () => {
-    await expect(
-      updateEventRegistrationCommand({
+    let caught: unknown = null;
+    try {
+      await updateWithPoolRetry({
         registrationId: "nonexistent000000000000000",
         name: "x",
         email: null,
         phone: null,
         note: null,
         quantity: 1,
-      }),
-    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+      });
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toMatchObject({ code: "NOT_FOUND" });
   });
 });

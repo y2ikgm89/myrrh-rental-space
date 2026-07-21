@@ -824,7 +824,15 @@ export async function updateEventRegistrationCommand(data: {
         },
       };
     },
-    { maxWait: 15000, timeout: 30000 },
+    // 他の event 系コマンド（create/cancel）と同一の既定値。このコマンドは refund
+    // 系（Stripe API 呼び出しを内包するため maxWait/timeout を意図的に伸ばしている
+    // payment-commands.ts の refundReservationPaymentCommand 等）と異なり、tx 内は
+    // 全て内部 DB クエリのみで外部 I/O を待たない。実 DB 統合テストで一時観測された
+    // "Unable to start a transaction in the given time" は、開発機上で並行する他
+    // プロセスの CPU 負荷による Prisma pool 接続確保の遅延が原因であり（詳細は
+    // update-registration-command.test.ts 側の対策コメント参照）、本コマンド自体の
+    // tx 設計や本番の運用要件を理由に maxWait/timeout を broaden する根拠ではない。
+    { maxWait: 5000, timeout: 10000 },
   );
 }
 
