@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { isSameMonth, isToday } from "date-fns";
 import { cn } from "@/shared/lib/cn";
 import {
   formatDateWithWeekday,
@@ -38,6 +37,10 @@ export function MonthView({
   const weekdays = getWeekdayHeaders();
   // JST 固定の月キー (browser local TZ 依存を避ける)。YYYY-MM-DD の先頭 7 文字を取る。
   const monthKey = formatJstDateString(dateRange.start).slice(0, 7);
+  // 表示中の月と比較する用の JST YYYY-MM。date-fns isSameMonth は host TZ 依存で
+  // Cloud Run (UTC) と ブラウザ (JST) で判定が分かれ、当月外セルの muted 表示が
+  // hydration 後にジャンプする silent bug になる (Round-4 finding #18)。
+  const currentMonthKey = formatJstDateString(currentDate).slice(0, 7);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   // hydration mismatch 回避: useSyncExternalStore で client-only gate
   const isClient = useSyncExternalStore(
@@ -114,8 +117,12 @@ export function MonthView({
                     ? dayEvents
                     : dayEvents.slice(0, MAX_VISIBLE_EVENTS);
                   const hiddenCount = dayEvents.length - MAX_VISIBLE_EVENTS;
-                  const isCurrentMonth = isSameMonth(day, currentDate);
-                  const todayCell = isToday(day);
+                  const isCurrentMonth =
+                    formatJstDateString(day).slice(0, 7) === currentMonthKey;
+                  // 「今日」判定も JST 固定 + client hydration 後に限定。
+                  // date-fns isToday は host TZ 依存 + SSR 実行で JST 深夜跨ぎに
+                  // ハイライトが誤配置される。
+                  const todayCell = now !== null && isSameJstDay(day, now);
                   const isPast =
                     !todayCell && now !== null && isPastJstDay(day, now);
 

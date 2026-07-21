@@ -19,6 +19,7 @@ import {
   formatJstMonthDay,
   formatJstWeekdayShort,
   formatYearMonth,
+  getJstMinutesOfDay,
 } from "@/shared/lib/date-format";
 import type {
   CalendarView,
@@ -151,34 +152,20 @@ export function isEventEnded(endTime: string | Date, now: Date): boolean {
   return end.getTime() < now.getTime();
 }
 
-/** JST の hour / minute を Intl.DateTimeFormat で抽出 (ランタイム TZ 非依存) */
-function getJstHourMinute(date: Date): { hour: number; minute: number } {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Tokyo",
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-  }).formatToParts(date);
-  return {
-    hour: Number(parts.find((p) => p.type === "hour")?.value ?? "0"),
-    minute: Number(parts.find((p) => p.type === "minute")?.value ?? "0"),
-  };
-}
-
 /**
  * 営業開始 (JST) から `now` までの経過分。
  * - 負値 = 営業時間前 (例: 営業 09:00 で now=08:00 → -60)
  * - 0 〜 営業時間内
  * - 営業時間以上 = 営業終了後
  *
- * TimeGrid の「Now ライン」位置計算 SSoT。
+ * TimeGrid の「Now ライン」位置計算 SSoT。JST 時刻抽出は
+ * `getJstMinutesOfDay` (Intl "Asia/Tokyo" 固定) 経由でランタイム TZ 非依存。
  */
 export function minutesSinceJstBusinessStart(
   now: Date,
   hours: BusinessHours = DEFAULT_BUSINESS_HOURS,
 ): number {
-  const { hour, minute } = getJstHourMinute(now);
-  return hour * 60 + minute - hours.startHour * 60;
+  return getJstMinutesOfDay(now) - hours.startHour * 60;
 }
 
 /**
@@ -208,8 +195,11 @@ export function calculateEventPosition(
 ): EventPosition {
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
-  const startMinutes = start.getHours() * 60 + start.getMinutes();
-  const endMinutes = end.getHours() * 60 + end.getMinutes();
+  // JST 固定の分数抽出 (Intl "Asia/Tokyo") でランタイム TZ 非依存。
+  // 素の `start.getHours()` は Cloud Run (UTC) で JST 想定の予約バー top position を
+  // 9h ずらす silent bug (isSameJstDay と同じ SSoT 統一)。
+  const startMinutes = getJstMinutesOfDay(start);
+  const endMinutes = getJstMinutesOfDay(end);
   const dayStartMinutes = hours.startHour * 60;
   const dayEndMinutes = hours.endHour * 60;
 

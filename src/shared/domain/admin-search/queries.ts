@@ -183,7 +183,9 @@ async function searchEvents(query: string): Promise<SearchResultItem[]> {
     id: r.id,
     resource: "event" as const,
     label: r.title,
-    description: r.slots[0]?.startAt?.toISOString().slice(0, 10) ?? "",
+    description: r.slots[0]?.startAt
+      ? formatJstDateString(r.slots[0].startAt)
+      : "",
     href: `/admin/events/${r.id}`,
   }));
 }
