@@ -867,7 +867,7 @@ export async function refundEventRegistrationPaymentCommand(
   await createAuditLogRecord({
     ...(actorUserId ? { userId: actorUserId } : {}),
     action: AuditAction.UPDATE,
-    resource: "eventRegistration",
+    resource: "event-registration",
     resourceId: registrationId,
     newValue: {
       paymentStatus: result.newPaymentStatus,
