@@ -223,7 +223,7 @@ describe("searchByResource", () => {
     });
   });
 
-  test("location: spaces tab + edit query 付きの href を生成", async () => {
+  test("location: 専用詳細ページへの href を生成 (Round-5 audit Finding #2)", async () => {
     mockLocationFindMany.mockResolvedValueOnce([
       { id: "loc1", name: "Tokyo Office" },
     ]);
@@ -234,7 +234,7 @@ describe("searchByResource", () => {
       id: "loc1",
       resource: "location",
       label: "Tokyo Office",
-      href: "/admin/spaces?tab=locations&edit=loc1",
+      href: "/admin/locations/loc1",
     });
   });
 

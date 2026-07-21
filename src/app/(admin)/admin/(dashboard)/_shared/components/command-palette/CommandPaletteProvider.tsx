@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, use, useEffect, useState, useTransition } from "react";
+import {
+  createContext,
+  use,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import type { ReactNode } from "react";
 import { searchAdminResources } from "@/admin/actions/command-palette/search";
 import type {
@@ -51,6 +58,12 @@ export function CommandPaletteProvider({
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResultGroup[]>([]);
   const [isSearching, startTransition] = useTransition();
+  // Round-5 audit Finding #24: debounce だけでは同時に飛んだ 2 リクエストの
+  // ネットワーク応答が到着順を保証しないため、後発 (新しい query) のリクエストが
+  // 先に応答し、その後に先発 (古い query) の応答が遅れて届くと古い結果で
+  // 上書きしてしまう。発行するたびに増分する連番で「最新リクエストの応答か」を
+  // 判定し、古い応答は破棄する。
+  const latestRequestIdRef = useRef(0);
 
   // Cmd+K / Ctrl+K でトグル
   useEffect(() => {
@@ -68,8 +81,12 @@ export function CommandPaletteProvider({
   useEffect(() => {
     if (query.trim().length < 2) return;
     const timeoutId = setTimeout(() => {
+      const requestId = ++latestRequestIdRef.current;
       startTransition(async () => {
         const result = await searchAdminResources(query);
+        // 応答が届いた時点で自分より新しいリクエストが発行済みなら stale
+        // 応答なので結果を破棄する (setSearchResults しない)。
+        if (requestId !== latestRequestIdRef.current) return;
         if (!("error" in result)) {
           setSearchResults(result.groups);
         }

@@ -264,7 +264,10 @@ async function searchLocations(query: string): Promise<SearchResultItem[]> {
     id: r.id,
     resource: "location" as const,
     label: r.name,
-    href: `/admin/spaces?tab=locations&edit=${r.id}`,
+    // Round-5 audit Finding #2: `/admin/spaces?tab=locations&edit=` は spaces
+    // ページ側が `edit` クエリを解釈しない dead link だった。個別の場所は
+    // `/admin/locations/[id]` という専用詳細ページを持つためそちらへ直リンクする。
+    href: `/admin/locations/${r.id}`,
   }));
 }
 

@@ -14,6 +14,11 @@ type AuditLogRow = {
 const mockAuditLogFindMany = mock<() => Promise<AuditLogRow[]>>(() =>
   Promise.resolve([]),
 );
+const mockPageFindMany = mock<
+  (args: {
+    where: { id: { in: string[] } };
+  }) => Promise<{ id: string; slug: string }[]>
+>(() => Promise.resolve([]));
 const mockHasPermission = mock<(role: Role, resource: string) => boolean>(
   () => true,
 );
@@ -30,6 +35,9 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     auditLog: {
       findMany: mockAuditLogFindMany,
+    },
+    page: {
+      findMany: mockPageFindMany,
     },
   },
 }));
@@ -57,6 +65,8 @@ function makeLog(
 describe("getRecentAuditedResources", () => {
   beforeEach(() => {
     mockAuditLogFindMany.mockReset();
+    mockPageFindMany.mockReset();
+    mockPageFindMany.mockResolvedValue([]);
     mockHasPermission.mockReset();
     mockHasPermission.mockReturnValue(true);
   });
@@ -138,17 +148,61 @@ describe("getRecentAuditedResources", () => {
     expect(items).toHaveLength(3);
   });
 
-  test("page resource は ID 付きでなく一覧 href にルーティングされる", async () => {
+  test("Round-5 audit Finding #17: location は専用詳細ページへ直リンクする", async () => {
     mockAuditLogFindMany.mockResolvedValueOnce([
-      makeLog("page", "page-id-abc"),
-      makeLog("faq", "faq-id-xyz"),
       makeLog("location", "loc-id-1"),
     ]);
 
     const items = await getRecentAuditedResources(USER_ID, ADMIN_ROLE);
 
+    expect(items[0]?.href).toBe("/admin/locations/loc-id-1");
+  });
+
+  test("Round-5 audit Finding #17: faq は category/item のどちらか判別できないため一覧へ集約する", async () => {
+    mockAuditLogFindMany.mockResolvedValueOnce([makeLog("faq", "faq-id-xyz")]);
+
+    const items = await getRecentAuditedResources(USER_ID, ADMIN_ROLE);
+
+    expect(items[0]?.href).toBe("/admin/faq");
+  });
+
+  test("Round-5 audit Finding #17: page は id から解決した slug で詳細ページへリンクする", async () => {
+    mockAuditLogFindMany.mockResolvedValueOnce([
+      makeLog("page", "page-id-abc"),
+    ]);
+    mockPageFindMany.mockResolvedValueOnce([
+      { id: "page-id-abc", slug: "about-us" },
+    ]);
+
+    const items = await getRecentAuditedResources(USER_ID, ADMIN_ROLE);
+
+    expect(mockPageFindMany).toHaveBeenCalledWith({
+      where: { id: { in: ["page-id-abc"] } },
+      select: { id: true, slug: true },
+    });
+    expect(items[0]?.href).toBe("/admin/pages/about-us");
+  });
+
+  test("page: slug が解決できない場合 (削除済み等) は一覧 href にフォールバックする", async () => {
+    mockAuditLogFindMany.mockResolvedValueOnce([
+      makeLog("page", "page-id-deleted"),
+    ]);
+    mockPageFindMany.mockResolvedValueOnce([]);
+
+    const items = await getRecentAuditedResources(USER_ID, ADMIN_ROLE);
+
     expect(items[0]?.href).toBe("/admin/pages");
-    expect(items[1]?.href).toBe("/admin/faq/faq-id-xyz");
-    expect(items[2]?.href).toBe("/admin/spaces?tab=locations");
+  });
+
+  test("news/inquiry は不規則複数形の正しい path segment を使う (newss/inquirys ではない)", async () => {
+    mockAuditLogFindMany.mockResolvedValueOnce([
+      makeLog("news", "news-id-1"),
+      makeLog("inquiry", "inquiry-id-1"),
+    ]);
+
+    const items = await getRecentAuditedResources(USER_ID, ADMIN_ROLE);
+
+    expect(items[0]?.href).toBe("/admin/news/news-id-1");
+    expect(items[1]?.href).toBe("/admin/inquiries/inquiry-id-1");
   });
 });
