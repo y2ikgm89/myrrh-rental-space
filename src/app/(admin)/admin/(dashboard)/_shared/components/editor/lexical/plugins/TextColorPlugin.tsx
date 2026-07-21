@@ -28,6 +28,7 @@ import {
   IconTypography,
   IconX,
 } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -227,33 +228,35 @@ export function TextColorPlugin() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant={hasColor ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 gap-1"
-          title="文字色"
-          aria-label="文字色"
-          aria-pressed={hasColor}
-        >
-          <div className="relative">
-            <IconTypography className="h-4 w-4" />
-            {hasColor && (
-              <div
-                className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
-                style={{
-                  backgroundColor: getPreviewColor(
-                    textColor,
-                    currentColorValue,
-                  ),
-                }}
-              />
-            )}
-          </div>
-          <IconChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Toolbar.Button asChild>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant={hasColor ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 gap-1"
+            title="文字色"
+            aria-label="文字色"
+            aria-pressed={hasColor}
+          >
+            <div className="relative">
+              <IconTypography className="h-4 w-4" />
+              {hasColor && (
+                <div
+                  className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
+                  style={{
+                    backgroundColor: getPreviewColor(
+                      textColor,
+                      currentColorValue,
+                    ),
+                  }}
+                />
+              )}
+            </div>
+            <IconChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+      </Toolbar.Button>
       <TextColorMenu
         textColor={textColor}
         currentColorValue={currentColorValue}

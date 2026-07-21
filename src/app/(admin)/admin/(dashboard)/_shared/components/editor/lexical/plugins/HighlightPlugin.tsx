@@ -28,6 +28,7 @@ import {
   IconHighlight,
   IconX,
 } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -171,30 +172,32 @@ export function HighlightPlugin() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant={hasHighlight ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 gap-1"
-          title="ハイライト"
-          aria-label="ハイライト"
-          aria-pressed={hasHighlight}
-        >
-          <div className="relative">
-            <IconHighlight className="h-4 w-4" />
-            {hasHighlight && (
-              <div
-                className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
-                style={{
-                  backgroundColor: HIGHLIGHT_COLORS[highlightColor].value,
-                }}
-              />
-            )}
-          </div>
-          <IconChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Toolbar.Button asChild>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant={hasHighlight ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 gap-1"
+            title="ハイライト"
+            aria-label="ハイライト"
+            aria-pressed={hasHighlight}
+          >
+            <div className="relative">
+              <IconHighlight className="h-4 w-4" />
+              {hasHighlight && (
+                <div
+                  className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
+                  style={{
+                    backgroundColor: HIGHLIGHT_COLORS[highlightColor].value,
+                  }}
+                />
+              )}
+            </div>
+            <IconChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+      </Toolbar.Button>
       <HighlightColorMenu
         highlightColor={highlightColor}
         onColorSelect={applyHighlight}

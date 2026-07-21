@@ -1,6 +1,7 @@
 "use client";
 
 import { IconArrowBackUp, IconArrowForwardUp } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 
 type Props = {
@@ -13,30 +14,36 @@ type Props = {
 export function HistorySection({ canUndo, canRedo, onUndo, onRedo }: Props) {
   return (
     <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-10 w-10 md:h-8 md:w-8"
-        onClick={onUndo}
-        disabled={!canUndo}
-        title="元に戻す"
-        aria-label="元に戻す"
-      >
-        <IconArrowBackUp className="h-5 w-5 md:h-4 md:w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-10 w-10 md:h-8 md:w-8"
-        onClick={onRedo}
-        disabled={!canRedo}
-        title="やり直す"
-        aria-label="やり直す"
-      >
-        <IconArrowForwardUp className="h-5 w-5 md:h-4 md:w-4" />
-      </Button>
+      {/* disabled は Toolbar.Button 側にも必須: RovingFocusGroup の focusable 判定は
+          自身の props からのみ行われ、内側 Button の disabled は見えない */}
+      <Toolbar.Button asChild disabled={!canUndo}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 md:h-8 md:w-8"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="元に戻す"
+          aria-label="元に戻す"
+        >
+          <IconArrowBackUp className="h-5 w-5 md:h-4 md:w-4" />
+        </Button>
+      </Toolbar.Button>
+      <Toolbar.Button asChild disabled={!canRedo}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 md:h-8 md:w-8"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="やり直す"
+          aria-label="やり直す"
+        >
+          <IconArrowForwardUp className="h-5 w-5 md:h-4 md:w-4" />
+        </Button>
+      </Toolbar.Button>
     </>
   );
 }

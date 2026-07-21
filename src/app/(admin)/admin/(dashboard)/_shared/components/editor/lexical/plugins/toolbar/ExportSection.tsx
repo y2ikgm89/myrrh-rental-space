@@ -9,6 +9,7 @@ import {
   IconPrinter,
   IconUpload,
 } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -35,13 +36,15 @@ export function ExportSection({
 }: Props) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
-          <IconFileDownload className="h-4 w-4" />
-          <span className="text-xs">書き出し</span>
-          <IconChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Toolbar.Button asChild>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
+            <IconFileDownload className="h-4 w-4" />
+            <span className="text-xs">書き出し</span>
+            <IconChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+      </Toolbar.Button>
       <DropdownMenuContent align="start" className="min-w-[200px]">
         <DropdownMenuItem
           onClick={onCopyMarkdown}

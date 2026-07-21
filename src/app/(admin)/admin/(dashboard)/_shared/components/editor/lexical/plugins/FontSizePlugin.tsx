@@ -23,6 +23,7 @@ import {
   $patchStyleText,
 } from "@lexical/selection";
 import { IconMinus, IconPlus } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import { Input } from "@/admin/components/ui/input";
 
@@ -166,17 +167,21 @@ export function FontSizePlugin() {
 
   return (
     <div className="flex items-center gap-0.5">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={handleDecrement}
-        disabled={currentSize <= MIN_FONT_SIZE}
-        title="フォントサイズを小さく"
-      >
-        <IconMinus className="h-3 w-3" />
-      </Button>
+      <Toolbar.Button asChild disabled={currentSize <= MIN_FONT_SIZE}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleDecrement}
+          disabled={currentSize <= MIN_FONT_SIZE}
+          title="フォントサイズを小さく"
+        >
+          <IconMinus className="h-3 w-3" />
+        </Button>
+      </Toolbar.Button>
+      {/* 自由入力の text input。矢印キーはキャレット移動に使うため
+          Toolbar.Button では包まず素の独立 Tab ストップのまま残す */}
       <Input
         type="text"
         inputMode="numeric"
@@ -187,17 +192,19 @@ export function FontSizePlugin() {
         className="h-8 w-12 px-1 text-center text-xs"
         title="フォントサイズ"
       />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={handleIncrement}
-        disabled={currentSize >= MAX_FONT_SIZE}
-        title="フォントサイズを大きく"
-      >
-        <IconPlus className="h-3 w-3" />
-      </Button>
+      <Toolbar.Button asChild disabled={currentSize >= MAX_FONT_SIZE}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleIncrement}
+          disabled={currentSize >= MAX_FONT_SIZE}
+          title="フォントサイズを大きく"
+        >
+          <IconPlus className="h-3 w-3" />
+        </Button>
+      </Toolbar.Button>
     </div>
   );
 }

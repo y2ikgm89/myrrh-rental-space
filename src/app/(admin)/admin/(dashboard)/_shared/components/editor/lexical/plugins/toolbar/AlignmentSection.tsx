@@ -2,6 +2,7 @@
 
 import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import type { ElementFormatType } from "lexical";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -22,20 +23,22 @@ export function AlignmentSection({ elementFormat, onChange }: Props) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1 min-w-[90px] justify-between"
-        >
-          <span className="flex items-center gap-1.5">
-            <Icon className="h-4 w-4" />
-            <span className="text-xs">{label}</span>
-          </span>
-          <IconChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Toolbar.Button asChild>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 min-w-[90px] justify-between"
+          >
+            <span className="flex items-center gap-1.5">
+              <Icon className="h-4 w-4" />
+              <span className="text-xs">{label}</span>
+            </span>
+            <IconChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+      </Toolbar.Button>
       <DropdownMenuContent align="start" className="min-w-[140px]">
         {entriesOf(ALIGNMENT_CONFIG).map(
           ([type, { label: itemLabel, icon: ItemIcon }]) => (

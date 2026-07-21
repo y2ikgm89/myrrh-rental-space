@@ -10,6 +10,7 @@ import {
   IconLayoutGrid,
 } from "@tabler/icons-react";
 import { $getNodeByKey, $setState, type LexicalEditor } from "lexical";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
 import {
@@ -72,19 +73,21 @@ export function LayoutToolbarSection({
     <>
       <Separator orientation="vertical" className="mx-1 h-6" />
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="h-8 gap-1 max-w-[140px]"
-            title="カラムレイアウト（選択中のブロック内）"
-          >
-            <IconLayoutGrid className="h-4 w-4 shrink-0" />
-            <span className="truncate text-xs">カラム</span>
-            <IconChevronDown className="h-3 w-3 shrink-0" />
-          </Button>
-        </DropdownMenuTrigger>
+        <Toolbar.Button asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-8 gap-1 max-w-[140px]"
+              title="カラムレイアウト（選択中のブロック内）"
+            >
+              <IconLayoutGrid className="h-4 w-4 shrink-0" />
+              <span className="truncate text-xs">カラム</span>
+              <IconChevronDown className="h-3 w-3 shrink-0" />
+            </Button>
+          </DropdownMenuTrigger>
+        </Toolbar.Button>
         <DropdownMenuContent align="start" className="min-w-[220px]">
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>広い画面（既定）</DropdownMenuSubTrigger>
