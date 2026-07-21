@@ -58,6 +58,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             redirectTo="/admin/customers"
           />
           <CustomerDetailActions
+            key={customer.id}
             customer={{
               id: customer.id,
               lastName: customer.lastName,

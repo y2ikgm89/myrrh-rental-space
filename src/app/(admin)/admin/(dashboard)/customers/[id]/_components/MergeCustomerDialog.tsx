@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -50,18 +50,21 @@ export function MergeCustomerDialog({
   const [isSearching, startSearchTransition] = useTransition();
   const [isMerging, startMergeTransition] = useTransition();
 
-  // initialCandidate が指定されている場合、ダイアログを開く時に
-  // 候補を初期選択状態にシードする。React Compilerが自動最適化する。
-  useEffect(() => {
+  // `open` が false→true に変化した瞬間だけ `initialCandidate` を選択状態に
+  // シードする（React docs "Adjusting some state when a prop changes" パターン。
+  // useEffect ではなく render 中に直接 setState することで、
+  // react-hooks/set-state-in-effect の cascading-render 警告を発生させずに
+  // 済む — 本プロジェクトは useEffect ベースの props→state 同期を避け、
+  // このパターンを正としている）。
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open && initialCandidate) {
-      // eslint-disable-next-line
       setSelected(initialCandidate);
-      // eslint-disable-next-line
       setResults([]);
-      // eslint-disable-next-line
       setQuery("");
     }
-  }, [open, initialCandidate]);
+  }
 
   const handleSearch = (value: string) => {
     setQuery(value);
