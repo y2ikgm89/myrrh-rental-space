@@ -31,6 +31,7 @@ import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   sendReservationAdminNotification,
   sendReservationConfirmationEmail,
+  sendReservationStatusChangedEmail,
   sendReservationUpdatedEmail,
 } from "@/shared/lib/email/reservation-emails";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
@@ -38,6 +39,8 @@ import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
 import {
   createReservationFormSchema,
   updateReservationFormSchema,
@@ -259,9 +262,94 @@ export async function updateReservationAction(
             });
           }
 
-          // スペース・日時・料金など顧客に影響する変更があった場合のみ、
-          // 顧客+管理者へ変更通知メールを自動送信する（重要取引通知として非gate）。
-          if (mutationPayload.customerVisibleChanged) {
+          // Cluster H #9: status 遷移に応じて適切な顧客通知メールに分岐する。
+          //   - PENDING → CONFIRMED: 確認メール (スマートロック passcode 込み)
+          //     + 管理者通知 "new" (updateReservationStatus と同型)
+          //   - CONFIRMED → PENDING: ステータス変更メール (顧客の decision に影響する
+          //     格下げなので silent 化しない)
+          //   - status 不変で日時/スペース/料金のみ変更: 汎用 update メール
+          //     (既存挙動)
+          // いずれも重要取引通知として非 gate。
+          const previousStatus = mutationPayload.previousStatus;
+          const newStatus = mutationPayload.newStatus;
+          const statusFlipToConfirmed =
+            newStatus === ReservationStatus.CONFIRMED &&
+            previousStatus !== ReservationStatus.CONFIRMED;
+          const statusFlipToPending =
+            newStatus === ReservationStatus.PENDING &&
+            previousStatus !== ReservationStatus.PENDING;
+
+          if (statusFlipToConfirmed) {
+            // updateReservationStatus と同型: スマートロック passcode 発行結果を
+            // 確認メールにマージする。個別に fireAndForget (Promise.all で束ねると
+            // 片方失敗で after() 実行時間が延長されず送信が dropped する)。
+            fireAndForget(
+              issueSmartLockPasscodes({
+                reservationId: payloadData.reservationId,
+                spaceId: mutationPayload.spaceId,
+                startTime: payloadData.startTime,
+                endTime: payloadData.endTime,
+              }).then((issueResult) =>
+                sendReservationConfirmationEmail(
+                  issueResult.passcodes.length > 0
+                    ? {
+                        ...payloadData,
+                        smartLockPasscodes: issueResult.passcodes,
+                      }
+                    : issueResult.issuanceFailed
+                      ? { ...payloadData, smartLockIssuanceFailed: true }
+                      : payloadData,
+                ),
+              ),
+              {
+                operation:
+                  "updateReservationActionIssuePasscodesAndSendConfirmation",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.MEDIUM,
+                context: { reservationId: id },
+              },
+            );
+            fireAndForget(
+              sendReservationAdminNotification(
+                payloadData,
+                previousStatus === ReservationStatus.PENDING ? "new" : "update",
+              ),
+              {
+                operation: "updateReservationActionAdminNotificationConfirm",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.MEDIUM,
+                context: { reservationId: id },
+              },
+            );
+          } else if (statusFlipToPending) {
+            fireAndForget(
+              Promise.all([
+                sendReservationStatusChangedEmail({
+                  reservationId: payloadData.reservationId,
+                  customerEmail: payloadData.customerEmail,
+                  customerName: payloadData.customerName,
+                  spaceName: payloadData.spaceName,
+                  startTime: payloadData.startTime,
+                  endTime: payloadData.endTime,
+                  totalPrice: payloadData.totalPrice,
+                  oldStatus: previousStatus,
+                  newStatus,
+                  icsSequence: payloadData.icsSequence,
+                  ...(payloadData.location != null
+                    ? { location: payloadData.location }
+                    : {}),
+                }),
+                sendReservationAdminNotification(payloadData, "update"),
+              ]),
+              {
+                operation: "updateReservationActionStatusFlipToPending",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.MEDIUM,
+                context: { reservationId: id },
+              },
+            );
+          } else if (mutationPayload.customerVisibleChanged) {
+            // status 不変で日時/スペース/料金のみ変更 (既存の汎用 update 通知)
             fireAndForget(
               Promise.all([
                 sendReservationUpdatedEmail(payloadData),

@@ -2867,6 +2867,58 @@ describe("architecture boundaries", () => {
     });
   });
 
+  describe("reservation-emails.ts idempotencyKey drift gate (Cluster H #16)", () => {
+    // `sendEmail` の idempotencyKey は同一予約が短時間に複数回同種イベントを起こす
+    // ケース (SUPER_ADMIN restore で CANCELLED→CONFIRMED 巻き戻し、PENDING→CONFIRMED
+    // への status flip 後の再送、etc.) で Resend が `invalid_idempotent_request` により
+    // silent drop してしまうため、常に **entity id + monotonic version discriminator**
+    // (icsSequence / newStatus / action / batchNonce / refundId 等) を含める SSoT 契約。
+    //
+    // sendReservationConfirmationEmail が discriminator を欠いていた回帰 (Cluster H #16)
+    // の再発防止として、reservation-emails.ts の全 `sendXxxEmail` 関数の
+    // idempotencyKey template literal が 2 つ以上の `${...}` 補間を持つことを強制する。
+    test("reservation-emails.ts の全 sendXxxEmail idempotencyKey は entity id + version discriminator を含む", () => {
+      const RESERVATION_EMAILS_FILE = join(
+        SRC_ROOT,
+        "shared",
+        "lib",
+        "email",
+        "reservation-emails.ts",
+      );
+      const source = readFileSync(RESERVATION_EMAILS_FILE, "utf8");
+
+      // sender 関数 (`export async function sendXxxEmail`) の名前と、その関数 body 内の
+      // 最初の `idempotencyKey:` 割当を抽出する。個々の sender は sendEmail の
+      // 呼出 1 回に対応し、idempotencyKey は 1 つだけを持つ設計。
+      const SENDER_RE =
+        /export\s+async\s+function\s+(send[A-Za-z]+Email|send[A-Za-z]+Notification)\s*\(/g;
+      const IDEMPOTENCY_RE = /idempotencyKey:\s*`([^`]+)`/g;
+
+      const senderNames: string[] = [];
+      for (const match of source.matchAll(SENDER_RE)) {
+        if (match[1]) senderNames.push(match[1]);
+      }
+      // sanity: sender 関数が見つからないと gate が silently vacuous になる。
+      expect(senderNames.length).toBeGreaterThan(0);
+
+      const violations: string[] = [];
+      for (const match of source.matchAll(IDEMPOTENCY_RE)) {
+        const template = match[1] ?? "";
+        // template 内の `${...}` 補間数を数える。entity id 1 つだけだと
+        // discriminator を欠く silent drop 回帰 (Cluster H #16) に該当する。
+        const interpolations = template.match(/\$\{[^}]+\}/g) ?? [];
+        if (interpolations.length < 2) {
+          violations.push(template);
+        }
+      }
+
+      expect(
+        violations,
+        `reservation-emails.ts に idempotencyKey が entity id 単独 (\`prefix/\${id}\` 形式) の sender が残っています: ${violations.join(", ")}. 同一予約の短時間内の再送 (SUPER_ADMIN restore, PENDING→CONFIRMED flip, etc.) で Resend が invalid_idempotent_request を返し silent drop します。icsSequence / newStatus / action / batchNonce / refundId 等の monotonic discriminator を追加してください (Cluster H #16 再発防止)。`,
+      ).toEqual([]);
+    });
+  });
+
   describe("reservation overlap SSoT (payloads.ts)", () => {
     // `ensureNoOverlap` (Reservation + Event 両方の overlap をチェックする関数) が
     // business-domain.md 契約の SSoT。過去に `ensureNoReservationOverlapOnly` という
