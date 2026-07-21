@@ -38,7 +38,8 @@ const ADMIN_AXE_ROUTES = [
  * 【設計原則】
  * - WCAG 2.1 Level A/AA タグで filter
  * - Lexical editor（contenteditable）は除外しない。ContentEditable に
- *   aria-label を付与済みのため通常スキャン対象に含める
+ *   aria-label または aria-labelledby でアクセシブルネームを付与済みのため
+ *   通常スキャン対象に含める
  * - `serious` / `critical` を blocking
  *
  * 前提: chromium-admin project で実行（setup-admin が storage state 作成済み）
@@ -129,10 +130,17 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
     ).toEqual([]);
   });
 
-  test("スペース編集ページの説明エディタが視認ラベルと一致するアクセシブルネームを持つ（PR#1340 Codexレビュー指摘の回帰確認）", async ({
+  test("スペース編集ページの説明エディタが視認ラベルと一致するアクセシブルネームを持つ（PR#1348 Codexレビュー指摘の回帰確認）", async ({
     page,
   }) => {
-    await page.goto(urls.adminSpaces);
+    // spSearch（SpaceFilters.tsx の nuqs クエリキー）で直接絞り込む。既定の
+    // 「作成日（新しい順）」ソート + ページネーション任せだと、他の並行 E2E/
+    // integration テストが同じ test DB に書き込む spaces に押し出されて
+    // 対象行が 1 ページ目に出ないことがある（本テストの本題である
+    // アクセシブルネーム検証とは無関係な flake のため、検索絞り込みで回避する）。
+    await page.goto(
+      `${urls.adminSpaces}?spSearch=${encodeURIComponent("コワーキングスペース")}`,
+    );
 
     await page
       .getByRole("link", { name: "コワーキングスペース", exact: true })
@@ -142,11 +150,15 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
       timeout: 20000,
     });
 
-    // SpaceEditForm.tsx の <Label htmlFor="space-description">説明 *</Label> と
-    // LazyLexicalEditor の contentEditableId="space-description" によるネイティブ
-    // label-for 関連付けで、contenteditable のアクセシブルネームが視認ラベルの
-    // テキストと一致することを確認する（axe は id/aria-labelledby の不在を検知
-    // できないため、getByRole の name 解決で明示的に検証する）。
+    // SpaceEditForm.tsx の <Label id="space-description-label" htmlFor="space-description">
+    // と LazyLexicalEditor の ariaLabelledBy="space-description-label" による
+    // aria-labelledby 関連付けで、contenteditable のアクセシブルネームが視認ラベルの
+    // テキストと一致することを確認する。Lexical の ContentEditable は
+    // <div contenteditable> を描画するため labelable element ではなく、
+    // <label htmlFor> だけではネイティブ label-for 関連付けが成立しない
+    // （PR#1348 の初版はこの点を見落としており、本テストは修正前は失敗していた）。
+    // axe は id/aria-labelledby の不在を検知できないため、getByRole の name
+    // 解決で明示的に検証する。
     const descriptionEditor = page.getByRole("textbox", { name: "説明 *" });
     await expect(descriptionEditor).toBeVisible({ timeout: 15000 });
 
