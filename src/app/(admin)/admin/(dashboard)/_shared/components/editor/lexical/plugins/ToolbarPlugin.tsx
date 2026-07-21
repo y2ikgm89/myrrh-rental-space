@@ -390,6 +390,8 @@ export function ToolbarPlugin({
             className="h-10 w-10 md:h-8 md:w-8"
             onClick={handleInsertLink}
             title="リンク"
+            aria-label="リンク"
+            aria-pressed={isLink}
           >
             <IconLink className="h-5 w-5 md:h-4 md:w-4" />
           </Button>

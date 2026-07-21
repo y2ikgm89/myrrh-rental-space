@@ -66,6 +66,7 @@ export function InspectorControls({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onShowShortcuts}
         title="キーボードショートカット (Ctrl+Shift+/)"
+        aria-label="キーボードショートカットを表示"
       >
         <IconHelpCircle className="h-5 w-5 md:h-4 md:w-4" />
       </Button>
@@ -76,6 +77,8 @@ export function InspectorControls({
         className="h-10 w-10 md:h-8 md:w-8"
         onClick={onFullscreenToggle}
         title={isFullscreen ? "全画面終了" : "全画面表示"}
+        aria-label={isFullscreen ? "全画面表示を終了" : "全画面表示にする"}
+        aria-pressed={isFullscreen}
       >
         {isFullscreen ? (
           <IconMinimize className="h-5 w-5 md:h-4 md:w-4" />

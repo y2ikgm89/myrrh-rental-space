@@ -35,6 +35,7 @@ import {
   TooltipTrigger,
 } from "@/admin/components/ui";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import { useBeforeUnload } from "@/admin/components/editor/inline/hooks";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
@@ -245,6 +246,37 @@ export function SpaceEditForm({
   const [ogpImageUrl, setOgpImageUrl] = useState<string>(
     space?.ogpImageUrl ?? "",
   );
+
+  // 未保存の変更がある場合にブラウザ離脱警告を表示する（PostEditor/NewsEditor/
+  // TermsInlineEditor は InlineEditorShell 経由で自動的に付いているが、
+  // このフォームは独自の conform + useActionState 構成のため個別に付与する）。
+  const dirtySnapshot = JSON.stringify({
+    name,
+    slug,
+    descriptionJson,
+    addressDetail,
+    capacity,
+    area,
+    locationId,
+    hourlyPrice,
+    discountType,
+    discountValue,
+    durationDiscountOverride,
+    taxRateType,
+    mainImageUrl,
+    categoryId,
+    facilities,
+    isPublished,
+    reviewsEnabled,
+    metaDescription,
+    metaKeywords,
+    ogpTitle,
+    ogpDescription,
+    ogpImageUrl,
+  });
+  const [initialSnapshot] = useState(dirtySnapshot);
+  const isDirty = dirtySnapshot !== initialSnapshot;
+  useBeforeUnload({ isDirty });
 
   // Server Action は `(prev, formData) => SubmissionResult` signature。
   // edit mode では id を `bind` で部分適用。

@@ -20,7 +20,10 @@ import {
 import { toast } from "sonner";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { IconMessage, IconX } from "@tabler/icons-react";
-import { SCROLL_TO_MARK_COMMAND } from "@/admin/components/editor/lexical/plugins";
+import {
+  SCROLL_TO_MARK_COMMAND,
+  REMOVE_COMMENT_COMMAND,
+} from "@/admin/components/editor/lexical/plugins";
 import { Button } from "@/admin/components/ui/button";
 import { Skeleton } from "@/admin/components/ui/skeleton";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
@@ -272,12 +275,19 @@ export function CommentPanel({
   };
 
   const handleDeleteThread = (threadId: string) => {
+    // 本文中の MarkNode を先に取得しておく（DB 側削除後は allThreads から
+    // 該当スレッドが消えるため markId を引けなくなる）。
+    const markId = allThreads.find((t) => t.id === threadId)?.markId;
     startTransition(async () => {
       const result = await deleteThread(threadId);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
+      // スレッド削除後もハイライトマークが本文に残り続けるのを防ぐ
+      // （REMOVE_COMMENT_COMMAND は登録済みだが従来どこからも dispatch されておらず、
+      // マークが孤立して残っていた）。
+      if (markId) editor.dispatchCommand(REMOVE_COMMENT_COMMAND, markId);
       toast.success("スレッドを削除しました");
       collapseAndForget(threadId);
       startTransition(() => {
