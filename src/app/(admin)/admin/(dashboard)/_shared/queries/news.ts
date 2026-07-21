@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import {
   getNewsById as getNewsByIdQuery,
   getNewsList as getNewsListQuery,
@@ -23,7 +24,13 @@ export async function getNewsList(
   return getNewsListQuery(filters, pagination);
 }
 
-export async function getNewsById(id: string): Promise<NewsData | null> {
+/**
+ * `generateMetadata` と page body の両方から同一 id で呼ばれるため、
+ * React cache() でリクエスト内メモ化し同一クエリの二重発行を防ぐ。
+ */
+export const getNewsById = cache(async function getNewsById(
+  id: string,
+): Promise<NewsData | null> {
   await requireAdminPermission("news", "read");
 
   const validated = idSchema.safeParse(id);
@@ -32,4 +39,4 @@ export async function getNewsById(id: string): Promise<NewsData | null> {
   }
 
   return getNewsByIdQuery(validated.data);
-}
+});
