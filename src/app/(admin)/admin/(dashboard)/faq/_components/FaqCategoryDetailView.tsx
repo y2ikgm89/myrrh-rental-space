@@ -21,7 +21,7 @@ import type {
   FaqCategoryWithItems,
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
-import type { AdminFaqItemSortBy } from "@/shared/lib/nuqs";
+import type { AdminFaqItemSortBy, SortOrder } from "@/shared/lib/nuqs";
 import { FaqCategoryItemsTable } from "./FaqCategoryItemsTable";
 import { FaqCategoryItemsFilters } from "./FaqCategoryItemsFilters";
 import { FaqCategoryDialog } from "./FaqCategoryDialog";
@@ -32,6 +32,7 @@ type FaqCategoryDetailViewProps = {
   readonly items: readonly FaqItemWithCategory[];
   readonly allCategories: readonly { id: string; name: string }[];
   readonly currentSortBy: AdminFaqItemSortBy;
+  readonly currentSortOrder: SortOrder;
   readonly reorderEnabled: boolean;
   readonly startIndex: number;
   readonly totalItems: number;
@@ -42,6 +43,7 @@ export function FaqCategoryDetailView({
   items,
   allCategories,
   currentSortBy,
+  currentSortOrder,
   reorderEnabled,
   startIndex,
   totalItems,
@@ -112,6 +114,7 @@ export function FaqCategoryDetailView({
         items={items}
         allCategories={allCategories}
         currentSortBy={currentSortBy}
+        currentSortOrder={currentSortOrder}
         reorderEnabled={reorderEnabled}
         startIndex={startIndex}
         onEditItem={handleEditItem}
