@@ -1162,6 +1162,19 @@ describe("updateAdminReservationCommand", () => {
       // mockQueryRaw (recompute) は呼ばれないはず
       expect(mockQueryRaw).not.toHaveBeenCalled();
     });
+
+    test("Phase 4: customerId と totalPrice が同時に変更されても recompute は二重発火しない(旧顧客+新顧客の計2回)", async () => {
+      // customerId 変更(cust-1 → cust-2)と totalPrice 変更(1000 → 6000)を同時に行う。
+      // if/else-if 構造上、customerId 変更branchのみが発火し、totalPrice branchは
+      // 発火しないはず(旧顧客・新顧客それぞれ1回ずつ、計2回 = 2)。
+      await updateAdminReservationCommand("res-1", {
+        ...validInput,
+        customerId: "cust-2",
+        totalPrice: 6000,
+      });
+
+      expect(mockQueryRaw).toHaveBeenCalledTimes(2);
+    });
   });
 });
 
