@@ -37,6 +37,21 @@ export function PostTable({ posts }: PostTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = posts.map((p) => p.id);
+
+  // Round-4 audit Finding #10 / high: 検索・並び替え・ページ移動で posts が入れ
+  // 替わっても、旧実装は selectedIds をローカル state に持ち続けたため、次に
+  // 「一括削除 / 一括非公開」を押した瞬間、現在の画面には存在しない過去選択の
+  // id 群まで対象になっていた。可視 posts の id 集合との積集合を派生 state と
+  // して計算し、"見えない行が bulk 対象になる" サイレント誤操作を防ぐ。
+  //
+  // React 公式 pattern (Adjusting state while rendering): effect 内の
+  // setState は @eslint-react/set-state-in-effect で禁じられているため、
+  // render 中に derived 値を計算して bulk operations に渡す。selectedIds
+  // 自体の state は toggle 操作で成長するが、UI に見える選択件数と bulk
+  // への入力は常に「可視 id との積集合」だけを使う。
+  const visibleIdSet = new Set(allIds);
+  const effectiveSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id));
+
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
 
@@ -126,9 +141,9 @@ export function PostTable({ posts }: PostTableProps) {
         </div>
       </div>
 
-      {/* 一括操作バー */}
+      {/* 一括操作バー: 現在の画面に表示されている行だけを bulk 対象に渡す */}
       <PostBulkActions
-        selectedIds={selectedIds}
+        selectedIds={effectiveSelectedIds}
         onClear={() => setSelectedIds([])}
       />
     </>

@@ -77,6 +77,9 @@ const mockUserDelete = mock<() => Promise<{ id: string }>>(() =>
 const mockReservationUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
+const mockReservationSeriesUpdateMany = mock<() => Promise<{ count: number }>>(
+  () => Promise.resolve({ count: 0 }),
+);
 const mockInquiryUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
@@ -137,6 +140,9 @@ const prismaUser = {
 const prismaReservation = {
   updateMany: mockReservationUpdateMany,
 };
+const prismaReservationSeries = {
+  updateMany: mockReservationSeriesUpdateMany,
+};
 const prismaInquiry = {
   updateMany: mockInquiryUpdateMany,
 };
@@ -151,6 +157,7 @@ type TxShape = {
   customer: typeof prismaCustomer;
   user: typeof prismaUser;
   reservation: typeof prismaReservation;
+  reservationSeries: typeof prismaReservationSeries;
   inquiry: typeof prismaInquiry;
   spaceReview: typeof prismaSpaceReview;
   eventRegistration: typeof prismaEventRegistration;
@@ -160,6 +167,7 @@ const txShape: TxShape = {
   customer: prismaCustomer,
   user: prismaUser,
   reservation: prismaReservation,
+  reservationSeries: prismaReservationSeries,
   inquiry: prismaInquiry,
   spaceReview: prismaSpaceReview,
   eventRegistration: prismaEventRegistration,
@@ -237,6 +245,7 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockCustomerDelete.mockReset();
     mockUserDelete.mockReset();
     mockReservationUpdateMany.mockReset();
+    mockReservationSeriesUpdateMany.mockReset();
     mockInquiryUpdateMany.mockReset();
     mockReviewUpdateMany.mockReset();
     mockEventRegistrationUpdateMany.mockReset();
@@ -245,6 +254,7 @@ describe("anonymizeCustomerCommand — preserves suppression state (RESEND-AUDIT
     mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
     mockUserDelete.mockResolvedValue({ id: USER_ID });
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
+    mockReservationSeriesUpdateMany.mockResolvedValue({ count: 0 });
     mockInquiryUpdateMany.mockResolvedValue({ count: 0 });
     mockReviewUpdateMany.mockResolvedValue({ count: 0 });
     mockEventRegistrationUpdateMany.mockResolvedValue({ count: 0 });
@@ -384,6 +394,7 @@ describe("mergeCustomerCommand — preserves suppression state (RESEND-AUDIT M7)
     mockCustomerUpdate.mockReset();
     mockCustomerDelete.mockReset();
     mockReservationUpdateMany.mockReset();
+    mockReservationSeriesUpdateMany.mockReset();
     mockInquiryUpdateMany.mockReset();
     mockReviewUpdateMany.mockReset();
     mockEventRegistrationUpdateMany.mockReset();
@@ -391,6 +402,7 @@ describe("mergeCustomerCommand — preserves suppression state (RESEND-AUDIT M7)
     mockCustomerUpdate.mockResolvedValue({ id: TARGET_ID });
     mockCustomerDelete.mockResolvedValue({ id: CUSTOMER_ID });
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
+    mockReservationSeriesUpdateMany.mockResolvedValue({ count: 0 });
     mockInquiryUpdateMany.mockResolvedValue({ count: 0 });
     mockReviewUpdateMany.mockResolvedValue({ count: 0 });
     mockEventRegistrationUpdateMany.mockResolvedValue({ count: 0 });

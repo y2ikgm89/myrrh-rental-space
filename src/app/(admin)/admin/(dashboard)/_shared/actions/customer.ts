@@ -422,6 +422,7 @@ export async function mergeCustomers(
 ): Promise<
   MutationResult<{
     transferredReservations: number;
+    transferredSeries: number;
     transferredInquiries: number;
     transferredReviews: number;
     transferredRegistrations: number;

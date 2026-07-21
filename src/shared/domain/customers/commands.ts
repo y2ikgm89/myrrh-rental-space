@@ -599,6 +599,7 @@ export async function mergeCustomerCommand(
   targetId: string,
 ): Promise<{
   transferredReservations: number;
+  transferredSeries: number;
   transferredInquiries: number;
   transferredReviews: number;
   transferredRegistrations: number;
@@ -676,9 +677,22 @@ export async function mergeCustomerCommand(
     !(targetAlreadySuppressed && sourceSuppressionHash === targetOwnHash);
 
   return prisma.$transaction(async (tx) => {
-    const [reservations, inquiries, reviews, registrations] = await Promise.all(
-      [
+    const [reservations, series, inquiries, reviews, registrations] =
+      await Promise.all([
         tx.reservation.updateMany({
+          where: { customerId: sourceId },
+          data: { customerId: targetId },
+        }),
+        // ReservationSeries も customer FK は onDelete: Cascade。旧実装はこの
+        // updateMany を欠いており、続く tx.customer.delete が source を消した
+        // 瞬間に source が保有していた series 行が cascade で物理削除され、
+        // その直前で updateMany 済み Reservation.seriesId は seriesId FK の
+        // onDelete: SetNull により null に上書きされていた (Round-4 audit
+        // Finding #3 / high)。partial unique index
+        // `reservation_series_space_dtstart_active_unique` は (spaceId,
+        // dtstart) のみが key で customerId を含まないため、customerId 変更
+        // だけでは衝突しない。
+        tx.reservationSeries.updateMany({
           where: { customerId: sourceId },
           data: { customerId: targetId },
         }),
@@ -694,8 +708,7 @@ export async function mergeCustomerCommand(
           where: { customerId: sourceId },
           data: { customerId: targetId },
         }),
-      ],
-    );
+      ]);
 
     // target の予約統計を実履歴から再計算する。
     // 同型の再計算経路は `updateAdminReservationCommand` の予約再割当時にもあり、
@@ -715,6 +728,7 @@ export async function mergeCustomerCommand(
 
     return {
       transferredReservations: reservations.count,
+      transferredSeries: series.count,
       transferredInquiries: inquiries.count,
       transferredReviews: reviews.count,
       transferredRegistrations: registrations.count,
