@@ -45,9 +45,22 @@ const CUSTOM_REASON_MAX = 500;
 interface RefundDialogProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  /** 予約合計 (税込)。金額 input の placeholder + 超過 client validation に使う */
-  readonly totalPriceWithTax: number;
-  /** 部分返金既発生時の累積額 (未指定なら 0)。残額 = totalPriceWithTax - cumulativeRefunded */
+  /**
+   * 返金上限の基準額（実際に課金された額。金額 input の placeholder + 超過
+   * client validation に使う）。
+   *
+   * Round-5 audit Finding #20: このプロパティは以前 `totalPriceWithTax`
+   * という名前で、呼出元 (ReservationDetail.tsx) は税込合計を渡していた。
+   * しかしサーバー側の権威ある返金上限
+   * (`refundReservationPaymentCommand`) は Stripe への実 charge 額である
+   * 税抜 `totalPrice` を基準にしている（税込額を基準にすると税額分だけ
+   * Stripe が「refund > charge」で reject する）。events 側の呼出元は元々
+   * 税込/税抜の区別を持たない `paidAmount`（実 charge 額）を渡しており
+   * 問題なかった。プロパティ名を「税込」を含意しない中立な名前に変え、
+   * 呼出元には常に実際の課金基準額を渡すよう統一する。
+   */
+  readonly refundableTotal: number;
+  /** 部分返金既発生時の累積額 (未指定なら 0)。残額 = refundableTotal - cumulativeRefunded */
   readonly cumulativeRefunded?: number;
   readonly onConfirm: (options: { amount?: number; reason?: string }) => void;
   readonly isPending: boolean;
@@ -56,7 +69,7 @@ interface RefundDialogProps {
 export function RefundDialog({
   open,
   onOpenChange,
-  totalPriceWithTax,
+  refundableTotal,
   cumulativeRefunded = 0,
   onConfirm,
   isPending,
@@ -66,7 +79,7 @@ export function RefundDialog({
   const [customReason, setCustomReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const remaining = Math.max(0, totalPriceWithTax - cumulativeRefunded);
+  const remaining = Math.max(0, refundableTotal - cumulativeRefunded);
   const isFullRefund = amountStr.trim() === "";
   const reason =
     reasonPreset === "custom"
@@ -156,7 +169,7 @@ export function RefundDialog({
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              合計 {formatPrice(totalPriceWithTax)} — 累積返金額{" "}
+              合計 {formatPrice(refundableTotal)} — 累積返金額{" "}
               {formatPrice(cumulativeRefunded)} — 残額 {formatPrice(remaining)}
             </p>
           </div>
