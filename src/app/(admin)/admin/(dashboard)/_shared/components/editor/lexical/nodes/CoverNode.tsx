@@ -89,12 +89,16 @@ const SAFE_BACKGROUND_IMAGE_URL_PATTERN = /^(https?:\/\/|\/)/i;
 // 続く `,url(`（CSS の background-image はカンマ区切りで複数指定できる）を
 // 埋め込むことで、実質的に2つ目の `url(javascript:...)` を注入できる。
 // prefix だけでなく「文字列全体が単一の妥当な URL である」ことを検証する:
-//   1. url() トークンを閉じたり複数値化しうる文字（空白・括弧・引用符・
-//      バックスラッシュ・バッククォート・カンマ・セミコロン）を含む値は
-//      それだけで拒否する（正規の URL がこれらを生で含む必要は無い）
+//   1. 引用符なし url() トークンを実際に終端しうる文字（CSS Syntax Module
+//      Level 3 の consume-a-url-token: 空白・`"`・`'`・`(`・`)`・バック
+//      スラッシュのみ。カンマ／セミコロン／バッククォートはこのトークンを
+//      終端しないため許可する — 実在の CDN 変換URL(例:
+//      `https://cdn.example/fit,fill,w_1200/photo.jpg`)がカンマを含む
+//      ケースを誤って拒否しないよう、仕様上の終端文字だけに絞る
+//      （PR#1386 followup, スレッド PRRT_kwDOQ0jEts6SpGeh）。
 //   2. その上で `URL` コンストラクタで単一の URL としてパース可能か、
 //      絶対 URL の場合はスキームが http(s) であることを確認する
-const UNSAFE_CSS_URL_BREAKOUT_CHARACTERS_PATTERN = /["'`(),;\\\s]/;
+const UNSAFE_CSS_URL_BREAKOUT_CHARACTERS_PATTERN = /["'()\\\s]/;
 
 function parseBackgroundImageUrl(v: unknown): string {
   if (typeof v !== "string" || v === "") return "";

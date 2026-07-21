@@ -605,6 +605,41 @@ describe("XSS対策: 汎用HTMLペースト", () => {
     expect(finalHtml).not.toContain("background-image");
   });
 
+  test("CoverNode: カンマを含む正規のCDN変換URLは誤って拒否されない(Codexレビュー指摘スレッド PRRT_kwDOQ0jEts6SpGeh)", () => {
+    // カンマは引用符なしCSS url()トークンを終端しない(CSS Syntax Module Level 3の
+    // consume-a-url-tokenの終端文字は空白・引用符・括弧・バックスラッシュのみ)。
+    // media pickerのURLタブ等から入力される実在のCDN画像変換URL
+    // (例: Cloudinary風のfit,fill,w_1200のようなカンマ区切りパラメータ)を
+    // 誤って空文字にしないことを確認する
+    const html =
+      '<div data-cover style="background-image:url(https://cdn.example/fit,fill,w_1200/photo.jpg)" data-color="default" data-overlay-opacity="40" data-min-height="md" data-content-align="center" data-content-position="center"><h2>タイトル</h2></div>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const coverNode = $dfs()
+        .map(({ node }) => node)
+        .find($isCoverNode);
+      expect(coverNode).toBeDefined();
+      if (!coverNode) return;
+      expect($getState(coverNode, backgroundImageUrlState)).toBe(
+        "https://cdn.example/fit,fill,w_1200/photo.jpg",
+      );
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    // CSSOM のシリアライズは url() の値を引用符付きに正規化するため、
+    // 厳密な引用符スタイルではなく URL 自体が保持されていることを確認する
+    expect(finalHtml).toContain("background-image");
+    expect(finalHtml).toContain(
+      "https://cdn.example/fit,fill,w_1200/photo.jpg",
+    );
+  });
+
   test('FeatureIconListNode: data-icon-name="toString" 等 Object.prototype 継承プロパティ名でも HTML 生成全体がクラッシュしない（getCuratedIconSvgMarkup の Object.hasOwn ガード回帰）', () => {
     const html =
       '<ul data-feature-icon-list data-columns="2" data-color="default" data-icon-size="md"><li data-feature-icon-item data-icon-name="toString"><p>設備名</p></li></ul>';
