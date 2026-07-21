@@ -32,6 +32,7 @@ export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/events/claim-commands.test.ts",
   "__tests__/integration/api/cron-waitlist-expire.test.ts",
   "__tests__/integration/spaces/rate-plan-commands.test.ts",
+  "__tests__/integration/spaces/resolve-space-card-embed-data.test.ts",
   "__tests__/integration/domain/reservations/blacklist-guard.test.ts",
   "__tests__/integration/domain/customers/risk-detection.test.ts",
   "__tests__/integration/domain/customers/anonymize-command.test.ts",
