@@ -14,8 +14,31 @@
  * `withDOM()` は常に「既存 window を使う」分岐を通り、上記の happy-dom 経路を一度も
  * 通らない。本番の Next.js サーバーには同等の事前登録が無いため、この関数で
  * 呼び出し前に同じ JSDOM 環境を一時的に用意する。
+ *
+ * `jsdom` はトップレベル `import` にすると、Next.js の Turbopack が本番 build の
+ * 「ページデータ収集」段階でこのモジュールを import する全ページに対し jsdom 自体を
+ * 静的解析しようとし、jsdom 内部の相対パス `require("../data/patch.json")` 等の
+ * 解決に失敗して `Cannot find module` で build が落ちる
+ * （`serverExternalPackages: ["jsdom"]` を next.config.ts に足しても解消しない —
+ * Turbopack 側の外部化判定が jsdom を対象外と判断する模様）。
+ * `createRequire` による遅延 require は `withLexicalHeadlessDom` が実際に呼ばれる
+ * 実行時まで jsdom のロードを遅延させ、ページデータ収集時には一切評価されないため
+ * この build エラーを回避する。
  */
-import { JSDOM } from "jsdom";
+import { createRequire } from "node:module";
+
+type JSDOMModule = typeof import("jsdom");
+type JSDOM = InstanceType<JSDOMModule["JSDOM"]>;
+
+let jsdomModule: JSDOMModule | undefined;
+
+function loadJsdomModule(): JSDOMModule {
+  if (jsdomModule === undefined) {
+    const require = createRequire(import.meta.url);
+    jsdomModule = require("jsdom") as JSDOMModule;
+  }
+  return jsdomModule;
+}
 
 function defineGlobal(target: object, key: string, value: unknown): void {
   Object.defineProperty(target, key, {
@@ -58,6 +81,7 @@ export function collectLexicalHeadlessDomGlobals(
 }
 
 function createHeadlessJsdom(): JSDOM {
+  const { JSDOM } = loadJsdomModule();
   return new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", {
     url: "http://localhost/",
     pretendToBeVisual: true,
