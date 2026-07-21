@@ -4,7 +4,7 @@ import {
   getEventById,
   getLocationsForEvent,
   getSpacesForEvent,
-} from "@/shared/domain/events/admin-queries";
+} from "@/admin/queries/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../../_components/EventForm";
 import type { Metadata } from "next";

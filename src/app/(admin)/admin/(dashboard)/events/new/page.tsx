@@ -1,8 +1,5 @@
 import { connection } from "next/server";
-import {
-  getLocationsForEvent,
-  getSpacesForEvent,
-} from "@/shared/domain/events/admin-queries";
+import { getLocationsForEvent, getSpacesForEvent } from "@/admin/queries/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../_components/EventForm";
 import type { Metadata } from "next";

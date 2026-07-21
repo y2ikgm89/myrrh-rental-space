@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { getEventById } from "@/shared/domain/events/admin-queries";
-import { getWaitlistQueue } from "@/shared/domain/events/waitlist-queries";
+import { getEventById, getWaitlistQueue } from "@/admin/queries/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { Pagination } from "@/admin/components/ui";
 import { loadAdminEventWaitlistSearchParams } from "@/shared/lib/nuqs";
