@@ -28,6 +28,8 @@ import {
   unpublishPost,
 } from "@/admin/actions/post/mutations";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { clearDraft } from "@/admin/components/editor/lexical/plugins/AutoSavePlugin";
+import { useDraftRecovery } from "@/admin/components/editor/lexical/use-draft-recovery";
 import { getPostPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { PostData } from "@/shared/domain/posts/types";
@@ -157,6 +159,9 @@ export function usePostEditor({
     ? JSON.stringify(post.contentJson)
     : EMPTY_LEXICAL_EDITOR_STATE_JSON;
 
+  // LocalStorage 下書き自動保存のキー（AutoSavePlugin が `lexical-draft:` prefix を付与）
+  const autoSaveKey = post ? `post-${post.id}` : "post-new";
+
   const [contentJson, setContentJson] = useState(initialContentJson);
   const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
   const [statusValue, setStatusValue] = useState<PostStatus>(
@@ -164,6 +169,18 @@ export function usePostEditor({
   );
   const [settingsSnapshot, setSettingsSnapshot] =
     useState<ParsedPostSettingsFormData | null>(null);
+
+  // Lexical エディタは非制御コンポーネント（初期値のみ使用）のため、下書き復元を
+  // 画面に反映するには key 変更によるアンマウント/リマウントが必要
+  const [editorResetKey, setEditorResetKey] = useState(0);
+  const draftRecovery = useDraftRecovery({
+    autoSaveKey,
+    initialContentJson,
+    onRestore: (json) => {
+      setContentJson(json);
+      setEditorResetKey((prev) => prev + 1);
+    },
+  });
 
   const isBodyDirty = contentJson !== savedContentJson;
 
@@ -216,6 +233,7 @@ export function usePostEditor({
         }
 
         setSavedContentJson(contentJson);
+        clearDraft(autoSaveKey);
         router.refresh();
         toast.success("本文を保存しました");
       } catch (error) {
@@ -326,6 +344,8 @@ export function usePostEditor({
         toast.error(result.error);
         return null;
       }
+      // create mode の下書きキー ("post-new") は id 確定後に不要になるため明示的に破棄する
+      clearDraft(autoSaveKey);
       return result.id;
     } catch (error) {
       logger.error("作成中にエラーが発生しました", {
@@ -474,6 +494,7 @@ export function usePostEditor({
           return;
         }
         setSavedContentJson(contentJson);
+        clearDraft(autoSaveKey);
         router.refresh();
         openPreviewTab(getPostPreviewHref(post.id));
       } catch (error) {
@@ -522,6 +543,10 @@ export function usePostEditor({
     slug,
     contentJson,
     status: statusValue,
+
+    autoSaveKey,
+    editorResetKey,
+    draftRecovery,
 
     isSettingsDialogOpen,
     openSettingsDialog,
