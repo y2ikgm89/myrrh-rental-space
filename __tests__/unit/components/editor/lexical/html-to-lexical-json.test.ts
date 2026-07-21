@@ -71,6 +71,11 @@ import {
   $isFileNode,
   fileUrlState,
 } from "@/admin/components/editor/lexical/nodes/FileNode";
+import {
+  $isCoverNode,
+  backgroundImageUrlState,
+} from "@/admin/components/editor/lexical/nodes/CoverNode";
+import { $isFeatureIconItemNode } from "@/admin/components/editor/lexical/nodes/FeatureIconListNode";
 import { createInlineIcon, createSpan } from "@/shared/lib/portable-text";
 import {
   EMPTY_LEXICAL_EDITOR_STATE_JSON,
@@ -512,5 +517,83 @@ describe("XSS対策: 汎用HTMLペースト", () => {
     const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
     expect(finalHtml).not.toContain("javascript:");
     expect(finalHtml).not.toContain("href=");
+  });
+
+  test("CoverNode: background-image の javascript: スキーム url() は importDOM 段階で除去され、最終 HTML にも style 属性として残らない（丸カッコを含まない round-trip 可能な値でも同様）", () => {
+    // sanitize-html は style 属性の CSS 値をスキーム検証しない（href/src のみ
+    // allowedSchemes 対象）。CoverNode 自身の parseBackgroundImageUrl allowlist
+    // （http(s) とサイト相対パスのみ許可）が唯一のガードであることを実測で固定化する。
+    const html =
+      '<div data-cover style="background-image:url(\'javascript:alert`1`\')" data-color="default" data-overlay-opacity="40" data-min-height="md" data-content-align="center" data-content-position="center"><h2>タイトル</h2></div>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const coverNode = $dfs()
+        .map(({ node }) => node)
+        .find($isCoverNode);
+      expect(coverNode).toBeDefined();
+      if (!coverNode) return;
+      expect($getState(coverNode, backgroundImageUrlState)).toBe("");
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+    expect(finalHtml).not.toContain("background-image");
+  });
+
+  test("CoverNode: 通常の https 背景画像 URL は round-trip で保持される（allowlist の回帰確認）", () => {
+    const html =
+      '<div data-cover style="background-image:url(https://example.com/bg.jpg)" data-color="default" data-overlay-opacity="40" data-min-height="md" data-content-align="center" data-content-position="center"><h2>タイトル</h2></div>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const coverNode = $dfs()
+        .map(({ node }) => node)
+        .find($isCoverNode);
+      expect(coverNode).toBeDefined();
+      if (!coverNode) return;
+      expect($getState(coverNode, backgroundImageUrlState)).toBe(
+        "https://example.com/bg.jpg",
+      );
+    });
+  });
+
+  test('FeatureIconListNode: data-icon-name="toString" 等 Object.prototype 継承プロパティ名でも HTML 生成全体がクラッシュしない（getCuratedIconSvgMarkup の Object.hasOwn ガード回帰）', () => {
+    const html =
+      '<ul data-feature-icon-list data-columns="2" data-color="default" data-icon-size="md"><li data-feature-icon-item data-icon-name="toString"><p>設備名</p></li></ul>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const itemNode = $dfs()
+        .map(({ node }) => node)
+        .find($isFeatureIconItemNode);
+      expect(itemNode).toBeDefined();
+    });
+
+    // 修正前は `getCuratedIconSvgMarkup("toString")` が Object.prototype.toString を
+    // 返し、呼び出し側の `.replace()` で TypeError を投げて deriveLexicalContentHtmlFromJsonCore
+    // 全体が DomainError を throw していた（本文保存が丸ごと失敗する不可用性バグ）。
+    expect(() =>
+      deriveLexicalContentHtmlFromJsonCore(result.json),
+    ).not.toThrow();
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).toContain("設備名");
   });
 });

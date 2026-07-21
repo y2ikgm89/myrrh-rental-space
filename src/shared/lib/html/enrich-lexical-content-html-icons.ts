@@ -32,7 +32,7 @@ function resolveIconMarkup(
   className: string | undefined,
 ): string {
   const base = getCuratedIconSvgMarkup(iconName);
-  if (!base) return "";
+  if (base === undefined) return "";
 
   if (className === undefined) {
     return base.replace(/\sclass="inline-icon-svg"/u, "");
