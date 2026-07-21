@@ -67,8 +67,12 @@ function CommandInput({
       <IconSearch className="size-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input
         data-slot="command-input"
+        // Round-4 audit Cluster J / Finding #17 (medium): iOS Safari は focus
+        // 対象 <input> の font-size が 16px 未満だとページを auto-zoom し、
+        // dialog 内のレイアウトが横に押し出される。base (16px) をモバイル既定、
+        // md 以上で従来通り sm (14px) に戻すことで見た目を維持しつつ zoom を抑止。
         className={cn(
-          "placeholder:text-muted-foreground flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+          "placeholder:text-muted-foreground flex h-11 w-full rounded-md bg-transparent py-3 text-base outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           className,
         )}
         {...props}
