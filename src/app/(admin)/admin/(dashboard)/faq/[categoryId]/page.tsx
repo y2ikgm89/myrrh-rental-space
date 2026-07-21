@@ -113,6 +113,7 @@ async function CategoryDetailContent({
         items={items}
         allCategories={allCategoryOptions}
         currentSortBy={params.sortBy}
+        currentSortOrder={params.sortOrder}
         reorderEnabled={reorderEnabled}
         startIndex={startIndex}
         totalItems={total}
