@@ -20,9 +20,35 @@
  * hook そのもので、`getServerSnapshot`（SSR/hydration 直後は常に `null`）と
  * `getSnapshot`（client の実値）を渡すだけで、mismatch を起こさず
  * hydration 後に自動で正しい値へ再レンダーしてくれる。
- * `getSnapshot` は同一 key に対して安定した参照を返す必要があるため
- * （でないと React が無限に再レンダーする）、モジュールスコープの
- * key→snapshot キャッシュ（`draftSnapshotCache`）を介す。
+ *
+ * `getSnapshot` は同一 key に対して安定した参照を返す必要がある（でないと
+ * React が無限に再レンダーする）。**PR#1350 の初版はこれを満たすために
+ * モジュールスコープの key→snapshot キャッシュ（`Map`）を使っていたが、これは
+ * 「一度読んだら二度と再読込しない」永続キャッシュになってしまっていた。**
+ * SPA 内クライアント遷移（Next.js `<Link>` での画面遷移によるコンポーネントの
+ * unmount/remount）を挟むと、実際の LocalStorage の最新状態（新しい下書きの
+ * 保存・`clearDraft` による削除）が反映されず、下書き復元機能が実質的に
+ * 壊れる致命的なバグだった（PR#1350 への chatgpt-codex-connector レビュー
+ * 指摘 P1, thread `PRRT_kwDOQ0jEts6Sg6Pv`）。
+ *
+ * 修正: キャッシュを**マウントスコープ**に変更した（`createDraftSnapshotStore`
+ * 参照）。同一マウント中は 1 回だけ LocalStorage を読んで参照を固定する
+ * （従来通り `getSnapshot` の安定参照契約を満たし、かつ「起動時に見つかった
+ * 下書きを一度だけ提示する」設計を維持する = タイピング中の AutoSave
+ * 再保存では再読込しない）。一方マウントそのものは SPA 遷移のたびに
+ * 作り直されるため、次のマウントでは必ず最新の LocalStorage を読み直す。
+ * さらに `clearDraft(autoSaveKey)` が呼ばれた場合は `AutoSavePlugin` が
+ * dispatch する `DRAFT_CLEARED_EVENT` を購読し、同一マウント中でも
+ * キャッシュを明示的に無効化して再レンダーする（保存直後に、既に存在しない
+ * 下書きをバナーが提示し続けるのを防ぐ）。
+ *
+ * キャッシュの保持に `useRef` ではなく `useState` の lazy initializer を
+ * 使っているのは、このリポジトリでは render 中の `ref.current` 読み取りが
+ * ESLint `react-hooks/refs`（React Compiler ルール）で error になるため
+ * （マウント時スナップショットは `useState(initializer)` を使う規約。
+ * 例外は lexical-draggable-block-plugin.ts のみ）。`useSyncExternalStore` の
+ * `getSnapshot` は render 中に呼ばれるため、内部キャッシュは「render で
+ * 読んでよい」`useState` の戻り値経由でしか保持できない。
  *
  * 判定ロジックは `shouldOfferDraftRestore` として素の関数に切り出し、
  * bun test で純粋関数として単体テストできるようにしている。
@@ -30,7 +56,7 @@
  */
 
 import { useState, useSyncExternalStore } from "react";
-import { getDraftJson } from "./plugins/AutoSavePlugin";
+import { getDraftJson, DRAFT_CLEARED_EVENT } from "./plugins/AutoSavePlugin";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 
 export type LexicalDraft = { json: string; savedAt: string };
@@ -88,31 +114,58 @@ export type UseDraftRecoveryReturn = {
   dismiss: () => void;
 };
 
-/**
- * `autoSaveKey` → 読み取り済み下書き の cache。`useSyncExternalStore` の
- * `getSnapshot` は「ストアが変化していない限り毎回同じ参照を返す」契約が
- * あるため（さもないと無限レンダーになる）、LocalStorage を毎回読み直さず
- * key ごとに 1 回だけ読んで固定する。ページ内でこのキーに対する下書きが
- * 外部から更新されることは無い（このフックは「起動時に見つかった下書き」を
- * 一度だけ提示する設計）ため、cache を無効化する仕組みは不要。
- */
-const draftSnapshotCache = new Map<string, LexicalDraft | null>();
-
-function readDraftSnapshot(autoSaveKey: string): LexicalDraft | null {
-  if (!draftSnapshotCache.has(autoSaveKey)) {
-    draftSnapshotCache.set(autoSaveKey, getDraftJson(autoSaveKey));
-  }
-  return draftSnapshotCache.get(autoSaveKey) ?? null;
-}
-
 /** SSR / hydration 直後は常に「下書きなし」相当を返す（バナー非表示で markup を揃える）。 */
 function getServerDraftSnapshot(): null {
   return null;
 }
 
-/** 外部ストアの変化を購読しない（マウント時の 1 回読みのみで足りるため no-op）。 */
-function subscribeToNothing(): () => void {
-  return () => {};
+/** `DRAFT_CLEARED_EVENT` の detail が文字列（= autoSaveKey）かを検証する type guard。 */
+function readClearedDraftKey(event: Event): string | null {
+  if (!(event instanceof CustomEvent)) return null;
+  const { detail } = event;
+  return typeof detail === "string" ? detail : null;
+}
+
+type DraftSnapshotState = {
+  read: boolean;
+  value: LexicalDraft | null;
+};
+
+/**
+ * `autoSaveKey` 1 つに対する `subscribe` / `getSnapshot` ペアを生成する。
+ * 内部状態 `state` はこの関数のクロージャにのみ閉じる（module scope でも
+ * `useRef` でもない）。呼び出し元の `useDraftRecovery` が `useState` の
+ * lazy initializer で 1 回だけ生成することで、「1 mount = 1 回だけ
+ * LocalStorage を読む」を実現する（上部の doc comment 参照）。
+ */
+function createDraftSnapshotStore(autoSaveKey: string): {
+  getSnapshot: () => LexicalDraft | null;
+  subscribe: (onStoreChange: () => void) => () => void;
+} {
+  const state: DraftSnapshotState = { read: false, value: null };
+
+  function getSnapshot(): LexicalDraft | null {
+    if (!state.read) {
+      state.read = true;
+      state.value = getDraftJson(autoSaveKey);
+    }
+    return state.value;
+  }
+
+  function subscribe(onStoreChange: () => void): () => void {
+    const handleDraftCleared = (event: Event): void => {
+      if (readClearedDraftKey(event) !== autoSaveKey) return;
+      if (state.read && state.value === null) return; // 既に変化なし
+      state.read = true;
+      state.value = null;
+      onStoreChange();
+    };
+    window.addEventListener(DRAFT_CLEARED_EVENT, handleDraftCleared);
+    return () =>
+      window.removeEventListener(DRAFT_CLEARED_EVENT, handleDraftCleared);
+  }
+
+  return { getSnapshot, subscribe };
 }
 
 /**
@@ -123,18 +176,31 @@ function subscribeToNothing(): () => void {
  * を起こさない。hydration 完了後に React が自動で `getSnapshot`（実際の
  * LocalStorage 値）へ再レンダーする。
  *
- * 以降のタイピングによる AutoSavePlugin の再保存はこのスナップショットに
- * 反映されない（意図通り: 「起動時に見つかった下書き」を提示する UI のため、
- * render 中に ref を読むパターンは使わない）。
+ * ストアはマウントごとに `createDraftSnapshotStore` で新規生成する（詳細は
+ * ファイル冒頭の doc comment）。以降のタイピングによる AutoSavePlugin の
+ * 再保存はこのスナップショットに反映されない（意図通り: 「起動時に見つかった
+ * 下書き」を提示する UI のため、render 中に ref を読むパターンは使わない）。
+ * 一方で `clearDraft` による削除は `DRAFT_CLEARED_EVENT` 経由で同一マウント中
+ * でも反映される。
  */
 export function useDraftRecovery({
   autoSaveKey,
   initialContentJson,
   onRestore,
 }: UseDraftRecoveryOptions): UseDraftRecoveryReturn {
+  // useState lazy initializer: マウント時のみ 1 回生成（非制御コンポーネント設計と
+  // 同じパターン、cf. LexicalEditorDesktopMounted の initialConfig）。呼び出し元
+  // 4 箇所（post/terms/news/space の各 editor hook）はいずれも
+  // `entity ? \`type-${entity.id}\` : "type-new"` のように編集対象の id 由来かつ、
+  // 新規作成成功後は別ルートへ router.push するため、同一マウント中に
+  // autoSaveKey が変化することはない。
+  const [{ getSnapshot, subscribe }] = useState(() =>
+    createDraftSnapshotStore(autoSaveKey),
+  );
+
   const draft = useSyncExternalStore(
-    subscribeToNothing,
-    () => readDraftSnapshot(autoSaveKey),
+    subscribe,
+    getSnapshot,
     getServerDraftSnapshot,
   );
   const [dismissed, setDismissed] = useState(false);
