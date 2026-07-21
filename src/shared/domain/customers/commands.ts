@@ -893,6 +893,14 @@ export async function recomputeCustomerStatsCommand(
   customerId: string,
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    const existing = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+    }
+
     await recomputeCustomerReservationStats(tx, customerId);
   });
 }
