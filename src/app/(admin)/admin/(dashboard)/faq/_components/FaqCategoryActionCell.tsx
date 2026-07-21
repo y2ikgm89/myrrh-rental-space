@@ -72,7 +72,7 @@ export function FaqCategoryActionCell({
         itemName={name}
         description={
           canDelete
-            ? `「${name}」を削除します。この操作は取り消せません。`
+            ? `「${name}」を削除します。ゴミ箱に 30 日間保持され、復元できます。`
             : `「${name}」には質問が ${itemCount} 件紐づいているため削除できません。先に質問を削除または別カテゴリへ移動してください。`
         }
         onConfirm={handleDelete}
