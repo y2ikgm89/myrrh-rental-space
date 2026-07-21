@@ -514,7 +514,24 @@ export async function searchCustomersAction(
   // ロール（customer:read を持たない EDITOR 含む）を通すため RBAC バイパスになる。
   const auth = await checkPermission("customer", "read");
   if (!auth.success) return [];
-  return searchCustomers(query);
+
+  const results = await searchCustomers(query);
+
+  fireAndForget(
+    createAuditLogRecord({
+      userId: auth.user.id,
+      action: AuditAction.READ,
+      resource: "customer",
+      metadata: { query, resultCount: results.length },
+    }),
+    {
+      operation: "auditLogSearchCustomers",
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+    },
+  );
+
+  return results;
 }
 
 /**

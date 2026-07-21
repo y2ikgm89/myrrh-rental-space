@@ -1,14 +1,20 @@
 /**
- * customer.ts の updateCustomerStatus / updateCustomer / anonymizeCustomer が
- * customer.status / customer.profile / customer.anonymization として
- * before/after（または匿名化メタデータ）を AuditLog に残すことを検証する。
+ * customer.ts の updateCustomerStatus / updateCustomer / anonymizeCustomer /
+ * createCustomer / updateCustomerNotes / toggleCustomerActive /
+ * clearCustomerRiskFlag / searchCustomersAction が customer.status /
+ * customer.profile / customer.anonymization / customer.notes /
+ * customer.active / customer.riskFlag として before/after を、
+ * searchCustomersAction が PII 検索の READ 監査を AuditLog に残すことを検証する。
  *
  * executeAdminMutationResult / executeConformMutation は薄いモックに差し替え、
  * RBAC・FormData→conform解析・cache invalidationの再テストはしない
  * （customer.action-shape.test.ts / *-empty-optional.test.ts の担務）。
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  CustomerStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -125,7 +131,9 @@ mock.module("@/shared/domain/customers/risk-detection", () => ({
 }));
 
 mock.module("@/admin/lib/action-auth", () => ({
-  checkPermission: mock(() => Promise.resolve({ success: true })),
+  checkPermission: mock(() =>
+    Promise.resolve({ success: true, user: { id: "admin-1" } }),
+  ),
 }));
 
 const mockCreateAuditLogRecord = mock<
@@ -156,8 +164,16 @@ mock.module("@/shared/lib/errors/server", () => ({
   normalizeError: (error: unknown) => error,
 }));
 
-const { updateCustomerStatus, updateCustomer, anonymizeCustomer } =
-  await import("@/app/(admin)/admin/(dashboard)/_shared/actions/customer");
+const {
+  updateCustomerStatus,
+  updateCustomer,
+  anonymizeCustomer,
+  createCustomer,
+  updateCustomerNotes,
+  toggleCustomerActive,
+  clearCustomerRiskFlag,
+  searchCustomersAction,
+} = await import("@/app/(admin)/admin/(dashboard)/_shared/actions/customer");
 
 const CUSTOMER_UUID = "11111111-1111-4111-8111-111111111111";
 
@@ -279,5 +295,25 @@ describe("anonymizeCustomer の AuditLog 記録 (customer.anonymization、生PII
     expect(record["anonymizedFields"]).toContain("phoneNumber");
     // 生 PII の値そのもの（例: 旧メールアドレス文字列）は一切含まれないこと
     expect(JSON.stringify(record)).not.toContain("tanaka@example.com");
+  });
+});
+
+describe("searchCustomersAction の PII 検索監査ログ (READ)", () => {
+  beforeEach(() => {
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("検索実行時に READ アクションでクエリと件数を記録する", async () => {
+    await searchCustomersAction("田中");
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["action"]).toBe(AuditAction.READ);
+    expect(call["resource"]).toBe("customer");
+    expect(call["metadata"]).toEqual({ query: "田中", resultCount: 0 });
   });
 });
