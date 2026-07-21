@@ -51,29 +51,58 @@ export async function bulkSetStatusInquiriesCommand(
     return { count: 0, newStatus, affectedIds: [], rejectedIds };
   }
 
-  const allowedIds = allowedTargets.map((t) => t.id);
-
-  const affected = await prisma.$transaction(async (tx) => {
-    const result = await tx.inquiry.updateMany({
-      where: { id: { in: allowedIds } },
+  // Round-5 audit Finding #6: events 側 (bulkSetStatusEventsCommand) と同型の
+  // TOCTOU。旧実装は updateMany の WHERE が id のみで status を含まず、read〜write
+  // 間の競合更新を無条件に上書きしていた。read 時点の status を WHERE に claim
+  // として含める。加えて、claim に失敗した id を InquiryStatusHistory に書くと
+  // 「実際には起きていない遷移」の偽レコードが append-only な監査証跡に残るため、
+  // 実際に claim できた id だけを history 対象にする。
+  const confirmedTargets = await prisma.$transaction(async (tx) => {
+    const claim = await tx.inquiry.updateMany({
+      where: {
+        deletedAt: null,
+        OR: allowedTargets.map((t) => ({ id: t.id, status: t.fromStatus })),
+      },
       data: { status: newStatus },
     });
-    await tx.inquiryStatusHistory.createMany({
-      data: allowedTargets.map((t) => ({
-        inquiryId: t.id,
-        fromStatus: t.fromStatus,
-        toStatus: newStatus,
-        changedById,
-        reason: reason ?? null,
-      })),
-    });
-    return result.count;
+
+    let confirmed = allowedTargets;
+    if (claim.count < allowedTargets.length) {
+      const rows = await tx.inquiry.findMany({
+        where: {
+          id: { in: allowedTargets.map((t) => t.id) },
+          status: newStatus,
+        },
+        select: { id: true },
+      });
+      const confirmedIds = new Set(rows.map((r) => r.id));
+      rejectedIds.push(
+        ...allowedTargets
+          .filter((t) => !confirmedIds.has(t.id))
+          .map((t) => t.id),
+      );
+      confirmed = allowedTargets.filter((t) => confirmedIds.has(t.id));
+    }
+
+    if (confirmed.length > 0) {
+      await tx.inquiryStatusHistory.createMany({
+        data: confirmed.map((t) => ({
+          inquiryId: t.id,
+          fromStatus: t.fromStatus,
+          toStatus: newStatus,
+          changedById,
+          reason: reason ?? null,
+        })),
+      });
+    }
+
+    return confirmed;
   });
 
   return {
-    count: affected,
+    count: confirmedTargets.length,
     newStatus,
-    affectedIds: allowedIds,
+    affectedIds: confirmedTargets.map((t) => t.id),
     rejectedIds,
   };
 }

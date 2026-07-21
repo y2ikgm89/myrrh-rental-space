@@ -9,14 +9,14 @@ mock.module("server-only", () => ({}));
 
 const mockFindMany = mock<
   (args: {
-    where: { id: { in: string[] } };
-    select: { id: boolean; status: boolean };
-  }) => Promise<{ id: string; status: CustomerStatus }[]>
+    where: { id: { in: string[] }; status?: CustomerStatus };
+    select: { id: boolean; status?: boolean };
+  }) => Promise<{ id: string; status?: CustomerStatus }[]>
 >(() => Promise.resolve([]));
 
 const mockUpdateMany = mock<
   (args: {
-    where: { id: { in: string[] } };
+    where: { OR: { id: string; status: CustomerStatus }[] };
     data: { status: CustomerStatus };
   }) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 0 }));
@@ -191,7 +191,10 @@ describe("bulkSetStatusCustomersCommand", () => {
   });
 
   describe("updateMany への引数", () => {
-    test("updateMany に正しい where と data が渡される", async () => {
+    test("updateMany に read 時点の status を claim する OR where が渡される", async () => {
+      // Round-5 audit Finding #5/#6 と同型: WHERE が id のみだと read〜write 間の
+      // 競合更新を無条件に上書きする TOCTOU になるため、read 時点の status を
+      // OR 条件に含めた claim になっていることを固定する。
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: CustomerStatus.NEW },
       ]);
@@ -200,9 +203,32 @@ describe("bulkSetStatusCustomersCommand", () => {
       await bulkSetStatusCustomersCommand([UUID_A], CustomerStatus.VIP);
 
       expect(mockUpdateMany).toHaveBeenCalledWith({
-        where: { id: { in: [UUID_A] } },
+        where: { OR: [{ id: UUID_A, status: CustomerStatus.NEW }] },
         data: { status: CustomerStatus.VIP },
       });
+    });
+
+    test("claim が一部失敗した場合、確定できた id だけ affected/affectedIds に残る", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: CustomerStatus.NEW },
+        { id: UUID_B, status: CustomerStatus.REGULAR },
+      ]);
+      // 2件 claim を試みたが、他 admin との競合で 1 件しか claim できなかった
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      // 実際に VIP になっているのは UUID_A のみ
+      mockFindMany.mockResolvedValueOnce([{ id: UUID_A }]);
+
+      const result = await bulkSetStatusCustomersCommand(
+        [UUID_A, UUID_B],
+        CustomerStatus.VIP,
+      );
+
+      expect(result.count).toBe(1);
+      expect(result.affectedIds).toEqual([UUID_A]);
+      expect(result.affected).toEqual([
+        { id: UUID_A, previousStatus: CustomerStatus.NEW },
+      ]);
+      expect(result.rejectedIds).toEqual([UUID_B]);
     });
   });
 

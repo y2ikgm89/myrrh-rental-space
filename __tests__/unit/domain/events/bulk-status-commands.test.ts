@@ -9,14 +9,21 @@ mock.module("server-only", () => ({}));
 
 const mockFindMany = mock<
   (args: {
-    where: { id: { in: string[] }; deletedAt: null };
-    select: { id: boolean; status: boolean };
-  }) => Promise<{ id: string; status: EventStatus }[]>
+    where: {
+      id: { in: string[] };
+      deletedAt?: null;
+      status?: EventStatus;
+    };
+    select: { id: boolean; status?: boolean };
+  }) => Promise<{ id: string; status?: EventStatus }[]>
 >(() => Promise.resolve([]));
 
 const mockUpdateMany = mock<
   (args: {
-    where: { id: { in: string[] }; deletedAt: null };
+    where: {
+      deletedAt: null;
+      OR: { id: string; status: EventStatus }[];
+    };
     data: { status: EventStatus };
   }) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 0 }));
@@ -217,7 +224,10 @@ describe("bulkSetStatusEventsCommand", () => {
   });
 
   describe("updateMany への引数", () => {
-    test("updateMany に deletedAt: null を含む where が渡される", async () => {
+    test("updateMany に deletedAt: null と read 時点の status を claim する OR where が渡される", async () => {
+      // Round-5 audit Finding #5: WHERE が id のみだと read〜write 間の競合更新を
+      // 無条件に上書きする TOCTOU になるため、read 時点の status を OR 条件に含めた
+      // claim になっていることを固定する。
       mockFindMany.mockResolvedValueOnce([
         { id: UUID_A, status: EventStatus.DRAFT },
       ]);
@@ -226,9 +236,33 @@ describe("bulkSetStatusEventsCommand", () => {
       await bulkSetStatusEventsCommand([UUID_A], EventStatus.CANCELLED);
 
       expect(mockUpdateMany).toHaveBeenCalledWith({
-        where: { id: { in: [UUID_A] }, deletedAt: null },
+        where: {
+          deletedAt: null,
+          OR: [{ id: UUID_A, status: EventStatus.DRAFT }],
+        },
         data: { status: EventStatus.CANCELLED },
       });
+    });
+
+    test("claim が一部失敗した場合、確定できた id だけ affectedIds に残り残りは rejectedIds に回る", async () => {
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: EventStatus.DRAFT },
+        { id: UUID_C, status: EventStatus.PUBLISHED },
+      ]);
+      // 2件 claim を試みたが、他 admin との競合で 1 件しか claim できなかった
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      // 実際に CANCELLED になっているのは UUID_A のみ (UUID_C は他 admin が先に
+      // 状態を変えていて claim に失敗した想定)
+      mockFindMany.mockResolvedValueOnce([{ id: UUID_A }]);
+
+      const result = await bulkSetStatusEventsCommand(
+        [UUID_A, UUID_C],
+        EventStatus.CANCELLED,
+      );
+
+      expect(result.count).toBe(1);
+      expect(result.affectedIds).toEqual([UUID_A]);
+      expect(result.rejectedIds).toEqual([UUID_C]);
     });
   });
 });
