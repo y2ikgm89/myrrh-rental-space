@@ -13,6 +13,7 @@ import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -22,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AboutPage(): Promise<ReactElement> {
   await connection();
+  await requireSystemPagePublished("about");
 
   const sections = await getPageSectionsWithFallback("about");
 

@@ -15,6 +15,7 @@ import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -30,6 +31,7 @@ export default async function ReservationPage({
 }: ReservationPageProps): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("reservation");
+  await requireSystemPagePublished("reservation");
 
   const sections = await getPageSectionsWithFallback("reservation");
 

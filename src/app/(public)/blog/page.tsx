@@ -10,6 +10,7 @@ import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
 
 interface PageProps {
   searchParams: Promise<SearchParams>;
@@ -35,6 +36,7 @@ export default async function BlogPage({
 }: PageProps): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("posts");
+  await requireSystemPagePublished("blog");
 
   const sections = await getPageSectionsWithFallback("blog");
   const baseUrl = getBaseUrl();

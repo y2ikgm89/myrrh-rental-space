@@ -17,7 +17,21 @@ import {
   getSystemPageDefinition,
   type SystemPageDefinition,
 } from "@/shared/lib/validations/page";
-import { getPageSeo } from "@/shared/domain/pages/queries";
+import {
+  getPageSeo,
+  isPublicPageUnpublished,
+} from "@/shared/domain/pages/queries";
+
+/**
+ * 非公開ページ用の metadata。`[...segments]/page.tsx` の 404 metadata と同一の形。
+ */
+const UNPUBLISHED_PAGE_METADATA: Metadata = {
+  title: "ページが見つかりません",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 /**
  * SEOデータ型
@@ -64,6 +78,10 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
  * - keywords
  */
 export async function generatePageMetadata(slug: string): Promise<Metadata> {
+  if (await isPublicPageUnpublished(slug)) {
+    return UNPUBLISHED_PAGE_METADATA;
+  }
+
   const baseUrl = getBaseUrl();
   // Page SEO と Settings を並列取得
   const [seo, settings] = await Promise.all([
