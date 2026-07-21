@@ -116,6 +116,7 @@ export { FindReplacePlugin } from "./FindReplacePlugin";
 export { ButtonPlugin } from "./ButtonPlugin";
 export { PullQuotePlugin } from "./PullQuotePlugin";
 export { LinkCardPlugin } from "./LinkCardPlugin";
+export { SpaceCardPlugin } from "./SpaceCardPlugin";
 export { StepsPlugin } from "./StepsPlugin";
 export { TabsPlugin } from "./TabsPlugin";
 

@@ -161,6 +161,15 @@ export {
   internalLinkCardContentIdState,
 } from "./InternalLinkCardNode";
 
+// Space Card Embed
+export {
+  SpaceCardNode,
+  $createSpaceCardNode,
+  $isSpaceCardNode,
+  spaceCardSpaceIdState,
+  spaceCardSpaceNameState,
+} from "./SpaceCardNode";
+
 // Steps
 export {
   StepsContainerNode,

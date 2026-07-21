@@ -18,6 +18,7 @@ import type { ImageNode } from "../../nodes/ImageNode";
 import type { CalloutNode } from "../../nodes/CalloutNode";
 import type { BookmarkNode } from "../../nodes/BookmarkNode";
 import type { InternalLinkCardNode } from "../../nodes/InternalLinkCardNode";
+import type { SpaceCardNode } from "../../nodes/SpaceCardNode";
 import type { InlineIconNode } from "../../nodes/InlineIconNode";
 import type { PullQuoteNode } from "../../nodes/PullQuoteNode";
 import type { CollapsibleContainerNode } from "../../nodes/CollapsibleContainerNode";
@@ -75,6 +76,7 @@ export type InspectableNodeType =
   | "callout"
   | "bookmark"
   | "internalLinkCard"
+  | "spaceCard"
   | "inlineIcon"
   | "pullQuote"
   | "ruby"
@@ -128,6 +130,7 @@ export type SelectedNodeInfo =
       node: InternalLinkCardNode;
       nodeKey: NodeKey;
     }
+  | { nodeType: "spaceCard"; node: SpaceCardNode; nodeKey: NodeKey }
   | { nodeType: "inlineIcon"; node: InlineIconNode; nodeKey: NodeKey }
   | { nodeType: "pullQuote"; node: PullQuoteNode; nodeKey: NodeKey }
   | { nodeType: "ruby"; node: RubyNode; nodeKey: NodeKey }
