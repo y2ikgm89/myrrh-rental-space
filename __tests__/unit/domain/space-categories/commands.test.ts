@@ -231,12 +231,12 @@ describe("createSpaceCategory", () => {
       expect(mockSpaceCategoryCreate).not.toHaveBeenCalled();
     });
 
-    test("重複チェックは DB 一意制約に合わせて全カテゴリーを対象にする", async () => {
+    test("重複チェックは Round-5 audit Finding #18 の partial unique index (isActive: true) に合わせて有効なカテゴリーのみを対象にする", async () => {
       await createSpaceCategory(VALID_FORM_DATA);
 
       expect(mockSpaceCategoryFindFirst).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { name: "会議室" },
+          where: { name: "会議室", isActive: true },
         }),
       );
     });

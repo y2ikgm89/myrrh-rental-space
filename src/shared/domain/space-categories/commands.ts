@@ -14,6 +14,13 @@ type SpaceCategoryOrderInput = {
   sortOrder: number;
 };
 
+/**
+ * Round-5 audit Finding #18: name の一意性は DB 側で isActive: true な行の間
+ * でのみ強制される partial unique index に変更済み（無効化したカテゴリーの
+ * 名前が永久に予約され続けるのを防ぐため）。この pre-check も同じ条件
+ * (isActive: true) で絞り、DB 制約と整合させる。無効なカテゴリー同士・
+ * 無効カテゴリーと有効カテゴリーの間で名前が重複していても DB 上は問題ない。
+ */
 async function ensureNameAvailable(
   name: string,
   currentId?: string,
@@ -21,6 +28,7 @@ async function ensureNameAvailable(
   const existing = await prisma.spaceCategory.findFirst({
     where: {
       name,
+      isActive: true,
       ...(currentId ? { id: { not: currentId } } : {}),
     },
     select: { id: true },
