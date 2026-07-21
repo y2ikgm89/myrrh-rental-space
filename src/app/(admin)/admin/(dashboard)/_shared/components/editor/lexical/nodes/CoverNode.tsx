@@ -81,9 +81,42 @@ export function isCoverOverlayOpacity(v: unknown): v is CoverOverlayOpacity {
 // サイト相対パスのみを許可する allowlist で防御する。
 const SAFE_BACKGROUND_IMAGE_URL_PATTERN = /^(https?:\/\/|\/)/i;
 
+// Codex レビュー指摘（PR#1367 followup, スレッド PRRT_kwDOQ0jEts6SnTcA）:
+// 上記の prefix チェックだけでは
+// `https://safe.example/x),url(javascript:alert\`1\`)` のような値が
+// 「https:// で始まる」という理由で通過してしまう。この値は exportDOM で
+// `url(${value})` として素の文字列展開されるため、`)`（url() を閉じる）と
+// 続く `,url(`（CSS の background-image はカンマ区切りで複数指定できる）を
+// 埋め込むことで、実質的に2つ目の `url(javascript:...)` を注入できる。
+// prefix だけでなく「文字列全体が単一の妥当な URL である」ことを検証する:
+//   1. url() トークンを閉じたり複数値化しうる文字（空白・括弧・引用符・
+//      バックスラッシュ・バッククォート・カンマ・セミコロン）を含む値は
+//      それだけで拒否する（正規の URL がこれらを生で含む必要は無い）
+//   2. その上で `URL` コンストラクタで単一の URL としてパース可能か、
+//      絶対 URL の場合はスキームが http(s) であることを確認する
+const UNSAFE_CSS_URL_BREAKOUT_CHARACTERS_PATTERN = /["'`(),;\\\s]/;
+
 function parseBackgroundImageUrl(v: unknown): string {
   if (typeof v !== "string" || v === "") return "";
-  return SAFE_BACKGROUND_IMAGE_URL_PATTERN.test(v) ? v : "";
+  if (!SAFE_BACKGROUND_IMAGE_URL_PATTERN.test(v)) return "";
+  if (UNSAFE_CSS_URL_BREAKOUT_CHARACTERS_PATTERN.test(v)) return "";
+
+  if (v.startsWith("/")) {
+    try {
+      // サイト相対パスの構文妥当性のみ確認する（origin は固定 placeholder）
+      new URL(v, "https://cover-image.invalid");
+      return v;
+    } catch {
+      return "";
+    }
+  }
+
+  try {
+    const parsed = new URL(v);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? v : "";
+  } catch {
+    return "";
+  }
 }
 
 // =============================================================================
