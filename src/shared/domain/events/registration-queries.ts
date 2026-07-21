@@ -21,7 +21,12 @@ export const EVENT_REGISTRATIONS_PER_PAGE = 20;
  */
 export async function getEventRegistrations(
   eventId: string,
-  options: { page?: number; perPage?: number } = {},
+  options: {
+    page?: number;
+    perPage?: number;
+    search?: string;
+    status?: RegistrationStatus;
+  } = {},
 ) {
   const {
     skip,
@@ -32,7 +37,20 @@ export async function getEventRegistrations(
     page: options.page,
     limit: options.perPage ?? EVENT_REGISTRATIONS_PER_PAGE,
   });
-  const where = { eventId, event: { deletedAt: null } };
+  const search = options.search?.trim();
+  const where = {
+    eventId,
+    event: { deletedAt: null },
+    ...(search && search !== ""
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" as const } },
+            { email: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+    ...(options.status ? { status: options.status } : {}),
+  };
 
   const [registrations, total, confirmedCount] = await Promise.all([
     prisma.eventRegistration.findMany({

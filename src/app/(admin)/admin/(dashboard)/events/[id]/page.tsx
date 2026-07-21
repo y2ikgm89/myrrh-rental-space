@@ -56,11 +56,16 @@ export default async function EventDetailPage({
   await connection();
 
   const { id } = await params;
-  const { page, perPage } =
+  const { page, perPage, search, status } =
     await loadAdminEventRegistrationsSearchParams(searchParams);
   const [event, registrationPage, waitlistCount] = await Promise.all([
     getEventById(id),
-    getEventRegistrations(id, { page, perPage }),
+    getEventRegistrations(id, {
+      page,
+      perPage,
+      search,
+      ...(status ? { status } : {}),
+    }),
     getWaitlistQueueCount(id),
   ]);
 

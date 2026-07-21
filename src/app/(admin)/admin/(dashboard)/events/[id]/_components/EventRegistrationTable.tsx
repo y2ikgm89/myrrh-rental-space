@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useQueryStates, parseAsStringLiteral } from "nuqs";
 import {
   Table,
   TableBody,
@@ -11,6 +12,12 @@ import {
   Button,
   Pagination,
   Badge,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/admin/components/ui";
 import { RegistrationStatusBadge } from "@/admin/components/status-badges";
 import {
@@ -19,6 +26,10 @@ import {
 } from "@/admin/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
+import {
+  parseAsQuery,
+  registrationStatusFilterValues,
+} from "@/shared/lib/nuqs/parsers";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type {
@@ -108,6 +119,10 @@ export function EventRegistrationTable({
   const [isRefundPending, startRefundTransition] = useTransition();
   const [refundTarget, setRefundTarget] = useState<Registration | null>(null);
   const [editTarget, setEditTarget] = useState<Registration | null>(null);
+  const [{ search, status }, setSearchParams] = useQueryStates({
+    search: parseAsQuery,
+    status: parseAsStringLiteral(registrationStatusFilterValues),
+  });
 
   function handleCancel(registrationId: string) {
     startCancelTransition(async () => {
@@ -152,6 +167,36 @@ export function EventRegistrationTable({
 
   return (
     <div className="space-y-4">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Input
+          placeholder="氏名・メールで検索"
+          defaultValue={search}
+          onChange={(e) => {
+            void setSearchParams({ search: e.target.value || null });
+          }}
+          className="max-w-xs"
+        />
+        <Select
+          value={status ?? "all"}
+          onValueChange={(value) => {
+            void setSearchParams({
+              status: value === "all" ? null : (value as typeof status),
+            });
+          }}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="ステータス" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">すべて</SelectItem>
+            {registrationStatusFilterValues.map((value) => (
+              <SelectItem key={value} value={value}>
+                {value}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="overflow-x-auto">
           <Table>
