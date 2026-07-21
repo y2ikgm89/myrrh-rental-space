@@ -51,15 +51,29 @@ const RESERVED_PATHS: ReadonlySet<string> = new Set([
   "spaces",
   "terms",
   "privacy",
+  "login",
+  "mypage",
   // 分類アーカイブ / プレビューのルートプレフィックス（システムページではないが
   // /category/[slug]・/tag/[slug]・/preview/* と衝突するため予約）
   "category",
   "tag",
   "preview",
+  // claim/receipts も同様のルートプレフィックス（/claim 自体・/receipts 自体に
+  // page はないが /claim/event-registration・/claim/reservation・
+  // /receipts/reissue-request・/receipts/[serialNo]/download と衝突するため予約）
+  "claim",
+  "receipts",
   // SEO/Static
   "sitemap.xml",
   "robots.txt",
   "favicon.ico",
+  "feed.xml",
+  "llms.txt",
+  "manifest.webmanifest",
+  // 動的アイコン生成ルート（src/app/icon* route.tsx、public/admin 両 surface 共通）
+  "icon",
+  "icon-192",
+  "icon-512",
 ]);
 
 /**
