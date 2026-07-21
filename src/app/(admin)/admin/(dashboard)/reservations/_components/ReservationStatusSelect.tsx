@@ -22,6 +22,7 @@ import { updateReservationStatus } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { CancellationReasonDialog } from "./CancellationReasonDialog";
 import {
   TERMINAL_RESERVATION_STATUSES,
   RESERVATION_STATUS_TRANSITIONS,
@@ -57,6 +58,23 @@ export function ReservationStatusSelect({
   const performStatusChange = (newStatus: ReservationStatus) => {
     startTransition(async () => {
       const result = await updateReservationStatus(reservationId, newStatus);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("ステータスを更新しました");
+      router.refresh();
+    });
+  };
+
+  const performCancelWithReason = (reason?: string) => {
+    setPendingTerminal(null);
+    startTransition(async () => {
+      const result = await updateReservationStatus(
+        reservationId,
+        ReservationStatus.CANCELLED,
+        reason,
+      );
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
@@ -109,40 +127,51 @@ export function ReservationStatusSelect({
         </SelectContent>
       </Select>
 
-      <AlertDialog
-        open={pendingTerminal !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingTerminal(null);
-        }}
-      >
-        <AlertDialogContent className="max-w-sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              ステータスを「
-              {pendingTerminal
-                ? RESERVATION_STATUS_LABELS[pendingTerminal]
-                : ""}
-              」に変更しますか？
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              この操作後、ステータスは終端状態となり、通常の管理者では戻せません。誤操作の場合は
-              SUPER_ADMIN
-              権限を持つ管理者に「ステータスを復元」を依頼してください。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>
-              キャンセル
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmTerminal}
-              disabled={isPending}
-            >
-              {isPending ? "変更中..." : "変更する"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {pendingTerminal === ReservationStatus.CANCELLED ? (
+        <CancellationReasonDialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setPendingTerminal(null);
+          }}
+          onConfirm={performCancelWithReason}
+          isPending={isPending}
+        />
+      ) : (
+        <AlertDialog
+          open={pendingTerminal !== null}
+          onOpenChange={(open) => {
+            if (!open) setPendingTerminal(null);
+          }}
+        >
+          <AlertDialogContent className="max-w-sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                ステータスを「
+                {pendingTerminal
+                  ? RESERVATION_STATUS_LABELS[pendingTerminal]
+                  : ""}
+                」に変更しますか？
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                この操作後、ステータスは終端状態となり、通常の管理者では戻せません。誤操作の場合は
+                SUPER_ADMIN
+                権限を持つ管理者に「ステータスを復元」を依頼してください。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>
+                キャンセル
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmTerminal}
+                disabled={isPending}
+              >
+                {isPending ? "変更中..." : "変更する"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }
