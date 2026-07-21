@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
-import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { expensiveAdminRateLimiter } from "@/shared/lib/rate-limit";
 import { createMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
@@ -21,7 +21,13 @@ export async function searchAdminResources(
   const auth = await checkAdminAuth(await headers());
   if (!auth.success) return auth.error;
 
-  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  // Round-5 audit Finding #23: formSubmitRateLimiter (5/分) は「稀に送信する
+  // フォーム」向けの閾値で、200ms debounce とはいえ入力のたびに発火しうる
+  // ライブ検索には厳しすぎる (公開フォームの提出ボタン連打対策と予算を共有すると
+  // 数文字打っただけで枯渇する)。最大 11 リソースへの LIKE スキャンを毎回叩く
+  // 重い内部検索のため、customers/search と同種の expensiveAdminRateLimiter
+  // (60/分) を使う。
+  const rateLimit = await checkActionRateLimit(expensiveAdminRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
 
   const trimmed = query.trim();
