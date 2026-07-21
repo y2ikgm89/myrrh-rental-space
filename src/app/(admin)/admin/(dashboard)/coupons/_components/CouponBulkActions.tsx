@@ -7,11 +7,11 @@ import {
   IconTicket,
   IconTicketOff,
   IconTrash,
-  IconX,
   IconLoader2,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { FloatingBulkActionBar } from "@/admin/components/FloatingBulkActionBar";
 import {
   bulkToggleActiveCoupons,
   bulkDeleteCoupons,
@@ -30,8 +30,6 @@ export function CouponBulkActions({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deleteOpen, setDeleteOpen] = useState(false);
-
-  if (selectedIds.length === 0) return null;
 
   const handleBulkToggleActive = (isActive: boolean) => {
     startTransition(async () => {
@@ -69,69 +67,49 @@ export function CouponBulkActions({
 
   return (
     <>
-      <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
-        <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg">
-          <span
-            className="text-sm font-medium"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {selectedIds.length}件選択中
-          </span>
+      <FloatingBulkActionBar
+        selectedCount={selectedIds.length}
+        onClear={onClear}
+        isPending={isPending}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleBulkToggleActive(true)}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <IconLoader2 className="mr-1 h-4 w-4 animate-spin" />
+          ) : (
+            <IconTicket className="mr-1 h-4 w-4" />
+          )}
+          一括有効化
+        </Button>
 
-          <div className="h-4 w-px bg-border" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleBulkToggleActive(false)}
+          disabled={isPending}
+        >
+          {isPending ? (
+            <IconLoader2 className="mr-1 h-4 w-4 animate-spin" />
+          ) : (
+            <IconTicketOff className="mr-1 h-4 w-4" />
+          )}
+          一括無効化
+        </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleBulkToggleActive(true)}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <IconLoader2 className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <IconTicket className="mr-1 h-4 w-4" />
-            )}
-            一括有効化
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleBulkToggleActive(false)}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <IconLoader2 className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <IconTicketOff className="mr-1 h-4 w-4" />
-            )}
-            一括無効化
-          </Button>
-
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setDeleteOpen(true)}
-            disabled={isPending}
-          >
-            <IconTrash className="mr-1 h-4 w-4" />
-            一括削除
-          </Button>
-
-          <div className="h-4 w-px bg-border" />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            disabled={isPending}
-            aria-label="選択を解除"
-          >
-            <IconX className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => setDeleteOpen(true)}
+          disabled={isPending}
+        >
+          <IconTrash className="mr-1 h-4 w-4" />
+          一括削除
+        </Button>
+      </FloatingBulkActionBar>
 
       <DeleteConfirmDialog
         open={deleteOpen}

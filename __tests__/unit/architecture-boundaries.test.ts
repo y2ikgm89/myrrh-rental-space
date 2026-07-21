@@ -3223,13 +3223,12 @@ describe("architecture boundaries", () => {
     });
   });
 
-  describe("admin BulkActions primitive (Cluster J mobile UX)", () => {
+  describe("admin BulkActions は FloatingBulkActionBar primitive を経由する (Cluster J mobile UX)", () => {
     // Round-4 audit Cluster J / Finding #12: 各 BulkActions が
     // `fixed bottom-6 left-1/2 -translate-x-1/2` + 単列 flex を直書きしていたため、
     // 375px viewport (iPhone SE) で 5 ボタン程度のバーが左右にオーバーフローし、
     // 「一括有効化」「X 閉じる」が画面外に飛び出していた。
-    // FloatingBulkActionBar が新たな SSoT で、safe-area + flex-wrap を担う。
-    // 全 10 BulkActions の primitive 移行と drift-gate は Cluster J2 で完了予定。
+    // FloatingBulkActionBar が唯一の SSoT で、safe-area + flex-wrap を担う。
     const ADMIN_DASHBOARD_ROOT = join(
       APP_ROUTE_ROOT,
       "(admin)",
@@ -3242,9 +3241,50 @@ describe("architecture boundaries", () => {
       "components",
       "FloatingBulkActionBar.tsx",
     );
+    const collectBulkActionFiles = (): string[] =>
+      collectSourceFiles(ADMIN_DASHBOARD_ROOT).filter((file) =>
+        /BulkActions\.tsx$/u.test(file),
+      );
 
     test("primitive ファイルが存在する", () => {
       expect(existsSync(BULK_ACTIONS_PRIMITIVE_FILE)).toBe(true);
+    });
+
+    test("`fixed bottom-6 left-1/2 -translate-x-1/2` の直書きは 0 件 (primitive 経由が SSoT)", () => {
+      const offenders = collectSourceFiles(SRC_ROOT)
+        .filter((file) => file !== BULK_ACTIONS_PRIMITIVE_FILE)
+        .filter((file) => {
+          const source = readFileSync(file, "utf8");
+          return /fixed[^"]{0,40}bottom-6[^"]{0,40}left-1\/2[^"]{0,80}-translate-x-1\/2|fixed[^"]{0,40}bottom-6[^"]{0,40}-translate-x-1\/2[^"]{0,80}left-1\/2/u.test(
+            source,
+          );
+        })
+        .map((file) => relative(ROOT, file));
+
+      expect(
+        offenders,
+        `Floating 一括操作バーの centering は FloatingBulkActionBar primitive が SSoT。fixed+translate ベースの直書きは 375px viewport で overflow するため禁止。@/admin/components/FloatingBulkActionBar を使ってください。`,
+      ).toEqual([]);
+    });
+
+    test("*BulkActions.tsx は FloatingBulkActionBar を import する", () => {
+      const bulkActionFiles = collectBulkActionFiles();
+      // sanity: 現存 10 個の BulkActions が全部拾えていること
+      expect(bulkActionFiles.length).toBeGreaterThanOrEqual(10);
+
+      const offenders = bulkActionFiles
+        .filter((file) => {
+          const source = readFileSync(file, "utf8");
+          return !/from\s+["']@\/admin\/components\/FloatingBulkActionBar["']/u.test(
+            source,
+          );
+        })
+        .map((file) => relative(ROOT, file));
+
+      expect(
+        offenders,
+        `*BulkActions.tsx は @/admin/components/FloatingBulkActionBar を import して bar 部を primitive に委譲すること。`,
+      ).toEqual([]);
     });
   });
 

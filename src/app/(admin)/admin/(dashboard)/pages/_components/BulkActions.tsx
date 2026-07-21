@@ -13,10 +13,10 @@ import {
   IconEye,
   IconEyeOff,
   IconTrash,
-  IconX,
   IconLoader2,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
+import { FloatingBulkActionBar } from "@/admin/components/FloatingBulkActionBar";
 import {
   bulkUpdatePagePublished,
   bulkDeletePages,
@@ -31,8 +31,6 @@ interface BulkActionsProps {
 export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  if (selectedSlugs.length === 0) return null;
 
   const handleBulkPublish = (publish: boolean) => {
     startTransition(async () => {
@@ -67,72 +65,52 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-      <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg">
-        <span
-          className="text-sm font-medium"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {selectedSlugs.length}件選択中
-        </span>
+    <FloatingBulkActionBar
+      selectedCount={selectedSlugs.length}
+      onClear={onClear}
+      isPending={isPending}
+    >
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleBulkPublish(true)}
+        disabled={isPending}
+      >
+        {isPending ? (
+          <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
+        ) : (
+          <IconEye className="h-4 w-4 mr-1" />
+        )}
+        一括公開
+      </Button>
 
-        <div className="h-4 w-px bg-border" />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleBulkPublish(false)}
+        disabled={isPending}
+      >
+        {isPending ? (
+          <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
+        ) : (
+          <IconEyeOff className="h-4 w-4 mr-1" />
+        )}
+        一括非公開
+      </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleBulkPublish(true)}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
-          ) : (
-            <IconEye className="h-4 w-4 mr-1" />
-          )}
-          一括公開
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleBulkPublish(false)}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
-          ) : (
-            <IconEyeOff className="h-4 w-4 mr-1" />
-          )}
-          一括非公開
-        </Button>
-
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={handleBulkDelete}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
-          ) : (
-            <IconTrash className="h-4 w-4 mr-1" />
-          )}
-          一括削除
-        </Button>
-
-        <div className="h-4 w-px bg-border" />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="選択をクリア"
-          onClick={onClear}
-          disabled={isPending}
-        >
-          <IconX className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      </div>
-    </div>
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={handleBulkDelete}
+        disabled={isPending}
+      >
+        {isPending ? (
+          <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
+        ) : (
+          <IconTrash className="h-4 w-4 mr-1" />
+        )}
+        一括削除
+      </Button>
+    </FloatingBulkActionBar>
   );
 }

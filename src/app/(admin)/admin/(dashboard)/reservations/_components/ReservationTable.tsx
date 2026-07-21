@@ -52,6 +52,17 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const selectableIds = reservations.filter(isSelectable).map((r) => r.id);
+
+  // Round-4 audit Cluster J / Finding #10 sibling: 検索・並び替え・ページ移動で
+  // reservations が入れ替わっても selectedIds はローカル state に残るため、
+  // 次の「一括確定 / 一括キャンセル」で見えていない過去選択の予約まで対象になる。
+  // 詳細は PostTable.tsx の該当コメント参照。可視 & 現在も selectable な id との
+  // 積集合を派生。行が削除やステータス遷移で TERMINAL 化しても bulk 対象から抜ける。
+  const selectableIdSet = new Set(selectableIds);
+  const effectiveSelectedIds = selectedIds.filter((id) =>
+    selectableIdSet.has(id),
+  );
+
   const allSelected =
     selectableIds.length > 0 &&
     selectableIds.every((id) => selectedIds.includes(id));
@@ -169,9 +180,9 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
         </div>
       </div>
 
-      {/* 一括操作バー */}
+      {/* 一括操作バー: 現在の画面に表示されている行だけを bulk 対象に渡す */}
       <ReservationBulkActions
-        selectedIds={selectedIds}
+        selectedIds={effectiveSelectedIds}
         onClear={() => setSelectedIds([])}
       />
     </>

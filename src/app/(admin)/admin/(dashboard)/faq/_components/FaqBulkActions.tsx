@@ -8,10 +8,10 @@ import {
   IconEyeOff,
   IconFolder,
   IconTrash,
-  IconX,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { FloatingBulkActionBar } from "@/admin/components/FloatingBulkActionBar";
 import { bulkDeleteFaqItems, bulkPublishFaqItems } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { FaqBulkMoveDialog } from "./FaqBulkMoveDialog";
@@ -31,8 +31,6 @@ export function FaqBulkActions({
   const [isPending, startTransition] = useTransition();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
-
-  if (selectedIds.length === 0) return null;
 
   const handleBulkPublish = (isPublished: boolean) => {
     startTransition(async () => {
@@ -65,19 +63,11 @@ export function FaqBulkActions({
 
   return (
     <>
-      <div
-        role="toolbar"
-        aria-label="一括操作"
-        className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border bg-card px-4 py-3 shadow-lg"
+      <FloatingBulkActionBar
+        selectedCount={selectedIds.length}
+        onClear={onClear}
+        isPending={isPending}
       >
-        <span
-          className="text-sm text-muted-foreground"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {selectedIds.length} 件選択中
-        </span>
-        <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
         <Button
           size="sm"
           variant="outline"
@@ -114,16 +104,7 @@ export function FaqBulkActions({
           <IconTrash className="mr-1 h-4 w-4" aria-hidden="true" />
           削除
         </Button>
-        <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onClear}
-          aria-label="選択を解除"
-        >
-          <IconX className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      </div>
+      </FloatingBulkActionBar>
 
       <DeleteConfirmDialog
         open={deleteOpen}
