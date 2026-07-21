@@ -16,6 +16,8 @@ import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
+import { getRefundPolicySettings } from "@/shared/domain/settings/admin-queries";
+import { calculateRefundAmount } from "@/shared/domain/refund/policy";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -56,6 +58,19 @@ export default async function ReservationDetailPage({ params }: PageProps) {
   if (!reservation) {
     notFound();
   }
+
+  const refundPolicy = await getRefundPolicySettings();
+  const suggestedRefundAmount = refundPolicy
+    ? calculateRefundAmount(
+        // Round-5 audit Finding #20 と同じ理由: 返金上限の基準は Stripe への
+        // 実 charge 額 = 税抜 totalPrice。税込を使うと推奨額が実際の
+        // refundableTotal (RefundDialog 側) を超えうる。
+        refundPolicy,
+        Number(reservation.totalPrice ?? 0),
+        new Date(reservation.startTime),
+        new Date(),
+      )
+    : null;
 
   const canRestoreStatus = sessionUser.role === Role.SUPER_ADMIN;
 
@@ -98,6 +113,7 @@ export default async function ReservationDetailPage({ params }: PageProps) {
           key={reservation.id}
           reservation={reservation}
           paymentEnabled={paymentEnabled}
+          suggestedRefundAmount={suggestedRefundAmount}
         />
       </div>
     </AdminDetailLayout>

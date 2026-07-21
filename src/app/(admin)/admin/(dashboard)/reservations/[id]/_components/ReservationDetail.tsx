@@ -73,6 +73,8 @@ type ReservationDetailProps = {
    * （domain 層 `assertOnlinePaymentAvailable` が VALIDATION エラーで弾く UI の対称）。
    */
   paymentEnabled: boolean;
+  /** 返金ポリシーに基づく推奨返金額。ポリシー未設定時は null。 */
+  suggestedRefundAmount: number | null;
 };
 
 function PriceBreakdown({
@@ -163,6 +165,7 @@ function PriceBreakdown({
 export function ReservationDetail({
   reservation,
   paymentEnabled,
+  suggestedRefundAmount,
 }: ReservationDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -612,6 +615,9 @@ export function ReservationDetail({
           (sum, r) => sum + r.amount,
           0,
         )}
+        {...(suggestedRefundAmount !== null
+          ? { suggestedAmount: suggestedRefundAmount }
+          : {})}
         onConfirm={handleRefund}
         isPending={isPaymentPending}
       />
