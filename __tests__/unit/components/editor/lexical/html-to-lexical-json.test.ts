@@ -570,6 +570,37 @@ describe("XSS対策: 汎用HTMLペースト", () => {
     });
   });
 
+  test("CoverNode: prefixがhttps://で始まるだけの多重url()注入(Codexレビュー指摘スレッド PRRT_kwDOQ0jEts6SnTcA)はimportDOM段階で拒否される", () => {
+    // prefixチェックのみだと `https://` で始まるという理由で通過してしまうが、
+    // 実際には `),url(javascript:...)` を埋め込むことでexportDOMの
+    // `url(${value})` 文字列展開時にCSSのbackground-image複数指定(カンマ区切り)
+    // として2つ目のurl()を注入できる。文字列全体が単一の妥当なURLであることを
+    // 検証していれば、この値は拒否されなければならない
+    const html =
+      '<div data-cover style="background-image:url(\'https://safe.example/x),url(javascript:alert`1`)\')" data-color="default" data-overlay-opacity="40" data-min-height="md" data-content-align="center" data-content-position="center"><h2>タイトル</h2></div>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const coverNode = $dfs()
+        .map(({ node }) => node)
+        .find($isCoverNode);
+      expect(coverNode).toBeDefined();
+      if (!coverNode) return;
+      expect($getState(coverNode, backgroundImageUrlState)).toBe("");
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+    expect(finalHtml).not.toContain("background-image");
+  });
+
   test('FeatureIconListNode: data-icon-name="toString" 等 Object.prototype 継承プロパティ名でも HTML 生成全体がクラッシュしない（getCuratedIconSvgMarkup の Object.hasOwn ガード回帰）', () => {
     const html =
       '<ul data-feature-icon-list data-columns="2" data-color="default" data-icon-size="md"><li data-feature-icon-item data-icon-name="toString"><p>設備名</p></li></ul>';
