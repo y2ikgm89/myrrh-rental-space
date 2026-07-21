@@ -216,9 +216,12 @@ export function AutoSectionForm({
       : undefined;
 
   // 直前に reset / 初期化した variant 値を ref で記憶し、無限ループを防ぐ
+  // discriminator キー名は schema 定義依存（page-hero では "variant" だが固定しない）
   const lastVariantRef = useRef<string | undefined>(
-    isRecord(defaultConfig) && typeof defaultConfig["variant"] === "string"
-      ? defaultConfig["variant"]
+    discriminatorKey !== undefined &&
+      isRecord(defaultConfig) &&
+      typeof defaultConfig[discriminatorKey] === "string"
+      ? defaultConfig[discriminatorKey]
       : undefined,
   );
 
