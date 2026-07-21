@@ -19,8 +19,8 @@ import {
 }
 
 resource "google_cloud_run_v2_job" "prisma_migrate" {
-  # 2026-07: dropped `provider = google-beta` — this resource is GA in the
-  # standard "google" provider (see terraform/versions.tf header comment).
+  # 2026-07: no `provider = google-beta` — GA in the standard "google"
+  # provider (see terraform/versions.tf header comment).
   name     = "prisma-migrate"
   project  = var.project_id
   location = var.region
