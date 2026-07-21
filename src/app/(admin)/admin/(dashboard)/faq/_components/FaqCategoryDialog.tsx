@@ -48,7 +48,7 @@ import {
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { createFaqCategory, updateFaqCategory } from "@/admin/actions/faq";
 import { faqCategoryFormSchema } from "@/admin/lib/validations/faq";
-import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
+import type { FaqCategoryData } from "@/shared/domain/faq/types";
 import { generateSlug } from "@/shared/lib/slug";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
@@ -56,7 +56,7 @@ type FaqCategoryDialogProps = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   /** edit モード時の既存カテゴリ — undefined なら create mode */
-  readonly category?: FaqCategoryWithItems;
+  readonly category?: FaqCategoryData;
 };
 
 export function FaqCategoryDialog(props: FaqCategoryDialogProps) {
@@ -143,7 +143,7 @@ function FaqCategoryCreateDialog({ open, onOpenChange }: CreateProps) {
 // =============================================================================
 
 type EditProps = Omit<FaqCategoryDialogProps, "category"> & {
-  readonly category: FaqCategoryWithItems;
+  readonly category: FaqCategoryData;
 };
 
 function FaqCategoryEditDialog({ open, onOpenChange, category }: EditProps) {

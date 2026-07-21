@@ -1,16 +1,20 @@
 import "server-only";
 
+import { cache } from "react";
 import {
   getDeletedFaqCategories as getDeletedFaqCategoriesQuery,
   getDeletedFaqItems as getDeletedFaqItemsQuery,
   getFaqCategories as getFaqCategoriesQuery,
   getFaqCategoryById as getFaqCategoryByIdQuery,
+  getFaqCategoryOptions as getFaqCategoryOptionsQuery,
   getFaqHealthSummary as getFaqHealthSummaryQuery,
   getFaqItemById as getFaqItemByIdQuery,
   getFaqItems as getFaqItemsQuery,
 } from "@/shared/domain/faq/queries";
 import type {
+  FaqCategoryData,
   FaqCategoryListResult,
+  FaqCategoryOption,
   FaqCategoryWithItems,
   FaqHealthSummary,
   FaqItemFilters,
@@ -29,9 +33,18 @@ export async function getFaqCategories(): Promise<FaqCategoryListResult> {
   return getFaqCategoriesQuery();
 }
 
-export async function getFaqCategoryById(
+export async function getFaqCategoryOptions(): Promise<FaqCategoryOption[]> {
+  await requireAdminPermission("faq", "read");
+  return getFaqCategoryOptionsQuery();
+}
+
+/**
+ * `generateMetadata` と page body の両方から同一 id で呼ばれるため、
+ * React cache() でリクエスト内メモ化し同一クエリの二重発行を防ぐ。
+ */
+export const getFaqCategoryById = cache(async function getFaqCategoryById(
   id: string,
-): Promise<FaqCategoryWithItems | null> {
+): Promise<FaqCategoryData | null> {
   await requireAdminPermission("faq", "read");
 
   const validated = idSchema.safeParse(id);
@@ -40,7 +53,7 @@ export async function getFaqCategoryById(
   }
 
   return getFaqCategoryByIdQuery(validated.data);
-}
+});
 
 export async function getFaqItems(
   filters: FaqItemFilters = {},

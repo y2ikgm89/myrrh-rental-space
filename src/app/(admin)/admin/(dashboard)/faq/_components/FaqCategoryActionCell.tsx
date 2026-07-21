@@ -11,14 +11,14 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { deleteFaqCategory } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
+import type { FaqCategoryData } from "@/shared/domain/faq/types";
 import { FaqCategoryDialog } from "./FaqCategoryDialog";
 
 type FaqCategoryActionCellProps = {
   readonly id: string;
   readonly name: string;
   readonly itemCount: number;
-  readonly category: FaqCategoryWithItems;
+  readonly category: FaqCategoryData;
 };
 
 export function FaqCategoryActionCell({

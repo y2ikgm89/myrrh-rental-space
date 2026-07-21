@@ -9,7 +9,9 @@ import {
 import { MS_PER_DAY } from "@/shared/lib/date-format";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import type {
+  FaqCategoryData,
   FaqCategoryListResult,
+  FaqCategoryOption,
   FaqCategoryWithItems,
   FaqHealthSummary,
   FaqItemFilters,
@@ -90,52 +92,88 @@ const ITEM_WITH_CATEGORY_SELECT = {
   },
 } as const;
 
+/**
+ * カテゴリごとの公開中（非削除）項目数をまとめて集計する。
+ * カテゴリ数分の count クエリを避けるため groupBy で 1 クエリに集約する。
+ */
+async function getPublishedItemCountByCategory(
+  categoryIds: string[],
+): Promise<Map<string, number>> {
+  if (categoryIds.length === 0) {
+    return new Map();
+  }
+
+  const grouped = await prisma.faqItem.groupBy({
+    by: ["categoryId"],
+    where: {
+      categoryId: { in: categoryIds },
+      deletedAt: null,
+      isPublished: true,
+    },
+    _count: { id: true },
+  });
+
+  return new Map(grouped.map((row) => [row.categoryId, row._count.id]));
+}
+
+/**
+ * カテゴリ一覧グリッド用。質問本文（question/answer 等のフルカラム）は使わないため、
+ * items をネスト取得せず件数（全件数・公開件数）のみを取得する。
+ */
 export async function getFaqCategories(): Promise<FaqCategoryListResult> {
   const categories = await prisma.faqCategory.findMany({
     where: { deletedAt: null },
     select: {
       ...CATEGORY_SELECT,
-      items: {
-        where: { deletedAt: null },
-        select: ITEM_SELECT,
-        orderBy: { order: "asc" },
+      _count: {
+        select: { items: { where: { deletedAt: null } } },
       },
     },
     orderBy: { order: "asc" },
   });
 
+  const publishedCounts = await getPublishedItemCountByCategory(
+    categories.map((category) => category.id),
+  );
+
   return {
-    categories: categories.map((category) => ({
+    categories: categories.map(({ _count, ...category }) => ({
       ...serializeFaqCategory(category),
-      items: category.items.map(serializeFaqItem),
+      itemCount: _count.items,
+      publishedItemCount: publishedCounts.get(category.id) ?? 0,
     })),
     total: categories.length,
   };
 }
 
+/**
+ * カテゴリ選択ドロップダウン用の最小フィールドのみ取得する軽量版。
+ */
+export async function getFaqCategoryOptions(): Promise<FaqCategoryOption[]> {
+  return prisma.faqCategory.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true },
+    orderBy: { order: "asc" },
+  });
+}
+
+/**
+ * カテゴリ単体取得。質問本文は使わない消費側（詳細ページのヘッダー表示・編集
+ * ダイアログ）のみのため、items はネスト取得しない。
+ */
 export async function getFaqCategoryById(
   id: string,
-): Promise<FaqCategoryWithItems | null> {
+): Promise<FaqCategoryData | null> {
   const category = await prisma.faqCategory.findFirst({
     where: { id, deletedAt: null },
-    select: {
-      ...CATEGORY_SELECT,
-      items: {
-        where: { deletedAt: null },
-        select: ITEM_SELECT,
-        orderBy: { order: "asc" },
-      },
-    },
+    select: CATEGORY_SELECT,
   });
 
   if (!category) {
     return null;
   }
 
-  return {
-    ...serializeFaqCategory(category),
-    items: category.items.map(serializeFaqItem),
-  };
+  return serializeFaqCategory(category);
 }
 
 type FaqItemWhere = {

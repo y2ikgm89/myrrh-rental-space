@@ -43,16 +43,16 @@ import {
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
-import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
+import type { FaqCategoryWithItemCounts } from "@/shared/domain/faq/types";
 import { FaqCategoryActionCell } from "./FaqCategoryActionCell";
 
 type FaqCategoryGridProps = {
-  readonly categories: readonly FaqCategoryWithItems[];
+  readonly categories: readonly FaqCategoryWithItemCounts[];
   readonly onCreate: () => void;
 };
 
 type SortableCardProps = {
-  readonly category: FaqCategoryWithItems;
+  readonly category: FaqCategoryWithItemCounts;
   readonly isPending: boolean;
   readonly onToggleActive: (
     id: string,
@@ -79,8 +79,8 @@ function SortableCategoryCard({
     transition,
   };
 
-  const itemCount = category.items.length;
-  const publishedCount = category.items.filter((i) => i.isPublished).length;
+  const itemCount = category.itemCount;
+  const publishedCount = category.publishedItemCount;
 
   return (
     <div
@@ -161,9 +161,9 @@ export function FaqCategoryGrid({
   onCreate,
 }: FaqCategoryGridProps) {
   const router = useRouter();
-  const [categories, setCategories] = useState<FaqCategoryWithItems[]>(() => [
-    ...initialCategories,
-  ]);
+  const [categories, setCategories] = useState<FaqCategoryWithItemCounts[]>(
+    () => [...initialCategories],
+  );
 
   // props 同期（React 19 推奨パターン）
   const [previousInitial, setPreviousInitial] = useState(initialCategories);

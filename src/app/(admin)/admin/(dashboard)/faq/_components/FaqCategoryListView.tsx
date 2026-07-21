@@ -23,14 +23,14 @@ import type { Route } from "next";
 import { Badge, Button } from "@/admin/components/ui";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import type {
-  FaqCategoryWithItems,
+  FaqCategoryWithItemCounts,
   FaqHealthSummary,
 } from "@/shared/domain/faq/types";
 import { FaqCategoryGrid } from "./FaqCategoryGrid";
 import { FaqCategoryDialog } from "./FaqCategoryDialog";
 
 type FaqCategoryListViewProps = {
-  readonly categories: readonly FaqCategoryWithItems[];
+  readonly categories: readonly FaqCategoryWithItemCounts[];
   readonly summary: FaqHealthSummary;
 };
 
