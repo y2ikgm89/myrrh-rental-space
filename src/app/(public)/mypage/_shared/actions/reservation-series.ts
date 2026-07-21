@@ -33,7 +33,7 @@ import {
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
-import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
+import { invalidateReservationSeriesCaches } from "@/shared/lib/cache/reservation-cache";
 
 const seriesIdSchema = z.uuid({ error: "series id が不正です" });
 
@@ -91,6 +91,20 @@ export async function cancelReservationSeriesCustomerAction(
   );
   if (!result.success) return createMutationError(result.error);
 
-  invalidateReservationCaches(parsedId.data, customer.id, { coupons: true });
+  // CRITIC-5: 以前は `invalidateReservationCaches(seriesId, ...)` を呼んで
+  // `reservations-<seriesId>` という dead tag を emit していた
+  // (`getCacheTag.reservations.detail` の producer は Reservation 単体側のみ)。
+  // 現時点では site-wide `RESERVATIONS` タグでも invalidate されるため実害は
+  // ないが、将来 detail-only invalidator を分離した瞬間 silent stale になる。
+  // series 経路用の helper に切り替え、dead tag を残さない。
+  //
+  // instanceIds は customer 経路 (customer-commands.ts の
+  // `cancelCustomerReservationSeries`) が現状返り値に含めていないため未指定。
+  // site-wide `RESERVATIONS` タグで list / detail 両方が invalidate されるので
+  // 顧客体感は変わらない。将来 customer-commands.ts 側で
+  // `cancelledReservationIds` を expose したら `instanceIds` を渡す。
+  invalidateReservationSeriesCaches(parsedId.data, customer.id, {
+    coupons: true,
+  });
   return { cancelledCount: result.payload.cancelledCount };
 }

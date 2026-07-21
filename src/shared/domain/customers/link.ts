@@ -48,7 +48,12 @@ export async function ensureCustomerLinked(user: {
     where: { userId: user.id },
     select: CUSTOMER_LINK_SELECT,
   });
-  if (linked) return { customer: linked, isNew: false };
+  if (linked) {
+    // 既紐付け顧客でも、ゲスト時に送信したお問い合わせが後から届く可能性があるため
+    // 毎回 backfill を試みる (updateMany なので該当なしなら no-op)。
+    await backfillGuestInquiriesForCustomer(linked.id, linked.email);
+    return { customer: linked, isNew: false };
+  }
 
   // 2. 新規作成（競合状態対策付き）
   // email は連絡先であり本人性の証明ではないため、同じ email の guest Customer を
@@ -64,6 +69,13 @@ export async function ensureCustomerLinked(user: {
       },
       select: CUSTOMER_LINK_SELECT,
     });
+
+    // INQ-MP-01: ゲスト送信 (未ログイン) の Inquiry.customerId は null で保存されるため、
+    // 同一 email で OAuth 登録した直後に紐付ける。email は canonicalize
+    // (trim + lowercase) 上で `mode: 'insensitive'` 比較し、大文字小文字/前後空白の
+    // 差異でも match する。customerId=null の record のみを対象にする
+    // (別 Customer に既紐付け済みのものは絶対に上書きしない)。
+    await backfillGuestInquiriesForCustomer(customer.id, customer.email);
 
     fireAndForget(
       sendWelcomeEmail({
@@ -85,8 +97,39 @@ export async function ensureCustomerLinked(user: {
         where: { userId: user.id },
         select: CUSTOMER_LINK_SELECT,
       });
-      if (fallback) return { customer: fallback, isNew: false };
+      if (fallback) {
+        await backfillGuestInquiriesForCustomer(fallback.id, fallback.email);
+        return { customer: fallback, isNew: false };
+      }
     }
     throw e;
   }
+}
+
+/**
+ * INQ-MP-01: ゲスト (未ログイン) 送信で `customerId: null` のまま保存された
+ * Inquiry を、同一 email の Customer に紐付ける。
+ *
+ * - `customerId: null` の record のみを対象にし、別 Customer に既に紐付いた
+ *   record は絶対に上書きしない (誤紐付けの防止)。
+ * - email 比較は `mode: 'insensitive'` (case-fold) + `trim` (呼出側 canonical
+ *   化) で、大文字小文字と前後空白の差異でも match する。Inquiry テーブル側
+ *   には canonical 列がないため per-row の canonicalize は不能で、DB 側の
+ *   case-insensitive 比較に頼る。
+ * - `updateMany` なので該当 0 件でも例外にはならない。
+ */
+async function backfillGuestInquiriesForCustomer(
+  customerId: string,
+  email: string,
+): Promise<void> {
+  const normalized = normalizeEmailForIdentity(email);
+  if (normalized.length === 0) return;
+
+  await prisma.inquiry.updateMany({
+    where: {
+      customerId: null,
+      email: { equals: normalized, mode: "insensitive" },
+    },
+    data: { customerId },
+  });
 }

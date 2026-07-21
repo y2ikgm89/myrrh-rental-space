@@ -2,6 +2,7 @@
 
 import type { SubmissionResult } from "@conform-to/react";
 import { updateTag } from "next/cache";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import {
   requestCustomerEmailChangeCommand,
@@ -10,6 +11,9 @@ import {
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getAppUrl, getCacheTag } from "@/shared/lib/constants";
 import {
   checkActionRateLimit,
@@ -96,6 +100,46 @@ export async function updateProfileAction(
         if (customer) {
           updateTag(getCacheTag.customers.detail(customer.id));
         }
+
+        // SEC-MYPAGE-02: 顧客本人のプロフィール変更は admin の
+        // updateCustomer 経路と対称に AuditLog へ残す。self-service 経路である
+        // ことは metadata.channel で判別可能にする (`customer-mypage`)。
+        // 送信は fire-and-forget: append-only の証跡目的で、書込失敗が profile
+        // 更新自体を巻き戻さない。buildAuditRequestContext も含めて IIFE 全体を
+        // wrap することで context 取得側の失敗も fireAndForget の logError に集約
+        // する (テスト時に next/headers・rate-limit のスタブが不完全でも成功パスを
+        // 壊さない防波堤も兼ねる)。SETTINGS-02 の verification 早期 return より
+        // 前に発火することで、profile 更新の事実は verification 成否に依らず記録される。
+        fireAndForget(
+          (async () => {
+            const request = await buildAuditRequestContext();
+            await createAuditLogRecord({
+              userId: session.user.id,
+              action: AuditAction.UPDATE,
+              resource: "customer",
+              ...(preCustomer.id ? { resourceId: preCustomer.id } : {}),
+              newValue: {
+                customerType: data.customerType,
+                lastName: data.lastName,
+                firstName: data.firstName,
+                companyName: data.companyName || null,
+                phoneNumber: data.phoneNumber || null,
+                email: emailInput,
+              },
+              metadata: {
+                channel: "customer-mypage",
+                operation: "customer_profile_updated",
+                ip: request.ip,
+                userAgent: request.userAgent,
+              },
+            });
+          })(),
+          {
+            operation: "auditCustomerProfileUpdate",
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+          },
+        );
 
         // SETTINGS-02 followup: 初回メールアドレス登録は本人確認 URL 経由に限定する
         // (Customer.email 直接更新は攻撃者が任意アドレスをなりすまし登録できるため)。

@@ -53,6 +53,10 @@ const mockFireAndForget = mock<
   (promise: Promise<unknown>, opts: Record<string, unknown>) => void
 >(() => {});
 
+const mockInquiryUpdateMany = mock<
+  (args: Record<string, unknown>) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 0 }));
+
 // ---------------------------------------------------------------------------
 // 2. mock.module() — import より前
 // ---------------------------------------------------------------------------
@@ -65,6 +69,9 @@ mock.module("@/shared/db/prisma", () => ({
       findUnique: mockFindUnique,
       update: mockUpdate,
       create: mockCreate,
+    },
+    inquiry: {
+      updateMany: mockInquiryUpdateMany,
     },
   },
 }));
@@ -153,10 +160,13 @@ describe("ensureCustomerLinked", () => {
     mockCreate.mockReset();
     mockSendWelcomeEmail.mockReset();
     mockFireAndForget.mockReset();
+    mockInquiryUpdateMany.mockReset();
 
     // デフォルト: 顧客が見つからない
     mockFindUnique.mockResolvedValue(null);
     mockCreate.mockResolvedValue(NEW_CUSTOMER);
+    // デフォルト: ゲスト inquiry backfill は該当 0 件（no-op）
+    mockInquiryUpdateMany.mockResolvedValue({ count: 0 });
   });
 
   // -----------------------------------------------------------------------

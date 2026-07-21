@@ -63,6 +63,10 @@ mock.module("@/shared/lib/action-helpers", () => ({
 mock.module("@/shared/lib/rate-limit", () => ({
   formSubmitRateLimiter: {},
   publicQueryRateLimiter: {},
+  // SEC-MYPAGE-02: account.ts が buildAuditRequestContext 経由で必要とする
+  // (rate-limit.ts から named export)。fireAndForget IIFE 内で使うため、テスト
+  // での import 解決を通すためのスタブ (実際の呼出は fireAndForget 側で潰される)。
+  getClientIpFromHeaders: mock(() => Promise.resolve("test-ip")),
 }));
 
 // domain クエリモック
@@ -151,6 +155,8 @@ mock.module("@/shared/lib/admin-auth", () => ({
 // エラーロギングモック
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(() => undefined),
+  // SEC-MYPAGE-02: fireAndForget (async-utils) が使う。
+  normalizeError: mock((err: unknown) => err),
   ErrorCategory: {
     DATABASE: "DATABASE",
     EXTERNAL_API: "EXTERNAL_API",
