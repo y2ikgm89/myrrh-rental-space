@@ -11,6 +11,8 @@ export type BulkToggleActiveCouponsResult = {
 export type BulkDeleteCouponsResult = {
   count: number;
   affectedIds: string[];
+  /** per-id audit 用 oldValue snapshot。affectedIds と 1:1 対応。 */
+  deleted: ReadonlyArray<{ id: string; code: string; name: string }>;
 };
 
 /**
@@ -54,14 +56,14 @@ export async function bulkDeleteCouponsCommand(
   ids: string[],
 ): Promise<BulkDeleteCouponsResult> {
   if (ids.length === 0) {
-    return { count: 0, affectedIds: [] };
+    return { count: 0, affectedIds: [], deleted: [] };
   }
   const targets = await prisma.coupon.findMany({
     where: { id: { in: ids } },
-    select: { id: true },
+    select: { id: true, code: true, name: true },
   });
   if (targets.length === 0) {
-    return { count: 0, affectedIds: [] };
+    return { count: 0, affectedIds: [], deleted: [] };
   }
   const result = await prisma.coupon.deleteMany({
     where: { id: { in: targets.map((t) => t.id) } },
@@ -69,5 +71,6 @@ export async function bulkDeleteCouponsCommand(
   return {
     count: result.count,
     affectedIds: targets.map((t) => t.id),
+    deleted: targets,
   };
 }
