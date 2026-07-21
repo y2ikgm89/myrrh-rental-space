@@ -23,8 +23,8 @@ mock.module("server-only", () => ({}));
 const mockUpdateStatus = mock(async () => ({
   previousStatus: CustomerStatus.NEW,
 }));
-const mockUpdateNotes = mock(async () => {});
-const mockToggleActive = mock(async () => {});
+const mockUpdateNotes = mock(async () => ({ previousNotes: null }));
+const mockToggleActive = mock(async () => ({ previousActive: true }));
 const mockAnonymizeCustomer = mock<
   (input: { customerId: string; reason: string }) => Promise<{
     customerId: string;

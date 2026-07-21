@@ -45,9 +45,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
     transferredReviews: 0,
     transferredRegistrations: 0,
   })),
-  toggleCustomerActive: mock(async () => undefined),
+  toggleCustomerActive: mock(async () => ({ previousActive: false })),
   updateCustomer: mock(async () => undefined),
-  updateCustomerNotes: mock(async () => undefined),
+  updateCustomerNotes: mock(async () => ({ previousNotes: null })),
   updateCustomerStatus: mock(async () => undefined),
   anonymizeCustomerCommand: mock(async () => ({
     customerId: CUSTOMER_ID,
@@ -58,7 +58,10 @@ mock.module("@/shared/domain/customers/commands", () => ({
 }));
 
 mock.module("@/shared/domain/customers/risk-detection", () => ({
-  clearRiskFlagCommand: mock(async () => undefined),
+  clearRiskFlagCommand: mock(async () => ({
+    previousFlaggedForReviewAt: null,
+    previousFlagReasons: [],
+  })),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({
