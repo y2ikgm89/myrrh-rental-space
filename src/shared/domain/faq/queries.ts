@@ -190,6 +190,11 @@ type FaqItemOrderBy =
   | Array<{ updatedAt: "asc" | "desc" }>
   | Array<{ viewCount: "asc" | "desc" } | { updatedAt: "desc" }>
   | Array<{ helpfulCount: "asc" | "desc" } | { updatedAt: "desc" }>
+  | Array<
+      | { notHelpfulCount: "asc" | "desc" }
+      | { helpfulCount: "asc" | "desc" }
+      | { updatedAt: "desc" }
+    >
   | Array<{ createdAt: "asc" | "desc" }>;
 
 function buildFaqItemOrderBy(sort: FaqItemSort | undefined): FaqItemOrderBy {
@@ -203,6 +208,15 @@ function buildFaqItemOrderBy(sort: FaqItemSort | undefined): FaqItemOrderBy {
     case "helpful":
       // 役立ち度ソート時も tie-breaker として updatedAt desc を付与
       return [{ helpfulCount: order }, { updatedAt: "desc" }];
+    case "notHelpful":
+      // 要改善度ソート: 不評票（notHelpfulCount）を主軸に、
+      // 同数の場合は「役立った」票が少ない方を要改善度が高いとみなして
+      // helpfulCount asc でタイブレークし、最後に updatedAt desc を付与
+      return [
+        { notHelpfulCount: order },
+        { helpfulCount: "asc" },
+        { updatedAt: "desc" },
+      ];
     case "createdAt":
       return [{ createdAt: order }];
     case "order":
