@@ -60,6 +60,11 @@ ${entries.join("\n")}
 } as const satisfies Record<string, string>;
 
 export function getCuratedIconSvgMarkup(name: string): string | undefined {
+  // Object.hasOwn ガード必須: name は data-icon-name（貼り付け HTML 由来の
+  // 任意文字列）になり得る。"toString" 等 Object.prototype 継承プロパティ名だと
+  // ガードなしの [name] アクセスが関数を返し、呼び出し側の String.replace で
+  // 例外を投げて HTML 生成全体が失敗する（実測で確認済み）。
+  if (!Object.hasOwn(CURATED_ICON_SVG_MARKUP, name)) return undefined;
   return (CURATED_ICON_SVG_MARKUP as Record<string, string>)[name];
 }
 `;

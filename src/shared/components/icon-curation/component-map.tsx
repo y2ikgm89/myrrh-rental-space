@@ -250,7 +250,14 @@ const ICON_COMPONENTS: Readonly<Record<string, TablerIcon>> = {
 /**
  * curation list の name から icon component を取得。
  * curation 外の name は undefined を返す（呼び出し側でフォールバック描画）。
+ *
+ * `name` は Lexical node（InlineIconNode/FeatureIconItemNode 等）の state 経由で
+ * 貼り付け HTML の `data-icon-name` 属性からも渡り得る任意文字列。Object.hasOwn
+ * ガードなしで `ICON_COMPONENTS[name]` を引くと "toString" 等 Object.prototype
+ * 継承プロパティ名で意図しない関数を返してしまい、呼び出し側の React 描画
+ * （`<Icon {...props} />`）がクラッシュする（実測で確認済み）。
  */
 export function getCuratedIconComponent(name: string): TablerIcon | undefined {
+  if (!Object.hasOwn(ICON_COMPONENTS, name)) return undefined;
   return ICON_COMPONENTS[name];
 }
