@@ -20,11 +20,21 @@ import { slugParamSchema } from "@/shared/lib/validations/params";
 
 /**
  * 公開ニュースクエリの共通 where 句。News model に deletedAt 列はないため
- * isPublished gate のみ。新規 query 追加時の publish gate 漏れを構造的に防ぐ。
+ * isPublished gate に加え、`publishedAt <= now` で予約公開（未来日時指定）の
+ * 早期露出を防ぐ。`now` は呼び出しの都度評価する（呼び出し元でキャプチャした
+ * `Date` を渡さないこと — この関数の呼び出し自体が `'use cache'` 関数本体内で
+ * 行われるため、生成された `Prisma.NewsWhereInput` は cacheLife(PUBLIC_CONTENT)
+ * の revalidate window（既定 1 時間）でしか鮮度が保証されない。予約公開時刻
+ * ちょうどでの露出精度が必要な場合は cron 側のタグ再検証で補う）。
+ * 新規 query 追加時の publish gate 漏れを構造的に防ぐため、公開 query は必ず
+ * この helper 経由で where を組み立てる。
  */
-const PUBLIC_WHERE = {
-  isPublished: true,
-} as const satisfies Prisma.NewsWhereInput;
+function publicNewsWhere(now: Date = new Date()): Prisma.NewsWhereInput {
+  return {
+    isPublished: true,
+    publishedAt: { lte: now },
+  };
+}
 
 const newsListSelect = {
   id: true,
@@ -69,7 +79,7 @@ export async function getPublishedNewsList(
   const { skip, take } = paginate({ page, limit: perPage });
 
   const where = {
-    ...PUBLIC_WHERE,
+    ...publicNewsWhere(),
     ...(search
       ? { title: { contains: search, mode: "insensitive" as const } }
       : {}),
@@ -126,7 +136,7 @@ export async function getPublishedNewsItem(slug: string) {
     fetch: () =>
       prisma.news.findFirst({
         where: {
-          ...PUBLIC_WHERE,
+          ...publicNewsWhere(),
           slug,
         },
         select: newsDetailSelect,
@@ -153,7 +163,7 @@ export async function getPublishedNews(maxItems: number) {
   const news = await safeFetch({
     fetch: () =>
       prisma.news.findMany({
-        where: { ...PUBLIC_WHERE },
+        where: { ...publicNewsWhere() },
         select: newsListSelect,
         orderBy: { publishedAt: "desc" },
         take: maxItems,
