@@ -11,6 +11,7 @@ import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import { BulkReservationCancelledEmail } from "@/shared/emails/bulk-reservation-cancelled";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
+import { ReservationRefundEmail } from "@/shared/emails/reservation-refund";
 import { ReservationUpdatedEmail } from "@/shared/emails/reservation-updated";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
@@ -56,6 +57,7 @@ import type {
   BulkReservationCancelledEmailData,
   EmailResult,
   ReservationEmailData,
+  ReservationRefundEmailData,
   StatusChangeEmailData,
 } from "./types";
 
@@ -591,6 +593,65 @@ export async function sendReservationStatusChangedEmail(
     context: {
       reservationId: data.reservationId,
       customerEmail: data.customerEmail,
+    },
+  });
+}
+
+/**
+ * 予約返金メールを送信 (管理者による全額 / 一部返金)。
+ *
+ * refund は「更新」「キャンセル」と独立した重要取引通知として非 gate で常時送信する
+ * (Cluster H #8)。idempotencyKey に refundId を含めることで、同一予約への複数回の
+ * 部分返金でも Resend の `invalid_idempotent_request` による silent drop を回避する。
+ */
+export async function sendReservationRefundEmail(
+  data: ReservationRefundEmailData,
+): Promise<EmailResult> {
+  const footer = await getEmailFooterData();
+
+  const reservationDate = formatDateWithWeekday(data.startTime);
+  const startTime = formatTimeShort(data.startTime);
+  const endTime = formatTimeShort(data.endTime);
+
+  const memberReservationUrl = buildMemberReservationUrl(
+    data.userId,
+    data.reservationId,
+  );
+
+  return sendEmail({
+    payload: omitUndefined({
+      to: data.customerEmail,
+      subject: `【ご返金のお知らせ】${data.spaceName} - ${reservationDate}`,
+      react: ReservationRefundEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          spaceName: data.spaceName,
+          reservationDate,
+          startTime,
+          endTime,
+          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+          refundAmount: formatPrice(data.refundAmount, "未設定"),
+          cumulativeRefundAmount: formatPrice(
+            data.cumulativeRefundAmount,
+            "未設定",
+          ),
+          originalTotal: formatPrice(data.originalTotal, "未設定"),
+          isFullyRefunded: data.isFullyRefunded,
+          reason: data.reason,
+          memberReservationUrl,
+          footer,
+        }),
+      ),
+    }),
+    // refundId (Stripe refund の primary key) を含めることで、同一予約への
+    // 複数回の部分返金 (accidental retry / partial refund の連続実行) でも
+    // idempotency key が衝突せず Resend が silent drop することを防ぐ。
+    idempotencyKey: `reservation-refund/${data.reservationId}/${data.refundId}`,
+    operation: "sendReservationRefundEmail",
+    context: {
+      reservationId: data.reservationId,
+      customerEmail: data.customerEmail,
+      refundId: data.refundId,
     },
   });
 }

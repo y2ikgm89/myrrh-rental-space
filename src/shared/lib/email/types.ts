@@ -184,6 +184,41 @@ export type BulkReservationCancelledEmailData = {
   batchNonce: string;
 };
 
+export type ReservationRefundEmailData = {
+  reservationId: string;
+  customerEmail: string;
+  customerName: string;
+  spaceName: string;
+  startTime: Date;
+  endTime: Date;
+  /**
+   * 今回の返金額 (円)。`refundReservationPaymentCommand` の `refundAmount` を
+   * そのまま渡す。
+   */
+  refundAmount: number;
+  /**
+   * 累積返金額 (円)。同一予約への複数回の部分返金を経た合計値。
+   * `refundReservationPaymentCommand` の `cumulativeAmount` を渡す。
+   */
+  cumulativeRefundAmount: number;
+  /**
+   * 予約の元請求額 (円、totalPrice)。
+   * "累計 X 円 / 元 Y 円" 表示のため fetchReservationEmailData 経由で流す。
+   */
+  originalTotal: number;
+  /** cumulative = originalTotal なら true (REFUNDED)、未満なら false (PARTIALLY_REFUNDED)。 */
+  isFullyRefunded: boolean;
+  /** 管理者入力の返金理由。空 / 未指定なら文面から省略。 */
+  reason?: string;
+  /**
+   * Refund.id (Stripe refund の primary key)。idempotencyKey に含めて
+   * 同一予約への複数回返金 (累計上書きシナリオ) で Resend の silent drop を防ぐ。
+   */
+  refundId: string;
+  /** 会員予約の User.id (ゲスト予約なら null/undefined)。マイページ URL の出し分けに使う。 */
+  userId?: string | null;
+};
+
 export type StatusChangeEmailData = {
   reservationId: string;
   customerEmail: string;
