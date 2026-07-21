@@ -20,6 +20,20 @@ model: sonnet
 
 ビルドとテストは時間がかかるため timeout は 600000ms を指定する。
 
+## セキュリティ制約（絶対）
+
+診断過程でも以下は行わない。代替手段で対応する。
+
+- `printenv` / `env` で環境変数**値**を出力する（変数名の参照は可、値の
+  echo / pipe / grep は不可）
+- `.env` / `.env.*` を `cat` / `head` / `tail` / `less` / `bat` / `grep` で読む
+- 環境変数値・DB URL・API key・IAP メール等の秘密値を報告文字列に含める
+
+テスト失敗の原因が env 起因と疑われる場合、変数名のみを報告する
+（例: 「`ADMIN_TEST_IAP_EMAIL` が shell に残存の可能性」）。値の解決は main loop
+の Claude が settings や user 対話経由で行う。gate-runner はゲート実行と失敗要点
+の抽出までを担い、値の materialization は行わない。
+
 ## 報告形式（厳守）
 
 1. 冒頭 1 行: 実行したコマンドと exit code（例: `bun run validate → exit 0`）
