@@ -69,11 +69,53 @@ export async function createCustomer(
     const result = await executeAdminMutationResult({
       resource: "customer",
       action: "create",
-      execute: async () => createCustomerCommand(data),
-      afterSuccess: () => {
-        updateTag(CACHE_TAGS.CUSTOMERS);
+      execute: async (user) => {
+        const created = await createCustomerCommand(data);
+        const { ip, userAgent } = await buildAuditRequestContext();
+        return { created, actorUserId: user.id, ip, userAgent };
       },
-      resolveAuditResourceId: (data) => data.id,
+      afterSuccess: (outcome) => {
+        updateTag(CACHE_TAGS.CUSTOMERS);
+
+        fireAndForget(
+          createAuditLogRecord({
+            userId: outcome.actorUserId,
+            action: AuditAction.CREATE,
+            resource: "customer.profile",
+            resourceId: outcome.created.id,
+            newValue: {
+              lastName: data.lastName,
+              firstName: data.firstName,
+              lastNameKana: data.lastNameKana || null,
+              firstNameKana: data.firstNameKana || null,
+              companyName: data.companyName || null,
+              customerType: data.customerType,
+              email: data.email,
+              phoneNumber: data.phoneNumber || null,
+              postalCode: data.postalCode || null,
+              prefecture: data.prefecture || null,
+              city: data.city || null,
+              streetAddress: data.streetAddress || null,
+              building: data.building || null,
+              notes: data.notes || null,
+              marketingOptIn: data.marketingOptIn,
+              phoneContactOptIn: data.phoneContactOptIn,
+            },
+            metadata: {
+              ...(outcome.ip !== null && { ip: outcome.ip }),
+              ...(outcome.userAgent !== null && {
+                userAgent: outcome.userAgent,
+              }),
+            },
+          }),
+          {
+            operation: "auditLogCreateCustomerProfile",
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+          },
+        );
+      },
+      resolveAuditResourceId: (outcome) => outcome.created.id,
     });
     if (isMutationError(result)) {
       return { ok: false, error: result.error };
@@ -231,7 +273,14 @@ export async function updateCustomerStatus(
 export async function updateCustomerNotes(
   id: string,
   notes: string | null,
-): Promise<MutationResult> {
+): Promise<
+  MutationResult<{
+    previousNotes: string | null;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const parsed = updateCustomerNotesSchema.safeParse({ id, notes });
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -241,20 +290,56 @@ export async function updateCustomerNotes(
     resource: "customer",
     action: "update",
     resourceId: parsed.data.id,
-    execute: async () => {
-      await updateCustomerNotesCommand(parsed.data.id, parsed.data.notes);
-      return null;
+    execute: async (user) => {
+      const { previousNotes } = await updateCustomerNotesCommand(
+        parsed.data.id,
+        parsed.data.notes,
+      );
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { previousNotes, actorUserId: user.id, ip, userAgent };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(parsed.data.id));
+
+      if (outcome.previousNotes === parsed.data.notes) {
+        // 冪等 no-op: メモが実際には変化していない (audit noise を減らす)
+        return;
+      }
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.notes",
+          resourceId: parsed.data.id,
+          oldValue: { notes: outcome.previousNotes },
+          newValue: { notes: parsed.data.notes },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogUpdateCustomerNotes",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }
 
-export async function toggleCustomerActive(
-  id: string,
-): Promise<MutationResult> {
+export async function toggleCustomerActive(id: string): Promise<
+  MutationResult<{
+    previousActive: boolean;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);
@@ -264,13 +349,38 @@ export async function toggleCustomerActive(
     resource: "customer",
     action: "update",
     resourceId: validated.data,
-    execute: async () => {
-      await toggleCustomerActiveCommand(validated.data);
-      return null;
+    execute: async (user) => {
+      const { previousActive } = await toggleCustomerActiveCommand(
+        validated.data,
+      );
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { previousActive, actorUserId: user.id, ip, userAgent };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(validated.data));
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.active",
+          resourceId: validated.data,
+          oldValue: { isActive: outcome.previousActive },
+          newValue: { isActive: !outcome.previousActive },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogToggleCustomerActive",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }
@@ -280,9 +390,15 @@ export async function toggleCustomerActive(
  * (誤検知時)。自動BLACKLIST化等は行わないため、フラグ解除自体は
  * ステータス変更を伴わない単純なクリア操作。
  */
-export async function clearCustomerRiskFlag(
-  id: string,
-): Promise<MutationResult> {
+export async function clearCustomerRiskFlag(id: string): Promise<
+  MutationResult<{
+    previousFlaggedForReviewAt: Date | null;
+    previousFlagReasons: string[];
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);
@@ -292,13 +408,47 @@ export async function clearCustomerRiskFlag(
     resource: "customer",
     action: "update",
     resourceId: validated.data,
-    execute: async () => {
-      await clearRiskFlagCommand(validated.data);
-      return null;
+    execute: async (user) => {
+      const { previousFlaggedForReviewAt, previousFlagReasons } =
+        await clearRiskFlagCommand(validated.data);
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return {
+        previousFlaggedForReviewAt,
+        previousFlagReasons,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+      };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(validated.data));
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.riskFlag",
+          resourceId: validated.data,
+          oldValue: {
+            flaggedForReviewAt:
+              outcome.previousFlaggedForReviewAt?.toISOString() ?? null,
+            flagReasons: outcome.previousFlagReasons,
+          },
+          newValue: { flaggedForReviewAt: null, flagReasons: [] },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogClearCustomerRiskFlag",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }
@@ -514,7 +664,24 @@ export async function searchCustomersAction(
   // ロール（customer:read を持たない EDITOR 含む）を通すため RBAC バイパスになる。
   const auth = await checkPermission("customer", "read");
   if (!auth.success) return [];
-  return searchCustomers(query);
+
+  const results = await searchCustomers(query);
+
+  fireAndForget(
+    createAuditLogRecord({
+      userId: auth.user.id,
+      action: AuditAction.READ,
+      resource: "customer",
+      metadata: { query, resultCount: results.length },
+    }),
+    {
+      operation: "auditLogSearchCustomers",
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+    },
+  );
+
+  return results;
 }
 
 /**

@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import {
   getAdminTermsById,
   getReagreeAffectedCustomerCount,
-} from "@/shared/domain/terms/admin-queries";
+} from "@/admin/queries/terms";
 import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
 
 interface PageProps {

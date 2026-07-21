@@ -7,9 +7,11 @@ import {
   IconClipboardCheck,
   IconSend,
 } from "@tabler/icons-react";
-import { getEventById } from "@/shared/domain/events/admin-queries";
-import { getEventRegistrations } from "@/shared/domain/events/registration-queries";
-import { getWaitlistQueueCount } from "@/shared/domain/events/waitlist-queries";
+import {
+  getEventById,
+  getEventRegistrations,
+  getWaitlistQueueCount,
+} from "@/admin/queries/event";
 import { deleteEvent } from "@/admin/actions/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";

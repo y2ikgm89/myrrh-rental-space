@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
 import { IconDownload, IconPlus } from "@tabler/icons-react";
-import { getEvents } from "@/shared/domain/events/admin-queries";
+import { getEvents } from "@/admin/queries/event";
 import {
   EVENT_STATUS_FILTER_ALL,
   loadAdminEventSearchParams,

@@ -23,6 +23,7 @@ import {
 } from "lexical";
 import { IconExternalLink } from "@tabler/icons-react";
 import { parseString } from "../config/type-guards";
+import { sanitizeLexicalUrlScheme } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 // =============================================================================
 // State
@@ -153,7 +154,11 @@ function $convertBookmarkElement(
   const link = element.querySelector("a");
   if (!link) return null;
 
-  const url = link.getAttribute("href") ?? "";
+  // 修正: 従来は href を無検証で読んでいたため、data-bookmark 属性を持つ
+  // 貼り付け HTML を細工されると javascript: 等の危険スキームがそのまま
+  // bookmarkUrlState に格納されていた（LinkNode.sanitizeUrl 相当の検証欠如）。
+  // @lexical/link の LinkNode.sanitizeUrl と同じパターンで import 時に無害化する。
+  const url = sanitizeLexicalUrlScheme(link.getAttribute("href") ?? "");
   const title = element.getAttribute("data-bookmark-title") ?? "";
   const description = element.getAttribute("data-bookmark-description") ?? "";
   const imageUrl = element.getAttribute("data-bookmark-image") ?? "";

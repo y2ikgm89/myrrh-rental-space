@@ -1,14 +1,20 @@
 /**
- * customer.ts の updateCustomerStatus / updateCustomer / anonymizeCustomer が
- * customer.status / customer.profile / customer.anonymization として
- * before/after（または匿名化メタデータ）を AuditLog に残すことを検証する。
+ * customer.ts の updateCustomerStatus / updateCustomer / anonymizeCustomer /
+ * createCustomer / updateCustomerNotes / toggleCustomerActive /
+ * clearCustomerRiskFlag / searchCustomersAction が customer.status /
+ * customer.profile / customer.anonymization / customer.notes /
+ * customer.active / customer.riskFlag として before/after を、
+ * searchCustomersAction が PII 検索の READ 監査を AuditLog に残すことを検証する。
  *
  * executeAdminMutationResult / executeConformMutation は薄いモックに差し替え、
  * RBAC・FormData→conform解析・cache invalidationの再テストはしない
  * （customer.action-shape.test.ts / *-empty-optional.test.ts の担務）。
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  CustomerStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 mock.module("server-only", () => ({}));
 
@@ -91,6 +97,30 @@ const mockAnonymizeCustomerCommand = mock<
   }),
 );
 
+const mockCreateCustomerCommand = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "x" }),
+);
+
+const mockUpdateCustomerNotesCommand = mock<
+  () => Promise<{ previousNotes: string | null }>
+>(() => Promise.resolve({ previousNotes: null }));
+
+const mockToggleCustomerActiveCommand = mock<
+  () => Promise<{ previousActive: boolean }>
+>(() => Promise.resolve({ previousActive: true }));
+
+const mockClearRiskFlagCommand = mock<
+  () => Promise<{
+    previousFlaggedForReviewAt: Date | null;
+    previousFlagReasons: string[];
+  }>
+>(() =>
+  Promise.resolve({
+    previousFlaggedForReviewAt: null,
+    previousFlagReasons: [],
+  }),
+);
+
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerStatus: (
     ...args: Parameters<typeof mockUpdateCustomerStatusCommand>
@@ -100,9 +130,14 @@ mock.module("@/shared/domain/customers/commands", () => ({
   anonymizeCustomerCommand: (
     ...args: Parameters<typeof mockAnonymizeCustomerCommand>
   ) => mockAnonymizeCustomerCommand(...args),
-  createCustomer: mock(() => Promise.resolve({ id: "x" })),
-  updateCustomerNotes: mock(() => Promise.resolve(undefined)),
-  toggleCustomerActive: mock(() => Promise.resolve(undefined)),
+  createCustomer: (...args: Parameters<typeof mockCreateCustomerCommand>) =>
+    mockCreateCustomerCommand(...args),
+  updateCustomerNotes: (
+    ...args: Parameters<typeof mockUpdateCustomerNotesCommand>
+  ) => mockUpdateCustomerNotesCommand(...args),
+  toggleCustomerActive: (
+    ...args: Parameters<typeof mockToggleCustomerActiveCommand>
+  ) => mockToggleCustomerActiveCommand(...args),
   mergeCustomerCommand: mock(() =>
     Promise.resolve({
       transferredReservations: 0,
@@ -121,11 +156,15 @@ mock.module("@/shared/domain/customers/queries", () => ({
 }));
 
 mock.module("@/shared/domain/customers/risk-detection", () => ({
-  clearRiskFlagCommand: mock(() => Promise.resolve(undefined)),
+  clearRiskFlagCommand: (
+    ...args: Parameters<typeof mockClearRiskFlagCommand>
+  ) => mockClearRiskFlagCommand(...args),
 }));
 
 mock.module("@/admin/lib/action-auth", () => ({
-  checkPermission: mock(() => Promise.resolve({ success: true })),
+  checkPermission: mock(() =>
+    Promise.resolve({ success: true, user: { id: "admin-1" } }),
+  ),
 }));
 
 const mockCreateAuditLogRecord = mock<
@@ -156,8 +195,16 @@ mock.module("@/shared/lib/errors/server", () => ({
   normalizeError: (error: unknown) => error,
 }));
 
-const { updateCustomerStatus, updateCustomer, anonymizeCustomer } =
-  await import("@/app/(admin)/admin/(dashboard)/_shared/actions/customer");
+const {
+  updateCustomerStatus,
+  updateCustomer,
+  anonymizeCustomer,
+  createCustomer,
+  updateCustomerNotes,
+  toggleCustomerActive,
+  clearCustomerRiskFlag,
+  searchCustomersAction,
+} = await import("@/app/(admin)/admin/(dashboard)/_shared/actions/customer");
 
 const CUSTOMER_UUID = "11111111-1111-4111-8111-111111111111";
 
@@ -279,5 +326,152 @@ describe("anonymizeCustomer の AuditLog 記録 (customer.anonymization、生PII
     expect(record["anonymizedFields"]).toContain("phoneNumber");
     // 生 PII の値そのもの（例: 旧メールアドレス文字列）は一切含まれないこと
     expect(JSON.stringify(record)).not.toContain("tanaka@example.com");
+  });
+});
+
+describe("searchCustomersAction の PII 検索監査ログ (READ)", () => {
+  beforeEach(() => {
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("検索実行時に READ アクションでクエリと件数を記録する", async () => {
+    await searchCustomersAction("田中");
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["action"]).toBe(AuditAction.READ);
+    expect(call["resource"]).toBe("customer");
+    expect(call["metadata"]).toEqual({ query: "田中", resultCount: 0 });
+  });
+});
+
+describe("createCustomer の AuditLog 記録 (customer.profile)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockCreateCustomerCommand.mockReset();
+    mockCreateCustomerCommand.mockResolvedValue({ id: CUSTOMER_UUID });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("新規作成した顧客のプロフィールを newValue に記録する (oldValueは無し)", async () => {
+    await createCustomer(undefined, new FormData());
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.profile");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["action"]).toBe(AuditAction.CREATE);
+    expect(call["oldValue"]).toBeUndefined();
+    expect(call["newValue"]).toEqual(
+      expect.objectContaining({
+        lastName: "田中",
+        firstName: "太郎",
+        email: "tanaka@example.com",
+      }),
+    );
+  });
+});
+
+describe("updateCustomerNotes の AuditLog diff (customer.notes)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockUpdateCustomerNotesCommand.mockReset();
+    mockUpdateCustomerNotesCommand.mockResolvedValue({
+      previousNotes: "旧メモ",
+    });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("メモが実際に変わった場合は oldValue/newValue 付きで記録する", async () => {
+    await updateCustomerNotes(CUSTOMER_UUID, "新メモ");
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.notes");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["oldValue"]).toEqual({ notes: "旧メモ" });
+    expect(call["newValue"]).toEqual({ notes: "新メモ" });
+  });
+
+  test("メモが変わらない (no-op) 場合は記録しない", async () => {
+    mockUpdateCustomerNotesCommand.mockResolvedValue({
+      previousNotes: "同じメモ",
+    });
+
+    await updateCustomerNotes(CUSTOMER_UUID, "同じメモ");
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe("toggleCustomerActive の AuditLog diff (customer.active)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockToggleCustomerActiveCommand.mockReset();
+    mockToggleCustomerActiveCommand.mockResolvedValue({
+      previousActive: true,
+    });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("有効→無効の切替を oldValue/newValue に記録する", async () => {
+    await toggleCustomerActive(CUSTOMER_UUID);
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.active");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["oldValue"]).toEqual({ isActive: true });
+    expect(call["newValue"]).toEqual({ isActive: false });
+  });
+});
+
+describe("clearCustomerRiskFlag の AuditLog diff (customer.riskFlag)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockClearRiskFlagCommand.mockReset();
+    mockClearRiskFlagCommand.mockResolvedValue({
+      previousFlaggedForReviewAt: new Date("2026-07-15T00:00:00.000Z"),
+      previousFlagReasons: ["RAPID_BOOKING"],
+    });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("フラグ解除前後を oldValue/newValue に記録する (Dateは ISO 文字列化)", async () => {
+    await clearCustomerRiskFlag(CUSTOMER_UUID);
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.riskFlag");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["oldValue"]).toEqual({
+      flaggedForReviewAt: "2026-07-15T00:00:00.000Z",
+      flagReasons: ["RAPID_BOOKING"],
+    });
+    expect(call["newValue"]).toEqual({
+      flaggedForReviewAt: null,
+      flagReasons: [],
+    });
   });
 });

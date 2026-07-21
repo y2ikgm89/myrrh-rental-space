@@ -1,6 +1,7 @@
 import sanitizeHtml from "sanitize-html";
 import {
   LEXICAL_ALLOWED_IFRAME_HOSTNAMES,
+  LEXICAL_ALLOWED_URL_SCHEMES,
   LEXICAL_CURATED_ICON_SVG_ATTRIBUTES,
   LEXICAL_CURATED_ICON_SVG_TAGS,
   LEXICAL_HTML_GLOBAL_ATTRIBUTES,
@@ -51,8 +52,6 @@ const LEXICAL_ALLOWED_TAGS = [
   ...LEXICAL_CURATED_ICON_SVG_TAGS,
 ] as const;
 
-const SAFE_URL_SCHEMES = ["http", "https", "mailto", "tel"] as const;
-
 /**
  * iframe 属性は 7 種の埋め込み node（YouTube/Vimeo/Spotify/Figma/Instagram/X/MapEmbed）の
  * 和集合。ホスト名は `allowedIframeHostnames` で別途制限する。
@@ -90,7 +89,7 @@ export function sanitizeLexicalContentHtml(html: string): string {
       ...LEXICAL_CURATED_ICON_SVG_ATTRIBUTES,
       "*": [...LEXICAL_HTML_GLOBAL_ATTRIBUTES],
     },
-    allowedSchemes: [...SAFE_URL_SCHEMES],
+    allowedSchemes: [...LEXICAL_ALLOWED_URL_SCHEMES],
     allowedSchemesAppliedToAttributes: ["href", "src"],
     allowedIframeHostnames: [...LEXICAL_ALLOWED_IFRAME_HOSTNAMES],
     allowProtocolRelative: false,

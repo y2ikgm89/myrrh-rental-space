@@ -28,7 +28,10 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkActionRateLimit: mockCheckRate,
 }));
 mock.module("@/shared/lib/rate-limit", () => ({
-  formSubmitRateLimiter: {},
+  // Round-5 audit Finding #23: formSubmitRateLimiter (5/分) はライブ検索には
+  // 厳しすぎるため expensiveAdminRateLimiter (60/分、customers/search と同種) に
+  // 変更済み。search.ts の import 対象と一致させる。
+  expensiveAdminRateLimiter: {},
 }));
 mock.module("@/shared/domain/admin-search/queries", () => ({
   searchByResource: mockSearchByResource,

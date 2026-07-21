@@ -3,10 +3,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { IconTrash } from "@tabler/icons-react";
 import { Badge, Button } from "@/admin/components/ui";
-import {
-  getAdminTermsList,
-  getDeletedTermsCount,
-} from "@/shared/domain/terms/admin-queries";
+import { getAdminTermsList, getDeletedTermsCount } from "@/admin/queries/terms";
 import { TermsTable } from "./_components/TermsTable";
 import { TermsTypeSelectDialog } from "./_components/TermsTypeSelectDialog";
 

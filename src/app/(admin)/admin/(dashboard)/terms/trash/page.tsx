@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
-import { getDeletedTermsList } from "@/shared/domain/terms/admin-queries";
+import { getDeletedTermsList } from "@/admin/queries/terms";
 import { TermsTrashTable } from "../_components/TermsTrashTable";
 
 export const metadata: Metadata = {

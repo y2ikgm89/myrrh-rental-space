@@ -4,6 +4,8 @@ import { IconAlertCircle, IconDeviceDesktop } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 import { renderEditorStateJsonToHtmlClient } from "../preview/render-editor-state-to-html-client";
+import { findUnregisteredLexicalNodeTypes } from "../config/registered-node-types";
+import { LexicalCorruptedContentNotice } from "./LexicalCorruptedContentNotice";
 
 type MobileEditorFallbackProps = {
   /** フォーム／親が保持する最新の EditorState JSON（未保存含む） */
@@ -17,10 +19,15 @@ export function MobileEditorFallback({
 }: MobileEditorFallbackProps) {
   const trimmed = contentJson.trim();
   const jsonOk = isLexicalComposerReadyEditorStateJson(trimmed);
+  const unregisteredTypes = jsonOk
+    ? findUnregisteredLexicalNodeTypes(trimmed)
+    : [];
+  const hasUnregisteredTypes = unregisteredTypes.length > 0;
 
-  const previewHtml = jsonOk
-    ? renderEditorStateJsonToHtmlClient(trimmed).trim()
-    : null;
+  const previewHtml =
+    jsonOk && !hasUnregisteredTypes
+      ? renderEditorStateJsonToHtmlClient(trimmed).trim()
+      : null;
 
   return (
     <div className="flex flex-col" style={{ height }}>
@@ -53,6 +60,13 @@ export function MobileEditorFallback({
             を渡すか、有効な Lexical EditorState JSON
             でデータを修正してください。
           </p>
+        </div>
+      ) : hasUnregisteredTypes ? (
+        <div className="border-b border-border p-4">
+          <LexicalCorruptedContentNotice
+            unregisteredTypes={unregisteredTypes}
+            contentJson={trimmed}
+          />
         </div>
       ) : previewHtml ? (
         <div className="min-h-0 flex-1 overflow-y-auto p-4">

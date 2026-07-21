@@ -21,23 +21,35 @@ async function ensureFaqCategoryExists(id: string): Promise<void> {
 
 /**
  * 複数の FAQ 項目を一括公開/非公開
+ *
+ * Round-5 audit Finding #16: 旧実装は affectedIds を返さず、呼び出し元の
+ * Server Action は per-id audit を発行できなかった（coupon/customer/space の
+ * bulk 系は Cluster A / Cluster P で対応済み）。対象を先に読んで id を確定
+ * してから updateMany する（coupon の bulkToggleActiveCouponsCommand と同型）。
  */
 export async function bulkPublishFaqItems(
   ids: string[],
   isPublished: boolean,
 ): Promise<BulkFaqItemResult> {
-  if (ids.length === 0) return { count: 0 };
+  if (ids.length === 0) return { count: 0, affectedIds: [] };
+
+  const targets = await prisma.faqItem.findMany({
+    where: { id: { in: ids }, deletedAt: null },
+    select: { id: true },
+  });
+  if (targets.length === 0) return { count: 0, affectedIds: [] };
 
   const now = new Date();
+  const affectedIds = targets.map((t) => t.id);
   const result = await prisma.faqItem.updateMany({
-    where: { id: { in: ids }, deletedAt: null },
+    where: { id: { in: affectedIds } },
     data: {
       isPublished,
       publishedAt: isPublished ? now : null,
     },
   });
 
-  return { count: result.count };
+  return { count: result.count, affectedIds };
 }
 
 /**
@@ -46,15 +58,22 @@ export async function bulkPublishFaqItems(
 export async function bulkDeleteFaqItems(
   ids: string[],
 ): Promise<BulkFaqItemResult> {
-  if (ids.length === 0) return { count: 0 };
+  if (ids.length === 0) return { count: 0, affectedIds: [] };
+
+  const targets = await prisma.faqItem.findMany({
+    where: { id: { in: ids }, deletedAt: null },
+    select: { id: true },
+  });
+  if (targets.length === 0) return { count: 0, affectedIds: [] };
 
   const now = new Date();
+  const affectedIds = targets.map((t) => t.id);
   const result = await prisma.faqItem.updateMany({
-    where: { id: { in: ids }, deletedAt: null },
+    where: { id: { in: affectedIds } },
     data: { deletedAt: now },
   });
 
-  return { count: result.count };
+  return { count: result.count, affectedIds };
 }
 
 /**
@@ -65,11 +84,11 @@ export async function bulkMoveFaqItems(
   ids: string[],
   newCategoryId: string,
 ): Promise<BulkFaqItemResult> {
-  if (ids.length === 0) return { count: 0 };
+  if (ids.length === 0) return { count: 0, affectedIds: [] };
 
   await ensureFaqCategoryExists(newCategoryId);
 
-  const movedCount = await prisma.$transaction(async (tx) => {
+  const affectedIds = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(buildOrderScopeLockSql(`faq_items:${newCategoryId}`));
 
     const maxOrder = await tx.faqItem.aggregate({
@@ -78,7 +97,7 @@ export async function bulkMoveFaqItems(
     });
     const startOrder = (maxOrder._max.order ?? -1) + 1;
 
-    let count = 0;
+    const moved: string[] = [];
     let order = startOrder;
     for (const id of ids) {
       const result = await tx.faqItem.updateMany({
@@ -86,12 +105,12 @@ export async function bulkMoveFaqItems(
         data: { categoryId: newCategoryId, order },
       });
       if (result.count > 0) {
-        count += result.count;
+        moved.push(id);
         order += 1;
       }
     }
-    return count;
+    return moved;
   });
 
-  return { count: movedCount };
+  return { count: affectedIds.length, affectedIds };
 }

@@ -377,11 +377,12 @@ describe("customers/commands", () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
           id: CUSTOMER_ID,
           isActive: true,
+          notes: "旧メモ",
         });
 
         await expect(
           updateCustomerNotes(CUSTOMER_ID, "新しいメモ"),
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ previousNotes: "旧メモ" });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -395,11 +396,12 @@ describe("customers/commands", () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
           id: CUSTOMER_ID,
           isActive: true,
+          notes: "既存メモ",
         });
 
-        await expect(
-          updateCustomerNotes(CUSTOMER_ID, null),
-        ).resolves.toBeUndefined();
+        await expect(updateCustomerNotes(CUSTOMER_ID, null)).resolves.toEqual({
+          previousNotes: "既存メモ",
+        });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -435,9 +437,9 @@ describe("customers/commands", () => {
           isActive: true,
         });
 
-        await expect(
-          toggleCustomerActive(CUSTOMER_ID),
-        ).resolves.toBeUndefined();
+        await expect(toggleCustomerActive(CUSTOMER_ID)).resolves.toEqual({
+          previousActive: true,
+        });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -453,9 +455,9 @@ describe("customers/commands", () => {
           isActive: false,
         });
 
-        await expect(
-          toggleCustomerActive(CUSTOMER_ID),
-        ).resolves.toBeUndefined();
+        await expect(toggleCustomerActive(CUSTOMER_ID)).resolves.toEqual({
+          previousActive: false,
+        });
 
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({

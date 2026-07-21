@@ -24,6 +24,13 @@ function Command({
         "bg-popover text-popover-foreground flex h-full w-full flex-col overflow-hidden rounded-md",
         className,
       )}
+      // Round-5 audit Finding #4: cmdk はデフォルトで shouldFilter=true。
+      // このアプリの唯一の呼び出し元 (CommandPalette) は検索結果 (SSoT の
+      // DB 順序) / 最近の操作 (時系列順) / クイックアクション・ナビゲーション
+      // (宣言順) をすべて自前で構築・整列済みで渡しているため、cmdk 側の
+      // fuzzy filter/sort を有効なままにすると二重フィルタで意図した順序が
+      // 上書きされる。呼び出し側で明示指定があればそちらを優先する。
+      shouldFilter={false}
       {...props}
     />
   );

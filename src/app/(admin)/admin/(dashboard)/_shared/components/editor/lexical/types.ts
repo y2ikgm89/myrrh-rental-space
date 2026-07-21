@@ -43,10 +43,35 @@ export type LexicalEditorProps = {
   height?: string | undefined;
   /** プレースホルダーテキスト */
   placeholder?: string | undefined;
-  /** エディタ本体（ContentEditable、role="textbox"）のアクセシブルネーム。未指定時は「本文」 */
+  /**
+   * エディタ本体（ContentEditable、role="textbox"）のアクセシブルネーム。
+   * `ariaLabelledBy` が指定されている場合はそちらが優先され、この prop は無視
+   * される（`aria-label` は出力しない）。どちらも未指定時は既定で「本文」。
+   */
   ariaLabel?: string | undefined;
   /** エディタ本体（ContentEditable）に紐づけるエラーメッセージ等の要素ID（aria-describedby） */
   ariaDescribedBy?: string | undefined;
+  /**
+   * エディタ本体（ContentEditable、role="textbox"）のアクセシブルネームを
+   * 提供する視認ラベル要素の `id`。指定時は `aria-labelledby` として
+   * ContentEditable に渡し、`ariaLabel` は出力しない。
+   *
+   * 注意: Lexical の ContentEditable は `<div contenteditable>` を描画するため
+   * "labelable element"（input/textarea/select/button 等）に該当せず、
+   * `<label htmlFor>` によるネイティブ label-for 関連付けは成立しない
+   * （アクセシブルネームが生成されない）。視認ラベルのテキストをそのまま
+   * アクセシブルネームにしたい場合は、ラベル要素に `id` を付与した上で
+   * この prop にその `id` を渡すこと（PR#1348 レビュー指摘の是正）。
+   */
+  ariaLabelledBy?: string | undefined;
+  /**
+   * ContentEditable の実 DOM 要素に付与する `id`。フォーカス制御や CSS
+   * ターゲティング等、アクセシブルネーム以外の用途で id が必要な場合に指定する。
+   * 視認ラベルとアクセシブルネームを一致させたい場合は `ariaLabelledBy` を使うこと
+   * （この `id` へ `<label htmlFor>` を向けても、contenteditable div は
+   * labelable element ではないためアクセシブルネームは生成されない）。
+   */
+  contentEditableId?: string | undefined;
   /** マークノードクリック時のコールバック */
   onMarkClick?: ((markId: string | null) => void) | undefined;
   /** コメント追加時のコールバック（FloatingToolbarからのコメントボタンクリック） */

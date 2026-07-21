@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { getEventById } from "@/shared/domain/events/admin-queries";
-import { getEventBroadcastRecipientCounts } from "@/shared/domain/events/registration-queries";
+import {
+  getEventById,
+  getEventBroadcastRecipientCounts,
+} from "@/admin/queries/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { BroadcastForm } from "./_components/BroadcastForm";

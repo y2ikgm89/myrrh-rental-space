@@ -3322,6 +3322,19 @@ describe("architecture boundaries", () => {
   });
 });
 
+describe("AuditLog resource文字列の統一 (event-registration)", () => {
+  test('"eventRegistration" (camelCase) を resource 文字列として使わない。"event-registration" (kebab-case) に統一する', () => {
+    const violations: string[] = [];
+    for (const path of collectSourceFiles(SRC_ROOT)) {
+      const source = readFileSync(path, "utf8");
+      if (source.includes('"eventRegistration"')) {
+        violations.push(relative(ROOT, path));
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+});
+
 // 元 architecture-boundaries.test.ts の末尾にあった 3 describe は per-concern に
 // 分離済み (2490 行 → 2263 行にスリム化。merge conflict hotspot 緩和が目的)。
 // 引継ぎ先:

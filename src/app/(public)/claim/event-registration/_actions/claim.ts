@@ -87,7 +87,7 @@ export async function claimEventRegistrationAction(): Promise<
     createAuditLogRecord({
       userId: session.user.id,
       action: AuditAction.UPDATE,
-      resource: "eventRegistration",
+      resource: "event-registration",
       resourceId: verified.eventRegistrationId,
       newValue: { customerId: customer.id },
       metadata: { claim: true },

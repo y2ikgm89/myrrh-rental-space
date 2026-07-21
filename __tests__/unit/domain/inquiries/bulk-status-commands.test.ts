@@ -27,14 +27,22 @@ mock.module("server-only", () => ({}));
 
 const mockFindMany = mock<
   (args: {
-    where: { id: { in: string[] }; deletedAt: null };
-    select: { id: boolean; status: boolean };
-  }) => Promise<{ id: string; status: InquiryStatus }[]>
+    where: {
+      id: { in: string[] };
+      deletedAt?: null;
+      status?: InquiryStatus;
+    };
+    select: { id: boolean; status?: boolean };
+  }) => Promise<{ id: string; status?: InquiryStatus }[]>
 >(() => Promise.resolve([]));
 
 const mockUpdateMany = mock<
   (args: {
-    where: { id: { in: string[] } };
+    where: {
+      deletedAt?: null;
+      OR?: { id: string; status: InquiryStatus }[];
+      id?: { in: string[] };
+    };
     data: { status: InquiryStatus };
   }) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 0 }));
@@ -453,6 +461,43 @@ describe("bulkSetStatusInquiriesCommand", () => {
       );
 
       expect(mockStatusHistoryCreateMany).not.toHaveBeenCalled();
+    });
+
+    test("claim が一部失敗した場合、実際に遷移できた id だけ StatusHistory に記録される", async () => {
+      // Round-5 audit Finding #6: read〜claim 間に別 admin が UUID_B の状態を
+      // 変えていた想定。claim できなかった id を history に書くと「実際には
+      // 起きていない遷移」の偽レコードが append-only な監査証跡に残るため、
+      // 実際に claim できた UUID_A のみが history 対象になることを固定する。
+      mockFindMany.mockResolvedValueOnce([
+        { id: UUID_A, status: InquiryStatus.NEW },
+        { id: UUID_B, status: InquiryStatus.IN_PROGRESS },
+      ]);
+      // 2件 claim を試みたが 1 件しか claim できなかった
+      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
+      // 実際に RESOLVED になっているのは UUID_A のみ
+      mockFindMany.mockResolvedValueOnce([{ id: UUID_A }]);
+
+      const result = await bulkSetStatusInquiriesCommand(
+        [UUID_A, UUID_B],
+        InquiryStatus.RESOLVED,
+        CHANGED_BY,
+      );
+
+      expect(result.count).toBe(1);
+      expect(result.affectedIds).toEqual([UUID_A]);
+      expect(result.rejectedIds).toEqual([UUID_B]);
+      expect(mockStatusHistoryCreateMany).toHaveBeenCalledTimes(1);
+      expect(mockStatusHistoryCreateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: [
+            expect.objectContaining({
+              inquiryId: UUID_A,
+              fromStatus: InquiryStatus.NEW,
+              toStatus: InquiryStatus.RESOLVED,
+            }),
+          ],
+        }),
+      );
     });
   });
 

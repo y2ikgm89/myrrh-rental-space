@@ -44,30 +44,55 @@ export async function bulkSetStatusCustomersCommand(
     select: { id: true, status: true },
   });
 
-  const affected: AffectedCustomerStatusChange[] = [];
+  const allowedTargets: AffectedCustomerStatusChange[] = [];
   const rejectedIds: string[] = [];
 
   for (const t of targets) {
     if (t.status === newStatus) continue;
     const allowed = CUSTOMER_STATUS_TRANSITIONS[t.status];
     if (allowed.includes(newStatus)) {
-      affected.push({ id: t.id, previousStatus: t.status });
+      allowedTargets.push({ id: t.id, previousStatus: t.status });
     } else {
       rejectedIds.push(t.id);
     }
   }
 
-  if (affected.length === 0) {
+  if (allowedTargets.length === 0) {
     return { count: 0, newStatus, affectedIds: [], affected: [], rejectedIds };
   }
 
-  const result = await prisma.customer.updateMany({
-    where: { id: { in: affected.map((a) => a.id) } },
+  // Round-5 audit Finding #5/#6 (events/inquiries) と同じ TOCTOU が customer 側にも
+  // 存在した。旧実装は updateMany の WHERE が id のみで status を含まず、read〜write
+  // 間の競合更新を無条件に上書きしていた。read 時点の status を WHERE に claim として
+  // 含める。claim に失敗した id を `affected`（audit ログの oldValue/newValue の元）
+  // に残すと実際には起きていない遷移を AuditLog に書いてしまうため、実際に claim
+  // できた id だけを返す。
+  const claim = await prisma.customer.updateMany({
+    where: {
+      OR: allowedTargets.map((t) => ({ id: t.id, status: t.previousStatus })),
+    },
     data: { status: newStatus },
   });
 
+  let affected = allowedTargets;
+
+  if (claim.count < allowedTargets.length) {
+    const confirmed = await prisma.customer.findMany({
+      where: {
+        id: { in: allowedTargets.map((t) => t.id) },
+        status: newStatus,
+      },
+      select: { id: true },
+    });
+    const confirmedIds = new Set(confirmed.map((c) => c.id));
+    rejectedIds.push(
+      ...allowedTargets.filter((t) => !confirmedIds.has(t.id)).map((t) => t.id),
+    );
+    affected = allowedTargets.filter((t) => confirmedIds.has(t.id));
+  }
+
   return {
-    count: result.count,
+    count: affected.length,
     newStatus,
     affectedIds: affected.map((a) => a.id),
     affected,

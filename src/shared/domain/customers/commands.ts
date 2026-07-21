@@ -137,16 +137,26 @@ export async function updateCustomerStatus(
 export async function updateCustomerNotes(
   id: string,
   notes: string | null,
-): Promise<void> {
-  await ensureCustomerExists(id);
+): Promise<{ previousNotes: string | null }> {
+  const existing = await prisma.customer.findUnique({
+    where: { id },
+    select: { notes: true },
+  });
+  if (!existing) {
+    throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+  }
 
   await prisma.customer.update({
     where: { id },
     data: { notes },
   });
+
+  return { previousNotes: existing.notes };
 }
 
-export async function toggleCustomerActive(id: string): Promise<void> {
+export async function toggleCustomerActive(
+  id: string,
+): Promise<{ previousActive: boolean }> {
   const customer = await prisma.customer.findUnique({
     where: { id },
     select: { id: true, isActive: true },
@@ -160,6 +170,8 @@ export async function toggleCustomerActive(id: string): Promise<void> {
     where: { id },
     data: { isActive: !customer.isActive },
   });
+
+  return { previousActive: customer.isActive };
 }
 
 export async function updateCustomer(
