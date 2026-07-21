@@ -49,7 +49,10 @@ import {
   ReservationStatus,
   CustomerType,
 } from "@/shared/lib/validations/enums/prisma-types";
-import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import {
+  isValidCustomerType,
+  isValidReservationStatus,
+} from "@/shared/lib/validations/enums/guards";
 import {
   CREATABLE_RESERVATION_STATUSES,
   RESERVATION_STATUS_LABELS,
@@ -632,11 +635,13 @@ export function ReservationEditForm({
                   />
                   <Select
                     value={guestCustomerType ?? ""}
-                    onValueChange={(value) =>
-                      setGuestCustomerType(
-                        value === "" ? undefined : (value as CustomerType),
-                      )
-                    }
+                    onValueChange={(value) => {
+                      if (value === "") {
+                        setGuestCustomerType(undefined);
+                      } else if (isValidCustomerType(value)) {
+                        setGuestCustomerType(value);
+                      }
+                    }}
                     disabled={isPending}
                   >
                     <SelectTrigger id="guestCustomerTypeSelect">
