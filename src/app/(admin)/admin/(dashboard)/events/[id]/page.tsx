@@ -22,6 +22,7 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 import { getEventScheduleModeLabel } from "@/shared/domain/events/schedule-mode";
 import { loadAdminEventRegistrationsSearchParams } from "@/shared/lib/nuqs";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
+import { RegisterParticipantButton } from "./_components/RegisterParticipantButton";
 import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 
@@ -99,6 +100,20 @@ export default async function EventDetailPage({
   });
 
   const confirmedCount = registrationPage.confirmedCount;
+
+  const tickets = event.tickets
+    .filter((t) => t.isAvailable)
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      price: t.price,
+    }));
+
+  const slots = event.slots.map((s) => ({
+    id: s.id,
+    startAt: s.startAt.toISOString(),
+    endAt: s.endAt.toISOString(),
+  }));
 
   return (
     <AdminDetailLayout
@@ -251,7 +266,12 @@ export default async function EventDetailPage({
       </DetailSection>
 
       <DetailSection title={`参加者一覧（${String(confirmedCount)}名）`}>
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex justify-end gap-2">
+          <RegisterParticipantButton
+            eventId={event.id}
+            tickets={tickets}
+            slots={slots}
+          />
           <Button asChild size="sm" variant="outline">
             <Link href={`/admin/events/${event.id}/waitlist`}>
               キャンセル待ち（{waitlistCount}件）
