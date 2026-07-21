@@ -8,8 +8,18 @@ import {
   refundReservationPaymentCommand,
   type RefundReservationResult,
 } from "@/shared/domain/reservations/payment-commands";
+import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
+import { sendReservationRefundEmail } from "@/shared/lib/email/reservation-emails";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 export async function createCheckoutSession(
   reservationId: string,
@@ -66,6 +76,55 @@ export async function refundReservationPayment(
     },
     afterSuccess: (data) => {
       invalidateReservationCaches(reservationId, data.customerId);
+
+      // Cluster H #8: 顧客への返金通知メール + 管理者向け in-app 通知を発火する。
+      // 返金は「更新」「キャンセル」と独立した重要取引通知として非 gate で常時送信。
+      // idempotencyKey は refundId ベースなので複数回の部分返金でも silent drop しない。
+      fireAndForget(
+        (async () => {
+          const emailData = await fetchReservationEmailData(reservationId);
+          if (!emailData) return;
+          await sendReservationRefundEmail({
+            reservationId: emailData.reservationId,
+            customerEmail: emailData.customerEmail,
+            customerName: emailData.customerName,
+            spaceName: emailData.spaceName,
+            startTime: emailData.startTime,
+            endTime: emailData.endTime,
+            refundAmount: data.refundAmount,
+            cumulativeRefundAmount: data.cumulativeAmount,
+            // fetchReservationEmailData は最新の totalPrice を返すため、
+            // manual admin edit 後の refund でも表示上の割合が現在値と一致する。
+            originalTotal: emailData.totalPrice ?? 0,
+            isFullyRefunded: data.newPaymentStatus === PaymentStatus.REFUNDED,
+            refundId: data.refundId,
+            ...(emailData.userId != null ? { userId: emailData.userId } : {}),
+          });
+        })(),
+        {
+          operation: "sendReservationRefundEmail",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: { reservationId, refundId: data.refundId },
+        },
+      );
+
+      fireAndForget(
+        createNotificationCommand({
+          type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+          message:
+            data.newPaymentStatus === PaymentStatus.REFUNDED
+              ? "管理者が予約の全額返金を実行しました"
+              : "管理者が予約の一部返金を実行しました",
+          resourceType: "reservation",
+          resourceId: reservationId,
+        }),
+        {
+          operation: "refundReservationPaymentNotification",
+          category: ErrorCategory.DATABASE,
+        },
+      );
     },
   });
 }
