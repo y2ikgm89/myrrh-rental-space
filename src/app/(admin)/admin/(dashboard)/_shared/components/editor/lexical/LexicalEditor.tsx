@@ -92,6 +92,7 @@ function EditorInner({
   placeholder = "ここに内容を入力...",
   ariaLabel,
   ariaDescribedBy,
+  ariaLabelledBy,
   contentEditableId,
   onMarkClick,
   onAddComment,
@@ -150,13 +151,13 @@ function EditorInner({
 
   const inspectorEnabled = showInspector !== false;
 
-  // contentEditableId 指定時（＝呼び出し元に視認可能な <Label htmlFor> がある）は
-  // ariaLabel が明示されない限り aria-label を出力しない。aria-label は
-  // ネイティブ label-for 関連付けより優先されるため、両方付けると視認ラベルの
-  // テキストとアクセシブルネームが乖離する（PR#1340 レビュー指摘）。
-  // contentEditableId 未指定時は従来通り既定で「本文」。
-  const resolvedAriaLabel =
-    ariaLabel ?? (contentEditableId ? undefined : "本文");
+  // ariaLabelledBy 指定時（＝呼び出し元に視認可能な <Label id="..."> があり、
+  // その id を aria-labelledby として渡している）は aria-label を出力しない。
+  // Lexical の ContentEditable は <div contenteditable> を描画するため
+  // labelable element ではなく、<label htmlFor> によるネイティブ label-for
+  // 関連付けは成立しない（PR#1348 レビュー指摘: aria-labelledby 方式に是正）。
+  // ariaLabelledBy 未指定時は従来通り ariaLabel、それも未指定なら既定で「本文」。
+  const resolvedAriaLabel = ariaLabelledBy ? undefined : (ariaLabel ?? "本文");
 
   return (
     <InspectorSidebarProvider enabled={inspectorEnabled}>
@@ -213,6 +214,7 @@ function EditorInner({
                       aria-multiline
                       role="textbox"
                       aria-label={resolvedAriaLabel}
+                      aria-labelledby={ariaLabelledBy}
                       aria-describedby={ariaDescribedBy}
                       aria-placeholder={placeholder}
                       placeholder={

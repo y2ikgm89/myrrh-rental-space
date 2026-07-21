@@ -641,7 +641,9 @@ export function SpaceEditForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="space-description">説明 *</Label>
+                <Label id="space-description-label" htmlFor="space-description">
+                  説明 *
+                </Label>
                 <div className="overflow-hidden rounded-lg border border-border">
                   <LazyLexicalEditor
                     key={`${space?.id ?? "new"}-${editorResetKey}`}
@@ -650,6 +652,7 @@ export function SpaceEditForm({
                     height="560px"
                     placeholder="スペースの説明を入力..."
                     contentEditableId="space-description"
+                    ariaLabelledBy="space-description-label"
                     ariaDescribedBy={
                       fields.descriptionJson.errors
                         ? fields.descriptionJson.errorId
