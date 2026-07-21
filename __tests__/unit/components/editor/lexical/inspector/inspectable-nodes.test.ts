@@ -49,6 +49,10 @@ import {
   $createPricingTableContainerNode,
   $createPricingPlanNode,
 } from "@/admin/components/editor/lexical/nodes/PricingTableNode";
+import {
+  SpaceCardNode,
+  $createSpaceCardNode,
+} from "@/admin/components/editor/lexical/nodes/SpaceCardNode";
 
 // =============================================================================
 // Test Setup
@@ -63,6 +67,7 @@ function createTestEditor(): LexicalEditor {
       CalloutNode,
       BookmarkNode,
       InternalLinkCardNode,
+      SpaceCardNode,
       InlineIconNode,
       PricingTableContainerNode,
       PricingPlanNode,
@@ -185,6 +190,25 @@ describe("inspectable-nodes", () => {
         expect(info?.nodeType).toBe("internalLinkCard");
         expect(info?.node).toBe(internalLinkCardNode);
         expect(info?.nodeKey).toBe(internalLinkCardNode.getKey());
+      });
+    });
+
+    test("SpaceCardNodeに対してspaceCard型の情報を返す", async () => {
+      await editor.update(() => {
+        const root = $getRoot();
+        root.clear();
+        const spaceCardNode = $createSpaceCardNode({
+          spaceId: "spc-1",
+          spaceName: "テストスペース",
+        });
+        root.append(spaceCardNode);
+
+        const info = getInspectableInfo(spaceCardNode);
+
+        expect(info).not.toBeNull();
+        expect(info?.nodeType).toBe("spaceCard");
+        expect(info?.node).toBe(spaceCardNode);
+        expect(info?.nodeKey).toBe(spaceCardNode.getKey());
       });
     });
 

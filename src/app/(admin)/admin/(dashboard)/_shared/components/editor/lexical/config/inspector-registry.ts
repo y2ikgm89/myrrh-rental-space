@@ -20,6 +20,7 @@ import { $isImageNode } from "../nodes/ImageNode";
 import { $isCalloutNode } from "../nodes/CalloutNode";
 import { $isBookmarkNode } from "../nodes/BookmarkNode";
 import { $isInternalLinkCardNode } from "../nodes/InternalLinkCardNode";
+import { $isSpaceCardNode } from "../nodes/SpaceCardNode";
 import { $isInlineIconNode } from "../nodes/InlineIconNode";
 import { $isPullQuoteNode } from "../nodes/PullQuoteNode";
 import { $isRubyNode } from "../nodes/RubyNode";
@@ -91,6 +92,7 @@ export function getInspectableInfoFromRegistry(
   if ($isBookmarkNode(node)) return { nodeType: "bookmark", node, nodeKey };
   if ($isInternalLinkCardNode(node))
     return { nodeType: "internalLinkCard", node, nodeKey };
+  if ($isSpaceCardNode(node)) return { nodeType: "spaceCard", node, nodeKey };
   if ($isInlineIconNode(node)) return { nodeType: "inlineIcon", node, nodeKey };
   if ($isPullQuoteNode(node)) return { nodeType: "pullQuote", node, nodeKey };
   if ($isRubyNode(node)) return { nodeType: "ruby", node, nodeKey };
@@ -156,6 +158,7 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
     "callout",
     "bookmark",
     "internalLinkCard",
+    "spaceCard",
     "inlineIcon",
     "pullQuote",
     "ruby",
