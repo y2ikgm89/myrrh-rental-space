@@ -35,6 +35,7 @@ mock.module("@/shared/domain/events/registration-commands", () => ({
   setEventRegistrationCheckInCommand: (
     ...args: Parameters<typeof mockSetEventRegistrationCheckInCommand>
   ) => mockSetEventRegistrationCheckInCommand(...args),
+  updateEventRegistrationCommand: mock(),
 }));
 
 mock.module(

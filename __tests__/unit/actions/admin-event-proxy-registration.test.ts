@@ -39,6 +39,7 @@ mock.module("@/shared/domain/events/registration-commands", () => ({
   ) => mockCreateAdminProxyRegistrationCommand(...args),
   createWalkInRegistrationCommand: mock(),
   setEventRegistrationCheckInCommand: mock(),
+  updateEventRegistrationCommand: mock(),
 }));
 
 mock.module("@/shared/domain/events/registration-queries", () => ({

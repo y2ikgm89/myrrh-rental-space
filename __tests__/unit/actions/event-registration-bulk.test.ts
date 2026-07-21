@@ -4,6 +4,14 @@
  */
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+mock.module("next/headers", () => ({
+  headers: mock(() => Promise.resolve(new Headers())),
+}));
+
+mock.module("@/shared/lib/rate-limit", () => ({
+  getClientIpFromHeaders: mock(() => Promise.resolve("127.0.0.1")),
+}));
+
 mock.module("server-only", () => ({}));
 
 type AdminUserLike = { id: string };

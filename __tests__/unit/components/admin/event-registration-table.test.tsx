@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { NuqsAdapter } from "nuqs/adapters/react";
 
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
@@ -12,7 +13,14 @@ const cancelMock = mock();
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({ refresh: refreshMock }),
+  redirect: mock(),
 }));
+
+// EventRegistrationTable (Task 4: 検索・フィルタ) は useQueryStates を使うため
+// <NuqsAdapter> context が実行時に必須になった。nuqs / @/shared/lib/nuqs/parsers
+// (内部で多数の nuqs プリミティブを使う) は mock せず実体をそのまま使い、
+// render 側を nuqs/adapters/react の NuqsAdapter で包むことで対応する
+// （下の render 呼び出し箇所を参照）。
 
 mock.module("sonner", () => ({
   toast: {
@@ -23,6 +31,7 @@ mock.module("sonner", () => ({
 
 mock.module("@/shared/lib/date-format", () => ({
   formatDateTimeShort: (value: string | Date) => `fmt:${String(value)}`,
+  MS_PER_DAY: 24 * 60 * 60 * 1000,
 }));
 
 mock.module("@/admin/components/status-badges", () => ({
@@ -117,6 +126,8 @@ mock.module("@/admin/actions/event-registration", () => ({
   refundEventRegistrationPayment: mock(),
   bulkCancelEventRegistrations: mock(),
   bulkCheckInEventRegistrations: mock(),
+  updateEventRegistration: mock(),
+  recordManualEventPayment: mock(),
 }));
 
 mock.module("@/admin/components/FloatingBulkActionBar", () => ({
@@ -184,30 +195,32 @@ describe("EventRegistrationTable", () => {
     await act(async () => {
       if (!root) throw new Error("root missing");
       root.render(
-        <EventRegistrationTable
-          eventId="cm0evt12345678901234567"
-          registrations={[
-            makeRegistration({
-              id: "cm0reg12345678901234567",
-              name: "出席済み参加者",
-              attendedAt: "2026-07-10T01:30:00.000Z",
-            }),
-            makeRegistration({
-              id: "cm0reg98765432109876543",
-              name: "未出席参加者",
-              attendedAt: null,
-            }),
-            makeRegistration({
-              id: "cm0regcancelled00000001",
-              name: "キャンセル参加者",
-              status: "CANCELLED",
-              cancelledAt: "2026-07-01T00:00:00.000Z",
-            }),
-          ]}
-          total={3}
-          currentPage={1}
-          perPage={20}
-        />,
+        <NuqsAdapter>
+          <EventRegistrationTable
+            eventId="cm0evt12345678901234567"
+            registrations={[
+              makeRegistration({
+                id: "cm0reg12345678901234567",
+                name: "出席済み参加者",
+                attendedAt: "2026-07-10T01:30:00.000Z",
+              }),
+              makeRegistration({
+                id: "cm0reg98765432109876543",
+                name: "未出席参加者",
+                attendedAt: null,
+              }),
+              makeRegistration({
+                id: "cm0regcancelled00000001",
+                name: "キャンセル参加者",
+                status: "CANCELLED",
+                cancelledAt: "2026-07-01T00:00:00.000Z",
+              }),
+            ]}
+            total={3}
+            currentPage={1}
+            perPage={20}
+          />
+        </NuqsAdapter>,
       );
     });
 

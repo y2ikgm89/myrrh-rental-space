@@ -554,10 +554,13 @@ const bulkRegistrationIdsSchema = z
 type BulkResult = { succeeded: number; skipped: number; failed: number };
 
 /**
- * reservation/bulk.ts の bulkCancelReservations と同型: per-id で既存の単発 command を
- * 呼び、失敗した id は skip して残りを継続する。per-id の副作用（メール・監査ログ等）は
- * adminCancelEventRegistrationCommand 呼び出し元の既存経路（applyEventRegistrationCancellationSideEffects
- * 相当）に委譲するため、ここでは呼び出しの成否のみを集計する。
+ * reservation/bulk.ts の bulkCancelReservations と同型: per-id で
+ * adminCancelEventRegistrationCommand を呼んだ直後に、単発キャンセル
+ * (adminCancelRegistration) と同じ applyEventRegistrationCancellationSideEffects
+ * （Stripe refund / waitlist 繰り上げ / 顧客・管理者メール / 監査ログ）を明示的に
+ * 呼び出す。これを省くと bulk cancel だけ返金・繰り上げ当選・監査ログが一切残らない
+ * 非対称になるため、副作用は per-id ループ内で必ず発火させる。失敗した id は
+ * skip して残りを継続する。
  */
 export async function bulkCancelEventRegistrations(
   ids: string[],
@@ -568,13 +571,27 @@ export async function bulkCancelEventRegistrations(
   return executeAdminMutationResult({
     resource: "event",
     action: "update",
-    execute: async (): Promise<BulkResult> => {
+    execute: async (user): Promise<BulkResult> => {
+      const requestHeaders = await headers();
+      const ip = await getClientIpFromHeaders();
+      const userAgent = requestHeaders.get("user-agent");
       let succeeded = 0;
       let failed = 0;
 
       for (const id of parsed.data) {
         try {
-          await adminCancelEventRegistrationCommand(id);
+          const registration = await adminCancelEventRegistrationCommand(id);
+          // reservation/bulk.ts の bulkCancelReservations と同型: per-id で
+          // 単発キャンセルと同じ副作用チェーン（Stripe refund / waitlist促進 /
+          // 顧客・管理者メール / 監査ログ）を発火する。ここを省くと bulk cancel
+          // だけ返金・繰り上げ当選・監査ログが一切残らない非対称になる。
+          await applyEventRegistrationCancellationSideEffects({
+            registrationId: id,
+            channel: "admin",
+            actorUserId: user.id,
+            request: { ip, userAgent },
+            promoted: registration.promoted,
+          });
           succeeded++;
         } catch (error) {
           logError(normalizeError(error), {
