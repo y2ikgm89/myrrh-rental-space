@@ -16,6 +16,7 @@ import {
 } from "@/shared/lib/email/event-emails";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import {
+  recordManualEventPaymentCommand,
   refundEventRegistrationPaymentCommand,
   type RefundEventRegistrationResult,
 } from "@/shared/domain/events/payment-commands";
@@ -647,6 +648,74 @@ export async function bulkCheckInEventRegistrations(
     },
     afterSuccess: () => {
       invalidateEventCaches();
+    },
+  });
+}
+
+// =============================================================================
+// 手動入金記録
+// =============================================================================
+
+const manualPaymentMethodValues = ["CASH", "BANK_TRANSFER", "OTHER"] as const;
+
+const manualPaymentSchema = z.object({
+  registrationId: eventRegistrationIdSchema,
+  amount: z.number().int().min(1),
+  method: z.enum(manualPaymentMethodValues),
+  note: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+});
+
+export type ManualPaymentInput = z.input<typeof manualPaymentSchema>;
+
+export async function recordManualEventPayment(
+  input: ManualPaymentInput,
+): Promise<MutationResult<{ registrationId: string }>> {
+  const parsed = manualPaymentSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: parsed.data.registrationId,
+    execute: async (user) => {
+      const result = await recordManualEventPaymentCommand({
+        registrationId: parsed.data.registrationId,
+        amount: parsed.data.amount,
+      });
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateEventCaches();
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "event-registration",
+          resourceId: parsed.data.registrationId,
+          oldValue: { paymentStatus: "UNPAID" },
+          newValue: { paymentStatus: "PAID", paidAmount: parsed.data.amount },
+          metadata: {
+            manualPaymentMethod: parsed.data.method,
+            ...(parsed.data.note !== null && { note: parsed.data.note }),
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogRecordManualEventPayment",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }

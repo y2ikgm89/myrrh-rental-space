@@ -43,6 +43,7 @@ import type {
 import { PaymentStatus as PaymentStatusEnum } from "@/shared/lib/validations/enums/prisma-types";
 import { RefundDialog } from "../../../reservations/[id]/_components/RefundDialog";
 import { EditRegistrationDialog } from "./EditRegistrationDialog";
+import { RecordManualPaymentDialog } from "./RecordManualPaymentDialog";
 import { EventRegistrationBulkActions } from "./EventRegistrationBulkActions";
 
 type Registration = {
@@ -114,6 +115,14 @@ function isRefundable(reg: Registration): boolean {
   );
 }
 
+/** 手動入金記録可能条件: UNPAID且つ Stripe 決済が進行中でない */
+function isManuallyPayable(reg: Registration): boolean {
+  return (
+    reg.paymentStatus === PaymentStatusEnum.UNPAID &&
+    reg.stripePaymentIntentId === null
+  );
+}
+
 export function EventRegistrationTable({
   eventId,
   registrations,
@@ -126,6 +135,9 @@ export function EventRegistrationTable({
   const [isRefundPending, startRefundTransition] = useTransition();
   const [refundTarget, setRefundTarget] = useState<Registration | null>(null);
   const [editTarget, setEditTarget] = useState<Registration | null>(null);
+  const [manualPaymentTarget, setManualPaymentTarget] = useState<string | null>(
+    null,
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   function toggleSelected(id: string) {
@@ -312,6 +324,16 @@ export function EventRegistrationTable({
                         >
                           編集
                         </Button>
+                        {isManuallyPayable(reg) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={anyPending}
+                            onClick={() => setManualPaymentTarget(reg.id)}
+                          >
+                            入金記録
+                          </Button>
+                        ) : null}
                         {showRefund ? (
                           <Button
                             variant="outline"
@@ -370,6 +392,16 @@ export function EventRegistrationTable({
             if (!open) setEditTarget(null);
           }}
           registration={editTarget}
+        />
+      ) : null}
+
+      {manualPaymentTarget !== null ? (
+        <RecordManualPaymentDialog
+          open={manualPaymentTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setManualPaymentTarget(null);
+          }}
+          registrationId={manualPaymentTarget}
         />
       ) : null}
 
