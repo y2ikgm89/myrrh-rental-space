@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
-import { IconPlus } from "@tabler/icons-react";
+import { IconDownload, IconPlus } from "@tabler/icons-react";
 import { getEvents } from "@/shared/domain/events/admin-queries";
 import {
   EVENT_STATUS_FILTER_ALL,
@@ -74,12 +74,20 @@ export default async function EventsPage({ searchParams }: PageProps) {
             イベントの作成・編集・公開を管理します
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/events/new">
-            <IconPlus className="mr-2 h-4 w-4" />
-            新規作成
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <a href="/api/admin/export/event-registrations" download>
+              <IconDownload className="mr-2 h-4 w-4" />
+              全参加者CSV
+            </a>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/events/new">
+              <IconPlus className="mr-2 h-4 w-4" />
+              新規作成
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* タブ（時間軸 + ステータスで分類） */}
