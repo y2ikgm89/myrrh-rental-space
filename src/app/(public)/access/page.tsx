@@ -17,6 +17,7 @@ import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { getAllPublishedLocationsJsonLdData } from "@/public/lib/seo";
 import { LocationsLocalBusinessJsonLd } from "@/public/components/seo/json-ld";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -31,6 +32,7 @@ async function AccessChaptersJsonLd(): Promise<ReactElement | null> {
 export default async function AccessPage(): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("access");
+  await requireSystemPagePublished("access");
 
   const sections = await getPageSectionsWithFallback("access");
 

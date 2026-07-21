@@ -13,6 +13,7 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -22,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function EventsPage(): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("events");
+  await requireSystemPagePublished("events");
 
   const sections = await getPageSectionsWithFallback("events");
 

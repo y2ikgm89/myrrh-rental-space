@@ -1,0 +1,71 @@
+/**
+ * `generatePageMetadata` — 非公開システムページの noindex 分岐
+ *
+ * 固定ルート page.tsx の `generateMetadata` は全て `generatePageMetadata(slug)` を
+ * 呼ぶ統一パイプライン。ページが「存在するが非公開」の場合、従来は
+ * `getPageSeo`（PUBLIC_WHERE gate で null）→ `defaultSeo`（SystemPageDefinition）に
+ * フォールバックし、robots メタデータを一切出さず indexable なままだった。
+ * 本テストは非公開時に `[...segments]/page.tsx` の 404 metadata と同型の
+ * `{ title: "ページが見つかりません", robots: { index: false, follow: false } }` を
+ * 返すことを固定する。
+ */
+
+import { beforeEach, describe, expect, mock, test } from "bun:test";
+
+mock.module("server-only", () => ({}));
+
+const mockGetPageSeo = mock<(_slug: string) => Promise<unknown>>(() =>
+  Promise.resolve(null),
+);
+const mockIsPublicPageUnpublished = mock<(_slug: string) => Promise<boolean>>(
+  () => Promise.resolve(false),
+);
+
+mock.module("@/shared/domain/pages/queries", () => ({
+  getPageSeo: (slug: string) => mockGetPageSeo(slug),
+  isPublicPageUnpublished: (slug: string) => mockIsPublicPageUnpublished(slug),
+}));
+
+const mockGetSeoSettings = mock<() => Promise<unknown>>(() =>
+  Promise.resolve(null),
+);
+
+mock.module("@/shared/domain/settings/queries/site", () => ({
+  getSeoSettings: () => mockGetSeoSettings(),
+}));
+
+const { generatePageMetadata } = await import("@/public/lib/page-metadata");
+
+describe("generatePageMetadata — 非公開判定", () => {
+  beforeEach(() => {
+    mockGetPageSeo.mockReset();
+    mockGetPageSeo.mockResolvedValue(null);
+    mockIsPublicPageUnpublished.mockReset();
+    mockIsPublicPageUnpublished.mockResolvedValue(false);
+    mockGetSeoSettings.mockReset();
+    mockGetSeoSettings.mockResolvedValue(null);
+  });
+
+  test("非公開ページ → noindex metadata を返し getPageSeo/getSeoSettings は呼ばない", async () => {
+    mockIsPublicPageUnpublished.mockResolvedValue(true);
+
+    const metadata = await generatePageMetadata("about");
+
+    expect(metadata).toEqual({
+      title: "ページが見つかりません",
+      robots: { index: false, follow: false },
+    });
+    expect(mockGetPageSeo).not.toHaveBeenCalled();
+    expect(mockGetSeoSettings).not.toHaveBeenCalled();
+  });
+
+  test("公開ページ（DB未カスタマイズ含む）→ 通常の SEO metadata を返す（robots は出さない）", async () => {
+    mockIsPublicPageUnpublished.mockResolvedValue(false);
+    mockGetPageSeo.mockResolvedValue(null);
+
+    const metadata = await generatePageMetadata("about");
+
+    expect(metadata.title).toBe("会社概要");
+    expect(metadata.robots).toBeUndefined();
+  });
+});
