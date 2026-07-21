@@ -226,22 +226,72 @@ export async function detectSuspiciousCustomers(
   );
 }
 
+const RISK_SCAN_OWNED_REASONS: readonly RiskFlagReason[] = [
+  RISK_FLAG_REASON.RAPID_BOOKING,
+  RISK_FLAG_REASON.FREQUENT_CANCELLATION,
+  RISK_FLAG_REASON.REPEATED_NO_SHOW,
+];
+
 /**
- * 検知結果をCustomerレコードに反映する。既存のflagReasonsは上書きする
- * (常に「直近の検知結果」を表す設計。前回検知時の理由が今回の条件から
- * 外れていれば自然に消える)。
+ * `Customer.flagReasons` を「呼出側が所有する理由コード集合」の範囲でのみ
+ * 書き換える。複数の独立した cron（customer-risk-scan / duplicate-detection）が
+ * 同一の `flagReasons` 配列を共有するため、無条件の配列置換だと後発 cron が
+ * 先発 cron の検知結果を消してしまう（逆も同様）。`ownedReasons` に含まれる
+ * コードだけを既存配列から除去し、`detectedReasons`（`ownedReasons` の部分集合）
+ * を足し戻すことで、他 cron 所有の理由コードを温存する。
+ *
+ * 最終的な `flagReasons` が空になれば `flaggedForReviewAt` も null に戻す
+ * （「要注意」表示は理由が1つも無ければ出さない）。空でなければ now を設定する
+ * （複数 cron のどちらが最後に触ったかに関わらず「直近に何らかのフラグが
+ * 更新された時刻」を表す）。
+ */
+export async function reconcileFlagReasonsCommand(
+  customerId: string,
+  params: {
+    ownedReasons: readonly RiskFlagReason[];
+    detectedReasons: readonly RiskFlagReason[];
+  },
+): Promise<number> {
+  const ownedSet = new Set<string>(params.ownedReasons);
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.customer.findUnique({
+      where: { id: customerId },
+      select: { flagReasons: true },
+    });
+    if (!existing) return 0;
+
+    const preserved = existing.flagReasons.filter(
+      (reason) => !ownedSet.has(reason),
+    );
+    const nextReasons = [...preserved, ...params.detectedReasons];
+
+    const result = await tx.customer.updateMany({
+      where: { id: customerId },
+      data: {
+        flagReasons: nextReasons,
+        flaggedForReviewAt: nextReasons.length > 0 ? new Date() : null,
+      },
+    });
+    return result.count;
+  });
+}
+
+/**
+ * 検知結果を Customer レコードに反映する。risk-scan が所有する3つの理由コード
+ * （rapid_booking/frequent_cancellation/repeated_no_show）の範囲でのみ
+ * `flagReasons` を書き換え、他 cron（duplicate-detection）由来のコードは
+ * `reconcileFlagReasonsCommand` が温存する。
  */
 export async function applyRiskFlagsCommand(
   detected: readonly DetectedRiskyCustomer[],
 ): Promise<number> {
-  const now = new Date();
   let updated = 0;
   for (const { customerId, reasons } of detected) {
-    const result = await prisma.customer.updateMany({
-      where: { id: customerId },
-      data: { flaggedForReviewAt: now, flagReasons: [...reasons] },
+    updated += await reconcileFlagReasonsCommand(customerId, {
+      ownedReasons: RISK_SCAN_OWNED_REASONS,
+      detectedReasons: reasons,
     });
-    updated += result.count;
   }
   return updated;
 }
