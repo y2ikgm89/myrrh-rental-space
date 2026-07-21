@@ -547,7 +547,7 @@ export async function createAdminProxyRegistration(
 // =============================================================================
 
 const bulkRegistrationIdsSchema = z
-  .array(z.string().min(1).max(100, { error: "登録IDが不正です" }))
+  .array(eventRegistrationIdSchema)
   .min(1, { error: "1件以上選択してください" });
 
 type BulkResult = { succeeded: number; skipped: number; failed: number };
@@ -598,31 +598,37 @@ export async function bulkCancelEventRegistrations(
 
 /**
  * setEventRegistrationCheckInCommand を per-id で呼び、まとめて出席済みに変える。
+ *
+ * `setEventRegistrationCheckInCommand` は `{eventId, registrationId, attended}` の
+ * object 引数を要求する（`toggleEventRegistrationCheckIn` 参照）ため、bulk 版も
+ * 呼び出し元から対象イベントの eventId を明示的に受け取る。
  */
 export async function bulkCheckInEventRegistrations(
+  eventId: string,
   ids: string[],
 ): Promise<MutationResult<BulkResult>> {
+  const parsedEventId = eventIdSchema.safeParse(eventId);
+  if (!parsedEventId.success)
+    return createValidationMutationError(parsedEventId.error);
+
   const parsed = bulkRegistrationIdsSchema.safeParse(ids);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
   return executeAdminMutationResult({
     resource: "event",
     action: "update",
+    resourceId: parsedEventId.data,
     execute: async (): Promise<BulkResult> => {
       let succeeded = 0;
       let failed = 0;
 
       for (const id of parsed.data) {
         try {
-          // Type mismatch: real API expects {eventId, registrationId, attended} object,
-          // but the mock expects (registrationId, attended) arguments. Call with 2 args
-          // to match test expectations.
-          await (
-            setEventRegistrationCheckInCommand as unknown as (
-              registrationId: string,
-              attended: boolean,
-            ) => Promise<{ eventId: string }>
-          )(id, true);
+          await setEventRegistrationCheckInCommand({
+            eventId: parsedEventId.data,
+            registrationId: id,
+            attended: true,
+          });
           succeeded++;
         } catch (error) {
           logError(normalizeError(error), {

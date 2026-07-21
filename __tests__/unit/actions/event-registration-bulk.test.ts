@@ -19,7 +19,11 @@ const mockAdminCancelCommand = mock<
   (registrationId: string) => Promise<{ eventId: string }>
 >(() => Promise.resolve({ eventId: "event-1" }));
 const mockCheckInCommand = mock<
-  (registrationId: string, attended: boolean) => Promise<{ eventId: string }>
+  (params: {
+    eventId: string;
+    registrationId: string;
+    attended: boolean;
+  }) => Promise<{ eventId: string }>
 >(() => Promise.resolve({ eventId: "event-1" }));
 
 mock.module("@/shared/domain/events/registration-commands", () => ({
@@ -88,6 +92,12 @@ const { bulkCancelEventRegistrations, bulkCheckInEventRegistrations } =
   await import("@/app/(admin)/admin/(dashboard)/_shared/actions/event-registration");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
+// cuid-shaped test ids (z.cuid() は /^[cC][0-9a-z]{6,}$/ を要求するため "r1" 等は不可)
+const REGISTRATION_ID_1 = "ckv1a2b3c4d5e6f7g8h9i0j1";
+const REGISTRATION_ID_2 = "ckv1a2b3c4d5e6f7g8h9i0j2";
+const REGISTRATION_ID_3 = "ckv1a2b3c4d5e6f7g8h9i0j3";
+const EVENT_ID = "ckv1a2b3c4d5e6f7g8h9i0e1";
+
 describe("bulkCancelEventRegistrations", () => {
   beforeEach(() => {
     mockAdminCancelCommand.mockReset();
@@ -95,7 +105,11 @@ describe("bulkCancelEventRegistrations", () => {
   });
 
   test("全件成功時は succeeded が ids.length と一致する", async () => {
-    const result = await bulkCancelEventRegistrations(["r1", "r2", "r3"]);
+    const result = await bulkCancelEventRegistrations([
+      REGISTRATION_ID_1,
+      REGISTRATION_ID_2,
+      REGISTRATION_ID_3,
+    ]);
     if (isMutationError(result)) throw new Error("unexpected error");
     expect(result.succeeded).toBe(3);
     expect(result.failed).toBe(0);
@@ -108,7 +122,11 @@ describe("bulkCancelEventRegistrations", () => {
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce({ eventId: "event-1" });
 
-    const result = await bulkCancelEventRegistrations(["r1", "r2", "r3"]);
+    const result = await bulkCancelEventRegistrations([
+      REGISTRATION_ID_1,
+      REGISTRATION_ID_2,
+      REGISTRATION_ID_3,
+    ]);
     if (isMutationError(result)) throw new Error("unexpected error");
     expect(result.succeeded).toBe(2);
     expect(result.failed).toBe(1);
@@ -127,10 +145,21 @@ describe("bulkCheckInEventRegistrations", () => {
   });
 
   test("全件成功時は succeeded が ids.length と一致する", async () => {
-    const result = await bulkCheckInEventRegistrations(["r1", "r2"]);
+    const result = await bulkCheckInEventRegistrations(EVENT_ID, [
+      REGISTRATION_ID_1,
+      REGISTRATION_ID_2,
+    ]);
     if (isMutationError(result)) throw new Error("unexpected error");
     expect(result.succeeded).toBe(2);
-    expect(mockCheckInCommand).toHaveBeenCalledWith("r1", true);
-    expect(mockCheckInCommand).toHaveBeenCalledWith("r2", true);
+    expect(mockCheckInCommand).toHaveBeenCalledWith({
+      eventId: EVENT_ID,
+      registrationId: REGISTRATION_ID_1,
+      attended: true,
+    });
+    expect(mockCheckInCommand).toHaveBeenCalledWith({
+      eventId: EVENT_ID,
+      registrationId: REGISTRATION_ID_2,
+      attended: true,
+    });
   });
 });
