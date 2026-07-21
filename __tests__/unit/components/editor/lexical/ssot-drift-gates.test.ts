@@ -443,6 +443,7 @@ const CLASS_NAME_TO_INSERT_ITEM_ID: Record<string, string> = {
   FigmaNode: "figma",
   SpotifyNode: "spotify",
   InternalLinkCardNode: "linkCard",
+  SpaceCardNode: "spaceCard",
   LayoutContainerNode: "layout",
   GroupNode: "group",
   CalloutNode: "callout",
