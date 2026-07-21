@@ -882,3 +882,17 @@ export async function resetCustomerEmailDeliveryStatusCommand(
 
   return { previous: existing.emailDeliveryStatus };
 }
+
+/**
+ * 顧客の予約統計を、現在の deleted でない予約レコードから再計算する。
+ * 手動トリガーまたは統計異常時の矯正用。
+ *
+ * transaction を自身で開始するため、admin action 層から直接呼び出し可能。
+ */
+export async function recomputeCustomerStatsCommand(
+  customerId: string,
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    await recomputeCustomerReservationStats(tx, customerId);
+  });
+}
