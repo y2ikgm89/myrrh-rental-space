@@ -12,6 +12,7 @@ import {
   getEventCheckInAttendees as getEventCheckInAttendeesQuery,
   getEventBroadcastRecipientCounts as getEventBroadcastRecipientCountsQuery,
 } from "@/shared/domain/events/registration-queries";
+import type { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getWaitlistQueue as getWaitlistQueueQuery,
   getWaitlistQueueCount as getWaitlistQueueCountQuery,
@@ -40,7 +41,12 @@ export async function getSpacesForEvent() {
 
 export async function getEventRegistrations(
   eventId: string,
-  options: { page?: number; perPage?: number } = {},
+  options: {
+    page?: number;
+    perPage?: number;
+    search?: string;
+    status?: RegistrationStatus;
+  } = {},
 ) {
   await requireAdminPermission("event", "read");
   return getEventRegistrationsQuery(eventId, options);
