@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/admin/components/ui";
-import { IconUserPlus } from "@tabler/icons-react";
+import { IconCalendarUser, IconUserPlus } from "@tabler/icons-react";
 import {
   createAdminProxyRegistration,
   createWalkInRegistration,
@@ -44,8 +44,12 @@ export function RegisterParticipantButton({
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => setProxyOpen(true)}>
+        <IconCalendarUser className="mr-2 h-4 w-4" />
+        代行登録
+      </Button>
+      <Button size="sm" onClick={() => setWalkInOpen(true)}>
         <IconUserPlus className="mr-2 h-4 w-4" />
-        参加者を登録
+        当日参加
       </Button>
 
       <ProxyRegistrationDialog
