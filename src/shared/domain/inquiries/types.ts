@@ -45,8 +45,30 @@ export type InquiryWithCustomer = InquiryData & {
   } | null;
 };
 
+/**
+ * 一覧表示専用の軽量投影。Round-5 audit Finding #22: 一覧が実際に描画するのは
+ * この形だけだが、旧実装は詳細画面と同じ select（全 reply 本文・message 全文・
+ * phoneNumber 等）を使い回しており、一覧ページ取得のたびに使わないデータを
+ * 毎行フルロードしていた。
+ */
+export type InquiryListItem = {
+  id: string;
+  receiptNumber: string;
+  name: string;
+  companyName: string | null;
+  email: string;
+  subject: string;
+  status: InquiryStatus;
+  createdAt: Date;
+  customer: {
+    id: string;
+    lastName: string;
+    firstName: string;
+  } | null;
+};
+
 export type GetInquiriesResult = {
-  inquiries: InquiryWithCustomer[];
+  inquiries: InquiryListItem[];
   total: number;
   page: number;
   limit: number;
