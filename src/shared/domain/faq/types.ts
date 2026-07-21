@@ -42,12 +42,29 @@ type FaqItemWithCategoryRecord = FaqItemRecord & {
   category: FaqCategorySummaryRecord;
 };
 
+/** items を含まないカテゴリ本体（ドロップダウン以外の単体取得・編集用） */
+type FaqCategoryDataRecord = Omit<FaqCategoryRecord, "items">;
+
+/** カテゴリ一覧グリッド表示用（全件本文の代わりに件数のみ持つ） */
+type FaqCategoryWithCountsRecord = FaqCategoryDataRecord & {
+  itemCount: number;
+  publishedItemCount: number;
+};
+
 export type FaqItemData = Serialized<FaqItemRecord>;
 export type FaqCategoryWithItems = Serialized<FaqCategoryRecord>;
+export type FaqCategoryData = Serialized<FaqCategoryDataRecord>;
+export type FaqCategoryWithItemCounts = Serialized<FaqCategoryWithCountsRecord>;
 export type FaqItemWithCategory = Serialized<FaqItemWithCategoryRecord>;
 
+/** カテゴリ選択ドロップダウン用の最小フィールド */
+export type FaqCategoryOption = {
+  id: string;
+  name: string;
+};
+
 export type FaqCategoryListResult = {
-  categories: FaqCategoryWithItems[];
+  categories: FaqCategoryWithItemCounts[];
   total: number;
 };
 

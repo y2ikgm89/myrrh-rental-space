@@ -14,7 +14,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { Metadata } from "next";
 import { IconChevronLeft } from "@tabler/icons-react";
-import { getFaqCategories, getFaqItems } from "@/admin/queries/faq";
+import { getFaqCategoryOptions, getFaqItems } from "@/admin/queries/faq";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { Pagination } from "@/admin/components/ui";
 import {
@@ -55,9 +55,9 @@ async function FaqReviewContent({
 }) {
   await connection();
 
-  const [params, { categories }] = await Promise.all([
+  const [params, allCategories] = await Promise.all([
     loadAdminFaqReviewSearchParams(searchParams),
-    getFaqCategories(),
+    getFaqCategoryOptions(),
   ]);
 
   const quickFilter: FaqItemQuickFilter | undefined =
@@ -76,8 +76,6 @@ async function FaqReviewContent({
     { page: params.page, limit: params.perPage },
     buildSort(params.filter),
   );
-
-  const allCategories = categories.map((c) => ({ id: c.id, name: c.name }));
 
   return (
     <div className="space-y-6">

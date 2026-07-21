@@ -17,8 +17,8 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { IconChevronLeft } from "@tabler/icons-react";
 import {
-  getFaqCategories,
   getFaqCategoryById,
+  getFaqCategoryOptions,
   getFaqItems,
 } from "@/admin/queries/faq";
 import { LoadingState } from "@/admin/components/LoadingState";
@@ -56,10 +56,10 @@ async function CategoryDetailContent({
 }) {
   await connection();
 
-  const [category, params, allCategoriesResult] = await Promise.all([
+  const [category, params, allCategoryOptions] = await Promise.all([
     getFaqCategoryById(categoryId),
     loadAdminFaqCategoryDetailSearchParams(searchParams),
-    getFaqCategories(),
+    getFaqCategoryOptions(),
   ]);
 
   if (!category) {
@@ -89,11 +89,6 @@ async function CategoryDetailContent({
     params.status === "all" &&
     params.quickFilter === "all";
   const startIndex = (page - 1) * params.perPage;
-
-  const allCategoryOptions = allCategoriesResult.categories.map((c) => ({
-    id: c.id,
-    name: c.name,
-  }));
 
   return (
     <div className="space-y-6">

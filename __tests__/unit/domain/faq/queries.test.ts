@@ -7,6 +7,15 @@ const mockFaqItemFindMany = mock<() => Promise<ReadonlyArray<never>>>(() =>
   Promise.resolve([]),
 );
 const mockFaqItemCount = mock<() => Promise<number>>(() => Promise.resolve(0));
+const mockFaqItemGroupBy = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+const mockFaqCategoryFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+const mockFaqCategoryFindFirst = mock<() => Promise<unknown>>(() =>
+  Promise.resolve(null),
+);
 
 mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
@@ -14,14 +23,31 @@ mock.module("@/shared/db/prisma", () => ({
     faqItem: {
       findMany: mockFaqItemFindMany,
       count: mockFaqItemCount,
+      groupBy: mockFaqItemGroupBy,
+    },
+    faqCategory: {
+      findMany: mockFaqCategoryFindMany,
+      findFirst: mockFaqCategoryFindFirst,
     },
   },
 }));
 
-const { getFaqItems, getFaqHealthSummary } =
-  await import("@/shared/domain/faq/queries");
+const {
+  getFaqItems,
+  getFaqHealthSummary,
+  getFaqCategories,
+  getFaqCategoryById,
+  getFaqCategoryOptions,
+} = await import("@/shared/domain/faq/queries");
 
 const CATEGORY_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_CATEGORY_ID = "22222222-2222-4222-8222-222222222222";
+
+const FAKE_CATEGORY_DATES = {
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+  deletedAt: null,
+};
 
 describe("getFaqItems — quickFilter / sort のクエリ構築", () => {
   beforeEach(() => {
@@ -118,5 +144,146 @@ describe("getFaqHealthSummary — 横断ヘルス集計", () => {
         notHelpfulCount: { gte: FAQ_LOW_RATED_MIN_NOT_HELPFUL },
       }),
     });
+  });
+});
+
+describe("getFaqCategories — 過剰フェッチ解消（件数のみ取得）", () => {
+  beforeEach(() => {
+    mockFaqCategoryFindMany.mockClear();
+    mockFaqItemGroupBy.mockClear();
+  });
+
+  test("items をネスト select せず _count のみを select する", async () => {
+    await getFaqCategories();
+
+    expect(mockFaqCategoryFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          _count: { select: { items: { where: { deletedAt: null } } } },
+        }),
+      }),
+    );
+    expect(mockFaqCategoryFindMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({ items: expect.anything() }),
+      }),
+    );
+  });
+
+  test("全件数（_count）と公開件数（groupBy）をカテゴリごとに合成して返す", async () => {
+    mockFaqCategoryFindMany.mockResolvedValueOnce([
+      {
+        id: CATEGORY_ID,
+        name: "予約について",
+        slug: "reservation",
+        description: null,
+        icon: null,
+        order: 0,
+        isActive: true,
+        ...FAKE_CATEGORY_DATES,
+        _count: { items: 5 },
+      },
+      {
+        id: OTHER_CATEGORY_ID,
+        name: "支払いについて",
+        slug: "payment",
+        description: null,
+        icon: null,
+        order: 1,
+        isActive: true,
+        ...FAKE_CATEGORY_DATES,
+        _count: { items: 0 },
+      },
+    ]);
+    mockFaqItemGroupBy.mockResolvedValueOnce([
+      { categoryId: CATEGORY_ID, _count: { id: 3 } },
+    ]);
+
+    const result = await getFaqCategories();
+
+    expect(result.total).toBe(2);
+    expect(result.categories).toEqual([
+      expect.objectContaining({
+        id: CATEGORY_ID,
+        itemCount: 5,
+        publishedItemCount: 3,
+      }),
+      expect.objectContaining({
+        id: OTHER_CATEGORY_ID,
+        itemCount: 0,
+        publishedItemCount: 0,
+      }),
+    ]);
+    // items フィールドは含まれない（本文の過剰フェッチをしない契約）
+    expect(result.categories[0]).not.toHaveProperty("items");
+  });
+
+  test("カテゴリが 0 件なら groupBy を呼ばない", async () => {
+    await getFaqCategories();
+
+    expect(mockFaqItemGroupBy).not.toHaveBeenCalled();
+  });
+});
+
+describe("getFaqCategoryOptions — ドロップダウン用の軽量取得", () => {
+  beforeEach(() => {
+    mockFaqCategoryFindMany.mockClear();
+  });
+
+  test("id / name のみを select する", async () => {
+    await getFaqCategoryOptions();
+
+    expect(mockFaqCategoryFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: { id: true, name: true },
+      }),
+    );
+  });
+});
+
+describe("getFaqCategoryById — 単体取得は items をネスト取得しない", () => {
+  beforeEach(() => {
+    mockFaqCategoryFindFirst.mockClear();
+  });
+
+  test("select に items ネストを含めない", async () => {
+    await getFaqCategoryById(CATEGORY_ID);
+
+    expect(mockFaqCategoryFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.not.objectContaining({ items: expect.anything() }),
+      }),
+    );
+  });
+
+  test("取得したカテゴリを items なしで返す", async () => {
+    mockFaqCategoryFindFirst.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: CATEGORY_ID,
+        name: "予約について",
+        slug: "reservation",
+        description: null,
+        icon: null,
+        order: 0,
+        isActive: true,
+        ...FAKE_CATEGORY_DATES,
+      }),
+    );
+
+    const category = await getFaqCategoryById(CATEGORY_ID);
+
+    expect(category).not.toBeNull();
+    expect(category).not.toHaveProperty("items");
+    expect(category?.id).toBe(CATEGORY_ID);
+  });
+
+  test("見つからない場合は null を返す", async () => {
+    mockFaqCategoryFindFirst.mockImplementationOnce(() =>
+      Promise.resolve(null),
+    );
+
+    const category = await getFaqCategoryById(CATEGORY_ID);
+
+    expect(category).toBeNull();
   });
 });

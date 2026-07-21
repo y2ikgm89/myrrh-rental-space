@@ -18,7 +18,7 @@ import { Badge, Button } from "@/admin/components/ui";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type {
-  FaqCategoryWithItems,
+  FaqCategoryData,
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
 import type { AdminFaqItemSortBy } from "@/shared/lib/nuqs";
@@ -28,7 +28,7 @@ import { FaqCategoryDialog } from "./FaqCategoryDialog";
 import { FaqItemDialog } from "./FaqItemDialog";
 
 type FaqCategoryDetailViewProps = {
-  readonly category: FaqCategoryWithItems;
+  readonly category: FaqCategoryData;
   readonly items: readonly FaqItemWithCategory[];
   readonly allCategories: readonly { id: string; name: string }[];
   readonly currentSortBy: AdminFaqItemSortBy;
