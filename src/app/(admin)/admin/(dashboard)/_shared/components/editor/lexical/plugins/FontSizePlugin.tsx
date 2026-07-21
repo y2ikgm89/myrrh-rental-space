@@ -120,6 +120,41 @@ export function FontSizePlugin() {
     setInputValue(`${clampedSize}`);
   };
 
+  // 委譲先の増減ボタンが blur 確定後に disabled 化されるかどうかを判定する
+  //
+  // PR#1351 フォローアップ（Codexレビュー指摘, スレッド
+  // PRRT_kwDOQ0jEts6ShRqe）: handleKeyDown が境界（先頭/末尾）で Radix の
+  // ロービングフォーカスへ委譲すると、隣接する増減ボタンへ同期的に
+  // フォーカスが移る。しかしこの時点の disabled 判定はまだ blur で確定
+  // していない `fontSize` state を基準にしている。たとえば MAX を超える
+  // `72` を入力し末尾で ArrowRight を押すと、増加ボタンは古い `fontSize`
+  // 基準ではまだ enabled と判定され、Radix はそこへフォーカスを移す。
+  // フォーカス移動が引き起こす input の blur で値が境界値へ clamp
+  // されると、フォーカス移動済みのそのボタンが直後に disabled 化される。
+  // HTML 仕様上 disabled 要素はフォーカスを保持できないため、フォーカスは
+  // 失われ以降の矢印キー操作が継続できなくなる。
+  //
+  // 対策として、委譲する前に「blur 相当で確定するであろう値」を
+  // inputValue から先読みし、その値で委譲先ボタンが disabled になると
+  // 判明した場合は委譲自体を行わない（handleKeyDown 側で preventDefault
+  // してキャレットをその場に留める）。React の state を同期的に flush
+  // する手段（`flushSync`）はこのリポジトリの ESLint ルール
+  // `@eslint-react/dom-no-flush-sync` で禁止されているため使わない。
+  const willAdjacentButtonBecomeDisabled = (
+    direction: "increment" | "decrement",
+  ): boolean => {
+    const parsed = parseInt(inputValue, 10);
+    // 無効値（空・0以下・NaN）は blur 時に現在の fontSize へ戻るだけなので、
+    // 確定後の値も現在の committed size と同じになる
+    const pendingSize =
+      !isNaN(parsed) && parsed > 0
+        ? Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, parsed))
+        : parseInt(fontSize, 10) || DEFAULT_FONT_SIZE;
+    return direction === "increment"
+      ? pendingSize >= MAX_FONT_SIZE
+      : pendingSize <= MIN_FONT_SIZE;
+  };
+
   // 増減ハンドラー
   const handleIncrement = () => {
     const currentSize = parseInt(fontSize, 10) || DEFAULT_FONT_SIZE;
@@ -194,6 +229,13 @@ export function FontSizePlugin() {
 
     if (e.key === "ArrowLeft") {
       if (selectionStart === 0 && selectionEnd === 0) {
+        if (willAdjacentButtonBecomeDisabled("decrement")) {
+          // 委譲すると blur で直後に disabled 化される減少ボタンへ
+          // フォーカスが移ってしまうため、委譲せずキャレットをその場に
+          // 留める（上記 willAdjacentButtonBecomeDisabled のコメント参照）
+          e.preventDefault();
+          return;
+        }
         return; // テキスト先頭: Radix のロービング移動へ委譲
       }
       e.preventDefault();
@@ -205,6 +247,13 @@ export function FontSizePlugin() {
         selectionStart === input.value.length &&
         selectionEnd === input.value.length
       ) {
+        if (willAdjacentButtonBecomeDisabled("increment")) {
+          // 委譲すると blur で直後に disabled 化される増加ボタンへ
+          // フォーカスが移ってしまうため、委譲せずキャレットをその場に
+          // 留める（上記 willAdjacentButtonBecomeDisabled のコメント参照）
+          e.preventDefault();
+          return;
+        }
         return; // テキスト末尾: Radix のロービング移動へ委譲
       }
       e.preventDefault();

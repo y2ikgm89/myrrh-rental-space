@@ -258,6 +258,72 @@ test.describe("Lexical ToolbarPlugin - roving tabindex（WAI-ARIA APG toolbar pa
     await expect(fontSizeInput).not.toBeFocused();
   });
 
+  test("境界値超過の入力中に境界で矢印キーを押しても、blur で直後に disabled 化される増減ボタンへ委譲してフォーカスを失わない（PR#1351 フォローアップ, Codexレビュー指摘スレッド PRRT_kwDOQ0jEts6ShRqe）", async ({
+    page,
+  }) => {
+    await page.goto(NEW_POST_PATH);
+    const toolbar = page.getByRole("toolbar", { name: TOOLBAR_NAME });
+    await expect(toolbar).toBeVisible({ timeout: 15000 });
+    const fontSizeInput = toolbar.getByRole("textbox", {
+      name: "フォントサイズ",
+    });
+    const incrementButton = toolbar.getByRole("button", {
+      name: "フォントサイズを大きく",
+    });
+    const decrementButton = toolbar.getByRole("button", {
+      name: "フォントサイズを小さく",
+    });
+
+    // MAX(72px) を超える値を末尾キャレットで入力する。この時点では
+    // まだ blur していないため fontSize state（disabled 判定の基準）は
+    // 古い値のまま。修正前はここで ArrowRight を押すと、Radix が
+    // まだ enabled 判定の増加ボタンへ委譲し、委譲が引き起こす blur で
+    // 値が 72 へ clamp・増加ボタンが直後に disabled 化され、
+    // フォーカスが input にもボタンにも残らず失われていた
+    await fontSizeInput.click();
+    await fontSizeInput.fill("999");
+    await fontSizeInput.evaluate((el: HTMLInputElement) =>
+      el.setSelectionRange(3, 3),
+    );
+
+    await page.keyboard.press("ArrowRight");
+    // フォーカスが失われていた場合（修正前）、この直後の Backspace は
+    // どこにも届かず入力値は "999" のまま変化しない。フォーカスが
+    // input に残っていることを、実際にキー入力が反映される（"99" に
+    // なる）ことで検証する。`toBeFocused()` 単体の直後アサーションは
+    // Radix が委譲する瞬間（フォーカス移動〜blur による disabled 化〜
+    // フォーカス消失）を通過するまでの一瞬 true になり得るため
+    // （web-first assertion は「一度でも真になった時点」で pass する）、
+    // waitForTimeout に頼らずこの決定的な後続入力で検証する
+    await page.keyboard.press("Backspace");
+    await expect(fontSizeInput).toHaveValue("99");
+    await expect(fontSizeInput).toBeFocused();
+
+    // 確定して 72 へ clamp され、増加ボタンが正しく disabled になることを確認
+    await fontSizeInput.fill("999");
+    await page.keyboard.press("Enter");
+    await expect(fontSizeInput).toHaveValue("72");
+    await expect(incrementButton).toBeDisabled();
+
+    // MIN(8px) 未満のケースも対称的に検証する（ArrowLeft × 減少ボタン）。
+    // キャレットは先頭のため、後続の確認には Delete（前方削除）を使う
+    await fontSizeInput.click();
+    await fontSizeInput.fill("3");
+    await fontSizeInput.evaluate((el: HTMLInputElement) =>
+      el.setSelectionRange(0, 0),
+    );
+
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("Delete");
+    await expect(fontSizeInput).toHaveValue("");
+    await expect(fontSizeInput).toBeFocused();
+
+    await fontSizeInput.fill("3");
+    await page.keyboard.press("Enter");
+    await expect(fontSizeInput).toHaveValue("8");
+    await expect(decrementButton).toBeDisabled();
+  });
+
   test("フォントサイズ input 内で Home/End は常にテキストフィールド内の移動として扱われる（ロービング移動に委譲しない）", async ({
     page,
   }) => {
