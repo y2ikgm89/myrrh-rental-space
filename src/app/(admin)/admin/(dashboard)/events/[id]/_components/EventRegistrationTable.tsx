@@ -27,6 +27,7 @@ import type {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { PaymentStatus as PaymentStatusEnum } from "@/shared/lib/validations/enums/prisma-types";
 import { RefundDialog } from "../../../reservations/[id]/_components/RefundDialog";
+import { EditRegistrationDialog } from "./EditRegistrationDialog";
 
 type Registration = {
   id: string;
@@ -106,6 +107,7 @@ export function EventRegistrationTable({
   const [isCancelPending, startCancelTransition] = useTransition();
   const [isRefundPending, startRefundTransition] = useTransition();
   const [refundTarget, setRefundTarget] = useState<Registration | null>(null);
+  const [editTarget, setEditTarget] = useState<Registration | null>(null);
 
   function handleCancel(registrationId: string) {
     startCancelTransition(async () => {
@@ -158,6 +160,7 @@ export function EventRegistrationTable({
                 <TableHead>名前</TableHead>
                 <TableHead className="hidden lg:table-cell">参加枠</TableHead>
                 <TableHead className="hidden md:table-cell">メール</TableHead>
+                <TableHead className="hidden xl:table-cell">備考</TableHead>
                 <TableHead>参加人数</TableHead>
                 <TableHead>ステータス</TableHead>
                 <TableHead>出欠</TableHead>
@@ -184,6 +187,9 @@ export function EventRegistrationTable({
                         </span>
                       )}
                     </TableCell>
+                    <TableCell className="hidden xl:table-cell max-w-[200px] truncate">
+                      {reg.note ?? "-"}
+                    </TableCell>
                     <TableCell>{reg.quantity}名</TableCell>
                     <TableCell className="whitespace-nowrap">
                       <RegistrationStatusBadge status={reg.status} />
@@ -196,6 +202,14 @@ export function EventRegistrationTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={anyPending}
+                          onClick={() => setEditTarget(reg)}
+                        >
+                          編集
+                        </Button>
                         {showRefund ? (
                           <Button
                             variant="outline"
@@ -215,11 +229,6 @@ export function EventRegistrationTable({
                           >
                             キャンセル
                           </Button>
-                        ) : null}
-                        {!showRefund && !showCancel ? (
-                          <span className="text-sm text-muted-foreground">
-                            -
-                          </span>
                         ) : null}
                       </div>
                     </TableCell>
@@ -249,6 +258,16 @@ export function EventRegistrationTable({
           cumulativeRefunded={refundTarget.cumulativeRefunded}
           onConfirm={handleRefund}
           isPending={isRefundPending}
+        />
+      ) : null}
+
+      {editTarget ? (
+        <EditRegistrationDialog
+          open={editTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditTarget(null);
+          }}
+          registration={editTarget}
         />
       ) : null}
     </div>
