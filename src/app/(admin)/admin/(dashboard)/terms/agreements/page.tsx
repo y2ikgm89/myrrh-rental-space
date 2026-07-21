@@ -16,10 +16,7 @@ import {
   TableShell,
 } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import {
-  getAdminAgreements,
-  getAdminTermsList,
-} from "@/shared/domain/terms/admin-queries";
+import { getAdminAgreements, getAdminTermsList } from "@/admin/queries/terms";
 import { TermsAgreementsFilters } from "./_components/TermsAgreementsFilters";
 import {
   TERMS_TYPE_LABELS,

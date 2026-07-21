@@ -75,7 +75,7 @@ const eventDetailSelect = {
   },
 } satisfies Prisma.EventSelect;
 
-interface GetEventsOptions {
+export interface GetEventsOptions {
   search?: string;
   status?: EventStatus;
   tab?: EventTabFilter;
