@@ -159,6 +159,8 @@ export async function getPublishedFaqItems(
           id: true,
           question: true,
           answer: true,
+          helpfulCount: true,
+          notHelpfulCount: true,
         },
         orderBy: { order: "asc" },
         take: maxItems,

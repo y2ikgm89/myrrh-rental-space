@@ -435,7 +435,13 @@ export async function SectionRenderer({
       if (config.categoryId) {
         const items: FaqData[] = (
           await getPublishedFaqItems(config.maxItems, config.categoryId)
-        ).map((f) => ({ id: f.id, question: f.question, answer: f.answer }));
+        ).map((f) => ({
+          id: f.id,
+          question: f.question,
+          answer: f.answer,
+          helpfulCount: f.helpfulCount,
+          notHelpfulCount: f.notHelpfulCount,
+        }));
         return (
           <FaqListSection config={config} items={items} style={resolved} />
         );
