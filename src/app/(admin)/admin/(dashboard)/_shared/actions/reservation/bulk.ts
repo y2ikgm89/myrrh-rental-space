@@ -67,6 +67,12 @@ const bulkIdsSchema = z
   .array(z.uuid({ error: "予約IDが不正です" }))
   .min(1, { error: "1件以上選択してください" });
 
+const bulkCancellationReasonSchema = z
+  .string()
+  .max(500, { error: "理由は500文字以内で入力してください" })
+  .optional()
+  .or(z.literal(""));
+
 // =============================================================================
 // Confirm side effects (per-id, non-blocking)
 // =============================================================================
@@ -238,9 +244,16 @@ export async function bulkConfirmReservations(
  */
 export async function bulkCancelReservations(
   ids: string[],
+  reason?: string,
 ): Promise<MutationResult<BulkResult>> {
   const parsed = bulkIdsSchema.safeParse(ids);
   if (!parsed.success) return createValidationMutationError(parsed.error);
+  const parsedReason = bulkCancellationReasonSchema.safeParse(reason);
+  if (!parsedReason.success) {
+    return createValidationMutationError(parsedReason.error);
+  }
+  const cancellationReason =
+    parsedReason.data && parsedReason.data !== "" ? parsedReason.data : null;
 
   return executeAdminMutationResult({
     resource: "reservation",
@@ -270,7 +283,7 @@ export async function bulkCancelReservations(
           // SSoT: single-cancel 経路と同じ副作用チェーン + per-id AuditLog を発火。
           await applyCancellationSideEffects({
             reservationId: id,
-            cancellationReason: null,
+            cancellationReason,
             channel: "admin",
             actorUserId: user.id,
             request,
