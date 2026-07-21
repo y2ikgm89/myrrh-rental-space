@@ -19,6 +19,7 @@ import {
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { CommentPanel } from "@/admin/components/editor/comment-panel";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import { DraftRecoveryBanner } from "@/admin/components/editor/lexical/parts/DraftRecoveryBanner";
 import {
   EditorHeader,
   InlineEditorShell,
@@ -152,8 +153,18 @@ export function NewsEditor({
             extraActions={deleteDialog}
           />
         }
+        banner={
+          editor.draftRecovery.isAvailable ? (
+            <DraftRecoveryBanner
+              savedAt={editor.draftRecovery.savedAt}
+              onRestore={editor.draftRecovery.restore}
+              onDismiss={editor.draftRecovery.dismiss}
+            />
+          ) : null
+        }
       >
         <LazyLexicalEditor
+          key={`${news?.id ?? "new"}-${editor.editorResetKey}`}
           contentJson={editor.contentJson}
           onChange={editor.handleContentChange}
           disabled={editor.isPending}
@@ -162,6 +173,7 @@ export function NewsEditor({
           flush
           height="100%"
           mediaUsage="NEWS"
+          autoSaveKey={editor.autoSaveKey}
           onMarkClick={mode === "edit" && news ? editor.selectMark : undefined}
           onAddComment={
             mode === "edit" && news ? editor.handleAddComment : undefined

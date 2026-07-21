@@ -18,6 +18,8 @@ import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { clearDraft } from "@/admin/components/editor/lexical/plugins/AutoSavePlugin";
+import { useDraftRecovery } from "@/admin/components/editor/lexical/use-draft-recovery";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -97,8 +99,24 @@ export function useTermsEditor({
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
   const initialContentJson = initContentJson(terms, initialTemplateJson);
+
+  // LocalStorage 下書き自動保存のキー（AutoSavePlugin が `lexical-draft:` prefix を付与）
+  const autoSaveKey = terms ? `terms-${terms.id}` : "terms-new";
+
   const [contentJson, setContentJson] = useState(initialContentJson);
   const [savedContentJson, setSavedContentJson] = useState(initialContentJson);
+
+  // Lexical エディタは非制御コンポーネント（初期値のみ使用）のため、下書き復元を
+  // 画面に反映するには key 変更によるアンマウント/リマウントが必要
+  const [editorResetKey, setEditorResetKey] = useState(0);
+  const draftRecovery = useDraftRecovery({
+    autoSaveKey,
+    initialContentJson,
+    onRestore: (json) => {
+      setContentJson(json);
+      setEditorResetKey((prev) => prev + 1);
+    },
+  });
 
   const [isPublishedValue, setIsPublishedValue] = useState<boolean>(
     terms?.isPublished ?? false,
@@ -301,6 +319,7 @@ export function useTermsEditor({
         }
         setSettingsSnapshot(settingsData);
         setSavedContentJson(contentJson);
+        clearDraft(autoSaveKey);
         router.refresh();
         toast.success("規約を保存しました");
       } catch (error) {
@@ -514,6 +533,10 @@ export function useTermsEditor({
     scopes: scopesValue,
     changelog: changelogValue,
     showInFooter: showInFooterValue,
+
+    autoSaveKey,
+    editorResetKey,
+    draftRecovery,
 
     isSettingsDialogOpen,
     openSettingsDialog,

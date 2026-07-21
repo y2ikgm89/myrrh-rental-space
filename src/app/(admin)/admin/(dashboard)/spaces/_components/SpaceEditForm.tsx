@@ -35,6 +35,9 @@ import {
   TooltipTrigger,
 } from "@/admin/components/ui";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import { DraftRecoveryBanner } from "@/admin/components/editor/lexical/parts/DraftRecoveryBanner";
+import { useDraftRecovery } from "@/admin/components/editor/lexical/use-draft-recovery";
+import { clearDraft } from "@/admin/components/editor/lexical/plugins/AutoSavePlugin";
 import { useBeforeUnload } from "@/admin/components/editor/inline/hooks";
 import { IconPickerField } from "@/admin/components/icon-picker/IconPickerField";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
@@ -166,6 +169,10 @@ export function SpaceEditForm({
 }: SpaceEditFormProps) {
   const isEdit = mode === "edit";
 
+  // LocalStorage 下書き自動保存のキー（AutoSavePlugin が `lexical-draft:` prefix を付与）
+  const autoSaveKey =
+    isEdit && space ? `space-${space.id}-description` : "space-new-description";
+
   /** スペース管理ハブの `tab` と衝突しないよう `section` を使用 */
   const [activeSection, setActiveSection] = useQueryState(
     "section",
@@ -180,6 +187,20 @@ export function SpaceEditForm({
   const [descriptionJson, setDescriptionJson] = useState<string>(() =>
     getInitialDescriptionJson(space),
   );
+
+  // Lexical エディタは非制御コンポーネント（初期値のみ使用）のため、下書き復元を
+  // 画面に反映するには key 変更によるアンマウント/リマウントが必要。復元後は
+  // 説明フィールドがある「基本情報」タブへ強制切替する。
+  const [editorResetKey, setEditorResetKey] = useState(0);
+  const draftRecovery = useDraftRecovery({
+    autoSaveKey,
+    initialContentJson: getInitialDescriptionJson(space),
+    onRestore: (json) => {
+      setDescriptionJson(json);
+      setEditorResetKey((prev) => prev + 1);
+      void setActiveSection("basic");
+    },
+  });
   const [addressDetail, setAddressDetail] = useState<string>(
     space?.addressDetail ?? "",
   );
@@ -288,6 +309,15 @@ export function SpaceEditForm({
     boundAction,
     undefined,
   );
+
+  // 保存成功時は下書きを破棄する。成功時は Server Action 側の `redirect()` で
+  // 詳細ページへ遷移するため実際にはこの分岐を通らないことが多いが、
+  // 将来 redirect が外れた場合や resetForm 挙動の変化に備えて監視しておく。
+  useEffect(() => {
+    if (lastResult?.status === "success") {
+      clearDraft(autoSaveKey);
+    }
+  }, [lastResult, autoSaveKey]);
 
   const [form, fields] = useForm({
     id: isEdit ? `space-edit-${space?.id ?? ""}` : "space-create",
@@ -506,6 +536,14 @@ export function SpaceEditForm({
       />
       <input type="hidden" name={fields.ogpImageUrl.name} value={ogpImageUrl} />
 
+      {draftRecovery.isAvailable && (
+        <DraftRecoveryBanner
+          savedAt={draftRecovery.savedAt}
+          onRestore={draftRecovery.restore}
+          onDismiss={draftRecovery.dismiss}
+        />
+      )}
+
       {form.errors && form.errors.length > 0 && (
         <div
           className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
@@ -606,6 +644,7 @@ export function SpaceEditForm({
                 <Label htmlFor="space-description">説明 *</Label>
                 <div className="overflow-hidden rounded-lg border border-border">
                   <LazyLexicalEditor
+                    key={`${space?.id ?? "new"}-${editorResetKey}`}
                     contentJson={descriptionJson}
                     onChange={setDescriptionJson}
                     height="560px"
@@ -616,6 +655,7 @@ export function SpaceEditForm({
                         : undefined
                     }
                     mediaUsage="SPACE"
+                    autoSaveKey={autoSaveKey}
                   />
                 </div>
                 {fields.descriptionJson.errors && (

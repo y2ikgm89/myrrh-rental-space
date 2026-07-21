@@ -21,6 +21,7 @@ import {
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { CommentPanel } from "@/admin/components/editor/comment-panel";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import { DraftRecoveryBanner } from "@/admin/components/editor/lexical/parts/DraftRecoveryBanner";
 import {
   EditorHeader,
   InlineEditorShell,
@@ -220,8 +221,18 @@ export function PostEditor({
             extraActions={deleteDialog}
           />
         }
+        banner={
+          editor.draftRecovery.isAvailable ? (
+            <DraftRecoveryBanner
+              savedAt={editor.draftRecovery.savedAt}
+              onRestore={editor.draftRecovery.restore}
+              onDismiss={editor.draftRecovery.dismiss}
+            />
+          ) : null
+        }
       >
         <LazyLexicalEditor
+          key={`${post?.id ?? "new"}-${editor.editorResetKey}`}
           contentJson={editor.contentJson}
           onChange={editor.handleContentChange}
           disabled={editor.isPending}
@@ -230,6 +241,7 @@ export function PostEditor({
           flush
           height="100%"
           mediaUsage="POST"
+          autoSaveKey={editor.autoSaveKey}
           onMarkClick={mode === "edit" && post ? editor.selectMark : undefined}
           onAddComment={
             mode === "edit" && post ? editor.handleAddComment : undefined

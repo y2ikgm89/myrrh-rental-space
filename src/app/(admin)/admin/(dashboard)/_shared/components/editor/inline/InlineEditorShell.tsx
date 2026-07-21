@@ -29,6 +29,11 @@ type InlineEditorShellProps = {
   isDirty?: boolean;
   /** ヘッダー部分 */
   header: ReactNode;
+  /**
+   * ヘッダー直下・本文行の間に表示する任意のバナー（下書き復元バナー等）。
+   * 未指定時は何も描画しない。
+   */
+  banner?: ReactNode;
   /** メインコンテンツ（LexicalEditor等） */
   children: ReactNode;
 };
@@ -37,6 +42,7 @@ export function InlineEditorShell({
   onSave,
   isDirty = false,
   header,
+  banner,
   children,
 }: InlineEditorShellProps) {
   useFullscreenMode();
@@ -46,6 +52,7 @@ export function InlineEditorShell({
   return (
     <div className="h-dvh flex flex-col pt-14">
       {header}
+      {banner}
       <div className="flex flex-1 min-w-0 overflow-hidden">{children}</div>
     </div>
   );

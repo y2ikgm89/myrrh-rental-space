@@ -12,6 +12,7 @@ import {
 } from "@/admin/components/ui";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import { DraftRecoveryBanner } from "@/admin/components/editor/lexical/parts/DraftRecoveryBanner";
 import {
   EditorHeader,
   InlineEditorShell,
@@ -181,8 +182,18 @@ export function TermsInlineEditor({
             extraActions={deleteDialog}
           />
         }
+        banner={
+          editor.draftRecovery.isAvailable ? (
+            <DraftRecoveryBanner
+              savedAt={editor.draftRecovery.savedAt}
+              onRestore={editor.draftRecovery.restore}
+              onDismiss={editor.draftRecovery.dismiss}
+            />
+          ) : null
+        }
       >
         <LazyLexicalEditor
+          key={`${terms?.id ?? "new"}-${editor.editorResetKey}`}
           contentJson={editor.contentJson}
           onChange={editor.handleContentChange}
           disabled={editor.isPending}
@@ -191,6 +202,7 @@ export function TermsInlineEditor({
           flush
           height="100%"
           mediaUsage="GENERAL"
+          autoSaveKey={editor.autoSaveKey}
           {...(TERMS_EDITOR_CONTENT_WIDTH_PX != null && {
             contentWidth: TERMS_EDITOR_CONTENT_WIDTH_PX,
           })}
