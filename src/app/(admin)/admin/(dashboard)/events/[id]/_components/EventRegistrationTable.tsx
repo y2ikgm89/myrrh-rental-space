@@ -19,6 +19,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Checkbox,
 } from "@/admin/components/ui";
 import { RegistrationStatusBadge } from "@/admin/components/status-badges";
 import {
@@ -42,6 +43,7 @@ import type {
 import { PaymentStatus as PaymentStatusEnum } from "@/shared/lib/validations/enums/prisma-types";
 import { RefundDialog } from "../../../reservations/[id]/_components/RefundDialog";
 import { EditRegistrationDialog } from "./EditRegistrationDialog";
+import { EventRegistrationBulkActions } from "./EventRegistrationBulkActions";
 
 type Registration = {
   id: string;
@@ -66,6 +68,7 @@ type Registration = {
 };
 
 interface EventRegistrationTableProps {
+  readonly eventId: string;
   readonly registrations: Registration[];
   /** 全申込件数（全ページ合計）。ページネーション表示に使用。 */
   readonly total: number;
@@ -112,6 +115,7 @@ function isRefundable(reg: Registration): boolean {
 }
 
 export function EventRegistrationTable({
+  eventId,
   registrations,
   total,
   currentPage,
@@ -122,6 +126,28 @@ export function EventRegistrationTable({
   const [isRefundPending, startRefundTransition] = useTransition();
   const [refundTarget, setRefundTarget] = useState<Registration | null>(null);
   const [editTarget, setEditTarget] = useState<Registration | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) =>
+      prev.size === registrations.length
+        ? new Set()
+        : new Set(registrations.map((r) => r.id)),
+    );
+  }
+
   const [{ search, status }, setSearchParams] = useQueryStates(
     {
       search: parseAsQuery,
@@ -216,6 +242,16 @@ export function EventRegistrationTable({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      registrations.length > 0 &&
+                      selectedIds.size === registrations.length
+                    }
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="全選択"
+                  />
+                </TableHead>
                 <TableHead>名前</TableHead>
                 <TableHead className="hidden lg:table-cell">参加枠</TableHead>
                 <TableHead className="hidden md:table-cell">メール</TableHead>
@@ -234,6 +270,13 @@ export function EventRegistrationTable({
                 const anyPending = isCancelPending || isRefundPending;
                 return (
                   <TableRow key={reg.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(reg.id)}
+                        onCheckedChange={() => toggleSelected(reg.id)}
+                        aria-label={`${reg.name}を選択`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{reg.name}</TableCell>
                     <TableCell className="hidden lg:table-cell whitespace-nowrap">
                       {formatDateTimeShort(reg.slotStartAt)} -{" "}
@@ -329,6 +372,12 @@ export function EventRegistrationTable({
           registration={editTarget}
         />
       ) : null}
+
+      <EventRegistrationBulkActions
+        eventId={eventId}
+        selectedIds={[...selectedIds]}
+        onClear={() => setSelectedIds(new Set())}
+      />
     </div>
   );
 }

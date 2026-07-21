@@ -259,6 +259,7 @@ export default async function EventDetailPage({
           </Button>
         </div>
         <EventRegistrationTable
+          eventId={event.id}
           registrations={serializedRegistrations}
           total={registrationPage.total}
           currentPage={registrationPage.page}

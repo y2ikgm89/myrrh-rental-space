@@ -94,6 +94,19 @@ mock.module("@/admin/components/ui", () => ({
   ),
   SelectValue: () => <span />,
   Textarea: () => <textarea />,
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (value: boolean) => void;
+  }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onCheckedChange?.(e.currentTarget.checked)}
+    />
+  ),
 }));
 
 // task #9 PR#5 task B: refundEventRegistrationPayment action も event-registration
@@ -102,6 +115,14 @@ mock.module("@/admin/actions/event-registration", () => ({
   adminCancelRegistration: (...args: Parameters<typeof cancelMock>) =>
     cancelMock(...args),
   refundEventRegistrationPayment: mock(),
+  bulkCancelEventRegistrations: mock(),
+  bulkCheckInEventRegistrations: mock(),
+}));
+
+mock.module("@/admin/components/FloatingBulkActionBar", () => ({
+  FloatingBulkActionBar: ({ children }: { children?: ReactNode }) => (
+    <div data-testid="floating-bulk-action-bar">{children}</div>
+  ),
 }));
 
 const { EventRegistrationTable } =
@@ -163,6 +184,7 @@ describe("EventRegistrationTable", () => {
       if (!root) throw new Error("root missing");
       root.render(
         <EventRegistrationTable
+          eventId="cm0evt12345678901234567"
           registrations={[
             makeRegistration({
               id: "cm0reg12345678901234567",
