@@ -2,22 +2,44 @@
 #
 # Update policy:
 #   - Terraform CLI: `terraform_version` in .github/workflows/terraform.yml must match this
-#   - hashicorp/google provider: pinned to major version; minor bumps via Renovate PR
-#   - hashicorp/google-beta: required ONLY by google_cloud_run_v2_service.admin
-#     (cloud_run_admin.tf), specifically for its `iap_enabled` and
-#     `default_uri_disabled` arguments. 2026-07 audit: verified via an actual
-#     `terraform validate` run against the real pinned google provider
-#     v6.50.0 (not just reading provider source) that these two arguments are
-#     still rejected as unsupported on the standard "google" provider's
-#     google_cloud_run_v2_service schema — the resource TYPE is GA, but these
-#     two specific attributes are not (yet). The other 3 resources that
-#     previously declared `provider = google-beta` — google_cloud_run_v2_service.public
-#     (cloud_run_public.tf), google_cloud_run_v2_job.prisma_migrate
-#     (cloud_run_migrate_job.tf), and google_compute_managed_ssl_certificate.admin_cert
-#     (lb_admin.tf) — validated cleanly on the standard "google" provider and
-#     had their `provider = google-beta` line dropped. Re-check with a real
-#     `terraform validate` (not just docs/source reading) before dropping the
-#     remaining google-beta requirement in a future provider bump.
+#   - hashicorp/google: pinned to major version 7 (bumped from 6.x 2026-07 —
+#     v6 has been frozen at 6.50.0 for ~10 months with zero further releases,
+#     i.e. de facto unmaintained; v7.0.0 shipped 2025-08-26, current latest is
+#     7.40.0). Floor pinned at `~> 7.40` (NOT `~> 7.0`) specifically to
+#     exclude the v7.0.0-7.3.x range, which has a confirmed real panic bug in
+#     google_cloud_scheduler_job when http_target.headers is omitted (this
+#     repo's cloud_scheduler.tf omits it for all 19 jobs) — GitHub
+#     hashicorp/terraform-provider-google#24354, fixed in v7.4.0. `~> 7.40`
+#     mirrors this file's existing 2-component floor-pin convention (like the
+#     prior `~> 6.14`) and matches the "minor bumps via Renovate PR" policy.
+#   - Exhaustively cross-checked the official v7.0.0 upgrade guide
+#     (https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/version_7_upgrade)
+#     against every resource type actually declared in terraform/*.tf: of
+#     the ~33 breaking changes/removed-resources/removed-fields listed, NONE
+#     touch a resource type this repo uses (no AlloyDB / Bigtable / BigQuery /
+#     Cloud Functions / Compute instance templates / GKE Hub / Cloud SQL /
+#     Storage bucket / Vertex AI / etc. anywhere in this config) — so no
+#     `.tf` resource attribute needed renaming, removing, or retyping for
+#     this migration. The Terraform CLI protocol requirement (protocol 5.0)
+#     is unchanged across the v6→v7 boundary, so this does not require the
+#     separate Terraform CLI version bump tracked in a different PR.
+#   - hashicorp/google-beta: REMOVED entirely (2026-07). A prior 2026-07 audit
+#     on provider v6.50.0 found google_cloud_run_v2_service.admin's
+#     `iap_enabled` and `default_uri_disabled` were still rejected as
+#     unsupported arguments on the standard "google" provider (verified via
+#     an actual `terraform validate` run, not docs/source reading), so
+#     google-beta was kept for just that one resource while the other 3
+#     (google_cloud_run_v2_service.public, google_cloud_run_v2_job.prisma_migrate,
+#     google_compute_managed_ssl_certificate.admin_cert) had `provider =
+#     google-beta` dropped in a separate PR. Re-running that same
+#     `terraform validate` check against the newly-pinned v7.40.0 confirmed
+#     `iap_enabled`/`default_uri_disabled` have since graduated to GA — so
+#     `provider = google-beta` was dropped from the admin service too, and
+#     the google-beta requirement removed from this file entirely. If a
+#     future resource genuinely needs a beta-only field, re-add google-beta
+#     to required_providers then (and verify with a real `terraform validate`
+#     against the pinned provider version, not just reading provider docs —
+#     that step is what caught the actual GA/beta boundary both times).
 terraform {
   # PESSIMISTIC pin (`~> 1.15.0`) — allows 1.15.x patch releases, blocks any
   # 1.16+ minor bump. Bumped 2026-07 from a previous exact `= 1.10.0` pin
@@ -59,11 +81,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 6.14"
-    }
-    google-beta = {
-      source  = "hashicorp/google-beta"
-      version = "~> 6.14"
+      version = "~> 7.40"
     }
     # Cloudflare provider — Phase 8 (myrrh-jp.com zone を Terraform 化).
     #
@@ -85,11 +103,6 @@ terraform {
 }
 
 provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
-provider "google-beta" {
   project = var.project_id
   region  = var.region
 }
