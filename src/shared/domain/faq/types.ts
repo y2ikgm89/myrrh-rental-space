@@ -74,7 +74,7 @@ export type FaqItemListResult = {
 export type FaqItemQuickFilter = "all" | "recent" | "stale" | "low-rated";
 
 export type FaqItemSortBy =
-  "order" | "updatedAt" | "viewCount" | "createdAt" | "helpful";
+  "order" | "updatedAt" | "viewCount" | "createdAt" | "helpful" | "notHelpful";
 export type FaqItemSortOrder = "asc" | "desc";
 
 export type FaqItemFilters = {

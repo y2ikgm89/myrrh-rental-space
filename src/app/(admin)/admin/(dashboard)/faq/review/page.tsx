@@ -40,8 +40,8 @@ function buildSort(filter: AdminFaqReviewFilter): FaqItemSort {
       // 最も古い更新を先頭に
       return { sortBy: "updatedAt", sortOrder: "asc" };
     case "low-rated":
-      // 役立ち票が少ない（＝要改善度が高い）順
-      return { sortBy: "helpful", sortOrder: "asc" };
+      // 不評票（notHelpfulCount）が多い順 = 要改善度が高い順
+      return { sortBy: "notHelpful", sortOrder: "desc" };
     case "draft":
     default:
       return { sortBy: "updatedAt", sortOrder: "desc" };

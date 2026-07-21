@@ -82,6 +82,24 @@ describe("getFaqItems — quickFilter / sort のクエリ構築", () => {
         }),
       );
     });
+
+    test("notHelpful は notHelpfulCount を主軸に helpfulCount → updatedAt でタイブレークする", async () => {
+      await getFaqItems(
+        { categoryId: CATEGORY_ID },
+        {},
+        { sortBy: "notHelpful", sortOrder: "desc" },
+      );
+
+      expect(mockFaqItemFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [
+            { notHelpfulCount: "desc" },
+            { helpfulCount: "asc" },
+            { updatedAt: "desc" },
+          ],
+        }),
+      );
+    });
   });
 });
 
