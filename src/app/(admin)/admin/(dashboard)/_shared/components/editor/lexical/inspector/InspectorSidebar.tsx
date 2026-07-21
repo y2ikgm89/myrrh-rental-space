@@ -19,6 +19,7 @@ import {
   CalloutInspectorPanel,
   BookmarkInspectorPanel,
   InternalLinkCardInspectorPanel,
+  SpaceCardInspectorPanel,
   InlineIconInspectorPanel,
   PullQuoteInspectorPanel,
   RubyInspectorPanel,
@@ -96,6 +97,10 @@ function renderPanel(info: SelectedNodeInfo) {
           nodeKey={info.nodeKey}
           node={info.node}
         />
+      );
+    case "spaceCard":
+      return (
+        <SpaceCardInspectorPanel nodeKey={info.nodeKey} node={info.node} />
       );
     case "inlineIcon":
       return (

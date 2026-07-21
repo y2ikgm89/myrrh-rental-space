@@ -8,6 +8,7 @@ export { GroupInspectorPanel } from "./GroupInspectorPanel";
 export { CalloutInspectorPanel } from "./CalloutInspectorPanel";
 export { BookmarkInspectorPanel } from "./BookmarkInspectorPanel";
 export { InternalLinkCardInspectorPanel } from "./InternalLinkCardInspectorPanel";
+export { SpaceCardInspectorPanel } from "./SpaceCardInspectorPanel";
 export { InlineIconInspectorPanel } from "./InlineIconInspectorPanel";
 export { PullQuoteInspectorPanel } from "./PullQuoteInspectorPanel";
 export { RubyInspectorPanel } from "./RubyInspectorPanel";
