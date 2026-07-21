@@ -58,6 +58,16 @@ const mockInquiryUpdate = mock<
   }) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "inquiry-1" }));
 
+// Round-4 audit fix: updateInquiryStatus now claims via updateMany with a
+// status pre-image guard; count===0 means a concurrent admin changed the
+// row and we throw CONFLICT.
+const mockInquiryUpdateMany = mock<
+  (args: {
+    where: Record<string, unknown>;
+    data: Record<string, unknown>;
+  }) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
+
 const mockInquiryReplyCreate = mock<
   (args: { data: Record<string, unknown> }) => Promise<{ id: string }>
 >(() => Promise.resolve({ id: "reply-1" }));
@@ -89,6 +99,7 @@ const prismaInquiry = {
   findUnique: mockInquiryFindUnique,
   create: mockInquiryCreate,
   update: mockInquiryUpdate,
+  updateMany: mockInquiryUpdateMany,
 };
 const prismaInquiryReply = { create: mockInquiryReplyCreate };
 const prismaInquiryStatusHistory = { create: mockStatusHistoryCreate };
@@ -199,6 +210,7 @@ describe("inquiries/commands", () => {
     mockInquiryFindUnique.mockReset();
     mockInquiryCreate.mockReset();
     mockInquiryUpdate.mockReset();
+    mockInquiryUpdateMany.mockReset();
     mockInquiryReplyCreate.mockReset();
     mockStatusHistoryCreate.mockReset();
     mockCustomerFindUnique.mockReset();
@@ -213,6 +225,7 @@ describe("inquiries/commands", () => {
       receiptNumber: "INQ-ABCDEF12",
     });
     mockInquiryUpdate.mockResolvedValue({ id: INQUIRY_ID });
+    mockInquiryUpdateMany.mockResolvedValue({ count: 1 });
     mockInquiryReplyCreate.mockResolvedValue({ id: "reply-1" });
     mockStatusHistoryCreate.mockResolvedValue({ id: "history-1" });
     mockCustomerFindUnique.mockResolvedValue(null);
@@ -227,7 +240,7 @@ describe("inquiries/commands", () => {
 
   describe("updateInquiryStatus", () => {
     describe("正常系", () => {
-      test("NEW → IN_PROGRESS へ遷移し、Inquiry.update と InquiryStatusHistory.create が呼ばれる", async () => {
+      test("NEW → IN_PROGRESS へ遷移し、updateMany(status guard) + InquiryStatusHistory.create が呼ばれる", async () => {
         mockInquiryFindUnique.mockResolvedValueOnce({
           id: INQUIRY_ID,
           status: InquiryStatus.NEW,
@@ -238,9 +251,17 @@ describe("inquiries/commands", () => {
           updateInquiryStatus(INQUIRY_ID, InquiryStatus.IN_PROGRESS, USER_ID),
         ).resolves.toBeUndefined();
 
-        expect(mockInquiryUpdate).toHaveBeenCalledWith(
+        // Round-4 audit fix: updateMany + status pre-image guard replaces the
+        // naive update({where:{id}}) that allowed concurrent NEW→CLOSED /
+        // NEW→IN_PROGRESS commits to compose into the forbidden transition
+        // CLOSED→IN_PROGRESS.
+        expect(mockInquiryUpdateMany).toHaveBeenCalledWith(
           expect.objectContaining({
-            where: { id: INQUIRY_ID },
+            where: expect.objectContaining({
+              id: INQUIRY_ID,
+              deletedAt: null,
+              status: InquiryStatus.NEW,
+            }),
             data: { status: InquiryStatus.IN_PROGRESS },
           }),
         );
@@ -254,6 +275,20 @@ describe("inquiries/commands", () => {
             }),
           }),
         );
+      });
+
+      test("claim=0 (別 admin が status を変更済) は CONFLICT DomainError", async () => {
+        mockInquiryFindUnique.mockResolvedValueOnce({
+          id: INQUIRY_ID,
+          status: InquiryStatus.NEW,
+          deletedAt: null,
+        });
+        mockInquiryUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+        await expect(
+          updateInquiryStatus(INQUIRY_ID, InquiryStatus.IN_PROGRESS, USER_ID),
+        ).rejects.toMatchObject({ code: "CONFLICT" });
+        expect(mockStatusHistoryCreate).not.toHaveBeenCalled();
       });
 
       test("changedById に null を指定できる (システム経路)", async () => {

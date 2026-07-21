@@ -68,11 +68,25 @@ export async function updateInquiryStatus(
 
   assertInquiryStatusTransition(inquiry.status, status);
 
+  // Round-4 audit Finding #11 / high: 旧実装は tx.inquiry.update({where:{id}})
+  // で status guard を欠いており、2 admin が同時に NEW→CLOSED / NEW→IN_PROGRESS
+  // を選ぶと A が status=CLOSED を commit、B が続けて status=IN_PROGRESS を
+  // 上書き commit する結果、実際の runtime 遷移が「CLOSED→IN_PROGRESS」に
+  // なる (CLOSED からの遷移先は [] に定義され本来不可能)。updateMany の WHERE
+  // 述語に `status: inquiry.status` を含めた claim パターンで再入検知し、
+  // count === 0 は CONFLICT DomainError にする (reservation の
+  // updateReservationStatusCommand と同型)。
   await prisma.$transaction(async (tx) => {
-    await tx.inquiry.update({
-      where: { id },
+    const claim = await tx.inquiry.updateMany({
+      where: { id, deletedAt: null, status: inquiry.status },
       data: { status },
     });
+    if (claim.count === 0) {
+      throw new DomainError(
+        "別の管理者によりお問い合わせの状態が変更されました。最新の状態を確認してください。",
+        "CONFLICT",
+      );
+    }
     await tx.inquiryStatusHistory.create({
       data: {
         inquiryId: id,

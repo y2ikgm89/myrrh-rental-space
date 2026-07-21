@@ -646,17 +646,41 @@ export async function publishEventCommand(id: string) {
   });
 }
 
+/**
+ * イベントをキャンセル状態に遷移させる。
+ *
+ * Round-4 audit Finding #4 / high: 旧実装は findFirst + prisma.event.update
+ * を分離しており、2 admin が同じイベントを同時にキャンセルした際に status
+ * ガードなしで両方が update に到達 → 両方が
+ * sendEventCancelledToAllParticipants を発火し、参加者に「本イベントは
+ * キャンセルされました」メールが 2 通届き、後続の deleteGcalEvent も
+ * 2 回叩かれていた。
+ *
+ * 現在の実装は updateMany({ where: { id, deletedAt: null, status: {
+ * not: CANCELLED } }, data: ... }) の atomic claim を使い、count > 0 の
+ * 「実際に遷移した」呼出しでのみ email/GCal を発火する。CANCELLED でも
+ * NOT_FOUND を throw して呼び出し側 (executeAdminMutationResult) が
+ * MutationError にする。findFirst の select { status: true } はもう不要。
+ */
 export async function cancelEventCommand(id: string) {
-  const event = await prisma.event.findFirst({
-    where: { id, deletedAt: null },
-    select: { id: true, status: true },
-  });
-  if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
-
-  await prisma.event.update({
-    where: { id, deletedAt: null },
+  const claim = await prisma.event.updateMany({
+    where: {
+      id,
+      deletedAt: null,
+      status: { not: EventStatus.CANCELLED },
+    },
     data: { status: EventStatus.CANCELLED },
   });
+
+  if (claim.count === 0) {
+    const exists = await prisma.event.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, status: true },
+    });
+    if (!exists) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+    // 別 admin が既に CANCELLED にした → 冪等 no-op (2 通目のメール発火を防ぐ)。
+    return;
+  }
 
   fireAndForget(sendEventCancelledToAllParticipants(id), {
     operation: "sendEventCancelledToAllParticipants",
