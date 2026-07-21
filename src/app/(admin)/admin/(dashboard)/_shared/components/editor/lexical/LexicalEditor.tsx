@@ -88,6 +88,7 @@ function EditorInner({
   flush = false,
   height = "300px",
   placeholder = "ここに内容を入力...",
+  ariaLabel = "本文",
   ariaDescribedBy,
   onMarkClick,
   onAddComment,
@@ -199,6 +200,7 @@ function EditorInner({
                     <ContentEditable
                       aria-multiline
                       role="textbox"
+                      aria-label={ariaLabel}
                       aria-describedby={ariaDescribedBy}
                       aria-placeholder={placeholder}
                       placeholder={

@@ -35,7 +35,7 @@ const styles = tv({
     titleSection: "flex items-center gap-2",
     title: "text-base font-medium truncate max-w-[300px]",
     slug: "text-sm text-muted-foreground",
-    dirtyIndicator: "ml-2 text-xs text-warning",
+    dirtyIndicator: "ml-2 text-xs text-warning-strong",
   },
 })();
 
