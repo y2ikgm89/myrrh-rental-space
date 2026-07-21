@@ -90,6 +90,7 @@ export default async function EventDetailPage({
       paymentStatus: r.paymentStatus,
       paidAmount: r.paidAmount,
       stripePaymentIntentId: r.stripePaymentIntentId,
+      stripeCheckoutSessionId: r.stripeCheckoutSessionId,
       cumulativeRefunded,
       cancelledAt: r.cancelledAt?.toISOString() ?? null,
       attendedAt: r.attendedAt?.toISOString() ?? null,

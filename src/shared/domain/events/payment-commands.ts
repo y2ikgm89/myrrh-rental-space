@@ -567,6 +567,13 @@ export async function claimEventRegistrationAsPaid(
  * updateMany WHERE claim パターンで二重確定を防ぐ。stripeCheckoutSessionId が
  * 非 null（Stripe決済が進行中/完了）の登録は対象外とする — walk-in/proxy 作成時は
  * この値が null 固定のため対象は自然に限定される。
+ *
+ * claim は `claimEventRegistrationAsPaid` と同様に `status: CONFIRMED` も要求する
+ * (レビュー Important #1)。cancel 経路 (registration-cancel-core.ts) は paymentStatus
+ * を触らず status のみ CANCELLED に遷移させるため、paymentStatus だけで claim すると
+ * CANCELLED + UNPAID な登録を PAID に格上げできてしまい、かつ `isRefundable` は
+ * stripePaymentIntentId 必須のため返金導線もない「CANCELLED+PAID で戻せない」
+ * 会計不整合状態を作れてしまう。
  */
 export async function recordManualEventPaymentCommand(data: {
   registrationId: string;
@@ -589,6 +596,7 @@ export async function recordManualEventPaymentCommand(data: {
   const claimed = await prisma.eventRegistration.updateMany({
     where: {
       id: data.registrationId,
+      status: RegistrationStatus.CONFIRMED,
       paymentStatus: PaymentStatus.UNPAID,
     },
     data: {
@@ -599,7 +607,7 @@ export async function recordManualEventPaymentCommand(data: {
   });
   if (claimed.count === 0) {
     throw new DomainError(
-      "この参加登録は既に入金記録済みか、決済処理中です",
+      "この参加登録はキャンセル済み、既に入金記録済み、または決済処理中のため記録できません",
       "CONFLICT",
     );
   }

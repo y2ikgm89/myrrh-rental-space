@@ -59,6 +59,8 @@ type Registration = {
   /** Stripe 経由で受領した金額 (円)。webhook / claim 経路でセット。UNPAID なら null */
   paidAmount: number | null;
   stripePaymentIntentId: string | null;
+  /** Stripe Checkout Session ID。非 null は決済進行中/完了を意味する (手動入金記録の対象外判定に使用) */
+  stripeCheckoutSessionId: string | null;
   /** Σ既 refunds.amount (task #9 PR#5 task B、残額計算に使う) */
   cumulativeRefunded: number;
   cancelledAt: string | null;
@@ -115,11 +117,17 @@ function isRefundable(reg: Registration): boolean {
   );
 }
 
-/** 手動入金記録可能条件: UNPAID且つ Stripe 決済が進行中でない */
+/**
+ * 手動入金記録可能条件: CONFIRMED且つUNPAID且つ Stripe 決済が進行中でない。
+ * ドメイン側 `recordManualEventPaymentCommand` の claim ガード
+ * (status: CONFIRMED, paymentStatus: UNPAID, stripeCheckoutSessionId: null 相当) と
+ * 一致させる (レビュー Important #1)。
+ */
 function isManuallyPayable(reg: Registration): boolean {
   return (
+    reg.status === "CONFIRMED" &&
     reg.paymentStatus === PaymentStatusEnum.UNPAID &&
-    reg.stripePaymentIntentId === null
+    reg.stripeCheckoutSessionId === null
   );
 }
 

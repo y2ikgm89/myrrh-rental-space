@@ -146,6 +146,7 @@ function makeRegistration(overrides: Partial<Registration> = {}): Registration {
     paymentStatus: "UNPAID",
     paidAmount: null,
     stripePaymentIntentId: null,
+    stripeCheckoutSessionId: null,
     cumulativeRefunded: 0,
     cancelledAt: null,
     attendedAt: null,

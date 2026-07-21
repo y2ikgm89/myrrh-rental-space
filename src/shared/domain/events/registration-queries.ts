@@ -74,6 +74,7 @@ export async function getEventRegistrations(
         paymentStatus: true,
         paidAmount: true,
         stripePaymentIntentId: true,
+        stripeCheckoutSessionId: true,
         refunds: { select: { amount: true } },
         slot: {
           select: {
