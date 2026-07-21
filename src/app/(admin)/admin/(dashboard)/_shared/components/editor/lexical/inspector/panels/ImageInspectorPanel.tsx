@@ -205,6 +205,8 @@ export function ImageInspectorPanel({
                 className="h-8 flex-1"
                 onClick={() => handleAlignmentChange(align)}
                 title={ALIGNMENT_LABELS[align]}
+                aria-label={ALIGNMENT_LABELS[align]}
+                aria-pressed={alignment === align}
               >
                 <Icon className="h-3.5 w-3.5" />
               </Button>

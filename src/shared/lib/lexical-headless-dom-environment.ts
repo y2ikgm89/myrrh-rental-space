@@ -93,6 +93,16 @@ function createHeadlessJsdom(): JSDOM {
  * 長時間稼働する Next.js サーバープロセスに `globalThis.window` を恒久的に
  * 残さないため、テスト用の `installJSDOMForTests()`（恒久設定・restore なし）とは
  * 異なり save/restore する。
+ *
+ * `callback` は必ず同期関数であること。Node.js はシングルスレッドのため、
+ * グローバル設定→呼び出し→restore が同一 tick 内で完結する限り、同時に
+ * 実行中の他リクエストの callback がこの区間に割り込むことはない
+ * （global mutation が安全な理由）。だが `callback` が async 関数だと、
+ * 最初の `await` で一旦制御が返り、restore 済み（または他リクエストが
+ * 上書きした）グローバルの下で続きが実行されてしまう。戻り値が Promise
+ * なら即座に throw して黙って壊れることを防ぐ（callback の戻り値型が
+ * union の場合に conditional type の分配で誤検知するため、型レベルでの
+ * 禁止ではなくランタイムチェックのみで守る）。
  */
 export function withLexicalHeadlessDom<T>(callback: () => T): T {
   const globals = collectLexicalHeadlessDomGlobals(
@@ -107,7 +117,15 @@ export function withLexicalHeadlessDom<T>(callback: () => T): T {
   }
 
   try {
-    return callback();
+    const result = callback();
+    if (result instanceof Promise) {
+      throw new Error(
+        "withLexicalHeadlessDom には同期関数のみ渡せます（async callback は" +
+          " restore 後に続きが実行され、DOM グローバルが他リクエストと" +
+          "競合する可能性があるため禁止）。",
+      );
+    }
+    return result;
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       defineGlobal(globalThis, key, value);
