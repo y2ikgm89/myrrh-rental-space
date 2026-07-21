@@ -1114,6 +1114,54 @@ describe("updateAdminReservationCommand", () => {
       expect(updateCall.data).not.toHaveProperty("guestLastName");
       expect(updateCall.data).not.toHaveProperty("guestCustomerType");
     });
+
+    test("Phase 4: 同一顧客のまま totalPrice のみ変更した場合も recompute が発火する", async () => {
+      // totalPrice を 1000 → 6000 に変更（同一顧客 cust-1）
+      await updateAdminReservationCommand("res-1", {
+        ...validInput,
+        totalPrice: 6000,
+      });
+
+      // recomputeCustomerReservationStats は tx.$queryRaw を呼ぶため、
+      // mockQueryRaw が呼ばれていることで確認する
+      expect(mockQueryRaw).toHaveBeenCalled();
+    });
+
+    test("Phase 4: totalPrice・customerId とも変更が無ければ recompute は発火しない", async () => {
+      // 既存予約と全く同じ input を渡す（何も変わらない）
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          spaceId: "space-1",
+          startTime: new Date("2024-06-15T10:00:00+09:00"),
+          endTime: new Date("2024-06-15T12:00:00+09:00"),
+          totalPrice: 2000,
+          couponId: null,
+          customerId: "cust-1",
+          googleCalendarEventId: null,
+          taxRate: 10,
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      mockQueryRaw.mockClear();
+
+      // totalPrice を明示指定しない場合、計算値 (2000) を使う。既存と同じ。
+      // customerId も既存と同じ。
+      await updateAdminReservationCommand("res-1", {
+        ...validInput,
+        // totalPrice は指定しない
+      });
+
+      // mockQueryRaw (recompute) は呼ばれないはず
+      expect(mockQueryRaw).not.toHaveBeenCalled();
+    });
   });
 });
 

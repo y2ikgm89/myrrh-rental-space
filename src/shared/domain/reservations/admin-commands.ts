@@ -542,14 +542,22 @@ export async function updateAdminReservationCommand(
     // 他消費面は cached stat を参照する) に stale 値が silently 伝播していた。
     // Codex #3564883654 / #3564905126 の data-retention レビュー中に副次発覚。
     //
-    // totalPrice のみ変更 (同一 customer) のケースは既存パターンに合わせて
-    // recompute しない — increment path 側でも totalSpent は維持していない
-    // 既知の pre-existing hole であり、本 PR のスコープ外。
+    // Phase 4: 同一 customer のまま totalPrice のみ変更するケースも
+    // totalSpent を再計算対象に。既知の穴を修正 (Task 6)。
     if (currentReservation.customerId !== input.customerId) {
       await recomputeCustomerReservationStats(
         tx,
         currentReservation.customerId,
       );
+      await recomputeCustomerReservationStats(tx, input.customerId);
+    } else if (
+      input.totalPrice !== undefined &&
+      currentReservation.totalPrice !== finalTotalPrice
+    ) {
+      // 顧客が変わった場合ではなく、同一顧客のまま金額のみ変更した場合。
+      // 旧 totalPrice → 新 finalTotalPrice への変更により Customer.totalSpent が
+      // stale のままになるため、再計算が必要。customerId は変わらないので
+      // recompute は 1 回のみ。
       await recomputeCustomerReservationStats(tx, input.customerId);
     }
   });
