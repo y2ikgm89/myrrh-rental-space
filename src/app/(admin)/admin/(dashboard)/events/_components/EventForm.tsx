@@ -45,6 +45,7 @@ import { EventPublishFields } from "./EventPublishFields";
 import { EventSeoFields } from "./EventSeoFields";
 import { eventFormSchema } from "./event-form-schema";
 import { TicketsField } from "./TicketsField";
+import { countTicketFieldErrorGroups } from "./ticket-errors";
 import {
   createDefaultTicket,
   type EventTicketInput,
@@ -250,7 +251,7 @@ export function EventForm({
       fields.status,
       fields.registrationOpen,
     ].filter((f) => fieldHasErrors(f.errors)).length,
-    tickets: [fields.tickets].filter((f) => fieldHasErrors(f.errors)).length,
+    tickets: countTicketFieldErrorGroups(fields.tickets.allErrors),
     location: [
       fields.locationId,
       fields.spaceId,
@@ -418,7 +419,7 @@ export function EventForm({
           <TicketsField
             tickets={tickets}
             onChange={setTickets}
-            errors={fields.tickets.errors ?? undefined}
+            fieldErrors={fields.tickets.allErrors ?? undefined}
             isPending={isPending}
           />
         </TabsContent>
