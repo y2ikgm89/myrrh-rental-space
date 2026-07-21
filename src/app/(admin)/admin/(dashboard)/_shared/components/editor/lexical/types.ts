@@ -43,10 +43,24 @@ export type LexicalEditorProps = {
   height?: string | undefined;
   /** プレースホルダーテキスト */
   placeholder?: string | undefined;
-  /** エディタ本体（ContentEditable、role="textbox"）のアクセシブルネーム。未指定時は「本文」 */
+  /**
+   * エディタ本体（ContentEditable、role="textbox"）のアクセシブルネーム。
+   * `contentEditableId` 未指定時は既定で「本文」。`contentEditableId` 指定時は
+   * こちらを省略すると `aria-label` を出力せず、視認ラベルの `htmlFor`
+   * とのネイティブ関連付け（label-for）にアクセシブルネーム解決を委ねる。
+   */
   ariaLabel?: string | undefined;
   /** エディタ本体（ContentEditable）に紐づけるエラーメッセージ等の要素ID（aria-describedby） */
   ariaDescribedBy?: string | undefined;
+  /**
+   * ContentEditable の実 DOM 要素に付与する `id`。呼び出し元に視認可能な
+   * `<Label htmlFor="...">` が隣接して存在する場合、その `htmlFor` と同じ値を
+   * 渡すことで、ラベルのテキストがそのままエディタのアクセシブルネームになる
+   * （ネイティブ label-for 関連付け）。指定時は `ariaLabel` を渡さないこと
+   * （`aria-label` は label-for 関連付けより優先されるため、視認ラベルと
+   * アクセシブルネームが乖離する）。
+   */
+  contentEditableId?: string | undefined;
   /** マークノードクリック時のコールバック */
   onMarkClick?: ((markId: string | null) => void) | undefined;
   /** コメント追加時のコールバック（FloatingToolbarからのコメントボタンクリック） */

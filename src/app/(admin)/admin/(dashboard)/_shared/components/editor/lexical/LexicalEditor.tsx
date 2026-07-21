@@ -90,8 +90,9 @@ function EditorInner({
   flush = false,
   height = "300px",
   placeholder = "ここに内容を入力...",
-  ariaLabel = "本文",
+  ariaLabel,
   ariaDescribedBy,
+  contentEditableId,
   onMarkClick,
   onAddComment,
   contentWidth,
@@ -149,6 +150,14 @@ function EditorInner({
 
   const inspectorEnabled = showInspector !== false;
 
+  // contentEditableId 指定時（＝呼び出し元に視認可能な <Label htmlFor> がある）は
+  // ariaLabel が明示されない限り aria-label を出力しない。aria-label は
+  // ネイティブ label-for 関連付けより優先されるため、両方付けると視認ラベルの
+  // テキストとアクセシブルネームが乖離する（PR#1340 レビュー指摘）。
+  // contentEditableId 未指定時は従来通り既定で「本文」。
+  const resolvedAriaLabel =
+    ariaLabel ?? (contentEditableId ? undefined : "本文");
+
   return (
     <InspectorSidebarProvider enabled={inspectorEnabled}>
       <div
@@ -200,9 +209,10 @@ function EditorInner({
                 <RichTextPlugin
                   contentEditable={
                     <ContentEditable
+                      id={contentEditableId}
                       aria-multiline
                       role="textbox"
-                      aria-label={ariaLabel}
+                      aria-label={resolvedAriaLabel}
                       aria-describedby={ariaDescribedBy}
                       aria-placeholder={placeholder}
                       placeholder={
