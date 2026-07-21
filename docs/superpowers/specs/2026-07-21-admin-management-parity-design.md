@@ -44,26 +44,20 @@ CLAUDE.md 自動完遂ポリシー準拠）。PR分割案は各フェーズ末�
 
 ## Phase 1: 監査ログ規約統一（基盤）
 
-### アーキテクチャ
+### アーキテクチャ（Plan作成時に訂正）
 
-`src/app/(admin)/admin/(dashboard)/_shared/lib/admin-action.ts` の `executeAdminMutationResult`
-（実行順序: checkAdminAuth → resolveResourceId → hasPermission → userHasResourceAccess → execute →
-afterSuccess → logAction は不変契約、変更しない）に、任意の `auditDiff` パラメータを追加する:
-
-```ts
-executeAdminMutationResult({
-  resource, action, resourceId,
-  execute,
-  afterSuccess,
-  auditDiff?: (result) => { oldValue?: unknown; newValue?: unknown },
-})
-```
-
-`auditDiff` が指定された場合、内部の `fireAndForget(logAction(user.id, action, resource, resourceId))`
-（`_shared/lib/action-auth.ts:140-163`、oldValue/newValue非対応）を
-`fireAndForget(createAuditLogRecord({ userId, action: actionToAuditAction(action), resource, resourceId, ...auditDiff(result) }))`
-（`src/shared/domain/audit-log/commands.ts:132-226`、hash chain + P2034 retry込み）に切り替える。
-`auditDiff` 未指定の既存呼び出し元は無変更で動作する非破壊的追加。
+`executeAdminMutationResult`（`_shared/lib/admin-action.ts`、実行順序不変契約）に新しい
+`auditDiff` パラメータを追加する案を当初検討したが、Plan作成時の実装調査で
+**既に確立されたパターンが存在する**ことが判明したため、それを横展開する方針に訂正する:
+`updateCustomer` / `updateCustomerStatus` は既に `afterSuccess` 内で直接
+`createAuditLogRecord`（`shared/domain/audit-log/commands.ts:132-226`）を呼び、
+`resource: "customer.profile"` / `"customer.status"` として oldValue/newValue を記録している
+（専用テスト `__tests__/unit/actions/customer-audit-diff.test.ts` で検証済み。`anonymizeCustomer`
+も同様に `resource: "customer.anonymization"` で実装済み）。監査で「基本ログのみ」と指摘された
+5関数のうち `updateCustomer` は実際には対象外で、真に対応が必要なのは
+`createCustomer` / `updateCustomerNotes` / `toggleCustomerActive` / `clearCustomerRiskFlag` の
+4関数のみ。`executeAdminMutationResult` 自体への変更は不要（基盤ファイルを触らない分、
+リスクも小さい）。
 
 ### コンポーネント / データフロー
 
@@ -72,39 +66,49 @@ executeAdminMutationResult({
    5action は全て `resource: "event"` で権限チェックしており、これは正しく統一済み）。
    (b) ペイメント側の副作用コマンドが `executeAdminMutationResult` を経由せず **直接**
    `createAuditLogRecord` を呼ぶ、より詳細な監査ログ用の自由文字列（`"eventRegistration"` /
-   `"event-registration"` の表記ゆれが実在）。今回統一するのは (b) のみで、
-   `"event-registration"`（kebab-case）を共有定数として導入し、camelCase で孤立している2箇所
-   （`src/app/(public)/claim/event-registration/_actions/claim.ts:90`、
-   `src/shared/domain/events/payment-commands.ts:870`）を修正する。(a) の `resource: "event"` は
-   変更しない。AuditLog.resource は enum ではなく String 列のため、DB migration は不要
-   （既存行の過去データはそのまま、将来行から統一）。
+   `"event-registration"` の表記ゆれが実在）。今回統一するのは (b) のみで、孤立している
+   camelCase 表記2箇所（`src/app/(public)/claim/event-registration/_actions/claim.ts:90`、
+   `src/shared/domain/events/payment-commands.ts:870`）を、他の全箇所で使われている
+   `"event-registration"`（kebab-case）に直接書き換える（既存コードに新しい共有定数は
+   使われていないため、convention に合わせ raw string literal のまま統一する）。(a) の
+   `resource: "event"` は変更しない。AuditLog.resource は enum ではなく String 列のため、
+   DB migration は不要（既存行の過去データはそのまま、将来行から統一）。
 2. **PII検索の監査ログ新設**: `searchCustomersAction`（`_shared/actions/customer.ts:510-518`）に
    `createAuditLogRecord({ action: AuditAction.READ, resource: "customer", metadata: { query, resultCount } })`
    を追加。現状ゼロだった証跡を新設する。
-3. **既存5関数への `auditDiff` 適用**: `createCustomer` / `updateCustomer` / `updateCustomerNotes` /
-   `toggleCustomerActive` / `clearCustomerRiskFlag`（すべて `_shared/actions/customer.ts`）に
-   `auditDiff` を追加し、基本ログのみから oldValue/newValue 付き詳細ログに切り替える。
+3. **4関数への詳細監査ログ追加**（`customer.profile`/`customer.status`/`customer.anonymization`と
+   同じ dot-notation 命名規則に揃える）:
+   - `createCustomer` → `resource: "customer.profile"`（`action: CREATE`、oldValue無し、
+     newValue=送信されたフォームデータ）
+   - `updateCustomerNotes` → `resource: "customer.notes"`（ドメインコマンドを
+     `Promise<void>` から `Promise<{ previousNotes: string | null }>` に変更し前値を返す）
+   - `toggleCustomerActive` → `resource: "customer.active"`（ドメインコマンドは既に
+     `customer.isActive` を fetch 済みのため `Promise<{ previousActive: boolean }>` を
+     返すよう変更するのみ）
+   - `clearCustomerRiskFlag` → `resource: "customer.riskFlag"`（`clearRiskFlagCommand` を
+     `Promise<{ previousFlaggedForReviewAt: Date | null; previousFlagReasons: string[] }>`
+     を返すよう変更）
 
 ### エラー処理
 
 `createAuditLogRecord` 側の hash chain retry（P2034 serialization conflict、最大3回、既存実装）を
-そのまま利用。`auditDiff` コールバック自体は同期・例外を投げない前提（`fireAndForget` でラップ済みのため
-失敗しても mutation 本体はロールバックしない設計を維持）。
+そのまま利用。監査ログ書込は既存パターンと同様 `fireAndForget` でラップし、失敗しても
+mutation 本体はロールバックしない。
 
 ### テスト
 
-- `admin-action.ts` 単体テスト: `auditDiff` 有無それぞれの分岐で `logAction` / `createAuditLogRecord` の
-  呼び分けを検証。
-- 5関数それぞれで oldValue/newValue が正しい前後値を含むことを検証。
+- 4関数それぞれで oldValue/newValue が正しい前後値を含むことを、既存の
+  `customer-audit-diff.test.ts` と同じ mock パターンで検証（同ファイルに describe ブロックを追加）。
 - `searchCustomersAction` の READ 監査ログ記録テスト。
-- resource文字列統一後、既存の "eventRegistration" 表記への依存がないことを grep gate または
-  architecture-boundaries テストで固定（再発防止）。
+- resource文字列統一後、既存の "eventRegistration" (camelCase) 表記への依存がないことを
+  architecture-boundaries テストの grep gate で固定（再発防止）。
 
 ### PR分割案
 
-1. `executeAdminMutationResult` への `auditDiff` 追加 + 単体テスト（基盤、他フェーズの前提）
-2. resource文字列統一 + searchCustomersAction 監査ログ追加
-3. 既存5関数への `auditDiff` 適用
+1. resource文字列統一（2箇所の camelCase → kebab-case）
+2. searchCustomersAction への PII 監査ログ追加
+3. `createCustomer` / `updateCustomerNotes` / `toggleCustomerActive` / `clearCustomerRiskFlag`
+   への詳細監査ログ追加（ドメインコマンドの戻り値変更含む）
 
 ---
 
@@ -148,7 +152,8 @@ TOCTOU防止パターン（`setEventRegistrationCheckInCommand` L379-385 と同�
   金額・方法（`CASH` / `BANK_TRANSFER` / `OTHER` の固定選択、集計・分析のため自由記述にはしない）・
   任意メモを必須入力とする。対象は
   `stripeCheckoutSessionId: null` の登録のみ（walk-in/proxy作成時は null 固定のため対象は自然に限定される。
-  Stripe checkout 進行中の登録には使えないようガードする）。Phase 1 の `auditDiff` 機構で
+  Stripe checkout 進行中の登録には使えないようガードする）。Phase 1 で確認した既存パターン
+  （`afterSuccess` 内で直接 `createAuditLogRecord` を呼ぶ）を踏襲し、
   oldValue（UNPAID）/newValue（PAID + 記録内容）を監査ログに残す。
 
 ### データフロー
@@ -156,10 +161,9 @@ TOCTOU防止パターン（`setEventRegistrationCheckInCommand` L379-385 と同�
 編集・一括操作・手動入金いずれも `executeAdminMutationResult` 経由で `resource: "event"` を使用し
 （既存の5兄弟action = adminCancelRegistration/refundEventRegistrationPayment/
 toggleEventRegistrationCheckIn/createWalkInRegistration/createAdminProxyRegistration と同じ
-Resource型に揃える）、Phase 1 で追加した `auditDiff` を渡して oldValue/newValue を記録する。
-これは `executeAdminMutationResult` の権限チェック用 `resource` をそのまま `createAuditLogRecord` に
-転送する設計であり、Phase 1 で統一した `"event-registration"` 文字列（ペイメント側副作用コマンドが
-直接 `createAuditLogRecord` を呼ぶ別経路専用）とは別レイヤーのため混同しない。
+Resource型に揃える）権限チェックを行う。詳細監査（oldValue/newValue）は Phase 1 で確立した
+`afterSuccess` 内で直接 `createAuditLogRecord` を呼ぶパターンに従い、resource文字列は
+`"event-registration"`（Phase 1 で統一済み、kebab-case）を使う。
 
 ### エラー処理
 
