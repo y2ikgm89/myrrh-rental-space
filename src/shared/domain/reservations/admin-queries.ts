@@ -349,6 +349,15 @@ export async function getReservationByIdQuery(id: string) {
           issuedAt: true,
         },
       },
+      // Round-5 audit Finding #21: RefundDialog の cumulativeRefunded (部分返金
+      // 済み累積額) を計算するために必要。events 側の getEventRegistrations
+      // (registration-queries.ts) と同型の select。amount 合計は呼び出し側
+      // (ReservationDetail.tsx) で reduce する。
+      refunds: {
+        select: {
+          amount: true,
+        },
+      },
     },
   });
 

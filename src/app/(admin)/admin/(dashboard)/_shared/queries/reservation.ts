@@ -80,6 +80,12 @@ export type ReservationWithRelations = {
     reissuedFromId: string | null;
     issuedAt: string;
   } | null;
+  /**
+   * Round-5 audit Finding #21: RefundDialog の cumulativeRefunded 計算に使う。
+   * receipt と同じ理由で detail query のみ select する optional field
+   * (undefined = list query、array = detail query)。
+   */
+  refunds?: { amount: number }[];
 };
 
 export type GetReservationsResult = {

@@ -575,7 +575,18 @@ export function ReservationDetail({
       <RefundDialog
         open={refundDialogOpen}
         onOpenChange={setRefundDialogOpen}
-        totalPriceWithTax={Number(reservation.totalPriceWithTax ?? 0)}
+        // Round-5 audit Finding #20: サーバー側の権威ある返金上限
+        // (refundReservationPaymentCommand) は Stripe への実 charge 額である
+        // 税抜 totalPrice を基準にしている。税込 totalPriceWithTax を渡すと
+        // クライアント側の「残額」表示・validation がサーバーの実際の上限より
+        // 大きくなり、サーバー側で reject される金額をクライアントが通してしまう。
+        refundableTotal={Number(reservation.totalPrice ?? 0)}
+        // Round-5 audit Finding #21: 部分返金済み累積額。未配線だと常に 0 扱いに
+        // なり、既に一部返金済みの予約でも「残額 = 合計全額」と誤表示していた。
+        cumulativeRefunded={(reservation.refunds ?? []).reduce(
+          (sum, r) => sum + r.amount,
+          0,
+        )}
         onConfirm={handleRefund}
         isPending={isPaymentPending}
       />

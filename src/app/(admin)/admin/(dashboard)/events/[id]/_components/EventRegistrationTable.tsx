@@ -245,7 +245,7 @@ export function EventRegistrationTable({
           onOpenChange={(open) => {
             if (!open) setRefundTarget(null);
           }}
-          totalPriceWithTax={refundTarget.paidAmount ?? 0}
+          refundableTotal={refundTarget.paidAmount ?? 0}
           cumulativeRefunded={refundTarget.cumulativeRefunded}
           onConfirm={handleRefund}
           isPending={isRefundPending}
