@@ -69,11 +69,53 @@ export async function createCustomer(
     const result = await executeAdminMutationResult({
       resource: "customer",
       action: "create",
-      execute: async () => createCustomerCommand(data),
-      afterSuccess: () => {
-        updateTag(CACHE_TAGS.CUSTOMERS);
+      execute: async (user) => {
+        const created = await createCustomerCommand(data);
+        const { ip, userAgent } = await buildAuditRequestContext();
+        return { created, actorUserId: user.id, ip, userAgent };
       },
-      resolveAuditResourceId: (data) => data.id,
+      afterSuccess: (outcome) => {
+        updateTag(CACHE_TAGS.CUSTOMERS);
+
+        fireAndForget(
+          createAuditLogRecord({
+            userId: outcome.actorUserId,
+            action: AuditAction.CREATE,
+            resource: "customer.profile",
+            resourceId: outcome.created.id,
+            newValue: {
+              lastName: data.lastName,
+              firstName: data.firstName,
+              lastNameKana: data.lastNameKana || null,
+              firstNameKana: data.firstNameKana || null,
+              companyName: data.companyName || null,
+              customerType: data.customerType,
+              email: data.email,
+              phoneNumber: data.phoneNumber || null,
+              postalCode: data.postalCode || null,
+              prefecture: data.prefecture || null,
+              city: data.city || null,
+              streetAddress: data.streetAddress || null,
+              building: data.building || null,
+              notes: data.notes || null,
+              marketingOptIn: data.marketingOptIn,
+              phoneContactOptIn: data.phoneContactOptIn,
+            },
+            metadata: {
+              ...(outcome.ip !== null && { ip: outcome.ip }),
+              ...(outcome.userAgent !== null && {
+                userAgent: outcome.userAgent,
+              }),
+            },
+          }),
+          {
+            operation: "auditLogCreateCustomerProfile",
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+          },
+        );
+      },
+      resolveAuditResourceId: (outcome) => outcome.created.id,
     });
     if (isMutationError(result)) {
       return { ok: false, error: result.error };

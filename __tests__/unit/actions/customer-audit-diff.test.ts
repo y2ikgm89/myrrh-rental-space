@@ -97,6 +97,10 @@ const mockAnonymizeCustomerCommand = mock<
   }),
 );
 
+const mockCreateCustomerCommand = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "x" }),
+);
+
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerStatus: (
     ...args: Parameters<typeof mockUpdateCustomerStatusCommand>
@@ -106,7 +110,8 @@ mock.module("@/shared/domain/customers/commands", () => ({
   anonymizeCustomerCommand: (
     ...args: Parameters<typeof mockAnonymizeCustomerCommand>
   ) => mockAnonymizeCustomerCommand(...args),
-  createCustomer: mock(() => Promise.resolve({ id: "x" })),
+  createCustomer: (...args: Parameters<typeof mockCreateCustomerCommand>) =>
+    mockCreateCustomerCommand(...args),
   updateCustomerNotes: mock(() => Promise.resolve(undefined)),
   toggleCustomerActive: mock(() => Promise.resolve(undefined)),
   mergeCustomerCommand: mock(() =>
@@ -315,5 +320,36 @@ describe("searchCustomersAction の PII 検索監査ログ (READ)", () => {
     expect(call["action"]).toBe(AuditAction.READ);
     expect(call["resource"]).toBe("customer");
     expect(call["metadata"]).toEqual({ query: "田中", resultCount: 0 });
+  });
+});
+
+describe("createCustomer の AuditLog 記録 (customer.profile)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockCreateCustomerCommand.mockReset();
+    mockCreateCustomerCommand.mockResolvedValue({ id: CUSTOMER_UUID });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("新規作成した顧客のプロフィールを newValue に記録する (oldValueは無し)", async () => {
+    await createCustomer(undefined, new FormData());
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.profile");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["action"]).toBe(AuditAction.CREATE);
+    expect(call["oldValue"]).toBeUndefined();
+    expect(call["newValue"]).toEqual(
+      expect.objectContaining({
+        lastName: "田中",
+        firstName: "太郎",
+        email: "tanaka@example.com",
+      }),
+    );
   });
 });
