@@ -50,6 +50,7 @@ import { useQueryStates } from "nuqs";
 import {
   adminFaqCategoryDetailSearchParamsParsers,
   type AdminFaqItemSortBy,
+  type SortOrder,
 } from "@/shared/lib/nuqs";
 import type { FaqItemWithCategory } from "@/shared/domain/faq/types";
 import { FaqItemActionCell } from "./FaqItemActionCell";
@@ -61,6 +62,7 @@ type FaqCategoryItemsTableProps = {
   readonly items: readonly FaqItemWithCategory[];
   readonly allCategories: readonly { id: string; name: string }[];
   readonly currentSortBy: AdminFaqItemSortBy;
+  readonly currentSortOrder: SortOrder;
   readonly reorderEnabled: boolean;
   readonly startIndex: number;
   readonly onEditItem: (item: FaqItemWithCategory) => void;
@@ -188,6 +190,7 @@ export function FaqCategoryItemsTable({
   items: initialItems,
   allCategories,
   currentSortBy,
+  currentSortOrder,
   reorderEnabled,
   startIndex,
   onEditItem,
@@ -329,6 +332,9 @@ export function FaqCategoryItemsTable({
                                 ? "mixed"
                                 : "false"
                           }
+                          ref={(el) => {
+                            if (el) el.indeterminate = someSelected;
+                          }}
                           onCheckedChange={toggleAll}
                           aria-label="すべて選択"
                         />
@@ -337,7 +343,7 @@ export function FaqCategoryItemsTable({
                       <SortableColumnHeader
                         column="viewCount"
                         currentSortBy={currentSortBy}
-                        currentSortOrder="desc"
+                        currentSortOrder={currentSortOrder}
                         onSort={handleSort}
                         className="hidden text-right lg:table-cell"
                       >
@@ -346,7 +352,7 @@ export function FaqCategoryItemsTable({
                       <SortableColumnHeader
                         column="helpful"
                         currentSortBy={currentSortBy}
-                        currentSortOrder="desc"
+                        currentSortOrder={currentSortOrder}
                         onSort={handleSort}
                         className="hidden text-right lg:table-cell"
                       >
@@ -355,7 +361,7 @@ export function FaqCategoryItemsTable({
                       <SortableColumnHeader
                         column="updatedAt"
                         currentSortBy={currentSortBy}
-                        currentSortOrder="desc"
+                        currentSortOrder={currentSortOrder}
                         onSort={handleSort}
                         className="hidden lg:table-cell"
                       >

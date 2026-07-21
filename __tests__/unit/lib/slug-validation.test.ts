@@ -75,6 +75,14 @@ describe("isReservedPath", () => {
       expect(isReservedPath("privacy")).toBe(true);
     });
 
+    test('"login" は予約済みパス（静的公開ルート）', () => {
+      expect(isReservedPath("login")).toBe(true);
+    });
+
+    test('"mypage" は予約済みパス（静的公開ルート）', () => {
+      expect(isReservedPath("mypage")).toBe(true);
+    });
+
     test('"blog" は予約済みパス（ブログ一覧ルート）', () => {
       expect(isReservedPath("blog")).toBe(true);
     });
@@ -99,6 +107,14 @@ describe("isReservedPath", () => {
       expect(isReservedPath("preview")).toBe(true);
     });
 
+    test('"claim" は予約済みパス（ルートプレフィックス）', () => {
+      expect(isReservedPath("claim")).toBe(true);
+    });
+
+    test('"receipts" は予約済みパス（ルートプレフィックス）', () => {
+      expect(isReservedPath("receipts")).toBe(true);
+    });
+
     test('"sitemap.xml" は予約済みパス', () => {
       expect(isReservedPath("sitemap.xml")).toBe(true);
     });
@@ -109,6 +125,30 @@ describe("isReservedPath", () => {
 
     test('"favicon.ico" は予約済みパス', () => {
       expect(isReservedPath("favicon.ico")).toBe(true);
+    });
+
+    test('"feed.xml" は予約済みパス', () => {
+      expect(isReservedPath("feed.xml")).toBe(true);
+    });
+
+    test('"llms.txt" は予約済みパス', () => {
+      expect(isReservedPath("llms.txt")).toBe(true);
+    });
+
+    test('"manifest.webmanifest" は予約済みパス', () => {
+      expect(isReservedPath("manifest.webmanifest")).toBe(true);
+    });
+
+    test('"icon" は予約済みパス（動的アイコン生成ルート）', () => {
+      expect(isReservedPath("icon")).toBe(true);
+    });
+
+    test('"icon-192" は予約済みパス（動的アイコン生成ルート）', () => {
+      expect(isReservedPath("icon-192")).toBe(true);
+    });
+
+    test('"icon-512" は予約済みパス（動的アイコン生成ルート）', () => {
+      expect(isReservedPath("icon-512")).toBe(true);
     });
   });
 

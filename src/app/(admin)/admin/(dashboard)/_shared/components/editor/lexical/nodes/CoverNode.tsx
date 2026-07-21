@@ -20,7 +20,7 @@ import {
   createState,
   ElementNode,
 } from "lexical";
-import { createEnumGuard, parseString } from "../config/type-guards";
+import { createEnumGuard } from "../config/type-guards";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
 
 // =============================================================================
@@ -68,11 +68,30 @@ export function isCoverOverlayOpacity(v: unknown): v is CoverOverlayOpacity {
 }
 
 // =============================================================================
+// URL サニタイズ
+// =============================================================================
+
+// `background-image: url(...)` は sanitize-html の allowedSchemes（href/src 用）の
+// 対象外（CSS 値はスキームチェックされない）。CustomTableCellNode の
+// backgroundColor 等と異なり `url()` 内は任意スキームを受け付ける CSS 文法のため、
+// `javascript:` のようなスキームが exportDOM の `style.backgroundImage = url(...)`
+// を経由してそのまま最終 HTML に残ってしまう（実測で確認済み）。
+// 現行ブラウザは image 取得コンテキストで javascript: を実行しないが、本リポジトリの
+// 既存方針（LinkNode 由来 href は javascript: を一律排除）に揃え、http(s) と
+// サイト相対パスのみを許可する allowlist で防御する。
+const SAFE_BACKGROUND_IMAGE_URL_PATTERN = /^(https?:\/\/|\/)/i;
+
+function parseBackgroundImageUrl(v: unknown): string {
+  if (typeof v !== "string" || v === "") return "";
+  return SAFE_BACKGROUND_IMAGE_URL_PATTERN.test(v) ? v : "";
+}
+
+// =============================================================================
 // State
 // =============================================================================
 
 export const backgroundImageUrlState = createState("backgroundImageUrl", {
-  parse: parseString,
+  parse: parseBackgroundImageUrl,
 });
 
 export const overlayColorState = createState("overlayColor", {
@@ -108,9 +127,10 @@ function $convertCoverElement(
   element: HTMLElement,
 ): null | DOMConversionOutput {
   const bgStyle = element.style.backgroundImage;
-  const backgroundImageUrl = bgStyle
+  const rawBackgroundImageUrl = bgStyle
     ? bgStyle.replace(/^url\(['"]?/, "").replace(/['"]?\)$/, "")
     : "";
+  const backgroundImageUrl = parseBackgroundImageUrl(rawBackgroundImageUrl);
 
   const overlayColorAttr = element.getAttribute("data-color") ?? "default";
   const overlayColor: AccentColor =

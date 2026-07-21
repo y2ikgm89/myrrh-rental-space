@@ -14,6 +14,7 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 
@@ -31,6 +32,7 @@ export default async function SpacesPage({
 }: SpacesPageProps): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("spaces");
+  await requireSystemPagePublished("spaces");
   const sections = await getPageSectionsWithFallback("spaces");
 
   return (

@@ -12,6 +12,7 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { requireSystemPagePublished } from "@/shared/lib/pages/require-published";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -21,6 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FaqPage(): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("faq");
+  await requireSystemPagePublished("faq");
 
   const sections = await getPageSectionsWithFallback("faq");
 

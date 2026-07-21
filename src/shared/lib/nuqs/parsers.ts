@@ -80,12 +80,38 @@ export const parseAsBoolean = createParser<boolean>({
 // NOTE: 公開スペース検索の SSoT は `src/app/(public)/_shared/lib/search-params.ts`
 //       の `spaceSearchParamsParsers`。ここに重複定義は置かない。
 
-const adminEventRegistrationsSearchParamsCache = createSearchParamsCache({
+export const registrationStatusFilterValues = [
+  "CONFIRMED",
+  "CANCELLED",
+  "WAITLISTED",
+  "WAITLISTED_OFFERED",
+  "EXPIRED",
+] as const;
+export type RegistrationStatusFilter =
+  (typeof registrationStatusFilterValues)[number];
+const registrationStatusFilterSet = new Set<string>(
+  registrationStatusFilterValues,
+);
+export function isRegistrationStatusFilter(
+  value: string,
+): value is RegistrationStatusFilter {
+  return registrationStatusFilterSet.has(value);
+}
+
+const adminEventRegistrationsSearchParamsParsers = {
+  search: parseAsQuery,
+  // .withDefault なし: 既存の一覧は全ステータス表示が前提のため、フィルタ未指定
+  // = null を「where に status 条件を追加しない」の意味で使う（Step 7 で undefined 変換）。
+  status: parseAsStringLiteral(registrationStatusFilterValues),
   page: parseAsPage,
   perPage: parseAsInteger.withDefault(20),
-});
+};
 
-/** イベント詳細の参加者一覧ページネーションパラメータローダー */
+const adminEventRegistrationsSearchParamsCache = createSearchParamsCache(
+  adminEventRegistrationsSearchParamsParsers,
+);
+
+/** イベント詳細の参加者一覧パラメータローダー（検索・ステータス・ページネーション） */
 export async function loadAdminEventRegistrationsSearchParams(
   searchParams: Promise<SearchParams>,
 ) {

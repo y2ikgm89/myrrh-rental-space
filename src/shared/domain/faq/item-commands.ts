@@ -46,12 +46,23 @@ async function ensureFaqItemExists(
 export async function createFaqItem(
   input: FaqItemCommandInput,
 ): Promise<CreateFaqItemResult> {
-  await ensureFaqCategoryExists(input.categoryId);
-
   const item = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(
       buildOrderScopeLockSql(`faq_items:${input.categoryId}`),
     );
+
+    // deleteFaqCategory と同じ `faq_items:${categoryId}` lock を共有しているため、
+    // lock 取得後にここで再確認することで、カテゴリ削除とのレースを防ぐ
+    // （lock 取得前の事前チェックだと、チェック後・lock 取得前にカテゴリが
+    // 削除される check-then-act の窓が残る）。
+    const category = await tx.faqCategory.findFirst({
+      where: { id: input.categoryId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!category) {
+      throw new DomainError("カテゴリが見つかりません", "NOT_FOUND");
+    }
 
     const maxOrder = await tx.faqItem.aggregate({
       where: { categoryId: input.categoryId, deletedAt: null },
@@ -79,12 +90,10 @@ export async function updateFaqItem(
   id: string,
   input: FaqItemCommandInput,
 ): Promise<void> {
-  const [existing] = await Promise.all([
-    ensureFaqItemExists(id),
-    ensureFaqCategoryExists(input.categoryId),
-  ]);
+  const existing = await ensureFaqItemExists(id);
   const categoryChanged = existing.categoryId !== input.categoryId;
   if (!categoryChanged) {
+    await ensureFaqCategoryExists(input.categoryId);
     await prisma.faqItem.update({
       where: { id, deletedAt: null },
       data: {
@@ -102,6 +111,17 @@ export async function updateFaqItem(
     await tx.$executeRaw(
       buildOrderScopeLockSql(`faq_items:${input.categoryId}`),
     );
+
+    // createFaqItem と同じ理由で、移動先カテゴリの存在チェックは lock 取得後に
+    // tx 内で行う（deleteFaqCategory とのレースを防ぐ）。
+    const targetCategory = await tx.faqCategory.findFirst({
+      where: { id: input.categoryId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!targetCategory) {
+      throw new DomainError("カテゴリが見つかりません", "NOT_FOUND");
+    }
 
     const maxTargetOrder = await tx.faqItem.aggregate({
       where: { categoryId: input.categoryId, deletedAt: null },
@@ -135,11 +155,7 @@ export async function deleteFaqItem(id: string): Promise<void> {
 export async function restoreFaqItem(id: string): Promise<void> {
   const item = await prisma.faqItem.findUnique({
     where: { id },
-    select: {
-      id: true,
-      deletedAt: true,
-      category: { select: { id: true, deletedAt: true } },
-    },
+    select: { id: true, deletedAt: true, categoryId: true },
   });
 
   if (!item) {
@@ -150,20 +166,27 @@ export async function restoreFaqItem(id: string): Promise<void> {
     throw new DomainError("この質問は削除されていません", "CONFLICT");
   }
 
-  if (item.category.deletedAt !== null) {
-    throw new DomainError(
-      "親カテゴリが削除されています。先にカテゴリを復元してください",
-      "CONFLICT",
-    );
-  }
-
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(
-      buildOrderScopeLockSql(`faq_items:${item.category.id}`),
+      buildOrderScopeLockSql(`faq_items:${item.categoryId}`),
     );
 
+    // createFaqItem / updateFaqItem と同じ理由で、親カテゴリの存在チェックは
+    // lock 取得後に tx 内で行う（deleteFaqCategory とのレースを防ぐ）。
+    const category = await tx.faqCategory.findFirst({
+      where: { id: item.categoryId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!category) {
+      throw new DomainError(
+        "親カテゴリが削除されています。先にカテゴリを復元してください",
+        "CONFLICT",
+      );
+    }
+
     const maxOrder = await tx.faqItem.aggregate({
-      where: { categoryId: item.category.id, deletedAt: null },
+      where: { categoryId: item.categoryId, deletedAt: null },
       _max: { order: true },
     });
 

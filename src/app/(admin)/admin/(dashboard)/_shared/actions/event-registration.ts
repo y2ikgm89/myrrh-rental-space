@@ -8,6 +8,7 @@ import {
   createAdminProxyRegistrationCommand,
   createWalkInRegistrationCommand,
   setEventRegistrationCheckInCommand,
+  updateEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
 import {
   sendEventAdminNotification,
@@ -15,14 +16,22 @@ import {
 } from "@/shared/lib/email/event-emails";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
 import {
+  recordManualEventPaymentCommand,
   refundEventRegistrationPaymentCommand,
   type RefundEventRegistrationResult,
 } from "@/shared/domain/events/payment-commands";
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { ErrorCategory } from "@/shared/lib/errors/server";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+  normalizeError,
+} from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -206,6 +215,102 @@ export async function toggleEventRegistrationCheckIn(
       };
     },
     // check-in toggle は公開側 (EVENTS) には影響しないため cache 無効化不要
+  });
+}
+
+// =============================================================================
+// 参加登録編集 (update)
+// =============================================================================
+
+const updateRegistrationSchema = z.object({
+  registrationId: eventRegistrationIdSchema,
+  name: z.string().trim().min(1, "氏名を入力してください").max(100),
+  email: z
+    .string()
+    .trim()
+    .max(255)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v))
+    .pipe(
+      z.union([z.email({ error: "メールアドレスの形式が不正です" }), z.null()]),
+    ),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+  note: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+  quantity: z.number().int().min(1).max(100),
+});
+
+export type UpdateRegistrationInput = z.input<typeof updateRegistrationSchema>;
+
+export async function updateEventRegistration(
+  input: UpdateRegistrationInput,
+): Promise<MutationResult<{ registrationId: string }>> {
+  const parsed = updateRegistrationSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: parsed.data.registrationId,
+    execute: async (user) => {
+      const { previous } = await updateEventRegistrationCommand({
+        registrationId: parsed.data.registrationId,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        note: parsed.data.note,
+        quantity: parsed.data.quantity,
+      });
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return {
+        registrationId: parsed.data.registrationId,
+        previous,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+      };
+    },
+    afterSuccess: (outcome) => {
+      invalidateEventCaches();
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "event-registration",
+          resourceId: parsed.data.registrationId,
+          oldValue: outcome.previous,
+          newValue: {
+            name: parsed.data.name,
+            email: parsed.data.email,
+            phone: parsed.data.phone,
+            note: parsed.data.note,
+            quantity: parsed.data.quantity,
+          },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogUpdateEventRegistration",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
+    },
+    resolveAuditResourceId: (outcome) => outcome.registrationId,
   });
 }
 
@@ -432,6 +537,200 @@ export async function createAdminProxyRegistration(
         {
           operation: "createAdminProxyRegistrationNotification",
           category: ErrorCategory.DATABASE,
+        },
+      );
+    },
+  });
+}
+
+// =============================================================================
+// 一括キャンセル・一括チェックイン
+// =============================================================================
+
+const bulkRegistrationIdsSchema = z
+  .array(eventRegistrationIdSchema)
+  .min(1, { error: "1件以上選択してください" });
+
+type BulkResult = { succeeded: number; skipped: number; failed: number };
+
+/**
+ * reservation/bulk.ts の bulkCancelReservations と同型: per-id で
+ * adminCancelEventRegistrationCommand を呼んだ直後に、単発キャンセル
+ * (adminCancelRegistration) と同じ applyEventRegistrationCancellationSideEffects
+ * （Stripe refund / waitlist 繰り上げ / 顧客・管理者メール / 監査ログ）を明示的に
+ * 呼び出す。これを省くと bulk cancel だけ返金・繰り上げ当選・監査ログが一切残らない
+ * 非対称になるため、副作用は per-id ループ内で必ず発火させる。失敗した id は
+ * skip して残りを継続する。
+ */
+export async function bulkCancelEventRegistrations(
+  ids: string[],
+): Promise<MutationResult<BulkResult>> {
+  const parsed = bulkRegistrationIdsSchema.safeParse(ids);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    execute: async (user): Promise<BulkResult> => {
+      const requestHeaders = await headers();
+      const ip = await getClientIpFromHeaders();
+      const userAgent = requestHeaders.get("user-agent");
+      let succeeded = 0;
+      let failed = 0;
+
+      for (const id of parsed.data) {
+        try {
+          const registration = await adminCancelEventRegistrationCommand(id);
+          // reservation/bulk.ts の bulkCancelReservations と同型: per-id で
+          // 単発キャンセルと同じ副作用チェーン（Stripe refund / waitlist促進 /
+          // 顧客・管理者メール / 監査ログ）を発火する。ここを省くと bulk cancel
+          // だけ返金・繰り上げ当選・監査ログが一切残らない非対称になる。
+          await applyEventRegistrationCancellationSideEffects({
+            registrationId: id,
+            channel: "admin",
+            actorUserId: user.id,
+            request: { ip, userAgent },
+            promoted: registration.promoted,
+          });
+          succeeded++;
+        } catch (error) {
+          logError(normalizeError(error), {
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+            context: {
+              operation: "bulkCancelEventRegistrations",
+              registrationId: id,
+            },
+          });
+          failed++;
+        }
+      }
+
+      return { succeeded, skipped: 0, failed };
+    },
+    afterSuccess: () => {
+      invalidateEventCaches();
+    },
+  });
+}
+
+/**
+ * setEventRegistrationCheckInCommand を per-id で呼び、まとめて出席済みに変える。
+ *
+ * `setEventRegistrationCheckInCommand` は `{eventId, registrationId, attended}` の
+ * object 引数を要求する（`toggleEventRegistrationCheckIn` 参照）ため、bulk 版も
+ * 呼び出し元から対象イベントの eventId を明示的に受け取る。
+ */
+export async function bulkCheckInEventRegistrations(
+  eventId: string,
+  ids: string[],
+): Promise<MutationResult<BulkResult>> {
+  const parsedEventId = eventIdSchema.safeParse(eventId);
+  if (!parsedEventId.success)
+    return createValidationMutationError(parsedEventId.error);
+
+  const parsed = bulkRegistrationIdsSchema.safeParse(ids);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: parsedEventId.data,
+    execute: async (): Promise<BulkResult> => {
+      let succeeded = 0;
+      let failed = 0;
+
+      for (const id of parsed.data) {
+        try {
+          await setEventRegistrationCheckInCommand({
+            eventId: parsedEventId.data,
+            registrationId: id,
+            attended: true,
+          });
+          succeeded++;
+        } catch (error) {
+          logError(normalizeError(error), {
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+            context: {
+              operation: "bulkCheckInEventRegistrations",
+              registrationId: id,
+            },
+          });
+          failed++;
+        }
+      }
+
+      return { succeeded, skipped: 0, failed };
+    },
+    afterSuccess: () => {
+      invalidateEventCaches();
+    },
+  });
+}
+
+// =============================================================================
+// 手動入金記録
+// =============================================================================
+
+const manualPaymentMethodValues = ["CASH", "BANK_TRANSFER", "OTHER"] as const;
+
+const manualPaymentSchema = z.object({
+  registrationId: eventRegistrationIdSchema,
+  amount: z.number().int().min(1),
+  method: z.enum(manualPaymentMethodValues),
+  note: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+});
+
+export type ManualPaymentInput = z.input<typeof manualPaymentSchema>;
+
+export async function recordManualEventPayment(
+  input: ManualPaymentInput,
+): Promise<MutationResult<{ registrationId: string }>> {
+  const parsed = manualPaymentSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: parsed.data.registrationId,
+    execute: async (user) => {
+      const result = await recordManualEventPaymentCommand({
+        registrationId: parsed.data.registrationId,
+        amount: parsed.data.amount,
+      });
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateEventCaches();
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "event-registration",
+          resourceId: parsed.data.registrationId,
+          oldValue: { paymentStatus: "UNPAID" },
+          newValue: { paymentStatus: "PAID", paidAmount: parsed.data.amount },
+          metadata: {
+            manualPaymentMethod: parsed.data.method,
+            ...(parsed.data.note !== null && { note: parsed.data.note }),
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogRecordManualEventPayment",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
         },
       );
     },
