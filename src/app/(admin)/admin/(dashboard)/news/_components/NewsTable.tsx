@@ -37,6 +37,14 @@ export function NewsTable({ news }: NewsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = news.map((item) => item.id);
+
+  // Round-4 audit Cluster J / Finding #10 sibling: 検索・並び替え・ページ移動で
+  // news が入れ替わっても selectedIds はローカル state に残るため、
+  // 次の「一括公開 / 一括削除」で見えていない過去選択のお知らせまで対象になる。
+  // 詳細は PostTable.tsx の該当コメント参照。
+  const visibleIdSet = new Set(allIds);
+  const effectiveSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id));
+
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
 
@@ -134,7 +142,7 @@ export function NewsTable({ news }: NewsTableProps) {
       </div>
 
       <NewsBulkActions
-        selectedIds={selectedIds}
+        selectedIds={effectiveSelectedIds}
         onClear={() => setSelectedIds([])}
       />
     </>

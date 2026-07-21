@@ -46,6 +46,15 @@ export function CustomerTable({ customers }: CustomerTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = customers.map((c) => c.id);
+
+  // Round-4 audit Cluster J / Finding #10 sibling: 検索・並び替え・ページ移動で
+  // customers が入れ替わっても selectedIds はローカル state に残るため、
+  // 次の「一括有効化 / 一括匿名化」で見えていない過去選択の顧客まで対象になる。
+  // Adjusting-state-while-rendering (React 公式) で可視 id との積集合を派生し、
+  // effect ベース reset (@eslint-react/set-state-in-effect 禁止) を避ける。
+  const visibleIdSet = new Set(allIds);
+  const effectiveSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id));
+
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
 
@@ -178,7 +187,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
       </div>
 
       <CustomerBulkActions
-        selectedIds={selectedIds}
+        selectedIds={effectiveSelectedIds}
         onClear={() => setSelectedIds([])}
       />
     </>
