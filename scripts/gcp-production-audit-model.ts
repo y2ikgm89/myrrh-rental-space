@@ -160,6 +160,7 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "audit-log-integrity",
   "calendar-sync",
   "calendar-sync-retry",
+  "customer-duplicate-scan",
   "customer-risk-scan",
   "data-retention",
   "event-import",

@@ -3,8 +3,7 @@
  *
  * emailCanonical または phoneNumber が完全一致する複数顧客を検知し、
  * Customer.flagReasons に DUPLICATE_CANDIDATE を付与して管理者通知を生成する。
- * Cloud Scheduler から daily（毎日 03:00 JST）で起動する想定
- * （faq-trash-cleanup と同じスケジュール、DEDUP_DAYS も同型）。
+ * Cloud Scheduler から daily（毎日 03:00 JST）で起動する想定。
  *
  * feature module gate は意図的に設けない。顧客データは単一モジュールに
  * 紐付かないため、複数モジュール状態でも検知対象が存在する。
@@ -13,7 +12,13 @@
  * 最終判断は常に管理者（顧客一覧から「重複顧客」フィルタ・詳細画面から確認する）。
  *
  * 認証: Cloud Scheduler OIDC token
- * 重複通知抑制: 直近 `DEDUP_DAYS` 日以内に同 type の通知があればスキップ
+ *
+ * 重複通知抑制は「通知の生成」だけを対象にし、検知・flagReasons への反映は
+ * 毎回実行する（customer-risk-scan の週次実装をそのまま流用すると、抑制チェックが
+ * 検知処理自体まで止めてしまい、daily 実行の意味が「実質週次」に縮退する
+ * ——`reconcileFlagReasonsCommand` は冪等かつ軽量なので、通知だけを間引けば十分）。
+ * `DEDUP_DAYS` は週次 cron の値をそのまま流用せず、daily cadence 用に短縮する
+ * （Scheduler の同日リトライ・手動再実行での通知重複だけを防ぐのが目的）。
  */
 
 import { unstable_rethrow } from "next/navigation";
@@ -36,8 +41,12 @@ import { logger } from "@/shared/lib/errors/logger-core";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 
-/** 同 type の通知を重複生成しないためのルックバック日数（日次スケジュールより 1 日短い） */
-const DEDUP_DAYS = 6;
+/**
+ * 同 type の通知を重複生成しないためのルックバック日数。daily cadence 用に
+ * 1 日（Scheduler の同日リトライ・手動再実行での通知重複だけを防ぐ）。
+ * 検知・flagReasons への反映自体はこの値に関わらず毎回実行する。
+ */
+const NOTIFICATION_DEDUP_DAYS = 1;
 
 export async function GET(request: Request) {
   try {
@@ -48,22 +57,6 @@ export async function GET(request: Request) {
     });
     if (authResult) return authResult;
 
-    // 重複抑制: 直近 6 日以内に同 type 通知が既にあれば no-op（Scheduler 再試行・手動再実行対策）
-    if (
-      await hasRecentNotificationOfType(
-        NOTIFICATION_TYPE.CUSTOMER_FLAGGED,
-        DEDUP_DAYS,
-      )
-    ) {
-      logger.info(
-        "Customer duplicate scan: recent notification exists, skipping",
-        {
-          dedupDays: DEDUP_DAYS,
-        },
-      );
-      return jsonSuccess({ skipped: true, reason: "recent_notification" });
-    }
-
     const detected = await detectDuplicateCandidates();
 
     if (detected.length === 0) {
@@ -72,6 +65,24 @@ export async function GET(request: Request) {
     }
 
     await applyDuplicateCandidateFlagsCommand(detected);
+
+    // 通知だけを抑制する（検知・フラグ付与は上で毎回実行済み）。直近 1 日以内に
+    // 同 type 通知が既にあれば no-op（Scheduler 再試行・手動再実行対策）。
+    if (
+      await hasRecentNotificationOfType(
+        NOTIFICATION_TYPE.CUSTOMER_FLAGGED,
+        NOTIFICATION_DEDUP_DAYS,
+      )
+    ) {
+      logger.info(
+        "Customer duplicate scan: flags applied, recent notification exists, skipping notification",
+        {
+          detected: detected.length,
+          dedupDays: NOTIFICATION_DEDUP_DAYS,
+        },
+      );
+      return jsonSuccess({ detected: detected.length, notified: false });
+    }
 
     await createNotificationCommand({
       type: NOTIFICATION_TYPE.CUSTOMER_FLAGGED,
@@ -84,7 +95,7 @@ export async function GET(request: Request) {
       detected: detected.length,
     });
 
-    return jsonSuccess({ detected: detected.length });
+    return jsonSuccess({ detected: detected.length, notified: true });
   } catch (error) {
     unstable_rethrow(error);
     logError(error, {

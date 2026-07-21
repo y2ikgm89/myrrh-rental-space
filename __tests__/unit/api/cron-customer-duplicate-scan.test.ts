@@ -156,18 +156,23 @@ describe("GET /api/cron/customer-duplicate-scan", () => {
     expect(mockDetectDuplicateCandidates).not.toHaveBeenCalled();
   });
 
-  test("直近6日以内に同type通知あり → skip(recent_notification)", async () => {
+  test("検知2件・直近1日以内に同type通知あり → フラグ付与は実行し通知だけskipする", async () => {
+    const detected = [{ customerId: "cust-1" }, { customerId: "cust-2" }];
+    mockDetectDuplicateCandidates.mockResolvedValue(detected);
     mockHasRecentNotificationOfType.mockResolvedValue(true);
 
     const response = await GET(makeSchedulerRequest());
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual({ skipped: true, reason: "recent_notification" });
-    expect(mockDetectDuplicateCandidates).not.toHaveBeenCalled();
+    expect(body).toEqual({ detected: 2, notified: false });
+    expect(mockApplyDuplicateCandidateFlagsCommand).toHaveBeenCalledWith(
+      detected,
+    );
+    expect(mockCreateNotificationCommand).not.toHaveBeenCalled();
   });
 
-  test("検知0件 → detected:0、通知は送らない", async () => {
+  test("検知0件 → detected:0、通知は送らない(hasRecentNotificationOfTypeも呼ばれない)", async () => {
     mockDetectDuplicateCandidates.mockResolvedValue([]);
 
     const response = await GET(makeSchedulerRequest());
@@ -176,6 +181,7 @@ describe("GET /api/cron/customer-duplicate-scan", () => {
     const body = await response.json();
     expect(body).toEqual({ detected: 0 });
     expect(mockApplyDuplicateCandidateFlagsCommand).not.toHaveBeenCalled();
+    expect(mockHasRecentNotificationOfType).not.toHaveBeenCalled();
     expect(mockCreateNotificationCommand).not.toHaveBeenCalled();
   });
 
@@ -187,7 +193,7 @@ describe("GET /api/cron/customer-duplicate-scan", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toEqual({ detected: 2 });
+    expect(body).toEqual({ detected: 2, notified: true });
     expect(mockApplyDuplicateCandidateFlagsCommand).toHaveBeenCalledWith(
       detected,
     );
