@@ -27,6 +27,8 @@ import {
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import {
+  isRegistrationStatusFilter,
+  parseAsPage,
   parseAsQuery,
   registrationStatusFilterValues,
 } from "@/shared/lib/nuqs/parsers";
@@ -122,6 +124,7 @@ export function EventRegistrationTable({
   const [{ search, status }, setSearchParams] = useQueryStates({
     search: parseAsQuery,
     status: parseAsStringLiteral(registrationStatusFilterValues),
+    page: parseAsPage,
   });
 
   function handleCancel(registrationId: string) {
@@ -172,16 +175,19 @@ export function EventRegistrationTable({
           placeholder="氏名・メールで検索"
           defaultValue={search}
           onChange={(e) => {
-            void setSearchParams({ search: e.target.value || null });
+            void setSearchParams({ search: e.target.value || null, page: 1 });
           }}
           className="max-w-xs"
         />
         <Select
           value={status ?? "all"}
           onValueChange={(value) => {
-            void setSearchParams({
-              status: value === "all" ? null : (value as typeof status),
-            });
+            if (value === "all") {
+              void setSearchParams({ status: null, page: 1 });
+              return;
+            }
+            if (!isRegistrationStatusFilter(value)) return;
+            void setSearchParams({ status: value, page: 1 });
           }}
         >
           <SelectTrigger className="w-40">

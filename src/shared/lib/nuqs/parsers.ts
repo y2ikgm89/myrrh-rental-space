@@ -89,6 +89,14 @@ export const registrationStatusFilterValues = [
 ] as const;
 export type RegistrationStatusFilter =
   (typeof registrationStatusFilterValues)[number];
+const registrationStatusFilterSet = new Set<string>(
+  registrationStatusFilterValues,
+);
+export function isRegistrationStatusFilter(
+  value: string,
+): value is RegistrationStatusFilter {
+  return registrationStatusFilterSet.has(value);
+}
 
 const adminEventRegistrationsSearchParamsParsers = {
   search: parseAsQuery,

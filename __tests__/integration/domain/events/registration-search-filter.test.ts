@@ -142,12 +142,23 @@ describeMaybe("getEventRegistrations 検索・フィルタ", () => {
         quantity: 1,
       },
     });
+    await basePrisma.eventRegistration.create({
+      data: {
+        eventId: fixture.eventId,
+        slotId: fixture.slotId,
+        ticketId: fixture.ticketId,
+        name: "Suzuki Hanako",
+        email: "hanako@example.com",
+        quantity: 1,
+      },
+    });
 
     try {
       const result = await getEventRegistrations(fixture.eventId, {
         search: "taro@example",
       });
       expect(result.total).toBe(1);
+      expect(result.registrations[0]?.email).toBe("taro@example.com");
     } finally {
       await cleanupFixture(fixture.eventId);
     }
