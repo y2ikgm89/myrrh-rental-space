@@ -273,7 +273,14 @@ export async function updateCustomerStatus(
 export async function updateCustomerNotes(
   id: string,
   notes: string | null,
-): Promise<MutationResult> {
+): Promise<
+  MutationResult<{
+    previousNotes: string | null;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const parsed = updateCustomerNotesSchema.safeParse({ id, notes });
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -283,13 +290,44 @@ export async function updateCustomerNotes(
     resource: "customer",
     action: "update",
     resourceId: parsed.data.id,
-    execute: async () => {
-      await updateCustomerNotesCommand(parsed.data.id, parsed.data.notes);
-      return null;
+    execute: async (user) => {
+      const { previousNotes } = await updateCustomerNotesCommand(
+        parsed.data.id,
+        parsed.data.notes,
+      );
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { previousNotes, actorUserId: user.id, ip, userAgent };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(parsed.data.id));
+
+      if (outcome.previousNotes === parsed.data.notes) {
+        // 冪等 no-op: メモが実際には変化していない (audit noise を減らす)
+        return;
+      }
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.notes",
+          resourceId: parsed.data.id,
+          oldValue: { notes: outcome.previousNotes },
+          newValue: { notes: parsed.data.notes },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogUpdateCustomerNotes",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }

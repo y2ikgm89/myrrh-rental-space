@@ -101,6 +101,10 @@ const mockCreateCustomerCommand = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "x" }),
 );
 
+const mockUpdateCustomerNotesCommand = mock<
+  () => Promise<{ previousNotes: string | null }>
+>(() => Promise.resolve({ previousNotes: null }));
+
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerStatus: (
     ...args: Parameters<typeof mockUpdateCustomerStatusCommand>
@@ -112,7 +116,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
   ) => mockAnonymizeCustomerCommand(...args),
   createCustomer: (...args: Parameters<typeof mockCreateCustomerCommand>) =>
     mockCreateCustomerCommand(...args),
-  updateCustomerNotes: mock(() => Promise.resolve(undefined)),
+  updateCustomerNotes: (
+    ...args: Parameters<typeof mockUpdateCustomerNotesCommand>
+  ) => mockUpdateCustomerNotesCommand(...args),
   toggleCustomerActive: mock(() => Promise.resolve(undefined)),
   mergeCustomerCommand: mock(() =>
     Promise.resolve({
@@ -351,5 +357,42 @@ describe("createCustomer の AuditLog 記録 (customer.profile)", () => {
         email: "tanaka@example.com",
       }),
     );
+  });
+});
+
+describe("updateCustomerNotes の AuditLog diff (customer.notes)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockUpdateCustomerNotesCommand.mockReset();
+    mockUpdateCustomerNotesCommand.mockResolvedValue({
+      previousNotes: "旧メモ",
+    });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("メモが実際に変わった場合は oldValue/newValue 付きで記録する", async () => {
+    await updateCustomerNotes(CUSTOMER_UUID, "新メモ");
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.notes");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["oldValue"]).toEqual({ notes: "旧メモ" });
+    expect(call["newValue"]).toEqual({ notes: "新メモ" });
+  });
+
+  test("メモが変わらない (no-op) 場合は記録しない", async () => {
+    mockUpdateCustomerNotesCommand.mockResolvedValue({
+      previousNotes: "同じメモ",
+    });
+
+    await updateCustomerNotes(CUSTOMER_UUID, "同じメモ");
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
   });
 });
