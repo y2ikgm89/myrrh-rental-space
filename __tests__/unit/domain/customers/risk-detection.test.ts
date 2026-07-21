@@ -1,13 +1,17 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockFindUnique =
   mock<(args: unknown) => Promise<{ flagReasons: string[] } | null>>();
 const mockUpdateMany = mock<(args: unknown) => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 1 }),
 );
+// customerId 単位の advisory lock (728358) 取得。tagged template 呼出しの
+// mock はテンプレート文字列 + 値配列を受け取れれば十分なので戻り値だけ返す。
+const mockExecuteRaw = mock(() => Promise.resolve(0));
 const mockTransaction = mock(async (fn: (tx: unknown) => Promise<unknown>) =>
   fn({
     customer: { findUnique: mockFindUnique, updateMany: mockUpdateMany },
+    $executeRaw: mockExecuteRaw,
   }),
 );
 
@@ -23,6 +27,7 @@ describe("reconcileFlagReasonsCommand", () => {
     mockFindUnique.mockReset();
     mockUpdateMany.mockReset();
     mockUpdateMany.mockResolvedValue({ count: 1 });
+    mockExecuteRaw.mockClear();
   });
 
   test("他cron所有の理由コードを温存しつつ自分の所有分だけ書き換える", async () => {

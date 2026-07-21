@@ -244,6 +244,14 @@ const RISK_SCAN_OWNED_REASONS: readonly RiskFlagReason[] = [
  * （「要注意」表示は理由が1つも無ければ出さない）。空でなければ now を設定する
  * （複数 cron のどちらが最後に触ったかに関わらず「直近に何らかのフラグが
  * 更新された時刻」を表す）。
+ *
+ * customerId 単位の advisory lock（728358）で read-then-write を直列化する。
+ * 素の `$transaction`（既定 READ COMMITTED）は read の行ロックを取らないため、
+ * 同一顧客への同時呼出し（例: risk-scan と duplicate-detection が偶然同時刻に
+ * 同じ顧客を触る）が両方とも古い配列から `nextReasons` を計算し、後勝ちの
+ * `updateMany` が先勝ちの結果を lost update で潰しうる — 本関数が防ごうとしている
+ * 「他 cron 所有の理由コードを消す」問題を、頻度は下がるが形を変えて
+ * 再発させてしまう。lock は `db-domain.md` の採番レジストリに準拠。
  */
 export async function reconcileFlagReasonsCommand(
   customerId: string,
@@ -255,6 +263,8 @@ export async function reconcileFlagReasonsCommand(
   const ownedSet = new Set<string>(params.ownedReasons);
 
   return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(728358::int4, hashtext(${customerId}))`;
+
     const existing = await tx.customer.findUnique({
       where: { id: customerId },
       select: { flagReasons: true },

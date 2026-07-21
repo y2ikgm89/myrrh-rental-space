@@ -53,6 +53,9 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
   `lockReservationSeriesForTransaction`。`createReservationSeriesCommand` や一括キャンセルなど
   series 全体にまたがる書込を tx 単位で serialize。Space namespace 728351 と併用する場合は
   必ず 728357 → 728351 の順で取得する（deadlock 予防）)、
+  728358=Customer.flagReasons reconcile 単位（`src/shared/domain/customers/risk-detection.ts` の
+  `reconcileFlagReasonsCommand`。customer-risk-scan / duplicate-detection 等、複数の独立した
+  cron が同一 Customer の `flagReasons` を read-then-write する際の lost update を防ぐ）、
   audit-log chain=int8 `6029451381908262157n`
 
 ## 'use cache' クエリの標準形
