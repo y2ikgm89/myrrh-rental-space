@@ -13,9 +13,19 @@ export type BulkToggleActiveCustomersResult = {
   affectedIds: string[];
 };
 
+export type AnonymizedCustomerRecord = {
+  id: string;
+  anonymizedAt: Date;
+  reason: AnonymizeCustomerReason;
+  hadUserId: boolean;
+  preservedSuppression: boolean;
+};
+
 export type BulkAnonymizeCustomersResult = {
   count: number;
   affectedIds: string[];
+  /** per-id audit 用 snapshot。affectedIds と 1:1 対応する順序で並ぶ。 */
+  affected: ReadonlyArray<AnonymizedCustomerRecord>;
   /** 既に anonymized 済みで skip した ID (冪等的成功扱い、error にしない)。 */
   skippedIds: string[];
 };
@@ -69,10 +79,10 @@ export async function bulkAnonymizeCustomersCommand(
   reason: AnonymizeCustomerReason,
 ): Promise<BulkAnonymizeCustomersResult> {
   if (ids.length === 0) {
-    return { count: 0, affectedIds: [], skippedIds: [] };
+    return { count: 0, affectedIds: [], affected: [], skippedIds: [] };
   }
 
-  const affectedIds: string[] = [];
+  const affected: AnonymizedCustomerRecord[] = [];
   const skippedIds: string[] = [];
 
   for (const id of ids) {
@@ -81,7 +91,13 @@ export async function bulkAnonymizeCustomersCommand(
         customerId: id,
         reason,
       });
-      affectedIds.push(result.customerId);
+      affected.push({
+        id: result.customerId,
+        anonymizedAt: result.anonymizedAt,
+        reason: result.reason,
+        hadUserId: result.hadUserId,
+        preservedSuppression: result.preservedSuppression,
+      });
     } catch (error) {
       // 「既に匿名化済み」= 冪等的成功として扱う (bulk 操作の再実行安全性)。
       // それ以外の error (NOT_FOUND / DB エラー) はそのまま伝播する。
@@ -94,8 +110,9 @@ export async function bulkAnonymizeCustomersCommand(
   }
 
   return {
-    count: affectedIds.length,
-    affectedIds,
+    count: affected.length,
+    affectedIds: affected.map((a) => a.id),
+    affected,
     skippedIds,
   };
 }

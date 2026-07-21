@@ -320,7 +320,7 @@ const anonymizeReasonSchema = z.enum(
 // 匿名化で null 化される PII フィールド名（anonymizeCustomerCommand と同期）。
 // 「何が消えたか」の forensic 記録に値そのものは含めない — 匿名化イベントの
 // AuditLog に生 PII を永続保存すると、削除自体の趣旨（データ最小化）と衝突するため。
-const ANONYMIZED_CUSTOMER_FIELDS = [
+export const ANONYMIZED_CUSTOMER_FIELDS = [
   "email",
   "emailCanonical",
   "lastName",
@@ -425,6 +425,11 @@ export async function mergeCustomers(
     transferredInquiries: number;
     transferredReviews: number;
     transferredRegistrations: number;
+    preservedSuppression: boolean;
+    targetId: string;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
   }>
 > {
   const sourceValid = z.uuid().safeParse(sourceId);
@@ -437,9 +442,21 @@ export async function mergeCustomers(
     resource: "customer",
     action: "delete",
     resourceId: sourceValid.data,
-    execute: async () =>
-      mergeCustomerCommand(sourceValid.data, targetValid.data),
-    afterSuccess: () => {
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const merged = await mergeCustomerCommand(
+        sourceValid.data,
+        targetValid.data,
+      );
+      return {
+        ...merged,
+        targetId: targetValid.data,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+      };
+    },
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(sourceValid.data));
       updateTag(getCacheTag.customers.detail(targetValid.data));
@@ -452,6 +469,39 @@ export async function mergeCustomers(
       updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
       // EVENTS は CDN `event-v1` にマップされているため helper 経由で CDN purge も発火。
       invalidateSiteWideCache(CACHE_TAGS.EVENTS);
+
+      // executeAdminMutationResult の集約 AuditLog は resource=customer /
+      // resourceId=sourceId のみを残すため、target 側の id と移管件数が
+      // forensic クエリから復元不能だった。ここで customer.merge リソースに
+      // per-merge の diff record を残す (single-op anonymizeCustomer と同型)。
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.merge",
+          resourceId: sourceValid.data,
+          newValue: {
+            targetId: outcome.targetId,
+            transferredReservations: outcome.transferredReservations,
+            transferredInquiries: outcome.transferredInquiries,
+            transferredReviews: outcome.transferredReviews,
+            transferredRegistrations: outcome.transferredRegistrations,
+            preservedSuppression: outcome.preservedSuppression,
+          },
+          metadata: {
+            channel: "admin",
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogMergeCustomers",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+        },
+      );
     },
   });
 }

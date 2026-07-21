@@ -29,12 +29,21 @@ const mockBulkAnonymizeCustomersCommand = mock<
   ) => Promise<{
     count: number;
     affectedIds: string[];
+    // Round-3 audit Cluster A: per-id snapshot for AuditLog payload
+    affected: ReadonlyArray<{
+      id: string;
+      anonymizedAt: Date;
+      reason: string;
+      hadUserId: boolean;
+      preservedSuppression: boolean;
+    }>;
     skippedIds: string[];
   }>
 >(() =>
   Promise.resolve({
     count: 0,
     affectedIds: [],
+    affected: [],
     skippedIds: [],
   }),
 );
@@ -47,6 +56,8 @@ const mockBulkSetStatusCustomersCommand = mock<
     count: number;
     newStatus: CustomerStatus;
     affectedIds: string[];
+    // Round-3 audit Cluster A: per-id previousStatus for AuditLog diff
+    affected: ReadonlyArray<{ id: string; previousStatus: CustomerStatus }>;
     rejectedIds: string[];
   }>
 >(() =>
@@ -54,6 +65,7 @@ const mockBulkSetStatusCustomersCommand = mock<
     count: 0,
     newStatus: CustomerStatus.NEW,
     affectedIds: [],
+    affected: [],
     rejectedIds: [],
   }),
 );
@@ -321,6 +333,13 @@ describe("bulkAnonymizeCustomers", () => {
       mockBulkAnonymizeCustomersCommand.mockResolvedValueOnce({
         count: 2,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        affected: [VALID_UUID_A, VALID_UUID_B].map((id) => ({
+          id,
+          anonymizedAt: new Date(),
+          reason: "admin-purge",
+          hadUserId: false,
+          preservedSuppression: false,
+        })),
         skippedIds: [],
       });
 
@@ -347,6 +366,13 @@ describe("bulkAnonymizeCustomers", () => {
       mockBulkAnonymizeCustomersCommand.mockResolvedValueOnce({
         count: 2,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        affected: [VALID_UUID_A, VALID_UUID_B].map((id) => ({
+          id,
+          anonymizedAt: new Date(),
+          reason: "customer-requested",
+          hadUserId: false,
+          preservedSuppression: false,
+        })),
         skippedIds: [],
       });
 
@@ -365,6 +391,15 @@ describe("bulkAnonymizeCustomers", () => {
       mockBulkAnonymizeCustomersCommand.mockResolvedValueOnce({
         count: 1,
         affectedIds: [VALID_UUID_A],
+        affected: [
+          {
+            id: VALID_UUID_A,
+            anonymizedAt: new Date(),
+            reason: "data-retention",
+            hadUserId: false,
+            preservedSuppression: false,
+          },
+        ],
         skippedIds: [VALID_UUID_B],
       });
 
@@ -435,6 +470,10 @@ describe("bulkSetStatusCustomers", () => {
         count: 2,
         newStatus: CustomerStatus.VIP,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        affected: [
+          { id: VALID_UUID_A, previousStatus: CustomerStatus.NEW },
+          { id: VALID_UUID_B, previousStatus: CustomerStatus.REGULAR },
+        ],
         rejectedIds: [],
       });
 
@@ -462,6 +501,10 @@ describe("bulkSetStatusCustomers", () => {
         count: 2,
         newStatus: CustomerStatus.INACTIVE,
         affectedIds: [VALID_UUID_A, VALID_UUID_B],
+        affected: [
+          { id: VALID_UUID_A, previousStatus: CustomerStatus.NEW },
+          { id: VALID_UUID_B, previousStatus: CustomerStatus.REGULAR },
+        ],
         rejectedIds: [],
       });
 
@@ -479,6 +522,9 @@ describe("bulkSetStatusCustomers", () => {
         count: 1,
         newStatus: CustomerStatus.BLACKLIST,
         affectedIds: [VALID_UUID_A],
+        affected: [
+          { id: VALID_UUID_A, previousStatus: CustomerStatus.REGULAR },
+        ],
         rejectedIds: [VALID_UUID_B],
       });
 
