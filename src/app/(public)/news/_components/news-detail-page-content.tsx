@@ -12,6 +12,7 @@ import {
 import { Prose } from "@/public/components/design-system/prose";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
+import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
@@ -79,8 +80,11 @@ export async function NewsDetailPageContent({
   const datePublished = toISOString(newsItem.publishedAt) ?? "";
 
   const headings = extractHeadingsFromHtml(newsItem.contentHtml);
-  const resolvedContentHtml = await resolveInternalLinkCards(
+  const linkCardsResolvedHtml = await resolveInternalLinkCards(
     newsItem.contentHtml,
+  );
+  const resolvedContentHtml = await resolveSpaceCardEmbeds(
+    linkCardsResolvedHtml,
   );
   const h2Count = headings.filter((h) => h.level === 2).length;
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;

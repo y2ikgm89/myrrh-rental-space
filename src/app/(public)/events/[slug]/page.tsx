@@ -11,6 +11,7 @@ import { Prose } from "@/public/components/design-system/prose";
 import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
+import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
 import { getSlotRegistrationCounts } from "@/shared/domain/events/slot-queries";
 import {
@@ -173,8 +174,11 @@ export default async function EventDetailPage({
     }
   }
 
-  const resolvedDescriptionHtml = await resolveInternalLinkCards(
+  const linkCardsResolvedDescriptionHtml = await resolveInternalLinkCards(
     event.descriptionHtml,
+  );
+  const resolvedDescriptionHtml = await resolveSpaceCardEmbeds(
+    linkCardsResolvedDescriptionHtml,
   );
 
   const infoPanelProps = {
