@@ -1,6 +1,7 @@
 "use client";
 
 import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -21,20 +22,22 @@ export function BlockTypeSection({ blockType, onChange }: Props) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1 min-w-[100px] justify-between"
-        >
-          <span className="flex items-center gap-1.5">
-            <Icon className="h-4 w-4" />
-            <span className="text-xs">{label}</span>
-          </span>
-          <IconChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Toolbar.Button asChild>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 min-w-[100px] justify-between"
+          >
+            <span className="flex items-center gap-1.5">
+              <Icon className="h-4 w-4" />
+              <span className="text-xs">{label}</span>
+            </span>
+            <IconChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+      </Toolbar.Button>
       <DropdownMenuContent align="start" className="min-w-[160px]">
         {entriesOf(BLOCK_TYPE_CONFIG).map(
           ([type, { label: itemLabel, icon: ItemIcon }]) => (

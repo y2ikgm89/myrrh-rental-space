@@ -42,6 +42,7 @@ import { $setBlocksType } from "@lexical/selection";
 import { $convertToMarkdownString } from "@lexical/markdown";
 import { $generateHtmlFromNodes } from "@lexical/html";
 import { IconLink } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
@@ -323,8 +324,7 @@ export function ToolbarPlugin({
 
   return (
     <>
-      <div
-        role="toolbar"
+      <Toolbar.Root
         aria-label="書式・挿入・書き出し"
         className="grid min-h-11 min-w-0 grid-cols-[1fr_auto_1fr] items-stretch border-b border-border bg-muted/40"
       >
@@ -383,18 +383,20 @@ export function ToolbarPlugin({
 
           <Separator orientation="vertical" className="mx-1 h-6" />
 
-          <Button
-            type="button"
-            variant={isLink ? "secondary" : "ghost"}
-            size="icon"
-            className="h-10 w-10 md:h-8 md:w-8"
-            onClick={handleInsertLink}
-            title="リンク"
-            aria-label="リンク"
-            aria-pressed={isLink}
-          >
-            <IconLink className="h-5 w-5 md:h-4 md:w-4" />
-          </Button>
+          <Toolbar.Button asChild>
+            <Button
+              type="button"
+              variant={isLink ? "secondary" : "ghost"}
+              size="icon"
+              className="h-10 w-10 md:h-8 md:w-8"
+              onClick={handleInsertLink}
+              title="リンク"
+              aria-label="リンク"
+              aria-pressed={isLink}
+            >
+              <IconLink className="h-5 w-5 md:h-4 md:w-4" />
+            </Button>
+          </Toolbar.Button>
 
           <Separator orientation="vertical" className="mx-1 h-6" />
 
@@ -422,7 +424,7 @@ export function ToolbarPlugin({
             onFullscreenToggle={onFullscreenToggle}
           />
         </div>
-      </div>
+      </Toolbar.Root>
       <MarkdownImportDialog
         open={showMarkdownImport}
         onClose={() => setShowMarkdownImport(false)}

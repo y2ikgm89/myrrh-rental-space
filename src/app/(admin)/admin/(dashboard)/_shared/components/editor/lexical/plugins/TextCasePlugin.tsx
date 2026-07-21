@@ -29,6 +29,7 @@ import {
   IconChevronDown,
   IconCheck,
 } from "@tabler/icons-react";
+import { Toolbar } from "radix-ui";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -139,18 +140,20 @@ export function TextCasePlugin() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant={activeCase ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 gap-1"
-          title="テキスト変換"
-        >
-          <ActiveIcon className="h-4 w-4" />
-          <IconChevronDown className="h-3 w-3" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Toolbar.Button asChild>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant={activeCase ? "secondary" : "ghost"}
+            size="sm"
+            className="h-8 gap-1"
+            title="テキスト変換"
+          >
+            <ActiveIcon className="h-4 w-4" />
+            <IconChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+      </Toolbar.Button>
       <DropdownMenuContent align="start" className="min-w-[140px]">
         {Array.from(TEXT_CASE_TYPES).map((caseType) => {
           const { label, icon: Icon } = TEXT_CASE_CONFIG[caseType];
