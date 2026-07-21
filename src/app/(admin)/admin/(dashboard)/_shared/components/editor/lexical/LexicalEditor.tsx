@@ -36,6 +36,7 @@ import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/
 import { cn } from "@/shared/lib/cn";
 import { EDITOR_TRANSFORMERS } from "./MarkdownTransformers";
 import { EDITOR_NODES } from "./config/nodes";
+import { findUnregisteredLexicalNodeTypes } from "./config/registered-node-types";
 import { MATCHERS, validateUrl } from "./config/url-matchers";
 import { DisablePlugin } from "./internal-plugins/DisablePlugin";
 import { useDialogManager } from "./dialogs/use-dialog-manager";
@@ -69,6 +70,7 @@ import { StatusBar } from "./parts/StatusBar";
 import { editorTheme } from "./theme";
 import { InspectorSidebar, InspectorSidebarProvider } from "./inspector";
 import { MobileEditorFallback } from "./parts/MobileEditorFallback";
+import { LexicalCorruptedContentNotice } from "./parts/LexicalCorruptedContentNotice";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { LexicalEditorProps } from "./types";
@@ -380,6 +382,21 @@ function LexicalEditorDesktop(props: LexicalEditorProps) {
   if (!isLexicalComposerReadyEditorStateJson(trimmed)) {
     return <LexicalInvalidContentJsonNotice />;
   }
+
+  // 未登録 node type を含む JSON を LexicalComposer にマウントすると
+  // editor.setEditorState() が同期 throw するか、パースが握りつぶされ
+  // 本文がサイレントに切り詰められる。マウント前に弾く（主防御）。
+  const unregisteredTypes = findUnregisteredLexicalNodeTypes(trimmed);
+  if (unregisteredTypes.length > 0) {
+    return (
+      <LexicalCorruptedContentNotice
+        unregisteredTypes={unregisteredTypes}
+        contentJson={trimmed}
+        onChange={props.onChange}
+      />
+    );
+  }
+
   return <LexicalEditorDesktopMounted {...props} editorStateJson={trimmed} />;
 }
 
