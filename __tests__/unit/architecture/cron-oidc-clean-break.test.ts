@@ -13,6 +13,7 @@ describe("cron OIDC clean-break boundary", () => {
     "src/app/api/cron/audit-log-integrity/route.ts",
     "src/app/api/cron/calendar-sync/route.ts",
     "src/app/api/cron/calendar-sync-retry/route.ts",
+    "src/app/api/cron/customer-duplicate-scan/route.ts",
     "src/app/api/cron/customer-risk-scan/route.ts",
     "src/app/api/cron/data-retention/route.ts",
     "src/app/api/cron/event-import/route.ts",
