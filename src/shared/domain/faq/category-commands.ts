@@ -122,36 +122,46 @@ export async function updateFaqCategoryActive(
 
 /**
  * カテゴリをソフトデリート。配下に未削除の質問が残っている場合は拒否。
+ *
+ * 「アクティブ項目数チェック」と「deletedAt 書込」を同一 tx 内で直列化し、
+ * createFaqItem / updateFaqItem（カテゴリ移動）/ restoreFaqItem が使う
+ * `faq_items:${categoryId}` advisory lock を共有する。これにより、チェックと
+ * 書込の間に別セッションが同カテゴリへアクティブ項目を追加する check-then-act
+ * レースを防ぎ、非公開カテゴリ配下にアクティブ項目が孤児化することを防止する。
  */
 export async function deleteFaqCategory(id: string): Promise<void> {
-  const category = await prisma.faqCategory.findFirst({
-    where: { id, deletedAt: null },
-    select: {
-      id: true,
-      _count: {
-        select: {
-          items: {
-            where: { deletedAt: null },
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(buildOrderScopeLockSql(`faq_items:${id}`));
+
+    const category = await tx.faqCategory.findFirst({
+      where: { id, deletedAt: null },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            items: {
+              where: { deletedAt: null },
+            },
           },
         },
       },
-    },
-  });
+    });
 
-  if (!category) {
-    throw new DomainError("カテゴリが見つかりません", "NOT_FOUND");
-  }
+    if (!category) {
+      throw new DomainError("カテゴリが見つかりません", "NOT_FOUND");
+    }
 
-  if (category._count.items > 0) {
-    throw new DomainError(
-      "このカテゴリには質問が含まれています。先に質問を削除または移動してください",
-      "CONFLICT",
-    );
-  }
+    if (category._count.items > 0) {
+      throw new DomainError(
+        "このカテゴリには質問が含まれています。先に質問を削除または移動してください",
+        "CONFLICT",
+      );
+    }
 
-  await prisma.faqCategory.update({
-    where: { id },
-    data: { deletedAt: new Date() },
+    await tx.faqCategory.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   });
 }
 
