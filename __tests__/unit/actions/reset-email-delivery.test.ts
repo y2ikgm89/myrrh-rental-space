@@ -47,7 +47,7 @@ mock.module("@/shared/domain/customers/commands", () => ({
   })),
   toggleCustomerActive: mock(async () => ({ previousActive: false })),
   updateCustomer: mock(async () => undefined),
-  updateCustomerNotes: mock(async () => undefined),
+  updateCustomerNotes: mock(async () => ({ previousNotes: null })),
   updateCustomerStatus: mock(async () => undefined),
   anonymizeCustomerCommand: mock(async () => ({
     customerId: CUSTOMER_ID,
