@@ -577,9 +577,17 @@ export function ReservationEditForm({
                     aria-invalid={
                       fields.guestFirstName.errors ? true : undefined
                     }
+                    aria-describedby={
+                      fields.guestFirstName.errors
+                        ? fields.guestFirstName.errorId
+                        : undefined
+                    }
                   />
                   {fields.guestFirstName.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.guestFirstName.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.guestFirstName.errors.join(", ")}
                     </p>
                   )}
@@ -593,9 +601,17 @@ export function ReservationEditForm({
                     defaultValue={fields.guestEmail.initialValue}
                     disabled={isPending}
                     aria-invalid={fields.guestEmail.errors ? true : undefined}
+                    aria-describedby={
+                      fields.guestEmail.errors
+                        ? fields.guestEmail.errorId
+                        : undefined
+                    }
                   />
                   {fields.guestEmail.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.guestEmail.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.guestEmail.errors.join(", ")}
                     </p>
                   )}
@@ -608,9 +624,17 @@ export function ReservationEditForm({
                     defaultValue={fields.guestPhone.initialValue}
                     disabled={isPending}
                     aria-invalid={fields.guestPhone.errors ? true : undefined}
+                    aria-describedby={
+                      fields.guestPhone.errors
+                        ? fields.guestPhone.errorId
+                        : undefined
+                    }
                   />
                   {fields.guestPhone.errors && (
-                    <p className="text-sm text-destructive">
+                    <p
+                      id={fields.guestPhone.errorId}
+                      className="text-sm text-destructive"
+                    >
                       {fields.guestPhone.errors.join(", ")}
                     </p>
                   )}
