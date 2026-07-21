@@ -649,6 +649,7 @@ export function SpaceEditForm({
                     onChange={setDescriptionJson}
                     height="560px"
                     placeholder="スペースの説明を入力..."
+                    contentEditableId="space-description"
                     ariaDescribedBy={
                       fields.descriptionJson.errors
                         ? fields.descriptionJson.errorId

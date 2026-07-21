@@ -128,4 +128,34 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
       `Admin post new page (dirty) a11y violations:\n${formatViolations(results.violations)}`,
     ).toEqual([]);
   });
+
+  test("スペース編集ページの説明エディタが視認ラベルと一致するアクセシブルネームを持つ（PR#1340 Codexレビュー指摘の回帰確認）", async ({
+    page,
+  }) => {
+    await page.goto(urls.adminSpaces);
+
+    await page
+      .getByRole("link", { name: "コワーキングスペース", exact: true })
+      .click();
+
+    await expect(page).toHaveURL(/\/admin\/spaces\/[^/]+\/edit$/u, {
+      timeout: 20000,
+    });
+
+    // SpaceEditForm.tsx の <Label htmlFor="space-description">説明 *</Label> と
+    // LazyLexicalEditor の contentEditableId="space-description" によるネイティブ
+    // label-for 関連付けで、contenteditable のアクセシブルネームが視認ラベルの
+    // テキストと一致することを確認する（axe は id/aria-labelledby の不在を検知
+    // できないため、getByRole の name 解決で明示的に検証する）。
+    const descriptionEditor = page.getByRole("textbox", { name: "説明 *" });
+    await expect(descriptionEditor).toBeVisible({ timeout: 15000 });
+
+    const results = await buildAdminAxeScanner(page).analyze();
+    const blocking = results.violations.filter(isBlocking);
+
+    expect(
+      blocking,
+      `Admin space edit page a11y violations:\n${formatViolations(results.violations)}`,
+    ).toEqual([]);
+  });
 });
