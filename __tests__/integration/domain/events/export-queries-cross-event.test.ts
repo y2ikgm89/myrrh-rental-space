@@ -31,9 +31,6 @@ async function createFixtureEventWithRegistration(): Promise<string> {
   const end = new Date(Date.now() + 26 * 60 * 60 * 1000);
 
   return prisma.$transaction(async (tx) => {
-    // Check constraint is DEFERRABLE INITIALLY DEFERRED, but ensure it's set
-    await tx.$executeRawUnsafe("SET CONSTRAINTS ALL DEFERRED");
-
     const event = await tx.event.create({
       data: {
         title: `横断エクスポートテスト ${suffix}`,
@@ -81,9 +78,12 @@ async function createFixtureEventWithRegistration(): Promise<string> {
 }
 
 async function cleanupFixture(eventId: string): Promise<void> {
+  // EventTimeSlot は event.delete() の ON DELETE CASCADE で削除される。
+  // 先に eventTimeSlot だけを個別削除すると、event 行がまだ残っている間に
+  // SINGLE_OCCURRENCE の「スロットは常に1件」制約(DEFERRABLE)に違反する
+  // (update-registration-command.test.ts / registration-search-filter.test.ts と同じ教訓)。
   await prisma.eventRegistration.deleteMany({ where: { eventId } });
   await prisma.eventTicket.deleteMany({ where: { eventId } });
-  await prisma.eventTimeSlot.deleteMany({ where: { eventId } });
   await prisma.event.delete({ where: { id: eventId } });
 }
 
