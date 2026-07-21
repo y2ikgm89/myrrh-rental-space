@@ -3,9 +3,12 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 
-export async function getEventRegistrationsForExport(eventId: string) {
+export async function getEventRegistrationsForExport(eventId?: string) {
   const rows = await prisma.eventRegistration.findMany({
-    where: { eventId, event: { deletedAt: null } },
+    where: {
+      ...(eventId ? { eventId } : {}),
+      event: { deletedAt: null },
+    },
     select: {
       id: true,
       name: true,

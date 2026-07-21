@@ -115,13 +115,15 @@ export async function GET(request: Request): Promise<Response> {
 
     const { searchParams } = new URL(request.url);
     const eventIdParam = searchParams.get("eventId");
-    const parsed = eventIdSchema.safeParse(eventIdParam);
-
-    if (!parsed.success) {
-      return jsonValidationError(parsed.error, "eventId が不正です");
+    let eventId: string | undefined = undefined;
+    if (eventIdParam !== null && eventIdParam !== "") {
+      const eventIdParsed = eventIdSchema.safeParse(eventIdParam);
+      if (!eventIdParsed.success) {
+        return jsonValidationError(eventIdParsed.error, "eventId が不正です");
+      }
+      eventId = eventIdParsed.data;
     }
 
-    const eventId = parsed.data;
     const formatParsed = exportFormatSchema.safeParse(
       searchParams.get("format") ?? "csv",
     );
@@ -136,10 +138,11 @@ export async function GET(request: Request): Promise<Response> {
       userId: auth.user.id,
       action: AuditAction.EXPORT,
       resource: "event",
-      resourceId: eventId,
+      ...(eventId !== undefined && { resourceId: eventId }),
       metadata: {
         format: formatParsed.data,
         exportedCount: registrations.length,
+        scope: eventId !== undefined ? "single-event" : "all-events",
       },
     });
 

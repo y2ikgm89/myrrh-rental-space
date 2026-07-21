@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useQueryStates, parseAsStringLiteral } from "nuqs";
+import { useDebouncedCallback } from "@/admin/hooks";
 import {
   Table,
   TableBody,
@@ -11,6 +13,13 @@ import {
   Button,
   Pagination,
   Badge,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Checkbox,
 } from "@/admin/components/ui";
 import { RegistrationStatusBadge } from "@/admin/components/status-badges";
 import {
@@ -19,6 +28,12 @@ import {
 } from "@/admin/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
+import {
+  isRegistrationStatusFilter,
+  parseAsPage,
+  parseAsQuery,
+  registrationStatusFilterValues,
+} from "@/shared/lib/nuqs/parsers";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type {
@@ -27,6 +42,9 @@ import type {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { PaymentStatus as PaymentStatusEnum } from "@/shared/lib/validations/enums/prisma-types";
 import { RefundDialog } from "../../../reservations/[id]/_components/RefundDialog";
+import { EditRegistrationDialog } from "./EditRegistrationDialog";
+import { RecordManualPaymentDialog } from "./RecordManualPaymentDialog";
+import { EventRegistrationBulkActions } from "./EventRegistrationBulkActions";
 
 type Registration = {
   id: string;
@@ -41,6 +59,8 @@ type Registration = {
   /** Stripe 経由で受領した金額 (円)。webhook / claim 経路でセット。UNPAID なら null */
   paidAmount: number | null;
   stripePaymentIntentId: string | null;
+  /** Stripe Checkout Session ID。非 null は決済進行中/完了を意味する (手動入金記録の対象外判定に使用) */
+  stripeCheckoutSessionId: string | null;
   /** Σ既 refunds.amount (task #9 PR#5 task B、残額計算に使う) */
   cumulativeRefunded: number;
   cancelledAt: string | null;
@@ -51,6 +71,7 @@ type Registration = {
 };
 
 interface EventRegistrationTableProps {
+  readonly eventId: string;
   readonly registrations: Registration[];
   /** 全申込件数（全ページ合計）。ページネーション表示に使用。 */
   readonly total: number;
@@ -96,7 +117,22 @@ function isRefundable(reg: Registration): boolean {
   );
 }
 
+/**
+ * 手動入金記録可能条件: CONFIRMED且つUNPAID且つ Stripe 決済が進行中でない。
+ * ドメイン側 `recordManualEventPaymentCommand` の claim ガード
+ * (status: CONFIRMED, paymentStatus: UNPAID, stripeCheckoutSessionId: null 相当) と
+ * 一致させる (レビュー Important #1)。
+ */
+function isManuallyPayable(reg: Registration): boolean {
+  return (
+    reg.status === "CONFIRMED" &&
+    reg.paymentStatus === PaymentStatusEnum.UNPAID &&
+    reg.stripeCheckoutSessionId === null
+  );
+}
+
 export function EventRegistrationTable({
+  eventId,
   registrations,
   total,
   currentPage,
@@ -106,6 +142,45 @@ export function EventRegistrationTable({
   const [isCancelPending, startCancelTransition] = useTransition();
   const [isRefundPending, startRefundTransition] = useTransition();
   const [refundTarget, setRefundTarget] = useState<Registration | null>(null);
+  const [editTarget, setEditTarget] = useState<Registration | null>(null);
+  const [manualPaymentTarget, setManualPaymentTarget] = useState<string | null>(
+    null,
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((prev) =>
+      prev.size === registrations.length
+        ? new Set()
+        : new Set(registrations.map((r) => r.id)),
+    );
+  }
+
+  const [{ search, status }, setSearchParams] = useQueryStates(
+    {
+      search: parseAsQuery,
+      status: parseAsStringLiteral(registrationStatusFilterValues),
+      page: parseAsPage,
+    },
+    { history: "replace", shallow: false },
+  );
+
+  const setSearchDebounced = useDebouncedCallback(
+    (value: string) => void setSearchParams({ search: value || null, page: 1 }),
+    300,
+  );
 
   function handleCancel(registrationId: string) {
     startCancelTransition(async () => {
@@ -150,14 +225,57 @@ export function EventRegistrationTable({
 
   return (
     <div className="space-y-4">
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Input
+          key={search}
+          placeholder="氏名・メールで検索"
+          defaultValue={search}
+          onChange={(e) => setSearchDebounced(e.target.value)}
+          className="max-w-xs"
+        />
+        <Select
+          value={status ?? "all"}
+          onValueChange={(value) => {
+            if (value === "all") {
+              void setSearchParams({ status: null, page: 1 });
+              return;
+            }
+            if (!isRegistrationStatusFilter(value)) return;
+            void setSearchParams({ status: value, page: 1 });
+          }}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="ステータス" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">すべて</SelectItem>
+            {registrationStatusFilterValues.map((value) => (
+              <SelectItem key={value} value={value}>
+                {value}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      registrations.length > 0 &&
+                      selectedIds.size === registrations.length
+                    }
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="全選択"
+                  />
+                </TableHead>
                 <TableHead>名前</TableHead>
                 <TableHead className="hidden lg:table-cell">参加枠</TableHead>
                 <TableHead className="hidden md:table-cell">メール</TableHead>
+                <TableHead className="hidden xl:table-cell">備考</TableHead>
                 <TableHead>参加人数</TableHead>
                 <TableHead>ステータス</TableHead>
                 <TableHead>出欠</TableHead>
@@ -172,6 +290,13 @@ export function EventRegistrationTable({
                 const anyPending = isCancelPending || isRefundPending;
                 return (
                   <TableRow key={reg.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(reg.id)}
+                        onCheckedChange={() => toggleSelected(reg.id)}
+                        aria-label={`${reg.name}を選択`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{reg.name}</TableCell>
                     <TableCell className="hidden lg:table-cell whitespace-nowrap">
                       {formatDateTimeShort(reg.slotStartAt)} -{" "}
@@ -183,6 +308,9 @@ export function EventRegistrationTable({
                           当日参加
                         </span>
                       )}
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell max-w-[200px] truncate">
+                      {reg.note ?? "-"}
                     </TableCell>
                     <TableCell>{reg.quantity}名</TableCell>
                     <TableCell className="whitespace-nowrap">
@@ -196,6 +324,24 @@ export function EventRegistrationTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={anyPending}
+                          onClick={() => setEditTarget(reg)}
+                        >
+                          編集
+                        </Button>
+                        {isManuallyPayable(reg) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={anyPending}
+                            onClick={() => setManualPaymentTarget(reg.id)}
+                          >
+                            入金記録
+                          </Button>
+                        ) : null}
                         {showRefund ? (
                           <Button
                             variant="outline"
@@ -215,11 +361,6 @@ export function EventRegistrationTable({
                           >
                             キャンセル
                           </Button>
-                        ) : null}
-                        {!showRefund && !showCancel ? (
-                          <span className="text-sm text-muted-foreground">
-                            -
-                          </span>
                         ) : null}
                       </div>
                     </TableCell>
@@ -251,6 +392,32 @@ export function EventRegistrationTable({
           isPending={isRefundPending}
         />
       ) : null}
+
+      {editTarget ? (
+        <EditRegistrationDialog
+          open={editTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditTarget(null);
+          }}
+          registration={editTarget}
+        />
+      ) : null}
+
+      {manualPaymentTarget !== null ? (
+        <RecordManualPaymentDialog
+          open={manualPaymentTarget !== null}
+          onOpenChange={(open) => {
+            if (!open) setManualPaymentTarget(null);
+          }}
+          registrationId={manualPaymentTarget}
+        />
+      ) : null}
+
+      <EventRegistrationBulkActions
+        eventId={eventId}
+        selectedIds={[...selectedIds]}
+        onClear={() => setSelectedIds(new Set())}
+      />
     </div>
   );
 }

@@ -18,6 +18,7 @@ import {
   adminPromoteWaitlistEntryAction,
   adminExpireWaitlistOfferAction,
 } from "@/admin/actions/event-waitlist";
+import { adminCancelRegistration } from "@/admin/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -88,6 +89,26 @@ export function WaitlistQueueTable({ entries }: WaitlistQueueTableProps) {
     });
   }
 
+  async function handleCancel(registrationId: string) {
+    const confirmed = await confirm({
+      title: "キャンセル待ちを取り消しますか？",
+      description: "この操作は元に戻せません。",
+      confirmLabel: "取り消す",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    startTransition(async () => {
+      const result = await adminCancelRegistration(registrationId);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("キャンセル待ちを取り消しました");
+      router.refresh();
+    });
+  }
+
   if (entries.length === 0) {
     return (
       <p className="py-4 text-center text-sm text-muted-foreground">
@@ -142,25 +163,35 @@ export function WaitlistQueueTable({ entries }: WaitlistQueueTableProps) {
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {entry.status === "WAITLISTED" && (
+                  <div className="flex justify-end gap-2">
+                    {entry.status === "WAITLISTED" && (
+                      <Button
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() => handlePromote(entry.id)}
+                      >
+                        今すぐ繰り上げ
+                      </Button>
+                    )}
+                    {entry.status === "WAITLISTED_OFFERED" && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() => handleExpire(entry.id)}
+                      >
+                        期限切れにする
+                      </Button>
+                    )}
                     <Button
+                      variant="outline"
                       size="sm"
                       disabled={isPending}
-                      onClick={() => handlePromote(entry.id)}
+                      onClick={() => void handleCancel(entry.id)}
                     >
-                      今すぐ繰り上げ
+                      キャンセル
                     </Button>
-                  )}
-                  {entry.status === "WAITLISTED_OFFERED" && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      disabled={isPending}
-                      onClick={() => handleExpire(entry.id)}
-                    >
-                      期限切れにする
-                    </Button>
-                  )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
