@@ -17,12 +17,14 @@ import { $createTableRowNode } from "@lexical/table";
 import { tryConvertHtmlStringToLexicalJsonString } from "@/admin/components/editor/lexical/html-to-lexical-json";
 import { tryConvertHtmlStringToLexicalJsonCore } from "@/admin/components/editor/lexical/html-to-lexical-json-core";
 import { renderEditorStateJsonToHtmlCore } from "@/admin/components/editor/lexical/preview/render-editor-state-json-to-html-core";
+import { deriveLexicalContentHtmlFromJsonCore } from "@/admin/components/editor/lexical/preview/derive-lexical-content-html-core";
 import { createProjectHeadlessEditor } from "@/admin/components/editor/lexical/create-headless-lexical-editor";
 import {
   $createImageNode,
   $isImageNode,
   alignmentState,
   captionState,
+  srcState,
 } from "@/admin/components/editor/lexical/nodes/ImageNode";
 import {
   $createButtonNode,
@@ -322,5 +324,94 @@ describe("exportDOM/importDOM round-trip parity", () => {
         expect($getState(instagramNode, postIdState)).toBe("CqIbCzYMi5C");
       }
     });
+  });
+});
+
+// =============================================================================
+// XSS対策: 汎用HTMLペースト (Word/Google Docs等からの貼り付けを想定)
+//
+// tryConvertHtmlStringToLexicalJsonCore (importDOM のアローリスト式パース) と
+// deriveLexicalContentHtmlFromJsonCore (保存/公開用の派生 HTML。sanitize-html の
+// allowedTags/allowedAttributes/allowedSchemes/allowedIframeHostnames による
+// 二重サニタイズを含む) の実パイプラインへ実際に XSS ベクタを通し、危険な
+// マークアップ/属性/URL スキームが除去・無効化されることを固定化する回帰テスト。
+// =============================================================================
+
+describe("XSS対策: 汎用HTMLペースト", () => {
+  test("<script> タグは JSON にも最終 HTML にも一切残らない（@lexical/html の IGNORE_TAGS）", () => {
+    const html = "<p>本文</p><script>alert('xss')</script>";
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json.toLowerCase()).not.toContain("script");
+    expect(result.json).not.toContain("alert");
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml.toLowerCase()).not.toContain("<script");
+    expect(finalHtml).not.toContain("alert(");
+  });
+
+  test("<img onerror> は importDOM が src/alt 以外を読まないため JSON にも最終 HTML にも残らない", () => {
+    const html =
+      '<img src="https://example.com/photo.png" alt="写真" onerror="alert(1)">';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("onerror");
+    expect(result.json).not.toContain("alert");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const imageNode = $dfs()
+        .map(({ node }) => node)
+        .find($isImageNode);
+      expect(imageNode).toBeDefined();
+      if (!imageNode) return;
+      // src は正規の許可属性として保持される（onerror だけが無視される）
+      expect($getState(imageNode, srcState)).toBe(
+        "https://example.com/photo.png",
+      );
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).toContain("https://example.com/photo.png");
+    expect(finalHtml).not.toContain("onerror");
+    expect(finalHtml).not.toContain("alert(");
+  });
+
+  test('<a href="javascript:...">: LinkNode.sanitizeUrl が about:blank に強制変換し、sanitize-html の allowedSchemes 外として最終 HTML から href 属性ごと消える', () => {
+    const html = '<a href="javascript:alert(1)">クリック</a>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+    expect(finalHtml).not.toContain("href=");
+    expect(finalHtml).toContain("クリック");
+  });
+
+  test("allowlist 外ホストの <iframe> は埋め込みノード化されず JSON にも最終 HTML にも残らない", () => {
+    const html =
+      '<p>前</p><iframe src="https://evil.example.com/payload"></iframe><p>後</p>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("evil.example.com");
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("evil.example.com");
+    expect(finalHtml.toLowerCase()).not.toContain("<iframe");
+    // 前後のテキストは正常に残る
+    expect(finalHtml).toContain("前");
+    expect(finalHtml).toContain("後");
   });
 });
