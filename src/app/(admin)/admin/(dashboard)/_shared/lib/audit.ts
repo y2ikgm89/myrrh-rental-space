@@ -14,6 +14,7 @@ import { headers } from "next/headers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { notifyPermissionDeniedSpikeIfNeeded } from "@/shared/domain/audit-log/security-alerts";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import { extractClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -162,4 +163,80 @@ export async function logPermissionDenied(
   });
 
   await notifyPermissionDeniedSpikeIfNeeded(userId);
+}
+
+// =============================================================================
+// Bulk Audit Emission
+// =============================================================================
+
+/**
+ * bulk 系 admin action で per-entity の AuditLog を fireAndForget で書き出す SSoT。
+ *
+ * # 背景
+ *
+ * `executeAdminMutationResult` は成功後に単一の集約 AuditLog（`logAction`）を
+ * 書くのみ。bulk 操作では resourceId が単一 id では表現できず、結果として
+ * 「30 件キャンセルしたが AuditLog 上は resource=reservation の集約行 1 件だけ、
+ * どの id が影響を受けたかは復元不能」という forensic ギャップが生じる。
+ *
+ * この helper は bulk 系 action の `afterSuccess` から呼ぶ。ip / userAgent /
+ * userId を 1 度だけ引数で受け取り、`records` を loop して per-id で
+ * `createAuditLogRecord` を発火する。個別書込は `fireAndForget` で非ブロッキング。
+ *
+ * # 契約
+ *
+ * - 各 record は `resourceId` を必須 (bulk の目的は「どの id に影響したか」を残すこと)。
+ * - `metadata` は record 個別追加 (`additionalMetadata`) と shared (`metadata` 引数)
+ *   をマージする (records で共通の request context は shared に置く)。
+ * - 個別書込の失敗は `fireAndForget` の logError に吸収され、他 record の書込を
+ *   ブロックしない。
+ */
+export type BulkAuditRecord = {
+  resourceId: string;
+  action: AuditAction;
+  oldValue?: object | undefined;
+  newValue?: object | undefined;
+  additionalMetadata?: Record<string, unknown> | undefined;
+};
+
+export type EmitBulkAuditRecordsArgs = {
+  resource: string;
+  userId: string;
+  records: ReadonlyArray<BulkAuditRecord>;
+  metadata?: Record<string, unknown> | undefined;
+};
+
+export function emitBulkAuditRecords(args: EmitBulkAuditRecordsArgs): void {
+  const { resource, userId, records, metadata } = args;
+  const sharedMetadata = metadata ?? {};
+
+  for (const record of records) {
+    fireAndForget(
+      createAuditLogRecord(
+        omitUndefined({
+          userId,
+          action: record.action,
+          resource,
+          resourceId: record.resourceId,
+          oldValue: record.oldValue,
+          newValue: record.newValue,
+          metadata: {
+            ...sharedMetadata,
+            ...(record.additionalMetadata ?? {}),
+          },
+        }),
+      ),
+      {
+        operation: "emitBulkAuditRecords",
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          resource,
+          resourceId: record.resourceId,
+          userId,
+          action: record.action,
+        },
+      },
+    );
+  }
 }

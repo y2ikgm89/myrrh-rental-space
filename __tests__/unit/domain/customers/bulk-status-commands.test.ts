@@ -66,6 +66,7 @@ describe("bulkSetStatusCustomersCommand", () => {
         count: 0,
         newStatus: CustomerStatus.REGULAR,
         affectedIds: [],
+        affected: [],
         rejectedIds: [],
       });
       expect(mockFindMany).not.toHaveBeenCalled();

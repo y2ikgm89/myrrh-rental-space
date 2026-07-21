@@ -466,7 +466,11 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
             <p className="text-xs text-muted-foreground">{helpText}</p>
           )}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              id={field.errorId}
+              role="alert"
+              className="text-sm text-destructive"
+            >
               {error}
             </p>
           )}
@@ -524,7 +528,11 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
             <p className="text-xs text-muted-foreground">{helpText}</p>
           )}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              id={field.errorId}
+              role="alert"
+              className="text-sm text-destructive"
+            >
               {error}
             </p>
           )}
@@ -553,7 +561,11 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
             <p className="text-xs text-muted-foreground">{helpText}</p>
           )}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              id={field.errorId}
+              role="alert"
+              className="text-sm text-destructive"
+            >
               {error}
             </p>
           )}
@@ -651,7 +663,11 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
             <p className="text-xs text-muted-foreground">{helpText}</p>
           )}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              id={field.errorId}
+              role="alert"
+              className="text-sm text-destructive"
+            >
               {error}
             </p>
           )}
@@ -680,7 +696,11 @@ function AutoFieldByType<TForm extends Record<string, unknown>>(
             )}
           />
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p
+              id={field.errorId}
+              role="alert"
+              className="text-sm text-destructive"
+            >
               {error}
             </p>
           )}
@@ -747,7 +767,7 @@ function AutoImageFieldControlled({
         {...(isPending && { disabled: true })}
       />
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={field.errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
@@ -788,7 +808,7 @@ function AutoMediaFieldControlled({
         {...(isPending && { disabled: true })}
       />
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={field.errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
@@ -846,7 +866,7 @@ function AutoColorField({
       </div>
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={field.errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
@@ -884,7 +904,7 @@ function AutoIconField({
       />
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={field.errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
@@ -941,7 +961,7 @@ function AutoRichLabelField({
       />
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={field.errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
@@ -987,7 +1007,7 @@ function AutoRichBlocksField({
       />
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p id={field.errorId} role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}

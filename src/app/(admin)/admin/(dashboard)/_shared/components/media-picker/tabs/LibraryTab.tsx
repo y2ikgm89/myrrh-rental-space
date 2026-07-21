@@ -108,8 +108,16 @@ export function LibraryTab({
   return (
     <div className="space-y-4">
       {showTypeFilter && (
+        // メディアタイプ「フィルタ」ボタン群 — 実質は toggle button group であり、
+        // MediaPickerDialog 側の library/url/upload のような真の tab pattern
+        // (aria-controls で切り替わる panel が別に存在する) ではない。 role="tab"
+        // だけ付けて aria-controls / tabpanel / arrow-key nav を欠くと screen reader
+        // に「不完全な tab」として案内される (WAI-ARIA APG 違反)。ここでは
+        // group + aria-pressed の toggle パターンに整理し、そのフィルタで
+        // 絞られたグリッド (下段の MediaGridContent) は tabpanel ではなく
+        // aria-live で更新を announce する。
         <div
-          role="tablist"
+          role="group"
           aria-label="メディアタイプ切替"
           className="inline-flex items-center gap-1 rounded-md bg-muted p-1"
         >
@@ -119,8 +127,7 @@ export function LibraryTab({
               <button
                 key={filter.value}
                 type="button"
-                role="tab"
-                aria-selected={isActive}
+                aria-pressed={isActive}
                 onClick={() => handleTypeChange(filter.value)}
                 className={cn(
                   "inline-flex min-h-11 items-center justify-center rounded-sm px-3 py-2 text-sm font-medium transition-colors",

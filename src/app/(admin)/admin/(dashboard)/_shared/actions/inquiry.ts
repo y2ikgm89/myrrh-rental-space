@@ -12,7 +12,10 @@ import {
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { sendInquiryReplyEmail } from "@/shared/lib/email/inquiry-emails";
+import {
+  sendInquiryReplyEmail,
+  sendInquiryStatusNotificationToAll,
+} from "@/shared/lib/email/inquiry-emails";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -51,6 +54,29 @@ export async function updateInquiryStatus(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(getCacheTag.inquiries.detail(parsed.data.id));
+
+      // Round-4 audit Finding #1 / high: 単発ステータス変更経路は 【対応完了】
+      // メールを送っていなかった。bulk 側 (bulkSetStatusInquiries) は
+      // RESOLVED/CLOSED 遷移時に sendInquiryStatusNotificationToAll を発火して
+      // 顧客に通知するのに対し、行内 status dropdown 経由は無音だった。sender/
+      // idempotency key は sendInquiryStatusNotificationToAll に集約されている
+      // (Resend の idempotencyKey に inquiry.updatedAt が含まれ、reopen ↔ close
+      // は都度別 nonce になる) ため、単純に [id] 配列で bulk helper に委譲する。
+      if (
+        parsed.data.status === InquiryStatus.RESOLVED ||
+        parsed.data.status === InquiryStatus.CLOSED
+      ) {
+        fireAndForget(
+          sendInquiryStatusNotificationToAll(
+            [parsed.data.id],
+            parsed.data.status,
+          ),
+          {
+            operation: "updateInquiryStatus.notify",
+            category: ErrorCategory.EXTERNAL_API,
+          },
+        );
+      }
     },
   });
 }

@@ -15,12 +15,31 @@ function ci(query: string) {
   return { contains: query, mode: "insensitive" as const };
 }
 
+/**
+ * command-palette 検索 top-N の SSoT ordering。
+ *
+ * take: N without orderBy → PostgreSQL 実装依存の非決定順序で 5 件を返す。
+ * 書込直後 / plan 変更 / VACUUM 後で「一覧に出たり消えたり」する silent UX 破綻
+ * になるため、更新時刻の新しい順を第一キー、id ASC を stable tie-breaker と
+ * して固定する (Round-3 audit Finding #23 / low)。updatedAt を持たないモデルは
+ * createdAt を採用する。
+ */
+const ORDER_BY_UPDATED = [
+  { updatedAt: "desc" as const },
+  { id: "asc" as const },
+];
+const ORDER_BY_CREATED = [
+  { createdAt: "desc" as const },
+  { id: "asc" as const },
+];
+
 async function searchSpaces(query: string): Promise<SearchResultItem[]> {
   const rows = await prisma.space.findMany({
     where: {
       OR: [{ name: ci(query) }, { slug: ci(query) }],
     },
     select: { id: true, name: true, slug: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -43,6 +62,8 @@ async function searchCustomers(query: string): Promise<SearchResultItem[]> {
       ],
     },
     select: { id: true, lastName: true, firstName: true, email: true },
+    // Customer は updatedAt 列を持たないため createdAt を採用する。
+    orderBy: ORDER_BY_CREATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -70,6 +91,7 @@ async function searchReservations(query: string): Promise<SearchResultItem[]> {
       customer: { select: { lastName: true } },
       space: { select: { name: true } },
     },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -90,6 +112,7 @@ async function searchPosts(query: string): Promise<SearchResultItem[]> {
       OR: [{ title: ci(query) }, { slug: ci(query) }],
     },
     select: { id: true, title: true, slug: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -107,6 +130,7 @@ async function searchNews(query: string): Promise<SearchResultItem[]> {
       OR: [{ title: ci(query) }, { slug: ci(query) }],
     },
     select: { id: true, title: true, slug: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -124,6 +148,7 @@ async function searchPages(query: string): Promise<SearchResultItem[]> {
       OR: [{ title: ci(query) }, { slug: ci(query) }],
     },
     select: { id: true, title: true, slug: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -151,6 +176,7 @@ async function searchEvents(query: string): Promise<SearchResultItem[]> {
         take: 1,
       },
     },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -176,6 +202,7 @@ async function searchInquiries(query: string): Promise<SearchResultItem[]> {
       ],
     },
     select: { id: true, name: true, subject: true, receiptNumber: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -194,6 +221,7 @@ async function searchFaqItems(query: string): Promise<SearchResultItem[]> {
       OR: [{ question: ci(query) }, { answer: ci(query) }],
     },
     select: { id: true, question: true, categoryId: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -210,6 +238,7 @@ async function searchCoupons(query: string): Promise<SearchResultItem[]> {
       OR: [{ code: ci(query) }, { name: ci(query) }],
     },
     select: { id: true, code: true, name: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
@@ -226,6 +255,7 @@ async function searchLocations(query: string): Promise<SearchResultItem[]> {
       OR: [{ name: ci(query) }, { address: ci(query) }],
     },
     select: { id: true, name: true },
+    orderBy: ORDER_BY_UPDATED,
     take: SEARCH_LIMIT_PER_RESOURCE,
   });
   return rows.map((r) => ({
