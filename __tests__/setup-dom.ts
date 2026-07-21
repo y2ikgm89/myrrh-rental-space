@@ -3,9 +3,11 @@
  *
  * Bun テスト実行時にグローバル DOM を登録する。
  * Lexical の `$generateHtmlFromNodes`（headless）は JSDOM 実装を想定しているため、
- * happy-dom ではなく JSDOM を使う。
- *
- * `DOMParser`（`html-to-lexical-json` の `parseFromString`）もグローバルに載せる。
+ * happy-dom ではなく JSDOM を使う。Lexical に必要な中核グローバル一覧は
+ * 本番のサーバー側変換（保存時の JSON→HTML 等）とも共有する
+ * `collectLexicalHeadlessDomGlobals`（`src/shared/lib/lexical-headless-dom-environment.ts`）
+ * が SSoT。ここではそれに加え、conform フォームテスト等 Lexical 以外のテストが
+ * 必要とする追加グローバルを重ねて設定する。
  *
  * `@lexical/html` は `typeof window` と `global.window` を参照するため、
  * `globalThis` だけでなく Node/Bun の `global` にも代入する。
@@ -14,6 +16,7 @@
  * `installJSDOMForTests()` をエクスポートし Lexical 関連テストの `beforeEach` から再適用できる。
  */
 import { JSDOM } from "jsdom";
+import { collectLexicalHeadlessDomGlobals } from "../src/shared/lib/lexical-headless-dom-environment";
 
 function defineGlobal(target: object, key: string, value: unknown): void {
   Object.defineProperty(target, key, {
@@ -40,9 +43,12 @@ export function installJSDOMForTests(): void {
 
   const { window } = jsdomInstance;
 
-  defineGlobal(globalThis, "window", window);
-  defineGlobal(globalThis, "document", window.document);
-  defineGlobal(globalThis, "navigator", window.navigator);
+  for (const [key, value] of Object.entries(
+    collectLexicalHeadlessDomGlobals(window),
+  )) {
+    defineGlobal(globalThis, key, value);
+  }
+
   // conform の getFormAction が bare `location` を参照するため global へ載せる
   // (form.insert/remove の submit 経路で必要)。
   defineGlobal(globalThis, "location", window.location);
@@ -56,8 +62,6 @@ export function installJSDOMForTests(): void {
     }
   }
 
-  defineGlobal(globalThis, "Element", window.Element);
-  defineGlobal(globalThis, "HTMLElement", window.HTMLElement);
   // conform の form observation (integrations: getFieldElements) は
   // form.elements を HTMLInputElement / HTMLSelectElement / HTMLTextAreaElement で
   // instanceof フィルタするため、これらの constructor を global へ載せる。
@@ -66,30 +70,9 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "HTMLTextAreaElement", window.HTMLTextAreaElement);
   defineGlobal(globalThis, "HTMLButtonElement", window.HTMLButtonElement);
   defineGlobal(globalThis, "HTMLFormElement", window.HTMLFormElement);
-  // Lexical ImageNode の importDOM (`element instanceof HTMLImageElement`) が
-  // 参照するため必要（bare <img> / figure>img 双方の round-trip テストで使用）。
-  defineGlobal(globalThis, "HTMLImageElement", window.HTMLImageElement);
-  // YouTube/Vimeo/X/Instagram の importDOM (`element instanceof HTMLIFrameElement` /
-  // `instanceof HTMLDivElement`) が参照するため必要（iframe round-trip テストで使用）。
-  defineGlobal(globalThis, "HTMLIFrameElement", window.HTMLIFrameElement);
-  defineGlobal(globalThis, "HTMLDivElement", window.HTMLDivElement);
-  defineGlobal(globalThis, "SVGElement", window.SVGElement);
-  defineGlobal(globalThis, "Node", window.Node);
-  defineGlobal(globalThis, "Text", window.Text);
-  defineGlobal(globalThis, "DocumentFragment", window.DocumentFragment);
-  defineGlobal(globalThis, "Document", window.Document);
-  defineGlobal(globalThis, "MutationObserver", window.MutationObserver);
   defineGlobal(globalThis, "customElements", window.customElements);
-  defineGlobal(globalThis, "Event", window.Event);
-  defineGlobal(globalThis, "CustomEvent", window.CustomEvent);
   defineGlobal(globalThis, "sessionStorage", window.sessionStorage);
   defineGlobal(globalThis, "localStorage", window.localStorage);
-  defineGlobal(
-    globalThis,
-    "getComputedStyle",
-    window.getComputedStyle.bind(window),
-  );
-  defineGlobal(globalThis, "DOMParser", window.DOMParser);
 
   // jsdom は HTMLDialogElement.showModal() / close() を未実装。
   // dialog 要素を使うコンポーネントのテストが TypeError で落ちるため polyfill する。

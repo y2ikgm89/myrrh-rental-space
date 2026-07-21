@@ -1,4 +1,4 @@
-import { withDOM } from "@lexical/headless/dom";
+import { withLexicalHeadlessDom } from "@/shared/lib/lexical-headless-dom-environment";
 import { getCuratedIconSvgMarkup } from "@/shared/lib/html/curated-icon-svg-markup";
 
 type IconEnrichmentTarget = {
@@ -95,10 +95,12 @@ export function enrichLexicalContentHtmlWithCuratedIcons(html: string): string {
     return enrichLexicalContentHtmlWithCuratedIconsInDom(html);
   }
 
-  return withDOM(() => enrichLexicalContentHtmlWithCuratedIconsInDom(html));
+  return withLexicalHeadlessDom(() =>
+    enrichLexicalContentHtmlWithCuratedIconsInDom(html),
+  );
 }
 
-/** CI seed 等で不完全な DOMParser が載る場合は withDOM 経路へフォールバック */
+/** CI seed 等で不完全な DOMParser が載る場合は withLexicalHeadlessDom 経路へフォールバック */
 function isFullDomParser(): boolean {
   try {
     const doc = new DOMParser().parseFromString("<p></p>", "text/html");

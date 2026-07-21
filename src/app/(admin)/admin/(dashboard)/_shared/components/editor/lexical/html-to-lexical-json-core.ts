@@ -1,7 +1,7 @@
 import { $generateNodesFromDOM } from "@lexical/html";
-import { withDOM } from "@lexical/headless/dom";
 import { $getRoot, $insertNodes } from "lexical";
 import { createProjectHeadlessEditor } from "./create-headless-lexical-editor";
+import { withLexicalHeadlessDom } from "@/shared/lib/lexical-headless-dom-environment";
 import {
   EMPTY_LEXICAL_EDITOR_STATE_JSON,
   isLexicalComposerReadyEditorStateJson,
@@ -16,6 +16,8 @@ export type ConvertHtmlToLexicalJsonResult =
  * HTML 文字列 → Lexical EditorState JSON（環境非依存コア）。
  *
  * 公式: `createHeadlessEditor` + `withDOM` + `$generateNodesFromDOM`。
+ * DOM 環境は `withLexicalHeadlessDom`（happy-dom フォールバックの既知バグを避け
+ * JSDOM を使う）が用意する。
  */
 export function tryConvertHtmlStringToLexicalJsonCore(
   html: string,
@@ -26,7 +28,7 @@ export function tryConvertHtmlStringToLexicalJsonCore(
   }
 
   try {
-    return withDOM(() => {
+    return withLexicalHeadlessDom(() => {
       const editor = createProjectHeadlessEditor();
 
       editor.update(
