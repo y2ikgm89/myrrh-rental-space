@@ -1,7 +1,6 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { isToday } from "date-fns";
 import { cn } from "@/shared/lib/cn";
 import {
   formatJstDayOfMonth,
@@ -11,6 +10,7 @@ import {
   generateTimeSlots,
   layoutOverlappingEvents,
   maxConcurrentColumns,
+  isSameJstDay,
   isPastJstDay,
   isEventEnded,
   minutesSinceJstBusinessStart,
@@ -38,7 +38,6 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
     CALENDAR_LAYOUT.dayColumnMinPx,
     maxCols * CALENDAR_LAYOUT.daySubcolumnMinPx,
   );
-  const today = isToday(date);
   const dayOfWeek = date.getDay();
 
   // hydration mismatch 回避: useSyncExternalStore で client-only gate
@@ -49,6 +48,9 @@ export function DayView({ date, events, onEventClick }: DayViewProps) {
   );
   // eslint-disable-next-line @eslint-react/purity -- Client component: now indicator
   const now = isClient ? new Date() : null;
+  // date-fns isToday は host TZ 依存 + SSR 実行で JST 深夜跨ぎに誤判定するため
+  // JST 固定の isSameJstDay を使う (MonthView/WeekView と同型)。
+  const today = now !== null && isSameJstDay(date, now);
   const past = now !== null && isPastJstDay(date, now);
   const businessTotalMinutes =
     (DEFAULT_BUSINESS_HOURS.endHour - DEFAULT_BUSINESS_HOURS.startHour) * 60;

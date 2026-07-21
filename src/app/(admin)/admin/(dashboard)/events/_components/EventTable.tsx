@@ -27,6 +27,13 @@ export function EventTable({ events }: EventTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = events.map((e) => e.id);
+
+  // Round-5 audit Finding #9: 検索・並び替え・ページ移動で events が入れ替わっても
+  // selectedIds はローカル state に残るため、次の一括操作で見えていない過去選択の
+  // イベントまで対象になる。CouponTable.tsx と同型の修正。
+  const visibleIdSet = new Set(allIds);
+  const effectiveSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id));
+
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
 
@@ -128,7 +135,7 @@ export function EventTable({ events }: EventTableProps) {
       </div>
 
       <EventBulkActions
-        selectedIds={selectedIds}
+        selectedIds={effectiveSelectedIds}
         onClear={() => setSelectedIds([])}
       />
     </>

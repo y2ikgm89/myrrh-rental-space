@@ -100,6 +100,21 @@ export const CREATABLE_RESERVATION_STATUSES: readonly ReservationStatus[] = [
 
 /**
  * ステータス遷移ルール（UI層・ドメイン層で共有）
+ *
+ * CONFIRMED → PENDING（確認済みの格下げ）は
+ * ReservationDetail.tsx の専用ステータス変更 UI が以前から選択肢として提示していた
+ * （静的な Select オプションで、遷移可否を UI 側で絞り込んでいなかった）が、
+ * 本 map に未登録だったため実際に選択すると DomainError で弾かれる、UI と
+ * ドメイン層が食い違った pre-existing バグだった（Round-5 audit Finding #8
+ * で発覚。admin.ts の編集フォーム経由の通知分岐も同じ理由で到達不能だった）。
+ * 「確認は取ったが要件変更で保留に戻す」は業務上妥当な操作のため、遷移を
+ * 正式に許可する。スマートロック passcode の失効は他の状態変更後の副作用
+ * （GCal 同期・確認メール等）と同様 actions/reservation/mutations.ts の
+ * afterSuccess 内で CONFIRMED→PENDING 遷移時に revoke する
+ * （発行済み passcode が「確認済み」の前提を失うため。domain command
+ * 自体は DB 書込と副作用判定に必要な previousStatus/payload の返却に
+ * 専念し、外部 API 呼出しの orchestration は呼び出し側に委譲する既存方針
+ * に合わせる）。
  */
 export const RESERVATION_STATUS_TRANSITIONS: Readonly<
   Record<string, readonly ReservationStatus[]>
@@ -109,6 +124,7 @@ export const RESERVATION_STATUS_TRANSITIONS: Readonly<
     ReservationStatus.CANCELLED,
   ],
   [ReservationStatus.CONFIRMED]: [
+    ReservationStatus.PENDING,
     ReservationStatus.COMPLETED,
     ReservationStatus.NO_SHOW,
     ReservationStatus.CANCELLED,

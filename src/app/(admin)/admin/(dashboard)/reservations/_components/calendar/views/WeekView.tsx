@@ -1,7 +1,6 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { isToday } from "date-fns";
 import { cn } from "@/shared/lib/cn";
 import {
   formatJstDayOfMonth,
@@ -67,7 +66,9 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
       CALENDAR_LAYOUT.weekColumnMinPx,
       maxCols * CALENDAR_LAYOUT.weekSubcolumnMinPx,
     );
-    const today = isToday(day);
+    // date-fns isToday は host TZ 依存 + SSR 実行で JST 深夜跨ぎに誤判定するため
+    // JST 固定の isSameJstDay を使う (MonthView と同型)。
+    const today = now !== null && isSameJstDay(day, now);
     const past = now !== null && isPastJstDay(day, now);
 
     return {
@@ -113,7 +114,8 @@ export function WeekView({ dateRange, events, onEventClick }: WeekViewProps) {
     };
   });
 
-  const hasToday = displayDays.some((d) => isToday(d));
+  const hasToday =
+    now !== null && displayDays.some((d) => isSameJstDay(d, now));
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-lg border bg-card">

@@ -37,6 +37,7 @@ import {
 } from "@/shared/lib/email/reservation-emails";
 import type { ReservationEmailData } from "@/shared/lib/email/types";
 import { issueSmartLockPasscodes } from "@/shared/domain/smart-lock/issue-passcode";
+import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/revoke-passcode";
 
 const updateStatusSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
@@ -184,6 +185,23 @@ export const updateReservationStatus = async (
             context: { reservationId: id },
           },
         );
+      }
+
+      // Round-5 audit Finding #8: CONFIRMED → PENDING (確認済みの格下げ) は
+      // RESERVATION_STATUS_TRANSITIONS に新規許可した遷移。発行済みスマートロック
+      // passcode は「確認済み」を前提に発行されているため、格下げ時は revoke する
+      // （キャンセル時の applyCancellationSideEffects 内 revoke と同じ helper・
+      // 同じ afterSuccess 層に揃える）。
+      if (
+        status === ReservationStatus.PENDING &&
+        result.previousStatus === ReservationStatus.CONFIRMED
+      ) {
+        fireAndForget(revokeSmartLockPasscodesForReservation(id), {
+          operation: "revokeSmartLockPasscodesForReservation",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: { reservationId: id },
+        });
       }
 
       // 確認・キャンセル以外のステータス変更（完了、無断キャンセル等）は汎用通知メール

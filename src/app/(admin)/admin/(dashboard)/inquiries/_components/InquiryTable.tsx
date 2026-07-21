@@ -40,6 +40,13 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = inquiries.map((i) => i.id);
+
+  // Round-5 audit Finding #10: 検索・並び替え・ページ移動で inquiries が入れ替わっても
+  // selectedIds はローカル state に残るため、次の一括操作で見えていない過去選択の
+  // お問い合わせまで対象になる。CouponTable.tsx と同型の修正。
+  const visibleIdSet = new Set(allIds);
+  const effectiveSelectedIds = selectedIds.filter((id) => visibleIdSet.has(id));
+
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selectedIds.includes(id));
 
@@ -158,7 +165,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
       </TableShell>
 
       <InquiryBulkActions
-        selectedIds={selectedIds}
+        selectedIds={effectiveSelectedIds}
         onClear={() => setSelectedIds([])}
       />
     </>

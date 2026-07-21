@@ -1,7 +1,6 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { isToday } from "date-fns";
 import {
   generateTimeSlots,
   layoutOverlappingEvents,
@@ -47,7 +46,6 @@ export function ResourceView({
 }: ResourceViewProps) {
   const timeSlots = generateTimeSlots(DEFAULT_BUSINESS_HOURS);
   const gridHeight = timeSlots.length * CALENDAR_LAYOUT.pixelsPerHour;
-  const today = isToday(date);
 
   // hydration mismatch 回避: useSyncExternalStore で client-only gate
   const isClient = useSyncExternalStore(
@@ -57,6 +55,9 @@ export function ResourceView({
   );
   // eslint-disable-next-line @eslint-react/purity -- Client component: now indicator
   const now = isClient ? new Date() : null;
+  // date-fns isToday は host TZ 依存 + SSR 実行で JST 深夜跨ぎに誤判定するため
+  // JST 固定の isSameJstDay を使う (MonthView/WeekView/DayView と同型)。
+  const today = now !== null && isSameJstDay(date, now);
   const past = now !== null && isPastJstDay(date, now);
   const businessTotalMinutes =
     (DEFAULT_BUSINESS_HOURS.endHour - DEFAULT_BUSINESS_HOURS.startHour) * 60;

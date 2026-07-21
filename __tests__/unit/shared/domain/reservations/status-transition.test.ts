@@ -9,6 +9,8 @@ describe("validateStatusTransition", () => {
     [ReservationStatus.CONFIRMED, ReservationStatus.COMPLETED],
     [ReservationStatus.CONFIRMED, ReservationStatus.NO_SHOW],
     [ReservationStatus.CONFIRMED, ReservationStatus.CANCELLED],
+    // Round-5 audit Finding #8: 確認済みの格下げ (要件変更で保留に戻す) を許可
+    [ReservationStatus.CONFIRMED, ReservationStatus.PENDING],
   ];
 
   for (const [from, to] of allowedTransitions) {
