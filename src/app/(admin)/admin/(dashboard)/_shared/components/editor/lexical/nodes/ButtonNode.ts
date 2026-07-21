@@ -43,6 +43,7 @@ import {
   parseStringWithDefault,
 } from "../config/type-guards";
 import { renderLexicalDecorator } from "./decorator-registry";
+import { sanitizeLexicalUrlScheme } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export type ButtonVariant =
   "primary" | "secondary" | "ghost" | "link" | "editorial";
@@ -152,7 +153,11 @@ function $convertButtonElement(
   if (!link) return null;
 
   const label = $convertButtonLabelSpans(link);
-  const href = link.getAttribute("href") ?? "#";
+  // 修正: 従来は href を無検証で読んでいたため、data-button 属性を持つ
+  // 貼り付け HTML を細工されると javascript: 等の危険スキームがそのまま
+  // buttonHrefState に格納されていた（LinkNode.sanitizeUrl 相当の検証欠如）。
+  // @lexical/link の LinkNode.sanitizeUrl と同じパターンで import 時に無害化する。
+  const href = sanitizeLexicalUrlScheme(link.getAttribute("href") ?? "#");
   const variantAttr = element.getAttribute("data-button-variant");
   const sizeAttr = element.getAttribute("data-button-size");
   const alignmentAttr = element.getAttribute("data-button-alignment");
