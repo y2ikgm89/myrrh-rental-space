@@ -190,6 +190,8 @@ locals {
     "calendar-sync-retry",
     # 段階 B 完了: PR #1313 で追加 → apply-create 完了 (2026-07-20T10:18:42Z 本番作成確認済み) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "audit-log-integrity",
+    # 段階 B 完了: PR #1382 で追加 → apply-create 完了 (2026-07-21T15:49:53Z 本番作成確認済み、Deploy Production run 29845742054 の Terraform Apply (IAM prereq) ジョブで実確認) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
+    "news-scheduled-publish",
   ])
 }
 
