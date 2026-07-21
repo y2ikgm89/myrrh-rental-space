@@ -13,32 +13,42 @@
 #     prevent_destroy-protected prod resources and warrants its own PR + a
 #     verified `terraform plan` before merge).
 terraform {
-  # EXACT pin (`= 1.10.0`) — not a floor (`>= 1.10.0`).
+  # PESSIMISTIC pin (`~> 1.15.0`) — allows 1.15.x patch releases, blocks any
+  # 1.16+ minor bump. Bumped 2026-07 from a previous exact `= 1.10.0` pin
+  # after a verified audit against HashiCorp's actual state-file source
+  # (internal/states/statefile/) confirmed the on-disk state format (v4) has
+  # not changed anywhere across the 1.10.0 -> 1.15.8 range — the earlier
+  # comment's framing of this jump as a risky "one-way state format upgrade"
+  # overstated the risk. 1.15.8 also carries fixes for 3 upstream Go-dependency
+  # CVEs (CVE-2025-0377 go-slug, CVE-2025-22868/22872 oauth2 & net) picked up
+  # since 1.10.0 — none GCS/import/provider-specific, but no reason to stay
+  # frozen once confirmed safe.
   #
-  # Why exact instead of >= :
-  #   - This is a project-specific choice, not something HashiCorp's own
-  #     guidance recommends (HashiCorp's tutorials/style guide actually favor
-  #     a pessimistic constraint like `~> 1.10` for exactly this scenario, to
-  #     avoid needing a config edit for every patch release). We pin exact
-  #     here because CI (`TF_VERSION: 1.10.0` in .github/workflows/terraform.yml
-  #     and terraform-drift.yml, `terraform_version: 1.10.0` in
-  #     deploy-production.yml) and any local `terraform apply` against the
-  #     shared GCS state must resolve to the byte-identical Terraform binary.
-  #     State upgrades are one-way and cannot be safely rolled back — a state
-  #     written by 1.11+ can never be read by 1.10.x again — so `>= 1.10.0`
-  #     would let a collaborator's newer local CLI silently rewrite the shared
-  #     remote state and lock CI out on the next plan.
-  #   - Exact pin makes local + GitHub Actions all agree, so the
-  #     `terraform_version` marker written into the state file never changes
-  #     unexpectedly. Version bumps become an explicit PR touching this file
-  #     AND all three workflow files that reference `1.10.0`
-  #     (.github/workflows/terraform.yml, terraform-drift.yml,
-  #     deploy-production.yml — grep for `1.10.0` to find them) together,
-  #     plus a state backup beforehand given the one-way upgrade risk.
+  # Why pessimistic (`~>`) instead of exact (`=`):
+  #   - This matches HashiCorp's own guidance (their tutorials/style guide
+  #     recommend `~>` precisely so patch releases — which never change state
+  #     format within a minor line — don't require a config edit), rather than
+  #     the previous exact pin, which wasn't something HashiCorp actually
+  #     recommends.
+  #   - Still fully controls the one thing that matters here: no collaborator
+  #     or CI can silently jump to 1.16+ and write a state format this repo
+  #     hasn't verified compatibility with.
+  #   - CI (`TF_VERSION` in .github/workflows/terraform.yml and
+  #     terraform-drift.yml, `terraform_version` in deploy-production.yml) still
+  #     pins the literal `1.15.8` string explicitly, so the actual installed
+  #     binary is identical everywhere regardless of this constraint's
+  #     flexibility — this constraint is a guard rail for anyone running a
+  #     different local patch version, not the thing that picks the CI binary.
+  #   - Future minor-version bumps (e.g. to 1.16) remain an explicit, deliberate
+  #     PR touching this file AND all three workflow files that reference the
+  #     pinned version (.github/workflows/terraform.yml, terraform-drift.yml,
+  #     deploy-production.yml — grep for the version string to find them),
+  #     ideally preceded by a `terraform state pull` backup given there is no
+  #     staging environment to rehearse against.
   #   - Still satisfies the >= 1.7 floor required by top-level `import {}`
   #     blocks (used throughout terraform/*.tf to adopt pre-existing GCP
   #     resources into state instead of erroring on 409 during fresh apply).
-  required_version = "= 1.10.0"
+  required_version = "~> 1.15.0"
 
   required_providers {
     google = {
