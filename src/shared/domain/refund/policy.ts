@@ -128,6 +128,22 @@ export function calculateRefundAmount(
 }
 
 /**
+ * `calculateRefundAmount` の `now` を呼出時刻で確定する薄いラッパー。
+ *
+ * `new Date()` をこの helper 内に閉じることで、Server Component の
+ * `purity` ルール（render 中の `new Date()` 直呼びを禁止）に抵触せず
+ * render 中に評価できる（`coupons/_lib/coupon-status.ts` の
+ * `deriveCouponStatusesNow` と同型の回避パターン）。
+ */
+export function calculateRefundAmountNow(
+  policy: RefundPolicy,
+  chargedAmount: number,
+  startTime: Date,
+): number {
+  return calculateRefundAmount(policy, chargedAmount, startTime, new Date());
+}
+
+/**
  * `Settings.refundPolicy` の unknown JSON 値を type-safe に parse する。
  *
  * ## fail-open 設計
