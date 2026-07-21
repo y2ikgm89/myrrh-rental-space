@@ -2640,6 +2640,85 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("Intl.DateTimeFormat / toLocale*String は timeZone 指定必須 (JST drift 防止)", () => {
+    // Cloud Run (TZ=UTC) 上で timeZone を指定しない Intl.DateTimeFormat /
+    // toLocaleDateString / toLocaleTimeString / toLocaleString(with options)
+    // は SSR で UTC 時刻を整形し、CSR (browser JST) と食い違って hydration mismatch や
+    // 予約バー描画位置の 9h ズレを引き起こす silent bug (Round-4 findings #6 #7 #18)。
+    // SSoT は @/shared/lib/date-format の formatTimeShort / formatJstDateString /
+    // formatJstYmd 等。inline 呼び出しでも options に `timeZone: "Asia/Tokyo"` を必須にする。
+    //
+    // 判定: options 引数を持つ Intl date/time 呼び出しで `timeZone:` が入っていないもの。
+    // 引数なし `.toLocaleString()` (数値通貨整形) は options object を持たないので対象外。
+    const CALL_PATTERN =
+      /(?:new\s+Intl\.DateTimeFormat|\.toLocale(?:Date|Time)?String)\(/gu;
+    const OPTIONS_PATTERN = /\{[\s\S]*?:/u;
+    const TIMEZONE_PATTERN = /\btimeZone\s*:/u;
+
+    const findMissingTimeZone = (source: string): number[] => {
+      const offenders: number[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = CALL_PATTERN.exec(source)) !== null) {
+        const bodyStart = match.index + match[0].length;
+        let depth = 1;
+        let pos = bodyStart;
+        while (pos < source.length && depth > 0) {
+          const c = source[pos];
+          if (c === "(") depth++;
+          else if (c === ")") depth--;
+          pos++;
+        }
+        const body = source.slice(bodyStart, pos - 1);
+        if (!OPTIONS_PATTERN.test(body)) continue;
+        if (TIMEZONE_PATTERN.test(body)) continue;
+        const lineNum = source.slice(0, match.index).split(/\r?\n/u).length;
+        offenders.push(lineNum);
+      }
+      return offenders;
+    };
+
+    const offenders: string[] = [];
+    for (const file of collectSourceFiles(SRC_ROOT)) {
+      const source = readFileSync(file, "utf8");
+      for (const line of findMissingTimeZone(source)) {
+        offenders.push(`${relative(ROOT, file)}:${line}`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  }, 30000);
+
+  test("UTC-blind な日付切り出し (toISOString/substring 0..10) を使わない", () => {
+    // `date.toISOString().slice(0, 10)` は UTC の YYYY-MM-DD を返すため、JST 深夜跨ぎ
+    // (JST 06:00 直前 = UTC 前日 21:00 直前) で 1 日ズレる silent bug。
+    // JST カレンダー日付が欲しい場合は `formatJstDateString(date)`
+    // (Intl "Asia/Tokyo" 固定) を使う。UTC 深夜 Date で保持される @db.Date 列
+    // (BlockedDate 等) の逆変換は `formatJstDateOnly` を使う (別 helper・別文脈)。
+    const sourceFiles = collectSourceFiles(SRC_ROOT).filter(
+      // date-format.ts 自身の `formatJstDateOnly` (`@db.Date` UTC 深夜 → YYYY-MM-DD)
+      // は SSoT 定義側。ここだけ toISOString().slice(0, 10) が正 (contract の逆)。
+      (file) => file !== join(SRC_ROOT, "shared", "lib", "date-format.ts"),
+    );
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\.toISOString\(\)\.slice\(\s*0\s*,\s*10\s*\)|\.toISOString\(\)\.substring\(\s*0\s*,\s*10\s*\)/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("datetime-local を new Date('${d}T${t}') で naive parse しない (single-quote 版)", () => {
+    // 上の template-literal 版と対を成す。single-quote 文字列連結でも server-local
+    // parse になり同じ JST 9h ズレ silent bug を発生させる。
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /new Date\(\s*'[^']*T\$\{/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
   test("Phase 1 SDK 境界 cast は Zod z.custom<T> helper 経由（呼び出し側 cast 0 件）", () => {
     // SDK 境界 cast の helper 強制（方針: .claude/rules/type-safety.md）
     // - LocationSchema.parse (googleapis Schema$Location)

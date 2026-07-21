@@ -18,6 +18,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import type { WalkInRegistrationInput } from "@/admin/actions/event-registration";
 import { useRadioGroupKeyboard } from "@/public/lib/a11y/use-radio-group-keyboard";
+import { formatTimeShort } from "@/shared/lib/date-format";
 
 type Ticket = {
   id: string;
@@ -46,22 +47,19 @@ type Props = {
   >;
 };
 
+// timeZone を明示しない Intl 呼び出しは SSR (Cloud Run = UTC) と CSR (ブラウザ tz)
+// で表示日時が異なり、React hydration mismatch と管理者向け slot 表示の JST ずれを
+// 同時に起こす silent bug。date-format.ts の SSoT 契約 (CLAUDE.md 絶対規約 10) に
+// 従い明示的に JST 固定。時刻は `formatTimeShort` (Intl "Asia/Tokyo") に集約。
 function formatSlotLabel(startAt: string, endAt: string): string {
   const start = new Date(startAt);
   const end = new Date(endAt);
   const dateLabel = start.toLocaleDateString("ja-JP", {
+    timeZone: "Asia/Tokyo",
     month: "numeric",
     day: "numeric",
   });
-  const startTime = start.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const endTime = end.toLocaleTimeString("ja-JP", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  return `${dateLabel} ${startTime}〜${endTime}`;
+  return `${dateLabel} ${formatTimeShort(start)}〜${formatTimeShort(end)}`;
 }
 
 export function WalkInDialog({
