@@ -23,6 +23,7 @@ import {
 import { createEnumGuard, parseString } from "../config/type-guards";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { renderLexicalDecorator } from "./decorator-registry";
+import { sanitizeLexicalUrlScheme } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export const IMAGE_ALIGNMENTS = ["left", "center", "right"] as const;
 export type ImageAlignment = (typeof IMAGE_ALIGNMENTS)[number];
@@ -30,8 +31,15 @@ export type ImageAlignment = (typeof IMAGE_ALIGNMENTS)[number];
 export const isImageAlignment =
   createEnumGuard<ImageAlignment>(IMAGE_ALIGNMENTS);
 
+// $convertImageElement / $convertImageFigureElement は貼り付け HTML の src 属性を
+// 検証なしで読むため、editor state（contentJson 正本）自体に javascript: 等の危険
+// スキームが生のまま残っていた（実測で確認済み。sanitize-html の allowedSchemes は
+// 保存時の最終 HTML にのみ効き、editor state・decorator 描画経路は素通り）。
+// LinkNode.sanitizeUrl と同じ sanitizeLexicalUrlScheme で import 時・state parse 時の
+// 両方をガードする（BookmarkNode/ButtonNode/FileNode と同型のパターン）。
 export const srcState = createState("src", {
-  parse: parseString,
+  parse: (v: unknown): string =>
+    typeof v === "string" ? sanitizeLexicalUrlScheme(v) : "",
 });
 
 export const altState = createState("alt", {
@@ -65,7 +73,7 @@ function $convertImageElement(
     if (src) {
       const alt = element.getAttribute("alt") ?? "";
       const node = $createImageNode({
-        src,
+        src: sanitizeLexicalUrlScheme(src),
         alt,
         ...(element.width && { width: element.width }),
         ...(element.height && { height: element.height }),
@@ -86,8 +94,9 @@ function $convertImageFigureElement(
 ): null | DOMConversionOutput {
   const img = element.querySelector("img");
   if (!(img instanceof HTMLImageElement)) return null;
-  const src = img.getAttribute("src");
-  if (!src) return null;
+  const rawSrc = img.getAttribute("src");
+  if (!rawSrc) return null;
+  const src = sanitizeLexicalUrlScheme(rawSrc);
 
   const alt = img.getAttribute("alt") ?? "";
   const alignmentAttr = element.getAttribute("data-image-alignment");

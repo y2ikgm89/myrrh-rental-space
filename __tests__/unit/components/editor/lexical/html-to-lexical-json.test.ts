@@ -71,6 +71,10 @@ import {
   $isFileNode,
   fileUrlState,
 } from "@/admin/components/editor/lexical/nodes/FileNode";
+import {
+  $isInlineImageNode,
+  inlineSrcState,
+} from "@/admin/components/editor/lexical/nodes/InlineImageNode";
 import { createInlineIcon, createSpan } from "@/shared/lib/portable-text";
 import {
   EMPTY_LEXICAL_EDITOR_STATE_JSON,
@@ -512,5 +516,122 @@ describe("XSS対策: 汎用HTMLペースト", () => {
     const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
     expect(finalHtml).not.toContain("javascript:");
     expect(finalHtml).not.toContain("href=");
+  });
+
+  // ---------------------------------------------------------------------------
+  // 再監査（PR #1367 の範囲外だった DecoratorNode 系）: ImageNode / InlineImageNode の
+  // src は $convertImageElement / $convertImageFigureElement / $convertInlineImageElement
+  // が getAttribute の生値を検証なしで読み、srcState も parseString のみだった
+  // （CoverNode.backgroundImageUrl と同型のギャップ）。実測で確認した実際の挙動:
+  // - contentJson（正本）には javascript: が生のまま残る（ImageNode/InlineImageNode 共通）
+  // - <img src> は sanitize-html の allowedSchemesAppliedToAttributes が "src" を
+  //   対象にしているため最終 HTML では属性ごと消える（ImageNode は最終出力上は無害）
+  // - InlineImageNode の外側 <span data-src="..."> は "src" ではなく data-* 属性のため
+  //   スキーム検証対象外で、javascript: が最終 HTML にも生き残る（実測で確認）
+  // 既存の sanitizeLexicalUrlScheme（LinkNode.sanitizeUrl 相当、BookmarkNode/ButtonNode/
+  // FileNode が使用）を import 時・state parse 時の両方に適用して閉じる。
+  // ---------------------------------------------------------------------------
+
+  test('ImageNode: <img src="javascript:...">はimportDOM側でabout:blankに無害化され、contentJson・最終HTMLのどちらにもjavascript:が残らない', () => {
+    const html = '<img src="javascript:alert(1)" alt="probe">';
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+    expect(result.json).not.toContain("alert(");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const imageNode = $dfs()
+        .map(({ node }) => node)
+        .find($isImageNode);
+      expect(imageNode).toBeDefined();
+      if (!imageNode) return;
+      expect($getState(imageNode, srcState)).toBe("about:blank");
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+  });
+
+  test('ImageNode: data-image figure 経由の <img src="javascript:...">も同様にimportDOM側で無害化される（$convertImageFigureElement 側の回帰確認）', () => {
+    const html =
+      '<figure data-image="true" data-image-alignment="center"><img src="javascript:alert(2)" alt="probe2" /></figure>';
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+  });
+
+  test("ImageNode: 通常の https 画像 URL は round-trip で保持される（allowlist の回帰確認）", () => {
+    const html = '<img src="https://example.com/photo.png" alt="写真">';
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const imageNode = $dfs()
+        .map(({ node }) => node)
+        .find($isImageNode);
+      expect(imageNode).toBeDefined();
+      if (!imageNode) return;
+      expect($getState(imageNode, srcState)).toBe(
+        "https://example.com/photo.png",
+      );
+    });
+  });
+
+  test('InlineImageNode: data-src="javascript:...">はimportDOM側でabout:blankに無害化され、contentJson・最終HTMLのどちらにもjavascript:が残らない（外側 span の data-src は sanitize-html の scheme 検証対象外のため import 時の無害化が唯一のガード）', () => {
+    const html =
+      '<span data-inline-image="true" data-src="javascript:alert(3)" data-alt="probe3" data-position="full" data-width="200"><img src="javascript:alert(3)" alt="probe3" style="width:100%;display:block;" /></span>';
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+    expect(result.json).not.toContain("alert(");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const inlineImageNode = $dfs()
+        .map(({ node }) => node)
+        .find($isInlineImageNode);
+      expect(inlineImageNode).toBeDefined();
+      if (!inlineImageNode) return;
+      expect($getState(inlineImageNode, inlineSrcState)).toBe("about:blank");
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+  });
+
+  test("InlineImageNode: 通常の https 画像 URL は round-trip で保持される（allowlist の回帰確認）", () => {
+    const html =
+      '<span data-inline-image="true" data-src="https://example.com/inline.png" data-alt="inline" data-position="full" data-width="200"><img src="https://example.com/inline.png" alt="inline" style="width:100%;display:block;" /></span>';
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const inlineImageNode = $dfs()
+        .map(({ node }) => node)
+        .find($isInlineImageNode);
+      expect(inlineImageNode).toBeDefined();
+      if (!inlineImageNode) return;
+      expect($getState(inlineImageNode, inlineSrcState)).toBe(
+        "https://example.com/inline.png",
+      );
+    });
   });
 });

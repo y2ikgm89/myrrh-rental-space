@@ -23,6 +23,7 @@ import {
 } from "lexical";
 import { parseString, createEnumGuard } from "../config/type-guards";
 import { renderLexicalDecorator } from "./decorator-registry";
+import { sanitizeLexicalUrlScheme } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export const INLINE_IMAGE_POSITIONS = ["left", "right", "full"] as const;
 export type InlineImagePosition = (typeof INLINE_IMAGE_POSITIONS)[number];
@@ -31,8 +32,15 @@ export const isInlineImagePosition = createEnumGuard<InlineImagePosition>(
   INLINE_IMAGE_POSITIONS,
 );
 
+// $convertInlineImageElement は貼り付け HTML の data-src 属性を検証なしで読むため、
+// editor state（contentJson 正本）に javascript: 等の危険スキームが生のまま残っていた
+// （実測で確認済み）。加えて外側 <span data-src="..."> は sanitize-html の
+// allowedSchemesAppliedToAttributes が "src" のみを対象にするため（data-* はスキーム
+// 未検証）、最終公開 HTML にも javascript: がそのまま残っていた。ImageNode.srcState と
+// 同様に sanitizeLexicalUrlScheme で import 時・state parse 時の両方をガードする。
 export const inlineSrcState = createState("src", {
-  parse: parseString,
+  parse: (v: unknown): string =>
+    typeof v === "string" ? sanitizeLexicalUrlScheme(v) : "",
 });
 
 export const inlineAltTextState = createState("altText", {
@@ -54,7 +62,7 @@ function $convertInlineImageElement(
 ): null | DOMConversionOutput {
   if (!element.hasAttribute("data-inline-image")) return null;
 
-  const src = element.getAttribute("data-src") ?? "";
+  const src = sanitizeLexicalUrlScheme(element.getAttribute("data-src") ?? "");
   const altText = element.getAttribute("data-alt") ?? "";
   const positionAttr = element.getAttribute("data-position") ?? "full";
   const position = isInlineImagePosition(positionAttr) ? positionAttr : "full";
