@@ -1069,6 +1069,51 @@ describe("updateAdminReservationCommand", () => {
         expect((error as DomainError).code).toBe("CONFLICT");
       }
     });
+
+    test("guest* フィールドを渡すと updateMany の data に反映される", async () => {
+      // Task 2: ゲスト連絡先スナップショット編集。guestCustomerType は
+      // CustomerType.CORPORATE (real enum value from Task 1 review)。
+      // brief の sample code は CustomerType.BUSINESS だったが stale なため修正。
+      const { CustomerType } =
+        await import("@/shared/lib/validations/enums/prisma-types");
+
+      await updateAdminReservationCommand("res-1", {
+        ...validInput,
+        guestLastName: "予約",
+        guestFirstName: "花子",
+        guestEmail: "hanako-guest@example.com",
+        guestPhone: "080-1111-2222",
+        guestCompanyName: "テスト株式会社",
+        guestCustomerType: CustomerType.CORPORATE,
+      });
+
+      expect(mockTxReservationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            guestLastName: "予約",
+            guestFirstName: "花子",
+            guestEmail: "hanako-guest@example.com",
+            guestPhone: "080-1111-2222",
+            guestCompanyName: "テスト株式会社",
+            guestCustomerType: CustomerType.CORPORATE,
+          }),
+        }),
+      );
+    });
+
+    test("guest* フィールドを省略すると updateMany の data に guest* キーが含まれない（既存値を保持）", async () => {
+      await updateAdminReservationCommand("res-1", validInput);
+
+      // 各テストはbeforeEach で mock.clear() されるため、updateMany は1回だけ呼ばれる
+      expect(mockTxReservationUpdateMany.mock.calls.length).toBeGreaterThan(0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateCall = (
+        mockTxReservationUpdateMany.mock.calls as any
+      )[0]?.[0];
+      expect(updateCall?.data).toBeDefined();
+      expect(updateCall.data).not.toHaveProperty("guestLastName");
+      expect(updateCall.data).not.toHaveProperty("guestCustomerType");
+    });
   });
 });
 

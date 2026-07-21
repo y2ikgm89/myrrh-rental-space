@@ -51,6 +51,7 @@ export async function GET(request: Request): Promise<Response> {
     const startDate = url.searchParams.get("dateFrom") ?? undefined;
     const endDate = url.searchParams.get("dateTo") ?? undefined;
     const userId = url.searchParams.get("userId") ?? undefined;
+    const spaceId = url.searchParams.get("spaceId") ?? undefined;
 
     const reservations = await getReservationsForExport({
       ...(tab !== undefined && { tab }),
@@ -58,6 +59,7 @@ export async function GET(request: Request): Promise<Response> {
       ...(startDate !== undefined && startDate !== "" && { startDate }),
       ...(endDate !== undefined && endDate !== "" && { endDate }),
       ...(userId !== undefined && userId !== "" && { userId }),
+      ...(spaceId !== undefined && spaceId !== "" && { spaceId }),
     });
 
     await createAuditLogRecord({
@@ -70,6 +72,12 @@ export async function GET(request: Request): Promise<Response> {
         ...(tab !== undefined && { filterTab: tab }),
         ...(search !== undefined && search !== "" && { filterSearch: search }),
         ...(userId !== undefined && userId !== "" && { filterUserId: userId }),
+        ...(spaceId !== undefined &&
+          spaceId !== "" && { filterSpaceId: spaceId }),
+        ...(startDate !== undefined &&
+          startDate !== "" && { filterStartDate: startDate }),
+        ...(endDate !== undefined &&
+          endDate !== "" && { filterEndDate: endDate }),
       },
     });
 

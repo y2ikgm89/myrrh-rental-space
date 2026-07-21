@@ -2,7 +2,10 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
 import { IconCalendar, IconDownload, IconPlus } from "@tabler/icons-react";
-import { getReservations } from "@/admin/queries/reservation";
+import {
+  getReservations,
+  getSpacesForReservation,
+} from "@/admin/queries/reservation";
 import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
 import { ReservationTabs } from "./_components/ReservationTabs";
@@ -37,6 +40,7 @@ async function ReservationList({
       startDate: params.dateFrom || undefined,
       endDate: params.dateTo || undefined,
       userId: params.userId || undefined,
+      spaceId: params.spaceId || undefined,
     }),
     {
       page: params.page,
@@ -61,6 +65,7 @@ async function ReservationList({
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
   const params = await loadAdminReservationSearchParams(searchParams);
+  const spaces = await getSpacesForReservation();
 
   // Round-4 audit Finding #13: CSV export は「今画面に見えている行」を
   // 期待して押されるため、一覧と同じ filter (tab/search/期間/userId) を
@@ -72,6 +77,7 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
   if (params.dateFrom) exportParams.set("dateFrom", params.dateFrom);
   if (params.dateTo) exportParams.set("dateTo", params.dateTo);
   if (params.userId) exportParams.set("userId", params.userId);
+  if (params.spaceId) exportParams.set("spaceId", params.spaceId);
   const exportHref = `/api/admin/export/reservations${
     exportParams.size > 0 ? `?${exportParams.toString()}` : ""
   }`;
@@ -115,7 +121,7 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
 
       {/* フィルター（期間 + 検索） */}
       <Suspense fallback={<LoadingState variant="inline" />}>
-        <ReservationFilters />
+        <ReservationFilters spaces={spaces} />
       </Suspense>
 
       {/* 予約一覧（タブ切替ごとに subtree を作り直す＝events と同じ Pattern A の keyed 動的ホール） */}

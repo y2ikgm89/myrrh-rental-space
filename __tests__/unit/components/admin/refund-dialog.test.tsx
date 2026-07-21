@@ -8,7 +8,8 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
 });
 
 /**
- * Round-5 audit Finding #20/#21 の回帰防止テスト。
+ * Round-5 audit Finding #20/#21 の回帰防止テスト + ポリシー推奨額ヒント
+ * (Phase 3 reservation-operations-uplift Task 9) のテスト。
  *
  * - remaining (残額) = refundableTotal - cumulativeRefunded の計算そのものを
  *   固定する（プロパティ名を `totalPriceWithTax` → `refundableTotal` に
@@ -17,6 +18,8 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
  *   コンポーネント自体の計算ロジックは元々正しかった。ここでは
  *   「渡された2値から残額と超過 validation を正しく導出する」契約を守る）。
  * - cumulativeRefunded 省略時のデフォルト 0 も明示的に検証する。
+ * - suggestedAmount (返金ポリシーに基づく推奨額) のヒント表示・
+ *   「推奨額を使用」ボタンの挙動も検証する。
  */
 
 mock.module("@/admin/components/ui", () => ({
@@ -216,6 +219,114 @@ describe("RefundDialog", () => {
     await act(async () => {
       setInputValue(input, "5000"); // remaining (7000) 以内
     });
+    await act(async () => {
+      confirmButton?.click();
+    });
+
+    expect(onConfirm).toHaveBeenCalledWith({ amount: 5000 });
+  });
+
+  test("suggestedAmount が指定された場合、ポリシー推奨額のヒントが表示される", async () => {
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      root.render(
+        <RefundDialog
+          open={true}
+          onOpenChange={() => {}}
+          refundableTotal={10000}
+          cumulativeRefunded={0}
+          suggestedAmount={5000}
+          onConfirm={() => {}}
+          isPending={false}
+        />,
+      );
+    });
+
+    const hintText = container?.textContent;
+    expect(hintText).toContain("ポリシー推奨額");
+    expect(hintText).toContain("5,000");
+  });
+
+  test("suggestedAmount が指定されていない場合、ヒントは表示されない", async () => {
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      root.render(
+        <RefundDialog
+          open={true}
+          onOpenChange={() => {}}
+          refundableTotal={10000}
+          cumulativeRefunded={0}
+          onConfirm={() => {}}
+          isPending={false}
+        />,
+      );
+    });
+
+    const hintText = container?.textContent;
+    expect(hintText).not.toContain("ポリシー推奨額");
+  });
+
+  test("「推奨額を使用」ボタン押下で、amount input に推奨額が入力される", async () => {
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      root.render(
+        <RefundDialog
+          open={true}
+          onOpenChange={() => {}}
+          refundableTotal={10000}
+          cumulativeRefunded={0}
+          suggestedAmount={5000}
+          onConfirm={() => {}}
+          isPending={false}
+        />,
+      );
+    });
+
+    const suggestedButton = Array.from(
+      container?.querySelectorAll("button") ?? [],
+    ).find((b) => b.textContent === "推奨額を使用");
+    const input = container?.querySelector(
+      '[data-testid="refund-amount-input"]',
+    ) as HTMLInputElement;
+
+    expect(input.value).toBe("");
+
+    await act(async () => {
+      suggestedButton?.click();
+    });
+
+    expect(input.value).toBe("5000");
+  });
+
+  test("推奨額を入力した後、返金確定で amount を含めて onConfirm する", async () => {
+    const onConfirm = mock();
+    await act(async () => {
+      if (!root) throw new Error("root missing");
+      root.render(
+        <RefundDialog
+          open={true}
+          onOpenChange={() => {}}
+          refundableTotal={10000}
+          cumulativeRefunded={0}
+          suggestedAmount={5000}
+          onConfirm={onConfirm}
+          isPending={false}
+        />,
+      );
+    });
+
+    const suggestedButton = Array.from(
+      container?.querySelectorAll("button") ?? [],
+    ).find((b) => b.textContent === "推奨額を使用");
+
+    await act(async () => {
+      suggestedButton?.click();
+    });
+
+    const confirmButton = Array.from(
+      container?.querySelectorAll("button") ?? [],
+    ).find((b) => b.textContent === "返金する");
+
     await act(async () => {
       confirmButton?.click();
     });

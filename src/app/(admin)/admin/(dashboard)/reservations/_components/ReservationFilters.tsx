@@ -4,7 +4,19 @@ import { IconX } from "@tabler/icons-react";
 import { useQueryStates } from "nuqs";
 import { adminReservationSearchParamsParsers } from "@/shared/lib/nuqs";
 import { useDebouncedCallback } from "@/admin/hooks";
-import { Button, Input } from "@/admin/components/ui";
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/admin/components/ui";
+
+type ReservationFiltersProps = {
+  spaces: { id: string; name: string }[];
+};
 
 /**
  * 予約管理一覧のフィルター（期間 + 検索 + staff deep-link）。
@@ -12,7 +24,7 @@ import { Button, Input } from "@/admin/components/ui";
  * ステータス絞り込みは `ReservationTabs`（nuqs `useQueryStates` shallow:false）に移管済み。
  * Filter は他テーブル (Event canonical) と同型の構造に整合。
  */
-export function ReservationFilters() {
+export function ReservationFilters({ spaces }: ReservationFiltersProps) {
   const [params, setParams] = useQueryStates(
     adminReservationSearchParamsParsers,
     {
@@ -40,6 +52,29 @@ export function ReservationFilters() {
           <IconX className="ml-2 h-3.5 w-3.5" aria-hidden="true" />
         </Button>
       )}
+      <div className="min-w-0 sm:w-[200px]">
+        <Select
+          value={params.spaceId || "all"}
+          onValueChange={(value) =>
+            void setParams({
+              spaceId: value === "all" ? null : value,
+              page: 1,
+            })
+          }
+        >
+          <SelectTrigger aria-label="スペースで絞り込み">
+            <SelectValue placeholder="全スペース" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全スペース</SelectItem>
+            {spaces.map((space) => (
+              <SelectItem key={space.id} value={space.id}>
+                {space.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
         <span className="text-sm font-medium text-muted-foreground">期間:</span>
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">

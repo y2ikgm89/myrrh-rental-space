@@ -62,6 +62,8 @@ interface RefundDialogProps {
   readonly refundableTotal: number;
   /** 部分返金既発生時の累積額 (未指定なら 0)。残額 = refundableTotal - cumulativeRefunded */
   readonly cumulativeRefunded?: number;
+  /** 返金ポリシー (Settings.refundPolicy) に基づく推奨返金額。未設定/取得不可なら undefined。 */
+  readonly suggestedAmount?: number;
   readonly onConfirm: (options: { amount?: number; reason?: string }) => void;
   readonly isPending: boolean;
 }
@@ -71,6 +73,7 @@ export function RefundDialog({
   onOpenChange,
   refundableTotal,
   cumulativeRefunded = 0,
+  suggestedAmount,
   onConfirm,
   isPending,
 }: RefundDialogProps) {
@@ -172,6 +175,22 @@ export function RefundDialog({
               合計 {formatPrice(refundableTotal)} — 累積返金額{" "}
               {formatPrice(cumulativeRefunded)} — 残額 {formatPrice(remaining)}
             </p>
+            {suggestedAmount !== undefined ? (
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  ポリシー推奨額: {formatPrice(suggestedAmount)}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAmountStr(String(suggestedAmount))}
+                  disabled={isPending}
+                >
+                  推奨額を使用
+                </Button>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">

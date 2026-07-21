@@ -42,6 +42,7 @@ import { revokeSmartLockPasscodesForReservation } from "@/shared/domain/smart-lo
 const updateStatusSchema = z.object({
   id: z.uuid({ error: "IDが不正です" }),
   status: z.enum(ReservationStatus),
+  reason: z.string().max(500).optional().or(z.literal("")),
 });
 
 const updateNotesSchema = z.object({
@@ -84,8 +85,9 @@ async function issueSmartLockAndSendConfirmationEmail(
 export const updateReservationStatus = async (
   id: string,
   status: ReservationStatus,
+  reason?: string,
 ) => {
-  const parsed = updateStatusSchema.safeParse({ id, status });
+  const parsed = updateStatusSchema.safeParse({ id, status, reason });
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }
@@ -172,7 +174,10 @@ export const updateReservationStatus = async (
             const userAgent = requestHeaders.get("user-agent");
             await applyCancellationSideEffects({
               reservationId: id,
-              cancellationReason: null,
+              cancellationReason:
+                parsed.data.reason && parsed.data.reason !== ""
+                  ? parsed.data.reason
+                  : null,
               channel: "admin",
               actorUserId: null,
               request: { ip, userAgent, tokenFingerprint: null },
