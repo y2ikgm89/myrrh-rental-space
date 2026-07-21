@@ -31,8 +31,9 @@ import {
 }
 
 resource "google_cloud_run_v2_service" "public" {
-  provider = google-beta
-
+  # 2026-07: dropped `provider = google-beta` — this resource is GA in the
+  # standard "google" provider (verified against the official migration guide
+  # + real-world precedent, see terraform/versions.tf header comment).
   name     = "myrrh-rental-space"
   project  = var.project_id
   location = var.region
