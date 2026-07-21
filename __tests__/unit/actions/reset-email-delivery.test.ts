@@ -58,7 +58,10 @@ mock.module("@/shared/domain/customers/commands", () => ({
 }));
 
 mock.module("@/shared/domain/customers/risk-detection", () => ({
-  clearRiskFlagCommand: mock(async () => undefined),
+  clearRiskFlagCommand: mock(async () => ({
+    previousFlaggedForReviewAt: null,
+    previousFlagReasons: [],
+  })),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({

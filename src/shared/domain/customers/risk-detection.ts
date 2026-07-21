@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { DomainError } from "@/shared/domain/domain-error";
 import { ReservationStatus, RegistrationStatus } from "@generated/prisma/enums";
 import {
   RISK_FLAG_REASON,
@@ -246,9 +247,25 @@ export async function applyRiskFlagsCommand(
 }
 
 /** 管理者による手動クリア(誤検知時に使う)。 */
-export async function clearRiskFlagCommand(customerId: string): Promise<void> {
+export async function clearRiskFlagCommand(customerId: string): Promise<{
+  previousFlaggedForReviewAt: Date | null;
+  previousFlagReasons: string[];
+}> {
+  const existing = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { flaggedForReviewAt: true, flagReasons: true },
+  });
+  if (!existing) {
+    throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+  }
+
   await prisma.customer.update({
     where: { id: customerId },
     data: { flaggedForReviewAt: null, flagReasons: [] },
   });
+
+  return {
+    previousFlaggedForReviewAt: existing.flaggedForReviewAt,
+    previousFlagReasons: existing.flagReasons,
+  };
 }

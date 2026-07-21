@@ -390,9 +390,15 @@ export async function toggleCustomerActive(id: string): Promise<
  * (誤検知時)。自動BLACKLIST化等は行わないため、フラグ解除自体は
  * ステータス変更を伴わない単純なクリア操作。
  */
-export async function clearCustomerRiskFlag(
-  id: string,
-): Promise<MutationResult> {
+export async function clearCustomerRiskFlag(id: string): Promise<
+  MutationResult<{
+    previousFlaggedForReviewAt: Date | null;
+    previousFlagReasons: string[];
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);
@@ -402,13 +408,47 @@ export async function clearCustomerRiskFlag(
     resource: "customer",
     action: "update",
     resourceId: validated.data,
-    execute: async () => {
-      await clearRiskFlagCommand(validated.data);
-      return null;
+    execute: async (user) => {
+      const { previousFlaggedForReviewAt, previousFlagReasons } =
+        await clearRiskFlagCommand(validated.data);
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return {
+        previousFlaggedForReviewAt,
+        previousFlagReasons,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+      };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(validated.data));
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.riskFlag",
+          resourceId: validated.data,
+          oldValue: {
+            flaggedForReviewAt:
+              outcome.previousFlaggedForReviewAt?.toISOString() ?? null,
+            flagReasons: outcome.previousFlagReasons,
+          },
+          newValue: { flaggedForReviewAt: null, flagReasons: [] },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogClearCustomerRiskFlag",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }

@@ -109,6 +109,18 @@ const mockToggleCustomerActiveCommand = mock<
   () => Promise<{ previousActive: boolean }>
 >(() => Promise.resolve({ previousActive: true }));
 
+const mockClearRiskFlagCommand = mock<
+  () => Promise<{
+    previousFlaggedForReviewAt: Date | null;
+    previousFlagReasons: string[];
+  }>
+>(() =>
+  Promise.resolve({
+    previousFlaggedForReviewAt: null,
+    previousFlagReasons: [],
+  }),
+);
+
 mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerStatus: (
     ...args: Parameters<typeof mockUpdateCustomerStatusCommand>
@@ -144,7 +156,9 @@ mock.module("@/shared/domain/customers/queries", () => ({
 }));
 
 mock.module("@/shared/domain/customers/risk-detection", () => ({
-  clearRiskFlagCommand: mock(() => Promise.resolve(undefined)),
+  clearRiskFlagCommand: (
+    ...args: Parameters<typeof mockClearRiskFlagCommand>
+  ) => mockClearRiskFlagCommand(...args),
 }));
 
 mock.module("@/admin/lib/action-auth", () => ({
@@ -426,5 +440,38 @@ describe("toggleCustomerActive の AuditLog diff (customer.active)", () => {
     expect(call["resourceId"]).toBe(CUSTOMER_UUID);
     expect(call["oldValue"]).toEqual({ isActive: true });
     expect(call["newValue"]).toEqual({ isActive: false });
+  });
+});
+
+describe("clearCustomerRiskFlag の AuditLog diff (customer.riskFlag)", () => {
+  beforeEach(() => {
+    currentUser = { id: "admin-1" };
+    mockClearRiskFlagCommand.mockReset();
+    mockClearRiskFlagCommand.mockResolvedValue({
+      previousFlaggedForReviewAt: new Date("2026-07-15T00:00:00.000Z"),
+      previousFlagReasons: ["RAPID_BOOKING"],
+    });
+    mockCreateAuditLogRecord.mockReset();
+    mockCreateAuditLogRecord.mockResolvedValue(undefined);
+  });
+
+  test("フラグ解除前後を oldValue/newValue に記録する (Dateは ISO 文字列化)", async () => {
+    await clearCustomerRiskFlag(CUSTOMER_UUID);
+    await flushMicrotasks();
+
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledTimes(1);
+    const call = mockCreateAuditLogRecord.mock.calls[0]?.[0];
+    expect(call).toBeDefined();
+    if (!call) throw new Error("call is undefined");
+    expect(call["resource"]).toBe("customer.riskFlag");
+    expect(call["resourceId"]).toBe(CUSTOMER_UUID);
+    expect(call["oldValue"]).toEqual({
+      flaggedForReviewAt: "2026-07-15T00:00:00.000Z",
+      flagReasons: ["RAPID_BOOKING"],
+    });
+    expect(call["newValue"]).toEqual({
+      flaggedForReviewAt: null,
+      flagReasons: [],
+    });
   });
 });
