@@ -64,6 +64,12 @@ locals {
       description = "Old notification cleanup 30d+ (daily 04:00 JST)"
     },
     {
+      name        = "news-scheduled-publish"
+      schedule    = "*/5 * * * *"
+      path        = "/api/cron/news-scheduled-publish"
+      description = "Revalidate NEWS cache tags when a scheduled (future publishedAt) News item's publish time has just passed, bounding the cacheLife(PUBLIC_CONTENT) 1h revalidate-window exposure delay to cron interval (every 5 min, feature module news gate)"
+    },
+    {
       name        = "reservation-reminder"
       schedule    = "0 * * * *"
       path        = "/api/cron/reservation-reminder"
