@@ -93,6 +93,8 @@ export type PostFilters = {
   status?: "ALL" | "PUBLISHED" | "DRAFT" | "ARCHIVED" | undefined;
   categoryId?: string | undefined;
   search?: string | undefined;
+  /** 投稿を作成した管理ユーザー (Post.authorId)。 */
+  authorId?: string | undefined;
 };
 
 export type PostPagination = PaginationInput<

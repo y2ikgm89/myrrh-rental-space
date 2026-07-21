@@ -1,12 +1,13 @@
 "use client";
 
+import { IconX } from "@tabler/icons-react";
 import { useQueryStates } from "nuqs";
 import { adminReservationSearchParamsParsers } from "@/shared/lib/nuqs";
 import { useDebouncedCallback } from "@/admin/hooks";
-import { Input } from "@/admin/components/ui";
+import { Button, Input } from "@/admin/components/ui";
 
 /**
- * 予約管理一覧のフィルター（期間 + 検索）。
+ * 予約管理一覧のフィルター（期間 + 検索 + staff deep-link）。
  *
  * ステータス絞り込みは `ReservationTabs`（nuqs `useQueryStates` shallow:false）に移管済み。
  * Filter は他テーブル (Event canonical) と同型の構造に整合。
@@ -27,6 +28,18 @@ export function ReservationFilters() {
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      {/* Round-4 audit Finding #14: staff 詳細ページの deep-link (?userId=)
+          で絞り込み中であることを可視化し、解除導線を出す。 */}
+      {params.userId && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void setParams({ userId: null, page: 1 })}
+        >
+          スタッフの担当予約のみ表示中
+          <IconX className="ml-2 h-3.5 w-3.5" aria-hidden="true" />
+        </Button>
+      )}
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
         <span className="text-sm font-medium text-muted-foreground">期間:</span>
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">

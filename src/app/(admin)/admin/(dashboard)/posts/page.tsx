@@ -50,6 +50,7 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
       status,
       categoryId: params.categoryId || undefined,
       search: params.search || undefined,
+      authorId: params.authorId || undefined,
     }),
     {
       page: params.page,

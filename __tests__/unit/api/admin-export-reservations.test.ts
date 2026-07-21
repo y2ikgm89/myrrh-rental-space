@@ -104,6 +104,60 @@ describe("GET /api/admin/export/reservations", () => {
     );
   });
 
+  test("クエリ文字列の tab/search/dateFrom/dateTo/userId が getReservationsForExport に反映される (Round-4 Finding #13)", async () => {
+    mockCheckPermission.mockResolvedValue({
+      success: true,
+      user: { id: "user-1", role: "ADMIN" },
+    });
+    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGenerateCsv.mockReturnValue("﻿予約ID\r\n");
+
+    const url =
+      "http://localhost/api/admin/export/reservations" +
+      "?tab=cancelled&search=山田&dateFrom=2026-01-01&dateTo=2026-01-31" +
+      "&userId=11111111-1111-1111-1111-111111111111";
+
+    await GET(new Request(url));
+
+    expect(mockGetReservationsForExport).toHaveBeenCalledWith({
+      tab: "cancelled",
+      search: "山田",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+      userId: "11111111-1111-1111-1111-111111111111",
+    });
+  });
+
+  test("クエリ文字列が無い場合は getReservationsForExport に空オブジェクトが渡る（全件、既存挙動維持）", async () => {
+    mockCheckPermission.mockResolvedValue({
+      success: true,
+      user: { id: "user-1", role: "ADMIN" },
+    });
+    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGenerateCsv.mockReturnValue("﻿予約ID\r\n");
+
+    await GET(new Request("http://localhost/api/admin/export/reservations"));
+
+    expect(mockGetReservationsForExport).toHaveBeenCalledWith({});
+  });
+
+  test("不正な tab 値は無視される（invalid tab injection を素通りさせない）", async () => {
+    mockCheckPermission.mockResolvedValue({
+      success: true,
+      user: { id: "user-1", role: "ADMIN" },
+    });
+    mockGetReservationsForExport.mockResolvedValue([]);
+    mockGenerateCsv.mockReturnValue("﻿予約ID\r\n");
+
+    await GET(
+      new Request(
+        "http://localhost/api/admin/export/reservations?tab=not-a-real-tab",
+      ),
+    );
+
+    expect(mockGetReservationsForExport).toHaveBeenCalledWith({});
+  });
+
   test("checkPermission に reservation:read を渡す", async () => {
     mockCheckPermission.mockResolvedValue({
       success: true,

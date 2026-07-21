@@ -2,6 +2,10 @@ import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getReservationsForExport } from "@/shared/domain/reservations/export-queries";
+import {
+  isReservationTabFilter,
+  type ReservationTabFilter,
+} from "@/shared/lib/nuqs";
 import { generateCsv } from "@/shared/lib/csv";
 import {
   formatJstDateString,
@@ -34,7 +38,27 @@ export async function GET(request: Request): Promise<Response> {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
-    const reservations = await getReservationsForExport();
+    // Round-4 audit Finding #13: 一覧ページの現在の filter (tab/search/期間/
+    // userId) を export にも反映する。CSV ボタンはこのクエリ文字列を含む href
+    // を組み立てる (reservations/page.tsx 参照)。
+    const url = new URL(request.url);
+    const tabParam = url.searchParams.get("tab");
+    const tab: ReservationTabFilter | undefined =
+      tabParam !== null && isReservationTabFilter(tabParam)
+        ? tabParam
+        : undefined;
+    const search = url.searchParams.get("search") ?? undefined;
+    const startDate = url.searchParams.get("dateFrom") ?? undefined;
+    const endDate = url.searchParams.get("dateTo") ?? undefined;
+    const userId = url.searchParams.get("userId") ?? undefined;
+
+    const reservations = await getReservationsForExport({
+      ...(tab !== undefined && { tab }),
+      ...(search !== undefined && search !== "" && { search }),
+      ...(startDate !== undefined && startDate !== "" && { startDate }),
+      ...(endDate !== undefined && endDate !== "" && { endDate }),
+      ...(userId !== undefined && userId !== "" && { userId }),
+    });
 
     await createAuditLogRecord({
       userId: auth.user.id,
@@ -43,6 +67,9 @@ export async function GET(request: Request): Promise<Response> {
       metadata: {
         format: "csv",
         exportedCount: reservations.length,
+        ...(tab !== undefined && { filterTab: tab }),
+        ...(search !== undefined && search !== "" && { filterSearch: search }),
+        ...(userId !== undefined && userId !== "" && { filterUserId: userId }),
       },
     });
 

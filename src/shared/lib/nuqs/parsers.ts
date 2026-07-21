@@ -508,6 +508,10 @@ export const adminReservationSearchParamsParsers = {
   sortOrder: parseAsSortOrder,
   dateFrom: parseAsString.withDefault(""),
   dateTo: parseAsString.withDefault(""),
+  // Round-4 audit Finding #14: staff 詳細ページの「予約一覧を表示」deep-link
+  // (?userId=<staffId>) を実際にフィルタとして機能させる。Reservation.userId
+  // (予約を作成した管理ユーザー) で絞り込む — Customer とは別軸。
+  userId: parseAsString.withDefault(""),
 };
 
 const adminReservationSearchParamsCache = createSearchParamsCache(
@@ -537,6 +541,9 @@ export const adminPostSearchParamsParsers = {
   postId: parseAsString.withDefault(""),
   sortBy: parseAsStringLiteral(postSortByValues).withDefault("createdAt"),
   sortOrder: parseAsSortOrder,
+  // Round-4 audit Finding #15: staff 詳細ページの「記事一覧を表示」deep-link
+  // (?authorId=<staffId>) を実際にフィルタとして機能させる。
+  authorId: parseAsString.withDefault(""),
 };
 
 const adminPostSearchParamsCache = createSearchParamsCache(
