@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useQueryStates, parseAsStringLiteral } from "nuqs";
+import { useDebouncedCallback } from "@/admin/hooks";
 import {
   Table,
   TableBody,
@@ -121,11 +122,19 @@ export function EventRegistrationTable({
   const [isRefundPending, startRefundTransition] = useTransition();
   const [refundTarget, setRefundTarget] = useState<Registration | null>(null);
   const [editTarget, setEditTarget] = useState<Registration | null>(null);
-  const [{ search, status }, setSearchParams] = useQueryStates({
-    search: parseAsQuery,
-    status: parseAsStringLiteral(registrationStatusFilterValues),
-    page: parseAsPage,
-  });
+  const [{ search, status }, setSearchParams] = useQueryStates(
+    {
+      search: parseAsQuery,
+      status: parseAsStringLiteral(registrationStatusFilterValues),
+      page: parseAsPage,
+    },
+    { history: "replace", shallow: false },
+  );
+
+  const setSearchDebounced = useDebouncedCallback(
+    (value: string) => void setSearchParams({ search: value || null, page: 1 }),
+    300,
+  );
 
   function handleCancel(registrationId: string) {
     startCancelTransition(async () => {
@@ -172,11 +181,10 @@ export function EventRegistrationTable({
     <div className="space-y-4">
       <div className="mb-4 flex flex-wrap gap-2">
         <Input
+          key={search}
           placeholder="氏名・メールで検索"
           defaultValue={search}
-          onChange={(e) => {
-            void setSearchParams({ search: e.target.value || null, page: 1 });
-          }}
+          onChange={(e) => setSearchDebounced(e.target.value)}
           className="max-w-xs"
         />
         <Select
