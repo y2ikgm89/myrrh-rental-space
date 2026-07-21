@@ -11,6 +11,7 @@ type InquiryWhereInput = Prisma.InquiryWhereInput;
 import type {
   GetInquiriesResult,
   InquiryFilters,
+  InquiryListItem,
   InquiryPagination,
   InquiryReplyItem,
   InquiryStats,
@@ -79,6 +80,13 @@ export async function getInquiries(
     ];
   }
 
+  // Round-5 audit Finding #22: 一覧 (InquiryTable) が実際に描画するのは
+  // 件名・受付番号・お名前・会社名・メール・顧客・受付日時・ステータスのみ
+  // (InquiryActionCell/InquiryBulkActions も id しか使わない)。旧実装は
+  // getInquiryById と同じ select を使い回しており、message 全文・全 reply
+  // スレッド本文・phoneNumber 等ページ表示に不要なデータを毎ページ・毎行
+  // フルロードしていた。詳細表示専用フィールドが必要な画面は getInquiryById
+  // を使う。
   const [total, inquiries] = await Promise.all([
     prisma.inquiry.count({ where }),
     prisma.inquiry.findMany({
@@ -89,31 +97,16 @@ export async function getInquiries(
         name: true,
         companyName: true,
         email: true,
-        phoneNumber: true,
         subject: true,
-        message: true,
         status: true,
-        customerId: true,
-        assigneeId: true,
-        assignee: { select: { name: true } },
-        slaExpiresAt: true,
-        deletedAt: true,
-        anonymizedAt: true,
-        replies: {
-          orderBy: { createdAt: "asc" },
-          select: REPLY_SELECT_INTERNAL,
-        },
         customer: {
           select: {
             id: true,
             lastName: true,
             firstName: true,
-            email: true,
-            userId: true,
           },
         },
         createdAt: true,
-        updatedAt: true,
       },
       orderBy: {
         [sortBy]: sortOrder,
@@ -123,26 +116,16 @@ export async function getInquiries(
     }),
   ]);
 
-  const shaped: InquiryWithCustomer[] = inquiries.map((i) => ({
+  const shaped: InquiryListItem[] = inquiries.map((i) => ({
     id: i.id,
     receiptNumber: i.receiptNumber,
     name: i.name,
     companyName: i.companyName,
     email: i.email,
-    phoneNumber: i.phoneNumber,
     subject: i.subject,
-    message: i.message,
     status: i.status,
-    customerId: i.customerId,
-    assigneeId: i.assigneeId,
-    assigneeName: i.assignee?.name ?? null,
-    slaExpiresAt: i.slaExpiresAt,
-    deletedAt: i.deletedAt,
-    anonymizedAt: i.anonymizedAt,
-    replies: i.replies.map(flattenReply),
     customer: i.customer,
     createdAt: i.createdAt,
-    updatedAt: i.updatedAt,
   }));
 
   return {

@@ -19,7 +19,7 @@ import {
   stopRowClick,
 } from "@/admin/components/table";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
-import type { InquiryWithCustomer } from "@/shared/domain/inquiries/types";
+import type { InquiryListItem } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import { InquiryActionCell } from "./InquiryActionCell";
 import { InquiryBulkActions } from "./InquiryBulkActions";
@@ -29,7 +29,7 @@ import { InquiryBulkActions } from "./InquiryBulkActions";
 // =============================================================================
 
 type InquiryTableProps = {
-  inquiries: Serialized<InquiryWithCustomer>[];
+  inquiries: Serialized<InquiryListItem>[];
 };
 
 // =============================================================================
