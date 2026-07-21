@@ -26,6 +26,12 @@ async function ensureFaqCategoryExists(id: string): Promise<void> {
  * Server Action は per-id audit を発行できなかった（coupon/customer/space の
  * bulk 系は Cluster A / Cluster P で対応済み）。対象を先に読んで id を確定
  * してから updateMany する（coupon の bulkToggleActiveCouponsCommand と同型）。
+ *
+ * findMany（対象確定）と updateMany（書込）の間には TOCTOU の window があるため、
+ * updateMany の where にも deletedAt: null を再チェックする（bulkMoveFaqItems・
+ * item-commands.ts の deleteFaqItem/updateFaqItemPublished と同じ claim pattern）。
+ * これがないと、その間に別操作で削除された項目を誤って公開/非公開状態のまま
+ * 復活させてしまう。
  */
 export async function bulkPublishFaqItems(
   ids: string[],
@@ -42,7 +48,7 @@ export async function bulkPublishFaqItems(
   const now = new Date();
   const affectedIds = targets.map((t) => t.id);
   const result = await prisma.faqItem.updateMany({
-    where: { id: { in: affectedIds } },
+    where: { id: { in: affectedIds }, deletedAt: null },
     data: {
       isPublished,
       publishedAt: isPublished ? now : null,
@@ -54,6 +60,9 @@ export async function bulkPublishFaqItems(
 
 /**
  * 複数の FAQ 項目を一括ソフトデリート
+ *
+ * findMany と updateMany の間の TOCTOU を防ぐため、updateMany の where にも
+ * deletedAt: null を再チェックする（claim pattern。bulkPublishFaqItems 参照）。
  */
 export async function bulkDeleteFaqItems(
   ids: string[],
@@ -69,7 +78,7 @@ export async function bulkDeleteFaqItems(
   const now = new Date();
   const affectedIds = targets.map((t) => t.id);
   const result = await prisma.faqItem.updateMany({
-    where: { id: { in: affectedIds } },
+    where: { id: { in: affectedIds }, deletedAt: null },
     data: { deletedAt: now },
   });
 
