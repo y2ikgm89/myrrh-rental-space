@@ -32,6 +32,7 @@ import { $isTabsContainerNode } from "./nodes/TabsContainerNode";
 import { $isLayoutContainerNode } from "./nodes/LayoutContainerNode";
 import { $isInlineIconNode } from "./nodes/InlineIconNode";
 import { $isInternalLinkCardNode } from "./nodes/InternalLinkCardNode";
+import { $isSpaceCardNode } from "./nodes/SpaceCardNode";
 import { $isPageBreakNode } from "./nodes/PageBreakNode";
 import { $isTooltipNode } from "./nodes/TooltipNode";
 import { $isPricingTableContainerNode } from "./nodes/PricingTableNode";
@@ -66,6 +67,7 @@ function isUnrepresentableInMarkdown(node: LexicalNode): boolean {
     $isLayoutContainerNode(node) ||
     $isInlineIconNode(node) ||
     $isInternalLinkCardNode(node) ||
+    $isSpaceCardNode(node) ||
     $isPageBreakNode(node) ||
     $isTooltipNode(node) ||
     $isPricingTableContainerNode(node) ||
