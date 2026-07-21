@@ -78,6 +78,7 @@ export function FaqItemActionCell({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         itemName={question}
+        description={`「${question}」を削除します。ゴミ箱に 30 日間保持され、復元できます。`}
         onConfirm={handleDelete}
         isPending={isPending}
       />
