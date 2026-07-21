@@ -8,6 +8,7 @@ import {
   createAdminProxyRegistrationCommand,
   createWalkInRegistrationCommand,
   setEventRegistrationCheckInCommand,
+  updateEventRegistrationCommand,
 } from "@/shared/domain/events/registration-commands";
 import {
   sendEventAdminNotification,
@@ -21,8 +22,10 @@ import {
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { ErrorCategory } from "@/shared/lib/errors/server";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -206,6 +209,102 @@ export async function toggleEventRegistrationCheckIn(
       };
     },
     // check-in toggle は公開側 (EVENTS) には影響しないため cache 無効化不要
+  });
+}
+
+// =============================================================================
+// 参加登録編集 (update)
+// =============================================================================
+
+const updateRegistrationSchema = z.object({
+  registrationId: eventRegistrationIdSchema,
+  name: z.string().trim().min(1, "氏名を入力してください").max(100),
+  email: z
+    .string()
+    .trim()
+    .max(255)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v))
+    .pipe(
+      z.union([z.email({ error: "メールアドレスの形式が不正です" }), z.null()]),
+    ),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+  note: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+  quantity: z.number().int().min(1).max(100),
+});
+
+export type UpdateRegistrationInput = z.input<typeof updateRegistrationSchema>;
+
+export async function updateEventRegistration(
+  input: UpdateRegistrationInput,
+): Promise<MutationResult<{ registrationId: string }>> {
+  const parsed = updateRegistrationSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: parsed.data.registrationId,
+    execute: async (user) => {
+      const { previous } = await updateEventRegistrationCommand({
+        registrationId: parsed.data.registrationId,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        note: parsed.data.note,
+        quantity: parsed.data.quantity,
+      });
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return {
+        registrationId: parsed.data.registrationId,
+        previous,
+        actorUserId: user.id,
+        ip,
+        userAgent,
+      };
+    },
+    afterSuccess: (outcome) => {
+      invalidateEventCaches();
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "event-registration",
+          resourceId: parsed.data.registrationId,
+          oldValue: outcome.previous,
+          newValue: {
+            name: parsed.data.name,
+            email: parsed.data.email,
+            phone: parsed.data.phone,
+            note: parsed.data.note,
+            quantity: parsed.data.quantity,
+          },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogUpdateEventRegistration",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
+    },
+    resolveAuditResourceId: (outcome) => outcome.registrationId,
   });
 }
 
