@@ -19,6 +19,16 @@ import {
 }
 
 resource "google_cloud_run_v2_service" "admin" {
+  # 2026-07 audit: KEEPS `provider = google-beta`, unlike the sibling public
+  # service / migrate job / SSL cert. `terraform validate` against the real
+  # pinned google provider v6.50.0 confirmed `iap_enabled` and
+  # `default_uri_disabled` are still rejected as unsupported arguments on the
+  # standard "google" provider's google_cloud_run_v2_service schema — i.e.
+  # the RESOURCE TYPE graduated to GA, but these two specific attributes have
+  # not (an earlier research pass incorrectly claimed `iap_enabled` was
+  # already GA; this was caught by actually running `terraform validate`,
+  # not by re-reading provider source). Revisit if a future provider bump
+  # promotes these fields to GA.
   provider = google-beta
 
   name     = "myrrh-rental-space-admin"

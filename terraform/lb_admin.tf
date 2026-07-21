@@ -160,8 +160,14 @@ resource "google_compute_url_map" "admin_url_map" {
 
 # Managed SSL cert
 resource "google_compute_managed_ssl_certificate" "admin_cert" {
-  provider = google-beta
-
+  # 2026-07: dropped `provider = google-beta` — this resource is GA in the
+  # standard "google" provider (see terraform/versions.tf header comment).
+  # NOTE: unlike the 3 Cloud Run resources also migrated in this change, this
+  # resource has `create_before_destroy` (below), not `prevent_destroy` — if
+  # `terraform plan` shows anything beyond a clean provider-metadata refresh
+  # for THIS resource specifically, stop and investigate before applying,
+  # since Terraform will not refuse to recreate it the way it would refuse to
+  # destroy a prevent_destroy-protected resource.
   project = var.project_id
   name    = "myrrh-admin-cert-20260705"
 

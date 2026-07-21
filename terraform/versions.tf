@@ -3,15 +3,21 @@
 # Update policy:
 #   - Terraform CLI: `terraform_version` in .github/workflows/terraform.yml must match this
 #   - hashicorp/google provider: pinned to major version; minor bumps via Renovate PR
-#   - hashicorp/google-beta: required because google_cloud_run_v2_service (×2,
-#     cloud_run_public.tf / cloud_run_admin.tf), google_cloud_run_v2_job
-#     (cloud_run_migrate_job.tf), and google_compute_managed_ssl_certificate
-#     (lb_admin.tf) all declare `provider = google-beta` (2026-07 audit:
-#     these 4 resources are now GA in the standard "google" provider too —
-#     dropping the google-beta pin and the 4 `provider = google-beta` lines
-#     is a valid future cleanup, tracked separately since it touches live
-#     prevent_destroy-protected prod resources and warrants its own PR + a
-#     verified `terraform plan` before merge).
+#   - hashicorp/google-beta: required ONLY by google_cloud_run_v2_service.admin
+#     (cloud_run_admin.tf), specifically for its `iap_enabled` and
+#     `default_uri_disabled` arguments. 2026-07 audit: verified via an actual
+#     `terraform validate` run against the real pinned google provider
+#     v6.50.0 (not just reading provider source) that these two arguments are
+#     still rejected as unsupported on the standard "google" provider's
+#     google_cloud_run_v2_service schema — the resource TYPE is GA, but these
+#     two specific attributes are not (yet). The other 3 resources that
+#     previously declared `provider = google-beta` — google_cloud_run_v2_service.public
+#     (cloud_run_public.tf), google_cloud_run_v2_job.prisma_migrate
+#     (cloud_run_migrate_job.tf), and google_compute_managed_ssl_certificate.admin_cert
+#     (lb_admin.tf) — validated cleanly on the standard "google" provider and
+#     had their `provider = google-beta` line dropped. Re-check with a real
+#     `terraform validate` (not just docs/source reading) before dropping the
+#     remaining google-beta requirement in a future provider bump.
 terraform {
   # PESSIMISTIC pin (`~> 1.15.0`) — allows 1.15.x patch releases, blocks any
   # 1.16+ minor bump. Bumped 2026-07 from a previous exact `= 1.10.0` pin
