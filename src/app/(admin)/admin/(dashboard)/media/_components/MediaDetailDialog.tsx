@@ -126,7 +126,9 @@ export function MediaDetailDialog({ item, onClose }: Props) {
     if (!item) return;
     const confirmed = await confirmDialog({
       title: "メディアを削除しますか？",
-      description: `「${item.filename}」を削除します。この操作は元に戻せません。`,
+      // Round-5 audit Finding #7: hooks.ts の useDeleteMedia と同文言（参照
+      // チェックが行われない旨を明示）。
+      description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中でもチェックされず、参照している箇所は画像が表示されなくなります。`,
       confirmLabel: "削除",
       variant: "destructive",
     });

@@ -34,7 +34,11 @@ export function useDeleteMedia(): {
   const handleDelete = async (item: MediaData) => {
     const confirmed = await confirm({
       title: "メディアを削除しますか？",
-      description: `「${item.filename}」を削除します。この操作は元に戻せません。`,
+      // Round-5 audit Finding #7: メディアは記事本文・スペース写真・固定ページ等
+      // から URL 文字列として参照されるのみで、DB 上のリレーションを持たない
+      // ため参照有無のチェックは行われない。削除すると使用中でも即座にファイル
+      // 実体が消え画像が壊れるため、その旨を明示する。
+      description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中でもチェックされず、参照している箇所は画像が表示されなくなります。`,
       confirmLabel: "削除",
       variant: "destructive",
     });
