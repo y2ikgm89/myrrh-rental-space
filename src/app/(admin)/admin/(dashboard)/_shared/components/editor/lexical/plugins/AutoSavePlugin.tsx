@@ -133,11 +133,30 @@ export function getDraftJson(
   return null;
 }
 
+/**
+ * `clearDraft(autoSaveKey)` が呼ばれたことを通知する CustomEvent 名
+ * （`detail` に対象の `autoSaveKey` を積む）。
+ *
+ * `useDraftRecovery`（use-draft-recovery.ts）はマウント時に 1 回だけ
+ * LocalStorage を読み、以降のタイピングによる debounce 再保存（このファイルの
+ * 通常の自動保存）はそのスナップショットに反映しない設計（起動時に見つかった
+ * 下書きを一度だけ提示する UI のため）。しかし `clearDraft` による削除だけは
+ * 例外的に同一マウント中でも即座に反映したい（保存直後に、既に存在しない
+ * 下書きをバナーが提示し続けるのを防ぐ）ため、この CustomEvent 経由で
+ * 明示的に通知する。
+ */
+export const DRAFT_CLEARED_EVENT = "lexical-draft-cleared";
+
 export function clearDraft(autoSaveKey: string): void {
   try {
     localStorage.removeItem(`lexical-draft:${autoSaveKey}`);
     localStorage.removeItem(`lexical-draft-time:${autoSaveKey}`);
   } catch {
     // localStorage不可
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent<string>(DRAFT_CLEARED_EVENT, { detail: autoSaveKey }),
+    );
   }
 }
