@@ -36,6 +36,14 @@ const mockEventUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "event-1" }),
 );
 
+// Round-4 audit fix: cancelEventCommand claims via updateMany with a
+// { status: { not: CANCELLED } } guard. Tests override the default via
+// mockResolvedValueOnce({count:0}) for the "already cancelled" idempotent
+// path or the "concurrent race" scenario.
+const mockEventUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 1 }),
+);
+
 const mockFireAndForget = mock<() => void>(() => undefined);
 
 const mockSendEventUpdated = mock<
@@ -158,6 +166,7 @@ mock.module("@/shared/db/prisma", () => ({
       findMany: mockEventFindMany,
       create: mockEventCreate,
       update: mockEventUpdate,
+      updateMany: mockEventUpdateMany,
     },
     eventTimeSlot: {
       findFirst: mockEventTimeSlotFindFirst,
@@ -1331,67 +1340,57 @@ describe("cancelEventCommand", () => {
   beforeEach(() => {
     mockEventFindFirst.mockClear();
     mockEventUpdate.mockClear();
+    mockEventUpdateMany.mockClear();
     mockFireAndForget.mockClear();
+    // default: claim wins ⇒ real transition
+    mockEventUpdateMany.mockImplementation(() => Promise.resolve({ count: 1 }));
   });
 
   describe("正常系", () => {
-    test("既存イベントをキャンセルできる", async () => {
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({
-          id: "event-1",
-          status: EventStatus.PUBLISHED,
-        }),
-      );
-      mockEventUpdate.mockImplementation(() =>
-        Promise.resolve({ id: "event-1" }),
-      );
-
+    test("既存イベントをキャンセルできる (updateMany claim + status guard)", async () => {
       await cancelEventCommand("event-1");
 
-      expect(mockEventUpdate).toHaveBeenCalledWith(
+      expect(mockEventUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
+          where: expect.objectContaining({
+            id: "event-1",
+            deletedAt: null,
+            status: expect.objectContaining({
+              not: EventStatus.CANCELLED,
+            }),
+          }),
           data: expect.objectContaining({ status: EventStatus.CANCELLED }),
         }),
       );
     });
 
-    test("キャンセル後に参加者メール通知が送られる", async () => {
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({
-          id: "event-1",
-          status: EventStatus.PUBLISHED,
-        }),
-      );
-      mockEventUpdate.mockImplementation(() =>
-        Promise.resolve({ id: "event-1" }),
-      );
-
+    test("キャンセル成功時に参加者メール通知が送られる", async () => {
       await cancelEventCommand("event-1");
-
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
     });
 
-    test("update の where 条件に deletedAt: null が含まれる", async () => {
-      mockEventFindFirst.mockImplementation(() =>
-        Promise.resolve({
-          id: "event-1",
-          status: EventStatus.DRAFT,
-        }),
+    test("既に CANCELLED の event は claim=0 で email 発火せず idempotent no-op", async () => {
+      // Concurrent-cancel race: someone else already committed CANCELLED, so
+      // our updateMany matches zero rows. We must NOT send a second email.
+      mockEventUpdateMany.mockImplementationOnce(() =>
+        Promise.resolve({ count: 0 }),
+      );
+      mockEventFindFirst.mockImplementationOnce(() =>
+        Promise.resolve({ id: "event-1", status: EventStatus.CANCELLED }),
       );
 
       await cancelEventCommand("event-1");
 
-      expect(mockEventUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({ id: "event-1", deletedAt: null }),
-        }),
-      );
+      expect(mockFireAndForget).not.toHaveBeenCalled();
     });
   });
 
   describe("異常系", () => {
-    test("存在しないイベントをキャンセルしようとすると DomainError をスローする", async () => {
-      mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
+    test("存在しないイベントは NOT_FOUND (claim=0 かつ findFirst=null) で DomainError", async () => {
+      mockEventUpdateMany.mockImplementationOnce(() =>
+        Promise.resolve({ count: 0 }),
+      );
+      mockEventFindFirst.mockImplementationOnce(() => Promise.resolve(null));
 
       await expect(cancelEventCommand("non-existent")).rejects.toThrow(
         DomainError,
