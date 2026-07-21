@@ -570,7 +570,24 @@ describe("reorderPageSectionsCommand", () => {
     ).rejects.toThrow("セクション数が一致しません");
   });
 
-  test("page-hero は order=-1 維持（CASE WHEN 二段更新）", async () => {
+  test("page-hero を orderedIds に含めると VALIDATION エラー（呼び出し元は常に page-hero を除外する契約）", async () => {
+    mockSectionFindMany.mockImplementationOnce(() =>
+      Promise.resolve([
+        { id: "id-hero", type: "page-hero", order: -1 },
+        { id: "id-a", type: "cta", order: 0 },
+        { id: "id-b", type: "gallery", order: 1 },
+      ]),
+    );
+
+    await expect(
+      reorderPageSectionsCommand({
+        pageId: PAGE_ID,
+        orderedIds: ["id-b", "id-hero", "id-a"],
+      }),
+    ).rejects.toThrow("不正なセクションID");
+  });
+
+  test("page-hero は order=-1 維持（CASE WHEN 二段更新、orderedIds は page-hero 除外）", async () => {
     mockSectionFindMany.mockImplementationOnce(() =>
       Promise.resolve([
         { id: "id-hero", type: "page-hero", order: -1 },
@@ -581,12 +598,13 @@ describe("reorderPageSectionsCommand", () => {
     mockExecuteRaw.mockReset();
     mockExecuteRaw.mockResolvedValue(0);
 
+    // SectionListSidebar.handleDragEnd と同じ契約: page-hero は送らない
     const result = await reorderPageSectionsCommand({
       pageId: PAGE_ID,
-      orderedIds: ["id-b", "id-hero", "id-a"],
+      orderedIds: ["id-b", "id-a"],
     });
 
-    expect(result.count).toBe(3);
+    expect(result.count).toBe(2);
     expect(result.pageSlug).toBe("test-page");
 
     // 個別 update ループは廃止。unique index 下の swap に耐えるため二段更新する。
@@ -624,6 +642,6 @@ describe("reorderPageSectionsCommand", () => {
     const bindValues = collectPrimitives(values);
     expect(bindValues).toContain(-1);
     expect(bindValues).toContain(0);
-    expect(bindValues).toContain(2);
+    expect(bindValues).toContain(1);
   });
 });

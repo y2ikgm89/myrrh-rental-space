@@ -298,7 +298,9 @@ export async function togglePageSectionActiveCommand(id: string): Promise<{
 
 /**
  * 同一 pageId のセクションを並び替える。
- * orderedIds は同一 pageId に属する全セクション ID（過不足不可）。
+ * page-hero は order=-1 固定でドラッグ対象外のため、orderedIds は
+ * 同一 pageId に属する page-hero **以外**の全セクション ID を過不足なく指定する
+ * （呼び出し元の SectionListSidebar は常に page-hero を除外して送る）。
  */
 export async function reorderPageSectionsCommand(input: {
   pageId: string;
@@ -316,24 +318,32 @@ export async function reorderPageSectionsCommand(input: {
     }),
     getPageSlugByIdOrThrow(input.pageId),
   ]);
-  const existingIds = new Set(existing.map((s) => s.id));
+
+  // page-hero は順序不変（-1 固定で先頭維持）。orderedIds との過不足チェックは
+  // page-hero を除いた集合に対して行う。
+  const heroSection = existing.find((s) => s.type === "page-hero");
+  const nonHeroExisting = existing.filter((s) => s.type !== "page-hero");
+  const nonHeroExistingIds = new Set(nonHeroExisting.map((s) => s.id));
 
   for (const id of input.orderedIds) {
-    if (!existingIds.has(id)) {
+    if (!nonHeroExistingIds.has(id)) {
       throw new DomainError("不正なセクションIDが含まれます", "VALIDATION");
     }
   }
-  if (existing.length !== input.orderedIds.length) {
+  if (nonHeroExisting.length !== input.orderedIds.length) {
     throw new DomainError("セクション数が一致しません（過不足）", "VALIDATION");
   }
 
-  // page-hero は順序不変（-1 固定で先頭維持）
-  const heroSection = existing.find((s) => s.type === "page-hero");
+  // page-hero が存在する場合、二段更新の対象に含めて order=-1 を明示的に再確認する。
+  const idsForUpdate = heroSection
+    ? [heroSection.id, ...input.orderedIds]
+    : [...input.orderedIds];
 
   const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(
-    input.orderedIds,
+    idsForUpdate,
     (id) => id,
-    (id, index) => (heroSection && id === heroSection.id ? -1 : index),
+    (id) =>
+      heroSection && id === heroSection.id ? -1 : input.orderedIds.indexOf(id),
   );
 
   if (finalCases.length > 0) {
