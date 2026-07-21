@@ -86,7 +86,9 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   # が fragment 文字列一致で single quote を要求するため、**single quote に統一**。
   #
   # 参考:
-  #   - Google 公式 WIF best practices: https://cloud.google.com/iam/docs/best-practices-for-using-and-managing-workload-identity-federation
+  #   - Google 公式 WIF best practices: https://docs.cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation
+  #     (2026-07 audit: 旧 URL は "-and-managing-" 込みの旧タイトルで 301 redirect 済み。
+  #     内容 — repository_id/repository_owner_id 優先、ref 制限 — は現行版と一致確認済み)
   #   - GitHub OIDC docs: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect
   #   - GitHub scheduled workflow context: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
   attribute_condition = join(" && ", [

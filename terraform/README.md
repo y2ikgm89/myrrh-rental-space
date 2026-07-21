@@ -84,10 +84,10 @@ SA metadata (`google_service_account` resource) は `scripts/bootstrap-terraform
 impersonation、runtime/build SA への secretAccessor 等) を bootstrap に集約。
 runner は「自 IAM も他 SA IAM も触れない」構造になり両 chain が物理的に消える。
 
-これは Google 公式パターン
-[Set up CI/CD for Terraform](https://cloud.google.com/architecture/setup-terraform-cicd)
-と [terraform-google-bootstrap](https://github.com/terraform-google-modules/terraform-example-foundation/tree/master/0-bootstrap)
-の "0-bootstrap phase handles IAM the runner cannot self-manage" 原則に沿う。
+これは [terraform-google-bootstrap](https://github.com/terraform-google-modules/terraform-example-foundation/tree/master/0-bootstrap)
+の "0-bootstrap phase handles IAM the runner cannot self-manage" 原則に沿う
+(旧 "Set up CI/CD for Terraform" 公式ページを併記していたが 2026-07 audit で
+404 確認済み、後継/リダイレクト先未発見のため参照から除去)。
 
 ### 現在の bootstrap-owned レイアウト
 
@@ -356,10 +356,10 @@ bash scripts/enumerate-cloudflare.sh > cloudflare-inventory.txt
 
 ## References
 
-- [Set up CI/CD for Terraform](https://cloud.google.com/architecture/setup-terraform-cicd) —
-  runner authority を out-of-band で provision する公式パターン
 - [terraform-google-bootstrap](https://github.com/terraform-google-modules/terraform-example-foundation/tree/master/0-bootstrap) —
   runner IAM を bootstrap で扱う reference implementation
+  (旧 "Set up CI/CD for Terraform" 公式ページ (cloud.google.com/architecture/setup-terraform-cicd)
+  も併記していたが 2026-07 audit で 404 確認済み、後継/リダイレクト先未発見のため除去)
 - [Running infrastructure code with the least privilege possible](https://cloud.google.com/blog/products/devops-sre/running-infrastructure-code-least-privilege-possible) —
   self-declare cycle を避ける設計指針
 - [Deny Policies overview](https://cloud.google.com/iam/docs/deny-overview) —

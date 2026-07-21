@@ -3,25 +3,38 @@
 # Update policy:
 #   - Terraform CLI: `terraform_version` in .github/workflows/terraform.yml must match this
 #   - hashicorp/google provider: pinned to major version; minor bumps via Renovate PR
-#   - hashicorp/google-beta: required for google_iam_deny_policy (Deny Policies GA API
-#     surface is still exposed only through the beta provider in Terraform)
+#   - hashicorp/google-beta: required because google_cloud_run_v2_service (×2,
+#     cloud_run_public.tf / cloud_run_admin.tf), google_cloud_run_v2_job
+#     (cloud_run_migrate_job.tf), and google_compute_managed_ssl_certificate
+#     (lb_admin.tf) all declare `provider = google-beta` (2026-07 audit:
+#     these 4 resources are now GA in the standard "google" provider too —
+#     dropping the google-beta pin and the 4 `provider = google-beta` lines
+#     is a valid future cleanup, tracked separately since it touches live
+#     prevent_destroy-protected prod resources and warrants its own PR + a
+#     verified `terraform plan` before merge).
 terraform {
   # EXACT pin (`= 1.10.0`) — not a floor (`>= 1.10.0`).
   #
   # Why exact instead of >= :
-  #   - HashiCorp official guidance recommends exact/minor pinning to prevent
-  #     silent state-format upgrades on newer CLI versions (state upgrades are
-  #     one-way and cannot be safely rolled back — a state written by 1.11+ can
-  #     never be read by 1.10.x again, breaking any environment still on 1.10).
-  #   - `>= 1.10.0` allowed local dev / any collaborator to run 1.11 / 1.12
-  #     while CI (`TF_VERSION: 1.10.0` in .github/workflows/terraform.yml and
-  #     Cloud Build `terraform_version: 1.10.0` in deploy-production.yml) stays
-  #     locked at 1.10.0. Any local apply on a newer CLI would silently rewrite
-  #     the shared remote state and lock CI out on the next plan.
-  #   - Exact pin makes local + GitHub Actions + Cloud Build all agree, so the
+  #   - This is a project-specific choice, not something HashiCorp's own
+  #     guidance recommends (HashiCorp's tutorials/style guide actually favor
+  #     a pessimistic constraint like `~> 1.10` for exactly this scenario, to
+  #     avoid needing a config edit for every patch release). We pin exact
+  #     here because CI (`TF_VERSION: 1.10.0` in .github/workflows/terraform.yml
+  #     and terraform-drift.yml, `terraform_version: 1.10.0` in
+  #     deploy-production.yml) and any local `terraform apply` against the
+  #     shared GCS state must resolve to the byte-identical Terraform binary.
+  #     State upgrades are one-way and cannot be safely rolled back — a state
+  #     written by 1.11+ can never be read by 1.10.x again — so `>= 1.10.0`
+  #     would let a collaborator's newer local CLI silently rewrite the shared
+  #     remote state and lock CI out on the next plan.
+  #   - Exact pin makes local + GitHub Actions all agree, so the
   #     `terraform_version` marker written into the state file never changes
   #     unexpectedly. Version bumps become an explicit PR touching this file
-  #     AND the two workflow files together (grep for `1.10.0` to find them).
+  #     AND all three workflow files that reference `1.10.0`
+  #     (.github/workflows/terraform.yml, terraform-drift.yml,
+  #     deploy-production.yml — grep for `1.10.0` to find them) together,
+  #     plus a state backup beforehand given the one-way upgrade risk.
   #   - Still satisfies the >= 1.7 floor required by top-level `import {}`
   #     blocks (used throughout terraform/*.tf to adopt pre-existing GCP
   #     resources into state instead of erroring on 409 during fresh apply).
