@@ -14,7 +14,12 @@
 #      sort_query_string_for_cache, true_client_ip_header, origin_error_page_pass_thru
 #      → provider が書換不可 (drift 検知しても action 不能)
 #   2. **Free plan で immutable / deprecated**: waf (Pro+ 限定), rocket_loader
-#      (廃止方向), polish (Pro+), mirage (Pro+), webp (auto-managed), minify
+#      (現状 Terraform 未管理・全 plan tier で現役機能、廃止予定ではない — 2026-07
+#      audit で "廃止方向" という旧記述が Cloudflare 公式 docs と不整合と判明し訂正),
+#      polish (Pro+), mirage (Pro+), webp (Cloudflare zone-settings API 上は
+#      独立した on/off toggle として現役 — 2026-07 audit で "auto-managed" という
+#      旧記述は Polish (Pro+ の自動フォーマット変換機能、別設定) との混同と判明し訂正。
+#      単に Terraform 管理範囲外に置いているだけ), minify
 #      (Cloudflare が deprecate、Speed → Minify 移行済)
 #   3. **default 値のまま / contextual**: development_mode (`off` = default),
 #      email_obfuscation (`off`), filter_logs_to_cloudflare (`off`),
