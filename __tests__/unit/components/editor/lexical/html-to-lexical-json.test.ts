@@ -29,6 +29,7 @@ import {
 import {
   $createButtonNode,
   $isButtonNode,
+  buttonHrefState,
   buttonLabelState,
 } from "@/admin/components/editor/lexical/nodes/ButtonNode";
 import {
@@ -62,6 +63,14 @@ import {
   $isInstagramNode,
   postIdState,
 } from "@/admin/components/editor/lexical/nodes/InstagramNode";
+import {
+  $isBookmarkNode,
+  bookmarkUrlState,
+} from "@/admin/components/editor/lexical/nodes/BookmarkNode";
+import {
+  $isFileNode,
+  fileUrlState,
+} from "@/admin/components/editor/lexical/nodes/FileNode";
 import { createInlineIcon, createSpan } from "@/shared/lib/portable-text";
 import {
   EMPTY_LEXICAL_EDITOR_STATE_JSON,
@@ -413,5 +422,95 @@ describe("XSS対策: 汎用HTMLペースト", () => {
     // 前後のテキストは正常に残る
     expect(finalHtml).toContain("前");
     expect(finalHtml).toContain("後");
+  });
+
+  // ---------------------------------------------------------------------------
+  // 再監査で発見: BookmarkNode/ButtonNode/FileNode は自ノードの marker 属性
+  // (data-bookmark/data-button/data-file) を持つ <a href> を LinkNode.sanitizeUrl
+  // 相当の検証なしで importDOM に取り込んでいた。汎用 <a href="javascript:...">
+  // は既存の LinkNode 経路で保護されるが（上記テスト）、この3ノードは自ノードの
+  // marker 属性さえ持たせれば同じ検証をバイパスできたため、node 側にも
+  // sanitizeLexicalUrlScheme（LinkNode.sanitizeUrl と同じパターン）を追加した。
+  // ---------------------------------------------------------------------------
+
+  test('BookmarkNode: data-bookmark を持つ <a href="javascript:...">はimportDOM側でabout:blankに無害化され、最終HTMLからもhref属性が消える', () => {
+    const html =
+      '<div data-bookmark="true"><a href="javascript:alert(1)">クリック</a></div>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+    expect(result.json).not.toContain("alert(");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const bookmarkNode = $dfs()
+        .map(({ node }) => node)
+        .find($isBookmarkNode);
+      expect(bookmarkNode).toBeDefined();
+      if (!bookmarkNode) return;
+      expect($getState(bookmarkNode, bookmarkUrlState)).toBe("about:blank");
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+    expect(finalHtml).not.toContain("href=");
+  });
+
+  test('ButtonNode: data-button を持つ <a href="javascript:...">はimportDOM側でabout:blankに無害化され、最終HTMLからもhref属性が消える', () => {
+    const html =
+      '<div data-button="true"><a href="javascript:alert(1)">ボタン</a></div>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+    expect(result.json).not.toContain("alert(");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const buttonNode = $dfs()
+        .map(({ node }) => node)
+        .find($isButtonNode);
+      expect(buttonNode).toBeDefined();
+      if (!buttonNode) return;
+      expect($getState(buttonNode, buttonHrefState)).toBe("about:blank");
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+    expect(finalHtml).not.toContain("href=");
+  });
+
+  test('FileNode: data-file を持つ <a href="javascript:...">はimportDOM側でabout:blankに無害化され、最終HTMLからもhref属性が消える', () => {
+    const html =
+      '<a data-file="true" href="javascript:alert(1)" data-file-name="evil.txt">ダウンロード</a>';
+
+    const result = tryConvertHtmlStringToLexicalJsonCore(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.json).not.toContain("javascript:");
+    expect(result.json).not.toContain("alert(");
+
+    const editor = createProjectHeadlessEditor();
+    editor.setEditorState(editor.parseEditorState(result.json));
+    editor.read(() => {
+      const fileNode = $dfs()
+        .map(({ node }) => node)
+        .find($isFileNode);
+      expect(fileNode).toBeDefined();
+      if (!fileNode) return;
+      expect($getState(fileNode, fileUrlState)).toBe("about:blank");
+    });
+
+    const finalHtml = deriveLexicalContentHtmlFromJsonCore(result.json);
+    expect(finalHtml).not.toContain("javascript:");
+    expect(finalHtml).not.toContain("href=");
   });
 });

@@ -58,6 +58,42 @@ export function isAllowedLexicalIframeHostname(url: string): boolean {
   }
 }
 
+/**
+ * Lexical 由来 URL 属性（`href` 等）の許可スキーム SSoT。
+ *
+ * - `sanitize-content-html-core.ts` の `allowedSchemes`（保存時）
+ * - `sanitizeLexicalUrlScheme`（下記。ペースト取込時）
+ * の両方から参照する。
+ */
+export const LEXICAL_ALLOWED_URL_SCHEMES: readonly string[] = [
+  "http",
+  "https",
+  "mailto",
+  "tel",
+];
+
+/**
+ * URL のスキームを検証し、非許可スキーム（`javascript:` 等）なら `about:blank` へ
+ * 強制変換する。相対パス（`/` `.` `#` 始まり）はスキームを持たないため常に許可する。
+ *
+ * `@lexical/link` の `LinkNode.sanitizeUrl` と同じ判定パターン。BookmarkNode /
+ * ButtonNode / FileNode の importDOM は自ノードの marker 属性
+ * （`data-bookmark` / `data-button` / `data-file`）を持つ任意の貼り付け HTML から
+ * `href` を無検証で読むため、ここでの検証が admin エディタ内での唯一のガードになる
+ * （保存時の sanitize-html はスキーム単位で再度弾くが、それ以前のエディタ内
+ * decorator 描画・exportDOM 経路は本関数を経由しない限り無防備）。
+ */
+export function sanitizeLexicalUrlScheme(url: string): string {
+  if (!url || /^[/.#]/.test(url)) return url;
+  try {
+    const scheme = new URL(url).protocol.replace(/:$/, "");
+    if (!LEXICAL_ALLOWED_URL_SCHEMES.includes(scheme)) return "about:blank";
+  } catch {
+    return url;
+  }
+  return url;
+}
+
 /** Tabler curated icon SVG サブツリー（sanitize-html / DOMPurify 共通） */
 export const LEXICAL_CURATED_ICON_SVG_TAGS = [
   "svg",

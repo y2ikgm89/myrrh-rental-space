@@ -21,6 +21,7 @@ import {
 } from "lexical";
 import { parseString } from "../config/type-guards";
 import { renderLexicalDecorator } from "./decorator-registry";
+import { sanitizeLexicalUrlScheme } from "@/shared/lib/html/lexical-html-sanitize-config";
 
 export const fileUrlState = createState("url", {
   parse: parseString,
@@ -72,8 +73,12 @@ export class FileNode extends DecoratorNode<ReactElement | null> {
           return null;
         return {
           conversion: (element) => {
+            // 修正: 従来は href を無検証で読んでいたため、data-file 属性を持つ
+            // 貼り付け HTML を細工されると javascript: 等の危険スキームがそのまま
+            // fileUrlState に格納されていた（LinkNode.sanitizeUrl 相当の検証欠如）。
+            // @lexical/link の LinkNode.sanitizeUrl と同じパターンで import 時に無害化する。
             const node = $createFileNode({
-              url: element.getAttribute("href") ?? "",
+              url: sanitizeLexicalUrlScheme(element.getAttribute("href") ?? ""),
               fileName: element.getAttribute("data-file-name") ?? "",
               fileSize: Number(element.getAttribute("data-file-size") ?? 0),
               mime: element.getAttribute("data-file-mime") ?? "",
