@@ -43,6 +43,8 @@ export type LexicalEditorProps = {
   height?: string | undefined;
   /** プレースホルダーテキスト */
   placeholder?: string | undefined;
+  /** エディタ本体（ContentEditable、role="textbox"）のアクセシブルネーム。未指定時は「本文」 */
+  ariaLabel?: string | undefined;
   /** エディタ本体（ContentEditable）に紐づけるエラーメッセージ等の要素ID（aria-describedby） */
   ariaDescribedBy?: string | undefined;
   /** マークノードクリック時のコールバック */

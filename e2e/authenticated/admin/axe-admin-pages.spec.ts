@@ -37,8 +37,8 @@ const ADMIN_AXE_ROUTES = [
  *
  * 【設計原則】
  * - WCAG 2.1 Level A/AA タグで filter
- * - 管理画面特有のウィジェット（Lexical editor / contenteditable 等）
- *   は既知の false positive が多いため除外
+ * - Lexical editor（contenteditable）は除外しない。ContentEditable に
+ *   aria-label を付与済みのため通常スキャン対象に含める
  * - `serious` / `critical` を blocking
  *
  * 前提: chromium-admin project で実行（setup-admin が storage state 作成済み）
@@ -46,16 +46,15 @@ const ADMIN_AXE_ROUTES = [
 
 /**
  * 管理画面用の AxeBuilder 共通設定
- * - Lexical editor は contenteditable false positive があるため exclude
- * - 動的ウィジェット（calendar, recharts 等）も exclude
+ * - Recharts / FullCalendar 等、axe が誤検知する動的ウィジェットのみ exclude
+ *   （2026-07-21 時点で実測確認済み。新たに exclude を追加する場合は
+ *   exclude を外した状態で実際に axe を走らせ、違反内容を確認してから追加すること）
  */
 function buildAdminAxeScanner(page: Page): AxeBuilder {
   return new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .exclude('[contenteditable="true"]') // Lexical editor
     .exclude('[class*="recharts" i]') // Recharts SVG
-    .exclude('[class*="fc-" i]') // FullCalendar (if any)
-    .exclude('[data-testid="lexical-editor"]');
+    .exclude('[class*="fc-" i]'); // FullCalendar (if any)
 }
 
 /**
@@ -94,7 +93,7 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
     });
   }
 
-  test("投稿新規作成ページに critical/serious 違反がない（Lexical editor 除外）", async ({
+  test("投稿新規作成ページ（空エディタ）に critical/serious 違反がない", async ({
     page,
   }) => {
     await page.goto(`${urls.adminPosts}/new`);
@@ -106,6 +105,27 @@ test.describe("a11y scan - 管理画面主要ページ", () => {
     expect(
       blocking,
       `Admin post new page a11y violations:\n${formatViolations(results.violations)}`,
+    ).toEqual([]);
+  });
+
+  test("投稿新規作成ページ（本文入力後）に critical/serious 違反がない", async ({
+    page,
+  }) => {
+    await page.goto(`${urls.adminPosts}/new`);
+
+    const editor = page
+      .getByRole("region", { name: "本文エディタ" })
+      .getByRole("textbox");
+    await expect(editor).toBeVisible({ timeout: 15000 });
+    await editor.click();
+    await page.keyboard.type("E2E a11y スキャン用の本文です。");
+
+    const results = await buildAdminAxeScanner(page).analyze();
+    const blocking = results.violations.filter(isBlocking);
+
+    expect(
+      blocking,
+      `Admin post new page (dirty) a11y violations:\n${formatViolations(results.violations)}`,
     ).toEqual([]);
   });
 });
