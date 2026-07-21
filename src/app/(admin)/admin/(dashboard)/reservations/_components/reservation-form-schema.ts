@@ -6,10 +6,15 @@ import {
 import {
   RESERVATION_SERIES_FREQ,
   ReservationStatus,
+  CustomerType,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { TIME_REGEX } from "@/shared/lib/validations/business-hours";
 import { WEEKDAYS } from "./rrule-utils";
+import {
+  personNameFieldSchema,
+  emailFieldSchema,
+} from "@/shared/lib/validations/customer-shared-fields";
 
 /**
  * ReservationForm / ReservationEditForm (conform) form schema
@@ -85,6 +90,37 @@ const newCustomerObjectSchema = z.object({
     .optional()
     .or(z.literal("")),
 });
+
+/**
+ * ゲスト連絡先編集フィールド (Phase 3)。全フィールド個別に optional
+ * — Reservation.guest* 列は全て nullable であり、admin が一部のみ
+ * 入力/更新したいケースを許容する (newCustomerObjectSchema が全項目必須の
+ * create 専用スキーマなのとは意図的に異なる)。電話番号は
+ * customer.ts の regex 付きバリアントと同じ制約に揃える。
+ */
+const guestContactFieldsSchema = {
+  guestLastName: personNameFieldSchema("お名前 (姓)")
+    .optional()
+    .or(z.literal("")),
+  guestFirstName: personNameFieldSchema("お名前 (名)")
+    .optional()
+    .or(z.literal("")),
+  guestEmail: emailFieldSchema.optional().or(z.literal("")),
+  guestPhone: z
+    .string()
+    .max(20, { error: "電話番号は20文字以内で入力してください" })
+    .regex(/^[\d\-+() ]+$/, {
+      error: "電話番号は数字・ハイフン・+・括弧・空白のみ使用できます",
+    })
+    .optional()
+    .or(z.literal("")),
+  guestCompanyName: z
+    .string()
+    .max(100, { error: "会社名は100文字以内で入力してください" })
+    .optional()
+    .or(z.literal("")),
+  guestCustomerType: z.enum(CustomerType).optional(),
+};
 
 const customerModeSchema = z.enum(["existing", "new"]);
 
@@ -195,6 +231,7 @@ export const updateReservationFormSchema = z
     couponCode: couponCodeSchema,
     status: z.enum(ReservationStatus).default(ReservationStatus.CONFIRMED),
     notes: notesSchema,
+    ...guestContactFieldsSchema,
     // 楽観制御: form が予約を load した時点の version を hidden で持ち回る。
     // updateAdminReservationCommand が updateMany の WHERE 述語で claim する。
     version: z.coerce

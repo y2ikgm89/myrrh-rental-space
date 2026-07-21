@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import type { ReservationStatus } from "@generated/prisma/enums";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
@@ -264,6 +265,16 @@ export async function updateAdminReservationCommand(
     adminUserId: string;
     /** 楽観制御: form が予約を load した時点の version。updateMany の WHERE 述語で claim する。 */
     version: number;
+    /**
+     * ゲスト連絡先スナップショット (Reservation 行のみ更新、Customer 行には伝播しない)。
+     * 個別に省略可能 — 省略したフィールドは既存 DB 値を保持する（omitUndefined 経由）。
+     */
+    guestLastName?: string | undefined;
+    guestFirstName?: string | undefined;
+    guestEmail?: string | undefined;
+    guestPhone?: string | undefined;
+    guestCompanyName?: string | undefined;
+    guestCustomerType?: CustomerType | undefined;
   },
 ) {
   const startDateTime = parseDateTimeLocalAsJst(
@@ -455,6 +466,24 @@ export async function updateAdminReservationCommand(
         notes: input.notes || null,
         icsSequence: { increment: 1 },
         version: { increment: 1 },
+        ...(input.guestLastName !== undefined && {
+          guestLastName: input.guestLastName,
+        }),
+        ...(input.guestFirstName !== undefined && {
+          guestFirstName: input.guestFirstName,
+        }),
+        ...(input.guestEmail !== undefined && {
+          guestEmail: input.guestEmail,
+        }),
+        ...(input.guestPhone !== undefined && {
+          guestPhone: input.guestPhone,
+        }),
+        ...(input.guestCompanyName !== undefined && {
+          guestCompanyName: input.guestCompanyName,
+        }),
+        ...(input.guestCustomerType !== undefined && {
+          guestCustomerType: input.guestCustomerType,
+        }),
       },
     });
 
