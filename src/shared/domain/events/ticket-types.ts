@@ -30,14 +30,11 @@ export type EventTicketWritableFields = Readonly<
  * 管理フォームのチケットドラフト兼ドメインコマンドの書き込み入力。
  *
  * 既存チケットは `id` を持ち（update 時の diff/upsert に利用）、新規追加分は省略する。
+ * React reconciliation 用の安定 key は conform の `getFieldList()[i].key` が提供するため、
+ * 型側で持つ必要はない。
  */
 export type EventTicketInput = Omit<EventTicketWritableFields, "sortOrder"> & {
   readonly id?: string;
-  /**
-   * React reconciliation 用の安定 key (UI 専用フィールド)。
-   * submit 時の JSON payload からは明示的に除外する。
-   */
-  readonly _key?: string;
 };
 
 /**
@@ -62,18 +59,3 @@ export type EventTicketSummary = Readonly<
 export type EventTicketOption = Readonly<
   Pick<EventTicket, "id" | "name" | "price" | "unitSize">
 >;
-
-/**
- * 新規チケットドラフトの初期値を生成する。
- */
-export function createDefaultTicket(): EventTicketInput {
-  return {
-    _key: crypto.randomUUID(),
-    name: "",
-    description: null,
-    price: 0,
-    capacity: null,
-    unitSize: 1,
-    isAvailable: true,
-  };
-}

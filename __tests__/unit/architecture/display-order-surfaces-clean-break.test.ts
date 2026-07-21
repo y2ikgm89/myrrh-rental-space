@@ -277,10 +277,16 @@ describe("display order surfaces clean-break contract", () => {
       "const ticketInputSchema = z.strictObject({",
     );
     expect(eventFormSchema).not.toContain("sortOrder: z.");
-    expect(eventForm).toContain(
+    // Option (a) 移行後: 独自 JSON hidden input を撤去し、conform の field.array
+    // (form.insert / form.remove / form.reorder) 経由で `tickets[N].<field>` 形式の
+    // native FormData として送信する。sortOrder は tickets 配列の並び順から
+    // domain command が派生する契約は不変。
+    expect(eventForm).not.toContain(
       "value={JSON.stringify(tickets.map(serializeTicket))}",
     );
     expect(eventForm).not.toContain("value={JSON.stringify(tickets)}");
+    expect(eventForm).toContain("form.insert({ name: fields.tickets.name");
+    expect(eventForm).toContain("form.reorder({ name: fields.tickets.name");
     expect(eventTicketTypes).toContain(
       'Omit<EventTicketWritableFields, "sortOrder">',
     );

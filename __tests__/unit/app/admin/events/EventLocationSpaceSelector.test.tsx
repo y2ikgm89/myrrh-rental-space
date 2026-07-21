@@ -108,19 +108,14 @@ function buildValidFormData(overrides: Record<string, string> = {}): FormData {
     ]),
   );
   formData.set("status", "DRAFT");
-  formData.set(
-    "tickets",
-    JSON.stringify([
-      {
-        name: "一般",
-        description: null,
-        price: 5000,
-        capacity: null,
-        unitSize: 1,
-        isAvailable: true,
-      },
-    ]),
-  );
+  // Option (a) refactor: tickets は conform field.array 経由で
+  // `tickets[N].<field>` 形式の native FormData として送信される。
+  formData.set("tickets[0].name", "一般");
+  formData.set("tickets[0].description", "");
+  formData.set("tickets[0].price", "5000");
+  formData.set("tickets[0].capacity", "");
+  formData.set("tickets[0].unitSize", "1");
+  formData.set("tickets[0].isAvailable", "on");
   for (const [key, value] of Object.entries(overrides)) {
     formData.set(key, value);
   }

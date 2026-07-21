@@ -13,6 +13,7 @@ import {
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
 import { gallerySchema } from "@/shared/lib/validations/gallery";
+import { switchBoolean } from "@/admin/actions/settings/schemas/form-schema-helpers";
 
 /**
  * EventForm (conform) form schema
@@ -21,7 +22,10 @@ import { gallerySchema } from "@/shared/lib/validations/gallery";
  * - `descriptionJson` (Lexical EditorState JSON) は hidden input で transit
  * - `descriptionHtml` は server が descriptionJson から派生
  * - boolean (`registrationOpen`) は Switch + hidden input "on" / "" を `z.preprocess` で coerce
- * - `tickets` は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate。
+ * - `tickets` は conform field.array 経由で FormData に `tickets[N].<field>` 形式で
+ *   直接 transit する（`getFieldList()` / `getFieldset()`）。number は `z.coerce.number()`、
+ *   isAvailable は Radix Switch の hidden input を `switchBoolean()` で吸収、
+ *   capacity/description は nullable preprocess で空欄→null 化する。
  *   `sortOrder` は payload から受け取らず、domain command が配列順から 0 始まりで派生する
  * - `slots`  は JSON 文字列 hidden input で transit、preprocess で JSON.parse + array validate
  *   （startAt/endAt は datetime-local 文字列 → parseDateTimeLocalAsJst で Date 変換）
@@ -56,57 +60,68 @@ const nullableUuidWithSentinel = (sentinel: string) =>
   );
 
 const ticketInputSchema = z.strictObject({
+  /**
+   * 既存チケットの update 時のみ hidden input で送信される。
+   * 新規追加分は undefined で届く（conform empty→undefined 経由）。
+   */
   id: z.string().optional(),
   name: z
-    .string()
+    .string({ error: "チケット名は必須です" })
     .min(1, { error: "チケット名は必須です" })
     .max(100, { error: "チケット名は100文字以内です" }),
+  /**
+   * 説明は任意で、空欄は永続化前に null 化する。
+   * conform の coerceFormValue が "" → undefined に normalize したあと、
+   * `.default(null)` が undefined → null を吸収するため、UI 側で preprocess 不要。
+   */
   description: z
     .string()
     .max(500, { error: "説明は500文字以内です" })
-    .nullable(),
-  price: z.number().int().min(0, { error: "料金は0以上です" }),
-  capacity: z.number().int().min(1).nullable(),
-  unitSize: z
+    .nullable()
+    .default(null),
+  price: z
+    .number({ error: "料金を入力してください" })
+    .int({ error: "料金は整数で入力してください" })
+    .min(0, { error: "料金は0以上です" }),
+  /**
+   * 単一区分なら基本情報の定員を全枠に使えるため任意。複数区分の場合は
+   * 下段の `superRefine` で必須化される。description と同型で "" → undefined → null。
+   */
+  capacity: z
     .number()
     .int()
+    .min(1, { error: "枠数は1以上です" })
+    .nullable()
+    .default(null),
+  unitSize: z
+    .number({ error: "1チケットあたりの人数を入力してください" })
+    .int()
     .min(1, { error: "1チケットあたりの人数は1以上です" }),
-  isAvailable: z.boolean(),
+  isAvailable: switchBoolean(),
 });
 
-const ticketsSchema = z.preprocess(
-  (value) => {
-    if (typeof value !== "string") return value;
-    if (value === "") return [];
-    try {
-      return JSON.parse(value);
-    } catch {
-      return null;
-    }
-  },
-  z
-    .array(ticketInputSchema)
-    .min(1, { error: "区分を少なくとも1つ登録してください" })
-    /**
-     * 区分が複数あるときは枠数 (capacity) を必須化。
-     *
-     * 単一区分なら基本情報の定員 (Event.capacity) を全枠数として使えるが、
-     * 複数区分のときは各区分の枠数を明示しないと「どの区分から何人受け入れるか」
-     * が決まらず公開申込フォームで在庫管理ができない (Eventbrite / Peatix と同 UX)。
-     */
-    .superRefine((tickets, ctx) => {
-      if (tickets.length <= 1) return;
-      tickets.forEach((ticket, index) => {
-        if (ticket.capacity == null) {
-          ctx.addIssue({
-            code: "custom",
-            message: "区分が複数のときは枠数を入力してください",
-            path: [index, "capacity"],
-          });
-        }
-      });
-    }),
-);
+const ticketsSchema = z
+  .array(ticketInputSchema)
+  .min(1, { error: "区分を少なくとも1つ登録してください" })
+  /**
+   * 区分が複数あるときは枠数 (capacity) を必須化。
+   *
+   * 単一区分なら基本情報の定員 (Event.capacity) を全枠数として使えるが、
+   * 複数区分のときは各区分の枠数を明示しないと「どの区分から何人受け入れるか」
+   * が決まらず公開申込フォームで在庫管理ができない (Eventbrite / Peatix と同 UX)。
+   */
+  .superRefine((tickets, ctx) => {
+    if (tickets.length <= 1) return;
+    tickets.forEach((ticket, index) => {
+      if (ticket.capacity == null) {
+        ctx.addIssue({
+          code: "custom",
+          message: "区分が複数のときは枠数を入力してください",
+          path: [index, "capacity"],
+        });
+      }
+    });
+  });
 
 /** 各スロットの入力スキーマ（JSON transit 内の各要素）。startAt/endAt は datetime-local 文字列→Date 変換。 */
 const slotFormItemSchema = z.object({

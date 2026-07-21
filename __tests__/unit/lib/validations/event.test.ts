@@ -13,7 +13,8 @@ describe("eventFormSchema (conform)", () => {
     ]),
     status: "DRAFT",
     registrationOpen: false,
-    tickets: JSON.stringify([
+    // Option (a) 移行後: tickets は native array 契約 (JSON preprocess なし)。
+    tickets: [
       {
         name: "一般",
         description: null,
@@ -22,7 +23,7 @@ describe("eventFormSchema (conform)", () => {
         unitSize: 1,
         isAvailable: true,
       },
-    ]),
+    ],
   };
 
   it("有効な入力を受け入れる", () => {
@@ -30,10 +31,10 @@ describe("eventFormSchema (conform)", () => {
     expect(result.success).toBe(true);
   });
 
-  it("チケット JSON の旧 sortOrder は拒否する", () => {
+  it("チケットの旧 sortOrder フィールドは拒否する (strictObject)", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      tickets: JSON.stringify([
+      tickets: [
         {
           name: "一般",
           description: null,
@@ -43,7 +44,7 @@ describe("eventFormSchema (conform)", () => {
           sortOrder: 0,
           isAvailable: true,
         },
-      ]),
+      ],
     });
     expect(result.success).toBe(false);
   });
@@ -156,15 +157,16 @@ describe("eventFormSchema (conform)", () => {
   it("チケットの料金が負の値はエラー", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      tickets: JSON.stringify([
+      tickets: [
         {
           name: "一般",
+          description: null,
           price: -100,
+          capacity: null,
           unitSize: 1,
-          sortOrder: 0,
           isAvailable: true,
         },
-      ]),
+      ],
     });
     expect(result.success).toBe(false);
   });
@@ -172,7 +174,7 @@ describe("eventFormSchema (conform)", () => {
   it("チケット未登録 (空配列) はエラー", () => {
     const result = eventFormSchema.safeParse({
       ...validInput,
-      tickets: JSON.stringify([]),
+      tickets: [],
     });
     expect(result.success).toBe(false);
   });
