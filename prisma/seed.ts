@@ -679,13 +679,33 @@ async function seedSpaceCategories() {
     },
   ];
 
-  // upsert で idempotent 化（name @unique が SSoT キー）
+  // Round-5 audit Finding #18: name の一意性は isActive: true な行の間でのみ
+  // 強制される partial unique index になったため、upsert({where:{name}}) は
+  // (無効化済み行と衝突しうる場合に) 曖昧になる。isActive: true を明示した
+  // findFirst + create/update に置き換えて idempotent 化する。
+  //
+  // sortOrder は (name とは異なり) 無条件 @unique のままのため、create 側で
+  // categories 配列のハードコードされた sortOrder をそのまま使うと、同名の
+  // 無効化済み行が既に別の sortOrder を占有している状況の re-seed で
+  // P2002 衝突を起こしうる（`createSpaceCategory` ドメインコマンドと同様に
+  // 都度 max+1 を計算して採番する）。
   for (const cat of categories) {
-    await prisma.spaceCategory.upsert({
-      where: { name: cat.name },
-      create: cat,
-      update: cat,
+    const existing = await prisma.spaceCategory.findFirst({
+      where: { name: cat.name, isActive: true },
     });
+    if (existing) {
+      await prisma.spaceCategory.update({
+        where: { id: existing.id },
+        data: cat,
+      });
+    } else {
+      const maxOrder = await prisma.spaceCategory.aggregate({
+        _max: { sortOrder: true },
+      });
+      await prisma.spaceCategory.create({
+        data: { ...cat, sortOrder: (maxOrder._max.sortOrder ?? -1) + 1 },
+      });
+    }
   }
 
   console.log("✅ Upserted space categories");
@@ -2802,8 +2822,12 @@ async function seedFaq(overridePublished?: boolean) {
   ];
 
   for (const { category, items } of faqData) {
-    let faqCategory = await prisma.faqCategory.findUnique({
-      where: { slug: category.slug },
+    // Round-5 audit Finding #18: slug の一意性は deletedAt: null な行の間でのみ
+    // 強制される partial unique index になったため、findUnique({where:{slug}})
+    // は (ソフトデリート済み行と衝突しうる場合に) 曖昧になる。deletedAt: null を
+    // 明示した findFirst に置き換える。
+    let faqCategory = await prisma.faqCategory.findFirst({
+      where: { slug: category.slug, deletedAt: null },
     });
 
     if (!faqCategory) {

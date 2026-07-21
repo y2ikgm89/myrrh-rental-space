@@ -450,7 +450,7 @@ model Location {
 
 model SpaceCategory {
   id          String   @id @default(uuid()) @db.Uuid
-  name        String   @unique // 例: 会議室、スタジオ、セミナー室（seed idempotency 保証）
+  name        String // 例: 会議室、スタジオ、セミナー室（seed idempotency 保証。一意性は下記 @@unique(where: isActive) 参照）
   description String?  @db.Text
   icon        String? // アイコン名（任意）
   color       String? // テーマカラー（任意）
@@ -462,6 +462,12 @@ model SpaceCategory {
   // Relations
   spaces Space[]
 
+  // Round-5 audit Finding #18: SpaceCategory は真の削除を持たず isActive:false
+  // による無効化のみ（Space.category は onDelete: Restrict のため物理削除不可）。
+  // name が無条件 @unique だと、無効化したカテゴリーの名前が永久に予約されたまま
+  // になり同名での再作成が常に CONFLICT になっていた。isActive な行の間でのみ
+  // 一意性を強制する partial unique index に変更する。
+  @@unique([name], map: "space_categories_name_active_key", where: { isActive: true })
   @@unique([sortOrder], map: "space_categories_sortOrder_key")
   @@index([sortOrder])
   @@map("space_categories")
@@ -1385,7 +1391,7 @@ model SocialLink {
 model FaqCategory {
   id          String    @id @default(uuid()) @db.Uuid
   name        String
-  slug        String    @unique
+  slug        String // 一意性は下記 @@unique(where: deletedAt is null) 参照
   description String?   @db.Text
   icon        String? // キュレーション済みアイコン名（任意、SpaceCategory.icon と同方式）
   order       Int       @default(0)
@@ -1397,6 +1403,14 @@ model FaqCategory {
   // Relations
   items FaqItem[]
 
+  // Round-5 audit Finding #18: slug が無条件 @unique だと、ソフトデリート済み
+  // カテゴリーが (permanentlyDelete するまで) 行として残り続ける限り同じ slug の
+  // 新規作成が DB 制約で常に拒否される。ドメイン層の ensureFaqCategoryUnique は
+  // 既に deletedAt: null で絞って「空いている」と判定していたため、この DB 制約
+  // 側の非対称により createFaqCategory が生の P2002 (executeAdminMutationResult
+  // が DomainError しか friendly化しない) で失敗していた。order と同じ partial
+  // unique index に揃える。
+  @@unique([slug], map: "faq_categories_slug_active_key", where: { deletedAt: null })
   @@unique([order], map: "faq_categories_order_active_key", where: { deletedAt: null })
   @@index([order])
   @@index([isActive, order])
