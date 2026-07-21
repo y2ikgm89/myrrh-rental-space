@@ -22,6 +22,11 @@ import {
   createDefaultTicket,
   type EventTicketInput,
 } from "@/shared/domain/events/ticket-types";
+import {
+  groupTicketFieldErrors,
+  selectTicketsArrayErrors,
+  type FieldErrorMap,
+} from "./ticket-errors";
 
 /**
  * 複数チケット種別 (= 参加費・定員枠) の入力 UI。
@@ -34,11 +39,15 @@ import {
  *
  * 型は `@/shared/domain/events/ticket-types` の `EventTicketInput` SSoT を共有する。
  * 永続化順はこの配列順から server/domain が再採番する。
+ *
+ * エラー表示は `fieldErrors`（`fields.tickets.allErrors` を prefix filter した
+ * Record<string, string[]>）を受け取り、`ticket-errors.ts` の helper で
+ * (a) 配列全体エラー (min(1) 等) と (b) 行単位フィールドエラーに分けて配線する。
  */
 type TicketsFieldProps = {
   tickets: readonly EventTicketInput[];
   onChange: (next: EventTicketInput[]) => void;
-  errors?: string[] | undefined;
+  fieldErrors?: FieldErrorMap | undefined;
   isPending: boolean;
 };
 
@@ -179,9 +188,11 @@ const PRESETS: readonly Preset[] = [
 export function TicketsField({
   tickets,
   onChange,
-  errors,
+  fieldErrors,
   isPending,
 }: TicketsFieldProps): ReactElement {
+  const perTicketErrors = groupTicketFieldErrors(fieldErrors);
+  const arrayLevelErrors = selectTicketsArrayErrors(fieldErrors);
   function updateTicket(index: number, patch: Partial<EventTicketInput>): void {
     const next = tickets.map((t, i) => (i === index ? { ...t, ...patch } : t));
     onChange(next);
@@ -283,10 +294,23 @@ export function TicketsField({
         {tickets.map((ticket, index) => {
           const inputBase = `event-ticket-${index}`;
           const capacityRequired = tickets.length > 1;
+          const rowErrors = perTicketErrors.get(index);
+          const nameErrors = rowErrors?.["name"];
+          const priceErrors = rowErrors?.["price"];
+          const unitSizeErrors = rowErrors?.["unitSize"];
+          const capacityErrors = rowErrors?.["capacity"];
+          const descriptionErrors = rowErrors?.["description"];
+          const isAvailableErrors = rowErrors?.["isAvailable"];
+          const rowLevelErrors = rowErrors?.["__row__"];
+          const hasAnyRowError = Boolean(rowErrors);
           return (
             <div
               key={ticket._key ?? ticket.id ?? `idx-${String(index)}`}
-              className="space-y-3 rounded-md border border-border bg-card p-4"
+              className={
+                hasAnyRowError
+                  ? "space-y-3 rounded-md border border-destructive/60 bg-destructive/5 p-4"
+                  : "space-y-3 rounded-md border border-border bg-card p-4"
+              }
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-medium text-foreground">
@@ -326,6 +350,16 @@ export function TicketsField({
                 </div>
               </div>
 
+              {rowLevelErrors && rowLevelErrors.length > 0 && (
+                <p
+                  id={`${inputBase}-row-error`}
+                  className="text-sm text-destructive"
+                  role="alert"
+                >
+                  {rowLevelErrors.join(", ")}
+                </p>
+              )}
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <Label htmlFor={`${inputBase}-name`}>区分名</Label>
@@ -339,7 +373,20 @@ export function TicketsField({
                     disabled={isPending}
                     placeholder="例: 一般 / 学生 / 女性 / 65歳以上"
                     required
+                    aria-invalid={nameErrors ? true : undefined}
+                    aria-describedby={
+                      nameErrors ? `${inputBase}-name-error` : undefined
+                    }
                   />
+                  {nameErrors && (
+                    <p
+                      id={`${inputBase}-name-error`}
+                      className="mt-1 text-xs text-destructive"
+                      role="alert"
+                    >
+                      {nameErrors.join(", ")}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -356,7 +403,20 @@ export function TicketsField({
                     }
                     disabled={isPending}
                     required
+                    aria-invalid={priceErrors ? true : undefined}
+                    aria-describedby={
+                      priceErrors ? `${inputBase}-price-error` : undefined
+                    }
                   />
+                  {priceErrors && (
+                    <p
+                      id={`${inputBase}-price-error`}
+                      className="mt-1 text-xs text-destructive"
+                      role="alert"
+                    >
+                      {priceErrors.join(", ")}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -375,10 +435,29 @@ export function TicketsField({
                     }
                     disabled={isPending}
                     required
+                    aria-invalid={unitSizeErrors ? true : undefined}
+                    aria-describedby={
+                      unitSizeErrors
+                        ? `${inputBase}-unitSize-error`
+                        : `${inputBase}-unitSize-hint`
+                    }
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    例: グループ枠なら 4 (4 名で 1 チケット)
-                  </p>
+                  {unitSizeErrors ? (
+                    <p
+                      id={`${inputBase}-unitSize-error`}
+                      className="mt-1 text-xs text-destructive"
+                      role="alert"
+                    >
+                      {unitSizeErrors.join(", ")}
+                    </p>
+                  ) : (
+                    <p
+                      id={`${inputBase}-unitSize-hint`}
+                      className="mt-1 text-xs text-muted-foreground"
+                    >
+                      例: グループ枠なら 4 (4 名で 1 チケット)
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -410,12 +489,31 @@ export function TicketsField({
                     disabled={isPending}
                     required={capacityRequired}
                     aria-required={capacityRequired}
+                    aria-invalid={capacityErrors ? true : undefined}
+                    aria-describedby={
+                      capacityErrors
+                        ? `${inputBase}-capacity-error`
+                        : `${inputBase}-capacity-hint`
+                    }
                   />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {capacityRequired
-                      ? "区分が複数のため必須。各区分で受け付ける人数を入力します。"
-                      : "空欄なら基本情報の定員を使用します。"}
-                  </p>
+                  {capacityErrors ? (
+                    <p
+                      id={`${inputBase}-capacity-error`}
+                      className="mt-1 text-xs text-destructive"
+                      role="alert"
+                    >
+                      {capacityErrors.join(", ")}
+                    </p>
+                  ) : (
+                    <p
+                      id={`${inputBase}-capacity-hint`}
+                      className="mt-1 text-xs text-muted-foreground"
+                    >
+                      {capacityRequired
+                        ? "区分が複数のため必須。各区分で受け付ける人数を入力します。"
+                        : "空欄なら基本情報の定員を使用します。"}
+                    </p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">
@@ -431,21 +529,53 @@ export function TicketsField({
                     }
                     disabled={isPending}
                     placeholder="例: 高校生以上の学生証提示 / 女性限定 / ドリンク付き"
+                    aria-invalid={descriptionErrors ? true : undefined}
+                    aria-describedby={
+                      descriptionErrors
+                        ? `${inputBase}-description-error`
+                        : undefined
+                    }
                   />
+                  {descriptionErrors && (
+                    <p
+                      id={`${inputBase}-description-error`}
+                      className="mt-1 text-xs text-destructive"
+                      role="alert"
+                    >
+                      {descriptionErrors.join(", ")}
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 sm:col-span-2">
-                  <Switch
-                    id={`${inputBase}-isAvailable`}
-                    checked={ticket.isAvailable}
-                    onCheckedChange={(checked) =>
-                      updateTicket(index, { isAvailable: checked })
-                    }
-                    disabled={isPending}
-                  />
-                  <Label htmlFor={`${inputBase}-isAvailable`}>
-                    申込受付中にする (OFF で一時停止)
-                  </Label>
+                <div className="flex flex-col gap-1 sm:col-span-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id={`${inputBase}-isAvailable`}
+                      checked={ticket.isAvailable}
+                      onCheckedChange={(checked) =>
+                        updateTicket(index, { isAvailable: checked })
+                      }
+                      disabled={isPending}
+                      aria-invalid={isAvailableErrors ? true : undefined}
+                      aria-describedby={
+                        isAvailableErrors
+                          ? `${inputBase}-isAvailable-error`
+                          : undefined
+                      }
+                    />
+                    <Label htmlFor={`${inputBase}-isAvailable`}>
+                      申込受付中にする (OFF で一時停止)
+                    </Label>
+                  </div>
+                  {isAvailableErrors && (
+                    <p
+                      id={`${inputBase}-isAvailable-error`}
+                      className="text-xs text-destructive"
+                      role="alert"
+                    >
+                      {isAvailableErrors.join(", ")}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -462,9 +592,9 @@ export function TicketsField({
           区分を追加
         </Button>
 
-        {errors && errors.length > 0 && (
+        {arrayLevelErrors && arrayLevelErrors.length > 0 && (
           <p className="text-sm text-destructive" role="alert">
-            {errors.join(", ")}
+            {arrayLevelErrors.join(", ")}
           </p>
         )}
       </CardContent>
