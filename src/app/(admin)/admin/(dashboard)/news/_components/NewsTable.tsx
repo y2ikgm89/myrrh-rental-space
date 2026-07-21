@@ -129,10 +129,7 @@ export function NewsTable({ news }: NewsTableProps) {
                     />
                   </TableCell>
                   <TableCell className="text-right" onClick={stopRowClick}>
-                    <NewsActionCell
-                      newsId={item.id}
-                      isPublished={item.isPublished}
-                    />
+                    <NewsActionCell newsId={item.id} />
                   </TableCell>
                 </ClickableTableRow>
               ))}
