@@ -26,6 +26,7 @@ import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { RefundDialog } from "./RefundDialog";
+import { CancellationReasonDialog } from "../../_components/CancellationReasonDialog";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
 import {
   updateReservationStatus,
@@ -168,6 +169,7 @@ export function ReservationDetail({
   const [isPaymentPending, startPaymentTransition] = useTransition();
   const [notes, setNotes] = useState(reservation.notes || "");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
   // Codex P2 (PR #1131) 対応: reissue 成功後に parent 直呼びで close → 再オープン時に
   // Dialog の internal form state (reason 等) が残る問題を防ぐため、open 発火のたびに
@@ -198,6 +200,11 @@ export function ReservationDetail({
   const handleStatusChange = async (newStatus: ReservationStatus) => {
     if (newStatus === reservation.status) return;
 
+    if (newStatus === ReservationStatus.CANCELLED) {
+      setCancelDialogOpen(true);
+      return;
+    }
+
     startTransition(async () => {
       const result = await updateReservationStatus(reservation.id, newStatus);
       if (isMutationError(result)) {
@@ -206,6 +213,24 @@ export function ReservationDetail({
       }
 
       toast.success("ステータスを更新しました");
+      router.refresh();
+    });
+  };
+
+  const handleConfirmCancel = (reason?: string) => {
+    startTransition(async () => {
+      const result = await updateReservationStatus(
+        reservation.id,
+        ReservationStatus.CANCELLED,
+        reason,
+      );
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("ステータスを更新しました");
+      setCancelDialogOpen(false);
       router.refresh();
     });
   };
@@ -589,6 +614,13 @@ export function ReservationDetail({
         )}
         onConfirm={handleRefund}
         isPending={isPaymentPending}
+      />
+
+      <CancellationReasonDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        onConfirm={handleConfirmCancel}
+        isPending={isPending}
       />
 
       {reservation.receipt != null ? (
