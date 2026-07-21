@@ -26,7 +26,7 @@ export async function getSectionDynamicOptions(): Promise<DynamicSectionOptions>
       orderBy: { name: "asc" },
     }),
     prisma.faqCategory.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, isActive: true },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
