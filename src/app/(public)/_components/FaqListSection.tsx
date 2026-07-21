@@ -48,6 +48,12 @@ export interface FaqData {
   readonly id: string;
   readonly question: string;
   readonly answer: string;
+  /**
+   * DB 由来の FAQ 項目のみ有する（config.items のインライン項目は対応する
+   * FaqItem レコードが存在せず投票/閲覧数トラッキング不可のため未設定のまま渡す）。
+   */
+  readonly helpfulCount?: number;
+  readonly notHelpfulCount?: number;
 }
 
 interface FaqListSectionProps {
@@ -86,7 +92,7 @@ function FaqAccordionItem({
   defaultOpen,
   styles,
 }: {
-  readonly item: PublicFaqCategoryWithItems["items"][number];
+  readonly item: FaqData;
   readonly defaultOpen: boolean;
   readonly styles: (typeof VARIANT_STYLES)[keyof typeof VARIANT_STYLES];
 }): ReactElement {
@@ -95,6 +101,11 @@ function FaqAccordionItem({
   const handleToggle = (e: SyntheticEvent<HTMLDetailsElement>) => {
     setOpen(e.currentTarget.open);
   };
+
+  // config.items のインライン項目は対応する FaqItem レコードが無く
+  // 投票/閲覧数トラッキング対象外（helpfulCount/notHelpfulCount が未設定）
+  const hasTracking =
+    item.helpfulCount !== undefined && item.notHelpfulCount !== undefined;
 
   return (
     <>
@@ -130,13 +141,15 @@ function FaqAccordionItem({
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
           {item.answer}
         </p>
-        <FaqHelpfulVote
-          id={item.id}
-          helpfulCount={item.helpfulCount}
-          notHelpfulCount={item.notHelpfulCount}
-        />
+        {hasTracking && (
+          <FaqHelpfulVote
+            id={item.id}
+            helpfulCount={item.helpfulCount ?? 0}
+            notHelpfulCount={item.notHelpfulCount ?? 0}
+          />
+        )}
       </details>
-      <FaqViewTracker id={item.id} open={open} />
+      {hasTracking && <FaqViewTracker id={item.id} open={open} />}
     </>
   );
 }
@@ -289,42 +302,15 @@ export function FaqListSection({
           ) : (
             <div ref={listRef} className={styles.container}>
               {flatItemsData.map((item, index) => (
-                <details
+                <FaqAccordionItem
                   key={item.id}
-                  data-faq-item=""
-                  className={cn("group", styles.item)}
-                  open={
+                  item={item}
+                  defaultOpen={
                     initialOpen === "all" ||
                     (initialOpen === "first" && index === 0)
                   }
-                >
-                  <summary className={styles.summary}>
-                    <span>{item.question}</span>
-                    {styles.marker && (
-                      <span
-                        className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
-                        aria-hidden="true"
-                      >
-                        <svg
-                          className="h-5 w-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                      </span>
-                    )}
-                  </summary>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                    {item.answer}
-                  </p>
-                </details>
+                  styles={styles}
+                />
               ))}
             </div>
           )}
