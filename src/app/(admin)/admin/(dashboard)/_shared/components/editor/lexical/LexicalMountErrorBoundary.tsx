@@ -28,6 +28,29 @@
  * `componentDidCatch` でしか実装できない（React 19 時点で hooks 版は存在しない）。
  * React Compiler は function component のみ最適化対象のため class component との
  * 技術的衝突はなく、`forwardRef`/`useMemo`/`useCallback` 直 import 禁止規約にも抵触しない。
+ *
+ * ## 汎用フォールバックの「再試行」と dynamic import のキャッシュ（PR#1352 レビュー指摘 P2 対応）
+ *
+ * `componentDidCatch` が捕捉する例外には `next/dynamic`（`LazyLexicalEditor` が
+ * ラップする `LexicalEditorDynamic`）の chunk 読み込み失敗も含まれる。
+ * `next/dynamic` は内部で `React.lazy(loader)` を 1 度だけ呼び出し、その結果
+ * （`_status`/`_result` を持つ payload オブジェクト）をコンポーネント参照の
+ * クロージャに保持する。React 19 の `lazyInitializer`（`react/cjs/react.development.js`
+ * 実装で実測確認済み）は `payload._status` が一度 `2`（rejected）になると、
+ * 以後同じ payload に対する render では loader を再実行せず、キャッシュ済みの
+ * Error を同期的に re-throw する — この挙動は React コア自体の恒久キャッシュで、
+ * Turbopack/webpack いずれのバンドラー実装にも依存しない。
+ * そのため `generation` を key にした Fragment remount だけでは、
+ * `LexicalEditorDynamic` が同一コンポーネント参照（＝同一 payload）である限り
+ * dynamic import は再実行されず、「再試行する」ボタンがこの一時的な chunk
+ * 読み込み失敗を回復できない。
+ *
+ * 対策として、呼び出し元（`LazyLexicalEditor`）は `onRetryDynamicImport` に
+ * 「新しい `dynamic()` 呼び出し（＝新しい `React.lazy()` payload、`_status: -1`
+ * の未検証状態）を生成して children に渡す component を差し替える」処理を渡す。
+ * `handleRetry` はこれを generation 更新の直前に呼び出すことで、再試行のたびに
+ * 実際に import が再試行されるようにする。省略可能（children が dynamic import を
+ * 経由しない場合は不要）。
  */
 
 "use client";
@@ -40,6 +63,16 @@ import type { LexicalEditorProps } from "./types";
 
 type LexicalMountErrorBoundaryProps = LexicalEditorProps & {
   children: ReactNode;
+  /**
+   * 汎用フォールバックの「再試行する」押下時、generation を更新して children を
+   * 再マウントする直前に呼ばれる。`next/dynamic` でラップされた child が
+   * chunk 読み込み失敗で reject した場合、同一コンポーネント参照のまま
+   * remount しても React.lazy のキャッシュにより import は再実行されない
+   * （詳細はファイル先頭 doc comment）。呼び出し元はこのコールバックで
+   * 新しい `dynamic()` 呼び出しに差し替えた children を用意し、実際に
+   * import が再試行されるようにする。省略時は remount のみ行う。
+   */
+  onRetryDynamicImport?: (() => void) | undefined;
 };
 
 type LexicalMountErrorBoundaryState = {
@@ -107,8 +140,13 @@ export class LexicalMountErrorBoundary extends Component<
     }));
   };
 
-  /** 汎用フォールバックの「再試行」: 本文には一切触れず children を再マウントするのみ */
+  /**
+   * 汎用フォールバックの「再試行」: 本文には一切触れず children を再マウントする。
+   * dynamic import の再試行が必要な場合は、remount 前に `onRetryDynamicImport` で
+   * 呼び出し元に新しい component 差し替えを要求する（ファイル先頭 doc comment参照）。
+   */
   private handleRetry = (): void => {
+    this.props.onRetryDynamicImport?.();
     this.setState((prev) => ({
       hasError: false,
       unregisteredTypes: null,
