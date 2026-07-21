@@ -3,6 +3,10 @@
 import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { emitBulkAuditRecords } from "@/admin/lib/audit";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import type { BulkFaqItemResult } from "@/shared/domain/faq/types";
 import {
   createFaqCategory as createFaqCategoryCommand,
   deleteFaqCategory as deleteFaqCategoryCommand,
@@ -352,10 +356,26 @@ export async function updateFaqItemPublished(
 // Bulk operations
 // ============================================================================
 
+/**
+ * coupon/customer の bulk 系 (Cluster A / Round-5 Cluster P) と同型:
+ * リクエストコンテキストを execute() 時点で一度だけ取得し、同一バルク操作内の
+ * 全 per-id record に共有する。
+ */
+function buildBulkAuditMetadata(args: {
+  ip: string | null;
+  userAgent: string | null;
+}): Record<string, unknown> {
+  return {
+    channel: "admin",
+    ...(args.ip !== null && { ip: args.ip }),
+    ...(args.userAgent !== null && { userAgent: args.userAgent }),
+  };
+}
+
 export async function bulkPublishFaqItems(
   ids: string[],
   isPublished: boolean,
-): Promise<MutationResult<{ count: number }>> {
+): Promise<MutationResult<BulkFaqItemResult>> {
   const parsed = bulkFaqItemIdsSchema.safeParse(ids);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -364,16 +384,37 @@ export async function bulkPublishFaqItems(
   return executeAdminMutationResult({
     resource: "faq",
     action: "update",
-    execute: async () => bulkPublishFaqItemsCommand(parsed.data, isPublished),
-    afterSuccess: () => {
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkPublishFaqItemsCommand(parsed.data, isPublished);
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
       purgeFaqCaches();
+      // Round-5 audit Finding #16: FAQ の bulk mutation は per-id audit を
+      // 発行しておらず、どの項目がいつ誰の操作で公開/非公開・削除・移動された
+      // か個別に追跡できなかった。coupon (Round-5 Cluster P) と同型のヘルパーで
+      // 揃える。
+      emitBulkAuditRecords({
+        resource: "faq.isPublished",
+        userId: outcome.actorUserId,
+        records: outcome.affectedIds.map((id) => ({
+          resourceId: id,
+          action: AuditAction.UPDATE,
+          newValue: { isPublished },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }
 
 export async function bulkDeleteFaqItems(
   ids: string[],
-): Promise<MutationResult<{ count: number }>> {
+): Promise<MutationResult<BulkFaqItemResult>> {
   const parsed = bulkFaqItemIdsSchema.safeParse(ids);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -382,9 +423,25 @@ export async function bulkDeleteFaqItems(
   return executeAdminMutationResult({
     resource: "faq",
     action: "delete",
-    execute: async () => bulkDeleteFaqItemsCommand(parsed.data),
-    afterSuccess: () => {
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkDeleteFaqItemsCommand(parsed.data);
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
       purgeFaqCaches();
+      emitBulkAuditRecords({
+        resource: "faq",
+        userId: outcome.actorUserId,
+        records: outcome.affectedIds.map((id) => ({
+          resourceId: id,
+          action: AuditAction.DELETE,
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }
@@ -392,7 +449,7 @@ export async function bulkDeleteFaqItems(
 export async function bulkMoveFaqItems(input: {
   ids: string[];
   newCategoryId: string;
-}): Promise<MutationResult<{ count: number }>> {
+}): Promise<MutationResult<BulkFaqItemResult>> {
   const parsed = bulkMoveFaqItemsSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -401,10 +458,29 @@ export async function bulkMoveFaqItems(input: {
   return executeAdminMutationResult({
     resource: "faq",
     action: "update",
-    execute: async () =>
-      bulkMoveFaqItemsCommand(parsed.data.ids, parsed.data.newCategoryId),
-    afterSuccess: () => {
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkMoveFaqItemsCommand(
+        parsed.data.ids,
+        parsed.data.newCategoryId,
+      );
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
       purgeFaqCaches();
+      emitBulkAuditRecords({
+        resource: "faq.category",
+        userId: outcome.actorUserId,
+        records: outcome.affectedIds.map((id) => ({
+          resourceId: id,
+          action: AuditAction.UPDATE,
+          newValue: { categoryId: parsed.data.newCategoryId },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }

@@ -106,7 +106,7 @@ export type FaqItemCommandInput = {
   isPublished: boolean;
 };
 
-export type BulkFaqItemResult = { count: number };
+export type BulkFaqItemResult = { count: number; affectedIds: string[] };
 
 export type CreateFaqCategoryResult = {
   id: string;
