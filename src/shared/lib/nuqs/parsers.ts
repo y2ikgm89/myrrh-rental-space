@@ -558,6 +558,7 @@ export const adminReservationSearchParamsParsers = {
   // (?userId=<staffId>) を実際にフィルタとして機能させる。Reservation.userId
   // (予約を作成した管理ユーザー) で絞り込む — Customer とは別軸。
   userId: parseAsString.withDefault(""),
+  spaceId: parseAsString.withDefault(""),
 };
 
 const adminReservationSearchParamsCache = createSearchParamsCache(
