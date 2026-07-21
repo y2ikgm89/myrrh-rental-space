@@ -63,7 +63,7 @@ export function ReceiptResendForm({
           再送信リクエストを受け付けました
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
-          ご入力内容が正しい場合、ご登録メールアドレス宛に領収書ダウンロードリンクをお送りしました。
+          ご入力内容が正しい場合、通常数分以内にご登録メールアドレス宛に領収書ダウンロードリンクをお送りします。
           数分以内に届かない場合は、迷惑メールフォルダをご確認いただくか、{" "}
           <Link
             href={toAppRoute("/contact")}
