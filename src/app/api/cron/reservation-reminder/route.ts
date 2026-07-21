@@ -49,6 +49,7 @@ export async function GET(request: Request) {
 
     let sent = 0;
     let skipped = 0;
+    let disabledCount = 0;
 
     for (const reservation of reservations) {
       const email = reservation.guestEmail ?? reservation.customer?.email;
@@ -95,6 +96,8 @@ export async function GET(request: Request) {
         if (!result.ok) {
           if (result.reason !== "disabled") {
             await releaseReservationReminderClaim(reservation.id);
+          } else {
+            disabledCount++;
           }
           skipped++;
           continue;
@@ -113,6 +116,28 @@ export async function GET(request: Request) {
         });
         skipped++;
       }
+    }
+
+    // Resend 未設定/rotate ミス等で email 送信が丸ごと disabled 状態だと、claim だけ
+    // 消費して reminder が永久に送られなくなる（無限 retry を防ぐための意図的な
+    // 設計だが、運用側に気づく手段が無いと障害が長期化する）。ループ内で都度 log
+    // すると対象件数分ログが積み上がるため、cron 1 回の実行につき集約して 1 回だけ
+    // 記録する。
+    if (disabledCount > 0) {
+      logError(
+        new Error(
+          `reservation-reminder: email delivery disabled, ${disabledCount} reminder(s) skipped without release`,
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "reservationReminderCron",
+            disabledCount,
+            total: reservations.length,
+          },
+        },
+      );
     }
 
     return jsonSuccess({ sent, skipped, total: reservations.length });

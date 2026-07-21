@@ -307,7 +307,7 @@ describe("GET /api/cron/event-reminder", () => {
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
-  test("メール送信が ok:false (disabled) → claim を保持して skipped=1（無限 retry 防止）", async () => {
+  test("メール送信が ok:false (disabled) → claim を保持して skipped=1（無限 retry 防止）+ 集約 logError", async () => {
     mockFindEventRegistrationsForReminderWindow.mockResolvedValue([
       makeRegistration(),
     ]);
@@ -321,6 +321,21 @@ describe("GET /api/cron/event-reminder", () => {
     const body = await response.json();
     expect(body).toEqual({ sent: 0, skipped: 1, total: 1 });
     expect(mockReleaseEventRegistrationReminderClaim).not.toHaveBeenCalled();
+    // Round-4 audit Finding #22 (reservation-reminder と同型で event-reminder も
+    // 修正): disabled は claim 消費のまま永久 skip されるため、運用側が気づける
+    // よう cron 1 回につき集約 logError を発火する。
+    expect(mockLogError).toHaveBeenCalledTimes(1);
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        category: "EXTERNAL_API",
+        severity: "HIGH",
+        context: expect.objectContaining({
+          operation: "eventReminderCron",
+          disabledCount: 1,
+        }),
+      }),
+    );
   });
 
   test("メール送信が ok:false (error) → claim を release + skipped=1", async () => {

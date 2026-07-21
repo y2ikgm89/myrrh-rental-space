@@ -372,7 +372,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(mockReleaseReservationReminderClaim).toHaveBeenCalledWith("res-1");
   });
 
-  test("メール送信が ok:false (disabled) → claim を保持して skipped=1（無限 retry 防止）", async () => {
+  test("メール送信が ok:false (disabled) → claim を保持して skipped=1（無限 retry 防止）+ 集約 logError", async () => {
     const reservation = makeReservation();
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
     // RESEND_API_KEY 未設定環境
@@ -389,6 +389,36 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(mockSendReservationReminderEmail).toHaveBeenCalledTimes(1);
     // disabled 時は claim を解放しない（次回 cron でも claim できないため無限 retry を防ぐ）
     expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
+    // Round-4 audit Finding #22: disabled は claim 消費のまま永久 skip されるため、
+    // 運用側が気づけるよう cron 1 回につき集約 logError を発火する。
+    expect(mockLogError).toHaveBeenCalledTimes(1);
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.any(Error),
+      expect.objectContaining({
+        category: "EXTERNAL_API",
+        severity: "HIGH",
+        context: expect.objectContaining({
+          operation: "reservationReminderCron",
+          disabledCount: 1,
+        }),
+      }),
+    );
+  });
+
+  test("メール送信が ok:false (error) → disabled 集約 logError は発火しない", async () => {
+    const reservation = makeReservation();
+    mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
+    mockSendReservationReminderEmail.mockResolvedValue({
+      ok: false,
+      reason: "error",
+      error: "メール送信に失敗しました",
+    });
+
+    await GET(makeSchedulerRequest());
+
+    // error (disabled 以外) は claim を解放するだけで済む既存挙動。disabled 用の
+    // 集約 log は disabledCount===0 のとき発火しない。
+    expect(mockLogError).not.toHaveBeenCalled();
   });
 
   test("複数予約: 成功2 + スキップ1 (メールなし)", async () => {
