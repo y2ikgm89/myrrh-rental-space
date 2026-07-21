@@ -19,6 +19,14 @@ const mockFetchPublicHttpResource = mock((url: string, _init?: RequestInit) =>
   Promise.resolve(new Response(`<title>${url}</title>`, { status: 200 })),
 );
 
+const mockLogError = mock<() => void>(() => undefined);
+
+const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
+  // Next.js の実装は内部制御フロー例外 (NEXT_REDIRECT 等) のみ rethrow するが、
+  // テストではこの mock 自体は無条件で通す (呼ばれたことだけを確認する)。
+  void error;
+});
+
 mock.module("@/admin/lib/action-auth", () => ({
   checkPermission: mockCheckPermission,
   checkAdminAuth: mockCheckAdminAuth,
@@ -35,6 +43,18 @@ mock.module("@/admin/lib/ogp-parser", () => ({
   extractSiteName: () => "Example",
   getFaviconUrl: (url: string) => new URL("/favicon.ico", url).toString(),
   resolveUrl: (base: string, raw: string) => new URL(raw, base).toString(),
+}));
+
+mock.module("next/navigation", () => ({
+  unstable_rethrow: (error: unknown) => mockUnstableRethrow(error),
+}));
+
+mock.module("@/shared/lib/errors/server", () => ({
+  logError: (...args: Parameters<typeof mockLogError>) => mockLogError(...args),
+  normalizeError: (error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
+  ErrorCategory: { EXTERNAL_API: "EXTERNAL_API", UNKNOWN: "UNKNOWN" },
+  ErrorSeverity: { MEDIUM: "MEDIUM", HIGH: "HIGH", LOW: "LOW" },
 }));
 
 import { POST } from "@/app/(admin)/admin/api/ogp/route";
@@ -60,6 +80,9 @@ describe("POST /admin/api/ogp", () => {
       (url: string, _init?: RequestInit) =>
         Promise.resolve(new Response(`<title>${url}</title>`, { status: 200 })),
     );
+    mockLogError.mockClear();
+    mockUnstableRethrow.mockClear();
+    mockUnstableRethrow.mockImplementation(() => {});
   });
 
   test("管理者認証を要求する（checkPermission ではなく checkAdminAuth）", async () => {
@@ -94,5 +117,42 @@ describe("POST /admin/api/ogp", () => {
       expect.objectContaining({ method: "GET" }),
     );
     expect(mockFetchPublicHttpResource).toHaveBeenCalledTimes(2);
+  });
+
+  test("OgpFetchError 以外の予期しない例外 → unstable_rethrow + logError の後 502", async () => {
+    // extractTitle 等パーサー側で予期しない TypeError が起きるケースを模倣する
+    // (Round-4 audit Finding #23: 旧実装は unstable_rethrow も logError も
+    // 呼ばずに無条件で 502 を返していた)。
+    const unexpected = new TypeError("Cannot read properties of undefined");
+    mock.module("@/admin/lib/ogp-parser", () => ({
+      extractTitle: () => {
+        throw unexpected;
+      },
+      extractDescription: () => "Example description",
+      extractImage: () => "/og.png",
+      extractSiteName: () => "Example",
+      getFaviconUrl: (url: string) => new URL("/favicon.ico", url).toString(),
+      resolveUrl: (base: string, raw: string) => new URL(raw, base).toString(),
+    }));
+
+    const { POST: postWithBrokenParser } =
+      await import("@/app/(admin)/admin/api/ogp/route");
+    const response = await postWithBrokenParser(
+      createOgpRequest("https://example.com/article"),
+    );
+    const body = await response.json();
+    expectErrorResult(body);
+
+    expect(response.status).toBe(502);
+    expect(body.error).toBe("OGP の取得に失敗しました");
+    expect(mockUnstableRethrow).toHaveBeenCalledWith(unexpected);
+    expect(mockLogError).toHaveBeenCalledWith(
+      unexpected,
+      expect.objectContaining({
+        category: "EXTERNAL_API",
+        severity: "MEDIUM",
+        context: expect.objectContaining({ operation: "adminOgpFetch" }),
+      }),
+    );
   });
 });

@@ -94,6 +94,26 @@ export async function loadAdminEventRegistrationsSearchParams(
 }
 
 // ============================================================
+// 管理画面: イベント詳細 — キャンセル待ち一覧
+// ============================================================
+
+const adminEventWaitlistSearchParamsCache = createSearchParamsCache({
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
+});
+
+/**
+ * イベント詳細のキャンセル待ち一覧ページネーションパラメータローダー。
+ * Round-4 audit Finding #20: 旧実装は pagination なしの無条件 findMany だった。
+ */
+export async function loadAdminEventWaitlistSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminEventWaitlistSearchParamsCache.parse(searchParams);
+  return adminEventWaitlistSearchParamsCache.all();
+}
+
+// ============================================================
 // 管理画面: スタッフ（ユーザー一覧）
 // ============================================================
 
@@ -508,6 +528,10 @@ export const adminReservationSearchParamsParsers = {
   sortOrder: parseAsSortOrder,
   dateFrom: parseAsString.withDefault(""),
   dateTo: parseAsString.withDefault(""),
+  // Round-4 audit Finding #14: staff 詳細ページの「予約一覧を表示」deep-link
+  // (?userId=<staffId>) を実際にフィルタとして機能させる。Reservation.userId
+  // (予約を作成した管理ユーザー) で絞り込む — Customer とは別軸。
+  userId: parseAsString.withDefault(""),
 };
 
 const adminReservationSearchParamsCache = createSearchParamsCache(
@@ -537,6 +561,9 @@ export const adminPostSearchParamsParsers = {
   postId: parseAsString.withDefault(""),
   sortBy: parseAsStringLiteral(postSortByValues).withDefault("createdAt"),
   sortOrder: parseAsSortOrder,
+  // Round-4 audit Finding #15: staff 詳細ページの「記事一覧を表示」deep-link
+  // (?authorId=<staffId>) を実際にフィルタとして機能させる。
+  authorId: parseAsString.withDefault(""),
 };
 
 const adminPostSearchParamsCache = createSearchParamsCache(
@@ -710,4 +737,36 @@ export async function loadAdminNotificationSearchParams(
 ) {
   await adminNotificationSearchParamsCache.parse(searchParams);
   return adminNotificationSearchParamsCache.all();
+}
+
+// ============================================================
+// 管理画面: 規約同意記録 (TermsAgreement)
+// ============================================================
+
+/**
+ * Round-4 audit Finding #19 / medium: 旧実装は Server Component 内で
+ * `parsePositiveInt` / `parseScope` / `parseString` を手書きし、query 層
+ * (getAdminAgreements) には scope/termsId/guestEmail を渡せていたが、それを
+ * 設定する絞り込み UI が存在しなかった (20,000 件規模の一覧を手動 URL 編集
+ * でしか絞れない)。他の一覧ページと同じ nuqs SSoT に統一し、client Filters
+ * コンポーネントから設定できるようにする。
+ */
+export const adminTermsAgreementsSearchParamsParsers = {
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(50),
+  scope: parseAsString.withDefault(""),
+  termsId: parseAsString.withDefault(""),
+  guestEmail: parseAsString.withDefault(""),
+};
+
+const adminTermsAgreementsSearchParamsCache = createSearchParamsCache(
+  adminTermsAgreementsSearchParamsParsers,
+);
+
+/** 管理画面規約同意記録の検索パラメータローダー */
+export async function loadAdminTermsAgreementsSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminTermsAgreementsSearchParamsCache.parse(searchParams);
+  return adminTermsAgreementsSearchParamsCache.all();
 }

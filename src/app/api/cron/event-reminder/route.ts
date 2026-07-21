@@ -57,6 +57,7 @@ export async function GET(request: Request) {
 
     let sent = 0;
     let skipped = 0;
+    let disabledCount = 0;
 
     for (const registration of registrations) {
       const email = registration.email;
@@ -103,6 +104,8 @@ export async function GET(request: Request) {
         if (!result.ok) {
           if (result.reason !== "disabled") {
             await releaseEventRegistrationReminderClaim(registration.id);
+          } else {
+            disabledCount++;
           }
           skipped++;
           continue;
@@ -121,6 +124,27 @@ export async function GET(request: Request) {
         });
         skipped++;
       }
+    }
+
+    // reservation-reminder cron と同型: Resend 未設定/rotate ミス等で email 送信が
+    // 丸ごと disabled 状態だと claim だけ消費して reminder が永久に送られなくなる
+    // （無限 retry を防ぐための意図的な設計だが、運用側に気づく手段が無いと障害が
+    // 長期化する）。cron 1 回の実行につき集約して 1 回だけ記録する。
+    if (disabledCount > 0) {
+      logError(
+        new Error(
+          `event-reminder: email delivery disabled, ${disabledCount} reminder(s) skipped without release`,
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "eventReminderCron",
+            disabledCount,
+            total: registrations.length,
+          },
+        },
+      );
     }
 
     return jsonSuccess({ sent, skipped, total: registrations.length });

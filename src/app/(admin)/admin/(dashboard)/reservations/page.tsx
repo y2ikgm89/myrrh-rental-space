@@ -36,6 +36,7 @@ async function ReservationList({
       search: params.search || undefined,
       startDate: params.dateFrom || undefined,
       endDate: params.dateTo || undefined,
+      userId: params.userId || undefined,
     }),
     {
       page: params.page,
@@ -60,6 +61,20 @@ async function ReservationList({
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
   const params = await loadAdminReservationSearchParams(searchParams);
+
+  // Round-4 audit Finding #13: CSV export は「今画面に見えている行」を
+  // 期待して押されるため、一覧と同じ filter (tab/search/期間/userId) を
+  // クエリ文字列で export route に引き継ぐ (AuditLogFilters.tsx の
+  // 既存パターンと同型)。
+  const exportParams = new URLSearchParams();
+  if (params.tab) exportParams.set("tab", params.tab);
+  if (params.search) exportParams.set("search", params.search);
+  if (params.dateFrom) exportParams.set("dateFrom", params.dateFrom);
+  if (params.dateTo) exportParams.set("dateTo", params.dateTo);
+  if (params.userId) exportParams.set("userId", params.userId);
+  const exportHref = `/api/admin/export/reservations${
+    exportParams.size > 0 ? `?${exportParams.toString()}` : ""
+  }`;
 
   return (
     <div className="space-y-6">
@@ -87,7 +102,7 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <a href="/api/admin/export/reservations" download>
+            <a href={exportHref} download>
               <IconDownload className="mr-2 h-4 w-4" />
               CSV
             </a>

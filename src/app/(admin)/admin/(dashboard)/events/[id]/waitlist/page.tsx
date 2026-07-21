@@ -3,14 +3,21 @@ import { connection } from "next/server";
 import { getEventById } from "@/shared/domain/events/admin-queries";
 import { getWaitlistQueue } from "@/shared/domain/events/waitlist-queries";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { Pagination } from "@/admin/components/ui";
+import { loadAdminEventWaitlistSearchParams } from "@/shared/lib/nuqs";
 import { WaitlistQueueTable } from "./_components/WaitlistQueueTable";
 import type { Metadata } from "next";
 
-type PageProps = { params: Promise<{ id: string }> };
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: SearchParams;
+};
 
 export async function generateMetadata({
   params,
-}: PageProps): Promise<Metadata> {
+}: Omit<PageProps, "searchParams">): Promise<Metadata> {
   await connection();
 
   const { id } = await params;
@@ -23,17 +30,22 @@ export async function generateMetadata({
   };
 }
 
-export default async function EventWaitlistPage({ params }: PageProps) {
+export default async function EventWaitlistPage({
+  params,
+  searchParams,
+}: PageProps) {
   await connection();
 
   const { id } = await params;
-  const [event, queue] = await Promise.all([
+  const { page, perPage } =
+    await loadAdminEventWaitlistSearchParams(searchParams);
+  const [event, queuePage] = await Promise.all([
     getEventById(id),
-    getWaitlistQueue(id),
+    getWaitlistQueue(id, { page, perPage }),
   ]);
   if (!event) notFound();
 
-  const entries = queue.map((entry) => ({
+  const entries = queuePage.entries.map((entry) => ({
     id: entry.id,
     name: entry.name,
     email: entry.email,
@@ -54,6 +66,13 @@ export default async function EventWaitlistPage({ params }: PageProps) {
       subtitle={`/${event.slug}`}
     >
       <WaitlistQueueTable entries={entries} />
+      <Pagination
+        currentPage={queuePage.page}
+        totalPages={queuePage.totalPages}
+        total={queuePage.total}
+        perPage={queuePage.perPage}
+        defaultPerPage={20}
+      />
     </AdminDetailLayout>
   );
 }

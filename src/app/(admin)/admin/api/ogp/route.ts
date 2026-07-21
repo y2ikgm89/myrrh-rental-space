@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
 import { fetchPublicHttpResource } from "@/shared/lib/ssrf-guard";
@@ -11,6 +12,12 @@ import {
   resolveUrl,
 } from "@/admin/lib/ogp-parser";
 import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
 
 const OGP_FETCH_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; BookmarkBot/1.0)",
@@ -189,9 +196,21 @@ export async function POST(request: Request) {
 
     return NextResponse.json(ogpData);
   } catch (error) {
+    // OgpFetchError は fetchOgpPage / readBodyWithLimit が投げる「想定内」エラー
+    // (リダイレクト超過・サイズ超過・無効 URL 等) — 個別 status でそのまま返す。
+    // それ以外 (extractTitle 等パーサー側の予期しない例外、Next.js の内部制御フロー
+    // 例外を含む) は unstable_rethrow で内部例外を forward した上で logError し、
+    // 「OGP取得に失敗しました」で 502 を返す。旧実装はここを無条件で握りつぶし、
+    // 運用側が原因を Cloud Logging から追えなかった (Round-4 audit Finding #23)。
     if (error instanceof OgpFetchError) {
       return jsonError(error.message, error.status);
     }
+    unstable_rethrow(error);
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "adminOgpFetch", targetUrl: url },
+    });
     return jsonError("OGP の取得に失敗しました", 502);
   }
 }

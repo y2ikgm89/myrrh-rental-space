@@ -19,7 +19,9 @@ type ReservationWhereInput = Prisma.ReservationWhereInput;
  * - cancelled: CANCELLED または NO_SHOW (終了)
  * - all: 制約なし
  */
-function buildTabWhere(tab: ReservationTabFilter): ReservationWhereInput {
+export function buildTabWhere(
+  tab: ReservationTabFilter,
+): ReservationWhereInput {
   switch (tab) {
     case "confirmed":
       return { status: ReservationStatus.CONFIRMED };
@@ -53,37 +55,42 @@ function getDefaultSort(tab: ReservationTabFilter): {
   }
 }
 
-export async function getReservationsQuery(
-  filters: {
-    tab?: ReservationTabFilter | undefined;
-    search?: string | undefined;
-    startDate?: string | undefined;
-    endDate?: string | undefined;
-    spaceId?: string | undefined;
-  } = {},
-  pagination: {
-    page?: number | undefined;
-    limit?: number | undefined;
-    sortBy?: "startTime" | "createdAt" | undefined;
-    sortOrder?: "asc" | "desc" | undefined;
-  } = {},
-) {
-  const { tab = "all", search, startDate, endDate, spaceId } = filters;
-  const { sortBy, sortOrder } = pagination;
-  const { skip, take, page, limit } = paginate(pagination);
+export type ReservationListFilters = {
+  tab?: ReservationTabFilter | undefined;
+  search?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  spaceId?: string | undefined;
+  /** 予約を作成した管理ユーザー (Reservation.userId、Customer とは別軸)。 */
+  userId?: string | undefined;
+};
 
-  const tabWhere = buildTabWhere(tab);
-  const defaults = getDefaultSort(tab);
-  const effectiveSortBy = sortBy ?? defaults.sortBy;
-  const effectiveSortOrder = sortOrder ?? defaults.sortOrder;
+/**
+ * 予約一覧・CSV export で共有する where 句ビルダー。
+ *
+ * Round-4 audit Finding #13 / medium: 旧 export route は無条件 findMany
+ * (deletedAt: null のみ) で、一覧が絞り込んでいる tab/search/期間/userId を
+ * 一切反映しなかった。管理者が画面に見えている行のつもりで CSV を押すと、
+ * 他ステータス・他顧客の PII まで漏れる不整合だったため、一覧クエリ
+ * (`getReservationsQuery`) と export クエリ (`getReservationsForExport`) が
+ * 同じ where 構築ロジックを共有するよう export する。
+ */
+export function buildReservationListWhere(
+  filters: ReservationListFilters,
+): ReservationWhereInput {
+  const { tab = "all", search, startDate, endDate, spaceId, userId } = filters;
 
   const where: ReservationWhereInput = {
     deletedAt: null,
-    ...tabWhere,
+    ...buildTabWhere(tab),
   };
 
   if (spaceId) {
     where.spaceId = spaceId;
+  }
+
+  if (userId) {
+    where.userId = userId;
   }
 
   if (startDate || endDate) {
@@ -111,6 +118,28 @@ export async function getReservationsQuery(
       },
     ];
   }
+
+  return where;
+}
+
+export async function getReservationsQuery(
+  filters: ReservationListFilters = {},
+  pagination: {
+    page?: number | undefined;
+    limit?: number | undefined;
+    sortBy?: "startTime" | "createdAt" | undefined;
+    sortOrder?: "asc" | "desc" | undefined;
+  } = {},
+) {
+  const { tab = "all" } = filters;
+  const { sortBy, sortOrder } = pagination;
+  const { skip, take, page, limit } = paginate(pagination);
+
+  const defaults = getDefaultSort(tab);
+  const effectiveSortBy = sortBy ?? defaults.sortBy;
+  const effectiveSortOrder = sortOrder ?? defaults.sortOrder;
+
+  const where = buildReservationListWhere(filters);
 
   const [total, reservations] = await Promise.all([
     prisma.reservation.count({ where }),

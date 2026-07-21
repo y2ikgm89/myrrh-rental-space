@@ -26,6 +26,10 @@ function buildPostWhere(filters: PostFilters): PostWhereInput {
     where.categoryId = filters.categoryId;
   }
 
+  if (filters.authorId) {
+    where.authorId = filters.authorId;
+  }
+
   if (filters.search) {
     where.OR = [
       { title: { contains: filters.search, mode: "insensitive" } },

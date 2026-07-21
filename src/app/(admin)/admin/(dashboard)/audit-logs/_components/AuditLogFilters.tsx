@@ -4,6 +4,7 @@ import { IconDownload, IconShieldCheck } from "@tabler/icons-react";
 import Link from "next/link";
 import { useQueryStates } from "nuqs";
 import { adminAuditLogSearchParamsParsers } from "@/shared/lib/nuqs";
+import { useDebouncedCallback } from "@/admin/hooks";
 import {
   Button,
   Checkbox,
@@ -57,6 +58,24 @@ export function AuditLogFilters({ resources }: AuditLogFiltersProps) {
     shallow: false,
   });
 
+  // Round-4 audit Finding #21 / medium: search/userId/ipAddress の 3 text input が
+  // keystroke ごとに shallow:false の setParams を即発火し、UUID を1文字ずつ打つ
+  // だけで audit_logs の count+findMany が何十回も RSC 再フェッチされていた。
+  // ReservationFilters / BaseFilters と同じ 300ms debounce + `key={value}` remount
+  // (クリアボタンで URL から値が消えた後も Input 表示を同期させるため) に統一する。
+  const setSearchDebounced = useDebouncedCallback(
+    (value: string) => void setParams({ search: value || null, page: 1 }),
+    300,
+  );
+  const setUserIdDebounced = useDebouncedCallback(
+    (value: string) => void setParams({ userId: value || null, page: 1 }),
+    300,
+  );
+  const setIpAddressDebounced = useDebouncedCallback(
+    (value: string) => void setParams({ ipAddress: value || null, page: 1 }),
+    300,
+  );
+
   const hasFilters =
     params.action ||
     params.resource ||
@@ -96,13 +115,12 @@ export function AuditLogFilters({ resources }: AuditLogFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Input
+        key={params.search}
         type="search"
         aria-label="監査ログ検索"
         placeholder="ユーザー・リソース・ID"
-        value={params.search}
-        onChange={(e) =>
-          void setParams({ search: e.target.value || null, page: 1 })
-        }
+        defaultValue={params.search}
+        onChange={(e) => setSearchDebounced(e.target.value)}
         className="w-[220px]"
       />
 
@@ -168,24 +186,22 @@ export function AuditLogFilters({ resources }: AuditLogFiltersProps) {
       </Select>
 
       <Input
+        key={params.userId}
         type="search"
         aria-label="ユーザーID"
         placeholder="ユーザーID (UUID)"
-        value={params.userId}
-        onChange={(e) =>
-          void setParams({ userId: e.target.value || null, page: 1 })
-        }
+        defaultValue={params.userId}
+        onChange={(e) => setUserIdDebounced(e.target.value)}
         className="w-[160px]"
       />
 
       <Input
+        key={params.ipAddress}
         type="search"
         aria-label="IPアドレス"
         placeholder="IPアドレス"
-        value={params.ipAddress}
-        onChange={(e) =>
-          void setParams({ ipAddress: e.target.value || null, page: 1 })
-        }
+        defaultValue={params.ipAddress}
+        onChange={(e) => setIpAddressDebounced(e.target.value)}
         className="w-[160px]"
       />
 

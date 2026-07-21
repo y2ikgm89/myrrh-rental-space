@@ -96,6 +96,8 @@ export type ReservationFilters = {
   startDate?: string | undefined;
   endDate?: string | undefined;
   spaceId?: string | undefined;
+  /** 予約を作成した管理ユーザー (Reservation.userId、Customer とは別軸)。 */
+  userId?: string | undefined;
 };
 
 export type ReservationPagination = PaginationInput<"startTime" | "createdAt">;
