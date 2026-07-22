@@ -45,6 +45,7 @@ import { locationFormSchema } from "@/shared/lib/validations/location";
 import {
   parseBusinessAttributes,
   parseBusinessHours,
+  type BusinessHours,
 } from "@/shared/lib/json-validators";
 import {
   createLocationAction,
@@ -71,6 +72,7 @@ import {
   type GlobalsMeoFlags,
 } from "./LocationMeoScoreCard";
 import { LocationGbpSyncCard } from "./LocationGbpSyncCard";
+import { LocationBusinessHoursCard } from "./LocationBusinessHoursCard";
 
 type LocationFormProps = {
   location?: LocationWithStats;
@@ -85,6 +87,22 @@ const DEFAULT_GLOBALS: GlobalsMeoFlags = {
   businessName: false,
   establishedDate: false,
   socialLinks: false,
+};
+
+function defaultDay(isOpen: boolean): BusinessHours["monday"] {
+  return isOpen
+    ? { isOpen: true, slots: [{ openTime: "09:00", closeTime: "21:00" }] }
+    : { isOpen: false, slots: [] };
+}
+
+const DEFAULT_BUSINESS_HOURS: BusinessHours = {
+  monday: defaultDay(true),
+  tuesday: defaultDay(true),
+  wednesday: defaultDay(true),
+  thursday: defaultDay(true),
+  friday: defaultDay(true),
+  saturday: defaultDay(true),
+  sunday: defaultDay(false),
 };
 
 function DragHandle({
@@ -304,20 +322,15 @@ export function LocationForm({
     location?.isPublished ?? false,
   );
 
-  const [businessHoursPayload] = useState<string>(() => {
-    const parsed = parseBusinessHours(location?.businessHours);
-    return parsed ? JSON.stringify(parsed) : "";
-  });
-  const [specialHolidaysPayload] = useState<string>(() => {
-    if (
-      location?.specialHolidays &&
-      Array.isArray(location.specialHolidays) &&
-      location.specialHolidays.length > 0
-    ) {
-      return JSON.stringify(location.specialHolidays);
-    }
-    return "";
-  });
+  const [businessHours, setBusinessHours] = useState<BusinessHours>(
+    () => parseBusinessHours(location?.businessHours) ?? DEFAULT_BUSINESS_HOURS,
+  );
+  const [specialHolidays, setSpecialHolidays] = useState<readonly string[]>(
+    () => location?.specialHolidays ?? [],
+  );
+  const businessHoursPayload = JSON.stringify(businessHours);
+  const specialHolidaysPayload =
+    specialHolidays.length > 0 ? JSON.stringify(specialHolidays) : "";
 
   const boundAction =
     isEdit && location?.id
@@ -839,6 +852,14 @@ export function LocationForm({
               </div>
             </CardContent>
           </Card>
+
+          <LocationBusinessHoursCard
+            businessHours={businessHours}
+            onBusinessHoursChange={setBusinessHours}
+            specialHolidays={specialHolidays}
+            onSpecialHolidaysChange={setSpecialHolidays}
+            disabled={isPending}
+          />
 
           <Card>
             <CardHeader>
