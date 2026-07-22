@@ -12,6 +12,7 @@ import { eventCalendarConfigSchema } from "@/shared/lib/sections/definitions/eve
 import { reservationFormConfigSchema } from "@/shared/lib/sections/definitions/reservation-form/schema";
 import { valuePropsConfigSchema } from "@/shared/lib/sections/definitions/value-props/schema";
 import { pageHeroConfigSchema } from "@/shared/lib/sections/definitions/page-hero/schema";
+import { termsListConfigSchema } from "@/shared/lib/sections/definitions/terms-list/schema";
 
 // =============================================================================
 // デフォルト設定取得（レジストリ委譲）
@@ -124,3 +125,7 @@ export const getValuePropsConfig = createTypedConfigGetterFromSchema(
 
 export const getPageHeroConfig =
   createTypedConfigGetterFromSchema(pageHeroConfigSchema);
+
+export const getTermsListConfig = createTypedConfigGetterFromSchema(
+  termsListConfigSchema,
+);

@@ -627,17 +627,26 @@ async function seedLocations(overridePublished?: boolean) {
     },
   ];
 
-  // upsert で idempotent 化（name @unique が SSoT キー）
+  // name の一意性は isActive: true な行の間でのみ強制される partial unique
+  // index のため、upsert({where:{name}}) は ON CONFLICT ("name") が対応する
+  // index (WHERE "isActive" = true) を解決できずエラーになる。SpaceCategory
+  // と同型の findFirst + create/update に置き換えて idempotent 化する。
   for (const loc of locations) {
     const locationData =
       overridePublished !== undefined
         ? { ...loc, isPublished: overridePublished }
         : loc;
-    await prisma.location.upsert({
-      where: { name: loc.name },
-      create: locationData,
-      update: locationData,
+    const existing = await prisma.location.findFirst({
+      where: { name: loc.name, isActive: true },
     });
+    if (existing) {
+      await prisma.location.update({
+        where: { id: existing.id },
+        data: locationData,
+      });
+    } else {
+      await prisma.location.create({ data: locationData });
+    }
   }
 
   console.log("✅ Upserted locations");

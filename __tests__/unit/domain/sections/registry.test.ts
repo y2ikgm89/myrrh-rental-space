@@ -46,9 +46,9 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("22 件のセクション定義を返す（page-hero + 標準 21 タイプ）", () => {
+  test("23 件のセクション定義を返す（page-hero + 標準 22 タイプ）", () => {
     const defs = getAllSectionDefinitions();
-    expect(defs).toHaveLength(22);
+    expect(defs).toHaveLength(23);
   });
 
   test("各定義は type / configSchema / metadata を持つ", () => {
@@ -62,7 +62,7 @@ describe("getAllSectionDefinitions", () => {
     }
   });
 
-  test("page-hero + 標準 21 タイプが含まれる", () => {
+  test("page-hero + 標準 22 タイプが含まれる", () => {
     const defs = getAllSectionDefinitions();
     const types = defs.map((d) => d.type);
 
@@ -89,6 +89,7 @@ describe("getAllSectionDefinitions", () => {
       "instagram",
       "event-calendar",
       "location-list",
+      "terms-list",
     ];
 
     for (const type of expectedTypes) {
@@ -123,7 +124,7 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(contentTypes).toContain("value-props");
   });
 
-  test("カテゴリ 'list' に space-list / space-showcase / news-list / post-list / faq-list / location-list が含まれる", () => {
+  test("カテゴリ 'list' に space-list / space-showcase / news-list / post-list / faq-list / location-list / terms-list が含まれる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const listTypes = grouped["list"].map((d) => d.type);
 
@@ -133,6 +134,7 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(listTypes).toContain("post-list");
     expect(listTypes).toContain("faq-list");
     expect(listTypes).toContain("location-list");
+    expect(listTypes).toContain("terms-list");
   });
 
   test("カテゴリ 'functional' に cta / contact-form / reservation-form が含まれる", () => {
@@ -155,7 +157,7 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(mediaTypes).toContain("instagram");
   });
 
-  test("全カテゴリの合計件数が 22 件になる", () => {
+  test("全カテゴリの合計件数が 23 件になる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const total =
       grouped["hero"].length +
@@ -164,7 +166,7 @@ describe("getSectionDefinitionsByCategory", () => {
       grouped["functional"].length +
       grouped["media"].length;
 
-    expect(total).toBe(22);
+    expect(total).toBe(23);
   });
 });
 

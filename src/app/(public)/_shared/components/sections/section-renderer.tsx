@@ -35,6 +35,7 @@ import {
   getEventCalendarConfig,
   getReservationFormConfig,
   getPageHeroConfig,
+  getTermsListConfig,
 } from "@/shared/lib/validations/section-defaults";
 import {
   getPublishedFaqCategoriesWithItems,
@@ -73,7 +74,10 @@ import {
   reservationSearchParams,
   spaceSearchParams,
 } from "@/public/lib/search-params";
-import { getRequiredTermsByScope } from "@/shared/domain/terms/queries";
+import {
+  getRequiredTermsByScope,
+  getPublishedTermsList,
+} from "@/shared/domain/terms/queries";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { getBusinessInfo } from "@/public/data/business";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
@@ -106,6 +110,7 @@ import { EventCalendarSection } from "../../../_components/EventCalendarSection"
 import type { EventCardData } from "../../../_components/event-calendar/event-card";
 import { InstagramSection } from "../../../_components/InstagramSection";
 import { LocationListSection } from "../../../_components/LocationListSection";
+import { TermsListSection } from "../../../_components/TermsListSection";
 import type { SpaceListData } from "../../../_components/SpaceListSection";
 import type { NewsData } from "../../../_components/NewsListSection";
 import type { PostData } from "../../../_components/PostListSection";
@@ -455,6 +460,14 @@ export async function SectionRenderer({
           categories={categories}
           style={resolved}
         />
+      );
+    }
+
+    case SectionType.TERMS_LIST: {
+      const config = getTermsListConfig(section.config);
+      const items = await getPublishedTermsList();
+      return (
+        <TermsListSection config={config} items={items} style={resolved} />
       );
     }
 

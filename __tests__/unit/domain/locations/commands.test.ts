@@ -317,6 +317,45 @@ describe("createLocation", () => {
       expect(mockLocationCreate).not.toHaveBeenCalled();
     });
   });
+
+  describe("重複エラー（TOCTOU 耐性: catch ベースで検出する）", () => {
+    test("スラッグが重複する場合は DUPLICATE エラーをスローする", async () => {
+      mockLocationCreate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      });
+
+      await expect(createLocation(VALID_FORM_DATA)).rejects.toMatchObject({
+        code: "DUPLICATE",
+        message: expect.stringContaining("shibuya-space"),
+      });
+    });
+
+    test("名前が重複する場合は DUPLICATE エラーをスローする", async () => {
+      mockLocationCreate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["name"] },
+      });
+
+      await expect(createLocation(VALID_FORM_DATA)).rejects.toMatchObject({
+        code: "DUPLICATE",
+        message: expect.stringContaining("渋谷スペース"),
+      });
+    });
+
+    test("事前の slug 存在チェックは行わない（findUnique 非呼び出し）", async () => {
+      await createLocation(VALID_FORM_DATA);
+
+      expect(mockLocationFindUnique).not.toHaveBeenCalled();
+    });
+
+    test("slug/name 以外の unique 制約違反はそのまま re-throw する", async () => {
+      const otherError = { code: "P2002", meta: { target: ["sortOrder"] } };
+      mockLocationCreate.mockRejectedValueOnce(otherError);
+
+      await expect(createLocation(VALID_FORM_DATA)).rejects.toBe(otherError);
+    });
+  });
 });
 
 // =============================================================================
@@ -415,6 +454,46 @@ describe("updateLocation", () => {
       ).rejects.toThrow(DomainError);
 
       expect(mockLocationUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("重複エラー（TOCTOU 耐性: catch ベースで検出する）", () => {
+    test("スラッグが重複する場合は DUPLICATE エラーをスローする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+      mockLocationUpdate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      });
+
+      await expect(
+        updateLocation(LOCATION_ID, VALID_FORM_DATA),
+      ).rejects.toMatchObject({
+        code: "DUPLICATE",
+        message: expect.stringContaining("shibuya-space"),
+      });
+    });
+
+    test("名前が重複する場合は DUPLICATE エラーをスローする", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+      mockLocationUpdate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["name"] },
+      });
+
+      await expect(
+        updateLocation(LOCATION_ID, VALID_FORM_DATA),
+      ).rejects.toMatchObject({
+        code: "DUPLICATE",
+        message: expect.stringContaining("渋谷スペース"),
+      });
+    });
+
+    test("存在確認以外の事前 slug 重複チェックは行わない（findUnique は1回のみ）", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await updateLocation(LOCATION_ID, VALID_FORM_DATA);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -747,6 +826,20 @@ describe("deleteLocation", () => {
       const result = await deleteLocation(LOCATION_ID);
 
       expect(result).toEqual({ id: LOCATION_ID });
+    });
+
+    test("スペース件数カウントは isActive な Space のみを対象にする（論理削除済み Space を巻き込まない）", async () => {
+      mockLocationFindUnique.mockResolvedValue(EXISTING_LOCATION);
+
+      await deleteLocation(LOCATION_ID);
+
+      expect(mockLocationFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: {
+            _count: { select: { spaces: { where: { isActive: true } } } },
+          },
+        }),
+      );
     });
   });
 });

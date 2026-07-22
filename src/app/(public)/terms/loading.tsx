@@ -1,7 +1,7 @@
 /**
- * /terms ローディング — ArticleLayout (showSidebar=false) + Breadcrumb 帯 + h1 + 規約リスト
+ * /terms ローディング — page-hero + 規約リスト
  *
- * terms/page.tsx の実 UI に揃えた skeleton。
+ * terms-list section の実 UI に揃えた skeleton (faq/loading.tsx と同型)。
  */
 
 import { Container } from "@/public/components/design-system/container";
@@ -11,25 +11,21 @@ import { skeletonKeys } from "@/shared/lib/skeleton-keys";
 export default function TermsListLoading() {
   return (
     <div aria-busy="true">
-      {/* Breadcrumb band */}
-      <div className="border-b border-divider bg-surface">
+      {/* Page hero */}
+      <section className="bg-background py-[var(--spacing-fluid-xl)]">
         <Container>
-          <div className="flex items-center gap-2 py-3">
-            <Skeleton className="h-3 w-12" variant="text" />
-            <Skeleton className="h-3 w-3" variant="text" />
-            <Skeleton className="h-3 w-20" variant="text" />
+          <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
+            <Skeleton className="h-3 w-16" variant="text" />
+            <Skeleton className="h-10 w-48 md:h-12 md:w-64" />
+            <Skeleton className="h-4 w-72 max-w-md" variant="text" />
           </div>
         </Container>
-      </div>
+      </section>
 
       <Container>
-        <div className="mx-auto max-w-[var(--container-measure)] space-y-8 py-[var(--spacing-fluid-lg)]">
-          {/* h1 */}
-          <Skeleton className="h-10 w-48 md:h-12 md:w-64" variant="text" />
-
-          {/* List rows */}
+        <div className="mx-auto max-w-[var(--container-measure)] py-10 md:py-14">
           <ul className="divide-y divide-divider">
-            {skeletonKeys(4, "terms-row").map((key) => (
+            {skeletonKeys(8, "terms-row").map((key) => (
               <li key={key} className="space-y-2 py-6">
                 <Skeleton className="h-3 w-32" variant="text" />
                 <Skeleton className="h-6 w-2/3" variant="text" />
