@@ -38,6 +38,7 @@ import {
   CustomerIdentityBadge,
   CustomerStatusBadge,
   ReservationStatusBadge,
+  RegistrationStatusBadge,
 } from "@/admin/components/status-badges";
 import {
   updateCustomerStatus,
@@ -306,6 +307,55 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                       <TableCell>
                         <Button asChild variant="outline" size="sm">
                           <Link href={`/admin/reservations/${reservation.id}`}>
+                            詳細
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* イベント参加履歴 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>イベント参加履歴（最新20件）</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {customer.eventRegistrations.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                イベント参加履歴がありません
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>イベント名</TableHead>
+                    <TableHead>申込日</TableHead>
+                    <TableHead>数量</TableHead>
+                    <TableHead>ステータス</TableHead>
+                    <TableHead>操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customer.eventRegistrations.map((registration) => (
+                    <TableRow key={registration.id}>
+                      <TableCell className="font-medium">
+                        {registration.event.title}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateTimeShort(registration.createdAt)}
+                      </TableCell>
+                      <TableCell>{registration.quantity}</TableCell>
+                      <TableCell>
+                        <RegistrationStatusBadge status={registration.status} />
+                      </TableCell>
+                      <TableCell>
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/admin/events/${registration.event.id}`}>
                             詳細
                           </Link>
                         </Button>
