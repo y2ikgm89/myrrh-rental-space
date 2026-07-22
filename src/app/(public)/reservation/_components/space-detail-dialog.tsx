@@ -35,7 +35,24 @@ export function SpaceDetailDialog({
 
   return (
     <Dialog open={space !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[var(--modal-max-height)] overflow-y-auto sm:max-w-md">
+      <DialogContent
+        className="max-h-[var(--modal-max-height)] sm:max-w-md"
+        footer={
+          space !== null ? (
+            <Button
+              variant="primary"
+              className="w-full"
+              disabled={isSelected}
+              onClick={() => {
+                onSelect(space.id);
+                onOpenChange(false);
+              }}
+            >
+              {isSelected ? "選択中" : "このスペースを選択"}
+            </Button>
+          ) : undefined
+        }
+      >
         {space !== null ? (
           <>
             <DialogHeader>
@@ -122,21 +139,6 @@ export function SpaceDetailDialog({
                 </div>
               </div>
             ) : null}
-
-            {/* Select Button */}
-            <div className="border-t border-border pt-4">
-              <Button
-                variant="primary"
-                className="w-full"
-                disabled={isSelected}
-                onClick={() => {
-                  onSelect(space.id);
-                  onOpenChange(false);
-                }}
-              >
-                {isSelected ? "選択中" : "このスペースを選択"}
-              </Button>
-            </div>
           </>
         ) : null}
       </DialogContent>

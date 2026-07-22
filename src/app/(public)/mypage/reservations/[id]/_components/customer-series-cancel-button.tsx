@@ -82,7 +82,26 @@ export function CustomerSeriesCancelButton({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent
+          footer={
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                onClick={() => setOpen(false)}
+                disabled={isPending}
+              >
+                キャンセルしない
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirm}
+                disabled={isPending}
+              >
+                {isPending ? "キャンセル中..." : "定期予約すべてをキャンセル"}
+              </Button>
+            </DialogFooter>
+          }
+        >
           <DialogHeader>
             <DialogTitle>定期予約すべてキャンセル</DialogTitle>
             <DialogDescription>
@@ -113,23 +132,6 @@ export function CustomerSeriesCancelButton({
               {error}
             </p>
           )}
-
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-            >
-              キャンセルしない
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleConfirm}
-              disabled={isPending}
-            >
-              {isPending ? "キャンセル中..." : "定期予約すべてをキャンセル"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

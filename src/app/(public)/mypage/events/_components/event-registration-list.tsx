@@ -397,7 +397,35 @@ function EventRegistrationCard({
           </Button>
 
           <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-            <DialogContent>
+            <DialogContent
+              footer={
+                // JSX 順 = visual 順 (Dialog primitive 修正後)。
+                // mobile 縦並びで「閉じる」=上、「キャンセル」(destructive) = 下 (thumb-zone)。
+                <DialogFooter
+                  role="group"
+                  aria-label="イベント申込キャンセル操作"
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCancelDialogOpen(false)}
+                    disabled={isPending}
+                    className="w-full sm:w-auto"
+                  >
+                    閉じる
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleConfirmCancel}
+                    disabled={isPending}
+                    className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
+                  >
+                    {isPending ? "キャンセル中..." : "キャンセルする"}
+                  </Button>
+                </DialogFooter>
+              }
+            >
               <DialogHeader>
                 <DialogTitle>申込キャンセルの確認</DialogTitle>
                 <DialogDescription>
@@ -422,32 +450,6 @@ function EventRegistrationCard({
                   {error}
                 </div>
               )}
-
-              {/* JSX 順 = visual 順 (Dialog primitive 修正後)。
-               *  mobile 縦並びで「閉じる」=上、「キャンセル」(destructive) = 下 (thumb-zone)。 */}
-              <DialogFooter
-                role="group"
-                aria-label="イベント申込キャンセル操作"
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCancelDialogOpen(false)}
-                  disabled={isPending}
-                  className="w-full sm:w-auto"
-                >
-                  閉じる
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleConfirmCancel}
-                  disabled={isPending}
-                  className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
-                >
-                  {isPending ? "キャンセル中..." : "キャンセルする"}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>

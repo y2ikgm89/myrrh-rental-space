@@ -237,7 +237,30 @@ export function AccountLinking({
                   アカウントを削除する
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent
+                footer={
+                  // JSX 順 = visual 順: mobile 縦並びで「キャンセル」が上、「削除」が下 (thumb-zone)。
+                  <DialogFooter>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setDeleteDialogOpen(false)}
+                      className="w-full sm:w-auto"
+                    >
+                      キャンセル
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
+                    >
+                      {isDeleting ? "送信中..." : "確認メールを送信する"}
+                    </Button>
+                  </DialogFooter>
+                }
+              >
                 <DialogHeader>
                   <DialogTitle>アカウント削除の確認</DialogTitle>
                   <DialogDescription>
@@ -252,26 +275,6 @@ export function AccountLinking({
                   onVerify={setDeleteTurnstileToken}
                   onExpire={() => setDeleteTurnstileToken("")}
                 />
-                {/* JSX 順 = visual 順: mobile 縦並びで「キャンセル」が上、「削除」が下 (thumb-zone)。 */}
-                <DialogFooter>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setDeleteDialogOpen(false)}
-                    className="w-full sm:w-auto"
-                  >
-                    キャンセル
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleDeleteAccount}
-                    disabled={isDeleting}
-                    className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
-                  >
-                    {isDeleting ? "送信中..." : "確認メールを送信する"}
-                  </Button>
-                </DialogFooter>
               </DialogContent>
             </Dialog>
           </>

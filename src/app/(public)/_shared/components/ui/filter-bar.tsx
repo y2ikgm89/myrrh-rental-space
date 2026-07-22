@@ -234,7 +234,27 @@ export function FilterBar({
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          footer={
+            <DialogFooter className="sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground" aria-live="polite">
+                該当{" "}
+                <span className="font-medium text-foreground">
+                  {resultCount}
+                </span>{" "}
+                件
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsDialogOpen(false)}
+                className="w-full sm:w-auto"
+              >
+                閉じる
+              </Button>
+            </DialogFooter>
+          }
+        >
           <DialogHeader>
             <DialogTitle>絞り込み</DialogTitle>
             <DialogDescription>
@@ -349,22 +369,6 @@ export function FilterBar({
               </div>
             </fieldset>
           ) : null}
-
-          <DialogFooter className="sm:items-center sm:justify-between">
-            <div className="text-sm text-muted-foreground" aria-live="polite">
-              該当{" "}
-              <span className="font-medium text-foreground">{resultCount}</span>{" "}
-              件
-            </div>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsDialogOpen(false)}
-              className="w-full sm:w-auto"
-            >
-              閉じる
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
