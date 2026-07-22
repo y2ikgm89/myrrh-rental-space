@@ -8,6 +8,7 @@ import {
   IconUserOff,
   IconLoader2,
   IconChevronDown,
+  IconMail,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import {
@@ -22,7 +23,9 @@ import {
   bulkToggleActiveCustomers,
   bulkAnonymizeCustomers,
   bulkSetStatusCustomers,
+  broadcastCustomersAction,
 } from "@/admin/actions/customer/bulk";
+import { CustomerBulkEmailDialog } from "./CustomerBulkEmailDialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { keysOf } from "@/shared/lib/serialize";
 import { CUSTOMER_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
@@ -41,6 +44,7 @@ export function CustomerBulkActions({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [anonymizeOpen, setAnonymizeOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
 
   const handleBulkToggleActive = (isActive: boolean) => {
     startTransition(async () => {
@@ -101,6 +105,33 @@ export function CustomerBulkActions({
     });
   };
 
+  const handleConfirmBulkEmail = (options: {
+    subject: string;
+    body: string;
+  }) => {
+    startTransition(async () => {
+      const result = await broadcastCustomersAction(
+        selectedIds,
+        options.subject,
+        options.body,
+      );
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+
+      const parts: string[] = [];
+      if (result.sent > 0) parts.push(`${result.sent}件送信`);
+      if (result.excluded > 0)
+        parts.push(`${result.excluded}件除外(配信停止済み)`);
+      toast.success(
+        parts.length > 0 ? parts.join("、") : "対象者がいませんでした",
+      );
+      setEmailDialogOpen(false);
+      onClear();
+    });
+  };
+
   return (
     <>
       <FloatingBulkActionBar
@@ -156,6 +187,16 @@ export function CustomerBulkActions({
         </DropdownMenu>
 
         <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setEmailDialogOpen(true)}
+          disabled={isPending}
+        >
+          <IconMail className="mr-1 h-4 w-4" />
+          一括メール送信
+        </Button>
+
+        <Button
           variant="destructive"
           size="sm"
           onClick={() => setAnonymizeOpen(true)}
@@ -173,6 +214,14 @@ export function CustomerBulkActions({
         description="この操作は取り消せません。予約・領収書・お問い合わせは残りますが、個人情報は削除されます。以降のログインは不可になります。"
         onConfirm={handleBulkAnonymize}
         isPending={isPending}
+      />
+
+      <CustomerBulkEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        onConfirm={handleConfirmBulkEmail}
+        isPending={isPending}
+        targetCount={selectedIds.length}
       />
     </>
   );
