@@ -612,6 +612,11 @@ describe("architecture boundaries", () => {
       // HTTP-02: ゲスト向け領収書 confirm page 経路。署名トークン URL 経由で
       // 個別ユーザーの領収書にアクセスするため CDN キャッシュ不可 (private route)。
       'source: "/receipts/:path*"',
+      // ゲスト向け予約 / イベント参加申込 claim page。署名トークン URL 経由で
+      // 個別ユーザーの予約詳細にアクセスするため CDN キャッシュ不可 (private route)。
+      'source: "/claim/:path*"',
+      'source: "/events/waitlist/:path*"',
+      'source: "/events/cancel/:path*"',
     ]) {
       const specificIndex = source.indexOf(specificSource);
       expect(specificIndex).toBeGreaterThanOrEqual(0);

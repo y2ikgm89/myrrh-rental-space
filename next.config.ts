@@ -333,6 +333,26 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
+        // ゲスト向け予約 / イベント参加申込の claim page。署名トークン URL 経由で
+        // 個別ユーザーの予約詳細 (氏名・日時・料金等) にアクセスする経路のため
+        // /receipts と同様に CDN キャッシュ不可。
+        source: "/claim/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
+      },
+      {
+        // イベント参加のキャンセル / キャンセル待ち確認ページ。/events/:path* の
+        // 公開キャッシュ（EVENTS_CACHE_TAG）より後ろに定義し last-match-wins で
+        // Cache-Control のみ no-store に上書きする。EVENTS_CACHE_TAG ヘッダー自体は
+        // 引き続き emit されるが no-store により CDN に何も保存されないため purge 対象は
+        // 存在せず実害はない。
+        source: "/events/waitlist/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
+      },
+      {
+        source: "/events/cancel/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
+      },
+      {
         source: "/api/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
