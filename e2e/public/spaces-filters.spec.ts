@@ -35,6 +35,8 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     page,
   }) => {
     await page.goto(`${urls.spaces}?minCapacity=10`);
+    // 収容人数・空き時間帯は「詳細な条件」モーダルの中（自動では開かない）
+    await page.getByRole("button", { name: /詳細な条件/ }).click();
     const capacityInput = page.getByLabel("最低収容人数");
     await expect(capacityInput).toHaveValue("10");
   });
@@ -45,6 +47,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     await page.goto(
       `${urls.spaces}?date=2026-12-01&startTime=10:00&endTime=12:00`,
     );
+    await page.getByRole("button", { name: /詳細な条件/ }).click();
     await expect(page.getByLabel("日付")).toHaveValue("2026-12-01");
     await expect(page.getByLabel("開始時刻")).toHaveValue("10:00");
     await expect(page.getByLabel("終了時刻")).toHaveValue("12:00");
@@ -63,11 +66,16 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     await page.goto(
       `${urls.spaces}?minCapacity=10&sort=price-asc&date=2026-12-01`,
     );
+    await page.getByRole("button", { name: /詳細な条件/ }).click();
     await expect(page.getByLabel("最低収容人数")).toHaveValue("10");
 
+    // モーダルは背後を inert 化するため、閉じてからリセットボタンを操作する
+    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /リセット/ }).click();
 
     await expect(page).toHaveURL(new RegExp(`${urls.spaces}(\\?page=1)?$`));
+
+    await page.getByRole("button", { name: /詳細な条件/ }).click();
     await expect(page.getByLabel("最低収容人数")).toHaveValue("");
   });
 });
