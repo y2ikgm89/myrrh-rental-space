@@ -164,14 +164,6 @@ describe("getPublishedSpacesPaginated where clause", () => {
     expect(lastFindManyArg().orderBy).toEqual({ name: "asc" });
   });
 
-  test("sort=capacity-asc / -desc", async () => {
-    await getPublishedSpacesPaginated({ sort: "capacity-asc" });
-    expect(lastFindManyArg().orderBy).toEqual({ capacity: "asc" });
-    resetAllMocks();
-    await getPublishedSpacesPaginated({ sort: "capacity-desc" });
-    expect(lastFindManyArg().orderBy).toEqual({ capacity: "desc" });
-  });
-
   test("sort=price-asc / -desc は hourlyPrice", async () => {
     await getPublishedSpacesPaginated({ sort: "price-asc" });
     expect(lastFindManyArg().orderBy).toEqual({ hourlyPrice: "asc" });

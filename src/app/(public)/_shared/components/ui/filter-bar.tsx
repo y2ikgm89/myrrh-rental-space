@@ -2,8 +2,8 @@
 
 import type { ChangeEvent, ReactElement } from "react";
 import { useQueryStates } from "nuqs";
-import { useTransition } from "react";
-import { DropdownMenu } from "radix-ui";
+import { useState, useTransition } from "react";
+import { Collapsible, DropdownMenu } from "radix-ui";
 import { cn } from "@/shared/lib/cn";
 import {
   SPACE_SORT_VALUES,
@@ -27,8 +27,6 @@ const ALL_VALUE = "";
 
 const SORT_LABELS: Record<SpaceSort, string> = {
   recommended: "おすすめ順",
-  "capacity-asc": "収容人数（少ない順）",
-  "capacity-desc": "収容人数（多い順）",
   "price-asc": "料金（安い順）",
   "price-desc": "料金（高い順）",
 };
@@ -36,8 +34,10 @@ const SORT_LABELS: Record<SpaceSort, string> = {
 /**
  * 公開スペース一覧のフィルタ toolbar。
  *
- * - 上段: 単一/複数選択 Dropdown（拠点・カテゴリ・設備・並び順）+ リセット + 件数
- * - 下段: 直接入力型 facet（最低収容人数 / 空き時間帯）
+ * - 上段: 単一/複数選択 Dropdown（拠点・カテゴリ・設備・並び順）+ 詳細な条件トグル +
+ *   リセット + 件数。デフォルトで 1 行に収まる
+ * - 詳細な条件（最低収容人数 / 空き時間帯）は Collapsible で畳んでおき、
+ *   該当 facet が URL に既にある場合のみ初期展開する
  * - すべて nuqs `useQueryStates(spaceSearchParamsParsers)` で URL 同期。
  *   任意の facet 変更で page=1 に戻す（結果セットが変わるため）。
  */
@@ -76,6 +76,17 @@ export function FilterBar({
     params.category !== null
       ? (categories.find((c) => c.id === params.category)?.name ?? null)
       : null;
+
+  // 収容人数・空き時間帯 facet。URL に既に値がある（共有リンク等）場合のみ
+  // マウント時点で開いた状態にする（以降はユーザー操作のみで開閉する）。
+  const hasDetailFacetActive =
+    params.minCapacity !== null ||
+    params.date !== "" ||
+    params.startTime !== "" ||
+    params.endTime !== "";
+  const [isDetailsOpen, setIsDetailsOpen] = useState(
+    () => hasDetailFacetActive,
+  );
 
   function setCategory(value: string) {
     startTransition(() => {
@@ -162,96 +173,132 @@ export function FilterBar({
         isPending && "opacity-60",
       )}
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-          {showLocationFilter && locations ? (
-            <FilterDropdown
-              label="拠点"
-              activeName={activeLocationName}
-              allLabel="すべての拠点"
-              options={locations}
-              currentValue={params.location ?? ALL_VALUE}
-              onSelect={setLocation}
-            />
-          ) : null}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-8 sm:gap-y-4">
+        {showLocationFilter && locations ? (
           <FilterDropdown
-            label="カテゴリ"
-            activeName={activeCategoryName}
-            allLabel="すべてのカテゴリ"
-            options={categories}
-            currentValue={params.category ?? ALL_VALUE}
-            onSelect={setCategory}
+            label="拠点"
+            activeName={activeLocationName}
+            allLabel="すべての拠点"
+            options={locations}
+            currentValue={params.location ?? ALL_VALUE}
+            onSelect={setLocation}
           />
-          {hasFacilityOptions ? (
-            <FacilityDropdown
-              options={facilityOptions}
-              selected={params.facilities}
-              onToggle={toggleFacility}
-            />
-          ) : null}
-          <SortDropdown value={params.sort} onSelect={setSort} />
-          <button
-            type="button"
-            onClick={handleReset}
-            disabled={!hasActiveFilter}
-            aria-label="リセット（フィルタを初期状態に戻す）"
-            className="inline-flex min-h-11 items-center px-2 text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted-foreground"
+        ) : null}
+        <FilterDropdown
+          label="カテゴリ"
+          activeName={activeCategoryName}
+          allLabel="すべてのカテゴリ"
+          options={categories}
+          currentValue={params.category ?? ALL_VALUE}
+          onSelect={setCategory}
+        />
+        {hasFacilityOptions ? (
+          <FacilityDropdown
+            options={facilityOptions}
+            selected={params.facilities}
+            onToggle={toggleFacility}
+          />
+        ) : null}
+        <SortDropdown value={params.sort} onSelect={setSort} />
+        <button
+          type="button"
+          onClick={() => setIsDetailsOpen((open) => !open)}
+          aria-expanded={isDetailsOpen}
+          aria-controls="space-detail-filters"
+          data-state={isDetailsOpen ? "open" : "closed"}
+          className={cn(
+            TRIGGER_CLASS,
+            hasDetailFacetActive &&
+              "after:origin-left after:scale-x-100 after:bg-accent/60",
+          )}
+        >
+          <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
+            詳細な条件
+          </span>
+          <span
+            className={cn(
+              "font-medium transition-colors",
+              hasDetailFacetActive ? "text-accent" : "text-foreground",
+            )}
           >
-            リセット
-          </button>
-        </div>
-        <div className="text-sm text-muted-foreground" aria-live="polite">
+            {hasDetailFacetActive ? "設定中" : "収容人数・空き状況"}
+          </span>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none text-sm text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
+          >
+            ▾
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={handleReset}
+          disabled={!hasActiveFilter}
+          aria-label="リセット（フィルタを初期状態に戻す）"
+          className="inline-flex min-h-11 items-center px-2 text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted-foreground"
+        >
+          リセット
+        </button>
+        <div
+          className="text-sm text-muted-foreground sm:ml-auto"
+          aria-live="polite"
+        >
           該当{" "}
           <span className="font-medium text-foreground">{resultCount}</span> 件
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-border pt-4 sm:flex-row sm:flex-wrap sm:items-end sm:gap-6">
-        <label className="flex min-h-11 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
-          最低収容人数
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            step={1}
-            placeholder="人数"
-            value={params.minCapacity ?? ""}
-            onChange={setMinCapacity}
-            className="min-h-11 w-32 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none"
-          />
-        </label>
-        <fieldset className="flex flex-col gap-1">
-          <legend className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-            空き時間帯（3 つとも指定時のみ絞り込み）
-          </legend>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
+      <Collapsible.Root open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <Collapsible.Content
+          id="space-detail-filters"
+          className="flex flex-wrap items-end gap-3 border-t border-border pt-4 sm:gap-6"
+        >
+          <label className="flex min-h-11 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
+            最低収容人数
             <input
-              type="date"
-              value={params.date}
-              onChange={setDate}
-              aria-label="日付"
-              className="min-h-11 w-40 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground focus-visible:border-accent focus-visible:outline-none"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              placeholder="人数"
+              value={params.minCapacity ?? ""}
+              onChange={setMinCapacity}
+              className="min-h-11 w-32 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none"
             />
-            <input
-              type="time"
-              value={params.startTime}
-              onChange={setStartTime}
-              aria-label="開始時刻"
-              className="min-h-11 w-28 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground focus-visible:border-accent focus-visible:outline-none"
-            />
-            <span aria-hidden="true" className="text-muted-foreground">
-              〜
-            </span>
-            <input
-              type="time"
-              value={params.endTime}
-              onChange={setEndTime}
-              aria-label="終了時刻"
-              className="min-h-11 w-28 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground focus-visible:border-accent focus-visible:outline-none"
-            />
-          </div>
-        </fieldset>
-      </div>
+          </label>
+          <fieldset className="flex flex-col gap-1">
+            <legend className="text-xs uppercase tracking-eyebrow text-muted-foreground">
+              空き時間帯（3 つとも指定時のみ絞り込み）
+            </legend>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={params.date}
+                onChange={setDate}
+                aria-label="日付"
+                className="min-h-11 w-40 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground focus-visible:border-accent focus-visible:outline-none"
+              />
+              <input
+                type="time"
+                value={params.startTime}
+                onChange={setStartTime}
+                aria-label="開始時刻"
+                className="min-h-11 w-28 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground focus-visible:border-accent focus-visible:outline-none"
+              />
+              <span aria-hidden="true" className="text-muted-foreground">
+                〜
+              </span>
+              <input
+                type="time"
+                value={params.endTime}
+                onChange={setEndTime}
+                aria-label="終了時刻"
+                className="min-h-11 w-28 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground focus-visible:border-accent focus-visible:outline-none"
+              />
+            </div>
+          </fieldset>
+        </Collapsible.Content>
+      </Collapsible.Root>
     </div>
   );
 }
