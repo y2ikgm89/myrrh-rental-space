@@ -71,7 +71,32 @@ export function CancelButton({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent
+          footer={
+            // JSX 順 = visual 順 (Dialog primitive が flex-col / sm:flex-row 両軸対応)。
+            // mobile 縦並びでは「閉じる」が上、「キャンセル確定」(destructive) が thumb-zone 底に来る。
+            <DialogFooter role="group" aria-label="予約キャンセル操作">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpen(false)}
+                disabled={isPending}
+                className="w-full sm:w-auto"
+              >
+                閉じる
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleConfirm}
+                disabled={isPending}
+                className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
+              >
+                {isPending ? "キャンセル中..." : "キャンセルを確定する"}
+              </Button>
+            </DialogFooter>
+          }
+        >
           <DialogHeader>
             <DialogTitle>予約のキャンセル確認</DialogTitle>
             <DialogDescription>
@@ -105,29 +130,6 @@ export function CancelButton({
               {error}
             </div>
           )}
-
-          {/* JSX 順 = visual 順 (Dialog primitive が flex-col / sm:flex-row 両軸対応)。
-           *  mobile 縦並びでは「閉じる」が上、「キャンセル確定」(destructive) が thumb-zone 底に来る。 */}
-          <DialogFooter role="group" aria-label="予約キャンセル操作">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-              disabled={isPending}
-              className="w-full sm:w-auto"
-            >
-              閉じる
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleConfirm}
-              disabled={isPending}
-              className="w-full bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 sm:w-auto"
-            >
-              {isPending ? "キャンセル中..." : "キャンセルを確定する"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
