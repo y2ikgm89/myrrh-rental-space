@@ -21,6 +21,7 @@ import {
   parseStringArray,
 } from "@/shared/lib/json-validators";
 import { parseGallery } from "@/shared/lib/validations/gallery";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import {
   EventStatus,
@@ -527,4 +528,67 @@ export async function getActiveSpacesByLocationId(locationId: string) {
     ...s,
     hourlyPrice: Number(s.hourlyPrice),
   }));
+}
+
+/**
+ * スペースカード埋め込みブロック（Lexical `SpaceCardNode`）の解決用データ。
+ * 写真・料金・定員のみを保持する最小構成（`resolveSpaceCardEmbeds` が
+ * 税込み価格ラベルの整形を担当するため、ここでは raw な number のまま返す）。
+ */
+export type SpaceCardEmbedData = {
+  id: string;
+  slug: string;
+  name: string;
+  capacity: number;
+  hourlyPrice: number;
+  mainImageUrl: string;
+};
+
+/**
+ * スペースカード埋め込みブロックの id 群を公開フィルタ付きで一括解決する。
+ *
+ * 参照先が非公開/非アクティブなら Map に含まれない（呼び出し側でカードを描画しない
+ * ＝404 防止、`resolveLinkCardsByType` と同じ方針）。spaces Feature Module が
+ * OFF の場合も空 Map を返す（挿入 UI 側では防がないため、ここが最終防衛線）。
+ * 常に最新データを返すため `'use cache'` は付けない（freshness 優先 + id 配列の
+ * cache key 肥大回避、既存 resolveSpaceCards と同じ理由）。
+ */
+export async function resolveSpaceCardEmbedData(
+  ids: readonly string[],
+): Promise<Map<string, SpaceCardEmbedData>> {
+  if (ids.length === 0) return new Map();
+  if (!(await isFeatureEnabled("spaces"))) return new Map();
+
+  const uniqueIds = Array.from(new Set(ids));
+  const rows = await safeFetch({
+    fetch: () =>
+      prisma.space.findMany({
+        where: { ...PUBLIC_WHERE, id: { in: uniqueIds } },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          capacity: true,
+          hourlyPrice: true,
+          mainImageUrl: true,
+        },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "resolveSpaceCardEmbedData",
+  });
+
+  const map = new Map<string, SpaceCardEmbedData>();
+  for (const r of rows) {
+    map.set(r.id, {
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      capacity: r.capacity,
+      hourlyPrice: Number(r.hourlyPrice),
+      mainImageUrl: r.mainImageUrl,
+    });
+  }
+  return map;
 }

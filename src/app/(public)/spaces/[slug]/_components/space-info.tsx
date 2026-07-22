@@ -2,6 +2,7 @@ import { IconMapPin } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { parseFacilities } from "@/shared/lib/json-validators";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
+import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
 
 interface SpaceInfoProps {
   readonly space: {
@@ -34,8 +35,11 @@ interface SpaceInfoProps {
  */
 export async function SpaceInfo({ space }: SpaceInfoProps) {
   const facilities = parseFacilities(space.facilities);
-  const resolvedDescriptionHtml = await resolveInternalLinkCards(
+  const linkCardsResolvedDescriptionHtml = await resolveInternalLinkCards(
     space.descriptionHtml,
+  );
+  const resolvedDescriptionHtml = await resolveSpaceCardEmbeds(
+    linkCardsResolvedDescriptionHtml,
   );
 
   return (
