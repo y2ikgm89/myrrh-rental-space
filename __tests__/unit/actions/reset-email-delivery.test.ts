@@ -55,6 +55,7 @@ mock.module("@/shared/domain/customers/commands", () => ({
     reason: "customer-requested" as const,
     hadUserId: false,
   })),
+  recomputeCustomerStatsCommand: mock(async () => undefined),
 }));
 
 mock.module("@/shared/domain/customers/risk-detection", () => ({
@@ -62,6 +63,9 @@ mock.module("@/shared/domain/customers/risk-detection", () => ({
     previousFlaggedForReviewAt: null,
     previousFlagReasons: [],
   })),
+  // customer.ts が duplicate-detection.ts 経由で reconcileFlagReasonsCommand を
+  // 間接 import するため、このファイルの対象外テストでもモック必須(Phase 4)。
+  reconcileFlagReasonsCommand: mock(async () => 0),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({

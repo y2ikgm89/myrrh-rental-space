@@ -29,6 +29,7 @@ import {
   anonymizeCustomerCommand,
   createCustomer as createCustomerCommand,
   mergeCustomerCommand,
+  recomputeCustomerStatsCommand,
   resetCustomerEmailDeliveryStatusCommand,
   toggleCustomerActive as toggleCustomerActiveCommand,
   updateCustomer as updateCustomerCommand,
@@ -38,7 +39,9 @@ import {
 import type { AnonymizeCustomerReason } from "@/shared/domain/customers/commands";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { searchCustomers } from "@/shared/domain/customers/queries";
+import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { clearRiskFlagCommand } from "@/shared/domain/customers/risk-detection";
+import { findDuplicateCandidateFor } from "@/shared/domain/customers/duplicate-detection";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
@@ -377,6 +380,48 @@ export async function toggleCustomerActive(id: string): Promise<
         }),
         {
           operation: "auditLogToggleCustomerActive",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
+    },
+  });
+}
+
+/**
+ * 顧客の予約統計を手動で再計算する。
+ * 統計情報の異常時や定期メンテナンス時に管理者が実行する。
+ */
+export async function recomputeCustomerStatsAction(
+  customerId: string,
+): Promise<MutationResult<{ actorUserId: string }>> {
+  const validated = idSchema.safeParse(customerId);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "update",
+    resourceId: validated.data,
+    execute: async (user) => {
+      await recomputeCustomerStatsCommand(validated.data);
+      return { actorUserId: user.id };
+    },
+    afterSuccess: (outcome) => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(validated.data));
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "customer.stats",
+          resourceId: validated.data,
+          metadata: { trigger: "manual_recompute" },
+        }),
+        {
+          operation: "auditLogRecomputeCustomerStats",
           category: ErrorCategory.DATABASE,
           severity: ErrorSeverity.MEDIUM,
         },
@@ -768,6 +813,34 @@ export async function resetCustomerEmailDelivery(id: string): Promise<
           context: { customerId: data.customerId },
         },
       );
+    },
+  });
+}
+
+/**
+ * Phase 4: 重複顧客検出cronが検知した候補を、マージダイアログの初期選択状態に
+ * プリフィルするための薄い wrapper。customer:read 権限で動く read-only action。
+ * 一致する相手が無い場合は null を返す。
+ */
+export async function findDuplicateCandidateForCustomer(
+  customerId: string,
+): Promise<
+  MutationResult<{
+    candidate: CustomerSearchResult | null;
+  }>
+> {
+  const validated = idSchema.safeParse(customerId);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "read",
+    resourceId: validated.data,
+    execute: async () => {
+      const candidate = await findDuplicateCandidateFor(validated.data);
+      return { candidate };
     },
   });
 }

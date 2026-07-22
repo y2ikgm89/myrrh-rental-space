@@ -840,6 +840,7 @@ export const RISK_FLAG_REASON = {
   RAPID_BOOKING: "rapid_booking",
   FREQUENT_CANCELLATION: "frequent_cancellation",
   REPEATED_NO_SHOW: "repeated_no_show",
+  DUPLICATE_CANDIDATE: "duplicate_candidate",
 } as const;
 
 export type RiskFlagReason =
@@ -849,6 +850,7 @@ export const RISK_FLAG_REASON_LABELS: Record<RiskFlagReason, string> = {
   [RISK_FLAG_REASON.RAPID_BOOKING]: "短時間に多数の予約/申込",
   [RISK_FLAG_REASON.FREQUENT_CANCELLATION]: "繰り返しキャンセル",
   [RISK_FLAG_REASON.REPEATED_NO_SHOW]: "無断キャンセル(NO_SHOW)多発",
+  [RISK_FLAG_REASON.DUPLICATE_CANDIDATE]: "重複顧客の疑い",
 };
 
 const VALID_RISK_FLAG_REASONS = new Set<string>(

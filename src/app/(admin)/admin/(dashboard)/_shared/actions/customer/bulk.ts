@@ -1,15 +1,22 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { emitBulkAuditRecords } from "@/admin/lib/audit";
 import { ANONYMIZED_CUSTOMER_FIELDS } from "@/admin/actions/customer";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import {
+  checkActionRateLimit,
+  createValidationMutationError,
+} from "@/shared/lib/action-helpers";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { createMutationError } from "@/shared/lib/mutation-result";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { sendCustomerBroadcast } from "@/shared/lib/email/customer-emails";
+import { customerBroadcastRateLimiter } from "@/shared/lib/rate-limit";
 import {
   bulkToggleActiveCustomersCommand,
   bulkAnonymizeCustomersCommand,
@@ -210,5 +217,75 @@ export async function bulkSetStatusCustomers(
         }),
       });
     },
+  });
+}
+
+const broadcastCustomersSchema = z.object({
+  customerIds: z
+    .array(z.uuid({ error: "顧客IDが不正です" }))
+    .min(1, { error: "1件以上選択してください" })
+    .max(100, { error: "一度に送信できるのは100件までです" })
+    .refine((ids) => new Set(ids).size === ids.length, {
+      error: "重複した顧客IDが含まれています",
+    }),
+  subject: z
+    .string({ error: "件名を入力してください" })
+    .trim()
+    .min(1, "件名を入力してください")
+    .max(200, "件名は200文字以内で入力してください"),
+  body: z
+    .string({ error: "本文を入力してください" })
+    .trim()
+    .min(1, "本文を入力してください")
+    .max(5000, "本文は5000文字以内で入力してください"),
+});
+
+/**
+ * Phase 4 顧客管理強化 (Task 10): 選択顧客への一括メール送信 Server Action。
+ *
+ * `broadcastEventAction`（event-broadcast.ts、T12）と同じ設計判断を踏襲する:
+ * - rate limit は `customerBroadcastRateLimiter` を「管理操作単位」の固定トークン
+ *   (`"customer-broadcast"`) でチェックする。管理者 IP は変わり得るため IP 単位でなく
+ *   操作単位の第二防壁で十分 (`executeAdminMutationResult` の RBAC + AuditLog と多層防御)。
+ * - AuditLog は `executeAdminMutationResult` 内の自動 `logAction`
+ *   (resource:customer action:update) に任せる。件名/本文は個人情報増加を避けるため
+ *   metadata に含めない (Resend dashboard 側で確認する運用)。
+ * - `broadcastNonce` は execute ごとに `randomUUID()` で生成し、Resend の
+ *   idempotencyKey が重複しないようにする。
+ *
+ * customerIds の重複は `sendCustomerBroadcast` の excluded 件数計算
+ * (`customerIds.length - recipients.length`) を壊すため、既存の
+ * `bulkInputSchema` と同じ `.refine` で境界で弾く。
+ */
+export async function broadcastCustomersAction(
+  customerIds: string[],
+  subject: string,
+  body: string,
+): Promise<MutationResult<{ sent: number; excluded: number }>> {
+  const parsed = broadcastCustomersSchema.safeParse({
+    customerIds,
+    subject,
+    body,
+  });
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  const rateLimit = await checkActionRateLimit({
+    check: (_token) => customerBroadcastRateLimiter.check("customer-broadcast"),
+  });
+  if (!rateLimit.success) return createMutationError(rateLimit.error);
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "update",
+    execute: async () => {
+      const broadcastNonce = randomUUID();
+      const result = await sendCustomerBroadcast(parsed.data.customerIds, {
+        subject: parsed.data.subject,
+        body: parsed.data.body,
+        broadcastNonce,
+      });
+      return { sent: result.sent, excluded: result.excluded };
+    },
+    // cache invalidation は不要 (customer レコード自体は変わらない)。
   });
 }

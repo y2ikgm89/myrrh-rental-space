@@ -2,6 +2,7 @@ import type {
   CustomerStatus,
   CustomerType,
   EmailDeliveryStatus,
+  RegistrationStatus,
   ReservationStatus,
 } from "@generated/prisma/enums";
 import type { PaginationInput } from "@/shared/lib/pagination";
@@ -50,6 +51,18 @@ type CustomerReservationRecord = {
   };
 };
 
+type CustomerEventRegistrationRecord = {
+  id: string;
+  status: RegistrationStatus;
+  quantity: number;
+  createdAt: Date;
+  event: {
+    id: string;
+    title: string;
+    slug: string;
+  };
+};
+
 export type CustomerData = Serialized<CustomerRecord> & {
   latestGuestName: {
     lastName: string;
@@ -66,6 +79,7 @@ export type CustomerWithReservations = Serialized<
 export type CustomerWithReservationsAndAccount = Serialized<
   CustomerRecord & {
     reservations: CustomerReservationRecord[];
+    eventRegistrations: CustomerEventRegistrationRecord[];
     user: {
       accounts: CustomerAccountInfo[];
     } | null;

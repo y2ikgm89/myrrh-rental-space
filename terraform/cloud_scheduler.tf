@@ -40,6 +40,12 @@ locals {
       description = "Weekly stale FAQ notification (Mon 09:00 JST)"
     },
     {
+      name        = "customer-duplicate-scan"
+      schedule    = "0 3 * * *"
+      path        = "/api/cron/customer-duplicate-scan"
+      description = "Daily duplicate customer detection by email/phone (daily 03:00 JST)"
+    },
+    {
       name        = "customer-risk-scan"
       schedule    = "0 9 * * 1"
       path        = "/api/cron/customer-risk-scan"

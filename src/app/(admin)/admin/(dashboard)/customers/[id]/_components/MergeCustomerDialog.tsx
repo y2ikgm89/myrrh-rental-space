@@ -28,12 +28,18 @@ type Props = {
     firstName: string;
     email: string;
   };
+  /**
+   * 重複検出cronが検知した候補を、検索操作なしで初期選択状態にする
+   * (Phase 4: 顧客管理強化)。未指定なら従来通り空の検索状態で開く。
+   */
+  initialCandidate?: CustomerSearchResult;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
 export function MergeCustomerDialog({
   sourceCustomer,
+  initialCandidate,
   open,
   onOpenChange,
 }: Props) {
@@ -43,6 +49,22 @@ export function MergeCustomerDialog({
   const [selected, setSelected] = useState<CustomerSearchResult | null>(null);
   const [isSearching, startSearchTransition] = useTransition();
   const [isMerging, startMergeTransition] = useTransition();
+
+  // `open` が false→true に変化した瞬間だけ `initialCandidate` を選択状態に
+  // シードする（React docs "Adjusting some state when a prop changes" パターン。
+  // useEffect ではなく render 中に直接 setState することで、
+  // react-hooks/set-state-in-effect の cascading-render 警告を発生させずに
+  // 済む — 本プロジェクトは useEffect ベースの props→state 同期を避け、
+  // このパターンを正としている）。
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && initialCandidate) {
+      setSelected(initialCandidate);
+      setResults([]);
+      setQuery("");
+    }
+  }
 
   const handleSearch = (value: string) => {
     setQuery(value);

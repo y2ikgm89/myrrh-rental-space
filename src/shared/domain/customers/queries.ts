@@ -190,6 +190,15 @@ export async function getCustomerById(
         },
         take: 20,
       },
+      eventRegistrations: {
+        include: {
+          event: {
+            select: { id: true, title: true, slug: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
       user: {
         select: {
           accounts: {
@@ -241,6 +250,13 @@ export async function getCustomerById(
       status: reservation.status,
       totalPrice: reservation.totalPrice,
       space: reservation.space,
+    })),
+    eventRegistrations: customer.eventRegistrations.map((registration) => ({
+      id: registration.id,
+      status: registration.status,
+      quantity: registration.quantity,
+      createdAt: registration.createdAt.toISOString(),
+      event: registration.event,
     })),
     user: customer.user
       ? {
@@ -473,5 +489,22 @@ export async function getCustomerByUserId(userId: string) {
       createdAt: true,
       updatedAt: true,
     },
+  });
+}
+
+/**
+ * 顧客一斉配信（Phase 4: 顧客管理強化）の送信対象を解決する。
+ *
+ * 指定された `customerIds` のうち `marketingOptIn: true` の顧客のみ返す
+ * （opt-out 済み顧客・存在しない customerId は同意ゲートとして除外）。
+ * 呼び出し側 `sendCustomerBroadcast`（`src/shared/lib/email/customer-emails.ts`）が
+ * `customerIds.length - 戻り値.length` を excluded としてカウントする。
+ */
+export async function findCustomersForBroadcast(
+  customerIds: string[],
+): Promise<{ id: string; email: string }[]> {
+  return prisma.customer.findMany({
+    where: { id: { in: customerIds }, marketingOptIn: true },
+    select: { id: true, email: true },
   });
 }

@@ -38,12 +38,14 @@ import {
   CustomerIdentityBadge,
   CustomerStatusBadge,
   ReservationStatusBadge,
+  RegistrationStatusBadge,
 } from "@/admin/components/status-badges";
 import {
   updateCustomerStatus,
   updateCustomerNotes,
   toggleCustomerActive,
   clearCustomerRiskFlag,
+  recomputeCustomerStatsAction,
 } from "@/admin/actions/customer";
 import type { CustomerWithReservationsAndAccount } from "@/shared/domain/customers/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -77,6 +79,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [notes, setNotes] = useState(customer.notes || "");
+  const [isRecomputePending, startRecomputeTransition] = useTransition();
 
   const handleStatusChange = async (status: CustomerStatus) => {
     startTransition(async () => {
@@ -87,6 +90,18 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
       }
       toast.success("ステータスを更新しました");
       router.refresh();
+    });
+  };
+
+  const handleRecomputeStats = () => {
+    startRecomputeTransition(async () => {
+      const result = await recomputeCustomerStatsAction(customer.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+      } else {
+        toast.success("統計情報を再計算しました");
+        router.refresh();
+      }
     });
   };
 
@@ -179,31 +194,41 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
         </DetailSection>
 
         <DetailSection title="統計情報">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <DetailField
-              label="予約回数"
-              value={
-                <span className="text-2xl font-bold">
-                  {customer.totalReservations}
-                </span>
-              }
-            />
-            <DetailField
-              label="累計利用金額"
-              value={
-                <span className="text-2xl font-bold">
-                  {formatPrice(customer.totalSpent, "-")}
-                </span>
-              }
-            />
-            <DetailField
-              label="最終予約日"
-              value={
-                <span className="text-lg">
-                  {formatDateShort(customer.lastReservationAt)}
-                </span>
-              }
-            />
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <DetailField
+                label="予約回数"
+                value={
+                  <span className="text-2xl font-bold">
+                    {customer.totalReservations}
+                  </span>
+                }
+              />
+              <DetailField
+                label="累計利用金額"
+                value={
+                  <span className="text-2xl font-bold">
+                    {formatPrice(customer.totalSpent, "-")}
+                  </span>
+                }
+              />
+              <DetailField
+                label="最終予約日"
+                value={
+                  <span className="text-lg">
+                    {formatDateShort(customer.lastReservationAt)}
+                  </span>
+                }
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRecomputeStats}
+              disabled={isRecomputePending}
+            >
+              {isRecomputePending ? "再計算中..." : "統計を再計算"}
+            </Button>
           </div>
         </DetailSection>
 
@@ -282,6 +307,55 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                       <TableCell>
                         <Button asChild variant="outline" size="sm">
                           <Link href={`/admin/reservations/${reservation.id}`}>
+                            詳細
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* イベント参加履歴 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>イベント参加履歴（最新20件）</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {customer.eventRegistrations.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">
+                イベント参加履歴がありません
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>イベント名</TableHead>
+                    <TableHead>申込日</TableHead>
+                    <TableHead>数量</TableHead>
+                    <TableHead>ステータス</TableHead>
+                    <TableHead>操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customer.eventRegistrations.map((registration) => (
+                    <TableRow key={registration.id}>
+                      <TableCell className="font-medium">
+                        {registration.event.title}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateTimeShort(registration.createdAt)}
+                      </TableCell>
+                      <TableCell>{registration.quantity}</TableCell>
+                      <TableCell>
+                        <RegistrationStatusBadge status={registration.status} />
+                      </TableCell>
+                      <TableCell>
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/admin/events/${registration.event.id}`}>
                             詳細
                           </Link>
                         </Button>

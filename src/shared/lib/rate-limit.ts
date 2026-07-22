@@ -440,6 +440,15 @@ export const eventBroadcastRateLimiter = createRateLimiter({
   maxRequests: 3,
 });
 
+// 管理者オーサリング型 customer broadcast（Phase 4: 顧客管理強化）— 1 時間あたり 3 回まで。
+// customer-broadcast も event-broadcast と同型の重い操作（選択顧客全員へ Resend API 呼出）
+// のため暴走防止の追加バケットを敷く。管理者 IP は変わり得るため IP 単位でなく管理操作単位
+// で十分（executeAdminMutationResult の RBAC + AuditLog と多層防御）。
+export const customerBroadcastRateLimiter = createRateLimiter({
+  interval: 60 * 60 * 1000, // 1 時間
+  maxRequests: 3,
+});
+
 // 管理画面の「重い」内部 API 用（60 リクエスト/分/IP）— defense-in-depth。
 // 認証済みスタッフでも、外向き fetch (OGP プレビュー) や全件 LIKE スキャン
 // (customer 検索) のような副作用 / コスト大の endpoint は単独でレート制限する。

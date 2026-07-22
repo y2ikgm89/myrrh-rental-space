@@ -59,6 +59,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
   resetCustomerEmailDeliveryStatusCommand: mock(async () => ({
     previous: "OK",
   })),
+  // customer.ts が recomputeCustomerStatsCommand を直接 import するため、
+  // このファイル自体は対象外テストでもモック必須(Phase 4)。
+  recomputeCustomerStatsCommand: mock(async () => undefined),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({
