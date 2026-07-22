@@ -141,10 +141,6 @@ function buildSpaceOrderBy(
   sort: SpaceSort | undefined,
 ): Prisma.SpaceOrderByWithRelationInput {
   switch (sort) {
-    case "capacity-asc":
-      return { capacity: "asc" };
-    case "capacity-desc":
-      return { capacity: "desc" };
     case "price-asc":
       return { hourlyPrice: "asc" };
     case "price-desc":
