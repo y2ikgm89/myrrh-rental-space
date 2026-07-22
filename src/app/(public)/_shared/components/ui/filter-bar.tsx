@@ -3,9 +3,9 @@
 import type { ChangeEvent, ReactElement } from "react";
 import { useQueryStates } from "nuqs";
 import { useState, useTransition } from "react";
-import { DropdownMenu } from "radix-ui";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/public/components/design-system/button";
+import { Select } from "@/public/components/design-system/select";
 import {
   Dialog,
   DialogContent,
@@ -40,17 +40,20 @@ const SORT_LABELS: Record<SpaceSort, string> = {
   "price-desc": "料金（高い順）",
 };
 
+const TRIGGER_CLASS =
+  "group relative inline-flex min-h-11 items-center gap-2 pb-2 text-base tracking-wide text-foreground transition-colors focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100";
+
 /**
  * 公開スペース一覧のフィルタ toolbar。
  *
- * - 上段: 単一/複数選択 Dropdown（拠点・カテゴリ・設備・並び順）+ 詳細な条件トグル +
- *   リセット + 件数。常に 1 行に収まり、開閉状態に関わらず高さが変わらない
- * - 詳細な条件（最低収容人数 / 空き時間帯）は Dialog（モーダル）に格納する。
- *   ページ内容を押し広げず、背後を inert 化するため誤操作も起きにくい。
- *   URL に該当 facet が既にあっても自動では開かない（モーダルの自動表示は
- *   離脱を招くアンチパターンのため）。トリガーの活性表示で状態を示す
+ * - 拠点・カテゴリ・設備・並び順・最低収容人数・空き時間帯のすべてを
+ *   単一の「絞り込み」Dialog（モーダル）に統合する。ヘッダー行はトリガー +
+ *   リセット + 件数のみで、デスクトップ・モバイルとも常に 1 行に収まる
+ * - モーダル内の単一選択（拠点・カテゴリ・並び順）は、Dialog の中で
+ *   さらにポップアップを開く二重構造を避けるためネイティブ select
+ *   （design-system Select）を使う。設備は複数選択のためチェックボックス
  * - すべて nuqs `useQueryStates(spaceSearchParamsParsers)` で URL 同期。
- *   任意の facet 変更で page=1 に戻す（結果セットが変わるため）。
+ *   任意の facet 変更で page=1 に戻す（結果セットが変わるため）
  */
 export function FilterBar({
   categories,
@@ -65,6 +68,7 @@ export function FilterBar({
     shallow: false,
   });
   const [isPending, startTransition] = useTransition();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const showLocationFilter = locations !== undefined && locations.length > 1;
   const hasFacilityOptions = facilityOptions.length > 0;
@@ -78,24 +82,6 @@ export function FilterBar({
     params.startTime !== "" ||
     params.endTime !== "" ||
     params.sort !== "recommended";
-
-  const activeLocationName =
-    params.location !== null
-      ? (locations?.find((l) => l.id === params.location)?.name ?? null)
-      : null;
-  const activeCategoryName =
-    params.category !== null
-      ? (categories.find((c) => c.id === params.category)?.name ?? null)
-      : null;
-
-  // 収容人数・空き時間帯 facet。モーダルは常に閉じた状態で始まる
-  // （URL に値があっても自動表示はしない）。トリガーの活性表示のみで状態を示す。
-  const hasDetailFacetActive =
-    params.minCapacity !== null ||
-    params.date !== "" ||
-    params.startTime !== "" ||
-    params.endTime !== "";
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   function setCategory(value: string) {
     startTransition(() => {
@@ -175,93 +161,127 @@ export function FilterBar({
     });
   }
 
+  const categoryOptions = [
+    { value: ALL_VALUE, label: "すべてのカテゴリ" },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
+  ];
+  const locationOptions = locations
+    ? [
+        { value: ALL_VALUE, label: "すべての拠点" },
+        ...locations.map((l) => ({ value: l.id, label: l.name })),
+      ]
+    : [];
+  const sortOptions = SPACE_SORT_VALUES.map((v) => ({
+    value: v,
+    label: SORT_LABELS[v],
+  }));
+
   return (
     <div
       className={cn(
-        "flex flex-col gap-6 transition-opacity duration-300",
+        "flex flex-wrap items-center gap-4 transition-opacity duration-300",
         isPending && "opacity-60",
       )}
     >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 sm:gap-x-8 sm:gap-y-4">
-        {showLocationFilter && locations ? (
-          <FilterDropdown
-            label="拠点"
-            activeName={activeLocationName}
-            allLabel="すべての拠点"
-            options={locations}
-            currentValue={params.location ?? ALL_VALUE}
-            onSelect={setLocation}
-          />
-        ) : null}
-        <FilterDropdown
-          label="カテゴリ"
-          activeName={activeCategoryName}
-          allLabel="すべてのカテゴリ"
-          options={categories}
-          currentValue={params.category ?? ALL_VALUE}
-          onSelect={setCategory}
-        />
-        {hasFacilityOptions ? (
-          <FacilityDropdown
-            options={facilityOptions}
-            selected={params.facilities}
-            onToggle={toggleFacility}
-          />
-        ) : null}
-        <SortDropdown value={params.sort} onSelect={setSort} />
-        <button
-          type="button"
-          onClick={() => setIsDialogOpen(true)}
-          aria-haspopup="dialog"
-          aria-expanded={isDialogOpen}
-          data-state={isDialogOpen ? "open" : "closed"}
+      <button
+        type="button"
+        onClick={() => setIsDialogOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={isDialogOpen}
+        data-state={isDialogOpen ? "open" : "closed"}
+        className={cn(
+          TRIGGER_CLASS,
+          hasActiveFilter &&
+            "after:origin-left after:scale-x-100 after:bg-accent/60",
+        )}
+      >
+        <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
+          絞り込み
+        </span>
+        <span
           className={cn(
-            TRIGGER_CLASS,
-            hasDetailFacetActive &&
-              "after:origin-left after:scale-x-100 after:bg-accent/60",
+            "font-medium transition-colors",
+            hasActiveFilter ? "text-accent" : "text-foreground",
           )}
         >
-          <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-            詳細な条件
-          </span>
-          <span
-            className={cn(
-              "font-medium transition-colors",
-              hasDetailFacetActive ? "text-accent" : "text-foreground",
-            )}
-          >
-            {hasDetailFacetActive ? "設定中" : "収容人数・空き状況"}
-          </span>
-          <span
-            aria-hidden="true"
-            className="pointer-events-none text-sm text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
-          >
-            ▾
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={!hasActiveFilter}
-          aria-label="リセット（フィルタを初期状態に戻す）"
-          className="inline-flex min-h-11 items-center px-2 text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted-foreground"
+          {hasActiveFilter ? "適用中" : "条件を指定"}
+        </span>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none text-sm text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
         >
-          リセット
-        </button>
-        <div className="text-sm text-muted-foreground" aria-live="polite">
-          該当{" "}
-          <span className="font-medium text-foreground">{resultCount}</span> 件
-        </div>
+          ▾
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={handleReset}
+        disabled={!hasActiveFilter}
+        aria-label="リセット（フィルタを初期状態に戻す）"
+        className="inline-flex min-h-11 items-center px-2 text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted-foreground"
+      >
+        リセット
+      </button>
+      <div className="text-sm text-muted-foreground" aria-live="polite">
+        該当 <span className="font-medium text-foreground">{resultCount}</span>{" "}
+        件
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>詳細な条件</DialogTitle>
+            <DialogTitle>絞り込み</DialogTitle>
             <DialogDescription>
-              収容人数の下限や、利用したい日時でスペースを絞り込みます。
+              拠点・カテゴリ・設備・並び順・収容人数・空き時間帯でスペースを絞り込みます。
             </DialogDescription>
           </DialogHeader>
+
+          {showLocationFilter && locations ? (
+            <Select
+              label="拠点"
+              options={locationOptions}
+              value={params.location ?? ALL_VALUE}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          ) : null}
+
+          <Select
+            label="カテゴリ"
+            options={categoryOptions}
+            value={params.category ?? ALL_VALUE}
+            onChange={(e) => setCategory(e.target.value)}
+          />
+
+          {hasFacilityOptions ? (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
+                設備
+              </legend>
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {facilityOptions.map((name) => (
+                  <label
+                    key={name}
+                    className="flex min-h-11 items-center gap-2 text-sm text-foreground"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={params.facilities.includes(name)}
+                      onChange={(e) => toggleFacility(name, e.target.checked)}
+                      className="h-4 w-4 accent-accent"
+                    />
+                    {name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
+
+          <Select
+            label="並び順"
+            options={sortOptions}
+            value={params.sort}
+            onChange={(e) => setSort(e.target.value)}
+          />
 
           <label className="flex min-h-11 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
             最低収容人数
@@ -276,6 +296,7 @@ export function FilterBar({
               className="min-h-11 w-32 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none"
             />
           </label>
+
           <fieldset className="flex flex-col gap-1">
             <legend className="text-xs uppercase tracking-eyebrow text-muted-foreground">
               空き時間帯（3 つとも指定時のみ絞り込み）
@@ -321,220 +342,5 @@ export function FilterBar({
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-interface FilterDropdownProps {
-  readonly label: string;
-  readonly activeName: string | null;
-  readonly allLabel: string;
-  readonly options: readonly FilterOption[];
-  readonly currentValue: string;
-  readonly onSelect: (value: string) => void;
-}
-
-const TRIGGER_CLASS =
-  "group relative inline-flex min-h-11 items-center gap-2 pb-2 text-base tracking-wide text-foreground transition-colors focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100";
-
-function FilterDropdown({
-  label,
-  activeName,
-  allLabel,
-  options,
-  currentValue,
-  onSelect,
-}: FilterDropdownProps): ReactElement {
-  const triggerValueLabel = activeName ?? allLabel;
-  const isActive = activeName !== null;
-
-  return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        className={cn(
-          TRIGGER_CLASS,
-          isActive && "after:origin-left after:scale-x-100 after:bg-accent/60",
-        )}
-      >
-        <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-          {label}
-        </span>
-        <span
-          className={cn(
-            "font-medium transition-colors",
-            isActive ? "text-accent" : "text-foreground",
-          )}
-        >
-          {triggerValueLabel}
-        </span>
-        <span
-          aria-hidden="true"
-          className="pointer-events-none text-sm text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
-        >
-          ▾
-        </span>
-      </DropdownMenu.Trigger>
-
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          sideOffset={8}
-          align="start"
-          className="z-50 min-w-[var(--dropdown-min-width)] overflow-hidden border border-border bg-background py-1 shadow-sm focus-visible:outline-none"
-        >
-          <DropdownMenu.RadioGroup
-            value={currentValue}
-            onValueChange={onSelect}
-          >
-            <FilterRadioItem value={ALL_VALUE} label={allLabel} />
-            {options.map((opt) => (
-              <FilterRadioItem key={opt.id} value={opt.id} label={opt.name} />
-            ))}
-          </DropdownMenu.RadioGroup>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
-  );
-}
-
-interface FilterRadioItemProps {
-  readonly value: string;
-  readonly label: string;
-}
-
-const RADIO_ITEM_CLASS =
-  "relative flex cursor-pointer select-none items-center px-4 py-2 text-sm text-foreground outline-none transition-colors focus:bg-surface data-[state=checked]:text-accent data-[state=checked]:font-medium";
-
-function FilterRadioItem({ value, label }: FilterRadioItemProps): ReactElement {
-  return (
-    <DropdownMenu.RadioItem value={value} className={RADIO_ITEM_CLASS}>
-      {label}
-    </DropdownMenu.RadioItem>
-  );
-}
-
-interface FacilityDropdownProps {
-  readonly options: readonly string[];
-  readonly selected: readonly string[];
-  readonly onToggle: (name: string, checked: boolean) => void;
-}
-
-function FacilityDropdown({
-  options,
-  selected,
-  onToggle,
-}: FacilityDropdownProps): ReactElement {
-  const activeCount = selected.length;
-  const isActive = activeCount > 0;
-  const summary = isActive ? `${activeCount} 件選択中` : "すべての設備";
-
-  return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        className={cn(
-          TRIGGER_CLASS,
-          isActive && "after:origin-left after:scale-x-100 after:bg-accent/60",
-        )}
-      >
-        <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-          設備
-        </span>
-        <span
-          className={cn(
-            "font-medium transition-colors",
-            isActive ? "text-accent" : "text-foreground",
-          )}
-        >
-          {summary}
-        </span>
-        <span
-          aria-hidden="true"
-          className="pointer-events-none text-sm text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
-        >
-          ▾
-        </span>
-      </DropdownMenu.Trigger>
-
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          sideOffset={8}
-          align="start"
-          className="z-50 max-h-80 min-w-[var(--dropdown-min-width)] overflow-y-auto border border-border bg-background py-1 shadow-sm focus-visible:outline-none"
-        >
-          {options.map((name) => {
-            const checked = selected.includes(name);
-            return (
-              <DropdownMenu.CheckboxItem
-                key={name}
-                checked={checked}
-                onCheckedChange={(next) => onToggle(name, next === true)}
-                onSelect={(e) => e.preventDefault()}
-                className={cn(
-                  RADIO_ITEM_CLASS,
-                  "pl-8",
-                  checked && "text-accent",
-                )}
-              >
-                <DropdownMenu.ItemIndicator className="absolute left-3 top-1/2 -translate-y-1/2 text-xs">
-                  ✓
-                </DropdownMenu.ItemIndicator>
-                {name}
-              </DropdownMenu.CheckboxItem>
-            );
-          })}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
-  );
-}
-
-interface SortDropdownProps {
-  readonly value: SpaceSort;
-  readonly onSelect: (value: string) => void;
-}
-
-function SortDropdown({ value, onSelect }: SortDropdownProps): ReactElement {
-  const isActive = value !== "recommended";
-  const label = SORT_LABELS[value];
-
-  return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        className={cn(
-          TRIGGER_CLASS,
-          isActive && "after:origin-left after:scale-x-100 after:bg-accent/60",
-        )}
-      >
-        <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-          並び順
-        </span>
-        <span
-          className={cn(
-            "font-medium transition-colors",
-            isActive ? "text-accent" : "text-foreground",
-          )}
-        >
-          {label}
-        </span>
-        <span
-          aria-hidden="true"
-          className="pointer-events-none text-sm text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180"
-        >
-          ▾
-        </span>
-      </DropdownMenu.Trigger>
-
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          sideOffset={8}
-          align="start"
-          className="z-50 min-w-[var(--dropdown-min-width)] overflow-hidden border border-border bg-background py-1 shadow-sm focus-visible:outline-none"
-        >
-          <DropdownMenu.RadioGroup value={value} onValueChange={onSelect}>
-            {SPACE_SORT_VALUES.map((v) => (
-              <FilterRadioItem key={v} value={v} label={SORT_LABELS[v]} />
-            ))}
-          </DropdownMenu.RadioGroup>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
   );
 }

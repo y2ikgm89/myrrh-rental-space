@@ -15,19 +15,21 @@ test.skip(
  * facet の Prisma 変換ロジックは `__tests__/unit/domain/spaces/public-queries.test.ts`
  * が担当。ここでは URL query が FilterBar UI 状態にきちんと写ることだけを検査する。
  *
+ * 拠点・カテゴリ・設備・並び順・収容人数・空き時間帯はすべて単一の「絞り込み」
+ * モーダルの中にあり、自動では開かない。
+ *
  * 規約 SSoT: `.claude/rules/testing-e2e.md`
  */
 
 test.describe("/spaces facet filter — URL 双方向反映", () => {
-  test("root で FilterBar と 拠点/カテゴリ dropdown が描画される", async ({
+  test("root で FilterBar の絞り込みトリガーとリセットが描画される", async ({
     page,
   }) => {
     const res = await page.goto(urls.spaces);
     expect(res?.status()).toBe(200);
 
     await expect(page.getByRole("main")).toBeVisible();
-    // 並び順・設備・リセットは常時表示
-    await expect(page.getByRole("button", { name: /並び順/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /絞り込み/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /リセット/ })).toBeVisible();
   });
 
@@ -35,8 +37,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     page,
   }) => {
     await page.goto(`${urls.spaces}?minCapacity=10`);
-    // 収容人数・空き時間帯は「詳細な条件」モーダルの中（自動では開かない）
-    await page.getByRole("button", { name: /詳細な条件/ }).click();
+    await page.getByRole("button", { name: /絞り込み/ }).click();
     const capacityInput = page.getByLabel("最低収容人数");
     await expect(capacityInput).toHaveValue("10");
   });
@@ -47,26 +48,25 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
     await page.goto(
       `${urls.spaces}?date=2026-12-01&startTime=10:00&endTime=12:00`,
     );
-    await page.getByRole("button", { name: /詳細な条件/ }).click();
+    await page.getByRole("button", { name: /絞り込み/ }).click();
     await expect(page.getByLabel("日付")).toHaveValue("2026-12-01");
     await expect(page.getByLabel("開始時刻")).toHaveValue("10:00");
     await expect(page.getByLabel("終了時刻")).toHaveValue("12:00");
   });
 
-  test("?sort=price-asc で並び順 dropdown が『料金（安い順）』", async ({
+  test("?sort=price-asc で並び順 select が『料金（安い順）』", async ({
     page,
   }) => {
     await page.goto(`${urls.spaces}?sort=price-asc`);
-    await expect(
-      page.getByRole("button", { name: /料金（安い順）/ }),
-    ).toBeVisible();
+    await page.getByRole("button", { name: /絞り込み/ }).click();
+    await expect(page.getByLabel("並び順")).toHaveValue("price-asc");
   });
 
   test("リセットボタンで URL の facet が消える", async ({ page }) => {
     await page.goto(
       `${urls.spaces}?minCapacity=10&sort=price-asc&date=2026-12-01`,
     );
-    await page.getByRole("button", { name: /詳細な条件/ }).click();
+    await page.getByRole("button", { name: /絞り込み/ }).click();
     await expect(page.getByLabel("最低収容人数")).toHaveValue("10");
 
     // モーダルは背後を inert 化するため、閉じてからリセットボタンを操作する
@@ -75,7 +75,7 @@ test.describe("/spaces facet filter — URL 双方向反映", () => {
 
     await expect(page).toHaveURL(new RegExp(`${urls.spaces}(\\?page=1)?$`));
 
-    await page.getByRole("button", { name: /詳細な条件/ }).click();
+    await page.getByRole("button", { name: /絞り込み/ }).click();
     await expect(page.getByLabel("最低収容人数")).toHaveValue("");
   });
 });
