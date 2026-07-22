@@ -384,8 +384,10 @@ model Verification {
 
 model Location {
   id              String  @id @default(uuid()) @db.Uuid
-  slug            String  @unique @db.VarChar(255)
-  name            String  @unique
+  // slug / name の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
+  // 値を永久に予約しないため partial index。SpaceCategory.name と同型の fix）。
+  slug            String  @db.VarChar(255)
+  name            String
   description     String? @db.Text
   address         String
   postalCode      String?
@@ -436,6 +438,8 @@ model Location {
   defaultSmartLockDevice  SmartLockDevice?        @relation("LocationDefaultSmartLockDevice", fields: [defaultSmartLockDeviceId], references: [id], onDelete: SetNull)
 
   @@unique([sortOrder], map: "locations_active_sortOrder_key", where: { isActive: true })
+  @@unique([slug], map: "locations_slug_active_key", where: { isActive: true })
+  @@unique([name], map: "locations_name_active_key", where: { isActive: true })
   @@index([isPublished, isActive])
   @@index([sortOrder])
   @@index([gbpSyncError])

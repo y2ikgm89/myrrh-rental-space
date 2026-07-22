@@ -10,6 +10,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { syncLocationToGbp } from "@/shared/lib/google-business-profile";
 import type { GbpSyncResult } from "@/shared/lib/google-business-profile";
+import { ensureLocationExists } from "@/shared/domain/locations/commands";
 
 export type SyncLocationToGbpInput = { readonly locationId: string };
 
@@ -32,6 +33,8 @@ export type ToggleLocationGbpSyncResult = {
 export async function toggleLocationGbpSyncCommand(
   input: ToggleLocationGbpSyncInput,
 ): Promise<ToggleLocationGbpSyncResult> {
+  await ensureLocationExists(input.locationId);
+
   const location = await prisma.location.update({
     where: { id: input.locationId },
     data: {
