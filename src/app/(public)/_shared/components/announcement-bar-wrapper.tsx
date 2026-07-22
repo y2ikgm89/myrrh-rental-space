@@ -1,5 +1,4 @@
 import { AnnouncementBar } from "./announcement-bar/announcement-bar";
-import { filterBarsWithinDisplayPeriod } from "./announcement-bar/display-period";
 import type { CarouselSettings } from "./announcement-bar/types";
 import {
   getActiveAnnouncementBars,
@@ -43,26 +42,27 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
     sticky: dbSettings.announcementBarSticky,
   };
 
-  const mappedBars = bars.map((bar) => ({
-    id: bar.id,
-    message: bar.message,
-    linkUrl: bar.linkUrl,
-    linkText: bar.linkText,
-    bgColor: bar.bgColor,
-    textColor: bar.textColor,
-    startAt: toISOString(bar.startAt) ?? null,
-    endAt: toISOString(bar.endAt) ?? null,
-  }));
-
-  // Server Component 側で表示期間 (startAt/endAt) を pre-filter し、Client
-  // Component には既に表示可能なバーだけを渡す（render 中の `new Date()` を
-  // helper に閉じ込めて React Compiler `purity` ルールに準拠する公式パターン。
-  // coupon-status.ts と同型）。Client 側で `new Date()` を呼ぶ必要がなくなり、
-  // SSR/hydration 間で表示期間の境界を跨いだ場合の DOM subtree hydration
-  // mismatch も構造的に発生しなくなる。
-  const displayableBars = filterBarsWithinDisplayPeriod(mappedBars);
-
-  if (displayableBars.length === 0) return null;
-
-  return <AnnouncementBar bars={displayableBars} settings={settings} />;
+  // 表示期間 (startAt/endAt) による絞り込みはここでは行わない。public blanket
+  // Cache-Control（next.config.ts、s-maxage=3600, stale-while-revalidate=3600）
+  // により Cloudflare CDN が最長 2 時間程度レスポンスをキャッシュしうるため、
+  // ここで `new Date()` を評価して pre-filter すると、その評価時刻がキャッシュに
+  // 焼き込まれ、表示期間の境界を跨いだバーがキャッシュ有効期間中ずっと
+  // 表示誤り（新規開始が出ない/終了後も出続ける）になる。表示期間の判定は
+  // 意図的に Client Component（announcement-bar.tsx）側で render のたびに
+  // 実際の client 現在時刻を使って行う（詳細は display-period.ts 参照）。
+  return (
+    <AnnouncementBar
+      bars={bars.map((bar) => ({
+        id: bar.id,
+        message: bar.message,
+        linkUrl: bar.linkUrl,
+        linkText: bar.linkText,
+        bgColor: bar.bgColor,
+        textColor: bar.textColor,
+        startAt: toISOString(bar.startAt) ?? null,
+        endAt: toISOString(bar.endAt) ?? null,
+      }))}
+      settings={settings}
+    />
+  );
 }
