@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import {
   assertAllowedManagedImageUrl,
   assertAllowedManagedImageUrls,
@@ -94,7 +95,7 @@ function toLocationData(data: LocationFormData) {
   };
 }
 
-async function ensureLocationExists(id: string): Promise<{
+export async function ensureLocationExists(id: string): Promise<{
   id: string;
   spaces: number;
 }> {
@@ -102,7 +103,7 @@ async function ensureLocationExists(id: string): Promise<{
     where: { id, isActive: true },
     include: {
       _count: {
-        select: { spaces: true },
+        select: { spaces: { where: { isActive: true } } },
       },
     },
   });
@@ -117,37 +118,54 @@ async function ensureLocationExists(id: string): Promise<{
   };
 }
 
-export async function createLocation(
+/** slug/name の unique 制約違反 (P2002) を、対象 field を特定した DomainError('DUPLICATE') に変換する。
+ *
+ * 事前 findUnique チェックは TOCTOU race（2 並行リクエストが同じ新規 slug/name を
+ * 同時に通す）を防げないため使わない。create/update の catch でのみ検出する。
+ */
+function rethrowAsDuplicateError(
+  error: unknown,
   data: LocationFormData,
-): Promise<{ id: string; slug: string }> {
-  const existing = await prisma.location.findUnique({
-    where: { slug: data.slug },
-    select: { id: true },
-  });
-  if (existing) {
+): never {
+  if (isPrismaUniqueConstraintError(error, "slug")) {
     throw new DomainError(
       `スラッグ "${data.slug}" は既に使用されています`,
       "DUPLICATE",
     );
   }
+  if (isPrismaUniqueConstraintError(error, "name")) {
+    throw new DomainError(
+      `名前 "${data.name}" は既に使用されています`,
+      "DUPLICATE",
+    );
+  }
+  throw error;
+}
 
-  const location = await prisma.$transaction(async (tx) => {
-    await tx.$executeRaw(buildOrderScopeLockSql("locations:active"));
+export async function createLocation(
+  data: LocationFormData,
+): Promise<{ id: string; slug: string }> {
+  try {
+    const location = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw(buildOrderScopeLockSql("locations:active"));
 
-    const maxOrder = await tx.location.aggregate({
-      _max: { sortOrder: true },
+      const maxOrder = await tx.location.aggregate({
+        _max: { sortOrder: true },
+      });
+
+      return tx.location.create({
+        data: {
+          ...toLocationData(data),
+          // sortOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
+          sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+        },
+      });
     });
 
-    return tx.location.create({
-      data: {
-        ...toLocationData(data),
-        // sortOrder はシステム管理（末尾に自動採番、D&D reorder が SSoT）
-        sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
-      },
-    });
-  });
-
-  return { id: location.id, slug: location.slug };
+    return { id: location.id, slug: location.slug };
+  } catch (error) {
+    rethrowAsDuplicateError(error, data);
+  }
 }
 
 export async function updateLocation(
@@ -156,21 +174,14 @@ export async function updateLocation(
 ): Promise<{ id: string; slug: string }> {
   await ensureLocationExists(id);
 
-  const slugConflict = await prisma.location.findUnique({
-    where: { slug: data.slug },
-    select: { id: true },
-  });
-  if (slugConflict && slugConflict.id !== id) {
-    throw new DomainError(
-      `スラッグ "${data.slug}" は既に使用されています`,
-      "DUPLICATE",
-    );
+  try {
+    await prisma.location.update({
+      where: { id },
+      data: toLocationData(data),
+    });
+  } catch (error) {
+    rethrowAsDuplicateError(error, data);
   }
-
-  await prisma.location.update({
-    where: { id },
-    data: toLocationData(data),
-  });
 
   return { id, slug: data.slug };
 }
