@@ -3,8 +3,17 @@
 import type { ChangeEvent, ReactElement } from "react";
 import { useQueryStates } from "nuqs";
 import { useState, useTransition } from "react";
-import { Collapsible, DropdownMenu } from "radix-ui";
+import { DropdownMenu } from "radix-ui";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/public/components/design-system/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/public/components/design-system/dialog";
 import {
   SPACE_SORT_VALUES,
   spaceSearchParamsParsers,
@@ -35,9 +44,11 @@ const SORT_LABELS: Record<SpaceSort, string> = {
  * 公開スペース一覧のフィルタ toolbar。
  *
  * - 上段: 単一/複数選択 Dropdown（拠点・カテゴリ・設備・並び順）+ 詳細な条件トグル +
- *   リセット + 件数。デフォルトで 1 行に収まる
- * - 詳細な条件（最低収容人数 / 空き時間帯）は Collapsible で畳んでおき、
- *   該当 facet が URL に既にある場合のみ初期展開する
+ *   リセット + 件数。常に 1 行に収まり、開閉状態に関わらず高さが変わらない
+ * - 詳細な条件（最低収容人数 / 空き時間帯）は Dialog（モーダル）に格納する。
+ *   ページ内容を押し広げず、背後を inert 化するため誤操作も起きにくい。
+ *   URL に該当 facet が既にあっても自動では開かない（モーダルの自動表示は
+ *   離脱を招くアンチパターンのため）。トリガーの活性表示で状態を示す
  * - すべて nuqs `useQueryStates(spaceSearchParamsParsers)` で URL 同期。
  *   任意の facet 変更で page=1 に戻す（結果セットが変わるため）。
  */
@@ -77,16 +88,14 @@ export function FilterBar({
       ? (categories.find((c) => c.id === params.category)?.name ?? null)
       : null;
 
-  // 収容人数・空き時間帯 facet。URL に既に値がある（共有リンク等）場合のみ
-  // マウント時点で開いた状態にする（以降はユーザー操作のみで開閉する）。
+  // 収容人数・空き時間帯 facet。モーダルは常に閉じた状態で始まる
+  // （URL に値があっても自動表示はしない）。トリガーの活性表示のみで状態を示す。
   const hasDetailFacetActive =
     params.minCapacity !== null ||
     params.date !== "" ||
     params.startTime !== "" ||
     params.endTime !== "";
-  const [isDetailsOpen, setIsDetailsOpen] = useState(
-    () => hasDetailFacetActive,
-  );
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   function setCategory(value: string) {
     startTransition(() => {
@@ -202,10 +211,10 @@ export function FilterBar({
         <SortDropdown value={params.sort} onSelect={setSort} />
         <button
           type="button"
-          onClick={() => setIsDetailsOpen((open) => !open)}
-          aria-expanded={isDetailsOpen}
-          aria-controls="space-detail-filters"
-          data-state={isDetailsOpen ? "open" : "closed"}
+          onClick={() => setIsDialogOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={isDialogOpen}
+          data-state={isDialogOpen ? "open" : "closed"}
           className={cn(
             TRIGGER_CLASS,
             hasDetailFacetActive &&
@@ -245,11 +254,15 @@ export function FilterBar({
         </div>
       </div>
 
-      <Collapsible.Root open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <Collapsible.Content
-          id="space-detail-filters"
-          className="flex flex-wrap items-end gap-3 border-t border-border pt-4 sm:gap-6"
-        >
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>詳細な条件</DialogTitle>
+            <DialogDescription>
+              収容人数の下限や、利用したい日時でスペースを絞り込みます。
+            </DialogDescription>
+          </DialogHeader>
+
           <label className="flex min-h-11 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
             最低収容人数
             <input
@@ -294,8 +307,19 @@ export function FilterBar({
               />
             </div>
           </fieldset>
-        </Collapsible.Content>
-      </Collapsible.Root>
+
+          <DialogFooter>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
+              閉じる
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
