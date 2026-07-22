@@ -681,4 +681,37 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
   ],
+
+  terms: [
+    {
+      type: "hero",
+      config: {
+        sectionLabel: "Terms",
+        title: [
+          {
+            _key: crypto.randomUUID(),
+            _type: "span" as const,
+            text: "規約一覧",
+          },
+        ],
+        subtitle: block(
+          "利用規約・プライバシーポリシー・キャンセルポリシー等の一覧",
+        ),
+        variant: "minimal",
+      },
+      order: 0,
+      isActive: true,
+    },
+    {
+      type: "terms-list",
+      config: {
+        sectionLabel: "",
+        title: [
+          { _key: crypto.randomUUID(), _type: "span" as const, text: "" },
+        ],
+      },
+      order: 1,
+      isActive: true,
+    },
+  ],
 };

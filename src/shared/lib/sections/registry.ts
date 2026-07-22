@@ -1,6 +1,6 @@
 // src/shared/lib/sections/registry.ts
 //
-// セクションレジストリ — 全 22 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
+// セクションレジストリ — 全 23 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
 
 import type { SectionCategory, SectionDefinition } from "./types";
 import { isRecord } from "@/shared/lib/serialize";
@@ -41,6 +41,8 @@ import { spaceListConfigSchema } from "./definitions/space-list/schema";
 import { spaceListMetadata } from "./definitions/space-list/metadata";
 import { spaceShowcaseConfigSchema } from "./definitions/space-showcase/schema";
 import { spaceShowcaseMetadata } from "./definitions/space-showcase/metadata";
+import { termsListConfigSchema } from "./definitions/terms-list/schema";
+import { termsListMetadata } from "./definitions/terms-list/metadata";
 import { testimonialConfigSchema } from "./definitions/testimonial/schema";
 import { testimonialMetadata } from "./definitions/testimonial/metadata";
 import { valuePropsConfigSchema } from "./definitions/value-props/schema";
@@ -54,7 +56,7 @@ import { pageHeroMetadata } from "./definitions/page-hero";
 // 定義レコード
 // ─────────────────────────────────────────────────────────────
 
-/** 全 22 セクション定義（page-hero 含む） */
+/** 全 23 セクション定義（page-hero 含む） */
 const definitions = {
   "page-hero": {
     type: "page-hero",
@@ -165,6 +167,11 @@ const definitions = {
     type: "location-list",
     configSchema: locationListConfigSchema,
     metadata: locationListMetadata,
+  },
+  "terms-list": {
+    type: "terms-list",
+    configSchema: termsListConfigSchema,
+    metadata: termsListMetadata,
   },
 } as const satisfies Record<string, SectionDefinition>;
 

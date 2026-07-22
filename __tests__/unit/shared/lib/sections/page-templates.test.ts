@@ -8,7 +8,7 @@ import {
 import { getAllSectionDefinitions } from "@/shared/lib/sections/registry";
 
 describe("PAGE_TEMPLATES", () => {
-  it("contains all 11 expected templates", () => {
+  it("contains all 12 expected templates", () => {
     const expected = [
       "home",
       "content",
@@ -20,6 +20,7 @@ describe("PAGE_TEMPLATES", () => {
       "events-archive",
       "spaces-archive",
       "reservation",
+      "terms-archive",
       "custom",
     ];
     expect(Object.keys(PAGE_TEMPLATES).sort()).toEqual(expected.sort());
@@ -107,6 +108,10 @@ describe("PAGE_TEMPLATES", () => {
     );
     expect(PAGE_TEMPLATES["access"]?.allowedSectionTypes).not.toContain(
       "event-calendar",
+    );
+    // terms-list は terms-archive 専用（他テンプレートに漏れない）
+    expect(PAGE_TEMPLATES["faq"]?.allowedSectionTypes).not.toContain(
+      "terms-list",
     );
   });
 });
