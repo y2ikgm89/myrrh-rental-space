@@ -149,6 +149,9 @@ mock.module("@/shared/domain/customers/commands", () => ({
   resetCustomerEmailDeliveryStatusCommand: mock(() =>
     Promise.resolve({ previous: "OK" }),
   ),
+  // customer.ts が recomputeCustomerStatsCommand を直接 import するため、
+  // このファイル自体は対象外テストでもモック必須(Phase 4)。
+  recomputeCustomerStatsCommand: mock(() => Promise.resolve(undefined)),
 }));
 
 mock.module("@/shared/domain/customers/queries", () => ({
@@ -159,6 +162,9 @@ mock.module("@/shared/domain/customers/risk-detection", () => ({
   clearRiskFlagCommand: (
     ...args: Parameters<typeof mockClearRiskFlagCommand>
   ) => mockClearRiskFlagCommand(...args),
+  // customer.ts が duplicate-detection.ts 経由で reconcileFlagReasonsCommand を
+  // 間接 import するため、このファイルの対象外テストでもモック必須(Phase 4)。
+  reconcileFlagReasonsCommand: mock(async () => 0),
 }));
 
 mock.module("@/admin/lib/action-auth", () => ({
