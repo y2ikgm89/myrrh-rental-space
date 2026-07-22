@@ -64,8 +64,11 @@ mock.module("@/shared/lib/admin-permissions", () => ({
   hasPermission: mock(() => true),
 }));
 
-mock.module("@/admin/lib/permissions", () => ({
+mock.module("@/shared/lib/admin-resource-access", () => ({
   userHasResourceAccess: mock(() => Promise.resolve(true)),
+}));
+
+mock.module("@/shared/lib/admin-role-guards", () => ({
   isEditorRole: mock(() => false),
 }));
 

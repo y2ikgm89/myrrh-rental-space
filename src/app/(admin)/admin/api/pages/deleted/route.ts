@@ -1,7 +1,7 @@
 import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
-import { isEditorRole } from "@/admin/lib/permissions";
+import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { getDeletedPagesListQuery } from "@/shared/domain/pages/admin-queries";
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 import {

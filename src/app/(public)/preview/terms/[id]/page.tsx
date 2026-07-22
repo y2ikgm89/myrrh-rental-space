@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { TermsDetailPageContent } from "@/app/(public)/terms/_components/terms-detail-page-content";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
 import { getTermsByIdForPreview } from "@/shared/domain/terms/preview-queries";
 
 interface PageProps {
@@ -20,7 +21,11 @@ export default async function TermsPreviewPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
-  await verifyAdminSession();
+  const user = await verifyAdminSession();
+
+  if (!(await userHasResourceAccess(user, "terms", "read"))) {
+    notFound();
+  }
 
   const { id } = await params;
   const terms = await getTermsByIdForPreview(id);
