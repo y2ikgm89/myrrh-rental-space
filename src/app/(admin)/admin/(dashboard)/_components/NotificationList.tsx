@@ -28,10 +28,9 @@ const subscribeNoop = (): (() => void) => () => {};
 const getHydratedSnapshot = (): boolean => true;
 const getServerSnapshot = (): boolean => false;
 
-function formatRelativeTime(dateStr: string): string {
-  const now = new Date();
+function formatRelativeTime(dateStr: string, nowMs: number): string {
   const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
+  const diffMs = nowMs - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
   if (diffMin < 1) return "たった今";
   if (diffMin < 60) return `${String(diffMin)}分前`;
@@ -55,6 +54,11 @@ export function NotificationList({ notifications }: NotificationListProps) {
     getHydratedSnapshot,
     getServerSnapshot,
   );
+  // formatRelativeTime の基準時刻を明示的な引数として渡す（helper 内部で
+  // new Date() を呼ぶと React Compiler の purity ルールの検知対象から漏れる
+  // ため、呼び出し側で明示的に読み取り、意図を明記した上で disable する）。
+  // eslint-disable-next-line react-hooks/purity, @eslint-react/purity -- Client Component: 相対時刻表示の基準時刻読み取りは意図的
+  const nowMs = Date.now();
 
   if (notifications.length === 0) {
     return (
@@ -102,7 +106,7 @@ export function NotificationList({ notifications }: NotificationListProps) {
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {isHydrated
-                      ? formatRelativeTime(notification.createdAt)
+                      ? formatRelativeTime(notification.createdAt, nowMs)
                       : formatDateShort(notification.createdAt)}
                   </span>
                 </div>

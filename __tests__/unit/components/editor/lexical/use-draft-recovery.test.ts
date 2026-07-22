@@ -85,9 +85,13 @@ const RECENT_SAVED_AT = String(Date.now());
 
 describe("shouldOfferDraftRestore", () => {
   test("下書きが存在しない場合は false", () => {
-    expect(shouldOfferDraftRestore(null, EMPTY_LEXICAL_EDITOR_STATE_JSON)).toBe(
-      false,
-    );
+    expect(
+      shouldOfferDraftRestore(
+        null,
+        EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        Date.now(),
+      ),
+    ).toBe(false);
   });
 
   test("下書きが現在の初期コンテンツと同一の場合は false", () => {
@@ -96,28 +100,44 @@ describe("shouldOfferDraftRestore", () => {
       savedAt: RECENT_SAVED_AT,
     };
     expect(
-      shouldOfferDraftRestore(draft, EMPTY_LEXICAL_EDITOR_STATE_JSON),
+      shouldOfferDraftRestore(
+        draft,
+        EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        Date.now(),
+      ),
     ).toBe(false);
   });
 
   test("下書きが初期コンテンツと異なり、有効な EditorState JSON の場合は true", () => {
     const draft = { json: VALID_DRAFT_JSON, savedAt: RECENT_SAVED_AT };
     expect(
-      shouldOfferDraftRestore(draft, EMPTY_LEXICAL_EDITOR_STATE_JSON),
+      shouldOfferDraftRestore(
+        draft,
+        EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        Date.now(),
+      ),
     ).toBe(true);
   });
 
   test("下書きが壊れた JSON（パース不能）の場合は false（黙って無視）", () => {
     const draft = { json: "not-json", savedAt: RECENT_SAVED_AT };
     expect(
-      shouldOfferDraftRestore(draft, EMPTY_LEXICAL_EDITOR_STATE_JSON),
+      shouldOfferDraftRestore(
+        draft,
+        EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        Date.now(),
+      ),
     ).toBe(false);
   });
 
   test("下書きが Composer マウント不可の形式（root の子が空配列）の場合は false", () => {
     const draft = { json: LEGACY_EMPTY_ROOT_ONLY, savedAt: RECENT_SAVED_AT };
     expect(
-      shouldOfferDraftRestore(draft, EMPTY_LEXICAL_EDITOR_STATE_JSON),
+      shouldOfferDraftRestore(
+        draft,
+        EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        Date.now(),
+      ),
     ).toBe(false);
   });
 
@@ -144,7 +164,9 @@ describe("shouldOfferDraftRestore", () => {
       },
     });
     const draft = { json: VALID_DRAFT_JSON, savedAt: RECENT_SAVED_AT };
-    expect(shouldOfferDraftRestore(draft, existingContentJson)).toBe(true);
+    expect(
+      shouldOfferDraftRestore(draft, existingContentJson, Date.now()),
+    ).toBe(true);
   });
 
   describe("有効期限（DRAFT_RECOVERY_EXPIRY_MS）", () => {

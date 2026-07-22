@@ -71,6 +71,22 @@ function emptySlot(): SlotFormItem {
   };
 }
 
+/**
+ * render 本体（displayedSlots の計算）専用のフォールバック値。`slots[0]` が
+ * 存在しない状況は呼び出し元（EventForm.tsx の useState lazy initializer +
+ * removeSlot/handleScheduleModeChange の不変条件）により実際には発生しない
+ * 防御的分岐だが、万一発生した場合でも render 中に `emptySlot()`（モジュール
+ * レベルの可変カウンタ `nextClientSlotKey` を変異させる）を呼ばないよう、
+ * 変異を伴わない静的な値のみを使う（React Compiler の purity/globals
+ * ルールが本来防ぎたい「render 中のモジュールグローバル変異」を回避）。
+ */
+const FALLBACK_DISPLAY_SLOT: SlotFormItem = {
+  clientKey: "fallback-slot",
+  startAt: "",
+  endAt: "",
+  capacity: 1,
+};
+
 export function EventScheduleFields({
   scheduleMode,
   onScheduleModeChange,
@@ -88,7 +104,7 @@ export function EventScheduleFields({
   const isTimedEntry = scheduleMode === EventScheduleMode.TIMED_ENTRY;
   const displayedSlots =
     scheduleMode === EventScheduleMode.SINGLE_OCCURRENCE
-      ? [slots[0] ?? emptySlot()]
+      ? [slots[0] ?? FALLBACK_DISPLAY_SLOT]
       : slots;
 
   const handleScheduleModeChange = (value: string) => {

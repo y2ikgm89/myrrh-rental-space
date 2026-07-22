@@ -1,4 +1,5 @@
 import { AnnouncementBar } from "./announcement-bar/announcement-bar";
+import { filterBarsWithinDisplayPeriod } from "./announcement-bar/display-period";
 import type { CarouselSettings } from "./announcement-bar/types";
 import {
   getActiveAnnouncementBars,
@@ -42,19 +43,26 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
     sticky: dbSettings.announcementBarSticky,
   };
 
-  return (
-    <AnnouncementBar
-      bars={bars.map((bar) => ({
-        id: bar.id,
-        message: bar.message,
-        linkUrl: bar.linkUrl,
-        linkText: bar.linkText,
-        bgColor: bar.bgColor,
-        textColor: bar.textColor,
-        startAt: toISOString(bar.startAt) ?? null,
-        endAt: toISOString(bar.endAt) ?? null,
-      }))}
-      settings={settings}
-    />
-  );
+  const mappedBars = bars.map((bar) => ({
+    id: bar.id,
+    message: bar.message,
+    linkUrl: bar.linkUrl,
+    linkText: bar.linkText,
+    bgColor: bar.bgColor,
+    textColor: bar.textColor,
+    startAt: toISOString(bar.startAt) ?? null,
+    endAt: toISOString(bar.endAt) ?? null,
+  }));
+
+  // Server Component 側で表示期間 (startAt/endAt) を pre-filter し、Client
+  // Component には既に表示可能なバーだけを渡す（render 中の `new Date()` を
+  // helper に閉じ込めて React Compiler `purity` ルールに準拠する公式パターン。
+  // coupon-status.ts と同型）。Client 側で `new Date()` を呼ぶ必要がなくなり、
+  // SSR/hydration 間で表示期間の境界を跨いだ場合の DOM subtree hydration
+  // mismatch も構造的に発生しなくなる。
+  const displayableBars = filterBarsWithinDisplayPeriod(mappedBars);
+
+  if (displayableBars.length === 0) return null;
+
+  return <AnnouncementBar bars={displayableBars} settings={settings} />;
 }

@@ -18,16 +18,6 @@ import { useDismissedBars, dismissBar } from "./use-dismissed-bars";
 import { computeBarStyles, getTransitionAnimation } from "./styles";
 import type { AnnouncementBarItem, CarouselSettings } from "./types";
 
-function isWithinDisplayPeriod(bar: AnnouncementBarItem): boolean {
-  const now = new Date();
-  const startAt = bar.startAt ? new Date(bar.startAt) : null;
-  const endAt = bar.endAt ? new Date(bar.endAt) : null;
-  if (!startAt && !endAt) return true;
-  if (startAt && !endAt) return now >= startAt;
-  if (!startAt && endAt) return now <= endAt;
-  return startAt !== null && endAt !== null && now >= startAt && now <= endAt;
-}
-
 // prefers-reduced-motion を render に反映する購読（React 19 公式パターン、module-scope
 // subscriber で参照安定）。自動回転の停止と停止ボタンの表示を render に反映する。
 function subscribeReduceMotion(callback: () => void): () => void {
@@ -60,9 +50,11 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
     getReduceMotionServerSnapshot,
   );
 
-  const visibleBars = bars.filter(
-    (bar) => !dismissedIds.includes(bar.id) && isWithinDisplayPeriod(bar),
-  );
+  // 表示期間 (startAt/endAt) は AnnouncementBarWrapper（Server Component）側で
+  // 既にフィルタ済み（render 中の new Date() を避ける React Compiler purity
+  // 対応。display-period.ts 参照）。ここでは client-only な既読(dismiss)状態
+  // による絞り込みのみ行う。
+  const visibleBars = bars.filter((bar) => !dismissedIds.includes(bar.id));
 
   // 自動回転の停止条件（WCAG 2.2.2）: 明示停止 / reduced-motion / hover（pauseOnHover 設定時）
   const isPaused =
