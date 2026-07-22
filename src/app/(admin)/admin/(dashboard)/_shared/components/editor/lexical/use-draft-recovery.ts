@@ -42,13 +42,17 @@
  * キャッシュを明示的に無効化して再レンダーする（保存直後に、既に存在しない
  * 下書きをバナーが提示し続けるのを防ぐ）。
  *
- * キャッシュの保持に `useRef` ではなく `useState` の lazy initializer を
- * 使っているのは、このリポジトリでは render 中の `ref.current` 読み取りが
- * ESLint `react-hooks/refs`（React Compiler ルール）で error になるため
- * （マウント時スナップショットは `useState(initializer)` を使う規約。
- * 例外は lexical-draggable-block-plugin.ts のみ）。`useSyncExternalStore` の
- * `getSnapshot` は render 中に呼ばれるため、内部キャッシュは「render で
- * 読んでよい」`useState` の戻り値経由でしか保持できない。
+ * キャッシュの保持には `useRef` ではなく `useState` の lazy initializer を
+ * 使っている。（訂正: 当初このコメントは「`useSyncExternalStore` の
+ * `getSnapshot` 内で `ref.current` を読むと ESLint `react-hooks/refs` が
+ * error になるため `useRef` は使えない」としていたが、これは誤り。
+ * `getSnapshot` クロージャ内での `ref.current ??= computeValue()` 形の
+ * lazy キャッシュは実機 ESLint 検証済みで react-hooks/refs を一切トリガー
+ * しない（faq-helpful-vote.tsx 等で同型パターンが disable コメント無しで
+ * lint 済）。`useState` を選んでいるのは、このリポジトリのマウント時
+ * スナップショット取得の統一慣習（`useState(initializer)`、
+ * feedback_react-compiler-no-ref-read-during-render 参照）に合わせた
+ * スタイル上の選択であり、`useRef` でも動作上・lint 上の問題は無い。
  *
  * 判定ロジックは `shouldOfferDraftRestore` として素の関数に切り出し、
  * bun test で純粋関数として単体テストできるようにしている。
@@ -80,11 +84,18 @@ export const DRAFT_RECOVERY_EXPIRY_MS = 24 * 60 * 60 * 1000;
  * - 下書きが現在の初期コンテンツと同一 → false（差分なし）
  * - 下書きの保存日時が不正、または `DRAFT_RECOVERY_EXPIRY_MS` を超えて古い → false
  * - 下書き JSON が Composer にマウントできない形式 → false（壊れた/非互換な下書きは無視）
+ *
+ * `now` はデフォルト引数にせず必須にしている。`now: number = Date.now()` の
+ * ようにデフォルト引数へ隠すと、render 中に引数省略で呼び出しても
+ * ESLint react-hooks/purity（React Compiler ルール）が検知できない
+ * （呼び出し式の直接の引数として現れないため）。呼び出し側
+ * （`useDraftRecovery`）で明示的に読み取らせることで、impure read が
+ * 常に目に見える形で残る。
  */
 export function shouldOfferDraftRestore(
   draft: LexicalDraft | null,
   initialContentJson: string,
-  now: number = Date.now(),
+  now: number,
 ): boolean {
   if (!draft) return false;
   if (draft.json === initialContentJson) return false;
@@ -205,8 +216,10 @@ export function useDraftRecovery({
   );
   const [dismissed, setDismissed] = useState(false);
 
+  // eslint-disable-next-line react-hooks/purity, @eslint-react/purity -- Client-side hook: 有効期限判定の基準時刻読み取りは意図的（shouldOfferDraftRestore の JSDoc 参照）
+  const now = Date.now();
   const isAvailable =
-    !dismissed && shouldOfferDraftRestore(draft, initialContentJson);
+    !dismissed && shouldOfferDraftRestore(draft, initialContentJson, now);
 
   const restore = () => {
     if (!draft) return;
