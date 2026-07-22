@@ -52,6 +52,12 @@ const TRIGGER_CLASS =
  * - モーダル内の単一選択（拠点・カテゴリ・並び順）は、Dialog の中で
  *   さらにポップアップを開く二重構造を避けるためネイティブ select
  *   （design-system Select）を使う。設備は複数選択のためチェックボックス
+ * - 項目順は「重要度」基準（拠点/カテゴリ → 空き時間帯（実際に予約と重複判定
+ *   する本質的な facet）→ 最低収容人数 → 並び順 → 設備（副次的な絞り込み））。
+ *   拠点+カテゴリ・最低収容人数+並び順はそれぞれ形状が近いペアとして
+ *   `grid-cols-1 sm:grid-cols-2`（`profile-form.tsx` と同じ house pattern）で
+ *   デスクトップ幅では横並びにし、可変幅の空き時間帯・設備はそれぞれ
+ *   単独で全幅の行を占める
  * - すべて nuqs `useQueryStates(spaceSearchParamsParsers)` で URL 同期。
  *   任意の facet 変更で page=1 に戻す（結果セットが変わるため）
  */
@@ -232,70 +238,38 @@ export function FilterBar({
           <DialogHeader>
             <DialogTitle>絞り込み</DialogTitle>
             <DialogDescription>
-              拠点・カテゴリ・設備・並び順・収容人数・空き時間帯でスペースを絞り込みます。
+              {showLocationFilter
+                ? "拠点・カテゴリ・空き時間帯・収容人数・並び順・設備でスペースを絞り込みます。"
+                : "カテゴリ・空き時間帯・収容人数・並び順・設備でスペースを絞り込みます。"}
             </DialogDescription>
           </DialogHeader>
 
           {showLocationFilter && locations ? (
+            // grid-cols-2 は Dialog 既定の max-w-lg（512px）幅が前提。sm: は
+            // viewport 基準なので、より狭い max-w を DialogContent に渡す
+            // 消費者ができた場合はこの前提を再検討すること。
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="拠点"
+                options={locationOptions}
+                value={params.location ?? ALL_VALUE}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+              <Select
+                label="カテゴリ"
+                options={categoryOptions}
+                value={params.category ?? ALL_VALUE}
+                onChange={(e) => setCategory(e.target.value)}
+              />
+            </div>
+          ) : (
             <Select
-              label="拠点"
-              options={locationOptions}
-              value={params.location ?? ALL_VALUE}
-              onChange={(e) => setLocation(e.target.value)}
+              label="カテゴリ"
+              options={categoryOptions}
+              value={params.category ?? ALL_VALUE}
+              onChange={(e) => setCategory(e.target.value)}
             />
-          ) : null}
-
-          <Select
-            label="カテゴリ"
-            options={categoryOptions}
-            value={params.category ?? ALL_VALUE}
-            onChange={(e) => setCategory(e.target.value)}
-          />
-
-          {hasFacilityOptions ? (
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
-                設備
-              </legend>
-              <div className="flex flex-wrap gap-x-4 gap-y-2">
-                {facilityOptions.map((name) => (
-                  <label
-                    key={name}
-                    className="flex min-h-11 items-center gap-2 text-sm text-foreground"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={params.facilities.includes(name)}
-                      onChange={(e) => toggleFacility(name, e.target.checked)}
-                      className="h-4 w-4 accent-accent"
-                    />
-                    {name}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          ) : null}
-
-          <Select
-            label="並び順"
-            options={sortOptions}
-            value={params.sort}
-            onChange={(e) => setSort(e.target.value)}
-          />
-
-          <label className="flex min-h-11 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
-            最低収容人数
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              step={1}
-              placeholder="人数"
-              value={params.minCapacity ?? ""}
-              onChange={setMinCapacity}
-              className="min-h-11 w-32 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none"
-            />
-          </label>
+          )}
 
           <fieldset className="flex flex-col gap-1">
             <legend className="text-xs uppercase tracking-eyebrow text-muted-foreground">
@@ -328,6 +302,53 @@ export function FilterBar({
               />
             </div>
           </fieldset>
+
+          {/* grid-cols-2 は max-w-lg 前提（上の拠点・カテゴリと同じ注意点）。 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="flex min-h-11 flex-col gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
+              最低収容人数
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={1}
+                placeholder="人数"
+                value={params.minCapacity ?? ""}
+                onChange={setMinCapacity}
+                className="min-h-11 w-32 border-b border-border bg-transparent px-1 py-2 text-base tracking-wide text-foreground placeholder:text-muted-foreground focus-visible:border-accent focus-visible:outline-none"
+              />
+            </label>
+            <Select
+              label="並び順"
+              options={sortOptions}
+              value={params.sort}
+              onChange={(e) => setSort(e.target.value)}
+            />
+          </div>
+
+          {hasFacilityOptions ? (
+            <fieldset className="flex flex-col gap-2">
+              <legend className="mb-1 text-xs uppercase tracking-eyebrow text-muted-foreground">
+                設備
+              </legend>
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
+                {facilityOptions.map((name) => (
+                  <label
+                    key={name}
+                    className="flex min-h-11 min-w-11 items-center gap-2 text-sm text-foreground"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={params.facilities.includes(name)}
+                      onChange={(e) => toggleFacility(name, e.target.checked)}
+                      className="h-4 w-4 accent-accent"
+                    />
+                    {name}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
 
           <DialogFooter className="sm:items-center sm:justify-between">
             <div className="text-sm text-muted-foreground" aria-live="polite">
