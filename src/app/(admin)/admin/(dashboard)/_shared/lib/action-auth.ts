@@ -15,11 +15,9 @@ import {
   type AdminUser,
 } from "@/shared/lib/admin-auth";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
-import {
-  userHasResourceAccess,
-  canAccessAdmin,
-  isEditorRole,
-} from "@/admin/lib/permissions";
+import { canAccessAdmin } from "@/admin/lib/permissions";
+import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { logUserAction, logPermissionDenied } from "@/admin/lib/audit";

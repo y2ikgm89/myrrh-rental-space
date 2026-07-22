@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
 import { getPageBySlugQuery } from "@/shared/domain/pages/admin-queries";
 import { getPageForEditQuery } from "@/shared/domain/sections/admin-queries";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
@@ -21,12 +22,16 @@ export default async function ManagedPagePreviewPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
-  await verifyAdminSession();
+  const user = await verifyAdminSession();
 
   const { slug } = await params;
   const pageMeta = await getPageBySlugQuery(slug);
 
   if (!pageMeta) {
+    notFound();
+  }
+
+  if (!(await userHasResourceAccess(user, "page", "read", pageMeta.id))) {
     notFound();
   }
 

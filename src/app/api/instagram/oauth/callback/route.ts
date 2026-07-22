@@ -14,7 +14,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { serverEnv } from "@/shared/lib/env/server";
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
-import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
+import { isAdminRole, isSuperAdminRole } from "@/shared/lib/admin-role-guards";
 import { connectInstagramOAuthAccount } from "@/shared/domain/instagram/commands";
 import {
   exchangeCodeForToken,

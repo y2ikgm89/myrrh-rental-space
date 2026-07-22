@@ -25,6 +25,11 @@ const PURE_RBAC_EXPORTS = [
   "Action",
   "RESOURCE_LABELS",
   "ROLE_LABELS",
+  // role type guards: src/shared/lib/admin-role-guards.ts が SSoT
+  // (public/preview ルートからも参照するため shared に置く)
+  "isEditorRole",
+  "isAdminRole",
+  "isSuperAdminRole",
 ] as const;
 
 function collectSourceFiles(root: string): string[] {

@@ -3,7 +3,7 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { isEditorRole } from "@/admin/lib/permissions";
+import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type {

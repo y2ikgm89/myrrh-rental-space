@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { PostDetailPageContent } from "@/app/(public)/blog/_components/post-detail-page-content";
 import { PreviewBanner } from "@/public/components/ui/preview-banner";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
+import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
 import { getPostByIdForPreview } from "@/shared/domain/posts/preview-queries";
 
 interface PageProps {
@@ -20,7 +21,11 @@ export default async function PostPreviewPage({
   params,
 }: PageProps): Promise<ReactElement> {
   await connection();
-  await verifyAdminSession();
+  const user = await verifyAdminSession();
+
+  if (!(await userHasResourceAccess(user, "post", "read"))) {
+    notFound();
+  }
 
   const { id } = await params;
   const post = await getPostByIdForPreview(id);

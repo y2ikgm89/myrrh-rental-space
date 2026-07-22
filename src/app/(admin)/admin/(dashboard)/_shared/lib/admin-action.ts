@@ -1,7 +1,8 @@
 import "server-only";
 
 import type { AdminUser } from "@/shared/lib/admin-auth";
-import { userHasResourceAccess, isEditorRole } from "@/admin/lib/permissions";
+import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
 import { checkAdminAuth, logAction } from "@/admin/lib/action-auth";

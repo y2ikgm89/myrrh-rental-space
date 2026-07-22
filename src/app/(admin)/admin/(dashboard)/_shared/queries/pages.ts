@@ -14,7 +14,7 @@ import {
   requireAdminPermission,
   requireAdminResourcePermission,
 } from "./_helpers";
-import { isEditorRole } from "@/admin/lib/permissions";
+import { isEditorRole } from "@/shared/lib/admin-role-guards";
 
 async function getAllowedPageIds(userId: string): Promise<string[]> {
   return getAssignedPageIdsForUser(userId);

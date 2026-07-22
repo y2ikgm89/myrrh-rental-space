@@ -40,9 +40,12 @@ mock.module("@/shared/lib/customer-auth", () => ({
   customerAuth: {},
 }));
 
-mock.module("@/admin/lib/permissions", () => ({
+mock.module("@/shared/lib/admin-role-guards", () => ({
   isEditorRole: (...args: Parameters<typeof mockIsEditorRole>) =>
     mockIsEditorRole(...args),
+}));
+
+mock.module("@/shared/lib/admin-resource-access", () => ({
   userHasResourceAccess: (
     ...args: Parameters<typeof mockUserHasResourceAccess>
   ) => mockUserHasResourceAccess(...args),

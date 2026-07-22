@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { serverEnv } from "@/shared/lib/env/server";
 import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
-import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
+import { isAdminRole, isSuperAdminRole } from "@/shared/lib/admin-role-guards";
 import { getAdminAppUrl } from "@/shared/lib/admin-urls";
 
 const INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize";
