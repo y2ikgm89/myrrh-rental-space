@@ -239,10 +239,7 @@ export function FilterBar({
         >
           リセット
         </button>
-        <div
-          className="text-sm text-muted-foreground sm:ml-auto"
-          aria-live="polite"
-        >
+        <div className="text-sm text-muted-foreground" aria-live="polite">
           該当{" "}
           <span className="font-medium text-foreground">{resultCount}</span> 件
         </div>
