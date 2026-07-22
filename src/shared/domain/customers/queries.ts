@@ -190,6 +190,15 @@ export async function getCustomerById(
         },
         take: 20,
       },
+      eventRegistrations: {
+        include: {
+          event: {
+            select: { id: true, title: true, slug: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
       user: {
         select: {
           accounts: {
@@ -241,6 +250,13 @@ export async function getCustomerById(
       status: reservation.status,
       totalPrice: reservation.totalPrice,
       space: reservation.space,
+    })),
+    eventRegistrations: customer.eventRegistrations.map((registration) => ({
+      id: registration.id,
+      status: registration.status,
+      quantity: registration.quantity,
+      createdAt: registration.createdAt.toISOString(),
+      event: registration.event,
     })),
     user: customer.user
       ? {
