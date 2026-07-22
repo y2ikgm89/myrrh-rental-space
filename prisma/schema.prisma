@@ -2149,6 +2149,31 @@ model EventTimeSlot {
 }
 
 // ==============================================
+// Event Category Model (イベントカテゴリー)
+// ==============================================
+
+model EventCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String?  @db.Text
+  icon        String?
+  color       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events Event[]
+
+  // SpaceCategory と同型: isActive:true な行の間でのみ name の一意性を強制する
+  // partial unique index。無効化済みカテゴリーの名前を永久に予約しない。
+  @@unique([name], map: "event_categories_name_active_key", where: { isActive: true })
+  @@unique([sortOrder], map: "event_categories_sortOrder_key")
+  @@index([sortOrder])
+  @@map("event_categories")
+}
+
+// ==============================================
 // Event Model (イベント)
 // ==============================================
 
@@ -2214,7 +2239,13 @@ model Event {
   /// meetingUrl の発行元。
   meetingProvider MeetingProvider @default(MANUAL)
 
+  /// イベントの種類・カテゴリー（必須）。EventCategory 側は onDelete: Restrict のため
+  /// 紐づくイベントがある限り物理削除・非アクティブ化できない。
+  categoryId String        @db.Uuid
+  category   EventCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
   @@index([status])
+  @@index([categoryId])
   @@index([locationId])
   @@index([spaceId])
   @@index([deletedAt])
