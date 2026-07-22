@@ -329,7 +329,12 @@ export function FilterBar({
             </div>
           </fieldset>
 
-          <DialogFooter>
+          <DialogFooter className="sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground" aria-live="polite">
+              該当{" "}
+              <span className="font-medium text-foreground">{resultCount}</span>{" "}
+              件
+            </div>
             <Button
               variant="primary"
               size="sm"
