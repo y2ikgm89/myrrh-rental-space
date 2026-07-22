@@ -8,7 +8,7 @@
  * （announcement-bar の barFormSchema と同型のバグ）。
  *
  * 全セクションのフィールドは `field-registry.ts` の `field.*` ヘルパー経由で
- * 構築され、すべて `.default()` を持つ（field defaults 契約）。本テストは全 22
+ * 構築され、すべて `.default()` を持つ（field defaults 契約）。本テストは全 23
  * 定義を registry から列挙し、空 FormData（page-hero は discriminator `variant`
  * のみ指定）で parseWithZod に通して status==="success" を固定する。
  * いずれかのセクションが任意フィールドのガードを失うと本テストが落ちる。

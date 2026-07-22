@@ -35,7 +35,7 @@ export interface PageTemplate extends PageTemplateDef {
  * calendar（event-calendar）・location-list は **page-specific** とし、
  * 各テンプレートが `additionalSectionTypes` で明示的に opt-in した時のみ追加可能にする。
  * これにより「予約ページに space-list を足して二重表示」のような silent UX bug を
- * AddSectionDialog の段階で構造的に防ぐ（registry / SectionRenderer は全 22 型対応のまま）。
+ * AddSectionDialog の段階で構造的に防ぐ（registry / SectionRenderer は全 23 型対応のまま）。
  */
 const UNIVERSAL_SECTION_TYPES = [
   // hero zone
@@ -141,6 +141,14 @@ const TEMPLATE_DEFS = {
     defaultSections: DEFAULT_PAGE_SECTIONS["spaces"] ?? [],
     requiredSectionTypes: ["space-list"],
   },
+  "terms-archive": {
+    id: "terms-archive",
+    label: "規約一覧",
+    description: "公開中の規約一覧",
+    additionalSectionTypes: ["terms-list"],
+    defaultSections: DEFAULT_PAGE_SECTIONS["terms"] ?? [],
+    requiredSectionTypes: ["terms-list"],
+  },
   reservation: {
     id: "reservation",
     label: "予約",
@@ -222,6 +230,7 @@ const SLUG_TO_TEMPLATE: Record<string, string> = {
   events: "events-archive",
   spaces: "spaces-archive",
   reservation: "reservation",
+  terms: "terms-archive",
 };
 
 export function resolveTemplateForSlug(slug: string): string {

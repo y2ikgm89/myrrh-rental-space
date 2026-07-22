@@ -45,6 +45,7 @@ export const SectionType = {
   LOCATION_LIST: "location-list",
   VALUE_PROPS: "value-props",
   PAGE_HERO: "page-hero",
+  TERMS_LIST: "terms-list",
 } as const;
 
 export type SectionType = (typeof SectionType)[keyof typeof SectionType];
@@ -72,6 +73,7 @@ const SECTION_TYPE_VALUES = [
   SectionType.LOCATION_LIST,
   SectionType.VALUE_PROPS,
   SectionType.PAGE_HERO,
+  SectionType.TERMS_LIST,
 ] as const;
 
 const VALID_SECTION_TYPES = new Set<string>(Object.values(SectionType));
@@ -172,9 +174,13 @@ export {
   pageHeroConfigSchema,
   type PageHeroConfig,
 } from "@/shared/lib/sections/definitions/page-hero/schema";
+export {
+  termsListConfigSchema,
+  type TermsListConfig,
+} from "@/shared/lib/sections/definitions/terms-list/schema";
 
 // =============================================================================
-// SectionConfig union（全 22 セクション）
+// SectionConfig union（全 23 セクション）
 // =============================================================================
 
 import type { HeroConfig } from "@/shared/lib/sections/definitions/hero/schema";
@@ -199,6 +205,7 @@ import type { EventCalendarConfig } from "@/shared/lib/sections/definitions/even
 import type { LocationListConfig } from "@/shared/lib/sections/definitions/location-list/schema";
 import type { ValuePropsConfig } from "@/shared/lib/sections/definitions/value-props/schema";
 import type { PageHeroConfig } from "@/shared/lib/sections/definitions/page-hero/schema";
+import type { TermsListConfig } from "@/shared/lib/sections/definitions/terms-list/schema";
 
 export type SectionConfig =
   | HeroConfig
@@ -222,7 +229,8 @@ export type SectionConfig =
   | EventCalendarConfig
   | LocationListConfig
   | ValuePropsConfig
-  | PageHeroConfig;
+  | PageHeroConfig
+  | TermsListConfig;
 
 // =============================================================================
 // セクション設定の検証（レジストリ委譲）
@@ -232,7 +240,7 @@ export type SectionConfig =
  * type に応じた config を canonical schema で検証する。
  *
  * `isSectionTypeKey` で string を `SectionTypeKey` literal union に narrowing し、
- * `sectionDefinitions[type].configSchema.safeParse()` の戻り値型が全 22 schema の
+ * `sectionDefinitions[type].configSchema.safeParse()` の戻り値型が全 23 schema の
  * output union (= `SectionConfig`) に subtype 包含される構造で `as cast` を排除。
  */
 export function validateSectionConfig(

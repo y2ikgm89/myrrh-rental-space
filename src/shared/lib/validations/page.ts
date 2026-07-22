@@ -56,7 +56,11 @@ export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
     title: "イベント",
     description: "イベントカレンダー・一覧",
   },
-  { slug: "terms", title: "利用規約", description: "ご利用にあたっての規約" },
+  {
+    slug: "terms",
+    title: "規約一覧",
+    description: "利用規約・プライバシーポリシー・キャンセルポリシー等の一覧",
+  },
 ];
 
 export const SYSTEM_PAGE_SLUGS = SYSTEM_PAGES.map((p) => p.slug);
