@@ -1,8 +1,0 @@
-{
-  "extends": ["development"],
-  "ignoredUrls": [
-    { "domain": "/cdn-cgi/", "hints": ["http-cache"] },
-    { "domain": "^chrome-extension://", "hints": ["*"] },
-    { "domain": "^https?://static\\.cloudflareinsights\\.com/", "hints": ["*"] }
-  ]
-}

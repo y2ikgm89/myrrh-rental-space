@@ -195,7 +195,11 @@ resource "google_secret_manager_secret" "secret" {
 #   - この PR を merge → terraform apply で Cloud Run が secret を読み込む。
 #
 # 既存の PR-D (#1269, RESEND_WEBHOOK_SECRET) や PR-K (#1276, SUPPRESSION_HASH_SECRET)
-# のように 1 PR で container 追加と Cloud Run 配線を同時に行うと、この revert PR で
-# imported_secrets に entry を追加する follow-up PR + operator の版投入 が必要になる。
-# なお RESEND_WEBHOOK_SECRET は 2026-07-19 の Tier 1 → Tier 2 移行で
-# runtime_secrets + imported_secrets 両方から削除済み (Settings DB に canonical 化)。
+# のように 1 PR で container 追加と Cloud Run 配線を同時に行うと、follow-up PR +
+# operator の版投入が必要になる。
+#
+# RESEND_WEBHOOK_SECRET: Tier 1 → Tier 2 (Settings DB) 移行済。Cloud Run 注入は
+# `cloud_run_secret_versions` から除去済だが、`prevent_destroy` のため
+# runtime_secrets / imported_secrets には orphan container として残置
+# （削除手順は上の runtime_secrets docblock）。
+# SUPPRESSION_HASH_SECRET: Phase A (container only)。Cloud Run 配線は未完了。

@@ -335,7 +335,7 @@ describe("production deploy workflow", () => {
     }
   });
 
-  test("reapplies the Cloud Run migrate Job service account during deploys", () => {
+  test("Cloud Run migrate Job: Cloud Build updates image only; Terraform owns shape/env", () => {
     const migrateUpdateIndex = cloudBuildConfig.indexOf("id: migrate-update");
     const migrateExecuteIndex = cloudBuildConfig.indexOf("id: migrate-execute");
     expect(migrateUpdateIndex).toBeGreaterThanOrEqual(0);
@@ -346,13 +346,20 @@ describe("production deploy workflow", () => {
       migrateExecuteIndex,
     );
 
-    expect(migrateUpdateStep).toContain(
-      "--service-account=${_SERVICE_ACCOUNT}",
-    );
-    // Phase 6b (2026-07-14): DATABASE_URL secret binding は Terraform SSoT に移管
-    // (terraform/cloud_run_migrate_job.tf の env block)。cloudbuild.yaml の
-    // `--set-secrets=` は削除、次回 deploy 前に Terraform apply が binding を宣言的に確立。
+    // Phase 6b clean-break: Step 4 is image-tag only (`:migrate-${SHORT_SHA}`).
+    expect(migrateUpdateStep).toContain(":migrate-${SHORT_SHA}");
     expect(migrateUpdateStep).not.toContain("--set-secrets=");
+    expect(migrateUpdateStep).not.toContain("--set-env-vars=");
+    expect(migrateUpdateStep).not.toContain("--service-account=");
+    expect(migrateUpdateStep).not.toContain("--command=");
+    expect(migrateUpdateStep).not.toContain("--args=");
+    expect(migrateUpdateStep).not.toContain("--memory=");
+    expect(migrateUpdateStep).not.toContain("--cpu=");
+    expect(migrateUpdateStep).not.toContain("--tasks=");
+    expect(migrateUpdateStep).not.toContain("--parallelism=");
+    expect(migrateUpdateStep).not.toContain("--max-retries=");
+    expect(migrateUpdateStep).not.toContain("--task-timeout=");
+
     const cloudRunMigrateJobTf = readFileSync(
       join(process.cwd(), "terraform", "cloud_run_migrate_job.tf"),
       "utf8",
@@ -360,13 +367,16 @@ describe("production deploy workflow", () => {
     expect(cloudRunMigrateJobTf).toMatch(
       /env[\s\S]*name\s*=\s*"DATABASE_URL"[\s\S]*secret_key_ref[\s\S]*google_secret_manager_secret\.secret\["DATABASE_URL"\]/,
     );
-    expect(migrateUpdateStep).toContain("--command=bunx");
-    expect(migrateUpdateStep).toContain("--args=--bun,prisma,migrate,deploy");
-    expect(migrateUpdateStep).toContain("--tasks=1");
-    expect(migrateUpdateStep).toContain("--parallelism=1");
-    expect(migrateUpdateStep).toContain("--max-retries=0");
-    expect(migrateUpdateStep).toContain("--task-timeout=600s");
-    expect(migrateUpdateStep).toContain("--cpu=1");
+    expect(cloudRunMigrateJobTf).toContain('command = ["bunx"]');
+    expect(cloudRunMigrateJobTf).toContain(
+      'args    = ["--bun", "prisma", "migrate", "deploy"]',
+    );
+    expect(cloudRunMigrateJobTf).toContain("parallelism = 1");
+    expect(cloudRunMigrateJobTf).toContain("task_count  = 1");
+    expect(cloudRunMigrateJobTf).toContain('timeout     = "600s"');
+    expect(cloudRunMigrateJobTf).toContain("max_retries = 0");
+    expect(cloudRunMigrateJobTf).toContain('cpu    = "1"');
+    expect(cloudRunMigrateJobTf).toContain('memory = "1Gi"');
     expect(runbook).toContain("Cloud Run migrate Job identity is dedicated");
     expect(runbook).toContain("Cloud Run migrate Job command is canonical");
     expect(runbook).toContain(

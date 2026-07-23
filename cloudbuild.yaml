@@ -23,8 +23,9 @@
 #
 # Required Cloud Run Job (created once per project):
 #   prisma-migrate — `bunx --bun prisma migrate deploy` を実行する独立 Job（プロジェクト毎に初回 1 回手動作成）。
-#   image / memory / command / args / DATABASE_URL secret は Step 4 が毎デプロイ宣言的に再適用する（作成時の値に依存しない）。
-#   image は runner（slim）ではなく完全な node_modules を持つ migrator ステージ（:migrate-SHORT_SHA）を使う。
+#   Phase 6b: memory / command / args / DATABASE_URL secret / service account は Terraform
+#   (`terraform/cloud_run_migrate_job.tf`) が SSoT。Step 4 は image tag
+#   (`:migrate-SHORT_SHA`) のみ更新する（runner slim ではなく migrator ステージ）。
 #
 # Breaking migration deploy mode:
 #   `_BREAKING_MIGRATION_DEPLOY=true` makes Cloud Build temporarily disable the
@@ -64,11 +65,9 @@ substitutions:
   _AR_HOST: asia-northeast1-docker.pkg.dev
   _MIGRATE_JOB_NAME: prisma-migrate
   _WORKER_POOL: myrrh-deploy-pool
-  # migrate Job のメモリ。かつて 512Mi では `bunx prisma migrate deploy` が実行時に依存を
-  # 再ダウンロード（不完全な runner image が原因）して OOM（signal 11）を起こしたが、
-  # migrator ステージ（完全な node_modules）の導入で再DL 自体を排除済み。1Gi は余裕分として維持。
-  # Step 4 で migrate Job の実行設定も毎デプロイ宣言的に再適用し作成時の値ドリフトを防ぐ。
-  _MIGRATE_MEMORY: 1Gi
+  # migrate Job メモリは Terraform (`cloud_run_migrate_job.tf` = 1Gi) が SSoT。
+  # かつて 512Mi + 不完全 runner image で bunx 再 DL → OOM があったが、migrator ステージで解消済。
+  # Cloud Build は未参照 substitution を INVALID_ARGUMENT とするため `_MIGRATE_MEMORY` は置かない。
   _MEMORY: 1Gi
   _CPU: "1"
   _MIN_INSTANCES: "0"
@@ -371,7 +370,10 @@ steps:
       - --all-tags
       - ${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}
 
-  # Step 4: Update Prisma migrate Job image (schema drift 防止のためデプロイ前に実行)
+  # Step 4: Update Prisma migrate Job image only (schema drift 防止のためデプロイ前に実行)
+  # Phase 6b: memory / cpu / tasks / command / args / service account / DATABASE_URL は
+  # terraform/cloud_run_migrate_job.tf が SSoT。ここで再宣言すると Terraform apply と
+  # drift loop になる。secret rotation は variables.tf の cloud_run_secret_versions を bump。
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: migrate-update
     waitFor: [push-image]
@@ -382,23 +384,9 @@ steps:
       - update
       - ${_MIGRATE_JOB_NAME}
       - --region=${_REGION}
-      # migrator イメージ（完全な node_modules）を使う。runner の :${SHORT_SHA} ではなく
+      # migrator イメージ（完全な node_modules）。runner の :${SHORT_SHA} ではなく
       # :migrate-${SHORT_SHA}。実行時再DL を排除し prisma.config.ts を確実にロードさせる。
       - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:migrate-${SHORT_SHA}
-      - --memory=${_MIGRATE_MEMORY}
-      - --cpu=1
-      - --tasks=1
-      - --parallelism=1
-      - --max-retries=0
-      - --task-timeout=600s
-      - --service-account=${_SERVICE_ACCOUNT}
-      # command / args も毎デプロイ再適用し、Job 作成後の手動変更による drift を防ぐ。
-      - --command=bunx
-      - --args=--bun,prisma,migrate,deploy
-      # DATABASE_URL secret binding は Terraform 側 (cloud_run_migrate_job.tf) の
-      # SSoT に完全移管済 (Phase 6b、2026-07-14)。ここで再宣言すると Terraform apply
-      # との drift loop を起こすため削除。secret rotation は
-      # terraform/variables.tf の `cloud_run_secret_versions.DATABASE_URL` を bump。
 
   # Step 5a: For intentional breaking migrations, stop new requests before DB
   # schema changes. Cloud Run lets in-flight requests finish; the drain step
@@ -543,9 +531,12 @@ steps:
   #     全廃 (secret_iam.tf / iam_project.tf 削除)。全て bootstrap に集約し、
   #     runner は「自 IAM も他 SA IAM も触れない」構造に。
   #
-  # 新規 secret を追加する場合: cloudbuild.yaml の `--set-secrets=` と
-  # terraform/secrets.tf の `runtime_secrets` local を両方更新する
-  # (IAM は既に付与済のため触らない)。
+  # 新規 runtime secret を追加する場合 (Phase 6b):
+  #   1. terraform/secrets.tf の runtime_secrets (+ 段階 B で imported_secrets)
+  #   2. terraform/variables.tf の cloud_run_secret_versions
+  #   3. terraform/locals_cloud_run.tf の plain/secret env maps（注入先）
+  # Cloud Build deploy step は --set-secrets を持たない。IAM は bootstrap 済のため触らない。
+  # build-time のみ必要な secret は availableSecrets + build_secrets を更新する。
 
   # Step 6a: Deploy public Cloud Run service
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk

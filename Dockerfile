@@ -86,28 +86,20 @@ RUN --mount=type=secret,id=next_server_actions_encryption_key \
 
 # --- Stage 4: Migrator (Cloud Run Job: `prisma migrate deploy`) ---
 # slim な runner と違い、Prisma CLI は TypeScript の prisma.config.ts を c12 / jiti /
-# deepmerge-ts でロードするため依存一式が必要。これらは @prisma/config / prisma CLI の
-# 依存だがトップレベル node_modules に在り、runner の `COPY @prisma` では同梱されない。
-# 不完全な node_modules では `bunx` が実行時にパッケージを再ダウンロードし、その不整合
-# コンテキストで config ローダ（c12/jiti）が解決できず prisma.config.ts を読めない →
-# datasource.url 未解決で migrate deploy が exit(1)。これが OOM(#597) / studio-core
-# tarball flake(#598) / config 未ロード(#599) の共通原因。
+# deepmerge-ts でロードするため依存一式が必要。runner の `COPY @prisma` だけでは不足。
+# 不完全な node_modules では `bunx` が実行時再 DL し、config ローダが解決できず
+# migrate deploy が exit(1) になる（過去: OOM / tarball flake / config 未ロード）。
 #
-# 対策: migrate を deps ステージ（bun install 済みの完全な node_modules）の上で実行し、
-# 実行時の再ダウンロードを構造的に排除する。CI（.github/workflows/ci.yml の
-# `bunx --bun prisma migrate deploy`）と同一環境のため確実に config をロードできる。
+# 対策: deps（`scripts/bun-ci-install.sh` = `bun ci`、devDeps 含む）の完全な
+# node_modules 上で migrate する。`prisma` CLI は package.json dependencies に置き、
+# 将来 deps を `--production` 化しても migrator から外れない契約にする。
 #
-# このステージは runner より前に置き、runner を Dockerfile 末尾（=`--target` 未指定時の
-# 既定ビルド対象）に保つ。cloudbuild は両ステージを `--target` で明示選択する
-# （build-image→runner / build-migrator→migrator）が、素の `docker build .` でも service
-# イメージが出る安全側に倒す。#599 で migrator を末尾に置いたため `--target` 未指定の
-# build-image が migrator を service タグでビルドし、service が migrate を実行して exit(0)
-# →ポート未待受で起動プローブ失敗、という回帰が起きた。その再発防止。
+# このステージは runner より前に置く（末尾 = `docker build` 既定ターゲットを runner に保つ）。
+# cloudbuild は `--target=runner` / `--target=migrator` を明示選択する。
 FROM deps AS migrator
 WORKDIR /app
-# deps は package.json / bun.lock / prisma/（schema + migrations）/ 完全な node_modules /
-# generated を保持済み。root の prisma.config.ts（datasource.url = env("DATABASE_URL")）
-# だけ追加で必要。
+# deps は package.json / bun.lock / prisma/ / 完全な node_modules / generated を保持済み。
+# root の prisma.config.ts（datasource.url = env("DATABASE_URL")）だけ追加で必要。
 COPY prisma.config.ts ./
 CMD ["bunx", "--bun", "prisma", "migrate", "deploy"]
 
@@ -128,6 +120,10 @@ ENV NODE_ENV=production \
 # Next.js standalone の server.js は process.env.PORT を読み取るため Dockerfile 側で指定しない。
 
 COPY --from=builder /app/public ./public
+# Next.js official with-docker: non-root user が ISR / prerender cache を書けるよう
+# .next を先に用意して chown する（standalone COPY だけでは不足）。
+# https://github.com/vercel/next.js/tree/canary/examples/with-docker
+RUN mkdir -p .next && chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # @prisma/client runtime（WASM ランタイムエンジン）

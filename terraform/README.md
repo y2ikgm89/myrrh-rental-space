@@ -14,16 +14,16 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 
 このディレクトリは Phase を追って全 GCP infra を段階的に取り込む:
 
-| Phase | スコープ                                                                              | 状態      |
-| ----- | ------------------------------------------------------------------------------------- | --------- |
-| 1     | Secret Manager IAM (bootstrap 化、詳細は下記契約 section)                             | ✅ 完了   |
-| 2     | Cloud Scheduler (13 cron jobs)                                                        | ✅ 完了   |
-| 3     | Secret Manager secrets 本体 (16 secrets の metadata)                                  | ✅ 完了   |
-| 4     | Artifact Registry + Cloud Build worker pool                                           | ✅ 完了   |
-| 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider               | ✅ 完了   |
-| 6a    | Cloud Run services + Job skeleton + resource-scoped IAM (env/secrets 移管は Phase 6b) | ✅ 完了   |
-| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)        | 🚧 実装中 |
-| 8     | Cloudflare (myrrh-jp.com zone): DNS / Transform Rule / Cache Rules / R2 / Turnstile   | ✅ 完了   |
+| Phase | スコープ                                                                            | 状態    |
+| ----- | ----------------------------------------------------------------------------------- | ------- |
+| 1     | Secret Manager IAM (bootstrap 化、詳細は下記契約 section)                           | ✅ 完了 |
+| 2     | Cloud Scheduler (OIDC cron jobs; API route と同期)                                  | ✅ 完了 |
+| 3     | Secret Manager secrets 本体 (metadata; 値は SM versions)                            | ✅ 完了 |
+| 4     | Artifact Registry + Cloud Build worker pool                                         | ✅ 完了 |
+| 5     | Service Accounts + project-level IAM (bootstrap 化) + WIF Pool/Provider             | ✅ 完了 |
+| 6a/6b | Cloud Run services + migrate Job + runtime env/secrets Terraform SSoT               | ✅ 完了 |
+| 7     | Load Balancer + IAP (admin service 用、DNS は Cloudflare 側で管理のため対象外)      | ✅ 完了 |
+| 8     | Cloudflare (myrrh-jp.com zone): DNS / Transform Rule / Cache Rules / R2 / Turnstile | ✅ 完了 |
 
 ## ファイル構成
 
@@ -33,8 +33,8 @@ Google Cloud infra の宣言的管理 (IaC)。**terraform apply が正規更新�
 | `backend.tf`                  | GCS state backend (`myrrh-rental-space-terraform-state`)                                                                  |
 | `variables.tf`                | project_id / region / SA email 等の入力                                                                                   |
 | `service_accounts.tf`         | (ドキュメンテーション目的の空 config — SA metadata は bootstrap の SSoT)                                                  |
-| `cloud_scheduler.tf`          | Phase 2: `google_cloud_scheduler_job` × 13 cron jobs (Cloud Run `/api/cron/*` を OIDC で叩く)                             |
-| `secrets.tf`                  | Phase 3: `google_secret_manager_secret` × 16 secrets の metadata (値は Terraform 対象外、prevent_destroy で誤削除 block)  |
+| `cloud_scheduler.tf`          | Phase 2: `google_cloud_scheduler_job` (Cloud Run `/api/cron/*` を OIDC で叩く; `cron_jobs` が件数 SSoT)                   |
+| `secrets.tf`                  | Phase 3: `google_secret_manager_secret` metadata (値は Terraform 対象外、prevent_destroy で誤削除 block)                  |
 | `artifact_registry.tf`        | Phase 4: `google_artifact_registry_repository` (Docker)                                                                   |
 | `cloud_build_worker_pool.tf`  | Phase 4: `google_cloudbuild_worker_pool` (myrrh-deploy-pool)                                                              |
 | `wif.tf`                      | Phase 5: Workload Identity Pool / Provider (`github-actions`)                                                             |
@@ -189,17 +189,18 @@ bootstrap 完了後、`.github/workflows/terraform.yml` が
 
 を担う。
 
-## 通常運用 (secret 追加時のフロー)
+## 通常運用 (secret 追加時のフロー / Phase 6b)
 
-1. `cloudbuild.yaml` の `--set-secrets=` に新 secret を追加
-2. `terraform/secrets.tf` の `runtime_secrets` (Cloud Build が読むなら
-   `build_secrets` も) に追加
+1. `terraform/secrets.tf` の `runtime_secrets` (Cloud Build が `availableSecrets`
+   で読むなら `build_secrets` も) に追加。同一 PR では `imported_secrets` に
+   入れない（create → follow-up adopt）
+2. `terraform/variables.tf` の `cloud_run_secret_versions` と
+   `terraform/locals_cloud_run.tf`（または migrate Job）で注入を宣言
 3. PR を出す → GitHub Actions で `terraform plan` が実行され差分表示
-4. PR merge → `terraform apply` (secret metadata のみ差分反映)
-5. Cloud Build deploy trigger → Cloud Run が新 secret を読める
-   (runtime/build SA への project-level `secretAccessor` binding は bootstrap
-   で既に付与済のため、追加 IAM 操作は不要 — project 内の全 secret に
-   automatic access)
+4. PR merge → `terraform apply`（secret metadata + Cloud Run env binding）
+5. operator が `gcloud secrets versions add` で値を投入。以降の Cloud Build
+   deploy は image (+ service shape) のみ更新し、`--set-secrets` は使わない
+   (runtime/build SA への project-level `secretAccessor` は bootstrap 済)
 
 ## ローカル運用 (差分確認したいとき、任意)
 
