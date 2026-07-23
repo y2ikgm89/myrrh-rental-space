@@ -59,6 +59,15 @@ describe("Route Handler contract: GET is session-only, POST carries token claim"
   beforeEach(() => {
     mock.restore();
 
+    // HTTP-03: per-serialNo rate limiter は GET/POST 両方の冒頭で叩かれる。
+    // 全 test が同一 SERIAL_NO を共有するため、実 limiter のままだと本ファイル内の
+    // 累積呼び出しで 429 化しうる (receipt-download-blocked.test.ts と同じ stub 方針)。
+    mock.module("@/shared/lib/rate-limit", () => ({
+      receiptDownloadBySerialNoRateLimiter: {
+        check: mock(() => Promise.resolve({ success: true })),
+      },
+    }));
+
     mock.module("@/shared/domain/receipts/queries", () => ({
       findReceiptForDownload: mock(() => Promise.resolve(RECEIPT)),
     }));
@@ -308,5 +317,39 @@ describe("Route Handler contract: GET is session-only, POST carries token claim"
 
     expect(res.status).toBe(404);
     expect(claimSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test("HTTP-03: POST returns 429 when the per-serialNo rate limit is exceeded, before touching the token/DB", async () => {
+    // GET 経路と同じ receiptDownloadBySerialNoRateLimiter を POST 冒頭でも叩く
+    // 契約の回帰テスト。limiter が blocked を返す場合、token 検証・DB read・
+    // 単発 claim のいずれよりも先に 429 で早期 return することを確認する。
+    mock.module("@/shared/lib/rate-limit", () => ({
+      receiptDownloadBySerialNoRateLimiter: {
+        check: mock(() => Promise.resolve({ success: false })),
+      },
+    }));
+
+    const verifySpy = mock(() => ({ valid: true, serialNo: SERIAL_NO }));
+    mock.module("@/shared/lib/receipt-download-token", () => ({
+      verifyReceiptDownloadToken: verifySpy,
+    }));
+    const claimSpy = mock(() =>
+      Promise.resolve({
+        status: "success" as const,
+        pdfBuffer: Buffer.from("PDF"),
+      }),
+    );
+    mock.module("@/shared/domain/receipts/download", () => ({
+      claimReceiptForSingleUseTokenDownload: claimSpy,
+    }));
+
+    const { POST } = await import("@/app/api/receipts/[serialNo]/pdf/route");
+    const body = new FormData();
+    body.set("token", "signed-token-value");
+    const res = await POST(makePostRequest(body), makeParams());
+
+    expect(res.status).toBe(429);
+    expect(verifySpy).not.toHaveBeenCalled();
+    expect(claimSpy).not.toHaveBeenCalled();
   });
 });
