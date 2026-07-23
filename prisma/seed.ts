@@ -720,6 +720,46 @@ async function seedSpaceCategories() {
   console.log("✅ Upserted space categories");
 }
 
+async function seedEventCategories() {
+  // sortOrder は 1 始まり: 0 は `20260722235352_add_event_category` migration が
+  // 恒久的に投入する「未分類」フォールバックカテゴリー（events.categoryId 必須化の
+  // backfill 先）が既に占有している。sortOrder は無条件 @unique のため、この4件を
+  // 0 始まりで定義すると update 分岐（下記）が「未分類」との P2002 衝突で
+  // 再実行時に必ず失敗する（create 分岐は max+1 を都度計算するため無害だが、
+  // update 分岐はここに書いたリテラル値をそのまま書き込む）。
+  const categories = [
+    { name: "ワークショップ", sortOrder: 1 },
+    { name: "マルシェ・展示", sortOrder: 2 },
+    { name: "セミナー・交流会", sortOrder: 3 },
+    { name: "その他", sortOrder: 4 },
+  ];
+
+  // seedSpaceCategories と同型（Round-5 audit Finding #18 の教訓）: name は
+  // isActive: true な行の間でのみ強制される partial unique index のため、
+  // upsert({where:{name}}) は無効化済み行との衝突で曖昧になる。
+  // isActive: true を明示した findFirst + create/update で idempotent 化する。
+  for (const cat of categories) {
+    const existing = await prisma.eventCategory.findFirst({
+      where: { name: cat.name, isActive: true },
+    });
+    if (existing) {
+      await prisma.eventCategory.update({
+        where: { id: existing.id },
+        data: cat,
+      });
+    } else {
+      const maxOrder = await prisma.eventCategory.aggregate({
+        _max: { sortOrder: true },
+      });
+      await prisma.eventCategory.create({
+        data: { ...cat, sortOrder: (maxOrder._max.sortOrder ?? -1) + 1 },
+      });
+    }
+  }
+
+  console.log("✅ Upserted event categories");
+}
+
 // =============================================================================
 // Spaces (with Location/Category relations)
 // =============================================================================
@@ -3371,6 +3411,30 @@ async function seedEvents() {
   const honkanId = locationsByName.get("本館") ?? null;
   const bekkanId = locationsByName.get("別館") ?? null;
 
+  // seedEventCategories() is guaranteed to run first in the same seed
+  // invocation (see the `await seedEventCategories();` call immediately
+  // before `await seedEvents();` in seedDev()) and creates exactly these
+  // four names. ESLint's no-non-null-assertion rule applies repo-wide
+  // (not just `src/`), so a throwing lookup is used instead of `!`.
+  const eventCategories = await prisma.eventCategory.findMany({
+    orderBy: { sortOrder: "asc" },
+  });
+  const findEventCategoryId = (name: string): string => {
+    const category = eventCategories.find((c) => c.name === name);
+    if (!category) {
+      throw new Error(
+        `Seed invariant violated: EventCategory "${name}" not found. seedEventCategories() must run before seedEvents().`,
+      );
+    }
+    return category.id;
+  };
+  // Only the categories actually referenced by eventSeedSource below are
+  // looked up here. マルシェ・展示 / その他 are still created by
+  // seedEventCategories() for admin-UI variety even though no current
+  // fixture event uses them yet.
+  const workshopCategoryId = findEventCategoryId("ワークショップ");
+  const seminarCategoryId = findEventCategoryId("セミナー・交流会");
+
   const futureJstDate = (daysFromNow: number, hour: number, minute = 0) => {
     const now = new Date();
     return new Date(
@@ -3395,6 +3459,7 @@ async function seedEvents() {
     price: number;
     addressDetail?: string;
     locationId?: string | null;
+    categoryId: string;
     status: EventStatus;
     registrationOpen: boolean;
     publishedAt?: Date;
@@ -3414,6 +3479,7 @@ async function seedEvents() {
       ],
       price: 2000,
       locationId: honkanId,
+      categoryId: workshopCategoryId,
       addressDetail: "3F スタジオA",
       status: EventStatus.PUBLISHED,
       registrationOpen: true,
@@ -3439,6 +3505,7 @@ async function seedEvents() {
       ],
       price: 5000,
       locationId: bekkanId,
+      categoryId: workshopCategoryId,
       addressDetail: "ギャラリールーム",
       status: EventStatus.PUBLISHED,
       registrationOpen: true,
@@ -3458,6 +3525,7 @@ async function seedEvents() {
       ],
       price: 0,
       locationId: honkanId,
+      categoryId: seminarCategoryId,
       addressDetail: "1F メインホール",
       status: EventStatus.DRAFT,
       registrationOpen: false,
@@ -3476,6 +3544,7 @@ async function seedEvents() {
       ],
       price: 1500,
       // 外部会場（location なし、addressDetail も空）の例
+      categoryId: workshopCategoryId,
       status: EventStatus.CANCELLED,
       registrationOpen: false,
     },
@@ -3494,6 +3563,7 @@ async function seedEvents() {
       ],
       price: 3000,
       addressDetail: "渋谷区文化総合センター大和田 和室",
+      categoryId: workshopCategoryId,
       status: EventStatus.ARCHIVED,
       registrationOpen: false,
       publishedAt: new Date("2026-02-15T09:00:00+09:00"),
@@ -3513,6 +3583,7 @@ async function seedEvents() {
       ],
       price: 0,
       locationId: honkanId,
+      categoryId: workshopCategoryId,
       addressDetail: "2F 陶芸スタジオ",
       status: EventStatus.PUBLISHED,
       registrationOpen: true,
@@ -5059,6 +5130,7 @@ async function seedDev() {
   await seedSystemPageSections();
 
   // Phase 8: イベント
+  await seedEventCategories();
   await seedEvents();
 
   // Phase 9: 新機能（レビュー・通知・メディア・ブロック・ページ権限）
