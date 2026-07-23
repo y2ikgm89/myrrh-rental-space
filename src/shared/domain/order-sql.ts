@@ -27,9 +27,11 @@ export function buildUuidOrderSqlFragments<T>(
     const id = getId(item);
     ids.push(Prisma.sql`${id}::uuid`);
     tempCases.push(
-      Prisma.sql`WHEN ${id}::uuid THEN ${TEMP_ORDER_BASE - index}`,
+      Prisma.sql`WHEN ${id}::uuid THEN ${TEMP_ORDER_BASE - index}::int4`,
     );
-    finalCases.push(Prisma.sql`WHEN ${id}::uuid THEN ${getOrder(item, index)}`);
+    finalCases.push(
+      Prisma.sql`WHEN ${id}::uuid THEN ${getOrder(item, index)}::int4`,
+    );
   }
 
   return { ids, tempCases, finalCases };
@@ -51,8 +53,10 @@ export function buildTextOrderSqlFragments<T>(
   for (const [index, item] of items.entries()) {
     const id = getId(item);
     ids.push(Prisma.sql`${id}`);
-    tempCases.push(Prisma.sql`WHEN ${id} THEN ${TEMP_ORDER_BASE - index}`);
-    finalCases.push(Prisma.sql`WHEN ${id} THEN ${getOrder(item, index)}`);
+    tempCases.push(
+      Prisma.sql`WHEN ${id} THEN ${TEMP_ORDER_BASE - index}::int4`,
+    );
+    finalCases.push(Prisma.sql`WHEN ${id} THEN ${getOrder(item, index)}::int4`);
   }
 
   return { ids, tempCases, finalCases };
