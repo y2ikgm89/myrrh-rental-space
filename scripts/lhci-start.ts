@@ -20,6 +20,7 @@ function applyLhciProductionFallbacks(): void {
 
   const fallbacks: Record<string, string> = {
     ENCRYPTION_KEY: hex64,
+    SUPPRESSION_HASH_SECRET: hex64,
     CRON_OIDC_AUDIENCE: "http://localhost:3000",
     CRON_SERVICE_ACCOUNT_EMAIL: "scheduler-ci@example.iam.gserviceaccount.com",
     R2_ACCOUNT_ID: "lhci-local-r2-account",
