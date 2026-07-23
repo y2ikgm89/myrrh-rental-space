@@ -70,6 +70,7 @@ type EventCreateData = Parameters<
 const createdEventIds: string[] = [];
 const createdCustomerIds: string[] = [];
 const createdUserIds: string[] = [];
+let testCategoryId: string;
 
 /** 必須 field のみを埋めた Event.create 用の最小 data（scheduleMode は SINGLE_OCCURRENCE 固定）。 */
 function baseEventData(label: string) {
@@ -80,6 +81,7 @@ function baseEventData(label: string) {
     descriptionHtml: "<p>test</p>",
     descriptionPlainText: "test",
     scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+    categoryId: testCategoryId,
   };
 }
 
@@ -146,6 +148,17 @@ describeMaybe("Event online format (integration)", () => {
       await import("@/shared/domain/events/registration-queries"));
     ({ EventScheduleMode, EVENT_FORMAT, MEETING_PROVIDER } =
       await import("@/shared/lib/validations/enums/prisma-types"));
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Online Format Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
   });
 
   afterAll(async () => {
@@ -170,6 +183,8 @@ describeMaybe("Event online format (integration)", () => {
     if (createdUserIds.length > 0) {
       await prisma.user.deleteMany({ where: { id: { in: createdUserIds } } });
     }
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     // 実 DB 接続をクローズしてサブプロセスをハングさせない。
     await basePrisma.$disconnect();
   });

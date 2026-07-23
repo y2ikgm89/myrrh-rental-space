@@ -24,6 +24,7 @@ type ExportQueriesModule =
 
 let prisma: PrismaModule["prisma"];
 let getEventRegistrationsForExport: ExportQueriesModule["getEventRegistrationsForExport"];
+let testCategoryId: string;
 
 async function createFixtureEventWithRegistration(): Promise<string> {
   const suffix = crypto.randomUUID();
@@ -44,6 +45,7 @@ async function createFixtureEventWithRegistration(): Promise<string> {
         firstSlotStartAt: start,
         lastSlotEndAt: end,
         addressDetail: "test",
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -92,9 +94,23 @@ describeMaybe("getEventRegistrationsForExport の eventId 省略時挙動", () =
     ({ prisma } = await import("@/shared/db/prisma"));
     ({ getEventRegistrationsForExport } =
       await import("@/shared/domain/events/export-queries"));
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Export Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
   });
 
   afterAll(async () => {
+    // EventCategory は onDelete: Restrict のため、紐づく Event がすべて
+    // 各テストの finally で削除された後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await prisma.$disconnect();
   });
 

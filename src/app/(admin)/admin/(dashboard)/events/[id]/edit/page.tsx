@@ -4,6 +4,7 @@ import {
   getEventById,
   getLocationsForEvent,
   getSpacesForEvent,
+  getCategoriesForEvent,
 } from "@/admin/queries/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../../_components/EventForm";
@@ -42,9 +43,10 @@ export default async function EditEventPage({ params }: PageProps) {
   const event = await getEventById(id);
   if (!event) notFound();
 
-  const [locations, spaces] = await Promise.all([
+  const [locations, spaces, categories] = await Promise.all([
     getLocationsForEvent(),
     getSpacesForEvent(),
+    getCategoriesForEvent(),
   ]);
 
   return (
@@ -59,6 +61,7 @@ export default async function EditEventPage({ params }: PageProps) {
         event={event}
         locations={locations}
         spaces={spaces}
+        categories={categories}
       />
     </AdminDetailLayout>
   );

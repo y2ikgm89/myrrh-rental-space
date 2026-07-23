@@ -74,6 +74,7 @@ type SharedEventFixture = {
 
 let futureEvent: SharedEventFixture;
 let pastEvent: SharedEventFixture;
+let testCategoryId: string;
 
 /** SINGLE_OCCURRENCE の Event + EventTimeSlot + EventTicket を 1 セット作る（1 トランザクション）。 */
 async function createSharedEvent(
@@ -94,6 +95,7 @@ async function createSharedEvent(
         registrationOpen: true,
         firstSlotStartAt: slotStartAt,
         lastSlotEndAt: slotEndAt,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -166,14 +168,29 @@ describeMaybe(
       // 接続プールをウォームアップ（コールドスタートで初回クエリがブレるのを防ぐ）。
       await prisma.$queryRaw`SELECT 1`;
 
+      const category = await prisma.eventCategory.create({
+        data: {
+          name: `Cancel Token Category ${crypto.randomUUID()}`,
+          // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+          // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+          sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+        },
+        select: { id: true },
+      });
+      testCategoryId = category.id;
+
       futureEvent = await createSharedEvent(FUTURE_SLOT_START, FUTURE_SLOT_END);
       pastEvent = await createSharedEvent(PAST_SLOT_START, PAST_SLOT_END);
     });
 
     afterAll(async () => {
       // Event → EventTimeSlot は onDelete: Cascade のため event 削除のみで良い。
+      // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
       await prisma.event.deleteMany({
         where: { id: { in: [futureEvent.eventId, pastEvent.eventId] } },
+      });
+      await prisma.eventCategory.deleteMany({
+        where: { id: testCategoryId },
       });
       await basePrisma.$disconnect();
     });

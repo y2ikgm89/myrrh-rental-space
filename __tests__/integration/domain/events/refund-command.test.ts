@@ -96,6 +96,7 @@ type SharedEventFixture = {
 };
 
 let sharedEvent: SharedEventFixture;
+let testCategoryId: string;
 
 /** SINGLE_OCCURRENCE Event + slot + ticket を 1 tx で作る (schedule integrity trigger 遵守)。 */
 async function createSharedEvent(): Promise<SharedEventFixture> {
@@ -116,6 +117,7 @@ async function createSharedEvent(): Promise<SharedEventFixture> {
         registrationOpen: true,
         firstSlotStartAt: start,
         lastSlotEndAt: end,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -204,11 +206,24 @@ describeMaybe("refundEventRegistrationPaymentCommand (integration)", () => {
       where: { slug: { startsWith: "refund-event-" } },
     });
 
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Refund Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
+
     sharedEvent = await createSharedEvent();
   });
 
   afterAll(async () => {
     await prisma.event.deleteMany({ where: { id: sharedEvent.eventId } });
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await basePrisma.$disconnect();
   });
 

@@ -1,5 +1,9 @@
 import { connection } from "next/server";
-import { getLocationsForEvent, getSpacesForEvent } from "@/admin/queries/event";
+import {
+  getLocationsForEvent,
+  getSpacesForEvent,
+  getCategoriesForEvent,
+} from "@/admin/queries/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../_components/EventForm";
 import type { Metadata } from "next";
@@ -11,9 +15,10 @@ export const metadata: Metadata = {
 export default async function NewEventPage() {
   await connection();
 
-  const [locations, spaces] = await Promise.all([
+  const [locations, spaces, categories] = await Promise.all([
     getLocationsForEvent(),
     getSpacesForEvent(),
+    getCategoriesForEvent(),
   ]);
 
   return (
@@ -22,7 +27,11 @@ export default async function NewEventPage() {
       title="イベント新規作成"
       subtitle="新しいイベントを作成します"
     >
-      <EventForm locations={locations} spaces={spaces} />
+      <EventForm
+        locations={locations}
+        spaces={spaces}
+        categories={categories}
+      />
     </AdminDetailLayout>
   );
 }
