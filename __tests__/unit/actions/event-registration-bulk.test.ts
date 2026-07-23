@@ -91,10 +91,20 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
-  ErrorCategory: { DATABASE: "DATABASE" },
-  ErrorSeverity: { MEDIUM: "MEDIUM" },
+  ErrorCategory: { DATABASE: "DATABASE", EXTERNAL_API: "EXTERNAL_API" },
+  ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH" },
   logError: mock(() => undefined),
   normalizeError: (error: unknown) => error,
+  getErrorMessage: (error: unknown) =>
+    error instanceof Error ? error.message : String(error),
+  safeFetch: async <T>(opts: { fetch: () => Promise<T>; fallback: T }) => {
+    try {
+      return await opts.fetch();
+    } catch {
+      return opts.fallback;
+    }
+  },
+  criticalFetch: async <T>(opts: { fetch: () => Promise<T> }) => opts.fetch(),
 }));
 
 const { bulkCancelEventRegistrations, bulkCheckInEventRegistrations } =
