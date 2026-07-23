@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { RegistrationStatus } from "@generated/prisma/enums";
+import { RegistrationStatus, PaymentStatus } from "@generated/prisma/enums";
 
 const mockFindFirst = mock<(args: Record<string, unknown>) => Promise<unknown>>(
   () => Promise.resolve(null),
@@ -52,6 +52,7 @@ const REG = {
   email: "test@example.com",
   quantity: 2,
   status: RegistrationStatus.CONFIRMED,
+  paymentStatus: PaymentStatus.UNPAID,
   event: { title: "夏祭り", slug: "summer-fes" },
 };
 

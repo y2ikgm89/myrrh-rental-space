@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconDownload, IconPlus } from "@tabler/icons-react";
 import { getEvents } from "@/admin/queries/event";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import {
   EVENT_STATUS_FILTER_ALL,
   loadAdminEventSearchParams,
@@ -13,6 +14,7 @@ import { EventTable } from "./_components/EventTable";
 import { EventTabs } from "./_components/EventTabs";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -60,6 +62,12 @@ async function EventList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function EventsPage({ searchParams }: PageProps) {
+  const user = await requireAdminDashboardAccess();
+  const canExportEventRegistrations = hasPermission(
+    user.role,
+    "event",
+    "manage",
+  );
   const params = await loadAdminEventSearchParams(searchParams);
 
   return (
@@ -78,12 +86,14 @@ export default async function EventsPage({ searchParams }: PageProps) {
           <Button asChild size="sm" variant="outline">
             <Link href="/admin/events/categories">カテゴリー管理</Link>
           </Button>
-          <Button asChild size="sm" variant="outline">
-            <a href="/api/admin/export/event-registrations" download>
-              <IconDownload className="mr-2 h-4 w-4" />
-              全参加者CSV
-            </a>
-          </Button>
+          {canExportEventRegistrations ? (
+            <Button asChild size="sm" variant="outline">
+              <a href="/api/admin/export/event-registrations" download>
+                <IconDownload className="mr-2 h-4 w-4" />
+                全参加者CSV
+              </a>
+            </Button>
+          ) : null}
           <Button asChild>
             <Link href="/admin/events/new">
               <IconPlus className="mr-2 h-4 w-4" />

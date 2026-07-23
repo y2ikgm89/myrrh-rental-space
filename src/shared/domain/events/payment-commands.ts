@@ -96,7 +96,12 @@ export async function createEventCheckoutSessionCommand(input: {
     );
   }
 
-  if (registration.paymentStatus !== PaymentStatus.UNPAID) {
+  // FAILED も再 checkout 可（Reservation / waitlist offer と同型）。UI は FAILED
+  // で CheckoutButton を出すため、UNPAID のみだと再試行が常に失敗する。
+  if (
+    registration.paymentStatus !== PaymentStatus.UNPAID &&
+    registration.paymentStatus !== PaymentStatus.FAILED
+  ) {
     throw new DomainError(
       "この申込は既に決済処理が開始されています",
       "VALIDATION",
@@ -133,14 +138,15 @@ export async function createEventCheckoutSessionCommand(input: {
     );
   }
 
-  // Claim-first: UNPAID → PENDING を atomic に確定 (edit / 並行 cancel との race を封鎖)。
-  // `status: CONFIRMED` も WHERE で assert する (Codex P1 #1026, comment 3567019751):
-  // pre-check と claim の間で並行 cancel が走ったケースを DB レベルで塞ぐ。
+  // Claim-first: UNPAID/FAILED → PENDING を atomic に確定 (edit / 並行 cancel /
+  // FAILED 再試行との race を封鎖)。`status: CONFIRMED` も WHERE で assert する
+  // (Codex P1 #1026, comment 3567019751): pre-check と claim の間で並行 cancel が
+  // 走ったケースを DB レベルで塞ぐ。
   const claimed = await prisma.eventRegistration.updateMany({
     where: {
       id: registrationId,
       status: RegistrationStatus.CONFIRMED,
-      paymentStatus: PaymentStatus.UNPAID,
+      paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.FAILED] },
     },
     data: { paymentStatus: PaymentStatus.PENDING },
   });
@@ -208,8 +214,8 @@ export async function createEventCheckoutSessionCommand(input: {
       // は存在しないルートで Stripe returnee が 404 していた。既存の公開イベント詳細
       // `/events/[slug]` にリダイレクトし、`registration` クエリで status バナー用に
       // 後続 PR がキーできるようにしておく。
-      success_url: `${appUrl}/events/${authoritative.event.slug}?payment=success&registration=${registrationId}`,
-      cancel_url: `${appUrl}/events/${authoritative.event.slug}?payment=cancelled&registration=${registrationId}`,
+      success_url: `${appUrl}/events/registrations/payment-result?payment=success&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
+      cancel_url: `${appUrl}/events/registrations/payment-result?payment=cancelled&registration=${registrationId}&slug=${encodeURIComponent(authoritative.event.slug)}`,
     });
 
     const settled = await prisma.eventRegistration.updateMany({
@@ -278,8 +284,9 @@ export async function createEventCheckoutSessionCommand(input: {
  * - paymentStatus の claim gate は UNPAID だけでなく FAILED も許容する（Reservation の
  *   `createCheckoutSessionCommand` と同じ「再決済許容」パターン）。offer には 24h の
  *   確定期限があり、途中で決済に失敗しても期限内は再挑戦できる必要があるため、
- *   `createEventCheckoutSessionCommand`（UNPAID のみ許容）より意図的に広くしている
- *   — Task 9 report の deviation 参照
+ *   `createEventCheckoutSessionCommand`（UNPAID / FAILED 許容）と同型の再決済許容パターン。
+ *   offer には 24h の確定期限があり、途中で決済に失敗しても期限内は再挑戦できる必要があるため、
+ *   両 command で claim gate を揃えている — Task 9 report の deviation 参照
  *
  * token 自体が一次認可のため actorCustomerId チェックは行わない
  * （`confirmWaitlistOfferAction` / `checkout/[token]/route.ts` と同方針）。
@@ -393,10 +400,8 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
 
   // Codex P1-A: claim（UNPAID/FAILED → PENDING）は status: WAITLISTED_OFFERED
   // のみを見ており、offer 自体が既に期限切れ（expiresAt <= now）かどうかを見て
-  // いない。hourly cron（waitlist-expire）がまだ EXPIRED 化していないケースや、
-  // 下の `expiresAt` 計算コメントにある Stripe `expires_at` の 30 分下限フロアで
-  // Stripe session だけが offer 期限より長生きするケースでは、期限切れ後でも
-  // checkout session を開始・決済完了できてしまう。決済完了後に webhook が呼ぶ
+  // いない。hourly cron（waitlist-expire）がまだ EXPIRED 化していないケースで
+  // 期限切れ後でも checkout を開始できてしまう。決済完了後に webhook が呼ぶ
   // `confirmWaitlistOfferCommand` は現在時刻で改めて expiresAt を判定するため
   // EXPIRED 遷移になり、支払い済みなのに確定できない money-handling 事故になる
   // （PR#1080 Codex P1-A レビュー）。ここで claim 直後に再検証し、既に期限切れ
@@ -412,6 +417,23 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     throw new DomainError("この繰り上げ当選は既に期限切れです", "VALIDATION");
   }
 
+  // Stripe Checkout Session の expires_at は作成時刻から最短 30 分。offer 残りが
+  // それ未満の場合にフロアで延命すると、offer 期限後の決済 → capacity/expiry
+  // race（自動返金必須経路）に流入する。クリーンに拒否して次候補へ委ねる。
+  const remainingSeconds = Math.floor(
+    (authoritative.expiresAt.getTime() - now.getTime()) / 1000,
+  );
+  if (remainingSeconds < 30 * 60) {
+    await prisma.eventRegistration.updateMany({
+      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
+      data: { paymentStatus: PaymentStatus.UNPAID },
+    });
+    throw new DomainError(
+      "確定期限までの残り時間が短いため、決済を開始できません。期限切れ後に次の待機者へ繰り上がります。",
+      "VALIDATION",
+    );
+  }
+
   const authoritativeTotal =
     authoritative.ticket.price * authoritative.quantity;
 
@@ -419,23 +441,8 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     // Codex review Critical #1: Stripe Checkout Session の有効期限を offer 自身の
     // expiresAt（24h 期限）に揃える。Reservation 側 createCheckoutSessionCommand の
     // `expires_at` precedent（本ファイル兄弟 `src/shared/domain/reservations/
-    // payment-commands.ts`、Codex P1: PR#1042 の silent orphan 予防）と同じ設計
-    // 意図: 揃えないと、cron `waitlist-expire` が offer を先に EXPIRED 化した
-    // 後でも Stripe session だけ生き残り、顧客が決済を完了できてしまう。その場合
-    // `confirmWaitlistOfferCommand` は WAITLISTED_OFFERED を見つけられず
-    // DomainError(NOT_FOUND) を投げ、webhook 側は severity LOW で握り潰す（通常の
-    // 重複配信と区別不能）ため `claimEventRegistrationAsPaid` が呼ばれず、
-    // paymentStatus が PENDING のまま永久に stuck する「money captured / 確認不能」
-    // という金銭事故になる（cron 側は `findExpiredWaitlistOfferCandidates` /
-    // `expireAndPromoteWaitlistForEventCommand` 側の paymentStatus PENDING 除外
-    // ガードで defense-in-depth 済み）。Stripe 制約で expires_at は作成時刻から
-    // 最短 30 分 (`30 * 60`) 必要なため、offer 期限が近い（残り 30 分未満）
-    // ケースはその下限をフロアとして採用する（顧客が offer window の最後の
-    // 1 分に checkout を開いたエッジケース）。
-    const expiresAt = Math.max(
-      Math.floor(authoritative.expiresAt.getTime() / 1000),
-      Math.floor(Date.now() / 1000) + 30 * 60,
-    );
+    // payment-commands.ts`、Codex P1: PR#1042 の silent orphan 予防）と同じ設計。
+    const expiresAt = Math.floor(authoritative.expiresAt.getTime() / 1000);
 
     const session = await client.checkout.sessions.create({
       mode: "payment",
@@ -1027,4 +1034,159 @@ export async function applyEventChargeRefundIdempotent(input: {
     },
     data: { paymentStatus: newStatus },
   });
+}
+
+/**
+ * Waitlist offer: Stripe 課金成功後に confirm が EXPIRED（容量/期限 race）になった
+ * orphan を PENDING → REFUNDED に閉じる。
+ *
+ * `refundEventRegistrationPaymentCommand` は PAID 前提のため使えない。
+ * paymentIntent は webhook session 由来（DB 未保存でも可）。
+ */
+export async function refundExpiredWaitlistOfferPaymentCommand(input: {
+  registrationId: string;
+  stripePaymentIntentId: string;
+  reason?: string;
+}): Promise<{
+  outcome: "refunded" | "already_refunded" | "not_applicable";
+  refundId?: string;
+  refundAmount?: number;
+}> {
+  const {
+    registrationId,
+    stripePaymentIntentId,
+    reason = "Waitlist capacity race after successful payment",
+  } = input;
+
+  const stripeSettings = await assertOnlinePaymentAvailable();
+  const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+  if (!client) {
+    throw new DomainError(
+      "Stripe の設定が正しくありません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+
+  const stripeCurrency = stripeSettings.stripeCurrency;
+
+  const result = await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EVENT_REFUND_LOCK_NAMESPACE}::int4, hashtext(${registrationId}))`;
+
+      const registration = await tx.eventRegistration.findFirst({
+        where: { id: registrationId, event: { deletedAt: null } },
+        select: {
+          id: true,
+          status: true,
+          paymentStatus: true,
+          paidAmount: true,
+          stripePaymentIntentId: true,
+        },
+      });
+
+      if (!registration) {
+        return { outcome: "not_applicable" as const };
+      }
+
+      if (registration.paymentStatus === PaymentStatus.REFUNDED) {
+        return { outcome: "already_refunded" as const };
+      }
+
+      if (
+        registration.status !== RegistrationStatus.EXPIRED ||
+        registration.paymentStatus !== PaymentStatus.PENDING ||
+        registration.paidAmount === null ||
+        registration.paidAmount <= 0
+      ) {
+        return { outcome: "not_applicable" as const };
+      }
+
+      const amount = registration.paidAmount;
+
+      let refund;
+      try {
+        refund = await client.refunds.create(
+          {
+            payment_intent: stripePaymentIntentId,
+            amount: toStripeUnitAmount(amount, stripeCurrency),
+            metadata: {
+              initiator: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+              reason,
+            },
+          },
+          {
+            idempotencyKey: `event-registration-capacity-race-refund-${registrationId}`,
+          },
+        );
+      } catch (error) {
+        logError(normalizeError(error), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.CRITICAL,
+          context: {
+            operation: "refundExpiredWaitlistOfferPayment",
+            registrationId,
+          },
+        });
+        throw new DomainError(
+          "容量レース後の自動返金に失敗しました",
+          "UNEXPECTED",
+        );
+      }
+
+      try {
+        await tx.$executeRaw`SAVEPOINT refund_create_capacity_race`;
+        await tx.refund.create({
+          data: {
+            eventRegistrationId: registrationId,
+            amount,
+            reason,
+            stripeRefundId: refund.id,
+            refundedByType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+          },
+        });
+        await tx.$executeRaw`RELEASE SAVEPOINT refund_create_capacity_race`;
+      } catch (error) {
+        if (!isPrismaUniqueConstraintError(error, "stripeRefundId")) {
+          throw error;
+        }
+        await tx.$executeRaw`ROLLBACK TO SAVEPOINT refund_create_capacity_race`;
+      }
+
+      await tx.eventRegistration.updateMany({
+        where: {
+          id: registrationId,
+          status: RegistrationStatus.EXPIRED,
+          paymentStatus: PaymentStatus.PENDING,
+        },
+        data: {
+          paymentStatus: PaymentStatus.REFUNDED,
+          stripePaymentIntentId,
+        },
+      });
+
+      return {
+        outcome: "refunded" as const,
+        refundId: refund.id,
+        refundAmount: amount,
+      };
+    },
+    { maxWait: 30_000, timeout: 30_000 },
+  );
+
+  if (result.outcome === "refunded") {
+    await createAuditLogRecord({
+      action: AuditAction.UPDATE,
+      resource: "event-registration",
+      resourceId: registrationId,
+      metadata: {
+        operation: "refundExpiredWaitlistOfferPayment",
+        actorType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+        reason,
+        refundId: result.refundId,
+        refundAmount: result.refundAmount,
+      },
+    });
+  }
+
+  return result;
 }

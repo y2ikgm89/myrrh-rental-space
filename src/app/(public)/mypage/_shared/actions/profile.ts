@@ -182,7 +182,7 @@ export async function updateProfileAction(
             );
 
             const verificationUrl = new URL(
-              "/api/customer/verify-email",
+              "/mypage/settings/confirm-email",
               getAppUrl(),
             );
             verificationUrl.searchParams.set("token", request.rawToken);

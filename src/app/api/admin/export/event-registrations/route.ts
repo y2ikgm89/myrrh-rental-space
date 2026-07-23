@@ -108,7 +108,7 @@ async function generateEventRegistrationsWorkbook(
  */
 export async function GET(request: Request): Promise<Response> {
   try {
-    const auth = await checkPermission("event", "read", request.headers);
+    const auth = await checkPermission("event", "manage", request.headers);
     if (!auth.success) {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }

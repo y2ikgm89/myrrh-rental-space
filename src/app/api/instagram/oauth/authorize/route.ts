@@ -9,10 +9,10 @@
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { checkPermission } from "@/admin/lib/action-auth";
 import { serverEnv } from "@/shared/lib/env/server";
-import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
-import { isAdminRole, isSuperAdminRole } from "@/shared/lib/admin-role-guards";
 import { getAdminAppUrl } from "@/shared/lib/admin-urls";
+import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
 
 const INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize";
 const STATE_COOKIE_NAME = "instagram_oauth_state";
@@ -22,17 +22,16 @@ const STATE_COOKIE_MAX_AGE = 600; // 10分
  * Instagram OAuth認証開始
  * GET /api/instagram/oauth/authorize
  *
- * 1. 環境変数チェック
- * 2. CSRF対策用のstate生成
- * 3. stateをcookieに保存
- * 4. Instagram認証URLにリダイレクト
+ * 1. settings:manage 権限検証（GBP OAuth / Server Action と同 SSoT）
+ * 2. 環境変数チェック
+ * 3. CSRF対策用のstate生成
+ * 4. stateをcookieに保存
+ * 5. Instagram認証URLにリダイレクト
  */
 export async function GET(request: Request) {
-  // 認証チェック
-  const session = await getAdminSession(request.headers);
-  const user = getAdminSessionUser(session);
-  if (!user || (!isAdminRole(user.role) && !isSuperAdminRole(user.role))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await checkPermission("settings", "manage", request.headers);
+  if (!auth.success) {
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   // 環境変数チェック

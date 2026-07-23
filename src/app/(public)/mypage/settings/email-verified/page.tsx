@@ -1,7 +1,7 @@
 /**
- * /mypage/settings/email-verified — メールアドレスの本人確認 URL 成功着地ページ。
+ * /mypage/settings/email-verified — メールアドレスの本人確認成功着地ページ。
  *
- * `/api/customer/verify-email` の GET が `consumeCustomerEmailChangeCommand` を
+ * `/api/customer/verify-email` の POST が `consumeCustomerEmailChangeCommand` を
  * 通したあとに 302 で遷移する。ここではもう副作用は起こさず結果表示のみ。
  */
 

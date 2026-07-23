@@ -393,7 +393,7 @@ describe("updateProfileAction", () => {
           email: "new@example.com",
           newEmail: "new@example.com",
           verificationUrl: expect.stringContaining(
-            "/api/customer/verify-email?token=",
+            "/mypage/settings/confirm-email?token=",
           ),
         }),
       );

@@ -421,6 +421,8 @@ export function validateProductionEnv(): void {
       name: "CLOUDFLARE_ORIGIN_HEADER_SECRET",
       value: serverEnv.CLOUDFLARE_ORIGIN_HEADER_SECRET,
     },
+    { name: "CLOUDFLARE_ZONE_ID", value: serverEnv.CLOUDFLARE_ZONE_ID },
+    { name: "CLOUDFLARE_API_TOKEN", value: serverEnv.CLOUDFLARE_API_TOKEN },
     // NEXT_PUBLIC_* はビルド時に client JS へインライン化されるが、
     // Cloud Build substitution で未指定だと "" でビルドされ silent failure になる。
     // instrumentation.register() で起動時に fail-fast させる。

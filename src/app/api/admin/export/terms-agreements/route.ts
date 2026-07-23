@@ -24,7 +24,7 @@ import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
  * 規約同意記録 CSV エクスポート
  *
  * 法務監査 (個情法 33 条 開示請求 / GDPR Art.30 / 民法 548 条の 4) 対応の
- * 証跡出力。RBAC: terms:read 必須。Cache-Control: private, no-store。
+ * 証跡出力。RBAC: terms:update 必須 (PII 一括 export)。Cache-Control: private, no-store。
  *
  * フィルタ: scope / termsId / guestEmail。全件取得は perPage=10000 上限で
  * 1 回の query で出す (証跡は 1 ユーザー数件程度のため数十万行スケールは
@@ -43,7 +43,7 @@ function nonEmpty(value: string | null): string | undefined {
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    const auth = await checkPermission("terms", "read", request.headers);
+    const auth = await checkPermission("terms", "update", request.headers);
     if (!auth.success) {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }

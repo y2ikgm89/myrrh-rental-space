@@ -1,9 +1,8 @@
 import "server-only";
 
-import { AuditAction } from "@generated/prisma/enums";
 import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
-import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -12,6 +11,8 @@ import {
 } from "@/shared/lib/errors/server";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
+import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
+import { getStripeClient } from "@/shared/lib/stripe";
 
 /**
  * PENDING 予約の fail-safe 有効期限（分）。**checkout 開始時刻** (Reservation.paymentInitiatedAt)
@@ -47,22 +48,13 @@ interface ExpirePendingReservationsResult {
  * `paymentStatus = PENDING` のまま `PENDING_RESERVATION_EXPIRY_MINUTES` を超えた予約を
  * CANCELLED に遷移させて空き枠（DB EXCLUDE 制約）を解放する。
  *
- * 冪等・at-least-once 安全:
- * - `updateMany` の WHERE で status / paymentStatus / paymentInitiatedAt / deletedAt を
- *   全て assert し、race で他経路（顧客の checkout / webhook / 管理者操作）が状態を進めて
- *   いた予約は自動的に対象外になる
- * - claim 対象を先に select してから updateMany の WHERE で id in [...] で
- *   claim する 2 段構え。監査ログ用のメタ情報 (spaceId / customerId / 年齢) を
- *   claim 後にも安定して取れる
+ * claim 成功後の副作用（SSoT = `applyCancellationSideEffects`）:
+ * - クーポン usageCount の戻し
+ * - Stripe Checkout Session の expire（open な session からの後追い課金を防ぐ）
+ * - GCal / メール / 通知 / SmartLock / 集約 AuditLog
  *
- * 判定軸 (Codex P1 対応):
- * - `paymentStatus: PENDING`: PAID/REFUNDED は自動除外され、terminal な決済状態を
- *   巻き戻さない
- * - `status: PENDING | CONFIRMED`: 公開経路の予約は `status = CONFIRMED` + `paymentStatus = PENDING`
- *   で作成される (`createPublicReservationCommand`)。admin 経路の PENDING も救う
- * - `paymentInitiatedAt: { lt: cutoff }`: checkout 開始時刻を cutoff の基準とする。予約作成
- *   から時間をおいて checkout を開始したケース (createdAt < cutoff でも checkout はまだ生きている)
- *   の誤爆を防ぐ
+ * `applyCancellation` は PENDING を拒否するため使わない。本 cron が PENDING を
+ * CANCELLED に claim した直後に副作用を発火する。
  *
  * cron から呼ぶ想定 (`/api/cron/pending-reservation-expire`)。他経路からは呼ばない。
  */
@@ -71,8 +63,9 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
   const cutoff = new Date(
     now.getTime() - PENDING_RESERVATION_EXPIRY_MINUTES * MS_PER_MINUTE,
   );
+  const cancellationReason = `PENDING が ${PENDING_RESERVATION_EXPIRY_MINUTES} 分を経過したため自動キャンセル`;
 
-  // 1) 対象候補を select（監査ログ用の spaceId / customerId / paymentInitiatedAt を確保）
+  // 1) 対象候補を select（副作用・監査用メタを確保）
   const candidates = await prisma.reservation.findMany({
     where: {
       deletedAt: null,
@@ -87,6 +80,8 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       customerId: true,
       spaceId: true,
       paymentInitiatedAt: true,
+      couponId: true,
+      stripeCheckoutSessionId: true,
     },
   });
 
@@ -95,6 +90,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
   }
 
   const candidateIds = candidates.map((r) => r.id);
+  const candidateById = new Map(candidates.map((r) => [r.id, r]));
 
   // 2) atomic claim: WHERE で全条件を再 assert し、race で条件を外れたものは自動除外
   const claimed = await prisma.reservation.updateMany({
@@ -111,16 +107,11 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
       status: ReservationStatus.CANCELLED,
       cancelledAt: now,
       cancelledByType: CANCELLED_BY.SYSTEM,
-      cancellationReason: `PENDING が ${PENDING_RESERVATION_EXPIRY_MINUTES} 分を経過したため自動キャンセル`,
+      cancellationReason,
       icsSequence: { increment: 1 },
     },
   });
 
-  // claim 数が候補数より少なくても race による自然な減少で異常ではない
-  // (webhook が同時刻に PAID / FAILED / CANCELLED を確定させた等)。
-  // 監査ログには「claim 成功した」ものだけを載せる — updateMany は行を返さないので
-  // 「候補として発見し、かつ claim 対象条件を満たすと直後に再確認できた」ものだけを
-  // ログ対象とし、race 敗北した予約は含めない (別経路のログに任せる)。
   const settled = await prisma.reservation.findMany({
     where: {
       id: { in: candidateIds },
@@ -132,7 +123,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
   });
 
   const expiredLogs: ExpiredReservationLog[] = settled.map((row) => {
-    const candidate = candidates.find((c) => c.id === row.id);
+    const candidate = candidateById.get(row.id);
     const initiatedAt = candidate?.paymentInitiatedAt;
     const ageMinutes = initiatedAt
       ? Math.floor((now.getTime() - initiatedAt.getTime()) / MS_PER_MINUTE)
@@ -145,31 +136,54 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
     };
   });
 
-  // 3) 監査ログ (`AuditLog` chain) を予約単位で書き込む。cron の userId は null。
-  //    hash chain の直列化契約に従い await で逐次記録する (並行書込禁止)。
+  // 3) claim 成功分の副作用。クーポン戻しは applyCancellation と同型で先に行い、
+  //    Stripe session expire + cancellation side effects を予約単位で発火する。
+  //    AuditLog は side effects 側の集約レコードが SSoT（旧: 本関数内の単純 UPDATE 監査）。
   for (const log of expiredLogs) {
+    const candidate = candidateById.get(log.id);
+    if (!candidate) continue;
+
+    if (candidate.couponId) {
+      try {
+        await prisma.coupon.updateMany({
+          where: { id: candidate.couponId, usageCount: { gt: 0 } },
+          data: { usageCount: { decrement: 1 } },
+        });
+      } catch (error) {
+        logError(normalizeError(error), {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "pendingExpiryCouponDecrement",
+            reservationId: log.id,
+            couponId: candidate.couponId,
+          },
+        });
+      }
+    }
+
+    if (candidate.stripeCheckoutSessionId) {
+      await expireCheckoutSessionBestEffort({
+        reservationId: log.id,
+        sessionId: candidate.stripeCheckoutSessionId,
+      });
+    }
+
     try {
-      await createAuditLogRecord({
-        action: AuditAction.UPDATE,
-        resource: "reservation",
-        resourceId: log.id,
-        newValue: {
-          status: "CANCELLED" satisfies ReservationStatus,
-          cancelledByType: CANCELLED_BY.SYSTEM,
-          cancellationReason: `PENDING expired after ${PENDING_RESERVATION_EXPIRY_MINUTES} minutes`,
-        },
-        metadata: {
-          channel: "cron:pending-reservation-expire",
-          expiryMinutes: PENDING_RESERVATION_EXPIRY_MINUTES,
-          ageMinutes: log.ageMinutes,
-        },
+      await applyCancellationSideEffects({
+        reservationId: log.id,
+        cancellationReason,
+        channel: "system",
+        actorUserId: null,
+        request: { ip: null, userAgent: null },
+        awaitCompletion: true,
       });
     } catch (error) {
       logError(normalizeError(error), {
         category: ErrorCategory.DATABASE,
         severity: ErrorSeverity.HIGH,
         context: {
-          operation: "auditLogPendingExpiry",
+          operation: "pendingExpirySideEffects",
           reservationId: log.id,
         },
       });
@@ -177,4 +191,28 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
   }
 
   return { expired: expiredLogs, total: claimed.count };
+}
+
+async function expireCheckoutSessionBestEffort(input: {
+  reservationId: string;
+  sessionId: string;
+}): Promise<void> {
+  try {
+    const stripeSettings = await assertOnlinePaymentAvailable();
+    const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
+    if (!client) return;
+    await client.checkout.sessions.expire(input.sessionId);
+  } catch (error) {
+    // 既に expired / completed の session は Stripe が reject する。
+    // cron の CANCELLED claim は既に成功しているため、expire 失敗は観測のみ。
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "pendingExpiryExpireCheckoutSession",
+        reservationId: input.reservationId,
+        sessionId: input.sessionId,
+      },
+    });
+  }
 }

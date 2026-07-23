@@ -8,7 +8,7 @@
 // enums (SocialPlatform 含む多数) を transitive に load する。webhook / refund
 // 系のコードは type guard のためだけに value import が必要で、helpers 経由だと
 // 消費側の test mock が `@generated/prisma/enums` を差し替えたときに不足 export
-// で SyntaxError を起こす。attribution 4 items のみを持つ最小モジュールに
+// で SyntaxError を起こす。attribution 値のみを持つ最小モジュールに
 // 切り出すことで、消費側の transitive dep を Prisma enums から完全に切り離す
 // (feedback: stale-branch-name-reuse-and-mock-module-coverage 相当の再発防止)。
 // =============================================================================
@@ -18,6 +18,11 @@ export const REFUNDED_BY_TYPE = {
   ADMIN: "ADMIN",
   /** キャンセル副作用 (`cancellation-side-effects.ts`) で自動発火した返金 */
   AUTO_ON_CANCEL: "AUTO_ON_CANCEL",
+  /**
+   * Waitlist offer: Stripe 課金成功後に容量/期限 race で EXPIRED 化した orphan の
+   * 自動返金 (`refundExpiredWaitlistOfferPaymentCommand`)。
+   */
+  AUTO_CAPACITY_RACE: "AUTO_CAPACITY_RACE",
   /** Stripe Dashboard 経由の手動返金 (webhook 経由で back-fill) */
   STRIPE_DASHBOARD: "STRIPE_DASHBOARD",
 } as const;
@@ -28,6 +33,7 @@ export type RefundedByType =
 export const REFUNDED_BY_TYPE_LABELS: Record<RefundedByType, string> = {
   [REFUNDED_BY_TYPE.ADMIN]: "管理者",
   [REFUNDED_BY_TYPE.AUTO_ON_CANCEL]: "自動（キャンセル）",
+  [REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE]: "自動（容量レース）",
   [REFUNDED_BY_TYPE.STRIPE_DASHBOARD]: "Stripe Dashboard",
 };
 

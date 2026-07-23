@@ -2,6 +2,7 @@ import "server-only";
 
 import { DomainError } from "@/shared/domain/domain-error";
 import { isRecord } from "@/shared/lib/serialize";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export interface SyncEventTimeSlotsTx {
   readonly eventTimeSlot: {
@@ -11,6 +12,9 @@ export interface SyncEventTimeSlotsTx {
     delete(args: object): Promise<unknown>;
     update(args: object): Promise<unknown>;
     create(args: object): Promise<unknown>;
+    aggregate(args: object): Promise<object>;
+  };
+  readonly eventRegistration: {
     aggregate(args: object): Promise<object>;
   };
   readonly event: {
@@ -36,6 +40,14 @@ function getAggregateDate(
   if (!isRecord(group)) return null;
   const value = group[fieldKey];
   return value instanceof Date ? value : null;
+}
+
+function getAggregateQuantitySum(aggregate: object): number {
+  if (!isRecord(aggregate)) return 0;
+  const sum = aggregate["_sum"];
+  if (!isRecord(sum)) return 0;
+  const quantity = sum["quantity"];
+  return typeof quantity === "number" ? quantity : 0;
 }
 
 /**
@@ -96,6 +108,21 @@ export async function syncEventTimeSlotsCommand(
 
   for (const slot of inputs) {
     if (slot.id) {
+      const confirmedAggregate = await tx.eventRegistration.aggregate({
+        where: {
+          slotId: slot.id,
+          status: RegistrationStatus.CONFIRMED,
+        },
+        _sum: { quantity: true },
+      });
+      const confirmedQuantity = getAggregateQuantitySum(confirmedAggregate);
+      if (slot.capacity < confirmedQuantity) {
+        throw new DomainError(
+          `定員を確定済み申込人数（${confirmedQuantity}名）未満にはできません`,
+          "VALIDATION",
+        );
+      }
+
       await tx.eventTimeSlot.update({
         where: { id: slot.id },
         data: {

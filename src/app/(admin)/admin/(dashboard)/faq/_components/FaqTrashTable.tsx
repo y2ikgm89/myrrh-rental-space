@@ -36,8 +36,7 @@ export function FaqTrashTable({
     <div className="space-y-6">
       <p className="rounded-md border border-warning/30 bg-warning/5 px-4 py-2 text-xs text-muted-foreground">
         ゴミ箱に保管された項目は 30
-        日経過後、自動的に完全削除される予定です（cron
-        未実装、現在は手動で完全削除可能）。
+        日経過後、定期ジョブにより自動的に完全削除されます。それまでは手動で復元または完全削除できます。
       </p>
 
       {categories.length > 0 && (

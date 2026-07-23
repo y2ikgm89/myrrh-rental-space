@@ -1,6 +1,6 @@
 import "server-only";
 
-import { RegistrationStatus } from "@generated/prisma/enums";
+import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
 import {
   CANCELLABLE_REGISTRATION_STATUSES,
   type CancelledByType,
@@ -61,6 +61,7 @@ export interface ApplyEventRegistrationCancellationTx {
 export interface CancellableEventRegistration {
   id: string;
   status: RegistrationStatus;
+  paymentStatus: PaymentStatus;
   slotId: string;
   ticketId: string;
 }
@@ -124,16 +125,28 @@ export async function applyEventRegistrationCancellation(
     return { success: false, error: "この申込はキャンセルできません" };
   }
 
+  // Stripe Checkout 進行中 (PENDING) はキャンセル禁止。予約側 applyCancellation と同型。
+  // 許すと checkout 完了 webhook の claimEventRegistrationAsPaid が status=CONFIRMED
+  // を要求して no-op になり、課金成功 / DB CANCELLED の orphan になる。
+  if (registration.paymentStatus === PaymentStatus.PENDING) {
+    return {
+      success: false,
+      error:
+        "決済処理中のためキャンセルできません。決済完了後にキャンセルするか、しばらく経ってから再度お試しください。",
+    };
+  }
+
   const previousStatus = registration.status;
   const previousSlotId = registration.slotId;
   const previousTicketId = registration.ticketId;
 
-  // Atomic claim: WHERE に status ∈ CANCELLABLE_REGISTRATION_STATUSES（+ 指定時は
-  // customerId 期待値）を含めて二重 submit / 同時操作 / claim との race を DB レベルで防ぐ。
+  // Atomic claim: WHERE に status ∈ CANCELLABLE + paymentStatus ≠ PENDING（+ 指定時は
+  // customerId 期待値）を含めて二重 submit / 同時操作 / checkout 開始 race を防ぐ。
   const updateResult = await tx.eventRegistration.updateMany({
     where: {
       id: registration.id,
       status: { in: [...CANCELLABLE_REGISTRATION_STATUSES] },
+      paymentStatus: { not: PaymentStatus.PENDING },
       ...(options.expectedCustomerId !== undefined
         ? { customerId: options.expectedCustomerId }
         : {}),

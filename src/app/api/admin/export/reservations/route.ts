@@ -33,7 +33,11 @@ import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
  */
 export async function GET(request: Request): Promise<Response> {
   try {
-    const auth = await checkPermission("reservation", "read", request.headers);
+    const auth = await checkPermission(
+      "reservation",
+      "manage",
+      request.headers,
+    );
     if (!auth.success) {
       return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }

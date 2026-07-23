@@ -12,9 +12,8 @@ import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
+import { checkPermission } from "@/admin/lib/action-auth";
 import { serverEnv } from "@/shared/lib/env/server";
-import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
-import { isAdminRole, isSuperAdminRole } from "@/shared/lib/admin-role-guards";
 import { connectInstagramOAuthAccount } from "@/shared/domain/instagram/commands";
 import {
   exchangeCodeForToken,
@@ -31,7 +30,7 @@ import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
 import { getAdminAppUrl } from "@/shared/lib/admin-urls";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
-import { jsonError } from "@/shared/lib/route-responses";
+import { getRouteErrorStatus, jsonError } from "@/shared/lib/route-responses";
 
 const STATE_COOKIE_NAME = "instagram_oauth_state";
 const instagramOAuthCallbackQuerySchema = z.object({
@@ -56,15 +55,11 @@ const instagramOAuthCallbackQuerySchema = z.object({
  * 8. 設定ページにリダイレクト
  */
 export async function GET(request: NextRequest) {
-  // 認証チェック
+  // settings:manage（SUPER_ADMIN）— GBP OAuth / Instagram Server Action と同 SSoT。
   // @see docs/api-conventions.md — 未認証=401 / 認証済+権限不足=403
-  const session = await getAdminSession(request.headers);
-  const user = getAdminSessionUser(session);
-  if (!user) {
-    return jsonError("Unauthorized", 401);
-  }
-  if (!isAdminRole(user.role) && !isSuperAdminRole(user.role)) {
-    return jsonError("Forbidden", 403);
+  const auth = await checkPermission("settings", "manage", request.headers);
+  if (!auth.success) {
+    return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
   }
 
   const parsedQuery = instagramOAuthCallbackQuerySchema.safeParse({

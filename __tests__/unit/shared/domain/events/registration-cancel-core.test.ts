@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { RegistrationStatus } from "@generated/prisma/enums";
+import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
 import {
   applyEventRegistrationCancellation,
   type ApplyEventRegistrationCancellationOptions,
@@ -36,7 +36,12 @@ const mockTx = {
 const NOW = new Date("2026-04-01T00:00:00Z");
 
 /** slotId/ticketId は offerNextWaitlistEntryCommand が候補検索に使う。 */
-const BASE_REGISTRATION = { id: "reg1", slotId: "slot1", ticketId: "ticket1" };
+const BASE_REGISTRATION = {
+  id: "reg1",
+  slotId: "slot1",
+  ticketId: "ticket1",
+  paymentStatus: PaymentStatus.UNPAID,
+};
 
 function customerMypageOptions(
   overrides: Partial<ApplyEventRegistrationCancellationOptions> = {},
@@ -58,6 +63,24 @@ describe("applyEventRegistrationCancellation", () => {
     mockFindUnique.mockResolvedValue(null);
   });
 
+  test("paymentStatus=PENDING ならキャンセル拒否（Checkout 進行中）", async () => {
+    const result = await applyEventRegistrationCancellation(
+      mockTx,
+      {
+        ...BASE_REGISTRATION,
+        status: RegistrationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PENDING,
+      },
+      customerMypageOptions(),
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("決済処理中");
+    }
+    expect(mockUpdateMany).not.toHaveBeenCalled();
+  });
+
   test("CONFIRMED なら CANCELLED に atomic claim して success（waitlist 候補なしなら promoted: null）", async () => {
     const result = await applyEventRegistrationCancellation(
       mockTx,
@@ -77,6 +100,7 @@ describe("applyEventRegistrationCancellation", () => {
           status: {
             in: expect.arrayContaining([RegistrationStatus.CONFIRMED]),
           },
+          paymentStatus: { not: PaymentStatus.PENDING },
         }),
         data: expect.objectContaining({
           status: RegistrationStatus.CANCELLED,

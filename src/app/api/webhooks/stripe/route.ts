@@ -13,8 +13,8 @@
  *   `confirmWaitlistOfferCommand` の容量再チェックを PAID 確定より先に通す）
  * - checkout.session.async_payment_failed: 非同期決済失敗 → FAILED
  * - checkout.session.expired: セッション期限切れ → FAILED
- * - charge.refunded: 返金完了 → REFUNDED（reservation のみ。event-registration の
- *   自動返金導線は未実装 — 容量race時は CRITICAL ログで手動対応）
+ * - charge.refunded: 返金完了 → REFUNDED（reservation / event-registration）
+ *   waitlist 容量 race 後の自動返金は `refundExpiredWaitlistOfferPaymentCommand`
  *
  * ## 決済対象の判別（`extractPaymentSubject`）
  * `session.metadata` の shape で reservation / event-registration を判別する
@@ -31,12 +31,9 @@
  * signature verification 直後に `claimStripeEventForProcessing` で
  * `event.id` を primary key として INSERT を試みる (Stripe 公式推奨パターン
  * <https://docs.stripe.com/webhooks#handle-duplicate-events>)。P2002 unique
- * conflict = 別配送で受領済み → 副作用ゼロで `200 { duplicate: true }` を返す
- * (cache invalidate も skip)。TOCTOU race を SELECT+INSERT ではなく create+catch
- * で回避するため、event.id が同一な並行 delivery でも 1 プロセスだけが handler を
- * 実行できる。handler 全成功後に `markStripeEventProcessed` で `processedAt` を
- * 書込む (tx 外の post-write のため、途中で throw すると null で残り、
- * STRIPE-DEDUP-B の retention/reconcile cron が拾う想定)。
+ * conflict = 既処理なら副作用ゼロで `200 { duplicate: true }`。未処理
+ * (`retry_unprocessed`) なら handler 再実行。handler 側 updateMany claim が
+ * 二重副作用の backstop。
  *
  * ### (b) Backstop: 各 handler の atomic claim (`claimReservationAs*` /
  * `claimEventRegistrationAs*` の WHERE 条件で status/paymentStatus を排他制御する
@@ -44,9 +41,8 @@
  * `session.completed` と `async_payment_succeeded` の並行配信で確認メールが
  * 二重送信される silent bug を起こすため、claim 成否 (`updateMany.count > 0`) で
  * 後続副作用（メール送信 / cache invalidate）を gate する。(a) だけでも十分に
- * 見えるが、handler crash → Stripe retry の crash-recovery 経路では (a) が
- * duplicate 短絡してしまうため、当該 event の再配送前に retention cron が
- * `processedAt=null` な stale event row を削除する契約で完結する。
+ * 見えるが、handler crash → Stripe retry では (a) が `retry_unprocessed` で
+ * handler 再入する契約。stale cleanup は補助。
  *
  * @see https://docs.stripe.com/webhooks#handle-duplicate-events
  * @see https://docs.stripe.com/payments/checkout/fulfill-orders
@@ -74,7 +70,14 @@ import {
   saveEventRegistrationPaymentIntentId,
   findEventRegistrationByPaymentIntent,
   applyEventChargeRefundIdempotent,
+  refundExpiredWaitlistOfferPaymentCommand,
 } from "@/shared/domain/events/payment-commands";
+import { prisma } from "@/shared/db/prisma";
+import {
+  PaymentStatus,
+  RegistrationStatus,
+  ReservationStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { getWaitlistConfirmationEmailDetails } from "@/shared/domain/events/waitlist-queries";
 import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
@@ -97,7 +100,6 @@ import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availabili
 import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // POST /api/webhooks/stripe
@@ -175,17 +177,17 @@ export async function POST(request: Request) {
     // 5. Primary dedup chokepoint (STRIPE-DEDUP-A)
     //
     // Stripe 公式 "handle-duplicate-events" 推奨実装。event.id で INSERT を試み、
-    // P2002 unique conflict なら副作用ゼロで 200 短絡する
-    // (`invalidateSiteWideCacheFromRouteHandler` も呼ばない — 初回配送で成功済み
-    // のキャッシュに再度 CF purge を投げても reflection しないうえ、無駄に purge
-    // quota を消費するため)。
+    // 成功済み (`already_processed`) のみ副作用ゼロで 200 短絡する。
+    // crash 後の `retry_unprocessed` は handler を再実行する（handler 側の
+    // updateMany claim が二重副作用の backstop。旧実装の一律 200 短絡は
+    // Stripe が再送を止め、paymentStatus が永久 stuck する欠陥だった）。
     //
     // @see https://docs.stripe.com/webhooks#handle-duplicate-events
     const claimResult = await claimStripeEventForProcessing({
       eventId: event.id,
       eventType: event.type,
     });
-    if (claimResult === "duplicate") {
+    if (claimResult === "already_processed") {
       return jsonSuccess({ received: true, duplicate: true });
     }
 
@@ -345,7 +347,11 @@ async function fulfillPaymentAtomically(
 
   invalidateReservationCache(reservationId);
 
-  if (reservation.status === ReservationStatus.CONFIRMED) return;
+  // 公開予約は作成時点で status=CONFIRMED（後払い checkout）。確認メールは作成時に
+  // 送済みなので二重送信を避けるが、領収書は決済確定のたびに発行する
+  // （旧 early-return は receipt も飛ばし receipt-backfill 依存だった）。
+  const skipConfirmationEmail =
+    reservation.status === ReservationStatus.CONFIRMED;
 
   // 領収書 (Receipt) の atomic 採番・発行を await で実行する。
   // - fireAndForget 禁止: 失敗が webhook から見えないと Stripe 再送で確定した予約に
@@ -386,6 +392,8 @@ async function fulfillPaymentAtomically(
       throw error;
     }
   }
+
+  if (skipConfirmationEmail) return;
 
   fireAndForget(
     sendReservationConfirmationEmail(
@@ -448,12 +456,9 @@ function invalidateEventRegistrationCache(): void {
  * 無限リトライを引き起こす。
  *
  * capacity race（`confirmWaitlistOfferCommand` が `status: "EXPIRED"` を返す =
- * 決済は成功したが容量再チェックで枠を失った）は `claimEventRegistrationAsPaid`
- * を呼ばない。この状態は `claimEventRegistrationAsFailed`（paymentStatus=FAILED）
- * でも正しく表現できない — 実際には Stripe 決済は成功しているため、FAILED は
- * 会計上の虚偽表示になる。イベント側に自動返金導線が無い（`refunds` API 呼び出しの
- * 実装が無い）ため、CRITICAL ログのみで手動返金・reconciliation に委ねる
- * （Task 9 report の capacity-race decision 参照。follow-up: 自動返金導線の追加）。
+ * 決済は成功したが容量再チェックで枠を失った）は
+ * `refundExpiredWaitlistOfferPaymentCommand` で PENDING → REFUNDED に閉じる
+ * （Stripe refund + Refund 行 + AuditLog。失敗時は throw して Stripe retry）。
  */
 async function fulfillEventRegistrationPaymentAtomically(
   registrationId: string,
@@ -464,6 +469,41 @@ async function fulfillEventRegistrationPaymentAtomically(
   const isWaitlistOffer = session.metadata?.["source"] === "waitlist-offer";
 
   if (isWaitlistOffer) {
+    // Retry recovery: 前回 confirm で EXPIRED 化した後、dedup 再入でここに来る。
+    const stuckExpiredPending = await prisma.eventRegistration.findFirst({
+      where: {
+        id: registrationId,
+        status: RegistrationStatus.EXPIRED,
+        paymentStatus: PaymentStatus.PENDING,
+      },
+      select: { id: true },
+    });
+    if (stuckExpiredPending) {
+      if (!paymentIntentId) {
+        logError(
+          new Error(
+            "Waitlist capacity-race orphan lacks payment_intent — cannot auto-refund",
+          ),
+          {
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.CRITICAL,
+            context: {
+              operation: "stripeWebhookWaitlistOfferCapacityRace",
+              registrationId,
+              sessionId: session.id,
+            },
+          },
+        );
+        return;
+      }
+      await refundExpiredWaitlistOfferPaymentCommand({
+        registrationId,
+        stripePaymentIntentId: paymentIntentId,
+      });
+      invalidateEventRegistrationCache();
+      return;
+    }
+
     let confirmResult:
       Awaited<ReturnType<typeof confirmWaitlistOfferCommand>> | undefined;
     try {
@@ -501,21 +541,28 @@ async function fulfillEventRegistrationPaymentAtomically(
     }
 
     if (confirmResult && confirmResult.registration.status === "EXPIRED") {
-      logError(
-        new Error(
-          "Waitlist offer payment succeeded but capacity recheck expired the offer — manual refund reconciliation required",
-        ),
-        {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.CRITICAL,
-          context: {
-            operation: "stripeWebhookWaitlistOfferCapacityRace",
-            registrationId,
-            sessionId: session.id,
-            paymentIntentId,
+      if (!paymentIntentId) {
+        logError(
+          new Error(
+            "Waitlist offer expired after payment but payment_intent missing — cannot auto-refund",
+          ),
+          {
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.CRITICAL,
+            context: {
+              operation: "stripeWebhookWaitlistOfferCapacityRace",
+              registrationId,
+              sessionId: session.id,
+            },
           },
-        },
-      );
+        );
+        return;
+      }
+      await refundExpiredWaitlistOfferPaymentCommand({
+        registrationId,
+        stripePaymentIntentId: paymentIntentId,
+      });
+      invalidateEventRegistrationCache();
       return;
     }
   }

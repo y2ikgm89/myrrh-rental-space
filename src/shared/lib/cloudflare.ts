@@ -6,8 +6,9 @@
  *
  * Zone ID は env schema (`src/shared/lib/env/server.ts`) で
  * 32-char hex を regex 検証済み。本モジュールは追加検証なしで信頼する。
- * 未設定（env 欠落）時は `getCloudflareCredentials()` が null を返し、
- * 各 purge エントリポイントは早期 return で no-op（既存挙動と整合）。
+ * 未設定（env 欠落）時は `getCloudflareCredentials()` が null を返す。
+ * 非本番 / E2E runtime では no-op (success: true)、本番では
+ * `{ success: false, error: "Cloudflare credentials not configured" }` を返す。
  *
  * 起動時の credential 健全性チェックは
  * `src/shared/lib/cache/health.ts` の `assertCloudflareCredentials()` が担当。
@@ -20,7 +21,7 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { serverEnv } from "@/shared/lib/env/server";
+import { isProduction, serverEnv } from "@/shared/lib/env/server";
 import { logger } from "./errors/logger-core";
 import { getBaseUrl } from "@/shared/lib/constants";
 
@@ -51,6 +52,19 @@ function getCloudflareCredentials(): {
   const apiToken = serverEnv.CLOUDFLARE_API_TOKEN;
   if (!zoneId || !apiToken) return null;
   return { zoneId, apiToken };
+}
+
+/** 本番 (E2E runtime 除く) では credential 欠落を silent no-op にしない。 */
+function shouldFailOnMissingCloudflareCredentials(): boolean {
+  return isProduction() && serverEnv.E2E_RUNTIME !== "1";
+}
+
+function purgeResultWhenCredentialsMissing(): PurgeResult {
+  if (shouldFailOnMissingCloudflareCredentials()) {
+    return { success: false, error: "Cloudflare credentials not configured" };
+  }
+  logger.debug("Cloudflare credentials not configured, skipping cache purge");
+  return { success: true };
 }
 
 /** 公式推奨: 3-5 回の exponential backoff retry */
@@ -204,9 +218,7 @@ export async function purgeCloudflareCache(
   const credentials = getCloudflareCredentials();
 
   if (!credentials) {
-    // Cloudflare設定がない場合は何もしない（エラーにはしない）
-    logger.debug("Cloudflare credentials not configured, skipping cache purge");
-    return { success: true };
+    return purgeResultWhenCredentialsMissing();
   }
 
   if (urls.length === 0) {
@@ -290,8 +302,7 @@ export async function callPurgeApiPublic(
 export async function purgeAllCloudflareCache(): Promise<PurgeResult> {
   const credentials = getCloudflareCredentials();
   if (!credentials) {
-    logger.debug("Cloudflare credentials not configured, skipping cache purge");
-    return { success: true };
+    return purgeResultWhenCredentialsMissing();
   }
   const result = await callPurgeApi(credentials.zoneId, credentials.apiToken, {
     purge_everything: true,
@@ -345,10 +356,7 @@ export async function purgeCloudflareCacheByTags(
 ): Promise<PurgeResult> {
   const credentials = getCloudflareCredentials();
   if (!credentials) {
-    logger.debug(
-      "Cloudflare credentials not configured, skipping cache tag purge",
-    );
-    return { success: true };
+    return purgeResultWhenCredentialsMissing();
   }
   if (tags.length === 0) {
     return { success: true };

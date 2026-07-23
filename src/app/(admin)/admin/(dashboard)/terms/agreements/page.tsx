@@ -16,6 +16,7 @@ import {
   TableShell,
 } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import { getAdminAgreements, getAdminTermsList } from "@/admin/queries/terms";
 import { TermsAgreementsFilters } from "./_components/TermsAgreementsFilters";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/shared/lib/validations/terms";
 import { loadAdminTermsAgreementsSearchParams } from "@/shared/lib/nuqs";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 
 export const metadata: Metadata = {
   title: "規約同意記録 | Myrrh Rental Space",
@@ -166,6 +168,8 @@ async function TermsAgreementsList({
 export default async function AdminTermsAgreementsPage({
   searchParams,
 }: PageProps) {
+  const user = await requireAdminDashboardAccess();
+  const canExportTermsAgreements = hasPermission(user.role, "terms", "update");
   const params = await loadAdminTermsAgreementsSearchParams(searchParams);
   const scope = isTermsScope(params.scope) ? params.scope : undefined;
 
@@ -194,9 +198,11 @@ export default async function AdminTermsAgreementsPage({
               規約一覧に戻る
             </Link>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <a href={exportHref}>CSV エクスポート</a>
-          </Button>
+          {canExportTermsAgreements ? (
+            <Button asChild variant="outline" size="sm">
+              <a href={exportHref}>CSV エクスポート</a>
+            </Button>
+          ) : null}
         </div>
       </div>
 

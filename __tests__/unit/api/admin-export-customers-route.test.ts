@@ -68,7 +68,7 @@ describe("GET /api/admin/export/customers", () => {
       );
     });
 
-    test("checkPermission に customer:read を渡す", async () => {
+    test("checkPermission に customer:manage を渡す", async () => {
       mockCheckPermission.mockResolvedValue({
         success: true,
         user: { id: "user-1", role: "ADMIN" },
@@ -83,7 +83,7 @@ describe("GET /api/admin/export/customers", () => {
 
       expect(mockCheckPermission).toHaveBeenCalledWith(
         "customer",
-        "read",
+        "manage",
         expect.any(Headers),
       );
     });

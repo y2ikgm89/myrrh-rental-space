@@ -88,7 +88,8 @@ import type {
   ReservationEmailData,
 } from "@/shared/lib/email/types";
 
-export type CancelChannel = "admin" | "customer-mypage" | "customer-token";
+export type CancelChannel =
+  "admin" | "customer-mypage" | "customer-token" | "system";
 
 /** リクエスト由来のコンテキスト（監査・フォレンジック用）。単発/bulk 両経路で共有する。 */
 export interface CancelRequestContext {
@@ -135,6 +136,11 @@ export interface CancellationSideEffectInput {
    * - `null` → 「policy 未設定 = 残額全額」を明示 (parseRefundPolicy が返す null を snapshot 化)
    */
   refundPolicySnapshot?: RefundPolicy | null;
+  /**
+   * cron 等で副作用完了を待ってから HTTP を返す必要がある経路向け。
+   * true のとき fireAndForget せず await する（デフォルト false = 既存 UX 維持）。
+   */
+  awaitCompletion?: boolean;
 }
 
 // -----------------------------------------------------------------------------
@@ -170,6 +176,7 @@ const CHANNEL_TO_CANCELLED_BY: Record<CancelChannel, CancelledByType> = {
   admin: CANCELLED_BY.ADMIN,
   "customer-mypage": CANCELLED_BY.CUSTOMER_MYPAGE,
   "customer-token": CANCELLED_BY.CUSTOMER_TOKEN,
+  system: CANCELLED_BY.SYSTEM,
 };
 
 interface SideEffectReservation {
@@ -177,6 +184,7 @@ interface SideEffectReservation {
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
+  totalPriceWithTax: number | null;
   notes: string | null;
   icsSequence: number;
   paymentStatus: PaymentStatus;
@@ -208,6 +216,7 @@ async function fetchReservationForSideEffects(
       startTime: true,
       endTime: true,
       totalPrice: true,
+      totalPriceWithTax: true,
       notes: true,
       icsSequence: true,
       paymentStatus: true,
@@ -275,6 +284,12 @@ function channelLabel(channel: CancelChannel): string {
       return "顧客（マイページ）";
     case "customer-token":
       return "顧客（メールリンク）";
+    case "system":
+      return "システム（自動）";
+    default: {
+      const _exhaustive: never = channel;
+      return _exhaustive;
+    }
   }
 }
 
@@ -325,10 +340,12 @@ async function runRefundStep(args: {
           );
 
     let refundAmount: number | undefined;
-    if (policy !== null && reservation.totalPrice !== null) {
+    const chargeBase =
+      reservation.totalPriceWithTax ?? reservation.totalPrice ?? null;
+    if (policy !== null && chargeBase !== null) {
       refundAmount = calculateRefundAmount(
         policy,
-        Number(reservation.totalPrice),
+        Number(chargeBase),
         reservation.startTime,
         new Date(),
       );
@@ -644,24 +661,28 @@ export async function applyCancellationSideEffects(
     reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
   const requiresRefund = wasPaid && reservation.stripePaymentIntentId !== null;
 
-  fireAndForget(
-    runCancellationSideEffectsAndFlushAudit({
-      input,
-      reservation,
-      payload,
-      wasPaid,
-      requiresRefund,
-    }),
-    {
-      operation: "applyCancellationSideEffects",
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        reservationId: input.reservationId,
-        channel: input.channel,
-      },
+  const run = runCancellationSideEffectsAndFlushAudit({
+    input,
+    reservation,
+    payload,
+    wasPaid,
+    requiresRefund,
+  });
+
+  if (input.awaitCompletion) {
+    await run;
+    return;
+  }
+
+  fireAndForget(run, {
+    operation: "applyCancellationSideEffects",
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.MEDIUM,
+    context: {
+      reservationId: input.reservationId,
+      channel: input.channel,
     },
-  );
+  });
 }
 
 // =============================================================================

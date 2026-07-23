@@ -3,8 +3,9 @@
  *
  * Stripe 公式 "handle-duplicate-events" 推奨実装の unit テスト。
  * `claimStripeEventForProcessing` の戻り値による route の分岐:
- *   - "claimed"   : handler 続行 → 成功後に `markStripeEventProcessed` を await 呼出
- *   - "duplicate" : handler 非実行 (cache invalidate も skip) → 200 { duplicate: true }
+ *   - "claimed"            : handler 続行 → 成功後に `markStripeEventProcessed`
+ *   - "already_processed"  : handler 非実行 → 200 { duplicate: true }
+ *   - "retry_unprocessed"  : crash 後の再送。handler 再実行 → 成功後に processedAt
  *
  * 加えて "署名検証失敗は chokepoint より前で完結する" の順序契約も確認。
  *
@@ -51,7 +52,7 @@ const mockClaimStripeEventForProcessing =
     (input: {
       eventId: string;
       eventType: string;
-    }) => Promise<"claimed" | "duplicate">
+    }) => Promise<"claimed" | "already_processed" | "retry_unprocessed">
   >();
 const mockMarkStripeEventProcessed = mock<(eventId: string) => Promise<void>>();
 
@@ -157,6 +158,16 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
+  refundExpiredWaitlistOfferPaymentCommand: () =>
+    Promise.resolve({ outcome: "not_applicable" }),
+}));
+
+mock.module("@/shared/db/prisma", () => ({
+  prisma: {
+    eventRegistration: {
+      findFirst: () => Promise.resolve(null),
+    },
+  },
 }));
 
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
@@ -384,10 +395,12 @@ describe("POST /api/webhooks/stripe — STRIPE-DEDUP-A chokepoint", () => {
     );
   });
 
-  test("重複配送 (duplicate) → handler 非実行 / cache invalidate skip / processedAt 非更新 / 200 { duplicate: true }", async () => {
+  test("既処理 (already_processed) → handler 非実行 / cache invalidate skip / processedAt 非更新 / 200 { duplicate: true }", async () => {
     const event = makeCheckoutCompletedEvent("evt_duplicate_delivery");
     mockConstructEvent.mockResolvedValue(event);
-    mockClaimStripeEventForProcessing.mockResolvedValueOnce("duplicate");
+    mockClaimStripeEventForProcessing.mockResolvedValueOnce(
+      "already_processed",
+    );
 
     const response = await POST(makeRequest("body"));
     expect(response.status).toBe(200);
@@ -398,14 +411,41 @@ describe("POST /api/webhooks/stripe — STRIPE-DEDUP-A chokepoint", () => {
     expect(body.received).toBe(true);
     expect(body.duplicate).toBe(true);
 
-    // chokepoint が呼ばれ、duplicate 判定
     expect(mockClaimStripeEventForProcessing).toHaveBeenCalledTimes(1);
-    // handler は一切呼ばれない
     expect(mockClaimReservationAsPaid).not.toHaveBeenCalled();
-    // cache invalidate も skip (初回配送で完了済みのため purge quota 節約)
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
-    // duplicate 経路は processedAt を書き換えない (初回配送側の刻印を保持)
     expect(mockMarkStripeEventProcessed).not.toHaveBeenCalled();
+  });
+
+  test("crash 後再送 (retry_unprocessed) → handler 再実行 / 成功後 processedAt 刻印", async () => {
+    const event = makeCheckoutCompletedEvent("evt_retry_unprocessed");
+    mockConstructEvent.mockResolvedValue(event);
+    mockClaimStripeEventForProcessing.mockResolvedValueOnce(
+      "retry_unprocessed",
+    );
+    mockClaimReservationAsPaid.mockResolvedValueOnce({
+      id: "res_1",
+      totalPrice: 1000,
+      notes: null,
+      startTime: "2026-07-01T01:00:00.000Z",
+      endTime: "2026-07-01T03:00:00.000Z",
+      icsSequence: 1,
+      guestEmail: null,
+      customer: {
+        email: "a@example.com",
+        lastName: "Yamada",
+        firstName: "Taro",
+      },
+      space: { name: "Room A", location: { name: "Tokyo" } },
+    });
+    mockMarkStripeEventProcessed.mockResolvedValue(undefined);
+
+    const response = await POST(makeRequest("body"));
+    expect(response.status).toBe(200);
+    expect(mockClaimReservationAsPaid).toHaveBeenCalledTimes(1);
+    expect(mockMarkStripeEventProcessed).toHaveBeenCalledWith(
+      "evt_retry_unprocessed",
+    );
   });
 
   test("署名検証失敗 → chokepoint より前で 400 で終了 (dedup table 汚染防止)", async () => {
