@@ -136,14 +136,27 @@ describe("locations/public-queries", () => {
       });
     });
 
-    test("accessLines は JSON 文字列から配列にパースされる", async () => {
+    test("accessLines は Prisma Json 値（パース済み配列）をそのまま検証・整形する", async () => {
+      // accessLines は schema.prisma 上 Json 列（`Json @default("[]")`）のため、
+      // Prisma は生 JSON 文字列ではなくパース済み値を返す。parseStringArray は
+      // unknown を受けて Zod で検証するだけで、JSON.parse は行わない。
       locationFindMany.mockResolvedValueOnce([
-        { ...RAW_LOCATION, accessLines: '["徒歩5分","A1出口"]' },
+        { ...RAW_LOCATION, accessLines: ["徒歩5分", "A1出口"] },
       ]);
 
       const result = await getPublishedLocationsForAccess();
 
       expect(result[0]?.accessLines).toEqual(["徒歩5分", "A1出口"]);
+    });
+
+    test("accessLines が不正形状（配列でない）のときは空配列にフォールバックする", async () => {
+      locationFindMany.mockResolvedValueOnce([
+        { ...RAW_LOCATION, accessLines: "not-an-array" },
+      ]);
+
+      const result = await getPublishedLocationsForAccess();
+
+      expect(result[0]?.accessLines).toEqual([]);
     });
 
     test("DB エラー時は空配列にフォールバックする（safeFetch）", async () => {
