@@ -52,7 +52,7 @@ paths:
 - PAGE_TEMPLATES は UNIVERSAL_SECTION_TYPES + additionalSectionTypes の opt-in 制
   （listing/form/calendar 系は page-specific）。server 側 create も同じ許可 floor を強制。
   requiredSectionTypes のセクションは削除不可
-- drift gate: registry 定義数（現在 22）/ DEFAULT_PAGE_SECTIONS の schema 適合・
+- drift gate: registry 定義数（現在 23）/ DEFAULT_PAGE_SECTIONS の schema 適合・
   order 重複なし / required ⊆ defaultSections をテストが固定。定義の増減時は
   これらのテストも更新する
 

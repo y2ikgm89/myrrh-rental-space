@@ -18,6 +18,7 @@ import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/regi
 import {
   recordManualEventPaymentCommand,
   refundEventRegistrationPaymentCommand,
+  createEventCheckoutSessionCommand,
   type RefundEventRegistrationResult,
 } from "@/shared/domain/events/payment-commands";
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
@@ -733,6 +734,27 @@ export async function recordManualEventPayment(
           severity: ErrorSeverity.MEDIUM,
         },
       );
+    },
+  });
+}
+
+export async function createEventCheckoutSession(
+  registrationId: string,
+): Promise<MutationResult<{ sessionId: string; sessionUrl: string | null }>> {
+  const validated = eventRegistrationIdSchema.safeParse(registrationId);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () =>
+      createEventCheckoutSessionCommand({
+        registrationId: validated.data,
+        actorCustomerId: null,
+      }),
+    afterSuccess: () => {
+      invalidateEventCaches();
     },
   });
 }

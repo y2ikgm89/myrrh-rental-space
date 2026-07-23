@@ -75,6 +75,9 @@ const SETTINGS_COLUMN_TAGS: Record<string, readonly string[]> = {
   // Analytics / search verification
   googleSearchConsoleId: ["ANALYTICS_CONFIG"],
   bingWebmasterToolsId: ["ANALYTICS_CONFIG"],
+
+  // Business hours
+  businessHours: ["ORGANIZATION_SETTINGS", "BUSINESS_SETTINGS"],
 };
 
 type ActionSpec = {
@@ -111,6 +114,11 @@ const ACTIONS: ActionSpec[] = [
       "invoiceNumber",
       "businessDescription",
     ],
+  },
+  {
+    name: "updateBusinessHoursSettings",
+    file: "src/app/(admin)/admin/(dashboard)/_shared/actions/settings/business.ts",
+    writes: ["businessHours"],
   },
   {
     name: "updateSearchVerification",

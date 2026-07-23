@@ -45,12 +45,17 @@ import {
 import { EventCalendarDisclosure } from "./_components/event-calendar-disclosure";
 import { EventStatusNotice } from "./_components/event-status-notice";
 import { EventRegistrationForm } from "./_components/event-registration-form";
+import { EventPaymentStatusBanner } from "./_components/event-payment-status-banner";
 import { RelatedEvents } from "./_components/related-events";
 import { EventJsonLd } from "./_components/event-json-ld";
 import { GalleryGrid } from "@/shared/components/gallery/GalleryGrid";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{
+    payment?: string;
+    registration?: string;
+  }>;
 }
 
 const REGISTER_ANCHOR_ID = "event-register";
@@ -97,11 +102,13 @@ export async function generateMetadata({
 
 export default async function EventDetailPage({
   params,
+  searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
   await requireFeatureEnabled("events");
 
   const { slug } = await params;
+  const { payment, registration: registrationId } = await searchParams;
   const event = await getPublishedEventBySlug(slug);
 
   if (!event) {
@@ -303,6 +310,11 @@ export default async function EventDetailPage({
             <span id="event-register-heading">お申し込み</span>
           </Heading>
           <div className="mt-8 space-y-6">
+            <EventPaymentStatusBanner
+              slug={slug}
+              payment={payment}
+              registrationId={registrationId}
+            />
             {registration.kind === "waitlist-available" && (
               <EventStatusNotice
                 variant="warning"

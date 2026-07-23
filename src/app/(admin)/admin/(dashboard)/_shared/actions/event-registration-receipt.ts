@@ -3,10 +3,15 @@
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { reissueReceiptCommand } from "@/shared/domain/receipts/issue";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { reissueReceiptInputSchema } from "@/shared/lib/validations/receipt-reissue";
+import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+
+const eventRegistrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 
 /**
  * イベント申込に紐づく領収書の再発行 (RECEIPT-USEDAT-P1 Phase 1)。
@@ -30,17 +35,31 @@ export async function reissueEventRegistrationReceipt(
   originalReceiptId: string,
   reason: string,
 ): Promise<MutationResult<{ receiptId: string; serialNo: string }>> {
+  const parsedRegistrationId =
+    eventRegistrationIdSchema.safeParse(eventRegistrationId);
+  if (!parsedRegistrationId.success) {
+    return createValidationMutationError(parsedRegistrationId.error);
+  }
+
+  const parsedInput = reissueReceiptInputSchema.safeParse({
+    originalReceiptId,
+    reason,
+  });
+  if (!parsedInput.success) {
+    return createValidationMutationError(parsedInput.error);
+  }
+
   return executeAdminMutationResult({
     resource: "event",
     action: "update",
-    resourceId: eventRegistrationId,
+    resourceId: parsedRegistrationId.data,
     execute: async (user) => {
       const { ip, userAgent } = await buildAuditRequestContext();
 
       const receipt = await reissueReceiptCommand({
-        originalReceiptId,
-        reason,
-        expectedEventRegistrationId: eventRegistrationId,
+        originalReceiptId: parsedInput.data.originalReceiptId,
+        reason: parsedInput.data.reason,
+        expectedEventRegistrationId: parsedRegistrationId.data,
       });
 
       await createAuditLogRecord({
@@ -54,8 +73,8 @@ export async function reissueEventRegistrationReceipt(
         },
         metadata: {
           reissuedFromId: originalReceiptId,
-          reissuedReason: reason,
-          eventRegistrationId,
+          reissuedReason: parsedInput.data.reason,
+          eventRegistrationId: parsedRegistrationId.data,
           ...(ip !== null && { ip }),
           ...(userAgent !== null && { userAgent }),
         },

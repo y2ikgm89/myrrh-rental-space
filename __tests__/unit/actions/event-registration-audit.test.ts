@@ -67,6 +67,9 @@ mock.module("@/shared/domain/events/registration-queries", () => ({
 mock.module("@/shared/domain/events/payment-commands", () => ({
   refundEventRegistrationPaymentCommand: mock(async () => ({})),
   recordManualEventPaymentCommand: mock(async () => ({ registrationId: "x" })),
+  createEventCheckoutSessionCommand: mock(async () => ({
+    checkoutUrl: "https://stripe.test/checkout",
+  })),
 }));
 
 mock.module(

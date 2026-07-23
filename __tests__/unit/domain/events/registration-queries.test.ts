@@ -5,6 +5,8 @@ type RegistrationEmailRow = {
   id: string;
   eventId: string;
   slotId: string;
+  quantity: number;
+  ticket: { price: number };
   slot: {
     startAt: Date;
     endAt: Date;
@@ -84,6 +86,8 @@ describe("event registration query slot consistency", () => {
       id: "reg-1",
       eventId: "event-1",
       slotId: "slot-selected",
+      quantity: 2,
+      ticket: { price: 1500 },
       slot: {
         startAt: selectedStart,
         endAt: selectedEnd,
@@ -113,6 +117,8 @@ describe("event registration query slot consistency", () => {
       confirmedCount: 6,
       format: "OFFLINE",
       meetingUrl: null,
+      ticketUnitPrice: 1500,
+      quantity: 2,
     });
     expect(mockRegistrationAggregate).toHaveBeenCalledWith({
       where: {

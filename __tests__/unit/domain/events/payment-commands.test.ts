@@ -114,6 +114,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 const {
+  createEventCheckoutSessionCommand,
   createWaitlistOfferCheckoutSessionCommand,
   claimEventRegistrationAsFailed,
 } = await import("@/shared/domain/events/payment-commands");
@@ -122,6 +123,45 @@ const REGISTRATION_ID = "550e8400-e29b-41d4-a716-446655440101";
 const OFFER_TOKEN = "test-offer-token-abc";
 const SESSION_ID = "cs_test_waitlist";
 const SESSION_URL = "https://stripe.example/waitlist-checkout";
+
+// ── createEventCheckoutSessionCommand fixtures ──────────────────────────────
+const CUSTOMER_ID = "customer-abc123";
+const CHECKOUT_SESSION_ID = "cs_test_checkout";
+const CHECKOUT_SESSION_URL = "https://stripe.example/event-checkout";
+
+/**
+ * prisma.eventRegistration.findUnique の初回読み込み結果（pre-flight チェック用）。
+ * createEventCheckoutSessionCommand は status: CONFIRMED + paymentStatus: UNPAID を要求。
+ */
+function checkoutInitialRead(overrides: Record<string, unknown> = {}) {
+  return {
+    id: REGISTRATION_ID,
+    customerId: CUSTOMER_ID,
+    email: "customer@example.com",
+    name: "Test Customer",
+    quantity: 1,
+    status: RegistrationStatus.CONFIRMED,
+    paymentStatus: PaymentStatus.UNPAID,
+    stripeCheckoutSessionId: null,
+    ticket: { name: "Standard Ticket", price: 5000 },
+    event: { title: "Test Event" },
+    ...overrides,
+  };
+}
+
+/**
+ * claim 後の authoritative 再読み込み結果（event.slug 付き）。
+ */
+function checkoutAuthoritative(overrides: Record<string, unknown> = {}) {
+  return {
+    email: "customer@example.com",
+    name: "Test Customer",
+    quantity: 1,
+    ticket: { name: "Standard Ticket", price: 5000 },
+    event: { title: "Test Event", slug: "test-event" },
+    ...overrides,
+  };
+}
 
 // Codex P1-A (event-waitlist-task1 の並行 modified) が追加した「claim 後に
 // authoritative.expiresAt <= now なら revert + VALIDATION」gate と共存させるため、
@@ -328,6 +368,216 @@ describe("events/payment-commands", () => {
 
       expect(stripeBeforeClaim).toBe(false);
       expect(mockCheckoutSessionCreate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("createEventCheckoutSessionCommand", () => {
+    // ── NOT_FOUND ─────────────────────────────────────────────────────────────
+    test("NOT_FOUND: registration が存在しなければ DomainError(NOT_FOUND)", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(null);
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("NOT_FOUND");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    });
+
+    // ── FORBIDDEN ─────────────────────────────────────────────────────────────
+    test("FORBIDDEN: actorCustomerId が registration.customerId と不一致 → DomainError(FORBIDDEN)", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(
+        checkoutInitialRead({ customerId: "other-customer-id" }),
+      );
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("FORBIDDEN");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    });
+
+    test("actorCustomerId が null (admin 経路) は FORBIDDEN を throw しない", async () => {
+      // admin 経路は本人性検証 bypass — CONFIRMED + UNPAID なら通過する。
+      // 次の updateMany (claim) で count=1 が返れば happy path を辿る。
+      mockRegFindUnique
+        .mockResolvedValueOnce(
+          checkoutInitialRead({ customerId: "any-customer" }),
+        )
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+
+      const result = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: null,
+      });
+
+      expect(result.sessionId).toBe(CHECKOUT_SESSION_ID);
+    });
+
+    // ── VALIDATION: status ─────────────────────────────────────────────────────
+    test("VALIDATION: status が CONFIRMED でなければ DomainError(VALIDATION) & claim/Stripe 未呼出", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(
+        checkoutInitialRead({ status: RegistrationStatus.CANCELLED }),
+      );
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    });
+
+    // ── VALIDATION: paymentStatus ──────────────────────────────────────────────
+    test("VALIDATION: paymentStatus が UNPAID でなければ DomainError(VALIDATION) & claim/Stripe 未呼出", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(
+        checkoutInitialRead({ paymentStatus: PaymentStatus.PENDING }),
+      );
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    });
+
+    // ── VALIDATION: free ticket ────────────────────────────────────────────────
+    test("VALIDATION: 無料チケット (price 0) は DomainError(VALIDATION) & claim/Stripe 未呼出", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(
+        checkoutInitialRead({ ticket: { name: "Free Ticket", price: 0 } }),
+      );
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    });
+
+    // ── Happy path ─────────────────────────────────────────────────────────────
+    test("happy path: claim UNPAID→PENDING + Stripe session 作成 + {sessionId, sessionUrl, customerId} 返却", async () => {
+      mockRegFindUnique
+        .mockResolvedValueOnce(checkoutInitialRead())
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockResolvedValueOnce({
+        id: CHECKOUT_SESSION_ID,
+        url: CHECKOUT_SESSION_URL,
+      });
+
+      const result = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      });
+
+      expect(result).toEqual({
+        sessionId: CHECKOUT_SESSION_ID,
+        sessionUrl: CHECKOUT_SESSION_URL,
+        customerId: CUSTOMER_ID,
+      });
+      expect(mockCheckoutSessionCreate).toHaveBeenCalledTimes(1);
+
+      // updateMany は 2 回: 1) claim UNPAID→PENDING, 2) settle (sessionId + paidAmount)
+      const calls = mockRegUpdateMany.mock.calls;
+      expect(calls.length).toBe(2);
+
+      // 1 回目: claim — status: CONFIRMED + paymentStatus: UNPAID → PENDING
+      // (Codex P1 #1026: status: CONFIRMED も WHERE に含めることで
+      //  並行 cancel が走ったケースを DB レベルで塞ぐ)
+      expect(calls[0]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          id: REGISTRATION_ID,
+          status: RegistrationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.PENDING,
+        }),
+      });
+
+      // 2 回目: settle — stripeCheckoutSessionId + paidAmount を書き込む
+      // price(5000) × quantity(1) = 5000
+      expect(calls[1]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          id: REGISTRATION_ID,
+          paymentStatus: expect.objectContaining({
+            notIn: [PaymentStatus.PAID, PaymentStatus.REFUNDED],
+          }),
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.PENDING,
+          stripeCheckoutSessionId: CHECKOUT_SESSION_ID,
+          paidAmount: 5000,
+        }),
+      });
+    });
+
+    test("Stripe 失敗 → PENDING → UNPAID revert + DomainError(UNEXPECTED) + logError 呼出", async () => {
+      mockRegFindUnique
+        .mockResolvedValueOnce(checkoutInitialRead())
+        .mockResolvedValueOnce(checkoutAuthoritative());
+      mockCheckoutSessionCreate.mockRejectedValueOnce(
+        new Error("Stripe API error"),
+      );
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("UNEXPECTED");
+
+      // updateMany: 1) claim UNPAID→PENDING, 2) revert PENDING→UNPAID
+      const calls = mockRegUpdateMany.mock.calls;
+      expect(calls.length).toBe(2);
+      expect(calls[1]?.[0]).toMatchObject({
+        where: expect.objectContaining({
+          id: REGISTRATION_ID,
+          paymentStatus: PaymentStatus.PENDING,
+        }),
+        data: expect.objectContaining({
+          paymentStatus: PaymentStatus.UNPAID,
+        }),
+      });
+      expect(mockLogError).toHaveBeenCalled();
+    });
+
+    test("claim race (別 request が先に PENDING を確保) → DomainError(CONFLICT) & Stripe 未呼出", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(checkoutInitialRead());
+      mockRegUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      const error = await createEventCheckoutSessionCommand({
+        registrationId: REGISTRATION_ID,
+        actorCustomerId: CUSTOMER_ID,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("CONFLICT");
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+      // authoritative 再読み込みも走らない
+      expect(mockRegFindUnique).toHaveBeenCalledTimes(1);
     });
   });
 

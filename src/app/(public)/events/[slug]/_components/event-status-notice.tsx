@@ -3,7 +3,7 @@ import { IconAlertCircle } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 
 interface EventStatusNoticeProps {
-  readonly variant: "warning" | "muted";
+  readonly variant: "success" | "warning" | "muted";
   readonly title: string;
   readonly description: string;
 }
@@ -26,7 +26,11 @@ export function EventStatusNotice({
       <IconAlertCircle
         className={cn(
           "mt-0.5 h-6 w-6 shrink-0",
-          variant === "warning" ? "text-accent" : "text-muted-foreground",
+          variant === "warning"
+            ? "text-accent"
+            : variant === "success"
+              ? "text-success"
+              : "text-muted-foreground",
         )}
         aria-hidden="true"
       />

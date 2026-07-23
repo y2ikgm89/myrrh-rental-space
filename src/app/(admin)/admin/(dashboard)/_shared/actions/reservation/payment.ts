@@ -1,7 +1,9 @@
 "use server";
 
+import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createCheckoutSessionCommand,
@@ -21,17 +23,25 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 
+const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
+
 export async function createCheckoutSession(
   reservationId: string,
 ): Promise<MutationResult<{ sessionId: string; sessionUrl: string | null }>> {
+  const parsedId = reservationIdSchema.safeParse(reservationId);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
-    resourceId: reservationId,
+    resourceId: parsedId.data,
     execute: async () =>
-      createCheckoutSessionCommand({ reservationId, actorCustomerId: null }),
+      createCheckoutSessionCommand({
+        reservationId: parsedId.data,
+        actorCustomerId: null,
+      }),
     afterSuccess: (data) => {
-      invalidateReservationCaches(reservationId, data.customerId);
+      invalidateReservationCaches(parsedId.data, data.customerId);
     },
   });
 }
@@ -55,16 +65,19 @@ export async function refundReservationPayment(
     reason?: string;
   },
 ): Promise<MutationResult<RefundReservationResult>> {
+  const parsedId = reservationIdSchema.safeParse(reservationId);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
-    resourceId: reservationId,
+    resourceId: parsedId.data,
     execute: async (user) => {
       // UA-HORIZ-04: admin session hijack シナリオでの forensics 対称化のため
       // ip / userAgent を AuditLog metadata に載せる (cancel / receipt / waitlist と同型)。
       const request = await buildAuditRequestContext();
       return refundReservationPaymentCommand({
-        reservationId,
+        reservationId: parsedId.data,
         actorType: REFUNDED_BY_TYPE.ADMIN,
         actorUserId: user.id,
         request,
@@ -75,14 +88,14 @@ export async function refundReservationPayment(
       });
     },
     afterSuccess: (data) => {
-      invalidateReservationCaches(reservationId, data.customerId);
+      invalidateReservationCaches(parsedId.data, data.customerId);
 
       // Cluster H #8: 顧客への返金通知メール + 管理者向け in-app 通知を発火する。
       // 返金は「更新」「キャンセル」と独立した重要取引通知として非 gate で常時送信。
       // idempotencyKey は refundId ベースなので複数回の部分返金でも silent drop しない。
       fireAndForget(
         (async () => {
-          const emailData = await fetchReservationEmailData(reservationId);
+          const emailData = await fetchReservationEmailData(parsedId.data);
           if (!emailData) return;
           await sendReservationRefundEmail({
             reservationId: emailData.reservationId,
@@ -105,7 +118,7 @@ export async function refundReservationPayment(
           operation: "sendReservationRefundEmail",
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.MEDIUM,
-          context: { reservationId, refundId: data.refundId },
+          context: { reservationId: parsedId.data, refundId: data.refundId },
         },
       );
 
@@ -118,7 +131,7 @@ export async function refundReservationPayment(
               ? "管理者が予約の全額返金を実行しました"
               : "管理者が予約の一部返金を実行しました",
           resourceType: "reservation",
-          resourceId: reservationId,
+          resourceId: parsedId.data,
         }),
         {
           operation: "refundReservationPaymentNotification",

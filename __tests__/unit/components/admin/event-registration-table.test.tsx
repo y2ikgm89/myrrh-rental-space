@@ -128,6 +128,7 @@ mock.module("@/admin/actions/event-registration", () => ({
   bulkCheckInEventRegistrations: mock(),
   updateEventRegistration: mock(),
   recordManualEventPayment: mock(),
+  createEventCheckoutSession: mock(),
 }));
 
 mock.module("@/admin/components/FloatingBulkActionBar", () => ({

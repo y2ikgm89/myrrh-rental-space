@@ -20,6 +20,7 @@ interface EventRegistrationTabsProps {
   readonly receiptSerialNoMap: Readonly<Record<string, string>>;
   /** registrationId → FIFO waitlist 順位 (1-indexed)。WAITLIST_ACTIVE のみ。 */
   readonly waitlistPositionMap: Readonly<Record<string, number>>;
+  readonly paymentEnabled: boolean;
 }
 
 // 予約タブ (reservation-tabs.tsx) と完全対称な class。
@@ -38,6 +39,7 @@ export function EventRegistrationTabs({
   nowIso,
   receiptSerialNoMap,
   waitlistPositionMap,
+  paymentEnabled,
 }: EventRegistrationTabsProps) {
   // Pattern B: 親が 1 フェッチで全件取得し props で分割渡し → forceMount + shallow:true。
   // 履歴は #629 のタブ方針に合わせ replace。
@@ -81,6 +83,7 @@ export function EventRegistrationTabs({
           nowIso={nowIso}
           receiptSerialNoMap={receiptSerialNoMap}
           waitlistPositionMap={waitlistPositionMap}
+          paymentEnabled={paymentEnabled}
         />
       </Tabs.Content>
       <Tabs.Content
@@ -95,6 +98,7 @@ export function EventRegistrationTabs({
           nowIso={nowIso}
           receiptSerialNoMap={receiptSerialNoMap}
           waitlistPositionMap={waitlistPositionMap}
+          paymentEnabled={paymentEnabled}
         />
       </Tabs.Content>
     </Tabs.Root>

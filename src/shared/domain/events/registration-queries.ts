@@ -211,6 +211,8 @@ export async function getEventRegistrationDetailsForEmail(
   readonly confirmedCount: number;
   readonly format: EventFormatValue;
   readonly meetingUrl: string | null;
+  readonly ticketUnitPrice: number;
+  readonly quantity: number;
 } | null> {
   const registration = await prisma.eventRegistration.findFirst({
     where: { id: registrationId, event: { deletedAt: null } },
@@ -218,6 +220,8 @@ export async function getEventRegistrationDetailsForEmail(
       id: true,
       eventId: true,
       slotId: true,
+      quantity: true,
+      ticket: { select: { price: true } },
       slot: {
         select: {
           startAt: true,
@@ -260,6 +264,8 @@ export async function getEventRegistrationDetailsForEmail(
     confirmedCount: confirmed._sum.quantity ?? 0,
     format: registration.event.format,
     meetingUrl: registration.event.meetingUrl,
+    ticketUnitPrice: registration.ticket.price,
+    quantity: registration.quantity,
   };
 }
 
@@ -308,6 +314,11 @@ const CUSTOMER_EVENT_REGISTRATION_SELECT = {
   offeredAt: true,
   expiresAt: true,
   paymentStatus: true,
+  ticket: {
+    select: {
+      price: true,
+    },
+  },
   // slotId / ticketId は mypage の waitlist 順位計算 (bulk lookup) 用。
   // Foundation gap analysis task #8 (mypage waitlist 順位 UI) で追加。
   slotId: true,
@@ -349,6 +360,9 @@ type CustomerEventRegistrationRow = {
   readonly offeredAt: Date | null;
   readonly expiresAt: Date | null;
   readonly paymentStatus: PaymentStatus;
+  readonly ticket: {
+    readonly price: number;
+  };
   readonly slotId: string;
   readonly ticketId: string;
   readonly slot: {
@@ -379,6 +393,8 @@ function mapCustomerEventRegistration(row: CustomerEventRegistrationRow) {
     offeredAt: row.offeredAt,
     expiresAt: row.expiresAt,
     paymentStatus: row.paymentStatus,
+    ticketUnitPrice: row.ticket.price,
+    ticketTotalPrice: row.ticket.price * row.quantity,
     slotId: row.slotId,
     ticketId: row.ticketId,
     event: {

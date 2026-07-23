@@ -45,6 +45,8 @@ type Props = {
    * 会員はマイページから領収書を DL するため未指定。
    */
   receiptDownloadUrl?: string;
+  /** ゲスト向け: 有料チケットの Stripe Checkout 起動 URL */
+  paymentCheckoutUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -64,6 +66,7 @@ export function EventRegistrationConfirmationEmail({
   claimUrl,
   cancelUrl,
   receiptDownloadUrl,
+  paymentCheckoutUrl,
   footer,
 }: Props) {
   const danger = SECTION_VARIANT_STYLES.danger;
@@ -169,6 +172,35 @@ export function EventRegistrationConfirmationEmail({
               style={{ color: COLOR.link, textDecoration: "underline" }}
             >
               マイページで申込を確認する
+            </Link>
+          </Text>
+        </Section>
+      )}
+
+      {paymentCheckoutUrl && (
+        <Section
+          style={{
+            backgroundColor: SECTION_VARIANT_STYLES.info.background,
+            borderRadius: "8px",
+            padding: "16px 20px",
+            margin: "24px 0",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: "14px",
+              color: COLOR.textMuted,
+              marginBottom: "8px",
+            }}
+          >
+            お支払いがまだ完了していません。下記リンクからオンライン決済を行ってください。
+          </Text>
+          <Text style={{ fontSize: "14px", lineHeight: "24px" }}>
+            <Link
+              href={paymentCheckoutUrl}
+              style={{ color: COLOR.link, textDecoration: "underline" }}
+            >
+              オンラインでお支払いする
             </Link>
           </Text>
         </Section>

@@ -102,8 +102,8 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
       }
     }
 
-    // syncToken を保存
-    if (fetchResult.newSyncToken) {
+    // syncToken は全イベント upsert が成功したときのみ保存する (inbound.ts と同型)。
+    if (result.errors.length === 0 && fetchResult.newSyncToken) {
       await prisma.settings.update({
         where: { id: "singleton" },
         data: { eventImportSyncToken: fetchResult.newSyncToken },

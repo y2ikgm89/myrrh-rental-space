@@ -94,8 +94,10 @@ export async function syncFromCalendar(): Promise<TwoWaySyncResult> {
       }
     }
 
-    // 同期トークンを保存
-    if (changesResult.newSyncToken) {
+    // 同期トークンは全イベント処理が成功したときのみ保存する。
+    // 一部失敗のままトークンを進めると Google Incremental Sync 仕様上、
+    // 失敗した変更が二度と配信されず永久欠落する。
+    if (result.errors.length === 0 && changesResult.newSyncToken) {
       await saveCalendarSyncToken(changesResult.newSyncToken);
     }
 

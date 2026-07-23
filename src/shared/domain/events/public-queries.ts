@@ -83,7 +83,7 @@ function mapPublicEvent<T extends PublicEventRow>(event: T) {
 export async function getPublishedEvents() {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.EVENTS);
+  cacheTag(CACHE_TAGS.EVENTS, CACHE_TAGS.LOCATIONS, CACHE_TAGS.SPACES);
 
   const events = await safeFetch({
     fetch: () =>
@@ -163,7 +163,7 @@ export async function getUpcomingEventsExcluding(params: {
 export async function getPublishedEventBySlug(slug: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.EVENTS);
+  cacheTag(CACHE_TAGS.EVENTS, CACHE_TAGS.LOCATIONS, CACHE_TAGS.SPACES);
 
   const event = await safeFetch({
     fetch: () =>

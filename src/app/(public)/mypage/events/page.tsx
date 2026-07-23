@@ -9,7 +9,10 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import {
+  isFeatureEnabled,
+  requireFeatureEnabled,
+} from "@/shared/lib/features/check";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { findReceiptSerialNoMapByEventRegistrationIds } from "@/shared/domain/receipts/queries";
 import { getWaitlistPositionMapForRegistrations } from "@/shared/domain/events/waitlist-queries";
@@ -34,10 +37,12 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
     redirect("/login");
   }
 
-  const [{ active, past, now }, turnstileSiteKey] = await Promise.all([
-    getCustomerEventRegistrations(customer.id),
-    getTurnstileSiteKey(),
-  ]);
+  const [{ active, past, now }, turnstileSiteKey, paymentEnabled] =
+    await Promise.all([
+      getCustomerEventRegistrations(customer.id),
+      getTurnstileSiteKey(),
+      isFeatureEnabled("payment"),
+    ]);
 
   // WAITLISTED_OFFERED のカウントダウン初期値算出用。`getCustomerEventRegistrations`
   // が active/past 判定に使った `now` をそのまま再利用する（ここで改めて
@@ -89,6 +94,7 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
         nowIso={nowIso}
         receiptSerialNoMap={receiptSerialNoMap}
         waitlistPositionMap={waitlistPositionMap}
+        paymentEnabled={paymentEnabled}
       />
     </Stack>
   );

@@ -446,6 +446,89 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
     }
   }, 30_000);
 
+  // #20: stripePaymentIntentId が null の予約は VALIDATION reject（Stripe API 呼出前）。
+  test("#20: stripePaymentIntentId が null の PAID 予約は VALIDATION reject (Stripe 呼出なし)", async () => {
+    // stripePaymentIntentId: null で PAID な予約を直接 create する
+    const suffix = crypto.randomUUID();
+    const location = await prisma.location.create({
+      data: {
+        slug: `refund-nopi-loc-${suffix}`,
+        name: `Refund NoPi Loc ${suffix}`,
+        address: "東京都テスト区1-2-3",
+        imageUrl: "https://example.com/loc.jpg",
+        sortOrder: nextFixtureSortOrder++,
+      },
+      select: { id: true },
+    });
+    const space = await prisma.space.create({
+      data: {
+        slug: `refund-nopi-space-${suffix}`,
+        name: `Refund NoPi Space ${suffix}`,
+        descriptionJson: { type: "doc" },
+        descriptionHtml: "<p>test</p>",
+        descriptionPlainText: "test",
+        capacity: 10,
+        hourlyPrice: 1000,
+        mainImageUrl: "https://example.com/space.jpg",
+        locationId: location.id,
+      },
+      select: { id: true },
+    });
+    const customer = await prisma.customer.create({
+      data: {
+        lastName: "田中",
+        firstName: "一郎",
+        email: `refund-nopi-${suffix}@example.com`,
+        emailCanonical: `refund-nopi-${suffix}@example.com`,
+      },
+      select: { id: true },
+    });
+    const totalPriceWithTax = 3000;
+    const taxAmount = Math.floor((totalPriceWithTax * 10) / 110);
+    const basePrice = totalPriceWithTax - taxAmount;
+    const reservation = await prisma.reservation.create({
+      data: {
+        customerId: customer.id,
+        spaceId: space.id,
+        startTime: new Date("2027-06-01T09:00:00+09:00"),
+        endTime: new Date("2027-06-01T11:00:00+09:00"),
+        status: "CONFIRMED",
+        totalPrice: totalPriceWithTax,
+        basePrice,
+        rateBreakdownJson: { legacy: true, segments: [] },
+        taxRateType: "standard",
+        taxRate: 10,
+        taxAmount,
+        totalPriceWithTax,
+        paymentStatus: "PAID",
+        stripePaymentIntentId: null, // 意図的に null
+      },
+      select: { id: true },
+    });
+    const reservationId = reservation.id;
+
+    try {
+      // Bun rejects hang 回避 (try/catch)
+      let caught: unknown;
+      try {
+        await refundReservationPaymentCommand({
+          reservationId,
+          actorType: REFUNDED_BY_TYPE.ADMIN,
+        });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toMatchObject({ code: "VALIDATION" });
+      // stripePaymentIntentId チェックは Stripe API 呼出より前
+      expect(mockRefundsCreate).not.toHaveBeenCalled();
+    } finally {
+      await prisma.reservation.deleteMany({ where: { id: reservationId } });
+      await prisma.space.deleteMany({ where: { id: space.id } });
+      await prisma.customer.deleteMany({ where: { id: customer.id } });
+      await prisma.location.deleteMany({ where: { id: location.id } });
+    }
+  }, 30_000);
+
   // UA-HORIZ-04: request が渡されたら AuditLog metadata に ip/userAgent が載る。
   // 渡されなければ (webhook / AUTO_ON_CANCEL の後方互換) キーが付かない。
   test("UA-HORIZ-04: request 指定時は AuditLog metadata に ip/userAgent が載る", async () => {
