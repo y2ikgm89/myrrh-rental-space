@@ -4,6 +4,8 @@ process.env["DATABASE_URL"] =
   process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
 
 const { prisma, basePrisma } = await import("@/shared/db/prisma");
+const { isPrismaUniqueConstraintError } =
+  await import("@/shared/lib/prisma-errors");
 const { claimEventRegistrationForCustomer } =
   await import("@/shared/domain/events/claim-commands");
 const { RegistrationStatus, EventStatus, EventScheduleMode } =
@@ -23,23 +25,45 @@ const { RegistrationStatus, EventStatus, EventScheduleMode } =
  * 実行した等）。findFirst → 無ければ create の fallback で自己修復する
  * （`prisma/seed.ts` の `seedEventCategories` と同型の idiom）。
  */
-const fallbackCategory =
-  (await prisma.eventCategory.findFirst({
+async function resolveFallbackCategoryId(): Promise<string> {
+  const existing = await prisma.eventCategory.findFirst({
     where: { name: "未分類", isActive: true },
     select: { id: true },
-  })) ??
-  (await prisma.eventCategory.create({
-    data: {
-      name: "未分類",
-      // sortOrder はテーブル全体でユニーク制約があるため、通常は migration が
-      // 予約した 0 を使うが、ここは「本来あるはずの行が無い」異常系 fallback
-      // のため、他 integration test ファイルの専用 EventCategory と同じ乱数域を
-      // 使い衝突を避ける。
-      sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
-    },
-    select: { id: true },
-  }));
-const testCategoryId = fallbackCategory.id;
+  });
+  if (existing) return existing.id;
+
+  // findFirst → create は TOCTOU（他プロセスが同時に同じ fallback を解決しようと
+  // した場合、name の partial unique index に両者の create が衝突しうる）。
+  // このファイルは SERIAL_DB_TESTS 登録により自分自身とは競合しないが、
+  // 別ファイル・別プロセスとの競合は理論上ありうるため、P2002 を「相手が
+  // 先に作った」と解釈して再取得する（sortOrder の枯渇や名前以外の衝突は
+  // 再スローする）。
+  try {
+    const created = await prisma.eventCategory.create({
+      data: {
+        name: "未分類",
+        // sortOrder はテーブル全体でユニーク制約があるため、通常は migration が
+        // 予約した 0 を使うが、ここは「本来あるはずの行が無い」異常系 fallback
+        // のため、他 integration test ファイルの専用 EventCategory と同じ乱数域を
+        // 使い衝突を避ける。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    return created.id;
+  } catch (err) {
+    if (!isPrismaUniqueConstraintError(err, "name")) throw err;
+
+    const won = await prisma.eventCategory.findFirst({
+      where: { name: "未分類", isActive: true },
+      select: { id: true },
+    });
+    if (!won) throw err;
+    return won.id;
+  }
+}
+
+const testCategoryId = await resolveFallbackCategoryId();
 
 /**
  * PUBLISHED イベント + タイムスロット + 受付中チケットを 1 件作る
