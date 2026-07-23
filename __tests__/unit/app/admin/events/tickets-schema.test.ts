@@ -22,6 +22,7 @@ describe("event-form-schema tickets: native FormData round-trip", () => {
     const fd = new FormData();
     fd.set("title", "Test event");
     fd.set("slug", "test-event");
+    fd.set("categoryId", "33333333-3333-4333-8333-333333333333");
     fd.set("descriptionJson", EMPTY_LEXICAL_EDITOR_STATE_JSON);
     fd.set("scheduleMode", "SINGLE_OCCURRENCE");
     fd.set("status", "DRAFT");

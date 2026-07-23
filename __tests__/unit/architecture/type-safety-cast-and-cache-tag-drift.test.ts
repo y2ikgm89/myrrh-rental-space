@@ -61,6 +61,7 @@ describe("type-safety casts / cache-tag drift", () => {
       "BLOCK_TEMPLATES",
       "COUPONS",
       "CUSTOMERS",
+      "EVENT_CATEGORIES",
       "EVENT_WAITLIST",
       "INQUIRIES",
       "MEDIA",
