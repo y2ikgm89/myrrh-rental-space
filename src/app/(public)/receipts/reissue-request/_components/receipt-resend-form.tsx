@@ -98,7 +98,14 @@ export function ReceiptResendForm({
       });
       if (isMutationError(result)) {
         setError(result.error);
+        // Turnstile token は 1 回の検証で消費される。SerialNo rate-limit
+        // エラー等 Turnstile 成功後に返る error でも token は既に消費済みのため、
+        // reset() (widget 側の再チャレンジ) と併せて state もクリアしないと、
+        // widget が新 token を発行する前に再送信すると消費済み token を再送して
+        // しまい、本来の rate-limit メッセージの代わりに Turnstile 検証失敗が
+        // 表示されてしまう (Codex review, PR #1430)。
         turnstileRef.current?.reset();
+        setTurnstileToken("");
         return;
       }
       setDone(true);
