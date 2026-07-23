@@ -198,6 +198,22 @@ describe("requestReceiptResendAction (enumeration + rate-limit)", () => {
     expect(domainSpy).not.toHaveBeenCalled();
   });
 
+  test("Turnstile fail 時は SerialNo rate-limit を一度も消費しない (P1: guessable serialNo による shared bucket 枯渇対策)", async () => {
+    // Turnstile より先に SerialNo バケットを消費できると、Turnstile を突破する
+    // 手段を持たない第三者でも sequential な serialNo (YYYY-NNNNNN) を推測して
+    // 空/不正な email で連投するだけで shared bucket (3/hour/serialNo) を
+    // 枯渇させ、正規ユーザーの再送信リクエストを最大1時間締め出せてしまう
+    // (PR #1428 で修正した receipt PDF rate limit と同型の P1)。
+    turnstileSpy.mockImplementation(() =>
+      Promise.resolve({ success: false, error: "turnstile-error" }),
+    );
+
+    const { requestReceiptResendAction } = await importAction();
+    await requestReceiptResendAction(validInput());
+
+    expect(serialNoCheckSpy).not.toHaveBeenCalled();
+  });
+
   test("honeypot 検出で error (bot heuristics)", async () => {
     botHeuristicsSpy.mockImplementation(() => ({
       success: false,

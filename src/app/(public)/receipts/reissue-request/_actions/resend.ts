@@ -39,10 +39,22 @@ import {
  *  2. Zod parse (serialNo / email / turnstileToken の shape 検証)
  *  3. Bot heuristics (honeypot + 3s 未満 submit を bot 判定)
  *  4. Email 単位 rate-limit (`receiptResendByEmailRateLimiter` — 3/hour/email)
- *  5. SerialNo 単位 rate-limit (`receiptResendBySerialNoRateLimiter` — 3/hour/serialNo)
- *  6. Turnstile 検証 (`guest_receipt_resend_request`)
+ *  5. Turnstile 検証 (`guest_receipt_resend_request`)
+ *  6. SerialNo 単位 rate-limit (`receiptResendBySerialNoRateLimiter` — 3/hour/serialNo)
  *  7. Domain command (Receipt lookup + timing-safe email 一致 + Case B/C 分岐)
  *  8. **常に success を返す** — enumeration 対策で match/no-match を client に露出しない
+ *
+ * ## SerialNo rate-limit を Turnstile より後に置く理由 (P1)
+ * serialNo は `YYYY-NNNNNN` の sequential 連番で推測可能なため、Turnstile より
+ * 前に置くと email 所有証明を一切持たない第三者が推測した serialNo + 適当な
+ * email で空リクエストを 3 回連投するだけで shared bucket (3/hour/serialNo) を
+ * 枯渇させ、正規の受信者本人が 1 時間締め出される (`receipt PDF` の per-serialNo
+ * rate limit で Codex #1426 が指摘し PR #1428 で修正した DoS と同型)。
+ * Turnstile 検証はここでは email 所有権を証明しないが、bot heuristics より
+ * 強い「実ブラウザ相当のクライアントが必要」という費用を攻撃者に課す。domain
+ * command (DB read) は従来通り Turnstile の直後に置かれたままなので、
+ * serialNo 単位の DB read 上限 (3/hour) 自体は Turnstile 通過者に対しても
+ * 変わらず維持される — 失われるのは「Turnstile 無しで 3 回消費できる」余地のみ。
  *
  * ## enumeration 対策
  * Domain command が `null` (未発見・email mismatch・orphan) を返した場合でも
@@ -100,22 +112,22 @@ export async function requestReceiptResendAction(
     return createMutationError(emailRateLimit.error);
   }
 
-  // 5. SerialNo 単位の追加バケット
-  const serialNoLimit =
-    await receiptResendBySerialNoRateLimiter.check(serialNo);
-  if (!serialNoLimit.success) {
-    return createMutationError(
-      "この領収書に対する再送信リクエストが多すぎます。しばらく時間をおいてからお試しください",
-    );
-  }
-
-  // 6. Turnstile
+  // 5. Turnstile (P1: SerialNo バケットより先に置く — 上記 JSDoc 参照)
   const turnstile = await validateTurnstile({
     token: turnstileToken,
     expectedAction: TURNSTILE_ACTIONS.guest_receipt_resend_request,
   });
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
+  }
+
+  // 6. SerialNo 単位の追加バケット
+  const serialNoLimit =
+    await receiptResendBySerialNoRateLimiter.check(serialNo);
+  if (!serialNoLimit.success) {
+    return createMutationError(
+      "この領収書に対する再送信リクエストが多すぎます。しばらく時間をおいてからお試しください",
+    );
   }
 
   // 7. Domain command
