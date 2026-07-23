@@ -97,6 +97,11 @@ export async function getBlockedSpaceIdsForDate(
   const locationIds = Array.from(new Set(spaces.map((s) => s.locationId)));
   const spaceIds = spaces.map((s) => s.spaceId);
 
+  // SPACE scope は spaceId で絞らず全件取得し、下の loop で `spaces` との交差を
+  // アプリ側で取る。`spaceId: { in: spaceIds } }` にすると spaceIds の長さが
+  // 呼び出し元の候補件数（/spaces の facet 該当件数）に比例して IN 句が肥大化する。
+  // SPACE scope の BlockedDate 行自体は運用上まれ（個別スペースの臨時休業）なので、
+  // 全件取得の方が呼び出し元の規模に依存せず軽い。
   const rows = await prisma.blockedDate.findMany({
     where: {
       startDate: { lte: target },
@@ -104,7 +109,7 @@ export async function getBlockedSpaceIdsForDate(
       OR: [
         { scope: BLOCKED_DATE_SCOPE.GLOBAL },
         { scope: BLOCKED_DATE_SCOPE.LOCATION, locationId: { in: locationIds } },
-        { scope: BLOCKED_DATE_SCOPE.SPACE, spaceId: { in: spaceIds } },
+        { scope: BLOCKED_DATE_SCOPE.SPACE },
       ],
     },
     select: { scope: true, locationId: true, spaceId: true },

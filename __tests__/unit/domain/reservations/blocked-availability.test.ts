@@ -233,7 +233,7 @@ describe("getBlockedSpaceIdsForDate", () => {
     expect(result).toEqual(new Set(["s1", "s3"]));
   });
 
-  test("重複する locationId は distinct 化して IN 句に渡す", async () => {
+  test("重複する locationId は distinct 化して IN 句に渡す。SPACE scope は spaceId で絞らず全件取得する（呼び出し元の候補件数に比例させないため、交差はアプリ側 loop で取る）", async () => {
     await getBlockedSpaceIdsForDate(DATE, spaces);
     expect(mockBlockedDateFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -241,10 +241,18 @@ describe("getBlockedSpaceIdsForDate", () => {
           OR: [
             { scope: "GLOBAL" },
             { scope: "LOCATION", locationId: { in: ["loc-1", "loc-2"] } },
-            { scope: "SPACE", spaceId: { in: ["s1", "s2", "s3"] } },
+            { scope: "SPACE" },
           ],
         }),
       }),
     );
+  });
+
+  test("SPACE scope は全件取得されるため、渡した spaces に含まれない spaceId の blocked 行は無視される", async () => {
+    mockBlockedDateFindMany.mockResolvedValue([
+      { scope: "SPACE", locationId: null, spaceId: "not-in-candidates" },
+    ]);
+    const result = await getBlockedSpaceIdsForDate(DATE, spaces);
+    expect(result.size).toBe(0);
   });
 });

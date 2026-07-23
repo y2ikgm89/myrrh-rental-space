@@ -88,6 +88,11 @@ export async function SpaceCard({
     return (
       <Link
         href={`/spaces/${slug}`}
+        aria-label={
+          isAvailableForSearch === false
+            ? `${name}（指定の日時は空きがありません）`
+            : name
+        }
         className="group flex flex-col gap-4 py-6 md:flex-row md:items-start md:gap-8 md:py-10"
       >
         <ImageFrame

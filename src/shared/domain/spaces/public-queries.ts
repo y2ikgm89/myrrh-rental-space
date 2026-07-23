@@ -291,7 +291,16 @@ async function runSpacesPaginatedAllUnavailable(
   };
 }
 
-/** 営業時間内: Reservation/EventTimeSlot 重複 + BlockedDate を判定し、空きあり優先で並べる。 */
+/**
+ * 営業時間内: Reservation/EventTimeSlot 重複 + BlockedDate を判定し、空きあり優先で並べる。
+ *
+ * `candidates` は facet 該当スペース全件（ページ分割前）を id/locationId のみで取得する。
+ * 「空きあり」「空きなし」2 グループに分けて正しくページ境界をまたぐには、まず全候補の
+ * 可否を判定する必要があるため（生 SQL の conditional ORDER BY は使わない設計上の帰結）。
+ * これにより `unavailableIds` の notIn/in 句サイズは facet 該当件数に比例して増える。
+ * 現状の掲載数では無視できるが、公開スペース数が数百〜数千規模まで増える場合は
+ * JOIN/EXISTS ベースの単一クエリへの再設計を検討すること。
+ */
 async function runSpacesPaginatedWithAvailabilitySplit(
   input: SpaceCatalogFilter,
   window: { readonly date: string; readonly from: Date; readonly to: Date },
@@ -301,17 +310,21 @@ async function runSpacesPaginatedWithAvailabilitySplit(
   const where = buildSpaceWhereClause(input);
   const orderBy = buildSpaceOrderBy(input.sort);
 
-  const [busyIds, candidates] = await Promise.all([
+  // candidates は busyIds に依存しないが blockedIds は candidates の
+  // spaceId/locationId が要る。busyIds と blockedIds は互いに独立なので、
+  // candidates を先に取ってから両方を並列実行する（busyIds の完了を
+  // blockedIds が無駄に待たされないようにする）。
+  const candidates = await prisma.space.findMany({
+    where,
+    select: { id: true, locationId: true },
+  });
+  const [busyIds, blockedIds] = await Promise.all([
     getUnavailableSpaceIds(window.from, window.to),
-    prisma.space.findMany({
-      where,
-      select: { id: true, locationId: true },
-    }),
+    getBlockedSpaceIdsForDate(
+      window.date,
+      candidates.map((c) => ({ spaceId: c.id, locationId: c.locationId })),
+    ),
   ]);
-  const blockedIds = await getBlockedSpaceIdsForDate(
-    window.date,
-    candidates.map((c) => ({ spaceId: c.id, locationId: c.locationId })),
-  );
 
   const unavailableIds = new Set<string>([...busyIds, ...blockedIds]);
   const availableWhere: Prisma.SpaceWhereInput = {
