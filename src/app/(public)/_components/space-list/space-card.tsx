@@ -35,6 +35,13 @@ interface SpaceCardProps {
    * "horizontal": 画像左・テキスト右の横長カード。/spaces 一覧の SpaceGrid で使用。
    */
   readonly layout?: "grid" | "horizontal";
+  /**
+   * aria-describedby 用 id の衝突回避キー。同一 slug のスペースが同一ページ内に
+   * 複数回描画されうる呼び出し元（複製された space-showcase セクション等）でのみ
+   * 指定する。async Server Component のため `useId()` は使えず slug ベースで
+   * id を生成しているため、slug だけでは page 内一意性を保証できない。
+   */
+  readonly instanceId?: string | undefined;
 }
 
 /**
@@ -60,9 +67,11 @@ export async function SpaceCard({
   isAvailableForSearch,
   imagePriority = false,
   layout = "grid",
+  instanceId,
 }: SpaceCardProps) {
   await connection();
 
+  const idScope = instanceId ? `${instanceId}-${slug}` : slug;
   const imageLoading = imagePriority ? "eager" : "lazy";
   const imageFetchPriority = imagePriority ? "high" : "auto";
   const allImages = gallery
@@ -85,9 +94,9 @@ export async function SpaceCard({
       : null;
 
   if (layout === "horizontal") {
-    const metaGroupId = `space-card-meta-${slug}`;
-    const infoRowId = `space-card-info-${slug}`;
-    const priceId = `space-card-price-${slug}`;
+    const metaGroupId = `space-card-meta-${idScope}`;
+    const infoRowId = `space-card-info-${idScope}`;
+    const priceId = `space-card-price-${idScope}`;
 
     return (
       <Link
@@ -193,10 +202,10 @@ export async function SpaceCard({
     );
   }
 
-  const categoryId = `space-card-category-${slug}`;
-  const locationId = `space-card-location-${slug}`;
-  const ratingId = `space-card-rating-${slug}`;
-  const summaryId = `space-card-summary-${slug}`;
+  const categoryId = `space-card-category-${idScope}`;
+  const locationId = `space-card-location-${idScope}`;
+  const ratingId = `space-card-rating-${idScope}`;
+  const summaryId = `space-card-summary-${idScope}`;
   const describedBy = [
     categoryName ? categoryId : null,
     locationName ? locationId : null,

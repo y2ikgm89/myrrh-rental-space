@@ -320,6 +320,7 @@ export async function SectionRenderer({
           config={config}
           spaces={spaces}
           style={resolved}
+          sectionId={section.id}
         />
       );
     }
