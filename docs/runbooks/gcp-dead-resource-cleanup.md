@@ -316,10 +316,10 @@ bun run gcp:audit-production-iap
 
 ## Related deferred cleanups (not this runbook's delete list)
 
-| Resource                     | Status                                                                   | Next action (operator / follow-up PR)                                                                                                                                                                                       |
-| ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF keeps orphan container (`prevent_destroy`) | Confirm admin UI has webhook secret → `gcloud secrets delete RESEND_WEBHOOK_SECRET` → PR removes entries from `terraform/secrets.tf` with `removed { destroy = false }`                                                     |
-| `SUPPRESSION_HASH_SECRET`    | Phase A (container in `runtime_secrets`; not in Cloud Run)               | Phase B: `openssl rand -hex 64 \| gcloud secrets versions add …` → Phase C PR adds `cloud_run_secret_versions` + `imported_secrets`. Keep `validateProductionEnv` as WARN until wiring is green; do **not** fail-closed yet |
+| Resource                     | Status                                                                   | Next action (operator / follow-up PR)                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF keeps orphan container (`prevent_destroy`) | Confirm admin UI has webhook secret → `gcloud secrets delete RESEND_WEBHOOK_SECRET` → PR removes entries from `terraform/secrets.tf` with `removed { destroy = false }` |
+| `SUPPRESSION_HASH_SECRET`    | Phase B done (`versions/1` ENABLED). Phase C wires Cloud Run via TF      | After Phase C deploy is green, optional follow-up: make `validateProductionEnv` fail-closed. Do **not** rotate `versions/1` casually (changes hash space).              |
 
 ## Why the Claude harness cannot run the deletes
 

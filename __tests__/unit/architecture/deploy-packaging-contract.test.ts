@@ -59,13 +59,12 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     }
   });
 
-  test("SUPPRESSION_HASH_SECRET stays unwired until Phase B version exists", () => {
-    // Phase C must not land before operator `gcloud secrets versions add`.
-    // Wiring without version=1 ENABLED breaks terraform apply.
-    // Comments may mention the name; assert no active map assignment.
+  test("SUPPRESSION_HASH_SECRET is Phase-C wired; RESEND stays out of Cloud Run map", () => {
     const variables = read("terraform/variables.tf");
-    expect(variables).not.toMatch(/^\s*SUPPRESSION_HASH_SECRET\s*=\s*"/m);
+    const secrets = read("terraform/secrets.tf");
+    expect(variables).toMatch(/^\s*SUPPRESSION_HASH_SECRET\s*=\s*"1"/m);
     expect(variables).not.toMatch(/^\s*RESEND_WEBHOOK_SECRET\s*=\s*"/m);
+    expect(secrets).toMatch(/imported_secrets[\s\S]*"SUPPRESSION_HASH_SECRET"/);
   });
 
   test("imported_cron_jobs covers every cron_jobs entry (state-rebuild safety)", () => {

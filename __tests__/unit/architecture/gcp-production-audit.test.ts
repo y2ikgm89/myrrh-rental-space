@@ -1054,6 +1054,7 @@ describe("GCP production audit model", () => {
       { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "1" },
       { name: "GOOGLE_CLIENT_ID", version: "1" },
       { name: "GOOGLE_CLIENT_SECRET", version: "1" },
+      { name: "SUPPRESSION_HASH_SECRET", version: "1" },
     ]);
 
     expect(

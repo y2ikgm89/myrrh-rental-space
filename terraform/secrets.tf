@@ -110,20 +110,9 @@ locals {
     # 詳細は上の runtime_secrets 内 docblock を参照。import 経由で再 adoption
     # できるよう imported_secrets にも維持する。
     "RESEND_WEBHOOK_SECRET",
-    #
-    # SUPPRESSION_HASH_SECRET (2026-07-19、PR-K #1276): Phase A のみ (runtime_secrets
-    # にのみ追加)。上の docblock の 3-phase rollout に従い、operator が Phase B
-    # (`gcloud secrets create SUPPRESSION_HASH_SECRET --replication-policy=automatic`
-    # → `openssl rand -hex 64 | gcloud secrets versions add SUPPRESSION_HASH_SECRET
-    # --data-file=-`) を完了した後の Phase C follow-up PR でここへ追加する。
-    # それまで hashSuppressedEmailCandidate は plain sha256 fallback + WARN log で
-    # 動作する (src/shared/lib/env/server.ts)。
-    #
-    # 元 PR #1276 は「operator が事前 populate 済み」と仮定してここに追加していたが、
-    # 実際は auto-flow で container 未作成のまま apply が走り
-    # `Cannot import non-existent remote object` で main deploy blocked
-    # (run 29685080757)。PR #1291 が root fix として entry を削除 = auto-flow を
-    # 復元済み。本 PR はその状態を継承する。
+    # Phase C (2026-07-24): versions/1 ENABLED 確認済み。Cloud Run 配線は
+    # var.cloud_run_secret_versions。state-rebuild 時の再 adoption 用に登録。
+    "SUPPRESSION_HASH_SECRET",
   ])
 }
 
@@ -202,4 +191,4 @@ resource "google_secret_manager_secret" "secret" {
 # `cloud_run_secret_versions` から除去済だが、`prevent_destroy` のため
 # runtime_secrets / imported_secrets には orphan container として残置
 # （削除手順は上の runtime_secrets docblock）。
-# SUPPRESSION_HASH_SECRET: Phase A (container only)。Cloud Run 配線は未完了。
+# SUPPRESSION_HASH_SECRET: Phase C 完了（cloud_run_secret_versions + imported_secrets）。
