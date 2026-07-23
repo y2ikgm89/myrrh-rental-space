@@ -18,9 +18,16 @@ import {
   isSpaceSort,
   type SpaceSort,
 } from "@/shared/domain/spaces/space-sort";
+import {
+  EVENT_LIST_TABS,
+  isEventListTab,
+  type EventListTab,
+} from "@/shared/domain/events/event-list-tab";
 
 export { SPACE_SORT_VALUES, isSpaceSort };
 export type { SpaceSort };
+export { EVENT_LIST_TABS, isEventListTab };
+export type { EventListTab };
 
 export const paginationSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
@@ -118,6 +125,18 @@ export const eventsSearchParamsParsers = {
 
 export const eventsSearchParams = createSearchParamsCache(
   eventsSearchParamsParsers,
+);
+
+export const eventsListSearchParamsParsers = {
+  tab: parseAsStringLiteral(EVENT_LIST_TABS).withDefault("upcoming"),
+  q: parseAsString.withDefault(""),
+  // 未指定 = null = "すべてのカテゴリー"(spaceSearchParamsParsers.category と同型)
+  categoryId: parseAsString,
+  page: parseAsInteger.withDefault(1),
+};
+
+export const eventsListSearchParams = createSearchParamsCache(
+  eventsListSearchParamsParsers,
 );
 
 export const reservationSearchParamsParsers = {

@@ -1,76 +1,83 @@
-"use client";
-
-import {
-  formatMonthYear,
-  getJSTDateParts,
-} from "@/public/lib/format-event-date";
 import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
-import { CalendarMonthNav } from "./calendar-month-nav";
-import { useCalendarMonth } from "./use-calendar-month";
-import { EventCard } from "./event-card";
-import type { EventCardData } from "./event-card";
+import { Pagination } from "@/public/components/pagination";
+import type { EventListTab } from "@/public/lib/search-params";
+import { EventCard, type EventCardData } from "./event-card";
+import {
+  EventListFilters,
+  type EventListFiltersCategory,
+} from "./event-list-filters";
+
+export interface EventListFilterState {
+  readonly tab: EventListTab;
+  readonly q: string;
+  readonly categoryId: string | null;
+}
+
+export interface EventListViewData {
+  readonly items: readonly EventCardData[];
+  readonly categories: readonly EventListFiltersCategory[];
+  readonly currentPage: number;
+  readonly totalPages: number;
+  readonly totalCount: number;
+  readonly filter: EventListFilterState;
+}
 
 interface EventListViewProps {
-  readonly events: readonly EventCardData[];
-  readonly initialNowIso?: string;
+  readonly data: EventListViewData;
 }
 
-function isInJSTMonth(iso: string, year: number, month: number): boolean {
-  const parts = getJSTDateParts(new Date(iso));
-  return parts.year === year && parts.month === month;
+/**
+ * ページ切替時も tab/q/categoryId を URL に保持する(`page` は Pagination が上書き)。
+ * `SpaceListSection.buildPreservedQuery` と同型。
+ */
+function buildPreservedQuery(
+  filter: EventListFilterState,
+): Readonly<Record<string, string | undefined>> {
+  const q: Record<string, string | undefined> = {};
+  if (filter.tab !== "upcoming") q["tab"] = filter.tab;
+  if (filter.q) q["q"] = filter.q;
+  if (filter.categoryId) q["categoryId"] = filter.categoryId;
+  return q;
 }
 
-function eventHasSlotInJSTMonth(
-  event: EventCardData,
-  year: number,
-  month: number,
-): boolean {
-  return event.slots.some((slot) => isInJSTMonth(slot.startTime, year, month));
-}
-
-export function EventListView({ events, initialNowIso }: EventListViewProps) {
-  const { year, month, nowMs, prev, next, goToday, jump } =
-    useCalendarMonth(initialNowIso);
-
-  const monthEvents = events.filter((e) =>
-    eventHasSlotInJSTMonth(e, year, month),
-  );
-  const monthLabel = formatMonthYear(new Date(year, month, 1));
+export function EventListView({ data }: EventListViewProps) {
+  const { items, categories, currentPage, totalPages, totalCount, filter } =
+    data;
+  // tab が upcoming/past を server 側で既に絞り込んでいるため、カードの
+  // 「終了」バッジは個々の slot 時刻ではなくタブの意味そのもので決める。
+  const isPast = filter.tab === "past";
 
   return (
     <div>
-      <CalendarMonthNav
-        year={year}
-        month={month}
-        onPrev={prev}
-        onNext={next}
-        onToday={goToday}
-        onJump={jump}
-      />
+      <EventListFilters categories={categories} resultCount={totalCount} />
 
-      <section className="mt-10" aria-label={`${monthLabel}のイベント`}>
-        {monthEvents.length === 0 ? (
-          <div className="py-12 text-center md:py-16">
-            <p className="text-muted-foreground">
-              {monthLabel}にイベントはありません。
-            </p>
-            <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground/70">
-              前後の月を確認してください
-            </p>
-          </div>
-        ) : (
-          <ScrollRevealGroup className="divide-y divide-divider">
-            {monthEvents.map((event) => (
-              <EventCard
-                key={event.id}
-                variant="list"
-                event={event}
-                isPast={new Date(event.endTime).getTime() < nowMs}
-              />
-            ))}
-          </ScrollRevealGroup>
-        )}
-      </section>
+      {items.length === 0 ? (
+        <div className="py-12 text-center md:py-16">
+          <p className="text-muted-foreground">
+            該当するイベントはありません。
+          </p>
+        </div>
+      ) : (
+        <ScrollRevealGroup className="mt-10 divide-y divide-divider">
+          {items.map((event) => (
+            <EventCard
+              key={event.id}
+              variant="list"
+              event={event}
+              isPast={isPast}
+            />
+          ))}
+        </ScrollRevealGroup>
+      )}
+
+      <div className="mt-10 md:mt-14">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          basePath="/events"
+          preservedQuery={buildPreservedQuery(filter)}
+        />
+      </div>
     </div>
   );
 }

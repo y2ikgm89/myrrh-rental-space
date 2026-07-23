@@ -1,7 +1,14 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
 import { paginate } from "@/shared/lib/pagination";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
 import type {
   GetEventCategoriesResult,
   EventCategoryWithStats,
@@ -114,14 +121,20 @@ export async function getEventCategoryById(
 export async function getActiveEventCategories(): Promise<
   ActiveEventCategoryOption[]
 > {
-  return prisma.eventCategory.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      name: true,
-      icon: true,
-      color: true,
-    },
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.EVENT_CATEGORIES);
+
+  return safeFetch({
+    fetch: () =>
+      prisma.eventCategory.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+        select: { id: true, name: true, icon: true, color: true },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getActiveEventCategories",
   });
 }

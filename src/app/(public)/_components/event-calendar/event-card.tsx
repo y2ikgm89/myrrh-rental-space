@@ -21,6 +21,12 @@ export interface EventCardSlotData {
   readonly capacity: number;
 }
 
+export interface EventCardCategoryData {
+  readonly id: string;
+  readonly name: string;
+  readonly color: string | null;
+}
+
 export interface EventCardData {
   readonly id: string;
   readonly title: string;
@@ -37,6 +43,7 @@ export interface EventCardData {
   readonly thumbnailUrl: string | null;
   /** ギャラリー画像（複数ある場合はカルーセルで表示） */
   readonly gallery: readonly GalleryItem[];
+  readonly category: EventCardCategoryData;
 }
 
 interface EventCardListProps {
@@ -62,6 +69,7 @@ function EventBadges({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
+      <Badge variant="default">{event.category.name}</Badge>
       {isPast ? (
         <Badge variant="default" className="text-muted-foreground">
           終了

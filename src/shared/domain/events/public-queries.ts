@@ -10,8 +10,15 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import {
+  toPlainArray,
+  toPlainObject,
+  type Serialized,
+} from "@/shared/lib/serialize";
 import { parseGallery } from "@/shared/lib/validations/gallery";
+import { paginate, calcTotalPages } from "@/shared/lib/pagination";
+import { PAGINATION_DEFAULTS } from "@/shared/lib/constants";
+import type { EventListTab } from "@/shared/domain/events/event-list-tab";
 
 const publicEventSelect = {
   id: true,
@@ -33,6 +40,7 @@ const publicEventSelect = {
   meetingProvider: true,
   location: { select: { id: true, name: true, address: true } },
   space: { select: { id: true, name: true, slug: true } },
+  category: { select: { id: true, name: true, color: true } },
   slots: {
     select: { id: true, startAt: true, endAt: true, capacity: true },
     orderBy: { startAt: "asc" as const },
@@ -79,6 +87,11 @@ function mapPublicEvent<T extends PublicEventRow>(event: T) {
     capacity: firstSlot?.capacity ?? null,
   };
 }
+
+/** section-renderer.tsx 等が「取得済みイベント行 → EventCardData」の変換に使う共通ソース型 */
+export type PublicEventCardSource = Serialized<
+  ReturnType<typeof mapPublicEvent>
+>;
 
 export async function getPublishedEvents() {
   "use cache";
@@ -183,4 +196,94 @@ export async function getPublishedEventBySlug(slug: string) {
 
   if (!event) return null;
   return toPlainObject(mapPublicEvent(event));
+}
+
+export interface EventListFilter {
+  readonly tab: EventListTab;
+  readonly q: string;
+  readonly categoryId: string | null;
+  readonly page?: number | undefined;
+  readonly perPage?: number | undefined;
+}
+
+/**
+ * q はタイトルのみを ILIKE 対象にする(既存 `events_title_trgm_idx` を活用)。
+ * admin 側の `searchEvents`(`admin-queries.ts` の `buildTabWhere` 隣接ロジック)も
+ * title/addressDetail/location.name/space.name の OR で本文(descriptionPlainText)
+ * は対象外にしており、descriptionPlainText には trigram index が無いため
+ * ILIKE がシーケンシャルスキャンになる。既存パターンとの一貫性を優先しタイトルのみとする。
+ */
+function buildEventListWhereClause(
+  filter: EventListFilter,
+  now: Date,
+): Prisma.EventWhereInput {
+  const tabWhere: Prisma.EventWhereInput =
+    filter.tab === "upcoming"
+      ? { slots: { some: { endAt: { gte: now } } } }
+      : { NOT: { slots: { some: { endAt: { gte: now } } } } };
+
+  const where: Prisma.EventWhereInput = {
+    status: EventStatus.PUBLISHED,
+    deletedAt: null,
+    ...tabWhere,
+  };
+
+  const q = filter.q.trim();
+  if (q) {
+    where.title = { contains: q, mode: "insensitive" };
+  }
+
+  if (filter.categoryId) {
+    where.categoryId = filter.categoryId;
+  }
+
+  return where;
+}
+
+/**
+ * 公開 `/events` list variant のページネーション付き取得。
+ *
+ * `'use cache'` 非対応(tab 判定に `new Date()` を使うため、呼び出し側が
+ * `await connection()` 済みの動的スコープで呼ぶ必要がある。既存
+ * `getUpcomingEventsExcluding` と同じ理由)。
+ *
+ * orderBy は `Event.firstSlotStartAt`/`lastSlotEndAt`(`schema.prisma` の
+ * フィールドコメント)が示す意図の通り: upcoming は開催が近い順、
+ * past は終了が遅い順(直近に終わったものを先に見せる)。
+ */
+export async function getPublishedEventsPaginated(filter: EventListFilter) {
+  const now = new Date();
+  const page = Math.max(1, filter.page ?? 1);
+  const perPage = filter.perPage ?? PAGINATION_DEFAULTS.public.default;
+  const where = buildEventListWhereClause(filter, now);
+  const orderBy: Prisma.EventOrderByWithRelationInput =
+    filter.tab === "upcoming"
+      ? { firstSlotStartAt: { sort: "asc", nulls: "last" } }
+      : { lastSlotEndAt: { sort: "desc", nulls: "last" } };
+  const { skip, take, limit } = paginate({ page, limit: perPage });
+
+  return safeFetch({
+    fetch: async () => {
+      const [rawItems, totalCount] = await Promise.all([
+        prisma.event.findMany({
+          where,
+          select: publicEventSelect,
+          orderBy,
+          skip,
+          take,
+        }),
+        prisma.event.count({ where }),
+      ]);
+      return {
+        items: toPlainArray(rawItems.map(mapPublicEvent)),
+        totalCount,
+        totalPages: calcTotalPages(totalCount, limit),
+        currentPage: page,
+      };
+    },
+    fallback: { items: [], totalCount: 0, totalPages: 0, currentPage: page },
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedEventsPaginated",
+  });
 }

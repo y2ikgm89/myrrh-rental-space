@@ -52,7 +52,12 @@ import {
   getPublishedPostsList,
   getPostCategories,
 } from "@/shared/domain/posts/queries";
-import { getPublishedEvents } from "@/shared/domain/events/public-queries";
+import {
+  getPublishedEvents,
+  getPublishedEventsPaginated,
+  type PublicEventCardSource,
+} from "@/shared/domain/events/public-queries";
+import { getActiveEventCategories } from "@/shared/domain/event-categories/queries";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
@@ -68,6 +73,7 @@ import {
 } from "@/shared/domain/spaces/public-queries";
 import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
 import {
+  eventsListSearchParams,
   newsSearchParams,
   parseSpaceTimeRange,
   postsSearchParams,
@@ -106,7 +112,10 @@ import { PostListSection } from "../../../_components/PostListSection";
 import { FaqListSection } from "../../../_components/FaqListSection";
 import { ContactFormSection } from "../../../_components/ContactFormSection";
 import { ReservationFormSection } from "../../../_components/ReservationFormSection";
-import { EventCalendarSection } from "../../../_components/EventCalendarSection";
+import {
+  EventCalendarSection,
+  type EventCalendarMode,
+} from "../../../_components/EventCalendarSection";
 import type { EventCardData } from "../../../_components/event-calendar/event-card";
 import { InstagramSection } from "../../../_components/InstagramSection";
 import { LocationListSection } from "../../../_components/LocationListSection";
@@ -566,37 +575,75 @@ export async function SectionRenderer({
 
     case SectionType.EVENT_CALENDAR: {
       const config = getEventCalendarConfig(section.config);
-      const rawEvents = await getPublishedEvents();
-      const events: EventCardData[] = rawEvents.map((e) => ({
-        id: e.id,
-        title: e.title,
-        slug: e.slug,
-        descriptionPlainText: e.descriptionPlainText,
-        location: formatEventVenue({
-          location: e.location,
-          space: e.space,
-          addressDetail: e.addressDetail,
-        }),
-        startTime: e.startTime,
-        endTime: e.endTime,
-        slots: e.slots.map((slot) => ({
-          id: slot.id,
-          startTime: slot.startAt,
-          endTime: slot.endAt,
-          capacity: slot.capacity,
-        })),
-        price: e.tickets[0]?.price ?? null,
-        registrationOpen: e.registrationOpen,
-        spaceName: e.space?.name ?? null,
-        thumbnailUrl: e.thumbnailUrl ?? null,
-        gallery: e.gallery,
-      }));
+      const layout = config.displayLayout;
+
+      function toEventCardData(e: PublicEventCardSource): EventCardData {
+        return {
+          id: e.id,
+          title: e.title,
+          slug: e.slug,
+          descriptionPlainText: e.descriptionPlainText,
+          location: formatEventVenue({
+            location: e.location,
+            space: e.space,
+            addressDetail: e.addressDetail,
+          }),
+          startTime: e.startTime,
+          endTime: e.endTime,
+          slots: e.slots.map((slot) => ({
+            id: slot.id,
+            startTime: slot.startAt,
+            endTime: slot.endAt,
+            capacity: slot.capacity,
+          })),
+          price: e.tickets[0]?.price ?? null,
+          registrationOpen: e.registrationOpen,
+          spaceName: e.space?.name ?? null,
+          thumbnailUrl: e.thumbnailUrl ?? null,
+          gallery: e.gallery,
+          category: e.category,
+        };
+      }
+
+      async function fetchEventListData() {
+        const sp = await eventsListSearchParams.parse(
+          searchParams ?? Promise.resolve({}),
+        );
+        const filter = { tab: sp.tab, q: sp.q, categoryId: sp.categoryId };
+        const [paginated, categories] = await Promise.all([
+          getPublishedEventsPaginated({ ...filter, page: sp.page }),
+          getActiveEventCategories(),
+        ]);
+        return {
+          items: paginated.items.map(toEventCardData),
+          categories,
+          currentPage: paginated.currentPage,
+          totalPages: paginated.totalPages,
+          totalCount: paginated.totalCount,
+          filter,
+        };
+      }
+
+      let mode: EventCalendarMode;
+      if (layout === "calendar") {
+        const rawEvents = await getPublishedEvents();
+        mode = { kind: "calendar", events: rawEvents.map(toEventCardData) };
+      } else if (layout === "list") {
+        mode = { kind: "list", listData: await fetchEventListData() };
+      } else {
+        const [rawEvents, listData] = await Promise.all([
+          getPublishedEvents(),
+          fetchEventListData(),
+        ]);
+        mode = {
+          kind: "toggle",
+          events: rawEvents.map(toEventCardData),
+          listData,
+        };
+      }
+
       return (
-        <EventCalendarSection
-          config={config}
-          style={resolved}
-          events={events}
-        />
+        <EventCalendarSection config={config} style={resolved} mode={mode} />
       );
     }
 
