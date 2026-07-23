@@ -170,6 +170,10 @@ const eventFormBaseSchema = z.object({
       error:
         "スラッグは小文字英数字とハイフンのみ使用できます（先頭/末尾/連続ハイフン禁止）",
     }),
+  categoryId: z
+    .string()
+    .min(1, { error: "カテゴリーを選択してください" })
+    .pipe(z.uuid({ error: "カテゴリーIDが無効です" })),
   /** Lexical EditorState JSON 文字列（hidden input transit） */
   descriptionJson: lexicalJsonSchema,
   thumbnailUrl: z.preprocess(
