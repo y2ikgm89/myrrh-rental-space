@@ -11,6 +11,7 @@ import "server-only";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import {
   clearReservationCalendarEvent,
+  GCAL_DELETE_FAILED_PREFIX,
   getCalendarSyncRuntimeState,
   getFailedCalendarSyncReservations,
   getFailedCalendarSyncSeriesIds,
@@ -112,10 +113,59 @@ export async function syncReservationToCalendar(
     const result = await createCalendarEvent(eventParams);
 
     if (result.success && result.eventId) {
-      await markReservationCalendarSyncSuccess({
-        reservationId: data.reservationId,
-        eventId: result.eventId,
-      });
+      try {
+        await markReservationCalendarSyncSuccess({
+          reservationId: data.reservationId,
+          eventId: result.eventId,
+        });
+      } catch (dbError) {
+        // GCAL-AUDIT-07: GCal 側の作成は成功したが DB write-back が失敗した場合、
+        // googleCalendarEventId が null のまま残り、次回 retry が
+        // createCalendarEvent を再実行して GCal 上に重複イベントを作ってしまう。
+        // 補償として作成済み GCal event を削除してから失敗として記録する
+        // (create の atomicity を模倣する compensating action)。
+        const compensationResult = await deleteCalendarEvent(result.eventId);
+        if (!compensationResult.success) {
+          logError(
+            new Error(
+              `Compensating delete failed after DB write-back error: ${compensationResult.error}`,
+            ),
+            {
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.HIGH,
+              context: {
+                operation: "syncReservationToCalendar.compensate",
+                reservationId: data.reservationId,
+                eventId: result.eventId,
+              },
+            },
+          );
+        }
+
+        const message =
+          dbError instanceof Error ? dbError.message : "Unknown error";
+        logError(normalizeError(dbError), {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "syncReservationToCalendar.writeBack",
+            reservationId: data.reservationId,
+          },
+        });
+        fireAndForget(
+          markReservationCalendarSyncError({
+            reservationId: data.reservationId,
+            error: message,
+          }),
+          {
+            operation: "saveCalendarSyncError",
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: data.reservationId },
+          },
+        );
+        return { success: false, error: message };
+      }
 
       return {
         success: true,
@@ -198,6 +248,7 @@ export async function updateCalendarSync(
 
     return omitUndefined({ success: false, error: result.error });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
@@ -207,15 +258,30 @@ export async function updateCalendarSync(
         eventId: existingEventId,
       },
     });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    // GCAL-AUDIT-05: 例外経路は従来 markReservationCalendarSyncError を呼んでおらず、
+    // `calendarSyncError` が更新されないため retry pool から漏れていた。
+    fireAndForget(
+      markReservationCalendarSyncError({
+        reservationId: data.reservationId,
+        error: message,
+      }),
+      {
+        operation: "saveCalendarSyncError",
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId: data.reservationId },
+      },
+    );
+    return { success: false, error: message };
   }
 }
 
 /**
  * 予約キャンセル時のカレンダーイベント削除
+ *
+ * GCAL-AUDIT-05: 失敗時は `googleCalendarEventId` を保持したまま
+ * `GCAL_DELETE_FAILED_PREFIX` 付きのエラーを記録する（GCal 上にイベントが
+ * まだ存在するため、次回 retry は create ではなく delete を再試行する契約）。
  */
 export async function deleteCalendarSync(
   reservationId: string,
@@ -235,8 +301,14 @@ export async function deleteCalendarSync(
       return { success: true };
     }
 
+    await markReservationCalendarSyncError({
+      reservationId,
+      error: `${GCAL_DELETE_FAILED_PREFIX}${result.error}`,
+    });
+
     return { success: false, error: result.error };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
@@ -246,10 +318,19 @@ export async function deleteCalendarSync(
         eventId,
       },
     });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    fireAndForget(
+      markReservationCalendarSyncError({
+        reservationId,
+        error: `${GCAL_DELETE_FAILED_PREFIX}${message}`,
+      }),
+      {
+        operation: "saveCalendarSyncError",
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId },
+      },
+    );
+    return { success: false, error: message };
   }
 }
 
@@ -282,6 +363,15 @@ export async function retryFailedSyncs(): Promise<{
   };
 }
 
+/**
+ * GCAL-AUDIT-05: 失敗した予約を eventId の有無 + エラー prefix で
+ * create / update / delete のいずれかに振り分けて再試行する。
+ *
+ * - `googleCalendarEventId` 無し → create (`syncReservationToCalendar`)
+ * - `googleCalendarEventId` 有り + `GCAL_DELETE_FAILED_PREFIX` エラー → delete
+ *   (`deleteCalendarSync`)。CANCELLED のまま GCal 上にイベントが残っている状態。
+ * - `googleCalendarEventId` 有り + それ以外のエラー → update (`updateCalendarSync`)
+ */
 async function retryFailedStandaloneCalendarSyncs(): Promise<{
   total: number;
   succeeded: number;
@@ -294,19 +384,34 @@ async function retryFailedStandaloneCalendarSyncs(): Promise<{
 
   for (const reservation of failedReservations) {
     const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
-    const result = await syncReservationToCalendar(
-      omitUndefined({
-        reservationId: reservation.id,
-        spaceName: reservation.space.name,
-        customerName,
-        customerEmail: reservation.guestEmail ?? reservation.customer.email,
-        startTime: reservation.startTime,
-        endTime: reservation.endTime,
-        location: reservation.space.lineAddress,
-        notes: reservation.notes ?? undefined,
-        totalPrice: reservation.totalPrice,
-      }),
-    );
+    const syncData = omitUndefined({
+      reservationId: reservation.id,
+      spaceName: reservation.space.name,
+      customerName,
+      customerEmail: reservation.guestEmail ?? reservation.customer.email,
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      location: reservation.space.lineAddress,
+      notes: reservation.notes ?? undefined,
+      totalPrice: reservation.totalPrice,
+    });
+
+    let result: { success: boolean };
+    if (reservation.googleCalendarEventId === null) {
+      result = await syncReservationToCalendar(syncData);
+    } else if (
+      reservation.calendarSyncError?.startsWith(GCAL_DELETE_FAILED_PREFIX)
+    ) {
+      result = await deleteCalendarSync(
+        reservation.id,
+        reservation.googleCalendarEventId,
+      );
+    } else {
+      result = await updateCalendarSync(
+        syncData,
+        reservation.googleCalendarEventId,
+      );
+    }
 
     if (result.success) {
       succeeded++;
@@ -396,11 +501,20 @@ async function retryFailedSeriesCalendarSyncs(): Promise<{
       continue;
     }
 
-    const { matched, total: seriesTotal } =
-      await writeBackInstanceGoogleCalendarEventIds({
-        seriesId,
-        instances: instancesResult.instances,
+    const {
+      matched,
+      total: seriesTotal,
+      unmatchedReservationIds,
+    } = await writeBackInstanceGoogleCalendarEventIds({
+      seriesId,
+      instances: instancesResult.instances,
+    });
+    if (unmatchedReservationIds.length > 0) {
+      await markUnmatchedSeriesInstances({
+        unmatchedReservationIds,
+        error: `series ${seriesId} write-back partial: ${matched}/${seriesTotal} instances matched`,
       });
+    }
     total += seriesTotal;
     succeeded += matched;
     failed += seriesTotal - matched;
@@ -443,7 +557,11 @@ function buildInstanceIdMapByStartTime(
 export async function writeBackInstanceGoogleCalendarEventIds(input: {
   seriesId: string;
   instances: readonly CalendarEventInstance[];
-}): Promise<{ matched: number; total: number }> {
+}): Promise<{
+  matched: number;
+  total: number;
+  unmatchedReservationIds: string[];
+}> {
   const reservations = await getSeriesInstanceStartTimes(input.seriesId);
   const idByStart = buildInstanceIdMapByStartTime(input.instances);
 
@@ -456,17 +574,37 @@ export async function writeBackInstanceGoogleCalendarEventIds(input: {
   const results = await Promise.all(
     reservations.map(async (r) => {
       const gcalId = idByStart.get(r.startTime.getTime());
-      if (gcalId === undefined) return false;
+      if (gcalId === undefined) return { id: r.id, matched: false as const };
       await markSeriesInstanceCalendarSyncSuccess({
         reservationId: r.id,
         googleCalendarEventId: gcalId,
       });
-      return true;
+      return { id: r.id, matched: true as const };
     }),
   );
-  const matched = results.filter(Boolean).length;
+  const matched = results.filter((r) => r.matched).length;
+  const unmatchedReservationIds = results
+    .filter((r) => !r.matched)
+    .map((r) => r.id);
 
-  return { matched, total: reservations.length };
+  return { matched, total: reservations.length, unmatchedReservationIds };
+}
+
+/**
+ * GCAL-AUDIT-06: write-back で未マッチだった instance に `calendarSyncError` を
+ * 記録し、retry pool (`getFailedCalendarSyncSeriesIds`) で拾えるようにする
+ * (`googleCalendarEventId` が null のまま `calendarSyncError` も null だと
+ * 失敗が可視化されず永久に取りこぼされる)。
+ */
+async function markUnmatchedSeriesInstances(input: {
+  unmatchedReservationIds: string[];
+  error: string;
+}): Promise<void> {
+  await Promise.all(
+    input.unmatchedReservationIds.map((reservationId) =>
+      markReservationCalendarSyncError({ reservationId, error: input.error }),
+    ),
+  );
 }
 
 /**
@@ -584,6 +722,26 @@ export async function syncReservationSeriesToCalendar(
         severity: ErrorSeverity.MEDIUM,
         context: { operation: "syncReservationSeriesToCalendar", seriesId },
       });
+      // GCAL-AUDIT-06: master 作成自体が失敗した場合も、他の失敗経路
+      // (fetchInstances 失敗) と同様に全 instance を FAILED にして retry pool
+      // (`getFailedCalendarSyncSeriesIds`) に載せる（旧実装は master 未作成時に
+      // instance 側へ一切マークしておらず、series 全体が silent に取りこぼされていた）。
+      try {
+        await markAllSeriesInstancesAsFailed({
+          seriesId,
+          error: `series ${seriesId} master creation failed: ${errMsg}`,
+        });
+      } catch (markError) {
+        logError(normalizeError(markError), {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation:
+              "syncReservationSeriesToCalendar.markInstancesFailedAfterCreate",
+            seriesId,
+          },
+        });
+      }
       return { success: false, error: errMsg };
     }
 
@@ -645,10 +803,38 @@ export async function syncReservationSeriesToCalendar(
       };
     }
 
-    await writeBackInstanceGoogleCalendarEventIds({
+    const writeBackResult = await writeBackInstanceGoogleCalendarEventIds({
       seriesId,
       instances: instancesResult.instances,
     });
+
+    if (writeBackResult.unmatchedReservationIds.length > 0) {
+      // GCAL-AUDIT-06: `matched < total` の部分成功も明示的に partial として扱い、
+      // 未マッチ instance に calendarSyncError を残して retry pool に載せる
+      // (旧実装は matched した分のみ書き戻し、未マッチ分は success:true の裏で
+      // calendarSyncError も null のまま可視化されない状態だった)。
+      const errMsg = `series ${seriesId} write-back partial: ${writeBackResult.matched}/${writeBackResult.total} instances matched`;
+      logError(new Error(errMsg), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "syncReservationSeriesToCalendar.writeBackPartial",
+          seriesId,
+          masterEventId,
+        },
+      });
+      await markUnmatchedSeriesInstances({
+        unmatchedReservationIds: writeBackResult.unmatchedReservationIds,
+        error: errMsg,
+      });
+      return {
+        success: "partial",
+        masterCreated: true,
+        masterEventId,
+        instancesWriteBack: false,
+        error: errMsg,
+      };
+    }
 
     // 型上 eventId は string 必須 (masterEventId は既に確定した非 undefined 値)。
     // eventUrl / event は optional なので omitUndefined 経由で除去する。

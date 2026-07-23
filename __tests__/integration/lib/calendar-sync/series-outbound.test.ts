@@ -391,7 +391,7 @@ describeMaybe(
       }
     }, 30_000);
 
-    test("createCalendarEvent 失敗時は googleCalendarMasterEventId 永続化されない", async () => {
+    test("createCalendarEvent 失敗時は googleCalendarMasterEventId 永続化されない + 全 instance が FAILED (GCAL-AUDIT-06)", async () => {
       const fixture = await createSeriesFixture();
       try {
         mockCreate.mockImplementation(() =>
@@ -406,6 +406,79 @@ describeMaybe(
           select: { googleCalendarMasterEventId: true },
         });
         expect(persisted?.googleCalendarMasterEventId).toBeNull();
+
+        // GCAL-AUDIT-06: master 作成自体の失敗も他の失敗経路と同様、全 instance を
+        // FAILED にして retry pool (getFailedCalendarSyncSeriesIds) に載せる
+        // (旧実装はここで instance 側へ一切マークしておらず取りこぼしていた)。
+        const reservations = await prisma.reservation.findMany({
+          where: { seriesId: fixture.seriesId },
+          select: { googleCalendarEventId: true, calendarSyncError: true },
+        });
+        expect(reservations).toHaveLength(3);
+        for (const r of reservations) {
+          expect(r.googleCalendarEventId).toBeNull();
+          expect(r.calendarSyncError).toContain("master creation failed");
+        }
+      } finally {
+        await fixture.cleanup();
+      }
+    }, 30_000);
+
+    test("write-back が部分マッチ (matched < total) のとき partial を返し未マッチのみ FAILED にする (GCAL-AUDIT-06)", async () => {
+      const fixture = await createSeriesFixture();
+      try {
+        mockCreate.mockImplementation(() =>
+          Promise.resolve({ success: true, eventId: "master-partial" }),
+        );
+        // 3 instance のうち 2 件だけ GCal 側に返す (fetch 自体は success)
+        mockFetchInstances.mockImplementation(() =>
+          Promise.resolve({
+            success: true,
+            instances: [
+              {
+                id: "master-partial_20280104T100000Z",
+                startTime: fixture.instances[0]!.startTime,
+              },
+              {
+                id: "master-partial_20280111T100000Z",
+                startTime: fixture.instances[1]!.startTime,
+              },
+            ],
+          }),
+        );
+
+        const result = await syncReservationSeriesToCalendar(fixture.seriesId);
+
+        expect(result.success).toBe("partial");
+        if (result.success !== "partial") {
+          throw new Error("expected partial result");
+        }
+        expect(result.masterEventId).toBe("master-partial");
+        expect(result.error).toContain("2/3");
+
+        const reservations = await prisma.reservation.findMany({
+          where: { seriesId: fixture.seriesId },
+          select: {
+            id: true,
+            googleCalendarEventId: true,
+            calendarSyncError: true,
+          },
+          orderBy: { startTime: "asc" },
+        });
+        // マッチした 2 件は write-back 済み・エラー無し
+        expect(reservations[0]?.googleCalendarEventId).toBe(
+          "master-partial_20280104T100000Z",
+        );
+        expect(reservations[0]?.calendarSyncError).toBeNull();
+        expect(reservations[1]?.googleCalendarEventId).toBe(
+          "master-partial_20280111T100000Z",
+        );
+        expect(reservations[1]?.calendarSyncError).toBeNull();
+        // 未マッチの 1 件のみ FAILED (calendarSyncError 有 + eventId 未設定)
+        expect(reservations[2]?.googleCalendarEventId).toBeNull();
+        expect(reservations[2]?.calendarSyncError).toContain(
+          "write-back partial",
+        );
       } finally {
         await fixture.cleanup();
       }
@@ -461,6 +534,11 @@ describeMaybe(
         });
         expect(result.matched).toBe(2);
         expect(result.total).toBe(3);
+        // GCAL-AUDIT-06: 未マッチの reservationId を呼出側 (syncReservationSeriesToCalendar /
+        // retryFailedSeriesCalendarSyncs) が calendarSyncError マーキングに使う。
+        expect(result.unmatchedReservationIds).toEqual([
+          fixture.instances[2]!.id,
+        ]);
 
         const updated = await prisma.reservation.findMany({
           where: { seriesId: fixture.seriesId },

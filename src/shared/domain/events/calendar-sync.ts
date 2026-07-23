@@ -60,12 +60,47 @@ export async function markEventCalendarSyncError(params: {
   eventId: string;
   error: string;
 }): Promise<void> {
-  // Event モデルには calendarSyncError カラムがないため logError のみで記録
+  // GCAL-AUDIT-04: `Event.calendarSyncError` (additive migration) に永続化する。
+  // 旧実装は logError のみで DB に残らず、admin dashboard に可視化されず
+  // `/api/cron/calendar-sync-retry` の retry pool にも載らなかった。
+  await prisma.event.updateMany({
+    where: { id: params.eventId, deletedAt: null },
+    data: { calendarSyncError: params.error },
+  });
+
   logError(new Error(params.error), {
     category: ErrorCategory.EXTERNAL_API,
     severity: ErrorSeverity.MEDIUM,
     context: { operation: "eventCalendarSync", eventId: params.eventId },
   });
+}
+
+/**
+ * イベントの Google Calendar 同期エラーを解消する（全 slot が正常同期できた場合）。
+ * `/api/cron/calendar-sync-retry` の retry 完了後に呼ぶ。
+ */
+export async function markEventCalendarSyncSuccess(
+  eventId: string,
+): Promise<void> {
+  await prisma.event.updateMany({
+    where: { id: eventId, deletedAt: null },
+    data: { calendarSyncError: null },
+  });
+}
+
+/**
+ * `calendarSyncError` が残っている Event の id 一覧を返す
+ * (`/api/cron/calendar-sync-retry` の event 側 retry pool)。
+ */
+export async function getFailedCalendarSyncEventIds(
+  limit: number = 50,
+): Promise<string[]> {
+  const rows = await prisma.event.findMany({
+    where: { deletedAt: null, calendarSyncError: { not: null } },
+    select: { id: true },
+    take: limit,
+  });
+  return rows.map((r) => r.id);
 }
 
 export async function getEventSlotsForCalendarSync(

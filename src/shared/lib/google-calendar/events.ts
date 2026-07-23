@@ -341,6 +341,11 @@ export async function getCalendarEvent(eventId: string): Promise<{
  * 開始時刻を返し、呼出側 (calendar-sync/outbound.ts の write-back 経路) が
  * Reservation.googleCalendarEventId に紐付ける。`showDeleted: false` で
  * キャンセル済 occurrence は除外。
+ *
+ * GCAL-AUDIT-06: `nextPageToken` を追ってページネーションする（`fetchCalendarChanges`
+ * / `fetchEventChanges` と同型）。旧実装は 1 ページ (最大 250 件) で打ち切っており、
+ * 250 件超の occurrence を持つ長期 series は後半 instance が write-back されず
+ * `Reservation.googleCalendarEventId` が null のまま残っていた。
  */
 export async function fetchEventInstances(masterEventId: string): Promise<{
   success: boolean;
@@ -359,24 +364,34 @@ export async function fetchEventInstances(masterEventId: string): Promise<{
   }
 
   try {
-    const response = await withGoogleApiRetry(() =>
-      client.events.instances({
-        calendarId,
-        eventId: masterEventId,
-        showDeleted: false,
-        maxResults: 250,
-      }),
-    );
-
-    const items = response.data.items ?? [];
     const instances: CalendarEventInstance[] = [];
-    for (const item of items) {
-      const id = item.id;
-      const startDateTime = item.start?.dateTime;
-      if (id === undefined || id === null) continue;
-      if (startDateTime === undefined || startDateTime === null) continue;
-      instances.push({ id, startTime: new Date(startDateTime) });
-    }
+    let pageToken: string | undefined;
+
+    do {
+      const response = await withGoogleApiRetry(() =>
+        client.events.instances(
+          omitUndefined({
+            calendarId,
+            eventId: masterEventId,
+            showDeleted: false,
+            maxResults: 250,
+            pageToken,
+          }),
+        ),
+      );
+
+      const items = response.data.items ?? [];
+      for (const item of items) {
+        const id = item.id;
+        const startDateTime = item.start?.dateTime;
+        if (id === undefined || id === null) continue;
+        if (startDateTime === undefined || startDateTime === null) continue;
+        instances.push({ id, startTime: new Date(startDateTime) });
+      }
+
+      pageToken = response.data.nextPageToken ?? undefined;
+    } while (pageToken);
+
     return { success: true, instances };
   } catch (error) {
     logError(normalizeError(error), {

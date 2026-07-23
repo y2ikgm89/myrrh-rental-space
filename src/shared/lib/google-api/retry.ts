@@ -54,12 +54,25 @@ const DEFAULT_MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1000;
 
 /**
+ * Google Calendar Incremental Sync が `410 Gone` を返す際の構造化 reason。
+ *
+ * 公式ドキュメントの本文メッセージには "410" という文字列自体は含まれない
+ * (例: "Sync token is no longer valid, a full sync is required.")。
+ * `error.message.includes("410")` のような文字列一致は誤検知・見逃し双方の
+ * リスクがあるため、HTTP status（410）または構造化 `reason`
+ * (`fullSyncRequired`) を機械的に判定する。
+ *
+ * @see https://developers.google.com/calendar/api/guides/sync#full-sync-required-by-server
+ */
+const FULL_SYNC_REQUIRED_REASON = "fullSyncRequired";
+
+/**
  * エラーオブジェクトから HTTP ステータスコードを抽出する。
  *
  * GaxiosError は `code` プロパティ（number or string）または `response.status` を持つ。
  * `error.code` は string の場合がある（ネットワークエラー時）ので型を丁寧に判定する。
  */
-function extractStatusCode(error: unknown): number | null {
+export function extractStatusCode(error: unknown): number | null {
   if (!isRecord(error)) return null;
   const code = error["code"];
   if (typeof code === "number") return code;
@@ -134,6 +147,25 @@ export function isRetryableGoogleApiError(error: unknown): boolean {
   if (sysCode !== null && RETRYABLE_SYSTEM_ERRORS.has(sysCode)) return true;
 
   return false;
+}
+
+/**
+ * syncToken / eventImportSyncToken の期限切れ（フルシンク要求）を判定する。
+ *
+ * 判定順:
+ * 1. HTTP status が 410 → true
+ * 2. 構造化 `reason` が `fullSyncRequired` → true（status が欠落した mock/レガシー
+ *    レスポンス互換のための保険）
+ *
+ * 呼出側は true のとき、永続化済み syncToken をクリアしてから `null` token で
+ * フルシンクをやり直す（403/404 等の別エラーと取り違えて token を握り続けない）。
+ */
+export function isGoogleCalendarFullSyncRequired(error: unknown): boolean {
+  const status = extractStatusCode(error);
+  if (status === 410) return true;
+
+  const reason = extractFirstErrorReason(error);
+  return reason === FULL_SYNC_REQUIRED_REASON;
 }
 
 function backoffMs(attempt: number): number {

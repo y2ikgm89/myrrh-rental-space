@@ -16,7 +16,29 @@ import crypto from "node:crypto";
 import { unstable_rethrow } from "next/navigation";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
+import {
+  getGoogleCalendarWebhookState,
+  getTwoWaySyncSettings,
+} from "@/shared/domain/settings/admin-queries";
+import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
+import { isTwoWaySyncEnabled } from "@/shared/lib/google-calendar";
+import {
+  releaseCalendarSyncLock,
+  tryAcquireCalendarSyncLock,
+} from "@/shared/domain/calendar-sync/locks";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import {
+  jsonError,
+  jsonSuccess,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
+import { googleCalendarWebhookHeadersSchema } from "@/shared/lib/validations/google-calendar-webhook";
+import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * タイミング攻撃を防止する定時間トークン比較
@@ -33,22 +55,6 @@ function timingSafeTokenEqual(
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
-import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
-import { isTwoWaySyncEnabled } from "@/shared/lib/google-calendar";
-import { getTwoWaySyncSettings } from "@/shared/domain/settings/admin-queries";
-import {
-  logError,
-  ErrorCategory,
-  ErrorSeverity,
-  normalizeError,
-} from "@/shared/lib/errors/server";
-import {
-  jsonError,
-  jsonSuccess,
-  jsonValidationError,
-} from "@/shared/lib/route-responses";
-import { googleCalendarWebhookHeadersSchema } from "@/shared/lib/validations/google-calendar-webhook";
-import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 
 function acknowledgeNotification(data: Record<string, unknown> = {}) {
   return jsonSuccess({ acknowledged: true, ...data });
@@ -177,38 +183,55 @@ export async function POST(request: Request) {
       return acknowledgeNotification({ pollingOnly: true });
     }
 
-    // 同期実行
-    const result = await syncFromCalendar();
-
-    if (!result.success) {
-      logError(new Error("Webhook sync failed"), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.MEDIUM,
-        context: { operation: "googleCalendarWebhook", errors: result.errors },
-      });
-      // 検証済み通知は ack し、同期の失敗はログと定期同期で回収する。
-      return acknowledgeNotification({ processing: "sync_failed" });
+    // GCAL-AUDIT-08: cron ポーリングと同じ排他ロックを取得してから同期を実行する。
+    // webhook 通知はバーストしやすく（同一変更で複数通知が短時間に届く公式仕様）、
+    // ロック無しでは cron ポーリングと webhook が同時に `syncFromCalendar` を実行し、
+    // 同期トークンの読み書き競合（lost update）を起こし得る。取得できない場合は
+    // Google への配信を失敗させず ack した上で skip する（次回配信 or 次回 cron で回収）。
+    const acquired = await tryAcquireCalendarSyncLock();
+    if (!acquired) {
+      return acknowledgeNotification({ skipped: "lock_unavailable" });
     }
 
-    // キャッシュ無効化: カレンダー同期後に予約データを最新化。
-    // webhook は Google Calendar 側の変更を反映する経路のため、SWR ではなく
-    // `{expire:0}` の blocking immediate-expire を使う（invalidateSiteWideCache-
-    // FromRouteHandler 経由。cron / Route Handler 用の canonical pattern）。
-    // skipCdnPurge: true — RESERVATIONS + calendar tag は全て admin-only の
-    // private tag。CDN 経路に emit されないため SITEMAP co-purge を Cloudflare に
-    // 飛ばす意味が無く、webhook 頻度で purge quota を不必要に消費するのを避ける
-    // (Codex PR #945 review 対応)。
-    invalidateSiteWideCacheFromRouteHandler(
-      [CACHE_TAGS.RESERVATIONS, getCacheTag.reservations.calendar()],
-      { skipCdnPurge: true },
-    );
+    try {
+      // 同期実行
+      const result = await syncFromCalendar();
 
-    return acknowledgeNotification({
-      processed: result.processed,
-      deleted: result.deleted,
-      updated: result.updated,
-      timestamp: new Date().toISOString(),
-    });
+      if (!result.success) {
+        logError(new Error("Webhook sync failed"), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "googleCalendarWebhook",
+            errors: result.errors,
+          },
+        });
+        // 検証済み通知は ack し、同期の失敗はログと定期同期で回収する。
+        return acknowledgeNotification({ processing: "sync_failed" });
+      }
+
+      // キャッシュ無効化: カレンダー同期後に予約データを最新化。
+      // webhook は Google Calendar 側の変更を反映する経路のため、SWR ではなく
+      // `{expire:0}` の blocking immediate-expire を使う（invalidateSiteWideCache-
+      // FromRouteHandler 経由。cron / Route Handler 用の canonical pattern）。
+      // skipCdnPurge: true — RESERVATIONS + calendar tag は全て admin-only の
+      // private tag。CDN 経路に emit されないため SITEMAP co-purge を Cloudflare に
+      // 飛ばす意味が無く、webhook 頻度で purge quota を不必要に消費するのを避ける
+      // (Codex PR #945 review 対応)。
+      invalidateSiteWideCacheFromRouteHandler(
+        [CACHE_TAGS.RESERVATIONS, getCacheTag.reservations.calendar()],
+        { skipCdnPurge: true },
+      );
+
+      return acknowledgeNotification({
+        processed: result.processed,
+        deleted: result.deleted,
+        updated: result.updated,
+        timestamp: new Date().toISOString(),
+      });
+    } finally {
+      await releaseCalendarSyncLock();
+    }
   } catch (error) {
     unstable_rethrow(error);
     logError(normalizeError(error), {

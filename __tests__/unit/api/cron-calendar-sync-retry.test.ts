@@ -6,6 +6,10 @@ const mockRetryFailedSyncs = mock<
   () => Promise<{ total: number; succeeded: number; failed: number }>
 >(() => Promise.resolve({ total: 0, succeeded: 0, failed: 0 }));
 
+const mockRetryFailedEventCalendarSyncs = mock<
+  () => Promise<{ total: number; succeeded: number; failed: number }>
+>(() => Promise.resolve({ total: 0, succeeded: 0, failed: 0 }));
+
 const mockIsGoogleCalendarEnabled = mock<() => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
@@ -43,6 +47,12 @@ mock.module("next/navigation", () => ({
 mock.module("@/shared/lib/calendar-sync/outbound", () => ({
   retryFailedSyncs: (...args: Parameters<typeof mockRetryFailedSyncs>) =>
     mockRetryFailedSyncs(...args),
+}));
+
+mock.module("@/shared/lib/calendar-sync/event-outbound", () => ({
+  retryFailedEventCalendarSyncs: (
+    ...args: Parameters<typeof mockRetryFailedEventCalendarSyncs>
+  ) => mockRetryFailedEventCalendarSyncs(...args),
 }));
 
 mock.module("@/shared/lib/google-calendar", () => ({
@@ -111,6 +121,7 @@ function makeSchedulerRequest() {
 describe("GET /api/cron/calendar-sync-retry", () => {
   beforeEach(() => {
     mockRetryFailedSyncs.mockReset();
+    mockRetryFailedEventCalendarSyncs.mockReset();
     mockIsGoogleCalendarEnabled.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockLogError.mockReset();
@@ -122,6 +133,11 @@ describe("GET /api/cron/calendar-sync-retry", () => {
     mockAuthorizeCronRequest.mockResolvedValue(null);
     mockIsGoogleCalendarEnabled.mockResolvedValue(true);
     mockRetryFailedSyncs.mockResolvedValue({
+      total: 0,
+      succeeded: 0,
+      failed: 0,
+    });
+    mockRetryFailedEventCalendarSyncs.mockResolvedValue({
       total: 0,
       succeeded: 0,
       failed: 0,
@@ -151,6 +167,7 @@ describe("GET /api/cron/calendar-sync-retry", () => {
     // 認証失敗時は本処理を呼ばない
     expect(mockIsGoogleCalendarEnabled).not.toHaveBeenCalled();
     expect(mockRetryFailedSyncs).not.toHaveBeenCalled();
+    expect(mockRetryFailedEventCalendarSyncs).not.toHaveBeenCalled();
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
@@ -166,6 +183,7 @@ describe("GET /api/cron/calendar-sync-retry", () => {
       reason: "Google Calendar is disabled",
     });
     expect(mockRetryFailedSyncs).not.toHaveBeenCalled();
+    expect(mockRetryFailedEventCalendarSyncs).not.toHaveBeenCalled();
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
@@ -182,16 +200,22 @@ describe("GET /api/cron/calendar-sync-retry", () => {
     const body = await response.json();
     expect(body).toMatchObject({ total: 0, succeeded: 0, failed: 0 });
     expect(mockRetryFailedSyncs).toHaveBeenCalledTimes(1);
+    expect(mockRetryFailedEventCalendarSyncs).toHaveBeenCalledTimes(1);
     // 0 件でもキャッシュ無効化は呼ぶ (calendar-sync 側と同型の無害呼出)。
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
   });
 
-  test("失敗予約 3 件 → 2 件成功 / 1 件失敗 → サマリを返す + cache 無効化", async () => {
+  test("失敗予約 3 件 + 失敗イベント 2 件 → 合算サマリを返す + cache 無効化", async () => {
     mockRetryFailedSyncs.mockResolvedValue({
       total: 3,
       succeeded: 2,
+      failed: 1,
+    });
+    mockRetryFailedEventCalendarSyncs.mockResolvedValue({
+      total: 2,
+      succeeded: 1,
       failed: 1,
     });
 
@@ -199,7 +223,13 @@ describe("GET /api/cron/calendar-sync-retry", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toMatchObject({ total: 3, succeeded: 2, failed: 1 });
+    expect(body).toMatchObject({
+      total: 5,
+      succeeded: 3,
+      failed: 2,
+      reservations: { total: 3, succeeded: 2, failed: 1 },
+      events: { total: 2, succeeded: 1, failed: 1 },
+    });
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
@@ -230,7 +260,7 @@ describe("GET /api/cron/calendar-sync-retry", () => {
     );
   });
 
-  test("認可 → GCal 有効判定 → retry の呼び出し順序を守る", async () => {
+  test("認可 → GCal 有効判定 → retry (予約/イベント並列) の呼び出し順序を守る", async () => {
     const callOrder: string[] = [];
     mockConnection.mockImplementation(async () => {
       callOrder.push("connection");
@@ -244,17 +274,26 @@ describe("GET /api/cron/calendar-sync-retry", () => {
       return true;
     });
     mockRetryFailedSyncs.mockImplementation(async () => {
-      callOrder.push("retry");
+      callOrder.push("retry-reservations");
+      return { total: 0, succeeded: 0, failed: 0 };
+    });
+    mockRetryFailedEventCalendarSyncs.mockImplementation(async () => {
+      callOrder.push("retry-events");
       return { total: 0, succeeded: 0, failed: 0 };
     });
 
     await GET(makeSchedulerRequest());
 
-    expect(callOrder).toEqual([
+    // 予約 / イベントの retry は Promise.all で並列実行されるため、開始 3 ステップ
+    // (connection → authorize → isEnabled) の後にどちらも呼ばれていることのみ検証する。
+    expect(callOrder.slice(0, 3)).toEqual([
       "connection",
       "authorize",
       "isEnabled",
-      "retry",
+    ]);
+    expect(callOrder.slice(3).sort()).toEqual([
+      "retry-events",
+      "retry-reservations",
     ]);
   });
 });

@@ -21,14 +21,22 @@ import { logger } from "@/shared/lib/errors/logger-core";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import { getServiceAccountClient } from "@/shared/lib/google-calendar/service-account";
 import { formatGoogleApiError } from "@/shared/lib/google-calendar/helpers";
-import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
-import { upsertEventFromCalendar } from "@/shared/domain/events/commands";
+import {
+  isGoogleCalendarFullSyncRequired,
+  withGoogleApiRetry,
+} from "@/shared/lib/google-api/retry";
+import {
+  cancelImportedEventFromCalendar,
+  upsertEventFromCalendar,
+} from "@/shared/domain/events/commands";
 import { isAppGeneratedCalendarEvent } from "./loop-prevention";
 
 export interface EventImportResult {
   success: boolean;
   imported: number;
   updated: number;
+  /** GCal 上で cancelled になった import 済みイベントを CANCELLED に遷移させた件数 */
+  cancelled: number;
   errors: string[];
 }
 
@@ -44,6 +52,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
     success: true,
     imported: 0,
     updated: 0,
+    cancelled: 0,
     errors: [],
   };
 
@@ -102,6 +111,22 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
       }
     }
 
+    // GCAL-AUDIT-10: GCal 上で cancelled になった import 済みイベントを
+    // CANCELLED に遷移させる（旧実装は cancelled イベントを黙って skip するのみで、
+    // 削除・キャンセルが Event 側に一切反映されなかった）。
+    for (const cancelledId of fetchResult.cancelledEventIds) {
+      try {
+        const cancelResult = await cancelImportedEventFromCalendar(cancelledId);
+        if (cancelResult.cancelled) {
+          result.cancelled++;
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        result.errors.push(`Event ${cancelledId} (cancel): ${errorMessage}`);
+      }
+    }
+
     // syncToken は全イベント upsert が成功したときのみ保存する (inbound.ts と同型)。
     if (result.errors.length === 0 && fetchResult.newSyncToken) {
       await prisma.settings.update({
@@ -120,8 +145,8 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
 
     return result;
   } catch (error) {
-    // 410 Gone: syncToken が期限切れ — リセットしてフルシンク
-    if (error instanceof Error && error.message.includes("410")) {
+    // 410 Gone / reason: fullSyncRequired — syncToken が期限切れ、リセットしてフルシンク
+    if (isGoogleCalendarFullSyncRequired(error)) {
       logger.info("Event import syncToken expired, performing full sync");
       await prisma.settings.update({
         where: { id: "singleton" },
@@ -158,6 +183,8 @@ interface ParsedCalendarEvent {
 
 interface FetchEventChangesResult {
   events: ParsedCalendarEvent[];
+  /** GCal 上で cancelled になったイベントの googleCalendarEventId 一覧 */
+  cancelledEventIds: string[];
   newSyncToken: string | undefined;
 }
 
@@ -170,6 +197,7 @@ async function fetchEventChanges(
   syncToken: string | null | undefined,
 ): Promise<FetchEventChangesResult> {
   const events: ParsedCalendarEvent[] = [];
+  const cancelledEventIds: string[] = [];
   let pageToken: string | undefined;
   let newSyncToken: string | undefined;
 
@@ -208,8 +236,13 @@ async function fetchEventChanges(
       // アプリ側 outbound 由来のイベントはスキップ（ループ防止 SSoT: loop-prevention.ts）
       if (isAppGeneratedCalendarEvent(event.description)) continue;
 
-      // キャンセルされたイベントはスキップ
-      if (event.status === "cancelled") continue;
+      // GCAL-AUDIT-10: キャンセルされたイベントは import 対象からは除外しつつ、
+      // 既に import 済みなら呼出側で Event.status を CANCELLED に遷移させる
+      // (旧実装は cancelled イベントを黙って skip するのみだった)。
+      if (event.status === "cancelled") {
+        cancelledEventIds.push(event.id);
+        continue;
+      }
 
       // dateTime が無いイベント（終日イベント等）はスキップ
       if (!event.start?.dateTime || !event.end?.dateTime) continue;
@@ -228,5 +261,5 @@ async function fetchEventChanges(
     newSyncToken = response.data.nextSyncToken ?? undefined;
   } while (pageToken);
 
-  return { events, newSyncToken };
+  return { events, cancelledEventIds, newSyncToken };
 }

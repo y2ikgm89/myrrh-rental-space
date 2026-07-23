@@ -9,6 +9,19 @@
  * - Webhookの自動更新
  * - 同期失敗時のエラー通知
  *
+ * ## GCAL-AUDIT-02: syncMethod 別の実行計画
+ *
+ * `syncMethod` が `webhook` の場合、旧実装は「polling 無効」を理由に
+ * webhook 更新チェックへ到達する前に早期 return していた。webhook は
+ * 自身を再登録できない（Google Calendar watch channel は最大 7 日で失効し、
+ * 外部からの明示的な re-watch が必須）ため、webhook-only 運用では
+ * `renewWebhookIfNeeded` を呼ぶ経路がこの cron しか存在せず、結果として
+ * webhook 期限切れ後に双方向同期が完全に停止していた（サイレント障害）。
+ *
+ * `resolveSyncPlan` で syncMethod ごとに「renew すべきか」「poll すべきか」を
+ * 独立に判定し、両方が false になり得ない（enum は 3 値のいずれか）前提で
+ * 排他ロックを 1 回だけ取得してから両ステップを実行する。
+ *
  * ## アーキテクチャ境界
  *
  * CLAUDE.md のアーキテクチャ境界「app 層からの Prisma 直 import 禁止」
@@ -49,6 +62,104 @@ import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types"
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
+interface SyncPlan {
+  /** webhook watch channel の renew チェックを実行するか */
+  renewWebhook: boolean;
+  /** ポーリング (`syncFromCalendar`) を実行するか */
+  poll: boolean;
+}
+
+/**
+ * syncMethod から実行計画を導出する。
+ *
+ * - `polling` → poll のみ（webhook 未設定のため renew は無意味）
+ * - `webhook` → renew のみ（GCAL-AUDIT-02: 旧実装はここが早期 skip され、
+ *   webhook-only 運用で watch channel が誰にも re-watch されなかった）
+ * - `both` → 両方実行
+ */
+export function resolveSyncPlan(method: CalendarSyncMethod): SyncPlan {
+  switch (method) {
+    case CalendarSyncMethod.polling:
+      return { renewWebhook: false, poll: true };
+    case CalendarSyncMethod.webhook:
+      return { renewWebhook: true, poll: false };
+    case CalendarSyncMethod.both:
+      return { renewWebhook: true, poll: true };
+    default: {
+      const _exhaustive: never = method;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
+ * Webhook 自動更新チェック（有効期限2日前に更新）+ 結果通知メール。
+ * 例外は内部で吸収し、呼出側の同期処理を妨げない。
+ */
+async function renewWebhookAndNotify(): Promise<{ webhookRenewed: boolean }> {
+  try {
+    const renewalResult = await renewWebhookIfNeeded();
+    if (renewalResult.renewed) {
+      fireAndForget(
+        sendWebhookRenewalNotification({
+          success: true,
+          ...(renewalResult.newExpiration != null
+            ? { newExpiration: renewalResult.newExpiration }
+            : {}),
+        }),
+        {
+          operation: "sendWebhookRenewalNotificationSuccess",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+        },
+      );
+      return { webhookRenewed: true };
+    }
+
+    if (!renewalResult.success) {
+      logError(new Error(renewalResult.error || "Webhook renewal failed"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: "renewWebhookIfNeeded" },
+      });
+      fireAndForget(
+        sendWebhookRenewalNotification({
+          success: false,
+          ...(renewalResult.error != null
+            ? { error: renewalResult.error }
+            : {}),
+        }),
+        {
+          operation: "sendWebhookRenewalNotificationFailure",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+        },
+      );
+    }
+    return { webhookRenewed: false };
+  } catch (renewalError) {
+    // Webhook更新エラーはログ記録のみ（同期処理は継続）
+    logError(normalizeError(renewalError), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "renewWebhookIfNeeded", phase: "catch" },
+    });
+    fireAndForget(
+      sendWebhookRenewalNotification({
+        success: false,
+        error:
+          "Webhook更新処理でエラーが発生しました。詳細はサーバーログを確認してください。",
+      }),
+      {
+        operation: "sendWebhookRenewalNotificationError",
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.LOW,
+      },
+    );
+    return { webhookRenewed: false };
+  }
+}
+
 /**
  * カレンダー同期用Cronエンドポイント
  * GET /api/cron/calendar-sync
@@ -78,16 +189,13 @@ export async function GET(request: Request) {
       });
     }
 
-    // 同期方式を確認（pollingまたはbothの場合のみ実行）
+    // GCAL-AUDIT-02: syncMethod ごとに renew / poll を独立に判定する
+    // (webhook-only でも renew は必ず実行する)。
     const settings = await getTwoWaySyncSettings();
-    if (settings.syncMethod === CalendarSyncMethod.webhook) {
-      return jsonSuccess({
-        skipped: true,
-        reason: "Polling is disabled (webhook only)",
-      });
-    }
+    const plan = resolveSyncPlan(settings.syncMethod);
 
-    // 並行実行ロック（Cloud Run 複数インスタンス対策、domain layer 経由）
+    // 並行実行ロック（Cloud Run 複数インスタンス対策、domain layer 経由）。
+    // renew のみの実行でも Settings 更新を伴うため同一ロックで排他する。
     const acquired = await tryAcquireCalendarSyncLock();
     if (!acquired) {
       return jsonSuccess({
@@ -97,66 +205,16 @@ export async function GET(request: Request) {
     }
 
     try {
-      // Webhook自動更新チェック（有効期限2日前に更新）
-      let webhookRenewed = false;
-      try {
-        const renewalResult = await renewWebhookIfNeeded();
-        if (renewalResult.renewed) {
-          webhookRenewed = true;
-          // 成功メール通知（バックグラウンド）
-          fireAndForget(
-            sendWebhookRenewalNotification({
-              success: true,
-              ...(renewalResult.newExpiration != null
-                ? { newExpiration: renewalResult.newExpiration }
-                : {}),
-            }),
-            {
-              operation: "sendWebhookRenewalNotificationSuccess",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.LOW,
-            },
-          );
-        } else if (!renewalResult.success) {
-          // 更新失敗時のメール通知
-          logError(new Error(renewalResult.error || "Webhook renewal failed"), {
-            category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.MEDIUM,
-            context: { operation: "renewWebhookIfNeeded" },
-          });
-          fireAndForget(
-            sendWebhookRenewalNotification({
-              success: false,
-              ...(renewalResult.error != null
-                ? { error: renewalResult.error }
-                : {}),
-            }),
-            {
-              operation: "sendWebhookRenewalNotificationFailure",
-              category: ErrorCategory.EXTERNAL_API,
-              severity: ErrorSeverity.LOW,
-            },
-          );
-        }
-      } catch (renewalError) {
-        // Webhook更新エラーはログ記録のみ（同期処理は継続）
-        logError(normalizeError(renewalError), {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.MEDIUM,
-          context: { operation: "renewWebhookIfNeeded", phase: "catch" },
+      const { webhookRenewed } = plan.renewWebhook
+        ? await renewWebhookAndNotify()
+        : { webhookRenewed: false };
+
+      if (!plan.poll) {
+        return jsonSuccess({
+          skipped: true,
+          reason: "Polling is disabled (webhook only)",
+          webhookRenewed,
         });
-        fireAndForget(
-          sendWebhookRenewalNotification({
-            success: false,
-            error:
-              "Webhook更新処理でエラーが発生しました。詳細はサーバーログを確認してください。",
-          }),
-          {
-            operation: "sendWebhookRenewalNotificationError",
-            category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.LOW,
-          },
-        );
       }
 
       // 同期実行
