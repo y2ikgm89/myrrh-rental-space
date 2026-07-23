@@ -67,6 +67,16 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     expect(secrets).toMatch(/imported_secrets[\s\S]*"SUPPRESSION_HASH_SECRET"/);
   });
 
+  test("RESEND_WEBHOOK_SECRET is forgotten from TF secret ownership", () => {
+    const secrets = read("terraform/secrets.tf");
+    // Active list entries only (quoted string), not comments.
+    expect(secrets).not.toMatch(/^\s*"RESEND_WEBHOOK_SECRET",?\s*$/m);
+    expect(secrets).toMatch(
+      /removed\s*\{\s*from\s*=\s*google_secret_manager_secret\.secret\["RESEND_WEBHOOK_SECRET"\]/,
+    );
+    expect(secrets).toMatch(/destroy\s*=\s*false/);
+  });
+
   test("imported_cron_jobs covers every cron_jobs entry (state-rebuild safety)", () => {
     const scheduler = read("terraform/cloud_scheduler.tf");
     const cronJobsBlock = scheduler.match(
