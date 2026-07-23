@@ -170,6 +170,16 @@ export async function POST(
 ): Promise<Response> {
   const { serialNo } = await params;
 
+  // HTTP-03: GET session 経路と同じ per-serialNo rate limit (10/hour)。ゲスト
+  // token 経路は認証を経由しないため、token 検証・DB read・usedAt 消費のいずれよりも
+  // 先にカットオフする必要がある (brute-force / usedAt 焼き潰し DoS 対策、上記
+  // receiptDownloadBySerialNoRateLimiter の定義コメントが元々 POST 経路も対象と
+  // 明記していたが、実装時に GET のみへの結線が漏れていた)。
+  const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
+  if (!rateLimit.success) {
+    return new Response("Too many requests", { status: 429 });
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();
