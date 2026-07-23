@@ -95,11 +95,13 @@ export default async function ReservationDetailPage({
     deadlineSettings,
     seriesInfo,
     customerCanCancelSeriesInFull,
+    reservationFeatureEnabled,
   ] = await Promise.all([
     getCustomerReservationDetail(id, customer.id),
     getReservationDeadlineSettings(),
     getCustomerReservationSeriesInfo(id, customer.id),
     getCustomerCanCancelSeriesInFull(),
+    isFeatureEnabled("reservation"),
   ]);
 
   if (!reservation) {
@@ -110,7 +112,11 @@ export default async function ReservationDetailPage({
 
   const now = reservationDeadlineNow();
 
+  // Codex #1433: 閲覧は reservation feature OFF でも許可するが、キャンセル・変更
+  // という「予約ミューテーション」相当の操作ボタンは feature OFF 時に隠す
+  // (対応する Server Action 側にも独立した fail-closed gate を追加済み)。
   const canCancel =
+    reservationFeatureEnabled &&
     isCancellableStatus &&
     isWithinDeadline(
       reservation.startTime,
@@ -127,6 +133,7 @@ export default async function ReservationDetailPage({
       reservation.spaceDiscountAmount > 0);
 
   const canEdit =
+    reservationFeatureEnabled &&
     isCancellableStatus &&
     !hasManualDiscount &&
     isWithinDeadline(
@@ -203,7 +210,9 @@ export default async function ReservationDetailPage({
       {seriesInfo && (
         <CustomerSeriesInfo
           series={seriesInfo}
-          customerCanCancelSeriesInFull={customerCanCancelSeriesInFull}
+          customerCanCancelSeriesInFull={
+            customerCanCancelSeriesInFull && reservationFeatureEnabled
+          }
           turnstileSiteKey={turnstileSiteKey}
         />
       )}

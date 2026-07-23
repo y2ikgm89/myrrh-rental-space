@@ -44,6 +44,16 @@ export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/domain/receipts/single-use-download.test.ts",
   "__tests__/integration/domain/receipts/issue-audit-log.test.ts",
   "__tests__/integration/domain/receipts/customer-list-query.test.ts",
+  "__tests__/integration/domain/space-categories/commands.test.ts",
+  "__tests__/integration/domain/locations/order-commands.test.ts",
+  "__tests__/integration/domain/terms/reorder-commands.test.ts",
+  "__tests__/integration/domain/sections/reorder-commands.test.ts",
+  "__tests__/integration/domain/posts/category-order-commands.test.ts",
+  "__tests__/integration/domain/navigation/order-commands.test.ts",
+  "__tests__/integration/domain/faq/category-reorder.test.ts",
+  "__tests__/integration/domain/faq/item-reorder.test.ts",
+  "__tests__/integration/domain/settings/announcement-bar-reorder.test.ts",
+  "__tests__/integration/domain/events/ticket-reorder.test.ts",
 ]);
 
 type TestDatabaseUrlCheckResult =

@@ -23,6 +23,7 @@ import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { DomainError } from "@/shared/domain/domain-error";
 import { cancelCustomerReservationSeries } from "@/shared/domain/reservations/customer-commands";
 import { getCustomerCanCancelSeriesInFull } from "@/shared/domain/reservations/payloads";
@@ -68,6 +69,15 @@ export async function cancelReservationSeriesCustomerAction(
       return createMutationError(error.message);
     }
     throw error;
+  }
+
+  // FEAT-3PLANE-02 (Codex #1433): reservation feature gate。ボタンが露出しない
+  // 設計でも、action を直接叩かれるケースに備えて server 側でも fail-closed する
+  // (下記 Settings gate と同型パターン)。
+  if (!(await isFeatureEnabled("reservation"))) {
+    return createMutationError(
+      "この機能は現在利用できません。管理者にお問い合わせください。",
+    );
   }
 
   // Settings gate (spec §goal 9): false のときはボタンが露出しない設計だが、

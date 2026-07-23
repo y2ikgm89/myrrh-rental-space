@@ -6,6 +6,7 @@ import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import {
   cancelCustomerReservation,
   updateCustomerReservation,
@@ -125,6 +126,19 @@ export async function cancelReservationAction(
   try {
     await assertCustomerActive(customer.id);
     await assertLoginSignupReagreed(customer.id);
+
+    // FEAT-3PLANE-02 (Codex #1433): 閲覧専用の detail ページは reservation
+    // feature OFF でも到達可能にしたため (dead link 回避)、ページ側の
+    // requireFeatureEnabled による fail-closed に頼れない。UI 側でボタンを
+    // 隠す設計でも、action を直接叩かれるケースに備えて server 側でも
+    // fail-closed する (cancelReservationSeriesCustomerAction の Settings gate
+    // と同型パターン)。
+    if (!(await isFeatureEnabled("reservation"))) {
+      return createMutationError(
+        "この機能は現在利用できません。管理者にお問い合わせください。",
+      );
+    }
+
     const settings = await getReservationDeadlineSettings();
     const trimmedReason =
       cancellationReason && cancellationReason.trim().length > 0
@@ -206,6 +220,14 @@ export async function updateReservationAction(
       try {
         await assertCustomerActive(customer.id);
         await assertLoginSignupReagreed(customer.id);
+
+        // FEAT-3PLANE-02 (Codex #1433): edit ページ自体は requireFeatureEnabled
+        // で 404 fail-closed 済みだが、Server Action は URL 到達性と独立に
+        // 直接呼び出せるため、ここでも同じ gate を独立して掛ける
+        // (cancelReservationAction と同型パターン)。
+        if (!(await isFeatureEnabled("reservation"))) {
+          return { ok: false, error: "この機能は現在利用できません。" };
+        }
       } catch (error) {
         if (error instanceof DomainError) {
           return { ok: false, error: error.message };
