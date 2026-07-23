@@ -2,7 +2,7 @@
 
 import { useTransition, type ChangeEvent } from "react";
 import { Tabs } from "radix-ui";
-import { useQueryStates } from "nuqs";
+import { useQueryStates, debounce } from "nuqs";
 import { cn } from "@/shared/lib/cn";
 import { Select } from "@/public/components/design-system/select";
 import {
@@ -57,8 +57,16 @@ export function EventListFilters({
   }
 
   function handleSearchChange(event: ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+    const next = { q: value, page: 1 };
+    // クリア時は即時反映、入力中は 300ms デバウンス
+    // (1 打鍵ごとのサーバー往復を抑止する公式推奨パターン。SearchBar と同型)。
     startTransition(() => {
-      void setParams({ q: event.target.value, page: 1 });
+      if (value === "") {
+        void setParams(next);
+      } else {
+        void setParams(next, { limitUrlUpdates: debounce(300) });
+      }
     });
   }
 
