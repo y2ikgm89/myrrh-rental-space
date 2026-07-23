@@ -65,36 +65,16 @@ substitutions:
   _AR_HOST: asia-northeast1-docker.pkg.dev
   _MIGRATE_JOB_NAME: prisma-migrate
   _WORKER_POOL: myrrh-deploy-pool
-  # migrate Job メモリは Terraform (`cloud_run_migrate_job.tf` = 1Gi) が SSoT。
-  # かつて 512Mi + 不完全 runner image で bunx 再 DL → OOM があったが、migrator ステージで解消済。
-  # Cloud Build は未参照 substitution を INVALID_ARGUMENT とするため `_MIGRATE_MEMORY` は置かない。
-  _MEMORY: 1Gi
-  _CPU: "1"
-  _MIN_INSTANCES: "0"
-  _MAX_INSTANCES: "1"
-  _CONCURRENCY: "80"
-  _TIMEOUT: "300"
+  # Cloud Run service / migrate Job の shape (memory/cpu/concurrency/probes/SA/…)
+  # は Terraform SSoT (`terraform/cloud_run_*.tf`)。未参照 substitution は
+  # Cloud Build INVALID_ARGUMENT のためここに置かない。
+  #
+  # DATABASE_POOL サイジング契約:
+  #   total = var.database_pool_max × 2 (public + admin) × max_instance_count
+  #   現状 max_instance_count=1 で 12 × 2 × 1 = 24 conn < Neon 30 conn cap (headroom 6)
   _BREAKING_MIGRATION_DEPLOY: "false"
   _BREAKING_MIGRATION_DRAIN_SECONDS: "310"
   # ---- Cloud Run runtime env は Terraform SSoT (Phase 6b、PR #1101) ----
-  #
-  # 以下 4 個の env 値は **cloudbuild.yaml 対象外** で Terraform 側に集約済:
-  #   _RATE_LIMIT_BACKEND      → var.rate_limit_backend
-  #   _DATABASE_POOL_MAX       → var.database_pool_max
-  #   _ENCRYPTION_KEY_ID       → var.encryption_key_id
-  #   _AUDIT_LOG_HMAC_KEY_ID   → var.audit_log_hmac_key_id
-  #
-  # 以前は cloudbuild.yaml `--set-env-vars=` で注入していたが、Phase 6b で
-  # `google_cloud_run_v2_service.template.containers.env` に完全移管済。
-  # substitutions block に定義を残しておくと Cloud Build が unmatched key で
-  # INVALID_ARGUMENT を返す (定義したが本文で参照されない substitution は仕様上禁止)。
-  #
-  # DATABASE_POOL サイジング契約 (Codex #3564676717):
-  #   total = database_pool_max × 2 (public + admin) × _MAX_INSTANCES
-  #   現状 _MAX_INSTANCES=1 で 12 × 2 × 1 = 24 conn < Neon 30 conn cap (headroom 6)
-  #   migrate Job + ad-hoc psql + Neon dashboard の合計を 6 conn 枠でまかなう。
-  # Dedicated service account email (Cloud Run runtime + Prisma migrate Job 共通、初回 1 回手動作成)
-  _SERVICE_ACCOUNT: myrrh-rental-space-runtime@myrrh-rental-space.iam.gserviceaccount.com
   # Dedicated Cloud Build service account. This build config is intentionally
   # not compatible with the default Cloud Build service account path.
   _BUILD_SERVICE_ACCOUNT: myrrh-rental-space-build@myrrh-rental-space.iam.gserviceaccount.com
@@ -538,80 +518,38 @@ steps:
   # Cloud Build deploy step は --set-secrets を持たない。IAM は bootstrap 済のため触らない。
   # build-time のみ必要な secret は availableSecrets + build_secrets を更新する。
 
-  # Step 6a: Deploy public Cloud Run service
+  # Step 6a/6b: update image (+ restore automatic scaling after breaking quiesce).
+  # Official pattern when Terraform owns service config: `gcloud run services update
+  # --image` (preserves env/shape). Do NOT use `gcloud run deploy` with shape flags —
+  # that reintroduces dual ownership. Shape/env/IAM/IAP/ingress/probes = Terraform
+  # (`cloud_run_public.tf` / `cloud_run_admin.tf`). `--scaling=auto` remains here so
+  # Step 5a `--scaling=0` is always cleared on the success path.
+  # https://cloud.google.com/sdk/gcloud/reference/run/services/update
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-public
     waitFor: [migrate-execute]
     entrypoint: gcloud
     args:
       - run
-      - deploy
+      - services
+      - update
       - ${_SERVICE_NAME}
-      - --platform=managed
       - --region=${_REGION}
       - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
-      - --allow-unauthenticated
-      - --ingress=all
-      - --service-account=${_SERVICE_ACCOUNT}
-      - --memory=${_MEMORY}
-      - --cpu=${_CPU}
       - --scaling=auto
-      - --min-instances=${_MIN_INSTANCES}
-      - --max-instances=${_MAX_INSTANCES}
-      - --concurrency=${_CONCURRENCY}
-      - --timeout=${_TIMEOUT}
-      - --execution-environment=gen2
-      - --cpu-boost
-      # fireAndForget / Next.js after() パターン向けに CPU always-allocated
-      # https://cloud.google.com/run/docs/configuring/cpu-allocation
-      - --no-cpu-throttling
-      - --port=8080
-      # Probes: startup + liveness を /api/live（DB 非依存・軽量）で統一
-      # https://cloud.google.com/run/docs/configuring/healthchecks
-      - --startup-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=1,periodSeconds=10,failureThreshold=9
-      - --liveness-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=10,timeoutSeconds=1,periodSeconds=30,failureThreshold=3
-      # env / secret bindings は Terraform 側 (terraform/cloud_run_public.tf) が SSoT
-      # (Phase 6b、2026-07-14 完成)。cloudbuild.yaml は image tag + shape のみ再適用。
-      # secret rotation は terraform/variables.tf `cloud_run_secret_versions` map を bump。
-      # env 追加は terraform/locals_cloud_run.tf `cloud_run_public_env` を編集。
 
-  # Step 6b: Deploy admin Cloud Run service. Direct IAP and authenticated-only
-  # access are enabled once by the production setup runbook and verified by
-  # `bun run gcp:audit-production-iap`; recurring deploys update the revision
-  # and runtime config without mutating service IAM/IAP policy. Admin ingress is
-  # intentionally limited to Cloud Load Balancing and the default run.app URL is
-  # disabled, so the canonical admin entrypoint is only https://admin.myrrh-jp.com.
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
     id: deploy-admin
     waitFor: [migrate-execute]
     entrypoint: gcloud
     args:
       - run
-      - deploy
+      - services
+      - update
       - ${_ADMIN_SERVICE_NAME}
-      - --platform=managed
       - --region=${_REGION}
       - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
-      - --ingress=internal-and-cloud-load-balancing
-      - --no-default-url
-      - --service-account=${_SERVICE_ACCOUNT}
-      - --memory=${_MEMORY}
-      - --cpu=${_CPU}
       - --scaling=auto
-      - --min-instances=${_MIN_INSTANCES}
-      - --max-instances=${_MAX_INSTANCES}
-      - --concurrency=${_CONCURRENCY}
-      - --timeout=${_TIMEOUT}
-      - --execution-environment=gen2
-      - --cpu-boost
-      - --no-cpu-throttling
-      - --port=8080
-      - --startup-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=0,timeoutSeconds=1,periodSeconds=10,failureThreshold=9
-      - --liveness-probe=httpGet.path=/api/live,httpGet.port=8080,initialDelaySeconds=10,timeoutSeconds=1,periodSeconds=30,failureThreshold=3
-      # env / secret bindings は Terraform 側 (terraform/cloud_run_admin.tf) が SSoT
-      # (Phase 6b、2026-07-14 完成)。cloudbuild.yaml は image tag + shape のみ再適用。
-      # admin 特有の IAP_JWT_AUDIENCE / ADMIN_ROLE_GROUP_*_EMAIL は
-      # terraform/locals_cloud_run.tf `cloud_run_admin_env` に集約。
 
 images:
   - ${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}

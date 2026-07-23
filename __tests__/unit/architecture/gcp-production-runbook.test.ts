@@ -242,8 +242,9 @@ describe("GCP production setup runbook", () => {
   });
 
   test("production audit runbook rejects legacy Cloud Run runtime env names", () => {
-    // Phase 6b: recurring deploys must NOT rewrite env/secrets via gcloud flags.
+    // Phase 6b: recurring deploys update image only; shape/env/secrets are TF.
     expect(runbook).toContain("Terraform SSoT (Phase 6b)");
+    expect(runbook).toContain("gcloud run services update --image");
     expect(runbook).toContain("must not use `--set-env-vars`");
     expect(runbook).toContain("`--set-secrets`");
     expect(runbook).toContain(

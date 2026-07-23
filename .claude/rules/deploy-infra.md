@@ -23,6 +23,11 @@ paths:
   Postgres がテーブル全体書換 + 排他ロックを取るため destructive 扱い
   （regression: `__tests__/unit/architecture/breaking-migration-detection.test.ts`）
 - 単一 runner イメージを APP_SURFACE env の違いで public / admin の 2 サービスに配る
+- **Cloud Run ownership (Phase 6b clean-break)**:
+  - Terraform = shape (memory/cpu/probes/ingress/SA) + env/secrets + IAP/IAM
+  - Cloud Build = `gcloud run services update --image` + `--scaling=auto`
+    （breaking quiesce 復帰用）。`gcloud run deploy` で shape を再適用しない
+  - migrate Job も同様: CB は image のみ、shape/DATABASE_URL は Terraform
 
 ## Dockerfile（6 ステージ、順序に意味がある）
 

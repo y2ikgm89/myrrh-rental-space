@@ -40,6 +40,34 @@ describe("deploy packaging contract (Phase 6b clean-break)", () => {
     );
   });
 
+  test("Cloud Build service deploy uses services update --image (not deploy + shape)", () => {
+    const cloudBuild = read("cloudbuild.yaml");
+    for (const id of ["id: deploy-public", "id: deploy-admin"] as const) {
+      const start = cloudBuild.indexOf(id);
+      expect(start).toBeGreaterThanOrEqual(0);
+      const nextId = cloudBuild.indexOf("\n  - name:", start + 1);
+      const step =
+        nextId === -1
+          ? cloudBuild.slice(start)
+          : cloudBuild.slice(start, nextId);
+      expect(step).toContain("- services");
+      expect(step).toContain("- update");
+      expect(step).toContain("--image=");
+      expect(step).toContain("--scaling=auto");
+      expect(step).not.toContain("--memory=");
+      expect(step).not.toContain("--set-secrets=");
+    }
+  });
+
+  test("SUPPRESSION_HASH_SECRET stays unwired until Phase B version exists", () => {
+    // Phase C must not land before operator `gcloud secrets versions add`.
+    // Wiring without version=1 ENABLED breaks terraform apply.
+    // Comments may mention the name; assert no active map assignment.
+    const variables = read("terraform/variables.tf");
+    expect(variables).not.toMatch(/^\s*SUPPRESSION_HASH_SECRET\s*=\s*"/m);
+    expect(variables).not.toMatch(/^\s*RESEND_WEBHOOK_SECRET\s*=\s*"/m);
+  });
+
   test("imported_cron_jobs covers every cron_jobs entry (state-rebuild safety)", () => {
     const scheduler = read("terraform/cloud_scheduler.tf");
     const cronJobsBlock = scheduler.match(

@@ -314,6 +314,13 @@ bun run gcp:audit-production-iap
   historical audit logs that reference the old ID will not chain back to
   the new SA.
 
+## Related deferred cleanups (not this runbook's delete list)
+
+| Resource                     | Status                                                                   | Next action (operator / follow-up PR)                                                                                                                                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF keeps orphan container (`prevent_destroy`) | Confirm admin UI has webhook secret → `gcloud secrets delete RESEND_WEBHOOK_SECRET` → PR removes entries from `terraform/secrets.tf` with `removed { destroy = false }`                                                     |
+| `SUPPRESSION_HASH_SECRET`    | Phase A (container in `runtime_secrets`; not in Cloud Run)               | Phase B: `openssl rand -hex 64 \| gcloud secrets versions add …` → Phase C PR adds `cloud_run_secret_versions` + `imported_secrets`. Keep `validateProductionEnv` as WARN until wiring is green; do **not** fail-closed yet |
+
 ## Why the Claude harness cannot run the deletes
 
 Both delete verbs (`secretmanager.secrets.delete`,

@@ -2,16 +2,18 @@
 # Cloud Run: public service (Phase 6b — env/secrets Terraform 完全移管)
 # -----------------------------------------------------------------------------
 #
-# env / secret bindings は本 file で declarative に宣言 (Phase 6b、2026-07-14 完成)。
-# cloudbuild.yaml Step 6a の `--set-env-vars=` / `--set-secrets=` は削除済で、
-# 毎 deploy が触るのは image tag (`--image=...:${SHORT_SHA}`) のみ。
+# shape / env / secret bindings は本 file で declarative に宣言 (Phase 6b clean-break)。
+# cloudbuild.yaml Step 6a は `gcloud run services update --image` (+ `--scaling=auto`)
+# のみ。`--set-env-vars` / `--set-secrets` / memory/cpu/probes/ingress は触らない。
 #
 # ## Lifecycle policy
 #
-# - `template[0].containers[0].image` は cloudbuild.yaml の毎 deploy `--image` で
+# - `template[0].containers[0].image` は cloudbuild の毎 deploy `--image` で
 #   書き換え続けるため `ignore_changes` で drift 無視。
 # - `template[0].revision` は Cloud Run が自動採番するため ignore。
-# - `env` は Terraform 完全管理 (Phase 6b で ignore_changes 撤去、drift-detect ON)。
+# - shape / env は Terraform 完全管理 (ignore しない = drift-detect ON)。
+# - service-level `--scaling=0` (breaking quiesce) は CB 一時操作。TF は
+#   template-level min/max のみ宣言し、top-level MANUAL scaling は管理しない。
 # - `prevent_destroy = true` で Terraform apply が service を消す事故は無条件 block。
 #
 # ## env の source of truth
