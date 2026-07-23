@@ -48,6 +48,7 @@ export function CancelButton({
       if (isMutationError(result)) {
         setError(result.error);
         turnstileRef.current?.reset();
+        setTurnstileToken("");
         return;
       }
       setOpen(false);
