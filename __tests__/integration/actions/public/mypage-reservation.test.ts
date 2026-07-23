@@ -166,6 +166,13 @@ mock.module("@/shared/lib/terms-consent-gate", () => ({
   assertLoginSignupReagreed: mock(() => Promise.resolve()),
 }));
 
+// Codex #1433: cancelReservationAction / updateReservationAction が
+// reservation feature の独立 fail-closed gate を持つようになったため mock 必須。
+const mockIsFeatureEnabled = mock(() => Promise.resolve(true));
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
+
 // domain コマンドモック
 const mockCancelCustomerReservation = mock<
   () => Promise<
@@ -367,6 +374,7 @@ describe("cancelReservationAction", () => {
     mockCheckActionRateLimit.mockClear();
     mockValidateTurnstile.mockClear();
     mockUpdateTag.mockClear();
+    mockIsFeatureEnabled.mockClear();
 
     mockGetSession.mockImplementation(() =>
       Promise.resolve({
@@ -398,6 +406,7 @@ describe("cancelReservationAction", () => {
         payload: { reservationId: VALID_RESERVATION_ID },
       }),
     );
+    mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
   });
 
   describe("正常系", () => {
@@ -513,6 +522,33 @@ describe("cancelReservationAction", () => {
     });
   });
 
+  describe("異常系: reservation feature OFF (Codex #1433)", () => {
+    test("feature OFF のとき MutationError を返す", async () => {
+      mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
+
+      const { cancelReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      const result = await cancelReservationAction(VALID_RESERVATION_ID);
+
+      expectErrorResult(result);
+      expect(result.error).toBe(
+        "この機能は現在利用できません。管理者にお問い合わせください。",
+      );
+    });
+
+    test("feature OFF のとき cancelCustomerReservation は呼ばれない (閲覧専用ページから gate 済み action を直接叩かれても mutation は起きない)", async () => {
+      mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
+
+      const { cancelReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      await cancelReservationAction(VALID_RESERVATION_ID);
+
+      expect(mockCancelCustomerReservation).not.toHaveBeenCalled();
+    });
+  });
+
   describe("異常系: ドメインエラー", () => {
     test("cancelCustomerReservation が success: false を返したとき MutationError を返す", async () => {
       mockCancelCustomerReservation.mockImplementation(() =>
@@ -576,6 +612,7 @@ describe("updateReservationAction", () => {
     mockValidateTurnstile.mockClear();
     mockUpdateTag.mockClear();
     mockCreateAuditLogRecord.mockClear();
+    mockIsFeatureEnabled.mockClear();
 
     mockGetSession.mockImplementation(() =>
       Promise.resolve({
@@ -607,6 +644,7 @@ describe("updateReservationAction", () => {
         payload: { reservationId: VALID_RESERVATION_ID },
       }),
     );
+    mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
   });
 
   describe("正常系", () => {
@@ -727,6 +765,25 @@ describe("updateReservationAction", () => {
 
       expect(result.status).toBe("error");
       expect(result.error?.[""]?.[0]).toBe("顧客情報が見つかりません");
+    });
+  });
+
+  describe("異常系: reservation feature OFF (Codex #1433)", () => {
+    test("feature OFF のとき formErrors にエラーを返し updateCustomerReservation は呼ばれない", async () => {
+      mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
+
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      const result = await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+      expectSubmissionLike(result);
+
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe("この機能は現在利用できません。");
+      expect(mockUpdateCustomerReservation).not.toHaveBeenCalled();
     });
   });
 

@@ -144,6 +144,15 @@ const mockGetCustomerCanCancelSeriesInFull = mock<() => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
 
+// Codex #1433: cancelReservationSeriesCustomerAction が reservation feature の
+// 独立 fail-closed gate を持つようになったため mock 必須。
+const mockIsFeatureEnabled = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
+
 // payloads.ts は他 export を持つが、本 file で必要なのは gate 関数のみ。
 // module 全体差替になるため、他 export を stub で埋める必要がある場合は追加する
 // (現状 test 対象 action は getCustomerCanCancelSeriesInFull のみ import)。
@@ -195,6 +204,8 @@ beforeEach(async () => {
   mockGetCustomerCanCancelSeriesInFull.mockImplementation(() =>
     Promise.resolve(true),
   );
+  mockIsFeatureEnabled.mockClear();
+  mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
   mockCancelSeries.mockClear();
   mockCancelSeries.mockImplementation(() =>
     Promise.resolve({ success: true, payload: { cancelledCount: 3 } }),
@@ -271,6 +282,19 @@ describe("cancelReservationSeriesCustomerAction (Phase B.2.1 Task A)", () => {
     mockGetCustomerCanCancelSeriesInFull.mockImplementation(() =>
       Promise.resolve(false),
     );
+    const result = await cancelReservationSeriesCustomerAction(
+      VALID_SERIES_ID,
+      null,
+      "token",
+    );
+    expect(isMutationError(result)).toBe(true);
+    if (isMutationError(result))
+      expect(result.error).toMatch(/この機能|管理者/u);
+    expect(mockCancelSeries).not.toHaveBeenCalled();
+  });
+
+  test("reservation feature OFF → MutationError (Codex #1433、fail-closed)", async () => {
+    mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
     const result = await cancelReservationSeriesCustomerAction(
       VALID_SERIES_ID,
       null,
