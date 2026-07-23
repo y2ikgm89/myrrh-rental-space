@@ -142,7 +142,10 @@ export async function getPublishedLocationsForAccess(
       prisma.location.findMany({
         where: {
           ...PUBLIC_LOCATION_WHERE,
-          ...(slugs && slugs.length > 0 && { slug: { in: [...slugs] } }),
+          // slugs === undefined: フィルタなし（mode="all"）。
+          // slugs === []: 明示的に 0 件（mode="selected" で未選択）。
+          // どちらも length で判定すると区別できず、空配列が「全件」に化けてしまう。
+          ...(slugs !== undefined && { slug: { in: [...slugs] } }),
         },
         orderBy: { sortOrder: "asc" },
         select: {
@@ -217,7 +220,9 @@ export type LocationForSeo = {
   readonly amenities: unknown;
 };
 
-export async function getPublishedLocationsForSeo(): Promise<LocationForSeo[]> {
+export async function getPublishedLocationsForSeo(
+  slugs?: readonly string[],
+): Promise<LocationForSeo[]> {
   "use cache";
   cacheLife(CACHE_LIFE.METADATA);
   cacheTag(CACHE_TAGS.LOCATIONS);
@@ -225,7 +230,12 @@ export async function getPublishedLocationsForSeo(): Promise<LocationForSeo[]> {
   const locations = await safeFetch({
     fetch: () =>
       prisma.location.findMany({
-        where: { ...PUBLIC_LOCATION_WHERE },
+        where: {
+          ...PUBLIC_LOCATION_WHERE,
+          // getPublishedLocationsForAccess と同じ契約: undefined = 全件、
+          // [] = 明示的に 0 件。
+          ...(slugs !== undefined && { slug: { in: [...slugs] } }),
+        },
         orderBy: { sortOrder: "asc" },
         select: {
           id: true,
