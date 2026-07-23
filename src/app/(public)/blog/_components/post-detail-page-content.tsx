@@ -42,7 +42,10 @@ export async function buildPostMetadata(slug: string): Promise<Metadata> {
   ]);
 
   if (!post) {
-    return { title: "記事が見つかりません" };
+    return {
+      title: "記事が見つかりません",
+      robots: { index: false, follow: false },
+    };
   }
 
   return generateArticleMetadata(

@@ -40,7 +40,10 @@ export async function buildNewsMetadata(slug: string): Promise<Metadata> {
   ]);
 
   if (!newsItem) {
-    return { title: "お知らせが見つかりません" };
+    return {
+      title: "お知らせが見つかりません",
+      robots: { index: false, follow: false },
+    };
   }
 
   return generateArticleMetadata(

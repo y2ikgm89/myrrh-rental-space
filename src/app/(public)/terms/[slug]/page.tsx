@@ -25,7 +25,10 @@ export async function generateMetadata({
   ]);
 
   if (!terms) {
-    return { title: "規約が見つかりません" };
+    return {
+      title: "規約が見つかりません",
+      robots: { index: false, follow: false },
+    };
   }
 
   return generateArticleMetadata(
