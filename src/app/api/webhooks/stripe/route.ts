@@ -70,14 +70,10 @@ import {
   saveEventRegistrationPaymentIntentId,
   findEventRegistrationByPaymentIntent,
   applyEventChargeRefundIdempotent,
+  findExpiredPendingWaitlistOfferRegistration,
   refundExpiredWaitlistOfferPaymentCommand,
 } from "@/shared/domain/events/payment-commands";
-import { prisma } from "@/shared/db/prisma";
-import {
-  PaymentStatus,
-  RegistrationStatus,
-  ReservationStatus,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getWaitlistConfirmationEmailDetails } from "@/shared/domain/events/waitlist-queries";
 import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
@@ -470,14 +466,8 @@ async function fulfillEventRegistrationPaymentAtomically(
 
   if (isWaitlistOffer) {
     // Retry recovery: 前回 confirm で EXPIRED 化した後、dedup 再入でここに来る。
-    const stuckExpiredPending = await prisma.eventRegistration.findFirst({
-      where: {
-        id: registrationId,
-        status: RegistrationStatus.EXPIRED,
-        paymentStatus: PaymentStatus.PENDING,
-      },
-      select: { id: true },
-    });
+    const stuckExpiredPending =
+      await findExpiredPendingWaitlistOfferRegistration(registrationId);
     if (stuckExpiredPending) {
       if (!paymentIntentId) {
         logError(

@@ -158,16 +158,9 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
+  findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
   refundExpiredWaitlistOfferPaymentCommand: () =>
     Promise.resolve({ outcome: "not_applicable" }),
-}));
-
-mock.module("@/shared/db/prisma", () => ({
-  prisma: {
-    eventRegistration: {
-      findFirst: () => Promise.resolve(null),
-    },
-  },
 }));
 
 mock.module("@/shared/domain/events/waitlist-commands", () => ({

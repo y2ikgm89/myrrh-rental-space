@@ -111,8 +111,8 @@ const mockRefundExpiredWaitlistOfferPaymentCommand = mock<
     refundAmount: 1000,
   }),
 );
-const mockEventRegistrationFindFirst = mock<
-  (args: Record<string, unknown>) => Promise<{ id: string } | null>
+const mockFindExpiredPendingWaitlistOfferRegistration = mock<
+  (id: string) => Promise<{ id: string } | null>
 >(() => Promise.resolve(null));
 const mockGetWaitlistConfirmationEmailDetails = mock<
   (id: string) => Promise<{
@@ -253,20 +253,13 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
   // no-op stub で十分。import 解決のみを満たす)
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
+  findExpiredPendingWaitlistOfferRegistration: (id: string) =>
+    mockFindExpiredPendingWaitlistOfferRegistration(id),
   refundExpiredWaitlistOfferPaymentCommand: (input: {
     registrationId: string;
     stripePaymentIntentId: string;
     reason?: string;
   }) => mockRefundExpiredWaitlistOfferPaymentCommand(input),
-}));
-
-mock.module("@/shared/db/prisma", () => ({
-  prisma: {
-    eventRegistration: {
-      findFirst: (args: Record<string, unknown>) =>
-        mockEventRegistrationFindFirst(args),
-    },
-  },
 }));
 
 mock.module("@/shared/domain/events/waitlist-queries", () => ({
@@ -488,7 +481,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockClaimEventRegistrationAsFailed.mockReset();
     mockSaveEventRegistrationPaymentIntentId.mockReset();
     mockRefundExpiredWaitlistOfferPaymentCommand.mockReset();
-    mockEventRegistrationFindFirst.mockReset();
+    mockFindExpiredPendingWaitlistOfferRegistration.mockReset();
     mockGetWaitlistConfirmationEmailDetails.mockReset();
     mockSendEventRegistrationConfirmation.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
@@ -545,7 +538,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       refundId: "re_mock",
       refundAmount: 1000,
     });
-    mockEventRegistrationFindFirst.mockResolvedValue(null);
+    mockFindExpiredPendingWaitlistOfferRegistration.mockResolvedValue(null);
     mockGetWaitlistConfirmationEmailDetails.mockResolvedValue(
       DEFAULT_WAITLIST_DETAILS,
     );

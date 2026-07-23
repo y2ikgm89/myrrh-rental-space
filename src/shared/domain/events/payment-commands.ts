@@ -965,6 +965,26 @@ export async function findEventRegistrationByPaymentIntent(
 }
 
 /**
+ * Waitlist capacity-race orphan: confirm が EXPIRED 化した後、Stripe retry /
+ * dedup 再入で webhook が戻ってきたときに拾う。
+ *
+ * `status=EXPIRED` + `paymentStatus=PENDING` のみ。PAID/REFUNDED は対象外。
+ */
+export async function findExpiredPendingWaitlistOfferRegistration(
+  registrationId: string,
+): Promise<{ id: string } | null> {
+  return prisma.eventRegistration.findFirst({
+    where: {
+      id: registrationId,
+      status: RegistrationStatus.EXPIRED,
+      paymentStatus: PaymentStatus.PENDING,
+      event: { deletedAt: null },
+    },
+    select: { id: true },
+  });
+}
+
+/**
  * `charge.refunded` webhook から呼ぶ event registration 版の idempotent refund 反映。
  *
  * Reservation 側 `applyChargeRefundIdempotent` (payment-queries.ts) の対称版:
