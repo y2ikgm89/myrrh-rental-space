@@ -32,7 +32,7 @@ interface SpaceGridProps {
    * 複製されたセクション同士で同じスペースが描画されても SpaceCard の
    * aria-describedby id がページ内で衝突しないようにする一意キー。
    */
-  readonly sectionId?: string | undefined;
+  readonly sectionId: string;
 }
 
 export function SpaceGrid({
