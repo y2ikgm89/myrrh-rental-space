@@ -319,10 +319,12 @@ describe("Route Handler contract: GET is session-only, POST carries token claim"
     expect(claimSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("HTTP-03: POST returns 429 when the per-serialNo rate limit is exceeded, before touching the token/DB", async () => {
-    // GET 経路と同じ receiptDownloadBySerialNoRateLimiter を POST 冒頭でも叩く
-    // 契約の回帰テスト。limiter が blocked を返す場合、token 検証・DB read・
-    // 単発 claim のいずれよりも先に 429 で早期 return することを確認する。
+  test("HTTP-03: POST returns 429 when the per-serialNo rate limit is exceeded, after token verification but before DB/claim", async () => {
+    // GET 経路と同じ receiptDownloadBySerialNoRateLimiter を POST でも叩く契約の
+    // 回帰テスト。rate limit は token 検証より後・DB read/claim より前に置く
+    // (Codex #1426 指摘: token 未検証のまま rate limit を先にすると、token を
+    // 持たない第三者が serialNo を推測して連投するだけで shared bucket を枯渇させ
+    // 正規ユーザーを締め出せてしまう)。
     mock.module("@/shared/lib/rate-limit", () => ({
       receiptDownloadBySerialNoRateLimiter: {
         check: mock(() => Promise.resolve({ success: false })),
@@ -349,7 +351,28 @@ describe("Route Handler contract: GET is session-only, POST carries token claim"
     const res = await POST(makePostRequest(body), makeParams());
 
     expect(res.status).toBe(429);
-    expect(verifySpy).not.toHaveBeenCalled();
+    expect(verifySpy).toHaveBeenCalledTimes(1);
     expect(claimSpy).not.toHaveBeenCalled();
+  });
+
+  test("HTTP-03: an invalid token never consumes the shared per-serialNo bucket", async () => {
+    // 未検証の garbage token 連投で shared bucket が枯渇しないことの直接検証。
+    // rate limiter 自体は success:true のままだが、token 検証失敗時に limiter が
+    // 一度も呼ばれないことを確認する (呼ばれていれば brute-force 経路が残っている)。
+    const rateLimitCheckSpy = mock(() => Promise.resolve({ success: true }));
+    mock.module("@/shared/lib/rate-limit", () => ({
+      receiptDownloadBySerialNoRateLimiter: { check: rateLimitCheckSpy },
+    }));
+    mock.module("@/shared/lib/receipt-download-token", () => ({
+      verifyReceiptDownloadToken: mock(() => ({ valid: false })),
+    }));
+
+    const { POST } = await import("@/app/api/receipts/[serialNo]/pdf/route");
+    const body = new FormData();
+    body.set("token", "garbage");
+    const res = await POST(makePostRequest(body), makeParams());
+
+    expect(res.status).toBe(404);
+    expect(rateLimitCheckSpy).not.toHaveBeenCalled();
   });
 });

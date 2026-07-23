@@ -288,4 +288,24 @@ describe("GET /api/receipts/[serialNo]/pdf — session active/BLACKLIST guard", 
     // 汚染しない設計 — 別途 PERMISSION_DENIED action を書くかは product judgement)。
     expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
   });
+
+  test("HTTP-03: セッションなしのリクエストは shared per-serialNo bucket を消費しない (Codex #1426)", async () => {
+    // session を持たない匿名リクエストが rate limiter を消費できると、sequential な
+    // serialNo を推測しただけの第三者が POST token 経路と共有するバケットを枯渇させ、
+    // 正規会員の DL を締め出せてしまう。session 確認を rate limit より先に行う契約の
+    // 回帰テスト。
+    const rateLimitCheckSpy = mock(() => Promise.resolve({ success: true }));
+    mock.module("@/shared/lib/rate-limit", () => ({
+      receiptDownloadBySerialNoRateLimiter: { check: rateLimitCheckSpy },
+    }));
+    mock.module("@/shared/lib/customer-auth", () => ({
+      getCustomerSession: mock(() => Promise.resolve(null)),
+    }));
+
+    const { GET } = await import("@/app/api/receipts/[serialNo]/pdf/route");
+    const res = await GET(makeRequest(), makeParams());
+
+    expect(res.status).toBe(404);
+    expect(rateLimitCheckSpy).not.toHaveBeenCalled();
+  });
 });
