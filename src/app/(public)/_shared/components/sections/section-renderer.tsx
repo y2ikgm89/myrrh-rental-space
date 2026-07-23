@@ -228,7 +228,13 @@ export async function SectionRenderer({
           facilityOptions,
         ] = await Promise.all([
           timeRange
-            ? getPublishedSpacesPaginatedWithAvailability(filter, timeRange)
+            ? getPublishedSpacesPaginatedWithAvailability(filter, {
+                date: sp.date,
+                startTime: sp.startTime,
+                endTime: sp.endTime,
+                from: timeRange.from,
+                to: timeRange.to,
+              })
             : getPublishedSpacesPaginated(filter),
           getActiveCategories(),
           getActiveLocations(),

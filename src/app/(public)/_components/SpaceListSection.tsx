@@ -59,6 +59,12 @@ interface CatalogSpace {
   readonly gallery: readonly GalleryItem[];
   readonly category: { readonly name: string } | null;
   readonly location: { readonly name: string };
+  /**
+   * 空き時間帯 facet 検索時のみ付与される。営業時間・予約/イベント重複・
+   * 臨時休業を判定した「この日時に予約できるか」。facet 未使用時は undefined
+   * （バッジを出さない = 通常表示）。
+   */
+  readonly isAvailableForSearch?: boolean | undefined;
 }
 
 /**

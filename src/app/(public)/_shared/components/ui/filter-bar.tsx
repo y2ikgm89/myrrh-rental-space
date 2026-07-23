@@ -259,8 +259,8 @@ export function FilterBar({
             <DialogTitle>絞り込み</DialogTitle>
             <DialogDescription>
               {showLocationFilter
-                ? "拠点・カテゴリ・空き時間帯・収容人数・並び順・設備でスペースを絞り込みます。"
-                : "カテゴリ・空き時間帯・収容人数・並び順・設備でスペースを絞り込みます。"}
+                ? "拠点・カテゴリ・収容人数・設備でスペースを絞り込み、並び順と空き時間帯で表示順を調整します。"
+                : "カテゴリ・収容人数・設備でスペースを絞り込み、並び順と空き時間帯で表示順を調整します。"}
             </DialogDescription>
           </DialogHeader>
 
@@ -293,7 +293,7 @@ export function FilterBar({
 
           <fieldset className="flex flex-col gap-1">
             <legend className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-              空き時間帯（3 つとも指定時のみ絞り込み）
+              空き時間帯（3 つとも指定時のみ判定）
             </legend>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <input
