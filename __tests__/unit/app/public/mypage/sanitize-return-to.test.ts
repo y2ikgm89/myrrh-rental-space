@@ -43,4 +43,12 @@ describe("sanitizeReturnTo", () => {
       "/mypage",
     );
   });
+
+  test("配列（?returnTo= の重複指定）はクラッシュせず /mypage にフォールバックする", () => {
+    // Next.js の searchParams は同名クエリを重複指定すると string[] になる。
+    // sanitizeReturnTo は open redirect 対策 SSoT のため、呼び出し側の型注釈に
+    // 依存せず自身で安全側に倒す契約を持つ（回帰: .startsWith は配列に無く TypeError）。
+    expect(sanitizeReturnTo(["/mypage", "/mypage/settings"])).toBe("/mypage");
+    expect(sanitizeReturnTo([])).toBe("/mypage");
+  });
 });

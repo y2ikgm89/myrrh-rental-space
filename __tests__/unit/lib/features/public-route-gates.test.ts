@@ -55,6 +55,10 @@ const EXPECTED_GATES: ReadonlyArray<{
     file: "src/app/(public)/mypage/reservations/[id]/edit/page.tsx",
     module: "reservation",
   },
+  {
+    file: "src/app/(public)/mypage/reservations/[id]/page.tsx",
+    module: "reservation",
+  },
   // events
   { file: "src/app/(public)/events/page.tsx", module: "events" },
   { file: "src/app/(public)/events/[slug]/page.tsx", module: "events" },

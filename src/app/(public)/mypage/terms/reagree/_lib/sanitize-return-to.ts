@@ -9,9 +9,15 @@
  *   - reagree 本体 (`/mypage/terms/reagree`) ではない (循環 redirect 防止)
  *
  * いずれかを満たさない場合は `/mypage` にフォールバックする。
+ *
+ * URL の `?returnTo=` は重複指定 (`?returnTo=a&returnTo=b`) されると Next.js の
+ * searchParams 上で配列になる。呼び出し側の型注釈だけでは実行時にこの形状を
+ * 防げないため、SSoT である本関数自身が `string[]` を安全側（フォールバック）に倒す。
  */
-export function sanitizeReturnTo(returnTo: string | null | undefined): string {
-  if (!returnTo) return "/mypage";
+export function sanitizeReturnTo(
+  returnTo: string | readonly string[] | null | undefined,
+): string {
+  if (typeof returnTo !== "string" || !returnTo) return "/mypage";
   if (returnTo.startsWith("//")) return "/mypage";
   if (!returnTo.startsWith("/mypage")) return "/mypage";
   if (returnTo.startsWith("/mypage/terms/reagree")) return "/mypage";

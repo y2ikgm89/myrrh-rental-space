@@ -12,6 +12,7 @@
 
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
+import type { SearchParams } from "nuqs/server";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
 export default async function TermsReagreePage({
   searchParams,
 }: {
-  readonly searchParams: Promise<{ readonly returnTo?: string }>;
+  readonly searchParams: Promise<SearchParams>;
 }): Promise<ReactElement> {
   await connection();
 
@@ -39,7 +40,7 @@ export default async function TermsReagreePage({
   const { customer } = await ensureCustomerLinked(user);
 
   const params = await searchParams;
-  const returnTo = sanitizeReturnTo(params.returnTo);
+  const returnTo = sanitizeReturnTo(params["returnTo"]);
 
   const pending = await getReagreeRequiredTermsForCustomer(customer.id);
   if (pending.length === 0) {

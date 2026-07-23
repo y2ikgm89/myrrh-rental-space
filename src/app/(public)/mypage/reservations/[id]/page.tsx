@@ -19,7 +19,10 @@ import { findReceiptSerialNoByReservationId } from "@/shared/domain/receipts/que
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import {
+  isFeatureEnabled,
+  requireFeatureEnabled,
+} from "@/shared/lib/features/check";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -66,6 +69,12 @@ export default async function ReservationDetailPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
   await connection();
+
+  // FEAT-3PLANE-02: mypage sub-page も公開 /reservation と対称に reservation
+  // feature OFF 時に 404 (fail-closed)。edit 側にのみ gate があり、閲覧専用の
+  // 本ページに gate が無いと会員は「予約詳細」を閲覧できてしまい、reservation
+  // module の可視性契約が非対称に破れる。
+  await requireFeatureEnabled("reservation");
 
   const { id } = await params;
   const sp = await searchParams;
