@@ -24,13 +24,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SubmissionResult } from "@conform-to/react";
-import {
-  getFormProps,
-  getInputProps,
-  getTextareaProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, useForm, useInputControl } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
@@ -51,6 +45,8 @@ import { createFaqItem, updateFaqItem } from "@/admin/actions/faq";
 import { faqItemFormSchema } from "@/admin/lib/validations/faq";
 import type { FaqItemWithCategory } from "@/shared/domain/faq/types";
 import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
+import { FaqItemTemplateSelect } from "./FaqItemTemplateSelect";
+import type { FaqItemTemplate } from "./faq-item-templates";
 
 type FaqItemDialogProps = {
   readonly open: boolean;
@@ -109,6 +105,7 @@ function FaqItemCreateDialog({ open, onOpenChange, categoryId }: CreateProps) {
           </DialogDescription>
         </DialogHeader>
         <FaqItemFormBody
+          mode="create"
           formId="faq-item-create-form"
           isPending={isPending}
           lastResult={lastResult}
@@ -182,6 +179,7 @@ function FaqItemEditDialog({ open, onOpenChange, item }: EditProps) {
           <DialogDescription>質問と回答を編集します</DialogDescription>
         </DialogHeader>
         <FaqItemFormBody
+          mode="edit"
           formId={`faq-item-edit-form-${item.id}`}
           isPending={isPending}
           lastResult={lastResult}
@@ -219,6 +217,7 @@ function FaqItemEditDialog({ open, onOpenChange, item }: EditProps) {
 // =============================================================================
 
 type FormBodyProps = {
+  readonly mode: "create" | "edit";
   readonly formId: string;
   readonly isPending: boolean;
   readonly lastResult: SubmissionResult | undefined;
@@ -232,6 +231,7 @@ type FormBodyProps = {
 };
 
 function FaqItemFormBody({
+  mode,
   formId,
   isPending,
   lastResult,
@@ -249,8 +249,15 @@ function FaqItemFormBody({
     defaultValue,
   });
 
+  const questionControl = useInputControl(fields.question);
+  const answerControl = useInputControl(fields.answer);
   const isPublishedControl = useInputControl(fields.isPublished);
   const isPublished = isPublishedControl.value === "on";
+
+  const handleTemplateSelect = (template: FaqItemTemplate) => {
+    questionControl.change(template.question);
+    answerControl.change(template.answer);
+  };
 
   const formErrors = form.errors;
 
@@ -268,12 +275,28 @@ function FaqItemFormBody({
         value={isPublishedControl.value ?? ""}
       />
 
+      {mode === "create" && (
+        <FaqItemTemplateSelect
+          onSelect={handleTemplateSelect}
+          disabled={isPending}
+        />
+      )}
+
       <div className="space-y-2">
         <Label htmlFor={fields.question.id}>質問 *</Label>
         <Input
-          {...getInputProps(fields.question, { type: "text" })}
+          id={fields.question.id}
+          name={fields.question.name}
+          type="text"
+          value={questionControl.value ?? ""}
+          onChange={(e) => questionControl.change(e.target.value)}
+          onBlur={questionControl.blur}
           placeholder="例: 予約はいつまでキャンセルできますか？"
           disabled={isPending}
+          aria-invalid={fields.question.errors ? true : undefined}
+          aria-describedby={
+            fields.question.errors ? fields.question.errorId : undefined
+          }
         />
         {fields.question.errors && (
           <p id={fields.question.errorId} className="text-xs text-destructive">
@@ -285,10 +308,18 @@ function FaqItemFormBody({
       <div className="space-y-2">
         <Label htmlFor={fields.answer.id}>回答 *</Label>
         <Textarea
-          {...getTextareaProps(fields.answer)}
+          id={fields.answer.id}
+          name={fields.answer.name}
+          value={answerControl.value ?? ""}
+          onChange={(e) => answerControl.change(e.target.value)}
+          onBlur={answerControl.blur}
           placeholder="回答を入力してください。改行は公開ページでも保持されます。"
           rows={8}
           disabled={isPending}
+          aria-invalid={fields.answer.errors ? true : undefined}
+          aria-describedby={
+            fields.answer.errors ? fields.answer.errorId : undefined
+          }
         />
         {fields.answer.errors && (
           <p id={fields.answer.errorId} className="text-xs text-destructive">
