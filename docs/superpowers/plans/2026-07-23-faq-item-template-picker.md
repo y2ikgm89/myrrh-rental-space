@@ -449,7 +449,7 @@ export function FaqItemTemplateSelect({
   return (
     <div className="space-y-1.5">
       <Label htmlFor={selectId}>雛形から選ぶ（任意）</Label>
-      <Select onValueChange={handleValueChange} disabled={disabled}>
+      <Select onValueChange={handleValueChange} disabled={disabled ?? false}>
         <SelectTrigger id={selectId} className="w-full">
           <SelectValue placeholder="雛形を選択..." />
         </SelectTrigger>
