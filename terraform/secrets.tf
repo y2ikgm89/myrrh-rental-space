@@ -130,11 +130,18 @@ resource "google_secret_manager_secret" "secret" {
 }
 
 # Tier 2 移行済みの RESEND_WEBHOOK_SECRET を state から forget（GCP 側は残す）。
-# destroy=false でないと prevent_destroy で apply が fail する。
+# `removed` は for_each インスタンスキーを直接受け付けない
+# (Error: Resource instance keys not allowed — hashicorp/terraform#34439)。
+# 回避策: moved で flat アドレスへ移してから removed { destroy = false }。
 # この apply 成功後に operator が `gcloud secrets delete RESEND_WEBHOOK_SECRET`。
 # （先に SM を消して config に残すと次 apply が空 container を再作成する。）
-removed {
+moved {
   from = google_secret_manager_secret.secret["RESEND_WEBHOOK_SECRET"]
+  to   = google_secret_manager_secret.resend_webhook_secret_forgotten
+}
+
+removed {
+  from = google_secret_manager_secret.resend_webhook_secret_forgotten
 
   lifecycle {
     destroy = false
