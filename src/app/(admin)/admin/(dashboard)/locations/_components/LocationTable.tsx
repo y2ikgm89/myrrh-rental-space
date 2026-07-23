@@ -3,7 +3,7 @@
 /**
  * LocationTable
  *
- * 拠点一覧テーブル。`sortable`（検索なし）のとき D&D 並び替えを有効化し、
+ * 拠点一覧テーブル。`sortable`（検索・絞り込みなし）のとき D&D 並び替えを有効化し、
  * `updateLocationOrder` に {id, sortOrder} を渡す。sortOrder はシステム管理
  * （create=末尾自動採番 / reorder=D&D SSoT / update=不変）。`startIndex` は
  * ページオフセットで global な sortOrder を維持する。
@@ -81,7 +81,7 @@ function GbpSyncBadge({
 
 type LocationTableProps = {
   readonly locations: LocationWithStats[];
-  /** 検索なしのとき true（D&D 並び替えを有効化） */
+  /** 検索・絞り込みなしのとき true（D&D 並び替えを有効化） */
   readonly sortable: boolean;
   /** ページオフセット（global な sortOrder 維持用） */
   readonly startIndex: number;
@@ -248,7 +248,7 @@ export function LocationTable({
       <p className="text-xs text-muted-foreground">
         {sortable
           ? "ドラッグ&ドロップで並び替えできます"
-          : "並び替えは検索を解除すると有効になります"}
+          : "並び替えは検索・絞り込みを解除すると有効になります"}
       </p>
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="overflow-x-auto">
