@@ -260,7 +260,7 @@ export async function getPublishedEventsPaginated(filter: EventListFilter) {
     filter.tab === "upcoming"
       ? { firstSlotStartAt: { sort: "asc", nulls: "last" } }
       : { lastSlotEndAt: { sort: "desc", nulls: "last" } };
-  const { skip, take } = paginate({ page, limit: perPage });
+  const { skip, take, limit } = paginate({ page, limit: perPage });
 
   return safeFetch({
     fetch: async () => {
@@ -277,7 +277,7 @@ export async function getPublishedEventsPaginated(filter: EventListFilter) {
       return {
         items: toPlainArray(rawItems.map(mapPublicEvent)),
         totalCount,
-        totalPages: calcTotalPages(totalCount, perPage),
+        totalPages: calcTotalPages(totalCount, limit),
         currentPage: page,
       };
     },
