@@ -158,6 +158,8 @@ export const CACHE_TAGS = {
   EVENTS: "events",
   /** イベントキャンセル待ち（producer なし。cron / 申込 action からの invalidation 専用） */
   EVENT_WAITLIST: "event-waitlist",
+  /** イベントカテゴリ */
+  EVENT_CATEGORIES: "event-categories",
   /** 送信前 suppression（Resend webhook で HARD_BOUNCED / COMPLAINED 観測済みの宛先 Set） */
   SUPPRESSED_EMAILS: "suppressed-emails",
 } as const;
