@@ -29,9 +29,19 @@ interface Props {
   readonly config: SpaceShowcaseConfig;
   readonly spaces: readonly ShowcaseSpaceData[];
   readonly style: SectionStylePayload;
+  /**
+   * 複製された space-showcase セクション同士で同じスペースが描画されても
+   * SpaceCard の aria-describedby id がページ内で衝突しないようにする一意キー。
+   */
+  readonly sectionId: string;
 }
 
-export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
+export function SpacesGrid({
+  config,
+  spaces,
+  style,
+  sectionId,
+}: Props): ReactElement {
   const featured = spaces[0];
   const remaining = spaces.slice(1);
   const hasTitle = config.title.length > 0;
@@ -75,6 +85,7 @@ export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
               gallery={featured.gallery}
               categoryName={featured.categoryName}
               locationName={featured.locationName ?? undefined}
+              instanceId={sectionId}
             />
           </div>
         </ScrollReveal>
@@ -102,6 +113,7 @@ export function SpacesGrid({ config, spaces, style }: Props): ReactElement {
                 gallery={space.gallery}
                 categoryName={space.categoryName}
                 locationName={space.locationName ?? undefined}
+                instanceId={sectionId}
               />
             ))}
           </ScrollRevealGroup>

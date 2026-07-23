@@ -28,15 +28,28 @@ interface SpaceShowcaseSectionProps {
   readonly config: SpaceShowcaseConfig;
   readonly spaces: readonly ShowcaseSpaceData[];
   readonly style: SectionStylePayload;
+  /**
+   * 複製された space-showcase セクション同士で SpaceCard の aria-describedby id が
+   * 衝突しないようにする一意キー（grid variant のみ SpaceCard を使うため carousel には渡さない）。
+   */
+  readonly sectionId: string;
 }
 
 export function SpaceShowcaseSection({
   config,
   spaces,
   style,
+  sectionId,
 }: SpaceShowcaseSectionProps): ReactElement | null {
   if (config.displayLayout === "carousel") {
     return <SpacesCarousel config={config} spaces={spaces} style={style} />;
   }
-  return <SpacesGrid config={config} spaces={spaces} style={style} />;
+  return (
+    <SpacesGrid
+      config={config}
+      spaces={spaces}
+      style={style}
+      sectionId={sectionId}
+    />
+  );
 }
