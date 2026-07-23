@@ -23,10 +23,6 @@ export const eventCalendarConfigSchema = z.object({
     helpText:
       "list: 一覧のみ / calendar: カレンダーのみ / calendar-list-toggle: タブ切替",
   }),
-  showPastEvents: field.boolean("過去のイベントも表示する", {
-    default: false,
-    group: "advanced",
-  }),
   layout: sectionLayoutSchema,
 });
 
