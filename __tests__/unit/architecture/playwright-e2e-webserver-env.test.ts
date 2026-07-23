@@ -52,6 +52,7 @@ describe("Playwright E2E webServer env", () => {
       "E2E_FIXED_NOW_ISO",
       "ADMIN_APP_URL",
       "ENCRYPTION_KEY",
+      "SUPPRESSION_HASH_SECRET",
       "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY",
       "AUDIT_LOG_HMAC_KEY",
       "CRON_OIDC_AUDIENCE",

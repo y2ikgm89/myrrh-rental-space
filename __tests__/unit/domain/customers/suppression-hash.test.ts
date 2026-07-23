@@ -7,8 +7,7 @@
  *   2. produce the SAME output for the same email+secret (deterministic — the
  *      sender-side `.has()` lookup depends on this).
  *   3. fall back to plain SHA-256 when `SUPPRESSION_HASH_SECRET` is unset
- *      (fail-safe: existing deploys keep working; the drift is announced as
- *      a boot-time WARN, not a fatal error).
+ *      (local/test path; production fails closed via `validateProductionEnv`).
  *
  * Because `serverEnv` snapshots `process.env` at module load, we mock the
  * env module itself with a mutable holder and re-import the SUT once per
@@ -98,7 +97,7 @@ describe("hashSuppressedEmailCandidate — M6 HMAC-keyed hash", () => {
     );
   });
 
-  test("unset secret falls back to plain SHA-256 (backwards compat / WARN path)", () => {
+  test("unset secret falls back to plain SHA-256 (local/test path)", () => {
     envHolder.SUPPRESSION_HASH_SECRET = undefined;
 
     const fallback = hashSuppressedEmailCandidate(CANONICAL_EMAIL);

@@ -217,11 +217,10 @@ export const serverEnv = createEnv({
       })
       .optional(),
 
-    // Suppression set hashing secret（本番推奨・任意 - M6）
+    // Suppression set hashing secret（本番必須 - M6）
     // `hashSuppressedEmailCandidate` で HMAC-SHA256 の鍵として使う。
-    // 未設定時は plain SHA-256 に fallback する（`getSuppressedEmailSet` の
-    // Data Cache dump が dictionary attack で全 suppression set を復元される
-    // リスクが残る）。未設定時は `validateProductionEnv()` が WARN を出す。
+    // 非本番では optional（unset 時は plain SHA-256 fallback）。本番は
+    // `validateProductionEnv()` が fail-closed。
     // Recommended: 64+ random hex chars (`openssl rand -hex 64`).
     SUPPRESSION_HASH_SECRET: z.string().optional(),
 
@@ -423,6 +422,11 @@ export function validateProductionEnv(): void {
     },
     { name: "CLOUDFLARE_ZONE_ID", value: serverEnv.CLOUDFLARE_ZONE_ID },
     { name: "CLOUDFLARE_API_TOKEN", value: serverEnv.CLOUDFLARE_API_TOKEN },
+    // M6 — suppression set HMAC。Phase C 配線後は本番必須。
+    {
+      name: "SUPPRESSION_HASH_SECRET",
+      value: serverEnv.SUPPRESSION_HASH_SECRET,
+    },
     // NEXT_PUBLIC_* はビルド時に client JS へインライン化されるが、
     // Cloud Build substitution で未指定だと "" でビルドされ silent failure になる。
     // instrumentation.register() で起動時に fail-fast させる。
@@ -527,20 +531,6 @@ export function validateProductionEnv(): void {
         "ENCRYPTION_KEY must contain only hexadecimal characters (0-9, a-f, A-F). Generate with: openssl rand -hex 32",
       );
     }
-  }
-
-  // M6: SUPPRESSION_HASH_SECRET — 未設定は fail-safe (plain SHA-256 fallback) だが
-  // Data Cache dump からの dictionary attack で全 suppression set が復元可能な
-  // 攻撃面が残る。本番では operator が drift を検知できるように WARN を出す
-  // (fail-closed ではなく WARN なのは、絶対必須にすると既存デプロイが break する
-  // ため — 段階的に secret を投入する運用余地を残す)。
-  if (!serverEnv.SUPPRESSION_HASH_SECRET) {
-    console.warn(
-      "[env] SUPPRESSION_HASH_SECRET is unset. hashSuppressedEmailCandidate() " +
-        "falls back to plain SHA-256, which is reversible via dictionary attack " +
-        "if the Next.js Data Cache is leaked. Set with `gcloud secrets create " +
-        "SUPPRESSION_HASH_SECRET` + `openssl rand -hex 64` and terraform apply. (M6)",
-    );
   }
 
   // Secondary encryption keys — parse eagerly so a malformed rotation window

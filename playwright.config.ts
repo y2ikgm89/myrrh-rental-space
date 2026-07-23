@@ -277,6 +277,8 @@ export default defineConfig({
         process.env["ADMIN_ROLE_GROUP_VIEWER_EMAIL"] ??
         "myrrh-viewers@example.com",
       ENCRYPTION_KEY: process.env["ENCRYPTION_KEY"] ?? "0".repeat(64),
+      SUPPRESSION_HASH_SECRET:
+        process.env["SUPPRESSION_HASH_SECRET"] ?? "0".repeat(64),
       CRON_OIDC_AUDIENCE: process.env["CRON_OIDC_AUDIENCE"] ?? localE2eBaseUrl,
       CRON_SERVICE_ACCOUNT_EMAIL:
         process.env["CRON_SERVICE_ACCOUNT_EMAIL"] ??
