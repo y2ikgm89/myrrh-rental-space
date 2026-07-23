@@ -72,7 +72,10 @@ import {
   type GlobalsMeoFlags,
 } from "./LocationMeoScoreCard";
 import { LocationGbpSyncCard } from "./LocationGbpSyncCard";
-import { LocationBusinessHoursCard } from "./LocationBusinessHoursCard";
+import {
+  LocationBusinessHoursCard,
+  DEFAULT_BUSINESS_HOURS,
+} from "./LocationBusinessHoursCard";
 
 type LocationFormProps = {
   location?: LocationWithStats;
@@ -87,22 +90,6 @@ const DEFAULT_GLOBALS: GlobalsMeoFlags = {
   businessName: false,
   establishedDate: false,
   socialLinks: false,
-};
-
-function defaultDay(isOpen: boolean): BusinessHours["monday"] {
-  return isOpen
-    ? { isOpen: true, slots: [{ openTime: "09:00", closeTime: "21:00" }] }
-    : { isOpen: false, slots: [] };
-}
-
-const DEFAULT_BUSINESS_HOURS: BusinessHours = {
-  monday: defaultDay(true),
-  tuesday: defaultDay(true),
-  wednesday: defaultDay(true),
-  thursday: defaultDay(true),
-  friday: defaultDay(true),
-  saturday: defaultDay(true),
-  sunday: defaultDay(false),
 };
 
 function DragHandle({
@@ -322,15 +309,28 @@ export function LocationForm({
     location?.isPublished ?? false,
   );
 
-  const [businessHours, setBusinessHours] = useState<BusinessHours>(
-    () => parseBusinessHours(location?.businessHours) ?? DEFAULT_BUSINESS_HOURS,
+  // 既存ロケーションで businessHours が未設定(null)の場合、DEFAULT_BUSINESS_HOURS に
+  // フォールバックしない。無関係なフィールドの保存だけで GBP 同期が発火し、
+  // 未設定だった営業時間がデフォルト値のまま Google に公開されてしまうため
+  // (作成モードのみ新規デフォルトを適用し、編集モードでは null を維持する)。
+  const [businessHours, setBusinessHours] = useState<BusinessHours | null>(
+    () =>
+      parseBusinessHours(location?.businessHours) ??
+      (isEdit ? null : DEFAULT_BUSINESS_HOURS),
   );
   const [specialHolidays, setSpecialHolidays] = useState<readonly string[]>(
     () => location?.specialHolidays ?? [],
   );
-  const businessHoursPayload = JSON.stringify(businessHours);
+  const businessHoursPayload = businessHours
+    ? JSON.stringify(businessHours)
+    : "";
+  // 「休業日を追加」で挿入される空エントリは送信前に除外する（未入力のまま保存すると
+  // location-json-ld.ts の validFrom/validThrough に空文字列がそのまま出力される）。
+  const nonEmptySpecialHolidays = specialHolidays.filter((date) => date !== "");
   const specialHolidaysPayload =
-    specialHolidays.length > 0 ? JSON.stringify(specialHolidays) : "";
+    nonEmptySpecialHolidays.length > 0
+      ? JSON.stringify(nonEmptySpecialHolidays)
+      : "";
 
   const boundAction =
     isEdit && location?.id
