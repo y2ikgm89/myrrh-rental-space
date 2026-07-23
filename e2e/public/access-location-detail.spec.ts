@@ -70,4 +70,29 @@ test.describe("/access 拠点情報ページ", () => {
       page.getByRole("heading", { name: "本館", level: 2 }),
     ).toBeVisible();
   });
+
+  test("非公開拠点（新宿支店 / shinjuku-ten, isPublished: false）は表示されない", async ({
+    page,
+  }) => {
+    await page.goto("/access");
+
+    // 公開拠点（本館）が描画されるまで待ってから非公開拠点の不在を確認する
+    // （データ取得前のフライング判定を避ける）。
+    await expect(
+      page.getByRole("heading", { name: "本館", level: 2 }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "新宿支店", level: 2 }),
+    ).toHaveCount(0);
+
+    // JSON-LD の LocalBusiness 一覧にも非公開拠点の name/slug アンカーを含めない
+    // （public-queries.ts の isPublished gate の回帰テスト）。
+    const jsonLdTexts = await page
+      .locator('script[type="application/ld+json"]')
+      .allTextContents();
+    const hasShinjukuInJsonLd = jsonLdTexts.some(
+      (text) => text.includes("新宿支店") || text.includes("shinjuku-ten"),
+    );
+    expect(hasShinjukuInJsonLd).toBe(false);
+  });
 });
