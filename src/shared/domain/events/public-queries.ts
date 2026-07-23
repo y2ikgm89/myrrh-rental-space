@@ -10,7 +10,11 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import {
+  toPlainArray,
+  toPlainObject,
+  type Serialized,
+} from "@/shared/lib/serialize";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 
 const publicEventSelect = {
@@ -33,6 +37,7 @@ const publicEventSelect = {
   meetingProvider: true,
   location: { select: { id: true, name: true, address: true } },
   space: { select: { id: true, name: true, slug: true } },
+  category: { select: { id: true, name: true, color: true } },
   slots: {
     select: { id: true, startAt: true, endAt: true, capacity: true },
     orderBy: { startAt: "asc" as const },
@@ -79,6 +84,11 @@ function mapPublicEvent<T extends PublicEventRow>(event: T) {
     capacity: firstSlot?.capacity ?? null,
   };
 }
+
+/** section-renderer.tsx 等が「取得済みイベント行 → EventCardData」の変換に使う共通ソース型 */
+export type PublicEventCardSource = Serialized<
+  ReturnType<typeof mapPublicEvent>
+>;
 
 export async function getPublishedEvents() {
   "use cache";

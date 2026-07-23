@@ -590,6 +590,7 @@ export async function SectionRenderer({
         spaceName: e.space?.name ?? null,
         thumbnailUrl: e.thumbnailUrl ?? null,
         gallery: e.gallery,
+        category: e.category,
       }));
       return (
         <EventCalendarSection
