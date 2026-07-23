@@ -19,10 +19,7 @@ import { findReceiptSerialNoByReservationId } from "@/shared/domain/receipts/que
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
-import {
-  isFeatureEnabled,
-  requireFeatureEnabled,
-} from "@/shared/lib/features/check";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -70,11 +67,15 @@ export default async function ReservationDetailPage({
 }: PageProps): Promise<ReactElement> {
   await connection();
 
-  // FEAT-3PLANE-02: mypage sub-page も公開 /reservation と対称に reservation
-  // feature OFF 時に 404 (fail-closed)。edit 側にのみ gate があり、閲覧専用の
-  // 本ページに gate が無いと会員は「予約詳細」を閲覧できてしまい、reservation
-  // module の可視性契約が非対称に破れる。
-  await requireFeatureEnabled("reservation");
+  // NOTE: 閲覧専用の本ページは意図的に requireFeatureEnabled("reservation") を
+  // 掛けない。/mypage (bare, 非 gate) が常に `/mypage/reservations/${id}` への
+  // リンクを含む予約一覧を表示するため、ここを 404 化すると reservation feature
+  // OFF 時に /mypage 自身が dead link を大量に抱える regression になる
+  // (Codex #1424 指摘)。予約変更・キャンセルという「新規ミューテーション」に
+  // 相当する edit ページのみ gate し、過去予約の閲覧・領収書導線は
+  // reservation feature の ON/OFF に関わらず残す
+  // (mypage/terms/reagree の returnTo allowlist が過去予約詳細を証跡アクセスとして
+  // 明示的に許可しているのと同じ設計判断)。
 
   const { id } = await params;
   const sp = await searchParams;
