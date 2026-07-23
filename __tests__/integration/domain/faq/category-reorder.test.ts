@@ -4,18 +4,41 @@
  * order-sql.ts の CASE 式 THEN 値に ::int4 キャストが無いと、Postgres が式全体を
  * text と推論し `order`（integer 列）への代入で 42804 を投げる
  * （event-categories/commands.test.ts の updateEventCategoryOrder と同じ回帰対象）。
+ *
+ * == 実行条件 ==
+ * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が
+ * docker-compose の test-db 既定値を注入する。
  */
 
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 
-process.env["DATABASE_URL"] =
-  process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+if (TEST_DB_URL) {
+  process.env["DATABASE_URL"] = TEST_DB_URL;
+}
 
-const { prisma } = await import("@/shared/db/prisma");
-const { reorderFaqCategories } =
-  await import("@/shared/domain/faq/category-commands");
+const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
-describe("faq/category-commands の reorder", () => {
+type PrismaModule = typeof import("@/shared/db/prisma");
+type CommandsModule = typeof import("@/shared/domain/faq/category-commands");
+
+let prisma: PrismaModule["prisma"];
+let reorderFaqCategories: CommandsModule["reorderFaqCategories"];
+
+describeMaybe("faq/category-commands の reorder", () => {
+  beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ reorderFaqCategories } =
+      await import("@/shared/domain/faq/category-commands"));
+  });
+
   afterAll(async () => {
     await prisma.$disconnect();
   });

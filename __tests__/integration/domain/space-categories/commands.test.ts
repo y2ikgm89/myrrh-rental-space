@@ -6,21 +6,41 @@
  * （event-categories/commands.test.ts の updateEventCategoryOrder と同じ回帰対象）。
  *
  * == 実行条件 ==
- * `bun run test:integration` は docker-compose の test-db 既定値を注入する。
- * preload (__tests__/setup.ts) が DATABASE_URL をダミー値に固定するため、
- * `@/shared/db/prisma` gateway を読む前に TEST_DATABASE_URL で上書きする。
+ * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が
+ * docker-compose の test-db 既定値を注入する。
  */
 
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 
-process.env["DATABASE_URL"] =
-  process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+if (TEST_DB_URL) {
+  process.env["DATABASE_URL"] = TEST_DB_URL;
+}
 
-const { prisma } = await import("@/shared/db/prisma");
-const { createSpaceCategory, updateSpaceCategoryOrder } =
-  await import("@/shared/domain/space-categories/commands");
+const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
-describe("space-categories/commands の reorder", () => {
+type PrismaModule = typeof import("@/shared/db/prisma");
+type CommandsModule =
+  typeof import("@/shared/domain/space-categories/commands");
+
+let prisma: PrismaModule["prisma"];
+let createSpaceCategory: CommandsModule["createSpaceCategory"];
+let updateSpaceCategoryOrder: CommandsModule["updateSpaceCategoryOrder"];
+
+describeMaybe("space-categories/commands の reorder", () => {
+  beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ createSpaceCategory, updateSpaceCategoryOrder } =
+      await import("@/shared/domain/space-categories/commands"));
+  });
+
   afterAll(async () => {
     await prisma.$disconnect();
   });

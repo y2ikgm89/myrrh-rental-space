@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import { afterEach, describe, expect, test } from "bun:test";
 
 import { setNodeEnv } from "../../../helpers/env";
+import { UNSAFE_E2E_ONLY_ENV_KEYS } from "../../../../src/shared/lib/env/unsafe-e2e-only-env-keys";
 
 const originalEnv = { ...process.env };
 let importCounter = 0;
@@ -28,6 +29,15 @@ function setProductionEnv(
 ): void {
   Reflect.deleteProperty(process.env, "SKIP_ENV_VALIDATION");
   setNodeEnv("production");
+
+  // Purge ambient E2E-only vars (e.g. from a developer's local .env, which
+  // `restoreEnv()` legitimately restores after each test since it predates
+  // this helper) so this baseline is deterministic regardless of the host's
+  // environment. Individual tests that want them can still set them via
+  // `overrides` below, which is applied after this deletion.
+  for (const key of UNSAFE_E2E_ONLY_ENV_KEYS) {
+    Reflect.deleteProperty(process.env, key);
+  }
 
   Object.assign(process.env, {
     APP_SURFACE: "public",

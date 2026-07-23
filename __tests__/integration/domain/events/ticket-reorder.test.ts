@@ -11,20 +11,65 @@
  * （00000000000000_init migration の DEFERRABLE INITIALLY DEFERRED constraint trigger）
  * により commit 時に「ちょうど1件の EventTimeSlot」を要求されるため、
  * Event 作成は EventTimeSlot と同一 tx で行う。
+ *
+ * == 実行条件 ==
+ * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が
+ * docker-compose の test-db 既定値を注入する。
  */
 
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 
-process.env["DATABASE_URL"] =
-  process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+if (TEST_DB_URL) {
+  process.env["DATABASE_URL"] = TEST_DB_URL;
+}
 
-const { prisma } = await import("@/shared/db/prisma");
-const { updateEventCommand } = await import("@/shared/domain/events/commands");
-const { EventStatus, EventScheduleMode } =
-  await import("@/shared/lib/validations/enums/prisma-types");
+const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
-describe("events/commands のチケット reorder", () => {
+type PrismaModule = typeof import("@/shared/db/prisma");
+type CommandsModule = typeof import("@/shared/domain/events/commands");
+type PrismaTypesModule =
+  typeof import("@/shared/lib/validations/enums/prisma-types");
+
+let prisma: PrismaModule["prisma"];
+let updateEventCommand: CommandsModule["updateEventCommand"];
+let EventStatus: PrismaTypesModule["EventStatus"];
+let EventScheduleMode: PrismaTypesModule["EventScheduleMode"];
+let testCategoryId: string;
+
+describeMaybe("events/commands のチケット reorder", () => {
+  beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ updateEventCommand } = await import("@/shared/domain/events/commands"));
+    ({ EventStatus, EventScheduleMode } =
+      await import("@/shared/lib/validations/enums/prisma-types"));
+
+    // Event.categoryId は必須 FK (EventCategory 追加, #1434)。export-queries-
+    // cross-event.test.ts と同じパターンで専用カテゴリーを用意する。sortOrder は
+    // テーブル全体でユニーク制約があるため、並行実行する他の integration test
+    // ファイルの EventCategory 行と衝突しない乱数域を使う。
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Ticket Reorder Test Category ${crypto.randomUUID()}`,
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
+  });
+
   afterAll(async () => {
+    // EventCategory は onDelete: Restrict のため、紐づく Event (最後の test 実行分、
+    // beforeEach では次回実行前にしか削除されない) を先に削除してから category を消す。
+    await prisma.event.deleteMany({});
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await prisma.$disconnect();
   });
 
@@ -48,6 +93,7 @@ describe("events/commands のチケット reorder", () => {
           descriptionJson: {},
           descriptionHtml: "",
           descriptionPlainText: "",
+          categoryId: testCategoryId,
           status: "DRAFT",
           scheduleMode: "SINGLE_OCCURRENCE",
         },
@@ -73,6 +119,7 @@ describe("events/commands のチケット reorder", () => {
       descriptionHtml: "",
       descriptionPlainText: "",
       gallery: [],
+      categoryId: testCategoryId,
       status: EventStatus.DRAFT,
       scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
       slots: [{ startAt: start, endAt: end, capacity: 10 }],

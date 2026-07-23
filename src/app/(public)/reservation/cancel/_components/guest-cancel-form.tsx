@@ -60,6 +60,7 @@ export function GuestCancelForm({
       if (isMutationError(result)) {
         setError(result.error);
         turnstileRef.current?.reset();
+        setTurnstileToken("");
         return;
       }
       setDone(true);
