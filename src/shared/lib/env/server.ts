@@ -25,6 +25,7 @@ import type { StandardSchemaV1 } from "@t3-oss/env-core";
 import { z } from "zod";
 
 import { parseSecondaryEncryptionKeys } from "./parse-secondary-encryption-keys";
+import { UNSAFE_E2E_ONLY_ENV_KEYS } from "./unsafe-e2e-only-env-keys";
 
 const isBase64EncodedAesKey = (value: string): boolean => {
   if (
@@ -452,16 +453,17 @@ export function validateProductionEnv(): void {
     isLocalhostUrl(process.env["NEXT_PUBLIC_BASE_URL"]) &&
     isLocalhostUrl(process.env["NEXT_PUBLIC_APP_URL"]) &&
     isLocalhostDatabaseUrl(process.env["DATABASE_URL"]);
-  const unsafeE2EOnlyEnv = [
-    {
-      name: "NEXT_PUBLIC_ENABLE_E2E_LOGIN",
-      value: process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"],
-    },
-    { name: "E2E_RUNTIME", value: serverEnv.E2E_RUNTIME },
-    { name: "ADMIN_TEST_IAP_EMAIL", value: serverEnv.ADMIN_TEST_IAP_EMAIL },
-  ]
-    .filter(({ value }) => value)
-    .map(({ name }) => name);
+  const unsafeE2EOnlyEnvValues: Record<
+    (typeof UNSAFE_E2E_ONLY_ENV_KEYS)[number],
+    string | undefined
+  > = {
+    NEXT_PUBLIC_ENABLE_E2E_LOGIN: process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"],
+    E2E_RUNTIME: serverEnv.E2E_RUNTIME,
+    ADMIN_TEST_IAP_EMAIL: serverEnv.ADMIN_TEST_IAP_EMAIL,
+  };
+  const unsafeE2EOnlyEnv = UNSAFE_E2E_ONLY_ENV_KEYS.filter(
+    (key) => unsafeE2EOnlyEnvValues[key],
+  );
 
   if (unsafeE2EOnlyEnv.length > 0 && !localE2ERuntimeAllowed) {
     throw new Error(
