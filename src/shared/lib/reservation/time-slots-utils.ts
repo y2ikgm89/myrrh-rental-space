@@ -204,6 +204,55 @@ export function deriveSlotIntervalMinutes(slots: readonly TimeSlot[]): number {
   return diff > 0 ? diff : SLOT_INTERVAL_MINUTES;
 }
 
+/** 時刻文字列（HH:MM）を 0 時からの分数に変換する。 */
+function toMinutes(time: string): number {
+  const { hour, minute } = parseTime(time);
+  return hour * 60 + minute;
+}
+
+/**
+ * 指定した date（YYYY-MM-DD）＋ startTime〜endTime（HH:MM）の窓が、営業時間内に
+ * 完全に収まるかを判定する純粋関数。`generateSlotsFromBusinessHours` と同じ
+ * 曜日・毎月定休判定（`getWeekdayKey`/`isMonthlyClosureDate`）を共有し、営業時間
+ * ルールの二重実装を避ける。スロット刻みに依存しないため、任意の分単位の
+ * startTime/endTime でも正しく判定できる（スロット列挙による整合チェックは
+ * 刻みに合わない入力を誤判定しうるため採用しない）。
+ *
+ * `businessHours` が未設定（null）の場合は `DEFAULT_BUSINESS_HOURS`（9-21時）
+ * にフォールバックする — `generateFallbackSlots` と同じ既定値。
+ */
+export function isWithinBusinessHours(
+  businessHours: BusinessHours | null,
+  date: string,
+  startTime: string,
+  endTime: string,
+): boolean {
+  const startMinutes = toMinutes(startTime);
+  const endMinutes = toMinutes(endTime);
+  if (startMinutes >= endMinutes) return false;
+
+  if (!businessHours) {
+    return (
+      startMinutes >= DEFAULT_BUSINESS_HOURS.start * 60 &&
+      endMinutes <= DEFAULT_BUSINESS_HOURS.end * 60
+    );
+  }
+
+  const targetDate = new Date(`${date}T00:00:00`);
+  if (isMonthlyClosureDate(targetDate, businessHours.monthlyClosures)) {
+    return false;
+  }
+
+  const daySettings = businessHours[getWeekdayKey(targetDate)];
+  if (!daySettings.isOpen) return false;
+
+  return daySettings.slots.some((slot) => {
+    const openMinutes = toMinutes(slot.openTime);
+    const closeMinutes = toMinutes(slot.closeTime);
+    return startMinutes >= openMinutes && endMinutes <= closeMinutes;
+  });
+}
+
 /**
  * 予約時間（分）が最小/最大予約時間の範囲内かを検証する純粋関数。
  * 範囲外ならエラーメッセージ、範囲内なら null を返す。

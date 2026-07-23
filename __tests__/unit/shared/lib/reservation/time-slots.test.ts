@@ -7,6 +7,7 @@ import {
   generateSlotsFromBusinessHours,
   deriveSlotIntervalMinutes,
   checkReservationDuration,
+  isWithinBusinessHours,
 } from "@/shared/lib/reservation/time-slots-utils";
 
 // =============================================================================
@@ -456,6 +457,170 @@ describe("deriveSlotIntervalMinutes", () => {
 // =============================================================================
 // checkReservationDuration
 // =============================================================================
+
+// =============================================================================
+// isWithinBusinessHours
+// =============================================================================
+
+describe("isWithinBusinessHours", () => {
+  describe("businessHours が null の場合（DEFAULT_BUSINESS_HOURS 9-21 にフォールバック）", () => {
+    test("9-21 の範囲内なら true", () => {
+      expect(isWithinBusinessHours(null, MONDAY_DATE, "10:00", "12:00")).toBe(
+        true,
+      );
+    });
+
+    test("21 時をまたぐと false", () => {
+      expect(isWithinBusinessHours(null, MONDAY_DATE, "20:00", "22:00")).toBe(
+        false,
+      );
+    });
+
+    test("9 時より前から始まると false", () => {
+      expect(isWithinBusinessHours(null, MONDAY_DATE, "08:00", "10:00")).toBe(
+        false,
+      );
+    });
+  });
+
+  describe("休業日の場合", () => {
+    test("isOpen: false の曜日は false", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_MONDAY_CLOSED,
+          MONDAY_DATE,
+          "10:00",
+          "12:00",
+        ),
+      ).toBe(false);
+    });
+
+    test("営業日なら true", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_MONDAY_CLOSED,
+          SUNDAY_DATE,
+          "10:00",
+          "12:00",
+        ),
+      ).toBe(true);
+    });
+  });
+
+  describe("単一時間帯（9:00-17:00）の場合", () => {
+    test("完全に収まる窓は true", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_SINGLE_SLOT,
+          MONDAY_DATE,
+          "14:00",
+          "16:00",
+        ),
+      ).toBe(true);
+    });
+
+    test("開始・終了ちょうど営業時間と一致する窓は true（境界値）", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_SINGLE_SLOT,
+          MONDAY_DATE,
+          "09:00",
+          "17:00",
+        ),
+      ).toBe(true);
+    });
+
+    test("営業終了時刻を1分でも超えると false", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_SINGLE_SLOT,
+          MONDAY_DATE,
+          "16:00",
+          "17:01",
+        ),
+      ).toBe(false);
+    });
+
+    test("営業開始時刻より前から始まると false", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_SINGLE_SLOT,
+          MONDAY_DATE,
+          "08:59",
+          "10:00",
+        ),
+      ).toBe(false);
+    });
+  });
+
+  describe("複数時間帯（9:00-12:00, 13:00-17:00、昼休みあり）の場合", () => {
+    test("片方の時間帯に完全に収まれば true", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_MULTIPLE_SLOTS,
+          MONDAY_DATE,
+          "13:00",
+          "15:00",
+        ),
+      ).toBe(true);
+    });
+
+    test("昼休みをまたぐ窓（11:00-14:00）は、単一の連続した営業時間帯に収まらないため false", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_MULTIPLE_SLOTS,
+          MONDAY_DATE,
+          "11:00",
+          "14:00",
+        ),
+      ).toBe(false);
+    });
+  });
+
+  describe("毎月の繰り返し定休（monthlyClosures）の場合", () => {
+    test("該当する第N曜日は false", () => {
+      // 2024-01-15 は月曜日で、2024年1月の第3週（15日は第3月曜）
+      const businessHours: BusinessHours = {
+        ...BUSINESS_HOURS_SINGLE_SLOT,
+        monthlyClosures: [{ weekday: "monday", week: "third" }],
+      };
+      expect(
+        isWithinBusinessHours(businessHours, MONDAY_DATE, "10:00", "12:00"),
+      ).toBe(false);
+    });
+
+    test("該当しない第N曜日は true", () => {
+      const businessHours: BusinessHours = {
+        ...BUSINESS_HOURS_SINGLE_SLOT,
+        monthlyClosures: [{ weekday: "monday", week: "first" }],
+      };
+      expect(
+        isWithinBusinessHours(businessHours, MONDAY_DATE, "10:00", "12:00"),
+      ).toBe(true);
+    });
+  });
+
+  describe("不正な入力", () => {
+    test("開始が終了以降なら false", () => {
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_SINGLE_SLOT,
+          MONDAY_DATE,
+          "12:00",
+          "12:00",
+        ),
+      ).toBe(false);
+      expect(
+        isWithinBusinessHours(
+          BUSINESS_HOURS_SINGLE_SLOT,
+          MONDAY_DATE,
+          "13:00",
+          "12:00",
+        ),
+      ).toBe(false);
+    });
+  });
+});
 
 describe("checkReservationDuration", () => {
   const RULES = { minReservationDuration: 60, maxReservationDuration: 480 };
