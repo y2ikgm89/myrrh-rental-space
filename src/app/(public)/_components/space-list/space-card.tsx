@@ -85,6 +85,10 @@ export async function SpaceCard({
       : null;
 
   if (layout === "horizontal") {
+    const metaGroupId = `space-card-meta-${slug}`;
+    const infoRowId = `space-card-info-${slug}`;
+    const priceId = `space-card-price-${slug}`;
+
     return (
       <Link
         href={`/spaces/${slug}`}
@@ -107,7 +111,7 @@ export async function SpaceCard({
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div id={metaGroupId} className="flex flex-wrap items-center gap-2">
               {categoryName ? (
                 <p className="text-xs uppercase tracking-eyebrow text-accent">
                   {categoryName}
@@ -117,7 +121,10 @@ export async function SpaceCard({
                 <Badge variant="warning">指定の日時は空きがありません</Badge>
               ) : null}
             </div>
-            <h3 className="mt-1 font-heading text-lg font-light tracking-tight md:text-xl">
+            <h3
+              aria-describedby={`${metaGroupId} ${infoRowId} ${priceId}`}
+              className="mt-1 font-heading text-lg font-light tracking-tight md:text-xl"
+            >
               {name}
             </h3>
             {description ? (
@@ -130,7 +137,10 @@ export async function SpaceCard({
                 aria-hidden="true"
               />
             )}
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground md:mt-3">
+            <div
+              id={infoRowId}
+              className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground md:mt-3"
+            >
               {locationName ? (
                 <span className="flex items-center gap-1">
                   <IconMapPin
@@ -161,11 +171,14 @@ export async function SpaceCard({
           </div>
           <div className="mt-3 flex items-end justify-between gap-3 md:mt-4">
             {hourlyPriceLabel ? (
-              <p className="font-heading text-base text-accent md:text-lg">
+              <p
+                id={priceId}
+                className="font-heading text-base text-accent md:text-lg"
+              >
                 {hourlyPriceLabel}
               </p>
             ) : (
-              <span />
+              <span id={priceId} />
             )}
             <span className="flex items-center gap-1 text-xs uppercase tracking-eyebrow text-muted-foreground transition-colors group-hover:text-foreground">
               詳細
@@ -179,6 +192,21 @@ export async function SpaceCard({
       </Link>
     );
   }
+
+  const categoryId = `space-card-category-${slug}`;
+  const locationId = `space-card-location-${slug}`;
+  const ratingId = `space-card-rating-${slug}`;
+  const summaryId = `space-card-summary-${slug}`;
+  const describedBy = [
+    categoryName ? categoryId : null,
+    locationName ? locationId : null,
+    reviewCount != null && reviewCount > 0 && averageRating != null
+      ? ratingId
+      : null,
+    summaryId,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <Link
@@ -211,15 +239,24 @@ export async function SpaceCard({
       {/* Content */}
       <div className="p-4 sm:p-5">
         {categoryName ? (
-          <p className="text-xs uppercase tracking-eyebrow text-accent">
+          <p
+            id={categoryId}
+            className="text-xs uppercase tracking-eyebrow text-accent"
+          >
             {categoryName}
           </p>
         ) : null}
-        <h3 className="mt-1 font-heading text-[1.25rem] font-light tracking-tight">
+        <h3
+          aria-describedby={describedBy}
+          className="mt-1 font-heading text-[1.25rem] font-light tracking-tight"
+        >
           {name}
         </h3>
         {locationName ? (
-          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <p
+            id={locationId}
+            className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground"
+          >
             <IconMapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>{locationName}</span>
           </p>
@@ -230,7 +267,7 @@ export async function SpaceCard({
           </p>
         ) : null}
         {reviewCount != null && reviewCount > 0 && averageRating != null ? (
-          <div className="mt-2 flex items-center gap-1 text-sm">
+          <div id={ratingId} className="mt-2 flex items-center gap-1 text-sm">
             <IconStar
               className="h-3.5 w-3.5 text-rating"
               fill="currentColor"
@@ -242,7 +279,7 @@ export async function SpaceCard({
             <span className="text-muted-foreground">({reviewCount}件)</span>
           </div>
         ) : null}
-        <p className="mt-2 text-[0.75rem] text-muted-foreground">
+        <p id={summaryId} className="mt-2 text-[0.75rem] text-muted-foreground">
           {area != null ? `${area}m² · ` : ""}
           {capacity != null ? `Max ${capacity}` : ""}
           {hourlyPriceLabel ? (
