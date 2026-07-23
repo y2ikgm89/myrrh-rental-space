@@ -14,18 +14,41 @@
  * updateLocationOrder は「isActive:true な Location が過不足なく揃っていること」を
  * 検証するため、本テスト専用の2件だけを削除しつつ、呼び出し時は既存の
  * アクティブ Location 全件（現在の sortOrder のまま）+ 本テストの2件を渡す。
+ *
+ * == 実行条件 ==
+ * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が
+ * docker-compose の test-db 既定値を注入する。
  */
 
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 
-process.env["DATABASE_URL"] =
-  process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+if (TEST_DB_URL) {
+  process.env["DATABASE_URL"] = TEST_DB_URL;
+}
 
-const { prisma } = await import("@/shared/db/prisma");
-const { updateLocationOrder } =
-  await import("@/shared/domain/locations/commands");
+const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
-describe("locations/commands の reorder", () => {
+type PrismaModule = typeof import("@/shared/db/prisma");
+type CommandsModule = typeof import("@/shared/domain/locations/commands");
+
+let prisma: PrismaModule["prisma"];
+let updateLocationOrder: CommandsModule["updateLocationOrder"];
+
+describeMaybe("locations/commands の reorder", () => {
+  beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ updateLocationOrder } =
+      await import("@/shared/domain/locations/commands"));
+  });
+
   afterAll(async () => {
     await prisma.$disconnect();
   });

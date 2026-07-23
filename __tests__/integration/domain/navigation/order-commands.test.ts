@@ -4,19 +4,42 @@
  * order-sql.ts の CASE 式 THEN 値に ::int4 キャストが無いと、Postgres が式全体を
  * text と推論し `order`（integer 列）への代入で 42804 を投げる
  * （event-categories/commands.test.ts の updateEventCategoryOrder と同じ回帰対象）。
+ *
+ * == 実行条件 ==
+ * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が
+ * docker-compose の test-db 既定値を注入する。
  */
 
-import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 import { NavigationType } from "@generated/prisma/enums";
 
-process.env["DATABASE_URL"] =
-  process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+if (TEST_DB_URL) {
+  process.env["DATABASE_URL"] = TEST_DB_URL;
+}
 
-const { prisma } = await import("@/shared/db/prisma");
-const { updateNavigationOrder } =
-  await import("@/shared/domain/navigation/commands");
+const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
-describe("navigation/commands の reorder", () => {
+type PrismaModule = typeof import("@/shared/db/prisma");
+type CommandsModule = typeof import("@/shared/domain/navigation/commands");
+
+let prisma: PrismaModule["prisma"];
+let updateNavigationOrder: CommandsModule["updateNavigationOrder"];
+
+describeMaybe("navigation/commands の reorder", () => {
+  beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ updateNavigationOrder } =
+      await import("@/shared/domain/navigation/commands"));
+  });
+
   afterAll(async () => {
     await prisma.$disconnect();
   });
@@ -54,7 +77,11 @@ describe("navigation/commands の reorder", () => {
       { id: b.id, order: 0 },
     ]);
 
+    // 永続 test-db に HEADER_MOBILE/FOOTER の行が残っている場合があるため、
+    // 検証は本テストが並び替えた HEADER_DESKTOP のみに絞る
+    // （updateNavigationOrder / beforeEach と同じスコープ）。
     const rows = await prisma.navigationItem.findMany({
+      where: { type: NavigationType.HEADER_DESKTOP },
       orderBy: { order: "asc" },
     });
     expect(rows.map((r) => r.id)).toEqual([b.id, a.id]);

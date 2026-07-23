@@ -11,6 +11,10 @@
  * （00000000000000_init migration の DEFERRABLE INITIALLY DEFERRED constraint trigger）
  * により commit 時に「ちょうど1件の EventTimeSlot」を要求されるため、
  * Event 作成は EventTimeSlot と同一 tx で行う。
+ *
+ * == 実行条件 ==
+ * `TEST_DATABASE_URL` 設定時のみ実行。`bun run test:integration` が
+ * docker-compose の test-db 既定値を注入する。
  */
 
 import {
@@ -22,18 +26,31 @@ import {
   test,
 } from "bun:test";
 
-process.env["DATABASE_URL"] =
-  process.env["TEST_DATABASE_URL"] ?? process.env["DATABASE_URL"];
+const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
+if (TEST_DB_URL) {
+  process.env["DATABASE_URL"] = TEST_DB_URL;
+}
 
-const { prisma } = await import("@/shared/db/prisma");
-const { updateEventCommand } = await import("@/shared/domain/events/commands");
-const { EventStatus, EventScheduleMode } =
-  await import("@/shared/lib/validations/enums/prisma-types");
+const describeMaybe = TEST_DB_URL ? describe : describe.skip;
 
+type PrismaModule = typeof import("@/shared/db/prisma");
+type CommandsModule = typeof import("@/shared/domain/events/commands");
+type PrismaTypesModule =
+  typeof import("@/shared/lib/validations/enums/prisma-types");
+
+let prisma: PrismaModule["prisma"];
+let updateEventCommand: CommandsModule["updateEventCommand"];
+let EventStatus: PrismaTypesModule["EventStatus"];
+let EventScheduleMode: PrismaTypesModule["EventScheduleMode"];
 let testCategoryId: string;
 
-describe("events/commands のチケット reorder", () => {
+describeMaybe("events/commands のチケット reorder", () => {
   beforeAll(async () => {
+    ({ prisma } = await import("@/shared/db/prisma"));
+    ({ updateEventCommand } = await import("@/shared/domain/events/commands"));
+    ({ EventStatus, EventScheduleMode } =
+      await import("@/shared/lib/validations/enums/prisma-types"));
+
     // Event.categoryId は必須 FK (EventCategory 追加, #1434)。export-queries-
     // cross-event.test.ts と同じパターンで専用カテゴリーを用意する。sortOrder は
     // テーブル全体でユニーク制約があるため、並行実行する他の integration test
