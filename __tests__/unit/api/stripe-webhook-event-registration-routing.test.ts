@@ -94,6 +94,26 @@ const mockClaimEventRegistrationAsFailed =
   mock<(id: string, sessionId: string) => Promise<boolean>>();
 const mockSaveEventRegistrationPaymentIntentId =
   mock<(id: string, paymentIntentId: string) => Promise<void>>();
+const mockRefundExpiredWaitlistOfferPaymentCommand = mock<
+  (input: {
+    registrationId: string;
+    stripePaymentIntentId: string;
+    reason?: string;
+  }) => Promise<{
+    outcome: "refunded" | "already_refunded" | "not_applicable";
+    refundId?: string;
+    refundAmount?: number;
+  }>
+>(() =>
+  Promise.resolve({
+    outcome: "refunded",
+    refundId: "re_mock",
+    refundAmount: 1000,
+  }),
+);
+const mockFindExpiredPendingWaitlistOfferRegistration = mock<
+  (id: string) => Promise<{ id: string } | null>
+>(() => Promise.resolve(null));
 const mockGetWaitlistConfirmationEmailDetails = mock<
   (id: string) => Promise<{
     id: string;
@@ -233,6 +253,13 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
   // no-op stub で十分。import 解決のみを満たす)
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
+  findExpiredPendingWaitlistOfferRegistration: (id: string) =>
+    mockFindExpiredPendingWaitlistOfferRegistration(id),
+  refundExpiredWaitlistOfferPaymentCommand: (input: {
+    registrationId: string;
+    stripePaymentIntentId: string;
+    reason?: string;
+  }) => mockRefundExpiredWaitlistOfferPaymentCommand(input),
 }));
 
 mock.module("@/shared/domain/events/waitlist-queries", () => ({
@@ -453,6 +480,8 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockClaimEventRegistrationAsPaid.mockReset();
     mockClaimEventRegistrationAsFailed.mockReset();
     mockSaveEventRegistrationPaymentIntentId.mockReset();
+    mockRefundExpiredWaitlistOfferPaymentCommand.mockReset();
+    mockFindExpiredPendingWaitlistOfferRegistration.mockReset();
     mockGetWaitlistConfirmationEmailDetails.mockReset();
     mockSendEventRegistrationConfirmation.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
@@ -504,6 +533,12 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockClaimEventRegistrationAsPaid.mockResolvedValue(true);
     mockClaimEventRegistrationAsFailed.mockResolvedValue(true);
     mockSaveEventRegistrationPaymentIntentId.mockResolvedValue(undefined);
+    mockRefundExpiredWaitlistOfferPaymentCommand.mockResolvedValue({
+      outcome: "refunded",
+      refundId: "re_mock",
+      refundAmount: 1000,
+    });
+    mockFindExpiredPendingWaitlistOfferRegistration.mockResolvedValue(null);
     mockGetWaitlistConfirmationEmailDetails.mockResolvedValue(
       DEFAULT_WAITLIST_DETAILS,
     );
@@ -658,9 +693,14 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       );
     });
 
-    test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → claimEventRegistrationAsPaid は呼ばれず CRITICAL ログのみ", async () => {
+    test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → 自動返金 + claim は呼ばない", async () => {
       mockConfirmWaitlistOfferCommand.mockResolvedValueOnce({
         registration: { id: "reg-race", status: "EXPIRED" },
+      });
+      mockRefundExpiredWaitlistOfferPaymentCommand.mockResolvedValueOnce({
+        outcome: "refunded",
+        refundId: "re_race",
+        refundAmount: 3000,
       });
 
       const event = makeSessionCompletedEvent({
@@ -674,13 +714,13 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expect(response.status).toBe(200);
 
       expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
-      expect(
-        mockInvalidateSiteWideCacheFromRouteHandler,
-      ).not.toHaveBeenCalled();
-      expect(mockLogError).toHaveBeenCalledWith(
-        expect.any(Error),
-        expect.objectContaining({ severity: "CRITICAL" }),
+      expect(mockRefundExpiredWaitlistOfferPaymentCommand).toHaveBeenCalledWith(
+        {
+          registrationId: "reg-race",
+          stripePaymentIntentId: "pi-123",
+        },
       );
+      expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalled();
       // 会計上の虚偽表示になるため FAILED にもしない
       expect(mockClaimEventRegistrationAsFailed).not.toHaveBeenCalled();
     });
@@ -986,9 +1026,14 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       );
     });
 
-    test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → claimEventRegistrationAsPaid は呼ばれず CRITICAL ログのみ", async () => {
+    test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → 自動返金 + claim は呼ばない", async () => {
       mockConfirmWaitlistOfferCommand.mockResolvedValueOnce({
         registration: { id: "reg-race-async", status: "EXPIRED" },
+      });
+      mockRefundExpiredWaitlistOfferPaymentCommand.mockResolvedValueOnce({
+        outcome: "refunded",
+        refundId: "re_race_async",
+        refundAmount: 3000,
       });
 
       const event = makeAsyncPaymentSucceededEvent({
@@ -1002,13 +1047,13 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expect(response.status).toBe(200);
 
       expect(mockClaimEventRegistrationAsPaid).not.toHaveBeenCalled();
-      expect(
-        mockInvalidateSiteWideCacheFromRouteHandler,
-      ).not.toHaveBeenCalled();
-      expect(mockLogError).toHaveBeenCalledWith(
-        expect.any(Error),
-        expect.objectContaining({ severity: "CRITICAL" }),
+      expect(mockRefundExpiredWaitlistOfferPaymentCommand).toHaveBeenCalledWith(
+        {
+          registrationId: "reg-race-async",
+          stripePaymentIntentId: expect.any(String),
+        },
       );
+      expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalled();
       expect(mockClaimEventRegistrationAsFailed).not.toHaveBeenCalled();
     });
 

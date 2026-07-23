@@ -188,6 +188,7 @@ const CANCEL_REGISTRATION_SELECT = {
   email: true,
   quantity: true,
   status: true,
+  paymentStatus: true,
   event: { select: { title: true, slug: true } },
 } as const;
 

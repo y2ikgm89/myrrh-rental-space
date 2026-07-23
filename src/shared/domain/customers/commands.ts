@@ -365,6 +365,37 @@ export async function requestCustomerEmailChangeCommand(
 }
 
 /**
+ * 確認ページ (GET) 用: token を read-only で検証する。Customer.email は更新しない。
+ *
+ * consume 前の link scanner 対策 (HTTP-02) で、メールリンク着地時に
+ * token の存在・期限・未消費のみを確認する。email 衝突チェックは POST consume 時。
+ */
+export async function validateCustomerEmailChangeTokenCommand(
+  rawToken: string,
+): Promise<void> {
+  const tokenHash = hashEmailChangeToken(rawToken);
+  const pending = await prisma.pendingCustomerEmailChange.findUnique({
+    where: { tokenHash },
+    select: {
+      expiresAt: true,
+      consumedAt: true,
+    },
+  });
+
+  if (!pending) {
+    throw new DomainError(VERIFICATION_INVALID_MESSAGE, "VALIDATION");
+  }
+
+  if (pending.consumedAt !== null) {
+    throw new DomainError(VERIFICATION_ALREADY_APPLIED_MESSAGE, "VALIDATION");
+  }
+
+  if (pending.expiresAt.getTime() <= Date.now()) {
+    throw new DomainError(VERIFICATION_INVALID_MESSAGE, "VALIDATION");
+  }
+}
+
+/**
  * verification URL クリック時: token を突合して Customer.email に反映する。
  *
  * - token 不一致・期限切れ → VALIDATION (`VERIFICATION_INVALID_MESSAGE`)

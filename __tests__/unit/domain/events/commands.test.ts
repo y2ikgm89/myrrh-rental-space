@@ -81,6 +81,9 @@ const mockExecuteRaw = mock<
 const mockEventRegistrationCount = mock<() => Promise<number>>(() =>
   Promise.resolve(0),
 );
+const mockEventRegistrationAggregate = mock<
+  () => Promise<{ _sum: { quantity: number | null } }>
+>(() => Promise.resolve({ _sum: { quantity: 0 } }));
 
 // upsertEventFromCalendar が tx 外で呼ぶ prisma.eventTimeSlot.findFirst 用
 const mockEventTimeSlotFindFirst = mock<
@@ -132,6 +135,7 @@ type TxClient = {
   };
   eventRegistration: {
     count: typeof mockEventRegistrationCount;
+    aggregate: typeof mockEventRegistrationAggregate;
   };
   eventTimeSlot: {
     findMany: typeof mockEventTimeSlotFindMany;
@@ -151,7 +155,10 @@ const txStub: TxClient = {
     createMany: mockEventTicketCreateMany,
     deleteMany: mockEventTicketDeleteMany,
   },
-  eventRegistration: { count: mockEventRegistrationCount },
+  eventRegistration: {
+    count: mockEventRegistrationCount,
+    aggregate: mockEventRegistrationAggregate,
+  },
   eventTimeSlot: {
     findMany: mockEventTimeSlotFindMany,
     create: mockEventTimeSlotCreate,

@@ -45,7 +45,9 @@ function setProductionEnv(
     AUDIT_LOG_HMAC_KEY: "a".repeat(64),
     BETTER_AUTH_SECRET: "a".repeat(32),
     BETTER_AUTH_URL: "https://rental-space.example.com",
+    CLOUDFLARE_API_TOKEN: "t".repeat(40),
     CLOUDFLARE_ORIGIN_HEADER_SECRET: "c".repeat(32),
+    CLOUDFLARE_ZONE_ID: "a".repeat(32),
     CRON_OIDC_AUDIENCE: "https://rental-space.example.com",
     CRON_SERVICE_ACCOUNT_EMAIL:
       "myrrh-rental-space-scheduler@example.iam.gserviceaccount.com",
@@ -110,6 +112,14 @@ describe("server production env validation", () => {
     expect(() => validateProductionEnv()).not.toThrow();
   });
 
+  test("requires Cloudflare purge credentials in production", async () => {
+    setProductionEnv({ CLOUDFLARE_ZONE_ID: undefined });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).toThrow("CLOUDFLARE_ZONE_ID");
+  });
+
   test("requires Cloudflare origin header secret in production", async () => {
     setProductionEnv({ CLOUDFLARE_ORIGIN_HEADER_SECRET: undefined });
 
@@ -163,6 +173,24 @@ describe("server production env validation", () => {
     const { validateProductionEnv } = await importServerEnv();
 
     expect(() => validateProductionEnv()).toThrow("ADMIN_TEST_IAP_EMAIL");
+  });
+
+  test("allows localhost E2E runtime without Cloudflare purge credentials", async () => {
+    setProductionEnv({
+      ADMIN_APP_URL: "http://localhost:3000",
+      ADMIN_TEST_IAP_EMAIL: "admin@example.com",
+      BETTER_AUTH_URL: "http://localhost:3000",
+      E2E_RUNTIME: "1",
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+      NEXT_PUBLIC_BASE_URL: "http://localhost:3000",
+      NEXT_PUBLIC_ENABLE_E2E_LOGIN: "1",
+      CLOUDFLARE_ZONE_ID: undefined,
+      CLOUDFLARE_API_TOKEN: undefined,
+    });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).not.toThrow();
   });
 
   test("allows E2E bypass flags only for localhost production-mode tests", async () => {

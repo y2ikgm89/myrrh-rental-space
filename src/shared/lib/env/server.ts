@@ -421,6 +421,8 @@ export function validateProductionEnv(): void {
       name: "CLOUDFLARE_ORIGIN_HEADER_SECRET",
       value: serverEnv.CLOUDFLARE_ORIGIN_HEADER_SECRET,
     },
+    { name: "CLOUDFLARE_ZONE_ID", value: serverEnv.CLOUDFLARE_ZONE_ID },
+    { name: "CLOUDFLARE_API_TOKEN", value: serverEnv.CLOUDFLARE_API_TOKEN },
     // NEXT_PUBLIC_* はビルド時に client JS へインライン化されるが、
     // Cloud Build substitution で未指定だと "" でビルドされ silent failure になる。
     // instrumentation.register() で起動時に fail-fast させる。
@@ -438,6 +440,17 @@ export function validateProductionEnv(): void {
 
   const missing = requiredInProd
     .filter(({ value }) => !value)
+    // E2E runtime (Playwright smoke / local next start) は CDN purge を使わない。
+    // cloudflare.ts と同契約で ZONE_ID / API_TOKEN 欠落を許容する。
+    .filter(({ name }) => {
+      if (
+        serverEnv.E2E_RUNTIME === "1" &&
+        (name === "CLOUDFLARE_ZONE_ID" || name === "CLOUDFLARE_API_TOKEN")
+      ) {
+        return false;
+      }
+      return true;
+    })
     .map(({ name }) => name);
 
   if (missing.length > 0) {

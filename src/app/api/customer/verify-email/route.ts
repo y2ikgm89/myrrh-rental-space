@@ -1,9 +1,12 @@
 /**
  * SETTINGS-02 followup: マイページ初回メールアドレス登録の本人確認 URL 着地点。
  *
- * `sendChangeEmailVerificationEmail` が発行する
- * `/api/customer/verify-email?token=<raw>` の GET リクエストを受け取り、
- * `consumeCustomerEmailChangeCommand` で Customer.email に反映する。
+ * HTTP-02 (link scanner 対策) の 2-step flow:
+ * - GET  `/api/customer/verify-email?token=<raw>` — 確認ページへ redirect のみ (token 消費なし)
+ * - POST `/api/customer/verify-email` — `consumeCustomerEmailChangeCommand` で Customer.email に反映
+ *
+ * 新規メールのリンクは `/mypage/settings/confirm-email?token=...` を正本とする。
+ * 旧メールの `/api/customer/verify-email?token=...` は GET redirect で後方互換を維持する。
  *
  * @module app/api/customer/verify-email
  */
@@ -23,31 +26,73 @@ import {
   logError,
 } from "@/shared/lib/errors/server";
 
+const CONFIRM_PATH = "/mypage/settings/confirm-email";
 const SUCCESS_PATH = "/mypage/settings/email-verified";
 const ERROR_PATH = "/mypage/settings/email-verified/error";
+
+function redirectToConfirmPage(request: Request, rawToken: string): Response {
+  const confirmUrl = new URL(CONFIRM_PATH, request.url);
+  confirmUrl.searchParams.set("token", rawToken);
+  return NextResponse.redirect(confirmUrl, 302);
+}
+
+function redirectToErrorPage(
+  request: Request,
+  reason?: "conflict" | "invalid",
+): Response {
+  const errorUrl = new URL(ERROR_PATH, request.url);
+  if (reason) {
+    errorUrl.searchParams.set("reason", reason);
+  }
+  return NextResponse.redirect(errorUrl, 302);
+}
 
 export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const rawToken = url.searchParams.get("token");
 
   const clientIp = getClientIp(request);
-  // token 総当たり牽制 (未認証 endpoint のため、事前チェックを先に敷く)。
   const limit = await emailVerificationConfirmRateLimiter.check(
     rawToken ?? clientIp,
   );
   if (!limit.success) {
-    return NextResponse.redirect(new URL(ERROR_PATH, request.url), 302);
+    return redirectToErrorPage(request);
   }
 
   if (!rawToken || rawToken.length === 0) {
-    return NextResponse.redirect(new URL(ERROR_PATH, request.url), 302);
+    return redirectToErrorPage(request);
+  }
+
+  return redirectToConfirmPage(request, rawToken);
+}
+
+export async function POST(request: Request): Promise<Response> {
+  const clientIp = getClientIp(request);
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return redirectToErrorPage(request);
+  }
+
+  const tokenValue = formData.get("token");
+  const rawToken = typeof tokenValue === "string" ? tokenValue : null;
+
+  const limit = await emailVerificationConfirmRateLimiter.check(
+    rawToken ?? clientIp,
+  );
+  if (!limit.success) {
+    return redirectToErrorPage(request);
+  }
+
+  if (!rawToken || rawToken.length === 0) {
+    return redirectToErrorPage(request);
   }
 
   try {
     const { customerId } = await consumeCustomerEmailChangeCommand(rawToken);
 
-    // マイページの customer 情報 (email) はキャッシュされているため、
-    // 表示側で古い値が出ないよう明示的に invalidate する。
     invalidateSiteWideCacheFromRouteHandler([
       CACHE_TAGS.CUSTOMERS,
       getCacheTag.customers.detail(customerId),
@@ -56,15 +101,8 @@ export async function GET(request: Request): Promise<Response> {
     return NextResponse.redirect(new URL(SUCCESS_PATH, request.url), 302);
   } catch (error) {
     if (error instanceof DomainError) {
-      // VALIDATION (invalid/expired/consumed) と CONFLICT (uniqueness) は
-      // どちらもエラーページへソフトランディング。UI 側で理由を表示する余地は
-      // 残すためクエリで区別する。
-      const errorUrl = new URL(ERROR_PATH, request.url);
-      errorUrl.searchParams.set(
-        "reason",
-        error.code === "CONFLICT" ? "conflict" : "invalid",
-      );
-      return NextResponse.redirect(errorUrl, 302);
+      const reason = error.code === "CONFLICT" ? "conflict" : "invalid";
+      return redirectToErrorPage(request, reason);
     }
 
     logError(error, {
@@ -72,6 +110,6 @@ export async function GET(request: Request): Promise<Response> {
       severity: ErrorSeverity.HIGH,
       context: { operation: "customerVerifyEmail" },
     });
-    return NextResponse.redirect(new URL(ERROR_PATH, request.url), 302);
+    return redirectToErrorPage(request);
   }
 }

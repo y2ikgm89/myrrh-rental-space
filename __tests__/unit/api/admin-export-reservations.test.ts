@@ -158,7 +158,7 @@ describe("GET /api/admin/export/reservations", () => {
     expect(mockGetReservationsForExport).toHaveBeenCalledWith({});
   });
 
-  test("checkPermission に reservation:read を渡す", async () => {
+  test("checkPermission に reservation:manage を渡す", async () => {
     mockCheckPermission.mockResolvedValue({
       success: true,
       user: { id: "user-1", role: "ADMIN" },
@@ -173,7 +173,7 @@ describe("GET /api/admin/export/reservations", () => {
 
     expect(mockCheckPermission).toHaveBeenCalledWith(
       "reservation",
-      "read",
+      "manage",
       expect.any(Headers),
     );
   });

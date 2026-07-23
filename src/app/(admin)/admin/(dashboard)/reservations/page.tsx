@@ -6,6 +6,7 @@ import {
   getReservations,
   getSpacesForReservation,
 } from "@/admin/queries/reservation";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
 import { ReservationTabs } from "./_components/ReservationTabs";
@@ -13,6 +14,7 @@ import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -64,6 +66,12 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
+  const user = await requireAdminDashboardAccess();
+  const canExportReservations = hasPermission(
+    user.role,
+    "reservation",
+    "manage",
+  );
   const params = await loadAdminReservationSearchParams(searchParams);
   const spaces = await getSpacesForReservation();
 
@@ -107,12 +115,14 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
               カレンダー表示
             </Link>
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href={exportHref} download>
-              <IconDownload className="mr-2 h-4 w-4" />
-              CSV
-            </a>
-          </Button>
+          {canExportReservations ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={exportHref} download>
+                <IconDownload className="mr-2 h-4 w-4" />
+                CSV
+              </a>
+            </Button>
+          ) : null}
         </div>
       </div>
 

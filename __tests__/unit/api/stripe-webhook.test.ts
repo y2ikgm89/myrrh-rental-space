@@ -220,6 +220,9 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
     currency: string;
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyEventChargeRefundIdempotent(input),
+  findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+  refundExpiredWaitlistOfferPaymentCommand: () =>
+    Promise.resolve({ outcome: "not_applicable" }),
 }));
 
 // 境界 mock: route.ts が使う唯一の cache-invalidation entry point を差し替える。

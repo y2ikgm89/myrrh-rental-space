@@ -2400,7 +2400,7 @@ model EventRegistration {
 /// - reservationId / eventRegistrationId は polymorphic (どちらか片方が非 null、CHECK 制約で強制)
 /// - amount は各 refund event の 個別 金額 (円、正整数)。累積は `Refund` 集計 SUM で算出
 /// - stripeRefundId は Stripe refund object の id (@unique で二重返金防止 + webhook idempotency)
-/// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "STRIPE_DASHBOARD" (AuditLog と併用)
+/// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
 /// - append-only (update / delete 想定なし、Refund オブジェクト 1 個 = 1 tx 完了)
 model Refund {
   id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -2414,7 +2414,7 @@ model Refund {
   reason              String?  @db.Text
   /// Stripe refund object の id (`re_...`)。@unique で二重返金防止 + webhook idempotency key。
   stripeRefundId      String   @unique
-  /// "ADMIN" | "AUTO_ON_CANCEL" | "STRIPE_DASHBOARD" (AuditLog と併用)
+  /// "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
   refundedByType      String   @db.VarChar(20)
   createdAt           DateTime @default(now()) @db.Timestamptz(6)
 

@@ -202,9 +202,9 @@ describe("reservations/payment-commands", () => {
     });
 
     // 新実装は findUnique を 2 回呼ぶ (初期 read + claim 後の authoritative re-read)。
-    // authoritative は totalPrice/guestEmail/space/customer の subset のみ select。
+    // authoritative は totalPriceWithTax/guestEmail/space/customer の subset のみ select。
     const authoritativeSameAsInitial = () => ({
-      totalPrice: 5000,
+      totalPriceWithTax: 5500,
       guestEmail: "booked-address@example.com",
       space: { name: "テストスペース" },
       customer: { email: "current-customer@example.com" },
@@ -323,12 +323,10 @@ describe("reservations/payment-commands", () => {
       expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
     });
 
-    test("Race 修正: claim 後 authoritative re-read で totalPrice が edit 済みなら新価格で Stripe 作成", async () => {
-      // 初期 read は totalPrice=5000
+    test("Race 修正: claim 後 authoritative re-read で totalPriceWithTax が edit 済みなら新価格で Stripe 作成", async () => {
       mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
-      // claim と authoritative re-read の間で edit が totalPrice を 8000 に変更 (race シナリオ)
       mockReservationFindUnique.mockResolvedValueOnce({
-        totalPrice: 8000,
+        totalPriceWithTax: 8800,
         guestEmail: "booked-address@example.com",
         space: { name: "テストスペース" },
         customer: { email: "current-customer@example.com" },
@@ -339,14 +337,12 @@ describe("reservations/payment-commands", () => {
         actorCustomerId: null,
       });
 
-      // Stripe には旧価格 5000 ではなく edit 後の 8000 が渡ることを assert
       expect(mockCheckoutSessionCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           line_items: [
             expect.objectContaining({
               price_data: expect.objectContaining({
-                // JPY は zero-decimal 通貨で 100 倍しない
-                unit_amount: 8000,
+                unit_amount: 8800,
               }),
             }),
           ],
@@ -475,11 +471,11 @@ describe("reservations/payment-commands", () => {
       expect(mockLogError).toHaveBeenCalled();
     });
 
-    test("Authoritative re-read で totalPrice が消えたら PENDING → UNPAID revert + VALIDATION", async () => {
+    test("Authoritative re-read で totalPriceWithTax が消えたら PENDING → UNPAID revert + VALIDATION", async () => {
       mockReservationFindUnique
         .mockResolvedValueOnce(unpaidReservation())
         .mockResolvedValueOnce({
-          totalPrice: null,
+          totalPriceWithTax: null,
           guestEmail: null,
           space: { name: "テストスペース" },
           customer: { email: "current-customer@example.com" },

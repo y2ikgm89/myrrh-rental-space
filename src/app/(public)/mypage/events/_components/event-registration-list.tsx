@@ -201,13 +201,12 @@ function EventRegistrationCard({
   // `confirmWaitlistOfferCommand` は `status: WAITLISTED_OFFERED` を要求するため
   // 対象を見つけられず confirm できない（money captured / 確認不能の orphan
   // payment）。P1-C（admin 手動 expire の同種ガード）と対になる修正。
-  const isPendingWaitlistOffer =
-    status === RegistrationStatus.WAITLISTED_OFFERED &&
+  const isPendingCheckout =
     registration.paymentStatus === PaymentStatus.PENDING;
   const canCancel =
     status !== null &&
     CANCELLABLE_REGISTRATION_STATUSES.some((s) => s === status) &&
-    !isPendingWaitlistOffer;
+    !isPendingCheckout;
 
   const handleConfirmCancel = () => {
     setError(null);
@@ -347,7 +346,7 @@ function EventRegistrationCard({
             <p className="mt-2 text-sm text-muted-foreground">
               確定用のリンクをメールでお送りしています。期限内にメール記載のリンクからお手続きください。
             </p>
-            {isPendingWaitlistOffer && (
+            {isPendingCheckout && (
               <p className="mt-2 text-sm text-muted-foreground" role="status">
                 決済処理中のため、この繰り上げ当選はキャンセルできません。決済を完了するか、Stripeで決済セッションをキャンセルしてから再度お試しください。
               </p>

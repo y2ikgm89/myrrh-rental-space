@@ -84,7 +84,7 @@ describe("GET /api/admin/export/event-registrations", () => {
     );
     expect(mockCheckPermission).toHaveBeenCalledWith(
       "event",
-      "read",
+      "manage",
       expect.any(Headers),
     );
     expect(mockGetEventRegistrationsForExport).toHaveBeenCalledWith(eventId);
@@ -156,5 +156,24 @@ describe("GET /api/admin/export/event-registrations", () => {
     );
     expect(mockGenerateCsv).not.toHaveBeenCalled();
     expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(0);
+  });
+
+  test("checkPermission に event:manage を渡す", async () => {
+    mockCheckPermission.mockResolvedValue({
+      success: true,
+      user: { id: "user-1", role: "ADMIN" },
+    });
+    mockGetEventRegistrationsForExport.mockResolvedValue([]);
+    mockGenerateCsv.mockReturnValue("\uFEFF氏名,メール\r\n");
+
+    await GET(
+      new Request("http://localhost/api/admin/export/event-registrations"),
+    );
+
+    expect(mockCheckPermission).toHaveBeenCalledWith(
+      "event",
+      "manage",
+      expect.any(Headers),
+    );
   });
 });

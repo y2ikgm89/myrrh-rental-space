@@ -193,12 +193,12 @@ export async function createCheckoutSessionCommand(input: {
   }
 
   // Claim 成功後の authoritative な reservation を再読み込みする。
-  // - totalPrice: claim 直前の edit を反映した最新値を Stripe に渡す
+  // - totalPriceWithTax: 領収書 (Receipt.amount) と同 SSoT の税込合計を Stripe に渡す
   // - customer/space/email: edit で顧客差替や guestEmail 変更があった場合も追随
   const authoritative = await prisma.reservation.findUnique({
     where: { id: reservationId, deletedAt: null },
     select: {
-      totalPrice: true,
+      totalPriceWithTax: true,
       guestEmail: true,
       space: { select: { name: true } },
       customer: { select: { email: true } },
@@ -207,8 +207,8 @@ export async function createCheckoutSessionCommand(input: {
 
   if (
     !authoritative ||
-    authoritative.totalPrice === null ||
-    authoritative.totalPrice <= 0
+    authoritative.totalPriceWithTax === null ||
+    authoritative.totalPriceWithTax <= 0
   ) {
     // 「claim 済みだが金額が消えた」異常状態。UNPAID に revert して stuck state を解消。
     await prisma.reservation.updateMany({
@@ -243,7 +243,10 @@ export async function createCheckoutSessionCommand(input: {
             product_data: {
               name: `予約: ${authoritative.space.name}`,
             },
-            unit_amount: toStripeUnitAmount(authoritative.totalPrice, currency),
+            unit_amount: toStripeUnitAmount(
+              authoritative.totalPriceWithTax,
+              currency,
+            ),
           },
           quantity: 1,
         },
@@ -437,11 +440,10 @@ export async function refundReservationPaymentCommand(
           customerId: true,
           paymentStatus: true,
           stripePaymentIntentId: true,
-          // Codex P1 (PR #1125, comment 3588489519): checkout は `totalPrice` (割引後・税抜、
-          // schema.prisma:606) を Stripe に送っているため、実 charge 額と refund 上限は
-          // `totalPrice` を base にする。`totalPriceWithTax` を base にすると税額分の差で
-          // Stripe が「refund amount > charge amount」で reject する回帰を招く。
-          totalPrice: true,
+          // Checkout は `totalPriceWithTax`（税込）を Stripe に送るため、実 charge
+          // 額と refund 上限・領収書 (Receipt.amount) は `totalPriceWithTax` を
+          // 単一 SSoT とする。
+          totalPriceWithTax: true,
         },
       });
 
@@ -467,7 +469,10 @@ export async function refundReservationPaymentCommand(
         );
       }
 
-      if (reservation.totalPrice === null || reservation.totalPrice <= 0) {
+      if (
+        reservation.totalPriceWithTax === null ||
+        reservation.totalPriceWithTax <= 0
+      ) {
         throw new DomainError(
           "料金が設定されていない予約は返金できません",
           "VALIDATION",
@@ -480,10 +485,10 @@ export async function refundReservationPaymentCommand(
         _sum: { amount: true },
       });
       const cumulativeSoFar = aggregate._sum.amount ?? 0;
-      const remaining = reservation.totalPrice - cumulativeSoFar;
+      const remaining = reservation.totalPriceWithTax - cumulativeSoFar;
 
       if (remaining <= 0) {
-        // paymentStatus が PARTIALLY_REFUNDED のまま累積が totalPrice (charge 額) に
+        // paymentStatus が PARTIALLY_REFUNDED のまま累積が charge 額に
         // 到達している異常状態 (paymentStatus 側の flip が失敗)。次回 admin refund で顕在化する。
         throw new DomainError("この予約は既に全額返金済みです", "VALIDATION");
       }
@@ -504,7 +509,8 @@ export async function refundReservationPaymentCommand(
       }
 
       const newCumulative = cumulativeSoFar + amount;
-      const willBeFullyRefunded = newCumulative === reservation.totalPrice;
+      const willBeFullyRefunded =
+        newCumulative === reservation.totalPriceWithTax;
 
       // Stripe refund (idempotent、tx 内で lock 保持しつつ実行)
       let refund;

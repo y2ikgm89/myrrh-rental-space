@@ -185,11 +185,14 @@ export async function applyBulkCancellation(
 ): Promise<BulkCancelResult> {
   if (ids.length === 0) return { cancelledIds: [] };
 
+  // 単体 applyCancellation と同型: Checkout 進行中 (PENDING) は一括からも除外する。
+  // 含めないと series キャンセル中に決済完了 → CANCELLED + 課金 orphan になる。
   const claimResult = await tx.reservation.updateMany({
     where: {
       id: { in: ids },
       deletedAt: null,
       status: { in: [...CANCELLABLE_STATUSES] },
+      paymentStatus: { not: PaymentStatus.PENDING },
     },
     data: {
       status: ReservationStatus.CANCELLED,

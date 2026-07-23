@@ -13,12 +13,16 @@ type TxStub = {
     create: ReturnType<typeof mock>;
     aggregate: ReturnType<typeof mock>;
   };
+  eventRegistration: {
+    aggregate: ReturnType<typeof mock>;
+  };
   event: { update: ReturnType<typeof mock> };
 };
 
 function buildTx(opts: {
   existingSlots?: { id: string; registrations: { id: string }[] }[];
   aggregate?: { min: Date | null; max: Date | null };
+  confirmedQuantityBySlotId?: Record<string, number>;
 }): TxStub {
   return {
     eventTimeSlot: {
@@ -30,6 +34,16 @@ function buildTx(opts: {
         _min: { startAt: opts.aggregate?.min ?? null },
         _max: { endAt: opts.aggregate?.max ?? null },
       })),
+    },
+    eventRegistration: {
+      aggregate: mock(async (args: { where?: { slotId?: string } }) => {
+        const slotId = args.where?.slotId;
+        const quantity =
+          slotId !== undefined
+            ? (opts.confirmedQuantityBySlotId?.[slotId] ?? 0)
+            : 0;
+        return { _sum: { quantity } };
+      }),
     },
     event: { update: mock(async () => ({ id: "event-1" })) },
   };
@@ -180,5 +194,23 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
       ]),
     ).rejects.toThrow(DomainError);
     expect(tx.eventTimeSlot.create).not.toHaveBeenCalled();
+  });
+
+  test("確定済み申込人数より定員を下げると DomainError 'VALIDATION'", async () => {
+    const startAt = new Date("2026-12-05T10:00:00Z");
+    const endAt = new Date("2026-12-05T12:00:00Z");
+    const tx = buildTx({
+      existingSlots: [{ id: "slot-1", registrations: [{ id: "reg-1" }] }],
+      confirmedQuantityBySlotId: { "slot-1": 5 },
+    });
+
+    await expect(
+      syncEventTimeSlotsCommand(tx, EVENT_ID, [
+        { id: "slot-1", startAt, endAt, capacity: 4 },
+      ]),
+    ).rejects.toThrow(DomainError);
+
+    expect(tx.eventTimeSlot.update).not.toHaveBeenCalled();
+    expect(tx.event.update).not.toHaveBeenCalled();
   });
 });

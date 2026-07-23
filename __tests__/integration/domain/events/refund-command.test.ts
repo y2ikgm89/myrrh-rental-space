@@ -86,7 +86,9 @@ type HelpersModule =
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let refundEventRegistrationPaymentCommand: PaymentCommandsModule["refundEventRegistrationPaymentCommand"];
+let refundExpiredWaitlistOfferPaymentCommand: PaymentCommandsModule["refundExpiredWaitlistOfferPaymentCommand"];
 let PaymentStatus: PrismaEnumsModule["PaymentStatus"];
+let RegistrationStatus: PrismaEnumsModule["RegistrationStatus"];
 let REFUNDED_BY_TYPE: HelpersModule["REFUNDED_BY_TYPE"];
 
 type SharedEventFixture = {
@@ -180,12 +182,49 @@ async function createPaidRegistration(paidAmount: number): Promise<{
   };
 }
 
-describeMaybe("refundEventRegistrationPaymentCommand (integration)", () => {
+async function createExpiredPendingRegistration(paidAmount: number): Promise<{
+  registrationId: string;
+  cleanup: () => Promise<void>;
+}> {
+  const suffix = crypto.randomUUID();
+  const registration = await prisma.eventRegistration.create({
+    data: {
+      eventId: sharedEvent.eventId,
+      slotId: sharedEvent.slotId,
+      ticketId: sharedEvent.ticketId,
+      name: "容量レース太郎",
+      email: `capacity-race-${suffix}@example.com`,
+      quantity: 1,
+      status: RegistrationStatus.EXPIRED,
+      paymentStatus: PaymentStatus.PENDING,
+      paidAmount,
+      stripeCheckoutSessionId: `cs_test_race_${suffix}`,
+    },
+    select: { id: true },
+  });
+
+  return {
+    registrationId: registration.id,
+    cleanup: async () => {
+      await prisma.refund.deleteMany({
+        where: { eventRegistrationId: registration.id },
+      });
+      await prisma.eventRegistration.deleteMany({
+        where: { id: registration.id },
+      });
+    },
+  };
+}
+
+describeMaybe("event registration refund commands (integration)", () => {
   beforeAll(async () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
-    ({ refundEventRegistrationPaymentCommand } =
-      await import("@/shared/domain/events/payment-commands"));
-    ({ PaymentStatus } = await import("@generated/prisma/enums"));
+    ({
+      refundEventRegistrationPaymentCommand,
+      refundExpiredWaitlistOfferPaymentCommand,
+    } = await import("@/shared/domain/events/payment-commands"));
+    ({ PaymentStatus, RegistrationStatus } =
+      await import("@generated/prisma/enums"));
     ({ REFUNDED_BY_TYPE } =
       await import("@/shared/lib/validations/enums/refund-attribution"));
 
@@ -297,6 +336,107 @@ describeMaybe("refundEventRegistrationPaymentCommand (integration)", () => {
       };
       expect(auditInput.metadata).not.toHaveProperty("ip");
       expect(auditInput.metadata).not.toHaveProperty("userAgent");
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
+  test("capacity-race: EXPIRED+PENDING → Stripe refund + REFUNDED + AUTO_CAPACITY_RACE", async () => {
+    const { registrationId, cleanup } =
+      await createExpiredPendingRegistration(5000);
+    const paymentIntentId = `pi_capacity_race_${crypto.randomUUID()}`;
+    try {
+      const result = await refundExpiredWaitlistOfferPaymentCommand({
+        registrationId,
+        stripePaymentIntentId: paymentIntentId,
+      });
+
+      expect(result.outcome).toBe("refunded");
+      expect(result.refundAmount).toBe(5000);
+
+      expect(mockRefundsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payment_intent: paymentIntentId,
+          amount: 5000,
+          metadata: expect.objectContaining({
+            initiator: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+          }),
+        }),
+        expect.objectContaining({
+          idempotencyKey: `event-registration-capacity-race-refund-${registrationId}`,
+        }),
+      );
+
+      const registration = await prisma.eventRegistration.findUniqueOrThrow({
+        where: { id: registrationId },
+        select: {
+          status: true,
+          paymentStatus: true,
+          stripePaymentIntentId: true,
+        },
+      });
+      expect(registration.status).toBe(RegistrationStatus.EXPIRED);
+      expect(registration.paymentStatus).toBe(PaymentStatus.REFUNDED);
+      expect(registration.stripePaymentIntentId).toBe(paymentIntentId);
+
+      const refund = await prisma.refund.findFirstOrThrow({
+        where: { eventRegistrationId: registrationId },
+      });
+      expect(refund.amount).toBe(5000);
+      expect(refund.refundedByType).toBe(REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE);
+
+      expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            actorType: REFUNDED_BY_TYPE.AUTO_CAPACITY_RACE,
+            operation: "refundExpiredWaitlistOfferPayment",
+          }),
+        }),
+      );
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
+  test("capacity-race: 既に REFUNDED なら already_refunded（Stripe 再呼出なし）", async () => {
+    const { registrationId, cleanup } =
+      await createExpiredPendingRegistration(3000);
+    try {
+      await prisma.eventRegistration.update({
+        where: { id: registrationId },
+        data: { paymentStatus: PaymentStatus.REFUNDED },
+      });
+
+      const result = await refundExpiredWaitlistOfferPaymentCommand({
+        registrationId,
+        stripePaymentIntentId: `pi_already_${crypto.randomUUID()}`,
+      });
+
+      expect(result.outcome).toBe("already_refunded");
+      expect(mockRefundsCreate).not.toHaveBeenCalled();
+    } finally {
+      await cleanup();
+    }
+  }, 30_000);
+
+  test("capacity-race: CONFIRMED+PENDING は not_applicable（EXPIRED 専用）", async () => {
+    const { registrationId, cleanup } = await createPaidRegistration(5000);
+    try {
+      await prisma.eventRegistration.update({
+        where: { id: registrationId },
+        data: {
+          status: RegistrationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.PENDING,
+        },
+      });
+
+      const result = await refundExpiredWaitlistOfferPaymentCommand({
+        registrationId,
+        stripePaymentIntentId: `pi_wrong_status_${crypto.randomUUID()}`,
+      });
+
+      expect(result.outcome).toBe("not_applicable");
+      expect(mockRefundsCreate).not.toHaveBeenCalled();
     } finally {
       await cleanup();
     }

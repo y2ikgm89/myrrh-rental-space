@@ -1,7 +1,7 @@
 /**
  * /mypage/settings/email-verified/error — メールアドレス本人確認 URL のエラー着地。
  *
- * `/api/customer/verify-email` が DomainError で失敗したとき (期限切れ / 使用済み /
+ * `/api/customer/verify-email` の POST が DomainError で失敗したとき (期限切れ / 使用済み /
  * 別顧客と競合) に 302 で遷移する。理由を searchParams で受け取り、UI で分岐する。
  */
 

@@ -10,28 +10,28 @@ import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
  * (https://docs.stripe.com/webhooks#handle-duplicate-events) の chokepoint 実装。
  *
  * - `"claimed"`: このプロセスが event を新規に受領した。呼出側は handler 続行。
- * - `"duplicate"`: 既に別配送で受領済み。呼出側は副作用ゼロで 200 短絡する。
+ * - `"already_processed"`: 別配送で既に handler 成功済み (`processedAt` あり)。
+ *   呼出側は副作用ゼロで 200 短絡する。
+ * - `"retry_unprocessed"`: 行はあるが `processedAt` が null（初回 crash / 途中 throw）。
+ *   呼出側は handler を再実行する。handler 側の updateMany claim
+ *   (`claimReservationAsPaid` 等) が二重副作用の backstop。
  *
- * `create` の P2002 unique conflict を duplicate 判定に使うことで、SELECT+INSERT
- * の TOCTOU race を回避する (真の atomic な chokepoint になる)。
+ * `create` の P2002 unique conflict を入口に使い、conflict 時だけ `processedAt`
+ * を読んで分岐する。SELECT+INSERT の TOCTOU で二重 insert するより安全で、かつ
+ * crash 後の Stripe retry を 200 短絡で止めない。
  *
- * ## crash-recovery
- * このテーブルは「受領済みマーカー」で、`processedAt` が null のまま残る row
- * (mid-flight or crash) の recovery は既存 handler 側の updateMany claim guard
- * (`claimReservationAsPaid` 等の paymentStatus/status WHERE) が backstop 責任を
- * 持つ。Stripe が retry すると本関数は `"duplicate"` を返すため、初回 crash 後の
- * 再配送は claim 経路に届かず stuck するかのように見えるが、実際には以下:
+ * ## crash-recovery（旧 `"duplicate"` 一律 200 短絡の欠陥）
+ * 旧実装は P2002 をすべて `"duplicate"` → 200 にしており、以下で stuck した:
  *
- *   1. 初回配送: claim 前に crash → StripeEvent 行だけ残る (processedAt null)
- *   2. Stripe retry: 本関数が duplicate 判定 → 200 短絡 (claim 実行されず)
- *   3. → paymentStatus が UNPAID/PENDING のまま stuck
+ *   1. 初回: claim 後に handler crash → StripeEvent 行だけ残る (processedAt null)
+ *   2. Stripe retry: duplicate → 200 → Stripe は成功扱いして再送停止
+ *   3. cleanup が stale 行を DELETE しても Stripe は自動再送しない
  *
- * この 3 が問題になるため、STRIPE-DEDUP-B (別 PR) で
- * `/api/cron/stripe-event-cleanup` に「processedAt=null かつ receivedAt < now - 1h
- * の event 行を削除する reconcile 経路」を追加し、再配送を allow する。
- * (retention 90 日削除と同じ cron に統合。同期問題は operational monitoring で拾う)
+ * 本実装は 2 を `"retry_unprocessed"` に変え、handler 再実行 + 成功時
+ * `markStripeEventProcessed` で完結させる。stale cleanup は孤児掃除用の補助。
  */
-export type StripeEventClaimResult = "claimed" | "duplicate";
+export type StripeEventClaimResult =
+  "claimed" | "already_processed" | "retry_unprocessed";
 
 export async function claimStripeEventForProcessing(input: {
   eventId: string;
@@ -44,7 +44,15 @@ export async function claimStripeEventForProcessing(input: {
     return "claimed";
   } catch (error) {
     if (isPrismaUniqueConstraintError(error, "id")) {
-      return "duplicate";
+      const existing = await prisma.stripeEvent.findUnique({
+        where: { id: input.eventId },
+        select: { processedAt: true },
+      });
+      if (existing?.processedAt != null) {
+        return "already_processed";
+      }
+      // 行欠落（cleanup 直後の極稀な race）や processedAt null → 再処理を許可
+      return "retry_unprocessed";
     }
     throw error;
   }

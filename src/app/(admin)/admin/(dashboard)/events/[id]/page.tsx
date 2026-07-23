@@ -12,6 +12,7 @@ import {
   getEventRegistrations,
   getWaitlistQueueCount,
 } from "@/admin/queries/event";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import { deleteEvent } from "@/admin/actions/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
@@ -23,6 +24,7 @@ import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { getEventScheduleModeLabel } from "@/shared/domain/events/schedule-mode";
 import { loadAdminEventRegistrationsSearchParams } from "@/shared/lib/nuqs";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import { RegisterParticipantButton } from "./_components/RegisterParticipantButton";
 import type { Metadata } from "next";
@@ -57,6 +59,13 @@ export default async function EventDetailPage({
   searchParams,
 }: PageProps) {
   await connection();
+
+  const user = await requireAdminDashboardAccess();
+  const canExportEventRegistrations = hasPermission(
+    user.role,
+    "event",
+    "manage",
+  );
 
   const { id } = await params;
   const { page, perPage, search, status } =
@@ -140,24 +149,28 @@ export default async function EventDetailPage({
             redirectTo="/admin/events"
             successMessage="イベントを削除しました"
           />
-          <Button asChild size="sm" variant="outline">
-            <a
-              href={`/api/admin/export/event-registrations?eventId=${event.id}`}
-              download
-            >
-              <IconDownload className="mr-2 h-4 w-4" />
-              CSV
-            </a>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <a
-              href={`/api/admin/export/event-registrations?eventId=${event.id}&format=xlsx`}
-              download
-            >
-              <IconDownload className="mr-2 h-4 w-4" />
-              Excel
-            </a>
-          </Button>
+          {canExportEventRegistrations ? (
+            <>
+              <Button asChild size="sm" variant="outline">
+                <a
+                  href={`/api/admin/export/event-registrations?eventId=${event.id}`}
+                  download
+                >
+                  <IconDownload className="mr-2 h-4 w-4" />
+                  CSV
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <a
+                  href={`/api/admin/export/event-registrations?eventId=${event.id}&format=xlsx`}
+                  download
+                >
+                  <IconDownload className="mr-2 h-4 w-4" />
+                  Excel
+                </a>
+              </Button>
+            </>
+          ) : null}
           <Button asChild size="sm" variant="outline">
             <Link href={`/admin/events/${event.id}/check-in`}>
               <IconClipboardCheck className="mr-2 h-4 w-4" />

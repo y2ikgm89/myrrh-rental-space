@@ -341,6 +341,12 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
+        // ゲスト決済 token URL / checkout-error。/events/:path* の公開キャッシュより
+        // 後ろで last-match-wins。302 に Stripe session URL が載るため CDN 保存禁止。
+        source: "/events/registrations/:path*",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
+      },
+      {
         // イベント参加のキャンセル / キャンセル待ち確認ページ。/events/:path* の
         // 公開キャッシュ（EVENTS_CACHE_TAG）より後ろに定義し last-match-wins で
         // Cache-Control のみ no-store に上書きする。EVENTS_CACHE_TAG ヘッダー自体は

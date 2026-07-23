@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconDownload, IconPlus } from "@tabler/icons-react";
 import { getCustomers } from "@/admin/queries/customer";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import { CustomerFilters } from "./_components/CustomerFilters";
 import { CustomerTable } from "./_components/CustomerTable";
 import { Pagination, Button } from "@/admin/components/ui";
@@ -10,6 +11,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseCustomerStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminCustomerSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -56,6 +58,9 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
 }
 
 export default async function CustomersPage({ searchParams }: PageProps) {
+  const user = await requireAdminDashboardAccess();
+  const canExportCustomers = hasPermission(user.role, "customer", "manage");
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -75,12 +80,14 @@ export default async function CustomersPage({ searchParams }: PageProps) {
               新規顧客
             </Link>
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href="/api/admin/export/customers" download>
-              <IconDownload className="mr-2 h-4 w-4" />
-              CSV
-            </a>
-          </Button>
+          {canExportCustomers ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href="/api/admin/export/customers" download>
+                <IconDownload className="mr-2 h-4 w-4" />
+                CSV
+              </a>
+            </Button>
+          ) : null}
         </div>
       </div>
 

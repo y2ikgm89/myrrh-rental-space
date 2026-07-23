@@ -51,18 +51,25 @@ mock.module("@/shared/lib/constants", () => ({
 const mockServerEnv: {
   CLOUDFLARE_ZONE_ID: string | undefined;
   CLOUDFLARE_API_TOKEN: string | undefined;
+  E2E_RUNTIME: "1" | undefined;
 } = {
   CLOUDFLARE_ZONE_ID: "a".repeat(32),
   CLOUDFLARE_API_TOKEN: "test-token",
+  E2E_RUNTIME: undefined,
 };
+
+let mockIsProduction = false;
 
 mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
-  isProduction: () => false,
+  isProduction: () => mockIsProduction,
 }));
 
-const { purgeCloudflareCache, purgeCloudflareCacheByTags } =
-  await import("@/shared/lib/cloudflare");
+const {
+  purgeCloudflareCache,
+  purgeCloudflareCacheByTags,
+  purgeAllCloudflareCache,
+} = await import("@/shared/lib/cloudflare");
 
 // =============================================================================
 // Helpers
@@ -131,6 +138,8 @@ describe("purgeCloudflareCache - retry", () => {
   let setTimeoutSpy: ReturnType<typeof spyOn<typeof globalThis, "setTimeout">>;
 
   beforeEach(() => {
+    mockIsProduction = false;
+    mockServerEnv.E2E_RUNTIME = undefined;
     // 同一参照を維持したままプロパティを mutate（reassign は import side に反映されない）
     mockServerEnv.CLOUDFLARE_ZONE_ID = "a".repeat(32);
     mockServerEnv.CLOUDFLARE_API_TOKEN = "test-token";
@@ -270,9 +279,42 @@ describe("purgeCloudflareCache - retry", () => {
     expect(result.error).toBe("URL is not valid");
   });
 
-  test("credentials 未設定時は success: true で no-op", async () => {
+  test("credentials 未設定時 (非本番) は success: true で no-op", async () => {
     mockServerEnv.CLOUDFLARE_ZONE_ID = undefined;
     mockServerEnv.CLOUDFLARE_API_TOKEN = undefined;
+    const result = await purgeCloudflareCache(["https://example.com/page"]);
+    expect(result.success).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("credentials 未設定時 (本番) は success: false を返す", async () => {
+    mockIsProduction = true;
+    mockServerEnv.CLOUDFLARE_ZONE_ID = undefined;
+    mockServerEnv.CLOUDFLARE_API_TOKEN = undefined;
+
+    await expect(
+      purgeCloudflareCache(["https://example.com/page"]),
+    ).resolves.toEqual({
+      success: false,
+      error: "Cloudflare credentials not configured",
+    });
+    await expect(purgeAllCloudflareCache()).resolves.toEqual({
+      success: false,
+      error: "Cloudflare credentials not configured",
+    });
+    await expect(purgeCloudflareCacheByTags(["layout-v1"])).resolves.toEqual({
+      success: false,
+      error: "Cloudflare credentials not configured",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test("credentials 未設定でも E2E runtime 本番は no-op を維持", async () => {
+    mockIsProduction = true;
+    mockServerEnv.E2E_RUNTIME = "1";
+    mockServerEnv.CLOUDFLARE_ZONE_ID = undefined;
+    mockServerEnv.CLOUDFLARE_API_TOKEN = undefined;
+
     const result = await purgeCloudflareCache(["https://example.com/page"]);
     expect(result.success).toBe(true);
     expect(fetchSpy).not.toHaveBeenCalled();
