@@ -443,7 +443,7 @@ describe("events/payment-commands", () => {
     });
 
     // ── VALIDATION: paymentStatus ──────────────────────────────────────────────
-    test("VALIDATION: paymentStatus が UNPAID でなければ DomainError(VALIDATION) & claim/Stripe 未呼出", async () => {
+    test("VALIDATION: paymentStatus が PENDING なら DomainError(VALIDATION) & claim/Stripe 未呼出", async () => {
       mockRegFindUnique.mockResolvedValueOnce(
         checkoutInitialRead({ paymentStatus: PaymentStatus.PENDING }),
       );
@@ -502,14 +502,16 @@ describe("events/payment-commands", () => {
       const calls = mockRegUpdateMany.mock.calls;
       expect(calls.length).toBe(2);
 
-      // 1 回目: claim — status: CONFIRMED + paymentStatus: UNPAID → PENDING
+      // 1 回目: claim — status: CONFIRMED + paymentStatus in [UNPAID, FAILED] → PENDING
       // (Codex P1 #1026: status: CONFIRMED も WHERE に含めることで
-      //  並行 cancel が走ったケースを DB レベルで塞ぐ)
+      //  並行 cancel が走ったケースを DB レベルで塞ぐ。FAILED は再 checkout 許容)
       expect(calls[0]?.[0]).toMatchObject({
         where: expect.objectContaining({
           id: REGISTRATION_ID,
           status: RegistrationStatus.CONFIRMED,
-          paymentStatus: PaymentStatus.UNPAID,
+          paymentStatus: {
+            in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+          },
         }),
         data: expect.objectContaining({
           paymentStatus: PaymentStatus.PENDING,

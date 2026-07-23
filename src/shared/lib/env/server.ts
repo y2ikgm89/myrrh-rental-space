@@ -440,6 +440,17 @@ export function validateProductionEnv(): void {
 
   const missing = requiredInProd
     .filter(({ value }) => !value)
+    // E2E runtime (Playwright smoke / local next start) は CDN purge を使わない。
+    // cloudflare.ts と同契約で ZONE_ID / API_TOKEN 欠落を許容する。
+    .filter(({ name }) => {
+      if (
+        serverEnv.E2E_RUNTIME === "1" &&
+        (name === "CLOUDFLARE_ZONE_ID" || name === "CLOUDFLARE_API_TOKEN")
+      ) {
+        return false;
+      }
+      return true;
+    })
     .map(({ name }) => name);
 
   if (missing.length > 0) {
