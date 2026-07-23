@@ -37,7 +37,7 @@
   - `type FaqItemTemplate = (typeof FAQ_ITEM_TEMPLATES)[number]`
   - `resolveFaqItemTemplateById(id: string): FaqItemTemplate | undefined`
 
-- [ ] **Step 1: 失敗するテストを書く**
+- [x] **Step 1: 失敗するテストを書く**
 
 `__tests__/unit/components/admin/faq-item-templates.test.ts` を新規作成:
 
@@ -90,12 +90,12 @@ describe("resolveFaqItemTemplateById", () => {
 });
 ```
 
-- [ ] **Step 2: テストを実行し失敗を確認する**
+- [x] **Step 2: テストを実行し失敗を確認する**
 
 Run: `bun scripts/run-tests.ts __tests__/unit/components/admin/faq-item-templates.test.ts`
 Expected: FAIL（`faq-item-templates` モジュールが解決できないエラー、または import 対象が undefined）
 
-- [ ] **Step 3: データファイルを実装する**
+- [x] **Step 3: データファイルを実装する**
 
 `src/app/(admin)/admin/(dashboard)/faq/_components/faq-item-templates.ts` を新規作成:
 
@@ -225,12 +225,12 @@ export function resolveFaqItemTemplateById(
 }
 ```
 
-- [ ] **Step 4: テストを実行し成功を確認する**
+- [x] **Step 4: テストを実行し成功を確認する**
 
 Run: `bun scripts/run-tests.ts __tests__/unit/components/admin/faq-item-templates.test.ts`
 Expected: PASS（全 6 テスト）
 
-- [ ] **Step 5: コミット**
+- [x] **Step 5: コミット**
 
 ```bash
 git add src/app/\(admin\)/admin/\(dashboard\)/faq/_components/faq-item-templates.ts __tests__/unit/components/admin/faq-item-templates.test.ts
@@ -251,7 +251,7 @@ git commit -m "feat(admin): add FAQ item template seed data"
 - Consumes: Task 1 の `FAQ_ITEM_TEMPLATE_GROUPS`, `FAQ_ITEM_TEMPLATES`, `resolveFaqItemTemplateById`, `type FaqItemTemplate`
 - Produces: `FaqItemTemplateSelect(props: { onSelect: (template: FaqItemTemplate) => void; disabled?: boolean }): JSX.Element`
 
-- [ ] **Step 1: 失敗するテストを書く**
+- [x] **Step 1: 失敗するテストを書く**
 
 `__tests__/unit/components/admin/faq-item-template-select.test.tsx` を新規作成:
 
@@ -390,12 +390,12 @@ describe("FaqItemTemplateSelect", () => {
 });
 ```
 
-- [ ] **Step 2: テストを実行し失敗を確認する**
+- [x] **Step 2: テストを実行し失敗を確認する**
 
 Run: `bun scripts/run-tests.ts __tests__/unit/components/admin/faq-item-template-select.test.tsx`
 Expected: FAIL（`FaqItemTemplateSelect` モジュールが解決できないエラー）
 
-- [ ] **Step 3: コンポーネントを実装する**
+- [x] **Step 3: コンポーネントを実装する**
 
 `src/app/(admin)/admin/(dashboard)/faq/_components/FaqItemTemplateSelect.tsx` を新規作成:
 
@@ -480,12 +480,12 @@ export function FaqItemTemplateSelect({
 }
 ```
 
-- [ ] **Step 4: テストを実行し成功を確認する**
+- [x] **Step 4: テストを実行し成功を確認する**
 
 Run: `bun scripts/run-tests.ts __tests__/unit/components/admin/faq-item-template-select.test.tsx`
 Expected: PASS（全 3 テスト）
 
-- [ ] **Step 5: コミット**
+- [x] **Step 5: コミット**
 
 ```bash
 git add src/app/\(admin\)/admin/\(dashboard\)/faq/_components/FaqItemTemplateSelect.tsx __tests__/unit/components/admin/faq-item-template-select.test.tsx
@@ -512,7 +512,7 @@ git commit -m "feat(admin): add FaqItemTemplateSelect component"
 レンダリングするテストの前例がこの codebase に存在しないため、無理に新設せず design
 spec 通り手動確認に留める）。
 
-- [ ] **Step 1: import を更新する**
+- [x] **Step 1: import を更新する**
 
 `src/app/(admin)/admin/(dashboard)/faq/_components/FaqItemDialog.tsx` の import ブロックを変更する。
 
@@ -585,7 +585,7 @@ import type { FaqItemTemplate } from "./faq-item-templates";
 （`getInputProps` / `getTextareaProps` は question/answer を制御コンポーネント化するため
 不要になるので削除する。削除しないと ESLint の未使用 import エラーになる。）
 
-- [ ] **Step 2: 呼び出し元に `mode` を渡す**
+- [x] **Step 2: 呼び出し元に `mode` を渡す**
 
 `FaqItemCreateDialog` 内の `<FaqItemFormBody>` 呼び出しを変更する。
 
@@ -661,7 +661,7 @@ After:
 />
 ```
 
-- [ ] **Step 3: `FormBodyProps` に `mode` を追加する**
+- [x] **Step 3: `FormBodyProps` に `mode` を追加する**
 
 Before:
 
@@ -698,7 +698,7 @@ type FormBodyProps = {
 };
 ```
 
-- [ ] **Step 4: `FaqItemFormBody` の本体を書き換える**
+- [x] **Step 4: `FaqItemFormBody` の本体を書き換える**
 
 Before（関数シグネチャから質問・回答フィールド部分まで）:
 
@@ -881,13 +881,13 @@ function FaqItemFormBody({
 （このあとの `isPublished` Switch ブロック・エラー表示ブロック・`</form>` は無変更のため
 そのまま残す。）
 
-- [ ] **Step 5: `bun run validate` を実行する**
+- [x] **Step 5: `bun run validate` を実行する**
 
 Run: `bun run validate`
 Expected: exit 0（type-check + lint エラーなし）。エラーが出た場合は
 Global Constraints・上記コード例と実ファイルの差分を確認して修正する。
 
-- [ ] **Step 6: dev server で実ブラウザ確認する**
+- [x] **Step 6: dev server で実ブラウザ確認する**
 
 `bun run dev` は既に手動起動されている前提（Claude からは起動/終了しない）。
 `/admin/faq/[categoryId]` を開き、以下を確認する:
@@ -901,7 +901,7 @@ Global Constraints・上記コード例と実ファイルの差分を確認し�
 6. 既存項目の「編集」を開く → 雛形 Select が表示されないこと、既存の質問・回答が
    正しく表示・編集・保存できることを確認する（回帰確認）
 
-- [ ] **Step 7: コミット**
+- [x] **Step 7: コミット**
 
 ```bash
 git add "src/app/(admin)/admin/(dashboard)/faq/_components/FaqItemDialog.tsx"

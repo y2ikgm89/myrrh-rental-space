@@ -153,7 +153,8 @@ Undo は再度手で直せば足りるため）。
 
 - `__tests__/unit/components/admin/faq-item-template-select.test.tsx`（新規）: 既存の
   `__tests__/unit/components/admin/*.test.tsx`（`refund-dialog.test.tsx` 等）と同じ
-  testing-library/react パターンで、`FaqItemTemplateSelect` 単体をレンダリングし、
+  `react-dom/client` の `createRoot` + `act` パターン（testing-library不使用）で、
+  `FaqItemTemplateSelect` 単体をレンダリングし、
   グループ見出しが `FAQ_ITEM_TEMPLATE_GROUPS` の順で表示されること、項目を選択すると
   `onSelect` が対応する `FaqItemTemplate` で呼ばれることを検証する（Server Action や
   `FaqItemDialog` 全体のモックは不要な範囲に留める）
