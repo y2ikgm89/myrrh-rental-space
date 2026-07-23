@@ -103,6 +103,16 @@ export async function GET(
 ): Promise<Response> {
   const { serialNo } = await params;
 
+  // Better Auth session 経路のみ (トークンは POST に移行済み — HTTP-02)。rate limit
+  // より先に判定する (HTTP-03 追記): session 自体を持たない匿名リクエストが
+  // shared bucket (serialNo 単位、POST token 経路と共有) を消費してしまうと、
+  // sequential な serialNo を推測しただけの第三者が正規ユーザーの GET/POST 双方を
+  // 1 時間 429 で締め出せてしまう (Codex #1426 指摘、POST 側と同型)。
+  const session = await getCustomerSession();
+  if (!session) {
+    return new Response("Not found", { status: 404 });
+  }
+
   // HTTP-03: per-serialNo rate limit (10/hour)。findReceiptForDownload (DB read) より
   // 先に in-memory bucket でカットオフし、brute-force 探索 × usedAt 焼き潰しの単価を下げる。
   const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
@@ -112,12 +122,6 @@ export async function GET(
 
   const receipt = await findReceiptForDownload(serialNo);
   if (!receipt) {
-    return new Response("Not found", { status: 404 });
-  }
-
-  // Better Auth session 経路のみ (トークンは POST に移行済み — HTTP-02)。
-  const session = await getCustomerSession();
-  if (!session) {
     return new Response("Not found", { status: 404 });
   }
 
@@ -170,16 +174,6 @@ export async function POST(
 ): Promise<Response> {
   const { serialNo } = await params;
 
-  // HTTP-03: GET session 経路と同じ per-serialNo rate limit (10/hour)。ゲスト
-  // token 経路は認証を経由しないため、token 検証・DB read・usedAt 消費のいずれよりも
-  // 先にカットオフする必要がある (brute-force / usedAt 焼き潰し DoS 対策、上記
-  // receiptDownloadBySerialNoRateLimiter の定義コメントが元々 POST 経路も対象と
-  // 明記していたが、実装時に GET のみへの結線が漏れていた)。
-  const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
-  if (!rateLimit.success) {
-    return new Response("Too many requests", { status: 429 });
-  }
-
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -196,6 +190,17 @@ export async function POST(
   const verified = verifyReceiptDownloadToken(token, new Date());
   if (!verified.valid || verified.serialNo !== serialNo) {
     return new Response("Not found", { status: 404 });
+  }
+
+  // HTTP-03: GET session 経路と同じ per-serialNo rate limit (10/hour)。署名済み
+  // token の検証が通った後に限定する — token 検証より前に置くと、token を持たない
+  // 第三者が sequential な serialNo を推測して空/不正な body を連投するだけで
+  // shared bucket (GET session 経路と共有) を枯渇させ、正規ゲスト・正規会員双方の
+  // DL を 1 時間締め出せてしまう (Codex #1426 指摘)。token 検証は crypto 演算のみ
+  // で DB を触らないため、ここに置いても brute-force コストの抑制効果は変わらない。
+  const rateLimit = await receiptDownloadBySerialNoRateLimiter.check(serialNo);
+  if (!rateLimit.success) {
+    return new Response("Too many requests", { status: 429 });
   }
 
   const receipt = await findReceiptForDownload(serialNo);
