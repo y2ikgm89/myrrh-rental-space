@@ -16,6 +16,7 @@ interface Space {
   readonly gallery: readonly GalleryItem[];
   readonly category: { readonly name: string } | null;
   readonly location: { readonly name: string };
+  readonly isAvailableForSearch?: boolean | undefined;
 }
 
 interface ReviewStats {
@@ -66,6 +67,7 @@ export function SpaceGrid({ spaces, reviewStats, hasFilters }: SpaceGridProps) {
             mainImageUrl={space.mainImageUrl}
             gallery={space.gallery}
             categoryName={space.category?.name}
+            isAvailableForSearch={space.isAvailableForSearch}
             layout="horizontal"
             imagePriority={index === 0}
             {...(stats && stats.totalCount > 0

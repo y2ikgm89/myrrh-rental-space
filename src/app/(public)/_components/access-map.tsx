@@ -69,13 +69,13 @@ export async function AccessMap({
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-surface",
+          "flex items-center justify-center bg-surface p-4 text-center",
           heightClass,
         )}
       >
         <p className="text-sm text-muted-foreground">
-          地図を表示するには、管理画面で Google Maps API
-          キーと住所（または座標）を設定してください。
+          現在、地図を表示できません。
+          {address ? <>お手数ですが住所をご確認ください：{address}</> : null}
         </p>
       </div>
     );

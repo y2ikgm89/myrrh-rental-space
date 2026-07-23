@@ -771,6 +771,46 @@ describe("display order surfaces clean-break contract", () => {
     );
   });
 
+  test("sortable location and category tabs bypass pagination to avoid partial-list D&D failures", () => {
+    const locationTabContent = readRepoFile(
+      "src",
+      "app",
+      "(admin)",
+      "admin",
+      "(dashboard)",
+      "spaces",
+      "_components",
+      "LocationTabContent.tsx",
+    );
+    const categoryTabContent = readRepoFile(
+      "src",
+      "app",
+      "(admin)",
+      "admin",
+      "(dashboard)",
+      "spaces",
+      "_components",
+      "CategoryTabContent.tsx",
+    );
+
+    for (const source of [locationTabContent, categoryTabContent]) {
+      expect(source).toContain("const SORTABLE_VIEW_LIMIT = 1000;");
+      expect(source).toContain("{!sortable && (");
+    }
+    expect(locationTabContent).toContain(
+      "page: sortable ? 1 : params.locPage,",
+    );
+    expect(locationTabContent).toContain(
+      "limit: sortable ? SORTABLE_VIEW_LIMIT : params.locPerPage,",
+    );
+    expect(categoryTabContent).toContain(
+      "page: sortable ? 1 : params.catPage,",
+    );
+    expect(categoryTabContent).toContain(
+      "limit: sortable ? SORTABLE_VIEW_LIMIT : params.catPerPage,",
+    );
+  });
+
   test("page section ordering exposes inline visibility control and disables sorting while pending", () => {
     const sectionValidation = readRepoFile(
       "src",

@@ -28,6 +28,11 @@ import {
   ReservationStatus,
 } from "@/shared/lib/validations/enums/prisma-types";
 import type { SpaceSort } from "@/shared/domain/spaces/space-sort";
+import {
+  getBlockedSpaceIdsForDate,
+  getBusinessHoursSettingsQuery,
+} from "@/shared/domain/reservations/availability";
+import { isWithinBusinessHours } from "@/shared/lib/reservation/time-slots-utils";
 
 /**
  * 公開スペースクエリの共通 where 句。Space model に deletedAt 列はないため
@@ -78,9 +83,10 @@ function mapSpaceListItem(s: SpaceListRow) {
  * 公開 /spaces catalog の facet 検索入力。
  *
  * `date` / `startTime` / `endTime` は本入力には含めない — 時間帯 facet は
- * `runSpacesPaginated` の内部を bypass して {@link getPublishedSpacesPaginatedWithAvailability}
- * が Reservation + EventTimeSlot と cross overlap 検査した上で `excludeSpaceIds` として
- * 差し込む（時間帯有効時は cache 経路が dynamic に切り替わる契約）。
+ * {@link getPublishedSpacesPaginatedWithAvailability} が別引数で受け取り、
+ * Reservation + EventTimeSlot の重複・営業時間・臨時休業（BlockedDate）を
+ * 判定した上で「空きあり」グループを先に並べる（除外はしない。除外すると
+ * 「他の時間帯なら予約できたかもしれない」候補が検索結果から消えてしまうため）。
  */
 export interface SpaceCatalogFilter {
   readonly page?: number | undefined;
@@ -93,11 +99,9 @@ export interface SpaceCatalogFilter {
   readonly sort?: SpaceSort | undefined;
 }
 
-interface RunSpacesInput extends SpaceCatalogFilter {
-  readonly excludeSpaceIds?: readonly string[] | undefined;
-}
-
-function buildSpaceWhereClause(input: RunSpacesInput): Prisma.SpaceWhereInput {
+function buildSpaceWhereClause(
+  input: SpaceCatalogFilter,
+): Prisma.SpaceWhereInput {
   const where: Prisma.SpaceWhereInput = { ...PUBLIC_WHERE };
 
   if (input.categoryId) where.categoryId = input.categoryId;
@@ -130,10 +134,6 @@ function buildSpaceWhereClause(input: RunSpacesInput): Prisma.SpaceWhereInput {
     }));
   }
 
-  if (input.excludeSpaceIds && input.excludeSpaceIds.length > 0) {
-    where.id = { notIn: [...input.excludeSpaceIds] };
-  }
-
   return where;
 }
 
@@ -151,7 +151,7 @@ function buildSpaceOrderBy(
   }
 }
 
-async function runSpacesPaginated(input: RunSpacesInput) {
+async function runSpacesPaginated(input: SpaceCatalogFilter) {
   const page = Math.max(1, input.page ?? 1);
   const perPage = input.perPage ?? PAGINATION_DEFAULTS.public.default;
   const where = buildSpaceWhereClause(input);
@@ -209,50 +209,178 @@ export async function getPublishedSpacesPaginated(input: SpaceCatalogFilter) {
 }
 
 /**
- * 時間帯 facet 込みの検索。指定期間で Reservation / EventTimeSlot と overlap する
- * space を除外した結果を返す。dynamic 経路（cache なし）— SectionRenderer が
+ * 時間帯 facet 込みの検索。指定した日時が営業時間内か、Reservation / EventTimeSlot /
+ * BlockedDate（臨時休業）と重複しないかを判定し、「空きあり」グループを先に、
+ * 「空きなし」グループを後ろに並べる。dynamic 経路（cache なし）— SectionRenderer が
  * `await connection()` 済みで呼ぶ前提。
  *
- * `range.from < endTime AND range.to > startTime` の半開区間 overlap を Space namespace
- * (Reservation.spaceId + EventTimeSlot.spaceId, いずれも非 null かつ event.status = PUBLISHED) で判定。
- * どちらかに衝突があれば「空きなし」とみなし id を除外リストに積む。
+ * 除外はしない。指定した時間帯に重複があっても、その日の別の時間なら予約できる
+ * 可能性があるスペースを検索結果から消してしまうと、ユーザーが本来見つけられた
+ * はずの候補を発見できなくなる。各アイテムに `isAvailableForSearch` を付与し、
+ * UI 側で「この日時は空きがありません」等のバッジ表示に使う。
+ *
+ * 判定は 3 種類:
+ * 1. 営業時間（`Settings.businessHours`、`isWithinBusinessHours` — 予約フォームの
+ *    スロット生成 `getAvailableTimeSlots` と同じ判定ロジックを共有し、二重実装を避ける）。
+ *    営業時間外ならサイト全体の設定のため個別のスペース差はなく、全件「空きなし」
+ * 2. Reservation + EventTimeSlot の重複（`getUnavailableSpaceIds`、半開区間 overlap）
+ * 3. BlockedDate（臨時休業、GLOBAL/LOCATION/SPACE 3 階層 cascade、`getBlockedSpaceIdsForDate`）
+ *
+ * ページネーションは「空きあり」「空きなし」2 グループそれぞれの count を求め、
+ * skip/take をグループ境界で分割して実現する（型安全な Prisma query のみで完結させ、
+ * conditional ORDER BY のための生 SQL は使わない）。
  */
 export async function getPublishedSpacesPaginatedWithAvailability(
   input: SpaceCatalogFilter,
-  range: { from: Date; to: Date },
+  window: {
+    readonly date: string;
+    readonly startTime: string;
+    readonly endTime: string;
+    readonly from: Date;
+    readonly to: Date;
+  },
 ) {
-  // RECENT-04: getUnavailableSpaceIds は Reservation + EventTimeSlot への 2 クエリ
-  // を発火する。以前は safeFetch の外側で await していたため、DB 接続断や
-  // statement_timeout でここが throw すると SpaceListSection catalog 経路
-  // (section-renderer.tsx) が丸ごと error boundary に落ち、時間帯 facet 経路だけ
-  // 非対称に落ちる non-uniform degrade を発生させていた (facet 未使用の
-  // getPublishedSpacesPaginated 側は safeFetch fallback で degrade 保護済み)。
-  // ここでも safeFetch でラップし、fallback として「availability 判定なし=
-  // 全 space 表示」に degrade する (facet 検索は失敗せず ideal 挙動から劣化するだけ)。
-  const unavailable = await safeFetch({
-    fetch: () => getUnavailableSpaceIds(range.from, range.to),
-    fallback: new Set<string>() as ReadonlySet<string>,
+  const page = Math.max(1, input.page ?? 1);
+  const perPage = input.perPage ?? PAGINATION_DEFAULTS.public.default;
+
+  const businessHours = await safeFetch({
+    fetch: () => getBusinessHoursSettingsQuery(),
+    fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
     operationName:
-      "getPublishedSpacesPaginatedWithAvailability.getUnavailableSpaceIds",
+      "getPublishedSpacesPaginatedWithAvailability.getBusinessHoursSettingsQuery",
   });
+  const openForWindow = isWithinBusinessHours(
+    businessHours,
+    window.date,
+    window.startTime,
+    window.endTime,
+  );
+
   return safeFetch({
     fetch: () =>
-      runSpacesPaginated({
-        ...input,
-        excludeSpaceIds: [...unavailable],
-      }),
+      openForWindow
+        ? runSpacesPaginatedWithAvailabilitySplit(input, window, page, perPage)
+        : runSpacesPaginatedAllUnavailable(input, page, perPage),
     fallback: {
       items: [],
       totalCount: 0,
       totalPages: 0,
-      currentPage: Math.max(1, input.page ?? 1),
+      currentPage: page,
     },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
     operationName: "getPublishedSpacesPaginatedWithAvailability",
   });
+}
+
+/** 営業時間外: サイト全体の設定のため個別差はなく、通常の並びで全件「空きなし」として返す。 */
+async function runSpacesPaginatedAllUnavailable(
+  input: SpaceCatalogFilter,
+  page: number,
+  perPage: number,
+) {
+  const result = await runSpacesPaginated({ ...input, page, perPage });
+  return {
+    ...result,
+    items: result.items.map((item) => ({
+      ...item,
+      isAvailableForSearch: false,
+    })),
+  };
+}
+
+/** 営業時間内: Reservation/EventTimeSlot 重複 + BlockedDate を判定し、空きあり優先で並べる。 */
+async function runSpacesPaginatedWithAvailabilitySplit(
+  input: SpaceCatalogFilter,
+  window: { readonly date: string; readonly from: Date; readonly to: Date },
+  page: number,
+  perPage: number,
+) {
+  const where = buildSpaceWhereClause(input);
+  const orderBy = buildSpaceOrderBy(input.sort);
+
+  const [busyIds, candidates] = await Promise.all([
+    getUnavailableSpaceIds(window.from, window.to),
+    prisma.space.findMany({
+      where,
+      select: { id: true, locationId: true },
+    }),
+  ]);
+  const blockedIds = await getBlockedSpaceIdsForDate(
+    window.date,
+    candidates.map((c) => ({ spaceId: c.id, locationId: c.locationId })),
+  );
+
+  const unavailableIds = new Set<string>([...busyIds, ...blockedIds]);
+  const availableWhere: Prisma.SpaceWhereInput = {
+    ...where,
+    id: { notIn: [...unavailableIds] },
+  };
+  const unavailableWhere: Prisma.SpaceWhereInput = {
+    ...where,
+    id: { in: [...unavailableIds] },
+  };
+
+  const [availableCount, unavailableCount] = await Promise.all([
+    prisma.space.count({ where: availableWhere }),
+    unavailableIds.size > 0
+      ? prisma.space.count({ where: unavailableWhere })
+      : Promise.resolve(0),
+  ]);
+
+  const totalCount = availableCount + unavailableCount;
+  // skip/take は paginate() の clamp 済み値を使う（raw な perPage を直接使うと
+  // 0/負値/非整数のときに takeFromAvailable/takeFromUnavailable が破綻する）。
+  const { skip, take: clampedPerPage } = paginate({ page, limit: perPage });
+
+  const skipInAvailable = Math.min(skip, availableCount);
+  const takeFromAvailable = Math.max(
+    0,
+    Math.min(clampedPerPage, availableCount - skipInAvailable),
+  );
+  const skipInUnavailable = Math.max(0, skip - availableCount);
+  const takeFromUnavailable = clampedPerPage - takeFromAvailable;
+
+  const [availableRows, unavailableRows] = await Promise.all([
+    takeFromAvailable > 0
+      ? prisma.space.findMany({
+          where: availableWhere,
+          select: spaceListSelect,
+          orderBy,
+          skip: skipInAvailable,
+          take: takeFromAvailable,
+        })
+      : Promise.resolve([]),
+    takeFromUnavailable > 0 && unavailableIds.size > 0
+      ? prisma.space.findMany({
+          where: unavailableWhere,
+          select: spaceListSelect,
+          orderBy,
+          skip: skipInUnavailable,
+          take: takeFromUnavailable,
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const items = [
+    ...availableRows.map((s) => ({
+      ...mapSpaceListItem(s),
+      isAvailableForSearch: true,
+    })),
+    ...unavailableRows.map((s) => ({
+      ...mapSpaceListItem(s),
+      isAvailableForSearch: false,
+    })),
+  ];
+
+  return {
+    items: toPlainArray(items),
+    totalCount,
+    totalPages: calcTotalPages(totalCount, clampedPerPage),
+    currentPage: page,
+  };
 }
 
 /**

@@ -77,9 +77,19 @@ mock.module("@/shared/lib/audit-request-context", () => ({
 }));
 mock.module("@/shared/lib/errors/server", () => ({
   ErrorCategory: { DATABASE: "DATABASE", EXTERNAL_API: "EXTERNAL_API" },
-  ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM" },
+  ErrorSeverity: { LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH" },
   logError: mock(() => undefined),
   normalizeError: (error: unknown) => error,
+  getErrorMessage: (error: unknown) =>
+    error instanceof Error ? error.message : String(error),
+  safeFetch: async <T>(opts: { fetch: () => Promise<T>; fallback: T }) => {
+    try {
+      return await opts.fetch();
+    } catch {
+      return opts.fallback;
+    }
+  },
+  criticalFetch: async <T>(opts: { fetch: () => Promise<T> }) => opts.fetch(),
 }));
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>) => {

@@ -81,6 +81,62 @@ export async function ensureDateNotBlocked(
   }
 }
 
+/**
+ * 複数スペースの blocked date（GLOBAL/LOCATION/SPACE 3 階層 cascade）を
+ * 1 クエリでまとめて判定する（`isDateBlocked` の N+1 回避版）。
+ * `/spaces` 一覧の空き時間帯検索のように、ページ内の複数スペースを
+ * まとめて判定したい read 専用ユースケース向け。書込経路の
+ * `ensureDateNotBlocked` はスペース単体判定のままでよい（変更しない）。
+ */
+export async function getBlockedSpaceIdsForDate(
+  date: string,
+  spaces: readonly { spaceId: string; locationId: string }[],
+): Promise<ReadonlySet<string>> {
+  if (spaces.length === 0) return new Set();
+  const target = parseJstDateOnly(date);
+  const locationIds = Array.from(new Set(spaces.map((s) => s.locationId)));
+  const spaceIds = spaces.map((s) => s.spaceId);
+
+  const rows = await prisma.blockedDate.findMany({
+    where: {
+      startDate: { lte: target },
+      endDate: { gte: target },
+      OR: [
+        { scope: BLOCKED_DATE_SCOPE.GLOBAL },
+        { scope: BLOCKED_DATE_SCOPE.LOCATION, locationId: { in: locationIds } },
+        { scope: BLOCKED_DATE_SCOPE.SPACE, spaceId: { in: spaceIds } },
+      ],
+    },
+    select: { scope: true, locationId: true, spaceId: true },
+  });
+
+  if (rows.some((r) => r.scope === BLOCKED_DATE_SCOPE.GLOBAL)) {
+    return new Set(spaceIds);
+  }
+
+  const blockedLocationIds = new Set(
+    rows
+      .filter((r) => r.scope === BLOCKED_DATE_SCOPE.LOCATION)
+      .map((r) => r.locationId),
+  );
+  const blockedSpaceIdsDirect = new Set(
+    rows
+      .filter((r) => r.scope === BLOCKED_DATE_SCOPE.SPACE)
+      .map((r) => r.spaceId),
+  );
+
+  const result = new Set<string>();
+  for (const s of spaces) {
+    if (
+      blockedSpaceIdsDirect.has(s.spaceId) ||
+      blockedLocationIds.has(s.locationId)
+    ) {
+      result.add(s.spaceId);
+    }
+  }
+  return result;
+}
+
 /** スペースの所属拠点 ID を取得（blocked date cascade 判定用、PK lookup） */
 export async function getSpaceLocationIdQuery(
   spaceId: string,

@@ -148,16 +148,20 @@ export function buildLocationLocalBusinessJsonLdData(
 }
 
 /**
- * 公開済み全 Location 分の JSON-LD データを取得（/access ページ用）
+ * 公開済み Location 分の JSON-LD データを取得（/access ページ用）
+ *
+ * @param slugs - 省略時は公開済み全 Location。指定時はその slug のみ
+ *   （/access ページの LocationList セクションが mode="selected" の場合、
+ *   実際に描画される拠点と JSON-LD の対象を一致させるため呼び出し側が渡す）。
  */
-export async function getAllPublishedLocationsJsonLdData(): Promise<
-  LocationLocalBusinessJsonLdData[]
-> {
+export async function getAllPublishedLocationsJsonLdData(
+  slugs?: readonly string[],
+): Promise<LocationLocalBusinessJsonLdData[]> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.LOCATIONS);
 
-  const locations = await getPublishedLocationsForSeo();
+  const locations = await getPublishedLocationsForSeo(slugs);
   const includeBranchOf = locations.length > 1;
   return locations.map((loc) =>
     buildLocationLocalBusinessJsonLdData(loc, { includeBranchOf }),

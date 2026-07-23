@@ -10,6 +10,11 @@ import {
 } from "@/shared/lib/api-keys";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { safeDecryptToString } from "@/shared/lib/crypto";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { serverEnv } from "@/shared/lib/env/server";
 import type {
@@ -194,11 +199,21 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
  * `getGoogleMapsConfig` を使う（DB read のみ）。
  */
 export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      googleMapsApiKey: true,
-    },
+  // AccessMap は拠点ごとに呼ばれるため、素の findUnique だと一時的な DB 障害が
+  // /access ページ全体（他拠点の住所・営業時間等、地図と無関係な情報まで）を
+  // クラッシュさせる。他の公開クエリと同じく safeFetch で fallback: null に握る。
+  const settings = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          googleMapsApiKey: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getDecryptedGoogleMapsApiKey",
   });
 
   if (!settings?.googleMapsApiKey) {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { IconArrowRight, IconMapPin, IconStar } from "@tabler/icons-react";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
+import { Badge } from "@/public/components/design-system/badge";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
@@ -23,6 +24,11 @@ interface SpaceCardProps {
   readonly locationName?: string | undefined;
   readonly averageRating?: number | undefined;
   readonly reviewCount?: number | undefined;
+  /**
+   * 空き時間帯 facet 検索時のみ渡される。false のときだけ「空きなし」バッジを
+   * 出す（undefined = facet 未使用時は何も表示しない）。
+   */
+  readonly isAvailableForSearch?: boolean | undefined;
   readonly imagePriority?: boolean | undefined;
   /**
    * "grid"（default）: 画像上・テキスト下の縦カード。SpaceShowcase / 関連スペース等で使用。
@@ -51,6 +57,7 @@ export async function SpaceCard({
   locationName,
   averageRating,
   reviewCount,
+  isAvailableForSearch,
   imagePriority = false,
   layout = "grid",
 }: SpaceCardProps) {
@@ -95,11 +102,16 @@ export async function SpaceCard({
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <div>
-            {categoryName ? (
-              <p className="text-xs uppercase tracking-eyebrow text-accent">
-                {categoryName}
-              </p>
-            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              {categoryName ? (
+                <p className="text-xs uppercase tracking-eyebrow text-accent">
+                  {categoryName}
+                </p>
+              ) : null}
+              {isAvailableForSearch === false ? (
+                <Badge variant="warning">指定の日時は空きがありません</Badge>
+              ) : null}
+            </div>
             <h3 className="mt-1 font-heading text-lg font-light tracking-tight md:text-xl">
               {name}
             </h3>
