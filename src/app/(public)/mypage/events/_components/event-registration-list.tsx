@@ -210,6 +210,7 @@ function EventRegistrationCard({
       if (isMutationError(result)) {
         setError(result.error);
         turnstileRef.current?.reset();
+        setTurnstileToken("");
       } else {
         setCancelDialogOpen(false);
         router.refresh();
