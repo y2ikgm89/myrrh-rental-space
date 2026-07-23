@@ -33,7 +33,12 @@ export async function generateMetadata({
     getPostTagBySlug(slug),
     getSeoSettings(),
   ]);
-  if (!tag) return { title: "タグが見つかりません" };
+  if (!tag) {
+    return {
+      title: "タグが見つかりません",
+      robots: { index: false, follow: false },
+    };
+  }
 
   return generateArticleMetadata(
     {

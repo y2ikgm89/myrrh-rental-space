@@ -67,7 +67,10 @@ export async function generateMetadata({
   ]);
 
   if (!event) {
-    return { title: "イベントが見つかりません" };
+    return {
+      title: "イベントが見つかりません",
+      robots: { index: false, follow: false },
+    };
   }
 
   const fallbackDescription =

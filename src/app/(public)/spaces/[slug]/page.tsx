@@ -55,7 +55,12 @@ export async function generateMetadata({
     getSpaceBySlug(slug),
     getSeoSettings(),
   ]);
-  if (!space) return {};
+  if (!space) {
+    return {
+      title: "スペースが見つかりません",
+      robots: { index: false, follow: false },
+    };
+  }
 
   return generateArticleMetadata(
     {

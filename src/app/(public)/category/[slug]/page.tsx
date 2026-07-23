@@ -33,7 +33,12 @@ export async function generateMetadata({
     getPostCategoryBySlug(slug),
     getSeoSettings(),
   ]);
-  if (!category) return { title: "カテゴリが見つかりません" };
+  if (!category) {
+    return {
+      title: "カテゴリが見つかりません",
+      robots: { index: false, follow: false },
+    };
+  }
 
   return generateArticleMetadata(
     {
