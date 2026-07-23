@@ -46,6 +46,7 @@ type SeriesCommandsModule =
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let createReservationSeriesCommand: SeriesCommandsModule["createReservationSeriesCommand"];
+let testCategoryId: string;
 
 const TEMPLATE_DATA = {
   totalPrice: 5000,
@@ -155,9 +156,22 @@ describeMaybe(
       // 接続プールをウォームアップ（コールドスタートが並行クエリをずらして race を隠すのを防ぐ）。
       await prisma.$queryRaw`SELECT 1`;
       await ensureSettings(26);
+
+      const category = await prisma.eventCategory.create({
+        data: {
+          name: `Series Overlap Test Category ${crypto.randomUUID()}`,
+          // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+          // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+          sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+        },
+        select: { id: true },
+      });
+      testCategoryId = category.id;
     });
 
     afterAll(async () => {
+      // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+      await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
       await basePrisma.$disconnect();
     });
 
@@ -283,6 +297,7 @@ describeMaybe(
               spaceId,
               firstSlotStartAt: conflictStart,
               lastSlotEndAt: conflictEnd,
+              categoryId: testCategoryId,
             },
             select: { id: true },
           });

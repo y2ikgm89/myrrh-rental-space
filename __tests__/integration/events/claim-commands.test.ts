@@ -10,6 +10,38 @@ const { RegistrationStatus, EventStatus, EventScheduleMode } =
   await import("@/shared/lib/validations/enums/prisma-types");
 
 /**
+ * このファイルは作成した Event/Customer/User の後始末をしない（既存の慣習、
+ * 本 Task では変更しない）ため、専用 EventCategory を都度作ると onDelete: Restrict
+ * により孤児行が無限に積み上がる。migration がシードする "未分類" カテゴリー
+ * （`prisma/migrations/20260722235352_add_event_category/migration.sql`）を
+ * 再利用する（`create-claim-reservation-fixture.ts` が既存 slug の Space を
+ * findFirstOrThrow で引く一貫パターンと同型）。
+ *
+ * `bun run test:integration` は migrate のみで `prisma/seed.ts` を実行しないため、
+ * migration 直後の DB は "未分類" だけが存在する契約のはずだが、ローカル docker
+ * test-db は使い回されるため理論上ズレうる（`db:seed` を誤って test DB に向けて
+ * 実行した等）。findFirst → 無ければ create の fallback で自己修復する
+ * （`prisma/seed.ts` の `seedEventCategories` と同型の idiom）。
+ */
+const fallbackCategory =
+  (await prisma.eventCategory.findFirst({
+    where: { name: "未分類", isActive: true },
+    select: { id: true },
+  })) ??
+  (await prisma.eventCategory.create({
+    data: {
+      name: "未分類",
+      // sortOrder はテーブル全体でユニーク制約があるため、通常は migration が
+      // 予約した 0 を使うが、ここは「本来あるはずの行が無い」異常系 fallback
+      // のため、他 integration test ファイルの専用 EventCategory と同じ乱数域を
+      // 使い衝突を避ける。
+      sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+    },
+    select: { id: true },
+  }));
+const testCategoryId = fallbackCategory.id;
+
+/**
  * PUBLISHED イベント + タイムスロット + 受付中チケットを 1 件作る
  * （`registration-overbooking.test.ts` の `createTestEvent` と同型のパターン。
  * `events_schedule_integrity_check` トリガーが scheduleMode と slot 件数の
@@ -37,6 +69,7 @@ async function createTestEvent(): Promise<{
         registrationOpen: true,
         firstSlotStartAt: start,
         lastSlotEndAt: end,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });

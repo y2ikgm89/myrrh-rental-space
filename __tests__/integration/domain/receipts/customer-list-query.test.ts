@@ -44,6 +44,7 @@ type QueriesModule = typeof import("@/shared/domain/receipts/queries");
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let getCustomerReceipts: QueriesModule["getCustomerReceipts"];
+let testCategoryId: string;
 
 const DEFAULT_RESERVATION_PRICING = {
   basePrice: 1000,
@@ -189,6 +190,7 @@ async function createEventFixture(
         registrationOpen: true,
         firstSlotStartAt: slotStartAt,
         lastSlotEndAt: slotEndAt,
+        categoryId: testCategoryId,
         ...(options?.deleted ? { deletedAt: new Date() } : {}),
       },
       select: { id: true },
@@ -285,6 +287,17 @@ describeMaybe("getCustomerReceipts — cross-source list query", () => {
     ({ getCustomerReceipts } =
       await import("@/shared/domain/receipts/queries"));
     await prisma.$queryRaw`SELECT 1`;
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Receipts List Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
   });
 
   afterAll(async () => {
@@ -324,6 +337,8 @@ describeMaybe("getCustomerReceipts — cross-source list query", () => {
         where: { id: { in: cleanupIds.locationIds } },
       });
     }
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await basePrisma.$disconnect();
   });
 

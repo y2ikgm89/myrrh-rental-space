@@ -110,6 +110,7 @@ let getEventSlotsForCalendarSync: EventsCalendarSyncModule["getEventSlotsForCale
 let EVENT_FORMAT: PrismaTypesModule["EVENT_FORMAT"];
 let MEETING_PROVIDER: PrismaTypesModule["MEETING_PROVIDER"];
 let EventScheduleMode: PrismaTypesModule["EventScheduleMode"];
+let testCategoryId: string;
 
 // =============================================================================
 // Fixture helpers
@@ -138,6 +139,7 @@ async function createEventWithSlot(overrides: {
         format: overrides.format,
         meetingProvider: overrides.meetingProvider,
         meetingUrl: overrides.meetingUrl,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -244,6 +246,17 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
 
     // 接続プール warm-up（cold start が並行クエリをずらして race を隠すのを防ぐ）。
     await prisma.$queryRaw`SELECT 1`;
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Meet Writeback Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
   });
 
   afterEach(() => {
@@ -260,6 +273,8 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
     if (createdEventIds.length > 0) {
       await prisma.event.deleteMany({ where: { id: { in: createdEventIds } } });
     }
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await basePrisma.$disconnect();
   });
 
