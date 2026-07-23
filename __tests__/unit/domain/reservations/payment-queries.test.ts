@@ -26,6 +26,18 @@ const mockReservationFindFirst = mock<
   () => Promise<{ id: string; paymentStatus: PaymentStatus } | null>
 >(() => Promise.resolve(null));
 
+const mockReservationFindUnique = mock<
+  () => Promise<{
+    status: ReservationStatus;
+    paymentStatus: PaymentStatus;
+  } | null>
+>(() =>
+  Promise.resolve({
+    status: ReservationStatus.CONFIRMED,
+    paymentStatus: PaymentStatus.PAID,
+  }),
+);
+
 const mockReservationFindUniqueOrThrow = mock<
   () => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "reservation-1" }));
@@ -45,6 +57,7 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: {
       findFirst: mockReservationFindFirst,
+      findUnique: mockReservationFindUnique,
       findUniqueOrThrow: mockReservationFindUniqueOrThrow,
       update: mockReservationUpdate,
       updateMany: mockReservationUpdateMany,
@@ -55,6 +68,37 @@ mock.module("@/shared/db/prisma", () => ({
 mock.module("@generated/prisma/enums", () => ({
   PaymentStatus,
   ReservationStatus,
+}));
+
+const mockLogError = mock<
+  (
+    error: unknown,
+    logContext: {
+      category: string;
+      severity: string;
+      context?: Record<string, unknown>;
+    },
+  ) => void
+>(() => undefined);
+
+mock.module("@/shared/lib/errors/server", () => ({
+  logError: mockLogError,
+  normalizeError: (e: unknown) =>
+    e instanceof Error ? e : new Error(String(e)),
+  ErrorCategory: {
+    DATABASE: "DATABASE",
+    EXTERNAL_API: "EXTERNAL_API",
+    VALIDATION: "VALIDATION",
+    AUTHORIZATION: "AUTHORIZATION",
+    CACHE: "CACHE",
+    UNKNOWN: "UNKNOWN",
+  },
+  ErrorSeverity: {
+    CRITICAL: "CRITICAL",
+    HIGH: "HIGH",
+    MEDIUM: "MEDIUM",
+    LOW: "LOW",
+  },
 }));
 
 import {
@@ -92,11 +136,17 @@ const FULFILL_DATA = {
 describe("reservations/payment-queries", () => {
   beforeEach(() => {
     mockReservationFindFirst.mockReset();
+    mockReservationFindUnique.mockReset();
     mockReservationFindUniqueOrThrow.mockReset();
     mockReservationUpdate.mockReset();
     mockReservationUpdateMany.mockReset();
+    mockLogError.mockReset();
 
     mockReservationFindFirst.mockResolvedValue(null);
+    mockReservationFindUnique.mockResolvedValue({
+      status: ReservationStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+    });
     mockReservationFindUniqueOrThrow.mockResolvedValue(FULFILL_DATA);
     mockReservationUpdate.mockResolvedValue({ id: RESERVATION_ID });
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
@@ -165,8 +215,12 @@ describe("reservations/payment-queries", () => {
     });
 
     describe("idempotency", () => {
-      test("既に PAID（count === 0）→ null を返し findUniqueOrThrow を呼ばない", async () => {
+      test("既に PAID（count === 0）→ null を返し findUniqueOrThrow を呼ばない・CRITICAL ログも出さない", async () => {
         mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+        mockReservationFindUnique.mockResolvedValueOnce({
+          status: ReservationStatus.CONFIRMED,
+          paymentStatus: PaymentStatus.PAID,
+        });
 
         const result = await claimReservationAsPaid(RESERVATION_ID, {
           stripePaymentIntentId: PAYMENT_INTENT_ID,
@@ -174,6 +228,44 @@ describe("reservations/payment-queries", () => {
 
         expect(result).toBeNull();
         expect(mockReservationFindUniqueOrThrow).not.toHaveBeenCalled();
+        expect(mockLogError).not.toHaveBeenCalled();
+      });
+
+      test("count === 0 かつ現在 status=CANCELLED → money-in-flight として CRITICAL ログを記録する", async () => {
+        mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+        mockReservationFindUnique.mockResolvedValueOnce({
+          status: ReservationStatus.CANCELLED,
+          paymentStatus: PaymentStatus.UNPAID,
+        });
+
+        const result = await claimReservationAsPaid(RESERVATION_ID, {
+          stripePaymentIntentId: PAYMENT_INTENT_ID,
+        });
+
+        expect(result).toBeNull();
+        expect(mockLogError).toHaveBeenCalledTimes(1);
+        const [, options] = mockLogError.mock.calls[0] ?? [];
+        expect(options).toMatchObject({
+          severity: "CRITICAL",
+          context: expect.objectContaining({
+            operation: "claimReservationAsPaid",
+            reservationId: RESERVATION_ID,
+          }),
+        });
+      });
+
+      test("count === 0 かつ現在 status=CANCELLED 以外 → CRITICAL ログを記録しない", async () => {
+        mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+        mockReservationFindUnique.mockResolvedValueOnce({
+          status: ReservationStatus.COMPLETED,
+          paymentStatus: PaymentStatus.PAID,
+        });
+
+        await claimReservationAsPaid(RESERVATION_ID, {
+          stripePaymentIntentId: PAYMENT_INTENT_ID,
+        });
+
+        expect(mockLogError).not.toHaveBeenCalled();
       });
     });
   });

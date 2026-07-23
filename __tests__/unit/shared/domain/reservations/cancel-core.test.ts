@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { ReservationStatus } from "@generated/prisma/enums";
+import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import {
   applyCancellation,
   type ApplyCancellationOptions,
@@ -46,6 +46,7 @@ describe("applyCancellation", () => {
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.PENDING,
         startTime: FUTURE_START,
         couponId: null,
@@ -76,6 +77,7 @@ describe("applyCancellation", () => {
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.PENDING,
         startTime: FUTURE_START,
         couponId: null,
@@ -102,6 +104,7 @@ describe("applyCancellation", () => {
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.CANCELLED,
         startTime: FUTURE_START,
         couponId: null,
@@ -122,6 +125,7 @@ describe("applyCancellation", () => {
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.CONFIRMED,
         startTime: soonStart,
         couponId: null,
@@ -139,6 +143,7 @@ describe("applyCancellation", () => {
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.PENDING,
         startTime: FUTURE_START,
         couponId: null,
@@ -153,11 +158,77 @@ describe("applyCancellation", () => {
     expect(mockCouponUpdateMany).not.toHaveBeenCalled();
   });
 
+  test("Stripe Checkout 進行中 (paymentStatus=PENDING) はキャンセルさせず更新しない", async () => {
+    const result = await applyCancellation(
+      mockTx,
+      {
+        id: "r1",
+        paymentStatus: PaymentStatus.PENDING,
+        status: ReservationStatus.PENDING,
+        startTime: FUTURE_START,
+        couponId: null,
+      },
+      customerMypageOptions(),
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("決済処理中");
+    }
+    expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    PaymentStatus.UNPAID,
+    PaymentStatus.PAID,
+    PaymentStatus.PARTIALLY_REFUNDED,
+  ])(
+    "paymentStatus=%s はキャンセル可能（PAID 系は自動返金導線に委ねる）",
+    async (paymentStatus) => {
+      const result = await applyCancellation(
+        mockTx,
+        {
+          id: "r1",
+          paymentStatus,
+          status: ReservationStatus.CONFIRMED,
+          startTime: FUTURE_START,
+          couponId: null,
+        },
+        customerMypageOptions(),
+      );
+
+      expect(result).toEqual({ success: true });
+    },
+  );
+
+  test("atomic claim の WHERE に paymentStatus: not PENDING を含める（TOCTOU race 対策）", async () => {
+    await applyCancellation(
+      mockTx,
+      {
+        id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
+        status: ReservationStatus.PENDING,
+        startTime: FUTURE_START,
+        couponId: null,
+      },
+      customerMypageOptions(),
+    );
+
+    expect(mockReservationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          paymentStatus: { not: PaymentStatus.PENDING },
+        }),
+      }),
+    );
+  });
+
   test("クーポン付き予約はクーポン使用回数を戻す", async () => {
     await applyCancellation(
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.CONFIRMED,
         startTime: FUTURE_START,
         couponId: "c1",
@@ -178,6 +249,7 @@ describe("applyCancellation", () => {
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.PENDING,
         startTime: FUTURE_START,
         couponId: null,
@@ -193,6 +265,7 @@ describe("applyCancellation", () => {
       mockTx,
       {
         id: "r1",
+        paymentStatus: PaymentStatus.UNPAID,
         status: ReservationStatus.PENDING,
         startTime: FUTURE_START,
         couponId: null,

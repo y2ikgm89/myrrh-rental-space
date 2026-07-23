@@ -45,7 +45,13 @@ export async function cancelCustomerReservation(
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
       where: { id: reservationId, customerId, deletedAt: null },
-      select: { id: true, status: true, startTime: true, couponId: true },
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        startTime: true,
+        couponId: true,
+      },
     });
 
     if (!reservation) {
@@ -129,7 +135,13 @@ export async function cancelReservationByToken(
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
       where: { id: reservationId, deletedAt: null },
-      select: { id: true, status: true, startTime: true, couponId: true },
+      select: {
+        id: true,
+        status: true,
+        paymentStatus: true,
+        startTime: true,
+        couponId: true,
+      },
     });
 
     if (!reservation) {
