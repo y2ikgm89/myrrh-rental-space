@@ -24,6 +24,9 @@ import {
   type TermsMutationInput,
 } from "@/shared/lib/validations/terms";
 import { deriveLexicalContentHtmlFromJson } from "@/admin/components/editor/lexical/preview/derive-content-html.server";
+import { uuidIdSchema } from "@/shared/lib/validations/params";
+
+const termsIdSchema = uuidIdSchema("規約");
 
 const orderedIdsSchema = z
   .array(z.uuid({ error: "IDが不正です" }))
@@ -67,11 +70,14 @@ function toTermsFormInput(input: TermsMutationInput): TermsFormInput {
 export async function deleteTerms(
   id: string,
 ): Promise<MutationResult<{ id: string }>> {
+  const validated = termsIdSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
   return executeAdminMutationResult({
     resource: "terms",
     action: "delete",
-    resourceId: id,
-    execute: async () => softDeleteTermsCommand(id),
+    resourceId: validated.data,
+    execute: async () => softDeleteTermsCommand(validated.data),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
     },
@@ -81,11 +87,14 @@ export async function deleteTerms(
 export async function hardDeleteTerms(
   id: string,
 ): Promise<MutationResult<{ id: string }>> {
+  const validated = termsIdSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
   return executeAdminMutationResult({
     resource: "terms",
     action: "delete",
-    resourceId: id,
-    execute: async () => hardDeleteTermsCommand(id),
+    resourceId: validated.data,
+    execute: async () => hardDeleteTermsCommand(validated.data),
     afterSuccess: () => {
       invalidateTermsCaches();
     },
@@ -96,11 +105,15 @@ export async function updateTermsPublished(
   id: string,
   isPublished: boolean,
 ): Promise<MutationResult<{ id: string; slug: string; isPublished: boolean }>> {
+  const validated = termsIdSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
   return executeAdminMutationResult({
     resource: "terms",
     action: "publish",
-    resourceId: id,
-    execute: async () => updateTermsPublishedCommand(id, isPublished),
+    resourceId: validated.data,
+    execute: async () =>
+      updateTermsPublishedCommand(validated.data, isPublished),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
     },
@@ -113,11 +126,15 @@ export async function updateTermsFooterVisibility(
 ): Promise<
   MutationResult<{ id: string; slug: string; showInFooter: boolean }>
 > {
+  const validated = termsIdSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
   return executeAdminMutationResult({
     resource: "terms",
     action: "update",
-    resourceId: id,
-    execute: async () => updateTermsFooterVisibilityCommand(id, showInFooter),
+    resourceId: validated.data,
+    execute: async () =>
+      updateTermsFooterVisibilityCommand(validated.data, showInFooter),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
     },
@@ -145,11 +162,14 @@ export async function reorderTerms(
 export async function restoreTerms(
   id: string,
 ): Promise<MutationResult<{ id: string; slug: string }>> {
+  const validated = termsIdSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
   return executeAdminMutationResult({
     resource: "terms",
     action: "update",
-    resourceId: id,
-    execute: async () => restoreTermsCommand(id),
+    resourceId: validated.data,
+    execute: async () => restoreTermsCommand(validated.data),
     afterSuccess: (data) => {
       invalidateTermsCaches(data.slug);
     },

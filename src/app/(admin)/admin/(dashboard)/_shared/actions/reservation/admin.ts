@@ -204,16 +204,21 @@ export async function updateReservationAction(
     formData,
     updateReservationFormSchema,
     async (data) => {
+      const parsedId = z.uuid({ error: "IDが不正です" }).safeParse(id);
+      if (!parsedId.success) {
+        return { ok: false, error: "IDが不正です" };
+      }
+
       let mutationPayload:
         Awaited<ReturnType<typeof updateAdminReservationCommand>> | undefined;
 
       const result = await executeAdminMutationResult({
         resource: "reservation",
         action: "update",
-        resourceId: id,
+        resourceId: parsedId.data,
         execute: async (user) => {
           mutationPayload = await updateAdminReservationCommand(
-            id,
+            parsedId.data,
             omitUndefined({
               spaceId: data.spaceId,
               date: data.date,
@@ -269,7 +274,7 @@ export async function updateReservationAction(
                 operation: "updateCalendarSync",
                 category: ErrorCategory.EXTERNAL_API,
                 severity: ErrorSeverity.LOW,
-                context: { reservationId: id },
+                context: { reservationId: parsedId.data },
               },
             );
           } else {
@@ -328,7 +333,7 @@ export async function updateReservationAction(
                   "updateReservationActionIssuePasscodesAndSendConfirmation",
                 category: ErrorCategory.EXTERNAL_API,
                 severity: ErrorSeverity.MEDIUM,
-                context: { reservationId: id },
+                context: { reservationId: parsedId.data },
               },
             );
             fireAndForget(
@@ -340,7 +345,7 @@ export async function updateReservationAction(
                 operation: "updateReservationActionAdminNotificationConfirm",
                 category: ErrorCategory.EXTERNAL_API,
                 severity: ErrorSeverity.MEDIUM,
-                context: { reservationId: id },
+                context: { reservationId: parsedId.data },
               },
             );
           } else if (statusFlipToPending) {
@@ -367,7 +372,7 @@ export async function updateReservationAction(
                 operation: "updateReservationActionStatusFlipToPending",
                 category: ErrorCategory.EXTERNAL_API,
                 severity: ErrorSeverity.MEDIUM,
-                context: { reservationId: id },
+                context: { reservationId: parsedId.data },
               },
             );
             // Round-5 audit Finding #8: 編集フォーム経由でも CONFIRMED → PENDING
@@ -376,12 +381,15 @@ export async function updateReservationAction(
             // 起点のみ)。発行済みスマートロック passcode は「確認済み」前提のため
             // 失効させる (updateReservationStatus の afterSuccess と同じ helper)。
             if (previousStatus === ReservationStatus.CONFIRMED) {
-              fireAndForget(revokeSmartLockPasscodesForReservation(id), {
-                operation: "revokeSmartLockPasscodesForReservation",
-                category: ErrorCategory.EXTERNAL_API,
-                severity: ErrorSeverity.MEDIUM,
-                context: { reservationId: id },
-              });
+              fireAndForget(
+                revokeSmartLockPasscodesForReservation(parsedId.data),
+                {
+                  operation: "revokeSmartLockPasscodesForReservation",
+                  category: ErrorCategory.EXTERNAL_API,
+                  severity: ErrorSeverity.MEDIUM,
+                  context: { reservationId: parsedId.data },
+                },
+              );
             }
           } else if (mutationPayload.customerVisibleChanged) {
             // status 不変で日時/スペース/料金のみ変更 (既存の汎用 update 通知)
@@ -394,7 +402,7 @@ export async function updateReservationAction(
                 operation: "sendReservationUpdateNotification",
                 category: ErrorCategory.EXTERNAL_API,
                 severity: ErrorSeverity.LOW,
-                context: { reservationId: id },
+                context: { reservationId: parsedId.data },
               },
             );
           }
@@ -406,7 +414,7 @@ export async function updateReservationAction(
                 NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_UPDATE],
               message: "管理者が予約を更新しました",
               resourceType: "reservation",
-              resourceId: id,
+              resourceId: parsedId.data,
             }),
             {
               operation: "updateReservationActionNotification",
@@ -414,9 +422,13 @@ export async function updateReservationAction(
             },
           );
 
-          invalidateReservationCaches(id, mutationPayload.customerId, {
-            coupons: true,
-          });
+          invalidateReservationCaches(
+            parsedId.data,
+            mutationPayload.customerId,
+            {
+              coupons: true,
+            },
+          );
         },
       });
 
@@ -429,7 +441,10 @@ export async function updateReservationAction(
   );
 
   if (success) {
-    redirect(toAppRoute(`/admin/reservations/${id}`));
+    const parsedId = z.uuid({ error: "IDが不正です" }).safeParse(id);
+    if (parsedId.success) {
+      redirect(toAppRoute(`/admin/reservations/${parsedId.data}`));
+    }
   }
 
   return submissionResult;

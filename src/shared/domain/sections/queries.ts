@@ -46,7 +46,11 @@ export async function getShowcaseSpaces(
 ) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.SPACES);
+  cacheTag(
+    CACHE_TAGS.SPACES,
+    CACHE_TAGS.LOCATIONS,
+    CACHE_TAGS.SPACE_CATEGORIES,
+  );
 
   const spaces = await safeFetch({
     fetch: () =>

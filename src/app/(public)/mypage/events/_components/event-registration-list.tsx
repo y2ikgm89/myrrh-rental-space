@@ -35,6 +35,7 @@ import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/shared/components/turnstile-widget";
+import { EventCheckoutButton } from "./event-checkout-button";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // ---------------------------------------------------------------------------
@@ -51,6 +52,8 @@ export interface EventRegistrationListItem {
   readonly offeredAt: string | null;
   readonly expiresAt: string | null;
   readonly paymentStatus: string;
+  readonly ticketUnitPrice: number;
+  readonly ticketTotalPrice: number;
   readonly slotId: string;
   readonly ticketId: string;
   readonly event: {
@@ -88,6 +91,8 @@ interface EventRegistrationListProps {
    * (WAITLIST_ACTIVE_STATUSES + waitlistedAt lte 自分)。
    */
   readonly waitlistPositionMap: Readonly<Record<string, number>>;
+  /** payment feature module が ON のとき true (CheckoutButton 表示 gate)。 */
+  readonly paymentEnabled: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,6 +123,7 @@ export function EventRegistrationList({
   nowIso,
   receiptSerialNoMap,
   waitlistPositionMap,
+  paymentEnabled,
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
@@ -147,6 +153,7 @@ export function EventRegistrationList({
           nowIso={nowIso}
           receiptSerialNo={receiptSerialNoMap[registration.id] ?? null}
           waitlistPosition={waitlistPositionMap[registration.id] ?? null}
+          paymentEnabled={paymentEnabled}
         />
       ))}
     </Stack>
@@ -163,12 +170,14 @@ function EventRegistrationCard({
   nowIso,
   receiptSerialNo,
   waitlistPosition,
+  paymentEnabled,
 }: {
   readonly registration: EventRegistrationListItem;
   readonly turnstileSiteKey: string | null;
   readonly nowIso: string;
   readonly receiptSerialNo: string | null;
   readonly waitlistPosition: number | null;
+  readonly paymentEnabled: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -347,6 +356,14 @@ function EventRegistrationCard({
 
       {registration.status === RegistrationStatus.CONFIRMED && (
         <div className="mt-4 border-t border-border pt-3">
+          {paymentEnabled &&
+            (registration.paymentStatus === PaymentStatus.UNPAID ||
+              registration.paymentStatus === PaymentStatus.FAILED) &&
+            registration.ticketTotalPrice > 0 && (
+              <div className="mb-4">
+                <EventCheckoutButton registrationId={registration.id} />
+              </div>
+            )}
           <AddToCalendar
             urls={buildAddToCalendarUrls({
               summary: registration.event.title,

@@ -291,6 +291,103 @@ describe("createAuditLogRecord", () => {
     });
   });
 
+  describe("P2034 直列化衝突リトライ (#11)", () => {
+    // 各テスト後に mockTransaction を元のデフォルト実装に戻す。
+    // beforeEach の mockTransaction.mockClear() は呼出履歴のみを消すため、
+    // 実装上書き後は afterEach で明示復元する必要がある。
+    afterEach(() => {
+      mockTransaction.mockImplementation(
+        async (
+          callback: (tx: {
+            $executeRaw: typeof mockTxExecuteRaw;
+            auditLog: {
+              findFirst: typeof mockTxAuditLogFindFirst;
+              create: typeof mockTxAuditLogCreate;
+            };
+          }) => Promise<unknown>,
+        ) =>
+          callback({
+            $executeRaw: mockTxExecuteRaw,
+            auditLog: {
+              findFirst: mockTxAuditLogFindFirst,
+              create: mockTxAuditLogCreate,
+            },
+          }),
+      );
+    });
+
+    test("P2034 を 2 回スローした後に成功する場合は最終的に void を返す", async () => {
+      let attempt = 0;
+      mockTransaction.mockImplementation(
+        async (
+          callback: (tx: {
+            $executeRaw: typeof mockTxExecuteRaw;
+            auditLog: {
+              findFirst: typeof mockTxAuditLogFindFirst;
+              create: typeof mockTxAuditLogCreate;
+            };
+          }) => Promise<unknown>,
+        ) => {
+          attempt++;
+          if (attempt <= 2) {
+            throw { code: "P2034", message: "serialization failure" };
+          }
+          return callback({
+            $executeRaw: mockTxExecuteRaw,
+            auditLog: {
+              findFirst: mockTxAuditLogFindFirst,
+              create: mockTxAuditLogCreate,
+            },
+          });
+        },
+      );
+
+      const result = await createAuditLogRecord({
+        action: "CREATE",
+        resource: "post",
+      });
+      expect(result).toBeUndefined();
+      expect(attempt).toBe(3); // 2 回 P2034 + 1 回成功
+      expect(mockTxAuditLogCreate).toHaveBeenCalledTimes(1);
+    });
+
+    test("P2034 を MAX_AUDIT_LOG_CHAIN_RETRIES(3) 回連続スローした場合は最後のエラーを rethrow する", async () => {
+      const p2034Error = { code: "P2034", message: "serialization failure" };
+      mockTransaction.mockImplementation(() => {
+        throw p2034Error;
+      });
+
+      let caught: unknown;
+      try {
+        await createAuditLogRecord({ action: "CREATE", resource: "post" });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBe(p2034Error);
+      // MAX_AUDIT_LOG_CHAIN_RETRIES = 3 なので $transaction が 3 回呼ばれる
+      expect(mockTransaction).toHaveBeenCalledTimes(3);
+    });
+
+    test("P2034 以外のエラーはリトライせず即座に rethrow する", async () => {
+      const dbError = new Error("connection terminated unexpectedly");
+      let callCount = 0;
+      mockTransaction.mockImplementation(() => {
+        callCount++;
+        throw dbError;
+      });
+
+      let caught: unknown;
+      try {
+        await createAuditLogRecord({ action: "CREATE", resource: "post" });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBe(dbError);
+      // リトライしないため呼出は 1 回のみ
+      expect(callCount).toBe(1);
+    });
+  });
+
   describe("エッジケース", () => {
     test("resourceId が undefined の場合 create データから省かれる", async () => {
       await createAuditLogRecord({

@@ -40,6 +40,8 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { buildEventRegistrationPaymentCheckoutUrl } from "@/shared/lib/tokens/event-registration-payment-token";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -178,6 +180,15 @@ export async function registerForEvent(
             );
             if (!event) return;
 
+            const ticketTotalPrice = event.ticketUnitPrice * event.quantity;
+            const paymentEnabled = await isFeatureEnabled("payment");
+            const paymentCheckoutUrl =
+              !customerId && paymentEnabled && ticketTotalPrice > 0
+                ? buildEventRegistrationPaymentCheckoutUrl(
+                    result.registration.id,
+                  )
+                : undefined;
+
             await Promise.all([
               sendEventRegistrationConfirmation({
                 registrationId: result.registration.id,
@@ -192,6 +203,9 @@ export async function registerForEvent(
                 customerId,
                 format: event.format,
                 meetingUrl: event.meetingUrl,
+                ...(paymentCheckoutUrl !== undefined
+                  ? { paymentCheckoutUrl }
+                  : {}),
               }),
               sendEventAdminNotification(
                 {

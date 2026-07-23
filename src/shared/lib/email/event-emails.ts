@@ -90,6 +90,8 @@ type EventRegistrationConfirmationData = {
    * (RECEIPT-GUEST-01)。会員はマイページから DL できるため未指定で OK。
    */
   receiptSerialNo?: string;
+  /** ゲスト向け: 有料チケットの Stripe Checkout 起動 URL (token 認可 route)。 */
+  paymentCheckoutUrl?: string;
 };
 
 /**
@@ -218,6 +220,7 @@ export async function sendEventRegistrationConfirmation(
           claimUrl,
           cancelUrl,
           receiptDownloadUrl,
+          paymentCheckoutUrl: data.paymentCheckoutUrl,
           footer,
         }),
       ),

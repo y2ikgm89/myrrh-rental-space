@@ -192,7 +192,11 @@ export type PaginatedSpaces = Awaited<ReturnType<typeof runSpacesPaginated>>;
 export async function getPublishedSpacesPaginated(input: SpaceCatalogFilter) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.SPACES);
+  cacheTag(
+    CACHE_TAGS.SPACES,
+    CACHE_TAGS.LOCATIONS,
+    CACHE_TAGS.SPACE_CATEGORIES,
+  );
 
   return safeFetch({
     fetch: () => runSpacesPaginated(input),

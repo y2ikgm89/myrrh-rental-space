@@ -24,9 +24,11 @@ import {
 import { RegistrationStatusBadge } from "@/admin/components/status-badges";
 import {
   adminCancelRegistration,
+  createEventCheckoutSession,
   refundEventRegistrationPayment,
 } from "@/admin/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { openExternalTab } from "@/admin/lib/open-external-tab";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import {
   isRegistrationStatusFilter,
@@ -141,6 +143,7 @@ export function EventRegistrationTable({
   const router = useRouter();
   const [isCancelPending, startCancelTransition] = useTransition();
   const [isRefundPending, startRefundTransition] = useTransition();
+  const [isCheckoutPending, startCheckoutTransition] = useTransition();
   const [refundTarget, setRefundTarget] = useState<Registration | null>(null);
   const [editTarget, setEditTarget] = useState<Registration | null>(null);
   const [manualPaymentTarget, setManualPaymentTarget] = useState<string | null>(
@@ -212,6 +215,23 @@ export function EventRegistrationTable({
       router.refresh();
     });
   };
+
+  function handleCreateCheckoutSession(registrationId: string) {
+    startCheckoutTransition(async () => {
+      const result = await createEventCheckoutSession(registrationId);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+      if (result.sessionUrl) {
+        openExternalTab(result.sessionUrl);
+        toast.success("決済リンクを作成しました");
+      } else {
+        toast.error("決済URLの取得に失敗しました");
+      }
+      router.refresh();
+    });
+  }
 
   if (total === 0) {
     return (
@@ -287,7 +307,8 @@ export function EventRegistrationTable({
               {registrations.map((reg) => {
                 const showRefund = isRefundable(reg);
                 const showCancel = reg.status === "CONFIRMED";
-                const anyPending = isCancelPending || isRefundPending;
+                const anyPending =
+                  isCancelPending || isRefundPending || isCheckoutPending;
                 return (
                   <TableRow key={reg.id}>
                     <TableCell>
@@ -333,14 +354,26 @@ export function EventRegistrationTable({
                           編集
                         </Button>
                         {isManuallyPayable(reg) ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={anyPending}
-                            onClick={() => setManualPaymentTarget(reg.id)}
-                          >
-                            入金記録
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={anyPending}
+                              onClick={() =>
+                                handleCreateCheckoutSession(reg.id)
+                              }
+                            >
+                              Stripe決済
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={anyPending}
+                              onClick={() => setManualPaymentTarget(reg.id)}
+                            >
+                              入金記録
+                            </Button>
+                          </>
                         ) : null}
                         {showRefund ? (
                           <Button

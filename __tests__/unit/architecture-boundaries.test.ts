@@ -715,38 +715,42 @@ describe("architecture boundaries", () => {
     // 参照になる。Prisma client は identity 比較で sentinel を判定するため、
     // gateway 経由（browser 由来）の sentinel を渡すと検出されない。
     // gateway は browser entry の type 再 export と enums の値再 export のみ。
-    const gatewayFile = join(ENUMS_GATEWAY_ROOT, "prisma-types.ts");
-    if (!existsSync(gatewayFile)) return;
-
-    // コメント・blank 行を除外した実コード行のみで検査
-    const codeLines = readFileSync(gatewayFile, "utf8")
-      .split(/\r?\n/u)
-      .filter((line) => {
-        const trimmed = line.trim();
-        return (
-          trimmed.length > 0 &&
-          !trimmed.startsWith("//") &&
-          !trimmed.startsWith("*") &&
-          !trimmed.startsWith("/*")
-        );
-      });
-    const codeSource = codeLines.join("\n");
-
-    // server-only の client entry import を禁止
-    expect(codeSource).not.toMatch(
-      /from\s+["']@generated\/prisma\/client["']/u,
+    const gatewayFiles = collectSourceFiles(ENUMS_GATEWAY_ROOT).filter((file) =>
+      file.endsWith(".ts"),
     );
-    // 値としての Prisma re-export を禁止（type-only に限定）
-    expect(codeSource).not.toMatch(/^export\s+\{\s*Prisma\b/mu);
-    // PrismaClient 自体の re-export を禁止（型・値とも）
-    expect(codeSource).not.toMatch(/\bPrismaClient\b/u);
-    // gateway は browser entry または enums entry のみから import 可能
-    // （models / internal 等の他 entry は禁止）
-    const importLines = codeLines.filter((line) =>
-      line.includes("@generated/prisma"),
-    );
-    for (const line of importLines) {
-      expect(line).toMatch(/@generated\/prisma\/(browser|enums)["']/u);
+    expect(gatewayFiles.length).toBeGreaterThan(0);
+
+    for (const gatewayFile of gatewayFiles) {
+      // コメント・blank 行を除外した実コード行のみで検査
+      const codeLines = readFileSync(gatewayFile, "utf8")
+        .split(/\r?\n/u)
+        .filter((line) => {
+          const trimmed = line.trim();
+          return (
+            trimmed.length > 0 &&
+            !trimmed.startsWith("//") &&
+            !trimmed.startsWith("*") &&
+            !trimmed.startsWith("/*")
+          );
+        });
+      const codeSource = codeLines.join("\n");
+
+      // server-only の client entry import を禁止
+      expect(codeSource).not.toMatch(
+        /from\s+["']@generated\/prisma\/client["']/u,
+      );
+      // 値としての Prisma re-export を禁止（type-only に限定）
+      expect(codeSource).not.toMatch(/^export\s+\{\s*Prisma\b/mu);
+      // PrismaClient 自体の re-export を禁止（型・値とも）
+      expect(codeSource).not.toMatch(/\bPrismaClient\b/u);
+      // gateway は browser entry または enums entry のみから import 可能
+      // （models / internal 等の他 entry は禁止）
+      const importLines = codeLines.filter((line) =>
+        line.includes("@generated/prisma"),
+      );
+      for (const line of importLines) {
+        expect(line).toMatch(/@generated\/prisma\/(browser|enums)["']/u);
+      }
     }
   });
 

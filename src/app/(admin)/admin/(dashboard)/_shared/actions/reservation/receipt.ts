@@ -1,12 +1,17 @@
 "use server";
 
+import { z } from "zod";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { reissueReceiptCommand } from "@/shared/domain/receipts/issue";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { reissueReceiptInputSchema } from "@/shared/lib/validations/receipt-reissue";
+
+const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
 
 /**
  * 管理者による領収書再発行 (task #7 PR#6)。
@@ -23,10 +28,23 @@ export async function reissueReservationReceipt(
   originalReceiptId: string,
   reason: string,
 ): Promise<MutationResult<{ receiptId: string; serialNo: string }>> {
+  const parsedReservationId = reservationIdSchema.safeParse(reservationId);
+  if (!parsedReservationId.success) {
+    return createValidationMutationError(parsedReservationId.error);
+  }
+
+  const parsedInput = reissueReceiptInputSchema.safeParse({
+    originalReceiptId,
+    reason,
+  });
+  if (!parsedInput.success) {
+    return createValidationMutationError(parsedInput.error);
+  }
+
   return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
-    resourceId: reservationId,
+    resourceId: parsedReservationId.data,
     execute: async (user) => {
       // UA-HORIZ-02: 領収書再発行の AuditLog に ip / userAgent を metadata として
       // 載せる (admin session hijack シナリオでの forensics 対称化)。
@@ -35,12 +53,12 @@ export async function reissueReservationReceipt(
       const { ip, userAgent } = await buildAuditRequestContext();
 
       const receipt = await reissueReceiptCommand({
-        originalReceiptId,
-        reason,
+        originalReceiptId: parsedInput.data.originalReceiptId,
+        reason: parsedInput.data.reason,
         // Codex P2 (PR #1129, comment 3589127456) binding check: stale/crafted call で
         // reservation A の action が別 reservation B (or event registration) の receipt を
         // mutate するのを domain 層で FORBIDDEN reject する。
-        expectedReservationId: reservationId,
+        expectedReservationId: parsedReservationId.data,
       });
 
       // AuditLog: 再発行を記録 (append-only、元 Receipt / 新 Receipt の両方 id + reason を metadata)
@@ -55,8 +73,8 @@ export async function reissueReservationReceipt(
         },
         metadata: {
           reissuedFromId: originalReceiptId,
-          reissuedReason: reason,
-          reservationId,
+          reissuedReason: parsedInput.data.reason,
+          reservationId: parsedReservationId.data,
           ...(ip !== null && { ip }),
           ...(userAgent !== null && { userAgent }),
         },
@@ -66,7 +84,7 @@ export async function reissueReservationReceipt(
     },
     afterSuccess: () => {
       // reservation 側の Receipt 参照 (mypage 用リンク等) を invalidate
-      invalidateReservationCaches(reservationId, null);
+      invalidateReservationCaches(parsedReservationId.data, null);
     },
   });
 }

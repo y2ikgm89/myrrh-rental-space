@@ -152,6 +152,17 @@ mock.module("@/shared/lib/ical/urls", () => ({
   buildAddToCalendarUrls: () => ({}),
 }));
 
+mock.module(
+  "@/app/(public)/mypage/events/_components/event-checkout-button",
+  () => ({
+    EventCheckoutButton: () => <div data-testid="event-checkout-button" />,
+  }),
+);
+
+mock.module("@/app/(public)/mypage/_shared/actions/event-registration", () => ({
+  startEventCheckoutSessionAction: mock(async () => ({ sessionUrl: null })),
+}));
+
 // ---------------------------------------------------------------------------
 // SUT dynamic import (mocks must be registered first)
 // ---------------------------------------------------------------------------
@@ -177,6 +188,8 @@ function makeRegistration(
     offeredAt: null,
     expiresAt: null,
     paymentStatus: "UNPAID",
+    ticketUnitPrice: 3000,
+    ticketTotalPrice: 3000,
     slotId: "cm0slot0000000000000001",
     ticketId: "cm0tick0000000000000001",
     ...overrides,
@@ -228,6 +241,7 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
           nowIso="2026-07-01T00:00:00.000Z"
           receiptSerialNoMap={{}}
           waitlistPositionMap={{}}
+          paymentEnabled={false}
         />,
       );
     });

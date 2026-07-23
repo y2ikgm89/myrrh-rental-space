@@ -149,6 +149,7 @@ export async function updateBusinessHoursSettings(
     },
     afterSuccess: () => {
       invalidateSiteWideCache([
+        CACHE_TAGS.ORGANIZATION_SETTINGS,
         CACHE_TAGS.BUSINESS_SETTINGS,
         CACHE_TAGS.RESERVATIONS,
       ]);
