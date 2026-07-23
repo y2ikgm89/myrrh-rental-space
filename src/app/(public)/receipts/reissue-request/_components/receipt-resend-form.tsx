@@ -172,7 +172,9 @@ export function ReceiptResendForm({
         <Button
           type="submit"
           variant="primary"
-          disabled={isPending}
+          disabled={
+            isPending || (turnstileSiteKey !== null && turnstileToken === "")
+          }
           className="self-start"
         >
           {isPending ? "送信中..." : "再送信をリクエスト"}
