@@ -247,6 +247,7 @@ export async function SectionRenderer({
           <SpaceListSection
             config={config}
             style={resolved}
+            sectionId={section.id}
             mode={{
               kind: "catalog",
               spaces: items,
@@ -291,6 +292,7 @@ export async function SectionRenderer({
         <SpaceListSection
           config={config}
           style={resolved}
+          sectionId={section.id}
           mode={{ kind: "simple", spaces }}
         />
       );

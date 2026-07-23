@@ -102,6 +102,12 @@ interface SpaceListSectionProps {
   readonly config: SpaceListConfig;
   readonly style: SectionStylePayload;
   readonly mode: SpaceListMode;
+  /**
+   * 複製されたセクション同士で同じスペースが描画されても SpaceCard の
+   * aria-describedby id がページ内で衝突しないようにする一意キー
+   * （catalog variant のみ SpaceGrid 経由で使用）。
+   */
+  readonly sectionId: string;
 }
 
 /**
@@ -145,6 +151,7 @@ export function SpaceListSection({
   config,
   style,
   mode,
+  sectionId,
 }: SpaceListSectionProps): ReactElement {
   if (mode.kind === "catalog") {
     const hasFilters = hasAnyFacetActive(mode.filter);
@@ -188,6 +195,7 @@ export function SpaceListSection({
             spaces={mode.spaces}
             reviewStats={mode.reviewStats}
             hasFilters={hasFilters}
+            sectionId={sectionId}
           />
         </Suspense>
 
