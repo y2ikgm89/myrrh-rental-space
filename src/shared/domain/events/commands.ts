@@ -945,6 +945,38 @@ export async function upsertEventFromCalendar(data: {
 }
 
 /**
+ * Google Calendar 上でカレンダー由来（`upsertEventFromCalendar` が import した）
+ * イベントが cancelled になったことを検知した際、対応する Event を CANCELLED に
+ * 遷移させる（GCAL-AUDIT-10）。
+ *
+ * `googleCalendarEventId` を持つ `EventTimeSlot` から親 Event を逆引きする
+ * （import 経路は 1 event = 1 slot 固定、`upsertEventFromCalendar` 参照）。
+ * 管理者操作 (`cancelEventCommand`) と異なり、GCal 側が既に削除済みのイベントに
+ * 対する反映のため、参加者通知・outbound GCal delete は発火しない（source of
+ * truth が GCal 側であり、二重送信・無意味な API 呼び出しを避ける）。
+ */
+export async function cancelImportedEventFromCalendar(
+  googleCalendarEventId: string,
+): Promise<{ cancelled: boolean }> {
+  const slot = await prisma.eventTimeSlot.findFirst({
+    where: { googleCalendarEventId },
+    select: { eventId: true },
+  });
+  if (!slot) return { cancelled: false };
+
+  const claim = await prisma.event.updateMany({
+    where: {
+      id: slot.eventId,
+      deletedAt: null,
+      status: { not: EventStatus.CANCELLED },
+    },
+    data: { status: EventStatus.CANCELLED },
+  });
+
+  return { cancelled: claim.count > 0 };
+}
+
+/**
  * `slug` が空いていればそのまま返し、衝突したら `${slug}-2`, `${slug}-3` ...
  * の最小未使用番号を返す（WordPress / Ghost / Notion 互換のインクリメンタル方式）。
  *

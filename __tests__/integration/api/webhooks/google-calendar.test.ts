@@ -57,6 +57,12 @@ const mockInvalidateSiteWideCacheFromRouteHandler = mock<
   (tags: readonly string[], options?: unknown) => void
 >(() => undefined);
 const mockLogError = mock(() => undefined);
+const mockTryAcquireCalendarSyncLock = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+const mockReleaseCalendarSyncLock = mock<() => Promise<void>>(() =>
+  Promise.resolve(),
+);
 
 mock.module("@/shared/domain/settings/admin-queries", () => ({
   getGoogleCalendarWebhookState: mockGetWebhookState,
@@ -76,6 +82,14 @@ mock.module("@/shared/lib/google-calendar", () => ({
 
 mock.module("@/shared/lib/calendar-sync/inbound", () => ({
   syncFromCalendar: mockSyncFromCalendar,
+}));
+
+// GCAL-AUDIT-08: webhook route が cron と同じ advisory lock を取得する。
+// 未 mock だと実 DB の pg_try_advisory_lock が走り、外 catch が
+// processing:"failed" を返して既存契約テストを壊す。
+mock.module("@/shared/domain/calendar-sync/locks", () => ({
+  tryAcquireCalendarSyncLock: () => mockTryAcquireCalendarSyncLock(),
+  releaseCalendarSyncLock: () => mockReleaseCalendarSyncLock(),
 }));
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
@@ -228,7 +242,9 @@ describe("POST /api/webhooks/google-calendar", () => {
       acknowledged: true,
       processing: "sync_failed",
     });
+    expect(mockTryAcquireCalendarSyncLock).toHaveBeenCalledTimes(1);
     expect(mockSyncFromCalendar).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendarSyncLock).toHaveBeenCalledTimes(1);
     expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 
@@ -243,9 +259,29 @@ describe("POST /api/webhooks/google-calendar", () => {
       deleted: 1,
       updated: 1,
     });
+    expect(mockTryAcquireCalendarSyncLock).toHaveBeenCalledTimes(1);
     expect(mockSyncFromCalendar).toHaveBeenCalledTimes(1);
+    expect(mockReleaseCalendarSyncLock).toHaveBeenCalledTimes(1);
     expect(mockInvalidateSiteWideCacheFromRouteHandler).toHaveBeenCalledTimes(
       1,
     );
+  });
+
+  test("lock 取得失敗時は200でackし同期しない", async () => {
+    mockTryAcquireCalendarSyncLock.mockImplementation(() =>
+      Promise.resolve(false),
+    );
+
+    const response = await post(googleCalendarWebhookRequest());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data).toMatchObject({
+      acknowledged: true,
+      skipped: "lock_unavailable",
+    });
+    expect(mockSyncFromCalendar).not.toHaveBeenCalled();
+    expect(mockReleaseCalendarSyncLock).not.toHaveBeenCalled();
+    expect(mockInvalidateSiteWideCacheFromRouteHandler).not.toHaveBeenCalled();
   });
 });

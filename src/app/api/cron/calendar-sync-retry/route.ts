@@ -31,6 +31,7 @@ import { connection } from "next/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { retryFailedSyncs } from "@/shared/lib/calendar-sync/outbound";
+import { retryFailedEventCalendarSyncs } from "@/shared/lib/calendar-sync/event-outbound";
 import { isGoogleCalendarEnabled } from "@/shared/lib/google-calendar";
 import {
   logError,
@@ -69,7 +70,12 @@ export async function GET(request: Request) {
       });
     }
 
-    const result = await retryFailedSyncs();
+    // 予約側 (create/update/delete 振り分け) と event 側 (create のみ) は独立した
+    // 失敗集合のため並列実行する (GCAL-AUDIT-04)。
+    const [reservationResult, eventResult] = await Promise.all([
+      retryFailedSyncs(),
+      retryFailedEventCalendarSyncs(),
+    ]);
 
     // 予約データの admin dashboard 表示を最新化 (calendar-sync と同型)。
     // skipCdnPurge: true — RESERVATIONS + calendar tag は admin-only private tag。
@@ -79,9 +85,11 @@ export async function GET(request: Request) {
     );
 
     return jsonSuccess({
-      total: result.total,
-      succeeded: result.succeeded,
-      failed: result.failed,
+      total: reservationResult.total + eventResult.total,
+      succeeded: reservationResult.succeeded + eventResult.succeeded,
+      failed: reservationResult.failed + eventResult.failed,
+      reservations: reservationResult,
+      events: eventResult,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

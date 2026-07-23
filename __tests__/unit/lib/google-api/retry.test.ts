@@ -11,6 +11,7 @@
 
 import { describe, test, expect } from "bun:test";
 import {
+  isGoogleCalendarFullSyncRequired,
   isRetryableGoogleApiError,
   withGoogleApiRetry,
 } from "@/shared/lib/google-api/retry";
@@ -131,6 +132,62 @@ describe("isRetryableGoogleApiError", () => {
       expect(isRetryableGoogleApiError("error")).toBe(false);
       expect(isRetryableGoogleApiError(123)).toBe(false);
     });
+  });
+});
+
+describe("isGoogleCalendarFullSyncRequired", () => {
+  test("HTTP status 410 は true（公式本文メッセージは '410' という文字列を含まない）", () => {
+    expect(isGoogleCalendarFullSyncRequired({ code: 410 })).toBe(true);
+    expect(isGoogleCalendarFullSyncRequired({ status: 410 })).toBe(true);
+    expect(
+      isGoogleCalendarFullSyncRequired({ response: { status: 410 } }),
+    ).toBe(true);
+  });
+
+  test("message に '410' を含まない実際の Google 本文でも status 410 なら true", () => {
+    const error = {
+      code: 410,
+      message: "Sync token is no longer valid, a full sync is required.",
+    };
+    expect(isGoogleCalendarFullSyncRequired(error)).toBe(true);
+  });
+
+  test("reason が fullSyncRequired なら status 欠落でも true", () => {
+    const error = {
+      errors: [{ domain: "calendar", reason: "fullSyncRequired" }],
+    };
+    expect(isGoogleCalendarFullSyncRequired(error)).toBe(true);
+  });
+
+  test("GaxiosError 形式（response.data.error.errors）でも reason を抽出できる", () => {
+    const error = {
+      response: {
+        data: {
+          error: {
+            errors: [{ domain: "calendar", reason: "fullSyncRequired" }],
+          },
+        },
+      },
+    };
+    expect(isGoogleCalendarFullSyncRequired(error)).toBe(true);
+  });
+
+  test("400 / 401 / 403 / 404 は false（410 と取り違えない）", () => {
+    expect(isGoogleCalendarFullSyncRequired({ code: 400 })).toBe(false);
+    expect(isGoogleCalendarFullSyncRequired({ code: 401 })).toBe(false);
+    expect(isGoogleCalendarFullSyncRequired({ code: 403 })).toBe(false);
+    expect(isGoogleCalendarFullSyncRequired({ code: 404 })).toBe(false);
+  });
+
+  test("message に偶然 '410' を含む無関係なエラーは true にしない（文字列一致の誤検知回避）", () => {
+    const error = { code: 500, message: "Internal error at line 410" };
+    expect(isGoogleCalendarFullSyncRequired(error)).toBe(false);
+  });
+
+  test("null / undefined / primitive は false", () => {
+    expect(isGoogleCalendarFullSyncRequired(null)).toBe(false);
+    expect(isGoogleCalendarFullSyncRequired(undefined)).toBe(false);
+    expect(isGoogleCalendarFullSyncRequired("error")).toBe(false);
   });
 });
 

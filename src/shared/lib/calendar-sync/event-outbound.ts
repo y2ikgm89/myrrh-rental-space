@@ -18,14 +18,17 @@ import {
 } from "@/shared/lib/errors/server";
 import {
   createCalendarEvent,
-  updateCalendarEvent,
   deleteCalendarEvent,
+  updateCalendarEvent,
   isGoogleCalendarEnabled,
   type CalendarEventParams,
 } from "@/shared/lib/google-calendar";
 import {
   clearEventGoogleCalendarEventId,
+  getEventSlotsForCalendarSync,
+  getFailedCalendarSyncEventIds,
   markEventCalendarSyncError,
+  markEventCalendarSyncSuccess,
   saveEventGoogleCalendarEventId,
   writeBackMeetingUrl,
 } from "@/shared/domain/events/calendar-sync";
@@ -109,14 +112,48 @@ export async function syncEventToCalendar(
     const result = await createCalendarEvent(eventParams, { withMeet });
 
     if (result.success && result.eventId) {
-      await saveEventGoogleCalendarEventId({
-        slotId: data.slotId,
-        googleCalendarEventId: result.eventId,
-      });
+      try {
+        await saveEventGoogleCalendarEventId({
+          slotId: data.slotId,
+          googleCalendarEventId: result.eventId,
+        });
+      } catch (dbError) {
+        // GCAL-AUDIT-07: event 側も reservation 側と同型の compensating action。
+        // GCal 側の作成は成功したが DB write-back が失敗した場合、次回 retry の
+        // createCalendarEvent 再実行による GCal 重複イベントを防ぐため、作成済み
+        // GCal event を削除してから失敗を記録する。
+        const compensationResult = await deleteCalendarEvent(result.eventId);
+        if (!compensationResult.success) {
+          logError(
+            new Error(
+              `Compensating delete failed after DB write-back error: ${compensationResult.error}`,
+            ),
+            {
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.HIGH,
+              context: {
+                operation: "syncEventToCalendar.compensate",
+                eventId: data.eventId,
+                googleCalendarEventId: result.eventId,
+              },
+            },
+          );
+        }
+        const message =
+          dbError instanceof Error
+            ? dbError.message
+            : normalizeError(dbError).message;
+        await markEventCalendarSyncError({
+          eventId: data.eventId,
+          error: message,
+        });
+        return { success: false, error: message };
+      }
 
       // Meet URL 抽出・write-back を独立した try/catch で包む。
       // write-back が失敗してもGCal イベント作成とgoogleCalendarEventId 保存は済んでいるため、
-      // 外側の sync は成功を返す。write-back エラーはサイレント化（logError で記録）。
+      // 外側の sync は成功を返す。GCAL-AUDIT-04: ただし silent 成功にはせず
+      // `Event.calendarSyncError` に記録し admin dashboard から追跡可能にする。
       if (withMeet) {
         try {
           const meetingUrl = extractMeetingUrl(result.event);
@@ -124,19 +161,13 @@ export async function syncEventToCalendar(
             await writeBackMeetingUrl({ eventId: data.eventId, meetingUrl });
           }
         } catch (error) {
-          // write-back エラーを記録するが、propagate しない
           const message =
             error instanceof Error
               ? error.message
               : normalizeError(error).message;
-          logError(new Error(`Failed to write back meeting URL: ${message}`), {
-            category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.MEDIUM,
-            context: {
-              operation: "writeBackMeetingUrl",
-              eventId: data.eventId,
-              googleCalendarEventId: result.eventId,
-            },
+          await markEventCalendarSyncError({
+            eventId: data.eventId,
+            error: `Meet URL write-back failed: ${message}`,
           });
           // Note: この時点で meetingUrl は null のまま。follow-up で別タスク化予定
         }
@@ -239,4 +270,61 @@ export async function deleteEventCalendarSync(
     });
     return { success: false, error: message };
   }
+}
+
+// =============================================================================
+// Batch Operations (GCAL-AUDIT-04)
+// =============================================================================
+
+/**
+ * `Event.calendarSyncError` が残っているイベントのうち、`googleCalendarEventId`
+ * が未設定のスロットを対象に create を再試行する。
+ *
+ * update / delete 失敗（slot は既に `googleCalendarEventId` を持つ）はここでは
+ * 拾わない — event 単位の再送で slot 側 GCal event を都度作り直すと孤児 event を
+ * 生むため対象外（reservation 側の update/delete retry と非対称、GCAL-AUDIT-04 の
+ * スコープは「failed slots with null googleCalendarEventId + event.calendarSyncError」）。
+ * 全 slot が同期済みになったら event 側の `calendarSyncError` を解消する。
+ */
+export async function retryFailedEventCalendarSyncs(): Promise<{
+  total: number;
+  succeeded: number;
+  failed: number;
+}> {
+  const eventIds = await getFailedCalendarSyncEventIds();
+
+  let total = 0;
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const eventId of eventIds) {
+    const slots = await getEventSlotsForCalendarSync(eventId);
+    const pendingSlots = slots.filter(
+      (slot) => slot.googleCalendarEventId === null,
+    );
+
+    for (const slot of pendingSlots) {
+      total++;
+      const result = await syncEventToCalendar(slot);
+      if (result.success) {
+        succeeded++;
+      } else {
+        failed++;
+      }
+    }
+
+    if (pendingSlots.length === 0) {
+      // 対象 slot が無い（Meet URL write-back 失敗等、機械的な再試行では解消しない
+      // event-level エラー）は自動 retry 対象外。calendarSyncError を残したまま
+      // admin dashboard 側の可視化に委ねる（silent clear しない — GCAL-AUDIT-04）。
+      continue;
+    }
+
+    const refreshed = await getEventSlotsForCalendarSync(eventId);
+    if (refreshed.every((slot) => slot.googleCalendarEventId !== null)) {
+      await markEventCalendarSyncSuccess(eventId);
+    }
+  }
+
+  return { total, succeeded, failed };
 }

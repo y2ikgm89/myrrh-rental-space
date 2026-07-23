@@ -29,12 +29,18 @@ const mockFetchInstances = mock<
     error?: string;
   }>
 >(() => Promise.resolve({ success: true, instances: [] }));
+const mockUpdate = mock<
+  (...args: unknown[]) => Promise<{ success: boolean; error?: string }>
+>(() => Promise.resolve({ success: true }));
+const mockDelete = mock<
+  (...args: unknown[]) => Promise<{ success: boolean; error?: string }>
+>(() => Promise.resolve({ success: true }));
 
 mock.module("@/shared/lib/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
   createCalendarEvent: mockCreate,
-  updateCalendarEvent: mock(() => Promise.resolve({ success: true })),
-  deleteCalendarEvent: mock(() => Promise.resolve({ success: true })),
+  updateCalendarEvent: mockUpdate,
+  deleteCalendarEvent: mockDelete,
   fetchEventInstances: mockFetchInstances,
   getCalendarEvent: mock(() => Promise.resolve(null)),
   getServiceAccountClient: mock(() => Promise.resolve(null)),
@@ -54,11 +60,14 @@ mock.module("@/shared/lib/google-calendar", () => ({
 // --- domain mocks ---
 type FailedReservation = {
   id: string;
+  status: string;
   startTime: Date;
   endTime: Date;
   notes: string | null;
   totalPrice: number | null;
   guestEmail: string | null;
+  googleCalendarEventId: string | null;
+  calendarSyncError: string | null;
   space: { name: string; lineAddress: string };
   customer: { firstName: string; lastName: string; email: string };
 };
@@ -81,8 +90,14 @@ const mockMarkSeriesInstanceSuccess = mock<() => Promise<void>>(() =>
 const mockMarkSuccess = mock<() => Promise<void>>(() => Promise.resolve());
 const mockMarkError = mock<() => Promise<void>>(() => Promise.resolve());
 
+const mockClearReservationCalendarEvent = mock<() => Promise<void>>(() =>
+  Promise.resolve(),
+);
+const mockMarkUpdated = mock<() => Promise<void>>(() => Promise.resolve());
+
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
-  clearReservationCalendarEvent: mock(() => Promise.resolve()),
+  GCAL_DELETE_FAILED_PREFIX: "gcal_delete_failed:",
+  clearReservationCalendarEvent: mockClearReservationCalendarEvent,
   getCalendarSyncRuntimeState: mock(() =>
     Promise.resolve({
       twoWaySyncEnabled: false,
@@ -100,7 +115,7 @@ mock.module("@/shared/domain/reservations/calendar-sync", () => ({
   getSeriesInstanceStartTimes: mockGetSeriesInstances,
   markReservationCalendarSyncError: mockMarkError,
   markReservationCalendarSyncSuccess: mockMarkSuccess,
-  markReservationCalendarSyncUpdated: mock(() => Promise.resolve()),
+  markReservationCalendarSyncUpdated: mockMarkUpdated,
   markSeriesInstanceCalendarSyncSuccess: mockMarkSeriesInstanceSuccess,
   markSeriesMasterEventCreated: mock(() => Promise.resolve()),
 }));
@@ -138,11 +153,14 @@ function baseReservation(
 ): FailedReservation {
   return {
     id: "res-001",
+    status: "CONFIRMED",
     startTime: new Date("2026-05-01T10:00:00Z"),
     endTime: new Date("2026-05-01T11:00:00Z"),
     notes: null,
     totalPrice: 1000,
     guestEmail: null,
+    googleCalendarEventId: null,
+    calendarSyncError: "create failed: quota exceeded",
     space: { name: "Space A", lineAddress: "東京都渋谷区" },
     customer: {
       firstName: "太郎",
@@ -178,6 +196,14 @@ describe("retryFailedSyncs — GCAL-RETRY-04 series/standalone separation", () =
     mockMarkSuccess.mockResolvedValue(undefined);
     mockMarkError.mockReset();
     mockMarkError.mockResolvedValue(undefined);
+    mockClearReservationCalendarEvent.mockReset();
+    mockClearReservationCalendarEvent.mockResolvedValue(undefined);
+    mockMarkUpdated.mockReset();
+    mockMarkUpdated.mockResolvedValue(undefined);
+    mockUpdate.mockReset();
+    mockUpdate.mockResolvedValue({ success: true });
+    mockDelete.mockReset();
+    mockDelete.mockResolvedValue({ success: true });
   });
 
   test("standalone 予約は createCalendarEvent (RRULE 無し) で再送", async () => {
@@ -252,5 +278,97 @@ describe("retryFailedSyncs — GCAL-RETRY-04 series/standalone separation", () =
 
     expect(result).toEqual({ total: 3, succeeded: 3, failed: 0 });
     expect(mockCreate).toHaveBeenCalledTimes(2); // standalone のみ
+  });
+});
+
+describe("retryFailedSyncs — GCAL-AUDIT-05 create/update/delete 振り分け", () => {
+  beforeEach(() => {
+    mockIsEnabled.mockReset();
+    mockIsEnabled.mockResolvedValue(true);
+    mockCreate.mockReset();
+    mockCreate.mockResolvedValue({
+      success: true,
+      eventId: "gcal-event-standalone",
+    });
+    mockUpdate.mockReset();
+    mockUpdate.mockResolvedValue({ success: true });
+    mockDelete.mockReset();
+    mockDelete.mockResolvedValue({ success: true });
+    mockGetFailedReservations.mockReset();
+    mockGetFailedSeriesIds.mockReset();
+    mockGetFailedSeriesIds.mockResolvedValue([]);
+    mockMarkSuccess.mockReset();
+    mockMarkSuccess.mockResolvedValue(undefined);
+    mockMarkUpdated.mockReset();
+    mockMarkUpdated.mockResolvedValue(undefined);
+    mockMarkError.mockReset();
+    mockMarkError.mockResolvedValue(undefined);
+    mockClearReservationCalendarEvent.mockReset();
+    mockClearReservationCalendarEvent.mockResolvedValue(undefined);
+  });
+
+  test("googleCalendarEventId が null → create (syncReservationToCalendar) を再試行", async () => {
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({ googleCalendarEventId: null }),
+    ]);
+
+    await retryFailedSyncs();
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  test("googleCalendarEventId 有り + gcal_delete_failed: prefix → delete を再試行", async () => {
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        status: "CANCELLED",
+        googleCalendarEventId: "gcal-existing-001",
+        calendarSyncError: "gcal_delete_failed:Rate limit exceeded",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    expect(mockDelete).toHaveBeenCalledWith("gcal-existing-001");
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockClearReservationCalendarEvent).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("googleCalendarEventId 有り + それ以外のエラー → update を再試行", async () => {
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        googleCalendarEventId: "gcal-existing-002",
+        calendarSyncError: "Update failed: network error",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "gcal-existing-002",
+      expect.any(Object),
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(mockMarkUpdated).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("delete 再試行が失敗した場合は failed に計上される", async () => {
+    mockDelete.mockResolvedValue({ success: false, error: "still failing" });
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        status: "CANCELLED",
+        googleCalendarEventId: "gcal-existing-003",
+        calendarSyncError: "gcal_delete_failed:still failing",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    expect(result).toEqual({ total: 1, succeeded: 0, failed: 1 });
   });
 });

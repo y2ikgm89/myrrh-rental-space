@@ -8,10 +8,14 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
+import { clearCalendarSyncToken } from "@/shared/domain/reservations/calendar-sync";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { CalendarChange, SyncChangesResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
-import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
+import {
+  isGoogleCalendarFullSyncRequired,
+  withGoogleApiRetry,
+} from "@/shared/lib/google-api/retry";
 import { getServiceAccountClient } from "./service-account";
 
 /**
@@ -117,8 +121,11 @@ export async function fetchCalendarChanges(
       newSyncToken,
     });
   } catch (error) {
-    // syncTokenが期限切れの場合はフルシンク
-    if (error instanceof Error && error.message.includes("410")) {
+    // syncToken が期限切れ（410 Gone / reason: fullSyncRequired）の場合は
+    // 永続化済み token をクリアしてからフルシンクをやり直す（公式仕様: 期限切れ
+    // token を握り続けると次回以降も同じ 410 を繰り返す）。
+    if (isGoogleCalendarFullSyncRequired(error)) {
+      await clearCalendarSyncToken();
       return fetchCalendarChanges(null);
     }
 

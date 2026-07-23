@@ -28,11 +28,17 @@ export async function sendCalendarSyncRejectionEmail(data: {
   attemptedEndTime: Date;
   currentStartTime: Date;
   currentEndTime: Date;
-  conflictingReservation: {
+  /** 重複予約による拒否のとき指定する。`rejectionReason` と排他。 */
+  conflictingReservation?: {
     id: string;
     startTime: Date;
     endTime: Date;
   };
+  /**
+   * 重複以外の拒否理由（決済確定済み等、GCAL-AUDIT-11）。
+   * `conflictingReservation` 省略時にこちらを本文に使う。
+   */
+  rejectionReason?: string;
 }): Promise<EmailResult> {
   const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
@@ -45,11 +51,12 @@ export async function sendCalendarSyncRejectionEmail(data: {
   const attemptedStart = formatTimeShort(data.attemptedStartTime);
   const attemptedEnd = formatTimeShort(data.attemptedEndTime);
 
-  const conflictDate = formatDateWithWeekday(
-    data.conflictingReservation.startTime,
-  );
-  const conflictStart = formatTimeShort(data.conflictingReservation.startTime);
-  const conflictEnd = formatTimeShort(data.conflictingReservation.endTime);
+  const conflict = data.conflictingReservation;
+  const rejectionReasonText = conflict
+    ? `拒否理由: 以下の予約と重複\n` +
+      `  予約ID: ${conflict.id.slice(0, 8).toUpperCase()}\n` +
+      `  時間: ${formatDateWithWeekday(conflict.startTime)} ${formatTimeShort(conflict.startTime)} - ${formatTimeShort(conflict.endTime)}`
+    : `拒否理由: ${data.rejectionReason ?? "手動確認が必要です"}`;
 
   const textContent = `
 カレンダー同期エラー: 時間変更が拒否されました
@@ -64,9 +71,7 @@ export async function sendCalendarSyncRejectionEmail(data: {
 試行された変更時間（拒否）:
   ${attemptedDate} ${attemptedStart} - ${attemptedEnd}
 
-拒否理由: 以下の予約と重複
-  予約ID: ${data.conflictingReservation.id.slice(0, 8).toUpperCase()}
-  時間: ${conflictDate} ${conflictStart} - ${conflictEnd}
+${rejectionReasonText}
 
 対応が必要な場合は、管理画面で予約を確認してください:
 ${getAdminUrl(`/reservations/${data.reservationId}`)}
