@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { connection } from "next/server";
-import type { SearchParams } from "nuqs/server";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
@@ -19,6 +19,11 @@ import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  publicQueryRateLimiter,
+  getClientIpFromHeaders,
+} from "@/shared/lib/rate-limit";
 
 // 予約直後のリダイレクト先。トークンで予約を特定する一時ページのため検索結果に出さない。
 export const metadata: Metadata = {
@@ -26,13 +31,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-interface PageProps {
-  readonly searchParams: Promise<SearchParams>;
-}
+// proxy（middleware）が `?token=...` を HttpOnly cookie に転写済み。
+// ここでは cookie のみ読み、URL クエリにトークンを残さない（ログ・履歴漏洩遮断、
+// /reservation/cancel と同方針）。
+const COMPLETE_TOKEN_COOKIE_NAME = "complete-token";
 
-export default async function ReservationCompletePage({
-  searchParams,
-}: PageProps): Promise<ReactElement> {
+export default async function ReservationCompletePage(): Promise<ReactElement> {
   await connection();
 
   // FEAT-3PLANE-04: /reservation と対称に reservation feature OFF 時は 404。
@@ -41,12 +45,18 @@ export default async function ReservationCompletePage({
   // 可視性契約破りになる。
   await requireFeatureEnabled("reservation");
 
-  const sp = await searchParams;
-  const token = typeof sp["token"] === "string" ? sp["token"] : null;
+  // GET ページにも rate-limit を貼る。有効トークン 1 本で uncached DB findFirst を
+  // 無制限ヒットできる経路を遮断（publicQueryRateLimiter: 30/min/IP、/reservation/cancel と同方針）。
+  const clientIp = await getClientIpFromHeaders();
+  const limit = await publicQueryRateLimiter.check(clientIp);
 
-  const verified = token
-    ? verifyCompleteToken(token, reservationDeadlineNow())
-    : ({ valid: false } as const);
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COMPLETE_TOKEN_COOKIE_NAME)?.value ?? null;
+
+  const verified =
+    limit.success && token
+      ? verifyCompleteToken(token, reservationDeadlineNow())
+      : ({ valid: false } as const);
 
   const [user, reservation, calendarSettings] = await Promise.all([
     getCurrentCustomerUser(),
@@ -57,8 +67,10 @@ export default async function ReservationCompletePage({
   ]);
 
   const isLoggedIn = user != null;
+  const isCancelled = reservation?.status === ReservationStatus.CANCELLED;
   const address = reservation?.space.location?.address ?? null;
-  const hasSmartLock = reservation?.space.smartLockDevice?.isActive ?? false;
+  const hasSmartLock =
+    !isCancelled && (reservation?.space.smartLockDevice?.isActive ?? false);
 
   const claimUrl =
     reservation && !isLoggedIn
@@ -66,7 +78,7 @@ export default async function ReservationCompletePage({
       : null;
 
   const calendarUrls =
-    reservation && calendarSettings.addToCalendarLinksEnabled
+    reservation && !isCancelled && calendarSettings.addToCalendarLinksEnabled
       ? buildAddToCalendarUrls({
           summary: `【予約】${reservation.space.name}`,
           description: [
@@ -84,20 +96,36 @@ export default async function ReservationCompletePage({
   return (
     <Layout>
       <div className="text-center">
-        <p className="mb-3 text-xs font-medium uppercase tracking-eyebrow text-accent">
-          Confirmed
-        </p>
-        <Heading level={1}>ご予約ありがとうございます</Heading>
-        <p className="mt-4 leading-relaxed text-muted-foreground">
-          ご予約を受け付けました。確認メールをお送りしましたので、
-          <br className="hidden sm:inline" />
-          内容をご確認ください。
-        </p>
-        {hasSmartLock && (
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            スマートロックの解錠用暗証番号は、発行手続きの完了後に確認メールで
-            数分以内にお送りします。
-          </p>
+        {isCancelled ? (
+          <>
+            <p className="mb-3 text-xs font-medium uppercase tracking-eyebrow text-muted-foreground">
+              Cancelled
+            </p>
+            <Heading level={1}>この予約はキャンセルされました</Heading>
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              こちらのご予約は既にキャンセル済みです。
+              <br className="hidden sm:inline" />
+              お心当たりがない場合はお問い合わせください。
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="mb-3 text-xs font-medium uppercase tracking-eyebrow text-accent">
+              Confirmed
+            </p>
+            <Heading level={1}>ご予約ありがとうございます</Heading>
+            <p className="mt-4 leading-relaxed text-muted-foreground">
+              ご予約を受け付けました。確認メールをお送りしましたので、
+              <br className="hidden sm:inline" />
+              内容をご確認ください。
+            </p>
+            {hasSmartLock && (
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                スマートロックの解錠用暗証番号は、発行手続きの完了後に確認メールで
+                数分以内にお送りします。
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -150,7 +178,8 @@ export default async function ReservationCompletePage({
 
       <NextSteps
         isLoggedIn={isLoggedIn}
-        isPending={reservation?.status === "PENDING"}
+        isPending={reservation?.status === ReservationStatus.PENDING}
+        isCancelled={isCancelled}
         claimUrl={claimUrl}
       />
     </Layout>
@@ -190,10 +219,12 @@ function DetailRow({ label, children }: DetailRowProps) {
 function NextSteps({
   isLoggedIn,
   isPending,
+  isCancelled,
   claimUrl,
 }: {
   readonly isLoggedIn: boolean;
   readonly isPending: boolean;
+  readonly isCancelled: boolean;
   readonly claimUrl: string | null;
 }) {
   return (
@@ -207,22 +238,23 @@ function NextSteps({
             ご予約は現在確認中です。確定しましたらメールでお知らせします。
           </li>
         )}
-        {isLoggedIn ? (
-          <li>
-            <Link
-              href={toAppRoute("/mypage")}
-              className="underline underline-offset-4 hover:text-foreground"
-            >
-              マイページ
-            </Link>
-            から予約の確認・変更・キャンセルができます。
-          </li>
-        ) : (
-          <li>
-            ご予約の確認・キャンセルは、確認メール内のリンクから行えます。
-          </li>
-        )}
-        {claimUrl && (
+        {!isCancelled &&
+          (isLoggedIn ? (
+            <li>
+              <Link
+                href={toAppRoute("/mypage")}
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                マイページ
+              </Link>
+              から予約の確認・変更・キャンセルができます。
+            </li>
+          ) : (
+            <li>
+              ご予約の確認・キャンセルは、確認メール内のリンクから行えます。
+            </li>
+          ))}
+        {!isCancelled && claimUrl && (
           <li>
             <a
               href={claimUrl}

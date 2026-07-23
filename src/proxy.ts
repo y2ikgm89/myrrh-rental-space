@@ -198,7 +198,7 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
 // ---------------------------------------------------------------------------
 
 /**
- * ゲストキャンセル URL `?token=…` を HttpOnly cookie に転写して `?token` を URL から除去する。
+ * ゲスト向けトークン URL `?token=…` を HttpOnly cookie に転写して `?token` を URL から除去する。
  *
  * URL クエリに含まれるトークンは Cloud Run / Cloudflare のアクセスログ、ブラウザ履歴、
  * autocomplete、同一オリジン Link クリック時の Referer 等あらゆる地点に残留する。
@@ -210,24 +210,32 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
  *   - 長さ 32〜1024 字（典型 100〜300）
  * 暗号学的な verify は Node ランタイムの page/action で実施する。
  *
- * 予約とイベント参加申込の 2 経路が同じ転写方式を共有する。cookie 名をドメイン別に
- * 分けることで、一方の cancel ページ滞在中にもう一方のトークンが誤って読まれる
- * （cross-contamination）ことを防ぐ。
+ * 予約キャンセル・イベント参加申込キャンセル・予約完了ページの 3 経路が同じ転写方式を
+ * 共有する。cookie 名をドメイン別に分けることで、一方のページ滞在中にもう一方の
+ * トークンが誤って読まれる（cross-contamination）ことを防ぐ。
+ *
+ * cookie の maxAge はトークン自体の暗号学的な有効期限より意図的に短い（例:
+ * キャンセルトークンは最大 7 日、完了トークンは 24 時間有効だが cookie は
+ * 一律 30 分）。URL 経由の再訪問（メールリンクの再クリック等）ではその都度
+ * 新しい cookie に転写されるため、通常の利用フローは損なわれない。
  */
-const CANCEL_TOKEN_COOKIE_MAX_AGE = 30 * 60; // 30 分
-const CANCEL_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
+const GUEST_TOKEN_COOKIE_MAX_AGE = 30 * 60; // 30 分
+const GUEST_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
 
-const GUEST_CANCEL_TOKEN_ROUTES: ReadonlyArray<{
+const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
   pathname: string;
   cookieName: string;
 }> = [
   { pathname: "/reservation/cancel", cookieName: "cancel-token" },
   { pathname: "/events/cancel", cookieName: "event-cancel-token" },
+  { pathname: "/reservation/complete", cookieName: "complete-token" },
 ];
 
-function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
+function handleGuestTokenTransfer(req: NextRequest): NextResponse | null {
   const { pathname, searchParams } = req.nextUrl;
-  const route = GUEST_CANCEL_TOKEN_ROUTES.find((r) => r.pathname === pathname);
+  const route = GUEST_TOKEN_TRANSFER_ROUTES.find(
+    (r) => r.pathname === pathname,
+  );
   if (!route) return null;
   const token = searchParams.get("token");
   if (!token) return null;
@@ -237,7 +245,7 @@ function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
   cleanUrl.searchParams.delete("token");
   const response = NextResponse.redirect(cleanUrl);
 
-  if (CANCEL_TOKEN_PATTERN.test(token)) {
+  if (GUEST_TOKEN_PATTERN.test(token)) {
     response.cookies.set({
       name: route.cookieName,
       value: token,
@@ -245,7 +253,7 @@ function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
       sameSite: "strict",
       secure: !isLocalhostRequest(req),
       path: "/",
-      maxAge: CANCEL_TOKEN_COOKIE_MAX_AGE,
+      maxAge: GUEST_TOKEN_COOKIE_MAX_AGE,
     });
   }
   return response;
@@ -253,15 +261,16 @@ function handleGuestCancelTokenTransfer(req: NextRequest): NextResponse | null {
 
 /**
  * 予約 / イベント参加申込の claim URL `?token=…` を HttpOnly cookie に転写し
- * `?token` を URL から除去する。理由・トークン形式検証方針はゲストキャンセル token
- * 転写（`handleGuestCancelTokenTransfer`）と同一。
+ * `?token` を URL から除去する。理由・トークン形式検証方針はゲスト向けトークン
+ * 転写（`handleGuestTokenTransfer`）と同一。
  *
  * `sameSite` のみ意図的に異なる値（`"lax"`）を使う: この claim トークンは
  * Google/LINE への外部リダイレクト（OAuth）を経由して戻ってくる。SameSite=Strict の
  * cookie は「他サイトからの top-level navigation」では送信されないため、OAuth
  * コールバックで戻ってきた際に cookie が消えて claim が失敗する。SameSite=Lax は
- * top-level GET navigation では送信されるため、この往復を生き残る。ゲストキャンセルは
- * 外部サイトを経由しないため既存の `strict` のままで問題ない（変更しない）。
+ * top-level GET navigation では送信されるため、この往復を生き残る。ゲスト向けトークン
+ * 転写（キャンセル・予約完了）は外部サイトを経由しないため既存の `strict` のままで
+ * 問題ない（変更しない）。
  */
 const CLAIM_TOKEN_PATTERN = /^[A-Za-z0-9_-]{32,1024}$/;
 // OAuth 往復（Google/LINE への外部リダイレクトを経由して戻る）を生き越えるため 60 分。
@@ -302,8 +311,8 @@ function handleClaimTokenTransfer(
 export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
-  const cancelTransfer = handleGuestCancelTokenTransfer(req);
-  if (cancelTransfer) return cancelTransfer;
+  const guestTokenTransfer = handleGuestTokenTransfer(req);
+  if (guestTokenTransfer) return guestTokenTransfer;
 
   const reservationClaimTransfer = handleClaimTokenTransfer(
     req,
