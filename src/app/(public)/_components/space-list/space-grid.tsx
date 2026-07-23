@@ -28,9 +28,19 @@ interface SpaceGridProps {
   readonly spaces: readonly Space[];
   readonly reviewStats?: Readonly<Record<string, ReviewStats>>;
   readonly hasFilters: boolean;
+  /**
+   * 複製されたセクション同士で同じスペースが描画されても SpaceCard の
+   * aria-describedby id がページ内で衝突しないようにする一意キー。
+   */
+  readonly sectionId?: string | undefined;
 }
 
-export function SpaceGrid({ spaces, reviewStats, hasFilters }: SpaceGridProps) {
+export function SpaceGrid({
+  spaces,
+  reviewStats,
+  hasFilters,
+  sectionId,
+}: SpaceGridProps) {
   if (spaces.length === 0) {
     return (
       <PublicEmptyState
@@ -70,6 +80,7 @@ export function SpaceGrid({ spaces, reviewStats, hasFilters }: SpaceGridProps) {
             isAvailableForSearch={space.isAvailableForSearch}
             layout="horizontal"
             imagePriority={index === 0}
+            instanceId={sectionId}
             {...(stats && stats.totalCount > 0
               ? {
                   averageRating: stats.averageRating,
