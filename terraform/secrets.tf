@@ -33,26 +33,9 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    # RESEND_WEBHOOK_SECRET (2026-07-19): Tier 1 → Tier 2 (DB canonical) 移行済 (PR #1292)。
-    # 秘密は `Settings.resendWebhookSecret` (暗号化) + admin UI で rotate する。
-    # Cloud Run env への注入は不要 (env は local dev fallback のみ、cloudbuild.yaml
-    # には元々未配線)。
-    #
-    # ただし GCP Secret Manager 側の container は Terraform state に残っており、
-    # runtime_secrets から削除すると `lifecycle.prevent_destroy = true` により
-    # `Instance cannot be destroyed` で apply が fail する
-    # ([run 29689132885](https://github.com/y2ikgm89/myrrh-rental-space/actions/runs/29689132885))。
-    #
-    # 「container は残すが Cloud Run では消費しない orphan」状態を維持するため、
-    # runtime_secrets には残置する。実際に消費されるのは cloud_run_secret_versions
-    # (variables.tf) に entry がある secret のみで、RESEND_WEBHOOK_SECRET は既に
-    # PR #1288 で除去済のため Cloud Run からは参照されない。
-    #
-    # 将来 container 自体を削除するときは:
-    # 1. gcloud secrets delete RESEND_WEBHOOK_SECRET (operator)
-    # 2. Terraform config から entry を削除 + `removed { from = ..., lifecycle { destroy = false } }`
-    #    block を追加 (Terraform 1.7+ syntax) して state から forget
-    "RESEND_WEBHOOK_SECRET",
+    # RESEND_WEBHOOK_SECRET: Tier 2 (Settings DB) 完了。ここへ戻さない。
+    # state forget は下の `removed` block。GCP SM 削除は operator 手順
+    # (docs/runbooks/gcp-dead-resource-cleanup.md)。
     "SUPPRESSION_HASH_SECRET",
   ]
 
@@ -104,26 +87,9 @@ locals {
     "CLOUDFLARE_ORIGIN_HEADER_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    # RESEND_WEBHOOK_SECRET (2026-07-19): runtime_secrets 側で orphan として残置
-    # している (Tier 1 → Tier 2 移行後の container は Cloud Run 未参照だが、
-    # `prevent_destroy = true` の safety net を尊重して state 保持)。
-    # 詳細は上の runtime_secrets 内 docblock を参照。import 経由で再 adoption
-    # できるよう imported_secrets にも維持する。
-    "RESEND_WEBHOOK_SECRET",
-    #
-    # SUPPRESSION_HASH_SECRET (2026-07-19、PR-K #1276): Phase A のみ (runtime_secrets
-    # にのみ追加)。上の docblock の 3-phase rollout に従い、operator が Phase B
-    # (`gcloud secrets create SUPPRESSION_HASH_SECRET --replication-policy=automatic`
-    # → `openssl rand -hex 64 | gcloud secrets versions add SUPPRESSION_HASH_SECRET
-    # --data-file=-`) を完了した後の Phase C follow-up PR でここへ追加する。
-    # それまで hashSuppressedEmailCandidate は plain sha256 fallback + WARN log で
-    # 動作する (src/shared/lib/env/server.ts)。
-    #
-    # 元 PR #1276 は「operator が事前 populate 済み」と仮定してここに追加していたが、
-    # 実際は auto-flow で container 未作成のまま apply が走り
-    # `Cannot import non-existent remote object` で main deploy blocked
-    # (run 29685080757)。PR #1291 が root fix として entry を削除 = auto-flow を
-    # 復元済み。本 PR はその状態を継承する。
+    # Phase C (2026-07-24): versions/1 ENABLED 確認済み。Cloud Run 配線は
+    # var.cloud_run_secret_versions。state-rebuild 時の再 adoption 用に登録。
+    "SUPPRESSION_HASH_SECRET",
   ])
 }
 
@@ -163,6 +129,25 @@ resource "google_secret_manager_secret" "secret" {
   }
 }
 
+# Tier 2 移行済みの RESEND_WEBHOOK_SECRET を state から forget（GCP 側は残す）。
+# `removed` は for_each インスタンスキーを直接受け付けない
+# (Error: Resource instance keys not allowed — hashicorp/terraform#34439)。
+# 回避策: moved で flat アドレスへ移してから removed { destroy = false }。
+# この apply 成功後に operator が `gcloud secrets delete RESEND_WEBHOOK_SECRET`。
+# （先に SM を消して config に残すと次 apply が空 container を再作成する。）
+moved {
+  from = google_secret_manager_secret.secret["RESEND_WEBHOOK_SECRET"]
+  to   = google_secret_manager_secret.resend_webhook_secret_forgotten
+}
+
+removed {
+  from = google_secret_manager_secret.resend_webhook_secret_forgotten
+
+  lifecycle {
+    destroy = false
+  }
+}
+
 # -----------------------------------------------------------------------------
 # 新規 secret 追加の operator フロー (bootstrap resource 廃止)
 # -----------------------------------------------------------------------------
@@ -198,8 +183,6 @@ resource "google_secret_manager_secret" "secret" {
 # のように 1 PR で container 追加と Cloud Run 配線を同時に行うと、follow-up PR +
 # operator の版投入が必要になる。
 #
-# RESEND_WEBHOOK_SECRET: Tier 1 → Tier 2 (Settings DB) 移行済。Cloud Run 注入は
-# `cloud_run_secret_versions` から除去済だが、`prevent_destroy` のため
-# runtime_secrets / imported_secrets には orphan container として残置
-# （削除手順は上の runtime_secrets docblock）。
-# SUPPRESSION_HASH_SECRET: Phase A (container only)。Cloud Run 配線は未完了。
+# RESEND_WEBHOOK_SECRET: Tier 2 完了。`removed { destroy = false }` で state forget。
+# GCP SM 削除は operator（docs/runbooks/gcp-dead-resource-cleanup.md）。
+# SUPPRESSION_HASH_SECRET: Phase C 完了（cloud_run_secret_versions + imported_secrets）。
