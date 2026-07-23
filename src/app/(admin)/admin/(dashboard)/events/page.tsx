@@ -76,6 +76,9 @@ export default async function EventsPage({ searchParams }: PageProps) {
         </div>
         <div className="flex gap-2">
           <Button asChild size="sm" variant="outline">
+            <Link href="/admin/events/categories">カテゴリー管理</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <a href="/api/admin/export/event-registrations" download>
               <IconDownload className="mr-2 h-4 w-4" />
               全参加者CSV

@@ -93,6 +93,16 @@ async function main(): Promise<void> {
     // Event 単体・EventTimeSlot 単体を別々の auto-commit 文で作ると、Event 作成の
     // コミット時点でまだスロットが無く即座に違反するため、`seed.ts` と同じく
     // interactive transaction 内でまとめて作成する。
+    // events.categoryId は必須化されている。この fixture は使い捨てで cleanup
+    // しないため（本 script は E2E DB へ都度作成するだけ）、専用カテゴリーを
+    // 作らず migration がシードする既存の "未分類" を再利用する
+    // (`create-claim-reservation-fixture.ts` が既存 slug の Space を
+    // findFirstOrThrow で引くのと同じ「既存 seed 行を参照する」パターン)。
+    const category = await prisma.eventCategory.findFirstOrThrow({
+      where: { name: "未分類" },
+      select: { id: true },
+    });
+
     const { event, slot, ticket } = await prisma.$transaction(async (tx) => {
       const createdEvent = await tx.event.create({
         data: {
@@ -112,6 +122,7 @@ async function main(): Promise<void> {
           lastSlotEndAt: endAt,
           format: EventFormat.HYBRID,
           meetingUrl,
+          categoryId: category.id,
         },
         select: { id: true },
       });

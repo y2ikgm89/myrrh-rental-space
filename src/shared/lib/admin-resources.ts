@@ -31,6 +31,7 @@ export type Resource =
   | "blockTemplate"
   | "review"
   | "event"
+  | "eventCategory"
   | "notification";
 
 export type Action =
@@ -58,5 +59,6 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   blockTemplate: "ブロックテンプレート",
   review: "レビュー",
   event: "イベント",
+  eventCategory: "イベントカテゴリー",
   notification: "通知",
 };

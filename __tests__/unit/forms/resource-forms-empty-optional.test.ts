@@ -385,6 +385,7 @@ describe("リソースフォーム: 任意空欄保存（conform 整合）", () 
       form({
         title: "イベント",
         slug: "event-1",
+        categoryId: "33333333-3333-4333-8333-333333333333",
         scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
         descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
         thumbnailUrl: "",

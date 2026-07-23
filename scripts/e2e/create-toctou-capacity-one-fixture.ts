@@ -81,6 +81,15 @@ async function createFixture(): Promise<void> {
     // trigger (`events_schedule_integrity_check`) で「ちょうど 1 つの
     // EventTimeSlot を持つこと」をコミット時に検証するため、Event +
     // EventTimeSlot は同一 interactive transaction 内で作成する。
+    // events.categoryId は必須化されている。この fixture は使い捨てで cleanup
+    // しないため専用カテゴリーを作らず、migration がシードする既存の "未分類" を
+    // 再利用する（`create-claim-reservation-fixture.ts` が既存 slug の Space を
+    // findFirstOrThrow で引くのと同じ「既存 seed 行を参照する」パターン)。
+    const category = await prisma.eventCategory.findFirstOrThrow({
+      where: { name: "未分類" },
+      select: { id: true },
+    });
+
     const { event, slot, ticket } = await prisma.$transaction(async (tx) => {
       const createdEvent = await tx.event.create({
         data: {
@@ -98,6 +107,7 @@ async function createFixture(): Promise<void> {
           publishedAt: new Date(),
           firstSlotStartAt: startAt,
           lastSlotEndAt: endAt,
+          categoryId: category.id,
         },
         select: { id: true },
       });

@@ -54,6 +54,7 @@ type EventFormProps = {
   event?: EventData;
   locations: LocationOption[];
   spaces: SpaceOption[];
+  categories: { id: string; name: string }[];
 };
 
 const EVENT_EDIT_TAB_VALUES = [
@@ -117,6 +118,7 @@ export function EventForm({
   event,
   locations,
   spaces,
+  categories,
 }: EventFormProps): ReactElement {
   const isEdit = Boolean(event);
 
@@ -152,6 +154,7 @@ export function EventForm({
     event?.locationId ?? null,
   );
   const [spaceId, setSpaceId] = useState<string | null>(event?.spaceId ?? null);
+  const [categoryId, setCategoryId] = useState<string>(event?.categoryId ?? "");
   // 開催形態 / オンライン会議設定 (Phase B.1)。EventLocationSpaceSelector 内の
   // ToggleGroup/RadioGroup が条件付きレンダリングで unmount されても入力値が
   // 消えないよう、locationId/spaceId と同じくここ (EventForm) にリフトして保持する。
@@ -199,6 +202,7 @@ export function EventForm({
       ? {
           title: event.title,
           slug: event.slug,
+          categoryId: event.categoryId,
           scheduleMode: event.scheduleMode,
           registrationDeadline: event.registrationDeadline
             ? formatDateTimeLocalInJst(event.registrationDeadline)
@@ -234,6 +238,7 @@ export function EventForm({
       : {
           title: "",
           slug: "",
+          categoryId: "",
           scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
           registrationDeadline: "",
           addressDetail: "",
@@ -260,6 +265,7 @@ export function EventForm({
     basic: [
       fields.title,
       fields.slug,
+      fields.categoryId,
       fields.scheduleMode,
       fields.slots,
     ].filter((f) => fieldHasErrors(f.errors)).length,
@@ -325,6 +331,7 @@ export function EventForm({
         value={locationId ?? ""}
       />
       <input type="hidden" name={fields.spaceId.name} value={spaceId ?? ""} />
+      <input type="hidden" name={fields.categoryId.name} value={categoryId} />
       <input type="hidden" name={fields.format.name} value={format} />
       <input
         type="hidden"
@@ -379,7 +386,13 @@ export function EventForm({
           forceMount
           className="space-y-6 data-[state=inactive]:hidden"
         >
-          <EventBasicFields fields={fields} isPending={isPending} />
+          <EventBasicFields
+            fields={fields}
+            isPending={isPending}
+            categories={categories}
+            categoryId={categoryId}
+            onCategoryChange={setCategoryId}
+          />
           <EventScheduleFields
             scheduleMode={scheduleMode}
             onScheduleModeChange={setScheduleMode}

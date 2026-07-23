@@ -163,6 +163,7 @@ const BASE_INPUT = {
   ] as const,
   status: EventStatus.DRAFT,
   scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
+  categoryId: "category-1",
 } as const;
 
 const SOURCE_EVENT = {
@@ -173,6 +174,7 @@ const SOURCE_EVENT = {
   endTime: new Date("2026-07-01T03:00:00.000Z"),
   locationId: null,
   spaceId: null,
+  categoryId: "original-category-1",
   addressDetail: null,
   title: "テストイベント",
   descriptionJson: { type: "root" },

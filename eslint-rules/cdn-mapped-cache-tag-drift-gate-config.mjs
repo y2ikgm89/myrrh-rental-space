@@ -45,6 +45,7 @@ export const CDN_MAPPED_CACHE_TAGS_KEYS = [
   "NEWS",
   "EVENTS",
   "EVENT_WAITLIST",
+  "EVENT_CATEGORIES",
   "FAQ",
   "TERMS",
   "SITEMAP",

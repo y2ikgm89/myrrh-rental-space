@@ -127,6 +127,7 @@ type PrismaModule = typeof import("@/shared/db/prisma");
 
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
+let testCategoryId: string;
 
 function makeCronRequest(): Request {
   const headers = new Headers();
@@ -159,6 +160,7 @@ async function createTestEvent(): Promise<{
         registrationOpen: true,
         firstSlotStartAt: start,
         lastSlotEndAt: end,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -198,9 +200,22 @@ describeMaybe("GET /api/cron/waitlist-expire — real Postgres", () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     // 接続プールをウォームアップ（コールドスタートで初回クエリがブレるのを防ぐ）。
     await prisma.$queryRaw`SELECT 1`;
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Waitlist Expire Cron Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
   });
 
   afterAll(async () => {
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await basePrisma.$disconnect();
   });
 

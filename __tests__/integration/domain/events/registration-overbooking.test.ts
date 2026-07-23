@@ -60,6 +60,7 @@ type CommandsModule =
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let createEventRegistrationCommand: CommandsModule["createEventRegistrationCommand"];
+let testCategoryId: string;
 
 /** capacity を指定して PUBLISHED イベント + タイムスロット + 受付中チケットを 1 件作る。 */
 async function createTestEvent(opts: {
@@ -84,6 +85,7 @@ async function createTestEvent(opts: {
         // 本番不変条件 (PUBLISHED + slot あり → 非 NULL) に整合させるため明示注入
         firstSlotStartAt: start,
         lastSlotEndAt: end,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -159,6 +161,18 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     ({ createEventRegistrationCommand } =
       await import("@/shared/domain/events/registration-commands"));
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Overbooking Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
+
     // フルパス（aggregate + create）を **並行バースト** でウォームアップする。
     // プロセス内で最初の並行バーストだけは、接続ごとの prepared-statement キャッシュ
     // 構築・pg プールの遅延接続確立でクエリがずれ、競合が偶発的に直列化して隠れる
@@ -179,6 +193,8 @@ describeMaybe("createEventRegistrationCommand — TOCTOU overbooking", () => {
   });
 
   afterAll(async () => {
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     // 実 DB 接続をクローズしてサブプロセスをハングさせない。
     await basePrisma.$disconnect();
   });

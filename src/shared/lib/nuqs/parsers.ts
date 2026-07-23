@@ -744,6 +744,28 @@ export async function loadAdminEventSearchParams(
 }
 
 // ============================================================
+// 管理画面: イベントカテゴリ
+// ============================================================
+
+export const adminEventCategorySearchParamsParsers = {
+  search: parseAsQuery,
+  includeInactive: parseAsBoolean.withDefault(false),
+  page: parseAsPage,
+  perPage: parseAsPerPage,
+};
+
+export const adminEventCategorySearchParamsCache = createSearchParamsCache(
+  adminEventCategorySearchParamsParsers,
+);
+
+export async function loadAdminEventCategorySearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminEventCategorySearchParamsCache.parse(searchParams);
+  return adminEventCategorySearchParamsCache.all();
+}
+
+// ============================================================
 // 管理画面: 通知
 // ============================================================
 

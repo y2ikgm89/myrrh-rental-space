@@ -74,6 +74,7 @@ export interface EventCommandInput {
   addressDetail?: string | null;
   locationId?: string | null;
   spaceId?: string | null;
+  categoryId: string;
   status: (typeof EventStatus)[keyof typeof EventStatus];
   scheduleMode: (typeof EventScheduleMode)[keyof typeof EventScheduleMode];
   registrationOpen?: boolean;
@@ -339,6 +340,7 @@ export async function createEventCommand(data: EventCommandInput) {
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
+        categoryId: data.categoryId,
         status: data.status,
         scheduleMode: data.scheduleMode,
         format: createResolvedFormat,
@@ -495,6 +497,7 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
         addressDetail: data.addressDetail ?? null,
         locationId: data.locationId ?? null,
         spaceId: data.spaceId ?? null,
+        categoryId: data.categoryId,
         status: data.status,
         scheduleMode: data.scheduleMode,
         format: resolvedFormat,
@@ -737,6 +740,7 @@ export async function duplicateEventCommand(id: string) {
       addressDetail: true,
       locationId: true,
       spaceId: true,
+      categoryId: true,
       registrationOpen: true,
       slots: {
         select: { startAt: true, endAt: true, capacity: true },
@@ -796,6 +800,7 @@ export async function duplicateEventCommand(id: string) {
         addressDetail: source.addressDetail,
         locationId: source.locationId,
         spaceId: source.spaceId,
+        categoryId: source.categoryId,
         status: EventStatus.DRAFT,
         scheduleMode: source.scheduleMode,
         registrationOpen: false,
@@ -889,6 +894,25 @@ export async function upsertEventFromCalendar(data: {
   }
 
   const slug = await ensureUniqueSlug(generateSlug(data.title, "event"));
+  // Google Calendar 由来のイベントはカテゴリー情報を持たないため、
+  // 必須化された categoryId には「未分類」カテゴリーをフォールバックとして
+  // 割り当てる（管理者は後でイベント編集画面から変更できる）。「未分類」は
+  // EventCategory 追加 migration が既存イベントの backfill 先として作成する
+  // 固定名のカテゴリーであり（prisma/migrations/20260722235352_add_event_category
+  // 参照）、任意の isActive カテゴリー（例: sortOrder 最小）を機械的に選ぶより、
+  // 「カテゴリー不明」という意味を持つ名前固定の行を明示参照する方が、将来
+  // カテゴリーの並び順や追加が変わっても挙動が変わらず安全。「未分類」が
+  // 存在しない（削除・改名された）場合は運用上の設定不備として明示的に失敗させる。
+  const fallbackCategory = await prisma.eventCategory.findFirst({
+    where: { name: "未分類", isActive: true },
+    select: { id: true },
+  });
+  if (!fallbackCategory) {
+    throw new DomainError(
+      "「未分類」カテゴリーが見つからないため、カレンダー由来イベントを作成できません",
+      "VALIDATION",
+    );
+  }
   const event = await prisma.$transaction(async (tx) => {
     const created = await tx.event.create({
       data: {
@@ -898,6 +922,7 @@ export async function upsertEventFromCalendar(data: {
         descriptionHtml,
         descriptionPlainText,
         addressDetail: data.location ?? null,
+        categoryId: fallbackCategory.id,
         status: EventStatus.DRAFT,
         scheduleMode: EventScheduleMode.SINGLE_OCCURRENCE,
         firstSlotStartAt: data.startTime,

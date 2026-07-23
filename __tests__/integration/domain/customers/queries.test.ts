@@ -29,6 +29,7 @@ type CustomerQueriesModule = typeof import("@/shared/domain/customers/queries");
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let getCustomerById: CustomerQueriesModule["getCustomerById"];
+let testCategoryId: string;
 
 async function createFixtureCustomer(): Promise<string> {
   const suffix = crypto.randomUUID();
@@ -68,6 +69,7 @@ async function createFixtureEvent(): Promise<{
         registrationOpen: true,
         firstSlotStartAt: start,
         lastSlotEndAt: end,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -106,9 +108,22 @@ describeMaybe("getCustomerById", () => {
   beforeAll(async () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     ({ getCustomerById } = await import("@/shared/domain/customers/queries"));
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Customer Queries Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
   });
 
   afterAll(async () => {
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await basePrisma.$disconnect();
   });
 

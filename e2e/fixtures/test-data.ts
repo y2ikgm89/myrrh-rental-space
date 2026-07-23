@@ -71,6 +71,12 @@ export const eventFixtures = {
   waitlistTestSlug: "waitlist-test",
 } as const;
 
+/** EventCategory seed contract used by public/admin E2E specs. */
+export const eventCategoryFixtures = {
+  workshopName: "ワークショップ",
+  marketName: "マルシェ・展示",
+} as const;
+
 /** Public space seed contract used by reservation/review E2E specs. */
 export const spaceFixtures = {
   publicReservableSpaceSlug: "coworking-space",

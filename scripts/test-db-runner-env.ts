@@ -20,6 +20,7 @@ export const SERIAL_DB_TESTS = new Set<string>([
   "__tests__/integration/domain/events/registration-search-filter.test.ts",
   "__tests__/integration/domain/events/export-queries-cross-event.test.ts",
   "__tests__/integration/domain/events/manual-payment.test.ts",
+  "__tests__/integration/domain/event-categories/commands.test.ts",
   "__tests__/integration/lib/calendar-sync/meet-writeback.test.ts",
   "__tests__/integration/lib/calendar-sync/series-outbound.test.ts",
   "__tests__/integration/actions/public/event-waitlist-register.test.ts",

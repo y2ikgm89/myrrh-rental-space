@@ -20,6 +20,7 @@ const eventListSelect = {
   createdAt: true,
   firstSlotStartAt: true,
   lastSlotEndAt: true,
+  categoryId: true,
   location: { select: { id: true, name: true } },
   space: { select: { id: true, name: true } },
   slots: {
@@ -243,5 +244,13 @@ export async function getLocationsForEvent() {
     where: { isActive: true },
     select: { id: true, name: true },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+}
+
+export async function getCategoriesForEvent() {
+  return prisma.eventCategory.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+    orderBy: { sortOrder: "asc" },
   });
 }

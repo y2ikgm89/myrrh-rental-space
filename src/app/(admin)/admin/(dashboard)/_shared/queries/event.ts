@@ -5,6 +5,7 @@ import {
   getEventById as getEventByIdQuery,
   getLocationsForEvent as getLocationsForEventQuery,
   getSpacesForEvent as getSpacesForEventQuery,
+  getCategoriesForEvent as getCategoriesForEventQuery,
 } from "@/shared/domain/events/admin-queries";
 import type { GetEventsOptions } from "@/shared/domain/events/admin-queries";
 import {
@@ -37,6 +38,11 @@ export async function getLocationsForEvent() {
 export async function getSpacesForEvent() {
   await requireAdminPermission("event", "read");
   return getSpacesForEventQuery();
+}
+
+export async function getCategoriesForEvent() {
+  await requireAdminPermission("event", "read");
+  return getCategoriesForEventQuery();
 }
 
 export async function getEventRegistrations(

@@ -31,6 +31,7 @@ type PaymentCommandsModule =
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let recordManualEventPaymentCommand: PaymentCommandsModule["recordManualEventPaymentCommand"];
+let testCategoryId: string;
 
 async function createFixtureEvent(): Promise<{
   eventId: string;
@@ -54,6 +55,7 @@ async function createFixtureEvent(): Promise<{
         registrationOpen: true,
         firstSlotStartAt: start,
         lastSlotEndAt: end,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -113,9 +115,23 @@ describeMaybe("recordManualEventPaymentCommand", () => {
     ({ prisma, basePrisma } = await import("@/shared/db/prisma"));
     ({ recordManualEventPaymentCommand } =
       await import("@/shared/domain/events/payment-commands"));
+
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Manual Payment Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
   });
 
   afterAll(async () => {
+    // EventCategory は onDelete: Restrict のため、紐づく Event がすべて
+    // 各テストの finally で削除された後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     await basePrisma.$disconnect();
   });
 

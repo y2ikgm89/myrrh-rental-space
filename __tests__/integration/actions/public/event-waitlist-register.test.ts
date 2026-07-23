@@ -180,6 +180,7 @@ type ActionsModule =
 let prisma: PrismaModule["prisma"];
 let basePrisma: PrismaModule["basePrisma"];
 let registerForEventWaitlist: ActionsModule["registerForEventWaitlist"];
+let testCategoryId: string;
 
 // =============================================================================
 // テストヘルパー
@@ -208,6 +209,7 @@ async function createTestEvent(opts: {
         // 本番不変条件 (PUBLISHED + slot あり → 非 NULL) に整合させるため明示注入
         firstSlotStartAt: start,
         lastSlotEndAt: end,
+        categoryId: testCategoryId,
       },
       select: { id: true },
     });
@@ -304,6 +306,17 @@ describeMaybe("registerForEventWaitlist（実 DB）", () => {
     ({ registerForEventWaitlist } =
       await import("@/app/(public)/_shared/actions/event-registration"));
 
+    const category = await prisma.eventCategory.create({
+      data: {
+        name: `Waitlist Register Test Category ${crypto.randomUUID()}`,
+        // sortOrder はテーブル全体でユニーク制約があるため、並行実行する他の
+        // integration test ファイルの EventCategory 行と衝突しない乱数域を使う。
+        sortOrder: 10_000_000 + Math.floor(Math.random() * 100_000_000),
+      },
+      select: { id: true },
+    });
+    testCategoryId = category.id;
+
     // 初回並行バーストのウォームアップ（registration-overbooking.test.ts と同方針。
     // cold connection では並行性が偶発的に直列化して隠れるため、本体テスト前に
     // 満員イベントへの waitlist 登録を並行実行して経路を温めておく）。
@@ -316,6 +329,8 @@ describeMaybe("registerForEventWaitlist（実 DB）", () => {
   });
 
   afterAll(async () => {
+    // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
+    await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     // 実 DB 接続をクローズしてサブプロセスをハングさせない。
     await basePrisma.$disconnect();
   });

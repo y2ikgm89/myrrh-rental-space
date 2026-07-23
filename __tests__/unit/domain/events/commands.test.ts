@@ -111,6 +111,12 @@ const mockEventTimeSlotAggregate = mock<
   }),
 );
 
+// upsertEventFromCalendar の新規作成分岐が tx 外で呼ぶ
+// prisma.eventCategory.findFirst（フォールバックカテゴリー解決）用
+const mockEventCategoryFindFirst = mock<() => Promise<{ id: string } | null>>(
+  () => Promise.resolve({ id: "fallback-category-1" }),
+);
+
 // $transaction interactive callback で tx を渡す mock
 type TxClient = {
   event: {
@@ -170,6 +176,9 @@ mock.module("@/shared/db/prisma", () => ({
     },
     eventTimeSlot: {
       findFirst: mockEventTimeSlotFindFirst,
+    },
+    eventCategory: {
+      findFirst: mockEventCategoryFindFirst,
     },
     $transaction: mockTransaction,
   },
@@ -279,6 +288,7 @@ const VALID_EVENT_INPUT = {
   addressDetail: "東京都渋谷区",
   locationId: null,
   spaceId: null,
+  categoryId: "category-1",
   status: EventStatus.DRAFT,
   // status !== PUBLISHED 時は normalizeRegistrationOpen で false に強制されるため
   // 入力時点でも false にしておく（DB と入力の一貫性）
@@ -1509,6 +1519,7 @@ describe("duplicateEventCommand", () => {
     addressDetail: "東京都渋谷区",
     locationId: null,
     spaceId: null,
+    categoryId: "original-category-1",
     registrationOpen: true,
   };
 
@@ -1672,8 +1683,13 @@ describe("upsertEventFromCalendar", () => {
     mockEventCreate.mockClear();
     mockEventUpdate.mockClear();
     mockEventTimeSlotFindFirst.mockClear();
+    mockEventCategoryFindFirst.mockClear();
     mockEventFindMany.mockImplementation(() => Promise.resolve([]));
     mockEventTimeSlotFindFirst.mockImplementation(() => Promise.resolve(null));
+    // 新規作成分岐（既存スロットなし）のフォールバックカテゴリー解決を既定で成功させる。
+    mockEventCategoryFindFirst.mockImplementation(() =>
+      Promise.resolve({ id: "fallback-category-1" }),
+    );
   });
 
   const CALENDAR_INPUT = {

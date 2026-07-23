@@ -6,6 +6,7 @@ describe("eventFormSchema (conform)", () => {
   const validInput = {
     title: "テストイベント",
     slug: "test-event",
+    categoryId: "33333333-3333-4333-8333-333333333333",
     descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
     scheduleMode: "SINGLE_OCCURRENCE",
     slots: JSON.stringify([
