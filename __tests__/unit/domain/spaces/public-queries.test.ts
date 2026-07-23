@@ -19,6 +19,12 @@ const reservationFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(() =>
 const eventTimeSlotFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(
   () => Promise.resolve([]),
 );
+const settingsFindUnique = mock<(_args?: unknown) => Promise<unknown>>(() =>
+  Promise.resolve(null),
+);
+const blockedDateFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(() =>
+  Promise.resolve([]),
+);
 
 mock.module("server-only", () => ({}));
 
@@ -33,6 +39,12 @@ mock.module("@/shared/db/prisma", () => ({
     },
     eventTimeSlot: {
       findMany: (args: unknown) => eventTimeSlotFindMany(args),
+    },
+    settings: {
+      findUnique: (args: unknown) => settingsFindUnique(args),
+    },
+    blockedDate: {
+      findMany: (args: unknown) => blockedDateFindMany(args),
     },
   },
 }));
@@ -64,10 +76,65 @@ function resetAllMocks() {
   spaceCount.mockReset();
   reservationFindMany.mockReset();
   eventTimeSlotFindMany.mockReset();
+  settingsFindUnique.mockReset();
+  blockedDateFindMany.mockReset();
   spaceFindMany.mockResolvedValue([]);
   spaceCount.mockResolvedValue(0);
   reservationFindMany.mockResolvedValue([]);
   eventTimeSlotFindMany.mockResolvedValue([]);
+  settingsFindUnique.mockResolvedValue(null);
+  blockedDateFindMany.mockResolvedValue([]);
+}
+
+interface FindManyCall {
+  readonly where?: { readonly id?: { notIn?: string[]; in?: string[] } };
+  readonly select?: Record<string, unknown>;
+  readonly orderBy?: unknown;
+  readonly skip?: number;
+  readonly take?: number;
+}
+
+function spaceFindManyCalls(): FindManyCall[] {
+  return spaceFindMany.mock.calls.map((c) => c[0] as FindManyCall);
+}
+
+/** candidates クエリ（id + locationId のみ select、ページネーション前の全件） */
+function candidatesCall(): FindManyCall | undefined {
+  return spaceFindManyCalls().find(
+    (c) => c.select && "locationId" in c.select && !("slug" in c.select),
+  );
+}
+
+function availableDisplayCall(): FindManyCall | undefined {
+  return spaceFindManyCalls().find((c) => c.where?.id?.notIn !== undefined);
+}
+
+function unavailableDisplayCall(): FindManyCall | undefined {
+  return spaceFindManyCalls().find((c) => c.where?.id?.in !== undefined);
+}
+
+function makeSpaceRow(id: string) {
+  return {
+    id,
+    slug: id,
+    name: id,
+    descriptionPlainText: "",
+    capacity: 10,
+    area: null,
+    hourlyPrice: 1000,
+    mainImageUrl: "https://example.com/img.jpg",
+    gallery: [],
+    facilities: [],
+    addressDetail: null,
+    reviewsEnabled: false,
+    category: null,
+    location: { name: "L", address: "Addr" },
+  };
+}
+
+interface CatalogItemWithAvailability {
+  readonly id: string;
+  readonly isAvailableForSearch: boolean;
 }
 
 function lastFindManyArg(): {
@@ -183,16 +250,85 @@ describe("getPublishedSpacesPaginated where clause", () => {
 describe("getPublishedSpacesPaginatedWithAvailability", () => {
   beforeEach(resetAllMocks);
 
-  test("Reservation + EventTimeSlot の busy id を where.id.notIn に足す", async () => {
+  const OPEN_WINDOW = {
+    date: "2026-07-27",
+    startTime: "14:00",
+    endTime: "16:00",
+  };
+  const CLOSED_ALL_WEEK = {
+    monday: { isOpen: false, slots: [] },
+    tuesday: { isOpen: false, slots: [] },
+    wednesday: { isOpen: false, slots: [] },
+    thursday: { isOpen: false, slots: [] },
+    friday: { isOpen: false, slots: [] },
+    saturday: { isOpen: false, slots: [] },
+    sunday: { isOpen: false, slots: [] },
+  };
+
+  test("営業時間外なら reservation/event/blockedDate を問い合わせず全件 isAvailableForSearch=false", async () => {
+    settingsFindUnique.mockResolvedValue({
+      businessHours: CLOSED_ALL_WEEK,
+    });
+    spaceFindMany.mockResolvedValue([makeSpaceRow("s1"), makeSpaceRow("s2")]);
+    spaceCount.mockResolvedValue(2);
+
+    const from = new Date("2026-07-27T05:00:00.000Z");
+    const to = new Date("2026-07-27T07:00:00.000Z");
+    const result = await getPublishedSpacesPaginatedWithAvailability(
+      {},
+      { ...OPEN_WINDOW, from, to },
+    );
+
+    expect(reservationFindMany).not.toHaveBeenCalled();
+    expect(eventTimeSlotFindMany).not.toHaveBeenCalled();
+    expect(blockedDateFindMany).not.toHaveBeenCalled();
+    expect(result.totalCount).toBe(2);
+    const items = result.items as unknown as CatalogItemWithAvailability[];
+    expect(items).toHaveLength(2);
+    expect(items.every((i) => i.isAvailableForSearch === false)).toBe(true);
+  });
+
+  test("営業時間内: reservation + event + blockedDate の busy を合算し、空きありを先に並べる", async () => {
+    // settingsFindUnique は既定 null（DEFAULT_BUSINESS_HOURS 9-21 にフォールバック）。
+    // OPEN_WINDOW（14:00-16:00）はこの範囲内なので営業時間チェックは通過する。
     reservationFindMany.mockResolvedValue([{ spaceId: "s1" }]);
-    eventTimeSlotFindMany.mockResolvedValue([
-      { event: { spaceId: "s2" } },
-      { event: { spaceId: null } },
+    eventTimeSlotFindMany.mockResolvedValue([{ event: { spaceId: "s2" } }]);
+    blockedDateFindMany.mockResolvedValue([
+      { scope: "SPACE", locationId: null, spaceId: "s3" },
     ]);
 
-    const from = new Date("2026-07-20T01:00:00.000Z");
-    const to = new Date("2026-07-20T03:00:00.000Z");
-    await getPublishedSpacesPaginatedWithAvailability({}, { from, to });
+    spaceFindMany.mockImplementation(async (rawArgs?: unknown) => {
+      const args = rawArgs as FindManyCall;
+      if (args.select && "locationId" in args.select) {
+        return [
+          { id: "s1", locationId: "l1" },
+          { id: "s2", locationId: "l1" },
+          { id: "s3", locationId: "l1" },
+          { id: "s4", locationId: "l1" },
+          { id: "s5", locationId: "l1" },
+        ];
+      }
+      if (args.where?.id?.notIn !== undefined) {
+        return [makeSpaceRow("s4"), makeSpaceRow("s5")];
+      }
+      if (args.where?.id?.in !== undefined) {
+        return [makeSpaceRow("s1"), makeSpaceRow("s2"), makeSpaceRow("s3")];
+      }
+      return [];
+    });
+    spaceCount.mockImplementation(async (rawArgs?: unknown) => {
+      const args = rawArgs as FindManyCall;
+      if (args.where?.id?.notIn !== undefined) return 2; // s4, s5
+      if (args.where?.id?.in !== undefined) return 3; // s1, s2, s3
+      return 0;
+    });
+
+    const from = new Date("2026-07-27T05:00:00.000Z");
+    const to = new Date("2026-07-27T07:00:00.000Z");
+    const result = await getPublishedSpacesPaginatedWithAvailability(
+      {},
+      { ...OPEN_WINDOW, from, to },
+    );
 
     expect(reservationFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -204,7 +340,6 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
         }),
       }),
     );
-
     expect(eventTimeSlotFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -217,27 +352,113 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
         }),
       }),
     );
+    expect(blockedDateFindMany).toHaveBeenCalled();
 
-    const { where } = lastFindManyArg();
-    const idFilter = where["id"] as { notIn: string[] };
-    expect(idFilter.notIn).toEqual(expect.arrayContaining(["s1", "s2"]));
-    expect(idFilter.notIn).toHaveLength(2);
-  });
-
-  test("busy が 0 件なら where.id は追加されない", async () => {
-    reservationFindMany.mockResolvedValue([]);
-    eventTimeSlotFindMany.mockResolvedValue([]);
-
-    const from = new Date("2026-07-20T01:00:00.000Z");
-    const to = new Date("2026-07-20T03:00:00.000Z");
-    await getPublishedSpacesPaginatedWithAvailability(
-      { categoryId: "c1" },
-      { from, to },
+    const availableArgs = availableDisplayCall();
+    const unavailableArgs = unavailableDisplayCall();
+    expect(availableArgs?.where?.id?.notIn).toEqual(
+      expect.arrayContaining(["s1", "s2", "s3"]),
+    );
+    expect(availableArgs?.where?.id?.notIn).toHaveLength(3);
+    expect(unavailableArgs?.where?.id?.in).toEqual(
+      expect.arrayContaining(["s1", "s2", "s3"]),
     );
 
-    const { where } = lastFindManyArg();
-    expect(where["id"]).toBeUndefined();
-    expect(where["categoryId"]).toBe("c1");
+    expect(result.totalCount).toBe(5);
+    const items = result.items as unknown as CatalogItemWithAvailability[];
+    expect(items).toHaveLength(5);
+    // 空きあり (s4, s5) が先、空きなし (s1, s2, s3) が後
+    expect(
+      items
+        .slice(0, 2)
+        .map((i) => i.id)
+        .sort(),
+    ).toEqual(["s4", "s5"]);
+    expect(items.slice(0, 2).every((i) => i.isAvailableForSearch)).toBe(true);
+    expect(items.slice(2).every((i) => i.isAvailableForSearch === false)).toBe(
+      true,
+    );
+  });
+
+  test("ページネーション: skip が空きありグループを超える場合は空きなしグループから取得する", async () => {
+    spaceFindMany.mockImplementation(async (rawArgs?: unknown) => {
+      const args = rawArgs as FindManyCall;
+      if (args.select && "locationId" in args.select) {
+        return [
+          { id: "a1", locationId: "l1" },
+          { id: "b1", locationId: "l1" },
+          { id: "b2", locationId: "l1" },
+        ];
+      }
+      if (args.where?.id?.notIn !== undefined) return [];
+      if (args.where?.id?.in !== undefined) {
+        // skip=1, take=2 相当が unavailable 側に渡ることを検証
+        expect(args.skip).toBe(0);
+        expect(args.take).toBe(1);
+        return [makeSpaceRow("b1")];
+      }
+      return [];
+    });
+    spaceCount.mockImplementation(async (rawArgs?: unknown) => {
+      const args = rawArgs as FindManyCall;
+      if (args.where?.id?.notIn !== undefined) return 1; // a1
+      if (args.where?.id?.in !== undefined) return 2; // b1, b2
+      return 0;
+    });
+    reservationFindMany.mockResolvedValue([
+      { spaceId: "b1" },
+      { spaceId: "b2" },
+    ]);
+
+    const from = new Date("2026-07-27T05:00:00.000Z");
+    const to = new Date("2026-07-27T07:00:00.000Z");
+    // perPage=1, page=2 → skip=1。available (1件) を超えるため unavailable 側の skip=0,take=1 になる。
+    const result = await getPublishedSpacesPaginatedWithAvailability(
+      { page: 2, perPage: 1 },
+      { ...OPEN_WINDOW, from, to },
+    );
+
+    expect(result.totalCount).toBe(3);
+    const items = result.items as unknown as CatalogItemWithAvailability[];
+    expect(items).toHaveLength(1);
+    expect(items[0]?.id).toBe("b1");
+    expect(items[0]?.isAvailableForSearch).toBe(false);
+  });
+
+  test("BlockedDate が GLOBAL scope なら候補全件が unavailable になる", async () => {
+    spaceFindMany.mockImplementation(async (rawArgs?: unknown) => {
+      const args = rawArgs as FindManyCall;
+      if (args.select && "locationId" in args.select) {
+        return [
+          { id: "s1", locationId: "l1" },
+          { id: "s2", locationId: "l2" },
+        ];
+      }
+      if (args.where?.id?.in !== undefined) {
+        return [makeSpaceRow("s1"), makeSpaceRow("s2")];
+      }
+      return [];
+    });
+    spaceCount.mockImplementation(async (rawArgs?: unknown) => {
+      const args = rawArgs as FindManyCall;
+      if (args.where?.id?.notIn !== undefined) return 0;
+      if (args.where?.id?.in !== undefined) return 2;
+      return 0;
+    });
+    blockedDateFindMany.mockResolvedValue([
+      { scope: "GLOBAL", locationId: null, spaceId: null },
+    ]);
+
+    const from = new Date("2026-07-27T05:00:00.000Z");
+    const to = new Date("2026-07-27T07:00:00.000Z");
+    const result = await getPublishedSpacesPaginatedWithAvailability(
+      {},
+      { ...OPEN_WINDOW, from, to },
+    );
+
+    const items = result.items as unknown as CatalogItemWithAvailability[];
+    expect(items.every((i) => i.isAvailableForSearch === false)).toBe(true);
+    expect(candidatesCall()).toBeDefined();
   });
 });
 

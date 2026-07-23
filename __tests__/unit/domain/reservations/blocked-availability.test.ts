@@ -5,8 +5,18 @@ const mockBlockedDateFindFirst = mock<
   () => Promise<{ reason: string | null } | null>
 >(() => Promise.resolve(null));
 
+type BlockedDateRangeRow = {
+  startDate: Date;
+  endDate: Date;
+  reason: string | null;
+};
+type BlockedDateScopeRow = {
+  scope: string;
+  locationId: string | null;
+  spaceId: string | null;
+};
 const mockBlockedDateFindMany = mock<
-  () => Promise<{ startDate: Date; endDate: Date; reason: string | null }[]>
+  () => Promise<(BlockedDateRangeRow | BlockedDateScopeRow)[]>
 >(() => Promise.resolve([]));
 
 const mockSpaceFindUnique = mock<() => Promise<{ locationId: string } | null>>(
@@ -30,6 +40,7 @@ import {
   ensureDateNotBlocked,
   getSpaceLocationIdQuery,
   getBlockedDateRangesForSpace,
+  getBlockedSpaceIdsForDate,
 } from "@/shared/domain/reservations/availability";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -164,6 +175,74 @@ describe("getBlockedDateRangesForSpace", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           OR: [{ scope: "GLOBAL" }, { scope: "SPACE", spaceId: SPACE_ID }],
+        }),
+      }),
+    );
+  });
+});
+
+describe("getBlockedSpaceIdsForDate", () => {
+  const spaces = [
+    { spaceId: "s1", locationId: "loc-1" },
+    { spaceId: "s2", locationId: "loc-1" },
+    { spaceId: "s3", locationId: "loc-2" },
+  ];
+
+  test("spaces が空なら DB に問い合わせず空集合を返す", async () => {
+    const result = await getBlockedSpaceIdsForDate(DATE, []);
+    expect(result.size).toBe(0);
+    expect(mockBlockedDateFindMany).not.toHaveBeenCalled();
+  });
+
+  test("該当 blocked date が無ければ空集合", async () => {
+    mockBlockedDateFindMany.mockResolvedValue([]);
+    const result = await getBlockedSpaceIdsForDate(DATE, spaces);
+    expect(result.size).toBe(0);
+  });
+
+  test("GLOBAL scope が1件でもあれば渡した全 spaceId が blocked", async () => {
+    mockBlockedDateFindMany.mockResolvedValue([
+      { scope: "GLOBAL", locationId: null, spaceId: null },
+    ]);
+    const result = await getBlockedSpaceIdsForDate(DATE, spaces);
+    expect(result).toEqual(new Set(["s1", "s2", "s3"]));
+  });
+
+  test("LOCATION scope は同じ locationId のスペースのみ blocked", async () => {
+    mockBlockedDateFindMany.mockResolvedValue([
+      { scope: "LOCATION", locationId: "loc-1", spaceId: null },
+    ]);
+    const result = await getBlockedSpaceIdsForDate(DATE, spaces);
+    expect(result).toEqual(new Set(["s1", "s2"]));
+  });
+
+  test("SPACE scope は該当 spaceId のみ blocked", async () => {
+    mockBlockedDateFindMany.mockResolvedValue([
+      { scope: "SPACE", locationId: null, spaceId: "s3" },
+    ]);
+    const result = await getBlockedSpaceIdsForDate(DATE, spaces);
+    expect(result).toEqual(new Set(["s3"]));
+  });
+
+  test("LOCATION + SPACE の組み合わせは合算される", async () => {
+    mockBlockedDateFindMany.mockResolvedValue([
+      { scope: "LOCATION", locationId: "loc-2", spaceId: null },
+      { scope: "SPACE", locationId: null, spaceId: "s1" },
+    ]);
+    const result = await getBlockedSpaceIdsForDate(DATE, spaces);
+    expect(result).toEqual(new Set(["s1", "s3"]));
+  });
+
+  test("重複する locationId は distinct 化して IN 句に渡す", async () => {
+    await getBlockedSpaceIdsForDate(DATE, spaces);
+    expect(mockBlockedDateFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            { scope: "GLOBAL" },
+            { scope: "LOCATION", locationId: { in: ["loc-1", "loc-2"] } },
+            { scope: "SPACE", spaceId: { in: ["s1", "s2", "s3"] } },
+          ],
         }),
       }),
     );

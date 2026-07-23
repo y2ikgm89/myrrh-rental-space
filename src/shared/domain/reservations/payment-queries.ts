@@ -5,6 +5,11 @@ import { prisma } from "@/shared/db/prisma";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+import {
   REFUNDED_BY_TYPE,
   isValidRefundedByType,
 } from "@/shared/lib/validations/enums/refund-attribution";
@@ -80,6 +85,31 @@ export async function claimReservationAsPaid(
   });
 
   if (result.count === 0) {
+    // count=0 の大半は無害 (重複 webhook 配信・既に PAID 等の想定内 no-op) だが、
+    // status=CANCELLED での不一致だけは「Stripe 側は課金成功したのに DB は
+    // キャンセル済みのまま」という money-in-flight を意味し自動返金導線が無い。
+    // 運用が気付けるよう CRITICAL ログを残す (架電・手動返金判断のトリガー)。
+    const current = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      select: { status: true, paymentStatus: true },
+    });
+    if (current?.status === ReservationStatus.CANCELLED) {
+      logError(
+        new Error(
+          "claimReservationAsPaid: Stripe payment succeeded for an already-cancelled reservation",
+        ),
+        {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.CRITICAL,
+          context: {
+            operation: "claimReservationAsPaid",
+            reservationId,
+            stripePaymentIntentId: data.stripePaymentIntentId,
+            currentPaymentStatus: current.paymentStatus,
+          },
+        },
+      );
+    }
     return null;
   }
 

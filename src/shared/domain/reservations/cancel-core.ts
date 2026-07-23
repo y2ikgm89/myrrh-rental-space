@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ReservationStatus } from "@generated/prisma/enums";
+import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import type { CancelledByType } from "@/shared/lib/validations/enums/helpers";
 import { isWithinDeadline } from "./deadline";
 
@@ -37,6 +37,7 @@ export const CANCELLABLE_STATUSES: readonly ReservationStatus[] = [
 export interface CancellableReservation {
   id: string;
   status: ReservationStatus;
+  paymentStatus: PaymentStatus;
   startTime: Date;
   couponId: string | null;
 }
@@ -66,6 +67,20 @@ export async function applyCancellation(
     return { success: false, error: "この予約はキャンセルできません" };
   }
 
+  // Stripe Checkout が進行中 (PENDING) の予約はキャンセルさせない。ここでキャンセルを
+  // 許すと、顧客が開いたままの Checkout タブで決済が完了した際に webhook 側の
+  // status ガード (claimReservationAsPaid) が claim を no-op にする一方、Stripe 側は
+  // 実際に課金されるため「課金成功したのに DB は unpaid/cancelled のまま」という
+  // 自動返金導線の無い money-in-flight を生む。UNPAID / PAID / PARTIALLY_REFUNDED は
+  // 引き続きキャンセル可（PAID 以降は `applyCancellationSideEffects` の自動返金導線あり）。
+  if (reservation.paymentStatus === PaymentStatus.PENDING) {
+    return {
+      success: false,
+      error:
+        "決済処理中のためキャンセルできません。決済完了後にキャンセルするか、しばらく経ってから再度お試しください。",
+    };
+  }
+
   if (
     !isWithinDeadline(reservation.startTime, options.deadlineHours, options.now)
   ) {
@@ -75,13 +90,15 @@ export async function applyCancellation(
     };
   }
 
-  // Atomic claim: WHERE に status: { in: CANCELLABLE_STATUSES } を含めて
-  // 二重 submit / 同時操作のレースを DB レベルで防ぐ。
+  // Atomic claim: WHERE に status / paymentStatus を含めて二重 submit・同時操作・
+  // 「読み取り直後に別 tx が決済を開始する」TOCTOU レース (customer-commands.ts の
+  // updateCustomerReservation と同型の Codex P1 パターン) を DB レベルで防ぐ。
   const updateResult = await tx.reservation.updateMany({
     where: {
       id: reservation.id,
       deletedAt: null,
       status: { in: [...CANCELLABLE_STATUSES] },
+      paymentStatus: { not: PaymentStatus.PENDING },
     },
     data: {
       status: ReservationStatus.CANCELLED,
