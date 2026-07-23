@@ -648,7 +648,8 @@ Phase 6b: Cloud Run runtime env/secrets の SSoT は Terraform。`cloudbuild.yam
 4. On merge, `terraform apply` creates the secret container (metadata) and
    binds it on the next apply after you add a Secret Manager version
    (`gcloud secrets versions add ...`). Recurring Cloud Build deploys only
-   push a new image; they do not rewrite secret bindings.
+   run `gcloud run services update --image` (+ `--scaling=auto`); they do not
+   rewrite env, secrets, or service shape.
 
 Runtime / build SA already hold `roles/secretmanager.secretAccessor` at the
 project level (granted by `scripts/bootstrap-terraform.sh`), so any secret
@@ -754,7 +755,7 @@ SHORT_SHA="$(git rev-parse --short=7 HEAD)"
 gcloud builds submit \
   --region="$REGION" \
   --config=cloudbuild.yaml \
-  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_EDITOR_EMAIL="${ADMIN_ROLE_GROUP_EDITOR_EMAIL}",_ADMIN_ROLE_GROUP_VIEWER_EMAIL="${ADMIN_ROLE_GROUP_VIEWER_EMAIL}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_SERVICE_ACCOUNT="${RUNTIME_SA}",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}",_CRON_OIDC_AUDIENCE="${PUBLIC_DOMAIN}",_CRON_SERVICE_ACCOUNT_EMAIL="${SCHEDULER_SA}",_NEXT_PUBLIC_TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY}",_BREAKING_MIGRATION_DEPLOY=false,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1
+  --substitutions=SHORT_SHA="${SHORT_SHA}",_REGION="${REGION}",_SERVICE_NAME="${SERVICE_NAME}",_ADMIN_SERVICE_NAME="${ADMIN_SERVICE_NAME}",_IAP_JWT_AUDIENCE="${IAP_JWT_AUDIENCE}",_ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_ADMIN_EMAIL="${ADMIN_ROLE_GROUP_ADMIN_EMAIL}",_ADMIN_ROLE_GROUP_EDITOR_EMAIL="${ADMIN_ROLE_GROUP_EDITOR_EMAIL}",_ADMIN_ROLE_GROUP_VIEWER_EMAIL="${ADMIN_ROLE_GROUP_VIEWER_EMAIL}",_REPOSITORY="${AR_REPOSITORY}",_WORKER_POOL="myrrh-deploy-pool",_BUILD_SERVICE_ACCOUNT="${BUILD_SA}",_NEXT_PUBLIC_BASE_URL="${PUBLIC_DOMAIN}",_NEXT_PUBLIC_APP_URL="${PUBLIC_DOMAIN}",_BETTER_AUTH_URL="${PUBLIC_DOMAIN}",_ADMIN_APP_URL="${ADMIN_DOMAIN}",_CRON_OIDC_AUDIENCE="${PUBLIC_DOMAIN}",_CRON_SERVICE_ACCOUNT_EMAIL="${SCHEDULER_SA}",_NEXT_PUBLIC_TURNSTILE_SITE_KEY="${TURNSTILE_SITE_KEY}",_BREAKING_MIGRATION_DEPLOY=false,_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION=1
 ```
 
 For intentional non-expand/contract migrations, use breaking migration deploy
@@ -953,22 +954,25 @@ gcloud iam service-accounts get-iam-policy "$BUILD_SA" \
 
 ## Cloud Run service settings
 
-`cloudbuild.yaml` deploys two services from the same image:
+Terraform declares two services that share the same Artifact Registry image
+(Cloud Build only runs `gcloud run services update --image` + `--scaling=auto`):
 
-- public: `$SERVICE_NAME`, `APP_SURFACE=public`, unauthenticated;
+- public: `$SERVICE_NAME`, `APP_SURFACE=public`, unauthenticated (`allUsers`
+  invoker via Terraform IAM);
 - admin: `$ADMIN_SERVICE_NAME`, `APP_SURFACE=admin`, Cloud Run direct IAP.
 
 IAP is enabled once during setup and then verified by the production audit.
-The recurring Cloud Build deploy updates the admin service revision but does
-not pass `--iap`, does not reapply `--no-allow-unauthenticated`, and does not
-require project-level `roles/iap.admin`.
+IAP / ingress / default-url / probes / memory / SA are Terraform SSoT
+(`terraform/cloud_run_*.tf`). Recurring Cloud Build deploys must not pass
+`--iap`, `--ingress`, `--no-default-url`, `--allow-unauthenticated`, or shape
+flags, does not reapply `--no-allow-unauthenticated`, and must not require
+project-level `roles/iap.admin`.
 
 The public service keeps Cloud Run network ingress at `all` because the public
 custom domain must remain directly reachable. The admin service is load
-balancer-only: `cloudbuild.yaml` reapplies
-`--ingress=internal-and-cloud-load-balancing` and `--no-default-url` on every
-admin deploy. The production audit verifies the live
-`run.googleapis.com/ingress`, `run.googleapis.com/ingress-status`, and
+balancer-only (`INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` +
+`default_uri_disabled = true` in Terraform). The production audit verifies the
+live `run.googleapis.com/ingress`, `run.googleapis.com/ingress-status`, and
 `run.googleapis.com/default-url-disabled` annotations. Do not reintroduce a
 direct admin `run.app` production entrypoint.
 
@@ -1335,11 +1339,11 @@ Expected results:
   `admin Cloud Run runtime env is canonical`. In particular, `BETTER_AUTH_URL`
   must be the canonical public origin on the public service and the canonical
   admin origin on the admin service, with no trailing slash.
-  The audit checks `Cloud Run service ingress is canonical`; recurring deploys
-  must keep the public service at `--ingress=all` and the admin service at
-  `--ingress=internal-and-cloud-load-balancing`. The audit also checks
-  `admin Cloud Run default run.app URL is disabled`; admin recurring deploys
-  must keep `--no-default-url`.
+  The audit checks `Cloud Run service ingress is canonical`; Terraform must keep
+  the public service at ingress `all` and the admin service at
+  `internal-and-cloud-load-balancing`. The audit also checks
+  `admin Cloud Run default run.app URL is disabled`; Terraform must keep
+  `default_uri_disabled = true` (Cloud Build must not reintroduce a run.app URL).
   The audit also checks `Cloud Run service identities are dedicated`,
   `Cloud Run migrate Job identity is dedicated`,
   `Cloud Run migrate Job env is canonical`, and
@@ -1350,9 +1354,10 @@ Expected results:
   from `DATABASE_URL:1` in Secret Manager while running
   `bunx --bun prisma migrate deploy` as one task, one parallel task, no retries,
   600 second task timeout, 1 vCPU, and 1Gi memory.
-  Recurring Cloud Build deploys update Cloud Run **image + shape**
-  (memory/cpu/scaling/probes/ingress) only. Runtime env and secret bindings are
-  Terraform SSoT (Phase 6b); deploy steps must not use `--set-env-vars` /
+  Recurring Cloud Build deploys update Cloud Run **image only** via
+  `gcloud run services update --image` (plus `--scaling=auto` to clear breaking
+  quiesce). Runtime env, secrets, and service shape (memory/cpu/probes/ingress/
+  SA) are Terraform SSoT (Phase 6b); deploy steps must not use `--set-env-vars` /
   `--set-secrets`, and must not rely on
   legacy `--update-*` / `--remove-*` drift cleanup.
   Legacy clean-break names `CRON_SECRET`, `ADMIN_LOGIN_TOKEN`,

@@ -1,8 +1,8 @@
 # -----------------------------------------------------------------------------
-# Cloud Run: admin service (Phase 6b — env/secrets Terraform 完全移管)
+# Cloud Run: admin service (Phase 6b — shape/env/secrets Terraform 完全移管)
 # -----------------------------------------------------------------------------
 #
-# 責務は cloud_run_public.tf と同型。相違点:
+# 責務は cloud_run_public.tf と同型 (CB = image + --scaling=auto のみ)。相違点:
 #   - ingress: internal-and-cloud-load-balancing (external LB 経由のみ)
 #   - default URL 無効化 (`default_uri_disabled = true`)
 #   - IAP 経由の authenticated-only access (`iap_enabled = true` + iap.tf)

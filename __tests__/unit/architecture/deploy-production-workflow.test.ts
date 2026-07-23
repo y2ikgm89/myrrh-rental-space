@@ -277,10 +277,10 @@ describe("production deploy workflow", () => {
     expect(runbook).toContain('--role="roles/run.admin"');
   });
 
-  test("Cloud Run runtime env/secrets は Terraform SSoT で管理される (Phase 6b、2026-07-14)", () => {
-    // Phase 6b で cloudbuild.yaml `--set-env-vars=` / `--set-secrets=` は削除され、
-    // Terraform `google_cloud_run_v2_service.template.containers.env` が SSoT。
-    // cloudbuild.yaml は image tag + shape (memory/cpu/ingress 等) のみ再適用。
+  test("Cloud Run shape/env/secrets は Terraform SSoT; CB は services update --image のみ", () => {
+    // Phase 6b clean-break: official pattern is `gcloud run services update --image`
+    // when Terraform owns configuration. CB also passes `--scaling=auto` so
+    // breaking quiesce (`--scaling=0`) is cleared on the success path.
     const deployPublicIndex = cloudBuildConfig.indexOf("id: deploy-public");
     const deployAdminIndex = cloudBuildConfig.indexOf("id: deploy-admin");
     expect(deployPublicIndex).toBeGreaterThanOrEqual(0);
@@ -292,26 +292,46 @@ describe("production deploy workflow", () => {
     );
     const deployAdminStep = cloudBuildConfig.slice(deployAdminIndex);
 
-    // cloudbuild.yaml から env/secret 書換 flag が消えていること (drift loop 防止)
     for (const step of [deployPublicStep, deployAdminStep]) {
+      expect(step).toContain("services");
+      expect(step).toContain("update");
+      expect(step).toContain("--image=");
+      expect(step).toContain("--scaling=auto");
+      expect(step).not.toContain("\n      - deploy\n");
       expect(step).not.toContain("--set-env-vars=");
       expect(step).not.toContain("--set-secrets=");
       expect(step).not.toContain("--remove-env-vars=");
       expect(step).not.toContain("--update-env-vars=");
       expect(step).not.toContain("--remove-secrets=");
       expect(step).not.toContain("--update-secrets=");
+      expect(step).not.toContain("--memory=");
+      expect(step).not.toContain("--cpu=");
+      expect(step).not.toContain("--concurrency=");
+      expect(step).not.toContain("--timeout=");
+      expect(step).not.toContain("--min-instances=");
+      expect(step).not.toContain("--max-instances=");
+      expect(step).not.toContain("--service-account=");
+      expect(step).not.toContain("--execution-environment=");
+      expect(step).not.toContain("--cpu-boost");
+      expect(step).not.toContain("--no-cpu-throttling");
+      expect(step).not.toContain("--port=");
+      expect(step).not.toContain("--startup-probe=");
+      expect(step).not.toContain("--liveness-probe=");
+      expect(step).not.toContain("--allow-unauthenticated");
+      expect(step).not.toContain("--ingress=");
+      expect(step).not.toContain("--no-default-url");
       expect(step).not.toContain("CRON_SECRET=CRON_SECRET");
       expect(step).not.toContain("ADMIN_LOGIN_TOKEN=ADMIN_LOGIN_TOKEN");
     }
-    // shape (image / ingress / default URL) は cloudbuild.yaml 側で再適用継続
-    expect(deployPublicStep).toContain("--ingress=all");
-    expect(deployPublicStep).not.toContain("--no-default-url");
-    expect(deployAdminStep).toContain(
-      "--ingress=internal-and-cloud-load-balancing",
-    );
-    expect(deployAdminStep).toContain("--no-default-url");
 
-    // Terraform 側で env/secret binding が dynamic block 経由で宣言されていること
+    // Unused shape substitutions must not remain (Cloud Build unmatched-key rule)
+    expect(cloudBuildConfig).not.toMatch(/^\s+_MEMORY:/m);
+    expect(cloudBuildConfig).not.toMatch(/^\s+_CPU:/m);
+    expect(cloudBuildConfig).not.toMatch(/^\s+_SERVICE_ACCOUNT:/m);
+    expect(workflow).not.toContain(
+      "_SERVICE_ACCOUNT=${RUNTIME_SERVICE_ACCOUNT}",
+    );
+
     const cloudRunPublicTf = readFileSync(
       join(process.cwd(), "terraform", "cloud_run_public.tf"),
       "utf8",
@@ -330,9 +350,16 @@ describe("production deploy workflow", () => {
       expect(tf).toMatch(
         /secret_key_ref[\s\S]*google_secret_manager_secret\.secret\[env\.key\]/,
       );
-      // env が ignore_changes から撤去されていること (drift-detect 完全化)
       expect(tf).not.toMatch(/ignore_changes[\s\S]*containers\[0\]\.env/);
+      expect(tf).toContain('memory = "1Gi"');
+      expect(tf).toContain('cpu    = "1"');
+      expect(tf).toContain('path = "/api/live"');
     }
+    expect(cloudRunPublicTf).toContain('ingress  = "INGRESS_TRAFFIC_ALL"');
+    expect(cloudRunAdminTf).toContain(
+      'ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"',
+    );
+    expect(cloudRunAdminTf).toContain("default_uri_disabled = true");
   });
 
   test("Cloud Run migrate Job: Cloud Build updates image only; Terraform owns shape/env", () => {

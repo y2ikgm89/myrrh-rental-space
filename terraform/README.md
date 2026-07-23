@@ -199,8 +199,9 @@ bootstrap 完了後、`.github/workflows/terraform.yml` が
 3. PR を出す → GitHub Actions で `terraform plan` が実行され差分表示
 4. PR merge → `terraform apply`（secret metadata + Cloud Run env binding）
 5. operator が `gcloud secrets versions add` で値を投入。以降の Cloud Build
-   deploy は image (+ service shape) のみ更新し、`--set-secrets` は使わない
-   (runtime/build SA への project-level `secretAccessor` は bootstrap 済)
+   deploy は `gcloud run services update --image` のみで、`--set-secrets` /
+   shape flags は使わない (runtime/build SA の project-level `secretAccessor`
+   は bootstrap 済)
 
 ## ローカル運用 (差分確認したいとき、任意)
 
