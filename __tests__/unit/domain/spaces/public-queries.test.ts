@@ -425,6 +425,31 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
     expect(items[0]?.isAvailableForSearch).toBe(false);
   });
 
+  test("candidates が 0 件（facet 該当スペースなし）でもエラーにならず空結果を返す", async () => {
+    spaceFindMany.mockImplementation(async (rawArgs?: unknown) => {
+      const args = rawArgs as FindManyCall;
+      if (args.select && "locationId" in args.select) {
+        return []; // candidates: facet に該当するスペースなし
+      }
+      return [];
+    });
+    spaceCount.mockResolvedValue(0);
+
+    const from = new Date("2026-07-27T05:00:00.000Z");
+    const to = new Date("2026-07-27T07:00:00.000Z");
+    const result = await getPublishedSpacesPaginatedWithAvailability(
+      { categoryId: "no-match" },
+      { ...OPEN_WINDOW, from, to },
+    );
+
+    // getBlockedSpaceIdsForDate は spaces=[] で DB に問い合わせず短絡するはず
+    expect(blockedDateFindMany).not.toHaveBeenCalled();
+    expect(result.totalCount).toBe(0);
+    expect(result.items).toHaveLength(0);
+    expect(result.totalPages).toBe(0);
+    expect(result.currentPage).toBe(1);
+  });
+
   test("BlockedDate が GLOBAL scope なら候補全件が unavailable になる", async () => {
     spaceFindMany.mockImplementation(async (rawArgs?: unknown) => {
       const args = rawArgs as FindManyCall;

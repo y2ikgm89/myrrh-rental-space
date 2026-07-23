@@ -47,8 +47,11 @@ const TRIGGER_CLASS =
  * 公開スペース一覧のフィルタ toolbar。
  *
  * - 拠点・カテゴリ・設備・並び順・最低収容人数・空き時間帯のすべてを
- *   単一の「絞り込み」Dialog（モーダル）に統合する。ヘッダー行はトリガー +
- *   リセット + 件数のみで、デスクトップ・モバイルとも常に 1 行に収まる
+ *   単一の「検索条件」Dialog（モーダル）に統合する。ヘッダー行はトリガー +
+ *   リセット + 件数のみで、デスクトップ・モバイルとも常に 1 行に収まる。
+ *   トリガーの状態文言は「絞り込み」（結果を除外する拠点/カテゴリ/検索語/
+ *   収容人数/設備）と「並び替え」（結果を除外しない並び順/空き時間帯）を
+ *   区別して表示する（除外していないのに「絞り込み適用中」と出さないため）
  * - モーダル内の単一選択（拠点・カテゴリ・並び順）は、Dialog の中で
  *   さらにポップアップを開く二重構造を避けるためネイティブ select
  *   （design-system Select）を使う。設備は複数選択のためチェックボックス
@@ -78,16 +81,29 @@ export function FilterBar({
 
   const showLocationFilter = locations !== undefined && locations.length > 1;
   const hasFacilityOptions = facilityOptions.length > 0;
-  const hasActiveFilter =
+  // 拠点/カテゴリ/検索語/収容人数/設備は結果から除外する「絞り込み」。
+  // 並び順・空き時間帯は結果を除外せず並べ替える・注記するだけなので、
+  // 「絞り込み: 適用中」と表示すると実態と食い違う（除外は何も起きていない）。
+  const hasNarrowingFilter =
     params.category !== null ||
     params.location !== null ||
     params.q !== "" ||
     params.minCapacity !== null ||
-    params.facilities.length > 0 ||
+    params.facilities.length > 0;
+  const hasDisplayOrderFilter =
     params.date !== "" ||
     params.startTime !== "" ||
     params.endTime !== "" ||
     params.sort !== "recommended";
+  const hasActiveFilter = hasNarrowingFilter || hasDisplayOrderFilter;
+  const triggerStateLabel =
+    hasNarrowingFilter && hasDisplayOrderFilter
+      ? "絞り込み・並び替え適用中"
+      : hasNarrowingFilter
+        ? "絞り込み適用中"
+        : hasDisplayOrderFilter
+          ? "並び替え適用中"
+          : "条件を指定";
 
   function setCategory(value: string) {
     startTransition(() => {
@@ -202,7 +218,7 @@ export function FilterBar({
         )}
       >
         <span className="text-xs uppercase tracking-eyebrow text-muted-foreground">
-          絞り込み
+          検索条件
         </span>
         <span
           className={cn(
@@ -210,7 +226,7 @@ export function FilterBar({
             hasActiveFilter ? "text-accent" : "text-foreground",
           )}
         >
-          {hasActiveFilter ? "適用中" : "条件を指定"}
+          {triggerStateLabel}
         </span>
         <span
           aria-hidden="true"
@@ -256,7 +272,7 @@ export function FilterBar({
           }
         >
           <DialogHeader>
-            <DialogTitle>絞り込み</DialogTitle>
+            <DialogTitle>検索条件</DialogTitle>
             <DialogDescription>
               {showLocationFilter
                 ? "拠点・カテゴリ・収容人数・設備でスペースを絞り込み、並び順と空き時間帯で表示順を調整します。"
