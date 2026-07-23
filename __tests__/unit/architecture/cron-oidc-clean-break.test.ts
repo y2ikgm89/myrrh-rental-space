@@ -50,12 +50,31 @@ describe("cron OIDC clean-break boundary", () => {
     const cloudBuild = read("cloudbuild.yaml");
     expect(cloudBuild).not.toContain("_CRON_SECRET_VERSION");
     expect(cloudBuild).not.toContain("CRON_SECRET");
-    expect(cloudBuild).toContain("--set-env-vars=");
-    expect(cloudBuild).toContain("--set-secrets=");
-    expect(cloudBuild).not.toContain("--remove-env-vars=");
-    expect(cloudBuild).not.toContain("--update-env-vars=");
-    expect(cloudBuild).not.toContain("--remove-secrets=");
-    expect(cloudBuild).not.toContain("--update-secrets=");
+
+    // Phase 6b: deploy / migrate-update steps must not rewrite env/secrets.
+    // Assert on step bodies only — file-level comment archaeology must not
+    // satisfy the gate (false green).
+    const deployPublicIndex = cloudBuild.indexOf("id: deploy-public");
+    const deployAdminIndex = cloudBuild.indexOf("id: deploy-admin");
+    const migrateUpdateIndex = cloudBuild.indexOf("id: migrate-update");
+    const migrateExecuteIndex = cloudBuild.indexOf("id: migrate-execute");
+    expect(deployPublicIndex).toBeGreaterThanOrEqual(0);
+    expect(deployAdminIndex).toBeGreaterThan(deployPublicIndex);
+    expect(migrateUpdateIndex).toBeGreaterThanOrEqual(0);
+    expect(migrateExecuteIndex).toBeGreaterThan(migrateUpdateIndex);
+
+    for (const step of [
+      cloudBuild.slice(deployPublicIndex, deployAdminIndex),
+      cloudBuild.slice(deployAdminIndex),
+      cloudBuild.slice(migrateUpdateIndex, migrateExecuteIndex),
+    ]) {
+      expect(step).not.toContain("--set-env-vars=");
+      expect(step).not.toContain("--set-secrets=");
+      expect(step).not.toContain("--remove-env-vars=");
+      expect(step).not.toContain("--update-env-vars=");
+      expect(step).not.toContain("--remove-secrets=");
+      expect(step).not.toContain("--update-secrets=");
+    }
   });
 
   test("Cloud Scheduler jobs use OIDC only (no shared-secret / custom auth headers)", () => {

@@ -633,26 +633,30 @@ apply`.
 
 ### Adding a new secret
 
-1. Update `cloudbuild.yaml` `--set-secrets=` to include the new secret name.
-2. Update `terraform/secrets.tf` `runtime_secrets` (or `build_secrets` if
-   Cloud Build needs to read it via `availableSecrets`) with the same name.
+Phase 6b: Cloud Run runtime env/secrets の SSoT は Terraform。`cloudbuild.yaml`
+の deploy step は `--set-env-vars` / `--set-secrets` を持たない。
+
+1. Add the secret name to `terraform/secrets.tf` `runtime_secrets` (or
+   `build_secrets` if Cloud Build must read it via `availableSecrets`).
+   Do **not** add it to `imported_secrets` in the same PR — create first, then
+   adopt in a follow-up (see comments in `secrets.tf`).
+2. Pin the version in `terraform/variables.tf` `cloud_run_secret_versions` and
+   wire injection in `terraform/locals_cloud_run.tf` (or
+   `cloud_run_migrate_job.tf` for migrate-only secrets).
 3. Open a PR. `.github/workflows/terraform.yml` runs `terraform plan` on the
    PR and posts the diff for review.
-4. On merge, `terraform apply` creates the new secret container (metadata).
-   `runtime-sa` / `build-sa` already have project-level `secretAccessor`
-   (granted by `scripts/bootstrap-terraform.sh`), so no additional IAM step
-   is required — the next Cloud Build deploy picks up the new secret
-   automatically.
+4. On merge, `terraform apply` creates the secret container (metadata) and
+   binds it on the next apply after you add a Secret Manager version
+   (`gcloud secrets versions add ...`). Recurring Cloud Build deploys only
+   push a new image; they do not rewrite secret bindings.
 
 Runtime / build SA already hold `roles/secretmanager.secretAccessor` at the
 project level (granted by `scripts/bootstrap-terraform.sh`), so any secret
 added to the project is automatically readable by both SAs. This is a
-deliberate simplification: the previous per-secret binding pattern required
-two-file updates (`cloudbuild.yaml` + `terraform/secret_iam.tf`) and had
-drift-detection issues. Project-level scope is safe because runtime / build
-SA are only used inside Cloud Run / Cloud Build (never externally exposed).
-The legacy default Cloud Build service account must have no Secret Manager
-access.
+deliberate simplification versus the former per-secret IAM pattern.
+Project-level scope is safe because runtime / build SA are only used inside
+Cloud Run / Cloud Build (never externally exposed). The legacy default Cloud
+Build service account must have no Secret Manager access.
 
 Secret generation rules used by this app:
 
@@ -685,8 +689,13 @@ key.
 
 ## Cloud Run migrate Job
 
-Create the job once. `cloudbuild.yaml` updates the image, memory, command,
-args, and `DATABASE_URL` secret on every deploy before executing it.
+Create the job once (bootstrap). After Terraform adoption, recurring deploys
+update **only the image tag** in `cloudbuild.yaml` Step 4
+(`:migrate-${SHORT_SHA}`). Memory, CPU, tasks, command/args, service account,
+and `DATABASE_URL` secret binding are owned by
+`terraform/cloud_run_migrate_job.tf` (Phase 6b).
+
+Bootstrap create (one-time; prefer Terraform import afterward):
 
 ```bash
 gcloud run jobs create prisma-migrate \
@@ -705,11 +714,11 @@ gcloud run jobs create prisma-migrate \
 ```
 
 Cloud Run resolves environment variable secrets at instance startup. Pin the
-migrate Job's `DATABASE_URL` secret to a numeric Secret Manager version from the
-first create command; do not use `latest` in production bootstrap or recurring
-deploys. The production audit checks `Cloud Run migrate Job env is canonical`
-and fails if `DATABASE_URL` is missing, set as a plain value, or references a
-non-pinned Secret Manager version.
+migrate Job's `DATABASE_URL` secret to a numeric Secret Manager version via
+`terraform/variables.tf` `cloud_run_secret_versions.DATABASE_URL`; do not use
+`latest` in production. The production audit checks `Cloud Run migrate Job env
+is canonical` and fails if `DATABASE_URL` is missing, set as a plain value, or
+references a non-pinned Secret Manager version.
 The audit also checks `Cloud Run migrate Job command is canonical` and fails if
 the Job no longer runs `bunx --bun prisma migrate deploy`.
 The audit also checks `Cloud Run migrate Job execution config is canonical` and
@@ -798,10 +807,12 @@ Missing values fail at Cloud Build submit
 time, and explicit empty values are rejected by the first
 `validate-production-substitutions` step before any image build or push.
 For production submits, `_NEXT_PUBLIC_APP_URL`, `_BETTER_AUTH_URL`, and
-`_CRON_OIDC_AUDIENCE` must match `_NEXT_PUBLIC_BASE_URL`; the single production
-image is built for the canonical public origin, while the admin service gets
-its admin-specific runtime `NEXT_PUBLIC_APP_URL` and `BETTER_AUTH_URL` during
-the Cloud Run deploy step.
+`_CRON_OIDC_AUDIENCE` must match `_NEXT_PUBLIC_BASE_URL`. The single production
+image bakes the canonical **public** origin into the client bundle at
+`next build`. Admin-specific `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` /
+`APP_SURFACE` are injected at runtime by Terraform
+(`terraform/locals_cloud_run.tf`); they do not rewrite the already-built
+client JS.
 
 `cloudbuild.yaml` sets all of these for user-specified Cloud Build service
 accounts and the private worker pool:
@@ -819,9 +830,11 @@ deploys to Webpack as a memory workaround; use the private pool so production
 and CI stay on the same bundler path.
 
 After the first successful deploy, prefer fixed Secret Manager versions for
-production rollouts. Update the `_..._SECRET_VERSION` substitutions in
-`.github/workflows/deploy-production.yml` when rotating a secret. Avoid `latest`
-in production deploys because it makes rollbacks ambiguous.
+production rollouts. Rotate runtime pins via
+`terraform/variables.tf` `cloud_run_secret_versions` (and
+`_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION` in
+`.github/workflows/deploy-production.yml` for the build-time exception). Avoid
+`latest` in production because it makes rollbacks ambiguous.
 
 ## GitHub Actions production workflow
 
@@ -1337,8 +1350,10 @@ Expected results:
   from `DATABASE_URL:1` in Secret Manager while running
   `bunx --bun prisma migrate deploy` as one task, one parallel task, no retries,
   600 second task timeout, 1 vCPU, and 1Gi memory.
-  Recurring Cloud Build deploys replace Cloud Run runtime env and secret
-  bindings with `--set-env-vars` and `--set-secrets`; they do not rely on
+  Recurring Cloud Build deploys update Cloud Run **image + shape**
+  (memory/cpu/scaling/probes/ingress) only. Runtime env and secret bindings are
+  Terraform SSoT (Phase 6b); deploy steps must not use `--set-env-vars` /
+  `--set-secrets`, and must not rely on
   legacy `--update-*` / `--remove-*` drift cleanup.
   Legacy clean-break names `CRON_SECRET`, `ADMIN_LOGIN_TOKEN`,
   `INITIAL_ADMIN_EMAIL`, and `INITIAL_ADMIN_NAME` must be absent from Cloud Run

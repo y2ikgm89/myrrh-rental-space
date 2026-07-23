@@ -123,7 +123,7 @@ locals {
       path        = "/api/cron/calendar-sync-retry"
       description = "Retry outbound Google Calendar syncs for reservations stuck with calendarSyncError (every 15 min, feature-gated by Google Calendar enabled)."
     },
-    # 段階 A: STRIPE-DEDUP-B で apply-create. 段階 B follow-up PR で imported_cron_jobs にも登録すること (tfstate rebuild 防御)
+    # 段階 B 完了: imported_cron_jobs に登録済 (state-rebuild 防御)
     {
       name        = "stripe-event-cleanup"
       schedule    = "0 3 * * *"
@@ -198,6 +198,9 @@ locals {
     "audit-log-integrity",
     # 段階 B 完了: PR #1382 で追加 → apply-create 完了 (2026-07-21T15:49:53Z 本番作成確認済み、Deploy Production run 29845742054 の Terraform Apply (IAM prereq) ジョブで実確認) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "news-scheduled-publish",
+    # 段階 B 完了: cron_jobs に Stage A 追加済み → 本番 apply-create 済み → state-rebuild 防御のため imported に組み込み
+    "customer-duplicate-scan",
+    "stripe-event-cleanup",
   ])
 }
 

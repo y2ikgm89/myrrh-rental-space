@@ -242,7 +242,9 @@ describe("GCP production setup runbook", () => {
   });
 
   test("production audit runbook rejects legacy Cloud Run runtime env names", () => {
-    expect(runbook).toContain("`--set-env-vars`");
+    // Phase 6b: recurring deploys must NOT rewrite env/secrets via gcloud flags.
+    expect(runbook).toContain("Terraform SSoT (Phase 6b)");
+    expect(runbook).toContain("must not use `--set-env-vars`");
     expect(runbook).toContain("`--set-secrets`");
     expect(runbook).toContain(
       "legacy `--update-*` / `--remove-*` drift cleanup",
@@ -259,8 +261,9 @@ describe("GCP production setup runbook", () => {
       /`_NEXT_PUBLIC_APP_URL`, `_BETTER_AUTH_URL`, and\s+`_CRON_OIDC_AUDIENCE` must match `_NEXT_PUBLIC_BASE_URL`/,
     );
     expect(runbook).toMatch(
-      /the single production\s+image is built for the canonical public origin/,
+      /The single production\s+image bakes the canonical \*\*public\*\* origin/,
     );
+    expect(runbook).toContain("terraform/locals_cloud_run.tf");
   });
 
   test("documents the image-baked Next Server Actions encryption key contract", () => {

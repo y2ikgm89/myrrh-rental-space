@@ -101,9 +101,9 @@ migrate Job の execution ログを読む（§4）。既知パターン:
    空 DB — クリーン再現には `docker compose down -v` で volume 削除）で再現・検証してから
    fix-forward する。
 
-- migrate-update は image/memory(1Gi)/command(`bunx --bun prisma migrate deploy`)/
-  DATABASE_URL secret を毎デプロイ再適用するため、Job への手動変更は次デプロイで消える
-  （= 手動変更で恒久修正しない。cloudbuild.yaml を直す）。
+- migrate-update（Phase 6b）は **image tag のみ**再適用する。memory / command /
+  DATABASE_URL secret / service account は `terraform/cloud_run_migrate_job.tf` が
+  SSoT。Job への手動変更は次の `terraform apply` で戻る（恒久修正は Terraform を直す）。
 
 ### D. deploy-public / deploy-admin 失敗（新 revision 起動失敗）
 
@@ -114,8 +114,9 @@ periodSeconds=10 × failureThreshold=9（≒90 秒）で待つ。
 1. revision ログ（§4）で起動時 throw を確認。代表例は
    `src/shared/lib/env/server.ts` の `validateProductionEnv`
    （`src/instrumentation.ts` の `register` から起動時に 1 回実行）:
-   - `Missing required environment variables in production: ...` → cloudbuild の
-     `--set-env-vars` / `--set-secrets` の欠落・Secret Manager バージョン不整合。
+   - `Missing required environment variables in production: ...` → Terraform
+     (`locals_cloud_run.tf` / `cloud_run_secret_versions`) の欠落・Secret Manager
+     バージョン不整合。cloudbuild deploy step は env/secrets を書き換えない (Phase 6b)。
    - `E2E/test-only environment variables are not allowed in production ...` →
      `NEXT_PUBLIC_ENABLE_E2E_LOGIN` / `E2E_RUNTIME` / `ADMIN_TEST_IAP_EMAIL` の混入。
 2. ログに `prisma migrate` の出力が出て exit(0) → **誤イメージ**。migrator が service に
