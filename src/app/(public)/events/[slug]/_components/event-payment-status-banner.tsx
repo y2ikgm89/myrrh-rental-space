@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { connection } from "next/server";
 import {
   getEventRegistrationPaymentBannerContext,
   resolveEventPaymentBannerMessage,
@@ -17,6 +18,8 @@ export async function EventPaymentStatusBanner({
   registrationId,
 }: EventPaymentStatusBannerProps): Promise<ReactElement | null> {
   if (!payment || !registrationId) return null;
+
+  await connection();
 
   const registration = await getEventRegistrationPaymentBannerContext({
     registrationId,
