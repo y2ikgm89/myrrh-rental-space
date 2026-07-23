@@ -62,6 +62,7 @@ function setProductionEnv(
     R2_BUCKET_NAME: "test-r2-bucket",
     R2_PUBLIC_URL: "https://cdn.example.com",
     R2_SECRET_ACCESS_KEY: "test-r2-secret-access-key",
+    SUPPRESSION_HASH_SECRET: "s".repeat(64),
     TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
   });
 
@@ -253,6 +254,14 @@ describe("server production env validation", () => {
     const { validateProductionEnv } = await importServerEnv();
 
     expect(() => validateProductionEnv()).not.toThrow();
+  });
+
+  test("requires SUPPRESSION_HASH_SECRET in production", async () => {
+    setProductionEnv({ SUPPRESSION_HASH_SECRET: undefined });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).toThrow("SUPPRESSION_HASH_SECRET");
   });
 
   test("fails fast on malformed SECONDARY_ENCRYPTION_KEYS", async () => {

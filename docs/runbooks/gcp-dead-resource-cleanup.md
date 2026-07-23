@@ -319,7 +319,7 @@ bun run gcp:audit-production-iap
 | Resource                     | Status                                                                              | Next action (operator / follow-up PR)                                                                                                                                                                 |
 | ---------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RESEND_WEBHOOK_SECRET` (SM) | Tier 2 (Settings DB) done; TF forget PR drops state (`removed { destroy = false }`) | Confirm admin UI has webhook secret → merge TF forget PR first → then `gcloud secrets delete RESEND_WEBHOOK_SECRET` (deleting SM while still in TF config recreates an empty container on next apply) |
-| `SUPPRESSION_HASH_SECRET`    | Phase B done (`versions/1` ENABLED). Phase C wires Cloud Run via TF                 | After Phase C deploy is green, optional follow-up: make `validateProductionEnv` fail-closed. Do **not** rotate `versions/1` casually (changes hash space).                                            |
+| `SUPPRESSION_HASH_SECRET`    | Phase C wired (Cloud Run + imported_secrets)                                        | After Phase C deploy is green, merge required (`validateProductionEnv` fail-closed) follow-up. Do **not** rotate `versions/1` casually (changes hash space).                                          |
 
 ## Why the Claude harness cannot run the deletes
 
