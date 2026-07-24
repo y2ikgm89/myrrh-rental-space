@@ -26,6 +26,7 @@ import {
 } from "@/shared/domain/smart-lock/webhook-commands";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import { isRecord } from "@/shared/lib/serialize";
 import {
   logError,
   normalizeError,
@@ -61,14 +62,12 @@ type ChangeReport =
     };
 
 function parseChangeReport(raw: unknown): ChangeReport | null {
-  if (typeof raw !== "object" || raw === null) return null;
+  if (!isRecord(raw)) return null;
+  if (raw["eventType"] !== "changeReport") return null;
+  const rawContext = raw["context"];
+  if (!isRecord(rawContext)) return null;
 
-  const record = raw as Record<string, unknown>;
-  if (record["eventType"] !== "changeReport") return null;
-  const rawContext = record["context"];
-  if (typeof rawContext !== "object" || rawContext === null) return null;
-
-  const context = rawContext as Record<string, unknown>;
+  const context = rawContext;
 
   if (typeof context["lockState"] === "string") {
     const parsed = lockStateContextSchema.safeParse(context);

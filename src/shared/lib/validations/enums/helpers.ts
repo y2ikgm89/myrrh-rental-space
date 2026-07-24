@@ -1011,17 +1011,13 @@ export const SMART_LOCK_BODY_DEVICE_TYPES: readonly SmartLockDeviceType[] = [
 export function isSmartLockPadDeviceType(
   deviceType: SmartLockDeviceType,
 ): boolean {
-  return (SMART_LOCK_PAD_DEVICE_TYPES as readonly string[]).includes(
-    deviceType,
-  );
+  return SMART_LOCK_PAD_DEVICE_TYPES.includes(deviceType);
 }
 
 export function isSmartLockBodyDeviceType(
   deviceType: SmartLockDeviceType,
 ): boolean {
-  return (SMART_LOCK_BODY_DEVICE_TYPES as readonly string[]).includes(
-    deviceType,
-  );
+  return SMART_LOCK_BODY_DEVICE_TYPES.includes(deviceType);
 }
 
 // =============================================================================
