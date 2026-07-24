@@ -108,11 +108,15 @@ function readUnsupportedCloudBuildDollarExpressions(): string[] {
 }
 
 describe("production deploy workflow", () => {
-  test("runs on every push to main without path filters", () => {
-    expect(workflow).toContain("push:");
-    expect(workflow).toContain("branches: [main]");
+  test("runs only via workflow_dispatch (no push-to-main auto deploy)", () => {
+    expect(workflow).toContain("workflow_dispatch:");
+    // push-to-main 自動デプロイはコスト / Neon wake 抑制のため廃止。
+    expect(workflow).not.toMatch(/^on:\s*\n\s*push:/m);
     expect(workflow).not.toContain("paths-ignore:");
     expect(workflow).not.toContain("paths:");
+    // 前回デプロイ済み image tag を breaking-migration base にする。
+    expect(workflow).toContain("gcloud run services describe");
+    expect(workflow).toContain("DEPLOYED_TAG");
   });
 
   test("uses GitHub WIF and submits Cloud Build directly", () => {

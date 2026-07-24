@@ -1,8 +1,8 @@
 name: Deploy Production
 
+# Cost / wake control: main merge ではデプロイしない。本番反映は手動
+# (Actions → Deploy Production → Run workflow)。ref は main のみ受け付ける。
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -315,10 +315,23 @@ jobs:
           set -euo pipefail
 
           BREAKING_MIGRATION_DEPLOY="false"
-          BASE_SHA="${{ github.event.before }}"
-          if [ -z "${BASE_SHA}" ] || [[ "${BASE_SHA}" =~ ^0+$ ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+          # workflow_dispatch には github.event.before が無い。複数 merge をまとめて
+          # デプロイするため、まず Cloud Run 上の現行 image tag (SHORT_SHA) を base にする。
+          BASE_SHA=""
+          DEPLOYED_IMAGE="$(
+            gcloud run services describe "${SERVICE_NAME}" \
+              --project="${PROJECT_ID}" \
+              --region="${REGION}" \
+              --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || true
+          )"
+          DEPLOYED_TAG="${DEPLOYED_IMAGE##*:}"
+          if [[ "${DEPLOYED_TAG}" =~ ^[0-9a-f]{7,40}$ ]]; then
+            BASE_SHA="$(git rev-parse "${DEPLOYED_TAG}" 2>/dev/null || true)"
+          fi
+          if [ -z "${BASE_SHA}" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             BASE_SHA="$(git rev-parse "${GITHUB_SHA}^" 2>/dev/null || git rev-list --max-parents=0 HEAD)"
           fi
+          printf 'Breaking-migration base: %s (deployed tag: %s)\n' "${BASE_SHA}" "${DEPLOYED_TAG:-none}"
 
           mapfile -t changed_migrations < <(
             git diff --name-only "${BASE_SHA}" "${GITHUB_SHA}" -- 'prisma/migrations/**/migration.sql'

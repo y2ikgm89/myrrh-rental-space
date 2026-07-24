@@ -14,9 +14,9 @@ paths:
 
 ## デプロイ経路
 
-- **main への push = 即・本番デプロイ**（deploy-production.yml →
-  `gcloud beta builds submit`）。PR merge は本番リリースを意味する
-- workflow が migration diff を grep し、DROP COLUMN / RENAME COLUMN / RENAME TO /
+- **本番デプロイは手動**（deploy-production.yml の `workflow_dispatch` のみ →
+  `gcloud beta builds submit`）。`main` merge だけでは本番は更新されない
+- workflow が「現行 Cloud Run image tag 〜 HEAD」の migration diff を grep し、DROP COLUMN / RENAME COLUMN / RENAME TO /
   DROP TABLE / DROP TYPE / ALTER COLUMN ... TYPE / ALTER COLUMN ... SET NOT NULL を
   検出すると自動で breaking migration mode（両サービス scaling=0 + 310 秒 drain =
   計画ダウンタイム）に切り替わる。`ALTER COLUMN ... TYPE` と `SET NOT NULL` は
