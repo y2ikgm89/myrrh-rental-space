@@ -49,7 +49,7 @@ export interface DataRetentionPurgeResult {
  * 存在しない / 不正値 → `DEFAULT_DATA_RETENTION_CONFIG`（fail-safe）。
  */
 export async function getDataRetentionConfig(): Promise<DataRetentionConfig> {
-  const row = await prisma.settings.findUnique({
+  const row = await prisma.settingsDataRetention.findUnique({
     where: { id: "singleton" },
     select: { dataRetention: true },
   });

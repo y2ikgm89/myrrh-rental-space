@@ -108,16 +108,10 @@ function findPrismaSettingsQueryOffenders(source: string): boolean {
 }
 
 describe("settings phase 4 schema split", () => {
-  test("Settings model no longer stores integration columns", () => {
-    const settingsBlock = extractSettingsModelBlock(
-      read("prisma/schema.prisma"),
-    );
+  test("Phase 4 split singleton tables exist", () => {
+    const schema = read("prisma/schema.prisma");
 
-    for (const pattern of phase4SettingsFieldPatterns) {
-      expect(settingsBlock).not.toMatch(pattern);
-    }
-
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsStripe \{[\s\S]*@@map\("settings_stripes"\)/u,
     );
     expect(read("prisma/schema.prisma")).toMatch(

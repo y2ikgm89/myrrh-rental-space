@@ -63,14 +63,9 @@ function findPrismaSettingsQueryOffenders(source: string): boolean {
 
 describe("settings phase 1 schema split", () => {
   test(
-    "Settings model no longer stores announcement, cookie, or maintenance columns",
+    "Phase 1 split singleton tables exist",
     () => {
       const schema = read("prisma/schema.prisma");
-      const settingsBlock = extractSettingsModelBlock(schema);
-
-      for (const pattern of phase1SettingsFieldPatterns) {
-        expect(settingsBlock).not.toMatch(pattern);
-      }
 
       expect(schema).toContain('@@map("settings_announcement_carousels")');
       expect(schema).toContain('@@map("settings_systems")');

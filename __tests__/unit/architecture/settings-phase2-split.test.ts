@@ -93,25 +93,19 @@ function findPrismaSettingsQueryOffenders(source: string): boolean {
 }
 
 describe("settings phase 2 schema split", () => {
-  test("Settings model no longer stores seo, analytics, layout, or sidebar columns", () => {
-    const settingsBlock = extractSettingsModelBlock(
-      read("prisma/schema.prisma"),
-    );
+  test("Phase 2 split singleton tables exist", () => {
+    const schema = read("prisma/schema.prisma");
 
-    for (const pattern of phase2SettingsFieldPatterns) {
-      expect(settingsBlock).not.toMatch(pattern);
-    }
-
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsSeo \{[\s\S]*@@map\("settings_seos"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsAnalytics \{[\s\S]*@@map\("settings_analytics"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsLayout \{[\s\S]*@@map\("settings_layouts"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsSidebar \{[\s\S]*@@map\("settings_sidebars"\)/u,
     );
   }, 30_000);

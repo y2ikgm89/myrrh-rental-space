@@ -127,7 +127,7 @@ export type SerializedNullable<T> = T extends null ? null : Serialized<T>;
  * @example
  * ```typescript
  * // Prisma の結果を変換
- * const prismaResult = await prisma.settings.findFirst()
+ * const prismaResult = await prisma.settingsSeo.findFirst()
  * const plainObject = toPlainObject(prismaResult)
  * // plainObject は Client Components に安全に渡せます
  *

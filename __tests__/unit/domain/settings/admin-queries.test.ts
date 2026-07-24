@@ -6,7 +6,7 @@ const singletonTimestamps = {
   updatedAt: new Date("2026-01-02T00:00:00Z"),
 };
 
-const mockSettingsUpsert = mock(() =>
+const mockSettingsFeaturesUpsert = mock(() =>
   Promise.resolve({
     ...singletonTimestamps,
     featureModules: {},
@@ -293,8 +293,8 @@ mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: {
-      upsert: mockSettingsUpsert,
+    settingsFeatures: {
+      upsert: mockSettingsFeaturesUpsert,
     },
     settingsAnnouncementCarousel: {
       upsert: mockCarouselUpsert,
@@ -386,7 +386,7 @@ import { getAdminSettings } from "@/shared/domain/settings/admin-queries";
 
 describe("getAdminSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockClear();
+    mockSettingsFeaturesUpsert.mockClear();
     mockCarouselUpsert.mockClear();
     mockSystemUpsert.mockClear();
     mockSeoUpsert.mockClear();

@@ -59,7 +59,7 @@ mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: {
+    settingsGoogleCalendar: {
       upsert: mockSettingsUpsert,
       findUnique: mockSettingsFindUnique,
     },

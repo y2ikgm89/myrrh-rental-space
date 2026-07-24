@@ -2,7 +2,7 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 type SettingsUpsertArgs = { update?: Record<string, unknown> };
-const mockSettingsUpsert = mock<
+const mockSettingsFeaturesUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
 const mockSettingsSeoUpsert = mock<
@@ -31,8 +31,8 @@ mock.module("@/shared/lib/env/server", () => ({
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: {
-      upsert: mockSettingsUpsert,
+    settingsFeatures: {
+      upsert: mockSettingsFeaturesUpsert,
     },
     settingsSeo: {
       upsert: mockSettingsSeoUpsert,

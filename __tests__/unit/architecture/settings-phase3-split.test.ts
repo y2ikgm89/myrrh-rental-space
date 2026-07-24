@@ -103,25 +103,19 @@ function findPrismaSettingsQueryOffenders(source: string): boolean {
 }
 
 describe("settings phase 3 schema split", () => {
-  test("Settings model no longer stores organization, commerce, notification, or reservation columns", () => {
-    const settingsBlock = extractSettingsModelBlock(
-      read("prisma/schema.prisma"),
-    );
+  test("Phase 3 split singleton tables exist", () => {
+    const schema = read("prisma/schema.prisma");
 
-    for (const pattern of phase3SettingsFieldPatterns) {
-      expect(settingsBlock).not.toMatch(pattern);
-    }
-
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsOrganization \{[\s\S]*@@map\("settings_organizations"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsCommerce \{[\s\S]*@@map\("settings_commerces"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsNotification \{[\s\S]*@@map\("settings_notifications"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsReservation \{[\s\S]*@@map\("settings_reservations"\)/u,
     );
   }, 30_000);

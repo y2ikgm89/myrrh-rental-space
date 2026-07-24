@@ -460,6 +460,22 @@ export async function ensureSettingsSwitchbot() {
   });
 }
 
+export async function ensureSettingsFeatures() {
+  return prisma.settingsFeatures.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsDataRetention() {
+  return prisma.settingsDataRetention.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput,
 ): Promise<void> {
@@ -623,12 +639,14 @@ export async function updateEventImportEnabled(
 export async function updateFeatureModulesCommand(
   modules: Record<string, boolean>,
 ): Promise<void> {
-  await prisma.settings.updateMany({
-    data: {
-      featureModules: asPrismaInputJsonValue(
-        modules,
-        "featureModules が不正です",
-      ),
-    },
+  const featureModules = asPrismaInputJsonValue(
+    modules,
+    "featureModules が不正です",
+  );
+
+  await prisma.settingsFeatures.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", featureModules },
+    update: { featureModules },
   });
 }

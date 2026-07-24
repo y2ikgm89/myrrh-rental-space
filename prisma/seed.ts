@@ -501,7 +501,7 @@ async function seedSettings(
   // featureModules は既定で「create only」（既存 install の管理画面トグル編集を保持）。
   // dev seed のみ resetFeatureModules:true で update 経路にも書き込み、全機能を ON に揃える。
   // SSoT: FEATURE_MODULES_LIST registry + SEED_FEATURE_MODULES_DISABLED env var。
-  await prisma.settings.upsert({
+  await prisma.settingsFeatures.upsert({
     where: { id: "singleton" },
     update: options.resetFeatureModules ? { featureModules } : {},
     create: {

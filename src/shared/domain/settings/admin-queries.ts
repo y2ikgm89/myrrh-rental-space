@@ -49,6 +49,7 @@ import {
   ensureSettingsSwitchbot,
   ensureSettingsSystem,
   ensureSettingsTurnstile,
+  ensureSettingsFeatures,
 } from "@/shared/domain/settings/commands";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
@@ -74,17 +75,9 @@ function maskServiceAccountEmail(email: string): string {
   return `${localPart.slice(0, 3)}****@${domain}`;
 }
 
-async function getOrCreateSettings() {
-  return prisma.settings.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-}
-
 async function getOrCreateSettingsBundle() {
   const [
-    settings,
+    features,
     carousel,
     system,
     seo,
@@ -105,7 +98,7 @@ async function getOrCreateSettingsBundle() {
     instagram,
     switchbot,
   ] = await Promise.all([
-    getOrCreateSettings(),
+    ensureSettingsFeatures(),
     ensureSettingsAnnouncementCarousel(),
     ensureSettingsSystem(),
     ensureSettingsSeo(),
@@ -128,7 +121,7 @@ async function getOrCreateSettingsBundle() {
   ]);
 
   return {
-    settings,
+    features,
     carousel,
     system,
     seo,
@@ -152,7 +145,7 @@ async function getOrCreateSettingsBundle() {
 }
 
 function toSettingsData(
-  settings: Awaited<ReturnType<typeof getOrCreateSettings>>,
+  features: Awaited<ReturnType<typeof ensureSettingsFeatures>>,
   carousel: Awaited<ReturnType<typeof ensureSettingsAnnouncementCarousel>>,
   system: Awaited<ReturnType<typeof ensureSettingsSystem>>,
   seo: Awaited<ReturnType<typeof ensureSettingsSeo>>,
@@ -175,7 +168,7 @@ function toSettingsData(
   },
 ): Serialized<SettingsData> {
   return toPlainObject({
-    id: settings.id,
+    id: features.id,
     siteName: seo.siteName,
     siteDescription: seo.siteDescription,
     faviconUrl: seo.faviconUrl,
@@ -275,7 +268,7 @@ function toSettingsData(
     googleCalendarReminderMinutes: googleCalendar.googleCalendarReminderMinutes,
     icalAttachmentEnabled: googleCalendar.icalAttachmentEnabled,
     addToCalendarLinksEnabled: googleCalendar.addToCalendarLinksEnabled,
-    featureModules: parseFeatureModules(settings.featureModules),
+    featureModules: parseFeatureModules(features.featureModules),
     stripeSecretKeyMasked: options.stripeSecretKeyMasked,
     stripeWebhookSecretMasked: options.stripeWebhookSecretMasked,
     googleCalendarServiceAccountEmailMasked:
@@ -306,8 +299,8 @@ function toSettingsData(
     footerShowSocialLinks: layout.footerShowSocialLinks,
     eventImportEnabled: googleCalendar.eventImportEnabled,
     themeColor: layout.themeColor,
-    createdAt: settings.createdAt,
-    updatedAt: settings.updatedAt,
+    createdAt: features.createdAt,
+    updatedAt: features.updatedAt,
   });
 }
 
@@ -346,7 +339,7 @@ function parseCalendarSyncMethod(value: string | null): CalendarSyncMethod {
 
 export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
   const {
-    settings,
+    features,
     carousel,
     system,
     seo,
@@ -363,7 +356,7 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
   } = await getOrCreateSettingsBundle();
 
   return toSettingsData(
-    settings,
+    features,
     carousel,
     system,
     seo,
@@ -387,7 +380,7 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
 
 export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
   const {
-    settings,
+    features,
     carousel,
     system,
     seo,
@@ -436,7 +429,7 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
   }
 
   return toSettingsData(
-    settings,
+    features,
     carousel,
     system,
     seo,
