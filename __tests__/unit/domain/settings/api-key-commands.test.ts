@@ -49,8 +49,20 @@ const mockDeleteWebhook = mock<
   (...args: unknown[]) => Promise<{ ok: boolean; message?: string }>
 >(() => Promise.resolve({ ok: true }));
 
+const mockSetupWebhook = mock<
+  (...args: unknown[]) => Promise<{ ok: boolean; message?: string }>
+>(() => Promise.resolve({ ok: true }));
+
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
+const GENERATED_WEBHOOK_TOKEN = "generated-token";
+
+mock.module("node:crypto", () => ({
+  randomBytes: () => ({
+    toString: () => GENERATED_WEBHOOK_TOKEN,
+  }),
+  randomUUID: () => "test-uuid",
+}));
 mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
@@ -76,6 +88,7 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
 }));
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   deleteWebhook: (...args: unknown[]) => mockDeleteWebhook(...args),
+  setupWebhook: (...args: unknown[]) => mockSetupWebhook(...args),
 }));
 mock.module("@/shared/lib/constants", () => ({
   getAppUrl: () => "https://example.com",
@@ -89,6 +102,7 @@ mock.module("@/shared/lib/errors/server", () => ({
 import {
   updateTurnstileSettings,
   clearSwitchBotSettings,
+  rotateSwitchBotWebhookPathToken,
 } from "@/shared/domain/settings/api-key-commands";
 
 const CREDENTIALS = {
@@ -115,6 +129,7 @@ beforeEach(() => {
   mockRevokeOne.mockReset();
   mockGetSwitchBotWebhookAuth.mockReset();
   mockDeleteWebhook.mockReset();
+  mockSetupWebhook.mockReset();
   mockLogError.mockReset();
 
   mockFindManyPasscodes.mockResolvedValue([]);
@@ -125,6 +140,7 @@ beforeEach(() => {
     pathToken: "path-token-123",
   });
   mockDeleteWebhook.mockResolvedValue({ ok: true });
+  mockSetupWebhook.mockResolvedValue({ ok: true });
 });
 
 describe("updateTurnstileSettings", () => {
@@ -168,6 +184,7 @@ describe("clearSwitchBotSettings", () => {
     await clearSwitchBotSettings();
 
     expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
     expect(mockRevokeOne).not.toHaveBeenCalled();
     expect(mockDeleteWebhook).toHaveBeenCalledWith(
       CREDENTIALS,
@@ -185,6 +202,7 @@ describe("clearSwitchBotSettings", () => {
 
     expect(mockDeleteWebhook).not.toHaveBeenCalled();
     expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
   });
 
   test("webhook解除に失敗してもクリア自体はブロックしない(ベストエフォート)", async () => {
@@ -196,6 +214,7 @@ describe("clearSwitchBotSettings", () => {
     await clearSwitchBotSettings();
 
     expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
     expect(mockLogError).toHaveBeenCalled();
   });
 
@@ -207,6 +226,7 @@ describe("clearSwitchBotSettings", () => {
     expect(mockFindManyPasscodes).not.toHaveBeenCalled();
     expect(mockDeleteWebhook).not.toHaveBeenCalled();
     expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
   });
 
   test("PENDINGのパスコードが残っている場合はクリアできない", async () => {
@@ -247,6 +267,7 @@ describe("clearSwitchBotSettings", () => {
       }),
     );
     expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
   });
 
   test("失効に失敗した場合はクリアをブロックする", async () => {
@@ -262,6 +283,82 @@ describe("clearSwitchBotSettings", () => {
 
     await expect(clearSwitchBotSettings()).rejects.toThrow(
       "一部のパスコードの失効に失敗したため連携をクリアできません",
+    );
+  });
+});
+
+describe("rotateSwitchBotWebhookPathToken", () => {
+  test("資格情報が無い場合はローテーションできない", async () => {
+    mockGetDecryptedSwitchBotCredentials.mockResolvedValue(null);
+
+    await expect(rotateSwitchBotWebhookPathToken()).rejects.toThrow(
+      "SwitchBot連携が未設定です",
+    );
+    expect(mockSetupWebhook).not.toHaveBeenCalled();
+  });
+
+  test("旧トークンがある場合は解除→DB更新→新URL登録の順で実行する", async () => {
+    mockGetSwitchBotWebhookAuth.mockResolvedValue({
+      enabled: true,
+      pathToken: "old-token",
+    });
+
+    await rotateSwitchBotWebhookPathToken();
+
+    expect(mockDeleteWebhook).toHaveBeenCalledWith(
+      CREDENTIALS,
+      "https://example.com/api/webhooks/switchbot/old-token",
+    );
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
+      `enc:${GENERATED_WEBHOOK_TOKEN}`,
+    );
+    expect(mockSetupWebhook).toHaveBeenCalledWith(
+      CREDENTIALS,
+      `https://example.com/api/webhooks/switchbot/${GENERATED_WEBHOOK_TOKEN}`,
+    );
+  });
+
+  test("旧トークンが無い場合はdeleteWebhookを呼ばず新トークンを保存する", async () => {
+    mockGetSwitchBotWebhookAuth.mockResolvedValue({
+      enabled: true,
+      pathToken: null,
+    });
+
+    await rotateSwitchBotWebhookPathToken();
+
+    expect(mockDeleteWebhook).not.toHaveBeenCalled();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
+      `enc:${GENERATED_WEBHOOK_TOKEN}`,
+    );
+    expect(mockSetupWebhook).toHaveBeenCalled();
+  });
+
+  test("deleteWebhook失敗はベストエフォートで続行する", async () => {
+    mockDeleteWebhook.mockResolvedValue({
+      ok: false,
+      message: "not found",
+    });
+
+    await rotateSwitchBotWebhookPathToken();
+
+    expect(mockLogError).toHaveBeenCalled();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
+      `enc:${GENERATED_WEBHOOK_TOKEN}`,
+    );
+    expect(mockSetupWebhook).toHaveBeenCalled();
+  });
+
+  test("setupWebhook失敗時は旧トークンを復元せず再登録を案内する", async () => {
+    mockSetupWebhook.mockResolvedValue({
+      ok: false,
+      message: "SwitchBot API error",
+    });
+
+    await expect(rotateSwitchBotWebhookPathToken()).rejects.toThrow(
+      "Webhook URLトークンの更新に失敗しました。管理画面の「Webhookを登録」から再試行してください",
+    );
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
+      `enc:${GENERATED_WEBHOOK_TOKEN}`,
     );
   });
 });

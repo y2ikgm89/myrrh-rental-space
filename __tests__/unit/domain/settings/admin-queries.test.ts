@@ -378,10 +378,6 @@ mock.module("@/shared/lib/crypto", () => ({
   safeDecryptToString: mock(() => "decrypted-secret"),
 }));
 
-mock.module("@/shared/lib/google-calendar/service-account", () => ({
-  extractServiceAccountEmail: mock(() => "svc@example.iam.gserviceaccount.com"),
-}));
-
 import { getAdminSettings } from "@/shared/domain/settings/admin-queries";
 
 describe("getAdminSettings", () => {

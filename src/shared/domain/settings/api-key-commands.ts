@@ -14,7 +14,10 @@ import {
   getSwitchBotWebhookAuth,
 } from "@/shared/domain/settings/api-key-queries";
 import { revokeOne } from "@/shared/domain/smart-lock/revoke-passcode";
-import { deleteWebhook } from "@/shared/lib/smart-lock/switchbot-client";
+import {
+  deleteWebhook,
+  setupWebhook,
+} from "@/shared/lib/smart-lock/switchbot-client";
 import { getAppUrl } from "@/shared/lib/constants";
 import {
   logError,
@@ -331,6 +334,7 @@ export async function clearSwitchBotSettings(): Promise<void> {
     switchbotEnabled: false,
     switchbotOpenToken: null,
     switchbotSecretKey: null,
+    switchbotWebhookPathToken: null,
     switchbotLastTestedAt: null,
     switchbotConnectionStatus: null,
   });
@@ -340,6 +344,20 @@ export async function clearSwitchBotSettings(): Promise<void> {
  * Webhook URL難読化用トークンを取得する。未発行なら生成して保存してから返す
  * （webhook登録操作の直前に呼ぶことで、常に有効なトークンを保証する）。
  */
+function generateSwitchBotWebhookPathToken(): string {
+  return randomBytes(24).toString("base64url");
+}
+
+async function persistSwitchBotWebhookPathToken(token: string): Promise<void> {
+  await upsertSwitchbotSettings({
+    switchbotWebhookPathToken: encryptSecret(
+      token,
+      "Webhookトークンの暗号化に失敗しました",
+      SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
+    ),
+  });
+}
+
 export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
   const settings = await prisma.settingsSwitchbot.findUnique({
     where: { id: "singleton" },
@@ -351,15 +369,57 @@ export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
   });
   if (existing) return existing;
 
-  const token = randomBytes(24).toString("base64url");
-  await upsertSwitchbotSettings({
-    switchbotWebhookPathToken: encryptSecret(
-      token,
-      "Webhookトークンの暗号化に失敗しました",
-      SETTINGS_CRYPTO_PURPOSES.switchbotWebhookPathToken,
-    ),
-  });
+  const token = generateSwitchBotWebhookPathToken();
+  await persistSwitchBotWebhookPathToken(token);
   return token;
+}
+
+/**
+ * Webhook URL難読化トークンをローテーションする。
+ *
+ * 1. 旧URLをSwitchBot側から解除（未登録/404系はベストエフォート）
+ * 2. 新トークンを生成（既存値は再利用しない）
+ * 3. DBを先に更新（旧パスは即無効）
+ * 4. 新URLをSwitchBotへ登録
+ *
+ * 手順4が失敗しても旧トークンは復元しない。管理画面の「Webhookを登録」で再試行する。
+ */
+export async function rotateSwitchBotWebhookPathToken(): Promise<void> {
+  const credentials = await getDecryptedSwitchBotCredentials();
+  if (!credentials) {
+    throw new DomainError(
+      "SwitchBot連携が未設定です。先にOpen Token/Secret Keyを保存してください",
+      "VALIDATION",
+    );
+  }
+
+  const { pathToken: oldPathToken } = await getSwitchBotWebhookAuth();
+  if (oldPathToken) {
+    const oldUrl = `${getAppUrl()}/api/webhooks/switchbot/${oldPathToken}`;
+    const deleteResult = await deleteWebhook(credentials, oldUrl);
+    if (!deleteResult.ok) {
+      logError(new Error("SwitchBot webhook解除に失敗しました"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "rotateSwitchBotWebhookPathToken",
+          message: deleteResult.message,
+        },
+      });
+    }
+  }
+
+  const newToken = generateSwitchBotWebhookPathToken();
+  await persistSwitchBotWebhookPathToken(newToken);
+
+  const newUrl = `${getAppUrl()}/api/webhooks/switchbot/${newToken}`;
+  const setupResult = await setupWebhook(credentials, newUrl);
+  if (!setupResult.ok) {
+    throw new DomainError(
+      "Webhook URLトークンの更新に失敗しました。管理画面の「Webhookを登録」から再試行してください",
+      "UNEXPECTED",
+    );
+  }
 }
 
 export async function addCustomApiKey(
