@@ -17,7 +17,7 @@ mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: {
+    settingsResend: {
       findUnique: mockFindUnique,
     },
   },

@@ -9,7 +9,7 @@ import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // モック用prismaクライアント（mock.module より前に定義してTDZを回避）
 const mockPrismaClient = {
-  settings: {
+  settingsTurnstile: {
     findUnique: mock<() => Promise<Record<string, string | null> | null>>(() =>
       Promise.resolve(null),
     ),
@@ -80,7 +80,7 @@ const mockFetch = Object.assign(mock(fetchImpl), {
 });
 beforeEach(() => {
   globalThis.fetch = mockFetch;
-  mockPrismaClient.settings.findUnique.mockClear();
+  mockPrismaClient.settingsTurnstile.findUnique.mockClear();
   mockServerEnv["NODE_ENV"] = "test";
   mockServerEnv["TURNSTILE_SECRET_KEY"] = undefined;
   mockClientEnv["NEXT_PUBLIC_TURNSTILE_SITE_KEY"] = undefined;
@@ -98,7 +98,7 @@ const DEFAULT_PARAMS = {
 describe("turnstile", () => {
   describe("verifyTurnstileToken", () => {
     test("シークレットキーが未設定の場合は dev で success: true を返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce(null);
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce(null);
 
       const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
       const result = await verifyTurnstileToken(DEFAULT_PARAMS);
@@ -108,7 +108,7 @@ describe("turnstile", () => {
     });
 
     test("シークレットキーが空の場合は dev で success: true を返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: null,
       });
 
@@ -120,7 +120,7 @@ describe("turnstile", () => {
     });
 
     test("トークンが空の場合は missing-input-response エラーを返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 
@@ -137,7 +137,7 @@ describe("turnstile", () => {
     });
 
     test("DB secret が未設定でも env TURNSTILE_SECRET_KEY で siteverify を実行する", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: null,
       });
       mockServerEnv["TURNSTILE_SECRET_KEY"] = "env-secret-key";
@@ -161,7 +161,7 @@ describe("turnstile", () => {
     });
 
     test("検証成功時は success: true + action/hostname を返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 
@@ -200,7 +200,7 @@ describe("turnstile", () => {
     });
 
     test("action が一致しない場合は action-mismatch エラーを返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 
@@ -224,7 +224,7 @@ describe("turnstile", () => {
     });
 
     test("検証失敗時は error-codes をそのまま返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 
@@ -254,7 +254,7 @@ describe("turnstile", () => {
     });
 
     test("API エラー時は http-<status> を errorCodes に含める", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 
@@ -269,7 +269,7 @@ describe("turnstile", () => {
     });
 
     test("レスポンス形式が不正な場合は invalid-response を返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 
@@ -290,7 +290,7 @@ describe("turnstile", () => {
     });
 
     test("ネットワークエラー時は network-error を返す", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 
@@ -303,7 +303,7 @@ describe("turnstile", () => {
     });
 
     test("remoteip と idempotency_key が siteverify body に含まれる", async () => {
-      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+      mockPrismaClient.settingsTurnstile.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",
       });
 

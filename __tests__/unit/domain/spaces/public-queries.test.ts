@@ -19,9 +19,9 @@ const reservationFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(() =>
 const eventTimeSlotFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(
   () => Promise.resolve([]),
 );
-const settingsFindUnique = mock<(_args?: unknown) => Promise<unknown>>(() =>
-  Promise.resolve(null),
-);
+const settingsOrganizationFindUnique = mock<
+  (_args?: unknown) => Promise<unknown>
+>(() => Promise.resolve(null));
 const blockedDateFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(() =>
   Promise.resolve([]),
 );
@@ -40,8 +40,8 @@ mock.module("@/shared/db/prisma", () => ({
     eventTimeSlot: {
       findMany: (args: unknown) => eventTimeSlotFindMany(args),
     },
-    settings: {
-      findUnique: (args: unknown) => settingsFindUnique(args),
+    settingsOrganization: {
+      findUnique: (args: unknown) => settingsOrganizationFindUnique(args),
     },
     blockedDate: {
       findMany: (args: unknown) => blockedDateFindMany(args),
@@ -76,13 +76,13 @@ function resetAllMocks() {
   spaceCount.mockReset();
   reservationFindMany.mockReset();
   eventTimeSlotFindMany.mockReset();
-  settingsFindUnique.mockReset();
+  settingsOrganizationFindUnique.mockReset();
   blockedDateFindMany.mockReset();
   spaceFindMany.mockResolvedValue([]);
   spaceCount.mockResolvedValue(0);
   reservationFindMany.mockResolvedValue([]);
   eventTimeSlotFindMany.mockResolvedValue([]);
-  settingsFindUnique.mockResolvedValue(null);
+  settingsOrganizationFindUnique.mockResolvedValue(null);
   blockedDateFindMany.mockResolvedValue([]);
 }
 
@@ -266,7 +266,7 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
   };
 
   test("営業時間外なら reservation/event/blockedDate を問い合わせず全件 isAvailableForSearch=false", async () => {
-    settingsFindUnique.mockResolvedValue({
+    settingsOrganizationFindUnique.mockResolvedValue({
       businessHours: CLOSED_ALL_WEEK,
     });
     spaceFindMany.mockResolvedValue([makeSpaceRow("s1"), makeSpaceRow("s2")]);

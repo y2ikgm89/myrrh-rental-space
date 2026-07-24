@@ -31,9 +31,9 @@ const mockTxReceiptSequenceFindUnique = mock<
 const mockTxReceiptSequenceUpsert = mock<
   (...args: unknown[]) => Promise<unknown>
 >(() => Promise.resolve({}));
-const mockTxSettingsFindUnique = mock<(...args: unknown[]) => Promise<unknown>>(
-  () => Promise.resolve(null),
-);
+const mockTxSettingsOrganizationFindUnique = mock<
+  (...args: unknown[]) => Promise<unknown>
+>(() => Promise.resolve(null));
 
 // 実 prisma.$transaction: callback を mock tx で実行するシム
 const mockTransaction = mock(
@@ -49,7 +49,7 @@ const mockTransaction = mock(
         findUnique: (...args: unknown[]) => Promise<unknown>;
         upsert: (...args: unknown[]) => Promise<unknown>;
       };
-      settings: {
+      settingsOrganization: {
         findUnique: (...args: unknown[]) => Promise<unknown>;
       };
     }) => Promise<unknown>,
@@ -66,8 +66,9 @@ const mockTransaction = mock(
           mockTxReceiptSequenceFindUnique(...args),
         upsert: (...args: unknown[]) => mockTxReceiptSequenceUpsert(...args),
       },
-      settings: {
-        findUnique: (...args: unknown[]) => mockTxSettingsFindUnique(...args),
+      settingsOrganization: {
+        findUnique: (...args: unknown[]) =>
+          mockTxSettingsOrganizationFindUnique(...args),
       },
     }),
 );
@@ -172,7 +173,7 @@ describe("reissueReceiptCommand", () => {
     mockTxReceiptCreate.mockReset();
     mockTxReceiptSequenceFindUnique.mockReset();
     mockTxReceiptSequenceUpsert.mockReset();
-    mockTxSettingsFindUnique.mockReset();
+    mockTxSettingsOrganizationFindUnique.mockReset();
     mockTransaction.mockClear();
 
     // デフォルト: 採番 / issuerSnapshot の stub
@@ -183,7 +184,7 @@ describe("reissueReceiptCommand", () => {
       nextNo: 99,
     });
     mockTxReceiptSequenceUpsert.mockResolvedValue({});
-    mockTxSettingsFindUnique.mockResolvedValue(null);
+    mockTxSettingsOrganizationFindUnique.mockResolvedValue(null);
     mockTxReceiptUpdate.mockResolvedValue({});
   });
 
