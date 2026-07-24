@@ -49,6 +49,7 @@ import { isValidInquiryStatus } from "@/shared/lib/validations/enums/guards";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { InquiryThread } from "./InquiryThread";
+import { InquiryAttachments } from "./InquiryAttachments";
 
 type InquiryDetailProps = {
   inquiry: Serialized<InquiryWithCustomer>;
@@ -194,6 +195,11 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
         </DetailSection>
 
         <InquiryThread message={inquiry.message} replies={inquiry.replies} />
+
+        <InquiryAttachments
+          inquiryId={inquiry.id}
+          attachments={inquiry.attachments}
+        />
 
         <Card>
           <CardHeader>

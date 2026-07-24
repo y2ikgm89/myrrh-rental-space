@@ -19,6 +19,7 @@ import { INQUIRY_STATUS_CONFIG } from "../_components/inquiry-status";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { InquiryReplyForm } from "./_components/inquiry-reply-form";
+import { InquiryAttachmentList } from "./_components/inquiry-attachment-list";
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
@@ -175,6 +176,8 @@ export default async function MypageInquiryDetailPage({
           )}
         </div>
       )}
+
+      <InquiryAttachmentList attachments={inquiry.attachments} />
 
       <InquiryReplyForm
         inquiryId={inquiry.id}
