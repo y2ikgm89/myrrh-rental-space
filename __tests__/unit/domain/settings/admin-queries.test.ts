@@ -266,6 +266,7 @@ const mockNotificationUpsert = mock(() =>
     notifyReservationChange: true,
     notifyReservationCancel: true,
     notifyNewInquiry: true,
+    notifyInquiryCustomerReply: true,
     notifyEventRegistration: true,
     notifyEventWaitlistRegistration: true,
     notifyEventCancellation: true,

@@ -222,6 +222,7 @@ function toSettingsData(
     notifyReservationChange: notification.notifyReservationChange,
     notifyReservationCancel: notification.notifyReservationCancel,
     notifyNewInquiry: notification.notifyNewInquiry,
+    notifyInquiryCustomerReply: notification.notifyInquiryCustomerReply,
     notifyEventRegistration: notification.notifyEventRegistration,
     notifyEventWaitlistRegistration:
       notification.notifyEventWaitlistRegistration,

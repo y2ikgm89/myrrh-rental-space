@@ -4237,7 +4237,7 @@ async function seedAdminNotifications() {
   }
   if (latestInquiry) {
     notifications.push({
-      type: "INQUIRY_RECEIVED",
+      type: "inquiry_new",
       title: "新着お問い合わせ",
       message: `${latestInquiry.name}様からお問い合わせが届いています`,
       resourceType: "inquiry",
