@@ -10,9 +10,11 @@
  * - email.bounced (bounce.type=Permanent) → HARD_BOUNCED
  * - email.bounced (bounce.type=Transient|Undetermined|その他) → SOFT_BOUNCED
  * - email.complained → COMPLAINED
- * - email.failed → HARD_BOUNCED（permanent send failure、L3）
+ * - email.failed → `data.failed.reason` が recipient 起因
+ *   (`invalid_recipient`) のときだけ HARD_BOUNCED。quota / API key /
+ *   domain verification 等の送信側要因は抑止しない（200 ack のみ）
  * - email.suppressed → HARD_BOUNCED（Resend 側 suppression list ヒットで
- *   送信ブロック。ローカルの suppression 状態も同期しておく、L3）
+ *   送信ブロック。ローカルの suppression 状態も同期しておく）
  * - その他 (sent / delivered / opened / clicked / delivery_delayed 等) は 200 で ack
  *
  * ## 署名検証（M4）
@@ -33,6 +35,8 @@
  * @see https://resend.com/docs/webhooks/verify-webhooks-requests
  * @see https://resend.com/docs/webhooks/emails/bounced
  * @see https://resend.com/docs/webhooks/emails/complained
+ * @see https://resend.com/docs/webhooks/emails/failed
+ * @see https://resend.com/docs/webhooks/emails/suppressed
  * @see https://www.standardwebhooks.com/
  * @module api/webhooks/resend
  */
@@ -73,14 +77,30 @@ const BounceDetailsSchema = z.object({
 // Resend / SES 公式の bounce.type 語彙。未知値は observability breadcrumb を残す。
 const KNOWN_BOUNCE_TYPES = new Set(["Permanent", "Transient", "Undetermined"]);
 
-// email.failed / email.suppressed の追加情報（L3）。
-// Resend は失敗理由を data.reason（or data.message）で返す事があるため両方許容。
-const FailureDetailsSchema = z.object({
+/**
+ * Resend 公式 docs で recipient 起因と示されている `email.failed` reason。
+ * allowlist のみ HARD_BOUNCED に載せる（quota / API key / domain 未検証などを
+ * 誤って永久抑止しない）。未知 reason は fail-open（抑止しない + breadcrumb）。
+ *
+ * @see https://resend.com/docs/webhooks/emails/failed
+ */
+const RECIPIENT_ATTRIBUTABLE_FAILED_REASONS: ReadonlySet<string> = new Set([
+  "invalid_recipient",
+]);
+
+/** 公式 `data.failed`（email.failed）。 */
+const FailedDetailsSchema = z.object({
   reason: z.string().optional(),
+});
+
+/** 公式 `data.suppressed`（email.suppressed）。 */
+const SuppressedDetailsSchema = z.object({
   message: z.string().optional(),
+  type: z.string().optional(),
 });
 
 // 全イベント共通: type / created_at / data.to / data.email_id を持つ。
+// failed / suppressed は公式ドキュメント準拠のネスト形のみ受理する（clean break）。
 const ResendWebhookEventSchema = z.object({
   type: z.string(),
   created_at: z.string().optional(),
@@ -88,10 +108,8 @@ const ResendWebhookEventSchema = z.object({
     email_id: z.string().optional(),
     to: z.array(z.string()).optional(),
     bounce: BounceDetailsSchema.optional(),
-    // email.failed / email.suppressed で使う失敗理由フィールド（L3）。
-    reason: z.string().optional(),
-    message: z.string().optional(),
-    failure: FailureDetailsSchema.optional(),
+    failed: FailedDetailsSchema.optional(),
+    suppressed: SuppressedDetailsSchema.optional(),
   }),
 });
 
@@ -224,22 +242,12 @@ async function handleEvent(
       return { processed: result.processed, failed: result.failed };
     }
     case "email.failed": {
-      // L3: permanent send failure → HARD_BOUNCED としてローカル状態を同期。
-      // Resend 側が再送を試みない失敗（ドメイン拒否など）はローカルでも suppress。
-      const result = await handleFailedOrSuppressed(
-        event,
-        extractFailureReason(event),
-      );
+      const result = await handleFailed(event);
       invalidateCustomerCacheForStatus(result);
       return { processed: result.processed, failed: result.failed };
     }
     case "email.suppressed": {
-      // L3: Resend の suppression list ヒットで送信ブロックされた宛先も
-      //     HARD_BOUNCED に落として同期（次回 sendEmail() を local-side で防止）。
-      const result = await handleFailedOrSuppressed(
-        event,
-        extractFailureReason(event) ?? "Blocked by Resend suppression list",
-      );
+      const result = await handleSuppressed(event);
       invalidateCustomerCacheForStatus(result);
       return { processed: result.processed, failed: result.failed };
     }
@@ -325,15 +333,43 @@ async function handleComplained(
 }
 
 /**
- * L3: email.failed / email.suppressed 共通ハンドラ。
- * どちらも「Resend 側で送信できなかった／ブロックされた宛先」なので
- * HARD_BOUNCED として suppression 対象に載せる。
- * M3 の per-recipient try/catch + L2 の status-aware invalidator と統合。
+ * email.failed: 公式 `data.failed.reason` を allowlist 判定する。
+ *
+ * Resend は invalid recipients / API key / domain verification / quota 等で
+ * このイベントを発火する。送信側インフラ要因（例: `reached_daily_quota`）を
+ * HARD_BOUNCED にすると大量誤抑止になるため、docs で recipient 起因と示され
+ * ている reason だけを抑止対象にする。それ以外は 200 ack + breadcrumb。
+ *
+ * @see https://resend.com/docs/webhooks/emails/failed
  */
-async function handleFailedOrSuppressed(
+async function handleFailed(
   event: ResendWebhookEvent,
-  reason: string | null,
 ): Promise<EventHandlerResult> {
+  const reason = event.data.failed?.reason ?? null;
+  if (reason === null || !RECIPIENT_ATTRIBUTABLE_FAILED_REASONS.has(reason)) {
+    logError(
+      new Error(
+        reason === null
+          ? "Resend email.failed without failed.reason; skipping suppression"
+          : `Resend email.failed reason is not recipient-attributable: ${reason}`,
+      ),
+      {
+        category: ErrorCategory.EXTERNAL_API,
+        severity:
+          reason === "reached_daily_quota"
+            ? ErrorSeverity.MEDIUM
+            : ErrorSeverity.LOW,
+        context: {
+          operation: "resendWebhook.handleFailed",
+          failedReason: reason,
+          emailId: event.data.email_id ?? null,
+          recipientCount: event.data.to?.length ?? 0,
+        },
+      },
+    );
+    return { processed: 0, failed: 0, appliedStatus: null };
+  }
+
   const recipients = event.data.to ?? [];
   if (recipients.length === 0) {
     return { processed: 0, failed: 0, appliedStatus: null };
@@ -343,7 +379,7 @@ async function handleFailedOrSuppressed(
     recipients,
     EmailDeliveryStatus.HARD_BOUNCED,
     reason,
-    `resendWebhook.${event.type}`,
+    "resendWebhook.handleFailed",
     event.data.email_id ?? null,
   );
 
@@ -354,14 +390,38 @@ async function handleFailedOrSuppressed(
   };
 }
 
-function extractFailureReason(event: ResendWebhookEvent): string | null {
-  return (
-    event.data.reason ??
-    event.data.message ??
-    event.data.failure?.reason ??
-    event.data.failure?.message ??
-    null
+/**
+ * email.suppressed: Resend アカウント抑制リストヒット → HARD_BOUNCED 同期。
+ * reason は公式 `data.suppressed.message` → `type` → 固定 fallback。
+ *
+ * @see https://resend.com/docs/webhooks/emails/suppressed
+ */
+async function handleSuppressed(
+  event: ResendWebhookEvent,
+): Promise<EventHandlerResult> {
+  const recipients = event.data.to ?? [];
+  if (recipients.length === 0) {
+    return { processed: 0, failed: 0, appliedStatus: null };
+  }
+
+  const reason =
+    event.data.suppressed?.message ??
+    event.data.suppressed?.type ??
+    "Blocked by Resend suppression list";
+
+  const { processed, failed } = await applyStatusPerRecipient(
+    recipients,
+    EmailDeliveryStatus.HARD_BOUNCED,
+    reason,
+    "resendWebhook.handleSuppressed",
+    event.data.email_id ?? null,
   );
+
+  return {
+    processed,
+    failed,
+    appliedStatus: EmailDeliveryStatus.HARD_BOUNCED,
+  };
 }
 
 /**

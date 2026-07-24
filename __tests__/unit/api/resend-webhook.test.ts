@@ -475,9 +475,13 @@ describe("POST /api/webhooks/resend", () => {
 
   // -----------------------------------------------------------------
   // L3: email.failed / email.suppressed handlers
+  // Resend 公式: email.failed は invalid recipients / API key / domain /
+  // quota 等で発火する。recipient 起因 (`invalid_recipient`) のみ
+  // HARD_BOUNCED に載せ、送信側インフラ要因は抑止しない。
+  // payload は公式形 `data.failed.reason` / `data.suppressed.{message,type}`。
   // -----------------------------------------------------------------
 
-  test("L3: email.failed イベントは全 recipient を HARD_BOUNCED でマークする", async () => {
+  test("L3: email.failed + failed.reason=invalid_recipient は HARD_BOUNCED", async () => {
     const applied: Array<{
       email: string;
       status: EmailDeliveryStatus;
@@ -494,7 +498,7 @@ describe("POST /api/webhooks/resend", () => {
         data: {
           email_id: "email_failed_1",
           to: ["a@example.com", "b@example.com"],
-          reason: "domain refused connection",
+          failed: { reason: "invalid_recipient" },
         },
       }),
     );
@@ -504,39 +508,76 @@ describe("POST /api/webhooks/resend", () => {
       {
         email: "a@example.com",
         status: EmailDeliveryStatus.HARD_BOUNCED,
-        reason: "domain refused connection",
+        reason: "invalid_recipient",
       },
       {
         email: "b@example.com",
         status: EmailDeliveryStatus.HARD_BOUNCED,
-        reason: "domain refused connection",
+        reason: "invalid_recipient",
       },
     ]);
-    // cache invalidation が発火している（processed > 0）
     expect(mockInvalidateSiteWide).toHaveBeenCalled();
   });
 
-  test("L3: email.failed で reason が data.failure.message にある場合も拾える", async () => {
-    const applied: Array<{ reason: string | null }> = [];
-    updateImpl = async (_email, _status, reason) => {
-      applied.push({ reason });
-      return 1;
-    };
+  test("L3: email.failed + reached_daily_quota は抑止せず 200 ack のみ", async () => {
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.failed",
+        data: {
+          email_id: "email_failed_quota",
+          to: ["a@example.com", "b@example.com"],
+          failed: { reason: "reached_daily_quota" },
+        },
+      }),
+    );
 
-    await POST(
+    expect(response.status).toBe(200);
+    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).not.toHaveBeenCalled();
+    expect(invalidateCalls).toHaveLength(0);
+  });
+
+  test("L3: email.failed の未知 reason / missing failed は抑止せず ack", async () => {
+    const unknownReason = await POST(
       makeSignedRequest({
         type: "email.failed",
         data: {
           to: ["a@example.com"],
+          failed: { reason: "some_future_sender_error" },
+        },
+      }),
+    );
+    expect(unknownReason.status).toBe(200);
+    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).not.toHaveBeenCalled();
+
+    mockUpdateCustomerEmailDeliveryStatusByEmail.mockClear();
+
+    const missingFailed = await POST(
+      makeSignedRequest({
+        type: "email.failed",
+        data: { to: ["a@example.com"] },
+      }),
+    );
+    expect(missingFailed.status).toBe(200);
+    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).not.toHaveBeenCalled();
+  });
+
+  test("L3: 旧非公式 payload (data.reason / data.failure) は抑止しない (clean break)", async () => {
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.failed",
+        data: {
+          to: ["a@example.com"],
+          reason: "invalid_recipient",
           failure: { message: "smtp 550 mailbox does not exist" },
         },
       }),
     );
 
-    expect(applied).toEqual([{ reason: "smtp 550 mailbox does not exist" }]);
+    expect(response.status).toBe(200);
+    expect(mockUpdateCustomerEmailDeliveryStatusByEmail).not.toHaveBeenCalled();
   });
 
-  test("L3: email.suppressed は HARD_BOUNCED + Resend suppression 文脈を reason に残す", async () => {
+  test("L3: email.suppressed は HARD_BOUNCED + suppressed.message を reason に残す", async () => {
     const applied: Array<{
       email: string;
       status: EmailDeliveryStatus;
@@ -553,6 +594,11 @@ describe("POST /api/webhooks/resend", () => {
         data: {
           email_id: "email_suppressed_1",
           to: ["c@example.com"],
+          suppressed: {
+            message:
+              "Resend has suppressed sending to this address because it is on the account-level suppression list",
+            type: "OnAccountSuppressionList",
+          },
         },
       }),
     );
@@ -562,12 +608,13 @@ describe("POST /api/webhooks/resend", () => {
       {
         email: "c@example.com",
         status: EmailDeliveryStatus.HARD_BOUNCED,
-        reason: "Blocked by Resend suppression list",
+        reason:
+          "Resend has suppressed sending to this address because it is on the account-level suppression list",
       },
     ]);
   });
 
-  test("L3: email.suppressed で明示的 reason があればそれを優先する", async () => {
+  test("L3: email.suppressed で message が無いときは type / fallback を使う", async () => {
     const applied: Array<{ reason: string | null }> = [];
     updateImpl = async (_email, _status, reason) => {
       applied.push({ reason });
@@ -579,17 +626,24 @@ describe("POST /api/webhooks/resend", () => {
         type: "email.suppressed",
         data: {
           to: ["c@example.com"],
-          reason: "recipient on account-level suppression list",
+          suppressed: { type: "OnAccountSuppressionList" },
         },
       }),
     );
 
-    expect(applied).toEqual([
-      { reason: "recipient on account-level suppression list" },
-    ]);
+    expect(applied).toEqual([{ reason: "OnAccountSuppressionList" }]);
+
+    applied.length = 0;
+    await POST(
+      makeSignedRequest({
+        type: "email.suppressed",
+        data: { to: ["d@example.com"] },
+      }),
+    );
+    expect(applied).toEqual([{ reason: "Blocked by Resend suppression list" }]);
   });
 
-  test("L3: email.failed で recipient の updateMany が throw しても loop は中断されない", async () => {
+  test("L3: email.failed (invalid_recipient) で update が throw しても loop は中断されない", async () => {
     const processed: string[] = [];
     updateImpl = async (email) => {
       if (email === "a@example.com") {
@@ -604,13 +658,12 @@ describe("POST /api/webhooks/resend", () => {
         type: "email.failed",
         data: {
           to: ["a@example.com", "b@example.com"],
+          failed: { reason: "invalid_recipient" },
         },
       }),
     );
 
-    // b@example.com は必ず処理されている（PR-J1 の per-recipient try/catch pattern と同じ）
     expect(processed).toEqual(["b@example.com"]);
-    // M3 aggregator: 1件でも failed が出れば top-level は 500 を返す (Resend 再配信)。
     expect(response.status).toBe(500);
     expect(mockUpdateCustomerEmailDeliveryStatusByEmail).toHaveBeenCalledTimes(
       2,
