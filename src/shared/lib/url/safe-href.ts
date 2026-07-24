@@ -23,6 +23,15 @@ function getUrlScheme(url: string): string | null {
   }
 }
 
+function isAllowedPublicHrefScheme(
+  scheme: string,
+): scheme is PublicHrefAllowedScheme {
+  for (const allowed of PUBLIC_HREF_ALLOWED_SCHEMES) {
+    if (allowed === scheme) return true;
+  }
+  return false;
+}
+
 /**
  * 内部 app route（`/` 始まり、`//` 除外）または許可スキーム付き絶対 URL か。
  * protocol-relative (`//evil`) や `javascript:` は false。
@@ -35,7 +44,7 @@ export function isSafePublicHref(url: string): boolean {
   if (isAppRoute(url)) return true;
   const scheme = getUrlScheme(url);
   if (scheme === null) return false;
-  return (PUBLIC_HREF_ALLOWED_SCHEMES as readonly string[]).includes(scheme);
+  return isAllowedPublicHrefScheme(scheme);
 }
 
 /**
@@ -53,7 +62,7 @@ export function isExternalPublicHref(url: string): boolean {
   if (!url || url.startsWith("/") || url.startsWith("//")) return false;
   const scheme = getUrlScheme(url);
   if (scheme === null) return false;
-  return (PUBLIC_HREF_ALLOWED_SCHEMES as readonly string[]).includes(scheme);
+  return isAllowedPublicHrefScheme(scheme);
 }
 
 /**

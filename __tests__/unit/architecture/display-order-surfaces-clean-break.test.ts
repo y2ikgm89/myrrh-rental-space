@@ -617,14 +617,15 @@ describe("display order surfaces clean-break contract", () => {
     expect(dialog).not.toContain("defaultOrder");
     expect(actions).not.toContain("order: data.order");
     expect(commands).toContain("_max: { order: true }");
-    expect(commands).toContain(
-      "export const navigationItemInputSchema = z.strictObject({",
+    // chained `.superRefine` のため `z.strictObject` が改行後に来る場合がある
+    expect(commands).toMatch(
+      /export const navigationItemInputSchema = z\s*\.strictObject\(\{/u,
     );
     expect(commands).toContain(
       "export const socialLinkInputSchema = z.strictObject({",
     );
-    expect(formSchema).toContain(
-      "export const navFormSchema = z.strictObject({",
+    expect(formSchema).toMatch(
+      /export const navFormSchema = z\s*\.strictObject\(\{/u,
     );
     expect(formSchema).toContain(
       "export const socialFormSchema = z.strictObject({",
