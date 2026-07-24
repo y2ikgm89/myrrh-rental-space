@@ -49,14 +49,26 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
           }
         }
 
-        # migrate Job は Prisma DATABASE_URL のみ必要 (他の env / secret は不要)。
-        # Cloud Run service 側と同じ Secret Manager container + version pinning。
+        # Neon 公式: prisma migrate は direct 接続。
+        # - DIRECT_URL: prisma.config.ts datasource（必須）
+        # - DATABASE_URL: versions/1 = Neon direct（runtime の v2 pooler と分離）
+        # @see https://neon.com/docs/guides/prisma-migrations
+        env {
+          name = "DIRECT_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.secret["DIRECT_URL"].secret_id
+              version = "1"
+            }
+          }
+        }
         env {
           name = "DATABASE_URL"
           value_source {
             secret_key_ref {
               secret  = google_secret_manager_secret.secret["DATABASE_URL"].secret_id
-              version = var.cloud_run_secret_versions["DATABASE_URL"]
+              # runtime の pooler pin (v2) ではなく、direct の v1 を明示。
+              version = "1"
             }
           }
         }

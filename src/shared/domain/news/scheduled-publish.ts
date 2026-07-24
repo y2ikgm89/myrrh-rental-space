@@ -5,10 +5,10 @@ import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 
 /**
  * cron の実行間隔（`terraform/cloud_scheduler.tf` の `news-scheduled-publish`
- * ジョブ、既定 5 分間隔）の 2 倍を look-back window として使う。at-least-once
+ * ジョブ、既定 10 分間隔）の 2 倍を look-back window として使う。at-least-once
  * retry や単発の実行ミス（デプロイ中の瞬断等）を吸収するバッファ。
  */
-export const NEWS_SCHEDULED_PUBLISH_LOOKBACK_MINUTES = 10;
+export const NEWS_SCHEDULED_PUBLISH_LOOKBACK_MINUTES = 20;
 
 /**
  * 直近 `lookbackMinutes` 分以内に `publishedAt` を迎えた公開済み（`isPublished:

@@ -1039,7 +1039,7 @@ describe("GCP production audit model", () => {
 
   test("requires Cloud Run services to bind every production secret env var to the pinned version", () => {
     expect(REQUIRED_CLOUD_RUN_SECRET_ENV_REFS).toEqual([
-      { name: "DATABASE_URL", version: "1" },
+      { name: "DATABASE_URL", version: "2" },
       { name: "BETTER_AUTH_SECRET", version: "1" },
       { name: "ENCRYPTION_KEY", version: "1" },
       { name: "AUDIT_LOG_HMAC_KEY", version: "1" },
@@ -1145,8 +1145,9 @@ describe("GCP production audit model", () => {
     ]);
   });
 
-  test("requires Cloud Run migrate Job to bind DATABASE_URL to the pinned secret version", () => {
+  test("requires Cloud Run migrate Job to bind DIRECT_URL and DATABASE_URL to direct secret versions", () => {
     expect(REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS).toEqual([
+      { name: "DIRECT_URL", version: "1" },
       { name: "DATABASE_URL", version: "1" },
     ]);
 
@@ -1161,6 +1162,15 @@ describe("GCP production audit model", () => {
                     containers: [
                       {
                         env: [
+                          {
+                            name: "DIRECT_URL",
+                            valueFrom: {
+                              secretKeyRef: {
+                                name: "DIRECT_URL",
+                                key: "1",
+                              },
+                            },
+                          },
                           {
                             name: "DATABASE_URL",
                             valueFrom: {
@@ -1198,6 +1208,15 @@ describe("GCP production audit model", () => {
                     containers: [
                       {
                         env: [
+                          {
+                            name: "DIRECT_URL",
+                            valueFrom: {
+                              secretKeyRef: {
+                                name: "DIRECT_URL",
+                                key: "1",
+                              },
+                            },
+                          },
                           {
                             name: "DATABASE_URL",
                             valueFrom: {
@@ -1238,6 +1257,10 @@ describe("GCP production audit model", () => {
                       {
                         env: [
                           {
+                            name: "DIRECT_URL",
+                            value: "not-a-secret-ref",
+                          },
+                          {
                             name: "DATABASE_URL",
                             value: "not-a-secret-ref",
                           },
@@ -1257,6 +1280,7 @@ describe("GCP production audit model", () => {
         },
       ),
     ).toEqual([
+      "prisma-migrate DIRECT_URL must be bound from Secret Manager",
       "prisma-migrate DATABASE_URL must be bound from Secret Manager",
     ]);
   });

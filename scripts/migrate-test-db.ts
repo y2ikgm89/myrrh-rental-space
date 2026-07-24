@@ -63,6 +63,8 @@ export function createPrismaMigrateEnv(
   return {
     ...baseEnv,
     DATABASE_URL: testDatabaseUrl,
+    // prisma.config.ts datasource reads DIRECT_URL (Neon Prisma guide).
+    DIRECT_URL: testDatabaseUrl,
   };
 }
 

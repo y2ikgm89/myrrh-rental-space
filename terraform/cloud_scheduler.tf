@@ -71,9 +71,11 @@ locals {
     },
     {
       name        = "news-scheduled-publish"
-      schedule    = "*/5 * * * *"
+      # */5 だと Neon Free の scale-to-zero（5 分 idle）が実質無効になる。
+      # PUBLIC_CONTENT の revalidate 窓は 1h のため */10 でも露出遅延は十分小さい。
+      schedule    = "*/10 * * * *"
       path        = "/api/cron/news-scheduled-publish"
-      description = "Revalidate NEWS cache tags when a scheduled (future publishedAt) News item's publish time has just passed, bounding the cacheLife(PUBLIC_CONTENT) 1h revalidate-window exposure delay to cron interval (every 5 min, feature module news gate)"
+      description = "Revalidate NEWS cache tags when a scheduled (future publishedAt) News item's publish time has just passed, bounding the cacheLife(PUBLIC_CONTENT) 1h revalidate-window exposure delay to cron interval (every 10 min, feature module news gate; avoids Neon Free always-on)"
     },
     {
       name        = "reservation-reminder"

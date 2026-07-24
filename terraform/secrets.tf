@@ -18,6 +18,9 @@ locals {
   # owner が gcloud secrets versions add で値を投入、の順。
   runtime_secrets = [
     "DATABASE_URL",
+    # Neon Prisma CLI / migrate Job 用の direct 接続。Cloud Run runtime には
+    # 注入しない（`cloud_run_secret_versions` 外）。migrate Job のみ参照。
+    "DIRECT_URL",
     "BETTER_AUTH_SECRET",
     "ENCRYPTION_KEY",
     "SECONDARY_ENCRYPTION_KEYS",
@@ -75,6 +78,8 @@ locals {
   # blocked になる (root-fix commit: このコメント追加の commit を参照)。
   imported_secrets = toset([
     "DATABASE_URL",
+    # 2026-07-25: gcloud で container + versions/1 作成済み → import 対象。
+    "DIRECT_URL",
     "BETTER_AUTH_SECRET",
     "ENCRYPTION_KEY",
     "SECONDARY_ENCRYPTION_KEYS",
