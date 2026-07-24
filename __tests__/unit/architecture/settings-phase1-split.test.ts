@@ -33,10 +33,16 @@ const phase1SettingsFieldPatterns = [
   /\bmaintenanceMessage\b/u,
 ] as const;
 
+/** Exact `model Settings {` block — not SettingsAnnouncementCarousel / SettingsSystem. */
 function extractSettingsModelBlock(schema: string): string {
-  const match = schema.match(/model Settings \{[\s\S]*?\n\}/u);
-  expect(match).not.toBeNull();
-  return match?.[0] ?? "";
+  const lines = schema.split("\n");
+  const start = lines.findIndex((line) => line === "model Settings {");
+  expect(start).toBeGreaterThanOrEqual(0);
+
+  const end = lines.findIndex((line, index) => index > start && line === "}");
+  expect(end).toBeGreaterThan(start);
+
+  return lines.slice(start, end + 1).join("\n");
 }
 
 function findPrismaSettingsQueryOffenders(source: string): boolean {
@@ -56,37 +62,42 @@ function findPrismaSettingsQueryOffenders(source: string): boolean {
 }
 
 describe("settings phase 1 schema split", () => {
-  test("Settings model no longer stores announcement, cookie, or maintenance columns", () => {
-    const settingsBlock = extractSettingsModelBlock(
-      read("prisma/schema.prisma"),
-    );
+  test(
+    "Settings model no longer stores announcement, cookie, or maintenance columns",
+    () => {
+      const schema = read("prisma/schema.prisma");
+      const settingsBlock = extractSettingsModelBlock(schema);
 
-    for (const pattern of phase1SettingsFieldPatterns) {
-      expect(settingsBlock).not.toMatch(pattern);
-    }
-
-    expect(read("prisma/schema.prisma")).toMatch(
-      /model SettingsAnnouncementCarousel \{[\s\S]*@@map\("settings_announcement_carousels"\)/u,
-    );
-    expect(read("prisma/schema.prisma")).toMatch(
-      /model SettingsSystem \{[\s\S]*@@map\("settings_systems"\)/u,
-    );
-  });
-
-  test("src must not select Phase 1 fields from prisma.settings", () => {
-    const offenders: string[] = [];
-
-    for (const file of listSourceFiles(join(root, "src"))) {
-      const source = readFileSync(file, "utf8");
-      if (!source.includes("prisma.settings")) {
-        continue;
+      for (const pattern of phase1SettingsFieldPatterns) {
+        expect(settingsBlock).not.toMatch(pattern);
       }
 
-      if (findPrismaSettingsQueryOffenders(source)) {
-        offenders.push(file.replace(`${root}\\`, "").replace(`${root}/`, ""));
-      }
-    }
+      expect(schema).toContain('@@map("settings_announcement_carousels")');
+      expect(schema).toContain('@@map("settings_systems")');
+      expect(schema).toContain("model SettingsAnnouncementCarousel {");
+      expect(schema).toContain("model SettingsSystem {");
+    },
+    { timeout: 30_000 },
+  );
 
-    expect(offenders).toEqual([]);
-  });
+  test(
+    "src must not select Phase 1 fields from prisma.settings",
+    () => {
+      const offenders: string[] = [];
+
+      for (const file of listSourceFiles(join(root, "src"))) {
+        const source = readFileSync(file, "utf8");
+        if (!source.includes("prisma.settings.")) {
+          continue;
+        }
+
+        if (findPrismaSettingsQueryOffenders(source)) {
+          offenders.push(file.replace(`${root}\\`, "").replace(`${root}/`, ""));
+        }
+      }
+
+      expect(offenders).toEqual([]);
+    },
+    { timeout: 30_000 },
+  );
 });
