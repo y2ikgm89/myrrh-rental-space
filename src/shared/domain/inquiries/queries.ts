@@ -1,6 +1,6 @@
 import "server-only";
 
-import { InquiryStatus } from "@generated/prisma/enums";
+import { InquiryReplyAuthorType, InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
@@ -28,6 +28,7 @@ export const REPLY_SELECT_INTERNAL = {
   authorType: true,
   createdAt: true,
   author: { select: { name: true } },
+  authorCustomer: { select: { lastName: true, firstName: true } },
 } as const;
 
 type RawReply = {
@@ -36,14 +37,31 @@ type RawReply = {
   authorType: InquiryReplyItem["authorType"];
   createdAt: Date;
   author: { name: string } | null;
+  authorCustomer: { lastName: string; firstName: string } | null;
 };
 
 export function flattenReply(r: RawReply): InquiryReplyItem {
+  let authorName: string | null;
+  switch (r.authorType) {
+    case InquiryReplyAuthorType.CUSTOMER:
+      authorName = r.authorCustomer
+        ? `${r.authorCustomer.lastName} ${r.authorCustomer.firstName}`
+        : null;
+      break;
+    case InquiryReplyAuthorType.STAFF:
+      authorName = r.author?.name ?? null;
+      break;
+    default: {
+      const _exhaustive: never = r.authorType;
+      throw new Error(`Unknown authorType: ${String(_exhaustive)}`);
+    }
+  }
+
   return {
     id: r.id,
     body: r.body,
     authorType: r.authorType,
-    authorName: r.author?.name ?? null,
+    authorName,
     createdAt: r.createdAt,
   };
 }
