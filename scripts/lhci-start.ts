@@ -27,6 +27,7 @@ function applyLhciProductionFallbacks(): void {
     R2_ACCESS_KEY_ID: "lhci-local-r2-access-key",
     R2_SECRET_ACCESS_KEY: "lhci-local-r2-secret-key-32-min!!",
     R2_BUCKET_NAME: "lhci-local-bucket",
+    R2_INQUIRIES_BUCKET_NAME: "lhci-local-inquiries-bucket",
     R2_PUBLIC_URL: "https://example.com",
     NEXT_PUBLIC_BASE_URL: "http://localhost:3000",
     NEXT_PUBLIC_APP_URL: "http://localhost:3000",

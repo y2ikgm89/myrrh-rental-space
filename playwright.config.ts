@@ -289,6 +289,9 @@ export default defineConfig({
       R2_SECRET_ACCESS_KEY:
         process.env["R2_SECRET_ACCESS_KEY"] ?? "local-e2e-r2-secret-key",
       R2_BUCKET_NAME: process.env["R2_BUCKET_NAME"] ?? "local-e2e-r2-bucket",
+      R2_INQUIRIES_BUCKET_NAME:
+        process.env["R2_INQUIRIES_BUCKET_NAME"] ??
+        "local-e2e-r2-inquiries-bucket",
       R2_PUBLIC_URL:
         process.env["R2_PUBLIC_URL"] ?? "https://assets.example.com",
     },

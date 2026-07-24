@@ -63,6 +63,7 @@ describe("Playwright E2E webServer env", () => {
       "R2_ACCESS_KEY_ID",
       "R2_SECRET_ACCESS_KEY",
       "R2_BUCKET_NAME",
+      "R2_INQUIRIES_BUCKET_NAME",
       "R2_PUBLIC_URL",
       "ADMIN_ROLE_GROUP_SUPER_ADMIN_EMAIL",
       "ADMIN_ROLE_GROUP_ADMIN_EMAIL",
