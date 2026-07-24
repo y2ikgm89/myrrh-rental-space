@@ -297,10 +297,18 @@ export async function updateNotificationSettings(
   });
 }
 
+export async function ensureSettingsSystem() {
+  return prisma.settingsSystem.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsSystem.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -310,7 +318,7 @@ export async function updateMaintenanceSettings(
 export async function updateCookieConsentSettings(
   data: CookieConsentSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsSystem.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,

@@ -59,7 +59,7 @@ export async function getCookieConsentSettings() {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsSystem.findUnique({
         where: { id: "singleton" },
         select: {
           cookieConsentEnabled: true,
@@ -153,7 +153,7 @@ export async function getMaintenanceSettings() {
 
   const result = await safeFetch({
     fetch: async () => {
-      const settings = await prisma.settings.findUnique({
+      const settings = await prisma.settingsSystem.findUnique({
         where: { id: "singleton" },
         select: {
           maintenanceMode: true,

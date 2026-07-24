@@ -143,6 +143,75 @@ function shapeAnnouncementBarRow(
   };
 }
 
+const carouselDbSelect = {
+  animation: true,
+  duration: true,
+  autoPlay: true,
+  pauseOnHover: true,
+  showArrows: true,
+  showIndicator: true,
+  designStyle: true,
+  bgColor: true,
+  textColor: true,
+  stripeColor: true,
+  stripeAnimation: true,
+  gradientAnimation: true,
+  glassAnimation: true,
+  sticky: true,
+} as const;
+
+type CarouselDbRow = Prisma.SettingsAnnouncementCarouselGetPayload<{
+  select: typeof carouselDbSelect;
+}>;
+
+function mapCarouselRowToDto(
+  row: CarouselDbRow,
+): AnnouncementBarCarouselSettings {
+  return {
+    announcementBarAnimation: row.animation,
+    announcementBarDuration: row.duration,
+    announcementBarAutoPlay: row.autoPlay,
+    announcementBarPauseOnHover: row.pauseOnHover,
+    announcementBarShowArrows: row.showArrows,
+    announcementBarShowIndicator: row.showIndicator,
+    announcementBarDesignStyle: row.designStyle,
+    announcementBarBgColor: row.bgColor,
+    announcementBarTextColor: row.textColor,
+    announcementBarStripeColor: row.stripeColor,
+    announcementBarStripeAnimation: row.stripeAnimation,
+    announcementBarGradientAnimation: row.gradientAnimation,
+    announcementBarGlassAnimation: row.glassAnimation,
+    announcementBarSticky: row.sticky,
+  };
+}
+
+function mapCarouselDtoToDb(data: AnnouncementBarCarouselSettingsInput) {
+  return {
+    animation: data.announcementBarAnimation,
+    duration: data.announcementBarDuration,
+    autoPlay: data.announcementBarAutoPlay,
+    pauseOnHover: data.announcementBarPauseOnHover,
+    showArrows: data.announcementBarShowArrows,
+    showIndicator: data.announcementBarShowIndicator,
+    designStyle: data.announcementBarDesignStyle,
+    bgColor: data.announcementBarBgColor,
+    textColor: data.announcementBarTextColor,
+    stripeColor: data.announcementBarStripeColor,
+    stripeAnimation: data.announcementBarStripeAnimation,
+    gradientAnimation: data.announcementBarGradientAnimation,
+    glassAnimation: data.announcementBarGlassAnimation,
+    sticky: data.announcementBarSticky,
+  };
+}
+
+export async function ensureSettingsAnnouncementCarousel() {
+  return prisma.settingsAnnouncementCarousel.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
 const defaultCarouselSettings: AnnouncementBarCarouselSettings = {
   announcementBarAnimation: AnnouncementBarAnimation.fade,
   announcementBarDuration: 5000,
@@ -311,24 +380,9 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
 
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsAnnouncementCarousel.findUnique({
         where: { id: "singleton" },
-        select: {
-          announcementBarAnimation: true,
-          announcementBarDuration: true,
-          announcementBarAutoPlay: true,
-          announcementBarPauseOnHover: true,
-          announcementBarShowArrows: true,
-          announcementBarShowIndicator: true,
-          announcementBarDesignStyle: true,
-          announcementBarBgColor: true,
-          announcementBarTextColor: true,
-          announcementBarStripeColor: true,
-          announcementBarStripeAnimation: true,
-          announcementBarGradientAnimation: true,
-          announcementBarGlassAnimation: true,
-          announcementBarSticky: true,
-        },
+        select: carouselDbSelect,
       }),
     fallback: null,
     category: ErrorCategory.DATABASE,
@@ -340,53 +394,18 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
     return defaultCarouselSettings;
   }
 
-  return {
-    announcementBarAnimation:
-      settings.announcementBarAnimation ??
-      defaultCarouselSettings.announcementBarAnimation,
-    announcementBarDuration:
-      settings.announcementBarDuration ??
-      defaultCarouselSettings.announcementBarDuration,
-    announcementBarAutoPlay:
-      settings.announcementBarAutoPlay ??
-      defaultCarouselSettings.announcementBarAutoPlay,
-    announcementBarPauseOnHover:
-      settings.announcementBarPauseOnHover ??
-      defaultCarouselSettings.announcementBarPauseOnHover,
-    announcementBarShowArrows:
-      settings.announcementBarShowArrows ??
-      defaultCarouselSettings.announcementBarShowArrows,
-    announcementBarShowIndicator:
-      settings.announcementBarShowIndicator ??
-      defaultCarouselSettings.announcementBarShowIndicator,
-    announcementBarDesignStyle:
-      settings.announcementBarDesignStyle ??
-      defaultCarouselSettings.announcementBarDesignStyle,
-    announcementBarBgColor: settings.announcementBarBgColor,
-    announcementBarTextColor: settings.announcementBarTextColor,
-    announcementBarStripeColor: settings.announcementBarStripeColor,
-    announcementBarStripeAnimation:
-      settings.announcementBarStripeAnimation ??
-      defaultCarouselSettings.announcementBarStripeAnimation,
-    announcementBarGradientAnimation:
-      settings.announcementBarGradientAnimation ??
-      defaultCarouselSettings.announcementBarGradientAnimation,
-    announcementBarGlassAnimation:
-      settings.announcementBarGlassAnimation ??
-      defaultCarouselSettings.announcementBarGlassAnimation,
-    announcementBarSticky:
-      settings.announcementBarSticky ??
-      defaultCarouselSettings.announcementBarSticky,
-  };
+  return mapCarouselRowToDto(settings);
 }
 
 export async function updateAnnouncementBarCarouselSettings(
   data: AnnouncementBarCarouselSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  const updateData = mapCarouselDtoToDb(data);
+
+  await prisma.settingsAnnouncementCarousel.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
+    create: { id: "singleton", ...updateData },
+    update: updateData,
   });
 }
 

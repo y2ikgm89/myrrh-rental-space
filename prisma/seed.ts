@@ -511,6 +511,19 @@ async function seedSettings(
     },
   });
 
+  await Promise.all([
+    prisma.settingsAnnouncementCarousel.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSystem.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+  ]);
+
   console.log("✅ Settings configured");
 }
 

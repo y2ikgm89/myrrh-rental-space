@@ -29,6 +29,8 @@ import type { Serialized } from "@/shared/lib/serialize";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { parseRefundPolicy } from "@/shared/domain/refund/policy";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
+import { ensureSettingsAnnouncementCarousel } from "@/shared/domain/settings/announcement-bar";
+import { ensureSettingsSystem } from "@/shared/domain/settings/commands";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
@@ -61,8 +63,20 @@ async function getOrCreateSettings() {
   });
 }
 
+async function getOrCreateSettingsBundle() {
+  const [settings, carousel, system] = await Promise.all([
+    getOrCreateSettings(),
+    ensureSettingsAnnouncementCarousel(),
+    ensureSettingsSystem(),
+  ]);
+
+  return { settings, carousel, system };
+}
+
 function toSettingsData(
   settings: Awaited<ReturnType<typeof getOrCreateSettings>>,
+  carousel: Awaited<ReturnType<typeof ensureSettingsAnnouncementCarousel>>,
+  system: Awaited<ReturnType<typeof ensureSettingsSystem>>,
   options: {
     stripeSecretKeyMasked: string | null;
     stripeWebhookSecretMasked: string | null;
@@ -132,32 +146,32 @@ function toSettingsData(
     taxStandardRate: settings.taxStandardRate,
     taxReducedRate: settings.taxReducedRate,
     taxDisplayModePublic: settings.taxDisplayModePublic,
-    maintenanceMode: settings.maintenanceMode,
-    maintenanceMessage: settings.maintenanceMessage,
+    maintenanceMode: system.maintenanceMode,
+    maintenanceMessage: system.maintenanceMessage,
     stripePublishableKey: settings.stripePublishableKey,
     stripeAccountId: settings.stripeAccountId,
     stripeCurrency: settings.stripeCurrency,
     stripePaymentMethodTypes: settings.stripePaymentMethodTypes,
     stripeLastTestedAt: settings.stripeLastTestedAt,
     stripeConnectionStatus: settings.stripeConnectionStatus,
-    cookieConsentEnabled: settings.cookieConsentEnabled,
-    cookieConsentMessage: settings.cookieConsentMessage,
-    cookieConsentAcceptText: settings.cookieConsentAcceptText,
-    cookieConsentRejectText: settings.cookieConsentRejectText,
-    cookieConsentPolicyUrl: settings.cookieConsentPolicyUrl,
-    announcementBarAnimation: settings.announcementBarAnimation,
-    announcementBarDuration: settings.announcementBarDuration,
-    announcementBarAutoPlay: settings.announcementBarAutoPlay,
-    announcementBarPauseOnHover: settings.announcementBarPauseOnHover,
-    announcementBarShowArrows: settings.announcementBarShowArrows,
-    announcementBarShowIndicator: settings.announcementBarShowIndicator,
-    announcementBarDesignStyle: settings.announcementBarDesignStyle,
-    announcementBarBgColor: settings.announcementBarBgColor,
-    announcementBarTextColor: settings.announcementBarTextColor,
-    announcementBarStripeColor: settings.announcementBarStripeColor,
-    announcementBarStripeAnimation: settings.announcementBarStripeAnimation,
-    announcementBarGradientAnimation: settings.announcementBarGradientAnimation,
-    announcementBarGlassAnimation: settings.announcementBarGlassAnimation,
+    cookieConsentEnabled: system.cookieConsentEnabled,
+    cookieConsentMessage: system.cookieConsentMessage,
+    cookieConsentAcceptText: system.cookieConsentAcceptText,
+    cookieConsentRejectText: system.cookieConsentRejectText,
+    cookieConsentPolicyUrl: system.cookieConsentPolicyUrl,
+    announcementBarAnimation: carousel.animation,
+    announcementBarDuration: carousel.duration,
+    announcementBarAutoPlay: carousel.autoPlay,
+    announcementBarPauseOnHover: carousel.pauseOnHover,
+    announcementBarShowArrows: carousel.showArrows,
+    announcementBarShowIndicator: carousel.showIndicator,
+    announcementBarDesignStyle: carousel.designStyle,
+    announcementBarBgColor: carousel.bgColor,
+    announcementBarTextColor: carousel.textColor,
+    announcementBarStripeColor: carousel.stripeColor,
+    announcementBarStripeAnimation: carousel.stripeAnimation,
+    announcementBarGradientAnimation: carousel.gradientAnimation,
+    announcementBarGlassAnimation: carousel.glassAnimation,
     googleCalendarEnabled: settings.googleCalendarEnabled,
     googleCalendarId: settings.googleCalendarId,
     googleCalendarLastTestedAt: settings.googleCalendarLastTestedAt,
@@ -233,9 +247,9 @@ function parseCalendarSyncMethod(value: string | null): CalendarSyncMethod {
 }
 
 export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
-  const settings = await getOrCreateSettings();
+  const { settings, carousel, system } = await getOrCreateSettingsBundle();
 
-  return toSettingsData(settings, {
+  return toSettingsData(settings, carousel, system, {
     stripeSecretKeyMasked: null,
     stripeWebhookSecretMasked: null,
     googleCalendarServiceAccountEmailMasked: null,
@@ -243,7 +257,7 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
 }
 
 export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
-  const settings = await getOrCreateSettings();
+  const { settings, carousel, system } = await getOrCreateSettingsBundle();
 
   const stripeSecretKeyMasked = settings.stripeSecretKey
     ? maskSecretKey(
@@ -277,7 +291,7 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
     }
   }
 
-  return toSettingsData(settings, {
+  return toSettingsData(settings, carousel, system, {
     stripeSecretKeyMasked,
     stripeWebhookSecretMasked,
     googleCalendarServiceAccountEmailMasked,

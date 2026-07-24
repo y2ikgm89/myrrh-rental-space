@@ -1456,6 +1456,49 @@ model FaqItem {
 }
 
 // ==============================================
+// Settings singletons (concern split — Phase 1+)
+// ==============================================
+
+model SettingsAnnouncementCarousel {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  animation         AnnouncementBarAnimation   @default(fade)
+  duration          Int                        @default(5000)
+  autoPlay          Boolean                    @default(true)
+  pauseOnHover      Boolean                    @default(true)
+  showArrows        Boolean                    @default(true)
+  showIndicator     Boolean                    @default(true)
+  designStyle       AnnouncementBarDesignStyle @default(solid)
+  bgColor           String?
+  textColor         String?
+  stripeColor       String?
+  stripeAnimation   Boolean                    @default(false)
+  gradientAnimation Boolean                    @default(false)
+  glassAnimation    Boolean                    @default(false)
+  sticky            Boolean                    @default(false)
+
+  @@map("settings_announcement_carousels")
+}
+
+model SettingsSystem {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  maintenanceMode         Boolean @default(false)
+  maintenanceMessage      String? @db.Text
+  cookieConsentEnabled    Boolean @default(false)
+  cookieConsentMessage    String? @db.Text
+  cookieConsentAcceptText String?
+  cookieConsentRejectText String?
+  cookieConsentPolicyUrl  String?
+
+  @@map("settings_systems")
+}
+
+// ==============================================
 // Settings (Singleton)
 // ==============================================
 
@@ -1605,8 +1648,7 @@ model Settings {
   // Other Settings
   // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、
   // html lang は layout が "ja" を固定使用しており、設定値は保存経路も consumer も無かった。
-  maintenanceMode    Boolean @default(false)
-  maintenanceMessage String? @db.Text
+  // maintenance* / cookieConsent* は SettingsSystem (settings_systems) へ移行済 (Phase 1)。
 
   // Stripe Payment Settings — credentials only.
   // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT
@@ -1634,32 +1676,8 @@ model Settings {
   // 参照: `cancellation-side-effects.ts` の auto refund 経路 + admin settings UI (次 PR で実装)。
   refundPolicy           Json?     @db.JsonB
 
-  // Cookie Consent Settings
-  cookieConsentEnabled    Boolean @default(false)
-  cookieConsentMessage    String? @db.Text
-  cookieConsentAcceptText String?
-  cookieConsentRejectText String?
-  cookieConsentPolicyUrl  String?
-
-  // Announcement Bar Carousel Settings - Enum化
-  announcementBarAnimation         AnnouncementBarAnimation   @default(fade)
-  announcementBarDuration          Int                        @default(5000)
-  announcementBarAutoPlay          Boolean                    @default(true)
-  announcementBarPauseOnHover      Boolean                    @default(true)
-  announcementBarShowArrows        Boolean                    @default(true)
-  announcementBarShowIndicator     Boolean                    @default(true)
-  announcementBarDesignStyle       AnnouncementBarDesignStyle @default(solid)
-  // Announcement Bar Common Color Settings
-  announcementBarBgColor           String? // 共通背景色（カスタム）
-  announcementBarTextColor         String? // 共通文字色（カスタム）
-  // Striped Design Settings
-  announcementBarStripeColor       String? // ストライプ色（カスタム）
-  announcementBarStripeAnimation   Boolean                    @default(false) // ストライプアニメーション
-  // Gradient Design Settings
-  announcementBarGradientAnimation Boolean                    @default(false) // グラデーションアニメーション
-  // Glass Design Settings
-  announcementBarGlassAnimation    Boolean                    @default(false) // グラス（シマー）アニメーション
-  announcementBarSticky            Boolean                    @default(false) // スクロール時に固定表示
+  // announcementBar* carousel 設定は SettingsAnnouncementCarousel
+  // (settings_announcement_carousels) へ移行済 (Phase 1)。
 
   // ==============================================
   // External Service API Keys
