@@ -38,12 +38,55 @@ const mockSettingsUpsert = mock(() =>
   }),
 );
 
+const mockCarouselUpsert = mock(() =>
+  Promise.resolve({
+    id: "singleton",
+    animation: "fade",
+    duration: 5000,
+    autoPlay: true,
+    pauseOnHover: true,
+    showArrows: true,
+    showIndicator: true,
+    designStyle: "solid",
+    bgColor: null,
+    textColor: null,
+    stripeColor: null,
+    stripeAnimation: false,
+    gradientAnimation: false,
+    glassAnimation: false,
+    sticky: false,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-02T00:00:00Z"),
+  }),
+);
+
+const mockSystemUpsert = mock(() =>
+  Promise.resolve({
+    id: "singleton",
+    maintenanceMode: false,
+    maintenanceMessage: null,
+    cookieConsentEnabled: false,
+    cookieConsentMessage: null,
+    cookieConsentAcceptText: null,
+    cookieConsentRejectText: null,
+    cookieConsentPolicyUrl: null,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-02T00:00:00Z"),
+  }),
+);
+
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settings: {
       upsert: mockSettingsUpsert,
+    },
+    settingsAnnouncementCarousel: {
+      upsert: mockCarouselUpsert,
+    },
+    settingsSystem: {
+      upsert: mockSystemUpsert,
     },
   },
 }));
@@ -79,6 +122,8 @@ import { getAdminSettings } from "@/shared/domain/settings/admin-queries";
 describe("getAdminSettings", () => {
   beforeEach(() => {
     mockSettingsUpsert.mockClear();
+    mockCarouselUpsert.mockClear();
+    mockSystemUpsert.mockClear();
   });
 
   test("client DTO does not serialize integration secrets or webhook verifiers", async () => {
