@@ -854,11 +854,10 @@ The workflow sets `install_components: beta` on
 `google-github-actions/setup-gcloud` so the beta component is installed before
 the non-interactive submit step and `gcloud` never prompts during deploy.
 
-The workflow triggers on every push to `main`, plus explicit
-`workflow_dispatch`. Do not add `paths` or `paths-ignore` filters to the
-production deploy workflow; file-path filters make post-merge production
-deployment conditional and reintroduce ambiguity about whether a merge should
-deploy.
+The workflow triggers **only** via explicit `workflow_dispatch` (Actions UI or
+`gh workflow run`). Merging to `main` does **not** deploy. Do not re-add a
+`push: branches: [main]` trigger for cost / Neon compute wake control. Do not
+add `paths` or `paths-ignore` filters either.
 
 Do not create Cloud Build native triggers for production. That includes
 `deploy-main`, console-created GitHub triggers, and manual
@@ -872,7 +871,8 @@ make a native trigger work. If `gcloud builds triggers run` fails with
 is not the production path. Remove the trigger instead.
 
 PR validation belongs in `.github/workflows/ci.yml`; production deploys only
-after code reaches `main`.
+when an operator runs Deploy Production against `main` (after the desired
+commits are on `main`).
 
 Remove any existing native Cloud Build triggers and Cloud Build repository
 connections before considering the project production-ready:
@@ -1333,8 +1333,8 @@ Expected results:
 - with an IAP-allowed Google account in exactly one admin role group, `/admin`
   opens the dashboard and auto-syncs the local staff record without an app
   password form;
-- `.github/workflows/deploy-production.yml` starts on every `main` push and the
-  Cloud Build it submits succeeds;
+- `.github/workflows/deploy-production.yml` runs only via `workflow_dispatch`
+  on `main`, and the Cloud Build it submits succeeds;
 - Cloud Logging shows `x-cloud-trace-context` correlation for requests.
 - Cloud Scheduler cron jobs use Google OIDC tokens only. They must use
   `$SCHEDULER_SA` as `oidcToken.serviceAccountEmail`, `$PUBLIC_DOMAIN` as

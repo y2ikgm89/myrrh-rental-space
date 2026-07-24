@@ -1,6 +1,6 @@
 ---
 name: deploy-debug
-description: 本番デプロイ失敗の調査手順書。main への push/merge 後に Cloud Build / Cloud Run のデプロイが失敗した、prisma migrate Job (prisma-migrate) が落ちた、新 revision が startup probe (/api/live) で起動しない、デプロイ成功後に CSP nonce 起因で画面の JS が動かない、などの障害切り分けに使う。deploy-production.yml → cloudbuild.yaml の step 別診断、breaking migration mode の挙動、gcloud builds log 等の調査コマンド、build:skip-env / docker によるローカル再現を含む。
+description: 本番デプロイ失敗の調査手順書。Deploy Production (workflow_dispatch) 実行後に Cloud Build / Cloud Run のデプロイが失敗した、prisma migrate Job (prisma-migrate) が落ちた、新 revision が startup probe (/api/live) で起動しない、デプロイ成功後に CSP nonce 起因で画面の JS が動かない、などの障害切り分けに使う。deploy-production.yml → cloudbuild.yaml の step 別診断、breaking migration mode の挙動、gcloud builds log 等の調査コマンド、build:skip-env / docker によるローカル再現を含む。
 ---
 
 # 本番デプロイ (Cloud Build / Cloud Run) 失敗調査
@@ -11,7 +11,8 @@ migration 方針は rules の `migrations` を参照。本 skill は「落ちた
 
 ## 1. 全体像と最初の切り分け
 
-経路は一本道: main への push（= PR merge は即・本番リリース。workflow_dispatch も main ref 限定）
+経路は一本道: GitHub Actions の **Deploy Production を手動実行**（`workflow_dispatch`、
+main ref 限定。`main` merge だけでは走らない）
 → `.github/workflows/deploy-production.yml`（WIF 認証）→ `gcloud beta builds submit
 --config=cloudbuild.yaml`。beta submit のため Cloud Build ログ全文が GitHub Actions の
 "Cloud Build Deploy" job 出力にストリームされる。**まず Actions ログでどの step id で

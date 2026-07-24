@@ -90,8 +90,9 @@ section/registry 変更 → architecture-boundaries テスト、UI のみの変�
 9. `TermsAgreement` と `AuditLog` は append-only の証跡レコード（update/delete 禁止）
 10. 日付表示は `src/shared/lib/date-format.ts` の JST 固定 formatter を使う
     （date-fns `format()` 直呼びが UTC ずれを起こす理由は business-domain ルール参照）
-11. **main への push = 即・本番デプロイ**。DROP/RENAME を含む migration は自動で
-    計画ダウンタイム付きデプロイに切り替わる
+11. **本番デプロイは手動**（`.github/workflows/deploy-production.yml` の
+    `workflow_dispatch` のみ）。`main` merge だけでは Cloud Run は更新されない。
+    DROP/RENAME を含む migration はデプロイ実行時に自動で計画ダウンタイム付きに切り替わる
 12. 秘密値（`.env*` の実値）は出力・コピー・コミットしない
 
 ## 自動完遂ポリシー
@@ -99,6 +100,10 @@ section/registry 変更 → architecture-boundaries テスト、UI のみの変�
 タスクが完了点に達したら、ユーザー確認なしで commit → push → PR → **auto-merge 予約**まで自動進行し
 **即次タスクに移る**。CI watch では blocking しない（GitHub 側の required checks pass 時点で自動
 squash merge）。「進めて」等の明示承認は**不要**。gate はいずれか該当で停止する。
+
+**本番デプロイは自動完遂に含めない**（コスト抑制）。`gh workflow run` /
+Actions UI での Deploy Production は、ユーザーが明示したとき、またはリリースを
+まとめて出すときだけ行う。
 
 | Gate            | 内容                                                                          | 該当/fail 時             |
 | --------------- | ----------------------------------------------------------------------------- | ------------------------ |
