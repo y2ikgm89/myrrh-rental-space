@@ -201,6 +201,7 @@ type ProfileInputShape = {
   companyName?: string;
   phoneNumber?: string;
   email?: string;
+  marketingOptIn?: boolean;
   turnstileToken?: string;
 };
 
@@ -220,6 +221,9 @@ function inputToFormData(input: ProfileInputShape): FormData {
   if (input.email !== undefined) {
     fd.append("email", input.email);
   }
+  if (input.marketingOptIn === true) {
+    fd.append("marketingOptIn", "on");
+  }
   if (input.turnstileToken !== undefined) {
     fd.append("turnstileToken", input.turnstileToken);
   }
@@ -231,6 +235,7 @@ const VALID_PROFILE_INPUT: ProfileInputShape = {
   lastName: "山田",
   firstName: "太郎",
   phoneNumber: "090-1234-5678",
+  marketingOptIn: true,
 };
 
 async function flushMicrotasks(): Promise<void> {
@@ -285,6 +290,7 @@ describe("updateProfileAction (SEC-MYPAGE-02)", () => {
       firstName: "太郎",
       companyName: null,
       phoneNumber: "090-1234-5678",
+      marketingOptIn: true,
       email: null,
     });
     // metadata に channel と operation が乗る

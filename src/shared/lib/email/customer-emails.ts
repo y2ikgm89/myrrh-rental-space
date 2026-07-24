@@ -11,6 +11,7 @@ import "server-only";
 import { findCustomersForBroadcast } from "@/shared/domain/customers/queries";
 import { CustomerBroadcastEmail } from "@/shared/emails/customer-broadcast";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
+import { createMarketingUnsubscribeArtifacts } from "@/shared/lib/tokens/marketing-unsubscribe-token";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -66,22 +67,25 @@ export async function sendCustomerBroadcast(
   const footer = await getEmailFooterData();
 
   const results = await Promise.allSettled(
-    recipients.map((customer) =>
-      sendEmail({
+    recipients.map((customer) => {
+      const unsubscribe = createMarketingUnsubscribeArtifacts(customer.id);
+      return sendEmail({
         payload: {
           to: customer.email,
           subject: params.subject,
+          headers: unsubscribe.headers,
           react: CustomerBroadcastEmail({
             subject: params.subject,
             bodyText: params.body,
+            unsubscribeUrl: unsubscribe.url,
             footer,
           }),
         },
         idempotencyKey: `customer-broadcast/${customer.id}/${hashForKey(customer.email)}/${params.broadcastNonce}`,
         operation: "sendCustomerBroadcast",
         context: { customerId: customer.id },
-      }),
-    ),
+      });
+    }),
   );
 
   let sent = 0;

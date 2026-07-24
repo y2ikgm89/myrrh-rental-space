@@ -71,6 +71,7 @@ export default async function SettingsPage({
             companyName: customer.companyName ?? "",
             email: customer.email,
             phoneNumber: customer.phoneNumber ?? "",
+            marketingOptIn: customer.marketingOptIn,
           }}
           turnstileSiteKey={turnstileSiteKey}
         />

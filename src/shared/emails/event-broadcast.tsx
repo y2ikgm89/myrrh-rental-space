@@ -25,6 +25,11 @@ type Props = {
    * `whiteSpace: "pre-wrap"` で改行を保持して描画する。
    */
   bodyText: string;
+  /**
+   * RFC 8058 配信停止 URL。Customer に解決できた宛先のみ渡す。
+   * walk-in 等で解決できない場合は省略（ヘッダも付けない）。
+   */
+  unsubscribeUrl?: string;
   footer: EmailFooterData;
 };
 
@@ -47,6 +52,7 @@ export function EventBroadcastEmail({
   eventUrl,
   subject,
   bodyText,
+  unsubscribeUrl,
   footer,
 }: Props) {
   return (
@@ -85,6 +91,19 @@ export function EventBroadcastEmail({
       <Text style={text}>
         ご不明な点がございましたら、本メールへ返信いただくかお問い合わせフォームよりご連絡ください。
       </Text>
+
+      {unsubscribeUrl !== undefined ? (
+        <Text style={{ ...text, fontSize: "12px", color: COLOR.textSubtle }}>
+          お知らせメールの配信停止は{" "}
+          <Link
+            href={unsubscribeUrl}
+            style={{ color: COLOR.link, textDecoration: "underline" }}
+          >
+            こちら
+          </Link>
+          から行えます。マイページのアカウント設定でも変更できます。
+        </Text>
+      ) : null}
     </EmailLayout>
   );
 }

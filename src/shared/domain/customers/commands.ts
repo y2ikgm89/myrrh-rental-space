@@ -239,6 +239,7 @@ export async function updateCustomerProfileByUserId(
     firstName: string;
     companyName: string | null;
     phoneNumber: string | null;
+    marketingOptIn: boolean;
   },
 ): Promise<void> {
   await prisma.customer.update({
@@ -249,8 +250,34 @@ export async function updateCustomerProfileByUserId(
       firstName: data.firstName,
       companyName: data.companyName,
       phoneNumber: data.phoneNumber,
+      marketingOptIn: data.marketingOptIn,
     },
   });
+}
+
+/**
+ * List-Unsubscribe / one-click 解除用。`marketingOptIn` を false にする（冪等）。
+ *
+ * - 顧客が存在しない → `null`（呼び出し側は 200 ack。enumeration を避ける）
+ * - 既に false → `{ previous: false }` のまま更新行は実質 no-op 相当
+ */
+export async function optOutCustomerMarketingById(
+  customerId: string,
+): Promise<{ previous: boolean } | null> {
+  const existing = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { id: true, marketingOptIn: true },
+  });
+  if (!existing) return null;
+
+  if (existing.marketingOptIn) {
+    await prisma.customer.update({
+      where: { id: customerId },
+      data: { marketingOptIn: false },
+    });
+  }
+
+  return { previous: existing.marketingOptIn };
 }
 
 // =============================================================================

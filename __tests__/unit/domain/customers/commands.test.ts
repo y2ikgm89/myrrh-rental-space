@@ -600,6 +600,7 @@ describe("customers/commands", () => {
             firstName: "花子",
             companyName: null,
             phoneNumber: "080-9876-5432",
+            marketingOptIn: true,
           }),
         ).resolves.toBeUndefined();
 
@@ -612,6 +613,7 @@ describe("customers/commands", () => {
               firstName: "花子",
               companyName: null,
               phoneNumber: "080-9876-5432",
+              marketingOptIn: true,
             },
           }),
         );
@@ -625,6 +627,7 @@ describe("customers/commands", () => {
             firstName: "花子",
             companyName: null,
             phoneNumber: null,
+            marketingOptIn: false,
           }),
         ).resolves.toBeUndefined();
 
@@ -636,6 +639,7 @@ describe("customers/commands", () => {
               firstName: "花子",
               companyName: null,
               phoneNumber: null,
+              marketingOptIn: false,
             },
           }),
         );

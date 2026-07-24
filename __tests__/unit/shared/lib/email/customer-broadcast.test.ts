@@ -12,7 +12,14 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 type BroadcastRecipient = { id: string; email: string };
 type SendEmailResult =
   { ok: true; messageId: string } | { ok: false; reason: string };
-type CapturedSendEmailParams = { idempotencyKey?: string; operation: string };
+type CapturedSendEmailParams = {
+  idempotencyKey?: string;
+  operation: string;
+  payload?: {
+    headers?: Record<string, string>;
+    react?: unknown;
+  };
+};
 
 const mockFindMany = mock<
   (customerIds: string[]) => Promise<BroadcastRecipient[]>
@@ -42,6 +49,15 @@ mock.module("@/shared/lib/email/send", () => ({
 }));
 mock.module("@/shared/emails/_shared/footer-data", () => ({
   getEmailFooterData: mockGetEmailFooterData,
+}));
+mock.module("@/shared/lib/tokens/marketing-unsubscribe-token", () => ({
+  createMarketingUnsubscribeArtifacts: (customerId: string) => ({
+    url: `https://example.com/api/email/unsubscribe?token=${customerId}`,
+    headers: {
+      "List-Unsubscribe": `<https://example.com/api/email/unsubscribe?token=${customerId}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  }),
 }));
 
 const { sendCustomerBroadcast } =
@@ -115,5 +131,22 @@ describe("sendCustomerBroadcast", () => {
         idempotencyKey: "customer-broadcast/c1/hashed(a@example.com)/nonce-4",
       }),
     );
+  });
+
+  test("List-Unsubscribe ヘッダと本文用 URL を同一トークンで付与する", async () => {
+    mockFindMany.mockResolvedValue([{ id: "c1", email: "a@example.com" }]);
+
+    await sendCustomerBroadcast(["c1"], {
+      subject: "お知らせ",
+      body: "本文",
+      broadcastNonce: "nonce-5",
+    });
+
+    const call = mockSendEmail.mock.calls[0]?.[0];
+    expect(call?.payload?.headers).toEqual({
+      "List-Unsubscribe":
+        "<https://example.com/api/email/unsubscribe?token=c1>",
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    });
   });
 });
