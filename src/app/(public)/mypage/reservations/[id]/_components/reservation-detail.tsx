@@ -259,12 +259,10 @@ export function ReservationDetail({
              * cancelledByType の SSoT は `CANCELLED_BY`
              * (helpers.ts)。現行 domain (customer-commands.ts) は
              * マイページ経路で `CUSTOMER_MYPAGE`、メールリンク経路で
-             * `CUSTOMER_TOKEN` を書き込む。legacy 値 `CUSTOMER` は既存
-             * データ互換のため合わせて判定する。
+             * `CUSTOMER_TOKEN` を書き込む。
              */}
             {(cancelledByType === CANCELLED_BY.CUSTOMER_MYPAGE ||
-              cancelledByType === CANCELLED_BY.CUSTOMER_TOKEN ||
-              cancelledByType === CANCELLED_BY.CUSTOMER) && (
+              cancelledByType === CANCELLED_BY.CUSTOMER_TOKEN) && (
               <span className="ml-2 text-xs text-muted-foreground">
                 （お客様によるキャンセル）
               </span>

@@ -3607,24 +3607,29 @@ async function seedEvents() {
     if (!firstSlot || !lastSlot) continue;
 
     await prisma.$transaction(async (tx) => {
-      const event = await tx.event.upsert({
-        where: { slug: eventRest.slug },
-        update: {
-          ...eventRest,
-          ...buildSeedDescription(description),
-          publishedAt: publishedAt ?? null,
-          firstSlotStartAt: firstSlot.startAt,
-          lastSlotEndAt: lastSlot.endAt,
-        },
-        create: {
-          ...eventRest,
-          ...buildSeedDescription(description),
-          publishedAt: publishedAt ?? null,
-          firstSlotStartAt: firstSlot.startAt,
-          lastSlotEndAt: lastSlot.endAt,
-        },
+      // Event.slug は deletedAt IS NULL の partial unique。Prisma upsert(where:{slug})
+      // はフル unique を要求するため ON CONFLICT が失敗する → findFirst + update/create。
+      const eventData = {
+        ...eventRest,
+        ...buildSeedDescription(description),
+        publishedAt: publishedAt ?? null,
+        firstSlotStartAt: firstSlot.startAt,
+        lastSlotEndAt: lastSlot.endAt,
+      };
+      const existingEvent = await tx.event.findFirst({
+        where: { slug: eventRest.slug, deletedAt: null },
         select: { id: true },
       });
+      const event = existingEvent
+        ? await tx.event.update({
+            where: { id: existingEvent.id },
+            data: eventData,
+            select: { id: true },
+          })
+        : await tx.event.create({
+            data: eventData,
+            select: { id: true },
+          });
 
       // Dev/test seed contract: seeded events are rebuilt so E2E data never drifts.
       await tx.eventRegistration.deleteMany({ where: { eventId: event.id } });

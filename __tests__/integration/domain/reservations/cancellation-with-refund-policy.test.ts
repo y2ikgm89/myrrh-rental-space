@@ -37,6 +37,7 @@ import {
   mock,
   test,
 } from "bun:test";
+import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 
 // preload の DATABASE_URL 上書きを、gateway import 前に実 TEST_DB へ向け直す。
 // interactive tx の並行度は refund-command test と同じ 20/60s に揃える (advisory lock
@@ -303,8 +304,8 @@ async function createPaidReservationFixture(
     customerId: customer.id,
     locationId: location.id,
     cleanup: async () => {
-      await prisma.refund.deleteMany({
-        where: { reservationId: reservation.id },
+      await deleteRefundsForTest(prisma, {
+        reservationId: reservation.id,
       });
       await prisma.reservation.deleteMany({ where: { id: reservation.id } });
       await prisma.space.deleteMany({ where: { id: space.id } });
@@ -368,12 +369,10 @@ describeMaybe(
       await prisma.$queryRaw`SELECT 1`;
 
       // 残留 fixture を掃除 (再実行耐性)。
-      await prisma.refund.deleteMany({
-        where: {
-          reservation: {
-            space: {
-              location: { slug: { startsWith: "refundpol-loc-" } },
-            },
+      await deleteRefundsForTest(prisma, {
+        reservation: {
+          space: {
+            location: { slug: { startsWith: "refundpol-loc-" } },
           },
         },
       });
