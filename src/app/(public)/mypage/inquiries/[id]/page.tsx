@@ -17,6 +17,8 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Badge } from "@/public/components/design-system/badge";
 import { INQUIRY_STATUS_CONFIG } from "../_components/inquiry-status";
 import { formatSerializedDate } from "@/shared/lib/serialize";
+import { getTurnstileSiteKey } from "@/shared/data/turnstile";
+import { InquiryReplyForm } from "./_components/inquiry-reply-form";
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
@@ -52,6 +54,8 @@ export default async function MypageInquiryDetailPage({
   if (!inquiry) {
     notFound();
   }
+
+  const turnstileSiteKey = await getTurnstileSiteKey();
 
   const statusConfig =
     INQUIRY_STATUS_CONFIG[inquiry.status] ?? INQUIRY_STATUS_CONFIG["NEW"];
@@ -171,6 +175,12 @@ export default async function MypageInquiryDetailPage({
           )}
         </div>
       )}
+
+      <InquiryReplyForm
+        inquiryId={inquiry.id}
+        status={inquiry.status}
+        turnstileSiteKey={turnstileSiteKey}
+      />
 
       <footer className="mt-10 border-t border-border pt-6">
         <Link
