@@ -8,7 +8,7 @@ export type InquiryReplyItem = {
   id: string;
   body: string;
   authorType: InquiryReplyAuthorType;
-  /** STAFF のときのみ非 null。CUSTOMER 返信は顧客側の識別子から解決する。 */
+  /** STAFF → User.name。CUSTOMER → lastName + firstName。削除・匿名化後は null。 */
   authorName: string | null;
   createdAt: Date;
 };

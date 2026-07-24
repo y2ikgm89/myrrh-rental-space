@@ -48,6 +48,7 @@ import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { isValidInquiryStatus } from "@/shared/lib/validations/enums/guards";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
+import { InquiryThread } from "./InquiryThread";
 
 type InquiryDetailProps = {
   inquiry: Serialized<InquiryWithCustomer>;
@@ -155,10 +156,6 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
     });
   };
 
-  // Phase 1: 最新の STAFF 返信 1 件だけ表示する（Phase 4 でスレッド UI に拡張）。
-  const staffReplies = inquiry.replies.filter((r) => r.authorType === "STAFF");
-  const latestStaffReply = staffReplies[staffReplies.length - 1] ?? null;
-
   return (
     <div className="grid gap-6 md:grid-cols-3">
       {/* メイン情報 */}
@@ -196,48 +193,8 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
           </div>
         </DetailSection>
 
-        {/* 本文 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              お問い合わせ内容
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap">{inquiry.message}</p>
-          </CardContent>
-        </Card>
+        <InquiryThread message={inquiry.message} replies={inquiry.replies} />
 
-        {/*
-          Inquiry Overhaul Phase 1: 旧 `replyMessage` (単一列上書き) を
-          `replies: InquiryReply[]` (createdAt asc の複数返信) に再設計。
-          Phase 1 では最小変更で「最新のスタッフ返信 1 件のみ表示」+「追加返信可能」に
-          切り替える。Phase 4 で完全なスレッド UI に拡張予定。
-          React Compiler が最適化できるよう IIFE を使わず、上位関数本体で計算した
-          `latestStaffReply` を条件付き render で表示する。
-        */}
-        {latestStaffReply ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                回答内容 (最新)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="whitespace-pre-wrap">{latestStaffReply.body}</p>
-              <p className="text-xs text-muted-foreground">
-                {latestStaffReply.authorName ?? "スタッフ"} -{" "}
-                {formatDate(latestStaffReply.createdAt, true)}
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {/*
-          Phase 1: 返信済みでも「追加返信」が可能。旧 UI は返信済み Inquiry に対して
-          form 自体を隠していたため、続報返信ができなかった (single replyMessage の
-          上書き問題)。replies に append する新モデルではフォーム常時表示が正。
-        */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base font-semibold">

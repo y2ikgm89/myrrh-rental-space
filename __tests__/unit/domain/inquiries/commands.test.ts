@@ -529,6 +529,9 @@ describe("inquiries/commands", () => {
             }),
           }),
         );
+        const replyCreateData = mockInquiryReplyCreate.mock.calls.at(0)?.[0] as
+          { data: Record<string, unknown> } | undefined;
+        expect(replyCreateData?.data).not.toHaveProperty("authorCustomerId");
 
         // NEW → IN_PROGRESS への advance
         expect(mockInquiryUpdate).toHaveBeenCalledWith(
