@@ -22,10 +22,50 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 
-async function upsertSettings(
-  updateData: Omit<Prisma.SettingsCreateInput, "id">,
+async function upsertResendSettings(
+  updateData: Omit<Prisma.SettingsResendCreateInput, "id">,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsResend.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...updateData },
+    update: updateData,
+  });
+}
+
+async function upsertTurnstileSettings(
+  updateData: Omit<Prisma.SettingsTurnstileCreateInput, "id">,
+): Promise<void> {
+  await prisma.settingsTurnstile.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...updateData },
+    update: updateData,
+  });
+}
+
+async function upsertGoogleMapsSettings(
+  updateData: Omit<Prisma.SettingsGoogleMapsCreateInput, "id">,
+): Promise<void> {
+  await prisma.settingsGoogleMaps.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...updateData },
+    update: updateData,
+  });
+}
+
+async function upsertSwitchbotSettings(
+  updateData: Omit<Prisma.SettingsSwitchbotCreateInput, "id">,
+): Promise<void> {
+  await prisma.settingsSwitchbot.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...updateData },
+    update: updateData,
+  });
+}
+
+async function upsertCustomApiKeysSettings(
+  updateData: Omit<Prisma.SettingsCustomApiKeysCreateInput, "id">,
+): Promise<void> {
+  await prisma.settingsCustomApiKeys.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -48,7 +88,7 @@ export async function updateResendSettings(data: {
   resendApiKey?: string | null;
   resendWebhookSecret?: string | null;
 }): Promise<void> {
-  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {};
+  const updateData: Omit<Prisma.SettingsResendCreateInput, "id"> = {};
 
   if (data.resendApiKey) {
     updateData.resendApiKey = encryptSecret(
@@ -68,20 +108,20 @@ export async function updateResendSettings(data: {
     );
   }
 
-  await upsertSettings(updateData);
+  await upsertResendSettings(updateData);
 }
 
 export async function recordResendConnectionStatus(
   status: "connected" | "error",
 ): Promise<void> {
-  await upsertSettings({
+  await upsertResendSettings({
     resendLastTestedAt: new Date(),
     resendConnectionStatus: status,
   });
 }
 
 export async function clearResendSettings(): Promise<void> {
-  await upsertSettings({
+  await upsertResendSettings({
     resendApiKey: null,
     resendWebhookSecret: null,
     resendLastTestedAt: null,
@@ -93,7 +133,7 @@ export async function updateTurnstileSettings(data: {
   turnstileSiteKey?: string | null;
   turnstileSecretKey?: string | null;
 }): Promise<void> {
-  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {};
+  const updateData: Omit<Prisma.SettingsTurnstileCreateInput, "id"> = {};
 
   // Site Key は管理 UI で「変更」ボタンによりロックされる公開キー。ロック中の保存は
   // 空送信になるため、空（falsy）は「既存値を維持」として扱う（Secret Key と同じ意味論）。
@@ -110,20 +150,20 @@ export async function updateTurnstileSettings(data: {
     );
   }
 
-  await upsertSettings(updateData);
+  await upsertTurnstileSettings(updateData);
 }
 
 export async function recordTurnstileConnectionStatus(
   status: "connected" | "error",
 ): Promise<void> {
-  await upsertSettings({
+  await upsertTurnstileSettings({
     turnstileLastTestedAt: new Date(),
     turnstileConnectionStatus: status,
   });
 }
 
 export async function clearTurnstileSettings(): Promise<void> {
-  await upsertSettings({
+  await upsertTurnstileSettings({
     turnstileSiteKey: null,
     turnstileSecretKey: null,
     turnstileLastTestedAt: null,
@@ -134,7 +174,7 @@ export async function clearTurnstileSettings(): Promise<void> {
 export async function updateGoogleMapsSettings(data: {
   googleMapsApiKey?: string | null;
 }): Promise<void> {
-  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {};
+  const updateData: Omit<Prisma.SettingsGoogleMapsCreateInput, "id"> = {};
 
   if (data.googleMapsApiKey) {
     updateData.googleMapsApiKey = encryptSecret(
@@ -144,20 +184,20 @@ export async function updateGoogleMapsSettings(data: {
     );
   }
 
-  await upsertSettings(updateData);
+  await upsertGoogleMapsSettings(updateData);
 }
 
 export async function recordGoogleMapsConnectionStatus(
   status: "connected" | "error",
 ): Promise<void> {
-  await upsertSettings({
+  await upsertGoogleMapsSettings({
     googleMapsLastTestedAt: new Date(),
     googleMapsConnectionStatus: status,
   });
 }
 
 export async function clearGoogleMapsSettings(): Promise<void> {
-  await upsertSettings({
+  await upsertGoogleMapsSettings({
     googleMapsApiKey: null,
     googleMapsLastTestedAt: null,
     googleMapsConnectionStatus: null,
@@ -170,7 +210,7 @@ export async function updateSwitchBotSettings(data: {
   switchbotSecretKey?: string | null;
   switchbotPasscodeBufferMinutes?: number;
 }): Promise<void> {
-  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {};
+  const updateData: Omit<Prisma.SettingsSwitchbotCreateInput, "id"> = {};
 
   if (data.switchbotEnabled !== undefined) {
     updateData.switchbotEnabled = data.switchbotEnabled;
@@ -197,13 +237,13 @@ export async function updateSwitchBotSettings(data: {
       data.switchbotPasscodeBufferMinutes;
   }
 
-  await upsertSettings(updateData);
+  await upsertSwitchbotSettings(updateData);
 }
 
 export async function recordSwitchBotConnectionStatus(
   status: "connected" | "error",
 ): Promise<void> {
-  await upsertSettings({
+  await upsertSwitchbotSettings({
     switchbotLastTestedAt: new Date(),
     switchbotConnectionStatus: status,
   });
@@ -287,7 +327,7 @@ export async function clearSwitchBotSettings(): Promise<void> {
     }
   }
 
-  await upsertSettings({
+  await upsertSwitchbotSettings({
     switchbotEnabled: false,
     switchbotOpenToken: null,
     switchbotSecretKey: null,
@@ -301,7 +341,7 @@ export async function clearSwitchBotSettings(): Promise<void> {
  * （webhook登録操作の直前に呼ぶことで、常に有効なトークンを保証する）。
  */
 export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsSwitchbot.findUnique({
     where: { id: "singleton" },
     select: { switchbotWebhookPathToken: true },
   });
@@ -312,7 +352,7 @@ export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
   if (existing) return existing;
 
   const token = randomBytes(24).toString("base64url");
-  await upsertSettings({
+  await upsertSwitchbotSettings({
     switchbotWebhookPathToken: encryptSecret(
       token,
       "Webhookトークンの暗号化に失敗しました",
@@ -325,7 +365,7 @@ export async function ensureSwitchBotWebhookPathToken(): Promise<string> {
 export async function addCustomApiKey(
   data: CustomApiKeyInput,
 ): Promise<{ id: string }> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsCustomApiKeys.findUnique({
     where: { id: "singleton" },
     select: { customApiKeys: true },
   });
@@ -351,13 +391,13 @@ export async function addCustomApiKey(
     },
   };
 
-  await upsertSettings({ customApiKeys: updated });
+  await upsertCustomApiKeysSettings({ customApiKeys: updated });
 
   return { id };
 }
 
 export async function deleteCustomApiKey(id: string): Promise<void> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsCustomApiKeys.findUnique({
     where: { id: "singleton" },
     select: { customApiKeys: true },
   });
@@ -369,5 +409,5 @@ export async function deleteCustomApiKey(id: string): Promise<void> {
 
   const { [id]: _removed, ...rest } = existing;
 
-  await upsertSettings({ customApiKeys: rest });
+  await upsertCustomApiKeysSettings({ customApiKeys: rest });
 }

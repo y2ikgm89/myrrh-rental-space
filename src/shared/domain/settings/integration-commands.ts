@@ -58,16 +58,11 @@ function normalizeNullableString(value: string | null): string | null {
 export async function updateStripeSettings(
   data: StripeSettingsInput,
 ): Promise<void> {
-  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {
+  const updateData: Omit<Prisma.SettingsStripeCreateInput, "id"> = {
     stripeCurrency: data.stripeCurrency,
-    // Prisma String[] は Prisma.SettingsCreateInput 側で
-    // `{ set: string[] }` 形 or plain array を受け付ける。plain array で渡す。
     stripePaymentMethodTypes: Array.from(data.stripePaymentMethodTypes),
   };
 
-  // 公開可能キーは管理 UI で「変更」ボタンによりロックされる公開キー。ロック中の保存は
-  // 空送信になるため、空（falsy）は「既存値を維持」として扱う（シークレットキーと同じ意味論）。
-  // クリアは clearStripeKeys（「キーをクリア」ボタン）経由で行う。
   if (data.stripePublishableKey) {
     updateData.stripePublishableKey = data.stripePublishableKey;
   }
@@ -98,7 +93,7 @@ export async function updateStripeSettings(
     }
   }
 
-  await prisma.settings.upsert({
+  await prisma.settingsStripe.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -108,7 +103,7 @@ export async function updateStripeSettings(
 export async function recordStripeConnectionSuccess(
   accountId: string | undefined,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsStripe.upsert({
     where: { id: "singleton" },
     create: omitUndefined({
       id: "singleton",
@@ -125,7 +120,7 @@ export async function recordStripeConnectionSuccess(
 }
 
 export async function clearStripeKeys(): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsStripe.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -154,15 +149,13 @@ export async function clearStripeKeys(): Promise<void> {
 export async function updateGoogleCalendarSettings(
   data: GoogleCalendarSettingsInput,
 ): Promise<void> {
-  const updateData: Omit<Prisma.SettingsCreateInput, "id"> = {
+  const updateData: Omit<Prisma.SettingsGoogleCalendarCreateInput, "id"> = {
     googleCalendarEnabled: data.googleCalendarEnabled,
     icalAttachmentEnabled: data.icalAttachmentEnabled,
     addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
     googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
   };
 
-  // カレンダーID は管理 UI で「変更」ボタンによりロックされる公開識別子。ロック中の保存は
-  // 空送信になるため、空（falsy）は「既存値を維持」として扱う（サービスアカウントと同じ意味論）。
   if (data.googleCalendarId) {
     updateData.googleCalendarId = normalizeNullableString(
       data.googleCalendarId,
@@ -184,7 +177,7 @@ export async function updateGoogleCalendarSettings(
     updateData.googleCalendarLastTestedAt = null;
   }
 
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -194,7 +187,7 @@ export async function updateGoogleCalendarSettings(
 export async function recordGoogleCalendarConnectionSuccess(): Promise<void> {
   const testedAt = new Date();
 
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -211,7 +204,7 @@ export async function recordGoogleCalendarConnectionSuccess(): Promise<void> {
 export async function recordGoogleCalendarConnectionError(): Promise<void> {
   const testedAt = new Date();
 
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -226,7 +219,7 @@ export async function recordGoogleCalendarConnectionError(): Promise<void> {
 }
 
 export async function clearGoogleCalendarServiceAccount(): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -245,7 +238,7 @@ export async function clearGoogleCalendarServiceAccount(): Promise<void> {
 export async function updateTwoWaySyncSettings(
   data: TwoWaySyncSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -274,7 +267,7 @@ export async function saveGoogleCalendarWebhookToken(
     );
   }
 
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", googleCalendarWebhookToken: encryptedToken },
     update: { googleCalendarWebhookToken: encryptedToken },
@@ -284,7 +277,7 @@ export async function saveGoogleCalendarWebhookToken(
 export async function saveGoogleCalendarWebhook(
   data: GoogleCalendarWebhookInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -301,7 +294,7 @@ export async function saveGoogleCalendarWebhook(
 }
 
 export async function clearGoogleCalendarWebhook(): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",

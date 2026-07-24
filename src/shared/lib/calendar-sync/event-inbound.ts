@@ -75,7 +75,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
   }
 
   // 現在の syncToken を取得
-  const settings = await prisma.settings.findFirstOrThrow({
+  const settings = await prisma.settingsGoogleCalendar.findFirstOrThrow({
     where: { id: "singleton" },
     select: { eventImportSyncToken: true },
   });
@@ -129,7 +129,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
 
     // syncToken は全イベント upsert が成功したときのみ保存する (inbound.ts と同型)。
     if (result.errors.length === 0 && fetchResult.newSyncToken) {
-      await prisma.settings.update({
+      await prisma.settingsGoogleCalendar.update({
         where: { id: "singleton" },
         data: { eventImportSyncToken: fetchResult.newSyncToken },
       });
@@ -148,7 +148,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
     // 410 Gone / reason: fullSyncRequired — syncToken が期限切れ、リセットしてフルシンク
     if (isGoogleCalendarFullSyncRequired(error)) {
       logger.info("Event import syncToken expired, performing full sync");
-      await prisma.settings.update({
+      await prisma.settingsGoogleCalendar.update({
         where: { id: "singleton" },
         data: { eventImportSyncToken: null },
       });

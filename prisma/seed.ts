@@ -561,6 +561,51 @@ async function seedSettings(
       update: {},
       create: { id: "singleton" },
     }),
+    prisma.settingsStripe.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsResend.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsTurnstile.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsGoogleMaps.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsCustomApiKeys.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsGoogleCalendar.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsGoogleBusinessProfile.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsInstagram.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSwitchbot.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
   ]);
 
   console.log("✅ Settings configured");

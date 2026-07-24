@@ -334,7 +334,7 @@ export async function getCalendarSyncRuntimeState(): Promise<{
   webhookChannelId: string | null;
   webhookExpiration: Date | null;
 }> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsGoogleCalendar.findUnique({
     where: { id: "singleton" },
     select: {
       googleCalendarLastSyncedAt: true,
@@ -366,14 +366,14 @@ export async function getCalendarSyncRuntimeState(): Promise<{
  * は全変更処理が成功した (`errors.length === 0`) ときのみ本関数を呼ぶ契約に変更した。
  */
 export async function recordCalendarSyncCompleted(): Promise<void> {
-  await prisma.settings.update({
+  await prisma.settingsGoogleCalendar.update({
     where: { id: "singleton" },
     data: { googleCalendarLastSyncedAt: new Date() },
   });
 }
 
 export async function saveCalendarSyncToken(syncToken: string): Promise<void> {
-  await prisma.settings.update({
+  await prisma.settingsGoogleCalendar.update({
     where: { id: "singleton" },
     data: {
       googleCalendarSyncToken: syncToken,
@@ -387,7 +387,7 @@ export async function saveCalendarSyncToken(syncToken: string): Promise<void> {
  * フルシンクをやり直す。
  */
 export async function clearCalendarSyncToken(): Promise<void> {
-  await prisma.settings.update({
+  await prisma.settingsGoogleCalendar.update({
     where: { id: "singleton" },
     data: { googleCalendarSyncToken: null },
   });

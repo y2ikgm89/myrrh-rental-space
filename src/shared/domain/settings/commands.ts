@@ -388,6 +388,78 @@ export async function ensureSettingsReservation() {
   });
 }
 
+export async function ensureSettingsStripe() {
+  return prisma.settingsStripe.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsResend() {
+  return prisma.settingsResend.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsTurnstile() {
+  return prisma.settingsTurnstile.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsGoogleMaps() {
+  return prisma.settingsGoogleMaps.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsCustomApiKeys() {
+  return prisma.settingsCustomApiKeys.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsGoogleCalendar() {
+  return prisma.settingsGoogleCalendar.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsGoogleBusinessProfile() {
+  return prisma.settingsGoogleBusinessProfile.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsInstagram() {
+  return prisma.settingsInstagram.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsSwitchbot() {
+  return prisma.settingsSwitchbot.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput,
 ): Promise<void> {
@@ -536,7 +608,7 @@ export async function updateRefundPolicy(
 export async function updateEventImportEnabled(
   enabled: boolean,
 ): Promise<void> {
-  await prisma.settings.updateMany({
+  await prisma.settingsGoogleCalendar.updateMany({
     data: { eventImportEnabled: enabled },
   });
 }

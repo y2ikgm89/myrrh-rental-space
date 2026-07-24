@@ -79,7 +79,7 @@ async function main(): Promise<void> {
       purpose: SETTINGS_CRYPTO_PURPOSES.stripeWebhookSecret,
     });
 
-    await prisma.settings.upsert({
+    await prisma.settingsStripe.upsert({
       where: { id: "singleton" },
       update: {
         stripeSecretKey: encryptedSecretKey,
