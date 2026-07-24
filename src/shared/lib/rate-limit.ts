@@ -20,8 +20,9 @@
  * 将来 multi-instance autoscale（max>1）に移行する場合、各 instance が独立した
  * bucket を持ち「同一 IP が N instance × maxRequests/min を発行可能」になる
  * ため、distributed backend（Upstash Redis / Cloud Memorystore 等）の実装が
- * **必須**になる。本ファイルには Redis backend 実装は存在しない — autoscale
- * 解禁時は新規追加した上で `_RATE_LIMIT_BACKEND: "redis"` に切り替える。
+ * **必須**になる。本ファイルには Redis backend 実装は存在しない。
+ * `RATE_LIMIT_BACKEND=redis` は env 予約語のみで、選択すると
+ * `validateProductionEnv()` が fail-closed する（未実装のまま通さない）。
  *
  * **多層防御:**
  * - Layer 1: `InMemoryRateLimitStore`（このファイル、Cloud Run max=1 でグローバル）
@@ -69,7 +70,7 @@ export interface RateLimitStore {
  *
  * Cloud Run multi-instance 環境では各 instance ごとに独立した bucket になるため、
  * 完全な distributed protection ではなく **soft floor** として機能する。
- * 完全な分散制限が必要な場合は `RedisRateLimitStore` に切り替える（env-driven）。
+ * 完全な分散制限が必要な場合は将来の Redis store 実装後に env で切り替える。
  */
 export class InMemoryRateLimitStore implements RateLimitStore {
   private readonly cache: LRUCache<
@@ -125,7 +126,7 @@ export class InMemoryRateLimitStore implements RateLimitStore {
  * レート制限インスタンスを作成（Adapter pattern）。
  *
  * デフォルトは `InMemoryRateLimitStore`。将来 Redis 等に切り替える場合は
- * store を差し替える（`createRateLimiter({ ... }, new RedisRateLimitStore(...))`）。
+ * store 実装を追加したうえで `createRateLimiter` に差し込む。
  *
  * @returns `{ check(token): Promise<RateLimitResult>; reset(token): Promise<void> }`
  */

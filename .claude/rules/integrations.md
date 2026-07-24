@@ -12,7 +12,9 @@ paths:
     "src/shared/lib/analytics/**",
     "src/shared/lib/ical/**",
     "src/app/api/webhooks/**",
+    "src/app/api/webhooks/switchbot/**",
     "src/app/api/cron/**",
+    "src/shared/domain/settings/**",
   ]
 ---
 
@@ -75,6 +77,15 @@ env はローカル開発 fallback のみ ([[project_integration-secrets-two-tie
 
 Cloud Scheduler の OIDC Bearer token 検証（fail-closed。詳細は security-auth ルール）が必須。
 feature module OFF のジョブは早期 return。新規追加は `add-cron-job` skill 参照。
+
+## SwitchBot（スマートロック）
+
+- Webhook 認可は path token（`/api/webhooks/switchbot/[token]`）+ deviceMac 照合。
+  公式 API に HMAC 署名ヘッダ契約が無いため HMAC 検証は未実装（accepted risk。
+  ベンダーが公式サポートするまで追加しない）
+- Feature Module ではなく Settings（外部連携）ゲート。管理サイドバーの feature prune
+  対象にもしない（公開ナビ prune のみ）
+- Open Token / Secret Key は Settings 暗号化保管（DB 優先）。詳細は security-auth ルール
 
 ## その他
 
