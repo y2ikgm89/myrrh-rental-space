@@ -1,11 +1,7 @@
 /**
- * SwitchBot Webhookで受信した`createKey`結果の反映
+ * SwitchBot Webhook で受信した createKey / deleteKey 結果の反映
  *
- * ポーリング（`issue-passcode.ts`）が主経路の確定手段であり、本モジュールは
- * webhookが到達した場合にそれを早期反映する高速パスとして位置づける。
- * SwitchBotはinbound webhookの署名検証機構を公式に提供していないため、
- * 呼び出し元（Route Handler）でURLパストークン + `deviceMac`照合の防御を行った
- * 上で本関数を呼ぶ前提。
+ * コマンド成否は webhook を正本とする。keyId 解決は Device List (`keyList`)。
  *
  * @module shared/domain/smart-lock/webhook-commands
  */
@@ -13,23 +9,33 @@
 import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
-import { getDeviceStatus } from "@/shared/lib/smart-lock/switchbot-client";
-import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { findKeyInDeviceList } from "@/shared/lib/smart-lock/switchbot-client";
+import {
+  SmartLockDeviceType,
+  SmartLockPasscodeStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { isSmartLockBodyDeviceType } from "@/shared/lib/validations/enums/helpers";
 import { buildPasscodeName } from "./issue-passcode";
+import { confirmRevokeByKeyAbsence } from "./revoke-passcode";
 
 export type SwitchBotWebhookCommandResult = "success" | "failed" | "timeout";
 
 export type SwitchBotChangeReportPayload = {
   readonly deviceMac: string;
   readonly eventName: string;
-  readonly commandId: string;
+  readonly commandId?: string;
   readonly result: SwitchBotWebhookCommandResult;
+  readonly keyName?: string;
 };
 
-/**
- * `deviceMac`が自テナント登録済みのSmartLockDeviceかどうかを確認する。
- * Route Handler側の二重防御（署名検証機構が無いため）に使う。
- */
+export type SwitchBotLockStateReportPayload = {
+  readonly deviceMac: string;
+  readonly lockState?: string;
+  readonly doorState?: string;
+  readonly battery?: number;
+  readonly timeOfSample?: number;
+};
+
 export async function isKnownSmartLockDevice(
   deviceMac: string,
 ): Promise<boolean> {
@@ -40,22 +46,110 @@ export async function isKnownSmartLockDevice(
   return device !== null;
 }
 
-/**
- * webhookで受信した`createKey`のchangeReportイベントを処理する。
- *
- * 戻り値は「状態を実際に更新したか」。該当PENDINGレコードが無い（既にポーリングで
- * 確定済み・無関係のcommandId等）場合はfalseを返すが、これはエラーではない
- * （webhookは複数回・遅延して届き得るため、後続イベントが実質no-opになるのは正常）。
- */
-export async function processSwitchBotChangeReport(
+function normalizeEventName(eventName: string): string {
+  return eventName.trim();
+}
+
+async function findRevokePendingPasscodeForDeleteWebhook(input: {
+  readonly deviceRowId: string;
+  readonly commandId?: string;
+  readonly keyName?: string;
+}): Promise<{
+  readonly id: string;
+  readonly reservationId: string;
+  readonly switchbotKeyId: string | null;
+} | null> {
+  if (input.commandId) {
+    const byCommand = await prisma.smartLockPasscode.findFirst({
+      where: {
+        deviceId: input.deviceRowId,
+        status: SmartLockPasscodeStatus.REVOKE_PENDING,
+        switchbotDeleteCommandId: input.commandId,
+      },
+      select: { id: true, reservationId: true, switchbotKeyId: true },
+    });
+    if (byCommand) return byCommand;
+  }
+
+  if (input.keyName) {
+    const candidates = await prisma.smartLockPasscode.findMany({
+      where: {
+        deviceId: input.deviceRowId,
+        status: SmartLockPasscodeStatus.REVOKE_PENDING,
+      },
+      select: { id: true, reservationId: true, switchbotKeyId: true },
+    });
+    for (const row of candidates) {
+      const expectedName = buildPasscodeName(
+        row.reservationId,
+        input.deviceRowId,
+      );
+      if (expectedName === input.keyName) {
+        return row;
+      }
+    }
+  }
+
+  const pendingOnDevice = await prisma.smartLockPasscode.findMany({
+    where: {
+      deviceId: input.deviceRowId,
+      status: SmartLockPasscodeStatus.REVOKE_PENDING,
+    },
+    select: { id: true, reservationId: true, switchbotKeyId: true },
+  });
+  if (pendingOnDevice.length === 1) {
+    return pendingOnDevice[0] ?? null;
+  }
+  return null;
+}
+
+async function processDeleteKeyChangeReport(
+  device: { readonly id: string; readonly deviceId: string },
   payload: SwitchBotChangeReportPayload,
 ): Promise<boolean> {
-  if (payload.eventName !== "createKey") return false;
-
-  const device = await prisma.smartLockDevice.findUnique({
-    where: { deviceId: payload.deviceMac },
+  const passcodeRow = await findRevokePendingPasscodeForDeleteWebhook({
+    deviceRowId: device.id,
+    ...(payload.commandId !== undefined
+      ? { commandId: payload.commandId }
+      : {}),
+    ...(payload.keyName !== undefined ? { keyName: payload.keyName } : {}),
   });
-  if (!device) return false;
+  if (!passcodeRow) return false;
+
+  if (payload.result === "failed" || payload.result === "timeout") {
+    const updated = await prisma.smartLockPasscode.updateMany({
+      where: {
+        id: passcodeRow.id,
+        status: SmartLockPasscodeStatus.REVOKE_PENDING,
+      },
+      data: {
+        status: SmartLockPasscodeStatus.CONFIRMED,
+        switchbotDeleteCommandId: null,
+        revokeRequestedAt: null,
+        failureReason: `SwitchBot webhook deleteKey: ${payload.result}`,
+      },
+    });
+    return updated.count > 0;
+  }
+
+  const updated = await prisma.smartLockPasscode.updateMany({
+    where: {
+      id: passcodeRow.id,
+      status: SmartLockPasscodeStatus.REVOKE_PENDING,
+    },
+    data: {
+      status: SmartLockPasscodeStatus.REVOKED,
+      revokedAt: new Date(),
+    },
+  });
+  return updated.count > 0;
+}
+
+async function processCreateKeyChangeReport(
+  device: { readonly id: string; readonly deviceId: string },
+  payload: SwitchBotChangeReportPayload,
+): Promise<boolean> {
+  if (!payload.commandId) return false;
 
   if (payload.result === "failed" || payload.result === "timeout") {
     const updated = await prisma.smartLockPasscode.updateMany({
@@ -72,7 +166,6 @@ export async function processSwitchBotChangeReport(
     return updated.count > 0;
   }
 
-  // result === "success" — keyList突合でkeyIdを確定させる必要があるため追加でAPI呼出する。
   const passcodeRow = await prisma.smartLockPasscode.findFirst({
     where: {
       switchbotCommandId: payload.commandId,
@@ -86,14 +179,16 @@ export async function processSwitchBotChangeReport(
   if (!credentials) return false;
 
   const name = buildPasscodeName(passcodeRow.reservationId, device.id);
-  const statusResult = await getDeviceStatus(credentials, device.deviceId);
-  if (!statusResult.ok) return false;
+  const keyResult = await findKeyInDeviceList(
+    credentials,
+    device.deviceId,
+    name,
+  );
+  if (!keyResult.ok) return false;
 
-  const match = statusResult.body.keyList?.find((key) => key.name === name);
+  const match = keyResult.body;
   if (!match) return false;
 
-  // findFirst との間にポーリング側が先に確定させていても status=PENDING ガードで
-  // 二重更新にはならない (count=0 で no-op)。
   const updated = await prisma.smartLockPasscode.updateMany({
     where: { id: passcodeRow.id, status: SmartLockPasscodeStatus.PENDING },
     data: {
@@ -103,4 +198,82 @@ export async function processSwitchBotChangeReport(
     },
   });
   return updated.count > 0;
+}
+
+/**
+ * webhook で受信した changeReport（createKey / deleteKey）を処理する。
+ */
+export async function processSwitchBotChangeReport(
+  payload: SwitchBotChangeReportPayload,
+): Promise<boolean> {
+  const eventName = normalizeEventName(payload.eventName);
+  if (eventName !== "createKey" && eventName !== "deleteKey") {
+    return false;
+  }
+
+  const device = await prisma.smartLockDevice.findUnique({
+    where: { deviceId: payload.deviceMac },
+  });
+  if (!device) return false;
+
+  if (eventName === "deleteKey") {
+    return processDeleteKeyChangeReport(device, payload);
+  }
+  return processCreateKeyChangeReport(device, payload);
+}
+
+/**
+ * 錠デバイス（LOCK / LOCK_LITE / LOCK_PRO）の lockState webhook を反映する。
+ */
+export async function processSwitchBotLockStateReport(
+  payload: SwitchBotLockStateReportPayload,
+): Promise<boolean> {
+  const device = await prisma.smartLockDevice.findUnique({
+    where: { deviceId: payload.deviceMac },
+    select: { id: true, deviceType: true },
+  });
+  if (!device) return false;
+
+  if (!isSmartLockBodyDeviceType(device.deviceType as SmartLockDeviceType)) {
+    return false;
+  }
+
+  const lastStateAt =
+    payload.timeOfSample !== undefined
+      ? new Date(payload.timeOfSample * 1000)
+      : new Date();
+
+  const updated = await prisma.smartLockDevice.updateMany({
+    where: { deviceId: payload.deviceMac },
+    data: {
+      ...(payload.lockState !== undefined && {
+        lastLockState: payload.lockState,
+      }),
+      ...(payload.doorState !== undefined && {
+        lastDoorState: payload.doorState,
+      }),
+      ...(payload.battery !== undefined && { lastBattery: payload.battery }),
+      lastStateAt,
+    },
+  });
+  return updated.count > 0;
+}
+
+/**
+ * deleteKey webhook success 後、Device List で key 消失を確認して REVOKED にする。
+ * Route から deleteKey 処理後にベストエフォートで呼べる補助。
+ */
+export async function confirmRevokeFromWebhookSuccess(input: {
+  readonly deviceMac: string;
+  readonly passcodeId: string;
+  readonly switchbotKeyId: string;
+}): Promise<boolean> {
+  const credentials = await getDecryptedSwitchBotCredentials();
+  if (!credentials) return false;
+
+  return confirmRevokeByKeyAbsence(credentials, {
+    id: input.passcodeId,
+    switchbotKeyId: input.switchbotKeyId,
+    device: { deviceId: input.deviceMac },
+  });
 }

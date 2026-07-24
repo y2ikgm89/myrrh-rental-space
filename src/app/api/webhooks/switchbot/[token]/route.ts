@@ -1,8 +1,12 @@
 /**
  * SwitchBot Webhook API
  *
- * SwitchBotからの`createKey`実行結果（changeReportイベント）を受信し、
- * パスコードの確定/失敗を早期反映する（主経路はポーリング、本経路は高速パス）。
+ * SwitchBotからの changeReport イベントを受信する。
+ * - createKey / deleteKey コマンド結果: webhook が成否の正本
+ * - lockState: 錠デバイスの施錠状態・電池更新
+ *
+ * keyId 物質化は Device List keyList 突合（domain 層）。Device List 疎 poll は
+ * webhook 遅延時の楽観確定の副経路。
  *
  * SwitchBotはinbound webhookの署名検証機構を公式に提供していないため、
  * ①URLパスの推測困難なトークン（`switchbotWebhookPathToken`、timing-safe比較）
@@ -18,9 +22,11 @@ import { getSwitchBotWebhookAuth } from "@/shared/domain/settings/api-key-querie
 import {
   isKnownSmartLockDevice,
   processSwitchBotChangeReport,
+  processSwitchBotLockStateReport,
 } from "@/shared/domain/smart-lock/webhook-commands";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
+import { isRecord } from "@/shared/lib/serialize";
 import {
   logError,
   normalizeError,
@@ -28,15 +34,69 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 
-const changeReportSchema = z.object({
-  eventType: z.string(),
-  context: z.object({
-    deviceMac: z.string(),
-    eventName: z.string(),
-    commandId: z.string(),
-    result: z.enum(["success", "failed", "timeout"]),
-  }),
+const commandResultContextSchema = z.object({
+  deviceMac: z.string(),
+  eventName: z.string(),
+  commandId: z.string().optional(),
+  result: z.enum(["success", "failed", "timeout"]),
 });
+
+const lockStateContextSchema = z.object({
+  deviceMac: z.string(),
+  lockState: z.string(),
+  battery: z.number().int().min(0).max(100).optional(),
+  timeOfSample: z.number().optional(),
+  deviceType: z.string().optional(),
+});
+
+type ChangeReport =
+  | {
+      readonly kind: "command";
+      readonly eventType: "changeReport";
+      readonly context: z.infer<typeof commandResultContextSchema>;
+    }
+  | {
+      readonly kind: "lockState";
+      readonly eventType: "changeReport";
+      readonly context: z.infer<typeof lockStateContextSchema>;
+    };
+
+function parseChangeReport(raw: unknown): ChangeReport | null {
+  if (!isRecord(raw)) return null;
+  if (raw["eventType"] !== "changeReport") return null;
+  const rawContext = raw["context"];
+  if (!isRecord(rawContext)) return null;
+
+  const context = rawContext;
+
+  if (typeof context["lockState"] === "string") {
+    const parsed = lockStateContextSchema.safeParse(context);
+    if (!parsed.success) return null;
+    return {
+      kind: "lockState",
+      eventType: "changeReport",
+      context: parsed.data,
+    };
+  }
+
+  const resultValue = context["result"];
+  if (
+    typeof context["eventName"] === "string" &&
+    (resultValue === "success" ||
+      resultValue === "failed" ||
+      resultValue === "timeout")
+  ) {
+    const parsed = commandResultContextSchema.safeParse(context);
+    if (!parsed.success) return null;
+    return {
+      kind: "command",
+      eventType: "changeReport",
+      context: parsed.data,
+    };
+  }
+
+  return null;
+}
 
 type RouteContext = { params: Promise<{ token: string }> };
 
@@ -60,13 +120,12 @@ export async function POST(request: Request, { params }: RouteContext) {
       return jsonError("Invalid JSON", 400);
     }
 
-    const parsed = changeReportSchema.safeParse(raw);
-    if (!parsed.success) {
-      // createKey以外のchangeReport種別など、未対応イベントは無視して200を返す
+    const parsed = parseChangeReport(raw);
+    if (!parsed) {
       return jsonSuccess({ received: true, handled: false });
     }
 
-    const { deviceMac, eventName, commandId, result } = parsed.data.context;
+    const { deviceMac } = parsed.context;
 
     const known = await isKnownSmartLockDevice(deviceMac);
     if (!known) {
@@ -78,11 +137,23 @@ export async function POST(request: Request, { params }: RouteContext) {
       return jsonSuccess({ received: true, handled: false });
     }
 
+    if (parsed.kind === "lockState") {
+      const { lockState, battery, timeOfSample } = parsed.context;
+      const handled = await processSwitchBotLockStateReport({
+        deviceMac,
+        lockState,
+        ...(battery !== undefined ? { battery } : {}),
+        ...(timeOfSample !== undefined ? { timeOfSample } : {}),
+      });
+      return jsonSuccess({ received: true, handled });
+    }
+
+    const { eventName, commandId, result } = parsed.context;
     const handled = await processSwitchBotChangeReport({
       deviceMac,
-      eventName,
-      commandId,
+      eventName: eventName.trim(),
       result,
+      ...(commandId !== undefined ? { commandId } : {}),
     });
 
     return jsonSuccess({ received: true, handled });

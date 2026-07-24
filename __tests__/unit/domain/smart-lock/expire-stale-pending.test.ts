@@ -36,7 +36,9 @@ mock.module("@/shared/domain/settings/api-key-queries", () => ({
 }));
 
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
-  deletePasscode: () => Promise.resolve({ ok: true }),
+  deletePasscode: () => Promise.resolve({ ok: true, body: {} }),
+  findKeyByIdInDeviceList: () =>
+    Promise.resolve({ ok: true, body: { id: "present" } }),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({

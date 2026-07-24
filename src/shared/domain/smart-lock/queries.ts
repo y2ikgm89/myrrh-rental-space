@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import type { SmartLockDeviceType } from "@generated/prisma/enums";
 import type { SmartLockDeviceData } from "@/shared/domain/smart-lock/types";
+import { SMART_LOCK_PAD_DEVICE_TYPES } from "@/shared/lib/validations/enums/helpers";
 
 const SMART_LOCK_DEVICE_SELECT = {
   id: true,
@@ -11,6 +12,11 @@ const SMART_LOCK_DEVICE_SELECT = {
   deviceName: true,
   deviceType: true,
   isActive: true,
+  pairedLockDeviceId: true,
+  lastLockState: true,
+  lastDoorState: true,
+  lastBattery: true,
+  lastStateAt: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -22,6 +28,11 @@ function formatSmartLockDevice(row: {
   deviceName: string;
   deviceType: SmartLockDeviceType;
   isActive: boolean;
+  pairedLockDeviceId: string | null;
+  lastLockState: string | null;
+  lastDoorState: string | null;
+  lastBattery: number | null;
+  lastStateAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }): SmartLockDeviceData {
@@ -32,17 +43,25 @@ function formatSmartLockDevice(row: {
     deviceName: row.deviceName,
     deviceType: row.deviceType,
     isActive: row.isActive,
+    pairedLockDeviceId: row.pairedLockDeviceId,
+    lastLockState: row.lastLockState,
+    lastDoorState: row.lastDoorState,
+    lastBattery: row.lastBattery,
+    lastStateAt: row.lastStateAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-/** 当該拠点に登録されたスマートロックデバイス一覧（拠点の既定デバイス選択用、登録順） */
+/** 拠点の既定デバイス選択用。パッド（KEYPAD*）のみ。 */
 export async function getSmartLockDevicesForLocation(
   locationId: string,
 ): Promise<SmartLockDeviceData[]> {
   const rows = await prisma.smartLockDevice.findMany({
-    where: { locationId },
+    where: {
+      locationId,
+      deviceType: { in: [...SMART_LOCK_PAD_DEVICE_TYPES] },
+    },
     orderBy: { createdAt: "asc" },
     select: SMART_LOCK_DEVICE_SELECT,
   });

@@ -2521,28 +2521,34 @@ model AdminNotification {
 // =============================================================================
 
 enum SmartLockDeviceType {
+  /// パスコード発行対象（Keypad 系）
   KEYPAD
   KEYPAD_TOUCH
   KEYPAD_VISION
   KEYPAD_VISION_PRO
-  LOCK_VISION_PRO
+  /// 施錠状態監視のみ（createKey なし）
+  LOCK
+  LOCK_LITE
+  LOCK_PRO
 }
 
 enum SmartLockPasscodeStatus {
-  /// createKey 呼出済み、Get Device Status での keyId 確定待ち
+  /// createKey 受理済み、webhook / Device List での keyId 確定待ち
   PENDING
-  /// keyList 突合成功（switchbotKeyId 確定済み）
+  /// Device List keyList 突合成功（switchbotKeyId 確定済み）
   CONFIRMED
-  /// API 呼出失敗、または確定ポーリングがタイムアウト
+  /// createKey 失敗、webhook failed/timeout、または stale PENDING 確定
   FAILED
-  /// deleteKey 済み（チェックアウト後 or キャンセルによる失効）
+  /// deleteKey 受理済み、webhook / Device List での失効確定待ち
+  REVOKE_PENDING
+  /// deleteKey 確定（チェックアウト後 or キャンセルによる失効）
   REVOKED
 }
 
-/// 拠点（Location）に紐づく物理スマートロック（Keypad アクセサリ or Lock Vision Pro 単体）。
-/// 1 拠点に複数台を登録できる登録簿（1:N from Location）。各Spaceはこの登録簿から
-/// 最大1台を選んで使う（Space.smartLockDeviceId）ため、同じ物理ロックを複数Spaceで
-/// 共有できる（例: 建物入口の共有ロックを複数の貸室が使う場合）。
+/// 拠点（Location）に紐づく SwitchBot デバイス登録簿。
+/// - パッド（KEYPAD*）: 一時パスコード発行。Space / Location デフォルトに割当可能。
+/// - 錠（LOCK*）: 施錠状態・電池の監視のみ。パスコード発行・Space 割当対象外。
+/// 1 拠点に複数台を登録できる（1:N from Location）。同一パッドを複数 Space で共有可。
 model SmartLockDevice {
   id         String              @id @default(uuid()) @db.Uuid
   locationId String              @db.Uuid
@@ -2550,6 +2556,14 @@ model SmartLockDevice {
   deviceName String
   deviceType SmartLockDeviceType
   isActive   Boolean             @default(true)
+  /// パッド → ペア錠（錠ロールの SmartLockDevice）。錠側では null。
+  pairedLockDeviceId String?     @db.Uuid
+  /// webhook / status 由来（錠ロール）。正規化: LOCKED|UNLOCKED|JAMMED
+  lastLockState String?
+  /// Pro/Lock のみ。正規化: OPEN|CLOSE。Lite は常に null
+  lastDoorState String?
+  lastBattery   Int?
+  lastStateAt   DateTime?
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
 
@@ -2557,6 +2571,8 @@ model SmartLockDevice {
   defaultForLocations Location[]          @relation("LocationDefaultSmartLockDevice")
   spaces              Space[]
   passcodes           SmartLockPasscode[]
+  pairedLockDevice    SmartLockDevice?    @relation("PadToLock", fields: [pairedLockDeviceId], references: [id], onDelete: SetNull)
+  pairedPads          SmartLockDevice[]   @relation("PadToLock")
 
   @@index([locationId])
   @@map("smart_lock_devices")
@@ -2572,13 +2588,17 @@ model SmartLockPasscode {
   passcodeCiphertext String             @db.Text
   /// createKey 呼出の同期レスポンス（相関確認用、keyId ではない）
   switchbotCommandId String?
-  /// Get Device Status の keyList[].id（deleteKey に必須）
+  /// deleteKey 呼出の同期レスポンス commandId（無い場合あり）
+  switchbotDeleteCommandId String?
+  /// Device List keyList[].id（deleteKey に必須）
   switchbotKeyId     String?
   /// パスコード有効期間（予約時間 ± switchbotPasscodeBufferMinutes）
   startTime     DateTime
   endTime       DateTime
   failureReason String?
   confirmedAt   DateTime?
+  /// REVOKE_PENDING 開始時刻（stale 判定用）
+  revokeRequestedAt DateTime?
   revokedAt     DateTime?
   createdAt     DateTime                @default(now())
   updatedAt     DateTime                @updatedAt
@@ -2588,6 +2608,7 @@ model SmartLockPasscode {
 
   @@unique([reservationId, deviceId])
   @@index([status, endTime])
+  @@index([status, revokeRequestedAt])
   @@map("smart_lock_passcodes")
 }
 

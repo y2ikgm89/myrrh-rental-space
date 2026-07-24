@@ -14,7 +14,8 @@ import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { getSwitchBotConfig } from "@/shared/domain/settings/api-key-queries";
 import {
   expireStalePendingSmartLockPasscodes,
-  findRevocableSmartLockPasscodes,
+  expireStaleRevokePendingSmartLockPasscodes,
+  findStuckSmartLockPasscodesWhenIntegrationDisabled,
   revokeExpiredSmartLockPasscodes,
 } from "@/shared/domain/smart-lock/revoke-passcode";
 import {
@@ -43,14 +44,15 @@ export async function GET(request: Request) {
     // 30 分経っても届かなかった行を FAILED へ倒し、`@@unique([reservationId, deviceId])`
     // 下で再発行不可の orphan を残さない。詳細は revoke-passcode.ts の JSDoc 参照。
     const stalePendingExpired = await expireStalePendingSmartLockPasscodes(now);
+    const staleRevokePendingReverted =
+      await expireStaleRevokePendingSmartLockPasscodes(now);
 
     const config = await getSwitchBotConfig();
     if (!config.enabled) {
-      // SwitchBot連携が無効でも、失効すべきCONFIRMEDパスコードの蓄積は
-      // DBのみの読取(外部API呼出無し)で検知できる。無効化中に気づかず放置される
-      // （後日デバイス削除でcascade削除されると復元不能になる）のを防ぐため、
-      // 件数だけでも警告ログに残す。
-      const stuck = await findRevocableSmartLockPasscodes(now);
+      // SwitchBot連携が無効でも、失効すべき CONFIRMED / REVOKE_PENDING パスコードの
+      // 蓄積は DB のみの読取(外部API呼出無し)で検知できる。
+      const stuck =
+        await findStuckSmartLockPasscodesWhenIntegrationDisabled(now);
       if (stuck.length > 0) {
         logError(
           new Error(
@@ -63,6 +65,7 @@ export async function GET(request: Request) {
               operation: "smartLockCleanupCron",
               stuckCount: stuck.length,
               stalePendingExpired,
+              staleRevokePendingReverted,
             },
           },
         );
@@ -72,6 +75,7 @@ export async function GET(request: Request) {
         reason: "switchbot_disabled",
         stuckCount: stuck.length,
         stalePendingExpired,
+        staleRevokePendingReverted,
       });
     }
 
@@ -86,11 +90,17 @@ export async function GET(request: Request) {
           revoked,
           failed,
           stalePendingExpired,
+          staleRevokePendingReverted,
         },
       });
     }
 
-    return jsonSuccess({ revoked, failed, stalePendingExpired });
+    return jsonSuccess({
+      revoked,
+      failed,
+      stalePendingExpired,
+      staleRevokePendingReverted,
+    });
   } catch (error) {
     unstable_rethrow(error);
     logError(normalizeError(error), {

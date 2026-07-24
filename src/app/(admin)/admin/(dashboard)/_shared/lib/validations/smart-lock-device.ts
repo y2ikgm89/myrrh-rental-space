@@ -29,6 +29,10 @@ export const smartLockDeviceFormSchema = z.object({
     .min(1, { error: "デバイス名を入力してください" })
     .max(100, { error: "デバイス名は100文字以内で入力してください" }),
   deviceType: smartLockDeviceTypeSchema,
+  pairedLockDeviceId: z
+    .uuid({ error: "ペア錠の指定が不正です" })
+    .optional()
+    .nullable(),
   isActive: switchBoolean(),
 });
 

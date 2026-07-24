@@ -1,6 +1,9 @@
 /**
  * 予約確定時のSwitchBotスマートロック用パスコード自動発行
  *
+ * createKey コマンド成否の正本は webhook（`webhook-commands.ts`）。
+ * Device List の疎 poll は keyId 物質化と webhook 遅延時の楽観確定の副経路。
+ *
  * @module shared/domain/smart-lock/issue-passcode
  */
 
@@ -12,10 +15,14 @@ import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import {
   createPasscode,
-  getDeviceStatus,
+  findKeyInDeviceList,
   type SwitchBotCredentials,
 } from "@/shared/lib/smart-lock/switchbot-client";
-import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  SmartLockDeviceType,
+  SmartLockPasscodeStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { isSmartLockPadDeviceType } from "@/shared/lib/validations/enums/helpers";
 import {
   logError,
   normalizeError,
@@ -57,9 +64,8 @@ function notifyPasscodeFailure(input: {
 /** Settingsの暗号化フィールドとは無関係のローカルpurpose（SETTINGS_CRYPTO_PURPOSESには含めない）。 */
 export const PASSCODE_CRYPTO_PURPOSE = "switchbot-guest-passcode";
 
-/** Get Device Statusでのkeyid確定ポーリング間隔・上限（SwitchBotのcommandタイムアウトは1分）。 */
-const POLL_INTERVAL_MS = 3_000;
-const MAX_POLL_ATTEMPTS = 15; // 3s * 15 = 45s
+/** Device List 疎 poll の開始からのオフセット（ms）。最大 5 回 / 45s。 */
+const DEVICE_LIST_POLL_OFFSETS_MS = [0, 5_000, 15_000, 30_000, 45_000] as const;
 
 export type IssueSmartLockPasscodesInput = {
   readonly reservationId: string;
@@ -164,6 +170,37 @@ async function resolveAfterCreateConflict(
   );
 }
 
+async function confirmPasscodeFromKeyList(
+  passcodeRowId: string,
+  keyId: string,
+  deviceName: string,
+  password: string,
+): Promise<IssuedSmartLockPasscode | null> {
+  const updated = await prisma.smartLockPasscode.updateMany({
+    where: { id: passcodeRowId, status: SmartLockPasscodeStatus.PENDING },
+    data: {
+      status: SmartLockPasscodeStatus.CONFIRMED,
+      switchbotKeyId: keyId,
+      confirmedAt: new Date(),
+    },
+  });
+  if (updated.count === 0) {
+    // 同一のcreateKey呼出・同一の物理パスコードに対する別経路（webhook）の
+    // 確定と競合した。既にCONFIRMEDならこの呼び出しのpasswordをそのまま
+    // 返してよい（webhookが記録したswitchbotKeyIdも同じkeyListエントリを
+    // 指すため）。FAILEDに倒れていた場合のみ発行失敗として扱う。
+    const current = await prisma.smartLockPasscode.findUnique({
+      where: { id: passcodeRowId },
+      select: { status: true },
+    });
+    if (current?.status === SmartLockPasscodeStatus.CONFIRMED) {
+      return { deviceName, passcode: password };
+    }
+    return null;
+  }
+  return { deviceName, passcode: password };
+}
+
 async function issueForDevice(
   device: {
     readonly id: string;
@@ -246,60 +283,44 @@ async function issueForDevice(
     data: { switchbotCommandId: createResult.body.commandId },
   });
 
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+  for (
+    let attempt = 0;
+    attempt < DEVICE_LIST_POLL_OFFSETS_MS.length;
+    attempt++
+  ) {
     if (attempt > 0) {
-      await sleep(POLL_INTERVAL_MS);
+      const currentOffset = DEVICE_LIST_POLL_OFFSETS_MS[attempt] ?? 0;
+      const previousOffset = DEVICE_LIST_POLL_OFFSETS_MS[attempt - 1] ?? 0;
+      await sleep(currentOffset - previousOffset);
     }
-    const statusResult = await getDeviceStatus(credentials, device.deviceId);
-    if (!statusResult.ok) continue;
 
-    const match = statusResult.body.keyList?.find((key) => key.name === name);
-    if (match) {
-      // webhook 側の高速パスが同じ行を先に確定/失効させている可能性があるため、
-      // status=PENDING を WHERE に含めた claim 形で書き込む（webhook-commands.ts の
-      // processSwitchBotChangeReport と同型）。
-      const updated = await prisma.smartLockPasscode.updateMany({
-        where: { id: passcodeRow.id, status: SmartLockPasscodeStatus.PENDING },
-        data: {
-          status: SmartLockPasscodeStatus.CONFIRMED,
-          switchbotKeyId: match.id,
-          confirmedAt: new Date(),
-        },
-      });
-      if (updated.count === 0) {
-        // 同一のcreateKey呼出・同一の物理パスコードに対する別経路（webhook）の
-        // 確定と競合した。既にCONFIRMEDならこの呼び出しのpasswordをそのまま
-        // 返してよい（webhookが記録したswitchbotKeyIdも同じkeyListエントリを
-        // 指すため）。FAILEDに倒れていた場合のみ発行失敗として扱う。
-        const current = await prisma.smartLockPasscode.findUnique({
-          where: { id: passcodeRow.id },
-          select: { status: true },
-        });
-        if (current?.status === SmartLockPasscodeStatus.CONFIRMED) {
-          return { deviceName: device.deviceName, passcode: password };
-        }
-        return null;
-      }
-      return { deviceName: device.deviceName, passcode: password };
+    const keyResult = await findKeyInDeviceList(
+      credentials,
+      device.deviceId,
+      name,
+    );
+    if (!keyResult.ok || keyResult.body === null) continue;
+
+    const confirmed = await confirmPasscodeFromKeyList(
+      passcodeRow.id,
+      keyResult.body.id,
+      device.deviceName,
+      password,
+    );
+    if (confirmed) {
+      return confirmed;
     }
+    return null;
   }
 
-  // Poll がタイムアウトしても **status は PENDING のまま残す**。
+  // Device List poll がタイムアウトしても **status は PENDING のまま残す**。
   //
-  // 旧実装は即 FAILED に倒していたが、これは webhook-commands.ts の
-  // processSwitchBotChangeReport が `status=PENDING` を WHERE に含めて claim
-  // する契約と競合し、遅延到着した webhook が CONFIRMED に upgrade できず
-  // 失敗記録が残る (`@@unique([reservationId, deviceId])` により再発行不可) race
-  // が発生していた。
-  //
-  // 現在の設計: poll で確定できなくても webhook の到着で CONFIRMED になる余地を
-  // 残す。webhook が最終的に来なかった場合の PENDING orphan は
-  // `expireStalePendingSmartLockPasscodes` (smart-lock-cleanup cron) が
-  // `createdAt + STALE_PENDING_THRESHOLD_MINUTES` 経過後に FAILED へ倒す
-  // (詳細は `revoke-passcode.ts` の同関数 JSDoc)。
+  // webhook（正本）が createKey success/failed/timeout を届ける余地を残す。
+  // 成否の失敗確定は webhook failed/timeout または stale cron に委譲する。
+  // 楽観確定（Device List に key が出現）は上記 poll で試行済み。
   logError(
     new Error(
-      "SwitchBot passcode confirmation timed out (status left PENDING for late webhook)",
+      "SwitchBot passcode confirmation timed out (status left PENDING for webhook)",
     ),
     {
       category: ErrorCategory.EXTERNAL_API,
@@ -312,10 +333,6 @@ async function issueForDevice(
       },
     },
   );
-  // Poll timeout でも通知を発火する。webhook が最終的に PENDING → CONFIRMED に
-  // upgrade する余地は残るが、45 秒経過して確定していないので運用側の状況把握が必要。
-  // cleanup cron の STALE_PENDING_THRESHOLD 経過で FAILED に倒れた場合の通知は
-  // cron 経路 (revoke-passcode.ts の expireStalePending) で別途発火する。
   notifyPasscodeFailure({
     reservationId: input.reservationId,
     reason:
@@ -330,6 +347,8 @@ async function issueForDevice(
  * - スペースにデバイス未割り当て、またはデバイスが無効化されている場合は no-op で
  *   空配列を返す（戻り値は将来の複数デバイス対応も見据えて配列のまま維持するが、
  *   現在は0または1要素）。
+ * - 錠タイプ（LOCK / LOCK_LITE / LOCK_PRO）はパスコード発行対象外。割当されていても
+ *   no-op（guard）。
  * - 同一予約・同一デバイスの組は既存レコードがあれば再発行しない（`@@unique`で保証、
  *   このチェックはAPI呼出前の重複防止用）。既にCONFIRMED済みなら復号して結果に含める。
  * - 発行成功・失敗どちらの場合も呼び出し元の処理（確認メール送信）をブロックしないよう
@@ -350,6 +369,11 @@ export async function issueSmartLockPasscodes(
     const device = space?.smartLockDevice;
     // デバイスなし or 無効化 = そもそも発行対象外 (failure ではない)
     if (!device || !device.isActive) {
+      return { passcodes: [], issuanceFailed: false };
+    }
+
+    // 錠タイプは Space 割当対象外だが、誤割当ガードとして no-op
+    if (!isSmartLockPadDeviceType(device.deviceType as SmartLockDeviceType)) {
       return { passcodes: [], issuanceFailed: false };
     }
 

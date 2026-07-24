@@ -986,8 +986,37 @@ export const SMART_LOCK_DEVICE_TYPE_LABELS: Record<
   KEYPAD_TOUCH: "Keypad Touch",
   KEYPAD_VISION: "Keypad Vision",
   KEYPAD_VISION_PRO: "Keypad Vision Pro",
-  LOCK_VISION_PRO: "Lock Vision Pro",
+  LOCK: "Lock",
+  LOCK_LITE: "Lock Lite",
+  LOCK_PRO: "Lock Pro",
 };
+
+/** 一時パスコード発行・Space/Location デフォルト割当の対象（Keypad 系）。 */
+export const SMART_LOCK_PAD_DEVICE_TYPES: readonly SmartLockDeviceType[] = [
+  SmartLockDeviceType.KEYPAD,
+  SmartLockDeviceType.KEYPAD_TOUCH,
+  SmartLockDeviceType.KEYPAD_VISION,
+  SmartLockDeviceType.KEYPAD_VISION_PRO,
+];
+
+/** 施錠状態監視のみ（createKey なし）。 */
+export const SMART_LOCK_BODY_DEVICE_TYPES: readonly SmartLockDeviceType[] = [
+  SmartLockDeviceType.LOCK,
+  SmartLockDeviceType.LOCK_LITE,
+  SmartLockDeviceType.LOCK_PRO,
+];
+
+export function isSmartLockPadDeviceType(
+  deviceType: SmartLockDeviceType,
+): boolean {
+  return SMART_LOCK_PAD_DEVICE_TYPES.includes(deviceType);
+}
+
+export function isSmartLockBodyDeviceType(
+  deviceType: SmartLockDeviceType,
+): boolean {
+  return SMART_LOCK_BODY_DEVICE_TYPES.includes(deviceType);
+}
 
 // =============================================================================
 // DayOfWeek / HolidayMode Labels（SpaceRatePlan 曜日・祝日設定 SSoT）

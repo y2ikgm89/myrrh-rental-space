@@ -61,6 +61,14 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // check-protected-files.sh (絶対規約 #7) で block されるため allowlist で bypass。
   // Risk 1 の窓は Cloud Run min0/max1 の atomic switch で排除済。
   "prisma/migrations/20260719020000_inquiry_overhaul_phase1/migration.sql",
+  // switchbot-official-clean (feat/switchbot-official-clean, PR #1457):
+  // SmartLockDeviceType を clean break で再構築（LOCK_VISION_PRO 削除、
+  // LOCK / LOCK_LITE / LOCK_PRO 追加）。`ALTER COLUMN ... TYPE` は
+  // `changing-column-type` を発火し、`-- squawk-ignore changing-column-type` を
+  // 直前行に置いても squawk が当該 rule を抑止しないため allowlist で bypass。
+  // schema 側 DROP/RENAME 判定で計画ダウンタイム付きデプロイに切替。アプリ型は
+  // 新 enum に更新済。Risk 1 の窓は Cloud Run min0/max1 の atomic switch で排除済。
+  "prisma/migrations/20260724140200_smart_lock_device_type_clean_break/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {

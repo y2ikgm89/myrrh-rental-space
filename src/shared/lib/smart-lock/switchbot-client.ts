@@ -6,6 +6,10 @@
  * secret keyで HMAC-SHA256 し、Base64エンコードしたもの（大文字化は公式サンプル間で
  * 一致しておらず本実装では行わない — Python/JS公式サンプルに準拠）。
  *
+ * keyId の SSoT は Device List (`GET /devices`) の `keyList`。コマンド成否
+ * （createKey / deleteKey）は webhook を正本とし、Device List は keyId 物質化の
+ * 副経路（疎 poll）として使う。
+ *
  * @see https://github.com/OpenWonderLabs/SwitchBotAPI
  * @module shared/lib/smart-lock/switchbot-client
  */
@@ -16,6 +20,7 @@ import { z } from "zod";
 
 const API_BASE = "https://api.switch-bot.com/v1.1";
 const REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_DEVICE_LIST_CACHE_TTL_MS = 3_000;
 
 export type SwitchBotCredentials = {
   readonly openToken: string;
@@ -35,6 +40,22 @@ const envelopeSchema = z.object({
   body: z.unknown().optional(),
   message: z.string().optional(),
 });
+
+type DeviceListBody = {
+  deviceList: SwitchBotDeviceListItem[];
+  infraredRemoteList: unknown[];
+};
+
+type DeviceListCacheEntry = {
+  readonly expiresAt: number;
+  readonly result: SwitchBotApiResult<DeviceListBody>;
+};
+
+const deviceListCache = new Map<string, DeviceListCacheEntry>();
+
+function deviceListCacheKey(credentials: SwitchBotCredentials): string {
+  return credentials.openToken.slice(0, 16);
+}
 
 function buildAuthHeaders(credentials: SwitchBotCredentials): HeadersInit {
   const t = Date.now().toString();
@@ -94,12 +115,30 @@ async function request<T>(
   }
 }
 
+export type SwitchBotPasscodeType =
+  "permanent" | "timeLimit" | "disposable" | "urgent";
+
+export type SwitchBotKeyListItem = {
+  readonly id: string;
+  readonly name: string;
+  readonly type: SwitchBotPasscodeType;
+  /** 暗号化された値（SwitchBot側の暗号化であり本アプリの`encrypt()`とは無関係） */
+  readonly password: string;
+  readonly iv: string;
+  readonly status: "normal" | "expired";
+  readonly createTime: number;
+};
+
 export type SwitchBotDeviceListItem = {
   readonly deviceId: string;
   readonly deviceName: string;
   readonly deviceType: string;
   readonly enableCloudService: boolean;
   readonly hubDeviceId: string;
+  /** Keypad 系デバイスに含まれる発行済みパスコード一覧（Device List のみ） */
+  readonly keyList?: SwitchBotKeyListItem[];
+  /** Keypad がペアリングしている錠デバイスの MAC（Device List のみ） */
+  readonly lockDeviceId?: string;
 };
 
 /**
@@ -115,8 +154,82 @@ export async function getDeviceList(credentials: SwitchBotCredentials): Promise<
   return request(credentials, "/devices");
 }
 
-export type SwitchBotPasscodeType =
-  "permanent" | "timeLimit" | "disposable" | "urgent";
+/**
+ * プロセス内 TTL キャッシュ付きの Device List 取得。
+ * createKey / deleteKey 確定待ちの疎 poll で `/devices` 呼び出しを畳む。
+ */
+export async function getDeviceListCached(
+  credentials: SwitchBotCredentials,
+  options?: { readonly ttlMs?: number },
+): Promise<
+  SwitchBotApiResult<{
+    deviceList: SwitchBotDeviceListItem[];
+    infraredRemoteList: unknown[];
+  }>
+> {
+  const ttlMs = options?.ttlMs ?? DEFAULT_DEVICE_LIST_CACHE_TTL_MS;
+  const cacheKey = deviceListCacheKey(credentials);
+  const now = Date.now();
+  const cached = deviceListCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.result;
+  }
+
+  const result = await getDeviceList(credentials);
+  // 失敗結果はキャッシュしない（一時障害やテスト間の汚染を避ける）
+  if (result.ok) {
+    deviceListCache.set(cacheKey, { expiresAt: now + ttlMs, result });
+  }
+  return result;
+}
+
+/** テスト・資格情報ローテーション後に process-local Device List キャッシュを捨てる。 */
+export function clearDeviceListCache(): void {
+  deviceListCache.clear();
+}
+
+function findDeviceInList(
+  deviceList: readonly SwitchBotDeviceListItem[],
+  deviceId: string,
+): SwitchBotDeviceListItem | undefined {
+  return deviceList.find((device) => device.deviceId === deviceId);
+}
+
+/**
+ * Device List から `name` でパスコードを突合する。keyId 解決の SSoT。
+ */
+export async function findKeyInDeviceList(
+  credentials: SwitchBotCredentials,
+  deviceId: string,
+  name: string,
+): Promise<SwitchBotApiResult<SwitchBotKeyListItem | null>> {
+  const listResult = await getDeviceListCached(credentials);
+  if (!listResult.ok) {
+    return listResult;
+  }
+
+  const device = findDeviceInList(listResult.body.deviceList, deviceId);
+  const key = device?.keyList?.find((item) => item.name === name) ?? null;
+  return { ok: true, body: key };
+}
+
+/**
+ * Device List から `keyId` でパスコードを突合する（revoke 失効確認等）。
+ */
+export async function findKeyByIdInDeviceList(
+  credentials: SwitchBotCredentials,
+  deviceId: string,
+  keyId: string,
+): Promise<SwitchBotApiResult<SwitchBotKeyListItem | null>> {
+  const listResult = await getDeviceListCached(credentials);
+  if (!listResult.ok) {
+    return listResult;
+  }
+
+  const device = findDeviceInList(listResult.body.deviceList, deviceId);
+  const key = device?.keyList?.find((item) => item.id === keyId) ?? null;
+  return { ok: true, body: key };
+}
 
 export type CreatePasscodeParams = {
   readonly deviceId: string;
@@ -139,9 +252,8 @@ export type CreatePasscodeParams = {
  * 正本として採用する（v1.1 APIの一般コマンド送信エンドポイントの標準形式のため）。
  * 実機での動作確認を推奨する。
  *
- * レスポンスの `commandId` はコマンド実行の相関確認用であり、パスコード自体のID
- * （`deleteKey`に必要な`keyId`）ではない。keyIdは`getDeviceStatus`の`keyList`から
- * `name`で突合して取得する（専用の取得APIが存在しないため）。
+ * レスポンスの `commandId` は webhook 相関用。コマンド成否は webhook を正本とする。
+ * keyId は Device List の `keyList` から `name` で突合して取得する。
  */
 export async function createPasscode(
   credentials: SwitchBotCredentials,
@@ -153,44 +265,80 @@ export async function createPasscode(
   });
 }
 
-export type SwitchBotKeyListItem = {
-  readonly id: string;
-  readonly name: string;
-  readonly type: SwitchBotPasscodeType;
-  /** 暗号化された値（SwitchBot側の暗号化であり本アプリの`encrypt()`とは無関係） */
-  readonly password: string;
-  readonly iv: string;
-  readonly status: "normal" | "expired";
-  readonly createTime: number;
+export type SwitchBotLockDeviceStatus = {
+  readonly lockState?: string;
+  readonly doorState?: string;
+  readonly battery?: number;
 };
 
 /**
- * デバイス状態を取得する。Keypad系デバイスの場合、`keyList`に発行済みパスコード
- * 一覧が含まれる（`createKey`の`name`で自分の発行分を突合するために使う）。
+ * 錠デバイス（Lock / Lock Lite / Lock Pro）の施錠・ドア・電池状態を取得する。
+ *
+ * keyList は Status API に含まれないため本関数では返さない。パスコード keyId 解決は
+ * Device List の `findKeyInDeviceList` / `findKeyByIdInDeviceList` を使う。
  */
-export async function getDeviceStatus(
+export async function getLockDeviceStatus(
   credentials: SwitchBotCredentials,
   deviceId: string,
-): Promise<SwitchBotApiResult<{ keyList?: SwitchBotKeyListItem[] }>> {
-  return request(credentials, `/devices/${deviceId}/status`);
+): Promise<SwitchBotApiResult<SwitchBotLockDeviceStatus>> {
+  const result = await request<Record<string, unknown>>(
+    credentials,
+    `/devices/${deviceId}/status`,
+  );
+  if (!result.ok) {
+    return result;
+  }
+
+  const body = result.body;
+  const lockState = body["lockState"];
+  const doorState = body["doorState"];
+  const battery = body["battery"];
+  return {
+    ok: true,
+    body: {
+      ...(typeof lockState === "string" ? { lockState } : {}),
+      ...(typeof doorState === "string" ? { doorState } : {}),
+      ...(typeof battery === "number" ? { battery } : {}),
+    },
+  };
 }
 
 /**
- * パスコードを削除する（`deleteKey`）。`keyId`は`getDeviceStatus`の`keyList[].id`。
+ * パスコードを削除する（`deleteKey`）。`keyId` は Device List の `keyList[].id`。
+ *
+ * コマンド成否は webhook を正本とする。`commandId` は webhook 相関用（body に
+ * 無ければ undefined）。
  */
 export async function deletePasscode(
   credentials: SwitchBotCredentials,
   deviceId: string,
   keyId: string,
-): Promise<SwitchBotApiResult<Record<string, never>>> {
-  return request(credentials, `/devices/${deviceId}/commands`, {
-    method: "POST",
-    body: {
-      commandType: "command",
-      command: "deleteKey",
-      parameter: { id: keyId },
+): Promise<SwitchBotApiResult<{ commandId?: string }>> {
+  const result = await request<{ commandId?: string } | Record<string, never>>(
+    credentials,
+    `/devices/${deviceId}/commands`,
+    {
+      method: "POST",
+      body: {
+        commandType: "command",
+        command: "deleteKey",
+        parameter: { id: keyId },
+      },
     },
-  });
+  );
+  if (!result.ok) {
+    return result;
+  }
+
+  const commandId =
+    typeof result.body === "object" &&
+    result.body !== null &&
+    "commandId" in result.body &&
+    typeof result.body.commandId === "string"
+      ? result.body.commandId
+      : undefined;
+
+  return { ok: true, body: commandId !== undefined ? { commandId } : {} };
 }
 
 /**
