@@ -35,7 +35,9 @@ import {
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
 import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
+import { createMarketingUnsubscribeArtifacts } from "@/shared/lib/tokens/marketing-unsubscribe-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -891,6 +893,7 @@ export async function sendEventBroadcast(
         select: {
           id: true,
           email: true,
+          customerId: true,
         },
       },
     },
@@ -910,21 +913,54 @@ export async function sendEventBroadcast(
     return { ok: true, sent: 0, skipped };
   }
 
+  // List-Unsubscribe 用に Customer を解決する。registration.customerId が
+  // 無いゲスト宛は emailCanonical で lookup（解決できない宛先はヘッダ省略）。
+  const unresolvedEmails = [
+    ...new Set(
+      recipients
+        .filter((r) => r.customerId === null)
+        .map((r) => normalizeEmailForIdentity(r.email)),
+    ),
+  ];
+  const customersByEmail =
+    unresolvedEmails.length > 0
+      ? await prisma.customer.findMany({
+          where: { emailCanonical: { in: unresolvedEmails } },
+          select: { id: true, emailCanonical: true },
+        })
+      : [];
+  const customerIdByEmail = new Map(
+    customersByEmail.map((c) => [c.emailCanonical, c.id]),
+  );
+
   const footer = await getEmailFooterData();
   const appUrl = getAppUrl();
   const eventUrl = `${appUrl}/events/${event.slug}`;
 
   const results = await Promise.allSettled(
-    recipients.map((registration) =>
-      sendEmail({
+    recipients.map((registration) => {
+      const customerId =
+        registration.customerId ??
+        customerIdByEmail.get(normalizeEmailForIdentity(registration.email)) ??
+        null;
+      const unsubscribe =
+        customerId !== null
+          ? createMarketingUnsubscribeArtifacts(customerId)
+          : null;
+
+      return sendEmail({
         payload: {
           to: registration.email,
           subject: params.subject,
+          ...(unsubscribe !== null ? { headers: unsubscribe.headers } : {}),
           react: EventBroadcastEmail({
             eventTitle: event.title,
             eventUrl,
             subject: params.subject,
             bodyText: params.body,
+            ...(unsubscribe !== null
+              ? { unsubscribeUrl: unsubscribe.url }
+              : {}),
             footer,
           }),
         },
@@ -934,8 +970,8 @@ export async function sendEventBroadcast(
           eventId,
           participantEmail: registration.email,
         },
-      }),
-    ),
+      });
+    }),
   );
 
   let sent = 0;

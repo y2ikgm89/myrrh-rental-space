@@ -93,6 +93,7 @@ export async function updateProfileAction(
           firstName: data.firstName,
           companyName: data.companyName || null,
           phoneNumber: data.phoneNumber || null,
+          marketingOptIn: data.marketingOptIn,
         });
 
         const customer = await getCustomerByUserId(session.user.id);
@@ -124,6 +125,7 @@ export async function updateProfileAction(
                 firstName: data.firstName,
                 companyName: data.companyName || null,
                 phoneNumber: data.phoneNumber || null,
+                marketingOptIn: data.marketingOptIn,
                 email: emailInput,
               },
               metadata: {

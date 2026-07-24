@@ -26,6 +26,14 @@ export const customerProfileSchema = z
         z.email({ error: "有効なメールアドレスを入力してください" }),
       ])
       .optional(),
+    /**
+     * お知らせ・キャンペーンメール受信可否（`Customer.marketingOptIn`）。
+     * checkbox は未チェック時に FormData へ出ないため、`"on"` / 欠落を boolean に正規化する。
+     */
+    marketingOptIn: z.preprocess(
+      (value) => value === true || value === "on" || value === "true",
+      z.boolean(),
+    ),
     turnstileToken: z.string().optional(),
   })
   .refine(requireCompanyNameForCorporate, COMPANY_NAME_REFINE_ERROR);

@@ -192,6 +192,8 @@ type ProfileInputShape = {
   companyName?: string;
   phoneNumber?: string;
   email?: string;
+  /** undefined = FormData に載せない（→ marketingOptIn false）。true で "on" を append。 */
+  marketingOptIn?: boolean;
   turnstileToken?: string;
 };
 
@@ -200,6 +202,7 @@ const VALID_INPUT: ProfileInputShape = {
   lastName: "山田",
   firstName: "太郎",
   phoneNumber: "090-1234-5678",
+  marketingOptIn: true,
 };
 
 function inputToFormData(input: ProfileInputShape): FormData {
@@ -217,6 +220,9 @@ function inputToFormData(input: ProfileInputShape): FormData {
   }
   if (input.email !== undefined) {
     fd.append("email", input.email);
+  }
+  if (input.marketingOptIn === true) {
+    fd.append("marketingOptIn", "on");
   }
   if (input.turnstileToken !== undefined) {
     fd.append("turnstileToken", input.turnstileToken);
@@ -302,6 +308,7 @@ describe("updateProfileAction", () => {
           firstName: "太郎",
           companyName: null,
           phoneNumber: "090-1234-5678",
+          marketingOptIn: true,
         },
       );
     });
@@ -350,6 +357,7 @@ describe("updateProfileAction", () => {
           firstName: "太郎",
           companyName: null,
           phoneNumber: null,
+          marketingOptIn: true,
         },
       );
     });

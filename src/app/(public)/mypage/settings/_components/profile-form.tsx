@@ -35,6 +35,7 @@ interface ProfileFormProps {
     readonly companyName: string;
     readonly email: string;
     readonly phoneNumber: string;
+    readonly marketingOptIn: boolean;
   };
   readonly turnstileSiteKey: string | null;
 }
@@ -64,6 +65,7 @@ export function ProfileForm({
       firstName: defaultValues.firstName,
       companyName: defaultValues.companyName,
       phoneNumber: defaultValues.phoneNumber,
+      marketingOptIn: defaultValues.marketingOptIn ? "on" : undefined,
     },
     onValidate({ formData }) {
       return parseWithZod(formData, { schema: customerProfileSchema });
@@ -241,6 +243,24 @@ export function ProfileForm({
         })}
         {...getInputProps(fields.phoneNumber, { type: "tel" })}
       />
+
+      <label className="flex items-start gap-3 text-sm">
+        <input
+          type="checkbox"
+          name={fields.marketingOptIn.name}
+          value="on"
+          defaultChecked={defaultValues.marketingOptIn}
+          className="mt-1 size-4 accent-primary"
+        />
+        <span className="space-y-1">
+          <span className="block font-medium text-foreground">
+            お知らせメールを受け取る
+          </span>
+          <span className="block text-xs text-muted-foreground">
+            運営からのキャンペーン・お知らせメールの配信を許可します。予約確認などの重要なお知らせは、オフでも届く場合があります。
+          </span>
+        </span>
+      </label>
 
       <TurnstileWidget
         ref={turnstileRef}
