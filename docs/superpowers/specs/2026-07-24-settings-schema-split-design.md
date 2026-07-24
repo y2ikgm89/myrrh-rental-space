@@ -133,7 +133,8 @@ Phase 1 のフィールド（プレフィックス除去 = clean 名）:
 - PR 本文に breaking / downtime を明記
 - Trivy SARIF の `continue-on-error` や terraform apply strict gate とは無関係
 
-## 9. 承認
+## 9. 承認 / 実装進捗
 
 - アプローチ A + 段階ダウンタイム: 2026-07-24 ユーザー指示「公式推奨で作業を」で採用
-- Phase 1 から実装開始
+- Phase 1〜5 実装済み。統合 PR: https://github.com/y2ikgm89/myrrh-rental-space/pull/1467
+- Phase 5 完了時点で `Settings` / `settings` ハブは DROP 済み。
