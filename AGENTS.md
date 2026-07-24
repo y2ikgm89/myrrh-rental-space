@@ -22,3 +22,28 @@ For human onboarding — setup, common commands, repo layout — see
   CLI tools, or cloud services. `resolve-library-id` then `query-docs`.
 - Never print, copy, or commit secret values. Treat non-example `.env*` files
   as protected.
+
+## Learned User Preferences
+
+- Prefer official-docs-aligned, clean-break implementations without backward-compat
+  shims when redesigning integrations.
+- When parallelizing work with subagents, use Composer.
+- Do not leave ambiguous or unverified points; investigate and validate against
+  official docs before implementing.
+- Prefer free / no-cost fixes first; defer paid infrastructure work unless clearly
+  needed.
+- For SwitchBot, keep admin notifications and remote lock/unlock out of scope
+  (handled by the SwitchBot app); admin lock-state visibility is welcome.
+
+## Learned Workspace Facts
+
+- Production smart-lock hardware is a SwitchBot fingerprint Keypad (Keypad Touch /
+  Vision family) for passcodes, paired with Lock Pro / Lock Lite for lock/door
+  state — not Lock Vision Pro.
+- SwitchBot passcode automation is Settings-gated (`switchbotEnabled`), not a
+  Feature Module; `keyId` comes from Device List `keyList` (not Device Status);
+  createKey/deleteKey are webhook-primary and asynchronous.
+- Admin smart-lock UI shows lock/door/battery state; remote lock/unlock and admin
+  push notifications are intentionally out of scope.
+- Rate-limit uses Cloud Run single-instance + in-memory only; Redis / paid
+  distributed rate-limit backends are intentionally out of scope.

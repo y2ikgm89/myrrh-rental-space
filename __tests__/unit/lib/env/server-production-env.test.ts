@@ -234,17 +234,13 @@ describe("server production env validation", () => {
     expect(() => validateProductionEnv()).not.toThrow();
   });
 
-  test("fails fast when RATE_LIMIT_BACKEND=redis before a distributed store exists", async () => {
+  test("rejects RATE_LIMIT_BACKEND=redis (in-memory only; Redis out of scope)", async () => {
     setProductionEnv({
       RATE_LIMIT_BACKEND: "redis",
-      MAX_INSTANCES_HINT: "10",
+      MAX_INSTANCES_HINT: "1",
     });
 
-    const { validateProductionEnv } = await importServerEnv();
-
-    expect(() => validateProductionEnv()).toThrow(
-      /RATE_LIMIT_BACKEND="redis" is not implemented/,
-    );
+    await expect(importServerEnv()).rejects.toThrow();
   });
 
   test("accepts deploys that omit MAX_INSTANCES_HINT entirely", async () => {
