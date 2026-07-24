@@ -35,6 +35,7 @@ import {
   recordResendConnectionStatus,
   recordSwitchBotConnectionStatus,
   recordTurnstileConnectionStatus,
+  rotateSwitchBotWebhookPathToken as rotateSwitchBotWebhookPathTokenCommand,
   updateGoogleMapsSettings as updateGoogleMapsSettingsCommand,
   updateResendSettings as updateResendSettingsCommand,
   updateSwitchBotSettings as updateSwitchBotSettingsCommand,
@@ -359,9 +360,7 @@ export async function clearSwitchBotKeys(): Promise<MutationResult> {
  * SwitchBot Webhook URLを（未発行なら生成の上）SwitchBot側に登録する。
  * inbound webhookの署名検証機構が公式に無いため、URLパスの難読化トークンで代替する。
  */
-export async function registerSwitchBotWebhookAction(): Promise<
-  MutationResult<{ url: string }>
-> {
+export async function registerSwitchBotWebhookAction(): Promise<MutationResult> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
@@ -385,8 +384,20 @@ export async function registerSwitchBotWebhookAction(): Promise<
         );
       }
 
-      return { url };
+      return null;
     },
+  });
+}
+
+export async function rotateSwitchBotWebhookPathTokenAction(): Promise<MutationResult> {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "manage",
+    execute: async () => {
+      await rotateSwitchBotWebhookPathTokenCommand();
+      return null;
+    },
+    afterSuccess: refreshSettingsCache,
   });
 }
 
