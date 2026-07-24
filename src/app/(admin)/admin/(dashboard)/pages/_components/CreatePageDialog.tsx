@@ -47,23 +47,18 @@ import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
 import { createPage } from "@/admin/actions/pages";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { slugAvailabilityResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import { generateSlug } from "@/shared/lib/slug";
 import { createPageSchema } from "@/shared/lib/validations/page";
 import { SLUG_REGEX } from "@/shared/lib/validations/params";
 
 type SlugStatus = "idle" | "checking" | "available" | "unavailable";
 
-type SlugAvailabilityResult = {
-  available: boolean;
-  message?: string;
-};
-
-async function fetchSlugAvailability(
-  slug: string,
-): Promise<SlugAvailabilityResult> {
+async function fetchSlugAvailability(slug: string) {
   const params = new URLSearchParams({ slug });
   return fetchAdminJson(
     `/admin/api/pages/slug-availability?${params.toString()}`,
+    slugAvailabilityResponseSchema,
   );
 }
 

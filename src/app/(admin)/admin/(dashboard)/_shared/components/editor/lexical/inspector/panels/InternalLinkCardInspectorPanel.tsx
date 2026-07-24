@@ -25,6 +25,7 @@ import {
   isLinkCardContentType,
 } from "@/shared/domain/link-cards/content-types";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { linkCardSearchResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import { InspectorHeader } from "../InspectorHeader";
 import { InspectorSection } from "../InspectorSection";
 import { useNodeUpdater } from "../hooks/use-node-updater";
@@ -86,8 +87,9 @@ export function InternalLinkCardInspectorPanel({
           contentType: nextType,
           query: nextQuery.trim(),
         });
-        const result = await fetchAdminJson<{ items: LinkCardSearchItem[] }>(
+        const result = await fetchAdminJson(
           `/admin/api/link-cards/search?${params.toString()}`,
+          linkCardSearchResponseSchema,
           { cache: "no-store" },
         );
         setItems(result.items);

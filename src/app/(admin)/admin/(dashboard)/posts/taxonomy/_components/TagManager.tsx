@@ -39,6 +39,7 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { SortableTableHead } from "@/admin/components/SortableTableHead";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { postTagsResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import {
   createPostTagAction,
   updatePostTagAction,
@@ -52,7 +53,7 @@ import { useTagFilters } from "../_hooks/use-taxonomy-filters";
 import type { PostTaxonomySortField } from "@/shared/lib/nuqs";
 
 async function fetchPostTags(): Promise<PostTagData[]> {
-  return fetchAdminJson("/admin/api/post-tags");
+  return fetchAdminJson("/admin/api/post-tags", postTagsResponseSchema);
 }
 
 // =============================================================================
