@@ -54,6 +54,8 @@ import { EventWaitlistOfferedEmail } from "@/shared/emails/event-waitlist-offere
 import { eventWaitlistOfferedFixture } from "@/shared/emails/event-waitlist-offered.fixture";
 import { EventWaitlistExpiredEmail } from "@/shared/emails/event-waitlist-expired";
 import { eventWaitlistExpiredFixture } from "@/shared/emails/event-waitlist-expired.fixture";
+import { InquiryCustomerReplyAdminEmail } from "@/shared/emails/inquiry-customer-reply-admin";
+import { inquiryCustomerReplyAdminFixture } from "@/shared/emails/inquiry-customer-reply-admin.fixture";
 import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
 import { inquiryReplyFixture } from "@/shared/emails/inquiry-reply.fixture";
 import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-notification";
@@ -225,7 +227,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 29 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * 30 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {
@@ -333,6 +335,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "inquiry-status-notification",
     InquiryStatusNotificationEmail,
     inquiryStatusNotificationFixture,
+  ),
+  "inquiry-customer-reply-admin": defineEntry(
+    "inquiry-customer-reply-admin",
+    InquiryCustomerReplyAdminEmail,
+    inquiryCustomerReplyAdminFixture,
   ),
   "admin-notification-reservation": defineEntry(
     "admin-notification-reservation",

@@ -1,8 +1,14 @@
 import "server-only";
+import { InquiryCustomerReplyAdminEmail } from "@/shared/emails/inquiry-customer-reply-admin";
 import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
 import { InquiryStatusNotificationEmail } from "@/shared/emails/inquiry-status-notification";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
+import {
+  getEmailDeliverySettings,
+  getNotificationEmailAddresses,
+} from "@/shared/domain/settings/queries/notification";
 import { prisma } from "@/shared/db/prisma";
+import { getAdminUrl } from "../admin-urls";
 import { buildMemberInquiryUrl } from "./contact-emails";
 import { hashForKey, sendEmail } from "./send";
 import {
@@ -11,7 +17,11 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "../errors/server";
-import type { EmailResult, InquiryReplyEmailData } from "./types";
+import type {
+  EmailResult,
+  InquiryCustomerReplyAdminEmailData,
+  InquiryReplyEmailData,
+} from "./types";
 
 export async function sendInquiryReplyEmail(
   data: InquiryReplyEmailData,
@@ -42,6 +52,41 @@ export async function sendInquiryReplyEmail(
     context: {
       inquiryId: data.inquiryId,
       email: data.customerEmail,
+    },
+  });
+}
+
+/**
+ * 会員によるお問い合わせ続報（顧客返信）の管理者通知メールを送信
+ */
+export async function sendInquiryCustomerReplyAdminEmail(
+  data: InquiryCustomerReplyAdminEmailData,
+): Promise<EmailResult> {
+  const { notifyInquiryCustomerReply } = await getEmailDeliverySettings();
+  if (!notifyInquiryCustomerReply) return { ok: false, reason: "disabled" };
+
+  const notificationEmails = await getNotificationEmailAddresses();
+  if (notificationEmails.length === 0) return { ok: false, reason: "disabled" };
+
+  const footer = await getEmailFooterData();
+
+  return sendEmail({
+    payload: {
+      to: notificationEmails,
+      subject: `【お問い合わせ続報】${data.subject} [${data.receiptNumber}]`,
+      react: InquiryCustomerReplyAdminEmail({
+        customerName: data.customerName,
+        receiptNumber: data.receiptNumber,
+        subject: data.subject,
+        replyMessage: data.replyMessage,
+        adminUrl: getAdminUrl(`/inquiries/${data.inquiryId}`),
+        footer,
+      }),
+    },
+    idempotencyKey: `inquiry-customer-reply-admin/${data.inquiryId}/${hashForKey(data.replyMessage)}`,
+    operation: "sendInquiryCustomerReplyAdminEmail",
+    context: {
+      inquiryId: data.inquiryId,
     },
   });
 }
