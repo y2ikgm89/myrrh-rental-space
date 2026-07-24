@@ -44,3 +44,16 @@ export const publicInquirySchema = z
   .refine(requireCompanyNameForCorporate, COMPANY_NAME_REFINE_ERROR);
 
 export type PublicInquiryInput = z.input<typeof publicInquirySchema>;
+
+export const customerInquiryReplySchema = z.object({
+  inquiryId: z.uuid({ error: "お問い合わせIDが不正です" }),
+  body: z
+    .string()
+    .min(1, { error: "返信内容を入力してください" })
+    .max(5000, { error: "返信内容は5000文字以内で入力してください" }),
+  turnstileToken: z.string().optional(),
+});
+
+export type CustomerInquiryReplyInput = z.input<
+  typeof customerInquiryReplySchema
+>;

@@ -80,6 +80,15 @@ export type ContactEmailData = {
   customerId?: string | null;
 };
 
+export type InquiryCustomerReplyAdminEmailData = {
+  inquiryId: string;
+  /** Inquiry.receiptNumber (「INQ-XXXXXXXX」形式)。件名・本文で突合の主キー。 */
+  receiptNumber: string;
+  customerName: string;
+  subject: string;
+  replyMessage: string;
+};
+
 export type InquiryReplyEmailData = {
   inquiryId: string;
   /**

@@ -86,6 +86,9 @@ export function NotificationSection({ settings }: NotificationSectionProps) {
       notifyReservationChange: settings.notifyReservationChange ? "on" : "",
       notifyReservationCancel: settings.notifyReservationCancel ? "on" : "",
       notifyNewInquiry: settings.notifyNewInquiry ? "on" : "",
+      notifyInquiryCustomerReply: settings.notifyInquiryCustomerReply
+        ? "on"
+        : "",
       notifyEventRegistration: settings.notifyEventRegistration ? "on" : "",
       notifyEventWaitlistRegistration: settings.notifyEventWaitlistRegistration
         ? "on"
@@ -136,6 +139,12 @@ export function NotificationSection({ settings }: NotificationSectionProps) {
               field={fields.notifyNewInquiry}
               title="お問い合わせ"
               description="お問い合わせが送信されたとき"
+              disabled={isPending}
+            />
+            <NotificationToggle
+              field={fields.notifyInquiryCustomerReply}
+              title="お問い合わせ続報"
+              description="会員がマイページから追加メッセージを送信したとき"
               disabled={isPending}
             />
             <NotificationToggle

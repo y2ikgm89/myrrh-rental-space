@@ -99,6 +99,7 @@ export type NotificationSettingsInput = {
   notifyReservationChange: boolean;
   notifyReservationCancel: boolean;
   notifyNewInquiry: boolean;
+  notifyInquiryCustomerReply: boolean;
   notifyEventRegistration: boolean;
   notifyEventWaitlistRegistration: boolean;
   notifyEventCancellation: boolean;

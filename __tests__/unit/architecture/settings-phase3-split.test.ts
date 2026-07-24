@@ -60,6 +60,7 @@ const phase3SettingsFieldPatterns = [
   /\bnotifyReservationChange\b/u,
   /\bnotifyReservationCancel\b/u,
   /\bnotifyNewInquiry\b/u,
+  /\bnotifyInquiryCustomerReply\b/u,
   /\bnotifyEventRegistration\b/u,
   /\bnotifyEventWaitlistRegistration\b/u,
   /\bnotifyEventCancellation\b/u,

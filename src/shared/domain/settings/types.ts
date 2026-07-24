@@ -80,6 +80,7 @@ export type SettingsData = {
   notifyReservationChange: boolean;
   notifyReservationCancel: boolean;
   notifyNewInquiry: boolean;
+  notifyInquiryCustomerReply: boolean;
   notifyEventRegistration: boolean;
   notifyEventWaitlistRegistration: boolean;
   notifyEventCancellation: boolean;

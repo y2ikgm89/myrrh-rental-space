@@ -24,6 +24,7 @@ export const TURNSTILE_ACTIONS = {
   mypage_event_registration_cancel: "mypage-event-registration-cancel",
   guest_reservation_cancel: "guest-reservation-cancel",
   guest_event_registration_cancel: "guest-event-registration-cancel",
+  mypage_inquiry_reply: "mypage-inquiry-reply",
   mypage_account_delete: "mypage-account-delete",
   customer_signup_terms: "customer-signup-terms",
   event_waitlist_register: "event-waitlist-register",

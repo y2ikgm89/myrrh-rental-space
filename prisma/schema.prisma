@@ -1643,6 +1643,7 @@ model SettingsNotification {
   notifyReservationChange         Boolean @default(true)
   notifyReservationCancel         Boolean @default(true)
   notifyNewInquiry                Boolean @default(true)
+  notifyInquiryCustomerReply      Boolean @default(true)
   notifyEventRegistration         Boolean @default(true)
   notifyEventWaitlistRegistration Boolean @default(true)
   notifyEventCancellation         Boolean @default(true)
