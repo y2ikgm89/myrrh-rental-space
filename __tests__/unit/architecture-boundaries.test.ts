@@ -1027,6 +1027,86 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("shared/lib → shared/domain import は allowlist 凍結（新規 lib→domain 禁止 ratchet）", () => {
+    // CLAUDE.md: shared/lib は純粋ヘルパー・横断基盤、domain が上位。
+    // 既存の lib→domain 依存は integration adapter として ALLOWLIST 凍結し、
+    // 新規追加と「解消済みだが allowlist 残留」の両方を fail する（ratchet）。
+    // 依存解消 PR では当該ファイルを ALLOWLIST から削除すること。
+    const SHARED_LIB_ROOT = join(SRC_ROOT, "shared", "lib");
+    const LIB_TO_DOMAIN_IMPORT_ALLOWLIST = new Set(
+      [
+        "admin-auth.ts",
+        "admin-resource-access.ts",
+        "analytics/config.ts",
+        "bootstrap.ts",
+        "calendar-sync/event-inbound.ts",
+        "calendar-sync/event-outbound.ts",
+        "calendar-sync/inbound.ts",
+        "calendar-sync/outbound.ts",
+        "calendar-sync/series-outbound.ts",
+        "email/client.ts",
+        "email/contact-emails.ts",
+        "email/customer-emails.ts",
+        "email/event-emails.ts",
+        "email/reminder-emails.ts",
+        "email/reservation-emails.ts",
+        "email/send.ts",
+        "email/system-emails.ts",
+        "features/check.ts",
+        "google-business-profile/client.ts",
+        "google-business-profile/index.ts",
+        "google-business-profile/location-sync.ts",
+        "google-calendar/events.ts",
+        "google-calendar/service-account.ts",
+        "google-calendar/settings.ts",
+        "google-calendar/sync.ts",
+        "google-calendar/webhook.ts",
+        "ical/index.ts",
+        "lexical/resolve-internal-link-cards.ts",
+        "lexical/resolve-space-card-embeds.ts",
+        "pages/require-published.ts",
+        "reservation/overlap-check.ts",
+        "reservation/time-slots.ts",
+        "section-defaults.ts",
+        "slug-validation.ts",
+        "terms-consent-gate.ts",
+        "turnstile.ts",
+      ].map((rel) =>
+        relative(ROOT, join(SHARED_LIB_ROOT, ...rel.split("/"))).replaceAll(
+          "\\",
+          "/",
+        ),
+      ),
+    );
+
+    const domainImportPattern =
+      /(?:from\s+["']@\/shared\/domain|from\s+["'](?:\.\.\/)+domain|import\s*\(\s*["']@\/shared\/domain|import\s*\(\s*["'](?:\.\.\/)+domain)/u;
+
+    const actual = new Set(
+      collectNonCommentOffenders(
+        collectSourceFiles(SHARED_LIB_ROOT),
+        domainImportPattern,
+      ).map((rel) => rel.replaceAll("\\", "/")),
+    );
+
+    for (const rel of LIB_TO_DOMAIN_IMPORT_ALLOWLIST) {
+      expect(
+        actual.has(rel),
+        `${rel} は allowlist だが domain import が検出されない（allowlist から削除すること）`,
+      ).toBe(true);
+    }
+
+    const newViolations = [...actual]
+      .filter((file) => !LIB_TO_DOMAIN_IMPORT_ALLOWLIST.has(file))
+      .sort();
+    expect(newViolations).toEqual([]);
+
+    const staleAllowlist = [...LIB_TO_DOMAIN_IMPORT_ALLOWLIST]
+      .filter((file) => !actual.has(file))
+      .sort();
+    expect(staleAllowlist).toEqual([]);
+  });
+
   test("`@/shared/db/prisma` を import する全ファイルが server-only を明示する", () => {
     // 動的列挙: 手書き allowlist は追加ファイルが登録されない限り gate が dead になり、
     // 実際に 58+ ファイルが未保護で drift していた。`from "@/shared/db/prisma"` を持つ
