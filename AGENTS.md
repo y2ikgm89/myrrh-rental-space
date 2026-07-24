@@ -27,7 +27,7 @@ For human onboarding — setup, common commands, repo layout — see
 
 - Prefer official-docs-aligned, clean-break implementations without backward-compat
   shims when redesigning integrations.
-- When parallelizing work with subagents, use Composer.
+- When parallelizing work with subagents, use Composer or Grok as appropriate.
 - Do not leave ambiguous or unverified points; investigate and validate against
   official docs before implementing.
 - Prefer free / no-cost fixes first; defer paid infrastructure work unless clearly
@@ -47,3 +47,11 @@ For human onboarding — setup, common commands, repo layout — see
   push notifications are intentionally out of scope.
 - Rate-limit uses Cloud Run single-instance + in-memory only; Redis / paid
   distributed rate-limit backends are intentionally out of scope.
+- Site Settings are split into domain singleton tables (`SettingsNotification`,
+  `SettingsStripe`, `SettingsCommerce`, `SettingsFeatures`, …), not one monolith.
+- `InquiryReply` authorship is dual-sided: STAFF → `authorId` (User), CUSTOMER →
+  `authorCustomerId` (Customer); DB CHECK forbids cross-side FK pollution.
+- Customer inquiry replies are members-only; allowed on NEW/IN_PROGRESS/RESOLVED/
+  FLAGGED (RESOLVED/FLAGGED reopen to IN_PROGRESS); blocked on CLOSED/SPAM.
+- Inquiry attachments must use private R2 + authenticated streaming; the public
+  Media CDN must not be reused for inquiry PII.
