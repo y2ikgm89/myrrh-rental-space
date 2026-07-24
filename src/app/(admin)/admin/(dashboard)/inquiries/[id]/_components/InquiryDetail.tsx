@@ -41,7 +41,11 @@ import { customerSearchResultsResponseSchema } from "@/admin/lib/admin-api-respo
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/shared/lib/errors/logger-core";
-import type { InquiryWithCustomer } from "@/shared/domain/inquiries/types";
+import type {
+  AssignableStaffOption,
+  InquiryTagOption,
+  InquiryWithCustomer,
+} from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";
@@ -50,9 +54,18 @@ import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { InquiryThread } from "./InquiryThread";
 import { InquiryAttachments } from "./InquiryAttachments";
+import { InquiryAssigneeCard } from "./InquiryAssigneeCard";
+import { InquirySlaCard } from "./InquirySlaCard";
+import { InquiryTagsCard } from "./InquiryTagsCard";
+import { InquiryInternalNotesCard } from "./InquiryInternalNotesCard";
+import { InquiryStatusHistoryCard } from "./InquiryStatusHistoryCard";
 
 type InquiryDetailProps = {
   inquiry: Serialized<InquiryWithCustomer>;
+  staff: Serialized<AssignableStaffOption>[];
+  allTags: Serialized<InquiryTagOption>[];
+  currentUserId: string;
+  canDeleteOthersNotes: boolean;
 };
 
 async function fetchCustomerSearchResults(
@@ -65,7 +78,13 @@ async function fetchCustomerSearchResults(
   );
 }
 
-export function InquiryDetail({ inquiry }: InquiryDetailProps) {
+export function InquiryDetail({
+  inquiry,
+  staff,
+  allTags,
+  currentUserId,
+  canDeleteOthersNotes,
+}: InquiryDetailProps) {
   const [isPending, startTransition] = useTransition();
   const [replyText, setReplyText] = useState("");
   const [isReplying, startReplyTransition] = useTransition();
@@ -274,6 +293,23 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
           </CardContent>
         </Card>
 
+        <InquiryAssigneeCard
+          inquiryId={inquiry.id}
+          assigneeId={inquiry.assigneeId}
+          staff={staff}
+        />
+
+        <InquirySlaCard
+          inquiryId={inquiry.id}
+          slaExpiresAt={inquiry.slaExpiresAt}
+        />
+
+        <InquiryTagsCard
+          inquiryId={inquiry.id}
+          tags={inquiry.tags}
+          allTags={allTags}
+        />
+
         {/* 顧客紐づけ */}
         <Card>
           <CardHeader>
@@ -427,6 +463,15 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
             </Button>
           </CardContent>
         </Card>
+
+        <InquiryInternalNotesCard
+          inquiryId={inquiry.id}
+          notes={inquiry.internalNotes}
+          currentUserId={currentUserId}
+          canDeleteOthersNotes={canDeleteOthersNotes}
+        />
+
+        <InquiryStatusHistoryCard history={inquiry.statusHistory} />
       </div>
     </div>
   );

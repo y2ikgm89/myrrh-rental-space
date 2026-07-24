@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  Badge,
   Table,
   TableBody,
   TableCell,
@@ -87,6 +88,8 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                 メールアドレス
               </TableHead>
               <TableHead className="hidden md:table-cell">顧客</TableHead>
+              <TableHead className="hidden lg:table-cell">担当者</TableHead>
+              <TableHead className="hidden lg:table-cell">タグ</TableHead>
               <TableHead className="hidden md:table-cell">受付日時</TableHead>
               <TableHead>ステータス</TableHead>
               <TableHead className="text-right">操作</TableHead>
@@ -145,6 +148,24 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                     >
                       {inquiry.customer.lastName} {inquiry.customer.firstName}
                     </Link>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  {inquiry.assigneeName ?? (
+                    <span className="text-muted-foreground">未割当</span>
+                  )}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  {inquiry.tagNames && inquiry.tagNames.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {inquiry.tagNames.map((name) => (
+                        <Badge key={name} variant="outline">
+                          {name}
+                        </Badge>
+                      ))}
+                    </div>
                   ) : (
                     <span className="text-muted-foreground">-</span>
                   )}
