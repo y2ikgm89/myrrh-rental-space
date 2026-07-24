@@ -41,9 +41,10 @@ export interface FeatureModuleDef {
   /** 依存 module（OFF なら自身も自動 OFF） */
   readonly requires?: readonly FeatureModule[];
   /**
-   * 404 ガード対象の公開ルート。配下の全 page.tsx / route.ts で
+   * 404 ガード対象の公開ルート prefix。配下の page.tsx / route.ts で
    * `await requireFeatureEnabled(<id>)` を呼ぶ (OFF 時に notFound())。
-   * 実装対象は grep 済で 18 file (src/app/(public) 配下の page.tsx + waitlist route)。
+   * nav / sitemap の `isUrlDisabled` もこの prefix を参照する。
+   * 実装対象は `public-route-gates.test.ts` が grep gate する。
    */
   readonly publicRoutes: readonly string[];
   /** Page table の slug（管理画面で feature OFF 警告表示用） */
@@ -164,7 +165,10 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     description:
       "Stripe を使った予約・イベントのオンライン決済と適格請求書 (領収書) 発行。OFF にすると checkout / 返金 / webhook / 領収書 backfill が全て無効化される（credentials は「Stripe 連携」で別途設定）。",
     requires: ["reservation"],
-    publicRoutes: [],
+    publicRoutes: [
+      "/events/registrations/checkout",
+      "/events/registrations/payment-result",
+    ],
     pageSlugs: [],
     sectionTypes: [],
     templates: [],

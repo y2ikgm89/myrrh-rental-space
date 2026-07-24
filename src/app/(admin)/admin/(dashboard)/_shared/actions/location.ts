@@ -22,11 +22,23 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 // /spaces / /spaces/[slug] の CDN Cache-Tag に emit されるため、raw updateTag では
 // Cloudflare edge に伝播せず (数時間の s-maxage の間) 旧住所 / 座標が配信され続けた。
 // invalidateSiteWideCache 経由で updateTag + Cloudflare purge_by_tags を一括発火する。
+// /access は per-collection Cache-Tag を emit しない (blanket public のみ) ため、
+// tag purge だけでは edge の旧拠点情報が残る。FAQ / pages と同様に URL purge を併用する。
+import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
+import { firePurgeAsync } from "@/shared/lib/cache";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
+
+function purgeLocationCaches(): void {
+  invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
+  void firePurgeAsync(() => purgeCloudflareDetailUrls(["/access"]), {
+    operation: "purgeAccessPage",
+    urls: ["/access"],
+  });
+}
 
 const idSchema = uuidIdSchema("店舗");
 const publishSchema = z.strictObject({
@@ -72,7 +84,7 @@ export async function createLocationAction(
         action: "create",
         execute: async () => createLocationCommand(data),
         afterSuccess: (payload) => {
-          invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
+          purgeLocationCaches();
           fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
             operation: "syncLocationToGbp",
             category: ErrorCategory.EXTERNAL_API,
@@ -127,7 +139,7 @@ export async function updateLocationAction(
         resourceId: locationId,
         execute: async () => updateLocationCommand(locationId, data),
         afterSuccess: (payload) => {
-          invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
+          purgeLocationCaches();
           fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {
             operation: "syncLocationToGbp",
             category: ErrorCategory.EXTERNAL_API,
@@ -166,7 +178,7 @@ export async function updateLocationPublished(
     execute: async () =>
       updateLocationPublishedCommand(parsed.data.id, parsed.data.isPublished),
     afterSuccess: () => {
-      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
+      purgeLocationCaches();
     },
     resolveAuditResourceId: (result) => result.id,
   });
@@ -185,7 +197,7 @@ export async function updateLocationOrder(
     action: "update",
     execute: async () => updateLocationOrderCommand(parsed.data),
     afterSuccess: () => {
-      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
+      purgeLocationCaches();
     },
   });
 }
@@ -204,7 +216,7 @@ export async function deleteLocation(
     resourceId: validated.data,
     execute: async () => deleteLocationCommand(validated.data),
     afterSuccess: () => {
-      invalidateSiteWideCache(CACHE_TAGS.LOCATIONS);
+      purgeLocationCaches();
     },
     resolveAuditResourceId: (result) => result.id,
   });

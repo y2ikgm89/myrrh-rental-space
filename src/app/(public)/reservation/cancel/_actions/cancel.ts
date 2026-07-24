@@ -2,10 +2,8 @@
 
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
-import {
-  verifyCancelToken,
-  tokenFingerprint,
-} from "@/shared/lib/reservation-cancel-token";
+import { verifyCancelToken } from "@/shared/lib/reservation-cancel-token";
+import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { cancelReservationByToken } from "@/shared/domain/reservations/customer-commands";
 import { applyCancellationSideEffects } from "@/shared/domain/reservations/cancellation-side-effects";

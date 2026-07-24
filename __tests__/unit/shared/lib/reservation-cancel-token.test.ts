@@ -4,8 +4,8 @@ import {
   createCancelToken,
   MAX_CANCEL_TOKEN_LIFETIME_MS,
   verifyCancelToken,
-  tokenFingerprint,
 } from "@/shared/lib/reservation-cancel-token";
+import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 
 const RID = "11111111-1111-4111-8111-111111111111";
 

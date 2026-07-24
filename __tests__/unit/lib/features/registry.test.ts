@@ -84,6 +84,13 @@ describe("FEATURE_MODULES routing alignment", () => {
     expect(SYSTEM_PAGE_SLUGS).toContain("events");
   });
 
+  test("payment module publicRoutes は requireFeatureEnabled gate 対象 prefix と一致する", () => {
+    expect(FEATURE_MODULES.payment.publicRoutes).toEqual([
+      "/events/registrations/checkout",
+      "/events/registrations/payment-result",
+    ]);
+  });
+
   test("pageSlugs はすべて実在のシステムページ slug を指す", () => {
     // 全 module の pageSlugs が SYSTEM_PAGES に実在する slug を指す不変条件。
     // blog / events 追加漏れと同種の「存在しない Page slug」退行を回帰防止。
