@@ -124,7 +124,7 @@ describe("getSidebarData", () => {
     );
   });
 
-  test("popular は publishedAt desc / take=popularCount で fetch", async () => {
+  test("popular は暫定で publishedAt desc / take=popularCount で fetch", async () => {
     mockPostFindMany.mockResolvedValueOnce([]);
     const widgets: SidebarWidget[] = [
       { type: "popular", enabled: true, layout: "compact", showRanking: true },

@@ -8,6 +8,11 @@ import {
   spansToPlainText,
   type PortableTextSpan,
 } from "@/shared/lib/portable-text";
+import {
+  externalPublicHrefSchema,
+  isExternalPublicHref,
+  isInternalNavHref,
+} from "@/shared/lib/url/safe-href";
 
 /**
  * Navigation / SocialLink Dialog (conform) form schemas
@@ -58,23 +63,39 @@ const booleanFromCheckbox = z.preprocess(
   z.boolean(),
 );
 
-export const navFormSchema = z.strictObject({
-  type: z.enum(NavigationType),
-  parentId: z.string(),
-  label: labelSchema,
-  url: z.string().min(1, { error: "URLは必須です" }),
-  isExternal: booleanFromCheckbox,
-  isActive: booleanFromCheckbox,
-});
+export const navFormSchema = z
+  .strictObject({
+    type: z.enum(NavigationType),
+    parentId: z.string(),
+    label: labelSchema,
+    url: z.string().min(1, { error: "URLは必須です" }),
+    isExternal: booleanFromCheckbox,
+    isActive: booleanFromCheckbox,
+  })
+  .superRefine((data, ctx) => {
+    if (data.isExternal) {
+      if (!isExternalPublicHref(data.url)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["url"],
+          message:
+            "外部リンクは http(s) / mailto / tel の URL を指定してください（javascript: 等は不可）",
+        });
+      }
+    } else if (!isInternalNavHref(data.url)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["url"],
+        message: "内部リンクは / から始まるパスを指定してください",
+      });
+    }
+  });
 
 export type NavFormSubmitData = z.output<typeof navFormSchema>;
 
 export const socialFormSchema = z.strictObject({
   platform: z.enum(SocialPlatform),
-  url: z
-    .string()
-    .min(1, { error: "URLは必須です" })
-    .pipe(z.url({ error: "有効なURLを入力してください" })),
+  url: externalPublicHrefSchema,
   isActive: booleanFromCheckbox,
   showOnDesktop: booleanFromCheckbox,
   showOnMobile: booleanFromCheckbox,

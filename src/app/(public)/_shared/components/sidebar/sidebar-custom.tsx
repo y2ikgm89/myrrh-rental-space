@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import Link from "next/link";
 import type { CustomWidget } from "@/shared/lib/validations/sidebar";
 import { isAppRoute } from "@/shared/lib/typed-routes";
+import { toSafePublicHref } from "@/shared/lib/url/safe-href";
 
 interface SidebarCustomProps {
   widget: CustomWidget;
@@ -11,6 +12,9 @@ const SIDEBAR_CTA_CLASS =
   "mt-3 inline-flex min-h-11 items-center justify-center border border-foreground px-4 text-xs uppercase tracking-eyebrow transition-colors hover:bg-accent hover:text-accent-foreground";
 
 export function SidebarCustom({ widget }: SidebarCustomProps): ReactElement {
+  const safeHref = widget.linkUrl ? toSafePublicHref(widget.linkUrl) : null;
+  const linkLabel = widget.linkLabel ?? widget.linkUrl;
+
   return (
     <div>
       <h2 className="mb-4 text-eyebrow uppercase text-muted-foreground">
@@ -19,19 +23,21 @@ export function SidebarCustom({ widget }: SidebarCustomProps): ReactElement {
       {widget.description ? (
         <p className="text-sm text-muted-foreground">{widget.description}</p>
       ) : null}
-      {widget.linkUrl && isAppRoute(widget.linkUrl) ? (
-        <Link href={widget.linkUrl} className={SIDEBAR_CTA_CLASS}>
-          {widget.linkLabel ?? widget.linkUrl}
+      {safeHref && isAppRoute(safeHref) ? (
+        <Link href={safeHref} className={SIDEBAR_CTA_CLASS}>
+          {linkLabel}
         </Link>
-      ) : widget.linkUrl ? (
+      ) : safeHref ? (
         <a
-          href={widget.linkUrl}
+          href={safeHref}
           className={SIDEBAR_CTA_CLASS}
-          target={widget.linkUrl.startsWith("http") ? "_blank" : undefined}
-          rel={widget.linkUrl.startsWith("http") ? "noreferrer" : undefined}
+          target={safeHref.startsWith("http") ? "_blank" : undefined}
+          rel={safeHref.startsWith("http") ? "noreferrer" : undefined}
         >
-          {widget.linkLabel ?? widget.linkUrl}
+          {linkLabel}
         </a>
+      ) : widget.linkUrl && widget.linkLabel ? (
+        <span className={SIDEBAR_CTA_CLASS}>{widget.linkLabel}</span>
       ) : null}
     </div>
   );

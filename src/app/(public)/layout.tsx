@@ -39,7 +39,10 @@ import { LenisProvider } from "@/public/components/providers/lenis-provider";
 import { MobileNav } from "@/public/components/layouts/mobile-nav";
 import { GraphJsonLd } from "@/public/components/seo/json-ld";
 import { getGraphJsonLdData } from "@/public/lib/seo";
-import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
+import {
+  getHeaderNavigation,
+  getMobileHeaderNavigation,
+} from "@/shared/domain/navigation/queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -268,11 +271,13 @@ async function resolvePublicAuthKind(): Promise<PublicAuthKind> {
  */
 async function HeaderWithData(): Promise<ReactElement> {
   await connection();
-  const [headerSettings, navItems, authKind] = await Promise.all([
-    getHeaderSettings(),
-    getHeaderNavigation(),
-    resolvePublicAuthKind(),
-  ]);
+  const [headerSettings, navItems, mobileNavItems, authKind] =
+    await Promise.all([
+      getHeaderSettings(),
+      getHeaderNavigation(),
+      getMobileHeaderNavigation(),
+      resolvePublicAuthKind(),
+    ]);
 
   const authSlot: HeaderAuthSlot | null =
     authKind === "mypage"
@@ -289,6 +294,7 @@ async function HeaderWithData(): Promise<ReactElement> {
     <Header
       brand={headerSettings.brand}
       navItems={navItems}
+      mobileNavItems={mobileNavItems}
       scrollBehavior={headerSettings.scrollBehavior}
       backgroundMode={headerSettings.backgroundMode}
       authSlot={authSlot}

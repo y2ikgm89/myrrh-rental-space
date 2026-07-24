@@ -11,6 +11,7 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import type { SocialLinkForFooter } from "@/shared/domain/settings/queries/organization";
+import { toSafePublicHref } from "@/shared/lib/url/safe-href";
 
 // =============================================================================
 // Platform Icons（@tabler/icons-react ブランドアイコン）
@@ -50,6 +51,9 @@ export function SocialLinks({ links }: SocialLinksProps): ReactElement | null {
   return (
     <div className="flex items-center gap-3">
       {links.map((link) => {
+        const safeHref = toSafePublicHref(link.url);
+        if (!safeHref) return null;
+
         const Icon = PLATFORM_ICONS[link.platform];
         const label = PLATFORM_LABELS[link.platform] ?? link.platform;
 
@@ -66,7 +70,7 @@ export function SocialLinks({ links }: SocialLinksProps): ReactElement | null {
         return (
           <a
             key={link.url}
-            href={link.url}
+            href={safeHref}
             target="_blank"
             rel="noreferrer"
             className={cn(

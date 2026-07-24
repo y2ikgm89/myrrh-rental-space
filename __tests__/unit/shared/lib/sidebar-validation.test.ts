@@ -4,6 +4,7 @@ import {
   sidebarSettingsSchema,
   DEFAULT_SIDEBAR_WIDGETS,
   parseSidebarWidgets,
+  tryParseSidebarWidgets,
 } from "@/shared/lib/validations/sidebar";
 
 describe("sidebarWidgetsSchema", () => {
@@ -49,10 +50,39 @@ describe("sidebarWidgetsSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  test("rejects javascript: linkUrl on custom widget", () => {
+    const widgets = [
+      {
+        type: "custom",
+        enabled: true,
+        id: "abc",
+        title: "CTA",
+        linkUrl: "javascript:alert(1)",
+      },
+    ];
+    const result = sidebarWidgetsSchema.safeParse(widgets);
+    expect(result.success).toBe(false);
+  });
+
   test("rejects invalid builtin type", () => {
     const widgets = [{ type: "unknown", enabled: true }];
     const result = sidebarWidgetsSchema.safeParse(widgets);
     expect(result.success).toBe(false);
+  });
+});
+
+describe("tryParseSidebarWidgets", () => {
+  test("valid array を success: true で返す", () => {
+    const result = tryParseSidebarWidgets(DEFAULT_SIDEBAR_WIDGETS);
+    expect(result).toEqual({ success: true, data: DEFAULT_SIDEBAR_WIDGETS });
+  });
+
+  test("invalid data を success: false で返す（フォールバックなし）", () => {
+    expect(tryParseSidebarWidgets(null)).toEqual({ success: false });
+    expect(tryParseSidebarWidgets("string")).toEqual({ success: false });
+    expect(
+      tryParseSidebarWidgets([{ type: "unknown", enabled: true }]),
+    ).toEqual({ success: false });
   });
 });
 

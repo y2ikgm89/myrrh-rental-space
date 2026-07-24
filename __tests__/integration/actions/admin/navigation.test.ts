@@ -228,7 +228,7 @@ describe("Navigation Admin Action Integration", () => {
         }
       });
 
-      test("有効な相対パスは許可", () => {
+      test("有効な相対パスは許可（isExternal=false）", () => {
         const validUrls = [
           "/",
           "/about",
@@ -239,12 +239,13 @@ describe("Navigation Admin Action Integration", () => {
           const result = navigationItemSchema.safeParse({
             ...VALID_NAVIGATION_ITEM_INPUT,
             url,
+            isExternal: false,
           });
           expect(result.success).toBe(true);
         }
       });
 
-      test("有効な絶対URLは許可", () => {
+      test("有効な絶対URLは isExternal=true のときのみ許可", () => {
         const validUrls = [
           "https://example.com",
           "https://www.example.co.jp/path",
@@ -254,9 +255,28 @@ describe("Navigation Admin Action Integration", () => {
           const result = navigationItemSchema.safeParse({
             ...VALID_NAVIGATION_ITEM_INPUT,
             url,
+            isExternal: true,
           });
           expect(result.success).toBe(true);
         }
+      });
+
+      test("https URL は isExternal=false で拒否する", () => {
+        const result = navigationItemSchema.safeParse({
+          ...VALID_NAVIGATION_ITEM_INPUT,
+          url: "https://example.com",
+          isExternal: false,
+        });
+        expect(result.success).toBe(false);
+      });
+
+      test("javascript: URL は isExternal=true で拒否する", () => {
+        const result = navigationItemSchema.safeParse({
+          ...VALID_NAVIGATION_ITEM_INPUT,
+          url: "javascript:alert(1)",
+          isExternal: true,
+        });
+        expect(result.success).toBe(false);
       });
 
       test("500文字のURLはOK", () => {
@@ -290,6 +310,7 @@ describe("Navigation Admin Action Integration", () => {
       test("boolean値は許可", () => {
         const result = navigationItemSchema.safeParse({
           ...VALID_NAVIGATION_ITEM_INPUT,
+          url: "https://example.com",
           isExternal: true,
           isActive: false,
         });
@@ -398,6 +419,14 @@ describe("Navigation Admin Action Integration", () => {
           });
           expect(result.success).toBe(false);
         }
+      });
+
+      test("javascript: URL は拒否する", () => {
+        const result = socialLinkSchema.safeParse({
+          ...VALID_SOCIAL_LINK_INPUT,
+          url: "javascript:alert(1)",
+        });
+        expect(result.success).toBe(false);
       });
     });
 
