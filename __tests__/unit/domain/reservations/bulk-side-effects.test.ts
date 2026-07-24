@@ -25,7 +25,7 @@ const mockReservationFindMany = mock<
 const mockSeriesFindUnique = mock<
   (args: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve(null));
-const mockSettingsFindUnique = mock<
+const mockSettingsCommerceFindUnique = mock<
   (args: Record<string, unknown>) => Promise<{ refundPolicy: unknown } | null>
 >(() => Promise.resolve(null));
 
@@ -36,7 +36,7 @@ mock.module("@/shared/db/prisma", () => ({
       findMany: mockReservationFindMany,
     },
     reservationSeries: { findUnique: mockSeriesFindUnique },
-    settings: { findUnique: mockSettingsFindUnique },
+    settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
   },
 }));
 
@@ -223,7 +223,7 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     mockReservationFindUnique.mockReset();
     mockReservationFindMany.mockReset();
     mockSeriesFindUnique.mockReset();
-    mockSettingsFindUnique.mockReset();
+    mockSettingsCommerceFindUnique.mockReset();
     mockCreateAuditLog.mockReset();
     mockCreateNotification.mockReset();
     mockRefund.mockReset();
@@ -246,7 +246,7 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
       },
     ]);
     mockSeriesFindUnique.mockResolvedValue(baseSeries);
-    mockSettingsFindUnique.mockResolvedValue(null);
+    mockSettingsCommerceFindUnique.mockResolvedValue(null);
     mockCreateAuditLog.mockResolvedValue(undefined);
     mockCreateNotification.mockResolvedValue(undefined);
     mockRefund.mockResolvedValue({ ok: true });
@@ -334,10 +334,10 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     });
 
     // 1 回目 (bulk 冒頭) は transient error、2 回目以降 (per-instance) は valid policy
-    mockSettingsFindUnique.mockImplementationOnce(() =>
+    mockSettingsCommerceFindUnique.mockImplementationOnce(() =>
       Promise.reject(new Error("transient DB error")),
     );
-    mockSettingsFindUnique.mockImplementation(() =>
+    mockSettingsCommerceFindUnique.mockImplementation(() =>
       Promise.resolve({
         refundPolicy: {
           tiers: [{ hoursBefore: 0, refundRate: 50 }],
@@ -352,7 +352,9 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
 
     // Settings.findUnique が bulk 1 回 + per-instance 1 回 = 計 2 回以上呼ばれる
     // (fix 前は snapshot=null で 1 回のみ、再 fetch されない)
-    expect(mockSettingsFindUnique.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(
+      mockSettingsCommerceFindUnique.mock.calls.length,
+    ).toBeGreaterThanOrEqual(2);
 
     // bulk 冒頭失敗は logError 済み → 例外は外に漏れない (関数は resolve)
     const snapshotLogCalls = mockLogError.mock.calls.filter(

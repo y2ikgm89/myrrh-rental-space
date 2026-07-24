@@ -469,16 +469,22 @@ async function seedSettings(
       }
     : { senderEmail: null, replyToEmail: null };
 
-  const settingsData = {
+  const organizationData = {
+    ...businessPlaceholders,
+    senderName: "Myrrh Rental Space",
+    ...emailPlaceholders,
+  };
+
+  const reservationData = {
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 24,
+  };
+
+  const seoData = {
     siteName: "Myrrh Rental Space",
     siteDescription:
       "ビジネスからプライベートまで、様々な用途に対応したレンタルスペース",
-    ...businessPlaceholders,
-    // 交通案内・駐車場案内は Location 単位（Location.accessLines / Location.parkingInfo）
     footerCopyright: "© 2025 Myrrh Rental Space. All rights reserved.",
-    cancellationDeadlineHours: 24,
-    modificationDeadlineHours: 24,
-
     // ファビコン・ロゴ・OGP（公開ページ表示用）
     // ファビコンは空文字で開始し、admin から R2 アップロードで設定。未設定（空文字）
     // 時は dynamic icon Route Handler (`src/app/icon/route.tsx`) が ImageResponse の
@@ -488,10 +494,6 @@ async function seedSettings(
     defaultOgpImageUrl: "/images/seed/ogp-default.svg",
     headerLogoUrl: "/images/seed/logo-header.svg",
     footerLogoUrl: "/images/seed/logo-footer.svg",
-
-    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
-    senderName: "Myrrh Rental Space",
-    ...emailPlaceholders,
   };
 
   const featureModules = resolveSeedFeatureModules();
@@ -499,17 +501,112 @@ async function seedSettings(
   // featureModules は既定で「create only」（既存 install の管理画面トグル編集を保持）。
   // dev seed のみ resetFeatureModules:true で update 経路にも書き込み、全機能を ON に揃える。
   // SSoT: FEATURE_MODULES_LIST registry + SEED_FEATURE_MODULES_DISABLED env var。
-  await prisma.settings.upsert({
+  await prisma.settingsFeatures.upsert({
     where: { id: "singleton" },
-    update: options.resetFeatureModules
-      ? { ...settingsData, featureModules }
-      : settingsData,
+    update: options.resetFeatureModules ? { featureModules } : {},
     create: {
       id: "singleton",
-      ...settingsData,
       featureModules,
     },
   });
+
+  await Promise.all([
+    prisma.settingsOrganization.upsert({
+      where: { id: "singleton" },
+      update: organizationData,
+      create: { id: "singleton", ...organizationData },
+    }),
+    prisma.settingsReservation.upsert({
+      where: { id: "singleton" },
+      update: reservationData,
+      create: { id: "singleton", ...reservationData },
+    }),
+    prisma.settingsAnnouncementCarousel.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSystem.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSeo.upsert({
+      where: { id: "singleton" },
+      update: seoData,
+      create: { id: "singleton", ...seoData },
+    }),
+    prisma.settingsAnalytics.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsLayout.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSidebar.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsCommerce.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsNotification.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsStripe.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsResend.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsTurnstile.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsGoogleMaps.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsCustomApiKeys.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsGoogleCalendar.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsGoogleBusinessProfile.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsInstagram.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSwitchbot.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+  ]);
 
   console.log("✅ Settings configured");
 }

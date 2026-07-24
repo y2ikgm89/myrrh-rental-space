@@ -11,7 +11,10 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 type SettingsUpsertArgs = { update?: Record<string, unknown> };
-const mockSettingsUpsert = mock<
+const mockSettingsTurnstileUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsSwitchbotUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
 
@@ -63,7 +66,8 @@ mock.module("node:crypto", () => ({
 mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: { upsert: mockSettingsUpsert },
+    settingsTurnstile: { upsert: mockSettingsTurnstileUpsert },
+    settingsSwitchbot: { upsert: mockSettingsSwitchbotUpsert },
     smartLockPasscode: {
       findMany: (...args: unknown[]) => mockFindManyPasscodes(...args),
     },
@@ -107,13 +111,19 @@ const CREDENTIALS = {
   passcodeBufferMinutes: 15,
 };
 
-function lastUpdate(): Record<string, unknown> {
-  const lastCall = mockSettingsUpsert.mock.calls.at(-1);
+function lastTurnstileUpdate(): Record<string, unknown> {
+  const lastCall = mockSettingsTurnstileUpsert.mock.calls.at(-1);
+  return lastCall?.[0]?.update ?? {};
+}
+
+function lastSwitchbotUpdate(): Record<string, unknown> {
+  const lastCall = mockSettingsSwitchbotUpsert.mock.calls.at(-1);
   return lastCall?.[0]?.update ?? {};
 }
 
 beforeEach(() => {
-  mockSettingsUpsert.mockClear();
+  mockSettingsTurnstileUpsert.mockClear();
+  mockSettingsSwitchbotUpsert.mockClear();
   mockFindManyPasscodes.mockReset();
   mockGetDecryptedSwitchBotCredentials.mockReset();
   mockRevokeOne.mockReset();
@@ -139,8 +149,12 @@ describe("updateTurnstileSettings", () => {
       turnstileSiteKey: null,
       turnstileSecretKey: null,
     });
-    expect(Object.keys(lastUpdate())).not.toContain("turnstileSiteKey");
-    expect(Object.keys(lastUpdate())).not.toContain("turnstileSecretKey");
+    expect(Object.keys(lastTurnstileUpdate())).not.toContain(
+      "turnstileSiteKey",
+    );
+    expect(Object.keys(lastTurnstileUpdate())).not.toContain(
+      "turnstileSecretKey",
+    );
   });
 
   test("Site Key を指定すると保存される", async () => {
@@ -148,7 +162,7 @@ describe("updateTurnstileSettings", () => {
       turnstileSiteKey: "0xNEWSITEKEY",
       turnstileSecretKey: null,
     });
-    expect(lastUpdate()["turnstileSiteKey"]).toBe("0xNEWSITEKEY");
+    expect(lastTurnstileUpdate()["turnstileSiteKey"]).toBe("0xNEWSITEKEY");
   });
 
   test("Secret Key を指定すると暗号化して保存され、Site Key は維持される", async () => {
@@ -156,8 +170,10 @@ describe("updateTurnstileSettings", () => {
       turnstileSiteKey: null,
       turnstileSecretKey: "0xSECRET",
     });
-    expect(lastUpdate()["turnstileSecretKey"]).toBe("enc:0xSECRET");
-    expect(Object.keys(lastUpdate())).not.toContain("turnstileSiteKey");
+    expect(lastTurnstileUpdate()["turnstileSecretKey"]).toBe("enc:0xSECRET");
+    expect(Object.keys(lastTurnstileUpdate())).not.toContain(
+      "turnstileSiteKey",
+    );
   });
 });
 
@@ -167,8 +183,8 @@ describe("clearSwitchBotSettings", () => {
 
     await clearSwitchBotSettings();
 
-    expect(lastUpdate()["switchbotOpenToken"]).toBeNull();
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
     expect(mockRevokeOne).not.toHaveBeenCalled();
     expect(mockDeleteWebhook).toHaveBeenCalledWith(
       CREDENTIALS,
@@ -185,8 +201,8 @@ describe("clearSwitchBotSettings", () => {
     await clearSwitchBotSettings();
 
     expect(mockDeleteWebhook).not.toHaveBeenCalled();
-    expect(lastUpdate()["switchbotOpenToken"]).toBeNull();
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
   });
 
   test("webhook解除に失敗してもクリア自体はブロックしない(ベストエフォート)", async () => {
@@ -197,8 +213,8 @@ describe("clearSwitchBotSettings", () => {
 
     await clearSwitchBotSettings();
 
-    expect(lastUpdate()["switchbotOpenToken"]).toBeNull();
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
     expect(mockLogError).toHaveBeenCalled();
   });
 
@@ -209,8 +225,8 @@ describe("clearSwitchBotSettings", () => {
 
     expect(mockFindManyPasscodes).not.toHaveBeenCalled();
     expect(mockDeleteWebhook).not.toHaveBeenCalled();
-    expect(lastUpdate()["switchbotOpenToken"]).toBeNull();
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
   });
 
   test("PENDINGのパスコードが残っている場合はクリアできない", async () => {
@@ -250,8 +266,8 @@ describe("clearSwitchBotSettings", () => {
         device: { deviceId: "AA:BB" },
       }),
     );
-    expect(lastUpdate()["switchbotOpenToken"]).toBeNull();
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotOpenToken"]).toBeNull();
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBeNull();
   });
 
   test("失効に失敗した場合はクリアをブロックする", async () => {
@@ -293,7 +309,7 @@ describe("rotateSwitchBotWebhookPathToken", () => {
       CREDENTIALS,
       "https://example.com/api/webhooks/switchbot/old-token",
     );
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBe(
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
       `enc:${GENERATED_WEBHOOK_TOKEN}`,
     );
     expect(mockSetupWebhook).toHaveBeenCalledWith(
@@ -311,7 +327,7 @@ describe("rotateSwitchBotWebhookPathToken", () => {
     await rotateSwitchBotWebhookPathToken();
 
     expect(mockDeleteWebhook).not.toHaveBeenCalled();
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBe(
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
       `enc:${GENERATED_WEBHOOK_TOKEN}`,
     );
     expect(mockSetupWebhook).toHaveBeenCalled();
@@ -326,7 +342,7 @@ describe("rotateSwitchBotWebhookPathToken", () => {
     await rotateSwitchBotWebhookPathToken();
 
     expect(mockLogError).toHaveBeenCalled();
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBe(
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
       `enc:${GENERATED_WEBHOOK_TOKEN}`,
     );
     expect(mockSetupWebhook).toHaveBeenCalled();
@@ -341,7 +357,7 @@ describe("rotateSwitchBotWebhookPathToken", () => {
     await expect(rotateSwitchBotWebhookPathToken()).rejects.toThrow(
       "Webhook URLトークンの更新に失敗しました。管理画面の「Webhookを登録」から再試行してください",
     );
-    expect(lastUpdate()["switchbotWebhookPathToken"]).toBe(
+    expect(lastSwitchbotUpdate()["switchbotWebhookPathToken"]).toBe(
       `enc:${GENERATED_WEBHOOK_TOKEN}`,
     );
   });

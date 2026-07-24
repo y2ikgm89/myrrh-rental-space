@@ -17,7 +17,7 @@ export async function getReservationDeadlineSettings() {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findFirstOrThrow({
+      prisma.settingsReservation.findFirstOrThrow({
         select: {
           cancellationDeadlineHours: true,
           modificationDeadlineHours: true,

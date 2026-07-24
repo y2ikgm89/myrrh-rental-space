@@ -78,7 +78,7 @@ const mockTransaction = mock<
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: { findUniqueOrThrow: mockSettingsFindUniqueOrThrow },
+    settingsReservation: { findUniqueOrThrow: mockSettingsFindUniqueOrThrow },
     $transaction: mockTransaction,
   },
 }));

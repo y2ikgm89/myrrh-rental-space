@@ -165,9 +165,9 @@ async function createAdminReservationFixture(opts?: {
   };
 }
 
-/** Settings singleton を既知値へ揃える（schema の @default と同値、他テストへの副作用ゼロ）。 */
+/** Commerce / reservation singletons を既知値へ揃える（schema の @default と同値、他テストへの副作用ゼロ）。 */
 async function ensureKnownSettings(): Promise<void> {
-  const data = {
+  const commerceData = {
     taxStandardRate: 10,
     taxReducedRate: 8,
     taxDisplayModePublic: "tax_included" as const,
@@ -175,18 +175,25 @@ async function ensureKnownSettings(): Promise<void> {
     durationDiscountRules: [],
     discountCombinationMode: "best" as const,
     showOriginalPrice: true,
+  };
+  const reservationData = {
     // 2 時間の fixture 予約が確実に通るよう、期間ルールも既知値へ揃える
-    // (schema の @default と同値。共有ローカル test-db コンテナに他テストの
-    // 残留値が入っていても揺れないようにするための明示指定)。
     defaultTimeSlot: 60,
     minReservationDuration: 60,
     maxReservationDuration: 480,
   };
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
-  });
+  await Promise.all([
+    prisma.settingsCommerce.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton", ...commerceData },
+      update: commerceData,
+    }),
+    prisma.settingsReservation.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton", ...reservationData },
+      update: reservationData,
+    }),
+  ]);
 }
 
 describeMaybe(

@@ -25,6 +25,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectRecord } from "../../../../helpers/type-assertions";
+import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
 // ---------------------------------------------------------------------------
 // Mocks（モジュール解決の都合上、import より前に登録する）
@@ -34,15 +35,15 @@ const mockFindUnique = mock<
   (args: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve(null));
 
-// task #9 PR#5: cancellation の auto refund で Settings.refundPolicy を fetch する
-const mockSettingsFindUnique = mock<
+// task #9 PR#5: cancellation の auto refund で SettingsCommerce.refundPolicy を fetch する
+const mockSettingsCommerceFindUnique = mock<
   (args: Record<string, unknown>) => Promise<{ refundPolicy: unknown } | null>
 >(() => Promise.resolve(null));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: { findUnique: mockFindUnique },
-    settings: { findUnique: mockSettingsFindUnique },
+    settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
   },
 }));
 
@@ -140,28 +141,13 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   ),
 }));
 
-const mockLogError = mock<(err: Error, ctx: Record<string, unknown>) => void>(
-  () => {},
-);
-mock.module("@/shared/lib/errors/server", () => ({
-  logError: mockLogError,
+const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
+// `...actual` re-export で safeFetch 等を残す（部分 mock は Export named not found）。
+await installErrorsServerMock({
+  logError: (err, ctx) => mockLogError(err, ctx),
   normalizeError: (err: unknown) =>
     err instanceof Error ? err : new Error(String(err)),
-  ErrorCategory: {
-    DATABASE: "DATABASE",
-    EXTERNAL_API: "EXTERNAL_API",
-    VALIDATION: "VALIDATION",
-    AUTHORIZATION: "AUTHORIZATION",
-    CACHE: "CACHE",
-    UNKNOWN: "UNKNOWN",
-  },
-  ErrorSeverity: {
-    LOW: "LOW",
-    MEDIUM: "MEDIUM",
-    HIGH: "HIGH",
-    CRITICAL: "CRITICAL",
-  },
-}));
+});
 
 // ---------------------------------------------------------------------------
 // SUT を mock 登録後に import
@@ -267,8 +253,8 @@ function baseInput(
 describe("applyCancellationSideEffects", () => {
   beforeEach(() => {
     mockFindUnique.mockReset();
-    mockSettingsFindUnique.mockReset();
-    mockSettingsFindUnique.mockResolvedValue(null);
+    mockSettingsCommerceFindUnique.mockReset();
+    mockSettingsCommerceFindUnique.mockResolvedValue(null);
     mockCreateAuditLog.mockReset();
     mockCreateNotification.mockReset();
     mockRefund.mockReset();

@@ -1,5 +1,5 @@
 /**
- * Settings シングルトンに保存された Google Business Profile 認証情報の暗号化 I/O。
+ * SettingsGoogleBusinessProfile シングルトンに保存された Google Business Profile 認証情報の暗号化 I/O。
  *
  * - `googleBusinessProfileAuth` は `Json?` 型で `{ encrypted: string }` 形式を保存
  * - 中身は `JSON.stringify(GbpAuthState)` を
@@ -46,12 +46,8 @@ function isGbpAuthState(value: unknown): value is GbpAuthState {
   );
 }
 
-/**
- * Settings シングルトンを保証する upsert helper。
- * `id` カラムは `@default("singleton")` のため、シンプルに `id: "singleton"` を使う。
- */
-async function ensureSettingsId(): Promise<string> {
-  const settings = await prisma.settings.upsert({
+async function ensureSettingsGoogleBusinessProfileId(): Promise<string> {
+  const settings = await prisma.settingsGoogleBusinessProfile.upsert({
     where: { id: "singleton" },
     create: { id: "singleton" },
     update: {},
@@ -68,7 +64,7 @@ async function ensureSettingsId(): Promise<string> {
  * - decrypt / parse 失敗 → `logError`（HIGH）+ null（次回連携で復旧可能）
  */
 export async function getGbpAuthState(): Promise<GbpAuthState | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsGoogleBusinessProfile.findUnique({
     where: { id: "singleton" },
     select: {
       googleBusinessProfileEnabled: true,
@@ -107,12 +103,12 @@ export async function getGbpAuthState(): Promise<GbpAuthState | null> {
  * `googleBusinessProfileEnabled` を true にし、再連携時の reset を兼ねる。
  */
 export async function saveGbpAuthState(state: GbpAuthState): Promise<void> {
-  const id = await ensureSettingsId();
+  const id = await ensureSettingsGoogleBusinessProfileId();
   const encrypted = encrypt(JSON.stringify(state), {
     purpose: GBP_AUTH_PURPOSE,
   });
 
-  await prisma.settings.update({
+  await prisma.settingsGoogleBusinessProfile.update({
     where: { id },
     data: {
       googleBusinessProfileAuth: { encrypted },
@@ -127,8 +123,8 @@ export async function saveGbpAuthState(state: GbpAuthState): Promise<void> {
  * `googleBusinessProfileEnabled` も false に戻す。
  */
 export async function clearGbpAuthState(): Promise<void> {
-  const id = await ensureSettingsId();
-  await prisma.settings.update({
+  const id = await ensureSettingsGoogleBusinessProfileId();
+  await prisma.settingsGoogleBusinessProfile.update({
     where: { id },
     data: {
       googleBusinessProfileAuth: Prisma.JsonNull,

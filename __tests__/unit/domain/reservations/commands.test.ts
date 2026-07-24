@@ -21,7 +21,7 @@ const CouponType = {
 // Mock functions (defined before mock.module)
 // ---------------------------------------------------------------------------
 
-const mockSettingsFindUnique = mock<() => Promise<unknown>>(() =>
+const mockSettingsCommerceFindUnique = mock<() => Promise<unknown>>(() =>
   Promise.resolve({
     durationDiscountEnabled: false,
     durationDiscountRules: null,
@@ -31,6 +31,22 @@ const mockSettingsFindUnique = mock<() => Promise<unknown>>(() =>
     taxDisplayModePublic: "tax_included",
     showOriginalPrice: true,
   }),
+);
+
+const mockSettingsReservationFindUnique = mock<() => Promise<unknown>>(() =>
+  Promise.resolve({
+    defaultTimeSlot: 60,
+    minReservationDuration: 60,
+    maxReservationDuration: 480,
+  }),
+);
+
+const mockSettingsReservationFindUniqueOrThrow = mock<() => Promise<unknown>>(
+  () =>
+    Promise.resolve({
+      maxRecurrenceInstances: 26,
+      customerCanCancelSeriesInFull: false,
+    }),
 );
 
 const mockSpaceFindUnique = mock<() => Promise<unknown>>(() =>
@@ -221,7 +237,11 @@ mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: { findUnique: mockSettingsFindUnique },
+    settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
+    settingsReservation: {
+      findUnique: mockSettingsReservationFindUnique,
+      findUniqueOrThrow: mockSettingsReservationFindUniqueOrThrow,
+    },
     space: { findUnique: mockSpaceFindUnique },
     reservation: {
       findUnique: mockReservationFindUnique,
@@ -294,7 +314,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 // ---------------------------------------------------------------------------
 
 function resetAllMocks() {
-  mockSettingsFindUnique.mockClear();
+  mockSettingsCommerceFindUnique.mockClear();
   mockSpaceFindUnique.mockClear();
   mockReservationFindUnique.mockClear();
   mockReservationCreate.mockClear();
@@ -333,7 +353,7 @@ function resetAllMocks() {
   mockGetSpaceRatePlans.mockResolvedValue([]);
 
   // Reset to default implementations
-  mockSettingsFindUnique.mockImplementation(() =>
+  mockSettingsCommerceFindUnique.mockImplementation(() =>
     Promise.resolve({
       durationDiscountEnabled: false,
       durationDiscountRules: null,
@@ -342,6 +362,21 @@ function resetAllMocks() {
       taxReducedRate: 8,
       taxDisplayModePublic: "tax_included",
       showOriginalPrice: true,
+    }),
+  );
+  mockSettingsReservationFindUnique.mockClear();
+  mockSettingsReservationFindUnique.mockImplementation(() =>
+    Promise.resolve({
+      defaultTimeSlot: 60,
+      minReservationDuration: 60,
+      maxReservationDuration: 480,
+    }),
+  );
+  mockSettingsReservationFindUniqueOrThrow.mockClear();
+  mockSettingsReservationFindUniqueOrThrow.mockImplementation(() =>
+    Promise.resolve({
+      maxRecurrenceInstances: 26,
+      customerCanCancelSeriesInFull: false,
     }),
   );
   mockSpaceFindUnique.mockImplementation(() =>

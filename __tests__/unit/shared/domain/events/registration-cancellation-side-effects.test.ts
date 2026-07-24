@@ -26,14 +26,14 @@ const mockFindUnique = mock<
   (args: Record<string, unknown>) => Promise<unknown>
 >(() => Promise.resolve(null));
 
-const mockSettingsFindUnique = mock<
+const mockSettingsCommerceFindUnique = mock<
   (args: Record<string, unknown>) => Promise<{ refundPolicy: unknown } | null>
 >(() => Promise.resolve(null));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     eventRegistration: { findUnique: mockFindUnique },
-    settings: { findUnique: mockSettingsFindUnique },
+    settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
   },
 }));
 
@@ -209,7 +209,7 @@ function baseInput(
 describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refund symmetry", () => {
   beforeEach(() => {
     mockFindUnique.mockReset();
-    mockSettingsFindUnique.mockReset();
+    mockSettingsCommerceFindUnique.mockReset();
     mockCreateAuditLog.mockReset();
     mockCreateNotification.mockReset();
     mockRefund.mockReset();
@@ -218,7 +218,7 @@ describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refu
     mockLogError.mockReset();
 
     mockFindUnique.mockResolvedValue(null);
-    mockSettingsFindUnique.mockResolvedValue(null);
+    mockSettingsCommerceFindUnique.mockResolvedValue(null);
     mockCreateAuditLog.mockResolvedValue(undefined);
     mockCreateNotification.mockResolvedValue(undefined);
     mockRefund.mockResolvedValue({ ok: true });
@@ -331,7 +331,7 @@ describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refu
 
   test("Policy refundRate=0% → refund skip かつ「要返金確認」通知タイトル維持", async () => {
     // policy: 24h 未満は 0%、default も 0%。slot.startAt を「1h 後」に置いて 0% 帯に落とす。
-    mockSettingsFindUnique.mockResolvedValue({
+    mockSettingsCommerceFindUnique.mockResolvedValue({
       refundPolicy: {
         tiers: [{ hoursBefore: 24, refundRate: 100 }],
         defaultRefundRate: 0,
@@ -376,7 +376,7 @@ describe("applyEventRegistrationCancellationSideEffects — MYPAGE-EVENT-02 refu
 
   test("Policy が tier 適用結果 100% → amount 明示で refund 発火", async () => {
     // policy: 168h (7d) 前まで 100%。slot は十分先 (baseRegistration 既定=2099年) で 100% 帯。
-    mockSettingsFindUnique.mockResolvedValue({
+    mockSettingsCommerceFindUnique.mockResolvedValue({
       refundPolicy: {
         tiers: [{ hoursBefore: 168, refundRate: 100 }],
         defaultRefundRate: 0,

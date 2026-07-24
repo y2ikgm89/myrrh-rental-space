@@ -90,7 +90,7 @@ const txClient = {
     updateMany: mockReservationUpdateMany,
   },
   space: { findUnique: mockSpaceFindUniqueTx },
-  settings: { findFirst: mockSettingsFindFirst },
+  settingsCommerce: { findFirst: mockSettingsFindFirst },
   blockedDate: { findFirst: mockBlockedDateFindFirst },
   $executeRaw: mockExecuteRaw,
 };

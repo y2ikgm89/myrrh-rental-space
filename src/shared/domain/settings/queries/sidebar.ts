@@ -38,7 +38,7 @@ export async function getSidebarSettings(): Promise<PublicSidebarSettings> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsSidebar.findUnique({
         where: { id: "singleton" },
         select: {
           sidebarEnabled: true,

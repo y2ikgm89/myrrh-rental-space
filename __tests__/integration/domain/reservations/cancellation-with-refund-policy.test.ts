@@ -38,6 +38,7 @@ import {
   test,
 } from "bun:test";
 import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 // preload の DATABASE_URL 上書きを、gateway import 前に実 TEST_DB へ向け直す。
 // interactive tx の並行度は refund-command test と同じ 20/60s に揃える (advisory lock
@@ -154,32 +155,14 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
 }));
 
 // logError: refundRate=0% skip 分岐で発火するのを record。
-const mockLogError = mock<(err: Error, ctx: Record<string, unknown>) => void>(
-  () => {},
-);
-const errorLevels = {
-  ErrorCategory: {
-    DATABASE: "DATABASE",
-    EXTERNAL_API: "EXTERNAL_API",
-    VALIDATION: "VALIDATION",
-    AUTHORIZATION: "AUTHORIZATION",
-    CACHE: "CACHE",
-    UNKNOWN: "UNKNOWN",
-  },
-  ErrorSeverity: {
-    LOW: "LOW",
-    MEDIUM: "MEDIUM",
-    HIGH: "HIGH",
-    CRITICAL: "CRITICAL",
-  },
-};
-mock.module("@/shared/lib/errors/server", () => ({
-  logError: (err: Error, ctx: Record<string, unknown>) =>
-    mockLogError(err, ctx),
+const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
+// Bun 公式に近い `...actual` re-export。部分 mock だと settings queries 等が
+// `safeFetch` を import した瞬間に Export named not found になる。
+await installErrorsServerMock({
+  logError: (err, ctx) => mockLogError(err, ctx),
   normalizeError: (err: unknown) =>
     err instanceof Error ? err : new Error(String(err)),
-  ...errorLevels,
-}));
+});
 
 // fireAndForget: applyCancellationSideEffects は refund を detach するため、テスト側で
 // 発火 Promise を集めて applyCancellationSideEffects 完了後に await する。
@@ -316,9 +299,7 @@ async function createPaidReservationFixture(
 }
 
 async function setRefundPolicy(policy: unknown): Promise<void> {
-  // Settings singleton は毎テスト upsert。JsonNull は Prisma に null を渡すと
-  // undefined と衝突するため raw で対応 (updateMany data は Prisma sentinel を使う)。
-  await prisma.settings.upsert({
+  await prisma.settingsCommerce.upsert({
     where: { id: "singleton" },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only: shape 破損 case で unknown JSON も渡すため
     create: { id: "singleton", refundPolicy: policy as any },
@@ -328,7 +309,7 @@ async function setRefundPolicy(policy: unknown): Promise<void> {
 }
 
 async function clearRefundPolicy(): Promise<void> {
-  await prisma.$executeRaw`UPDATE settings SET "refundPolicy" = NULL WHERE id = 'singleton'`;
+  await prisma.$executeRaw`UPDATE settings_commerces SET "refundPolicy" = NULL WHERE id = 'singleton'`;
 }
 
 function baseInput(reservationId: string) {

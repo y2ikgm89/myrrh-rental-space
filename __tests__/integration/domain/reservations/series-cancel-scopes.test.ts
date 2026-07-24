@@ -135,7 +135,7 @@ async function createSpaceFixture(): Promise<SpaceFixture> {
 }
 
 async function ensureSettings(maxRecurrenceInstances = 26): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsReservation.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", maxRecurrenceInstances },
     update: { maxRecurrenceInstances },

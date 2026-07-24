@@ -6,30 +6,31 @@
  * 記録されることを、実 DB 依存なしで確認する。
  *
  * 実 Postgres は不要 (Prisma 呼出は fetchReservationForSideEffects の findUnique
- * だけを facade level で mock、Settings.findUnique も mock)。SERIAL_DB_TESTS への
+ * だけを facade level で mock、SettingsCommerce.findUnique も mock)。SERIAL_DB_TESTS への
  * 登録は不要。既存の cancellation-with-refund-policy.test.ts は refund 実挙動
  * (Refund child 書込 + PaymentStatus 遷移) の検証で、本 test は AuditLog 集約
  * metadata の shape 検証を担当する (責務分割)。
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 // ---------------------------------------------------------------------------
 // Facade / external module mocks (順序: mock.module 宣言 → dynamic import)
 // ---------------------------------------------------------------------------
 
-// Prisma facade: reservation findUnique と settings findUnique だけ本 test で使う。
+// Prisma facade: reservation findUnique と settingsCommerce findUnique だけ本 test で使う。
 const mockReservationFindUnique =
   mock<
     (args: { where: unknown; select: unknown }) => Promise<unknown | null>
   >();
-const mockSettingsFindUnique = mock<
+const mockSettingsCommerceFindUnique = mock<
   (args: { where: unknown; select: unknown }) => Promise<unknown | null>
 >(() => Promise.resolve(null));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     reservation: { findUnique: mockReservationFindUnique },
-    settings: { findUnique: mockSettingsFindUnique },
+    settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
   },
   basePrisma: {},
 }));
@@ -134,25 +135,12 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
 }));
 
 // logError: skip 分岐等で発火する。fail 時のノイズを抑えるため noop。
-mock.module("@/shared/lib/errors/server", () => ({
+// `...actual` re-export で safeFetch 等を残す（部分 mock は Export named not found）。
+await installErrorsServerMock({
   logError: () => {},
   normalizeError: (err: unknown) =>
     err instanceof Error ? err : new Error(String(err)),
-  ErrorCategory: {
-    DATABASE: "DATABASE",
-    EXTERNAL_API: "EXTERNAL_API",
-    VALIDATION: "VALIDATION",
-    AUTHORIZATION: "AUTHORIZATION",
-    CACHE: "CACHE",
-    UNKNOWN: "UNKNOWN",
-  },
-  ErrorSeverity: {
-    LOW: "LOW",
-    MEDIUM: "MEDIUM",
-    HIGH: "HIGH",
-    CRITICAL: "CRITICAL",
-  },
-}));
+});
 
 // fireAndForget: applyCancellationSideEffects は orchestrator 全体を fireAndForget
 // でラップするため、テスト側で単一の pending promise を集めて drain する。
@@ -245,7 +233,7 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     }
 
     mockReservationFindUnique.mockReset();
-    mockSettingsFindUnique.mockReset();
+    mockSettingsCommerceFindUnique.mockReset();
     mockRefundReservationPaymentCommand.mockReset();
     mockDeleteCalendarSync.mockReset();
     mockSendCancelled.mockReset();
@@ -256,7 +244,9 @@ describe("applyCancellationSideEffects × sideEffects outcome capture (CRITIC-6)
     pendingSideEffects.length = 0;
 
     // 既定 mock: happy path
-    mockSettingsFindUnique.mockImplementation(() => Promise.resolve(null));
+    mockSettingsCommerceFindUnique.mockImplementation(() =>
+      Promise.resolve(null),
+    );
     mockRefundReservationPaymentCommand.mockImplementation(() =>
       Promise.resolve({
         refundId: "re_test",

@@ -138,7 +138,7 @@ async function createSpaceFixture(): Promise<SpaceFixture> {
 
 /** Settings singleton の maxRecurrenceInstances を安全な既定値へ upsert する。 */
 async function ensureSettings(maxRecurrenceInstances = 26): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsReservation.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", maxRecurrenceInstances },
     update: { maxRecurrenceInstances },

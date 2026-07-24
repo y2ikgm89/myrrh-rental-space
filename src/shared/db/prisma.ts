@@ -38,7 +38,6 @@ type ConvertDecimalFields<T> = {
 export type Space = ConvertDecimalFields<PrismaModels.Space>;
 export type Reservation = ConvertDecimalFields<PrismaModels.Reservation>;
 export type Customer = ConvertDecimalFields<PrismaModels.Customer>;
-export type Settings = ConvertDecimalFields<PrismaModels.Settings>;
 export type Coupon = ConvertDecimalFields<PrismaModels.Coupon>;
 export type SpaceRatePlan = ConvertDecimalFields<PrismaModels.SpaceRatePlan>;
 export type Receipt = ConvertDecimalFields<PrismaModels.Receipt>;

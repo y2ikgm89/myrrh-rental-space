@@ -86,7 +86,7 @@ export function createAppPrismaClient(base: PrismaClient) {
           compute: (c) => decimalToNumber(c.totalSpent),
         },
       },
-      settings: {
+      settingsCommerce: {
         taxStandardRate: {
           needs: { taxStandardRate: true },
           compute: (s) => decimalToNumberStrict(s.taxStandardRate),

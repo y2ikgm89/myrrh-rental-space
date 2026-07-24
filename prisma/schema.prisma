@@ -1456,289 +1456,368 @@ model FaqItem {
 }
 
 // ==============================================
-// Settings (Singleton)
+// Settings singletons (concern split — Phase 1+)
 // ==============================================
 
-model Settings {
+model SettingsAnnouncementCarousel {
   id        String   @id @default("singleton")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Site Basic Info
-  // favicon は dynamic icon Route Handler (src/app/icon/route.tsx) 経由で配信する。
-  // ここに保存された URL は R2 オブジェクト URL を期待し、Route Handler が DB query →
-  // R2 から binary pass-through する。空文字 ("") なら ImageResponse で default fallback。
-  // NOT NULL + DEFAULT '' で型を `string` に強化（codebase の他 nullable string 列とは
-  // 一貫性が崩れるが、null と空文字の二重表現を排除する意図的な強化）。
-  // generateMetadata からは静的 URL `/icon` を icons.icon に注入し DB query しないため、
-  // PR #699 の build-time prerender 汚染懸念には抵触しない。
-  siteName           String?
-  siteDescription    String? @db.Text
-  faviconUrl         String  @default("")
-  defaultOgpImageUrl String?
-  headerLogoUrl      String?
-  footerLogoUrl      String?
-  footerCopyright    String?
+  animation         AnnouncementBarAnimation   @default(fade)
+  duration          Int                        @default(5000)
+  autoPlay          Boolean                    @default(true)
+  pauseOnHover      Boolean                    @default(true)
+  showArrows        Boolean                    @default(true)
+  showIndicator     Boolean                    @default(true)
+  designStyle       AnnouncementBarDesignStyle @default(solid)
+  bgColor           String?
+  textColor         String?
+  stripeColor       String?
+  stripeAnimation   Boolean                    @default(false)
+  gradientAnimation Boolean                    @default(false)
+  glassAnimation    Boolean                    @default(false)
+  sticky            Boolean                    @default(false)
 
-  // Logo Display Settings
-  useHeaderLogo Boolean @default(true)
-  useFooterLogo Boolean @default(true)
+  @@map("settings_announcement_carousels")
+}
 
-  // Business Info (事業者情報)
-  businessName        String? // 会社名・屋号
-  businessNameKana    String? // 会社名・屋号（カナ） — JSON-LD alternateName で公開
-  representativeName  String? // 代表者名
-  establishedDate     DateTime? // 設立日
-  registrationNumber  String? // 法人番号/登録番号 — 特商法表記で公開
-  invoiceNumber       String? // インボイス登録番号
-  businessDescription String?   @db.Text // 事業概要
+model SettingsSystem {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Contact Info
-  // 表示用住所は postalCode + prefecture + city + streetAddress + buildingName から派生（SSoT）
-  phoneNumber   String?
-  faxNumber     String?
-  email         String?
-  postalCode    String? // 郵便番号
-  prefecture    String? // 都道府県
-  city          String? // 市区町村
-  streetAddress String? // 番地以降
-  buildingName  String? // 建物名
-
-  // Business Hours (営業時間)
-  businessHours   Json? // 曜日ごとの営業時間
-  regularHolidays Json? // 定休日（曜日）
-  holidayNotice   String? @db.Text // 休業日のお知らせ
-
-  // Access Info (アクセス情報)
-  // 交通案内・駐車場案内は Location 単位（multi-location）が SSoT。
-  // Settings 側の旧 accessInfo / parkingInfo は 2026-05-01 に廃止。
-
-  // Email Settings
-  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの
-  // env-OR-DB（API キー / Stripe / Turnstile と同方式）。senderEmail/senderName は
-  // 管理画面のメール設定で運用者が設定でき、保存時に Resend 検証済みドメインと照合する。
-  senderEmail  String?
-  senderName   String?
-  replyToEmail String?
-
-  // SEO Settings
-  defaultMetaDescription String?
-  defaultMetaKeywords    String?
-  defaultOgpTitle        String?
-  defaultOgpDescription  String?
-
-  // Layout Settings (レイアウト設定)
-  containerWidth       LayoutWidth?
-  containerWidthCustom Int? // CUSTOMの場合の幅（px）
-  contentWidth         LayoutWidth?
-  contentWidthCustom   Int? // CUSTOMの場合の幅（px）
-  headerScrollBehavior HeaderScrollBehavior @default(always_visible)
-  headerBackgroundMode HeaderBackgroundMode @default(solid)
-
-  // Footer Settings (フッター設定)
-  footerTagline         String?
-  footerNavigationLabel String  @default("Navigation")
-  footerContactLabel    String  @default("Contact")
-  footerHoursLabel      String  @default("Hours")
-  footerShowSocialLinks Boolean @default(true)
-
-  // Theme
-  themeColor String @default("#fafafa")
-
-  // Sidebar Settings (サイドバー設定)
-  sidebarEnabled      Boolean @default(true) // サイドバー全体の有効/無効
-  sidebarWidgets      Json    @default("[{\"type\":\"search\",\"enabled\":true},{\"type\":\"recent\",\"enabled\":true,\"layout\":\"compact\"},{\"type\":\"popular\",\"enabled\":true,\"layout\":\"compact\",\"showRanking\":true},{\"type\":\"categories\",\"enabled\":true},{\"type\":\"tags\",\"enabled\":true}]") // ウィジェット個別設定
-  sidebarRecentCount  Int     @default(5) // 新着記事の表示件数
-  sidebarPopularCount Int     @default(5) // 人気記事の表示件数
-  sidebarTocEnabled   Boolean @default(true) // 公開記事詳細ページの目次サイドバー表示（グローバル）
-
-  // Analytics Settings（Enum化）
-  analyticsType         AnalyticsType? // ga4 | gtm | null
-  googleAnalyticsId     String? // GA4 Measurement ID (G-XXXXXXXXXX)
-  googleTagManagerId    String? // GTM Container ID (GTM-XXXXXXX)
-  googleSearchConsoleId String? // GSC verification meta tag
-  bingWebmasterToolsId  String? // Bing verification meta tag
-  gaPropertyId          String? // GA4 Property ID for Data API
-  microsoftClarityId    String? // Microsoft Clarity Project ID（ヒートマップ・セッション録画、GA4/GTM と独立）
-
-  // Reservation Settings（常に有効な整数。未設定行は DB default で埋めたうえで NOT NULL）
-  defaultTimeSlot                  Int     @default(60)
-  minReservationDuration           Int     @default(60)
-  maxReservationDuration           Int     @default(480)
-  sendReservationConfirmationEmail Boolean @default(true)
-  // Phase B.2: 繰返し予約 (RRULE) の 1 series あたり最大 instance 数 upper bound (admin 設定可)
-  maxRecurrenceInstances           Int     @default(26)
-
-  // Phase B.2 task 25: 顧客が定期予約を series-all スコープで自らキャンセルできるか。
-  // false (default): 顧客はマイページで series-all キャンセルできず、admin へ問い合わせ導線のみ。
-  // true: マイページからも「定期予約すべてをキャンセル」ボタンが表示される。
-  customerCanCancelSeriesInFull    Boolean @default(false)
-
-  // Discount Settings (割引設定) - Enum化
-  durationDiscountEnabled Boolean                 @default(false)
-  durationDiscountRules   Json                    @default("[]")
-  discountCombinationMode DiscountCombinationMode @default(best)
-  showOriginalPrice       Boolean                 @default(true)
-
-  // Tax Settings (消費税設定) - Enum化
-  taxStandardRate      Decimal        @default(10) @db.Decimal(5, 2)
-  taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
-  taxDisplayModePublic TaxDisplayMode @default(tax_included)
-
-  // Notification Settings（管理者通知のイベント別トグル）
-  notifyNewReservation       Boolean  @default(true)
-  notifyReservationChange    Boolean  @default(true)
-  notifyReservationCancel    Boolean  @default(true)
-  notifyNewInquiry           Boolean  @default(true)
-  notifyEventRegistration    Boolean  @default(true)
-  notifyEventWaitlistRegistration Boolean @default(true)
-  notifyEventCancellation    Boolean  @default(true)
-  // 通知先: スタッフ(User.id 配列・送信時に現在メールへ解決) ＋ カスタムメール
-  notificationStaffIds       String[] @default([])
-  notificationEmailAddresses String[] @default([])
-
-  // Customer Reminder Settings（参加者向けリマインダーメールのトグル）
-  // 上記の管理者通知トグルとは対象読者が異なる。イベント前日リマインダーは
-  // 参加者全員へ一斉送信されるため送信数が増えやすく、既定は無効（opt-in）にする。
-  notifyEventReminder Boolean @default(false)
-
-  // Other Settings
-  // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、
-  // html lang は layout が "ja" を固定使用しており、設定値は保存経路も consumer も無かった。
-  maintenanceMode    Boolean @default(false)
-  maintenanceMessage String? @db.Text
-
-  // Stripe Payment Settings — credentials only.
-  // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT
-  // （feature module registry と `assertOnlinePaymentAvailable` 経由で解決される）。
-  // test/live モードは API キーの接頭辞（sk_test_ / sk_live_）が決定者。
-  // 別途トグルを持つと UI と実挙動が乖離するため列は持たない（2026-06-20 撤去）。
-  stripePublishableKey   String?
-  stripeSecretKey        String?   @db.Text // 暗号化して保存
-  stripeWebhookSecret    String?   @db.Text // 暗号化して保存
-  stripeAccountId        String?
-  stripeCurrency         String    @default("jpy")
-  /// Stripe Checkout Session の `payment_method_types` に渡す method 名配列。
-  /// 有効値は `STRIPE_PAYMENT_METHOD_TYPE_VALUES`
-  /// (src/shared/lib/stripe-payment-methods.ts) で列挙し Zod で強制。
-  /// 少なくとも 1 つ必要 (domain 層で assert)。既定は `["card"]`。
-  stripePaymentMethodTypes String[]  @default(["card"])
-  stripeLastTestedAt     DateTime?
-  stripeConnectionStatus String?
-
-  // Refund Policy (task #9 PR#5): tier ベース返金率の JSON snapshot。
-  // Schema: `{ tiers: Array<{ hoursBefore: number; refundRate: number (0-100) }>, defaultRefundRate: number (0-100) }`
-  // 例: `{ tiers: [{ hoursBefore: 168, refundRate: 100 }, { hoursBefore: 72, refundRate: 50 }], defaultRefundRate: 0 }`
-  // = 7 日前まで 100%、3 日前まで 50%、それ以降 0%。
-  // null なら policy 未設定 (現状の「auto refund 時は全額」動作を維持、後方互換)。
-  // 参照: `cancellation-side-effects.ts` の auto refund 経路 + admin settings UI (次 PR で実装)。
-  refundPolicy           Json?     @db.JsonB
-
-  // Cookie Consent Settings
+  maintenanceMode         Boolean @default(false)
+  maintenanceMessage      String? @db.Text
   cookieConsentEnabled    Boolean @default(false)
   cookieConsentMessage    String? @db.Text
   cookieConsentAcceptText String?
   cookieConsentRejectText String?
   cookieConsentPolicyUrl  String?
 
-  // Announcement Bar Carousel Settings - Enum化
-  announcementBarAnimation         AnnouncementBarAnimation   @default(fade)
-  announcementBarDuration          Int                        @default(5000)
-  announcementBarAutoPlay          Boolean                    @default(true)
-  announcementBarPauseOnHover      Boolean                    @default(true)
-  announcementBarShowArrows        Boolean                    @default(true)
-  announcementBarShowIndicator     Boolean                    @default(true)
-  announcementBarDesignStyle       AnnouncementBarDesignStyle @default(solid)
-  // Announcement Bar Common Color Settings
-  announcementBarBgColor           String? // 共通背景色（カスタム）
-  announcementBarTextColor         String? // 共通文字色（カスタム）
-  // Striped Design Settings
-  announcementBarStripeColor       String? // ストライプ色（カスタム）
-  announcementBarStripeAnimation   Boolean                    @default(false) // ストライプアニメーション
-  // Gradient Design Settings
-  announcementBarGradientAnimation Boolean                    @default(false) // グラデーションアニメーション
-  // Glass Design Settings
-  announcementBarGlassAnimation    Boolean                    @default(false) // グラス（シマー）アニメーション
-  announcementBarSticky            Boolean                    @default(false) // スクロール時に固定表示
+  @@map("settings_systems")
+}
 
-  // ==============================================
-  // External Service API Keys
-  // ==============================================
+model SettingsSeo {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Resend Email Service
-  resendApiKey           String?   @db.Text // Encrypted
-  // Webhook 署名検証用シークレット (svix `whsec_...`)。DB canonical、env
-  // (`RESEND_WEBHOOK_SECRET`) は local dev fallback のみ。
-  // stripeWebhookSecret と同じ Tier 2 (DB 暗号化 + admin UI 管理) パターン。
-  resendWebhookSecret    String?   @db.Text // Encrypted
+  // favicon は dynamic icon Route Handler (src/app/icon/route.tsx) 経由で配信する。
+  // ここに保存された URL は R2 オブジェクト URL を期待し、Route Handler が DB query →
+  // R2 から binary pass-through する。空文字 ("") なら ImageResponse で default fallback。
+  // NOT NULL + DEFAULT '' で型を `string` に強化（codebase の他 nullable string 列とは
+  // 一貫性が崩れるが、null と空文字の二重表現を排除する意図的な強化）。
+  siteName               String?
+  siteDescription        String? @db.Text
+  faviconUrl             String  @default("")
+  defaultOgpImageUrl     String?
+  headerLogoUrl          String?
+  footerLogoUrl          String?
+  footerCopyright        String?
+  useHeaderLogo          Boolean @default(true)
+  useFooterLogo          Boolean @default(true)
+  defaultMetaDescription String?
+  defaultMetaKeywords    String?
+  defaultOgpTitle        String?
+  defaultOgpDescription  String?
+
+  @@map("settings_seos")
+}
+
+model SettingsAnalytics {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analyticsType         AnalyticsType?
+  googleAnalyticsId     String?
+  googleTagManagerId    String?
+  googleSearchConsoleId String?
+  bingWebmasterToolsId  String?
+  gaPropertyId          String?
+  microsoftClarityId    String?
+
+  @@map("settings_analytics")
+}
+
+model SettingsLayout {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  containerWidth       LayoutWidth?
+  containerWidthCustom Int?
+  contentWidth         LayoutWidth?
+  contentWidthCustom   Int?
+  headerScrollBehavior HeaderScrollBehavior @default(always_visible)
+  headerBackgroundMode HeaderBackgroundMode @default(solid)
+  themeColor           String               @default("#fafafa")
+  footerTagline        String?
+  footerNavigationLabel String              @default("Navigation")
+  footerContactLabel   String               @default("Contact")
+  footerHoursLabel     String               @default("Hours")
+  footerShowSocialLinks Boolean             @default(true)
+
+  @@map("settings_layouts")
+}
+
+model SettingsSidebar {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sidebarEnabled      Boolean @default(true)
+  sidebarWidgets      Json    @default("[{\"type\":\"search\",\"enabled\":true},{\"type\":\"recent\",\"enabled\":true,\"layout\":\"compact\"},{\"type\":\"popular\",\"enabled\":true,\"layout\":\"compact\",\"showRanking\":true},{\"type\":\"categories\",\"enabled\":true},{\"type\":\"tags\",\"enabled\":true}]")
+  sidebarRecentCount  Int     @default(5)
+  sidebarPopularCount Int     @default(5)
+  sidebarTocEnabled   Boolean @default(true)
+
+  @@map("settings_sidebars")
+}
+
+model SettingsOrganization {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessName        String?
+  businessNameKana    String?
+  representativeName  String?
+  establishedDate     DateTime?
+  registrationNumber  String?
+  invoiceNumber       String?
+  businessDescription String? @db.Text
+
+  phoneNumber   String?
+  faxNumber     String?
+  email         String?
+  postalCode    String?
+  prefecture    String?
+  city          String?
+  streetAddress String?
+  buildingName  String?
+
+  businessHours   Json?
+  regularHolidays Json?
+  holidayNotice   String? @db.Text
+
+  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの env-OR-DB。
+  senderEmail  String?
+  senderName   String?
+  replyToEmail String?
+
+  @@map("settings_organizations")
+}
+
+model SettingsCommerce {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  durationDiscountEnabled Boolean                 @default(false)
+  durationDiscountRules   Json                    @default("[]")
+  discountCombinationMode DiscountCombinationMode @default(best)
+  showOriginalPrice       Boolean                 @default(true)
+
+  taxStandardRate      Decimal        @default(10) @db.Decimal(5, 2)
+  taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
+  taxDisplayModePublic TaxDisplayMode @default(tax_included)
+
+  refundPolicy Json? @db.JsonB
+
+  @@map("settings_commerces")
+}
+
+model SettingsNotification {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifyNewReservation            Boolean @default(true)
+  notifyReservationChange         Boolean @default(true)
+  notifyReservationCancel         Boolean @default(true)
+  notifyNewInquiry                Boolean @default(true)
+  notifyEventRegistration         Boolean @default(true)
+  notifyEventWaitlistRegistration Boolean @default(true)
+  notifyEventCancellation         Boolean @default(true)
+  notifyEventReminder             Boolean @default(false)
+
+  notificationStaffIds       String[] @default([])
+  notificationEmailAddresses String[] @default([])
+
+  @@map("settings_notifications")
+}
+
+model SettingsReservation {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  defaultTimeSlot                  Int     @default(60)
+  minReservationDuration           Int     @default(60)
+  maxReservationDuration           Int     @default(480)
+  sendReservationConfirmationEmail Boolean @default(true)
+  maxRecurrenceInstances           Int     @default(26)
+  customerCanCancelSeriesInFull    Boolean @default(false)
+  cancellationDeadlineHours        Int     @default(24)
+  modificationDeadlineHours        Int     @default(24)
+
+  @@map("settings_reservations")
+}
+
+model SettingsStripe {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT。
+  stripePublishableKey       String?
+  stripeSecretKey            String?   @db.Text
+  stripeWebhookSecret        String?   @db.Text
+  stripeAccountId            String?
+  stripeCurrency             String    @default("jpy")
+  stripePaymentMethodTypes   String[]  @default(["card"])
+  stripeLastTestedAt         DateTime?
+  stripeConnectionStatus     String?
+
+  @@map("settings_stripes")
+}
+
+model SettingsResend {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resendApiKey           String?   @db.Text
+  resendWebhookSecret    String?   @db.Text
   resendLastTestedAt     DateTime?
-  resendConnectionStatus String? // 'connected' | 'error'
+  resendConnectionStatus String?
 
-  // Cloudflare Turnstile (Bot Protection)
-  turnstileSiteKey          String? // Public key (not encrypted)
-  turnstileSecretKey        String?   @db.Text // Encrypted
+  @@map("settings_resends")
+}
+
+model SettingsTurnstile {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turnstileSiteKey          String?
+  turnstileSecretKey        String?   @db.Text
   turnstileLastTestedAt     DateTime?
   turnstileConnectionStatus String?
 
-  // Google Maps API
-  googleMapsApiKey           String?   @db.Text // Encrypted
+  @@map("settings_turnstiles")
+}
+
+model SettingsGoogleMaps {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  googleMapsApiKey           String?   @db.Text
   googleMapsLastTestedAt     DateTime?
   googleMapsConnectionStatus String?
 
-  // Cloudflare CDN (Cache Purge API) — env-only に移行済み（CLOUDFLARE_ZONE_ID /
-  // CLOUDFLARE_API_TOKEN）。DB 列は contract migration で DROP 済み。
+  @@map("settings_google_maps")
+}
 
-  // Custom API Keys (Generic key-value storage)
-  // Format: { "id": { "name": "...", "key": "encrypted", "value": "encrypted", ... } }
+model SettingsCustomApiKeys {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   customApiKeys Json? @default("{}")
 
-  // ==============================================
-  // Google Calendar Integration
-  // ==============================================
+  @@map("settings_custom_api_keys")
+}
 
-  // サービスアカウント連携（共有カレンダー用）
-  googleCalendarEnabled            Boolean   @default(false)
-  googleCalendarServiceAccountJson String?   @db.Text // 暗号化されたJSON認証情報
-  googleCalendarId                 String? // 共有カレンダーID
+model SettingsGoogleCalendar {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  googleCalendarEnabled            Boolean            @default(false)
+  googleCalendarServiceAccountJson String?            @db.Text
+  googleCalendarId                 String?
   googleCalendarLastTestedAt       DateTime?
-  googleCalendarConnectionStatus   String? // 'connected' | 'error'
+  googleCalendarConnectionStatus   String?
+  googleCalendarReminderMinutes    Int?
+  icalAttachmentEnabled            Boolean            @default(true)
+  addToCalendarLinksEnabled        Boolean            @default(true)
+  googleCalendarTwoWaySyncEnabled  Boolean            @default(false)
+  googleCalendarSyncMethod         CalendarSyncMethod @default(polling)
+  googleCalendarSyncToken          String?            @db.Text
+  googleCalendarLastSyncedAt       DateTime?
+  eventImportEnabled               Boolean            @default(false)
+  eventImportSyncToken             String?            @db.Text
+  googleCalendarWebhookChannelId   String?
+  googleCalendarWebhookResourceId  String?
+  googleCalendarWebhookExpiration  DateTime?
+  googleCalendarWebhookToken       String?            @db.Text
 
-  // Google Business Profile sync
+  @@map("settings_google_calendars")
+}
+
+model SettingsGoogleBusinessProfile {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   googleBusinessProfileEnabled Boolean @default(false)
-  googleBusinessProfileAuth    Json? // { encrypted: string } envelope (中身は { accessToken, refreshToken, expiresAt, accountId } を encrypt() した ciphertext)
+  googleBusinessProfileAuth    Json?
 
-  // Google Meet ビデオ会議自動生成は per-event Event.meetingProvider === GOOGLE_MEET に置換 (Phase B.1)。
-  // site-wide gate は「per-event で ON にしても発行されないケース」の混乱源だったため DROP。
-  // Workspace 権限失敗は per-event GCal API 呼出時に surface され、admin UI に表示される。
+  @@map("settings_google_business_profiles")
+}
 
-  // リマインダー設定: null=Googleカレンダー既定を使う, 0=通知なし, N=N分前にメール通知
-  googleCalendarReminderMinutes Int?
+model SettingsInstagram {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // 予約者向けiCal設定
-  icalAttachmentEnabled     Boolean @default(true) // メールにiCal添付
-  addToCalendarLinksEnabled Boolean @default(true) // Add to Calendarリンク表示
+  instagramAccessToken    String?   @db.Text
+  instagramTokenExpiresAt DateTime?
+  instagramUserId         String?
+  instagramUsername       String?
+  instagramAccountType    String?
 
-  // ==============================================
-  // Google Calendar 双方向同期（Phase 4）
-  // ==============================================
+  @@map("settings_instagrams")
+}
 
-  // 同期方式設定 - Enum化
-  googleCalendarTwoWaySyncEnabled Boolean            @default(false)
-  googleCalendarSyncMethod        CalendarSyncMethod @default(polling)
+model SettingsSwitchbot {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // 同期状態
-  googleCalendarSyncToken    String?   @db.Text // 増分同期用トークン
-  googleCalendarLastSyncedAt DateTime? // 最終同期日時
+  switchbotEnabled               Boolean   @default(false)
+  switchbotOpenToken             String?   @db.Text
+  switchbotSecretKey             String?   @db.Text
+  switchbotConnectionStatus      String?
+  switchbotLastTestedAt          DateTime?
+  switchbotPasscodeBufferMinutes Int       @default(15)
+  switchbotWebhookPathToken      String?   @db.Text
 
-  // イベントインポート設定
-  eventImportEnabled   Boolean @default(false)
-  eventImportSyncToken String? @db.Text
+  @@map("settings_switchbots")
+}
+
+model SettingsFeatures {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
   /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / data-retention）。
   /// OFF module は public route 404 / nav prune / sitemap prune / section registry filter / cron 早期 return に伝播。
   /// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES。seed.ts と migration が全 module を explicit に保つ。
   featureModules Json @default("{}")
+
+  @@map("settings_features")
+}
+
+model SettingsDataRetention {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   /// データ保持ポリシー — 保持期間経過後の PII 削除・匿名化に使う月数（0 = opt-out）。
   /// 形式: `{ sessionMonths, verificationMonths, loginAttemptMonths, reservationGuestMonths, inquiryMonths, customerInactiveMonths }`。
@@ -1747,40 +1826,7 @@ model Settings {
   /// 実 purge は feature module `data-retention` が ON かつ月数 > 0 のときのみ cron から実行される (`/api/cron/data-retention`)。
   dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"loginAttemptMonths\":6,\"reservationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}")
 
-  // Webhook設定（Push Notifications）
-  googleCalendarWebhookChannelId  String? // Webhook チャンネルID
-  googleCalendarWebhookResourceId String? // Webhook リソースID
-  googleCalendarWebhookExpiration DateTime? // Webhook 有効期限
-  googleCalendarWebhookToken      String?   @db.Text // Webhook 認証トークン (x-goog-channel-token) // Encrypted
-
-  // ==============================================
-  // Instagram連携 - Enum化
-  // ==============================================
-  instagramAccessToken    String?   @db.Text // Encrypted
-  instagramTokenExpiresAt DateTime?
-  instagramUserId         String?
-  instagramUsername       String?
-  instagramAccountType    String?
-
-  // ==============================================
-  // SwitchBot スマートロック連携
-  // ==============================================
-  switchbotEnabled               Boolean   @default(false)
-  switchbotOpenToken             String?   @db.Text // Encrypted
-  switchbotSecretKey             String?   @db.Text // Encrypted
-  switchbotConnectionStatus      String? // 'connected' | 'error'
-  switchbotLastTestedAt          DateTime?
-  // 予約開始/終了時刻の前後に持たせるパスコード有効バッファ（分）。早期到着・退出遅れの猶予。
-  switchbotPasscodeBufferMinutes Int       @default(15)
-  // Webhook URL 難読化用トークン（SwitchBot は inbound webhook の署名検証機構を提供しないため、
-  // 推測困難な URL パスセグメント + deviceMac 照合の二重防御で代替する）
-  switchbotWebhookPathToken      String?   @db.Text // Encrypted
-
-  // Mypage Deadline Settings（マイページ操作期限）
-  cancellationDeadlineHours Int @default(24) // キャンセル可能期限（時間前）
-  modificationDeadlineHours Int @default(24) // 変更可能期限（時間前）
-
-  @@map("settings")
+  @@map("settings_data_retentions")
 }
 
 // =============================================================================

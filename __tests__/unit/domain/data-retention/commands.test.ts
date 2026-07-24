@@ -54,7 +54,7 @@ mock.module("@/shared/db/prisma", () => ({
         data: Record<string, unknown>;
       }) => mockCustomerUpdate(args),
     },
-    settings: { findUnique: mock() },
+    settingsDataRetention: { findUnique: mock() },
   },
 }));
 

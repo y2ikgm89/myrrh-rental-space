@@ -250,7 +250,7 @@ async function runRefundStep(args: {
         ? input.refundPolicySnapshot
         : parseRefundPolicy(
             (
-              await prisma.settings.findUnique({
+              await prisma.settingsCommerce.findUnique({
                 where: { id: "singleton" },
                 select: { refundPolicy: true },
               })

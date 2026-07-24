@@ -36,31 +36,65 @@ export async function getPublicBusinessSettings() {
   cacheTag(CACHE_TAGS.BUSINESS_SETTINGS);
 
   const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          siteName: true,
-          siteDescription: true,
-          businessName: true,
-          businessNameKana: true,
-          businessDescription: true,
-          representativeName: true,
-          establishedDate: true,
-          registrationNumber: true,
-          invoiceNumber: true,
-          email: true,
-          phoneNumber: true,
-          faxNumber: true,
-          postalCode: true,
-          prefecture: true,
-          city: true,
-          streetAddress: true,
-          buildingName: true,
-          businessHours: true,
-          holidayNotice: true,
-        },
-      }),
+    fetch: async () => {
+      const [organization, seo] = await Promise.all([
+        prisma.settingsOrganization.findUnique({
+          where: { id: "singleton" },
+          select: {
+            businessName: true,
+            businessNameKana: true,
+            businessDescription: true,
+            representativeName: true,
+            establishedDate: true,
+            registrationNumber: true,
+            invoiceNumber: true,
+            email: true,
+            phoneNumber: true,
+            faxNumber: true,
+            postalCode: true,
+            prefecture: true,
+            city: true,
+            streetAddress: true,
+            buildingName: true,
+            businessHours: true,
+            holidayNotice: true,
+          },
+        }),
+        prisma.settingsSeo.findUnique({
+          where: { id: "singleton" },
+          select: {
+            siteName: true,
+            siteDescription: true,
+          },
+        }),
+      ]);
+
+      if (!organization && !seo) {
+        return null;
+      }
+
+      return {
+        siteName: seo?.siteName ?? null,
+        siteDescription: seo?.siteDescription ?? null,
+        businessName: organization?.businessName ?? null,
+        businessNameKana: organization?.businessNameKana ?? null,
+        businessDescription: organization?.businessDescription ?? null,
+        representativeName: organization?.representativeName ?? null,
+        establishedDate: organization?.establishedDate ?? null,
+        registrationNumber: organization?.registrationNumber ?? null,
+        invoiceNumber: organization?.invoiceNumber ?? null,
+        email: organization?.email ?? null,
+        phoneNumber: organization?.phoneNumber ?? null,
+        faxNumber: organization?.faxNumber ?? null,
+        postalCode: organization?.postalCode ?? null,
+        prefecture: organization?.prefecture ?? null,
+        city: organization?.city ?? null,
+        streetAddress: organization?.streetAddress ?? null,
+        buildingName: organization?.buildingName ?? null,
+        businessHours: organization?.businessHours ?? null,
+        holidayNotice: organization?.holidayNotice ?? null,
+      };
+    },
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
@@ -81,7 +115,7 @@ export async function getAdminBrandingSettings(): Promise<{
 
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findFirst({
+      prisma.settingsSeo.findFirst({
         select: {
           siteName: true,
           headerLogoUrl: true,
@@ -107,28 +141,59 @@ export async function getOrganizationSettings(): Promise<Serialized<Organization
   cacheTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
 
   const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          siteName: true,
-          siteDescription: true,
-          businessName: true,
-          businessNameKana: true,
-          businessDescription: true,
-          headerLogoUrl: true,
-          phoneNumber: true,
-          faxNumber: true,
-          email: true,
-          postalCode: true,
-          prefecture: true,
-          city: true,
-          streetAddress: true,
-          buildingName: true,
-          businessHours: true,
-          establishedDate: true,
-        },
-      }),
+    fetch: async () => {
+      const [organization, seo] = await Promise.all([
+        prisma.settingsOrganization.findUnique({
+          where: { id: "singleton" },
+          select: {
+            businessName: true,
+            businessNameKana: true,
+            businessDescription: true,
+            phoneNumber: true,
+            faxNumber: true,
+            email: true,
+            postalCode: true,
+            prefecture: true,
+            city: true,
+            streetAddress: true,
+            buildingName: true,
+            businessHours: true,
+            establishedDate: true,
+          },
+        }),
+        prisma.settingsSeo.findUnique({
+          where: { id: "singleton" },
+          select: {
+            siteName: true,
+            siteDescription: true,
+            headerLogoUrl: true,
+          },
+        }),
+      ]);
+
+      if (!organization && !seo) {
+        return null;
+      }
+
+      return {
+        siteName: seo?.siteName ?? null,
+        siteDescription: seo?.siteDescription ?? null,
+        businessName: organization?.businessName ?? null,
+        businessNameKana: organization?.businessNameKana ?? null,
+        businessDescription: organization?.businessDescription ?? null,
+        headerLogoUrl: seo?.headerLogoUrl ?? null,
+        phoneNumber: organization?.phoneNumber ?? null,
+        faxNumber: organization?.faxNumber ?? null,
+        email: organization?.email ?? null,
+        postalCode: organization?.postalCode ?? null,
+        prefecture: organization?.prefecture ?? null,
+        city: organization?.city ?? null,
+        streetAddress: organization?.streetAddress ?? null,
+        buildingName: organization?.buildingName ?? null,
+        businessHours: organization?.businessHours ?? null,
+        establishedDate: organization?.establishedDate ?? null,
+      };
+    },
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
@@ -214,9 +279,9 @@ export async function getIcalOrganizer(): Promise<{
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.BUSINESS_SETTINGS);
 
-  const settings = await safeFetch({
+  const organization = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsOrganization.findUnique({
         where: { id: "singleton" },
         select: {
           businessName: true,
@@ -230,12 +295,12 @@ export async function getIcalOrganizer(): Promise<{
   });
 
   const name =
-    settings?.businessName && settings.businessName.length > 0
-      ? settings.businessName
+    organization?.businessName && organization.businessName.length > 0
+      ? organization.businessName
       : "Myrrh Rental Space";
   const email =
-    settings?.email && settings.email.length > 0
-      ? settings.email
+    organization?.email && organization.email.length > 0
+      ? organization.email
       : `noreply@${getAppHost()}`;
 
   return { name, email };

@@ -41,7 +41,7 @@ const mockTransaction = mock<
       | Promise<void>[]
       | ((tx: {
           $executeRaw: typeof mockExecuteRaw;
-          settings: {
+          settingsInstagram: {
             update: typeof mockSettingsUpdate;
           };
           instagramPost: {
@@ -54,7 +54,7 @@ const mockTransaction = mock<
   if (typeof arg === "function") {
     return arg({
       $executeRaw: mockExecuteRaw,
-      settings: {
+      settingsInstagram: {
         update: mockSettingsUpdate,
       },
       instagramPost: {
@@ -71,7 +71,7 @@ mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: {
+    settingsInstagram: {
       upsert: mockSettingsUpsert,
       update: mockSettingsUpdate,
       updateMany: mockSettingsUpdateMany,
@@ -301,7 +301,7 @@ describe("disconnectInstagram", () => {
       if (typeof arg === "function") {
         return arg({
           $executeRaw: mockExecuteRaw,
-          settings: {
+          settingsInstagram: {
             update: mockSettingsUpdate,
           },
           instagramPost: {
@@ -351,7 +351,7 @@ describe("syncInstagramFeed", () => {
       if (typeof arg === "function") {
         return arg({
           $executeRaw: mockExecuteRaw,
-          settings: {
+          settingsInstagram: {
             update: mockSettingsUpdate,
           },
           instagramPost: {

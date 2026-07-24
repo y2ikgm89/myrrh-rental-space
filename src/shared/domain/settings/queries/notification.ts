@@ -21,7 +21,7 @@ import { mergeRecipients } from "@/shared/lib/email/recipients";
 export async function getNotificationEmailAddresses(): Promise<string[]> {
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsNotification.findUnique({
         where: { id: "singleton" },
         select: {
           notificationEmailAddresses: true,
@@ -95,47 +95,73 @@ export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings>
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
 
-  const settings = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          sendReservationConfirmationEmail: true,
-          notifyNewReservation: true,
-          notifyReservationChange: true,
-          notifyReservationCancel: true,
-          notifyNewInquiry: true,
-          notifyEventRegistration: true,
-          notifyEventWaitlistRegistration: true,
-          notifyEventCancellation: true,
-          notifyEventReminder: true,
-          senderEmail: true,
-          senderName: true,
-          replyToEmail: true,
-        },
-      }),
-    fallback: null,
-    category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.LOW,
-    operationName: "getEmailDeliverySettings",
-  });
+  const [notification, organization, reservation] = await Promise.all([
+    safeFetch({
+      fetch: () =>
+        prisma.settingsNotification.findUnique({
+          where: { id: "singleton" },
+          select: {
+            notifyNewReservation: true,
+            notifyReservationChange: true,
+            notifyReservationCancel: true,
+            notifyNewInquiry: true,
+            notifyEventRegistration: true,
+            notifyEventWaitlistRegistration: true,
+            notifyEventCancellation: true,
+            notifyEventReminder: true,
+          },
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getEmailDeliverySettings.notification",
+    }),
+    safeFetch({
+      fetch: () =>
+        prisma.settingsOrganization.findUnique({
+          where: { id: "singleton" },
+          select: {
+            senderEmail: true,
+            senderName: true,
+            replyToEmail: true,
+          },
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getEmailDeliverySettings.organization",
+    }),
+    safeFetch({
+      fetch: () =>
+        prisma.settingsReservation.findUnique({
+          where: { id: "singleton" },
+          select: {
+            sendReservationConfirmationEmail: true,
+          },
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getEmailDeliverySettings.reservation",
+    }),
+  ]);
 
   return {
     sendReservationConfirmationEmail:
-      settings?.sendReservationConfirmationEmail ?? true,
-    notifyNewReservation: settings?.notifyNewReservation ?? true,
-    notifyReservationChange: settings?.notifyReservationChange ?? true,
-    notifyReservationCancel: settings?.notifyReservationCancel ?? true,
-    notifyNewInquiry: settings?.notifyNewInquiry ?? true,
-    notifyEventRegistration: settings?.notifyEventRegistration ?? true,
+      reservation?.sendReservationConfirmationEmail ?? true,
+    notifyNewReservation: notification?.notifyNewReservation ?? true,
+    notifyReservationChange: notification?.notifyReservationChange ?? true,
+    notifyReservationCancel: notification?.notifyReservationCancel ?? true,
+    notifyNewInquiry: notification?.notifyNewInquiry ?? true,
+    notifyEventRegistration: notification?.notifyEventRegistration ?? true,
     notifyEventWaitlistRegistration:
-      settings?.notifyEventWaitlistRegistration ?? true,
-    notifyEventCancellation: settings?.notifyEventCancellation ?? true,
+      notification?.notifyEventWaitlistRegistration ?? true,
+    notifyEventCancellation: notification?.notifyEventCancellation ?? true,
     // schema の @default(false) と揃える（他の notify* とは既定値が異なる）
-    notifyEventReminder: settings?.notifyEventReminder ?? false,
-    senderEmail: settings?.senderEmail ?? null,
-    senderName: settings?.senderName ?? null,
-    replyToEmail: settings?.replyToEmail ?? null,
+    notifyEventReminder: notification?.notifyEventReminder ?? false,
+    senderEmail: organization?.senderEmail ?? null,
+    senderName: organization?.senderName ?? null,
+    replyToEmail: organization?.replyToEmail ?? null,
   };
 }
 
@@ -149,7 +175,7 @@ export async function getCalendarEmailSettings(): Promise<{
 
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsGoogleCalendar.findUnique({
         where: { id: "singleton" },
         select: {
           icalAttachmentEnabled: true,

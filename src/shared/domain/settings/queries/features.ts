@@ -26,7 +26,7 @@ export async function getFeatureModulesSettings(): Promise<FeatureModulesMap> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsFeatures.findUnique({
         where: { id: "singleton" },
         select: { featureModules: true },
       }),

@@ -111,7 +111,7 @@ export async function createReservationSeriesCommand(
 ): Promise<CreateReservationSeriesResult> {
   // Step 1: RRULE 展開（Settings.maxRecurrenceInstances と照合）。tx に入る前に
   // 検証する — advisory lock を無駄に取得しないため。
-  const settings = await prisma.settings.findUniqueOrThrow({
+  const settings = await prisma.settingsReservation.findUniqueOrThrow({
     where: { id: "singleton" },
     select: { maxRecurrenceInstances: true },
   });

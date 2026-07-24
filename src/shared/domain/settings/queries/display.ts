@@ -52,17 +52,27 @@ export async function getHeaderSettings(): Promise<HeaderSettings> {
   cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
 
   const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          headerScrollBehavior: true,
-          headerBackgroundMode: true,
-          siteName: true,
-          headerLogoUrl: true,
-          useHeaderLogo: true,
-        },
-      }),
+    fetch: async () => {
+      const [layout, seo] = await Promise.all([
+        prisma.settingsLayout.findUnique({
+          where: { id: "singleton" },
+          select: {
+            headerScrollBehavior: true,
+            headerBackgroundMode: true,
+          },
+        }),
+        prisma.settingsSeo.findUnique({
+          where: { id: "singleton" },
+          select: {
+            siteName: true,
+            headerLogoUrl: true,
+            useHeaderLogo: true,
+          },
+        }),
+      ]);
+
+      return { ...layout, ...seo };
+    },
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
@@ -90,22 +100,32 @@ export async function getFooterSettings(): Promise<FooterSettings> {
   cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
 
   const result = await safeFetch({
-    fetch: () =>
-      prisma.settings.findUnique({
-        where: { id: "singleton" },
-        select: {
-          footerTagline: true,
-          footerCopyright: true,
-          footerNavigationLabel: true,
-          footerContactLabel: true,
-          footerHoursLabel: true,
-          footerShowSocialLinks: true,
-          themeColor: true,
-          siteName: true,
-          footerLogoUrl: true,
-          useFooterLogo: true,
-        },
-      }),
+    fetch: async () => {
+      const [layout, seo] = await Promise.all([
+        prisma.settingsLayout.findUnique({
+          where: { id: "singleton" },
+          select: {
+            footerTagline: true,
+            footerNavigationLabel: true,
+            footerContactLabel: true,
+            footerHoursLabel: true,
+            footerShowSocialLinks: true,
+            themeColor: true,
+          },
+        }),
+        prisma.settingsSeo.findUnique({
+          where: { id: "singleton" },
+          select: {
+            footerCopyright: true,
+            siteName: true,
+            footerLogoUrl: true,
+            useFooterLogo: true,
+          },
+        }),
+      ]);
+
+      return { ...layout, ...seo };
+    },
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
@@ -129,7 +149,7 @@ export async function getFooterSettings(): Promise<FooterSettings> {
 }
 
 /**
- * Settings.faviconUrl を取得する。dynamic icon Route Handler (`src/app/icon/route.tsx`)
+ * SettingsSeo.faviconUrl を取得する。dynamic icon Route Handler (`src/app/icon/route.tsx`)
  * からのみ呼ばれる前提。
  *
  * 戻り値は常に `string`（schema は NOT NULL + DEFAULT '' で型強化済）。未設定は空文字
@@ -150,7 +170,7 @@ export async function getFaviconUrl(): Promise<string> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsSeo.findUnique({
         where: { id: "singleton" },
         select: { faviconUrl: true },
       }),

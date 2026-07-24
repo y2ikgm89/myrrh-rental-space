@@ -17,7 +17,7 @@ import type {
 } from "@/shared/domain/instagram/types";
 
 export async function getInstagramConfig(): Promise<InstagramConfig> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsInstagram.findUnique({
     where: { id: "singleton" },
     select: {
       instagramAccessToken: true,
@@ -85,7 +85,7 @@ export async function getInstagramPosts(): Promise<InstagramPostData[]> {
 }
 
 export async function getDecryptedInstagramToken(): Promise<string | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsInstagram.findUnique({
     where: { id: "singleton" },
     select: { instagramAccessToken: true },
   });
@@ -105,7 +105,7 @@ export async function getInstagramRefreshState(): Promise<{
   userId: string | null;
   username: string | null;
 }> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsInstagram.findUnique({
     where: { id: "singleton" },
     select: {
       instagramAccessToken: true,

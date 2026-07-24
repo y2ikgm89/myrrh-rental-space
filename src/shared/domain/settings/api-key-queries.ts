@@ -29,14 +29,14 @@ import {
   parseCustomApiKeysMap,
 } from "@/shared/domain/settings/api-key-helpers";
 
-async function getApiKeySettings() {
-  return prisma.settings.findUnique({
+async function getCustomApiKeySettings() {
+  return prisma.settingsCustomApiKeys.findUnique({
     where: { id: "singleton" },
   });
 }
 
 export async function getResendConfig(): Promise<ResendConfig> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsResend.findUnique({
     where: { id: "singleton" },
     select: {
       resendApiKey: true,
@@ -75,7 +75,7 @@ export async function getResendConfig(): Promise<ResendConfig> {
  * 返す値で `standardwebhooks` の `Webhook` を初期化する。
  */
 export async function getResendWebhookSecret(): Promise<string | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsResend.findUnique({
     where: { id: "singleton" },
     select: {
       resendWebhookSecret: true,
@@ -100,7 +100,7 @@ export async function getResendWebhookSecret(): Promise<string | null> {
  * （DB-OR-env、Settings is canonical）。
  */
 export async function getDecryptedResendApiKey(): Promise<string | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsResend.findUnique({
     where: { id: "singleton" },
     select: {
       resendApiKey: true,
@@ -121,7 +121,7 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsTurnstile.findUnique({
     where: { id: "singleton" },
     select: {
       turnstileSiteKey: true,
@@ -148,7 +148,7 @@ export async function getTurnstileConfig(): Promise<TurnstileConfig> {
 }
 
 export async function getDecryptedTurnstileSecretKey(): Promise<string | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsTurnstile.findUnique({
     where: { id: "singleton" },
     select: {
       turnstileSecretKey: true,
@@ -165,7 +165,7 @@ export async function getDecryptedTurnstileSecretKey(): Promise<string | null> {
 }
 
 export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsGoogleMaps.findUnique({
     where: { id: "singleton" },
     select: {
       googleMapsApiKey: true,
@@ -204,7 +204,7 @@ export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
   // クラッシュさせる。他の公開クエリと同じく safeFetch で fallback: null に握る。
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsGoogleMaps.findUnique({
         where: { id: "singleton" },
         select: {
           googleMapsApiKey: true,
@@ -230,7 +230,7 @@ export async function getSwitchBotConfig(): Promise<SwitchBotConfig> {
   cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
 
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsSwitchbot.findUnique({
     where: { id: "singleton" },
     select: {
       switchbotEnabled: true,
@@ -276,7 +276,7 @@ export async function getDecryptedSwitchBotCredentials(): Promise<{
   secretKey: string;
   passcodeBufferMinutes: number;
 } | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsSwitchbot.findUnique({
     where: { id: "singleton" },
     select: {
       switchbotEnabled: true,
@@ -321,7 +321,7 @@ export async function getSwitchBotWebhookAuth(): Promise<{
   readonly enabled: boolean;
   readonly pathToken: string | null;
 }> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsSwitchbot.findUnique({
     where: { id: "singleton" },
     select: { switchbotEnabled: true, switchbotWebhookPathToken: true },
   });
@@ -337,7 +337,7 @@ export async function getSwitchBotWebhookAuth(): Promise<{
 }
 
 export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
-  const settings = await getApiKeySettings();
+  const settings = await getCustomApiKeySettings();
 
   if (!settings?.customApiKeys || typeof settings.customApiKeys !== "object") {
     return [];
@@ -357,7 +357,7 @@ export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
 }
 
 export async function getCustomApiKeyValue(id: string): Promise<string | null> {
-  const settings = await getApiKeySettings();
+  const settings = await getCustomApiKeySettings();
   const keysMap = settings?.customApiKeys
     ? parseCustomApiKeysMap(settings.customApiKeys)
     : null;
@@ -382,52 +382,69 @@ export async function getIntegrationHealthSummary(): Promise<{
   readonly turnstile: boolean;
   readonly switchbot: boolean;
 }> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      resendApiKey: true,
-      stripeSecretKey: true,
-      googleCalendarEnabled: true,
-      googleCalendarConnectionStatus: true,
-      turnstileSecretKey: true,
-      switchbotEnabled: true,
-      switchbotOpenToken: true,
-      switchbotSecretKey: true,
-    },
-  });
+  const [resend, stripe, googleCalendar, turnstile, switchbot] =
+    await Promise.all([
+      prisma.settingsResend.findUnique({
+        where: { id: "singleton" },
+        select: { resendApiKey: true },
+      }),
+      prisma.settingsStripe.findUnique({
+        where: { id: "singleton" },
+        select: { stripeSecretKey: true },
+      }),
+      prisma.settingsGoogleCalendar.findUnique({
+        where: { id: "singleton" },
+        select: {
+          googleCalendarEnabled: true,
+          googleCalendarConnectionStatus: true,
+        },
+      }),
+      prisma.settingsTurnstile.findUnique({
+        where: { id: "singleton" },
+        select: { turnstileSecretKey: true },
+      }),
+      prisma.settingsSwitchbot.findUnique({
+        where: { id: "singleton" },
+        select: {
+          switchbotEnabled: true,
+          switchbotOpenToken: true,
+          switchbotSecretKey: true,
+        },
+      }),
+    ]);
 
   return {
     // 送信経路（client.ts / stripe.ts / turnstile.ts）と同じ DB-OR-env ソースで判定する。
     // DB キーが正本のため、DB のみ設定／env のみ設定のどちらでも「接続済み」を
     // 正しく反映する（health が嘘をつかない）。
     resend: Boolean(
-      safeDecryptToString(settings?.resendApiKey, {
+      safeDecryptToString(resend?.resendApiKey, {
         expectedPurpose: SETTINGS_CRYPTO_PURPOSES.resendApiKey,
       }) || serverEnv.RESEND_API_KEY,
     ),
     stripe: Boolean(
-      safeDecryptToString(settings?.stripeSecretKey, {
+      safeDecryptToString(stripe?.stripeSecretKey, {
         expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
       }) || serverEnv.STRIPE_SECRET_KEY,
     ),
     googleCalendar: Boolean(
-      settings?.googleCalendarEnabled &&
-      settings?.googleCalendarConnectionStatus === "connected",
+      googleCalendar?.googleCalendarEnabled &&
+      googleCalendar?.googleCalendarConnectionStatus === "connected",
     ),
     turnstile: Boolean(
-      safeDecryptToString(settings?.turnstileSecretKey, {
+      safeDecryptToString(turnstile?.turnstileSecretKey, {
         expectedPurpose: SETTINGS_CRYPTO_PURPOSES.turnstileSecretKey,
       }) || serverEnv.TURNSTILE_SECRET_KEY,
     ),
     // SwitchBotはenvフォールバックを持たないためDBのみで判定する。
     switchbot: Boolean(
-      settings?.switchbotEnabled &&
-      settings.switchbotOpenToken &&
-      settings.switchbotSecretKey &&
-      safeDecryptToString(settings.switchbotOpenToken, {
+      switchbot?.switchbotEnabled &&
+      switchbot.switchbotOpenToken &&
+      switchbot.switchbotSecretKey &&
+      safeDecryptToString(switchbot.switchbotOpenToken, {
         expectedPurpose: SETTINGS_CRYPTO_PURPOSES.switchbotOpenToken,
       }) &&
-      safeDecryptToString(settings.switchbotSecretKey, {
+      safeDecryptToString(switchbot.switchbotSecretKey, {
         expectedPurpose: SETTINGS_CRYPTO_PURPOSES.switchbotSecretKey,
       }),
     ),

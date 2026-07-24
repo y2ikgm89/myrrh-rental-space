@@ -59,7 +59,7 @@ export async function getCookieConsentSettings() {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsSystem.findUnique({
         where: { id: "singleton" },
         select: {
           cookieConsentEnabled: true,
@@ -85,7 +85,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
 
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsAnalytics.findUnique({
         where: { id: "singleton" },
         select: {
           analyticsType: true,
@@ -125,7 +125,7 @@ export async function getSeoSettings(): Promise<SeoSettings | null> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsSeo.findUnique({
         where: { id: "singleton" },
         select: {
           siteName: true,
@@ -153,7 +153,7 @@ export async function getMaintenanceSettings() {
 
   const result = await safeFetch({
     fetch: async () => {
-      const settings = await prisma.settings.findUnique({
+      const settings = await prisma.settingsSystem.findUnique({
         where: { id: "singleton" },
         select: {
           maintenanceMode: true,
@@ -178,7 +178,7 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsLayout.findUnique({
         where: { id: "singleton" },
         select: {
           containerWidth: true,
