@@ -1,8 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { flattenReply, REPLY_SELECT_INTERNAL } from "./queries";
-import type { InquiryReplyItem } from "./types";
+import {
+  ATTACHMENT_SELECT_INTERNAL,
+  flattenAttachment,
+  flattenReply,
+  REPLY_SELECT_INTERNAL,
+} from "./queries";
+import type { InquiryAttachmentItem, InquiryReplyItem } from "./types";
 
 const CUSTOMER_INQUIRY_LIST_SELECT = {
   id: true,
@@ -30,6 +35,10 @@ const CUSTOMER_INQUIRY_DETAIL_SELECT = {
   replies: {
     orderBy: { createdAt: "asc" },
     select: REPLY_SELECT_INTERNAL,
+  },
+  attachments: {
+    orderBy: { createdAt: "asc" },
+    select: ATTACHMENT_SELECT_INTERNAL,
   },
 } as const;
 
@@ -76,6 +85,7 @@ export type CustomerInquiryDetail = {
   createdAt: Date;
   updatedAt: Date;
   replies: InquiryReplyItem[];
+  attachments: InquiryAttachmentItem[];
 };
 
 export async function getCustomerInquiryById(
@@ -100,5 +110,6 @@ export async function getCustomerInquiryById(
     createdAt: inquiry.createdAt,
     updatedAt: inquiry.updatedAt,
     replies: inquiry.replies.map(flattenReply),
+    attachments: inquiry.attachments.map(flattenAttachment),
   };
 }

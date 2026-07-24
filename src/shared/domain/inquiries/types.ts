@@ -13,6 +13,21 @@ export type InquiryReplyItem = {
   createdAt: Date;
 };
 
+/**
+ * お問い合わせ添付ファイルの 1 件。private R2 bucket に保存され `r2Key` は
+ * DB 内部でのみ保持する（このアプリ層の型には含めない — download route が
+ * id から都度 DB 引き当てる設計。公開 URL は存在しない）。
+ */
+export type InquiryAttachmentItem = {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** 特定の返信への添付なら非 null。Inquiry 本体への添付は null。 */
+  replyId: string | null;
+  createdAt: Date;
+};
+
 export type InquiryData = {
   id: string;
   receiptNumber: string;
@@ -33,6 +48,8 @@ export type InquiryData = {
   updatedAt: Date;
   /** createdAt 昇順の返信スレッド。ゲスト向けメールで参照するのは最新 (末尾) */
   replies: InquiryReplyItem[];
+  /** createdAt 昇順の添付ファイル一覧（Inquiry 本体 + 全 reply 分をまとめて表示）。 */
+  attachments: InquiryAttachmentItem[];
 };
 
 export type InquiryWithCustomer = InquiryData & {
