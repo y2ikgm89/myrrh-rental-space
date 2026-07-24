@@ -1,10 +1,8 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import {
-  verifyCancelToken,
-  tokenFingerprint,
-} from "@/shared/lib/event-registration-cancel-token";
+import { verifyCancelToken } from "@/shared/lib/event-registration-cancel-token";
+import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 import { cancelEventRegistrationByToken } from "@/shared/domain/events/registration-commands";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { getEventRegistrationForGuestCancel } from "@/shared/domain/events/registration-queries";

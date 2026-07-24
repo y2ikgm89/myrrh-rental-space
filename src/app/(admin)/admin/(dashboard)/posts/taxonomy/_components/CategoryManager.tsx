@@ -57,6 +57,7 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { postCategoriesResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import {
   createPostCategoryAction,
   updatePostCategoryAction,
@@ -70,7 +71,10 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { useCategoryFilters } from "../_hooks/use-taxonomy-filters";
 
 async function fetchPostCategories(): Promise<PostCategoryData[]> {
-  return fetchAdminJson("/admin/api/post-categories");
+  return fetchAdminJson(
+    "/admin/api/post-categories",
+    postCategoriesResponseSchema,
+  );
 }
 
 // =============================================================================

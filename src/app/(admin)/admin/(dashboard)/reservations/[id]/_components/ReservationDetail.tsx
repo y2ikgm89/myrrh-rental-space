@@ -24,7 +24,6 @@ import {
 } from "@/admin/components/status-badges";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { RefundDialog } from "./RefundDialog";
 import { CancellationReasonDialog } from "../../_components/CancellationReasonDialog";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
@@ -52,6 +51,16 @@ import {
 import { isValidTaxRateType } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeFull } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
+
+function getCancelledByLabel(cancelledByType: string | null): string {
+  if (cancelledByType == null) return "不明";
+  for (const key of Object.values(CANCELLED_BY)) {
+    if (key === cancelledByType) {
+      return CANCELLED_BY_LABELS[key];
+    }
+  }
+  return "不明";
+}
 
 const PAYMENT_BADGE_VARIANTS: Record<
   PaymentStatus,
@@ -551,13 +560,7 @@ export function ReservationDetail({
           <div className="grid gap-4 sm:grid-cols-2">
             <DetailField
               label="キャンセル者"
-              value={
-                reservation.cancelledByType === CANCELLED_BY.CUSTOMER
-                  ? CANCELLED_BY_LABELS[CANCELLED_BY.CUSTOMER]
-                  : reservation.cancelledByType === CANCELLED_BY.ADMIN
-                    ? CANCELLED_BY_LABELS[CANCELLED_BY.ADMIN]
-                    : "不明"
-              }
+              value={getCancelledByLabel(reservation.cancelledByType)}
             />
             {reservation.cancelledAt && (
               <DetailField

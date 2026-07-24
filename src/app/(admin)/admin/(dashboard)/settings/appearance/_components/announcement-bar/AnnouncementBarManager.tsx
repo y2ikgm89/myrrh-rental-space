@@ -9,6 +9,7 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { announcementBarsListResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import {
   deleteAnnouncementBar,
   reorderAnnouncementBars,
@@ -47,7 +48,10 @@ async function fetchAnnouncementBars(): Promise<{
   items: Serialized<AnnouncementBarData>[];
   total: number;
 }> {
-  return fetchAdminJson("/admin/api/announcement-bars");
+  return fetchAdminJson(
+    "/admin/api/announcement-bars",
+    announcementBarsListResponseSchema,
+  );
 }
 
 // =============================================================================

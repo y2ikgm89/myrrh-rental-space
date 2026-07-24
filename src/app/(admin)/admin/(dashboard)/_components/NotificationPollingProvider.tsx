@@ -3,19 +3,17 @@
 import { createContext, use, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { unreadCountResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 
 type NotificationPollingContextValue = {
   unreadCount: number;
   refresh: () => void;
 };
 
-type UnreadCountResponse = {
-  unreadCount: number;
-};
-
 async function readUnreadCount(): Promise<number> {
-  const response = await fetchAdminJson<UnreadCountResponse>(
+  const response = await fetchAdminJson(
     "/admin/api/notifications/unread-count",
+    unreadCountResponseSchema,
     { cache: "no-store" },
   );
   return response.unreadCount;

@@ -6,10 +6,8 @@ import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import {
-  verifyCancelToken,
-  tokenFingerprint,
-} from "@/shared/lib/reservation-cancel-token";
+import { verifyCancelToken } from "@/shared/lib/reservation-cancel-token";
+import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForGuestCancel } from "@/shared/domain/reservations/customer-queries";

@@ -83,8 +83,9 @@ export function FeatureModulesForm({
           <CardTitle>機能モジュール ON/OFF</CardTitle>
           <CardDescription>
             OFF にした機能は公開ページが 404
-            になり、ナビゲーション・サイトマップ・関連 cron
-            ジョブから自動除外されます。データベース上の既存データは保持されます。
+            になり、公開サイトのナビゲーション・サイトマップ・関連 cron
+            ジョブから自動除外されます（管理画面メニューは除外されません）。
+            データベース上の既存データは保持されます。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

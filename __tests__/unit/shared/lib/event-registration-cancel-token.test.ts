@@ -4,8 +4,8 @@ import {
   createCancelToken,
   MAX_CANCEL_TOKEN_LIFETIME_MS,
   verifyCancelToken,
-  tokenFingerprint,
 } from "@/shared/lib/event-registration-cancel-token";
+import { tokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 
 const RID = "ckv1a2b3c0000abcdefghijk";
 

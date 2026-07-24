@@ -1,4 +1,8 @@
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import {
+  navigationItemsResponseSchema,
+  socialLinksResponseSchema,
+} from "@/admin/lib/admin-api-response-schemas";
 import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {
@@ -86,11 +90,17 @@ export async function fetchNavigationItems(
   type: NavigationType,
 ): Promise<NavigationItemData[]> {
   const searchParams = new URLSearchParams({ type });
-  return fetchAdminJson(`/admin/api/navigation?${searchParams.toString()}`);
+  return fetchAdminJson(
+    `/admin/api/navigation?${searchParams.toString()}`,
+    navigationItemsResponseSchema,
+  );
 }
 
 export async function fetchSocialLinks(): Promise<
   Serialized<SocialLinkData>[]
 > {
-  return fetchAdminJson("/admin/api/navigation/social-links");
+  return fetchAdminJson(
+    "/admin/api/navigation/social-links",
+    socialLinksResponseSchema,
+  );
 }

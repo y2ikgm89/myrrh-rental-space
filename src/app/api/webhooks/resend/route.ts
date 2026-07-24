@@ -184,8 +184,9 @@ export async function POST(request: Request) {
       severity: ErrorSeverity.HIGH,
       context: { operation: "resendWebhook" },
     });
-    // エラーでも 200 を返す（Resend の指数バックオフ再送を防止）
-    return jsonSuccess({ received: false });
+    // 未知例外は 500 を返し Resend 再配信に任せる（M3 partial failure と同方針）。
+    // per-recipient 更新は idempotent なため再送しても安全。
+    return jsonError("Internal error processing webhook", 500);
   }
 }
 

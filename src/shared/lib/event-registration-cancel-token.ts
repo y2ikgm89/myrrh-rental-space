@@ -2,7 +2,6 @@ import "server-only";
 
 import { encrypt, decrypt } from "@/shared/lib/crypto";
 import { isRecord } from "@/shared/lib/serialize";
-import { tokenFingerprint as sharedTokenFingerprint } from "@/shared/lib/tokens/fingerprint";
 
 /**
  * ゲストイベント参加申込キャンセル用トークン
@@ -89,11 +88,6 @@ export function createCancelToken(
   const ciphertext = encrypt(JSON.stringify(payload), { purpose: PURPOSE });
   return Buffer.from(ciphertext, "utf8").toString("base64url");
 }
-
-/**
- * @deprecated 直接 `@/shared/lib/tokens/fingerprint` から import すること。
- */
-export const tokenFingerprint = sharedTokenFingerprint;
 
 /**
  * キャンセルトークンを検証する。

@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 
 type ErrorResponse = {
   error?: string;
@@ -14,25 +14,14 @@ function isErrorResponse(value: unknown): value is ErrorResponse {
 }
 
 /**
- * admin API 経路の fetch + JSON parse + エラーメッセージ抽出をまとめる helper。
+ * admin API 経路の fetch + JSON parse + Zod 検証 + エラーメッセージ抽出。
  *
- * ## 型安全性の契約 (TS-1 audit finding)
- *
- * - **`schema` 省略時**: `response.json()` の `unknown` を `T` に widening するだけで
- *   runtime 検証は無い。呼び出し側の型注釈は「期待するレスポンス shape の記述」に
- *   すぎず、実際の payload が異なっても TypeScript は検出できない。**新規呼び出しは
- *   極力 schema を渡し、runtime 検証を通すこと。**
- * - **`schema` 指定時**: `schema.safeParse(body)` を通し、失敗時は throw する。
- *   戻り値の `T` は Zod schema の output 型と一致するため、runtime と型の乖離が
- *   構造的に排除される。
- *
- * 既存 caller は annotation form (`fetchAdminJson<T>(url)`) のままでも動作する
- * (backward compatible)。段階的に schema を追加していく前提。
+ * 戻り値の `T` は schema の output 型と一致する。runtime 検証失敗時は throw する。
  */
 export async function fetchAdminJson<T>(
   input: string,
+  schema: z.ZodType<T>,
   init?: RequestInit,
-  schema?: z.ZodType<T>,
 ): Promise<T> {
   const response = await fetch(input, {
     credentials: "same-origin",
@@ -47,15 +36,12 @@ export async function fetchAdminJson<T>(
     throw new Error(message);
   }
 
-  if (schema) {
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
-      throw new Error(
-        `admin API レスポンスの検証に失敗しました: ${parsed.error.message}`,
-      );
-    }
-    return parsed.data;
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw new Error(
+      `admin API レスポンスの検証に失敗しました: ${parsed.error.message}`,
+    );
   }
 
-  return body as T;
+  return parsed.data;
 }
