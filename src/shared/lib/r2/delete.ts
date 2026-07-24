@@ -72,3 +72,65 @@ export async function deleteFiles(keys: string[]): Promise<DeleteResult> {
     return { success: false, error: "ファイルの削除に失敗しました" };
   }
 }
+
+/**
+ * 任意 bucket から単一 Object を削除する（private bucket 専用）。
+ * `deleteFile` は `R2_BUCKET_NAME`（公開メディア bucket）固定のため、
+ * お問い合わせ添付など別 bucket の object には使えない。
+ */
+export async function deleteObjectFromBucket(
+  bucket: string,
+  key: string,
+): Promise<DeleteResult> {
+  try {
+    await getR2Client().send(
+      new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+    return { success: true };
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "deleteObjectFromBucket", bucket, key },
+    });
+    return { success: false, error: "ファイルの削除に失敗しました" };
+  }
+}
+
+/**
+ * 任意 bucket から複数 Object を一括削除する（private bucket 専用、最大 1000 件）。
+ * 空配列は no-op（success:true）。
+ */
+export async function deleteObjectsFromBucket(
+  bucket: string,
+  keys: string[],
+): Promise<DeleteResult> {
+  if (keys.length === 0) return { success: true };
+
+  try {
+    await getR2Client().send(
+      new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: {
+          Objects: keys.map((Key) => ({ Key })),
+          Quiet: true,
+        },
+      }),
+    );
+    return { success: true };
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        operation: "deleteObjectsFromBucket",
+        bucket,
+        count: keys.length,
+      },
+    });
+    return { success: false, error: "ファイルの削除に失敗しました" };
+  }
+}

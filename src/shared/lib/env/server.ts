@@ -270,6 +270,11 @@ export const serverEnv = createEnv({
     R2_SECRET_ACCESS_KEY: z.string().optional(),
     R2_BUCKET_NAME: z.string().optional(),
     R2_PUBLIC_URL: z.url().optional(),
+    // お問い合わせ添付専用の private bucket（公開 CDN ドメインなし）。
+    // Terraform 側の secret container 作成 → operator が版投入 → Cloud Run 配線
+    // の 3 段階手順が未完了のうちは env 自体が存在しないため、`R2_BUCKET_NAME` と
+    // 異なり `requiredInProd` にはまだ加えない（配線完了後の follow-up で追加する）。
+    R2_INQUIRIES_BUCKET_NAME: z.string().optional(),
 
     // Cloudflare CDN（CDN cache purge / 任意）
     // 設定時のみ admin mutation 時に purge_by_tags が発火する。
@@ -358,6 +363,7 @@ export const serverEnv = createEnv({
     R2_SECRET_ACCESS_KEY: process.env["R2_SECRET_ACCESS_KEY"],
     R2_BUCKET_NAME: process.env["R2_BUCKET_NAME"],
     R2_PUBLIC_URL: process.env["R2_PUBLIC_URL"],
+    R2_INQUIRIES_BUCKET_NAME: process.env["R2_INQUIRIES_BUCKET_NAME"],
     CLOUDFLARE_ZONE_ID: process.env["CLOUDFLARE_ZONE_ID"],
     CLOUDFLARE_API_TOKEN: process.env["CLOUDFLARE_API_TOKEN"],
     CLOUDFLARE_ORIGIN_HEADER_SECRET:

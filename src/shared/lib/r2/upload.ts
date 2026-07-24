@@ -264,6 +264,49 @@ export async function uploadFiles(
 }
 
 // =============================================================================
+// Private bucket put（公開 URL を発行しない bucket 向け）
+// =============================================================================
+
+export type PutPrivateObjectResult =
+  { success: true } | { success: false; error: string };
+
+/**
+ * 任意の bucket に raw PutObject する（private bucket 専用、公開 URL を発行しない）。
+ *
+ * `uploadFile` は `R2_PUBLIC_URL` + `buildPublicUrl` を前提にした公開 CDN 向け
+ * ヘルパーのため、PII を含む private bucket（お問い合わせ添付等）には使えない。
+ * MIME 検証・object key 生成・size 上限チェックは呼び出し側（domain command）が
+ * 担い、本関数は確定済み `key` / `body` / `contentType` を渡された bucket へ
+ * そのまま送るだけの薄い primitive とする。
+ */
+export async function putPrivateObject(
+  bucket: string,
+  key: string,
+  body: Uint8Array,
+  contentType: string,
+): Promise<PutPrivateObjectResult> {
+  try {
+    await getR2Client().send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        ContentLength: body.byteLength,
+      }),
+    );
+    return { success: true };
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { operation: "putPrivateObject", bucket, key },
+    });
+    return { success: false, error: "ファイルのアップロードに失敗しました" };
+  }
+}
+
+// =============================================================================
 // Re-exports (consumer 側の barrel 化を抑えるため type のみ slim re-export)
 // =============================================================================
 

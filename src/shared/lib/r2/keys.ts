@@ -28,6 +28,13 @@ export const STORAGE_PREFIXES = {
   POSTS: "posts",
   SITE: "site",
   MEDIA: "media",
+  /**
+   * お問い合わせ添付（private bucket 専用）。この prefix の object は
+   * `R2_INQUIRIES_BUCKET_NAME`（`R2_BUCKET_NAME` とは別バケット）にのみ置かれ、
+   * `buildPublicUrl` / `extractKeyFromUrl` は一切呼ばない
+   * （inquiry-overhaul completion design §5.2、architecture-boundaries.test.ts で強制）。
+   */
+  INQUIRIES: "inquiries",
 } as const;
 
 export type StoragePrefix =
