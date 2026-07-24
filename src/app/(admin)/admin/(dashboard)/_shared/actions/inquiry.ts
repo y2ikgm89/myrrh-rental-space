@@ -13,15 +13,22 @@ import {
   uploadInquiryAttachmentCommand,
   deleteInquiryAttachmentCommand,
 } from "@/shared/domain/inquiries/attachment-commands";
+import { anonymizeInquiryCommand } from "@/shared/domain/inquiries/anonymize-commands";
+import type { AnonymizeInquiryReason } from "@/shared/domain/inquiries/anonymize-commands";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   sendInquiryReplyEmail,
   sendInquiryStatusNotificationToAll,
 } from "@/shared/lib/email/inquiry-emails";
-import { ErrorCategory } from "@/shared/lib/errors/server";
-import { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
+import {
+  AuditAction,
+  InquiryStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
@@ -272,6 +279,97 @@ export async function deleteInquiryAttachment(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(getCacheTag.inquiries.detail(parsed.data.inquiryId));
+    },
+  });
+}
+
+/**
+ * Inquiry Overhaul Phase 6: お問い合わせ匿名化 Server Action。
+ *
+ * `anonymizeCustomer`（`@/admin/actions/customer`）と同型: `resource: "inquiry",
+ * action: "delete"` の RBAC（「PII を消す」= 破壊的操作扱い、EDITOR ロール以下
+ * では実行不可）+ 匿名化専用の詳細 AuditLog（`inquiry.anonymization`）。
+ */
+const anonymizeInquiryReasonSchema = z.enum(
+  ["customer-requested", "admin-purge", "data-retention"] as const,
+  { error: "匿名化理由が不正です" },
+);
+
+// 匿名化で置換される PII フィールド名（anonymizeInquiryCommand と同期）。
+// customer.anonymization と同様、生 PII 値そのものは AuditLog に残さない。
+// "use server" ファイルは async function 以外の export を持てないため
+// (Next.js の制約)、非公開の module-local 定数として保持する。
+const ANONYMIZED_INQUIRY_FIELDS = [
+  "name",
+  "email",
+  "phoneNumber",
+  "companyName",
+  "message",
+  "replies.body",
+  "attachments",
+] as const;
+
+export async function anonymizeInquiry(
+  id: string,
+  reason: AnonymizeInquiryReason,
+): Promise<
+  MutationResult<{
+    anonymized: Awaited<ReturnType<typeof anonymizeInquiryCommand>>;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationMutationError(validatedId.error);
+  }
+  const validatedReason = anonymizeInquiryReasonSchema.safeParse(reason);
+  if (!validatedReason.success) {
+    return createValidationMutationError(validatedReason.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "inquiry",
+    action: "delete",
+    resourceId: validatedId.data,
+    execute: async (user) => {
+      const anonymized = await anonymizeInquiryCommand({
+        inquiryId: validatedId.data,
+        reason: validatedReason.data,
+      });
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { anonymized, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      updateTag(CACHE_TAGS.INQUIRIES);
+      updateTag(getCacheTag.inquiries.detail(validatedId.data));
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "inquiry.anonymization",
+          resourceId: validatedId.data,
+          newValue: {
+            reason: outcome.anonymized.reason,
+            anonymizedAt: outcome.anonymized.anonymizedAt.toISOString(),
+            deletedAttachmentCount: outcome.anonymized.deletedAttachmentCount,
+            anonymizedFields: ANONYMIZED_INQUIRY_FIELDS,
+          },
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogAnonymizeInquiry",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+        },
+      );
     },
   });
 }

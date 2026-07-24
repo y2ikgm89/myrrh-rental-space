@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  IconEyeOff,
   IconLink,
   IconLinkOff,
   IconMail,
@@ -176,8 +177,22 @@ export function InquiryDetail({
     });
   };
 
+  const isAnonymized = inquiry.anonymizedAt !== null;
+
   return (
-    <div className="grid gap-6 md:grid-cols-3">
+    <div className="space-y-6">
+      {isAnonymized ? (
+        <div className="flex items-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <IconEyeOff className="h-4 w-4 shrink-0" />
+          <span>
+            このお問い合わせは匿名化済みです（
+            {formatDate(inquiry.anonymizedAt, true)}
+            ）。個人情報は削除されています。
+          </span>
+        </div>
+      ) : null}
+
+      <div className="grid gap-6 md:grid-cols-3">
       {/* メイン情報 */}
       <div className="md:col-span-2 space-y-6">
         {/* 送信者情報 */}
@@ -218,44 +233,50 @@ export function InquiryDetail({
         <InquiryAttachments
           inquiryId={inquiry.id}
           attachments={inquiry.attachments}
+          isAnonymized={isAnonymized}
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              {inquiry.replies.length > 0 ? "追加返信を送信" : "回答を送信"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              placeholder="回答内容を入力してください..."
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              rows={6}
-              disabled={isReplying}
-            />
-            <div className="flex justify-end">
-              <SubmitButton
-                isPending={isReplying}
-                label="回答を送信"
-                pendingLabel="送信中..."
-                disabled={!replyText.trim()}
-                onClick={() => {
-                  startReplyTransition(async () => {
-                    const result = await replyToInquiry(inquiry.id, replyText);
-                    if (isMutationError(result)) {
-                      toast.error(result.error);
-                    } else {
-                      toast.success("回答を送信しました");
-                      setReplyText("");
-                      router.refresh();
-                    }
-                  });
-                }}
+        {!isAnonymized && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">
+                {inquiry.replies.length > 0 ? "追加返信を送信" : "回答を送信"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="回答内容を入力してください..."
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={6}
+                disabled={isReplying}
               />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex justify-end">
+                <SubmitButton
+                  isPending={isReplying}
+                  label="回答を送信"
+                  pendingLabel="送信中..."
+                  disabled={!replyText.trim()}
+                  onClick={() => {
+                    startReplyTransition(async () => {
+                      const result = await replyToInquiry(
+                        inquiry.id,
+                        replyText,
+                      );
+                      if (isMutationError(result)) {
+                        toast.error(result.error);
+                      } else {
+                        toast.success("回答を送信しました");
+                        setReplyText("");
+                        router.refresh();
+                      }
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* サイドバー */}
@@ -472,6 +493,7 @@ export function InquiryDetail({
         />
 
         <InquiryStatusHistoryCard history={inquiry.statusHistory} />
+      </div>
       </div>
     </div>
   );

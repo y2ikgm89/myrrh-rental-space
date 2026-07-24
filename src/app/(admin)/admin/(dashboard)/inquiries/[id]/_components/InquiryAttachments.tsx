@@ -32,11 +32,14 @@ function formatFileSize(bytes: number): string {
 type InquiryAttachmentsProps = {
   inquiryId: string;
   attachments: Serialized<InquiryAttachmentItem>[];
+  /** 匿名化済みなら true。既存添付は anonymize 時に削除済みのため新規追加のみ隠す。 */
+  isAnonymized?: boolean;
 };
 
 export function InquiryAttachments({
   inquiryId,
   attachments,
+  isAnonymized = false,
 }: InquiryAttachmentsProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -136,28 +139,30 @@ export function InquiryAttachments({
           </p>
         )}
 
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ALLOWED_ACCEPT}
-            className="hidden"
-            onChange={handleFileChange}
-            disabled={isUploading}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isUploading}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {isUploading ? "アップロード中..." : "ファイルを追加"}
-          </Button>
-          <p className="mt-1 text-xs text-muted-foreground">
-            JPEG / PNG / WebP（5MB以下）・ PDF（10MB以下）
-          </p>
-        </div>
+        {!isAnonymized && (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ALLOWED_ACCEPT}
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={isUploading}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploading ? "アップロード中..." : "ファイルを追加"}
+            </Button>
+            <p className="mt-1 text-xs text-muted-foreground">
+              JPEG / PNG / WebP（5MB以下）・ PDF（10MB以下）
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

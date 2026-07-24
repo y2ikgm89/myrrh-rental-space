@@ -10,6 +10,7 @@ import {
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { InquiryDetail } from "./_components/InquiryDetail";
+import { AnonymizeInquiryButton } from "./_components/AnonymizeInquiryButton";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -59,11 +60,18 @@ export default async function InquiryDetailPage({ params }: PageProps) {
       title="お問い合わせ詳細"
       subtitle={`${inquiry.name}（${inquiry.email}）`}
       actions={
-        <DetailDeleteButton
-          itemName={inquiry.subject}
-          onDelete={deleteInquiry.bind(null, inquiry.id)}
-          redirectTo="/admin/inquiries"
-        />
+        <>
+          <AnonymizeInquiryButton
+            inquiryId={inquiry.id}
+            subject={inquiry.subject}
+            anonymizedAt={inquiry.anonymizedAt}
+          />
+          <DetailDeleteButton
+            itemName={inquiry.subject}
+            onDelete={deleteInquiry.bind(null, inquiry.id)}
+            redirectTo="/admin/inquiries"
+          />
+        </>
       }
     >
       <InquiryDetail
