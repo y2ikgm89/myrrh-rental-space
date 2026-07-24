@@ -82,15 +82,24 @@ const mockPatchGcalMasterUntil = mock<
     masterEventId: string;
     seriesId: string;
     until: Date;
-  }) => Promise<void>
->(() => Promise.resolve());
-const mockDeleteGcalMaster = mock<(masterEventId: string) => Promise<void>>(
-  () => Promise.resolve(),
-);
+  }) => Promise<{ success: boolean; error?: string }>
+>(() => Promise.resolve({ success: true }));
+const mockDeleteGcalMaster = mock<
+  (masterEventId: string) => Promise<{ success: boolean; error?: string }>
+>(() => Promise.resolve({ success: true }));
 mock.module("@/shared/lib/calendar-sync/series-outbound", () => ({
   getSeriesGcalMasterEventId: mockGetSeriesGcalMasterEventId,
   patchGcalMasterUntil: mockPatchGcalMasterUntil,
   deleteGcalMaster: mockDeleteGcalMaster,
+}));
+
+const mockMarkReservationCalendarSyncError = mock<
+  (input: { reservationId: string; error: string }) => Promise<void>
+>(() => Promise.resolve());
+mock.module("@/shared/domain/reservations/calendar-sync", () => ({
+  GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
+  GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
+  markReservationCalendarSyncError: mockMarkReservationCalendarSyncError,
 }));
 
 const mockSendCancelledEmail = mock<
@@ -222,6 +231,7 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     mockGetSeriesGcalMasterEventId.mockReset();
     mockPatchGcalMasterUntil.mockReset();
     mockDeleteGcalMaster.mockReset();
+    mockMarkReservationCalendarSyncError.mockReset();
     mockSendCancelledEmail.mockReset();
     mockSendAdminNotification.mockReset();
     mockSendBulkReservationCancelledEmail.mockReset();
@@ -242,8 +252,9 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     mockRefund.mockResolvedValue({ ok: true });
     mockDeleteCalendarSync.mockResolvedValue(undefined);
     mockGetSeriesGcalMasterEventId.mockResolvedValue(MASTER_EVENT_ID);
-    mockPatchGcalMasterUntil.mockResolvedValue(undefined);
-    mockDeleteGcalMaster.mockResolvedValue(undefined);
+    mockPatchGcalMasterUntil.mockResolvedValue({ success: true });
+    mockDeleteGcalMaster.mockResolvedValue({ success: true });
+    mockMarkReservationCalendarSyncError.mockResolvedValue(undefined);
     mockSendCancelledEmail.mockResolvedValue({ ok: true });
     mockSendAdminNotification.mockResolvedValue({ ok: true });
     mockSendBulkReservationCancelledEmail.mockResolvedValue({ ok: true });
@@ -385,6 +396,61 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     );
     expect(seriesAuditCalls[0]?.[0]).toMatchObject({
       newValue: { scope: "this-and-following" },
+    });
+  });
+
+  // GCAL-OUTBOUND-07: patchGcalMasterUntil / deleteGcalMaster 失敗時、対象
+  // instance に typed prefix 付き calendarSyncError を記録し retry pool に載せる。
+  describe("series master 操作失敗の永続化 (GCAL-OUTBOUND-07)", () => {
+    test("deleteGcalMaster が失敗 → 対象 instance 全件に delete failed prefix を記録", async () => {
+      const ids = makeReservationIds(3);
+      mockDeleteGcalMaster.mockResolvedValue({
+        success: false,
+        error: "rate limit exceeded",
+      });
+
+      await applyBulkCancellationSideEffects(
+        baseInput({ reservationIds: ids, scope: "series-all" }),
+      );
+
+      expect(mockMarkReservationCalendarSyncError).toHaveBeenCalledTimes(3);
+      for (const id of ids) {
+        expect(mockMarkReservationCalendarSyncError).toHaveBeenCalledWith({
+          reservationId: id,
+          error: "gcal_series_master_delete_failed:rate limit exceeded",
+        });
+      }
+    });
+
+    test("patchGcalMasterUntil が失敗 → until を ISO でエンコードした patch failed prefix を記録", async () => {
+      const ids = makeReservationIds(2);
+      mockPatchGcalMasterUntil.mockResolvedValue({
+        success: false,
+        error: "network error",
+      });
+
+      await applyBulkCancellationSideEffects(
+        baseInput({ reservationIds: ids, scope: "this-and-following" }),
+      );
+
+      expect(mockMarkReservationCalendarSyncError).toHaveBeenCalledTimes(2);
+      const expectedError = `gcal_series_master_patch_failed:${NOW.toISOString()}|network error`;
+      for (const id of ids) {
+        expect(mockMarkReservationCalendarSyncError).toHaveBeenCalledWith({
+          reservationId: id,
+          error: expectedError,
+        });
+      }
+    });
+
+    test("master 操作成功時は markReservationCalendarSyncError を呼ばない", async () => {
+      const ids = makeReservationIds(2);
+
+      await applyBulkCancellationSideEffects(
+        baseInput({ reservationIds: ids, scope: "series-all" }),
+      );
+
+      expect(mockMarkReservationCalendarSyncError).not.toHaveBeenCalled();
     });
   });
 });

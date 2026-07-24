@@ -62,6 +62,11 @@ import {
   patchGcalMasterUntil,
 } from "@/shared/lib/calendar-sync/series-outbound";
 import {
+  GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX,
+  GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX,
+  markReservationCalendarSyncError,
+} from "@/shared/domain/reservations/calendar-sync";
+import {
   sendBulkAdminNotification,
   sendBulkReservationCancelledEmail,
   sendReservationAdminNotification,
@@ -852,6 +857,12 @@ export async function applyBulkCancellationSideEffects(
   }
 
   // Step 2: master GCal 操作（scope 分岐）
+  //
+  // GCAL-OUTBOUND-07: patchGcalMasterUntil / deleteGcalMaster は失敗を
+  // `{success, error}` で返すようになった (旧実装は void を返し log-only で
+  // 失敗が握り潰されていた)。失敗時は対象 instance に typed prefix 付きの
+  // `calendarSyncError` を記録し、`retryFailedSeriesMasterOperations`
+  // (calendar-sync-retry cron) が拾えるようにする。
   try {
     const masterEventId = await getSeriesGcalMasterEventId(input.seriesId);
     if (masterEventId) {
@@ -860,13 +871,30 @@ export async function applyBulkCancellationSideEffects(
         // UNTIL は fromInstance.startTime - 1s (呼出側計算) を優先し、後方互換の
         // ため未指定時のみ `input.now` にフォールバック。詳細は RECENT-01 fix
         // (BulkCancellationSideEffectInput.gcalUntil の JSDoc)。
-        await patchGcalMasterUntil({
+        const until = input.gcalUntil ?? input.now;
+        const result = await patchGcalMasterUntil({
           masterEventId,
           seriesId: input.seriesId,
-          until: input.gcalUntil ?? input.now,
+          until,
         });
+        if (!result.success) {
+          const error = `${GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX}${until.toISOString()}|${result.error ?? "unknown error"}`;
+          await Promise.all(
+            input.reservationIds.map((reservationId) =>
+              markReservationCalendarSyncError({ reservationId, error }),
+            ),
+          );
+        }
       } else {
-        await deleteGcalMaster(masterEventId);
+        const result = await deleteGcalMaster(masterEventId);
+        if (!result.success) {
+          const error = `${GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX}${result.error ?? "unknown error"}`;
+          await Promise.all(
+            input.reservationIds.map((reservationId) =>
+              markReservationCalendarSyncError({ reservationId, error }),
+            ),
+          );
+        }
       }
     }
   } catch (error) {

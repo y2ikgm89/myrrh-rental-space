@@ -24,6 +24,7 @@ import {
 import { previewReservationPricing } from "@/shared/domain/reservations/pricing-preview";
 import type { ReservationPricingResult } from "@/shared/lib/pricing/calculate-reservation-pricing";
 import {
+  deleteCalendarSync,
   syncReservationToCalendar,
   updateCalendarSync,
 } from "@/shared/lib/calendar-sync/outbound";
@@ -264,7 +265,45 @@ export async function updateReservationAction(
 
           const payloadData = omitUndefined(mutationPayload.payload);
           const calendarData: ReservationSyncData = payloadData;
-          if (mutationPayload.googleCalendarEventId) {
+
+          // Cluster H #9: status 遷移に応じて適切な顧客通知メールに分岐する。
+          //   - PENDING → CONFIRMED: 確認メール (スマートロック passcode 込み)
+          //     + 管理者通知 "new" (updateReservationStatus と同型)
+          //   - CONFIRMED → PENDING: ステータス変更メール (顧客の decision に影響する
+          //     格下げなので silent 化しない)
+          //   - status 不変で日時/スペース/料金のみ変更: 汎用 update メール
+          //     (既存挙動)
+          // いずれも重要取引通知として非 gate。
+          const previousStatus = mutationPayload.previousStatus;
+          const newStatus = mutationPayload.newStatus;
+          const statusFlipToConfirmed =
+            newStatus === ReservationStatus.CONFIRMED &&
+            previousStatus !== ReservationStatus.CONFIRMED;
+          const statusFlipToPending =
+            newStatus === ReservationStatus.PENDING &&
+            previousStatus !== ReservationStatus.PENDING;
+
+          // GCAL-OUTBOUND-04: CONFIRMED → PENDING 格下げは「確認済み予約」として
+          // 共有カレンダーに残す理由が無くなるため、update ではなく delete を選ぶ
+          // (updateReservationStatus / mutations.ts と同型)。それ以外は既存どおり
+          // eventId の有無で create / update を振り分ける。
+          if (statusFlipToPending && mutationPayload.googleCalendarEventId) {
+            fireAndForget(
+              deleteCalendarSync(
+                parsedId.data,
+                mutationPayload.googleCalendarEventId,
+              ),
+              {
+                operation: "deleteCalendarSync",
+                category: ErrorCategory.EXTERNAL_API,
+                severity: ErrorSeverity.LOW,
+                context: {
+                  reservationId: parsedId.data,
+                  trigger: "statusFlipToPending",
+                },
+              },
+            );
+          } else if (mutationPayload.googleCalendarEventId) {
             fireAndForget(
               updateCalendarSync(
                 calendarData,
@@ -288,23 +327,6 @@ export async function updateReservationAction(
               },
             });
           }
-
-          // Cluster H #9: status 遷移に応じて適切な顧客通知メールに分岐する。
-          //   - PENDING → CONFIRMED: 確認メール (スマートロック passcode 込み)
-          //     + 管理者通知 "new" (updateReservationStatus と同型)
-          //   - CONFIRMED → PENDING: ステータス変更メール (顧客の decision に影響する
-          //     格下げなので silent 化しない)
-          //   - status 不変で日時/スペース/料金のみ変更: 汎用 update メール
-          //     (既存挙動)
-          // いずれも重要取引通知として非 gate。
-          const previousStatus = mutationPayload.previousStatus;
-          const newStatus = mutationPayload.newStatus;
-          const statusFlipToConfirmed =
-            newStatus === ReservationStatus.CONFIRMED &&
-            previousStatus !== ReservationStatus.CONFIRMED;
-          const statusFlipToPending =
-            newStatus === ReservationStatus.PENDING &&
-            previousStatus !== ReservationStatus.PENDING;
 
           if (statusFlipToConfirmed) {
             // updateReservationStatus と同型: スマートロック passcode 発行結果を

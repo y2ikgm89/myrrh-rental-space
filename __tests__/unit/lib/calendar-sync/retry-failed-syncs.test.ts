@@ -11,6 +11,9 @@ import type { calendar_v3 } from "googleapis";
 
 // --- google-calendar mocks ---
 const mockIsEnabled = mock<() => Promise<boolean>>(() => Promise.resolve(true));
+const mockIsConfigured = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
 const mockCreate = mock<
   (
     params: Record<string, unknown>,
@@ -38,6 +41,7 @@ const mockDelete = mock<
 
 mock.module("@/shared/lib/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
+  isGoogleCalendarConfigured: mockIsConfigured,
   createCalendarEvent: mockCreate,
   updateCalendarEvent: mockUpdate,
   deleteCalendarEvent: mockDelete,
@@ -81,6 +85,24 @@ const mockGetFailedSeriesIds = mock<() => Promise<string[]>>(() =>
 const mockGetSeriesMaster = mock<(seriesId: string) => Promise<string | null>>(
   () => Promise.resolve(null),
 );
+type SeriesForCalendarSync = {
+  id: string;
+  rrule: string;
+  dtstart: Date;
+  duration: number;
+  spaceName: string;
+  spaceAddressDetail: string | null;
+  locationAddress: string;
+  customerLastName: string;
+  customerFirstName: string;
+  customerEmail: string;
+};
+const mockGetSeriesForCalendarSync = mock<
+  (seriesId: string) => Promise<SeriesForCalendarSync | null>
+>(() => Promise.resolve(null));
+const mockMarkSeriesMasterEventCreated = mock<() => Promise<void>>(() =>
+  Promise.resolve(),
+);
 const mockGetSeriesInstances = mock<
   (seriesId: string) => Promise<{ id: string; startTime: Date }[]>
 >(() => Promise.resolve([]));
@@ -95,8 +117,21 @@ const mockClearReservationCalendarEvent = mock<() => Promise<void>>(() =>
 );
 const mockMarkUpdated = mock<() => Promise<void>>(() => Promise.resolve());
 
+const mockGetSeriesIdsWithMasterOperationFailure = mock<
+  () => Promise<string[]>
+>(() => Promise.resolve([]));
+const mockGetSeriesMasterOperationFailureInstances = mock<
+  (seriesId: string) => Promise<{ id: string; calendarSyncError: string }[]>
+>(() => Promise.resolve([]));
+
 mock.module("@/shared/domain/reservations/calendar-sync", () => ({
   GCAL_DELETE_FAILED_PREFIX: "gcal_delete_failed:",
+  GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX: "gcal_series_master_patch_failed:",
+  GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX: "gcal_series_master_delete_failed:",
+  getSeriesIdsWithMasterOperationFailure:
+    mockGetSeriesIdsWithMasterOperationFailure,
+  getSeriesMasterOperationFailureInstances:
+    mockGetSeriesMasterOperationFailureInstances,
   clearReservationCalendarEvent: mockClearReservationCalendarEvent,
   getCalendarSyncRuntimeState: mock(() =>
     Promise.resolve({
@@ -110,14 +145,14 @@ mock.module("@/shared/domain/reservations/calendar-sync", () => ({
   ),
   getFailedCalendarSyncReservations: mockGetFailedReservations,
   getFailedCalendarSyncSeriesIds: mockGetFailedSeriesIds,
-  getSeriesForCalendarSync: mock(() => Promise.resolve(null)),
+  getSeriesForCalendarSync: mockGetSeriesForCalendarSync,
   getSeriesGcalMasterEventId: mockGetSeriesMaster,
   getSeriesInstanceStartTimes: mockGetSeriesInstances,
   markReservationCalendarSyncError: mockMarkError,
   markReservationCalendarSyncSuccess: mockMarkSuccess,
   markReservationCalendarSyncUpdated: mockMarkUpdated,
   markSeriesInstanceCalendarSyncSuccess: mockMarkSeriesInstanceSuccess,
-  markSeriesMasterEventCreated: mock(() => Promise.resolve()),
+  markSeriesMasterEventCreated: mockMarkSeriesMasterEventCreated,
 }));
 
 // --- errors ---
@@ -175,6 +210,8 @@ describe("retryFailedSyncs — GCAL-RETRY-04 series/standalone separation", () =
   beforeEach(() => {
     mockIsEnabled.mockReset();
     mockIsEnabled.mockResolvedValue(true);
+    mockIsConfigured.mockReset();
+    mockIsConfigured.mockResolvedValue(true);
     mockCreate.mockReset();
     mockCreate.mockResolvedValue({
       success: true,
@@ -188,6 +225,14 @@ describe("retryFailedSyncs — GCAL-RETRY-04 series/standalone separation", () =
     mockGetFailedSeriesIds.mockResolvedValue([]);
     mockGetSeriesMaster.mockReset();
     mockGetSeriesMaster.mockResolvedValue(null);
+    mockGetSeriesForCalendarSync.mockReset();
+    mockGetSeriesForCalendarSync.mockResolvedValue(null);
+    mockMarkSeriesMasterEventCreated.mockReset();
+    mockMarkSeriesMasterEventCreated.mockResolvedValue(undefined);
+    mockGetSeriesIdsWithMasterOperationFailure.mockReset();
+    mockGetSeriesIdsWithMasterOperationFailure.mockResolvedValue([]);
+    mockGetSeriesMasterOperationFailureInstances.mockReset();
+    mockGetSeriesMasterOperationFailureInstances.mockResolvedValue([]);
     mockGetSeriesInstances.mockReset();
     mockGetSeriesInstances.mockResolvedValue([]);
     mockMarkSeriesInstanceSuccess.mockReset();
@@ -245,9 +290,64 @@ describe("retryFailedSyncs — GCAL-RETRY-04 series/standalone separation", () =
     expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
   });
 
-  test("series の master 未永続 → 想定外として failed 計上 + logError", async () => {
+  test("series の master 未永続 → syncReservationSeriesToCalendar で master 再作成を試みる (成功時)", async () => {
     mockGetFailedSeriesIds.mockResolvedValue(["series-orphan"]);
     mockGetSeriesMaster.mockResolvedValue(null);
+    mockGetSeriesForCalendarSync.mockResolvedValue({
+      id: "series-orphan",
+      rrule: "FREQ=WEEKLY;BYDAY=TU;COUNT=2",
+      dtstart: new Date("2026-05-01T01:00:00Z"),
+      duration: 60,
+      spaceName: "Space A",
+      spaceAddressDetail: null,
+      locationAddress: "東京都渋谷区",
+      customerLastName: "山田",
+      customerFirstName: "太郎",
+      customerEmail: "taro@example.com",
+    });
+    mockGetSeriesInstances.mockResolvedValue([
+      { id: "res-x", startTime: new Date("2026-05-01T01:00:00Z") },
+      { id: "res-y", startTime: new Date("2026-05-08T01:00:00Z") },
+    ]);
+    mockCreate.mockResolvedValue({
+      success: true,
+      eventId: "gcal-master-recreated",
+    });
+    mockFetchInstances.mockResolvedValue({
+      success: true,
+      instances: [
+        {
+          id: "gcal-master-recreated_20260501T010000Z",
+          startTime: new Date("2026-05-01T01:00:00Z"),
+        },
+        {
+          id: "gcal-master-recreated_20260508T010000Z",
+          startTime: new Date("2026-05-08T01:00:00Z"),
+        },
+      ],
+    });
+
+    const result = await retryFailedSyncs();
+
+    // master が無い series は create (RRULE 付き master 再作成) を試みる
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    const call = mockCreate.mock.calls[0]?.[0];
+    expect(call?.["recurrence"]).toEqual([
+      "RRULE:FREQ=WEEKLY;BYDAY=TU;COUNT=2",
+    ]);
+    expect(mockMarkSeriesMasterEventCreated).toHaveBeenCalledWith({
+      seriesId: "series-orphan",
+      masterEventId: "gcal-master-recreated",
+    });
+    expect(result).toEqual({ total: 2, succeeded: 2, failed: 0 });
+  });
+
+  test("series の master 未永続 → 再作成も失敗すれば failed 計上 + logError", async () => {
+    mockGetFailedSeriesIds.mockResolvedValue(["series-orphan"]);
+    mockGetSeriesMaster.mockResolvedValue(null);
+    // getSeriesForCalendarSync が null (series 自体が見つからない) →
+    // syncReservationSeriesToCalendar は success:false を返す。
+    mockGetSeriesForCalendarSync.mockResolvedValue(null);
     mockGetSeriesInstances.mockResolvedValue([
       { id: "res-x", startTime: new Date("2026-05-01T01:00:00Z") },
       { id: "res-y", startTime: new Date("2026-05-08T01:00:00Z") },
@@ -285,6 +385,8 @@ describe("retryFailedSyncs — GCAL-AUDIT-05 create/update/delete 振り分け",
   beforeEach(() => {
     mockIsEnabled.mockReset();
     mockIsEnabled.mockResolvedValue(true);
+    mockIsConfigured.mockReset();
+    mockIsConfigured.mockResolvedValue(true);
     mockCreate.mockReset();
     mockCreate.mockResolvedValue({
       success: true,
@@ -297,6 +399,10 @@ describe("retryFailedSyncs — GCAL-AUDIT-05 create/update/delete 振り分け",
     mockGetFailedReservations.mockReset();
     mockGetFailedSeriesIds.mockReset();
     mockGetFailedSeriesIds.mockResolvedValue([]);
+    mockGetSeriesIdsWithMasterOperationFailure.mockReset();
+    mockGetSeriesIdsWithMasterOperationFailure.mockResolvedValue([]);
+    mockGetSeriesMasterOperationFailureInstances.mockReset();
+    mockGetSeriesMasterOperationFailureInstances.mockResolvedValue([]);
     mockMarkSuccess.mockReset();
     mockMarkSuccess.mockResolvedValue(undefined);
     mockMarkUpdated.mockReset();
@@ -330,7 +436,9 @@ describe("retryFailedSyncs — GCAL-AUDIT-05 create/update/delete 振り分け",
 
     const result = await retryFailedSyncs();
 
-    expect(mockDelete).toHaveBeenCalledWith("gcal-existing-001");
+    expect(mockDelete).toHaveBeenCalledWith("gcal-existing-001", {
+      ignoreEnabledToggle: true,
+    });
     expect(mockCreate).not.toHaveBeenCalled();
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockClearReservationCalendarEvent).toHaveBeenCalledTimes(1);
@@ -370,5 +478,42 @@ describe("retryFailedSyncs — GCAL-AUDIT-05 create/update/delete 振り分け",
     const result = await retryFailedSyncs();
 
     expect(result).toEqual({ total: 1, succeeded: 0, failed: 1 });
+  });
+
+  // GCAL-OUTBOUND-05: delete は isGoogleCalendarEnabled (トグル) ではなく
+  // isGoogleCalendarConfigured (サービスアカウント + カレンダー ID) を gate にする。
+  test("トグル OFF (isGoogleCalendarEnabled=false) でも configured なら delete retry は実行される", async () => {
+    mockIsEnabled.mockResolvedValue(false);
+    mockIsConfigured.mockResolvedValue(true);
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        status: "CANCELLED",
+        googleCalendarEventId: "gcal-existing-004",
+        calendarSyncError: "gcal_delete_failed:still failing",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    expect(mockDelete).toHaveBeenCalledWith("gcal-existing-004", {
+      ignoreEnabledToggle: true,
+    });
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
+  });
+
+  test("未 configured (サービスアカウント/カレンダーID 未設定) なら delete も no-op success", async () => {
+    mockIsConfigured.mockResolvedValue(false);
+    mockGetFailedReservations.mockResolvedValue([
+      baseReservation({
+        status: "CANCELLED",
+        googleCalendarEventId: "gcal-existing-005",
+        calendarSyncError: "gcal_delete_failed:still failing",
+      }),
+    ]);
+
+    const result = await retryFailedSyncs();
+
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(result).toEqual({ total: 1, succeeded: 1, failed: 0 });
   });
 });

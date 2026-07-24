@@ -37,6 +37,7 @@ import {
   deleteCalendarEvent,
   fetchEventInstances,
   isGoogleCalendarEnabled,
+  isGoogleCalendarConfigured,
   type CalendarEventInstance,
   type CalendarEventParams,
   type CalendarEventResult,
@@ -48,6 +49,7 @@ import {
 } from "@/shared/lib/date-format";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { OUTBOUND_RESERVATION_MARKER } from "./loop-prevention";
+import { retryFailedSeriesMasterOperations } from "./series-outbound";
 import type { ReservationSyncData, SyncResult } from "./types";
 
 // =============================================================================
@@ -282,18 +284,26 @@ export async function updateCalendarSync(
  * GCAL-AUDIT-05: 失敗時は `googleCalendarEventId` を保持したまま
  * `GCAL_DELETE_FAILED_PREFIX` 付きのエラーを記録する（GCal 上にイベントが
  * まだ存在するため、次回 retry は create ではなく delete を再試行する契約）。
+ *
+ * GCAL-OUTBOUND-05: create/update と異なり `isGoogleCalendarEnabled()`
+ * (`googleCalendarEnabled` トグル) では gate しない。トグルを OFF にした
+ * 直後でも、サービスアカウント + カレンダー ID が設定済みであれば削除を試みる
+ * ことで、無効化した瞬間にキャンセル/削除が GCal 側の孤児 event を
+ * クリーンアップできなくなる事故を防ぐ（`isGoogleCalendarConfigured()` gate）。
  */
 export async function deleteCalendarSync(
   reservationId: string,
   eventId: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
-    const isEnabled = await isGoogleCalendarEnabled();
-    if (!isEnabled) {
+    const isConfigured = await isGoogleCalendarConfigured();
+    if (!isConfigured) {
       return { success: true };
     }
 
-    const result = await deleteCalendarEvent(eventId);
+    const result = await deleteCalendarEvent(eventId, {
+      ignoreEnabledToggle: true,
+    });
 
     if (result.success) {
       await clearReservationCalendarEvent(reservationId);
@@ -345,21 +355,25 @@ export async function deleteCalendarSync(
  * 再送する。GCAL-RETRY-04: series-child の instance は `getFailedCalendarSyncReservations`
  * の `seriesId: null` gate で除外されており、代わりに `retryFailedSeriesCalendarSyncs`
  * が既存の master event に対する `fetchEventInstances` + write-back を再試行する。
- * 両者を並列 (順序依存無し、独立した失敗集合) で走らせ、合計を返す。
+ * GCAL-OUTBOUND-07: `retryFailedSeriesMasterOperations` は series master 自体への
+ * 操作 (`patchGcalMasterUntil` / `deleteGcalMaster`) の失敗を再試行する、独立した
+ * 第 3 の失敗集合。3 つとも並列 (順序依存無し) で走らせ、合計を返す。
  */
 export async function retryFailedSyncs(): Promise<{
   total: number;
   succeeded: number;
   failed: number;
 }> {
-  const [standalone, series] = await Promise.all([
+  const [standalone, series, seriesMasterOps] = await Promise.all([
     retryFailedStandaloneCalendarSyncs(),
     retryFailedSeriesCalendarSyncs(),
+    retryFailedSeriesMasterOperations(),
   ]);
   return {
-    total: standalone.total + series.total,
-    succeeded: standalone.succeeded + series.succeeded,
-    failed: standalone.failed + series.failed,
+    total: standalone.total + series.total + seriesMasterOps.total,
+    succeeded:
+      standalone.succeeded + series.succeeded + seriesMasterOps.succeeded,
+    failed: standalone.failed + series.failed + seriesMasterOps.failed,
   };
 }
 
@@ -432,12 +446,14 @@ async function retryFailedStandaloneCalendarSyncs(): Promise<{
  * かけると master の RRULE 展開との時刻二重招待になるため、series-child は
  * 独立経路で「既存 master に対する `fetchEventInstances` + write-back」だけを再試行する。
  *
+ * master が既に永続化済み (`markSeriesMasterEventCreated` 済) の series は
  * `syncReservationSeriesToCalendar` を呼ばない: あれは `createCalendarEvent` を必ず
- * 発火するため、master が既存 (`markSeriesMasterEventCreated` 済) の series で呼ぶと
- * 二重の master event が作成される。retry pool に来る失敗 series は
- * `syncReservationSeriesToCalendar` 内の `fetchEventInstances` 失敗経路
- * (partial success) が唯一で、そこは master 永続化を完了させた後にしか到達しない。
- * ゆえに master 未永続な series はこの retry では拾えず、logError で可視化する。
+ * 発火するため、二重の master event 作成を招く。この場合は既存 master に対する
+ * `fetchEventInstances` + write-back のみを再試行する。
+ *
+ * GCAL-RETRY-06: master が未永続 (`getSeriesGcalMasterEventId` が null) の series は
+ * `syncReservationSeriesToCalendar` を呼んで master 作成からやり直す
+ * (旧実装は「想定外」として skip するのみだった)。
  */
 async function retryFailedSeriesCalendarSyncs(): Promise<{
   total: number;
@@ -453,25 +469,32 @@ async function retryFailedSeriesCalendarSyncs(): Promise<{
   for (const seriesId of seriesIds) {
     const masterEventId = await getSeriesGcalMasterEventId(seriesId);
     if (!masterEventId) {
-      // 想定外: retry pool に来ている series の master が永続化されていない。
-      // markAllSeriesInstancesAsFailed は master 永続化後にしか呼ばれないため
-      // 通常は起きない。監査ログに残して次サイクルで再試行する。
+      // GCAL-RETRY-06: master event が未永続化 (create 失敗、または
+      // markSeriesMasterEventCreated 前の予期せぬ中断) の series は、
+      // syncReservationSeriesToCalendar を再実行して master 作成からやり直す。
+      // 旧実装はここを「想定外」として skip するのみで、series 全体が
+      // 永久に retry pool に取り残される gap があった。
+      const recreateResult = await syncReservationSeriesToCalendar(seriesId);
       const startTimes = await getSeriesInstanceStartTimes(seriesId);
       total += startTimes.length;
-      failed += startTimes.length;
-      logError(
-        new Error(
-          `series ${seriesId} has failed instances but no master eventId; skipping`,
-        ),
-        {
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.MEDIUM,
-          context: {
-            operation: "retryFailedSeriesCalendarSyncs.missingMaster",
-            seriesId,
+      if (recreateResult.success === true) {
+        succeeded += startTimes.length;
+      } else {
+        failed += startTimes.length;
+        logError(
+          new Error(
+            `series ${seriesId} master recreation failed: ${recreateResult.error}`,
+          ),
+          {
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: {
+              operation: "retryFailedSeriesCalendarSyncs.recreateMaster",
+              seriesId,
+            },
           },
-        },
-      );
+        );
+      }
       continue;
     }
 

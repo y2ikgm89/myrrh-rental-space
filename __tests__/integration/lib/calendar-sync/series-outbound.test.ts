@@ -75,11 +75,17 @@ const mockPatch = mock<
   (
     eventId: string,
     patch: Record<string, unknown>,
+    options?: { ignoreEnabledToggle?: boolean },
   ) => Promise<{ success: boolean; error?: string; eventId?: string }>
 >(() => Promise.resolve({ success: true }));
 
+const mockIsConfigured = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
 mock.module("@/shared/lib/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
+  isGoogleCalendarConfigured: mockIsConfigured,
   createCalendarEvent: mockCreate,
   fetchEventInstances: mockFetchInstances,
   patchCalendarEvent: mockPatch,
@@ -253,6 +259,8 @@ describeMaybe(
     afterEach(() => {
       mockIsEnabled.mockClear();
       mockIsEnabled.mockImplementation(() => Promise.resolve(true));
+      mockIsConfigured.mockClear();
+      mockIsConfigured.mockImplementation(() => Promise.resolve(true));
       mockCreate.mockClear();
       mockCreate.mockImplementation(() =>
         Promise.resolve({ success: true, eventId: "master-default" }),
@@ -570,12 +578,13 @@ describeMaybe(
         // fixture の series は "FREQ=WEEKLY;BYDAY=TU;COUNT=3" / dtstart=2028-01-04
         // until を 2 番目 instance 直後 (2028-01-11 10:00Z) にセット → COUNT 消える
         const until = new Date("2028-01-11T10:00:00.000Z");
-        await patchGcalMasterUntil({
+        const result = await patchGcalMasterUntil({
           masterEventId: "master-for-patch",
           seriesId: fixture.seriesId,
           until,
         });
 
+        expect(result).toEqual({ success: true });
         expect(mockPatch).toHaveBeenCalledTimes(1);
         const call = mockPatch.mock.calls[0];
         if (!call) throw new Error("mockPatch call missing");
@@ -588,21 +597,52 @@ describeMaybe(
         expect(rrule).toMatch(/BYDAY=TU/u);
         expect(rrule).toMatch(/UNTIL=20280111T100000Z/u);
         expect(rrule).not.toMatch(/COUNT=/u);
+        // GCAL-OUTBOUND-05: ignoreEnabledToggle:true で呼ばれる (トグル OFF でも動く)
+        expect(call[2]).toEqual({ ignoreEnabledToggle: true });
       } finally {
         await fixture.cleanup();
       }
     }, 30_000);
 
-    test("patchGcalMasterUntil: series が見つからなければ patch を呼ばず silent skip", async () => {
+    test("patchGcalMasterUntil: series が見つからなければ patch を呼ばず失敗を返す", async () => {
       const { patchGcalMasterUntil } =
         await import("@/shared/lib/calendar-sync/series-outbound");
       const bogusId = "00000000-0000-0000-0000-000000000000";
-      await patchGcalMasterUntil({
+      const result = await patchGcalMasterUntil({
         masterEventId: "master-ghost",
         seriesId: bogusId,
         until: new Date(),
       });
+      expect(result.success).toBe(false);
       expect(mockPatch).not.toHaveBeenCalled();
+    }, 30_000);
+
+    // GCAL-OUTBOUND-05: googleCalendarEnabled トグルではなく
+    // isGoogleCalendarConfigured を gate にする。
+    test("patchGcalMasterUntil / deleteGcalMaster: 未 configured なら API を呼ばず no-op success", async () => {
+      const { patchGcalMasterUntil, deleteGcalMaster } =
+        await import("@/shared/lib/calendar-sync/series-outbound");
+      mockIsConfigured.mockImplementation(() => Promise.resolve(false));
+
+      const patchResult = await patchGcalMasterUntil({
+        masterEventId: "master-x",
+        seriesId: "00000000-0000-0000-0000-000000000000",
+        until: new Date(),
+      });
+      const deleteResult = await deleteGcalMaster("master-x");
+
+      expect(patchResult).toEqual({ success: true });
+      expect(deleteResult).toEqual({ success: true });
+      expect(mockPatch).not.toHaveBeenCalled();
+    }, 30_000);
+
+    test("deleteGcalMaster: 成功時 {success:true} を返す", async () => {
+      const { deleteGcalMaster } =
+        await import("@/shared/lib/calendar-sync/series-outbound");
+
+      const result = await deleteGcalMaster("master-to-delete");
+
+      expect(result).toEqual({ success: true });
     }, 30_000);
   },
 );

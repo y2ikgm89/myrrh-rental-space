@@ -21,6 +21,7 @@ import {
   deleteCalendarEvent,
   updateCalendarEvent,
   isGoogleCalendarEnabled,
+  isGoogleCalendarConfigured,
   type CalendarEventParams,
 } from "@/shared/lib/google-calendar";
 import {
@@ -152,13 +153,21 @@ export async function syncEventToCalendar(
 
       // Meet URL 抽出・write-back を独立した try/catch で包む。
       // write-back が失敗してもGCal イベント作成とgoogleCalendarEventId 保存は済んでいるため、
-      // 外側の sync は成功を返す。GCAL-AUDIT-04: ただし silent 成功にはせず
-      // `Event.calendarSyncError` に記録し admin dashboard から追跡可能にする。
+      // 外側の sync は成功を返す。GCAL-AUDIT-04 / GCAL-OUTBOUND-06: ただし silent
+      // 成功にはせず `Event.calendarSyncError` に記録し admin dashboard から
+      // 追跡可能にする（write-back 失敗だけでなく、GCal API 応答に Meet URL が
+      // 含まれていなかったケースも同様に記録する — 旧実装はこちらを完全に黙殺していた）。
       if (withMeet) {
         try {
           const meetingUrl = extractMeetingUrl(result.event);
           if (meetingUrl) {
             await writeBackMeetingUrl({ eventId: data.eventId, meetingUrl });
+          } else {
+            await markEventCalendarSyncError({
+              eventId: data.eventId,
+              error:
+                "Meet URL was not returned by the Google Calendar API response",
+            });
           }
         } catch (error) {
           const message =
@@ -238,18 +247,25 @@ export async function updateEventCalendarSync(
 
 /**
  * イベントキャンセル時のカレンダーイベント削除
+ *
+ * GCAL-OUTBOUND-05: reservation 側の `deleteCalendarSync` と同じ設計。
+ * `isGoogleCalendarEnabled()` (トグル) ではなく `isGoogleCalendarConfigured()`
+ * (サービスアカウント + カレンダー ID の設定有無) を gate にし、トグル OFF でも
+ * 既存 GCal event の削除は実行できるようにする。
  */
 export async function deleteEventCalendarSync(
   eventId: string,
   gcalEventId: string,
 ): Promise<SyncResult> {
   try {
-    const isEnabled = await isGoogleCalendarEnabled();
-    if (!isEnabled) {
+    const isConfigured = await isGoogleCalendarConfigured();
+    if (!isConfigured) {
       return { success: true };
     }
 
-    const result = await deleteCalendarEvent(gcalEventId);
+    const result = await deleteCalendarEvent(gcalEventId, {
+      ignoreEnabledToggle: true,
+    });
 
     if (result.success) {
       await clearEventGoogleCalendarEventId({

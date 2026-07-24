@@ -204,6 +204,10 @@ export async function updateCalendarEvent(
  *
  * Task C 主用途: series の this-and-following scope キャンセルで master recurring
  * event の RRULE に UNTIL を注入して打ち切る (`recurrence: [rebuiltRrule]`)。
+ *
+ * `options.ignoreEnabledToggle` (GCAL-OUTBOUND-05): series の this-and-following
+ * キャンセルは打ち切り (実質 delete 相当) のため、`googleCalendarEnabled` トグル
+ * OFF でも実行できるようにする呼出し元 (`patchGcalMasterUntil`) 向け。
  */
 export async function patchCalendarEvent(
   eventId: string,
@@ -213,8 +217,9 @@ export async function patchCalendarEvent(
       "summary" | "description" | "location" | "recurrence"
     >
   >,
+  options?: { ignoreEnabledToggle?: boolean },
 ): Promise<CalendarEventResult> {
-  const client = await getServiceAccountClient();
+  const client = await getServiceAccountClient(options);
   if (!client) {
     return { success: false, error: "Google Calendar is not configured" };
   }
@@ -256,11 +261,19 @@ export async function patchCalendarEvent(
 
 /**
  * カレンダーイベントを削除
+ *
+ * `options.ignoreEnabledToggle` (GCAL-OUTBOUND-05): true のとき
+ * `googleCalendarEnabled` トグル OFF でも削除を実行する。呼出し元
+ * (`deleteCalendarSync` / `deleteEventCalendarSync` / `deleteGcalMaster`)
+ * が cancel/delete 系フローから `{ ignoreEnabledToggle: true }` を渡し、
+ * トグルを切った瞬間に以降のキャンセルが GCal 側の孤児 event を
+ * クリーンアップできなくなる事故を防ぐ。
  */
 export async function deleteCalendarEvent(
   eventId: string,
+  options?: { ignoreEnabledToggle?: boolean },
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const client = await getServiceAccountClient();
+  const client = await getServiceAccountClient(options);
   if (!client) {
     return { success: false, error: "Google Calendar is not configured" };
   }

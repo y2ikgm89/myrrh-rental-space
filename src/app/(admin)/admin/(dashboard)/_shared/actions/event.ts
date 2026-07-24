@@ -202,16 +202,30 @@ export async function updateEventAction(
         resourceId: validId,
         execute: async () => {
           const commandInput = buildEventCommandInput(data);
-          await updateEventCommand(validId, commandInput);
-          return null;
+          return updateEventCommand(validId, commandInput);
         },
-        afterSuccess: () => {
+        afterSuccess: (payload) => {
           invalidateEventCaches();
           invalidateEventSiteWideCaches(data.slug);
           fireAndForget(syncEventOutbound(validId), {
             operation: "syncEventOutbound.update",
             category: ErrorCategory.EXTERNAL_API,
           });
+          // GCAL-OUTBOUND-02: 更新で削除されたスロットの GCal event を孤児にしない。
+          // syncEventOutbound は現存スロットしか見ないため、削除された旧スロットの
+          // googleCalendarEventId は別途ここで明示的に削除する。
+          if (payload.removedGoogleCalendarEventIds.length > 0) {
+            fireAndForget(
+              deleteEventOutbound(
+                validId,
+                payload.removedGoogleCalendarEventIds,
+              ),
+              {
+                operation: "deleteEventOutbound.slotRemoval",
+                category: ErrorCategory.EXTERNAL_API,
+              },
+            );
+          }
         },
       });
 

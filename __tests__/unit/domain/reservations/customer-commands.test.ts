@@ -40,6 +40,7 @@ const mockTxReservationFindFirst = mock<() => Promise<unknown>>(() =>
     // 偶然相殺していた表記だったため是正)。
     taxRate: 10,
     couponId: null,
+    googleCalendarEventId: null,
     coupon: null,
   }),
 );
@@ -186,6 +187,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         taxRateType: "STANDARD",
         taxRate: 10,
         couponId: null,
+        googleCalendarEventId: null,
         coupon: null,
       }),
     );
@@ -221,7 +223,7 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
 
     expect(result).toEqual({
       success: true,
-      payload: { reservationId: "res-1" },
+      payload: { reservationId: "res-1", googleCalendarEventId: null },
     });
     // 最終書込は updateMany (atomic compare-and-swap with paymentStatus=UNPAID predicate)
     expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);

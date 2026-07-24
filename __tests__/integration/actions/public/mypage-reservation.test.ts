@@ -234,8 +234,32 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
 
 // 変更通知メールで fetchReservationEmailData が呼ばれる。DB 経路を触らないよう
 // no-op モック化する (payload なし → send{Reservation,Admin} は skip される)。
+type MockReservationPayload = {
+  reservationId: string;
+  customerEmail: string;
+  customerName: string;
+  spaceName: string;
+  startTime: Date;
+  endTime: Date;
+  totalPrice: number;
+  icsSequence: number;
+};
+const mockFetchReservationEmailData = mock<
+  () => Promise<MockReservationPayload | null>
+>(() => Promise.resolve(null));
 mock.module("@/shared/domain/reservations/payloads", () => ({
-  fetchReservationEmailData: mock(() => Promise.resolve(null)),
+  fetchReservationEmailData: mockFetchReservationEmailData,
+}));
+
+// GCAL-OUTBOUND-01: updateReservationAction が成功後に GCal 同期を fireAndForget
+// で発火する (admin updateReservationAction と同型)。
+const mockSyncReservationToCalendar = mock(() =>
+  Promise.resolve({ success: true }),
+);
+const mockUpdateCalendarSync = mock(() => Promise.resolve({ success: true }));
+mock.module("@/shared/lib/calendar-sync/outbound", () => ({
+  syncReservationToCalendar: mockSyncReservationToCalendar,
+  updateCalendarSync: mockUpdateCalendarSync,
 }));
 
 // 設定クエリモック
@@ -641,10 +665,16 @@ describe("updateReservationAction", () => {
     mockUpdateCustomerReservation.mockImplementation(() =>
       Promise.resolve({
         success: true as const,
-        payload: { reservationId: VALID_RESERVATION_ID },
+        payload: {
+          reservationId: VALID_RESERVATION_ID,
+          googleCalendarEventId: null,
+        },
       }),
     );
     mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
+    mockFetchReservationEmailData.mockClear();
+    mockSyncReservationToCalendar.mockClear();
+    mockUpdateCalendarSync.mockClear();
   });
 
   describe("正常系", () => {
@@ -1015,6 +1045,118 @@ describe("updateReservationAction", () => {
       );
 
       expect(mockCreateAuditLogRecord).not.toHaveBeenCalled();
+    });
+  });
+
+  // GCAL-OUTBOUND-01: 顧客セルフ変更でも管理画面 updateReservationAction と
+  // 同型で GCal 同期を発火する (旧実装はこの経路だけ欠落していた)。
+  describe("GCal 同期 (GCAL-OUTBOUND-01)", () => {
+    test("成功時に fetchReservationEmailData が予約IDで呼ばれる (ReservationSyncData 組み立ての SSoT 再利用)", async () => {
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+
+      expect(mockFetchReservationEmailData).toHaveBeenCalledWith(
+        VALID_RESERVATION_ID,
+      );
+    });
+
+    test("googleCalendarEventId が既存なら updateCalendarSync を呼ぶ (create ではない)", async () => {
+      mockUpdateCustomerReservation.mockImplementation(() =>
+        Promise.resolve({
+          success: true as const,
+          payload: {
+            reservationId: VALID_RESERVATION_ID,
+            googleCalendarEventId: "gcal-existing-001",
+          },
+        }),
+      );
+      mockFetchReservationEmailData.mockImplementation(() =>
+        Promise.resolve({
+          reservationId: VALID_RESERVATION_ID,
+          customerEmail: "c@example.com",
+          customerName: "山田 太郎",
+          spaceName: "Space A",
+          startTime: new Date("2099-12-31T10:00:00Z"),
+          endTime: new Date("2099-12-31T12:00:00Z"),
+          totalPrice: 1000,
+          icsSequence: 0,
+        }),
+      );
+
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+      // fireAndForget 内の await fetchReservationEmailData 後の続きを待つ。
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockUpdateCalendarSync).toHaveBeenCalledWith(
+        expect.objectContaining({ reservationId: VALID_RESERVATION_ID }),
+        "gcal-existing-001",
+      );
+      expect(mockSyncReservationToCalendar).not.toHaveBeenCalled();
+    });
+
+    test("googleCalendarEventId が無ければ syncReservationToCalendar (create) を呼ぶ", async () => {
+      mockFetchReservationEmailData.mockImplementation(() =>
+        Promise.resolve({
+          reservationId: VALID_RESERVATION_ID,
+          customerEmail: "c@example.com",
+          customerName: "山田 太郎",
+          spaceName: "Space A",
+          startTime: new Date("2099-12-31T10:00:00Z"),
+          endTime: new Date("2099-12-31T12:00:00Z"),
+          totalPrice: 1000,
+          icsSequence: 0,
+        }),
+      );
+
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockSyncReservationToCalendar).toHaveBeenCalledWith(
+        expect.objectContaining({ reservationId: VALID_RESERVATION_ID }),
+      );
+      expect(mockUpdateCalendarSync).not.toHaveBeenCalled();
+    });
+
+    test("update が success:false のとき GCal 同期は発火しない", async () => {
+      mockUpdateCustomerReservation.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error: "変更期限を過ぎています",
+        }),
+      );
+
+      const { updateReservationAction } =
+        await import("@/app/(public)/mypage/_shared/actions/reservation");
+
+      await updateReservationAction(
+        undefined,
+        inputToFormData(VALID_UPDATE_INPUT),
+      );
+
+      expect(mockFetchReservationEmailData).not.toHaveBeenCalled();
+      expect(mockSyncReservationToCalendar).not.toHaveBeenCalled();
+      expect(mockUpdateCalendarSync).not.toHaveBeenCalled();
     });
   });
 

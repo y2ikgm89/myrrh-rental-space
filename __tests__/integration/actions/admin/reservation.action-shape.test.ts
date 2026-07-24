@@ -33,7 +33,24 @@ const mockDeleteReservation = mock(() =>
 const mockRestoreReservation = mock(() =>
   Promise.resolve({ customerId: "cust-id", couponId: null }),
 );
-const mockUpdateStatus = mock(() =>
+type MockUpdateStatusResult = {
+  previousStatus: string;
+  googleCalendarEventId: string | null;
+  customerId: string;
+  couponId: string | null;
+  spaceId?: string;
+  payload: {
+    reservationId: string;
+    customerEmail: string;
+    customerName: string;
+    spaceName: string;
+    startTime: Date;
+    endTime: Date;
+    totalPrice: number;
+    icsSequence: number;
+  };
+};
+const mockUpdateStatus = mock<() => Promise<MockUpdateStatusResult>>(() =>
   Promise.resolve({
     previousStatus: "PENDING",
     googleCalendarEventId: null,
@@ -94,10 +111,11 @@ mock.module("@/shared/lib/cache/reservation-cache", () => ({
   invalidateReservationCaches: mock(() => {}),
 }));
 
+const mockDeleteCalendarSync = mock(async () => ({ success: true }) as const);
 mock.module("@/shared/lib/calendar-sync/outbound", () => ({
   syncReservationToCalendar: mock(async () => {}),
   updateCalendarSync: mock(async () => {}),
-  deleteCalendarSync: mock(async () => {}),
+  deleteCalendarSync: mockDeleteCalendarSync,
 }));
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
@@ -263,6 +281,7 @@ describe("updateReservationStatus (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockUpdateStatus.mockClear();
+    mockDeleteCalendarSync.mockClear();
   });
 
   test("正常系: status 変更を domain に伝搬", async () => {
@@ -274,5 +293,83 @@ describe("updateReservationStatus (action shape)", () => {
       }),
     );
     expect(mockUpdateStatus).toHaveBeenCalledWith(VALID_UUID, "CONFIRMED");
+  });
+
+  // GCAL-OUTBOUND-04: CONFIRMED → PENDING 格下げ時に GCal event を削除する。
+  describe("CONFIRMED → PENDING 格下げ時の GCal 削除 (GCAL-OUTBOUND-04)", () => {
+    test("googleCalendarEventId があれば deleteCalendarSync を呼ぶ", async () => {
+      mockUpdateStatus.mockResolvedValueOnce({
+        previousStatus: "CONFIRMED",
+        googleCalendarEventId: "gcal-existing-001",
+        customerId: "cust-id",
+        couponId: null,
+        spaceId: "space-1",
+        payload: {
+          reservationId: VALID_UUID,
+          customerEmail: "c@e.com",
+          customerName: "x",
+          spaceName: "s",
+          startTime: new Date(),
+          endTime: new Date(),
+          totalPrice: 0,
+          icsSequence: 0,
+        },
+      });
+
+      await updateReservationStatus(VALID_UUID, ReservationStatus.PENDING);
+
+      expect(mockDeleteCalendarSync).toHaveBeenCalledWith(
+        VALID_UUID,
+        "gcal-existing-001",
+      );
+    });
+
+    test("googleCalendarEventId が無ければ deleteCalendarSync を呼ばない", async () => {
+      mockUpdateStatus.mockResolvedValueOnce({
+        previousStatus: "CONFIRMED",
+        googleCalendarEventId: null,
+        customerId: "cust-id",
+        couponId: null,
+        spaceId: "space-1",
+        payload: {
+          reservationId: VALID_UUID,
+          customerEmail: "c@e.com",
+          customerName: "x",
+          spaceName: "s",
+          startTime: new Date(),
+          endTime: new Date(),
+          totalPrice: 0,
+          icsSequence: 0,
+        },
+      });
+
+      await updateReservationStatus(VALID_UUID, ReservationStatus.PENDING);
+
+      expect(mockDeleteCalendarSync).not.toHaveBeenCalled();
+    });
+
+    test("previousStatus が CONFIRMED でなければ deleteCalendarSync を呼ばない", async () => {
+      mockUpdateStatus.mockResolvedValueOnce({
+        previousStatus: "PENDING",
+        googleCalendarEventId: "gcal-existing-002",
+        customerId: "cust-id",
+        couponId: null,
+        spaceId: "space-1",
+        payload: {
+          reservationId: VALID_UUID,
+          customerEmail: "c@e.com",
+          customerName: "x",
+          spaceName: "s",
+          startTime: new Date(),
+          endTime: new Date(),
+          totalPrice: 0,
+          icsSequence: 0,
+        },
+      });
+
+      await updateReservationStatus(VALID_UUID, ReservationStatus.PENDING);
+
+      expect(mockDeleteCalendarSync).not.toHaveBeenCalled();
+    });
   });
 });
