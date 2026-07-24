@@ -17,7 +17,7 @@ export async function getStripeSettings() {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsStripe.findUnique({
         where: { id: "singleton" },
         select: {
           stripePublishableKey: true,
@@ -44,7 +44,7 @@ export async function getSwitchBotSettings() {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsSwitchbot.findUnique({
         where: { id: "singleton" },
         select: {
           switchbotEnabled: true,

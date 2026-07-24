@@ -43,7 +43,7 @@ export async function saveInstagramToken(
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 60);
 
-  await prisma.settings.upsert({
+  await prisma.settingsInstagram.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -75,7 +75,7 @@ export async function connectInstagramOAuthAccount(input: {
   const encryptedToken = encrypt(input.accessToken, { purpose: "instagram" });
   const expiresAt = new Date(Date.now() + input.expiresIn * 1000);
 
-  await prisma.settings.upsert({
+  await prisma.settingsInstagram.upsert({
     where: { id: "singleton" },
     create: {
       id: "singleton",
@@ -101,7 +101,7 @@ export async function refreshInstagramAccessToken(input: {
 }): Promise<void> {
   const encryptedToken = encrypt(input.accessToken, { purpose: "instagram" });
 
-  await prisma.settings.updateMany({
+  await prisma.settingsInstagram.updateMany({
     data: {
       instagramAccessToken: encryptedToken,
       instagramTokenExpiresAt: input.expiresAt,
@@ -113,7 +113,7 @@ export async function disconnectInstagram(): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(buildOrderScopeLockSql("instagram_posts:all"));
 
-    await tx.settings.update({
+    await tx.settingsInstagram.update({
       where: { id: "singleton" },
       data: {
         instagramAccessToken: null,

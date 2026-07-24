@@ -33,13 +33,22 @@ import { ensureSettingsAnnouncementCarousel } from "@/shared/domain/settings/ann
 import {
   ensureSettingsAnalytics,
   ensureSettingsCommerce,
+  ensureSettingsCustomApiKeys,
+  ensureSettingsGoogleBusinessProfile,
+  ensureSettingsGoogleCalendar,
+  ensureSettingsGoogleMaps,
+  ensureSettingsInstagram,
   ensureSettingsLayout,
   ensureSettingsNotification,
   ensureSettingsOrganization,
   ensureSettingsReservation,
+  ensureSettingsResend,
   ensureSettingsSeo,
   ensureSettingsSidebar,
+  ensureSettingsStripe,
+  ensureSettingsSwitchbot,
   ensureSettingsSystem,
+  ensureSettingsTurnstile,
 } from "@/shared/domain/settings/commands";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
@@ -86,6 +95,15 @@ async function getOrCreateSettingsBundle() {
     commerce,
     notification,
     reservation,
+    stripe,
+    resend,
+    turnstile,
+    googleMaps,
+    customApiKeys,
+    googleCalendar,
+    googleBusinessProfile,
+    instagram,
+    switchbot,
   ] = await Promise.all([
     getOrCreateSettings(),
     ensureSettingsAnnouncementCarousel(),
@@ -98,6 +116,15 @@ async function getOrCreateSettingsBundle() {
     ensureSettingsCommerce(),
     ensureSettingsNotification(),
     ensureSettingsReservation(),
+    ensureSettingsStripe(),
+    ensureSettingsResend(),
+    ensureSettingsTurnstile(),
+    ensureSettingsGoogleMaps(),
+    ensureSettingsCustomApiKeys(),
+    ensureSettingsGoogleCalendar(),
+    ensureSettingsGoogleBusinessProfile(),
+    ensureSettingsInstagram(),
+    ensureSettingsSwitchbot(),
   ]);
 
   return {
@@ -112,6 +139,15 @@ async function getOrCreateSettingsBundle() {
     commerce,
     notification,
     reservation,
+    stripe,
+    resend,
+    turnstile,
+    googleMaps,
+    customApiKeys,
+    googleCalendar,
+    googleBusinessProfile,
+    instagram,
+    switchbot,
   };
 }
 
@@ -127,6 +163,11 @@ function toSettingsData(
   commerce: Awaited<ReturnType<typeof ensureSettingsCommerce>>,
   notification: Awaited<ReturnType<typeof ensureSettingsNotification>>,
   reservation: Awaited<ReturnType<typeof ensureSettingsReservation>>,
+  stripe: Awaited<ReturnType<typeof ensureSettingsStripe>>,
+  googleCalendar: Awaited<ReturnType<typeof ensureSettingsGoogleCalendar>>,
+  googleBusinessProfile: Awaited<
+    ReturnType<typeof ensureSettingsGoogleBusinessProfile>
+  >,
   options: {
     stripeSecretKeyMasked: string | null;
     stripeWebhookSecretMasked: string | null;
@@ -200,12 +241,12 @@ function toSettingsData(
     taxDisplayModePublic: commerce.taxDisplayModePublic,
     maintenanceMode: system.maintenanceMode,
     maintenanceMessage: system.maintenanceMessage,
-    stripePublishableKey: settings.stripePublishableKey,
-    stripeAccountId: settings.stripeAccountId,
-    stripeCurrency: settings.stripeCurrency,
-    stripePaymentMethodTypes: settings.stripePaymentMethodTypes,
-    stripeLastTestedAt: settings.stripeLastTestedAt,
-    stripeConnectionStatus: settings.stripeConnectionStatus,
+    stripePublishableKey: stripe.stripePublishableKey,
+    stripeAccountId: stripe.stripeAccountId,
+    stripeCurrency: stripe.stripeCurrency,
+    stripePaymentMethodTypes: stripe.stripePaymentMethodTypes,
+    stripeLastTestedAt: stripe.stripeLastTestedAt,
+    stripeConnectionStatus: stripe.stripeConnectionStatus,
     cookieConsentEnabled: system.cookieConsentEnabled,
     cookieConsentMessage: system.cookieConsentMessage,
     cookieConsentAcceptText: system.cookieConsentAcceptText,
@@ -224,24 +265,29 @@ function toSettingsData(
     announcementBarStripeAnimation: carousel.stripeAnimation,
     announcementBarGradientAnimation: carousel.gradientAnimation,
     announcementBarGlassAnimation: carousel.glassAnimation,
-    googleCalendarEnabled: settings.googleCalendarEnabled,
-    googleCalendarId: settings.googleCalendarId,
-    googleCalendarLastTestedAt: settings.googleCalendarLastTestedAt,
-    googleCalendarConnectionStatus: settings.googleCalendarConnectionStatus,
-    googleBusinessProfileEnabled: settings.googleBusinessProfileEnabled,
-    googleCalendarReminderMinutes: settings.googleCalendarReminderMinutes,
-    icalAttachmentEnabled: settings.icalAttachmentEnabled,
-    addToCalendarLinksEnabled: settings.addToCalendarLinksEnabled,
+    googleCalendarEnabled: googleCalendar.googleCalendarEnabled,
+    googleCalendarId: googleCalendar.googleCalendarId,
+    googleCalendarLastTestedAt: googleCalendar.googleCalendarLastTestedAt,
+    googleCalendarConnectionStatus:
+      googleCalendar.googleCalendarConnectionStatus,
+    googleBusinessProfileEnabled:
+      googleBusinessProfile.googleBusinessProfileEnabled,
+    googleCalendarReminderMinutes: googleCalendar.googleCalendarReminderMinutes,
+    icalAttachmentEnabled: googleCalendar.icalAttachmentEnabled,
+    addToCalendarLinksEnabled: googleCalendar.addToCalendarLinksEnabled,
     featureModules: parseFeatureModules(settings.featureModules),
     stripeSecretKeyMasked: options.stripeSecretKeyMasked,
     stripeWebhookSecretMasked: options.stripeWebhookSecretMasked,
     googleCalendarServiceAccountEmailMasked:
       options.googleCalendarServiceAccountEmailMasked,
-    googleCalendarTwoWaySyncEnabled: settings.googleCalendarTwoWaySyncEnabled,
-    googleCalendarSyncMethod: settings.googleCalendarSyncMethod,
-    googleCalendarLastSyncedAt: settings.googleCalendarLastSyncedAt,
-    googleCalendarWebhookActive: !!settings.googleCalendarWebhookChannelId,
-    googleCalendarWebhookExpiration: settings.googleCalendarWebhookExpiration,
+    googleCalendarTwoWaySyncEnabled:
+      googleCalendar.googleCalendarTwoWaySyncEnabled,
+    googleCalendarSyncMethod: googleCalendar.googleCalendarSyncMethod,
+    googleCalendarLastSyncedAt: googleCalendar.googleCalendarLastSyncedAt,
+    googleCalendarWebhookActive:
+      !!googleCalendar.googleCalendarWebhookChannelId,
+    googleCalendarWebhookExpiration:
+      googleCalendar.googleCalendarWebhookExpiration,
     containerWidth: layout.containerWidth,
     containerWidthCustom: layout.containerWidthCustom,
     contentWidth: layout.contentWidth,
@@ -258,7 +304,7 @@ function toSettingsData(
     footerContactLabel: layout.footerContactLabel,
     footerHoursLabel: layout.footerHoursLabel,
     footerShowSocialLinks: layout.footerShowSocialLinks,
-    eventImportEnabled: settings.eventImportEnabled,
+    eventImportEnabled: googleCalendar.eventImportEnabled,
     themeColor: layout.themeColor,
     createdAt: settings.createdAt,
     updatedAt: settings.updatedAt,
@@ -311,6 +357,9 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
     commerce,
     notification,
     reservation,
+    stripe,
+    googleCalendar,
+    googleBusinessProfile,
   } = await getOrCreateSettingsBundle();
 
   return toSettingsData(
@@ -325,6 +374,9 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
     commerce,
     notification,
     reservation,
+    stripe,
+    googleCalendar,
+    googleBusinessProfile,
     {
       stripeSecretKeyMasked: null,
       stripeWebhookSecretMasked: null,
@@ -346,27 +398,30 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
     commerce,
     notification,
     reservation,
+    stripe,
+    googleCalendar,
+    googleBusinessProfile,
   } = await getOrCreateSettingsBundle();
 
-  const stripeSecretKeyMasked = settings.stripeSecretKey
+  const stripeSecretKeyMasked = stripe.stripeSecretKey
     ? maskSecretKey(
-        safeDecryptToString(settings.stripeSecretKey, {
+        safeDecryptToString(stripe.stripeSecretKey, {
           expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeSecretKey,
         }) || "****",
       )
     : null;
-  const stripeWebhookSecretMasked = settings.stripeWebhookSecret
+  const stripeWebhookSecretMasked = stripe.stripeWebhookSecret
     ? maskSecretKey(
-        safeDecryptToString(settings.stripeWebhookSecret, {
+        safeDecryptToString(stripe.stripeWebhookSecret, {
           expectedPurpose: SETTINGS_CRYPTO_PURPOSES.stripeWebhookSecret,
         }) || "****",
       )
     : null;
 
   let googleCalendarServiceAccountEmailMasked: string | null = null;
-  if (settings.googleCalendarServiceAccountJson) {
+  if (googleCalendar.googleCalendarServiceAccountJson) {
     const decrypted = safeDecryptToString(
-      settings.googleCalendarServiceAccountJson,
+      googleCalendar.googleCalendarServiceAccountJson,
       {
         expectedPurpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
       },
@@ -392,6 +447,9 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
     commerce,
     notification,
     reservation,
+    stripe,
+    googleCalendar,
+    googleBusinessProfile,
     {
       stripeSecretKeyMasked,
       stripeWebhookSecretMasked,
@@ -401,7 +459,7 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
 }
 
 export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettingsData> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsGoogleCalendar.findUnique({
     where: { id: "singleton" },
     select: {
       googleCalendarEnabled: true,
@@ -427,7 +485,7 @@ export async function getGoogleCalendarServiceAccountConfig(): Promise<{
   enabled: boolean;
   encryptedServiceAccountJson: string | null;
 }> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsGoogleCalendar.findUnique({
     where: { id: "singleton" },
     select: {
       googleCalendarEnabled: true,
@@ -443,7 +501,7 @@ export async function getGoogleCalendarServiceAccountConfig(): Promise<{
 }
 
 export async function getTwoWaySyncSettings(): Promise<TwoWaySyncSettingsData> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsGoogleCalendar.findUnique({
     where: { id: "singleton" },
     select: {
       googleCalendarTwoWaySyncEnabled: true,
@@ -464,7 +522,7 @@ export async function getTwoWaySyncSettings(): Promise<TwoWaySyncSettingsData> {
 }
 
 export async function getGoogleCalendarWebhookState(): Promise<GoogleCalendarWebhookState> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsGoogleCalendar.findUnique({
     where: { id: "singleton" },
     select: {
       googleCalendarId: true,
@@ -563,7 +621,7 @@ export async function getRefundPolicySettings(): Promise<RefundPolicy | null> {
 export async function getEventImportSettings(): Promise<{
   eventImportEnabled: boolean;
 }> {
-  const settings = await prisma.settings.findFirstOrThrow({
+  const settings = await prisma.settingsGoogleCalendar.findFirstOrThrow({
     where: { id: "singleton" },
     select: { eventImportEnabled: true },
   });

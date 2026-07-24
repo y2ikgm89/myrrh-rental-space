@@ -5,7 +5,10 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 // =============================================================================
 
 type SettingsUpsertArgs = { update?: Record<string, unknown> };
-const mockSettingsUpsert = mock<
+const mockSettingsStripeUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsGoogleCalendarUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
 const mockTransactionFn =
@@ -22,8 +25,11 @@ mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
-    settings: {
-      upsert: mockSettingsUpsert,
+    settingsStripe: {
+      upsert: mockSettingsStripeUpsert,
+    },
+    settingsGoogleCalendar: {
+      upsert: mockSettingsGoogleCalendarUpsert,
     },
     $transaction: mockTransactionFn,
   },
@@ -51,8 +57,13 @@ mock.module("@/shared/lib/env/encryption", () => ({
   },
 }));
 
-function lastUpdate(): Record<string, unknown> {
-  const lastCall = mockSettingsUpsert.mock.calls.at(-1);
+function lastStripeUpdate(): Record<string, unknown> {
+  const lastCall = mockSettingsStripeUpsert.mock.calls.at(-1);
+  return lastCall?.[0]?.update ?? {};
+}
+
+function lastGoogleCalendarUpdate(): Record<string, unknown> {
+  const lastCall = mockSettingsGoogleCalendarUpsert.mock.calls.at(-1);
   return lastCall?.[0]?.update ?? {};
 }
 
@@ -102,8 +113,8 @@ const INVALID_SERVICE_ACCOUNT_JSON = JSON.stringify({
 
 describe("updateStripeSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsStripeUpsert.mockReset();
+    mockSettingsStripeUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
@@ -113,8 +124,8 @@ describe("updateStripeSettings", () => {
         stripePaymentMethodTypes: ["card"],
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
         }),
@@ -128,16 +139,16 @@ describe("updateStripeSettings", () => {
         stripePaymentMethodTypes: ["card"],
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
       // 暗号化されているため元のキーと一致しない
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeSecretKey: expect.not.stringContaining("sk_test_abc123"),
           }),
         }),
       );
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeSecretKey: expect.any(String),
@@ -153,15 +164,15 @@ describe("updateStripeSettings", () => {
         stripePaymentMethodTypes: ["card"],
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeWebhookSecret: expect.not.stringContaining("whsec_test123"),
           }),
         }),
       );
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeWebhookSecret: expect.any(String),
@@ -178,8 +189,8 @@ describe("updateStripeSettings", () => {
         stripePaymentMethodTypes: ["card"],
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeCurrency: "usd",
@@ -187,7 +198,7 @@ describe("updateStripeSettings", () => {
         }),
       );
       // stripeEnabled 列は schema から削除済み — update に混入していないことを固定。
-      expect(Object.keys(lastUpdate())).not.toContain("stripeEnabled");
+      expect(Object.keys(lastStripeUpdate())).not.toContain("stripeEnabled");
     });
 
     test("stripePublishableKey が null の場合は既存値を維持する（update に含めない）", async () => {
@@ -199,7 +210,9 @@ describe("updateStripeSettings", () => {
         stripePaymentMethodTypes: ["card"],
       });
 
-      expect(Object.keys(lastUpdate())).not.toContain("stripePublishableKey");
+      expect(Object.keys(lastStripeUpdate())).not.toContain(
+        "stripePublishableKey",
+      );
     });
 
     test("戻り値が void（undefined）", async () => {
@@ -254,16 +267,16 @@ describe("updateStripeSettings", () => {
 
 describe("recordStripeConnectionSuccess", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsStripeUpsert.mockReset();
+    mockSettingsStripeUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("accountId を指定して接続成功を記録できる", async () => {
       await recordStripeConnectionSuccess("acct_test123");
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeConnectionStatus: "connected",
@@ -276,8 +289,8 @@ describe("recordStripeConnectionSuccess", () => {
     test("accountId を undefined にしても記録できる", async () => {
       await recordStripeConnectionSuccess(undefined);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeConnectionStatus: "connected",
@@ -289,7 +302,7 @@ describe("recordStripeConnectionSuccess", () => {
     test("stripeLastTestedAt が Date として設定される", async () => {
       await recordStripeConnectionSuccess("acct_test");
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeLastTestedAt: expect.any(Date),
@@ -301,7 +314,7 @@ describe("recordStripeConnectionSuccess", () => {
     test("singleton ID で upsert が呼ばれる", async () => {
       await recordStripeConnectionSuccess("acct_test");
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
         }),
@@ -316,16 +329,16 @@ describe("recordStripeConnectionSuccess", () => {
 
 describe("clearStripeKeys", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsStripeUpsert.mockReset();
+    mockSettingsStripeUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("Stripe 関連キーをすべて null にして保存できる", async () => {
       await clearStripeKeys();
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsStripeUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             stripeSecretKey: null,
@@ -352,8 +365,8 @@ describe("clearStripeKeys", () => {
 
 describe("updateGoogleCalendarSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
@@ -367,8 +380,8 @@ describe("updateGoogleCalendarSettings", () => {
         googleCalendarReminderMinutes: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
         }),
@@ -385,9 +398,9 @@ describe("updateGoogleCalendarSettings", () => {
         googleCalendarReminderMinutes: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
       // 暗号化されて保存される
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarServiceAccountJson: expect.any(String),
@@ -410,7 +423,9 @@ describe("updateGoogleCalendarSettings", () => {
         googleCalendarReminderMinutes: null,
       });
 
-      expect(Object.keys(lastUpdate())).not.toContain("googleCalendarId");
+      expect(Object.keys(lastGoogleCalendarUpdate())).not.toContain(
+        "googleCalendarId",
+      );
     });
 
     test("有効な googleCalendarId はそのまま保持される", async () => {
@@ -424,7 +439,7 @@ describe("updateGoogleCalendarSettings", () => {
         googleCalendarReminderMinutes: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarId: calendarId,
@@ -490,7 +505,7 @@ describe("updateGoogleCalendarSettings", () => {
         }),
       ).rejects.toThrow(DomainError);
 
-      expect(mockSettingsUpsert).not.toHaveBeenCalled();
+      expect(mockSettingsGoogleCalendarUpsert).not.toHaveBeenCalled();
     });
   });
 });
@@ -501,16 +516,16 @@ describe("updateGoogleCalendarSettings", () => {
 
 describe("recordGoogleCalendarConnectionSuccess", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("Google Calendar 接続成功を記録できる", async () => {
       await recordGoogleCalendarConnectionSuccess();
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarConnectionStatus: "connected",
@@ -522,7 +537,7 @@ describe("recordGoogleCalendarConnectionSuccess", () => {
     test("googleCalendarLastTestedAt が Date として設定される", async () => {
       await recordGoogleCalendarConnectionSuccess();
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarLastTestedAt: expect.any(Date),
@@ -539,16 +554,16 @@ describe("recordGoogleCalendarConnectionSuccess", () => {
 
 describe("recordGoogleCalendarConnectionError", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("Google Calendar 接続エラーを記録できる", async () => {
       await recordGoogleCalendarConnectionError();
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarConnectionStatus: "error",
@@ -560,7 +575,7 @@ describe("recordGoogleCalendarConnectionError", () => {
     test("googleCalendarLastTestedAt が Date として設定される", async () => {
       await recordGoogleCalendarConnectionError();
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarLastTestedAt: expect.any(Date),
@@ -577,16 +592,16 @@ describe("recordGoogleCalendarConnectionError", () => {
 
 describe("clearGoogleCalendarServiceAccount", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("サービスアカウント関連情報をすべて null にして保存できる", async () => {
       await clearGoogleCalendarServiceAccount();
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarServiceAccountJson: null,
@@ -610,8 +625,8 @@ describe("clearGoogleCalendarServiceAccount", () => {
 
 describe("updateTwoWaySyncSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
@@ -621,8 +636,8 @@ describe("updateTwoWaySyncSettings", () => {
         syncMethod: "polling",
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
           update: expect.objectContaining({
@@ -639,8 +654,8 @@ describe("updateTwoWaySyncSettings", () => {
         syncMethod: "webhook",
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarTwoWaySyncEnabled: false,
@@ -665,8 +680,8 @@ describe("updateTwoWaySyncSettings", () => {
 
 describe("saveGoogleCalendarWebhookToken", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
@@ -676,9 +691,9 @@ describe("saveGoogleCalendarWebhookToken", () => {
       // DB dump / snapshot 経由での漏洩から webhook 認証トークンを守る。
       await saveGoogleCalendarWebhookToken("token-xyz-123");
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
       // 暗号化されているため元のトークン文字列と一致してはいけない
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarWebhookToken:
@@ -686,7 +701,7 @@ describe("saveGoogleCalendarWebhookToken", () => {
           }),
         }),
       );
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarWebhookToken: expect.any(String),
@@ -723,8 +738,8 @@ describe("saveGoogleCalendarWebhookToken", () => {
 
 describe("saveGoogleCalendarWebhook", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
@@ -736,8 +751,8 @@ describe("saveGoogleCalendarWebhook", () => {
         expiration,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
           update: expect.objectContaining({
@@ -756,7 +771,7 @@ describe("saveGoogleCalendarWebhook", () => {
         expiration: undefined,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarWebhookExpiration: null,
@@ -782,16 +797,16 @@ describe("saveGoogleCalendarWebhook", () => {
 
 describe("clearGoogleCalendarWebhook", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsGoogleCalendarUpsert.mockReset();
+    mockSettingsGoogleCalendarUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("Webhook 関連情報をすべて null にして保存できる", async () => {
       await clearGoogleCalendarWebhook();
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsGoogleCalendarUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             googleCalendarWebhookChannelId: null,

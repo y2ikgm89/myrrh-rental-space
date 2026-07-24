@@ -1,5 +1,5 @@
 /**
- * Settings テーブルに保存する暗号化フィールドの HKDF purpose 文字列（単一ソース）。
+ * Settings 分割 singleton テーブルに保存する暗号化フィールドの HKDF purpose 文字列（単一ソース）。
  *
  * 各統合が専用の派生鍵を持つよう、統合ごとに一意な文字列を割り当てる。
  * `crypto.ts` の `decrypt()` は暗号文自身に埋め込まれた purpose で鍵導出するため、

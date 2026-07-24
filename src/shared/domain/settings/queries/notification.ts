@@ -175,7 +175,7 @@ export async function getCalendarEmailSettings(): Promise<{
 
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsGoogleCalendar.findUnique({
         where: { id: "singleton" },
         select: {
           icalAttachmentEnabled: true,

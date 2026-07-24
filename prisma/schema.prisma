@@ -1666,6 +1666,140 @@ model SettingsReservation {
   @@map("settings_reservations")
 }
 
+model SettingsStripe {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT。
+  stripePublishableKey       String?
+  stripeSecretKey            String?   @db.Text
+  stripeWebhookSecret        String?   @db.Text
+  stripeAccountId            String?
+  stripeCurrency             String    @default("jpy")
+  stripePaymentMethodTypes   String[]  @default(["card"])
+  stripeLastTestedAt         DateTime?
+  stripeConnectionStatus     String?
+
+  @@map("settings_stripes")
+}
+
+model SettingsResend {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resendApiKey           String?   @db.Text
+  resendWebhookSecret    String?   @db.Text
+  resendLastTestedAt     DateTime?
+  resendConnectionStatus String?
+
+  @@map("settings_resends")
+}
+
+model SettingsTurnstile {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turnstileSiteKey          String?
+  turnstileSecretKey        String?   @db.Text
+  turnstileLastTestedAt     DateTime?
+  turnstileConnectionStatus String?
+
+  @@map("settings_turnstiles")
+}
+
+model SettingsGoogleMaps {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  googleMapsApiKey           String?   @db.Text
+  googleMapsLastTestedAt     DateTime?
+  googleMapsConnectionStatus String?
+
+  @@map("settings_google_maps")
+}
+
+model SettingsCustomApiKeys {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customApiKeys Json? @default("{}")
+
+  @@map("settings_custom_api_keys")
+}
+
+model SettingsGoogleCalendar {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  googleCalendarEnabled            Boolean            @default(false)
+  googleCalendarServiceAccountJson String?            @db.Text
+  googleCalendarId                 String?
+  googleCalendarLastTestedAt       DateTime?
+  googleCalendarConnectionStatus   String?
+  googleCalendarReminderMinutes    Int?
+  icalAttachmentEnabled            Boolean            @default(true)
+  addToCalendarLinksEnabled        Boolean            @default(true)
+  googleCalendarTwoWaySyncEnabled  Boolean            @default(false)
+  googleCalendarSyncMethod         CalendarSyncMethod @default(polling)
+  googleCalendarSyncToken          String?            @db.Text
+  googleCalendarLastSyncedAt       DateTime?
+  eventImportEnabled               Boolean            @default(false)
+  eventImportSyncToken             String?            @db.Text
+  googleCalendarWebhookChannelId   String?
+  googleCalendarWebhookResourceId  String?
+  googleCalendarWebhookExpiration  DateTime?
+  googleCalendarWebhookToken       String?            @db.Text
+
+  @@map("settings_google_calendars")
+}
+
+model SettingsGoogleBusinessProfile {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  googleBusinessProfileEnabled Boolean @default(false)
+  googleBusinessProfileAuth    Json?
+
+  @@map("settings_google_business_profiles")
+}
+
+model SettingsInstagram {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instagramAccessToken    String?   @db.Text
+  instagramTokenExpiresAt DateTime?
+  instagramUserId         String?
+  instagramUsername       String?
+  instagramAccountType    String?
+
+  @@map("settings_instagrams")
+}
+
+model SettingsSwitchbot {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  switchbotEnabled               Boolean   @default(false)
+  switchbotOpenToken             String?   @db.Text
+  switchbotSecretKey             String?   @db.Text
+  switchbotConnectionStatus      String?
+  switchbotLastTestedAt          DateTime?
+  switchbotPasscodeBufferMinutes Int       @default(15)
+  switchbotWebhookPathToken      String?   @db.Text
+
+  @@map("settings_switchbots")
+}
+
 // ==============================================
 // Settings (Singleton)
 // ==============================================
@@ -1677,107 +1811,7 @@ model Settings {
 
   // Site / SEO / layout / sidebar / analytics は Phase 2 split 済 singleton テーブルへ移行。
   // Organization / commerce / notification / reservation は Phase 3 split 済。
-
-  // Other Settings
-  // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、
-  // html lang は layout が "ja" を固定使用しており、設定値は保存経路も consumer も無かった。
-  // maintenance* / cookieConsent* は SettingsSystem (settings_systems) へ移行済 (Phase 1)。
-
-  // Stripe Payment Settings — credentials only.
-  // オンライン決済の ON/OFF は `Settings.featureModules.payment` が SSoT
-  // （feature module registry と `assertOnlinePaymentAvailable` 経由で解決される）。
-  // test/live モードは API キーの接頭辞（sk_test_ / sk_live_）が決定者。
-  // 別途トグルを持つと UI と実挙動が乖離するため列は持たない（2026-06-20 撤去）。
-  stripePublishableKey   String?
-  stripeSecretKey        String?   @db.Text // 暗号化して保存
-  stripeWebhookSecret    String?   @db.Text // 暗号化して保存
-  stripeAccountId        String?
-  stripeCurrency         String    @default("jpy")
-  /// Stripe Checkout Session の `payment_method_types` に渡す method 名配列。
-  /// 有効値は `STRIPE_PAYMENT_METHOD_TYPE_VALUES`
-  /// (src/shared/lib/stripe-payment-methods.ts) で列挙し Zod で強制。
-  /// 少なくとも 1 つ必要 (domain 層で assert)。既定は `["card"]`。
-  stripePaymentMethodTypes String[]  @default(["card"])
-  stripeLastTestedAt     DateTime?
-  stripeConnectionStatus String?
-
-  // Tier ベース返金率 JSON は SettingsCommerce (settings_commerces) へ移行済 (Phase 3)。
-
-  // announcementBar* carousel 設定は SettingsAnnouncementCarousel
-  // (settings_announcement_carousels) へ移行済 (Phase 1)。
-
-  // ==============================================
-  // External Service API Keys
-  // ==============================================
-
-  // Resend Email Service
-  resendApiKey           String?   @db.Text // Encrypted
-  // Webhook 署名検証用シークレット (svix `whsec_...`)。DB canonical、env
-  // (`RESEND_WEBHOOK_SECRET`) は local dev fallback のみ。
-  // stripeWebhookSecret と同じ Tier 2 (DB 暗号化 + admin UI 管理) パターン。
-  resendWebhookSecret    String?   @db.Text // Encrypted
-  resendLastTestedAt     DateTime?
-  resendConnectionStatus String? // 'connected' | 'error'
-
-  // Cloudflare Turnstile (Bot Protection)
-  turnstileSiteKey          String? // Public key (not encrypted)
-  turnstileSecretKey        String?   @db.Text // Encrypted
-  turnstileLastTestedAt     DateTime?
-  turnstileConnectionStatus String?
-
-  // Google Maps API
-  googleMapsApiKey           String?   @db.Text // Encrypted
-  googleMapsLastTestedAt     DateTime?
-  googleMapsConnectionStatus String?
-
-  // Cloudflare CDN (Cache Purge API) — env-only に移行済み（CLOUDFLARE_ZONE_ID /
-  // CLOUDFLARE_API_TOKEN）。DB 列は contract migration で DROP 済み。
-
-  // Custom API Keys (Generic key-value storage)
-  // Format: { "id": { "name": "...", "key": "encrypted", "value": "encrypted", ... } }
-  customApiKeys Json? @default("{}")
-
-  // ==============================================
-  // Google Calendar Integration
-  // ==============================================
-
-  // サービスアカウント連携（共有カレンダー用）
-  googleCalendarEnabled            Boolean   @default(false)
-  googleCalendarServiceAccountJson String?   @db.Text // 暗号化されたJSON認証情報
-  googleCalendarId                 String? // 共有カレンダーID
-  googleCalendarLastTestedAt       DateTime?
-  googleCalendarConnectionStatus   String? // 'connected' | 'error'
-
-  // Google Business Profile sync
-  googleBusinessProfileEnabled Boolean @default(false)
-  googleBusinessProfileAuth    Json? // { encrypted: string } envelope (中身は { accessToken, refreshToken, expiresAt, accountId } を encrypt() した ciphertext)
-
-  // Google Meet ビデオ会議自動生成は per-event Event.meetingProvider === GOOGLE_MEET に置換 (Phase B.1)。
-  // site-wide gate は「per-event で ON にしても発行されないケース」の混乱源だったため DROP。
-  // Workspace 権限失敗は per-event GCal API 呼出時に surface され、admin UI に表示される。
-
-  // リマインダー設定: null=Googleカレンダー既定を使う, 0=通知なし, N=N分前にメール通知
-  googleCalendarReminderMinutes Int?
-
-  // 予約者向けiCal設定
-  icalAttachmentEnabled     Boolean @default(true) // メールにiCal添付
-  addToCalendarLinksEnabled Boolean @default(true) // Add to Calendarリンク表示
-
-  // ==============================================
-  // Google Calendar 双方向同期（Phase 4）
-  // ==============================================
-
-  // 同期方式設定 - Enum化
-  googleCalendarTwoWaySyncEnabled Boolean            @default(false)
-  googleCalendarSyncMethod        CalendarSyncMethod @default(polling)
-
-  // 同期状態
-  googleCalendarSyncToken    String?   @db.Text // 増分同期用トークン
-  googleCalendarLastSyncedAt DateTime? // 最終同期日時
-
-  // イベントインポート設定
-  eventImportEnabled   Boolean @default(false)
-  eventImportSyncToken String? @db.Text
+  // Integration credentials は Phase 4 split 済 (settings_stripes 等)。
 
   /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
   /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / data-retention）。
@@ -1791,35 +1825,6 @@ model Settings {
   /// デフォルトは規約テンプレの保持期間に合わせた: Session/Verification/login_attempts 6mo、Reservation.guest* 12mo、Inquiry 36mo、INACTIVE Customer 84mo。
   /// 実 purge は feature module `data-retention` が ON かつ月数 > 0 のときのみ cron から実行される (`/api/cron/data-retention`)。
   dataRetention Json @default("{\"sessionMonths\":6,\"verificationMonths\":6,\"loginAttemptMonths\":6,\"reservationGuestMonths\":12,\"inquiryMonths\":36,\"customerInactiveMonths\":84}")
-
-  // Webhook設定（Push Notifications）
-  googleCalendarWebhookChannelId  String? // Webhook チャンネルID
-  googleCalendarWebhookResourceId String? // Webhook リソースID
-  googleCalendarWebhookExpiration DateTime? // Webhook 有効期限
-  googleCalendarWebhookToken      String?   @db.Text // Webhook 認証トークン (x-goog-channel-token) // Encrypted
-
-  // ==============================================
-  // Instagram連携 - Enum化
-  // ==============================================
-  instagramAccessToken    String?   @db.Text // Encrypted
-  instagramTokenExpiresAt DateTime?
-  instagramUserId         String?
-  instagramUsername       String?
-  instagramAccountType    String?
-
-  // ==============================================
-  // SwitchBot スマートロック連携
-  // ==============================================
-  switchbotEnabled               Boolean   @default(false)
-  switchbotOpenToken             String?   @db.Text // Encrypted
-  switchbotSecretKey             String?   @db.Text // Encrypted
-  switchbotConnectionStatus      String? // 'connected' | 'error'
-  switchbotLastTestedAt          DateTime?
-  // 予約開始/終了時刻の前後に持たせるパスコード有効バッファ（分）。早期到着・退出遅れの猶予。
-  switchbotPasscodeBufferMinutes Int       @default(15)
-  // Webhook URL 難読化用トークン（SwitchBot は inbound webhook の署名検証機構を提供しないため、
-  // 推測困難な URL パスセグメント + deviceMac 照合の二重防御で代替する）
-  switchbotWebhookPathToken      String?   @db.Text // Encrypted
 
   @@map("settings")
 }

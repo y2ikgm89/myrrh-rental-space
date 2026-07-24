@@ -10,26 +10,117 @@ const mockSettingsUpsert = mock(() =>
   Promise.resolve({
     ...singletonTimestamps,
     featureModules: {},
-    googleCalendarSyncMethod: "webhook",
-    googleCalendarWebhookChannelId: "channel-secret",
-    googleCalendarWebhookResourceId: "resource-secret",
-    googleCalendarWebhookToken: "token-secret",
-    googleCalendarWebhookExpiration: new Date("2026-02-01T00:00:00Z"),
-    googleCalendarServiceAccountJson: "encrypted-service-account-json",
+  }),
+);
+
+const mockStripeUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    stripePublishableKey: null,
     stripeSecretKey: "encrypted-stripe-secret",
     stripeWebhookSecret: "encrypted-stripe-webhook-secret",
+    stripeAccountId: null,
+    stripeCurrency: "jpy",
+    stripePaymentMethodTypes: ["card"],
+    stripeLastTestedAt: null,
+    stripeConnectionStatus: null,
+  }),
+);
+
+const mockGoogleCalendarUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    googleCalendarEnabled: false,
+    googleCalendarServiceAccountJson: "encrypted-service-account-json",
+    googleCalendarId: null,
+    googleCalendarLastTestedAt: null,
+    googleCalendarConnectionStatus: null,
+    googleCalendarReminderMinutes: null,
+    icalAttachmentEnabled: true,
+    addToCalendarLinksEnabled: true,
+    googleCalendarTwoWaySyncEnabled: false,
+    googleCalendarSyncMethod: "webhook",
+    googleCalendarSyncToken: "calendar-sync-token",
+    googleCalendarLastSyncedAt: null,
+    eventImportEnabled: false,
+    eventImportSyncToken: "event-import-sync-token",
+    googleCalendarWebhookChannelId: "channel-secret",
+    googleCalendarWebhookResourceId: "resource-secret",
+    googleCalendarWebhookExpiration: new Date("2026-02-01T00:00:00Z"),
+    googleCalendarWebhookToken: "token-secret",
+  }),
+);
+
+const mockGoogleBusinessProfileUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    googleBusinessProfileEnabled: false,
+    googleBusinessProfileAuth: null,
+  }),
+);
+
+const mockResendUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
     resendApiKey: "encrypted-resend-api-key",
+    resendWebhookSecret: null,
+    resendLastTestedAt: null,
+    resendConnectionStatus: null,
+  }),
+);
+
+const mockTurnstileUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    turnstileSiteKey: null,
     turnstileSecretKey: "encrypted-turnstile-secret-key",
+    turnstileLastTestedAt: null,
+    turnstileConnectionStatus: null,
+  }),
+);
+
+const mockGoogleMapsUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
     googleMapsApiKey: "encrypted-google-maps-api-key",
+    googleMapsLastTestedAt: null,
+    googleMapsConnectionStatus: null,
+  }),
+);
+
+const mockCustomApiKeysUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
     customApiKeys: {
       external: {
         key: "encrypted-custom-key",
         value: "encrypted-custom-value",
       },
     },
+  }),
+);
+
+const mockInstagramUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
     instagramAccessToken: "encrypted-instagram-access-token",
-    googleCalendarSyncToken: "calendar-sync-token",
-    eventImportSyncToken: "event-import-sync-token",
+    instagramTokenExpiresAt: null,
+    instagramUserId: null,
+    instagramUsername: null,
+    instagramAccountType: null,
+  }),
+);
+
+const mockSwitchbotUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    switchbotEnabled: false,
+    switchbotOpenToken: null,
+    switchbotSecretKey: null,
+    switchbotConnectionStatus: null,
+    switchbotLastTestedAt: null,
+    switchbotPasscodeBufferMinutes: 15,
+    switchbotWebhookPathToken: null,
   }),
 );
 
@@ -235,6 +326,33 @@ mock.module("@/shared/db/prisma", () => ({
     settingsReservation: {
       upsert: mockReservationUpsert,
     },
+    settingsStripe: {
+      upsert: mockStripeUpsert,
+    },
+    settingsResend: {
+      upsert: mockResendUpsert,
+    },
+    settingsTurnstile: {
+      upsert: mockTurnstileUpsert,
+    },
+    settingsGoogleMaps: {
+      upsert: mockGoogleMapsUpsert,
+    },
+    settingsCustomApiKeys: {
+      upsert: mockCustomApiKeysUpsert,
+    },
+    settingsGoogleCalendar: {
+      upsert: mockGoogleCalendarUpsert,
+    },
+    settingsGoogleBusinessProfile: {
+      upsert: mockGoogleBusinessProfileUpsert,
+    },
+    settingsInstagram: {
+      upsert: mockInstagramUpsert,
+    },
+    settingsSwitchbot: {
+      upsert: mockSwitchbotUpsert,
+    },
   },
 }));
 
@@ -279,6 +397,15 @@ describe("getAdminSettings", () => {
     mockCommerceUpsert.mockClear();
     mockNotificationUpsert.mockClear();
     mockReservationUpsert.mockClear();
+    mockStripeUpsert.mockClear();
+    mockResendUpsert.mockClear();
+    mockTurnstileUpsert.mockClear();
+    mockGoogleMapsUpsert.mockClear();
+    mockCustomApiKeysUpsert.mockClear();
+    mockGoogleCalendarUpsert.mockClear();
+    mockGoogleBusinessProfileUpsert.mockClear();
+    mockInstagramUpsert.mockClear();
+    mockSwitchbotUpsert.mockClear();
   });
 
   test("client DTO does not serialize integration secrets or webhook verifiers", async () => {
