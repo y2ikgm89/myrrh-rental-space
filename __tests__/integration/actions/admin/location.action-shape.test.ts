@@ -70,6 +70,22 @@ mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCache: mockInvalidateSiteWideCache,
 }));
 
+const mockPurgeDetailUrls = mock<
+  (paths: readonly string[]) => Promise<{ success: boolean }>
+>(async () => ({ success: true }));
+mock.module("@/shared/lib/cloudflare", () => ({
+  purgeCloudflareDetailUrls: mockPurgeDetailUrls,
+}));
+
+const mockFirePurgeAsync = mock(
+  async (purge: () => Promise<{ success: boolean }>) => {
+    await purge();
+  },
+);
+mock.module("@/shared/lib/cache", () => ({
+  firePurgeAsync: mockFirePurgeAsync,
+}));
+
 // Next.js redirect は特殊な throw で render を中断する契約
 // (google-business-profile.test.ts と同じ mock パターン)。
 const mockRedirect = mock<(url: string) => never>((url: string) => {
@@ -219,6 +235,8 @@ describe("createLocationAction (conform)", () => {
     mockInvalidateSiteWideCache.mockClear();
     mockFireAndForget.mockClear();
     mockSyncLocationToGbpCommand.mockClear();
+    mockPurgeDetailUrls.mockClear();
+    mockFirePurgeAsync.mockClear();
     mockCreateLocation.mockResolvedValue({ id: "loc-new", slug: "honkan" });
   });
 
@@ -248,6 +266,8 @@ describe("createLocationAction (conform)", () => {
     }
 
     expect(mockInvalidateSiteWideCache).toHaveBeenCalledTimes(1);
+    expect(mockFirePurgeAsync).toHaveBeenCalledTimes(1);
+    expect(mockPurgeDetailUrls).toHaveBeenCalledWith(["/access"]);
     expect(mockFireAndForget).toHaveBeenCalledTimes(1);
     expect(mockSyncLocationToGbpCommand).toHaveBeenCalledWith({
       locationId: "loc-new",
@@ -284,6 +304,8 @@ describe("updateLocationAction (conform)", () => {
     mockInvalidateSiteWideCache.mockClear();
     mockFireAndForget.mockClear();
     mockSyncLocationToGbpCommand.mockClear();
+    mockPurgeDetailUrls.mockClear();
+    mockFirePurgeAsync.mockClear();
     mockUpdateLocation.mockResolvedValue({ id: VALID_UUID, slug: "honkan" });
   });
 
@@ -326,6 +348,8 @@ describe("updateLocationAction (conform)", () => {
     }
 
     expect(mockInvalidateSiteWideCache).toHaveBeenCalledTimes(1);
+    expect(mockFirePurgeAsync).toHaveBeenCalledTimes(1);
+    expect(mockPurgeDetailUrls).toHaveBeenCalledWith(["/access"]);
     expect(mockFireAndForget).toHaveBeenCalledTimes(1);
     expect(mockSyncLocationToGbpCommand).toHaveBeenCalledWith({
       locationId: VALID_UUID,

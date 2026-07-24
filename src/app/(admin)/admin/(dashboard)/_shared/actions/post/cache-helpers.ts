@@ -21,16 +21,24 @@ export async function purgePostCaches(
   });
 }
 
+const POST_LISTING_URLS = ["/blog", "/feed.xml"] as const;
+
 export async function purgePostArchive(): Promise<void> {
-  void firePurgeAsync(() => purgeCloudflareDetailUrls(["/blog"]), {
+  void firePurgeAsync(() => purgeCloudflareDetailUrls([...POST_LISTING_URLS]), {
     operation: "purgePostArchive",
-    urls: ["/blog"],
+    urls: [...POST_LISTING_URLS],
   });
 }
 
 export async function invalidatePostCollectionCaches(): Promise<void> {
   invalidateSiteWideCache([CACHE_TAGS.POSTS, CACHE_TAGS.SIDEBAR_DATA]);
   purgeMarketingHomeTag();
+  // /feed.xml は Cache-Tag を emit しない。記事 CRUD は purgePostArchive を呼ばないため
+  // ここで RSS feed の URL purge も併発する (/blog は POST tag + site-wide co-purge で足りる)。
+  void firePurgeAsync(() => purgeCloudflareDetailUrls(["/feed.xml"]), {
+    operation: "purgePostFeed",
+    urls: ["/feed.xml"],
+  });
 }
 
 export async function invalidatePostCategoryCaches(): Promise<void> {
