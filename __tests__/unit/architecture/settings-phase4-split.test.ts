@@ -108,37 +108,39 @@ function findPrismaSettingsQueryOffenders(source: string): boolean {
 }
 
 describe("settings phase 4 schema split", () => {
+  // CI は unit を高並列で回すため、巨大 schema.prisma の多重 regex が
+  // 30s 枠に収まる保証がない（2026-07-24 PR#1475: 30312ms timeout flake）。
   test("Phase 4 split singleton tables exist", () => {
     const schema = read("prisma/schema.prisma");
 
     expect(schema).toMatch(
       /model SettingsStripe \{[\s\S]*@@map\("settings_stripes"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsResend \{[\s\S]*@@map\("settings_resends"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsTurnstile \{[\s\S]*@@map\("settings_turnstiles"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsGoogleMaps \{[\s\S]*@@map\("settings_google_maps"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsCustomApiKeys \{[\s\S]*@@map\("settings_custom_api_keys"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsGoogleCalendar \{[\s\S]*@@map\("settings_google_calendars"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsGoogleBusinessProfile \{[\s\S]*@@map\("settings_google_business_profiles"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsInstagram \{[\s\S]*@@map\("settings_instagrams"\)/u,
     );
-    expect(read("prisma/schema.prisma")).toMatch(
+    expect(schema).toMatch(
       /model SettingsSwitchbot \{[\s\S]*@@map\("settings_switchbots"\)/u,
     );
-  }, 30_000);
+  }, 60_000);
 
   test("src must not select Phase 4 fields from prisma.settings", () => {
     const offenders: string[] = [];
