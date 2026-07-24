@@ -442,6 +442,44 @@ describe("sendEmail()", () => {
       expect(result).toEqual({ ok: true, messageId: "email-retry-ok" });
       expect(mockResendSend).toHaveBeenCalledTimes(2);
     });
+
+    test("SDK throw（ネットワークエラー等）は retry 対象で、2 回 throw 後に成功する", async () => {
+      mockResendSend.mockReset();
+      mockResendSend
+        .mockRejectedValueOnce(new Error("ECONNREFUSED"))
+        .mockRejectedValueOnce(new Error("ECONNRESET"))
+        .mockResolvedValueOnce({ data: { id: "email-throw-ok" }, error: null });
+
+      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+
+      expect(result).toEqual({ ok: true, messageId: "email-throw-ok" });
+      expect(mockResendSend).toHaveBeenCalledTimes(3);
+      expect(mockLogError).not.toHaveBeenCalled();
+    });
+
+    test("SDK throw が maxRetries まで続く場合は最終失敗する", async () => {
+      mockResendSend.mockReset();
+      mockResendSend.mockRejectedValue(new Error("ETIMEDOUT"));
+
+      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 3 });
+
+      expect(result).toEqual({
+        ok: false,
+        reason: "error",
+        error: "メール送信に失敗しました",
+      });
+      // attempt 0→1→2→3 の計 4 回
+      expect(mockResendSend).toHaveBeenCalledTimes(4);
+      expect(mockLogError).toHaveBeenCalledTimes(1);
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          context: expect.objectContaining({
+            attempt: 4,
+          }),
+        }),
+      );
+    });
   });
 
   describe("エラーハンドリング", () => {
@@ -587,27 +625,35 @@ describe("sendEmail()", () => {
       );
     });
 
-    test("SDK が throw（ネットワークエラー等）した場合も固定メッセージで失敗する", async () => {
-      mockResendSend.mockImplementation(() => {
-        throw new Error("ECONNREFUSED");
-      });
+    test("SDK throw を尽きた後は固定メッセージで失敗し、retry したうえで logError する", async () => {
+      mockResendSend.mockRejectedValue(new Error("ECONNREFUSED"));
 
-      const result = await sendEmail(BASE_PARAMS);
+      const result = await sendEmail({ ...BASE_PARAMS, maxRetries: 2 });
 
       expect(result).toEqual({
         ok: false,
         reason: "error",
         error: "メール送信に失敗しました",
       });
+      // attempt 0→1→2 の計 3 回（即時失敗ではなく retry する）
+      expect(mockResendSend).toHaveBeenCalledTimes(3);
       expect(mockLogError).toHaveBeenCalledTimes(1);
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          category: "EXTERNAL_API",
+          severity: "MEDIUM",
+          context: expect.objectContaining({
+            attempt: 3,
+          }),
+        }),
+      );
     });
 
-    test("SDK が throw した場合も logError で ErrorCategory.EXTERNAL_API が呼ばれる", async () => {
-      mockResendSend.mockImplementation(() => {
-        throw new Error("Network error");
-      });
+    test("SDK throw 尽きた後も logError で ErrorCategory.EXTERNAL_API が呼ばれる", async () => {
+      mockResendSend.mockRejectedValue(new Error("Network error"));
 
-      await sendEmail(BASE_PARAMS);
+      await sendEmail({ ...BASE_PARAMS, maxRetries: 0 });
 
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),

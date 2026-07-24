@@ -2,7 +2,8 @@
  * Resend メール送信（公式ベストプラクティス準拠）
  *
  * - Idempotency Key: retry 時の重複送信防止（公式推奨形式 `<event-type>/<entity-id>`）
- * - Auto retry: 429 / 500 系を exponential backoff で自動再試行
+ * - Auto retry: 429 / 500 系の named error、およびネットワーク/transport の throw を
+ *   exponential backoff で自動再試行
  * - 400 / 401 / 403 / 404 / 409 / 422 は即時失敗（公式推奨: 再試行しない）
  *
  * @see https://resend.com/docs/ai-onboarding
@@ -238,10 +239,20 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       });
       return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     } catch (error) {
+      // ネットワーク / transport 例外は transient とみなし named retryable error と同様に再試行する。
+      // 設定不備などループ外の throw（payload parse）はこの catch に入らない。
+      if (attempt < maxRetries) {
+        await sleep(backoffMs(attempt));
+        continue;
+      }
+
       logError(normalizeError(error), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: errorContext,
+        context: {
+          ...errorContext,
+          attempt: attempt + 1,
+        },
       });
       return { ok: false, reason: "error", error: "メール送信に失敗しました" };
     }
