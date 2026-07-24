@@ -240,7 +240,7 @@ mock.module("@/shared/domain/events/waitlist-commands", () => ({
     mockConfirmWaitlistOfferCommand(args),
 }));
 
-mock.module("@/shared/domain/events/payment-commands", () => ({
+mock.module("@/shared/domain/events/payment-queries", () => ({
   claimEventRegistrationAsPaid: (
     id: string,
     data: { stripePaymentIntentId: string | null },
@@ -255,6 +255,9 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: (id: string) =>
     mockFindExpiredPendingWaitlistOfferRegistration(id),
+}));
+
+mock.module("@/shared/domain/events/payment-commands", () => ({
   refundExpiredWaitlistOfferPaymentCommand: (input: {
     registrationId: string;
     stripePaymentIntentId: string;

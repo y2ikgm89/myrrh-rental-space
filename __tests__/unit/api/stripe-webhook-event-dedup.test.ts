@@ -152,13 +152,16 @@ mock.module("@/shared/domain/reservations/payment-queries", () => ({
   applyChargeRefundIdempotent: () => Promise.resolve(),
 }));
 
-mock.module("@/shared/domain/events/payment-commands", () => ({
+mock.module("@/shared/domain/events/payment-queries", () => ({
   claimEventRegistrationAsPaid: () => Promise.resolve(false),
   claimEventRegistrationAsFailed: () => Promise.resolve(false),
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+}));
+
+mock.module("@/shared/domain/events/payment-commands", () => ({
   refundExpiredWaitlistOfferPaymentCommand: () =>
     Promise.resolve({ outcome: "not_applicable" }),
 }));
