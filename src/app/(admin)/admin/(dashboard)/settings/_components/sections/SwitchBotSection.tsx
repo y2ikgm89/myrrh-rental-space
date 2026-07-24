@@ -43,6 +43,7 @@ import {
   testSwitchBotConnectionAction,
   clearSwitchBotKeys,
   registerSwitchBotWebhookAction,
+  rotateSwitchBotWebhookPathTokenAction,
 } from "@/admin/actions/api-keys";
 import { switchbotFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { SwitchBotConfig } from "@/admin/types/api-keys";
@@ -71,6 +72,7 @@ export function SwitchBotSection({
   const [testPending, startTestTransition] = useTransition();
   const [clearPending, startClearTransition] = useTransition();
   const [webhookPending, startWebhookTransition] = useTransition();
+  const [rotatePending, startRotateTransition] = useTransition();
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
@@ -202,7 +204,7 @@ export function SwitchBotSection({
         if (!isMutationError(result)) {
           setWebhookResult({
             success: true,
-            message: `Webhookを登録しました: ${result.url}`,
+            message: "Webhookを登録しました",
           });
         } else {
           setWebhookResult({ success: false, message: result.error });
@@ -216,7 +218,40 @@ export function SwitchBotSection({
     });
   };
 
-  const isBusy = isPending || testPending || clearPending || webhookPending;
+  const handleRotateWebhookToken = async () => {
+    const confirmed = await confirmDialog({
+      title: "Webhook URLトークンを更新しますか？",
+      description:
+        "旧URLは即座に無効になり、SwitchBot側の登録も新URLへ切り替わります。切替中は通知が届かない可能性があります。",
+      confirmLabel: "更新",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
+
+    startRotateTransition(async () => {
+      setWebhookResult(null);
+      try {
+        const result = await rotateSwitchBotWebhookPathTokenAction();
+        if (!isMutationError(result)) {
+          setWebhookResult({
+            success: true,
+            message: "Webhook URLトークンを更新しました",
+          });
+          router.refresh();
+        } else {
+          setWebhookResult({ success: false, message: result.error });
+        }
+      } catch {
+        setWebhookResult({
+          success: false,
+          message: "Webhook URLトークンの更新でエラーが発生しました",
+        });
+      }
+    });
+  };
+
+  const isBusy =
+    isPending || testPending || clearPending || webhookPending || rotatePending;
   const formErrors = form.errors;
 
   return (
@@ -466,18 +501,34 @@ export function SwitchBotSection({
                       </p>
                       <p className="text-xs text-muted-foreground">
                         SwitchBotからの発行結果通知を受け取るURLを登録します（未登録でも
-                        ポーリングにより発行自体は完了しますが、確定が早まります）
+                        ポーリングにより発行自体は完了しますが、確定が早まります）。
+                        受信URLは{" "}
+                        <span className="font-mono">
+                          /api/webhooks/switchbot/[トークン]
+                        </span>{" "}
+                        形式で、トークンは画面に表示しません。
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRegisterWebhook}
-                      disabled={isBusy}
-                    >
-                      {webhookPending ? "登録中..." : "Webhookを登録"}
-                    </Button>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRegisterWebhook}
+                        disabled={isBusy}
+                      >
+                        {webhookPending ? "登録中..." : "Webhookを登録"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRotateWebhookToken}
+                        disabled={isBusy}
+                      >
+                        {rotatePending ? "更新中..." : "URLトークンを更新"}
+                      </Button>
+                    </div>
                   </div>
                   {webhookResult && (
                     <StatusBanner success={webhookResult.success}>
