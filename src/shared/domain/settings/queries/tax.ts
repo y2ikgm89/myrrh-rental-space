@@ -25,7 +25,7 @@ export async function getPublicTaxSettings(): Promise<TaxSettings> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findFirst({
+      prisma.settingsCommerce.findFirst({
         select: {
           taxStandardRate: true,
           taxReducedRate: true,

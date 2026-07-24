@@ -1,20 +1,15 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+const singletonTimestamps = {
+  id: "singleton",
+  createdAt: new Date("2026-01-01T00:00:00Z"),
+  updatedAt: new Date("2026-01-02T00:00:00Z"),
+};
+
 const mockSettingsUpsert = mock(() =>
   Promise.resolve({
-    id: "singleton",
-    createdAt: new Date("2026-01-01T00:00:00Z"),
-    updatedAt: new Date("2026-01-02T00:00:00Z"),
-    businessHours: null,
-    regularHolidays: null,
-    notificationStaffIds: [],
+    ...singletonTimestamps,
     featureModules: {},
-    durationDiscountRules: [],
-    discountCombinationMode: "best",
-    showOriginalPrice: true,
-    taxStandardRate: 10,
-    taxReducedRate: 8,
-    taxDisplayModePublic: "tax_included",
     googleCalendarSyncMethod: "webhook",
     googleCalendarWebhookChannelId: "channel-secret",
     googleCalendarWebhookResourceId: "resource-secret",
@@ -40,7 +35,7 @@ const mockSettingsUpsert = mock(() =>
 
 const mockCarouselUpsert = mock(() =>
   Promise.resolve({
-    id: "singleton",
+    ...singletonTimestamps,
     animation: "fade",
     duration: 5000,
     autoPlay: true,
@@ -55,14 +50,12 @@ const mockCarouselUpsert = mock(() =>
     gradientAnimation: false,
     glassAnimation: false,
     sticky: false,
-    createdAt: new Date("2026-01-01T00:00:00Z"),
-    updatedAt: new Date("2026-01-02T00:00:00Z"),
   }),
 );
 
 const mockSystemUpsert = mock(() =>
   Promise.resolve({
-    id: "singleton",
+    ...singletonTimestamps,
     maintenanceMode: false,
     maintenanceMessage: null,
     cookieConsentEnabled: false,
@@ -70,8 +63,138 @@ const mockSystemUpsert = mock(() =>
     cookieConsentAcceptText: null,
     cookieConsentRejectText: null,
     cookieConsentPolicyUrl: null,
-    createdAt: new Date("2026-01-01T00:00:00Z"),
-    updatedAt: new Date("2026-01-02T00:00:00Z"),
+  }),
+);
+
+const mockSeoUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    siteName: "Myrrh",
+    siteDescription: null,
+    faviconUrl: "",
+    defaultOgpImageUrl: null,
+    headerLogoUrl: null,
+    footerLogoUrl: null,
+    footerCopyright: null,
+    useHeaderLogo: true,
+    useFooterLogo: true,
+    defaultMetaDescription: null,
+    defaultMetaKeywords: null,
+    defaultOgpTitle: null,
+    defaultOgpDescription: null,
+  }),
+);
+
+const mockAnalyticsUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    analyticsType: null,
+    googleAnalyticsId: null,
+    googleTagManagerId: null,
+    googleSearchConsoleId: null,
+    bingWebmasterToolsId: null,
+    gaPropertyId: null,
+    microsoftClarityId: null,
+  }),
+);
+
+const mockLayoutUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    containerWidth: null,
+    containerWidthCustom: null,
+    contentWidth: null,
+    contentWidthCustom: null,
+    headerScrollBehavior: "always_visible",
+    headerBackgroundMode: "solid",
+    themeColor: "#fafafa",
+    footerTagline: null,
+    footerNavigationLabel: "Navigation",
+    footerContactLabel: "Contact",
+    footerHoursLabel: "Hours",
+    footerShowSocialLinks: true,
+  }),
+);
+
+const mockSidebarUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    sidebarEnabled: true,
+    sidebarWidgets: [],
+    sidebarRecentCount: 5,
+    sidebarPopularCount: 5,
+    sidebarTocEnabled: true,
+  }),
+);
+
+const mockOrganizationUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    businessName: null,
+    businessNameKana: null,
+    representativeName: null,
+    establishedDate: null,
+    registrationNumber: null,
+    invoiceNumber: null,
+    businessDescription: null,
+    phoneNumber: null,
+    faxNumber: null,
+    email: null,
+    postalCode: null,
+    prefecture: null,
+    city: null,
+    streetAddress: null,
+    buildingName: null,
+    businessHours: null,
+    regularHolidays: null,
+    holidayNotice: null,
+    senderEmail: null,
+    senderName: null,
+    replyToEmail: null,
+  }),
+);
+
+const mockCommerceUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    durationDiscountEnabled: false,
+    durationDiscountRules: [],
+    discountCombinationMode: "best",
+    showOriginalPrice: true,
+    taxStandardRate: 10,
+    taxReducedRate: 8,
+    taxDisplayModePublic: "tax_included",
+    refundPolicy: null,
+  }),
+);
+
+const mockNotificationUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    notifyNewReservation: true,
+    notifyReservationChange: true,
+    notifyReservationCancel: true,
+    notifyNewInquiry: true,
+    notifyEventRegistration: true,
+    notifyEventWaitlistRegistration: true,
+    notifyEventCancellation: true,
+    notifyEventReminder: false,
+    notificationStaffIds: [],
+    notificationEmailAddresses: [],
+  }),
+);
+
+const mockReservationUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    defaultTimeSlot: 60,
+    minReservationDuration: 60,
+    maxReservationDuration: 480,
+    sendReservationConfirmationEmail: true,
+    maxRecurrenceInstances: 26,
+    customerCanCancelSeriesInFull: false,
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 24,
   }),
 );
 
@@ -87,6 +210,30 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsSystem: {
       upsert: mockSystemUpsert,
+    },
+    settingsSeo: {
+      upsert: mockSeoUpsert,
+    },
+    settingsAnalytics: {
+      upsert: mockAnalyticsUpsert,
+    },
+    settingsLayout: {
+      upsert: mockLayoutUpsert,
+    },
+    settingsSidebar: {
+      upsert: mockSidebarUpsert,
+    },
+    settingsOrganization: {
+      upsert: mockOrganizationUpsert,
+    },
+    settingsCommerce: {
+      upsert: mockCommerceUpsert,
+    },
+    settingsNotification: {
+      upsert: mockNotificationUpsert,
+    },
+    settingsReservation: {
+      upsert: mockReservationUpsert,
     },
   },
 }));
@@ -124,6 +271,14 @@ describe("getAdminSettings", () => {
     mockSettingsUpsert.mockClear();
     mockCarouselUpsert.mockClear();
     mockSystemUpsert.mockClear();
+    mockSeoUpsert.mockClear();
+    mockAnalyticsUpsert.mockClear();
+    mockLayoutUpsert.mockClear();
+    mockSidebarUpsert.mockClear();
+    mockOrganizationUpsert.mockClear();
+    mockCommerceUpsert.mockClear();
+    mockNotificationUpsert.mockClear();
+    mockReservationUpsert.mockClear();
   });
 
   test("client DTO does not serialize integration secrets or webhook verifiers", async () => {

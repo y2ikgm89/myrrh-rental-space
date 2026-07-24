@@ -234,7 +234,7 @@ export async function updateBusinessInfo(
       : null,
   };
 
-  await prisma.settings.upsert({
+  await prisma.settingsOrganization.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -247,7 +247,7 @@ export async function updateContactInfo(data: ContactInfoInput): Promise<void> {
     email: normalizeNullableString(data.email),
   };
 
-  await prisma.settings.upsert({
+  await prisma.settingsOrganization.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -263,7 +263,7 @@ export async function updateBusinessHoursSettings(
     holidayNotice: data.holidayNotice,
   };
 
-  await prisma.settings.upsert({
+  await prisma.settingsOrganization.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -273,24 +273,43 @@ export async function updateBusinessHoursSettings(
 export async function updateEmailSettings(
   data: EmailSettingsInput,
 ): Promise<void> {
-  const updateData = {
-    ...data,
+  const organizationData = {
     senderEmail: normalizeNullableString(data.senderEmail),
     senderName: normalizeNullableString(data.senderName),
     replyToEmail: normalizeNullableString(data.replyToEmail),
   };
+  const reservationData = {
+    sendReservationConfirmationEmail: data.sendReservationConfirmationEmail,
+  };
+  const notificationData = {
+    notifyEventReminder: data.notifyEventReminder,
+    notificationStaffIds: data.notificationStaffIds,
+    notificationEmailAddresses: data.notificationEmailAddresses,
+  };
 
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
+  await Promise.all([
+    prisma.settingsOrganization.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton", ...organizationData },
+      update: organizationData,
+    }),
+    prisma.settingsReservation.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton", ...reservationData },
+      update: reservationData,
+    }),
+    prisma.settingsNotification.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton", ...notificationData },
+      update: notificationData,
+    }),
+  ]);
 }
 
 export async function updateNotificationSettings(
   data: NotificationSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsNotification.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -337,6 +356,38 @@ export async function ensureSettingsSidebar() {
   });
 }
 
+export async function ensureSettingsOrganization() {
+  return prisma.settingsOrganization.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsCommerce() {
+  return prisma.settingsCommerce.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsNotification() {
+  return prisma.settingsNotification.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsReservation() {
+  return prisma.settingsReservation.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput,
 ): Promise<void> {
@@ -360,7 +411,7 @@ export async function updateCookieConsentSettings(
 export async function updateReservationSettings(
   data: ReservationSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsReservation.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -438,7 +489,7 @@ export async function updateDiscountSettings(
     showOriginalPrice: data.showOriginalPrice,
   };
 
-  await prisma.settings.upsert({
+  await prisma.settingsCommerce.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -446,7 +497,7 @@ export async function updateDiscountSettings(
 }
 
 export async function updateTaxSettings(data: TaxSettingsInput): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsCommerce.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -454,7 +505,7 @@ export async function updateTaxSettings(data: TaxSettingsInput): Promise<void> {
 }
 
 /**
- * `Settings.refundPolicy` (Json?) を書き込む。
+ * `SettingsCommerce.refundPolicy` (Json?) を書き込む。
  *
  * - `policy === null` → `Prisma.JsonNull` を書き込み「policy 未設定」に戻す
  *   (cancellation-side-effects の後方互換動作 = 残額全額返金 に fallback)。
@@ -475,7 +526,7 @@ export async function updateRefundPolicy(
         : asPrismaInputJsonValue(policy, "返金ポリシーの形式が不正です"),
   };
 
-  await prisma.settings.upsert({
+  await prisma.settingsCommerce.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,

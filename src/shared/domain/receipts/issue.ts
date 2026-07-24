@@ -82,7 +82,7 @@ async function claimNextSerialNo(tx: Tx): Promise<string> {
 }
 
 async function fetchIssuerSnapshot(tx: Tx): Promise<Record<string, unknown>> {
-  const settings = await tx.settings.findUnique({
+  const organization = await tx.settingsOrganization.findUnique({
     where: { id: "singleton" },
     select: {
       businessName: true,
@@ -101,17 +101,17 @@ async function fetchIssuerSnapshot(tx: Tx): Promise<Record<string, unknown>> {
     // undefined を null に正規化 (JSON 永続化可能な shape)。適格請求書要件の
     // 事業者情報を発行時点で固定する (invoiceNumber を後日書き換えても
     // 既発行 Receipt は不変・append-only 証跡)。
-    businessName: settings?.["businessName"] ?? null,
-    representativeName: settings?.["representativeName"] ?? null,
-    registrationNumber: settings?.["registrationNumber"] ?? null,
-    invoiceNumber: settings?.["invoiceNumber"] ?? null,
-    email: settings?.["email"] ?? null,
-    phoneNumber: settings?.["phoneNumber"] ?? null,
+    businessName: organization?.businessName ?? null,
+    representativeName: organization?.representativeName ?? null,
+    registrationNumber: organization?.registrationNumber ?? null,
+    invoiceNumber: organization?.invoiceNumber ?? null,
+    email: organization?.email ?? null,
+    phoneNumber: organization?.phoneNumber ?? null,
     address: {
-      postalCode: settings?.["postalCode"] ?? null,
-      prefecture: settings?.["prefecture"] ?? null,
-      city: settings?.["city"] ?? null,
-      streetAddress: settings?.["streetAddress"] ?? null,
+      postalCode: organization?.postalCode ?? null,
+      prefecture: organization?.prefecture ?? null,
+      city: organization?.city ?? null,
+      streetAddress: organization?.streetAddress ?? null,
     },
     snapshotAt: new Date().toISOString(),
   };

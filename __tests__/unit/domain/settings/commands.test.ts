@@ -11,6 +11,15 @@ const mockSettingsSeoUpsert = mock<
 const mockSettingsLayoutUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsOrganizationUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsCommerceUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsReservationUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
 
 mock.module("server-only", () => ({}));
 
@@ -30,6 +39,15 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsLayout: {
       upsert: mockSettingsLayoutUpsert,
+    },
+    settingsOrganization: {
+      upsert: mockSettingsOrganizationUpsert,
+    },
+    settingsCommerce: {
+      upsert: mockSettingsCommerceUpsert,
+    },
+    settingsReservation: {
+      upsert: mockSettingsReservationUpsert,
     },
   },
   Prisma: {
@@ -219,21 +237,21 @@ describe("updateBasicInfo", () => {
 
 describe("updateBusinessInfo", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsOrganizationUpsert.mockReset();
+    mockSettingsOrganizationUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("有効な事業者情報でアップサートが実行される", async () => {
       await updateBusinessInfo(BUSINESS_INFO_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("establishedDate が Date オブジェクトに変換される", async () => {
       await updateBusinessInfo(BUSINESS_INFO_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             establishedDate: expect.any(Date),
@@ -248,7 +266,7 @@ describe("updateBusinessInfo", () => {
         establishedDate: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             establishedDate: null,
@@ -268,7 +286,7 @@ describe("updateBusinessInfo", () => {
         businessDescription: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -279,15 +297,15 @@ describe("updateBusinessInfo", () => {
 
 describe("updateReservationSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsReservationUpsert.mockReset();
+    mockSettingsReservationUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("予約設定データが upsert の update フィールドに渡される", async () => {
       await updateReservationSettings(RESERVATION_SETTINGS_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsReservationUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             defaultTimeSlot: 60,
@@ -306,21 +324,21 @@ describe("updateReservationSettings", () => {
 
 describe("updateDiscountSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsCommerceUpsert.mockReset();
+    mockSettingsCommerceUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("重複のない割引ルールで正常にアップサートされる", async () => {
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("durationDiscountRules が Prisma Json 配列としてそのまま渡される", async () => {
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsCommerceUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             durationDiscountRules:
@@ -336,7 +354,7 @@ describe("updateDiscountSettings", () => {
 
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
-      const firstCall = mockSettingsUpsert.mock.calls[0];
+      const firstCall = mockSettingsCommerceUpsert.mock.calls[0];
       expect(firstCall).toBeDefined();
       if (firstCall === undefined) {
         throw new Error("settings.upsert must be called");
@@ -356,7 +374,7 @@ describe("updateDiscountSettings", () => {
         durationDiscountRules: [],
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("durationDiscountEnabled が false でも正常に動作する", async () => {
@@ -366,7 +384,7 @@ describe("updateDiscountSettings", () => {
         durationDiscountRules: [],
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -397,7 +415,7 @@ describe("updateDiscountSettings", () => {
         }),
       ).rejects.toThrow(DomainError);
 
-      expect(mockSettingsUpsert).not.toHaveBeenCalled();
+      expect(mockSettingsCommerceUpsert).not.toHaveBeenCalled();
     });
   });
 });
@@ -408,21 +426,21 @@ describe("updateDiscountSettings", () => {
 
 describe("updateTaxSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsCommerceUpsert.mockReset();
+    mockSettingsCommerceUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("有効な税設定でアップサートが実行される", async () => {
       await updateTaxSettings(TAX_SETTINGS_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("税設定データが upsert の update フィールドに渡される", async () => {
       await updateTaxSettings(TAX_SETTINGS_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsCommerceUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             taxStandardRate: 10,
@@ -600,8 +618,8 @@ describe("updateLayoutSettings", () => {
 
 describe("updateContactInfo", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsOrganizationUpsert.mockReset();
+    mockSettingsOrganizationUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
@@ -617,7 +635,7 @@ describe("updateContactInfo", () => {
         buildingName: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("空文字のメールアドレスが null に正規化される", async () => {
@@ -632,7 +650,7 @@ describe("updateContactInfo", () => {
         buildingName: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             email: null,
@@ -653,7 +671,7 @@ describe("updateContactInfo", () => {
         buildingName: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             email: "test@example.com",

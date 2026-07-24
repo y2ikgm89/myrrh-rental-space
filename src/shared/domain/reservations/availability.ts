@@ -196,7 +196,7 @@ export async function getBlockedDateRangesForSpace(
 }
 
 export async function getBusinessHoursSettingsQuery(): Promise<BusinessHours | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsOrganization.findUnique({
     where: { id: "singleton" },
     select: { businessHours: true },
   });
@@ -217,7 +217,7 @@ export async function getReservationRuleSettings(): Promise<{
   minReservationDuration: number;
   maxReservationDuration: number;
 }> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsReservation.findUnique({
     where: { id: "singleton" },
     select: {
       defaultTimeSlot: true,

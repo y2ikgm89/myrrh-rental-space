@@ -38,7 +38,7 @@ export async function getPublicDiscountSettings(): Promise<PublicDiscountSetting
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsCommerce.findUnique({
         where: { id: "singleton" },
         select: {
           durationDiscountEnabled: true,

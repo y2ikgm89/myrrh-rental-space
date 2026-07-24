@@ -32,7 +32,11 @@ import type { RefundPolicy } from "@/shared/domain/refund/policy";
 import { ensureSettingsAnnouncementCarousel } from "@/shared/domain/settings/announcement-bar";
 import {
   ensureSettingsAnalytics,
+  ensureSettingsCommerce,
   ensureSettingsLayout,
+  ensureSettingsNotification,
+  ensureSettingsOrganization,
+  ensureSettingsReservation,
   ensureSettingsSeo,
   ensureSettingsSidebar,
   ensureSettingsSystem,
@@ -70,18 +74,45 @@ async function getOrCreateSettings() {
 }
 
 async function getOrCreateSettingsBundle() {
-  const [settings, carousel, system, seo, analytics, layout, sidebar] =
-    await Promise.all([
-      getOrCreateSettings(),
-      ensureSettingsAnnouncementCarousel(),
-      ensureSettingsSystem(),
-      ensureSettingsSeo(),
-      ensureSettingsAnalytics(),
-      ensureSettingsLayout(),
-      ensureSettingsSidebar(),
-    ]);
+  const [
+    settings,
+    carousel,
+    system,
+    seo,
+    analytics,
+    layout,
+    sidebar,
+    organization,
+    commerce,
+    notification,
+    reservation,
+  ] = await Promise.all([
+    getOrCreateSettings(),
+    ensureSettingsAnnouncementCarousel(),
+    ensureSettingsSystem(),
+    ensureSettingsSeo(),
+    ensureSettingsAnalytics(),
+    ensureSettingsLayout(),
+    ensureSettingsSidebar(),
+    ensureSettingsOrganization(),
+    ensureSettingsCommerce(),
+    ensureSettingsNotification(),
+    ensureSettingsReservation(),
+  ]);
 
-  return { settings, carousel, system, seo, analytics, layout, sidebar };
+  return {
+    settings,
+    carousel,
+    system,
+    seo,
+    analytics,
+    layout,
+    sidebar,
+    organization,
+    commerce,
+    notification,
+    reservation,
+  };
 }
 
 function toSettingsData(
@@ -92,6 +123,10 @@ function toSettingsData(
   analytics: Awaited<ReturnType<typeof ensureSettingsAnalytics>>,
   layout: Awaited<ReturnType<typeof ensureSettingsLayout>>,
   sidebar: Awaited<ReturnType<typeof ensureSettingsSidebar>>,
+  organization: Awaited<ReturnType<typeof ensureSettingsOrganization>>,
+  commerce: Awaited<ReturnType<typeof ensureSettingsCommerce>>,
+  notification: Awaited<ReturnType<typeof ensureSettingsNotification>>,
+  reservation: Awaited<ReturnType<typeof ensureSettingsReservation>>,
   options: {
     stripeSecretKeyMasked: string | null;
     stripeWebhookSecretMasked: string | null;
@@ -109,27 +144,27 @@ function toSettingsData(
     footerCopyright: seo.footerCopyright,
     useHeaderLogo: seo.useHeaderLogo,
     useFooterLogo: seo.useFooterLogo,
-    businessName: settings.businessName,
-    businessNameKana: settings.businessNameKana,
-    representativeName: settings.representativeName,
-    establishedDate: settings.establishedDate,
-    registrationNumber: settings.registrationNumber,
-    invoiceNumber: settings.invoiceNumber,
-    businessDescription: settings.businessDescription,
-    phoneNumber: settings.phoneNumber,
-    faxNumber: settings.faxNumber,
-    email: settings.email,
-    postalCode: settings.postalCode,
-    prefecture: settings.prefecture,
-    city: settings.city,
-    streetAddress: settings.streetAddress,
-    buildingName: settings.buildingName,
-    businessHours: parseBusinessHours(settings.businessHours),
-    regularHolidays: parseStringArrayOrNull(settings.regularHolidays),
-    holidayNotice: settings.holidayNotice,
-    senderEmail: settings.senderEmail,
-    senderName: settings.senderName,
-    replyToEmail: settings.replyToEmail,
+    businessName: organization.businessName,
+    businessNameKana: organization.businessNameKana,
+    representativeName: organization.representativeName,
+    establishedDate: organization.establishedDate,
+    registrationNumber: organization.registrationNumber,
+    invoiceNumber: organization.invoiceNumber,
+    businessDescription: organization.businessDescription,
+    phoneNumber: organization.phoneNumber,
+    faxNumber: organization.faxNumber,
+    email: organization.email,
+    postalCode: organization.postalCode,
+    prefecture: organization.prefecture,
+    city: organization.city,
+    streetAddress: organization.streetAddress,
+    buildingName: organization.buildingName,
+    businessHours: parseBusinessHours(organization.businessHours),
+    regularHolidays: parseStringArrayOrNull(organization.regularHolidays),
+    holidayNotice: organization.holidayNotice,
+    senderEmail: organization.senderEmail,
+    senderName: organization.senderName,
+    replyToEmail: organization.replyToEmail,
     defaultMetaDescription: seo.defaultMetaDescription,
     defaultMetaKeywords: seo.defaultMetaKeywords,
     defaultOgpTitle: seo.defaultOgpTitle,
@@ -141,26 +176,28 @@ function toSettingsData(
     bingWebmasterToolsId: analytics.bingWebmasterToolsId,
     gaPropertyId: analytics.gaPropertyId,
     microsoftClarityId: analytics.microsoftClarityId,
-    defaultTimeSlot: settings.defaultTimeSlot,
-    minReservationDuration: settings.minReservationDuration,
-    maxReservationDuration: settings.maxReservationDuration,
-    cancellationDeadlineHours: settings.cancellationDeadlineHours,
-    modificationDeadlineHours: settings.modificationDeadlineHours,
-    customerCanCancelSeriesInFull: settings.customerCanCancelSeriesInFull,
-    sendReservationConfirmationEmail: settings.sendReservationConfirmationEmail,
-    notifyNewReservation: settings.notifyNewReservation,
-    notifyReservationChange: settings.notifyReservationChange,
-    notifyReservationCancel: settings.notifyReservationCancel,
-    notifyNewInquiry: settings.notifyNewInquiry,
-    notifyEventRegistration: settings.notifyEventRegistration,
-    notifyEventWaitlistRegistration: settings.notifyEventWaitlistRegistration,
-    notifyEventCancellation: settings.notifyEventCancellation,
-    notifyEventReminder: settings.notifyEventReminder,
-    notificationStaffIds: settings.notificationStaffIds,
-    notificationEmailAddresses: settings.notificationEmailAddresses,
-    taxStandardRate: settings.taxStandardRate,
-    taxReducedRate: settings.taxReducedRate,
-    taxDisplayModePublic: settings.taxDisplayModePublic,
+    defaultTimeSlot: reservation.defaultTimeSlot,
+    minReservationDuration: reservation.minReservationDuration,
+    maxReservationDuration: reservation.maxReservationDuration,
+    cancellationDeadlineHours: reservation.cancellationDeadlineHours,
+    modificationDeadlineHours: reservation.modificationDeadlineHours,
+    customerCanCancelSeriesInFull: reservation.customerCanCancelSeriesInFull,
+    sendReservationConfirmationEmail:
+      reservation.sendReservationConfirmationEmail,
+    notifyNewReservation: notification.notifyNewReservation,
+    notifyReservationChange: notification.notifyReservationChange,
+    notifyReservationCancel: notification.notifyReservationCancel,
+    notifyNewInquiry: notification.notifyNewInquiry,
+    notifyEventRegistration: notification.notifyEventRegistration,
+    notifyEventWaitlistRegistration:
+      notification.notifyEventWaitlistRegistration,
+    notifyEventCancellation: notification.notifyEventCancellation,
+    notifyEventReminder: notification.notifyEventReminder,
+    notificationStaffIds: notification.notificationStaffIds,
+    notificationEmailAddresses: notification.notificationEmailAddresses,
+    taxStandardRate: commerce.taxStandardRate,
+    taxReducedRate: commerce.taxReducedRate,
+    taxDisplayModePublic: commerce.taxDisplayModePublic,
     maintenanceMode: system.maintenanceMode,
     maintenanceMessage: system.maintenanceMessage,
     stripePublishableKey: settings.stripePublishableKey,
@@ -262,8 +299,19 @@ function parseCalendarSyncMethod(value: string | null): CalendarSyncMethod {
 }
 
 export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
-  const { settings, carousel, system, seo, analytics, layout, sidebar } =
-    await getOrCreateSettingsBundle();
+  const {
+    settings,
+    carousel,
+    system,
+    seo,
+    analytics,
+    layout,
+    sidebar,
+    organization,
+    commerce,
+    notification,
+    reservation,
+  } = await getOrCreateSettingsBundle();
 
   return toSettingsData(
     settings,
@@ -273,6 +321,10 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
     analytics,
     layout,
     sidebar,
+    organization,
+    commerce,
+    notification,
+    reservation,
     {
       stripeSecretKeyMasked: null,
       stripeWebhookSecretMasked: null,
@@ -282,8 +334,19 @@ export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
 }
 
 export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
-  const { settings, carousel, system, seo, analytics, layout, sidebar } =
-    await getOrCreateSettingsBundle();
+  const {
+    settings,
+    carousel,
+    system,
+    seo,
+    analytics,
+    layout,
+    sidebar,
+    organization,
+    commerce,
+    notification,
+    reservation,
+  } = await getOrCreateSettingsBundle();
 
   const stripeSecretKeyMasked = settings.stripeSecretKey
     ? maskSecretKey(
@@ -325,6 +388,10 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
     analytics,
     layout,
     sidebar,
+    organization,
+    commerce,
+    notification,
+    reservation,
     {
       stripeSecretKeyMasked,
       stripeWebhookSecretMasked,
@@ -429,7 +496,7 @@ export async function getGoogleCalendarWebhookState(): Promise<GoogleCalendarWeb
 }
 
 export async function getDiscountSettings(): Promise<DiscountSettingsData> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsCommerce.findUnique({
     where: { id: "singleton" },
     select: {
       durationDiscountEnabled: true,
@@ -456,7 +523,7 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
 }
 
 export async function getTaxSettings(): Promise<TaxSettings> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsCommerce.findUnique({
     where: { id: "singleton" },
     select: {
       taxStandardRate: true,
@@ -477,14 +544,14 @@ export async function getTaxSettings(): Promise<TaxSettings> {
 }
 
 /**
- * `Settings.refundPolicy` を parse して RefundPolicy か null で返す。
+ * `SettingsCommerce.refundPolicy` を parse して RefundPolicy か null で返す。
  *
  * 未設定 (null) / shape 破損の両方を null に集約する fail-open 動作は
  * `parseRefundPolicy` に集約されている。UI 側は null を「policy 未設定 =
  * cancellation 時は残額全額返金」として表示する。
  */
 export async function getRefundPolicySettings(): Promise<RefundPolicy | null> {
-  const settings = await prisma.settings.findUnique({
+  const settings = await prisma.settingsCommerce.findUnique({
     where: { id: "singleton" },
     select: { refundPolicy: true },
   });

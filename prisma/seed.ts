@@ -469,14 +469,15 @@ async function seedSettings(
       }
     : { senderEmail: null, replyToEmail: null };
 
-  const settingsData = {
+  const organizationData = {
     ...businessPlaceholders,
-    cancellationDeadlineHours: 24,
-    modificationDeadlineHours: 24,
-
-    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
     senderName: "Myrrh Rental Space",
     ...emailPlaceholders,
+  };
+
+  const reservationData = {
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 24,
   };
 
   const seoData = {
@@ -502,17 +503,24 @@ async function seedSettings(
   // SSoT: FEATURE_MODULES_LIST registry + SEED_FEATURE_MODULES_DISABLED env var。
   await prisma.settings.upsert({
     where: { id: "singleton" },
-    update: options.resetFeatureModules
-      ? { ...settingsData, featureModules }
-      : settingsData,
+    update: options.resetFeatureModules ? { featureModules } : {},
     create: {
       id: "singleton",
-      ...settingsData,
       featureModules,
     },
   });
 
   await Promise.all([
+    prisma.settingsOrganization.upsert({
+      where: { id: "singleton" },
+      update: organizationData,
+      create: { id: "singleton", ...organizationData },
+    }),
+    prisma.settingsReservation.upsert({
+      where: { id: "singleton" },
+      update: reservationData,
+      create: { id: "singleton", ...reservationData },
+    }),
     prisma.settingsAnnouncementCarousel.upsert({
       where: { id: "singleton" },
       update: {},
@@ -539,6 +547,16 @@ async function seedSettings(
       create: { id: "singleton" },
     }),
     prisma.settingsSidebar.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsCommerce.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsNotification.upsert({
       where: { id: "singleton" },
       update: {},
       create: { id: "singleton" },

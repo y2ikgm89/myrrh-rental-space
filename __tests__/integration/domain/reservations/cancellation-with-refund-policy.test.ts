@@ -316,9 +316,7 @@ async function createPaidReservationFixture(
 }
 
 async function setRefundPolicy(policy: unknown): Promise<void> {
-  // Settings singleton は毎テスト upsert。JsonNull は Prisma に null を渡すと
-  // undefined と衝突するため raw で対応 (updateMany data は Prisma sentinel を使う)。
-  await prisma.settings.upsert({
+  await prisma.settingsCommerce.upsert({
     where: { id: "singleton" },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only: shape 破損 case で unknown JSON も渡すため
     create: { id: "singleton", refundPolicy: policy as any },
@@ -328,7 +326,7 @@ async function setRefundPolicy(policy: unknown): Promise<void> {
 }
 
 async function clearRefundPolicy(): Promise<void> {
-  await prisma.$executeRaw`UPDATE settings SET "refundPolicy" = NULL WHERE id = 'singleton'`;
+  await prisma.$executeRaw`UPDATE settings_commerces SET "refundPolicy" = NULL WHERE id = 'singleton'`;
 }
 
 function baseInput(reservationId: string) {

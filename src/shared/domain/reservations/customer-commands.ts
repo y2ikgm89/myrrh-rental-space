@@ -354,7 +354,7 @@ export async function updateCustomerReservation(
     }
 
     // 割引・税設定を取得
-    const settings = await tx.settings.findFirst({
+    const settings = await tx.settingsCommerce.findFirst({
       select: {
         durationDiscountEnabled: true,
         durationDiscountRules: true,

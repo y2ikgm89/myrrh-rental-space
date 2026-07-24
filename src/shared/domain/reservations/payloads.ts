@@ -58,7 +58,7 @@ export const CUSTOMER_SELECT = {
 // ---------------------------------------------------------------------------
 
 export async function getReservationSettings() {
-  return prisma.settings.findUnique({
+  return prisma.settingsCommerce.findUnique({
     where: { id: "singleton" },
     select: {
       durationDiscountEnabled: true,
@@ -78,7 +78,7 @@ export async function getReservationSettings() {
  * validateRruleForSeries が上限を強制するため defense-in-depth。
  */
 export async function getMaxRecurrenceInstances(): Promise<number> {
-  const settings = await prisma.settings.findUniqueOrThrow({
+  const settings = await prisma.settingsReservation.findUniqueOrThrow({
     where: { id: "singleton" },
     select: { maxRecurrenceInstances: true },
   });
@@ -90,7 +90,7 @@ export async function getMaxRecurrenceInstances(): Promise<number> {
  * Task 26 で顧客マイページ (`page.tsx`) の gate 判定に使う。
  */
 export async function getCustomerCanCancelSeriesInFull(): Promise<boolean> {
-  const settings = await prisma.settings.findUniqueOrThrow({
+  const settings = await prisma.settingsReservation.findUniqueOrThrow({
     where: { id: "singleton" },
     select: { customerCanCancelSeriesInFull: true },
   });

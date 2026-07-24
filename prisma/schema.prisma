@@ -1576,6 +1576,96 @@ model SettingsSidebar {
   @@map("settings_sidebars")
 }
 
+model SettingsOrganization {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessName        String?
+  businessNameKana    String?
+  representativeName  String?
+  establishedDate     DateTime?
+  registrationNumber  String?
+  invoiceNumber       String?
+  businessDescription String? @db.Text
+
+  phoneNumber   String?
+  faxNumber     String?
+  email         String?
+  postalCode    String?
+  prefecture    String?
+  city          String?
+  streetAddress String?
+  buildingName  String?
+
+  businessHours   Json?
+  regularHolidays Json?
+  holidayNotice   String? @db.Text
+
+  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの env-OR-DB。
+  senderEmail  String?
+  senderName   String?
+  replyToEmail String?
+
+  @@map("settings_organizations")
+}
+
+model SettingsCommerce {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  durationDiscountEnabled Boolean                 @default(false)
+  durationDiscountRules   Json                    @default("[]")
+  discountCombinationMode DiscountCombinationMode @default(best)
+  showOriginalPrice       Boolean                 @default(true)
+
+  taxStandardRate      Decimal        @default(10) @db.Decimal(5, 2)
+  taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
+  taxDisplayModePublic TaxDisplayMode @default(tax_included)
+
+  refundPolicy Json? @db.JsonB
+
+  @@map("settings_commerces")
+}
+
+model SettingsNotification {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifyNewReservation            Boolean @default(true)
+  notifyReservationChange         Boolean @default(true)
+  notifyReservationCancel         Boolean @default(true)
+  notifyNewInquiry                Boolean @default(true)
+  notifyEventRegistration         Boolean @default(true)
+  notifyEventWaitlistRegistration Boolean @default(true)
+  notifyEventCancellation         Boolean @default(true)
+  notifyEventReminder             Boolean @default(false)
+
+  notificationStaffIds       String[] @default([])
+  notificationEmailAddresses String[] @default([])
+
+  @@map("settings_notifications")
+}
+
+model SettingsReservation {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  defaultTimeSlot                  Int     @default(60)
+  minReservationDuration           Int     @default(60)
+  maxReservationDuration           Int     @default(480)
+  sendReservationConfirmationEmail Boolean @default(true)
+  maxRecurrenceInstances           Int     @default(26)
+  customerCanCancelSeriesInFull    Boolean @default(false)
+  cancellationDeadlineHours        Int     @default(24)
+  modificationDeadlineHours        Int     @default(24)
+
+  @@map("settings_reservations")
+}
+
 // ==============================================
 // Settings (Singleton)
 // ==============================================
@@ -1586,84 +1676,7 @@ model Settings {
   updatedAt DateTime @updatedAt
 
   // Site / SEO / layout / sidebar / analytics は Phase 2 split 済 singleton テーブルへ移行。
-
-  // Business Info (事業者情報)
-  businessName        String? // 会社名・屋号
-  businessNameKana    String? // 会社名・屋号（カナ） — JSON-LD alternateName で公開
-  representativeName  String? // 代表者名
-  establishedDate     DateTime? // 設立日
-  registrationNumber  String? // 法人番号/登録番号 — 特商法表記で公開
-  invoiceNumber       String? // インボイス登録番号
-  businessDescription String?   @db.Text // 事業概要
-
-  // Contact Info
-  // 表示用住所は postalCode + prefecture + city + streetAddress + buildingName から派生（SSoT）
-  phoneNumber   String?
-  faxNumber     String?
-  email         String?
-  postalCode    String? // 郵便番号
-  prefecture    String? // 都道府県
-  city          String? // 市区町村
-  streetAddress String? // 番地以降
-  buildingName  String? // 建物名
-
-  // Business Hours (営業時間)
-  businessHours   Json? // 曜日ごとの営業時間
-  regularHolidays Json? // 定休日（曜日）
-  holidayNotice   String? @db.Text // 休業日のお知らせ
-
-  // Access Info (アクセス情報)
-  // 交通案内・駐車場案内は Location 単位（multi-location）が SSoT。
-  // Settings 側の旧 accessInfo / parkingInfo は 2026-05-01 に廃止。
-
-  // Email Settings
-  // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの
-  // env-OR-DB（API キー / Stripe / Turnstile と同方式）。senderEmail/senderName は
-  // 管理画面のメール設定で運用者が設定でき、保存時に Resend 検証済みドメインと照合する。
-  senderEmail  String?
-  senderName   String?
-  replyToEmail String?
-
-  // Reservation Settings（常に有効な整数。未設定行は DB default で埋めたうえで NOT NULL）
-  defaultTimeSlot                  Int     @default(60)
-  minReservationDuration           Int     @default(60)
-  maxReservationDuration           Int     @default(480)
-  sendReservationConfirmationEmail Boolean @default(true)
-  // Phase B.2: 繰返し予約 (RRULE) の 1 series あたり最大 instance 数 upper bound (admin 設定可)
-  maxRecurrenceInstances           Int     @default(26)
-
-  // Phase B.2 task 25: 顧客が定期予約を series-all スコープで自らキャンセルできるか。
-  // false (default): 顧客はマイページで series-all キャンセルできず、admin へ問い合わせ導線のみ。
-  // true: マイページからも「定期予約すべてをキャンセル」ボタンが表示される。
-  customerCanCancelSeriesInFull    Boolean @default(false)
-
-  // Discount Settings (割引設定) - Enum化
-  durationDiscountEnabled Boolean                 @default(false)
-  durationDiscountRules   Json                    @default("[]")
-  discountCombinationMode DiscountCombinationMode @default(best)
-  showOriginalPrice       Boolean                 @default(true)
-
-  // Tax Settings (消費税設定) - Enum化
-  taxStandardRate      Decimal        @default(10) @db.Decimal(5, 2)
-  taxReducedRate       Decimal        @default(8) @db.Decimal(5, 2)
-  taxDisplayModePublic TaxDisplayMode @default(tax_included)
-
-  // Notification Settings（管理者通知のイベント別トグル）
-  notifyNewReservation       Boolean  @default(true)
-  notifyReservationChange    Boolean  @default(true)
-  notifyReservationCancel    Boolean  @default(true)
-  notifyNewInquiry           Boolean  @default(true)
-  notifyEventRegistration    Boolean  @default(true)
-  notifyEventWaitlistRegistration Boolean @default(true)
-  notifyEventCancellation    Boolean  @default(true)
-  // 通知先: スタッフ(User.id 配列・送信時に現在メールへ解決) ＋ カスタムメール
-  notificationStaffIds       String[] @default([])
-  notificationEmailAddresses String[] @default([])
-
-  // Customer Reminder Settings（参加者向けリマインダーメールのトグル）
-  // 上記の管理者通知トグルとは対象読者が異なる。イベント前日リマインダーは
-  // 参加者全員へ一斉送信されるため送信数が増えやすく、既定は無効（opt-in）にする。
-  notifyEventReminder Boolean @default(false)
+  // Organization / commerce / notification / reservation は Phase 3 split 済。
 
   // Other Settings
   // timezone / language 列は 2026-06-20 撤去。日付整形は date-format.ts が "Asia/Tokyo" を、
@@ -1688,13 +1701,7 @@ model Settings {
   stripeLastTestedAt     DateTime?
   stripeConnectionStatus String?
 
-  // Refund Policy (task #9 PR#5): tier ベース返金率の JSON snapshot。
-  // Schema: `{ tiers: Array<{ hoursBefore: number; refundRate: number (0-100) }>, defaultRefundRate: number (0-100) }`
-  // 例: `{ tiers: [{ hoursBefore: 168, refundRate: 100 }, { hoursBefore: 72, refundRate: 50 }], defaultRefundRate: 0 }`
-  // = 7 日前まで 100%、3 日前まで 50%、それ以降 0%。
-  // null なら policy 未設定 (現状の「auto refund 時は全額」動作を維持、後方互換)。
-  // 参照: `cancellation-side-effects.ts` の auto refund 経路 + admin settings UI (次 PR で実装)。
-  refundPolicy           Json?     @db.JsonB
+  // Tier ベース返金率 JSON は SettingsCommerce (settings_commerces) へ移行済 (Phase 3)。
 
   // announcementBar* carousel 設定は SettingsAnnouncementCarousel
   // (settings_announcement_carousels) へ移行済 (Phase 1)。
@@ -1813,10 +1820,6 @@ model Settings {
   // Webhook URL 難読化用トークン（SwitchBot は inbound webhook の署名検証機構を提供しないため、
   // 推測困難な URL パスセグメント + deviceMac 照合の二重防御で代替する）
   switchbotWebhookPathToken      String?   @db.Text // Encrypted
-
-  // Mypage Deadline Settings（マイページ操作期限）
-  cancellationDeadlineHours Int @default(24) // キャンセル可能期限（時間前）
-  modificationDeadlineHours Int @default(24) // 変更可能期限（時間前）
 
   @@map("settings")
 }

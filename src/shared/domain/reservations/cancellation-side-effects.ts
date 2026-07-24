@@ -337,7 +337,7 @@ async function runRefundStep(args: {
         ? input.refundPolicySnapshot
         : parseRefundPolicy(
             (
-              await prisma.settings.findUnique({
+              await prisma.settingsCommerce.findUnique({
                 where: { id: "singleton" },
                 select: { refundPolicy: true },
               })
@@ -807,7 +807,7 @@ export async function applyBulkCancellationSideEffects(
   //   （PERF-02-FIX、audit 2026-07-18）。
   let refundPolicySnapshot: RefundPolicy | null | undefined = undefined;
   try {
-    const settings = await prisma.settings.findUnique({
+    const settings = await prisma.settingsCommerce.findUnique({
       where: { id: "singleton" },
       select: { refundPolicy: true },
     });

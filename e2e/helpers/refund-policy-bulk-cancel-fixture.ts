@@ -120,18 +120,18 @@ export async function setupRefundPolicyBulkCancelFixture(): Promise<RefundPolicy
   // Step 0: 前回残骸を掃除
   await purgeExistingFixture(client);
 
-  // Step 1: Settings snapshot + refundPolicy 置き換え
-  const settings = await client.settings.findUnique({
+  // Step 1: SettingsCommerce snapshot + refundPolicy 置き換え
+  const commerce = await client.settingsCommerce.findUnique({
     where: { id: "singleton" },
     select: { refundPolicy: true },
   });
-  if (!settings) {
+  if (!commerce) {
     throw new Error(
-      "Settings singleton row が見つかりません。seed 実行を確認してください。",
+      "SettingsCommerce singleton row が見つかりません。seed 実行を確認してください。",
     );
   }
-  const originalRefundPolicy = settings.refundPolicy;
-  await client.settings.update({
+  const originalRefundPolicy = commerce.refundPolicy;
+  await client.settingsCommerce.update({
     where: { id: "singleton" },
     data: {
       refundPolicy: REFUND_FIXTURE_POLICY as unknown as Prisma.InputJsonValue,
@@ -268,9 +268,9 @@ export async function teardownRefundPolicyBulkCancelFixture(
     fixture.originalRefundPolicy === null ||
     fixture.originalRefundPolicy === undefined
   ) {
-    await client.$executeRaw`UPDATE settings SET "refundPolicy" = NULL WHERE id = 'singleton'`;
+    await client.$executeRaw`UPDATE settings_commerces SET "refundPolicy" = NULL WHERE id = 'singleton'`;
   } else {
-    await client.settings.update({
+    await client.settingsCommerce.update({
       where: { id: "singleton" },
       data: {
         refundPolicy: fixture.originalRefundPolicy as Prisma.InputJsonValue,
