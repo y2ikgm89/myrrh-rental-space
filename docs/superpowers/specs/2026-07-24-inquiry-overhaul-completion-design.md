@@ -74,16 +74,23 @@ model InquiryReply {
 
 DB CHECK（migration SQL）:
 
+User / Customer 削除時の `onDelete: SetNull` を壊さないため、「正しい側 FK の NOT NULL」は
+強制しない。禁止するのは **逆側 FK の混入** のみ。
+
 ```sql
-ALTER TABLE inquiry_replies ADD CONSTRAINT inquiry_replies_author_xor_check CHECK (
-  ( "authorType" = 'STAFF' AND "authorId" IS NOT NULL AND "authorCustomerId" IS NULL )
+ALTER TABLE inquiry_replies ADD CONSTRAINT inquiry_replies_author_side_check CHECK (
+  ( "authorType" = 'STAFF' AND "authorCustomerId" IS NULL )
   OR
-  ( "authorType" = 'CUSTOMER' AND "authorCustomerId" IS NOT NULL AND "authorId" IS NULL )
+  ( "authorType" = 'CUSTOMER' AND "authorId" IS NULL )
 );
 ```
 
-既存行はすべて STAFF（Phase 1 data migration）のため backfill 不要。  
-アプリ側でも create 時に同じ不変条件を assert（DB に頼るだけにしない）。
+作成時のアプリ assert（create 経路）:
+
+- STAFF → `authorId` 必須・`authorCustomerId` null
+- CUSTOMER → `authorCustomerId` 必須・`authorId` null
+
+既存行はすべて STAFF（Phase 1 data migration）のため backfill 不要。
 
 `InquiryReplyItem.authorName`:
 
