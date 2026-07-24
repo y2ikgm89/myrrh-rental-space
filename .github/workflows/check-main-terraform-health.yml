@@ -14,11 +14,15 @@ name: Main Terraform Health
 # 対策: main の最新 deploy-production run status を required check に昇格させ、
 # main が unhealthy な間は全 PR の auto-merge を physically block する。
 #
+# Deploy Production は `workflow_dispatch` のみ (push-to-main 自動デプロイ廃止)。
+# 最新 run は event を絞らず取得する (`--event push` だと手動成功を無視して
+# 古い push failure のまま PR を永久 block する)。
+#
 # ## 判定ロジック
 #
 #   - SUCCESS: pass (通常運用)
 #   - STATUS != completed (queued / in_progress / pending / waiting / requested):
-#     pass (deploy 未完了、次 push を待たず block しない。future GitHub API で
+#     pass (deploy 未完了、次 run を待たず block しない。future GitHub API で
 #     追加される新 status も全てここで pass 側に倒す)
 #   - 初回 (no prior run): pass (green field)
 #   - FAILURE / CANCELLED / TIMED_OUT: **fail** (最新 apply が壊れている、fix PR merge が先)
@@ -111,14 +115,14 @@ jobs:
           set -euo pipefail
           # 最新の main branch 上の deploy-production.yml run status を取得。
           # `--limit 1` で最新 1 件、`--branch main` で PR run を除外。
-          # `event=push` で main への直 push (auto-merge 経由の squash commit も含む) のみ拾う。
+          # event は絞らない: 本番デプロイは workflow_dispatch のみのため、
+          # `--event push` だと手動成功を無視して古い push failure で gate が固着する。
           RESPONSE="$(gh run list \
             --repo "${GITHUB_REPO}" \
             --workflow deploy-production.yml \
             --branch main \
-            --event push \
             --limit 1 \
-            --json databaseId,conclusion,status,createdAt,headSha,url)"
+            --json databaseId,conclusion,status,createdAt,headSha,url,event)"
 
           COUNT="$(echo "${RESPONSE}" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
           if [ "${COUNT}" = "0" ]; then

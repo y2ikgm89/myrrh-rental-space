@@ -7,6 +7,15 @@ const workflow = readFileSync(
   join(process.cwd(), ".github", "workflows", "deploy-production.yml"),
   "utf8",
 );
+const mainTerraformHealthWorkflow = readFileSync(
+  join(
+    process.cwd(),
+    ".github",
+    "workflows",
+    "check-main-terraform-health.yml",
+  ),
+  "utf8",
+);
 const cloudBuildConfig = readFileSync(
   join(process.cwd(), "cloudbuild.yaml"),
   "utf8",
@@ -514,5 +523,18 @@ describe("production deploy workflow", () => {
     expect(runbook).toContain("breaking migration deploy mode");
     expect(runbook).toContain("_BREAKING_MIGRATION_DEPLOY=true");
     expect(runbook).toContain("gcloud run services update SERVICE --scaling=0");
+  });
+});
+
+describe("Main Terraform Health gate", () => {
+  test("watches latest main Deploy Production run regardless of event type", () => {
+    // Deploy Production は workflow_dispatch のみ。`--event push` に絞ると
+    // 手動成功を無視して古い push failure で PR が永久 block される。
+    expect(mainTerraformHealthWorkflow).toContain(
+      "--workflow deploy-production.yml",
+    );
+    expect(mainTerraformHealthWorkflow).toContain("--branch main");
+    expect(mainTerraformHealthWorkflow).not.toContain("--event push");
+    expect(mainTerraformHealthWorkflow).toContain("[skip-main-health]");
   });
 });
