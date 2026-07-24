@@ -2,6 +2,7 @@ import "server-only";
 
 import { InquiryReplyAuthorType, InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { ADMIN_OR_HIGHER_ROLES } from "@/shared/lib/admin-roles";
 import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -9,13 +10,17 @@ import type { Prisma } from "@generated/prisma/client";
 
 type InquiryWhereInput = Prisma.InquiryWhereInput;
 import type {
+  AssignableStaffOption,
   GetInquiriesResult,
   InquiryAttachmentItem,
   InquiryFilters,
+  InquiryInternalNoteItem,
   InquiryListItem,
   InquiryPagination,
   InquiryReplyItem,
   InquiryStats,
+  InquiryStatusHistoryItem,
+  InquiryTagOption,
   InquiryWithCustomer,
 } from "@/shared/domain/inquiries/types";
 
@@ -99,11 +104,84 @@ export function flattenAttachment(a: RawAttachment): InquiryAttachmentItem {
   };
 }
 
+/** InquiryStatusHistory の select 生形状 (changedBy を名前に平坦化する前)。 */
+const STATUS_HISTORY_SELECT = {
+  id: true,
+  fromStatus: true,
+  toStatus: true,
+  changedById: true,
+  changedBy: { select: { name: true } },
+  reason: true,
+  createdAt: true,
+} as const;
+
+type RawStatusHistory = {
+  id: string;
+  fromStatus: InquiryStatus | null;
+  toStatus: InquiryStatus;
+  changedById: string | null;
+  changedBy: { name: string } | null;
+  reason: string | null;
+  createdAt: Date;
+};
+
+function flattenStatusHistory(h: RawStatusHistory): InquiryStatusHistoryItem {
+  return {
+    id: h.id,
+    fromStatus: h.fromStatus,
+    toStatus: h.toStatus,
+    changedById: h.changedById,
+    changedByName: h.changedBy?.name ?? null,
+    reason: h.reason,
+    createdAt: h.createdAt,
+  };
+}
+
+/** InquiryInternalNote の select 生形状 (author を名前に平坦化する前)。 */
+const INTERNAL_NOTE_SELECT = {
+  id: true,
+  body: true,
+  authorId: true,
+  author: { select: { name: true } },
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+type RawInternalNote = {
+  id: string;
+  body: string;
+  authorId: string;
+  author: { name: string } | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function flattenInternalNote(n: RawInternalNote): InquiryInternalNoteItem {
+  return {
+    id: n.id,
+    body: n.body,
+    authorId: n.authorId,
+    authorName: n.author?.name ?? null,
+    createdAt: n.createdAt,
+    updatedAt: n.updatedAt,
+  };
+}
+
 export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {},
 ): Promise<Serialized<GetInquiriesResult>> {
-  const { status, search, assigneeId, includeDeleted } = filters;
+  const {
+    status,
+    search,
+    assigneeId,
+    tagId,
+    customerType,
+    slaExpired,
+    createdFrom,
+    createdTo,
+    includeDeleted,
+  } = filters;
   const { sortBy = "createdAt", sortOrder = "desc" } = pagination;
   const { skip, take, page, limit } = paginate(pagination);
 
@@ -119,6 +197,26 @@ export async function getInquiries(
 
   if (assigneeId) {
     where.assigneeId = assigneeId;
+  }
+
+  if (tagId) {
+    where.tags = { some: { tagId } };
+  }
+
+  if (customerType) {
+    where.customerType = customerType;
+  }
+
+  // slaExpiresAt が設定済みかつ現在時刻より過去 = SLA 超過。未設定 (null) は対象外。
+  if (slaExpired) {
+    where.slaExpiresAt = { not: null, lt: new Date() };
+  }
+
+  if (createdFrom || createdTo) {
+    where.createdAt = {
+      ...(createdFrom ? { gte: createdFrom } : {}),
+      ...(createdTo ? { lte: createdTo } : {}),
+    };
   }
 
   if (search) {
@@ -137,7 +235,7 @@ export async function getInquiries(
   // getInquiryById と同じ select を使い回しており、message 全文・全 reply
   // スレッド本文・phoneNumber 等ページ表示に不要なデータを毎ページ・毎行
   // フルロードしていた。詳細表示専用フィールドが必要な画面は getInquiryById
-  // を使う。
+  // を使う。Phase 4: 担当者名・タグ名を軽量投影として追加。
   const [total, inquiries] = await Promise.all([
     prisma.inquiry.count({ where }),
     prisma.inquiry.findMany({
@@ -157,6 +255,8 @@ export async function getInquiries(
             firstName: true,
           },
         },
+        assignee: { select: { name: true } },
+        tags: { select: { tag: { select: { name: true } } } },
         createdAt: true,
       },
       orderBy: {
@@ -176,6 +276,8 @@ export async function getInquiries(
     subject: i.subject,
     status: i.status,
     customer: i.customer,
+    assigneeName: i.assignee?.name ?? null,
+    tagNames: i.tags.map((t) => t.tag.name),
     createdAt: i.createdAt,
   }));
 
@@ -217,6 +319,18 @@ export async function getInquiryById(
         orderBy: { createdAt: "asc" },
         select: ATTACHMENT_SELECT_INTERNAL,
       },
+      statusHistory: {
+        orderBy: { createdAt: "asc" },
+        select: STATUS_HISTORY_SELECT,
+      },
+      internalNotes: {
+        orderBy: { createdAt: "asc" },
+        select: INTERNAL_NOTE_SELECT,
+      },
+      tags: {
+        orderBy: { tag: { name: "asc" } },
+        select: { tag: { select: { id: true, name: true, color: true } } },
+      },
       customer: {
         select: {
           id: true,
@@ -251,6 +365,9 @@ export async function getInquiryById(
     anonymizedAt: inquiry.anonymizedAt,
     replies: inquiry.replies.map(flattenReply),
     attachments: inquiry.attachments.map(flattenAttachment),
+    statusHistory: inquiry.statusHistory.map(flattenStatusHistory),
+    internalNotes: inquiry.internalNotes.map(flattenInternalNote),
+    tags: inquiry.tags.map((t) => t.tag),
     customer: inquiry.customer,
     createdAt: inquiry.createdAt,
     updatedAt: inquiry.updatedAt,
@@ -314,6 +431,47 @@ export async function getInquiryAttachmentForDownload(
     inquiryId: attachment.inquiryId,
     customerId: attachment.inquiry.customerId,
   };
+}
+
+// ============================================================================
+// Phase 4 (ops surfaces): タグマスタ一覧 / アサイン可能スタッフ一覧
+// ============================================================================
+
+/** タグマスタ一覧 (name 昇順)。紐づく Inquiry 件数を添えて削除可否の目安を示す。 */
+export async function listInquiryTagsQuery(): Promise<InquiryTagOption[]> {
+  const tags = await prisma.inquiryTag.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      _count: { select: { inquiries: true } },
+    },
+  });
+
+  return tags.map((t) => ({
+    id: t.id,
+    name: t.name,
+    color: t.color,
+    inquiryCount: t._count.inquiries,
+  }));
+}
+
+/**
+ * 担当者アサイン候補のスタッフ一覧 (name 昇順)。
+ *
+ * `inquiry:update` 権限を持つロール (ADMIN / SUPER_ADMIN) のみを対象にする。
+ * EDITOR / VIEWER は閲覧専用のため、アサインしても実際に対応できない。
+ */
+export async function listAssignableStaffQuery(): Promise<
+  AssignableStaffOption[]
+> {
+  const users = await prisma.user.findMany({
+    where: { role: { in: [...ADMIN_OR_HIGHER_ROLES] } },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+  });
+  return users;
 }
 
 export async function getInquiryStats(): Promise<InquiryStats> {

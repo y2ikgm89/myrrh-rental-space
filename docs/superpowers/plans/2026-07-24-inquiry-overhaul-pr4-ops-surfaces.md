@@ -20,6 +20,17 @@
 
 ### Task 1: Domain commands + query extensions
 
+**Concrete paths (explore 2026-07-24):**
+
+- Domain: `src/shared/domain/inquiries/{types,queries}.ts` + **new** `ops-commands.ts`
+- Staff: reuse `getNotificationStaffCandidates()` (`domain/users/queries.ts`)
+- Actions: `_shared/actions/inquiry.ts` or **new** `inquiry/ops.ts` (`executeAdminMutationResult`)
+- nuqs: `src/shared/lib/nuqs/parsers.ts` (`adminInquirySearchParamsParsers`)
+- List UI: `inquiries/{page.tsx,_components/InquiryFilters.tsx,InquiryTable.tsx}`
+- Detail: `inquiries/[id]/{page.tsx,_components/InquiryDetail.tsx}` + sidebar components
+- Tag master: **new** `inquiries/tags/` (mirror post `TagManager` / `tag-commands.ts`)
+- Gap: schema+partial assignee query only; commands/UI/notes/tags/history all new
+
 **Files:**
 
 - Modify/Create under `src/shared/domain/inquiries/`:
