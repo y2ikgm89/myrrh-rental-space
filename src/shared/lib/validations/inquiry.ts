@@ -40,6 +40,13 @@ export const publicInquirySchema = z
         error: "同じ規約に複数回同意することはできません",
       }),
     turnstileToken: z.string().optional(),
+    // bot対策のhoneypotフィールド。フォームに実在しない項目("website")を装い、
+    // botが機械的に埋めやすい名前にする(OWASP Automated Threats Handbook推奨)。
+    // formRenderedAtは表示から3秒未満の送信を拒否する時間トラップ。
+    // どちらもZodではエラー化せずServer Action側のcheckBotHeuristicsで判定する
+    // (validationエラーとして出すとbotに手がかりを与えるため)。
+    website: z.string().optional(),
+    formRenderedAt: z.coerce.number().optional(),
   })
   .refine(requireCompanyNameForCorporate, COMPANY_NAME_REFINE_ERROR);
 
