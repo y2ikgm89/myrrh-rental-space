@@ -11,6 +11,7 @@ import {
   CANCELLED_BY,
 } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
 import { formatDateTimeFull, formatTimeShort } from "@/shared/lib/date-format";
 import { lockSpaceForTransaction } from "./space-locks";
 
@@ -512,26 +513,24 @@ export async function applyCalendarTimeChange(input: {
   return prisma.$transaction(async (tx) => {
     await lockSpaceForTransaction(tx, input.spaceId);
 
-    const overlappingReservation = await tx.reservation.findFirst({
-      where: {
+    const overlap = await checkSpaceOverlap(
+      {
         spaceId: input.spaceId,
-        status: { in: [...ACTIVE_RESERVATION_STATUSES] },
-        id: { not: input.reservationId },
-        deletedAt: null,
-        AND: [
-          { startTime: { lt: input.endTime } },
-          { endTime: { gt: input.startTime } },
-        ],
+        startTime: input.startTime,
+        endTime: input.endTime,
+        excludeReservationId: input.reservationId,
       },
-      select: { id: true, startTime: true, endTime: true },
-    });
+      tx,
+    );
 
-    if (overlappingReservation) {
+    if (overlap.hasOverlap) {
+      const conflictLabel =
+        overlap.type === "event" ? "重複イベント枠ID" : "重複予約ID";
       const rejectionNote =
         `[カレンダー同期エラー] ${formatDateTimeFull(new Date())}\n` +
         `時間変更が重複のため拒否されました。\n` +
         `試行時間: ${formatDateTimeFull(input.startTime)} - ${formatTimeShort(input.endTime)}\n` +
-        `重複予約ID: ${overlappingReservation.id.slice(0, 8).toUpperCase()}`;
+        `${conflictLabel}: ${overlap.conflictId.slice(0, 8).toUpperCase()}`;
 
       const newNotes = input.existingNotes
         ? `${input.existingNotes}\n\n${rejectionNote}`
@@ -541,13 +540,17 @@ export async function applyCalendarTimeChange(input: {
         where: { id: input.reservationId },
         data: {
           notes: newNotes,
-          calendarSyncError: "Time change rejected: overlapping reservation",
+          calendarSyncError: `Time change rejected: overlapping ${overlap.type}`,
         },
       });
 
       return {
         success: false as const,
-        conflictingReservation: overlappingReservation,
+        conflictingReservation: {
+          id: overlap.conflictId,
+          startTime: overlap.startTime,
+          endTime: overlap.endTime,
+        },
       };
     }
 

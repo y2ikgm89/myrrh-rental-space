@@ -101,9 +101,6 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
 
 // terms 系: server-side consent gate + 記録コマンドを no-op に。
 const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));
-const mockRecordTermsAgreementsCommand = mock(() =>
-  Promise.resolve({ count: 0 }),
-);
 mock.module("@/shared/domain/terms/queries", () => ({
   getRequiredTermsByScope: mockGetRequiredTermsByScope,
   // Phase 2 (TERMS-REAGREE-P2): terms-consent-gate.ts が本 module から
@@ -111,9 +108,8 @@ mock.module("@/shared/domain/terms/queries", () => ({
   // module 全体差し替え mock ではここに no-op を明示する必要がある。
   getReagreeRequiredTermsForCustomer: mock(() => Promise.resolve([])),
 }));
-mock.module("@/shared/domain/terms/commands", () => ({
-  recordTermsAgreementsCommand: mockRecordTermsAgreementsCommand,
-}));
+// TermsAgreement 記録は createPublicReservationCommand（domain、本 test では mock）
+// の同一 tx 内で行われる。action 層から recordTermsAgreementsCommand は呼ばない。
 
 const mockSyncReservationToCalendar = mock(() =>
   Promise.resolve({ success: true }),
@@ -308,7 +304,6 @@ describe("submitReservation", () => {
     mockGetCurrentUser.mockClear();
     mockRedirect.mockClear();
     mockGetRequiredTermsByScope.mockClear();
-    mockRecordTermsAgreementsCommand.mockClear();
     mockGetRequiredTermsByScope.mockImplementation(() => Promise.resolve([]));
 
     mockValidateTurnstile.mockImplementation(() =>

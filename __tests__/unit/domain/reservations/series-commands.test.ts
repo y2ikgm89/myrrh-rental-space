@@ -4,7 +4,7 @@
  * Phase B.2 task 13: series 作成（RRULE 展開 → advisory lock → overlap 事前 check →
  * TermsAgreement → coupon → series/instance 一括 insert）と series キャンセル
  * （this-only / this-and-following / series-all の 3 scope 分岐）を、直接の
- * 協調モジュール（overlap query / terms / cancel-core / side-effects）を mock して検証する。
+ * 協調モジュール（ensureNoOverlap / terms / cancel-core / side-effects）を mock して検証する。
  *
  * `validateRruleForSeries`（series-rrule.ts）と advisory lock wrapper
  * （series-advisory-lock.ts / space-locks.ts）は純粋関数 / `tx.$executeRaw` のみに
@@ -83,11 +83,14 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-const mockCheckOverlap = mock<
-  (args: Record<string, unknown>) => Promise<{ hasOverlap: boolean }>
->(() => Promise.resolve({ hasOverlap: false }));
-mock.module("@/shared/domain/reservations/availability", () => ({
-  checkReservationOverlapQuery: mockCheckOverlap,
+// series-commands は ensureNoOverlap（Reservation + Event）を呼ぶ。
+// 旧 checkReservationOverlapQuery mock だと実実装の checkSpaceOverlap が走り、
+// mock tx に reservation.findFirst が無く TypeError になる。
+const mockEnsureNoOverlap = mock<
+  (args: Record<string, unknown>, tx?: unknown) => Promise<void>
+>(() => Promise.resolve());
+mock.module("@/shared/domain/reservations/payloads", () => ({
+  ensureNoOverlap: mockEnsureNoOverlap,
 }));
 
 const mockAssertTermsAgreed = mock<
@@ -133,6 +136,7 @@ mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
 // SUT を mock 登録後に import
 // ---------------------------------------------------------------------------
 
+import { DomainError } from "@/shared/domain/domain-error";
 import {
   cancelReservationSeriesCommand,
   createReservationSeriesCommand,
@@ -194,7 +198,7 @@ function resetAllMocks(): void {
   mockReservationFindUnique.mockReset();
   mockCouponUpdateMany.mockReset();
   mockTransaction.mockReset();
-  mockCheckOverlap.mockReset();
+  mockEnsureNoOverlap.mockReset();
   mockAssertTermsAgreed.mockReset();
   mockRecordTermsAgreements.mockReset();
   mockApplyBulkCancellation.mockReset();
@@ -221,7 +225,7 @@ function resetAllMocks(): void {
   mockReservationFindUnique.mockResolvedValue(null);
   mockCouponUpdateMany.mockResolvedValue({ count: 1 });
   mockTransaction.mockImplementation((cb) => cb(mockTx));
-  mockCheckOverlap.mockResolvedValue({ hasOverlap: false });
+  mockEnsureNoOverlap.mockResolvedValue(undefined);
   mockAssertTermsAgreed.mockResolvedValue(undefined);
   mockRecordTermsAgreements.mockResolvedValue([]);
   mockApplyBulkCancellation.mockImplementation((_tx, ids) =>
@@ -256,7 +260,7 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
     expect(secondCallSql).toContain("728351");
 
     // overlap 事前 check は 3 instance 分
-    expect(mockCheckOverlap).toHaveBeenCalledTimes(3);
+    expect(mockEnsureNoOverlap).toHaveBeenCalledTimes(3);
 
     // createMany は 1 回・3 行
     expect(mockReservationCreateMany).toHaveBeenCalledTimes(1);
@@ -387,9 +391,9 @@ describe("createReservationSeriesCommand (Phase B.2 task 13)", () => {
 
   test("overlap detection: N 回目の instance が重複していれば「N 回目 (日付)」の CONFLICT を投げ createMany しない", async () => {
     // 3 instance 中 2 番目 (index=1) で衝突させる
-    mockCheckOverlap
-      .mockResolvedValueOnce({ hasOverlap: false })
-      .mockResolvedValueOnce({ hasOverlap: true });
+    mockEnsureNoOverlap
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new DomainError("overlap", "CONFLICT"));
 
     await expect(
       createReservationSeriesCommand(baseCreateInput()),

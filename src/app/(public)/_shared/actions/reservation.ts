@@ -39,7 +39,6 @@ import {
 } from "@/shared/lib/errors/server";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
@@ -181,24 +180,15 @@ export async function submitReservation(
       const userAgent = headersList.get("user-agent");
 
       try {
+        // TermsAgreement は createPublicReservationCommand 内の同一 tx で記録する
+        // （予約成立と法務 evidence の atomicity。series 経路と同契約）。
         const result = await createPublicReservationCommand({
           ...data,
           userId: user?.id,
+          agreedTermsIds: data.agreedTermsIds,
+          ipAddress: clientIp,
+          userAgent: userAgent ?? null,
         });
-
-        if (data.agreedTermsIds.length > 0) {
-          // 法務 evidence は await で確実に記録する。fireAndForget だと
-          // recordTermsAgreementsCommand 失敗時に evidence が永久消失する。
-          await recordTermsAgreementsCommand({
-            termsIds: data.agreedTermsIds,
-            scope: TermsScope.RESERVATION,
-            resourceId: result.id,
-            customerId: result.customerId ?? null,
-            guestEmail: user ? null : data.email,
-            ipAddress: clientIp,
-            userAgent: userAgent ?? null,
-          });
-        }
 
         invalidateReservationCaches(result.id, result.customerId ?? null, {
           coupons: true,

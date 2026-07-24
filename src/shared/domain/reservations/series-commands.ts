@@ -31,7 +31,7 @@ import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 import { formatJstDateString } from "@/shared/lib/date-format";
 import type { RateBreakdown } from "@/shared/lib/pricing/rate-breakdown";
 import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
-import { checkReservationOverlapQuery } from "./availability";
+import { ensureNoOverlap } from "./payloads";
 import { applyBulkCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import {
   applyBulkCancellationSideEffects,
@@ -163,19 +163,25 @@ export async function createReservationSeriesCommand(
     // （EXCLUDE 制約だけに頼ると「一括 insert が丸ごと reject」で原因の instance が
     // 特定できず admin UX が悪化するため、アプリ層で先制的に特定する）。
     for (const window of instanceWindows) {
-      const overlap = await checkReservationOverlapQuery(
-        {
-          spaceId: input.spaceId,
-          startTime: window.startTime,
-          endTime: window.endTime,
-        },
-        tx,
-      );
-      if (overlap.hasOverlap) {
-        throw new DomainError(
-          `${window.index + 1} 回目 (${formatJstDateString(window.startTime)}) の時間帯は既に予約されています`,
-          "CONFLICT",
+      // ensureNoOverlap → checkSpaceOverlap（Reservation + EventTimeSlot）。
+      // 旧 checkReservationOverlapQuery は Event を見ず DB trigger に依存していた。
+      try {
+        await ensureNoOverlap(
+          {
+            spaceId: input.spaceId,
+            startTime: window.startTime,
+            endTime: window.endTime,
+          },
+          tx,
         );
+      } catch (error) {
+        if (error instanceof DomainError && error.code === "CONFLICT") {
+          throw new DomainError(
+            `${window.index + 1} 回目 (${formatJstDateString(window.startTime)}) の時間帯は既に予約されています`,
+            "CONFLICT",
+          );
+        }
+        throw error;
       }
     }
 
