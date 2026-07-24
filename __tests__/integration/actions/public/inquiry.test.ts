@@ -39,9 +39,14 @@ const mockCheckActionRateLimit = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockCheckBotHeuristics = mock(
+  (): { success: boolean; error?: string } => ({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
   checkActionRateLimit: mockCheckActionRateLimit,
+  checkBotHeuristics: mockCheckBotHeuristics,
 }));
 
 const DEFAULT_RECEIPT_NUMBER = "INQ-ABCDEF12";
@@ -171,6 +176,8 @@ type InquiryInputShape = {
   companyName?: string;
   turnstileToken?: string;
   agreedTermsIds?: readonly string[];
+  website?: string;
+  formRenderedAt?: number;
 };
 
 const VALID_INPUT: InquiryInputShape = {
@@ -200,6 +207,12 @@ function inputToFormData(input: InquiryInputShape): FormData {
   if (input.turnstileToken !== undefined) {
     fd.append("turnstileToken", input.turnstileToken);
   }
+  if (input.website !== undefined) {
+    fd.append("website", input.website);
+  }
+  if (input.formRenderedAt !== undefined) {
+    fd.append("formRenderedAt", String(input.formRenderedAt));
+  }
   for (const id of input.agreedTermsIds ?? []) {
     fd.append("agreedTermsIds", id);
   }
@@ -216,6 +229,7 @@ describe("submitInquiry", () => {
     mockGetSession.mockImplementation(() => Promise.resolve(null));
     mockValidateTurnstile.mockClear();
     mockCheckActionRateLimit.mockClear();
+    mockCheckBotHeuristics.mockClear();
     mockCreateInquiryCommand.mockClear();
     mockSendContactConfirmationEmail.mockClear();
     mockSendContactAdminNotification.mockClear();
@@ -230,6 +244,9 @@ describe("submitInquiry", () => {
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockCheckBotHeuristics.mockImplementation(() => ({
+      success: true as const,
+    }));
     mockCreateInquiryCommand.mockImplementation(() =>
       Promise.resolve({
         id: "inquiry-001",
@@ -420,6 +437,73 @@ describe("submitInquiry", () => {
     });
   });
 
+  describe("異常系: bot対策(honeypot/timing)", () => {
+    test("bot判定時は formErrors にエラーを返す", async () => {
+      mockCheckBotHeuristics.mockImplementation(() => ({
+        success: false as const,
+        error:
+          "セキュリティ検証に失敗しました。しばらく経ってから再度お試しください。",
+      }));
+
+      const { submitInquiry } =
+        await import("@/app/(public)/_shared/actions/inquiry");
+
+      const result = await submitInquiry(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      );
+      expectSubmissionLike(result);
+
+      expect(result.status).toBe("error");
+      const formErrors = result.error?.[""];
+      expect(formErrors?.[0]).toContain("セキュリティ検証");
+    });
+
+    test("bot判定時は createInquiryCommand が呼ばれない", async () => {
+      mockCheckBotHeuristics.mockImplementation(() => ({
+        success: false as const,
+        error: "セキュリティ検証に失敗しました。",
+      }));
+
+      const { submitInquiry } =
+        await import("@/app/(public)/_shared/actions/inquiry");
+
+      await submitInquiry(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockCreateInquiryCommand).not.toHaveBeenCalled();
+    });
+
+    test("bot判定はTurnstile検証より前に実行される", async () => {
+      mockCheckBotHeuristics.mockImplementation(() => ({
+        success: false as const,
+        error: "セキュリティ検証に失敗しました。",
+      }));
+
+      const { submitInquiry } =
+        await import("@/app/(public)/_shared/actions/inquiry");
+
+      await submitInquiry(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockValidateTurnstile).not.toHaveBeenCalled();
+    });
+
+    test("レート制限はbot対策より前に実行される", async () => {
+      mockCheckActionRateLimit.mockImplementation(() =>
+        Promise.resolve({
+          success: false as const,
+          error: "リクエストが多すぎます。",
+        }),
+      );
+
+      const { submitInquiry } =
+        await import("@/app/(public)/_shared/actions/inquiry");
+
+      await submitInquiry(undefined, inputToFormData(VALID_INPUT));
+
+      expect(mockCheckBotHeuristics).not.toHaveBeenCalled();
+    });
+  });
+
   describe("異常系: Turnstile 検証失敗", () => {
     test("Turnstile 検証失敗時は formErrors に top-level エラーを返す", async () => {
       mockValidateTurnstile.mockImplementation(() =>
@@ -525,6 +609,21 @@ describe("submitInquiry", () => {
         subject: "件名",
         message: "本文",
         // turnstileToken なし
+      });
+
+      expect(result.success).toBe(true);
+    });
+
+    test("website / formRenderedAt は省略可能", async () => {
+      const { publicInquirySchema } =
+        await import("@/shared/lib/validations/inquiry");
+
+      const result = publicInquirySchema.safeParse({
+        lastName: "田中",
+        firstName: "花子",
+        email: "tanaka@example.com",
+        subject: "件名",
+        message: "本文",
       });
 
       expect(result.success).toBe(true);

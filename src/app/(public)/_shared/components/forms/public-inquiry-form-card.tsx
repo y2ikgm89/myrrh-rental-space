@@ -97,6 +97,9 @@ export function PublicInquiryFormCard({
   const [previousResult, setPreviousResult] = useState<unknown>(undefined);
   const [clientError, setClientError] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance>(null);
+  // bot対策の時間トラップ: フォーム初回マウント時刻を記録し、
+  // Server Action側で送信までの経過時間が短すぎないか検証する。
+  const [formRenderedAt] = useState(() => Date.now());
   const isInteractive = mode === "live";
   const hasPrefilledIdentity =
     defaults !== undefined &&
@@ -284,6 +287,25 @@ export function PublicInquiryFormCard({
             name={fields.turnstileToken.name}
             value={turnstileTokenControl.value ?? ""}
           />
+          <input
+            type="hidden"
+            name={fields.formRenderedAt.name}
+            value={formRenderedAt}
+          />
+          {/* bot対策のhoneypot: 実在しない項目("website")を装う。人には見えず、
+              機械的にフォームを埋めるbotだけが入力してしまう。 */}
+          <div
+            aria-hidden="true"
+            className="absolute left-[-9999px] top-[-9999px] h-0 w-0 overflow-hidden"
+          >
+            <input
+              type="text"
+              name={fields.website.name}
+              tabIndex={-1}
+              autoComplete="off"
+              defaultValue=""
+            />
+          </div>
           {agreedTermsIds.map((id) => (
             <input
               key={id}

@@ -6,6 +6,7 @@ import { updateTag } from "next/cache";
 import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import {
   checkActionRateLimit,
+  checkBotHeuristics,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import {
@@ -46,6 +47,14 @@ export async function submitInquiry(
     const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
     if (!rateLimit.success) {
       return { ok: false, error: rateLimit.error };
+    }
+
+    const botCheck = checkBotHeuristics({
+      honeypot: data.website,
+      formRenderedAt: data.formRenderedAt,
+    });
+    if (!botCheck.success) {
+      return { ok: false, error: botCheck.error };
     }
 
     const turnstile = await validateTurnstile({
