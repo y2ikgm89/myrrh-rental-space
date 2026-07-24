@@ -3431,6 +3431,34 @@ describe("architecture boundaries", () => {
       ).toEqual([]);
     });
   });
+
+  describe("お問い合わせ添付は private R2 のみ配信する (公開 CDN buildPublicUrl 禁止)", () => {
+    // inquiry-overhaul completion design §5.2: 添付ファイルは PII を含むため
+    // 専用の private R2 bucket + 認証付き server 配信のみで扱い、公開メディア
+    // CDN の URL builder (`buildPublicUrl`) を誤って再利用しないことを
+    // grep gate で 0 件強制する。scope は相対パスに "inquir" (inquiry/inquiries)
+    // を含む src 配下の全ファイル（domain commands/queries、admin・mypage の
+    // route/action/UI）。
+    test("relative path に inquir を含む src ファイルは buildPublicUrl を呼ばない", () => {
+      const files = collectSourceFiles(SRC_ROOT).filter((file) =>
+        /inquir/iu.test(relative(ROOT, file)),
+      );
+
+      // 存在確認: gate が 0 件と誤検知するのを防ぐため、少なくとも 1 ファイルが
+      // 対象スコープに該当していることを確認する。
+      expect(files.length).toBeGreaterThan(0);
+
+      const offenders = collectNonCommentOffenders(
+        files,
+        /\bbuildPublicUrl\b/u,
+      );
+
+      expect(
+        offenders,
+        `お問い合わせ添付関連ファイルは buildPublicUrl を呼ばないこと。添付は private bucket + getObjectStream 経由の認証済み配信のみが許可される（inquiry-overhaul completion design §5.2）。`,
+      ).toEqual([]);
+    });
+  });
 });
 
 describe("AuditLog resource文字列の統一 (event-registration)", () => {

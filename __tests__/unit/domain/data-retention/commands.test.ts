@@ -25,6 +25,9 @@ const mockReservationUpdateMany = mock<
 const mockInquiryDeleteMany = mock<
   (args?: MockArgs) => Promise<DeleteManyResult>
 >(() => Promise.resolve({ count: 0 }));
+const mockInquiryAttachmentFindMany = mock<
+  (args?: MockArgs) => Promise<Array<{ r2Key: string }>>
+>(() => Promise.resolve([]));
 const mockCustomerFindMany = mock<
   (args?: MockArgs) => Promise<Array<{ id: string }>>
 >(() => Promise.resolve([]));
@@ -47,6 +50,9 @@ mock.module("@/shared/db/prisma", () => ({
       updateMany: (args?: MockArgs) => mockReservationUpdateMany(args),
     },
     inquiry: { deleteMany: (args?: MockArgs) => mockInquiryDeleteMany(args) },
+    inquiryAttachment: {
+      findMany: (args?: MockArgs) => mockInquiryAttachmentFindMany(args),
+    },
     customer: {
       findMany: (args?: MockArgs) => mockCustomerFindMany(args),
       update: (args: {
@@ -56,6 +62,29 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsDataRetention: { findUnique: mock() },
   },
+}));
+
+const mockGetR2InquiriesBucketName = mock<() => string>(
+  () => "test-inquiries-bucket",
+);
+mock.module("@/shared/lib/r2/client", () => ({
+  getR2InquiriesBucketName: () => mockGetR2InquiriesBucketName(),
+}));
+
+const mockDeleteObjectsFromBucket = mock<
+  (bucket: string, keys: string[]) => Promise<{ success: boolean }>
+>(() => Promise.resolve({ success: true }));
+mock.module("@/shared/lib/r2/delete", () => ({
+  deleteObjectsFromBucket: (bucket: string, keys: string[]) =>
+    mockDeleteObjectsFromBucket(bucket, keys),
+}));
+
+mock.module("@/shared/lib/errors/server", () => ({
+  logError: mock(() => {}),
+  ErrorCategory: { EXTERNAL_API: "EXTERNAL_API", DATABASE: "DATABASE" },
+  ErrorSeverity: { HIGH: "HIGH", MEDIUM: "MEDIUM" },
+  normalizeError: (e: unknown) =>
+    e instanceof Error ? e : new Error(String(e)),
 }));
 
 const {
@@ -160,6 +189,16 @@ describe("purge commands", () => {
     mockInquiryDeleteMany.mockImplementation(() =>
       Promise.resolve({ count: 0 }),
     );
+    mockInquiryAttachmentFindMany.mockClear();
+    mockInquiryAttachmentFindMany.mockImplementation(() => Promise.resolve([]));
+    mockGetR2InquiriesBucketName.mockClear();
+    mockGetR2InquiriesBucketName.mockImplementation(
+      () => "test-inquiries-bucket",
+    );
+    mockDeleteObjectsFromBucket.mockClear();
+    mockDeleteObjectsFromBucket.mockImplementation(() =>
+      Promise.resolve({ success: true }),
+    );
     mockCustomerFindMany.mockClear();
     mockCustomerFindMany.mockImplementation(() => Promise.resolve([]));
     mockCustomerUpdate.mockClear();
@@ -182,6 +221,8 @@ describe("purge commands", () => {
     expect(mockReservationUpdateMany).not.toHaveBeenCalled();
     expect(mockInquiryDeleteMany).not.toHaveBeenCalled();
     expect(mockCustomerFindMany).not.toHaveBeenCalled();
+    expect(mockInquiryAttachmentFindMany).not.toHaveBeenCalled();
+    expect(mockDeleteObjectsFromBucket).not.toHaveBeenCalled();
   });
 
   test("months>0 で対象 0 件 → 0 を返す (Prisma は 1 度呼ばれる)", async () => {
@@ -198,6 +239,65 @@ describe("purge commands", () => {
     expect(mockLoginAttemptDeleteMany).toHaveBeenCalledTimes(1);
     expect(mockReservationUpdateMany).toHaveBeenCalledTimes(1);
     expect(mockInquiryDeleteMany).toHaveBeenCalledTimes(1);
+    // 対象 attachment が 0 件なら R2 delete は呼ばれない (no-op 短絡)。
+    expect(mockDeleteObjectsFromBucket).not.toHaveBeenCalled();
+  });
+
+  test("purgeExpiredInquiries: 対象 inquiry に添付があれば DB delete 後に R2 一括削除する", async () => {
+    mockInquiryAttachmentFindMany.mockImplementation(() =>
+      Promise.resolve([
+        { r2Key: "inquiries/a/1.jpg" },
+        { r2Key: "inquiries/a/2.pdf" },
+      ]),
+    );
+    mockInquiryDeleteMany.mockImplementation(() =>
+      Promise.resolve({ count: 1 }),
+    );
+
+    const deleted = await purgeExpiredInquiries(NOW, 36);
+
+    expect(deleted).toBe(1);
+    expect(mockInquiryAttachmentFindMany).toHaveBeenCalledTimes(1);
+    expect(mockInquiryDeleteMany).toHaveBeenCalledTimes(1);
+    expect(mockDeleteObjectsFromBucket).toHaveBeenCalledTimes(1);
+    expect(mockDeleteObjectsFromBucket).toHaveBeenCalledWith(
+      "test-inquiries-bucket",
+      ["inquiries/a/1.jpg", "inquiries/a/2.pdf"],
+    );
+  });
+
+  test("purgeExpiredInquiries: R2 bucket 未設定でも DB purge 自体は成功する (fail-open, log のみ)", async () => {
+    mockInquiryAttachmentFindMany.mockImplementation(() =>
+      Promise.resolve([{ r2Key: "inquiries/a/1.jpg" }]),
+    );
+    mockInquiryDeleteMany.mockImplementation(() =>
+      Promise.resolve({ count: 1 }),
+    );
+    mockGetR2InquiriesBucketName.mockImplementation(() => {
+      throw new Error("R2_INQUIRIES_BUCKET_NAME is not configured");
+    });
+
+    const deleted = await purgeExpiredInquiries(NOW, 36);
+
+    expect(deleted).toBe(1);
+    expect(mockDeleteObjectsFromBucket).not.toHaveBeenCalled();
+  });
+
+  test("purgeExpiredInquiries: R2 削除失敗でも DB purge の戻り値には影響しない (log のみ)", async () => {
+    mockInquiryAttachmentFindMany.mockImplementation(() =>
+      Promise.resolve([{ r2Key: "inquiries/a/1.jpg" }]),
+    );
+    mockInquiryDeleteMany.mockImplementation(() =>
+      Promise.resolve({ count: 1 }),
+    );
+    mockDeleteObjectsFromBucket.mockImplementation(() =>
+      Promise.resolve({ success: false }),
+    );
+
+    const deleted = await purgeExpiredInquiries(NOW, 36);
+
+    expect(deleted).toBe(1);
+    expect(mockDeleteObjectsFromBucket).toHaveBeenCalledTimes(1);
   });
 
   test("anonymizeInactiveCustomers は per-record で個別 update を発行し、email を anonymized-<uuid> 形式に置換する", async () => {
