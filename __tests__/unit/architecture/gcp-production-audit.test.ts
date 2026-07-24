@@ -1049,6 +1049,7 @@ describe("GCP production audit model", () => {
       { name: "R2_SECRET_ACCESS_KEY", version: "1" },
       { name: "R2_BUCKET_NAME", version: "1" },
       { name: "R2_PUBLIC_URL", version: "1" },
+      { name: "R2_INQUIRIES_BUCKET_NAME", version: "1" },
       { name: "CLOUDFLARE_ZONE_ID", version: "1" },
       { name: "CLOUDFLARE_API_TOKEN", version: "1" },
       { name: "CLOUDFLARE_ORIGIN_HEADER_SECRET", version: "1" },

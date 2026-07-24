@@ -60,6 +60,7 @@ function setProductionEnv(
     R2_ACCESS_KEY_ID: "test-r2-access-key-id",
     R2_ACCOUNT_ID: "test-r2-account-id",
     R2_BUCKET_NAME: "test-r2-bucket",
+    R2_INQUIRIES_BUCKET_NAME: "test-r2-inquiries-bucket",
     R2_PUBLIC_URL: "https://cdn.example.com",
     R2_SECRET_ACCESS_KEY: "test-r2-secret-access-key",
     SUPPRESSION_HASH_SECRET: "s".repeat(64),
@@ -111,6 +112,14 @@ describe("server production env validation", () => {
     const { validateProductionEnv } = await importServerEnv();
 
     expect(() => validateProductionEnv()).not.toThrow();
+  });
+
+  test("requires R2 inquiries private bucket name in production", async () => {
+    setProductionEnv({ R2_INQUIRIES_BUCKET_NAME: undefined });
+
+    const { validateProductionEnv } = await importServerEnv();
+
+    expect(() => validateProductionEnv()).toThrow("R2_INQUIRIES_BUCKET_NAME");
   });
 
   test("requires Cloudflare purge credentials in production", async () => {

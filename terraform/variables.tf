@@ -159,8 +159,7 @@ variable "cloud_run_secret_versions" {
     # Phase C (2026-07-24): Phase B で versions/1 ENABLED 確認済み → Cloud Run 配線。
     # required (fail-closed) 化は配線緑確認後の follow-up PR。
     SUPPRESSION_HASH_SECRET = "1"
-    # Inquiry attachments private bucket: operator が versions/1 投入済み。
-    # App env の requiredInProd 化は配線緑確認後の follow-up。
+    # Inquiry attachments private bucket: versions/1 + Cloud Run 配線済み。
     R2_INQUIRIES_BUCKET_NAME = "1"
     # RESEND_WEBHOOK_SECRET: Tier 2 (Settings DB) 完了。ここに戻さない。
   }
