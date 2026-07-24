@@ -21,6 +21,13 @@ type CommandRunner = (
   command: readonly string[],
 ) => Promise<CommandResult>;
 
+export const VALIDATE_SCOPE_BANNER = [
+  "================================================================================",
+  "[validate] SCOPE: type-check + lint ONLY — this command does NOT run tests.",
+  "  For tests: bun run test <path>  or  bun scripts/run-tests.ts <path>",
+  "================================================================================",
+].join("\n");
+
 export function createValidatePlan(): ValidatePlan {
   return {
     parallel: [
@@ -63,6 +70,7 @@ export async function runValidatePlan(
 }
 
 if (import.meta.main) {
+  console.info(VALIDATE_SCOPE_BANNER);
   const startedAt = performance.now();
   const { exitCode, results } = await runValidatePlan(createValidatePlan());
   for (const result of results) flushResult(result);

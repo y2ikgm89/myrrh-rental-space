@@ -1,6 +1,8 @@
 # Contributing to Myrrh Rental Space
 
-このドキュメントは開発者向けのクイックスタートです。AI エージェント作業の正本は [`AGENTS.md`](../AGENTS.md) と repo skills（[`.agents/skills`](../.agents/skills)）です。
+このドキュメントは開発者向けのクイックスタートです。ハードルール・エージェント作業の正本は
+[CLAUDE.md](../CLAUDE.md) と [`.claude/rules/`](../.claude/rules/) です。
+[AGENTS.md](../AGENTS.md) は CLAUDE.md へのポインタ兼補助メモです。
 
 ## 開発環境セットアップ
 
@@ -8,33 +10,45 @@
 
 - **Bun** — `package.json#packageManager` で固定。`bun upgrade` で揃える
 - **Node.js** 20+ — 一部 CLI ツール
-- **PostgreSQL** 16 — ローカル DB
+- **PostgreSQL** 16 — ローカル DB（Docker Compose 推奨）
 - **Git** 2.40+
 
 ### 初期セットアップ
 
+依存インストール（`bun install`）は `bun run setup` には含まれません。
+
+#### 短い経路
+
 ```bash
-# 依存インストール（postinstall で prisma generate も実行）
 bun install
-
-# ローカル PostgreSQL（開発 DB + 実 DB 統合テスト専用 DB）
-docker compose up -d db test-db
-
-# .env.local を作成（.env.example があれば参照）
-cp .env.example .env.local
-# 必要な env var を設定:
-# DATABASE_URL は開発 DB、TEST_DATABASE_URL は test-db に向ける
-# BETTER_AUTH_SECRET, ENCRYPTION_KEY, etc. も必要に応じて設定
-
-# DB マイグレーション適用 + seed
-bunx --bun prisma migrate dev
-bun run db:seed
-
-# 開発サーバー起動
-bun dev
+bun run setup    # .env.local（無ければ）+ db/test-db + migrate deploy + seed
+bun run dev
 ```
 
-`bun dev` は Turbopack で起動し、`http://localhost:3000` で公開ページ、`http://localhost:3000/admin` で管理画面を開けます。
+#### 手動経路
+
+```bash
+bun install
+
+# ローカル PostgreSQL（開発 DB。統合テスト時は test-db も起動）
+docker compose up -d db
+# docker compose up -d db test-db   # integration test 用
+
+cp .env.example .env.local
+# 本番専用 secret（ENCRYPTION_KEY, AUDIT_LOG_HMAC_KEY, Cloudflare 本番トークン等）は
+# ローカルでは空のままでよい
+# BETTER_AUTH_SECRET が placeholder のままなら:
+#   openssl rand -base64 32
+
+bun run db:generate
+bun run db:migrate    # 新規 migration 作成時。適用のみなら prisma migrate deploy でも可
+bun run db:seed
+
+bun run dev
+```
+
+`bun run dev` は `http://localhost:3000` で公開ページ、`http://localhost:3000/admin` で管理画面を開けます。
+`APP_SURFACE`（`.env.example` 参照）で admin / public のどちらを起動するか選びます。
 
 ### 初回アクセス
 
@@ -100,10 +114,11 @@ docs(agents): document Prisma re-export gateway rules
 ### 2. 実装
 
 ```bash
-# 作業中は type-check でチェック
-bun run type-check
+# 変更を狭く証明
+bun scripts/run-tests.ts path/to/file.test.ts
+bun run lint:files -- path/to/changed.ts
 
-# コミット前に validate（type-check + lint）
+# コミット前に validate（type-check + lint。テストは含まれない）
 bun run validate
 
 # PR 作成前に full build 含めて検証
@@ -122,10 +137,8 @@ bun run test:db:migrate
 bun run test:integration
 
 # 特定ファイルのみ（日常開発はこれで十分）
-bun test __tests__/unit/domain/reservations/commands.test.ts
-bun test --watch __tests__/unit/domain/reservations/commands.test.ts  # TDD
-bun test --bail=1 <file>                                              # fail fast
-bun test --test-name-pattern "<name>"                                 # 名前フィルター
+bun scripts/run-tests.ts __tests__/unit/domain/reservations/commands.test.ts
+bun run test -- __tests__/unit/domain/reservations/commands.test.ts
 
 # E2E（dev サーバー自動起動）
 bun run e2e
@@ -136,9 +149,10 @@ bunx playwright test --project=chromium-customer
 
 **注意**:
 
-- `bun test __tests__/unit/domain/reservations`（親ディレクトリ指定）は `mock.module` グローバル干渉のため禁止。単一ファイル指定か `bun run test:unit` / `test:integration` を使う
+- 素の `bun test <path>` は禁止。必ず `bun scripts/run-tests.ts` または `bun run test --` を使う
+- 親ディレクトリ指定（例: `__tests__/unit/domain/reservations`）は `mock.module` グローバル干渉のため禁止。単一ファイル指定か `bun run test:unit` / `test:integration` を使う
 - フル実行を毎回行う必要はない。lefthook pre-push と CI が自動で守る
-- Coverage は per-directory batch と非互換のため CI ゲートなし。必要時 `bun test --coverage <single-file>` を参考値として取る
+- Coverage は per-directory batch と非互換のため CI ゲートなし
 
 ### 4. PR 作成
 
@@ -160,10 +174,12 @@ CI で実行される必須 / opt-in job の定義は [`.github/workflows/`](./w
 
 ## ハードルール
 
-ハードルールの SSoT は [`AGENTS.md`](../AGENTS.md) と repo skills（[`.agents/skills`](../.agents/skills)）です。本 CONTRIBUTING には複製しません（drift 防止）。
+ハードルールの SSoT は [CLAUDE.md](../CLAUDE.md) と [`.claude/rules/`](../.claude/rules/) です。
+本 CONTRIBUTING には複製しません（drift 防止）。エージェント向け補助は [AGENTS.md](../AGENTS.md) を参照。
 
 ## 質問・サポート
 
-- プロジェクト固有の疑問: [`AGENTS.md`](../AGENTS.md) + [`.agents/skills/`](../.agents/skills/) を先に読む
-- 実装パターン・設計の「なぜ」: [`AGENTS.md`](../AGENTS.md) / [`.agents/skills/`](../.agents/skills/) を参照。ライブラリ API は公式 docs を直接参照
+- プロジェクト固有の疑問: [CLAUDE.md](../CLAUDE.md) + [`.claude/rules/`](../.claude/rules/) を先に読む
+- 人間向けセットアップ: [README.md](../README.md)（本ドキュメント）
+- 実装パターン・設計の「なぜ」: CLAUDE.md / `.claude/rules/` を参照。ライブラリ API は公式 docs を直接参照
 - それでも不明な場合: GitHub Issue（bug / feature template）または owner に直接連絡

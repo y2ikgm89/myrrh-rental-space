@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  VALIDATE_SCOPE_BANNER,
   createValidatePlan,
   runValidatePlan,
   type CommandResult,
@@ -15,6 +16,12 @@ function fail(name: string): CommandResult {
 }
 
 describe("validate runner", () => {
+  test("VALIDATE_SCOPE_BANNER states type-check and lint only, excludes tests", () => {
+    expect(VALIDATE_SCOPE_BANNER).toContain("type-check");
+    expect(VALIDATE_SCOPE_BANNER).toContain("lint");
+    expect(VALIDATE_SCOPE_BANNER).toContain("does NOT run tests");
+  });
+
   test("starts type-check and lint together", async () => {
     const plan = createValidatePlan();
     const started: string[] = [];

@@ -19,35 +19,92 @@ services — the public storefront and the admin dashboard — split by the
 
 ## Getting started
 
+Install dependencies first (`bun install` is not part of `bun run setup`).
+
+### Short path
+
 ```sh
 bun install
-cp .env.example .env.local     # fill in DATABASE_URL and secrets
-docker compose up -d db        # dev Postgres on :5432
-bun run db:generate
-bun run db:migrate
-bun run dev                    # http://localhost:3000
+bun run setup          # .env.local (if missing) + db/test-db + migrate deploy + seed
+bun run dev            # http://localhost:3000
 ```
 
-Run `bun run dev` yourself and leave it running; the assistant should not
-start or stop it.
+### Manual path
+
+```sh
+bun install
+cp .env.example .env.local
+docker compose up -d db          # add test-db when running integration tests
+bun run db:generate
+bun run db:migrate
+bun run db:seed
+bun run dev                      # http://localhost:3000
+```
+
+### Environment notes
+
+- Copy `.env.example` to `.env.local`. **Production-only secrets** (e.g.
+  `ENCRYPTION_KEY`, `AUDIT_LOG_HMAC_KEY`, Cloudflare production tokens) can stay
+  empty locally — local dev does not require them.
+- If `BETTER_AUTH_SECRET` is still a placeholder, generate one:
+  `openssl rand -base64 32`
+- `APP_SURFACE` in `.env.example` selects which surface this process serves:
+  `admin` (dashboard + IAP bypass locally) or `public` (storefront). Two Cloud
+  Run services in production; locally you usually run one dev server at a time.
+- **Local admin**: set `ADMIN_TEST_IAP_EMAIL` (default in `.env.example`) and
+  run seed → open `http://localhost:3000/admin`. No app password or login-token
+  URL locally.
+- Deeper local admin / customer dev-login notes:
+  [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)
+
+Humans own the long-running dev server — start `bun run dev` yourself and leave
+it running; assistants should not start or stop it unless asked.
+
+## Smallest proof
+
+Before a full `bun run validate`, prove a focused change with narrow commands:
+
+```sh
+bun scripts/run-tests.ts path/to/file.test.ts
+# or
+bun run test -- path/to/file.test.ts
+
+bun run lint:files -- path/to/changed.ts
+```
+
+Then run `bun run validate` (type-check + lint only, **not** tests) before
+commit; `bun run validate && bun run build` before push (see
+[CLAUDE.md](CLAUDE.md)).
 
 ## Common commands
 
 | Command                                         | Purpose                                              |
 | ----------------------------------------------- | ---------------------------------------------------- |
+| `bun run setup`                                 | One-shot local DB setup (migrate deploy + seed)      |
 | `bun run validate`                              | **type-check + lint** (does NOT run tests)           |
+| `bun run test`                                  | Test runner alias → `scripts/run-tests.ts`           |
 | `bun run test:unit`                             | Unit tests, per-file isolated subprocess             |
 | `bun run test:integration`                      | Integration tests against `test-db` (auto-migrated)  |
 | `bun scripts/run-tests.ts <path>`               | One test file — always use this, not bare `bun test` |
+| `bun run lint:files -- <paths>`                 | ESLint on specific files only                        |
 | `bun run build`                                 | Production build (strict env validation)             |
 | `bun run build:skip-env`                        | Production build with placeholder env (offline)      |
 | `bun run db:migrate --name <name>`              | New Prisma migration + apply                         |
 | `bunx playwright test --project=chromium-smoke` | E2E smoke — same as CI required gate                 |
-| `bun run lint-format`                           | ESLint + Prettier                                    |
+| `bun run lint-format`                           | ESLint + Prettier (whole repo)                       |
 
 Before committing: `bun run validate && bun run build`. Push runs a lefthook
 pre-push hook (type-check + architecture-boundaries) that takes ~80–110s, so
 `git push` needs at least a 3-minute tool timeout.
+
+## Health endpoints
+
+| Path          | Role                                                  |
+| ------------- | ----------------------------------------------------- |
+| `/api/live`   | Liveness — no external deps; used by Cloud Run probes |
+| `/api/health` | Monitoring / manual check — includes DB connectivity  |
+
+Implementation: `src/app/api/live/route.ts`, `src/app/api/health/route.ts`.
 
 ## Repo layout
 
@@ -71,6 +128,7 @@ pre-push hook (type-check + architecture-boundaries) that takes ~80–110s, so
 ## Where to look next
 
 - Working with an agent (Claude Code / Codex): [CLAUDE.md](CLAUDE.md)
+- Human contributor setup & workflow: [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md)
 - Topic-specific guardrails: [`.claude/rules/`](.claude/rules/)
 - Multi-step workflows (migrations, adding a section, deploy debugging):
   [`.claude/skills/`](.claude/skills/)
