@@ -4,6 +4,7 @@
 
 import type { ReactNode } from "react";
 import type { Action, Resource } from "@/shared/lib/admin-resources";
+import type { FeatureModule } from "@/shared/lib/features/registry";
 
 /** サイドバー状態 */
 export type SidebarState = "expanded" | "collapsed" | "hidden";
@@ -46,6 +47,8 @@ export type SidebarItem = {
   href: string;
   icon: ReactNode;
   requiredPermission?: SidebarItemPermission;
+  /** 公開サイト feature gate 対象。OFF 時は badge 表示（メニューは残す） */
+  featureModule?: FeatureModule;
 };
 
 /** サイドバーグループ（セクション見出し付きの 5 グループ構成 SSoT） */

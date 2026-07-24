@@ -13,6 +13,7 @@ import { SpaceTabContent } from "./_components/SpaceTabContent";
 import { LocationTabContent } from "./_components/LocationTabContent";
 import { CategoryTabContent } from "./_components/CategoryTabContent";
 import { ReviewTabContent } from "./_components/ReviewTabContent";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
 
 export const metadata: Metadata = {
   title: "スペース管理 | Myrrh Rental Space",
@@ -65,6 +66,8 @@ function HeaderAction({ tab }: { tab: AdminSpaceManagementTab }) {
 export default async function SpacesPage({ searchParams }: PageProps) {
   await adminSpaceSearchParamsCache.parse(searchParams);
   const tab = adminSpaceSearchParamsCache.get("tab");
+  const enabledFeatures = await getEnabledFeatures();
+  const reviewsFeatureDisabled = !enabledFeatures.has("reviews");
 
   return (
     <div className="space-y-6">
@@ -81,7 +84,7 @@ export default async function SpacesPage({ searchParams }: PageProps) {
       </div>
 
       <div className="space-y-4">
-        <SpaceManagementTabs />
+        <SpaceManagementTabs reviewsFeatureDisabled={reviewsFeatureDisabled} />
         {/* タブ依存パネルは Suspense 動的ホールで描画し、`shallow:false` ソフトナビ時に
             request 時再ストリームさせる。`key={tab}` でタブ切替ごとに subtree を作り直す
             （events / reservations と同じ公式 PPR パターン）。 */}

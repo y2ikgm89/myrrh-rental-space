@@ -17,10 +17,13 @@ import { cn } from "@/shared/lib/cn";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
-import { Button } from "@/admin/components/ui";
+import { Button, TooltipProvider } from "@/admin/components/ui";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { SidebarGroup } from "@/admin/types/admin-layout";
+import { AdminNavFeatureDisabledIndicator } from "./AdminNavFeatureDisabledIndicator";
 import { isSidebarItemActive } from "./sidebar-active";
+import { isAdminNavFeaturePubliclyDisabled } from "@/shared/lib/features/admin-nav";
+import type { FeatureModule } from "@/shared/lib/features/registry";
 
 const styles = tv({
   slots: {
@@ -81,11 +84,13 @@ const styles = tv({
 type ResponsiveSidebarProps = {
   groups: SidebarGroup[];
   userInfo: ReactNode;
+  enabledFeatures: ReadonlySet<FeatureModule>;
 };
 
 export function ResponsiveSidebar({
   groups,
   userInfo,
+  enabledFeatures,
 }: ResponsiveSidebarProps) {
   const { sidebarState, closeSidebar, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
@@ -180,54 +185,73 @@ export function ResponsiveSidebar({
 
         {/* ナビゲーション */}
         <nav className={classes.nav()}>
-          <div className="space-y-5">
-            {groups.map((group) => (
-              <div key={group.label}>
-                <p className={classes.navGroupHeading()} aria-hidden="true">
-                  {group.label}
-                </p>
-                <ul className={classes.navGroup()} aria-label={group.label}>
-                  {group.items.map((item) => {
-                    const isActive = isSidebarItemActive(
-                      item.href,
-                      pathname,
-                      searchParams,
-                      queryBearingHrefs,
-                    );
-                    return (
-                      <li key={item.href}>
-                        <Link
-                          href={toAppRoute(item.href)}
-                          aria-current={isActive ? "page" : undefined}
-                          className={cn(
-                            classes.navItem(),
-                            isActive && classes.navItemActive(),
-                          )}
-                          onClick={() => effectiveIsMobile && closeSidebar()}
-                        >
-                          <span
-                            className={
-                              isActive ? "text-primary-foreground" : ""
-                            }
-                          >
-                            {item.icon}
-                          </span>
-                          <span
+          <TooltipProvider delayDuration={200}>
+            <div className="space-y-5">
+              {groups.map((group) => (
+                <div key={group.label}>
+                  <p className={classes.navGroupHeading()} aria-hidden="true">
+                    {group.label}
+                  </p>
+                  <ul className={classes.navGroup()} aria-label={group.label}>
+                    {group.items.map((item) => {
+                      const isActive = isSidebarItemActive(
+                        item.href,
+                        pathname,
+                        searchParams,
+                        queryBearingHrefs,
+                      );
+                      const isFeatureDisabled =
+                        isAdminNavFeaturePubliclyDisabled(
+                          item.featureModule,
+                          enabledFeatures,
+                        );
+                      return (
+                        <li key={item.href}>
+                          <Link
+                            href={toAppRoute(item.href)}
+                            aria-current={isActive ? "page" : undefined}
                             className={cn(
-                              "text-sm font-medium",
-                              isActive && "text-primary-foreground",
+                              classes.navItem(),
+                              isActive && classes.navItemActive(),
+                              isFeatureDisabled &&
+                                !isActive &&
+                                "opacity-80 saturate-75",
                             )}
+                            onClick={() => effectiveIsMobile && closeSidebar()}
                           >
-                            {item.label}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
+                            <span
+                              className={
+                                isActive ? "text-primary-foreground" : ""
+                              }
+                            >
+                              {item.icon}
+                            </span>
+                            <span
+                              className={cn(
+                                "min-w-0 flex-1 text-sm font-medium",
+                                isActive && "text-primary-foreground",
+                                isFeatureDisabled &&
+                                  !isActive &&
+                                  "text-sidebar-text-muted/80",
+                              )}
+                            >
+                              {item.label}
+                            </span>
+                            {isFeatureDisabled &&
+                              item.featureModule !== undefined && (
+                                <AdminNavFeatureDisabledIndicator
+                                  featureModule={item.featureModule}
+                                />
+                              )}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </TooltipProvider>
         </nav>
 
         {/* ユーザー情報 */}

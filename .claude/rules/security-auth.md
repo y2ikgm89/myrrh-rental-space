@@ -53,8 +53,8 @@ paths:
 
 - SwitchBot 公式 webhook は path token（`/api/webhooks/switchbot/[token]`）で認可する。
   HMAC 署名ヘッダはベンダー契約に無いため未実装（無理に足しても検証できない）
-- Feature Module ではなく Settings（外部連携）ゲート。管理サイドバーの feature prune
-  対象にもしない（公開ナビ prune のみ。管理画面は OFF 機能のデータ運用導線を残す）
+- Feature Module ではなく Settings（外部連携）ゲート。管理 nav では feature OFF 時も
+  メニューを残し「非公開」badge を表示する（公開ナビ prune のみ）
 
 ## Turnstile
 

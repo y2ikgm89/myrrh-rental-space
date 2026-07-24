@@ -129,6 +129,11 @@ await requireFeatureEnabled("<id>");
 - sitemap: `src/app/sitemap.ts` が静的ページを `isUrlDisabled`、カスタムページを
   `disabledPageSlugs` で filter。新 module のページを `STATIC_PAGES` に足す場合は
   drift gate（下記）が publicRoutes との整合を強制する。
+- **管理 nav**: サイドバー / コマンドパレット / スペース管理の reviews タブは prune しない。
+  該当 module に `featureModule` を map し、OFF 時は `src/shared/lib/features/admin-nav.ts`
+  - `AdminNavFeatureDisabledIndicator` で「非公開」badge + tooltip を表示する。
+    quick action（新規作成）は feature OFF 時 disabled。map 追加時は drift gate
+    (`admin-navigation-route-contract.test.ts`) を更新する。
 
 ### Step 7: テスト更新
 

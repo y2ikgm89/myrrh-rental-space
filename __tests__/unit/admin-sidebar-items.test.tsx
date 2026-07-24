@@ -3,6 +3,10 @@ import {
   filterSidebarGroupsByPermission,
   SIDEBAR_GROUPS,
 } from "@/app/(admin)/admin/(dashboard)/_components/sidebar-items";
+import {
+  assertAdminNavFeatureModulesAreRegistered,
+  collectMappedAdminNavFeatureModules,
+} from "@/shared/lib/features/admin-nav";
 
 describe("admin sidebar groups", () => {
   test("5 グループ構成 (概要 / 運営 / カタログ / コンテンツ / システム)", () => {
@@ -51,5 +55,35 @@ describe("admin sidebar groups", () => {
     expect(groupLabels).toContain("概要");
     // 「コンテンツ」はページ管理が残るので含まれる
     expect(groupLabels).toContain("コンテンツ");
+  });
+
+  test("featureModule map — reservation/contact/spaces/events/posts/news/faq のみ", () => {
+    const mapped = collectMappedAdminNavFeatureModules(
+      SIDEBAR_GROUPS.flatMap((group) =>
+        group.items.map((item) => item.featureModule),
+      ),
+    ).sort();
+    expect(mapped).toEqual([
+      "contact",
+      "events",
+      "faq",
+      "news",
+      "posts",
+      "reservation",
+      "spaces",
+    ]);
+    assertAdminNavFeatureModulesAreRegistered(mapped);
+  });
+
+  test("core メニュー (dashboard / customers / settings 等) は featureModule 未 map", () => {
+    const coreLabels = SIDEBAR_GROUPS.flatMap((group) =>
+      group.items
+        .filter((item) => item.featureModule === undefined)
+        .map((item) => item.label),
+    );
+    expect(coreLabels).toContain("ダッシュボード");
+    expect(coreLabels).toContain("顧客管理");
+    expect(coreLabels).toContain("設定");
+    expect(coreLabels).not.toContain("予約管理");
   });
 });

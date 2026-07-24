@@ -83,8 +83,8 @@ feature module OFF のジョブは早期 return。新規追加は `add-cron-job`
 - Webhook 認可は path token（`/api/webhooks/switchbot/[token]`）+ deviceMac 照合。
   公式 API に HMAC 署名ヘッダ契約が無いため HMAC 検証は未実装（accepted risk。
   ベンダーが公式サポートするまで追加しない）
-- Feature Module ではなく Settings（外部連携）ゲート。管理サイドバーの feature prune
-  対象にもしない（公開ナビ prune のみ）
+- Feature Module ではなく Settings（外部連携）ゲート。管理 nav では feature OFF 時も
+  メニューを残し「非公開」badge を表示する（公開ナビ prune のみ）
 - Open Token / Secret Key は Settings 暗号化保管（DB 優先）。詳細は security-auth ルール
 
 ## その他
