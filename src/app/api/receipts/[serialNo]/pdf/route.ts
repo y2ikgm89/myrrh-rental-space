@@ -262,21 +262,15 @@ type ReceiptForDownload = NonNullable<
   Awaited<ReturnType<typeof findReceiptForDownload>>
 >;
 
-/**
- * Prisma の Decimal 列 (amount / taxAmount / taxRate) を number に変換する。
- * Reservation / EventRegistration は `$extends` で自動変換されるが、Receipt は
- * 現在 `$extends` 対象外のため呼出側で Number() する (receipt-full-wiring PR#7 で
- * $extends 拡張時に除去可能)。
- */
 function buildRenderInput(receipt: ReceiptForDownload) {
   return {
     serialNo: receipt.serialNo,
     issuedAt: receipt.issuedAt,
     recipientName: receipt.recipientName,
     subject: receipt.subject,
-    amount: Number(receipt.amount),
-    taxAmount: Number(receipt.taxAmount),
-    taxRate: Number(receipt.taxRate),
+    amount: receipt.amount,
+    taxAmount: receipt.taxAmount,
+    taxRate: receipt.taxRate,
     issuerSnapshot: receipt.issuerSnapshot,
   };
 }
