@@ -47,6 +47,10 @@ const mockInquiryFindUnique = mock<
   (args: unknown) => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
+const mockInquiryFindFirst = mock<
+  (args: unknown) => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+
 const mockInquiryCreate = mock<
   (args: { data: Record<string, unknown> }) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "inquiry-1", receiptNumber: "INQ-DEADBEEF" }));
@@ -97,6 +101,7 @@ const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
 // に対して実行されるため、外部 mock を tx 経由でも共有する。
 const prismaInquiry = {
   findUnique: mockInquiryFindUnique,
+  findFirst: mockInquiryFindFirst,
   create: mockInquiryCreate,
   update: mockInquiryUpdate,
   updateMany: mockInquiryUpdateMany,
@@ -166,6 +171,7 @@ const { DomainError } = await import("@/shared/domain/domain-error");
 const {
   updateInquiryStatus,
   replyToInquiryCommand,
+  replyToInquiryAsCustomerCommand,
   deleteInquiry,
   createInquiryCommand,
   updateInquiryCustomer,
@@ -208,6 +214,7 @@ const VALID_CREATE_INPUT: {
 describe("inquiries/commands", () => {
   beforeEach(() => {
     mockInquiryFindUnique.mockReset();
+    mockInquiryFindFirst.mockReset();
     mockInquiryCreate.mockReset();
     mockInquiryUpdate.mockReset();
     mockInquiryUpdateMany.mockReset();
@@ -220,6 +227,7 @@ describe("inquiries/commands", () => {
 
     // デフォルト
     mockInquiryFindUnique.mockResolvedValue(null);
+    mockInquiryFindFirst.mockResolvedValue(null);
     mockInquiryCreate.mockResolvedValue({
       id: INQUIRY_ID,
       receiptNumber: "INQ-ABCDEF12",
@@ -661,6 +669,210 @@ describe("inquiries/commands", () => {
         await expect(
           replyToInquiryCommand(INQUIRY_ID, "返信", USER_ID),
         ).rejects.toThrow(DomainError);
+
+        expect(mockInquiryReplyCreate).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  // =============================================================================
+  // replyToInquiryAsCustomerCommand
+  // =============================================================================
+
+  describe("replyToInquiryAsCustomerCommand", () => {
+    const CUSTOMER_REPLY_BODY = "追加で確認したい点があります。";
+
+    describe("正常系", () => {
+      test("NEW からの返信は status を変更しない", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce(EXISTING_INQUIRY);
+
+        const result = await replyToInquiryAsCustomerCommand(
+          INQUIRY_ID,
+          CUSTOMER_ID,
+          CUSTOMER_REPLY_BODY,
+        );
+
+        expect(result.inquiryId).toBe(INQUIRY_ID);
+        expect(result.replyId).toBe("reply-1");
+        expect(result.emailContext).toEqual({
+          name: "山田太郎",
+          email: "yamada@example.com",
+          subject: "スペース利用について",
+          message: "詳しい料金を教えてください。",
+          receiptNumber: "INQ-ABCDEF12",
+          replyBody: CUSTOMER_REPLY_BODY,
+        });
+
+        expect(mockInquiryReplyCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              inquiryId: INQUIRY_ID,
+              authorType: InquiryReplyAuthorType.CUSTOMER,
+              authorCustomerId: CUSTOMER_ID,
+              body: CUSTOMER_REPLY_BODY,
+            }),
+          }),
+        );
+        const replyCreateData = mockInquiryReplyCreate.mock.calls.at(0)?.[0] as
+          { data: Record<string, unknown> } | undefined;
+        expect(replyCreateData?.data).not.toHaveProperty("authorId");
+
+        expect(mockInquiryUpdate).not.toHaveBeenCalled();
+        expect(mockStatusHistoryCreate).not.toHaveBeenCalled();
+      });
+
+      test("IN_PROGRESS からの返信は status を変更しない", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce({
+          ...EXISTING_INQUIRY,
+          status: InquiryStatus.IN_PROGRESS,
+        });
+
+        await replyToInquiryAsCustomerCommand(
+          INQUIRY_ID,
+          CUSTOMER_ID,
+          CUSTOMER_REPLY_BODY,
+        );
+
+        expect(mockInquiryReplyCreate).toHaveBeenCalledTimes(1);
+        expect(mockInquiryUpdate).not.toHaveBeenCalled();
+        expect(mockStatusHistoryCreate).not.toHaveBeenCalled();
+      });
+
+      test("RESOLVED からの返信は IN_PROGRESS へ reopen する", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce({
+          ...EXISTING_INQUIRY,
+          status: InquiryStatus.RESOLVED,
+        });
+
+        await replyToInquiryAsCustomerCommand(
+          INQUIRY_ID,
+          CUSTOMER_ID,
+          CUSTOMER_REPLY_BODY,
+        );
+
+        expect(mockInquiryReplyCreate).toHaveBeenCalledTimes(1);
+        expect(mockInquiryUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: { id: INQUIRY_ID },
+            data: { status: InquiryStatus.IN_PROGRESS },
+          }),
+        );
+        expect(mockStatusHistoryCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              inquiryId: INQUIRY_ID,
+              fromStatus: InquiryStatus.RESOLVED,
+              toStatus: InquiryStatus.IN_PROGRESS,
+              changedById: null,
+              reason: "customer-reply-reopen",
+            }),
+          }),
+        );
+      });
+
+      test("FLAGGED からの返信は IN_PROGRESS へ reopen する", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce({
+          ...EXISTING_INQUIRY,
+          status: InquiryStatus.FLAGGED,
+        });
+
+        await replyToInquiryAsCustomerCommand(
+          INQUIRY_ID,
+          CUSTOMER_ID,
+          CUSTOMER_REPLY_BODY,
+        );
+
+        expect(mockInquiryUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: { status: InquiryStatus.IN_PROGRESS },
+          }),
+        );
+        expect(mockStatusHistoryCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              fromStatus: InquiryStatus.FLAGGED,
+              toStatus: InquiryStatus.IN_PROGRESS,
+              reason: "customer-reply-reopen",
+            }),
+          }),
+        );
+      });
+    });
+
+    describe("異常系", () => {
+      test("存在しない ID で NOT_FOUND エラーをスローする", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          replyToInquiryAsCustomerCommand(
+            INQUIRY_ID,
+            CUSTOMER_ID,
+            CUSTOMER_REPLY_BODY,
+          ),
+        ).rejects.toMatchObject({
+          code: "NOT_FOUND",
+          message: "お問い合わせが見つかりません",
+        });
+
+        expect(mockInquiryReplyCreate).not.toHaveBeenCalled();
+      });
+
+      test("anonymized な Inquiry は NOT_FOUND として扱う (findFirst が null)", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          replyToInquiryAsCustomerCommand(
+            INQUIRY_ID,
+            CUSTOMER_ID,
+            CUSTOMER_REPLY_BODY,
+          ),
+        ).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+        expect(mockInquiryFindFirst).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              anonymizedAt: null,
+            }),
+          }),
+        );
+      });
+
+      test("CLOSED な Inquiry は VALIDATION エラーをスローする", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce({
+          ...EXISTING_INQUIRY,
+          status: InquiryStatus.CLOSED,
+        });
+
+        await expect(
+          replyToInquiryAsCustomerCommand(
+            INQUIRY_ID,
+            CUSTOMER_ID,
+            CUSTOMER_REPLY_BODY,
+          ),
+        ).rejects.toMatchObject({
+          code: "VALIDATION",
+          message: "このお問い合わせは終了しているため、返信できません",
+        });
+
+        expect(mockInquiryReplyCreate).not.toHaveBeenCalled();
+      });
+
+      test("SPAM な Inquiry は VALIDATION エラーをスローする", async () => {
+        mockInquiryFindFirst.mockResolvedValueOnce({
+          ...EXISTING_INQUIRY,
+          status: InquiryStatus.SPAM,
+        });
+
+        await expect(
+          replyToInquiryAsCustomerCommand(
+            INQUIRY_ID,
+            CUSTOMER_ID,
+            CUSTOMER_REPLY_BODY,
+          ),
+        ).rejects.toMatchObject({
+          code: "VALIDATION",
+          message: "このお問い合わせには返信できません",
+        });
 
         expect(mockInquiryReplyCreate).not.toHaveBeenCalled();
       });

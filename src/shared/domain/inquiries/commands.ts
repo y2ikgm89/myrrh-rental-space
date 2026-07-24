@@ -197,6 +197,114 @@ export async function replyToInquiryCommand(
   };
 }
 
+export type InquiryCustomerReplyEmailContext = {
+  readonly name: string;
+  readonly email: string;
+  readonly subject: string;
+  readonly message: string;
+  readonly receiptNumber: string;
+  readonly replyBody: string;
+};
+
+/**
+ * 会員マイページから顧客が InquiryReply (CUSTOMER) を append する。
+ *
+ * - CLOSED / SPAM は VALIDATION で拒否
+ * - RESOLVED / FLAGGED は IN_PROGRESS へ reopen (history reason:
+ *   `customer-reply-reopen`)。assertInquiryStatusTransition は意図的に
+ *   呼ばない (RESOLVED/FLAGGED → IN_PROGRESS は admin 遷移表外)
+ * - NEW / IN_PROGRESS は返信のみ (status 変更なし)
+ */
+export async function replyToInquiryAsCustomerCommand(
+  inquiryId: string,
+  customerId: string,
+  body: string,
+): Promise<{
+  inquiryId: string;
+  replyId: string;
+  emailContext: InquiryCustomerReplyEmailContext;
+}> {
+  const inquiry = await prisma.inquiry.findFirst({
+    where: {
+      id: inquiryId,
+      customerId,
+      deletedAt: null,
+      anonymizedAt: null,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      subject: true,
+      message: true,
+      status: true,
+      receiptNumber: true,
+    },
+  });
+
+  if (!inquiry) {
+    throw new DomainError("お問い合わせが見つかりません", "NOT_FOUND");
+  }
+
+  if (inquiry.status === InquiryStatus.CLOSED) {
+    throw new DomainError(
+      "このお問い合わせは終了しているため、返信できません",
+      "VALIDATION",
+    );
+  }
+
+  if (inquiry.status === InquiryStatus.SPAM) {
+    throw new DomainError("このお問い合わせには返信できません", "VALIDATION");
+  }
+
+  const shouldReopen =
+    inquiry.status === InquiryStatus.RESOLVED ||
+    inquiry.status === InquiryStatus.FLAGGED;
+
+  const created = await prisma.$transaction(async (tx) => {
+    const reply = await tx.inquiryReply.create({
+      data: {
+        inquiryId,
+        authorType: InquiryReplyAuthorType.CUSTOMER,
+        authorCustomerId: customerId,
+        body,
+      },
+      select: { id: true },
+    });
+
+    if (shouldReopen) {
+      await tx.inquiry.update({
+        where: { id: inquiryId },
+        data: { status: InquiryStatus.IN_PROGRESS },
+      });
+      await tx.inquiryStatusHistory.create({
+        data: {
+          inquiryId,
+          fromStatus: inquiry.status,
+          toStatus: InquiryStatus.IN_PROGRESS,
+          changedById: null,
+          reason: "customer-reply-reopen",
+        },
+      });
+    }
+
+    return reply;
+  });
+
+  return {
+    inquiryId,
+    replyId: created.id,
+    emailContext: {
+      name: inquiry.name,
+      email: inquiry.email,
+      subject: inquiry.subject,
+      message: inquiry.message,
+      receiptNumber: inquiry.receiptNumber,
+      replyBody: body,
+    },
+  };
+}
+
 /**
  * Inquiry の customer 紐付けを変更する。diff を返り値で返し、AuditLog 配線は
  * Phase 2 で呼び出し側 (executeAdminMutationResult wrapper) から記録する。
