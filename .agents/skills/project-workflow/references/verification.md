@@ -3,11 +3,14 @@
 ## Default Gates
 
 - Type and route types: `bun run type-check`.
-- Lint: `bun run lint`.
-- Combined fast gate: `bun run validate`.
+- Lint (whole repo): `bun run lint`.
+- Lint (narrow): `bun run lint:files -- <paths>`.
+- Combined fast gate: `bun run validate` (**type-check + lint only — does NOT run tests**).
+- All tests via runner: `bun run test` (alias for `scripts/run-tests.ts`).
 - Unit tests: `bun run test:unit`.
 - Integration tests: `bun run test:integration`.
-- One Bun test file: `bun scripts/run-tests.ts path/to/file.test.ts`.
+- One Bun test file: `bun scripts/run-tests.ts path/to/file.test.ts` or
+  `bun run test -- path/to/file.test.ts`.
 - E2E: `bun run e2e`.
 - Build without production env secrets: `bun run build:skip-env`.
 
@@ -30,7 +33,7 @@
 - UI-only change: run focused component/unit tests; use Playwright only when
   behavior depends on browser interaction or layout.
 - Admin UI change: also run the admin design-token and submit-button
-  architecture tests named in `AGENTS.md`.
+  architecture tests named in `CLAUDE.md`.
 - Playwright test change: run the specific file or project, then the relevant
   smoke/auth setup if auth state was touched.
 

@@ -13,19 +13,37 @@
 
 ## コマンド
 
-| コマンド                                        | 用途                                           |
-| ----------------------------------------------- | ---------------------------------------------- |
-| `bun run dev`                                   | 開発サーバー（prisma generate 込み）           |
-| `bun run validate`                              | **type-check + lint のみ**。テストは含まれない |
-| `bun run test:unit`                             | unit テスト（per-file 隔離 runner 経由）       |
-| `bun run test:integration`                      | 統合テスト（test DB を自動起動・migrate）      |
-| `bun scripts/run-tests.ts <path>`               | 単一ファイル/ディレクトリのテスト実行          |
-| `bun run build`                                 | 本番ビルド（実 env 検証あり）                  |
-| `bun run build:skip-env`                        | placeholder env でのビルド検証（DB 不要）      |
-| `bun run db:generate`                           | Prisma client 再生成（schema 変更後に必須）    |
-| `bun run db:migrate --name <name>`              | migration 作成・適用                           |
-| `bunx playwright test --project=chromium-smoke` | smoke E2E（CI required gate と同一）           |
-| `bun run lint-format`                           | ESLint + Prettier チェック（CI と同一入口）    |
+### 最小証明 (smallest proof)
+
+変更を狭く証明してから広い gate を回す:
+
+```sh
+bun scripts/run-tests.ts path/to/file.test.ts
+# または
+bun run test -- path/to/file.test.ts
+
+bun run lint:files -- path/to/changed.ts
+```
+
+- `bun run validate` = **type-check + lint のみ**（テストは含まれない）
+- コミット / push 前: `bun run validate`（+ 既存ポリシーどおり `bun run build`）
+
+| コマンド                                        | 用途                                                                  |
+| ----------------------------------------------- | --------------------------------------------------------------------- |
+| `bun run dev`                                   | 開発サーバー（prisma generate 込み）                                  |
+| `bun run setup`                                 | ローカル bootstrap（.env.local / db+test-db / migrate deploy / seed） |
+| `bun run validate`                              | **type-check + lint のみ**。テストは含まれない                        |
+| `bun run test`                                  | テスト runner エイリアス → `scripts/run-tests.ts`                     |
+| `bun run test:unit`                             | unit テスト（per-file 隔離 runner 経由）                              |
+| `bun run test:integration`                      | 統合テスト（test DB を自動起動・migrate）                             |
+| `bun scripts/run-tests.ts <path>`               | 単一ファイル/ディレクトリのテスト実行                                 |
+| `bun run lint:files -- <paths>`                 | 指定ファイルのみ ESLint                                               |
+| `bun run build`                                 | 本番ビルド（実 env 検証あり）                                         |
+| `bun run build:skip-env`                        | placeholder env でのビルド検証（DB 不要）                             |
+| `bun run db:generate`                           | Prisma client 再生成（schema 変更後に必須）                           |
+| `bun run db:migrate --name <name>`              | migration 作成・適用                                                  |
+| `bunx playwright test --project=chromium-smoke` | smoke E2E（CI required gate と同一）                                  |
+| `bun run lint-format`                           | ESLint + Prettier チェック（CI と同一入口）                           |
 
 変更を証明できる最小のコマンドを選ぶ: schema 変更 → `db:generate` + 該当テスト、
 section/registry 変更 → architecture-boundaries テスト、UI のみの変更 →
@@ -46,6 +64,8 @@ section/registry 変更 → architecture-boundaries テスト、UI のみの変�
 - `__tests__/unit` + `__tests__/integration`（bun）/ `e2e/`（Playwright、`*.spec.ts`）
 - path alias: `@/shared/*` → `src/shared/*`、`@/admin/*` → `src/app/(admin)/admin/(dashboard)/_shared/*`、
   `@/public/*` → `src/app/(public)/_shared/*`、`@generated/*` → `generated/*`
+- Ops: `/api/live`（liveness、外部依存なし）/ `/api/health`（DB 含む監視用）—
+  `src/app/api/live/route.ts` / `src/app/api/health/route.ts`
 
 ## 絶対規約
 
