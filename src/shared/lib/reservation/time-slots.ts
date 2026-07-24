@@ -12,6 +12,7 @@ import "server-only";
 
 import {
   getBusinessHoursSettingsQuery,
+  getEventSlotsForDateQuery,
   getReservationRuleSettings,
   getReservationsForDateQuery,
   getSpaceLocationIdQuery,
@@ -87,24 +88,25 @@ export async function getAvailableTimeSlots(
   const dateStart = parseDateTimeLocalAsJst(`${date}T00:00`);
   const dateEnd = parseDateTimeLocalAsJst(`${date}T23:59:59`);
 
-  const reservations = await getReservationsForDateQuery(
-    spaceId,
-    dateStart,
-    dateEnd,
-  );
+  const [reservations, eventSlots] = await Promise.all([
+    getReservationsForDateQuery(spaceId, dateStart, dateEnd),
+    getEventSlotsForDateQuery(spaceId, dateStart, dateEnd),
+  ]);
 
-  // 予約済みの時間枠を unavailable にマーク。
-  // 予約 datetime は UTC 保存だが、スロットラベル (BusinessHours 設定) は
+  // 予約 / イベント占有枠を unavailable にマーク（書込側 ensureNoOverlap =
+  // checkSpaceOverlap と同一の空間占有定義）。
+  // datetime は UTC 保存だが、スロットラベル (BusinessHours 設定) は
   // JST wall-clock。Cloud Run (UTC) で `.getHours()` を使うと 9 時間ずれる
   // ため JST 固定の `getJstMinutesOfDay` SSoT で照合する。
-  for (const reservation of reservations) {
-    const resStartMinutes = getJstMinutesOfDay(reservation.startTime);
-    const resEndMinutes = getJstMinutesOfDay(reservation.endTime);
+  const occupiedWindows = [...reservations, ...eventSlots];
+  for (const window of occupiedWindows) {
+    const resStartMinutes = getJstMinutesOfDay(window.startTime);
+    const resEndMinutes = getJstMinutesOfDay(window.endTime);
 
     for (const slot of slots) {
       const slotParsed = parseTime(slot.time);
       const slotMinutes = slotParsed.hour * 60 + slotParsed.minute;
-      // スロットが予約時間内にある場合は unavailable
+      // スロットが占有時間内にある場合は unavailable
       if (slotMinutes >= resStartMinutes && slotMinutes < resEndMinutes) {
         slot.available = false;
       }

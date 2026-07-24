@@ -384,7 +384,46 @@ export async function restoreReservationCommand(id: string) {
     throw new DomainError("この予約は削除されていません");
   }
 
+  // soft-delete 復元前に占有衝突を検査する（status 復元経路と同契約）。
+  // 復元後に ACTIVE なまま slot が埋まっていると EXCLUDE 制約で raw DB error になる。
+  const full = await prisma.reservation.findUnique({
+    where: { id },
+    select: {
+      spaceId: true,
+      startTime: true,
+      endTime: true,
+      status: true,
+    },
+  });
+  if (!full) {
+    throw new DomainError("予約が見つかりません", "NOT_FOUND");
+  }
+
   await prisma.$transaction(async (tx) => {
+    if (
+      full.status === ReservationStatus.PENDING ||
+      full.status === ReservationStatus.CONFIRMED
+    ) {
+      await lockSpaceForTransaction(tx, full.spaceId);
+      const overlap = await checkSpaceOverlap(
+        {
+          spaceId: full.spaceId,
+          startTime: full.startTime,
+          endTime: full.endTime,
+          excludeReservationId: id,
+        },
+        tx,
+      );
+      if (overlap.hasOverlap) {
+        throw new DomainError(
+          overlap.type === "event"
+            ? "同一スペース・同一時間帯に有効なイベントが存在するため復元できません"
+            : "同一スペース・同一時間帯に有効な予約が存在するため復元できません",
+          "VALIDATION",
+        );
+      }
+    }
+
     await tx.reservation.update({
       where: { id },
       data: {

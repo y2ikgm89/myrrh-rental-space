@@ -27,6 +27,8 @@ import {
   validateCoupon,
 } from "./payloads";
 import { lockSpaceForTransaction } from "./space-locks";
+import { recordTermsAgreements } from "@/shared/domain/terms/commands";
+import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
 
 const SPACE_SELECT = {
   id: true,
@@ -60,6 +62,13 @@ type PublicReservationInput = {
   userId?: string | null | undefined;
   /** クーポンコード。空文字/undefined は「未入力」。サーバー側で validateCoupon が形式・有効性を検証。 */
   couponCode?: string | null | undefined;
+  /**
+   * 同意済み規約 ID。予約作成と同一 tx 内で TermsAgreement を記録する
+   * （series 経路の `recordTermsAgreements` と同型。post-commit 別 tx は禁止）。
+   */
+  agreedTermsIds?: readonly string[] | undefined;
+  ipAddress?: string | null | undefined;
+  userAgent?: string | null | undefined;
 };
 
 export async function createPublicReservationCommand(
@@ -235,6 +244,21 @@ export async function createPublicReservationCommand(
     }
 
     await incrementCustomerReservationStats(tx, customerId);
+
+    // TermsAgreement は予約行と同じ tx で記録する（失敗時は予約ごと rollback）。
+    // series-commands.ts の recordTermsAgreements と同契約。
+    if (input.agreedTermsIds && input.agreedTermsIds.length > 0) {
+      await recordTermsAgreements({
+        scope: TERMS_SCOPE.RESERVATION,
+        customerId,
+        resourceId: created.id,
+        guestEmail: input.userId ? null : input.email,
+        ipAddress: input.ipAddress ?? null,
+        userAgent: input.userAgent ?? null,
+        agreements: input.agreedTermsIds.map((termsId) => ({ termsId })),
+        tx,
+      });
+    }
 
     return created;
   });

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { ACTIVE_EVENT_STATUSES } from "@/shared/domain/spaces/overlap";
 import {
   formatJstDateOnly,
   formatJstDateString,
@@ -282,4 +283,33 @@ export async function getReservationsForDateQuery(
       endTime: true,
     },
   });
+}
+
+/**
+ * 公開空き枠表示用: 指定日に Space を占有する EventTimeSlot を返す。
+ * `checkSpaceOverlap` / DB CONSTRAINT TRIGGER と同じ ACTIVE_EVENT_STATUSES 契約。
+ */
+export async function getEventSlotsForDateQuery(
+  spaceId: string,
+  dateStart: Date,
+  dateEnd: Date,
+): Promise<Array<{ startTime: Date; endTime: Date }>> {
+  const slots = await prisma.eventTimeSlot.findMany({
+    where: {
+      event: {
+        spaceId,
+        deletedAt: null,
+        status: { in: [...ACTIVE_EVENT_STATUSES] },
+      },
+      AND: [{ startAt: { lt: dateEnd } }, { endAt: { gt: dateStart } }],
+    },
+    select: {
+      startAt: true,
+      endAt: true,
+    },
+  });
+  return slots.map((slot) => ({
+    startTime: slot.startAt,
+    endTime: slot.endAt,
+  }));
 }
