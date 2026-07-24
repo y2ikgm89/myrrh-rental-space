@@ -234,7 +234,7 @@ describe("server production env validation", () => {
     expect(() => validateProductionEnv()).not.toThrow();
   });
 
-  test("accepts multi-instance deploys once a distributed backend is claimed", async () => {
+  test("fails fast when RATE_LIMIT_BACKEND=redis before a distributed store exists", async () => {
     setProductionEnv({
       RATE_LIMIT_BACKEND: "redis",
       MAX_INSTANCES_HINT: "10",
@@ -242,7 +242,9 @@ describe("server production env validation", () => {
 
     const { validateProductionEnv } = await importServerEnv();
 
-    expect(() => validateProductionEnv()).not.toThrow();
+    expect(() => validateProductionEnv()).toThrow(
+      /RATE_LIMIT_BACKEND="redis" is not implemented/,
+    );
   });
 
   test("accepts deploys that omit MAX_INSTANCES_HINT entirely", async () => {

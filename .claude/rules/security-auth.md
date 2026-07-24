@@ -41,12 +41,21 @@ paths:
 - InMemory store は **Cloud Run max instance=1 前提**（`cloudbuild.yaml` の
   `_MAX_INSTANCES: "1"` で実際に固定済み。autoscale 解禁には分散 backend が必須で、
   現状は未実装 — 意図的に見送っている判断であり、autoscale 解禁時に再検討する）
+- `RATE_LIMIT_BACKEND=redis` は予約語のみ。store 未実装のため
+  `validateProductionEnv()` が fail-closed（半実装のまま multi-instance を通さない）
 - 本番のクライアント IP は `cf-connecting-ip` + `x-cloudflare-origin-secret` の
   timing-safe 比較成功時のみ信頼。XFF fallback は非本番/localhost 専用
 - パス別の limiter 振分は `checkRateLimit()` が SSoT
 - 予約・イベント申込作成は IP 単位（`checkActionRateLimit`）に加え、顧客(メール)
   単位の第二防壁を `checkEmailRateLimit` で重ねる。同一人物が複数IPから同じ
   メールで大量作成するケースは IP 単位だけでは防げないため
+
+## SwitchBot webhook（accepted risk）
+
+- SwitchBot 公式 webhook は path token（`/api/webhooks/switchbot/[token]`）で認可する。
+  HMAC 署名ヘッダはベンダー契約に無いため未実装（無理に足しても検証できない）
+- Feature Module ではなく Settings（外部連携）ゲート。管理サイドバーの feature prune
+  対象にもしない（公開ナビ prune のみ。管理画面は OFF 機能のデータ運用導線を残す）
 
 ## Turnstile
 

@@ -287,13 +287,12 @@ export const serverEnv = createEnv({
     // Runtime scaling hints
     //
     // `RATE_LIMIT_BACKEND` describes which rate limit store the Cloud Run
-    // process runs against. Only `"in-memory"` is implemented today; adding
-    // `"redis"` requires a distributed store implementation in
-    // `src/shared/lib/rate-limit.ts`. When the backend is `"in-memory"`,
-    // `MAX_INSTANCES_HINT` MUST be `1`: multi-instance Cloud Run + LRUCache
-    // silently divides every rate limit N ways per instance, effectively
-    // multiplying every documented limit by `MAX_INSTANCES`. The instrumentation
-    // startup guard cross-checks the two.
+    // process runs against. Only `"in-memory"` is implemented today.
+    // `"redis"` remains in the enum as a reserved value but
+    // `validateProductionEnv()` fail-closes until a store exists (selecting
+    // redis must not silently keep using InMemory). When the backend is
+    // `"in-memory"`, `MAX_INSTANCES_HINT` MUST be `1`: multi-instance Cloud Run
+    // + LRUCache silently divides every rate limit N ways per instance.
     //
     // `MAX_INSTANCES_HINT` is a copy of the deploy-time Cloud Run
     // `--max-instances` value, plumbed through as a runtime env var so the
@@ -551,9 +550,22 @@ export function validateProductionEnv(): void {
   // deploy-time hint contradicts the backend, fail-fast at startup with an
   // actionable message instead of silently letting production run degraded.
   //
-  // The remediation path is either (a) lower `_MAX_INSTANCES` back to 1 in
-  // `cloudbuild.yaml`, or (b) implement a distributed backend and set
-  // `RATE_LIMIT_BACKEND=redis` alongside the higher `_MAX_INSTANCES`.
+  // `RATE_LIMIT_BACKEND=redis` is reserved in the Zod enum for a future distributed
+  // store, but `RedisRateLimitStore` is not implemented. Accepting the value would
+  // silently keep using InMemoryRateLimitStore — a half-wired footgun. Fail closed
+  // until a real store exists and createRateLimiter selects it by env.
+  if (serverEnv.RATE_LIMIT_BACKEND === "redis") {
+    throw new Error(
+      'RATE_LIMIT_BACKEND="redis" is not implemented. ' +
+        "src/shared/lib/rate-limit.ts only provides InMemoryRateLimitStore. " +
+        'Keep RATE_LIMIT_BACKEND="in-memory" with Cloud Run max-instances=1, ' +
+        "or implement a distributed store before selecting redis.",
+    );
+  }
+
+  // The remediation path for multi-instance is either (a) lower `_MAX_INSTANCES`
+  // back to 1 in `cloudbuild.yaml`, or (b) implement a distributed backend then
+  // set `RATE_LIMIT_BACKEND=redis` alongside the higher `_MAX_INSTANCES`.
   if (
     serverEnv.RATE_LIMIT_BACKEND === "in-memory" &&
     typeof serverEnv.MAX_INSTANCES_HINT === "number" &&
@@ -563,7 +575,7 @@ export function validateProductionEnv(): void {
       `RATE_LIMIT_BACKEND="in-memory" is incompatible with MAX_INSTANCES_HINT=${serverEnv.MAX_INSTANCES_HINT}. ` +
         "Every rate limit is silently multiplied by MAX_INSTANCES because LRUCache is per-process. " +
         "Either lower `_MAX_INSTANCES` in cloudbuild.yaml back to 1, or implement a distributed store " +
-        "in src/shared/lib/rate-limit.ts and set RATE_LIMIT_BACKEND=redis.",
+        "in src/shared/lib/rate-limit.ts first and only then set RATE_LIMIT_BACKEND=redis.",
     );
   }
 }
