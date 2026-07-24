@@ -1,12 +1,8 @@
 /**
  * /mypage/inquiries/[id] — お問い合わせ詳細ページ
  *
- * メッセージスレッド型 card レイアウト: 顧客メッセージとスタッフ返信を
- * 独立 card として視覚的に識別。連絡先は footer に配置。
- *
- * Phase 4 で Inquiry モデルの単一 replyMessage/repliedAt から Inquiry.replies[]
- * (InquiryReply) スレッドへ移行。ここでは STAFF 返信のみをスレッド描画する
- * (CUSTOMER 返信は Phase 5 で追加予定)。
+ * メッセージスレッド型 card レイアウト: 顧客初回メッセージと STAFF/CUSTOMER
+ * 返信を時系列で独立 card として視覚的に識別。連絡先は footer に配置。
  */
 
 import type { ReactElement } from "react";
@@ -65,12 +61,6 @@ export default async function MypageInquiryDetailPage({
     DATE_FORMAT_OPTIONS,
   );
 
-  // STAFF 返信のみをスレッド表示。CUSTOMER 返信 (Phase 5 で追加) は今は除外する。
-  // domain 側で createdAt 昇順に返却されているため sort 不要。
-  const staffReplies = inquiry.replies.filter(
-    (reply) => reply.authorType === "STAFF",
-  );
-
   return (
     <div className="mx-auto w-full min-w-0 max-w-2xl">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
@@ -119,24 +109,34 @@ export default async function MypageInquiryDetailPage({
           </p>
         </article>
 
-        {staffReplies.map((reply) => {
+        {inquiry.replies.map((reply) => {
+          const isStaff = reply.authorType === "STAFF";
           const repliedDate = formatSerializedDate(
             reply.createdAt,
             DATE_FORMAT_OPTIONS,
           );
-          // STAFF 返信では authorName が保証されるが、null fallback で defensive。
-          const authorLabel = reply.authorName ?? "スタッフ";
-          const headingId = `staff-reply-heading-${reply.id}`;
+          const authorLabel = isStaff
+            ? (reply.authorName ?? "スタッフ")
+            : "あなた";
+          const headingId = `reply-heading-${reply.id}`;
           return (
             <article
               key={reply.id}
               aria-labelledby={headingId}
-              className="border border-accent/30 bg-accent/5 p-4 sm:p-6"
+              className={
+                isStaff
+                  ? "border border-accent/30 bg-accent/5 p-4 sm:p-6"
+                  : "border border-border p-4 sm:p-6"
+              }
             >
               <header className="mb-4 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4">
                 <h2
                   id={headingId}
-                  className="text-base font-medium text-accent"
+                  className={
+                    isStaff
+                      ? "text-base font-medium text-accent"
+                      : "text-base font-medium text-foreground"
+                  }
                 >
                   {authorLabel}
                 </h2>
