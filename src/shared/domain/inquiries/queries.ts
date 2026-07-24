@@ -10,6 +10,7 @@ import type { Prisma } from "@generated/prisma/client";
 type InquiryWhereInput = Prisma.InquiryWhereInput;
 import type {
   GetInquiriesResult,
+  InquiryAttachmentItem,
   InquiryFilters,
   InquiryListItem,
   InquiryPagination,
@@ -63,6 +64,38 @@ export function flattenReply(r: RawReply): InquiryReplyItem {
     authorType: r.authorType,
     authorName,
     createdAt: r.createdAt,
+  };
+}
+
+/**
+ * findMany の select で返す attachment 生形状。queries.ts / customer-queries.ts で共有する。
+ */
+export const ATTACHMENT_SELECT_INTERNAL = {
+  id: true,
+  filename: true,
+  mimeType: true,
+  sizeBytes: true,
+  replyId: true,
+  createdAt: true,
+} as const;
+
+type RawAttachment = {
+  id: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  replyId: string | null;
+  createdAt: Date;
+};
+
+export function flattenAttachment(a: RawAttachment): InquiryAttachmentItem {
+  return {
+    id: a.id,
+    filename: a.filename,
+    mimeType: a.mimeType,
+    sizeBytes: a.sizeBytes,
+    replyId: a.replyId,
+    createdAt: a.createdAt,
   };
 }
 
@@ -180,6 +213,10 @@ export async function getInquiryById(
         orderBy: { createdAt: "asc" },
         select: REPLY_SELECT_INTERNAL,
       },
+      attachments: {
+        orderBy: { createdAt: "asc" },
+        select: ATTACHMENT_SELECT_INTERNAL,
+      },
       customer: {
         select: {
           id: true,
@@ -213,12 +250,70 @@ export async function getInquiryById(
     deletedAt: inquiry.deletedAt,
     anonymizedAt: inquiry.anonymizedAt,
     replies: inquiry.replies.map(flattenReply),
+    attachments: inquiry.attachments.map(flattenAttachment),
     customer: inquiry.customer,
     createdAt: inquiry.createdAt,
     updatedAt: inquiry.updatedAt,
   };
 
   return toPlainObject(shaped);
+}
+
+/**
+ * 添付ダウンロード route 用の最小投影。
+ *
+ * `customerId` は customer 側 route の所有権チェック（`inquiry.customerId` 一致）
+ * に使う。admin 側 route は `checkPermission("inquiry","read")` のみで
+ * customerId は見ない（admin は全件アクセス可）。
+ *
+ * soft-deleted（`deletedAt` 非 null）はここでは弾かない — admin は retention
+ * 猶予期間中の soft-deleted inquiry も詳細画面から閲覧できる（`getInquiryById`
+ * が `deletedAt` で filter しない設計と対称）。customer 側は
+ * `getCustomerInquiryById` 自体が `deletedAt: null` で絞るため、customer は
+ * そもそも soft-deleted inquiry の詳細ページに到達できず矛盾しない。
+ *
+ * anonymize 済み（`anonymizedAt` 非 null）は 404 相当（null）にする —
+ * `anonymizeInquiryCommand`（PR6）が添付を R2 ごと削除する設計のため、万一
+ * DB 行が残っていてもここでは配信しない防御。
+ */
+export type InquiryAttachmentForDownload = {
+  id: string;
+  r2Key: string;
+  mimeType: string;
+  filename: string;
+  inquiryId: string;
+  customerId: string | null;
+};
+
+export async function getInquiryAttachmentForDownload(
+  id: string,
+): Promise<InquiryAttachmentForDownload | null> {
+  const attachment = await prisma.inquiryAttachment.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      r2Key: true,
+      mimeType: true,
+      filename: true,
+      inquiryId: true,
+      inquiry: {
+        select: { customerId: true, anonymizedAt: true },
+      },
+    },
+  });
+
+  if (!attachment || attachment.inquiry.anonymizedAt !== null) {
+    return null;
+  }
+
+  return {
+    id: attachment.id,
+    r2Key: attachment.r2Key,
+    mimeType: attachment.mimeType,
+    filename: attachment.filename,
+    inquiryId: attachment.inquiryId,
+    customerId: attachment.inquiry.customerId,
+  };
 }
 
 export async function getInquiryStats(): Promise<InquiryStats> {

@@ -105,3 +105,22 @@ export function getR2BucketName(): string {
   }
   return bucket;
 }
+
+/**
+ * お問い合わせ添付専用の private R2 バケット名（env から取得、未設定時は throw）。
+ *
+ * `R2_BUCKET_NAME`（メディアライブラリ用の公開 CDN バケット）とは別バケット。
+ * PII を含む添付ファイルを公開 CDN に混在させない設計方針（inquiry-overhaul
+ * completion design §5.2）のため、bucket 自体を分離し `buildPublicUrl` を
+ * 一切呼ばない private-only 経路にする。credentials（account/access key/secret）
+ * は既存 R2 アカウントを共有する。
+ */
+export function getR2InquiriesBucketName(): string {
+  const bucket = serverEnv.R2_INQUIRIES_BUCKET_NAME;
+  if (!bucket) {
+    throw new Error(
+      "R2_INQUIRIES_BUCKET_NAME is not configured. Set it in the environment variables.",
+    );
+  }
+  return bucket;
+}

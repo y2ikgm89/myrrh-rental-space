@@ -37,6 +37,10 @@ locals {
     # state forget は下の `removed` block。GCP SM 削除は operator 手順
     # (docs/runbooks/gcp-dead-resource-cleanup.md)。
     "SUPPRESSION_HASH_SECRET",
+    # 手順 1 (PR-a) のみ完了: container だけ作成。operator の版投入 (手順 2) と
+    # Cloud Run 配線 + imported_secrets 追加 (手順 3, PR-b) は follow-up。
+    # 3 段階手順は本ファイル末尾のコメントを参照。
+    "R2_INQUIRIES_BUCKET_NAME",
   ]
 
   # Cloud Build が image build 時に availableSecrets 経由で読む secret。

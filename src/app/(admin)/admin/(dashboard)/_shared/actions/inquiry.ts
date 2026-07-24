@@ -9,6 +9,10 @@ import {
   replyToInquiryCommand,
   updateInquiryCustomer as updateInquiryCustomerCommand,
 } from "@/shared/domain/inquiries/commands";
+import {
+  uploadInquiryAttachmentCommand,
+  deleteInquiryAttachmentCommand,
+} from "@/shared/domain/inquiries/attachment-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
@@ -191,6 +195,83 @@ export async function updateInquiryCustomer(
       if (parsed.data.customerId) {
         updateTag(getCacheTag.customers.detail(parsed.data.customerId));
       }
+    },
+  });
+}
+
+const uploadAttachmentSchema = z.object({
+  inquiryId: z.uuid({ error: "お問い合わせIDが不正です" }),
+  replyId: z.uuid({ error: "返信IDが不正です" }).nullable(),
+});
+
+export async function uploadInquiryAttachment(
+  formData: FormData,
+): Promise<MutationResult<{ id: string }>> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "ファイルを選択してください" };
+  }
+
+  const inquiryIdValue = formData.get("inquiryId");
+  const replyIdValue = formData.get("replyId");
+  const parsed = uploadAttachmentSchema.safeParse({
+    inquiryId: typeof inquiryIdValue === "string" ? inquiryIdValue : "",
+    replyId:
+      typeof replyIdValue === "string" && replyIdValue.length > 0
+        ? replyIdValue
+        : null,
+  });
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "inquiry",
+    action: "update",
+    resourceId: parsed.data.inquiryId,
+    execute: async (user) =>
+      uploadInquiryAttachmentCommand({
+        file,
+        inquiryId: parsed.data.inquiryId,
+        replyId: parsed.data.replyId,
+        uploader: { type: "STAFF", userId: user.id },
+      }),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INQUIRIES);
+      updateTag(getCacheTag.inquiries.detail(parsed.data.inquiryId));
+    },
+    resolveAuditResourceId: () => parsed.data.inquiryId,
+  });
+}
+
+const deleteAttachmentSchema = z.object({
+  attachmentId: z.uuid({ error: "添付ファイルIDが不正です" }),
+  inquiryId: z.uuid({ error: "お問い合わせIDが不正です" }),
+});
+
+export async function deleteInquiryAttachment(
+  attachmentId: string,
+  inquiryId: string,
+): Promise<MutationResult> {
+  const parsed = deleteAttachmentSchema.safeParse({ attachmentId, inquiryId });
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "inquiry",
+    action: "update",
+    resourceId: parsed.data.inquiryId,
+    execute: async () => {
+      await deleteInquiryAttachmentCommand({
+        attachmentId: parsed.data.attachmentId,
+        actor: { type: "STAFF_ADMIN" },
+      });
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INQUIRIES);
+      updateTag(getCacheTag.inquiries.detail(parsed.data.inquiryId));
     },
   });
 }

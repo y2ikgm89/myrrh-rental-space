@@ -7,6 +7,15 @@ import {
   type DataRetentionConfig,
 } from "@/shared/lib/json-validators";
 import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { getR2InquiriesBucketName } from "@/shared/lib/r2/client";
+import { deleteObjectsFromBucket } from "@/shared/lib/r2/delete";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import type { Prisma } from "@generated/prisma/client";
 
 /**
  * データ保持ポリシー実行 — PIPA 22 条 / GDPR 5(1)(e) 対応。
@@ -205,6 +214,17 @@ export async function anonymizeExpiredGuestReservations(
  *
  * Phase 6 で soft-deleted 用の短い grace period（例: 14 日）を config field として
  * 分離する余地は残しつつ、Phase 1 では単一の inquiryMonths cutoff を両分岐で共有する。
+ *
+ * ## 添付ファイル (inquiry-overhaul completion design §5.2)
+ *
+ * `inquiry_attachments` は `Inquiry` に `onDelete: Cascade` で紐づくため DB 行は
+ * 自動で消えるが、private R2 bucket 上の object は別途明示的に削除しないと
+ * orphan で残り続ける。DB cascade が実行される**前**に対象 inquiry 群の
+ * `r2Key` を集めておき、DB delete 後に一括削除する。R2 削除が失敗しても
+ * DB purge 自体は完了させ（本 cron の主目的）、失敗は log のみ（orphan object
+ * の再クリーンアップは別 cron 検討、Phase 1 では対象外 — 環境変数
+ * `R2_INQUIRIES_BUCKET_NAME` が未配線の環境でもこの cron 全体を落とさない
+ * ためにも try/catch で隔離する）。
  */
 export async function purgeExpiredInquiries(
   now: Date,
@@ -212,11 +232,46 @@ export async function purgeExpiredInquiries(
 ): Promise<number> {
   if (months <= 0) return 0;
   const cutoff = monthsAgo(now, months);
-  const result = await prisma.inquiry.deleteMany({
-    where: {
-      OR: [{ createdAt: { lt: cutoff } }, { deletedAt: { lt: cutoff } }],
-    },
+  const purgeWhere: Prisma.InquiryWhereInput = {
+    OR: [{ createdAt: { lt: cutoff } }, { deletedAt: { lt: cutoff } }],
+  };
+
+  const attachments = await prisma.inquiryAttachment.findMany({
+    where: { inquiry: purgeWhere },
+    select: { r2Key: true },
   });
+
+  const result = await prisma.inquiry.deleteMany({ where: purgeWhere });
+
+  if (attachments.length > 0) {
+    try {
+      const bucket = getR2InquiriesBucketName();
+      const r2Result = await deleteObjectsFromBucket(
+        bucket,
+        attachments.map((a) => a.r2Key),
+      );
+      if (!r2Result.success) {
+        logError(new Error(r2Result.error ?? "R2 delete failed"), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "purgeExpiredInquiries.r2Cleanup",
+            count: attachments.length,
+          },
+        });
+      }
+    } catch (error) {
+      logError(normalizeError(error), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.HIGH,
+        context: {
+          operation: "purgeExpiredInquiries.r2Cleanup",
+          count: attachments.length,
+        },
+      });
+    }
+  }
+
   return result.count;
 }
 
