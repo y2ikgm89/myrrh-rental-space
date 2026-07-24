@@ -13,6 +13,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 // ---------------------------------------------------------------------------
 // Facade / external module mocks (順序: mock.module 宣言 → dynamic import)
@@ -134,25 +135,12 @@ mock.module("@/shared/domain/audit-log/commands", () => ({
 }));
 
 // logError: skip 分岐等で発火する。fail 時のノイズを抑えるため noop。
-mock.module("@/shared/lib/errors/server", () => ({
+// `...actual` re-export で safeFetch 等を残す（部分 mock は Export named not found）。
+await installErrorsServerMock({
   logError: () => {},
   normalizeError: (err: unknown) =>
     err instanceof Error ? err : new Error(String(err)),
-  ErrorCategory: {
-    DATABASE: "DATABASE",
-    EXTERNAL_API: "EXTERNAL_API",
-    VALIDATION: "VALIDATION",
-    AUTHORIZATION: "AUTHORIZATION",
-    CACHE: "CACHE",
-    UNKNOWN: "UNKNOWN",
-  },
-  ErrorSeverity: {
-    LOW: "LOW",
-    MEDIUM: "MEDIUM",
-    HIGH: "HIGH",
-    CRITICAL: "CRITICAL",
-  },
-}));
+});
 
 // fireAndForget: applyCancellationSideEffects は orchestrator 全体を fireAndForget
 // でラップするため、テスト側で単一の pending promise を集めて drain する。

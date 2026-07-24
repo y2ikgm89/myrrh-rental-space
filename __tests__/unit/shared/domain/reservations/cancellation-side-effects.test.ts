@@ -25,6 +25,7 @@
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { expectRecord } from "../../../../helpers/type-assertions";
+import { installErrorsServerMock } from "../../../../mocks/errors-server";
 
 // ---------------------------------------------------------------------------
 // Mocks（モジュール解決の都合上、import より前に登録する）
@@ -140,28 +141,13 @@ mock.module("@/shared/lib/email/reservation-emails", () => ({
   ),
 }));
 
-const mockLogError = mock<(err: Error, ctx: Record<string, unknown>) => void>(
-  () => {},
-);
-mock.module("@/shared/lib/errors/server", () => ({
-  logError: mockLogError,
+const mockLogError = mock<(err: unknown, ctx: unknown) => void>(() => {});
+// `...actual` re-export で safeFetch 等を残す（部分 mock は Export named not found）。
+await installErrorsServerMock({
+  logError: (err, ctx) => mockLogError(err, ctx),
   normalizeError: (err: unknown) =>
     err instanceof Error ? err : new Error(String(err)),
-  ErrorCategory: {
-    DATABASE: "DATABASE",
-    EXTERNAL_API: "EXTERNAL_API",
-    VALIDATION: "VALIDATION",
-    AUTHORIZATION: "AUTHORIZATION",
-    CACHE: "CACHE",
-    UNKNOWN: "UNKNOWN",
-  },
-  ErrorSeverity: {
-    LOW: "LOW",
-    MEDIUM: "MEDIUM",
-    HIGH: "HIGH",
-    CRITICAL: "CRITICAL",
-  },
-}));
+});
 
 // ---------------------------------------------------------------------------
 // SUT を mock 登録後に import
