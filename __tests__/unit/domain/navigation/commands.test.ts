@@ -282,7 +282,16 @@ describe("navigationItemInputSchema バリデーション", () => {
     test("url が500文字のとき通過する", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        url: "https://example.com/" + "a".repeat(480),
+        url: "/" + "a".repeat(499),
+      });
+      expect(result.success).toBe(true);
+    });
+
+    test("外部リンク URL は isExternal=true のとき通過する", () => {
+      const result = navigationItemInputSchema.safeParse({
+        ...VALID_NAV_INPUT,
+        url: "https://example.com/page",
+        isExternal: true,
       });
       expect(result.success).toBe(true);
     });
@@ -324,7 +333,25 @@ describe("navigationItemInputSchema バリデーション", () => {
     test("url が501文字で失敗する", () => {
       const result = navigationItemInputSchema.safeParse({
         ...VALID_NAV_INPUT,
-        url: "https://example.com/" + "a".repeat(481),
+        url: "/" + "a".repeat(500),
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("https URL は isExternal=false で失敗する", () => {
+      const result = navigationItemInputSchema.safeParse({
+        ...VALID_NAV_INPUT,
+        url: "https://example.com",
+        isExternal: false,
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("javascript: URL は isExternal=true で失敗する", () => {
+      const result = navigationItemInputSchema.safeParse({
+        ...VALID_NAV_INPUT,
+        url: "javascript:alert(1)",
+        isExternal: true,
       });
       expect(result.success).toBe(false);
     });
@@ -478,6 +505,14 @@ describe("socialLinkInputSchema バリデーション", () => {
       const result = socialLinkInputSchema.safeParse({
         ...VALID_SOCIAL_INPUT,
         url: "not-a-url",
+      });
+      expect(result.success).toBe(false);
+    });
+
+    test("javascript: URL で失敗する", () => {
+      const result = socialLinkInputSchema.safeParse({
+        ...VALID_SOCIAL_INPUT,
+        url: "javascript:alert(1)",
       });
       expect(result.success).toBe(false);
     });

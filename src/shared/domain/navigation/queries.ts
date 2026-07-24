@@ -136,6 +136,12 @@ export async function getHeaderNavigation(): Promise<readonly PublicNavItem[]> {
   return getPublicNavigation("HEADER_DESKTOP");
 }
 
+export async function getMobileHeaderNavigation(): Promise<
+  readonly PublicNavItem[]
+> {
+  return getPublicNavigation("HEADER_MOBILE");
+}
+
 export async function getFooterNavigation(): Promise<readonly PublicNavItem[]> {
   return getPublicNavigation("FOOTER");
 }

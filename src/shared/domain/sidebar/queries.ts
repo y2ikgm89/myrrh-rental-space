@@ -102,6 +102,8 @@ export async function getSidebarData(
             prisma.post.findMany({
               where: publishedWhere,
               select: postSelect,
+              // Post に viewCount 列が無いため、暫定で公開日順。
+              // 閲覧数トラッキング実装後に viewCount desc へ切り替える。
               orderBy: { publishedAt: "desc" },
               take: popularCount,
             }),

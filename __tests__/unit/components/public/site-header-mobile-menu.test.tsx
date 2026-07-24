@@ -147,11 +147,15 @@ function textLabel(key: string, text: string): PublicNavItem["label"] {
   return [{ _key: key, _type: "span", text }];
 }
 
-function renderHeader(navItems: readonly PublicNavItem[] = []): void {
+function renderHeader(
+  mobileNavItems: readonly PublicNavItem[] = [],
+  navItems: readonly PublicNavItem[] = [],
+): void {
   root?.render(
     <Header
       brand={brand}
       navItems={navItems}
+      mobileNavItems={mobileNavItems}
       scrollBehavior={HeaderScrollBehavior.always_visible}
       backgroundMode={HeaderBackgroundMode.transparent}
       authSlot={null}
@@ -260,5 +264,43 @@ describe("public site header mobile menu", () => {
       expect(element?.className).toContain("focus-visible:ring-ring");
       expect(element?.className).not.toContain("rounded-");
     }
+  });
+
+  test("hamburger menu renders mobileNavItems, not desktop navItems", async () => {
+    await act(async () => {
+      renderHeader(
+        [
+          {
+            id: "mobile-only",
+            label: textLabel("mobile-label", "Mobile Only"),
+            url: "/mobile-only",
+            isExternal: false,
+            children: [],
+          },
+        ],
+        [
+          {
+            id: "desktop-only",
+            label: textLabel("desktop-label", "Desktop Only"),
+            url: "/desktop-only",
+            isExternal: false,
+            children: [],
+          },
+        ],
+      );
+    });
+
+    await openMobileMenu();
+
+    const mobileNav = document.querySelector<HTMLElement>(
+      '[role="dialog"] nav',
+    );
+    expect(mobileNav).not.toBeNull();
+    const labels = Array.from(
+      mobileNav?.querySelectorAll<HTMLAnchorElement>("a") ?? [],
+    ).map((anchor) => anchor.textContent);
+
+    expect(labels).toContain("Mobile Only");
+    expect(labels).not.toContain("Desktop Only");
   });
 });

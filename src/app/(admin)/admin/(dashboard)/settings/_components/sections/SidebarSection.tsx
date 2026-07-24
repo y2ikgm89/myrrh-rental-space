@@ -11,8 +11,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { arrayMove } from "@dnd-kit/sortable";
 import type { DragEndEvent } from "@dnd-kit/core";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { toast } from "sonner";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
   Card,
   CardContent,
@@ -37,7 +41,8 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
-  parseSidebarWidgets,
+  DEFAULT_SIDEBAR_WIDGETS,
+  tryParseSidebarWidgets,
   type CustomWidget,
   type PopularWidget,
   type PostListLayout,
@@ -64,12 +69,16 @@ interface SidebarSectionProps {
 
 export function SidebarSection({ settings }: SidebarSectionProps) {
   const router = useRouter();
+  const initialWidgetsParse = tryParseSidebarWidgets(settings.sidebarWidgets);
+  const initialWidgets = initialWidgetsParse.success
+    ? initialWidgetsParse.data
+    : DEFAULT_SIDEBAR_WIDGETS;
 
   // --- State ---
   const [sidebarEnabled, setSidebarEnabled] = useState(settings.sidebarEnabled);
-  const [widgets, setWidgets] = useState<SidebarWidget[]>(() =>
-    parseSidebarWidgets(settings.sidebarWidgets),
-  );
+  const [widgets, setWidgets] = useState<SidebarWidget[]>(initialWidgets);
+  const [storedWidgetsInvalid] = useState(!initialWidgetsParse.success);
+  const [resetConfirmed, setResetConfirmed] = useState(false);
   const [recentCount, setRecentCount] = useState(settings.sidebarRecentCount);
   const [popularCount, setPopularCount] = useState(
     settings.sidebarPopularCount,
@@ -89,14 +98,20 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
 
   // --- Dirty check ---
   const isDirty = (() => {
-    const initial = parseSidebarWidgets(settings.sidebarWidgets);
     if (sidebarEnabled !== settings.sidebarEnabled) return true;
     if (recentCount !== settings.sidebarRecentCount) return true;
     if (popularCount !== settings.sidebarPopularCount) return true;
     if (tocEnabled !== settings.sidebarTocEnabled) return true;
-    if (JSON.stringify(widgets) !== JSON.stringify(initial)) return true;
+    if (JSON.stringify(widgets) !== JSON.stringify(initialWidgets)) return true;
     return false;
   })();
+
+  const canSave = storedWidgetsInvalid ? resetConfirmed : isDirty;
+
+  const handleResetWidgetsToDefaults = () => {
+    setWidgets(DEFAULT_SIDEBAR_WIDGETS);
+    setResetConfirmed(true);
+  };
 
   // --- Widget sub-type helpers ---
   const recentWidget = widgets.find(
@@ -226,6 +241,28 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {storedWidgetsInvalid && (
+          <Alert variant="destructive">
+            <IconAlertTriangle aria-hidden="true" />
+            <AlertTitle>保存されているウィジェット設定が不正です</AlertTitle>
+            <AlertDescription>
+              <p>
+                データベース上のウィジェット設定を読み込めませんでした。誤って上書きしないよう、保存は一時的に無効です。
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={handleResetWidgetsToDefaults}
+                disabled={isPending}
+              >
+                デフォルトにリセット
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* サイドバー全体の有効/無効 */}
         <div className="flex items-center justify-between rounded-lg border p-4">
           <div className="space-y-0.5">
@@ -342,6 +379,9 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                 {popularWidget?.enabled && (
                   <div className="space-y-4 rounded-lg border p-4">
                     <p className="text-sm font-medium">人気記事</p>
+                    <p className="text-sm text-muted-foreground">
+                      現時点では閲覧数トラッキング未実装のため、公開日の新しい順で表示されます（新着と同じ並び）。
+                    </p>
                     <div className="space-y-2">
                       <Label htmlFor="sidebar-popular-count">表示件数</Label>
                       <Input
@@ -408,7 +448,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
             isPending={isPending}
             label="サイドバー設定を保存"
             onClick={handleSave}
-            disabled={!isDirty}
+            disabled={!canSave}
           />
         </div>
 

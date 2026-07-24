@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalSafePublicHrefSchema } from "@/shared/lib/url/safe-href";
 
 // ---------------------------------------------------------------------------
 // Widget types
@@ -48,7 +49,7 @@ const customWidgetSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1, { error: "タイトルは必須です" }).max(100),
   description: z.string().max(500).optional(),
-  linkUrl: z.string().max(500).optional(),
+  linkUrl: optionalSafePublicHrefSchema,
   linkLabel: z.string().max(100).optional(),
 });
 
@@ -109,13 +110,27 @@ export const DEFAULT_SIDEBAR_WIDGETS: SidebarWidget[] = [
   { type: "tags", enabled: true },
 ];
 
+export type TryParseSidebarWidgetsResult =
+  { success: true; data: SidebarWidget[] } | { success: false };
+
+/**
+ * Strict parse for admin paths — no silent fallback.
+ */
+export function tryParseSidebarWidgets(
+  value: unknown,
+): TryParseSidebarWidgetsResult {
+  const result = sidebarWidgetsSchema.safeParse(value);
+  if (result.success) return { success: true, data: result.data };
+  return { success: false };
+}
+
 /**
  * Parse sidebar widgets from DB JSON.
  * Handles: valid array, null/undefined, invalid data.
  * Always returns a valid SidebarWidget[].
  */
 export function parseSidebarWidgets(value: unknown): SidebarWidget[] {
-  const arrayResult = sidebarWidgetsSchema.safeParse(value);
-  if (arrayResult.success) return arrayResult.data;
+  const result = tryParseSidebarWidgets(value);
+  if (result.success) return result.data;
   return DEFAULT_SIDEBAR_WIDGETS;
 }

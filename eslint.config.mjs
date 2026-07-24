@@ -407,6 +407,8 @@ const eslintConfig = defineConfig([
     // 別 tsconfig が同梱されると `eslint .` 時に typescript-eslint が
     // tsconfigRootDir を一意に決められず全ファイル parse error になるため必須。
     ".claude/**",
+    // Cursor / agent worktrees（同様に別 tsconfig が混ざると eslint . が壊れる）
+    ".worktrees/**",
     // scratch / 生成物（lint 対象外）
     ".remember/**",
     "coverage/**",

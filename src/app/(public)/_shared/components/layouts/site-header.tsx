@@ -6,7 +6,7 @@
  * - デスクトップ: @radix-ui/react-navigation-menu（WAI-ARIA 準拠、キーボード操作対応）
  * - モバイル: @radix-ui/react-dialog（Portal / focus trap / Esc）
  * - スクロール挙動: gsap.matchMedia で prefers-reduced-motion を尊重
- * - 全ナビ項目は DB 駆動。navItems が空なら nav リストのみ省略
+ * - 全ナビ項目は DB 駆動。navItems / mobileNavItems が空なら各ナビリストのみ省略
  */
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
@@ -25,7 +25,8 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
 import { normalizePreviewPathname } from "@/shared/lib/preview-routes";
-import { toAppRoute } from "@/shared/lib/typed-routes";
+import { isAppRoute, toAppRoute } from "@/shared/lib/typed-routes";
+import { toSafePublicHref } from "@/shared/lib/url/safe-href";
 import { Button } from "@/public/components/design-system/button";
 import { LogoutButton } from "@/public/components/ui/logout-button";
 import { SiteBrand } from "./site-brand";
@@ -51,6 +52,7 @@ export type HeaderAuthSlot =
 interface HeaderProps {
   readonly brand: SiteBrandValue;
   readonly navItems: readonly PublicNavItem[];
+  readonly mobileNavItems: readonly PublicNavItem[];
   readonly scrollBehavior: HeaderScrollBehavior;
   readonly backgroundMode: HeaderBackgroundMode;
   readonly authSlot: HeaderAuthSlot | null;
@@ -115,6 +117,7 @@ function NavItemLink({
   readonly inNavigationMenu?: boolean;
 }): ReactElement {
   const isActive = useIsActiveUrl(item.url, item.isExternal);
+  const safeExternalHref = item.isExternal ? toSafePublicHref(item.url) : null;
 
   const content = (
     <>
@@ -122,30 +125,43 @@ function NavItemLink({
         spans={item.label}
         iconClassName="h-3.5 w-3.5 shrink-0"
       />
-      {item.isExternal && <span className="sr-only"> (新しいタブで開く)</span>}
+      {safeExternalHref ? (
+        <span className="sr-only"> (新しいタブで開く)</span>
+      ) : null}
     </>
   );
 
-  const anchor = item.isExternal ? (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noreferrer"
-      className={className}
-      {...(onNavigate && { onClick: onNavigate })}
-    >
-      {content}
-    </a>
-  ) : (
-    <Link
-      href={toAppRoute(item.url)}
-      aria-current={isActive ? "page" : undefined}
-      className={className}
-      {...(onNavigate && { onClick: onNavigate })}
-    >
-      {content}
-    </Link>
-  );
+  const textOnly = <span className={className}>{content}</span>;
+
+  let anchor: ReactElement;
+  if (item.isExternal) {
+    anchor = safeExternalHref ? (
+      <a
+        href={safeExternalHref}
+        target="_blank"
+        rel="noreferrer"
+        className={className}
+        {...(onNavigate && { onClick: onNavigate })}
+      >
+        {content}
+      </a>
+    ) : (
+      textOnly
+    );
+  } else if (isAppRoute(item.url)) {
+    anchor = (
+      <Link
+        href={toAppRoute(item.url)}
+        aria-current={isActive ? "page" : undefined}
+        className={className}
+        {...(onNavigate && { onClick: onNavigate })}
+      >
+        {content}
+      </Link>
+    );
+  } else {
+    anchor = textOnly;
+  }
 
   if (inNavigationMenu) {
     return (
@@ -217,12 +233,16 @@ function MobileNavItem({
 export function Header({
   brand,
   navItems,
+  mobileNavItems,
   scrollBehavior,
   backgroundMode,
   authSlot,
 }: HeaderProps): ReactElement {
   // /reservation は CTA ボタンで導線があるためナビから除外
   const items = navItems.filter((item) => item.url !== "/reservation");
+  const mobileItems = mobileNavItems.filter(
+    (item) => item.url !== "/reservation",
+  );
   const headerRef = useRef<HTMLElement>(null);
   const mobileMenuContentRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -527,7 +547,7 @@ export function Header({
                 className="flex flex-1 flex-col overflow-y-auto"
               >
                 <div className="flex min-h-full flex-col items-center justify-center gap-6 px-5 py-8">
-                  {items.map((item) => (
+                  {mobileItems.map((item) => (
                     <MobileNavItem
                       key={item.id}
                       item={item}

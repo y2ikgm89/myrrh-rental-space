@@ -30,6 +30,11 @@ export async function BlogLayout({
     return <>{children}</>;
   }
 
+  const hasEnabledWidgets = settings.widgets.some((w) => w.enabled);
+  if (!hasEnabledWidgets) {
+    return <>{children}</>;
+  }
+
   const data = await getSidebarData(
     settings.widgets,
     settings.recentCount,

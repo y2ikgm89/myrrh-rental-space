@@ -12,22 +12,46 @@ import {
 } from "@/shared/domain/order-sql";
 import { createSpanArraySchema } from "@/shared/lib/portable-text/schema";
 import { spansToPlainText } from "@/shared/lib/portable-text";
+import {
+  externalPublicHrefSchema,
+  isExternalPublicHref,
+  isInternalNavHref,
+} from "@/shared/lib/url/safe-href";
 
-export const navigationItemInputSchema = z.strictObject({
-  type: z.enum(NavigationType),
-  parentId: z.uuid().nullable().optional(),
-  /**
-   * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在）。
-   * icon-only モード（span token ゼロ）は NN/g 準拠で UI 層が拒否する想定。
-   */
-  label: createSpanArraySchema({ maxSpans: 30 }).refine(
-    (spans) => spansToPlainText(spans).trim().length > 0,
-    { error: "ラベルにテキストを 1 文字以上含めてください" },
-  ),
-  url: z.string().min(1, { error: "URLは必須です" }).max(500),
-  isExternal: z.boolean().default(false),
-  isActive: z.boolean().default(true),
-});
+export const navigationItemInputSchema = z
+  .strictObject({
+    type: z.enum(NavigationType),
+    parentId: z.uuid().nullable().optional(),
+    /**
+     * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在）。
+     * icon-only モード（span token ゼロ）は NN/g 準拠で UI 層が拒否する想定。
+     */
+    label: createSpanArraySchema({ maxSpans: 30 }).refine(
+      (spans) => spansToPlainText(spans).trim().length > 0,
+      { error: "ラベルにテキストを 1 文字以上含めてください" },
+    ),
+    url: z.string().min(1, { error: "URLは必須です" }).max(500),
+    isExternal: z.boolean().default(false),
+    isActive: z.boolean().default(true),
+  })
+  .superRefine((data, ctx) => {
+    if (data.isExternal) {
+      if (!isExternalPublicHref(data.url)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["url"],
+          message:
+            "外部リンクは http(s) / mailto / tel の URL を指定してください（javascript: 等は不可）",
+        });
+      }
+    } else if (!isInternalNavHref(data.url)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["url"],
+        message: "内部リンクは / から始まるパスを指定してください",
+      });
+    }
+  });
 
 export const navigationOrderInputSchema = z
   .array(
@@ -50,10 +74,7 @@ export const navigationOrderInputSchema = z
 
 export const socialLinkInputSchema = z.strictObject({
   platform: z.enum(SocialPlatform),
-  url: z
-    .string()
-    .min(1, { error: "URLは必須です" })
-    .pipe(z.url({ error: "有効なURLを入力してください" })),
+  url: externalPublicHrefSchema,
   isActive: z.boolean().default(true),
   showOnDesktop: z.boolean().default(true),
   showOnMobile: z.boolean().default(true),

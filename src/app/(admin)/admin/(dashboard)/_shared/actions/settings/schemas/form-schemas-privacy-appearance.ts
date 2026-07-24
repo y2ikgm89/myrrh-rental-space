@@ -33,14 +33,17 @@ export const footerFormSchema = z.object({
   // conform は空欄を undefined 化するため、明示的な必須メッセージを与える。
   footerNavigationLabel: z
     .string({ error: "必須です" })
+    .trim()
     .min(1, { error: "必須です" })
     .max(50, { error: "50文字以内で入力してください" }),
   footerContactLabel: z
     .string({ error: "必須です" })
+    .trim()
     .min(1, { error: "必須です" })
     .max(50, { error: "50文字以内で入力してください" }),
   footerHoursLabel: z
     .string({ error: "必須です" })
+    .trim()
     .min(1, { error: "必須です" })
     .max(50, { error: "50文字以内で入力してください" }),
   footerShowSocialLinks: switchBoolean(),

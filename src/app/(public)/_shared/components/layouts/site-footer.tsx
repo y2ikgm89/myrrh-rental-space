@@ -17,7 +17,9 @@ import { getFooterTerms } from "@/shared/domain/terms/queries";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
-import { toAppRoute } from "@/shared/lib/typed-routes";
+import { isAppRoute, toAppRoute } from "@/shared/lib/typed-routes";
+import { toSafePublicHref } from "@/shared/lib/url/safe-href";
+import type { PublicNavItem } from "@/shared/domain/navigation/queries";
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { CopyrightYear } from "./copyright-year";
@@ -142,6 +144,47 @@ const CONTACT_LINK_CLASS =
 
 const HEADING_CLASS = "text-eyebrow uppercase text-muted-foreground";
 
+function FooterNavLink({
+  item,
+}: {
+  readonly item: PublicNavItem;
+}): ReactElement {
+  const inner = (
+    <PortableTextSpans
+      spans={item.label}
+      iconClassName="h-3.5 w-3.5 shrink-0"
+    />
+  );
+  const safeExternalHref = item.isExternal ? toSafePublicHref(item.url) : null;
+
+  if (item.isExternal) {
+    if (!safeExternalHref) {
+      return <span className={NAV_LINK_CLASS}>{inner}</span>;
+    }
+    return (
+      <a
+        href={safeExternalHref}
+        target="_blank"
+        rel="noreferrer"
+        className={NAV_LINK_CLASS}
+      >
+        {inner}
+        <span className="sr-only"> (新しいタブで開く)</span>
+      </a>
+    );
+  }
+
+  if (!isAppRoute(item.url)) {
+    return <span className={NAV_LINK_CLASS}>{inner}</span>;
+  }
+
+  return (
+    <Link href={toAppRoute(item.url)} className={NAV_LINK_CLASS}>
+      {inner}
+    </Link>
+  );
+}
+
 export async function Footer(): Promise<ReactElement> {
   // build-time prerender 汚染を構造的に回避する。Footer は全て 'use cache' 関数依存だが
   // (info / footerNav / footerSettings / socialLinks / footerTerms)、build 時に placeholder
@@ -203,36 +246,20 @@ export async function Footer(): Promise<ReactElement> {
                 {footerSettings.navigationLabel}
               </h2>
               <ul className="mt-4 space-y-3">
-                {footerNav.map((item) => {
-                  const inner = (
-                    <PortableTextSpans
-                      spans={item.label}
-                      iconClassName="h-3.5 w-3.5 shrink-0"
-                    />
-                  );
-                  return (
-                    <li key={item.id}>
-                      {item.isExternal ? (
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={NAV_LINK_CLASS}
-                        >
-                          {inner}
-                          <span className="sr-only"> (新しいタブで開く)</span>
-                        </a>
-                      ) : (
-                        <Link
-                          href={toAppRoute(item.url)}
-                          className={NAV_LINK_CLASS}
-                        >
-                          {inner}
-                        </Link>
-                      )}
-                    </li>
-                  );
-                })}
+                {footerNav.map((item) => (
+                  <li key={item.id}>
+                    <FooterNavLink item={item} />
+                    {item.children.length > 0 ? (
+                      <ul className="mt-2 space-y-2 pl-4">
+                        {item.children.map((child) => (
+                          <li key={child.id}>
+                            <FooterNavLink item={child} />
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
               </ul>
             </nav>
           )}
