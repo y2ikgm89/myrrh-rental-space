@@ -1498,6 +1498,84 @@ model SettingsSystem {
   @@map("settings_systems")
 }
 
+model SettingsSeo {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // favicon は dynamic icon Route Handler (src/app/icon/route.tsx) 経由で配信する。
+  // ここに保存された URL は R2 オブジェクト URL を期待し、Route Handler が DB query →
+  // R2 から binary pass-through する。空文字 ("") なら ImageResponse で default fallback。
+  // NOT NULL + DEFAULT '' で型を `string` に強化（codebase の他 nullable string 列とは
+  // 一貫性が崩れるが、null と空文字の二重表現を排除する意図的な強化）。
+  siteName               String?
+  siteDescription        String? @db.Text
+  faviconUrl             String  @default("")
+  defaultOgpImageUrl     String?
+  headerLogoUrl          String?
+  footerLogoUrl          String?
+  footerCopyright        String?
+  useHeaderLogo          Boolean @default(true)
+  useFooterLogo          Boolean @default(true)
+  defaultMetaDescription String?
+  defaultMetaKeywords    String?
+  defaultOgpTitle        String?
+  defaultOgpDescription  String?
+
+  @@map("settings_seos")
+}
+
+model SettingsAnalytics {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analyticsType         AnalyticsType?
+  googleAnalyticsId     String?
+  googleTagManagerId    String?
+  googleSearchConsoleId String?
+  bingWebmasterToolsId  String?
+  gaPropertyId          String?
+  microsoftClarityId    String?
+
+  @@map("settings_analytics")
+}
+
+model SettingsLayout {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  containerWidth       LayoutWidth?
+  containerWidthCustom Int?
+  contentWidth         LayoutWidth?
+  contentWidthCustom   Int?
+  headerScrollBehavior HeaderScrollBehavior @default(always_visible)
+  headerBackgroundMode HeaderBackgroundMode @default(solid)
+  themeColor           String               @default("#fafafa")
+  footerTagline        String?
+  footerNavigationLabel String              @default("Navigation")
+  footerContactLabel   String               @default("Contact")
+  footerHoursLabel     String               @default("Hours")
+  footerShowSocialLinks Boolean             @default(true)
+
+  @@map("settings_layouts")
+}
+
+model SettingsSidebar {
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sidebarEnabled      Boolean @default(true)
+  sidebarWidgets      Json    @default("[{\"type\":\"search\",\"enabled\":true},{\"type\":\"recent\",\"enabled\":true,\"layout\":\"compact\"},{\"type\":\"popular\",\"enabled\":true,\"layout\":\"compact\",\"showRanking\":true},{\"type\":\"categories\",\"enabled\":true},{\"type\":\"tags\",\"enabled\":true}]")
+  sidebarRecentCount  Int     @default(5)
+  sidebarPopularCount Int     @default(5)
+  sidebarTocEnabled   Boolean @default(true)
+
+  @@map("settings_sidebars")
+}
+
 // ==============================================
 // Settings (Singleton)
 // ==============================================
@@ -1507,25 +1585,7 @@ model Settings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Site Basic Info
-  // favicon は dynamic icon Route Handler (src/app/icon/route.tsx) 経由で配信する。
-  // ここに保存された URL は R2 オブジェクト URL を期待し、Route Handler が DB query →
-  // R2 から binary pass-through する。空文字 ("") なら ImageResponse で default fallback。
-  // NOT NULL + DEFAULT '' で型を `string` に強化（codebase の他 nullable string 列とは
-  // 一貫性が崩れるが、null と空文字の二重表現を排除する意図的な強化）。
-  // generateMetadata からは静的 URL `/icon` を icons.icon に注入し DB query しないため、
-  // PR #699 の build-time prerender 汚染懸念には抵触しない。
-  siteName           String?
-  siteDescription    String? @db.Text
-  faviconUrl         String  @default("")
-  defaultOgpImageUrl String?
-  headerLogoUrl      String?
-  footerLogoUrl      String?
-  footerCopyright    String?
-
-  // Logo Display Settings
-  useHeaderLogo Boolean @default(true)
-  useFooterLogo Boolean @default(true)
+  // Site / SEO / layout / sidebar / analytics は Phase 2 split 済 singleton テーブルへ移行。
 
   // Business Info (事業者情報)
   businessName        String? // 会社名・屋号
@@ -1563,46 +1623,6 @@ model Settings {
   senderEmail  String?
   senderName   String?
   replyToEmail String?
-
-  // SEO Settings
-  defaultMetaDescription String?
-  defaultMetaKeywords    String?
-  defaultOgpTitle        String?
-  defaultOgpDescription  String?
-
-  // Layout Settings (レイアウト設定)
-  containerWidth       LayoutWidth?
-  containerWidthCustom Int? // CUSTOMの場合の幅（px）
-  contentWidth         LayoutWidth?
-  contentWidthCustom   Int? // CUSTOMの場合の幅（px）
-  headerScrollBehavior HeaderScrollBehavior @default(always_visible)
-  headerBackgroundMode HeaderBackgroundMode @default(solid)
-
-  // Footer Settings (フッター設定)
-  footerTagline         String?
-  footerNavigationLabel String  @default("Navigation")
-  footerContactLabel    String  @default("Contact")
-  footerHoursLabel      String  @default("Hours")
-  footerShowSocialLinks Boolean @default(true)
-
-  // Theme
-  themeColor String @default("#fafafa")
-
-  // Sidebar Settings (サイドバー設定)
-  sidebarEnabled      Boolean @default(true) // サイドバー全体の有効/無効
-  sidebarWidgets      Json    @default("[{\"type\":\"search\",\"enabled\":true},{\"type\":\"recent\",\"enabled\":true,\"layout\":\"compact\"},{\"type\":\"popular\",\"enabled\":true,\"layout\":\"compact\",\"showRanking\":true},{\"type\":\"categories\",\"enabled\":true},{\"type\":\"tags\",\"enabled\":true}]") // ウィジェット個別設定
-  sidebarRecentCount  Int     @default(5) // 新着記事の表示件数
-  sidebarPopularCount Int     @default(5) // 人気記事の表示件数
-  sidebarTocEnabled   Boolean @default(true) // 公開記事詳細ページの目次サイドバー表示（グローバル）
-
-  // Analytics Settings（Enum化）
-  analyticsType         AnalyticsType? // ga4 | gtm | null
-  googleAnalyticsId     String? // GA4 Measurement ID (G-XXXXXXXXXX)
-  googleTagManagerId    String? // GTM Container ID (GTM-XXXXXXX)
-  googleSearchConsoleId String? // GSC verification meta tag
-  bingWebmasterToolsId  String? // Bing verification meta tag
-  gaPropertyId          String? // GA4 Property ID for Data API
-  microsoftClarityId    String? // Microsoft Clarity Project ID（ヒートマップ・セッション録画、GA4/GTM と独立）
 
   // Reservation Settings（常に有効な整数。未設定行は DB default で埋めたうえで NOT NULL）
   defaultTimeSlot                  Int     @default(60)

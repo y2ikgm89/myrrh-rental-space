@@ -155,7 +155,7 @@ export async function updateBasicInfo(data: BasicInfoInput): Promise<void> {
     { label: "フッターロゴ画像", url: data.footerLogoUrl },
   ]);
 
-  await prisma.settings.upsert({
+  await prisma.settingsSeo.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -187,7 +187,7 @@ export async function updateLayoutSettings(
       data.contentWidth === "CUSTOM" ? data.contentWidthCustom : null,
   };
 
-  await prisma.settings.upsert({
+  await prisma.settingsLayout.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -197,7 +197,7 @@ export async function updateLayoutSettings(
 export async function updateMetaSettings(
   data: MetaSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsSeo.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -207,7 +207,7 @@ export async function updateMetaSettings(
 export async function updateAnalyticsSettings(
   data: AnalyticsSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsAnalytics.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -217,7 +217,7 @@ export async function updateAnalyticsSettings(
 export async function updateSearchVerification(
   data: SearchVerificationInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsAnalytics.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -305,6 +305,38 @@ export async function ensureSettingsSystem() {
   });
 }
 
+export async function ensureSettingsSeo() {
+  return prisma.settingsSeo.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsAnalytics() {
+  return prisma.settingsAnalytics.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsLayout() {
+  return prisma.settingsLayout.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
+export async function ensureSettingsSidebar() {
+  return prisma.settingsSidebar.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton" },
+  });
+}
+
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput,
 ): Promise<void> {
@@ -346,7 +378,7 @@ export async function updateSidebarSettings(
     sidebarTocEnabled: data.sidebarTocEnabled,
   };
 
-  await prisma.settings.upsert({
+  await prisma.settingsSidebar.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -356,7 +388,7 @@ export async function updateSidebarSettings(
 export async function updateHeaderSettings(
   data: HeaderSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsLayout.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
@@ -375,7 +407,7 @@ export type FooterSettingsInput = {
 export async function updateFooterSettings(
   data: FooterSettingsInput,
 ): Promise<void> {
-  await prisma.settings.upsert({
+  await prisma.settingsLayout.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },
     update: data,
