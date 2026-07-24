@@ -207,6 +207,21 @@ export const updateReservationStatus = async (
           severity: ErrorSeverity.MEDIUM,
           context: { reservationId: id },
         });
+
+        // GCAL-OUTBOUND-04: CONFIRMED → PENDING の格下げは「確認済み予約」として
+        // 共有カレンダーに残す理由が無くなるため、既存 GCal event を削除する
+        // (残したままだと確定予約であるかのように見え続ける)。再度 CONFIRMED に
+        // 戻ったときは googleCalendarEventId が null に戻っているため、上の
+        // 分岐 (status===CONFIRMED) が create (syncReservationToCalendar) を
+        // 選択する契約になる。
+        if (result.googleCalendarEventId) {
+          fireAndForget(deleteCalendarSync(id, result.googleCalendarEventId), {
+            operation: "deleteCalendarSync",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: id, trigger: "statusFlipToPending" },
+          });
+        }
       }
 
       // 確認・キャンセル以外のステータス変更（完了、無断キャンセル等）は汎用通知メール

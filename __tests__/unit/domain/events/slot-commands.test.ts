@@ -20,13 +20,22 @@ type TxStub = {
 };
 
 function buildTx(opts: {
-  existingSlots?: { id: string; registrations: { id: string }[] }[];
+  existingSlots?: {
+    id: string;
+    registrations: { id: string }[];
+    googleCalendarEventId?: string | null;
+  }[];
   aggregate?: { min: Date | null; max: Date | null };
   confirmedQuantityBySlotId?: Record<string, number>;
 }): TxStub {
   return {
     eventTimeSlot: {
-      findMany: mock(async () => opts.existingSlots ?? []),
+      findMany: mock(async () =>
+        (opts.existingSlots ?? []).map((s) => ({
+          ...s,
+          googleCalendarEventId: s.googleCalendarEventId ?? null,
+        })),
+      ),
       delete: mock(async () => ({ id: "deleted" })),
       update: mock(async () => ({ id: "updated" })),
       create: mock(async () => ({ id: "created" })),
@@ -139,6 +148,52 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
       where: { id: EVENT_ID },
       data: { firstSlotStartAt: remainStart, lastSlotEndAt: remainEnd },
     });
+  });
+
+  // GCAL-OUTBOUND-02: 削除されたスロットが googleCalendarEventId を持つ場合、
+  // 呼出側 (updateEventCommand) が GCal 側の孤児イベントを削除できるよう
+  // removedGoogleCalendarEventIds として返す。
+  test("GCal 同期済みスロットを削除すると removedGoogleCalendarEventIds に含まれる", async () => {
+    const remainStart = new Date("2026-12-02T10:00:00Z");
+    const remainEnd = new Date("2026-12-02T12:00:00Z");
+    const tx = buildTx({
+      existingSlots: [
+        {
+          id: "slot-synced",
+          registrations: [],
+          googleCalendarEventId: "gcal-event-abc",
+        },
+        { id: "slot-2", registrations: [], googleCalendarEventId: null },
+      ],
+      aggregate: { min: remainStart, max: remainEnd },
+    });
+
+    const result = await syncEventTimeSlotsCommand(tx, EVENT_ID, [
+      { id: "slot-2", startAt: remainStart, endAt: remainEnd, capacity: 10 },
+    ]);
+
+    expect(tx.eventTimeSlot.delete).toHaveBeenCalledWith({
+      where: { id: "slot-synced" },
+    });
+    expect(result.removedGoogleCalendarEventIds).toEqual(["gcal-event-abc"]);
+  });
+
+  test("GCal 未同期のスロット削除では removedGoogleCalendarEventIds が空", async () => {
+    const remainStart = new Date("2026-12-02T10:00:00Z");
+    const remainEnd = new Date("2026-12-02T12:00:00Z");
+    const tx = buildTx({
+      existingSlots: [
+        { id: "slot-1", registrations: [], googleCalendarEventId: null },
+        { id: "slot-2", registrations: [] },
+      ],
+      aggregate: { min: remainStart, max: remainEnd },
+    });
+
+    const result = await syncEventTimeSlotsCommand(tx, EVENT_ID, [
+      { id: "slot-2", startAt: remainStart, endAt: remainEnd, capacity: 10 },
+    ]);
+
+    expect(result.removedGoogleCalendarEventIds).toEqual([]);
   });
 
   test("申込ありスロットを削除しようとすると DomainError 'VALIDATION'", async () => {

@@ -37,7 +37,9 @@ const mockDuplicateEventCommand = mock<
 const mockCreateEventCommand = mock(() =>
   Promise.resolve({ id: "x", slug: "y" }),
 );
-const mockUpdateEventCommand = mock(() => Promise.resolve());
+const mockUpdateEventCommand = mock(() =>
+  Promise.resolve({ removedGoogleCalendarEventIds: [] as string[] }),
+);
 
 mock.module("@/shared/domain/events/commands", () => ({
   createEventCommand: mockCreateEventCommand,

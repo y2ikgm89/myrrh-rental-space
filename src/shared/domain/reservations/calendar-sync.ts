@@ -24,6 +24,27 @@ import { lockSpaceForTransaction } from "./space-locks";
 export const GCAL_DELETE_FAILED_PREFIX = "gcal_delete_failed:";
 
 /**
+ * series の master GCal event に対する RRULE UNTIL 打ち切り
+ * (`patchGcalMasterUntil`、`this-and-following` scope) が失敗したときの
+ * `calendarSyncError` prefix (GCAL-OUTBOUND-07)。
+ *
+ * `${PREFIX}${untilIso}|${message}` の形式でエンコードする。`untilIso` は
+ * 再試行時に `patchGcalMasterUntil` へそのまま渡す UNTIL 値 (ISO 8601)。
+ * この prefix を持つ series instance は `retryFailedSeriesMasterOperations`
+ * が拾って再試行する。
+ */
+export const GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX =
+  "gcal_series_master_patch_failed:";
+
+/**
+ * series の master GCal event 削除 (`deleteGcalMaster`、`series-all` scope) が
+ * 失敗したときの `calendarSyncError` prefix (GCAL-OUTBOUND-07)。
+ * `${PREFIX}${message}` の形式。
+ */
+export const GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX =
+  "gcal_series_master_delete_failed:";
+
+/**
  * GCal 上でイベントが削除されたことを検知した際の自動キャンセル理由（SSoT）。
  * `cancelReservationFromCalendar` の DB claim と、呼出側 (`inbound.ts`) が
  * `applyCancellationSideEffects` に渡す `cancellationReason` を一致させる。
@@ -227,6 +248,81 @@ export async function getFailedCalendarSyncSeriesIds(
     take: limit,
   });
   return rows.map((r) => r.seriesId).filter((id): id is string => id !== null);
+}
+
+/**
+ * series master レベルの GCal 操作 (`patchGcalMasterUntil` / `deleteGcalMaster`)
+ * が失敗し、typed prefix (`GCAL_SERIES_MASTER_*_FAILED_PREFIX`) 付きの
+ * `calendarSyncError` を持つ instance が存在する series の一意な seriesId
+ * 一覧を返す (GCAL-OUTBOUND-07)。
+ *
+ * `getFailedCalendarSyncSeriesIds` (instance 自身の create/update/write-back 失敗)
+ * とは独立した retry pool。series master 操作失敗時、対象 instance は自身の
+ * `googleCalendarEventId` (child event) を既に持っているため、
+ * `googleCalendarEventId: null` を主条件にする既存クエリでは拾えない。
+ */
+export async function getSeriesIdsWithMasterOperationFailure(
+  limit: number = 50,
+): Promise<string[]> {
+  const rows = await prisma.reservation.findMany({
+    where: {
+      seriesId: { not: null },
+      deletedAt: null,
+      OR: [
+        {
+          calendarSyncError: {
+            startsWith: GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX,
+          },
+        },
+        {
+          calendarSyncError: {
+            startsWith: GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX,
+          },
+        },
+      ],
+    },
+    select: { seriesId: true },
+    distinct: ["seriesId"],
+    take: limit,
+  });
+  return rows.map((r) => r.seriesId).filter((id): id is string => id !== null);
+}
+
+/**
+ * 指定 series のうち、series master 操作失敗の typed prefix を持つ
+ * instance (id + calendarSyncError) を返す (GCAL-OUTBOUND-07)。
+ *
+ * 呼出側 (`retryFailedSeriesMasterOperations`) はこの一覧から代表 1 件の
+ * `calendarSyncError` を復号して再試行内容 (patch の UNTIL 値 / delete) を
+ * 判定し、成功後は全件の `calendarSyncError` をクリアする。
+ */
+export async function getSeriesMasterOperationFailureInstances(
+  seriesId: string,
+): Promise<{ id: string; calendarSyncError: string }[]> {
+  const rows = await prisma.reservation.findMany({
+    where: {
+      seriesId,
+      deletedAt: null,
+      OR: [
+        {
+          calendarSyncError: {
+            startsWith: GCAL_SERIES_MASTER_PATCH_FAILED_PREFIX,
+          },
+        },
+        {
+          calendarSyncError: {
+            startsWith: GCAL_SERIES_MASTER_DELETE_FAILED_PREFIX,
+          },
+        },
+      ],
+    },
+    select: { id: true, calendarSyncError: true },
+  });
+  return rows.flatMap((r) =>
+    r.calendarSyncError !== null
+      ? [{ id: r.id, calendarSyncError: r.calendarSyncError }]
+      : [],
+  );
 }
 
 export async function getCalendarSyncRuntimeState(): Promise<{

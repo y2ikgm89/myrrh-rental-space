@@ -18,6 +18,11 @@ import {
   getReservationSnapshotForEdit,
 } from "@/shared/domain/reservations/edit-side-effects";
 import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
+import {
+  syncReservationToCalendar,
+  updateCalendarSync,
+} from "@/shared/lib/calendar-sync/outbound";
+import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import {
   sendReservationAdminNotification,
@@ -258,6 +263,33 @@ export async function updateReservationAction(
         invalidateReservationCaches(data.reservationId, customer.id, {
           coupons: true,
         });
+
+        // GCAL-OUTBOUND-01: 管理画面 updateReservationAction と同型パターン。
+        // 顧客セルフ変更でも日時/スペース変更を GCal に反映する
+        // (旧実装はこの経路だけ outbound sync が欠落していた)。
+        // ReservationSyncData の組み立ては fetchReservationEmailData
+        // (payloads.ts SSoT) を再利用し、独自フォーマッタを作らない。
+        fireAndForget(
+          (async () => {
+            const payload = await fetchReservationEmailData(data.reservationId);
+            if (!payload) return;
+            const syncData: ReservationSyncData = omitUndefined(payload);
+            if (result.payload.googleCalendarEventId) {
+              await updateCalendarSync(
+                syncData,
+                result.payload.googleCalendarEventId,
+              );
+            } else {
+              await syncReservationToCalendar(syncData);
+            }
+          })(),
+          {
+            operation: "customerUpdateReservationCalendarSync",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: data.reservationId },
+          },
+        );
 
         // PR#14: 変更前スナップショットと入力を比較し、spaceId or 時刻変更ありなら
         // SwitchBot passcode の revoke + reissue を実行し (tx 外)、新パスコード

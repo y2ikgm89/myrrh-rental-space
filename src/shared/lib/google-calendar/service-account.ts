@@ -23,11 +23,23 @@ export function parseServiceAccountCredentials(
 
 /**
  * サービスアカウントのGoogle Calendar APIクライアントを取得
+ *
+ * `options.ignoreEnabledToggle` (GCAL-OUTBOUND-05): true のとき
+ * `googleCalendarEnabled` トグルの ON/OFF を無視し、サービスアカウント JSON が
+ * 設定されていればクライアントを返す。delete 系の呼出し (`deleteCalendarEvent`
+ * / `patchCalendarEvent` を `ignoreEnabledToggle: true` で呼ぶ経路) 専用で、
+ * トグル OFF でも既存 GCal event の削除・打ち切りだけは行えるようにするための
+ * gate 緩和。省略時 (false 相当) は既存どおりトグル ON 必須。
  */
-export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | null> {
+export async function getServiceAccountClient(options?: {
+  ignoreEnabledToggle?: boolean;
+}): Promise<calendar_v3.Calendar | null> {
   const settings = await getGoogleCalendarServiceAccountConfig();
 
-  if (!settings.enabled || !settings.encryptedServiceAccountJson) {
+  if (!settings.encryptedServiceAccountJson) {
+    return null;
+  }
+  if (!options?.ignoreEnabledToggle && !settings.enabled) {
     return null;
   }
 

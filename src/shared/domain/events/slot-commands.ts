@@ -6,9 +6,13 @@ import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types"
 
 export interface SyncEventTimeSlotsTx {
   readonly eventTimeSlot: {
-    findMany(
-      args: object,
-    ): Promise<{ id: string; registrations?: { id: string }[] }[]>;
+    findMany(args: object): Promise<
+      {
+        id: string;
+        googleCalendarEventId: string | null;
+        registrations?: { id: string }[];
+      }[]
+    >;
     delete(args: object): Promise<unknown>;
     update(args: object): Promise<unknown>;
     create(args: object): Promise<unknown>;
@@ -59,12 +63,17 @@ function getAggregateQuantitySum(aggregate: object): number {
  *
  * interactive transaction 内から呼ぶこと（tx を渡す）。
  * 重複時刻は DB の @@unique([eventId, startAt]) が最終防衛線。
+ *
+ * 削除されたスロットが `googleCalendarEventId` を持っていた場合、そのまま
+ * DB から消すと GCal 側にイベントが孤児として残る (outbound gap)。呼出側
+ * (`updateEventCommand`) が tx commit 後に `deleteEventCalendarSync` を発火
+ * できるよう、削除対象スロットの `googleCalendarEventId` を戻り値で返す。
  */
 export async function syncEventTimeSlotsCommand(
   tx: SyncEventTimeSlotsTx,
   eventId: string,
   inputs: readonly SlotInput[],
-): Promise<void> {
+): Promise<{ removedGoogleCalendarEventIds: string[] }> {
   if (inputs.length === 0) {
     throw new DomainError(
       "スロットを少なくとも1件登録してください",
@@ -86,7 +95,11 @@ export async function syncEventTimeSlotsCommand(
 
   const existingSlots = await tx.eventTimeSlot.findMany({
     where: { eventId },
-    select: { id: true, registrations: { select: { id: true }, take: 1 } },
+    select: {
+      id: true,
+      googleCalendarEventId: true,
+      registrations: { select: { id: true }, take: 1 },
+    },
   });
 
   const incomingIds = new Set(
@@ -94,6 +107,7 @@ export async function syncEventTimeSlotsCommand(
   );
 
   // 削除対象: 既存スロットのうち incoming に含まれないもの
+  const removedGoogleCalendarEventIds: string[] = [];
   for (const existing of existingSlots) {
     if (!incomingIds.has(existing.id)) {
       if ((existing.registrations?.length ?? 0) > 0) {
@@ -103,6 +117,9 @@ export async function syncEventTimeSlotsCommand(
         );
       }
       await tx.eventTimeSlot.delete({ where: { id: existing.id } });
+      if (existing.googleCalendarEventId !== null) {
+        removedGoogleCalendarEventIds.push(existing.googleCalendarEventId);
+      }
     }
   }
 
@@ -157,4 +174,6 @@ export async function syncEventTimeSlotsCommand(
       lastSlotEndAt: getAggregateDate(aggregate, "_max", "endAt"),
     },
   });
+
+  return { removedGoogleCalendarEventIds };
 }

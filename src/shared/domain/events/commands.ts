@@ -373,7 +373,10 @@ export async function createEventCommand(data: EventCommandInput) {
   return event;
 }
 
-export async function updateEventCommand(id: string, data: EventCommandInput) {
+export async function updateEventCommand(
+  id: string,
+  data: EventCommandInput,
+): Promise<{ removedGoogleCalendarEventIds: string[] }> {
   assertEventScheduleInvariant(data);
 
   // format が OFFLINE に変更される場合、meetingUrl/meetingProvider を明示リセットする
@@ -446,6 +449,8 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
 
+  let removedGoogleCalendarEventIds: string[] = [];
+
   await prisma.$transaction(async (tx) => {
     // Space ↔ Reservation cross-table overlap check (Priority-10 audit #4)。
     // spaceId が指定されていれば advisory lock で Space スケジュール空間を直列化し、
@@ -512,7 +517,11 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
     });
 
     // スロット差分同期
-    await syncEventTimeSlotsCommand(tx, id, data.slots);
+    ({ removedGoogleCalendarEventIds } = await syncEventTimeSlotsCommand(
+      tx,
+      id,
+      data.slots,
+    ));
 
     if (data.tickets !== undefined) {
       await tx.$executeRaw(buildOrderScopeLockSql(`event_tickets:${id}`));
@@ -620,6 +629,8 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       category: ErrorCategory.EXTERNAL_API,
     });
   }
+
+  return { removedGoogleCalendarEventIds };
 }
 
 export async function deleteEventCommand(id: string) {

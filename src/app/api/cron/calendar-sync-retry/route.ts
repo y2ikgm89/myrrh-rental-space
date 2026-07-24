@@ -32,7 +32,7 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { retryFailedSyncs } from "@/shared/lib/calendar-sync/outbound";
 import { retryFailedEventCalendarSyncs } from "@/shared/lib/calendar-sync/event-outbound";
-import { isGoogleCalendarEnabled } from "@/shared/lib/google-calendar";
+import { isGoogleCalendarConfigured } from "@/shared/lib/google-calendar";
 import {
   logError,
   ErrorCategory,
@@ -59,14 +59,17 @@ export async function GET(request: Request) {
       return authorizationResult;
     }
 
-    // Google Calendar 連携そのものが OFF なら retry する意味がない
-    // (retryFailedSyncs 内の syncReservationToCalendar も同一 gate で早期 return
-    // するが、cron route 側で先に skip して不要な DB read を避ける)。
-    const enabled = await isGoogleCalendarEnabled();
-    if (!enabled) {
+    // GCAL-OUTBOUND-05: create/update retry は `isGoogleCalendarEnabled()`
+    // (トグル) で個別に gate されるため、トグル OFF 時はそのまま no-op success に
+    // なる。一方 delete retry (`deleteCalendarSync` 等) はトグルに依らず
+    // `isGoogleCalendarConfigured()` (サービスアカウント + カレンダー ID) だけを
+    // 見るため、ここでの早期 skip もトグルではなく configured を基準にする
+    // (トグルを切った直後も delete retry を止めない)。
+    const configured = await isGoogleCalendarConfigured();
+    if (!configured) {
       return jsonSuccess({
         skipped: true,
-        reason: "Google Calendar is disabled",
+        reason: "Google Calendar is not configured",
       });
     }
 

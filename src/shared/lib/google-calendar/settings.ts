@@ -8,6 +8,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import {
+  getGoogleCalendarServiceAccountConfig,
   getGoogleCalendarSettings,
   getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
@@ -75,6 +76,31 @@ export async function testServiceAccountConnection(params: {
 export async function isGoogleCalendarEnabled(): Promise<boolean> {
   const settings = await getGoogleCalendarSettings();
   return settings.enabled && settings.connectionStatus === "connected";
+}
+
+/**
+ * Google Calendar への書込み (mutate) が技術的に可能かどうかを判定する
+ * (GCAL-OUTBOUND-05)。
+ *
+ * `isGoogleCalendarEnabled` と異なり `googleCalendarEnabled` トグルを見ない
+ * — サービスアカウント JSON とカレンダー ID さえ設定されていれば true を返す。
+ *
+ * 用途: create/update は `isGoogleCalendarEnabled()` でユーザーが意図的に
+ * OFF にした間は一切書き込まない（既存契約）。一方 delete はトグル OFF でも
+ * 実行できないと、無効化した瞬間に以降のキャンセル/削除が GCal 側の孤児
+ * event をクリーンアップできなくなる（disable した瞬間に事故る設計は禁止）。
+ * `deleteCalendarSync` / `deleteEventCalendarSync` / `deleteGcalMaster` /
+ * `patchGcalMasterUntil` はこちらを gate に使う。
+ */
+export async function isGoogleCalendarConfigured(): Promise<boolean> {
+  const [serviceAccountConfig, settings] = await Promise.all([
+    getGoogleCalendarServiceAccountConfig(),
+    getGoogleCalendarSettings(),
+  ]);
+  return (
+    serviceAccountConfig.encryptedServiceAccountJson !== null &&
+    settings.calendarId !== null
+  );
 }
 
 /**

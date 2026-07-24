@@ -8,6 +8,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { getAppUrl } from "@/shared/lib/constants/urls";
 import { formatEventVenue } from "@/shared/domain/events/venue";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 
 export type EventSyncContext = EventSyncData & {
@@ -103,11 +104,30 @@ export async function getFailedCalendarSyncEventIds(
   return rows.map((r) => r.id);
 }
 
+/**
+ * イベント → GCal outbound sync 対象のスロットを取得する。
+ *
+ * GCAL-OUTBOUND-08 (DRAFT event outbound policy): `status: PUBLISHED` を
+ * where 句に含める clean-break 変更。DRAFT のイベントは共有カレンダーに
+ * 一切同期しない（下書き段階のタイトル・日時が誤って公開カレンダーを汚染する
+ * のを防ぐ）。この関数は `syncEventOutbound` (create/duplicate/update/publish
+ * 共通の outbound エントリポイント) と `retryFailedEventCalendarSyncs`
+ * (cron retry) の両方から呼ばれる唯一の SSoT のため、ここで gate すれば
+ * 両経路とも自動的に DRAFT を除外する。
+ *
+ * PUBLISHED → DRAFT の遷移は `EVENT_STATUS_TRANSITIONS` 上そもそも許可されて
+ * いない（PUBLISHED は CANCELLED / ARCHIVED にしか遷移できない）ため、
+ * 「一度同期された PUBLISHED イベントが DRAFT に戻って sync 対象から漏れる」
+ * ケースは発生しない。CANCELLED / ARCHIVED への遷移時の GCal 削除は
+ * `deleteEventOutbound` (cancelEvent / archiveEvent / deleteEvent) が
+ * status に関わらず既存 slot の `googleCalendarEventId` を直接読んで処理する
+ * ため、本 gate の影響を受けない。
+ */
 export async function getEventSlotsForCalendarSync(
   eventId: string,
 ): Promise<EventSyncContext[]> {
   const event = await prisma.event.findFirst({
-    where: { id: eventId, deletedAt: null },
+    where: { id: eventId, deletedAt: null, status: EventStatus.PUBLISHED },
     select: {
       id: true,
       title: true,

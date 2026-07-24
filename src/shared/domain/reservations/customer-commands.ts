@@ -30,7 +30,10 @@ type CommandResult<T> =
   { success: true; payload: T } | { success: false; error: string };
 
 type CancelPayload = { reservationId: string };
-type UpdatePayload = { reservationId: string };
+type UpdatePayload = {
+  reservationId: string;
+  googleCalendarEventId: string | null;
+};
 
 // ---------------------------------------------------------------------------
 // Cancel
@@ -254,6 +257,7 @@ export async function updateCustomerReservation(
         taxRateType: true,
         taxRate: true,
         couponId: true,
+        googleCalendarEventId: true,
         coupon: {
           select: {
             id: true,
@@ -465,6 +469,12 @@ export async function updateCustomerReservation(
       };
     }
 
-    return { success: true, payload: { reservationId } };
+    return {
+      success: true,
+      payload: {
+        reservationId,
+        googleCalendarEventId: reservation.googleCalendarEventId,
+      },
+    };
   });
 }

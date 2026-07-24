@@ -55,6 +55,9 @@ type MockCreateResult = {
 };
 
 const mockIsEnabled = mock<() => Promise<boolean>>(() => Promise.resolve(true));
+const mockIsConfigured = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
 const mockCreate = mock<
   (
     params: CalendarEventParams,
@@ -64,11 +67,13 @@ const mockCreate = mock<
 
 mock.module("@/shared/lib/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
+  isGoogleCalendarConfigured: mockIsConfigured,
   createCalendarEvent: mockCreate,
   // event-outbound.ts / outbound.ts が barrel から import する残りの export は
   // 本テストで未使用だが、モジュール全体差し替えのためテスト汚染防止に無害スタブを置く。
   updateCalendarEvent: mock(() => Promise.resolve({ success: true })),
   deleteCalendarEvent: mock(() => Promise.resolve({ success: true })),
+  patchCalendarEvent: mock(() => Promise.resolve({ success: true })),
   // Phase B.2 task 16 で追加された fetchEventInstances。outbound.ts が
   // syncReservationSeriesToCalendar 経由で import するため mock stub 必須
   // (未追加時に SyntaxError: Export named 'fetchEventInstances' not found)。
@@ -110,6 +115,7 @@ let getEventSlotsForCalendarSync: EventsCalendarSyncModule["getEventSlotsForCale
 let EVENT_FORMAT: PrismaTypesModule["EVENT_FORMAT"];
 let MEETING_PROVIDER: PrismaTypesModule["MEETING_PROVIDER"];
 let EventScheduleMode: PrismaTypesModule["EventScheduleMode"];
+let EventStatus: PrismaTypesModule["EventStatus"];
 let testCategoryId: string;
 
 // =============================================================================
@@ -140,6 +146,10 @@ async function createEventWithSlot(overrides: {
         meetingProvider: overrides.meetingProvider,
         meetingUrl: overrides.meetingUrl,
         categoryId: testCategoryId,
+        // GCAL-OUTBOUND-08: getEventSlotsForCalendarSync は status:PUBLISHED の
+        // イベントのみを対象にする (DRAFT event outbound policy)。デフォルト
+        // (DRAFT) のままだと本テストの対象取得が空配列になる。
+        status: EventStatus.PUBLISHED,
       },
       select: { id: true },
     });
@@ -241,7 +251,7 @@ describeMaybe("Meet URL write-back (event GOOGLE_MEET) [integration]", () => {
       await import("@/shared/lib/calendar-sync/outbound"));
     ({ getEventSlotsForCalendarSync } =
       await import("@/shared/domain/events/calendar-sync"));
-    ({ EVENT_FORMAT, MEETING_PROVIDER, EventScheduleMode } =
+    ({ EVENT_FORMAT, MEETING_PROVIDER, EventScheduleMode, EventStatus } =
       await import("@/shared/lib/validations/enums/prisma-types"));
 
     // 接続プール warm-up（cold start が並行クエリをずらして race を隠すのを防ぐ）。

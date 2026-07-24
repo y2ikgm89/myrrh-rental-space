@@ -6,6 +6,9 @@ import type { calendar_v3 } from "googleapis";
 // =============================================================================
 
 const mockIsEnabled = mock<() => Promise<boolean>>(() => Promise.resolve(true));
+const mockIsConfigured = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
 const mockCreate = mock<
   (
     params: unknown,
@@ -26,6 +29,7 @@ const mockDelete = mock<() => Promise<{ success: boolean; error?: string }>>(
 
 mock.module("@/shared/lib/google-calendar", () => ({
   isGoogleCalendarEnabled: mockIsEnabled,
+  isGoogleCalendarConfigured: mockIsConfigured,
   createCalendarEvent: mockCreate,
   updateCalendarEvent: mockUpdate,
   deleteCalendarEvent: mockDelete,
@@ -307,17 +311,26 @@ describe("syncEventToCalendar", () => {
     });
   });
 
-  test("GOOGLE_MEET だが hangoutLink も conferenceData も無い → writeBackMeetingUrl は呼ばれない", async () => {
+  test("GOOGLE_MEET だが hangoutLink も conferenceData も無い → writeBackMeetingUrl は呼ばれず、markEventCalendarSyncError で可視化される (GCAL-OUTBOUND-06)", async () => {
     mockCreate.mockImplementation(() =>
       Promise.resolve({ success: true, eventId: "gcal-meet-4" }),
     );
 
-    await syncEventToCalendar({
+    const result = await syncEventToCalendar({
       ...baseEventData,
       meetingProvider: "GOOGLE_MEET",
     });
 
     expect(mockWriteBackMeetingUrl).not.toHaveBeenCalled();
+    // GCAL-OUTBOUND-06: Meet URL 未発行は silent 成功にしない。
+    // GCal event 自体の作成は成功しているため sync 全体は success:true のまま。
+    expect(result).toEqual({ success: true, eventId: "gcal-meet-4" });
+    expect(mockMarkError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventId: baseEventData.eventId,
+        error: expect.stringContaining("Meet URL was not returned"),
+      }),
+    );
   });
 
   test("GOOGLE_MEET だが createCalendarEvent 失敗 → writeBackMeetingUrl は呼ばれない", async () => {
@@ -432,13 +445,14 @@ describe("updateEventCalendarSync", () => {
 describe("deleteEventCalendarSync", () => {
   beforeEach(() => {
     mockIsEnabled.mockClear();
+    mockIsConfigured.mockReset();
+    mockIsConfigured.mockResolvedValue(true);
     mockDelete.mockClear();
     mockClear.mockClear();
     mockMarkError.mockClear();
   });
 
-  test("deleteCalendarEvent(gcalEventId) 呼び出し + clearEventGoogleCalendarEventId 呼び出し", async () => {
-    mockIsEnabled.mockImplementation(() => Promise.resolve(true));
+  test("deleteCalendarEvent(gcalEventId, {ignoreEnabledToggle:true}) 呼び出し + clearEventGoogleCalendarEventId 呼び出し", async () => {
     mockDelete.mockImplementation(() => Promise.resolve({ success: true }));
 
     const result = await deleteEventCalendarSync(
@@ -448,7 +462,9 @@ describe("deleteEventCalendarSync", () => {
 
     expect(result).toEqual({ success: true });
     expect(mockDelete).toHaveBeenCalledTimes(1);
-    expect(mockDelete).toHaveBeenCalledWith("gcal-event-to-delete");
+    expect(mockDelete).toHaveBeenCalledWith("gcal-event-to-delete", {
+      ignoreEnabledToggle: true,
+    });
     expect(mockClear).toHaveBeenCalledTimes(1);
     expect(mockClear).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -457,8 +473,24 @@ describe("deleteEventCalendarSync", () => {
     );
   });
 
-  test("GCal disabled → no-op { success: true }", async () => {
+  // GCAL-OUTBOUND-05: delete は isGoogleCalendarEnabled (トグル) ではなく
+  // isGoogleCalendarConfigured を gate にする。トグル OFF でも削除は実行される。
+  test("トグル OFF (isGoogleCalendarEnabled=false) でも configured なら削除する", async () => {
     mockIsEnabled.mockImplementation(() => Promise.resolve(false));
+    mockIsConfigured.mockResolvedValue(true);
+    mockDelete.mockImplementation(() => Promise.resolve({ success: true }));
+
+    const result = await deleteEventCalendarSync(
+      "event-id-001",
+      "gcal-event-to-delete",
+    );
+
+    expect(result).toEqual({ success: true });
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+  });
+
+  test("未 configured (サービスアカウント/カレンダーID 未設定) → no-op { success: true }", async () => {
+    mockIsConfigured.mockResolvedValue(false);
 
     const result = await deleteEventCalendarSync(
       "event-id-001",
