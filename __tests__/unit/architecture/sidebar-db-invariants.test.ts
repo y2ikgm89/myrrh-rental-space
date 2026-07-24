@@ -4,11 +4,18 @@ import { join } from "node:path";
 
 const ROOT = process.cwd();
 const SCHEMA = join(ROOT, "prisma", "schema.prisma");
-const MIGRATION = join(
+const LEGACY_MIGRATION = join(
   ROOT,
   "prisma",
   "migrations",
   "20260630000000_sidebar_widgets_canonical_array",
+  "migration.sql",
+);
+const PHASE2_MIGRATION = join(
+  ROOT,
+  "prisma",
+  "migrations",
+  "20260724151000_settings_seo_analytics_layout_sidebar_split",
   "migration.sql",
 );
 
@@ -26,13 +33,14 @@ describe("sidebar DB invariants", () => {
     expect(schema).toContain(
       `sidebarWidgets      Json    @default("${CANONICAL_DEFAULT}")`,
     );
+    expect(schema).toContain('@@map("settings_sidebars")');
     expect(schema).not.toContain(
       '@default("{\\"search\\":true,\\"recent\\":true,\\"popular\\":true,\\"categories\\":true,\\"tags\\":true}")',
     );
   });
 
-  test("migration converts object rows once and enforces array shape", () => {
-    const migration = read(MIGRATION);
+  test("legacy migration converted object rows once on settings", () => {
+    const migration = read(LEGACY_MIGRATION);
 
     expect(migration).toContain(
       `ALTER COLUMN "sidebarWidgets" SET DEFAULT '[{"type":"search","enabled":true}`,
@@ -48,6 +56,22 @@ describe("sidebar DB invariants", () => {
     );
     expect(migration).toContain(
       "CHECK (jsonb_typeof(\"sidebarWidgets\") = 'array')",
+    );
+  });
+
+  test("phase 2 migration copies sidebarWidgets to settings_sidebars with array check", () => {
+    const migration = read(PHASE2_MIGRATION);
+
+    expect(migration).toContain('INSERT INTO "settings_sidebars"');
+    expect(migration).toContain('FROM "settings" s');
+    expect(migration).toContain(
+      'CONSTRAINT "SettingsSidebar_sidebarWidgets_array_check"',
+    );
+    expect(migration).toContain(
+      "CHECK (jsonb_typeof(\"sidebarWidgets\") = 'array')",
+    );
+    expect(migration).toContain(
+      'ALTER TABLE "settings" DROP COLUMN "sidebarWidgets"',
     );
   });
 });

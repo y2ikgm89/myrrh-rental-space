@@ -5,6 +5,12 @@ type SettingsUpsertArgs = { update?: Record<string, unknown> };
 const mockSettingsUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsSeoUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsLayoutUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
 
 mock.module("server-only", () => ({}));
 
@@ -18,6 +24,12 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settings: {
       upsert: mockSettingsUpsert,
+    },
+    settingsSeo: {
+      upsert: mockSettingsSeoUpsert,
+    },
+    settingsLayout: {
+      upsert: mockSettingsLayoutUpsert,
     },
   },
   Prisma: {
@@ -131,21 +143,21 @@ const HEADER_SETTINGS_INPUT = {
 
 describe("updateBasicInfo", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsSeoUpsert.mockReset();
+    mockSettingsSeoUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("有効な基本情報でアップサートが実行される", async () => {
       await updateBasicInfo(BASIC_INFO_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsSeoUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("upsert が singleton ID で呼ばれる", async () => {
       await updateBasicInfo(BASIC_INFO_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsSeoUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
         }),
@@ -163,13 +175,13 @@ describe("updateBasicInfo", () => {
         defaultOgpImageUrl: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsSeoUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("faviconUrl が upsert の create/update に渡される (dynamic icon route の SSoT)", async () => {
       await updateBasicInfo(BASIC_INFO_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsSeoUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           create: expect.objectContaining({
             faviconUrl: "https://media.example.com/site/favicon.png",
@@ -196,7 +208,7 @@ describe("updateBasicInfo", () => {
       ).rejects.toMatchObject({
         code: "VALIDATION",
       });
-      expect(mockSettingsUpsert).not.toHaveBeenCalled();
+      expect(mockSettingsSeoUpsert).not.toHaveBeenCalled();
     });
   });
 });
@@ -434,21 +446,21 @@ describe("updateTaxSettings", () => {
 
 describe("updateHeaderSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsLayoutUpsert.mockReset();
+    mockSettingsLayoutUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
     test("有効なヘッダー設定でアップサートが実行される", async () => {
       await updateHeaderSettings(HEADER_SETTINGS_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("ヘッダー設定データが upsert に渡される", async () => {
       await updateHeaderSettings(HEADER_SETTINGS_INPUT);
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsLayoutUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "singleton" },
           update: expect.objectContaining({
@@ -465,7 +477,7 @@ describe("updateHeaderSettings", () => {
         headerBackgroundMode: "solid",
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -476,8 +488,8 @@ describe("updateHeaderSettings", () => {
 
 describe("updateLayoutSettings", () => {
   beforeEach(() => {
-    mockSettingsUpsert.mockReset();
-    mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsLayoutUpsert.mockReset();
+    mockSettingsLayoutUpsert.mockResolvedValue({ id: "singleton" });
   });
 
   describe("正常系", () => {
@@ -489,7 +501,7 @@ describe("updateLayoutSettings", () => {
         contentWidthCustom: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("CUSTOM 幅でカスタム値を指定するとアップサートが実行される", async () => {
@@ -500,7 +512,7 @@ describe("updateLayoutSettings", () => {
         contentWidthCustom: 900,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
     });
 
     test("CUSTOM containerWidth の場合 containerWidthCustom が設定される", async () => {
@@ -511,7 +523,7 @@ describe("updateLayoutSettings", () => {
         contentWidthCustom: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsLayoutUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             containerWidthCustom: 1400,
@@ -528,7 +540,7 @@ describe("updateLayoutSettings", () => {
         contentWidthCustom: null,
       });
 
-      expect(mockSettingsUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsLayoutUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             containerWidthCustom: null,
@@ -577,7 +589,7 @@ describe("updateLayoutSettings", () => {
         }),
       ).rejects.toThrow(DomainError);
 
-      expect(mockSettingsUpsert).not.toHaveBeenCalled();
+      expect(mockSettingsLayoutUpsert).not.toHaveBeenCalled();
     });
   });
 });

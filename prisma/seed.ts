@@ -470,15 +470,20 @@ async function seedSettings(
     : { senderEmail: null, replyToEmail: null };
 
   const settingsData = {
-    siteName: "Myrrh Rental Space",
-    siteDescription:
-      "ビジネスからプライベートまで、様々な用途に対応したレンタルスペース",
     ...businessPlaceholders,
-    // 交通案内・駐車場案内は Location 単位（Location.accessLines / Location.parkingInfo）
-    footerCopyright: "© 2025 Myrrh Rental Space. All rights reserved.",
     cancellationDeadlineHours: 24,
     modificationDeadlineHours: 24,
 
+    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
+    senderName: "Myrrh Rental Space",
+    ...emailPlaceholders,
+  };
+
+  const seoData = {
+    siteName: "Myrrh Rental Space",
+    siteDescription:
+      "ビジネスからプライベートまで、様々な用途に対応したレンタルスペース",
+    footerCopyright: "© 2025 Myrrh Rental Space. All rights reserved.",
     // ファビコン・ロゴ・OGP（公開ページ表示用）
     // ファビコンは空文字で開始し、admin から R2 アップロードで設定。未設定（空文字）
     // 時は dynamic icon Route Handler (`src/app/icon/route.tsx`) が ImageResponse の
@@ -488,10 +493,6 @@ async function seedSettings(
     defaultOgpImageUrl: "/images/seed/ogp-default.svg",
     headerLogoUrl: "/images/seed/logo-header.svg",
     footerLogoUrl: "/images/seed/logo-footer.svg",
-
-    // メール送信設定（送信元 From は env 優先・DB フォールバックの env-OR-DB）
-    senderName: "Myrrh Rental Space",
-    ...emailPlaceholders,
   };
 
   const featureModules = resolveSeedFeatureModules();
@@ -518,6 +519,26 @@ async function seedSettings(
       create: { id: "singleton" },
     }),
     prisma.settingsSystem.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSeo.upsert({
+      where: { id: "singleton" },
+      update: seoData,
+      create: { id: "singleton", ...seoData },
+    }),
+    prisma.settingsAnalytics.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsLayout.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
+    prisma.settingsSidebar.upsert({
       where: { id: "singleton" },
       update: {},
       create: { id: "singleton" },

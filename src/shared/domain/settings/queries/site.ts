@@ -85,7 +85,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
 
   const settings = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsAnalytics.findUnique({
         where: { id: "singleton" },
         select: {
           analyticsType: true,
@@ -125,7 +125,7 @@ export async function getSeoSettings(): Promise<SeoSettings | null> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsSeo.findUnique({
         where: { id: "singleton" },
         select: {
           siteName: true,
@@ -178,7 +178,7 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
 
   const result = await safeFetch({
     fetch: () =>
-      prisma.settings.findUnique({
+      prisma.settingsLayout.findUnique({
         where: { id: "singleton" },
         select: {
           containerWidth: true,

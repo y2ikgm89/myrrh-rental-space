@@ -30,7 +30,13 @@ import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/
 import { parseRefundPolicy } from "@/shared/domain/refund/policy";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
 import { ensureSettingsAnnouncementCarousel } from "@/shared/domain/settings/announcement-bar";
-import { ensureSettingsSystem } from "@/shared/domain/settings/commands";
+import {
+  ensureSettingsAnalytics,
+  ensureSettingsLayout,
+  ensureSettingsSeo,
+  ensureSettingsSidebar,
+  ensureSettingsSystem,
+} from "@/shared/domain/settings/commands";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
@@ -64,19 +70,28 @@ async function getOrCreateSettings() {
 }
 
 async function getOrCreateSettingsBundle() {
-  const [settings, carousel, system] = await Promise.all([
-    getOrCreateSettings(),
-    ensureSettingsAnnouncementCarousel(),
-    ensureSettingsSystem(),
-  ]);
+  const [settings, carousel, system, seo, analytics, layout, sidebar] =
+    await Promise.all([
+      getOrCreateSettings(),
+      ensureSettingsAnnouncementCarousel(),
+      ensureSettingsSystem(),
+      ensureSettingsSeo(),
+      ensureSettingsAnalytics(),
+      ensureSettingsLayout(),
+      ensureSettingsSidebar(),
+    ]);
 
-  return { settings, carousel, system };
+  return { settings, carousel, system, seo, analytics, layout, sidebar };
 }
 
 function toSettingsData(
   settings: Awaited<ReturnType<typeof getOrCreateSettings>>,
   carousel: Awaited<ReturnType<typeof ensureSettingsAnnouncementCarousel>>,
   system: Awaited<ReturnType<typeof ensureSettingsSystem>>,
+  seo: Awaited<ReturnType<typeof ensureSettingsSeo>>,
+  analytics: Awaited<ReturnType<typeof ensureSettingsAnalytics>>,
+  layout: Awaited<ReturnType<typeof ensureSettingsLayout>>,
+  sidebar: Awaited<ReturnType<typeof ensureSettingsSidebar>>,
   options: {
     stripeSecretKeyMasked: string | null;
     stripeWebhookSecretMasked: string | null;
@@ -85,15 +100,15 @@ function toSettingsData(
 ): Serialized<SettingsData> {
   return toPlainObject({
     id: settings.id,
-    siteName: settings.siteName,
-    siteDescription: settings.siteDescription,
-    faviconUrl: settings.faviconUrl,
-    defaultOgpImageUrl: settings.defaultOgpImageUrl,
-    headerLogoUrl: settings.headerLogoUrl,
-    footerLogoUrl: settings.footerLogoUrl,
-    footerCopyright: settings.footerCopyright,
-    useHeaderLogo: settings.useHeaderLogo,
-    useFooterLogo: settings.useFooterLogo,
+    siteName: seo.siteName,
+    siteDescription: seo.siteDescription,
+    faviconUrl: seo.faviconUrl,
+    defaultOgpImageUrl: seo.defaultOgpImageUrl,
+    headerLogoUrl: seo.headerLogoUrl,
+    footerLogoUrl: seo.footerLogoUrl,
+    footerCopyright: seo.footerCopyright,
+    useHeaderLogo: seo.useHeaderLogo,
+    useFooterLogo: seo.useFooterLogo,
     businessName: settings.businessName,
     businessNameKana: settings.businessNameKana,
     representativeName: settings.representativeName,
@@ -115,17 +130,17 @@ function toSettingsData(
     senderEmail: settings.senderEmail,
     senderName: settings.senderName,
     replyToEmail: settings.replyToEmail,
-    defaultMetaDescription: settings.defaultMetaDescription,
-    defaultMetaKeywords: settings.defaultMetaKeywords,
-    defaultOgpTitle: settings.defaultOgpTitle,
-    defaultOgpDescription: settings.defaultOgpDescription,
-    analyticsType: settings.analyticsType,
-    googleAnalyticsId: settings.googleAnalyticsId,
-    googleTagManagerId: settings.googleTagManagerId,
-    googleSearchConsoleId: settings.googleSearchConsoleId,
-    bingWebmasterToolsId: settings.bingWebmasterToolsId,
-    gaPropertyId: settings.gaPropertyId,
-    microsoftClarityId: settings.microsoftClarityId,
+    defaultMetaDescription: seo.defaultMetaDescription,
+    defaultMetaKeywords: seo.defaultMetaKeywords,
+    defaultOgpTitle: seo.defaultOgpTitle,
+    defaultOgpDescription: seo.defaultOgpDescription,
+    analyticsType: analytics.analyticsType,
+    googleAnalyticsId: analytics.googleAnalyticsId,
+    googleTagManagerId: analytics.googleTagManagerId,
+    googleSearchConsoleId: analytics.googleSearchConsoleId,
+    bingWebmasterToolsId: analytics.bingWebmasterToolsId,
+    gaPropertyId: analytics.gaPropertyId,
+    microsoftClarityId: analytics.microsoftClarityId,
     defaultTimeSlot: settings.defaultTimeSlot,
     minReservationDuration: settings.minReservationDuration,
     maxReservationDuration: settings.maxReservationDuration,
@@ -190,24 +205,24 @@ function toSettingsData(
     googleCalendarLastSyncedAt: settings.googleCalendarLastSyncedAt,
     googleCalendarWebhookActive: !!settings.googleCalendarWebhookChannelId,
     googleCalendarWebhookExpiration: settings.googleCalendarWebhookExpiration,
-    containerWidth: settings.containerWidth,
-    containerWidthCustom: settings.containerWidthCustom,
-    contentWidth: settings.contentWidth,
-    contentWidthCustom: settings.contentWidthCustom,
-    sidebarEnabled: settings.sidebarEnabled,
-    sidebarWidgets: settings.sidebarWidgets,
-    sidebarRecentCount: settings.sidebarRecentCount,
-    sidebarPopularCount: settings.sidebarPopularCount,
-    sidebarTocEnabled: settings.sidebarTocEnabled,
-    headerScrollBehavior: settings.headerScrollBehavior,
-    headerBackgroundMode: settings.headerBackgroundMode,
-    footerTagline: settings.footerTagline,
-    footerNavigationLabel: settings.footerNavigationLabel,
-    footerContactLabel: settings.footerContactLabel,
-    footerHoursLabel: settings.footerHoursLabel,
-    footerShowSocialLinks: settings.footerShowSocialLinks,
+    containerWidth: layout.containerWidth,
+    containerWidthCustom: layout.containerWidthCustom,
+    contentWidth: layout.contentWidth,
+    contentWidthCustom: layout.contentWidthCustom,
+    sidebarEnabled: sidebar.sidebarEnabled,
+    sidebarWidgets: sidebar.sidebarWidgets,
+    sidebarRecentCount: sidebar.sidebarRecentCount,
+    sidebarPopularCount: sidebar.sidebarPopularCount,
+    sidebarTocEnabled: sidebar.sidebarTocEnabled,
+    headerScrollBehavior: layout.headerScrollBehavior,
+    headerBackgroundMode: layout.headerBackgroundMode,
+    footerTagline: layout.footerTagline,
+    footerNavigationLabel: layout.footerNavigationLabel,
+    footerContactLabel: layout.footerContactLabel,
+    footerHoursLabel: layout.footerHoursLabel,
+    footerShowSocialLinks: layout.footerShowSocialLinks,
     eventImportEnabled: settings.eventImportEnabled,
-    themeColor: settings.themeColor,
+    themeColor: layout.themeColor,
     createdAt: settings.createdAt,
     updatedAt: settings.updatedAt,
   });
@@ -247,17 +262,28 @@ function parseCalendarSyncMethod(value: string | null): CalendarSyncMethod {
 }
 
 export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
-  const { settings, carousel, system } = await getOrCreateSettingsBundle();
+  const { settings, carousel, system, seo, analytics, layout, sidebar } =
+    await getOrCreateSettingsBundle();
 
-  return toSettingsData(settings, carousel, system, {
-    stripeSecretKeyMasked: null,
-    stripeWebhookSecretMasked: null,
-    googleCalendarServiceAccountEmailMasked: null,
-  });
+  return toSettingsData(
+    settings,
+    carousel,
+    system,
+    seo,
+    analytics,
+    layout,
+    sidebar,
+    {
+      stripeSecretKeyMasked: null,
+      stripeWebhookSecretMasked: null,
+      googleCalendarServiceAccountEmailMasked: null,
+    },
+  );
 }
 
 export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
-  const { settings, carousel, system } = await getOrCreateSettingsBundle();
+  const { settings, carousel, system, seo, analytics, layout, sidebar } =
+    await getOrCreateSettingsBundle();
 
   const stripeSecretKeyMasked = settings.stripeSecretKey
     ? maskSecretKey(
@@ -291,11 +317,20 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
     }
   }
 
-  return toSettingsData(settings, carousel, system, {
-    stripeSecretKeyMasked,
-    stripeWebhookSecretMasked,
-    googleCalendarServiceAccountEmailMasked,
-  });
+  return toSettingsData(
+    settings,
+    carousel,
+    system,
+    seo,
+    analytics,
+    layout,
+    sidebar,
+    {
+      stripeSecretKeyMasked,
+      stripeWebhookSecretMasked,
+      googleCalendarServiceAccountEmailMasked,
+    },
+  );
 }
 
 export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettingsData> {
