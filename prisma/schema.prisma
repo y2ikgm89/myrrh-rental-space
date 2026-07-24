@@ -877,6 +877,7 @@ model Customer {
   pendingEmailChanges  PendingCustomerEmailChange[]
   // Inquiry Overhaul Phase 1: 顧客が添付した inquiry_attachments 行 (uploadedByCustomerId)
   uploadedInquiryAttachments InquiryAttachment[] @relation("InquiryAttachmentUploadedByCustomer")
+  authoredInquiryReplies     InquiryReply[]     @relation("InquiryReplyAuthorCustomer")
 
   @@index([lastName])
   @@index([firstName])
@@ -1040,18 +1041,22 @@ model InquiryReply {
   id         String                 @id @default(uuid()) @db.Uuid
   inquiryId  String                 @db.Uuid
   authorType InquiryReplyAuthorType
-  /// STAFF 返信時の User.id (User 削除で SetNull)。CUSTOMER 返信では別の識別で解決。
+  /// STAFF → User.id (User 削除で SetNull)。CUSTOMER では null。
   authorId   String?                @db.Uuid
+  /// CUSTOMER → Customer.id (Customer 削除で SetNull)。STAFF では null。
+  authorCustomerId String?          @db.Uuid
   body       String                 @db.Text
   createdAt  DateTime               @default(now())
   updatedAt  DateTime               @updatedAt
 
-  inquiry     Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
-  author      User?               @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  attachments InquiryAttachment[]
+  inquiry        Inquiry             @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  author         User?               @relation("InquiryReplyAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  authorCustomer Customer?           @relation("InquiryReplyAuthorCustomer", fields: [authorCustomerId], references: [id], onDelete: SetNull)
+  attachments    InquiryAttachment[]
 
   @@index([inquiryId, createdAt])
   @@index([authorId])
+  @@index([authorCustomerId])
   @@map("inquiry_replies")
 }
 
