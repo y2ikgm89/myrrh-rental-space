@@ -110,6 +110,12 @@ export function createAppPrismaClient(base: PrismaClient) {
           compute: (c) => decimalToNumber(c.maxDiscountAmount),
         },
       },
+      receipt: {
+        taxRate: {
+          needs: { taxRate: true },
+          compute: (r) => decimalToNumberStrict(r.taxRate),
+        },
+      },
     },
   });
 }

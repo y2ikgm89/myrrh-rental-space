@@ -104,14 +104,8 @@ export async function getReceiptDetailBySerialNoQuery(serialNo: string) {
     cursor = parent.reissuedFromId;
   }
 
-  // Receipt モデルは `createAppPrismaClient` の Decimal → number result 拡張の
-  // 対象外 (reservation / space / customer / settings / coupon のみ)。
-  // Receipt.taxRate は Prisma Decimal のまま返るので、UI へ渡す前に number 化する。
   return {
-    receipt: {
-      ...receipt,
-      taxRate: Number(receipt.taxRate.toString()),
-    },
+    receipt,
     upChain,
   };
 }

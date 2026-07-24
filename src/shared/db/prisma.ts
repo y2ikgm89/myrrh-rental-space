@@ -41,6 +41,7 @@ export type Customer = ConvertDecimalFields<PrismaModels.Customer>;
 export type Settings = ConvertDecimalFields<PrismaModels.Settings>;
 export type Coupon = ConvertDecimalFields<PrismaModels.Coupon>;
 export type SpaceRatePlan = ConvertDecimalFields<PrismaModels.SpaceRatePlan>;
+export type Receipt = ConvertDecimalFields<PrismaModels.Receipt>;
 
 // ---------------------------------------------------------------------------
 // Singleton: PrismaClient
