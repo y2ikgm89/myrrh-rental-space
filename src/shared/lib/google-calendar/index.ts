@@ -16,7 +16,6 @@ export { formatGoogleApiError } from "./helpers";
 export {
   getServiceAccountClient,
   encryptServiceAccountJson,
-  extractServiceAccountEmail,
 } from "./service-account";
 
 export {

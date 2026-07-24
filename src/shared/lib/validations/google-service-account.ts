@@ -29,3 +29,7 @@ export function parseGoogleServiceAccountCredentials(
     return null;
   }
 }
+
+export function extractGoogleServiceAccountEmail(json: string): string | null {
+  return parseGoogleServiceAccountCredentials(json)?.client_email ?? null;
+}
