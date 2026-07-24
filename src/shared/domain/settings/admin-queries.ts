@@ -16,7 +16,7 @@ import type {
 } from "@/shared/domain/settings/types";
 import { safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
-import { extractServiceAccountEmail } from "@/shared/lib/google-calendar/service-account";
+import { extractGoogleServiceAccountEmail } from "@/shared/lib/validations/google-service-account";
 import {
   parseBusinessHours,
   parseFeatureModules,
@@ -269,7 +269,7 @@ export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
       },
     );
     if (decrypted) {
-      const email = extractServiceAccountEmail(decrypted);
+      const email = extractGoogleServiceAccountEmail(decrypted);
       if (email) {
         googleCalendarServiceAccountEmailMasked =
           maskServiceAccountEmail(email);

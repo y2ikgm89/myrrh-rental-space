@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  extractGoogleServiceAccountEmail,
   googleServiceAccountCredentialsSchema,
   parseGoogleServiceAccountCredentials,
 } from "@/shared/lib/validations/google-service-account";
@@ -66,5 +67,41 @@ describe("parseGoogleServiceAccountCredentials", () => {
     });
 
     expect(parseGoogleServiceAccountCredentials(invalidJson)).toBeNull();
+  });
+});
+
+describe("extractGoogleServiceAccountEmail", () => {
+  test("有効なJSONからメールアドレスを抽出する", () => {
+    const json = JSON.stringify({
+      type: "service_account",
+      project_id: "test-project",
+      client_email: "test@test-project.iam.gserviceaccount.com",
+      private_key:
+        "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
+      client_id: "123456789",
+    });
+
+    const result = extractGoogleServiceAccountEmail(json);
+    expect(result).toBe("test@test-project.iam.gserviceaccount.com");
+  });
+
+  test("client_emailがないJSONはnullを返す", () => {
+    const json = JSON.stringify({
+      type: "service_account",
+      project_id: "test-project",
+    });
+
+    const result = extractGoogleServiceAccountEmail(json);
+    expect(result).toBeNull();
+  });
+
+  test("不正なJSONはnullを返す", () => {
+    const result = extractGoogleServiceAccountEmail("invalid json");
+    expect(result).toBeNull();
+  });
+
+  test("空文字列はnullを返す", () => {
+    const result = extractGoogleServiceAccountEmail("");
+    expect(result).toBeNull();
   });
 });

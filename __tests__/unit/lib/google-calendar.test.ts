@@ -5,48 +5,9 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import {
-  extractServiceAccountEmail,
-  isValidCalendarId,
-} from "@/shared/lib/google-calendar";
+import { isValidCalendarId } from "@/shared/lib/google-calendar";
 
 describe("google-calendar helpers", () => {
-  describe("extractServiceAccountEmail", () => {
-    test("有効なJSONからメールアドレスを抽出する", () => {
-      const json = JSON.stringify({
-        type: "service_account",
-        project_id: "test-project",
-        client_email: "test@test-project.iam.gserviceaccount.com",
-        private_key:
-          "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n",
-        client_id: "123456789",
-      });
-
-      const result = extractServiceAccountEmail(json);
-      expect(result).toBe("test@test-project.iam.gserviceaccount.com");
-    });
-
-    test("client_emailがないJSONはnullを返す", () => {
-      const json = JSON.stringify({
-        type: "service_account",
-        project_id: "test-project",
-      });
-
-      const result = extractServiceAccountEmail(json);
-      expect(result).toBeNull();
-    });
-
-    test("不正なJSONはnullを返す", () => {
-      const result = extractServiceAccountEmail("invalid json");
-      expect(result).toBeNull();
-    });
-
-    test("空文字列はnullを返す", () => {
-      const result = extractServiceAccountEmail("");
-      expect(result).toBeNull();
-    });
-  });
-
   describe("isValidCalendarId", () => {
     test('"primary"は有効なカレンダーID', () => {
       expect(isValidCalendarId("primary")).toBe(true);

@@ -10,16 +10,7 @@ import {
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { getGoogleCalendarServiceAccountConfig } from "@/shared/domain/settings/admin-queries";
-import {
-  parseGoogleServiceAccountCredentials,
-  type GoogleServiceAccountCredentials,
-} from "@/shared/lib/validations/google-service-account";
-
-export function parseServiceAccountCredentials(
-  json: string,
-): GoogleServiceAccountCredentials | null {
-  return parseGoogleServiceAccountCredentials(json);
-}
+import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 /**
  * サービスアカウントのGoogle Calendar APIクライアントを取得
@@ -58,7 +49,7 @@ export async function getServiceAccountClient(options?: {
     return null;
   }
 
-  const credentials = parseServiceAccountCredentials(decryptedJson);
+  const credentials = parseGoogleServiceAccountCredentials(decryptedJson);
   if (!credentials) {
     logError(new Error("Invalid service account credentials JSON"), {
       category: ErrorCategory.UNKNOWN,
@@ -92,11 +83,4 @@ export function encryptServiceAccountJson(json: string): string {
   return encrypt(json, {
     purpose: SETTINGS_CRYPTO_PURPOSES.googleCalendarServiceAccount,
   });
-}
-
-/**
- * サービスアカウントJSONからメールアドレスを抽出（マスク表示用）
- */
-export function extractServiceAccountEmail(json: string): string | null {
-  return parseServiceAccountCredentials(json)?.client_email ?? null;
 }

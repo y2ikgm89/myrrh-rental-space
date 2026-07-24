@@ -16,7 +16,7 @@ import type { CalendarConnectionTestResult } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { withGoogleApiRetry } from "@/shared/lib/google-api/retry";
-import { parseServiceAccountCredentials } from "./service-account";
+import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 /**
  * サービスアカウントの接続テスト
@@ -26,7 +26,7 @@ export async function testServiceAccountConnection(params: {
   calendarId: string;
 }): Promise<CalendarConnectionTestResult> {
   try {
-    const credentials = parseServiceAccountCredentials(
+    const credentials = parseGoogleServiceAccountCredentials(
       params.serviceAccountJson,
     );
     if (!credentials) {
