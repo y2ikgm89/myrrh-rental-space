@@ -10,6 +10,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { customerSearchResultsResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
 import { CustomerIdentityBadge } from "@/admin/components/status-badges";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";
@@ -41,7 +42,10 @@ async function fetchCustomerSearchResults(
   query: string,
 ): Promise<CustomerSearchResult[]> {
   const params = new URLSearchParams({ q: query });
-  return fetchAdminJson(`/admin/api/customers/search?${params.toString()}`);
+  return fetchAdminJson(
+    `/admin/api/customers/search?${params.toString()}`,
+    customerSearchResultsResponseSchema,
+  );
 }
 
 export function CustomerSelector({

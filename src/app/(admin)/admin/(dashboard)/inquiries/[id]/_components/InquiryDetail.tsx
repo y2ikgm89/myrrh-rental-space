@@ -37,6 +37,7 @@ import {
   updateInquiryCustomer,
 } from "@/admin/actions/inquiry";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { customerSearchResultsResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/shared/lib/errors/logger-core";
@@ -56,7 +57,10 @@ async function fetchCustomerSearchResults(
   query: string,
 ): Promise<CustomerSearchResult[]> {
   const params = new URLSearchParams({ q: query });
-  return fetchAdminJson(`/admin/api/customers/search?${params.toString()}`);
+  return fetchAdminJson(
+    `/admin/api/customers/search?${params.toString()}`,
+    customerSearchResultsResponseSchema,
+  );
 }
 
 export function InquiryDetail({ inquiry }: InquiryDetailProps) {

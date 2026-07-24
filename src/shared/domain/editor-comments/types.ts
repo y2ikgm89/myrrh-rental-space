@@ -35,7 +35,7 @@ export type EditorComment = {
   updatedAt: DateLike;
   createdBy: string | null;
   createdByUser?: CommentUserSummary | undefined;
-  deletedByUser?: CommentUserSummary | null;
+  deletedByUser?: CommentUserSummary | null | undefined;
 };
 
 export type EditorCommentThread = {

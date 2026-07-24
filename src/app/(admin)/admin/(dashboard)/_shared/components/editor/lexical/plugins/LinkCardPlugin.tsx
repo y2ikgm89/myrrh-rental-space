@@ -13,7 +13,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { z } from "zod";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
@@ -23,6 +22,11 @@ import {
   IconPhoto,
 } from "@tabler/icons-react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import {
+  linkCardContentTypesResponseSchema,
+  linkCardSearchResponseSchema,
+  ogpPreviewResponseSchema,
+} from "@/admin/lib/admin-api-response-schemas";
 import { logger } from "@/shared/lib/errors/logger-core";
 import {
   Button,
@@ -72,10 +76,6 @@ type LinkCardPluginProps = {
   onClose: () => void;
 };
 
-const contentTypesResponseSchema = z.object({
-  contentTypes: z.array(z.string()),
-});
-
 /**
  * 有効な Feature Module に対応する content-type 一覧を取得する。
  *
@@ -96,8 +96,8 @@ function useEnabledLinkCardContentTypes(
     let cancelled = false;
     fetchAdminJson(
       "/admin/api/link-cards/content-types",
+      linkCardContentTypesResponseSchema,
       { cache: "no-store" },
-      contentTypesResponseSchema,
     )
       .then((result) => {
         if (cancelled) return;
@@ -162,8 +162,9 @@ function InternalTab({
           contentType: nextType,
           query: nextQuery.trim(),
         });
-        const result = await fetchAdminJson<{ items: LinkCardSearchItem[] }>(
+        const result = await fetchAdminJson(
           `/admin/api/link-cards/search?${params.toString()}`,
+          linkCardSearchResponseSchema,
           { cache: "no-store" },
         );
         setItems(result.items);
@@ -304,11 +305,15 @@ function ExternalTab({ onInserted }: { onInserted: () => void }) {
     setPreview(null);
     startTransition(async () => {
       try {
-        const result = await fetchAdminJson<OgpPreview>("/admin/api/ogp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: url.trim() }),
-        });
+        const result = await fetchAdminJson(
+          "/admin/api/ogp",
+          ogpPreviewResponseSchema,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: url.trim() }),
+          },
+        );
         setPreview(result);
       } catch (fetchError) {
         logger.warn("LinkCardPlugin: OGP fetch failed", { url });

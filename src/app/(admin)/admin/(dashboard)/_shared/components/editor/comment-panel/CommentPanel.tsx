@@ -27,6 +27,10 @@ import {
 import { Button } from "@/admin/components/ui/button";
 import { Skeleton } from "@/admin/components/ui/skeleton";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import {
+  editorCommentThreadListResponseSchema,
+  editorCommentThreadResponseSchema,
+} from "@/admin/lib/admin-api-response-schemas";
 import { Tabs, TabsList, TabsTrigger } from "@/admin/components/ui/tabs";
 import {
   resolveThread,
@@ -88,13 +92,15 @@ async function fetchCommentThreads(params: {
   });
   return fetchAdminJson(
     `/admin/api/editor-comments/threads?${searchParams.toString()}`,
+    editorCommentThreadListResponseSchema,
   );
 }
 
-async function fetchThreadDetail(
-  threadId: string,
-): Promise<EditorCommentThread> {
-  return fetchAdminJson(`/admin/api/editor-comments/threads/${threadId}`);
+async function fetchThreadDetail(threadId: string) {
+  return fetchAdminJson(
+    `/admin/api/editor-comments/threads/${threadId}`,
+    editorCommentThreadResponseSchema,
+  );
 }
 
 export function CommentPanel({

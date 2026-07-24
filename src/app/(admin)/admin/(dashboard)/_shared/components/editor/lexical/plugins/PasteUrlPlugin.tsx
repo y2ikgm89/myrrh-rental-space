@@ -14,6 +14,7 @@ import {
 } from "lexical";
 import { useEffect } from "react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { ogpPreviewResponseSchema } from "@/admin/lib/admin-api-response-schemas";
 import { logger } from "@/shared/lib/errors/logger-core";
 import {
   detectPasteEmbed,
@@ -42,15 +43,6 @@ function isPasteableUrl(text: string): boolean {
   }
   return parsed.hostname === "localhost" || parsed.hostname.includes(".");
 }
-
-type OgpPreview = {
-  url: string;
-  title: string | null;
-  description: string | null;
-  imageUrl: string | null;
-  faviconUrl: string;
-  siteName: string | null;
-};
 
 /**
  * 空段落に URL を単独ペーストすると OGP を取得して外部リンクカード
@@ -127,11 +119,15 @@ async function insertBookmarkFromUrl(
   url: string,
 ): Promise<void> {
   try {
-    const ogp = await fetchAdminJson<OgpPreview>("/admin/api/ogp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
+    const ogp = await fetchAdminJson(
+      "/admin/api/ogp",
+      ogpPreviewResponseSchema,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      },
+    );
     editor.update(() => {
       $insertNodeToNearestRoot(
         $createBookmarkNode({
