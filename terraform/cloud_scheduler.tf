@@ -70,7 +70,7 @@ locals {
       description = "Old notification cleanup 30d+ (daily 04:00 JST)"
     },
     {
-      name        = "news-scheduled-publish"
+      name = "news-scheduled-publish"
       # */5 だと Neon Free の scale-to-zero（5 分 idle）が実質無効になる。
       # PUBLIC_CONTENT の revalidate 窓は 1h のため */10 でも露出遅延は十分小さい。
       schedule    = "*/10 * * * *"

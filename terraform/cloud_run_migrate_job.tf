@@ -66,7 +66,7 @@ resource "google_cloud_run_v2_job" "prisma_migrate" {
           name = "DATABASE_URL"
           value_source {
             secret_key_ref {
-              secret  = google_secret_manager_secret.secret["DATABASE_URL"].secret_id
+              secret = google_secret_manager_secret.secret["DATABASE_URL"].secret_id
               # runtime の pooler pin (v2) ではなく、direct の v1 を明示。
               version = "1"
             }
