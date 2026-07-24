@@ -52,6 +52,8 @@ import {
   getAuditActionFilterOrAll,
   getReservationStatusFilterOrAll,
   getValidPaymentStatus,
+  CANCELLED_BY,
+  CANCELLED_BY_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 
 describe("ACTIVE_RESERVATION_STATUSES", () => {
@@ -413,6 +415,21 @@ describe("getValidPaymentStatus", () => {
     );
     expect(getValidPaymentStatus(null, PaymentStatus.PENDING)).toBe(
       PaymentStatus.PENDING,
+    );
+  });
+});
+
+describe("CANCELLED_BY", () => {
+  test("legacy CUSTOMER alias は含まない", () => {
+    expect(Object.values(CANCELLED_BY)).not.toContain("CUSTOMER");
+  });
+
+  test("CANCELLED_BY_LABELS は CANCELLED_BY の各値に 1 ラベルずつ", () => {
+    for (const value of Object.values(CANCELLED_BY)) {
+      expect(CANCELLED_BY_LABELS[value]).toBeString();
+    }
+    expect(Object.keys(CANCELLED_BY_LABELS)).toHaveLength(
+      Object.values(CANCELLED_BY).length,
     );
   });
 });

@@ -763,7 +763,7 @@ model Reservation {
   // Cancellation tracking
   cancellationReason String?   @db.Text
   cancelledAt        DateTime?
-  cancelledByType    String?   @db.VarChar(20) // "CUSTOMER" | "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
+  cancelledByType    String?   @db.VarChar(20) // "CUSTOMER_MYPAGE" | "CUSTOMER_TOKEN" | "ADMIN" | "SYSTEM" (CANCELLED_BY SSoT: src/shared/lib/validations/enums/helpers.ts)
 
   // iCal RFC 5545 SEQUENCE (increments on update/cancel)
   icsSequence Int @default(0)
@@ -2180,7 +2180,7 @@ model EventCategory {
 model Event {
   id                   String            @id @default(cuid()) @db.VarChar(30)
   title                String            @db.VarChar(200)
-  slug                 String            @unique @db.VarChar(100)
+  slug                 String            @db.VarChar(100) // 一意性は下記 @@unique(where: deletedAt is null) 参照
   /// Lexical EditorState JSON（正本）
   descriptionJson      Json
   /// Lexical → 公開表示用 HTML キャッシュ（SanitizedHtml で出力）
@@ -2267,6 +2267,11 @@ model Event {
   /// `prisma migrate diff` で実証済み）。where 省略の base index 宣言だけでは diff engine が
   /// 述語差分を検知し CREATE INDEX を再提案するため、実 DB と同一の predicate を明示する。
   @@index([spaceId], map: "events_spaceId_alive_idx", where: { deletedAt: null, spaceId: { not: null } })
+  // FaqCategory.slug と同型: slug が無条件 @unique だと、ソフトデリート済みイベントが
+  // (permanentlyDelete するまで) 行として残り続ける限り同じ slug の新規作成が DB 制約で
+  // 常に拒否される。ensureUniqueSlug は deletedAt: null で絞っているため partial unique
+  // index に揃える。
+  @@unique([slug], map: "events_slug_active_key", where: { deletedAt: null })
   @@map("events")
 }
 
@@ -2407,7 +2412,8 @@ model EventRegistration {
 /// - amount は各 refund event の 個別 金額 (円、正整数)。累積は `Refund` 集計 SUM で算出
 /// - stripeRefundId は Stripe refund object の id (@unique で二重返金防止 + webhook idempotency)
 /// - refundedByType: "ADMIN" | "AUTO_ON_CANCEL" | "AUTO_CAPACITY_RACE" | "STRIPE_DASHBOARD" (AuditLog と併用)
-/// - append-only (update / delete 想定なし、Refund オブジェクト 1 個 = 1 tx 完了)
+/// - append-only (update / delete 想定なし、Refund オブジェクト 1 個 = 1 tx 完了)。
+///   DB trigger (20260724110000_refunds_no_mutation) で UPDATE/DELETE を拒否。
 model Refund {
   id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// 対象 Reservation (polymorphic、eventRegistrationId と排他)

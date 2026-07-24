@@ -875,6 +875,17 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("Refund は append-only — UPDATE/DELETE/upsert を src 以下で禁止", () => {
+    // Refund は決済証跡 child record なので append-only。DB trigger と src grep gate
+    // の二重防御。integration test の cleanup のみ bypass GUC 経由で deleteMany 可。
+    const files = collectSourceFiles(SRC_ROOT);
+    const offenders = collectNonCommentOffenders(
+      files,
+      /prisma\.refund\.(update|updateMany|delete|deleteMany|upsert)\b/u,
+    );
+    expect(offenders).toEqual([]);
+  });
+
   test("TERMS_AGREEMENT_CONTEXT VARCHAR ラベルは src 以下に残さない (TermsScope enum へ移行済み)", () => {
     // `TERMS_AGREEMENT_CONTEXT` const は TermsScope enum に統合済 (PR: terms-domain overhaul)。
     const files = collectStyleSourceFiles(SRC_ROOT);

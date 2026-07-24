@@ -26,6 +26,7 @@ import {
   mock,
   test,
 } from "bun:test";
+import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 
 // グローバル preload が DATABASE_URL をダミー値に固定するため、gateway を読む前に
 // 実テスト DB へ向け直す (静的 import は gateway を引かないためこの代入は動的 import
@@ -201,8 +202,8 @@ async function createPaidReservationFixture(
     customerId: customer.id,
     locationId: location.id,
     cleanup: async () => {
-      await prisma.refund.deleteMany({
-        where: { reservationId: reservation.id },
+      await deleteRefundsForTest(prisma, {
+        reservationId: reservation.id,
       });
       await prisma.reservation.deleteMany({ where: { id: reservation.id } });
       await prisma.space.deleteMany({ where: { id: space.id } });
@@ -229,11 +230,9 @@ describeMaybe("refundReservationPaymentCommand (integration)", () => {
 
     // 過去の fail 実行で cleanup 未達な残留 fixture を予備削除 (再実行耐性)。
     // FK 順: refunds → reservations → spaces → customers → locations。
-    await prisma.refund.deleteMany({
-      where: {
-        reservation: {
-          space: { location: { slug: { startsWith: "refund-loc-" } } },
-        },
+    await deleteRefundsForTest(prisma, {
+      reservation: {
+        space: { location: { slug: { startsWith: "refund-loc-" } } },
       },
     });
     await prisma.reservation.deleteMany({

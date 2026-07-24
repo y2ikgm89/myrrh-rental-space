@@ -22,6 +22,7 @@ import {
   test,
 } from "bun:test";
 import { EventScheduleMode, EventStatus } from "@generated/prisma/enums";
+import { deleteRefundsForTest } from "../../../helpers/refund-test-cleanup";
 
 const TEST_DB_URL = process.env["TEST_DATABASE_URL"];
 if (TEST_DB_URL) {
@@ -172,8 +173,8 @@ async function createPaidRegistration(paidAmount: number): Promise<{
   return {
     registrationId: registration.id,
     cleanup: async () => {
-      await prisma.refund.deleteMany({
-        where: { eventRegistrationId: registration.id },
+      await deleteRefundsForTest(prisma, {
+        eventRegistrationId: registration.id,
       });
       await prisma.eventRegistration.deleteMany({
         where: { id: registration.id },
@@ -206,8 +207,8 @@ async function createExpiredPendingRegistration(paidAmount: number): Promise<{
   return {
     registrationId: registration.id,
     cleanup: async () => {
-      await prisma.refund.deleteMany({
-        where: { eventRegistrationId: registration.id },
+      await deleteRefundsForTest(prisma, {
+        eventRegistrationId: registration.id,
       });
       await prisma.eventRegistration.deleteMany({
         where: { id: registration.id },
@@ -231,11 +232,9 @@ describeMaybe("event registration refund commands (integration)", () => {
     await prisma.$queryRaw`SELECT 1`;
 
     // 残留 fixture の予備削除 (再実行耐性)。FK: refund → registration → slot/ticket → event。
-    await prisma.refund.deleteMany({
-      where: {
-        eventRegistration: {
-          event: { slug: { startsWith: "refund-event-" } },
-        },
+    await deleteRefundsForTest(prisma, {
+      eventRegistration: {
+        event: { slug: { startsWith: "refund-event-" } },
       },
     });
     await prisma.eventRegistration.deleteMany({
