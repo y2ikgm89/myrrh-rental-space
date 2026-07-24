@@ -39,10 +39,9 @@ paths:
 ## rate limit / クライアント IP
 
 - InMemory store は **Cloud Run max instance=1 前提**（`cloudbuild.yaml` の
-  `_MAX_INSTANCES: "1"` で実際に固定済み。autoscale 解禁には分散 backend が必須で、
-  現状は未実装 — 意図的に見送っている判断であり、autoscale 解禁時に再検討する）
-- `RATE_LIMIT_BACKEND=redis` は予約語のみ。store 未実装のため
-  `validateProductionEnv()` が fail-closed（半実装のまま multi-instance を通さない）
+  `_MAX_INSTANCES: "1"` で固定）。rate-limit 用 Redis / 分散 store は製品決定で
+  **使わない**（`RATE_LIMIT_BACKEND` は `"in-memory"` のみ）。エッジ防御は
+  Cloudflare Turnstile / WAF。`MAX_INSTANCES_HINT>1` は startup fail-closed
 - 本番のクライアント IP は `cf-connecting-ip` + `x-cloudflare-origin-secret` の
   timing-safe 比較成功時のみ信頼。XFF fallback は非本番/localhost 専用
 - パス別の limiter 振分は `checkRateLimit()` が SSoT

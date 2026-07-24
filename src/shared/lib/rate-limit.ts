@@ -16,24 +16,20 @@
  * `_MAX_INSTANCES` を上げた operator が「rate limit が壊れている」ことに
  * 気付かず本番投入する silent regression を防ぐ。
  *
- * **autoscale 解禁時の制約（未実装）:**
- * 将来 multi-instance autoscale（max>1）に移行する場合、各 instance が独立した
- * bucket を持ち「同一 IP が N instance × maxRequests/min を発行可能」になる
- * ため、distributed backend（Upstash Redis / Cloud Memorystore 等）の実装が
- * **必須**になる。本ファイルには Redis backend 実装は存在しない。
- * `RATE_LIMIT_BACKEND=redis` は env 予約語のみで、選択すると
- * `validateProductionEnv()` が fail-closed する（未実装のまま通さない）。
+ * **スケール契約（製品決定）:**
+ * rate-limit 用 Redis / 分散 store は使わない。Cloud Run は max-instances=1 を維持し、
+ * アプリ層は `InMemoryRateLimitStore` のみ。エッジ側の追加防御は Cloudflare
+ * Turnstile / WAF に任せる。`RATE_LIMIT_BACKEND` は `"in-memory"` 固定。
  *
  * **多層防御:**
  * - Layer 1: `InMemoryRateLimitStore`（このファイル、Cloud Run max=1 でグローバル）
  * - Layer 2: Cloudflare Turnstile（公開フォームの bot 緩和、`turnstile-actions.ts`）
- * - Layer 3: Cloud Run autoscale max instance 数（実質的なグローバル上限）
+ * - Layer 3: Cloud Run max instance = 1（実質的なグローバル上限）
  * - Layer 4: Cloudflare WAF Custom Rules（CDN 層 IP rate limit、運用配線）
  *
  * **interface contract:**
- * `check(token, options)` は `Promise<RateLimitResult>` を返す（将来の
- * distributed backend 追加を見越した async）。in-memory 実装は LRU から
- * 同期取得するが、`Promise.resolve()` で wrap して interface を統一する。
+ * `check(token, options)` は `Promise<RateLimitResult>` を返す（store 差し替え用の
+ * async 契約）。in-memory 実装は LRU から同期取得し `Promise.resolve()` で wrap する。
  */
 
 import { LRUCache } from "lru-cache";
@@ -70,7 +66,6 @@ export interface RateLimitStore {
  *
  * Cloud Run multi-instance 環境では各 instance ごとに独立した bucket になるため、
  * 完全な distributed protection ではなく **soft floor** として機能する。
- * 完全な分散制限が必要な場合は将来の Redis store 実装後に env で切り替える。
  */
 export class InMemoryRateLimitStore implements RateLimitStore {
   private readonly cache: LRUCache<
@@ -125,8 +120,7 @@ export class InMemoryRateLimitStore implements RateLimitStore {
 /**
  * レート制限インスタンスを作成（Adapter pattern）。
  *
- * デフォルトは `InMemoryRateLimitStore`。将来 Redis 等に切り替える場合は
- * store 実装を追加したうえで `createRateLimiter` に差し込む。
+ * デフォルト（かつ唯一の本番契約）は `InMemoryRateLimitStore`。
  *
  * @returns `{ check(token): Promise<RateLimitResult>; reset(token): Promise<void> }`
  */
