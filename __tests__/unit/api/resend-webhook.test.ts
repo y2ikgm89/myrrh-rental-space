@@ -637,4 +637,22 @@ describe("POST /api/webhooks/resend", () => {
     expect(text).not.toHaveBeenCalled();
     expect(mockVerify).not.toHaveBeenCalled();
   });
+
+  test("未知例外は 500 を返し Resend 再配信に任せる（M3 partial failure と同方針）", async () => {
+    resendWebhookSecretResolver = async () => {
+      throw new Error("database unavailable");
+    };
+
+    const response = await POST(
+      makeSignedRequest({
+        type: "email.bounced",
+        data: { to: ["a@example.com"] },
+      }),
+    );
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(500);
+    expect(body.error).toContain("Internal error processing webhook");
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
 });
