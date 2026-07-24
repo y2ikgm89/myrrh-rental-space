@@ -57,6 +57,7 @@ type DeviceRow = {
   deviceId: string;
   deviceName: string;
   isActive: boolean;
+  deviceType: string;
 };
 
 const mockFindUniqueSpace = mock<
@@ -92,25 +93,23 @@ const mockCreatePasscodeApi = mock<
   >
 >(() => Promise.resolve({ ok: true, body: { commandId: "cmd-default" } }));
 
-const mockGetDeviceStatus = mock<
+const mockFindKeyInDeviceList = mock<
   (...args: unknown[]) => Promise<
     | {
         ok: true;
         body: {
-          keyList?: Array<{
-            id: string;
-            name: string;
-            type: string;
-            password: string;
-            iv: string;
-            status: string;
-            createTime: number;
-          }>;
-        };
+          id: string;
+          name: string;
+          type: string;
+          password: string;
+          iv: string;
+          status: string;
+          createTime: number;
+        } | null;
       }
     | { ok: false; statusCode: number; message: string }
   >
->(() => Promise.resolve({ ok: true, body: { keyList: [] } }));
+>(() => Promise.resolve({ ok: true, body: null }));
 
 const mockLogError = mock<(...args: unknown[]) => void>(() => undefined);
 
@@ -150,7 +149,7 @@ mock.module("@/shared/domain/settings/api-key-queries", () => ({
 
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   createPasscode: (...args: unknown[]) => mockCreatePasscodeApi(...args),
-  getDeviceStatus: (...args: unknown[]) => mockGetDeviceStatus(...args),
+  findKeyInDeviceList: (...args: unknown[]) => mockFindKeyInDeviceList(...args),
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -194,6 +193,7 @@ const DEVICE_ROW: DeviceRow = {
   deviceId: "AA:BB:CC:DD:EE:FF",
   deviceName: "玄関ドア",
   isActive: true,
+  deviceType: "KEYPAD",
 };
 const START_TIME = new Date("2026-08-01T01:00:00.000Z");
 const END_TIME = new Date("2026-08-01T03:00:00.000Z");
@@ -219,7 +219,7 @@ beforeEach(() => {
   mockFindUniquePasscodeRow.mockReset();
   mockGetDecryptedSwitchBotCredentials.mockReset();
   mockCreatePasscodeApi.mockReset();
-  mockGetDeviceStatus.mockReset();
+  mockFindKeyInDeviceList.mockReset();
   mockLogError.mockReset();
 
   mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: null });
@@ -236,7 +236,7 @@ beforeEach(() => {
     ok: true,
     body: { commandId: "cmd-default" },
   });
-  mockGetDeviceStatus.mockResolvedValue({ ok: true, body: { keyList: [] } });
+  mockFindKeyInDeviceList.mockResolvedValue({ ok: true, body: null });
 });
 
 afterEach(() => {
@@ -267,7 +267,7 @@ describe("issueSmartLockPasscodes", () => {
     expect(result.passcodes).toEqual([]);
     expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
-    expect(mockGetDeviceStatus).not.toHaveBeenCalled();
+    expect(mockFindKeyInDeviceList).not.toHaveBeenCalled();
   });
 
   test("割り当てられたデバイスが無効化されている場合はAPI呼出をせず空配列を返す", async () => {
@@ -278,6 +278,19 @@ describe("issueSmartLockPasscodes", () => {
     const result = await issueSmartLockPasscodes(makeInput());
 
     expect(result.passcodes).toEqual([]);
+    expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
+    expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
+  });
+
+  test("錠タイプ(LOCK/LOCK_LITE/LOCK_PRO)のデバイスは発行対象外でno-op", async () => {
+    mockFindUniqueSpace.mockResolvedValue({
+      smartLockDevice: { ...DEVICE_ROW, deviceType: "LOCK_PRO" },
+    });
+
+    const result = await issueSmartLockPasscodes(makeInput());
+
+    expect(result.passcodes).toEqual([]);
+    expect(result.issuanceFailed).toBe(false);
     expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
   });
@@ -305,7 +318,7 @@ describe("issueSmartLockPasscodes", () => {
     const result = await issueSmartLockPasscodes(makeInput());
 
     expect(result.passcodes).toEqual([]);
-    expect(mockGetDeviceStatus).not.toHaveBeenCalled();
+    expect(mockFindKeyInDeviceList).not.toHaveBeenCalled();
     expect(mockUpdatePasscodeRow).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "passcode-row-1" },
@@ -318,7 +331,7 @@ describe("issueSmartLockPasscodes", () => {
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
-  test("getDeviceStatusが即座に一致するkeyListエントリを返す場合はCONFIRMEDになり結果に含まれる", async () => {
+  test("findKeyInDeviceListが即座に一致するkeyを返す場合はCONFIRMEDになり結果に含まれる", async () => {
     mockFindUniqueSpace.mockResolvedValue({ smartLockDevice: DEVICE_ROW });
     mockFindUniquePasscodeRow.mockResolvedValue(null);
     mockCreatePasscodeApi.mockResolvedValue({
@@ -326,20 +339,16 @@ describe("issueSmartLockPasscodes", () => {
       body: { commandId: "cmd-1" },
     });
     const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE_ROW.id);
-    mockGetDeviceStatus.mockResolvedValue({
+    mockFindKeyInDeviceList.mockResolvedValue({
       ok: true,
       body: {
-        keyList: [
-          {
-            id: "key-1",
-            name: expectedName,
-            type: "timeLimit",
-            password: "enc",
-            iv: "iv",
-            status: "normal",
-            createTime: 1_700_000_000,
-          },
-        ],
+        id: "key-1",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1_700_000_000,
       },
     });
 
@@ -348,17 +357,14 @@ describe("issueSmartLockPasscodes", () => {
     expect(result.passcodes).toHaveLength(1);
     expect(result.passcodes[0]?.deviceName).toBe(DEVICE_ROW.deviceName);
     expect(result.passcodes[0]?.passcode).toMatch(/^\d{6}$/);
-    expect(mockGetDeviceStatus).toHaveBeenCalledTimes(1);
-    expect(mockCreatePasscodeApi).toHaveBeenCalledWith(
+    expect(mockFindKeyInDeviceList).toHaveBeenCalledTimes(1);
+    expect(mockFindKeyInDeviceList).toHaveBeenCalledWith(
       expect.objectContaining({
         openToken: "open-token",
         secretKey: "secret-key",
       }),
-      expect.objectContaining({
-        deviceId: DEVICE_ROW.deviceId,
-        name: expectedName,
-        type: "timeLimit",
-      }),
+      DEVICE_ROW.deviceId,
+      expectedName,
     );
     expect(mockUpdateManyPasscodeRow).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -379,20 +385,16 @@ describe("issueSmartLockPasscodes", () => {
       body: { commandId: "cmd-1" },
     });
     const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE_ROW.id);
-    mockGetDeviceStatus.mockResolvedValue({
+    mockFindKeyInDeviceList.mockResolvedValue({
       ok: true,
       body: {
-        keyList: [
-          {
-            id: "key-1",
-            name: expectedName,
-            type: "timeLimit",
-            password: "enc",
-            iv: "iv",
-            status: "normal",
-            createTime: 1_700_000_000,
-          },
-        ],
+        id: "key-1",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1_700_000_000,
       },
     });
     mockUpdateManyPasscodeRow.mockResolvedValue({ count: 0 });
@@ -418,20 +420,16 @@ describe("issueSmartLockPasscodes", () => {
       body: { commandId: "cmd-1" },
     });
     const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE_ROW.id);
-    mockGetDeviceStatus.mockResolvedValue({
+    mockFindKeyInDeviceList.mockResolvedValue({
       ok: true,
       body: {
-        keyList: [
-          {
-            id: "key-1",
-            name: expectedName,
-            type: "timeLimit",
-            password: "enc",
-            iv: "iv",
-            status: "normal",
-            createTime: 1_700_000_000,
-          },
-        ],
+        id: "key-1",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1_700_000_000,
       },
     });
     mockUpdateManyPasscodeRow.mockResolvedValue({ count: 0 });
@@ -455,16 +453,16 @@ describe("issueSmartLockPasscodes", () => {
       ok: true,
       body: { commandId: "cmd-1" },
     });
-    mockGetDeviceStatus.mockResolvedValue({ ok: true, body: { keyList: [] } });
+    mockFindKeyInDeviceList.mockResolvedValue({ ok: true, body: null });
 
     const result = await issueSmartLockPasscodes(makeInput());
 
     expect(result.passcodes).toEqual([]);
-    // MAX_POLL_ATTEMPTS = 15 (3s * 15 = 45s、setTimeout はスパイ済みで即時)
-    expect(mockGetDeviceStatus).toHaveBeenCalledTimes(15);
+    // DEVICE_LIST_POLL_OFFSETS_MS = 5 回 (0,5,15,30,45s — setTimeout はスパイ済みで即時)
+    expect(mockFindKeyInDeviceList).toHaveBeenCalledTimes(5);
 
     // ポーリングタイムアウト時に FAILED へは倒さない —
-    // webhook-commands.ts の processSwitchBotChangeReport が status=PENDING の
+    // webhook（正本）が createKey success/failed/timeout を届ける余地を残す。
     // 行しか claim できないため、即 FAILED は遅延 webhook との race で復旧不能の
     // 失敗確定を生む。stale PENDING の清算は smart-lock-cleanup cron の
     // expireStalePendingSmartLockPasscodes に委譲。
@@ -498,7 +496,7 @@ describe("issueSmartLockPasscodes", () => {
     ]);
     expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
-    expect(mockGetDeviceStatus).not.toHaveBeenCalled();
+    expect(mockFindKeyInDeviceList).not.toHaveBeenCalled();
   });
 
   test("既存CONFIRMEDレコードの復号に失敗した場合は例外を投げず空配列を返す", async () => {
@@ -528,7 +526,7 @@ describe("issueSmartLockPasscodes", () => {
     expect(result.passcodes).toEqual([]);
     expect(mockCreatePasscodeRow).not.toHaveBeenCalled();
     expect(mockCreatePasscodeApi).not.toHaveBeenCalled();
-    expect(mockGetDeviceStatus).not.toHaveBeenCalled();
+    expect(mockFindKeyInDeviceList).not.toHaveBeenCalled();
   });
 
   test("createでの一意制約違反(P2002)は既存の先勝ちCONFIRMED行を読み直して返す(例外を投げない)", async () => {

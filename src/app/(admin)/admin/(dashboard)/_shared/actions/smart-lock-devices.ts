@@ -25,6 +25,8 @@ import {
   updateSmartLockDeviceCommand,
   deleteSmartLockDeviceCommand,
   toggleSmartLockDeviceActiveCommand,
+  refreshLockDeviceStateCommand,
+  type SmartLockDeviceStateSnapshot,
 } from "@/shared/domain/smart-lock/commands";
 import { smartLockDeviceFormSchema } from "@/admin/lib/validations/smart-lock-device";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
@@ -122,6 +124,22 @@ export async function deleteSmartLockDevice(
     afterSuccess: () => {
       invalidateSiteWideCache(CACHE_TAGS.SPACES);
     },
+  });
+}
+
+/** 錠デバイスの施錠・ドア・電池状態を SwitchBot Status API から更新する。 */
+export async function refreshSmartLockDeviceState(
+  deviceRowId: string,
+): Promise<MutationResult<SmartLockDeviceStateSnapshot>> {
+  const parsedDevice = deviceIdSchema.safeParse(deviceRowId);
+  if (!parsedDevice.success) {
+    return { error: "IDが不正です" };
+  }
+
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "manage",
+    execute: async () => refreshLockDeviceStateCommand(parsedDevice.data),
   });
 }
 

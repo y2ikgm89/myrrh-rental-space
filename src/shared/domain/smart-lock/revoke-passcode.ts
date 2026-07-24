@@ -1,13 +1,19 @@
 /**
  * SwitchBotスマートロックの一時パスコード失効（deleteKey）
  *
+ * deleteKey は非同期（webhook 主）。API 受理後は REVOKE_PENDING とし、webhook
+ * success または Device List から keyId 消失で REVOKED に確定する。
+ *
  * @module shared/domain/smart-lock/revoke-passcode
  */
 
 import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
-import { deletePasscode } from "@/shared/lib/smart-lock/switchbot-client";
+import {
+  deletePasscode,
+  findKeyByIdInDeviceList,
+} from "@/shared/lib/smart-lock/switchbot-client";
 import {
   ReservationStatus,
   SmartLockPasscodeStatus,
@@ -30,21 +36,81 @@ export type RevocablePasscode = {
   readonly device: { readonly deviceId: string };
 };
 
+/** Device List で key 消失を確認する疎 poll（秒: 0 / 5 / 15 / 30 / 45）。 */
+const REVOKE_CONFIRM_POLL_DELAYS_MS = [
+  0, 5_000, 15_000, 30_000, 45_000,
+] as const;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * 1件のパスコードをdeleteKeyで失効させる。
+ * Device List に `switchbotKeyId` が無ければ REVOKE_PENDING → REVOKED へ claim する。
+ */
+export async function confirmRevokeByKeyAbsence(
+  credentials: { openToken: string; secretKey: string },
+  passcode: RevocablePasscode,
+): Promise<boolean> {
+  if (!passcode.switchbotKeyId) {
+    return false;
+  }
+
+  const keyResult = await findKeyByIdInDeviceList(
+    credentials,
+    passcode.device.deviceId,
+    passcode.switchbotKeyId,
+  );
+  if (!keyResult.ok) {
+    return false;
+  }
+  if (keyResult.body !== null) {
+    return false;
+  }
+
+  const updated = await prisma.smartLockPasscode.updateMany({
+    where: {
+      id: passcode.id,
+      status: SmartLockPasscodeStatus.REVOKE_PENDING,
+    },
+    data: {
+      status: SmartLockPasscodeStatus.REVOKED,
+      revokedAt: new Date(),
+    },
+  });
+  return updated.count > 0;
+}
+
+async function pollRevokeConfirmationByKeyAbsence(
+  credentials: { openToken: string; secretKey: string },
+  passcode: RevocablePasscode,
+): Promise<boolean> {
+  let elapsedMs = 0;
+  for (const targetMs of REVOKE_CONFIRM_POLL_DELAYS_MS) {
+    const waitMs = targetMs - elapsedMs;
+    if (waitMs > 0) {
+      await sleep(waitMs);
+    }
+    elapsedMs = targetMs;
+    if (await confirmRevokeByKeyAbsence(credentials, passcode)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 1件のパスコードを deleteKey で失効させる。
  *
- * 成功時のみ`REVOKED`へ更新する。失敗時はCONFIRMEDのまま残し、呼び出し元
- * （cleanup cron）が再試行できるようにする（deleteKey自体は冪等なコマンド呼出の
- * ため、繰り返し呼んでも副作用は増えない）。deviceCommands.ts の
- * deleteSmartLockDeviceCommand からも、削除前の生きたパスコード失効に再利用する。
+ * API 受理後は REVOKE_PENDING（`switchbotDeleteCommandId` / `revokeRequestedAt`）。
+ * 即 REVOKED にはしない。Device List 疎 poll で key 消失が確認できれば REVOKED。
+ * deleteKey API 失敗時は CONFIRMED のまま（cron が再試行可能）。
  */
 export async function revokeOne(
   credentials: { openToken: string; secretKey: string },
   passcode: RevocablePasscode,
 ): Promise<boolean> {
   if (!passcode.switchbotKeyId) {
-    // keyId未確定のままCONFIRMEDになることは無いはずだが、念のためガード。
-    // 削除しようがないのでスキップ（管理者が事後確認できるようログのみ残す）。
     logError(
       new Error("CONFIRMEDなのにswitchbotKeyId未確定のパスコードをスキップ"),
       {
@@ -78,23 +144,32 @@ export async function revokeOne(
     return false;
   }
 
-  // deleteKey は既に成功しているため、この後の書込自体は失敗しても物理的な失効は
-  // 完了済み。ただし cancellation 経由と cron が同一行を同時に処理し得るため、
-  // status=CONFIRMED を WHERE に含めて 2 回目以降の書込を無害な no-op にする
-  // (REVOKED 上書き自体は無害だが、updatedAt 等の余計な変更を避ける)。
-  await prisma.smartLockPasscode.updateMany({
+  const now = new Date();
+  const commandId = result.body.commandId;
+
+  const updated = await prisma.smartLockPasscode.updateMany({
     where: { id: passcode.id, status: SmartLockPasscodeStatus.CONFIRMED },
     data: {
-      status: SmartLockPasscodeStatus.REVOKED,
-      revokedAt: new Date(),
+      status: SmartLockPasscodeStatus.REVOKE_PENDING,
+      revokeRequestedAt: now,
+      ...(commandId !== undefined && {
+        switchbotDeleteCommandId: commandId,
+      }),
     },
+  });
+  if (updated.count === 0) {
+    return false;
+  }
+
+  fireAndForget(pollRevokeConfirmationByKeyAbsence(credentials, passcode), {
+    operation: "pollRevokeConfirmationByKeyAbsence",
+    category: ErrorCategory.EXTERNAL_API,
   });
   return true;
 }
 
 /**
  * 指定予約に紐づく発行済み（CONFIRMED）パスコードを全て失効させる。
- * 予約キャンセル時に即座に呼ぶ（失敗分はcleanup cronがフォールバック回収する）。
  */
 export async function revokeSmartLockPasscodesForReservation(
   reservationId: string,
@@ -133,8 +208,8 @@ export async function revokeSmartLockPasscodesForReservation(
 }
 
 /**
- * 失効対象（`endTime`経過済み、または紐づく予約がCANCELLED）のCONFIRMEDパスコードを
- * 一括取得する。cleanup cronから使う。
+ * 失効対象（`endTime` 経過済み、または紐づく予約が CANCELLED）の CONFIRMED パスコードを
+ * 一括取得する。REVOKE_PENDING は除外（失効処理中）。
  */
 export async function findRevocableSmartLockPasscodes(
   now: Date,
@@ -156,7 +231,31 @@ export async function findRevocableSmartLockPasscodes(
 }
 
 /**
- * cleanup cronから呼ぶ一括失効処理。成功/失敗件数を返す。
+ * SwitchBot 連携 OFF 時の stuck 警告用。CONFIRMED（失効待ち条件）と
+ * REVOKE_PENDING（失効確定待ち）を数える。
+ */
+export async function findStuckSmartLockPasscodesWhenIntegrationDisabled(
+  now: Date,
+): Promise<Array<{ readonly id: string }>> {
+  return prisma.smartLockPasscode.findMany({
+    where: {
+      OR: [
+        { status: SmartLockPasscodeStatus.REVOKE_PENDING },
+        {
+          status: SmartLockPasscodeStatus.CONFIRMED,
+          OR: [
+            { endTime: { lt: now } },
+            { reservation: { status: ReservationStatus.CANCELLED } },
+          ],
+        },
+      ],
+    },
+    select: { id: true },
+  });
+}
+
+/**
+ * cleanup cron から呼ぶ一括失効処理。成功/失敗件数を返す。
  */
 export async function revokeExpiredSmartLockPasscodes(
   now: Date,
@@ -176,31 +275,8 @@ export async function revokeExpiredSmartLockPasscodes(
   return { revoked, failed: results.length - revoked };
 }
 
-/**
- * webhook 待ち PENDING passcode を stale 判定して FAILED へ倒す閾値 (分単位)。
- *
- * SwitchBot webhook (`changeReport` `createKey`) は経験上数秒〜数分で到着する。
- * 30 分経っても届かない passcode は「webhook がもう来ない」と判断して失敗確定にする。
- * この閾値を短くしすぎると `issue-passcode.ts` の poll と webhook との race で PENDING
- * 期間中に誤って FAILED に倒し得るため、poll 上限 (現状 45s) より十分に長くする。
- */
 export const STALE_PENDING_THRESHOLD_MINUTES = 30;
 
-/**
- * webhook 待ち PENDING passcode の停滞救済。
- *
- * `issue-passcode.ts` の poll がタイムアウトした場合、webhook 到着を待って CONFIRMED
- * に upgrade できるよう status は PENDING のまま残される (旧実装は即 FAILED に倒して
- * webhook との race を起こしていた)。
- *
- * この関数は、`createdAt + STALE_PENDING_THRESHOLD_MINUTES` が経過しても PENDING の
- * ままの passcode を FAILED へ倒す。webhook がもう到着しないと判断する時点で失敗確定
- * にすることで、次回同一 reservation の再発行経路 (`@@unique([reservationId, deviceId])`
- * 制約下で PENDING が残っていると再発行できない) を回復させる。
- *
- * cleanup cron (`/api/cron/smart-lock-cleanup`) から呼ぶ。SwitchBot 未設定時でも
- * DB 読取のみで完結するため常に実行して良い。
- */
 export async function expireStalePendingSmartLockPasscodes(
   now: Date,
 ): Promise<number> {
@@ -227,14 +303,6 @@ export async function expireStalePendingSmartLockPasscodes(
     },
   });
 
-  // Codex P2 (PR#1014, comment 3566818385): webhook 遅延で PENDING → CONFIRMED に
-  // flip した行は updateMany の status: PENDING 述語で弾かれる (result.count が
-  // snapshot より減る)。pre-snapshot の reservationId をそのまま通知に流すと、
-  // 実際は成功していたパスコードを「失敗」と管理者に誤報してしまう。count がズレた
-  // ときだけ post-update の実状態を再取得し、本当に FAILED になった行のみに絞り込む。
-  // count が一致する common path では、snapshot と updateMany 対象が subset 関係
-  // (新規 PENDING は createdAt ≥ now > cutoff で snapshot に入らない) なので同集合
-  // と判定でき、余分な round-trip を避ける。
   const failedRows =
     result.count === stale.length
       ? stale
@@ -246,9 +314,6 @@ export async function expireStalePendingSmartLockPasscodes(
           select: { reservationId: true },
         });
 
-  // 各 stale passcode に対応する予約単位で admin 通知を発火する。
-  // fireAndForget で cron 全体を通知失敗が巻き添えにしないよう分離。
-  // reservationId で dedupe (同一予約に複数デバイスがあった場合も 1 通知に集約)。
   const reservationIds = Array.from(
     new Set(failedRows.map((p) => p.reservationId)),
   );
@@ -266,6 +331,71 @@ export async function expireStalePendingSmartLockPasscodes(
       }),
       {
         operation: "notifySmartLockPasscodeStalePendingFailed",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+  }
+  return result.count;
+}
+
+/**
+ * REVOKE_PENDING が stale な行を CONFIRMED に戻し、deleteKey を再試行可能にする。
+ */
+export async function expireStaleRevokePendingSmartLockPasscodes(
+  now: Date,
+): Promise<number> {
+  const cutoff = new Date(
+    now.getTime() - STALE_PENDING_THRESHOLD_MINUTES * 60 * 1000,
+  );
+  const stale = await prisma.smartLockPasscode.findMany({
+    where: {
+      status: SmartLockPasscodeStatus.REVOKE_PENDING,
+      revokeRequestedAt: { lt: cutoff },
+    },
+    select: { id: true, reservationId: true },
+  });
+  if (stale.length === 0) return 0;
+
+  const result = await prisma.smartLockPasscode.updateMany({
+    where: {
+      status: SmartLockPasscodeStatus.REVOKE_PENDING,
+      revokeRequestedAt: { lt: cutoff },
+    },
+    data: {
+      status: SmartLockPasscodeStatus.CONFIRMED,
+      switchbotDeleteCommandId: null,
+      revokeRequestedAt: null,
+    },
+  });
+
+  const revertedRows =
+    result.count === stale.length
+      ? stale
+      : await prisma.smartLockPasscode.findMany({
+          where: {
+            id: { in: stale.map((p) => p.id) },
+            status: SmartLockPasscodeStatus.CONFIRMED,
+          },
+          select: { reservationId: true },
+        });
+
+  const reservationIds = Array.from(
+    new Set(revertedRows.map((p) => p.reservationId)),
+  );
+  for (const reservationId of reservationIds) {
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED,
+        title:
+          NOTIFICATION_TYPE_LABELS[
+            NOTIFICATION_TYPE.SMART_LOCK_PASSCODE_FAILED
+          ],
+        message: `予約 ${reservationId} のスマートロックパスコード失効が ${STALE_PENDING_THRESHOLD_MINUTES} 分以上 REVOKE_PENDING のため CONFIRMED に戻しました (webhook 未到着・再試行可能)`,
+        resourceType: "reservation",
+        resourceId: reservationId,
+      }),
+      {
+        operation: "notifySmartLockPasscodeStaleRevokePendingReverted",
         category: ErrorCategory.DATABASE,
       },
     );

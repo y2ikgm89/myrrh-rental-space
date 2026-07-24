@@ -13,7 +13,13 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { SubmissionResult } from "@conform-to/react";
-import { IconLock, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconLock,
+  IconPencil,
+  IconPlus,
+  IconRefresh,
+  IconTrash,
+} from "@tabler/icons-react";
 import {
   getFormProps,
   getInputProps,
@@ -23,6 +29,7 @@ import {
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Button,
+  Badge,
   Input,
   Label,
   PublishSwitch,
@@ -44,8 +51,15 @@ import {
   isMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import { SMART_LOCK_DEVICE_TYPE_LABELS } from "@/shared/lib/validations/enums/helpers";
+import {
+  SMART_LOCK_DEVICE_TYPE_LABELS,
+  isSmartLockBodyDeviceType,
+  isSmartLockPadDeviceType,
+  SMART_LOCK_BODY_DEVICE_TYPES,
+  SMART_LOCK_PAD_DEVICE_TYPES,
+} from "@/shared/lib/validations/enums/helpers";
 import { SmartLockDeviceType } from "@/shared/lib/validations/enums/prisma-types";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isValidSmartLockDeviceType } from "@/shared/lib/validations/enums/guards";
 import { smartLockDeviceFormSchema } from "@/admin/lib/validations/smart-lock-device";
 import {
@@ -53,6 +67,7 @@ import {
   updateSmartLockDevice,
   deleteSmartLockDevice,
   toggleSmartLockDeviceActive,
+  refreshSmartLockDeviceState,
 } from "@/admin/actions/smart-lock-devices";
 import type { SmartLockDeviceWithLocation } from "@/shared/domain/smart-lock/queries";
 
@@ -67,12 +82,100 @@ interface SmartLockDeviceRegistryProps {
 }
 
 const DEVICE_TYPE_VALUES: readonly SmartLockDeviceType[] = [
-  SmartLockDeviceType.KEYPAD,
-  SmartLockDeviceType.KEYPAD_TOUCH,
-  SmartLockDeviceType.KEYPAD_VISION,
-  SmartLockDeviceType.KEYPAD_VISION_PRO,
-  SmartLockDeviceType.LOCK_VISION_PRO,
+  ...SMART_LOCK_PAD_DEVICE_TYPES,
+  ...SMART_LOCK_BODY_DEVICE_TYPES,
 ];
+
+const LOCK_STATE_LABELS: Record<string, string> = {
+  LOCKED: "施錠",
+  UNLOCKED: "解除",
+  JAMMED: "異常",
+};
+
+const DOOR_STATE_LABELS: Record<string, string> = {
+  OPEN: "開",
+  CLOSE: "閉",
+};
+
+function buildDeviceLookup(
+  devices: readonly SmartLockDeviceWithLocation[],
+): ReadonlyMap<string, SmartLockDeviceWithLocation> {
+  return new Map(devices.map((device) => [device.id, device]));
+}
+
+function formatLockStateLabel(state: string | null): string {
+  if (!state) return "不明";
+  return LOCK_STATE_LABELS[state] ?? state;
+}
+
+function SmartLockDeviceStateBadges({
+  device,
+}: {
+  readonly device: SmartLockDeviceWithLocation;
+}) {
+  if (!isSmartLockBodyDeviceType(device.deviceType)) {
+    return null;
+  }
+
+  const supportsDoorState = device.deviceType !== SmartLockDeviceType.LOCK_LITE;
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+      <Badge variant="secondary">
+        施錠: {formatLockStateLabel(device.lastLockState)}
+      </Badge>
+      {supportsDoorState ? (
+        <Badge variant="secondary">
+          ドア:{" "}
+          {device.lastDoorState
+            ? (DOOR_STATE_LABELS[device.lastDoorState] ?? device.lastDoorState)
+            : "不明"}
+        </Badge>
+      ) : (
+        <Badge variant="outline">ドア開閉: 非対応</Badge>
+      )}
+      <Badge variant="secondary">
+        電池: {device.lastBattery !== null ? `${device.lastBattery}%` : "不明"}
+      </Badge>
+      {device.lastStateAt && (
+        <span className="text-xs text-muted-foreground">
+          最終更新: {formatDateTimeShort(device.lastStateAt)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SmartLockPairedLockLine({
+  device,
+  deviceById,
+}: {
+  readonly device: SmartLockDeviceWithLocation;
+  readonly deviceById: ReadonlyMap<string, SmartLockDeviceWithLocation>;
+}) {
+  if (
+    !isSmartLockPadDeviceType(device.deviceType) ||
+    !device.pairedLockDeviceId
+  ) {
+    return null;
+  }
+
+  const pairedLock = deviceById.get(device.pairedLockDeviceId);
+  if (!pairedLock) {
+    return (
+      <p className="mt-1 text-xs text-muted-foreground">
+        ペア錠: 未登録（ID のみ設定済み）
+      </p>
+    );
+  }
+
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">
+      ペア錠: {pairedLock.deviceName}（
+      {formatLockStateLabel(pairedLock.lastLockState)}）
+    </p>
+  );
+}
 
 type DialogState =
   { mode: "create" } | { mode: "edit"; device: SmartLockDeviceWithLocation };
@@ -115,6 +218,11 @@ export function SmartLockDeviceRegistry({
   const router = useRouter();
   const [dialogState, setDialogState] = useState<DialogState | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [refreshingDeviceId, setRefreshingDeviceId] = useState<string | null>(
+    null,
+  );
+
+  const deviceById = buildDeviceLookup(devices);
 
   const handleDelete = (device: SmartLockDeviceWithLocation): void => {
     startDeleteTransition(async () => {
@@ -135,15 +243,32 @@ export function SmartLockDeviceRegistry({
     return toggleSmartLockDeviceActive(deviceRowId, checked);
   };
 
+  const handleRefreshState = async (
+    device: SmartLockDeviceWithLocation,
+  ): Promise<void> => {
+    setRefreshingDeviceId(device.id);
+    try {
+      const result = await refreshSmartLockDeviceState(device.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(`${device.deviceName} の状態を更新しました`);
+      router.refresh();
+    } finally {
+      setRefreshingDeviceId(null);
+    }
+  };
+
   const groups = groupDevicesByLocation(devices);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          SwitchBot 製スマートロックデバイスを拠点横断で登録します（Keypad 系
-          アクセサリ / Lock Vision Pro
-          単体）。入退室パスコードの発行は予約確定時に 自動で行われます。
+          SwitchBot 製スマートロックを拠点横断で登録します。Keypad 系は
+          予約確定時の入退室パスコード発行に、Lock 系は施錠・ドア・電池状態の
+          監視に使います。スペース／拠点既定への割当は Keypad 系のみです。
         </p>
         <Button
           type="button"
@@ -200,9 +325,28 @@ export function SmartLockDeviceRegistry({
                           {" ・ "}
                           <span className="font-mono">{device.deviceId}</span>
                         </p>
+                        <SmartLockDeviceStateBadges device={device} />
+                        <SmartLockPairedLockLine
+                          device={device}
+                          deviceById={deviceById}
+                        />
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
+                      {isSmartLockBodyDeviceType(device.deviceType) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`${device.deviceName} の状態を更新`}
+                          disabled={refreshingDeviceId === device.id}
+                          onClick={() => void handleRefreshState(device)}
+                        >
+                          <IconRefresh
+                            className={`h-4 w-4 ${refreshingDeviceId === device.id ? "animate-spin" : ""}`}
+                          />
+                        </Button>
+                      )}
                       <PublishSwitch
                         id={device.id}
                         isPublished={device.isActive}
@@ -476,7 +620,10 @@ function SmartLockDeviceDialog({
                 有効にする
               </Label>
               <p className="text-sm text-muted-foreground">
-                オフにするとこのデバイスへのパスコード発行が停止します。
+                オフにすると
+                {isSmartLockPadDeviceType(typeValue)
+                  ? "このデバイスへのパスコード発行が停止します。"
+                  : "このデバイスは状態監視の対象外として扱われます（表示は残ります）。"}
               </p>
             </div>
           </div>

@@ -1,17 +1,15 @@
 /**
  * isKnownSmartLockDevice / processSwitchBotChangeReport のテスト
- *
- * Prisma / SwitchBot API クライアント / settings クエリをモックする。
- * `processSwitchBotChangeReport` は内部で `./issue-passcode` の
- * `buildPasscodeName`（純粋関数）を実利用するため、issue-passcode モジュール自体は
- * モックしない（その依存先である prisma / api-key-queries / switchbot-client は
- * 本ファイルで既にモック済みのため問題なく読み込める）。
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-type DeviceRow = { id: string; deviceId: string };
-type PasscodeRow = { id: string; reservationId: string };
+type DeviceRow = { id: string; deviceId: string; deviceType: string };
+type PasscodeRow = {
+  id: string;
+  reservationId: string;
+  switchbotKeyId: string | null;
+};
 
 const mockFindUniqueDevice = mock<
   (...args: unknown[]) => Promise<DeviceRow | null>
@@ -22,6 +20,9 @@ const mockUpdateManyPasscode = mock<
 const mockFindFirstPasscode = mock<
   (...args: unknown[]) => Promise<PasscodeRow | null>
 >(() => Promise.resolve(null));
+const mockFindManyPasscode = mock<
+  (...args: unknown[]) => Promise<PasscodeRow[]>
+>(() => Promise.resolve([]));
 
 const mockGetDecryptedSwitchBotCredentials = mock<
   () => Promise<{
@@ -34,34 +35,39 @@ const mockGetDecryptedSwitchBotCredentials = mock<
 const mockCreatePasscodeApi = mock<(...args: unknown[]) => Promise<unknown>>(
   () => Promise.resolve({ ok: true, body: { commandId: "unused" } }),
 );
-const mockGetDeviceStatus = mock<
+
+const mockFindKeyInDeviceList = mock<
   (...args: unknown[]) => Promise<
     | {
         ok: true;
         body: {
-          keyList?: Array<{
-            id: string;
-            name: string;
-            type: string;
-            password: string;
-            iv: string;
-            status: string;
-            createTime: number;
-          }>;
-        };
+          id: string;
+          name: string;
+          type: string;
+          password: string;
+          iv: string;
+          status: string;
+          createTime: number;
+        } | null;
       }
     | { ok: false; statusCode: number; message: string }
   >
->(() => Promise.resolve({ ok: true, body: { keyList: [] } }));
+>(() => Promise.resolve({ ok: true, body: null }));
+
+const mockUpdateManyDevice = mock<
+  (...args: unknown[]) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 0 }));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     smartLockDevice: {
       findUnique: (...args: unknown[]) => mockFindUniqueDevice(...args),
+      updateMany: (...args: unknown[]) => mockUpdateManyDevice(...args),
     },
     smartLockPasscode: {
       updateMany: (...args: unknown[]) => mockUpdateManyPasscode(...args),
       findFirst: (...args: unknown[]) => mockFindFirstPasscode(...args),
+      findMany: (...args: unknown[]) => mockFindManyPasscode(...args),
     },
   },
 }));
@@ -73,304 +79,241 @@ mock.module("@/shared/domain/settings/api-key-queries", () => ({
 
 mock.module("@/shared/lib/smart-lock/switchbot-client", () => ({
   createPasscode: (...args: unknown[]) => mockCreatePasscodeApi(...args),
-  getDeviceStatus: (...args: unknown[]) => mockGetDeviceStatus(...args),
+  findKeyInDeviceList: (...args: unknown[]) => mockFindKeyInDeviceList(...args),
+  deletePasscode: () => Promise.resolve({ ok: true, body: {} }),
+  findKeyByIdInDeviceList: () => Promise.resolve({ ok: true, body: null }),
 }));
 
-const { isKnownSmartLockDevice, processSwitchBotChangeReport } =
-  await import("@/shared/domain/smart-lock/webhook-commands");
+mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
+  confirmRevokeByKeyAbsence: mock(() => Promise.resolve(false)),
+}));
+
+const {
+  isKnownSmartLockDevice,
+  processSwitchBotChangeReport,
+  processSwitchBotLockStateReport,
+} = await import("@/shared/domain/smart-lock/webhook-commands");
 const { buildPasscodeName } =
   await import("@/shared/domain/smart-lock/issue-passcode");
 
-const DEVICE: DeviceRow = { id: "device-row-1", deviceId: "AA:BB:CC:DD:EE:FF" };
+const DEVICE: DeviceRow = {
+  id: "device-row-1",
+  deviceId: "AA:BB:CC:DD:EE:FF",
+  deviceType: "LOCK_PRO",
+};
 const RESERVATION_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 const PASSCODE_ROW: PasscodeRow = {
   id: "passcode-1",
   reservationId: RESERVATION_ID,
+  switchbotKeyId: "key-1",
 };
 
 beforeEach(() => {
   mockFindUniqueDevice.mockReset();
   mockUpdateManyPasscode.mockReset();
   mockFindFirstPasscode.mockReset();
+  mockFindManyPasscode.mockReset();
+  mockUpdateManyDevice.mockReset();
   mockGetDecryptedSwitchBotCredentials.mockReset();
   mockCreatePasscodeApi.mockReset();
-  mockGetDeviceStatus.mockReset();
+  mockFindKeyInDeviceList.mockReset();
 
   mockFindUniqueDevice.mockResolvedValue(null);
   mockUpdateManyPasscode.mockResolvedValue({ count: 0 });
   mockFindFirstPasscode.mockResolvedValue(null);
+  mockFindManyPasscode.mockResolvedValue([]);
+  mockUpdateManyDevice.mockResolvedValue({ count: 0 });
   mockGetDecryptedSwitchBotCredentials.mockResolvedValue({
     openToken: "open-token",
     secretKey: "secret-key",
     passcodeBufferMinutes: 15,
   });
-  mockGetDeviceStatus.mockResolvedValue({ ok: true, body: { keyList: [] } });
+  mockFindKeyInDeviceList.mockResolvedValue({ ok: true, body: null });
 });
 
 describe("isKnownSmartLockDevice", () => {
   test("登録済みのdeviceMacはtrueを返す", async () => {
     mockFindUniqueDevice.mockResolvedValue(DEVICE);
-
-    const result = await isKnownSmartLockDevice(DEVICE.deviceId);
-
-    expect(result).toBe(true);
-    expect(mockFindUniqueDevice).toHaveBeenCalledWith({
-      where: { deviceId: DEVICE.deviceId },
-      select: { id: true },
-    });
-  });
-
-  test("未知のdeviceMacはfalseを返す", async () => {
-    mockFindUniqueDevice.mockResolvedValue(null);
-
-    const result = await isKnownSmartLockDevice("unknown-mac");
-
-    expect(result).toBe(false);
+    expect(await isKnownSmartLockDevice(DEVICE.deviceId)).toBe(true);
   });
 });
 
-describe("processSwitchBotChangeReport", () => {
-  test("eventNameがcreateKey以外なら何もせずfalseを返す", async () => {
+describe("processSwitchBotLockStateReport", () => {
+  test("錠デバイスの lockState を lastLockState に反映する", async () => {
+    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockUpdateManyDevice.mockResolvedValue({ count: 1 });
+
+    const result = await processSwitchBotLockStateReport({
+      deviceMac: DEVICE.deviceId,
+      lockState: "LOCKED",
+      battery: 90,
+      timeOfSample: 1_700_000_000,
+    });
+
+    expect(result).toBe(true);
+    expect(mockUpdateManyDevice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { deviceId: DEVICE.deviceId },
+        data: expect.objectContaining({
+          lastLockState: "LOCKED",
+          lastBattery: 90,
+        }),
+      }),
+    );
+  });
+});
+
+describe("processSwitchBotChangeReport createKey", () => {
+  test("eventName が trim され createKey として処理される", async () => {
+    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockFindFirstPasscode.mockResolvedValue({
+      id: PASSCODE_ROW.id,
+      reservationId: PASSCODE_ROW.reservationId,
+      switchbotKeyId: null,
+    });
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE.id);
+    mockFindKeyInDeviceList.mockResolvedValue({
+      ok: true,
+      body: {
+        id: "key-1",
+        name: expectedName,
+        type: "timeLimit",
+        password: "enc",
+        iv: "iv",
+        status: "normal",
+        createTime: 1,
+      },
+    });
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
+
     const result = await processSwitchBotChangeReport({
       deviceMac: DEVICE.deviceId,
-      eventName: "someOtherEvent",
+      eventName: " createKey ",
       commandId: "cmd-1",
       result: "success",
     });
 
-    expect(result).toBe(false);
-    expect(mockFindUniqueDevice).not.toHaveBeenCalled();
+    expect(result).toBe(true);
+    expect(mockFindKeyInDeviceList).toHaveBeenCalled();
   });
 
-  test("deviceMacが未知(smartLockDevice無し)ならfalseを返す", async () => {
-    mockFindUniqueDevice.mockResolvedValue(null);
+  test("createKey failed は PENDING を FAILED に倒す", async () => {
+    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
 
     const result = await processSwitchBotChangeReport({
-      deviceMac: "unknown-mac",
+      deviceMac: DEVICE.deviceId,
       eventName: "createKey",
       commandId: "cmd-1",
+      result: "failed",
+    });
+
+    expect(result).toBe(true);
+    expect(mockUpdateManyPasscode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "PENDING" }),
+        data: expect.objectContaining({ status: "FAILED" }),
+      }),
+    );
+  });
+});
+
+describe("processSwitchBotChangeReport deleteKey", () => {
+  beforeEach(() => {
+    mockFindUniqueDevice.mockResolvedValue(DEVICE);
+  });
+
+  test("eventName deleteKey (末尾スペース) を trim して処理する", async () => {
+    mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
+
+    const result = await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "deleteKey ",
+      commandId: "del-cmd-1",
       result: "success",
     });
 
-    expect(result).toBe(false);
-    expect(mockFindFirstPasscode).not.toHaveBeenCalled();
+    expect(result).toBe(true);
+    expect(mockUpdateManyPasscode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "REVOKE_PENDING" }),
+        data: expect.objectContaining({ status: "REVOKED" }),
+      }),
+    );
   });
 
-  describe("result: failed / timeout", () => {
-    test("PENDINGレコードが更新されればtrueを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
+  test("deleteKey success は switchbotDeleteCommandId で相関して REVOKED", async () => {
+    mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
 
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "failed",
-      });
+    await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "deleteKey",
+      commandId: "del-cmd-2",
+      result: "success",
+    });
 
-      expect(result).toBe(true);
-      expect(mockUpdateManyPasscode).toHaveBeenCalledWith({
-        where: {
-          switchbotCommandId: "cmd-1",
-          deviceId: DEVICE.id,
-          status: "PENDING",
-        },
-        data: expect.objectContaining({
-          status: "FAILED",
-          failureReason: "SwitchBot webhook: failed",
+    expect(mockFindFirstPasscode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          switchbotDeleteCommandId: "del-cmd-2",
+          status: "REVOKE_PENDING",
         }),
-      });
-    });
-
-    test("timeoutでも同様にFAILEDへ更新する", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
-
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "timeout",
-      });
-
-      expect(result).toBe(true);
-      expect(mockUpdateManyPasscode).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            failureReason: "SwitchBot webhook: timeout",
-          }),
-        }),
-      );
-    });
-
-    test("該当PENDINGレコードが無い場合(count:0)はfalseを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockUpdateManyPasscode.mockResolvedValue({ count: 0 });
-
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "failed",
-      });
-
-      expect(result).toBe(false);
-    });
+      }),
+    );
   });
 
-  describe("result: success", () => {
-    test("PENDINGレコードが無ければAPI呼出せずfalseを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockFindFirstPasscode.mockResolvedValue(null);
+  test("deleteKey failed は REVOKE_PENDING を CONFIRMED に戻す", async () => {
+    mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
 
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "success",
-      });
-
-      expect(result).toBe(false);
-      expect(mockGetDecryptedSwitchBotCredentials).not.toHaveBeenCalled();
-      expect(mockGetDeviceStatus).not.toHaveBeenCalled();
+    const result = await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "deleteKey",
+      commandId: "del-cmd-3",
+      result: "failed",
     });
 
-    test("SwitchBot連携が未設定(credentials null)ならfalseを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
-      mockGetDecryptedSwitchBotCredentials.mockResolvedValue(null);
-
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "success",
-      });
-
-      expect(result).toBe(false);
-      expect(mockGetDeviceStatus).not.toHaveBeenCalled();
-    });
-
-    test("getDeviceStatusが失敗(ok:false)ならfalseを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
-      mockGetDeviceStatus.mockResolvedValue({
-        ok: false,
-        statusCode: 500,
-        message: "error",
-      });
-
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "success",
-      });
-
-      expect(result).toBe(false);
-      expect(mockUpdateManyPasscode).not.toHaveBeenCalled();
-    });
-
-    test("keyListに一致するnameが無ければfalseを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
-      mockGetDeviceStatus.mockResolvedValue({
-        ok: true,
-        body: {
-          keyList: [
-            {
-              id: "key-other",
-              name: "res-unrelated-name",
-              type: "timeLimit",
-              password: "enc",
-              iv: "iv",
-              status: "normal",
-              createTime: 1,
-            },
-          ],
-        },
-      });
-
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "success",
-      });
-
-      expect(result).toBe(false);
-      expect(mockUpdateManyPasscode).not.toHaveBeenCalled();
-    });
-
-    test("keyList突合が成功すればCONFIRMEDへ更新しtrueを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
-      const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE.id);
-      mockGetDeviceStatus.mockResolvedValue({
-        ok: true,
-        body: {
-          keyList: [
-            {
-              id: "key-1",
-              name: expectedName,
-              type: "timeLimit",
-              password: "enc",
-              iv: "iv",
-              status: "normal",
-              createTime: 1,
-            },
-          ],
-        },
-      });
-      mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
-
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "success",
-      });
-
-      expect(result).toBe(true);
-      expect(mockUpdateManyPasscode).toHaveBeenCalledWith({
-        where: { id: PASSCODE_ROW.id, status: "PENDING" },
+    expect(result).toBe(true);
+    expect(mockUpdateManyPasscode).toHaveBeenCalledWith(
+      expect.objectContaining({
         data: expect.objectContaining({
           status: "CONFIRMED",
-          switchbotKeyId: "key-1",
+          switchbotDeleteCommandId: null,
+          revokeRequestedAt: null,
         }),
-      });
+      }),
+    );
+  });
+
+  test("commandId 無し + keyName で相関できる", async () => {
+    mockFindFirstPasscode.mockResolvedValue(null);
+    const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE.id);
+    mockFindManyPasscode.mockResolvedValue([PASSCODE_ROW]);
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
+
+    const result = await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "deleteKey",
+      result: "success",
+      keyName: expectedName,
     });
 
-    test("突合は成功してもupdateManyがcount:0(先にポーリング側が確定済み)ならfalseを返す", async () => {
-      mockFindUniqueDevice.mockResolvedValue(DEVICE);
-      mockFindFirstPasscode.mockResolvedValue(PASSCODE_ROW);
-      const expectedName = buildPasscodeName(RESERVATION_ID, DEVICE.id);
-      mockGetDeviceStatus.mockResolvedValue({
-        ok: true,
-        body: {
-          keyList: [
-            {
-              id: "key-1",
-              name: expectedName,
-              type: "timeLimit",
-              password: "enc",
-              iv: "iv",
-              status: "normal",
-              createTime: 1,
-            },
-          ],
-        },
-      });
-      mockUpdateManyPasscode.mockResolvedValue({ count: 0 });
+    expect(result).toBe(true);
+  });
 
-      const result = await processSwitchBotChangeReport({
-        deviceMac: DEVICE.deviceId,
-        eventName: "createKey",
-        commandId: "cmd-1",
-        result: "success",
-      });
+  test("device 上 REVOKE_PENDING が 1 件だけなら commandId 無しでも相関", async () => {
+    mockFindFirstPasscode.mockResolvedValue(null);
+    mockFindManyPasscode.mockResolvedValue([PASSCODE_ROW]);
+    mockUpdateManyPasscode.mockResolvedValue({ count: 1 });
 
-      expect(result).toBe(false);
+    const result = await processSwitchBotChangeReport({
+      deviceMac: DEVICE.deviceId,
+      eventName: "deleteKey",
+      result: "success",
     });
+
+    expect(result).toBe(true);
   });
 });

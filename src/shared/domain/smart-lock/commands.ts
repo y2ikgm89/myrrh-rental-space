@@ -6,13 +6,45 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getDecryptedSwitchBotCredentials } from "@/shared/domain/settings/api-key-queries";
 import { revokeOne } from "@/shared/domain/smart-lock/revoke-passcode";
+import {
+  getDeviceListCached,
+  getLockDeviceStatus,
+} from "@/shared/lib/smart-lock/switchbot-client";
 import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  isSmartLockBodyDeviceType,
+  isSmartLockPadDeviceType,
+  SMART_LOCK_BODY_DEVICE_TYPES,
+} from "@/shared/lib/validations/enums/helpers";
 
 function isUniqueConstraintError(error: unknown): boolean {
   return (
     error instanceof Prisma.PrismaClientKnownRequestError &&
     error.code === "P2002"
   );
+}
+
+function normalizeLockState(value: string): string | null {
+  const normalized = value.trim().toUpperCase();
+  if (
+    normalized === "LOCKED" ||
+    normalized === "UNLOCKED" ||
+    normalized === "JAMMED"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeDoorState(value: string): string | null {
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "OPEN") {
+    return "OPEN";
+  }
+  if (normalized === "CLOSE" || normalized === "CLOSED") {
+    return "CLOSE";
+  }
+  return null;
 }
 
 async function ensureLocationExists(locationId: string): Promise<void> {
@@ -38,6 +70,120 @@ async function ensureSmartLockDeviceExists(id: string): Promise<void> {
   }
 }
 
+async function validatePairedLockDeviceId(
+  locationId: string,
+  pairedLockDeviceId: string,
+): Promise<void> {
+  const pairedLock = await prisma.smartLockDevice.findUnique({
+    where: { id: pairedLockDeviceId },
+    select: { id: true, locationId: true, deviceType: true },
+  });
+  if (!pairedLock) {
+    throw new DomainError("ペア錠デバイスが見つかりません", "NOT_FOUND");
+  }
+  if (pairedLock.locationId !== locationId) {
+    throw new DomainError(
+      "ペア錠は同じ拠点に登録された錠デバイスを指定してください",
+      "VALIDATION",
+    );
+  }
+  if (!isSmartLockBodyDeviceType(pairedLock.deviceType)) {
+    throw new DomainError(
+      "ペア錠には Lock / Lock Lite / Lock Pro のいずれかを指定してください",
+      "VALIDATION",
+    );
+  }
+}
+
+async function resolveAutoPairedLockDeviceId(
+  locationId: string,
+  padSwitchbotDeviceId: string,
+): Promise<string | null> {
+  const credentials = await getDecryptedSwitchBotCredentials();
+  if (!credentials) {
+    return null;
+  }
+
+  const listResult = await getDeviceListCached(credentials);
+  if (!listResult.ok) {
+    return null;
+  }
+
+  const padItem = listResult.body.deviceList.find(
+    (item) => item.deviceId === padSwitchbotDeviceId,
+  );
+  if (!padItem?.lockDeviceId) {
+    return null;
+  }
+
+  const bodyDevice = await prisma.smartLockDevice.findFirst({
+    where: {
+      locationId,
+      deviceId: padItem.lockDeviceId,
+      deviceType: { in: [...SMART_LOCK_BODY_DEVICE_TYPES] },
+    },
+    select: { id: true },
+  });
+  return bodyDevice?.id ?? null;
+}
+
+function assertPadOnlyAssignment(deviceType: SmartLockDeviceType): void {
+  if (!isSmartLockPadDeviceType(deviceType)) {
+    throw new DomainError(
+      "スペースまたは拠点既定に割り当てできるのは Keypad 系デバイスのみです",
+      "VALIDATION",
+    );
+  }
+}
+
+async function resolvePairedLockDeviceIdForCreate(
+  locationId: string,
+  data: SmartLockDeviceCommandInput,
+): Promise<string | null> {
+  if (!isSmartLockPadDeviceType(data.deviceType)) {
+    if (data.pairedLockDeviceId) {
+      throw new DomainError(
+        "錠デバイスにはペア錠を設定できません",
+        "VALIDATION",
+      );
+    }
+    return null;
+  }
+
+  if (data.pairedLockDeviceId) {
+    await validatePairedLockDeviceId(locationId, data.pairedLockDeviceId);
+    return data.pairedLockDeviceId;
+  }
+
+  return resolveAutoPairedLockDeviceId(locationId, data.deviceId);
+}
+
+async function resolvePairedLockDeviceIdForUpdate(
+  locationId: string,
+  data: SmartLockDeviceCommandInput,
+): Promise<string | null | undefined> {
+  if (!isSmartLockPadDeviceType(data.deviceType)) {
+    if (data.pairedLockDeviceId) {
+      throw new DomainError(
+        "錠デバイスにはペア錠を設定できません",
+        "VALIDATION",
+      );
+    }
+    return null;
+  }
+
+  if (data.pairedLockDeviceId === undefined) {
+    return undefined;
+  }
+
+  if (data.pairedLockDeviceId === null) {
+    return null;
+  }
+
+  await validatePairedLockDeviceId(locationId, data.pairedLockDeviceId);
+  return data.pairedLockDeviceId;
+}
+
 /**
  * `deviceId`（SwitchBot 側 device ID / MAC アドレス）の一意制約違反を
  * `DomainError("DUPLICATE")` に変換する。
@@ -61,6 +207,15 @@ export type SmartLockDeviceCommandInput = {
   deviceName: string;
   deviceType: SmartLockDeviceType;
   isActive: boolean;
+  pairedLockDeviceId?: string | null;
+};
+
+export type SmartLockDeviceStateSnapshot = {
+  readonly id: string;
+  readonly lastLockState: string | null;
+  readonly lastDoorState: string | null;
+  readonly lastBattery: number | null;
+  readonly lastStateAt: string;
 };
 
 export async function createSmartLockDeviceCommand(
@@ -68,6 +223,10 @@ export async function createSmartLockDeviceCommand(
   data: SmartLockDeviceCommandInput,
 ): Promise<{ id: string }> {
   await ensureLocationExists(locationId);
+  const pairedLockDeviceId = await resolvePairedLockDeviceIdForCreate(
+    locationId,
+    data,
+  );
 
   return withDuplicateDeviceIdGuard(async () => {
     const created = await prisma.smartLockDevice.create({
@@ -77,6 +236,7 @@ export async function createSmartLockDeviceCommand(
         deviceName: data.deviceName,
         deviceType: data.deviceType,
         isActive: data.isActive,
+        pairedLockDeviceId,
       },
       select: { id: true },
     });
@@ -88,7 +248,21 @@ export async function updateSmartLockDeviceCommand(
   id: string,
   data: SmartLockDeviceCommandInput,
 ): Promise<{ id: string }> {
-  await ensureSmartLockDeviceExists(id);
+  const existing = await prisma.smartLockDevice.findUnique({
+    where: { id },
+    select: { id: true, locationId: true },
+  });
+  if (!existing) {
+    throw new DomainError(
+      "スマートロックデバイスが見つかりません",
+      "NOT_FOUND",
+    );
+  }
+
+  const pairedLockDeviceId = await resolvePairedLockDeviceIdForUpdate(
+    existing.locationId,
+    data,
+  );
 
   return withDuplicateDeviceIdGuard(async () => {
     await prisma.smartLockDevice.update({
@@ -98,14 +272,87 @@ export async function updateSmartLockDeviceCommand(
         deviceName: data.deviceName,
         deviceType: data.deviceType,
         isActive: data.isActive,
+        ...(pairedLockDeviceId !== undefined && { pairedLockDeviceId }),
       },
     });
     return { id };
   });
 }
 
+export async function refreshLockDeviceStateCommand(
+  deviceRowId: string,
+): Promise<SmartLockDeviceStateSnapshot> {
+  const device = await prisma.smartLockDevice.findUnique({
+    where: { id: deviceRowId },
+    select: {
+      id: true,
+      deviceId: true,
+      deviceType: true,
+    },
+  });
+  if (!device) {
+    throw new DomainError(
+      "スマートロックデバイスが見つかりません",
+      "NOT_FOUND",
+    );
+  }
+  if (!isSmartLockBodyDeviceType(device.deviceType)) {
+    throw new DomainError(
+      "状態更新は Lock / Lock Lite / Lock Pro のみ対象です",
+      "VALIDATION",
+    );
+  }
+
+  const credentials = await getDecryptedSwitchBotCredentials();
+  if (!credentials) {
+    throw new DomainError(
+      "SwitchBot 連携が無効または未設定のため状態を取得できません",
+      "VALIDATION",
+    );
+  }
+
+  const statusResult = await getLockDeviceStatus(credentials, device.deviceId);
+  if (!statusResult.ok) {
+    throw new DomainError(
+      statusResult.message || "SwitchBot から状態を取得できませんでした",
+      "VALIDATION",
+    );
+  }
+
+  const lastLockState =
+    statusResult.body.lockState !== undefined
+      ? normalizeLockState(statusResult.body.lockState)
+      : null;
+  const supportsDoorState = device.deviceType !== "LOCK_LITE";
+  const lastDoorState =
+    supportsDoorState && statusResult.body.doorState !== undefined
+      ? normalizeDoorState(statusResult.body.doorState)
+      : null;
+  const lastBattery =
+    statusResult.body.battery !== undefined ? statusResult.body.battery : null;
+  const lastStateAt = new Date();
+
+  await prisma.smartLockDevice.update({
+    where: { id: device.id },
+    data: {
+      lastLockState,
+      lastDoorState,
+      lastBattery,
+      lastStateAt,
+    },
+  });
+
+  return {
+    id: device.id,
+    lastLockState,
+    lastDoorState,
+    lastBattery,
+    lastStateAt: lastStateAt.toISOString(),
+  };
+}
+
 /**
- * デバイス削除前に、このデバイスに紐づく生きたパスコード（PENDING/CONFIRMED）を
+ * デバイス削除前に、このデバイスに紐づく生きたパスコード（CONFIRMED/REVOKE_PENDING）を
  * 失効させる。`SmartLockPasscode.device`はonDelete: Cascadeのため、これをせずに
  * 削除すると、まだ物理ドアで有効なパスコードのkeyId/deviceId対応が失われ、
  * 二度とdeleteKeyできなくなる（ゲストの暗証番号が失効不能なまま残る）。
@@ -124,22 +371,40 @@ export async function deleteSmartLockDeviceCommand(
     );
   }
 
+  const pendingPasscodes = await prisma.smartLockPasscode.findMany({
+    where: {
+      deviceId: id,
+      status: SmartLockPasscodeStatus.PENDING,
+    },
+    select: { id: true },
+  });
+  if (pendingPasscodes.length > 0) {
+    throw new DomainError(
+      "発行処理中のパスコードが残っているため削除できません。しばらく待ってから再試行してください",
+      "VALIDATION",
+    );
+  }
+
   const livePasscodes = await prisma.smartLockPasscode.findMany({
     where: {
       deviceId: id,
       status: {
         in: [
-          SmartLockPasscodeStatus.PENDING,
           SmartLockPasscodeStatus.CONFIRMED,
+          SmartLockPasscodeStatus.REVOKE_PENDING,
         ],
       },
     },
     select: { id: true, status: true, switchbotKeyId: true },
   });
 
-  if (livePasscodes.some((p) => p.status === SmartLockPasscodeStatus.PENDING)) {
+  if (
+    livePasscodes.some(
+      (p) => p.status === SmartLockPasscodeStatus.REVOKE_PENDING,
+    )
+  ) {
     throw new DomainError(
-      "発行処理中のパスコードが残っているため削除できません。しばらく待ってから再試行してください",
+      "失効処理中のパスコードが残っているため削除できません。しばらく待ってから再試行してください",
       "VALIDATION",
     );
   }
@@ -217,7 +482,7 @@ export async function setSpaceSmartLockDeviceCommand(
     if (deviceId) {
       const device = await tx.smartLockDevice.findUnique({
         where: { id: deviceId },
-        select: { id: true, locationId: true },
+        select: { id: true, locationId: true, deviceType: true },
       });
       if (!device) {
         throw new DomainError(
@@ -233,6 +498,7 @@ export async function setSpaceSmartLockDeviceCommand(
           "VALIDATION",
         );
       }
+      assertPadOnlyAssignment(device.deviceType);
     }
 
     await tx.space.update({
@@ -263,7 +529,7 @@ export async function setLocationDefaultSmartLockDeviceCommand(
   if (deviceId) {
     const device = await prisma.smartLockDevice.findUnique({
       where: { id: deviceId },
-      select: { id: true, locationId: true },
+      select: { id: true, locationId: true, deviceType: true },
     });
     if (!device) {
       throw new DomainError(
@@ -277,6 +543,7 @@ export async function setLocationDefaultSmartLockDeviceCommand(
         "VALIDATION",
       );
     }
+    assertPadOnlyAssignment(device.deviceType);
   }
 
   await prisma.location.update({

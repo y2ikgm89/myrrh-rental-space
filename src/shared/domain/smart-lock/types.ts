@@ -3,11 +3,10 @@ import type { SmartLockDeviceType } from "@generated/prisma/enums";
 /**
  * スマートロックデバイス（SmartLockDevice）の表示用データ。
  *
- * SwitchBot 側の Keypad 系アクセサリ・Lock Vision Pro 単体を表す。拠点（Location）に
- * 紐づく登録簿であり、同一 Location 内の複数 Space が同じ物理デバイスを共有できる
- * （各 Space はこの登録簿から最大 1 台を選ぶ、`Space.smartLockDeviceId`）。
+ * - パッド（KEYPAD*）: 一時パスコード発行。Space / Location デフォルトに割当可。
+ * - 錠（LOCK*）: 施錠状態・電池の監視のみ。
  *
- * `createdAt` / `updatedAt` は ISO 8601 文字列。
+ * `createdAt` / `updatedAt` / `lastStateAt` は ISO 8601 文字列。
  */
 export type SmartLockDeviceData = {
   readonly id: string;
@@ -17,6 +16,12 @@ export type SmartLockDeviceData = {
   readonly deviceName: string;
   readonly deviceType: SmartLockDeviceType;
   readonly isActive: boolean;
+  readonly pairedLockDeviceId: string | null;
+  readonly lastLockState: string | null;
+  readonly lastDoorState: string | null;
+  readonly lastBattery: number | null;
+  /** ISO 8601 or null */
+  readonly lastStateAt: string | null;
   /** ISO 8601 */
   readonly createdAt: string;
   /** ISO 8601 */

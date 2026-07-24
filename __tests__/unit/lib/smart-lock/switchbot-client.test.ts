@@ -21,6 +21,31 @@ const CREDENTIALS: SwitchBotCredentials = {
   secretKey: "test-secret-key",
 };
 
+const KEY_LIST_ITEM = {
+  id: "key-1",
+  name: "res-12345678-abcdefgh",
+  type: "timeLimit" as const,
+  password: "enc",
+  iv: "iv",
+  status: "normal" as const,
+  createTime: 1_700_000_000,
+};
+
+const DEVICE_LIST_WITH_KEY = {
+  deviceList: [
+    {
+      deviceId: "device-mac-1",
+      deviceName: "Keypad 1",
+      deviceType: "WoKeypad",
+      enableCloudService: true,
+      hubDeviceId: "hub-1",
+      keyList: [KEY_LIST_ITEM],
+      lockDeviceId: "lock-mac-1",
+    },
+  ],
+  infraredRemoteList: [],
+};
+
 const originalFetch = globalThis.fetch;
 const fetchImpl = Object.assign(
   (_input: Parameters<typeof globalThis.fetch>[0], _init?: RequestInit) =>
@@ -31,9 +56,12 @@ const mockFetch = Object.assign(mock(fetchImpl), {
   preconnect: originalFetch.preconnect,
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   globalThis.fetch = mockFetch;
   mockFetch.mockClear();
+  const { clearDeviceListCache } =
+    await import("@/shared/lib/smart-lock/switchbot-client");
+  clearDeviceListCache();
 });
 
 afterEach(() => {
@@ -112,6 +140,110 @@ describe("switchbot-client", () => {
     });
   });
 
+  describe("getDeviceListCached", () => {
+    test("TTL 内の2回目は fetch を呼ばずキャッシュを返す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          body: DEVICE_LIST_WITH_KEY,
+        }),
+      );
+
+      const { getDeviceListCached } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const first = await getDeviceListCached(CREDENTIALS, { ttlMs: 60_000 });
+      const second = await getDeviceListCached(CREDENTIALS, { ttlMs: 60_000 });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(first).toEqual({ ok: true, body: DEVICE_LIST_WITH_KEY });
+      expect(second).toEqual(first);
+    });
+  });
+
+  describe("findKeyInDeviceList", () => {
+    test("GET /devices から name で key を突合する", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          body: DEVICE_LIST_WITH_KEY,
+        }),
+      );
+
+      const { findKeyInDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await findKeyInDeviceList(
+        CREDENTIALS,
+        "device-mac-1",
+        "res-12345678-abcdefgh",
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("https://api.switch-bot.com/v1.1/devices");
+      expect(result).toEqual({ ok: true, body: KEY_LIST_ITEM });
+    });
+
+    test("一致する name が無い場合は null を返す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          body: DEVICE_LIST_WITH_KEY,
+        }),
+      );
+
+      const { findKeyInDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await findKeyInDeviceList(
+        CREDENTIALS,
+        "device-mac-1",
+        "missing-name",
+      );
+
+      expect(result).toEqual({ ok: true, body: null });
+    });
+  });
+
+  describe("findKeyByIdInDeviceList", () => {
+    test("GET /devices から keyId で key を突合する", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          body: DEVICE_LIST_WITH_KEY,
+        }),
+      );
+
+      const { findKeyByIdInDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await findKeyByIdInDeviceList(
+        CREDENTIALS,
+        "device-mac-1",
+        "key-1",
+      );
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ ok: true, body: KEY_LIST_ITEM });
+    });
+
+    test("一致する keyId が無い場合は null を返す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({
+          statusCode: 100,
+          body: DEVICE_LIST_WITH_KEY,
+        }),
+      );
+
+      const { findKeyByIdInDeviceList } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await findKeyByIdInDeviceList(
+        CREDENTIALS,
+        "device-mac-1",
+        "missing-key",
+      );
+
+      expect(result).toEqual({ ok: true, body: null });
+    });
+  });
+
   describe("createPasscode", () => {
     test("POST /devices/:id/commands で createKey コマンドを送信する", async () => {
       mockFetch.mockResolvedValueOnce(
@@ -156,43 +288,39 @@ describe("switchbot-client", () => {
     });
   });
 
-  describe("getDeviceStatus", () => {
-    test("GET /devices/:id/status で keyList を含む body を返す", async () => {
+  describe("getLockDeviceStatus", () => {
+    test("GET /devices/:id/status で錠の lockState/doorState/battery のみ返す", async () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           statusCode: 100,
           body: {
-            keyList: [
-              {
-                id: "key-1",
-                name: "res-12345678-abcdefgh",
-                type: "timeLimit",
-                password: "enc",
-                iv: "iv",
-                status: "normal",
-                createTime: 1_700_000_000,
-              },
-            ],
+            lockState: "LOCKED",
+            doorState: "close",
+            battery: 85,
+            keyList: [{ id: "should-not-appear" }],
           },
         }),
       );
 
-      const { getDeviceStatus } =
+      const { getLockDeviceStatus } =
         await import("@/shared/lib/smart-lock/switchbot-client");
-      const result = await getDeviceStatus(CREDENTIALS, "device-mac-1");
+      const result = await getLockDeviceStatus(CREDENTIALS, "lock-mac-1");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe(
-        "https://api.switch-bot.com/v1.1/devices/device-mac-1/status",
+        "https://api.switch-bot.com/v1.1/devices/lock-mac-1/status",
       );
       expect(init.method ?? "GET").toBe("GET");
       expectValidAuthHeaders(capturedHeaders(), CREDENTIALS);
 
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.body.keyList).toHaveLength(1);
-        expect(result.body.keyList?.[0]?.id).toBe("key-1");
-      }
+      expect(result).toEqual({
+        ok: true,
+        body: {
+          lockState: "LOCKED",
+          doorState: "close",
+          battery: 85,
+        },
+      });
     });
   });
 
@@ -217,6 +345,18 @@ describe("switchbot-client", () => {
         parameter: { id: "key-1" },
       });
       expect(result).toEqual({ ok: true, body: {} });
+    });
+
+    test("body に commandId がある場合は返す", async () => {
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ statusCode: 100, body: { commandId: "del-cmd-1" } }),
+      );
+
+      const { deletePasscode } =
+        await import("@/shared/lib/smart-lock/switchbot-client");
+      const result = await deletePasscode(CREDENTIALS, "device-mac-1", "key-1");
+
+      expect(result).toEqual({ ok: true, body: { commandId: "del-cmd-1" } });
     });
   });
 
