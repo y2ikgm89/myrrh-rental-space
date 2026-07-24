@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { sectionDefinitions } from "@/shared/lib/sections/registry";
+import { SectionType } from "@/shared/lib/validations/section";
 
 const ROOT = process.cwd();
 
@@ -28,5 +30,11 @@ describe("section registry clean break", () => {
     );
 
     expect(source).not.toContain("export function getSafeConfig");
+  });
+
+  test("SectionType values match sectionDefinitions registry keys exactly", () => {
+    const sectionTypeValues: string[] = Object.values(SectionType).toSorted();
+    const registryKeys: string[] = Object.keys(sectionDefinitions).toSorted();
+    expect(registryKeys).toEqual(sectionTypeValues);
   });
 });

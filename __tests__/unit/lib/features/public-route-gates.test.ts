@@ -15,7 +15,7 @@
  * 誤って登録漏れした route が本番デプロイされる前に fail する。
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test, expect } from "bun:test";
 import {
@@ -80,6 +80,26 @@ const EXPECTED_GATES: ReadonlyArray<{
     file: "src/app/(public)/claim/event-registration/page.tsx",
     module: "events",
   },
+  {
+    file: "src/app/(public)/events/registrations/checkout-error/page.tsx",
+    module: "events",
+  },
+  {
+    file: "src/app/(public)/events/registrations/payment-result/page.tsx",
+    module: "events",
+  },
+  {
+    file: "src/app/(public)/events/registrations/payment-result/page.tsx",
+    module: "payment",
+  },
+  {
+    file: "src/app/(public)/events/registrations/checkout/[token]/route.ts",
+    module: "events",
+  },
+  {
+    file: "src/app/(public)/events/registrations/checkout/[token]/route.ts",
+    module: "payment",
+  },
   // posts
   { file: "src/app/(public)/blog/page.tsx", module: "posts" },
   { file: "src/app/(public)/blog/[slug]/page.tsx", module: "posts" },
@@ -101,7 +121,40 @@ const EXPECTED_GATES: ReadonlyArray<{
   },
 ] as const;
 
-const FEATURE_GATE_PATTERN = /requireFeatureEnabled\(\s*["']([^"']+)["']\s*\)/g;
+const FEATURE_GATE_PATTERN =
+  /await requireFeatureEnabled\(\s*["']([^"']+)["']\s*\)/g;
+
+const PUBLIC_APP_ROOT = join(process.cwd(), "src/app/(public)");
+
+function collectPublicGateFiles(): string[] {
+  const files: string[] = [];
+
+  function walk(dir: string): void {
+    for (const entry of readdirSync(dir)) {
+      const abs = join(dir, entry);
+      if (statSync(abs).isDirectory()) {
+        walk(abs);
+        continue;
+      }
+      if (entry === "page.tsx" || entry === "route.ts") {
+        files.push(abs.replace(/\\/g, "/"));
+      }
+    }
+  }
+
+  walk(PUBLIC_APP_ROOT);
+  return files;
+}
+
+function gateKey(file: string, moduleId: string): string {
+  return `${file}::${moduleId}`;
+}
+
+function toRepoRelativePath(absPath: string): string {
+  return absPath
+    .replace(/\\/g, "/")
+    .slice(process.cwd().replace(/\\/g, "/").length + 1);
+}
 
 describe("public route ↔ requireFeatureEnabled drift gate", () => {
   test("EXPECTED_GATES の全 module id は registry に存在する", () => {
@@ -122,9 +175,30 @@ describe("public route ↔ requireFeatureEnabled drift gate", () => {
     });
   }
 
-  test("EXPECTED_GATES に重複エントリがない", () => {
-    const files = EXPECTED_GATES.map((e) => e.file);
-    const unique = new Set(files);
-    expect(unique.size).toBe(files.length);
+  test("EXPECTED_GATES に file::module の重複エントリがない", () => {
+    const keys = EXPECTED_GATES.map((e) => gateKey(e.file, e.module));
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("src/app/(public) の page.tsx / route.ts の requireFeatureEnabled と EXPECTED_GATES が一致する", () => {
+    const expected = new Set(
+      EXPECTED_GATES.map((e) => gateKey(e.file, e.module)),
+    );
+    const actual = new Set<string>();
+
+    for (const abs of collectPublicGateFiles()) {
+      const source = readFileSync(abs, "utf-8");
+      const matches = [...source.matchAll(FEATURE_GATE_PATTERN)];
+      if (matches.length === 0) continue;
+
+      const rel = toRepoRelativePath(abs);
+      for (const match of matches) {
+        const moduleId = match[1];
+        if (!moduleId) continue;
+        actual.add(gateKey(rel, moduleId));
+      }
+    }
+
+    expect(actual).toEqual(expected);
   });
 });

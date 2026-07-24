@@ -2,8 +2,9 @@
  * /admin/settings/features — Feature Module ON/OFF 管理
  *
  * Sanity / Stripe Capabilities 流の declarative composition pattern。
- * 11 module の ON/OFF を切り替えると公開ページ 404 / nav prune /
+ * 11 module の ON/OFF を切り替えると公開ページ 404 / 公開ナビ prune /
  * sitemap prune / SectionRenderer skip / cron 早期 return に伝播する。
+ * 管理画面サイドバーは feature module では prune しない。
  */
 
 import type { Metadata } from "next";
