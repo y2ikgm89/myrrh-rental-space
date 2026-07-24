@@ -71,8 +71,8 @@ import {
   findEventRegistrationByPaymentIntent,
   applyEventChargeRefundIdempotent,
   findExpiredPendingWaitlistOfferRegistration,
-  refundExpiredWaitlistOfferPaymentCommand,
-} from "@/shared/domain/events/payment-commands";
+} from "@/shared/domain/events/payment-queries";
+import { refundExpiredWaitlistOfferPaymentCommand } from "@/shared/domain/events/payment-commands";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getWaitlistConfirmationEmailDetails } from "@/shared/domain/events/waitlist-queries";
 import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";

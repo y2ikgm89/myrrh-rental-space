@@ -207,7 +207,7 @@ mock.module("@/shared/domain/stripe-events/dedup", () => ({
 
 // task #6: event registration 経路も webhook.route.ts が使うので mock を追加
 // (reservation で見つからない場合の fallback 経路)。
-mock.module("@/shared/domain/events/payment-commands", () => ({
+mock.module("@/shared/domain/events/payment-queries", () => ({
   claimEventRegistrationAsPaid: () => Promise.resolve(false),
   claimEventRegistrationAsFailed: () => Promise.resolve(false),
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
@@ -221,6 +221,9 @@ mock.module("@/shared/domain/events/payment-commands", () => ({
     latestRefund: { id: string; amount: number } | null;
   }) => mockApplyEventChargeRefundIdempotent(input),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+}));
+
+mock.module("@/shared/domain/events/payment-commands", () => ({
   refundExpiredWaitlistOfferPaymentCommand: () =>
     Promise.resolve({ outcome: "not_applicable" }),
 }));
