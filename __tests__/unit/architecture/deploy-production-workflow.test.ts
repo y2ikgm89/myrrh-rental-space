@@ -528,13 +528,15 @@ describe("production deploy workflow", () => {
 
 describe("Main Terraform Health gate", () => {
   test("watches latest main Deploy Production run regardless of event type", () => {
-    // Deploy Production は workflow_dispatch のみ。`--event push` に絞ると
-    // 手動成功を無視して古い push failure で PR が永久 block される。
-    expect(mainTerraformHealthWorkflow).toContain(
-      "--workflow deploy-production.yml",
-    );
-    expect(mainTerraformHealthWorkflow).toContain("--branch main");
-    expect(mainTerraformHealthWorkflow).not.toContain("--event push");
+    // Deploy Production は workflow_dispatch のみ。gh run list を push event に
+    // 絞ると手動成功を無視して古い failure で PR が永久 block される。
+    const queryStep =
+      mainTerraformHealthWorkflow.match(
+        /Query latest main deploy-production run[\s\S]*?Evaluate gate/,
+      )?.[0] ?? "";
+    expect(queryStep).toContain("--workflow deploy-production.yml");
+    expect(queryStep).toContain("--branch main");
+    expect(queryStep).not.toMatch(/--event\s+push\b/);
     expect(mainTerraformHealthWorkflow).toContain("[skip-main-health]");
   });
 });

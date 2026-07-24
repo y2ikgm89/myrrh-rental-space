@@ -15,7 +15,7 @@ name: Main Terraform Health
 # main が unhealthy な間は全 PR の auto-merge を physically block する。
 #
 # Deploy Production は `workflow_dispatch` のみ (push-to-main 自動デプロイ廃止)。
-# 最新 run は event を絞らず取得する (`--event push` だと手動成功を無視して
+# 最新 run は event を絞らず取得する (push 限定だと手動成功を無視して
 # 古い push failure のまま PR を永久 block する)。
 #
 # ## 判定ロジック
@@ -116,7 +116,7 @@ jobs:
           # 最新の main branch 上の deploy-production.yml run status を取得。
           # `--limit 1` で最新 1 件、`--branch main` で PR run を除外。
           # event は絞らない: 本番デプロイは workflow_dispatch のみのため、
-          # `--event push` だと手動成功を無視して古い push failure で gate が固着する。
+          # push event 限定だと手動成功を無視して古い failure で gate が固着する。
           RESPONSE="$(gh run list \
             --repo "${GITHUB_REPO}" \
             --workflow deploy-production.yml \
