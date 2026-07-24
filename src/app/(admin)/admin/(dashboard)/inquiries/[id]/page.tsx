@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { deleteInquiry } from "@/admin/actions/inquiry";
-import { getInquiryById } from "@/admin/queries/inquiry";
+import {
+  getInquiryActor,
+  getInquiryById,
+  listAssignableStaff,
+  listInquiryTags,
+} from "@/admin/queries/inquiry";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { InquiryDetail } from "./_components/InquiryDetail";
@@ -42,6 +47,12 @@ export default async function InquiryDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const [staff, allTags, actor] = await Promise.all([
+    listAssignableStaff(),
+    listInquiryTags(),
+    getInquiryActor(),
+  ]);
+
   return (
     <AdminDetailLayout
       backHref="/admin/inquiries"
@@ -55,7 +66,14 @@ export default async function InquiryDetailPage({ params }: PageProps) {
         />
       }
     >
-      <InquiryDetail key={inquiry.id} inquiry={inquiry} />
+      <InquiryDetail
+        key={inquiry.id}
+        inquiry={inquiry}
+        staff={staff}
+        allTags={allTags}
+        currentUserId={actor.id}
+        canDeleteOthersNotes={actor.canDeleteOthersNotes}
+      />
     </AdminDetailLayout>
   );
 }

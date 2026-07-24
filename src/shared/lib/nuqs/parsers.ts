@@ -505,9 +505,29 @@ export async function loadAdminFaqReviewSearchParams(
   return adminFaqReviewSearchParamsCache.all();
 }
 
-const adminInquirySearchParamsParsers = {
+// Phase 4 (ops surfaces): 顧客種別フィルター ("ALL" は「すべて」を表す sentinel、
+// CUSTOMER_TYPE_FILTER_ALL は adminCustomerSearchParamsParsers と共有)。
+const inquiryCustomerTypeFilterValues = [
+  CUSTOMER_TYPE_FILTER_ALL,
+  CustomerType.PERSONAL,
+  CustomerType.CORPORATE,
+] as const;
+
+export type InquiryCustomerTypeFilter =
+  (typeof inquiryCustomerTypeFilterValues)[number];
+
+export const adminInquirySearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
+  assigneeId: parseAsString.withDefault(""),
+  tagId: parseAsString.withDefault(""),
+  customerType: parseAsStringLiteral(
+    inquiryCustomerTypeFilterValues,
+  ).withDefault(CUSTOMER_TYPE_FILTER_ALL),
+  slaExpired: parseAsBoolean.withDefault(false),
+  /** `<input type="date">` 形式 ("YYYY-MM-DD")。空文字列 = 未指定 */
+  createdFrom: parseAsString.withDefault(""),
+  createdTo: parseAsString.withDefault(""),
   page: parseAsPage,
   perPage: parseAsPerPage,
 };
