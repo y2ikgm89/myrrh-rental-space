@@ -3,19 +3,18 @@
  *
  * 検証する 3 つの不変条件（すべて mock では再現不能、実 Postgres が必須）:
  *
- *   1. アプリ層 pre-check（`checkReservationOverlapQuery` を各 instance に対して
- *      逐次実行）が、既存の（series 外の）予約と重複する instance を「N 回目 (日付)」
- *      の specific error で検出し、series/instance を一切作成せず tx 全体を
- *      rollback する（spec risk-1 対策）。
+ *   1. アプリ層 pre-check（`ensureNoOverlap` → Reservation + EventTimeSlot）が、
+ *      既存の（series 外の）予約と重複する instance を「N 回目 (日付)」の specific
+ *      error で検出し、series/instance を一切作成せず tx 全体を rollback する
+ *      （spec risk-1 対策）。
  *   2. `reservations_no_active_time_overlap_excl` EXCLUDE 制約が、pre-check では
  *      原理的に検出できないケース（**同一 createMany バッチ内**で instance 同士が
  *      重複するケース — pre-check は「既存 DB 行」としか比較しないため、まだ
  *      insert していない同バッチの兄弟 instance とは比較できない）を defense-in-depth
  *      として検出し、`createMany` ごと reject する。
- *   3. `reservations_no_event_slot_overlap_check` CONSTRAINT TRIGGER（Event ↔
- *      Reservation cross-table overlap、PR#5 既存）が、pre-check の対象外
- *      （`checkReservationOverlapQuery` は Reservation 同士の重複のみ検査し
- *      EventTimeSlot は見ない）である EventTimeSlot との重複を検出する。
+ *   3. 既存 EventTimeSlot との重複も `ensureNoOverlap` が pre-check で検出し、
+ *      「N 回目 (日付)」の CONFLICT で rollback する（DB trigger
+ *      `reservations_no_event_slot_overlap_check` は defense-in-depth として残存）。
  *   4. advisory lock 728357（series 単位）+ 728351（Space 単位、既存契約）が、
  *      同一 space への 2 並行 series 作成を直列化する（先着 1 件のみ成功）。
  *
@@ -272,13 +271,13 @@ describeMaybe(
       }
     }, 30_000);
 
-    test("CROSS-TABLE TRIGGER: pre-check の対象外である EventTimeSlot との重複は createMany 時に検出され、series/instance は作成されない", async () => {
+    test("EventTimeSlot 重複: ensureNoOverlap が 2 回目 instance を CONFLICT で検出し、series/instance は作成されない", async () => {
       const { spaceId, customerId, cleanup } = await createSpaceFixture();
       let eventId: string | null = null;
       try {
         // WEEKLY 火曜 2 回。2 回目 (2027-07-13 10:00-12:00) の時間帯に、同じ space の
-        // Event + EventTimeSlot を先に作っておく（Reservation 同士ではないため
-        // checkReservationOverlapQuery の pre-check は検出しない）。
+        // Event + EventTimeSlot を先に作っておく。ensureNoOverlap が Event 側も見るため
+        // createMany / DB trigger に到達する前に「2 回目」CONFLICT で止まる。
         const dtstart = new Date("2027-07-06T10:00:00.000Z");
         const conflictStart = new Date("2027-07-13T10:30:00.000Z");
         const conflictEnd = new Date("2027-07-13T11:30:00.000Z");
@@ -286,8 +285,8 @@ describeMaybe(
         const event = await prisma.$transaction(async (tx) => {
           const created = await tx.event.create({
             data: {
-              title: "Series Overlap Trigger Test Event",
-              slug: `series-overlap-trigger-${crypto.randomUUID()}`,
+              title: "Series Overlap Event Precheck Test",
+              slug: `series-overlap-event-${crypto.randomUUID()}`,
               descriptionJson: { type: "doc" },
               descriptionHtml: "<p>test</p>",
               descriptionPlainText: "test",
@@ -330,10 +329,10 @@ describeMaybe(
         } catch (err) {
           caught = err;
         }
-        expect(caught).toBeInstanceOf(Error);
-        expect((caught as Error).message).toMatch(
-          /overlaps with EventTimeSlot/,
-        );
+        expect(caught).toMatchObject({
+          code: "CONFLICT",
+          message: expect.stringContaining("2 回目 (2027-07-13)"),
+        });
 
         const seriesCount = await prisma.reservationSeries.count({
           where: { spaceId },
