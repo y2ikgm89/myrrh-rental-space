@@ -28,7 +28,7 @@ describe("migrate test DB script", () => {
     });
   });
 
-  test("passes the test database URL as Prisma DATABASE_URL", () => {
+  test("passes the test database URL as Prisma DATABASE_URL and DIRECT_URL", () => {
     expect(
       createPrismaMigrateEnv(
         {
@@ -42,6 +42,8 @@ describe("migrate test DB script", () => {
       ),
     ).toMatchObject({
       DATABASE_URL:
+        "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
+      DIRECT_URL:
         "postgresql://postgres:postgres@localhost:5433/myrrh_test?schema=public",
       TEST_DATABASE_URL:
         "postgresql://postgres:postgres@localhost:5433/myrrh_test",

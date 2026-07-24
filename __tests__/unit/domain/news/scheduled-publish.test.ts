@@ -56,7 +56,7 @@ describe("findRecentlyDueScheduledNewsSlugs", () => {
     expect(filter.gt.getTime()).toBeLessThanOrEqual(after - 10 * 60_000 + 1000);
   });
 
-  test("lookbackMinutes 省略時は既定の look-back window (10分) を使う", async () => {
+  test("lookbackMinutes 省略時は既定の look-back window (20分) を使う", async () => {
     await findRecentlyDueScheduledNewsSlugs();
 
     const call = mockFindMany.mock.calls[0];

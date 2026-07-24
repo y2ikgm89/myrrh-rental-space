@@ -140,7 +140,9 @@ variable "cloud_run_secret_versions" {
   description = "Cloud Run env で pin する Secret Manager version の map (secret_id → version string)"
   type        = map(string)
   default = {
-    DATABASE_URL                       = "1"
+    # v1 = Neon direct（migrate 用に DIRECT_URL secret へ退避済み）。
+    # v2 = Neon pooled (`-pooler`)。Cloud Run runtime は v2 を pin。
+    DATABASE_URL                       = "2"
     BETTER_AUTH_SECRET                 = "1"
     ENCRYPTION_KEY                     = "1"
     SECONDARY_ENCRYPTION_KEYS          = "1"

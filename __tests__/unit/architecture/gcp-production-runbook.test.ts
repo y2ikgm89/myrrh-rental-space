@@ -277,7 +277,9 @@ describe("GCP production setup runbook", () => {
   });
 
   test("pins Cloud Run migrate Job environment secrets to numeric versions", () => {
-    expect(runbook).toContain("--set-secrets=DATABASE_URL=DATABASE_URL:1");
+    expect(runbook).toContain(
+      "--set-secrets=DIRECT_URL=DIRECT_URL:1,DATABASE_URL=DATABASE_URL:1",
+    );
     expect(runbook).toContain("--command=bunx");
     expect(runbook).toContain("--args=--bun,prisma,migrate,deploy");
     expect(runbook).toContain("--tasks=1");

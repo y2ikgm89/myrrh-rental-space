@@ -41,6 +41,8 @@ env:
   # ubuntu-latest は 16 GB RAM 確保されているため 4 GB 割当で確実に賄える。
   NODE_OPTIONS: "--max-old-space-size=4096"
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+  # Prisma CLI (prisma.config.ts datasource). Local/CI: same as DATABASE_URL.
+  DIRECT_URL: postgresql://postgres:postgres@localhost:5432/test_db
   # 実 DB 必須の統合テスト（イベント overbooking TOCTOU 等）が接続するテスト DB。
   # 未設定だと当該テストは describe ごと skip される（dev DB 誤汚染防止の安全弁）。
   # `test:all` が `test:db:migrate` で `prisma migrate deploy` を適用してから実行する。
@@ -523,6 +525,7 @@ jobs:
         run: bun run build
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/test_db
           BETTER_AUTH_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab
           BETTER_AUTH_URL: http://localhost:3000
           NEXT_PUBLIC_APP_URL: http://localhost:3000

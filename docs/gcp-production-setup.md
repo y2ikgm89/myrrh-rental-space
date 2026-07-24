@@ -516,7 +516,8 @@ history. Use stdin from a secure local prompt or your password manager.
 
 Required by production startup:
 
-- `DATABASE_URL`
+- `DATABASE_URL` (Neon: pooled `-pooler` host for Cloud Run runtime; pin versions/2)
+- `DIRECT_URL` (Neon: direct host for `prisma-migrate` Job / Prisma CLI; pin versions/1)
 - `BETTER_AUTH_SECRET`
 - `ENCRYPTION_KEY`
 - `AUDIT_LOG_HMAC_KEY`
@@ -545,6 +546,7 @@ Create each secret once:
 ```bash
 for name in \
   DATABASE_URL \
+  DIRECT_URL \
   BETTER_AUTH_SECRET \
   ENCRYPTION_KEY \
   AUDIT_LOG_HMAC_KEY \
@@ -711,17 +713,17 @@ gcloud run jobs create prisma-migrate \
   --parallelism=1 \
   --max-retries=0 \
   --task-timeout=600s \
-  --set-secrets=DATABASE_URL=DATABASE_URL:1 \
+  --set-secrets=DIRECT_URL=DIRECT_URL:1,DATABASE_URL=DATABASE_URL:1 \
   --command=bunx \
   --args=--bun,prisma,migrate,deploy
 ```
 
 Cloud Run resolves environment variable secrets at instance startup. Pin the
-migrate Job's `DATABASE_URL` secret to a numeric Secret Manager version via
-`terraform/variables.tf` `cloud_run_secret_versions.DATABASE_URL`; do not use
-`latest` in production. The production audit checks `Cloud Run migrate Job env
-is canonical` and fails if `DATABASE_URL` is missing, set as a plain value, or
-references a non-pinned Secret Manager version.
+migrate Job to Neon **direct** secrets (`DIRECT_URL:1` and `DATABASE_URL:1`);
+runtime Cloud Run services pin pooled `DATABASE_URL:2`. Do not use `latest` in
+production. The production audit checks `Cloud Run migrate Job env is canonical`
+and fails if either secret is missing, set as a plain value, or references a
+non-pinned Secret Manager version.
 The audit also checks `Cloud Run migrate Job command is canonical` and fails if
 the Job no longer runs `bunx --bun prisma migrate deploy`.
 The audit also checks `Cloud Run migrate Job execution config is canonical` and
@@ -1352,8 +1354,9 @@ Expected results:
   `Cloud Run migrate Job command is canonical`, and
   `Cloud Run migrate Job execution config is canonical`; the public service,
   admin service, and migrate Job must all run as `$RUNTIME_SA`, not the Compute
-  Engine default service account, and the migrate Job must bind `DATABASE_URL`
-  from `DATABASE_URL:1` in Secret Manager while running
+  Engine default service account, and the migrate Job must bind `DIRECT_URL`
+  from `DIRECT_URL:1` and `DATABASE_URL` from `DATABASE_URL:1` (Neon direct;
+  not the runtime pooler pin) while running
   `bunx --bun prisma migrate deploy` as one task, one parallel task, no retries,
   600 second task timeout, 1 vCPU, and 1Gi memory.
   Recurring Cloud Build deploys update Cloud Run **image only** via

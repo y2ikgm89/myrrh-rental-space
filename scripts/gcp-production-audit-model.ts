@@ -180,7 +180,8 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
 ] as const;
 
 export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
-  { name: "DATABASE_URL", version: "1" },
+  // Neon pooled runtime URL (Secret Manager DATABASE_URL versions/2).
+  { name: "DATABASE_URL", version: "2" },
   { name: "BETTER_AUTH_SECRET", version: "1" },
   { name: "ENCRYPTION_KEY", version: "1" },
   { name: "AUDIT_LOG_HMAC_KEY", version: "1" },
@@ -200,6 +201,8 @@ export const REQUIRED_CLOUD_RUN_SECRET_ENV_REFS = [
 ] as const satisfies readonly CloudRunSecretEnvRef[];
 
 export const REQUIRED_CLOUD_RUN_MIGRATE_JOB_SECRET_ENV_REFS = [
+  // Neon direct: DIRECT_URL:1 + DATABASE_URL:1 (not runtime pooler v2).
+  { name: "DIRECT_URL", version: "1" },
   { name: "DATABASE_URL", version: "1" },
 ] as const satisfies readonly CloudRunSecretEnvRef[];
 
