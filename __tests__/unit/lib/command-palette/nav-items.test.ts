@@ -4,6 +4,11 @@ import {
   getNavItemsForRole,
   ALL_NAV_ITEMS_FOR_TEST,
 } from "@/admin/lib/command-palette/nav-items";
+import {
+  assertAdminNavFeatureModulesAreRegistered,
+  collectMappedAdminNavFeatureModules,
+} from "@/shared/lib/features/admin-nav";
+import { ALL_QUICK_ACTIONS_FOR_TEST } from "@/admin/lib/command-palette/quick-actions";
 
 describe("getNavItemsForRole", () => {
   test("SUPER_ADMIN は全 nav items を取得", () => {
@@ -27,5 +32,25 @@ describe("getNavItemsForRole", () => {
   test("ADMIN は user / auditLog を含む", () => {
     const items = getNavItemsForRole(Role.ADMIN);
     expect(items.find((i) => i.resource === "user")).toBeDefined();
+  });
+
+  test("featureModule map drift gate — mapped values ⊆ FEATURE_MODULES_LIST", () => {
+    const navMapped = collectMappedAdminNavFeatureModules(
+      ALL_NAV_ITEMS_FOR_TEST.map((item) => item.featureModule),
+    );
+    const quickMapped = collectMappedAdminNavFeatureModules(
+      ALL_QUICK_ACTIONS_FOR_TEST.map((action) => action.featureModule),
+    );
+    const allMapped = [...new Set([...navMapped, ...quickMapped])].sort();
+    expect(allMapped).toEqual([
+      "contact",
+      "events",
+      "faq",
+      "news",
+      "posts",
+      "reservation",
+      "spaces",
+    ]);
+    assertAdminNavFeatureModulesAreRegistered(allMapped);
   });
 });

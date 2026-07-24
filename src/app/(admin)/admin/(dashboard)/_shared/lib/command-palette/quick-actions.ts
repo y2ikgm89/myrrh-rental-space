@@ -8,12 +8,14 @@ const ALL_QUICK_ACTIONS: readonly QuickAction[] = [
     label: "新規スペースを作成",
     href: "/admin/spaces/new",
     resource: "space",
+    featureModule: "spaces",
   },
   {
     id: "new-reservation",
     label: "新規予約を作成",
     href: "/admin/reservations/new",
     resource: "reservation",
+    featureModule: "reservation",
   },
   {
     id: "new-customer",
@@ -26,18 +28,21 @@ const ALL_QUICK_ACTIONS: readonly QuickAction[] = [
     label: "新規イベントを作成",
     href: "/admin/events/new",
     resource: "event",
+    featureModule: "events",
   },
   {
     id: "new-post",
     label: "新規ブログ記事を作成",
     href: "/admin/posts/new",
     resource: "post",
+    featureModule: "posts",
   },
   {
     id: "new-news",
     label: "新規お知らせを作成",
     href: "/admin/news/new",
     resource: "news",
+    featureModule: "news",
   },
   {
     id: "new-coupon",

@@ -6,6 +6,7 @@
  */
 
 import type { Resource } from "@/shared/lib/admin-resources";
+import type { FeatureModule } from "@/shared/lib/features/registry";
 
 export type NavItem = {
   id: string;
@@ -13,6 +14,8 @@ export type NavItem = {
   href: string;
   resource: Resource;
   keywords?: string[]; // fuzzy filter のキーワード補強
+  /** 公開サイト feature gate 対象。OFF 時は badge 表示（ナビは残す） */
+  featureModule?: FeatureModule;
 };
 
 export type QuickAction = {
@@ -21,6 +24,8 @@ export type QuickAction = {
   href: string;
   resource: Resource;
   description?: string;
+  /** 公開サイト feature gate 対象。OFF 時は create 不可（disabled） */
+  featureModule?: FeatureModule;
 };
 
 export type RecentItem = {

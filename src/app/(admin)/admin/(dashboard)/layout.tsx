@@ -48,6 +48,7 @@ import { CommandPalette } from "./_shared/components/command-palette/CommandPale
 import { getNavItemsForRole } from "./_shared/lib/command-palette/nav-items";
 import { getQuickActionsForRole } from "./_shared/lib/command-palette/quick-actions";
 import { getRecentAuditedResources } from "@/shared/domain/audit/recents-queries";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
 
 async function DashboardChromeResolved({
   children,
@@ -57,6 +58,7 @@ async function DashboardChromeResolved({
   await connection();
 
   const user = await requireAdminDashboardAccess();
+  const enabledFeatures = await getEnabledFeatures();
   const sidebarGroups = filterSidebarGroupsByPermission(
     SIDEBAR_GROUPS,
     (permission) =>
@@ -77,6 +79,7 @@ async function DashboardChromeResolved({
               navItems={navItems}
               quickActions={quickActions}
               recents={recents}
+              enabledFeatures={[...enabledFeatures]}
             >
               <div className="min-h-dvh bg-background">
                 {/* WCAG 2.4.1 bypass-blocks: 通常は視覚的に隠し、focus 時のみ
@@ -87,6 +90,7 @@ async function DashboardChromeResolved({
                 {/* レスポンシブサイドバー */}
                 <ResponsiveSidebar
                   groups={sidebarGroups}
+                  enabledFeatures={enabledFeatures}
                   userInfo={
                     <Suspense fallback={<UserInfoSkeleton />}>
                       <UserInfo />

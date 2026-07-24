@@ -4,7 +4,8 @@
  * Sanity / Stripe Capabilities 流の declarative composition pattern。
  * 11 module の ON/OFF を切り替えると公開ページ 404 / 公開ナビ prune /
  * sitemap prune / SectionRenderer skip / cron 早期 return に伝播する。
- * 管理画面サイドバーは feature module では prune しない。
+ * 管理画面サイドバー・コマンドパレットは prune せず、OFF 時は「非公開」badge +
+ * tooltip で公開 404 であることを示す（管理画面では引き続きデータ運用可能）。
  */
 
 import type { Metadata } from "next";

@@ -16,6 +16,7 @@ import type {
   RecentItem,
   SearchResultGroup,
 } from "@/shared/lib/command-palette-types";
+import type { FeatureModule } from "@/shared/lib/features/registry";
 
 type CommandPaletteContextValue = {
   open: boolean;
@@ -27,6 +28,7 @@ type CommandPaletteContextValue = {
   setQuery: (q: string) => void;
   results: SearchResultGroup[];
   isSearching: boolean;
+  enabledFeatures: ReadonlySet<FeatureModule>;
 };
 
 const CommandPaletteContext = createContext<
@@ -45,6 +47,7 @@ type ProviderProps = {
   navItems: NavItem[];
   quickActions: QuickAction[];
   recents: RecentItem[];
+  enabledFeatures: readonly FeatureModule[];
   children: ReactNode;
 };
 
@@ -52,6 +55,7 @@ export function CommandPaletteProvider({
   navItems,
   quickActions,
   recents,
+  enabledFeatures: enabledFeatureList,
   children,
 }: ProviderProps) {
   const [openState, setOpenState] = useState(false);
@@ -106,6 +110,7 @@ export function CommandPaletteProvider({
 
   // render 中 derive: クエリが短い場合は結果を空として扱う
   const results = query.trim().length >= 2 ? searchResults : [];
+  const enabledFeatures = new Set<FeatureModule>(enabledFeatureList);
 
   return (
     <CommandPaletteContext
@@ -119,6 +124,7 @@ export function CommandPaletteProvider({
         setQuery,
         results,
         isSearching,
+        enabledFeatures,
       }}
     >
       {children}

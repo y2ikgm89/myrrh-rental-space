@@ -84,7 +84,9 @@ export function FeatureModulesForm({
           <CardDescription>
             OFF にした機能は公開ページが 404
             になり、公開サイトのナビゲーション・サイトマップ・関連 cron
-            ジョブから自動除外されます（管理画面メニューは除外されません）。
+            ジョブから自動除外されます。管理画面のサイドバー・コマンドパレットは
+            残り、「非公開」badge と tooltip で公開面 OFF
+            を示します（データの確認・編集は可能）。
             データベース上の既存データは保持されます。
           </CardDescription>
         </CardHeader>

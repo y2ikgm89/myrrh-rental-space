@@ -58,6 +58,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         href: "/admin/reservations",
         icon: <IconCalendar className="h-5 w-5" />,
         requiredPermission: { resource: "reservation", action: "read" },
+        featureModule: "reservation",
       },
       {
         label: "顧客管理",
@@ -70,6 +71,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         href: "/admin/inquiries",
         icon: <IconMail className="h-5 w-5" />,
         requiredPermission: { resource: "inquiry", action: "read" },
+        featureModule: "contact",
       },
     ],
   },
@@ -81,12 +83,14 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         href: "/admin/spaces",
         icon: <IconBuilding className="h-5 w-5" />,
         requiredPermission: { resource: "space", action: "read" },
+        featureModule: "spaces",
       },
       {
         label: "イベント",
         href: "/admin/events",
         icon: <IconCalendarEvent className="h-5 w-5" />,
         requiredPermission: { resource: "event", action: "read" },
+        featureModule: "events",
       },
       {
         label: "クーポン",
@@ -110,18 +114,21 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
         href: "/admin/posts",
         icon: <IconFileDescription className="h-5 w-5" />,
         requiredPermission: { resource: "post", action: "read" },
+        featureModule: "posts",
       },
       {
         label: "お知らせ",
         href: "/admin/news",
         icon: <IconNews className="h-5 w-5" />,
         requiredPermission: { resource: "news", action: "read" },
+        featureModule: "news",
       },
       {
         label: "FAQ",
         href: "/admin/faq",
         icon: <IconHelpCircle className="h-5 w-5" />,
         requiredPermission: { resource: "faq", action: "read" },
+        featureModule: "faq",
       },
       {
         label: "メディア",
