@@ -70,7 +70,7 @@ export async function GET(request: Request) {
     // 同 type 通知が既にあれば no-op（Scheduler 再試行・手動再実行対策）。
     if (
       await hasRecentNotificationOfType(
-        NOTIFICATION_TYPE.CUSTOMER_FLAGGED,
+        NOTIFICATION_TYPE.CUSTOMER_DUPLICATE_FLAGGED,
         NOTIFICATION_DEDUP_DAYS,
       )
     ) {
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     }
 
     await createNotificationCommand({
-      type: NOTIFICATION_TYPE.CUSTOMER_FLAGGED,
+      type: NOTIFICATION_TYPE.CUSTOMER_DUPLICATE_FLAGGED,
       title: `${String(detected.length)}件の重複顧客候補を検知しました`,
       message:
         "重複の疑いがあるフラグを付与しました。顧客一覧から確認してください。",

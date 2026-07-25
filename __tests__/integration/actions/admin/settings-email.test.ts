@@ -154,13 +154,15 @@ describe("emailFormSchema（実体）", () => {
   });
 
   test("notificationStaffIds は複数チェックを配列に集約する", () => {
+    const staffId1 = "11111111-1111-4111-8111-111111111111";
+    const staffId2 = "22222222-2222-4222-8222-222222222222";
     const fd = new FormData();
-    fd.append("notificationStaffIds", "id-1");
-    fd.append("notificationStaffIds", "id-2");
+    fd.append("notificationStaffIds", staffId1);
+    fd.append("notificationStaffIds", staffId2);
     const r = parseWithZod(fd, { schema: emailFormSchema });
     expect(r.status).toBe("success");
     if (r.status === "success" && r.value) {
-      expect(r.value.notificationStaffIds).toEqual(["id-1", "id-2"]);
+      expect(r.value.notificationStaffIds).toEqual([staffId1, staffId2]);
     }
   });
 

@@ -31,8 +31,9 @@ export const emailFormSchema = z.object({
   // schema 側の @default(false) と揃えて既定 OFF（opt-in）。
   notifyEventReminder: switchBoolean(),
   // 通知先スタッフ（User.id 配列）。チェックボックス群を conform が配列に集約する。
+  // 未選択時はフィールド自体が送られないため optional → []。空配列は許容。
   notificationStaffIds: z
-    .array(z.string())
+    .array(z.uuid({ error: "スタッフIDが不正です" }))
     .optional()
     .transform((value) => value ?? []),
   // カスタム通知先。同名 hidden input の複数値を配列として受け取る。

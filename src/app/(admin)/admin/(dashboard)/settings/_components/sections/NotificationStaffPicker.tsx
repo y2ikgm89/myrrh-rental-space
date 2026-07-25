@@ -6,7 +6,7 @@
  * - 管理ロールのスタッフを名前＋メールで全件表示し、チェックで選択。
  * - 選択状況を「N名選択中」バッジで常時可視化、すべて選択/解除を提供。
  * - ネイティブ checkbox（name="notificationStaffIds"）で送信し、conform が
- *   `z.array(z.string())` に集約する（hidden input 不要・送信契約は不変）。
+ *   `z.array(z.uuid())` に集約する（hidden input 不要・送信契約は不変）。
  */
 import { Badge, Button, Checkbox } from "@/admin/components/ui";
 

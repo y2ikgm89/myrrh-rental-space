@@ -9,6 +9,7 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { mergeRecipients } from "@/shared/lib/email/recipients";
+import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
 
 /**
  * 通知先（スタッフ＋カスタム）を解決した実メールアドレス一覧を返す。
@@ -39,10 +40,14 @@ export async function getNotificationEmailAddresses(): Promise<string[]> {
   const staffIds = settings?.notificationStaffIds ?? [];
   let staffEmails: string[] = [];
   if (staffIds.length > 0) {
+    // 退職・ロール降格などで非スタッフになった ID はメールを送らない。
     const users = await safeFetch({
       fetch: () =>
         prisma.user.findMany({
-          where: { id: { in: staffIds } },
+          where: {
+            id: { in: staffIds },
+            role: { in: [...DASHBOARD_ROLES] },
+          },
           select: { email: true },
         }),
       fallback: [],

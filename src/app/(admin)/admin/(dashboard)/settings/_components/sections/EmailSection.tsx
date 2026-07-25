@@ -114,6 +114,23 @@ export function EmailSection({
   const [customTokens, setCustomTokens] = useState<string[]>(
     () => settings.notificationEmailAddresses,
   );
+  // props 同期（配列は参照ではなく内容比較 — 毎 render 新配列でも無限ループしない）
+  const [previousStaffIdsKey, setPreviousStaffIdsKey] = useState(() =>
+    settings.notificationStaffIds.join("\0"),
+  );
+  const [previousCustomEmailsKey, setPreviousCustomEmailsKey] = useState(() =>
+    settings.notificationEmailAddresses.join("\0"),
+  );
+  const nextStaffIdsKey = settings.notificationStaffIds.join("\0");
+  const nextCustomEmailsKey = settings.notificationEmailAddresses.join("\0");
+  if (nextStaffIdsKey !== previousStaffIdsKey) {
+    setPreviousStaffIdsKey(nextStaffIdsKey);
+    setStaffIds(settings.notificationStaffIds);
+  }
+  if (nextCustomEmailsKey !== previousCustomEmailsKey) {
+    setPreviousCustomEmailsKey(nextCustomEmailsKey);
+    setCustomTokens(settings.notificationEmailAddresses);
+  }
   const customLabelId = useId();
   const customHelpId = useId();
   const noRecipients = staffIds.length === 0 && customTokens.length === 0;

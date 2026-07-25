@@ -74,6 +74,7 @@ import {
   sendEventAdminNotification,
   sendEventRegistrationCancelled,
 } from "@/shared/lib/email/event-emails";
+import { notifyEventWaitlistOfferedForRegistration } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { sendEventWaitlistOffered } from "@/shared/lib/email/event-waitlist-emails";
 import type { EmailResult } from "@/shared/lib/email/types";
 import {
@@ -405,13 +406,12 @@ async function runNotificationStep(args: {
     const title = requiresRefund
       ? "PAID イベント申込のキャンセル — 要返金確認"
       : `イベント申込キャンセル（${channelLabel(input.channel)}）`;
-    // resourceId は AdminNotification.resourceId（@db.Uuid）を意図した項目だが、
-    // Event.id は cuid()（VarChar(30)）であり UUID ではないため渡さない。
     await createNotificationCommand({
       type: NOTIFICATION_TYPE.EVENT_REGISTRATION_CANCEL,
       title,
       message: `${registration.name}様が「${registration.event.title}」の申込をキャンセルしました`,
       resourceType: "event",
+      resourceId: registration.eventId,
     });
     return { status: "ok", detail: { escalated: requiresRefund } };
   } catch (err) {
@@ -445,13 +445,28 @@ async function runWaitlistOfferStep(
   if (input.promoted === null) {
     return { status: "skipped", reason: "no_promotion" };
   }
-  if (input.promoted.email === null) {
-    return { status: "skipped", reason: "promoted_no_email" };
-  }
 
   const promotedRegistrationId = input.promoted.id;
   const promotedEmail = input.promoted.email;
   const promotedExpiresAt = input.promoted.expiresAt;
+
+  if (promotedEmail === null) {
+    try {
+      await notifyEventWaitlistOfferedForRegistration(promotedRegistrationId);
+    } catch (err) {
+      const normalized = normalizeError(err);
+      logError(normalized, {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "createEventWaitlistOfferedNotification",
+          registrationId: promotedRegistrationId,
+          channel: input.channel,
+        },
+      });
+    }
+    return { status: "skipped", reason: "promoted_no_email" };
+  }
 
   try {
     const paymentContext = await getEventWaitlistOfferPaymentContext(
@@ -484,6 +499,20 @@ async function runWaitlistOfferStep(
       paymentContext,
     });
     if (result.ok) {
+      try {
+        await notifyEventWaitlistOfferedForRegistration(promotedRegistrationId);
+      } catch (err) {
+        const normalized = normalizeError(err);
+        logError(normalized, {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.LOW,
+          context: {
+            operation: "createEventWaitlistOfferedNotification",
+            registrationId: promotedRegistrationId,
+            channel: input.channel,
+          },
+        });
+      }
       return {
         status: "ok",
         detail: {

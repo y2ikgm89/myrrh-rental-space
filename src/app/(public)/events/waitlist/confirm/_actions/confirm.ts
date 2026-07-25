@@ -15,6 +15,7 @@ import {
   getEventRegistrationForConfirm,
   getWaitlistConfirmationEmailDetails,
 } from "@/shared/domain/events/waitlist-queries";
+import { fireEventWaitlistConfirmedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
@@ -174,6 +175,8 @@ export async function confirmWaitlistOfferAction(
             category: ErrorCategory.EXTERNAL_API,
           },
         );
+
+        fireEventWaitlistConfirmedAdminNotification(result.registration.id);
 
         return { ok: true };
       } catch (error) {
