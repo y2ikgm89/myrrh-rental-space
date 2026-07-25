@@ -80,10 +80,28 @@ export async function getUnreadCountQuery(): Promise<number> {
   });
 }
 
+/**
+ * ベル / ダッシュボード用の直近通知。
+ *
+ * 未読を優先し、足りなければ既読で埋める。
+ * （全件未読数バッジと「最新 N 件」一覧の食い違いを防ぐ）
+ */
 export async function getRecentNotificationsQuery(limit = 10) {
-  return prisma.adminNotification.findMany({
+  const unread = await prisma.adminNotification.findMany({
+    where: { isRead: false },
     select: NOTIFICATION_SELECT,
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+  if (unread.length >= limit) {
+    return unread;
+  }
+  const remaining = limit - unread.length;
+  const read = await prisma.adminNotification.findMany({
+    where: { isRead: true },
+    select: NOTIFICATION_SELECT,
+    orderBy: { createdAt: "desc" },
+    take: remaining,
+  });
+  return [...unread, ...read];
 }

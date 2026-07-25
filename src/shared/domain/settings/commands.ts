@@ -20,11 +20,12 @@ import type {
 } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
+import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import {
   buildInitialFeatureModules,
   normalizeFeatureModules,
 } from "@/shared/lib/features/registry";
-import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
@@ -367,6 +368,24 @@ export async function updateBusinessHoursSettings(
 export async function updateEmailSettings(
   data: EmailSettingsInput,
 ): Promise<void> {
+  // 重複 ID を除去したうえで、管理画面ロールの User のみ許可する。
+  // 空配列は「通知先スタッフなし」として許容する。
+  const uniqueStaffIds = [...new Set(data.notificationStaffIds)];
+  if (uniqueStaffIds.length > 0) {
+    const validStaffCount = await prisma.user.count({
+      where: {
+        id: { in: uniqueStaffIds },
+        role: { in: [...DASHBOARD_ROLES] },
+      },
+    });
+    if (validStaffCount !== uniqueStaffIds.length) {
+      throw new DomainError(
+        "通知先スタッフに無効なユーザーが含まれています。管理画面にアクセスできるスタッフのみ選択してください",
+        "VALIDATION",
+      );
+    }
+  }
+
   const organizationData = {
     senderEmail: normalizeNullableString(data.senderEmail),
     senderName: normalizeNullableString(data.senderName),
@@ -377,7 +396,7 @@ export async function updateEmailSettings(
   };
   const notificationData = {
     notifyEventReminder: data.notifyEventReminder,
-    notificationStaffIds: data.notificationStaffIds,
+    notificationStaffIds: uniqueStaffIds,
     notificationEmailAddresses: data.notificationEmailAddresses,
   };
 

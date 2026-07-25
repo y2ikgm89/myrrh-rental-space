@@ -75,6 +75,7 @@ import {
 import { refundExpiredWaitlistOfferPaymentCommand } from "@/shared/domain/events/payment-commands";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getWaitlistConfirmationEmailDetails } from "@/shared/domain/events/waitlist-queries";
+import { fireEventWaitlistConfirmedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { sendEventRegistrationConfirmation } from "@/shared/lib/email/event-emails";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
@@ -637,6 +638,8 @@ async function fulfillEventRegistrationPaymentAtomically(
       context: { registrationId },
     },
   );
+
+  fireEventWaitlistConfirmedAdminNotification(registrationId);
 }
 
 // =============================================================================

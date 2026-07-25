@@ -9,6 +9,7 @@ import {
   sendEventWaitlistExpired,
   sendEventWaitlistOffered,
 } from "@/shared/lib/email/event-waitlist-emails";
+import { fireEventWaitlistOfferedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS } from "@/shared/lib/constants";
@@ -104,7 +105,10 @@ export async function GET(request: Request) {
 
         // 繰り上げ当選通知（cancel 駆動の自動昇格・admin 手動昇格と同じ契約）。
         for (const offeredEntry of result.offered) {
-          if (!offeredEntry.email) continue;
+          if (!offeredEntry.email) {
+            fireEventWaitlistOfferedAdminNotification(offeredEntry.id);
+            continue;
+          }
           const email = offeredEntry.email;
           fireAndForget(
             (async () => {
@@ -134,6 +138,7 @@ export async function GET(request: Request) {
                 expiresAt: offeredEntry.expiresAt,
                 paymentContext,
               });
+              fireEventWaitlistOfferedAdminNotification(offeredEntry.id);
             })(),
             {
               operation: "sendEventWaitlistOfferedFromCron",

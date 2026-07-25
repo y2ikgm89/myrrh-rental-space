@@ -69,6 +69,12 @@ const INTENTIONAL_BREAKING_MIGRATIONS: ReadonlySet<string> = new Set([
   // schema 側 DROP/RENAME 判定で計画ダウンタイム付きデプロイに切替。アプリ型は
   // 新 enum に更新済。Risk 1 の窓は Cloud Run min0/max1 の atomic switch で排除済。
   "prisma/migrations/20260724140200_smart_lock_device_type_clean_break/migration.sql",
+  // notifications-clean-break: AdminNotification.resourceId を UUID → VARCHAR(36)
+  // （Event cuid deep link 用）。`ALTER COLUMN ... SET DATA TYPE` は
+  // `changing-column-type` を発火し squawk-ignore だけでは抑止できないため allowlist。
+  // 併せて旧 customer_flagged 行を risk/duplicate type へ再ラベル。計画ダウンタイム
+  // 付きデプロイ（SET DATA TYPE）が発動する。
+  "prisma/migrations/20260726030000_admin_notification_resource_id_varchar/migration.sql",
 ]);
 
 function isIntentionallyBreaking(file: string): boolean {

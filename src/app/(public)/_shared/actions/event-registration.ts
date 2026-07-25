@@ -240,6 +240,7 @@ export async function registerForEvent(
               NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
             message: `${result.registration.name}様が「${result.event.title}」に申し込みました`,
             resourceType: "event",
+            resourceId: result.registration.eventId,
           }),
           {
             operation: "createEventRegistrationNotification",
@@ -432,6 +433,42 @@ export async function registerForEventWaitlist(
           {
             operation: "sendEventWaitlistRegistrationEmails",
             category: ErrorCategory.EXTERNAL_API,
+          },
+        );
+
+        fireAndForget(
+          createNotificationCommand({
+            type: NOTIFICATION_TYPE.EVENT_WAITLIST_REGISTRATION,
+            title:
+              NOTIFICATION_TYPE_LABELS[
+                NOTIFICATION_TYPE.EVENT_WAITLIST_REGISTRATION
+              ],
+            message: `${data.name}様が「${result.event.title}」のキャンセル待ちに登録しました`,
+            resourceType: "event",
+            resourceId: data.eventId,
+          }),
+          {
+            operation: "createEventWaitlistRegistrationNotification",
+            category: ErrorCategory.DATABASE,
+          },
+        );
+
+        // D7: 公開 waitlist 登録 CREATE の最小監査（通常申込と同型、channel のみ waitlist）。
+        fireAndForget(
+          createAuditLogRecord({
+            action: AuditAction.CREATE,
+            resource: "event-registration",
+            resourceId: result.registration.id,
+            newValue: { status: "WAITLISTED" },
+            metadata: {
+              channel: "waitlist",
+              customerId,
+              eventId: data.eventId,
+            },
+          }),
+          {
+            operation: "auditPublicEventWaitlistRegistrationCreate",
+            category: ErrorCategory.DATABASE,
           },
         );
 
