@@ -23,12 +23,18 @@ import {
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { ErrorCategory } from "@/shared/lib/errors/server";
+import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
 
 export async function submitReview(
   _prev: SubmissionResult | undefined,
   formData: FormData,
 ): Promise<SubmissionResult> {
   return executeConformMutation(formData, spaceReviewSchema, async (data) => {
+    const maintenance = await checkPublicSiteWritable();
+    if (!maintenance.ok) {
+      return { ok: false, error: maintenance.error };
+    }
+
     const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
     if (!rateLimit.success) {
       return { ok: false, error: rateLimit.error };

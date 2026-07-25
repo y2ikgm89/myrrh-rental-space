@@ -55,6 +55,7 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
 import { MS_PER_DAY } from "@/shared/lib/date-format";
+import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
 
 const COMPLETE_TOKEN_TTL_MS = MS_PER_DAY;
 
@@ -97,6 +98,11 @@ export async function submitReservation(
     formData,
     publicReservationSchema,
     async (data) => {
+      const maintenance = await checkPublicSiteWritable();
+      if (!maintenance.ok) {
+        return { ok: false, error: maintenance.error };
+      }
+
       const rateLimit = await checkActionRateLimit(
         reservationSubmitRateLimiter,
       );

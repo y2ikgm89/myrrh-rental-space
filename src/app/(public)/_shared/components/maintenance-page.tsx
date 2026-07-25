@@ -3,22 +3,30 @@ import { SITE_DEFAULTS } from "@/shared/lib/constants";
 
 interface MaintenancePageProps {
   message?: string | null;
+  siteName?: string;
 }
 
 const DEFAULT_MESSAGE =
   "システムの改善作業のため、一時的にサービスを停止しております。\nしばらくお待ちください。";
 
+function formatBrandLabel(siteName: string | undefined): string {
+  const resolved = siteName?.trim() || SITE_DEFAULTS.name;
+  return resolved.split(/\s+/u)[0]?.toUpperCase() ?? resolved.toUpperCase();
+}
+
 export function MaintenancePage({
   message,
+  siteName,
 }: MaintenancePageProps): ReactElement {
   const displayMessage = message ?? DEFAULT_MESSAGE;
+  const brandLabel = formatBrandLabel(siteName);
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-5 md:px-8">
       <div className="animate-maintenance-in w-full max-w-sm text-center">
         {/* ブランドロゴ */}
         <p className="font-heading text-xl tracking-eyebrow text-foreground">
-          {SITE_DEFAULTS.name.split(" ")[0]?.toUpperCase() ?? "MYRRH"}
+          {brandLabel}
         </p>
 
         {/* MAINTENANCE ラベル */}

@@ -78,7 +78,8 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
         <CardHeader>
           <CardTitle>メンテナンス設定</CardTitle>
           <CardDescription>
-            サイトのメンテナンスモードを設定します
+            公開サイトの閲覧・書込み（予約・問い合わせ・Server Action 等）を
+            メンテナンスモードで制限します
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -96,7 +97,8 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
                 メンテナンスモード
               </label>
               <p className="text-xs text-muted-foreground">
-                有効にすると、公開ページにメンテナンス画面が表示されます
+                有効にすると、公開ページにメンテナンス画面が表示され、予約・問い合わせ・
+                ログイン等の書込み操作も拒否されます
               </p>
             </div>
             <Switch
@@ -121,8 +123,9 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
                 メンテナンスモードが有効です
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                公開ページにアクセスするとメンテナンス画面が表示されます。
-                管理画面は引き続き利用可能です。
+                公開ページの閲覧はメンテナンス画面に切り替わり、Server Action や
+                公開 API の書込みも fail-closed で拒否されます。管理画面・Stripe
+                webhook・cron ジョブは引き続き利用可能です。
               </p>
             </div>
           )}

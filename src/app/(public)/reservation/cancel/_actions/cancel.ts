@@ -33,6 +33,7 @@ import {
   ErrorSeverity,
   logError,
 } from "@/shared/lib/errors/server";
+import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
 
 const CANCEL_TOKEN_COOKIE_NAME = "cancel-token";
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
@@ -69,6 +70,9 @@ export async function cancelGuestReservationAction(
   cancellationReason: string | null = null,
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) {
     logError(new Error("Guest cancel rate-limit hit (form/IP)"), {

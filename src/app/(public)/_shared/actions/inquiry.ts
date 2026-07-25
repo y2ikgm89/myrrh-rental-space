@@ -37,12 +37,18 @@ import {
   assertLoginSignupReagreed,
 } from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
 
 export async function submitInquiry(
   _prev: SubmissionResult | undefined,
   formData: FormData,
 ): Promise<SubmissionResult> {
   return executeConformMutation(formData, publicInquirySchema, async (data) => {
+    const maintenance = await checkPublicSiteWritable();
+    if (!maintenance.ok) {
+      return { ok: false, error: maintenance.error };
+    }
+
     const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
     if (!rateLimit.success) {
       return { ok: false, error: rateLimit.error };

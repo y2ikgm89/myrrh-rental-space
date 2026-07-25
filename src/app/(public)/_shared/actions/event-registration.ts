@@ -61,6 +61,10 @@ import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import { headers } from "next/headers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import {
+  checkPublicSiteWritable,
+  getPublicMaintenanceBlockMutation,
+} from "@/shared/lib/maintenance-guard";
 
 const registrationIdSchema = prismaCuidIdSchema("イベント参加申込");
 
@@ -72,6 +76,11 @@ export async function registerForEvent(
     formData,
     publicEventRegistrationSchema,
     async (data) => {
+      const maintenance = await checkPublicSiteWritable();
+      if (!maintenance.ok) {
+        return { ok: false, error: maintenance.error };
+      }
+
       const rateLimit = await checkActionRateLimit(
         eventRegistrationSubmitRateLimiter,
       );
@@ -266,6 +275,11 @@ export async function registerForEventWaitlist(
     formData,
     publicEventWaitlistRegistrationSchema,
     async (data) => {
+      const maintenance = await checkPublicSiteWritable();
+      if (!maintenance.ok) {
+        return { ok: false, error: maintenance.error };
+      }
+
       const rateLimit = await checkActionRateLimit(
         eventWaitlistRegistrationSubmitRateLimiter,
       );
@@ -413,6 +427,9 @@ export async function cancelEventRegistration(
   registrationId: string,
   turnstileToken?: string,
 ): Promise<MutationResult<null>> {
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   // 1. Rate limit check
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
