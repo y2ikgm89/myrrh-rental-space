@@ -32,6 +32,7 @@ import { updateCookieConsentSettings } from "@/admin/actions/settings";
 import { cookieConsentFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
+import { cn } from "@/shared/lib/cn";
 
 const DEFAULT_MESSAGE =
   "当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。";
@@ -116,116 +117,114 @@ export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
             />
           </div>
 
-          {isEnabled && (
-            <>
+          <div className={cn(!isEnabled && "hidden")}>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.cookieConsentMessage.id}
+              >
+                バナーメッセージ
+              </label>
+              <Textarea
+                {...getTextareaProps(fields.cookieConsentMessage)}
+                placeholder={DEFAULT_MESSAGE}
+                rows={3}
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                空欄の場合はデフォルトメッセージが表示されます
+              </p>
+              {fields.cookieConsentMessage.errors &&
+                fields.cookieConsentMessage.errors.length > 0 && (
+                  <p
+                    id={fields.cookieConsentMessage.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.cookieConsentMessage.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label
                   className="block text-sm font-medium text-foreground"
-                  htmlFor={fields.cookieConsentMessage.id}
+                  htmlFor={fields.cookieConsentAcceptText.id}
                 >
-                  バナーメッセージ
-                </label>
-                <Textarea
-                  {...getTextareaProps(fields.cookieConsentMessage)}
-                  placeholder={DEFAULT_MESSAGE}
-                  rows={3}
-                  disabled={isPending}
-                />
-                <p className="text-xs text-muted-foreground">
-                  空欄の場合はデフォルトメッセージが表示されます
-                </p>
-                {fields.cookieConsentMessage.errors &&
-                  fields.cookieConsentMessage.errors.length > 0 && (
-                    <p
-                      id={fields.cookieConsentMessage.errorId}
-                      className="text-sm text-destructive"
-                    >
-                      {fields.cookieConsentMessage.errors.join(", ")}
-                    </p>
-                  )}
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label
-                    className="block text-sm font-medium text-foreground"
-                    htmlFor={fields.cookieConsentAcceptText.id}
-                  >
-                    同意ボタンテキスト
-                  </label>
-                  <Input
-                    {...getInputProps(fields.cookieConsentAcceptText, {
-                      type: "text",
-                    })}
-                    placeholder={DEFAULT_ACCEPT_TEXT}
-                    disabled={isPending}
-                  />
-                  {fields.cookieConsentAcceptText.errors &&
-                    fields.cookieConsentAcceptText.errors.length > 0 && (
-                      <p
-                        id={fields.cookieConsentAcceptText.errorId}
-                        className="text-sm text-destructive"
-                      >
-                        {fields.cookieConsentAcceptText.errors.join(", ")}
-                      </p>
-                    )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    className="block text-sm font-medium text-foreground"
-                    htmlFor={fields.cookieConsentRejectText.id}
-                  >
-                    拒否ボタンテキスト
-                  </label>
-                  <Input
-                    {...getInputProps(fields.cookieConsentRejectText, {
-                      type: "text",
-                    })}
-                    placeholder={DEFAULT_REJECT_TEXT}
-                    disabled={isPending}
-                  />
-                  {fields.cookieConsentRejectText.errors &&
-                    fields.cookieConsentRejectText.errors.length > 0 && (
-                      <p
-                        id={fields.cookieConsentRejectText.errorId}
-                        className="text-sm text-destructive"
-                      >
-                        {fields.cookieConsentRejectText.errors.join(", ")}
-                      </p>
-                    )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  className="block text-sm font-medium text-foreground"
-                  htmlFor={fields.cookieConsentPolicyUrl.id}
-                >
-                  プライバシーポリシーURL
+                  同意ボタンテキスト
                 </label>
                 <Input
-                  {...getInputProps(fields.cookieConsentPolicyUrl, {
+                  {...getInputProps(fields.cookieConsentAcceptText, {
                     type: "text",
                   })}
-                  placeholder={DEFAULT_POLICY_URL}
+                  placeholder={DEFAULT_ACCEPT_TEXT}
                   disabled={isPending}
                 />
-                <p className="text-xs text-muted-foreground">
-                  「詳細」リンクのリンク先URL
-                </p>
-                {fields.cookieConsentPolicyUrl.errors &&
-                  fields.cookieConsentPolicyUrl.errors.length > 0 && (
+                {fields.cookieConsentAcceptText.errors &&
+                  fields.cookieConsentAcceptText.errors.length > 0 && (
                     <p
-                      id={fields.cookieConsentPolicyUrl.errorId}
+                      id={fields.cookieConsentAcceptText.errorId}
                       className="text-sm text-destructive"
                     >
-                      {fields.cookieConsentPolicyUrl.errors.join(", ")}
+                      {fields.cookieConsentAcceptText.errors.join(", ")}
                     </p>
                   )}
               </div>
-            </>
-          )}
+
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.cookieConsentRejectText.id}
+                >
+                  拒否ボタンテキスト
+                </label>
+                <Input
+                  {...getInputProps(fields.cookieConsentRejectText, {
+                    type: "text",
+                  })}
+                  placeholder={DEFAULT_REJECT_TEXT}
+                  disabled={isPending}
+                />
+                {fields.cookieConsentRejectText.errors &&
+                  fields.cookieConsentRejectText.errors.length > 0 && (
+                    <p
+                      id={fields.cookieConsentRejectText.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.cookieConsentRejectText.errors.join(", ")}
+                    </p>
+                  )}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.cookieConsentPolicyUrl.id}
+              >
+                プライバシーポリシーURL
+              </label>
+              <Input
+                {...getInputProps(fields.cookieConsentPolicyUrl, {
+                  type: "text",
+                })}
+                placeholder={DEFAULT_POLICY_URL}
+                disabled={isPending}
+              />
+              <p className="text-xs text-muted-foreground">
+                「詳細」リンクのリンク先URL
+              </p>
+              {fields.cookieConsentPolicyUrl.errors &&
+                fields.cookieConsentPolicyUrl.errors.length > 0 && (
+                  <p
+                    id={fields.cookieConsentPolicyUrl.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.cookieConsentPolicyUrl.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+          </div>
 
           {formErrors && formErrors.length > 0 && (
             <div
