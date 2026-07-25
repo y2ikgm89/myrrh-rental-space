@@ -1065,6 +1065,7 @@ describe("architecture boundaries", () => {
         "ical/index.ts",
         "lexical/resolve-internal-link-cards.ts",
         "lexical/resolve-space-card-embeds.ts",
+        "maintenance-guard.ts",
         "pages/require-published.ts",
         "reservation/overlap-check.ts",
         "reservation/time-slots.ts",
