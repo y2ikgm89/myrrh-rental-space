@@ -20,10 +20,19 @@ import {
 import { CuratedIcon } from "@/shared/components/icon-curation/CuratedIcon";
 import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
+import { DashboardSectionError } from "./DashboardSectionError";
+import { settleDashboardLoad } from "./settle-dashboard-load";
 
 export async function DashboardNotificationsSection() {
   await connection();
-  const notifications = await getRecentNotifications(5);
+
+  const result = await settleDashboardLoad(() => getRecentNotifications(5));
+
+  if (!result.ok) {
+    return <DashboardSectionError title="最新の通知" />;
+  }
+
+  const notifications = result.value;
   const unreadNotifications = notifications.filter((n) => !n.isRead);
 
   return (

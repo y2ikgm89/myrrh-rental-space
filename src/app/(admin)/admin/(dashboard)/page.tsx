@@ -4,11 +4,15 @@
  * Next.js 16 + React 19 Suspense Streaming:
  * - 各セクションを独立したasync Server Componentsに分割
  * - Suspense境界でプログレッシブレンダリング
+ * - サイドバーと同じ resource:read でセクションを gate
  */
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Suspense } from "react";
+import { connection } from "next/server";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import { DashboardHeader } from "./_components/DashboardHeader";
 import { DashboardStatsSection } from "./_components/DashboardStatsSection";
 import { DashboardNotificationsSection } from "./_components/DashboardNotificationsSection";
@@ -37,55 +41,58 @@ export const metadata: Metadata = {
   title: "ダッシュボード | 管理画面",
 };
 
-function DashboardHeaderSkeleton() {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-40" variant="text" />
-        <Skeleton className="h-5 w-48" variant="text" />
-      </div>
-      <Skeleton className="h-11 w-32" />
-    </div>
-  );
-}
-
 export default async function AdminDashboard(): Promise<ReactElement> {
+  await connection();
+  const user = await requireAdminDashboardAccess();
+
+  const canReadReservation = hasPermission(user.role, "reservation", "read");
+  const canReadInquiry = hasPermission(user.role, "inquiry", "read");
+  const canReadSpace = hasPermission(user.role, "space", "read");
+  const canReadNotification = hasPermission(user.role, "notification", "read");
+  const canReadSettings = hasPermission(user.role, "settings", "read");
+
+  const canShowStats = canReadReservation || canReadInquiry || canReadSpace;
+  const canShowRecent = canReadReservation || canReadInquiry;
+
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
-      <Suspense fallback={<DashboardHeaderSkeleton />}>
-        <DashboardHeader />
-      </Suspense>
+      <DashboardHeader />
 
-      {/* 統計カード: 最も高速なDBクエリ */}
-      <Suspense fallback={<StatsCardsSkeleton />}>
-        <DashboardStatsSection />
-      </Suspense>
+      {canShowStats ? (
+        <Suspense fallback={<StatsCardsSkeleton />}>
+          <DashboardStatsSection />
+        </Suspense>
+      ) : null}
 
-      {/* 最新通知 */}
-      <Suspense fallback={<NotificationsSkeleton />}>
-        <DashboardNotificationsSection />
-      </Suspense>
+      {canReadNotification ? (
+        <Suspense fallback={<NotificationsSkeleton />}>
+          <DashboardNotificationsSection />
+        </Suspense>
+      ) : null}
 
-      {/* 予約・売上推移グラフ */}
-      <Suspense fallback={<ChartSkeleton />}>
-        <DashboardChartSection />
-      </Suspense>
+      {canReadReservation ? (
+        <Suspense fallback={<ChartSkeleton />}>
+          <DashboardChartSection />
+        </Suspense>
+      ) : null}
 
-      {/* アクセス解析: 外部API（Google Analytics）で最も遅い */}
-      <Suspense fallback={<AnalyticsSkeleton />}>
-        <AnalyticsCard />
-      </Suspense>
+      {canReadSettings ? (
+        <Suspense fallback={<AnalyticsSkeleton />}>
+          <AnalyticsCard />
+        </Suspense>
+      ) : null}
 
-      {/* 本日の予約: フィルタ済みクエリ */}
-      <Suspense fallback={<TodayReservationsSkeleton />}>
-        <DashboardTodaySection />
-      </Suspense>
+      {canReadReservation ? (
+        <Suspense fallback={<TodayReservationsSkeleton />}>
+          <DashboardTodaySection />
+        </Suspense>
+      ) : null}
 
-      {/* 最近の予約/お問い合わせ: 2つの並列クエリ */}
-      <Suspense fallback={<RecentItemsSkeleton />}>
-        <DashboardRecentSection />
-      </Suspense>
+      {canShowRecent ? (
+        <Suspense fallback={<RecentItemsSkeleton />}>
+          <DashboardRecentSection />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

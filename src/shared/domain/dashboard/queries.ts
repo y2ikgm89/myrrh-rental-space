@@ -43,11 +43,6 @@ export type RecentInquiry = {
   email: string;
   subject: string;
   status: InquiryStatus;
-  /**
-   * Inquiry Overhaul Phase 1: replies relation (旧 `replyMessage` を置き換え)。
-   * 「未対応 / 返信済み」の派生表示に使う（テーブル UI 側で判定）。
-   */
-  hasReplies: boolean;
   createdAt: Date;
 };
 
@@ -96,6 +91,37 @@ function normalizeLimit(limit: number): number {
   return Math.min(limit, MAX_LIST_LIMIT);
 }
 
+/** JST カレンダー月の 1 日 00:00 (+09:00) を返す。month は 1..12。 */
+function getJstMonthStart(year: number, month: number): Date {
+  const monthStr = String(month).padStart(2, "0");
+  return new Date(`${year}-${monthStr}-01T00:00:00+09:00`);
+}
+
+function getJstMonthBoundaries(now: Date): {
+  thisMonthStart: Date;
+  lastMonthStart: Date;
+} {
+  const todayJstStr = formatJstDateString(now);
+  const [yearStr, monthStr] = todayJstStr.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const thisMonthStart = getJstMonthStart(year, month);
+  const lastMonthYear = month === 1 ? year - 1 : year;
+  const lastMonth = month === 1 ? 12 : month - 1;
+  const lastMonthStart = getJstMonthStart(lastMonthYear, lastMonth);
+  return { thisMonthStart, lastMonthStart };
+}
+
+function getJstTodayWindow(now: Date): {
+  todayStart: Date;
+  tomorrowStart: Date;
+} {
+  const todayJstStr = formatJstDateString(now);
+  const todayStart = new Date(`${todayJstStr}T00:00:00+09:00`);
+  const tomorrowStart = new Date(todayStart.getTime() + MS_PER_DAY);
+  return { todayStart, tomorrowStart };
+}
+
 function mapRecentReservation(reservation: {
   id: string;
   startTime: Date;
@@ -117,18 +143,7 @@ function mapRecentReservation(reservation: {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const now = new Date();
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    0,
-    23,
-    59,
-    59,
-    999,
-  );
+  const { thisMonthStart, lastMonthStart } = getJstMonthBoundaries(new Date());
 
   const [
     thisMonthReservations,
@@ -142,6 +157,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   ] = await Promise.all([
     prisma.reservation.count({
       where: {
+        deletedAt: null,
         createdAt: { gte: thisMonthStart },
         status: {
           notIn: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
@@ -150,7 +166,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
     prisma.reservation.count({
       where: {
-        createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
+        deletedAt: null,
+        createdAt: { gte: lastMonthStart, lt: thisMonthStart },
         status: {
           notIn: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
         },
@@ -158,6 +175,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
     prisma.reservation.aggregate({
       where: {
+        deletedAt: null,
         createdAt: { gte: thisMonthStart },
         status: {
           in: [ReservationStatus.CONFIRMED, ReservationStatus.COMPLETED],
@@ -167,7 +185,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
     prisma.reservation.aggregate({
       where: {
-        createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
+        deletedAt: null,
+        createdAt: { gte: lastMonthStart, lt: thisMonthStart },
         status: {
           in: [ReservationStatus.CONFIRMED, ReservationStatus.COMPLETED],
         },
@@ -175,12 +194,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       _sum: { totalPrice: true },
     }),
     prisma.inquiry.count({
-      // soft-deleted は除外 (deletedAt IS NOT NULL のものは新規対応対象外)
       where: { status: InquiryStatus.NEW, deletedAt: null },
     }),
     prisma.inquiry.count({
-      // 今月受付件数も soft-deleted は除外
-      where: { createdAt: { gte: thisMonthStart }, deletedAt: null },
+      where: {
+        createdAt: { gte: thisMonthStart },
+        deletedAt: null,
+        status: { not: InquiryStatus.SPAM },
+      },
     }),
     prisma.space.count({
       where: { isPublished: true, isActive: true },
@@ -223,6 +244,12 @@ export async function getRecentReservations(
   limit = DEFAULT_LIST_LIMIT,
 ): Promise<RecentReservation[]> {
   const reservations = await prisma.reservation.findMany({
+    where: {
+      deletedAt: null,
+      status: {
+        notIn: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
+      },
+    },
     take: normalizeLimit(limit),
     orderBy: { createdAt: "desc" },
     select: {
@@ -233,7 +260,7 @@ export async function getRecentReservations(
       totalPrice: true,
       space: { select: { name: true } },
       customer: {
-        select: { lastName: true, firstName: true, companyName: true },
+        select: { lastName: true, firstName: true },
       },
     },
   });
@@ -245,7 +272,6 @@ export async function getRecentInquiries(
   limit = DEFAULT_LIST_LIMIT,
 ): Promise<RecentInquiry[]> {
   const inquiries = await prisma.inquiry.findMany({
-    // Inquiry Overhaul Phase 1: soft-deleted は最近リストから除外
     where: { deletedAt: null },
     take: normalizeLimit(limit),
     orderBy: { createdAt: "desc" },
@@ -257,40 +283,19 @@ export async function getRecentInquiries(
       subject: true,
       status: true,
       createdAt: true,
-      // 返信済み/未対応 の派生表示用に replies 件数の 0/1+ 判定を軽量に取得。
-      // 旧 `replyMessage` 列は Phase 1 で DROP されたため、relation 経由で問い合わせる。
-      _count: { select: { replies: true } },
     },
   });
 
-  return inquiries.map((inquiry) => ({
-    id: inquiry.id,
-    receiptNumber: inquiry.receiptNumber,
-    name: inquiry.name,
-    email: inquiry.email,
-    subject: inquiry.subject,
-    status: inquiry.status,
-    hasReplies: inquiry._count.replies > 0,
-    createdAt: inquiry.createdAt,
-  }));
+  return inquiries;
 }
 
 export async function getTodayReservations(): Promise<RecentReservation[]> {
-  const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const todayEnd = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-    23,
-    59,
-    59,
-    999,
-  );
+  const { todayStart, tomorrowStart } = getJstTodayWindow(new Date());
 
   const reservations = await prisma.reservation.findMany({
     where: {
-      startTime: { gte: todayStart, lte: todayEnd },
+      deletedAt: null,
+      startTime: { gte: todayStart, lt: tomorrowStart },
       status: {
         notIn: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
       },
@@ -304,7 +309,7 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
       totalPrice: true,
       space: { select: { name: true } },
       customer: {
-        select: { lastName: true, firstName: true, companyName: true },
+        select: { lastName: true, firstName: true },
       },
     },
   });
@@ -341,6 +346,7 @@ export async function getReservationChartData(): Promise<ReservationChartResult>
       SUM(CASE WHEN status IN (${revenueStatuses}) THEN "totalPrice"::numeric ELSE 0 END) as revenue
     FROM "reservations"
     WHERE "createdAt" >= ${oldestJstMidnightUtc}
+      AND "deletedAt" IS NULL
       AND status NOT IN (${excludedStatuses})
     GROUP BY TO_CHAR("createdAt" AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD')
     ORDER BY date ASC
