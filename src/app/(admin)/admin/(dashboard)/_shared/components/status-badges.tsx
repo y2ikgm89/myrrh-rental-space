@@ -242,6 +242,7 @@ const auditActionConfig = {
   UPDATE: { label: AUDIT_ACTION_LABELS.UPDATE, variant: "secondary" },
   DELETE: { label: AUDIT_ACTION_LABELS.DELETE, variant: "destructive" },
   READ: { label: AUDIT_ACTION_LABELS.READ, variant: "outline" },
+  MANAGE: { label: AUDIT_ACTION_LABELS.MANAGE, variant: "secondary" },
   PUBLISH: { label: AUDIT_ACTION_LABELS.PUBLISH, variant: "default" },
   EXPORT: { label: AUDIT_ACTION_LABELS.EXPORT, variant: "outline" },
   LOGIN_SUCCESS: {

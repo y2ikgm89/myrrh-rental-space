@@ -4691,15 +4691,17 @@ async function seedAuditLog() {
 
   const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
 
-  // AuditAction 全 14 値（schema.prisma の AuditAction enum と一致）:
-  // CREATE / UPDATE / DELETE / PUBLISH / EXPORT / LOGIN_SUCCESS / LOGIN_FAILED /
-  // LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE / PASSWORD_RESET_REQUEST /
-  // PASSWORD_RESET_FAILED / ROLE_CHANGE / INTEGRITY_CHECK
+  // AuditAction 全 16 値（schema.prisma の AuditAction enum と一致）:
+  // CREATE / UPDATE / DELETE / READ / MANAGE / PUBLISH / EXPORT / LOGIN_SUCCESS /
+  // LOGIN_FAILED / LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE /
+  // PASSWORD_RESET_REQUEST / PASSWORD_RESET_FAILED / ROLE_CHANGE / INTEGRITY_CHECK
   const entries: Array<{
     action:
       | "CREATE"
       | "UPDATE"
       | "DELETE"
+      | "READ"
+      | "MANAGE"
       | "PUBLISH"
       | "EXPORT"
       | "LOGIN_SUCCESS"
@@ -4736,6 +4738,20 @@ async function seedAuditLog() {
       resource: "post",
       userId: admin.id,
       createdAt: hoursAgo(48),
+    },
+    {
+      action: "READ",
+      resource: "receipt",
+      userId: admin.id,
+      metadata: { format: "pdf", source: "seed" },
+      createdAt: hoursAgo(44),
+    },
+    {
+      action: "MANAGE",
+      resource: "auditLog",
+      userId: admin.id,
+      metadata: { operation: "verifyAuditLogIntegrity" },
+      createdAt: hoursAgo(42),
     },
     {
       action: "PUBLISH",
@@ -4839,7 +4855,7 @@ async function seedAuditLog() {
   }
 
   console.log(
-    `✅ Created ${entries.length.toString()} audit log entries (all 14 AuditAction values)`,
+    `✅ Created ${entries.length.toString()} audit log entries (all 16 AuditAction values)`,
   );
 }
 

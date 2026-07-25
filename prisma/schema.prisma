@@ -1864,6 +1864,7 @@ enum AuditAction {
   UPDATE
   DELETE
   READ // 参照アクセス（領収書 PDF DL 等のセキュリティ観点で追跡する read）
+  MANAGE // 管理操作（完全性検証トリガー等、CRUD 以外の manage 権限アクション）
   PUBLISH
   EXPORT
   LOGIN_SUCCESS
