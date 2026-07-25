@@ -84,6 +84,8 @@ type ReservationDetailProps = {
   paymentEnabled: boolean;
   /** 返金ポリシーに基づく推奨返金額。ポリシー未設定時は null。 */
   suggestedRefundAmount: number | null;
+  /** reservation:update 権限がない (VIEWER 等) 場合は false */
+  canUpdate?: boolean;
 };
 
 function PriceBreakdown({
@@ -175,6 +177,7 @@ export function ReservationDetail({
   reservation,
   paymentEnabled,
   suggestedRefundAmount,
+  canUpdate = true,
 }: ReservationDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -341,31 +344,40 @@ export function ReservationDetail({
         <CardContent>
           <div className="flex items-center gap-4">
             <ReservationStatusBadge status={reservation.status} />
-            <Select
-              value={reservation.status}
-              onValueChange={(value) => {
-                if (isValidReservationStatus(value)) handleStatusChange(value);
-              }}
-              disabled={isPending}
-            >
-              <SelectTrigger
-                className="w-48"
-                aria-label={`予約ステータスを変更（現在: ${RESERVATION_STATUS_LABELS[reservation.status]}）`}
+            {canUpdate ? (
+              <Select
+                value={reservation.status}
+                onValueChange={(value) => {
+                  if (isValidReservationStatus(value))
+                    handleStatusChange(value);
+                }}
+                disabled={isPending}
               >
-                <SelectValue placeholder="ステータスを変更" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ReservationStatus.PENDING}>
-                  {RESERVATION_STATUS_LABELS[ReservationStatus.PENDING]}に変更
-                </SelectItem>
-                <SelectItem value={ReservationStatus.CONFIRMED}>
-                  {RESERVATION_STATUS_LABELS[ReservationStatus.CONFIRMED]}に変更
-                </SelectItem>
-                <SelectItem value={ReservationStatus.CANCELLED}>
-                  {RESERVATION_STATUS_LABELS[ReservationStatus.CANCELLED]}に変更
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                <SelectTrigger
+                  className="w-48"
+                  aria-label={`予約ステータスを変更（現在: ${RESERVATION_STATUS_LABELS[reservation.status]}）`}
+                >
+                  <SelectValue placeholder="ステータスを変更" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ReservationStatus.PENDING}>
+                    {RESERVATION_STATUS_LABELS[ReservationStatus.PENDING]}に変更
+                  </SelectItem>
+                  <SelectItem value={ReservationStatus.CONFIRMED}>
+                    {RESERVATION_STATUS_LABELS[ReservationStatus.CONFIRMED]}
+                    に変更
+                  </SelectItem>
+                  <SelectItem value={ReservationStatus.CANCELLED}>
+                    {RESERVATION_STATUS_LABELS[ReservationStatus.CANCELLED]}
+                    に変更
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                閲覧専用のため、ステータスは変更できません。
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -421,73 +433,99 @@ export function ReservationDetail({
           ) : null}
         </div>
         <div className="mt-4 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            {reservation.paymentStatus === PaymentStatus.UNPAID ? (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isPaymentPending || !paymentEnabled}
-                onClick={() => void handleCreateCheckoutSession()}
-                title={
-                  paymentEnabled
-                    ? undefined
-                    : "オンライン決済機能が無効です (機能モジュールで有効化できます)"
-                }
-              >
-                {isPaymentPending ? "作成中..." : "決済リンクを作成"}
-              </Button>
-            ) : null}
-            {reservation.paymentStatus === PaymentStatus.PAID ||
-            reservation.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={isPaymentPending || !paymentEnabled}
-                onClick={() => setRefundDialogOpen(true)}
-                title={
-                  paymentEnabled
-                    ? undefined
-                    : "オンライン決済機能が無効のため返金操作を実行できません"
-                }
-              >
-                返金する
-              </Button>
-            ) : null}
-            {reservation.receipt != null ? (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isReissuePending}
-                onClick={openReissueDialog}
-              >
-                {isReissuePending ? "処理中..." : "領収書を再発行"}
-              </Button>
-            ) : null}
-          </div>
-          {reservation.receipt != null ? (
-            <p className="text-xs text-muted-foreground">
-              現在の領収書: No. {reservation.receipt.serialNo}
-              {reservation.receipt.revision > 0
-                ? ` (訂正 rev.${reservation.receipt.revision})`
-                : ""}
-              {" · "}
-              <Link
-                href={`/admin/receipts/${reservation.receipt.serialNo}`}
-                className="text-primary underline-offset-2 hover:underline"
-              >
-                詳細
-              </Link>
-            </p>
-          ) : null}
-          {!paymentEnabled &&
-            (reservation.paymentStatus === PaymentStatus.UNPAID ||
-              reservation.paymentStatus === PaymentStatus.PAID ||
-              reservation.paymentStatus ===
-                PaymentStatus.PARTIALLY_REFUNDED) && (
-              <p className="text-xs text-muted-foreground">
-                オンライン決済機能が無効です。「機能モジュール」で有効化するとこの操作が実行できます。
+          {canUpdate ? (
+            <>
+              <div className="flex items-center gap-2">
+                {reservation.paymentStatus === PaymentStatus.UNPAID ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isPaymentPending || !paymentEnabled}
+                    onClick={() => void handleCreateCheckoutSession()}
+                    title={
+                      paymentEnabled
+                        ? undefined
+                        : "オンライン決済機能が無効です (機能モジュールで有効化できます)"
+                    }
+                  >
+                    {isPaymentPending ? "作成中..." : "決済リンクを作成"}
+                  </Button>
+                ) : null}
+                {reservation.paymentStatus === PaymentStatus.PAID ||
+                reservation.paymentStatus ===
+                  PaymentStatus.PARTIALLY_REFUNDED ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isPaymentPending || !paymentEnabled}
+                    onClick={() => setRefundDialogOpen(true)}
+                    title={
+                      paymentEnabled
+                        ? undefined
+                        : "オンライン決済機能が無効のため返金操作を実行できません"
+                    }
+                  >
+                    返金する
+                  </Button>
+                ) : null}
+                {reservation.receipt != null ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isReissuePending}
+                    onClick={openReissueDialog}
+                  >
+                    {isReissuePending ? "処理中..." : "領収書を再発行"}
+                  </Button>
+                ) : null}
+              </div>
+              {reservation.receipt != null ? (
+                <p className="text-xs text-muted-foreground">
+                  現在の領収書: No. {reservation.receipt.serialNo}
+                  {reservation.receipt.revision > 0
+                    ? ` (訂正 rev.${reservation.receipt.revision})`
+                    : ""}
+                  {" · "}
+                  <Link
+                    href={`/admin/receipts/${reservation.receipt.serialNo}`}
+                    className="text-primary underline-offset-2 hover:underline"
+                  >
+                    詳細
+                  </Link>
+                </p>
+              ) : null}
+              {!paymentEnabled &&
+                (reservation.paymentStatus === PaymentStatus.UNPAID ||
+                  reservation.paymentStatus === PaymentStatus.PAID ||
+                  reservation.paymentStatus ===
+                    PaymentStatus.PARTIALLY_REFUNDED) && (
+                  <p className="text-xs text-muted-foreground">
+                    オンライン決済機能が無効です。「機能モジュール」で有効化するとこの操作が実行できます。
+                  </p>
+                )}
+            </>
+          ) : (
+            <>
+              {reservation.receipt != null ? (
+                <p className="text-xs text-muted-foreground">
+                  現在の領収書: No. {reservation.receipt.serialNo}
+                  {reservation.receipt.revision > 0
+                    ? ` (訂正 rev.${reservation.receipt.revision})`
+                    : ""}
+                  {" · "}
+                  <Link
+                    href={`/admin/receipts/${reservation.receipt.serialNo}`}
+                    className="text-primary underline-offset-2 hover:underline"
+                  >
+                    詳細
+                  </Link>
+                </p>
+              ) : null}
+              <p className="text-sm text-muted-foreground">
+                閲覧専用のため、決済操作は実行できません。
               </p>
-            )}
+            </>
+          )}
         </div>
       </DetailSection>
 
@@ -541,14 +579,16 @@ export function ReservationDetail({
               )}
             </dl>
             <div className="mt-3 flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleUpdateCustomer}
-                disabled={isUpdateCustomerPending}
-              >
-                {isUpdateCustomerPending ? "更新中..." : "顧客情報を更新"}
-              </Button>
+              {canUpdate ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUpdateCustomer}
+                  disabled={isUpdateCustomerPending}
+                >
+                  {isUpdateCustomerPending ? "更新中..." : "顧客情報を更新"}
+                </Button>
+              ) : null}
             </div>
           </div>
         )}
@@ -592,14 +632,20 @@ export function ReservationDetail({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="メモを入力..."
-            disabled={isPending}
+            disabled={isPending || !canUpdate}
           />
-          <Button
-            onClick={handleNotesUpdate}
-            disabled={isPending || notes === (reservation.notes || "")}
-          >
-            メモを保存
-          </Button>
+          {canUpdate ? (
+            <Button
+              onClick={handleNotesUpdate}
+              disabled={isPending || notes === (reservation.notes || "")}
+            >
+              メモを保存
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              閲覧専用のため、メモは編集できません。
+            </p>
+          )}
         </CardContent>
       </Card>
 

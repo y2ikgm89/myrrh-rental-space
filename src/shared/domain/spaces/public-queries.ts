@@ -23,10 +23,8 @@ import {
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
-import {
-  EventStatus,
-  ReservationStatus,
-} from "@/shared/lib/validations/enums/prisma-types";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { ACTIVE_EVENT_STATUSES } from "@/shared/domain/spaces/overlap";
 import type { SpaceSort } from "@/shared/domain/spaces/space-sort";
 import {
   getBlockedSpaceIdsForDate,
@@ -404,7 +402,8 @@ async function runSpacesPaginatedWithAvailabilitySplit(
  * 指定期間と overlap する予約・イベントスロットを持つ Space ID の集合を返す。
  *
  * - Reservation: `status ∈ {PENDING, CONFIRMED}` かつ `deletedAt IS NULL`
- * - EventTimeSlot: `event.status = PUBLISHED` かつ event 未削除 かつ `event.spaceId` が対象
+ * - EventTimeSlot: `event.status ∈ ACTIVE_EVENT_STATUSES`（DRAFT + PUBLISHED）かつ
+ *   event 未削除 かつ `event.spaceId` が対象（予約フォーム / overlap.ts と同一契約）
  *   （EventTimeSlot 自身は spaceId を持たず、Event.spaceId 経由。null 会場は空間検索対象外）
  * - 半開区間: `startTime < range.to AND endTime > range.from`
  */
@@ -428,7 +427,7 @@ async function getUnavailableSpaceIds(
     prisma.eventTimeSlot.findMany({
       where: {
         event: {
-          status: EventStatus.PUBLISHED,
+          status: { in: [...ACTIVE_EVENT_STATUSES] },
           deletedAt: null,
           spaceId: { not: null },
         },

@@ -11,6 +11,10 @@ import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const TAB_BASE: readonly { value: ReservationTabFilter; label: string }[] = [
   {
+    value: "pending",
+    label: RESERVATION_STATUS_LABELS[ReservationStatus.PENDING],
+  },
+  {
     value: "confirmed",
     label: RESERVATION_STATUS_LABELS[ReservationStatus.CONFIRMED],
   },

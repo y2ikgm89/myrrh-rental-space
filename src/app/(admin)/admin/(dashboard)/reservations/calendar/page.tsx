@@ -6,12 +6,14 @@ import {
   getReservationsForCalendar,
   getSpacesForCalendar,
 } from "@/admin/queries/reservation";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import {
   getCalendarDateRange,
   getValidCalendarView,
 } from "@/admin/lib/calendar";
 import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminCalendarSearchParams } from "@/shared/lib/nuqs";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { CalendarViewWrapper } from "../_components/calendar/CalendarViewWrapper";
 import { Button, Breadcrumb } from "@/admin/components/ui";
 import type { Metadata } from "next";
@@ -35,7 +37,13 @@ function CalendarSkeleton() {
   );
 }
 
-async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
+async function CalendarData({
+  searchParams,
+  canMutate,
+}: {
+  searchParams: SearchParams;
+  canMutate: boolean;
+}) {
   await connection();
   const params = await loadAdminCalendarSearchParams(searchParams);
   const view = getValidCalendarView(params.view, "week");
@@ -51,12 +59,20 @@ async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
     getSpacesForCalendar(),
   ]);
 
-  return <CalendarViewWrapper initialEvents={events} spaces={spaces} />;
+  return (
+    <CalendarViewWrapper
+      initialEvents={events}
+      spaces={spaces}
+      canMutate={canMutate}
+    />
+  );
 }
 
 export default async function ReservationCalendarPage({
   searchParams,
 }: PageProps) {
+  const user = await requireAdminDashboardAccess();
+  const canMutate = hasPermission(user.role, "reservation", "update");
   // Pattern A: searchParam が server fetch を gate する → page 側で resolve し
   // Suspense key として注入することで、soft navigation (nuqs push) でも
   // boundary が再 trigger され skeleton → 新コンテンツの正規ストリームが回る。
@@ -95,7 +111,7 @@ export default async function ReservationCalendarPage({
       {/* カレンダー */}
       <div className="min-h-0 flex-1">
         <Suspense key={suspenseKey} fallback={<CalendarSkeleton />}>
-          <CalendarData searchParams={searchParams} />
+          <CalendarData searchParams={searchParams} canMutate={canMutate} />
         </Suspense>
       </div>
     </div>

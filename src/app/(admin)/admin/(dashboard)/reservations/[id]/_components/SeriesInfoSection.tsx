@@ -38,11 +38,13 @@ interface Props {
     deletedAt: Date | null;
     recurrenceInstanceIndex: number;
   };
+  canMutate?: boolean;
 }
 
 export function SeriesInfoSection({
   reservationId,
   series,
+  canMutate = true,
 }: Props): ReactElement {
   const cancelDate = series.cancelledAt ?? series.deletedAt;
   const isSeriesCancelled = cancelDate !== null;
@@ -80,7 +82,7 @@ export function SeriesInfoSection({
 
         {isSeriesCancelled ? (
           <p className="text-sm text-muted-foreground">{cancelledMessage}</p>
-        ) : (
+        ) : canMutate ? (
           <div className="flex flex-wrap gap-2 pt-2">
             <CancelForm
               seriesId={series.id}
@@ -101,6 +103,10 @@ export function SeriesInfoSection({
               variant="destructive"
             />
           </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            閲覧専用のため、定期予約のキャンセルは実行できません。
+          </p>
         )}
       </CardContent>
     </Card>

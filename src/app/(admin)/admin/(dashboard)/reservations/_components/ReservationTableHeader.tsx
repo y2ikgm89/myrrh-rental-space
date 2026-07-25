@@ -10,11 +10,13 @@ type ReservationSortBy = "startTime" | "createdAt";
 type ReservationTableHeaderProps = {
   allSelected: boolean;
   onToggleAll: () => void;
+  showBulkSelect?: boolean;
 };
 
 export function ReservationTableHeader({
   allSelected,
   onToggleAll,
+  showBulkSelect = true,
 }: ReservationTableHeaderProps) {
   const [params, setParams] = useQueryStates(
     adminReservationSearchParamsParsers,
@@ -37,11 +39,13 @@ export function ReservationTableHeader({
     <TableHeader>
       <TableRow>
         <TableHead className="w-10">
-          <CheckboxCell
-            checked={allSelected}
-            onChange={() => onToggleAll()}
-            aria-label="すべての行を選択"
-          />
+          {showBulkSelect ? (
+            <CheckboxCell
+              checked={allSelected}
+              onChange={() => onToggleAll()}
+              aria-label="すべての行を選択"
+            />
+          ) : null}
         </TableHead>
         <SortableColumnHeader
           column="startTime"

@@ -14,19 +14,26 @@ import {
   restoreReservation,
 } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 type ReservationActionCellProps = {
   reservationId: string;
   isDeleted: boolean;
+  status: ReservationStatus;
+  canUpdate?: boolean;
 };
 
 export function ReservationActionCell({
   reservationId,
   isDeleted,
+  status,
+  canUpdate = true,
 }: ReservationActionCellProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRestoring, startRestoreTransition] = useTransition();
   const router = useRouter();
+
+  const isCancelledTrash = isDeleted && status === ReservationStatus.CANCELLED;
 
   const handleRestore = () => {
     startRestoreTransition(async () => {
@@ -43,7 +50,7 @@ export function ReservationActionCell({
   return (
     <>
       <ActionDropdown>
-        {!isDeleted && (
+        {canUpdate && !isDeleted && (
           <ActionDropdownItem
             href={`/admin/reservations/${reservationId}/edit`}
           >
@@ -53,31 +60,49 @@ export function ReservationActionCell({
         <ActionDropdownItem href={`/admin/reservations/${reservationId}`}>
           詳細
         </ActionDropdownItem>
-        <ActionDropdownSeparator />
-        {isDeleted ? (
-          <ActionDropdownItem onClick={handleRestore} disabled={isRestoring}>
-            復元
-          </ActionDropdownItem>
-        ) : (
-          <ActionDropdownItem destructive onClick={() => setDeleteOpen(true)}>
-            削除
-          </ActionDropdownItem>
-        )}
+        {canUpdate ? (
+          <>
+            <ActionDropdownSeparator />
+            {isDeleted ? (
+              isCancelledTrash ? (
+                <ActionDropdownItem disabled>
+                  復元不可（キャンセル済み）
+                </ActionDropdownItem>
+              ) : (
+                <ActionDropdownItem
+                  onClick={handleRestore}
+                  disabled={isRestoring}
+                >
+                  復元
+                </ActionDropdownItem>
+              )
+            ) : (
+              <ActionDropdownItem
+                destructive
+                onClick={() => setDeleteOpen(true)}
+              >
+                削除
+              </ActionDropdownItem>
+            )}
+          </>
+        ) : null}
       </ActionDropdown>
-      <DeleteConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        itemName={`予約 #${reservationId.slice(0, 8)}`}
-        onConfirm={async () => {
-          const result = await deleteReservation(reservationId);
-          if (isMutationError(result)) {
-            toast.error(result.error);
-          } else {
-            toast.success("予約を削除しました");
-            router.refresh();
-          }
-        }}
-      />
+      {canUpdate ? (
+        <DeleteConfirmDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          itemName={`予約 #${reservationId.slice(0, 8)}`}
+          onConfirm={async () => {
+            const result = await deleteReservation(reservationId);
+            if (isMutationError(result)) {
+              toast.error(result.error);
+            } else {
+              toast.success("予約を削除しました");
+              router.refresh();
+            }
+          }}
+        />
+      ) : null}
     </>
   );
 }

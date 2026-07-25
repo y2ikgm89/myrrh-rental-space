@@ -13,11 +13,13 @@ import type { CalendarEvent, SpaceOption } from "@/admin/lib/calendar";
 interface CalendarViewWrapperProps {
   initialEvents: CalendarEvent[];
   spaces: SpaceOption[];
+  canMutate?: boolean;
 }
 
 export function CalendarViewWrapper({
   initialEvents,
   spaces,
+  canMutate = true,
 }: CalendarViewWrapperProps) {
   const state = useCalendarState({ events: initialEvents, spaces });
   const {
@@ -72,6 +74,7 @@ export function CalendarViewWrapper({
       <EventDetailDialog
         event={selectedEvent}
         isPending={isPending}
+        canMutate={canMutate}
         onClose={handleCloseDialog}
         onStatusChange={handleStatusChange}
       />

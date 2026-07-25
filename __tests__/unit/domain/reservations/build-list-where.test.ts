@@ -52,6 +52,14 @@ describe("buildReservationListWhere", () => {
     expect(where).toEqual({ deletedAt: null });
   });
 
+  test("tab=pending → status: PENDING を含む", () => {
+    const where = buildReservationListWhere({ tab: "pending" });
+    expect(where).toMatchObject({
+      deletedAt: null,
+      status: ReservationStatus.PENDING,
+    });
+  });
+
   test("tab=confirmed → status: CONFIRMED を含む", () => {
     const where = buildReservationListWhere({ tab: "confirmed" });
     expect(where).toMatchObject({

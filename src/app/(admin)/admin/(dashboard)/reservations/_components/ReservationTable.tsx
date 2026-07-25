@@ -9,7 +9,10 @@
 import { useState } from "react";
 import { Table, TableBody, TableCell } from "@/admin/components/ui";
 import { ReservationTableHeader } from "./ReservationTableHeader";
-import { PaymentStatusBadge } from "@/admin/components/status-badges";
+import {
+  PaymentStatusBadge,
+  ReservationStatusBadge,
+} from "@/admin/components/status-badges";
 import { ReservationStatusSelect } from "./ReservationStatusSelect";
 import { ReservationActionCell } from "./ReservationActionCell";
 import { ReservationBulkActions } from "./ReservationBulkActions";
@@ -35,6 +38,8 @@ type ReservationTableProps = {
   reservations: ReservationWithRelations[];
   /** feature OFF 時は EmptyState の新規作成を出さない */
   allowCreate?: boolean;
+  /** reservation:update 権限がない (VIEWER 等) 場合は false */
+  canUpdate?: boolean;
 };
 
 // =============================================================================
@@ -53,6 +58,7 @@ function isSelectable(reservation: ReservationWithRelations): boolean {
 export function ReservationTable({
   reservations,
   allowCreate = true,
+  canUpdate = true,
 }: ReservationTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -105,6 +111,7 @@ export function ReservationTable({
             <ReservationTableHeader
               allSelected={allSelected}
               onToggleAll={toggleAll}
+              showBulkSelect={canUpdate}
             />
             <TableBody>
               {reservations.map((reservation) => {
@@ -119,12 +126,14 @@ export function ReservationTable({
                       : {})}
                   >
                     <TableCell onClick={stopRowClick}>
-                      <CheckboxCell
-                        checked={selectedIds.includes(reservation.id)}
-                        onChange={() => toggleOne(reservation.id)}
-                        disabled={!selectable}
-                        aria-label={`${formatDateWithWeekday(reservation.startTime)} ${reservation.space.name} の予約を選択`}
-                      />
+                      {canUpdate ? (
+                        <CheckboxCell
+                          checked={selectedIds.includes(reservation.id)}
+                          onChange={() => toggleOne(reservation.id)}
+                          disabled={!selectable}
+                          aria-label={`${formatDateWithWeekday(reservation.startTime)} ${reservation.space.name} の予約を選択`}
+                        />
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <div>
@@ -166,17 +175,21 @@ export function ReservationTable({
                         <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                           削除済み
                         </span>
-                      ) : (
+                      ) : canUpdate ? (
                         <ReservationStatusSelect
                           reservationId={reservation.id}
                           currentStatus={reservation.status}
                         />
+                      ) : (
+                        <ReservationStatusBadge status={reservation.status} />
                       )}
                     </TableCell>
                     <TableCell className="text-right" onClick={stopRowClick}>
                       <ReservationActionCell
                         reservationId={reservation.id}
                         isDeleted={reservation.deletedAt != null}
+                        status={reservation.status}
+                        canUpdate={canUpdate}
                       />
                     </TableCell>
                   </ClickableTableRow>
@@ -188,10 +201,12 @@ export function ReservationTable({
       </div>
 
       {/* 一括操作バー: 現在の画面に表示されている行だけを bulk 対象に渡す */}
-      <ReservationBulkActions
-        selectedIds={effectiveSelectedIds}
-        onClear={() => setSelectedIds([])}
-      />
+      {canUpdate ? (
+        <ReservationBulkActions
+          selectedIds={effectiveSelectedIds}
+          onClear={() => setSelectedIds([])}
+        />
+      ) : null}
     </>
   );
 }
