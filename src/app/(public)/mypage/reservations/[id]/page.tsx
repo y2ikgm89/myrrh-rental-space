@@ -42,6 +42,7 @@ import { getCustomerCanCancelSeriesInFull } from "@/shared/domain/reservations/p
 import { ReviewForm } from "./_components/review-form";
 import { ReviewDisplay } from "./_components/review-display";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-passcode-queries";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -160,6 +161,7 @@ export default async function ReservationDetailPage({
     paymentEnabled,
     cancellationPolicy,
     receiptSerialNo,
+    passcodeRevealState,
   ] = await Promise.all([
     isCompleted
       ? getReviewForReservation(reservation.id, customer.id)
@@ -169,6 +171,11 @@ export default async function ReservationDetailPage({
     isFeatureEnabled("payment"),
     getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
     findReceiptSerialNoByReservationId(reservation.id),
+    getPasscodeRevealState(
+      reservation.id,
+      { kind: "customer", customerId: customer.id },
+      { now },
+    ),
   ]);
   const cancellationPolicyUrl = cancellationPolicy
     ? `/terms/${cancellationPolicy.slug}`
@@ -233,6 +240,7 @@ export default async function ReservationDetailPage({
         refundPolicyLines={refundPolicyLines}
         paymentEnabled={paymentEnabled}
         receiptSerialNo={receiptSerialNo}
+        passcodeRevealState={passcodeRevealState}
       />
 
       {(canEdit || canCancel) && (

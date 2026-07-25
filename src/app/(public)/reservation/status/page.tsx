@@ -12,6 +12,7 @@ import { reservationDeadlineNow } from "@/shared/domain/reservations/server-dead
 import { getReservationForGuestStatus } from "@/shared/domain/reservations/customer-queries";
 import {
   buildGuestReceiptDownloadHref,
+  buildGuestCancelHref,
   resolveGuestStatusAccess,
   shouldShowGuestClaimLink,
 } from "@/shared/domain/reservations/guest-status-view";
@@ -19,11 +20,21 @@ import { createReservationClaimToken } from "@/shared/lib/reservation-claim-toke
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,
+  RESERVATION_STATUS_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
+import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
+import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import { PasscodeReveal } from "@/app/(public)/_shared/components/passcode-reveal";
+import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import {
   publicQueryRateLimiter,
   getClientIpFromHeaders,
@@ -61,27 +72,61 @@ export default async function GuestReservationStatusPage(): Promise<ReactElement
     return <InvalidLinkView />;
   }
 
-  const [reservation, user] = await Promise.all([
-    getReservationForGuestStatus(access.reservationId),
-    getCurrentCustomerUser(),
-  ]);
+  const [reservation, user, calendarSettings, deadlineSettings] =
+    await Promise.all([
+      getReservationForGuestStatus(access.reservationId),
+      getCurrentCustomerUser(),
+      getCalendarEmailSettings(),
+      getReservationDeadlineSettings(),
+    ]);
 
   if (!reservation) {
     return <InvalidLinkView />;
   }
 
+  const now = reservationDeadlineNow();
   const address = reservation.space.location?.address ?? null;
   const paymentStatus = getValidPaymentStatus(reservation.paymentStatus);
+  const reservationStatusLabel = isValidReservationStatus(reservation.status)
+    ? RESERVATION_STATUS_LABELS[reservation.status]
+    : reservation.status;
+  const isCancelled = reservation.status === ReservationStatus.CANCELLED;
   const receiptSerialNo = reservation.receipt?.serialNo ?? null;
   const receiptDownloadHref = receiptSerialNo
     ? buildGuestReceiptDownloadHref(receiptSerialNo)
     : null;
+  const cancelHref = buildGuestCancelHref({
+    reservationId: reservation.id,
+    status: reservation.status,
+    startTime: reservation.startTime,
+    cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
+    now,
+  });
   const claimUrl = shouldShowGuestClaimLink({
     customerUserId: reservation.customer.userId,
     isLoggedIn: user != null,
   })
     ? `/claim/reservation?token=${createReservationClaimToken(reservation.id)}`
     : null;
+  const calendarUrls =
+    !isCancelled && calendarSettings.addToCalendarLinksEnabled
+      ? buildAddToCalendarUrls({
+          summary: `【予約】${reservation.space.name}`,
+          description: [
+            `予約番号: ${reservation.id.slice(0, 8).toUpperCase()}`,
+            `スペース: ${reservation.space.name}`,
+          ].join("\n"),
+          startTime: reservation.startTime,
+          endTime: reservation.endTime,
+          ...(address ? { location: address } : {}),
+          icsDownloadUrl: `${getAppUrl()}/api/calendar/reservation/${reservation.id}`,
+        })
+      : null;
+  const passcodeRevealState = await getPasscodeRevealState(
+    reservation.id,
+    { kind: "status-token", reservationId: reservation.id },
+    { now },
+  );
 
   return (
     <Layout>
@@ -128,10 +173,16 @@ export default async function GuestReservationStatusPage(): Promise<ReactElement
           <DetailRow label="合計金額">
             {formatPrice(reservation.totalPrice, "未定")}
           </DetailRow>
+          <DetailRow label="予約状態">{reservationStatusLabel}</DetailRow>
           <DetailRow label="お支払い">
             {PAYMENT_STATUS_LABELS[paymentStatus]}
           </DetailRow>
         </dl>
+
+        <PasscodeReveal
+          reservationId={reservation.id}
+          initialState={passcodeRevealState}
+        />
 
         {receiptDownloadHref && (
           <div className="border-t border-border px-4 py-4 sm:px-6">
@@ -148,11 +199,27 @@ export default async function GuestReservationStatusPage(): Promise<ReactElement
         )}
       </div>
 
+      {calendarUrls && (
+        <div className="border border-border p-4 sm:p-6">
+          <AddToCalendar urls={calendarUrls} variant="public" />
+        </div>
+      )}
+
       <div className="border border-border p-4 sm:p-6">
         <Heading level={2} className="!text-base">
           次のステップ
         </Heading>
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          {cancelHref && (
+            <li>
+              <a
+                href={cancelHref}
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                この予約をキャンセルする
+              </a>
+            </li>
+          )}
           {user ? (
             <li>
               <Link

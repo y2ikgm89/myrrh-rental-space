@@ -22,6 +22,9 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { isSmartLockPadDeviceType } from "@/shared/lib/validations/enums/helpers";
 import { PASSCODE_CRYPTO_PURPOSE } from "@/shared/domain/smart-lock/issue-passcode";
+import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
+
+export type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 
 export type CustomerPasscodeAuth =
   | { readonly kind: "customer"; readonly customerId: string }
@@ -254,4 +257,37 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
     revealed: true,
     passcodes,
   };
+}
+
+/**
+ * PasscodeReveal の初期表示用。decrypt せず pending / outside_window / visible 等のみ返す。
+ */
+export async function getPasscodeRevealState(
+  reservationId: string,
+  auth: CustomerPasscodeAuth,
+  options: { readonly now?: Date } = {},
+): Promise<PasscodeRevealState> {
+  const result = await getCustomerVisibleSmartLockPasscodesForReservation(
+    reservationId,
+    auth,
+    options.now !== undefined
+      ? { reveal: false, now: options.now }
+      : { reveal: false },
+  );
+
+  switch (result.status) {
+    case "unauthorized":
+    case "unavailable":
+      return { status: "unavailable" };
+    case "pending":
+      return { status: "pending" };
+    case "outside_window":
+      return { status: "outside_window" };
+    case "visible":
+      return { status: "visible" };
+    default: {
+      const _exhaustive: never = result;
+      return _exhaustive;
+    }
+  }
 }

@@ -1,7 +1,14 @@
 import "server-only";
 
+import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
+import {
+  computeCancelTokenExpiresAt,
+  createCancelToken,
+} from "@/shared/lib/reservation-cancel-token";
 import { verifyStatusToken } from "@/shared/lib/reservation-status-token";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 export type GuestStatusAccessResult =
   | { kind: "invalid" }
@@ -42,4 +49,43 @@ export function shouldShowGuestClaimLink(input: {
   isLoggedIn: boolean;
 }): boolean {
   return !input.isLoggedIn && input.customerUserId == null;
+}
+
+const CANCELLABLE_STATUSES = new Set<ReservationStatus>(
+  ACTIVE_RESERVATION_STATUSES,
+);
+
+/**
+ * ゲスト向けキャンセル導線 URL。
+ * キャンセル可能ステータスかつ期限内のときのみ返す。
+ */
+export function buildGuestCancelHref(input: {
+  reservationId: string;
+  status: ReservationStatus;
+  startTime: Date;
+  cancellationDeadlineHours: number;
+  now: Date;
+}): string | null {
+  if (!CANCELLABLE_STATUSES.has(input.status)) {
+    return null;
+  }
+  if (
+    !isWithinDeadline(
+      input.startTime,
+      input.cancellationDeadlineHours,
+      input.now,
+    )
+  ) {
+    return null;
+  }
+  const expiresAt = computeCancelTokenExpiresAt(
+    input.startTime,
+    input.cancellationDeadlineHours,
+    input.now,
+  );
+  if (expiresAt.getTime() <= input.now.getTime()) {
+    return null;
+  }
+  const token = createCancelToken(input.reservationId, expiresAt, input.now);
+  return `/reservation/cancel?token=${token}`;
 }

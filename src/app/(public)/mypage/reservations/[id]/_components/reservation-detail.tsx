@@ -25,6 +25,8 @@ import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import { PasscodeReveal } from "@/app/(public)/_shared/components/passcode-reveal";
+import type { PasscodeRevealState } from "@/shared/domain/smart-lock/passcode-reveal-state";
 import { CheckoutButton } from "./checkout-button";
 import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 
@@ -90,6 +92,8 @@ interface ReservationDetailProps {
    * `/api/receipts/[serialNo]/pdf`) を使う。
    */
   readonly receiptSerialNo: string | null;
+  /** SwitchBot 解錠番号の非秘匿表示状態（平文なし）。 */
+  readonly passcodeRevealState: PasscodeRevealState;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +128,7 @@ export function ReservationDetail({
   refundPolicyLines,
   paymentEnabled,
   receiptSerialNo,
+  passcodeRevealState,
 }: ReservationDetailProps) {
   const {
     id,
@@ -279,6 +284,8 @@ export function ReservationDetail({
           </DetailRow>
         )}
       </dl>
+
+      <PasscodeReveal reservationId={id} initialState={passcodeRevealState} />
 
       {/* Policy info (active reservations only) */}
       {isActive && deadlineSettings != null && (

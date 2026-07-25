@@ -6,9 +6,11 @@ import {
 } from "@/shared/lib/reservation-status-token";
 import {
   buildGuestReceiptDownloadHref,
+  buildGuestCancelHref,
   resolveGuestStatusAccess,
   shouldShowGuestClaimLink,
 } from "@/shared/domain/reservations/guest-status-view";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { verifyReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import { receiptDownloadNow } from "@/shared/domain/receipts/server-download-instant";
 
@@ -102,5 +104,46 @@ describe("shouldShowGuestClaimLink", () => {
         isLoggedIn: false,
       }),
     ).toBe(false);
+  });
+});
+
+describe("buildGuestCancelHref", () => {
+  const reservationId = randomUUID();
+  const now = new Date("2026-04-01T00:00:00Z");
+  const startTime = new Date("2026-04-10T10:00:00Z");
+
+  test("CONFIRMED かつ期限内なら cancel URL を返す", () => {
+    const href = buildGuestCancelHref({
+      reservationId,
+      status: ReservationStatus.CONFIRMED,
+      startTime,
+      cancellationDeadlineHours: 24,
+      now,
+    });
+    expect(href).toMatch(/^\/reservation\/cancel\?token=[A-Za-z0-9_-]+$/);
+  });
+
+  test("CANCELLED なら null", () => {
+    expect(
+      buildGuestCancelHref({
+        reservationId,
+        status: ReservationStatus.CANCELLED,
+        startTime,
+        cancellationDeadlineHours: 24,
+        now,
+      }),
+    ).toBeNull();
+  });
+
+  test("期限超過なら null", () => {
+    expect(
+      buildGuestCancelHref({
+        reservationId,
+        status: ReservationStatus.CONFIRMED,
+        startTime: new Date("2026-04-01T12:00:00Z"),
+        cancellationDeadlineHours: 24,
+        now,
+      }),
+    ).toBeNull();
   });
 });

@@ -128,6 +128,7 @@ export async function getReservationForGuestStatus(reservationId: string) {
     where: { id: reservationId, deletedAt: null },
     select: {
       id: true,
+      status: true,
       startTime: true,
       endTime: true,
       totalPrice: true,
