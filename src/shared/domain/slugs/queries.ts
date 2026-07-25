@@ -17,15 +17,18 @@ export async function findSlugConflict(
   const normalizedSlug = slug.toLowerCase();
 
   const [post, news, page, space] = await Promise.all([
-    currentType === "post" && currentId
-      ? prisma.post.findFirst({
-          where: { slug: normalizedSlug, id: { not: currentId } },
-          select: { id: true },
-        })
-      : prisma.post.findUnique({
-          where: { slug: normalizedSlug },
-          select: { id: true },
-        }),
+    // Post.slug は partial unique (deletedAt IS NULL) のため findUnique 不可。
+    // ゴミ箱中の slug は衝突とみなさない。
+    prisma.post.findFirst({
+      where: {
+        slug: normalizedSlug,
+        deletedAt: null,
+        ...(currentType === "post" && currentId
+          ? { id: { not: currentId } }
+          : {}),
+      },
+      select: { id: true },
+    }),
     // News.slug は partial unique (deletedAt IS NULL) のため findUnique 不可。
     // ゴミ箱中の slug は衝突とみなさない。
     prisma.news.findFirst({

@@ -150,7 +150,7 @@ function SortableCategoryRow({
           <Button
             variant="destructive"
             size="sm"
-            disabled={isPending || category._count.posts > 0}
+            disabled={isPending || category.hasLinkedPostsIncludingTrash}
             onClick={() => setDeleteDialogOpen(true)}
             aria-label={`${category.name}カテゴリを削除`}
           >

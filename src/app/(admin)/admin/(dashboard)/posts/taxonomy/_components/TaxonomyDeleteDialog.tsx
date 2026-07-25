@@ -18,7 +18,10 @@ import { IconTrash } from "@tabler/icons-react";
 
 type TaxonomyDeleteDialogProps = {
   label: string;
+  /** アクティブ記事数（表示用） */
   postCount: number;
+  /** ゴミ箱含む紐づけがある場合 true（削除ブロック） */
+  hasLinkedPostsIncludingTrash: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete: () => void;
@@ -32,11 +35,14 @@ type TaxonomyDeleteDialogProps = {
 export function TaxonomyDeleteDialog({
   label,
   postCount,
+  hasLinkedPostsIncludingTrash,
   open,
   onOpenChange,
   onDelete,
   isPending,
 }: TaxonomyDeleteDialogProps) {
+  const isBlocked = hasLinkedPostsIncludingTrash;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -47,13 +53,18 @@ export function TaxonomyDeleteDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{label}を削除しますか？</DialogTitle>
+          <DialogTitle>
+            {isBlocked
+              ? `${label}を削除できません`
+              : `${label}を削除しますか？`}
+          </DialogTitle>
           <DialogDescription>
-            {postCount > 0 ? (
+            {isBlocked ? (
               <>
-                この{label}には{postCount}
-                件の投稿が紐づいています。
-                削除すると、投稿との紐づけが解除されます。
+                この{label}には投稿が紐づいているため削除できません
+                {postCount === 0
+                  ? "（ゴミ箱内の記事も含みます）。"
+                  : `（${postCount}件のアクティブ記事）。`}
               </>
             ) : (
               <>この操作は取り消せません。</>
@@ -66,11 +77,17 @@ export function TaxonomyDeleteDialog({
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
-            キャンセル
+            {isBlocked ? "閉じる" : "キャンセル"}
           </Button>
-          <Button variant="destructive" onClick={onDelete} disabled={isPending}>
-            {isPending ? "削除中..." : "削除"}
-          </Button>
+          {!isBlocked && (
+            <Button
+              variant="destructive"
+              onClick={onDelete}
+              disabled={isPending}
+            >
+              {isPending ? "削除中..." : "削除"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

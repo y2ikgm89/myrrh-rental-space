@@ -106,7 +106,10 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: ["blog"],
     sectionTypes: ["post-list"],
     templates: ["blog-archive"],
-    cronPaths: [],
+    cronPaths: [
+      "/api/cron/blog-scheduled-publish",
+      "/api/cron/blog-trash-cleanup",
+    ],
   },
   news: {
     id: "news",

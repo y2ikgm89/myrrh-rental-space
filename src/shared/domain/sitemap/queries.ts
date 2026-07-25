@@ -1,8 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { publicPostsWhere } from "@/shared/domain/posts/queries";
 import { logger } from "@/shared/lib/errors/logger-core";
-import { EventStatus, PostStatus } from "@generated/prisma/enums";
+import { EventStatus } from "@generated/prisma/enums";
 
 /**
  * Sitemap 用ドメイン query。
@@ -119,7 +120,7 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
       orderBy: { updatedAt: "desc" },
     }),
     prisma.post.findMany({
-      where: { status: PostStatus.PUBLISHED },
+      where: publicPostsWhere(),
       select: {
         slug: true,
         updatedAt: true,
@@ -133,12 +134,12 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
       orderBy: { updatedAt: "desc" },
     }),
     prisma.postCategory.findMany({
-      where: { posts: { some: { status: PostStatus.PUBLISHED } } },
+      where: { posts: { some: publicPostsWhere() } },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.postTag.findMany({
-      where: { posts: { some: { post: { status: PostStatus.PUBLISHED } } } },
+      where: { posts: { some: { post: publicPostsWhere() } } },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),

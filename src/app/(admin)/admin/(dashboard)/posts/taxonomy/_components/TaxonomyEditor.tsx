@@ -320,6 +320,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
           <TaxonomyDeleteDialog
             label={config.label}
             postCount={postCount}
+            hasLinkedPostsIncludingTrash={data.hasLinkedPostsIncludingTrash}
             open={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
             onDelete={handleDelete}
@@ -617,6 +618,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
           <TaxonomyDeleteDialog
             label={config.label}
             postCount={postCount}
+            hasLinkedPostsIncludingTrash={data.hasLinkedPostsIncludingTrash}
             open={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
             onDelete={handleDelete}

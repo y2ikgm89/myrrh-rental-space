@@ -432,7 +432,7 @@ export function usePostEditor({
           return;
         }
 
-        toast.success("投稿記事を削除しました");
+        toast.success("投稿をゴミ箱へ移動しました");
         router.push("/admin/posts");
       } catch (error) {
         logger.error("削除中にエラーが発生しました", {
@@ -470,6 +470,14 @@ export function usePostEditor({
     if (!settingsData) {
       setIsSettingsDialogOpen(true);
       return;
+    }
+
+    // 公開中記事はプレビュー前保存がそのまま公開面に反映されるため確認する
+    if (post.status === PostStatus.PUBLISHED) {
+      const confirmed = window.confirm(
+        "公開中の記事です。プレビュー前に保存すると公開ページも更新されます。続行しますか？",
+      );
+      if (!confirmed) return;
     }
 
     core.startTransition(async () => {

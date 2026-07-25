@@ -69,6 +69,7 @@ export function CustomSection({
               <SanitizedHtml
                 html={config.body}
                 className="prose prose-neutral max-w-none"
+                restrictIframeHostnames
               />
             </div>
           </ScrollReveal>

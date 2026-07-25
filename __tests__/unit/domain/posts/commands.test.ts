@@ -5,6 +5,10 @@ const mockPostFindUnique = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
 
+const mockPostFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
+  () => Promise.resolve(null),
+);
+
 const mockPostCreate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "post-1", slug: "my-post" }),
 );
@@ -109,6 +113,7 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     post: {
       findUnique: mockPostFindUnique,
+      findFirst: mockPostFindFirst,
       create: mockPostCreate,
       update: mockPostUpdate,
       delete: mockPostDelete,
@@ -216,6 +221,8 @@ import {
   updatePostBody,
   updatePostSettings,
   deletePost,
+  restorePost,
+  permanentlyDeletePost,
   publishPost,
   unpublishPost,
   archivePost,
@@ -403,6 +410,18 @@ describe("createPost", () => {
       await expect(createPost(VALID_CREATE_INPUT)).rejects.toThrow(DomainError);
     });
 
+    test("slug の P2002 は CONFLICT に変換する", async () => {
+      mockPostCreate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      });
+
+      await expect(createPost(VALID_CREATE_INPUT)).rejects.toMatchObject({
+        code: "CONFLICT",
+        message: "このスラッグは既に投稿で使用されています",
+      });
+    });
+
     test("カテゴリが存在しない場合 NOT_FOUND エラーをスローする", async () => {
       mockPostCategoryFindUnique.mockResolvedValue(null);
 
@@ -463,10 +482,10 @@ describe("createPost", () => {
 
 describe("updatePostBody", () => {
   beforeEach(() => {
-    mockPostFindUnique.mockReset();
+    mockPostFindFirst.mockReset();
     mockPostUpdate.mockReset();
 
-    mockPostFindUnique.mockResolvedValue(EXISTING_POST);
+    mockPostFindFirst.mockResolvedValue(EXISTING_POST);
     mockPostUpdate.mockResolvedValue({ id: POST_ID });
   });
 
@@ -484,7 +503,7 @@ describe("updatePostBody", () => {
 
   describe("異常系", () => {
     test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
+      mockPostFindFirst.mockResolvedValue(null);
 
       await expect(
         updatePostBody(POST_ID, VALID_UPDATE_BODY_INPUT),
@@ -523,13 +542,13 @@ describe("updatePostBody", () => {
 
 describe("updatePostSettings", () => {
   beforeEach(() => {
-    mockPostFindUnique.mockReset();
+    mockPostFindFirst.mockReset();
     mockCheckSlugAvailability.mockReset();
     mockPostCategoryFindUnique.mockReset();
     mockPostTagCount.mockReset();
     mockPostUpdate.mockReset();
 
-    mockPostFindUnique.mockResolvedValue(EXISTING_POST);
+    mockPostFindFirst.mockResolvedValue(EXISTING_POST);
     mockCheckSlugAvailability.mockResolvedValue({ available: true });
     mockPostCategoryFindUnique.mockResolvedValue({ id: CATEGORY_ID });
     mockPostTagCount.mockResolvedValue(0);
@@ -581,7 +600,7 @@ describe("updatePostSettings", () => {
 
   describe("異常系", () => {
     test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
+      mockPostFindFirst.mockResolvedValue(null);
 
       await expect(
         updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
@@ -601,6 +620,20 @@ describe("updatePostSettings", () => {
         updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
       ).rejects.toMatchObject({
         code: "CONFLICT",
+      });
+    });
+
+    test("slug の P2002 は CONFLICT に変換する", async () => {
+      mockPostUpdate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      });
+
+      await expect(
+        updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        message: "このスラッグは既に投稿で使用されています",
       });
     });
 
@@ -630,29 +663,157 @@ describe("updatePostSettings", () => {
 });
 
 // =============================================================================
-// deletePost
+// deletePost (soft delete)
 // =============================================================================
 
-describe("deletePost", () => {
+describe("deletePost (soft delete)", () => {
+  beforeEach(() => {
+    mockPostFindFirst.mockReset();
+    mockPostUpdate.mockReset();
+    mockPostDelete.mockReset();
+
+    mockPostFindFirst.mockResolvedValue(EXISTING_POST);
+    mockPostUpdate.mockResolvedValue({ id: POST_ID });
+  });
+
+  describe("正常系", () => {
+    test("投稿をソフトデリートするとスラッグを返す", async () => {
+      const result = await deletePost(POST_ID);
+
+      expect(result).toEqual({ slug: POST_SLUG });
+      expect(mockPostUpdate).toHaveBeenCalledTimes(1);
+      expect(mockPostDelete).not.toHaveBeenCalled();
+    });
+
+    test("update が deletedAt を設定して呼ばれる", async () => {
+      await deletePost(POST_ID);
+
+      expect(mockPostUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: POST_ID, deletedAt: null },
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
+      mockPostFindFirst.mockResolvedValue(null);
+
+      await expect(deletePost("non-existent")).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "投稿記事が見つかりません",
+      });
+    });
+
+    test("存在しない投稿では update が呼ばれない", async () => {
+      mockPostFindFirst.mockResolvedValue(null);
+
+      await expect(deletePost("non-existent")).rejects.toThrow(DomainError);
+
+      expect(mockPostUpdate).not.toHaveBeenCalled();
+      expect(mockPostDelete).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// =============================================================================
+// restorePost
+// =============================================================================
+
+describe("restorePost", () => {
+  const DELETED_POST = {
+    id: POST_ID,
+    slug: POST_SLUG,
+    deletedAt: new Date("2026-07-01T00:00:00Z"),
+  };
+
+  beforeEach(() => {
+    mockPostFindUnique.mockReset();
+    mockPostFindFirst.mockReset();
+    mockPostUpdate.mockReset();
+
+    mockPostFindUnique.mockResolvedValue(DELETED_POST);
+    mockPostFindFirst.mockResolvedValue(null);
+    mockPostUpdate.mockResolvedValue({ id: POST_ID });
+  });
+
+  describe("正常系", () => {
+    test("ゴミ箱の投稿を復元するとスラッグを返す", async () => {
+      const result = await restorePost(POST_ID);
+
+      expect(result).toEqual({ slug: POST_SLUG });
+      expect(mockPostUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: POST_ID },
+          data: { deletedAt: null },
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
+      mockPostFindUnique.mockResolvedValue(null);
+
+      await expect(restorePost("non-existent")).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "投稿記事が見つかりません",
+      });
+    });
+
+    test("既にアクティブな投稿は VALIDATION エラーをスローする", async () => {
+      mockPostFindUnique.mockResolvedValue({
+        id: POST_ID,
+        slug: POST_SLUG,
+        deletedAt: null,
+      });
+
+      await expect(restorePost(POST_ID)).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "この投稿は削除されていません",
+      });
+      expect(mockPostUpdate).not.toHaveBeenCalled();
+    });
+
+    test("同一 slug のアクティブ投稿があると CONFLICT", async () => {
+      mockPostFindFirst.mockResolvedValue({ id: "other-post" });
+
+      await expect(restorePost(POST_ID)).rejects.toMatchObject({
+        code: "CONFLICT",
+      });
+      expect(mockPostUpdate).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// =============================================================================
+// permanentlyDeletePost
+// =============================================================================
+
+describe("permanentlyDeletePost", () => {
+  const DELETED_POST = {
+    id: POST_ID,
+    slug: POST_SLUG,
+    deletedAt: new Date("2026-07-01T00:00:00Z"),
+  };
+
   beforeEach(() => {
     mockPostFindUnique.mockReset();
     mockPostDelete.mockReset();
 
-    mockPostFindUnique.mockResolvedValue(EXISTING_POST);
+    mockPostFindUnique.mockResolvedValue(DELETED_POST);
     mockPostDelete.mockResolvedValue({ id: POST_ID });
   });
 
   describe("正常系", () => {
-    test("投稿を削除するとスラッグを返す", async () => {
-      const result = await deletePost(POST_ID);
+    test("ゴミ箱の投稿を完全削除するとスラッグを返す", async () => {
+      const result = await permanentlyDeletePost(POST_ID);
 
       expect(result).toEqual({ slug: POST_SLUG });
-      expect(mockPostDelete).toHaveBeenCalledTimes(1);
-    });
-
-    test("正しいIDで delete が呼ばれる", async () => {
-      await deletePost(POST_ID);
-
       expect(mockPostDelete).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: POST_ID },
@@ -665,17 +826,24 @@ describe("deletePost", () => {
     test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
       mockPostFindUnique.mockResolvedValue(null);
 
-      await expect(deletePost("non-existent")).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "投稿記事が見つかりません",
-      });
+      await expect(permanentlyDeletePost("non-existent")).rejects.toMatchObject(
+        {
+          code: "NOT_FOUND",
+          message: "投稿記事が見つかりません",
+        },
+      );
     });
 
-    test("存在しない投稿では delete が呼ばれない", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
+    test("アクティブな投稿は CONFLICT エラーをスローする", async () => {
+      mockPostFindUnique.mockResolvedValue({
+        id: POST_ID,
+        slug: POST_SLUG,
+        deletedAt: null,
+      });
 
-      await expect(deletePost("non-existent")).rejects.toThrow(DomainError);
-
+      await expect(permanentlyDeletePost(POST_ID)).rejects.toMatchObject({
+        code: "CONFLICT",
+      });
       expect(mockPostDelete).not.toHaveBeenCalled();
     });
   });
@@ -687,10 +855,10 @@ describe("deletePost", () => {
 
 describe("publishPost", () => {
   beforeEach(() => {
-    mockPostFindUnique.mockReset();
+    mockPostFindFirst.mockReset();
     mockPostUpdate.mockReset();
 
-    mockPostFindUnique.mockResolvedValue(EXISTING_POST_WITH_CONTENT);
+    mockPostFindFirst.mockResolvedValue(EXISTING_POST_WITH_CONTENT);
     mockPostUpdate.mockResolvedValue({ id: POST_ID });
   });
 
@@ -703,7 +871,7 @@ describe("publishPost", () => {
     });
 
     test("初回公開時は publishedAt が設定される", async () => {
-      mockPostFindUnique.mockResolvedValue({
+      mockPostFindFirst.mockResolvedValue({
         ...EXISTING_POST_WITH_CONTENT,
         publishedAt: null,
       });
@@ -716,7 +884,7 @@ describe("publishPost", () => {
 
     test("再公開時は既存の publishedAt が維持される", async () => {
       const existingDate = new Date("2024-01-15T12:00:00Z");
-      mockPostFindUnique.mockResolvedValue({
+      mockPostFindFirst.mockResolvedValue({
         ...EXISTING_POST_WITH_CONTENT,
         publishedAt: existingDate,
       });
@@ -736,7 +904,7 @@ describe("publishPost", () => {
 
   describe("異常系", () => {
     test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
+      mockPostFindFirst.mockResolvedValue(null);
 
       await expect(publishPost(POST_ID)).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -752,10 +920,10 @@ describe("publishPost", () => {
 
 describe("unpublishPost", () => {
   beforeEach(() => {
-    mockPostFindUnique.mockReset();
+    mockPostFindFirst.mockReset();
     mockPostUpdate.mockReset();
 
-    mockPostFindUnique.mockResolvedValue(EXISTING_POST);
+    mockPostFindFirst.mockResolvedValue(EXISTING_POST);
     mockPostUpdate.mockResolvedValue({ id: POST_ID });
   });
 
@@ -783,7 +951,7 @@ describe("unpublishPost", () => {
 
   describe("異常系", () => {
     test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
+      mockPostFindFirst.mockResolvedValue(null);
 
       await expect(unpublishPost("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -799,10 +967,10 @@ describe("unpublishPost", () => {
 
 describe("archivePost", () => {
   beforeEach(() => {
-    mockPostFindUnique.mockReset();
+    mockPostFindFirst.mockReset();
     mockPostUpdate.mockReset();
 
-    mockPostFindUnique.mockResolvedValue(EXISTING_POST);
+    mockPostFindFirst.mockResolvedValue(EXISTING_POST);
     mockPostUpdate.mockResolvedValue({ id: POST_ID });
   });
 
@@ -830,7 +998,7 @@ describe("archivePost", () => {
 
   describe("異常系", () => {
     test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
-      mockPostFindUnique.mockResolvedValue(null);
+      mockPostFindFirst.mockResolvedValue(null);
 
       await expect(archivePost("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -1038,7 +1206,8 @@ describe("deletePostCategory", () => {
 
       await expect(deletePostCategory(CATEGORY_ID)).rejects.toMatchObject({
         code: "CONFLICT",
-        message: "このカテゴリには記事が紐づいているため削除できません",
+        message:
+          "このカテゴリには記事が紐づいているため削除できません（ゴミ箱内の記事も含みます）",
       });
     });
 
@@ -1362,7 +1531,8 @@ describe("deletePostTag", () => {
 
       await expect(deletePostTag(TAG_ID)).rejects.toMatchObject({
         code: "CONFLICT",
-        message: "このタグは記事で使用されているため削除できません",
+        message:
+          "このタグは記事で使用されているため削除できません（ゴミ箱内の記事も含みます）",
       });
     });
 

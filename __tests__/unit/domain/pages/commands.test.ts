@@ -308,6 +308,17 @@ describe("createPageCommand", () => {
       );
       expect(mockPageCreate).not.toHaveBeenCalled();
     });
+
+    test("create 時の slug unique 制約違反 (P2002) は CONFLICT に変換する", async () => {
+      mockPageCreate.mockRejectedValue({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      });
+
+      await expect(createPageCommand(VALID_CREATE_INPUT)).rejects.toMatchObject(
+        { code: "CONFLICT" },
+      );
+    });
   });
 });
 
@@ -605,6 +616,23 @@ describe("updatePagePublishedCommand", () => {
   });
 
   describe("異常系", () => {
+    test("システムページを公開状態変更しようとすると VALIDATION エラーをスローする", async () => {
+      await expect(
+        updatePagePublishedCommand(SYSTEM_PAGE_SLUG, false),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "システムページは公開状態を変更できません",
+      });
+    });
+
+    test("システムページ公開状態変更時は update が呼ばれない", async () => {
+      await expect(
+        updatePagePublishedCommand(SYSTEM_PAGE_SLUG, true),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockPageUpdate).not.toHaveBeenCalled();
+    });
+
     test("ページが存在しない場合 NOT_FOUND エラーをスローする", async () => {
       mockPageFindUnique.mockResolvedValue(null);
 
@@ -695,6 +723,21 @@ describe("bulkUpdatePagePublishedCommand", () => {
         }),
       );
     });
+
+    test("システムページが混在する場合、システムページを除外して公開状態を変更する", async () => {
+      await bulkUpdatePagePublishedCommand(
+        ["page-a", SYSTEM_PAGE_SLUG, "page-b"],
+        true,
+      );
+
+      expect(mockPageUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            slug: { in: ["page-a", "page-b"] },
+          }),
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {
@@ -711,6 +754,26 @@ describe("bulkUpdatePagePublishedCommand", () => {
       await expect(bulkUpdatePagePublishedCommand([], false)).rejects.toThrow(
         DomainError,
       );
+
+      expect(mockPageUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("全てシステムページの場合 VALIDATION エラーをスローする", async () => {
+      await expect(
+        bulkUpdatePagePublishedCommand(
+          [SYSTEM_PAGE_SLUG, ANOTHER_SYSTEM_SLUG],
+          true,
+        ),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "システムページは公開状態を変更できません",
+      });
+    });
+
+    test("全てシステムページの場合は updateMany が呼ばれない", async () => {
+      await expect(
+        bulkUpdatePagePublishedCommand([SYSTEM_PAGE_SLUG], false),
+      ).rejects.toThrow(DomainError);
 
       expect(mockPageUpdateMany).not.toHaveBeenCalled();
     });

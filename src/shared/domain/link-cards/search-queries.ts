@@ -46,6 +46,7 @@ export async function searchLinkCardCandidates(params: {
     case "post": {
       const rows = await prisma.post.findMany({
         where: {
+          deletedAt: null,
           status: PostStatus.PUBLISHED,
           ...(titleContains && { title: titleContains }),
         },

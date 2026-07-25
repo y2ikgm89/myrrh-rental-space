@@ -40,6 +40,7 @@ const RESERVED_PATHS: ReadonlySet<string> = new Set([
   "_next",
   // Public routes (fixed) — システムページ slug。seed は本チェックを通らないため
   // ここに列挙しても seed は阻害されず、カスタムページが奪うことだけを防ぐ。
+  "home",
   "about",
   "contact",
   "faq",

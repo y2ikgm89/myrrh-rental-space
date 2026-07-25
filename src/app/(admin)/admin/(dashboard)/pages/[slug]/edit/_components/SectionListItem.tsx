@@ -39,6 +39,7 @@ export interface SectionListItemProps {
   readonly canDuplicate: boolean;
   readonly canDelete: boolean;
   readonly canDrag: boolean;
+  readonly canToggleActive: boolean;
   readonly isPending: boolean;
   readonly dragHandleProps?: Record<string, unknown>;
   /**
@@ -48,6 +49,11 @@ export interface SectionListItemProps {
    * PAGE_TEMPLATES.requiredSectionTypes に含まれる section で使用。
    */
   readonly disableDeleteReason?: string;
+  /**
+   * 表示切替 Switch を disabled にし、title でこの理由を表示する。
+   * page-hero やテンプレート必須 section で使用。
+   */
+  readonly disableToggleActiveReason?: string;
 }
 
 export function SectionListItem({
@@ -60,9 +66,11 @@ export function SectionListItem({
   canDuplicate,
   canDelete,
   canDrag,
+  canToggleActive,
   isPending,
   dragHandleProps,
   disableDeleteReason,
+  disableToggleActiveReason,
 }: SectionListItemProps) {
   const label =
     getSectionDefinition(section.type)?.metadata.label ?? section.type;
@@ -115,7 +123,8 @@ export function SectionListItem({
         <Switch
           checked={section.isActive}
           onCheckedChange={onToggleActive}
-          disabled={isPending}
+          disabled={isPending || !canToggleActive}
+          title={disableToggleActiveReason}
           aria-label={`${label} の表示状態`}
         />
       </div>

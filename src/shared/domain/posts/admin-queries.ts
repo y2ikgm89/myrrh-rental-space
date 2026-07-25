@@ -16,7 +16,9 @@ import type {
 } from "@/shared/domain/posts/types";
 
 function buildPostWhere(filters: PostFilters): PostWhereInput {
-  const where: PostWhereInput = {};
+  const where: PostWhereInput = {
+    deletedAt: null,
+  };
 
   if (isValidPostStatus(filters.status)) {
     where.status = filters.status;
@@ -39,6 +41,51 @@ function buildPostWhere(filters: PostFilters): PostWhereInput {
   }
 
   return where;
+}
+
+export type DeletedPostListItem = {
+  id: string;
+  title: string;
+  slug: string;
+  deletedAt: string;
+  status: PostData["status"];
+  category: { name: string };
+};
+
+/**
+ * Recycle Bin: ソフトデリート済み投稿一覧（ゴミ箱テーブル用）。
+ */
+export async function getDeletedPosts(): Promise<DeletedPostListItem[]> {
+  const posts = await prisma.post.findMany({
+    where: { deletedAt: { not: null } },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      deletedAt: true,
+      status: true,
+      category: {
+        select: { name: true },
+      },
+    },
+    orderBy: { deletedAt: "desc" },
+  });
+
+  return posts.flatMap((post) => {
+    if (post.deletedAt === null) {
+      return [];
+    }
+    return [
+      {
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        deletedAt: post.deletedAt.toISOString(),
+        status: post.status,
+        category: post.category,
+      },
+    ];
+  });
 }
 
 export async function getPosts(
@@ -107,8 +154,8 @@ export async function getPosts(
 }
 
 export async function getPostById(id: string): Promise<PostData | null> {
-  const post = await prisma.post.findUnique({
-    where: { id },
+  const post = await prisma.post.findFirst({
+    where: { id, deletedAt: null },
     include: {
       category: {
         select: {
@@ -161,14 +208,18 @@ export async function getPostCategories(): Promise<PostCategoryData[]> {
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        // 表示件数はアクティブ記事のみ（ゴミ箱は除外）
+        select: { posts: { where: { deletedAt: null } } },
       },
+      // 削除可否用: ゴミ箱含む紐づけの有無
+      posts: { select: { id: true }, take: 1 },
     },
     orderBy: { order: "asc" },
   });
 
-  return categories.map((category) => ({
+  return categories.map(({ posts, ...category }) => ({
     ...category,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
     createdAt: category.createdAt.toISOString(),
     updatedAt: category.updatedAt.toISOString(),
   }));
@@ -191,8 +242,9 @@ export async function getPostCategoryById(
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        select: { posts: { where: { deletedAt: null } } },
       },
+      posts: { select: { id: true }, take: 1 },
     },
   });
 
@@ -200,10 +252,12 @@ export async function getPostCategoryById(
     return null;
   }
 
+  const { posts, ...rest } = category;
   return {
-    ...category,
-    createdAt: category.createdAt.toISOString(),
-    updatedAt: category.updatedAt.toISOString(),
+    ...rest,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
+    createdAt: rest.createdAt.toISOString(),
+    updatedAt: rest.updatedAt.toISOString(),
   };
 }
 
@@ -220,14 +274,17 @@ export async function getPostTags(): Promise<PostTagData[]> {
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        // 表示件数はアクティブ記事のみ（ゴミ箱は除外）
+        select: { posts: { where: { post: { deletedAt: null } } } },
       },
+      posts: { select: { postId: true }, take: 1 },
     },
     orderBy: { name: "asc" },
   });
 
-  return tags.map((tag) => ({
+  return tags.map(({ posts, ...tag }) => ({
     ...tag,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
     createdAt: tag.createdAt.toISOString(),
     updatedAt: tag.updatedAt.toISOString(),
   }));
@@ -247,8 +304,9 @@ export async function getPostTagById(id: string): Promise<PostTagData | null> {
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        select: { posts: { where: { post: { deletedAt: null } } } },
       },
+      posts: { select: { postId: true }, take: 1 },
     },
   });
 
@@ -256,9 +314,11 @@ export async function getPostTagById(id: string): Promise<PostTagData | null> {
     return null;
   }
 
+  const { posts, ...rest } = tag;
   return {
-    ...tag,
-    createdAt: tag.createdAt.toISOString(),
-    updatedAt: tag.updatedAt.toISOString(),
+    ...rest,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
+    createdAt: rest.createdAt.toISOString(),
+    updatedAt: rest.updatedAt.toISOString(),
   };
 }

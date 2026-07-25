@@ -37,4 +37,17 @@ describe("section registry clean break", () => {
     const registryKeys: string[] = Object.keys(sectionDefinitions).toSorted();
     expect(registryKeys).toEqual(sectionTypeValues);
   });
+
+  test("SectionRenderer switch handles every registered section type", () => {
+    const rendererSource = readFileSync(
+      filePath(
+        "src/app/(public)/_shared/components/sections/section-renderer.tsx",
+      ),
+      "utf8",
+    );
+
+    for (const key of Object.keys(SectionType)) {
+      expect(rendererSource).toContain(`case SectionType.${key}:`);
+    }
+  });
 });
