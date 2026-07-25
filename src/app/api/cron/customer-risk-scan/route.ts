@@ -13,7 +13,9 @@
  * 最終判断は常に管理者（顧客一覧の「要注意」フィルタ・詳細画面から確認する）。
  *
  * 認証: Cloud Scheduler OIDC token
- * 重複通知抑制: 直近 `DEDUP_DAYS` 日以内に同 type の通知があればスキップ
+ *
+ * 重複通知抑制は「通知の生成」だけを対象にし、検知・flagReasons への反映は
+ * 毎回実行する（customer-duplicate-scan と同型）。`DEDUP_DAYS` は週次 cadence 用。
  */
 
 import { unstable_rethrow } from "next/navigation";
@@ -48,19 +50,6 @@ export async function GET(request: Request) {
     });
     if (authResult) return authResult;
 
-    // 重複抑制: 直近 6 日以内に同 type 通知が既にあれば no-op（Scheduler 再試行・手動再実行対策）
-    if (
-      await hasRecentNotificationOfType(
-        NOTIFICATION_TYPE.CUSTOMER_FLAGGED,
-        DEDUP_DAYS,
-      )
-    ) {
-      logger.info("Customer risk scan: recent notification exists, skipping", {
-        dedupDays: DEDUP_DAYS,
-      });
-      return jsonSuccess({ skipped: true, reason: "recent_notification" });
-    }
-
     const detected = await detectSuspiciousCustomers();
 
     if (detected.length === 0) {
@@ -70,8 +59,26 @@ export async function GET(request: Request) {
 
     await applyRiskFlagsCommand(detected);
 
+    // 通知だけを抑制する（検知・フラグ付与は上で毎回実行済み）。直近 6 日以内に
+    // 同 type 通知が既にあれば no-op（Scheduler 再試行・手動再実行対策）。
+    if (
+      await hasRecentNotificationOfType(
+        NOTIFICATION_TYPE.CUSTOMER_RISK_FLAGGED,
+        DEDUP_DAYS,
+      )
+    ) {
+      logger.info(
+        "Customer risk scan: flags applied, recent notification exists, skipping notification",
+        {
+          detected: detected.length,
+          dedupDays: DEDUP_DAYS,
+        },
+      );
+      return jsonSuccess({ detected: detected.length, notified: false });
+    }
+
     await createNotificationCommand({
-      type: NOTIFICATION_TYPE.CUSTOMER_FLAGGED,
+      type: NOTIFICATION_TYPE.CUSTOMER_RISK_FLAGGED,
       title: `${String(detected.length)}名の顧客に不審な予約パターンを検知しました`,
       message:
         "要注意フラグを付与しました。顧客一覧の「要注意」フィルタから確認してください。",
@@ -81,7 +88,7 @@ export async function GET(request: Request) {
       detected: detected.length,
     });
 
-    return jsonSuccess({ detected: detected.length });
+    return jsonSuccess({ detected: detected.length, notified: true });
   } catch (error) {
     unstable_rethrow(error);
     logError(error, {

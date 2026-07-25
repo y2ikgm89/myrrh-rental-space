@@ -65,6 +65,24 @@ describe("createNotificationCommand", () => {
       },
     });
   });
+
+  test("truncates title and message to DB limits", async () => {
+    const longTitle = "あ".repeat(250);
+    const longMessage = "い".repeat(600);
+    await createNotificationCommand({
+      type: "faq_stale",
+      title: longTitle,
+      message: longMessage,
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        type: "faq_stale",
+        title: `${"あ".repeat(199)}…`,
+        message: `${"い".repeat(499)}…`,
+      }),
+    });
+  });
 });
 
 describe("markAsReadCommand", () => {

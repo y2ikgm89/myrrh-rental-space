@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { IconChecks } from "@tabler/icons-react";
 import { markAllNotificationsAsRead } from "@/admin/actions/notification";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -10,16 +11,22 @@ import { useNotificationPolling } from "../../_components/NotificationPollingPro
 
 export function MarkAllReadButton() {
   const router = useRouter();
-  const { refresh } = useNotificationPolling();
+  const { refresh, unreadCount } = useNotificationPolling();
   const [isPending, startTransition] = useTransition();
+
+  if (unreadCount <= 0) {
+    return null;
+  }
 
   const handleMarkAllRead = () => {
     startTransition(async () => {
       const result = await markAllNotificationsAsRead();
-      if (!isMutationError(result)) {
-        router.refresh();
-        refresh();
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
+      router.refresh();
+      refresh();
     });
   };
 

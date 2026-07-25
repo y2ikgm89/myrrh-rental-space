@@ -11,6 +11,7 @@ import {
   sendEventWaitlistOffered,
   sendEventWaitlistExpired,
 } from "@/shared/lib/email/event-waitlist-emails";
+import { fireEventWaitlistOfferedAdminNotification } from "@/shared/domain/events/waitlist-admin-notification-side-effects";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import {
   ErrorCategory,
@@ -145,6 +146,7 @@ export async function adminPromoteWaitlistEntryAction(
             },
           },
         );
+        fireEventWaitlistOfferedAdminNotification(data.registrationId);
         return;
       }
       const email = data.email;
@@ -161,6 +163,7 @@ export async function adminPromoteWaitlistEntryAction(
             expiresAt: data.expiresAt,
             paymentContext,
           });
+          fireEventWaitlistOfferedAdminNotification(data.registrationId);
         })(),
         {
           operation: "sendEventWaitlistOffered",

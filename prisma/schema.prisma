@@ -2551,7 +2551,9 @@ model AdminNotification {
   title        String   @db.VarChar(200)
   message      String   @db.VarChar(500)
   resourceType String?  @db.VarChar(50)
-  resourceId   String?  @db.Uuid
+  /// UUID（予約・問い合わせ等）または cuid（Event / EventRegistration）。
+  /// 旧 @db.Uuid だと Event.id (cuid) を紐づけられず deep link が常に死んでいた。
+  resourceId   String?  @db.VarChar(36)
   isRead       Boolean  @default(false)
   createdAt    DateTime @default(now()) @db.Timestamptz(6)
 

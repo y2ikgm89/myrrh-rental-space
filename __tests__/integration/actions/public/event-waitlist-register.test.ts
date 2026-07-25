@@ -146,6 +146,13 @@ mock.module("@/shared/domain/notifications/commands", () => ({
   createNotificationCommand: mock(() => Promise.resolve()),
 }));
 
+// waitlist 登録も通常申込と同型で AuditLog を fireAndForget する。
+// 実 DB の hash chain 書込は本スイートの焦点（advisory lock / FIFO）と無関係で、
+// beforeAll の並行 warmup と衝突して hook 5s タイムアウトを起こすため mock する。
+mock.module("@/shared/domain/audit-log/commands", () => ({
+  createAuditLogRecord: mock(() => Promise.resolve()),
+}));
+
 mock.module("@/shared/lib/cache/event-cache", () => ({
   invalidateEventCaches: mock(() => undefined),
 }));
@@ -325,14 +332,14 @@ describeMaybe("registerForEventWaitlist（実 DB）", () => {
     });
     await registerConcurrently(warmup, 3, "warmup");
     await cleanupEvent(warmup.eventId);
-  });
+  }, 30_000);
 
   afterAll(async () => {
     // EventCategory は onDelete: Restrict のため、紐づく Event の削除後に削除する。
     await prisma.eventCategory.deleteMany({ where: { id: testCategoryId } });
     // 実 DB 接続をクローズしてサブプロセスをハングさせない。
     await basePrisma.$disconnect();
-  });
+  }, 30_000);
 
   test("満員イベントで registerForEventWaitlist → WAITLISTED 登録 + waitlistedAt 設定", async () => {
     const { eventId, slotId, ticketId } = await createTestEvent({

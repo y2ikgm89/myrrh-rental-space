@@ -198,7 +198,7 @@ describe("GET /api/cron/customer-duplicate-scan", () => {
       detected,
     );
     expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "customer_flagged" }),
+      expect.objectContaining({ type: "customer_duplicate_flagged" }),
     );
   });
 

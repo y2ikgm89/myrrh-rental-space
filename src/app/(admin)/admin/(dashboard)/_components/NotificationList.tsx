@@ -3,6 +3,7 @@
 import { useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { IconCheck } from "@tabler/icons-react";
 import { markNotificationAsRead } from "@/admin/actions/notification";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -71,10 +72,12 @@ export function NotificationList({ notifications }: NotificationListProps) {
   const handleMarkAsRead = (id: string) => {
     startTransition(async () => {
       const result = await markNotificationAsRead(id);
-      if (!isMutationError(result)) {
-        router.refresh();
-        refresh();
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
+      router.refresh();
+      refresh();
     });
   };
 

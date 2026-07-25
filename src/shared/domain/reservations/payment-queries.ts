@@ -4,11 +4,17 @@ import { PaymentStatus, ReservationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   logError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import {
   REFUNDED_BY_TYPE,
   isValidRefundedByType,
@@ -165,6 +171,28 @@ export async function claimReservationAsFailed(
     },
     data: { paymentStatus: PaymentStatus.FAILED },
   });
+
+  if (result.count > 0) {
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.RESERVATION_PAYMENT_FAILED,
+        title:
+          NOTIFICATION_TYPE_LABELS[
+            NOTIFICATION_TYPE.RESERVATION_PAYMENT_FAILED
+          ],
+        message: `予約 ${reservationId} の決済が失敗しました`,
+        resourceType: "reservation",
+        resourceId: reservationId,
+      }),
+      {
+        operation: "notifyReservationPaymentFailed",
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: { reservationId, sessionId },
+      },
+    );
+  }
+
   return result.count > 0;
 }
 

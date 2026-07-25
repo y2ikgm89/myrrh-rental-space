@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { IconBell } from "@tabler/icons-react";
 import {
   Popover,
@@ -30,10 +31,12 @@ export function NotificationBell({
   const handleMarkAllAsRead = () => {
     startTransition(async () => {
       const result = await markAllNotificationsAsRead();
-      if (!isMutationError(result)) {
-        router.refresh();
-        refresh();
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
+      router.refresh();
+      refresh();
     });
   };
 
