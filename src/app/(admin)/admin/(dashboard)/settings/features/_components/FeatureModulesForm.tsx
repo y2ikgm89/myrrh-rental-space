@@ -14,12 +14,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { FieldMetadata } from "@conform-to/react";
-import {
-  getFormProps,
-  getInputProps,
-  useForm,
-  useInputControl,
-} from "@conform-to/react";
+import { getFormProps, getInputProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import { updateFeatureModulesSettings } from "@/admin/actions/settings";
@@ -34,6 +29,7 @@ import {
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
+import { useTypedInputControl } from "@/shared/lib/conform/typed-input-control";
 import type { FeatureModule } from "@/shared/lib/features/registry";
 
 interface ModuleDef {
@@ -123,7 +119,7 @@ export function FeatureModulesForm({
             {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
           />
           {moduleDefs.map((mod) => {
-            const field = fields[mod.id] as unknown as FieldMetadata<string>;
+            const field = fields[mod.id];
             if (!field) return null;
             const depsMet = mod.requires.every(
               (req) => fields[req]?.value === "on",
@@ -141,12 +137,8 @@ export function FeatureModulesForm({
           })}
           {fields["data-retention"] && fields.confirmDataRetentionEnable && (
             <DataRetentionEnableConfirmSection
-              dataRetentionField={
-                fields["data-retention"] as unknown as FieldMetadata<string>
-              }
-              confirmField={
-                fields.confirmDataRetentionEnable as unknown as FieldMetadata<string>
-              }
+              dataRetentionField={fields["data-retention"]}
+              confirmField={fields.confirmDataRetentionEnable}
               initialDataRetentionEnabled={initialDataRetentionEnabled}
               isPending={isPending}
             />
@@ -182,13 +174,13 @@ function DataRetentionEnableConfirmSection({
   initialDataRetentionEnabled,
   isPending,
 }: {
-  readonly dataRetentionField: FieldMetadata<string>;
-  readonly confirmField: FieldMetadata<string>;
+  readonly dataRetentionField: FieldMetadata<unknown>;
+  readonly confirmField: FieldMetadata<unknown>;
   readonly initialDataRetentionEnabled: boolean;
   readonly isPending: boolean;
 }) {
-  const dataRetentionControl = useInputControl(dataRetentionField);
-  const confirmControl = useInputControl(confirmField);
+  const dataRetentionControl = useTypedInputControl(dataRetentionField);
+  const confirmControl = useTypedInputControl(confirmField);
   const requiresConfirm =
     !initialDataRetentionEnabled && dataRetentionControl.value === "on";
 
@@ -254,11 +246,11 @@ function ModuleSwitchRow({
 }: {
   readonly mod: ModuleDef;
   readonly moduleDefs: readonly ModuleDef[];
-  readonly field: FieldMetadata<string>;
+  readonly field: FieldMetadata<unknown>;
   readonly isPending: boolean;
   readonly depsMet: boolean;
 }) {
-  const control = useInputControl(field);
+  const control = useTypedInputControl(field);
   const isOn = control.value === "on";
   const disabledDueToDeps = !depsMet;
   const switchDisabled = isPending || disabledDueToDeps;
