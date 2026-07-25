@@ -165,6 +165,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   claimEventRegistrationAsFailed: () => Promise.resolve(false),
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
+  findEventRegistrationForReceiptNotify: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
 }));

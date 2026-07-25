@@ -223,6 +223,7 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   saveEventRegistrationPaymentIntentId: () => Promise.resolve(),
   findEventRegistrationByPaymentIntent: (piId: string) =>
     mockFindEventRegistrationByPaymentIntent(piId),
+  findEventRegistrationForReceiptNotify: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: (input: {
     registrationId: string;
     chargeAmount: number;

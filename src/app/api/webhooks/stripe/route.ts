@@ -69,6 +69,7 @@ import {
   claimEventRegistrationAsFailed,
   saveEventRegistrationPaymentIntentId,
   findEventRegistrationByPaymentIntent,
+  findEventRegistrationForReceiptNotify,
   applyEventChargeRefundIdempotent,
   findExpiredPendingWaitlistOfferRegistration,
 } from "@/shared/domain/events/payment-queries";
@@ -103,6 +104,10 @@ import {
   createStatusToken,
   STATUS_TOKEN_LIFETIME_MS,
 } from "@/shared/lib/reservation-status-token";
+import {
+  createEventRegistrationStatusToken,
+  EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
+} from "@/shared/lib/event-registration-status-token";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -126,9 +131,23 @@ function buildReservationReceiptDetailUrl(reservation: {
   return `${appUrl}/reservation/status?token=${token}`;
 }
 
-/** イベント申込の領収書発行通知 CTA（会員 mypage 一覧。ゲスト薄い詳細は follow-up）。 */
-function buildEventRegistrationReceiptDetailUrl(): string {
-  return `${getAppUrl()}/mypage/events`;
+/**
+ * イベント申込の領収書発行通知 CTA。
+ * 会員は mypage 申込詳細、ゲストは status token 付き薄い詳細ページ。
+ */
+function buildEventRegistrationReceiptDetailUrl(registration: {
+  readonly id: string;
+  readonly customerId: string | null;
+}): string {
+  const appUrl = getAppUrl();
+  if (registration.customerId) {
+    return `${appUrl}/mypage/events/${registration.id}`;
+  }
+  const token = createEventRegistrationStatusToken(
+    registration.id,
+    new Date(Date.now() + EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS),
+  );
+  return `${appUrl}/events/registrations/status?token=${token}`;
 }
 
 // =============================================================================
@@ -651,10 +670,15 @@ async function fulfillEventRegistrationPaymentAtomically(
   }
 
   if (issuedReceipt) {
+    const notifyTarget =
+      await findEventRegistrationForReceiptNotify(registrationId);
     fireAndForget(
       notifyReceiptIssuedForEventRegistration({
         receiptId: issuedReceipt.id,
-        detailUrl: buildEventRegistrationReceiptDetailUrl(),
+        detailUrl: buildEventRegistrationReceiptDetailUrl({
+          id: registrationId,
+          customerId: notifyTarget?.customerId ?? null,
+        }),
       }),
       {
         operation: "notifyReceiptIssuedForEventRegistration",

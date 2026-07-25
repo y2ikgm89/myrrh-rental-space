@@ -30,7 +30,10 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { issueReceiptForEventRegistration } from "@/shared/domain/receipts/issue";
 import { notifyReceiptIssuedForEventRegistration } from "@/shared/domain/receipts/notify-issued";
-import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
+import {
+  createEventRegistrationStatusToken,
+  EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
+} from "@/shared/lib/event-registration-status-token";
 import {
   MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
   MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
@@ -572,17 +575,19 @@ export type ManualEventPaymentResult = {
 };
 
 function buildEventRegistrationReceiptDetailUrl(input: {
+  registrationId: string;
   customerId: string | null;
-  serialNo: string;
 }): string {
   const appUrl = getAppUrl();
-  // 会員: mypage イベント一覧（個別詳細 route は未設置）。
-  // ゲスト薄いステータスは out of scope — 既存の領収書 DL 署名 URL を暫定 CTA にする。
+  // 会員: mypage 申込詳細。ゲスト: status token 付き薄い詳細ページ。
   if (input.customerId !== null) {
-    return `${appUrl}/mypage/events`;
+    return `${appUrl}/mypage/events/${input.registrationId}`;
   }
-  const token = createReceiptDownloadToken(input.serialNo);
-  return `${appUrl}/receipts/${input.serialNo}/download?token=${token}`;
+  const token = createEventRegistrationStatusToken(
+    input.registrationId,
+    new Date(Date.now() + EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS),
+  );
+  return `${appUrl}/events/registrations/status?token=${token}`;
 }
 
 export async function recordManualEventPaymentCommand(data: {
@@ -635,8 +640,8 @@ export async function recordManualEventPaymentCommand(data: {
       },
     );
     const detailUrl = buildEventRegistrationReceiptDetailUrl({
+      registrationId: data.registrationId,
       customerId: existing.customerId,
-      serialNo: receipt.serialNo,
     });
     fireAndForget(
       notifyReceiptIssuedForEventRegistration({

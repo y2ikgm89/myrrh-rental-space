@@ -38,7 +38,9 @@ const mockFireAndForget = mock(
     void promise.catch(() => undefined);
   },
 );
-const mockCreateReceiptDownloadToken = mock((_serialNo: string) => "DL_TOKEN");
+const mockCreateEventRegistrationStatusToken = mock(
+  (_registrationId: string, _expiresAt: Date) => "STATUS_TOKEN_TEST",
+);
 const mockLogError = mock(() => undefined);
 
 mock.module("server-only", () => ({}));
@@ -82,8 +84,9 @@ mock.module("@/shared/domain/receipts/issue", () => ({
 mock.module("@/shared/domain/receipts/notify-issued", () => ({
   notifyReceiptIssuedForEventRegistration: mockNotify,
 }));
-mock.module("@/shared/lib/receipt-download-token", () => ({
-  createReceiptDownloadToken: mockCreateReceiptDownloadToken,
+mock.module("@/shared/lib/event-registration-status-token", () => ({
+  createEventRegistrationStatusToken: mockCreateEventRegistrationStatusToken,
+  EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS: 90 * 24 * 60 * 60 * 1000,
 }));
 // Unused by this suite but imported by payment-commands module graph.
 mock.module("@/shared/domain/payment/availability", () => ({
@@ -143,12 +146,12 @@ describe("recordManualEventPaymentCommand — receipt issue + notify", () => {
         void promise.catch(() => undefined);
       },
     );
-    mockCreateReceiptDownloadToken.mockReset();
-    mockCreateReceiptDownloadToken.mockReturnValue("DL_TOKEN");
+    mockCreateEventRegistrationStatusToken.mockReset();
+    mockCreateEventRegistrationStatusToken.mockReturnValue("STATUS_TOKEN_TEST");
     mockLogError.mockReset();
   });
 
-  test("issues receipt with manual-payment source and notifies guest via download URL", async () => {
+  test("issues receipt with manual-payment source and notifies guest via status URL", async () => {
     mockRegFindUnique.mockResolvedValue(unpaidRegistration());
     mockRegUpdateMany.mockResolvedValue({ count: 1 });
 
@@ -161,15 +164,17 @@ describe("recordManualEventPaymentCommand — receipt issue + notify", () => {
     expect(mockIssueReceipt).toHaveBeenCalledWith(REGISTRATION_ID, {
       source: "manual-payment",
     });
-    expect(mockCreateReceiptDownloadToken).toHaveBeenCalledWith("2026-000101");
+    expect(mockCreateEventRegistrationStatusToken).toHaveBeenCalledWith(
+      REGISTRATION_ID,
+      expect.any(Date),
+    );
     expect(mockNotify).toHaveBeenCalledWith({
       receiptId: "receipt-event-1",
-      detailUrl:
-        "https://example.com/receipts/2026-000101/download?token=DL_TOKEN",
+      detailUrl: `https://example.com/events/registrations/status?token=STATUS_TOKEN_TEST`,
     });
   });
 
-  test("member (customerId) detailUrl uses /mypage/events", async () => {
+  test("member (customerId) detailUrl uses /mypage/events/{id}", async () => {
     mockRegFindUnique.mockResolvedValue(
       unpaidRegistration({ customerId: CUSTOMER_ID }),
     );
@@ -182,9 +187,9 @@ describe("recordManualEventPaymentCommand — receipt issue + notify", () => {
 
     expect(mockNotify).toHaveBeenCalledWith({
       receiptId: "receipt-event-1",
-      detailUrl: "https://example.com/mypage/events",
+      detailUrl: `https://example.com/mypage/events/${REGISTRATION_ID}`,
     });
-    expect(mockCreateReceiptDownloadToken).not.toHaveBeenCalled();
+    expect(mockCreateEventRegistrationStatusToken).not.toHaveBeenCalled();
   });
 
   test("VALIDATION receipt error keeps PAID and returns receiptWarning", async () => {

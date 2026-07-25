@@ -83,8 +83,8 @@ export async function notifyReceiptIssuedForReservation(input: {
 /**
  * イベント申込に紐づく領収書の新規発行通知を送る（予約側の対称）。
  *
- * ゲスト薄いステータス詳細は follow-up。当面 `detailUrl` は会員 mypage または
- * 既存の詳細/一覧 URL を呼出側が渡す。
+ * `detailUrl` は呼出側が組み立てる（会員 `/mypage/events/{id}` /
+ * ゲスト status token URL）。
  */
 export async function notifyReceiptIssuedForEventRegistration(input: {
   readonly receiptId: string;

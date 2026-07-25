@@ -117,6 +117,9 @@ const mockRefundExpiredWaitlistOfferPaymentCommand = mock<
 const mockFindExpiredPendingWaitlistOfferRegistration = mock<
   (id: string) => Promise<{ id: string } | null>
 >(() => Promise.resolve(null));
+const mockFindEventRegistrationForReceiptNotify = mock<
+  (id: string) => Promise<{ customerId: string | null } | null>
+>(() => Promise.resolve({ customerId: null }));
 const mockGetWaitlistConfirmationEmailDetails = mock<
   (id: string) => Promise<{
     id: string;
@@ -261,6 +264,8 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   // task #6: 新規追加関数 (この test file 内では charge.refunded route を叩かないため
   // no-op stub で十分。import 解決のみを満たす)
   findEventRegistrationByPaymentIntent: () => Promise.resolve(null),
+  findEventRegistrationForReceiptNotify: (id: string) =>
+    mockFindEventRegistrationForReceiptNotify(id),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: (id: string) =>
     mockFindExpiredPendingWaitlistOfferRegistration(id),
@@ -521,6 +526,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockSaveEventRegistrationPaymentIntentId.mockReset();
     mockRefundExpiredWaitlistOfferPaymentCommand.mockReset();
     mockFindExpiredPendingWaitlistOfferRegistration.mockReset();
+    mockFindEventRegistrationForReceiptNotify.mockReset();
     mockGetWaitlistConfirmationEmailDetails.mockReset();
     mockSendEventRegistrationConfirmation.mockReset();
     mockIssueReceiptForReservation.mockReset();
@@ -585,6 +591,9 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       refundAmount: 1000,
     });
     mockFindExpiredPendingWaitlistOfferRegistration.mockResolvedValue(null);
+    mockFindEventRegistrationForReceiptNotify.mockResolvedValue({
+      customerId: null,
+    });
     mockGetWaitlistConfirmationEmailDetails.mockResolvedValue(
       DEFAULT_WAITLIST_DETAILS,
     );
@@ -710,10 +719,12 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       await flushFireAndForget();
       expect(mockGetWaitlistConfirmationEmailDetails).not.toHaveBeenCalled();
       expect(mockSendEventRegistrationConfirmation).not.toHaveBeenCalled();
-      expect(mockNotifyReceiptIssuedForEventRegistration).toHaveBeenCalledWith({
-        receiptId: "receipt-event-mock",
-        detailUrl: "http://localhost:3000/mypage/events",
-      });
+      const notifyArg =
+        mockNotifyReceiptIssuedForEventRegistration.mock.calls[0]?.[0];
+      expect(notifyArg?.receiptId).toBe("receipt-event-mock");
+      expect(notifyArg?.detailUrl).toMatch(
+        /^http:\/\/localhost:3000\/events\/registrations\/status\?token=.+/,
+      );
     });
 
     test("waitlist offer（source=waitlist-offer）→ confirmWaitlistOfferCommand が claimEventRegistrationAsPaid より先に呼ばれる（CALL ORDER）", async () => {
@@ -764,9 +775,31 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expect(
         mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
       ).not.toHaveProperty("receiptSerialNo");
+      const waitlistNotifyArg =
+        mockNotifyReceiptIssuedForEventRegistration.mock.calls[0]?.[0];
+      expect(waitlistNotifyArg?.receiptId).toBe("receipt-event-mock");
+      expect(waitlistNotifyArg?.detailUrl).toMatch(
+        /^http:\/\/localhost:3000\/events\/registrations\/status\?token=.+/,
+      );
+    });
+
+    test("会員 (customerId) の領収書通知 detailUrl は /mypage/events/{id}", async () => {
+      mockFindEventRegistrationForReceiptNotify.mockResolvedValueOnce({
+        customerId: "cust-member-1",
+      });
+      const event = makeSessionCompletedEvent({
+        type: "event-registration",
+        registrationId: "reg-member-1",
+      });
+      mockConstructEvent.mockResolvedValue(event);
+
+      const response = await POST(makeRequest("body"));
+      expect(response.status).toBe(200);
+
+      await flushFireAndForget();
       expect(mockNotifyReceiptIssuedForEventRegistration).toHaveBeenCalledWith({
         receiptId: "receipt-event-mock",
-        detailUrl: "http://localhost:3000/mypage/events",
+        detailUrl: "http://localhost:3000/mypage/events/reg-member-1",
       });
     });
 
@@ -1106,10 +1139,12 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       expect(
         mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
       ).not.toHaveProperty("receiptSerialNo");
-      expect(mockNotifyReceiptIssuedForEventRegistration).toHaveBeenCalledWith({
-        receiptId: "receipt-event-mock",
-        detailUrl: "http://localhost:3000/mypage/events",
-      });
+      const asyncWaitlistNotifyArg =
+        mockNotifyReceiptIssuedForEventRegistration.mock.calls[0]?.[0];
+      expect(asyncWaitlistNotifyArg?.receiptId).toBe("receipt-event-mock");
+      expect(asyncWaitlistNotifyArg?.detailUrl).toMatch(
+        /^http:\/\/localhost:3000\/events\/registrations\/status\?token=.+/,
+      );
     });
 
     test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → 自動返金 + claim は呼ばない", async () => {
