@@ -4,6 +4,8 @@ import { proxy } from "@/proxy";
 import { createCancelToken as createReservationCancelToken } from "@/shared/lib/reservation-cancel-token";
 import { createCancelToken as createEventCancelToken } from "@/shared/lib/event-registration-cancel-token";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
+import { createStatusToken } from "@/shared/lib/reservation-status-token";
+import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/reservation-status-token-cookie-name";
 
 const FUTURE = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -56,6 +58,30 @@ describe("guest token transfer", () => {
     expect(cookie?.value).toBe(token);
     expect(cookie?.sameSite).toBe("strict");
     expect(cookie?.httpOnly).toBe(true);
+  });
+
+  test("/reservation/status の ?token= を HttpOnly cookie に転写する", async () => {
+    const token = createStatusToken(
+      "55555555-5555-4555-8555-555555555555",
+      FUTURE,
+    );
+    const req = new NextRequest(
+      `https://example.com/reservation/status?token=${token}`,
+    );
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.searchParams.get("token")).toBeNull();
+    const cookie = res.cookies.get(RESERVATION_STATUS_TOKEN_COOKIE_NAME);
+    expect(cookie?.value).toBe(token);
+    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.httpOnly).toBe(true);
+  });
+
+  test("token なしの /reservation/status は素通り（redirect しない）", async () => {
+    const req = new NextRequest("https://example.com/reservation/status");
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
   });
 
   test("不正形式の token は cookie に書かず ?token だけ外す", async () => {
