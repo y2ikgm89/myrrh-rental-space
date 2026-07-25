@@ -117,6 +117,7 @@ export type SideEffectSuppressFlags = {
   customerEmail?: boolean;
   adminEmail?: boolean;
   gcalDelete?: boolean;
+  inAppNotification?: boolean;
 };
 
 export interface CancellationSideEffectInput {
@@ -506,6 +507,9 @@ async function runNotificationStep(args: {
   requiresRefund: boolean;
 }): Promise<CancellationEffectOutcome> {
   const { input, requiresRefund } = args;
+  if (input.suppress?.inAppNotification) {
+    return { status: "skipped", reason: "suppressed_by_bulk" };
+  }
   const notificationTitle = requiresRefund
     ? "PAID 予約のキャンセル — 要返金確認"
     : `予約キャンセル（${channelLabel(input.channel)}）`;
@@ -766,14 +770,14 @@ async function fetchInstancesForBulkEmail(
  *   1. 各 instance に対して `applyCancellationSideEffects` を **for-await 順次**発火
  *      （`Promise.all` にすると AuditLog chain 用 advisory lock の争いで各 instance の
  *      finding/書込順序が保証されない）。Stripe refund / SwitchBot revoke /
- *      per-instance AuditLog / in-app 通知は通常どおり発火するが、customerEmail /
- *      adminEmail / gcalDelete は suppress して二重送信・個別 GCal delete を防ぐ
+ *      per-instance AuditLog は通常どおり発火するが、customerEmail /
+ *      adminEmail / gcalDelete / inAppNotification は suppress して二重送信・
+ *      個別 GCal delete・N 件 in-app 通知スパムを防ぐ
  *      （Codex fix 3599414659、per spec §4.5）
  *   2. series の master GCal イベントに対して scope 別の 1 回操作
- *      （`this-and-following` → UNTIL 更新、`series-all` → 削除。master event id
- *      取得は Task 16 で本実装に差し替わる stub — 現状は常に null を返し no-op skip）
  *   3. 集約キャンセルメール（顧客向け 1 通 + 管理者向け 1 通）
- *   4. 集約 AuditLog（resource: "reservation_series"）を 1 レコード
+ *   4. 集約 in-app 通知（1 件、件数付き summary）
+ *   5. 集約 AuditLog（resource: "reservation_series"）を 1 レコード
  *
  * 副作用のみを担当するため戻り値は無い。各ステップは独立に try/catch し、
  * 失敗は `logError` に吸収して例外を外へ伝播させない（1 ステップの失敗が他の
@@ -839,6 +843,7 @@ export async function applyBulkCancellationSideEffects(
           customerEmail: true,
           adminEmail: true,
           gcalDelete: true,
+          inAppNotification: true,
         },
         // exactOptionalPropertyTypes: undefined を明示代入せず conditional spread。
         ...(refundPolicySnapshot !== undefined ? { refundPolicySnapshot } : {}),
@@ -955,7 +960,30 @@ export async function applyBulkCancellationSideEffects(
     });
   }
 
-  // Step 4: 集約 AuditLog（1 レコード、resource="reservation_series"）
+  // Step 4: 集約 in-app 通知（1 件、per-instance 通知スパムを防ぐ）
+  try {
+    const count = input.reservationIds.length;
+    const notificationMessage = cancellationReason
+      ? `繰り返し予約 ${String(count)}件をキャンセルしました。理由: ${cancellationReason}`
+      : `繰り返し予約 ${String(count)}件をキャンセルしました。理由: 入力なし`;
+    await createNotificationCommand({
+      type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
+      title: `予約キャンセル（${channelLabel(input.channel)}）— ${String(count)}件`,
+      message: notificationMessage,
+    });
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      context: {
+        operation: "applyBulkCancellationSideEffects.notification",
+        seriesId: input.seriesId,
+        count: input.reservationIds.length,
+      },
+    });
+  }
+
+  // Step 5: 集約 AuditLog（1 レコード、resource="reservation_series"）
   try {
     await createAuditLogRecord({
       ...(actorUserId ? { userId: actorUserId } : {}),

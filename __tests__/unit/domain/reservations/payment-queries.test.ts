@@ -81,6 +81,33 @@ const mockLogError = mock<
   ) => void
 >(() => undefined);
 
+const mockCreateNotificationCommand = mock<
+  (input: Record<string, unknown>) => Promise<void>
+>(() => Promise.resolve());
+
+const mockFireAndForget = mock<
+  (promise: Promise<unknown>, context: Record<string, unknown>) => void
+>((promise) => {
+  void promise;
+});
+
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: mockCreateNotificationCommand,
+}));
+
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: mockFireAndForget,
+}));
+
+mock.module("@/shared/lib/validations/enums/helpers", () => ({
+  NOTIFICATION_TYPE: {
+    RESERVATION_PAYMENT_FAILED: "reservation_payment_failed",
+  },
+  NOTIFICATION_TYPE_LABELS: {
+    reservation_payment_failed: "予約決済失敗",
+  },
+}));
+
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mockLogError,
   normalizeError: (e: unknown) =>
@@ -141,6 +168,8 @@ describe("reservations/payment-queries", () => {
     mockReservationUpdate.mockReset();
     mockReservationUpdateMany.mockReset();
     mockLogError.mockReset();
+    mockCreateNotificationCommand.mockReset();
+    mockFireAndForget.mockReset();
 
     mockReservationFindFirst.mockResolvedValue(null);
     mockReservationFindUnique.mockResolvedValue({
@@ -150,6 +179,10 @@ describe("reservations/payment-queries", () => {
     mockReservationFindUniqueOrThrow.mockResolvedValue(FULFILL_DATA);
     mockReservationUpdate.mockResolvedValue({ id: RESERVATION_ID });
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
+    mockCreateNotificationCommand.mockResolvedValue(undefined);
+    mockFireAndForget.mockImplementation((promise) => {
+      void promise;
+    });
   });
 
   // =============================================================================
@@ -300,12 +333,22 @@ describe("reservations/payment-queries", () => {
           data: { paymentStatus: PaymentStatus.FAILED },
         }),
       );
+      expect(mockFireAndForget).toHaveBeenCalledTimes(1);
+      expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "reservation_payment_failed",
+          resourceType: "reservation",
+          resourceId: RESERVATION_ID,
+        }),
+      );
     });
 
     test("既に PAID / PARTIALLY_REFUNDED / REFUNDED / FAILED → false（no-op）", async () => {
       mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
       const result = await claimReservationAsFailed(RESERVATION_ID, SESSION_ID);
       expect(result).toBe(false);
+      expect(mockFireAndForget).not.toHaveBeenCalled();
+      expect(mockCreateNotificationCommand).not.toHaveBeenCalled();
     });
 
     test("stale webhook (別 session id) → count=0 で false (Codex PR #1043 P1)", async () => {

@@ -298,6 +298,23 @@ describe("applyBulkCancellationSideEffects (Phase B.2 task 12)", () => {
     expect(mockDeleteGcalMaster).toHaveBeenCalledWith(MASTER_EVENT_ID);
     expect(mockPatchGcalMasterUntil).not.toHaveBeenCalled();
 
+    // per-instance in-app 通知は suppress により 0 回
+    const perInstanceNotifications = mockCreateNotification.mock.calls.filter(
+      (call) => call[0]?.["resourceId"] !== undefined,
+    );
+    expect(perInstanceNotifications).toHaveLength(0);
+
+    // 集約 in-app 通知は 1 回（件数付き summary、resourceId なし）
+    const summaryNotifications = mockCreateNotification.mock.calls.filter(
+      (call) => call[0]?.["resourceId"] === undefined,
+    );
+    expect(summaryNotifications).toHaveLength(1);
+    expect(summaryNotifications[0]?.[0]).toMatchObject({
+      type: "reservation_cancel",
+      title: expect.stringContaining("10件"),
+      message: expect.stringContaining("10件"),
+    });
+
     // 集約 AuditLog: resource="reservation_series" のレコードが 1 回書かれる
     // （per-instance AuditLog は suppress 対象外のため別途 10 回発火するが、
     //   本テストは集約レコードの存在のみを検証する）
