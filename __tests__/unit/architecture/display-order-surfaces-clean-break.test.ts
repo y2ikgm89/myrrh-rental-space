@@ -143,10 +143,13 @@ describe("display order surfaces clean-break contract", () => {
     expect(source).toContain("displayOrder");
     expect(source).not.toContain("priority");
     expect(source).not.toContain("優先度");
-    expect(source).toContain(
-      "export const announcementBarInputSchema = z.strictObject({",
+    // schema は `.superRefine` 連鎖のため `z\n  .strictObject({` 形式も許容する
+    expect(source).toMatch(
+      /export const announcementBarInputSchema = z(?:\s*\n\s*)?\.strictObject\(\{/,
     );
-    expect(source).toContain("export const barFormSchema = z.strictObject({");
+    expect(source).toMatch(
+      /export const barFormSchema = z(?:\s*\n\s*)?\.strictObject\(\{/,
+    );
     expect(source).not.toContain("priority: z.");
     expect(source).not.toContain("displayOrder: z.");
   });
