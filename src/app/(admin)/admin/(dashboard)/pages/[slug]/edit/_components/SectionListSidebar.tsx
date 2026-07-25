@@ -221,6 +221,12 @@ export function SectionListSidebar({
                 const isPageHero = section.type === "page-hero";
                 const isRequired =
                   requiredSectionTypes?.has(section.type) ?? false;
+                const canToggleActive = !isPageHero && !isRequired;
+                const disableToggleActiveReason = isPageHero
+                  ? "ヒーローは非表示にできません"
+                  : isRequired
+                    ? "このセクションはこのテンプレートで必須です"
+                    : undefined;
                 return (
                   <SortableSectionListItem
                     key={section.id}
@@ -234,12 +240,16 @@ export function SectionListSidebar({
                     canDuplicate={!isPageHero}
                     canDelete={!isPageHero}
                     canDrag={!isPageHero}
+                    canToggleActive={canToggleActive}
                     isPending={isPending}
                     {...(isRequired && !isPageHero
                       ? {
                           disableDeleteReason:
                             "このセクションはこのテンプレートで必須です",
                         }
+                      : {})}
+                    {...(disableToggleActiveReason
+                      ? { disableToggleActiveReason }
                       : {})}
                   />
                 );

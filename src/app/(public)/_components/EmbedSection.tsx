@@ -98,6 +98,7 @@ export function EmbedSection({
             <SanitizedHtml
               html={config.embedCode}
               className={cn("overflow-hidden", radiusClass, aspectClass)}
+              restrictIframeHostnames
             />
           ) : (
             <div

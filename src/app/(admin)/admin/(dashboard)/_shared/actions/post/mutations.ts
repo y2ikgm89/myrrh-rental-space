@@ -83,11 +83,15 @@ export async function updatePostSettings(
     return createValidationMutationError(parsed.error);
   }
 
+  const currentStatus = await postCommands.getPostStatus(validatedId.data);
+  const statusChanging =
+    currentStatus !== null && parsed.data.status !== currentStatus;
+
   let updatedPost: { oldSlug: string; slug: string } | null = null;
 
   return executeAdminMutationResult({
     resource: "post",
-    action: "update",
+    action: statusChanging ? "publish" : "update",
     resourceId: validatedId.data,
     execute: async () => {
       updatedPost = await postCommands.updatePostSettings(

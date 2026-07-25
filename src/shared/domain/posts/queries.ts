@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { PostStatus } from "@generated/prisma/enums";
 import {
@@ -18,6 +19,28 @@ import { calcTotalPages, paginate } from "@/shared/lib/pagination";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
+
+/**
+ * 公開ポストクエリの共通 where 句。`status: PUBLISHED` に加え
+ * `publishedAt <= now` で予約公開（未来日時指定）の早期露出を防ぐ。
+ * `publishedAt` が null の PUBLISHED 行は `lte` に一致せず非公開扱い
+ * （`publishPost` は必ず `publishedAt` をセットする）。
+ * `now` は呼び出しの都度評価する（呼び出し元でキャプチャした `Date` を
+ * 渡さないこと — この関数の呼び出し自体が `'use cache'` 関数本体内で
+ * 行われるため、生成された where は cacheLife(PUBLIC_CONTENT) の
+ * revalidate window（既定 1 時間）でしか鮮度が保証されない。予約公開時刻
+ * ちょうどでの露出精度が必要な場合は cron 側のタグ再検証で補う）。
+ * 新規 query 追加時の publish gate 漏れを構造的に防ぐため、公開 query は必ず
+ * この helper 経由で where を組み立てる。
+ */
+export function publicPostsWhere(
+  now: Date = new Date(),
+): Prisma.PostWhereInput {
+  return {
+    status: PostStatus.PUBLISHED,
+    publishedAt: { lte: now },
+  };
+}
 
 const postListSelect = {
   id: true,
@@ -98,8 +121,8 @@ export async function getPublishedPostsList(
 
   const { skip, take } = paginate({ page, limit: perPage });
 
-  const where = {
-    status: PostStatus.PUBLISHED,
+  const where: Prisma.PostWhereInput = {
+    ...publicPostsWhere(),
     ...(search
       ? {
           OR: [
@@ -164,7 +187,7 @@ export async function getPublishedPost(slug: string) {
       prisma.post.findFirst({
         where: {
           slug,
-          status: PostStatus.PUBLISHED,
+          ...publicPostsWhere(),
         },
         select: postDetailSelect,
       }),
@@ -188,7 +211,7 @@ export async function getPublishedPosts(maxItems: number, categoryId?: string) {
     fetch: () =>
       prisma.post.findMany({
         where: {
-          status: PostStatus.PUBLISHED,
+          ...publicPostsWhere(),
           ...(categoryId ? { categoryId } : {}),
         },
         select: {
@@ -316,9 +339,7 @@ export async function getAllPublishedTags() {
         where: {
           posts: {
             some: {
-              post: {
-                status: PostStatus.PUBLISHED,
-              },
+              post: publicPostsWhere(),
             },
           },
         },

@@ -18,7 +18,6 @@
  * @security XSS 対策済み — DOMPurify による厳格なサニタイズ
  */
 
-import { sanitize } from "isomorphic-dompurify";
 import { useEffect, useRef } from "react";
 import { injectHeadingAnchors } from "@/shared/lib/html/extract-headings";
 import {
@@ -26,6 +25,7 @@ import {
   LEXICAL_DOMPURIFY_EXTRA_ATTRIBUTES,
   LEXICAL_DOMPURIFY_SVG_ATTRIBUTES,
 } from "@/shared/lib/html/lexical-html-sanitize-config";
+import { sanitizeDomPurifyHtml } from "@/shared/lib/html/sanitize-dompurify-html";
 
 export const SANITIZE_OPTIONS = {
   ADD_TAGS: ["iframe", ...LEXICAL_CURATED_ICON_SVG_TAGS],
@@ -41,6 +41,11 @@ export const SANITIZE_OPTIONS = {
 interface SanitizedHtmlProps {
   html: string;
   className?: string;
+  /**
+   * true のとき Lexical 保存時と同じ iframe ホスト allowlist を適用する。
+   * CustomSection / EmbedSection の raw embed HTML 向け。
+   */
+  restrictIframeHostnames?: boolean;
 }
 
 /**
@@ -104,9 +109,16 @@ function hydrateLexicalTabs(root: HTMLElement): () => void {
   };
 }
 
-export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
+export function SanitizedHtml({
+  html,
+  className,
+  restrictIframeHostnames = false,
+}: SanitizedHtmlProps) {
   // DOMPurify でサニタイズ → heading に id 自動付与（決定論的、SSR/Client で同一結果）
-  const cleanHtml = sanitize(html, SANITIZE_OPTIONS);
+  const cleanHtml = sanitizeDomPurifyHtml(html, {
+    ...SANITIZE_OPTIONS,
+    restrictIframeHostnames,
+  });
   const withAnchors = injectHeadingAnchors(cleanHtml);
   const ref = useRef<HTMLDivElement>(null);
 

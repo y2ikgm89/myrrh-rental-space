@@ -41,6 +41,9 @@ const mockArchivePost = mock<(id: string) => Promise<{ slug: string }>>(() =>
 const mockUpdatePostBody = mock<
   (id: string, input: unknown) => Promise<{ oldSlug: string; slug: string }>
 >(() => Promise.resolve({ oldSlug: "s", slug: "s" }));
+const mockGetPostStatus = mock<(id: string) => Promise<string | null>>(() =>
+  Promise.resolve("DRAFT"),
+);
 
 mock.module("@/shared/domain/posts/post-commands", () => ({
   createPost: mockCreatePost,
@@ -50,6 +53,7 @@ mock.module("@/shared/domain/posts/post-commands", () => ({
   publishPost: mockPublishPost,
   unpublishPost: mockUnpublishPost,
   archivePost: mockArchivePost,
+  getPostStatus: mockGetPostStatus,
 }));
 
 // cache helpers (no-op)
@@ -181,6 +185,8 @@ describe("updatePostSettings (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockUpdatePostSettings.mockClear();
+    mockGetPostStatus.mockClear();
+    mockGetPostStatus.mockResolvedValue("DRAFT");
   });
 
   test("無効な id は validation error", async () => {
@@ -197,7 +203,8 @@ describe("updatePostSettings (action shape)", () => {
     expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
   });
 
-  test("正常系: resource=post, action=update, resourceId=id で wrapper 呼出し", async () => {
+  test("status 変更時は action=publish で wrapper 呼出し", async () => {
+    mockGetPostStatus.mockResolvedValueOnce("DRAFT");
     mockUpdatePostSettings.mockResolvedValueOnce({
       oldSlug: "old",
       slug: "new",
@@ -214,10 +221,11 @@ describe("updatePostSettings (action shape)", () => {
       publishedAt: "2026-01-02T03:04",
     });
 
+    expect(mockGetPostStatus).toHaveBeenCalledWith(VALID_UUID);
     expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
       expect.objectContaining({
         resource: "post",
-        action: "update",
+        action: "publish",
         resourceId: VALID_UUID,
       }),
     );
@@ -233,6 +241,32 @@ describe("updatePostSettings (action shape)", () => {
     const [, payload] = mockUpdatePostSettings.mock.calls[0] ?? [];
     expect((payload as { publishedAt: Date }).publishedAt.toISOString()).toBe(
       "2026-01-01T18:04:00.000Z",
+    );
+  });
+
+  test("status 未変更時は action=update で wrapper 呼出し", async () => {
+    mockGetPostStatus.mockResolvedValueOnce("PUBLISHED");
+    mockUpdatePostSettings.mockResolvedValueOnce({
+      oldSlug: "old",
+      slug: "new",
+    });
+
+    await updatePostSettings(VALID_UUID, {
+      title: "t",
+      slug: "new-slug",
+      excerpt: "e",
+      thumbnailUrl: "https://example.com/x.jpg",
+      categoryId: VALID_UUID,
+      tags: [],
+      status: "PUBLISHED",
+    });
+
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: "post",
+        action: "update",
+        resourceId: VALID_UUID,
+      }),
     );
   });
 });
