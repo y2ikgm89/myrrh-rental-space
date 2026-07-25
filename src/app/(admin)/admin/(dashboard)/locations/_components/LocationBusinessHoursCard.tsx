@@ -147,8 +147,13 @@ export function LocationBusinessHoursCard({
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            この拠点の曜日別営業時間です。GBP同期・MEOスコア・LocalBusiness
-            構造化データに反映されます。
+            この拠点の曜日別営業時間です。Google Business
+            Profile（GBP）同期・MEO スコア・LocalBusiness
+            構造化データ・サイト上の表示に反映されます。
+            <span className="mt-2 block">
+              予約可能な時間帯（予約スロット）は、拠点ごとの営業時間ではなく
+              「設定 → 営業時間」で設定したサイト全体の営業時間が使われます。
+            </span>
           </p>
           {businessHours === null ? (
             <div className="rounded-lg border border-dashed p-4 text-center">

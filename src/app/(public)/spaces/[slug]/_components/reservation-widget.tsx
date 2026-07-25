@@ -6,10 +6,12 @@ import {
   IconBolt,
   IconCalendarOff,
   IconCoin,
+  IconCreditCard,
   IconCreditCardOff,
 } from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { getReservationPaymentDisplayCopy } from "@/shared/lib/reservation/payment-display-copy";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 
 // `formatTotal` の戻り値（例: `¥550（税込）`）を hero typography 用に
@@ -35,6 +37,12 @@ interface ReservationWidgetProps {
   readonly cancellationDeadlineHours: number;
   /** 公開中のキャンセルポリシー規約 URL。無ければリンクを出さない */
   readonly cancellationPolicyUrl: string | undefined;
+  /** Feature Module `reservation` が ON か */
+  readonly reservationEnabled: boolean;
+  /** Feature Module `contact` が ON か */
+  readonly contactEnabled: boolean;
+  /** feature ON かつ Stripe credentials 設定済みか */
+  readonly onlinePaymentAvailable: boolean;
 }
 
 /**
@@ -58,18 +66,25 @@ export function ReservationWidget({
   hourlyPrice,
   cancellationDeadlineHours,
   cancellationPolicyUrl,
+  reservationEnabled,
+  contactEnabled,
+  onlinePaymentAvailable,
 }: ReservationWidgetProps) {
   const { formatTotal, formatUnit } = useFormatPrice();
   const hourly = splitTaxedPrice(formatTotal(hourlyPrice));
+  const paymentCopy = getReservationPaymentDisplayCopy(onlinePaymentAvailable);
+  const showCtaBlock = reservationEnabled || contactEnabled;
 
   return (
     <div className="border border-accent bg-background">
       <p className="px-8 pt-7 text-xs uppercase tracking-eyebrow-wide text-muted-foreground sm:px-10">
         — Reservation —
       </p>
-      <div className="px-8 pb-5 pt-4 sm:px-10">
-        <Badge variant="success">即時予約可</Badge>
-      </div>
+      {reservationEnabled ? (
+        <div className="px-8 pb-5 pt-4 sm:px-10">
+          <Badge variant="success">即時予約可</Badge>
+        </div>
+      ) : null}
       <div className="px-8 pb-5 sm:px-10">
         <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="text-accent">
@@ -98,12 +113,14 @@ export function ReservationWidget({
         )}
       </div>
       <dl className="px-8 sm:px-10">
-        <DetailRow
-          icon={<IconBolt className="h-4 w-4" aria-hidden="true" />}
-          label="予約"
-        >
-          即時予約成立
-        </DetailRow>
+        {reservationEnabled ? (
+          <DetailRow
+            icon={<IconBolt className="h-4 w-4" aria-hidden="true" />}
+            label="予約"
+          >
+            即時予約成立
+          </DetailRow>
+        ) : null}
         <DetailRow
           icon={<IconCalendarOff className="h-4 w-4" aria-hidden="true" />}
           label="キャンセル"
@@ -122,26 +139,38 @@ export function ReservationWidget({
           )}
         </DetailRow>
         <DetailRow
-          icon={<IconCreditCardOff className="h-4 w-4" aria-hidden="true" />}
+          icon={
+            onlinePaymentAvailable ? (
+              <IconCreditCard className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <IconCreditCardOff className="h-4 w-4" aria-hidden="true" />
+            )
+          }
           label="決済"
         >
-          事前決済不要
+          {paymentCopy}
         </DetailRow>
       </dl>
-      <div className="space-y-2 px-8 pb-7 sm:px-10">
-        <Link
-          href={toAppRoute(`/reservation?spaceId=${spaceId}`)}
-          className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-6 text-xs uppercase tracking-eyebrow text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          Reserve this space
-        </Link>
-        <Link
-          href="/contact"
-          className="inline-flex min-h-11 w-full items-center justify-center border border-foreground px-6 text-xs uppercase tracking-eyebrow text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          Inquiry
-        </Link>
-      </div>
+      {showCtaBlock ? (
+        <div className="space-y-2 px-8 pb-7 sm:px-10">
+          {reservationEnabled ? (
+            <Link
+              href={toAppRoute(`/reservation?spaceId=${spaceId}`)}
+              className="inline-flex min-h-12 w-full items-center justify-center border border-foreground bg-foreground px-6 text-xs uppercase tracking-eyebrow text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Reserve this space
+            </Link>
+          ) : null}
+          {contactEnabled ? (
+            <Link
+              href="/contact"
+              className="inline-flex min-h-11 w-full items-center justify-center border border-foreground px-6 text-xs uppercase tracking-eyebrow text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Inquiry
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
