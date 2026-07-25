@@ -42,6 +42,8 @@ export type ReservationWithRelations = {
   createdAt: string;
   updatedAt: string;
   paymentStatus: PaymentStatus;
+  /** detail query のみ select (手動入金記録 UI の Stripe セッション判定用) */
+  stripeCheckoutSessionId?: string | null;
   stripePaymentIntentId: string | null;
   paidAt: string | null;
   cancellationReason: string | null;

@@ -25,6 +25,10 @@ export {
   cancelReservationSeriesAction,
 } from "./series";
 
-export { createCheckoutSession, refundReservationPayment } from "./payment";
+export {
+  createCheckoutSession,
+  recordManualReservationPayment,
+  refundReservationPayment,
+} from "./payment";
 
 export { reissueReservationReceipt } from "./receipt";

@@ -320,6 +320,7 @@ export async function getReservationByIdQuery(id: string) {
       createdAt: true,
       updatedAt: true,
       paymentStatus: true,
+      stripeCheckoutSessionId: true,
       stripePaymentIntentId: true,
       paidAt: true,
       cancellationReason: true,
