@@ -159,7 +159,7 @@ export type ReservationSettingsInput = {
 export const SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE =
   "他のユーザーにより更新されています。ページを再読み込みしてください";
 
-function toExpectedUpdatedAt(value: string | Date): Date {
+export function toExpectedUpdatedAt(value: string | Date): Date {
   const expected = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(expected.getTime())) {
     throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
@@ -235,12 +235,22 @@ export type DiscountSettingsInput = {
   durationDiscountRules: DurationDiscountRule[];
   discountCombinationMode: DiscountCombinationMode;
   showOriginalPrice: boolean;
+  /** 楽観的 concurrency: 読み込み時の SettingsCommerce.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export type TaxSettingsInput = {
   taxStandardRate: number;
   taxReducedRate: number;
   taxDisplayModePublic: TaxDisplayMode;
+  /** 楽観的 concurrency: 読み込み時の SettingsCommerce.updatedAt */
+  expectedUpdatedAt: string | Date;
+};
+
+export type RefundPolicyUpdateInput = {
+  policy: RefundPolicy | null;
+  /** 楽観的 concurrency: 読み込み時の SettingsCommerce.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 function normalizeNullableString(value: string | null): string | null {
@@ -808,6 +818,7 @@ export async function updateFooterSettings(
 export async function updateDiscountSettings(
   data: DiscountSettingsInput,
 ): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
   const hourSet = new Set<number>();
   for (const rule of data.durationDiscountRules) {
     if (hourSet.has(rule.hours)) {
@@ -829,18 +840,43 @@ export async function updateDiscountSettings(
     showOriginalPrice: data.showOriginalPrice,
   };
 
-  await prisma.settingsCommerce.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    await tx.settingsCommerce.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    });
+    const result = await tx.settingsCommerce.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
 export async function updateTaxSettings(data: TaxSettingsInput): Promise<void> {
-  await prisma.settingsCommerce.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+  const updateData = {
+    taxStandardRate: data.taxStandardRate,
+    taxReducedRate: data.taxReducedRate,
+    taxDisplayModePublic: data.taxDisplayModePublic,
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.settingsCommerce.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    });
+    const result = await tx.settingsCommerce.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
@@ -857,19 +893,29 @@ export async function updateTaxSettings(data: TaxSettingsInput): Promise<void> {
  * 参照: `src/shared/domain/refund/policy.ts` の parseRefundPolicy / calculateRefundAmount。
  */
 export async function updateRefundPolicy(
-  policy: RefundPolicy | null,
+  data: RefundPolicyUpdateInput,
 ): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
   const updateData = {
     refundPolicy:
-      policy === null
+      data.policy === null
         ? Prisma.JsonNull
-        : asPrismaInputJsonValue(policy, "返金ポリシーの形式が不正です"),
+        : asPrismaInputJsonValue(data.policy, "返金ポリシーの形式が不正です"),
   };
 
-  await prisma.settingsCommerce.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    await tx.settingsCommerce.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    });
+    const result = await tx.settingsCommerce.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 

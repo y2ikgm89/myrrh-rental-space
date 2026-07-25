@@ -73,6 +73,31 @@ export async function claimEventRegistrationAsFailed(
 }
 
 /**
+ * Stripe Checkout fulfill 前の amount_total 照合用。
+ * `paidAmount` (checkout settle 時に書込) を優先し、未設定なら ticket.price × quantity。
+ */
+export async function getEventRegistrationCheckoutExpectedAmount(
+  registrationId: string,
+): Promise<number | null> {
+  const registration = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: {
+      paidAmount: true,
+      quantity: true,
+      ticket: { select: { price: true } },
+    },
+  });
+  if (!registration) return null;
+
+  if (registration.paidAmount != null && registration.paidAmount > 0) {
+    return registration.paidAmount;
+  }
+
+  const computed = registration.ticket.price * registration.quantity;
+  return computed > 0 ? computed : null;
+}
+
+/**
  * 非同期決済 (konbini / customer_balance) の `checkout.session.completed` で
  * `payment_status !== "paid"` のとき、PaymentIntent ID のみ保存する
  * (Reservation の `savePaymentIntentId` と同型)。

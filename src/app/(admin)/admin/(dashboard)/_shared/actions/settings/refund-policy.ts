@@ -49,14 +49,18 @@ export async function updateRefundPolicySettings(
         resource: "settings",
         action: "manage",
         execute: async (user) => {
-          const previous = await getRefundPolicySettings();
+          const previousData = await getRefundPolicySettings();
+          const previous = previousData.policy;
           const policy = data.refundPolicyEnabled
             ? {
                 tiers: data.refundPolicyTiers,
                 defaultRefundRate: data.refundPolicyDefaultRefundRate,
               }
             : null;
-          await settingsCommands.updateRefundPolicy(policy);
+          await settingsCommands.updateRefundPolicy({
+            policy,
+            expectedUpdatedAt: data.expectedUpdatedAt,
+          });
           const { ip, userAgent } = await buildAuditRequestContext();
           return { previous, policy, actorUserId: user.id, ip, userAgent };
         },

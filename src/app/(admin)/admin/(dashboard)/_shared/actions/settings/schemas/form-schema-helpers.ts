@@ -49,3 +49,10 @@ export function optionalText(max: number, message?: string) {
     .max(max, { error: message ?? `${max}文字以内で入力してください` })
     .optional();
 }
+
+/** Settings 楽観的 concurrency 用 hidden field（ISO 8601 datetime） */
+export const settingsExpectedUpdatedAtSchema = z.iso
+  .datetime({
+    error: "更新バージョンが不正です。ページを再読み込みしてください",
+  })
+  .or(z.date());

@@ -16,7 +16,10 @@ import { getStripeClient } from "@/shared/lib/stripe";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { getAppUrl } from "@/shared/lib/constants";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
-import { isStripePaymentMethodType } from "@/shared/lib/stripe-payment-methods";
+import {
+  findPaymentMethodsIncompatibleWithCurrency,
+  isStripePaymentMethodType,
+} from "@/shared/lib/stripe-payment-methods";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
 import {
   REFUNDED_BY_TYPE,
@@ -154,6 +157,17 @@ export async function createCheckoutSessionCommand(input: {
   if (paymentMethodTypes.length === 0) {
     throw new DomainError(
       "Stripe 決済方法が有効化されていません。管理者にお問い合わせください。",
+      "VALIDATION",
+    );
+  }
+
+  const incompatibleMethods = findPaymentMethodsIncompatibleWithCurrency(
+    paymentMethodTypes,
+    currency,
+  );
+  if (incompatibleMethods.length > 0) {
+    throw new DomainError(
+      "選択された決済方法は現在の通貨設定と互換性がありません。管理者にお問い合わせください。",
       "VALIDATION",
     );
   }

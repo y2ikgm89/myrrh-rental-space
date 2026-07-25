@@ -42,7 +42,10 @@ import type { RefundPolicy } from "@/shared/domain/refund/policy";
 
 interface RefundPolicySectionProps {
   settings: RefundPolicy | null;
+  commerceUpdatedAt: string;
 }
+
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
 const DEFAULT_TIER = { hoursBefore: 168, refundRate: 100 };
 const PRESET_TIERS: ReadonlyArray<{ hoursBefore: number; refundRate: number }> =
@@ -51,7 +54,10 @@ const PRESET_TIERS: ReadonlyArray<{ hoursBefore: number; refundRate: number }> =
     { hoursBefore: 72, refundRate: 50 },
   ];
 
-export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
+export function RefundPolicySection({
+  settings,
+  commerceUpdatedAt,
+}: RefundPolicySectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateRefundPolicySettings,
@@ -83,6 +89,7 @@ export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
         refundRate: String(tier.refundRate),
       })),
       refundPolicyDefaultRefundRate: String(initialDefaultRate),
+      expectedUpdatedAt: commerceUpdatedAt,
     },
   });
 
@@ -94,6 +101,17 @@ export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("返金ポリシーを更新しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -133,6 +151,7 @@ export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
 
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
+      <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
       <input
         type="hidden"
         name={fields.refundPolicyEnabled.name}
@@ -143,7 +162,10 @@ export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
         <CardHeader>
           <CardTitle>返金ポリシー</CardTitle>
           <CardDescription>
-            予約キャンセル時の自動返金率を予約開始までの残り時間で段階的に設定します
+            予約キャンセル時の自動返金率を、予約開始までの残り時間（壁時計の時間、168
+            時間 ≈ 7 日）で段階的に設定します。無効（policy 未設定）の場合は
+            fail-open
+            で、キャンセル時に決済残額の全額を自動返金します（返金なしではありません）。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -153,7 +175,8 @@ export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
                 返金ポリシーを有効にする
               </Label>
               <p className="text-xs text-muted-foreground">
-                無効の場合、キャンセル時は残額全額を自動返金します
+                無効時は tier
+                設定を保存せず、キャンセル時に決済残額の全額を自動返金します（fail-open）。
               </p>
             </div>
             <Switch
@@ -224,7 +247,7 @@ export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
                               aria-label={`tier ${index + 1} 開始まで残り時間`}
                             />
                             <span className="text-sm text-muted-foreground">
-                              時間以上前で
+                              時間以上前（開始まで）
                             </span>
                           </div>
                           {tierFieldset.hoursBefore.errors && (
@@ -287,8 +310,10 @@ export function RefundPolicySection({ settings }: RefundPolicySectionProps) {
               )}
 
               <p className="text-xs text-muted-foreground">
-                残り時間が長いほど優先されます。全 tier 外れの場合は下段の
-                「既定返金率」が適用されます。
+                tier
+                の時間はカレンダー日数ではなく、予約開始までの経過時間（壁時計の時間）です。
+                残り時間が長いほど優先されます。全 tier
+                外れの場合は下段の「既定返金率」が適用されます。
               </p>
 
               <div className="space-y-1.5 rounded-lg border p-4">

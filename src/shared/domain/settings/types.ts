@@ -14,6 +14,7 @@ import type {
   BusinessHoursDay,
   BusinessTimeSlot,
 } from "@/shared/lib/json-validators";
+import type { RefundPolicy } from "@/shared/domain/refund/policy";
 import type {
   DurationDiscountRule,
   TaxSettings,
@@ -61,6 +62,10 @@ export type SettingsData = {
   notificationUpdatedAt: Date;
   /** SettingsFeatures.updatedAt — Feature Modules の optimistic concurrency 用 */
   featuresUpdatedAt: Date;
+  /** SettingsStripe.updatedAt — Stripe 設定の optimistic concurrency 用 */
+  stripeUpdatedAt: Date;
+  /** SettingsCommerce.updatedAt — 割引 / 税 / 返金ポリシー設定の optimistic concurrency 用 */
+  commerceUpdatedAt: Date;
   senderEmail: string | null;
   senderName: string | null;
   replyToEmail: string | null;
@@ -184,6 +189,21 @@ export type DiscountSettingsData = {
   durationDiscountRules: DurationDiscountRule[];
   discountCombinationMode: DiscountCombinationMode;
   showOriginalPrice: boolean;
+  /** SettingsCommerce.updatedAt — 割引設定の optimistic concurrency 用 */
+  commerceUpdatedAt: Date;
+};
+
+/** 管理画面の消費税設定（TaxSettings + CAS 用タイムスタンプ） */
+export type AdminTaxSettings = TaxSettings & {
+  /** SettingsCommerce.updatedAt — 消費税設定の optimistic concurrency 用 */
+  commerceUpdatedAt: Date;
+};
+
+/** 管理画面の返金ポリシー設定 */
+export type RefundPolicySettingsData = {
+  policy: RefundPolicy | null;
+  /** SettingsCommerce.updatedAt — 返金ポリシーの optimistic concurrency 用 */
+  commerceUpdatedAt: Date;
 };
 
 export type GoogleCalendarSettingsData = {

@@ -213,6 +213,27 @@ export async function claimReservationAsPaid(
 }
 
 /**
+ * Stripe Checkout fulfill 前の amount_total 照合用。
+ * Checkout Session 作成時に Stripe へ渡した税込合計 (`totalPriceWithTax`) を返す。
+ */
+export async function getReservationCheckoutExpectedAmount(
+  reservationId: string,
+): Promise<number | null> {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId, deletedAt: null },
+    select: { totalPriceWithTax: true },
+  });
+  if (
+    !reservation ||
+    reservation.totalPriceWithTax === null ||
+    reservation.totalPriceWithTax <= 0
+  ) {
+    return null;
+  }
+  return reservation.totalPriceWithTax;
+}
+
+/**
  * 決済失敗の atomic claim: PAID / REFUNDED 以外の予約のみ FAILED に遷移させる。
  *
  * ## Session 一致必須 (Codex PR #1043 P1)

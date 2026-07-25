@@ -7,11 +7,12 @@ import {
   TaxDisplayMode,
 } from "@generated/prisma/enums";
 import type {
+  AdminTaxSettings,
   DiscountSettingsData,
   GoogleCalendarSettingsData,
   GoogleCalendarWebhookState,
+  RefundPolicySettingsData,
   SettingsData,
-  TaxSettings,
   TwoWaySyncSettingsData,
 } from "@/shared/domain/settings/types";
 import { safeDecryptToString } from "@/shared/lib/crypto";
@@ -23,13 +24,13 @@ import {
   parseFeatureModules,
 } from "@/shared/lib/json-validators";
 import type { DataRetentionConfig } from "@/shared/lib/json-validators";
-import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { parseRefundPolicy } from "@/shared/domain/refund/policy";
-import type { RefundPolicy } from "@/shared/domain/refund/policy";
+import { serverEnv } from "@/shared/lib/env/server";
+import { isTestKey } from "@/shared/lib/stripe-shared";
 import { ensureSettingsAnnouncementCarousel } from "@/shared/domain/settings/announcement-bar";
 import {
   ensureSettingsAnalytics,
@@ -47,12 +48,12 @@ import {
   ensureSettingsStripe,
   ensureSettingsSystem,
 } from "@/shared/domain/settings/commands";
-const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
+const DEFAULT_DISCOUNT_SETTINGS = {
   durationDiscountEnabled: false,
   durationDiscountRules: [],
   discountCombinationMode: DiscountCombinationMode.best,
   showOriginalPrice: true,
-};
+} satisfies Omit<DiscountSettingsData, "commerceUpdatedAt">;
 
 function maskSecretKey(key: string): string {
   if (!key || key.length < 16) {
@@ -179,6 +180,8 @@ function toSettingsData(
     sidebarUpdatedAt: sidebar.updatedAt,
     notificationUpdatedAt: notification.updatedAt,
     featuresUpdatedAt: features.updatedAt,
+    stripeUpdatedAt: stripe.updatedAt,
+    commerceUpdatedAt: commerce.updatedAt,
     senderEmail: organization.senderEmail,
     senderName: organization.senderName,
     replyToEmail: organization.replyToEmail,
@@ -532,21 +535,10 @@ export async function getGoogleCalendarWebhookState(): Promise<GoogleCalendarWeb
 }
 
 export async function getDiscountSettings(): Promise<DiscountSettingsData> {
-  const settings = await prisma.settingsCommerce.findUnique({
-    where: { id: "singleton" },
-    select: {
-      durationDiscountEnabled: true,
-      durationDiscountRules: true,
-      discountCombinationMode: true,
-      showOriginalPrice: true,
-    },
-  });
-
-  if (!settings) {
-    return DEFAULT_DISCOUNT_SETTINGS;
-  }
+  const settings = await ensureSettingsCommerce();
 
   return {
+    ...DEFAULT_DISCOUNT_SETTINGS,
     durationDiscountEnabled: settings.durationDiscountEnabled,
     durationDiscountRules: parseDurationDiscountRules(
       settings.durationDiscountRules,
@@ -555,45 +547,44 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
       settings.discountCombinationMode,
     ),
     showOriginalPrice: settings.showOriginalPrice,
+    commerceUpdatedAt: settings.updatedAt,
   };
 }
 
-export async function getTaxSettings(): Promise<TaxSettings> {
-  const settings = await prisma.settingsCommerce.findUnique({
-    where: { id: "singleton" },
-    select: {
-      taxStandardRate: true,
-      taxReducedRate: true,
-      taxDisplayModePublic: true,
-    },
-  });
-
-  if (!settings) {
-    return DEFAULT_TAX_SETTINGS;
-  }
+export async function getTaxSettings(): Promise<AdminTaxSettings> {
+  const settings = await ensureSettingsCommerce();
 
   return {
     standardRate: settings.taxStandardRate,
     reducedRate: settings.taxReducedRate,
     displayModePublic: parseTaxDisplayMode(settings.taxDisplayModePublic),
+    commerceUpdatedAt: settings.updatedAt,
   };
 }
 
 /**
- * `SettingsCommerce.refundPolicy` を parse して RefundPolicy か null で返す。
+ * `SettingsCommerce.refundPolicy` を parse して返す。
  *
  * 未設定 (null) / shape 破損の両方を null に集約する fail-open 動作は
  * `parseRefundPolicy` に集約されている。UI 側は null を「policy 未設定 =
  * cancellation 時は残額全額返金」として表示する。
  */
-export async function getRefundPolicySettings(): Promise<RefundPolicy | null> {
-  const settings = await prisma.settingsCommerce.findUnique({
-    where: { id: "singleton" },
-    select: { refundPolicy: true },
-  });
+export async function getRefundPolicySettings(): Promise<RefundPolicySettingsData> {
+  const settings = await ensureSettingsCommerce();
 
-  if (!settings) return null;
-  return parseRefundPolicy(settings.refundPolicy);
+  return {
+    policy: parseRefundPolicy(settings.refundPolicy),
+    commerceUpdatedAt: settings.updatedAt,
+  };
+}
+
+/** DB に Stripe シークレットがなく env `STRIPE_SECRET_KEY` のみ有効な場合 true */
+export async function getStripeEnvSecretOverrideActive(): Promise<boolean> {
+  const stripe = await prisma.settingsStripe.findUnique({
+    where: { id: "singleton" },
+    select: { stripeSecretKey: true },
+  });
+  return Boolean(serverEnv.STRIPE_SECRET_KEY) && !stripe?.stripeSecretKey;
 }
 
 export async function getEventImportSettings(): Promise<{
@@ -619,4 +610,56 @@ export async function getDataRetentionSettings(): Promise<DataRetentionSettingsD
     config: parseDataRetentionConfig(row.dataRetention),
     dataRetentionUpdatedAt: row.updatedAt,
   };
+}
+
+export type StripeSettingsAuditSnapshot = {
+  stripePublishableKeyLast4: string | null;
+  stripeMode: "test" | "live" | null;
+  stripeCurrency: string;
+  stripePaymentMethodTypes: readonly string[];
+  stripeSecretKeyConfigured: boolean;
+  stripeWebhookSecretConfigured: boolean;
+};
+
+type StripeAuditRow = {
+  stripePublishableKey: string | null;
+  stripeSecretKey: string | null;
+  stripeWebhookSecret: string | null;
+  stripeCurrency: string;
+  stripePaymentMethodTypes: string[];
+};
+
+export function buildStripeSettingsAuditSnapshot(
+  stripe: StripeAuditRow | null,
+): StripeSettingsAuditSnapshot {
+  const publishableKey = stripe?.stripePublishableKey ?? null;
+  return {
+    stripePublishableKeyLast4:
+      publishableKey && publishableKey.length >= 4
+        ? publishableKey.slice(-4)
+        : publishableKey,
+    stripeMode: publishableKey
+      ? isTestKey(publishableKey)
+        ? "test"
+        : "live"
+      : null,
+    stripeCurrency: stripe?.stripeCurrency ?? "jpy",
+    stripePaymentMethodTypes: stripe?.stripePaymentMethodTypes ?? ["card"],
+    stripeSecretKeyConfigured: Boolean(stripe?.stripeSecretKey),
+    stripeWebhookSecretConfigured: Boolean(stripe?.stripeWebhookSecret),
+  };
+}
+
+export async function getStripeSettingsAuditSnapshot(): Promise<StripeSettingsAuditSnapshot> {
+  const stripe = await prisma.settingsStripe.findUnique({
+    where: { id: "singleton" },
+    select: {
+      stripePublishableKey: true,
+      stripeSecretKey: true,
+      stripeWebhookSecret: true,
+      stripeCurrency: true,
+      stripePaymentMethodTypes: true,
+    },
+  });
+  return buildStripeSettingsAuditSnapshot(stripe);
 }

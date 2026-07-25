@@ -57,6 +57,7 @@ import {
   applyChargeRefundIdempotent,
   savePaymentIntentId,
   findReservationByPaymentIntent,
+  getReservationCheckoutExpectedAmount,
 } from "@/shared/domain/reservations/payment-queries";
 import {
   claimStripeEventForProcessing,
@@ -72,6 +73,7 @@ import {
   findEventRegistrationForReceiptNotify,
   applyEventChargeRefundIdempotent,
   findExpiredPendingWaitlistOfferRegistration,
+  getEventRegistrationCheckoutExpectedAmount,
 } from "@/shared/domain/events/payment-queries";
 import { refundExpiredWaitlistOfferPaymentCommand } from "@/shared/domain/events/payment-commands";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
@@ -109,6 +111,7 @@ import {
   EVENT_REGISTRATION_STATUS_TOKEN_LIFETIME_MS,
 } from "@/shared/lib/event-registration-status-token";
 import { getStripeClient } from "@/shared/lib/stripe";
+import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
 
@@ -351,6 +354,56 @@ function extractPaymentSubject(
     },
   );
   return null;
+}
+
+/**
+ * `session.amount_total` と DB 上の期待 charge 額を照合する (AUDIT-03)。
+ *
+ * mismatch 時は fulfill せず HIGH ログのみ (200 返却で Stripe retry を止める —
+ * 金額改ざん / 設定 drift は再送しても解消しない poison event と同型。
+ * `extractPaymentSubject` が null を返して skip する orphan パターンに揃える)。
+ *
+ * `amount_total` または期待額が欠落している場合は check を skip する
+ * (legacy session / テスト stub 互換)。
+ */
+async function checkoutSessionAmountMatchesExpected(
+  session: Stripe.Checkout.Session,
+  expectedAppAmount: number | null,
+  operation: string,
+  subjectKey: string,
+  subjectId: string,
+): Promise<boolean> {
+  if (session.amount_total == null || expectedAppAmount == null) {
+    return true;
+  }
+
+  const currency = session.currency ?? "jpy";
+  const expectedUnit = toStripeUnitAmount(expectedAppAmount, currency);
+
+  if (session.amount_total === expectedUnit) {
+    return true;
+  }
+
+  logError(
+    new Error(
+      "Checkout session amount_total mismatch — skipping fulfill (fail-closed)",
+    ),
+    {
+      category: ErrorCategory.VALIDATION,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation,
+        subjectKey,
+        subjectId,
+        sessionId: session.id,
+        sessionAmountTotal: session.amount_total,
+        expectedUnit,
+        expectedAppAmount,
+        currency,
+      },
+    },
+  );
+  return false;
 }
 
 /**
@@ -755,6 +808,17 @@ async function handleCheckoutSessionCompleted(
   if (subject.kind === "reservation") {
     const { reservationId } = subject;
     if (session.payment_status === "paid") {
+      const expectedAmount =
+        await getReservationCheckoutExpectedAmount(reservationId);
+      const amountOk = await checkoutSessionAmountMatchesExpected(
+        session,
+        expectedAmount,
+        "stripeWebhookCheckoutCompleted",
+        "reservationId",
+        reservationId,
+      );
+      if (!amountOk) return;
+
       // 即時決済（カード等）: atomic claim で fulfill
       await fulfillPaymentAtomically(reservationId, session);
     } else {
@@ -776,6 +840,17 @@ async function handleCheckoutSessionCompleted(
 
   const { registrationId } = subject;
   if (session.payment_status === "paid") {
+    const expectedAmount =
+      await getEventRegistrationCheckoutExpectedAmount(registrationId);
+    const amountOk = await checkoutSessionAmountMatchesExpected(
+      session,
+      expectedAmount,
+      "stripeWebhookCheckoutCompleted",
+      "registrationId",
+      registrationId,
+    );
+    if (!amountOk) return;
+
     await fulfillEventRegistrationPaymentAtomically(registrationId, session);
   } else {
     // 非同期決済（konbini / customer_balance）: PaymentIntent ID のみ保存。
@@ -822,9 +897,33 @@ async function handleAsyncPaymentSucceeded(session: Stripe.Checkout.Session) {
   if (!subject) return;
 
   if (subject.kind === "reservation") {
+    const expectedAmount = await getReservationCheckoutExpectedAmount(
+      subject.reservationId,
+    );
+    const amountOk = await checkoutSessionAmountMatchesExpected(
+      session,
+      expectedAmount,
+      "stripeWebhookAsyncPaymentSucceeded",
+      "reservationId",
+      subject.reservationId,
+    );
+    if (!amountOk) return;
+
     await fulfillPaymentAtomically(subject.reservationId, session);
     return;
   }
+
+  const expectedAmount = await getEventRegistrationCheckoutExpectedAmount(
+    subject.registrationId,
+  );
+  const amountOk = await checkoutSessionAmountMatchesExpected(
+    session,
+    expectedAmount,
+    "stripeWebhookAsyncPaymentSucceeded",
+    "registrationId",
+    subject.registrationId,
+  );
+  if (!amountOk) return;
 
   await fulfillEventRegistrationPaymentAtomically(
     subject.registrationId,

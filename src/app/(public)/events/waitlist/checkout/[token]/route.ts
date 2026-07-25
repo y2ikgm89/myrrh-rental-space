@@ -65,6 +65,7 @@ export async function GET(
   // 生成する — Server Component 限定ではない。公式 JSDoc: "In a Route Handler or
   // Server Action, it will serve a 404 to the caller.")
   await requireFeatureEnabled("events");
+  await requireFeatureEnabled("payment");
 
   // GET エンドポイントへの token 総当たりを牽制する（confirm page と同方針）。
   const clientIp = getClientIp(request);

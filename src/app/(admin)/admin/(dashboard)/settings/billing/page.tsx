@@ -8,6 +8,7 @@
  * - 動的コンテンツ: 設定データ（Suspenseでラップ）
  */
 
+import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import {
@@ -15,6 +16,7 @@ import {
   getDiscountSettings,
   getTaxSettings,
   getRefundPolicySettings,
+  getStripeEnvSecretOverrideActive,
 } from "@/admin/queries/settings";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { SettingsLayout } from "../_components/SettingsLayout";
@@ -25,17 +27,34 @@ import {
   TaxSection,
   RefundPolicySection,
 } from "../_components/sections";
+import { Alert, AlertDescription, AlertTitle } from "@/admin/components/ui";
+import { getAppUrl } from "@/shared/lib/constants";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { toPlainObject } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
+import type {
+  AdminTaxSettings,
+  DiscountSettingsData,
+} from "@/shared/domain/settings/types";
 import type { ReactElement } from "react";
 
 async function BillingSettingsContent(): Promise<ReactElement> {
   await connection();
-  const [settings, discountSettings, taxSettings, refundPolicy] =
-    await Promise.all([
-      getSettings(),
-      getDiscountSettings(),
-      getTaxSettings(),
-      getRefundPolicySettings(),
-    ]);
+  const [
+    settings,
+    discountSettings,
+    taxSettings,
+    refundPolicySettings,
+    stripeEnvSecretActive,
+    paymentFeatureEnabled,
+  ] = await Promise.all([
+    getSettings(),
+    getDiscountSettings(),
+    getTaxSettings(),
+    getRefundPolicySettings(),
+    getStripeEnvSecretOverrideActive(),
+    isFeatureEnabled("payment"),
+  ]);
 
   if (!settings) {
     return (
@@ -45,30 +64,83 @@ async function BillingSettingsContent(): Promise<ReactElement> {
     );
   }
 
+  const stripeWebhookUrl = `${getAppUrl()}/api/webhooks/stripe`;
+  const maxReservationHours = Math.max(
+    1,
+    Math.floor(settings.maxReservationDuration / 60),
+  );
+
   const tabs = [
     {
       value: "payment",
       label: "決済",
-      content: <StripeSection settings={settings} />,
+      content: (
+        <StripeSection
+          settings={settings}
+          stripeWebhookUrl={stripeWebhookUrl}
+          stripeEnvSecretActive={stripeEnvSecretActive}
+        />
+      ),
     },
     {
       value: "discount",
       label: "割引",
-      content: <DiscountSection settings={discountSettings} />,
+      content: (
+        <DiscountSection
+          settings={
+            toPlainObject(
+              discountSettings,
+            ) satisfies Serialized<DiscountSettingsData>
+          }
+          maxReservationHours={maxReservationHours}
+        />
+      ),
     },
     {
       value: "tax",
       label: "消費税",
-      content: <TaxSection settings={taxSettings} />,
+      content: (
+        <TaxSection
+          settings={
+            toPlainObject(taxSettings) satisfies Serialized<AdminTaxSettings>
+          }
+        />
+      ),
     },
     {
       value: "refund-policy",
       label: "返金ポリシー",
-      content: <RefundPolicySection settings={refundPolicy} />,
+      content: (
+        <RefundPolicySection
+          settings={refundPolicySettings.policy}
+          commerceUpdatedAt={refundPolicySettings.commerceUpdatedAt.toISOString()}
+        />
+      ),
     },
   ];
 
-  return <SettingsTabs tabs={tabs} defaultTab="payment" />;
+  return (
+    <div className="space-y-6">
+      {!paymentFeatureEnabled && (
+        <Alert variant="info">
+          <AlertTitle>オンライン決済機能が OFF です</AlertTitle>
+          <AlertDescription>
+            新規 checkout は無効です。Stripe credentials
+            が設定されていれば、Webhook
+            による決済確定・返金反映などの精算処理は継続します。有効化は「
+            <Link
+              href="/admin/settings/features"
+              className="underline underline-offset-4 hover:text-foreground"
+            >
+              機能モジュール
+            </Link>
+            」の「オンライン決済」から行えます。
+          </AlertDescription>
+        </Alert>
+      )}
+      <SettingsTabs tabs={tabs} defaultTab="payment" />
+    </div>
+  );
 }
 
 function BillingSettingsLoading(): ReactElement {

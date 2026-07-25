@@ -5,17 +5,18 @@ import * as announcementBar from "@/shared/domain/settings/announcement-bar";
 import { getNotificationStaffCandidates as getNotificationStaffCandidatesQuery } from "@/shared/domain/users/queries";
 import type { NotificationStaffCandidate } from "@/shared/domain/users/types";
 import type {
+  AdminTaxSettings,
   BusinessHours,
   BusinessHoursDay,
   BusinessTimeSlot,
   DiscountSettingsData,
   GoogleCalendarSettingsData,
+  RefundPolicySettingsData,
   SettingsData,
   TaxSettings,
 } from "@/shared/domain/settings/types";
 import type { AnnouncementBarCarouselSettingsInput } from "@/shared/domain/settings/announcement-bar";
 import type { Serialized } from "@/shared/lib/serialize";
-import type { RefundPolicy } from "@/shared/domain/refund/policy";
 import type { DataRetentionSettingsData } from "@/shared/domain/settings/admin-queries";
 import { requireAdminPermission } from "./_helpers";
 
@@ -26,6 +27,8 @@ export type {
   SettingsData,
   DiscountSettingsData,
   GoogleCalendarSettingsData,
+  AdminTaxSettings,
+  RefundPolicySettingsData,
   TaxSettings,
 };
 
@@ -51,14 +54,19 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
   return adminQueries.getDiscountSettings();
 }
 
-export async function getTaxSettings(): Promise<TaxSettings> {
+export async function getTaxSettings(): Promise<AdminTaxSettings> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getTaxSettings();
 }
 
-export async function getRefundPolicySettings(): Promise<RefundPolicy | null> {
+export async function getRefundPolicySettings(): Promise<RefundPolicySettingsData> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getRefundPolicySettings();
+}
+
+export async function getStripeEnvSecretOverrideActive(): Promise<boolean> {
+  await requireAdminPermission("settings", "read");
+  return adminQueries.getStripeEnvSecretOverrideActive();
 }
 
 export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettingsInput> {

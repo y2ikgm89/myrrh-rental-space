@@ -26,6 +26,7 @@ const ENABLED_INPUT = {
   refundPolicyEnabled: true,
   refundPolicyTiers: [{ hoursBefore: 24, refundRate: 50 }],
   refundPolicyDefaultRefundRate: 0,
+  expectedUpdatedAt: "2026-01-01T00:00:00.000Z",
 };
 
 let currentFormInput: typeof ENABLED_INPUT = ENABLED_INPUT;
@@ -60,10 +61,18 @@ mock.module("@/shared/domain/settings/commands", () => ({
 
 const mockGetRefundPolicySettings = mock<
   () => Promise<{
-    tiers: { hoursBefore: number; refundRate: number }[];
-    defaultRefundRate: number;
-  } | null>
->(() => Promise.resolve(null));
+    policy: {
+      tiers: { hoursBefore: number; refundRate: number }[];
+      defaultRefundRate: number;
+    } | null;
+    commerceUpdatedAt: string;
+  }>
+>(() =>
+  Promise.resolve({
+    policy: null,
+    commerceUpdatedAt: "2026-01-01T00:00:00.000Z",
+  }),
+);
 
 mock.module("@/shared/domain/settings/admin-queries", () => ({
   getRefundPolicySettings: () => mockGetRefundPolicySettings(),
@@ -112,7 +121,10 @@ describe("updateRefundPolicySettings の AuditLog diff", () => {
     mockUpdateRefundPolicyCommand.mockReset();
     mockUpdateRefundPolicyCommand.mockResolvedValue(undefined);
     mockGetRefundPolicySettings.mockReset();
-    mockGetRefundPolicySettings.mockResolvedValue(null);
+    mockGetRefundPolicySettings.mockResolvedValue({
+      policy: null,
+      commerceUpdatedAt: "2026-01-01T00:00:00.000Z",
+    });
     mockCreateAuditLogRecord.mockReset();
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
@@ -138,13 +150,17 @@ describe("updateRefundPolicySettings の AuditLog diff", () => {
 
   test("有効設定 → 無効化 (OFF) を newValue=null で記録する", async () => {
     mockGetRefundPolicySettings.mockResolvedValue({
-      tiers: [{ hoursBefore: 24, refundRate: 50 }],
-      defaultRefundRate: 0,
+      policy: {
+        tiers: [{ hoursBefore: 24, refundRate: 50 }],
+        defaultRefundRate: 0,
+      },
+      commerceUpdatedAt: "2026-01-01T00:00:00.000Z",
     });
     currentFormInput = {
       refundPolicyEnabled: false,
       refundPolicyTiers: [],
       refundPolicyDefaultRefundRate: 0,
+      expectedUpdatedAt: "2026-01-01T00:00:00.000Z",
     };
 
     await updateRefundPolicySettings(undefined, new FormData());

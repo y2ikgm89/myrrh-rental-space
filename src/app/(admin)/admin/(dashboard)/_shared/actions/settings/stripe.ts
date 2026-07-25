@@ -21,19 +21,40 @@ import { emptyToNull } from "./schemas/form-schema-helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   clearStripeKeys as clearStripeKeysCommand,
-  recordStripeConnectionSuccess,
   updateStripeSettings as updateStripeSettingsCommand,
 } from "@/shared/domain/settings/integration-commands";
 import {
-  logError,
-  ErrorCategory,
-  ErrorSeverity,
-  normalizeError,
-} from "@/shared/lib/errors/server";
+  buildStripeSettingsAuditSnapshot,
+  getStripeSettingsAuditSnapshot,
+  type StripeSettingsAuditSnapshot,
+} from "@/shared/domain/settings/admin-queries";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import {
   isMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
+
+type StripeAuditValue = StripeSettingsAuditSnapshot & {
+  stripeSecretKeyRotated?: boolean;
+  stripeWebhookSecretRotated?: boolean;
+};
+
+function withSecretRotationFlags(
+  snapshot: StripeSettingsAuditSnapshot,
+  rotation: {
+    secretKey?: boolean;
+    webhookSecret?: boolean;
+  },
+): StripeAuditValue {
+  return {
+    ...snapshot,
+    ...(rotation.secretKey && { stripeSecretKeyRotated: true }),
+    ...(rotation.webhookSecret && { stripeWebhookSecretRotated: true }),
+  };
+}
 
 // =============================================================================
 // Actions
@@ -52,20 +73,56 @@ export async function updateStripeSettings(
     const result = await executeAdminMutationResult({
       resource: "settings",
       action: "manage",
-      execute: async () => {
+      execute: async (user) => {
+        const previous = await getStripeSettingsAuditSnapshot();
+        const secretKey = emptyToNull(data.stripeSecretKey);
+        const webhookSecret = emptyToNull(data.stripeWebhookSecret);
         await updateStripeSettingsCommand({
           stripePublishableKey: emptyToNull(data.stripePublishableKey),
-          stripeSecretKey: emptyToNull(data.stripeSecretKey),
-          stripeWebhookSecret: emptyToNull(data.stripeWebhookSecret),
+          stripeSecretKey: secretKey,
+          stripeWebhookSecret: webhookSecret,
           stripeCurrency: data.stripeCurrency,
           stripePaymentMethodTypes: data.stripePaymentMethodTypes,
+          expectedUpdatedAt: data.expectedUpdatedAt,
         });
-        return null;
+        const next = await getStripeSettingsAuditSnapshot();
+        const { ip, userAgent } = await buildAuditRequestContext();
+        return {
+          previous,
+          newValue: withSecretRotationFlags(next, {
+            ...(secretKey && { secretKey: true }),
+            ...(webhookSecret && { webhookSecret: true }),
+          }),
+          actorUserId: user.id,
+          ip,
+          userAgent,
+        };
       },
-      afterSuccess: () => {
+      afterSuccess: (outcome) => {
         invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
           skipCdnPurge: true,
         });
+
+        fireAndForget(
+          createAuditLogRecord({
+            userId: outcome.actorUserId,
+            action: "UPDATE",
+            resource: "settings.stripe",
+            oldValue: outcome.previous,
+            newValue: outcome.newValue,
+            metadata: {
+              ...(outcome.ip !== null && { ip: outcome.ip }),
+              ...(outcome.userAgent !== null && {
+                userAgent: outcome.userAgent,
+              }),
+            },
+          }),
+          {
+            operation: "auditLogUpdateStripeSettings",
+            category: ErrorCategory.DATABASE,
+            severity: ErrorSeverity.MEDIUM,
+          },
+        );
       },
     });
     if (isMutationError(result)) {
@@ -76,7 +133,7 @@ export async function updateStripeSettings(
 }
 
 /**
- * Stripe接続テスト
+ * Stripe接続テスト — 未保存キーでの検証のみ。DB への接続状態書込は行わない。
  */
 export async function testStripeConnectionAction(
   secretKey: string,
@@ -93,25 +150,10 @@ export async function testStripeConnectionAction(
         );
       }
 
-      try {
-        await recordStripeConnectionSuccess(result.accountId);
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.MEDIUM,
-          context: { operation: "testStripeConnectionAction" },
-        });
-      }
-
       return {
         ...(result.accountId !== undefined && { accountId: result.accountId }),
         ...(result.mode !== undefined && { mode: result.mode }),
       };
-    },
-    afterSuccess: () => {
-      invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
-        skipCdnPurge: true,
-      });
     },
   });
 }
@@ -119,18 +161,55 @@ export async function testStripeConnectionAction(
 /**
  * Stripeキーをクリア
  */
-export async function clearStripeKeys(): Promise<MutationResult> {
+export async function clearStripeKeys(): Promise<
+  MutationResult<{
+    previous: StripeSettingsAuditSnapshot;
+    newValue: StripeSettingsAuditSnapshot;
+    actorUserId: string;
+    ip: string | null;
+    userAgent: string | null;
+  }>
+> {
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
-    execute: async () => {
+    execute: async (user) => {
+      const previous = await getStripeSettingsAuditSnapshot();
       await clearStripeKeysCommand();
-      return null;
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return {
+        previous,
+        newValue: buildStripeSettingsAuditSnapshot(null),
+        actorUserId: user.id,
+        ip,
+        userAgent,
+      };
     },
-    afterSuccess: () => {
+    afterSuccess: (outcome) => {
       invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
         skipCdnPurge: true,
       });
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: "UPDATE",
+          resource: "settings.stripe",
+          oldValue: outcome.previous,
+          newValue: outcome.newValue,
+          metadata: {
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogClearStripeKeys",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }

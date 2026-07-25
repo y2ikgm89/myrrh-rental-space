@@ -82,8 +82,8 @@ interface ReservationDetailProps {
   /** 返金ポリシー表示行。未設定なら undefined */
   readonly refundPolicyLines?: readonly string[] | undefined;
   /**
-   * オンライン決済 (Feature Module `payment`) が有効か。
-   * false なら CheckoutButton は表示しない (server 側 `assertOnlinePaymentAvailable` と対称)。
+   * オンライン決済が利用可能か (feature ON かつ Stripe credentials 設定済み)。
+   * false なら CheckoutButton は表示しない (`assertOnlinePaymentAvailable` と対称)。
    */
   readonly paymentEnabled: boolean;
   /**
@@ -324,13 +324,11 @@ export function ReservationDetail({
 
       {/* Stripe Checkout ボタン (PR#7 + Codex P1 PR#1022 + #8 FAILED gate 緩和):
         paymentStatus ∈ {UNPAID, FAILED} かつ totalPrice>0 かつ status ∈ {PENDING, CONFIRMED}
-        かつ Feature Module `payment` ON のみ表示。
-        FAILED (前回決済失敗 / session.expired webhook で claim) からも再決済に進めるようにし、
-        「一度離脱すると admin 手動リセットまでマイページから支払えない」体験を解消する。
+        かつ `isOnlinePaymentAvailable()` (feature ON + credentials 設定済) のみ表示。
+        FAILED (前回決済失敗 / session.expired webhook で claim) からも再決済に進める。
         cancel path は status=CANCELLED / paymentStatus=UNPAID を残すので isActive gate 必須。
-        `paymentEnabled` は server 側 `assertOnlinePaymentAvailable` と対称の feature gate
-        (旧 stripeEnabled トグルの UI 抜けを恒久解消)。server 側の terminal-status ガード
-        (createCheckoutSessionCommand) と重ねて defense-in-depth を成す。 */}
+        `paymentEnabled` は server 側 `assertOnlinePaymentAvailable` と対称。
+        createCheckoutSessionCommand の terminal-status ガードと重ねて defense-in-depth。 */}
       {paymentEnabled &&
         isActive &&
         (paymentStatusEnum === PaymentStatus.UNPAID ||

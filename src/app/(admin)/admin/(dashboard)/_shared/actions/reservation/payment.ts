@@ -179,9 +179,9 @@ export async function refundReservationPayment(
             endTime: emailData.endTime,
             refundAmount: data.refundAmount,
             cumulativeRefundAmount: data.cumulativeAmount,
-            // fetchReservationEmailData は最新の totalPrice を返すため、
-            // manual admin edit 後の refund でも表示上の割合が現在値と一致する。
-            originalTotal: emailData.totalPrice ?? 0,
+            // Stripe charge / refund 上限は totalPriceWithTax (税込) が SSoT。
+            originalTotal:
+              emailData.totalPriceWithTax ?? emailData.totalPrice ?? 0,
             isFullyRefunded: data.newPaymentStatus === PaymentStatus.REFUNDED,
             refundId: data.refundId,
             ...(emailData.userId != null ? { userId: emailData.userId } : {}),

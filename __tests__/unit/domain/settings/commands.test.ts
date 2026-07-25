@@ -43,6 +43,9 @@ const mockSettingsOrganizationUpdateMany = mock<
 const mockSettingsCommerceUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsCommerceUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockSettingsReservationUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
@@ -117,6 +120,10 @@ const txClient = {
   settingsDataRetention: {
     updateMany: mockSettingsDataRetentionUpdateMany,
   },
+  settingsCommerce: {
+    upsert: mockSettingsCommerceUpsert,
+    updateMany: mockSettingsCommerceUpdateMany,
+  },
 };
 
 const mockTransaction = mock(
@@ -161,6 +168,7 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsCommerce: {
       upsert: mockSettingsCommerceUpsert,
+      updateMany: mockSettingsCommerceUpdateMany,
     },
     settingsReservation: {
       upsert: mockSettingsReservationUpsert,
@@ -338,12 +346,14 @@ const DISCOUNT_SETTINGS_INPUT = {
   ],
   discountCombinationMode: "best" as const,
   showOriginalPrice: true,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
 const TAX_SETTINGS_INPUT = {
   taxStandardRate: 10,
   taxReducedRate: 8,
   taxDisplayModePublic: "tax_included" as const,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
 const HEADER_SETTINGS_INPUT = {
@@ -614,21 +624,23 @@ describe("updateDiscountSettings", () => {
   beforeEach(() => {
     mockSettingsCommerceUpsert.mockReset();
     mockSettingsCommerceUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsCommerceUpdateMany.mockReset();
+    mockSettingsCommerceUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   describe("正常系", () => {
-    test("重複のない割引ルールで正常にアップサートされる", async () => {
+    test("重複のない割引ルールで正常に更新される", async () => {
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
-      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpdateMany).toHaveBeenCalledTimes(1);
     });
 
     test("durationDiscountRules が Prisma Json 配列としてそのまま渡される", async () => {
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
-      expect(mockSettingsCommerceUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsCommerceUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             durationDiscountRules:
               DISCOUNT_SETTINGS_INPUT.durationDiscountRules,
           }),
@@ -642,14 +654,13 @@ describe("updateDiscountSettings", () => {
 
       await updateDiscountSettings(DISCOUNT_SETTINGS_INPUT);
 
-      const firstCall = mockSettingsCommerceUpsert.mock.calls[0];
+      const firstCall = mockSettingsCommerceUpdateMany.mock.calls[0];
       expect(firstCall).toBeDefined();
       if (firstCall === undefined) {
-        throw new Error("settings.upsert must be called");
+        throw new Error("settingsCommerce.updateMany must be called");
       }
-      const stored = firstCall[0].update?.["durationDiscountRules"];
+      const stored = firstCall[0].data?.["durationDiscountRules"];
       expect(Array.isArray(stored)).toBe(true);
-      // Prisma Json 列に object を渡したときの read 側挙動を模した round-trip
       const roundTripped = parseDurationDiscountRules(stored);
       expect(roundTripped).toEqual(
         DISCOUNT_SETTINGS_INPUT.durationDiscountRules,
@@ -662,7 +673,7 @@ describe("updateDiscountSettings", () => {
         durationDiscountRules: [],
       });
 
-      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpdateMany).toHaveBeenCalledTimes(1);
     });
 
     test("durationDiscountEnabled が false でも正常に動作する", async () => {
@@ -672,7 +683,7 @@ describe("updateDiscountSettings", () => {
         durationDiscountRules: [],
       });
 
-      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpdateMany).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -683,7 +694,7 @@ describe("updateDiscountSettings", () => {
           ...DISCOUNT_SETTINGS_INPUT,
           durationDiscountRules: [
             { hours: 2, discountRate: 5 },
-            { hours: 2, discountRate: 10 }, // 重複
+            { hours: 2, discountRate: 10 },
           ],
         }),
       ).rejects.toMatchObject({
@@ -692,7 +703,7 @@ describe("updateDiscountSettings", () => {
       });
     });
 
-    test("重複ルールがある場合は upsert が呼ばれない", async () => {
+    test("重複ルールがある場合は updateMany が呼ばれない", async () => {
       await expect(
         updateDiscountSettings({
           ...DISCOUNT_SETTINGS_INPUT,
@@ -703,7 +714,18 @@ describe("updateDiscountSettings", () => {
         }),
       ).rejects.toThrow(DomainError);
 
-      expect(mockSettingsCommerceUpsert).not.toHaveBeenCalled();
+      expect(mockSettingsCommerceUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("expectedUpdatedAt 不一致時は CONFLICT エラー", async () => {
+      mockSettingsCommerceUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        updateDiscountSettings(DISCOUNT_SETTINGS_INPUT),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+      });
     });
   });
 });
@@ -716,21 +738,23 @@ describe("updateTaxSettings", () => {
   beforeEach(() => {
     mockSettingsCommerceUpsert.mockReset();
     mockSettingsCommerceUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsCommerceUpdateMany.mockReset();
+    mockSettingsCommerceUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   describe("正常系", () => {
-    test("有効な税設定でアップサートが実行される", async () => {
+    test("有効な税設定で updateMany が実行される", async () => {
       await updateTaxSettings(TAX_SETTINGS_INPUT);
 
-      expect(mockSettingsCommerceUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsCommerceUpdateMany).toHaveBeenCalledTimes(1);
     });
 
-    test("税設定データが upsert の update フィールドに渡される", async () => {
+    test("税設定データが updateMany の data フィールドに渡される", async () => {
       await updateTaxSettings(TAX_SETTINGS_INPUT);
 
-      expect(mockSettingsCommerceUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsCommerceUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             taxStandardRate: 10,
             taxReducedRate: 8,
           }),
@@ -742,6 +766,19 @@ describe("updateTaxSettings", () => {
       const result = await updateTaxSettings(TAX_SETTINGS_INPUT);
 
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("異常系", () => {
+    test("expectedUpdatedAt 不一致時は CONFLICT エラー", async () => {
+      mockSettingsCommerceUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(updateTaxSettings(TAX_SETTINGS_INPUT)).rejects.toMatchObject(
+        {
+          code: "CONFLICT",
+          message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+        },
+      );
     });
   });
 });

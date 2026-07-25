@@ -21,7 +21,11 @@ import {
   STRIPE_PAYMENT_METHOD_LABELS,
   isPaymentMethodAllowedForCurrency,
 } from "@/shared/lib/stripe-payment-methods";
-import { optionalText, switchBoolean } from "./form-schema-helpers";
+import {
+  optionalText,
+  switchBoolean,
+  settingsExpectedUpdatedAtSchema,
+} from "./form-schema-helpers";
 
 // =============================================================================
 // Site > Security > Turnstile
@@ -64,6 +68,7 @@ export const discountFormSchema = z.object({
     ),
   discountCombinationMode: z.enum(DiscountCombinationMode),
   showOriginalPrice: switchBoolean(),
+  expectedUpdatedAt: settingsExpectedUpdatedAtSchema,
 });
 
 export type DiscountFormInput = z.infer<typeof discountFormSchema>;
@@ -111,6 +116,7 @@ export const stripeFormSchema = z
       .min(1, { error: "少なくとも 1 種類の決済方法を有効にしてください" })
       .transform((methods) => Array.from(new Set(methods)))
       .default(["card"]),
+    expectedUpdatedAt: settingsExpectedUpdatedAtSchema,
   })
   .refine(
     (data) => {

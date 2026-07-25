@@ -385,6 +385,28 @@ describe("reservations/payment-commands", () => {
       expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
     });
 
+    test("決済方法と通貨が非互換 (konbini + USD) → VALIDATION & Stripe 未呼出", async () => {
+      mockAssertOnlinePaymentAvailable.mockResolvedValueOnce({
+        stripeSecretKey: "enc-stripe-secret",
+        stripeWebhookSecret: "enc-webhook-secret",
+        stripePublishableKey: null,
+        stripeAccountId: null,
+        stripeCurrency: "usd",
+        stripePaymentMethodTypes: ["konbini", "card"],
+      });
+      mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
+
+      const error = await createCheckoutSessionCommand({
+        reservationId: RESERVATION_ID,
+        actorCustomerId: null,
+      }).catch((e: unknown) => e);
+
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect((error as DomainError).message).toContain("互換性");
+      expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
     test("Race 修正: claim 後 authoritative re-read で totalPriceWithTax が edit 済みなら新価格で Stripe 作成", async () => {
       mockReservationFindUnique.mockResolvedValueOnce(unpaidReservation());
       mockReservationFindUnique.mockResolvedValueOnce({
