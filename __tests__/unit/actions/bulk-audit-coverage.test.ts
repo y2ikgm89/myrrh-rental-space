@@ -51,6 +51,26 @@ const REQUIRED: BulkAction[] = [
     file: "src/app/(admin)/admin/(dashboard)/_shared/actions/space/bulk.ts",
     exports: ["bulkTogglePublishedSpaces", "bulkDeleteSpaces"],
   },
+  {
+    file: "src/app/(admin)/admin/(dashboard)/_shared/actions/post/bulk.ts",
+    exports: ["bulkTogglePostPublished", "bulkDeletePosts"],
+  },
+  {
+    file: "src/app/(admin)/admin/(dashboard)/_shared/actions/news/bulk.ts",
+    exports: ["bulkTogglePublishedNews", "bulkDeleteNews"],
+  },
+  {
+    file: "src/app/(admin)/admin/(dashboard)/_shared/actions/event/bulk.ts",
+    exports: [
+      "bulkPublishEvents",
+      "bulkSoftDeleteEvents",
+      "bulkSetStatusEvents",
+    ],
+  },
+  {
+    file: "src/app/(admin)/admin/(dashboard)/_shared/actions/inquiry/bulk.ts",
+    exports: ["bulkDeleteInquiries", "bulkSetStatusInquiries"],
+  },
 ];
 
 function extractFunctionBody(source: string, name: string): string | null {

@@ -55,6 +55,10 @@ mock.module("@/admin/lib/admin-action", () => ({
   ),
 }));
 
+mock.module("@/admin/lib/audit", () => ({
+  emitBulkAuditRecords: mock(() => undefined),
+}));
+
 const mockBulkPublishEventsCommand = mock<
   (ids: string[], publish: boolean) => Promise<unknown>
 >(() =>
