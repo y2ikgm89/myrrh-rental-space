@@ -85,6 +85,10 @@ const EXPECTED_GATES: ReadonlyArray<{
   },
   { file: "src/app/(public)/mypage/events/page.tsx", module: "events" },
   {
+    file: "src/app/(public)/mypage/events/[id]/page.tsx",
+    module: "events",
+  },
+  {
     file: "src/app/(public)/claim/event-registration/page.tsx",
     module: "events",
   },

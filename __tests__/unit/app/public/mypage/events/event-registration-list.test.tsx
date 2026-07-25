@@ -255,9 +255,19 @@ describe("EventRegistrationList / meetingUrl gate (MYPAGE-EVENT-01)", () => {
     return links.length > 0 ? links[0]! : null;
   }
 
+  function detailLink(): HTMLAnchorElement | null {
+    if (!container) return null;
+    return container.querySelector<HTMLAnchorElement>(
+      'a[href="/mypage/events/cm0reg12345678901234567"]',
+    );
+  }
+
   test("CONFIRMED + ONLINE + meetingUrl 有り → 参加 URL リンクを描画する", () => {
     renderList(makeRegistration({ status: "CONFIRMED" }));
     expect(meetingUrlLink()).not.toBeNull();
+    expect(detailLink()?.getAttribute("href")).toBe(
+      "/mypage/events/cm0reg12345678901234567",
+    );
   });
 
   test("CONFIRMED + HYBRID + meetingUrl 有り → 参加 URL リンクを描画する", () => {

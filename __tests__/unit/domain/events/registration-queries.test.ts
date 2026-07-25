@@ -6,20 +6,31 @@ type RegistrationEmailRow = {
   eventId: string;
   slotId: string;
   quantity: number;
-  ticket: { price: number };
+  ticket: { price: number; name?: string };
   slot: {
     startAt: Date;
     endAt: Date;
-    capacity: number;
+    capacity?: number;
   };
   event: {
+    id?: string;
     title: string;
+    slug?: string;
+    status?: string;
     format: string;
     meetingUrl: string | null;
     addressDetail: string | null;
     location: { name: string } | null;
     space: { name: string } | null;
   };
+  status?: RegistrationStatus;
+  cancelledAt?: Date | null;
+  createdAt?: Date;
+  waitlistedAt?: Date | null;
+  offeredAt?: Date | null;
+  expiresAt?: Date | null;
+  paymentStatus?: string;
+  ticketId?: string;
 };
 
 type ExportRow = {
@@ -69,6 +80,7 @@ mock.module("@/shared/db/prisma", () => ({
 import {
   getEventRegistrationDetailsForEmail,
   findEventRegistrationsForReminderWindow,
+  getCustomerEventRegistrationDetail,
 } from "@/shared/domain/events/registration-queries";
 import { getEventRegistrationsForExport } from "@/shared/domain/events/export-queries";
 
@@ -201,5 +213,68 @@ describe("event registration query slot consistency", () => {
         },
       },
     });
+  });
+
+  test("getCustomerEventRegistrationDetail は customerId 一致で絞り込み ticketName を返す", async () => {
+    const startAt = new Date("2026-08-01T01:00:00.000Z");
+    const endAt = new Date("2026-08-01T02:00:00.000Z");
+    mockRegistrationFindFirst.mockResolvedValue({
+      id: "reg-detail",
+      eventId: "event-1",
+      quantity: 2,
+      status: RegistrationStatus.CONFIRMED,
+      cancelledAt: null,
+      createdAt: new Date("2026-07-01T00:00:00.000Z"),
+      waitlistedAt: null,
+      offeredAt: null,
+      expiresAt: null,
+      paymentStatus: "UNPAID",
+      ticket: { price: 3000, name: "一般チケット" },
+      slotId: "slot-1",
+      ticketId: "ticket-1",
+      slot: { startAt, endAt },
+      event: {
+        id: "event-1",
+        title: "詳細テストイベント",
+        slug: "detail-event",
+        addressDetail: null,
+        status: "PUBLISHED",
+        format: "OFFLINE",
+        meetingUrl: null,
+        location: { name: "会場A" },
+        space: null,
+      },
+    });
+
+    const detail = await getCustomerEventRegistrationDetail(
+      "reg-detail",
+      "customer-1",
+    );
+
+    expect(mockRegistrationFindFirst).toHaveBeenCalledWith({
+      where: {
+        id: "reg-detail",
+        customerId: "customer-1",
+        event: { deletedAt: null },
+      },
+      select: expect.objectContaining({
+        id: true,
+        ticket: { select: { price: true, name: true } },
+      }),
+    });
+    expect(detail?.ticketName).toBe("一般チケット");
+    expect(detail?.event.title).toBe("詳細テストイベント");
+    expect(detail?.ticketTotalPrice).toBe(6000);
+  });
+
+  test("getCustomerEventRegistrationDetail は ownership 不一致時 null", async () => {
+    mockRegistrationFindFirst.mockResolvedValue(null);
+
+    const detail = await getCustomerEventRegistrationDetail(
+      "reg-other",
+      "customer-1",
+    );
+
+    expect(detail).toBeNull();
   });
 });

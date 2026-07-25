@@ -533,12 +533,36 @@ export async function getCustomerEventRegistrations(
 }
 
 /**
- * イベント申込の .ics 生成に必要なフィールドを取得する。
- *
- * - `customerId` を渡した場合: 所有者一致を where 条件で強制 (会員セッション経路)
- * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
- *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
+ * 会員マイページのイベント申込詳細 (`/mypage/events/[id]`) 用。
+ * `customerId` 一致を where で強制し、他顧客の申込は null を返す。
  */
+export async function getCustomerEventRegistrationDetail(
+  registrationId: string,
+  customerId: string,
+) {
+  const row = await prisma.eventRegistration.findFirst({
+    where: {
+      id: registrationId,
+      customerId,
+      event: { deletedAt: null },
+    },
+    select: {
+      ...CUSTOMER_EVENT_REGISTRATION_SELECT,
+      ticket: {
+        select: {
+          price: true,
+          name: true,
+        },
+      },
+    },
+  });
+  if (!row) return null;
+  return {
+    ...mapCustomerEventRegistration(row),
+    ticketName: row.ticket.name,
+  };
+}
+
 /**
  * イベント前日リマインダー cron 用: 指定日時窓内の CONFIRMED 申込を取得。
  *
@@ -582,6 +606,13 @@ export async function findEventRegistrationsForReminderWindow(
   });
 }
 
+/**
+ * イベント申込の .ics 生成に必要なフィールドを取得する。
+ *
+ * - `customerId` を渡した場合: 所有者一致を where 条件で強制 (会員セッション経路)
+ * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
+ *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
+ */
 export async function getEventRegistrationForCalendar(params: {
   registrationId: string;
   customerId?: string | undefined;

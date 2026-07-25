@@ -9,8 +9,8 @@ type MypageSkeletonProps = {
  * マイページ系 loading.tsx の共通プレースホルダ。
  * list: 3 件のカード型、detail: 大ブロック型、form: 入力欄型。
  *
- * 全 7 mypage loading.tsx（`/mypage`, `/mypage/events`, `/mypage/inquiries`,
- * `/mypage/inquiries/[id]`, `/mypage/reservations/[id]`,
+ * 全 8 mypage loading.tsx（`/mypage`, `/mypage/events`, `/mypage/events/[id]`,
+ * `/mypage/inquiries`, `/mypage/inquiries/[id]`, `/mypage/reservations/[id]`,
  * `/mypage/reservations/[id]/edit`, `/mypage/settings`）の SSoT。
  *
  * `aria-busy="true"` + `aria-live="polite"` で SR にロード状態を通知。
