@@ -43,6 +43,7 @@ export interface OrganizationJsonLdData {
   sameAs?: string[];
   foundingDate?: string;
   additionalType?: string;
+  openingHoursSpecification?: OpeningHoursSpec[];
 }
 
 interface OpeningHoursSpec {
@@ -98,6 +99,9 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
       undefined)
     : undefined;
 
+  const openingHoursSpecification =
+    convertToOpeningHoursSpecification(settings?.businessHours) ?? undefined;
+
   return omitUndefined({
     "@id": `${baseUrl}/#organization`,
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
@@ -122,6 +126,7 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
     sameAs: sameAs.length > 0 ? sameAs : undefined,
     foundingDate,
     additionalType: "https://en.wikipedia.org/wiki/Coworking",
+    openingHoursSpecification,
   });
 }
 

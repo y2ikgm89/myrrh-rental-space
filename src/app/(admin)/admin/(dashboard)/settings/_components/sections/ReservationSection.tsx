@@ -40,19 +40,45 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
 interface ReservationSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
 const DEADLINE_OPTIONS = [
   { value: "1", label: "1時間前" },
+  { value: "2", label: "2時間前" },
   { value: "3", label: "3時間前" },
   { value: "6", label: "6時間前" },
   { value: "12", label: "12時間前" },
   { value: "24", label: "24時間前" },
   { value: "48", label: "48時間前" },
   { value: "72", label: "72時間前" },
-];
+  { value: "168", label: "168時間前（1週間）" },
+  { value: "336", label: "336時間前（2週間）" },
+  { value: "720", label: "720時間前（30日）" },
+] as const;
+
+function buildDeadlineOptions(
+  currentValue: string | undefined,
+): Array<{ value: string; label: string }> {
+  const options: Array<{ value: string; label: string }> = [
+    ...DEADLINE_OPTIONS,
+  ];
+  if (
+    currentValue &&
+    currentValue !== "" &&
+    !options.some((opt) => opt.value === currentValue)
+  ) {
+    options.push({
+      value: currentValue,
+      label: `${currentValue}時間前（現在の設定）`,
+    });
+    options.sort((a, b) => Number(a.value) - Number(b.value));
+  }
+  return options;
+}
 
 export function ReservationSection({
   settings,
@@ -82,6 +108,7 @@ export function ReservationSection({
         ? "on"
         : "",
       maxRecurrenceInstances: String(settings.maxRecurrenceInstances),
+      expectedUpdatedAt: settings.reservationUpdatedAt,
     },
   });
 
@@ -97,10 +124,28 @@ export function ReservationSection({
   const customerCanCancelSeriesInFullOn =
     customerCanCancelSeriesInFullControl.value === "on";
 
+  const cancellationDeadlineOptions = buildDeadlineOptions(
+    cancellationDeadline.value,
+  );
+  const modificationDeadlineOptions = buildDeadlineOptions(
+    modificationDeadline.value,
+  );
+
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("予約設定を保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -120,6 +165,9 @@ export function ReservationSection({
             disabled={readOnly}
             className="space-y-4 border-0 p-0 m-0 min-w-0"
           >
+            <input
+              {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+            />
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <label
@@ -227,7 +275,7 @@ export function ReservationSection({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEADLINE_OPTIONS.map((opt) => (
+                    {cancellationDeadlineOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>
@@ -260,7 +308,7 @@ export function ReservationSection({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DEADLINE_OPTIONS.map((opt) => (
+                    {modificationDeadlineOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>

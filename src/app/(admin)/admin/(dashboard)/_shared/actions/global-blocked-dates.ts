@@ -21,7 +21,12 @@ import { uuidIdSchema } from "@/shared/lib/validations/params";
 const idSchema = uuidIdSchema("ブロック日");
 
 function invalidateGlobalBlockedCaches(): void {
-  invalidateSiteWideCache([CACHE_TAGS.SPACES, CACHE_TAGS.LOCATIONS]);
+  invalidateSiteWideCache([
+    CACHE_TAGS.SPACES,
+    CACHE_TAGS.LOCATIONS,
+    CACHE_TAGS.BUSINESS_SETTINGS,
+    CACHE_TAGS.RESERVATIONS,
+  ]);
 }
 
 /**

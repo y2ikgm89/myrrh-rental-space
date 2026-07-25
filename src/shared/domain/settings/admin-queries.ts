@@ -174,6 +174,7 @@ function toSettingsData(
     businessHours: parseBusinessHours(organization.businessHours),
     holidayNotice: organization.holidayNotice,
     organizationUpdatedAt: organization.updatedAt,
+    reservationUpdatedAt: reservation.updatedAt,
     senderEmail: organization.senderEmail,
     senderName: organization.senderName,
     replyToEmail: organization.replyToEmail,

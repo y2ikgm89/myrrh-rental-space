@@ -171,14 +171,12 @@ export function parseStringArrayOrNull(value: unknown): string[] | null {
 }
 
 /**
- * Prisma.JsonValueをBusinessHoursに安全に変換
+ * JSON 値を BusinessHours に安全に変換（不正値は null）
  *
  * @example
  * const hours = parseBusinessHours(settings.businessHours)
  */
-export function parseBusinessHours(
-  value: Prisma.JsonValue | null | undefined,
-): BusinessHours | null {
+export function parseBusinessHours(value: unknown): BusinessHours | null {
   const result = businessHoursSchema.safeParse(value);
   return result.success ? result.data : null;
 }

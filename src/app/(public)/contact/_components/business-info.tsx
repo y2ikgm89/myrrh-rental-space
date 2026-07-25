@@ -19,6 +19,7 @@ import {
 } from "@tabler/icons-react";
 import { getBusinessInfo } from "@/public/data/business";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
+import { parseMonthlyClosuresForDisplay } from "@/shared/lib/business-hours/monthly-closure-display";
 import { isRecord } from "@/shared/lib/serialize";
 
 // =============================================================================
@@ -168,6 +169,9 @@ function InfoSection({
 export async function BusinessInfo(): Promise<ReactElement> {
   const info = await getBusinessInfo();
   const hoursDisplay = parseBusinessHoursForDisplay(info.businessHours);
+  const monthlyClosureLines = parseMonthlyClosuresForDisplay(
+    info.businessHours,
+  );
 
   return (
     <div
@@ -256,7 +260,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
           </InfoSection>
         )}
 
-        {hoursDisplay.length > 0 && (
+        {(hoursDisplay.length > 0 || monthlyClosureLines.length > 0) && (
           <InfoSection icon={IconClock} label="営業時間">
             <div className="space-y-1">
               {hoursDisplay.map((h) => (
@@ -271,6 +275,11 @@ export async function BusinessInfo(): Promise<ReactElement> {
                     {h.time}
                   </time>
                 </div>
+              ))}
+              {monthlyClosureLines.map((line) => (
+                <p key={line} className="text-muted-foreground">
+                  {line}
+                </p>
               ))}
             </div>
           </InfoSection>

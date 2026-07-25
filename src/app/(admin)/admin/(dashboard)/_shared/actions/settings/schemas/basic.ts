@@ -58,7 +58,11 @@ const businessHoursWeekSchema = z.object({
 export const businessHoursSettingsSchema = z
   .object({
     businessHours: businessHoursWeekSchema,
-    expectedUpdatedAt: z.iso.datetime().or(z.date()).optional(),
+    expectedUpdatedAt: z.iso
+      .datetime({
+        error: "更新バージョンが不正です。ページを再読み込みしてください",
+      })
+      .or(z.date()),
     // 特別休業日は拠点（Location）ごとに管理（2026-04-27 に settings から移管済み）
     // HTMLタグを禁止してXSS対策
     holidayNotice: z
@@ -92,24 +96,68 @@ export type HeaderSettingsInput = z.infer<typeof headerSettingsSchema>;
 // Reservation Schema
 // =============================================================================
 
-export const reservationSettingsSchema = z.object({
-  defaultTimeSlot: z.number().int().min(15).max(240),
-  minReservationDuration: z.number().int().min(15).max(480),
-  maxReservationDuration: z.number().int().min(60).max(1440),
-  cancellationDeadlineHours: z.number().int().min(1).max(720),
-  modificationDeadlineHours: z.number().int().min(1).max(720),
-  // Phase B.2 goal 9: 顧客が定期予約全体を series-all キャンセルできるか。
-  // OFF (未送信) を許容するため switchBoolean() 経由 (bare z.boolean() は
-  // parseWithZod で undefined 弾き)。
-  customerCanCancelSeriesInFull: switchBoolean(),
-  // 定期予約 (RRULE) 展開の上限。form validation / series-commands が参照する。
-  // 104 = 週次×2年相当の上限として妥当なキャップ。
-  maxRecurrenceInstances: z
-    .number({ error: "定期予約の最大件数を入力してください" })
-    .int({ error: "整数で入力してください" })
-    .min(1, { error: "定期予約の最大件数は1以上で入力してください" })
-    .max(104, { error: "定期予約の最大件数は104以下で入力してください" }),
-});
+export const reservationSettingsSchema = z
+  .object({
+    defaultTimeSlot: z.number().int().min(15).max(240),
+    minReservationDuration: z.number().int().min(15).max(480),
+    maxReservationDuration: z.number().int().min(60).max(1440),
+    cancellationDeadlineHours: z.number().int().min(1).max(720),
+    modificationDeadlineHours: z.number().int().min(1).max(720),
+    // Phase B.2 goal 9: 顧客が定期予約全体を series-all キャンセルできるか。
+    // OFF (未送信) を許容するため switchBoolean() 経由 (bare z.boolean() は
+    // parseWithZod で undefined 弾き)。
+    customerCanCancelSeriesInFull: switchBoolean(),
+    // 定期予約 (RRULE) 展開の上限。form validation / series-commands が参照する。
+    // 104 = 週次×2年相当の上限として妥当なキャップ。
+    maxRecurrenceInstances: z
+      .number({ error: "定期予約の最大件数を入力してください" })
+      .int({ error: "整数で入力してください" })
+      .min(1, { error: "定期予約の最大件数は1以上で入力してください" })
+      .max(104, { error: "定期予約の最大件数は104以下で入力してください" }),
+    expectedUpdatedAt: z.iso
+      .datetime({
+        error: "更新バージョンが不正です。ページを再読み込みしてください",
+      })
+      .or(z.date()),
+  })
+  .superRefine((data, ctx) => {
+    if (data.minReservationDuration > data.maxReservationDuration) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["minReservationDuration"],
+        message: "最小予約時間は最大予約時間以下である必要があります",
+      });
+      ctx.addIssue({
+        code: "custom",
+        path: ["maxReservationDuration"],
+        message: "最大予約時間は最小予約時間以上である必要があります",
+      });
+    }
+
+    if (data.defaultTimeSlot % 15 !== 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["defaultTimeSlot"],
+        message: "予約時間単位は15分刻みで入力してください",
+      });
+    }
+
+    if (data.minReservationDuration % data.defaultTimeSlot !== 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["minReservationDuration"],
+        message: "最小予約時間は予約時間単位の倍数である必要があります",
+      });
+    }
+
+    if (data.maxReservationDuration % data.defaultTimeSlot !== 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maxReservationDuration"],
+        message: "最大予約時間は予約時間単位の倍数である必要があります",
+      });
+    }
+  });
 
 export type ReservationSettingsInput = z.infer<
   typeof reservationSettingsSchema

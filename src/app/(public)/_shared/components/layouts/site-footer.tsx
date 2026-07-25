@@ -18,6 +18,7 @@ import { getCookieConsentSettings } from "@/shared/domain/settings/queries/site"
 import { getFooterTerms } from "@/shared/domain/terms/queries";
 import { CookieConsentManageLink } from "@/public/components/cookie-consent-manage-link";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
+import { parseMonthlyClosuresForDisplay } from "@/shared/lib/business-hours/monthly-closure-display";
 import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
 import { isAppRoute, toAppRoute } from "@/shared/lib/typed-routes";
@@ -211,6 +212,9 @@ export async function Footer(): Promise<ReactElement> {
     getCookieConsentSettings(),
   ]);
   const hoursDisplay = parseFooterHours(info.businessHours);
+  const monthlyClosureLines = parseMonthlyClosuresForDisplay(
+    info.businessHours,
+  );
   const taglineLines = (
     footerSettings.tagline ??
     "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。"
@@ -359,9 +363,12 @@ export async function Footer(): Promise<ReactElement> {
                 </li>
               )}
 
-              {(hoursDisplay.length > 0 || info.holidayNotice) && (
+              {(hoursDisplay.length > 0 ||
+                monthlyClosureLines.length > 0 ||
+                info.holidayNotice) && (
                 <li className="pt-1">
-                  {hoursDisplay.length > 0 && (
+                  {(hoursDisplay.length > 0 ||
+                    monthlyClosureLines.length > 0) && (
                     <>
                       <span className={cn(HEADING_CLASS, "block")}>
                         {footerSettings.hoursLabel}
@@ -381,6 +388,14 @@ export async function Footer(): Promise<ReactElement> {
                             </time>
                           </div>
                         ))}
+                        {monthlyClosureLines.map((line) => (
+                          <p
+                            key={line}
+                            className="text-sm text-muted-foreground"
+                          >
+                            {line}
+                          </p>
+                        ))}
                       </div>
                     </>
                   )}
@@ -388,7 +403,9 @@ export async function Footer(): Promise<ReactElement> {
                     <p
                       className={cn(
                         "text-sm text-muted-foreground",
-                        hoursDisplay.length > 0 && "mt-3",
+                        (hoursDisplay.length > 0 ||
+                          monthlyClosureLines.length > 0) &&
+                          "mt-3",
                       )}
                     >
                       {info.holidayNotice}

@@ -1,8 +1,5 @@
-import type {
-  BusinessHours,
-  BusinessHoursDay,
-  BusinessTimeSlot,
-} from "@/admin/actions/settings";
+import type { BusinessHours, BusinessTimeSlot } from "@/admin/actions/settings";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 
 // テンプレートキー
 export const TEMPLATE_KEYS = ["continuous", "lunch-break", "custom"] as const;
@@ -47,20 +44,9 @@ export const DEFAULT_SLOT: BusinessTimeSlot = {
   closeTime: "18:00",
 };
 
-// デフォルト曜日データ生成
-export function createDefaultDay(isOpen: boolean): BusinessHoursDay {
-  return isOpen
-    ? { isOpen: true, slots: [{ openTime: "09:00", closeTime: "21:00" }] }
-    : { isOpen: false, slots: [] };
-}
+// デフォルト曜日データ生成（shared SSoT を re-export）
+export { createDefaultBusinessHoursDay as createDefaultDay } from "@/shared/lib/business-hours";
 
-// デフォルト営業時間
-export const DEFAULT_BUSINESS_HOURS: BusinessHours = {
-  monday: createDefaultDay(true),
-  tuesday: createDefaultDay(true),
-  wednesday: createDefaultDay(true),
-  thursday: createDefaultDay(true),
-  friday: createDefaultDay(true),
-  saturday: createDefaultDay(true),
-  sunday: createDefaultDay(false),
-};
+// デフォルト営業時間（shared SSoT を re-export）
+export const DEFAULT_BUSINESS_HOURS: BusinessHours =
+  DEFAULT_BUSINESS_HOURS_WEEK;

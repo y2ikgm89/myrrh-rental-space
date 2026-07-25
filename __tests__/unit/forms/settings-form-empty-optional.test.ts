@@ -54,12 +54,15 @@ import {
   notificationFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import {
+  businessHoursSettingsSchema,
   dataRetentionSettingsSchema,
   featureModulesSettingsSchema,
   reservationSettingsSchema,
 } from "@/admin/actions/settings/schemas/basic";
 import { refundPolicyFormSchema } from "@/admin/actions/settings/schemas/refund-policy";
 import type { z } from "zod";
+
+const EXPECTED_UPDATED_AT = "2026-01-15T00:00:00.000Z";
 
 /** Record → FormData（値は全て文字列。空欄 / OFF は "" を渡す）。 */
 function form(entries: Record<string, string>): FormData {
@@ -113,19 +116,84 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   // ---------------------------------------------------------------------------
   // 既存（#618 で修正済み）— 退行ガード
   // ---------------------------------------------------------------------------
-  test("事業者情報: 全項目空欄でも success", () => {
+  test("事業者情報: 全項目空欄でも success（expectedUpdatedAt は必須）", () => {
     expectSuccess(
       businessInfoFormSchema,
-      emptyKeys([
-        "businessName",
-        "businessNameKana",
-        "representativeName",
-        "establishedDate",
-        "registrationNumber",
-        "invoiceNumber",
-        "businessDescription",
-      ]),
+      form({
+        businessName: "",
+        businessNameKana: "",
+        representativeName: "",
+        establishedDate: "",
+        registrationNumber: "",
+        invoiceNumber: "",
+        businessDescription: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
       "businessInfo",
+    );
+  });
+
+  test("事業者情報: expectedUpdatedAt 欠落は error", () => {
+    const fd = emptyKeys([
+      "businessName",
+      "businessNameKana",
+      "representativeName",
+      "establishedDate",
+      "registrationNumber",
+      "invoiceNumber",
+      "businessDescription",
+    ]);
+    expect(parseWithZod(fd, { schema: businessInfoFormSchema }).status).toBe(
+      "error",
+    );
+  });
+
+  test("事業者情報: 有効な設立日 (YYYY-MM-DD) は success", () => {
+    expectSuccess(
+      businessInfoFormSchema,
+      form({
+        businessName: "",
+        businessNameKana: "",
+        representativeName: "",
+        establishedDate: "2020-04-01",
+        registrationNumber: "",
+        invoiceNumber: "",
+        businessDescription: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
+      "businessInfo.establishedDate.valid",
+    );
+  });
+
+  test("事業者情報: 不正な設立日文字列は error", () => {
+    const fd = form({
+      businessName: "",
+      businessNameKana: "",
+      representativeName: "",
+      establishedDate: "not-a-date",
+      registrationNumber: "",
+      invoiceNumber: "",
+      businessDescription: "",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
+    });
+    expect(parseWithZod(fd, { schema: businessInfoFormSchema }).status).toBe(
+      "error",
+    );
+  });
+
+  test("事業者情報: 法人番号に数字以外を含む場合は error", () => {
+    const fd = form({
+      businessName: "",
+      businessNameKana: "",
+      representativeName: "",
+      establishedDate: "",
+      registrationNumber: "ABC123",
+      invoiceNumber: "",
+      businessDescription: "",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
+    });
+    expect(parseWithZod(fd, { schema: businessInfoFormSchema }).status).toBe(
+      "error",
     );
   });
 
@@ -555,6 +623,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       modificationDeadlineHours: "24",
       customerCanCancelSeriesInFull: "",
       maxRecurrenceInstances: "26",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
     const result = parseWithZod(fd, { schema: reservationSettingsSchema });
     expect(result.status).toBe("success");
@@ -573,6 +642,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       modificationDeadlineHours: "24",
       customerCanCancelSeriesInFull: "on",
       maxRecurrenceInstances: "52",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
     const result = parseWithZod(fd, { schema: reservationSettingsSchema });
     expect(result.status).toBe("success");
@@ -580,6 +650,21 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       expect(result.value.customerCanCancelSeriesInFull).toBe(true);
       expect(result.value.maxRecurrenceInstances).toBe(52);
     }
+  });
+
+  test("予約設定: expectedUpdatedAt 欠落は error", () => {
+    const fd = form({
+      defaultTimeSlot: "30",
+      minReservationDuration: "60",
+      maxReservationDuration: "480",
+      cancellationDeadlineHours: "24",
+      modificationDeadlineHours: "24",
+      customerCanCancelSeriesInFull: "on",
+      maxRecurrenceInstances: "26",
+    });
+    expect(parseWithZod(fd, { schema: reservationSettingsSchema }).status).toBe(
+      "error",
+    );
   });
 
   test("予約設定: maxRecurrenceInstances が 1〜104 の範囲外なら error", () => {
@@ -591,6 +676,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       modificationDeadlineHours: "24",
       customerCanCancelSeriesInFull: "on",
       maxRecurrenceInstances: "0",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
     expect(
       parseWithZod(tooLow, { schema: reservationSettingsSchema }).status,
@@ -604,10 +690,74 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       modificationDeadlineHours: "24",
       customerCanCancelSeriesInFull: "on",
       maxRecurrenceInstances: "105",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
     expect(
       parseWithZod(tooHigh, { schema: reservationSettingsSchema }).status,
     ).toBe("error");
+  });
+
+  test("営業時間設定: expectedUpdatedAt 欠落は error", () => {
+    const result = businessHoursSettingsSchema.safeParse({
+      businessHours: {
+        monday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        tuesday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        wednesday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        thursday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        friday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        saturday: { isOpen: false, slots: [] },
+        sunday: { isOpen: false, slots: [] },
+      },
+      holidayNotice: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  test("営業時間設定: expectedUpdatedAt ありなら success", () => {
+    const result = businessHoursSettingsSchema.safeParse({
+      businessHours: {
+        monday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        tuesday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        wednesday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        thursday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        friday: {
+          isOpen: true,
+          slots: [{ openTime: "09:00", closeTime: "18:00" }],
+        },
+        saturday: { isOpen: false, slots: [] },
+        sunday: { isOpen: false, slots: [] },
+      },
+      holidayNotice: null,
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
+    });
+    expect(result.success).toBe(true);
   });
 
   test("データ保持: 6 field の非負整数を parse できる", () => {

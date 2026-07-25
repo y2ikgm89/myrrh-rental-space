@@ -134,6 +134,10 @@ function buildOrganizationData(
     ...(org.sameAs && org.sameAs.length > 0 && { sameAs: org.sameAs }),
     ...(org.foundingDate && { foundingDate: org.foundingDate }),
     ...(org.additionalType && { additionalType: org.additionalType }),
+    ...(org.openingHoursSpecification &&
+      org.openingHoursSpecification.length > 0 && {
+        openingHoursSpecification: org.openingHoursSpecification,
+      }),
   };
 }
 
