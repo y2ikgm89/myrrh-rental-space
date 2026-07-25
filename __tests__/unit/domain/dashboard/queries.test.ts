@@ -4,21 +4,40 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 // Mocks (must precede module under test import — TDZ)
 // =============================================================================
 
-const mockReservationCount = mock<() => Promise<number>>(() =>
+type PrismaWhereArg = {
+  where?: {
+    deletedAt?: null;
+    createdAt?: { gte?: Date; lt?: Date; lte?: Date };
+    startTime?: { gte?: Date; lt?: Date; lte?: Date };
+    status?: unknown;
+    [key: string]: unknown;
+  };
+  take?: number;
+  orderBy?: unknown;
+  select?: unknown;
+  _sum?: unknown;
+};
+
+const mockReservationCount = mock((_args?: PrismaWhereArg): Promise<number> =>
   Promise.resolve(0),
 );
-const mockReservationAggregate = mock<
-  () => Promise<{ _sum: { totalPrice: number | null } }>
->(() => Promise.resolve({ _sum: { totalPrice: null } }));
-const mockReservationFindMany = mock<() => Promise<unknown[]>>(() =>
+const mockReservationAggregate = mock(
+  (_args?: PrismaWhereArg): Promise<{ _sum: { totalPrice: number | null } }> =>
+    Promise.resolve({ _sum: { totalPrice: null } }),
+);
+const mockReservationFindMany = mock(
+  (_args?: PrismaWhereArg): Promise<unknown[]> => Promise.resolve([]),
+);
+const mockInquiryCount = mock((_args?: PrismaWhereArg): Promise<number> =>
+  Promise.resolve(0),
+);
+const mockInquiryFindMany = mock((_args?: PrismaWhereArg): Promise<unknown[]> =>
   Promise.resolve([]),
 );
-const mockInquiryCount = mock<() => Promise<number>>(() => Promise.resolve(0));
-const mockInquiryFindMany = mock<() => Promise<unknown[]>>(() =>
-  Promise.resolve([]),
+const mockSpaceCount = mock((_args?: PrismaWhereArg): Promise<number> =>
+  Promise.resolve(0),
 );
-const mockSpaceCount = mock<() => Promise<number>>(() => Promise.resolve(0));
-const mockQueryRaw = mock<() => Promise<unknown[]>>(() => Promise.resolve([]));
+const mockQueryRaw = mock((): Promise<unknown[]> => Promise.resolve([]));
 
 mock.module("server-only", () => ({}));
 
@@ -57,15 +76,44 @@ mock.module("@generated/prisma/enums", () => ({
     CANCELLED: "CANCELLED",
     NO_SHOW: "NO_SHOW",
   },
-  InquiryStatus: { NEW: "NEW", REPLIED: "REPLIED" },
+  InquiryStatus: {
+    NEW: "NEW",
+    IN_PROGRESS: "IN_PROGRESS",
+    RESOLVED: "RESOLVED",
+    CLOSED: "CLOSED",
+    FLAGGED: "FLAGGED",
+    SPAM: "SPAM",
+  },
 }));
 
 const {
   getDashboardStats,
   getRecentReservations,
   getRecentInquiries,
+  getTodayReservations,
   getReservationChartData,
 } = await import("@/shared/domain/dashboard/queries");
+
+const RealDate = Date;
+
+/** UTC 2025-06-30T15:00:00Z = JST 2025-07-01 00:00:00 */
+const FIXED_JST_MIDNIGHT_UTC = "2025-06-30T15:00:00.000Z";
+
+function withFixedNow<T>(isoUtc: string, fn: () => Promise<T>): Promise<T> {
+  const fixedMs = new RealDate(isoUtc).getTime();
+  const MockDate = class extends RealDate {
+    constructor(value?: string | number | Date) {
+      super(value === undefined ? fixedMs : value);
+    }
+    static override now(): number {
+      return fixedMs;
+    }
+  };
+  globalThis.Date = MockDate as DateConstructor;
+  return fn().finally(() => {
+    globalThis.Date = RealDate;
+  });
+}
 
 describe("getDashboardStats", () => {
   beforeEach(() => {
@@ -133,6 +181,80 @@ describe("getDashboardStats", () => {
 
     expect(stats.reservations.changePercent).toBe(100);
   });
+
+  test("予約 count/aggregate に deletedAt: null を含む", async () => {
+    mockReservationCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    mockReservationAggregate
+      .mockResolvedValueOnce({ _sum: { totalPrice: null } })
+      .mockResolvedValueOnce({ _sum: { totalPrice: null } });
+    mockInquiryCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    mockSpaceCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+
+    await getDashboardStats();
+
+    for (const call of mockReservationCount.mock.calls) {
+      expect(call[0]).toMatchObject({
+        where: expect.objectContaining({ deletedAt: null }),
+      });
+    }
+    for (const call of mockReservationAggregate.mock.calls) {
+      expect(call[0]).toMatchObject({
+        where: expect.objectContaining({ deletedAt: null }),
+      });
+    }
+  });
+
+  test("inquiry thisMonth は SPAM を除外する", async () => {
+    mockReservationCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    mockReservationAggregate
+      .mockResolvedValueOnce({ _sum: { totalPrice: null } })
+      .mockResolvedValueOnce({ _sum: { totalPrice: null } });
+    mockInquiryCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    mockSpaceCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+
+    await getDashboardStats();
+
+    const thisMonthInquiryCall = mockInquiryCount.mock.calls[1]?.[0];
+    expect(thisMonthInquiryCall).toMatchObject({
+      where: expect.objectContaining({
+        deletedAt: null,
+        status: { not: "SPAM" },
+      }),
+    });
+  });
+
+  test("JST 月境界: UTC 15:00 (= JST 翌日 00:00) で今月=7月・先月=6月", async () => {
+    mockReservationCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    mockReservationAggregate
+      .mockResolvedValueOnce({ _sum: { totalPrice: null } })
+      .mockResolvedValueOnce({ _sum: { totalPrice: null } });
+    mockInquiryCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+    mockSpaceCount.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+
+    await withFixedNow(FIXED_JST_MIDNIGHT_UTC, () => getDashboardStats());
+
+    const expectedThisMonthStart = new RealDate("2025-07-01T00:00:00+09:00");
+    const expectedLastMonthStart = new RealDate("2025-06-01T00:00:00+09:00");
+
+    const thisMonthResCall = mockReservationCount.mock.calls[0]?.[0] as
+      PrismaWhereArg | undefined;
+    expect(thisMonthResCall?.where?.createdAt?.gte).toEqual(
+      expectedThisMonthStart,
+    );
+
+    const lastMonthResCall = mockReservationCount.mock.calls[1]?.[0] as
+      PrismaWhereArg | undefined;
+    expect(lastMonthResCall?.where?.createdAt).toEqual({
+      gte: expectedLastMonthStart,
+      lt: expectedThisMonthStart,
+    });
+
+    const thisMonthInquiryCall = mockInquiryCount.mock.calls[1]?.[0] as
+      PrismaWhereArg | undefined;
+    expect(thisMonthInquiryCall?.where?.createdAt?.gte).toEqual(
+      expectedThisMonthStart,
+    );
+  });
 });
 
 describe("getRecentReservations", () => {
@@ -155,6 +277,20 @@ describe("getRecentReservations", () => {
 
     expect(mockReservationFindMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 50 }),
+    );
+  });
+
+  test("deletedAt: null と cancelled/no-show 除外 where を渡す", async () => {
+    mockReservationFindMany.mockResolvedValueOnce([]);
+    await getRecentReservations(5);
+
+    expect(mockReservationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          deletedAt: null,
+          status: { notIn: ["CANCELLED", "NO_SHOW"] },
+        },
+      }),
     );
   });
 
@@ -184,12 +320,45 @@ describe("getRecentReservations", () => {
   });
 });
 
+describe("getTodayReservations", () => {
+  beforeEach(() => {
+    mockReservationFindMany.mockReset();
+  });
+
+  test("deletedAt: null と cancelled/no-show 除外 where を渡す", async () => {
+    mockReservationFindMany.mockResolvedValueOnce([]);
+    await getTodayReservations();
+
+    expect(mockReservationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          deletedAt: null,
+          status: { notIn: ["CANCELLED", "NO_SHOW"] },
+        }),
+      }),
+    );
+  });
+
+  test("JST 今日窓: gte todayStart, lt tomorrowStart", async () => {
+    mockReservationFindMany.mockResolvedValueOnce([]);
+
+    await withFixedNow(FIXED_JST_MIDNIGHT_UTC, () => getTodayReservations());
+
+    const call = mockReservationFindMany.mock.calls[0]?.[0] as
+      PrismaWhereArg | undefined;
+    const startTime = call?.where?.startTime;
+    expect(startTime?.gte).toEqual(new RealDate("2025-07-01T00:00:00+09:00"));
+    expect(startTime?.lt).toEqual(new RealDate("2025-07-02T00:00:00+09:00"));
+    expect(startTime?.lte).toBeUndefined();
+  });
+});
+
 describe("getRecentInquiries", () => {
   beforeEach(() => {
     mockInquiryFindMany.mockReset();
   });
 
-  test("Inquiry を RecentInquiry に map する", async () => {
+  test("Inquiry 行を RecentInquiry として返す", async () => {
     mockInquiryFindMany.mockResolvedValueOnce([
       {
         id: "i1",
@@ -199,7 +368,6 @@ describe("getRecentInquiries", () => {
         subject: "予約の確認",
         status: "NEW",
         createdAt: new Date("2025-06-01T00:00:00Z"),
-        _count: { replies: 0 },
       },
     ]);
 
@@ -213,30 +381,19 @@ describe("getRecentInquiries", () => {
       email: "hanako@example.com",
       subject: "予約の確認",
       status: "NEW",
-      hasReplies: false,
     });
+    expect(result[0]).not.toHaveProperty("hasReplies");
   });
 
-  test("_count.replies > 0 なら hasReplies=true にする", async () => {
-    mockInquiryFindMany.mockResolvedValueOnce([
-      {
-        id: "i2",
-        receiptNumber: "INQ-EFGH5678",
-        name: "山田太郎",
-        email: "taro@example.com",
-        subject: "見積依頼",
-        status: "IN_PROGRESS",
-        createdAt: new Date("2025-06-02T00:00:00Z"),
-        _count: { replies: 2 },
-      },
-    ]);
+  test("soft-deleted を除外する where を渡す", async () => {
+    mockInquiryFindMany.mockResolvedValueOnce([]);
+    await getRecentInquiries();
 
-    const result = await getRecentInquiries();
-
-    expect(result[0]).toMatchObject({
-      id: "i2",
-      hasReplies: true,
-    });
+    expect(mockInquiryFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { deletedAt: null },
+      }),
+    );
   });
 });
 

@@ -14,7 +14,8 @@ export const ReservationChart = dynamic(
     ssr: false,
     loading: () => (
       <div
-        aria-hidden
+        role="status"
+        aria-label="予約・売上推移を読み込み中"
         className="h-[26rem] animate-pulse rounded-lg border border-border bg-card"
       />
     ),
