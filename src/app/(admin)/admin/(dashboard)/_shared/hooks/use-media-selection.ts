@@ -11,17 +11,21 @@ import type { MediaData } from "@/admin/types/media-picker";
 import type { SelectionMode, SelectedMedia } from "@/admin/types/media-picker";
 
 /** アップロード結果（シンプルな型） */
-interface UploadedMediaData {
+export interface UploadedMediaData {
   id: string;
   url: string;
   mimeType?: string;
   size?: number;
+  alt?: string;
+  filename?: string;
+  title?: string;
 }
 
 interface UseMediaSelectionOptions {
   mode: SelectionMode;
   maxSelections?: number;
   initialSelected?: SelectedMedia[];
+  isOpen?: boolean;
 }
 
 /**
@@ -46,6 +50,25 @@ export function mediaDataToSelectedMedia(media: MediaData): SelectedMedia {
   };
 }
 
+/**
+ * アップロード結果を `SelectedMedia` に変換する。
+ * alt / filename / title を ImagePlugin / AudioPlugin 等へ伝播する。
+ */
+export function uploadedMediaToSelectedMedia(
+  media: UploadedMediaData,
+): SelectedMedia {
+  return {
+    id: media.id,
+    url: media.url,
+    ...(media.alt != null && { alt: media.alt }),
+    ...(media.filename != null && { filename: media.filename }),
+    ...(media.mimeType !== undefined && { mimeType: media.mimeType }),
+    ...(media.size !== undefined && { size: media.size }),
+    ...(media.title != null && { title: media.title }),
+    source: "upload",
+  };
+}
+
 interface UseMediaSelectionReturn {
   selectedIds: Set<string>;
   selectedMedia: SelectedMedia[];
@@ -62,9 +85,19 @@ export function useMediaSelection({
   mode,
   maxSelections = 10,
   initialSelected = [],
+  isOpen,
 }: UseMediaSelectionOptions): UseMediaSelectionReturn {
   const [selectedMedia, setSelectedMedia] =
     useState<SelectedMedia[]>(initialSelected);
+
+  const [wasOpen, setWasOpen] = useState(isOpen === true);
+  const openNow = isOpen === true;
+  if (openNow !== wasOpen) {
+    setWasOpen(openNow);
+    if (openNow) {
+      setSelectedMedia(initialSelected);
+    }
+  }
 
   const selectedIds = new Set(
     selectedMedia
@@ -116,13 +149,7 @@ export function useMediaSelection({
   };
 
   const addUploadedMedia = (media: UploadedMediaData) => {
-    const uploadedMedia: SelectedMedia = {
-      id: media.id,
-      url: media.url,
-      ...(media.mimeType !== undefined && { mimeType: media.mimeType }),
-      ...(media.size !== undefined && { size: media.size }),
-      source: "upload",
-    };
+    const uploadedMedia = uploadedMediaToSelectedMedia(media);
 
     if (mode === "single") {
       setSelectedMedia([uploadedMedia]);

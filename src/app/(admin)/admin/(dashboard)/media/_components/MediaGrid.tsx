@@ -31,9 +31,10 @@ import { isValidMediaType, MediaType } from "@/admin/lib/validations/media";
 
 type Props = {
   items: MediaData[];
+  canDelete?: boolean;
 };
 
-export function MediaGrid({ items }: Props) {
+export function MediaGrid({ items, canDelete = false }: Props) {
   const [detailItem, setDetailItem] = useState<MediaData | null>(null);
   const handleCopyUrl = createCopyUrlHandler();
   const { handleDelete, isPending } = useDeleteMedia();
@@ -76,16 +77,18 @@ export function MediaGrid({ items }: Props) {
                 >
                   <IconCopy className="h-4 w-4 text-primary-foreground" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(item)}
-                  disabled={isPending}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50 pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`${item.filename} を削除`}
-                  title="削除"
-                >
-                  <IconTrash className="h-4 w-4 text-primary-foreground" />
-                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item)}
+                    disabled={isPending}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50 pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`${item.filename} を削除`}
+                    title="削除"
+                  >
+                    <IconTrash className="h-4 w-4 text-primary-foreground" />
+                  </button>
+                )}
               </div>
 
               <div className="text-primary-foreground text-xs">
@@ -102,6 +105,7 @@ export function MediaGrid({ items }: Props) {
       <MediaDetailDialog
         item={detailItem}
         onClose={() => setDetailItem(null)}
+        canDelete={canDelete}
       />
     </>
   );

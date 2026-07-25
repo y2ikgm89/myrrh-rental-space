@@ -6,8 +6,90 @@
  * - 各 tab / Dialog title の表示 label
  */
 
-import type { MediaType } from "@/admin/lib/validations/media";
+import {
+  ALLOWED_MIME_TYPES,
+  type MediaType,
+} from "@/admin/lib/validations/media";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
+import { detectVideoProvider } from "@/shared/lib/video/url-detect";
+
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp"] as const;
+
+const VIDEO_EXTENSIONS = [".mp4", ".webm"] as const;
+
+const AUDIO_EXTENSIONS = [".mp3", ".wav", ".webm"] as const;
+
+function joinMimeTypes(...groups: readonly string[][]): string {
+  return groups.flat().join(",");
+}
+
+function getUrlExtension(url: string): string | null {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    const dot = pathname.lastIndexOf(".");
+    if (dot === -1) return null;
+    return pathname.slice(dot);
+  } catch {
+    return null;
+  }
+}
+
+function extensionMatches(url: string, extensions: readonly string[]): boolean {
+  const ext = getUrlExtension(url);
+  return ext !== null && extensions.includes(ext);
+}
+
+/**
+ * URL が画像らしいか（拡張子ベースの UX hint）。
+ */
+export function urlLooksLikeImage(url: string): boolean {
+  return extensionMatches(url, IMAGE_EXTENSIONS);
+}
+
+/**
+ * `accept` カテゴリに URL が合致するか（http/https のみ。動画は YouTube/Vimeo も許容）。
+ */
+export function urlMatchesAccept(
+  url: string,
+  accept: MediaAcceptType,
+): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return false;
+  }
+
+  const { provider } = detectVideoProvider(url);
+  const isEmbedVideo = provider !== undefined;
+
+  switch (accept) {
+    case "image":
+      return urlLooksLikeImage(url);
+    case "video":
+      return isEmbedVideo || extensionMatches(url, VIDEO_EXTENSIONS);
+    case "image-or-video":
+      return (
+        urlLooksLikeImage(url) ||
+        isEmbedVideo ||
+        extensionMatches(url, VIDEO_EXTENSIONS)
+      );
+    case "audio":
+      return extensionMatches(url, AUDIO_EXTENSIONS);
+    case "file":
+      return extensionMatches(url, [".pdf"]);
+    case "any":
+      return true;
+    default: {
+      const _exhaustive: never = accept;
+      return _exhaustive;
+    }
+  }
+}
 
 /**
  * `accept` → native `<input type="file" accept="...">` 文字列。
@@ -16,17 +98,22 @@ import type { MediaAcceptType } from "@/shared/lib/sections/types";
 export function acceptToInputAttr(accept: MediaAcceptType): string {
   switch (accept) {
     case "image":
-      return "image/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.IMAGE);
     case "video":
-      return "video/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.VIDEO);
     case "image-or-video":
-      return "image/*,video/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.IMAGE, ALLOWED_MIME_TYPES.VIDEO);
     case "audio":
-      return "audio/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.AUDIO);
     case "file":
-      return "application/pdf";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.DOCUMENT);
     case "any":
-      return "image/*,video/*,audio/*,application/pdf";
+      return joinMimeTypes(
+        ALLOWED_MIME_TYPES.IMAGE,
+        ALLOWED_MIME_TYPES.VIDEO,
+        ALLOWED_MIME_TYPES.AUDIO,
+        ALLOWED_MIME_TYPES.DOCUMENT,
+      );
   }
 }
 
@@ -45,8 +132,6 @@ export function acceptToInitialMediaType(
     case "video":
       return "VIDEO";
     case "image-or-video":
-      // 初期は画像表示（業界一般: WordPress Cover Block / Squarespace の Hero Media picker
-      // は初期 image tab スタートで動画タブに切替できる UX）
       return "IMAGE";
     case "audio":
       return "AUDIO";

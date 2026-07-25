@@ -128,6 +128,7 @@ async function searchPosts(query: string): Promise<SearchResultItem[]> {
 async function searchNews(query: string): Promise<SearchResultItem[]> {
   const rows = await prisma.news.findMany({
     where: {
+      deletedAt: null,
       OR: [{ title: ci(query) }, { slug: ci(query) }],
     },
     select: { id: true, title: true, slug: true },

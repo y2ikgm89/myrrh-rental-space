@@ -4,6 +4,9 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 const mockNewsFindUnique = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
+const mockNewsFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
+  () => Promise.resolve(null),
+);
 const mockNewsCreate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "news-1", slug: "test-news" }),
 );
@@ -26,6 +29,7 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     news: {
       findUnique: mockNewsFindUnique,
+      findFirst: mockNewsFindFirst,
       create: mockNewsCreate,
       update: mockNewsUpdate,
       delete: mockNewsDelete,
@@ -77,6 +81,8 @@ import {
   updateNewsBody,
   updateNewsSettings,
   deleteNews,
+  restoreNews,
+  permanentlyDeleteNews,
   publishNews,
   unpublishNews,
 } from "@/shared/domain/news/commands";
@@ -265,9 +271,9 @@ describe("createNews", () => {
 
 describe("updateNewsBody", () => {
   beforeEach(() => {
-    mockNewsFindUnique.mockReset();
+    mockNewsFindFirst.mockReset();
     mockNewsUpdate.mockReset();
-    mockNewsFindUnique.mockResolvedValue(EXISTING_NEWS);
+    mockNewsFindFirst.mockResolvedValue(EXISTING_NEWS);
     mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
   });
 
@@ -285,7 +291,7 @@ describe("updateNewsBody", () => {
 
   describe("異常系", () => {
     test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+      mockNewsFindFirst.mockResolvedValue(null);
 
       await expect(
         updateNewsBody("non-existent", VALID_UPDATE_BODY_INPUT),
@@ -324,10 +330,10 @@ describe("updateNewsBody", () => {
 
 describe("updateNewsSettings", () => {
   beforeEach(() => {
-    mockNewsFindUnique.mockReset();
+    mockNewsFindFirst.mockReset();
     mockCheckSlugAvailability.mockReset();
     mockNewsUpdate.mockReset();
-    mockNewsFindUnique.mockResolvedValue(EXISTING_NEWS);
+    mockNewsFindFirst.mockResolvedValue(EXISTING_NEWS);
     mockCheckSlugAvailability.mockResolvedValue({ available: true });
     mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
   });
@@ -408,7 +414,7 @@ describe("updateNewsSettings", () => {
 
   describe("異常系", () => {
     test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+      mockNewsFindFirst.mockResolvedValue(null);
 
       await expect(
         updateNewsSettings("non-existent", VALID_UPDATE_SETTINGS_INPUT),
@@ -419,7 +425,7 @@ describe("updateNewsSettings", () => {
     });
 
     test("お知らせが見つからない場合 update が呼ばれない", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+      mockNewsFindFirst.mockResolvedValue(null);
 
       await expect(
         updateNewsSettings("non-existent", VALID_UPDATE_SETTINGS_INPUT),
@@ -458,28 +464,156 @@ describe("updateNewsSettings", () => {
 });
 
 // ============================================================================
-// deleteNews
+// deleteNews (soft delete)
 // ============================================================================
 
-describe("deleteNews", () => {
+describe("deleteNews (soft delete)", () => {
+  beforeEach(() => {
+    mockNewsFindFirst.mockReset();
+    mockNewsUpdate.mockReset();
+    mockNewsDelete.mockReset();
+
+    mockNewsFindFirst.mockResolvedValue(EXISTING_NEWS);
+    mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
+  });
+
+  describe("正常系", () => {
+    test("お知らせをソフトデリートすると slug を返す", async () => {
+      const result = await deleteNews(NEWS_ID);
+
+      expect(result).toEqual({ slug: NEWS_SLUG });
+      expect(mockNewsUpdate).toHaveBeenCalledTimes(1);
+      expect(mockNewsDelete).not.toHaveBeenCalled();
+    });
+
+    test("update が deletedAt を設定して呼ばれる", async () => {
+      await deleteNews(NEWS_ID);
+
+      expect(mockNewsUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: NEWS_ID, deletedAt: null },
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
+      mockNewsFindFirst.mockResolvedValue(null);
+
+      await expect(deleteNews("non-existent")).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "お知らせが見つかりません",
+      });
+    });
+
+    test("お知らせが見つからない場合 delete/update が呼ばれない", async () => {
+      mockNewsFindFirst.mockResolvedValue(null);
+
+      await expect(deleteNews("non-existent")).rejects.toThrow(DomainError);
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
+      expect(mockNewsDelete).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// ============================================================================
+// restoreNews
+// ============================================================================
+
+describe("restoreNews", () => {
+  const DELETED_NEWS = {
+    id: NEWS_ID,
+    slug: NEWS_SLUG,
+    deletedAt: new Date("2026-07-01T00:00:00Z"),
+  };
+
+  beforeEach(() => {
+    mockNewsFindUnique.mockReset();
+    mockNewsFindFirst.mockReset();
+    mockNewsUpdate.mockReset();
+
+    mockNewsFindUnique.mockResolvedValue(DELETED_NEWS);
+    mockNewsFindFirst.mockResolvedValue(null);
+    mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
+  });
+
+  describe("正常系", () => {
+    test("ゴミ箱のお知らせを復元すると slug を返す", async () => {
+      const result = await restoreNews(NEWS_ID);
+
+      expect(result).toEqual({ slug: NEWS_SLUG });
+      expect(mockNewsUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: NEWS_ID },
+          data: { deletedAt: null },
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
+      mockNewsFindUnique.mockResolvedValue(null);
+
+      await expect(restoreNews("non-existent")).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "お知らせが見つかりません",
+      });
+    });
+
+    test("既にアクティブなお知らせは VALIDATION エラーをスローする", async () => {
+      mockNewsFindUnique.mockResolvedValue({
+        id: NEWS_ID,
+        slug: NEWS_SLUG,
+        deletedAt: null,
+      });
+
+      await expect(restoreNews(NEWS_ID)).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "このお知らせは削除されていません",
+      });
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
+    });
+
+    test("同一 slug のアクティブお知らせがあると CONFLICT", async () => {
+      mockNewsFindFirst.mockResolvedValue({ id: "other-news" });
+
+      await expect(restoreNews(NEWS_ID)).rejects.toMatchObject({
+        code: "CONFLICT",
+      });
+      expect(mockNewsUpdate).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// ============================================================================
+// permanentlyDeleteNews
+// ============================================================================
+
+describe("permanentlyDeleteNews", () => {
+  const DELETED_NEWS = {
+    id: NEWS_ID,
+    slug: NEWS_SLUG,
+    deletedAt: new Date("2026-07-01T00:00:00Z"),
+  };
+
   beforeEach(() => {
     mockNewsFindUnique.mockReset();
     mockNewsDelete.mockReset();
-    mockNewsFindUnique.mockResolvedValue(EXISTING_NEWS);
+
+    mockNewsFindUnique.mockResolvedValue(DELETED_NEWS);
     mockNewsDelete.mockResolvedValue({ id: NEWS_ID });
   });
 
   describe("正常系", () => {
-    test("お知らせを削除し slug を返す", async () => {
-      const result = await deleteNews(NEWS_ID);
+    test("ゴミ箱のお知らせを完全削除すると slug を返す", async () => {
+      const result = await permanentlyDeleteNews(NEWS_ID);
 
       expect(result).toEqual({ slug: NEWS_SLUG });
-      expect(mockNewsDelete).toHaveBeenCalledTimes(1);
-    });
-
-    test("delete が正しい ID で呼ばれる", async () => {
-      await deleteNews(NEWS_ID);
-
       expect(mockNewsDelete).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: NEWS_ID },
@@ -492,16 +626,24 @@ describe("deleteNews", () => {
     test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
       mockNewsFindUnique.mockResolvedValue(null);
 
-      await expect(deleteNews("non-existent")).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "お知らせが見つかりません",
-      });
+      await expect(permanentlyDeleteNews("non-existent")).rejects.toMatchObject(
+        {
+          code: "NOT_FOUND",
+          message: "お知らせが見つかりません",
+        },
+      );
     });
 
-    test("お知らせが見つからない場合 delete が呼ばれない", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+    test("アクティブなお知らせは CONFLICT エラーをスローする", async () => {
+      mockNewsFindUnique.mockResolvedValue({
+        id: NEWS_ID,
+        slug: NEWS_SLUG,
+        deletedAt: null,
+      });
 
-      await expect(deleteNews("non-existent")).rejects.toThrow(DomainError);
+      await expect(permanentlyDeleteNews(NEWS_ID)).rejects.toMatchObject({
+        code: "CONFLICT",
+      });
       expect(mockNewsDelete).not.toHaveBeenCalled();
     });
   });
@@ -519,9 +661,9 @@ describe("publishNews", () => {
   };
 
   beforeEach(() => {
-    mockNewsFindUnique.mockReset();
+    mockNewsFindFirst.mockReset();
     mockNewsUpdate.mockReset();
-    mockNewsFindUnique.mockResolvedValue(NEWS_FOR_PUBLISH);
+    mockNewsFindFirst.mockResolvedValue(NEWS_FOR_PUBLISH);
     mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
   });
 
@@ -547,7 +689,7 @@ describe("publishNews", () => {
 
     test("既に publishedAt がある場合は上書きしない", async () => {
       const existingPublishedAt = new Date("2024-01-01");
-      mockNewsFindUnique.mockResolvedValue({
+      mockNewsFindFirst.mockResolvedValue({
         ...NEWS_FOR_PUBLISH,
         publishedAt: existingPublishedAt,
       });
@@ -566,7 +708,7 @@ describe("publishNews", () => {
 
   describe("異常系", () => {
     test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+      mockNewsFindFirst.mockResolvedValue(null);
 
       await expect(publishNews("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -575,7 +717,7 @@ describe("publishNews", () => {
     });
 
     test("お知らせが見つからない場合 update が呼ばれない", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+      mockNewsFindFirst.mockResolvedValue(null);
 
       await expect(publishNews("non-existent")).rejects.toThrow(DomainError);
       expect(mockNewsUpdate).not.toHaveBeenCalled();
@@ -589,9 +731,9 @@ describe("publishNews", () => {
 
 describe("unpublishNews", () => {
   beforeEach(() => {
-    mockNewsFindUnique.mockReset();
+    mockNewsFindFirst.mockReset();
     mockNewsUpdate.mockReset();
-    mockNewsFindUnique.mockResolvedValue(EXISTING_NEWS);
+    mockNewsFindFirst.mockResolvedValue(EXISTING_NEWS);
     mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
   });
 
@@ -619,7 +761,7 @@ describe("unpublishNews", () => {
 
   describe("異常系", () => {
     test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+      mockNewsFindFirst.mockResolvedValue(null);
 
       await expect(unpublishNews("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -628,7 +770,7 @@ describe("unpublishNews", () => {
     });
 
     test("お知らせが見つからない場合 update が呼ばれない", async () => {
-      mockNewsFindUnique.mockResolvedValue(null);
+      mockNewsFindFirst.mockResolvedValue(null);
 
       await expect(unpublishNews("non-existent")).rejects.toThrow(DomainError);
       expect(mockNewsUpdate).not.toHaveBeenCalled();

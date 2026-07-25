@@ -35,6 +35,7 @@ import {
 
 type Props = {
   items: MediaData[];
+  canDelete?: boolean;
 };
 
 const TYPE_ICONS = {
@@ -48,7 +49,7 @@ function hasTypeIcon(type: string): type is keyof typeof TYPE_ICONS {
   return type in TYPE_ICONS;
 }
 
-export function MediaTable({ items }: Props) {
+export function MediaTable({ items, canDelete = false }: Props) {
   const [detailItem, setDetailItem] = useState<MediaData | null>(null);
   const handleCopyUrl = createCopyUrlHandler();
   const { handleDelete, isPending } = useDeleteMedia();
@@ -131,14 +132,18 @@ export function MediaTable({ items }: Props) {
                       <ActionDropdownItem onClick={() => setDetailItem(item)}>
                         詳細
                       </ActionDropdownItem>
-                      <ActionDropdownSeparator />
-                      <ActionDropdownItem
-                        destructive
-                        onClick={() => handleDelete(item)}
-                        disabled={isPending}
-                      >
-                        削除
-                      </ActionDropdownItem>
+                      {canDelete && (
+                        <>
+                          <ActionDropdownSeparator />
+                          <ActionDropdownItem
+                            destructive
+                            onClick={() => handleDelete(item)}
+                            disabled={isPending}
+                          >
+                            削除
+                          </ActionDropdownItem>
+                        </>
+                      )}
                     </ActionDropdown>
                   </TableCell>
                 </TableRow>
@@ -151,6 +156,7 @@ export function MediaTable({ items }: Props) {
       <MediaDetailDialog
         item={detailItem}
         onClose={() => setDetailItem(null)}
+        canDelete={canDelete}
       />
     </>
   );

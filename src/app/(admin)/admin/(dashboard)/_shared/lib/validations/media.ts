@@ -36,7 +36,7 @@ export const MediaUsageEnum = z.enum(MediaUsage);
 export const ALLOWED_MIME_TYPES: Record<MediaType, string[]> = {
   IMAGE: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   VIDEO: ["video/mp4", "video/webm"],
-  AUDIO: ["audio/mpeg", "audio/wav"],
+  AUDIO: ["audio/mpeg", "audio/wav", "audio/webm"],
   DOCUMENT: ["application/pdf"],
   OTHER: [],
 };

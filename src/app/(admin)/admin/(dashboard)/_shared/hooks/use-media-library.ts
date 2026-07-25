@@ -92,18 +92,22 @@ function fetchMediaData(
   });
 }
 
-/**
- * 空の初期結果を返す解決済みPromiseを作成
- * レンダリング中にServer Actionを呼ばないようにするため
- */
-function createEmptyPromise(limit: number): Promise<GetMediaResult> {
-  return Promise.resolve({
+function createEmptyResult(limit: number): GetMediaResult {
+  return {
     items: [],
     total: 0,
     page: 1,
     limit,
     totalPages: 0,
-  });
+  };
+}
+
+/**
+ * 空の初期結果を返す解決済みPromiseを作成
+ * レンダリング中にServer Actionを呼ばないようにするため
+ */
+function createEmptyPromise(limit: number): Promise<GetMediaResult> {
+  return Promise.resolve(createEmptyResult(limit));
 }
 
 export function useMediaLibrary(
@@ -116,6 +120,8 @@ export function useMediaLibrary(
   const generationRef = useRef(0);
   // 初期フェッチが完了したかどうか
   const initialFetchDoneRef = useRef(false);
+  // STALE_REQUEST 時に直前の結果を返す
+  const lastResultRef = useRef<GetMediaResult>(createEmptyResult(limit));
 
   // 初期状態は空のPromise（レンダリング中にServer Actionを呼ばない）
   const [mediaPromise, setMediaPromise] = useState<Promise<GetMediaResult>>(
@@ -143,12 +149,13 @@ export function useMediaLibrary(
           if (generation !== generationRef.current) {
             throw new Error("STALE_REQUEST");
           }
+          lastResultRef.current = result;
           setIsInitialLoading(false);
           return result;
         })
         .catch((error: Error) => {
           if (error.message === "STALE_REQUEST") {
-            return createEmptyPromise(limit).then((r) => r);
+            return lastResultRef.current;
           }
           setIsInitialLoading(false);
           throw error;
@@ -181,16 +188,15 @@ export function useMediaLibrary(
       // Promiseを即座にセット（古いリクエストのチェックは結果取得後）
       const promise = fetchMediaData(appliedFilters, appliedPage, limit)
         .then((result) => {
-          // レースコンディション対策: 古いリクエストの結果は無視
           if (generation !== generationRef.current) {
             throw new Error("STALE_REQUEST");
           }
+          lastResultRef.current = result;
           return result;
         })
         .catch((error: Error) => {
-          // STALE_REQUESTエラーは無視し、前の結果を維持
           if (error.message === "STALE_REQUEST") {
-            return createEmptyPromise(limit).then((r) => r);
+            return lastResultRef.current;
           }
           throw error;
         });

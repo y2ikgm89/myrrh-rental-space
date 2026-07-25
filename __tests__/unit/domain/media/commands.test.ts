@@ -17,6 +17,10 @@ const mockMediaFindMany = mock<() => Promise<Record<string, unknown>[]>>(() =>
   Promise.resolve([]),
 );
 
+const mockAssertMediaUrlNotInUse = mock<() => Promise<void>>(() =>
+  Promise.resolve(),
+);
+
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
@@ -31,6 +35,13 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
+mock.module("@/shared/domain/media/references", () => ({
+  assertMediaUrlNotInUse: (
+    ...args: Parameters<typeof mockAssertMediaUrlNotInUse>
+  ) => mockAssertMediaUrlNotInUse(...args),
+  findMediaUrlUsages: mock(() => Promise.resolve([])),
+}));
+
 // r2 モック（discriminated union: success: true → url/path/contentType, false → error）
 type MockUploadResult =
   | {
@@ -38,6 +49,8 @@ type MockUploadResult =
       url: string;
       path: string;
       contentType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+      width?: number | null;
+      height?: number | null;
     }
   | { success: false; error: string };
 
@@ -51,6 +64,7 @@ const MOCK_MEDIA_VALIDATION = {
     "video/webm",
     "audio/mpeg",
     "audio/wav",
+    "audio/webm",
     "application/pdf",
   ],
 } as const;
@@ -126,6 +140,7 @@ const EXISTING_MEDIA = {
 const EXISTING_MEDIA_WITH_PATH = {
   id: MEDIA_ID,
   storagePath: STORAGE_PATH,
+  url: MEDIA_URL,
 };
 
 // =============================================================================
@@ -143,6 +158,8 @@ describe("uploadMediaCommand", () => {
       url: MEDIA_URL,
       path: STORAGE_PATH,
       contentType: "image/jpeg",
+      width: 1280,
+      height: 720,
     });
     mockMediaCreate.mockResolvedValue({ id: MEDIA_ID, url: MEDIA_URL });
   });
@@ -197,7 +214,29 @@ describe("uploadMediaCommand", () => {
             url: MEDIA_URL,
             bucket: "media",
             mimeType: "image/jpeg",
+            width: 1280,
+            height: 720,
             uploadedBy: USER_ID,
+          }),
+        }),
+      );
+    });
+
+    test("upload 結果に width/height が無い場合は null で保存する", async () => {
+      mockUploadFile.mockResolvedValue({
+        success: true,
+        url: MEDIA_URL,
+        path: STORAGE_PATH,
+        contentType: "image/jpeg",
+      });
+
+      await uploadMediaCommand(UPLOAD_INPUT);
+
+      expect(mockMediaCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            width: null,
+            height: null,
           }),
         }),
       );
@@ -430,16 +469,19 @@ describe("deleteMediaCommand", () => {
     mockMediaFindUnique.mockReset();
     mockMediaUpdate.mockReset();
     mockDeleteFile.mockReset();
+    mockAssertMediaUrlNotInUse.mockReset();
 
     mockMediaFindUnique.mockResolvedValue(EXISTING_MEDIA_WITH_PATH);
     mockMediaUpdate.mockResolvedValue({ id: MEDIA_ID });
     mockDeleteFile.mockResolvedValue({ success: true });
+    mockAssertMediaUrlNotInUse.mockResolvedValue(undefined);
   });
 
   describe("正常系", () => {
     test("メディアをソフトデリートできる", async () => {
       await deleteMediaCommand(MEDIA_ID);
 
+      expect(mockAssertMediaUrlNotInUse).toHaveBeenCalledWith(MEDIA_URL);
       expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH);
       expect(mockMediaUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -456,10 +498,10 @@ describe("deleteMediaCommand", () => {
       expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH);
     });
 
-    test("戻り値が void（undefined）", async () => {
+    test("成功時は { id, url } を返す", async () => {
       const result = await deleteMediaCommand(MEDIA_ID);
 
-      expect(result).toBeUndefined();
+      expect(result).toEqual({ id: MEDIA_ID, url: MEDIA_URL });
     });
   });
 
@@ -480,7 +522,34 @@ describe("deleteMediaCommand", () => {
         DomainError,
       );
 
+      expect(mockAssertMediaUrlNotInUse).not.toHaveBeenCalled();
       expect(mockDeleteFile).not.toHaveBeenCalled();
+      expect(mockMediaUpdate).not.toHaveBeenCalled();
+    });
+
+    test("参照中 URL は CONFLICT で削除せず deleteFile も呼ばない", async () => {
+      mockAssertMediaUrlNotInUse.mockRejectedValue(
+        new DomainError(
+          "このメディアは使用中のため削除できません（投稿: hello）",
+          "CONFLICT",
+        ),
+      );
+
+      await expect(deleteMediaCommand(MEDIA_ID)).rejects.toMatchObject({
+        code: "CONFLICT",
+      });
+
+      expect(mockDeleteFile).not.toHaveBeenCalled();
+      expect(mockMediaUpdate).not.toHaveBeenCalled();
+    });
+
+    test("deleteFile 失敗時は UNEXPECTED で DB を更新しない", async () => {
+      mockDeleteFile.mockResolvedValue({ success: false });
+
+      await expect(deleteMediaCommand(MEDIA_ID)).rejects.toMatchObject({
+        code: "UNEXPECTED",
+      });
+
       expect(mockMediaUpdate).not.toHaveBeenCalled();
     });
   });

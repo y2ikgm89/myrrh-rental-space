@@ -8,10 +8,19 @@
  */
 
 import { useId, useState } from "react";
-import { IconAlertCircle, IconPhoto } from "@tabler/icons-react";
+import {
+  IconAlertCircle,
+  IconExternalLink,
+  IconLink,
+} from "@tabler/icons-react";
 import { Button, Input, Label } from "@/admin/components/ui";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
-import { acceptToLabel, acceptToUrlPlaceholder } from "../accept-helpers";
+import {
+  acceptToLabel,
+  acceptToUrlPlaceholder,
+  urlLooksLikeImage,
+  urlMatchesAccept,
+} from "../accept-helpers";
 
 interface UrlTabProps {
   onAdd: (url: string, alt?: string) => void;
@@ -29,24 +38,33 @@ export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
   const [alt, setAlt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showLinkPreview, setShowLinkPreview] = useState(false);
 
   const validateUrl = (value: string): boolean => {
-    if (!value.trim()) {
+    const trimmed = value.trim();
+    if (!trimmed) {
       setError("URLを入力してください");
       setPreviewUrl(null);
+      setShowLinkPreview(false);
       return false;
     }
 
-    try {
-      new URL(value);
-      setError(null);
-      setPreviewUrl(value);
-      return true;
-    } catch {
-      setError("有効なURLを入力してください");
+    if (!urlMatchesAccept(trimmed, accept)) {
+      setError(`有効な${acceptLabel}URLを入力してください（http/https）`);
       setPreviewUrl(null);
+      setShowLinkPreview(false);
       return false;
     }
+
+    setError(null);
+    if (urlLooksLikeImage(trimmed)) {
+      setPreviewUrl(trimmed);
+      setShowLinkPreview(false);
+    } else {
+      setPreviewUrl(null);
+      setShowLinkPreview(true);
+    }
+    return true;
   };
 
   const handleUrlChange = (value: string) => {
@@ -56,6 +74,7 @@ export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
     } else {
       setError(null);
       setPreviewUrl(null);
+      setShowLinkPreview(false);
     }
   };
 
@@ -67,6 +86,7 @@ export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
     setUrl("");
     setAlt("");
     setPreviewUrl(null);
+    setShowLinkPreview(false);
     setError(null);
   };
 
@@ -117,7 +137,6 @@ export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
       {previewUrl && (
         <div className="space-y-2">
           <p className="text-sm font-medium">プレビュー</p>
-          {/* bg-checker: 透過 PNG / SVG の透過部分を市松模様で可視化 */}
           <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border bg-checker">
             <img
               src={previewUrl}
@@ -126,16 +145,38 @@ export function UrlTab({ onAdd, canAddMore, accept }: UrlTabProps) {
               onError={() => {
                 setError("画像を読み込めませんでした");
                 setPreviewUrl(null);
+                setShowLinkPreview(true);
               }}
             />
           </div>
         </div>
       )}
 
-      {!previewUrl && url && !error && (
+      {showLinkPreview && url && !error && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">プレビュー</p>
+          <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed bg-muted/30 p-4">
+            <div className="text-center text-muted-foreground">
+              <IconLink className="mx-auto h-8 w-8" aria-hidden="true" />
+              <p className="mt-2 break-all text-sm">{url.trim()}</p>
+              <a
+                href={url.trim()}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                <IconExternalLink className="h-3 w-3" aria-hidden="true" />
+                リンクを開く
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!previewUrl && !showLinkPreview && url && !error && (
         <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed bg-muted/30">
           <div className="text-center text-muted-foreground">
-            <IconPhoto className="mx-auto h-8 w-8" />
+            <IconLink className="mx-auto h-8 w-8" aria-hidden="true" />
             <p className="mt-2 text-sm">
               URLを入力するとプレビューが表示されます
             </p>

@@ -15,7 +15,9 @@ import type {
 } from "@/shared/domain/news/types";
 
 function buildNewsWhere(filters: NewsFilters): NewsWhereInput {
-  const where: NewsWhereInput = {};
+  const where: NewsWhereInput = {
+    deletedAt: null,
+  };
 
   if (filters.status === "PUBLISHED") {
     where.isPublished = true;
@@ -123,8 +125,8 @@ export async function getNewsList(
 }
 
 export async function getNewsById(id: string): Promise<NewsData | null> {
-  const news = await prisma.news.findUnique({
-    where: { id },
+  const news = await prisma.news.findFirst({
+    where: { id, deletedAt: null },
   });
 
   if (!news) {
@@ -137,4 +139,44 @@ export async function getNewsById(id: string): Promise<NewsData | null> {
     createdAt: news.createdAt.toISOString(),
     updatedAt: news.updatedAt.toISOString(),
   };
+}
+
+export type DeletedNewsListItem = {
+  id: string;
+  title: string;
+  slug: string;
+  deletedAt: string;
+  isPublished: boolean;
+};
+
+/**
+ * Recycle Bin: ソフトデリート済みお知らせ一覧（ゴミ箱テーブル用）。
+ */
+export async function getDeletedNews(): Promise<DeletedNewsListItem[]> {
+  const news = await prisma.news.findMany({
+    where: { deletedAt: { not: null } },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      deletedAt: true,
+      isPublished: true,
+    },
+    orderBy: { deletedAt: "desc" },
+  });
+
+  return news.flatMap((item) => {
+    if (item.deletedAt === null) {
+      return [];
+    }
+    return [
+      {
+        id: item.id,
+        title: item.title,
+        slug: item.slug,
+        deletedAt: item.deletedAt.toISOString(),
+        isPublished: item.isPublished,
+      },
+    ];
+  });
 }

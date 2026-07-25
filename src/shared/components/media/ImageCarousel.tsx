@@ -24,6 +24,10 @@ type ImageCarouselPriorityProps =
       readonly fetchPriority?: "high" | "low" | "auto";
     };
 
+function BrokenImagePlaceholder() {
+  return <div className="absolute inset-0 bg-muted" aria-hidden="true" />;
+}
+
 /**
  * Card-level image carousel with hover navigation buttons.
  *
@@ -38,11 +42,23 @@ export function ImageCarousel({
   ...priorityProps
 }: ImageCarouselProps & ImageCarouselPriorityProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [failedSrcs, setFailedSrcs] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const touchStartXRef = useRef(0);
   const count = images.length;
   const shouldPreload = priorityProps.preload === true;
   const loading = shouldPreload ? undefined : priorityProps.loading;
   const fetchPriority = shouldPreload ? undefined : priorityProps.fetchPriority;
+
+  const markFailed = (src: string) => {
+    setFailedSrcs((prev) => {
+      if (prev.has(src)) return prev;
+      const next = new Set(prev);
+      next.add(src);
+      return next;
+    });
+  };
 
   const goTo = (index: number) => {
     setActiveIndex((index + count) % count);
@@ -131,6 +147,7 @@ export function ImageCarousel({
                   fetchPriority: i === 0 ? fetchPriority : "auto",
                 }),
               };
+        const isFailed = failedSrcs.has(src);
         return (
           <div
             key={src}
@@ -140,7 +157,7 @@ export function ImageCarousel({
             )}
             aria-hidden={i !== activeIndex}
           >
-            {isWindow ? (
+            {isWindow && !isFailed ? (
               <Image
                 src={src}
                 alt={i === activeIndex ? `${alt} ${i + 1}/${count}` : ""}
@@ -148,7 +165,10 @@ export function ImageCarousel({
                 sizes={sizes}
                 {...imagePriorityProps}
                 className="object-cover"
+                onError={() => markFailed(src)}
               />
+            ) : isWindow && isFailed ? (
+              <BrokenImagePlaceholder />
             ) : null}
           </div>
         );

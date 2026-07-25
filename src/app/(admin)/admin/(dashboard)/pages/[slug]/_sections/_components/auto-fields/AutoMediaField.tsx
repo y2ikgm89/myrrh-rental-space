@@ -14,6 +14,7 @@
  */
 
 import { createElement, useState } from "react";
+import { toast } from "sonner";
 import {
   IconFileText,
   IconMusic,
@@ -27,8 +28,35 @@ import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { useMediaUpload } from "@/admin/hooks/use-media-upload";
 import { MediaPreview } from "@/admin/components/media-picker/MediaPreview";
 import { acceptToLabel } from "@/admin/components/media-picker/accept-helpers";
+import {
+  validateFile,
+  inferMediaType,
+  type MediaType,
+} from "@/admin/lib/validations/media";
 import { cn } from "@/shared/lib/cn";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
+
+function acceptedMediaTypes(accept: MediaAcceptType): MediaType[] {
+  switch (accept) {
+    case "image":
+      return ["IMAGE"];
+    case "video":
+      return ["VIDEO"];
+    case "image-or-video":
+      return ["IMAGE", "VIDEO"];
+    case "audio":
+      return ["AUDIO"];
+    case "file":
+      return ["DOCUMENT"];
+    case "any":
+      return ["IMAGE", "VIDEO", "AUDIO", "DOCUMENT"];
+  }
+}
+
+function fileMatchesAccept(file: File, accept: MediaAcceptType): boolean {
+  const mediaType = inferMediaType(file.type);
+  return acceptedMediaTypes(accept).includes(mediaType);
+}
 
 interface AutoMediaFieldProps {
   readonly fieldId: string;
@@ -52,25 +80,6 @@ function emptyStateIcon(accept: MediaAcceptType) {
     case "any":
     default:
       return IconPhotoPlus;
-  }
-}
-
-function mimePrefixForAccept(accept: MediaAcceptType): string | null {
-  switch (accept) {
-    case "image":
-      return "image/";
-    case "video":
-      return "video/";
-    case "image-or-video":
-      // 画像 / 動画 どちらも許容 — 単一 prefix で表現不能のため UI hint は省略
-      // (server-side magic-byte が trust boundary、UI は誤投下を許容する canonical pattern)
-      return null;
-    case "audio":
-      return "audio/";
-    case "file":
-      return "application/pdf";
-    case "any":
-      return null;
   }
 }
 
@@ -100,7 +109,6 @@ export function AutoMediaField({
 
   const { uploadFile, isUploading } = useMediaUpload();
 
-  const acceptPrefix = mimePrefixForAccept(accept);
   const acceptLabel = acceptToLabel(accept);
   const emptyIcon = emptyStateIcon(accept);
 
@@ -122,7 +130,18 @@ export function AutoMediaField({
 
     const file = e.dataTransfer.files[0];
     if (!file) return;
-    if (acceptPrefix !== null && !file.type.startsWith(acceptPrefix)) return;
+
+    if (!fileMatchesAccept(file, accept)) {
+      toast.error(`対応していないファイル形式です（${acceptLabel}のみ）`);
+      return;
+    }
+
+    const mediaType = inferMediaType(file.type);
+    const validation = validateFile(file, mediaType);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
 
     const result = await uploadFile(file, {}, "GENERAL");
     if (result) {

@@ -67,6 +67,7 @@ export async function searchLinkCardCandidates(params: {
     case "news": {
       const rows = await prisma.news.findMany({
         where: {
+          deletedAt: null,
           isPublished: true,
           ...(titleContains && { title: titleContains }),
         },

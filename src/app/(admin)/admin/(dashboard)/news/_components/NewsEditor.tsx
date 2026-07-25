@@ -83,7 +83,7 @@ export function NewsEditor({
           <DialogHeader>
             <DialogTitle>お知らせを削除しますか？</DialogTitle>
             <DialogDescription>
-              この操作は取り消せません。本当に削除してもよろしいですか？
+              削除されたお知らせはゴミ箱に 30 日間保持され、復元できます。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

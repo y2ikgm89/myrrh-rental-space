@@ -44,6 +44,7 @@ describe("findRecentlyDueScheduledNewsSlugs", () => {
     const call = mockFindMany.mock.calls[0];
     if (!call) throw new Error("findMany was not called");
     const [{ where }] = call;
+    expect(where["deletedAt"]).toBeNull();
     expect(where["isPublished"]).toBe(true);
     const filter = where["publishedAt"] as { lte: Date; gt: Date };
     expect(filter.lte.getTime()).toBeGreaterThanOrEqual(before);

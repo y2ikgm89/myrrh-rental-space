@@ -19,8 +19,8 @@ import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 
 /**
- * 公開ニュースクエリの共通 where 句。News model に deletedAt 列はないため
- * isPublished gate に加え、`publishedAt <= now` で予約公開（未来日時指定）の
+ * 公開ニュースクエリの共通 where 句。`deletedAt: null` に加え
+ * `isPublished` gate と `publishedAt <= now` で予約公開（未来日時指定）の
  * 早期露出を防ぐ。`now` は呼び出しの都度評価する（呼び出し元でキャプチャした
  * `Date` を渡さないこと — この関数の呼び出し自体が `'use cache'` 関数本体内で
  * 行われるため、生成された `Prisma.NewsWhereInput` は cacheLife(PUBLIC_CONTENT)
@@ -31,6 +31,7 @@ import { slugParamSchema } from "@/shared/lib/validations/params";
  */
 function publicNewsWhere(now: Date = new Date()): Prisma.NewsWhereInput {
   return {
+    deletedAt: null,
     isPublished: true,
     publishedAt: { lte: now },
   };

@@ -50,6 +50,7 @@ describe("MEDIA_MIME_EXTENSIONS", () => {
     expect(MEDIA_MIME_EXTENSIONS["video/webm"]).toBe("webm");
     expect(MEDIA_MIME_EXTENSIONS["audio/mpeg"]).toBe("mp3");
     expect(MEDIA_MIME_EXTENSIONS["audio/wav"]).toBe("wav");
+    expect(MEDIA_MIME_EXTENSIONS["audio/webm"]).toBe("webm");
     expect(MEDIA_MIME_EXTENSIONS["application/pdf"]).toBe("pdf");
   });
 });
@@ -135,10 +136,23 @@ describe("detectMediaMimeFromMagicBytes — 動画", () => {
     ).toBe("video/mp4");
   });
 
-  test("WebM EBML header を検出", () => {
+  test("WebM EBML header（コーデック不明）は video/webm（fail-safe）", () => {
     expect(detectMediaMimeFromMagicBytes(buf([0x1a, 0x45, 0xdf, 0xa3]))).toBe(
       "video/webm",
     );
+  });
+
+  test("WebM + 動画コーデックは video/webm", () => {
+    const withCodec = new Uint8Array(64);
+    withCodec[0] = 0x1a;
+    withCodec[1] = 0x45;
+    withCodec[2] = 0xdf;
+    withCodec[3] = 0xa3;
+    const codec = "V_VP9";
+    for (let i = 0; i < codec.length; i++) {
+      withCodec[20 + i] = codec.charCodeAt(i);
+    }
+    expect(detectMediaMimeFromMagicBytes(withCodec)).toBe("video/webm");
   });
 });
 
@@ -163,6 +177,36 @@ describe("detectMediaMimeFromMagicBytes — 音声", () => {
   test("MP3 frame sync を検出 (0xFFEx / 0xFFFx)", () => {
     expect(detectMediaMimeFromMagicBytes(buf([0xff, 0xfb]))).toBe("audio/mpeg");
     expect(detectMediaMimeFromMagicBytes(buf([0xff, 0xe0]))).toBe("audio/mpeg");
+  });
+
+  test("WebM + 音声コーデックのみは audio/webm", () => {
+    const withCodec = new Uint8Array(64);
+    withCodec[0] = 0x1a;
+    withCodec[1] = 0x45;
+    withCodec[2] = 0xdf;
+    withCodec[3] = 0xa3;
+    const codec = "A_OPUS";
+    for (let i = 0; i < codec.length; i++) {
+      withCodec[20 + i] = codec.charCodeAt(i);
+    }
+    expect(detectMediaMimeFromMagicBytes(withCodec)).toBe("audio/webm");
+  });
+
+  test("WebM に動画と音声の両方がある場合は video/webm", () => {
+    const withCodec = new Uint8Array(80);
+    withCodec[0] = 0x1a;
+    withCodec[1] = 0x45;
+    withCodec[2] = 0xdf;
+    withCodec[3] = 0xa3;
+    const video = "V_VP8";
+    const audio = "A_OPUS";
+    for (let i = 0; i < video.length; i++) {
+      withCodec[20 + i] = video.charCodeAt(i);
+    }
+    for (let i = 0; i < audio.length; i++) {
+      withCodec[40 + i] = audio.charCodeAt(i);
+    }
+    expect(detectMediaMimeFromMagicBytes(withCodec)).toBe("video/webm");
   });
 });
 

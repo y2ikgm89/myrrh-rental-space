@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextResponse } from "next/server";
+import { DomainError } from "@/shared/domain/domain-error";
 
 const mockCheckPermission = mock();
 const mockGetMediaListQuery = mock();
 const mockUploadMediaCommand = mock();
+const mockLogAction = mock(() => Promise.resolve());
+const mockFinalizeMediaMutation = mock();
+const mockFireAndForget = mock((promise: Promise<unknown>, _opts?: unknown) => {
+  void promise;
+});
 
 mock.module("next/server", () => ({
   NextResponse,
@@ -12,6 +18,8 @@ mock.module("next/server", () => ({
 mock.module("@/admin/lib/action-auth", () => ({
   checkPermission: (...args: Parameters<typeof mockCheckPermission>) =>
     mockCheckPermission(...args),
+  logAction: (...args: Parameters<typeof mockLogAction>) =>
+    mockLogAction(...args),
 }));
 
 mock.module("@/shared/domain/media/queries", () => ({
@@ -24,6 +32,19 @@ mock.module("@/shared/domain/media/commands", () => ({
     mockUploadMediaCommand(...args),
 }));
 
+mock.module("@/shared/domain/media/cache", () => ({
+  finalizeMediaMutation: (
+    ...args: Parameters<typeof mockFinalizeMediaMutation>
+  ) => mockFinalizeMediaMutation(...args),
+  revalidateMedia: mock(),
+  purgeMediaUrls: mock(),
+}));
+
+mock.module("@/shared/lib/async-utils", () => ({
+  fireAndForget: (...args: Parameters<typeof mockFireAndForget>) =>
+    mockFireAndForget(...args),
+}));
+
 const { GET, POST } = await import("@/app/(admin)/admin/api/media/route");
 
 describe("admin media route", () => {
@@ -31,6 +52,10 @@ describe("admin media route", () => {
     mockCheckPermission.mockReset();
     mockGetMediaListQuery.mockReset();
     mockUploadMediaCommand.mockReset();
+    mockLogAction.mockReset();
+    mockFinalizeMediaMutation.mockReset();
+    mockFireAndForget.mockReset();
+    mockLogAction.mockResolvedValue(undefined);
   });
 
   test("GET のバリデーションエラーは最初の error だけを返す", async () => {
@@ -96,6 +121,42 @@ describe("admin media route", () => {
       id: "media-1",
       url: "https://example.com/media.jpg",
     });
+    expect(mockFinalizeMediaMutation).toHaveBeenCalledWith(["media-1"]);
+    expect(mockFireAndForget).toHaveBeenCalled();
+    expect(mockLogAction).toHaveBeenCalledWith(
+      "admin-user",
+      "create",
+      "media",
+      "media-1",
+    );
+  });
+
+  test("POST の DomainError CONFLICT は 409 を返す", async () => {
+    mockCheckPermission.mockResolvedValue({
+      success: true,
+      user: { id: "admin-user" },
+    });
+    mockUploadMediaCommand.mockRejectedValue(
+      new DomainError("競合しました", "CONFLICT"),
+    );
+
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new File(["image"], "photo.jpg", { type: "image/jpeg" }),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/admin/api/media", {
+        method: "POST",
+        body: formData,
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toEqual({ error: "競合しました" });
+    expect(mockFinalizeMediaMutation).not.toHaveBeenCalled();
   });
 
   test("POST の権限エラーは { error } で返す", async () => {

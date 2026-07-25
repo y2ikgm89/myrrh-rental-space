@@ -83,7 +83,7 @@ async function resolveNewsCards(
   ids: string[],
 ): Promise<Map<string, ResolvedLinkCard>> {
   const rows = await prisma.news.findMany({
-    where: { id: { in: ids }, isPublished: true },
+    where: { id: { in: ids }, deletedAt: null, isPublished: true },
     select: { id: true, slug: true, title: true },
   });
 

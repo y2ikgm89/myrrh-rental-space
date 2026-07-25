@@ -21,6 +21,12 @@ const mockUpdateNewsBodyCommand = mock<
 const mockDeleteNewsCommand = mock<(id: string) => Promise<{ slug: string }>>(
   () => Promise.resolve({ slug: "deleted" }),
 );
+const mockRestoreNewsCommand = mock<(id: string) => Promise<{ slug: string }>>(
+  () => Promise.resolve({ slug: "restored" }),
+);
+const mockPermanentlyDeleteNewsCommand = mock<
+  (id: string) => Promise<{ slug: string }>
+>(() => Promise.resolve({ slug: "purged" }));
 const mockPublishNewsCommand = mock<(id: string) => Promise<{ slug: string }>>(
   () => Promise.resolve({ slug: "published" }),
 );
@@ -33,6 +39,8 @@ mock.module("@/shared/domain/news/commands", () => ({
   updateNewsSettings: mockUpdateNewsSettingsCommand,
   updateNewsBody: mockUpdateNewsBodyCommand,
   deleteNews: mockDeleteNewsCommand,
+  restoreNews: mockRestoreNewsCommand,
+  permanentlyDeleteNews: mockPermanentlyDeleteNewsCommand,
   publishNews: mockPublishNewsCommand,
   unpublishNews: mockUnpublishNewsCommand,
 }));
@@ -82,8 +90,13 @@ mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: mockExecuteAdminMutationResult,
 }));
 
-const { createNews, updateNewsSettings } =
-  await import("@/app/(admin)/admin/(dashboard)/_shared/actions/news");
+const {
+  createNews,
+  updateNewsSettings,
+  deleteNews,
+  restoreNews,
+  permanentlyDeleteNews,
+} = await import("@/app/(admin)/admin/(dashboard)/_shared/actions/news");
 const { isMutationError } = await import("@/shared/lib/mutation-result");
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
@@ -175,5 +188,59 @@ describe("updateNewsSettings (action shape)", () => {
     expect((payload as { publishedAt: Date }).publishedAt.toISOString()).toBe(
       "2026-01-01T18:04:00.000Z",
     );
+  });
+});
+
+describe("deleteNews / restoreNews / permanentlyDeleteNews (action shape)", () => {
+  beforeEach(() => {
+    mockExecuteAdminMutationResult.mockClear();
+    mockDeleteNewsCommand.mockClear();
+    mockRestoreNewsCommand.mockClear();
+    mockPermanentlyDeleteNewsCommand.mockClear();
+  });
+
+  test("deleteNews: 無効な id は validation error", async () => {
+    const result = await deleteNews("xx");
+    expect(isMutationError(result)).toBe(true);
+    expect(mockExecuteAdminMutationResult).not.toHaveBeenCalled();
+  });
+
+  test("deleteNews: 正常系で resource=news, action=delete", async () => {
+    mockDeleteNewsCommand.mockResolvedValueOnce({ slug: "deleted" });
+    await deleteNews(VALID_UUID);
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: "news",
+        action: "delete",
+        resourceId: VALID_UUID,
+      }),
+    );
+    expect(mockDeleteNewsCommand).toHaveBeenCalledWith(VALID_UUID);
+  });
+
+  test("restoreNews: 正常系で resource=news, action=update", async () => {
+    mockRestoreNewsCommand.mockResolvedValueOnce({ slug: "restored" });
+    await restoreNews(VALID_UUID);
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: "news",
+        action: "update",
+        resourceId: VALID_UUID,
+      }),
+    );
+    expect(mockRestoreNewsCommand).toHaveBeenCalledWith(VALID_UUID);
+  });
+
+  test("permanentlyDeleteNews: 正常系で resource=news, action=delete", async () => {
+    mockPermanentlyDeleteNewsCommand.mockResolvedValueOnce({ slug: "purged" });
+    await permanentlyDeleteNews(VALID_UUID);
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: "news",
+        action: "delete",
+        resourceId: VALID_UUID,
+      }),
+    );
+    expect(mockPermanentlyDeleteNewsCommand).toHaveBeenCalledWith(VALID_UUID);
   });
 });

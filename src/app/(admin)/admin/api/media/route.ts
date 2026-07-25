@@ -6,7 +6,7 @@
 
 import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
-import { checkPermission } from "@/admin/lib/action-auth";
+import { checkPermission, logAction } from "@/admin/lib/action-auth";
 import {
   mediaFiltersSchema,
   mediaPaginationSchema,
@@ -16,7 +16,13 @@ import {
   preValidateMediaFile,
 } from "@/admin/lib/validations/media";
 import { uploadMediaCommand } from "@/shared/domain/media/commands";
+import { finalizeMediaMutation } from "@/shared/domain/media/cache";
 import { getMediaListQuery } from "@/shared/domain/media/queries";
+import {
+  isDomainError,
+  type DomainErrorCode,
+} from "@/shared/domain/domain-error";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import {
   logError,
   ErrorCategory,
@@ -30,6 +36,28 @@ import {
   jsonValidationError,
 } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
+
+function domainErrorStatus(code: DomainErrorCode): number | null {
+  switch (code) {
+    case "VALIDATION":
+      return 400;
+    case "UNAUTHORIZED":
+      return 401;
+    case "FORBIDDEN":
+      return 403;
+    case "NOT_FOUND":
+      return 404;
+    case "CONFLICT":
+    case "DUPLICATE":
+      return 409;
+    case "UNEXPECTED":
+      return null;
+    default: {
+      const _exhaustive: never = code;
+      return _exhaustive;
+    }
+  }
+}
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
@@ -108,9 +136,28 @@ export async function POST(request: Request): Promise<NextResponse> {
       tags: metadata.tags ?? [],
     });
 
+    finalizeMediaMutation([result.id]);
+
+    fireAndForget(logAction(auth.user.id, "create", "media", result.id), {
+      operation: "adminMediaUpload.logAction",
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.MEDIUM,
+      context: {
+        resource: "media",
+        action: "create",
+        userId: auth.user.id,
+      },
+    });
+
     return jsonSuccess(result);
   } catch (error: unknown) {
     unstable_rethrow(error);
+    if (isDomainError(error)) {
+      const status = domainErrorStatus(error.code);
+      if (status !== null) {
+        return jsonError(error.message, status);
+      }
+    }
     logError(normalizeError(error), {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.HIGH,

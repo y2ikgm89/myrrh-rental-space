@@ -2824,8 +2824,8 @@ async function seedNews() {
   ];
 
   for (const news of newsItems) {
-    const existing = await prisma.news.findUnique({
-      where: { slug: news.slug },
+    const existing = await prisma.news.findFirst({
+      where: { slug: news.slug, deletedAt: null },
     });
     if (!existing) {
       // contentJson 正本 → server 派生 HTML（保存パイプラインと同一）

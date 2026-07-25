@@ -30,7 +30,7 @@ export async function bulkTogglePublishedNewsCommand(
     return { count: 0, isPublished: publish, affectedSlugs: [] };
   }
   const targets = await prisma.news.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, deletedAt: null },
     select: { id: true, slug: true, publishedAt: true },
   });
   if (targets.length === 0) {
@@ -52,20 +52,20 @@ export async function bulkTogglePublishedNewsCommand(
       unsetIds.length === 0
         ? Promise.resolve({ count: 0 })
         : prisma.news.updateMany({
-            where: { id: { in: unsetIds } },
+            where: { id: { in: unsetIds }, deletedAt: null },
             data: { isPublished: true, publishedAt: new Date() },
           }),
       alreadySetIds.length === 0
         ? Promise.resolve({ count: 0 })
         : prisma.news.updateMany({
-            where: { id: { in: alreadySetIds } },
+            where: { id: { in: alreadySetIds }, deletedAt: null },
             data: { isPublished: true },
           }),
     ]);
     count = unsetResult.count + alreadySetResult.count;
   } else {
     const result = await prisma.news.updateMany({
-      where: { id: { in: targets.map((t) => t.id) } },
+      where: { id: { in: targets.map((t) => t.id) }, deletedAt: null },
       data: {
         isPublished: false,
         publishedAt: null,
@@ -82,10 +82,10 @@ export async function bulkTogglePublishedNewsCommand(
 }
 
 /**
- * 複数のお知らせを一括削除する。
+ * 複数のお知らせを一括ソフトデリートする。
  *
- * - お知らせは外部 FK 依存がないため `deleteMany` で一括削除可
- * - 戻り値の `affectedSlugs` は cache invalidation 用
+ * updateMany の where に `deletedAt: null` を含め、既にゴミ箱入りの行は数えない。
+ * 戻り値の `affectedSlugs` は cache invalidation 用。
  */
 export async function bulkDeleteNewsCommand(
   ids: string[],
@@ -94,14 +94,15 @@ export async function bulkDeleteNewsCommand(
     return { count: 0, affectedSlugs: [] };
   }
   const targets = await prisma.news.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, deletedAt: null },
     select: { id: true, slug: true },
   });
   if (targets.length === 0) {
     return { count: 0, affectedSlugs: [] };
   }
-  const result = await prisma.news.deleteMany({
-    where: { id: { in: targets.map((t) => t.id) } },
+  const result = await prisma.news.updateMany({
+    where: { id: { in: targets.map((t) => t.id) }, deletedAt: null },
+    data: { deletedAt: new Date() },
   });
   return {
     count: result.count,

@@ -5,6 +5,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { deleteMedia } from "@/admin/actions/media";
@@ -28,17 +29,14 @@ export function useDeleteMedia(): {
   handleDelete: (item: MediaData) => void;
   isPending: boolean;
 } {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const confirm = useConfirm();
 
   const handleDelete = async (item: MediaData) => {
     const confirmed = await confirm({
       title: "メディアを削除しますか？",
-      // Round-5 audit Finding #7: メディアは記事本文・スペース写真・固定ページ等
-      // から URL 文字列として参照されるのみで、DB 上のリレーションを持たない
-      // ため参照有無のチェックは行われない。削除すると使用中でも即座にファイル
-      // 実体が消え画像が壊れるため、その旨を明示する。
-      description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中でもチェックされず、参照している箇所は画像が表示されなくなります。`,
+      description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中の場合、参照チェックにより削除がブロックされます。`,
       confirmLabel: "削除",
       variant: "destructive",
     });
@@ -48,6 +46,7 @@ export function useDeleteMedia(): {
       const result = await deleteMedia(item.id);
       if (!isMutationError(result)) {
         toast.success("削除しました");
+        router.refresh();
       } else {
         toast.error(result.error);
       }

@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertMediaUrlNotInUse } from "@/shared/domain/media/references";
 import { STORAGE_PREFIXES } from "@/shared/lib/r2/keys";
 import { MEDIA_VALIDATION, uploadFile } from "@/shared/lib/r2/upload";
 import { deriveMediaTypeFromMime } from "@/shared/lib/r2/media-type-derivation";
@@ -45,8 +46,8 @@ export async function uploadMediaCommand(input: {
         // （client 供給の file.type は偽装可能なため使わない）
         mimeType: result.contentType,
         size: input.file.size,
-        width: null,
-        height: null,
+        width: result.width ?? null,
+        height: result.height ?? null,
         // server-side magic-byte で確定した MIME から MediaType を派生する
         // （クライアント供給 input.type 信用バイパス）
         type: deriveMediaTypeFromMime(result.contentType),
@@ -115,19 +116,32 @@ export async function updateMediaCommand(input: {
   });
 }
 
-export async function deleteMediaCommand(id: string): Promise<void> {
+export async function deleteMediaCommand(
+  id: string,
+): Promise<{ id: string; url: string }> {
   const media = await prisma.media.findUnique({
     where: { id, isActive: true },
-    select: { id: true, storagePath: true },
+    select: { id: true, storagePath: true, url: true },
   });
 
   if (!media) {
     throw new DomainError("メディアが見つかりません", "NOT_FOUND");
   }
 
-  await deleteFile(media.storagePath);
+  await assertMediaUrlNotInUse(media.url);
+
+  const deleteResult = await deleteFile(media.storagePath);
+  if (!deleteResult.success) {
+    throw new DomainError(
+      "ストレージからのファイル削除に失敗したため、メディアを削除できませんでした",
+      "UNEXPECTED",
+    );
+  }
+
   await prisma.media.update({
     where: { id },
     data: { isActive: false },
   });
+
+  return { id: media.id, url: media.url };
 }

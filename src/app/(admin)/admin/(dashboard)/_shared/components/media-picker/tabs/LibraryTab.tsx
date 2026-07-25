@@ -22,7 +22,7 @@ import type {
 } from "@/admin/types/media-picker";
 import type { MediaType } from "@/admin/lib/validations/media";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
-import { acceptToInitialMediaType } from "../accept-helpers";
+import { acceptToInitialMediaType, acceptToLabel } from "../accept-helpers";
 import { cn } from "@/shared/lib/cn";
 
 interface LibraryTabProps {
@@ -47,12 +47,14 @@ function MediaGridContent({
   onSelect,
   viewMode,
   canSelectMore,
+  emptyLabel,
 }: {
   mediaPromise: Promise<GetMediaResult>;
   selectedIds: Set<string>;
   onSelect: (media: MediaData) => void;
   viewMode: "grid" | "list";
   canSelectMore: boolean;
+  emptyLabel: string;
 }) {
   const result = use(mediaPromise);
 
@@ -64,6 +66,7 @@ function MediaGridContent({
       viewMode={viewMode}
       isLoading={false}
       canSelectMore={canSelectMore}
+      emptyLabel={emptyLabel}
     />
   );
 }
@@ -78,6 +81,7 @@ export function LibraryTab({
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const initialType = acceptToInitialMediaType(accept);
+  const emptyLabel = `${acceptToLabel(accept)}が見つかりません`;
   const initialFilters: MediaFilters = initialType ? { type: initialType } : {};
   const [activeType, setActiveType] = useState<MediaType | undefined>(
     initialType,
@@ -157,6 +161,7 @@ export function LibraryTab({
             onSelect={onSelect}
             viewMode={viewMode}
             canSelectMore={canSelectMore}
+            emptyLabel={emptyLabel}
           />
         </Suspense>
       )}
