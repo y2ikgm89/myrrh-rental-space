@@ -76,6 +76,8 @@ export function FeatureModulesForm({
     }
   }, [lastResult, router]);
 
+  const formErrors = form.errors;
+
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
       <Card>
@@ -86,7 +88,7 @@ export function FeatureModulesForm({
             になり、公開サイトのナビゲーション・サイトマップ・関連 cron
             ジョブから自動除外されます。管理画面のサイドバー・コマンドパレットは
             残り、「非公開」badge と tooltip で公開面 OFF
-            を示します（データの確認・編集は可能）。
+            を示します（確認・編集は可、新規作成は不可）。
             データベース上の既存データは保持されます。
           </CardDescription>
         </CardHeader>
@@ -106,6 +108,15 @@ export function FeatureModulesForm({
               />
             );
           })}
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
           <div className="flex justify-end pt-2">
             <SubmitButton
               isPending={isPending}

@@ -15,6 +15,8 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { hasPermission } from "@/shared/lib/admin-permissions";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -29,8 +31,10 @@ type PageProps = {
 
 async function ReservationList({
   searchParams,
+  allowCreate,
 }: {
   searchParams: SearchParams;
+  allowCreate: boolean;
 }) {
   await connection();
   const params = await loadAdminReservationSearchParams(searchParams);
@@ -54,7 +58,10 @@ async function ReservationList({
 
   return (
     <>
-      <ReservationTable reservations={result.reservations} />
+      <ReservationTable
+        reservations={result.reservations}
+        allowCreate={allowCreate}
+      />
       <Pagination
         currentPage={result.page}
         totalPages={result.totalPages}
@@ -73,7 +80,14 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
     "manage",
   );
   const params = await loadAdminReservationSearchParams(searchParams);
-  const spaces = await getSpacesForReservation();
+  const [spaces, enabledFeatures] = await Promise.all([
+    getSpacesForReservation(),
+    getEnabledFeatures(),
+  ]);
+  const allowCreate = isAdminFeatureCreateAllowed(
+    "reservation",
+    enabledFeatures,
+  );
 
   // Round-4 audit Finding #13: CSV export は「今画面に見えている行」を
   // 期待して押されるため、一覧と同じ filter (tab/search/期間/userId) を
@@ -103,12 +117,14 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button asChild>
-            <Link href="/admin/reservations/new">
-              <IconPlus className="mr-2 h-4 w-4" />
-              新規予約
-            </Link>
-          </Button>
+          {allowCreate ? (
+            <Button asChild>
+              <Link href="/admin/reservations/new">
+                <IconPlus className="mr-2 h-4 w-4" />
+                新規予約
+              </Link>
+            </Button>
+          ) : null}
           <Button variant="outline" asChild>
             <Link href="/admin/reservations/calendar">
               <IconCalendar className="mr-2 h-4 w-4" />
@@ -136,7 +152,10 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
 
       {/* 予約一覧（タブ切替ごとに subtree を作り直す＝events と同じ Pattern A の keyed 動的ホール） */}
       <Suspense key={params.tab} fallback={<LoadingState />}>
-        <ReservationList searchParams={searchParams} />
+        <ReservationList
+          searchParams={searchParams}
+          allowCreate={allowCreate}
+        />
       </Suspense>
     </div>
   );

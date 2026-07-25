@@ -111,6 +111,8 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
     }
   }, [lastResult, router]);
 
+  const formErrors = form.errors;
+
   const handleSetupWebhook = () => {
     startActionTransition(async () => {
       const result = await setupCalendarWebhook();
@@ -375,6 +377,16 @@ function TwoWaySyncSectionForm({ settings }: TwoWaySyncSectionProps) {
                 )}
               </div>
             </>
+          )}
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
           )}
 
           {/* 保存ボタン */}

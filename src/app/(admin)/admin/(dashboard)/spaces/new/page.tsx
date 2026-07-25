@@ -2,7 +2,10 @@ import { connection } from "next/server";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import {
+  isFeatureEnabled,
+  requireFeatureEnabled,
+} from "@/shared/lib/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SpaceEditForm } from "../_components/SpaceEditForm";
 import type { Metadata } from "next";
@@ -13,6 +16,7 @@ export const metadata: Metadata = {
 
 export default async function NewSpacePage() {
   await connection();
+  await requireFeatureEnabled("spaces");
 
   const [
     availableLocations,

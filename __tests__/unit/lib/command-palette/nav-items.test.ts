@@ -43,14 +43,25 @@ describe("getNavItemsForRole", () => {
     );
     const allMapped = [...new Set([...navMapped, ...quickMapped])].sort();
     expect(allMapped).toEqual([
+      "access",
       "contact",
       "events",
       "faq",
       "news",
+      "payment",
       "posts",
       "reservation",
       "spaces",
     ]);
     assertAdminNavFeatureModulesAreRegistered(allMapped);
+  });
+
+  test("locations は access、settings-billing は payment に map", () => {
+    const locations = ALL_NAV_ITEMS_FOR_TEST.find((i) => i.id === "locations");
+    const billing = ALL_NAV_ITEMS_FOR_TEST.find(
+      (i) => i.id === "settings-billing",
+    );
+    expect(locations?.featureModule).toBe("access");
+    expect(billing?.featureModule).toBe("payment");
   });
 });

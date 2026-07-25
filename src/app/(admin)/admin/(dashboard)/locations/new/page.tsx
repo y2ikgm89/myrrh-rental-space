@@ -3,6 +3,7 @@ import {
   getOrganizationSettings,
   getSocialLinkUrls,
 } from "@/shared/domain/settings/queries/organization";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { LocationForm } from "../_components/LocationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 
 export default async function NewLocationPage() {
   await connection();
+  await requireFeatureEnabled("access");
 
   const [settings, socialLinks] = await Promise.all([
     getOrganizationSettings(),

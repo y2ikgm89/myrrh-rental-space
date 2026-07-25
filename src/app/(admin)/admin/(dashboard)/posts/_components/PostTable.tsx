@@ -27,13 +27,15 @@ import type { PostListData } from "@/shared/domain/posts/types";
 
 type PostTableProps = {
   posts: PostListData[];
+  /** feature OFF 時は EmptyState の新規作成を出さない */
+  allowCreate?: boolean;
 };
 
 // =============================================================================
 // PostTable Component
 // =============================================================================
 
-export function PostTable({ posts }: PostTableProps) {
+export function PostTable({ posts, allowCreate = true }: PostTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = posts.map((p) => p.id);
@@ -73,7 +75,9 @@ export function PostTable({ posts }: PostTableProps) {
     return (
       <EmptyState
         message="投稿がありません"
-        action={{ label: "新規作成", href: "/admin/posts/new" }}
+        {...(allowCreate
+          ? { action: { label: "新規作成", href: "/admin/posts/new" } }
+          : {})}
       />
     );
   }

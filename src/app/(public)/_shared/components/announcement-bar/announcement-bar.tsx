@@ -51,15 +51,9 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
     getReduceMotionServerSnapshot,
   );
 
-  // 表示期間 (startAt/endAt) の判定は意図的にここ（Client Component、毎 render）
-  // で行う。public blanket Cache-Control（s-maxage=3600,
-  // stale-while-revalidate=3600）により Cloudflare CDN が最長 2 時間程度
-  // レスポンスをキャッシュしうるため、Server Component 側で new Date() を
-  // 評価して pre-filter すると、その評価時刻がキャッシュに焼き込まれ、表示期間の
-  // 境界を跨いだバーがキャッシュ有効期間中ずっと表示誤りになる（詳細は
-  // display-period.ts の doc comment 参照）。ここで毎 render 実際の client 現在
-  // 時刻を使うことで、CDN キャッシュがどれだけ古くても常に正しく再評価される。
-  // eslint-disable-next-line @eslint-react/purity -- Client Component: 表示期間判定用の現在時刻読み取りは意図的（CDN cache 下でも正しく再評価するため）
+  // 表示期間 (startAt/endAt) の判定は Server（AnnouncementBarWrapper）でも
+  // request 時点で行われる。ここでは dismiss とページ滞在中の境界跨ぎ再評価用。
+  // eslint-disable-next-line @eslint-react/purity -- Client Component: 表示期間/dismiss 用の現在時刻
   const now = new Date();
   const visibleBars = bars.filter(
     (bar) => !dismissedIds.includes(bar.id) && isWithinDisplayPeriod(bar, now),

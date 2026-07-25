@@ -97,6 +97,8 @@ export function DataRetentionSettingsForm({
     }
   }, [lastResult, router]);
 
+  const formErrors = form.errors;
+
   return (
     <form {...getFormProps(form)} action={action} className="space-y-6">
       <Card>
@@ -139,6 +141,15 @@ export function DataRetentionSettingsForm({
               );
             })}
           </div>
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
+          )}
           <div className="flex justify-end pt-2">
             <SubmitButton
               isPending={isPending}

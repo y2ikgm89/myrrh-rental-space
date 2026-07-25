@@ -54,6 +54,7 @@ import {
   googleCalendarFormSchema,
   twoWaySyncFormSchema,
 } from "./schemas/form-schemas-security-integrations";
+import { emptyToNull } from "./schemas/form-schema-helpers";
 
 function invalidateCalendarSyncCache(): void {
   invalidateSiteWideCache(
@@ -87,8 +88,8 @@ export async function updateGoogleCalendarSettings(
         execute: async () => {
           await updateGoogleCalendarSettingsCommand({
             googleCalendarEnabled: data.googleCalendarEnabled,
-            googleCalendarId: data.googleCalendarId || null,
-            serviceAccountJson: data.serviceAccountJson || null,
+            googleCalendarId: emptyToNull(data.googleCalendarId),
+            serviceAccountJson: emptyToNull(data.serviceAccountJson),
             icalAttachmentEnabled: data.icalAttachmentEnabled,
             addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
             googleCalendarReminderMinutes:

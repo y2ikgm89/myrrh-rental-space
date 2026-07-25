@@ -21,7 +21,7 @@ const ALL_NAV_ITEMS: readonly NavItem[] = [
     label: "場所管理",
     href: "/admin/spaces?tab=locations",
     resource: "location",
-    featureModule: "spaces",
+    featureModule: "access",
   },
   {
     id: "categories",
@@ -146,6 +146,7 @@ const ALL_NAV_ITEMS: readonly NavItem[] = [
     label: "設定: 課金・決済",
     href: "/admin/settings/billing",
     resource: "settings",
+    featureModule: "payment",
   },
   {
     id: "settings-notifications",

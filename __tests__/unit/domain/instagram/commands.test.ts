@@ -10,9 +10,6 @@ const mockSettingsUpsert = mock<() => Promise<void>>(() =>
 const mockSettingsUpdate = mock<() => Promise<void>>(() =>
   Promise.resolve(undefined),
 );
-const mockSettingsUpdateMany = mock<() => Promise<void>>(() =>
-  Promise.resolve(undefined),
-);
 const mockInstagramPostCreate = mock<() => Promise<void>>(() =>
   Promise.resolve(undefined),
 );
@@ -74,7 +71,6 @@ mock.module("@/shared/db/prisma", () => ({
     settingsInstagram: {
       upsert: mockSettingsUpsert,
       update: mockSettingsUpdate,
-      updateMany: mockSettingsUpdateMany,
     },
     instagramPost: {
       create: mockInstagramPostCreate,
@@ -267,12 +263,12 @@ describe("connectInstagramOAuthAccount", () => {
 
 describe("refreshInstagramAccessToken", () => {
   beforeEach(() => {
-    mockSettingsUpdateMany.mockReset();
-    mockSettingsUpdateMany.mockResolvedValue(undefined);
+    mockSettingsUpdate.mockReset();
+    mockSettingsUpdate.mockResolvedValue(undefined);
   });
 
   describe("正常系", () => {
-    test("新しいアクセストークンで全 settings を更新できる", async () => {
+    test("新しいアクセストークンで singleton settings を更新できる", async () => {
       const expiresAt = new Date("2026-06-01T00:00:00Z");
 
       await expect(
@@ -282,14 +278,13 @@ describe("refreshInstagramAccessToken", () => {
         }),
       ).resolves.toBeUndefined();
 
-      expect(mockSettingsUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: {
-            instagramAccessToken: "encrypted:new-access-token",
-            instagramTokenExpiresAt: expiresAt,
-          },
-        }),
-      );
+      expect(mockSettingsUpdate).toHaveBeenCalledWith({
+        where: { id: "singleton" },
+        data: {
+          instagramAccessToken: "encrypted:new-access-token",
+          instagramTokenExpiresAt: expiresAt,
+        },
+      });
     });
   });
 });

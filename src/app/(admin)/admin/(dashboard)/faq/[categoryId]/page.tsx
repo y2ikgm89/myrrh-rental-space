@@ -25,6 +25,8 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { Pagination } from "@/admin/components/ui";
 import { loadAdminFaqCategoryDetailSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import { FaqCategoryDetailView } from "../_components/FaqCategoryDetailView";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -56,15 +58,19 @@ async function CategoryDetailContent({
 }) {
   await connection();
 
-  const [category, params, allCategoryOptions] = await Promise.all([
-    getFaqCategoryById(categoryId),
-    loadAdminFaqCategoryDetailSearchParams(searchParams),
-    getFaqCategoryOptions(),
-  ]);
+  const [category, params, allCategoryOptions, enabledFeatures] =
+    await Promise.all([
+      getFaqCategoryById(categoryId),
+      loadAdminFaqCategoryDetailSearchParams(searchParams),
+      getFaqCategoryOptions(),
+      getEnabledFeatures(),
+    ]);
 
   if (!category) {
     notFound();
   }
+
+  const allowCreate = isAdminFeatureCreateAllowed("faq", enabledFeatures);
 
   const { items, page, totalPages, total } = await getFaqItems(
     omitUndefined({
@@ -112,6 +118,7 @@ async function CategoryDetailContent({
         reorderEnabled={reorderEnabled}
         startIndex={startIndex}
         totalItems={total}
+        allowCreate={allowCreate}
       />
 
       <Pagination

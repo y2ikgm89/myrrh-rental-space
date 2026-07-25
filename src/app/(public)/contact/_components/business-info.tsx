@@ -13,6 +13,9 @@ import {
   IconMail,
   IconClock,
   IconCalendarOff,
+  IconUser,
+  IconBuilding,
+  IconReceipt,
 } from "@tabler/icons-react";
 import { getBusinessInfo } from "@/public/data/business";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
@@ -229,6 +232,24 @@ export async function BusinessInfo(): Promise<ReactElement> {
             >
               {info.email}
             </a>
+          </InfoSection>
+        )}
+
+        {info.representativeName && (
+          <InfoSection icon={IconUser} label="代表者">
+            <span>{info.representativeName}</span>
+          </InfoSection>
+        )}
+
+        {info.registrationNumber && (
+          <InfoSection icon={IconBuilding} label="法人番号">
+            <span>{info.registrationNumber}</span>
+          </InfoSection>
+        )}
+
+        {info.invoiceNumber && (
+          <InfoSection icon={IconReceipt} label="インボイス登録番号">
+            <span>{info.invoiceNumber}</span>
           </InfoSection>
         )}
 

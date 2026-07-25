@@ -123,6 +123,8 @@ export function GoogleCalendarSection({
     }
   }, [lastResult, router]);
 
+  const formErrors = form.errors;
+
   const handleConnectionTest = () => {
     if (!serviceAccountJson || !calendarId) {
       setTestResult({
@@ -587,6 +589,16 @@ export function GoogleCalendarSection({
                   disabled={isPending || testPending}
                 />
               </div>
+            </div>
+          )}
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
             </div>
           )}
 

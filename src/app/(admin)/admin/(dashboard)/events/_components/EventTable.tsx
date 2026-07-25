@@ -21,9 +21,11 @@ type EventListItem = Awaited<ReturnType<typeof getEvents>>["events"][number];
 
 type EventTableProps = {
   events: EventListItem[];
+  /** feature OFF 時は EmptyState の新規作成を出さない */
+  allowCreate?: boolean;
 };
 
-export function EventTable({ events }: EventTableProps) {
+export function EventTable({ events, allowCreate = true }: EventTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = events.map((e) => e.id);
@@ -55,7 +57,9 @@ export function EventTable({ events }: EventTableProps) {
     return (
       <EmptyState
         message="イベントがありません"
-        action={{ label: "新規作成", href: "/admin/events/new" }}
+        {...(allowCreate
+          ? { action: { label: "新規作成", href: "/admin/events/new" } }
+          : {})}
       />
     );
   }

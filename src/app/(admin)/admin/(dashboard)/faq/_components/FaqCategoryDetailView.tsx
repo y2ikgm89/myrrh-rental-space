@@ -36,6 +36,8 @@ type FaqCategoryDetailViewProps = {
   readonly reorderEnabled: boolean;
   readonly startIndex: number;
   readonly totalItems: number;
+  /** feature OFF 時は質問の新規追加を出さない（編集は可） */
+  readonly allowCreate?: boolean;
 };
 
 export function FaqCategoryDetailView({
@@ -47,6 +49,7 @@ export function FaqCategoryDetailView({
   reorderEnabled,
   startIndex,
   totalItems,
+  allowCreate = true,
 }: FaqCategoryDetailViewProps) {
   const [editingItem, setEditingItem] = useState<FaqItemWithCategory | null>(
     null,
@@ -100,10 +103,12 @@ export function FaqCategoryDetailView({
           >
             カテゴリを編集
           </Button>
-          <Button type="button" onClick={handleAddItem}>
-            <IconPlus className="mr-1 h-4 w-4" aria-hidden="true" />
-            質問を追加
-          </Button>
+          {allowCreate ? (
+            <Button type="button" onClick={handleAddItem}>
+              <IconPlus className="mr-1 h-4 w-4" aria-hidden="true" />
+              質問を追加
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -118,7 +123,7 @@ export function FaqCategoryDetailView({
         reorderEnabled={reorderEnabled}
         startIndex={startIndex}
         onEditItem={handleEditItem}
-        onAddItem={handleAddItem}
+        {...(allowCreate ? { onAddItem: handleAddItem } : {})}
       />
 
       <FaqItemDialog

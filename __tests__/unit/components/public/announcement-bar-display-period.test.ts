@@ -1,5 +1,8 @@
 import { describe, test, expect } from "bun:test";
-import { isWithinDisplayPeriod } from "@/public/components/announcement-bar/display-period";
+import {
+  filterBarsWithinDisplayPeriodNow,
+  isWithinDisplayPeriod,
+} from "@/public/components/announcement-bar/display-period";
 
 const NOW = new Date("2026-07-22T12:00:00.000Z");
 
@@ -92,5 +95,20 @@ describe("isWithinDisplayPeriod", () => {
     expect(
       isWithinDisplayPeriod({ startAt: null, endAt: NOW.toISOString() }, NOW),
     ).toBe(true);
+  });
+});
+
+describe("filterBarsWithinDisplayPeriodNow", () => {
+  test("期間内の bar のみ返す", () => {
+    const bars = [
+      { id: "a", startAt: null, endAt: null },
+      {
+        id: "b",
+        startAt: "2099-01-01T00:00:00.000Z",
+        endAt: null,
+      },
+    ];
+    const filtered = filterBarsWithinDisplayPeriodNow(bars);
+    expect(filtered.map((bar) => bar.id)).toEqual(["a"]);
   });
 });

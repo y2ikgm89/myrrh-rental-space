@@ -140,10 +140,10 @@ export function ContactInfoSection({
                 <p className="text-xs text-muted-foreground">
                   フッターや連絡先ページに表示される代表メールです。メール送信元は
                   <Link
-                    href="/admin/settings/notifications?tab=resend"
+                    href="/admin/settings/notifications?tab=email"
                     className="underline underline-offset-2 hover:text-foreground"
                   >
-                    通知設定
+                    通知設定のメール設定タブ
                   </Link>
                   で設定します。
                 </p>

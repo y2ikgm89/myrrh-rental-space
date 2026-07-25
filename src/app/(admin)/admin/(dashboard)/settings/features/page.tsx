@@ -5,7 +5,7 @@
  * 11 module の ON/OFF を切り替えると公開ページ 404 / 公開ナビ prune /
  * sitemap prune / SectionRenderer skip / cron 早期 return に伝播する。
  * 管理画面サイドバー・コマンドパレットは prune せず、OFF 時は「非公開」badge +
- * tooltip で公開 404 であることを示す（管理画面では引き続きデータ運用可能）。
+ * tooltip で公開 404 であることを示す。既存データの確認・編集は可、新規作成は不可。
  */
 
 import type { Metadata } from "next";
@@ -15,7 +15,7 @@ import {
   getDataRetentionSettings,
 } from "@/admin/queries/settings";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
-import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { SettingsLayout } from "../_components/SettingsLayout";
 import { parseFeatureModules } from "@/shared/lib/json-validators";
 import {
   FEATURE_MODULES,
@@ -66,16 +66,15 @@ export default async function FeaturesSettingsPage() {
   }));
 
   return (
-    <AdminDetailLayout
-      backHref="/admin/settings"
+    <SettingsLayout
       title="機能モジュール"
-      subtitle="サイトで使用する機能の ON/OFF を管理します"
+      description="サイトで使用する機能の ON/OFF を管理します"
     >
       <FeatureModulesForm
         initialValues={initialValues}
         moduleDefs={moduleDefs}
       />
       <DataRetentionSettingsForm initialValues={dataRetention} />
-    </AdminDetailLayout>
+    </SettingsLayout>
   );
 }

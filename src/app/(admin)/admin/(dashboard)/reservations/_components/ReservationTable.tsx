@@ -33,6 +33,8 @@ import { TERMINAL_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/he
 
 type ReservationTableProps = {
   reservations: ReservationWithRelations[];
+  /** feature OFF 時は EmptyState の新規作成を出さない */
+  allowCreate?: boolean;
 };
 
 // =============================================================================
@@ -48,7 +50,10 @@ function isSelectable(reservation: ReservationWithRelations): boolean {
 // ReservationTable Component (Client Component)
 // =============================================================================
 
-export function ReservationTable({ reservations }: ReservationTableProps) {
+export function ReservationTable({
+  reservations,
+  allowCreate = true,
+}: ReservationTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const selectableIds = reservations.filter(isSelectable).map((r) => r.id);
@@ -85,7 +90,9 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
     return (
       <EmptyState
         message="予約がありません"
-        action={{ label: "新規予約", href: "/admin/reservations/new" }}
+        {...(allowCreate
+          ? { action: { label: "新規予約", href: "/admin/reservations/new" } }
+          : {})}
       />
     );
   }

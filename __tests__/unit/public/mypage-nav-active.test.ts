@@ -1,5 +1,76 @@
 import { describe, expect, test } from "bun:test";
 import { isMypageNavActive } from "@/app/(public)/mypage/_components/mypage-nav-active";
+import {
+  getMypageNavGridClass,
+  getVisibleMypageNavItems,
+} from "@/app/(public)/mypage/_components/mypage-nav-items";
+
+describe("getVisibleMypageNavItems", () => {
+  test("全 feature ON なら 5 項目", () => {
+    const items = getVisibleMypageNavItems({
+      eventsEnabled: true,
+      contactEnabled: true,
+    });
+    expect(items.map((item) => item.href)).toEqual([
+      "/mypage",
+      "/mypage/events",
+      "/mypage/receipts",
+      "/mypage/inquiries",
+      "/mypage/settings",
+    ]);
+  });
+
+  test("events OFF なら /mypage/events を prune", () => {
+    const items = getVisibleMypageNavItems({
+      eventsEnabled: false,
+      contactEnabled: true,
+    });
+    expect(items.map((item) => item.href)).toEqual([
+      "/mypage",
+      "/mypage/receipts",
+      "/mypage/inquiries",
+      "/mypage/settings",
+    ]);
+  });
+
+  test("contact OFF なら /mypage/inquiries を prune", () => {
+    const items = getVisibleMypageNavItems({
+      eventsEnabled: true,
+      contactEnabled: false,
+    });
+    expect(items.map((item) => item.href)).toEqual([
+      "/mypage",
+      "/mypage/events",
+      "/mypage/receipts",
+      "/mypage/settings",
+    ]);
+  });
+
+  test("events + contact OFF なら常時項目のみ", () => {
+    const items = getVisibleMypageNavItems({
+      eventsEnabled: false,
+      contactEnabled: false,
+    });
+    expect(items.map((item) => item.href)).toEqual([
+      "/mypage",
+      "/mypage/receipts",
+      "/mypage/settings",
+    ]);
+  });
+});
+
+describe("getMypageNavGridClass", () => {
+  test("可視件数に応じた grid-cols-* を返す", () => {
+    expect(getMypageNavGridClass(5)).toBe("grid-cols-5");
+    expect(getMypageNavGridClass(4)).toBe("grid-cols-4");
+    expect(getMypageNavGridClass(3)).toBe("grid-cols-3");
+  });
+
+  test("想定外件数は grid-cols-1 にフォールバック", () => {
+    expect(getMypageNavGridClass(0)).toBe("grid-cols-1");
+    expect(getMypageNavGridClass(6)).toBe("grid-cols-1");
+  });
+});
 
 describe("isMypageNavActive", () => {
   describe("/mypage (予約タブ)", () => {

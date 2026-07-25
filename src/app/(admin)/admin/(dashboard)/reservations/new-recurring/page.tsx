@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { getSpacesForReservation } from "@/admin/queries/reservation";
 import { getMaxRecurrenceInstances } from "@/shared/domain/reservations/payloads";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { RecurringReservationForm } from "../_components/RecurringReservationForm";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 
 export default async function NewRecurringReservationPage() {
   await connection();
+  await requireFeatureEnabled("reservation");
 
   const [spaces, maxRecurrenceInstances] = await Promise.all([
     getSpacesForReservation(),

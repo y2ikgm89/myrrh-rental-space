@@ -199,6 +199,8 @@ export function StripeSection({ settings }: StripeSectionProps) {
     }
   }, [lastResult, router]);
 
+  const formErrors = form.errors;
+
   const handleConnectionTest = () => {
     if (!secretKeyValue) {
       setTestResult({
@@ -657,6 +659,16 @@ export function StripeSection({ settings }: StripeSectionProps) {
                 </p>
               )}
             </StatusBanner>
+          )}
+
+          {formErrors && formErrors.length > 0 && (
+            <div
+              id={form.errorId}
+              role="alert"
+              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              {formErrors.join(", ")}
+            </div>
           )}
 
           {/* アクションボタン */}

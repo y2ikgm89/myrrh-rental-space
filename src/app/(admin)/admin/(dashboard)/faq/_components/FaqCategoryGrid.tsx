@@ -48,7 +48,8 @@ import { FaqCategoryActionCell } from "./FaqCategoryActionCell";
 
 type FaqCategoryGridProps = {
   readonly categories: readonly FaqCategoryWithItemCounts[];
-  readonly onCreate: () => void;
+  /** feature OFF 時は未指定（EmptyState の作成 CTA も出さない） */
+  readonly onCreate?: () => void;
 };
 
 type SortableCardProps = {
@@ -225,10 +226,14 @@ export function FaqCategoryGrid({
       <EmptyState
         message="カテゴリがまだ登録されていません"
         description="まずは FAQ カテゴリを作成して、そこに質問を追加していきます"
-        action={{
-          label: "最初のカテゴリを作成",
-          onClick: onCreate,
-        }}
+        {...(onCreate !== undefined
+          ? {
+              action: {
+                label: "最初のカテゴリを作成",
+                onClick: onCreate,
+              },
+            }
+          : {})}
       />
     );
   }

@@ -1606,9 +1606,8 @@ model SettingsOrganization {
   streetAddress String?
   buildingName  String?
 
-  businessHours   Json?
-  regularHolidays Json?
-  holidayNotice   String? @db.Text
+  businessHours Json?
+  holidayNotice String? @db.Text
 
   // 送信元(From)は env (EMAIL_FROM / EMAIL_FROM_NAME) 優先・DB フォールバックの env-OR-DB。
   senderEmail  String?
@@ -1805,7 +1804,7 @@ model SettingsFeatures {
   updatedAt DateTime @updatedAt
 
   /// Feature Module ON/OFF SSoT（Sanity / Stripe Capabilities 流の declarative composition）。
-  /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / data-retention）。
+  /// 形式: `Record<FeatureModule, boolean>` — 全 module（spaces / reservation / events / posts / news / faq / access / contact / reviews / payment / data-retention）。
   /// OFF module は public route 404 / nav prune / sitemap prune / section registry filter / cron 早期 return に伝播。
   /// SSoT: `@/shared/lib/features/registry` の FEATURE_MODULES。seed.ts と migration が全 module を explicit に保つ。
   featureModules Json @default("{}")

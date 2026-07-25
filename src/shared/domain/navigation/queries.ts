@@ -108,20 +108,20 @@ export async function getPublicNavigation(
 
   const ctx = await getFeatureFilterContext();
 
-  // 内部リンクで disabled module の publicRoutes に hit するものは除外。
-  // 外部リンク（isExternal）は feature gate の対象外。
-  const isItemEnabled = (url: string, isExternal: boolean): boolean =>
-    isExternal || !isUrlDisabled(url, ctx.disabledRoutes);
+  // disabled module の publicRoutes に path が hit する URL は除外。
+  // isExternal（絶対 URL）も含む — `isUrlDisabled` が pathname を抽出して判定する。
+  const isItemEnabled = (url: string): boolean =>
+    !isUrlDisabled(url, ctx.disabledRoutes);
 
   return items
-    .filter((item) => isItemEnabled(item.url, item.isExternal))
+    .filter((item) => isItemEnabled(item.url))
     .map((item) => ({
       id: item.id,
       label: parseLabelSpans(item.label),
       url: item.url,
       isExternal: item.isExternal,
       children: item.children
-        .filter((child) => isItemEnabled(child.url, child.isExternal))
+        .filter((child) => isItemEnabled(child.url))
         .map((child) => ({
           id: child.id,
           label: parseLabelSpans(child.label),

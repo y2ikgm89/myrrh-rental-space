@@ -265,6 +265,7 @@ export default async function SpaceDetailPage({
               spaceId={space.id}
               businessHours={businessHours}
               blockedRanges={blockedRanges}
+              reservationEnabled={reservationEnabled}
             />
 
             {/* Access map — Google Maps Embed API (server component, DB API key) */}

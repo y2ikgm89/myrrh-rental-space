@@ -3,22 +3,14 @@
  *
  * `startAt` / `endAt` と現在時刻 `now` から表示可否を判定する。
  *
- * この判定は意図的に Client Component（announcement-bar.tsx）側で、render の
- * たびに実際の client 現在時刻を使って呼び出す。next.config.ts の public
- * blanket Cache-Control（`s-maxage=3600, stale-while-revalidate=3600`）により
- * Cloudflare CDN が最大 2 時間程度レスポンスをキャッシュしうるため、Server
- * Component 側（`await connection()` 後）で `new Date()` を評価して
- * pre-filter すると、そのサーバ評価時刻がキャッシュに焼き込まれてしまい、
- * 表示期間の境界を跨いだバーがキャッシュ有効期間中ずっと
- * 「新しく開始したのに出ない」「終了したのに出続ける」ままになる
- * （コードレビュー指摘、PR#1398 review comment 3630072526）。
+ * **Server**: `AnnouncementBarWrapper` が `await connection()` の後に
+ * `now = new Date()` で呼び出し、HTML に含める bar を request 時点で
+ * 絞り込む（`'use cache'` producer 内では wall-clock を評価しない）。
  *
- * Client Component で毎 render 評価する現行方式なら、CDN キャッシュがどれだけ
- * 古くても、ページ表示時点のブラウザの実時刻で常に正しく再評価される
- * （SSR と hydration 直後の render で `now` が食い違い、境界を跨ぐ瞬間だけ
- * ごく稀に hydration mismatch が起こりうるが、これは他 7 ファイル
- * （CopyrightYear.tsx 等）と同種の許容済みリスクであり、CDN キャッシュ起因の
- * 長時間の表示誤りより実害が小さい）。
+ * **Client**: `announcement-bar.tsx` でも毎 render 再評価する。ページ滞在中に
+ * 表示期間が終了した bar を非表示にし、dismiss 状態と併用する defense-in-depth。
+ * SSR/hydration 直後の `now` 食い違いによるごく稀な hydration mismatch は
+ * CopyrightYear.tsx 等と同種の許容済みリスク。
  */
 
 import type { AnnouncementBarItem } from "./types";
@@ -33,4 +25,12 @@ export function isWithinDisplayPeriod(
   if (startAt && !endAt) return now >= startAt;
   if (!startAt && endAt) return now <= endAt;
   return startAt !== null && endAt !== null && now >= startAt && now <= endAt;
+}
+
+/** `connection()` 後の Server Component から呼ぶ request-time 絞り込み */
+export function filterBarsWithinDisplayPeriodNow<
+  T extends Pick<AnnouncementBarItem, "startAt" | "endAt">,
+>(bars: readonly T[]): T[] {
+  const now = new Date();
+  return bars.filter((bar) => isWithinDisplayPeriod(bar, now));
 }

@@ -188,6 +188,9 @@ describe("requireFeatureEnabled", () => {
  * disabled module の publicRoutes に hit するかを判定する純粋関数。
  * 偽陽性（`/spacesfoo` を `/spaces` の子と誤判定）を防ぐため、
  * exact match と「`/` 区切りの子ルート」のみマッチする。
+ *
+ * http(s) 絶対 URL は pathname を抽出して比較する（nav の isExternal 含む
+ * clean-break: `/events` と `https://host/events` を同等に prune）。
  */
 describe("isUrlDisabled", () => {
   test("exact match で hit する", () => {
@@ -234,5 +237,25 @@ describe("isUrlDisabled", () => {
     expect(isUrlDisabled("/", ["/"])).toBe(true);
     expect(isUrlDisabled("/spaces", ["/"])).toBe(false);
     expect(isUrlDisabled("/about", ["/"])).toBe(false);
+  });
+
+  test("http(s) 絶対 URL は pathname で判定する（same-site / 任意 host）", () => {
+    expect(isUrlDisabled("https://example.com/events", ["/events"])).toBe(true);
+    expect(isUrlDisabled("http://localhost:3000/events/abc", ["/events"])).toBe(
+      true,
+    );
+    expect(isUrlDisabled("https://example.com/about", ["/events"])).toBe(false);
+  });
+
+  test("path-only URL の query / hash は pathname 比較前に除去する", () => {
+    expect(isUrlDisabled("/events?utm=1", ["/events"])).toBe(true);
+    expect(isUrlDisabled("/events#top", ["/events"])).toBe(true);
+    expect(isUrlDisabled("/eventsfoo?x=1", ["/events"])).toBe(false);
+  });
+
+  test("mailto / tel / 不正 URL は path 抽出せず false（disabled route に非該当）", () => {
+    expect(isUrlDisabled("mailto:info@example.com", ["/contact"])).toBe(false);
+    expect(isUrlDisabled("tel:+81123456789", ["/contact"])).toBe(false);
+    expect(isUrlDisabled("not a url", ["/events"])).toBe(false);
   });
 });

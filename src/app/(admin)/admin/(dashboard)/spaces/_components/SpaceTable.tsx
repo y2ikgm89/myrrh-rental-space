@@ -18,13 +18,15 @@ import { SpaceBulkActions } from "./SpaceBulkActions";
 
 type SpaceTableProps = {
   spaces: SpaceWithStats[];
+  /** feature OFF 時は EmptyState の新規作成を出さない */
+  allowCreate?: boolean;
 };
 
 // =============================================================================
 // SpaceTable Component
 // =============================================================================
 
-export function SpaceTable({ spaces }: SpaceTableProps) {
+export function SpaceTable({ spaces, allowCreate = true }: SpaceTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = spaces.map((s) => s.id);
@@ -57,7 +59,9 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
     return (
       <EmptyState
         message="スペースがありません"
-        action={{ label: "新規作成", href: "/admin/spaces/new" }}
+        {...(allowCreate
+          ? { action: { label: "新規作成", href: "/admin/spaces/new" } }
+          : {})}
       />
     );
   }
