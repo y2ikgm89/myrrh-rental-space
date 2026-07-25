@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatRefundPolicyDisplayLines } from "@/shared/lib/refund/format-refund-policy-display";
+import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
 
 describe("formatRefundPolicyDisplayLines", () => {

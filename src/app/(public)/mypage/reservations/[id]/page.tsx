@@ -20,7 +20,7 @@ import {
   getPublicRefundPolicySettings,
   getReservationDeadlineSettings,
 } from "@/shared/domain/settings/public-queries";
-import { formatRefundPolicyDisplayLines } from "@/shared/lib/refund/format-refund-policy-display";
+import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { isFeatureEnabled } from "@/shared/lib/features/check";

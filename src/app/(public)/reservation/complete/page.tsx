@@ -14,7 +14,7 @@ import { reservationDeadlineNow } from "@/shared/domain/reservations/server-dead
 import { getReservationForCompletion } from "@/shared/domain/reservations/customer-queries";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
 import { getPublicRefundPolicySettings } from "@/shared/domain/settings/public-queries";
-import { formatRefundPolicyDisplayLines } from "@/shared/lib/refund/format-refund-policy-display";
+import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
 import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";

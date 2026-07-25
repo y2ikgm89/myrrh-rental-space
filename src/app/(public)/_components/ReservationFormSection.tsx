@@ -32,7 +32,7 @@ import {
 } from "@/shared/domain/reservations/availability";
 import { getPublicDiscountSettings } from "@/shared/domain/settings/queries/discount";
 import { getPublicRefundPolicySettings } from "@/shared/domain/settings/public-queries";
-import { formatRefundPolicyDisplayLines } from "@/shared/lib/refund/format-refund-policy-display";
+import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
