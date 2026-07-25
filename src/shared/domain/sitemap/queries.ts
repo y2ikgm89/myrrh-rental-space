@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { publicNewsWhere } from "@/shared/domain/news/queries";
 import { publicPostsWhere } from "@/shared/domain/posts/queries";
 import { logger } from "@/shared/lib/errors/logger-core";
 import { EventStatus } from "@generated/prisma/enums";
@@ -73,6 +74,9 @@ export type SitemapTerms = {
  */
 export type SystemPageLastModifiedMap = ReadonlyMap<string, Date>;
 
+/** 公開済み collection システムページ slug 集合（例: "news", "blog"）。 */
+export type PublishedCollectionPageSlugs = ReadonlySet<string>;
+
 export interface SitemapContentData {
   spaces: SitemapSpace[];
   news: SitemapNews[];
@@ -83,6 +87,7 @@ export interface SitemapContentData {
   events: SitemapEvent[];
   terms: SitemapTerms[];
   systemPageLastModified: SystemPageLastModifiedMap;
+  publishedCollectionPageSlugs: PublishedCollectionPageSlugs;
 }
 
 /** sitemap.ts の STATIC_PAGES から駆動される静的システムページ slug 集合。 */
@@ -96,6 +101,9 @@ const STATIC_SYSTEM_PAGE_SLUGS = [
   "terms",
 ] as const;
 
+/** listing ルート emit 判定用の collection システムページ slug 集合。 */
+const COLLECTION_SYSTEM_PAGE_SLUGS = ["news", "blog"] as const;
+
 export async function getSitemapContentData(): Promise<SitemapContentData> {
   const [
     spacesResult,
@@ -107,6 +115,7 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
     eventsResult,
     termsResult,
     systemPageLastModifiedResult,
+    publishedCollectionPageSlugsResult,
   ] = await Promise.allSettled([
     // Space は deletedAt 列を持たず isActive=false が soft-delete 代替 (schema.prisma:429-500 確認済み)
     prisma.space.findMany({
@@ -115,7 +124,7 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
       orderBy: { updatedAt: "desc" },
     }),
     prisma.news.findMany({
-      where: { isPublished: true },
+      where: publicNewsWhere(),
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
@@ -166,6 +175,7 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
       orderBy: { updatedAt: "desc" },
     }),
     fetchSystemPageLastModified(),
+    fetchPublishedCollectionPageSlugs(),
   ]);
 
   return {
@@ -185,6 +195,11 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
       systemPageLastModifiedResult,
       "systemPageLastModified",
       new Map<string, Date>(),
+    ),
+    publishedCollectionPageSlugs: collectionOrFallback(
+      publishedCollectionPageSlugsResult,
+      "publishedCollectionPageSlugs",
+      new Set<string>(),
     ),
   };
 }
@@ -234,4 +249,17 @@ async function fetchSystemPageLastModified(): Promise<SystemPageLastModifiedMap>
     map.set(page.slug, effective);
   }
   return map;
+}
+
+async function fetchPublishedCollectionPageSlugs(): Promise<PublishedCollectionPageSlugs> {
+  const pages = await prisma.page.findMany({
+    where: {
+      slug: { in: [...COLLECTION_SYSTEM_PAGE_SLUGS] },
+      isSystemPage: true,
+      isPublished: true,
+    },
+    select: { slug: true },
+  });
+
+  return new Set(pages.map((page) => page.slug));
 }

@@ -79,6 +79,8 @@ export async function createNews(
           contentHtml: deriveLexicalContentHtmlFromJson(
             parsed.data.contentJson,
           ),
+          isPublished: parsed.data.isPublished,
+          publishedAt: parsePublishedAt(parsed.data.publishedAt),
         }),
       );
       createdNewsSlug = result.slug;

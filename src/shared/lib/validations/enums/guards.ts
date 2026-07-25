@@ -54,7 +54,12 @@ const VALID_NAVIGATION_TYPES = new Set<string>(Object.values(NavigationType));
 const VALID_SOCIAL_PLATFORMS = new Set<string>(Object.values(SocialPlatform));
 const VALID_LAYOUT_WIDTHS = new Set<string>(Object.values(LayoutWidth));
 const VALID_POST_STATUSES = new Set<string>(Object.values(PostStatus));
-const VALID_NEWS_STATUS_FILTERS = new Set(["ALL", "PUBLISHED", "DRAFT"]);
+const VALID_NEWS_STATUS_FILTERS = new Set([
+  "ALL",
+  "PUBLISHED",
+  "SCHEDULED",
+  "DRAFT",
+]);
 const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AuditAction));
 const VALID_MEDIA_TYPES = new Set<string>(Object.values(MediaType));
 const VALID_MEDIA_USAGES = new Set<string>(Object.values(MediaUsage));
@@ -143,7 +148,7 @@ export function isValidPostStatus(value: unknown): value is PostStatus {
 }
 
 // フィルター用のバリデーション
-export type NewsStatusFilter = "ALL" | "PUBLISHED" | "DRAFT";
+export type NewsStatusFilter = "ALL" | "PUBLISHED" | "SCHEDULED" | "DRAFT";
 
 export function isValidNewsStatusFilter(
   value: unknown,

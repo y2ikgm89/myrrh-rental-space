@@ -94,6 +94,8 @@ const VALID_CREATE_INPUT = {
   slug: "test-news",
   title: "テストお知らせ",
   contentJson: VALID_LEXICAL_JSON,
+  isPublished: false,
+  publishedAt: null as string | null,
 };
 
 describe("createNews (action shape)", () => {
@@ -137,6 +139,23 @@ describe("createNews (action shape)", () => {
         ogpTitle: "OGP",
         ogpDescription: "OGP 概要",
         ogpImageUrl: "https://example.com/ogp.jpg",
+        isPublished: false,
+        publishedAt: null,
+      }),
+    );
+  });
+
+  test("作成時の公開設定（予約公開含む）を domain command へ渡す", async () => {
+    await createNews({
+      ...VALID_CREATE_INPUT,
+      isPublished: true,
+      publishedAt: "2026-12-01T10:00",
+    });
+
+    expect(mockCreateNewsCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isPublished: true,
+        publishedAt: expect.any(Date),
       }),
     );
   });

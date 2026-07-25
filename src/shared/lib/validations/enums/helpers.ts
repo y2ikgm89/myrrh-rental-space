@@ -543,6 +543,16 @@ export const POST_STATUS_LABELS: Record<PostStatus, string> = {
   [PostStatus.ARCHIVED]: "アーカイブ",
 };
 
+/**
+ * News 管理フィルター / バッジ用ラベル（PostStatus とは独立。予約公開を含む）。
+ * `NEWS_PUBLISH_VISIBILITY_LABELS`（domain）と同文言を維持すること。
+ */
+export const NEWS_STATUS_FILTER_LABELS = {
+  PUBLISHED: POST_STATUS_LABELS.PUBLISHED,
+  SCHEDULED: "予約公開",
+  DRAFT: POST_STATUS_LABELS.DRAFT,
+} as const;
+
 // =============================================================================
 // ReservationStatus Labels
 // =============================================================================

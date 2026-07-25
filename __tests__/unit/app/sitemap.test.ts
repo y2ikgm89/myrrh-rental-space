@@ -43,6 +43,7 @@ type ContentData = {
   events: { slug: string; updatedAt: Date }[];
   terms: { slug: string; updatedAt: Date }[];
   systemPageLastModified: Map<string, Date>;
+  publishedCollectionPageSlugs: Set<string>;
 };
 
 const D = (iso: string) => new Date(iso);
@@ -57,6 +58,7 @@ const emptyContent = (): ContentData => ({
   events: [],
   terms: [],
   systemPageLastModified: new Map(),
+  publishedCollectionPageSlugs: new Set(["news", "blog"]),
 });
 
 const allOnContext = (
@@ -238,6 +240,54 @@ describe("app/sitemap.ts", () => {
       contentFixture.systemPageLastModified = SYSTEM_PAGE_LAST_MOD;
       const result = await sitemap();
       expect(result.find((e) => e.url === `${BASE_URL}/blog`)).toBeUndefined();
+    });
+
+    test("news collection page 非公開なら /news listing は emit されない", async () => {
+      contentFixture = {
+        ...emptyContent(),
+        systemPageLastModified: SYSTEM_PAGE_LAST_MOD,
+        publishedCollectionPageSlugs: new Set(["blog"]),
+        news: [{ slug: "n1", updatedAt: D("2026-06-01T00:00:00Z") }],
+      };
+      const result = await sitemap();
+      expect(result.find((e) => e.url === `${BASE_URL}/news`)).toBeUndefined();
+      expect(result.find((e) => e.url === `${BASE_URL}/news/n1`)).toBeDefined();
+    });
+
+    test("blog collection page 非公開なら /blog listing は emit されない", async () => {
+      contentFixture = {
+        ...emptyContent(),
+        systemPageLastModified: SYSTEM_PAGE_LAST_MOD,
+        publishedCollectionPageSlugs: new Set(["news"]),
+        posts: [
+          {
+            slug: "p1",
+            updatedAt: D("2026-06-01T00:00:00Z"),
+            publishedAt: D("2026-06-01T00:00:00Z"),
+            category: { slug: "general" },
+          },
+        ],
+      };
+      const result = await sitemap();
+      expect(result.find((e) => e.url === `${BASE_URL}/blog`)).toBeUndefined();
+      expect(
+        result.find((e) => e.url.startsWith(`${BASE_URL}/blog/`)),
+      ).toBeDefined();
+    });
+
+    test("news が 1 件以上かつ collection page 公開なら /news は最大 updatedAt で emit される", async () => {
+      contentFixture = {
+        ...emptyContent(),
+        systemPageLastModified: SYSTEM_PAGE_LAST_MOD,
+        publishedCollectionPageSlugs: new Set(["news"]),
+        news: [
+          { slug: "a", updatedAt: D("2026-06-01T00:00:00Z") },
+          { slug: "b", updatedAt: D("2026-06-20T00:00:00Z") },
+        ],
+      };
+      const result = await sitemap();
+      const listing = result.find((e) => e.url === `${BASE_URL}/news`);
+      expect(listing?.lastModified).toEqual(D("2026-06-20T00:00:00Z"));
     });
 
     test("spaces が 1 件以上あれば /spaces は最大 updatedAt で emit される", async () => {

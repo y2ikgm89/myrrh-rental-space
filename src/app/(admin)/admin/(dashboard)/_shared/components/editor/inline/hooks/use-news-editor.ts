@@ -281,17 +281,21 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     });
   };
 
-  // create mode の下書き作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
-  // 「保存して作成」と「未保存プレビュー (auto-draft)」の両経路が共有する。
+  // create mode の作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
+  // 「保存して作成」は設定の公開状態を尊重し、プレビュー auto-create は常に下書き強制。
   const createDraftNews = async (
     settingsData: ParsedNewsSettingsFormData,
+    options?: { forceDraft?: boolean },
   ): Promise<string | null> => {
     const settingsPayload = toSettingsSubmitPayload(settingsData);
+    const forceDraft = options?.forceDraft === true;
     try {
       const result = await createNews({
         slug: settingsPayload.slug,
         title: settingsPayload.title,
         contentJson,
+        isPublished: forceDraft ? false : settingsPayload.isPublished,
+        publishedAt: forceDraft ? null : settingsPayload.publishedAt,
         contentWidth: settingsPayload.contentWidth,
         contentWidthCustom: settingsPayload.contentWidthCustom,
         metaDescription: settingsPayload.metaDescription,
@@ -418,7 +422,8 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
         return;
       }
       core.startTransition(async () => {
-        const id = await createDraftNews(settingsData);
+        // プレビュー経路は設定の公開フラグを無視し、誤公開を防ぐ
+        const id = await createDraftNews(settingsData, { forceDraft: true });
         if (!id) return;
         openPreviewTab(getNewsPreviewHref(id));
         router.push(`/admin/news/${id}`);

@@ -36,7 +36,7 @@ export type GetNewsListResult = {
 };
 
 export type NewsFilters = {
-  status?: "ALL" | "PUBLISHED" | "DRAFT" | undefined;
+  status?: "ALL" | "PUBLISHED" | "SCHEDULED" | "DRAFT" | undefined;
   search?: string | undefined;
 };
 
@@ -47,6 +47,8 @@ export type CreateNewsCommandInput = {
   title: string;
   contentJson: string;
   contentHtml: string;
+  isPublished: boolean;
+  publishedAt: Date | null;
   contentWidth?: LayoutWidth | null;
   contentWidthCustom?: number | null;
   metaDescription?: string | null;

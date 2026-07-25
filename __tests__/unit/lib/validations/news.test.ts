@@ -74,6 +74,7 @@ describe("createNewsSchema", () => {
       slug: "sample-news",
       title: "サンプルニュース",
       contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
     };
 
     const result = createNewsSchema.safeParse(validData);
@@ -85,6 +86,7 @@ describe("createNewsSchema", () => {
       slug: "sample-news",
       title: "",
       contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
     };
 
     const result = createNewsSchema.safeParse(invalidData);
@@ -99,6 +101,7 @@ describe("createNewsSchema", () => {
       slug: "sample-news",
       title: "あ".repeat(201),
       contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
     };
 
     const result = createNewsSchema.safeParse(invalidData);
@@ -123,6 +126,8 @@ describe("createNewsSchema", () => {
       slug: "sample-news",
       title: "サンプルニュース",
       contentJson: VALID_LEXICAL_JSON,
+      isPublished: true,
+      publishedAt: "2026-01-01T10:00",
       contentWidth: LayoutWidth.CUSTOM,
       contentWidthCustom: 960,
       metaDescription: "概要",
@@ -130,6 +135,18 @@ describe("createNewsSchema", () => {
       ogpTitle: "OGP",
       ogpDescription: "OGP 概要",
       ogpImageUrl: "https://example.com/ogp.jpg",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  test("isPublished と publishedAt フィールドを受け取れる", () => {
+    const result = createNewsSchema.safeParse({
+      slug: "sample-news",
+      title: "サンプルニュース",
+      contentJson: VALID_LEXICAL_JSON,
+      isPublished: true,
+      publishedAt: "2026-01-01T10:00",
     });
 
     expect(result.success).toBe(true);

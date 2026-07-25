@@ -169,7 +169,11 @@ describe("searchLinkCardCandidates", () => {
     await searchLinkCardCandidates({ contentType: "post", query: "   " });
     expect(mockPostFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { deletedAt: null, status: "PUBLISHED" },
+        where: expect.objectContaining({
+          deletedAt: null,
+          status: "PUBLISHED",
+          publishedAt: { lte: expect.any(Date) },
+        }),
       }),
     );
   });

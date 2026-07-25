@@ -62,6 +62,8 @@ export const createNewsSchema = z
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
     contentJson: lexicalJsonSchema,
+    isPublished: z.boolean(),
+    publishedAt: publishedAtFormSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z
       .number()

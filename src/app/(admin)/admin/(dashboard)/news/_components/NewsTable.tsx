@@ -17,6 +17,10 @@ import {
   stopRowClick,
 } from "@/admin/components/table";
 import { updateNewsPublished } from "@/admin/actions/news";
+import {
+  getNewsPublishVisibility,
+  NEWS_PUBLISH_VISIBILITY_LABELS,
+} from "@/shared/lib/news-publish-visibility";
 import { NewsActionCell } from "./NewsActionCell";
 import { NewsBulkActions } from "./NewsBulkActions";
 import type { NewsListItem } from "@/shared/domain/news/types";
@@ -97,46 +101,59 @@ export function NewsTable({ news, allowCreate = true }: NewsTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {news.map((item) => (
-                <ClickableTableRow
-                  key={item.id}
-                  href={`/admin/news/${item.id}`}
-                  aria-label={`${item.title} のお知らせを編集`}
-                >
-                  <TableCell onClick={stopRowClick}>
-                    <CheckboxCell
-                      checked={selectedIds.includes(item.id)}
-                      onChange={() => toggleOne(item.id)}
-                      aria-label={`${item.title} を選択`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-xs truncate font-medium">
-                      {item.title}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {item.publishedAtLabel ?? "-"}
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground lg:table-cell">
-                    {item.createdAtLabel}
-                  </TableCell>
-                  <TableCell
-                    className="whitespace-nowrap"
-                    onClick={stopRowClick}
+              {news.map((item) => {
+                const visibility = getNewsPublishVisibility(
+                  item.isPublished,
+                  item.publishedAt,
+                );
+                return (
+                  <ClickableTableRow
+                    key={item.id}
+                    href={`/admin/news/${item.id}`}
+                    aria-label={`${item.title} のお知らせを編集`}
                   >
-                    <PublishSwitch
-                      id={item.id}
-                      isPublished={item.isPublished}
-                      onToggle={updateNewsPublished}
-                      resourceLabel={`${item.title} の公開状態`}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right" onClick={stopRowClick}>
-                    <NewsActionCell newsId={item.id} />
-                  </TableCell>
-                </ClickableTableRow>
-              ))}
+                    <TableCell onClick={stopRowClick}>
+                      <CheckboxCell
+                        checked={selectedIds.includes(item.id)}
+                        onChange={() => toggleOne(item.id)}
+                        aria-label={`${item.title} を選択`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-xs truncate font-medium">
+                        {item.title}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {item.publishedAtLabel ?? "-"}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">
+                      {item.createdAtLabel}
+                    </TableCell>
+                    <TableCell
+                      className="whitespace-nowrap"
+                      onClick={stopRowClick}
+                    >
+                      <PublishSwitch
+                        id={item.id}
+                        isPublished={item.isPublished}
+                        onToggle={updateNewsPublished}
+                        resourceLabel={`${item.title} の公開状態`}
+                        label={{
+                          published:
+                            visibility === "scheduled"
+                              ? NEWS_PUBLISH_VISIBILITY_LABELS.scheduled
+                              : NEWS_PUBLISH_VISIBILITY_LABELS.published,
+                          unpublished: NEWS_PUBLISH_VISIBILITY_LABELS.draft,
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right" onClick={stopRowClick}>
+                      <NewsActionCell newsId={item.id} />
+                    </TableCell>
+                  </ClickableTableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
