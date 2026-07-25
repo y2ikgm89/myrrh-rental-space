@@ -228,7 +228,7 @@ export async function Footer(): Promise<ReactElement> {
         className="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent"
         aria-hidden="true"
       />
-      <div className="mx-auto max-w-6xl px-5 py-[var(--spacing-fluid-sm)] md:px-8 md:py-[var(--spacing-fluid-md)]">
+      <div className="mx-auto max-w-[var(--container-site)] px-5 py-[var(--spacing-fluid-sm)] md:px-8 md:py-[var(--spacing-fluid-md)]">
         <div
           className={cn(
             "grid gap-10 md:gap-16",

@@ -216,11 +216,9 @@ export async function updateSocialLinkOrder(
 function toNavigationItemInput(
   data: z.output<typeof navFormSchema>,
 ): NavigationItemInput {
-  const parentId =
-    data.parentId === "none" || data.parentId === "" ? null : data.parentId;
   return {
     type: data.type,
-    parentId,
+    parentId: data.parentId,
     label: data.label,
     url: data.url,
     isExternal: data.isExternal,

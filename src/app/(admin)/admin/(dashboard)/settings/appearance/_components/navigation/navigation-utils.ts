@@ -13,13 +13,82 @@ import type {
 import { getProjectedDepth } from "./types";
 
 // =============================================================================
+// Subtree Reorder (D&D)
+// =============================================================================
+
+/** Root + contiguous depth-1 children immediately following it. */
+export function getSubtreeBlockSize(
+  flatItems: FlatNavigationItem[],
+  startIndex: number,
+): number {
+  const item = flatItems[startIndex];
+  if (!item) return 0;
+  if (item.depth !== 0) return 1;
+
+  let size = 1;
+  for (let i = startIndex + 1; i < flatItems.length; i++) {
+    const next = flatItems[i];
+    if (!next || next.depth === 0) break;
+    size++;
+  }
+  return size;
+}
+
+/** Move a root subtree (or single item) like `arrayMove`, keeping children attached. */
+export function reorderFlatWithSubtree(
+  flatItems: FlatNavigationItem[],
+  from: number,
+  to: number,
+): FlatNavigationItem[] {
+  if (from === to) return flatItems;
+
+  const blockSize = getSubtreeBlockSize(flatItems, from);
+  const block = flatItems.slice(from, from + blockSize);
+  const without = [
+    ...flatItems.slice(0, from),
+    ...flatItems.slice(from + blockSize),
+  ];
+
+  let insertAt = to;
+  if (from < to) {
+    insertAt = to - blockSize + 1;
+  }
+  insertAt = Math.max(0, Math.min(insertAt, without.length));
+
+  return [...without.slice(0, insertAt), ...block, ...without.slice(insertAt)];
+}
+
+export function flatItemHasChildren(
+  flatItems: FlatNavigationItem[],
+  index: number,
+): boolean {
+  return getSubtreeBlockSize(flatItems, index) > 1;
+}
+
+function collectSubtreeChildIds(
+  reordered: FlatNavigationItem[],
+  draggedIndex: number,
+): Set<string> {
+  const childIds = new Set<string>();
+  const dragged = reordered[draggedIndex];
+  if (!dragged || dragged.depth !== 0) return childIds;
+
+  for (let i = draggedIndex + 1; i < reordered.length; i++) {
+    const next = reordered[i];
+    if (!next || next.depth === 0) break;
+    childIds.add(next.id);
+  }
+  return childIds;
+}
+
+// =============================================================================
 // Nesting Computation
 // =============================================================================
 
 /**
  * After reorder, walk through items top-to-bottom and assign parentId
  * based on the projected depth of the dragged item.
- * Non-dragged items keep their existing depth (isChild).
+ * Dragged root subtrees stay attached; items with children cannot nest.
  */
 export function computeOrderWithNesting(
   reordered: FlatNavigationItem[],
@@ -27,15 +96,28 @@ export function computeOrderWithNesting(
   offsetX: number,
   draggedOriginalDepth: 0 | 1,
 ): { id: string; order: number; parentId: string | null }[] {
-  const projectedDepth = getProjectedDepth(offsetX, draggedOriginalDepth);
+  const draggedIndex = reordered.findIndex((item) => item.id === draggedId);
+  const draggedSubtreeChildIds =
+    draggedIndex === -1
+      ? new Set<string>()
+      : collectSubtreeChildIds(reordered, draggedIndex);
+  const draggedHasChildren = draggedSubtreeChildIds.size > 0;
 
-  // Build depth map: dragged item gets projected depth, others keep existing
-  const depths = reordered.map((item) => ({
-    item,
-    depth: item.id === draggedId ? projectedDepth : item.depth,
-  }));
+  let projectedDepth = getProjectedDepth(offsetX, draggedOriginalDepth);
+  if (draggedHasChildren && projectedDepth === 1) {
+    projectedDepth = 0;
+  }
 
-  // Walk top-to-bottom, track the last root-level item
+  const depths = reordered.map((item) => {
+    if (item.id === draggedId) {
+      return { item, depth: projectedDepth };
+    }
+    if (draggedSubtreeChildIds.has(item.id)) {
+      return { item, depth: 1 as const };
+    }
+    return { item, depth: item.depth };
+  });
+
   let lastRootId: string | null = null;
   const updates: { id: string; order: number; parentId: string | null }[] = [];
 
@@ -45,11 +127,14 @@ export function computeOrderWithNesting(
 
     const { item, depth } = entry;
 
+    if (draggedSubtreeChildIds.has(item.id)) {
+      updates.push({ id: item.id, order: i, parentId: draggedId });
+      continue;
+    }
+
     if (depth === 1 && lastRootId !== null) {
-      // Child: parent is the last root item above
       updates.push({ id: item.id, order: i, parentId: lastRootId });
     } else {
-      // Root item (or forced root because no parent above)
       updates.push({ id: item.id, order: i, parentId: null });
       lastRootId = item.id;
     }

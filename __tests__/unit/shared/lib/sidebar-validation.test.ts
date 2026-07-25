@@ -116,6 +116,8 @@ describe("parseSidebarWidgets", () => {
 });
 
 describe("sidebarSettingsSchema", () => {
+  const expectedUpdatedAt = new Date("2026-01-15T00:00:00.000Z");
+
   test("validates complete settings", () => {
     const settings = {
       sidebarEnabled: true,
@@ -123,6 +125,7 @@ describe("sidebarSettingsSchema", () => {
       sidebarRecentCount: 5,
       sidebarPopularCount: 5,
       sidebarTocEnabled: true,
+      expectedUpdatedAt,
     };
     const result = sidebarSettingsSchema.safeParse(settings);
     expect(result.success).toBe(true);
@@ -135,6 +138,7 @@ describe("sidebarSettingsSchema", () => {
       sidebarRecentCount: 0,
       sidebarPopularCount: 21,
       sidebarTocEnabled: true,
+      expectedUpdatedAt,
     };
     const result = sidebarSettingsSchema.safeParse(settings);
     expect(result.success).toBe(false);

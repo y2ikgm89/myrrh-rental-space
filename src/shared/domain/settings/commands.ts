@@ -42,6 +42,8 @@ export type LayoutSettingsInput = {
   containerWidthCustom: number | null;
   contentWidth: LayoutWidth;
   contentWidthCustom: number | null;
+  /** 楽観的 concurrency: 読み込み時の SettingsLayout.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export type MetaSettingsInput = {
@@ -156,6 +158,8 @@ function toExpectedUpdatedAt(value: string | Date): Date {
 export type HeaderSettingsInput = {
   headerScrollBehavior: HeaderScrollBehavior;
   headerBackgroundMode: HeaderBackgroundMode;
+  /** 楽観的 concurrency: 読み込み時の SettingsLayout.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export type DiscountSettingsInput = {
@@ -173,6 +177,31 @@ export type TaxSettingsInput = {
 
 function normalizeNullableString(value: string | null): string | null {
   return value || null;
+}
+
+const CONTAINER_CUSTOM_WIDTH_MIN = 320;
+const CONTAINER_CUSTOM_WIDTH_MAX = 2560;
+const CONTENT_CUSTOM_WIDTH_MIN = 320;
+const CONTENT_CUSTOM_WIDTH_MAX = 1920;
+
+function assertCustomWidthInRange(
+  value: number | null,
+  min: number,
+  max: number,
+  label: string,
+): number {
+  if (
+    value === null ||
+    !Number.isInteger(value) ||
+    value < min ||
+    value > max
+  ) {
+    throw new DomainError(
+      `${label}は${min}px〜${max}pxの範囲で入力してください`,
+      "VALIDATION",
+    );
+  }
+  return value;
 }
 
 export async function updateBasicInfo(data: BasicInfoInput): Promise<void> {
@@ -193,32 +222,55 @@ export async function updateBasicInfo(data: BasicInfoInput): Promise<void> {
 export async function updateLayoutSettings(
   data: LayoutSettingsInput,
 ): Promise<void> {
-  if (data.containerWidth === "CUSTOM" && !data.containerWidthCustom) {
-    throw new DomainError(
-      "Container幅のカスタム値を入力してください",
-      "VALIDATION",
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+
+  let containerWidthCustom: number | null = null;
+  if (data.containerWidth === "CUSTOM") {
+    if (data.containerWidthCustom === null) {
+      throw new DomainError(
+        "Container幅のカスタム値を入力してください",
+        "VALIDATION",
+      );
+    }
+    containerWidthCustom = assertCustomWidthInRange(
+      data.containerWidthCustom,
+      CONTAINER_CUSTOM_WIDTH_MIN,
+      CONTAINER_CUSTOM_WIDTH_MAX,
+      "Container幅",
     );
   }
-  if (data.contentWidth === "CUSTOM" && !data.contentWidthCustom) {
-    throw new DomainError(
-      "コンテンツ幅のカスタム値を入力してください",
-      "VALIDATION",
+
+  let contentWidthCustom: number | null = null;
+  if (data.contentWidth === "CUSTOM") {
+    if (data.contentWidthCustom === null) {
+      throw new DomainError(
+        "コンテンツ幅のカスタム値を入力してください",
+        "VALIDATION",
+      );
+    }
+    contentWidthCustom = assertCustomWidthInRange(
+      data.contentWidthCustom,
+      CONTENT_CUSTOM_WIDTH_MIN,
+      CONTENT_CUSTOM_WIDTH_MAX,
+      "コンテンツ幅",
     );
   }
 
   const updateData = {
     containerWidth: data.containerWidth,
-    containerWidthCustom:
-      data.containerWidth === "CUSTOM" ? data.containerWidthCustom : null,
+    containerWidthCustom,
     contentWidth: data.contentWidth,
-    contentWidthCustom:
-      data.contentWidth === "CUSTOM" ? data.contentWidthCustom : null,
+    contentWidthCustom,
   };
 
-  await prisma.settingsLayout.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsLayout.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
@@ -569,6 +621,7 @@ export async function updateReservationSettings(
 export async function updateSidebarSettings(
   data: SidebarSettings,
 ): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
   const updateData = {
     sidebarEnabled: data.sidebarEnabled,
     sidebarWidgets: data.sidebarWidgets,
@@ -577,20 +630,34 @@ export async function updateSidebarSettings(
     sidebarTocEnabled: data.sidebarTocEnabled,
   };
 
-  await prisma.settingsSidebar.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsSidebar.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
 export async function updateHeaderSettings(
   data: HeaderSettingsInput,
 ): Promise<void> {
-  await prisma.settingsLayout.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+  const updateData = {
+    headerScrollBehavior: data.headerScrollBehavior,
+    headerBackgroundMode: data.headerBackgroundMode,
+  };
+
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsLayout.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
@@ -601,15 +668,31 @@ export type FooterSettingsInput = {
   footerHoursLabel: string;
   footerShowSocialLinks: boolean;
   themeColor: string;
+  /** 楽観的 concurrency: 読み込み時の SettingsLayout.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export async function updateFooterSettings(
   data: FooterSettingsInput,
 ): Promise<void> {
-  await prisma.settingsLayout.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+  const updateData = {
+    footerTagline: data.footerTagline,
+    footerNavigationLabel: data.footerNavigationLabel,
+    footerContactLabel: data.footerContactLabel,
+    footerHoursLabel: data.footerHoursLabel,
+    footerShowSocialLinks: data.footerShowSocialLinks,
+    themeColor: data.themeColor,
+  };
+
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsLayout.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 

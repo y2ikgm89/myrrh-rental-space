@@ -100,6 +100,85 @@ export type NavigationOrderInput = z.infer<typeof navigationOrderInputSchema>;
 export type SocialLinkInput = z.infer<typeof socialLinkInputSchema>;
 export type SocialLinkOrderInput = z.infer<typeof socialLinkOrderInputSchema>;
 
+type NavigationParentRow = {
+  id: string;
+  type: NavigationType;
+  parentId: string | null;
+};
+
+export function assertValidNavigationParent(params: {
+  type: NavigationType;
+  parentId: string | null;
+  parent: NavigationParentRow | null;
+  itemHasChildren: boolean;
+}): void {
+  if (params.parentId === null) {
+    return;
+  }
+
+  if (!params.parent) {
+    throw new DomainError("親ナビゲーションが見つかりません", "NOT_FOUND");
+  }
+
+  if (params.parent.type !== params.type) {
+    throw new DomainError("親ナビゲーションの種別が一致しません", "VALIDATION");
+  }
+
+  if (params.parent.parentId !== null) {
+    throw new DomainError(
+      "親はトップレベルの項目のみ指定できます",
+      "VALIDATION",
+    );
+  }
+
+  if (params.itemHasChildren) {
+    throw new DomainError(
+      "子メニューがある項目はサブメニューにできません",
+      "VALIDATION",
+    );
+  }
+}
+
+async function loadNavigationParentValidationContext(params: {
+  type: NavigationType;
+  parentId: string | null;
+  itemId?: string;
+}): Promise<{
+  parent: NavigationParentRow | null;
+  itemHasChildren: boolean;
+}> {
+  const [parent, childCount] = await Promise.all([
+    params.parentId === null
+      ? Promise.resolve(null)
+      : prisma.navigationItem.findUnique({
+          where: { id: params.parentId },
+          select: { id: true, type: true, parentId: true },
+        }),
+    params.itemId
+      ? prisma.navigationItem.count({ where: { parentId: params.itemId } })
+      : Promise.resolve(0),
+  ]);
+
+  return {
+    parent,
+    itemHasChildren: childCount > 0,
+  };
+}
+
+async function ensureValidNavigationParent(params: {
+  type: NavigationType;
+  parentId: string | null;
+  itemId?: string;
+}): Promise<void> {
+  const context = await loadNavigationParentValidationContext(params);
+  assertValidNavigationParent({
+    type: params.type,
+    parentId: params.parentId,
+    parent: context.parent,
+    itemHasChildren: context.itemHasChildren,
+  });
+}
+
 function normalizeNavigationItemInput(data: NavigationItemInput) {
   // PortableTextSpan[] discriminated union を Prisma の Json 列に渡す境界。
   // Zod が runtime 検証済みのため `isPrismaInputJsonValue` で型 narrow するだけで十分。
@@ -119,6 +198,11 @@ function normalizeNavigationItemInput(data: NavigationItemInput) {
 export async function createNavigationItem(
   data: NavigationItemInput,
 ): Promise<{ id: string }> {
+  await ensureValidNavigationParent({
+    type: data.type,
+    parentId: data.parentId ?? null,
+  });
+
   const item = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw(buildOrderScopeLockSql(`navigation:${data.type}`));
 
@@ -151,6 +235,12 @@ export async function updateNavigationItem(
   if (!existing) {
     throw new DomainError("ナビゲーションが見つかりません", "NOT_FOUND");
   }
+
+  await ensureValidNavigationParent({
+    type: data.type,
+    parentId: data.parentId ?? null,
+    itemId: id,
+  });
 
   await prisma.navigationItem.update({
     where: { id },
@@ -251,35 +341,44 @@ export async function updateNavigationOrder(
     );
   }
 
-  const parentIds = items
-    .map((item) => item.parentId)
-    .filter((id): id is string => typeof id === "string");
-  const parentRowsById =
+  const parentIds = [
+    ...new Set(
+      items
+        .map((item) => item.parentId)
+        .filter((id): id is string => typeof id === "string"),
+    ),
+  ];
+  const parentRows =
     parentIds.length === 0
-      ? new Map<string, { id: string; type: NavigationType }>()
-      : new Map(
-          (
-            await prisma.navigationItem.findMany({
-              where: { id: { in: parentIds } },
-              select: { id: true, type: true },
-            })
-          ).map((item) => [item.id, item]),
-        );
+      ? []
+      : await prisma.navigationItem.findMany({
+          where: { id: { in: parentIds } },
+          select: { id: true, type: true, parentId: true },
+        });
+  const parentRowsById = new Map(parentRows.map((item) => [item.id, item]));
+
+  const childCounts =
+    itemIds.length === 0
+      ? []
+      : await prisma.navigationItem.groupBy({
+          by: ["parentId"],
+          where: { parentId: { in: itemIds } },
+          _count: { _all: true },
+        });
+  const childCountByParentId = new Map(
+    childCounts.flatMap((row) =>
+      row.parentId === null ? [] : [[row.parentId, row._count._all] as const],
+    ),
+  );
 
   for (const item of items) {
-    if (typeof item.parentId !== "string") {
-      continue;
-    }
-    const parent = parentRowsById.get(item.parentId);
-    if (!parent) {
-      throw new DomainError("親ナビゲーションが見つかりません", "NOT_FOUND");
-    }
-    if (parent.type !== targetType) {
-      throw new DomainError(
-        "親ナビゲーションの種別が一致しません",
-        "VALIDATION",
-      );
-    }
+    const parentId = item.parentId ?? null;
+    assertValidNavigationParent({
+      type: targetType,
+      parentId,
+      parent: parentId === null ? null : (parentRowsById.get(parentId) ?? null),
+      itemHasChildren: (childCountByParentId.get(item.id) ?? 0) > 0,
+    });
   }
 
   const { ids, tempCases, finalCases } = buildUuidOrderSqlFragments(

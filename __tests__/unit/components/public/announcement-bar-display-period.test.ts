@@ -1,6 +1,8 @@
 import { describe, test, expect } from "bun:test";
 import {
   filterBarsWithinDisplayPeriodNow,
+  getAnnouncementBarDisplayStatus,
+  getAnnouncementBarDisplayStatusLabel,
   isWithinDisplayPeriod,
 } from "@/public/components/announcement-bar/display-period";
 
@@ -110,5 +112,47 @@ describe("filterBarsWithinDisplayPeriodNow", () => {
     ];
     const filtered = filterBarsWithinDisplayPeriodNow(bars);
     expect(filtered.map((bar) => bar.id)).toEqual(["a"]);
+  });
+});
+
+describe("getAnnouncementBarDisplayStatus", () => {
+  test("非表示: isActive=false", () => {
+    expect(
+      getAnnouncementBarDisplayStatus(
+        { isActive: false, startAt: null, endAt: null },
+        NOW,
+      ),
+    ).toBe("hidden");
+    expect(getAnnouncementBarDisplayStatusLabel("hidden")).toBe("非表示");
+  });
+
+  test("公開中: isActive=true かつ期間内", () => {
+    expect(
+      getAnnouncementBarDisplayStatus(
+        {
+          isActive: true,
+          startAt: "2026-07-22T11:00:00.000Z",
+          endAt: "2026-07-22T13:00:00.000Z",
+        },
+        NOW,
+      ),
+    ).toBe("published");
+    expect(getAnnouncementBarDisplayStatusLabel("published")).toBe("公開中");
+  });
+
+  test("期間外: isActive=true だが表示期間外", () => {
+    expect(
+      getAnnouncementBarDisplayStatus(
+        {
+          isActive: true,
+          startAt: "2026-07-22T13:00:00.000Z",
+          endAt: null,
+        },
+        NOW,
+      ),
+    ).toBe("out_of_period");
+    expect(getAnnouncementBarDisplayStatusLabel("out_of_period")).toBe(
+      "期間外",
+    );
   });
 });

@@ -12,6 +12,7 @@ import {
 import { cn } from "@/shared/lib/cn";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { isAppRoute } from "@/shared/lib/typed-routes";
+import { toSafePublicHref } from "@/shared/lib/url/safe-href";
 import { AnnouncementBarDesignStyle } from "@/shared/lib/validations/enums/prisma-types";
 import { useCarousel } from "./use-carousel";
 import { useDismissedBars, dismissBar } from "./use-dismissed-bars";
@@ -123,9 +124,13 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
   const showPlayPause = settings.autoPlay && showNav && !reduceMotion;
 
   // CTA リンク用の派生値（typedoc の narrowing を JSX 外で確定させる）
-  const linkUrl = currentBar.linkUrl;
+  const safeLinkUrl = currentBar.linkUrl
+    ? toSafePublicHref(currentBar.linkUrl)
+    : null;
   const linkText = currentBar.linkText;
-  const isExternalLink = linkUrl != null && linkUrl.startsWith("http");
+  const isExternalLink =
+    safeLinkUrl != null &&
+    (safeLinkUrl.startsWith("http://") || safeLinkUrl.startsWith("https://"));
   // hasCustomText が false (= default style) なら明示的に text-white を当てて
   // Lighthouse の OKLCH → sRGB conversion 罠を回避 (親 inherit ではなく直接適用)。
   const linkClassName = cn(
@@ -196,15 +201,15 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
               iconClassName="mr-1.5 inline-block h-4 w-4 align-[-0.125em]"
             />
           </span>
-          {linkUrl != null &&
+          {safeLinkUrl != null &&
             linkText != null &&
-            (isAppRoute(linkUrl) ? (
-              <Link href={linkUrl} className={linkClassName}>
+            (isAppRoute(safeLinkUrl) ? (
+              <Link href={safeLinkUrl} className={linkClassName}>
                 {linkText}
               </Link>
             ) : (
               <a
-                href={linkUrl}
+                href={safeLinkUrl}
                 className={linkClassName}
                 target={isExternalLink ? "_blank" : undefined}
                 rel={isExternalLink ? "noreferrer" : undefined}

@@ -127,6 +127,25 @@ export function parseDateTimeLocalAsJst(value: string): Date {
   return new Date(`${withSeconds}+09:00`);
 }
 
+/**
+ * 表示期間の開始・終了が両方指定されているとき、start <= end かを検証する。
+ * 空欄（null / undefined / ""）は許容。個別の日時形式エラーは別 validator に委譲。
+ */
+export function isDisplayPeriodOrderValid(
+  startAt: string | null | undefined,
+  endAt: string | null | undefined,
+): boolean {
+  if (!startAt || startAt === "" || !endAt || endAt === "") {
+    return true;
+  }
+  const start = parseDateTimeLocalAsJst(startAt);
+  const end = parseDateTimeLocalAsJst(endAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return true;
+  }
+  return start.getTime() <= end.getTime();
+}
+
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 /**

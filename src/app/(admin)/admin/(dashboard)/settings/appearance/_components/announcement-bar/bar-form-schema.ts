@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { isDisplayPeriodOrderValid } from "@/shared/lib/date-format";
+import { optionalHttpOrInternalHrefSchema } from "@/shared/lib/url/safe-href";
 import { portableTextSpanSchema } from "@/shared/lib/portable-text/schema";
 import {
   spansToPlainText,
@@ -53,31 +55,38 @@ const messageSchema = z
       }),
   );
 
-export const barFormSchema = z.strictObject({
-  message: messageSchema,
-  // 任意項目（リンク・日時）。conform `parseWithZod` は空入力を undefined に
-  // 変換するため、`.or(z.literal(""))` だけでは undefined を取りこぼして弾かれる。
-  // `.optional()` で undefined を許容し、空 → null 化は Server Action 側で行う。
-  linkUrl: z
-    .url({ error: "有効なURLを入力してください" })
-    .or(z.literal(""))
-    .optional(),
-  linkText: z
-    .string()
-    .max(50, { error: "リンクテキストは50文字以内" })
-    .optional(),
-  isActive: z.preprocess(
-    (value) => value === "on" || value === true,
-    z.boolean(),
-  ),
-  startAt: z.iso
-    .datetime({ local: true, error: "有効な日時を入力してください" })
-    .or(z.literal(""))
-    .optional(),
-  endAt: z.iso
-    .datetime({ local: true, error: "有効な日時を入力してください" })
-    .or(z.literal(""))
-    .optional(),
-});
+export const barFormSchema = z
+  .strictObject({
+    message: messageSchema,
+    // 任意項目（リンク・日時）。conform `parseWithZod` は空入力を undefined に
+    // 変換するため、`.or(z.literal(""))` だけでは undefined を取りこぼして弾かれる。
+    // `.optional()` で undefined を許容し、空 → null 化は Server Action 側で行う。
+    linkUrl: optionalHttpOrInternalHrefSchema,
+    linkText: z
+      .string()
+      .max(50, { error: "リンクテキストは50文字以内" })
+      .optional(),
+    isActive: z.preprocess(
+      (value) => value === "on" || value === true,
+      z.boolean(),
+    ),
+    startAt: z.iso
+      .datetime({ local: true, error: "有効な日時を入力してください" })
+      .or(z.literal(""))
+      .optional(),
+    endAt: z.iso
+      .datetime({ local: true, error: "有効な日時を入力してください" })
+      .or(z.literal(""))
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!isDisplayPeriodOrderValid(data.startAt, data.endAt)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endAt"],
+        message: "終了日時は開始日時以降に設定してください",
+      });
+    }
+  });
 
 export type BarFormSubmitData = z.infer<typeof barFormSchema>;

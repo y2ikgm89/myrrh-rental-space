@@ -2,6 +2,10 @@
 
 import { formatMonthDayTime } from "@/shared/lib/date-format";
 import {
+  getAnnouncementBarDisplayStatus,
+  getAnnouncementBarDisplayStatusLabel,
+} from "@/public/components/announcement-bar/display-period";
+import {
   Badge,
   Button,
   Card,
@@ -63,6 +67,11 @@ function SortableBarRow({
     transition,
   };
 
+  // eslint-disable-next-line @eslint-react/purity -- Client Component: 公開状態の算出用
+  const displayStatus = getAnnouncementBarDisplayStatus(bar, new Date());
+  const displayStatusLabel =
+    getAnnouncementBarDisplayStatusLabel(displayStatus);
+
   return (
     <TableRow
       ref={setNodeRef}
@@ -88,8 +97,16 @@ function SortableBarRow({
         </span>
       </TableCell>
       <TableCell>
-        <Badge variant={bar.isActive ? "default" : "secondary"}>
-          {bar.isActive ? "有効" : "無効"}
+        <Badge
+          variant={
+            displayStatus === "published"
+              ? "default"
+              : displayStatus === "out_of_period"
+                ? "outline"
+                : "secondary"
+          }
+        >
+          {displayStatusLabel}
         </Badge>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">

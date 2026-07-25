@@ -29,6 +29,8 @@ import {
   computeOrderFromFlat,
   fetchNavigationItems,
   fetchSocialLinks,
+  flatItemHasChildren,
+  reorderFlatWithSubtree,
 } from "../navigation-utils";
 
 // =============================================================================
@@ -208,11 +210,22 @@ export function useNavigationHandlers(
     const draggedItem = flatItems[oldIndex];
     if (!draggedItem) return;
 
+    const draggedHasChildren = flatItemHasChildren(flatItems, oldIndex);
+
     // Check if only depth changed (horizontal drag with no vertical reorder)
     const projectedDepth = getProjectedDepth(currentOffsetX, draggedItem.depth);
     const samePosition = active.id === over.id;
 
     if (samePosition && projectedDepth === draggedItem.depth) return;
+
+    if (
+      samePosition &&
+      draggedHasChildren &&
+      projectedDepth === 1 &&
+      draggedItem.depth === 0
+    ) {
+      return;
+    }
 
     const newIndex = samePosition
       ? oldIndex
@@ -222,7 +235,7 @@ export function useNavigationHandlers(
 
     const reordered = samePosition
       ? flatItems
-      : arrayMove(flatItems, oldIndex, newIndex);
+      : reorderFlatWithSubtree(flatItems, oldIndex, newIndex);
 
     // Compute parentId for each item based on projected depth
     const updates = computeOrderWithNesting(
@@ -262,6 +275,7 @@ export function useNavigationHandlers(
 
     const item = flatItems[itemIndex];
     if (!item || item.depth !== 0) return;
+    if (flatItemHasChildren(flatItems, itemIndex)) return;
 
     // Find the previous root item
     let prevRootIndex = -1;

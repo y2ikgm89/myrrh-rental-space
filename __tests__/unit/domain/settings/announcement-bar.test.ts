@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { createSpan } from "@/shared/lib/portable-text";
 
 const mockAnnouncementBarFindMany = mock<() => Promise<Array<{ id: string }>>>(
   () => Promise.resolve([]),
+);
+const mockAnnouncementBarFindUnique = mock<
+  () => Promise<{ id: string } | null>
+>(() => Promise.resolve(null));
+const mockAnnouncementBarUpdate = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "bar-1" }),
 );
 const mockExecuteRaw = mock<
   (strings: TemplateStringsArray, ...values: unknown[]) => Promise<number>
@@ -24,6 +31,8 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     announcementBar: {
       findMany: mockAnnouncementBarFindMany,
+      findUnique: mockAnnouncementBarFindUnique,
+      update: mockAnnouncementBarUpdate,
     },
     $transaction: mockTransaction,
     $executeRaw: mockExecuteRaw,
@@ -84,10 +93,80 @@ mock.module("@generated/prisma/enums", () => ({
 
 const announcementBarCommands =
   (await import("@/shared/domain/settings/announcement-bar")) as unknown as {
+    announcementBarInputSchema: typeof import("@/shared/domain/settings/announcement-bar").announcementBarInputSchema;
     reorderAnnouncementBars: (
       orderedIds: readonly string[],
     ) => Promise<{ updated: number }>;
+    updateAnnouncementBarActive: (
+      id: string,
+      isActive: boolean,
+    ) => Promise<void>;
   };
+
+const validMessageInput = {
+  message: [createSpan("テストメッセージ")],
+};
+
+describe("announcementBarInputSchema", () => {
+  test("javascript: linkUrl を拒否する", () => {
+    const result = announcementBarCommands.announcementBarInputSchema.safeParse(
+      {
+        ...validMessageInput,
+        linkUrl: "javascript:alert(1)",
+      },
+    );
+    expect(result.success).toBe(false);
+  });
+
+  test("内部 path (/about) を許可する", () => {
+    const result = announcementBarCommands.announcementBarInputSchema.safeParse(
+      {
+        ...validMessageInput,
+        linkUrl: "/about",
+      },
+    );
+    expect(result.success).toBe(true);
+  });
+
+  test("startAt > endAt を拒否する", () => {
+    const result = announcementBarCommands.announcementBarInputSchema.safeParse(
+      {
+        ...validMessageInput,
+        startAt: "2026-07-31T18:00",
+        endAt: "2026-07-01T09:00",
+      },
+    );
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateAnnouncementBarActive", () => {
+  beforeEach(() => {
+    mockAnnouncementBarFindUnique.mockReset();
+    mockAnnouncementBarUpdate.mockReset();
+    mockAnnouncementBarFindUnique.mockResolvedValue({ id: "bar-1" });
+    mockAnnouncementBarUpdate.mockResolvedValue({ id: "bar-1" });
+  });
+
+  test("存在する bar の isActive を更新する", async () => {
+    await announcementBarCommands.updateAnnouncementBarActive("bar-1", false);
+
+    expect(mockAnnouncementBarUpdate).toHaveBeenCalledWith({
+      where: { id: "bar-1" },
+      data: { isActive: false },
+    });
+  });
+
+  test("存在しない bar は NOT_FOUND で update しない", async () => {
+    mockAnnouncementBarFindUnique.mockResolvedValueOnce(null);
+
+    await expect(
+      announcementBarCommands.updateAnnouncementBarActive("missing-id", true),
+    ).rejects.toThrow("お知らせバーが見つかりません");
+
+    expect(mockAnnouncementBarUpdate).not.toHaveBeenCalled();
+  });
+});
 
 describe("reorderAnnouncementBars", () => {
   beforeEach(() => {

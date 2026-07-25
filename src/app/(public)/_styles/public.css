@@ -193,7 +193,6 @@
     var(--container-padding),
     env(safe-area-inset-right, 0px)
   );
-  --container-header-max: 90rem;
   --container-measure: 65ch;
   --prose-narrow: 40ch;
   --prose-medium: 45ch;

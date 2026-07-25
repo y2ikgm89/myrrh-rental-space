@@ -88,6 +88,11 @@ export type BusinessHoursSettingsInput = z.infer<
 export const headerSettingsSchema = z.object({
   headerScrollBehavior: z.enum(HeaderScrollBehavior),
   headerBackgroundMode: z.enum(HeaderBackgroundMode),
+  expectedUpdatedAt: z.iso
+    .datetime({
+      error: "更新バージョンが不正です。ページを再読み込みしてください",
+    })
+    .or(z.date()),
 });
 
 export type HeaderSettingsInput = z.infer<typeof headerSettingsSchema>;

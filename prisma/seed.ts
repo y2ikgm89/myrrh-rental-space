@@ -544,7 +544,12 @@ async function seedSettings(
     prisma.settingsLayout.upsert({
       where: { id: "singleton" },
       update: {},
-      create: { id: "singleton" },
+      create: {
+        id: "singleton",
+        footerNavigationLabel: "ナビゲーション",
+        footerContactLabel: "お問い合わせ",
+        footerHoursLabel: "営業時間",
+      },
     }),
     prisma.settingsSidebar.upsert({
       where: { id: "singleton" },

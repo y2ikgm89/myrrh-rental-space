@@ -9,7 +9,12 @@
 import { useEffect, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
   Card,
@@ -71,10 +76,13 @@ const BACKGROUND_MODE_OPTIONS: SelectionBoxOption[] = [
   },
 ];
 
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
 interface HeaderSectionProps extends SettingsReadOnlyProps {
   settings: {
     headerScrollBehavior: string;
     headerBackgroundMode: string;
+    layoutUpdatedAt: string;
   };
 }
 
@@ -103,6 +111,7 @@ export function HeaderSection({
       headerBackgroundMode: getValidHeaderBackgroundMode(
         settings.headerBackgroundMode,
       ),
+      expectedUpdatedAt: settings.layoutUpdatedAt,
     },
   });
 
@@ -113,6 +122,17 @@ export function HeaderSection({
     if (lastResult && lastResult.initialValue === null) {
       toast.success("ヘッダー設定を保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -132,6 +152,9 @@ export function HeaderSection({
             disabled={readOnly}
             className="space-y-6 border-0 p-0 m-0 min-w-0"
           >
+            <input
+              {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+            />
             <div className="space-y-1.5">
               <label
                 className="block text-sm font-medium text-foreground"

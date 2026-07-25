@@ -28,6 +28,7 @@ import type {
 } from "./types";
 import { platformLabels } from "./types";
 import { SortableNavRow, SortableSocialRow } from "./SortableNavItem";
+import { flatItemHasChildren } from "./navigation-utils";
 
 // =============================================================================
 // Navigation List Component
@@ -76,9 +77,14 @@ export function NavigationList({
 }: NavigationListProps) {
   const title = {
     HEADER_DESKTOP: "デスクトップメニュー",
-    HEADER_MOBILE: "モバイルメニュー",
+    HEADER_MOBILE: "ハンバーガーメニュー",
     FOOTER: "フッターメニュー",
   }[type];
+
+  const helperText =
+    type === "HEADER_MOBILE"
+      ? "ヘッダーのハンバーガーアイコンから開くメニューです。画面下部の固定タブバー（ホーム・スペース・予約など）とは別設定です。ドラッグで並べ替え・右に移動でサブメニュー化"
+      : "ドラッグで並べ替え・右に移動でサブメニュー化";
 
   // Find the active item for DragOverlay
   const activeItem = activeItemId
@@ -100,9 +106,7 @@ export function NavigationList({
           </p>
         ) : (
           <>
-            <p className="mb-4 text-sm text-muted-foreground">
-              ドラッグで並べ替え・右に移動でサブメニュー化
-            </p>
+            <p className="mb-4 text-sm text-muted-foreground">{helperText}</p>
             <DndContext
               id={`nav-${type}-sortable`}
               sensors={sensors}
@@ -122,6 +126,7 @@ export function NavigationList({
                     // Must be root (depth 0) AND have a root item above it
                     const canMakeChild =
                       item.depth === 0 &&
+                      !flatItemHasChildren(items, index) &&
                       items.slice(0, index).some((prev) => prev.depth === 0);
 
                     return (

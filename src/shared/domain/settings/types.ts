@@ -53,6 +53,10 @@ export type SettingsData = {
   organizationUpdatedAt: Date;
   /** SettingsReservation.updatedAt — 予約設定の optimistic concurrency 用 */
   reservationUpdatedAt: Date;
+  /** SettingsLayout.updatedAt — レイアウト / ヘッダー / フッター設定の optimistic concurrency 用 */
+  layoutUpdatedAt: Date;
+  /** SettingsSidebar.updatedAt — サイドバー設定の optimistic concurrency 用 */
+  sidebarUpdatedAt: Date;
   senderEmail: string | null;
   senderName: string | null;
   replyToEmail: string | null;

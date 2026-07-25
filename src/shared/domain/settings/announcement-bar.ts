@@ -15,7 +15,11 @@ import {
   buildUuidOrderSqlFragments,
 } from "@/shared/domain/order-sql";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
-import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
+import {
+  isDisplayPeriodOrderValid,
+  parseDateTimeLocalAsJst,
+} from "@/shared/lib/date-format";
+import { optionalHttpOrInternalHrefSchema } from "@/shared/lib/url/safe-href";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -229,59 +233,65 @@ const defaultCarouselSettings: AnnouncementBarCarouselSettings = {
   announcementBarSticky: false,
 };
 
-export const announcementBarInputSchema = z.strictObject({
-  /**
-   * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在、最大 30 span）。
-   * 空配列 / 純アイコン構成は UI 層が許容するが、ここではプレーン文字列ベースで
-   * 1 文字以上必須を契約（icon-only モード = メッセージ意味不在は NN/g 準拠で拒否）。
-   */
-  message: createSpanArraySchema({ maxSpans: 30 })
-    .refine((spans) => spansToPlainText(spans).trim().length > 0, {
-      error: "メッセージにテキストを 1 文字以上含めてください",
-    })
-    .refine((spans) => spansToPlainText(spans).length <= 200, {
-      error: "メッセージは200文字以内で入力してください",
-    }),
-  linkUrl: z
-    .url({ error: "有効なURLを入力してください" })
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
-  linkText: z
-    .string()
-    .max(50, { error: "リンクテキストは50文字以内" })
-    .nullable()
-    .optional(),
-  bgColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, { error: "有効な色コードを入力してください" })
-    .transform((value) => value.toLowerCase())
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
-  textColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/, { error: "有効な色コードを入力してください" })
-    .transform((value) => value.toLowerCase())
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
-  isActive: z.boolean().default(true),
-  // `<input type="datetime-local">` の値（"YYYY-MM-DDTHH:mm" / "...:ss"）を受け取る
-  // contract に統一。command 層で `parseDateTimeLocalAsJst` を通して JST 固定で UTC 化
-  // （サーバ tz / ブラウザ tz 非依存）。空文字は `.or(z.literal(""))` で許容、normalize
-  // 関数で null 化。
-  startAt: z.iso
-    .datetime({ local: true, error: "有効な日時を入力してください" })
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
-  endAt: z.iso
-    .datetime({ local: true, error: "有効な日時を入力してください" })
-    .or(z.literal(""))
-    .nullable()
-    .optional(),
-});
+export const announcementBarInputSchema = z
+  .strictObject({
+    /**
+     * Sanity Portable Text 互換の Span 配列（テキスト + アイコン混在、最大 30 span）。
+     * 空配列 / 純アイコン構成は UI 層が許容するが、ここではプレーン文字列ベースで
+     * 1 文字以上必須を契約（icon-only モード = メッセージ意味不在は NN/g 準拠で拒否）。
+     */
+    message: createSpanArraySchema({ maxSpans: 30 })
+      .refine((spans) => spansToPlainText(spans).trim().length > 0, {
+        error: "メッセージにテキストを 1 文字以上含めてください",
+      })
+      .refine((spans) => spansToPlainText(spans).length <= 200, {
+        error: "メッセージは200文字以内で入力してください",
+      }),
+    linkUrl: optionalHttpOrInternalHrefSchema,
+    linkText: z
+      .string()
+      .max(50, { error: "リンクテキストは50文字以内" })
+      .nullable()
+      .optional(),
+    bgColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/, { error: "有効な色コードを入力してください" })
+      .transform((value) => value.toLowerCase())
+      .or(z.literal(""))
+      .nullable()
+      .optional(),
+    textColor: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/, { error: "有効な色コードを入力してください" })
+      .transform((value) => value.toLowerCase())
+      .or(z.literal(""))
+      .nullable()
+      .optional(),
+    isActive: z.boolean().default(true),
+    // `<input type="datetime-local">` の値（"YYYY-MM-DDTHH:mm" / "...:ss"）を受け取る
+    // contract に統一。command 層で `parseDateTimeLocalAsJst` を通して JST 固定で UTC 化
+    // （サーバ tz / ブラウザ tz 非依存）。空文字は `.or(z.literal(""))` で許容、normalize
+    // 関数で null 化。
+    startAt: z.iso
+      .datetime({ local: true, error: "有効な日時を入力してください" })
+      .or(z.literal(""))
+      .nullable()
+      .optional(),
+    endAt: z.iso
+      .datetime({ local: true, error: "有効な日時を入力してください" })
+      .or(z.literal(""))
+      .nullable()
+      .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!isDisplayPeriodOrderValid(data.startAt, data.endAt)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endAt"],
+        message: "終了日時は開始日時以降に設定してください",
+      });
+    }
+  });
 
 export type AnnouncementBarInput = z.infer<typeof announcementBarInputSchema>;
 
@@ -522,6 +532,15 @@ export async function updateAnnouncementBarActive(
   id: string,
   isActive: boolean,
 ): Promise<void> {
+  const existing = await prisma.announcementBar.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    throw new DomainError("お知らせバーが見つかりません", "NOT_FOUND");
+  }
+
   await prisma.announcementBar.update({
     where: { id },
     data: { isActive },
