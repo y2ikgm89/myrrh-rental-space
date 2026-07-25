@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 
@@ -21,6 +21,20 @@ describe("PWA manifest boundary", () => {
   });
 
   test("公開 manifest route は Web App Manifest として配信する", async () => {
+    // Unit test は request scope 外で GET を呼ぶため connection / SEO query を stub する。
+    mock.module("next/server", () => ({
+      connection: async () => undefined,
+    }));
+    mock.module("@/public/lib/seo/metadata-factory", () => ({
+      getSeoSettings: async () => null,
+      resolveSiteBranding: () => ({
+        siteName: "Test Site",
+        description: "Test description",
+        ogTitle: "Test Site",
+        ogDescription: "Test description",
+      }),
+    }));
+
     const { GET } = await import("@/app/(public)/manifest.webmanifest/route");
     const response = await GET();
 

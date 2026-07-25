@@ -30,8 +30,12 @@ import {
 } from "@/admin/components/ui";
 import { updateFooterSettings } from "@/admin/actions/settings";
 import { footerFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
-interface FooterSectionProps {
+interface FooterSectionProps extends SettingsReadOnlyProps {
   settings: {
     footerTagline: string | null;
     footerNavigationLabel: string;
@@ -45,12 +49,16 @@ interface FooterSectionProps {
 const DEFAULT_TAGLINE =
   "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。";
 
-export function FooterSection({ settings }: FooterSectionProps) {
+export function FooterSection({
+  settings,
+  readOnly = false,
+}: FooterSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateFooterSettings,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
   const [form, fields] = useForm({
     id: "footer-settings",
     lastResult,
@@ -94,155 +102,164 @@ export function FooterSection({ settings }: FooterSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-1.5">
-            <label
-              className="block text-sm font-medium text-foreground"
-              htmlFor={fields.footerTagline.id}
-            >
-              ブランド説明文
-            </label>
-            <Textarea
-              {...getTextareaProps(fields.footerTagline)}
-              placeholder={DEFAULT_TAGLINE}
-              rows={3}
-              maxLength={200}
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              空欄の場合はデフォルトの説明文が表示されます
-            </p>
-            {fields.footerTagline.errors &&
-              fields.footerTagline.errors.length > 0 && (
-                <p
-                  id={fields.footerTagline.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.footerTagline.errors.join(", ")}
-                </p>
-              )}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
+          <fieldset
+            disabled={readOnly}
+            className="space-y-6 border-0 p-0 m-0 min-w-0"
+          >
             <div className="space-y-1.5">
               <label
                 className="block text-sm font-medium text-foreground"
-                htmlFor={fields.footerNavigationLabel.id}
+                htmlFor={fields.footerTagline.id}
               >
-                ナビゲーション見出し
+                ブランド説明文
               </label>
-              <Input
-                {...getInputProps(fields.footerNavigationLabel, {
-                  type: "text",
-                })}
-                disabled={isPending}
+              <Textarea
+                {...getTextareaProps(fields.footerTagline)}
+                placeholder={DEFAULT_TAGLINE}
+                rows={3}
+                maxLength={200}
+                disabled={isDisabled}
               />
-            </div>
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.footerContactLabel.id}
-              >
-                連絡先見出し
-              </label>
-              <Input
-                {...getInputProps(fields.footerContactLabel, { type: "text" })}
-                disabled={isPending}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.footerHoursLabel.id}
-              >
-                営業時間見出し
-              </label>
-              <Input
-                {...getInputProps(fields.footerHoursLabel, { type: "text" })}
-                disabled={isPending}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <label
-                className="text-sm font-medium"
-                htmlFor={fields.footerShowSocialLinks.id}
-              >
-                SNSリンクを表示
-              </label>
               <p className="text-xs text-muted-foreground">
-                ナビゲーション設定で登録したSNSリンクをフッターに表示します
+                空欄の場合はデフォルトの説明文が表示されます
               </p>
+              {fields.footerTagline.errors &&
+                fields.footerTagline.errors.length > 0 && (
+                  <p
+                    id={fields.footerTagline.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.footerTagline.errors.join(", ")}
+                  </p>
+                )}
             </div>
-            <Switch
-              id={fields.footerShowSocialLinks.id}
-              checked={isSocialOn}
-              onCheckedChange={(checked) =>
-                showSocialLinks.change(checked ? "on" : "")
-              }
-              onBlur={showSocialLinks.blur}
-              disabled={isPending}
-            />
-            <input
-              type="hidden"
-              name={fields.footerShowSocialLinks.name}
-              value={isSocialOn ? "on" : ""}
-            />
-          </div>
 
-          <div className="space-y-1.5">
-            <label
-              className="block text-sm font-medium text-foreground"
-              htmlFor={fields.themeColor.id}
-            >
-              ブラウザテーマカラー
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={themeColor.value ?? ""}
-                onChange={(e) => themeColor.change(e.target.value)}
-                className="h-10 w-10 cursor-pointer rounded border border-input"
-              />
-              <Input
-                {...getInputProps(fields.themeColor, { type: "text" })}
-                placeholder="#fafafa"
-                className="max-w-[10rem]"
-                disabled={isPending}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              モバイルブラウザのアドレスバーの色に反映されます
-            </p>
-            {fields.themeColor.errors &&
-              fields.themeColor.errors.length > 0 && (
-                <p
-                  id={fields.themeColor.errorId}
-                  className="text-sm text-destructive"
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.footerNavigationLabel.id}
                 >
-                  {fields.themeColor.errors.join(", ")}
-                </p>
-              )}
-          </div>
-
-          {formErrors && formErrors.length > 0 && (
-            <div
-              id={form.errorId}
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            >
-              {formErrors.join(", ")}
+                  ナビゲーション見出し
+                </label>
+                <Input
+                  {...getInputProps(fields.footerNavigationLabel, {
+                    type: "text",
+                  })}
+                  disabled={isDisabled}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.footerContactLabel.id}
+                >
+                  連絡先見出し
+                </label>
+                <Input
+                  {...getInputProps(fields.footerContactLabel, {
+                    type: "text",
+                  })}
+                  disabled={isDisabled}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.footerHoursLabel.id}
+                >
+                  営業時間見出し
+                </label>
+                <Input
+                  {...getInputProps(fields.footerHoursLabel, { type: "text" })}
+                  disabled={isDisabled}
+                />
+              </div>
             </div>
-          )}
 
-          <div className="flex justify-end pt-2">
-            <SubmitButton
-              isPending={isPending}
-              label="保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <label
+                  className="text-sm font-medium"
+                  htmlFor={fields.footerShowSocialLinks.id}
+                >
+                  SNSリンクを表示
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  ナビゲーション設定で登録したSNSリンクをフッターに表示します
+                </p>
+              </div>
+              <Switch
+                id={fields.footerShowSocialLinks.id}
+                checked={isSocialOn}
+                onCheckedChange={(checked) =>
+                  showSocialLinks.change(checked ? "on" : "")
+                }
+                onBlur={showSocialLinks.blur}
+                disabled={isDisabled}
+              />
+              <input
+                type="hidden"
+                name={fields.footerShowSocialLinks.name}
+                value={isSocialOn ? "on" : ""}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.themeColor.id}
+              >
+                ブラウザテーマカラー
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={themeColor.value ?? ""}
+                  onChange={(e) => themeColor.change(e.target.value)}
+                  className="h-10 w-10 cursor-pointer rounded border border-input"
+                />
+                <Input
+                  {...getInputProps(fields.themeColor, { type: "text" })}
+                  placeholder="#fafafa"
+                  className="max-w-[10rem]"
+                  disabled={isDisabled}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                モバイルブラウザのアドレスバーの色に反映されます
+              </p>
+              {fields.themeColor.errors &&
+                fields.themeColor.errors.length > 0 && (
+                  <p
+                    id={fields.themeColor.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.themeColor.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
+
+            {!readOnly ? (
+              <div className="flex justify-end pt-2">
+                <SubmitButton
+                  isPending={isPending}
+                  label="保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>

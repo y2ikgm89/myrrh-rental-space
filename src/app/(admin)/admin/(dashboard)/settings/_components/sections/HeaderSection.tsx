@@ -35,6 +35,10 @@ import {
   getValidHeaderScrollBehavior,
   getValidHeaderBackgroundMode,
 } from "@/shared/lib/validations/enums/helpers";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
 const SCROLL_BEHAVIOR_OPTIONS: SelectionBoxOption[] = [
   {
@@ -67,19 +71,23 @@ const BACKGROUND_MODE_OPTIONS: SelectionBoxOption[] = [
   },
 ];
 
-interface HeaderSectionProps {
+interface HeaderSectionProps extends SettingsReadOnlyProps {
   settings: {
     headerScrollBehavior: string;
     headerBackgroundMode: string;
   };
 }
 
-export function HeaderSection({ settings }: HeaderSectionProps) {
+export function HeaderSection({
+  settings,
+  readOnly = false,
+}: HeaderSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateHeaderSettings,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
   const [form, fields] = useForm({
     id: "header-settings",
     lastResult,
@@ -120,99 +128,108 @@ export function HeaderSection({ settings }: HeaderSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-1.5">
-            <label
-              className="block text-sm font-medium text-foreground"
-              htmlFor={fields.headerBackgroundMode.id}
-            >
-              背景モード
-            </label>
-            <SelectionBox
-              options={BACKGROUND_MODE_OPTIONS}
-              value={backgroundMode.value ?? ""}
-              onChange={(value) => {
-                if (isValidHeaderBackgroundMode(value)) {
-                  backgroundMode.change(value);
-                }
-              }}
-              columns={1}
-              name="ヘッダー背景モード"
-            />
-            <input
-              type="hidden"
-              name={fields.headerBackgroundMode.name}
-              value={backgroundMode.value ?? ""}
-            />
-            {fields.headerBackgroundMode.errors &&
-              fields.headerBackgroundMode.errors.length > 0 && (
-                <p
-                  id={fields.headerBackgroundMode.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.headerBackgroundMode.errors.join(", ")}
-                </p>
-              )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label
-              className="block text-sm font-medium text-foreground"
-              htmlFor={fields.headerScrollBehavior.id}
-            >
-              スクロール動作
-            </label>
-            <SelectionBox
-              options={SCROLL_BEHAVIOR_OPTIONS}
-              value={scrollBehavior.value ?? ""}
-              onChange={(value) => {
-                if (isValidHeaderScrollBehavior(value)) {
-                  scrollBehavior.change(value);
-                }
-              }}
-              columns={1}
-              name="ヘッダースクロール動作"
-            />
-            <input
-              type="hidden"
-              name={fields.headerScrollBehavior.name}
-              value={scrollBehavior.value ?? ""}
-            />
-            {fields.headerScrollBehavior.errors &&
-              fields.headerScrollBehavior.errors.length > 0 && (
-                <p
-                  id={fields.headerScrollBehavior.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.headerScrollBehavior.errors.join(", ")}
-                </p>
-              )}
-          </div>
-
-          <div className="rounded-md border border-muted bg-muted/50 p-4">
-            <p className="text-sm text-muted-foreground">
-              {backgroundMode.value === HeaderBackgroundMode.transparent
-                ? "ヒーロー画像がヘッダー背後に広がります。テキストが見にくい場合は「不透明」に変更してください。"
-                : "予約導線を常時表示したい場合は「常時表示」がおすすめです。"}
-            </p>
-          </div>
-
-          {formErrors && formErrors.length > 0 && (
-            <div
-              id={form.errorId}
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            >
-              {formErrors.join(", ")}
+          <fieldset
+            disabled={readOnly}
+            className="space-y-6 border-0 p-0 m-0 min-w-0"
+          >
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.headerBackgroundMode.id}
+              >
+                背景モード
+              </label>
+              <SelectionBox
+                options={BACKGROUND_MODE_OPTIONS}
+                value={backgroundMode.value ?? ""}
+                onChange={(value) => {
+                  if (isValidHeaderBackgroundMode(value)) {
+                    backgroundMode.change(value);
+                  }
+                }}
+                columns={1}
+                name="ヘッダー背景モード"
+                disabled={isDisabled}
+              />
+              <input
+                type="hidden"
+                name={fields.headerBackgroundMode.name}
+                value={backgroundMode.value ?? ""}
+              />
+              {fields.headerBackgroundMode.errors &&
+                fields.headerBackgroundMode.errors.length > 0 && (
+                  <p
+                    id={fields.headerBackgroundMode.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.headerBackgroundMode.errors.join(", ")}
+                  </p>
+                )}
             </div>
-          )}
 
-          <div className="flex justify-end pt-2">
-            <SubmitButton
-              isPending={isPending}
-              label="保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.headerScrollBehavior.id}
+              >
+                スクロール動作
+              </label>
+              <SelectionBox
+                options={SCROLL_BEHAVIOR_OPTIONS}
+                value={scrollBehavior.value ?? ""}
+                onChange={(value) => {
+                  if (isValidHeaderScrollBehavior(value)) {
+                    scrollBehavior.change(value);
+                  }
+                }}
+                columns={1}
+                name="ヘッダースクロール動作"
+                disabled={isDisabled}
+              />
+              <input
+                type="hidden"
+                name={fields.headerScrollBehavior.name}
+                value={scrollBehavior.value ?? ""}
+              />
+              {fields.headerScrollBehavior.errors &&
+                fields.headerScrollBehavior.errors.length > 0 && (
+                  <p
+                    id={fields.headerScrollBehavior.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.headerScrollBehavior.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+
+            <div className="rounded-md border border-muted bg-muted/50 p-4">
+              <p className="text-sm text-muted-foreground">
+                {backgroundMode.value === HeaderBackgroundMode.transparent
+                  ? "ヒーロー画像がヘッダー背後に広がります。テキストが見にくい場合は「不透明」に変更してください。"
+                  : "予約導線を常時表示したい場合は「常時表示」がおすすめです。"}
+              </p>
+            </div>
+
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
+
+            {!readOnly ? (
+              <div className="flex justify-end pt-2">
+                <SubmitButton
+                  isPending={isPending}
+                  label="保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>

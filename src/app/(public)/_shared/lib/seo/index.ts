@@ -8,8 +8,10 @@
 export {
   getSeoSettings,
   generateArticleMetadata,
+  resolveSiteBranding,
   type SeoSettings,
   type ArticleMetadata,
+  type ResolvedSiteBranding,
 } from "./metadata-factory";
 
 // JSON-LD設定

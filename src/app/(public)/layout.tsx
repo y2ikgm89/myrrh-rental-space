@@ -58,7 +58,11 @@ import {
 import { getContainerSiteCss } from "@/shared/lib/styles/layout-mapper";
 import { MaintenanceGate } from "@/public/components/maintenance-gate";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
-import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { getBaseUrl } from "@/shared/lib/constants";
+import {
+  getSeoSettings,
+  resolveSiteBranding,
+} from "@/public/lib/seo/metadata-factory";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import {
   TaxSettingsProvider,
@@ -86,14 +90,19 @@ export async function generateMetadata(): Promise<Metadata> {
   // PWA manifest は公開 root metadata からだけ明示リンクし、IAP-protected admin root
   // では取得自体を発生させない。
   await connection();
-  const feedAlternates = await getFeedAlternates();
+  const [feedAlternates, seoSettings] = await Promise.all([
+    getFeedAlternates(),
+    getSeoSettings(),
+  ]);
+  const { siteName, description, ogTitle, ogDescription } =
+    resolveSiteBranding(seoSettings);
   return {
     metadataBase: new URL(getBaseUrl()),
     title: {
-      default: SITE_DEFAULTS.name,
-      template: `%s | ${SITE_DEFAULTS.name}`,
+      default: siteName,
+      template: `%s | ${siteName}`,
     },
-    description: SITE_DEFAULTS.description,
+    description,
     manifest: "/manifest.webmanifest",
     icons: {
       icon: "/icon",
@@ -106,15 +115,15 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       locale: "ja_JP",
-      siteName: SITE_DEFAULTS.name,
+      siteName,
       url: "/",
-      title: SITE_DEFAULTS.name,
-      description: SITE_DEFAULTS.description,
+      title: ogTitle,
+      description: ogDescription,
     },
     twitter: {
       card: "summary_large_image",
-      title: SITE_DEFAULTS.name,
-      description: SITE_DEFAULTS.description,
+      title: ogTitle,
+      description: ogDescription,
     },
   };
 }

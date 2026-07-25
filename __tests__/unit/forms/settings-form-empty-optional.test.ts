@@ -54,6 +54,7 @@ import {
   notificationFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import {
+  dataRetentionSettingsSchema,
   featureModulesSettingsSchema,
   reservationSettingsSchema,
 } from "@/admin/actions/settings/schemas/basic";
@@ -494,11 +495,13 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       cancellationDeadlineHours: "24",
       modificationDeadlineHours: "24",
       customerCanCancelSeriesInFull: "",
+      maxRecurrenceInstances: "26",
     });
     const result = parseWithZod(fd, { schema: reservationSettingsSchema });
     expect(result.status).toBe("success");
     if (result.status === "success") {
       expect(result.value.customerCanCancelSeriesInFull).toBe(false);
+      expect(result.value.maxRecurrenceInstances).toBe(26);
     }
   });
 
@@ -510,11 +513,72 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       cancellationDeadlineHours: "24",
       modificationDeadlineHours: "24",
       customerCanCancelSeriesInFull: "on",
+      maxRecurrenceInstances: "52",
     });
     const result = parseWithZod(fd, { schema: reservationSettingsSchema });
     expect(result.status).toBe("success");
     if (result.status === "success") {
       expect(result.value.customerCanCancelSeriesInFull).toBe(true);
+      expect(result.value.maxRecurrenceInstances).toBe(52);
     }
+  });
+
+  test("予約設定: maxRecurrenceInstances が 1〜104 の範囲外なら error", () => {
+    const tooLow = form({
+      defaultTimeSlot: "30",
+      minReservationDuration: "60",
+      maxReservationDuration: "480",
+      cancellationDeadlineHours: "24",
+      modificationDeadlineHours: "24",
+      customerCanCancelSeriesInFull: "on",
+      maxRecurrenceInstances: "0",
+    });
+    expect(
+      parseWithZod(tooLow, { schema: reservationSettingsSchema }).status,
+    ).toBe("error");
+
+    const tooHigh = form({
+      defaultTimeSlot: "30",
+      minReservationDuration: "60",
+      maxReservationDuration: "480",
+      cancellationDeadlineHours: "24",
+      modificationDeadlineHours: "24",
+      customerCanCancelSeriesInFull: "on",
+      maxRecurrenceInstances: "105",
+    });
+    expect(
+      parseWithZod(tooHigh, { schema: reservationSettingsSchema }).status,
+    ).toBe("error");
+  });
+
+  test("データ保持: 6 field の非負整数を parse できる", () => {
+    const fd = form({
+      sessionMonths: "6",
+      verificationMonths: "6",
+      loginAttemptMonths: "6",
+      reservationGuestMonths: "12",
+      inquiryMonths: "36",
+      customerInactiveMonths: "84",
+    });
+    const result = parseWithZod(fd, { schema: dataRetentionSettingsSchema });
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.value.sessionMonths).toBe(6);
+      expect(result.value.customerInactiveMonths).toBe(84);
+    }
+  });
+
+  test("データ保持: 負数は error", () => {
+    const fd = form({
+      sessionMonths: "-1",
+      verificationMonths: "6",
+      loginAttemptMonths: "6",
+      reservationGuestMonths: "12",
+      inquiryMonths: "36",
+      customerInactiveMonths: "84",
+    });
+    expect(
+      parseWithZod(fd, { schema: dataRetentionSettingsSchema }).status,
+    ).toBe("error");
   });
 });

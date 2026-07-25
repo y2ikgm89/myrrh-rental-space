@@ -17,6 +17,7 @@ import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 import { TermsConsentChecklist } from "@/app/(public)/_shared/components/forms/TermsConsentChecklist";
 import { BookingSummary } from "./booking-summary";
+import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
 import { StickyBottomBar } from "@/app/(public)/_shared/components/ui/sticky-bottom-bar";
 
 // ---------------------------------------------------------------------------
@@ -66,6 +67,7 @@ interface CustomerStepProps {
   readonly onTurnstileExpire: () => void;
   readonly onToggleTerm: (id: string) => void;
   readonly onBack: () => void;
+  readonly refundPolicyLines?: readonly string[] | undefined;
 }
 
 export function CustomerStep({
@@ -84,6 +86,7 @@ export function CustomerStep({
   onTurnstileExpire,
   onToggleTerm,
   onBack,
+  refundPolicyLines,
 }: CustomerStepProps): ReactElement {
   const allTermsAgreed =
     requiredTerms.length === 0 ||
@@ -239,6 +242,11 @@ export function CustomerStep({
             {...getInputProps(fields.notes, { type: "text" })}
           />
         </div>
+
+        <RefundPolicyNotice
+          lines={refundPolicyLines}
+          className="mt-8 border-t border-border pt-6"
+        />
 
         {requiredTerms.length > 0 ? (
           <div className="mt-8 border-t border-border pt-6">

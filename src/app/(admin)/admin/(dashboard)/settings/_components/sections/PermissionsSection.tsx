@@ -60,9 +60,9 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
     description: "システム全体を管理できる最上位の権限",
     capabilities: [
       "すべての機能へのフルアクセス",
+      "settings:manage（課金・外部連携・機能モジュール・システムを含む全設定）",
       "管理者・編集者・閲覧者の追加・削除・権限変更",
       "監査ログの閲覧",
-      "システム設定の変更",
       "API キーの管理",
     ],
     restrictions: [
@@ -81,12 +81,12 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
       "スペース・予約・顧客の管理",
       "投稿・ニュース・ページの作成・編集・公開",
       "FAQ・お問い合わせの管理",
-      "サイト設定（ナビゲーション・告知バー等）",
+      "settings:update（サイト基本・見た目・ビジネス・メール・通知）",
     ],
     restrictions: [
+      "settings:manage（課金・外部連携・機能モジュール・システム）",
       "SUPER_ADMIN / ADMIN ロールグループの管理",
       "監査ログの閲覧",
-      "API キーや外部連携などの特権設定",
       "Google Admin / GCP 側の権限変更",
     ],
   },

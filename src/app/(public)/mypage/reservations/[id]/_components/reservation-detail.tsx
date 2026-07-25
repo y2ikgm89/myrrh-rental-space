@@ -76,6 +76,8 @@ interface ReservationDetailProps {
   readonly deadlineSettings: DeadlineSettings | undefined;
   /** 公開中のキャンセルポリシー規約 URL。無ければリンクを出さない */
   readonly cancellationPolicyUrl: string | undefined;
+  /** 返金ポリシー表示行。未設定なら undefined */
+  readonly refundPolicyLines?: readonly string[] | undefined;
   /**
    * オンライン決済 (Feature Module `payment`) が有効か。
    * false なら CheckoutButton は表示しない (server 側 `assertOnlinePaymentAvailable` と対称)。
@@ -119,6 +121,7 @@ export function ReservationDetail({
   reservation,
   deadlineSettings,
   cancellationPolicyUrl,
+  refundPolicyLines,
   paymentEnabled,
   receiptSerialNo,
 }: ReservationDetailProps) {
@@ -304,6 +307,9 @@ export function ReservationDetail({
                 をご確認ください
               </li>
             )}
+            {refundPolicyLines?.map((line) => (
+              <li key={line}>・{line}</li>
+            ))}
           </ul>
         </div>
       )}

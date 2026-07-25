@@ -59,6 +59,7 @@ interface BlockedDatesFieldProps {
   readonly deleteAction: DeleteBlockedDateAction;
   /** タブ上部の説明文（scope ごとの伝播範囲を明示） */
   readonly description: string;
+  readonly readOnly?: boolean;
 }
 
 const TYPE_VALUES: readonly BlockedDateType[] = [
@@ -79,6 +80,7 @@ export function BlockedDatesField({
   createAction,
   deleteAction,
   description,
+  readOnly = false,
 }: BlockedDatesFieldProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -97,18 +99,23 @@ export function BlockedDatesField({
   };
 
   return (
-    <div className="space-y-4">
+    <fieldset
+      disabled={readOnly}
+      className="space-y-4 border-0 p-0 m-0 min-w-0"
+    >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">{description}</p>
-        <Button
-          type="button"
-          variant="default"
-          size="sm"
-          onClick={() => setDialogOpen(true)}
-        >
-          <IconPlus className="mr-2 h-4 w-4" />
-          臨時休業を追加
-        </Button>
+        {!readOnly ? (
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => setDialogOpen(true)}
+          >
+            <IconPlus className="mr-2 h-4 w-4" />
+            臨時休業を追加
+          </Button>
+        ) : null}
       </div>
 
       {initialBlockedDates.length === 0 ? (
@@ -137,30 +144,32 @@ export function BlockedDatesField({
                   {blocked.reason ? ` ・ ${blocked.reason}` : ""}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="destructive-ghost"
-                size="icon"
-                aria-label={`${formatRange(blocked)} の臨時休業を削除`}
-                disabled={isDeleting}
-                onClick={() => handleDelete(blocked.id)}
-              >
-                <IconTrash className="h-4 w-4" />
-              </Button>
+              {!readOnly ? (
+                <Button
+                  type="button"
+                  variant="destructive-ghost"
+                  size="icon"
+                  aria-label={`${formatRange(blocked)} の臨時休業を削除`}
+                  disabled={isDeleting}
+                  onClick={() => handleDelete(blocked.id)}
+                >
+                  <IconTrash className="h-4 w-4" />
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
       )}
 
-      {dialogOpen && (
+      {dialogOpen && !readOnly ? (
         <AddBlockedDateDialog
           entityId={entityId}
           createAction={createAction}
           open={dialogOpen}
           onOpenChange={setDialogOpen}
         />
-      )}
-    </div>
+      ) : null}
+    </fieldset>
   );
 }
 

@@ -9,17 +9,20 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { Button, Breadcrumb } from "@/admin/components/ui";
+import { SettingsReadOnlyAlert } from "./shared/SettingsReadOnlyAlert";
 
 interface SettingsLayoutProps {
   title: string;
   description?: ReactNode;
   children: ReactNode;
+  readOnly?: boolean;
 }
 
 export function SettingsLayout({
   title,
   description,
   children,
+  readOnly = false,
 }: SettingsLayoutProps) {
   return (
     <div className="space-y-6">
@@ -44,6 +47,8 @@ export function SettingsLayout({
           )}
         </div>
       </div>
+
+      {readOnly ? <SettingsReadOnlyAlert /> : null}
 
       {/* コンテンツ */}
       <div className="space-y-6">{children}</div>

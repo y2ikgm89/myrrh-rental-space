@@ -37,10 +37,8 @@ import { setupStripeWebhookFixture } from "../helpers/setup-stripe-webhook-fixtu
  *   Settings singleton に暗号化 secret を仕込む。fixture が返す plaintext
  *   webhook secret を Stripe SDK の `webhooks.generateTestHeaderString()` に渡して
  *   valid な `stripe-signature` header を生成する。
- * - `getStripeSettings` は `"use cache"` (STATIC_SETTINGS = days) のため、
- *   本 spec が最初の `/api/webhooks/stripe` 呼び出しになる順序契約を要する。
- *   他 E2E spec は checkout 導線を踏まず `assertOnlinePaymentAvailable` を
- *   実行しないため、この契約は自然に満たされる。
+ * - Stripe secret / webhook secret は `getStripeCredentialCiphertext` 経由で
+ *   キャッシュせず読むため、fixture 投入後は webhook 経路へ即座に反映される。
  * - `test.describe.serial` で 3 test を直列化する。event.id が dedup 契約の
  *   primary key で、fullyParallel だと初回配送と replay の順序が入れ替わって
  *   flake する。

@@ -29,6 +29,7 @@ type NavigationManagerProps = {
   initialMobileItems: NavigationItemData[];
   initialFooterItems: NavigationItemData[];
   initialSocialLinks: Serialized<SocialLinkData>[];
+  readOnly?: boolean;
 };
 
 // =============================================================================
@@ -40,6 +41,7 @@ export function NavigationManager({
   initialMobileItems,
   initialFooterItems,
   initialSocialLinks,
+  readOnly = false,
 }: NavigationManagerProps) {
   // Navigation Items State
   const [desktopItems, setDesktopItems] =
@@ -142,125 +144,130 @@ export function NavigationManager({
   };
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="desktop">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="desktop">デスクトップ</TabsTrigger>
-          <TabsTrigger value="mobile">モバイル</TabsTrigger>
-          <TabsTrigger value="footer">フッター</TabsTrigger>
-          <TabsTrigger value="social">SNSリンク</TabsTrigger>
-        </TabsList>
+    <fieldset
+      disabled={readOnly}
+      className="space-y-6 border-0 p-0 m-0 min-w-0"
+    >
+      <div className="space-y-6">
+        <Tabs defaultValue="desktop">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="desktop">デスクトップ</TabsTrigger>
+            <TabsTrigger value="mobile">モバイル</TabsTrigger>
+            <TabsTrigger value="footer">フッター</TabsTrigger>
+            <TabsTrigger value="social">SNSリンク</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="desktop" className="mt-6">
-          <NavigationList
-            items={flattenNavItems(desktopItems)}
-            type="HEADER_DESKTOP"
-            emptyMessage="デスクトップメニューがありません"
-            sensors={sensors}
-            isPending={isPending}
-            activeItemId={activeItemId}
-            overItemId={overItemId}
-            dragOffsetX={dragOffsetX}
-            onAdd={openNavCreateDialog}
-            onEdit={openNavEditDialog}
-            onDelete={handleNavDelete}
-            onToggleActive={handleNavActiveToggle("HEADER_DESKTOP")}
-            onDragStart={handleNavDragStart("HEADER_DESKTOP")}
-            onDragMove={handleNavDragMove("HEADER_DESKTOP")}
-            onDragOver={handleNavDragOver("HEADER_DESKTOP")}
-            onDragEnd={handleNavDragEnd("HEADER_DESKTOP")}
-            onMakeChild={handleMakeChild("HEADER_DESKTOP")}
-            onMakeRoot={handleMakeRoot("HEADER_DESKTOP")}
+          <TabsContent value="desktop" className="mt-6">
+            <NavigationList
+              items={flattenNavItems(desktopItems)}
+              type="HEADER_DESKTOP"
+              emptyMessage="デスクトップメニューがありません"
+              sensors={sensors}
+              isPending={isPending || readOnly}
+              activeItemId={activeItemId}
+              overItemId={overItemId}
+              dragOffsetX={dragOffsetX}
+              onAdd={openNavCreateDialog}
+              onEdit={openNavEditDialog}
+              onDelete={handleNavDelete}
+              onToggleActive={handleNavActiveToggle("HEADER_DESKTOP")}
+              onDragStart={handleNavDragStart("HEADER_DESKTOP")}
+              onDragMove={handleNavDragMove("HEADER_DESKTOP")}
+              onDragOver={handleNavDragOver("HEADER_DESKTOP")}
+              onDragEnd={handleNavDragEnd("HEADER_DESKTOP")}
+              onMakeChild={handleMakeChild("HEADER_DESKTOP")}
+              onMakeRoot={handleMakeRoot("HEADER_DESKTOP")}
+            />
+          </TabsContent>
+
+          <TabsContent value="mobile" className="mt-6">
+            <NavigationList
+              items={flattenNavItems(mobileItems)}
+              type="HEADER_MOBILE"
+              emptyMessage="モバイルメニューがありません"
+              sensors={sensors}
+              isPending={isPending || readOnly}
+              activeItemId={activeItemId}
+              overItemId={overItemId}
+              dragOffsetX={dragOffsetX}
+              onAdd={openNavCreateDialog}
+              onEdit={openNavEditDialog}
+              onDelete={handleNavDelete}
+              onToggleActive={handleNavActiveToggle("HEADER_MOBILE")}
+              onDragStart={handleNavDragStart("HEADER_MOBILE")}
+              onDragMove={handleNavDragMove("HEADER_MOBILE")}
+              onDragOver={handleNavDragOver("HEADER_MOBILE")}
+              onDragEnd={handleNavDragEnd("HEADER_MOBILE")}
+              onMakeChild={handleMakeChild("HEADER_MOBILE")}
+              onMakeRoot={handleMakeRoot("HEADER_MOBILE")}
+            />
+            <p className="mt-4 text-sm text-muted-foreground">
+              モバイルでは項目数を少なめに設定することをおすすめします。
+            </p>
+          </TabsContent>
+
+          <TabsContent value="footer" className="mt-6">
+            <NavigationList
+              items={flattenNavItems(footerItems)}
+              type="FOOTER"
+              emptyMessage="フッターメニューがありません"
+              sensors={sensors}
+              isPending={isPending || readOnly}
+              activeItemId={activeItemId}
+              overItemId={overItemId}
+              dragOffsetX={dragOffsetX}
+              onAdd={openNavCreateDialog}
+              onEdit={openNavEditDialog}
+              onDelete={handleNavDelete}
+              onToggleActive={handleNavActiveToggle("FOOTER")}
+              onDragStart={handleNavDragStart("FOOTER")}
+              onDragMove={handleNavDragMove("FOOTER")}
+              onDragOver={handleNavDragOver("FOOTER")}
+              onDragEnd={handleNavDragEnd("FOOTER")}
+              onMakeChild={handleMakeChild("FOOTER")}
+              onMakeRoot={handleMakeRoot("FOOTER")}
+            />
+          </TabsContent>
+
+          <TabsContent value="social" className="mt-6">
+            <SocialLinkList
+              links={socialLinks}
+              sensors={sensors}
+              isPending={isPending || readOnly}
+              activeSocialId={activeSocialId}
+              onAdd={openSocialCreateDialog}
+              onEdit={openSocialEditDialog}
+              onDelete={handleSocialDelete}
+              onToggleActive={handleSocialActiveToggle}
+              onToggleDesktop={handleSocialDesktopToggle}
+              onToggleMobile={handleSocialMobileToggle}
+              onDragStart={handleSocialDragStart}
+              onDragEnd={handleSocialDragEnd}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* mount-on-open: Dialog 内 conform `useForm` の defaultValue を確実に反映 */}
+        {isNavDialogOpen && !readOnly ? (
+          <NavigationFormDialog
+            open={isNavDialogOpen}
+            onOpenChange={setIsNavDialogOpen}
+            editingItem={editingNavItem}
+            defaultType={navDefaultType}
+            parentOptions={getParentOptions(navDefaultType)}
+            onSuccess={loadData}
           />
-        </TabsContent>
+        ) : null}
 
-        <TabsContent value="mobile" className="mt-6">
-          <NavigationList
-            items={flattenNavItems(mobileItems)}
-            type="HEADER_MOBILE"
-            emptyMessage="モバイルメニューがありません"
-            sensors={sensors}
-            isPending={isPending}
-            activeItemId={activeItemId}
-            overItemId={overItemId}
-            dragOffsetX={dragOffsetX}
-            onAdd={openNavCreateDialog}
-            onEdit={openNavEditDialog}
-            onDelete={handleNavDelete}
-            onToggleActive={handleNavActiveToggle("HEADER_MOBILE")}
-            onDragStart={handleNavDragStart("HEADER_MOBILE")}
-            onDragMove={handleNavDragMove("HEADER_MOBILE")}
-            onDragOver={handleNavDragOver("HEADER_MOBILE")}
-            onDragEnd={handleNavDragEnd("HEADER_MOBILE")}
-            onMakeChild={handleMakeChild("HEADER_MOBILE")}
-            onMakeRoot={handleMakeRoot("HEADER_MOBILE")}
+        {isSocialDialogOpen && !readOnly ? (
+          <SocialLinkFormDialog
+            open={isSocialDialogOpen}
+            onOpenChange={setIsSocialDialogOpen}
+            editingLink={editingSocialLink}
+            onSuccess={loadData}
           />
-          <p className="mt-4 text-sm text-muted-foreground">
-            モバイルでは項目数を少なめに設定することをおすすめします。
-          </p>
-        </TabsContent>
-
-        <TabsContent value="footer" className="mt-6">
-          <NavigationList
-            items={flattenNavItems(footerItems)}
-            type="FOOTER"
-            emptyMessage="フッターメニューがありません"
-            sensors={sensors}
-            isPending={isPending}
-            activeItemId={activeItemId}
-            overItemId={overItemId}
-            dragOffsetX={dragOffsetX}
-            onAdd={openNavCreateDialog}
-            onEdit={openNavEditDialog}
-            onDelete={handleNavDelete}
-            onToggleActive={handleNavActiveToggle("FOOTER")}
-            onDragStart={handleNavDragStart("FOOTER")}
-            onDragMove={handleNavDragMove("FOOTER")}
-            onDragOver={handleNavDragOver("FOOTER")}
-            onDragEnd={handleNavDragEnd("FOOTER")}
-            onMakeChild={handleMakeChild("FOOTER")}
-            onMakeRoot={handleMakeRoot("FOOTER")}
-          />
-        </TabsContent>
-
-        <TabsContent value="social" className="mt-6">
-          <SocialLinkList
-            links={socialLinks}
-            sensors={sensors}
-            isPending={isPending}
-            activeSocialId={activeSocialId}
-            onAdd={openSocialCreateDialog}
-            onEdit={openSocialEditDialog}
-            onDelete={handleSocialDelete}
-            onToggleActive={handleSocialActiveToggle}
-            onToggleDesktop={handleSocialDesktopToggle}
-            onToggleMobile={handleSocialMobileToggle}
-            onDragStart={handleSocialDragStart}
-            onDragEnd={handleSocialDragEnd}
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* mount-on-open: Dialog 内 conform `useForm` の defaultValue を確実に反映 */}
-      {isNavDialogOpen && (
-        <NavigationFormDialog
-          open={isNavDialogOpen}
-          onOpenChange={setIsNavDialogOpen}
-          editingItem={editingNavItem}
-          defaultType={navDefaultType}
-          parentOptions={getParentOptions(navDefaultType)}
-          onSuccess={loadData}
-        />
-      )}
-
-      {isSocialDialogOpen && (
-        <SocialLinkFormDialog
-          open={isSocialDialogOpen}
-          onOpenChange={setIsSocialDialogOpen}
-          editingLink={editingSocialLink}
-          onSuccess={loadData}
-        />
-      )}
-    </div>
+        ) : null}
+      </div>
+    </fieldset>
   );
 }

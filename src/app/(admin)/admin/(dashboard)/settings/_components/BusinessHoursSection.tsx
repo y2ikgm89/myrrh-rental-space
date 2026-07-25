@@ -51,8 +51,12 @@ import {
   hasOverlappingSlots,
   type SlotError,
 } from "./business-hours-validation";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "./shared/settings-read-only";
 
-interface BusinessHoursSectionProps {
+interface BusinessHoursSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
@@ -93,9 +97,13 @@ function formatMonthlyClosure(closure: MonthlyClosure): string {
   return `${MONTHLY_CLOSURE_WEEK_LABELS[closure.week]} ${WEEKDAY_SHORT_LABELS[closure.weekday]}`;
 }
 
-export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
+export function BusinessHoursSection({
+  settings,
+  readOnly = false,
+}: BusinessHoursSectionProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS;
   const initialRegularHolidays = settings.regularHolidays ?? [];
@@ -365,282 +373,291 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* 一括設定テンプレート */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium">一括設定</h3>
-          <div className="flex items-center gap-3">
-            <Select
-              value={selectedTemplate}
-              onValueChange={(v) => {
-                if (isTemplateKey(v)) setSelectedTemplate(v);
-              }}
-              disabled={isPending}
-            >
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(TEMPLATES).map(([key, template]) => (
-                  <SelectItem key={key} value={key}>
-                    {template.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={applyTemplateToAll}
-              disabled={isPending || selectedTemplate === "custom"}
-            >
-              全曜日に適用
-            </Button>
-          </div>
-          {selectedTemplate !== "custom" && (
-            <p className="text-xs text-muted-foreground">
-              {TEMPLATES[selectedTemplate].description}（日曜は休業）
-            </p>
-          )}
-        </div>
-
-        {/* 曜日ごとの営業時間 */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">曜日別営業時間</h3>
+        <fieldset
+          disabled={readOnly}
+          className="space-y-6 border-0 p-0 m-0 min-w-0"
+        >
+          {/* 一括設定テンプレート */}
           <div className="space-y-3">
-            {DAYS_OF_WEEK.map(({ key, label }) => (
-              <div key={key} className="rounded-lg border p-3">
-                <div className="flex items-center gap-4">
-                  <div className="w-20">
-                    <span className="font-medium">{label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={businessHours[key].isOpen}
-                      onCheckedChange={(checked) =>
-                        handleIsOpenChange(key, checked)
-                      }
-                      disabled={isPending}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {businessHours[key].isOpen ? "営業" : "休業"}
-                    </span>
-                  </div>
-                  {businessHours[key].isOpen && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToAllDays(key)}
-                      disabled={isPending}
-                      title="この設定を全曜日にコピー"
-                    >
-                      <IconCopy className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+            <h3 className="text-sm font-medium">一括設定</h3>
+            <div className="flex items-center gap-3">
+              <Select
+                value={selectedTemplate}
+                onValueChange={(v) => {
+                  if (isTemplateKey(v)) setSelectedTemplate(v);
+                }}
+                disabled={isDisabled}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TEMPLATES).map(([key, template]) => (
+                    <SelectItem key={key} value={key}>
+                      {template.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={applyTemplateToAll}
+                disabled={isPending || selectedTemplate === "custom"}
+              >
+                全曜日に適用
+              </Button>
+            </div>
+            {selectedTemplate !== "custom" && (
+              <p className="text-xs text-muted-foreground">
+                {TEMPLATES[selectedTemplate].description}（日曜は休業）
+              </p>
+            )}
+          </div>
 
-                {/* 時間帯リスト */}
-                {businessHours[key].isOpen && (
-                  <div className="mt-3 space-y-2 pl-24">
-                    {/* 重複エラー表示 */}
-                    {getSlotError(key, 0, "overlap") && (
-                      <p className="text-sm text-destructive">
-                        時間帯が重複しています
-                      </p>
+          {/* 曜日ごとの営業時間 */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium">曜日別営業時間</h3>
+            <div className="space-y-3">
+              {DAYS_OF_WEEK.map(({ key, label }) => (
+                <div key={key} className="rounded-lg border p-3">
+                  <div className="flex items-center gap-4">
+                    <div className="w-20">
+                      <span className="font-medium">{label}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={businessHours[key].isOpen}
+                        onCheckedChange={(checked) =>
+                          handleIsOpenChange(key, checked)
+                        }
+                        disabled={isDisabled}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {businessHours[key].isOpen ? "営業" : "休業"}
+                      </span>
+                    </div>
+                    {businessHours[key].isOpen && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToAllDays(key)}
+                        disabled={isDisabled}
+                        title="この設定を全曜日にコピー"
+                      >
+                        <IconCopy className="h-4 w-4" />
+                      </Button>
                     )}
-                    {businessHours[key].slots.map((slot, slotIndex) => {
-                      const openError = getSlotError(
-                        key,
-                        slotIndex,
-                        "openTime",
-                      );
-                      const closeError = getSlotError(
-                        key,
-                        slotIndex,
-                        "closeTime",
-                      );
-                      return (
-                        // eslint-disable-next-line @eslint-react/no-array-index-key
-                        <div key={slotIndex} className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="time"
-                              value={slot.openTime}
-                              onChange={(e) =>
-                                handleSlotChange(
-                                  key,
-                                  slotIndex,
-                                  "openTime",
-                                  e.target.value,
-                                )
-                              }
-                              className={cn(
-                                "w-32",
-                                openError && "border-destructive",
+                  </div>
+
+                  {/* 時間帯リスト */}
+                  {businessHours[key].isOpen && (
+                    <div className="mt-3 space-y-2 pl-24">
+                      {/* 重複エラー表示 */}
+                      {getSlotError(key, 0, "overlap") && (
+                        <p className="text-sm text-destructive">
+                          時間帯が重複しています
+                        </p>
+                      )}
+                      {businessHours[key].slots.map((slot, slotIndex) => {
+                        const openError = getSlotError(
+                          key,
+                          slotIndex,
+                          "openTime",
+                        );
+                        const closeError = getSlotError(
+                          key,
+                          slotIndex,
+                          "closeTime",
+                        );
+                        return (
+                          // eslint-disable-next-line @eslint-react/no-array-index-key
+                          <div key={slotIndex} className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="time"
+                                value={slot.openTime}
+                                onChange={(e) =>
+                                  handleSlotChange(
+                                    key,
+                                    slotIndex,
+                                    "openTime",
+                                    e.target.value,
+                                  )
+                                }
+                                className={cn(
+                                  "w-32",
+                                  openError && "border-destructive",
+                                )}
+                                disabled={isDisabled}
+                              />
+                              <span>〜</span>
+                              <Input
+                                type="time"
+                                value={slot.closeTime}
+                                onChange={(e) =>
+                                  handleSlotChange(
+                                    key,
+                                    slotIndex,
+                                    "closeTime",
+                                    e.target.value,
+                                  )
+                                }
+                                className={cn(
+                                  "w-32",
+                                  closeError && "border-destructive",
+                                )}
+                                disabled={isDisabled}
+                              />
+                              {businessHours[key].slots.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleRemoveSlot(key, slotIndex)
+                                  }
+                                  disabled={isDisabled}
+                                  className="h-8 w-8"
+                                >
+                                  <IconX className="h-4 w-4" />
+                                </Button>
                               )}
-                              disabled={isPending}
-                            />
-                            <span>〜</span>
-                            <Input
-                              type="time"
-                              value={slot.closeTime}
-                              onChange={(e) =>
-                                handleSlotChange(
-                                  key,
-                                  slotIndex,
-                                  "closeTime",
-                                  e.target.value,
-                                )
-                              }
-                              className={cn(
-                                "w-32",
-                                closeError && "border-destructive",
-                              )}
-                              disabled={isPending}
-                            />
-                            {businessHours[key].slots.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveSlot(key, slotIndex)}
-                                disabled={isPending}
-                                className="h-8 w-8"
-                              >
-                                <IconX className="h-4 w-4" />
-                              </Button>
+                            </div>
+                            {closeError && (
+                              <p className="text-xs text-destructive pl-1">
+                                {closeError.message}
+                              </p>
                             )}
                           </div>
-                          {closeError && (
-                            <p className="text-xs text-destructive pl-1">
-                              {closeError.message}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddSlot(key)}
+                        disabled={isDisabled}
+                      >
+                        <IconPlus className="mr-1 h-4 w-4" />
+                        時間帯を追加
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 毎月の定休（第N曜日） */}
+          <div className="space-y-3">
+            <Label>毎月の定休（第N曜日）</Label>
+            <p className="text-sm text-muted-foreground">
+              「毎月第3月曜」のような繰り返し定休を設定します。該当日は予約を受け付けません。
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={newClosureWeek}
+                onValueChange={(v) => {
+                  if (isMonthlyClosureWeek(v)) {
+                    setNewClosureWeek(v);
+                  }
+                }}
+                disabled={isDisabled}
+              >
+                <SelectTrigger className="w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHLY_CLOSURE_WEEK_VALUES.map((week) => (
+                    <SelectItem key={week} value={week}>
+                      {MONTHLY_CLOSURE_WEEK_LABELS[week]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={newClosureWeekday}
+                onValueChange={(v) => {
+                  if (isWeekdayKey(v)) setNewClosureWeekday(v);
+                }}
+                disabled={isDisabled}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DAYS_OF_WEEK.map((day) => (
+                    <SelectItem key={day.key} value={day.key}>
+                      {day.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddMonthlyClosure}
+                disabled={isDisabled}
+              >
+                <IconPlus className="mr-1 h-4 w-4" />
+                追加
+              </Button>
+            </div>
+            {monthlyClosures.length > 0 && (
+              <ul className="flex flex-wrap gap-2">
+                {monthlyClosures.map((closure, index) => (
+                  <li
+                    key={`${closure.week}-${closure.weekday}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 py-1 pl-3 pr-1 text-sm"
+                  >
+                    <span>{formatMonthlyClosure(closure)}</span>
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAddSlot(key)}
-                      disabled={isPending}
+                      variant="destructive-ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      aria-label={`${formatMonthlyClosure(closure)}の定休を削除`}
+                      disabled={isDisabled}
+                      onClick={() => handleRemoveMonthlyClosure(index)}
                     >
-                      <IconPlus className="mr-1 h-4 w-4" />
-                      時間帯を追加
+                      <IconX className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 毎月の定休（第N曜日） */}
-        <div className="space-y-3">
-          <Label>毎月の定休（第N曜日）</Label>
-          <p className="text-sm text-muted-foreground">
-            「毎月第3月曜」のような繰り返し定休を設定します。該当日は予約を受け付けません。
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={newClosureWeek}
-              onValueChange={(v) => {
-                if (isMonthlyClosureWeek(v)) {
-                  setNewClosureWeek(v);
-                }
-              }}
-              disabled={isPending}
-            >
-              <SelectTrigger className="w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MONTHLY_CLOSURE_WEEK_VALUES.map((week) => (
-                  <SelectItem key={week} value={week}>
-                    {MONTHLY_CLOSURE_WEEK_LABELS[week]}
-                  </SelectItem>
+                  </li>
                 ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={newClosureWeekday}
-              onValueChange={(v) => {
-                if (isWeekdayKey(v)) setNewClosureWeekday(v);
-              }}
-              disabled={isPending}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DAYS_OF_WEEK.map((day) => (
-                  <SelectItem key={day.key} value={day.key}>
-                    {day.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddMonthlyClosure}
-              disabled={isPending}
-            >
-              <IconPlus className="mr-1 h-4 w-4" />
-              追加
-            </Button>
+              </ul>
+            )}
           </div>
-          {monthlyClosures.length > 0 && (
-            <ul className="flex flex-wrap gap-2">
-              {monthlyClosures.map((closure, index) => (
-                <li
-                  key={`${closure.week}-${closure.weekday}`}
-                  className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/50 py-1 pl-3 pr-1 text-sm"
-                >
-                  <span>{formatMonthlyClosure(closure)}</span>
-                  <Button
-                    type="button"
-                    variant="destructive-ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    aria-label={`${formatMonthlyClosure(closure)}の定休を削除`}
-                    disabled={isPending}
-                    onClick={() => handleRemoveMonthlyClosure(index)}
-                  >
-                    <IconX className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
 
-        {/* 休業日のお知らせ */}
-        <div className="space-y-2">
-          <Label htmlFor="holidayNotice">休業日のお知らせ</Label>
-          <Textarea
-            id="holidayNotice"
-            value={holidayNotice}
-            onChange={(e) => setHolidayNotice(e.target.value)}
-            placeholder="年末年始（12/31〜1/3）は休業いたします。"
-            rows={3}
-            disabled={isPending}
-          />
-          <p className="text-xs text-muted-foreground">
-            ホームページに表示するお知らせ文を入力できます。
-          </p>
-        </div>
+          {/* 休業日のお知らせ */}
+          <div className="space-y-2">
+            <Label htmlFor="holidayNotice">休業日のお知らせ</Label>
+            <Textarea
+              id="holidayNotice"
+              value={holidayNotice}
+              onChange={(e) => setHolidayNotice(e.target.value)}
+              placeholder="年末年始（12/31〜1/3）は休業いたします。"
+              rows={3}
+              disabled={isDisabled}
+            />
+            <p className="text-xs text-muted-foreground">
+              ホームページに表示するお知らせ文を入力できます。
+            </p>
+          </div>
 
-        <div className="flex justify-end pt-2">
-          <SubmitButton
-            isPending={isPending}
-            onClick={handleSave}
-            label="営業時間設定を保存"
-            disabled={hasErrors}
-          />
-        </div>
+          {!readOnly ? (
+            <div className="flex justify-end pt-2">
+              <SubmitButton
+                isPending={isPending}
+                onClick={handleSave}
+                label="営業時間設定を保存"
+                disabled={hasErrors}
+              />
+            </div>
+          ) : null}
+        </fieldset>
       </CardContent>
     </Card>
   );

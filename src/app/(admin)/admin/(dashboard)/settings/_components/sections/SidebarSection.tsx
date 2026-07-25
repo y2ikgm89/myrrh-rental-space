@@ -11,7 +11,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { arrayMove } from "@dnd-kit/sortable";
 import type { DragEndEvent } from "@dnd-kit/core";
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { IconAlertTriangle, IconInfoCircle } from "@tabler/icons-react";
 import { toast } from "sonner";
 import {
   Alert,
@@ -54,12 +54,16 @@ import { SidebarWidgetGrid } from "./sidebar/SidebarWidgetGrid";
 import { SidebarWidgetDialog } from "./sidebar/SidebarWidgetDialog";
 import type { CustomWidgetFormData } from "./sidebar/SidebarWidgetDialog";
 import { getWidgetId } from "./sidebar/SidebarWidgetCard";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-interface SidebarSectionProps {
+interface SidebarSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
@@ -67,7 +71,10 @@ interface SidebarSectionProps {
 // SidebarSection (orchestrator)
 // =============================================================================
 
-export function SidebarSection({ settings }: SidebarSectionProps) {
+export function SidebarSection({
+  settings,
+  readOnly = false,
+}: SidebarSectionProps) {
   const router = useRouter();
   const initialWidgetsParse = tryParseSidebarWidgets(settings.sidebarWidgets);
   const initialWidgets = initialWidgetsParse.success
@@ -85,6 +92,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
   );
   const [tocEnabled, setTocEnabled] = useState(settings.sidebarTocEnabled);
   const [isPending, startTransition] = useTransition();
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   // --- Custom widget dialog ---
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -241,247 +249,259 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {storedWidgetsInvalid && (
-          <Alert variant="destructive">
-            <IconAlertTriangle aria-hidden="true" />
-            <AlertTitle>保存されているウィジェット設定が不正です</AlertTitle>
-            <AlertDescription>
-              <p>
-                データベース上のウィジェット設定を読み込めませんでした。誤って上書きしないよう、保存は一時的に無効です。
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={handleResetWidgetsToDefaults}
-                disabled={isPending}
-              >
-                デフォルトにリセット
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* サイドバー全体の有効/無効 */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">サイドバーを表示する</p>
-            <p className="text-sm text-muted-foreground">
-              ブログページでサイドバーを表示します
-            </p>
-          </div>
-          <Switch
-            checked={sidebarEnabled}
-            onCheckedChange={setSidebarEnabled}
-            disabled={isPending}
-          />
-        </div>
-
-        {/* 記事目次サイドバーの有効/無効（独立設定） */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">
-              記事の目次サイドバーを表示する
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ブログ・お知らせの記事詳細ページで、見出しから自動生成された目次サイドバーを表示します（見出し（h2）が
-              2 つ以上ある記事のみ）
-            </p>
-          </div>
-          <Switch
-            checked={tocEnabled}
-            onCheckedChange={setTocEnabled}
-            disabled={isPending}
-          />
-        </div>
-
-        {/* ウィジェット設定 */}
-        {sidebarEnabled && (
-          <>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium">ウィジェット</h4>
+        <fieldset
+          disabled={readOnly}
+          className="space-y-6 border-0 p-0 m-0 min-w-0"
+        >
+          {storedWidgetsInvalid && (
+            <Alert variant="destructive">
+              <IconAlertTriangle aria-hidden="true" />
+              <AlertTitle>保存されているウィジェット設定が不正です</AlertTitle>
+              <AlertDescription>
+                <p>
+                  データベース上のウィジェット設定を読み込めませんでした。誤って上書きしないよう、保存は一時的に無効です。
+                </p>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleOpenAddDialog}
-                  disabled={isPending}
+                  className="mt-3"
+                  onClick={handleResetWidgetsToDefaults}
+                  disabled={isDisabled}
                 >
-                  <IconPlus className="mr-1.5 h-4 w-4" />
-                  カスタムウィジェット追加
+                  デフォルトにリセット
                 </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* サイドバー全体の有効/無効 */}
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">サイドバーを表示する</p>
+              <p className="text-sm text-muted-foreground">
+                ブログページでサイドバーを表示します
+              </p>
+            </div>
+            <Switch
+              checked={sidebarEnabled}
+              onCheckedChange={setSidebarEnabled}
+              disabled={isDisabled}
+            />
+          </div>
+
+          {/* 記事目次サイドバーの有効/無効（独立設定） */}
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">
+                記事の目次サイドバーを表示する
+              </p>
+              <p className="text-sm text-muted-foreground">
+                ブログ・お知らせの記事詳細ページで、見出しから自動生成された目次サイドバーを表示します（見出し（h2）が
+                2 つ以上ある記事のみ）
+              </p>
+            </div>
+            <Switch
+              checked={tocEnabled}
+              onCheckedChange={setTocEnabled}
+              disabled={isDisabled}
+            />
+          </div>
+
+          {/* ウィジェット設定 */}
+          {sidebarEnabled && (
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">ウィジェット</h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenAddDialog}
+                    disabled={isDisabled}
+                  >
+                    <IconPlus className="mr-1.5 h-4 w-4" />
+                    カスタムウィジェット追加
+                  </Button>
+                </div>
+
+                <SidebarWidgetGrid
+                  widgets={widgets}
+                  onDragEnd={handleDragEnd}
+                  onToggle={handleToggleWidget}
+                  onEdit={handleEditWidget}
+                  onDelete={handleDeleteRequest}
+                  disabled={isDisabled}
+                />
               </div>
 
-              <SidebarWidgetGrid
-                widgets={widgets}
-                onDragEnd={handleDragEnd}
-                onToggle={handleToggleWidget}
-                onEdit={handleEditWidget}
-                onDelete={handleDeleteRequest}
-                disabled={isPending}
-              />
-            </div>
+              {/* 記事ウィジェット設定 */}
+              {(recentWidget?.enabled || popularWidget?.enabled) && (
+                <div className="space-y-6">
+                  <h4 className="text-sm font-medium">記事ウィジェット設定</h4>
 
-            {/* 記事ウィジェット設定 */}
-            {(recentWidget?.enabled || popularWidget?.enabled) && (
-              <div className="space-y-6">
-                <h4 className="text-sm font-medium">記事ウィジェット設定</h4>
-
-                {recentWidget?.enabled && (
-                  <div className="space-y-4 rounded-lg border p-4">
-                    <p className="text-sm font-medium">新着記事</p>
-                    <div className="space-y-2">
-                      <Label htmlFor="sidebar-recent-count">表示件数</Label>
-                      <Input
-                        id="sidebar-recent-count"
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={recentCount}
-                        onChange={(e) =>
-                          setRecentCount(parseInt(e.target.value, 10) || 5)
-                        }
-                        disabled={isPending}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        1〜20件の範囲で指定してください
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>レイアウト</Label>
-                      <ToggleGroup
-                        type="single"
-                        value={recentWidget.layout}
-                        onValueChange={(v) => {
-                          if (v === "compact" || v === "stacked") {
-                            handleChangeRecentLayout(v);
+                  {recentWidget?.enabled && (
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <p className="text-sm font-medium">新着記事</p>
+                      <div className="space-y-2">
+                        <Label htmlFor="sidebar-recent-count">表示件数</Label>
+                        <Input
+                          id="sidebar-recent-count"
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={recentCount}
+                          onChange={(e) =>
+                            setRecentCount(parseInt(e.target.value, 10) || 5)
                           }
-                        }}
-                        disabled={isPending}
-                      >
-                        <ToggleGroupItem value="compact">
-                          コンパクト
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="stacked">
-                          縦積み
-                        </ToggleGroupItem>
-                      </ToggleGroup>
-                      <p className="text-sm text-muted-foreground">
-                        コンパクト: 横並びサムネ（5件推奨） / 縦積み:
-                        大きなサムネ（3件推奨）
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {popularWidget?.enabled && (
-                  <div className="space-y-4 rounded-lg border p-4">
-                    <p className="text-sm font-medium">人気記事</p>
-                    <p className="text-sm text-muted-foreground">
-                      現時点では閲覧数トラッキング未実装のため、公開日の新しい順で表示されます（新着と同じ並び）。
-                    </p>
-                    <div className="space-y-2">
-                      <Label htmlFor="sidebar-popular-count">表示件数</Label>
-                      <Input
-                        id="sidebar-popular-count"
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={popularCount}
-                        onChange={(e) =>
-                          setPopularCount(parseInt(e.target.value, 10) || 5)
-                        }
-                        disabled={isPending}
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        1〜20件の範囲で指定してください
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>レイアウト</Label>
-                      <ToggleGroup
-                        type="single"
-                        value={popularWidget.layout}
-                        onValueChange={(v) => {
-                          if (v === "compact" || v === "stacked") {
-                            handleChangePopularLayout(v);
-                          }
-                        }}
-                        disabled={isPending}
-                      >
-                        <ToggleGroupItem value="compact">
-                          コンパクト
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="stacked">
-                          縦積み
-                        </ToggleGroupItem>
-                      </ToggleGroup>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="sidebar-popular-ranking">
-                          ランキング番号を表示
-                        </Label>
+                          disabled={isDisabled}
+                        />
                         <p className="text-sm text-muted-foreground">
-                          サムネイル左上に 01〜 の連番を重ねます
+                          1〜20件の範囲で指定してください
                         </p>
                       </div>
-                      <Switch
-                        id="sidebar-popular-ranking"
-                        checked={popularWidget.showRanking}
-                        onCheckedChange={handleTogglePopularRanking}
-                        disabled={isPending}
-                      />
+                      <div className="space-y-2">
+                        <Label>レイアウト</Label>
+                        <ToggleGroup
+                          type="single"
+                          value={recentWidget.layout}
+                          onValueChange={(v) => {
+                            if (v === "compact" || v === "stacked") {
+                              handleChangeRecentLayout(v);
+                            }
+                          }}
+                          disabled={isDisabled}
+                        >
+                          <ToggleGroupItem value="compact">
+                            コンパクト
+                          </ToggleGroupItem>
+                          <ToggleGroupItem value="stacked">
+                            縦積み
+                          </ToggleGroupItem>
+                        </ToggleGroup>
+                        <p className="text-sm text-muted-foreground">
+                          コンパクト: 横並びサムネ（5件推奨） / 縦積み:
+                          大きなサムネ（3件推奨）
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
+                  )}
 
-        {/* 保存ボタン */}
-        <div className="flex justify-end pt-2">
-          <SubmitButton
-            isPending={isPending}
-            label="サイドバー設定を保存"
-            onClick={handleSave}
-            disabled={!canSave}
-          />
-        </div>
+                  {popularWidget?.enabled && (
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <p className="text-sm font-medium">
+                        注目記事（公開日順）
+                      </p>
+                      <Alert variant="info">
+                        <IconInfoCircle aria-hidden="true" />
+                        <AlertDescription>
+                          閲覧数トラッキング未実装のため、現在は公開日の新しい順で表示されます（新着と同じ並び）。
+                        </AlertDescription>
+                      </Alert>
+                      <div className="space-y-2">
+                        <Label htmlFor="sidebar-popular-count">表示件数</Label>
+                        <Input
+                          id="sidebar-popular-count"
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={popularCount}
+                          onChange={(e) =>
+                            setPopularCount(parseInt(e.target.value, 10) || 5)
+                          }
+                          disabled={isDisabled}
+                        />
+                        <p className="text-sm text-muted-foreground">
+                          1〜20件の範囲で指定してください
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>レイアウト</Label>
+                        <ToggleGroup
+                          type="single"
+                          value={popularWidget.layout}
+                          onValueChange={(v) => {
+                            if (v === "compact" || v === "stacked") {
+                              handleChangePopularLayout(v);
+                            }
+                          }}
+                          disabled={isDisabled}
+                        >
+                          <ToggleGroupItem value="compact">
+                            コンパクト
+                          </ToggleGroupItem>
+                          <ToggleGroupItem value="stacked">
+                            縦積み
+                          </ToggleGroupItem>
+                        </ToggleGroup>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="sidebar-popular-ranking">
+                            ランキング番号を表示
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            サムネイル左上に 01〜 の連番を重ねます
+                          </p>
+                        </div>
+                        <Switch
+                          id="sidebar-popular-ranking"
+                          checked={popularWidget.showRanking}
+                          onCheckedChange={handleTogglePopularRanking}
+                          disabled={isDisabled}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
-        {/* ヒント */}
-        <Accordion type="single" collapsible>
-          <AccordionItem
-            value="hints"
-            className="rounded-lg border bg-muted/50 px-4 border-b last:border-b"
-          >
-            <AccordionTrigger className="text-sm">ヒント</AccordionTrigger>
-            <AccordionContent>
-              <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
-                <li>
-                  サイドバーは記事一覧ページと記事詳細ページで表示されます
-                </li>
-                <li>モバイル表示では自動的に非表示になります</li>
-                <li>ドラッグ&ドロップでウィジェットの表示順を変更できます</li>
-                <li>各ウィジェットは個別にオン/オフできます</li>
-                <li>
-                  カスタムウィジェットでは自由なテキストとリンクを追加できます
-                </li>
-                <li>表示件数は1〜20件の範囲で設定できます</li>
-                <li>
-                  新着・人気記事はコンパクト（横並び）/
-                  縦積みの2種類のレイアウトから選べます
-                </li>
-                <li>
-                  人気記事はサムネイル左上に 01〜 のランキング番号を表示できます
-                </li>
-              </ul>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+          {!readOnly ? (
+            <div className="flex justify-end pt-2">
+              <SubmitButton
+                isPending={isPending}
+                label="サイドバー設定を保存"
+                onClick={handleSave}
+                disabled={!canSave}
+              />
+            </div>
+          ) : null}
+
+          {/* ヒント */}
+          <Accordion type="single" collapsible>
+            <AccordionItem
+              value="hints"
+              className="rounded-lg border bg-muted/50 px-4 border-b last:border-b"
+            >
+              <AccordionTrigger className="text-sm">ヒント</AccordionTrigger>
+              <AccordionContent>
+                <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
+                  <li>
+                    サイドバーは記事一覧ページと記事詳細ページで表示されます
+                  </li>
+                  <li>モバイル表示では自動的に非表示になります</li>
+                  <li>ドラッグ&ドロップでウィジェットの表示順を変更できます</li>
+                  <li>各ウィジェットは個別にオン/オフできます</li>
+                  <li>
+                    カスタムウィジェットでは自由なテキストとリンクを追加できます
+                  </li>
+                  <li>表示件数は1〜20件の範囲で設定できます</li>
+                  <li>
+                    新着・注目記事はコンパクト（横並び）/
+                    縦積みの2種類のレイアウトから選べます
+                  </li>
+                  <li>
+                    注目記事（公開日順）はサムネイル左上に 01〜
+                    のランキング番号を表示できます（閲覧数ではなく表示順の連番です）
+                  </li>
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </fieldset>
       </CardContent>
 
       {/* Custom widget dialog */}

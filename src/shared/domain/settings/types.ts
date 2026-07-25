@@ -75,6 +75,11 @@ export type SettingsData = {
    * キャンセル可、series 全体は「管理者に問い合わせ」導線のみ。
    */
   customerCanCancelSeriesInFull: boolean;
+  /**
+   * 定期予約 (RRULE) の series 展開上限件数。
+   * 管理画面の定期予約フォーム検証・series-commands の展開キャップに使う。
+   */
+  maxRecurrenceInstances: number;
   sendReservationConfirmationEmail: boolean;
   notifyNewReservation: boolean;
   notifyReservationChange: boolean;

@@ -13,6 +13,9 @@ import { createReservationClaimToken } from "@/shared/lib/reservation-claim-toke
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getReservationForCompletion } from "@/shared/domain/reservations/customer-queries";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
+import { getPublicRefundPolicySettings } from "@/shared/domain/settings/public-queries";
+import { formatRefundPolicyDisplayLines } from "@/shared/domain/refund/format-refund-policy-display";
+import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { formatSerializedDate } from "@/shared/lib/serialize";
@@ -58,13 +61,19 @@ export default async function ReservationCompletePage(): Promise<ReactElement> {
       ? verifyCompleteToken(token, reservationDeadlineNow())
       : ({ valid: false } as const);
 
-  const [user, reservation, calendarSettings] = await Promise.all([
-    getCurrentCustomerUser(),
-    verified.valid
-      ? getReservationForCompletion(verified.reservationId)
-      : Promise.resolve(null),
-    getCalendarEmailSettings(),
-  ]);
+  const [user, reservation, calendarSettings, refundPolicy] = await Promise.all(
+    [
+      getCurrentCustomerUser(),
+      verified.valid
+        ? getReservationForCompletion(verified.reservationId)
+        : Promise.resolve(null),
+      getCalendarEmailSettings(),
+      getPublicRefundPolicySettings(),
+    ],
+  );
+  const refundPolicyLines = refundPolicy
+    ? formatRefundPolicyDisplayLines(refundPolicy)
+    : null;
 
   const isLoggedIn = user != null;
   const isCancelled = reservation?.status === ReservationStatus.CANCELLED;
@@ -174,6 +183,13 @@ export default async function ReservationCompletePage(): Promise<ReactElement> {
         <div className="border border-border p-4 sm:p-6">
           <AddToCalendar urls={calendarUrls} variant="public" />
         </div>
+      )}
+
+      {!isCancelled && (
+        <RefundPolicyNotice
+          lines={refundPolicyLines}
+          className="border border-border p-4 sm:p-6"
+        />
       )}
 
       <NextSteps

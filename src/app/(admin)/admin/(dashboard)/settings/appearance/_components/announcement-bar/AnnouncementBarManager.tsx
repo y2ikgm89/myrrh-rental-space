@@ -42,6 +42,7 @@ import { isValidHexColor, type CarouselSettings } from "./types";
 type AnnouncementBarManagerProps = {
   initialBars: Serialized<AnnouncementBarData>[];
   initialCarouselSettings: AnnouncementBarCarouselSettingsInput;
+  readOnly?: boolean;
 };
 
 async function fetchAnnouncementBars(): Promise<{
@@ -61,6 +62,7 @@ async function fetchAnnouncementBars(): Promise<{
 export function AnnouncementBarManager({
   initialBars,
   initialCarouselSettings,
+  readOnly = false,
 }: AnnouncementBarManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [bars, setBars] =
@@ -221,54 +223,61 @@ export function AnnouncementBarManager({
   };
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="bars" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="bars">お知らせ一覧</TabsTrigger>
-          <TabsTrigger value="design">デザイン・カルーセル設定</TabsTrigger>
-        </TabsList>
+    <fieldset
+      disabled={readOnly}
+      className="space-y-6 border-0 p-0 m-0 min-w-0"
+    >
+      <div className="space-y-6">
+        <Tabs defaultValue="bars" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="bars">お知らせ一覧</TabsTrigger>
+            <TabsTrigger value="design">デザイン・カルーセル設定</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="bars">
-          <BarList
-            bars={bars}
-            isPending={isPending}
-            onEdit={openDialog}
-            onCreate={() => openDialog()}
-            onToggleActive={handleToggleActive}
-            onReorder={handleReorder}
-            onDelete={(id) => {
-              setDeletingId(id);
-              setDeleteDialogOpen(true);
-            }}
+          <TabsContent value="bars">
+            <BarList
+              bars={bars}
+              isPending={isPending || readOnly}
+              onEdit={openDialog}
+              onCreate={() => openDialog()}
+              onToggleActive={handleToggleActive}
+              onReorder={handleReorder}
+              onDelete={(id) => {
+                setDeletingId(id);
+                setDeleteDialogOpen(true);
+              }}
+            />
+          </TabsContent>
+
+          <TabsContent value="design">
+            <CarouselSettingsPanel
+              settings={carouselSettings}
+              isPending={isPending || readOnly}
+              onSettingsChange={setCarouselSettings}
+              onSave={handleSaveCarouselSettings}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* mount-on-open: Dialog 内 conform `useForm` の defaultValue を確実に反映 */}
+        {isDialogOpen && !readOnly ? (
+          <BarFormDialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            editingBar={editingBar}
+            onSuccess={loadBars}
           />
-        </TabsContent>
+        ) : null}
 
-        <TabsContent value="design">
-          <CarouselSettingsPanel
-            settings={carouselSettings}
+        {!readOnly ? (
+          <DeleteDialog
+            isOpen={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
             isPending={isPending}
-            onSettingsChange={setCarouselSettings}
-            onSave={handleSaveCarouselSettings}
+            onConfirm={handleDelete}
           />
-        </TabsContent>
-      </Tabs>
-
-      {/* mount-on-open: Dialog 内 conform `useForm` の defaultValue を確実に反映 */}
-      {isDialogOpen && (
-        <BarFormDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          editingBar={editingBar}
-          onSuccess={loadBars}
-        />
-      )}
-
-      <DeleteDialog
-        isOpen={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        isPending={isPending}
-        onConfirm={handleDelete}
-      />
-    </div>
+        ) : null}
+      </div>
+    </fieldset>
   );
 }

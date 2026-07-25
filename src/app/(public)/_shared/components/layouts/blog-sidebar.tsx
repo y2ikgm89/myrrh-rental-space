@@ -29,9 +29,10 @@ function renderWidget(
         />
       );
     case "popular":
+      // viewCount 未実装のため公開日順。type key `popular` は互換のため維持。
       return (
         <SidebarPostList
-          label="Popular"
+          label="Featured"
           posts={data.popularPosts}
           layout={widget.layout}
           showRanking={widget.showRanking}

@@ -159,6 +159,7 @@ interface ReservationFormProps {
   readonly initialSpaceId?: string | undefined;
   readonly requiredTerms?: readonly RequiredTerm[] | undefined;
   readonly isLoggedIn: boolean;
+  readonly refundPolicyLines?: readonly string[] | undefined;
 }
 
 export function ReservationForm({
@@ -172,6 +173,7 @@ export function ReservationForm({
   initialSpaceId,
   requiredTerms = [],
   isLoggedIn,
+  refundPolicyLines,
 }: ReservationFormProps): ReactElement {
   const auto = resolveAutoIds(locations, initialSpaceId);
   const preSelected = auto.locationId != null && auto.spaceId != null;
@@ -636,6 +638,7 @@ export function ReservationForm({
           onTurnstileExpire={handleTurnstileExpire}
           onToggleTerm={toggleTermAgreement}
           onBack={() => goToStep(2)}
+          refundPolicyLines={refundPolicyLines}
         />
       </form>
     );

@@ -10,7 +10,10 @@
 
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { getSettings } from "@/admin/queries/settings";
+import {
+  getSettings,
+  getDataRetentionSettings,
+} from "@/admin/queries/settings";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { parseFeatureModules } from "@/shared/lib/json-validators";
@@ -20,6 +23,7 @@ import {
   type FeatureModule,
 } from "@/shared/lib/features/registry";
 import { FeatureModulesForm } from "./_components/FeatureModulesForm";
+import { DataRetentionSettingsForm } from "./_components/DataRetentionSettingsForm";
 
 export const metadata: Metadata = {
   title: "機能モジュール — 設定",
@@ -31,6 +35,7 @@ export default async function FeaturesSettingsPage() {
   await connection();
 
   const settings = await getSettings();
+  const dataRetention = await getDataRetentionSettings();
   const currentModules = parseFeatureModules(settings.featureModules);
 
   // registry の全 module を network しつつ、未保存の key は false で初期化（fail-closed）
@@ -70,6 +75,7 @@ export default async function FeaturesSettingsPage() {
         initialValues={initialValues}
         moduleDefs={moduleDefs}
       />
+      <DataRetentionSettingsForm initialValues={dataRetention} />
     </AdminDetailLayout>
   );
 }

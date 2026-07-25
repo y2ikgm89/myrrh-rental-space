@@ -26,6 +26,37 @@ export interface ArticleMetadata {
 
 export { getSeoSettings, type SeoSettings };
 
+export interface ResolvedSiteBranding {
+  siteName: string;
+  description: string;
+  ogTitle: string;
+  ogDescription: string;
+}
+
+function nonEmpty(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+/**
+ * SettingsSeo からサイト共通ブランディングを解決する。
+ * null / 空文字は SITE_DEFAULTS にフォールバック。
+ */
+export function resolveSiteBranding(
+  settings: SeoSettings | null,
+): ResolvedSiteBranding {
+  const siteName = nonEmpty(settings?.siteName) ?? SITE_DEFAULTS.name;
+  const description =
+    nonEmpty(settings?.defaultMetaDescription) ??
+    nonEmpty(settings?.siteDescription) ??
+    SITE_DEFAULTS.description;
+  const ogTitle = nonEmpty(settings?.defaultOgpTitle) ?? siteName;
+  const ogDescription =
+    nonEmpty(settings?.defaultOgpDescription) ?? description;
+
+  return { siteName, description, ogTitle, ogDescription };
+}
+
 /**
  * 記事ページメタデータ生成（ブログ・ニュース・スペース・イベント・タクソノミー共通）
  *

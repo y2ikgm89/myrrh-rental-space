@@ -125,6 +125,7 @@ export {
   updateHeaderSettings,
   updateFooterSettings,
   updateFeatureModulesSettings,
+  updateDataRetentionSettings,
 } from "./other";
 
 // =============================================================================

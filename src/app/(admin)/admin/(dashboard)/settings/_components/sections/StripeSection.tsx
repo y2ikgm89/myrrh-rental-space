@@ -20,6 +20,9 @@ import {
 } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
   Card,
   CardContent,
@@ -59,6 +62,7 @@ import {
 import { Checkbox } from "@/admin/components/ui";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { stripeFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -291,6 +295,23 @@ export function StripeSection({ settings }: StripeSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <Alert variant="info">
+            <IconAlertTriangle aria-hidden="true" />
+            <AlertTitle>決済機能 OFF 時の Webhook について</AlertTitle>
+            <AlertDescription>
+              「
+              <Link
+                href="/admin/settings/features"
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                機能モジュール
+              </Link>
+              」で「オンライン決済」を OFF にすると、Stripe Webhook
+              は意図的に拒否されます（503 /
+              DomainError）。処理中の決済が更新されない場合があります（fail-closed）。
+            </AlertDescription>
+          </Alert>
+
           {/* 動作モード（APIキーから自動判定・読み取り専用） */}
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">

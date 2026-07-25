@@ -52,14 +52,16 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
       "アクセス",
       "お問い合わせ",
       "レビュー",
+      "決済",
+      "データ保持",
     ],
   },
   {
     title: "サイト基本",
-    description: "一般設定・連絡先・SEO・投稿のパーマリンク",
+    description: "一般設定・連絡先・SEO",
     href: "/admin/settings/site",
     icon: IconWorld,
-    items: ["一般", "SEO", "投稿"],
+    items: ["一般", "連絡先", "SEO"],
   },
   {
     title: "サイトの見た目",
@@ -96,7 +98,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     description: "メール送信元と管理者通知チャネル",
     href: "/admin/settings/notifications",
     icon: IconBell,
-    items: ["メール", "通知"],
+    items: ["メール", "通知", "テンプレート"],
   },
   {
     title: "外部連携",
@@ -107,8 +109,10 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     items: [
       "Resend",
       "Turnstile",
+      "SwitchBot",
       "Google Maps",
       "Google カレンダー",
+      "Google ビジネスプロフィール",
       "Instagram",
       "カスタム",
     ],
@@ -119,7 +123,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     href: "/admin/settings/system",
     icon: IconSettings,
     requiredPermission: { resource: "settings", action: "manage" },
-    items: ["メンテナンス", "Cookie", "管理ロール"],
+    items: ["メンテナンス", "Cookie", "権限"],
   },
 ];
 

@@ -15,17 +15,24 @@
  * next.config > Route Handler / project_cloudflare-cdn-cache-control-2026-06-17 参照)。
  *
  * `export const dynamic` は cacheComponents 有効下では非互換のため使用不可。
- * Cloudflare エッジが s-maxage=3600 で吸収し、リクエスト毎のハンドラ実行コストは無視できる
- * (純粋な文字列生成のみで DB / I/O なし)。
+ * Cloudflare エッジが s-maxage=3600 で吸収する。getSeoSettings は 'use cache' のため
+ * `await connection()` で build prerender 汚染を避ける。
  */
-import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { connection } from "next/server";
+import { getBaseUrl } from "@/shared/lib/constants";
+import {
+  getSeoSettings,
+  resolveSiteBranding,
+} from "@/public/lib/seo/metadata-factory";
 
-export function GET(): Response {
+export async function GET(): Promise<Response> {
+  await connection();
+  const { siteName, description } = resolveSiteBranding(await getSeoSettings());
   const baseUrl = getBaseUrl();
 
-  const body = `# ${SITE_DEFAULTS.name}
+  const body = `# ${siteName}
 
-> ${SITE_DEFAULTS.description}
+> ${description}
 
 このサイトはレンタルスペースの予約・問い合わせを提供するウェブサイトです。利用者は空室確認・オンライン予約・イベント情報の閲覧・お問い合わせを行えます。
 

@@ -94,6 +94,7 @@ export function FeatureModulesForm({
           {moduleDefs.map((mod) => {
             const field = fields[mod.id];
             if (!field) return null;
+            const depsMet = areModuleDepsMet(mod.requires, fields);
             return (
               <ModuleSwitchRow
                 key={mod.id}
@@ -101,6 +102,7 @@ export function FeatureModulesForm({
                 moduleDefs={moduleDefs}
                 field={field}
                 isPending={isPending}
+                depsMet={depsMet}
               />
             );
           })}
@@ -122,19 +124,30 @@ export function FeatureModulesForm({
  * useInputControl は Hook のため map() 内で直接呼べず、sub-component に
  * 切り出して各行で個別に呼ぶ canonical pattern。
  */
+function areModuleDepsMet(
+  requires: readonly FeatureModule[],
+  fields: Record<string, FieldMetadata<string> | undefined>,
+): boolean {
+  return requires.every((req) => fields[req]?.value === "on");
+}
+
 function ModuleSwitchRow({
   mod,
   moduleDefs,
   field,
   isPending,
+  depsMet,
 }: {
   readonly mod: ModuleDef;
   readonly moduleDefs: readonly ModuleDef[];
   readonly field: FieldMetadata<string>;
   readonly isPending: boolean;
+  readonly depsMet: boolean;
 }) {
   const control = useInputControl(field);
   const isOn = control.value === "on";
+  const disabledDueToDeps = !depsMet;
+  const switchDisabled = isPending || disabledDueToDeps;
 
   return (
     <div className="flex items-start justify-between rounded-lg border p-4">
@@ -158,6 +171,13 @@ function ModuleSwitchRow({
             （OFF にすると本機能も自動的に OFF として扱われます）
           </p>
         )}
+        {disabledDueToDeps && (
+          <p className="text-xs text-muted-foreground">
+            依存機能が OFF
+            のため操作できません。表示は保存値のままですが、実行時は OFF
+            として扱われます。
+          </p>
+        )}
         {field.errors && (
           <p id={field.errorId} className="text-xs text-destructive">
             {field.errors.join(", ")}
@@ -169,7 +189,7 @@ function ModuleSwitchRow({
         checked={isOn}
         onCheckedChange={(checked) => control.change(checked ? "on" : "")}
         onBlur={control.blur}
-        disabled={isPending}
+        disabled={switchDisabled}
       />
       <input type="hidden" name={field.name} value={control.value ?? ""} />
     </div>

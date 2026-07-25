@@ -20,6 +20,9 @@ const mockSettingsCommerceUpsert = mock<
 const mockSettingsReservationUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsDataRetentionUpsert = mock<
+  (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
 
 mock.module("server-only", () => ({}));
 
@@ -48,6 +51,9 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsReservation: {
       upsert: mockSettingsReservationUpsert,
+    },
+    settingsDataRetention: {
+      upsert: mockSettingsDataRetentionUpsert,
     },
   },
   Prisma: {
@@ -97,6 +103,7 @@ import {
   updateHeaderSettings,
   updateLayoutSettings,
   updateContactInfo,
+  updateDataRetentionSettings,
 } from "@/shared/domain/settings/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -132,6 +139,8 @@ const RESERVATION_SETTINGS_INPUT = {
   maxReservationDuration: 480,
   cancellationDeadlineHours: 24,
   modificationDeadlineHours: 24,
+  customerCanCancelSeriesInFull: false,
+  maxRecurrenceInstances: 26,
 };
 
 const DISCOUNT_SETTINGS_INPUT = {
@@ -679,5 +688,39 @@ describe("updateContactInfo", () => {
         }),
       );
     });
+  });
+});
+
+// =============================================================================
+// updateDataRetentionSettings
+// =============================================================================
+
+describe("updateDataRetentionSettings", () => {
+  beforeEach(() => {
+    mockSettingsDataRetentionUpsert.mockReset();
+    mockSettingsDataRetentionUpsert.mockResolvedValue({ id: "singleton" });
+  });
+
+  test("保持月数 config を settingsDataRetention に upsert する", async () => {
+    const config = {
+      sessionMonths: 6,
+      verificationMonths: 6,
+      loginAttemptMonths: 6,
+      reservationGuestMonths: 12,
+      inquiryMonths: 36,
+      customerInactiveMonths: 84,
+    };
+
+    await updateDataRetentionSettings(config);
+
+    expect(mockSettingsDataRetentionUpsert).toHaveBeenCalledTimes(1);
+    expect(mockSettingsDataRetentionUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "singleton" },
+        update: expect.objectContaining({
+          dataRetention: config,
+        }),
+      }),
+    );
   });
 });

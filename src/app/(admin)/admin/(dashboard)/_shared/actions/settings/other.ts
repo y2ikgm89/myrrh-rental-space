@@ -31,6 +31,7 @@ import {
   announcementBarCarouselSettingsSchema,
   headerSettingsSchema,
   featureModulesSettingsSchema,
+  dataRetentionSettingsSchema,
   type AnnouncementBarCarouselSettingsInput,
 } from "./schemas";
 import { emptyToNull } from "./schemas/form-schema-helpers";
@@ -302,6 +303,36 @@ export async function updateFeatureModulesSettings(
             CACHE_TAGS.PAGES,
             CACHE_TAGS.REVIEWS,
           ]);
+        },
+      });
+      if (isMutationError(result)) {
+        return { ok: false, error: result.error };
+      }
+      return { ok: true };
+    },
+  );
+}
+
+/**
+ * データ保持ポリシー（保持月数）の更新 — conform `useActionState` 統合経路。
+ *
+ * 実 purge は feature module `data-retention` が ON かつ月数 > 0 の field のみ
+ * cron から実行される。cache invalidation は不要（公開面に露出しない設定）。
+ */
+export async function updateDataRetentionSettings(
+  _prev: SubmissionResult | undefined,
+  formData: FormData,
+): Promise<SubmissionResult> {
+  return executeConformMutation(
+    formData,
+    dataRetentionSettingsSchema,
+    async (data) => {
+      const result = await executeAdminMutationResult({
+        resource: "settings",
+        action: "manage",
+        execute: async () => {
+          await settingsCommands.updateDataRetentionSettings(data);
+          return null;
         },
       });
       if (isMutationError(result)) {

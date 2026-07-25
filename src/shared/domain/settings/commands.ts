@@ -14,7 +14,10 @@ import type {
 import { DomainError } from "@/shared/domain/domain-error";
 import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-image-assertions";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
-import type { BusinessHours } from "@/shared/lib/json-validators";
+import type {
+  BusinessHours,
+  DataRetentionConfig,
+} from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
 export type BasicInfoInput = {
@@ -124,6 +127,8 @@ export type ReservationSettingsInput = {
   maxReservationDuration: number;
   cancellationDeadlineHours: number;
   modificationDeadlineHours: number;
+  customerCanCancelSeriesInFull: boolean;
+  maxRecurrenceInstances: number;
 };
 
 export type HeaderSettingsInput = {
@@ -649,5 +654,26 @@ export async function updateFeatureModulesCommand(
     where: { id: "singleton" },
     create: { id: "singleton", featureModules },
     update: { featureModules },
+  });
+}
+
+/**
+ * データ保持ポリシー（保持月数）を SettingsDataRetention.dataRetention JSON に書き込む。
+ *
+ * 入力は schema 層（`dataRetentionSettingsSchema`）で全 6 key の非負整数必須に
+ * 検証済み。`0` は該当テーブルの opt-out（cron 側で skip）。
+ */
+export async function updateDataRetentionSettings(
+  config: DataRetentionConfig,
+): Promise<void> {
+  const dataRetention = asPrismaInputJsonValue(
+    config,
+    "dataRetention が不正です",
+  );
+
+  await prisma.settingsDataRetention.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", dataRetention },
+    update: { dataRetention },
   });
 }
