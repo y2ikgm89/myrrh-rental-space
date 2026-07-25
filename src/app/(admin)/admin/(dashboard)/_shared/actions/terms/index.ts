@@ -4,9 +4,14 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { invalidateSiteWideCache, firePurgeAsync } from "@/shared/lib/cache";
+import {
+  invalidateSiteWideCache,
+  firePurgeAsync,
+  queueTagPurge,
+} from "@/shared/lib/cache";
 import { purgeCloudflareDetailUrls } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { CDN_CACHE_TAGS } from "@/shared/lib/constants/cdn-cache-tags";
 import {
   createTermsCommand,
   hardDeleteTermsCommand,
@@ -41,6 +46,9 @@ function invalidateTermsCaches(slug?: string, previousSlug?: string): void {
   // a future reader tagged with ONLY a sub-tag silently misses invalidation.
   invalidateSiteWideCache(CACHE_TAGS.TERMS);
   updateTag(getCacheTag.terms.footer());
+  // Footer links are tagged terms-footer-v1 on every public layout response;
+  // TERMS → TERMS_DETAIL mapping alone does not purge that tag.
+  queueTagPurge(CDN_CACHE_TAGS.TERMS_FOOTER);
   if (slug) updateTag(getCacheTag.terms.detail(slug));
   if (previousSlug && previousSlug !== slug) {
     updateTag(getCacheTag.terms.detail(previousSlug));

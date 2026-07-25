@@ -139,6 +139,15 @@ describe("Terms RESERVATION_SERIES scope (Phase B.2 task 10)", () => {
     });
 
     expect(result).toHaveLength(3);
+    expect(mockTermsDocumentFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          scopes: { has: "RESERVATION_SERIES" },
+          isPublished: true,
+          deletedAt: null,
+        }),
+      }),
+    );
     expect(mockTermsAgreementCreateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.arrayContaining([
@@ -160,5 +169,19 @@ describe("Terms RESERVATION_SERIES scope (Phase B.2 task 10)", () => {
         ]),
       }),
     );
+  });
+
+  test("recordTermsAgreements: 未解決 termsId あり → DomainError（fail-closed）", async () => {
+    mockTermsDocumentFindMany.mockImplementation(() =>
+      Promise.resolve([{ id: "doc-1", contentHtml: "<p>第1条</p>" }]),
+    );
+
+    await expect(
+      recordTermsAgreements({
+        scope: "RESERVATION_SERIES",
+        agreements: [{ termsId: "doc-1" }, { termsId: "doc-missing" }],
+      }),
+    ).rejects.toThrow("この同意 scope の対象ではありません");
+    expect(mockTermsAgreementCreateMany).not.toHaveBeenCalled();
   });
 });

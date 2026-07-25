@@ -18,7 +18,7 @@ export async function generateMetadata({
 
   const { id } = await params;
   const terms = await getAdminTermsById(id);
-  if (!terms) {
+  if (!terms || terms.deletedAt != null) {
     return { title: "規約が見つかりません | Myrrh Rental Space" };
   }
   return { title: `${terms.title} 編集 | Myrrh Rental Space` };
@@ -30,7 +30,7 @@ export default async function EditTermsPage({ params }: PageProps) {
   const { id } = await params;
   const terms = await getAdminTermsById(id);
 
-  if (!terms) {
+  if (!terms || terms.deletedAt != null) {
     notFound();
   }
 

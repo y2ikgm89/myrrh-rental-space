@@ -8,10 +8,13 @@ import {
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { DomainError } from "@/shared/domain/domain-error";
 import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
+import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
+import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   SIGNUP_TERMS_COOKIE_MAX_AGE_SECONDS,
   SIGNUP_TERMS_COOKIE_NAME,
@@ -54,6 +57,18 @@ export async function setSignupTermsAgreementCookie(input: {
   });
   if (!turnstileResult.success) {
     return createMutationError(turnstileResult.error);
+  }
+
+  try {
+    await assertAllRequiredTermsAgreed({
+      scope: TermsScope.LOGIN_SIGNUP,
+      agreedTermsIds: parsed.data.termsIds,
+    });
+  } catch (error) {
+    if (error instanceof DomainError) {
+      return createMutationError(error.message);
+    }
+    throw error;
   }
 
   const cookieStore = await cookies();

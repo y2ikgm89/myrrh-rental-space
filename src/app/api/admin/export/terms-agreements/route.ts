@@ -53,13 +53,15 @@ export async function GET(request: Request): Promise<Response> {
     const termsId = nonEmpty(url.searchParams.get("termsId"));
     const guestEmailKeyword = nonEmpty(url.searchParams.get("guestEmail"));
 
-    const { items } = await getAdminAgreements({
+    const { items, total } = await getAdminAgreements({
       page: 1,
       perPage: MAX_EXPORT_ROWS,
       ...(scope !== undefined && { scope }),
       ...(termsId !== undefined && { termsId }),
       ...(guestEmailKeyword !== undefined && { guestEmailKeyword }),
     });
+
+    const truncated = total > MAX_EXPORT_ROWS;
 
     await createAuditLogRecord({
       userId: auth.user.id,
@@ -68,6 +70,8 @@ export async function GET(request: Request): Promise<Response> {
       metadata: {
         format: "csv",
         exportedCount: items.length,
+        totalCount: total,
+        ...(truncated && { truncated: true }),
         filters: {
           ...(scope !== undefined && { scope }),
           ...(termsId !== undefined && { termsId }),
@@ -121,6 +125,7 @@ export async function GET(request: Request): Promise<Response> {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "private, no-store",
+        ...(truncated && { "X-Export-Truncated": "true" }),
       },
     });
   } catch (error) {

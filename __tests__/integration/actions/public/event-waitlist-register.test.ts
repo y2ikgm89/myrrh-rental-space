@@ -67,9 +67,8 @@ mock.module("@/shared/domain/terms/queries", () => ({
   getReagreeRequiredTermsForCustomer: mock(() => Promise.resolve([])),
 }));
 
-mock.module("@/shared/domain/terms/commands", () => ({
-  recordTermsAgreementsCommand: mock(() => Promise.resolve({ count: 0 })),
-}));
+// TermsAgreement 記録は registerWaitlistEntryCommand（domain）の同一 tx 内で行われる。
+// action 層から recordTermsAgreementsCommand は呼ばない。
 
 mock.module("@/shared/lib/customer-auth", () => ({
   getCustomerSession: mock(() => Promise.resolve(null)),

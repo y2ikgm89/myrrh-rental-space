@@ -32,7 +32,6 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
-import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
@@ -105,6 +104,8 @@ export async function submitInquiry(
     const userAgent = headersList.get("user-agent");
 
     try {
+      // TermsAgreement は createInquiryCommand 内の同一 tx で記録する
+      // （問い合わせ成立と法務 evidence の atomicity。reservation 経路と同契約）。
       const result = await createInquiryCommand({
         name: `${data.lastName} ${data.firstName}`,
         companyName: data.companyName || null,
@@ -114,20 +115,10 @@ export async function submitInquiry(
         message: data.message,
         customerType: data.customerType,
         customerId,
+        agreedTermsIds: data.agreedTermsIds,
+        ipAddress: clientIp,
+        userAgent: userAgent ?? null,
       });
-
-      if (data.agreedTermsIds.length > 0) {
-        // 法務 evidence は await で確実に記録する。
-        await recordTermsAgreementsCommand({
-          termsIds: data.agreedTermsIds,
-          scope: TermsScope.INQUIRY,
-          resourceId: result.id,
-          customerId,
-          guestEmail: customerId ? null : data.email,
-          ipAddress: clientIp,
-          userAgent: userAgent ?? null,
-        });
-      }
 
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(CACHE_TAGS.CUSTOMERS);

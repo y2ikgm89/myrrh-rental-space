@@ -65,7 +65,11 @@ describe("display order surfaces clean-break contract", () => {
 
     expect(source).toContain("displayOrder");
     expect(source).not.toContain("footerOrder");
-    expect(source).toContain("export const termsFormSchema = z.strictObject({");
+    // Prettier may break `z.strictObject` onto the next line when `.superRefine`
+    // is chained; match the export + strictObject contract, not a single-line shape.
+    expect(source).toMatch(
+      /export const termsFormSchema = z\s*\n?\s*\.strictObject\(\{/u,
+    );
     expect(source).toContain(
       "export const termsSettingsFormSchema = z.strictObject({",
     );

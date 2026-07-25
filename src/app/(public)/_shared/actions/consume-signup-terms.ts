@@ -5,6 +5,7 @@ import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import { hasTermsAgreementRecorded } from "@/shared/domain/terms/queries";
+import { assertAllRequiredTermsAgreed } from "@/shared/lib/terms-consent-gate";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
 import {
   SIGNUP_TERMS_COOKIE_NAME,
@@ -62,9 +63,10 @@ export async function consumeSignupTermsAction(_input: {
   const { user } = await verifyCustomerSession();
   const { customer } = await ensureCustomerLinked(user);
 
-  // Idempotency: 同じ customer + LOGIN_SIGNUP scope + 該当 termsIds のいずれかで
-  // 既に TermsAgreement が記録されていれば cookie は「消費済みだが削除が persist
-  // しなかった residual」と見做し、insert せず cookie だけ削除する。
+  // Idempotency: 同じ customer + LOGIN_SIGNUP scope + 要求 termsIds がすべて
+  // 揃って記録済みなら cookie は「消費済みだが削除が persist しなかった
+  // residual」と見做し、insert せず cookie だけ削除する。
+  // 1 件でも欠ける場合は false（部分記録は idempotent とみなさない）。
   // append-only 契約 (upsert しない、insert only + collision → skip) を維持。
   const alreadyRecorded = await hasTermsAgreementRecorded({
     customerId: customer.id,
@@ -75,6 +77,13 @@ export async function consumeSignupTermsAction(_input: {
     cookieStore.delete(SIGNUP_TERMS_COOKIE_NAME);
     return;
   }
+
+  // cookie は OAuth 直前の同意集合を保持するが、消費時点の required scope と
+  // 乖離している可能性がある (admin publish / scope 変更)。記録前に再 gate する。
+  await assertAllRequiredTermsAgreed({
+    scope: TermsScope.LOGIN_SIGNUP,
+    agreedTermsIds: termsIds,
+  });
 
   const clientIp = await getClientIpFromHeaders();
   const headersList = await headers();

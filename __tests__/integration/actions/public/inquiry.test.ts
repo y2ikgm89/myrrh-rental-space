@@ -80,22 +80,18 @@ mock.module("@/shared/lib/email/contact-emails", () => ({
   sendContactAdminNotification: mockSendContactAdminNotification,
 }));
 
-// terms 系: server-side consent gate + 記録コマンドを no-op に。
+// terms 系: server-side consent gate を no-op に。
 // `assertAllRequiredTermsAgreed` は内部で `getRequiredTermsByScope` を呼び、
 // 未モックだと Prisma `'use cache'` 経路で SyntaxError 化するため明示的に空配列を返す。
+// TermsAgreement 記録は createInquiryCommand（domain、本 test では mock）
+// の同一 tx 内で行われる。action 層から recordTermsAgreementsCommand は呼ばない。
 const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));
-const mockRecordTermsAgreementsCommand = mock(() =>
-  Promise.resolve({ count: 0 }),
-);
 mock.module("@/shared/domain/terms/queries", () => ({
   getRequiredTermsByScope: mockGetRequiredTermsByScope,
   // Phase 2 (TERMS-REAGREE-P2): terms-consent-gate.ts が本 module から
   // getReagreeRequiredTermsForCustomer を新規 import したため、
   // module 全体差し替え mock ではここに no-op を明示する必要がある。
   getReagreeRequiredTermsForCustomer: mock(() => Promise.resolve([])),
-}));
-mock.module("@/shared/domain/terms/commands", () => ({
-  recordTermsAgreementsCommand: mockRecordTermsAgreementsCommand,
 }));
 
 const mockUpdateTag = mock(() => undefined);
@@ -235,7 +231,6 @@ describe("submitInquiry", () => {
     mockSendContactAdminNotification.mockClear();
     mockUpdateTag.mockClear();
     mockGetRequiredTermsByScope.mockClear();
-    mockRecordTermsAgreementsCommand.mockClear();
     mockGetRequiredTermsByScope.mockImplementation(() => Promise.resolve([]));
     // 成功レスポンスにリセット
     mockValidateTurnstile.mockImplementation(() =>

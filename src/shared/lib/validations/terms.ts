@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isEmptyLexicalEditorStateJson } from "@/shared/lib/lexical/is-empty-editor-state-json";
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import {
@@ -128,19 +129,30 @@ const termsScopeSchema = z.enum(TERMS_SCOPE_VALUES, {
  *
  * `displayOrder` はシステム管理（D&D 並び替えが SSoT、手動入力なし）。
  * `scopes` は重複を許さず TermsScope enum 値のみ受理する。
+ * `isPublished: true` のとき空 Lexical 本文は拒否する（公開 gate）。
  */
-export const termsFormSchema = z.strictObject({
-  type: typeSchema,
-  slug: slugSchema,
-  title: titleSchema,
-  contentJson: lexicalJsonSchema,
-  isPublished: z.boolean(),
-  /** 同意必須にする scope 配列 (空配列なら consent UI に出さない・フッター掲載のみ可) */
-  scopes: z.array(termsScopeSchema).default([]),
-  /** 改訂時の周知文 (任意・将来 mypage 通知で利用) */
-  changelog: z.string().max(2000).nullable().default(null),
-  showInFooter: z.boolean(),
-});
+export const termsFormSchema = z
+  .strictObject({
+    type: typeSchema,
+    slug: slugSchema,
+    title: titleSchema,
+    contentJson: lexicalJsonSchema,
+    isPublished: z.boolean(),
+    /** 同意必須にする scope 配列 (空配列なら consent UI に出さない・フッター掲載のみ可) */
+    scopes: z.array(termsScopeSchema).default([]),
+    /** 改訂時の周知文 (任意・将来 mypage 通知で利用) */
+    changelog: z.string().max(2000).nullable().default(null),
+    showInFooter: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.isPublished && isEmptyLexicalEditorStateJson(data.contentJson)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["contentJson"],
+        message: "公開するには本文を入力してください",
+      });
+    }
+  });
 
 /** Server Actions 経由の永続化入力（contentHtml は server 側で contentJson から派生） */
 export type TermsMutationInput = z.infer<typeof termsFormSchema>;

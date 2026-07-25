@@ -36,11 +36,41 @@ describe("TERMS_CONTENT_WIDTH — editor ↔ public WYSIWYG consistency", () => 
 });
 
 describe("termsFormSchema clean-break contract", () => {
+  const nonEmptyContentJson = JSON.stringify({
+    root: {
+      children: [
+        {
+          children: [
+            {
+              detail: 0,
+              format: 0,
+              mode: "normal",
+              style: "",
+              text: "プライバシーポリシー本文",
+              type: "text",
+              version: 1,
+            },
+          ],
+          direction: null,
+          format: "",
+          indent: 0,
+          type: "paragraph",
+          version: 1,
+        },
+      ],
+      direction: null,
+      format: "",
+      indent: 0,
+      type: "root",
+      version: 1,
+    },
+  });
+
   const validInput = {
     type: "privacy-policy",
     slug: "privacy-policy",
     title: "プライバシーポリシー",
-    contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+    contentJson: nonEmptyContentJson,
     isPublished: true,
     scopes: [],
     changelog: null,
@@ -49,6 +79,24 @@ describe("termsFormSchema clean-break contract", () => {
 
   it("accepts the current mutation contract", () => {
     expect(termsFormSchema.safeParse(validInput).success).toBe(true);
+  });
+
+  it("rejects empty Lexical body when isPublished is true", () => {
+    const result = termsFormSchema.safeParse({
+      ...validInput,
+      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+      isPublished: true,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts empty Lexical body when isPublished is false (draft)", () => {
+    const result = termsFormSchema.safeParse({
+      ...validInput,
+      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+      isPublished: false,
+    });
+    expect(result.success).toBe(true);
   });
 
   it.each([

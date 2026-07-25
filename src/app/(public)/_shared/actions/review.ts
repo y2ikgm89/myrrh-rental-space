@@ -15,6 +15,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
@@ -53,6 +54,7 @@ export async function submitReview(
 
     try {
       await assertCustomerActive(customer.id);
+      await assertLoginSignupReagreed(customer.id);
       const result = await createReviewCommand({
         customerId: customer.id,
         reservationId: data.reservationId,
