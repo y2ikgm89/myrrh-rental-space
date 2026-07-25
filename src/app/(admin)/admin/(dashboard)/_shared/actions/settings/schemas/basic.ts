@@ -111,6 +111,13 @@ export const reservationSettingsSchema = z.object({
   // OFF (未送信) を許容するため switchBoolean() 経由 (bare z.boolean() は
   // parseWithZod で undefined 弾き)。
   customerCanCancelSeriesInFull: switchBoolean(),
+  // 定期予約 (RRULE) 展開の上限。form validation / series-commands が参照する。
+  // 104 = 週次×2年相当の上限として妥当なキャップ。
+  maxRecurrenceInstances: z
+    .number({ error: "定期予約の最大件数を入力してください" })
+    .int({ error: "整数で入力してください" })
+    .min(1, { error: "定期予約の最大件数は1以上で入力してください" })
+    .max(104, { error: "定期予約の最大件数は104以下で入力してください" }),
 });
 
 export type ReservationSettingsInput = z.infer<
@@ -140,6 +147,29 @@ export const featureModulesSettingsSchema = z.object({
 
 export type FeatureModulesSettingsInput = z.infer<
   typeof featureModulesSettingsSchema
+>;
+
+// =============================================================================
+// Data Retention（保持月数 — SettingsDataRetention.dataRetention JSON）
+// =============================================================================
+
+const retentionMonthsField = (label: string) =>
+  z.coerce
+    .number({ error: `${label}を入力してください` })
+    .int({ error: `${label}は整数で入力してください` })
+    .min(0, { error: `${label}は0以上で入力してください` });
+
+export const dataRetentionSettingsSchema = z.object({
+  sessionMonths: retentionMonthsField("セッション保持月数"),
+  verificationMonths: retentionMonthsField("認証トークン保持月数"),
+  loginAttemptMonths: retentionMonthsField("ログイン試行記録保持月数"),
+  reservationGuestMonths: retentionMonthsField("予約ゲスト情報保持月数"),
+  inquiryMonths: retentionMonthsField("問い合わせ保持月数"),
+  customerInactiveMonths: retentionMonthsField("非アクティブ顧客保持月数"),
+});
+
+export type DataRetentionSettingsInput = z.infer<
+  typeof dataRetentionSettingsSchema
 >;
 
 // Re-export from validations for sidebar

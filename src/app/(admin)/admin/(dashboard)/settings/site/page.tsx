@@ -13,6 +13,8 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -24,7 +26,12 @@ import type { ReactElement } from "react";
 
 async function SiteSettingsContent(): Promise<ReactElement> {
   await connection();
-  const settings = await getSettings();
+  const [settings, user] = await Promise.all([
+    getSettings(),
+    requireAdminPermission("settings", "read"),
+  ]);
+  const canUpdate = hasPermission(user.role, "settings", "update");
+  const readOnly = !canUpdate;
 
   if (!settings) {
     return (
@@ -40,8 +47,8 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       label: "一般",
       content: (
         <div className="space-y-6">
-          <BasicInfoSection settings={settings} />
-          <ContactInfoSection settings={settings} />
+          <BasicInfoSection settings={settings} readOnly={readOnly} />
+          <ContactInfoSection settings={settings} readOnly={readOnly} />
         </div>
       ),
     },
@@ -50,7 +57,7 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       label: "SEO",
       content: (
         <div className="space-y-6">
-          <SeoSection settings={settings} />
+          <SeoSection settings={settings} readOnly={readOnly} />
         </div>
       ),
     },
@@ -74,8 +81,16 @@ function SiteSettingsLoading(): ReactElement {
 }
 
 export default async function SiteSettingsPage(): Promise<ReactElement> {
+  await connection();
+  const user = await requireAdminPermission("settings", "read");
+  const readOnly = !hasPermission(user.role, "settings", "update");
+
   return (
-    <SettingsLayout title="サイト基本" description="一般設定・連絡先・SEO">
+    <SettingsLayout
+      title="サイト基本"
+      description="一般設定・連絡先・SEO"
+      readOnly={readOnly}
+    >
       <Suspense fallback={<SiteSettingsLoading />}>
         <SiteSettingsContent />
       </Suspense>

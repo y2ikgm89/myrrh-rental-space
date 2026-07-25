@@ -1,7 +1,11 @@
 import "server-only";
 
 import { DomainError } from "@/shared/domain/domain-error";
-import { getStripeSettings } from "@/shared/domain/settings/queries/integration";
+import {
+  getStripeCredentialCiphertext,
+  getStripeSettings,
+} from "@/shared/domain/settings/queries/integration";
+import { serverEnv } from "@/shared/lib/env/server";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 
 /**
@@ -35,7 +39,7 @@ import { isFeatureEnabled } from "@/shared/lib/features/check";
  * 拾い、UI では出し分けない）。
  */
 export interface StripeCredentials {
-  readonly stripeSecretKey: string;
+  readonly stripeSecretKey: string | null;
   readonly stripeWebhookSecret: string;
   readonly stripePublishableKey: string | null;
   readonly stripeAccountId: string | null;
@@ -51,8 +55,16 @@ export async function assertOnlinePaymentAvailable(): Promise<StripeCredentials>
     );
   }
 
-  const settings = await getStripeSettings();
-  if (!settings?.stripeSecretKey || !settings.stripeWebhookSecret) {
+  const [publicSettings, credentials] = await Promise.all([
+    getStripeSettings(),
+    getStripeCredentialCiphertext(),
+  ]);
+
+  const hasSecretKey = Boolean(
+    credentials?.stripeSecretKey || serverEnv.STRIPE_SECRET_KEY,
+  );
+  const webhookCiphertext = credentials?.stripeWebhookSecret;
+  if (!hasSecretKey || !webhookCiphertext) {
     throw new DomainError(
       "Stripe の設定が正しくありません。管理者にお問い合わせください。",
       "VALIDATION",
@@ -60,11 +72,13 @@ export async function assertOnlinePaymentAvailable(): Promise<StripeCredentials>
   }
 
   return {
-    stripeSecretKey: settings.stripeSecretKey,
-    stripeWebhookSecret: settings.stripeWebhookSecret,
-    stripePublishableKey: settings.stripePublishableKey ?? null,
-    stripeAccountId: settings.stripeAccountId ?? null,
-    stripeCurrency: settings.stripeCurrency ?? "jpy",
-    stripePaymentMethodTypes: settings.stripePaymentMethodTypes,
+    stripeSecretKey: credentials?.stripeSecretKey ?? null,
+    stripeWebhookSecret: webhookCiphertext,
+    stripePublishableKey: publicSettings?.stripePublishableKey ?? null,
+    stripeAccountId: publicSettings?.stripeAccountId ?? null,
+    stripeCurrency: publicSettings?.stripeCurrency ?? "jpy",
+    stripePaymentMethodTypes: publicSettings?.stripePaymentMethodTypes ?? [
+      "card",
+    ],
   };
 }

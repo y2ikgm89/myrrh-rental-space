@@ -15,6 +15,8 @@ export {
   type ReservationSettingsInput,
   featureModulesSettingsSchema,
   type FeatureModulesSettingsInput,
+  dataRetentionSettingsSchema,
+  type DataRetentionSettingsInput,
   sidebarSettingsSchema,
 } from "./basic";
 

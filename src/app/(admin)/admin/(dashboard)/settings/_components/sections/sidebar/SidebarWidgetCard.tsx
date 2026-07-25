@@ -30,7 +30,8 @@ import type {
 const WIDGET_LABELS: Record<string, string> = {
   search: "検索",
   recent: "新着記事",
-  popular: "人気記事",
+  // viewCount 未実装のため公開日順。JSON type key `popular` は互換のため維持。
+  popular: "注目記事（公開日順）",
   categories: "カテゴリー",
   tags: "タグ",
 };
@@ -129,6 +130,11 @@ export function SidebarWidgetCard({
       {/* Label */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{label}</p>
+        {widget.type === "popular" && (
+          <p className="text-xs text-muted-foreground truncate">
+            閲覧数トラッキング未実装のため公開日の新しい順
+          </p>
+        )}
         {widget.type === "custom" && widget.description && (
           <p className="text-xs text-muted-foreground truncate">
             {widget.description}

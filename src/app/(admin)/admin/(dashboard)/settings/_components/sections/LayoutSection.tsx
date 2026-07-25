@@ -46,8 +46,12 @@ import {
 } from "@/shared/lib/styles/layout-mapper";
 import type { WidthPreset } from "@/shared/lib/styles/layout-mapper";
 import { keysOf } from "@/shared/lib/serialize";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
-interface LayoutSectionProps {
+interface LayoutSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
@@ -85,12 +89,16 @@ function resolvePresetPx(
   return presets[width].px;
 }
 
-export function LayoutSection({ settings }: LayoutSectionProps) {
+export function LayoutSection({
+  settings,
+  readOnly = false,
+}: LayoutSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateLayoutSettings,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   const [form, fields] = useForm({
     id: "layout-settings",
@@ -176,215 +184,224 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">サイト全体の幅</h4>
-                <p className="text-xs text-muted-foreground">
-                  ヘッダー、フッター、コンテンツ領域全体の最大幅
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={fields.containerWidth.id}>サイト幅</Label>
-                <Select
-                  value={containerWidth}
-                  onValueChange={(value) => {
-                    if (isValidLayoutWidth(value))
-                      containerWidthControl.change(value);
-                  }}
-                  disabled={isPending}
-                >
-                  <SelectTrigger
-                    id={fields.containerWidth.id}
-                    aria-invalid={
-                      fields.containerWidth.errors ? true : undefined
-                    }
-                    aria-describedby={
-                      fields.containerWidth.errors
-                        ? fields.containerWidth.errorId
-                        : undefined
-                    }
-                  >
-                    <SelectValue placeholder="幅を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {siteWidthOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fields.containerWidth.errors && (
-                  <p
-                    id={fields.containerWidth.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.containerWidth.errors.join(", ")}
-                  </p>
-                )}
-              </div>
-
-              {containerWidth === LayoutWidth.CUSTOM && (
-                <div className="space-y-2">
-                  <Label htmlFor={fields.containerWidthCustom.id}>
-                    カスタム幅 (px)
-                  </Label>
-                  <Input
-                    {...getInputProps(fields.containerWidthCustom, {
-                      type: "number",
-                    })}
-                    min={320}
-                    max={2560}
-                    placeholder="例: 1400"
-                    disabled={isPending}
-                  />
+          <fieldset
+            disabled={readOnly}
+            className="space-y-6 border-0 p-0 m-0 min-w-0"
+          >
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium">サイト全体の幅</h4>
                   <p className="text-xs text-muted-foreground">
-                    320px〜2560pxの範囲で入力
+                    ヘッダー、フッター、コンテンツ領域全体の最大幅
                   </p>
-                  {fields.containerWidthCustom.errors && (
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={fields.containerWidth.id}>サイト幅</Label>
+                  <Select
+                    value={containerWidth}
+                    onValueChange={(value) => {
+                      if (isValidLayoutWidth(value))
+                        containerWidthControl.change(value);
+                    }}
+                    disabled={isDisabled}
+                  >
+                    <SelectTrigger
+                      id={fields.containerWidth.id}
+                      aria-invalid={
+                        fields.containerWidth.errors ? true : undefined
+                      }
+                      aria-describedby={
+                        fields.containerWidth.errors
+                          ? fields.containerWidth.errorId
+                          : undefined
+                      }
+                    >
+                      <SelectValue placeholder="幅を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {siteWidthOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fields.containerWidth.errors && (
                     <p
-                      id={fields.containerWidthCustom.errorId}
+                      id={fields.containerWidth.errorId}
                       className="text-sm text-destructive"
                     >
-                      {fields.containerWidthCustom.errors.join(", ")}
+                      {fields.containerWidth.errors.join(", ")}
                     </p>
                   )}
                 </div>
-              )}
-            </div>
 
-            <div className="space-y-4 rounded-lg border p-4">
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">記事コンテンツの幅</h4>
-                <p className="text-xs text-muted-foreground">
-                  ブログ記事、お知らせ、静的ページの表示幅
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={fields.contentWidth.id}>コンテンツ幅</Label>
-                <Select
-                  value={contentWidth}
-                  onValueChange={(value) => {
-                    if (isValidLayoutWidth(value))
-                      contentWidthControl.change(value);
-                  }}
-                  disabled={isPending}
-                >
-                  <SelectTrigger
-                    id={fields.contentWidth.id}
-                    aria-invalid={fields.contentWidth.errors ? true : undefined}
-                    aria-describedby={
-                      fields.contentWidth.errors
-                        ? fields.contentWidth.errorId
-                        : undefined
-                    }
-                  >
-                    <SelectValue placeholder="幅を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contentWidthOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {fields.contentWidth.errors && (
-                  <p
-                    id={fields.contentWidth.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.contentWidth.errors.join(", ")}
-                  </p>
+                {containerWidth === LayoutWidth.CUSTOM && (
+                  <div className="space-y-2">
+                    <Label htmlFor={fields.containerWidthCustom.id}>
+                      カスタム幅 (px)
+                    </Label>
+                    <Input
+                      {...getInputProps(fields.containerWidthCustom, {
+                        type: "number",
+                      })}
+                      min={320}
+                      max={2560}
+                      placeholder="例: 1400"
+                      disabled={isDisabled}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      320px〜2560pxの範囲で入力
+                    </p>
+                    {fields.containerWidthCustom.errors && (
+                      <p
+                        id={fields.containerWidthCustom.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.containerWidthCustom.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {contentWidth === LayoutWidth.CUSTOM && (
-                <div className="space-y-2">
-                  <Label htmlFor={fields.contentWidthCustom.id}>
-                    カスタム幅 (px)
-                  </Label>
-                  <Input
-                    {...getInputProps(fields.contentWidthCustom, {
-                      type: "number",
-                    })}
-                    min={320}
-                    max={1920}
-                    placeholder="例: 900"
-                    disabled={isPending}
-                  />
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium">記事コンテンツの幅</h4>
                   <p className="text-xs text-muted-foreground">
-                    320px〜1920pxの範囲で入力
+                    ブログ記事、お知らせ、静的ページの表示幅
                   </p>
-                  {fields.contentWidthCustom.errors && (
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={fields.contentWidth.id}>コンテンツ幅</Label>
+                  <Select
+                    value={contentWidth}
+                    onValueChange={(value) => {
+                      if (isValidLayoutWidth(value))
+                        contentWidthControl.change(value);
+                    }}
+                    disabled={isDisabled}
+                  >
+                    <SelectTrigger
+                      id={fields.contentWidth.id}
+                      aria-invalid={
+                        fields.contentWidth.errors ? true : undefined
+                      }
+                      aria-describedby={
+                        fields.contentWidth.errors
+                          ? fields.contentWidth.errorId
+                          : undefined
+                      }
+                    >
+                      <SelectValue placeholder="幅を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contentWidthOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fields.contentWidth.errors && (
                     <p
-                      id={fields.contentWidthCustom.errorId}
+                      id={fields.contentWidth.errorId}
                       className="text-sm text-destructive"
                     >
-                      {fields.contentWidthCustom.errors.join(", ")}
+                      {fields.contentWidth.errors.join(", ")}
                     </p>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* レイアウトプレビュー（比率表示） */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">レイアウトプレビュー</p>
-            <div className="rounded-lg border px-4 py-4">
-              <div className="rounded border border-dashed border-foreground/20 px-3 py-2.5">
-                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>サイト幅</span>
-                  <span className="font-mono">
-                    {resolvedSitePx ? `${resolvedSitePx}px` : "全幅"}
-                  </span>
-                </div>
-                <div
-                  className="mx-auto mt-2.5 rounded border border-dashed border-primary/40 bg-background px-3 py-2.5"
-                  style={{
-                    width: contentRatio ? `${contentRatio}%` : "100%",
-                  }}
-                >
+                {contentWidth === LayoutWidth.CUSTOM && (
+                  <div className="space-y-2">
+                    <Label htmlFor={fields.contentWidthCustom.id}>
+                      カスタム幅 (px)
+                    </Label>
+                    <Input
+                      {...getInputProps(fields.contentWidthCustom, {
+                        type: "number",
+                      })}
+                      min={320}
+                      max={1920}
+                      placeholder="例: 900"
+                      disabled={isDisabled}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      320px〜1920pxの範囲で入力
+                    </p>
+                    {fields.contentWidthCustom.errors && (
+                      <p
+                        id={fields.contentWidthCustom.errorId}
+                        className="text-sm text-destructive"
+                      >
+                        {fields.contentWidthCustom.errors.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* レイアウトプレビュー（比率表示） */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">レイアウトプレビュー</p>
+              <div className="rounded-lg border px-4 py-4">
+                <div className="rounded border border-dashed border-foreground/20 px-3 py-2.5">
                   <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span>コンテンツ領域</span>
+                    <span>サイト幅</span>
                     <span className="font-mono">
-                      {resolvedContentPx ? `${resolvedContentPx}px` : "全幅"}
-                      {contentRatio !== null && (
-                        <span className="ml-1 opacity-60">
-                          ({contentRatio}%)
-                        </span>
-                      )}
+                      {resolvedSitePx ? `${resolvedSitePx}px` : "全幅"}
                     </span>
                   </div>
-                  <div className="mt-2 space-y-1.5">
-                    <div className="h-2 rounded-full bg-muted" />
-                    <div className="h-2 w-4/5 rounded-full bg-muted" />
-                    <div className="h-2 w-3/5 rounded-full bg-muted" />
+                  <div
+                    className="mx-auto mt-2.5 rounded border border-dashed border-primary/40 bg-background px-3 py-2.5"
+                    style={{
+                      width: contentRatio ? `${contentRatio}%` : "100%",
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>コンテンツ領域</span>
+                      <span className="font-mono">
+                        {resolvedContentPx ? `${resolvedContentPx}px` : "全幅"}
+                        {contentRatio !== null && (
+                          <span className="ml-1 opacity-60">
+                            ({contentRatio}%)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="h-2 rounded-full bg-muted" />
+                      <div className="h-2 w-4/5 rounded-full bg-muted" />
+                      <div className="h-2 w-3/5 rounded-full bg-muted" />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {formErrors && formErrors.length > 0 && (
-            <div
-              id={form.errorId}
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {formErrors.join(", ")}
-            </div>
-          )}
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
 
-          <div className="flex justify-end">
-            <SubmitButton
-              isPending={isPending}
-              label="保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            {!readOnly ? (
+              <div className="flex justify-end">
+                <SubmitButton
+                  isPending={isPending}
+                  label="保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>

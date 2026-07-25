@@ -31,6 +31,8 @@ import {
   getReservationRuleSettings,
 } from "@/shared/domain/reservations/availability";
 import { getPublicDiscountSettings } from "@/shared/domain/settings/queries/discount";
+import { getPublicRefundPolicySettings } from "@/shared/domain/settings/public-queries";
+import { formatRefundPolicyDisplayLines } from "@/shared/lib/refund/format-refund-policy-display";
 import { getTurnstileSiteKey } from "@/shared/data/turnstile";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -42,6 +44,7 @@ import type { ReservationFormConfig } from "@/shared/lib/sections/definitions/re
 import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 import { ReservationForm } from "../reservation/_components/reservation-form";
+import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
 import { PortableTextSpans } from "@/shared/components/portable-text/PortableTextSpans";
 import { PortableText } from "@/shared/components/portable-text/PortableText";
 
@@ -70,6 +73,7 @@ export async function ReservationFormSection({
     requiredTerms,
     reservationRules,
     discountSettings,
+    refundPolicy,
   ] = await Promise.all([
     getPublishedLocationsWithSpaces(),
     getBusinessHoursSettingsQuery(),
@@ -78,7 +82,11 @@ export async function ReservationFormSection({
     getRequiredTermsByScope(TermsScope.RESERVATION),
     getReservationRuleSettings(),
     getPublicDiscountSettings(),
+    getPublicRefundPolicySettings(),
   ]);
+  const refundPolicyLines = refundPolicy
+    ? formatRefundPolicyDisplayLines(refundPolicy)
+    : null;
 
   if (config.requireLogin && !user) {
     redirect("/login?redirect=/reservation");
@@ -155,6 +163,11 @@ export async function ReservationFormSection({
           initialSpaceId={initialSpaceId}
           requiredTerms={requiredTerms}
           isLoggedIn={isLoggedIn}
+          refundPolicyLines={refundPolicyLines ?? undefined}
+        />
+        <RefundPolicyNotice
+          lines={refundPolicyLines}
+          className="mt-6 border border-border p-4 sm:p-5"
         />
       </div>
     </SectionWrapper>

@@ -35,8 +35,12 @@ import {
 import { updateReservationSettings } from "@/admin/actions/settings";
 import { reservationSettingsSchema } from "@/admin/actions/settings/schemas/basic";
 import type { SettingsData } from "@/shared/domain/settings/types";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
-interface ReservationSectionProps {
+interface ReservationSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
@@ -50,12 +54,16 @@ const DEADLINE_OPTIONS = [
   { value: "72", label: "72時間前" },
 ];
 
-export function ReservationSection({ settings }: ReservationSectionProps) {
+export function ReservationSection({
+  settings,
+  readOnly = false,
+}: ReservationSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateReservationSettings,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
   const [form, fields] = useForm({
     id: "reservation-settings",
     lastResult,
@@ -73,6 +81,7 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
       customerCanCancelSeriesInFull: settings.customerCanCancelSeriesInFull
         ? "on"
         : "",
+      maxRecurrenceInstances: String(settings.maxRecurrenceInstances),
     },
   });
 
@@ -107,222 +116,263 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.defaultTimeSlot.id}
-              >
-                予約時間単位（分）
-              </label>
-              <Input
-                {...getInputProps(fields.defaultTimeSlot, { type: "number" })}
-                min={15}
-                max={240}
-                step={15}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">15〜240分</p>
-              {fields.defaultTimeSlot.errors &&
-                fields.defaultTimeSlot.errors.length > 0 && (
-                  <p
-                    id={fields.defaultTimeSlot.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.defaultTimeSlot.errors.join(", ")}
-                  </p>
-                )}
-            </div>
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.minReservationDuration.id}
-              >
-                最小予約時間（分）
-              </label>
-              <Input
-                {...getInputProps(fields.minReservationDuration, {
-                  type: "number",
-                })}
-                min={15}
-                max={480}
-                step={15}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                予約可能な最短時間
-              </p>
-              {fields.minReservationDuration.errors &&
-                fields.minReservationDuration.errors.length > 0 && (
-                  <p
-                    id={fields.minReservationDuration.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.minReservationDuration.errors.join(", ")}
-                  </p>
-                )}
-            </div>
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.maxReservationDuration.id}
-              >
-                最大予約時間（分）
-              </label>
-              <Input
-                {...getInputProps(fields.maxReservationDuration, {
-                  type: "number",
-                })}
-                min={60}
-                max={1440}
-                step={30}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                予約可能な最長時間（最大24時間）
-              </p>
-              {fields.maxReservationDuration.errors &&
-                fields.maxReservationDuration.errors.length > 0 && (
-                  <p
-                    id={fields.maxReservationDuration.errorId}
-                    className="text-sm text-destructive"
-                  >
-                    {fields.maxReservationDuration.errors.join(", ")}
-                  </p>
-                )}
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.cancellationDeadlineHours.id}
-              >
-                キャンセル期限（予約開始の何時間前まで）
-              </label>
-              <Select
-                value={cancellationDeadline.value ?? ""}
-                onValueChange={(v) => cancellationDeadline.change(v)}
-                disabled={isPending}
-              >
-                <SelectTrigger
-                  id={fields.cancellationDeadlineHours.id}
-                  className="w-full"
-                  onBlur={cancellationDeadline.blur}
+          <fieldset
+            disabled={readOnly}
+            className="space-y-4 border-0 p-0 m-0 min-w-0"
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.defaultTimeSlot.id}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEADLINE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input
-                type="hidden"
-                name={fields.cancellationDeadlineHours.name}
-                value={cancellationDeadline.value ?? ""}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label
-                className="block text-sm font-medium text-foreground"
-                htmlFor={fields.modificationDeadlineHours.id}
-              >
-                変更期限（予約開始の何時間前まで）
-              </label>
-              <Select
-                value={modificationDeadline.value ?? ""}
-                onValueChange={(v) => modificationDeadline.change(v)}
-                disabled={isPending}
-              >
-                <SelectTrigger
-                  id={fields.modificationDeadlineHours.id}
-                  className="w-full"
-                  onBlur={modificationDeadline.blur}
+                  予約時間単位（分）
+                </label>
+                <Input
+                  {...getInputProps(fields.defaultTimeSlot, { type: "number" })}
+                  min={15}
+                  max={240}
+                  step={15}
+                  disabled={isDisabled}
+                />
+                <p className="text-xs text-muted-foreground">15〜240分</p>
+                {fields.defaultTimeSlot.errors &&
+                  fields.defaultTimeSlot.errors.length > 0 && (
+                    <p
+                      id={fields.defaultTimeSlot.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.defaultTimeSlot.errors.join(", ")}
+                    </p>
+                  )}
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.minReservationDuration.id}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEADLINE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <input
-                type="hidden"
-                name={fields.modificationDeadlineHours.name}
-                value={modificationDeadline.value ?? ""}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-start justify-between rounded-lg border p-4">
-            <div className="space-y-1">
-              <label
-                htmlFor={fields.customerCanCancelSeriesInFull.id}
-                className="cursor-pointer text-sm font-medium text-foreground"
-              >
-                顧客が定期予約全体をキャンセルできる
-              </label>
-              <p className="text-xs text-muted-foreground">
-                ON: 顧客はマイページから「定期予約すべてキャンセル」ボタンで
-                series 全体を まとめてキャンセルできます。OFF:
-                個別の予約は各自キャンセルできますが、series 全体のキャンセルは
-                管理者への問い合わせのみ受け付けます。
-              </p>
-              {fields.customerCanCancelSeriesInFull.errors && (
-                <p
-                  id={fields.customerCanCancelSeriesInFull.errorId}
-                  className="text-xs text-destructive"
-                >
-                  {fields.customerCanCancelSeriesInFull.errors.join(", ")}
+                  最小予約時間（分）
+                </label>
+                <Input
+                  {...getInputProps(fields.minReservationDuration, {
+                    type: "number",
+                  })}
+                  min={15}
+                  max={480}
+                  step={15}
+                  disabled={isDisabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  予約可能な最短時間
                 </p>
-              )}
+                {fields.minReservationDuration.errors &&
+                  fields.minReservationDuration.errors.length > 0 && (
+                    <p
+                      id={fields.minReservationDuration.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.minReservationDuration.errors.join(", ")}
+                    </p>
+                  )}
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.maxReservationDuration.id}
+                >
+                  最大予約時間（分）
+                </label>
+                <Input
+                  {...getInputProps(fields.maxReservationDuration, {
+                    type: "number",
+                  })}
+                  min={60}
+                  max={1440}
+                  step={30}
+                  disabled={isDisabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  予約可能な最長時間（最大24時間）
+                </p>
+                {fields.maxReservationDuration.errors &&
+                  fields.maxReservationDuration.errors.length > 0 && (
+                    <p
+                      id={fields.maxReservationDuration.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.maxReservationDuration.errors.join(", ")}
+                    </p>
+                  )}
+              </div>
             </div>
-            <Switch
-              id={fields.customerCanCancelSeriesInFull.id}
-              checked={customerCanCancelSeriesInFullOn}
-              onCheckedChange={(checked) =>
-                customerCanCancelSeriesInFullControl.change(checked ? "on" : "")
-              }
-              onBlur={customerCanCancelSeriesInFullControl.blur}
-              disabled={isPending}
-              aria-describedby={
-                fields.customerCanCancelSeriesInFull.errors
-                  ? fields.customerCanCancelSeriesInFull.errorId
-                  : undefined
-              }
-            />
-            <input
-              type="hidden"
-              name={fields.customerCanCancelSeriesInFull.name}
-              value={customerCanCancelSeriesInFullControl.value ?? ""}
-            />
-          </div>
 
-          {formErrors && formErrors.length > 0 && (
-            <div
-              id={form.errorId}
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            >
-              {formErrors.join(", ")}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.cancellationDeadlineHours.id}
+                >
+                  キャンセル期限（予約開始の何時間前まで）
+                </label>
+                <Select
+                  value={cancellationDeadline.value ?? ""}
+                  onValueChange={(v) => cancellationDeadline.change(v)}
+                  disabled={isDisabled}
+                >
+                  <SelectTrigger
+                    id={fields.cancellationDeadlineHours.id}
+                    className="w-full"
+                    onBlur={cancellationDeadline.blur}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEADLINE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input
+                  type="hidden"
+                  name={fields.cancellationDeadlineHours.name}
+                  value={cancellationDeadline.value ?? ""}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label
+                  className="block text-sm font-medium text-foreground"
+                  htmlFor={fields.modificationDeadlineHours.id}
+                >
+                  変更期限（予約開始の何時間前まで）
+                </label>
+                <Select
+                  value={modificationDeadline.value ?? ""}
+                  onValueChange={(v) => modificationDeadline.change(v)}
+                  disabled={isDisabled}
+                >
+                  <SelectTrigger
+                    id={fields.modificationDeadlineHours.id}
+                    className="w-full"
+                    onBlur={modificationDeadline.blur}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DEADLINE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <input
+                  type="hidden"
+                  name={fields.modificationDeadlineHours.name}
+                  value={modificationDeadline.value ?? ""}
+                />
+              </div>
             </div>
-          )}
 
-          <div className="flex justify-end pt-2">
-            <SubmitButton
-              isPending={isPending}
-              label="予約設定を保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            <div className="space-y-1.5">
+              <label
+                className="block text-sm font-medium text-foreground"
+                htmlFor={fields.maxRecurrenceInstances.id}
+              >
+                定期予約の最大件数
+              </label>
+              <Input
+                {...getInputProps(fields.maxRecurrenceInstances, {
+                  type: "number",
+                })}
+                min={1}
+                max={104}
+                step={1}
+                disabled={isDisabled}
+                className="max-w-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                1回の定期予約作成で展開できる件数の上限です。定期予約フォームの回数検証と
+                series 展開キャップに使用されます（1〜104）
+              </p>
+              {fields.maxRecurrenceInstances.errors &&
+                fields.maxRecurrenceInstances.errors.length > 0 && (
+                  <p
+                    id={fields.maxRecurrenceInstances.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.maxRecurrenceInstances.errors.join(", ")}
+                  </p>
+                )}
+            </div>
+
+            <div className="flex items-start justify-between rounded-lg border p-4">
+              <div className="space-y-1">
+                <label
+                  htmlFor={fields.customerCanCancelSeriesInFull.id}
+                  className="cursor-pointer text-sm font-medium text-foreground"
+                >
+                  顧客が定期予約全体をキャンセルできる
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  ON: 顧客はマイページから「定期予約すべてキャンセル」ボタンで
+                  series 全体を まとめてキャンセルできます。OFF:
+                  個別の予約は各自キャンセルできますが、series
+                  全体のキャンセルは 管理者への問い合わせのみ受け付けます。
+                </p>
+                {fields.customerCanCancelSeriesInFull.errors && (
+                  <p
+                    id={fields.customerCanCancelSeriesInFull.errorId}
+                    className="text-xs text-destructive"
+                  >
+                    {fields.customerCanCancelSeriesInFull.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+              <Switch
+                id={fields.customerCanCancelSeriesInFull.id}
+                checked={customerCanCancelSeriesInFullOn}
+                onCheckedChange={(checked) =>
+                  customerCanCancelSeriesInFullControl.change(
+                    checked ? "on" : "",
+                  )
+                }
+                onBlur={customerCanCancelSeriesInFullControl.blur}
+                disabled={isDisabled}
+                aria-describedby={
+                  fields.customerCanCancelSeriesInFull.errors
+                    ? fields.customerCanCancelSeriesInFull.errorId
+                    : undefined
+                }
+              />
+              <input
+                type="hidden"
+                name={fields.customerCanCancelSeriesInFull.name}
+                value={customerCanCancelSeriesInFullControl.value ?? ""}
+              />
+            </div>
+
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
+
+            {!readOnly ? (
+              <div className="flex justify-end pt-2">
+                <SubmitButton
+                  isPending={isPending}
+                  label="予約設定を保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>

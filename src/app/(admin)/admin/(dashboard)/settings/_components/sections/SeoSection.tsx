@@ -43,8 +43,12 @@ import {
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
-interface SeoSectionProps {
+interface SeoSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
@@ -66,12 +70,13 @@ const ANALYTICS_TYPE_OPTIONS = [
 // MetaSettingsCard
 // =============================================================================
 
-function MetaSettingsCard({ settings }: SeoSectionProps) {
+function MetaSettingsCard({ settings, readOnly = false }: SeoSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateMetaSettings,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   const [form, fields] = useForm({
     id: "seo-meta-settings",
@@ -109,93 +114,102 @@ function MetaSettingsCard({ settings }: SeoSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor={fields.defaultMetaDescription.id}>
-              デフォルトメタディスクリプション
-            </Label>
-            <Textarea
-              {...getTextareaProps(fields.defaultMetaDescription)}
-              placeholder="サイトのデフォルト説明文（160文字以内推奨）"
-              rows={2}
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              現在 {metaDescriptionLength} 文字（推奨: 120〜160文字）
-            </p>
-            {fields.defaultMetaDescription.errors && (
-              <p
-                id={fields.defaultMetaDescription.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.defaultMetaDescription.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor={fields.defaultMetaKeywords.id}>
-              デフォルトメタキーワード
-            </Label>
-            <Input
-              {...getInputProps(fields.defaultMetaKeywords, { type: "text" })}
-              placeholder="レンタルスペース, 会議室, イベント会場"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">カンマ区切りで入力</p>
-            {fields.defaultMetaKeywords.errors && (
-              <p
-                id={fields.defaultMetaKeywords.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.defaultMetaKeywords.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
+          <fieldset
+            disabled={readOnly}
+            className="space-y-4 border-0 p-0 m-0 min-w-0"
+          >
             <div className="space-y-2">
-              <Label htmlFor={fields.defaultOgpTitle.id}>OGPタイトル</Label>
-              <Input
-                {...getInputProps(fields.defaultOgpTitle, { type: "text" })}
-                placeholder="サイト名 | キャッチコピー"
-                disabled={isPending}
+              <Label htmlFor={fields.defaultMetaDescription.id}>
+                デフォルトメタディスクリプション
+              </Label>
+              <Textarea
+                {...getTextareaProps(fields.defaultMetaDescription)}
+                placeholder="サイトのデフォルト説明文（160文字以内推奨）"
+                rows={2}
+                disabled={isDisabled}
               />
-              {fields.defaultOgpTitle.errors && (
+              <p className="text-xs text-muted-foreground">
+                現在 {metaDescriptionLength} 文字（推奨: 120〜160文字）
+              </p>
+              {fields.defaultMetaDescription.errors && (
                 <p
-                  id={fields.defaultOgpTitle.errorId}
+                  id={fields.defaultMetaDescription.errorId}
                   className="text-sm text-destructive"
                 >
-                  {fields.defaultOgpTitle.errors.join(", ")}
+                  {fields.defaultMetaDescription.errors.join(", ")}
                 </p>
               )}
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor={fields.defaultOgpDescription.id}>OGP説明</Label>
+              <Label htmlFor={fields.defaultMetaKeywords.id}>
+                デフォルトメタキーワード
+              </Label>
               <Input
-                {...getInputProps(fields.defaultOgpDescription, {
-                  type: "text",
-                })}
-                placeholder="SNSシェア時の説明文"
-                disabled={isPending}
+                {...getInputProps(fields.defaultMetaKeywords, { type: "text" })}
+                placeholder="レンタルスペース, 会議室, イベント会場"
+                disabled={isDisabled}
               />
-              {fields.defaultOgpDescription.errors && (
+              <p className="text-xs text-muted-foreground">
+                カンマ区切りで入力
+              </p>
+              {fields.defaultMetaKeywords.errors && (
                 <p
-                  id={fields.defaultOgpDescription.errorId}
+                  id={fields.defaultMetaKeywords.errorId}
                   className="text-sm text-destructive"
                 >
-                  {fields.defaultOgpDescription.errors.join(", ")}
+                  {fields.defaultMetaKeywords.errors.join(", ")}
                 </p>
               )}
             </div>
-          </div>
 
-          <div className="flex justify-end pt-4">
-            <SubmitButton
-              isPending={isPending}
-              label="メタ情報を保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={fields.defaultOgpTitle.id}>OGPタイトル</Label>
+                <Input
+                  {...getInputProps(fields.defaultOgpTitle, { type: "text" })}
+                  placeholder="サイト名 | キャッチコピー"
+                  disabled={isDisabled}
+                />
+                {fields.defaultOgpTitle.errors && (
+                  <p
+                    id={fields.defaultOgpTitle.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.defaultOgpTitle.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={fields.defaultOgpDescription.id}>OGP説明</Label>
+                <Input
+                  {...getInputProps(fields.defaultOgpDescription, {
+                    type: "text",
+                  })}
+                  placeholder="SNSシェア時の説明文"
+                  disabled={isDisabled}
+                />
+                {fields.defaultOgpDescription.errors && (
+                  <p
+                    id={fields.defaultOgpDescription.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.defaultOgpDescription.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {!readOnly ? (
+              <div className="flex justify-end pt-4">
+                <SubmitButton
+                  isPending={isPending}
+                  label="メタ情報を保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>
@@ -206,12 +220,16 @@ function MetaSettingsCard({ settings }: SeoSectionProps) {
 // AnalyticsSettingsCard
 // =============================================================================
 
-function AnalyticsSettingsCard({ settings }: SeoSectionProps) {
+function AnalyticsSettingsCard({
+  settings,
+  readOnly = false,
+}: SeoSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateAnalyticsSettings,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   const [form, fields] = useForm({
     id: "seo-analytics-settings",
@@ -256,138 +274,147 @@ function AnalyticsSettingsCard({ settings }: SeoSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor={fields.analyticsType.id}>トラッキング方式</Label>
-            <SelectionBox
-              options={ANALYTICS_TYPE_OPTIONS}
-              value={analyticsType}
-              onChange={(value) => analyticsTypeControl.change(value)}
-              columns={3}
-              disabled={isPending}
-              name="トラッキング方式"
-              ariaDescribedBy={
-                fields.analyticsType.errors
-                  ? fields.analyticsType.errorId
-                  : undefined
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              GA4とGTMは排他選択です。GTM経由でGA4を使う場合はGTMを選択してください。
-            </p>
-            {fields.analyticsType.errors && (
-              <p
-                id={fields.analyticsType.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.analyticsType.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          {analyticsType === AnalyticsType.ga4 && (
+          <fieldset
+            disabled={readOnly}
+            className="space-y-4 border-0 p-0 m-0 min-w-0"
+          >
             <div className="space-y-2">
-              <Label htmlFor={fields.googleAnalyticsId.id}>
-                GA4 Measurement ID
-              </Label>
-              <Input
-                {...getInputProps(fields.googleAnalyticsId, { type: "text" })}
-                placeholder="G-XXXXXXXXXX"
-                disabled={isPending}
+              <Label htmlFor={fields.analyticsType.id}>トラッキング方式</Label>
+              <SelectionBox
+                options={ANALYTICS_TYPE_OPTIONS}
+                value={analyticsType}
+                onChange={(value) => analyticsTypeControl.change(value)}
+                columns={3}
+                disabled={isDisabled}
+                name="トラッキング方式"
+                ariaDescribedBy={
+                  fields.analyticsType.errors
+                    ? fields.analyticsType.errorId
+                    : undefined
+                }
               />
               <p className="text-xs text-muted-foreground">
-                GA4管理画面 &gt; データストリーム &gt; 測定IDから取得
+                GA4とGTMは排他選択です。GTM経由でGA4を使う場合はGTMを選択してください。
               </p>
-              {fields.googleAnalyticsId.errors && (
+              {fields.analyticsType.errors && (
                 <p
-                  id={fields.googleAnalyticsId.errorId}
+                  id={fields.analyticsType.errorId}
                   className="text-sm text-destructive"
                 >
-                  {fields.googleAnalyticsId.errors.join(", ")}
+                  {fields.analyticsType.errors.join(", ")}
                 </p>
               )}
             </div>
-          )}
 
-          {analyticsType === AnalyticsType.gtm && (
-            <div className="space-y-2">
-              <Label htmlFor={fields.googleTagManagerId.id}>
-                GTM Container ID
+            {analyticsType === AnalyticsType.ga4 && (
+              <div className="space-y-2">
+                <Label htmlFor={fields.googleAnalyticsId.id}>
+                  GA4 Measurement ID
+                </Label>
+                <Input
+                  {...getInputProps(fields.googleAnalyticsId, { type: "text" })}
+                  placeholder="G-XXXXXXXXXX"
+                  disabled={isDisabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  GA4管理画面 &gt; データストリーム &gt; 測定IDから取得
+                </p>
+                {fields.googleAnalyticsId.errors && (
+                  <p
+                    id={fields.googleAnalyticsId.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.googleAnalyticsId.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {analyticsType === AnalyticsType.gtm && (
+              <div className="space-y-2">
+                <Label htmlFor={fields.googleTagManagerId.id}>
+                  GTM Container ID
+                </Label>
+                <Input
+                  {...getInputProps(fields.googleTagManagerId, {
+                    type: "text",
+                  })}
+                  placeholder="GTM-XXXXXXX"
+                  disabled={isDisabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  GTM管理画面のコンテナIDから取得
+                </p>
+                {fields.googleTagManagerId.errors && (
+                  <p
+                    id={fields.googleTagManagerId.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.googleTagManagerId.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2 border-t pt-2">
+              <Label htmlFor={fields.gaPropertyId.id}>
+                GA4 プロパティID（ダッシュボード統計用）
               </Label>
               <Input
-                {...getInputProps(fields.googleTagManagerId, { type: "text" })}
-                placeholder="GTM-XXXXXXX"
-                disabled={isPending}
+                {...getInputProps(fields.gaPropertyId, { type: "text" })}
+                placeholder="123456789"
+                disabled={isDisabled}
               />
               <p className="text-xs text-muted-foreground">
-                GTM管理画面のコンテナIDから取得
+                GA4管理画面 &gt; プロパティ設定 &gt;
+                プロパティIDから取得（数値のみ）。
+                ダッシュボードでのアクセス解析表示に必要です。
               </p>
-              {fields.googleTagManagerId.errors && (
+              {fields.gaPropertyId.errors && (
                 <p
-                  id={fields.googleTagManagerId.errorId}
+                  id={fields.gaPropertyId.errorId}
                   className="text-sm text-destructive"
                 >
-                  {fields.googleTagManagerId.errors.join(", ")}
+                  {fields.gaPropertyId.errors.join(", ")}
                 </p>
               )}
             </div>
-          )}
 
-          <div className="space-y-2 border-t pt-2">
-            <Label htmlFor={fields.gaPropertyId.id}>
-              GA4 プロパティID（ダッシュボード統計用）
-            </Label>
-            <Input
-              {...getInputProps(fields.gaPropertyId, { type: "text" })}
-              placeholder="123456789"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              GA4管理画面 &gt; プロパティ設定 &gt;
-              プロパティIDから取得（数値のみ）。
-              ダッシュボードでのアクセス解析表示に必要です。
-            </p>
-            {fields.gaPropertyId.errors && (
-              <p
-                id={fields.gaPropertyId.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.gaPropertyId.errors.join(", ")}
+            <div className="space-y-2 border-t pt-2">
+              <Label htmlFor={fields.microsoftClarityId.id}>
+                Microsoft Clarity プロジェクトID
+              </Label>
+              <Input
+                {...getInputProps(fields.microsoftClarityId, { type: "text" })}
+                placeholder="abcd1234ef"
+                disabled={isDisabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                Microsoft
+                Clarity（無料・GDPR対応）のヒートマップ・セッション録画を有効化します。
+                Clarity管理画面 &gt; Settings &gt; Setup &gt; Project
+                IDから取得。 GA4/GTM とは独立して並行動作します。
               </p>
-            )}
-          </div>
+              {fields.microsoftClarityId.errors && (
+                <p
+                  id={fields.microsoftClarityId.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.microsoftClarityId.errors.join(", ")}
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-2 border-t pt-2">
-            <Label htmlFor={fields.microsoftClarityId.id}>
-              Microsoft Clarity プロジェクトID
-            </Label>
-            <Input
-              {...getInputProps(fields.microsoftClarityId, { type: "text" })}
-              placeholder="abcd1234ef"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              Microsoft
-              Clarity（無料・GDPR対応）のヒートマップ・セッション録画を有効化します。
-              Clarity管理画面 &gt; Settings &gt; Setup &gt; Project IDから取得。
-              GA4/GTM とは独立して並行動作します。
-            </p>
-            {fields.microsoftClarityId.errors && (
-              <p
-                id={fields.microsoftClarityId.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.microsoftClarityId.errors.join(", ")}
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-end pt-4">
-            <SubmitButton
-              isPending={isPending}
-              label="Analytics設定を保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            {!readOnly ? (
+              <div className="flex justify-end pt-4">
+                <SubmitButton
+                  isPending={isPending}
+                  label="Analytics設定を保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>
@@ -398,12 +425,16 @@ function AnalyticsSettingsCard({ settings }: SeoSectionProps) {
 // SearchVerificationCard
 // =============================================================================
 
-function SearchVerificationCard({ settings }: SeoSectionProps) {
+function SearchVerificationCard({
+  settings,
+  readOnly = false,
+}: SeoSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateSearchVerification,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   const [form, fields] = useForm({
     id: "seo-search-verification",
@@ -437,73 +468,82 @@ function SearchVerificationCard({ settings }: SeoSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor={fields.googleSearchConsoleId.id}>
-              Google Search Console
-            </Label>
-            <Input
-              {...getInputProps(fields.googleSearchConsoleId, {
-                type: "text",
-              })}
-              placeholder="verification-code-here"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              &lt;meta name=&quot;google-site-verification&quot;
-              content=&quot;...&quot; /&gt; のcontent属性値を入力
-            </p>
-            {fields.googleSearchConsoleId.errors && (
-              <p
-                id={fields.googleSearchConsoleId.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.googleSearchConsoleId.errors.join(", ")}
+          <fieldset
+            disabled={readOnly}
+            className="space-y-4 border-0 p-0 m-0 min-w-0"
+          >
+            <div className="space-y-2">
+              <Label htmlFor={fields.googleSearchConsoleId.id}>
+                Google Search Console
+              </Label>
+              <Input
+                {...getInputProps(fields.googleSearchConsoleId, {
+                  type: "text",
+                })}
+                placeholder="verification-code-here"
+                disabled={isDisabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                &lt;meta name=&quot;google-site-verification&quot;
+                content=&quot;...&quot; /&gt; のcontent属性値を入力
               </p>
-            )}
-          </div>
+              {fields.googleSearchConsoleId.errors && (
+                <p
+                  id={fields.googleSearchConsoleId.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.googleSearchConsoleId.errors.join(", ")}
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor={fields.bingWebmasterToolsId.id}>
-              Bing Webmaster Tools
-            </Label>
-            <Input
-              {...getInputProps(fields.bingWebmasterToolsId, { type: "text" })}
-              placeholder="verification-code-here"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              &lt;meta name=&quot;msvalidate.01&quot; content=&quot;...&quot;
-              /&gt; のcontent属性値を入力
-            </p>
-            {fields.bingWebmasterToolsId.errors && (
-              <p
-                id={fields.bingWebmasterToolsId.errorId}
-                className="text-sm text-destructive"
-              >
-                {fields.bingWebmasterToolsId.errors.join(", ")}
+            <div className="space-y-2">
+              <Label htmlFor={fields.bingWebmasterToolsId.id}>
+                Bing Webmaster Tools
+              </Label>
+              <Input
+                {...getInputProps(fields.bingWebmasterToolsId, {
+                  type: "text",
+                })}
+                placeholder="verification-code-here"
+                disabled={isDisabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                &lt;meta name=&quot;msvalidate.01&quot; content=&quot;...&quot;
+                /&gt; のcontent属性値を入力
               </p>
-            )}
-          </div>
+              {fields.bingWebmasterToolsId.errors && (
+                <p
+                  id={fields.bingWebmasterToolsId.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.bingWebmasterToolsId.errors.join(", ")}
+                </p>
+              )}
+            </div>
 
-          <div className="flex justify-end pt-4">
-            <SubmitButton
-              isPending={isPending}
-              label="検索エンジン検証を保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            {!readOnly ? (
+              <div className="flex justify-end pt-4">
+                <SubmitButton
+                  isPending={isPending}
+                  label="検索エンジン検証を保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>
   );
 }
 
-export function SeoSection({ settings }: SeoSectionProps) {
+export function SeoSection({ settings, readOnly = false }: SeoSectionProps) {
   return (
     <div className="space-y-6">
-      <MetaSettingsCard settings={settings} />
-      <AnalyticsSettingsCard settings={settings} />
-      <SearchVerificationCard settings={settings} />
+      <MetaSettingsCard settings={settings} readOnly={readOnly} />
+      <AnalyticsSettingsCard settings={settings} readOnly={readOnly} />
+      <SearchVerificationCard settings={settings} readOnly={readOnly} />
     </div>
   );
 }

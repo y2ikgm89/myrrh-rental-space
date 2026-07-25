@@ -55,8 +55,12 @@ import {
 } from "@/shared/emails/_registry/data";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { StatusBanner } from "../shared/StatusBanner";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
-type Props = {
+type Props = SettingsReadOnlyProps & {
   defaultRecipient: string;
 };
 
@@ -99,7 +103,10 @@ function groupByCategory(): Record<TemplateCategory, EmailTemplateIndexItem[]> {
   return grouped;
 }
 
-export function EmailTemplatesSection({ defaultRecipient }: Props) {
+export function EmailTemplatesSection({
+  defaultRecipient,
+  readOnly = false,
+}: Props) {
   const selectId = useId();
   const recipientId = useId();
   const simulatorId = useId();
@@ -120,6 +127,7 @@ export function EmailTemplatesSection({ defaultRecipient }: Props) {
   const [simulatorValue, setSimulatorValue] = useState("");
   const [sendPending, startSendTransition] = useTransition();
   const [sendResult, setSendResult] = useState<SendResult>(null);
+  const isSendDisabled = isSettingsFormDisabled(sendPending, readOnly);
 
   const selectedEntry =
     EMAIL_TEMPLATE_INDEX.find((e) => e.key === selectedKey) ?? null;
@@ -302,93 +310,100 @@ export function EmailTemplatesSection({ defaultRecipient }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor={recipientId}>宛先メールアドレス</Label>
-            <Input
-              id={recipientId}
-              type="email"
-              value={recipient}
-              onChange={(e) => handleRecipientChange(e.target.value)}
-              placeholder="admin@example.com"
-              disabled={sendPending}
-              aria-invalid={!isValidRecipient && recipient.length > 0}
-            />
-          </div>
-
-          {isInfraCheck && (
+          <fieldset
+            disabled={readOnly}
+            className="space-y-4 border-0 p-0 m-0 min-w-0"
+          >
             <div className="space-y-1.5">
-              <Label htmlFor={simulatorId}>
-                Resend テスト用アドレス（インフラ疎通確認のみ）
-              </Label>
-              <Select
-                value={simulatorValue}
-                onValueChange={handleSimulatorChange}
-                disabled={sendPending}
-              >
-                <SelectTrigger id={simulatorId} className="w-full">
-                  <SelectValue placeholder="（選択なし）" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SIMULATOR_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Resend 公式 simulator アドレス。実際の受信箱は使われず、Resend
-                ダッシュボードでバウンス・苦情等の挙動を確認できます。
-              </p>
+              <Label htmlFor={recipientId}>宛先メールアドレス</Label>
+              <Input
+                id={recipientId}
+                type="email"
+                value={recipient}
+                onChange={(e) => handleRecipientChange(e.target.value)}
+                placeholder="admin@example.com"
+                disabled={isSendDisabled}
+                aria-invalid={!isValidRecipient && recipient.length > 0}
+              />
             </div>
-          )}
 
-          {sendResult && (
-            <div
-              role={sendResult.success ? "status" : "alert"}
-              aria-live="polite"
-            >
-              <StatusBanner success={sendResult.success}>
-                {sendResult.success ? (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-success">
-                      送信しました
-                    </p>
-                    {subjectPreview && (
+            {isInfraCheck && (
+              <div className="space-y-1.5">
+                <Label htmlFor={simulatorId}>
+                  Resend テスト用アドレス（インフラ疎通確認のみ）
+                </Label>
+                <Select
+                  value={simulatorValue}
+                  onValueChange={handleSimulatorChange}
+                  disabled={isSendDisabled}
+                >
+                  <SelectTrigger id={simulatorId} className="w-full">
+                    <SelectValue placeholder="（選択なし）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SIMULATOR_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Resend 公式 simulator アドレス。実際の受信箱は使われず、Resend
+                  ダッシュボードでバウンス・苦情等の挙動を確認できます。
+                </p>
+              </div>
+            )}
+
+            {sendResult && (
+              <div
+                role={sendResult.success ? "status" : "alert"}
+                aria-live="polite"
+              >
+                <StatusBanner success={sendResult.success}>
+                  {sendResult.success ? (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-success">
+                        送信しました
+                      </p>
+                      {subjectPreview && (
+                        <p className="text-xs text-muted-foreground">
+                          件名:{" "}
+                          <code className="font-mono text-foreground">
+                            {subjectPreview}
+                          </code>
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground">
-                        件名:{" "}
+                        送信 ID:{" "}
                         <code className="font-mono text-foreground">
-                          {subjectPreview}
+                          {sendResult.messageId}
                         </code>
                       </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      送信 ID:{" "}
-                      <code className="font-mono text-foreground">
-                        {sendResult.messageId}
-                      </code>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-destructive">
+                      {sendResult.message}
                     </p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-destructive">
-                    {sendResult.message}
-                  </p>
-                )}
-              </StatusBanner>
-            </div>
-          )}
+                  )}
+                </StatusBanner>
+              </div>
+            )}
 
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="default"
-              onClick={handleSend}
-              disabled={sendPending || !isValidRecipient}
-              aria-busy={sendPending}
-            >
-              {sendPending ? "送信中..." : "テスト送信"}
-            </Button>
-          </div>
+            {!readOnly ? (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={handleSend}
+                  disabled={isSendDisabled || !isValidRecipient}
+                  aria-busy={sendPending}
+                >
+                  {sendPending ? "送信中..." : "テスト送信"}
+                </Button>
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </div>

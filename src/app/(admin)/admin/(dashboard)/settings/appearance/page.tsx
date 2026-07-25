@@ -15,6 +15,8 @@ import { getSettings } from "@/admin/queries/settings";
 import { getNavigationItems, getSocialLinks } from "@/admin/queries/navigation";
 import { getAnnouncementBars } from "@/admin/queries/announcement-bar";
 import { getAnnouncementBarCarouselSettings } from "@/admin/queries/settings";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import { HeaderSection } from "../_components/sections/HeaderSection";
@@ -27,6 +29,16 @@ import type { ReactElement } from "react";
 
 async function AppearanceSettingsContent(): Promise<ReactElement> {
   await connection();
+
+  const user = await requireAdminPermission("settings", "read");
+  const canUpdateSettings = hasPermission(user.role, "settings", "update");
+  const canUpdateNavigation = hasPermission(user.role, "navigation", "update");
+  const canUpdateAnnouncementBar = hasPermission(
+    user.role,
+    "announcementBar",
+    "update",
+  );
+  const readOnlySettings = !canUpdateSettings;
 
   const [
     settings,
@@ -58,22 +70,30 @@ async function AppearanceSettingsContent(): Promise<ReactElement> {
     {
       value: "header",
       label: "ヘッダー",
-      content: <HeaderSection settings={settings} />,
+      content: (
+        <HeaderSection settings={settings} readOnly={readOnlySettings} />
+      ),
     },
     {
       value: "footer",
       label: "フッター",
-      content: <FooterSection settings={settings} />,
+      content: (
+        <FooterSection settings={settings} readOnly={readOnlySettings} />
+      ),
     },
     {
       value: "sidebar",
       label: "サイドバー",
-      content: <SidebarSection settings={settings} />,
+      content: (
+        <SidebarSection settings={settings} readOnly={readOnlySettings} />
+      ),
     },
     {
       value: "layout",
       label: "レイアウト",
-      content: <LayoutSection settings={settings} />,
+      content: (
+        <LayoutSection settings={settings} readOnly={readOnlySettings} />
+      ),
     },
     {
       value: "navigation",
@@ -84,6 +104,7 @@ async function AppearanceSettingsContent(): Promise<ReactElement> {
           initialMobileItems={mobileItems}
           initialFooterItems={footerItems}
           initialSocialLinks={socialLinks}
+          readOnly={!canUpdateNavigation}
         />
       ),
     },
@@ -94,6 +115,7 @@ async function AppearanceSettingsContent(): Promise<ReactElement> {
         <AnnouncementBarManager
           initialBars={announcementBars}
           initialCarouselSettings={carouselSettings}
+          readOnly={!canUpdateAnnouncementBar}
         />
       ),
     },
@@ -119,10 +141,15 @@ function AppearanceSettingsLoading(): ReactElement {
 }
 
 export default async function AppearanceSettingsPage(): Promise<ReactElement> {
+  await connection();
+  const user = await requireAdminPermission("settings", "read");
+  const readOnly = !hasPermission(user.role, "settings", "update");
+
   return (
     <SettingsLayout
       title="サイトの見た目"
       description="ヘッダー・フッター・サイドバー・レイアウト・ナビゲーション・お知らせバーをまとめて管理"
+      readOnly={readOnly}
     >
       <Suspense fallback={<AppearanceSettingsLoading />}>
         <AppearanceSettingsContent />

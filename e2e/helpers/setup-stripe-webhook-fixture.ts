@@ -13,11 +13,8 @@ export type StripeWebhookFixture = {
  * Settings singleton に E2E 用の Stripe secret / webhook secret を仕込む。
  *
  * webServer 起動後・最初の `/api/webhooks/stripe` 呼び出し前に呼ぶこと。
- * `getStripeSettings` は `"use cache"` (STATIC_SETTINGS = days) のため、
- * webhook 経路以外で先に populate されると本 fixture の値が反映されない
- * (dev DB 上に stripe secret が空の状態がキャッシュされる)。E2E の他 spec は
- * 現在 checkout 導線を踏まず `assertOnlinePaymentAvailable` を実行しないため、
- * この順序契約は自然に満たされる。
+ * Stripe secret / webhook secret は `getStripeCredentialCiphertext` 経由で
+ * キャッシュせず読むため、fixture 投入後は即座に webhook 経路へ反映される。
  */
 export async function setupStripeWebhookFixture(): Promise<StripeWebhookFixture> {
   const workspaceRoot = path.join(__dirname, "..", "..");

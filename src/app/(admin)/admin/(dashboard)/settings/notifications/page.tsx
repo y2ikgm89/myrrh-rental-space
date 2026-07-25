@@ -16,6 +16,8 @@ import {
   getNotificationStaffCandidates,
 } from "@/admin/queries/settings";
 import { checkAdminAuth } from "@/admin/lib/action-auth";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -41,21 +43,30 @@ async function NotificationsSettingsContent(): Promise<ReactElement> {
     );
   }
 
+  const readOnly = !hasPermission(auth.user.role, "settings", "update");
+
   const tabs = [
     {
       value: "email",
       label: "メール",
-      content: <EmailSection settings={settings} staff={staff} />,
+      content: (
+        <EmailSection settings={settings} staff={staff} readOnly={readOnly} />
+      ),
     },
     {
       value: "notification",
       label: "通知",
-      content: <NotificationSection settings={settings} />,
+      content: <NotificationSection settings={settings} readOnly={readOnly} />,
     },
     {
       value: "templates",
       label: "テンプレート",
-      content: <EmailTemplatesSection defaultRecipient={auth.user.email} />,
+      content: (
+        <EmailTemplatesSection
+          defaultRecipient={auth.user.email}
+          readOnly={readOnly}
+        />
+      ),
     },
   ];
 
@@ -76,10 +87,15 @@ function NotificationsSettingsLoading(): ReactElement {
 }
 
 export default async function NotificationsSettingsPage(): Promise<ReactElement> {
+  await connection();
+  const user = await requireAdminPermission("settings", "read");
+  const readOnly = !hasPermission(user.role, "settings", "update");
+
   return (
     <SettingsLayout
       title="メール・通知"
       description="メール送信元、管理者通知、テンプレートのプレビュー & テスト送信"
+      readOnly={readOnly}
     >
       <Suspense fallback={<NotificationsSettingsLoading />}>
         <NotificationsSettingsContent />

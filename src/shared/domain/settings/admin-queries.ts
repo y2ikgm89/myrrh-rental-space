@@ -19,9 +19,11 @@ import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { extractGoogleServiceAccountEmail } from "@/shared/lib/validations/google-service-account";
 import {
   parseBusinessHours,
+  parseDataRetentionConfig,
   parseFeatureModules,
   parseStringArrayOrNull,
 } from "@/shared/lib/json-validators";
+import type { DataRetentionConfig } from "@/shared/lib/json-validators";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { toPlainObject } from "@/shared/lib/serialize";
@@ -50,6 +52,7 @@ import {
   ensureSettingsSystem,
   ensureSettingsTurnstile,
   ensureSettingsFeatures,
+  ensureSettingsDataRetention,
 } from "@/shared/domain/settings/commands";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
@@ -97,6 +100,7 @@ async function getOrCreateSettingsBundle() {
     googleBusinessProfile,
     instagram,
     switchbot,
+    dataRetention,
   ] = await Promise.all([
     ensureSettingsFeatures(),
     ensureSettingsAnnouncementCarousel(),
@@ -118,6 +122,7 @@ async function getOrCreateSettingsBundle() {
     ensureSettingsGoogleBusinessProfile(),
     ensureSettingsInstagram(),
     ensureSettingsSwitchbot(),
+    ensureSettingsDataRetention(),
   ]);
 
   return {
@@ -141,6 +146,7 @@ async function getOrCreateSettingsBundle() {
     googleBusinessProfile,
     instagram,
     switchbot,
+    dataRetention,
   };
 }
 
@@ -216,6 +222,7 @@ function toSettingsData(
     cancellationDeadlineHours: reservation.cancellationDeadlineHours,
     modificationDeadlineHours: reservation.modificationDeadlineHours,
     customerCanCancelSeriesInFull: reservation.customerCanCancelSeriesInFull,
+    maxRecurrenceInstances: reservation.maxRecurrenceInstances,
     sendReservationConfirmationEmail:
       reservation.sendReservationConfirmationEmail,
     notifyNewReservation: notification.notifyNewReservation,
@@ -621,4 +628,9 @@ export async function getEventImportSettings(): Promise<{
   });
 
   return { eventImportEnabled: settings.eventImportEnabled };
+}
+
+export async function getDataRetentionSettings(): Promise<DataRetentionConfig> {
+  const row = await ensureSettingsDataRetention();
+  return parseDataRetentionConfig(row.dataRetention);
 }

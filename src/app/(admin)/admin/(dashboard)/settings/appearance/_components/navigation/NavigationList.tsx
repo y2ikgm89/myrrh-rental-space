@@ -89,7 +89,7 @@ export function NavigationList({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{title}</CardTitle>
-        <Button size="sm" onClick={() => onAdd(type)}>
+        <Button size="sm" onClick={() => onAdd(type)} disabled={isPending}>
           追加
         </Button>
       </CardHeader>
@@ -209,7 +209,7 @@ export function SocialLinkList({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>SNSリンク</CardTitle>
-        <Button size="sm" onClick={onAdd}>
+        <Button size="sm" onClick={onAdd} disabled={isPending}>
           追加
         </Button>
       </CardHeader>

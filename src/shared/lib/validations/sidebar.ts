@@ -35,7 +35,8 @@ const recentWidgetSchema = z.object({
   layout: z.enum(POST_LIST_LAYOUTS).default("compact"),
 });
 
-// 人気記事 widget — layout + ランキング表示設定
+// 注目記事 widget（type key `popular` は互換維持）— layout + ランキング表示設定。
+// 閲覧数未実装のためクエリは公開日順（queries.ts）。
 const popularWidgetSchema = z.object({
   type: z.literal("popular"),
   enabled: z.boolean(),

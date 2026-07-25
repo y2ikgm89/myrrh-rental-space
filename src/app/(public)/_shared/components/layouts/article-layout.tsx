@@ -35,7 +35,7 @@ interface ArticleLayoutProps {
    * - **`"in-grid"`**: 2-col grid の **左カラム内 上部** に配置 (WordPress
    *   Astra / GeneratePress / Newspaper / Hashnode 業界標準、および
    *   Stripe / GitHub / Notion 規約・docs)。記事系 (posts / news) で
-   *   Search / Recent / Popular widget を hero 同 row sticky で常時可視に
+   *   Search / Recent / Featured (popular) widget を hero 同 row sticky で常時可視に
    *   保つため、また長文 docs / 規約 (terms) で TOC を hero 同 row sticky に
    *   置いて navigation friction を下げるため。
    */

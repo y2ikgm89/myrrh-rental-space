@@ -33,17 +33,25 @@ import { businessInfoFormSchema } from "@/admin/actions/settings/schemas/form-sc
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { dateInputValueFromSerialized } from "@/shared/lib/serialize";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "./shared/settings-read-only";
 
-interface BusinessInfoSectionProps {
+interface BusinessInfoSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
-export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
+export function BusinessInfoSection({
+  settings,
+  readOnly = false,
+}: BusinessInfoSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateBusinessInfo,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   const [form, fields] = useForm({
     id: "business-info-settings",
@@ -85,146 +93,157 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={fields.businessName.id}>会社名・屋号</Label>
-              <Input
-                {...getInputProps(fields.businessName, { type: "text" })}
-                placeholder="株式会社サンプル"
-                disabled={isPending}
-              />
-              {fields.businessName.errors && (
-                <p
-                  id={fields.businessName.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.businessName.errors.join(", ")}
-                </p>
-              )}
+          <fieldset
+            disabled={readOnly}
+            className="space-y-4 border-0 p-0 m-0 min-w-0"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={fields.businessName.id}>会社名・屋号</Label>
+                <Input
+                  {...getInputProps(fields.businessName, { type: "text" })}
+                  placeholder="株式会社サンプル"
+                  disabled={isDisabled}
+                />
+                {fields.businessName.errors && (
+                  <p
+                    id={fields.businessName.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.businessName.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={fields.businessNameKana.id}>
+                  会社名・屋号（カナ）
+                </Label>
+                <Input
+                  {...getInputProps(fields.businessNameKana, { type: "text" })}
+                  placeholder="カブシキガイシャサンプル"
+                  disabled={isDisabled}
+                />
+                {fields.businessNameKana.errors && (
+                  <p
+                    id={fields.businessNameKana.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.businessNameKana.errors.join(", ")}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={fields.businessNameKana.id}>
-                会社名・屋号（カナ）
-              </Label>
-              <Input
-                {...getInputProps(fields.businessNameKana, { type: "text" })}
-                placeholder="カブシキガイシャサンプル"
-                disabled={isPending}
-              />
-              {fields.businessNameKana.errors && (
-                <p
-                  id={fields.businessNameKana.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.businessNameKana.errors.join(", ")}
-                </p>
-              )}
-            </div>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor={fields.representativeName.id}>代表者名</Label>
-              <Input
-                {...getInputProps(fields.representativeName, { type: "text" })}
-                placeholder="山田 太郎"
-                disabled={isPending}
-              />
-              {fields.representativeName.errors && (
-                <p
-                  id={fields.representativeName.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.representativeName.errors.join(", ")}
-                </p>
-              )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={fields.representativeName.id}>代表者名</Label>
+                <Input
+                  {...getInputProps(fields.representativeName, {
+                    type: "text",
+                  })}
+                  placeholder="山田 太郎"
+                  disabled={isDisabled}
+                />
+                {fields.representativeName.errors && (
+                  <p
+                    id={fields.representativeName.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.representativeName.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={fields.establishedDate.id}>設立日</Label>
+                <Input
+                  {...getInputProps(fields.establishedDate, { type: "date" })}
+                  disabled={isDisabled}
+                />
+                {fields.establishedDate.errors && (
+                  <p
+                    id={fields.establishedDate.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.establishedDate.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={fields.registrationNumber.id}>法人番号</Label>
+                <Input
+                  {...getInputProps(fields.registrationNumber, {
+                    type: "text",
+                  })}
+                  placeholder="1234567890123"
+                  disabled={isDisabled}
+                />
+                {fields.registrationNumber.errors && (
+                  <p
+                    id={fields.registrationNumber.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.registrationNumber.errors.join(", ")}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={fields.invoiceNumber.id}>
+                  インボイス登録番号
+                </Label>
+                <Input
+                  {...getInputProps(fields.invoiceNumber, { type: "text" })}
+                  placeholder="T1234567890123"
+                  disabled={isDisabled}
+                />
+                {fields.invoiceNumber.errors && (
+                  <p
+                    id={fields.invoiceNumber.errorId}
+                    className="text-sm text-destructive"
+                  >
+                    {fields.invoiceNumber.errors.join(", ")}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor={fields.establishedDate.id}>設立日</Label>
-              <Input
-                {...getInputProps(fields.establishedDate, { type: "date" })}
-                disabled={isPending}
-              />
-              {fields.establishedDate.errors && (
-                <p
-                  id={fields.establishedDate.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.establishedDate.errors.join(", ")}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={fields.registrationNumber.id}>法人番号</Label>
-              <Input
-                {...getInputProps(fields.registrationNumber, { type: "text" })}
-                placeholder="1234567890123"
-                disabled={isPending}
-              />
-              {fields.registrationNumber.errors && (
-                <p
-                  id={fields.registrationNumber.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.registrationNumber.errors.join(", ")}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={fields.invoiceNumber.id}>
-                インボイス登録番号
-              </Label>
-              <Input
-                {...getInputProps(fields.invoiceNumber, { type: "text" })}
-                placeholder="T1234567890123"
-                disabled={isPending}
-              />
-              {fields.invoiceNumber.errors && (
-                <p
-                  id={fields.invoiceNumber.errorId}
-                  className="text-sm text-destructive"
-                >
-                  {fields.invoiceNumber.errors.join(", ")}
-                </p>
-              )}
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor={fields.businessDescription.id}>事業概要</Label>
-            <Textarea
-              {...getTextareaProps(fields.businessDescription)}
-              placeholder="事業内容の説明..."
-              rows={3}
-              disabled={isPending}
-            />
-            {fields.businessDescription.errors && (
-              <p
-                id={fields.businessDescription.errorId}
-                className="text-sm text-destructive"
+            <div className="space-y-2">
+              <Label htmlFor={fields.businessDescription.id}>事業概要</Label>
+              <Textarea
+                {...getTextareaProps(fields.businessDescription)}
+                placeholder="事業内容の説明..."
+                rows={3}
+                disabled={isDisabled}
+              />
+              {fields.businessDescription.errors && (
+                <p
+                  id={fields.businessDescription.errorId}
+                  className="text-sm text-destructive"
+                >
+                  {fields.businessDescription.errors.join(", ")}
+                </p>
+              )}
+            </div>
+
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
               >
-                {fields.businessDescription.errors.join(", ")}
-              </p>
+                {formErrors.join(", ")}
+              </div>
             )}
-          </div>
 
-          {formErrors && formErrors.length > 0 && (
-            <div
-              id={form.errorId}
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {formErrors.join(", ")}
-            </div>
-          )}
-
-          <div className="flex justify-end pt-2">
-            <SubmitButton
-              isPending={isPending}
-              label="事業者情報を保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            {!readOnly ? (
+              <div className="flex justify-end pt-2">
+                <SubmitButton
+                  isPending={isPending}
+                  label="事業者情報を保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>

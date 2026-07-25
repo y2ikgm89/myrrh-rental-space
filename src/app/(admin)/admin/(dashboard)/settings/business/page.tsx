@@ -12,6 +12,9 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
+import { getGlobalBlockedDates } from "@/admin/queries/blocked-dates";
+import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
 import {
   Card,
@@ -23,7 +26,6 @@ import {
   createGlobalBlockedDate,
   deleteGlobalBlockedDate,
 } from "@/admin/actions/global-blocked-dates";
-import { getGlobalBlockedDates } from "@/shared/domain/blocked-dates/queries";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -35,6 +37,9 @@ import type { ReactElement } from "react";
 
 async function BusinessSettingsContent(): Promise<ReactElement> {
   await connection();
+  const user = await requireAdminPermission("settings", "read");
+  const readOnly = !hasPermission(user.role, "settings", "update");
+
   const [settings, blockedDates] = await Promise.all([
     getSettings(),
     getGlobalBlockedDates(),
@@ -52,17 +57,17 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
     {
       value: "info",
       label: "事業者情報",
-      content: <BusinessInfoSection settings={settings} />,
+      content: <BusinessInfoSection settings={settings} readOnly={readOnly} />,
     },
     {
       value: "hours",
       label: "営業時間",
-      content: <BusinessHoursSection settings={settings} />,
+      content: <BusinessHoursSection settings={settings} readOnly={readOnly} />,
     },
     {
       value: "reservation",
       label: "予約",
-      content: <ReservationSection settings={settings} />,
+      content: <ReservationSection settings={settings} readOnly={readOnly} />,
     },
     {
       value: "holidays",
@@ -78,6 +83,7 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
               initialBlockedDates={blockedDates}
               createAction={createGlobalBlockedDate}
               deleteAction={deleteGlobalBlockedDate}
+              readOnly={readOnly}
               description="全スペース・全拠点の予約を、指定した日付で一斉に受け付けません（年末年始・大規模災害などの全社休業）。"
             />
           </CardContent>
@@ -104,10 +110,15 @@ function BusinessSettingsLoading(): ReactElement {
 }
 
 export default async function BusinessSettingsPage(): Promise<ReactElement> {
+  await connection();
+  const user = await requireAdminPermission("settings", "read");
+  const readOnly = !hasPermission(user.role, "settings", "update");
+
   return (
     <SettingsLayout
       title="ビジネス設定"
       description="事業者情報・営業時間・予約・休業日の設定"
+      readOnly={readOnly}
     >
       <Suspense fallback={<BusinessSettingsLoading />}>
         <BusinessSettingsContent />

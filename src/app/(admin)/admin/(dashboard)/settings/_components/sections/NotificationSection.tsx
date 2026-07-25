@@ -25,8 +25,12 @@ import { updateNotificationSettings } from "@/admin/actions/settings";
 import { notificationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
+import {
+  isSettingsFormDisabled,
+  type SettingsReadOnlyProps,
+} from "../shared/settings-read-only";
 
-interface NotificationSectionProps {
+interface NotificationSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
 
@@ -67,12 +71,16 @@ function NotificationToggle({
   );
 }
 
-export function NotificationSection({ settings }: NotificationSectionProps) {
+export function NotificationSection({
+  settings,
+  readOnly = false,
+}: NotificationSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
     updateNotificationSettings,
     undefined,
   );
+  const isDisabled = isSettingsFormDisabled(isPending, readOnly);
   const [form, fields] = useForm({
     id: "notification-settings",
     lastResult,
@@ -116,74 +124,81 @@ export function NotificationSection({ settings }: NotificationSectionProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <NotificationToggle
-              field={fields.notifyNewReservation}
-              title="新規予約"
-              description="予約が作成されたとき"
-              disabled={isPending}
-            />
-            <NotificationToggle
-              field={fields.notifyReservationChange}
-              title="予約変更"
-              description="予約内容が変更されたとき"
-              disabled={isPending}
-            />
-            <NotificationToggle
-              field={fields.notifyReservationCancel}
-              title="予約キャンセル"
-              description="予約がキャンセルされたとき"
-              disabled={isPending}
-            />
-            <NotificationToggle
-              field={fields.notifyNewInquiry}
-              title="お問い合わせ"
-              description="お問い合わせが送信されたとき"
-              disabled={isPending}
-            />
-            <NotificationToggle
-              field={fields.notifyInquiryCustomerReply}
-              title="お問い合わせ続報"
-              description="会員がマイページから追加メッセージを送信したとき"
-              disabled={isPending}
-            />
-            <NotificationToggle
-              field={fields.notifyEventRegistration}
-              title="イベント申込"
-              description="イベントに申し込まれたとき"
-              disabled={isPending}
-            />
-            <NotificationToggle
-              field={fields.notifyEventWaitlistRegistration}
-              title="イベントキャンセル待ち登録"
-              description="満員のイベントにキャンセル待ちで登録されたとき"
-              disabled={isPending}
-            />
-            <NotificationToggle
-              field={fields.notifyEventCancellation}
-              title="イベント申込キャンセル"
-              description="イベント申込がキャンセルされたとき"
-              disabled={isPending}
-            />
-          </div>
-
-          {formErrors && formErrors.length > 0 && (
-            <div
-              id={form.errorId}
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            >
-              {formErrors.join(", ")}
+          <fieldset
+            disabled={readOnly}
+            className="space-y-4 border-0 p-0 m-0 min-w-0"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <NotificationToggle
+                field={fields.notifyNewReservation}
+                title="新規予約"
+                description="予約が作成されたとき"
+                disabled={isDisabled}
+              />
+              <NotificationToggle
+                field={fields.notifyReservationChange}
+                title="予約変更"
+                description="予約内容が変更されたとき"
+                disabled={isDisabled}
+              />
+              <NotificationToggle
+                field={fields.notifyReservationCancel}
+                title="予約キャンセル"
+                description="予約がキャンセルされたとき"
+                disabled={isDisabled}
+              />
+              <NotificationToggle
+                field={fields.notifyNewInquiry}
+                title="お問い合わせ"
+                description="お問い合わせが送信されたとき"
+                disabled={isDisabled}
+              />
+              <NotificationToggle
+                field={fields.notifyInquiryCustomerReply}
+                title="お問い合わせ続報"
+                description="会員がマイページから追加メッセージを送信したとき"
+                disabled={isDisabled}
+              />
+              <NotificationToggle
+                field={fields.notifyEventRegistration}
+                title="イベント申込"
+                description="イベントに申し込まれたとき"
+                disabled={isDisabled}
+              />
+              <NotificationToggle
+                field={fields.notifyEventWaitlistRegistration}
+                title="イベントキャンセル待ち登録"
+                description="満員のイベントにキャンセル待ちで登録されたとき"
+                disabled={isDisabled}
+              />
+              <NotificationToggle
+                field={fields.notifyEventCancellation}
+                title="イベント申込キャンセル"
+                description="イベント申込がキャンセルされたとき"
+                disabled={isDisabled}
+              />
             </div>
-          )}
 
-          <div className="flex justify-end pt-2">
-            <SubmitButton
-              isPending={isPending}
-              label="通知設定を保存"
-              pendingLabel="保存中..."
-            />
-          </div>
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
+
+            {!readOnly ? (
+              <div className="flex justify-end pt-2">
+                <SubmitButton
+                  isPending={isPending}
+                  label="通知設定を保存"
+                  pendingLabel="保存中..."
+                />
+              </div>
+            ) : null}
+          </fieldset>
         </CardContent>
       </Card>
     </form>

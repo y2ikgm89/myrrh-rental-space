@@ -13,7 +13,12 @@
  */
 
 import { ImageResponse } from "next/og";
+import { connection } from "next/server";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
+import {
+  getSeoSettings,
+  resolveSiteBranding,
+} from "@/public/lib/seo/metadata-factory";
 
 // 1200x630 — Open Graph / Twitter summary_large_image 標準サイズ
 export const size = {
@@ -25,7 +30,10 @@ export const contentType = "image/png";
 
 export const alt = SITE_DEFAULTS.name;
 
-export default function OpengraphImage(): ImageResponse {
+export default async function OpengraphImage(): Promise<ImageResponse> {
+  await connection();
+  const { siteName } = resolveSiteBranding(await getSeoSettings());
+
   return new ImageResponse(
     <div
       style={{
@@ -65,7 +73,7 @@ export default function OpengraphImage(): ImageResponse {
           maxWidth: 1000,
         }}
       >
-        {SITE_DEFAULTS.name}
+        {siteName}
       </div>
 
       {/* bronze hairline (Kinfolk editorial accent) */}

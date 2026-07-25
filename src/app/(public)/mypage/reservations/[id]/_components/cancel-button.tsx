@@ -19,15 +19,18 @@ import {
 } from "@/shared/components/turnstile-widget";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { cancelReservationAction } from "../../../_shared/actions/reservation";
+import { RefundPolicyNotice } from "@/app/(public)/_shared/components/ui/refund-policy-notice";
 
 interface CancelButtonProps {
   readonly reservationId: string;
   readonly turnstileSiteKey: string | null;
+  readonly refundPolicyLines?: readonly string[] | undefined;
 }
 
 export function CancelButton({
   reservationId,
   turnstileSiteKey,
+  refundPolicyLines,
 }: CancelButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -104,6 +107,11 @@ export function CancelButton({
               この予約をキャンセルしてもよろしいですか？この操作は取り消せません。
             </DialogDescription>
           </DialogHeader>
+
+          <RefundPolicyNotice
+            lines={refundPolicyLines}
+            className="border border-border p-3"
+          />
 
           <Textarea
             label="キャンセル理由（任意）"

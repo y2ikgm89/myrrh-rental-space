@@ -16,7 +16,11 @@ import {
   getCustomerReservationSeriesInfo,
 } from "@/shared/domain/reservations/customer-queries";
 import { findReceiptSerialNoByReservationId } from "@/shared/domain/receipts/queries";
-import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import {
+  getPublicRefundPolicySettings,
+  getReservationDeadlineSettings,
+} from "@/shared/domain/settings/public-queries";
+import { formatRefundPolicyDisplayLines } from "@/shared/lib/refund/format-refund-policy-display";
 import { getPublishedTermsByType } from "@/shared/domain/terms/queries";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
@@ -96,13 +100,18 @@ export default async function ReservationDetailPage({
     seriesInfo,
     customerCanCancelSeriesInFull,
     reservationFeatureEnabled,
+    refundPolicy,
   ] = await Promise.all([
     getCustomerReservationDetail(id, customer.id),
     getReservationDeadlineSettings(),
     getCustomerReservationSeriesInfo(id, customer.id),
     getCustomerCanCancelSeriesInFull(),
     isFeatureEnabled("reservation"),
+    getPublicRefundPolicySettings(),
   ]);
+  const refundPolicyLines = refundPolicy
+    ? formatRefundPolicyDisplayLines(refundPolicy)
+    : undefined;
 
   if (!reservation) {
     notFound();
@@ -221,6 +230,7 @@ export default async function ReservationDetailPage({
         reservation={serializedReservation}
         deadlineSettings={deadlineSettings}
         cancellationPolicyUrl={cancellationPolicyUrl}
+        refundPolicyLines={refundPolicyLines}
         paymentEnabled={paymentEnabled}
         receiptSerialNo={receiptSerialNo}
       />
@@ -239,6 +249,7 @@ export default async function ReservationDetailPage({
             <CancelButton
               reservationId={reservation.id}
               turnstileSiteKey={turnstileSiteKey}
+              refundPolicyLines={refundPolicyLines}
             />
           )}
         </div>
