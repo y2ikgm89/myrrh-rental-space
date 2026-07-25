@@ -60,6 +60,16 @@ describe("getSitemapContentData", () => {
     mockPageFindMany.mockReset();
     mockEventFindMany.mockReset();
     mockTermsFindMany.mockReset();
+
+    mockSpaceFindMany.mockResolvedValue([]);
+    mockNewsFindMany.mockResolvedValue([]);
+    mockPostFindMany.mockResolvedValue([]);
+    mockPostCategoryFindMany.mockResolvedValue([]);
+    mockPostTagFindMany.mockResolvedValue([]);
+    // customPages + systemPageLastModified の 2 回呼ばれる
+    mockPageFindMany.mockResolvedValue([]);
+    mockEventFindMany.mockResolvedValue([]);
+    mockTermsFindMany.mockResolvedValue([]);
   });
 
   test("8 collection + systemPageLastModified が空でも空 shape を返す", async () => {
@@ -99,12 +109,15 @@ describe("getSitemapContentData", () => {
     );
   });
 
-  test("post は status: PUBLISHED filter + category.slug を select に含む", async () => {
+  test("post は publicPostsWhere + category.slug を select に含む", async () => {
     await getSitemapContentData();
 
     expect(mockPostFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: "PUBLISHED" },
+        where: expect.objectContaining({
+          status: "PUBLISHED",
+          publishedAt: { lte: expect.any(Date) },
+        }),
         select: expect.objectContaining({
           category: { select: { slug: true } },
         }),
@@ -112,17 +125,33 @@ describe("getSitemapContentData", () => {
     );
   });
 
-  test("postCategory / postTag は公開記事を持つもののみ（published filter）", async () => {
+  test("postCategory / postTag は公開記事を持つもののみ（publicPostsWhere）", async () => {
     await getSitemapContentData();
 
     expect(mockPostCategoryFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { posts: { some: { status: "PUBLISHED" } } },
+        where: {
+          posts: {
+            some: expect.objectContaining({
+              status: "PUBLISHED",
+              publishedAt: { lte: expect.any(Date) },
+            }),
+          },
+        },
       }),
     );
     expect(mockPostTagFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { posts: { some: { post: { status: "PUBLISHED" } } } },
+        where: {
+          posts: {
+            some: {
+              post: expect.objectContaining({
+                status: "PUBLISHED",
+                publishedAt: { lte: expect.any(Date) },
+              }),
+            },
+          },
+        },
       }),
     );
   });
