@@ -181,6 +181,7 @@ export const postCategoryDataSchema = z.object({
   createdAt: isoDateStringSchema,
   updatedAt: isoDateStringSchema,
   _count: postCountSchema,
+  hasLinkedPostsIncludingTrash: z.boolean(),
 });
 
 export const postCategoriesResponseSchema = z.array(postCategoryDataSchema);
@@ -196,6 +197,7 @@ export const postTagDataSchema = z.object({
   createdAt: isoDateStringSchema,
   updatedAt: isoDateStringSchema,
   _count: postCountSchema,
+  hasLinkedPostsIncludingTrash: z.boolean(),
 });
 
 export const postTagsResponseSchema = z.array(postTagDataSchema);

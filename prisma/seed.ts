@@ -3189,8 +3189,8 @@ async function seedBlog() {
   ];
 
   for (const { tagNames, ...postData } of posts) {
-    const existing = await prisma.post.findUnique({
-      where: { slug: postData.slug },
+    const existing = await prisma.post.findFirst({
+      where: { slug: postData.slug, deletedAt: null },
     });
     if (!existing) {
       // タグを先にfindOrCreate

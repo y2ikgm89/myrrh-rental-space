@@ -102,7 +102,7 @@ function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
           <Button
             variant="destructive"
             size="sm"
-            disabled={isPending || tag._count.posts > 0}
+            disabled={isPending || tag.hasLinkedPostsIncludingTrash}
             onClick={() => setDeleteDialogOpen(true)}
             aria-label={`${tag.name}タグを削除`}
           >
