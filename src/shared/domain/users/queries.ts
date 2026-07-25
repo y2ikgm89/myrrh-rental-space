@@ -23,7 +23,10 @@ export async function getNotificationStaffCandidates(): Promise<
   NotificationStaffCandidate[]
 > {
   const users = await prisma.user.findMany({
-    where: { role: { in: STAFF_QUERY_ROLES } },
+    where: {
+      role: { in: STAFF_QUERY_ROLES },
+      dashboardEnabled: true,
+    },
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: "asc" },
   });
@@ -41,6 +44,7 @@ function toUserData(user: {
   name: string;
   role: Role;
   emailVerified: boolean;
+  dashboardEnabled: boolean;
   image: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -55,6 +59,7 @@ function toUserData(user: {
     name: user.name,
     role: user.role,
     emailVerified: user.emailVerified,
+    dashboardEnabled: user.dashboardEnabled,
     image: user.image,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),

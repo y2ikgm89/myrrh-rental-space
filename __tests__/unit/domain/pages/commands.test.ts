@@ -738,6 +738,35 @@ describe("bulkUpdatePagePublishedCommand", () => {
         }),
       );
     });
+
+    test("updateMany の実際の count を返す", async () => {
+      mockPageUpdateMany.mockResolvedValue({ count: 2 });
+
+      const result = await bulkUpdatePagePublishedCommand(
+        ["page-a", "page-b"],
+        true,
+      );
+
+      expect(result).toEqual({ count: 2 });
+    });
+
+    test("システムページ除外後の updateMany count を返す（選択件数ではない）", async () => {
+      mockPageUpdateMany.mockResolvedValue({ count: 1 });
+
+      const result = await bulkUpdatePagePublishedCommand(
+        ["page-a", SYSTEM_PAGE_SLUG, "missing-page"],
+        true,
+      );
+
+      expect(mockPageUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            slug: { in: ["page-a", "missing-page"] },
+          }),
+        }),
+      );
+      expect(result).toEqual({ count: 1 });
+    });
   });
 
   describe("異常系", () => {

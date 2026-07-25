@@ -235,7 +235,7 @@ export async function updatePagePublishedCommand(
 export async function bulkUpdatePagePublishedCommand(
   slugs: string[],
   isPublished: boolean,
-): Promise<void> {
+): Promise<{ count: number }> {
   if (slugs.length === 0) {
     throw new DomainError("対象ページが選択されていません", "VALIDATION");
   }
@@ -248,7 +248,7 @@ export async function bulkUpdatePagePublishedCommand(
     );
   }
 
-  await prisma.page.updateMany({
+  const result = await prisma.page.updateMany({
     where: {
       slug: { in: publishableSlugs },
       isActive: true,
@@ -258,6 +258,8 @@ export async function bulkUpdatePagePublishedCommand(
       publishedAt: isPublished ? new Date() : null,
     },
   });
+
+  return { count: result.count };
 }
 
 export async function bulkDeletePagesCommand(

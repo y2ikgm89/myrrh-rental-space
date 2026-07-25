@@ -61,12 +61,11 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
     capabilities: [
       "すべての機能へのフルアクセス",
       "settings:manage（課金・外部連携・機能モジュール・システムを含む全設定）",
-      "管理者・編集者・閲覧者の追加・削除・権限変更",
       "監査ログの閲覧",
       "API キーの管理",
     ],
     restrictions: [
-      "ロール変更は Google Admin のグループ所属で実施",
+      "スタッフの追加・削除・ロール変更は Google Admin のグループ所属で実施（アプリ内では行わない）",
       "通常スタッフの日常運用には付与しない",
     ],
   },
@@ -96,17 +95,18 @@ const ROLE_CONFIGS: readonly RoleConfig[] = [
     color: "text-warning",
     bgColor: "bg-warning/10",
     borderColor: "border-warning/20",
-    description: "割り当てられたコンテンツのみ編集可能",
+    description: "割り当てられたページのみ編集可能",
     capabilities: [
       "割り当てられたページの編集",
-      "投稿・ニュースの作成・編集",
+      "割り当てページ内メディアのアップロード",
       "コンテンツのプレビュー",
     ],
     restrictions: [
       "コンテンツの公開・削除",
+      "投稿・ニュース・FAQ・イベントの編集",
       "予約・顧客情報の編集",
       "システム設定へのアクセス",
-      "スタッフ管理",
+      "スタッフ管理・ページ割り当ての変更",
     ],
   },
   {
@@ -355,8 +355,10 @@ export function PermissionsSection() {
                 <strong className="text-foreground">
                   編集者の割り当てページ：
                 </strong>
-                編集者ロールのスタッフには、編集可能なページを個別に割り当てることができます。
-                スタッフ詳細ページの「割り当てページ」セクションで設定してください。
+                編集者ロールのスタッフには、編集可能なページを個別に割り当てます。
+                管理者はスタッフ詳細ページの「割り当てページ」セクションで設定してください。
+                スタッフの追加・ロール変更は Google Admin
+                のグループ所属で行います。
               </p>
               <p>
                 <strong className="text-foreground">

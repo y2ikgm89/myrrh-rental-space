@@ -4,13 +4,19 @@ import { prisma } from "@/shared/db/prisma";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { isGoogleWorkspaceGroupMember } from "@/shared/lib/google-workspace/cloud-identity-groups";
-import { DASHBOARD_ROLES, isDashboardRole } from "@/shared/lib/admin-roles";
+import {
+  ADMIN_OR_HIGHER_ROLES,
+  DASHBOARD_ROLES,
+  isAdminOrHigherRole,
+  isDashboardRole,
+} from "@/shared/lib/admin-roles";
 import {
   ErrorCategory,
   ErrorSeverity,
   logError,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
   NOTIFICATION_TYPE,
@@ -28,6 +34,16 @@ type GroupMembershipChecker = (params: {
   groupEmail: string;
   memberEmail: string;
 }) => Promise<boolean>;
+
+type SyncUserRow = {
+  id: string;
+  email: string;
+  name: string;
+  image: string | null;
+  role: Role;
+  emailVerified: boolean;
+  dashboardEnabled: boolean;
+};
 
 const ROLE_GROUP_ENV = [
   {
@@ -47,6 +63,16 @@ const ROLE_GROUP_ENV = [
     envName: "ADMIN_ROLE_GROUP_VIEWER_EMAIL",
   },
 ] as const;
+
+const AUTH_USER_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  image: true,
+  role: true,
+  emailVerified: true,
+  dashboardEnabled: true,
+} as const;
 
 function readConfiguredRoleGroups(): AdminRoleGroup[] | null {
   const groupValues = ROLE_GROUP_ENV.map((entry) => {
@@ -74,6 +100,17 @@ function readConfiguredRoleGroups(): AdminRoleGroup[] | null {
 function defaultNameFromEmail(email: string): string {
   const [localPart] = email.split("@");
   return localPart && localPart.trim().length > 0 ? localPart : email;
+}
+
+function toAdminAuthUser(user: SyncUserRow): AdminAuthUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    image: user.image,
+    role: user.role,
+    emailVerified: user.emailVerified,
+  };
 }
 
 async function writeGoogleRoleSyncAudit(input: {
@@ -136,6 +173,61 @@ async function notifyRoleChange(input: {
   }
 }
 
+async function isLastActiveAdmin(userId: string): Promise<boolean> {
+  const others = await prisma.user.count({
+    where: {
+      id: { not: userId },
+      dashboardEnabled: true,
+      role: { in: [...ADMIN_OR_HIGHER_ROLES] },
+    },
+  });
+  return others === 0;
+}
+
+async function refuseLastAdminChange(input: {
+  email: string;
+  userId: string;
+  reason: "revoke" | "demote";
+  existing: SyncUserRow;
+}): Promise<AdminAuthUser | null> {
+  logError(
+    normalizeError(
+      new Error(
+        `Refusing Google role sync ${input.reason}: last active ADMIN/SUPER_ADMIN`,
+      ),
+    ),
+    {
+      category: ErrorCategory.AUTHORIZATION,
+      severity: ErrorSeverity.HIGH,
+      context: {
+        operation: "syncAdminAuthUserFromGoogleGroups.lastAdminGuard",
+        reason: input.reason,
+        targetEmail: input.email,
+        userId: input.userId,
+      },
+    },
+  );
+
+  await writeGoogleRoleSyncAudit({
+    action: AuditAction.UPDATE,
+    email: input.email,
+    resourceId: input.userId,
+    oldValue: {
+      role: input.existing.role,
+      dashboardEnabled: input.existing.dashboardEnabled,
+    },
+    newValue: {
+      role: input.existing.role,
+      dashboardEnabled: input.existing.dashboardEnabled,
+      lastAdminGuard: input.reason,
+    },
+  });
+
+  return input.existing.dashboardEnabled
+    ? toAdminAuthUser(input.existing)
+    : null;
+}
+
 export function isAdminRoleGroupSyncConfigured(): boolean {
   return readConfiguredRoleGroups() !== null;
 }
@@ -166,6 +258,171 @@ export async function resolveRoleFromGoogleWorkspaceGroups(
   return isDashboardRole(role) ? role : null;
 }
 
+async function revokeDashboardAccess(
+  email: string,
+  existing: SyncUserRow,
+): Promise<AdminAuthUser | null> {
+  if (!isDashboardRole(existing.role)) {
+    return null;
+  }
+  if (!existing.dashboardEnabled) {
+    return null;
+  }
+
+  if (
+    isAdminOrHigherRole(existing.role) &&
+    (await isLastActiveAdmin(existing.id))
+  ) {
+    return refuseLastAdminChange({
+      email,
+      userId: existing.id,
+      reason: "revoke",
+      existing,
+    });
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: existing.id },
+    data: { dashboardEnabled: false },
+    select: AUTH_USER_SELECT,
+  });
+
+  await writeGoogleRoleSyncAudit({
+    action: AuditAction.UPDATE,
+    email,
+    resourceId: updated.id,
+    oldValue: { dashboardEnabled: true, role: existing.role },
+    newValue: { dashboardEnabled: false, role: updated.role },
+  });
+
+  return null;
+}
+
+async function upsertEnabledDashboardUser(
+  email: string,
+  role: Role,
+  existing: SyncUserRow | null,
+): Promise<AdminAuthUser> {
+  if (existing) {
+    const demotingLastAdmin =
+      existing.dashboardEnabled &&
+      isAdminOrHigherRole(existing.role) &&
+      !isAdminOrHigherRole(role) &&
+      (await isLastActiveAdmin(existing.id));
+
+    if (demotingLastAdmin) {
+      const kept = await refuseLastAdminChange({
+        email,
+        userId: existing.id,
+        reason: "demote",
+        existing,
+      });
+      if (kept) return kept;
+      // disabled last-admin edge: re-enable with prior role instead of demoting
+      const restored = await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          dashboardEnabled: true,
+          emailVerified: true,
+          name: existing.name || defaultNameFromEmail(email),
+        },
+        select: AUTH_USER_SELECT,
+      });
+      return toAdminAuthUser(restored);
+    }
+
+    if (
+      existing.role === role &&
+      existing.emailVerified &&
+      existing.dashboardEnabled
+    ) {
+      return toAdminAuthUser(existing);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        role,
+        emailVerified: true,
+        dashboardEnabled: true,
+        name: existing.name || defaultNameFromEmail(email),
+      },
+      select: AUTH_USER_SELECT,
+    });
+
+    const roleChanged = existing.role !== updated.role;
+
+    await writeGoogleRoleSyncAudit({
+      action: roleChanged ? AuditAction.ROLE_CHANGE : AuditAction.UPDATE,
+      email,
+      resourceId: updated.id,
+      oldValue: roleChanged
+        ? {
+            role: existing.role,
+            dashboardEnabled: existing.dashboardEnabled,
+          }
+        : {
+            emailVerified: existing.emailVerified,
+            dashboardEnabled: existing.dashboardEnabled,
+          },
+      newValue: {
+        role: updated.role,
+        emailVerified: updated.emailVerified,
+        dashboardEnabled: updated.dashboardEnabled,
+      },
+    });
+
+    if (roleChanged) {
+      await notifyRoleChange({
+        email,
+        oldRole: existing.role,
+        newRole: updated.role,
+      });
+    }
+
+    return toAdminAuthUser(updated);
+  }
+
+  try {
+    const created = await prisma.user.create({
+      data: {
+        email,
+        name: defaultNameFromEmail(email),
+        role,
+        emailVerified: true,
+        dashboardEnabled: true,
+      },
+      select: AUTH_USER_SELECT,
+    });
+
+    await writeGoogleRoleSyncAudit({
+      action: AuditAction.CREATE,
+      email,
+      resourceId: created.id,
+      newValue: {
+        role: created.role,
+        emailVerified: created.emailVerified,
+        dashboardEnabled: created.dashboardEnabled,
+      },
+    });
+
+    return toAdminAuthUser(created);
+  } catch (error) {
+    if (!isPrismaUniqueConstraintError(error, "email")) {
+      throw error;
+    }
+
+    const raced = await prisma.user.findUnique({
+      where: { email },
+      select: AUTH_USER_SELECT,
+    });
+    if (!raced) {
+      throw error;
+    }
+    return upsertEnabledDashboardUser(email, role, raced);
+  }
+}
+
 export async function syncAdminAuthUserFromGoogleGroups(
   email: string,
 ): Promise<AdminAuthUser | null> {
@@ -183,92 +440,15 @@ export async function syncAdminAuthUserFromGoogleGroups(
     return null;
   }
 
-  if (!role) return null;
-
   const existing = await prisma.user.findUnique({
     where: { email },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      image: true,
-      role: true,
-      emailVerified: true,
-    },
+    select: AUTH_USER_SELECT,
   });
 
-  if (existing) {
-    if (existing.role === role && existing.emailVerified) return existing;
-
-    const updated = await prisma.user.update({
-      where: { id: existing.id },
-      data: {
-        role,
-        emailVerified: true,
-        name: existing.name || defaultNameFromEmail(email),
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        image: true,
-        role: true,
-        emailVerified: true,
-      },
-    });
-
-    const roleChanged = existing.role !== updated.role;
-
-    await writeGoogleRoleSyncAudit({
-      action: roleChanged ? AuditAction.ROLE_CHANGE : AuditAction.UPDATE,
-      email,
-      resourceId: updated.id,
-      oldValue: roleChanged
-        ? { role: existing.role }
-        : { emailVerified: existing.emailVerified },
-      newValue: {
-        role: updated.role,
-        emailVerified: updated.emailVerified,
-      },
-    });
-
-    if (roleChanged) {
-      await notifyRoleChange({
-        email,
-        oldRole: existing.role,
-        newRole: updated.role,
-      });
-    }
-
-    return updated;
+  if (!role) {
+    if (!existing) return null;
+    return revokeDashboardAccess(email, existing);
   }
 
-  const created = await prisma.user.create({
-    data: {
-      email,
-      name: defaultNameFromEmail(email),
-      role,
-      emailVerified: true,
-    },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      image: true,
-      role: true,
-      emailVerified: true,
-    },
-  });
-
-  await writeGoogleRoleSyncAudit({
-    action: AuditAction.CREATE,
-    email,
-    resourceId: created.id,
-    newValue: {
-      role: created.role,
-      emailVerified: created.emailVerified,
-    },
-  });
-
-  return created;
+  return upsertEnabledDashboardUser(email, role, existing);
 }

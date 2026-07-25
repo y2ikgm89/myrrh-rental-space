@@ -26,6 +26,7 @@ import {
   buildInitialFeatureModules,
   normalizeFeatureModules,
 } from "@/shared/lib/features/registry";
+
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
@@ -365,26 +366,45 @@ export async function updateBusinessHoursSettings(
   });
 }
 
+/**
+ * 通知先スタッフ ID を正規化し、有効なダッシュボードスタッフのみであることを検証する。
+ *
+ * - 重複 ID は除去する
+ * - 存在する User かつ `dashboardEnabled: true` かつ role ∈ DASHBOARD_ROLES のみ許可
+ */
+async function normalizeAndAssertNotificationStaffIds(
+  ids: readonly string[],
+): Promise<string[]> {
+  const uniqueIds = [...new Set(ids)];
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const validUsers = await prisma.user.findMany({
+    where: {
+      id: { in: uniqueIds },
+      dashboardEnabled: true,
+      role: { in: [...DASHBOARD_ROLES] },
+    },
+    select: { id: true },
+  });
+
+  if (validUsers.length !== uniqueIds.length) {
+    throw new DomainError(
+      "通知先スタッフに無効なユーザーが含まれています。ダッシュボード利用可能なスタッフのみ選択できます。",
+      "VALIDATION",
+    );
+  }
+
+  return uniqueIds;
+}
+
 export async function updateEmailSettings(
   data: EmailSettingsInput,
 ): Promise<void> {
-  // 重複 ID を除去したうえで、管理画面ロールの User のみ許可する。
-  // 空配列は「通知先スタッフなし」として許容する。
-  const uniqueStaffIds = [...new Set(data.notificationStaffIds)];
-  if (uniqueStaffIds.length > 0) {
-    const validStaffCount = await prisma.user.count({
-      where: {
-        id: { in: uniqueStaffIds },
-        role: { in: [...DASHBOARD_ROLES] },
-      },
-    });
-    if (validStaffCount !== uniqueStaffIds.length) {
-      throw new DomainError(
-        "通知先スタッフに無効なユーザーが含まれています。管理画面にアクセスできるスタッフのみ選択してください",
-        "VALIDATION",
-      );
-    }
-  }
+  const notificationStaffIds = await normalizeAndAssertNotificationStaffIds(
+    data.notificationStaffIds,
+  );
 
   const organizationData = {
     senderEmail: normalizeNullableString(data.senderEmail),
@@ -396,7 +416,7 @@ export async function updateEmailSettings(
   };
   const notificationData = {
     notifyEventReminder: data.notifyEventReminder,
-    notificationStaffIds: uniqueStaffIds,
+    notificationStaffIds,
     notificationEmailAddresses: data.notificationEmailAddresses,
   };
 

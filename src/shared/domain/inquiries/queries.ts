@@ -467,7 +467,10 @@ export async function listAssignableStaffQuery(): Promise<
   AssignableStaffOption[]
 > {
   const users = await prisma.user.findMany({
-    where: { role: { in: [...ADMIN_OR_HIGHER_ROLES] } },
+    where: {
+      role: { in: [...ADMIN_OR_HIGHER_ROLES] },
+      dashboardEnabled: true,
+    },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });

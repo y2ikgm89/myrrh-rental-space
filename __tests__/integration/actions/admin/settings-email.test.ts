@@ -166,6 +166,13 @@ describe("emailFormSchema（実体）", () => {
     }
   });
 
+  test("notificationStaffIds が UUID 以外なら error", () => {
+    const fd = new FormData();
+    fd.append("notificationStaffIds", "not-a-uuid");
+    const r = parseWithZod(fd, { schema: emailFormSchema });
+    expect(r.status).toBe("error");
+  });
+
   test("notificationStaffIds 未指定でも success（任意）", () => {
     const r = parseWithZod(new FormData(), { schema: emailFormSchema });
     expect(r.status).toBe("success");

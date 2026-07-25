@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { userHasResourceAccess } from "@/shared/lib/admin-resource-access";
+import { canPreviewPageByPublishState } from "@/shared/lib/pages/can-preview-page";
 import { getPageBySlugQuery } from "@/shared/domain/pages/admin-queries";
 import { getPageForEditQuery } from "@/shared/domain/sections/admin-queries";
 import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
@@ -32,6 +33,10 @@ export default async function ManagedPagePreviewPage({
   }
 
   if (!(await userHasResourceAccess(user, "page", "read", pageMeta.id))) {
+    notFound();
+  }
+
+  if (!canPreviewPageByPublishState(user.role, pageMeta.isPublished)) {
     notFound();
   }
 

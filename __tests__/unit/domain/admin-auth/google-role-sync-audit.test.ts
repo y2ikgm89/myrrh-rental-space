@@ -5,6 +5,7 @@ mock.module("server-only", () => ({}));
 const mockFindUnique = mock();
 const mockUserCreate = mock();
 const mockUserUpdate = mock();
+const mockUserCount = mock();
 const mockCreateAuditLogRecord = mock();
 const mockCreateNotificationCommand = mock();
 
@@ -14,6 +15,7 @@ mock.module("@/shared/db/prisma", () => ({
       findUnique: mockFindUnique,
       create: mockUserCreate,
       update: mockUserUpdate,
+      count: mockUserCount,
     },
   },
 }));
@@ -50,7 +52,11 @@ mock.module("@/shared/lib/env/server", () => ({
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
-  ErrorCategory: { EXTERNAL_API: "EXTERNAL_API", DATABASE: "DATABASE" },
+  ErrorCategory: {
+    EXTERNAL_API: "EXTERNAL_API",
+    DATABASE: "DATABASE",
+    AUTHORIZATION: "AUTHORIZATION",
+  },
   ErrorSeverity: { HIGH: "HIGH", LOW: "LOW" },
   logError: mock(),
   normalizeError: (error: unknown) => error,
@@ -64,9 +70,11 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
     mockFindUnique.mockReset();
     mockUserCreate.mockReset();
     mockUserUpdate.mockReset();
+    mockUserCount.mockReset();
     mockCreateAuditLogRecord.mockReset();
     mockCreateNotificationCommand.mockReset();
     mockCreateNotificationCommand.mockResolvedValue(undefined);
+    mockUserCount.mockResolvedValue(1);
   });
 
   test("Google グループ同期で管理ユーザーを新規作成したら監査ログを残す（通知は送らない）", async () => {
@@ -78,6 +86,7 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
       image: null,
       role: "ADMIN",
       emailVerified: true,
+      dashboardEnabled: true,
     });
 
     await syncAdminAuthUserFromGoogleGroups("admin@example.com");
@@ -87,7 +96,11 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
         action: "CREATE",
         resource: "user",
         resourceId: "11111111-1111-4111-8111-111111111111",
-        newValue: { role: "ADMIN", emailVerified: true },
+        newValue: {
+          role: "ADMIN",
+          emailVerified: true,
+          dashboardEnabled: true,
+        },
         metadata: expect.objectContaining({
           source: "google-workspace-role-sync",
           targetEmail: "admin@example.com",
@@ -106,6 +119,7 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
       image: null,
       role: "VIEWER",
       emailVerified: true,
+      dashboardEnabled: true,
     });
     mockUserUpdate.mockResolvedValueOnce({
       id: "22222222-2222-4222-8222-222222222222",
@@ -114,6 +128,7 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
       image: null,
       role: "ADMIN",
       emailVerified: true,
+      dashboardEnabled: true,
     });
 
     await syncAdminAuthUserFromGoogleGroups("admin@example.com");
@@ -123,8 +138,12 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
         action: "ROLE_CHANGE",
         resource: "user",
         resourceId: "22222222-2222-4222-8222-222222222222",
-        oldValue: { role: "VIEWER" },
-        newValue: { role: "ADMIN", emailVerified: true },
+        oldValue: { role: "VIEWER", dashboardEnabled: true },
+        newValue: {
+          role: "ADMIN",
+          emailVerified: true,
+          dashboardEnabled: true,
+        },
         metadata: expect.objectContaining({
           source: "google-workspace-role-sync",
           targetEmail: "admin@example.com",
@@ -149,6 +168,7 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
       image: null,
       role: "ADMIN",
       emailVerified: false,
+      dashboardEnabled: true,
     });
     mockUserUpdate.mockResolvedValueOnce({
       id: "33333333-3333-4333-8333-333333333333",
@@ -157,6 +177,7 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
       image: null,
       role: "ADMIN",
       emailVerified: true,
+      dashboardEnabled: true,
     });
 
     await syncAdminAuthUserFromGoogleGroups("admin@example.com");
@@ -175,6 +196,7 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
       image: null,
       role: "VIEWER",
       emailVerified: true,
+      dashboardEnabled: true,
     });
     const updated = {
       id: "44444444-4444-4444-8444-444444444444",
@@ -183,6 +205,7 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
       image: null,
       role: "ADMIN",
       emailVerified: true,
+      dashboardEnabled: true,
     } as const;
     mockUserUpdate.mockResolvedValueOnce(updated);
     mockCreateNotificationCommand.mockRejectedValueOnce(
@@ -191,6 +214,13 @@ describe("syncAdminAuthUserFromGoogleGroups audit logging", () => {
 
     const result = await syncAdminAuthUserFromGoogleGroups("admin@example.com");
 
-    expect(result).toEqual(updated);
+    expect(result).toEqual({
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      image: updated.image,
+      role: updated.role,
+      emailVerified: updated.emailVerified,
+    });
   });
 });

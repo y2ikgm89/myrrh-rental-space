@@ -24,3 +24,10 @@ export type PageListResult = {
   page: number;
   perPage: number;
 };
+
+/** EDITOR ページ割り当て UI 用（client-safe）。 */
+export type PageAssignmentOption = {
+  id: string;
+  title: string;
+  slug: string;
+};

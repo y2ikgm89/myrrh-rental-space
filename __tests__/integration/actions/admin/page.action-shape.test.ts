@@ -24,7 +24,9 @@ const mockRestorePage = mock(async () => {});
 const mockUpdatePublished = mock<
   (slug: string, isPublished: boolean) => Promise<{ isPublished: boolean }>
 >((_s, isPublished) => Promise.resolve({ isPublished }));
-const mockBulkUpdatePublished = mock(async () => {});
+const mockBulkUpdatePublished = mock<
+  (slugs: string[], isPublished: boolean) => Promise<{ count: number }>
+>((slugs) => Promise.resolve({ count: slugs.length }));
 const mockBulkDelete = mock<
   (slugs: string[]) => Promise<{ deletedSlugs: string[] }>
 >((slugs) => Promise.resolve({ deletedSlugs: slugs }));
@@ -190,6 +192,9 @@ describe("bulkUpdatePagePublished (action shape)", () => {
   beforeEach(() => {
     mockExecute.mockClear();
     mockBulkUpdatePublished.mockClear();
+    mockBulkUpdatePublished.mockImplementation((slugs) =>
+      Promise.resolve({ count: slugs.length }),
+    );
   });
 
   test("正常系: resource=page, action=publish (bulk)", async () => {
@@ -202,6 +207,14 @@ describe("bulkUpdatePagePublished (action shape)", () => {
     );
     expect(mockBulkUpdatePublished).toHaveBeenCalledWith([SLUG, SLUG_B], false);
     expect(r).toEqual({ count: 2, isPublished: false });
+  });
+
+  test("count は command の戻り値を使う（slugs.length ではない）", async () => {
+    mockBulkUpdatePublished.mockResolvedValue({ count: 1 });
+
+    const r = await bulkUpdatePagePublished([SLUG, SLUG_B], true);
+
+    expect(r).toEqual({ count: 1, isPublished: true });
   });
 });
 

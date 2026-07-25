@@ -161,8 +161,11 @@ export async function bulkUpdatePagePublished(
     resource: "page",
     action: "publish",
     execute: async () => {
-      await bulkUpdatePagePublishedCommand(slugs, isPublished);
-      return { count: slugs.length, isPublished };
+      const { count } = await bulkUpdatePagePublishedCommand(
+        slugs,
+        isPublished,
+      );
+      return { count, isPublished };
     },
     afterSuccess: () => {
       invalidatePageTags(...slugs);

@@ -271,14 +271,17 @@ enum HolidayMode {
 // ==============================================
 
 model User {
-  id            String   @id @default(uuid()) @db.Uuid
-  email         String   @unique
-  name          String
-  emailVerified Boolean  @default(false)
-  image         String?
-  role          Role     @default(USER)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(uuid()) @db.Uuid
+  email            String   @unique
+  name             String
+  emailVerified    Boolean  @default(false)
+  image            String?
+  role             Role     @default(USER)
+  /// Google Workspace グループ同期でダッシュボード利用可否を表す。
+  /// false のとき管理ログイン拒否・通知先/担当候補から除外（ロール履歴は保持）。
+  dashboardEnabled Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   accounts     Account[]

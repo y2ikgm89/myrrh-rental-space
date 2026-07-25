@@ -7,6 +7,7 @@ type UserRecord = {
   name: string;
   role: Role;
   emailVerified: boolean;
+  dashboardEnabled: boolean;
   image: string | null;
   createdAt: Date;
   updatedAt: Date;

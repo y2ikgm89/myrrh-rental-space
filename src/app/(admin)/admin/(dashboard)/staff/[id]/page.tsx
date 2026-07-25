@@ -15,7 +15,12 @@ import {
 } from "@/admin/components/ui/card";
 import { Button } from "@/admin/components/ui/button";
 import { RoleBadge } from "@/admin/components/status-badges";
+import { AssignedPagesSection } from "../_components/AssignedPagesSection";
 import { formatDate } from "@/shared/lib/date-format";
+import { getActivePagesForAssignmentPickerQuery } from "@/shared/domain/pages/admin-queries";
+import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
+import { hasPermission } from "@/shared/lib/admin-permissions";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import type { Metadata } from "next";
 
 type Props = {
@@ -39,7 +44,7 @@ export default async function StaffDetailPage({ params }: Props) {
   await connection();
 
   const { id } = await params;
-  const [, user] = await Promise.all([
+  const [currentUser, user] = await Promise.all([
     requireAdminPermission("user", "read"),
     getUser(id),
   ]);
@@ -47,6 +52,15 @@ export default async function StaffDetailPage({ params }: Props) {
   if (!user) {
     notFound();
   }
+
+  const canEditAssignments = hasPermission(currentUser.role, "user", "update");
+  const [assignedPageIds, activePages] =
+    user.role === Role.EDITOR
+      ? await Promise.all([
+          getAssignedPageIdsForUser(user.id),
+          getActivePagesForAssignmentPickerQuery(),
+        ])
+      : [[], []];
 
   return (
     <AdminDetailLayout
@@ -62,6 +76,10 @@ export default async function StaffDetailPage({ params }: Props) {
             <DetailField
               label="ロール"
               value={<RoleBadge role={user.role} />}
+            />
+            <DetailField
+              label="ダッシュボード"
+              value={user.dashboardEnabled ? "有効" : "無効（グループ未所属）"}
             />
           </div>
         </DetailSection>
@@ -84,6 +102,16 @@ export default async function StaffDetailPage({ params }: Props) {
           </div>
         </DetailSection>
       </div>
+
+      {user.role === Role.EDITOR && (
+        <AssignedPagesSection
+          key={assignedPageIds.join(",")}
+          userId={user.id}
+          pages={activePages}
+          assignedPageIds={assignedPageIds}
+          canEdit={canEditAssignments}
+        />
+      )}
 
       {user._count.reservations > 0 && (
         <Card>
