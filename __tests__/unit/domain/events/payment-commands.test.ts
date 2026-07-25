@@ -35,6 +35,18 @@ type MockCredentials = {
   stripeCurrency: string;
   stripePaymentMethodTypes: readonly string[];
 };
+const mockAssertStripeCredentialsConfigured = mock<
+  () => Promise<MockCredentials>
+>(() =>
+  Promise.resolve({
+    stripeSecretKey: "enc-stripe-secret",
+    stripeWebhookSecret: "enc-webhook-secret",
+    stripePublishableKey: null,
+    stripeAccountId: null,
+    stripeCurrency: "jpy",
+    stripePaymentMethodTypes: ["card"],
+  }),
+);
 const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>(
   () =>
     Promise.resolve({
@@ -88,6 +100,8 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 mock.module("@/shared/domain/payment/availability", () => ({
   assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
+  assertStripeCredentialsConfigured: () =>
+    mockAssertStripeCredentialsConfigured(),
 }));
 mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: () => mockGetStripeClient(),
@@ -195,6 +209,7 @@ describe("events/payment-commands", () => {
     mockRegFindFirst.mockReset();
     mockRegUpdateMany.mockReset();
     mockAssertOnlinePaymentAvailable.mockReset();
+    mockAssertStripeCredentialsConfigured.mockReset();
     mockGetStripeClient.mockReset();
     mockCheckoutSessionCreate.mockReset();
     mockLogError.mockReset();
@@ -203,6 +218,14 @@ describe("events/payment-commands", () => {
     mockRegFindFirst.mockResolvedValue(authoritative());
     mockRegUpdateMany.mockResolvedValue({ count: 1 });
     mockAssertOnlinePaymentAvailable.mockResolvedValue({
+      stripeSecretKey: "enc-stripe-secret",
+      stripeWebhookSecret: "enc-webhook-secret",
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
+    });
+    mockAssertStripeCredentialsConfigured.mockResolvedValue({
       stripeSecretKey: "enc-stripe-secret",
       stripeWebhookSecret: "enc-webhook-secret",
       stripePublishableKey: null,

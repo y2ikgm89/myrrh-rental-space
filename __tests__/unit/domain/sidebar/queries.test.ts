@@ -124,7 +124,7 @@ describe("getSidebarData", () => {
     );
   });
 
-  test("popular は暫定で publishedAt desc / take=popularCount で fetch", async () => {
+  test("popular は viewCount desc / publishedAt desc / take=popularCount で fetch", async () => {
     mockPostFindMany.mockResolvedValueOnce([]);
     const widgets: SidebarWidget[] = [
       { type: "popular", enabled: true, layout: "compact", showRanking: true },
@@ -134,7 +134,7 @@ describe("getSidebarData", () => {
 
     expect(mockPostFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        orderBy: { publishedAt: "desc" },
+        orderBy: [{ viewCount: "desc" }, { publishedAt: "desc" }],
         take: 4,
       }),
     );

@@ -7,7 +7,10 @@ import {
 } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
+import {
+  assertOnlinePaymentAvailable,
+  assertStripeCredentialsConfigured,
+} from "@/shared/domain/payment/availability";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { toStripeUnitAmount } from "@/shared/lib/stripe-shared";
@@ -658,7 +661,7 @@ export async function refundEventRegistrationPaymentCommand(
     request,
   } = input;
 
-  const stripeSettings = await assertOnlinePaymentAvailable();
+  const stripeSettings = await assertStripeCredentialsConfigured();
   const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(
@@ -878,7 +881,7 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
     reason = "Waitlist capacity race after successful payment",
   } = input;
 
-  const stripeSettings = await assertOnlinePaymentAvailable();
+  const stripeSettings = await assertStripeCredentialsConfigured();
   const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
   if (!client) {
     throw new DomainError(

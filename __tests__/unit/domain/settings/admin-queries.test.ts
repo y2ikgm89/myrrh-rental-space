@@ -88,18 +88,6 @@ const mockGoogleMapsUpsert = mock(() =>
   }),
 );
 
-const mockCustomApiKeysUpsert = mock(() =>
-  Promise.resolve({
-    ...singletonTimestamps,
-    customApiKeys: {
-      external: {
-        key: "encrypted-custom-key",
-        value: "encrypted-custom-value",
-      },
-    },
-  }),
-);
-
 const mockInstagramUpsert = mock(() =>
   Promise.resolve({
     ...singletonTimestamps,
@@ -356,9 +344,6 @@ mock.module("@/shared/db/prisma", () => ({
     settingsGoogleMaps: {
       upsert: mockGoogleMapsUpsert,
     },
-    settingsCustomApiKeys: {
-      upsert: mockCustomApiKeysUpsert,
-    },
     settingsGoogleCalendar: {
       upsert: mockGoogleCalendarUpsert,
     },
@@ -416,7 +401,6 @@ describe("getAdminSettings", () => {
     mockResendUpsert.mockClear();
     mockTurnstileUpsert.mockClear();
     mockGoogleMapsUpsert.mockClear();
-    mockCustomApiKeysUpsert.mockClear();
     mockGoogleCalendarUpsert.mockClear();
     mockGoogleBusinessProfileUpsert.mockClear();
     mockInstagramUpsert.mockClear();

@@ -24,7 +24,6 @@ export { GoogleMapsSection } from "./GoogleMapsSection";
 export { GoogleCalendarSection } from "./GoogleCalendarSection";
 export { GoogleBusinessProfileSection } from "./GoogleBusinessProfileSection";
 export { TwoWaySyncSection } from "./TwoWaySyncSection";
-export { CustomApiKeysSection } from "./CustomApiKeysSection";
 export { InstagramSection } from "./InstagramSection";
 
 // 既存コンポーネント（親ディレクトリから再エクスポート）

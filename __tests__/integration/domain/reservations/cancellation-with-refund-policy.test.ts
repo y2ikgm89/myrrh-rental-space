@@ -94,6 +94,15 @@ mock.module("@/shared/domain/payment/availability", () => ({
       stripeCurrency: "jpy",
       stripePaymentMethodTypes: ["card"],
     }),
+  assertStripeCredentialsConfigured: () =>
+    Promise.resolve({
+      stripeSecretKey: "sk_test_dummy",
+      stripeWebhookSecret: "whsec_dummy",
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
+    }),
 }));
 
 // AuditLog: hash chain state を汚染しないよう mock。metadata を record して assert。

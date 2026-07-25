@@ -46,7 +46,6 @@ const phase4SettingsFieldPatterns = [
   /\bgoogleMapsApiKey\b/u,
   /\bgoogleMapsLastTestedAt\b/u,
   /\bgoogleMapsConnectionStatus\b/u,
-  /\bcustomApiKeys\b/u,
   /\bgoogleCalendarEnabled\b/u,
   /\bgoogleCalendarServiceAccountJson\b/u,
   /\bgoogleCalendarId\b/u,
@@ -124,9 +123,6 @@ describe("settings phase 4 schema split", () => {
     );
     expect(schema).toMatch(
       /model SettingsGoogleMaps \{[\s\S]*@@map\("settings_google_maps"\)/u,
-    );
-    expect(schema).toMatch(
-      /model SettingsCustomApiKeys \{[\s\S]*@@map\("settings_custom_api_keys"\)/u,
     );
     expect(schema).toMatch(
       /model SettingsGoogleCalendar \{[\s\S]*@@map\("settings_google_calendars"\)/u,

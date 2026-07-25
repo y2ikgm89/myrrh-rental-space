@@ -28,7 +28,7 @@ const mockCouponUpdateMany = mock<
 const mockApplyCancellationSideEffects = mock<
   (args: Record<string, unknown>) => Promise<void>
 >(() => Promise.resolve());
-const mockAssertOnlinePaymentAvailable = mock<
+const mockAssertStripeCredentialsConfigured = mock<
   () => Promise<{
     stripeSecretKey: string;
   }>
@@ -63,7 +63,7 @@ mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
   applyCancellationSideEffects: mockApplyCancellationSideEffects,
 }));
 mock.module("@/shared/domain/payment/availability", () => ({
-  assertOnlinePaymentAvailable: mockAssertOnlinePaymentAvailable,
+  assertStripeCredentialsConfigured: mockAssertStripeCredentialsConfigured,
 }));
 mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: mockGetStripeClient,
@@ -88,7 +88,7 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockReservationUpdateMany.mockReset();
     mockCouponUpdateMany.mockReset();
     mockApplyCancellationSideEffects.mockReset();
-    mockAssertOnlinePaymentAvailable.mockReset();
+    mockAssertStripeCredentialsConfigured.mockReset();
     mockSessionsExpire.mockReset();
     mockGetStripeClient.mockReset();
     mockLogError.mockReset();
@@ -97,7 +97,7 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
     mockCouponUpdateMany.mockResolvedValue({ count: 0 });
     mockApplyCancellationSideEffects.mockResolvedValue(undefined);
-    mockAssertOnlinePaymentAvailable.mockResolvedValue({
+    mockAssertStripeCredentialsConfigured.mockResolvedValue({
       stripeSecretKey: "sk_test",
     });
     mockSessionsExpire.mockResolvedValue({});

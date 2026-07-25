@@ -11,7 +11,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
-import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
+import { assertStripeCredentialsConfigured } from "@/shared/domain/payment/availability";
 import { getStripeClient } from "@/shared/lib/stripe";
 
 /**
@@ -198,7 +198,7 @@ async function expireCheckoutSessionBestEffort(input: {
   sessionId: string;
 }): Promise<void> {
   try {
-    const stripeSettings = await assertOnlinePaymentAvailable();
+    const stripeSettings = await assertStripeCredentialsConfigured();
     const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
     if (!client) return;
     await client.checkout.sessions.expire(input.sessionId);

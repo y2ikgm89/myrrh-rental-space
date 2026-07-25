@@ -1222,6 +1222,7 @@ model Post {
   ogpDescription     String?
   publishedAt        DateTime?
   status             PostStatus   @default(DRAFT)
+  viewCount          Int          @default(0) // 公開ページでの閲覧回数（集計値、localStorage で dedup）
   authorId           String?      @db.Uuid // ユーザー削除時にnull化
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
@@ -1238,6 +1239,8 @@ model Post {
   @@index([authorId])
   @@index([status, publishedAt])
   @@index([categoryId, status, publishedAt])
+  @@index([viewCount])
+  @@index([status, viewCount])
   // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchPosts ORs
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_title_trgm_idx")
@@ -1726,16 +1729,6 @@ model SettingsGoogleMaps {
   googleMapsConnectionStatus String?
 
   @@map("settings_google_maps")
-}
-
-model SettingsCustomApiKeys {
-  id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  customApiKeys Json? @default("{}")
-
-  @@map("settings_custom_api_keys")
 }
 
 model SettingsGoogleCalendar {

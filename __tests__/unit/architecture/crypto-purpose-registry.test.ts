@@ -32,8 +32,8 @@ const OTHER_DOMAIN_PURPOSES = [
 ];
 
 describe("crypto purpose registry", () => {
-  test("SETTINGS_CRYPTO_PURPOSES は期待通り13種類ちょうど", () => {
-    expect(Object.keys(SETTINGS_CRYPTO_PURPOSES)).toHaveLength(13);
+  test("SETTINGS_CRYPTO_PURPOSES は期待通り12種類ちょうど", () => {
+    expect(Object.keys(SETTINGS_CRYPTO_PURPOSES)).toHaveLength(12);
   });
 
   test("SETTINGS_CRYPTO_PURPOSES 単体で重複がない", () => {

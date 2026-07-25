@@ -1,7 +1,6 @@
 "use server";
 
 import type { SubmissionResult } from "@conform-to/react";
-import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   testGoogleMapsConnection,
@@ -10,26 +9,19 @@ import {
   testTurnstileConnection,
 } from "@/admin/lib/api-keys";
 import {
-  customApiKeySchema,
-  type CustomApiKeyInput,
-} from "@/admin/lib/validations/api-keys";
-import {
   resendFormSchema,
   googleMapsFormSchema,
   switchbotFormSchema,
   turnstileFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
-  addCustomApiKey as addCustomApiKeyCommand,
   clearGoogleMapsSettings as clearGoogleMapsSettingsCommand,
   clearResendSettings as clearResendSettingsCommand,
   clearSwitchBotSettings as clearSwitchBotSettingsCommand,
   clearTurnstileSettings as clearTurnstileSettingsCommand,
-  deleteCustomApiKey as deleteCustomApiKeyCommand,
   ensureSwitchBotWebhookPathToken,
   recordGoogleMapsConnectionStatus,
   recordResendConnectionStatus,
@@ -51,8 +43,6 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { CACHE_TAGS, getAppUrl } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-
-const apiKeyIdSchema = z.string().min(1, { error: "APIキーIDが不正です" });
 
 function refreshSettingsCache(): void {
   invalidateSiteWideCache(CACHE_TAGS.INTEGRATION_SETTINGS, {
@@ -395,40 +385,6 @@ export async function rotateSwitchBotWebhookPathTokenAction(): Promise<MutationR
     action: "manage",
     execute: async () => {
       await rotateSwitchBotWebhookPathTokenCommand();
-      return null;
-    },
-    afterSuccess: refreshSettingsCache,
-  });
-}
-
-export async function addCustomApiKey(
-  input: CustomApiKeyInput,
-): Promise<MutationResult<{ id: string }>> {
-  const parsed = customApiKeySchema.safeParse(input);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "manage",
-    execute: async () => addCustomApiKeyCommand(omitUndefined(parsed.data)),
-    afterSuccess: refreshSettingsCache,
-    resolveAuditResourceId: (result) => result.id,
-  });
-}
-
-export async function deleteCustomApiKey(id: string): Promise<MutationResult> {
-  const validated = apiKeyIdSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationMutationError(validated.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "manage",
-    execute: async () => {
-      await deleteCustomApiKeyCommand(validated.data);
       return null;
     },
     afterSuccess: refreshSettingsCache,

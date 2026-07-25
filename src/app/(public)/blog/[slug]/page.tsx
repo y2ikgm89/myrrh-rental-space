@@ -6,6 +6,7 @@ import {
   PostDetailPageContent,
   buildPostMetadata,
 } from "../_components/post-detail-page-content";
+import { PostViewTracker } from "../_components/post-view-tracker";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
 
@@ -31,5 +32,10 @@ export default async function BlogPostPage({
   const post = await getPublishedPost(slug);
   if (!post) notFound();
 
-  return <PostDetailPageContent post={post} />;
+  return (
+    <>
+      <PostViewTracker id={post.id} />
+      <PostDetailPageContent post={post} />
+    </>
+  );
 }

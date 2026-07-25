@@ -114,7 +114,6 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
       "Google カレンダー",
       "Google ビジネスプロフィール",
       "Instagram",
-      "カスタム",
     ],
   },
   {

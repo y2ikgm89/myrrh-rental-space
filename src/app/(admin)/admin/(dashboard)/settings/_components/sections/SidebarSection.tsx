@@ -390,13 +390,11 @@ export function SidebarSection({
 
                   {popularWidget?.enabled && (
                     <div className="space-y-4 rounded-lg border p-4">
-                      <p className="text-sm font-medium">
-                        注目記事（公開日順）
-                      </p>
+                      <p className="text-sm font-medium">人気記事</p>
                       <Alert variant="info">
                         <IconInfoCircle aria-hidden="true" />
                         <AlertDescription>
-                          閲覧数トラッキング未実装のため、現在は公開日の新しい順で表示されます（新着と同じ並び）。
+                          公開記事の閲覧数（viewCount）が多い順に表示します。同数の場合は公開日が新しい順です。
                         </AlertDescription>
                       </Alert>
                       <div className="space-y-2">
@@ -490,12 +488,13 @@ export function SidebarSection({
                   </li>
                   <li>表示件数は1〜20件の範囲で設定できます</li>
                   <li>
-                    新着・注目記事はコンパクト（横並び）/
+                    新着・人気記事はコンパクト（横並び）/
                     縦積みの2種類のレイアウトから選べます
                   </li>
+                  <li>人気記事は閲覧数（viewCount）の多い順で表示されます</li>
                   <li>
-                    注目記事（公開日順）はサムネイル左上に 01〜
-                    のランキング番号を表示できます（閲覧数ではなく表示順の連番です）
+                    人気記事はサムネイル左上に 01〜
+                    のランキング番号を表示できます
                   </li>
                 </ul>
               </AccordionContent>

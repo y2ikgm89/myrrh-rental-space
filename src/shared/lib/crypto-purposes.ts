@@ -16,7 +16,6 @@ export const SETTINGS_CRYPTO_PURPOSES = {
   googleMapsApiKey: "google-maps-api-key",
   resendApiKey: "resend-api-key",
   resendWebhookSecret: "resend-webhook-secret",
-  customApiKey: "custom-api-key",
   googleCalendarServiceAccount: "google-calendar-service-account",
   googleBusinessProfileAuth: "google-business-profile-auth",
   switchbotOpenToken: "switchbot-open-token",

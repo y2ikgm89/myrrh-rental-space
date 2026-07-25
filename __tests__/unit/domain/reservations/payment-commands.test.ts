@@ -36,6 +36,18 @@ type MockCredentials = {
   stripeCurrency: string;
   stripePaymentMethodTypes: readonly string[];
 };
+const mockAssertStripeCredentialsConfigured = mock<
+  () => Promise<MockCredentials>
+>(() =>
+  Promise.resolve({
+    stripeSecretKey: "enc-stripe-secret",
+    stripeWebhookSecret: "enc-webhook-secret",
+    stripePublishableKey: null,
+    stripeAccountId: null,
+    stripeCurrency: "jpy",
+    stripePaymentMethodTypes: ["card"],
+  }),
+);
 const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>(
   () =>
     Promise.resolve({
@@ -96,6 +108,8 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 mock.module("@/shared/domain/payment/availability", () => ({
   assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
+  assertStripeCredentialsConfigured: () =>
+    mockAssertStripeCredentialsConfigured(),
 }));
 mock.module("@/shared/lib/stripe", () => ({
   getStripeClient: () => mockGetStripeClient(),
@@ -149,6 +163,7 @@ describe("reservations/payment-commands", () => {
     mockReservationUpdate.mockReset();
     mockReservationUpdateMany.mockReset();
     mockAssertOnlinePaymentAvailable.mockReset();
+    mockAssertStripeCredentialsConfigured.mockReset();
     mockGetStripeClient.mockReset();
     mockRefundCreate.mockReset();
     mockCheckoutSessionCreate.mockReset();
@@ -158,6 +173,14 @@ describe("reservations/payment-commands", () => {
     mockReservationUpdate.mockResolvedValue({ id: RESERVATION_ID });
     mockReservationUpdateMany.mockResolvedValue({ count: 1 });
     mockAssertOnlinePaymentAvailable.mockResolvedValue({
+      stripeSecretKey: "enc-stripe-secret",
+      stripeWebhookSecret: "enc-webhook-secret",
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
+    });
+    mockAssertStripeCredentialsConfigured.mockResolvedValue({
       stripeSecretKey: "enc-stripe-secret",
       stripeWebhookSecret: "enc-webhook-secret",
       stripePublishableKey: null,
