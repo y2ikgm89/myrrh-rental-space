@@ -290,6 +290,20 @@ const mockReservationUpsert = mock(() =>
   }),
 );
 
+const mockDataRetentionUpsert = mock(() =>
+  Promise.resolve({
+    ...singletonTimestamps,
+    dataRetention: {
+      sessionMonths: 6,
+      verificationMonths: 6,
+      loginAttemptMonths: 6,
+      reservationGuestMonths: 12,
+      inquiryMonths: 36,
+      customerInactiveMonths: 84,
+    },
+  }),
+);
+
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
@@ -326,6 +340,9 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsReservation: {
       upsert: mockReservationUpsert,
+    },
+    settingsDataRetention: {
+      upsert: mockDataRetentionUpsert,
     },
     settingsStripe: {
       upsert: mockStripeUpsert,
@@ -394,6 +411,7 @@ describe("getAdminSettings", () => {
     mockCommerceUpsert.mockClear();
     mockNotificationUpsert.mockClear();
     mockReservationUpsert.mockClear();
+    mockDataRetentionUpsert.mockClear();
     mockStripeUpsert.mockClear();
     mockResendUpsert.mockClear();
     mockTurnstileUpsert.mockClear();
