@@ -1206,7 +1206,8 @@ describe("deletePostCategory", () => {
 
       await expect(deletePostCategory(CATEGORY_ID)).rejects.toMatchObject({
         code: "CONFLICT",
-        message: "このカテゴリには記事が紐づいているため削除できません",
+        message:
+          "このカテゴリには記事が紐づいているため削除できません（ゴミ箱内の記事も含みます）",
       });
     });
 
@@ -1530,7 +1531,8 @@ describe("deletePostTag", () => {
 
       await expect(deletePostTag(TAG_ID)).rejects.toMatchObject({
         code: "CONFLICT",
-        message: "このタグは記事で使用されているため削除できません",
+        message:
+          "このタグは記事で使用されているため削除できません（ゴミ箱内の記事も含みます）",
       });
     });
 

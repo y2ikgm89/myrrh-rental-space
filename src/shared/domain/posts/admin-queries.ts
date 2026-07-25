@@ -208,14 +208,18 @@ export async function getPostCategories(): Promise<PostCategoryData[]> {
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        // 表示件数はアクティブ記事のみ（ゴミ箱は除外）
+        select: { posts: { where: { deletedAt: null } } },
       },
+      // 削除可否用: ゴミ箱含む紐づけの有無
+      posts: { select: { id: true }, take: 1 },
     },
     orderBy: { order: "asc" },
   });
 
-  return categories.map((category) => ({
+  return categories.map(({ posts, ...category }) => ({
     ...category,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
     createdAt: category.createdAt.toISOString(),
     updatedAt: category.updatedAt.toISOString(),
   }));
@@ -238,8 +242,9 @@ export async function getPostCategoryById(
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        select: { posts: { where: { deletedAt: null } } },
       },
+      posts: { select: { id: true }, take: 1 },
     },
   });
 
@@ -247,10 +252,12 @@ export async function getPostCategoryById(
     return null;
   }
 
+  const { posts, ...rest } = category;
   return {
-    ...category,
-    createdAt: category.createdAt.toISOString(),
-    updatedAt: category.updatedAt.toISOString(),
+    ...rest,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
+    createdAt: rest.createdAt.toISOString(),
+    updatedAt: rest.updatedAt.toISOString(),
   };
 }
 
@@ -267,14 +274,17 @@ export async function getPostTags(): Promise<PostTagData[]> {
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        // 表示件数はアクティブ記事のみ（ゴミ箱は除外）
+        select: { posts: { where: { post: { deletedAt: null } } } },
       },
+      posts: { select: { postId: true }, take: 1 },
     },
     orderBy: { name: "asc" },
   });
 
-  return tags.map((tag) => ({
+  return tags.map(({ posts, ...tag }) => ({
     ...tag,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
     createdAt: tag.createdAt.toISOString(),
     updatedAt: tag.updatedAt.toISOString(),
   }));
@@ -294,8 +304,9 @@ export async function getPostTagById(id: string): Promise<PostTagData | null> {
       createdAt: true,
       updatedAt: true,
       _count: {
-        select: { posts: true },
+        select: { posts: { where: { post: { deletedAt: null } } } },
       },
+      posts: { select: { postId: true }, take: 1 },
     },
   });
 
@@ -303,9 +314,11 @@ export async function getPostTagById(id: string): Promise<PostTagData | null> {
     return null;
   }
 
+  const { posts, ...rest } = tag;
   return {
-    ...tag,
-    createdAt: tag.createdAt.toISOString(),
-    updatedAt: tag.updatedAt.toISOString(),
+    ...rest,
+    hasLinkedPostsIncludingTrash: posts.length > 0,
+    createdAt: rest.createdAt.toISOString(),
+    updatedAt: rest.updatedAt.toISOString(),
   };
 }
