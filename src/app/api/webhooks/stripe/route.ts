@@ -93,10 +93,43 @@ import {
   issueReceiptForReservation,
   issueReceiptForEventRegistration,
 } from "@/shared/domain/receipts/issue";
+import {
+  notifyReceiptIssuedForEventRegistration,
+  notifyReceiptIssuedForReservation,
+} from "@/shared/domain/receipts/notify-issued";
 import { assertStripeCredentialsConfigured } from "@/shared/domain/payment/availability";
+import { getAppUrl } from "@/shared/lib/constants";
+import {
+  createStatusToken,
+  STATUS_TOKEN_LIFETIME_MS,
+} from "@/shared/lib/reservation-status-token";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
+
+/**
+ * 予約領収書発行通知の CTA URL。
+ * 会員は mypage 詳細、ゲストは status token 付き薄い詳細ページ。
+ */
+function buildReservationReceiptDetailUrl(reservation: {
+  readonly id: string;
+  readonly userId: string | null;
+}): string {
+  const appUrl = getAppUrl();
+  if (reservation.userId) {
+    return `${appUrl}/mypage/reservations/${reservation.id}`;
+  }
+  const token = createStatusToken(
+    reservation.id,
+    new Date(Date.now() + STATUS_TOKEN_LIFETIME_MS),
+  );
+  return `${appUrl}/reservation/status?token=${token}`;
+}
+
+/** イベント申込の領収書発行通知 CTA（会員 mypage 一覧。ゲスト薄い詳細は follow-up）。 */
+function buildEventRegistrationReceiptDetailUrl(): string {
+  return `${getAppUrl()}/mypage/events`;
+}
 
 // =============================================================================
 // POST /api/webhooks/stripe
@@ -366,17 +399,15 @@ async function fulfillPaymentAtomically(
   // これを毎時実行の `/api/cron/receipt-backfill` (`backfillReceipts`) が
   // `paymentStatus IN [PAID, PARTIALLY_REFUNDED] AND receipt: null` 走査で reconcile する。
   //
-  // receiptSerialNo は発行成功時のみゲスト予約の確認メールへ渡して署名 URL を組み立てる
-  // (RECEIPT-GUEST-01)。VALIDATION スキップ / 恒久 throw で undefined のままなら
-  // 領収書 CTA は表示されない (backfill 経路がフォローする)。
-  let receiptSerialNo: string | undefined;
+  // 領収書の顧客通知は確認メール埋め込みではなく `notifyReceiptIssuedFor*`（発行通知メール）。
+  // 発行成功時のみ送り、CONFIRMED で確認メールを skip しても通知は必ず送る（spec §7）。
+  let issuedReceipt: { id: string; serialNo: string } | undefined;
   try {
     // OBS-02: source を明示指定して AuditLog CREATE の metadata に載せる
     // (webhook 経路の自動発行を hash chain 保護された証跡として区別)。
-    const receipt = await issueReceiptForReservation(reservation.id, {
+    issuedReceipt = await issueReceiptForReservation(reservation.id, {
       source: "stripe-webhook",
     });
-    receiptSerialNo = receipt.serialNo;
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION") {
       logError(error, {
@@ -390,6 +421,24 @@ async function fulfillPaymentAtomically(
     } else {
       throw error;
     }
+  }
+
+  if (issuedReceipt) {
+    fireAndForget(
+      notifyReceiptIssuedForReservation({
+        receiptId: issuedReceipt.id,
+        detailUrl: buildReservationReceiptDetailUrl(reservation),
+      }),
+      {
+        operation: "notifyReceiptIssuedForReservation",
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          reservationId,
+          receiptId: issuedReceipt.id,
+        },
+      },
+    );
   }
 
   if (skipConfirmationEmail) return;
@@ -408,7 +457,6 @@ async function fulfillPaymentAtomically(
         notes: reservation.notes ?? undefined,
         icsSequence: reservation.icsSequence,
         userId: reservation.userId,
-        receiptSerialNo,
       }),
     ),
     {
@@ -579,15 +627,14 @@ async function fulfillEventRegistrationPaymentAtomically(
   // receipt: null) を毎時走査して発行を再試行する (`backfillReceipts` の
   // `registrationRows` 経路)。
   //
-  // receiptSerialNo は発行成功時のみゲスト申込の確認メール (waitlist offer 経路) へ
-  // 渡して署名 URL を組み立てる (RECEIPT-GUEST-01)。
-  let receiptSerialNo: string | undefined;
+  // 領収書顧客通知は発行通知メール (`notifyReceiptIssuedFor*`) に集約。確認メールへ
+  // receiptSerialNo を渡さない（直接購入で確認メール skip でも発行通知は送る）。
+  let issuedReceipt: { id: string; serialNo: string } | undefined;
   try {
     // OBS-02: source を明示指定 (reservation 側と同型)。
-    const receipt = await issueReceiptForEventRegistration(registrationId, {
+    issuedReceipt = await issueReceiptForEventRegistration(registrationId, {
       source: "stripe-webhook",
     });
-    receiptSerialNo = receipt.serialNo;
   } catch (error) {
     if (error instanceof DomainError && error.code === "VALIDATION") {
       logError(error, {
@@ -601,6 +648,24 @@ async function fulfillEventRegistrationPaymentAtomically(
     } else {
       throw error;
     }
+  }
+
+  if (issuedReceipt) {
+    fireAndForget(
+      notifyReceiptIssuedForEventRegistration({
+        receiptId: issuedReceipt.id,
+        detailUrl: buildEventRegistrationReceiptDetailUrl(),
+      }),
+      {
+        operation: "notifyReceiptIssuedForEventRegistration",
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          registrationId,
+          receiptId: issuedReceipt.id,
+        },
+      },
+    );
   }
 
   if (!isWaitlistOffer) return;
@@ -629,7 +694,6 @@ async function fulfillEventRegistrationPaymentAtomically(
       customerId: details.customerId,
       format: details.format,
       meetingUrl: details.meetingUrl,
-      ...(receiptSerialNo !== undefined ? { receiptSerialNo } : {}),
     }),
     {
       operation: "sendWaitlistOfferPaymentConfirmationEmail",

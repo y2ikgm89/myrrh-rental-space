@@ -53,6 +53,8 @@ const mockClaimReservationAsPaid = mock<
     startTime: string;
     endTime: string;
     icsSequence: number;
+    status: string;
+    userId: string | null;
     guestEmail?: string | null;
     customer: { email: string; lastName: string; firstName: string };
     space: { name: string; location: { name: string } | null };
@@ -143,11 +145,16 @@ const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
 
 // async-utils — fireAndForget は渡された promise をそのまま握り潰さず、テストから
 // 完了を observe できるよう Promise を保持しておく（await 用）。
+// 実実装と同様に rejection は swallow し、admin 通知などが実 Prisma を叩いても
+// unhandled rejection でテストを落とさない。
 let lastFireAndForgetPromise: Promise<unknown> | null = null;
 const mockFireAndForget = mock<
   (promise: Promise<unknown>, opts?: unknown) => void
 >((promise) => {
   lastFireAndForgetPromise = promise;
+  if (promise != null && typeof promise.catch === "function") {
+    void promise.catch(() => undefined);
+  }
 });
 
 // Errors
@@ -286,12 +293,39 @@ const mockIssueReceiptForReservation = mock<
 const mockIssueReceiptForEventRegistration = mock<
   (id: string, options?: unknown) => Promise<{ id: string; serialNo: string }>
 >(() => Promise.resolve({ id: "receipt-event-mock", serialNo: "2026-000002" }));
+const mockNotifyReceiptIssuedForReservation = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt" }));
+const mockNotifyReceiptIssuedForEventRegistration = mock<
+  (input: { receiptId: string; detailUrl: string }) => Promise<unknown>
+>(() => Promise.resolve({ ok: true, messageId: "msg_receipt_event" }));
 mock.module("@/shared/domain/receipts/issue", () => ({
   issueReceiptForReservation: (id: string, options?: unknown) =>
     mockIssueReceiptForReservation(id, options),
   issueReceiptForEventRegistration: (id: string, options?: unknown) =>
     mockIssueReceiptForEventRegistration(id, options),
 }));
+mock.module("@/shared/domain/receipts/notify-issued", () => ({
+  notifyReceiptIssuedForReservation: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForReservation(input),
+  notifyReceiptIssuedForEventRegistration: (input: {
+    receiptId: string;
+    detailUrl: string;
+  }) => mockNotifyReceiptIssuedForEventRegistration(input),
+}));
+
+// waitlist 確定後の admin in-app 通知は実 Prisma を触るため境界差替
+mock.module(
+  "@/shared/domain/events/waitlist-admin-notification-side-effects",
+  () => ({
+    fireEventWaitlistConfirmedAdminNotification: mock(() => undefined),
+    fireEventWaitlistOfferedAdminNotification: mock(() => undefined),
+    notifyEventWaitlistConfirmedForRegistration: mock(() => Promise.resolve()),
+    notifyEventWaitlistOfferedForRegistration: mock(() => Promise.resolve()),
+  }),
+);
 
 mock.module("@/shared/lib/cache/site-wide", () => ({
   invalidateSiteWideCacheFromRouteHandler: (
@@ -489,6 +523,10 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockFindExpiredPendingWaitlistOfferRegistration.mockReset();
     mockGetWaitlistConfirmationEmailDetails.mockReset();
     mockSendEventRegistrationConfirmation.mockReset();
+    mockIssueReceiptForReservation.mockReset();
+    mockIssueReceiptForEventRegistration.mockReset();
+    mockNotifyReceiptIssuedForReservation.mockReset();
+    mockNotifyReceiptIssuedForEventRegistration.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
     mockFireAndForget.mockReset();
     mockLogError.mockReset();
@@ -511,6 +549,9 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
     mockOmitUndefined.mockImplementation((obj) => obj);
     mockFireAndForget.mockImplementation((promise) => {
       lastFireAndForgetPromise = promise;
+      if (promise != null && typeof promise.catch === "function") {
+        void promise.catch(() => undefined);
+      }
     });
     mockUnstableRethrow.mockImplementation((error) => {
       throw error;
@@ -548,6 +589,23 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       DEFAULT_WAITLIST_DETAILS,
     );
     mockSendEventRegistrationConfirmation.mockResolvedValue({ ok: true });
+    mockSendReservationConfirmationEmail.mockResolvedValue(undefined);
+    mockIssueReceiptForReservation.mockResolvedValue({
+      id: "receipt-mock",
+      serialNo: "2026-000001",
+    });
+    mockIssueReceiptForEventRegistration.mockResolvedValue({
+      id: "receipt-event-mock",
+      serialNo: "2026-000002",
+    });
+    mockNotifyReceiptIssuedForReservation.mockResolvedValue({
+      ok: true,
+      messageId: "msg_receipt",
+    });
+    mockNotifyReceiptIssuedForEventRegistration.mockResolvedValue({
+      ok: true,
+      messageId: "msg_receipt_event",
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -565,6 +623,8 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
         startTime: "2025-01-01T10:00:00.000Z",
         endTime: "2025-01-01T12:00:00.000Z",
         icsSequence: 0,
+        status: "PENDING",
+        userId: "user-1",
         customer: {
           email: "a@example.com",
           lastName: "田中",
@@ -645,10 +705,15 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
         ["events", "event-waitlist"],
         undefined,
       );
-      // 直接購入は登録時点で確認メール送信済みのため、ここでは送らない
+      // 直接購入は登録時点で確認メール送信済みのため、ここでは送らない。
+      // 領収書発行通知は別メールとして必ず送る（確認メール skip と独立）。
       await flushFireAndForget();
       expect(mockGetWaitlistConfirmationEmailDetails).not.toHaveBeenCalled();
       expect(mockSendEventRegistrationConfirmation).not.toHaveBeenCalled();
+      expect(mockNotifyReceiptIssuedForEventRegistration).toHaveBeenCalledWith({
+        receiptId: "receipt-event-mock",
+        detailUrl: "http://localhost:3000/mypage/events",
+      });
     });
 
     test("waitlist offer（source=waitlist-offer）→ confirmWaitlistOfferCommand が claimEventRegistrationAsPaid より先に呼ばれる（CALL ORDER）", async () => {
@@ -696,6 +761,13 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           customerEmail: "waitlist@example.com",
         }),
       );
+      expect(
+        mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
+      ).not.toHaveProperty("receiptSerialNo");
+      expect(mockNotifyReceiptIssuedForEventRegistration).toHaveBeenCalledWith({
+        receiptId: "receipt-event-mock",
+        detailUrl: "http://localhost:3000/mypage/events",
+      });
     });
 
     test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → 自動返金 + claim は呼ばない", async () => {
@@ -939,6 +1011,8 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
         startTime: "2025-02-01T10:00:00.000Z",
         endTime: "2025-02-01T12:00:00.000Z",
         icsSequence: 0,
+        status: "PENDING",
+        userId: "user-async-1",
         customer: {
           email: "b@example.com",
           lastName: "佐藤",
@@ -1029,6 +1103,13 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
           customerEmail: "waitlist@example.com",
         }),
       );
+      expect(
+        mockSendEventRegistrationConfirmation.mock.calls[0]?.[0],
+      ).not.toHaveProperty("receiptSerialNo");
+      expect(mockNotifyReceiptIssuedForEventRegistration).toHaveBeenCalledWith({
+        receiptId: "receipt-event-mock",
+        detailUrl: "http://localhost:3000/mypage/events",
+      });
     });
 
     test("容量race: confirmWaitlistOfferCommand が EXPIRED を返す → 自動返金 + claim は呼ばない", async () => {
