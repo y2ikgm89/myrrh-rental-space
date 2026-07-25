@@ -276,7 +276,7 @@ export async function getReservationsForDateQuery(
       spaceId,
       deletedAt: null,
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
-      startTime: { gte: dateStart, lte: dateEnd },
+      AND: [{ startTime: { lt: dateEnd } }, { endTime: { gt: dateStart } }],
     },
     select: {
       startTime: true,

@@ -5,7 +5,8 @@ describe("publicReservationSchema", () => {
   const validInput = {
     locationId: "00000000-0000-4000-a000-000000000001",
     spaceId: "550e8400-e29b-41d4-a716-446655440000",
-    date: "2026-04-01",
+    // JST 今日以降の日付 refine があるため未来日を使う
+    date: "2026-12-15",
     startTime: "10:00",
     endTime: "13:00",
     numberOfGuests: 10,
@@ -69,5 +70,13 @@ describe("publicReservationSchema", () => {
       phoneNumber: "",
     });
     expect(result.success).toBe(true);
+  });
+
+  test("rejects past JST calendar dates", () => {
+    const result = publicReservationSchema.safeParse({
+      ...validInput,
+      date: "2020-01-01",
+    });
+    expect(result.success).toBe(false);
   });
 });

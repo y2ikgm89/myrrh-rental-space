@@ -117,6 +117,7 @@ export async function createRecurringReservationAction(
             spaceDiscountAmount: preview.spaceDiscountAmount,
           },
           agreements: [],
+          skipCustomerTerms: true,
           now: new Date(),
         });
         return {

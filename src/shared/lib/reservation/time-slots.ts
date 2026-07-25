@@ -100,14 +100,31 @@ export async function getAvailableTimeSlots(
   // ため JST 固定の `getJstMinutesOfDay` SSoT で照合する。
   const occupiedWindows = [...reservations, ...eventSlots];
   for (const window of occupiedWindows) {
-    const resStartMinutes = getJstMinutesOfDay(window.startTime);
-    const resEndMinutes = getJstMinutesOfDay(window.endTime);
+    // 半開区間 overlap: この JST カレンダー日と交差しない占有は skip
+    if (
+      window.endTime.getTime() <= dateStart.getTime() ||
+      window.startTime.getTime() > dateEnd.getTime()
+    ) {
+      continue;
+    }
+
+    // 日跨ぎ予約は dateStart/dateEnd で clamp し、当該日の表示範囲 (0–1440 分) に投影する
+    const displayStartMinutes =
+      window.startTime.getTime() < dateStart.getTime()
+        ? 0
+        : getJstMinutesOfDay(window.startTime);
+    const displayEndMinutes =
+      window.endTime.getTime() > dateEnd.getTime()
+        ? 1440
+        : getJstMinutesOfDay(window.endTime);
 
     for (const slot of slots) {
       const slotParsed = parseTime(slot.time);
       const slotMinutes = slotParsed.hour * 60 + slotParsed.minute;
-      // スロットが占有時間内にある場合は unavailable
-      if (slotMinutes >= resStartMinutes && slotMinutes < resEndMinutes) {
+      if (
+        slotMinutes >= displayStartMinutes &&
+        slotMinutes < displayEndMinutes
+      ) {
         slot.available = false;
       }
     }

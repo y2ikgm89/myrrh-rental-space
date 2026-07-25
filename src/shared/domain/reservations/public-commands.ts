@@ -8,9 +8,13 @@ import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { resolveOrCreateCustomer } from "@/shared/domain/reservations/resolve-customer";
 import {
   ensureDateNotBlocked,
+  getBusinessHoursSettingsQuery,
   getReservationRuleSettings,
 } from "@/shared/domain/reservations/availability";
-import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
+import {
+  checkReservationDuration,
+  isWithinBusinessHours,
+} from "@/shared/lib/reservation/time-slots-utils";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
 import { resolveRateBreakdown } from "@/shared/lib/pricing/rate-plan-resolver";
@@ -34,6 +38,7 @@ const SPACE_SELECT = {
   id: true,
   name: true,
   addressDetail: true,
+  capacity: true,
   hourlyPrice: true,
   locationId: true,
   discountType: true,
@@ -60,6 +65,11 @@ type PublicReservationInput = {
   customerType?: CustomerType | undefined;
   notes?: string | null | undefined;
   userId?: string | null | undefined;
+  /**
+   * 利用人数。現状は永続化せず、スペース定員 (`Space.capacity`) との照合のみ行う
+   * clean-break gate。フォーム schema 経由で渡る。
+   */
+  numberOfGuests?: number | undefined;
   /** クーポンコード。空文字/undefined は「未入力」。サーバー側で validateCoupon が形式・有効性を検証。 */
   couponCode?: string | null | undefined;
   /**
@@ -89,6 +99,12 @@ export async function createPublicReservationCommand(
   );
   const endDateTime = parseDateTimeLocalAsJst(`${input.date}T${input.endTime}`);
 
+  // 過去時刻への予約を封殺する（顧客セルフ変更の MYPAGE-EDIT-01 と同契約）。
+  // Zod の JST 日付 refine は「今日」まで通すため、同日の過去時刻はここで拒否する。
+  if (startDateTime.getTime() <= Date.now()) {
+    throw new DomainError("過去の日時には予約できません", "VALIDATION");
+  }
+
   const space = await prisma.space.findUnique({
     where: { id: input.spaceId, isActive: true, isPublished: true },
     select: SPACE_SELECT,
@@ -96,6 +112,30 @@ export async function createPublicReservationCommand(
 
   if (!space) {
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
+  }
+
+  // 利用人数が渡された場合のみ定員 gate（validate-only。永続化は別タスク）。
+  if (
+    input.numberOfGuests !== undefined &&
+    input.numberOfGuests > space.capacity
+  ) {
+    throw new DomainError(
+      `利用人数がスペースの定員（${String(space.capacity)}名）を超えています`,
+      "VALIDATION",
+    );
+  }
+
+  // 営業時間（公開スロット生成と同じ Settings.businessHours SSoT）
+  const businessHours = await getBusinessHoursSettingsQuery();
+  if (
+    !isWithinBusinessHours(
+      businessHours,
+      input.date,
+      input.startTime,
+      input.endTime,
+    )
+  ) {
+    throw new DomainError("選択した時間帯は営業時間外です", "VALIDATION");
   }
 
   // 最小/最大予約時間（設定値）をサーバー側で強制する

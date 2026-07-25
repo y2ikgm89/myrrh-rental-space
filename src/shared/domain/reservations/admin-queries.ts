@@ -94,9 +94,17 @@ export function buildReservationListWhere(
   }
 
   if (startDate || endDate) {
+    // JST カレンダー日境界（Cloud Run UTC でも営業日と一致させる）。
+    // endDate はその日を含む → 翌日 JST 00:00 未満（半開区間）。
     where.startTime = {
-      ...(startDate && { gte: new Date(startDate) }),
-      ...(endDate && { lte: new Date(endDate) }),
+      ...(startDate ? { gte: new Date(`${startDate}T00:00:00+09:00`) } : {}),
+      ...(endDate
+        ? {
+            lt: new Date(
+              new Date(`${endDate}T00:00:00+09:00`).getTime() + MS_PER_DAY,
+            ),
+          }
+        : {}),
     };
   }
 

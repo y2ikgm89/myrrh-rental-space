@@ -54,6 +54,7 @@ const mockSpaceFindUnique = mock<() => Promise<unknown>>(() =>
     id: "space-1",
     name: "テストスペース",
     addressDetail: null,
+    capacity: 10,
     hourlyPrice: 1000,
     discountType: "none",
     discountValue: null,
@@ -62,6 +63,10 @@ const mockSpaceFindUnique = mock<() => Promise<unknown>>(() =>
     locationId: "loc-1",
     location: { address: "東京都渋谷区1-1-1" },
   }),
+);
+
+const mockSettingsOrganizationFindUnique = mock<() => Promise<unknown>>(() =>
+  Promise.resolve({ businessHours: null }),
 );
 
 // getSpaceRatePlans: rate plan 統合 (Task 8)。既定は空配列（rate plan 未設定）で
@@ -238,6 +243,9 @@ mock.module("server-only", () => ({}));
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     settingsCommerce: { findUnique: mockSettingsCommerceFindUnique },
+    settingsOrganization: {
+      findUnique: mockSettingsOrganizationFindUnique,
+    },
     settingsReservation: {
       findUnique: mockSettingsReservationFindUnique,
       findUniqueOrThrow: mockSettingsReservationFindUniqueOrThrow,
@@ -315,6 +323,10 @@ import { DomainError } from "@/shared/domain/domain-error";
 
 function resetAllMocks() {
   mockSettingsCommerceFindUnique.mockClear();
+  mockSettingsOrganizationFindUnique.mockClear();
+  mockSettingsOrganizationFindUnique.mockImplementation(() =>
+    Promise.resolve({ businessHours: null }),
+  );
   mockSpaceFindUnique.mockClear();
   mockReservationFindUnique.mockClear();
   mockReservationCreate.mockClear();
@@ -1635,6 +1647,108 @@ describe("updateReservationStatusCommand", () => {
         updateReservationStatusCommand("res-1", ReservationStatus.PENDING),
       ).rejects.toThrow(DomainError);
     });
+
+    test("利用終了前の COMPLETED 遷移は VALIDATION エラー", async () => {
+      const futureEnd = new Date(Date.now() + 60 * 60 * 1000);
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          googleCalendarEventId: null,
+          startTime: new Date(futureEnd.getTime() - 2 * 60 * 60 * 1000),
+          endTime: futureEnd,
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await expect(
+        updateReservationStatusCommand("res-1", ReservationStatus.COMPLETED),
+      ).rejects.toMatchObject({
+        message: "利用終了前に完了/不参加にはできません",
+        code: "VALIDATION",
+      });
+      expect(mockTxReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("利用終了前の NO_SHOW 遷移は VALIDATION エラー", async () => {
+      const futureEnd = new Date(Date.now() + 30 * 60 * 1000);
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          googleCalendarEventId: null,
+          startTime: new Date(futureEnd.getTime() - 60 * 60 * 1000),
+          endTime: futureEnd,
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      await expect(
+        updateReservationStatusCommand("res-1", ReservationStatus.NO_SHOW),
+      ).rejects.toMatchObject({
+        message: "利用終了前に完了/不参加にはできません",
+        code: "VALIDATION",
+      });
+      expect(mockTxReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("利用終了後の COMPLETED 遷移は成功する", async () => {
+      const pastEnd = new Date(Date.now() - 60 * 1000);
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.CONFIRMED,
+          googleCalendarEventId: null,
+          startTime: new Date(pastEnd.getTime() - 2 * 60 * 60 * 1000),
+          endTime: pastEnd,
+          totalPrice: 2000,
+          notes: null,
+          space: {
+            name: "テストスペース",
+            addressDetail: null,
+            location: { address: "東京都渋谷区1-1-1" },
+          },
+          customer: {
+            firstName: "太郎",
+            lastName: "山田",
+            companyName: null,
+            email: "taro@example.com",
+          },
+        }),
+      );
+
+      const result = await updateReservationStatusCommand(
+        "res-1",
+        ReservationStatus.COMPLETED,
+      );
+
+      expect(result.previousStatus).toBe(ReservationStatus.CONFIRMED);
+      expect(mockTxReservationUpdateMany).toHaveBeenCalled();
+    });
   });
 });
 
@@ -1765,7 +1879,7 @@ describe("deleteReservationCommand", () => {
       expect(mockTransaction).toHaveBeenCalled();
     });
 
-    test("クーポン付き予約の削除で使用数がデクリメントされる", async () => {
+    test("クーポン付き PENDING/CONFIRMED 予約の削除で使用数がデクリメントされる", async () => {
       mockReservationFindUnique.mockImplementation(() =>
         Promise.resolve({
           id: "res-1",
@@ -1788,6 +1902,21 @@ describe("deleteReservationCommand", () => {
           }),
         }),
       );
+    });
+
+    test("クーポン付き COMPLETED 予約の削除ではクーポン使用数をデクリメントしない", async () => {
+      mockReservationFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "res-1",
+          status: ReservationStatus.COMPLETED,
+          googleCalendarEventId: null,
+          couponId: "coupon-1",
+        }),
+      );
+
+      await deleteReservationCommand("res-1", "user-1");
+
+      expect(mockCouponUpdateMany).not.toHaveBeenCalled();
     });
 
     test("クーポンなし予約の削除ではクーポン更新されない", async () => {
@@ -1879,20 +2008,45 @@ describe("deleteReservationCommand", () => {
   });
 });
 
+function mockDeletedReservationFindUnique(args: {
+  deletedAt: Date | null;
+  couponId: string | null;
+  status: (typeof ReservationStatus)[keyof typeof ReservationStatus];
+  customerId?: string;
+}) {
+  mockReservationFindUnique.mockImplementation((...callArgs: unknown[]) => {
+    const query = callArgs[0] as
+      { select?: Record<string, boolean> } | undefined;
+    if (query?.select?.["status"] !== undefined) {
+      return Promise.resolve({
+        spaceId: "space-1",
+        startTime: new Date("2024-06-15T10:00:00+09:00"),
+        endTime: new Date("2024-06-15T12:00:00+09:00"),
+        status: args.status,
+      });
+    }
+
+    return Promise.resolve({
+      id: "res-1",
+      deletedAt: args.deletedAt,
+      couponId: args.couponId,
+      customerId: args.customerId ?? "cust-1",
+    });
+  });
+}
+
 describe("restoreReservationCommand", () => {
   beforeEach(() => {
     resetAllMocks();
   });
 
   describe("正常系", () => {
-    test("削除済み予約を復元できる", async () => {
-      mockReservationFindUnique.mockImplementation(() =>
-        Promise.resolve({
-          id: "res-1",
-          deletedAt: new Date("2024-06-15"),
-          couponId: null,
-        }),
-      );
+    test("削除済み COMPLETED 予約を復元できる", async () => {
+      mockDeletedReservationFindUnique({
+        deletedAt: new Date("2024-06-15"),
+        couponId: null,
+        status: ReservationStatus.COMPLETED,
+      });
 
       await restoreReservationCommand("res-1");
 
@@ -1906,33 +2060,39 @@ describe("restoreReservationCommand", () => {
       );
     });
 
-    test("クーポン付き予約の復元で atomic claim ($executeRaw) がインクリメントを発火", async () => {
-      mockReservationFindUnique.mockImplementation(() =>
-        Promise.resolve({
-          id: "res-1",
-          deletedAt: new Date("2024-06-15"),
-          couponId: "coupon-1",
-        }),
-      );
-      // atomic claim: usageLimit cap を強制する $executeRaw が 1 を返す = claim 成功。
-      mockExecuteRaw.mockImplementationOnce(() => Promise.resolve(1));
+    test("クーポン付き CONFIRMED 予約の復元で atomic claim ($executeRaw) がインクリメントを発火", async () => {
+      mockDeletedReservationFindUnique({
+        deletedAt: new Date("2024-06-15"),
+        couponId: "coupon-1",
+        status: ReservationStatus.CONFIRMED,
+      });
+      mockExecuteRaw.mockImplementation(() => Promise.resolve(1));
 
       await restoreReservationCommand("res-1");
 
-      // 素の tx.coupon.update は禁止 (drift-gate). raw SQL 経由で increment されるため
-      // coupon.update mock は呼ばれない。
       expect(mockCouponUpdate).not.toHaveBeenCalled();
       expect(mockExecuteRaw).toHaveBeenCalled();
     });
 
-    test("クーポン付き予約の復元で claim=0 (limit 到達) は CONFLICT", async () => {
-      mockReservationFindUnique.mockImplementation(() =>
-        Promise.resolve({
-          id: "res-1",
-          deletedAt: new Date("2024-06-15"),
-          couponId: "coupon-1",
-        }),
-      );
+    test("クーポン付き COMPLETED 予約の復元ではクーポン使用数をインクリメントしない", async () => {
+      mockDeletedReservationFindUnique({
+        deletedAt: new Date("2024-06-15"),
+        couponId: "coupon-1",
+        status: ReservationStatus.COMPLETED,
+      });
+
+      await restoreReservationCommand("res-1");
+
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
+      expect(mockCouponUpdate).not.toHaveBeenCalled();
+    });
+
+    test("クーポン付き CONFIRMED 予約の復元で claim=0 (limit 到達) は CONFLICT", async () => {
+      mockDeletedReservationFindUnique({
+        deletedAt: new Date("2024-06-15"),
+        couponId: "coupon-1",
+        status: ReservationStatus.CONFIRMED,
+      });
       mockExecuteRaw.mockImplementationOnce(() => Promise.resolve(0));
 
       await expect(restoreReservationCommand("res-1")).rejects.toMatchObject({
@@ -1941,17 +2101,16 @@ describe("restoreReservationCommand", () => {
     });
 
     test("クーポンなし予約の復元ではクーポン更新されない", async () => {
-      mockReservationFindUnique.mockImplementation(() =>
-        Promise.resolve({
-          id: "res-1",
-          deletedAt: new Date("2024-06-15"),
-          couponId: null,
-        }),
-      );
+      mockDeletedReservationFindUnique({
+        deletedAt: new Date("2024-06-15"),
+        couponId: null,
+        status: ReservationStatus.COMPLETED,
+      });
 
       await restoreReservationCommand("res-1");
 
       expect(mockCouponUpdate).not.toHaveBeenCalled();
+      expect(mockExecuteRaw).not.toHaveBeenCalled();
     });
   });
 
@@ -1965,25 +2124,39 @@ describe("restoreReservationCommand", () => {
     });
 
     test("削除されていない予約の復元はエラー", async () => {
-      mockReservationFindUnique.mockImplementation(() =>
-        Promise.resolve({
-          id: "res-1",
-          deletedAt: null,
-          couponId: null,
-        }),
-      );
+      mockDeletedReservationFindUnique({
+        deletedAt: null,
+        couponId: null,
+        status: ReservationStatus.COMPLETED,
+      });
 
       await expect(restoreReservationCommand("res-1")).rejects.toThrow(
         "この予約は削除されていません",
       );
     });
+
+    test("CANCELLED + deletedAt の予約は復元を拒否する", async () => {
+      mockDeletedReservationFindUnique({
+        deletedAt: new Date("2024-06-15"),
+        couponId: null,
+        status: ReservationStatus.CANCELLED,
+      });
+
+      await expect(restoreReservationCommand("res-1")).rejects.toMatchObject({
+        code: "VALIDATION",
+        message:
+          "キャンセルを伴う削除は復元できません。必要なら新規予約を作成してください。",
+      });
+      expect(mockReservationUpdate).not.toHaveBeenCalled();
+    });
   });
 });
 
 describe("createPublicReservationCommand", () => {
+  // 過去日時 gate があるため未来日を使う（2026-12-15 は火曜 = DEFAULT 営業時間内）
   const validInput = {
     spaceId: "space-1",
-    date: "2024-06-15",
+    date: "2026-12-15",
     startTime: "10:00",
     endTime: "12:00",
     lastName: "山田",
@@ -1993,12 +2166,16 @@ describe("createPublicReservationCommand", () => {
 
   beforeEach(() => {
     resetAllMocks();
+    mockSettingsOrganizationFindUnique.mockImplementation(() =>
+      Promise.resolve({ businessHours: null }),
+    );
     // 公開ページではスペースが isPublished: true も必要
     mockSpaceFindUnique.mockImplementation(() =>
       Promise.resolve({
         id: "space-1",
         name: "テストスペース",
         addressDetail: null,
+        capacity: 10,
         hourlyPrice: 1000,
         discountType: "none",
         discountValue: null,
