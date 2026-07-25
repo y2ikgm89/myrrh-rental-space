@@ -30,11 +30,13 @@ const mockReservationFindUnique = mock<
   () => Promise<{
     status: ReservationStatus;
     paymentStatus: PaymentStatus;
+    stripePaymentIntentId: string | null;
   } | null>
 >(() =>
   Promise.resolve({
     status: ReservationStatus.CONFIRMED,
     paymentStatus: PaymentStatus.PAID,
+    stripePaymentIntentId: null,
   }),
 );
 
@@ -85,6 +87,18 @@ const mockCreateNotificationCommand = mock<
   (input: Record<string, unknown>) => Promise<void>
 >(() => Promise.resolve());
 
+const mockRefundOrphanedStripePaymentForCancelledReservation = mock<
+  (input: {
+    reservationId: string;
+    stripePaymentIntentId: string;
+    reason?: string;
+  }) => Promise<{
+    outcome: "refunded" | "already_refunded" | "not_applicable";
+    refundId?: string;
+    refundAmount?: number;
+  }>
+>(() => Promise.resolve({ outcome: "already_refunded" }));
+
 const mockFireAndForget = mock<
   (promise: Promise<unknown>, context: Record<string, unknown>) => void
 >((promise) => {
@@ -99,11 +113,18 @@ mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: mockFireAndForget,
 }));
 
+mock.module("@/shared/domain/reservations/payment-commands", () => ({
+  refundOrphanedStripePaymentForCancelledReservation:
+    mockRefundOrphanedStripePaymentForCancelledReservation,
+}));
+
 mock.module("@/shared/lib/validations/enums/helpers", () => ({
   NOTIFICATION_TYPE: {
+    RESERVATION_REFUND: "reservation_refund",
     RESERVATION_PAYMENT_FAILED: "reservation_payment_failed",
   },
   NOTIFICATION_TYPE_LABELS: {
+    reservation_refund: "予約返金",
     reservation_payment_failed: "予約決済失敗",
   },
 }));
@@ -169,17 +190,22 @@ describe("reservations/payment-queries", () => {
     mockReservationUpdateMany.mockReset();
     mockLogError.mockReset();
     mockCreateNotificationCommand.mockReset();
+    mockRefundOrphanedStripePaymentForCancelledReservation.mockReset();
     mockFireAndForget.mockReset();
 
     mockReservationFindFirst.mockResolvedValue(null);
     mockReservationFindUnique.mockResolvedValue({
       status: ReservationStatus.CONFIRMED,
       paymentStatus: PaymentStatus.PAID,
+      stripePaymentIntentId: null,
     });
     mockReservationFindUniqueOrThrow.mockResolvedValue(FULFILL_DATA);
     mockReservationUpdate.mockResolvedValue({ id: RESERVATION_ID });
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
     mockCreateNotificationCommand.mockResolvedValue(undefined);
+    mockRefundOrphanedStripePaymentForCancelledReservation.mockResolvedValue({
+      outcome: "already_refunded",
+    });
     mockFireAndForget.mockImplementation((promise) => {
       void promise;
     });
@@ -253,6 +279,7 @@ describe("reservations/payment-queries", () => {
         mockReservationFindUnique.mockResolvedValueOnce({
           status: ReservationStatus.CONFIRMED,
           paymentStatus: PaymentStatus.PAID,
+          stripePaymentIntentId: null,
         });
 
         const result = await claimReservationAsPaid(RESERVATION_ID, {
@@ -269,22 +296,33 @@ describe("reservations/payment-queries", () => {
         mockReservationFindUnique.mockResolvedValueOnce({
           status: ReservationStatus.CANCELLED,
           paymentStatus: PaymentStatus.UNPAID,
+          stripePaymentIntentId: null,
         });
+        mockRefundOrphanedStripePaymentForCancelledReservation.mockResolvedValueOnce(
+          { outcome: "refunded", refundId: "re_auto_1", refundAmount: 5000 },
+        );
 
         const result = await claimReservationAsPaid(RESERVATION_ID, {
           stripePaymentIntentId: PAYMENT_INTENT_ID,
         });
 
         expect(result).toBeNull();
-        expect(mockLogError).toHaveBeenCalledTimes(1);
-        const [, options] = mockLogError.mock.calls[0] ?? [];
-        expect(options).toMatchObject({
-          severity: "CRITICAL",
-          context: expect.objectContaining({
-            operation: "claimReservationAsPaid",
+        expect(
+          mockRefundOrphanedStripePaymentForCancelledReservation,
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
             reservationId: RESERVATION_ID,
+            stripePaymentIntentId: PAYMENT_INTENT_ID,
           }),
-        });
+        );
+        expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "reservation_refund",
+            resourceType: "reservation",
+            resourceId: RESERVATION_ID,
+          }),
+        );
+        expect(mockLogError).not.toHaveBeenCalled();
       });
 
       test("count === 0 かつ現在 status=CANCELLED 以外 → CRITICAL ログを記録しない", async () => {
@@ -292,6 +330,7 @@ describe("reservations/payment-queries", () => {
         mockReservationFindUnique.mockResolvedValueOnce({
           status: ReservationStatus.COMPLETED,
           paymentStatus: PaymentStatus.PAID,
+          stripePaymentIntentId: null,
         });
 
         await claimReservationAsPaid(RESERVATION_ID, {
@@ -299,6 +338,59 @@ describe("reservations/payment-queries", () => {
         });
 
         expect(mockLogError).not.toHaveBeenCalled();
+      });
+
+      test("count === 0 かつ status=CANCELLED だが PaymentIntent ID が取れない → 通知 + CRITICAL ログ、返金は呼ばない", async () => {
+        mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+        mockReservationFindUnique.mockResolvedValueOnce({
+          status: ReservationStatus.CANCELLED,
+          paymentStatus: PaymentStatus.UNPAID,
+          stripePaymentIntentId: null,
+        });
+
+        const result = await claimReservationAsPaid(RESERVATION_ID, {
+          stripePaymentIntentId: null,
+        });
+
+        expect(result).toBeNull();
+        expect(
+          mockRefundOrphanedStripePaymentForCancelledReservation,
+        ).not.toHaveBeenCalled();
+        expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "reservation_refund",
+            resourceType: "reservation",
+            resourceId: RESERVATION_ID,
+          }),
+        );
+        expect(mockLogError).toHaveBeenCalledTimes(1);
+      });
+
+      test("status=CANCELLED で自動返金が失敗 → 通知 + CRITICAL ログ、例外を throw する", async () => {
+        mockReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+        mockReservationFindUnique.mockResolvedValueOnce({
+          status: ReservationStatus.CANCELLED,
+          paymentStatus: PaymentStatus.PAID,
+          stripePaymentIntentId: null,
+        });
+        mockRefundOrphanedStripePaymentForCancelledReservation.mockRejectedValueOnce(
+          new Error("stripe refunds.create failed"),
+        );
+
+        await expect(
+          claimReservationAsPaid(RESERVATION_ID, {
+            stripePaymentIntentId: PAYMENT_INTENT_ID,
+          }),
+        ).rejects.toThrow();
+
+        expect(mockCreateNotificationCommand).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "reservation_refund",
+            resourceType: "reservation",
+            resourceId: RESERVATION_ID,
+          }),
+        );
+        expect(mockLogError).toHaveBeenCalledTimes(1);
       });
     });
   });

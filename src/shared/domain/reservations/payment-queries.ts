@@ -5,8 +5,10 @@ import { prisma } from "@/shared/db/prisma";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { refundOrphanedStripePaymentForCancelledReservation } from "@/shared/domain/reservations/payment-commands";
 import {
   logError,
+  normalizeError,
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
@@ -94,27 +96,111 @@ export async function claimReservationAsPaid(
     // count=0 の大半は無害 (重複 webhook 配信・既に PAID 等の想定内 no-op) だが、
     // status=CANCELLED での不一致だけは「Stripe 側は課金成功したのに DB は
     // キャンセル済みのまま」という money-in-flight を意味し自動返金導線が無い。
-    // 運用が気付けるよう CRITICAL ログを残す (架電・手動返金判断のトリガー)。
+    // clean-break: 自動返金で即時収束させ、運用が追えるよう通知を残す。
     const current = await prisma.reservation.findUnique({
       where: { id: reservationId },
-      select: { status: true, paymentStatus: true },
+      select: {
+        status: true,
+        paymentStatus: true,
+        stripePaymentIntentId: true,
+      },
     });
     if (current?.status === ReservationStatus.CANCELLED) {
-      logError(
-        new Error(
-          "claimReservationAsPaid: Stripe payment succeeded for an already-cancelled reservation",
-        ),
-        {
+      const paymentIntentId =
+        data.stripePaymentIntentId ?? current.stripePaymentIntentId;
+
+      if (!paymentIntentId) {
+        logError(
+          new Error(
+            "claimReservationAsPaid: missing stripePaymentIntentId for a cancelled reservation",
+          ),
+          {
+            category: ErrorCategory.VALIDATION,
+            severity: ErrorSeverity.CRITICAL,
+            context: {
+              operation: "claimReservationAsPaid",
+              reservationId,
+              currentPaymentStatus: current.paymentStatus,
+            },
+          },
+        );
+        fireAndForget(
+          createNotificationCommand({
+            type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+            title:
+              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+            message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立しました。PaymentIntent ID が不明なため自動返金できません（要確認）`,
+            resourceType: "reservation",
+            resourceId: reservationId,
+          }),
+          {
+            operation:
+              "notifyReservationAutoRefundFailedMissingPaymentIntentId",
+            category: ErrorCategory.VALIDATION,
+            severity: ErrorSeverity.HIGH,
+            context: { reservationId },
+          },
+        );
+        return null;
+      }
+
+      try {
+        const refunded =
+          await refundOrphanedStripePaymentForCancelledReservation({
+            reservationId,
+            stripePaymentIntentId: paymentIntentId,
+          });
+        if (refunded.outcome === "refunded") {
+          fireAndForget(
+            createNotificationCommand({
+              type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+              title:
+                NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+              message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立したため、自動で全額返金しました（返金額: ${refunded.refundAmount ?? 0} 円）`,
+              resourceType: "reservation",
+              resourceId: reservationId,
+            }),
+            {
+              operation: "notifyReservationAutoRefundedAfterCancel",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.MEDIUM,
+              context: {
+                reservationId,
+                stripePaymentIntentId: paymentIntentId,
+                refundId: refunded.refundId,
+              },
+            },
+          );
+        }
+      } catch (error) {
+        logError(normalizeError(error), {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.CRITICAL,
           context: {
-            operation: "claimReservationAsPaid",
+            operation: "refundOrphanedStripePaymentForCancelledReservation",
             reservationId,
-            stripePaymentIntentId: data.stripePaymentIntentId,
+            stripePaymentIntentId: paymentIntentId,
             currentPaymentStatus: current.paymentStatus,
           },
-        },
-      );
+        });
+        fireAndForget(
+          createNotificationCommand({
+            type: NOTIFICATION_TYPE.RESERVATION_REFUND,
+            title:
+              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_REFUND],
+            message: `予約 ${reservationId} はキャンセル済みですが Stripe 決済が成立しました。自動返金に失敗しました（PaymentIntent: ${paymentIntentId}）。至急確認してください。`,
+            resourceType: "reservation",
+            resourceId: reservationId,
+          }),
+          {
+            operation: "notifyReservationAutoRefundFailedAfterCancel",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.CRITICAL,
+            context: { reservationId, stripePaymentIntentId: paymentIntentId },
+          },
+        );
+        throw error;
+      }
     }
     return null;
   }
