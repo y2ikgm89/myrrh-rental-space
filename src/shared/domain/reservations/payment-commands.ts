@@ -339,6 +339,86 @@ export async function createCheckoutSessionCommand(input: {
   }
 }
 
+/**
+ * 管理者による手動入金記録。UNPAID → PAID の遷移を、Stripe を経由しない支払い
+ * （現金・銀行振込等）について事後記録する。`createCheckoutSessionCommand` と同じ
+ * updateMany WHERE claim パターンで二重確定を防ぐ。`stripeCheckoutSessionId` が
+ * 非 null（Stripe 決済が進行中/完了）の予約は対象外とする。
+ *
+ * claim は `status in [PENDING, CONFIRMED]` も要求する (cancel 経路は paymentStatus
+ * を触らず status のみ CANCELLED に遷移させるため、paymentStatus だけで claim すると
+ * CANCELLED + UNPAID な予約を PAID に格上げできてしまう)。
+ *
+ * 入金額は Stripe Checkout / 領収書と同じ charge base（`totalPriceWithTax` が
+ * populate されていれば税込合計、未設定なら `totalPrice`）と一致することを要求する。
+ * 受領額自体は Reservation 列には保存せず AuditLog metadata にのみ記録する
+ * (events の method/note と同型)。
+ */
+export async function recordManualReservationPaymentCommand(data: {
+  reservationId: string;
+  amount: number;
+}): Promise<{ reservationId: string; customerId: string }> {
+  const existing = await prisma.reservation.findUnique({
+    where: { id: data.reservationId, deletedAt: null },
+    select: {
+      customerId: true,
+      paymentStatus: true,
+      stripeCheckoutSessionId: true,
+      totalPrice: true,
+      totalPriceWithTax: true,
+    },
+  });
+  if (!existing) {
+    throw new DomainError("予約が見つかりません", "NOT_FOUND");
+  }
+  if (existing.stripeCheckoutSessionId !== null) {
+    throw new DomainError(
+      "この予約はStripe決済が進行中または完了しているため、手動入金記録できません",
+      "VALIDATION",
+    );
+  }
+
+  const chargeBase = existing.totalPriceWithTax ?? existing.totalPrice;
+  if (chargeBase === null || chargeBase <= 0) {
+    throw new DomainError(
+      "料金が設定されていない予約は手動入金記録できません",
+      "VALIDATION",
+    );
+  }
+  if (data.amount !== chargeBase) {
+    throw new DomainError(
+      `入金額は${chargeBase}円と一致する必要があります`,
+      "VALIDATION",
+    );
+  }
+
+  const claimed = await prisma.reservation.updateMany({
+    where: {
+      id: data.reservationId,
+      deletedAt: null,
+      status: {
+        in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+      },
+      paymentStatus: PaymentStatus.UNPAID,
+    },
+    data: {
+      paymentStatus: PaymentStatus.PAID,
+      paidAt: new Date(),
+    },
+  });
+  if (claimed.count === 0) {
+    throw new DomainError(
+      "この予約はキャンセル済み、既に入金記録済み、または決済処理中のため記録できません",
+      "CONFLICT",
+    );
+  }
+
+  return {
+    reservationId: data.reservationId,
+    customerId: existing.customerId,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Refund
 // ---------------------------------------------------------------------------

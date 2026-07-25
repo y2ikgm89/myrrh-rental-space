@@ -135,7 +135,7 @@ mock.module("@/shared/domain/reservations/pending-expiry", () => ({
 }));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
-const { createCheckoutSessionCommand } =
+const { createCheckoutSessionCommand, recordManualReservationPaymentCommand } =
   await import("@/shared/domain/reservations/payment-commands");
 // NOTE: `refundReservationPaymentCommand` の挙動は interactive tx + advisory lock +
 // Refund child table 集計 + AuditLog を跨ぐため unit mock では過度に fragile。
@@ -612,4 +612,89 @@ describe("reservations/payment-commands", () => {
 
   // refundReservationPaymentCommand の検証は integration test に集約
   // (`__tests__/integration/domain/reservations/refund-command.test.ts`)。
+
+  describe("recordManualReservationPaymentCommand", () => {
+    function unpaidReservation(
+      overrides: Record<string, unknown> = {},
+    ): Record<string, unknown> {
+      return {
+        customerId: CUSTOMER_ID,
+        paymentStatus: PaymentStatus.UNPAID,
+        stripeCheckoutSessionId: null,
+        totalPrice: 5000,
+        totalPriceWithTax: 5500,
+        ...overrides,
+      };
+    }
+
+    test("marks UNPAID reservation as PAID when amount matches charge base", async () => {
+      mockReservationFindUnique.mockResolvedValue(unpaidReservation());
+      mockReservationUpdateMany.mockResolvedValue({ count: 1 });
+
+      const result = await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5500,
+      });
+
+      expect(result).toEqual({
+        reservationId: RESERVATION_ID,
+        customerId: CUSTOMER_ID,
+      });
+      expect(mockReservationUpdateMany).toHaveBeenCalledWith({
+        where: {
+          id: RESERVATION_ID,
+          deletedAt: null,
+          status: {
+            in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+          },
+          paymentStatus: PaymentStatus.UNPAID,
+        },
+        data: {
+          paymentStatus: PaymentStatus.PAID,
+          paidAt: expect.any(Date),
+        },
+      });
+    });
+
+    test("rejects when stripe checkout session exists", async () => {
+      mockReservationFindUnique.mockResolvedValue(
+        unpaidReservation({ stripeCheckoutSessionId: "cs_test_123" }),
+      );
+
+      const error = await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5500,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("rejects when amount does not match charge base", async () => {
+      mockReservationFindUnique.mockResolvedValue(unpaidReservation());
+
+      const error = await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5000,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockReservationUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("rejects when claim updateMany updates zero rows", async () => {
+      mockReservationFindUnique.mockResolvedValue(unpaidReservation());
+      mockReservationUpdateMany.mockResolvedValue({ count: 0 });
+
+      const error = await recordManualReservationPaymentCommand({
+        reservationId: RESERVATION_ID,
+        amount: 5500,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("CONFLICT");
+    });
+  });
 });

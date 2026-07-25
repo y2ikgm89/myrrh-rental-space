@@ -25,6 +25,7 @@ import {
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { RefundDialog } from "./RefundDialog";
+import { RecordManualPaymentDialog } from "./RecordManualPaymentDialog";
 import { CancellationReasonDialog } from "../../_components/CancellationReasonDialog";
 import { openExternalTab } from "@/admin/lib/open-external-tab";
 import {
@@ -184,6 +185,7 @@ export function ReservationDetail({
   const [isPaymentPending, startPaymentTransition] = useTransition();
   const [notes, setNotes] = useState(reservation.notes || "");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [manualPaymentDialogOpen, setManualPaymentDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [reissueDialogOpen, setReissueDialogOpen] = useState(false);
   // Codex P2 (PR #1131) 対応: reissue 成功後に parent 直呼びで close → 再オープン時に
@@ -334,6 +336,16 @@ export function ReservationDetail({
     reservation.guestPhone !== reservation.customer.phoneNumber;
   const hasGuestDiff = hasNameDiff || hasPhoneDiff;
 
+  const chargeBase = Number(
+    reservation.totalPriceWithTax ?? reservation.totalPrice ?? 0,
+  );
+  const isManuallyPayable =
+    (reservation.status === ReservationStatus.PENDING ||
+      reservation.status === ReservationStatus.CONFIRMED) &&
+    reservation.paymentStatus === PaymentStatus.UNPAID &&
+    (reservation.stripeCheckoutSessionId ?? null) === null &&
+    chargeBase > 0;
+
   return (
     <div className="space-y-6">
       {/* ステータス */}
@@ -436,6 +448,16 @@ export function ReservationDetail({
           {canUpdate ? (
             <>
               <div className="flex items-center gap-2">
+                {isManuallyPayable ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isPaymentPending}
+                    onClick={() => setManualPaymentDialogOpen(true)}
+                  >
+                    手動入金記録
+                  </Button>
+                ) : null}
                 {reservation.paymentStatus === PaymentStatus.UNPAID ? (
                   <Button
                     variant="outline"
@@ -666,6 +688,15 @@ export function ReservationDetail({
         onConfirm={handleRefund}
         isPending={isPaymentPending}
       />
+
+      {isManuallyPayable ? (
+        <RecordManualPaymentDialog
+          open={manualPaymentDialogOpen}
+          onOpenChange={setManualPaymentDialogOpen}
+          reservationId={reservation.id}
+          defaultAmount={chargeBase}
+        />
+      ) : null}
 
       <CancellationReasonDialog
         open={cancelDialogOpen}
