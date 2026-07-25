@@ -31,19 +31,15 @@ type PageProps = {
   params: PageParams;
 };
 
-async function ensureSystemPageIfNeeded(slug: string): Promise<void> {
-  if (isSystemPageSlug(slug)) {
-    await ensureSystemPageCommand(slug);
-  }
-}
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   await connection();
 
   const { slug } = await params;
-  await ensureSystemPageIfNeeded(slug);
+  if (isSystemPageSlug(slug)) {
+    await ensureSystemPageCommand(slug);
+  }
   const page = await getPageWithSections(slug);
 
   return {
@@ -57,7 +53,9 @@ export default async function EditPagePage({
   await connection();
 
   const { slug } = await params;
-  await ensureSystemPageIfNeeded(slug);
+  if (isSystemPageSlug(slug)) {
+    await ensureSystemPageCommand(slug);
+  }
 
   const page = await getPageForEdit(slug);
 
