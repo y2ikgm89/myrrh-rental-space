@@ -9,7 +9,7 @@ import type {
   BusinessHours,
   MonthlyClosure,
 } from "@/shared/lib/json-validators";
-import { DEFAULT_BUSINESS_HOURS } from "./constants";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import type { TimeSlot } from "./types";
 
 /** スロットの時間間隔（分） */
@@ -111,20 +111,16 @@ export function generateSlotsFromBusinessHours(
   date: string,
   slotIntervalMinutes: number = SLOT_INTERVAL_MINUTES,
 ): TimeSlot[] {
+  const effectiveHours = businessHours ?? DEFAULT_BUSINESS_HOURS_WEEK;
   const targetDate = new Date(`${date}T00:00:00`);
   const weekday = getWeekdayKey(targetDate);
 
-  // 営業時間設定がない場合はフォールバック
-  if (!businessHours) {
-    return generateFallbackSlots(slotIntervalMinutes);
-  }
-
   // 毎月の繰り返し定休（第N曜日）に該当する場合は空配列
-  if (isMonthlyClosureDate(targetDate, businessHours.monthlyClosures)) {
+  if (isMonthlyClosureDate(targetDate, effectiveHours.monthlyClosures)) {
     return [];
   }
 
-  const daySettings = businessHours[weekday];
+  const daySettings = effectiveHours[weekday];
 
   // 休業日の場合は空配列
   if (!daySettings.isOpen || daySettings.slots.length === 0) {
@@ -160,24 +156,18 @@ export function generateSlotsFromBusinessHours(
 }
 
 /**
- * フォールバック用スロット生成（営業時間設定がない場合）
+ * フォールバック用スロット生成（営業時間設定が null のときの週間既定値）。
+ * `generateSlotsFromBusinessHours(null, date)` と同等 — 日付ごとの曜日休業を反映する。
  */
 export function generateFallbackSlots(
   slotIntervalMinutes: number = SLOT_INTERVAL_MINUTES,
+  date: string,
 ): TimeSlot[] {
-  const slots: TimeSlot[] = [];
-  const startMinutes = DEFAULT_BUSINESS_HOURS.start * 60;
-  const endMinutes = DEFAULT_BUSINESS_HOURS.end * 60;
-
-  for (let m = startMinutes; m < endMinutes; m += slotIntervalMinutes) {
-    const hour = Math.floor(m / 60);
-    const minute = m % 60;
-    slots.push({
-      time: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
-      available: true,
-    });
-  }
-  return slots;
+  return generateSlotsFromBusinessHours(
+    DEFAULT_BUSINESS_HOURS_WEEK,
+    date,
+    slotIntervalMinutes,
+  );
 }
 
 /** 時刻文字列（HH:MM）に指定分数を加算して HH:MM を返す */
@@ -218,8 +208,8 @@ function toMinutes(time: string): number {
  * startTime/endTime でも正しく判定できる（スロット列挙による整合チェックは
  * 刻みに合わない入力を誤判定しうるため採用しない）。
  *
- * `businessHours` が未設定（null）の場合は `DEFAULT_BUSINESS_HOURS`（9-21時）
- * にフォールバックする — `generateFallbackSlots` と同じ既定値。
+ * `businessHours` が未設定（null）の場合は `DEFAULT_BUSINESS_HOURS_WEEK`
+ * （月〜土 09:00–21:00、日曜休業）にフォールバックする。
  */
 export function isWithinBusinessHours(
   businessHours: BusinessHours | null,
@@ -227,23 +217,17 @@ export function isWithinBusinessHours(
   startTime: string,
   endTime: string,
 ): boolean {
+  const effectiveHours = businessHours ?? DEFAULT_BUSINESS_HOURS_WEEK;
   const startMinutes = toMinutes(startTime);
   const endMinutes = toMinutes(endTime);
   if (startMinutes >= endMinutes) return false;
 
-  if (!businessHours) {
-    return (
-      startMinutes >= DEFAULT_BUSINESS_HOURS.start * 60 &&
-      endMinutes <= DEFAULT_BUSINESS_HOURS.end * 60
-    );
-  }
-
   const targetDate = new Date(`${date}T00:00:00`);
-  if (isMonthlyClosureDate(targetDate, businessHours.monthlyClosures)) {
+  if (isMonthlyClosureDate(targetDate, effectiveHours.monthlyClosures)) {
     return false;
   }
 
-  const daySettings = businessHours[getWeekdayKey(targetDate)];
+  const daySettings = effectiveHours[getWeekdayKey(targetDate)];
   if (!daySettings.isOpen) return false;
 
   return daySettings.slots.some((slot) => {

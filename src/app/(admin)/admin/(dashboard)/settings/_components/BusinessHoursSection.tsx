@@ -147,19 +147,29 @@ export function BusinessHoursSection({
   const getSlotError = (
     day: WeekdayKey,
     slotIndex: number,
-    field: "openTime" | "closeTime" | "overlap",
+    field: "openTime" | "closeTime" | "overlap" | "empty",
   ) => {
     return slotErrors.find(
       (e) => e.day === day && e.slotIndex === slotIndex && e.field === field,
     );
   };
 
-  // エラー検証
+  // エラー検証（server の collectBusinessHoursWeekIssues と同等のガードを先に弾く）
   const validateSlots = (hours: BusinessHours): SlotError[] => {
     const errors: SlotError[] = [];
     for (const { key } of DAYS_OF_WEEK) {
       const day = hours[key];
       if (!day.isOpen) continue;
+
+      if (day.slots.length === 0) {
+        errors.push({
+          day: key,
+          slotIndex: 0,
+          field: "empty",
+          message: "営業日には最低1つの時間帯を設定してください",
+        });
+        continue;
+      }
 
       for (let i = 0; i < day.slots.length; i++) {
         const slot = day.slots[i];
@@ -332,6 +342,9 @@ export function BusinessHoursSection({
 
       if (isMutationError(result)) {
         toast.error(result.error);
+        if (result.code === "CONFLICT") {
+          router.refresh();
+        }
       } else {
         toast.success("営業時間設定を保存しました");
         router.refresh();
@@ -432,6 +445,11 @@ export function BusinessHoursSection({
                   {/* 時間帯リスト */}
                   {businessHours[key].isOpen && (
                     <div className="mt-3 space-y-2 pl-24">
+                      {getSlotError(key, 0, "empty") && (
+                        <p className="text-sm text-destructive">
+                          営業日には最低1つの時間帯を設定してください
+                        </p>
+                      )}
                       {/* 重複エラー表示 */}
                       {getSlotError(key, 0, "overlap") && (
                         <p className="text-sm text-destructive">
@@ -621,7 +639,7 @@ export function BusinessHoursSection({
               disabled={isDisabled}
             />
             <p className="text-xs text-muted-foreground">
-              ホームページに表示するお知らせ文を入力できます。
+              ホームページに表示するお知らせ文を入力できます（1000文字以内）。
             </p>
           </div>
 

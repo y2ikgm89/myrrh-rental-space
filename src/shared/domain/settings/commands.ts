@@ -24,6 +24,7 @@ import {
   buildInitialFeatureModules,
   normalizeFeatureModules,
 } from "@/shared/lib/features/registry";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
@@ -71,6 +72,8 @@ export type BusinessInfoInput = {
   registrationNumber: string | null;
   invoiceNumber: string | null;
   businessDescription: string | null;
+  /** 楽観的 concurrency: 読み込み時の SettingsOrganization.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export type ContactInfoInput = {
@@ -89,7 +92,7 @@ export type BusinessHoursSettingsInput = {
   businessHours: BusinessHours;
   holidayNotice: string | null;
   /** 楽観的 concurrency: 読み込み時の SettingsOrganization.updatedAt */
-  expectedUpdatedAt?: string | Date | undefined;
+  expectedUpdatedAt: string | Date;
 };
 
 export type EmailSettingsInput = {
@@ -134,7 +137,21 @@ export type ReservationSettingsInput = {
   modificationDeadlineHours: number;
   customerCanCancelSeriesInFull: boolean;
   maxRecurrenceInstances: number;
+  /** 楽観的 concurrency: 読み込み時の SettingsReservation.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
+
+/** Business Settings 楽観的 concurrency 競合時の共通メッセージ */
+export const SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE =
+  "他のユーザーにより更新されています。ページを再読み込みしてください";
+
+function toExpectedUpdatedAt(value: string | Date): Date {
+  const expected = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(expected.getTime())) {
+    throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+  }
+  return expected;
+}
 
 export type HeaderSettingsInput = {
   headerScrollBehavior: HeaderScrollBehavior;
@@ -238,17 +255,27 @@ export async function updateSearchVerification(
 export async function updateBusinessInfo(
   data: BusinessInfoInput,
 ): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
   const updateData = {
-    ...data,
+    businessName: data.businessName,
+    businessNameKana: data.businessNameKana,
+    representativeName: data.representativeName,
     establishedDate: data.establishedDate
       ? new Date(data.establishedDate)
       : null,
+    registrationNumber: data.registrationNumber,
+    invoiceNumber: data.invoiceNumber,
+    businessDescription: data.businessDescription,
   };
 
-  await prisma.settingsOrganization.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsOrganization.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
@@ -268,33 +295,20 @@ export async function updateContactInfo(data: ContactInfoInput): Promise<void> {
 export async function updateBusinessHoursSettings(
   data: BusinessHoursSettingsInput,
 ): Promise<void> {
-  if (data.expectedUpdatedAt !== undefined) {
-    const current = await prisma.settingsOrganization.findUnique({
-      where: { id: "singleton" },
-      select: { updatedAt: true },
-    });
-    const expectedMs = new Date(data.expectedUpdatedAt).getTime();
-    if (
-      !current ||
-      Number.isNaN(expectedMs) ||
-      current.updatedAt.getTime() !== expectedMs
-    ) {
-      throw new DomainError(
-        "他のユーザーにより更新されています。ページを再読み込みしてください",
-        "CONFLICT",
-      );
-    }
-  }
-
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
   const updateData = {
     businessHours: data.businessHours,
     holidayNotice: data.holidayNotice,
   };
 
-  await prisma.settingsOrganization.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsOrganization.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
@@ -388,7 +402,13 @@ export async function ensureSettingsOrganization() {
   return prisma.settingsOrganization.upsert({
     where: { id: "singleton" },
     update: {},
-    create: { id: "singleton" },
+    create: {
+      id: "singleton",
+      businessHours: asPrismaInputJsonValue(
+        DEFAULT_BUSINESS_HOURS_WEEK,
+        "businessHours が不正です",
+      ),
+    },
   });
 }
 
@@ -524,10 +544,25 @@ export async function updateCookieConsentSettings(
 export async function updateReservationSettings(
   data: ReservationSettingsInput,
 ): Promise<void> {
-  await prisma.settingsReservation.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+  const updateData = {
+    defaultTimeSlot: data.defaultTimeSlot,
+    minReservationDuration: data.minReservationDuration,
+    maxReservationDuration: data.maxReservationDuration,
+    cancellationDeadlineHours: data.cancellationDeadlineHours,
+    modificationDeadlineHours: data.modificationDeadlineHours,
+    customerCanCancelSeriesInFull: data.customerCanCancelSeriesInFull,
+    maxRecurrenceInstances: data.maxRecurrenceInstances,
+  };
+
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsReservation.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: updateData,
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 

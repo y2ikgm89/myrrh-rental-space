@@ -146,23 +146,23 @@ describe("getWeekdayKey", () => {
 
 describe("generateFallbackSlots", () => {
   describe("正常系", () => {
-    test("DEFAULT_BUSINESS_HOURS (9-21) に基づき 24 スロットを生成する（30分刻み）", () => {
-      const slots = generateFallbackSlots();
+    test("DEFAULT_BUSINESS_HOURS_WEEK（月曜 9-21）に基づき 24 スロットを生成する（30分刻み）", () => {
+      const slots = generateFallbackSlots(30, MONDAY_DATE);
       expect(slots).toHaveLength(24);
     });
 
     test('最初のスロットが "09:00" である', () => {
-      const slots = generateFallbackSlots();
+      const slots = generateFallbackSlots(30, MONDAY_DATE);
       expect(slots[0]?.time).toBe("09:00");
     });
 
     test('最後のスロットが "20:30" である', () => {
-      const slots = generateFallbackSlots();
+      const slots = generateFallbackSlots(30, MONDAY_DATE);
       expect(slots[slots.length - 1]?.time).toBe("20:30");
     });
 
     test("全スロットが available: true である", () => {
-      const slots = generateFallbackSlots();
+      const slots = generateFallbackSlots(30, MONDAY_DATE);
       expect(
         slots.every(
           (s: { time: string; available: boolean }) => s.available === true,
@@ -171,7 +171,7 @@ describe("generateFallbackSlots", () => {
     });
 
     test("スロットが 30 分刻みで連続している（09:00〜20:30）", () => {
-      const slots = generateFallbackSlots();
+      const slots = generateFallbackSlots(30, MONDAY_DATE);
       const times = slots.map(
         (s: { time: string; available: boolean }) => s.time,
       );
@@ -211,15 +211,20 @@ describe("generateFallbackSlots", () => {
 
 describe("generateSlotsFromBusinessHours", () => {
   describe("businessHours が null の場合", () => {
-    test("フォールバックスロット（24スロット）を返す", () => {
+    test("月曜はフォールバックスロット（24スロット）を返す", () => {
       const slots = generateSlotsFromBusinessHours(null, MONDAY_DATE);
       expect(slots).toHaveLength(24);
     });
 
-    test("フォールバックスロットの最初が 09:00、最後が 20:30 である", () => {
+    test("月曜フォールバックスロットの最初が 09:00、最後が 20:30 である", () => {
       const slots = generateSlotsFromBusinessHours(null, MONDAY_DATE);
       expect(slots[0]?.time).toBe("09:00");
       expect(slots[slots.length - 1]?.time).toBe("20:30");
+    });
+
+    test("日曜は既定週で休業のため空配列を返す", () => {
+      const slots = generateSlotsFromBusinessHours(null, SUNDAY_DATE);
+      expect(slots).toHaveLength(0);
     });
   });
 
@@ -417,8 +422,8 @@ describe("generateSlotsFromBusinessHours", () => {
     });
 
     test("generateFallbackSlots も刻みを受け取る（60分→12スロット）", () => {
-      expect(generateFallbackSlots(60)).toHaveLength(12);
-      expect(generateFallbackSlots()).toHaveLength(24);
+      expect(generateFallbackSlots(60, MONDAY_DATE)).toHaveLength(12);
+      expect(generateFallbackSlots(30, MONDAY_DATE)).toHaveLength(24);
     });
   });
 });
@@ -463,21 +468,27 @@ describe("deriveSlotIntervalMinutes", () => {
 // =============================================================================
 
 describe("isWithinBusinessHours", () => {
-  describe("businessHours が null の場合（DEFAULT_BUSINESS_HOURS 9-21 にフォールバック）", () => {
-    test("9-21 の範囲内なら true", () => {
+  describe("businessHours が null の場合（DEFAULT_BUSINESS_HOURS_WEEK にフォールバック）", () => {
+    test("月曜 9-21 の範囲内なら true", () => {
       expect(isWithinBusinessHours(null, MONDAY_DATE, "10:00", "12:00")).toBe(
         true,
       );
     });
 
-    test("21 時をまたぐと false", () => {
+    test("月曜 21 時をまたぐと false", () => {
       expect(isWithinBusinessHours(null, MONDAY_DATE, "20:00", "22:00")).toBe(
         false,
       );
     });
 
-    test("9 時より前から始まると false", () => {
+    test("月曜 9 時より前から始まると false", () => {
       expect(isWithinBusinessHours(null, MONDAY_DATE, "08:00", "10:00")).toBe(
+        false,
+      );
+    });
+
+    test("日曜は休業のため false", () => {
+      expect(isWithinBusinessHours(null, SUNDAY_DATE, "10:00", "12:00")).toBe(
         false,
       );
     });

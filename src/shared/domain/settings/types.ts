@@ -49,8 +49,10 @@ export type SettingsData = {
   buildingName: string | null;
   businessHours: BusinessHours | null;
   holidayNotice: string | null;
-  /** SettingsOrganization.updatedAt — 営業時間の optimistic concurrency 用 */
+  /** SettingsOrganization.updatedAt — 事業者情報 / 営業時間の optimistic concurrency 用 */
   organizationUpdatedAt: Date;
+  /** SettingsReservation.updatedAt — 予約設定の optimistic concurrency 用 */
+  reservationUpdatedAt: Date;
   senderEmail: string | null;
   senderName: string | null;
   replyToEmail: string | null;

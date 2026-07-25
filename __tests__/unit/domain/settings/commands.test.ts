@@ -2,6 +2,10 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // Prisma モック関数（import より前に定義 — TDZ 回避）
 type SettingsUpsertArgs = { update?: Record<string, unknown> };
+type UpdateManyArgs = {
+  where?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+};
 const mockSettingsFeaturesUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
@@ -14,15 +18,36 @@ const mockSettingsLayoutUpsert = mock<
 const mockSettingsOrganizationUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsOrganizationUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockSettingsCommerceUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
 const mockSettingsReservationUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsReservationUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockSettingsDataRetentionUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+
+const txClient = {
+  settingsOrganization: {
+    upsert: mockSettingsOrganizationUpsert,
+    updateMany: mockSettingsOrganizationUpdateMany,
+  },
+  settingsReservation: {
+    upsert: mockSettingsReservationUpsert,
+    updateMany: mockSettingsReservationUpdateMany,
+  },
+};
+
+const mockTransaction = mock(
+  async (fn: (tx: typeof txClient) => Promise<unknown>) => fn(txClient),
+);
 
 mock.module("server-only", () => ({}));
 
@@ -34,6 +59,7 @@ mock.module("@/shared/lib/env/server", () => ({
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
+    $transaction: mockTransaction,
     settingsFeatures: {
       upsert: mockSettingsFeaturesUpsert,
     },
@@ -45,12 +71,14 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsOrganization: {
       upsert: mockSettingsOrganizationUpsert,
+      updateMany: mockSettingsOrganizationUpdateMany,
     },
     settingsCommerce: {
       upsert: mockSettingsCommerceUpsert,
     },
     settingsReservation: {
       upsert: mockSettingsReservationUpsert,
+      updateMany: mockSettingsReservationUpdateMany,
     },
     settingsDataRetention: {
       upsert: mockSettingsDataRetentionUpsert,
@@ -97,6 +125,7 @@ mock.module("@generated/prisma/enums", () => ({
 import {
   updateBasicInfo,
   updateBusinessInfo,
+  updateBusinessHoursSettings,
   updateReservationSettings,
   updateDiscountSettings,
   updateTaxSettings,
@@ -104,8 +133,10 @@ import {
   updateLayoutSettings,
   updateContactInfo,
   updateDataRetentionSettings,
+  SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
 } from "@/shared/domain/settings/commands";
 import { DomainError } from "@/shared/domain/domain-error";
+import type { BusinessHours } from "@/shared/lib/json-validators";
 
 // =============================================================================
 // テスト用定数
@@ -123,6 +154,8 @@ const BASIC_INFO_INPUT = {
   useFooterLogo: true,
 };
 
+const EXPECTED_UPDATED_AT = new Date("2026-01-15T00:00:00.000Z");
+
 const BUSINESS_INFO_INPUT = {
   businessName: "株式会社テスト",
   businessNameKana: "カブシキガイシャテスト",
@@ -131,6 +164,31 @@ const BUSINESS_INFO_INPUT = {
   registrationNumber: "1234567890123",
   invoiceNumber: "T1234567890123",
   businessDescription: "レンタルスペースの運営",
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
+};
+
+const OPEN_DAY = {
+  isOpen: true,
+  slots: [{ openTime: "09:00", closeTime: "18:00" }],
+};
+const CLOSED_DAY = {
+  isOpen: false,
+  slots: [] as { openTime: string; closeTime: string }[],
+};
+const BUSINESS_HOURS: BusinessHours = {
+  monday: OPEN_DAY,
+  tuesday: OPEN_DAY,
+  wednesday: OPEN_DAY,
+  thursday: OPEN_DAY,
+  friday: OPEN_DAY,
+  saturday: CLOSED_DAY,
+  sunday: CLOSED_DAY,
+};
+
+const BUSINESS_HOURS_INPUT = {
+  businessHours: BUSINESS_HOURS,
+  holidayNotice: null as string | null,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
 const RESERVATION_SETTINGS_INPUT = {
@@ -141,6 +199,7 @@ const RESERVATION_SETTINGS_INPUT = {
   modificationDeadlineHours: 24,
   customerCanCancelSeriesInFull: false,
   maxRecurrenceInstances: 26,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
 const DISCOUNT_SETTINGS_INPUT = {
@@ -246,23 +305,21 @@ describe("updateBasicInfo", () => {
 
 describe("updateBusinessInfo", () => {
   beforeEach(() => {
-    mockSettingsOrganizationUpsert.mockReset();
-    mockSettingsOrganizationUpsert.mockResolvedValue({ id: "singleton" });
+    mockTransaction.mockClear();
+    mockSettingsOrganizationUpdateMany.mockReset();
+    mockSettingsOrganizationUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   describe("正常系", () => {
-    test("有効な事業者情報でアップサートが実行される", async () => {
+    test("CAS updateMany が expectedUpdatedAt 付きで実行される", async () => {
       await updateBusinessInfo(BUSINESS_INFO_INPUT);
 
-      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledTimes(1);
-    });
-
-    test("establishedDate が Date オブジェクトに変換される", async () => {
-      await updateBusinessInfo(BUSINESS_INFO_INPUT);
-
-      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+          data: expect.objectContaining({
+            businessName: "株式会社テスト",
             establishedDate: expect.any(Date),
           }),
         }),
@@ -275,9 +332,9 @@ describe("updateBusinessInfo", () => {
         establishedDate: null,
       });
 
-      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             establishedDate: null,
           }),
         }),
@@ -293,9 +350,78 @@ describe("updateBusinessInfo", () => {
         registrationNumber: null,
         invoiceNumber: null,
         businessDescription: null,
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       });
 
-      expect(mockSettingsOrganizationUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("楽観的 concurrency", () => {
+    test("updateMany count=0 なら DomainError CONFLICT", async () => {
+      mockSettingsOrganizationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        updateBusinessInfo(BUSINESS_INFO_INPUT),
+      ).rejects.toMatchObject({
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+        code: "CONFLICT",
+      });
+    });
+  });
+});
+
+// =============================================================================
+// updateBusinessHoursSettings
+// =============================================================================
+
+describe("updateBusinessHoursSettings", () => {
+  beforeEach(() => {
+    mockTransaction.mockClear();
+    mockSettingsOrganizationUpdateMany.mockReset();
+    mockSettingsOrganizationUpdateMany.mockResolvedValue({ count: 1 });
+  });
+
+  describe("正常系", () => {
+    test("CAS updateMany が expectedUpdatedAt 付きで実行される", async () => {
+      await updateBusinessHoursSettings(BUSINESS_HOURS_INPUT);
+
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+          data: expect.objectContaining({
+            businessHours: BUSINESS_HOURS,
+            holidayNotice: null,
+          }),
+        }),
+      );
+    });
+  });
+
+  describe("楽観的 concurrency", () => {
+    test("updateMany count=0 なら DomainError CONFLICT", async () => {
+      mockSettingsOrganizationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        updateBusinessHoursSettings(BUSINESS_HOURS_INPUT),
+      ).rejects.toMatchObject({
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+        code: "CONFLICT",
+      });
+    });
+
+    test("不正な expectedUpdatedAt は DomainError CONFLICT", async () => {
+      await expect(
+        updateBusinessHoursSettings({
+          ...BUSINESS_HOURS_INPUT,
+          expectedUpdatedAt: "not-a-date",
+        }),
+      ).rejects.toMatchObject({
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+        code: "CONFLICT",
+      });
+      expect(mockSettingsOrganizationUpdateMany).not.toHaveBeenCalled();
     });
   });
 });
@@ -306,23 +432,39 @@ describe("updateBusinessInfo", () => {
 
 describe("updateReservationSettings", () => {
   beforeEach(() => {
-    mockSettingsReservationUpsert.mockReset();
-    mockSettingsReservationUpsert.mockResolvedValue({ id: "singleton" });
+    mockTransaction.mockClear();
+    mockSettingsReservationUpdateMany.mockReset();
+    mockSettingsReservationUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   describe("正常系", () => {
-    test("予約設定データが upsert の update フィールドに渡される", async () => {
+    test("CAS updateMany に予約設定データが渡される", async () => {
       await updateReservationSettings(RESERVATION_SETTINGS_INPUT);
 
-      expect(mockSettingsReservationUpsert).toHaveBeenCalledWith(
+      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSettingsReservationUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+          data: expect.objectContaining({
             defaultTimeSlot: 60,
             minReservationDuration: 60,
             maxReservationDuration: 480,
           }),
         }),
       );
+    });
+  });
+
+  describe("楽観的 concurrency", () => {
+    test("updateMany count=0 なら DomainError CONFLICT", async () => {
+      mockSettingsReservationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        updateReservationSettings(RESERVATION_SETTINGS_INPUT),
+      ).rejects.toMatchObject({
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+        code: "CONFLICT",
+      });
     });
   });
 });

@@ -106,10 +106,15 @@ export const businessInfoFormSchema = z.object({
     .string()
     .max(50, { error: "50文字以内で入力してください" })
     .optional(),
-  establishedDate: z.string().optional(),
+  establishedDate: z.iso
+    .date({ error: "設立日は YYYY-MM-DD 形式で入力してください" })
+    .optional(),
   registrationNumber: z
     .string()
     .max(50, { error: "50文字以内で入力してください" })
+    .refine((value) => value === undefined || /^\d{0,13}$/.test(value), {
+      error: "法人番号は数字13桁以内で入力してください",
+    })
     .optional(),
   invoiceNumber: z
     .string()
@@ -122,6 +127,9 @@ export const businessInfoFormSchema = z.object({
     .string()
     .max(2000, { error: "2000文字以内で入力してください" })
     .optional(),
+  expectedUpdatedAt: z.iso.datetime({
+    error: "更新バージョンが不正です。ページを再読み込みしてください",
+  }),
 });
 
 export type BusinessInfoFormInput = z.infer<typeof businessInfoFormSchema>;

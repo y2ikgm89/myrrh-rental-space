@@ -9,6 +9,6 @@ export {
 export type SlotError = {
   day: keyof BusinessHours;
   slotIndex: number;
-  field: "openTime" | "closeTime" | "overlap";
+  field: "openTime" | "closeTime" | "overlap" | "empty";
   message: string;
 };

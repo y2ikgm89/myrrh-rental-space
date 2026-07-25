@@ -56,6 +56,7 @@ export async function updateBusinessInfo(
             registrationNumber: emptyToNull(data.registrationNumber),
             invoiceNumber: emptyToNull(data.invoiceNumber),
             businessDescription: emptyToNull(data.businessDescription),
+            expectedUpdatedAt: data.expectedUpdatedAt,
           });
           return null;
         },

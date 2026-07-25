@@ -38,6 +38,8 @@ import {
   type SettingsReadOnlyProps,
 } from "./shared/settings-read-only";
 
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
 interface BusinessInfoSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
@@ -69,6 +71,7 @@ export function BusinessInfoSection({
       registrationNumber: settings.registrationNumber ?? "",
       invoiceNumber: settings.invoiceNumber ?? "",
       businessDescription: settings.businessDescription ?? "",
+      expectedUpdatedAt: settings.organizationUpdatedAt,
     },
   });
 
@@ -76,6 +79,17 @@ export function BusinessInfoSection({
     if (lastResult && lastResult.initialValue === null) {
       toast.success("事業者情報を保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -97,6 +111,9 @@ export function BusinessInfoSection({
             disabled={readOnly}
             className="space-y-4 border-0 p-0 m-0 min-w-0"
           >
+            <input
+              {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor={fields.businessName.id}>会社名・屋号</Label>
@@ -177,6 +194,9 @@ export function BusinessInfoSection({
                   placeholder="1234567890123"
                   disabled={isDisabled}
                 />
+                <p className="text-xs text-muted-foreground">
+                  法人の場合は13桁の法人番号（任意）
+                </p>
                 {fields.registrationNumber.errors && (
                   <p
                     id={fields.registrationNumber.errorId}
