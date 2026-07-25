@@ -9,6 +9,7 @@ import {
 import { PostViewTracker } from "../_components/post-view-tracker";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -19,7 +20,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   await connection();
   const { slug } = await params;
-  return buildPostMetadata(slug);
+  return withFeatureGate("posts", () => buildPostMetadata(slug));
 }
 
 export default async function BlogPostPage({

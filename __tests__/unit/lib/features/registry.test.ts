@@ -5,6 +5,7 @@ import {
   FEATURE_MODULES,
   FEATURE_MODULES_LIST,
   buildInitialFeatureModules,
+  getFeatureModuleForPageSlug,
   isFeatureModule,
   normalizeFeatureModules,
   parseDisabledFeatureModulesEnv,
@@ -100,6 +101,12 @@ describe("FEATURE_MODULES routing alignment", () => {
         expect(SYSTEM_PAGE_SLUGS).toContain(slug);
       }
     }
+  });
+
+  test("getFeatureModuleForPageSlug — pageSlugs 逆引き", () => {
+    expect(getFeatureModuleForPageSlug("blog")).toBe("posts");
+    expect(getFeatureModuleForPageSlug("spaces")).toBe("spaces");
+    expect(getFeatureModuleForPageSlug("home")).toBeNull();
   });
 });
 

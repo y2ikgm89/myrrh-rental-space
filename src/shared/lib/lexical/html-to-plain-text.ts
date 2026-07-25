@@ -8,6 +8,8 @@
  * - 前後トリム
  * - `maxLength` 指定時は末尾を `…` で丸める
  */
+import { decodeHtmlEntities } from "@/shared/lib/html/decode-html-entities";
+
 export function stripHtmlToText(html: string, maxLength?: number): string {
   if (!html) return "";
 
@@ -18,13 +20,7 @@ export function stripHtmlToText(html: string, maxLength?: number): string {
     )
     .replace(/<[^>]+>/g, "");
 
-  const decoded = withBreaks
-    .replaceAll("&nbsp;", " ")
-    .replaceAll("&amp;", "&")
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&#39;", "'");
+  const decoded = decodeHtmlEntities(withBreaks.replaceAll("&nbsp;", " "));
 
   const normalized = decoded.replace(/\s+/g, " ").trim();
 

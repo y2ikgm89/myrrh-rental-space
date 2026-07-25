@@ -23,6 +23,8 @@
  * - 先頭・末尾のハイフンを除去
  */
 
+import { decodeHtmlEntities } from "@/shared/lib/html/decode-html-entities";
+
 export type HeadingEntry = {
   readonly id: string;
   readonly text: string;
@@ -48,14 +50,7 @@ export function slugifyHeading(text: string): string {
 }
 
 function stripTags(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  return decodeHtmlEntities(html.replace(/<[^>]+>/g, ""))
     .replace(/\s+/g, " ")
     .trim();
 }

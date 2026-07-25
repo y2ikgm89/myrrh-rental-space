@@ -34,6 +34,7 @@ import {
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import {
   generateArticleMetadata,
   getSeoSettings,
@@ -62,38 +63,40 @@ export async function generateMetadata({
   await connection();
 
   const { slug } = await params;
-  const [event, settings] = await Promise.all([
-    getPublishedEventBySlug(slug),
-    getSeoSettings(),
-  ]);
+  return withFeatureGate("events", async () => {
+    const [event, settings] = await Promise.all([
+      getPublishedEventBySlug(slug),
+      getSeoSettings(),
+    ]);
 
-  if (!event) {
-    return {
-      title: "イベントが見つかりません",
-      robots: { index: false, follow: false },
-    };
-  }
+    if (!event) {
+      return {
+        title: "イベントが見つかりません",
+        robots: { index: false, follow: false },
+      };
+    }
 
-  const fallbackDescription =
-    event.descriptionPlainText.trim() !== ""
-      ? event.descriptionPlainText
-      : `${event.title} - イベント詳細`;
+    const fallbackDescription =
+      event.descriptionPlainText.trim() !== ""
+        ? event.descriptionPlainText
+        : `${event.title} - イベント詳細`;
 
-  return generateArticleMetadata(
-    {
-      title: event.title,
-      description: event.metaDescription ?? fallbackDescription,
-      image: event.ogpImageUrl ?? event.thumbnailUrl,
-      ogpTitle: event.ogpTitle,
-      ogpDescription: event.ogpDescription,
-      metaKeywords: event.metaKeywords,
-    },
-    settings,
-    {
-      canonicalUrl: `${getBaseUrl()}/events/${slug}`,
-      ogType: "website",
-    },
-  );
+    return generateArticleMetadata(
+      {
+        title: event.title,
+        description: event.metaDescription ?? fallbackDescription,
+        image: event.ogpImageUrl ?? event.thumbnailUrl,
+        ogpTitle: event.ogpTitle,
+        ogpDescription: event.ogpDescription,
+        metaKeywords: event.metaKeywords,
+      },
+      settings,
+      {
+        canonicalUrl: `${getBaseUrl()}/events/${slug}`,
+        ogType: "website",
+      },
+    );
+  });
 }
 
 export default async function EventDetailPage({

@@ -23,6 +23,7 @@ import {
   requireFeatureEnabled,
   isFeatureEnabled,
 } from "@/shared/lib/features/check";
+import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
@@ -55,32 +56,34 @@ export async function generateMetadata({
 }: SpaceDetailPageProps): Promise<Metadata> {
   await connection();
   const { slug } = await params;
-  const [space, settings] = await Promise.all([
-    getSpaceBySlug(slug),
-    getSeoSettings(),
-  ]);
-  if (!space) {
-    return {
-      title: "スペースが見つかりません",
-      robots: { index: false, follow: false },
-    };
-  }
+  return withFeatureGate("spaces", async () => {
+    const [space, settings] = await Promise.all([
+      getSpaceBySlug(slug),
+      getSeoSettings(),
+    ]);
+    if (!space) {
+      return {
+        title: "スペースが見つかりません",
+        robots: { index: false, follow: false },
+      };
+    }
 
-  return generateArticleMetadata(
-    {
-      title: space.name,
-      description:
-        space.metaDescription ?? space.descriptionPlainText ?? undefined,
-      image: space.ogpImageUrl ?? space.mainImageUrl,
-      ogpTitle: space.ogpTitle,
-      ogpDescription: space.ogpDescription,
-    },
-    settings,
-    {
-      canonicalUrl: `${getBaseUrl()}/spaces/${slug}`,
-      ogType: "website",
-    },
-  );
+    return generateArticleMetadata(
+      {
+        title: space.name,
+        description:
+          space.metaDescription ?? space.descriptionPlainText ?? undefined,
+        image: space.ogpImageUrl ?? space.mainImageUrl,
+        ogpTitle: space.ogpTitle,
+        ogpDescription: space.ogpDescription,
+      },
+      settings,
+      {
+        canonicalUrl: `${getBaseUrl()}/spaces/${slug}`,
+        ogType: "website",
+      },
+    );
+  });
 }
 
 export default async function SpaceDetailPage({

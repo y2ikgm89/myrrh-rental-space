@@ -10,6 +10,10 @@ import {
   getSeoSettings,
   type SeoSettings,
 } from "@/shared/domain/settings/queries/site";
+import {
+  resolveOpenGraphImages,
+  resolveTwitterImages,
+} from "@/public/lib/seo/default-social-images";
 
 // =============================================================================
 // Types
@@ -126,7 +130,7 @@ export function generateArticleMetadata(
     openGraph: {
       title: ogTitle,
       ...(ogDescription !== undefined && { description: ogDescription }),
-      ...(image !== undefined && { images: [image] }),
+      images: resolveOpenGraphImages(siteName, image, ogTitle),
       type: ogType,
       locale: "ja_JP",
       siteName,
@@ -136,7 +140,7 @@ export function generateArticleMetadata(
       card: "summary_large_image",
       title: ogTitle,
       ...(ogDescription !== undefined && { description: ogDescription }),
-      ...(image !== undefined && { images: [image] }),
+      images: resolveTwitterImages(siteName, image),
     },
   };
 }

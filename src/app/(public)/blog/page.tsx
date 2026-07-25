@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { createMetadataErrorFallback } from "@/public/lib/seo/feature-gated-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionStack } from "@/public/components/sections/section-stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
@@ -16,10 +17,10 @@ interface PageProps {
   searchParams: Promise<SearchParams>;
 }
 
-const FALLBACK_METADATA: Metadata = {
-  title: "ブログ",
-  description: "最新のブログ記事をお届けします。",
-};
+const FALLBACK_METADATA: Metadata = createMetadataErrorFallback(
+  "ブログ",
+  "最新のブログ記事をお届けします。",
+);
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();

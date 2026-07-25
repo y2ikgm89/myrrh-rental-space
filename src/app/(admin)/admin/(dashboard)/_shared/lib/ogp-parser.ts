@@ -1,5 +1,11 @@
 // 純粋な文字列操作関数群（server-only 不要）
 
+import { decodeHtmlEntities } from "@/shared/lib/html/decode-html-entities";
+
+function decodeOgpText(value: string): string {
+  return decodeHtmlEntities(value).trim();
+}
+
 function extractMetaContent(html: string, property: string): string {
   // og:property or name attribute
   const ogRegex = new RegExp(
@@ -23,15 +29,15 @@ function extractMetaContent(html: string, property: string): string {
 export function extractTitle(html: string): string | null {
   // og:title
   const ogTitle = extractMetaContent(html, "og:title");
-  if (ogTitle) return ogTitle;
+  if (ogTitle) return decodeOgpText(ogTitle);
 
   // twitter:title
   const twitterTitle = extractMetaContent(html, "twitter:title");
-  if (twitterTitle) return twitterTitle;
+  if (twitterTitle) return decodeOgpText(twitterTitle);
 
   // <title> tag
   const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-  if (titleMatch?.[1]) return titleMatch[1].trim();
+  if (titleMatch?.[1]) return decodeOgpText(titleMatch[1]);
 
   return null;
 }
@@ -39,15 +45,15 @@ export function extractTitle(html: string): string | null {
 export function extractDescription(html: string): string | null {
   // og:description
   const ogDesc = extractMetaContent(html, "og:description");
-  if (ogDesc) return ogDesc;
+  if (ogDesc) return decodeOgpText(ogDesc);
 
   // twitter:description
   const twitterDesc = extractMetaContent(html, "twitter:description");
-  if (twitterDesc) return twitterDesc;
+  if (twitterDesc) return decodeOgpText(twitterDesc);
 
   // meta description
   const metaDesc = extractMetaContent(html, "description");
-  if (metaDesc) return metaDesc;
+  if (metaDesc) return decodeOgpText(metaDesc);
 
   return null;
 }
@@ -67,11 +73,11 @@ export function extractImage(html: string): string | null {
 export function extractSiteName(html: string): string | null {
   // og:site_name
   const ogSiteName = extractMetaContent(html, "og:site_name");
-  if (ogSiteName) return ogSiteName;
+  if (ogSiteName) return decodeOgpText(ogSiteName);
 
   // application-name
   const appName = extractMetaContent(html, "application-name");
-  if (appName) return appName;
+  if (appName) return decodeOgpText(appName);
 
   return null;
 }
