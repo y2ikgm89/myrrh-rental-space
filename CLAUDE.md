@@ -136,12 +136,12 @@ OPEN を確認 — auto-merge 済みなら新 branch）。独立 topic / 別 dom
 **事故防止の実体**（lefthook + GitHub branch protection。ツール呼び出しレベルの deny hook は
 プロジェクト側に現存しないため、これと上記 gate・停止例外自体が最終防衛線）:
 
-| 層                       | 内容                                                                          |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| pre-commit               | eslint-fix + prettier-fix + `scripts/check-protected-files.sh`（並列）        |
-| pre-push                 | `type-check` → `architecture-boundaries.test.ts` を直列実行                   |
-| commit-msg               | `scripts/check-commit-msg.sh` で Conventional Commits 強制                    |
-| GitHub branch protection | main、required checks 8 件・force-push 禁止・branch 削除禁止・`strict: false` |
+| 層                       | 内容                                                                                                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pre-commit               | eslint-fix + prettier-fix + `scripts/check-protected-files.sh`（並列）                                                                                              |
+| pre-push                 | `type-check` → `architecture-boundaries.test.ts` を直列実行                                                                                                         |
+| commit-msg               | `scripts/check-commit-msg.sh` で Conventional Commits 強制                                                                                                          |
+| GitHub branch protection | main、required checks（`.github/branch-protection.json`）・force-push 禁止・branch 削除禁止・`strict: false`。旧 Main Terraform Health は手動デプロイ移行に伴い廃止 |
 
 ## 詳細ルール
 
