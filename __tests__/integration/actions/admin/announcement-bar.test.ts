@@ -121,6 +121,15 @@ describe("AnnouncementBar Admin Action Integration", () => {
         const result = announcementBarSchema.safeParse(inputWithoutDates);
         expect(result.success).toBe(true);
       });
+
+      test("startAt が endAt より後なら拒否", () => {
+        const result = announcementBarSchema.safeParse({
+          ...VALID_ANNOUNCEMENT_INPUT,
+          startAt: "2026-07-31T18:00",
+          endAt: "2026-07-01T09:00",
+        });
+        expect(result.success).toBe(false);
+      });
     });
 
     describe("message (PortableTextSpan[])", () => {
@@ -210,6 +219,22 @@ describe("AnnouncementBar Admin Action Integration", () => {
           });
           expect(result.success).toBe(true);
         }
+      });
+
+      test("内部 path (/about) は許可", () => {
+        const result = announcementBarSchema.safeParse({
+          ...VALID_ANNOUNCEMENT_INPUT,
+          linkUrl: "/about",
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("javascript: スキームは拒否", () => {
+        const result = announcementBarSchema.safeParse({
+          ...VALID_ANNOUNCEMENT_INPUT,
+          linkUrl: "javascript:alert(1)",
+        });
+        expect(result.success).toBe(false);
       });
 
       test("無効なURLはエラー", () => {

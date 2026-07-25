@@ -15,6 +15,12 @@ const mockSettingsSeoUpsert = mock<
 const mockSettingsLayoutUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsLayoutUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
+const mockSettingsSidebarUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
 const mockSettingsOrganizationUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
@@ -43,6 +49,13 @@ const txClient = {
     upsert: mockSettingsReservationUpsert,
     updateMany: mockSettingsReservationUpdateMany,
   },
+  settingsLayout: {
+    upsert: mockSettingsLayoutUpsert,
+    updateMany: mockSettingsLayoutUpdateMany,
+  },
+  settingsSidebar: {
+    updateMany: mockSettingsSidebarUpdateMany,
+  },
 };
 
 const mockTransaction = mock(
@@ -68,6 +81,7 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsLayout: {
       upsert: mockSettingsLayoutUpsert,
+      updateMany: mockSettingsLayoutUpdateMany,
     },
     settingsOrganization: {
       upsert: mockSettingsOrganizationUpsert,
@@ -82,6 +96,9 @@ mock.module("@/shared/db/prisma", () => ({
     },
     settingsDataRetention: {
       upsert: mockSettingsDataRetentionUpsert,
+    },
+    settingsSidebar: {
+      updateMany: mockSettingsSidebarUpdateMany,
     },
   },
   Prisma: {
@@ -221,6 +238,15 @@ const TAX_SETTINGS_INPUT = {
 const HEADER_SETTINGS_INPUT = {
   headerScrollBehavior: "always_visible" as const,
   headerBackgroundMode: "transparent" as const,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
+};
+
+const LAYOUT_SETTINGS_INPUT = {
+  containerWidth: "FULL" as const,
+  containerWidthCustom: null,
+  contentWidth: "FULL" as const,
+  contentWidthCustom: null,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
 // =============================================================================
@@ -615,24 +641,24 @@ describe("updateTaxSettings", () => {
 
 describe("updateHeaderSettings", () => {
   beforeEach(() => {
-    mockSettingsLayoutUpsert.mockReset();
-    mockSettingsLayoutUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsLayoutUpdateMany.mockReset();
+    mockSettingsLayoutUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   describe("正常系", () => {
-    test("有効なヘッダー設定でアップサートが実行される", async () => {
+    test("有効なヘッダー設定で updateMany が実行される", async () => {
       await updateHeaderSettings(HEADER_SETTINGS_INPUT);
 
-      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpdateMany).toHaveBeenCalledTimes(1);
     });
 
-    test("ヘッダー設定データが upsert に渡される", async () => {
+    test("ヘッダー設定データが updateMany に渡される", async () => {
       await updateHeaderSettings(HEADER_SETTINGS_INPUT);
 
-      expect(mockSettingsLayoutUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsLayoutUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "singleton" },
-          update: expect.objectContaining({
+          where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+          data: expect.objectContaining({
             headerScrollBehavior: "always_visible",
             headerBackgroundMode: "transparent",
           }),
@@ -644,9 +670,23 @@ describe("updateHeaderSettings", () => {
       await updateHeaderSettings({
         headerScrollBehavior: "hide_on_scroll",
         headerBackgroundMode: "solid",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       });
 
-      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpdateMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("楽観的 concurrency", () => {
+    test("updateMany count=0 なら DomainError CONFLICT", async () => {
+      mockSettingsLayoutUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        updateHeaderSettings(HEADER_SETTINGS_INPUT),
+      ).rejects.toMatchObject({
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+        code: "CONFLICT",
+      });
     });
   });
 });
@@ -657,31 +697,27 @@ describe("updateHeaderSettings", () => {
 
 describe("updateLayoutSettings", () => {
   beforeEach(() => {
-    mockSettingsLayoutUpsert.mockReset();
-    mockSettingsLayoutUpsert.mockResolvedValue({ id: "singleton" });
+    mockSettingsLayoutUpdateMany.mockReset();
+    mockSettingsLayoutUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   describe("正常系", () => {
-    test("FULL 幅の設定でアップサートが実行される", async () => {
-      await updateLayoutSettings({
-        containerWidth: "FULL",
-        containerWidthCustom: null,
-        contentWidth: "FULL",
-        contentWidthCustom: null,
-      });
+    test("FULL 幅の設定で updateMany が実行される", async () => {
+      await updateLayoutSettings(LAYOUT_SETTINGS_INPUT);
 
-      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpdateMany).toHaveBeenCalledTimes(1);
     });
 
-    test("CUSTOM 幅でカスタム値を指定するとアップサートが実行される", async () => {
+    test("CUSTOM 幅でカスタム値を指定すると updateMany が実行される", async () => {
       await updateLayoutSettings({
         containerWidth: "CUSTOM",
         containerWidthCustom: 1200,
         contentWidth: "CUSTOM",
         contentWidthCustom: 900,
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       });
 
-      expect(mockSettingsLayoutUpsert).toHaveBeenCalledTimes(1);
+      expect(mockSettingsLayoutUpdateMany).toHaveBeenCalledTimes(1);
     });
 
     test("CUSTOM containerWidth の場合 containerWidthCustom が設定される", async () => {
@@ -690,11 +726,12 @@ describe("updateLayoutSettings", () => {
         containerWidthCustom: 1400,
         contentWidth: "FULL",
         contentWidthCustom: null,
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       });
 
-      expect(mockSettingsLayoutUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsLayoutUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             containerWidthCustom: 1400,
           }),
         }),
@@ -707,11 +744,12 @@ describe("updateLayoutSettings", () => {
         containerWidthCustom: 1400, // 指定しても FULL なら null
         contentWidth: "FULL",
         contentWidthCustom: null,
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       });
 
-      expect(mockSettingsLayoutUpsert).toHaveBeenCalledWith(
+      expect(mockSettingsLayoutUpdateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          update: expect.objectContaining({
+          data: expect.objectContaining({
             containerWidthCustom: null,
           }),
         }),
@@ -727,6 +765,7 @@ describe("updateLayoutSettings", () => {
           containerWidthCustom: null,
           contentWidth: "FULL",
           contentWidthCustom: null,
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
         }),
       ).rejects.toMatchObject({
         code: "VALIDATION",
@@ -741,6 +780,7 @@ describe("updateLayoutSettings", () => {
           containerWidthCustom: null,
           contentWidth: "CUSTOM",
           contentWidthCustom: null,
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
         }),
       ).rejects.toMatchObject({
         code: "VALIDATION",
@@ -748,17 +788,75 @@ describe("updateLayoutSettings", () => {
       });
     });
 
-    test("バリデーションエラー時は upsert が呼ばれない", async () => {
+    test("container カスタム幅が範囲外の場合 VALIDATION エラーをスローする", async () => {
+      await expect(
+        updateLayoutSettings({
+          containerWidth: "CUSTOM",
+          containerWidthCustom: 300,
+          contentWidth: "FULL",
+          contentWidthCustom: null,
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "Container幅は320px〜2560pxの範囲で入力してください",
+      });
+    });
+
+    test("content カスタム幅が範囲外の場合 VALIDATION エラーをスローする", async () => {
+      await expect(
+        updateLayoutSettings({
+          containerWidth: "FULL",
+          containerWidthCustom: null,
+          contentWidth: "CUSTOM",
+          contentWidthCustom: 2000,
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "コンテンツ幅は320px〜1920pxの範囲で入力してください",
+      });
+    });
+
+    test("負の container カスタム幅は VALIDATION エラーをスローする", async () => {
+      await expect(
+        updateLayoutSettings({
+          containerWidth: "CUSTOM",
+          containerWidthCustom: -100,
+          contentWidth: "FULL",
+          contentWidthCustom: null,
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+      });
+    });
+
+    test("バリデーションエラー時は updateMany が呼ばれない", async () => {
       await expect(
         updateLayoutSettings({
           containerWidth: "CUSTOM",
           containerWidthCustom: null,
           contentWidth: "FULL",
           contentWidthCustom: null,
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
         }),
       ).rejects.toThrow(DomainError);
 
-      expect(mockSettingsLayoutUpsert).not.toHaveBeenCalled();
+      expect(mockSettingsLayoutUpdateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("楽観的 concurrency", () => {
+    test("updateMany count=0 なら DomainError CONFLICT", async () => {
+      mockSettingsLayoutUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        updateLayoutSettings(LAYOUT_SETTINGS_INPUT),
+      ).rejects.toMatchObject({
+        message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+        code: "CONFLICT",
+      });
     });
   });
 });

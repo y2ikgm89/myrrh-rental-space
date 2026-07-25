@@ -435,6 +435,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         footerHoursLabel: "営業時間",
         footerShowSocialLinks: "",
         themeColor: "#fafafa",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       }),
       "footer",
     );
@@ -450,6 +451,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
           footerHoursLabel: "営業時間",
           footerShowSocialLinks: "",
           themeColor: "#fafafa",
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
         }),
         { schema: footerFormSchema },
       ).status,
@@ -464,8 +466,68 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
         containerWidthCustom: "",
         contentWidth: LayoutWidth.MD,
         contentWidthCustom: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       }),
       "layout",
+    );
+  });
+
+  test("レイアウト: CUSTOM + 空カスタム幅はエラー", () => {
+    expect(
+      parseWithZod(
+        form({
+          containerWidth: LayoutWidth.CUSTOM,
+          containerWidthCustom: "",
+          contentWidth: LayoutWidth.MD,
+          contentWidthCustom: "",
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
+        }),
+        { schema: layoutFormSchema },
+      ).status,
+    ).toBe("error");
+  });
+
+  test("レイアウト: container カスタム幅が範囲外はエラー", () => {
+    expect(
+      parseWithZod(
+        form({
+          containerWidth: LayoutWidth.CUSTOM,
+          containerWidthCustom: "300",
+          contentWidth: LayoutWidth.MD,
+          contentWidthCustom: "",
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
+        }),
+        { schema: layoutFormSchema },
+      ).status,
+    ).toBe("error");
+  });
+
+  test("レイアウト: content カスタム幅が範囲外はエラー", () => {
+    expect(
+      parseWithZod(
+        form({
+          containerWidth: LayoutWidth.LG,
+          containerWidthCustom: "",
+          contentWidth: LayoutWidth.CUSTOM,
+          contentWidthCustom: "2000",
+          expectedUpdatedAt: EXPECTED_UPDATED_AT,
+        }),
+        { schema: layoutFormSchema },
+      ).status,
+    ).toBe("error");
+  });
+
+  test("レイアウト: 有効な CUSTOM 幅は success", () => {
+    expectSuccess(
+      layoutFormSchema,
+      form({
+        containerWidth: LayoutWidth.CUSTOM,
+        containerWidthCustom: "1400",
+        contentWidth: LayoutWidth.CUSTOM,
+        contentWidthCustom: "900",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
+      "layout custom widths",
     );
   });
 

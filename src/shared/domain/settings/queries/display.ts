@@ -45,6 +45,9 @@ export interface FooterSettings {
 }
 
 const DEFAULT_SITE_NAME = "Myrrh Rental Space";
+const DEFAULT_FOOTER_NAVIGATION_LABEL = "ナビゲーション";
+const DEFAULT_FOOTER_CONTACT_LABEL = "お問い合わせ";
+const DEFAULT_FOOTER_HOURS_LABEL = "営業時間";
 
 export async function getHeaderSettings(): Promise<HeaderSettings> {
   "use cache";
@@ -135,9 +138,10 @@ export async function getFooterSettings(): Promise<FooterSettings> {
   return {
     tagline: result?.footerTagline ?? null,
     copyright: result?.footerCopyright ?? null,
-    navigationLabel: result?.footerNavigationLabel ?? "Navigation",
-    contactLabel: result?.footerContactLabel ?? "Contact",
-    hoursLabel: result?.footerHoursLabel ?? "Hours",
+    navigationLabel:
+      result?.footerNavigationLabel ?? DEFAULT_FOOTER_NAVIGATION_LABEL,
+    contactLabel: result?.footerContactLabel ?? DEFAULT_FOOTER_CONTACT_LABEL,
+    hoursLabel: result?.footerHoursLabel ?? DEFAULT_FOOTER_HOURS_LABEL,
     showSocialLinks: result?.footerShowSocialLinks ?? true,
     themeColor: result?.themeColor ?? "#fafafa",
     brand: {

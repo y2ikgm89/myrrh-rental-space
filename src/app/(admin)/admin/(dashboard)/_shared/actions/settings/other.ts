@@ -248,6 +248,7 @@ export async function updateFooterSettings(
           footerHoursLabel: data.footerHoursLabel,
           footerShowSocialLinks: data.footerShowSocialLinks,
           themeColor: data.themeColor,
+          expectedUpdatedAt: data.expectedUpdatedAt,
         });
         return null;
       },

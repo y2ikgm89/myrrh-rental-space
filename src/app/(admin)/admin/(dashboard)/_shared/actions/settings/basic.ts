@@ -122,6 +122,7 @@ export async function updateLayoutSettings(
             data.contentWidth === LayoutWidth.CUSTOM
               ? parseInt(data.contentWidthCustom ?? "", 10) || null
               : null,
+          expectedUpdatedAt: data.expectedUpdatedAt,
         });
         return null;
       },

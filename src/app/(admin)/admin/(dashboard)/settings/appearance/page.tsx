@@ -143,7 +143,11 @@ function AppearanceSettingsLoading(): ReactElement {
 export default async function AppearanceSettingsPage(): Promise<ReactElement> {
   await connection();
   const user = await requireAdminPermission("settings", "read");
-  const readOnly = !hasPermission(user.role, "settings", "update");
+  const canUpdateAnyAppearanceSection =
+    hasPermission(user.role, "settings", "update") ||
+    hasPermission(user.role, "navigation", "update") ||
+    hasPermission(user.role, "announcementBar", "update");
+  const readOnly = !canUpdateAnyAppearanceSection;
 
   return (
     <SettingsLayout

@@ -94,7 +94,7 @@ function toAnnouncementBarInput(
 ): AnnouncementBarInput {
   return {
     message: data.message,
-    linkUrl: data.linkUrl || null,
+    linkUrl: data.linkUrl,
     linkText: data.linkText || null,
     bgColor: null,
     textColor: null,

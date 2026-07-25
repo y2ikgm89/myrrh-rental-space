@@ -9,6 +9,10 @@ import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { isHttpOrInternalPublicHref } from "@/shared/lib/url/safe-href";
 import { optionalText, switchBoolean } from "./form-schema-helpers";
 
+const settingsExpectedUpdatedAtSchema = z.iso.datetime({
+  error: "更新バージョンが不正です。ページを再読み込みしてください",
+});
+
 // =============================================================================
 // Site > Privacy > Cookie同意設定
 // =============================================================================
@@ -64,6 +68,7 @@ export const footerFormSchema = z.object({
   themeColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, {
     error: "有効なHEXカラーコードを入力してください（例: #fafafa）",
   }),
+  expectedUpdatedAt: settingsExpectedUpdatedAtSchema,
 });
 
 export type FooterFormInput = z.infer<typeof footerFormSchema>;
@@ -72,12 +77,65 @@ export type FooterFormInput = z.infer<typeof footerFormSchema>;
 // Site > Appearance > レイアウト設定
 // =============================================================================
 
-export const layoutFormSchema = z.object({
-  containerWidth: z.enum(LayoutWidth),
-  // CUSTOM 選択時のみ使用。非 CUSTOM では空欄で送られるため optional。
-  containerWidthCustom: z.string().optional(),
-  contentWidth: z.enum(LayoutWidth),
-  contentWidthCustom: z.string().optional(),
-});
+export const layoutFormSchema = z
+  .object({
+    containerWidth: z.enum(LayoutWidth),
+    // CUSTOM 選択時のみ使用。非 CUSTOM では空欄で送られるため optional。
+    containerWidthCustom: z.string().optional(),
+    contentWidth: z.enum(LayoutWidth),
+    contentWidthCustom: z.string().optional(),
+    expectedUpdatedAt: settingsExpectedUpdatedAtSchema,
+  })
+  .superRefine((data, ctx) => {
+    if (data.containerWidth === LayoutWidth.CUSTOM) {
+      const raw = data.containerWidthCustom?.trim() ?? "";
+      if (!raw) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["containerWidthCustom"],
+          message: "カスタム幅を入力してください",
+        });
+      } else {
+        const parsed = Number.parseInt(raw, 10);
+        if (
+          Number.isNaN(parsed) ||
+          parsed < 320 ||
+          parsed > 2560 ||
+          String(parsed) !== raw
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["containerWidthCustom"],
+            message: "320px〜2560pxの範囲で入力してください",
+          });
+        }
+      }
+    }
+
+    if (data.contentWidth === LayoutWidth.CUSTOM) {
+      const raw = data.contentWidthCustom?.trim() ?? "";
+      if (!raw) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["contentWidthCustom"],
+          message: "カスタム幅を入力してください",
+        });
+      } else {
+        const parsed = Number.parseInt(raw, 10);
+        if (
+          Number.isNaN(parsed) ||
+          parsed < 320 ||
+          parsed > 1920 ||
+          String(parsed) !== raw
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["contentWidthCustom"],
+            message: "320px〜1920pxの範囲で入力してください",
+          });
+        }
+      }
+    }
+  });
 
 export type LayoutFormInput = z.infer<typeof layoutFormSchema>;

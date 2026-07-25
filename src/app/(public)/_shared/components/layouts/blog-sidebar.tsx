@@ -29,7 +29,7 @@ function renderWidget(
         />
       );
     case "popular":
-      // viewCount 未実装のため公開日順。type key `popular` は互換のため維持。
+      // viewCount 降順 → 公開日降順。type key `popular` は互換のため維持。
       return (
         <SidebarPostList
           label="Popular"

@@ -34,3 +34,28 @@ export function filterBarsWithinDisplayPeriodNow<
   const now = new Date();
   return bars.filter((bar) => isWithinDisplayPeriod(bar, now));
 }
+
+export type AnnouncementBarDisplayStatus =
+  "published" | "out_of_period" | "hidden";
+
+const DISPLAY_STATUS_LABEL: Record<AnnouncementBarDisplayStatus, string> = {
+  published: "公開中",
+  out_of_period: "期間外",
+  hidden: "非表示",
+};
+
+export function getAnnouncementBarDisplayStatusLabel(
+  status: AnnouncementBarDisplayStatus,
+): string {
+  return DISPLAY_STATUS_LABEL[status];
+}
+
+/** 管理画面一覧: isActive + 表示期間から算出する公開状態 */
+export function getAnnouncementBarDisplayStatus(
+  bar: Pick<AnnouncementBarItem, "startAt" | "endAt"> & { isActive: boolean },
+  now: Date,
+): AnnouncementBarDisplayStatus {
+  if (!bar.isActive) return "hidden";
+  if (isWithinDisplayPeriod(bar, now)) return "published";
+  return "out_of_period";
+}

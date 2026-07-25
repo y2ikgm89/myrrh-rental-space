@@ -35,8 +35,8 @@ const recentWidgetSchema = z.object({
   layout: z.enum(POST_LIST_LAYOUTS).default("compact"),
 });
 
-// 注目記事 widget（type key `popular` は互換維持）— layout + ランキング表示設定。
-// 閲覧数未実装のためクエリは公開日順（queries.ts）。
+// 人気記事 widget（type key `popular` は互換維持）— layout + ランキング表示設定。
+// 並び順は viewCount 降順 → 公開日降順（queries.ts）。
 const popularWidgetSchema = z.object({
   type: z.literal("popular"),
   enabled: z.boolean(),
@@ -95,6 +95,11 @@ export const sidebarSettingsSchema = z.object({
   sidebarPopularCount: z.number().int().min(1).max(20),
   /** 公開記事詳細ページに目次サイドバーを表示するグローバルトグル（h2 数 >= 2 の記事のみ有効） */
   sidebarTocEnabled: z.boolean(),
+  expectedUpdatedAt: z.iso
+    .datetime({
+      error: "更新バージョンが不正です。ページを再読み込みしてください",
+    })
+    .or(z.date()),
 });
 
 export type SidebarSettings = z.infer<typeof sidebarSettingsSchema>;

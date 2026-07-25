@@ -51,6 +51,8 @@ import {
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
 interface LayoutSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
 }
@@ -116,6 +118,7 @@ export function LayoutSection({
       containerWidthCustom: settings.containerWidthCustom?.toString() || "",
       contentWidth: getValidLayoutWidth(settings.contentWidth, LayoutWidth.MD),
       contentWidthCustom: settings.contentWidthCustom?.toString() || "",
+      expectedUpdatedAt: settings.layoutUpdatedAt,
     },
   });
 
@@ -157,6 +160,17 @@ export function LayoutSection({
     if (lastResult && lastResult.initialValue === null) {
       toast.success("レイアウト設定を保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -175,6 +189,7 @@ export function LayoutSection({
         name={fields.contentWidth.name}
         value={contentWidth}
       />
+      <input {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })} />
 
       <Card>
         <CardHeader>

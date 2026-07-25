@@ -22,7 +22,7 @@ import {
  *   → schema 内で JSON.parse + spans 配列 validate (Pattern B)
  * - boolean (`isExternal` / `isActive` / `showOnDesktop` / `showOnMobile`) は Switch +
  *   hidden input で "on" / "" を `z.preprocess` で boolean coerce
- * - `parentId` は Select で "none" → empty string、command 層で null 化
+ * - `parentId` は Select で "none" / 空文字 → `z.preprocess` で null、UUID は検証
  * - `type` / `platform` は hidden input
  * - `order` は create/update 入力から除外し、domain 層の自動採番と reorder action に閉じる
  */
@@ -66,7 +66,10 @@ const booleanFromCheckbox = z.preprocess(
 export const navFormSchema = z
   .strictObject({
     type: z.enum(NavigationType),
-    parentId: z.string(),
+    parentId: z.preprocess(
+      (value) => (value === "none" || value === "" ? null : value),
+      z.uuid().nullable(),
+    ),
     label: labelSchema,
     url: z.string().min(1, { error: "URLは必須です" }),
     isExternal: booleanFromCheckbox,

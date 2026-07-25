@@ -43,11 +43,18 @@ interface FooterSectionProps extends SettingsReadOnlyProps {
     footerHoursLabel: string;
     footerShowSocialLinks: boolean;
     themeColor: string;
+    layoutUpdatedAt: string;
   };
 }
 
 const DEFAULT_TAGLINE =
   "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。";
+
+const DEFAULT_FOOTER_NAVIGATION_LABEL = "ナビゲーション";
+const DEFAULT_FOOTER_CONTACT_LABEL = "お問い合わせ";
+const DEFAULT_FOOTER_HOURS_LABEL = "営業時間";
+
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
 export function FooterSection({
   settings,
@@ -74,6 +81,7 @@ export function FooterSection({
       footerHoursLabel: settings.footerHoursLabel,
       footerShowSocialLinks: settings.footerShowSocialLinks ? "on" : "",
       themeColor: settings.themeColor,
+      expectedUpdatedAt: settings.layoutUpdatedAt,
     },
   });
 
@@ -85,6 +93,17 @@ export function FooterSection({
     if (lastResult && lastResult.initialValue === null) {
       toast.success("フッター設定を保存しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -106,6 +125,9 @@ export function FooterSection({
             disabled={readOnly}
             className="space-y-6 border-0 p-0 m-0 min-w-0"
           >
+            <input
+              {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+            />
             <div className="space-y-1.5">
               <label
                 className="block text-sm font-medium text-foreground"
@@ -146,8 +168,18 @@ export function FooterSection({
                   {...getInputProps(fields.footerNavigationLabel, {
                     type: "text",
                   })}
+                  placeholder={DEFAULT_FOOTER_NAVIGATION_LABEL}
                   disabled={isDisabled}
                 />
+                {fields.footerNavigationLabel.errors &&
+                  fields.footerNavigationLabel.errors.length > 0 && (
+                    <p
+                      id={fields.footerNavigationLabel.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.footerNavigationLabel.errors.join(", ")}
+                    </p>
+                  )}
               </div>
               <div className="space-y-1.5">
                 <label
@@ -160,8 +192,18 @@ export function FooterSection({
                   {...getInputProps(fields.footerContactLabel, {
                     type: "text",
                   })}
+                  placeholder={DEFAULT_FOOTER_CONTACT_LABEL}
                   disabled={isDisabled}
                 />
+                {fields.footerContactLabel.errors &&
+                  fields.footerContactLabel.errors.length > 0 && (
+                    <p
+                      id={fields.footerContactLabel.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.footerContactLabel.errors.join(", ")}
+                    </p>
+                  )}
               </div>
               <div className="space-y-1.5">
                 <label
@@ -172,8 +214,18 @@ export function FooterSection({
                 </label>
                 <Input
                   {...getInputProps(fields.footerHoursLabel, { type: "text" })}
+                  placeholder={DEFAULT_FOOTER_HOURS_LABEL}
                   disabled={isDisabled}
                 />
+                {fields.footerHoursLabel.errors &&
+                  fields.footerHoursLabel.errors.length > 0 && (
+                    <p
+                      id={fields.footerHoursLabel.errorId}
+                      className="text-sm text-destructive"
+                    >
+                      {fields.footerHoursLabel.errors.join(", ")}
+                    </p>
+                  )}
               </div>
             </div>
 

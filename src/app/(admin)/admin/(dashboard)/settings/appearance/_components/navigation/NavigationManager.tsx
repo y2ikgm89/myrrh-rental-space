@@ -152,7 +152,7 @@ export function NavigationManager({
         <Tabs defaultValue="desktop">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="desktop">デスクトップ</TabsTrigger>
-            <TabsTrigger value="mobile">モバイル</TabsTrigger>
+            <TabsTrigger value="mobile">ハンバーガー</TabsTrigger>
             <TabsTrigger value="footer">フッター</TabsTrigger>
             <TabsTrigger value="social">SNSリンク</TabsTrigger>
           </TabsList>
@@ -184,7 +184,7 @@ export function NavigationManager({
             <NavigationList
               items={flattenNavItems(mobileItems)}
               type="HEADER_MOBILE"
-              emptyMessage="モバイルメニューがありません"
+              emptyMessage="ハンバーガーメニューがありません"
               sensors={sensors}
               isPending={isPending || readOnly}
               activeItemId={activeItemId}
@@ -202,7 +202,7 @@ export function NavigationManager({
               onMakeRoot={handleMakeRoot("HEADER_MOBILE")}
             />
             <p className="mt-4 text-sm text-muted-foreground">
-              モバイルでは項目数を少なめに設定することをおすすめします。
+              ここで編集するのはヘッダーのハンバーガーメニュー（モバイル表示時）です。画面下部に固定表示されるタブバー（ホーム・スペース・予約など）はサイト共通の固定項目で、この設定とは連動しません。
             </p>
           </TabsContent>
 

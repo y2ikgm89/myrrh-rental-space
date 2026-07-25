@@ -81,6 +81,36 @@ describe("barFormSchema（お知らせバー）", () => {
     expect(submission.status).toBe("success");
   });
 
+  test("内部 path (/about) は許可する", () => {
+    const submission = parseWithZod(
+      form({
+        message: validMessage,
+        linkUrl: "/about",
+        linkText: "",
+        isActive: "on",
+        startAt: "",
+        endAt: "",
+      }),
+      { schema: barFormSchema },
+    );
+    expect(submission.status).toBe("success");
+  });
+
+  test("javascript: スキームは拒否する", () => {
+    const submission = parseWithZod(
+      form({
+        message: validMessage,
+        linkUrl: "javascript:alert(1)",
+        linkText: "",
+        isActive: "on",
+        startAt: "",
+        endAt: "",
+      }),
+      { schema: barFormSchema },
+    );
+    expect(submission.status).toBe("error");
+  });
+
   test("不正な URL は弾く（境界）", () => {
     const submission = parseWithZod(
       form({
@@ -90,6 +120,21 @@ describe("barFormSchema（お知らせバー）", () => {
         isActive: "on",
         startAt: "",
         endAt: "",
+      }),
+      { schema: barFormSchema },
+    );
+    expect(submission.status).toBe("error");
+  });
+
+  test("開始日時が終了日時より後なら拒否する", () => {
+    const submission = parseWithZod(
+      form({
+        message: validMessage,
+        linkUrl: "",
+        linkText: "",
+        isActive: "on",
+        startAt: "2026-07-31T18:00",
+        endAt: "2026-07-01T09:00",
       }),
       { schema: barFormSchema },
     );
@@ -111,6 +156,27 @@ describe("navFormSchema / socialFormSchema（回帰ガード）", () => {
       { schema: navFormSchema },
     );
     expect(submission.status).toBe("success");
+    if (submission.status === "success") {
+      expect(submission.value.parentId).toBeNull();
+    }
+  });
+
+  test("ナビ: parentId 空文字は null に正規化する", () => {
+    const submission = parseWithZod(
+      form({
+        type: "HEADER_DESKTOP",
+        parentId: "",
+        label: validLabel,
+        url: "/about",
+        isExternal: "",
+        isActive: "on",
+      }),
+      { schema: navFormSchema },
+    );
+    expect(submission.status).toBe("success");
+    if (submission.status === "success") {
+      expect(submission.value.parentId).toBeNull();
+    }
   });
 
   test("SNS: 表示トグルを全 OFF にしても保存できる", () => {

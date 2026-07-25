@@ -407,7 +407,7 @@ export function Header({
         scrolled && "border-b border-border/50",
       )}
     >
-      <div className="mx-auto grid max-w-[var(--container-header-max)] grid-cols-2 items-center justify-items-start gap-6 px-5 py-4 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-5 xl:gap-16">
+      <div className="mx-auto grid max-w-[var(--container-site)] grid-cols-2 items-center justify-items-start gap-6 px-5 py-4 lg:grid-cols-3 lg:gap-12 lg:px-8 lg:py-5 xl:gap-16">
         {/* Brand — 左列（container の justify-items-start が default 適用） */}
         <SiteBrand brand={brand} variant="header" />
 

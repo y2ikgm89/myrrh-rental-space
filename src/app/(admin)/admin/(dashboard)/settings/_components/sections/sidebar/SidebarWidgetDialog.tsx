@@ -14,6 +14,7 @@ import {
   Textarea,
 } from "@/admin/components/ui";
 import type { CustomWidget } from "@/shared/lib/validations/sidebar";
+import { optionalSafePublicHrefSchema } from "@/shared/lib/url/safe-href";
 
 // =============================================================================
 // Types
@@ -64,10 +65,24 @@ export function SidebarWidgetDialog({
         }
       : EMPTY_FORM,
   );
+  const [linkUrlError, setLinkUrlError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
+
+    const linkUrlResult = optionalSafePublicHrefSchema.safeParse(
+      form.linkUrl.trim() === "" ? "" : form.linkUrl.trim(),
+    );
+    if (!linkUrlResult.success) {
+      setLinkUrlError(
+        linkUrlResult.error.issues[0]?.message ??
+          "リンクURLの形式が正しくありません",
+      );
+      return;
+    }
+
+    setLinkUrlError(null);
     onSubmit(form);
     onOpenChange(false);
   };
@@ -119,12 +134,26 @@ export function SidebarWidgetDialog({
             <Input
               id="widget-link-url"
               value={form.linkUrl}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, linkUrl: e.target.value }))
-              }
-              placeholder="https://..."
+              onChange={(e) => {
+                setLinkUrlError(null);
+                setForm((prev) => ({ ...prev, linkUrl: e.target.value }));
+              }}
+              placeholder="/contact または https://..."
               maxLength={500}
+              aria-invalid={linkUrlError ? true : undefined}
+              aria-describedby={
+                linkUrlError ? "widget-link-url-error" : undefined
+              }
             />
+            {linkUrlError ? (
+              <p
+                id="widget-link-url-error"
+                className="text-sm text-destructive"
+                role="alert"
+              >
+                {linkUrlError}
+              </p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="widget-link-label">リンクラベル</Label>

@@ -230,9 +230,13 @@ export function SidebarSection({
         sidebarRecentCount: recentCount,
         sidebarPopularCount: popularCount,
         sidebarTocEnabled: tocEnabled,
+        expectedUpdatedAt: settings.sidebarUpdatedAt,
       });
       if (isMutationError(result)) {
         toast.error(result.error);
+        if (result.code === "CONFLICT") {
+          router.refresh();
+        }
       } else {
         toast.success("サイドバー設定を保存しました");
         router.refresh();
@@ -245,7 +249,7 @@ export function SidebarSection({
       <CardHeader>
         <CardTitle>サイドバー設定</CardTitle>
         <CardDescription>
-          ブログページのサイドバー表示とウィジェット設定を行います
+          ブログ・お知らせ記事のウィジェットサイドバーと目次サイドバーを設定します
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -280,7 +284,8 @@ export function SidebarSection({
             <div className="space-y-0.5">
               <p className="text-sm font-medium">サイドバーを表示する</p>
               <p className="text-sm text-muted-foreground">
-                ブログページでサイドバーを表示します
+                ブログ一覧・アーカイブ、および記事詳細（目次サイドバー非表示時）で
+                ウィジェットサイドバーを表示します
               </p>
             </div>
             <Switch
@@ -298,7 +303,8 @@ export function SidebarSection({
               </p>
               <p className="text-sm text-muted-foreground">
                 ブログ・お知らせの記事詳細ページで、見出しから自動生成された目次サイドバーを表示します（見出し（h2）が
-                2 つ以上ある記事のみ）
+                2
+                つ以上ある記事のみ）。目次サイドバーが表示されるページではウィジェットサイドバーは表示されません（どちらか一方のみ）。
               </p>
             </div>
             <Switch
@@ -478,9 +484,19 @@ export function SidebarSection({
               <AccordionContent>
                 <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
                   <li>
-                    サイドバーは記事一覧ページと記事詳細ページで表示されます
+                    ウィジェットサイドバーは /blog
+                    一覧・カテゴリ/タグアーカイブ、および記事詳細（目次サイドバー非表示時）で表示されます
                   </li>
-                  <li>モバイル表示では自動的に非表示になります</li>
+                  <li>
+                    /news
+                    一覧ではウィジェットサイドバーは表示されません。お知らせ詳細は目次サイドバー非表示時のみウィジェットサイドバーを表示します
+                  </li>
+                  <li>
+                    記事詳細で目次サイドバーが表示される場合（h2 が 2
+                    つ以上かつ目次設定
+                    ON）、ウィジェットサイドバーは同ページでは表示されません
+                  </li>
+                  <li>モバイル表示ではサイドバーは自動的に非表示になります</li>
                   <li>ドラッグ&ドロップでウィジェットの表示順を変更できます</li>
                   <li>各ウィジェットは個別にオン/オフできます</li>
                   <li>

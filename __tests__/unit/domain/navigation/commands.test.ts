@@ -25,6 +25,16 @@ const mockNavigationItemAggregate = mock<
   () => Promise<{ _max: { order: number | null } }>
 >(() => Promise.resolve({ _max: { order: null } }));
 
+const mockNavigationItemCount = mock<() => Promise<number>>(() =>
+  Promise.resolve(0),
+);
+
+const mockNavigationItemGroupBy = mock<
+  () => Promise<
+    ReadonlyArray<{ parentId: string | null; _count: { _all: number } }>
+  >
+>(() => Promise.resolve([]));
+
 const mockSocialLinkCreate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "social-1" }),
 );
@@ -92,6 +102,8 @@ mock.module("@/shared/db/prisma", () => ({
       update: mockNavigationItemUpdate,
       delete: mockNavigationItemDelete,
       aggregate: mockNavigationItemAggregate,
+      count: mockNavigationItemCount,
+      groupBy: mockNavigationItemGroupBy,
     },
     socialLink: {
       create: mockSocialLinkCreate,
@@ -671,8 +683,10 @@ describe("updateNavigationItem", () => {
   beforeEach(() => {
     mockNavigationItemFindUnique.mockReset();
     mockNavigationItemUpdate.mockReset();
+    mockNavigationItemCount.mockReset();
     mockNavigationItemFindUnique.mockResolvedValue({ id: NAV_ID });
     mockNavigationItemUpdate.mockResolvedValue({ id: NAV_ID });
+    mockNavigationItemCount.mockResolvedValue(0);
   });
 
   describe("正常系", () => {
@@ -845,6 +859,7 @@ describe("updateNavigationOrder", () => {
     mockTransaction.mockReset();
     mockNavigationItemFindMany.mockReset();
     mockNavigationItemUpdate.mockReset();
+    mockNavigationItemGroupBy.mockReset();
     mockExecuteRaw.mockReset();
     mockTransaction.mockImplementation((cb) =>
       cb({
@@ -860,6 +875,7 @@ describe("updateNavigationOrder", () => {
       }),
     );
     mockExecuteRaw.mockResolvedValue(0);
+    mockNavigationItemGroupBy.mockResolvedValue([]);
   });
 
   describe("正常系", () => {
@@ -933,6 +949,7 @@ describe("updateNavigationOrder", () => {
           {
             id: "550e8400-e29b-41d4-a716-446655440099",
             type: "HEADER_DESKTOP",
+            parentId: null,
           },
         ]);
 

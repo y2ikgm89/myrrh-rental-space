@@ -175,6 +175,8 @@ function toSettingsData(
     holidayNotice: organization.holidayNotice,
     organizationUpdatedAt: organization.updatedAt,
     reservationUpdatedAt: reservation.updatedAt,
+    layoutUpdatedAt: layout.updatedAt,
+    sidebarUpdatedAt: sidebar.updatedAt,
     senderEmail: organization.senderEmail,
     senderName: organization.senderName,
     replyToEmail: organization.replyToEmail,
