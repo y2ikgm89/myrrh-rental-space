@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { DomainError } from "@/shared/domain/domain-error";
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
 import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
@@ -36,8 +38,13 @@ export async function reagreeAction(
     const { user } = await verifyCustomerSession();
     const { customer } = await ensureCustomerLinked(user);
 
-    if (!customer.isActive) {
-      return { ok: false, error: "アカウントが停止されています" };
+    try {
+      await assertCustomerActive(customer.id);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return { ok: false, error: error.message };
+      }
+      throw error;
     }
 
     const pending = await getReagreeRequiredTermsForCustomer(customer.id);

@@ -7,6 +7,7 @@ import { claimReservationForCustomer } from "@/shared/domain/reservations/claim-
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";

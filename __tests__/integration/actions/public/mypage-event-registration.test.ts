@@ -195,6 +195,11 @@ mock.module("@/shared/lib/terms-consent-gate", () => ({
   assertLoginSignupReagreed: mock(() => Promise.resolve()),
 }));
 
+const mockIsFeatureEnabled = mock(() => Promise.resolve(true));
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: mockIsFeatureEnabled,
+}));
+
 // =============================================================================
 // テストデータ
 // =============================================================================
@@ -217,6 +222,7 @@ describe("cancelEventRegistration", () => {
     mockCancelEventRegistrationCommand.mockClear();
     mockApplySideEffects.mockClear();
     mockUpdateTag.mockClear();
+    mockIsFeatureEnabled.mockClear();
 
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
@@ -242,6 +248,7 @@ describe("cancelEventRegistration", () => {
       }),
     );
     mockApplySideEffects.mockImplementation(() => Promise.resolve());
+    mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(true));
   });
 
   describe("正常系", () => {
@@ -371,6 +378,34 @@ describe("cancelEventRegistration", () => {
 
       expectErrorResult(result);
       expect(result.error).toBe("顧客情報が見つかりません");
+    });
+  });
+
+  describe("異常系: events feature OFF", () => {
+    test("feature OFF のとき MutationError を返す", async () => {
+      mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
+
+      const { cancelEventRegistration } = await import(IMPORT_PATH);
+
+      const result = await cancelEventRegistration(
+        VALID_REGISTRATION_ID,
+        "turnstile-token",
+      );
+
+      expectErrorResult(result);
+      expect(result.error).toBe(
+        "この機能は現在利用できません。管理者にお問い合わせください。",
+      );
+    });
+
+    test("feature OFF のとき cancelEventRegistrationCommand は呼ばれない", async () => {
+      mockIsFeatureEnabled.mockImplementation(() => Promise.resolve(false));
+
+      const { cancelEventRegistration } = await import(IMPORT_PATH);
+
+      await cancelEventRegistration(VALID_REGISTRATION_ID, "turnstile-token");
+
+      expect(mockCancelEventRegistrationCommand).not.toHaveBeenCalled();
     });
   });
 

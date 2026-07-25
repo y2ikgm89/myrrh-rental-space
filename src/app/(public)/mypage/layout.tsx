@@ -31,11 +31,13 @@ import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { isCustomerActiveForMypage } from "@/shared/domain/customers/guard";
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
-import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
+import { hasUnlinkedGuestCustomerForEmail } from "@/shared/domain/customers/queries";
 import { IncompleteProfileNotice } from "./_components/incomplete-profile-notice";
+import { UnlinkedGuestHistoryNotice } from "./_components/unlinked-guest-history-notice";
 import { SignupTermsConsumer } from "./_components/signup-terms-consumer";
 import { isReagreeAllowlisted } from "./_lib/reagree-allowlist";
 
@@ -95,10 +97,15 @@ async function MypageAuthGate({
     }
   }
 
-  const [eventsEnabled, contactEnabled] = await Promise.all([
-    isFeatureEnabled("events"),
-    isFeatureEnabled("contact"),
-  ]);
+  const [eventsEnabled, contactEnabled, hasUnlinkedGuestHistory] =
+    await Promise.all([
+      isFeatureEnabled("events"),
+      isFeatureEnabled("contact"),
+      hasUnlinkedGuestCustomerForEmail({
+        email: customer.email,
+        excludeCustomerId: customer.id,
+      }),
+    ]);
 
   return (
     <PageLayout variant="dashboard">
@@ -107,6 +114,10 @@ async function MypageAuthGate({
         contactEnabled={contactEnabled}
       />
       <IncompleteProfileNotice customer={customer} />
+      <UnlinkedGuestHistoryNotice
+        hasUnlinkedGuestHistory={hasUnlinkedGuestHistory}
+        showContactLink={contactEnabled}
+      />
       <SignupTermsConsumer isNew={isNew} />
       {children}
     </PageLayout>

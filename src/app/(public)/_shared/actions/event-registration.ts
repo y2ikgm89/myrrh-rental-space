@@ -520,6 +520,15 @@ export async function cancelEventRegistration(
     // TERMS-REAGREE-P2: LOGIN_SIGNUP scope の再同意 pending も同ゲートで拒否。
     await assertCustomerActive(customer.id);
     await assertLoginSignupReagreed(customer.id);
+
+    // FEAT-3PLANE-04: 詳細ページは events gate 済みだが、Server Action は
+    // 直接呼び出せるため fail-closed する (cancelReservationAction と同型)。
+    if (!(await isFeatureEnabled("events"))) {
+      return createMutationError(
+        "この機能は現在利用できません。管理者にお問い合わせください。",
+      );
+    }
+
     const registration = await cancelEventRegistrationCommand(
       registrationId,
       customer.id,
