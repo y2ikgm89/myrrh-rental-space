@@ -79,6 +79,7 @@ describe("getPublishedNewsList", () => {
     const call = mockFindMany.mock.calls[0];
     if (!call) throw new Error("findMany was not called");
     const [{ where }] = call;
+    expect(where["deletedAt"]).toBeNull();
     expect(where["isPublished"]).toBe(true);
     const publishedAtFilter = where["publishedAt"] as { lte: Date };
     expect(publishedAtFilter.lte).toBeInstanceOf(Date);
@@ -93,6 +94,7 @@ describe("getPublishedNewsList", () => {
     const call = mockCount.mock.calls[0];
     if (!call) throw new Error("count was not called");
     const [{ where }] = call;
+    expect(where["deletedAt"]).toBeNull();
     expect(where["isPublished"]).toBe(true);
     expect(where["publishedAt"]).toEqual(
       expect.objectContaining({ lte: expect.any(Date) }),
@@ -110,6 +112,7 @@ describe("getPublishedNewsItem", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           slug: "announcement",
+          deletedAt: null,
           isPublished: true,
           publishedAt: expect.objectContaining({ lte: expect.any(Date) }),
         }),
@@ -125,6 +128,7 @@ describe("getPublishedNews", () => {
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
+          deletedAt: null,
           isPublished: true,
           publishedAt: expect.objectContaining({ lte: expect.any(Date) }),
         }),

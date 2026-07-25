@@ -25,8 +25,8 @@ const newsDetailSelect = {
  * 本番 `NewsDetailPageContent` をそのまま再利用可能にする canonical 整形。
  */
 export async function getNewsByIdForPreview(id: string) {
-  const item = await prisma.news.findUnique({
-    where: { id },
+  const item = await prisma.news.findFirst({
+    where: { id, deletedAt: null },
     select: newsDetailSelect,
   });
 

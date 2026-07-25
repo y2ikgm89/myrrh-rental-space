@@ -5,7 +5,9 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   createNews as createNewsCommand,
   deleteNews as deleteNewsCommand,
+  permanentlyDeleteNews as permanentlyDeleteNewsCommand,
   publishNews as publishNewsCommand,
+  restoreNews as restoreNewsCommand,
   unpublishNews as unpublishNewsCommand,
   updateNewsBody as updateNewsBodyCommand,
   updateNewsSettings as updateNewsSettingsCommand,
@@ -205,6 +207,66 @@ export async function deleteNews(id: string): Promise<MutationResult> {
     resourceId: validated.data,
     execute: async () => {
       const result = await deleteNewsCommand(validated.data);
+      deletedNewsSlug = result.slug;
+      return null;
+    },
+    afterSuccess: () => {
+      if (!deletedNewsSlug) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(deletedNewsSlug));
+      purgeNewsCaches(deletedNewsSlug);
+    },
+  });
+}
+
+export async function restoreNews(id: string): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  let restoredNewsSlug: string | null = null;
+
+  return executeAdminMutationResult({
+    resource: "news",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await restoreNewsCommand(validated.data);
+      restoredNewsSlug = result.slug;
+      return null;
+    },
+    afterSuccess: () => {
+      if (!restoredNewsSlug) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(restoredNewsSlug));
+      purgeNewsCaches(restoredNewsSlug);
+    },
+  });
+}
+
+export async function permanentlyDeleteNews(
+  id: string,
+): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  let deletedNewsSlug: string | null = null;
+
+  return executeAdminMutationResult({
+    resource: "news",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await permanentlyDeleteNewsCommand(validated.data);
       deletedNewsSlug = result.slug;
       return null;
     },

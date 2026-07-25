@@ -23,6 +23,7 @@ describe("cron OIDC clean-break boundary", () => {
     "src/app/api/cron/instagram-refresh/route.ts",
     "src/app/api/cron/instagram-sync/route.ts",
     "src/app/api/cron/news-scheduled-publish/route.ts",
+    "src/app/api/cron/news-trash-cleanup/route.ts",
     "src/app/api/cron/notification-cleanup/route.ts",
     "src/app/api/cron/receipt-backfill/route.ts",
     "src/app/api/cron/reservation-reminder/route.ts",

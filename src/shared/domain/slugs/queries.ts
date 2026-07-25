@@ -26,15 +26,18 @@ export async function findSlugConflict(
           where: { slug: normalizedSlug },
           select: { id: true },
         }),
-    currentType === "news" && currentId
-      ? prisma.news.findFirst({
-          where: { slug: normalizedSlug, id: { not: currentId } },
-          select: { id: true },
-        })
-      : prisma.news.findUnique({
-          where: { slug: normalizedSlug },
-          select: { id: true },
-        }),
+    // News.slug は partial unique (deletedAt IS NULL) のため findUnique 不可。
+    // ゴミ箱中の slug は衝突とみなさない。
+    prisma.news.findFirst({
+      where: {
+        slug: normalizedSlug,
+        deletedAt: null,
+        ...(currentType === "news" && currentId
+          ? { id: { not: currentId } }
+          : {}),
+      },
+      select: { id: true },
+    }),
     currentType === "page" && currentId
       ? prisma.page.findFirst({
           where: { slug: normalizedSlug, id: { not: currentId } },

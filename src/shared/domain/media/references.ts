@@ -48,11 +48,12 @@ export async function findMediaUrlUsages(url: string): Promise<string[]> {
       select: { slug: true },
     }),
     prisma.news.findFirst({
-      where: { ogpImageUrl: url },
+      where: { ogpImageUrl: url, deletedAt: null },
       select: { slug: true },
     }),
     prisma.news.findFirst({
       where: {
+        deletedAt: null,
         OR: [
           { contentHtml: { contains: url } },
           { contentJson: { string_contains: url } },

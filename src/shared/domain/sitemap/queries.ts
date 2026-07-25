@@ -114,7 +114,7 @@ export async function getSitemapContentData(): Promise<SitemapContentData> {
       orderBy: { updatedAt: "desc" },
     }),
     prisma.news.findMany({
-      where: { isPublished: true },
+      where: { deletedAt: null, isPublished: true },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),

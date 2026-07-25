@@ -1149,7 +1149,7 @@ model InquiryTagOnInquiry {
 
 model News {
   id                 String       @id @default(uuid()) @db.Uuid
-  slug               String       @unique
+  slug               String
   title              String
   contentHtml        String       @map("content") @db.Text // HTMLキャッシュ（公開表示用）
   contentJson        Json? // Lexical EditorState JSON（プライマリ）
@@ -1157,6 +1157,8 @@ model News {
   publishedAt        DateTime?
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
+  /// Soft delete: admin 削除は deletedAt を刻むだけ。hard delete はゴミ箱の永久削除 or trash-cleanup cron。
+  deletedAt          DateTime?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -1173,10 +1175,13 @@ model News {
   @@index([title])
   @@index([isPublished, publishedAt])
   @@index([createdAt])
+  @@index([deletedAt])
   // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchNews ORs
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "news_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "news_slug_trgm_idx")
+  // ソフトデリート済み行が slug を占有し続けないよう partial unique（Post / Event と同型）。
+  @@unique([slug], map: "news_slug_active_key", where: { deletedAt: null })
   @@map("news")
 }
 

@@ -7,7 +7,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { getNewsList } from "@/admin/queries/news";
 import { getPageBySlug } from "@/admin/queries/pages";
 import { NewsFilters } from "./_components/NewsFilters";
@@ -135,12 +135,20 @@ export default async function NewsPage({ searchParams }: PageProps) {
             お知らせの作成・編集・公開管理を行います
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/news/new">
-            <IconPlus className="mr-2 h-4 w-4" />
-            新規お知らせ作成
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild type="button" variant="destructive">
+            <Link href="/admin/news/trash">
+              <IconTrash className="mr-2 h-4 w-4" aria-hidden="true" />
+              ゴミ箱
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/news/new">
+              <IconPlus className="mr-2 h-4 w-4" />
+              新規お知らせ作成
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">

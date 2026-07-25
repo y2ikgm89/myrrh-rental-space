@@ -87,7 +87,10 @@ describe("bulkTogglePublishedNewsCommand", () => {
       });
       expect(mockNewsUpdateMany).toHaveBeenCalledTimes(1);
       expect(mockNewsUpdateMany).toHaveBeenCalledWith({
-        where: { id: { in: [NEWS_1.id, NEWS_2.id, NEWS_3.id] } },
+        where: {
+          id: { in: [NEWS_1.id, NEWS_2.id, NEWS_3.id] },
+          deletedAt: null,
+        },
         data: {
           isPublished: true,
           publishedAt: expect.any(Date),
@@ -105,7 +108,7 @@ describe("bulkTogglePublishedNewsCommand", () => {
 
       expect(mockNewsUpdateMany).toHaveBeenCalledTimes(1);
       expect(mockNewsUpdateMany).toHaveBeenCalledWith({
-        where: { id: { in: [NEWS_1.id] } },
+        where: { id: { in: [NEWS_1.id] }, deletedAt: null },
         data: { isPublished: true },
       });
     });
@@ -132,12 +135,12 @@ describe("bulkTogglePublishedNewsCommand", () => {
       expect(mockNewsUpdateMany).toHaveBeenCalledTimes(2);
       // 未公開グループ: publishedAt を現在時刻に設定
       expect(mockNewsUpdateMany).toHaveBeenNthCalledWith(1, {
-        where: { id: { in: [NEWS_2.id] } },
+        where: { id: { in: [NEWS_2.id] }, deletedAt: null },
         data: { isPublished: true, publishedAt: expect.any(Date) },
       });
       // 公開済みグループ: publishedAt キー自体を送らず既存値を保持
       expect(mockNewsUpdateMany).toHaveBeenNthCalledWith(2, {
-        where: { id: { in: [NEWS_1.id] } },
+        where: { id: { in: [NEWS_1.id] }, deletedAt: null },
         data: { isPublished: true },
       });
     });
@@ -152,7 +155,7 @@ describe("bulkTogglePublishedNewsCommand", () => {
 
       expect(mockNewsUpdateMany).toHaveBeenCalledTimes(1);
       expect(mockNewsUpdateMany).toHaveBeenCalledWith({
-        where: { id: { in: [NEWS_1.id] } },
+        where: { id: { in: [NEWS_1.id] }, deletedAt: null },
         data: {
           isPublished: false,
           publishedAt: null,
@@ -182,7 +185,7 @@ describe("bulkTogglePublishedNewsCommand", () => {
 describe("bulkDeleteNewsCommand", () => {
   beforeEach(() => {
     mockNewsFindMany.mockReset();
-    mockNewsDeleteMany.mockReset();
+    mockNewsUpdateMany.mockReset();
   });
 
   describe("正常系", () => {
@@ -191,12 +194,12 @@ describe("bulkDeleteNewsCommand", () => {
 
       expect(result).toEqual({ count: 0, affectedSlugs: [] });
       expect(mockNewsFindMany).not.toHaveBeenCalled();
-      expect(mockNewsDeleteMany).not.toHaveBeenCalled();
+      expect(mockNewsUpdateMany).not.toHaveBeenCalled();
     });
 
-    test("複数件を削除: count + affectedSlugs を返す", async () => {
+    test("複数件をソフトデリート: count + affectedSlugs を返す", async () => {
       mockNewsFindMany.mockResolvedValue([NEWS_1, NEWS_2]);
-      mockNewsDeleteMany.mockResolvedValue({ count: 2 });
+      mockNewsUpdateMany.mockResolvedValue({ count: 2 });
 
       const result = await bulkDeleteNewsCommand([NEWS_1.id, NEWS_2.id]);
 
@@ -206,24 +209,25 @@ describe("bulkDeleteNewsCommand", () => {
       });
     });
 
-    test("削除時に対象 ids で deleteMany を呼ぶ", async () => {
+    test("ソフトデリート時に deletedAt を設定して updateMany を呼ぶ", async () => {
       mockNewsFindMany.mockResolvedValue([NEWS_1, NEWS_2]);
-      mockNewsDeleteMany.mockResolvedValue({ count: 2 });
+      mockNewsUpdateMany.mockResolvedValue({ count: 2 });
 
       await bulkDeleteNewsCommand([NEWS_1.id, NEWS_2.id]);
 
-      expect(mockNewsDeleteMany).toHaveBeenCalledWith({
-        where: { id: { in: [NEWS_1.id, NEWS_2.id] } },
+      expect(mockNewsUpdateMany).toHaveBeenCalledWith({
+        where: { id: { in: [NEWS_1.id, NEWS_2.id] }, deletedAt: null },
+        data: { deletedAt: expect.any(Date) },
       });
     });
 
-    test("findMany の結果が空の場合は count: 0 を返し deleteMany を呼ばない", async () => {
+    test("findMany の結果が空の場合は count: 0 を返し updateMany を呼ばない", async () => {
       mockNewsFindMany.mockResolvedValue([]);
 
       const result = await bulkDeleteNewsCommand(["missing-id"]);
 
       expect(result).toEqual({ count: 0, affectedSlugs: [] });
-      expect(mockNewsDeleteMany).not.toHaveBeenCalled();
+      expect(mockNewsUpdateMany).not.toHaveBeenCalled();
     });
   });
 });

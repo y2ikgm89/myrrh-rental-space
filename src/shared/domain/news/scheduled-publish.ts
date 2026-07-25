@@ -34,6 +34,7 @@ export async function findRecentlyDueScheduledNewsSlugs(
 
   const news = await prisma.news.findMany({
     where: {
+      deletedAt: null,
       isPublished: true,
       publishedAt: { lte: now, gt: windowStart },
     },

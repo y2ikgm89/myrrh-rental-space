@@ -58,7 +58,7 @@ export function NewsBulkActions({
         return;
       }
 
-      toast.success(`${result.count}件のお知らせを削除しました`);
+      toast.success(`${result.count}件のお知らせをゴミ箱へ移動しました`);
       setDeleteOpen(false);
       onClear();
       router.refresh();
@@ -115,7 +115,7 @@ export function NewsBulkActions({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={`${selectedIds.length}件のお知らせを削除しますか？`}
-        description="この操作は取り消せません。"
+        description="削除されたお知らせはゴミ箱に 30 日間保持され、復元できます。"
         onConfirm={handleBulkDelete}
         isPending={isPending}
       />
