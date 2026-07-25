@@ -29,6 +29,10 @@ const mockAuthorizeCronRequest = mock<() => Promise<Response | null>>(() =>
   Promise.resolve(null),
 );
 
+const mockIsEmailEnabled = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
 const mockConnection = mock<() => Promise<void>>(() => Promise.resolve());
 
 const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
@@ -117,6 +121,11 @@ mock.module("@/shared/lib/cron-auth", () => ({
   ) => mockAuthorizeCronRequest(...args),
 }));
 
+mock.module("@/shared/lib/email/client", () => ({
+  isEmailEnabled: (...args: Parameters<typeof mockIsEmailEnabled>) =>
+    mockIsEmailEnabled(...args),
+}));
+
 mock.module("@/shared/lib/route-responses", () => ({
   getRouteErrorStatus: (message: string) => {
     if (message.includes("ログイン")) return 401;
@@ -189,12 +198,14 @@ describe("GET /api/cron/reservation-reminder", () => {
     mockReleaseReservationReminderClaim.mockReset();
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
+    mockIsEmailEnabled.mockReset();
     mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
 
     // デフォルト: 認証通過、予約なし、claim 成功、メール送信成功
     mockConnection.mockResolvedValue(undefined);
     mockAuthorizeCronRequest.mockResolvedValue(null);
+    mockIsEmailEnabled.mockResolvedValue(true);
     mockFindReservationsForReminderWindow.mockResolvedValue([]);
     mockClaimReservationReminder.mockResolvedValue(true);
     mockReleaseReservationReminderClaim.mockResolvedValue(undefined);
@@ -225,6 +236,19 @@ describe("GET /api/cron/reservation-reminder", () => {
       }),
     );
     expect(mockFindReservationsForReminderWindow).not.toHaveBeenCalled();
+  });
+
+  test("email disabled (isEmailEnabled=false) → skipped:email_disabled、claim 前に早期 return", async () => {
+    mockIsEmailEnabled.mockResolvedValue(false);
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ skipped: true, reason: "email_disabled" });
+    expect(mockFindReservationsForReminderWindow).not.toHaveBeenCalled();
+    expect(mockClaimReservationReminder).not.toHaveBeenCalled();
+    expect(mockSendReservationReminderEmail).not.toHaveBeenCalled();
   });
 
   test("予約なし → sent=0, skipped=0, total=0 を返す", async () => {
@@ -372,7 +396,7 @@ describe("GET /api/cron/reservation-reminder", () => {
     expect(mockReleaseReservationReminderClaim).toHaveBeenCalledWith("res-1");
   });
 
-  test("メール送信が ok:false (disabled) → claim を保持して skipped=1（無限 retry 防止）+ 集約 logError", async () => {
+  test("メール送信が ok:false (disabled) → race defense-in-depth: claim を保持 + 集約 logError", async () => {
     const reservation = makeReservation();
     mockFindReservationsForReminderWindow.mockResolvedValue([reservation]);
     // RESEND_API_KEY 未設定環境
@@ -387,10 +411,9 @@ describe("GET /api/cron/reservation-reminder", () => {
     const body = await response.json();
     expect(body).toEqual({ sent: 0, skipped: 1, total: 1 });
     expect(mockSendReservationReminderEmail).toHaveBeenCalledTimes(1);
-    // disabled 時は claim を解放しない（次回 cron でも claim できないため無限 retry を防ぐ）
+    // disabled 時は claim を解放しない（race defense-in-depth: 無限 retry 防止）
     expect(mockReleaseReservationReminderClaim).not.toHaveBeenCalled();
-    // Round-4 audit Finding #22: disabled は claim 消費のまま永久 skip されるため、
-    // 運用側が気づけるよう cron 1 回につき集約 logError を発火する。
+    // 実行中 disabled 化の race のみここに到達するため、集約 logError を発火する。
     expect(mockLogError).toHaveBeenCalledTimes(1);
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(Error),

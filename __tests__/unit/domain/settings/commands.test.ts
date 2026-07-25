@@ -36,6 +36,30 @@ const mockSettingsReservationUpsert = mock<
 const mockSettingsReservationUpdateMany = mock<
   (args: UpdateManyArgs) => Promise<{ count: number }>
 >(() => Promise.resolve({ count: 1 }));
+const mockSettingsNotificationUpdateMany = mock<
+  (args: UpdateManyArgs) => Promise<{ count: number }>
+>(() => Promise.resolve({ count: 1 }));
+const mockSettingsNotificationFindUnique = mock<
+  () => Promise<{ id: string } | null>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsNotificationCreate = mock<
+  () => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsOrganizationFindUnique = mock<
+  () => Promise<{ id: string } | null>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsOrganizationCreate = mock<
+  () => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsReservationFindUnique = mock<
+  () => Promise<{ id: string } | null>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockSettingsReservationCreate = mock<
+  () => Promise<Record<string, unknown>>
+>(() => Promise.resolve({ id: "singleton" }));
+const mockAssertAllowlistedNotificationStaffIds = mock<
+  (ids: string[]) => Promise<string[]>
+>((ids) => Promise.resolve(ids));
 const mockSettingsDataRetentionUpsert = mock<
   (args: SettingsUpsertArgs) => Promise<Record<string, unknown>>
 >(() => Promise.resolve({ id: "singleton" }));
@@ -53,10 +77,19 @@ const txClient = {
   settingsOrganization: {
     upsert: mockSettingsOrganizationUpsert,
     updateMany: mockSettingsOrganizationUpdateMany,
+    findUnique: mockSettingsOrganizationFindUnique,
+    create: mockSettingsOrganizationCreate,
   },
   settingsReservation: {
     upsert: mockSettingsReservationUpsert,
     updateMany: mockSettingsReservationUpdateMany,
+    findUnique: mockSettingsReservationFindUnique,
+    create: mockSettingsReservationCreate,
+  },
+  settingsNotification: {
+    updateMany: mockSettingsNotificationUpdateMany,
+    findUnique: mockSettingsNotificationFindUnique,
+    create: mockSettingsNotificationCreate,
   },
   settingsLayout: {
     upsert: mockSettingsLayoutUpsert,
@@ -79,6 +112,12 @@ mock.module("@/shared/lib/env/server", () => ({
   },
 }));
 
+mock.module("@/shared/domain/settings/notification-staff", () => ({
+  assertAllowlistedNotificationStaffIds: (
+    ...args: Parameters<typeof mockAssertAllowlistedNotificationStaffIds>
+  ) => mockAssertAllowlistedNotificationStaffIds(...args),
+}));
+
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
     $transaction: mockTransaction,
@@ -95,6 +134,8 @@ mock.module("@/shared/db/prisma", () => ({
     settingsOrganization: {
       upsert: mockSettingsOrganizationUpsert,
       updateMany: mockSettingsOrganizationUpdateMany,
+      findUnique: mockSettingsOrganizationFindUnique,
+      create: mockSettingsOrganizationCreate,
     },
     settingsCommerce: {
       upsert: mockSettingsCommerceUpsert,
@@ -102,6 +143,13 @@ mock.module("@/shared/db/prisma", () => ({
     settingsReservation: {
       upsert: mockSettingsReservationUpsert,
       updateMany: mockSettingsReservationUpdateMany,
+      findUnique: mockSettingsReservationFindUnique,
+      create: mockSettingsReservationCreate,
+    },
+    settingsNotification: {
+      updateMany: mockSettingsNotificationUpdateMany,
+      findUnique: mockSettingsNotificationFindUnique,
+      create: mockSettingsNotificationCreate,
     },
     settingsDataRetention: {
       upsert: mockSettingsDataRetentionUpsert,
@@ -160,6 +208,8 @@ import {
   updateBusinessHoursSettings,
   updateEmailSettings,
   updateReservationSettings,
+  updateEmailSettings,
+  updateNotificationSettings,
   updateDiscountSettings,
   updateTaxSettings,
   updateHeaderSettings,
@@ -232,6 +282,31 @@ const RESERVATION_SETTINGS_INPUT = {
   modificationDeadlineHours: 24,
   customerCanCancelSeriesInFull: false,
   maxRecurrenceInstances: 26,
+  expectedUpdatedAt: EXPECTED_UPDATED_AT,
+};
+
+const EMAIL_SETTINGS_INPUT = {
+  senderEmail: "noreply@example.com",
+  senderName: "Myrrh",
+  replyToEmail: "reply@example.com",
+  sendReservationConfirmationEmail: true,
+  notifyEventReminder: false,
+  notificationStaffIds: ["staff-1"],
+  notificationEmailAddresses: ["admin@example.com"],
+  expectedOrganizationUpdatedAt: EXPECTED_UPDATED_AT,
+  expectedReservationUpdatedAt: EXPECTED_UPDATED_AT,
+  expectedNotificationUpdatedAt: EXPECTED_UPDATED_AT,
+};
+
+const NOTIFICATION_SETTINGS_INPUT = {
+  notifyNewReservation: true,
+  notifyReservationChange: false,
+  notifyReservationCancel: true,
+  notifyNewInquiry: true,
+  notifyInquiryCustomerReply: false,
+  notifyEventRegistration: true,
+  notifyEventWaitlistRegistration: false,
+  notifyEventCancellation: true,
   expectedUpdatedAt: EXPECTED_UPDATED_AT,
 };
 
@@ -943,6 +1018,99 @@ describe("updateContactInfo", () => {
           }),
         }),
       );
+    });
+  });
+});
+
+// =============================================================================
+// updateEmailSettings
+// =============================================================================
+
+describe("updateEmailSettings", () => {
+  beforeEach(() => {
+    mockTransaction.mockClear();
+    mockAssertAllowlistedNotificationStaffIds.mockClear();
+    mockSettingsOrganizationUpdateMany.mockReset();
+    mockSettingsReservationUpdateMany.mockReset();
+    mockSettingsNotificationUpdateMany.mockReset();
+    mockSettingsOrganizationUpdateMany.mockResolvedValue({ count: 1 });
+    mockSettingsReservationUpdateMany.mockResolvedValue({ count: 1 });
+    mockSettingsNotificationUpdateMany.mockResolvedValue({ count: 1 });
+  });
+
+  test("単一 transaction で org / reservation / notification を CAS 更新する", async () => {
+    await updateEmailSettings(EMAIL_SETTINGS_INPUT);
+
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockAssertAllowlistedNotificationStaffIds).toHaveBeenCalledWith([
+      "staff-1",
+    ]);
+    expect(mockSettingsOrganizationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+      }),
+    );
+    expect(mockSettingsReservationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+      }),
+    );
+    expect(mockSettingsNotificationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+        data: expect.objectContaining({
+          notificationStaffIds: ["staff-1"],
+        }),
+      }),
+    );
+  });
+
+  test("notification CAS が count=0 なら DomainError CONFLICT", async () => {
+    mockSettingsNotificationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(
+      updateEmailSettings(EMAIL_SETTINGS_INPUT),
+    ).rejects.toMatchObject({
+      message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+      code: "CONFLICT",
+    });
+  });
+});
+
+// =============================================================================
+// updateNotificationSettings
+// =============================================================================
+
+describe("updateNotificationSettings", () => {
+  beforeEach(() => {
+    mockTransaction.mockClear();
+    mockSettingsNotificationUpdateMany.mockReset();
+    mockSettingsNotificationUpdateMany.mockResolvedValue({ count: 1 });
+  });
+
+  test("SettingsNotification を CAS updateMany する", async () => {
+    await updateNotificationSettings(NOTIFICATION_SETTINGS_INPUT);
+
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockSettingsNotificationUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "singleton", updatedAt: EXPECTED_UPDATED_AT },
+        data: expect.objectContaining({
+          notifyNewReservation: true,
+          notifyReservationChange: false,
+        }),
+      }),
+    );
+  });
+
+  test("updateMany count=0 なら DomainError CONFLICT", async () => {
+    mockSettingsNotificationUpdateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(
+      updateNotificationSettings(NOTIFICATION_SETTINGS_INPUT),
+    ).rejects.toMatchObject({
+      message: SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE,
+      code: "CONFLICT",
     });
   });
 });

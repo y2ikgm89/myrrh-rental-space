@@ -177,6 +177,7 @@ function toSettingsData(
     reservationUpdatedAt: reservation.updatedAt,
     layoutUpdatedAt: layout.updatedAt,
     sidebarUpdatedAt: sidebar.updatedAt,
+    notificationUpdatedAt: notification.updatedAt,
     senderEmail: organization.senderEmail,
     senderName: organization.senderName,
     replyToEmail: organization.replyToEmail,

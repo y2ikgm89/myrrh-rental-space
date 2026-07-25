@@ -9,7 +9,7 @@
  * - IME 変換中の Enter 確定を抑止。空入力で Backspace は末尾チップを削除。
  * - 確定済みトークンは同名 hidden input として1件ずつ submit する。
  */
-import { useId, useRef, useState } from "react";
+import { useId, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { z } from "zod";
 import { cn } from "@/shared/lib/cn";
 import { Badge } from "@/admin/components/ui";
@@ -29,6 +29,12 @@ type EmailChipsProps = {
   labelledBy?: string;
   /** 説明文要素の id（aria-describedby 用） */
   describedBy?: string;
+  ref?: Ref<EmailChipsHandle>;
+};
+
+export type EmailChipsHandle = {
+  /** 入力中の draft を確定する。検証失敗時は false。 */
+  flushDraft: () => boolean;
 };
 
 export function EmailChips({
@@ -39,6 +45,7 @@ export function EmailChips({
   placeholder,
   labelledBy,
   describedBy,
+  ref,
 }: EmailChipsProps) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +65,7 @@ export function EmailChips({
       setError(null);
       return true;
     }
+    const currentValue = value;
     const added: string[] = [];
     for (const part of parts) {
       if (!emailSchema.safeParse(part).success) {
@@ -69,7 +77,9 @@ export function EmailChips({
         added.some((a) => a.toLowerCase() === part.toLowerCase());
       if (!dup) added.push(part);
     }
-    if (added.length > 0) onChange([...value, ...added]);
+    if (added.length > 0) {
+      onChange([...currentValue, ...added]);
+    }
     setError(null);
     return true;
   };
@@ -77,6 +87,40 @@ export function EmailChips({
   const removeEmail = (email: string) => {
     onChange(value.filter((v) => v !== email));
   };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      flushDraft: (): boolean => {
+        const raw = draft;
+        if (!raw.trim()) {
+          return true;
+        }
+        const parts = raw
+          .split(SPLIT_RE)
+          .map((p) => p.trim())
+          .filter(Boolean);
+        const added: string[] = [];
+        for (const part of parts) {
+          if (!emailSchema.safeParse(part).success) {
+            setError(`不正なメールアドレス: ${part}`);
+            return false;
+          }
+          const dup =
+            value.some((v) => v.toLowerCase() === part.toLowerCase()) ||
+            added.some((a) => a.toLowerCase() === part.toLowerCase());
+          if (!dup) added.push(part);
+        }
+        if (added.length > 0) {
+          onChange([...value, ...added]);
+        }
+        setError(null);
+        setDraft("");
+        return true;
+      },
+    }),
+    [draft, value, onChange],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (composingRef.current) return;

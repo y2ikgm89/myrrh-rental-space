@@ -37,6 +37,10 @@ const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
   Promise.resolve(true),
 );
 
+const mockIsEmailEnabled = mock<() => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
 const mockConnection = mock<() => Promise<void>>(() => Promise.resolve());
 
 const mockUnstableRethrow = mock<(error: unknown) => void>((error) => {
@@ -129,6 +133,11 @@ mock.module("@/shared/lib/features/check", () => ({
     mockIsFeatureEnabled(...args),
 }));
 
+mock.module("@/shared/lib/email/client", () => ({
+  isEmailEnabled: (...args: Parameters<typeof mockIsEmailEnabled>) =>
+    mockIsEmailEnabled(...args),
+}));
+
 mock.module("@/shared/lib/route-responses", () => ({
   jsonError: (error: string, status = 400) =>
     NextResponse.json({ error }, { status }),
@@ -177,12 +186,14 @@ describe("GET /api/cron/event-reminder", () => {
     mockLogError.mockReset();
     mockAuthorizeCronRequest.mockReset();
     mockIsFeatureEnabled.mockReset();
+    mockIsEmailEnabled.mockReset();
     mockConnection.mockReset();
     mockUnstableRethrow.mockReset();
 
     mockConnection.mockResolvedValue(undefined);
     mockAuthorizeCronRequest.mockResolvedValue(null);
     mockIsFeatureEnabled.mockResolvedValue(true);
+    mockIsEmailEnabled.mockResolvedValue(true);
     mockGetEmailDeliverySettings.mockResolvedValue({
       notifyEventReminder: true,
     });
@@ -233,6 +244,19 @@ describe("GET /api/cron/event-reminder", () => {
     const body = await response.json();
     expect(body).toEqual({ skipped: true, reason: "notification_disabled" });
     expect(mockFindEventRegistrationsForReminderWindow).not.toHaveBeenCalled();
+  });
+
+  test("email disabled (isEmailEnabled=false) → skipped:email_disabled、claim 前に早期 return", async () => {
+    mockIsEmailEnabled.mockResolvedValue(false);
+
+    const response = await GET(makeSchedulerRequest());
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toEqual({ skipped: true, reason: "email_disabled" });
+    expect(mockFindEventRegistrationsForReminderWindow).not.toHaveBeenCalled();
+    expect(mockClaimEventRegistrationReminder).not.toHaveBeenCalled();
+    expect(mockSendEventReminderEmail).not.toHaveBeenCalled();
   });
 
   test("申込なし → sent=0, skipped=0, total=0", async () => {
@@ -309,7 +333,7 @@ describe("GET /api/cron/event-reminder", () => {
     expect(mockLogError).toHaveBeenCalledTimes(1);
   });
 
-  test("メール送信が ok:false (disabled) → claim を保持して skipped=1（無限 retry 防止）+ 集約 logError", async () => {
+  test("メール送信が ok:false (disabled) → race defense-in-depth: claim を保持 + 集約 logError", async () => {
     mockFindEventRegistrationsForReminderWindow.mockResolvedValue([
       makeRegistration(),
     ]);
@@ -323,9 +347,7 @@ describe("GET /api/cron/event-reminder", () => {
     const body = await response.json();
     expect(body).toEqual({ sent: 0, skipped: 1, total: 1 });
     expect(mockReleaseEventRegistrationReminderClaim).not.toHaveBeenCalled();
-    // Round-4 audit Finding #22 (reservation-reminder と同型で event-reminder も
-    // 修正): disabled は claim 消費のまま永久 skip されるため、運用側が気づける
-    // よう cron 1 回につき集約 logError を発火する。
+    // 実行中 disabled 化の race のみここに到達するため、集約 logError を発火する。
     expect(mockLogError).toHaveBeenCalledTimes(1);
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(Error),

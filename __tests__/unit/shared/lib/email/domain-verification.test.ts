@@ -2,7 +2,7 @@
  * validateSenderDomain() — 送信元ドメインの Resend 検証チェック
  *
  * verified / partially_verified を送信可能とみなし、未登録・未検証は ng。
- * APIキー未設定・Resend エラー・例外時は ok（インフラ起因で保存をブロックしない）。
+ * Resend 未設定 / API エラー / 例外時は fail-closed。
  */
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
@@ -71,6 +71,7 @@ describe("validateSenderDomain()", () => {
     expect(await validateSenderDomain("noreply@unknown.com")).toEqual({
       ok: false,
       verifiedDomains: ["verified.com"],
+      reason: "domain_unverified",
     });
   });
 
@@ -81,32 +82,39 @@ describe("validateSenderDomain()", () => {
     expect(await validateSenderDomain("noreply@pending.com")).toEqual({
       ok: false,
       verifiedDomains: [],
+      reason: "domain_unverified",
     });
   });
 
-  test("APIキー未設定（client が null）は ok（ブロックしない）", async () => {
+  test("APIキー未設定（client が null）は fail-closed", async () => {
     mockGetResendClient.mockReturnValue(null);
     expect(await validateSenderDomain("noreply@example.com")).toEqual({
-      ok: true,
+      ok: false,
+      verifiedDomains: [],
+      reason: "resend_unavailable",
     });
   });
 
-  test("Resend API エラー時は ok（ブロックしない）", async () => {
+  test("Resend API エラー時は fail-closed", async () => {
     mockDomainsList.mockResolvedValue({
       data: null,
       error: { message: "boom" },
     });
     expect(await validateSenderDomain("noreply@example.com")).toEqual({
-      ok: true,
+      ok: false,
+      verifiedDomains: [],
+      reason: "resend_error",
     });
   });
 
-  test("list が throw しても ok（ブロックしない）", async () => {
+  test("list が throw しても fail-closed", async () => {
     mockDomainsList.mockImplementation(() => {
       throw new Error("network");
     });
     expect(await validateSenderDomain("noreply@example.com")).toEqual({
-      ok: true,
+      ok: false,
+      verifiedDomains: [],
+      reason: "resend_error",
     });
   });
 });

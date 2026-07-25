@@ -9,7 +9,12 @@
 import { useEffect, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getFormProps, useForm, useInputControl } from "@conform-to/react";
+import {
+  getFormProps,
+  getInputProps,
+  useForm,
+  useInputControl,
+} from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
 import type { FieldMetadata } from "@conform-to/react";
 import {
@@ -23,15 +28,20 @@ import {
 } from "@/admin/components/ui";
 import { updateNotificationSettings } from "@/admin/actions/settings";
 import { notificationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
-import type { SettingsData } from "@/admin/actions/settings";
+import type { SettingsData } from "@/shared/domain/settings/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   isSettingsFormDisabled,
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
 
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
+
 interface NotificationSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
+  reservationEnabled?: boolean;
+  contactEnabled?: boolean;
+  eventsEnabled?: boolean;
 }
 
 type NotificationToggleProps = {
@@ -41,6 +51,7 @@ type NotificationToggleProps = {
   title: string;
   description: string;
   disabled: boolean;
+  featureDisabledHint?: string | undefined;
 };
 
 function NotificationToggle({
@@ -48,6 +59,7 @@ function NotificationToggle({
   title,
   description,
   disabled,
+  featureDisabledHint,
 }: NotificationToggleProps) {
   const control = useInputControl(field);
   const isOn = control.value === "on";
@@ -57,7 +69,9 @@ function NotificationToggle({
         <label className="text-sm font-medium" htmlFor={field.id}>
           {title}
         </label>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-xs text-muted-foreground">
+          {featureDisabledHint ?? description}
+        </p>
       </div>
       <Switch
         id={field.id}
@@ -74,6 +88,9 @@ function NotificationToggle({
 export function NotificationSection({
   settings,
   readOnly = false,
+  reservationEnabled = true,
+  contactEnabled = true,
+  eventsEnabled = true,
 }: NotificationSectionProps) {
   const router = useRouter();
   const [lastResult, action, isPending] = useActionState(
@@ -102,17 +119,67 @@ export function NotificationSection({
         ? "on"
         : "",
       notifyEventCancellation: settings.notifyEventCancellation ? "on" : "",
+      expectedUpdatedAt: settings.notificationUpdatedAt,
     },
   });
+
+  const notifyNewReservation = useInputControl(fields.notifyNewReservation);
+  const notifyReservationChange = useInputControl(
+    fields.notifyReservationChange,
+  );
+  const notifyReservationCancel = useInputControl(
+    fields.notifyReservationCancel,
+  );
+  const notifyNewInquiry = useInputControl(fields.notifyNewInquiry);
+  const notifyInquiryCustomerReply = useInputControl(
+    fields.notifyInquiryCustomerReply,
+  );
+  const notifyEventRegistration = useInputControl(
+    fields.notifyEventRegistration,
+  );
+  const notifyEventWaitlistRegistration = useInputControl(
+    fields.notifyEventWaitlistRegistration,
+  );
+  const notifyEventCancellation = useInputControl(
+    fields.notifyEventCancellation,
+  );
+
+  const allAdminNotifyOff = [
+    notifyNewReservation,
+    notifyReservationChange,
+    notifyReservationCancel,
+    notifyNewInquiry,
+    notifyInquiryCustomerReply,
+    notifyEventRegistration,
+    notifyEventWaitlistRegistration,
+    notifyEventCancellation,
+  ].every((control) => control.value !== "on");
 
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("通知設定を更新しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
   const formErrors = form.errors;
+  const reservationFeatureHint =
+    "予約機能モジュールが OFF のため、この通知は送信されません。";
+  const contactFeatureHint =
+    "お問い合わせ機能モジュールが OFF のため、この通知は送信されません。";
+  const eventsFeatureHint =
+    "イベント機能モジュールが OFF のため、この通知は送信されません。";
 
   return (
     <form {...getFormProps(form)} action={action}>
@@ -120,7 +187,8 @@ export function NotificationSection({
         <CardHeader>
           <CardTitle>通知トリガー設定</CardTitle>
           <CardDescription>
-            どのイベントで管理者に通知メールを送信するか設定します
+            どのイベントで管理者に通知メールを送信するか設定します。管理画面のベル（通知センター）とは別チャネルで、ここでの
+            ON/OFF はアプリ内通知には影響しません。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -128,54 +196,92 @@ export function NotificationSection({
             disabled={readOnly}
             className="space-y-4 border-0 p-0 m-0 min-w-0"
           >
+            <input
+              {...getInputProps(fields.expectedUpdatedAt, { type: "hidden" })}
+            />
+
+            {allAdminNotifyOff && (
+              <p
+                role="status"
+                className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground"
+              >
+                すべての管理者通知メールが OFF
+                です。このままでは予約・お問い合わせ・イベント等のイベントが発生しても、管理者へメールは送信されません（アプリ内のベル通知は別途表示されます）。
+              </p>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <NotificationToggle
                 field={fields.notifyNewReservation}
                 title="新規予約"
                 description="予約が作成されたとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !reservationEnabled}
+                featureDisabledHint={
+                  !reservationEnabled ? reservationFeatureHint : undefined
+                }
               />
               <NotificationToggle
                 field={fields.notifyReservationChange}
                 title="予約変更"
                 description="予約内容が変更されたとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !reservationEnabled}
+                featureDisabledHint={
+                  !reservationEnabled ? reservationFeatureHint : undefined
+                }
               />
               <NotificationToggle
                 field={fields.notifyReservationCancel}
                 title="予約キャンセル"
                 description="予約がキャンセルされたとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !reservationEnabled}
+                featureDisabledHint={
+                  !reservationEnabled ? reservationFeatureHint : undefined
+                }
               />
               <NotificationToggle
                 field={fields.notifyNewInquiry}
                 title="お問い合わせ"
                 description="お問い合わせが送信されたとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !contactEnabled}
+                featureDisabledHint={
+                  !contactEnabled ? contactFeatureHint : undefined
+                }
               />
               <NotificationToggle
                 field={fields.notifyInquiryCustomerReply}
                 title="お問い合わせ続報"
                 description="会員がマイページから追加メッセージを送信したとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !contactEnabled}
+                featureDisabledHint={
+                  !contactEnabled ? contactFeatureHint : undefined
+                }
               />
               <NotificationToggle
                 field={fields.notifyEventRegistration}
                 title="イベント申込"
                 description="イベントに申し込まれたとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !eventsEnabled}
+                featureDisabledHint={
+                  !eventsEnabled ? eventsFeatureHint : undefined
+                }
               />
               <NotificationToggle
                 field={fields.notifyEventWaitlistRegistration}
                 title="イベントキャンセル待ち登録"
                 description="満員のイベントにキャンセル待ちで登録されたとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !eventsEnabled}
+                featureDisabledHint={
+                  !eventsEnabled ? eventsFeatureHint : undefined
+                }
               />
               <NotificationToggle
                 field={fields.notifyEventCancellation}
                 title="イベント申込キャンセル"
                 description="イベント申込がキャンセルされたとき"
-                disabled={isDisabled}
+                disabled={isDisabled || !eventsEnabled}
+                featureDisabledHint={
+                  !eventsEnabled ? eventsFeatureHint : undefined
+                }
               />
             </div>
 

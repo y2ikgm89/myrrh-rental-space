@@ -4,6 +4,12 @@
 import { z } from "zod";
 import { optionalText, switchBoolean } from "./form-schema-helpers";
 
+const settingsUpdatedAtField = z.iso
+  .datetime({
+    error: "更新バージョンが不正です。ページを再読み込みしてください",
+  })
+  .or(z.date());
+
 // =============================================================================
 // Site > Email > メール設定
 // =============================================================================
@@ -36,6 +42,7 @@ export const emailFormSchema = z.object({
   // domain の updateEmailSettings が最終ゲートとして検証する。
   notificationStaffIds: z
     .array(z.uuid({ error: "通知先スタッフIDが不正です" }))
+    .max(50, { error: "通知先スタッフは50件以内で選択してください" })
     .optional()
     .transform((value) => value ?? []),
   // カスタム通知先。同名 hidden input の複数値を配列として受け取る。
@@ -48,6 +55,9 @@ export const emailFormSchema = z.object({
     .max(50, { error: "カスタム通知先は50件以内で入力してください" })
     .optional()
     .transform((value) => value ?? []),
+  expectedOrganizationUpdatedAt: settingsUpdatedAtField,
+  expectedReservationUpdatedAt: settingsUpdatedAtField,
+  expectedNotificationUpdatedAt: settingsUpdatedAtField,
 });
 
 export type EmailFormInput = z.infer<typeof emailFormSchema>;
@@ -65,6 +75,7 @@ export const notificationFormSchema = z.object({
   notifyEventRegistration: switchBoolean(),
   notifyEventWaitlistRegistration: switchBoolean(),
   notifyEventCancellation: switchBoolean(),
+  expectedUpdatedAt: settingsUpdatedAtField,
 });
 
 export type NotificationFormInput = z.infer<typeof notificationFormSchema>;

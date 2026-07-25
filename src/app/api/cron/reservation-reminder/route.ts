@@ -6,6 +6,7 @@ import {
   claimReservationReminder,
   releaseReservationReminderClaim,
 } from "@/shared/domain/reservations/reminder-commands";
+import { isEmailEnabled } from "@/shared/lib/email/client";
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {
@@ -31,6 +32,12 @@ export async function GET(request: Request) {
     // Feature module gate — reservation OFF なら早期 return
     if (!(await isFeatureEnabled("reservation"))) {
       return jsonSuccess({ skipped: true, reason: "feature_disabled" });
+    }
+
+    // Resend 未設定等でメール送信が丸ごと disabled なら claim 前に早期 return。
+    // claim 後に disabled になると reminder が永久に送られなくなるため、ここが主経路。
+    if (!(await isEmailEnabled())) {
+      return jsonSuccess({ skipped: true, reason: "email_disabled" });
     }
 
     // JST で翌日の日付を計算（Cloud Run は UTC 環境）
@@ -90,8 +97,9 @@ export async function GET(request: Request) {
         });
 
         // sendEmail は送信失敗時に throw せず { ok: false, ... } を返す。
-        // disabled（RESEND_API_KEY 未設定）: claim を保持して永続 skipped 扱い
-        //   → 次回 cron でも claim できないため無限 retry を防ぐ
+        // グローバルな email disabled は claim 前の isEmailEnabled() 早期 return が主経路。
+        // ここでの disabled は実行中にキーが外れた等の race 用 defense-in-depth:
+        // claim を保持して永続 skipped 扱い（無限 retry 防止）。
         // error: claim を解放して次回 cron で再送できるようにする
         if (!result.ok) {
           if (result.reason !== "disabled") {
@@ -118,11 +126,9 @@ export async function GET(request: Request) {
       }
     }
 
-    // Resend 未設定/rotate ミス等で email 送信が丸ごと disabled 状態だと、claim だけ
-    // 消費して reminder が永久に送られなくなる（無限 retry を防ぐための意図的な
-    // 設計だが、運用側に気づく手段が無いと障害が長期化する）。ループ内で都度 log
-    // すると対象件数分ログが積み上がるため、cron 1 回の実行につき集約して 1 回だけ
-    // 記録する。
+    // defense-in-depth: ループ実行中に email が disabled 化した race のみここに到達する
+    // （通常のグローバル disabled は claim 前の isEmailEnabled() 早期 return）。
+    // claim 消費のまま永久 skip になるため、cron 1 回につき集約して 1 回だけ記録する。
     if (disabledCount > 0) {
       logError(
         new Error(

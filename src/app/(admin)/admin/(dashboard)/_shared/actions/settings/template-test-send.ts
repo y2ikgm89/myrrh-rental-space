@@ -141,7 +141,7 @@ export async function sendTemplateTestAction(
       if (!result.ok) {
         if (result.reason === "disabled") {
           throw new DomainError(
-            "メール送信が無効です（RESEND_API_KEY が設定されていません）",
+            "メール送信が無効です。連携設定（/admin/settings/integrations?tab=resend）で Resend API キーを設定するか、環境変数 RESEND_API_KEY を設定してください。",
             "VALIDATION",
           );
         }
