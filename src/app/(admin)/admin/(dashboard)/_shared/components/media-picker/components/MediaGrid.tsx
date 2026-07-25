@@ -16,6 +16,7 @@ interface MediaGridProps {
   viewMode: "grid" | "list";
   isLoading?: boolean;
   canSelectMore: boolean;
+  emptyLabel?: string;
 }
 
 /**
@@ -49,6 +50,7 @@ export function MediaGrid({
   viewMode,
   isLoading = false,
   canSelectMore,
+  emptyLabel = "画像が見つかりません",
 }: MediaGridProps) {
   if (isLoading) {
     return <MediaGridSkeleton />;
@@ -57,7 +59,7 @@ export function MediaGrid({
   if (items.length === 0) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        画像が見つかりません
+        {emptyLabel}
       </div>
     );
   }

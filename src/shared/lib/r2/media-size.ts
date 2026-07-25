@@ -31,6 +31,7 @@ export const MEDIA_MAX_SIZE_BYTES: Record<SupportedMediaMimeType, number> = {
   "video/webm": 50 * 1024 * 1024,
   "audio/mpeg": 20 * 1024 * 1024,
   "audio/wav": 20 * 1024 * 1024,
+  "audio/webm": 20 * 1024 * 1024,
   "application/pdf": 10 * 1024 * 1024,
 };
 

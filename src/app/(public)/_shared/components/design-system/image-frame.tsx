@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * ImageFrame — next/image の type-safe ラッパー
  *
@@ -13,6 +15,7 @@
  * @see https://nextjs.org/docs/app/api-reference/components/image
  */
 
+import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 
@@ -69,6 +72,7 @@ type ImageFrameProps = (FillProps | DimensionProps) & ImagePriorityProps;
 
 export function ImageFrame(props: ImageFrameProps) {
   const { src, alt, sizes, className, rounded = false } = props;
+  const [failed, setFailed] = useState(false);
   const shouldPreload = props.preload === true;
   const imagePriorityProps = shouldPreload
     ? { preload: true }
@@ -88,7 +92,9 @@ export function ImageFrame(props: ImageFrameProps) {
         className,
       )}
     >
-      {props.fill ? (
+      {failed ? (
+        <div className="absolute inset-0 bg-muted" aria-hidden="true" />
+      ) : props.fill ? (
         <Image
           src={src}
           alt={alt}
@@ -96,6 +102,7 @@ export function ImageFrame(props: ImageFrameProps) {
           sizes={sizes}
           {...imagePriorityProps}
           className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
+          onError={() => setFailed(true)}
         />
       ) : (
         <Image
@@ -106,6 +113,7 @@ export function ImageFrame(props: ImageFrameProps) {
           sizes={sizes}
           {...imagePriorityProps}
           className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
+          onError={() => setFailed(true)}
         />
       )}
     </div>

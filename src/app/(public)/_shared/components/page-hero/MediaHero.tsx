@@ -18,7 +18,7 @@
  * と `backgroundImage` の 2 軸分離を `media` 単一フィールド + runtime discriminate に統合。
  */
 
-import { useRef, type ReactElement } from "react";
+import { useRef, useState, type ReactElement } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
@@ -37,6 +37,27 @@ export type MediaHeroProps = Omit<
   Extract<PageHeroConfig, { variant: "media" }>,
   "variant" | "layout"
 >;
+
+function HeroPosterImage({ src, alt }: { src: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return <div className="absolute inset-0 bg-muted" aria-hidden="true" />;
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes="100vw"
+      className="object-cover"
+      loading="eager"
+      fetchPriority="high"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export function MediaHero({
   label,
@@ -104,15 +125,7 @@ export function MediaHero({
         />
       ) : hasPoster ? (
         <div className="absolute inset-0">
-          <Image
-            src={posterImage.url}
-            alt={posterImage.alt}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            loading="eager"
-            fetchPriority="high"
-          />
+          <HeroPosterImage src={posterImage.url} alt={posterImage.alt} />
         </div>
       ) : null}
 

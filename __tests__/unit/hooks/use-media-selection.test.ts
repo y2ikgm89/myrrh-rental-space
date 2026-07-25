@@ -1,5 +1,8 @@
 import { describe, test, expect } from "bun:test";
-import { mediaDataToSelectedMedia } from "@/admin/hooks/use-media-selection";
+import {
+  mediaDataToSelectedMedia,
+  uploadedMediaToSelectedMedia,
+} from "@/admin/hooks/use-media-selection";
 import type { MediaData } from "@/admin/types/media-picker";
 
 function makeMediaData(overrides: Partial<MediaData> = {}): MediaData {
@@ -66,5 +69,40 @@ describe("mediaDataToSelectedMedia", () => {
 
     expect(selected.alt).toBeUndefined();
     expect(selected.title).toBe("楽曲タイトル");
+  });
+});
+
+describe("uploadedMediaToSelectedMedia", () => {
+  test("alt / filename / title / mimeType / size を SelectedMedia に伝播する", () => {
+    const selected = uploadedMediaToSelectedMedia({
+      id: "upload-1",
+      url: "https://cdn.example.com/track.mp3",
+      mimeType: "audio/mpeg",
+      size: 4096,
+      alt: "代替テキスト",
+      filename: "track.mp3",
+      title: "楽曲タイトル",
+    });
+
+    expect(selected.id).toBe("upload-1");
+    expect(selected.url).toBe("https://cdn.example.com/track.mp3");
+    expect(selected.alt).toBe("代替テキスト");
+    expect(selected.filename).toBe("track.mp3");
+    expect(selected.title).toBe("楽曲タイトル");
+    expect(selected.mimeType).toBe("audio/mpeg");
+    expect(selected.size).toBe(4096);
+    expect(selected.source).toBe("upload");
+  });
+
+  test("省略された alt / title はキーを含めない", () => {
+    const selected = uploadedMediaToSelectedMedia({
+      id: "upload-2",
+      url: "https://cdn.example.com/photo.jpg",
+    });
+
+    expect(selected.alt).toBeUndefined();
+    expect(selected.title).toBeUndefined();
+    expect("alt" in selected).toBe(false);
+    expect("title" in selected).toBe(false);
   });
 });

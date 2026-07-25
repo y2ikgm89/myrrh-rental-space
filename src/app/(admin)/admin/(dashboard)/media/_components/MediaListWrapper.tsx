@@ -4,6 +4,8 @@
 
 import { connection } from "next/server";
 import { getMediaList } from "@/admin/queries/media";
+import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { MediaGrid } from "./MediaGrid";
 import { MediaTable } from "./MediaTable";
 import { Pagination } from "@/admin/components/ui";
@@ -28,6 +30,9 @@ type Props = {
 
 export async function MediaListWrapper({ searchParams }: Props) {
   await connection();
+  const user = await requireAdminDashboardAccess();
+  const canDelete = hasPermission(user.role, "media", "delete");
+
   const filters: MediaFilters = {
     type: parseMediaTypeFilter(searchParams.type),
     usage: parseMediaUsageFilter(searchParams.usage),
@@ -55,9 +60,9 @@ export async function MediaListWrapper({ searchParams }: Props) {
   return (
     <div className="space-y-4">
       {viewMode === "grid" ? (
-        <MediaGrid items={result.items} />
+        <MediaGrid items={result.items} canDelete={canDelete} />
       ) : (
-        <MediaTable items={result.items} />
+        <MediaTable items={result.items} canDelete={canDelete} />
       )}
 
       <Pagination
