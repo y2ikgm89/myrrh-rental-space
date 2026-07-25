@@ -78,10 +78,15 @@ export function resolveSiteBranding(
 /**
  * 記事ページメタデータ生成（ブログ・ニュース・スペース・イベント・タクソノミー共通）
  *
- * settings には `getSeoSettings()` の戻り値を渡す。article の各フィールドが null/空のときに
- * 管理画面で設定した SEO defaults（defaultOgpImageUrl / defaultMetaDescription /
- * defaultOgpTitle / defaultOgpDescription / defaultMetaKeywords / siteName）を fallback として
- * マージする。これを渡さないと管理画面の OGP defaults が silently 効かない。
+ * settings には `getSeoSettings()` の戻り値を渡す。`generatePageMetadata` と同じ OGP 解決順:
+ *
+ * - **meta description** (`description` / `<meta name="description">`):
+ *   `article.description` → settings defaultMetaDescription / siteDescription → SITE_DEFAULTS
+ * - **og:title**: `article.ogpTitle` → `settings.defaultOgpTitle` → `article.title`
+ *   （`branding.ogTitle` / siteName は使わない — article.title へのフォールバックを阻害するため）
+ * - **og:description**: `article.ogpDescription` → `settings.defaultOgpDescription` → 上記 meta description
+ *
+ * 画像・キーワードは settings の defaultOgpImageUrl / defaultMetaKeywords を fallback としてマージする。
  */
 export function generateArticleMetadata(
   article: ArticleMetadata,
@@ -99,9 +104,13 @@ export function generateArticleMetadata(
     article.metaKeywords ?? settings?.defaultMetaKeywords ?? undefined;
   const image = article.image ?? settings?.defaultOgpImageUrl ?? undefined;
   const ogTitle =
-    nonEmpty(article.ogpTitle) ?? branding.ogTitle ?? article.title;
+    nonEmpty(article.ogpTitle) ??
+    nonEmpty(settings?.defaultOgpTitle) ??
+    article.title;
   const ogDescription =
-    nonEmpty(article.ogpDescription) ?? branding.ogDescription;
+    nonEmpty(article.ogpDescription) ??
+    nonEmpty(settings?.defaultOgpDescription) ??
+    description;
   const siteName = options?.siteName ?? branding.siteName;
   const ogType = options?.ogType ?? "article";
 
