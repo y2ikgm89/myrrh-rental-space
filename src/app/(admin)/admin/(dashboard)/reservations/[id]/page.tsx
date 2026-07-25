@@ -16,6 +16,7 @@ import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
+import { hasPermission } from "@/shared/lib/admin-permissions";
 import { getRefundPolicySettings } from "@/shared/domain/settings/admin-queries";
 import { calculateRefundAmountNow } from "@/shared/domain/refund/policy";
 import type { Metadata } from "next";
@@ -72,6 +73,8 @@ export default async function ReservationDetailPage({ params }: PageProps) {
     : null;
 
   const canRestoreStatus = sessionUser.role === Role.SUPER_ADMIN;
+  const canUpdate = hasPermission(sessionUser.role, "reservation", "update");
+  const canDelete = hasPermission(sessionUser.role, "reservation", "delete");
 
   return (
     <AdminDetailLayout
@@ -86,18 +89,22 @@ export default async function ReservationDetailPage({ params }: PageProps) {
               currentStatus={reservation.status}
             />
           )}
-          <DetailDeleteButton
-            itemName={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
-            onDelete={deleteReservation.bind(null, reservation.id)}
-            redirectTo="/admin/reservations"
-            successMessage="予約を削除しました"
-          />
-          <Button size="sm" asChild>
-            <Link href={`/admin/reservations/${id}/edit`}>
-              <IconPencil className="mr-2 h-4 w-4" />
-              編集
-            </Link>
-          </Button>
+          {canDelete ? (
+            <DetailDeleteButton
+              itemName={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
+              onDelete={deleteReservation.bind(null, reservation.id)}
+              redirectTo="/admin/reservations"
+              successMessage="予約を削除しました"
+            />
+          ) : null}
+          {canUpdate ? (
+            <Button size="sm" asChild>
+              <Link href={`/admin/reservations/${id}/edit`}>
+                <IconPencil className="mr-2 h-4 w-4" />
+                編集
+              </Link>
+            </Button>
+          ) : null}
         </>
       }
     >
@@ -106,6 +113,7 @@ export default async function ReservationDetailPage({ params }: PageProps) {
           <SeriesInfoSection
             reservationId={reservation.id}
             series={seriesInfo}
+            canMutate={canUpdate}
           />
         )}
         <ReservationDetail
@@ -113,6 +121,7 @@ export default async function ReservationDetailPage({ params }: PageProps) {
           reservation={reservation}
           paymentEnabled={paymentEnabled}
           suggestedRefundAmount={suggestedRefundAmount}
+          canUpdate={canUpdate}
         />
       </div>
     </AdminDetailLayout>

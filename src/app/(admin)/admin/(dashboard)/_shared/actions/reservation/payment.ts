@@ -7,12 +7,17 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createCheckoutSessionCommand,
+  recordManualReservationPaymentCommand,
   refundReservationPaymentCommand,
   type RefundReservationResult,
 } from "@/shared/domain/reservations/payment-commands";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
 import { REFUNDED_BY_TYPE } from "@/shared/lib/validations/enums/refund-attribution";
-import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  PaymentStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
@@ -24,6 +29,22 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 
 const reservationIdSchema = z.uuid({ error: "予約IDが不正です" });
+
+const manualPaymentMethodValues = ["CASH", "BANK_TRANSFER", "OTHER"] as const;
+
+const manualPaymentSchema = z.object({
+  reservationId: reservationIdSchema,
+  amount: z.number().int().min(1),
+  method: z.enum(manualPaymentMethodValues),
+  note: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v)),
+});
+
+export type ManualReservationPaymentInput = z.input<typeof manualPaymentSchema>;
 
 export async function createCheckoutSession(
   reservationId: string,
@@ -42,6 +63,58 @@ export async function createCheckoutSession(
       }),
     afterSuccess: (data) => {
       invalidateReservationCaches(parsedId.data, data.customerId);
+    },
+  });
+}
+
+export async function recordManualReservationPayment(
+  input: ManualReservationPaymentInput,
+): Promise<MutationResult<{ reservationId: string }>> {
+  const parsed = manualPaymentSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "reservation",
+    action: "update",
+    resourceId: parsed.data.reservationId,
+    execute: async (user) => {
+      const result = await recordManualReservationPaymentCommand({
+        reservationId: parsed.data.reservationId,
+        amount: parsed.data.amount,
+      });
+      const { ip, userAgent } = await buildAuditRequestContext();
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
+      invalidateReservationCaches(
+        parsed.data.reservationId,
+        outcome.customerId,
+      );
+
+      fireAndForget(
+        createAuditLogRecord({
+          userId: outcome.actorUserId,
+          action: AuditAction.UPDATE,
+          resource: "reservation",
+          resourceId: parsed.data.reservationId,
+          oldValue: { paymentStatus: PaymentStatus.UNPAID },
+          newValue: { paymentStatus: PaymentStatus.PAID },
+          metadata: {
+            manualPaymentAmount: parsed.data.amount,
+            manualPaymentMethod: parsed.data.method,
+            ...(parsed.data.note !== null && { note: parsed.data.note }),
+            ...(outcome.ip !== null && { ip: outcome.ip }),
+            ...(outcome.userAgent !== null && {
+              userAgent: outcome.userAgent,
+            }),
+          },
+        }),
+        {
+          operation: "auditLogRecordManualReservationPayment",
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.MEDIUM,
+        },
+      );
     },
   });
 }

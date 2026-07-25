@@ -14,6 +14,7 @@ type ReservationWhereInput = Prisma.ReservationWhereInput;
 /**
  * 予約一覧のタブ別 where 句。
  *
+ * - pending: PENDING (確認待ち)
  * - confirmed: CONFIRMED (来店予定)
  * - completed: COMPLETED (利用済み)
  * - cancelled: CANCELLED または NO_SHOW (終了)
@@ -23,6 +24,8 @@ export function buildTabWhere(
   tab: ReservationTabFilter,
 ): ReservationWhereInput {
   switch (tab) {
+    case "pending":
+      return { status: ReservationStatus.PENDING };
     case "confirmed":
       return { status: ReservationStatus.CONFIRMED };
     case "completed":
@@ -44,6 +47,8 @@ function getDefaultSort(tab: ReservationTabFilter): {
   sortOrder: "asc" | "desc";
 } {
   switch (tab) {
+    case "pending":
+      return { sortBy: "startTime", sortOrder: "asc" };
     case "confirmed":
       return { sortBy: "startTime", sortOrder: "asc" };
     case "completed":
@@ -94,9 +99,17 @@ export function buildReservationListWhere(
   }
 
   if (startDate || endDate) {
+    // JST カレンダー日境界（Cloud Run UTC でも営業日と一致させる）。
+    // endDate はその日を含む → 翌日 JST 00:00 未満（半開区間）。
     where.startTime = {
-      ...(startDate && { gte: new Date(startDate) }),
-      ...(endDate && { lte: new Date(endDate) }),
+      ...(startDate ? { gte: new Date(`${startDate}T00:00:00+09:00`) } : {}),
+      ...(endDate
+        ? {
+            lt: new Date(
+              new Date(`${endDate}T00:00:00+09:00`).getTime() + MS_PER_DAY,
+            ),
+          }
+        : {}),
     };
   }
 
@@ -307,6 +320,7 @@ export async function getReservationByIdQuery(id: string) {
       createdAt: true,
       updatedAt: true,
       paymentStatus: true,
+      stripeCheckoutSessionId: true,
       stripePaymentIntentId: true,
       paidAt: true,
       cancellationReason: true,

@@ -344,7 +344,7 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           event: expect.objectContaining({
-            status: "PUBLISHED",
+            status: { in: ["DRAFT", "PUBLISHED"] },
             deletedAt: null,
           }),
           startAt: { lt: to },

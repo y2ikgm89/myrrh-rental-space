@@ -10,9 +10,13 @@ import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
 import { cancelReservationSeriesCommand } from "./series-commands";
 import type { CancelRequestContext } from "./cancellation-side-effects";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
-import { checkReservationDuration } from "@/shared/lib/reservation/time-slots-utils";
+import {
+  checkReservationDuration,
+  isWithinBusinessHours,
+} from "@/shared/lib/reservation/time-slots-utils";
 import {
   ensureDateNotBlocked,
+  getBusinessHoursSettingsQuery,
   getReservationRuleSettings,
 } from "@/shared/domain/reservations/availability";
 import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
@@ -197,6 +201,19 @@ export async function updateCustomerReservation(
     return { success: false, error: "過去の日時には変更できません" };
   }
 
+  // 営業時間（公開スロット生成 / createPublicReservationCommand と同じ SSoT）
+  const businessHours = await getBusinessHoursSettingsQuery();
+  if (
+    !isWithinBusinessHours(
+      businessHours,
+      input.date,
+      input.startTime,
+      input.endTime,
+    )
+  ) {
+    return { success: false, error: "選択した時間帯は営業時間外です" };
+  }
+
   // 最小/最大予約時間（設定値）をサーバー側で強制する（新規予約と同一ルール）
   const rules = await getReservationRuleSettings();
   const durationError = checkReservationDuration(
@@ -257,6 +274,9 @@ export async function updateCustomerReservation(
         taxRateType: true,
         taxRate: true,
         couponId: true,
+        couponDiscountAmount: true,
+        durationDiscountAmount: true,
+        spaceDiscountAmount: true,
         googleCalendarEventId: true,
         coupon: {
           select: {
@@ -282,6 +302,19 @@ export async function updateCustomerReservation(
 
     if (!CANCELLABLE_STATUSES.includes(reservation.status)) {
       return { success: false, error: "この予約は変更できません" };
+    }
+
+    // 割引適用済み予約のセルフ変更禁止（page の redirect は UX、domain が SSoT）。
+    // 差額精算・クーポン再計算の複雑さを避けるため、お問い合わせ / 再予約に誘導する。
+    if (
+      Number(reservation.couponDiscountAmount ?? 0) > 0 ||
+      Number(reservation.durationDiscountAmount ?? 0) > 0 ||
+      Number(reservation.spaceDiscountAmount ?? 0) > 0
+    ) {
+      return {
+        success: false,
+        error: "割引が適用された予約は変更できません。お問い合わせください。",
+      };
     }
 
     // PAID edit gate: 決済確定/決済中の予約はセルフ変更を禁止 (業界標準の Peerspace/Airbnb

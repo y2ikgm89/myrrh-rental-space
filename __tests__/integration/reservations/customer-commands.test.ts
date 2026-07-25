@@ -329,13 +329,10 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
     }
   });
 
-  test("validUntil=null の永続クーポンが time/space セルフ変更後も維持される", async () => {
-    // Regression: customer-commands.ts の couponForCalc 条件が旧実装で
-    // `coupon.validUntil &&` を要求しており、Coupon.validUntil が null（永続クーポン）
-    // の場合に short-circuit で null になっていた。結果 `couponId: ... : null` で
-    // FK が silently drop され、顧客がセルフ変更するだけで恒久的にクーポンが外れていた。
-    // validateCoupon (payloads.ts:127-131) と同じ「`!validUntil || >= end`」意味論に
-    // 揃わせるための regression test。
+  test("割引適用済み予約の顧客セルフ変更は拒否されクーポンは維持される", async () => {
+    // Clean-break: 割引適用済み予約の time/space セルフ変更はサーバー権威で拒否。
+    // （旧 regression「永続クーポンがセルフ変更後も維持」は再計算経路を前提としていたが、
+    //  割引 edit gate 導入後は変更自体が到達しない。）
     const { spaceId, cleanup } = await createSpaceFixture(1000);
     const couponCode = `PERM${crypto.randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`;
     const coupon = await prisma.coupon.create({
@@ -345,7 +342,7 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
         type: CouponType.PERCENTAGE,
         discountValue: 10, // 10% off
         validFrom: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        validUntil: null, // 永続クーポン（バグの発火条件）
+        validUntil: null,
         usageLimit: null,
         usageCount: 0,
         isActive: true,
@@ -354,7 +351,6 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
       select: { id: true, code: true },
     });
     try {
-      // クーポン付きで予約作成（10:00-12:00 = 2h × 1000 = 2000, 10% off = 1800）。
       const created = await createPublicReservationCommand({
         spaceId,
         date: FRIDAY_DATE,
@@ -371,7 +367,6 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
       expect(before.couponId).toBe(coupon.id);
       expect(before.couponDiscountAmount).toBeGreaterThan(0);
 
-      // 顧客が time だけセルフ変更（クーポン操作なし）。
       const updateResult = await updateCustomerReservation(
         created.id,
         created.customerId,
@@ -384,27 +379,18 @@ describeMaybe("updateCustomerReservation — rate plan 統合", () => {
         },
         MODIFICATION_DEADLINE_HOURS,
       );
-      expect(updateResult.success).toBe(true);
+      expect(updateResult.success).toBe(false);
+      if (updateResult.success) {
+        throw new Error("expected discount-edit gate rejection");
+      }
+      expect(updateResult.error).toMatch(/割引/);
 
       const after = await prisma.reservation.findUniqueOrThrow({
         where: { id: created.id },
       });
-      // couponId が silently drop されないこと（真のバグ）。
       expect(after.couponId).toBe(coupon.id);
-      // クーポン割引額が 0 に戻らず再計算後も適用されていること。
-      // basePrice/couponDiscountAmount は NOT NULL 列だが result 拡張の型は
-      // number | null（decimalToNumber の防御的シグネチャ）のため narrow する。
-      if (after.basePrice === null || after.couponDiscountAmount === null) {
-        throw new Error(
-          "basePrice / couponDiscountAmount must not be null after reprice",
-        );
-      }
-      expect(after.couponDiscountAmount).toBeGreaterThan(0);
-      // basePrice は 2h × 1000 で不変、totalPrice は couponDiscount 適用済み。
-      expect(after.basePrice).toBe(2000);
-      expect(after.totalPrice).toBe(
-        after.basePrice - after.couponDiscountAmount,
-      );
+      expect(after.startTime).toEqual(before.startTime);
+      expect(after.endTime).toEqual(before.endTime);
     } finally {
       await prisma.reservation.deleteMany({ where: { couponId: coupon.id } });
       await prisma.coupon.deleteMany({ where: { id: coupon.id } });

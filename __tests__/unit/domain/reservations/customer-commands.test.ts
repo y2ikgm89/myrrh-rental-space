@@ -113,6 +113,10 @@ mock.module("@/shared/domain/spaces/overlap", () => ({
   checkSpaceOverlap: mockCheckSpaceOverlap,
 }));
 
+const mockGetBusinessHoursSettingsQuery = mock<() => Promise<unknown>>(() =>
+  Promise.resolve(null),
+);
+
 mock.module("@/shared/domain/reservations/availability", () => ({
   ensureDateNotBlocked: mock(
     async (spaceId: string, locationId: string, date: string, tx?: unknown) => {
@@ -132,6 +136,7 @@ mock.module("@/shared/domain/reservations/availability", () => ({
       }
     },
   ),
+  getBusinessHoursSettingsQuery: mockGetBusinessHoursSettingsQuery,
   getReservationRuleSettings: mockReservationRuleSettings,
 }));
 
@@ -177,6 +182,9 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
       }),
     );
 
+    mockGetBusinessHoursSettingsQuery.mockClear();
+    mockGetBusinessHoursSettingsQuery.mockResolvedValue(null);
+
     // 十分未来の予約 (isWithinDeadline を通過)
     mockTxReservationFindFirst.mockImplementation(() =>
       Promise.resolve({
@@ -187,6 +195,9 @@ describe("updateCustomerReservation — BlockedDate guard (PR#2)", () => {
         taxRateType: "STANDARD",
         taxRate: 10,
         couponId: null,
+        couponDiscountAmount: null,
+        durationDiscountAmount: null,
+        spaceDiscountAmount: null,
         googleCalendarEventId: null,
         coupon: null,
       }),

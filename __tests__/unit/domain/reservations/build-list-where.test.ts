@@ -52,6 +52,14 @@ describe("buildReservationListWhere", () => {
     expect(where).toEqual({ deletedAt: null });
   });
 
+  test("tab=pending → status: PENDING を含む", () => {
+    const where = buildReservationListWhere({ tab: "pending" });
+    expect(where).toMatchObject({
+      deletedAt: null,
+      status: ReservationStatus.PENDING,
+    });
+  });
+
   test("tab=confirmed → status: CONFIRMED を含む", () => {
     const where = buildReservationListWhere({ tab: "confirmed" });
     expect(where).toMatchObject({
@@ -85,14 +93,14 @@ describe("buildReservationListWhere", () => {
     expect(where.OR).toHaveLength(2);
   });
 
-  test("startDate/endDate 指定 → startTime に gte/lte が構築される", () => {
+  test("startDate/endDate 指定 → JST 日境界の gte/lt が構築される", () => {
     const where = buildReservationListWhere({
       startDate: "2026-01-01",
       endDate: "2026-01-31",
     });
     expect(where.startTime).toEqual({
-      gte: new Date("2026-01-01"),
-      lte: new Date("2026-01-31"),
+      gte: new Date("2026-01-01T00:00:00+09:00"),
+      lt: new Date("2026-02-01T00:00:00+09:00"),
     });
   });
 
@@ -110,7 +118,10 @@ describe("buildReservationListWhere", () => {
       status: ReservationStatus.CONFIRMED,
       spaceId: "space-1",
       userId: "staff-1",
-      startTime: { gte: new Date("2026-01-01"), lte: new Date("2026-01-31") },
+      startTime: {
+        gte: new Date("2026-01-01T00:00:00+09:00"),
+        lt: new Date("2026-02-01T00:00:00+09:00"),
+      },
     });
     expect(where.OR).toBeDefined();
   });

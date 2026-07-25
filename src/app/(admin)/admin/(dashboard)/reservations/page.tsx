@@ -32,9 +32,11 @@ type PageProps = {
 async function ReservationList({
   searchParams,
   allowCreate,
+  canUpdate,
 }: {
   searchParams: SearchParams;
   allowCreate: boolean;
+  canUpdate: boolean;
 }) {
   await connection();
   const params = await loadAdminReservationSearchParams(searchParams);
@@ -61,6 +63,7 @@ async function ReservationList({
       <ReservationTable
         reservations={result.reservations}
         allowCreate={allowCreate}
+        canUpdate={canUpdate}
       />
       <Pagination
         currentPage={result.page}
@@ -79,15 +82,24 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
     "reservation",
     "manage",
   );
+  const canCreateReservation = hasPermission(
+    user.role,
+    "reservation",
+    "create",
+  );
+  const canUpdateReservation = hasPermission(
+    user.role,
+    "reservation",
+    "update",
+  );
   const params = await loadAdminReservationSearchParams(searchParams);
   const [spaces, enabledFeatures] = await Promise.all([
     getSpacesForReservation(),
     getEnabledFeatures(),
   ]);
-  const allowCreate = isAdminFeatureCreateAllowed(
-    "reservation",
-    enabledFeatures,
-  );
+  const allowCreate =
+    canCreateReservation &&
+    isAdminFeatureCreateAllowed("reservation", enabledFeatures);
 
   // Round-4 audit Finding #13: CSV export は「今画面に見えている行」を
   // 期待して押されるため、一覧と同じ filter (tab/search/期間/userId) を
@@ -155,6 +167,7 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
         <ReservationList
           searchParams={searchParams}
           allowCreate={allowCreate}
+          canUpdate={canUpdateReservation}
         />
       </Suspense>
     </div>

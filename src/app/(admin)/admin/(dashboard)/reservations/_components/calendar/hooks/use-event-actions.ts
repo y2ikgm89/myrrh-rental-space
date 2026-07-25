@@ -78,6 +78,7 @@ export function useEventActions({ events }: UseEventActionsOptions) {
   const handleStatusChange = async (
     eventId: string,
     newStatus: ReservationStatus,
+    reason?: string,
   ) => {
     if (isPending) return;
 
@@ -88,7 +89,7 @@ export function useEventActions({ events }: UseEventActionsOptions) {
         newStatus,
       });
 
-      const result = await updateReservationStatus(eventId, newStatus);
+      const result = await updateReservationStatus(eventId, newStatus, reason);
       if (isMutationError(result)) {
         toast.error(result.error);
         router.refresh();

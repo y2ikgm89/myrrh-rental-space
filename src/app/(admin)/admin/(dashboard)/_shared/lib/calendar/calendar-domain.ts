@@ -1,11 +1,4 @@
 import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  startOfDay,
-  endOfDay,
-  eachDayOfInterval,
   addDays,
   addWeeks,
   addMonths,
@@ -14,12 +7,17 @@ import {
   subMonths,
 } from "date-fns";
 import {
+  addJstCalendarDays,
   formatDateWithWeekday,
   formatJstDateString,
   formatJstMonthDay,
   formatJstWeekdayShort,
   formatYearMonth,
+  getJstCalendarDayOfWeek,
+  getJstMonthLastDay,
   getJstMinutesOfDay,
+  jstDayEndInstantExclusive,
+  jstDayStartInstant,
 } from "@/shared/lib/date-format";
 import type {
   CalendarView,
@@ -31,38 +29,85 @@ import type {
 } from "./calendar-types";
 import { DEFAULT_BUSINESS_HOURS, CALENDAR_LAYOUT } from "./calendar-types";
 
+/** 管理カレンダーの週始まり（日曜 = 0） */
+const CALENDAR_WEEK_STARTS_ON = 0;
+
+function getJstMonthStartDate(jstDate: string): string {
+  return `${jstDate.slice(0, 7)}-01`;
+}
+
+function getJstMonthEndDate(jstDate: string): string {
+  const year = Number.parseInt(jstDate.slice(0, 4), 10);
+  const month = Number.parseInt(jstDate.slice(5, 7), 10);
+  const lastDay = getJstMonthLastDay(year, month);
+  return `${jstDate.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
+}
+
+function getJstWeekStartDate(jstDate: string): string {
+  const dayOfWeek = getJstCalendarDayOfWeek(jstDate);
+  const offset = (dayOfWeek - CALENDAR_WEEK_STARTS_ON + 7) % 7;
+  return addJstCalendarDays(jstDate, -offset);
+}
+
+function getJstWeekEndDate(jstDate: string): string {
+  const dayOfWeek = getJstCalendarDayOfWeek(jstDate);
+  const offset = (CALENDAR_WEEK_STARTS_ON + 6 - dayOfWeek + 7) % 7;
+  return addJstCalendarDays(jstDate, offset);
+}
+
+function eachJstDisplayDay(start: Date, endInclusive: Date): Date[] {
+  const days: Date[] = [];
+  let current = formatJstDateString(start);
+  const endStr = formatJstDateString(endInclusive);
+  while (current <= endStr) {
+    days.push(jstDayStartInstant(current));
+    current = addJstCalendarDays(current, 1);
+  }
+  return days;
+}
+
 /**
  * カレンダー日付範囲を計算
+ *
+ * JST (Asia/Tokyo) カレンダー日境界で start/end/displayDates を確定する。
+ * `start` は inclusive、`end` は overlap query 向けの排他境界（翌 JST 00:00）。
+ * ホスト tz (Cloud Run UTC) の date-fns `startOfDay` 等に依存しない。
  */
 export function getCalendarDateRange(
   date: Date,
   view: CalendarView,
 ): CalendarDateRange {
-  let start: Date;
-  let end: Date;
+  const jstDate = formatJstDateString(date);
+  let displayStartStr: string;
+  let displayEndStr: string;
 
   switch (view) {
     case "month": {
-      const monthStart = startOfMonth(date);
-      const monthEnd = endOfMonth(date);
-      start = startOfWeek(monthStart, { weekStartsOn: 0 });
-      end = endOfWeek(monthEnd, { weekStartsOn: 0 });
+      const monthStart = getJstMonthStartDate(jstDate);
+      const monthEnd = getJstMonthEndDate(jstDate);
+      displayStartStr = getJstWeekStartDate(monthStart);
+      displayEndStr = getJstWeekEndDate(monthEnd);
       break;
     }
     case "week": {
-      start = startOfWeek(date, { weekStartsOn: 0 });
-      end = endOfWeek(date, { weekStartsOn: 0 });
+      displayStartStr = getJstWeekStartDate(jstDate);
+      displayEndStr = getJstWeekEndDate(jstDate);
       break;
     }
     case "day":
     case "resource": {
-      start = startOfDay(date);
-      end = endOfDay(date);
+      displayStartStr = jstDate;
+      displayEndStr = jstDate;
       break;
     }
   }
 
-  const displayDates = eachDayOfInterval({ start, end });
+  const start = jstDayStartInstant(displayStartStr);
+  const end = jstDayEndInstantExclusive(displayEndStr);
+  const displayDates = eachJstDisplayDay(
+    start,
+    jstDayStartInstant(displayEndStr),
+  );
 
   return { start, end, displayDates };
 }
@@ -400,8 +445,9 @@ export function formatDateLabel(date: Date, view: CalendarView): string {
     case "month":
       return formatYearMonth(date);
     case "week": {
-      const weekStart = startOfWeek(date, { weekStartsOn: 0 });
-      const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
+      const jstDate = formatJstDateString(date);
+      const weekStart = jstDayStartInstant(getJstWeekStartDate(jstDate));
+      const weekEnd = jstDayStartInstant(getJstWeekEndDate(jstDate));
       return `${formatJstMonthDay(weekStart)} - ${formatJstMonthDay(weekEnd)}`;
     }
     case "day":

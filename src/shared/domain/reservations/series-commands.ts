@@ -91,6 +91,11 @@ export interface CreateReservationSeriesInput {
   templateData: ReservationSeriesTemplateData;
   /** 各 required TermsDocument への同意（RESERVATION_SERIES scope）。 */
   agreements: { termsId: string }[];
+  /**
+   * Admin 代行作成時は顧客向け必須規約ゲートをスキップする。
+   * 公開/顧客セルフ申込経路では必ず false（または未指定）。
+   */
+  skipCustomerTerms?: boolean;
   now: Date;
 }
 
@@ -186,28 +191,28 @@ export async function createReservationSeriesCommand(
     }
 
     // TermsAgreement（RESERVATION_SERIES scope、各 required doc につき 1 行）。
-    // server-side gate → 記録の順（terms-consent-gate と同じ二段構え）。
-    await assertAllRequiredTermsAgreed({
-      scope: TERMS_SCOPE.RESERVATION_SERIES,
-      agreements: input.agreements,
-      tx,
-    });
+    // Admin 代行作成は顧客同意 UI を持たないため skipCustomerTerms でゲートを外す。
+    let agreementSnapshot: AgreementSnapshotEntry[] = [];
+    if (!input.skipCustomerTerms) {
+      await assertAllRequiredTermsAgreed({
+        scope: TERMS_SCOPE.RESERVATION_SERIES,
+        agreements: input.agreements,
+        tx,
+      });
 
-    // seriesId は関数冒頭で pre-generate 済 (lock key と共用、上のコメント参照)。
-    const recordedAgreements = await recordTermsAgreements({
-      scope: TERMS_SCOPE.RESERVATION_SERIES,
-      customerId: input.customerId,
-      resourceId: seriesId,
-      agreements: input.agreements,
-      tx,
-    });
-    const agreementSnapshot: AgreementSnapshotEntry[] = recordedAgreements.map(
-      (agreement) => ({
+      const recordedAgreements = await recordTermsAgreements({
+        scope: TERMS_SCOPE.RESERVATION_SERIES,
+        customerId: input.customerId,
+        resourceId: seriesId,
+        agreements: input.agreements,
+        tx,
+      });
+      agreementSnapshot = recordedAgreements.map((agreement) => ({
         termsId: agreement.termsId,
         contentHash: agreement.contentHash,
         agreedAt: agreement.agreedAt.toISOString(),
-      }),
-    );
+      }));
+    }
 
     // coupon usage increment（series 全体で 1 usage、既存単発予約と同じ pattern）。
     // atomic claim: public-commands.ts と同型の $executeRaw で

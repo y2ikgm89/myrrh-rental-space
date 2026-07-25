@@ -23,6 +23,7 @@ const TERMINAL_STATUS_SET = new Set<ReservationStatus>(
 export async function updateReservationStatusCommand(
   id: string,
   status: ReservationStatus,
+  cancellationReason?: string | null,
 ) {
   const reservation = await prisma.reservation.findUnique({
     where: { id, deletedAt: null },
@@ -43,6 +44,17 @@ export async function updateReservationStatusCommand(
   }
 
   validateStatusTransition(reservation.status, status);
+
+  if (
+    (status === ReservationStatus.COMPLETED ||
+      status === ReservationStatus.NO_SHOW) &&
+    reservation.endTime.getTime() > Date.now()
+  ) {
+    throw new DomainError(
+      "利用終了前に完了/不参加にはできません",
+      "VALIDATION",
+    );
+  }
 
   const previousStatus = reservation.status;
 
@@ -70,7 +82,14 @@ export async function updateReservationStatusCommand(
         status,
         icsSequence: { increment: 1 },
         ...(isCancellation
-          ? { cancelledAt: new Date(), cancelledByType: CANCELLED_BY.ADMIN }
+          ? {
+              cancelledAt: new Date(),
+              cancelledByType: CANCELLED_BY.ADMIN,
+              cancellationReason:
+                cancellationReason && cancellationReason.trim() !== ""
+                  ? cancellationReason.trim()
+                  : null,
+            }
           : {}),
       },
     });
@@ -246,6 +265,23 @@ export async function restoreReservationStatusCommand(
       );
     }
 
+    // キャンセル時に decrement した usageCount を、非終端へ戻すときに再 claim。
+    if (wasCancelled && reservation.couponId !== null) {
+      const claimed = await tx.$executeRaw`
+        UPDATE "coupons"
+        SET "usageCount" = "usageCount" + 1
+        WHERE "id" = ${reservation.couponId}::uuid
+          AND "isActive" = true
+          AND ("usageLimit" IS NULL OR "usageCount" < "usageLimit")
+      `;
+      if (claimed === 0) {
+        throw new DomainError(
+          "クーポンが利用できません（利用上限に達した可能性があります）。復元を中止しました。",
+          "CONFLICT",
+        );
+      }
+    }
+
     return tx.reservation.findUniqueOrThrow({
       where: { id },
       select: { icsSequence: true },
@@ -346,7 +382,7 @@ export async function deleteReservationCommand(
       },
     });
 
-    if (reservation.couponId) {
+    if (needsCancellationTracking && reservation.couponId) {
       await tx.coupon.updateMany({
         where: { id: reservation.couponId, usageCount: { gt: 0 } },
         data: { usageCount: { decrement: 1 } },
@@ -399,11 +435,19 @@ export async function restoreReservationCommand(id: string) {
     throw new DomainError("予約が見つかりません", "NOT_FOUND");
   }
 
+  if (full.status === ReservationStatus.CANCELLED) {
+    throw new DomainError(
+      "キャンセルを伴う削除は復元できません。必要なら新規予約を作成してください。",
+      "VALIDATION",
+    );
+  }
+
+  const isActiveReservation =
+    full.status === ReservationStatus.PENDING ||
+    full.status === ReservationStatus.CONFIRMED;
+
   await prisma.$transaction(async (tx) => {
-    if (
-      full.status === ReservationStatus.PENDING ||
-      full.status === ReservationStatus.CONFIRMED
-    ) {
+    if (isActiveReservation) {
       await lockSpaceForTransaction(tx, full.spaceId);
       const overlap = await checkSpaceOverlap(
         {
@@ -433,7 +477,7 @@ export async function restoreReservationCommand(id: string) {
       },
     });
 
-    if (reservation.couponId) {
+    if (isActiveReservation && reservation.couponId) {
       // atomic claim: createAdminReservationCommand / updateAdminReservationCommand と
       // 同型の $executeRaw で usageLimit cap を強制する。素の increment だと、
       // 削除中に別経路で usageLimit まで消費された coupon を復元時に silently

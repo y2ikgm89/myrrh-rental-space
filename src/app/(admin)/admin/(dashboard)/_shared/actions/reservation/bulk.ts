@@ -28,10 +28,8 @@ import {
   syncReservationToCalendar,
   updateCalendarSync,
 } from "@/shared/lib/calendar-sync/outbound";
-import {
-  sendReservationAdminNotification,
-  sendReservationConfirmationEmail,
-} from "@/shared/lib/email/reservation-emails";
+import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
+import { issueSmartLockAndSendConfirmationEmail } from "./mutations";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
@@ -104,15 +102,21 @@ function handleConfirmAfterSuccess(
   }
 
   fireAndForget(
-    Promise.all([
-      sendReservationConfirmationEmail(payloadData),
-      sendReservationAdminNotification(
-        payloadData,
-        result.previousStatus === ReservationStatus.PENDING ? "new" : "update",
-      ),
-    ]),
+    issueSmartLockAndSendConfirmationEmail(payloadData, result.spaceId),
     {
-      operation: "bulkConfirm:sendConfirmationEmails",
+      operation: "bulkConfirm:issuePasscodesAndSendConfirmationEmail",
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.MEDIUM,
+      context: { reservationId: id },
+    },
+  );
+  fireAndForget(
+    sendReservationAdminNotification(
+      payloadData,
+      result.previousStatus === ReservationStatus.PENDING ? "new" : "update",
+    ),
+    {
+      operation: "bulkConfirm:sendAdminNotification",
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
       context: { reservationId: id },

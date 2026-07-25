@@ -62,7 +62,7 @@ const restoreStatusSchema = z.object({
  * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（意図した設計、
  * 詳細は `src/shared/domain/smart-lock/issue-passcode.ts`）。
  */
-async function issueSmartLockAndSendConfirmationEmail(
+export async function issueSmartLockAndSendConfirmationEmail(
   payloadData: ReservationEmailData,
   spaceId: string,
 ) {
@@ -100,7 +100,11 @@ export const updateReservationStatus = async (
     action: "update",
     resourceId: id,
     execute: async () => {
-      result = await updateReservationStatusCommand(id, status);
+      result = await updateReservationStatusCommand(
+        id,
+        status,
+        status === ReservationStatus.CANCELLED ? reason : undefined,
+      );
       return null;
     },
     afterSuccess: () => {

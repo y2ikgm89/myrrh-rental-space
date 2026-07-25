@@ -16,8 +16,9 @@
  * gate、超過は保存前に UI で reject)。
  */
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { getFormProps, useForm } from "@conform-to/react";
 import { parseWithZod } from "@conform-to/zod/v4";
@@ -121,6 +122,18 @@ export function RecurringReservationForm({
     shouldValidate: "onBlur",
     shouldRevalidate: "onInput",
   });
+
+  useEffect(() => {
+    if (!lastResult || lastResult.status !== "success") return;
+    const message =
+      "successMessage" in lastResult &&
+      typeof lastResult.successMessage === "string"
+        ? lastResult.successMessage
+        : "繰返し予約を作成しました";
+    toast.success(message);
+    router.push("/admin/reservations");
+    router.refresh();
+  }, [lastResult, router]);
 
   const [selectedCustomer, setSelectedCustomer] =
     useState<SelectedCustomer | null>(null);
