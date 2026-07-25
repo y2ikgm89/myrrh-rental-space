@@ -74,6 +74,8 @@ import { ReservationRefundEmail } from "@/shared/emails/reservation-refund";
 import { reservationRefundFixture } from "@/shared/emails/reservation-refund.fixture";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
 import { reservationReminderFixture } from "@/shared/emails/reservation-reminder.fixture";
+import { ReceiptIssuedEmail } from "@/shared/emails/receipt-issued";
+import { receiptIssuedFixture } from "@/shared/emails/receipt-issued.fixture";
 import { ReceiptResendEmail } from "@/shared/emails/receipt-resend";
 import { receiptResendFixture } from "@/shared/emails/receipt-resend.fixture";
 import { BulkReservationCancelledEmail } from "@/shared/emails/bulk-reservation-cancelled";
@@ -227,7 +229,7 @@ function defineEntry<P extends EmailTemplateProps>(
 }
 
 /**
- * 30 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
+ * 31 エントリの SSoT。registry は `satisfies Record<TemplateKey, …>` で全 key 網羅を
  * compile error で enforce する。
  */
 export const EMAIL_TEMPLATE_REGISTRY = {
@@ -260,6 +262,11 @@ export const EMAIL_TEMPLATE_REGISTRY = {
     "reservation-reminder",
     ReservationReminderEmail,
     reservationReminderFixture,
+  ),
+  "receipt-issued": defineEntry(
+    "receipt-issued",
+    ReceiptIssuedEmail,
+    receiptIssuedFixture,
   ),
   "receipt-resend": defineEntry(
     "receipt-resend",

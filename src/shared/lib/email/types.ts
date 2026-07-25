@@ -134,6 +134,24 @@ export type WelcomeEmailData = {
   loginUrl: string;
 };
 
+/**
+ * 領収書新規発行通知メール用データ（ゲスト・会員共通）。
+ *
+ * `detailUrl` は呼出側が組み立てる（会員 mypage / ゲスト status token URL 等）。
+ * PDF API 直リンクは表導線にしない。
+ */
+export type ReceiptIssuedEmailData = {
+  recipientEmail: string;
+  serialNo: string;
+  recipientName: string;
+  subject: string;
+  amount: number;
+  taxAmount: number;
+  issuedAt: Date;
+  /** CTA 先（予約/申込詳細）。sender は URL を生成しない。 */
+  detailUrl: string;
+};
+
 export type ReminderEmailData = {
   reservationId: string;
   customerEmail: string;

@@ -1,13 +1,15 @@
 /**
  * 領収書関連メール送信
  *
- * ゲスト向けセルフサービス再送信リクエスト (RECEIPT-RESEND-P1) のメール送信を行う。
+ * - 新規発行通知 (`sendReceiptIssuedEmail`) — ゲスト・会員双方
+ * - ゲスト向けセルフサービス再送信 (`sendReceiptResendEmail`, RECEIPT-RESEND-P1)
  *
  * @module shared/lib/email/receipt-emails
  */
 
 import "server-only";
 
+import { ReceiptIssuedEmail } from "@/shared/emails/receipt-issued";
 import { ReceiptResendEmail } from "@/shared/emails/receipt-resend";
 import { getEmailFooterData } from "@/shared/emails/_shared/footer-data";
 import { formatJstDateString } from "@/shared/lib/date-format";
@@ -15,7 +17,56 @@ import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token"
 import { getAppUrl } from "../constants";
 import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
-import type { EmailResult } from "./types";
+import type { EmailResult, ReceiptIssuedEmailData } from "./types";
+
+/**
+ * 新規発行通知の Resend idempotency key。
+ *
+ * `receipt-issued/<serialNo>`（静的）。同一 serial への再送は first-send-wins。
+ * 初回配信が Resend 側で消失した場合の正当な再送は、admin / ゲスト再送信
+ * (`sendReceiptResendEmail`) フローを使うこと（本 key では再送できない）。
+ */
+export function buildReceiptIssuedIdempotencyKey(serialNo: string): string {
+  return `receipt-issued/${serialNo}`;
+}
+
+/**
+ * 領収書の新規発行通知メールを送信する（ゲスト・会員共通）。
+ *
+ * ## 呼出契約
+ * - `detailUrl`: CTA 先。会員 mypage / ゲスト status URL 等を呼出側が渡す。
+ *   本関数は URL を生成しない（PDF API 直リンクも組み立てない）。
+ *
+ * ## Idempotency
+ * {@link buildReceiptIssuedIdempotencyKey} — 静的 key、first-send-wins。
+ */
+export async function sendReceiptIssuedEmail(
+  input: ReceiptIssuedEmailData,
+): Promise<EmailResult> {
+  const footer = await getEmailFooterData();
+
+  return sendEmail({
+    payload: {
+      to: input.recipientEmail,
+      subject: `【領収書発行】${input.serialNo}`,
+      react: ReceiptIssuedEmail({
+        recipientName: input.recipientName,
+        subject: input.subject,
+        issuedAt: formatJstDateString(input.issuedAt),
+        amount: formatAmountLabel(input.amount, input.taxAmount),
+        serialNo: input.serialNo,
+        detailUrl: input.detailUrl,
+        footer,
+      }),
+    },
+    idempotencyKey: buildReceiptIssuedIdempotencyKey(input.serialNo),
+    operation: "sendReceiptIssuedEmail",
+    context: {
+      serialNo: input.serialNo,
+      recipientEmail: input.recipientEmail,
+    },
+  });
+}
 
 /**
  * ゲスト再送信リクエストで領収書 DL リンクを配信する。
