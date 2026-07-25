@@ -484,7 +484,9 @@ export async function updateCustomerReservation(
         // なし」に戻す（admin override の履歴が新しい自動計算額に紐付いたまま残る
         // stale 表示を防ぐ）。
         priceOverriddenBy: null,
-        couponId: couponForCalc ? reservation.couponId : null,
+        // best 併用でクーポンが落ちた場合は appliedCoupon=null。usage は作成時に
+        // claim 済みのためここでは増減しないが、参照と割引額は pricing SSoT に揃える。
+        couponId: pricing.appliedCoupon?.id ?? null,
         icsSequence: { increment: 1 },
         version: { increment: 1 },
       },

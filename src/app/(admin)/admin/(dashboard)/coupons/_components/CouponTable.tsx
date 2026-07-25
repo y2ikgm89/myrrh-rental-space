@@ -122,7 +122,7 @@ export function CouponTable({ coupons }: CouponTableProps) {
                 <ClickableTableRow
                   key={coupon.id}
                   href={`/admin/coupons/${coupon.id}`}
-                  aria-label={`${coupon.name} を編集`}
+                  aria-label={`${coupon.name} の詳細を開く`}
                 >
                   <TableCell onClick={stopRowClick}>
                     <CheckboxCell

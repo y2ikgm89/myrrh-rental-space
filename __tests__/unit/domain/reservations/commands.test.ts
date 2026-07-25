@@ -668,6 +668,74 @@ describe("createAdminReservationCommand", () => {
       );
     });
 
+    test("best モードでクーポンが落とされた場合 couponId=null かつ usage claim しない", async () => {
+      mockSettingsCommerceFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          durationDiscountEnabled: true,
+          durationDiscountRules: [
+            { hours: 3, discountRate: 5 },
+            { hours: 5, discountRate: 10 },
+            { hours: 8, discountRate: 20 },
+          ],
+          discountCombinationMode: "best",
+          taxStandardRate: 10,
+          taxReducedRate: 8,
+          taxDisplayModePublic: "tax_included",
+          showOriginalPrice: true,
+        }),
+      );
+      mockSpaceFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "space-1",
+          name: "テストスペース",
+          addressDetail: null,
+          hourlyPrice: 1000,
+          discountType: "none",
+          discountValue: null,
+          durationDiscountOverride: "inherit",
+          taxRateType: "standard",
+          location: { address: "東京都渋谷区1-1-1" },
+        }),
+      );
+      mockCouponFindUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: "coupon-small",
+          code: "SMALL10",
+          name: "10%OFF",
+          type: CouponType.PERCENTAGE,
+          discountValue: 10,
+          maxDiscountAmount: null,
+          canCombineWithDurationDiscount: true,
+          isActive: true,
+          validFrom: new Date("2020-01-01"),
+          validUntil: null,
+          usageLimit: null,
+          usageCount: 0,
+          minReservationAmount: null,
+        }),
+      );
+
+      await createAdminReservationCommand({
+        ...validInput,
+        endTime: "18:00",
+        couponCode: "SMALL10",
+      });
+
+      expect(mockReservationCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            couponId: null,
+            couponDiscountAmount: 0,
+          }),
+        }),
+      );
+
+      const couponClaimSql = mockExecuteRaw.mock.calls
+        .map((call) => call[0]?.join("?") ?? "")
+        .find((sql) => sql.includes('UPDATE "coupons"'));
+      expect(couponClaimSql).toBeUndefined();
+    });
+
     test("スペース固有割引(percentage)が適用され spaceDiscountAmount が永続化される", async () => {
       mockSpaceFindUnique.mockImplementation(() =>
         Promise.resolve({

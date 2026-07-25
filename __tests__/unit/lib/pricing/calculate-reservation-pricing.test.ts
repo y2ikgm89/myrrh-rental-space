@@ -81,4 +81,71 @@ describe("calculateReservationPricing", () => {
     expect(result.spaceDiscountAmount).toBe(400);
     expect(result.totalPrice).toBe(3600);
   });
+
+  test("best モードで長時間割引が勝つ場合 appliedCoupon は null", () => {
+    const smallCoupon = {
+      id: "coupon-small",
+      code: "SMALL10",
+      name: "10%OFF",
+      type: "PERCENTAGE" as const,
+      discountValue: 10,
+      maxDiscountAmount: null,
+      canCombineWithDurationDiscount: true,
+    };
+    const result = calculateReservationPricing({
+      startDateTime: jst("2026-07-15T10:00"),
+      endDateTime: jst("2026-07-15T18:00"),
+      space: baseSpace,
+      ratePlans: [],
+      reservationSettings: {
+        ...baseSettings,
+        durationDiscountEnabled: true,
+        durationDiscountRules: [
+          { hours: 3, discountRate: 5 },
+          { hours: 5, discountRate: 10 },
+          { hours: 8, discountRate: 20 },
+        ],
+        discountCombinationMode: "best",
+      },
+      coupon: smallCoupon,
+      holidayJudge: noHoliday,
+    });
+
+    expect(result.durationDiscountAmount).toBeGreaterThan(0);
+    expect(result.couponDiscountAmount).toBe(0);
+    expect(result.appliedCoupon).toBeNull();
+  });
+
+  test("best モードでクーポンが勝つ場合 appliedCoupon を返す", () => {
+    const bigCoupon = {
+      id: "coupon-big",
+      code: "BIG50",
+      name: "50%OFF",
+      type: "PERCENTAGE" as const,
+      discountValue: 50,
+      maxDiscountAmount: null,
+      canCombineWithDurationDiscount: true,
+    };
+    const result = calculateReservationPricing({
+      startDateTime: jst("2026-07-15T10:00"),
+      endDateTime: jst("2026-07-15T13:00"),
+      space: baseSpace,
+      ratePlans: [],
+      reservationSettings: {
+        ...baseSettings,
+        durationDiscountEnabled: true,
+        durationDiscountRules: [{ hours: 3, discountRate: 5 }],
+        discountCombinationMode: "best",
+      },
+      coupon: bigCoupon,
+      holidayJudge: noHoliday,
+    });
+
+    expect(result.couponDiscountAmount).toBeGreaterThan(0);
+    expect(result.appliedCoupon).toEqual({
+      id: "coupon-big",
+      code: "BIG50",
+      name: "50%OFF",
+    });
+  });
 });

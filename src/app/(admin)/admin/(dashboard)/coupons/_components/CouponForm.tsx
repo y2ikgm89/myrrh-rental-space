@@ -6,7 +6,7 @@
  *   経由 JST 固定表示。
  */
 
-import { useActionState, useEffect, type ReactElement } from "react";
+import { useActionState, useEffect, useState, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import {
   getFormProps,
@@ -105,17 +105,15 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
   });
 
   const typeControl = useInputControl(fields.type);
-  const isActiveControl = useInputControl(fields.isActive);
-  const canCombineControl = useInputControl(
-    fields.canCombineWithDurationDiscount,
+  const [isActive, setIsActive] = useState(coupon?.isActive ?? true);
+  const [canCombine, setCanCombine] = useState(
+    coupon?.canCombineWithDurationDiscount ?? true,
   );
 
   const couponType =
     typeControl.value === CouponType.FIXED_AMOUNT
       ? CouponType.FIXED_AMOUNT
       : CouponType.PERCENTAGE;
-  const isActive = isActiveControl.value === "on";
-  const canCombine = canCombineControl.value === "on";
 
   function handleTypeChange(value: string) {
     if (!isValidCouponType(value)) return;
@@ -426,10 +424,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
               <Switch
                 id={fields.isActive.id}
                 checked={isActive}
-                onCheckedChange={(checked) =>
-                  isActiveControl.change(checked ? "on" : "")
-                }
-                onBlur={isActiveControl.blur}
+                onCheckedChange={setIsActive}
                 disabled={isPending}
               />
               <input
@@ -451,10 +446,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
               <Switch
                 id={fields.canCombineWithDurationDiscount.id}
                 checked={canCombine}
-                onCheckedChange={(checked) =>
-                  canCombineControl.change(checked ? "on" : "")
-                }
-                onBlur={canCombineControl.blur}
+                onCheckedChange={setCanCombine}
                 disabled={isPending}
               />
               <input

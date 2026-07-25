@@ -136,6 +136,11 @@ function formatCouponDetail(
   };
 }
 
+/** 属性ベースのステータスフィルタ（Prisma findMany 経路）。
+ *
+ * 一覧バッジ `getCouponStatus` は inactive 優先の排他判定だが、フィルタは
+ * 属性ごとに独立（例: 無効化済みでも期限切れフィルタに含める）— 意図的に重複しうる。
+ */
 function buildStatusWhereClause(
   status: Exclude<CouponStatusValue, "active" | "limitReached">,
 ): Prisma.CouponWhereInput {
@@ -146,12 +151,10 @@ function buildStatusWhereClause(
       return { isActive: false };
     case "expired":
       return {
-        isActive: true,
-        validUntil: { lt: now },
+        validUntil: { not: null, lt: now },
       };
     case "notStarted":
       return {
-        isActive: true,
         validFrom: { gt: now },
       };
   }
@@ -187,11 +190,8 @@ function buildRawCouponWhere(filters: CouponFilters): Prisma.Sql {
   const clauses: Prisma.Sql[] = [];
 
   if (filters.status === "limitReached") {
-    clauses.push(Prisma.sql`"isActive" = true`);
     clauses.push(Prisma.sql`"usageLimit" IS NOT NULL`);
     clauses.push(Prisma.sql`"usageCount" >= "usageLimit"`);
-    clauses.push(Prisma.sql`"validFrom" <= ${now}`);
-    clauses.push(Prisma.sql`("validUntil" IS NULL OR "validUntil" >= ${now})`);
   }
 
   if (filters.status === "active") {

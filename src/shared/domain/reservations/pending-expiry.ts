@@ -89,78 +89,67 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
     return { expired: [], total: 0 };
   }
 
-  const candidateIds = candidates.map((r) => r.id);
   const candidateById = new Map(candidates.map((r) => [r.id, r]));
+  const expiredLogs: ExpiredReservationLog[] = [];
 
-  // 2) atomic claim: WHERE で全条件を再 assert し、race で条件を外れたものは自動除外
-  const claimed = await prisma.reservation.updateMany({
-    where: {
-      id: { in: candidateIds },
-      deletedAt: null,
-      status: {
-        in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
-      },
-      paymentStatus: PaymentStatus.PENDING,
-      paymentInitiatedAt: { lt: cutoff },
-    },
-    data: {
-      status: ReservationStatus.CANCELLED,
-      cancelledAt: now,
-      cancelledByType: CANCELLED_BY.SYSTEM,
-      cancellationReason,
-      icsSequence: { increment: 1 },
-    },
-  });
-
-  const settled = await prisma.reservation.findMany({
-    where: {
-      id: { in: candidateIds },
-      status: ReservationStatus.CANCELLED,
-      cancelledByType: CANCELLED_BY.SYSTEM,
-      cancelledAt: now,
-    },
-    select: { id: true, customerId: true, spaceId: true },
-  });
-
-  const expiredLogs: ExpiredReservationLog[] = settled.map((row) => {
-    const candidate = candidateById.get(row.id);
-    const initiatedAt = candidate?.paymentInitiatedAt;
+  // 2) 予約ごとに atomic claim + coupon decrement を同一 tx で実行する。
+  //    旧実装は bulk updateMany の後に coupon を別クエリで戻しており、
+  //    プロセスクラッシュで usageCount が strand する余地があった。
+  for (const candidate of candidates) {
+    const initiatedAt = candidate.paymentInitiatedAt;
     const ageMinutes = initiatedAt
       ? Math.floor((now.getTime() - initiatedAt.getTime()) / MS_PER_MINUTE)
       : PENDING_RESERVATION_EXPIRY_MINUTES;
-    return {
-      id: row.id,
-      customerId: row.customerId,
-      spaceId: row.spaceId,
-      ageMinutes,
-    };
-  });
 
-  // 3) claim 成功分の副作用。クーポン戻しは applyCancellation と同型で先に行い、
-  //    Stripe session expire + cancellation side effects を予約単位で発火する。
-  //    AuditLog は side effects 側の集約レコードが SSoT（旧: 本関数内の単純 UPDATE 監査）。
-  for (const log of expiredLogs) {
-    const candidate = candidateById.get(log.id);
-    if (!candidate) continue;
+    const claimed = await prisma.$transaction(async (tx) => {
+      const updateResult = await tx.reservation.updateMany({
+        where: {
+          id: candidate.id,
+          deletedAt: null,
+          status: {
+            in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED],
+          },
+          paymentStatus: PaymentStatus.PENDING,
+          paymentInitiatedAt: { lt: cutoff },
+        },
+        data: {
+          status: ReservationStatus.CANCELLED,
+          cancelledAt: now,
+          cancelledByType: CANCELLED_BY.SYSTEM,
+          cancellationReason,
+          icsSequence: { increment: 1 },
+        },
+      });
 
-    if (candidate.couponId) {
-      try {
-        await prisma.coupon.updateMany({
+      if (updateResult.count === 0) {
+        return false;
+      }
+
+      if (candidate.couponId) {
+        await tx.coupon.updateMany({
           where: { id: candidate.couponId, usageCount: { gt: 0 } },
           data: { usageCount: { decrement: 1 } },
         });
-      } catch (error) {
-        logError(normalizeError(error), {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "pendingExpiryCouponDecrement",
-            reservationId: log.id,
-            couponId: candidate.couponId,
-          },
-        });
       }
+
+      return true;
+    });
+
+    if (claimed) {
+      expiredLogs.push({
+        id: candidate.id,
+        customerId: candidate.customerId,
+        spaceId: candidate.spaceId,
+        ageMinutes,
+      });
     }
+  }
+
+  // 3) claim 成功分の副作用。クーポン戻しは上記 tx 内で完了済み。
+  //    Stripe session expire + cancellation side effects を予約単位で発火する。
+  for (const log of expiredLogs) {
+    const candidate = candidateById.get(log.id);
+    if (!candidate) continue;
 
     if (candidate.stripeCheckoutSessionId) {
       await expireCheckoutSessionBestEffort({
@@ -190,7 +179,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
     }
   }
 
-  return { expired: expiredLogs, total: claimed.count };
+  return { expired: expiredLogs, total: expiredLogs.length };
 }
 
 async function expireCheckoutSessionBestEffort(input: {

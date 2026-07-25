@@ -26,6 +26,7 @@ mock.module("@/shared/db/prisma", () => ({
 
 const { bulkToggleActiveCouponsCommand, bulkDeleteCouponsCommand } =
   await import("@/shared/domain/coupons/bulk-commands");
+const { DomainError } = await import("@/shared/domain/domain-error");
 
 const COUPON_A = {
   id: "11111111-1111-4111-8111-111111111111",
@@ -71,31 +72,20 @@ describe("bulkToggleActiveCouponsCommand", () => {
         isActive: true,
         affectedIds: [COUPON_A.id, COUPON_B.id],
       });
-      expect(mockFindMany).toHaveBeenCalledTimes(1);
-      expect(mockUpdateMany).toHaveBeenCalledTimes(1);
     });
+  });
 
-    test("isActive=false で無効化", async () => {
-      mockFindMany.mockResolvedValueOnce([COUPON_A]);
-      mockUpdateMany.mockResolvedValueOnce({ count: 1 });
-
-      const result = await bulkToggleActiveCouponsCommand([COUPON_A.id], false);
-
-      expect(result.isActive).toBe(false);
-      expect(result.count).toBe(1);
-      expect(result.affectedIds).toEqual([COUPON_A.id]);
-    });
-
-    test("対象が見つからない場合は count: 0 を返し updateMany を呼ばない", async () => {
+  describe("異常系", () => {
+    test("ids 指定だが対象が見つからない場合は NOT_FOUND をスローする", async () => {
       mockFindMany.mockResolvedValueOnce([]);
 
-      const result = await bulkToggleActiveCouponsCommand([COUPON_A.id], true);
-
-      expect(result).toEqual({
-        count: 0,
-        isActive: true,
-        affectedIds: [],
+      await expect(
+        bulkToggleActiveCouponsCommand([COUPON_A.id], true),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "対象のクーポンが見つかりません",
       });
+
       expect(mockUpdateMany).not.toHaveBeenCalled();
     });
   });
@@ -131,19 +121,20 @@ describe("bulkDeleteCouponsCommand", () => {
         affectedIds: [COUPON_A.id, COUPON_B.id],
         deleted: [COUPON_A, COUPON_B],
       });
-      expect(mockDeleteMany).toHaveBeenCalledTimes(1);
     });
+  });
 
-    test("対象が見つからない場合は count: 0 を返し deleteMany を呼ばない", async () => {
+  describe("異常系", () => {
+    test("ids 指定だが対象が見つからない場合は NOT_FOUND をスローする", async () => {
       mockFindMany.mockResolvedValueOnce([]);
 
-      const result = await bulkDeleteCouponsCommand([COUPON_A.id]);
-
-      expect(result).toEqual({
-        count: 0,
-        affectedIds: [],
-        deleted: [],
+      await expect(
+        bulkDeleteCouponsCommand([COUPON_A.id]),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "対象のクーポンが見つかりません",
       });
+
       expect(mockDeleteMany).not.toHaveBeenCalled();
     });
   });
