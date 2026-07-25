@@ -29,6 +29,7 @@ export default function robots(): MetadataRoute.Robots {
           "/reservation/cancel",
           "/events/cancel",
           "/events/waitlist/",
+          "/events/registrations/",
           "/claim/",
           "/receipts/",
           "/login",

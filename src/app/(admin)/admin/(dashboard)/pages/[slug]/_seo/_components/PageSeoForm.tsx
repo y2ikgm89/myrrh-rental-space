@@ -39,6 +39,7 @@ import {
 } from "@/admin/components/ui";
 import { SerpPreview } from "@/admin/components/seo/SerpPreview";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { SEO_LIMITS } from "@/shared/lib/validations/seo";
 import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/pages";
 
@@ -54,9 +55,10 @@ interface PageSeoData {
 
 interface PageSeoFormProps {
   page: PageSeoData;
+  siteName: string | null;
 }
 
-export function PageSeoForm({ page }: PageSeoFormProps) {
+export function PageSeoForm({ page, siteName }: PageSeoFormProps) {
   const router = useRouter();
   const boundAction = updatePageSeo.bind(null, page.slug);
   const [lastResult, action, isPending] = useActionState(
@@ -84,12 +86,14 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
 
   const titleControl = useInputControl(fields.title);
   const metaDescriptionControl = useInputControl(fields.metaDescription);
+  const metaKeywordsControl = useInputControl(fields.metaKeywords);
   const ogpTitleControl = useInputControl(fields.ogpTitle);
   const ogpDescriptionControl = useInputControl(fields.ogpDescription);
   const ogpImageUrlControl = useInputControl(fields.ogpImageUrl);
 
   const watchedTitle = titleControl.value ?? "";
   const watchedMetaDescription = metaDescriptionControl.value ?? "";
+  const watchedMetaKeywords = metaKeywordsControl.value ?? "";
   const watchedOgpTitle = ogpTitleControl.value ?? "";
   const watchedOgpDescription = ogpDescriptionControl.value ?? "";
   const ogpImageUrl = ogpImageUrlControl.value ?? "";
@@ -158,7 +162,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
                   </Label>
                   <CharCount
                     current={watchedMetaDescription.length}
-                    max={160}
+                    max={SEO_LIMITS.META_DESCRIPTION}
                   />
                 </div>
                 <Textarea
@@ -181,7 +185,13 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={fields.metaKeywords.id}>メタキーワード</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor={fields.metaKeywords.id}>メタキーワード</Label>
+                  <CharCount
+                    current={watchedMetaKeywords.length}
+                    max={SEO_LIMITS.META_KEYWORDS}
+                  />
+                </div>
                 <Input
                   {...getInputProps(fields.metaKeywords, { type: "text" })}
                   placeholder="キーワード1, キーワード2, キーワード3"
@@ -201,17 +211,13 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                検索結果プレビュー
-              </p>
-              <div className="lg:sticky lg:top-6">
-                <SerpPreview
-                  title={watchedTitle}
-                  description={watchedMetaDescription}
-                  slug={page.slug}
-                />
-              </div>
+            <div className="lg:sticky lg:top-6">
+              <SerpPreview
+                title={watchedTitle}
+                description={watchedMetaDescription}
+                slug={page.slug}
+                {...(siteName ? { siteName } : {})}
+              />
             </div>
           </div>
         </CardContent>
@@ -229,7 +235,10 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor={fields.ogpTitle.id}>OGPタイトル</Label>
-                  <CharCount current={watchedOgpTitle.length} max={100} />
+                  <CharCount
+                    current={watchedOgpTitle.length}
+                    max={SEO_LIMITS.OGP_TITLE}
+                  />
                 </div>
                 <Input
                   {...getInputProps(fields.ogpTitle, { type: "text" })}
@@ -249,7 +258,10 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor={fields.ogpDescription.id}>OGP説明文</Label>
-                  <CharCount current={watchedOgpDescription.length} max={200} />
+                  <CharCount
+                    current={watchedOgpDescription.length}
+                    max={SEO_LIMITS.OGP_DESCRIPTION}
+                  />
                 </div>
                 <Textarea
                   {...getTextareaProps(fields.ogpDescription)}

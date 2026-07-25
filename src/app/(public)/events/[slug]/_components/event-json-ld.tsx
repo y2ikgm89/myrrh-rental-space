@@ -3,8 +3,8 @@
  *
  * 開催形態（OFFLINE / ONLINE / HYBRID）に応じて schema.org の
  * eventAttendanceMode 3 値 + polymorphic location（Place | VirtualLocation |
- * [Place, VirtualLocation]）を出力する。分岐の SSoT は Task 2/3 で定義した
- * `EVENT_FORMAT_TO_SCHEMA_ORG` / `isEventVirtualAccessible`。
+ * [Place, VirtualLocation]）を出力する。分岐の SSoT は
+ * `EVENT_FORMAT_TO_SCHEMA_ORG` と format に対する exhaustive switch。
  *
  * 重要: `EventJsonLdProps` に `meetingUrl` は存在しない。参加 URL は登録完了者
  * 限定のため、公開 JSON-LD には一切出力しない（Meetup / Eventbrite と同様の
@@ -18,9 +18,8 @@
 
 /* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */
 import type { ReactElement } from "react";
-import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { getBaseUrl } from "@/shared/lib/constants";
 import { escapeJsonForScriptTag } from "@/shared/lib/json-ld-escape";
-import { isEventVirtualAccessible } from "@/shared/domain/events/venue";
 import {
   EVENT_FORMAT_TO_SCHEMA_ORG,
   type EventFormatValue,
@@ -58,10 +57,19 @@ export interface EventJsonLdProps {
   readonly eventStatus?: EventStatusType;
   /** eventAttendanceMode + location polymorphism を決める SSoT 分岐キー */
   readonly format: EventFormatValue;
-  /** 物理会場（OFFLINE / HYBRID のみ出力に反映される）。未設定なら Place を出力しない */
+  /**
+   * 物理会場（OFFLINE / HYBRID のみ出力に反映される）。
+   * 未設定かつ OFFLINE/HYBRID のときは organizerName の Place にフォールバックする
+   * （Google は Offline 系に location を必須とする。架空の住所は作らない）。
+   */
   readonly venue?: EventJsonLdVenue;
   readonly offers?: EventJsonLdOffers;
   readonly maximumAttendeeCapacity?: number;
+  /**
+   * organizer.name。呼び出し元が Settings の siteName（なければ SITE_DEFAULTS）を解決して渡す。
+   * ビルダーは pure のまま維持する。
+   */
+  readonly organizerName: string;
 }
 
 function buildPlace(venue: EventJsonLdVenue): Record<string, unknown> {
@@ -84,24 +92,32 @@ function buildVirtualLocation(): Record<string, unknown> {
   return { "@type": "VirtualLocation", name: VIRTUAL_LOCATION_NAME };
 }
 
+function resolvePhysicalPlace(
+  venue: EventJsonLdVenue | undefined,
+  fallbackPlaceName: string,
+): Record<string, unknown> {
+  return buildPlace(venue ?? { name: fallbackPlaceName });
+}
+
 function buildLocation(
   format: EventFormatValue,
   venue: EventJsonLdVenue | undefined,
-): Record<string, unknown> | Record<string, unknown>[] | null {
-  const physical = venue ? buildPlace(venue) : null;
-  const virtual = isEventVirtualAccessible({ format })
-    ? buildVirtualLocation()
-    : null;
-
+  fallbackPlaceName: string,
+): Record<string, unknown> | Record<string, unknown>[] {
   switch (format) {
     case "OFFLINE":
-      return physical;
+      return resolvePhysicalPlace(venue, fallbackPlaceName);
     case "ONLINE":
-      return virtual;
+      return buildVirtualLocation();
     case "HYBRID":
-      return [physical, virtual].filter(
-        (item): item is Record<string, unknown> => item !== null,
-      );
+      return [
+        resolvePhysicalPlace(venue, fallbackPlaceName),
+        buildVirtualLocation(),
+      ];
+    default: {
+      const _exhaustive: never = format;
+      throw new Error(`Unhandled EventFormat: ${String(_exhaustive)}`);
+    }
   }
 }
 
@@ -124,13 +140,11 @@ export function buildEventJsonLdData(
     venue,
     offers,
     maximumAttendeeCapacity,
+    organizerName,
   } = props;
 
   const baseUrl = getBaseUrl();
-  const location = buildLocation(format, venue);
-  const hasLocation = Array.isArray(location)
-    ? location.length > 0
-    : location !== null;
+  const location = buildLocation(format, venue, organizerName);
 
   return {
     "@context": "https://schema.org",
@@ -143,7 +157,9 @@ export function buildEventJsonLdData(
     ...(image && { image }),
     eventStatus: `https://schema.org/${eventStatus}`,
     eventAttendanceMode: EVENT_FORMAT_TO_SCHEMA_ORG[format],
-    ...(hasLocation && { location }),
+    location,
+    // offers.validFrom はチケット販売開始日時（≠ startDate）。販売開始フィールドが
+    // 無い限り省略する（発明しない）。
     ...(offers && {
       offers: {
         "@type": "Offer",
@@ -151,13 +167,12 @@ export function buildEventJsonLdData(
         priceCurrency: offers.priceCurrency || "JPY",
         availability: `https://schema.org/${offers.availability || "InStock"}`,
         ...(offers.url && { url: offers.url }),
-        validFrom: startDate,
       },
     }),
     ...(maximumAttendeeCapacity !== undefined && { maximumAttendeeCapacity }),
     organizer: {
       "@type": "Organization",
-      name: SITE_DEFAULTS.name,
+      name: organizerName,
       url: baseUrl,
     },
   };

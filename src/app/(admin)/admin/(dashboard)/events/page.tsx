@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
-import { IconDownload, IconPlus } from "@tabler/icons-react";
+import { IconDownload, IconPlus, IconSettings } from "@tabler/icons-react";
 import { getEvents } from "@/admin/queries/event";
 import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 import {
@@ -93,6 +93,12 @@ export default async function EventsPage({ searchParams }: PageProps) {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/admin/events/seo">
+              <IconSettings className="mr-2 h-4 w-4" />
+              ページSEO
+            </Link>
+          </Button>
           <Button asChild size="sm" variant="outline">
             <Link href="/admin/events/categories">カテゴリー管理</Link>
           </Button>

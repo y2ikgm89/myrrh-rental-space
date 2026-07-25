@@ -73,7 +73,7 @@ export async function generateMetadata({
         space.metaDescription ?? space.descriptionPlainText ?? undefined,
       image: space.ogpImageUrl ?? space.mainImageUrl,
       ogpTitle: space.ogpTitle,
-      ogpDescription: space.ogpDescription ?? space.descriptionPlainText,
+      ogpDescription: space.ogpDescription,
     },
     settings,
     {

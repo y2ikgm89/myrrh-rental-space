@@ -36,6 +36,9 @@ import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/pages";
 
+/** リストページ（blog/news/faq/events）の Page.slug */
+export type ListPageSeoSlug = "blog" | "news" | "faq" | "events";
+
 interface SeoData {
   title: string;
   metaDescription: string | null;
@@ -46,8 +49,8 @@ interface SeoData {
 }
 
 interface ListPageSeoFormProps {
-  /** ページスラッグ（'posts' / 'news' / 'faq' など） */
-  slug: "posts" | "news" | "faq";
+  /** ページスラッグ（blog / news / faq / events） */
+  slug: ListPageSeoSlug;
   /** 現在のSEO設定 */
   seoData: SeoData;
 }

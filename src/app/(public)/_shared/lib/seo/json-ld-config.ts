@@ -9,6 +9,8 @@ import {
   getOrganizationSettings,
   getSocialLinkUrls,
 } from "@/shared/domain/settings/queries/organization";
+import { getSeoSettings } from "@/shared/domain/settings/queries/site";
+import { resolveSiteBranding } from "@/public/lib/seo/metadata-factory";
 import { isRecord, omitUndefined } from "@/shared/lib/serialize";
 
 // =============================================================================
@@ -65,11 +67,12 @@ export interface GraphJsonLdData {
  */
 export async function getWebSiteJsonLdData(): Promise<WebSiteJsonLdData> {
   const baseUrl = getBaseUrl();
-  const settings = await getOrganizationSettings();
+  const settings = await getSeoSettings();
+  const branding = resolveSiteBranding(settings);
 
   return {
-    name: settings?.siteName || SITE_DEFAULTS.name,
-    description: settings?.siteDescription || SITE_DEFAULTS.description,
+    name: branding.siteName,
+    description: branding.description,
     url: baseUrl,
   };
 }

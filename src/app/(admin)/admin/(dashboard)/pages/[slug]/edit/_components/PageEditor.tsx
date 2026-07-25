@@ -33,12 +33,14 @@ interface PageEditorProps {
   readonly dynamicOptions: DynamicSectionOptions;
   /** OFF の feature module に属する section type（追加ダイアログの選択肢から除外する）。 */
   readonly disabledSectionTypes: readonly string[];
+  readonly siteName: string | null;
 }
 
 export function PageEditor({
   page,
   dynamicOptions,
   disabledSectionTypes,
+  siteName,
 }: PageEditorProps) {
   const router = useRouter();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -173,7 +175,7 @@ export function PageEditor({
         forceMount
         className="outline-none data-[state=inactive]:hidden"
       >
-        <PageSeoForm page={page} />
+        <PageSeoForm page={page} siteName={siteName} />
       </TabsContent>
     </Tabs>
   );

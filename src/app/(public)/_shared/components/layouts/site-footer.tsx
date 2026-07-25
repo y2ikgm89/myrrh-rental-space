@@ -348,10 +348,10 @@ export async function Footer(): Promise<ReactElement> {
                     {info.city && (
                       <meta itemProp="addressLocality" content={info.city} />
                     )}
-                    {info.streetAddress && (
+                    {info.streetAddressLine && (
                       <meta
                         itemProp="streetAddress"
-                        content={info.streetAddress}
+                        content={info.streetAddressLine}
                       />
                     )}
                     {info.address}

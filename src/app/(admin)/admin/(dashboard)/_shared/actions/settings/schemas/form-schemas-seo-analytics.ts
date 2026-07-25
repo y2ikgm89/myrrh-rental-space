@@ -3,6 +3,7 @@
  */
 import { z } from "zod";
 import { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
+import { SEO_LIMITS } from "@/shared/lib/validations/seo";
 import { optionalText } from "./form-schema-helpers";
 
 // =============================================================================
@@ -10,10 +11,10 @@ import { optionalText } from "./form-schema-helpers";
 // =============================================================================
 
 export const metaFormSchema = z.object({
-  defaultMetaDescription: optionalText(160),
-  defaultMetaKeywords: optionalText(500),
-  defaultOgpTitle: optionalText(60),
-  defaultOgpDescription: optionalText(160),
+  defaultMetaDescription: optionalText(SEO_LIMITS.META_DESCRIPTION),
+  defaultMetaKeywords: optionalText(SEO_LIMITS.META_KEYWORDS),
+  defaultOgpTitle: optionalText(SEO_LIMITS.OGP_TITLE),
+  defaultOgpDescription: optionalText(SEO_LIMITS.OGP_DESCRIPTION),
 });
 
 export type MetaFormInput = z.infer<typeof metaFormSchema>;

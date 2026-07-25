@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { SEO_LIMITS } from "./seo";
 import { SLUG_REGEX } from "./params";
 
 // =============================================================================
@@ -103,19 +104,27 @@ export const updatePageSeoSchema = z.object({
     .max(200, { error: "タイトルは200文字以内です" }),
   metaDescription: z
     .string()
-    .max(160, { error: "メタディスクリプションは160文字以内です" })
+    .max(SEO_LIMITS.META_DESCRIPTION, {
+      error: `メタディスクリプションは${SEO_LIMITS.META_DESCRIPTION}文字以内です`,
+    })
     .optional(),
   metaKeywords: z
     .string()
-    .max(200, { error: "メタキーワードは200文字以内です" })
+    .max(SEO_LIMITS.META_KEYWORDS, {
+      error: `メタキーワードは${SEO_LIMITS.META_KEYWORDS}文字以内です`,
+    })
     .optional(),
   ogpTitle: z
     .string()
-    .max(100, { error: "OGPタイトルは100文字以内です" })
+    .max(SEO_LIMITS.OGP_TITLE, {
+      error: `OGPタイトルは${SEO_LIMITS.OGP_TITLE}文字以内です`,
+    })
     .optional(),
   ogpDescription: z
     .string()
-    .max(200, { error: "OGP説明は200文字以内です" })
+    .max(SEO_LIMITS.OGP_DESCRIPTION, {
+      error: `OGP説明は${SEO_LIMITS.OGP_DESCRIPTION}文字以内です`,
+    })
     .optional(),
   ogpImageUrl: z
     .url({ error: "有効なURLを入力してください" })

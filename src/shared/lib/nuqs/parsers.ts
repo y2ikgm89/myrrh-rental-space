@@ -593,7 +593,7 @@ export async function loadAdminReservationSearchParams(
   return adminReservationSearchParamsCache.all();
 }
 
-const adminPostTabs = ["posts", "categories", "tags"] as const;
+const adminPostTabs = ["posts", "categories", "tags", "meta"] as const;
 
 const postSortByValues = ["createdAt", "publishedAt", "title"] as const;
 

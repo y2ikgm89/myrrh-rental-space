@@ -129,7 +129,7 @@ test.describe("Phase B.1: online event admin flow", () => {
       );
     }
     expect(eventJsonLd["eventAttendanceMode"]).toBe(
-      "OnlineEventAttendanceMode",
+      "https://schema.org/OnlineEventAttendanceMode",
     );
 
     const location = eventJsonLd["location"];

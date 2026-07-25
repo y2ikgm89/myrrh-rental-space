@@ -122,10 +122,11 @@ export const EVENT_FORMAT_VALUES = Object.values(
   EVENT_FORMAT,
 ) as EventFormatValue[];
 
+/** Google Event structured data は full schema.org URL を要求する */
 export const EVENT_FORMAT_TO_SCHEMA_ORG = {
-  OFFLINE: "OfflineEventAttendanceMode",
-  ONLINE: "OnlineEventAttendanceMode",
-  HYBRID: "MixedEventAttendanceMode",
+  OFFLINE: "https://schema.org/OfflineEventAttendanceMode",
+  ONLINE: "https://schema.org/OnlineEventAttendanceMode",
+  HYBRID: "https://schema.org/MixedEventAttendanceMode",
 } as const satisfies Record<EventFormatValue, string>;
 
 // MeetingProvider: オンライン会議発行元

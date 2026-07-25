@@ -33,9 +33,27 @@ export interface ResolvedSiteBranding {
   ogDescription: string;
 }
 
-function nonEmpty(value: string | null | undefined): string | undefined {
+export function nonEmpty(value: string | null | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+/**
+ * ページメタ description の解決順:
+ * page SEO → defaultMetaDescription → siteDescription → system page default → SITE_DEFAULTS
+ */
+export function resolvePageDescription(
+  settings: SeoSettings | null,
+  pageMeta: string | null | undefined,
+  systemDefault: string | null | undefined,
+): string {
+  return (
+    nonEmpty(pageMeta) ??
+    nonEmpty(settings?.defaultMetaDescription) ??
+    nonEmpty(settings?.siteDescription) ??
+    nonEmpty(systemDefault) ??
+    SITE_DEFAULTS.description
+  );
 }
 
 /**
@@ -60,10 +78,15 @@ export function resolveSiteBranding(
 /**
  * 記事ページメタデータ生成（ブログ・ニュース・スペース・イベント・タクソノミー共通）
  *
- * settings には `getSeoSettings()` の戻り値を渡す。article の各フィールドが null/空のときに
- * 管理画面で設定した SEO defaults（defaultOgpImageUrl / defaultMetaDescription /
- * defaultOgpTitle / defaultOgpDescription / defaultMetaKeywords / siteName）を fallback として
- * マージする。これを渡さないと管理画面の OGP defaults が silently 効かない。
+ * settings には `getSeoSettings()` の戻り値を渡す。`generatePageMetadata` と同じ OGP 解決順:
+ *
+ * - **meta description** (`description` / `<meta name="description">`):
+ *   `article.description` → settings defaultMetaDescription / siteDescription → SITE_DEFAULTS
+ * - **og:title**: `article.ogpTitle` → `settings.defaultOgpTitle` → `article.title`
+ *   （`branding.ogTitle` / siteName は使わない — article.title へのフォールバックを阻害するため）
+ * - **og:description**: `article.ogpDescription` → `settings.defaultOgpDescription` → 上記 meta description
+ *
+ * 画像・キーワードは settings の defaultOgpImageUrl / defaultMetaKeywords を fallback としてマージする。
  */
 export function generateArticleMetadata(
   article: ArticleMetadata,
@@ -75,17 +98,20 @@ export function generateArticleMetadata(
     ogType?: "article" | "website";
   },
 ): Metadata {
-  const description =
-    article.description ?? settings?.defaultMetaDescription ?? undefined;
+  const branding = resolveSiteBranding(settings ?? null);
+  const description = nonEmpty(article.description) ?? branding.description;
   const keywords =
     article.metaKeywords ?? settings?.defaultMetaKeywords ?? undefined;
   const image = article.image ?? settings?.defaultOgpImageUrl ?? undefined;
   const ogTitle =
-    article.ogpTitle ?? settings?.defaultOgpTitle ?? article.title;
+    nonEmpty(article.ogpTitle) ??
+    nonEmpty(settings?.defaultOgpTitle) ??
+    article.title;
   const ogDescription =
-    article.ogpDescription ?? settings?.defaultOgpDescription ?? description;
-  const siteName =
-    options?.siteName ?? settings?.siteName ?? SITE_DEFAULTS.name;
+    nonEmpty(article.ogpDescription) ??
+    nonEmpty(settings?.defaultOgpDescription) ??
+    description;
+  const siteName = options?.siteName ?? branding.siteName;
   const ogType = options?.ogType ?? "article";
 
   return {
