@@ -210,45 +210,26 @@ describe("sendReservationConfirmationEmail() の claimUrl 出し分け", () => {
   });
 });
 
-// RECEIPT-GUEST-01 / HTTP-02: receiptSerialNo が渡された場合、ゲスト予約のみ
-// 領収書 PDF ダウンロード confirm page 経由の署名 URL を発行する。
-// HTTP-02 以降は直リンク (`/api/receipts/...`) を発行せず、confirm page
-// (`/receipts/[serialNo]/download?token=`) 経由に切り替え済み (link scanner 対策)。
-describe("sendReservationConfirmationEmail() の receiptDownloadUrl 出し分け", () => {
-  test("ゲスト予約 + receiptSerialNo あり → receiptDownloadUrl を confirm page 向けに発行する", async () => {
+// 領収書 DL は発行通知メール (`sendReceiptIssuedEmail`) に集約。確認メールには載せない。
+describe("sendReservationConfirmationEmail() は receiptDownloadUrl を載せない", () => {
+  test("ゲスト予約でも receiptDownloadUrl を渡さない", async () => {
     await sendReservationConfirmationEmail({
       ...CONFIRMATION_DATA,
       userId: null,
-      receiptSerialNo: "2026-000042",
     });
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
-    expect(props?.receiptDownloadUrl).toMatch(
-      /\/receipts\/2026-000042\/download\?token=[A-Za-z0-9_-]+$/,
-    );
-    // HTTP-02: 旧 API 直リンクは発行しない
-    expect(props?.receiptDownloadUrl).not.toContain("/api/receipts/");
+    expect(props).not.toHaveProperty("receiptDownloadUrl");
   });
 
-  test("会員予約 + receiptSerialNo あり → receiptDownloadUrl は発行しない", async () => {
+  test("会員予約でも receiptDownloadUrl を渡さない", async () => {
     await sendReservationConfirmationEmail({
       ...CONFIRMATION_DATA,
       userId: "user-1",
-      receiptSerialNo: "2026-000042",
     });
 
     const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
-    expect(props?.receiptDownloadUrl).toBeUndefined();
-  });
-
-  test("ゲスト予約 + receiptSerialNo なし → receiptDownloadUrl は発行しない", async () => {
-    await sendReservationConfirmationEmail({
-      ...CONFIRMATION_DATA,
-      userId: null,
-    });
-
-    const props = mockReservationConfirmationEmail.mock.calls.at(-1)?.[0];
-    expect(props?.receiptDownloadUrl).toBeUndefined();
+    expect(props).not.toHaveProperty("receiptDownloadUrl");
   });
 });
 

@@ -34,7 +34,6 @@ import {
 } from "@/shared/lib/event-registration-cancel-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import { createEventRegistrationClaimToken } from "@/shared/lib/event-registration-claim-token";
-import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import { createMarketingUnsubscribeArtifacts } from "@/shared/lib/tokens/marketing-unsubscribe-token";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
@@ -86,12 +85,6 @@ type EventRegistrationConfirmationData = {
   customerId: string | null;
   format: EventFormatValue;
   meetingUrl: string | null;
-  /**
-   * PAID 遷移直後に採番された Receipt.serialNo (「YYYY-XXXXXX」形式)。
-   * ゲスト申込 (customerId=null) の確認メールに領収書 PDF DL 署名 URL を組み込む
-   * (RECEIPT-GUEST-01)。会員はマイページから DL できるため未指定で OK。
-   */
-  receiptSerialNo?: string;
   /** ゲスト向け: 有料チケットの Stripe Checkout 起動 URL (token 認可 route)。 */
   paymentCheckoutUrl?: string;
 };
@@ -168,14 +161,8 @@ export async function sendEventRegistrationConfirmation(
       ? `${appUrl}/events/cancel?token=${createEventCancelToken(data.registrationId, cancelDeadline)}`
       : undefined;
 
-  // ゲスト申込かつ Receipt 採番済みなら、領収書 PDF ダウンロード確認ページ URL を
-  // 発行する (RECEIPT-GUEST-01 / HTTP-02)。会員はマイページから DL できるため
-  // 署名 URL は不要。詳細は `reservation-emails.ts` の同名フィールドコメント参照
-  // (link scanner による usedAt 消費対策の切り分けは対称)。
-  const receiptDownloadUrl =
-    !data.customerId && data.receiptSerialNo
-      ? `${appUrl}/receipts/${data.receiptSerialNo}/download?token=${createReceiptDownloadToken(data.receiptSerialNo)}`
-      : undefined;
+  // 領収書 DL CTA は確認メールに載せない。発行通知は `sendReceiptIssuedEmail` /
+  // `notifyReceiptIssuedFor*` に集約する (payment-off / guest-status clean-break)。
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -221,7 +208,6 @@ export async function sendEventRegistrationConfirmation(
           memberEventRegistrationUrl,
           claimUrl,
           cancelUrl,
-          receiptDownloadUrl,
           paymentCheckoutUrl: data.paymentCheckoutUrl,
           footer,
         }),

@@ -240,45 +240,26 @@ describe("sendEventRegistrationConfirmation() の memberEventRegistrationUrl 出
   });
 });
 
-// RECEIPT-GUEST-01 / HTTP-02: ゲスト申込かつ receiptSerialNo が渡された場合のみ、
-// 領収書 PDF ダウンロード confirm page 経由の署名 URL を発行する。
-// HTTP-02 以降は直リンク (`/api/receipts/...`) を発行せず、confirm page
-// (`/receipts/[serialNo]/download?token=`) 経由に切り替え済み (link scanner 対策)。
-describe("sendEventRegistrationConfirmation() の receiptDownloadUrl 出し分け", () => {
-  test("ゲスト申込 + receiptSerialNo あり → receiptDownloadUrl を confirm page 向けに発行する", async () => {
+// 領収書 DL は発行通知メール (`sendReceiptIssuedEmail`) に集約。確認メールには載せない。
+describe("sendEventRegistrationConfirmation() は receiptDownloadUrl を載せない", () => {
+  test("ゲスト申込でも receiptDownloadUrl を渡さない", async () => {
     await sendEventRegistrationConfirmation({
       ...REGISTRATION_DATA,
       customerId: null,
-      receiptSerialNo: "2026-000042",
     });
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
-    expect(props?.receiptDownloadUrl).toMatch(
-      /\/receipts\/2026-000042\/download\?token=[A-Za-z0-9_-]+$/,
-    );
-    // HTTP-02: 旧 API 直リンクは発行しない
-    expect(props?.receiptDownloadUrl).not.toContain("/api/receipts/");
+    expect(props).not.toHaveProperty("receiptDownloadUrl");
   });
 
-  test("会員申込 + receiptSerialNo あり → receiptDownloadUrl は発行しない", async () => {
+  test("会員申込でも receiptDownloadUrl を渡さない", async () => {
     await sendEventRegistrationConfirmation({
       ...REGISTRATION_DATA,
       customerId: "customer-1",
-      receiptSerialNo: "2026-000042",
     });
 
     const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
-    expect(props?.receiptDownloadUrl).toBeUndefined();
-  });
-
-  test("ゲスト申込 + receiptSerialNo なし → receiptDownloadUrl は発行しない", async () => {
-    await sendEventRegistrationConfirmation({
-      ...REGISTRATION_DATA,
-      customerId: null,
-    });
-
-    const props = mockEventRegistrationConfirmationEmail.mock.calls.at(-1)?.[0];
-    expect(props?.receiptDownloadUrl).toBeUndefined();
+    expect(props).not.toHaveProperty("receiptDownloadUrl");
   });
 });
 

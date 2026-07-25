@@ -23,7 +23,6 @@ import {
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { createReservationClaimToken } from "@/shared/lib/reservation-claim-token";
-import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import {
   computeCancelTokenExpiresAt,
   createCancelToken,
@@ -169,20 +168,8 @@ export async function sendReservationConfirmationEmail(
     ? undefined
     : `${appUrl}/claim/reservation?token=${createReservationClaimToken(data.reservationId)}`;
 
-  // ゲスト予約かつ Receipt 採番済みなら、領収書 PDF ダウンロード確認ページ URL を
-  // 発行する (RECEIPT-GUEST-01 / HTTP-02)。会員はマイページから DL できるため
-  // 署名 URL は不要。Receipt 未発行 (未 PAID / 管理者経路等) では serialNo 未指定で
-  // CTA 非表示。
-  //
-  // HTTP-02: 旧 `/api/receipts/[serialNo]/pdf?token=` の直リンクを confirm page
-  // (`/receipts/[serialNo]/download?token=`) 経由に変更した。link scanner
-  // (Outlook SafeLinks / Gmail preview / Slack unfurl 等) の GET プリフェッチで
-  // `usedAt` が消費されると、ゲスト本人のクリック時に 404 になる fail mode を
-  // 根治するため、実 claim は confirm page の POST フォーム経由に切り分けた。
-  const receiptDownloadUrl =
-    !data.userId && data.receiptSerialNo
-      ? `${appUrl}/receipts/${data.receiptSerialNo}/download?token=${createReceiptDownloadToken(data.receiptSerialNo)}`
-      : undefined;
+  // 領収書 DL CTA は確認メールに載せない。発行通知は `sendReceiptIssuedEmail` /
+  // `notifyReceiptIssuedFor*` に集約する (payment-off / guest-status clean-break)。
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -226,7 +213,6 @@ export async function sendReservationConfirmationEmail(
           cancelUrl,
           memberReservationUrl,
           claimUrl,
-          receiptDownloadUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
           modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
           cancellationPolicyUrl,

@@ -25,8 +25,6 @@ export const reservationConfirmationFixture = {
   memberReservationUrl:
     "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
   claimUrl: "https://example.com/claim/reservation?token=preview-token",
-  receiptDownloadUrl:
-    "https://example.com/receipts/2026-000001/download?token=DEMO-RECEIPT-TOKEN",
   cancellationDeadlineHours: 24,
   modificationDeadlineHours: 24,
   cancellationPolicyUrl: "https://example.com/terms/cancellation-policy",
