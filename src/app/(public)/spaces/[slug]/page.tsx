@@ -19,7 +19,11 @@ import {
   getBusinessHoursSettingsQuery,
 } from "@/shared/domain/reservations/availability";
 import { CANCELLATION_POLICY_TERMS_TYPE } from "@/shared/lib/validations/terms";
-import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import {
+  requireFeatureEnabled,
+  isFeatureEnabled,
+} from "@/shared/lib/features/check";
+import { isOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
 import { getBaseUrl } from "@/shared/lib/constants";
 import {
   generateArticleMetadata,
@@ -94,6 +98,10 @@ export default async function SpaceDetailPage({
     cancellationPolicy,
     businessHours,
     blockedRanges,
+    reservationEnabled,
+    contactEnabled,
+    reviewsFeatureEnabled,
+    onlinePaymentAvailable,
   ] = await Promise.all([
     space.reviewsEnabled
       ? getSpaceReviewStats(space.id)
@@ -102,6 +110,10 @@ export default async function SpaceDetailPage({
     getPublishedTermsByType(CANCELLATION_POLICY_TERMS_TYPE),
     getBusinessHoursSettingsQuery(),
     getBlockedDateRangesForSpace(space.id),
+    isFeatureEnabled("reservation"),
+    isFeatureEnabled("contact"),
+    isFeatureEnabled("reviews"),
+    isOnlinePaymentAvailable(),
   ]);
   const cancellationPolicyUrl = cancellationPolicy
     ? `/terms/${cancellationPolicy.slug}`
@@ -287,7 +299,7 @@ export default async function SpaceDetailPage({
               </Suspense>
             </section>
 
-            {space.reviewsEnabled ? (
+            {space.reviewsEnabled && reviewsFeatureEnabled ? (
               <Suspense fallback={null}>
                 <SpaceReviews spaceId={space.id} />
               </Suspense>
@@ -309,6 +321,9 @@ export default async function SpaceDetailPage({
                 deadlineSettings.cancellationDeadlineHours
               }
               cancellationPolicyUrl={cancellationPolicyUrl}
+              reservationEnabled={reservationEnabled}
+              contactEnabled={contactEnabled}
+              onlinePaymentAvailable={onlinePaymentAvailable}
             />
           </aside>
         </div>
@@ -327,6 +342,7 @@ export default async function SpaceDetailPage({
       <MobileReserveCTA
         spaceId={space.id}
         hourlyPrice={Number(space.hourlyPrice)}
+        reservationEnabled={reservationEnabled}
       />
     </>
   );

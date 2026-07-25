@@ -32,6 +32,10 @@ import { isFeatureEnabled } from "@/shared/lib/features/check";
  * UI 側の「決済ボタンを出すか」判定は `isFeatureEnabled("payment")` を直接使い、
  * credentials 状態には触れない（credentials 欠損は運用エラーとして DomainError で
  * 拾い、UI では出し分けない）。
+ *
+ * 公開ページの決済に関する**説明文**（checkout ボタンの出し分けではない）だけ
+ * `isOnlinePaymentAvailable()` を使い、feature ON かつ credentials 設定済みの
+ * 両方を満たす場合に「オンライン決済に対応」等の copy を出す。
  */
 export interface StripeCredentials {
   readonly stripeSecretKey: string | null;
@@ -91,4 +95,21 @@ export async function assertOnlinePaymentAvailable(): Promise<StripeCredentials>
   }
 
   return loadStripeCredentials();
+}
+
+/**
+ * 公開 UI の決済説明 copy 用。feature ON かつ Stripe credentials 設定済みのとき true。
+ * checkout ボタンの出し分けには使わない（`isFeatureEnabled("payment")` を使う）。
+ */
+export async function isOnlinePaymentAvailable(): Promise<boolean> {
+  if (!(await isFeatureEnabled("payment"))) {
+    return false;
+  }
+
+  try {
+    await loadStripeCredentials();
+    return true;
+  } catch {
+    return false;
+  }
 }

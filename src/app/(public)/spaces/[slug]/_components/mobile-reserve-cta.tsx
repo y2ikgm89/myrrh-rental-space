@@ -9,6 +9,8 @@ import { toAppRoute } from "@/shared/lib/typed-routes";
 interface MobileReserveCTAProps {
   readonly spaceId: string;
   readonly hourlyPrice: number;
+  /** Feature Module `reservation` が ON か */
+  readonly reservationEnabled: boolean;
 }
 
 /**
@@ -22,8 +24,14 @@ interface MobileReserveCTAProps {
 export function MobileReserveCTA({
   spaceId,
   hourlyPrice,
+  reservationEnabled,
 }: MobileReserveCTAProps) {
   const { formatUnit } = useFormatPrice();
+
+  if (!reservationEnabled) {
+    return null;
+  }
+
   return (
     <StickyBottomBar hiddenFrom="lg">
       <div className="flex items-center justify-between gap-3">
