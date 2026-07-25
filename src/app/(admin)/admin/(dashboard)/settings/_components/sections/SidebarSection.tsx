@@ -493,7 +493,8 @@ export function SidebarSection({
                   </li>
                   <li>人気記事は閲覧数（viewCount）の多い順で表示されます</li>
                   <li>
-                    人気記事はサムネイル左上に 01〜 のランキング番号を表示できます
+                    人気記事はサムネイル左上に 01〜
+                    のランキング番号を表示できます
                   </li>
                 </ul>
               </AccordionContent>
