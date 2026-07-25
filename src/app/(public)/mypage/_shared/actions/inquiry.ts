@@ -23,6 +23,8 @@ import {
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { DomainError } from "@/shared/domain/domain-error";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
@@ -107,6 +109,26 @@ export async function replyToInquiryAction(
       {
         operation: "sendInquiryCustomerReplyAdminEmail",
         category: ErrorCategory.EXTERNAL_API,
+      },
+    );
+
+    // D7: マイページ顧客返信の最小監査。Customer は User FK ではないため
+    // userId は付けず、customerId / channel を metadata に残す。本文は残さない。
+    fireAndForget(
+      createAuditLogRecord({
+        action: AuditAction.UPDATE,
+        resource: "inquiry",
+        resourceId: result.inquiryId,
+        newValue: { replyId: result.replyId },
+        metadata: {
+          channel: "customer-mypage",
+          customerId: customer.id,
+          operation: "customer_reply",
+        },
+      }),
+      {
+        operation: "auditMypageInquiryReply",
+        category: ErrorCategory.DATABASE,
       },
     );
 

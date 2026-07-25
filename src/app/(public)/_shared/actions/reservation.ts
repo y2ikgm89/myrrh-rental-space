@@ -43,12 +43,16 @@ import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
 } from "@/shared/lib/terms-consent-gate";
-import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  TermsScope,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -225,6 +229,25 @@ export async function submitReservation(
           }),
           {
             operation: "createReservationNotification",
+            category: ErrorCategory.DATABASE,
+          },
+        );
+
+        // D7: 公開予約 CREATE の最小監査。Customer は User FK ではないため
+        // userId は付けず、customerId / channel を metadata に残す。
+        fireAndForget(
+          createAuditLogRecord({
+            action: AuditAction.CREATE,
+            resource: "reservation",
+            resourceId: result.id,
+            newValue: { status: "CONFIRMED" },
+            metadata: {
+              channel: "public",
+              customerId: result.customerId,
+            },
+          }),
+          {
+            operation: "auditPublicReservationCreate",
             category: ErrorCategory.DATABASE,
           },
         );
