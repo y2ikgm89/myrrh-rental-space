@@ -69,9 +69,18 @@ mock.module("@/shared/lib/stripe", () => ({
     }),
 }));
 
-// assertOnlinePaymentAvailable: Settings row 依存を回避し dummy credentials を返す。
+// assertStripeCredentialsConfigured: Settings row 依存を回避し dummy credentials を返す。
 mock.module("@/shared/domain/payment/availability", () => ({
   assertOnlinePaymentAvailable: () =>
+    Promise.resolve({
+      stripeSecretKey: "sk_test_dummy",
+      stripeWebhookSecret: "whsec_dummy",
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
+    }),
+  assertStripeCredentialsConfigured: () =>
     Promise.resolve({
       stripeSecretKey: "sk_test_dummy",
       stripeWebhookSecret: "whsec_dummy",

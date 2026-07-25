@@ -92,7 +92,7 @@ import {
   issueReceiptForReservation,
   issueReceiptForEventRegistration,
 } from "@/shared/domain/receipts/issue";
-import { assertOnlinePaymentAvailable } from "@/shared/domain/payment/availability";
+import { assertStripeCredentialsConfigured } from "@/shared/domain/payment/availability";
 import { getStripeClient } from "@/shared/lib/stripe";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -110,13 +110,15 @@ export async function POST(request: Request) {
       return jsonError("Missing stripe-signature header", 400);
     }
 
-    // 2. オンライン決済 gate (feature module + credentials) をドメイン層で検証。
-    //    feature OFF / credentials 欠損はどちらも 503 で Stripe に「一時的に受けられない」と
-    //    伝える（Stripe は 503 を exponential backoff で 3 日間再送するため、admin が
-    //    設定を復旧すれば配送に成功する）。
+    // 2. Stripe credentials gate（feature module は見ない）。
+    //    既に Stripe で決済が成立した event は credentials があれば必ず受理し 2xx を返す
+    //    (Stripe 公式: valid event は 2xx で retry を止める)。feature OFF は新規 checkout
+    //    のみを止め、webhook settlement は継続する。
+    //    credentials 欠損 / 復号失敗 / client 不可は 503（admin が credentials を復旧すれば
+    //    Stripe の exponential backoff 再送で配送成功する）。
     let settings;
     try {
-      settings = await assertOnlinePaymentAvailable();
+      settings = await assertStripeCredentialsConfigured();
     } catch (error) {
       logError(error instanceof Error ? error : new Error(String(error)), {
         category: ErrorCategory.EXTERNAL_API,

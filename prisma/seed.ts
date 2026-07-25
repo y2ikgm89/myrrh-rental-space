@@ -581,11 +581,6 @@ async function seedSettings(
       update: {},
       create: { id: "singleton" },
     }),
-    prisma.settingsCustomApiKeys.upsert({
-      where: { id: "singleton" },
-      update: {},
-      create: { id: "singleton" },
-    }),
     prisma.settingsGoogleCalendar.upsert({
       where: { id: "singleton" },
       update: {},

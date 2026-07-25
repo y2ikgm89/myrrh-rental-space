@@ -13,7 +13,6 @@ import {
   getTurnstileConfig,
   getSwitchBotConfig,
   getGoogleMapsConfig,
-  getCustomApiKeys,
 } from "@/admin/queries/api-keys";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { getInstagramConfig } from "@/admin/queries/instagram";
@@ -29,7 +28,6 @@ import {
   TurnstileSection,
   SwitchBotSection,
   GoogleMapsSection,
-  CustomApiKeysSection,
   GoogleCalendarSection,
   GoogleBusinessProfileSection,
   TwoWaySyncSection,
@@ -72,7 +70,6 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     turnstileConfig,
     switchbotConfig,
     googleMapsConfig,
-    customApiKeys,
     settings,
     instagramConfig,
     gbpAuthState,
@@ -83,7 +80,6 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
     getTurnstileConfig(),
     getSwitchBotConfig(),
     getGoogleMapsConfig(),
-    getCustomApiKeys(),
     getSettings(),
     getInstagramConfig(),
     getGbpAuthState(),
@@ -144,11 +140,6 @@ async function IntegrationsSettingsContent(): Promise<ReactElement> {
       value: "instagram",
       label: "Instagram",
       content: <InstagramSection config={instagramConfig} />,
-    },
-    {
-      value: "custom",
-      label: "カスタム",
-      content: <CustomApiKeysSection keys={customApiKeys} />,
     },
   ];
 

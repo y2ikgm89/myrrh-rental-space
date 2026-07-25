@@ -72,16 +72,3 @@ export type GoogleMapsSettingsInput = z.infer<typeof googleMapsSettingsSchema>;
 export function isValidGoogleMapsApiKey(key: string): boolean {
   return key.startsWith("AIza") && key.length >= 30;
 }
-
-// =============================================================================
-// Custom API Keys
-// =============================================================================
-
-export const customApiKeySchema = z.object({
-  name: z.string().min(1, { error: "サービス名を入力してください" }).max(100),
-  keyName: z.string().min(1, { error: "キー名を入力してください" }).max(100),
-  keyValue: z.string().min(1, { error: "キー値を入力してください" }).max(500),
-  description: z.string().max(500).optional(),
-});
-
-export type CustomApiKeyInput = z.infer<typeof customApiKeySchema>;

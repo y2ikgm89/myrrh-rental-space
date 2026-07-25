@@ -426,14 +426,6 @@ export async function ensureSettingsGoogleMaps() {
   });
 }
 
-export async function ensureSettingsCustomApiKeys() {
-  return prisma.settingsCustomApiKeys.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
-  });
-}
-
 export async function ensureSettingsGoogleCalendar() {
   return prisma.settingsGoogleCalendar.upsert({
     where: { id: "singleton" },

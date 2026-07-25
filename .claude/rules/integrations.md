@@ -43,7 +43,7 @@ paths:
 
 ## API キーの優先順（DB優先で統一、Settings is canonical）
 
-Resend / Stripe / Turnstile secret / Google Maps / CustomApiKeys は全て **DB優先** →
+Resend / Stripe / Turnstile secret / Google Maps は全て **DB優先** →
 env はフォールバック（PR #878 で確定した「Settings is canonical」に統一、2026-07-06）。
 env 側は `cloudbuild.yaml` に配線されておらず本番では常に undefined
 （ローカル開発の利便性のためのフォールバックとしてのみ機能する）。

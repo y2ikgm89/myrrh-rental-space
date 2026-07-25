@@ -1,7 +1,8 @@
 import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
-import { isFeatureEnabled } from "@/shared/lib/features/check";
+import { assertStripeCredentialsConfigured } from "@/shared/domain/payment/availability";
+import { DomainError } from "@/shared/domain/domain-error";
 import { backfillReceipts } from "@/shared/domain/receipts/backfill";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import {
@@ -25,8 +26,8 @@ import {
  *
  * ## 実行契約
  * - 実行頻度: 毎時 :15 (STRIPE-03 の recovery 窓を最大 1h に抑える)
- * - Feature Module: `payment` OFF なら skip (Stripe 決済自体が無効化されている環境で
- *   receipt 発行を試みる意味がない)
+ * - Feature Module: `payment` OFF でも Stripe credentials があれば実行
+ *   (historical PAID orphan / webhook-retry-stuck orphan の reconcile を継続)
  * - 冪等: `issueReceiptFor*` は `@unique` + advisory lock 728353 で at-least-once 呼出
  *   でも重複発行なし。cron の retry (Cloud Scheduler max=3) と webhook 同時実行の
  *   double-issue も同 lock が防ぐ
@@ -40,8 +41,13 @@ export async function GET(request: Request) {
     });
     if (authResult) return authResult;
 
-    if (!(await isFeatureEnabled("payment"))) {
-      return jsonSuccess({ skipped: true, reason: "feature_disabled" });
+    try {
+      await assertStripeCredentialsConfigured();
+    } catch (error) {
+      if (error instanceof DomainError && error.code === "VALIDATION") {
+        return jsonSuccess({ skipped: true, reason: "stripe_not_configured" });
+      }
+      throw error;
     }
 
     const summary = await backfillReceipts();

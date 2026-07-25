@@ -1,14 +1,14 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
 // Foundation gap analysis (2026-07-15) task #7 receipt-full-wiring PR#7 (backfill 部分)。
-// /api/cron/receipt-backfill Route Handler の認可・feature gate・分岐を境界 mock で検証。
+// /api/cron/receipt-backfill Route Handler の認可・credentials gate・分岐を境界 mock で検証。
 mock.module("server-only", () => ({}));
 
 const mockAuthorize =
   mock<
     (opts: { request: Request; operation: string }) => Promise<Response | null>
   >();
-const mockIsFeatureEnabled = mock<(id: string) => Promise<boolean>>();
+const mockAssertStripeCredentialsConfigured = mock<() => Promise<unknown>>();
 const mockBackfill = mock<
   () => Promise<{
     issuedReservations: number;
@@ -47,8 +47,9 @@ mock.module("@/shared/lib/cron-auth", () => ({
   authorizeCronRequest: (opts: { request: Request; operation: string }) =>
     mockAuthorize(opts),
 }));
-mock.module("@/shared/lib/features/check", () => ({
-  isFeatureEnabled: (id: string) => mockIsFeatureEnabled(id),
+mock.module("@/shared/domain/payment/availability", () => ({
+  assertStripeCredentialsConfigured: () =>
+    mockAssertStripeCredentialsConfigured(),
 }));
 mock.module("@/shared/domain/receipts/backfill", () => ({
   backfillReceipts: () => mockBackfill(),
@@ -75,12 +76,20 @@ function makeRequest() {
 describe("/api/cron/receipt-backfill", () => {
   beforeEach(() => {
     mockAuthorize.mockReset();
-    mockIsFeatureEnabled.mockReset();
+    mockAssertStripeCredentialsConfigured.mockReset();
     mockBackfill.mockReset();
     mockLogError.mockReset();
+    mockAssertStripeCredentialsConfigured.mockResolvedValue({
+      stripeSecretKey: "enc-sk",
+      stripeWebhookSecret: "enc-whsec",
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
+    });
   });
 
-  test("cron 認可失敗 → authorizeCronRequest の Response を即返し、feature gate / backfill は呼ばれない", async () => {
+  test("cron 認可失敗 → authorizeCronRequest の Response を即返し、credentials gate / backfill は呼ばれない", async () => {
     mockAuthorize.mockResolvedValueOnce(
       new Response("Unauthorized", { status: 401 }),
     );
@@ -88,26 +97,31 @@ describe("/api/cron/receipt-backfill", () => {
     const res = await GET(makeRequest());
 
     expect(res.status).toBe(401);
-    expect(mockIsFeatureEnabled).not.toHaveBeenCalled();
+    expect(mockAssertStripeCredentialsConfigured).not.toHaveBeenCalled();
     expect(mockBackfill).not.toHaveBeenCalled();
   });
 
-  test("認可成功 + payment feature OFF → skipped で 200、backfill は呼ばれない", async () => {
+  test("認可成功 + Stripe credentials 未設定 → skipped で 200、backfill は呼ばれない", async () => {
     mockAuthorize.mockResolvedValueOnce(null);
-    mockIsFeatureEnabled.mockResolvedValueOnce(false);
+    const { DomainError } = await import("@/shared/domain/domain-error");
+    mockAssertStripeCredentialsConfigured.mockRejectedValueOnce(
+      new DomainError(
+        "Stripe の設定が正しくありません。管理者にお問い合わせください。",
+        "VALIDATION",
+      ),
+    );
 
     const res = await GET(makeRequest());
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { skipped?: boolean; reason?: string };
     expect(body.skipped).toBe(true);
-    expect(body.reason).toBe("feature_disabled");
+    expect(body.reason).toBe("stripe_not_configured");
     expect(mockBackfill).not.toHaveBeenCalled();
   });
 
-  test("認可成功 + payment feature ON → backfillReceipts を実行しサマリを返却", async () => {
+  test("認可成功 + Stripe credentials 設定済み → backfillReceipts を実行しサマリを返却", async () => {
     mockAuthorize.mockResolvedValueOnce(null);
-    mockIsFeatureEnabled.mockResolvedValueOnce(true);
     mockBackfill.mockResolvedValueOnce({
       issuedReservations: 3,
       skippedReservations: 1,
@@ -127,7 +141,6 @@ describe("/api/cron/receipt-backfill", () => {
 
   test("backfillReceipts が throw したら 500 で logError", async () => {
     mockAuthorize.mockResolvedValueOnce(null);
-    mockIsFeatureEnabled.mockResolvedValueOnce(true);
     const dbError = new Error("DB temporarily unavailable");
     mockBackfill.mockRejectedValueOnce(dbError);
 
@@ -139,7 +152,6 @@ describe("/api/cron/receipt-backfill", () => {
 
   test("errorReservations / errorEventRegistrations が 1 件以上なら 500 で Cloud Scheduler retry を trigger (Codex P2 対応)", async () => {
     mockAuthorize.mockResolvedValueOnce(null);
-    mockIsFeatureEnabled.mockResolvedValueOnce(true);
     mockBackfill.mockResolvedValueOnce({
       issuedReservations: 5,
       skippedReservations: 2,
@@ -157,7 +169,6 @@ describe("/api/cron/receipt-backfill", () => {
 
   test("errors 0 なら通常通り 200 (VALIDATION による skipped は errors ではない)", async () => {
     mockAuthorize.mockResolvedValueOnce(null);
-    mockIsFeatureEnabled.mockResolvedValueOnce(true);
     mockBackfill.mockResolvedValueOnce({
       issuedReservations: 5,
       skippedReservations: 3, // VALIDATION skipped は問題なし
@@ -185,7 +196,6 @@ describe("/api/cron/receipt-backfill", () => {
     // event registration 側 orphan の混合を同一 batch で issue し summary を返す」ことを
     // 検証する。実 query は `receipt: null` フィルタで自然に webhook-retry-stuck を拾う。
     mockAuthorize.mockResolvedValueOnce(null);
-    mockIsFeatureEnabled.mockResolvedValueOnce(true);
     mockBackfill.mockResolvedValueOnce({
       issuedReservations: 1, // 1 件の PAID-but-Receipt-less reservation を reconcile
       skippedReservations: 0,

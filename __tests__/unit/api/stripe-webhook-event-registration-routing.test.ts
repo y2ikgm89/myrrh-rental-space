@@ -18,7 +18,8 @@ type MockCredentials = {
   stripeCurrency: string;
   stripePaymentMethodTypes: readonly string[];
 };
-const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>();
+const mockAssertStripeCredentialsConfigured =
+  mock<() => Promise<MockCredentials>>();
 const mockSafeDecrypt = mock<(value: string) => string | null>();
 
 // Stripe Client — route が読む webhook event の最小 contract に固定する。
@@ -174,7 +175,8 @@ const mockOmitUndefined = mock<
 // =============================================================================
 
 mock.module("@/shared/domain/payment/availability", () => ({
-  assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
+  assertStripeCredentialsConfigured: () =>
+    mockAssertStripeCredentialsConfigured(),
 }));
 
 const actualCrypto = await import("@/shared/lib/crypto");
@@ -469,7 +471,7 @@ async function flushFireAndForget(): Promise<void> {
 
 describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", () => {
   beforeEach(() => {
-    mockAssertOnlinePaymentAvailable.mockReset();
+    mockAssertStripeCredentialsConfigured.mockReset();
     mockSafeDecrypt.mockReset();
     mockGetStripeClient.mockReset();
     mockConstructEvent.mockReset();
@@ -514,7 +516,7 @@ describe("POST /api/webhooks/stripe — event-registration routing (Task 9)", ()
       throw error;
     });
 
-    mockAssertOnlinePaymentAvailable.mockResolvedValue(DEFAULT_SETTINGS);
+    mockAssertStripeCredentialsConfigured.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
     mockGetStripeClient.mockResolvedValue({
       client: {

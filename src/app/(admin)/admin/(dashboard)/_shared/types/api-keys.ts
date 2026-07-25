@@ -1,10 +1,6 @@
 export type {
   ApiKeyTestResult,
   ConnectionStatus,
-  CustomApiKeyData,
-  CustomApiKeyInput,
-  CustomApiKeysMap,
-  CustomApiKeyStored,
   GoogleMapsConfig,
   ResendConfig,
   SwitchBotConfig,

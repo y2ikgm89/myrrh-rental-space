@@ -18,22 +18,12 @@ import {
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { serverEnv } from "@/shared/lib/env/server";
 import type {
-  CustomApiKeyData,
   GoogleMapsConfig,
   ResendConfig,
   SwitchBotConfig,
   TurnstileConfig,
 } from "@/shared/types/api-keys";
-import {
-  parseConnectionStatus,
-  parseCustomApiKeysMap,
-} from "@/shared/domain/settings/api-key-helpers";
-
-async function getCustomApiKeySettings() {
-  return prisma.settingsCustomApiKeys.findUnique({
-    where: { id: "singleton" },
-  });
-}
+import { parseConnectionStatus } from "@/shared/domain/settings/api-key-helpers";
 
 export async function getResendConfig(): Promise<ResendConfig> {
   const settings = await prisma.settingsResend.findUnique({
@@ -334,41 +324,6 @@ export async function getSwitchBotWebhookAuth(): Promise<{
         })
       : null,
   };
-}
-
-export async function getCustomApiKeys(): Promise<CustomApiKeyData[]> {
-  const settings = await getCustomApiKeySettings();
-
-  if (!settings?.customApiKeys || typeof settings.customApiKeys !== "object") {
-    return [];
-  }
-
-  const keysMap = parseCustomApiKeysMap(settings.customApiKeys);
-  return Object.entries(keysMap).map(([id, data]) => ({
-    id,
-    name: data.name,
-    keyName: data.keyName,
-    description: data.description,
-    lastTestedAt: data.lastTestedAt ? new Date(data.lastTestedAt) : undefined,
-    connectionStatus: data.connectionStatus,
-    createdAt: new Date(data.createdAt),
-    updatedAt: new Date(data.updatedAt),
-  }));
-}
-
-export async function getCustomApiKeyValue(id: string): Promise<string | null> {
-  const settings = await getCustomApiKeySettings();
-  const keysMap = settings?.customApiKeys
-    ? parseCustomApiKeysMap(settings.customApiKeys)
-    : null;
-
-  if (!keysMap || !keysMap[id]) {
-    return null;
-  }
-
-  return safeDecryptToString(keysMap[id].keyValue, {
-    expectedPurpose: SETTINGS_CRYPTO_PURPOSES.customApiKey,
-  });
 }
 
 /**

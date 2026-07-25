@@ -1,14 +1,12 @@
 import "server-only";
 
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { encrypt, safeDecryptToString } from "@/shared/lib/crypto";
 import { SETTINGS_CRYPTO_PURPOSES } from "@/shared/lib/crypto-purposes";
 import { SmartLockPasscodeStatus } from "@/shared/lib/validations/enums/prisma-types";
-import type { CustomApiKeyInput } from "@/shared/types/api-keys";
-import { parseCustomApiKeysMap } from "@/shared/domain/settings/api-key-helpers";
 import {
   getDecryptedSwitchBotCredentials,
   getSwitchBotWebhookAuth,
@@ -59,16 +57,6 @@ async function upsertSwitchbotSettings(
   updateData: Omit<Prisma.SettingsSwitchbotCreateInput, "id">,
 ): Promise<void> {
   await prisma.settingsSwitchbot.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...updateData },
-    update: updateData,
-  });
-}
-
-async function upsertCustomApiKeysSettings(
-  updateData: Omit<Prisma.SettingsCustomApiKeysCreateInput, "id">,
-): Promise<void> {
-  await prisma.settingsCustomApiKeys.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...updateData },
     update: updateData,
@@ -420,54 +408,4 @@ export async function rotateSwitchBotWebhookPathToken(): Promise<void> {
       "UNEXPECTED",
     );
   }
-}
-
-export async function addCustomApiKey(
-  data: CustomApiKeyInput,
-): Promise<{ id: string }> {
-  const settings = await prisma.settingsCustomApiKeys.findUnique({
-    where: { id: "singleton" },
-    select: { customApiKeys: true },
-  });
-
-  const existing = parseCustomApiKeysMap(settings?.customApiKeys);
-  const id = randomUUID();
-  const now = new Date().toISOString();
-  const encryptedKeyValue = encryptSecret(
-    data.keyValue,
-    "APIキーの暗号化に失敗しました",
-    SETTINGS_CRYPTO_PURPOSES.customApiKey,
-  );
-
-  const updated = {
-    ...existing,
-    [id]: {
-      name: data.name,
-      keyName: data.keyName,
-      keyValue: encryptedKeyValue,
-      description: data.description,
-      createdAt: now,
-      updatedAt: now,
-    },
-  };
-
-  await upsertCustomApiKeysSettings({ customApiKeys: updated });
-
-  return { id };
-}
-
-export async function deleteCustomApiKey(id: string): Promise<void> {
-  const settings = await prisma.settingsCustomApiKeys.findUnique({
-    where: { id: "singleton" },
-    select: { customApiKeys: true },
-  });
-
-  const existing = parseCustomApiKeysMap(settings?.customApiKeys);
-  if (!existing[id]) {
-    throw new DomainError("指定されたAPIキーが見つかりません", "NOT_FOUND");
-  }
-
-  const { [id]: _removed, ...rest } = existing;
-
-  await upsertCustomApiKeysSettings({ customApiKeys: rest });
 }

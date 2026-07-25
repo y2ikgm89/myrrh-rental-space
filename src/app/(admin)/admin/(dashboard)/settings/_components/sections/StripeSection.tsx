@@ -291,7 +291,9 @@ export function StripeSection({ settings }: StripeSectionProps) {
             >
               機能モジュール
             </Link>
-            」の「オンライン決済」で切り替えます。
+            」の「オンライン決済」で切り替えます（OFF でも credentials
+            が設定されていれば webhook による決済確定・返金反映は継続します。OFF
+            で止まるのは新規 checkout のみ）。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

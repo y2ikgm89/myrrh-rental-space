@@ -26,7 +26,8 @@ type MockCredentials = {
   stripeCurrency: string;
   stripePaymentMethodTypes: readonly string[];
 };
-const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>();
+const mockAssertStripeCredentialsConfigured =
+  mock<() => Promise<MockCredentials>>();
 const mockSafeDecrypt = mock<(value: string) => string | null>();
 
 type StripeWebhookEvent = {
@@ -117,7 +118,8 @@ const mockSendReservationConfirmationEmail =
 // =============================================================================
 
 mock.module("@/shared/domain/payment/availability", () => ({
-  assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
+  assertStripeCredentialsConfigured: () =>
+    mockAssertStripeCredentialsConfigured(),
 }));
 
 const actualCrypto = await import("@/shared/lib/crypto");
@@ -310,7 +312,7 @@ function makeRequest(body: string, signature: string | null = "sig-valid") {
 
 describe("POST /api/webhooks/stripe — STRIPE-DEDUP-A chokepoint", () => {
   beforeEach(() => {
-    mockAssertOnlinePaymentAvailable.mockReset();
+    mockAssertStripeCredentialsConfigured.mockReset();
     mockSafeDecrypt.mockReset();
     mockGetStripeClient.mockReset();
     mockConstructEvent.mockReset();
@@ -350,7 +352,7 @@ describe("POST /api/webhooks/stripe — STRIPE-DEDUP-A chokepoint", () => {
       Promise.resolve({ id: "receipt-event-mock", serialNo: "2026-000002" }),
     );
 
-    mockAssertOnlinePaymentAvailable.mockResolvedValue(DEFAULT_SETTINGS);
+    mockAssertStripeCredentialsConfigured.mockResolvedValue(DEFAULT_SETTINGS);
     mockSafeDecrypt.mockImplementation((value) => `decrypted-${value}`);
     mockGetStripeClient.mockResolvedValue({
       client: {

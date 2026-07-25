@@ -65,6 +65,15 @@ mock.module("@/shared/domain/payment/availability", () => ({
       stripeCurrency: "jpy",
       stripePaymentMethodTypes: ["card"],
     }),
+  assertStripeCredentialsConfigured: () =>
+    Promise.resolve({
+      stripeSecretKey: "sk_test_dummy",
+      stripeWebhookSecret: "whsec_dummy",
+      stripePublishableKey: null,
+      stripeAccountId: null,
+      stripeCurrency: "jpy",
+      stripePaymentMethodTypes: ["card"],
+    }),
 }));
 
 // AuditLog: hash-chain の書込が実 DB を汚染するため mock。
