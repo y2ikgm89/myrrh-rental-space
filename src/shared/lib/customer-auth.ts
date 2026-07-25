@@ -19,6 +19,11 @@ import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
 import { sendDeleteAccountVerificationEmail } from "@/shared/lib/email/delete-account-emails";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
+import { anonymizeCustomerCommand } from "@/shared/domain/customers/commands";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { prisma } from "@/shared/db/prisma";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 import { SESSION_CONFIG, CACHE_TAGS, getAppUrl } from "./constants";
 import { isRecord } from "./serialize";
@@ -161,9 +166,51 @@ function createCustomerAuth() {
         },
         // 実際の削除は本人がメール内リンクを踏んだ時点（Better Auth 内部の
         // /api/customer-auth/delete-user/callback、Route Handler）で発生する。
-        // Customer.userId は User 削除で SetNull されるため、この時点では
-        // customer 個別レコードの id は復元できない（site-wide の CUSTOMERS
-        // collection タグで一覧系は十分カバーされる）。
+        //
+        // Clean break (mypage audit): PII は User 削除前に必須で anonymize する。
+        // Better Auth 公式の `beforeDelete` で Customer を redaction し、User 物理削除は
+        // BA 本体に委譲する（`deleteLinkedUser: false`）。旧実装は afterDelete で
+        // cache のみ消し、Customer PII が userId=null のまま残っていた。
+        // @see https://www.better-auth.com/docs/concepts/users-accounts
+        beforeDelete: async (user) => {
+          const linked = await prisma.customer.findUnique({
+            where: { userId: user.id },
+            select: { id: true, anonymizedAt: true },
+          });
+          if (!linked || linked.anonymizedAt !== null) {
+            return;
+          }
+
+          const anonymized = await anonymizeCustomerCommand({
+            customerId: linked.id,
+            reason: "customer-requested",
+            deleteLinkedUser: false,
+          });
+
+          fireAndForget(
+            createAuditLogRecord({
+              userId: user.id,
+              action: AuditAction.UPDATE,
+              resource: "customer",
+              resourceId: anonymized.customerId,
+              oldValue: { hadUserId: anonymized.hadUserId },
+              newValue: {
+                anonymizedAt: anonymized.anonymizedAt.toISOString(),
+                anonymizedReason: anonymized.reason,
+              },
+              metadata: {
+                channel: "customer-mypage",
+                operation: "customer_account_delete_anonymized",
+                source: "better-auth-beforeDelete",
+              },
+            }),
+            {
+              operation: "auditCustomerAccountDeleteAnonymize",
+              category: ErrorCategory.DATABASE,
+              severity: ErrorSeverity.MEDIUM,
+            },
+          );
+        },
         afterDelete: async () => {
           invalidateSiteWideCacheFromRouteHandler([
             CACHE_TAGS.CUSTOMERS,

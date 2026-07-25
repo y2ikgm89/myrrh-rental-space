@@ -16,6 +16,13 @@ const CustomerType = {
   CORPORATE: "CORPORATE",
 } as const;
 
+const EmailDeliveryStatus = {
+  OK: "OK",
+  SOFT_BOUNCED: "SOFT_BOUNCED",
+  HARD_BOUNCED: "HARD_BOUNCED",
+  COMPLAINED: "COMPLAINED",
+} as const;
+
 // Prisma モック関数（mock.module より先に定義）
 const mockCustomerFindUnique = mock<
   () => Promise<{
@@ -41,6 +48,8 @@ const mockCustomerFindUnique = mock<
     notes?: string | null;
     marketingOptIn?: boolean;
     phoneContactOptIn?: boolean;
+    emailDeliveryStatus?: string;
+    suppressedEmailHash?: string | null;
   } | null>
 >(() => Promise.resolve(null));
 
@@ -96,6 +105,9 @@ const mockPendingUpdate = mock<() => Promise<{ id: string }>>(() =>
 const mockUserFindFirst = mock<() => Promise<{ id: string } | null>>(() =>
   Promise.resolve(null),
 );
+const mockUserUpdate = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "user-1" }),
+);
 
 const prismaCustomer = {
   findUnique: mockCustomerFindUnique,
@@ -115,6 +127,7 @@ const prismaPending = {
 const prismaUser = {
   findFirst: mockUserFindFirst,
   delete: mockUserDelete,
+  update: mockUserUpdate,
 };
 
 mock.module("@/shared/db/prisma", () => ({
@@ -140,6 +153,11 @@ mock.module("@/shared/db/prisma", () => ({
 mock.module("@generated/prisma/enums", () => ({
   CustomerStatus,
   CustomerType,
+  EmailDeliveryStatus,
+}));
+
+mock.module("@/shared/domain/customers/queries", () => ({
+  hashSuppressedEmailCandidate: (email: string) => `hash:${email}`,
 }));
 
 import { DomainError } from "@/shared/domain/domain-error";
@@ -557,6 +575,9 @@ describe("customers/commands", () => {
         mockCustomerFindUnique.mockResolvedValueOnce({
           userId: USER_ID,
           lastName: "旧姓",
+          emailCanonical: "old@example.com",
+          emailDeliveryStatus: "OK",
+          suppressedEmailHash: null,
         });
         mockCustomerFindFirst.mockResolvedValueOnce({ id: "other-customer" });
 

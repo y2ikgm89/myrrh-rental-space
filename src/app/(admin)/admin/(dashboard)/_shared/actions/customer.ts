@@ -148,13 +148,25 @@ export async function updateCustomer(
       action: "update",
       resourceId: idValid.data,
       execute: async (user) => {
-        const { previous } = await updateCustomerCommand(idValid.data, data);
+        const { previous, emailChanged, preservedSuppression } =
+          await updateCustomerCommand(idValid.data, data);
         const { ip, userAgent } = await buildAuditRequestContext();
-        return { previous, actorUserId: user.id, ip, userAgent };
+        return {
+          previous,
+          emailChanged,
+          preservedSuppression,
+          actorUserId: user.id,
+          ip,
+          userAgent,
+        };
       },
       afterSuccess: (outcome) => {
         updateTag(CACHE_TAGS.CUSTOMERS);
         updateTag(getCacheTag.customers.detail(idValid.data));
+        // メール変更で delivery/suppression が動くため SUPPRESSED_EMAILS を即時反映。
+        if (outcome.emailChanged) {
+          updateTag(CACHE_TAGS.SUPPRESSED_EMAILS);
+        }
 
         // 顧客プロフィールの改ざん（予約通知メールの横取り等）を追跡できるよう、
         // executeAdminMutationResult の自動ログとは別に customer.profile として
@@ -189,6 +201,8 @@ export async function updateCustomer(
               ...(outcome.userAgent !== null && {
                 userAgent: outcome.userAgent,
               }),
+              emailChanged: outcome.emailChanged,
+              preservedSuppression: outcome.preservedSuppression,
             },
           }),
           {
