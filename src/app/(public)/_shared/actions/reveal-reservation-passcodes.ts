@@ -5,7 +5,9 @@ import { z } from "zod";
 import { getCustomerVisibleSmartLockPasscodesForReservation } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import type { CustomerVisiblePasscode } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
+import { DomainError } from "@/shared/domain/domain-error";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants";
 import { verifyStatusToken } from "@/shared/lib/reservation-status-token";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
@@ -86,6 +88,14 @@ export async function revealReservationPasscodesAction(
     const customer = await getCustomerByUserId(sessionUser.id);
     if (!customer) {
       return createMutationError("顧客情報が見つかりません");
+    }
+    try {
+      await assertCustomerActive(customer.id);
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return createMutationError(error.message);
+      }
+      throw error;
     }
     auth = { kind: "customer", customerId: customer.id };
   }
