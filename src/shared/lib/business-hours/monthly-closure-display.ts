@@ -9,7 +9,6 @@ import {
   type MonthlyClosure,
   type MonthlyClosureWeek,
 } from "@/shared/lib/json-validators";
-import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 
 const MONTHLY_CLOSURE_WEEK_LABELS: Record<MonthlyClosureWeek, string> = {
   first: "第1",
@@ -41,9 +40,7 @@ export function formatMonthlyClosureLabel(closure: MonthlyClosure): string {
 export function parseMonthlyClosuresForDisplay(
   businessHours: unknown,
 ): string[] {
-  const parsed = parseBusinessHours(
-    businessHours as Prisma.JsonValue | null | undefined,
-  );
+  const parsed = parseBusinessHours(businessHours);
   if (!parsed?.monthlyClosures?.length) {
     return [];
   }
