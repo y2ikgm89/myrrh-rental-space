@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     await connection();
     const authResult = await authorizeCronRequest({
       request,
-      operation: "postsScheduledPublishCron",
+      operation: "blogScheduledPublishCron",
     });
     if (authResult) return authResult;
 
@@ -65,8 +65,8 @@ export async function GET(request: Request) {
     logError(error, {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: "postsScheduledPublishCron" },
+      context: { operation: "blogScheduledPublishCron" },
     });
-    return jsonError("Posts scheduled-publish cache revalidation failed", 500);
+    return jsonError("Blog scheduled-publish cache revalidation failed", 500);
   }
 }

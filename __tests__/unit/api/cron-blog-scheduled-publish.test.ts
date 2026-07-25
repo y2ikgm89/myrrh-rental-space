@@ -85,7 +85,7 @@ mock.module("@/shared/lib/route-responses", () => ({
     NextResponse.json(data, { status }),
 }));
 
-const { GET } = await import("@/app/api/cron/posts-scheduled-publish/route");
+const { GET } = await import("@/app/api/cron/blog-scheduled-publish/route");
 
 // --- テスト用ヘルパー ---
 
@@ -94,7 +94,7 @@ function makeRequest(authHeader?: string) {
   if (authHeader) {
     headers.set("authorization", authHeader);
   }
-  return new Request("http://localhost/api/cron/posts-scheduled-publish", {
+  return new Request("http://localhost/api/cron/blog-scheduled-publish", {
     headers,
   });
 }
@@ -103,7 +103,7 @@ function makeSchedulerRequest() {
   return makeRequest("Bearer cloud-scheduler-oidc-token");
 }
 
-describe("GET /api/cron/posts-scheduled-publish", () => {
+describe("GET /api/cron/blog-scheduled-publish", () => {
   beforeEach(() => {
     mockFindRecentlyDueScheduledPostSlugs.mockReset();
     mockInvalidateSiteWideCacheFromRouteHandler.mockReset();
@@ -135,7 +135,7 @@ describe("GET /api/cron/posts-scheduled-publish", () => {
     const body = await response.json();
     expect(body).toEqual({ error: "Unauthorized" });
     expect(mockAuthorizeCronRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ operation: "postsScheduledPublishCron" }),
+      expect.objectContaining({ operation: "blogScheduledPublishCron" }),
     );
     expect(mockFindRecentlyDueScheduledPostSlugs).not.toHaveBeenCalled();
   });
@@ -198,13 +198,13 @@ describe("GET /api/cron/posts-scheduled-publish", () => {
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body).toEqual({
-      error: "Posts scheduled-publish cache revalidation failed",
+      error: "Blog scheduled-publish cache revalidation failed",
     });
     expect(mockLogError).toHaveBeenCalledWith(
       dbError,
       expect.objectContaining({
         context: expect.objectContaining({
-          operation: "postsScheduledPublishCron",
+          operation: "blogScheduledPublishCron",
         }),
       }),
     );

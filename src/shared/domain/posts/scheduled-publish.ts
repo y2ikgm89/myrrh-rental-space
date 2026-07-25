@@ -5,7 +5,7 @@ import { PostStatus } from "@generated/prisma/enums";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 
 /**
- * cron の実行間隔（`terraform/cloud_scheduler.tf` の `posts-scheduled-publish`
+ * cron の実行間隔（`terraform/cloud_scheduler.tf` の `blog-scheduled-publish`
  * ジョブ、既定 10 分間隔）の 2 倍を look-back window として使う。at-least-once
  * retry や単発の実行ミス（デプロイ中の瞬断等）を吸収するバッファ。
  */
@@ -23,7 +23,7 @@ export const POSTS_SCHEDULED_PUBLISH_LOOKBACK_MINUTES = 20;
  * （既定 1 時間）を跨がない限り公開サイトには古い（＝まだ非公開扱いの）結果が
  * 返り続け得る。
  *
- * cron `/api/cron/posts-scheduled-publish` がこの関数の戻り値を使って
+ * cron `/api/cron/blog-scheduled-publish` がこの関数の戻り値を使って
  * POSTS 系キャッシュタグを明示的に revalidate することで、公開日時ちょうどでの
  * 露出精度を cron 間隔単位まで保証する（詳細は該当 route の docstring 参照）。
  */
