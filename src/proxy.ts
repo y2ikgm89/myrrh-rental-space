@@ -12,6 +12,7 @@ import {
   EVENT_REGISTRATION_CLAIM_TOKEN_COOKIE_NAME,
 } from "@/shared/lib/constants/claim-token-cookie-names";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/reservation-status-token-cookie-name";
+import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-status-token-cookie-name";
 
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
@@ -234,6 +235,10 @@ const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
   {
     pathname: "/reservation/status",
     cookieName: RESERVATION_STATUS_TOKEN_COOKIE_NAME,
+  },
+  {
+    pathname: "/events/registrations/status",
+    cookieName: EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME,
   },
 ];
 

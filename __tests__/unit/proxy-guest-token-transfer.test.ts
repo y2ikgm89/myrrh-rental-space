@@ -5,7 +5,9 @@ import { createCancelToken as createReservationCancelToken } from "@/shared/lib/
 import { createCancelToken as createEventCancelToken } from "@/shared/lib/event-registration-cancel-token";
 import { createCompleteToken } from "@/shared/lib/reservation-complete-token";
 import { createStatusToken } from "@/shared/lib/reservation-status-token";
+import { createEventRegistrationStatusToken } from "@/shared/lib/event-registration-status-token";
 import { RESERVATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/reservation-status-token-cookie-name";
+import { EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-status-token-cookie-name";
 
 const FUTURE = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -80,6 +82,32 @@ describe("guest token transfer", () => {
 
   test("token なしの /reservation/status は素通り（redirect しない）", async () => {
     const req = new NextRequest("https://example.com/reservation/status");
+    const res = await proxy(req);
+    expect(res.status).not.toBe(307);
+  });
+
+  test("/events/registrations/status の ?token= を HttpOnly cookie に転写する", async () => {
+    const token = createEventRegistrationStatusToken(
+      "clxxxxxxxxxxxxxxxxxxxxxxxxx",
+      FUTURE,
+    );
+    const req = new NextRequest(
+      `https://example.com/events/registrations/status?token=${token}`,
+    );
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.searchParams.get("token")).toBeNull();
+    const cookie = res.cookies.get(EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME);
+    expect(cookie?.value).toBe(token);
+    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.httpOnly).toBe(true);
+  });
+
+  test("token なしの /events/registrations/status は素通り（redirect しない）", async () => {
+    const req = new NextRequest(
+      "https://example.com/events/registrations/status",
+    );
     const res = await proxy(req);
     expect(res.status).not.toBe(307);
   });

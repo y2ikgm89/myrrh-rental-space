@@ -200,6 +200,61 @@ export async function getEventRegistrationForGuestCancel(
   });
 }
 
+/**
+ * ゲスト向け薄いイベント申込ステータスページ (`/events/registrations/status`) 用。
+ * status token 検証後にのみ呼ぶ（ここでは ownership を強制しない）。
+ */
+export async function getEventRegistrationForGuestStatus(
+  registrationId: string,
+) {
+  const registration = await prisma.eventRegistration.findFirst({
+    where: { id: registrationId, event: { deletedAt: null } },
+    select: {
+      id: true,
+      customerId: true,
+      status: true,
+      quantity: true,
+      paymentStatus: true,
+      ticket: { select: { price: true } },
+      slot: { select: { startAt: true, endAt: true } },
+      receipt: { select: { serialNo: true } },
+      event: {
+        select: {
+          title: true,
+          format: true,
+          meetingUrl: true,
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
+        },
+      },
+    },
+  });
+  if (!registration) return null;
+
+  return {
+    id: registration.id,
+    customerId: registration.customerId,
+    status: registration.status,
+    quantity: registration.quantity,
+    paymentStatus: registration.paymentStatus,
+    ticketUnitPrice: registration.ticket.price,
+    ticketTotalPrice: registration.ticket.price * registration.quantity,
+    slot: registration.slot,
+    receiptSerialNo: registration.receipt?.serialNo ?? null,
+    event: {
+      title: registration.event.title,
+      format: registration.event.format,
+      meetingUrl: registration.event.meetingUrl,
+      location: formatEventVenue({
+        location: registration.event.location,
+        space: registration.event.space,
+        addressDetail: registration.event.addressDetail,
+      }),
+    },
+  };
+}
+
 export async function getEventRegistrationDetailsForEmail(
   registrationId: string,
 ): Promise<{

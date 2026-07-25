@@ -23,6 +23,7 @@ const OTHER_DOMAIN_PURPOSES = [
   "reservation-complete", // reservation-complete-token.ts
   "reservation-status", // reservation-status-token.ts
   "event-registration-cancel", // event-registration-cancel-token.ts
+  "event-registration-status", // event-registration-status-token.ts
 
   "reservation-claim", // reservation-claim-token.ts
   "event-registration-claim", // event-registration-claim-token.ts
