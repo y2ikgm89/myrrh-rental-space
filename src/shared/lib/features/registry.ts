@@ -172,7 +172,9 @@ export const FEATURE_MODULES: Record<FeatureModule, FeatureModuleDef> = {
     pageSlugs: [],
     sectionTypes: [],
     templates: [],
-    cronPaths: ["/api/cron/receipt-backfill"],
+    // receipt-backfill は credentials gate（feature OFF でも orphan reconcile 継続）のため
+    // cronPaths には載せない。feature-gated cron のみここに列挙する。
+    cronPaths: [],
   },
   "data-retention": {
     id: "data-retention",
