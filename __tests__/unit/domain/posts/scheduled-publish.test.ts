@@ -2,7 +2,7 @@
  * findRecentlyDueScheduledPostSlugs() のテスト
  *
  * 予約公開（未来日時指定）ポストの cache 露出精度 cron
- * (`/api/cron/posts-scheduled-publish`) が使う検出ロジック。
+ * (`/api/cron/blog-scheduled-publish`) が使う検出ロジック。
  * 「直近 lookbackMinutes 分以内に publishedAt を迎えた status:PUBLISHED
  * ポスト」だけを対象にすることを固定する（まだ先の予約公開・とっくに過ぎた
  * 通常公開・非公開記事を誤検出しない）。
