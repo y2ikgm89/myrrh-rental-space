@@ -349,9 +349,14 @@ function CategoryFormDialog({
 
 type CategoryManagerProps = {
   readonly initialCategories: PostCategoryData[];
+  /** feature OFF 時は新規作成ボタンを出さない */
+  readonly allowCreate?: boolean;
 };
 
-export function CategoryManager({ initialCategories }: CategoryManagerProps) {
+export function CategoryManager({
+  initialCategories,
+  allowCreate = true,
+}: CategoryManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [categories, setCategories] =
     useState<PostCategoryData[]>(initialCategories);
@@ -452,7 +457,9 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>カテゴリー一覧</CardTitle>
-          <Button onClick={openCreateDialog}>新規作成</Button>
+          {allowCreate ? (
+            <Button onClick={openCreateDialog}>新規作成</Button>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           {/* フィルター */}

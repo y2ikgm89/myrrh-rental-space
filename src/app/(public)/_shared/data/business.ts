@@ -21,6 +21,9 @@ export interface BusinessInfo {
   readonly phone: string | null;
   readonly fax: string | null;
   readonly email: string | null;
+  readonly representativeName: string | null;
+  readonly registrationNumber: string | null;
+  readonly invoiceNumber: string | null;
   readonly businessHours: unknown;
   readonly holidayNotice: string | null;
 }
@@ -53,6 +56,9 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     phone: settings?.phoneNumber ?? null,
     fax: settings?.faxNumber ?? null,
     email: settings?.email ?? null,
+    representativeName: settings?.representativeName ?? null,
+    registrationNumber: settings?.registrationNumber ?? null,
+    invoiceNumber: settings?.invoiceNumber ?? null,
     businessHours: settings?.businessHours ?? null,
     holidayNotice: settings?.holidayNotice ?? null,
   };

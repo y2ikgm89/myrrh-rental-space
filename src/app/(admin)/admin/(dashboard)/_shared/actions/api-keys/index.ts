@@ -14,6 +14,7 @@ import {
   switchbotFormSchema,
   turnstileFormSchema,
 } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -67,10 +68,8 @@ export async function updateResendSettings(
       action: "manage",
       execute: async () => {
         await updateResendSettingsCommand({
-          resendApiKey: data.resendApiKey ? data.resendApiKey : null,
-          resendWebhookSecret: data.resendWebhookSecret
-            ? data.resendWebhookSecret
-            : null,
+          resendApiKey: emptyToNull(data.resendApiKey),
+          resendWebhookSecret: emptyToNull(data.resendWebhookSecret),
         });
         return null;
       },
@@ -135,12 +134,8 @@ export async function updateTurnstileSettings(
       action: "manage",
       execute: async () => {
         await updateTurnstileSettingsCommand({
-          turnstileSiteKey: data.turnstileSiteKey
-            ? data.turnstileSiteKey
-            : null,
-          turnstileSecretKey: data.turnstileSecretKey
-            ? data.turnstileSecretKey
-            : null,
+          turnstileSiteKey: emptyToNull(data.turnstileSiteKey),
+          turnstileSecretKey: emptyToNull(data.turnstileSecretKey),
         });
         return null;
       },
@@ -214,9 +209,7 @@ export async function updateGoogleMapsSettings(
         action: "manage",
         execute: async () => {
           await updateGoogleMapsSettingsCommand({
-            googleMapsApiKey: data.googleMapsApiKey
-              ? data.googleMapsApiKey
-              : null,
+            googleMapsApiKey: emptyToNull(data.googleMapsApiKey),
           });
           return null;
         },
@@ -283,12 +276,8 @@ export async function updateSwitchBotSettings(
       execute: async () => {
         await updateSwitchBotSettingsCommand({
           switchbotEnabled: data.switchbotEnabled,
-          switchbotOpenToken: data.switchbotOpenToken
-            ? data.switchbotOpenToken
-            : null,
-          switchbotSecretKey: data.switchbotSecretKey
-            ? data.switchbotSecretKey
-            : null,
+          switchbotOpenToken: emptyToNull(data.switchbotOpenToken),
+          switchbotSecretKey: emptyToNull(data.switchbotSecretKey),
           switchbotPasscodeBufferMinutes: data.switchbotPasscodeBufferMinutes,
         });
         return null;

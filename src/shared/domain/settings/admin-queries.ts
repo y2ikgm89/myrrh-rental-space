@@ -21,7 +21,6 @@ import {
   parseBusinessHours,
   parseDataRetentionConfig,
   parseFeatureModules,
-  parseStringArrayOrNull,
 } from "@/shared/lib/json-validators";
 import type { DataRetentionConfig } from "@/shared/lib/json-validators";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
@@ -35,23 +34,18 @@ import { ensureSettingsAnnouncementCarousel } from "@/shared/domain/settings/ann
 import {
   ensureSettingsAnalytics,
   ensureSettingsCommerce,
+  ensureSettingsDataRetention,
+  ensureSettingsFeatures,
   ensureSettingsGoogleBusinessProfile,
   ensureSettingsGoogleCalendar,
-  ensureSettingsGoogleMaps,
-  ensureSettingsInstagram,
   ensureSettingsLayout,
   ensureSettingsNotification,
   ensureSettingsOrganization,
   ensureSettingsReservation,
-  ensureSettingsResend,
   ensureSettingsSeo,
   ensureSettingsSidebar,
   ensureSettingsStripe,
-  ensureSettingsSwitchbot,
   ensureSettingsSystem,
-  ensureSettingsTurnstile,
-  ensureSettingsFeatures,
-  ensureSettingsDataRetention,
 } from "@/shared/domain/settings/commands";
 const DEFAULT_DISCOUNT_SETTINGS: DiscountSettingsData = {
   durationDiscountEnabled: false,
@@ -91,14 +85,8 @@ async function getOrCreateSettingsBundle() {
     notification,
     reservation,
     stripe,
-    resend,
-    turnstile,
-    googleMaps,
     googleCalendar,
     googleBusinessProfile,
-    instagram,
-    switchbot,
-    dataRetention,
   ] = await Promise.all([
     ensureSettingsFeatures(),
     ensureSettingsAnnouncementCarousel(),
@@ -112,14 +100,8 @@ async function getOrCreateSettingsBundle() {
     ensureSettingsNotification(),
     ensureSettingsReservation(),
     ensureSettingsStripe(),
-    ensureSettingsResend(),
-    ensureSettingsTurnstile(),
-    ensureSettingsGoogleMaps(),
     ensureSettingsGoogleCalendar(),
     ensureSettingsGoogleBusinessProfile(),
-    ensureSettingsInstagram(),
-    ensureSettingsSwitchbot(),
-    ensureSettingsDataRetention(),
   ]);
 
   return {
@@ -135,14 +117,8 @@ async function getOrCreateSettingsBundle() {
     notification,
     reservation,
     stripe,
-    resend,
-    turnstile,
-    googleMaps,
     googleCalendar,
     googleBusinessProfile,
-    instagram,
-    switchbot,
-    dataRetention,
   };
 }
 
@@ -196,8 +172,8 @@ function toSettingsData(
     streetAddress: organization.streetAddress,
     buildingName: organization.buildingName,
     businessHours: parseBusinessHours(organization.businessHours),
-    regularHolidays: parseStringArrayOrNull(organization.regularHolidays),
     holidayNotice: organization.holidayNotice,
+    organizationUpdatedAt: organization.updatedAt,
     senderEmail: organization.senderEmail,
     senderName: organization.senderName,
     replyToEmail: organization.replyToEmail,

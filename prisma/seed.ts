@@ -601,6 +601,11 @@ async function seedSettings(
       update: {},
       create: { id: "singleton" },
     }),
+    prisma.settingsDataRetention.upsert({
+      where: { id: "singleton" },
+      update: {},
+      create: { id: "singleton" },
+    }),
   ]);
 
   console.log("✅ Settings configured");

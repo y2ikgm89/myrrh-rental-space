@@ -7,6 +7,8 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { Pagination } from "@/admin/components/ui";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 
 // =============================================================================
 // 内部コンポーネント
@@ -36,14 +38,18 @@ async function LocationList() {
   // （絞り込み中は順序が部分集合になり破綻するため）
   const sortable = !params.locSearch && isPublished === "ALL";
 
-  const result = await getLocations(
-    omitUndefined({
-      isPublished,
-      search: params.locSearch || undefined,
-      page: sortable ? 1 : params.locPage,
-      limit: sortable ? SORTABLE_VIEW_LIMIT : params.locPerPage,
-    }),
-  );
+  const [result, enabledFeatures] = await Promise.all([
+    getLocations(
+      omitUndefined({
+        isPublished,
+        search: params.locSearch || undefined,
+        page: sortable ? 1 : params.locPage,
+        limit: sortable ? SORTABLE_VIEW_LIMIT : params.locPerPage,
+      }),
+    ),
+    getEnabledFeatures(),
+  ]);
+  const allowCreate = isAdminFeatureCreateAllowed("access", enabledFeatures);
 
   const startIndex = (result.page - 1) * params.locPerPage;
 
@@ -53,6 +59,7 @@ async function LocationList() {
         locations={result.locations}
         sortable={sortable}
         startIndex={startIndex}
+        allowCreate={allowCreate}
       />
       {!sortable && (
         <Pagination

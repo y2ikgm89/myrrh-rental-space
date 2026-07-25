@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { getPostCategories, getPostTags } from "@/admin/queries/post";
 import { PostEditor } from "../_components/PostEditor";
 import { getLayoutSettings } from "@/shared/domain/settings/queries/site";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 
 export default async function NewPostPage() {
   await connection();
+  await requireFeatureEnabled("posts");
 
   const [categories, tags, settings] = await Promise.all([
     getPostCategories(),

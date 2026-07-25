@@ -18,6 +18,8 @@ interface SpaceAvailabilityCalendarProps {
   readonly spaceId: string;
   readonly businessHours: BusinessHours | null;
   readonly blockedRanges: readonly BlockedDateRange[];
+  /** Feature Module `reservation` が ON のときのみ予約フォーム導線を出す */
+  readonly reservationEnabled: boolean;
 }
 
 /**
@@ -26,13 +28,14 @@ interface SpaceAvailabilityCalendarProps {
  * 定休 / 臨時休業 / 過去日を disabled で grey-out することで一目で
  * 予約可能日が分かる view-only カレンダー。時間帯の空き有無は含めない
  * (per-day のスロット問い合わせは高コストで CDN cacheable でないため、
- * 日単位の gate のみ)。日付を選ぶと `/reservation?spaceId=` へ遷移して
- * 予約フォームで時間帯選択に進める導線を提供する。
+ * 日単位の gate のみ)。`reservation` feature ON のときだけ
+ * `/reservation?spaceId=` への導線を出す（OFF 時は閲覧のみ）。
  */
 export function SpaceAvailabilityCalendar({
   spaceId,
   businessHours,
   blockedRanges,
+  reservationEnabled,
 }: SpaceAvailabilityCalendarProps): ReactElement {
   const [minDate] = useState(() => {
     const today = new Date();
@@ -82,17 +85,21 @@ export function SpaceAvailabilityCalendar({
         />
       </div>
       <p className="mt-4 text-xs text-muted-foreground">
-        グレーの日付は定休日・休業日・過去日です。実際の時間帯別空き状況は予約フォームでご確認ください。
+        {reservationEnabled
+          ? "グレーの日付は定休日・休業日・過去日です。実際の時間帯別空き状況は予約フォームでご確認ください。"
+          : "グレーの日付は定休日・休業日・過去日です。"}
       </p>
-      <div className="mt-6">
-        <Link
-          href={toAppRoute(`/reservation?spaceId=${spaceId}`)}
-          className="inline-flex min-h-11 items-center gap-2 border border-foreground bg-foreground px-6 text-xs uppercase tracking-eyebrow text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <span>予約フォームへ進む</span>
-          <IconArrowRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
-      </div>
+      {reservationEnabled ? (
+        <div className="mt-6">
+          <Link
+            href={toAppRoute(`/reservation?spaceId=${spaceId}`)}
+            className="inline-flex min-h-11 items-center gap-2 border border-foreground bg-foreground px-6 text-xs uppercase tracking-eyebrow text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <span>予約フォームへ進む</span>
+            <IconArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

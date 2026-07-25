@@ -225,7 +225,6 @@ const mockOrganizationUpsert = mock(() =>
     streetAddress: null,
     buildingName: null,
     businessHours: null,
-    regularHolidays: null,
     holidayNotice: null,
     senderEmail: null,
     senderName: null,
@@ -409,6 +408,13 @@ describe("getAdminSettings", () => {
 
   test("client DTO does not serialize integration secrets or webhook verifiers", async () => {
     const settings = await getAdminSettings();
+
+    expect(mockResendUpsert).not.toHaveBeenCalled();
+    expect(mockTurnstileUpsert).not.toHaveBeenCalled();
+    expect(mockGoogleMapsUpsert).not.toHaveBeenCalled();
+    expect(mockInstagramUpsert).not.toHaveBeenCalled();
+    expect(mockSwitchbotUpsert).not.toHaveBeenCalled();
+    expect(mockDataRetentionUpsert).not.toHaveBeenCalled();
 
     expect("stripeSecretKey" in settings).toBe(false);
     expect("stripeWebhookSecret" in settings).toBe(false);

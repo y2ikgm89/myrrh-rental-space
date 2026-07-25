@@ -54,11 +54,6 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
     undefined,
   );
 
-  const initialRules =
-    settings.durationDiscountRules.length > 0
-      ? settings.durationDiscountRules
-      : [{ hours: 4, discountRate: 10 }];
-
   const [form, fields] = useForm({
     id: "discount-settings",
     lastResult,
@@ -69,7 +64,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
     shouldRevalidate: "onInput",
     defaultValue: {
       durationDiscountEnabled: settings.durationDiscountEnabled ? "on" : "",
-      durationDiscountRules: initialRules.map((rule) => ({
+      durationDiscountRules: settings.durationDiscountRules.map((rule) => ({
         hours: String(rule.hours),
         discountRate: String(rule.discountRate),
       })),

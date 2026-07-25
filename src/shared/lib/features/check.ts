@@ -63,7 +63,8 @@ export async function isFeatureEnabled(
  *
  * sitemap / navigation / SectionRenderer の filter は全てこの context を経由する。
  *
- * - `disabledRoutes`: nav 内部リンク URL prefix 比較に使う（external link は影響なし）
+ * - `disabledRoutes`: nav URL の path prefix 比較に使う（isExternal 含む全 URL。
+ *   http(s) 絶対 URL は `isUrlDisabled` が pathname を抽出して判定する）
  * - `disabledPageSlugs`: sitemap の `/slug` URL filter に使う
  * - `disabledSectionTypes`: SectionRenderer の早期 return / AddSectionDialog 除外に使う
  *
@@ -106,13 +107,41 @@ export async function getFeatureFilterContext(): Promise<FeatureFilterContext> {
   };
 }
 
+/**
+ * 比較用 pathname を抽出する。
+ *
+ * - path-only (`/events?x=1#y`) → `/events`
+ * - http(s) 絶対 URL → `URL.pathname`（host は無視。nav isExternal clean-break）
+ * - mailto / tel / 不正文字列 → そのまま（disabled route には通常非該当）
+ */
+function toComparablePathname(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed.startsWith("/")) {
+    const withoutHash = trimmed.split("#")[0] ?? trimmed;
+    const withoutQuery = withoutHash.split("?")[0] ?? withoutHash;
+    return withoutQuery;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.pathname;
+    }
+  } catch {
+    // fall through — 非 URL はそのまま比較
+  }
+
+  return trimmed;
+}
+
 /** URL が disabled module の publicRoutes に hit するか判定する。 */
 export function isUrlDisabled(
   url: string,
   disabledRoutes: readonly string[],
 ): boolean {
+  const pathname = toComparablePathname(url);
   return disabledRoutes.some(
-    (route) => url === route || url.startsWith(`${route}/`),
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
 

@@ -55,19 +55,10 @@ const businessHoursWeekSchema = z.object({
   monthlyClosures: z.array(monthlyClosureObjectSchema).max(20).optional(),
 });
 
-// 各日付は React key の stable ID として機能するため、重複を禁止する
-const uniqueDateArraySchema = (label: string) =>
-  z
-    .array(z.string())
-    .refine((arr) => new Set(arr).size === arr.length, {
-      error: `同じ${label}を複数登録することはできません`,
-    })
-    .nullable();
-
 export const businessHoursSettingsSchema = z
   .object({
     businessHours: businessHoursWeekSchema,
-    regularHolidays: uniqueDateArraySchema("定休日"),
+    expectedUpdatedAt: z.iso.datetime().or(z.date()).optional(),
     // 特別休業日は拠点（Location）ごとに管理（2026-04-27 に settings から移管済み）
     // HTMLタグを禁止してXSS対策
     holidayNotice: z

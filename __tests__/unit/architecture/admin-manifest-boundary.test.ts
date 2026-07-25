@@ -34,6 +34,22 @@ describe("PWA manifest boundary", () => {
         ogDescription: "Test description",
       }),
     }));
+    mock.module("@/shared/domain/settings/queries/display", () => ({
+      getFooterSettings: async () => ({
+        tagline: null,
+        copyright: null,
+        navigationLabel: "Navigation",
+        contactLabel: "Contact",
+        hoursLabel: "Hours",
+        showSocialLinks: true,
+        themeColor: "#fafafa",
+        brand: {
+          siteName: "Test Site",
+          logoUrl: null,
+          useLogo: true,
+        },
+      }),
+    }));
 
     const { GET } = await import("@/app/(public)/manifest.webmanifest/route");
     const response = await GET();

@@ -276,9 +276,14 @@ function TagFormDialog({
 
 type TagManagerProps = {
   readonly initialTags: PostTagData[];
+  /** feature OFF 時は新規作成ボタンを出さない */
+  readonly allowCreate?: boolean;
 };
 
-export function TagManager({ initialTags }: TagManagerProps) {
+export function TagManager({
+  initialTags,
+  allowCreate = true,
+}: TagManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [tags, setTags] = useState<PostTagData[]>(initialTags);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -370,7 +375,9 @@ export function TagManager({ initialTags }: TagManagerProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>タグ一覧</CardTitle>
-          <Button onClick={openCreateDialog}>新規作成</Button>
+          {allowCreate ? (
+            <Button onClick={openCreateDialog}>新規作成</Button>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           {/* フィルター */}

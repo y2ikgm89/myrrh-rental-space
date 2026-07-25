@@ -1,17 +1,18 @@
 import type { ReactElement } from "react";
-import { SITE_DEFAULTS } from "@/shared/lib/constants";
 
 interface MaintenancePageProps {
   message?: string | null;
-  siteName?: string;
+  /** resolveSiteBranding 済みの live siteName（呼び出し元が SEO 設定から解決） */
+  siteName: string;
 }
 
 const DEFAULT_MESSAGE =
   "システムの改善作業のため、一時的にサービスを停止しております。\nしばらくお待ちください。";
 
-function formatBrandLabel(siteName: string | undefined): string {
-  const resolved = siteName?.trim() || SITE_DEFAULTS.name;
-  return resolved.split(/\s+/u)[0]?.toUpperCase() ?? resolved.toUpperCase();
+function formatBrandLabel(siteName: string): string {
+  const trimmed = siteName.trim();
+  const firstWord = trimmed.split(/\s+/u)[0];
+  return firstWord ? firstWord.toUpperCase() : trimmed.toUpperCase();
 }
 
 export function MaintenancePage({

@@ -15,6 +15,8 @@ import { EventTabs } from "./_components/EventTabs";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { hasPermission } from "@/shared/lib/admin-permissions";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -27,7 +29,13 @@ type PageProps = {
   searchParams: SearchParams;
 };
 
-async function EventList({ searchParams }: { searchParams: SearchParams }) {
+async function EventList({
+  searchParams,
+  allowCreate,
+}: {
+  searchParams: SearchParams;
+  allowCreate: boolean;
+}) {
   await connection();
   const params = await loadAdminEventSearchParams(searchParams);
   // parser が EventStatusFilter に narrow 済。"ALL" のときは status フィルタなし
@@ -50,7 +58,7 @@ async function EventList({ searchParams }: { searchParams: SearchParams }) {
 
   return (
     <>
-      <EventTable events={result.events} />
+      <EventTable events={result.events} allowCreate={allowCreate} />
       <Pagination
         currentPage={result.page}
         totalPages={result.totalPages}
@@ -69,6 +77,8 @@ export default async function EventsPage({ searchParams }: PageProps) {
     "manage",
   );
   const params = await loadAdminEventSearchParams(searchParams);
+  const enabledFeatures = await getEnabledFeatures();
+  const allowCreate = isAdminFeatureCreateAllowed("events", enabledFeatures);
 
   return (
     <div className="space-y-6">
@@ -94,12 +104,14 @@ export default async function EventsPage({ searchParams }: PageProps) {
               </a>
             </Button>
           ) : null}
-          <Button asChild>
-            <Link href="/admin/events/new">
-              <IconPlus className="mr-2 h-4 w-4" />
-              新規作成
-            </Link>
-          </Button>
+          {allowCreate ? (
+            <Button asChild>
+              <Link href="/admin/events/new">
+                <IconPlus className="mr-2 h-4 w-4" />
+                新規作成
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -111,7 +123,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
 
       {/* テーブル */}
       <Suspense key={params.tab} fallback={<LoadingState />}>
-        <EventList searchParams={searchParams} />
+        <EventList searchParams={searchParams} allowCreate={allowCreate} />
       </Suspense>
     </div>
   );

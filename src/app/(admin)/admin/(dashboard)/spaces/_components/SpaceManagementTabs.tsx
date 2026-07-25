@@ -6,19 +6,21 @@ import { adminSpaceSearchParamsParsers } from "@/shared/lib/nuqs";
 import { cn } from "@/shared/lib/cn";
 import { TooltipProvider } from "@/admin/components/ui";
 import { AdminNavFeatureDisabledIndicator } from "../../_components/AdminNavFeatureDisabledIndicator";
+import type { FeatureModule } from "@/shared/lib/features/registry";
 
 const TAB_BASE: readonly {
   value: AdminSpaceManagementTab;
   label: string;
-  featureModule?: "reviews";
+  featureModule?: FeatureModule;
 }[] = [
   { value: "spaces", label: "スペース" },
-  { value: "locations", label: "場所" },
+  { value: "locations", label: "場所", featureModule: "access" },
   { value: "categories", label: "カテゴリー" },
   { value: "reviews", label: "レビュー", featureModule: "reviews" },
 ];
 
 type SpaceManagementTabsProps = {
+  readonly accessFeatureDisabled: boolean;
   readonly reviewsFeatureDisabled: boolean;
 };
 
@@ -32,6 +34,7 @@ type SpaceManagementTabsProps = {
  * @see https://nextjs.org/docs/app/getting-started/cache-components
  */
 export function SpaceManagementTabs({
+  accessFeatureDisabled,
   reviewsFeatureDisabled,
 }: SpaceManagementTabsProps) {
   const [tab, setTab] = useQueryState(
@@ -48,8 +51,9 @@ export function SpaceManagementTabs({
         <ul className="inline-flex min-h-11 w-fit max-w-full items-center justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground scrollbar-hide">
           {TAB_BASE.map(({ value, label, featureModule }) => {
             const isActive = tab === value;
-            const showReviewsBadge =
-              featureModule === "reviews" && reviewsFeatureDisabled;
+            const showDisabledBadge =
+              (featureModule === "access" && accessFeatureDisabled) ||
+              (featureModule === "reviews" && reviewsFeatureDisabled);
             return (
               <li key={value}>
                 <button
@@ -62,13 +66,13 @@ export function SpaceManagementTabs({
                     "hover:bg-background/50",
                     isActive &&
                       "bg-card text-foreground shadow-sm hover:bg-card",
-                    showReviewsBadge && !isActive && "opacity-80",
+                    showDisabledBadge && !isActive && "opacity-80",
                   )}
                 >
                   <span>{label}</span>
-                  {showReviewsBadge && (
+                  {showDisabledBadge && featureModule !== undefined && (
                     <AdminNavFeatureDisabledIndicator
-                      featureModule="reviews"
+                      featureModule={featureModule}
                       compact
                     />
                   )}

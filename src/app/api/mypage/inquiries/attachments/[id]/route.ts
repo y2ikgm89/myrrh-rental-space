@@ -24,6 +24,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 
 export async function GET(
   _request: Request,
@@ -32,6 +33,11 @@ export async function GET(
   const { id } = await params;
 
   try {
+    // contact module OFF 時は公開 /contact・mypage inquiries と対称に 404。
+    if (!(await isFeatureEnabled("contact"))) {
+      return new Response("Not found", { status: 404 });
+    }
+
     const session = await getCustomerSession();
     if (!session) {
       return new Response("Not found", { status: 404 });

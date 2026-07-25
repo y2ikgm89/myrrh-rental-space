@@ -14,7 +14,10 @@ export type NavItem = {
   href: string;
   resource: Resource;
   keywords?: string[]; // fuzzy filter のキーワード補強
-  /** 公開サイト feature gate 対象。OFF 時は badge 表示（ナビは残す） */
+  /**
+   * 公開サイト feature gate 対象。OFF 時は「非公開」badge 表示（ナビは残す）。
+   * 一覧・編集は可、新規作成は不可。
+   */
   featureModule?: FeatureModule;
 };
 
@@ -24,7 +27,7 @@ export type QuickAction = {
   href: string;
   resource: Resource;
   description?: string;
-  /** 公開サイト feature gate 対象。OFF 時は create 不可（disabled） */
+  /** feature OFF 時は palette 上 disabled（create 不可） */
   featureModule?: FeatureModule;
 };
 

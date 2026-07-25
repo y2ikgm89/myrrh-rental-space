@@ -101,7 +101,8 @@ export async function refreshInstagramAccessToken(input: {
 }): Promise<void> {
   const encryptedToken = encrypt(input.accessToken, { purpose: "instagram" });
 
-  await prisma.settingsInstagram.updateMany({
+  await prisma.settingsInstagram.update({
+    where: { id: "singleton" },
     data: {
       instagramAccessToken: encryptedToken,
       instagramTokenExpiresAt: input.expiresAt,

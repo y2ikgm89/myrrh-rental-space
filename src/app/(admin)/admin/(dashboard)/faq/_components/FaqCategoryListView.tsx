@@ -32,6 +32,8 @@ import { FaqCategoryDialog } from "./FaqCategoryDialog";
 type FaqCategoryListViewProps = {
   readonly categories: readonly FaqCategoryWithItemCounts[];
   readonly summary: FaqHealthSummary;
+  /** feature OFF 時はカテゴリ新規作成を出さない */
+  readonly allowCreate?: boolean;
 };
 
 type HealthChip = {
@@ -44,6 +46,7 @@ type HealthChip = {
 export function FaqCategoryListView({
   categories,
   summary,
+  allowCreate = true,
 }: FaqCategoryListViewProps) {
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -97,10 +100,12 @@ export function FaqCategoryListView({
               ゴミ箱
             </Link>
           </Button>
-          <Button type="button" onClick={() => setCreateOpen(true)}>
-            <IconPlus className="mr-1 h-4 w-4" aria-hidden="true" />
-            カテゴリを追加
-          </Button>
+          {allowCreate ? (
+            <Button type="button" onClick={() => setCreateOpen(true)}>
+              <IconPlus className="mr-1 h-4 w-4" aria-hidden="true" />
+              カテゴリを追加
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -132,10 +137,12 @@ export function FaqCategoryListView({
 
       <FaqCategoryGrid
         categories={categories}
-        onCreate={() => setCreateOpen(true)}
+        {...(allowCreate ? { onCreate: () => setCreateOpen(true) } : {})}
       />
 
-      <FaqCategoryDialog open={createOpen} onOpenChange={setCreateOpen} />
+      {allowCreate ? (
+        <FaqCategoryDialog open={createOpen} onOpenChange={setCreateOpen} />
+      ) : null}
     </>
   );
 }

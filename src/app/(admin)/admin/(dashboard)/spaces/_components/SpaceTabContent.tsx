@@ -11,6 +11,8 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED } from "@/shared/lib/constants/admin-space-management";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 
 // =============================================================================
 // 内部コンポーネント
@@ -41,25 +43,29 @@ async function SpaceList() {
     }
   }
 
-  const result = await getSpaces(
-    omitUndefined({
-      isPublished,
-      search: params.spSearch || undefined,
-      locationId,
-      categoryId,
-      uncategorizedOnly,
-    }),
-    {
-      page: params.spPage,
-      limit: params.spPerPage,
-      sortBy: params.spSortBy,
-      sortOrder: params.spSortOrder,
-    },
-  );
+  const [result, enabledFeatures] = await Promise.all([
+    getSpaces(
+      omitUndefined({
+        isPublished,
+        search: params.spSearch || undefined,
+        locationId,
+        categoryId,
+        uncategorizedOnly,
+      }),
+      {
+        page: params.spPage,
+        limit: params.spPerPage,
+        sortBy: params.spSortBy,
+        sortOrder: params.spSortOrder,
+      },
+    ),
+    getEnabledFeatures(),
+  ]);
+  const allowCreate = isAdminFeatureCreateAllowed("spaces", enabledFeatures);
 
   return (
     <>
-      <SpaceTable spaces={result.spaces} />
+      <SpaceTable spaces={result.spaces} allowCreate={allowCreate} />
       <Pagination
         pageUrlKey="spPage"
         perPageUrlKey="spPerPage"

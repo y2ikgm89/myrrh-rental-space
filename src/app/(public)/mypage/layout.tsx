@@ -32,6 +32,7 @@ import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { isCustomerActiveForMypage } from "@/shared/domain/customers/guard";
 import { getReagreeRequiredTermsForCustomer } from "@/shared/domain/terms/queries";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
 import { IncompleteProfileNotice } from "./_components/incomplete-profile-notice";
@@ -94,9 +95,17 @@ async function MypageAuthGate({
     }
   }
 
+  const [eventsEnabled, contactEnabled] = await Promise.all([
+    isFeatureEnabled("events"),
+    isFeatureEnabled("contact"),
+  ]);
+
   return (
     <PageLayout variant="dashboard">
-      <MypageNav />
+      <MypageNav
+        eventsEnabled={eventsEnabled}
+        contactEnabled={contactEnabled}
+      />
       <IncompleteProfileNotice customer={customer} />
       <SignupTermsConsumer isNew={isNew} />
       {children}

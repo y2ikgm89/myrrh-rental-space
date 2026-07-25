@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { NewsEditor } from "../_components/NewsEditor";
 import { getLayoutSettings } from "@/shared/domain/settings/queries/site";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 
 export default async function NewNewsPage() {
   await connection();
+  await requireFeatureEnabled("news");
 
   const settings = await getLayoutSettings();
 

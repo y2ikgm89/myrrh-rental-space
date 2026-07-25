@@ -104,6 +104,8 @@ function MetaSettingsCard({ settings, readOnly = false }: SeoSectionProps) {
     }
   }, [lastResult, router]);
 
+  const formErrors = form.errors;
+
   return (
     <form {...getFormProps(form)} action={action}>
       <Card>
@@ -200,6 +202,16 @@ function MetaSettingsCard({ settings, readOnly = false }: SeoSectionProps) {
               </div>
             </div>
 
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
+
             {!readOnly ? (
               <div className="flex justify-end pt-4">
                 <SubmitButton
@@ -257,6 +269,8 @@ function AnalyticsSettingsCard({
       router.refresh();
     }
   }, [lastResult, router]);
+
+  const formErrors = form.errors;
 
   return (
     <form {...getFormProps(form)} action={action}>
@@ -405,6 +419,16 @@ function AnalyticsSettingsCard({
               )}
             </div>
 
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
+
             {!readOnly ? (
               <div className="flex justify-end pt-4">
                 <SubmitButton
@@ -456,6 +480,8 @@ function SearchVerificationCard({
       router.refresh();
     }
   }, [lastResult, router]);
+
+  const formErrors = form.errors;
 
   return (
     <form {...getFormProps(form)} action={action}>
@@ -521,6 +547,16 @@ function SearchVerificationCard({
                 </p>
               )}
             </div>
+
+            {formErrors && formErrors.length > 0 && (
+              <div
+                id={form.errorId}
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+              >
+                {formErrors.join(", ")}
+              </div>
+            )}
 
             {!readOnly ? (
               <div className="flex justify-end pt-4">

@@ -12,8 +12,7 @@ import {
   getSeoSettings,
   resolveSiteBranding,
 } from "@/public/lib/seo/metadata-factory";
-
-const STATIC_THEME_COLOR = "#fafafa";
+import { getFooterSettings } from "@/shared/domain/settings/queries/display";
 
 const MANIFEST_ICONS: MetadataRoute.Manifest["icons"] = [
   {
@@ -37,8 +36,12 @@ const MANIFEST_ICONS: MetadataRoute.Manifest["icons"] = [
 export async function GET(): Promise<Response> {
   // getSeoSettings は 'use cache' + safeFetch のため build prerender 汚染を避ける。
   await connection();
-  const seoSettings = await getSeoSettings();
+  const [seoSettings, footerSettings] = await Promise.all([
+    getSeoSettings(),
+    getFooterSettings(),
+  ]);
   const { siteName, description } = resolveSiteBranding(seoSettings);
+  const themeColor = footerSettings.themeColor;
 
   const manifest: MetadataRoute.Manifest = {
     name: siteName,
@@ -46,8 +49,8 @@ export async function GET(): Promise<Response> {
     description,
     start_url: "/",
     display: "standalone",
-    background_color: STATIC_THEME_COLOR,
-    theme_color: STATIC_THEME_COLOR,
+    background_color: themeColor,
+    theme_color: themeColor,
     icons: MANIFEST_ICONS,
   };
 

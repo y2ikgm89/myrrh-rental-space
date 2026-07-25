@@ -14,6 +14,7 @@ import { LocationTabContent } from "./_components/LocationTabContent";
 import { CategoryTabContent } from "./_components/CategoryTabContent";
 import { ReviewTabContent } from "./_components/ReviewTabContent";
 import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 
 export const metadata: Metadata = {
   title: "スペース管理 | Myrrh Rental Space",
@@ -36,9 +37,18 @@ function tabPanel(tab: AdminSpaceManagementTab) {
   }
 }
 
-function HeaderAction({ tab }: { tab: AdminSpaceManagementTab }) {
+function HeaderAction({
+  tab,
+  canCreateSpace,
+  canCreateLocation,
+}: {
+  tab: AdminSpaceManagementTab;
+  canCreateSpace: boolean;
+  canCreateLocation: boolean;
+}) {
   switch (tab) {
     case "spaces":
+      if (!canCreateSpace) return null;
       return (
         <Button asChild>
           <Link href="/admin/spaces/new">
@@ -48,6 +58,7 @@ function HeaderAction({ tab }: { tab: AdminSpaceManagementTab }) {
         </Button>
       );
     case "locations":
+      if (!canCreateLocation) return null;
       return (
         <Button asChild>
           <Link href="/admin/locations/new">
@@ -57,6 +68,7 @@ function HeaderAction({ tab }: { tab: AdminSpaceManagementTab }) {
         </Button>
       );
     case "categories":
+      if (!canCreateSpace) return null;
       return <CreateCategoryDialog />;
     case "reviews":
       return null;
@@ -67,7 +79,13 @@ export default async function SpacesPage({ searchParams }: PageProps) {
   await adminSpaceSearchParamsCache.parse(searchParams);
   const tab = adminSpaceSearchParamsCache.get("tab");
   const enabledFeatures = await getEnabledFeatures();
+  const accessFeatureDisabled = !enabledFeatures.has("access");
   const reviewsFeatureDisabled = !enabledFeatures.has("reviews");
+  const canCreateSpace = isAdminFeatureCreateAllowed("spaces", enabledFeatures);
+  const canCreateLocation = isAdminFeatureCreateAllowed(
+    "access",
+    enabledFeatures,
+  );
 
   return (
     <div className="space-y-6">
@@ -80,11 +98,18 @@ export default async function SpacesPage({ searchParams }: PageProps) {
             スペース・場所・カテゴリー・レビューを一元管理します
           </p>
         </div>
-        <HeaderAction tab={tab} />
+        <HeaderAction
+          tab={tab}
+          canCreateSpace={canCreateSpace}
+          canCreateLocation={canCreateLocation}
+        />
       </div>
 
       <div className="space-y-4">
-        <SpaceManagementTabs reviewsFeatureDisabled={reviewsFeatureDisabled} />
+        <SpaceManagementTabs
+          accessFeatureDisabled={accessFeatureDisabled}
+          reviewsFeatureDisabled={reviewsFeatureDisabled}
+        />
         {/* タブ依存パネルは Suspense 動的ホールで描画し、`shallow:false` ソフトナビ時に
             request 時再ストリームさせる。`key={tab}` でタブ切替ごとに subtree を作り直す
             （events / reservations と同じ公式 PPR パターン）。 */}

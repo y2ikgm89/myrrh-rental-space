@@ -6,6 +6,7 @@ import {
   FEATURE_MODULES_LIST,
   buildInitialFeatureModules,
   isFeatureModule,
+  normalizeFeatureModules,
   parseDisabledFeatureModulesEnv,
   type FeatureModule,
 } from "@/shared/lib/features/registry";
@@ -273,5 +274,78 @@ describe("buildInitialFeatureModules", () => {
     const resultKeys: string[] = Object.keys(result).sort();
     const registryKeys: string[] = [...FEATURE_MODULES_LIST].sort();
     expect(resultKeys).toEqual(registryKeys);
+  });
+});
+
+describe("normalizeFeatureModules", () => {
+  test("依存関係が満たされる map はそのまま返す", () => {
+    const input = {
+      spaces: true,
+      reservation: true,
+      events: true,
+      posts: true,
+      news: true,
+      faq: true,
+      access: true,
+      contact: true,
+      reviews: true,
+      payment: true,
+      "data-retention": false,
+    };
+
+    expect(normalizeFeatureModules(input)).toEqual(input);
+  });
+
+  test("spaces OFF の場合、reservation / reviews / payment も強制 OFF", () => {
+    const result = normalizeFeatureModules({
+      spaces: false,
+      reservation: true,
+      reviews: true,
+      payment: true,
+      events: true,
+      posts: true,
+      news: true,
+      faq: true,
+      access: true,
+      contact: true,
+      "data-retention": true,
+    });
+
+    expect(result.spaces).toBe(false);
+    expect(result.reservation).toBe(false);
+    expect(result.reviews).toBe(false);
+    expect(result.payment).toBe(false);
+    expect(result.events).toBe(true);
+    expect(result["data-retention"]).toBe(true);
+  });
+
+  test("reservation OFF の場合、payment も強制 OFF", () => {
+    const result = normalizeFeatureModules({
+      spaces: true,
+      reservation: false,
+      payment: true,
+    });
+
+    expect(result.spaces).toBe(true);
+    expect(result.reservation).toBe(false);
+    expect(result.payment).toBe(false);
+  });
+
+  test("戻り値は FEATURE_MODULES_LIST の全 key を含む", () => {
+    const result = normalizeFeatureModules({ spaces: true });
+    expect(Object.keys(result).sort()).toEqual(
+      [...FEATURE_MODULES_LIST].sort(),
+    );
+  });
+
+  test("registry にない key は出力に含めない", () => {
+    const result = normalizeFeatureModules({
+      spaces: true,
+      unknown_module: true,
+    });
+    expect(Object.keys(result).sort()).toEqual(
+      [...FEATURE_MODULES_LIST].sort(),
+    );
+    expect("unknown_module" in result).toBe(false);
   });
 });

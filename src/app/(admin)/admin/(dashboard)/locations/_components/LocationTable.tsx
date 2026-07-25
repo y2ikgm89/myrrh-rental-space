@@ -85,6 +85,8 @@ type LocationTableProps = {
   readonly sortable: boolean;
   /** ページオフセット（global な sortOrder 維持用） */
   readonly startIndex: number;
+  /** feature OFF 時は EmptyState の新規作成を出さない */
+  readonly allowCreate?: boolean;
 };
 
 type SortableRowProps = {
@@ -185,6 +187,7 @@ export function LocationTable({
   locations: initialLocations,
   sortable,
   startIndex,
+  allowCreate = true,
 }: LocationTableProps) {
   const router = useRouter();
   const [locations, setLocations] = useState<LocationWithStats[]>(() => [
@@ -238,7 +241,9 @@ export function LocationTable({
     return (
       <EmptyState
         message="場所がありません"
-        action={{ label: "新規作成", href: "/admin/locations/new" }}
+        {...(allowCreate
+          ? { action: { label: "新規作成", href: "/admin/locations/new" } }
+          : {})}
       />
     );
   }

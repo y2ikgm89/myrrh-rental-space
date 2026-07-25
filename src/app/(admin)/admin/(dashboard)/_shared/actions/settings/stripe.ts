@@ -17,6 +17,7 @@ import { executeConformMutation } from "@/shared/lib/forms/conform-action";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import * as stripeLib from "@/shared/lib/stripe";
 import { stripeFormSchema } from "./schemas/form-schemas-security-integrations";
+import { emptyToNull } from "./schemas/form-schema-helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   clearStripeKeys as clearStripeKeysCommand,
@@ -53,9 +54,9 @@ export async function updateStripeSettings(
       action: "manage",
       execute: async () => {
         await updateStripeSettingsCommand({
-          stripePublishableKey: data.stripePublishableKey || null,
-          stripeSecretKey: data.stripeSecretKey || null,
-          stripeWebhookSecret: data.stripeWebhookSecret || null,
+          stripePublishableKey: emptyToNull(data.stripePublishableKey),
+          stripeSecretKey: emptyToNull(data.stripeSecretKey),
+          stripeWebhookSecret: emptyToNull(data.stripeWebhookSecret),
           stripeCurrency: data.stripeCurrency,
           stripePaymentMethodTypes: data.stripePaymentMethodTypes,
         });

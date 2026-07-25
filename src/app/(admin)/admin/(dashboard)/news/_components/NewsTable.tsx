@@ -27,13 +27,15 @@ import type { NewsListItem } from "@/shared/domain/news/types";
 
 type NewsTableProps = {
   news: NewsListItem[];
+  /** feature OFF 時は EmptyState の新規作成を出さない */
+  allowCreate?: boolean;
 };
 
 // =============================================================================
 // NewsTable Component (Client Component)
 // =============================================================================
 
-export function NewsTable({ news }: NewsTableProps) {
+export function NewsTable({ news, allowCreate = true }: NewsTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allIds = news.map((item) => item.id);
@@ -66,7 +68,9 @@ export function NewsTable({ news }: NewsTableProps) {
     return (
       <EmptyState
         message="お知らせがありません"
-        action={{ label: "新規作成", href: "/admin/news/new" }}
+        {...(allowCreate
+          ? { action: { label: "新規作成", href: "/admin/news/new" } }
+          : {})}
       />
     );
   }

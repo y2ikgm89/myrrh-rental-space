@@ -19,6 +19,8 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseNewsStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminNewsSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "お知らせ管理 | Myrrh Rental Space",
@@ -34,7 +36,13 @@ type PageProps = {
 // 記事一覧タブのコンポーネント
 // ==============================================================================
 
-async function NewsList({ searchParams }: { searchParams: SearchParams }) {
+async function NewsList({
+  searchParams,
+  allowCreate,
+}: {
+  searchParams: SearchParams;
+  allowCreate: boolean;
+}) {
   await connection();
   const params = await loadAdminNewsSearchParams(searchParams);
   const status = parseNewsStatusFilter(params.status);
@@ -46,7 +54,7 @@ async function NewsList({ searchParams }: { searchParams: SearchParams }) {
 
   return (
     <>
-      <NewsTable news={result.news} />
+      <NewsTable news={result.news} allowCreate={allowCreate} />
       <Pagination
         currentPage={result.page}
         totalPages={result.totalPages}
@@ -94,7 +102,11 @@ async function SeoContent() {
 // タブパネル（アクティブタブのみ描画）
 // ==============================================================================
 
-function tabPanel(tab: "posts" | "meta", searchParams: SearchParams) {
+function tabPanel(
+  tab: "posts" | "meta",
+  searchParams: SearchParams,
+  allowCreate: boolean,
+) {
   switch (tab) {
     case "posts":
       return (
@@ -103,7 +115,7 @@ function tabPanel(tab: "posts" | "meta", searchParams: SearchParams) {
             <NewsFilters />
           </Suspense>
           <Suspense fallback={<LoadingState />}>
-            <NewsList searchParams={searchParams} />
+            <NewsList searchParams={searchParams} allowCreate={allowCreate} />
           </Suspense>
         </div>
       );
@@ -122,6 +134,8 @@ function tabPanel(tab: "posts" | "meta", searchParams: SearchParams) {
 
 export default async function NewsPage({ searchParams }: PageProps) {
   const { tab } = await loadAdminNewsSearchParams(searchParams);
+  const enabledFeatures = await getEnabledFeatures();
+  const allowCreate = isAdminFeatureCreateAllowed("news", enabledFeatures);
 
   return (
     <div className="space-y-6">
@@ -135,12 +149,14 @@ export default async function NewsPage({ searchParams }: PageProps) {
             お知らせの作成・編集・公開管理を行います
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/news/new">
-            <IconPlus className="mr-2 h-4 w-4" />
-            新規お知らせ作成
-          </Link>
-        </Button>
+        {allowCreate ? (
+          <Button asChild>
+            <Link href="/admin/news/new">
+              <IconPlus className="mr-2 h-4 w-4" />
+              新規お知らせ作成
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="space-y-4">
@@ -149,7 +165,7 @@ export default async function NewsPage({ searchParams }: PageProps) {
             request 時再ストリーム。`key={tab}` でタブ切替ごとに subtree を作り直す
             （events / reservations / spaces と同じ公式 PPR パターン）。 */}
         <Suspense key={tab} fallback={<LoadingState />}>
-          {tabPanel(tab, searchParams)}
+          {tabPanel(tab, searchParams, allowCreate)}
         </Suspense>
       </div>
     </div>

@@ -20,6 +20,10 @@ import type {
 } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
+import {
+  buildInitialFeatureModules,
+  normalizeFeatureModules,
+} from "@/shared/lib/features/registry";
 export type BasicInfoInput = {
   siteName: string | null;
   siteDescription: string | null;
@@ -83,8 +87,9 @@ export type ContactInfoInput = {
 
 export type BusinessHoursSettingsInput = {
   businessHours: BusinessHours;
-  regularHolidays: string[] | null;
   holidayNotice: string | null;
+  /** 楽観的 concurrency: 読み込み時の SettingsOrganization.updatedAt */
+  expectedUpdatedAt?: string | Date | undefined;
 };
 
 export type EmailSettingsInput = {
@@ -263,9 +268,26 @@ export async function updateContactInfo(data: ContactInfoInput): Promise<void> {
 export async function updateBusinessHoursSettings(
   data: BusinessHoursSettingsInput,
 ): Promise<void> {
+  if (data.expectedUpdatedAt !== undefined) {
+    const current = await prisma.settingsOrganization.findUnique({
+      where: { id: "singleton" },
+      select: { updatedAt: true },
+    });
+    const expectedMs = new Date(data.expectedUpdatedAt).getTime();
+    if (
+      !current ||
+      Number.isNaN(expectedMs) ||
+      current.updatedAt.getTime() !== expectedMs
+    ) {
+      throw new DomainError(
+        "他のユーザーにより更新されています。ページを再読み込みしてください",
+        "CONFLICT",
+      );
+    }
+  }
+
   const updateData = {
     businessHours: data.businessHours,
-    regularHolidays: data.regularHolidays ?? Prisma.JsonNull,
     holidayNotice: data.holidayNotice,
   };
 
@@ -459,10 +481,15 @@ export async function ensureSettingsSwitchbot() {
 }
 
 export async function ensureSettingsFeatures() {
+  const featureModules = asPrismaInputJsonValue(
+    buildInitialFeatureModules(),
+    "featureModules が不正です",
+  );
+
   return prisma.settingsFeatures.upsert({
     where: { id: "singleton" },
     update: {},
-    create: { id: "singleton" },
+    create: { id: "singleton", featureModules },
   });
 }
 
@@ -622,7 +649,8 @@ export async function updateRefundPolicy(
 export async function updateEventImportEnabled(
   enabled: boolean,
 ): Promise<void> {
-  await prisma.settingsGoogleCalendar.updateMany({
+  await prisma.settingsGoogleCalendar.update({
+    where: { id: "singleton" },
     data: { eventImportEnabled: enabled },
   });
 }
@@ -631,14 +659,14 @@ export async function updateEventImportEnabled(
  * Feature Module ON/OFF map を Settings.featureModules JSON column に書き込む。
  *
  * 入力は schema 層（`featureModulesSettingsSchema`）で全 11 module の boolean 必須に
- * 検証済みのため、ここでは純粋な write を行うのみ。依存解決は read 側
- * (`@/shared/lib/features/check.ts` の `getEnabledFeatures`) で行う。
+ * 検証済み。persist 前に `normalizeFeatureModules` で依存 cascade を適用する（write-side SSoT）。
  */
 export async function updateFeatureModulesCommand(
   modules: Record<string, boolean>,
 ): Promise<void> {
+  const normalized = normalizeFeatureModules(modules);
   const featureModules = asPrismaInputJsonValue(
-    modules,
+    normalized,
     "featureModules が不正です",
   );
 

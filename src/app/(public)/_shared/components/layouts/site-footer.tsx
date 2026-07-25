@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
+import { IconPrinter } from "@tabler/icons-react";
 import { connection } from "next/server";
 
 import { getBusinessInfo } from "@/public/data/business";
@@ -312,6 +313,17 @@ export async function Footer(): Promise<ReactElement> {
                   </a>
                 </li>
               )}
+              {info.fax && (
+                <li className="flex items-center gap-2">
+                  <IconPrinter
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span itemProp="faxNumber" className="text-muted-foreground">
+                    {info.fax}
+                  </span>
+                </li>
+              )}
               {info.address && (
                 <li
                   itemProp="address"
@@ -347,27 +359,41 @@ export async function Footer(): Promise<ReactElement> {
                 </li>
               )}
 
-              {hoursDisplay.length > 0 && (
+              {(hoursDisplay.length > 0 || info.holidayNotice) && (
                 <li className="pt-1">
-                  <span className={cn(HEADING_CLASS, "block")}>
-                    {footerSettings.hoursLabel}
-                  </span>
-                  <div className="mt-2 space-y-1">
-                    {hoursDisplay.map((h) => (
-                      <div
-                        key={h.microdataContent}
-                        className="flex items-center gap-2 text-muted-foreground"
-                      >
-                        <span className="min-w-[3rem]">{h.label}</span>
-                        <time
-                          itemProp="openingHours"
-                          content={h.microdataContent}
-                        >
-                          {h.time}
-                        </time>
+                  {hoursDisplay.length > 0 && (
+                    <>
+                      <span className={cn(HEADING_CLASS, "block")}>
+                        {footerSettings.hoursLabel}
+                      </span>
+                      <div className="mt-2 space-y-1">
+                        {hoursDisplay.map((h) => (
+                          <div
+                            key={h.microdataContent}
+                            className="flex items-center gap-2 text-muted-foreground"
+                          >
+                            <span className="min-w-[3rem]">{h.label}</span>
+                            <time
+                              itemProp="openingHours"
+                              content={h.microdataContent}
+                            >
+                              {h.time}
+                            </time>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
+                  {info.holidayNotice && (
+                    <p
+                      className={cn(
+                        "text-sm text-muted-foreground",
+                        hoursDisplay.length > 0 && "mt-3",
+                      )}
+                    >
+                      {info.holidayNotice}
+                    </p>
+                  )}
                 </li>
               )}
             </ul>

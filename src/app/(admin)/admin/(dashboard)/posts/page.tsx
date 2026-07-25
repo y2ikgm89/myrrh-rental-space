@@ -19,6 +19,8 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "投稿管理 | Myrrh Rental Space",
@@ -40,7 +42,13 @@ async function PostFiltersWrapper() {
   return <PostFilters categories={categories} />;
 }
 
-async function PostList({ searchParams }: { searchParams: SearchParams }) {
+async function PostList({
+  searchParams,
+  allowCreate,
+}: {
+  searchParams: SearchParams;
+  allowCreate: boolean;
+}) {
   await connection();
   const params = await loadAdminPostSearchParams(searchParams);
   const status = parsePostStatusFilter(params.status);
@@ -62,7 +70,7 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
 
   return (
     <>
-      <PostTable posts={result.posts} />
+      <PostTable posts={result.posts} allowCreate={allowCreate} />
       <Pagination
         currentPage={result.page}
         totalPages={result.totalPages}
@@ -77,20 +85,22 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
 // カテゴリータブのコンポーネント
 // ==============================================================================
 
-async function CategoryContent() {
+async function CategoryContent({ allowCreate }: { allowCreate: boolean }) {
   await connection();
   const categories = await getPostCategories();
-  return <CategoryManager initialCategories={categories} />;
+  return (
+    <CategoryManager initialCategories={categories} allowCreate={allowCreate} />
+  );
 }
 
 // ==============================================================================
 // タグタブのコンポーネント
 // ==============================================================================
 
-async function TagContent() {
+async function TagContent({ allowCreate }: { allowCreate: boolean }) {
   await connection();
   const tags = await getPostTags();
-  return <TagManager initialTags={tags} />;
+  return <TagManager initialTags={tags} allowCreate={allowCreate} />;
 }
 
 // ==============================================================================
@@ -100,6 +110,7 @@ async function TagContent() {
 function tabPanel(
   tab: "posts" | "categories" | "tags",
   searchParams: SearchParams,
+  allowCreate: boolean,
 ) {
   switch (tab) {
     case "posts":
@@ -109,20 +120,20 @@ function tabPanel(
             <PostFiltersWrapper />
           </Suspense>
           <Suspense fallback={<LoadingState />}>
-            <PostList searchParams={searchParams} />
+            <PostList searchParams={searchParams} allowCreate={allowCreate} />
           </Suspense>
         </div>
       );
     case "categories":
       return (
         <Suspense fallback={<LoadingState />}>
-          <CategoryContent />
+          <CategoryContent allowCreate={allowCreate} />
         </Suspense>
       );
     case "tags":
       return (
         <Suspense fallback={<LoadingState />}>
-          <TagContent />
+          <TagContent allowCreate={allowCreate} />
         </Suspense>
       );
   }
@@ -134,6 +145,8 @@ function tabPanel(
 
 export default async function PostsPage({ searchParams }: PageProps) {
   const { tab } = await loadAdminPostSearchParams(searchParams);
+  const enabledFeatures = await getEnabledFeatures();
+  const allowCreate = isAdminFeatureCreateAllowed("posts", enabledFeatures);
 
   return (
     <div className="space-y-6">
@@ -147,12 +160,14 @@ export default async function PostsPage({ searchParams }: PageProps) {
             投稿・カテゴリー・タグを管理します
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/posts/new">
-            <IconPlus className="mr-2 h-4 w-4" />
-            新規投稿作成
-          </Link>
-        </Button>
+        {allowCreate ? (
+          <Button asChild>
+            <Link href="/admin/posts/new">
+              <IconPlus className="mr-2 h-4 w-4" />
+              新規投稿作成
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="space-y-4">
@@ -161,7 +176,7 @@ export default async function PostsPage({ searchParams }: PageProps) {
             request 時再ストリーム。`key={tab}` でタブ切替ごとに subtree を作り直す
             （events / reservations / spaces と同じ公式 PPR パターン）。 */}
         <Suspense key={tab} fallback={<LoadingState />}>
-          {tabPanel(tab, searchParams)}
+          {tabPanel(tab, searchParams, allowCreate)}
         </Suspense>
       </div>
     </div>

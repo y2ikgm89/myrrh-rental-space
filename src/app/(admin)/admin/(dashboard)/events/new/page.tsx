@@ -4,6 +4,7 @@ import {
   getSpacesForEvent,
   getCategoriesForEvent,
 } from "@/admin/queries/event";
+import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { EventForm } from "../_components/EventForm";
 import type { Metadata } from "next";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 
 export default async function NewEventPage() {
   await connection();
+  await requireFeatureEnabled("events");
 
   const [locations, spaces, categories] = await Promise.all([
     getLocationsForEvent(),

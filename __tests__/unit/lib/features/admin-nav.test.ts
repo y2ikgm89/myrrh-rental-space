@@ -6,6 +6,7 @@ import {
   assertAdminNavFeatureModulesAreRegistered,
   collectMappedAdminNavFeatureModules,
   formatAdminNavDisabledTooltip,
+  isAdminFeatureCreateAllowed,
   isAdminNavFeaturePubliclyDisabled,
   isAdminQuickActionFeatureDisabled,
 } from "@/shared/lib/features/admin-nav";
@@ -49,6 +50,22 @@ describe("admin-nav helpers", () => {
     expect(isAdminQuickActionFeatureDisabled("news", enabled)).toBe(true);
     expect(isAdminQuickActionFeatureDisabled("posts", enabled)).toBe(false);
     expect(isAdminQuickActionFeatureDisabled(undefined, enabled)).toBe(false);
+  });
+
+  test("isAdminFeatureCreateAllowed は OFF 時 false（未 map は true）", () => {
+    const enabled = enabledSet("spaces");
+    expect(isAdminFeatureCreateAllowed("events", enabled)).toBe(false);
+    expect(isAdminFeatureCreateAllowed("spaces", enabled)).toBe(true);
+    expect(isAdminFeatureCreateAllowed(undefined, enabled)).toBe(true);
+  });
+
+  test("tooltip は編集可・新規作成不可を明示する", () => {
+    expect(ADMIN_NAV_DISABLED_TOOLTIP_TEMPLATE).toContain(
+      "確認・編集はできます",
+    );
+    expect(ADMIN_NAV_DISABLED_TOOLTIP_TEMPLATE).toContain(
+      "新規作成はできません",
+    );
   });
 
   test("ADMIN_NAV_DISABLED_BADGE_LABEL", () => {

@@ -106,27 +106,9 @@ export function BusinessHoursSection({
   const isDisabled = isSettingsFormDisabled(isPending, readOnly);
 
   const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS;
-  const initialRegularHolidays = settings.regularHolidays ?? [];
 
-  /**
-   * 定休日設定を営業時間に反映
-   */
-  const businessHoursWithHolidays = (() => {
-    const hours = { ...initialBusinessHours };
-    for (const day of initialRegularHolidays) {
-      if (isWeekdayKey(day)) {
-        hours[day] = {
-          ...hours[day],
-          isOpen: false,
-        };
-      }
-    }
-    return hours;
-  })();
-
-  const [businessHours, setBusinessHours] = useState<BusinessHours>(
-    businessHoursWithHolidays,
-  );
+  const [businessHours, setBusinessHours] =
+    useState<BusinessHours>(initialBusinessHours);
   const [holidayNotice, setHolidayNotice] = useState(
     settings.holidayNotice || "",
   );
@@ -339,17 +321,13 @@ export function BusinessHoursSection({
     }
 
     startTransition(async () => {
-      const regularHolidays = DAYS_OF_WEEK.filter(
-        ({ key }) => !businessHours[key].isOpen,
-      ).map(({ key }) => key);
-
       const result = await updateBusinessHoursSettings({
         businessHours: {
           ...businessHours,
           monthlyClosures: monthlyClosures.length > 0 ? monthlyClosures : [],
         },
-        regularHolidays: regularHolidays.length > 0 ? regularHolidays : null,
         holidayNotice: holidayNotice || null,
+        expectedUpdatedAt: settings.organizationUpdatedAt,
       });
 
       if (isMutationError(result)) {

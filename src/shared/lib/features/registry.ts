@@ -266,3 +266,40 @@ export function parseDisabledFeatureModulesEnv(
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
+/**
+ * Feature Module ON/OFF map を依存関係に従って正規化する（write-side SSoT）。
+ *
+ * `requires` の依存先が OFF の module は、自身も強制的に OFF にする。
+ * read 側の `getEnabledFeatures` と同じ fixed-point 解決を persist 前に適用し、
+ * DB に矛盾状態（spaces OFF + reservation ON 等）を書き込まない。
+ */
+export function normalizeFeatureModules(
+  modules: Record<string, boolean>,
+): Record<FeatureModule, boolean> {
+  const enabled = new Set<FeatureModule>();
+
+  for (const id of FEATURE_MODULES_LIST) {
+    if (modules[id] === true) {
+      enabled.add(id);
+    }
+  }
+
+  for (let pass = 0; pass < FEATURE_MODULES_LIST.length; pass++) {
+    let removed = false;
+    for (const id of [...enabled]) {
+      const def = FEATURE_MODULES[id];
+      if (def.requires?.some((req) => !enabled.has(req))) {
+        enabled.delete(id);
+        removed = true;
+      }
+    }
+    if (!removed) break;
+  }
+
+  const normalized = {} as Record<FeatureModule, boolean>;
+  for (const id of FEATURE_MODULES_LIST) {
+    normalized[id] = enabled.has(id);
+  }
+  return normalized;
+}

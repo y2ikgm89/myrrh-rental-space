@@ -66,7 +66,8 @@ type FaqCategoryItemsTableProps = {
   readonly reorderEnabled: boolean;
   readonly startIndex: number;
   readonly onEditItem: (item: FaqItemWithCategory) => void;
-  readonly onAddItem: () => void;
+  /** feature OFF 時は未指定（EmptyState の作成 CTA も出さない） */
+  readonly onAddItem?: () => void;
 };
 
 type SortableRowProps = {
@@ -290,10 +291,14 @@ export function FaqCategoryItemsTable({
     return (
       <EmptyState
         message="このカテゴリにはまだ質問がありません"
-        action={{
-          label: "最初の質問を追加",
-          onClick: onAddItem,
-        }}
+        {...(onAddItem !== undefined
+          ? {
+              action: {
+                label: "最初の質問を追加",
+                onClick: onAddItem,
+              },
+            }
+          : {})}
       />
     );
   }

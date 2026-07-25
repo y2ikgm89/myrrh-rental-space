@@ -14,6 +14,8 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import { getFaqCategories, getFaqHealthSummary } from "@/admin/queries/faq";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { getEnabledFeatures } from "@/shared/lib/features/check";
+import { isAdminFeatureCreateAllowed } from "@/shared/lib/features/admin-nav";
 import { FaqCategoryListView } from "./_components/FaqCategoryListView";
 
 export const metadata: Metadata = {
@@ -22,11 +24,19 @@ export const metadata: Metadata = {
 
 async function FaqCategoryListContent() {
   await connection();
-  const [{ categories }, summary] = await Promise.all([
+  const [{ categories }, summary, enabledFeatures] = await Promise.all([
     getFaqCategories(),
     getFaqHealthSummary(),
+    getEnabledFeatures(),
   ]);
-  return <FaqCategoryListView categories={categories} summary={summary} />;
+  const allowCreate = isAdminFeatureCreateAllowed("faq", enabledFeatures);
+  return (
+    <FaqCategoryListView
+      categories={categories}
+      summary={summary}
+      allowCreate={allowCreate}
+    />
+  );
 }
 
 export default function FaqPage() {
