@@ -37,6 +37,8 @@ export function TaxonomyDeleteDialog({
   onDelete,
   isPending,
 }: TaxonomyDeleteDialogProps) {
+  const isBlocked = postCount > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -47,13 +49,16 @@ export function TaxonomyDeleteDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{label}を削除しますか？</DialogTitle>
+          <DialogTitle>
+            {isBlocked
+              ? `${label}を削除できません`
+              : `${label}を削除しますか？`}
+          </DialogTitle>
           <DialogDescription>
-            {postCount > 0 ? (
+            {isBlocked ? (
               <>
                 この{label}には{postCount}
-                件の投稿が紐づいています。
-                削除すると、投稿との紐づけが解除されます。
+                件の投稿が紐づいているため削除できません。
               </>
             ) : (
               <>この操作は取り消せません。</>
@@ -66,11 +71,17 @@ export function TaxonomyDeleteDialog({
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
-            キャンセル
+            {isBlocked ? "閉じる" : "キャンセル"}
           </Button>
-          <Button variant="destructive" onClick={onDelete} disabled={isPending}>
-            {isPending ? "削除中..." : "削除"}
-          </Button>
+          {!isBlocked && (
+            <Button
+              variant="destructive"
+              onClick={onDelete}
+              disabled={isPending}
+            >
+              {isPending ? "削除中..." : "削除"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

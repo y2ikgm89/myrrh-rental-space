@@ -7,6 +7,7 @@ import {
   assertAllowedManagedImageSourcesInJson,
   assertAllowedManagedImageUrls,
 } from "@/shared/domain/media/managed-image-assertions";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   checkSlugAvailability,
@@ -21,6 +22,19 @@ import type {
   UpdatePostSettingsCommandInput,
   UpdatePostResult,
 } from "@/shared/domain/posts/types";
+
+const POST_SLUG_CONFLICT_MESSAGE = getSlugErrorMessage({
+  type: "conflict",
+  contentType: "post",
+  id: "",
+});
+
+function rethrowPostSlugConflict(error: unknown): never {
+  if (isPrismaUniqueConstraintError(error, "slug")) {
+    throw new DomainError(POST_SLUG_CONFLICT_MESSAGE, "CONFLICT");
+  }
+  throw error;
+}
 
 function parseContentJson(contentJson: string) {
   if (!contentJson) {
@@ -124,35 +138,39 @@ export async function createPost(
     ensurePostTagsExist(input.tags),
   ]);
 
-  const post = await prisma.post.create({
-    data: omitUndefined({
-      title: input.title,
-      slug: input.slug,
-      excerpt: input.excerpt,
-      contentHtml: input.contentHtml,
-      contentJson: parseContentJson(input.contentJson),
-      thumbnailUrl: input.thumbnailUrl,
-      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-      categoryId: input.categoryId,
-      metaDescription: normalizeNullableString(input.metaDescription),
-      metaKeywords: normalizeNullableString(input.metaKeywords),
-      ogpTitle: normalizeNullableString(input.ogpTitle),
-      ogpDescription: normalizeNullableString(input.ogpDescription),
-      contentWidth: input.contentWidth ?? null,
-      contentWidthCustom: input.contentWidthCustom ?? null,
-      status: PostStatus.DRAFT,
-      authorId: input.authorId,
-      postTags: {
-        create: input.tags.map((tagId) => ({ tagId })),
+  try {
+    const post = await prisma.post.create({
+      data: omitUndefined({
+        title: input.title,
+        slug: input.slug,
+        excerpt: input.excerpt,
+        contentHtml: input.contentHtml,
+        contentJson: parseContentJson(input.contentJson),
+        thumbnailUrl: input.thumbnailUrl,
+        ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
+        categoryId: input.categoryId,
+        metaDescription: normalizeNullableString(input.metaDescription),
+        metaKeywords: normalizeNullableString(input.metaKeywords),
+        ogpTitle: normalizeNullableString(input.ogpTitle),
+        ogpDescription: normalizeNullableString(input.ogpDescription),
+        contentWidth: input.contentWidth ?? null,
+        contentWidthCustom: input.contentWidthCustom ?? null,
+        status: PostStatus.DRAFT,
+        authorId: input.authorId,
+        postTags: {
+          create: input.tags.map((tagId) => ({ tagId })),
+        },
+      }),
+      select: {
+        id: true,
+        slug: true,
       },
-    }),
-    select: {
-      id: true,
-      slug: true,
-    },
-  });
+    });
 
-  return post;
+    return post;
+  } catch (error) {
+    rethrowPostSlugConflict(error);
+  }
 }
 
 /**
@@ -205,34 +223,47 @@ export async function updatePostSettings(
     ensurePostTagsExist(input.tags),
   ]);
 
-  await prisma.post.update({
-    where: { id },
-    data: {
-      title: input.title,
-      slug: input.slug,
-      excerpt: input.excerpt,
-      thumbnailUrl: input.thumbnailUrl,
-      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-      categoryId: input.categoryId,
-      metaDescription: normalizeNullableString(input.metaDescription),
-      metaKeywords: normalizeNullableString(input.metaKeywords),
-      ogpTitle: normalizeNullableString(input.ogpTitle),
-      ogpDescription: normalizeNullableString(input.ogpDescription),
-      status: input.status,
-      publishedAt: resolvePostPublishedAt(input.status, input.publishedAt),
-      contentWidth: input.contentWidth,
-      contentWidthCustom: input.contentWidthCustom,
-      postTags: {
-        deleteMany: {},
-        create: input.tags.map((tagId) => ({ tagId })),
+  try {
+    await prisma.post.update({
+      where: { id },
+      data: {
+        title: input.title,
+        slug: input.slug,
+        excerpt: input.excerpt,
+        thumbnailUrl: input.thumbnailUrl,
+        ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
+        categoryId: input.categoryId,
+        metaDescription: normalizeNullableString(input.metaDescription),
+        metaKeywords: normalizeNullableString(input.metaKeywords),
+        ogpTitle: normalizeNullableString(input.ogpTitle),
+        ogpDescription: normalizeNullableString(input.ogpDescription),
+        status: input.status,
+        publishedAt: resolvePostPublishedAt(input.status, input.publishedAt),
+        contentWidth: input.contentWidth,
+        contentWidthCustom: input.contentWidthCustom,
+        postTags: {
+          deleteMany: {},
+          create: input.tags.map((tagId) => ({ tagId })),
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    rethrowPostSlugConflict(error);
+  }
 
   return {
     oldSlug: existingPost.slug,
     slug: input.slug,
   };
+}
+
+/** 投稿の現在 status を取得する（設定更新の RBAC 判定用）。見つからなければ null。 */
+export async function getPostStatus(id: string): Promise<PostStatus | null> {
+  const post = await prisma.post.findUnique({
+    where: { id },
+    select: { status: true },
+  });
+  return post?.status ?? null;
 }
 
 export async function deletePost(id: string): Promise<DeletePostResult> {

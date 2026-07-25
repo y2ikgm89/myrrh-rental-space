@@ -78,6 +78,13 @@ locals {
       description = "Revalidate NEWS cache tags when a scheduled (future publishedAt) News item's publish time has just passed, bounding the cacheLife(PUBLIC_CONTENT) 1h revalidate-window exposure delay to cron interval (every 10 min, feature module news gate; avoids Neon Free always-on)"
     },
     {
+      name = "posts-scheduled-publish"
+      # news-scheduled-publish と同理由で */10（Neon Free scale-to-zero 維持）。
+      schedule    = "*/10 * * * *"
+      path        = "/api/cron/posts-scheduled-publish"
+      description = "Revalidate POSTS cache tags when a scheduled (future publishedAt) Post's publish time has just passed, bounding the cacheLife(PUBLIC_CONTENT) 1h revalidate-window exposure delay to cron interval (every 10 min, feature module posts/blog gate; avoids Neon Free always-on)"
+    },
+    {
       name        = "reservation-reminder"
       schedule    = "0 * * * *"
       path        = "/api/cron/reservation-reminder"
@@ -200,6 +207,7 @@ locals {
     "audit-log-integrity",
     # 段階 B 完了: PR #1382 で追加 → apply-create 完了 (2026-07-21T15:49:53Z 本番作成確認済み、Deploy Production run 29845742054 の Terraform Apply (IAM prereq) ジョブで実確認) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "news-scheduled-publish",
+    "posts-scheduled-publish",
     # 段階 B 完了: cron_jobs に Stage A 追加済み → 本番 apply-create 済み → state-rebuild 防御のため imported に組み込み
     "customer-duplicate-scan",
     "stripe-event-cleanup",

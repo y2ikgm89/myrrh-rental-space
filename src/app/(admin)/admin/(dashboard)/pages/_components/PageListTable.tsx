@@ -29,6 +29,7 @@ import { BulkActions } from "./BulkActions";
 import { CheckboxCell } from "@/admin/components/table";
 import { CreatePageDialog } from "./CreatePageDialog";
 import { PageTableHeader } from "./PageTableHeader";
+import { PageStatusBadge } from "@/admin/components/status-badges";
 
 type PageListTableProps = {
   pages: PageData[];
@@ -145,8 +146,8 @@ export function PageListTable({
                       {formatDateTimeShort(page.updatedAt)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {page.isSystemPage && isHomepage ? (
-                        <Badge variant="success">公開中</Badge>
+                      {page.isSystemPage ? (
+                        <PageStatusBadge isPublished={page.isPublished} />
                       ) : (
                         <PublishSwitch
                           id={page.slug}

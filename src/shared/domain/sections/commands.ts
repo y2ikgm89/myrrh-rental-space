@@ -274,13 +274,26 @@ export async function togglePageSectionActiveCommand(id: string): Promise<{
     where: { id },
     select: {
       id: true,
+      type: true,
       pageId: true,
       isActive: true,
-      page: { select: { slug: true } },
+      page: { select: { slug: true, template: true } },
     },
   });
   if (!current) {
     throw new DomainError("セクションが見つかりません", "NOT_FOUND");
+  }
+
+  if (current.isActive) {
+    if (current.type === "page-hero") {
+      throw new DomainError("ヒーローは非表示にできません", "CONFLICT");
+    }
+    if (isRequiredSectionForTemplate(current.page.template, current.type)) {
+      throw new DomainError(
+        "このセクションはページの必須要素のため非表示にできません",
+        "CONFLICT",
+      );
+    }
   }
 
   const updated = await prisma.section.update({

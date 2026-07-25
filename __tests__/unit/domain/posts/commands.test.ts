@@ -403,6 +403,18 @@ describe("createPost", () => {
       await expect(createPost(VALID_CREATE_INPUT)).rejects.toThrow(DomainError);
     });
 
+    test("slug の P2002 は CONFLICT に変換する", async () => {
+      mockPostCreate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      });
+
+      await expect(createPost(VALID_CREATE_INPUT)).rejects.toMatchObject({
+        code: "CONFLICT",
+        message: "このスラッグは既に投稿で使用されています",
+      });
+    });
+
     test("カテゴリが存在しない場合 NOT_FOUND エラーをスローする", async () => {
       mockPostCategoryFindUnique.mockResolvedValue(null);
 
@@ -601,6 +613,20 @@ describe("updatePostSettings", () => {
         updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
       ).rejects.toMatchObject({
         code: "CONFLICT",
+      });
+    });
+
+    test("slug の P2002 は CONFLICT に変換する", async () => {
+      mockPostUpdate.mockRejectedValueOnce({
+        code: "P2002",
+        meta: { target: ["slug"] },
+      });
+
+      await expect(
+        updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        message: "このスラッグは既に投稿で使用されています",
       });
     });
 

@@ -482,8 +482,9 @@ describe("togglePageSectionActiveCommand", () => {
       Promise.resolve({
         id: SECTION_ID,
         pageId: PAGE_ID,
+        type: "cta",
         isActive: true,
-        page: { slug: "test-page" },
+        page: { slug: "test-page", template: "content" },
       }),
     );
     mockSectionUpdate.mockImplementationOnce(() =>
@@ -506,8 +507,9 @@ describe("togglePageSectionActiveCommand", () => {
       Promise.resolve({
         id: SECTION_ID,
         pageId: PAGE_ID,
+        type: "cta",
         isActive: false,
-        page: { slug: "test-page" },
+        page: { slug: "test-page", template: "content" },
       }),
     );
     mockSectionUpdate.mockImplementationOnce(() =>
@@ -517,6 +519,64 @@ describe("togglePageSectionActiveCommand", () => {
     const result = await togglePageSectionActiveCommand(SECTION_ID);
 
     expect(result.isActive).toBe(true);
+  });
+
+  test("page-hero を非表示にしようとすると CONFLICT", async () => {
+    mockSectionFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: SECTION_ID,
+        pageId: PAGE_ID,
+        type: "page-hero",
+        isActive: true,
+        page: { slug: "test-page", template: "content" },
+      }),
+    );
+
+    await expect(togglePageSectionActiveCommand(SECTION_ID)).rejects.toThrow(
+      "ヒーローは非表示にできません",
+    );
+    expect(mockSectionUpdate).not.toHaveBeenCalled();
+  });
+
+  test("テンプレートの必須セクションを非表示にしようとすると CONFLICT", async () => {
+    mockSectionFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: SECTION_ID,
+        pageId: PAGE_ID,
+        type: "reservation-form",
+        isActive: true,
+        page: { slug: "reservation", template: "reservation" },
+      }),
+    );
+
+    await expect(togglePageSectionActiveCommand(SECTION_ID)).rejects.toThrow(
+      "このセクションはページの必須要素のため非表示にできません",
+    );
+    expect(mockSectionUpdate).not.toHaveBeenCalled();
+  });
+
+  test("非アクティブな必須セクションは再表示できる", async () => {
+    mockSectionFindUnique.mockImplementationOnce(() =>
+      Promise.resolve({
+        id: SECTION_ID,
+        pageId: PAGE_ID,
+        type: "reservation-form",
+        isActive: false,
+        page: { slug: "reservation", template: "reservation" },
+      }),
+    );
+    mockSectionUpdate.mockImplementationOnce(() =>
+      Promise.resolve({ id: SECTION_ID, isActive: true }),
+    );
+
+    const result = await togglePageSectionActiveCommand(SECTION_ID);
+
+    expect(result.isActive).toBe(true);
+    expect(mockSectionUpdate).toHaveBeenCalledWith({
+      where: { id: SECTION_ID },
+      data: { isActive: true },
+      select: { id: true, isActive: true },
+    });
   });
 });
 
