@@ -255,6 +255,9 @@ export function MediaDetailDialog({ item, onClose, canDelete = false }: Props) {
                           onChange={(e) => handleChange("alt", e.target.value)}
                           placeholder="画像の説明"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          ライブラリの代替テキストは公開コンテンツへ自動反映されません。各ページ／記事で設定した代替テキストが使われます。
+                        </p>
                       </div>
                     )}
 

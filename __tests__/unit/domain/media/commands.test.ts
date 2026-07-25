@@ -49,6 +49,8 @@ type MockUploadResult =
       url: string;
       path: string;
       contentType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+      width?: number | null;
+      height?: number | null;
     }
   | { success: false; error: string };
 
@@ -156,6 +158,8 @@ describe("uploadMediaCommand", () => {
       url: MEDIA_URL,
       path: STORAGE_PATH,
       contentType: "image/jpeg",
+      width: 1280,
+      height: 720,
     });
     mockMediaCreate.mockResolvedValue({ id: MEDIA_ID, url: MEDIA_URL });
   });
@@ -210,7 +214,29 @@ describe("uploadMediaCommand", () => {
             url: MEDIA_URL,
             bucket: "media",
             mimeType: "image/jpeg",
+            width: 1280,
+            height: 720,
             uploadedBy: USER_ID,
+          }),
+        }),
+      );
+    });
+
+    test("upload 結果に width/height が無い場合は null で保存する", async () => {
+      mockUploadFile.mockResolvedValue({
+        success: true,
+        url: MEDIA_URL,
+        path: STORAGE_PATH,
+        contentType: "image/jpeg",
+      });
+
+      await uploadMediaCommand(UPLOAD_INPUT);
+
+      expect(mockMediaCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            width: null,
+            height: null,
           }),
         }),
       );
