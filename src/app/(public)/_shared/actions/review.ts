@@ -18,6 +18,8 @@ import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
@@ -77,6 +79,24 @@ export async function submitReview(
         }),
         {
           operation: "createReviewNotification",
+          category: ErrorCategory.DATABASE,
+        },
+      );
+
+      // D7: 公開レビュー CREATE の最小監査。本文は残さず id/channel のみ。
+      fireAndForget(
+        createAuditLogRecord({
+          action: AuditAction.CREATE,
+          resource: "review",
+          resourceId: result.id,
+          newValue: { reservationId: data.reservationId },
+          metadata: {
+            channel: "public",
+            customerId: customer.id,
+          },
+        }),
+        {
+          operation: "auditPublicReviewCreate",
           category: ErrorCategory.DATABASE,
         },
       );
