@@ -16,7 +16,9 @@ import type {
 } from "@/shared/domain/posts/types";
 
 function buildPostWhere(filters: PostFilters): PostWhereInput {
-  const where: PostWhereInput = {};
+  const where: PostWhereInput = {
+    deletedAt: null,
+  };
 
   if (isValidPostStatus(filters.status)) {
     where.status = filters.status;
@@ -39,6 +41,51 @@ function buildPostWhere(filters: PostFilters): PostWhereInput {
   }
 
   return where;
+}
+
+export type DeletedPostListItem = {
+  id: string;
+  title: string;
+  slug: string;
+  deletedAt: string;
+  status: PostData["status"];
+  category: { name: string };
+};
+
+/**
+ * Recycle Bin: ソフトデリート済み投稿一覧（ゴミ箱テーブル用）。
+ */
+export async function getDeletedPosts(): Promise<DeletedPostListItem[]> {
+  const posts = await prisma.post.findMany({
+    where: { deletedAt: { not: null } },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      deletedAt: true,
+      status: true,
+      category: {
+        select: { name: true },
+      },
+    },
+    orderBy: { deletedAt: "desc" },
+  });
+
+  return posts.flatMap((post) => {
+    if (post.deletedAt === null) {
+      return [];
+    }
+    return [
+      {
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        deletedAt: post.deletedAt.toISOString(),
+        status: post.status,
+        category: post.category,
+      },
+    ];
+  });
 }
 
 export async function getPosts(
@@ -107,8 +154,8 @@ export async function getPosts(
 }
 
 export async function getPostById(id: string): Promise<PostData | null> {
-  const post = await prisma.post.findUnique({
-    where: { id },
+  const post = await prisma.post.findFirst({
+    where: { id, deletedAt: null },
     include: {
       category: {
         select: {

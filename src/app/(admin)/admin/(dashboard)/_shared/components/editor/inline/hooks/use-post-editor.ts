@@ -432,7 +432,7 @@ export function usePostEditor({
           return;
         }
 
-        toast.success("投稿記事を削除しました");
+        toast.success("投稿をゴミ箱へ移動しました");
         router.push("/admin/posts");
       } catch (error) {
         logger.error("削除中にエラーが発生しました", {

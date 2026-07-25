@@ -46,7 +46,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockUpdateMany).not.toHaveBeenCalled();
   });
 
-  test("publish: true は DRAFT のみ PUBLISHED に更新する", async () => {
+  test("publish: true は DRAFT のみ PUBLISHED に更新する（alive のみ）", async () => {
     mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
     const result = await bulkTogglePublishedCommand([POST_A, POST_B], true);
@@ -55,6 +55,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockUpdateMany).toHaveBeenCalledWith({
       where: {
         id: { in: [POST_A, POST_B] },
+        deletedAt: null,
         status: "DRAFT",
       },
       data: {
@@ -64,7 +65,7 @@ describe("bulkTogglePublishedCommand", () => {
     });
   });
 
-  test("publish: false は PUBLISHED のみ DRAFT に更新する", async () => {
+  test("publish: false は PUBLISHED のみ DRAFT に更新する（alive のみ）", async () => {
     mockUpdateMany.mockResolvedValueOnce({ count: 1 });
 
     const result = await bulkTogglePublishedCommand([POST_A], false);
@@ -73,6 +74,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockUpdateMany).toHaveBeenCalledWith({
       where: {
         id: { in: [POST_A] },
+        deletedAt: null,
         status: "PUBLISHED",
       },
       data: {
@@ -90,7 +92,10 @@ describe("bulkTogglePublishedCommand", () => {
     expect(result).toEqual({ count: 0, isPublished: false });
     expect(mockUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ status: "PUBLISHED" }),
+        where: expect.objectContaining({
+          status: "PUBLISHED",
+          deletedAt: null,
+        }),
       }),
     );
   });
@@ -98,18 +103,29 @@ describe("bulkTogglePublishedCommand", () => {
 
 describe("bulkDeletePostsCommand", () => {
   beforeEach(() => {
+    mockUpdateMany.mockReset();
     mockDeleteMany.mockReset();
-    mockDeleteMany.mockResolvedValue({ count: 0 });
+    mockUpdateMany.mockResolvedValue({ count: 0 });
   });
 
-  test("指定 id を deleteMany する", async () => {
-    mockDeleteMany.mockResolvedValueOnce({ count: 2 });
+  test("ids が空配列の場合は count: 0 を返し DB を呼ばない", async () => {
+    const result = await bulkDeletePostsCommand([]);
+
+    expect(result).toEqual({ count: 0 });
+    expect(mockUpdateMany).not.toHaveBeenCalled();
+    expect(mockDeleteMany).not.toHaveBeenCalled();
+  });
+
+  test("指定 id を soft-delete（updateMany + deletedAt）する", async () => {
+    mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
     const result = await bulkDeletePostsCommand([POST_A, POST_B]);
 
     expect(result).toEqual({ count: 2 });
-    expect(mockDeleteMany).toHaveBeenCalledWith({
-      where: { id: { in: [POST_A, POST_B] } },
+    expect(mockDeleteMany).not.toHaveBeenCalled();
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: [POST_A, POST_B] }, deletedAt: null },
+      data: { deletedAt: expect.any(Date) },
     });
   });
 });

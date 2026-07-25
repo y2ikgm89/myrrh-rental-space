@@ -48,7 +48,7 @@ describe("findSlugConflict", () => {
     mockSpaceFindUnique.mockReset();
     mockSpaceFindFirst.mockReset();
     for (const m of [
-      mockPostFindUnique,
+      mockPostFindFirst,
       mockNewsFindUnique,
       mockPageFindUnique,
       mockSpaceFindUnique,
@@ -63,7 +63,7 @@ describe("findSlugConflict", () => {
   });
 
   test("post に conflict があれば post として返す", async () => {
-    mockPostFindUnique.mockResolvedValueOnce({ id: "p1" });
+    mockPostFindFirst.mockResolvedValueOnce({ id: "p1" });
 
     const result = await findSlugConflict("hello-world", "news");
 
@@ -79,7 +79,7 @@ describe("findSlugConflict", () => {
   });
 
   test("優先順位は post → news → page → space（複数 conflict 時は post 優先）", async () => {
-    mockPostFindUnique.mockResolvedValueOnce({ id: "p1" });
+    mockPostFindFirst.mockResolvedValueOnce({ id: "p1" });
     mockNewsFindUnique.mockResolvedValueOnce({ id: "n1" });
     mockPageFindUnique.mockResolvedValueOnce({ id: "pg1" });
     mockSpaceFindUnique.mockResolvedValueOnce({ id: "s1" });
@@ -89,25 +89,28 @@ describe("findSlugConflict", () => {
     expect(result?.contentType).toBe("post");
   });
 
-  test("slug は lower-case 化されてから検索される", async () => {
-    // currentId 未指定 → 全 4 model が findUnique 経路（自己除外なし）
+  test("slug は lower-case 化され、post は findFirst + deletedAt:null で検索される", async () => {
     await findSlugConflict("Hello-World", "post");
 
-    expect(mockPostFindUnique).toHaveBeenCalledWith(
+    expect(mockPostFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ slug: "hello-world" }),
+        where: expect.objectContaining({
+          slug: "hello-world",
+          deletedAt: null,
+        }),
       }),
     );
+    expect(mockPostFindUnique).not.toHaveBeenCalled();
   });
 
-  test("currentType + currentId 指定時は同 type の自分自身を除外（findFirst + id NOT 経路）", async () => {
+  test("currentType + currentId 指定時は同 type の自分自身を除外（findFirst + id NOT）", async () => {
     await findSlugConflict("my-slug", "post", "post-current");
 
-    // post は findFirst（自分以外）、他 3 model は findUnique
     expect(mockPostFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           slug: "my-slug",
+          deletedAt: null,
           id: { not: "post-current" },
         }),
       }),
@@ -118,10 +121,10 @@ describe("findSlugConflict", () => {
     expect(mockSpaceFindUnique).toHaveBeenCalled();
   });
 
-  test("currentId なしなら findUnique 経路（自己除外なし）", async () => {
+  test("currentId なしでも post は findFirst（partial unique のため findUnique 不可）", async () => {
     await findSlugConflict("new-slug", "post");
 
-    expect(mockPostFindUnique).toHaveBeenCalled();
-    expect(mockPostFindFirst).not.toHaveBeenCalled();
+    expect(mockPostFindFirst).toHaveBeenCalled();
+    expect(mockPostFindUnique).not.toHaveBeenCalled();
   });
 });

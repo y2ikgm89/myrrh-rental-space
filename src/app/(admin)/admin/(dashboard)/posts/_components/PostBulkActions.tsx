@@ -69,7 +69,7 @@ export function PostBulkActions({
         return;
       }
 
-      toast.success(`${result.count}件の投稿を削除しました`);
+      toast.success(`${result.count}件の投稿をゴミ箱へ移動しました`);
       setDeleteOpen(false);
       onClear();
       router.refresh();
@@ -126,7 +126,7 @@ export function PostBulkActions({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={`${selectedIds.length}件の投稿を削除しますか？`}
-        description="この操作は取り消せません。"
+        description="削除された投稿はゴミ箱に 30 日間保持され、復元できます。"
         onConfirm={handleBulkDelete}
         isPending={isPending}
       />

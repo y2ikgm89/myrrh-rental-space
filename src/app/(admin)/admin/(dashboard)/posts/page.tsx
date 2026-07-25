@@ -7,7 +7,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import Link from "next/link";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { getPosts, getPostCategories, getPostTags } from "@/admin/queries/post";
 import { PostFilters } from "./_components/PostFilters";
 import { PostTable } from "./_components/PostTable";
@@ -147,12 +147,20 @@ export default async function PostsPage({ searchParams }: PageProps) {
             投稿・カテゴリー・タグを管理します
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/posts/new">
-            <IconPlus className="mr-2 h-4 w-4" />
-            新規投稿作成
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild type="button" variant="destructive">
+            <Link href="/admin/posts/trash">
+              <IconTrash className="mr-2 h-4 w-4" aria-hidden="true" />
+              ゴミ箱
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/posts/new">
+              <IconPlus className="mr-2 h-4 w-4" />
+              新規投稿作成
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-4">

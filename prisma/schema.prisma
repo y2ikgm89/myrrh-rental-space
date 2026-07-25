@@ -1209,7 +1209,8 @@ model AnnouncementBar {
 model Post {
   id                 String       @id @default(uuid()) @db.Uuid
   title              String
-  slug               String       @unique
+  // 一意性は下記 @@unique(where: deletedAt is null) 参照（Event/FaqCategory と同型）
+  slug               String
   excerpt            String       @db.Text
   contentHtml        String       @map("content") @db.Text // HTMLキャッシュ（公開表示用）
   contentJson        Json? // Lexical EditorState JSON（プライマリ）
@@ -1225,6 +1226,8 @@ model Post {
   authorId           String?      @db.Uuid // ユーザー削除時にnull化
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
+  /// Soft delete: admin 削除は deletedAt を刻むだけ。hard delete はゴミ箱の永久削除 or trash-cleanup cron。
+  deletedAt          DateTime?
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -1238,10 +1241,13 @@ model Post {
   @@index([authorId])
   @@index([status, publishedAt])
   @@index([categoryId, status, publishedAt])
+  @@index([deletedAt])
   // pg_trgm GIN for admin command-palette ILIKE '%q%' — searchPosts ORs
   // title/slug; both branches need trigram to avoid Seq Scan fallback.
   @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_title_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "posts_slug_trgm_idx")
+  // ソフトデリート済み行が slug を占有し続けないよう partial unique（Event と同型）。
+  @@unique([slug], map: "posts_slug_active_key", where: { deletedAt: null })
   @@map("posts")
 }
 

@@ -29,6 +29,12 @@ const mockUpdatePostSettings = mock<
 const mockDeletePost = mock<(id: string) => Promise<{ slug: string }>>(() =>
   Promise.resolve({ slug: "deleted" }),
 );
+const mockRestorePost = mock<(id: string) => Promise<{ slug: string }>>(() =>
+  Promise.resolve({ slug: "restored" }),
+);
+const mockPermanentlyDeletePost = mock<
+  (id: string) => Promise<{ slug: string }>
+>(() => Promise.resolve({ slug: "purged" }));
 const mockPublishPost = mock<(id: string) => Promise<{ slug: string }>>(() =>
   Promise.resolve({ slug: "published" }),
 );
@@ -50,6 +56,8 @@ mock.module("@/shared/domain/posts/post-commands", () => ({
   updatePostSettings: mockUpdatePostSettings,
   updatePostBody: mockUpdatePostBody,
   deletePost: mockDeletePost,
+  restorePost: mockRestorePost,
+  permanentlyDeletePost: mockPermanentlyDeletePost,
   publishPost: mockPublishPost,
   unpublishPost: mockUnpublishPost,
   archivePost: mockArchivePost,
@@ -104,6 +112,8 @@ const {
   createPost,
   updatePostSettings,
   deletePost,
+  restorePost,
+  permanentlyDeletePost,
   publishPost,
   unpublishPost,
   archivePost,
@@ -271,10 +281,12 @@ describe("updatePostSettings (action shape)", () => {
   });
 });
 
-describe("deletePost / publishPost / unpublishPost / archivePost (action shape)", () => {
+describe("deletePost / restorePost / permanentlyDeletePost / publishPost / unpublishPost / archivePost (action shape)", () => {
   beforeEach(() => {
     mockExecuteAdminMutationResult.mockClear();
     mockDeletePost.mockClear();
+    mockRestorePost.mockClear();
+    mockPermanentlyDeletePost.mockClear();
     mockPublishPost.mockClear();
     mockUnpublishPost.mockClear();
     mockArchivePost.mockClear();
@@ -297,6 +309,32 @@ describe("deletePost / publishPost / unpublishPost / archivePost (action shape)"
       }),
     );
     expect(mockDeletePost).toHaveBeenCalledWith(VALID_UUID);
+  });
+
+  test("restorePost: 正常系で resource=post, action=update", async () => {
+    mockRestorePost.mockResolvedValueOnce({ slug: "restored" });
+    await restorePost(VALID_UUID);
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: "post",
+        action: "update",
+        resourceId: VALID_UUID,
+      }),
+    );
+    expect(mockRestorePost).toHaveBeenCalledWith(VALID_UUID);
+  });
+
+  test("permanentlyDeletePost: 正常系で resource=post, action=delete", async () => {
+    mockPermanentlyDeletePost.mockResolvedValueOnce({ slug: "purged" });
+    await permanentlyDeletePost(VALID_UUID);
+    expect(mockExecuteAdminMutationResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: "post",
+        action: "delete",
+        resourceId: VALID_UUID,
+      }),
+    );
+    expect(mockPermanentlyDeletePost).toHaveBeenCalledWith(VALID_UUID);
   });
 
   test("publishPost: action=publish", async () => {

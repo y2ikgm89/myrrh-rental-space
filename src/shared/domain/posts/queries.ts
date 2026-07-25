@@ -37,6 +37,7 @@ export function publicPostsWhere(
   now: Date = new Date(),
 ): Prisma.PostWhereInput {
   return {
+    deletedAt: null,
     status: PostStatus.PUBLISHED,
     publishedAt: { lte: now },
   };

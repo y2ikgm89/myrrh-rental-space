@@ -49,7 +49,7 @@ async function resolvePostCards(
   ids: string[],
 ): Promise<Map<string, ResolvedLinkCard>> {
   const rows = await prisma.post.findMany({
-    where: { id: { in: ids }, status: PostStatus.PUBLISHED },
+    where: { id: { in: ids }, status: PostStatus.PUBLISHED, deletedAt: null },
     select: {
       id: true,
       slug: true,

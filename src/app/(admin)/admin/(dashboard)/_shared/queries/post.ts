@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  getDeletedPosts as getDeletedPostsQuery,
   getPostById as getPostByIdQuery,
   getPostCategories as getPostCategoriesQuery,
   getPostCategoryById as getPostCategoryByIdQuery,
@@ -8,6 +9,7 @@ import {
   getPostTagById as getPostTagByIdQuery,
   getPostTags as getPostTagsQuery,
 } from "@/shared/domain/posts/admin-queries";
+import type { DeletedPostListItem } from "@/shared/domain/posts/admin-queries";
 import type {
   GetPostsResult,
   PostCategoryData,
@@ -61,6 +63,11 @@ export async function getPostCategoryById(
 export async function getPostTags(): Promise<PostTagData[]> {
   await requireAdminPermission("post", "read");
   return getPostTagsQuery();
+}
+
+export async function getDeletedPosts(): Promise<DeletedPostListItem[]> {
+  await requireAdminPermission("post", "read");
+  return getDeletedPostsQuery();
 }
 
 export async function getPostTagById(id: string): Promise<PostTagData | null> {
