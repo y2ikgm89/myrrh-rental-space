@@ -5,6 +5,7 @@
  * SSoT が無いため、EMPTY 定数 + 構造 walk の純関数としてここに置く。
  */
 
+import { isRecord } from "@/shared/lib/serialize";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 /**
@@ -26,18 +27,17 @@ const LEXICAL_STRUCTURAL_NODE_TYPES = new Set([
 ]);
 
 function hasMeaningfulLexicalNode(value: unknown): boolean {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
   if (Array.isArray(value)) {
     return value.some(hasMeaningfulLexicalNode);
   }
+  if (!isRecord(value)) {
+    return false;
+  }
 
-  const record = value as Record<string, unknown>;
-  const type = record["type"];
+  const type = value["type"];
 
   if (type === "text") {
-    const text = record["text"];
+    const text = value["text"];
     return typeof text === "string" && text.trim().length > 0;
   }
 
@@ -45,7 +45,7 @@ function hasMeaningfulLexicalNode(value: unknown): boolean {
     return true;
   }
 
-  return Object.values(record).some(hasMeaningfulLexicalNode);
+  return Object.values(value).some(hasMeaningfulLexicalNode);
 }
 
 /**
