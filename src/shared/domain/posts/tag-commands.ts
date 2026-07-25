@@ -98,7 +98,10 @@ export async function deletePostTag(id: string): Promise<void> {
     select: {
       id: true,
       _count: {
-        select: { posts: true },
+        select: {
+          // PostTag.posts は中間テーブル PostTagOnPost
+          posts: { where: { post: { deletedAt: null } } },
+        },
       },
     },
   });

@@ -34,6 +34,12 @@ locals {
       description = "FAQ recycle bin 30-day auto-purge (daily 03:00 JST)"
     },
     {
+      name        = "blog-trash-cleanup"
+      schedule    = "0 3 * * *"
+      path        = "/api/cron/blog-trash-cleanup"
+      description = "Blog recycle bin 30-day auto-purge (daily 03:00 JST)"
+    },
+    {
       name        = "faq-stale-check"
       schedule    = "0 9 * * 1"
       path        = "/api/cron/faq-stale-check"

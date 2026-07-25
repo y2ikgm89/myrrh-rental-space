@@ -86,6 +86,7 @@ describe("getPublishedPostsList", () => {
     if (!call) throw new Error("findMany was not called");
     const [{ where }] = call;
     expect(where["status"]).toBe("PUBLISHED");
+    expect(where["deletedAt"]).toBeNull();
     const publishedAtFilter = where["publishedAt"] as { lte: Date };
     expect(publishedAtFilter.lte).toBeInstanceOf(Date);
     expect(publishedAtFilter.lte.getTime()).toBeGreaterThanOrEqual(before);
@@ -100,6 +101,7 @@ describe("getPublishedPostsList", () => {
     if (!call) throw new Error("count was not called");
     const [{ where }] = call;
     expect(where["status"]).toBe("PUBLISHED");
+    expect(where["deletedAt"]).toBeNull();
     expect(where["publishedAt"]).toEqual(
       expect.objectContaining({ lte: expect.any(Date) }),
     );
@@ -116,6 +118,7 @@ describe("getPublishedPost", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           slug: "hello-world",
+          deletedAt: null,
           status: "PUBLISHED",
           publishedAt: expect.objectContaining({ lte: expect.any(Date) }),
         }),
@@ -131,6 +134,7 @@ describe("getPublishedPosts", () => {
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
+          deletedAt: null,
           status: "PUBLISHED",
           publishedAt: expect.objectContaining({ lte: expect.any(Date) }),
         }),

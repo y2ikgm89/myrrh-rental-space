@@ -35,6 +35,7 @@ export async function findRecentlyDueScheduledPostSlugs(
 
   const posts = await prisma.post.findMany({
     where: {
+      deletedAt: null,
       status: PostStatus.PUBLISHED,
       publishedAt: { lte: now, gt: windowStart },
     },

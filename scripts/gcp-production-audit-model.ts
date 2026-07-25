@@ -167,6 +167,7 @@ export const REQUIRED_CLOUD_SCHEDULER_CRON_JOB_IDS = [
   "event-reminder",
   "faq-stale-check",
   "faq-trash-cleanup",
+  "blog-trash-cleanup",
   "instagram-refresh",
   "instagram-sync",
   "news-scheduled-publish",

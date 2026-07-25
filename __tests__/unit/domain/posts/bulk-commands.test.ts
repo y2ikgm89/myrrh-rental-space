@@ -58,7 +58,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockUpdateMany).not.toHaveBeenCalled();
   });
 
-  test("publish: true は DRAFT のみ PUBLISHED に更新する", async () => {
+  test("publish: true は DRAFT のみ PUBLISHED に更新する（alive のみ）", async () => {
     mockFindMany.mockResolvedValueOnce([{ id: POST_A }, { id: POST_B }]);
     mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
@@ -72,6 +72,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockFindMany).toHaveBeenCalledWith({
       where: {
         id: { in: [POST_A, POST_B] },
+        deletedAt: null,
         status: "DRAFT",
       },
       select: { id: true },
@@ -79,6 +80,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockUpdateMany).toHaveBeenCalledWith({
       where: {
         id: { in: [POST_A, POST_B] },
+        deletedAt: null,
         status: "DRAFT",
       },
       data: {
@@ -88,7 +90,7 @@ describe("bulkTogglePublishedCommand", () => {
     });
   });
 
-  test("publish: false は PUBLISHED のみ DRAFT に更新する", async () => {
+  test("publish: false は PUBLISHED のみ DRAFT に更新する（alive のみ）", async () => {
     mockFindMany.mockResolvedValueOnce([{ id: POST_A }]);
     mockUpdateMany.mockResolvedValueOnce({ count: 1 });
 
@@ -102,6 +104,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockFindMany).toHaveBeenCalledWith({
       where: {
         id: { in: [POST_A] },
+        deletedAt: null,
         status: "PUBLISHED",
       },
       select: { id: true },
@@ -109,6 +112,7 @@ describe("bulkTogglePublishedCommand", () => {
     expect(mockUpdateMany).toHaveBeenCalledWith({
       where: {
         id: { in: [POST_A] },
+        deletedAt: null,
         status: "PUBLISHED",
       },
       data: {
@@ -130,7 +134,10 @@ describe("bulkTogglePublishedCommand", () => {
     });
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ status: "PUBLISHED" }),
+        where: expect.objectContaining({
+          status: "PUBLISHED",
+          deletedAt: null,
+        }),
       }),
     );
     expect(mockUpdateMany).not.toHaveBeenCalled();
@@ -140,8 +147,10 @@ describe("bulkTogglePublishedCommand", () => {
 describe("bulkDeletePostsCommand", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
+    mockUpdateMany.mockReset();
     mockDeleteMany.mockReset();
     mockFindMany.mockResolvedValue([]);
+    mockUpdateMany.mockResolvedValue({ count: 0 });
     mockDeleteMany.mockResolvedValue({ count: 0 });
   });
 
@@ -150,31 +159,34 @@ describe("bulkDeletePostsCommand", () => {
 
     expect(result).toEqual({ count: 0, affectedIds: [] });
     expect(mockFindMany).not.toHaveBeenCalled();
+    expect(mockUpdateMany).not.toHaveBeenCalled();
     expect(mockDeleteMany).not.toHaveBeenCalled();
   });
 
-  test("指定 id を deleteMany し affectedIds を返す", async () => {
+  test("指定 id を soft-delete（updateMany + deletedAt）し affectedIds を返す", async () => {
     mockFindMany.mockResolvedValueOnce([{ id: POST_A }, { id: POST_B }]);
-    mockDeleteMany.mockResolvedValueOnce({ count: 2 });
+    mockUpdateMany.mockResolvedValueOnce({ count: 2 });
 
     const result = await bulkDeletePostsCommand([POST_A, POST_B]);
 
     expect(result).toEqual({ count: 2, affectedIds: [POST_A, POST_B] });
     expect(mockFindMany).toHaveBeenCalledWith({
-      where: { id: { in: [POST_A, POST_B] } },
+      where: { id: { in: [POST_A, POST_B] }, deletedAt: null },
       select: { id: true },
     });
-    expect(mockDeleteMany).toHaveBeenCalledWith({
-      where: { id: { in: [POST_A, POST_B] } },
+    expect(mockDeleteMany).not.toHaveBeenCalled();
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: [POST_A, POST_B] }, deletedAt: null },
+      data: { deletedAt: expect.any(Date) },
     });
   });
 
-  test("対象が無い場合は count: 0 を返し deleteMany を呼ばない", async () => {
+  test("対象が無い場合は count: 0 を返し updateMany を呼ばない", async () => {
     mockFindMany.mockResolvedValueOnce([]);
 
     const result = await bulkDeletePostsCommand([POST_A]);
 
     expect(result).toEqual({ count: 0, affectedIds: [] });
-    expect(mockDeleteMany).not.toHaveBeenCalled();
+    expect(mockUpdateMany).not.toHaveBeenCalled();
   });
 });

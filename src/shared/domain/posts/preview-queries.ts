@@ -33,8 +33,8 @@ const postDetailSelect = {
  * 本番 `PostDetailPageContent` をそのまま再利用可能にする canonical 整形。
  */
 export async function getPostByIdForPreview(id: string) {
-  const post = await prisma.post.findUnique({
-    where: { id },
+  const post = await prisma.post.findFirst({
+    where: { id, deletedAt: null },
     select: postDetailSelect,
   });
 

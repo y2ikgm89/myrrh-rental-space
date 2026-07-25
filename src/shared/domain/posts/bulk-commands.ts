@@ -19,6 +19,7 @@ export type BulkDeletePostsResult = {
  *
  * - `publish: true` → DRAFT のみ PUBLISHED にする（ARCHIVED は触らない）
  * - `publish: false` → PUBLISHED のみ DRAFT にする（ARCHIVED / DRAFT は触らない）
+ * - soft-delete 済み（deletedAt が non-null）は対象外
  * - 戻り値の `affectedIds` は実際に状態遷移した行のみ（per-id audit 用）
  */
 export async function bulkTogglePublishedCommand(
@@ -33,6 +34,7 @@ export async function bulkTogglePublishedCommand(
   const targets = await prisma.post.findMany({
     where: {
       id: { in: ids },
+      deletedAt: null,
       status: eligibleStatus,
     },
     select: { id: true },
@@ -45,6 +47,7 @@ export async function bulkTogglePublishedCommand(
   const result = await prisma.post.updateMany({
     where: {
       id: { in: affectedIds },
+      deletedAt: null,
       status: eligibleStatus,
     },
     data: {
@@ -60,6 +63,11 @@ export async function bulkTogglePublishedCommand(
   };
 }
 
+/**
+ * 複数投稿を一括ソフトデリートする。
+ *
+ * updateMany の where に `deletedAt: null` を含め、既にゴミ箱入りの行は数えない。
+ */
 export async function bulkDeletePostsCommand(
   ids: string[],
 ): Promise<BulkDeletePostsResult> {
@@ -68,7 +76,7 @@ export async function bulkDeletePostsCommand(
   }
 
   const targets = await prisma.post.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, deletedAt: null },
     select: { id: true },
   });
   if (targets.length === 0) {
@@ -76,8 +84,9 @@ export async function bulkDeletePostsCommand(
   }
 
   const affectedIds = targets.map((t) => t.id);
-  const result = await prisma.post.deleteMany({
-    where: { id: { in: affectedIds } },
+  const result = await prisma.post.updateMany({
+    where: { id: { in: affectedIds }, deletedAt: null },
+    data: { deletedAt: new Date() },
   });
 
   return { count: result.count, affectedIds };

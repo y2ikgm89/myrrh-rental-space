@@ -117,7 +117,9 @@ export async function deletePostCategory(id: string): Promise<void> {
     select: {
       id: true,
       _count: {
-        select: { posts: true },
+        select: {
+          posts: { where: { deletedAt: null } },
+        },
       },
     },
   });

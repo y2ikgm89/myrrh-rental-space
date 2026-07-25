@@ -68,7 +68,10 @@ export async function getSidebarData(
   const needCategories = enabledTypes.has("categories");
   const needTags = enabledTypes.has("tags");
 
-  const publishedWhere = { status: PostStatus.PUBLISHED };
+  const publishedWhere = {
+    status: PostStatus.PUBLISHED,
+    deletedAt: null,
+  };
 
   const postSelect = {
     id: true,

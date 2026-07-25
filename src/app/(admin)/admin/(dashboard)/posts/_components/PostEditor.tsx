@@ -141,7 +141,7 @@ export function PostEditor({
           <DialogHeader>
             <DialogTitle>投稿を削除しますか？</DialogTitle>
             <DialogDescription>
-              この操作は取り消せません。本当に削除してもよろしいですか？
+              削除された投稿はゴミ箱に 30 日間保持され、復元できます。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

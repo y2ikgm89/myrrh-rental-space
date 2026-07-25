@@ -200,6 +200,66 @@ export async function deletePost(id: string): Promise<MutationResult> {
   });
 }
 
+export async function restorePost(id: string): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  let restoredPostSlug: string | null = null;
+
+  return executeAdminMutationResult({
+    resource: "post",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await postCommands.restorePost(validated.data);
+      restoredPostSlug = result.slug;
+      return null;
+    },
+    afterSuccess: async () => {
+      if (!restoredPostSlug) {
+        return;
+      }
+
+      await invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(restoredPostSlug));
+      await purgePostCaches(restoredPostSlug);
+    },
+  });
+}
+
+export async function permanentlyDeletePost(
+  id: string,
+): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  let deletedPostSlug: string | null = null;
+
+  return executeAdminMutationResult({
+    resource: "post",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await postCommands.permanentlyDeletePost(validated.data);
+      deletedPostSlug = result.slug;
+      return null;
+    },
+    afterSuccess: async () => {
+      if (!deletedPostSlug) {
+        return;
+      }
+
+      await invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(deletedPostSlug));
+      await purgePostCaches(deletedPostSlug);
+    },
+  });
+}
+
 export async function publishPost(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
