@@ -292,7 +292,11 @@ describe("updateReservationStatus (action shape)", () => {
         action: "update",
       }),
     );
-    expect(mockUpdateStatus).toHaveBeenCalledWith(VALID_UUID, "CONFIRMED");
+    expect(mockUpdateStatus).toHaveBeenCalledWith(
+      VALID_UUID,
+      "CONFIRMED",
+      undefined,
+    );
   });
 
   // GCAL-OUTBOUND-04: CONFIRMED → PENDING 格下げ時に GCal event を削除する。
