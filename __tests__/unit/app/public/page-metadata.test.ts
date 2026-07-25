@@ -11,6 +11,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { SITE_DEFAULTS } from "@/shared/lib/constants";
 
 mock.module("server-only", () => ({}));
 
@@ -67,5 +68,69 @@ describe("generatePageMetadata — 非公開判定", () => {
 
     expect(metadata.title).toBe("会社概要");
     expect(metadata.robots).toBeUndefined();
+  });
+});
+
+describe("generatePageMetadata — description fallback", () => {
+  beforeEach(() => {
+    mockGetPageSeo.mockReset();
+    mockGetPageSeo.mockResolvedValue(null);
+    mockIsPublicPageUnpublished.mockReset();
+    mockIsPublicPageUnpublished.mockResolvedValue(false);
+    mockGetSeoSettings.mockReset();
+    mockGetSeoSettings.mockResolvedValue(null);
+  });
+
+  test("defaultMetaDescription 空 → siteDescription を使う", async () => {
+    mockGetSeoSettings.mockResolvedValue({
+      siteName: "Custom Site",
+      siteDescription: "Settings site description",
+      defaultMetaDescription: "",
+      defaultOgpImageUrl: null,
+      defaultMetaKeywords: null,
+      defaultOgpTitle: null,
+      defaultOgpDescription: null,
+    });
+
+    const metadata = await generatePageMetadata("about");
+
+    expect(metadata.description).toBe("Settings site description");
+    expect(metadata.openGraph?.siteName).toBe("Custom Site");
+  });
+
+  test("settings 空 → システムページ default metaDescription", async () => {
+    const metadata = await generatePageMetadata("about");
+
+    expect(metadata.description).toBe("会社・サービスについて");
+  });
+
+  test("page SEO metaDescription が最優先", async () => {
+    mockGetPageSeo.mockResolvedValue({
+      title: "Custom title",
+      metaDescription: "Page meta",
+      metaKeywords: null,
+      ogpTitle: null,
+      ogpDescription: null,
+      ogpImageUrl: null,
+    });
+    mockGetSeoSettings.mockResolvedValue({
+      siteName: "Custom Site",
+      siteDescription: "Settings site description",
+      defaultMetaDescription: "Settings meta",
+      defaultOgpImageUrl: null,
+      defaultMetaKeywords: null,
+      defaultOgpTitle: null,
+      defaultOgpDescription: null,
+    });
+
+    const metadata = await generatePageMetadata("about");
+
+    expect(metadata.description).toBe("Page meta");
+  });
+
+  test("システム default も無い slug → SITE_DEFAULTS.description", async () => {
+    const metadata = await generatePageMetadata("nonexistent-slug");
+
+    expect(metadata.description).toBe(SITE_DEFAULTS.description);
   });
 });

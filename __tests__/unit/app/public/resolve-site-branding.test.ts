@@ -4,7 +4,10 @@
 
 import { describe, expect, test } from "bun:test";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
-import { resolveSiteBranding } from "@/public/lib/seo/metadata-factory";
+import {
+  resolvePageDescription,
+  resolveSiteBranding,
+} from "@/public/lib/seo/metadata-factory";
 
 describe("resolveSiteBranding", () => {
   test("null settings → SITE_DEFAULTS にフォールバック", () => {
@@ -52,5 +55,77 @@ describe("resolveSiteBranding", () => {
       ogTitle: "OG Title",
       ogDescription: "OG Description",
     });
+  });
+});
+
+describe("resolvePageDescription", () => {
+  test("page SEO > defaultMetaDescription > siteDescription > system default > SITE_DEFAULTS", () => {
+    expect(
+      resolvePageDescription(
+        {
+          siteName: null,
+          siteDescription: "Site desc",
+          defaultMetaDescription: "Meta desc",
+          defaultOgpImageUrl: null,
+          defaultMetaKeywords: null,
+          defaultOgpTitle: null,
+          defaultOgpDescription: null,
+        },
+        "Page desc",
+        "System desc",
+      ),
+    ).toBe("Page desc");
+
+    expect(
+      resolvePageDescription(
+        {
+          siteName: null,
+          siteDescription: "Site desc",
+          defaultMetaDescription: "Meta desc",
+          defaultOgpImageUrl: null,
+          defaultMetaKeywords: null,
+          defaultOgpTitle: null,
+          defaultOgpDescription: null,
+        },
+        null,
+        "System desc",
+      ),
+    ).toBe("Meta desc");
+
+    expect(
+      resolvePageDescription(
+        {
+          siteName: null,
+          siteDescription: "Site desc",
+          defaultMetaDescription: "",
+          defaultOgpImageUrl: null,
+          defaultMetaKeywords: null,
+          defaultOgpTitle: null,
+          defaultOgpDescription: null,
+        },
+        null,
+        "System desc",
+      ),
+    ).toBe("Site desc");
+
+    expect(
+      resolvePageDescription(
+        {
+          siteName: null,
+          siteDescription: "",
+          defaultMetaDescription: "",
+          defaultOgpImageUrl: null,
+          defaultMetaKeywords: null,
+          defaultOgpTitle: null,
+          defaultOgpDescription: null,
+        },
+        null,
+        "System desc",
+      ),
+    ).toBe("System desc");
+
+    expect(resolvePageDescription(null, null, null)).toBe(
+      SITE_DEFAULTS.description,
+    );
   });
 });

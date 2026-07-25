@@ -197,8 +197,11 @@ export async function BusinessInfo(): Promise<ReactElement> {
               {info.city && (
                 <meta itemProp="addressLocality" content={info.city} />
               )}
-              {info.streetAddress && (
-                <meta itemProp="streetAddress" content={info.streetAddress} />
+              {info.streetAddressLine && (
+                <meta
+                  itemProp="streetAddress"
+                  content={info.streetAddressLine}
+                />
               )}
               {info.address}
             </div>

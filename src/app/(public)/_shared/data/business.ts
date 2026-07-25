@@ -9,6 +9,7 @@
  */
 
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
+import { SITE_DEFAULTS } from "@/shared/lib/constants";
 
 export interface BusinessInfo {
   readonly name: string;
@@ -18,6 +19,8 @@ export interface BusinessInfo {
   readonly city: string | null;
   readonly streetAddress: string | null;
   readonly buildingName: string | null;
+  /** streetAddress + buildingName（JSON-LD / microdata 用） */
+  readonly streetAddressLine: string | null;
   readonly phone: string | null;
   readonly fax: string | null;
   readonly email: string | null;
@@ -45,14 +48,20 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     settings?.buildingName,
   ].filter(Boolean);
 
+  const streetAddressLine =
+    [settings?.streetAddress, settings?.buildingName]
+      .filter(Boolean)
+      .join(" ") || null;
+
   return {
-    name: settings?.businessName ?? "Myrrh Rental Space",
+    name: settings?.businessName ?? settings?.siteName ?? SITE_DEFAULTS.name,
     address: addressParts.length > 0 ? addressParts.join("") : null,
     postalCode: settings?.postalCode ?? null,
     prefecture: settings?.prefecture ?? null,
     city: settings?.city ?? null,
     streetAddress: settings?.streetAddress ?? null,
     buildingName: settings?.buildingName ?? null,
+    streetAddressLine,
     phone: settings?.phoneNumber ?? null,
     fax: settings?.faxNumber ?? null,
     email: settings?.email ?? null,

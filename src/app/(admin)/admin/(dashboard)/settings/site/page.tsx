@@ -33,14 +33,6 @@ async function SiteSettingsContent(): Promise<ReactElement> {
   const canUpdate = hasPermission(user.role, "settings", "update");
   const readOnly = !canUpdate;
 
-  if (!settings) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        設定を読み込めませんでした
-      </div>
-    );
-  }
-
   const tabs = [
     {
       value: "general",
@@ -72,7 +64,6 @@ function SiteSettingsLoading(): ReactElement {
       <div className="flex gap-1 h-10 bg-muted rounded-lg p-1">
         <div className="h-8 w-16 bg-muted-foreground/30 rounded-md" />
         <div className="h-8 w-12 bg-muted rounded-md" />
-        <div className="h-8 w-16 bg-muted rounded-md" />
       </div>
       <div className="h-48 bg-muted rounded" />
       <div className="h-48 bg-muted rounded" />

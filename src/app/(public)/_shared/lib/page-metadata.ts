@@ -10,8 +10,13 @@
  */
 
 import type { Metadata } from "next";
-import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
-import { getSeoSettings } from "@/public/lib/seo/metadata-factory";
+import { getBaseUrl } from "@/shared/lib/constants";
+import {
+  getSeoSettings,
+  nonEmpty,
+  resolvePageDescription,
+  resolveSiteBranding,
+} from "@/public/lib/seo/metadata-factory";
 import {
   SYSTEM_PAGES,
   getSystemPageDefinition,
@@ -90,22 +95,26 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
   ]);
   const defaultSeo = getDefaultPageSeo(slug);
 
-  const siteName = settings?.siteName ?? SITE_DEFAULTS.name;
+  const branding = resolveSiteBranding(settings);
+  const siteName = branding.siteName;
 
   // タイトル: DB > デフォルト > slug
   const title = seo?.title || defaultSeo?.title || slug;
 
-  // 説明文: DB metaDescription > Settings > デフォルト
-  const description =
-    seo?.metaDescription ||
-    settings?.defaultMetaDescription ||
-    defaultSeo?.metaDescription ||
-    undefined;
+  // 説明文: page SEO → settings → system default → SITE_DEFAULTS
+  const description = resolvePageDescription(
+    settings,
+    seo?.metaDescription,
+    defaultSeo?.metaDescription,
+  );
 
   // OGP タイトル/説明: DB OGP > Settings OGP > 通常値
-  const ogTitle = seo?.ogpTitle || settings?.defaultOgpTitle || title;
+  const ogTitle =
+    nonEmpty(seo?.ogpTitle) ?? nonEmpty(settings?.defaultOgpTitle) ?? title;
   const ogDescription =
-    seo?.ogpDescription || settings?.defaultOgpDescription || description;
+    nonEmpty(seo?.ogpDescription) ??
+    nonEmpty(settings?.defaultOgpDescription) ??
+    description;
 
   // OGP 画像: DB > Settings デフォルト
   const ogImage = seo?.ogpImageUrl || settings?.defaultOgpImageUrl || undefined;

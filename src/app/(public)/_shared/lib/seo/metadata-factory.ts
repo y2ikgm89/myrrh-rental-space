@@ -33,9 +33,27 @@ export interface ResolvedSiteBranding {
   ogDescription: string;
 }
 
-function nonEmpty(value: string | null | undefined): string | undefined {
+export function nonEmpty(value: string | null | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+/**
+ * ページメタ description の解決順:
+ * page SEO → defaultMetaDescription → siteDescription → system page default → SITE_DEFAULTS
+ */
+export function resolvePageDescription(
+  settings: SeoSettings | null,
+  pageMeta: string | null | undefined,
+  systemDefault: string | null | undefined,
+): string {
+  return (
+    nonEmpty(pageMeta) ??
+    nonEmpty(settings?.defaultMetaDescription) ??
+    nonEmpty(settings?.siteDescription) ??
+    nonEmpty(systemDefault) ??
+    SITE_DEFAULTS.description
+  );
 }
 
 /**
@@ -75,17 +93,16 @@ export function generateArticleMetadata(
     ogType?: "article" | "website";
   },
 ): Metadata {
-  const description =
-    article.description ?? settings?.defaultMetaDescription ?? undefined;
+  const branding = resolveSiteBranding(settings ?? null);
+  const description = nonEmpty(article.description) ?? branding.description;
   const keywords =
     article.metaKeywords ?? settings?.defaultMetaKeywords ?? undefined;
   const image = article.image ?? settings?.defaultOgpImageUrl ?? undefined;
   const ogTitle =
-    article.ogpTitle ?? settings?.defaultOgpTitle ?? article.title;
+    nonEmpty(article.ogpTitle) ?? branding.ogTitle ?? article.title;
   const ogDescription =
-    article.ogpDescription ?? settings?.defaultOgpDescription ?? description;
-  const siteName =
-    options?.siteName ?? settings?.siteName ?? SITE_DEFAULTS.name;
+    nonEmpty(article.ogpDescription) ?? branding.ogDescription;
+  const siteName = options?.siteName ?? branding.siteName;
   const ogType = options?.ogType ?? "article";
 
   return {
