@@ -11,12 +11,14 @@ const mockBulkTogglePublishedNewsCommand = mock<
   ) => Promise<{
     count: number;
     isPublished: boolean;
+    affectedIds: string[];
     affectedSlugs: string[];
   }>
 >(() =>
   Promise.resolve({
     count: 0,
     isPublished: true,
+    affectedIds: [],
     affectedSlugs: [],
   }),
 );
@@ -24,11 +26,13 @@ const mockBulkTogglePublishedNewsCommand = mock<
 const mockBulkDeleteNewsCommand = mock<
   (ids: string[]) => Promise<{
     count: number;
+    affectedIds: string[];
     affectedSlugs: string[];
   }>
 >(() =>
   Promise.resolve({
     count: 0,
+    affectedIds: [],
     affectedSlugs: [],
   }),
 );
@@ -57,6 +61,10 @@ const mockExecuteAdminMutationResult = mock<
 
 mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: mockExecuteAdminMutationResult,
+}));
+
+mock.module("@/admin/lib/audit", () => ({
+  emitBulkAuditRecords: mock(() => undefined),
 }));
 
 // next/cache (updateTag は no-op)
@@ -180,6 +188,7 @@ describe("bulkTogglePublishedNews", () => {
       mockBulkTogglePublishedNewsCommand.mockResolvedValueOnce({
         count: 100,
         isPublished: true,
+        affectedIds: ids,
         affectedSlugs: ids.map((_, i) => `news-slug-${i}`),
       });
 
@@ -195,6 +204,7 @@ describe("bulkTogglePublishedNews", () => {
       mockBulkTogglePublishedNewsCommand.mockResolvedValueOnce({
         count: 2,
         isPublished: true,
+        affectedIds: [VALID_UUID_A, VALID_UUID_B],
         affectedSlugs: ["news-a", "news-b"],
       });
 
@@ -225,6 +235,7 @@ describe("bulkTogglePublishedNews", () => {
       mockBulkTogglePublishedNewsCommand.mockResolvedValueOnce({
         count: 1,
         isPublished: false,
+        affectedIds: [VALID_UUID_A],
         affectedSlugs: ["news-a"],
       });
 
@@ -240,6 +251,7 @@ describe("bulkTogglePublishedNews", () => {
       mockBulkTogglePublishedNewsCommand.mockResolvedValueOnce({
         count: 2,
         isPublished: true,
+        affectedIds: [VALID_UUID_A, VALID_UUID_B],
         affectedSlugs: ["news-a", "news-b"],
       });
 
@@ -292,6 +304,7 @@ describe("bulkDeleteNews", () => {
     test("executeAdminMutationResult が resource: news, action: delete で呼ばれる", async () => {
       mockBulkDeleteNewsCommand.mockResolvedValueOnce({
         count: 2,
+        affectedIds: [VALID_UUID_A, VALID_UUID_B],
         affectedSlugs: ["news-a", "news-b"],
       });
 
@@ -317,6 +330,7 @@ describe("bulkDeleteNews", () => {
     test("afterSuccess で削除成功 slug が CF detail URL purge に渡る", async () => {
       mockBulkDeleteNewsCommand.mockResolvedValueOnce({
         count: 1,
+        affectedIds: [VALID_UUID_A],
         affectedSlugs: ["news-a"],
       });
 

@@ -82,6 +82,10 @@ mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: mockExecuteAdminMutationResult,
 }));
 
+mock.module("@/admin/lib/audit", () => ({
+  emitBulkAuditRecords: mock(() => undefined),
+}));
+
 // next/cache (updateTag は no-op)
 const mockUpdateTag = mock<(tag: string) => void>(() => {});
 mock.module("next/cache", () => ({
