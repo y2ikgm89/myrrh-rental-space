@@ -214,6 +214,7 @@ locals {
     # 段階 B 完了: PR #1382 で追加 → apply-create 完了 (2026-07-21T15:49:53Z 本番作成確認済み、Deploy Production run 29845742054 の Terraform Apply (IAM prereq) ジョブで実確認) → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "news-scheduled-publish",
     "blog-scheduled-publish",
+    "blog-trash-cleanup",
     # 段階 B 完了: cron_jobs に Stage A 追加済み → 本番 apply-create 済み → state-rebuild 防御のため imported に組み込み
     "customer-duplicate-scan",
     "stripe-event-cleanup",
