@@ -16,6 +16,7 @@
 import "server-only";
 
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import sharp from "sharp";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   logError,
@@ -24,6 +25,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { getR2BucketName, getR2Client } from "./client";
+import { deleteFile } from "./delete";
 import {
   detectMediaMimeFromMagicBytes,
   SUPPORTED_IMAGE_MIME_TYPES,
@@ -45,6 +47,9 @@ export type UploadResult =
       path: string;
       /** server-side 確定した MIME type（DB 永続用） */
       contentType: SupportedMediaMimeType;
+      /** 画像 MIME のみ。sharp metadata 失敗時は null */
+      width?: number | null;
+      height?: number | null;
     }
   | { success: false; error: string };
 
@@ -125,6 +130,35 @@ function validatePerTypeSize(
   return null;
 }
 
+function isSupportedImageMime(
+  mime: SupportedMediaMimeType,
+): mime is SupportedImageMimeType {
+  for (const imageMime of SUPPORTED_IMAGE_MIME_TYPES) {
+    if (imageMime === mime) return true;
+  }
+  return false;
+}
+
+/**
+ * 画像 MIME の buffer から width/height を抽出する。
+ * sharp 失敗時は null（アップロード自体は失敗させない）。
+ */
+async function extractImageDimensions(
+  buffer: Uint8Array,
+  mime: SupportedMediaMimeType,
+): Promise<{ width: number | null; height: number | null } | null> {
+  if (!isSupportedImageMime(mime)) return null;
+  try {
+    const meta = await sharp(buffer).metadata();
+    return {
+      width: meta.width ?? null,
+      height: meta.height ?? null,
+    };
+  } catch {
+    return { width: null, height: null };
+  }
+}
+
 // =============================================================================
 // Upload
 // =============================================================================
@@ -150,7 +184,8 @@ type UploadOptions = {
  * 6. R2 へ送信（`Content-Type` も検出値）
  *
  * @returns success 時は `{ url, path, contentType }` を返す
- *   （`contentType` は server-side 確定値 — DB 永続化に使う canonical 値）
+ *   （`contentType` は server-side 確定値 — DB 永続化に使う canonical 値）。
+ *   画像 MIME の場合は `width` / `height` も付与（抽出失敗時は null）
  */
 export async function uploadFile(
   file: File,
@@ -197,6 +232,9 @@ export async function uploadFile(
       return { success: false, error: perTypeError };
     }
 
+    // 画像なら upload 前に同一 buffer から寸法を取る（失敗しても upload は続行）
+    const dimensions = await extractImageDimensions(body, detected);
+
     const key = generateStorageKey({
       prefix,
       contentType: detected,
@@ -219,6 +257,9 @@ export async function uploadFile(
       url: buildPublicUrl(key, publicUrl),
       path: key,
       contentType: detected,
+      ...(dimensions !== null
+        ? { width: dimensions.width, height: dimensions.height }
+        : {}),
     };
   } catch (error) {
     logError(normalizeError(error), {
@@ -234,7 +275,8 @@ export async function uploadFile(
 }
 
 /**
- * 複数 File を順次アップロードする。失敗時は短絡し、成功分のみ results に残す。
+ * 複数 File を順次アップロードする。
+ * 失敗時は短絡し、それまでに成功した Object を best-effort で削除して orphan を残さない。
  */
 export async function uploadFiles(
   files: File[],
@@ -252,6 +294,15 @@ export async function uploadFiles(
     results.push(result);
 
     if (!result.success) {
+      // 先行成功分の R2 orphan を best-effort で掃除（cleanup 失敗は握りつぶす）
+      await Promise.all(
+        results
+          .filter(
+            (r): r is Extract<UploadResult, { success: true }> => r.success,
+          )
+          .map((r) => deleteFile(r.path)),
+      );
+
       return {
         success: false,
         results,

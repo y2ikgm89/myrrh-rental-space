@@ -104,6 +104,35 @@ function hydrateLexicalTabs(root: HTMLElement): () => void {
   };
 }
 
+function attachBrokenImageFallback(root: HTMLElement): () => void {
+  const cleanups: (() => void)[] = [];
+
+  for (const img of root.querySelectorAll<HTMLImageElement>("img")) {
+    const handler = () => {
+      if (img.dataset["brokenHandled"] === "true") return;
+      img.dataset["brokenHandled"] = "true";
+      img.style.display = "none";
+
+      const placeholder = document.createElement("span");
+      placeholder.className =
+        "inline-block min-h-16 min-w-16 bg-muted align-middle";
+      placeholder.setAttribute("aria-hidden", "true");
+      img.insertAdjacentElement("afterend", placeholder);
+    };
+
+    if (img.complete && img.naturalWidth === 0 && img.src) {
+      handler();
+    }
+
+    img.addEventListener("error", handler);
+    cleanups.push(() => img.removeEventListener("error", handler));
+  }
+
+  return () => {
+    for (const cleanup of cleanups) cleanup();
+  };
+}
+
 export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
   // DOMPurify でサニタイズ → heading に id 自動付与（決定論的、SSR/Client で同一結果）
   const cleanHtml = sanitize(html, SANITIZE_OPTIONS);
@@ -113,7 +142,12 @@ export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
   useEffect(() => {
     const root = ref.current;
     if (!root) return;
-    return hydrateLexicalTabs(root);
+    const cleanupTabs = hydrateLexicalTabs(root);
+    const cleanupImages = attachBrokenImageFallback(root);
+    return () => {
+      cleanupTabs();
+      cleanupImages();
+    };
   }, [withAnchors]);
 
   return (

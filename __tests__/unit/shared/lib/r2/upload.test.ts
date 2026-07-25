@@ -33,6 +33,19 @@ mock.module("@/shared/lib/errors/server", () => ({
     e instanceof Error ? e : new Error(String(e)),
 }));
 
+const sharpMetadataMock = mock(async () => ({ width: 800, height: 600 }));
+mock.module("sharp", () => ({
+  default: () => ({
+    metadata: sharpMetadataMock,
+  }),
+}));
+
+const deleteFileMock = mock(async () => ({ success: true }));
+mock.module("@/shared/lib/r2/delete", () => ({
+  deleteFile: deleteFileMock,
+  deleteFiles: mock(async () => ({ success: true })),
+}));
+
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   uploadFile,
@@ -47,6 +60,10 @@ const JPEG_HEADER = [0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0];
 const PNG_HEADER = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0];
 const WEBP_HEADER = [
   0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
+];
+// MP4 ftyp box (minimal for magic-byte detection)
+const MP4_HEADER = [
+  0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d,
 ];
 
 function makeImageFile(
@@ -70,6 +87,9 @@ function makeRawFile(name: string, declaredType: string, size: number): File {
 
 beforeEach(() => {
   sendMock.mockClear();
+  deleteFileMock.mockClear();
+  sharpMetadataMock.mockReset();
+  sharpMetadataMock.mockResolvedValue({ width: 800, height: 600 });
 });
 
 describe("uploadFile (magic-byte trust boundary)", () => {
@@ -110,6 +130,44 @@ describe("uploadFile (magic-byte trust boundary)", () => {
     if (!result.success) throw new Error("expected success");
     expect(result.contentType).toBe("image/webp");
     expect(result.path).toMatch(/\.webp$/);
+  });
+
+  test("画像 MIME では sharp metadata の width/height を返す", async () => {
+    const file = makeImageFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: IMAGE_VALIDATION,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("expected success");
+    expect(result.width).toBe(800);
+    expect(result.height).toBe(600);
+    expect(sharpMetadataMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("sharp metadata 失敗でも upload は成功し width/height は null", async () => {
+    sharpMetadataMock.mockRejectedValueOnce(new Error("corrupt image"));
+    const file = makeImageFile("photo.jpg", "image/jpeg", JPEG_HEADER, 1024);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: IMAGE_VALIDATION,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("expected success");
+    expect(result.width).toBeNull();
+    expect(result.height).toBeNull();
+    expect(sendMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("非画像 MIME では width/height を付与しない", async () => {
+    const file = makeImageFile("clip.mp4", "video/mp4", MP4_HEADER, 2048);
+    const result = await uploadFile(file, STORAGE_PREFIXES.MEDIA, {
+      validation: MEDIA_VALIDATION,
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("expected success");
+    expect(result.contentType).toBe("video/mp4");
+    expect(result.width).toBeUndefined();
+    expect(result.height).toBeUndefined();
+    expect(sharpMetadataMock).not.toHaveBeenCalled();
   });
 
   test("magic-byte が画像でない（HTML 偽装）→ success:false で send されない", async () => {
@@ -194,9 +252,10 @@ describe("uploadFiles", () => {
     expect(result.success).toBe(true);
     expect(result.results).toHaveLength(2);
     expect(sendMock).toHaveBeenCalledTimes(2);
+    expect(deleteFileMock).not.toHaveBeenCalled();
   });
 
-  test("途中で失敗したら success:false で短絡", async () => {
+  test("途中で失敗したら success:false で短絡し、先行成功分を deleteFile する", async () => {
     const files = [
       makeImageFile("a.jpg", "image/jpeg", JPEG_HEADER, 1024),
       makeImageFile("big.jpg", "image/jpeg", JPEG_HEADER, 20 * 1024 * 1024),
@@ -208,6 +267,12 @@ describe("uploadFiles", () => {
     expect(result.success).toBe(false);
     expect(result.results).toHaveLength(2); // 最初の1件成功 + 2件目失敗で短絡
     expect(result.error).toContain("big.jpg");
+
+    const first = result.results[0];
+    expect(first?.success).toBe(true);
+    if (!first?.success) throw new Error("expected first success");
+    expect(deleteFileMock).toHaveBeenCalledTimes(1);
+    expect(deleteFileMock).toHaveBeenCalledWith(first.path);
   });
 });
 

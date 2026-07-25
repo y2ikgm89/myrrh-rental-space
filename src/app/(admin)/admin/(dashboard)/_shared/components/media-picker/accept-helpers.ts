@@ -6,31 +6,22 @@
  * - 各 tab / Dialog title の表示 label
  */
 
-import type { MediaType } from "@/admin/lib/validations/media";
+import {
+  ALLOWED_MIME_TYPES,
+  type MediaType,
+} from "@/admin/lib/validations/media";
 import type { MediaAcceptType } from "@/shared/lib/sections/types";
 import { detectVideoProvider } from "@/shared/lib/video/url-detect";
 
-const IMAGE_EXTENSIONS = [
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".gif",
-  ".webp",
-  ".svg",
-  ".avif",
-  ".bmp",
-] as const;
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp"] as const;
 
-const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".m4v"] as const;
+const VIDEO_EXTENSIONS = [".mp4", ".webm"] as const;
 
-const AUDIO_EXTENSIONS = [
-  ".mp3",
-  ".wav",
-  ".ogg",
-  ".m4a",
-  ".aac",
-  ".flac",
-] as const;
+const AUDIO_EXTENSIONS = [".mp3", ".wav", ".webm"] as const;
+
+function joinMimeTypes(...groups: readonly string[][]): string {
+  return groups.flat().join(",");
+}
 
 function getUrlExtension(url: string): string | null {
   try {
@@ -107,17 +98,22 @@ export function urlMatchesAccept(
 export function acceptToInputAttr(accept: MediaAcceptType): string {
   switch (accept) {
     case "image":
-      return "image/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.IMAGE);
     case "video":
-      return "video/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.VIDEO);
     case "image-or-video":
-      return "image/*,video/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.IMAGE, ALLOWED_MIME_TYPES.VIDEO);
     case "audio":
-      return "audio/*";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.AUDIO);
     case "file":
-      return "application/pdf";
+      return joinMimeTypes(ALLOWED_MIME_TYPES.DOCUMENT);
     case "any":
-      return "image/*,video/*,audio/*,application/pdf";
+      return joinMimeTypes(
+        ALLOWED_MIME_TYPES.IMAGE,
+        ALLOWED_MIME_TYPES.VIDEO,
+        ALLOWED_MIME_TYPES.AUDIO,
+        ALLOWED_MIME_TYPES.DOCUMENT,
+      );
   }
 }
 

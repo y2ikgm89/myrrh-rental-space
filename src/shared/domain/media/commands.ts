@@ -46,8 +46,8 @@ export async function uploadMediaCommand(input: {
         // （client 供給の file.type は偽装可能なため使わない）
         mimeType: result.contentType,
         size: input.file.size,
-        width: null,
-        height: null,
+        width: result.width ?? null,
+        height: result.height ?? null,
         // server-side magic-byte で確定した MIME から MediaType を派生する
         // （クライアント供給 input.type 信用バイパス）
         type: deriveMediaTypeFromMime(result.contentType),

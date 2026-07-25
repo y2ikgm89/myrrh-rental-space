@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import { ALLOWED_MIME_TYPES } from "@/admin/lib/validations/media";
 import {
   acceptToInputAttr,
   acceptToInitialMediaType,
@@ -8,14 +9,34 @@ import {
   urlMatchesAccept,
 } from "@/admin/components/media-picker/accept-helpers";
 
+function joinMimeTypes(...groups: readonly string[][]): string {
+  return groups.flat().join(",");
+}
+
 describe("acceptToInputAttr", () => {
-  test("各 accept で native <input accept> 文字列を返す", () => {
-    expect(acceptToInputAttr("image")).toBe("image/*");
-    expect(acceptToInputAttr("video")).toBe("video/*");
-    expect(acceptToInputAttr("audio")).toBe("audio/*");
-    expect(acceptToInputAttr("file")).toBe("application/pdf");
+  test("各 accept で ALLOWED_MIME_TYPES 由来の exact MIME 一覧を返す", () => {
+    expect(acceptToInputAttr("image")).toBe(
+      joinMimeTypes(ALLOWED_MIME_TYPES.IMAGE),
+    );
+    expect(acceptToInputAttr("video")).toBe(
+      joinMimeTypes(ALLOWED_MIME_TYPES.VIDEO),
+    );
+    expect(acceptToInputAttr("image-or-video")).toBe(
+      joinMimeTypes(ALLOWED_MIME_TYPES.IMAGE, ALLOWED_MIME_TYPES.VIDEO),
+    );
+    expect(acceptToInputAttr("audio")).toBe(
+      joinMimeTypes(ALLOWED_MIME_TYPES.AUDIO),
+    );
+    expect(acceptToInputAttr("file")).toBe(
+      joinMimeTypes(ALLOWED_MIME_TYPES.DOCUMENT),
+    );
     expect(acceptToInputAttr("any")).toBe(
-      "image/*,video/*,audio/*,application/pdf",
+      joinMimeTypes(
+        ALLOWED_MIME_TYPES.IMAGE,
+        ALLOWED_MIME_TYPES.VIDEO,
+        ALLOWED_MIME_TYPES.AUDIO,
+        ALLOWED_MIME_TYPES.DOCUMENT,
+      ),
     );
   });
 });
@@ -63,6 +84,12 @@ describe("urlLooksLikeImage", () => {
       false,
     );
   });
+
+  test("許可外の画像拡張子 (svg/avif/bmp) を false と判定する", () => {
+    expect(urlLooksLikeImage("https://example.com/icon.svg")).toBe(false);
+    expect(urlLooksLikeImage("https://example.com/photo.avif")).toBe(false);
+    expect(urlLooksLikeImage("https://example.com/photo.bmp")).toBe(false);
+  });
 });
 
 describe("urlMatchesAccept", () => {
@@ -79,9 +106,36 @@ describe("urlMatchesAccept", () => {
     expect(urlMatchesAccept("https://vimeo.com/123456", "video")).toBe(true);
   });
 
-  test("video accept は mp4 拡張子も許容する", () => {
+  test("video accept は mp4 / webm 拡張子を許容する", () => {
     expect(urlMatchesAccept("https://cdn.example.com/clip.mp4", "video")).toBe(
       true,
+    );
+    expect(urlMatchesAccept("https://cdn.example.com/clip.webm", "video")).toBe(
+      true,
+    );
+  });
+
+  test("video accept は mov 等の許可外拡張子を拒否する", () => {
+    expect(urlMatchesAccept("https://cdn.example.com/clip.mov", "video")).toBe(
+      false,
+    );
+  });
+
+  test("audio accept は mp3 / wav / webm のみ許容する", () => {
+    expect(urlMatchesAccept("https://example.com/track.mp3", "audio")).toBe(
+      true,
+    );
+    expect(urlMatchesAccept("https://example.com/track.wav", "audio")).toBe(
+      true,
+    );
+    expect(urlMatchesAccept("https://example.com/track.webm", "audio")).toBe(
+      true,
+    );
+    expect(urlMatchesAccept("https://example.com/track.ogg", "audio")).toBe(
+      false,
+    );
+    expect(urlMatchesAccept("https://example.com/track.m4a", "audio")).toBe(
+      false,
     );
   });
 
