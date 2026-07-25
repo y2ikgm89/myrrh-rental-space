@@ -270,6 +270,65 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     );
   });
 
+  test("Cookie同意: 有効 OFF でも FormData にテキストがあれば値を保持", () => {
+    const result = parseWithZod(
+      form({
+        cookieConsentEnabled: "",
+        cookieConsentMessage: "保存済みメッセージ",
+        cookieConsentAcceptText: "同意する",
+        cookieConsentRejectText: "拒否する",
+        cookieConsentPolicyUrl: "/terms/privacy-policy",
+      }),
+      { schema: cookieConsentFormSchema },
+    );
+    expect(result.status).toBe("success");
+    if (result.status !== "success") return;
+    expect(result.value.cookieConsentEnabled).toBe(false);
+    expect(result.value.cookieConsentMessage).toBe("保存済みメッセージ");
+    expect(result.value.cookieConsentAcceptText).toBe("同意する");
+    expect(result.value.cookieConsentRejectText).toBe("拒否する");
+    expect(result.value.cookieConsentPolicyUrl).toBe("/terms/privacy-policy");
+  });
+
+  test("Cookie同意: policy URL は javascript: を拒否", () => {
+    const result = parseWithZod(
+      form({
+        cookieConsentEnabled: "on",
+        cookieConsentMessage: "",
+        cookieConsentAcceptText: "",
+        cookieConsentRejectText: "",
+        cookieConsentPolicyUrl: "javascript:alert(1)",
+      }),
+      { schema: cookieConsentFormSchema },
+    );
+    expect(result.status).toBe("error");
+  });
+
+  test("Cookie同意: policy URL は http(s) と内部 path を許可", () => {
+    expectSuccess(
+      cookieConsentFormSchema,
+      form({
+        cookieConsentEnabled: "on",
+        cookieConsentMessage: "",
+        cookieConsentAcceptText: "",
+        cookieConsentRejectText: "",
+        cookieConsentPolicyUrl: "https://example.com/privacy",
+      }),
+      "cookieConsent https policy",
+    );
+    expectSuccess(
+      cookieConsentFormSchema,
+      form({
+        cookieConsentEnabled: "on",
+        cookieConsentMessage: "",
+        cookieConsentAcceptText: "",
+        cookieConsentRejectText: "",
+        cookieConsentPolicyUrl: "/terms/privacy-policy",
+      }),
+      "cookieConsent internal policy",
+    );
+  });
+
   test("フッター: tagline 空欄 + SNS Switch OFF でも success（必須ラベルは保持）", () => {
     expectSuccess(
       footerFormSchema,
