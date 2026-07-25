@@ -47,6 +47,10 @@ describe("isReservedPath", () => {
       expect(isReservedPath("about")).toBe(true);
     });
 
+    test('"home" は予約済みパス（システムページ）', () => {
+      expect(isReservedPath("home")).toBe(true);
+    });
+
     test('"contact" は予約済みパス', () => {
       expect(isReservedPath("contact")).toBe(true);
     });
@@ -242,6 +246,7 @@ describe("getReservedPaths", () => {
     const paths = getReservedPaths();
     expect(paths).toContain("admin");
     expect(paths).toContain("api");
+    expect(paths).toContain("home");
     expect(paths).toContain("news");
     expect(paths).toContain("about");
     expect(paths).toContain("sitemap.xml");

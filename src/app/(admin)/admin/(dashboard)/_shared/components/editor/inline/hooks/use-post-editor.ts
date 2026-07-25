@@ -472,6 +472,14 @@ export function usePostEditor({
       return;
     }
 
+    // 公開中記事はプレビュー前保存がそのまま公開面に反映されるため確認する
+    if (post.status === PostStatus.PUBLISHED) {
+      const confirmed = window.confirm(
+        "公開中の記事です。プレビュー前に保存すると公開ページも更新されます。続行しますか？",
+      );
+      if (!confirmed) return;
+    }
+
     core.startTransition(async () => {
       try {
         const settingsResult = await updatePostSettings(

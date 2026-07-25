@@ -17,6 +17,7 @@ import {
 } from "@/shared/lib/validations/page";
 import { createDefaultCustomPageSections } from "@/shared/lib/constants/default-page-sections";
 import { resolveTemplateForSlug } from "@/shared/lib/sections/page-templates";
+import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 
 function normalizeNullableString(
   value: string | null | undefined,
@@ -124,27 +125,42 @@ export async function createPageCommand(
 
   const publishedAt = input.isPublished ? new Date() : null;
   const sections = createDefaultCustomPageSections(input.title);
-  const page = await prisma.page.create({
-    data: {
-      slug: input.slug,
-      title: input.title,
-      template: resolveTemplateForSlug(input.slug),
-      isPublished: input.isPublished,
-      publishedAt,
-      isActive: true,
-      sections: {
-        create: sections.map((section) => ({
-          type: section.type,
-          config: section.config,
-          order: section.order,
-          isActive: section.isActive,
-        })),
-      },
-    },
-    select: { slug: true },
-  });
 
-  return page;
+  try {
+    const page = await prisma.page.create({
+      data: {
+        slug: input.slug,
+        title: input.title,
+        template: resolveTemplateForSlug(input.slug),
+        isPublished: input.isPublished,
+        publishedAt,
+        isActive: true,
+        sections: {
+          create: sections.map((section) => ({
+            type: section.type,
+            config: section.config,
+            order: section.order,
+            isActive: section.isActive,
+          })),
+        },
+      },
+      select: { slug: true },
+    });
+
+    return page;
+  } catch (error) {
+    if (isPrismaUniqueConstraintError(error, "slug")) {
+      throw new DomainError(
+        getSlugErrorMessage({
+          type: "conflict",
+          contentType: "page",
+          id: "unknown",
+        }),
+        "CONFLICT",
+      );
+    }
+    throw error;
+  }
 }
 
 export async function deletePageCommand(slug: string): Promise<void> {
@@ -196,6 +212,13 @@ export async function updatePagePublishedCommand(
   slug: string,
   isPublished: boolean,
 ): Promise<{ isPublished: boolean }> {
+  if (isSystemPageSlug(slug)) {
+    throw new DomainError(
+      "システムページは公開状態を変更できません",
+      "VALIDATION",
+    );
+  }
+
   await ensurePageExists(slug);
 
   await prisma.page.update({
@@ -217,9 +240,17 @@ export async function bulkUpdatePagePublishedCommand(
     throw new DomainError("対象ページが選択されていません", "VALIDATION");
   }
 
+  const publishableSlugs = slugs.filter((slug) => !isSystemPageSlug(slug));
+  if (publishableSlugs.length === 0) {
+    throw new DomainError(
+      "システムページは公開状態を変更できません",
+      "VALIDATION",
+    );
+  }
+
   await prisma.page.updateMany({
     where: {
-      slug: { in: slugs },
+      slug: { in: publishableSlugs },
       isActive: true,
     },
     data: {

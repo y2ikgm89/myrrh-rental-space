@@ -129,6 +129,7 @@ import {
   spansToPlainText,
 } from "@/shared/lib/portable-text";
 import type { InquiryDefaults } from "@/shared/lib/inquiry/defaults";
+import { logger } from "@/shared/lib/errors/logger-core";
 
 /** /blog archive variant のページあたり件数（旧 page.tsx の `POSTS_PER_PAGE`） */
 const POSTS_ARCHIVE_PER_PAGE = 12;
@@ -671,7 +672,12 @@ export async function SectionRenderer({
       );
     }
 
-    default:
+    default: {
+      logger.warn("SectionRenderer: unknown section type", {
+        sectionType: section.type,
+        sectionId: section.id,
+      });
       return null;
+    }
   }
 }

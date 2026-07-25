@@ -101,7 +101,7 @@ export function PageActions({
           プレビュー
         </ActionDropdownItem>
 
-        {!isHomepage && (
+        {!isSystemPage && (
           <>
             <ActionDropdownSeparator />
             <ActionDropdownItem
