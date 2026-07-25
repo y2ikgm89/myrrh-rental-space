@@ -4,6 +4,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { emitBulkAuditRecords } from "@/admin/lib/audit";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import type { BulkFaqItemResult } from "@/shared/domain/faq/types";
@@ -93,14 +94,16 @@ export async function createFaqCategory(
       const result = await executeAdminMutationResult({
         resource: "faq",
         action: "create",
-        execute: async () =>
-          createFaqCategoryCommand({
+        execute: async () => {
+          await assertAdminFeatureCreateAllowed("faq");
+          return createFaqCategoryCommand({
             name: data.name,
             slug: data.slug,
             description: data.description ? data.description : null,
             icon: data.icon ? data.icon : null,
             isActive: data.isActive,
-          }),
+          });
+        },
         afterSuccess: () => {
           purgeFaqCaches();
         },
@@ -229,13 +232,15 @@ export async function createFaqItem(
     const result = await executeAdminMutationResult({
       resource: "faq",
       action: "create",
-      execute: async () =>
-        createFaqItemCommand({
+      execute: async () => {
+        await assertAdminFeatureCreateAllowed("faq");
+        return createFaqItemCommand({
           categoryId: data.categoryId,
           question: data.question,
           answer: data.answer,
           isPublished: data.isPublished,
-        }),
+        });
+      },
       afterSuccess: () => {
         purgeFaqCaches();
       },

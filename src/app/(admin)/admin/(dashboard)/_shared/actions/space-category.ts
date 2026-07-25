@@ -11,6 +11,7 @@ import type { SubmissionResult } from "@conform-to/react";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 // CACHE-INVALIDATE-02: SPACE_CATEGORIES は cdn-cache-tags.ts で SPACE_CATEGORY に
 // mapped され /spaces / /spaces/[slug] の CDN Cache-Tag に emit されるため、
@@ -62,7 +63,10 @@ export async function createSpaceCategory(
       const result = await executeAdminMutationResult({
         resource: "spaceCategory",
         action: "create",
-        execute: async () => createSpaceCategoryCommand(data),
+        execute: async () => {
+          await assertAdminFeatureCreateAllowed("spaces");
+          return createSpaceCategoryCommand(data);
+        },
         afterSuccess: () => {
           invalidateSiteWideCache(CACHE_TAGS.SPACE_CATEGORIES);
         },

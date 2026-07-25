@@ -717,22 +717,22 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   // Feature Modules（client/server 共用 declarative schema）
   // ---------------------------------------------------------------------------
   test("Feature Modules: 全 Switch OFF でも success（全 false）", () => {
-    const result = parseWithZod(
-      emptyKeys([
-        "spaces",
-        "reservation",
-        "events",
-        "posts",
-        "news",
-        "faq",
-        "access",
-        "contact",
-        "reviews",
-        "payment",
-        "data-retention",
-      ]),
-      { schema: featureModulesSettingsSchema },
-    );
+    const fd = emptyKeys([
+      "spaces",
+      "reservation",
+      "events",
+      "posts",
+      "news",
+      "faq",
+      "access",
+      "contact",
+      "reviews",
+      "payment",
+      "data-retention",
+      "confirmDataRetentionEnable",
+    ]);
+    fd.set("expectedUpdatedAt", EXPECTED_UPDATED_AT);
+    const result = parseWithZod(fd, { schema: featureModulesSettingsSchema });
     expect(result.status).toBe("success");
   });
 
@@ -893,6 +893,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       reservationGuestMonths: "12",
       inquiryMonths: "36",
       customerInactiveMonths: "84",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
     const result = parseWithZod(fd, { schema: dataRetentionSettingsSchema });
     expect(result.status).toBe("success");
@@ -910,6 +911,7 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
       reservationGuestMonths: "12",
       inquiryMonths: "36",
       customerInactiveMonths: "84",
+      expectedUpdatedAt: EXPECTED_UPDATED_AT,
     });
     expect(
       parseWithZod(fd, { schema: dataRetentionSettingsSchema }).status,

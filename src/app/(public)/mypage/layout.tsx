@@ -6,6 +6,13 @@
  * - 新規顧客の場合、signup terms cookie を消費して同意記録（SignupTermsConsumer に隔離）
  * - メール未登録時は /mypage/settings にリダイレクト（LINE ログインで email なしの場合）
  *
+ * Feature / maintenance 契約:
+ * - maintenance mode は親 `(public)/layout.tsx` の `MaintenanceGate` が適用（本 layout では
+ *   重複 gate しない）。mypage も公開 surface の一部としてメンテナンスページに切り替わる。
+ * - `/mypage` 予約一覧は reservation Feature Module OFF でも read 可（既存予約の確認・
+ *   キャンセル継続の intentional half-gate）。新規予約は `/reservation` の
+ *   `requireFeatureEnabled("reservation")` で 404。`/mypage/events` のみ events gate あり。
+ *
  * 設計（rule .claude/rules/caching.md「build prerender の焼き込み防止」canonical）:
  * - 認証 + Prisma 直呼び出し (verifyCustomerSession / ensureCustomerLinked) + headers
  *   等の dynamic API 処理は **MypageAuthGate async SC に隔離**し、冒頭で `await connection()`

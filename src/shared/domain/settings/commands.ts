@@ -15,9 +15,10 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { assertAllowlistedNotificationStaffIds } from "@/shared/domain/settings/notification-staff";
 import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-image-assertions";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
-import type {
-  BusinessHours,
-  DataRetentionConfig,
+import {
+  parseFeatureModules,
+  type BusinessHours,
+  type DataRetentionConfig,
 } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
@@ -25,6 +26,7 @@ import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import {
   buildInitialFeatureModules,
   normalizeFeatureModules,
+  type FeatureModule,
 } from "@/shared/lib/features/registry";
 
 export type BasicInfoInput = {
@@ -207,6 +209,19 @@ async function casUpdateOrCreateSingleton<
 
   await create({ data: createData });
 }
+
+/** Feature Module `data-retention` を OFF→ON する際の確認不足メッセージ */
+export const DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE =
+  "データ保持ポリシーの自動適用を有効にするには、保持期間経過後の削除・匿名化のリスクを理解したうえで確認チェックボックスにチェックを入れてください。";
+
+export type FeatureModulesCommandInput = Record<FeatureModule, boolean> & {
+  confirmDataRetentionEnable: boolean;
+  expectedUpdatedAt: string | Date;
+};
+
+export type DataRetentionSettingsCommandInput = DataRetentionConfig & {
+  expectedUpdatedAt: string | Date;
+};
 
 export type HeaderSettingsInput = {
   headerScrollBehavior: HeaderScrollBehavior;
@@ -872,20 +887,56 @@ export async function updateEventImportEnabled(
  *
  * 入力は schema 層（`featureModulesSettingsSchema`）で全 11 module の boolean 必須に
  * 検証済み。persist 前に `normalizeFeatureModules` で依存 cascade を適用する（write-side SSoT）。
+ *
+ * `data-retention` を stored OFF から ON にする場合は `confirmDataRetentionEnable` 必須。
  */
 export async function updateFeatureModulesCommand(
-  modules: Record<string, boolean>,
+  data: FeatureModulesCommandInput,
 ): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+  const {
+    confirmDataRetentionEnable,
+    expectedUpdatedAt: _expectedUpdatedAt,
+    ...modules
+  } = data;
   const normalized = normalizeFeatureModules(modules);
   const featureModules = asPrismaInputJsonValue(
     normalized,
     "featureModules が不正です",
   );
 
-  await prisma.settingsFeatures.upsert({
+  const existing = await prisma.settingsFeatures.findUnique({
     where: { id: "singleton" },
-    create: { id: "singleton", featureModules },
-    update: { featureModules },
+    select: { featureModules: true },
+  });
+
+  const previousStored = parseFeatureModules(existing?.featureModules);
+  const isEnablingDataRetention =
+    normalized["data-retention"] === true &&
+    previousStored["data-retention"] !== true;
+
+  if (isEnablingDataRetention && !confirmDataRetentionEnable) {
+    throw new DomainError(
+      DATA_RETENTION_ENABLE_CONFIRMATION_MESSAGE,
+      "VALIDATION",
+    );
+  }
+
+  if (!existing) {
+    await prisma.settingsFeatures.create({
+      data: { id: "singleton", featureModules },
+    });
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsFeatures.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: { featureModules },
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }
 
@@ -896,16 +947,34 @@ export async function updateFeatureModulesCommand(
  * 検証済み。`0` は該当テーブルの opt-out（cron 側で skip）。
  */
 export async function updateDataRetentionSettings(
-  config: DataRetentionConfig,
+  data: DataRetentionSettingsCommandInput,
 ): Promise<void> {
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+  const { expectedUpdatedAt: _expectedUpdatedAt, ...config } = data;
   const dataRetention = asPrismaInputJsonValue(
     config,
     "dataRetention が不正です",
   );
 
-  await prisma.settingsDataRetention.upsert({
+  const existing = await prisma.settingsDataRetention.findUnique({
     where: { id: "singleton" },
-    create: { id: "singleton", dataRetention },
-    update: { dataRetention },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    await prisma.settingsDataRetention.create({
+      data: { id: "singleton", dataRetention },
+    });
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.settingsDataRetention.updateMany({
+      where: { id: "singleton", updatedAt: expectedUpdatedAt },
+      data: { dataRetention },
+    });
+    if (result.count === 0) {
+      throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+    }
   });
 }

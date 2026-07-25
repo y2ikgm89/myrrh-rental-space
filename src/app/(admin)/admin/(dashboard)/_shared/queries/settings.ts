@@ -16,7 +16,7 @@ import type {
 import type { AnnouncementBarCarouselSettingsInput } from "@/shared/domain/settings/announcement-bar";
 import type { Serialized } from "@/shared/lib/serialize";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
-import type { DataRetentionConfig } from "@/shared/lib/json-validators";
+import type { DataRetentionSettingsData } from "@/shared/domain/settings/admin-queries";
 import { requireAdminPermission } from "./_helpers";
 
 export type {
@@ -71,7 +71,7 @@ export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSetting
   return adminQueries.getGoogleCalendarSettings();
 }
 
-export async function getDataRetentionSettings(): Promise<DataRetentionConfig> {
+export async function getDataRetentionSettings(): Promise<DataRetentionSettingsData> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getDataRetentionSettings();
 }

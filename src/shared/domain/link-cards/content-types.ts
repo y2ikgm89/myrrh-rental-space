@@ -34,6 +34,8 @@ export const LINK_CARD_TYPE_LABELS: Record<LinkCardContentType, string> = {
  * 公開ルートは `requireFeatureEnabled` で 404 ガードされるため（`.claude/rules/app-structure.md`）、
  * Feature Module が OFF の content-type は「サイト内」タブの選択肢・挿入項目から
  * 除外する（無効な種別を新規に選べてしまう insert 経路側の bug 修正、M 級）。
+ * 公開 HTML 描画 (`resolveInternalLinkCards` / `resolveLinkCardsByType`) でも
+ * 同 mapping で OFF 種別のカードを除去する（`resolveSpaceCardEmbedData` と同型）。
  * `FeatureModule` は値を持たないメタデータ型のみを import（`import type`）しているため、
  * server-only な `features/check.ts` に依存せず client bundle に安全に含められる。
  */

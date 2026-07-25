@@ -1,6 +1,7 @@
 import "server-only";
 
 import { notFound } from "next/navigation";
+import { DomainError } from "@/shared/domain/domain-error";
 import { getFeatureModulesSettings } from "@/shared/domain/settings/queries/features";
 import {
   FEATURE_MODULES,
@@ -160,5 +161,24 @@ export async function requireFeatureEnabled(
 ): Promise<void> {
   if (!(await isFeatureEnabled(module))) {
     notFound();
+  }
+}
+
+/** 管理画面 create Server Action が feature OFF 時に返すメッセージ（UI tooltip と整合）。 */
+export const ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE =
+  "この機能は公開面で無効のため新規作成できません" as const;
+
+/**
+ * 管理画面の新規作成 Server Action 用ガード。
+ *
+ * 公開 page の `requireFeatureEnabled` (404) に対称し、直接 action 呼び出しを
+ * fail-closed にする。`executeAdminMutationResult` が DomainError を
+ * MutationError に変換するため、conform フォームにもエラーが返る。
+ */
+export async function assertAdminFeatureCreateAllowed(
+  module: FeatureModule,
+): Promise<void> {
+  if (!(await isFeatureEnabled(module))) {
+    throw new DomainError(ADMIN_FEATURE_CREATE_FORBIDDEN_MESSAGE, "FORBIDDEN");
   }
 }

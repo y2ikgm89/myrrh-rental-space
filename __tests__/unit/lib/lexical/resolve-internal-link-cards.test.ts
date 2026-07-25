@@ -10,6 +10,14 @@ mock.module("@/shared/domain/link-cards/resolve-queries", () => ({
   resolveLinkCardsByType: mockResolveLinkCardsByType,
 }));
 
+const mockGetEnabledFeatures = mock(() =>
+  Promise.resolve(new Set(["posts", "news", "spaces", "events"] as const)),
+);
+
+mock.module("@/shared/lib/features/check", () => ({
+  getEnabledFeatures: mockGetEnabledFeatures,
+}));
+
 const { resolveInternalLinkCards } =
   await import("@/shared/lib/lexical/resolve-internal-link-cards");
 
@@ -20,6 +28,10 @@ describe("resolveInternalLinkCards", () => {
   beforeEach(() => {
     mockResolveLinkCardsByType.mockReset();
     mockResolveLinkCardsByType.mockResolvedValue(new Map());
+    mockGetEnabledFeatures.mockReset();
+    mockGetEnabledFeatures.mockResolvedValue(
+      new Set(["posts", "news", "spaces", "events"]),
+    );
   });
 
   test("プレースホルダーが無い HTML はそのまま返す（DB アクセスなし）", async () => {
@@ -81,5 +93,15 @@ describe("resolveInternalLinkCards", () => {
     const out = await resolveInternalLinkCards(html);
     expect(out).toBe("");
     expect(mockResolveLinkCardsByType).not.toHaveBeenCalled();
+  });
+
+  test("Feature Module OFF の種別は DB 解決せず placeholder を除去する", async () => {
+    mockGetEnabledFeatures.mockResolvedValueOnce(new Set(["posts", "news"]));
+    const html = PLACEHOLDER("post", "p1") + PLACEHOLDER("event", "e1");
+    const out = await resolveInternalLinkCards(html);
+    expect(mockResolveLinkCardsByType).toHaveBeenCalledTimes(1);
+    expect(mockResolveLinkCardsByType).toHaveBeenCalledWith("post", ["p1"]);
+    expect(out).not.toContain('data-content-type="event"');
+    expect(out).not.toContain('data-content-id="e1"');
   });
 });

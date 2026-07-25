@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { executeConformMutation } from "@/shared/lib/forms/conform-action";
+import { assertAdminFeatureCreateAllowed } from "@/shared/lib/features/check";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { toAppRoute } from "@/shared/lib/routes/to-app-route";
 import { locationFormSchema } from "@/shared/lib/validations/location";
@@ -82,7 +83,10 @@ export async function createLocationAction(
       const result = await executeAdminMutationResult({
         resource: "location",
         action: "create",
-        execute: async () => createLocationCommand(data),
+        execute: async () => {
+          await assertAdminFeatureCreateAllowed("access");
+          return createLocationCommand(data);
+        },
         afterSuccess: (payload) => {
           purgeLocationCaches();
           fireAndForget(syncLocationToGbpCommand({ locationId: payload.id }), {

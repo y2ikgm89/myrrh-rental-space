@@ -4,7 +4,11 @@ import { prisma } from "@/shared/db/prisma";
 import { EventStatus, PostStatus } from "@generated/prisma/enums";
 import { parseGallery } from "@/shared/lib/validations/gallery";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
-import type { LinkCardContentType } from "@/shared/domain/link-cards/content-types";
+import {
+  LINK_CARD_CONTENT_TYPE_FEATURE_MODULE,
+  type LinkCardContentType,
+} from "@/shared/domain/link-cards/content-types";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 
 /**
  * 公開描画時に解決された内部リンクカードの表示データ。
@@ -22,6 +26,8 @@ export type ResolvedLinkCard = {
  * 指定種別の id 群を公開フィルタ付きで一括解決し、`id → ResolvedLinkCard` の Map を返す。
  *
  * 参照先が削除 / 非公開なら Map に含まれない（呼び出し側でカードを描画しない＝404 防止）。
+ * 対応 Feature Module が OFF なら空 Map を返す（`resolveSpaceCardEmbedData` と同型の
+ * 公開描画最終防衛線。admin insert UI 側では防がないためここで除去する）。
  * 常に最新データを返すため `'use cache'` は付けない（freshness 優先 + id 配列の cache key 肥大回避）。
  */
 export async function resolveLinkCardsByType(
@@ -29,6 +35,8 @@ export async function resolveLinkCardsByType(
   ids: readonly string[],
 ): Promise<Map<string, ResolvedLinkCard>> {
   if (ids.length === 0) return new Map();
+  const featureModule = LINK_CARD_CONTENT_TYPE_FEATURE_MODULE[contentType];
+  if (!(await isFeatureEnabled(featureModule))) return new Map();
   const uniqueIds = Array.from(new Set(ids));
 
   switch (contentType) {
