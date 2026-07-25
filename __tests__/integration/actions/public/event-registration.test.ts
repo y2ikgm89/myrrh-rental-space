@@ -39,6 +39,11 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkEmailRateLimit: mockCheckEmailRateLimit,
 }));
 
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 const mockCreateEventRegistrationCommand = mock(() =>
   Promise.resolve({
     registration: {

@@ -49,6 +49,11 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkBotHeuristics: mockCheckBotHeuristics,
 }));
 
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 const DEFAULT_RECEIPT_NUMBER = "INQ-ABCDEF12";
 
 const mockCreateInquiryCommand = mock(() =>

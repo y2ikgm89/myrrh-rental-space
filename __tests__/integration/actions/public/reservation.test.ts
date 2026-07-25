@@ -53,6 +53,11 @@ mock.module("@/shared/lib/action-helpers", () => ({
   checkEmailRateLimit: mockCheckEmailRateLimit,
 }));
 
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 const mockCreatePublicReservationCommand = mock(() =>
   Promise.resolve({
     id: "reservation-001",

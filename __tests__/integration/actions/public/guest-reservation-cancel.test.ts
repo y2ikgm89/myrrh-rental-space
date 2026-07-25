@@ -35,6 +35,11 @@ mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
 
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 const mockPerReservationCheck = mock(() =>
   Promise.resolve({ success: true, remaining: 3, reset: Date.now() + 3600000 }),
 );
@@ -145,6 +150,8 @@ mock.module("@/shared/lib/async-utils", () => ({
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
+  safeFetch: mock(() => Promise.resolve(null)),
+  criticalFetch: mock(() => Promise.resolve(null)),
   logError: mock(() => undefined),
   normalizeError: (e: unknown) =>
     e instanceof Error ? e : new Error(String(e)),
