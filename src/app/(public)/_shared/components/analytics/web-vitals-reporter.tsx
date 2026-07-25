@@ -6,13 +6,13 @@
  * Core Web Vitals（CLS, INP, LCP）+ 補助指標（FCP, TTFB）を計測。
  * GA4 が有効な場合は gtag() に送信。無効な場合は開発コンソールに出力。
  *
- * GDPR対応: Cookie同意後のみ計測開始（AnalyticsProvider と同じ条件）
+ * GDPR対応: cookieConsentEnabled 時は同意後のみ計測（AnalyticsProvider と同条件）
  *
  * @see https://web.dev/articles/vitals
  */
 
 import { useEffect } from "react";
-import { useCookieConsent } from "@/public/components/cookie-consent-banner";
+import { useAnalyticsConsent } from "@/public/components/analytics/use-analytics-consent";
 import { logger } from "@/shared/lib/errors/logger-core";
 
 /**
@@ -55,18 +55,18 @@ function sendMetric(metric: {
 interface WebVitalsReporterProps {
   /** GA4 が有効かどうか（Analytics設定から） */
   enabled: boolean;
+  /** Admin setting: when false, vitals run without prior banner accept. */
+  cookieConsentEnabled: boolean;
 }
 
-export function WebVitalsReporter({ enabled }: WebVitalsReporterProps) {
-  const consentStatus = useCookieConsent();
+export function WebVitalsReporter({
+  enabled,
+  cookieConsentEnabled,
+}: WebVitalsReporterProps) {
+  const shouldLoadAnalytics = useAnalyticsConsent(cookieConsentEnabled);
 
   useEffect(() => {
-    // Cookie同意がない場合、またはAnalyticsが無効な場合はスキップ
-    // ただし開発環境ではコンソール出力のため常に有効
-    if (
-      consentStatus !== "accepted" &&
-      process.env["NODE_ENV"] !== "development"
-    ) {
+    if (!shouldLoadAnalytics && process.env["NODE_ENV"] !== "development") {
       return;
     }
 
@@ -82,7 +82,7 @@ export function WebVitalsReporter({ enabled }: WebVitalsReporterProps) {
       onFCP(sendMetric);
       onTTFB(sendMetric);
     });
-  }, [consentStatus, enabled]);
+  }, [shouldLoadAnalytics, enabled]);
 
   return null;
 }

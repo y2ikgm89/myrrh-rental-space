@@ -13,7 +13,9 @@ import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
 import { getFooterSettings } from "@/shared/domain/settings/queries/display";
 import { getSocialLinksForFooter } from "@/shared/domain/settings/queries/organization";
+import { getCookieConsentSettings } from "@/shared/domain/settings/queries/site";
 import { getFooterTerms } from "@/shared/domain/terms/queries";
+import { CookieConsentManageLink } from "@/public/components/cookie-consent-manage-link";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
@@ -192,14 +194,21 @@ export async function Footer(): Promise<ReactElement> {
   // ある (PR の真因)。`await connection()` で runtime 動的レンダリングを強制し、必ず Cloud Run
   // の実 DB から real data を取り直す。親 layout は本 Footer を Suspense でラップしている。
   await connection();
-  const [info, footerNav, footerSettings, socialLinks, footerTerms] =
-    await Promise.all([
-      getBusinessInfo(),
-      getFooterNavigation(),
-      getFooterSettings(),
-      getSocialLinksForFooter(),
-      getFooterTerms(),
-    ]);
+  const [
+    info,
+    footerNav,
+    footerSettings,
+    socialLinks,
+    footerTerms,
+    cookieSettings,
+  ] = await Promise.all([
+    getBusinessInfo(),
+    getFooterNavigation(),
+    getFooterSettings(),
+    getSocialLinksForFooter(),
+    getFooterTerms(),
+    getCookieConsentSettings(),
+  ]);
   const hoursDisplay = parseFooterHours(info.businessHours);
   const taglineLines = (
     footerSettings.tagline ??
@@ -366,7 +375,7 @@ export async function Footer(): Promise<ReactElement> {
         </div>
 
         <div className="mt-14 border-t border-border pt-8">
-          {footerTerms.length > 0 && (
+          {(footerTerms.length > 0 || cookieSettings?.cookieConsentEnabled) && (
             <nav
               aria-label="規約・法的文書"
               className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
@@ -380,6 +389,11 @@ export async function Footer(): Promise<ReactElement> {
                   {terms.title}
                 </Link>
               ))}
+              {cookieSettings?.cookieConsentEnabled ? (
+                <CookieConsentManageLink
+                  cookieConsentEnabled={cookieSettings.cookieConsentEnabled}
+                />
+              ) : null}
             </nav>
           )}
           <p className="text-center text-[0.6875rem] tracking-eyebrow text-muted-foreground">

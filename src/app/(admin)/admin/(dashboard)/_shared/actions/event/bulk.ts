@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { emitBulkAuditRecords } from "@/admin/lib/audit";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
@@ -15,7 +16,11 @@ import {
   type BulkSetStatusEventsResult,
 } from "@/shared/domain/events/bulk-status-commands";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  EventStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { buildAuditRequestContext } from "@/shared/lib/audit-request-context";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
 import { ErrorCategory } from "@/shared/lib/errors";
@@ -28,6 +33,17 @@ const bulkIdsSchema = z
   .min(1, { error: "1件以上選択してください" })
   .max(100, { error: "一度に処理できるのは100件までです" });
 
+function buildBulkAuditMetadata(args: {
+  ip: string | null;
+  userAgent: string | null;
+}): Record<string, unknown> {
+  return {
+    channel: "admin",
+    ...(args.ip !== null && { ip: args.ip }),
+    ...(args.userAgent !== null && { userAgent: args.userAgent }),
+  };
+}
+
 export async function bulkPublishEvents(
   ids: string[],
   publish: boolean,
@@ -38,9 +54,31 @@ export async function bulkPublishEvents(
   return executeAdminMutationResult({
     resource: "event",
     action: "publish",
-    execute: async () => bulkPublishEventsCommand(parsed.data, publish),
-    afterSuccess: () => {
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkPublishEventsCommand(parsed.data, publish);
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
       invalidateEventCaches();
+      emitBulkAuditRecords({
+        resource: "event",
+        userId: outcome.actorUserId,
+        records: outcome.affectedTargets.map((target) => ({
+          resourceId: target.id,
+          action: AuditAction.PUBLISH,
+          newValue: {
+            status: outcome.isPublished
+              ? EventStatus.PUBLISHED
+              : EventStatus.DRAFT,
+            slug: target.slug,
+          },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }
@@ -54,10 +92,28 @@ export async function bulkSoftDeleteEvents(
   return executeAdminMutationResult({
     resource: "event",
     action: "delete",
-    execute: async (user) =>
-      bulkSoftDeleteEventsCommand(parsed.data, { id: user.id }),
-    afterSuccess: () => {
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkSoftDeleteEventsCommand(parsed.data, {
+        id: user.id,
+      });
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
       invalidateEventCaches();
+      emitBulkAuditRecords({
+        resource: "event",
+        userId: outcome.actorUserId,
+        records: outcome.affectedTargets.map((target) => ({
+          resourceId: target.id,
+          action: AuditAction.DELETE,
+          oldValue: { slug: target.slug },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
     },
   });
 }
@@ -80,17 +136,36 @@ export async function bulkSetStatusEvents(
   return executeAdminMutationResult({
     resource: "event",
     action: "update",
-    execute: async () =>
-      bulkSetStatusEventsCommand(parsed.data.ids, parsed.data.newStatus),
-    afterSuccess: (data) => {
+    execute: async (user) => {
+      const { ip, userAgent } = await buildAuditRequestContext();
+      const result = await bulkSetStatusEventsCommand(
+        parsed.data.ids,
+        parsed.data.newStatus,
+      );
+      return { ...result, actorUserId: user.id, ip, userAgent };
+    },
+    afterSuccess: (outcome) => {
       invalidateEventCaches();
+      emitBulkAuditRecords({
+        resource: "event",
+        userId: outcome.actorUserId,
+        records: outcome.affectedIds.map((id) => ({
+          resourceId: id,
+          action: AuditAction.UPDATE,
+          newValue: { status: outcome.newStatus },
+        })),
+        metadata: buildBulkAuditMetadata({
+          ip: outcome.ip,
+          userAgent: outcome.userAgent,
+        }),
+      });
       if (
-        data.newStatus === EventStatus.CANCELLED &&
-        data.affectedIds.length > 0
+        outcome.newStatus === EventStatus.CANCELLED &&
+        outcome.affectedIds.length > 0
       ) {
         fireAndForget(
           Promise.allSettled(
-            data.affectedIds.map((eventId) =>
+            outcome.affectedIds.map((eventId) =>
               sendEventCancelledToAllParticipants(eventId),
             ),
           ).then(() => undefined),

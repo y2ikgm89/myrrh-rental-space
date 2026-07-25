@@ -6,6 +6,7 @@
  */
 import { z } from "zod";
 import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
+import { isHttpOrInternalPublicHref } from "@/shared/lib/url/safe-href";
 import { optionalText, switchBoolean } from "./form-schema-helpers";
 
 // =============================================================================
@@ -17,7 +18,20 @@ export const cookieConsentFormSchema = z.object({
   cookieConsentMessage: optionalText(1000),
   cookieConsentAcceptText: optionalText(50),
   cookieConsentRejectText: optionalText(50),
-  cookieConsentPolicyUrl: optionalText(200),
+  cookieConsentPolicyUrl: z.preprocess(
+    (value) => (value === null || value === "" ? undefined : value),
+    z
+      .string()
+      .max(200, { error: "200文字以内で入力してください" })
+      .optional()
+      .refine(
+        (value) => value === undefined || isHttpOrInternalPublicHref(value),
+        {
+          error:
+            "プライバシーポリシーURLは / から始まるパス、または http(s) の URL を指定してください（javascript: 等は不可）",
+        },
+      ),
+  ),
 });
 
 export type CookieConsentFormInput = z.infer<typeof cookieConsentFormSchema>;

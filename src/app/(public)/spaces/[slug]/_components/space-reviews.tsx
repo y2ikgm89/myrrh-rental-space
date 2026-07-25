@@ -3,6 +3,7 @@ import {
   getPublishedReviewsForSpace,
   getSpaceReviewStats,
 } from "@/shared/domain/reviews/public-queries";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { Heading } from "@/public/components/design-system/heading";
 import { StarRating } from "@/public/components/ui/star-rating";
 import { formatSerializedDate } from "@/shared/lib/serialize";
@@ -21,6 +22,10 @@ interface SpaceReviewsProps {
 
 export async function SpaceReviews({ spaceId }: SpaceReviewsProps) {
   await connection();
+
+  if (!(await isFeatureEnabled("reviews"))) {
+    return null;
+  }
 
   const [reviews, stats] = await Promise.all([
     getPublishedReviewsForSpace(spaceId),

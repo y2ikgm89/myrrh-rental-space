@@ -11,13 +11,15 @@
 
 import Script from "next/script";
 import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
-import { useCookieConsent } from "@/public/components/cookie-consent-banner";
+import { useAnalyticsConsent } from "@/public/components/analytics/use-analytics-consent";
 import type { AnalyticsConfig } from "@/shared/lib/analytics/config";
 import { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
 
 interface AnalyticsProviderProps {
   config: AnalyticsConfig;
   nonce?: string | null;
+  /** Admin setting: when false, analytics loads without prior banner accept. */
+  cookieConsentEnabled: boolean;
 }
 
 /**
@@ -73,16 +75,20 @@ function GtmScript({ gtmId, nonce }: { gtmId: string; nonce?: string | null }) {
 /**
  * Analytics Provider
  *
- * - Cookie同意が 'accepted' の場合のみスクリプトを出力
+ * - cookieConsentEnabled かつ未同意の場合は出力しない（GDPR ゲート）
+ * - cookieConsentEnabled === false の場合は同意なしで出力
  * - analyticsType が 'ga4' の場合: GoogleAnalytics を出力
  * - analyticsType が 'gtm' の場合: GoogleTagManager を出力
  * - microsoftClarityId が設定されている場合: Clarity を並行出力（GA4/GTM とは独立）
  */
-export function AnalyticsProvider({ config, nonce }: AnalyticsProviderProps) {
-  const consentStatus = useCookieConsent();
+export function AnalyticsProvider({
+  config,
+  nonce,
+  cookieConsentEnabled,
+}: AnalyticsProviderProps) {
+  const shouldLoadAnalytics = useAnalyticsConsent(cookieConsentEnabled);
 
-  // Cookie同意がない場合は何も出力しない（GDPR準拠）
-  if (consentStatus !== "accepted") {
+  if (!shouldLoadAnalytics) {
     return null;
   }
 

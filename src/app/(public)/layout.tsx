@@ -168,12 +168,20 @@ async function DynamicContent(): Promise<ReactElement> {
   ]);
 
   const nonce = headersList.get("x-nonce");
+  const cookieConsentEnabled = cookieSettings?.cookieConsentEnabled ?? false;
 
   return (
     <>
-      <AnalyticsProvider config={analyticsConfig} nonce={nonce} />
-      <WebVitalsReporter enabled={analyticsConfig.analyticsType !== null} />
-      {cookieSettings?.cookieConsentEnabled && (
+      <AnalyticsProvider
+        config={analyticsConfig}
+        nonce={nonce}
+        cookieConsentEnabled={cookieConsentEnabled}
+      />
+      <WebVitalsReporter
+        enabled={analyticsConfig.analyticsType !== null}
+        cookieConsentEnabled={cookieConsentEnabled}
+      />
+      {cookieConsentEnabled && cookieSettings != null && (
         <CookieConsentBanner
           message={cookieSettings.cookieConsentMessage}
           acceptText={cookieSettings.cookieConsentAcceptText}

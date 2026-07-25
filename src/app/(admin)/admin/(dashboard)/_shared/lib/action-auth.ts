@@ -149,13 +149,19 @@ function actionToAuditAction(action: Action): AuditAction {
   switch (action) {
     case "create":
       return AuditAction.CREATE;
+    case "read":
+      return AuditAction.READ;
     case "update":
       return AuditAction.UPDATE;
     case "delete":
       return AuditAction.DELETE;
     case "publish":
       return AuditAction.PUBLISH;
-    default:
-      return AuditAction.UPDATE;
+    case "manage":
+      return AuditAction.MANAGE;
+    default: {
+      const _exhaustive: never = action;
+      throw new Error(`Unhandled action: ${String(_exhaustive)}`);
+    }
   }
 }

@@ -36,7 +36,11 @@ import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
 } from "@/shared/lib/terms-consent-gate";
-import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  TermsScope,
+} from "@/shared/lib/validations/enums/prisma-types";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { checkPublicSiteWritable } from "@/shared/lib/maintenance-guard";
 
 export async function submitInquiry(
@@ -154,6 +158,24 @@ export async function submitInquiry(
         }),
         {
           operation: "createInquiryNotification",
+          category: ErrorCategory.DATABASE,
+        },
+      );
+
+      // D7: 公開お問い合わせ CREATE の最小監査。本文は残さず id/status/channel のみ。
+      fireAndForget(
+        createAuditLogRecord({
+          action: AuditAction.CREATE,
+          resource: "inquiry",
+          resourceId: result.id,
+          newValue: { status: "NEW" },
+          metadata: {
+            channel: "public",
+            customerId,
+          },
+        }),
+        {
+          operation: "auditPublicInquiryCreate",
           category: ErrorCategory.DATABASE,
         },
       );

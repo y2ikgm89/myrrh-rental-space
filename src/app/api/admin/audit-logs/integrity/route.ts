@@ -27,16 +27,22 @@ export async function GET(request: Request): Promise<Response> {
       );
     }
 
+    const result = await verifyAuditLogIntegrity();
+
     await createAuditLogRecord({
       userId: auth.user.id,
       action: "INTEGRITY_CHECK",
       resource: "auditLog",
       metadata: {
         operation: "verifyAuditLogIntegrity",
+        ok: result.ok,
+        checkedCount: result.checkedCount,
+        failureCount: result.failures.length,
+        latestSequence: result.latestSequence,
+        latestHash: result.latestHash,
+        checkedAt: result.checkedAt,
       },
     });
-
-    const result = await verifyAuditLogIntegrity();
 
     return Response.json(result, {
       status: result.ok ? 200 : 409,

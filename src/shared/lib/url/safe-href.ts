@@ -100,6 +100,34 @@ export function navigationHrefSchema(isExternal: boolean) {
 }
 
 /**
+ * Cookie 同意バナーの「詳細」リンク用: 内部 path または http(s) のみ（mailto/tel 不可）。
+ */
+export function isHttpOrInternalPublicHref(url: string): boolean {
+  if (isInternalNavHref(url)) return true;
+  if (!url || url.startsWith("//")) return false;
+  const scheme = getUrlScheme(url);
+  return scheme === "http" || scheme === "https";
+}
+
+/**
+ * 任意の http(s) / 内部 path。空欄は undefined（Server Action で null 化）。
+ */
+export const optionalHttpOrInternalHrefSchema = z.preprocess(
+  (value) => (value === null || value === "" ? undefined : value),
+  z
+    .string()
+    .max(500)
+    .optional()
+    .refine(
+      (value) => value === undefined || isHttpOrInternalPublicHref(value),
+      {
+        error:
+          "リンクは / から始まるパス、または http(s) の URL を指定してください（javascript: 等は不可）",
+      },
+    ),
+);
+
+/**
  * サイドバー custom 等: 空 / null / undefined は許可、値があれば内部 or 許可外部。
  */
 export const optionalSafePublicHrefSchema = z.preprocess(

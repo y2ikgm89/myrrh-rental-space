@@ -46,8 +46,11 @@ mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
 }));
 
-const { assertOnlinePaymentAvailable, assertStripeCredentialsConfigured } =
-  await import("@/shared/domain/payment/availability");
+const {
+  assertOnlinePaymentAvailable,
+  assertStripeCredentialsConfigured,
+  isOnlinePaymentAvailable,
+} = await import("@/shared/domain/payment/availability");
 
 function resetMocks() {
   mockGetStripeSettings.mockClear();
@@ -147,5 +150,26 @@ describe("payment availability gates", () => {
     expect(result.stripeSecretKey).toBe("enc-sk");
     expect(mockIsFeatureEnabled).toHaveBeenCalledWith("payment");
     expect(mockGetStripeCredentialCiphertext).toHaveBeenCalledTimes(1);
+  });
+
+  test("isOnlinePaymentAvailable returns false when payment feature is OFF", async () => {
+    mockIsFeatureEnabled.mockImplementation(async () => false);
+
+    await expect(isOnlinePaymentAvailable()).resolves.toBe(false);
+    expect(mockGetStripeSettings).not.toHaveBeenCalled();
+  });
+
+  test("isOnlinePaymentAvailable returns false when credentials are missing", async () => {
+    mockGetStripeCredentialCiphertext.mockImplementation(async () => ({
+      stripeSecretKey: null,
+      stripeWebhookSecret: null,
+    }));
+
+    await expect(isOnlinePaymentAvailable()).resolves.toBe(false);
+  });
+
+  test("isOnlinePaymentAvailable returns true when feature ON and credentials configured", async () => {
+    await expect(isOnlinePaymentAvailable()).resolves.toBe(true);
+    expect(mockIsFeatureEnabled).toHaveBeenCalledWith("payment");
   });
 });

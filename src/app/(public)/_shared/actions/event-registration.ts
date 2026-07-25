@@ -57,10 +57,14 @@ import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
 } from "@/shared/lib/terms-consent-gate";
-import { TermsScope } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  AuditAction,
+  TermsScope,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { headers } from "next/headers";
 import { getClientIpFromHeaders } from "@/shared/lib/rate-limit";
 import { prismaCuidIdSchema } from "@/shared/lib/validations/params";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import {
   checkPublicSiteWritable,
   getPublicMaintenanceBlockMutation,
@@ -239,6 +243,25 @@ export async function registerForEvent(
           }),
           {
             operation: "createEventRegistrationNotification",
+            category: ErrorCategory.DATABASE,
+          },
+        );
+
+        // D7: 公開イベント申込 CREATE の最小監査。
+        fireAndForget(
+          createAuditLogRecord({
+            action: AuditAction.CREATE,
+            resource: "event-registration",
+            resourceId: result.registration.id,
+            newValue: { status: "CONFIRMED" },
+            metadata: {
+              channel: "public",
+              customerId,
+              eventId: result.registration.eventId,
+            },
+          }),
+          {
+            operation: "auditPublicEventRegistrationCreate",
             category: ErrorCategory.DATABASE,
           },
         );

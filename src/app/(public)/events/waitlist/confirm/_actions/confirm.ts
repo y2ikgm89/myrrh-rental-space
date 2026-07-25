@@ -21,6 +21,8 @@ import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { invalidateSiteWideCache } from "@/shared/lib/cache/site-wide";
 import { DomainError } from "@/shared/domain/domain-error";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
@@ -126,6 +128,25 @@ export async function confirmWaitlistOfferAction(
         }
 
         invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.EVENT_WAITLIST]);
+
+        // D7: waitlist 確定 (OFFERED → CONFIRMED) の最小監査。
+        fireAndForget(
+          createAuditLogRecord({
+            action: AuditAction.UPDATE,
+            resource: "event-registration",
+            resourceId: result.registration.id,
+            newValue: { status: result.registration.status },
+            metadata: {
+              channel: "public",
+              operation: "waitlist_confirm",
+              customerId: expectedCustomerId ?? null,
+            },
+          }),
+          {
+            operation: "auditPublicWaitlistConfirm",
+            category: ErrorCategory.DATABASE,
+          },
+        );
 
         fireAndForget(
           (async () => {

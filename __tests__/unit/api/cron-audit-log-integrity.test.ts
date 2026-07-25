@@ -186,9 +186,10 @@ describe("GET /api/cron/audit-log-integrity", () => {
     expect(mockVerifyAuditLogIntegrity).not.toHaveBeenCalled();
   });
 
-  test("認証成功時、検証前に INTEGRITY_CHECK の AuditLog を先に記録する", async () => {
+  test("認証成功時、検証後に INTEGRITY_CHECK の AuditLog を記録する", async () => {
     await GET(makeSchedulerRequest());
 
+    expect(mockVerifyAuditLogIntegrity).toHaveBeenCalledTimes(1);
     expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "INTEGRITY_CHECK",
@@ -196,9 +197,15 @@ describe("GET /api/cron/audit-log-integrity", () => {
         metadata: expect.objectContaining({
           operation: "verifyAuditLogIntegrity",
           trigger: "cron",
+          ok: true,
+          checkedCount: 0,
+          failureCount: 0,
         }),
       }),
     );
+    expect(
+      mockVerifyAuditLogIntegrity.mock.invocationCallOrder[0],
+    ).toBeLessThan(mockCreateAuditLogRecord.mock.invocationCallOrder[0] ?? 0);
   });
 
   test("整合性OK → 200、result をそのまま要約して返し logger.info のみ呼ばれる（CRITICAL logError なし）", async () => {
