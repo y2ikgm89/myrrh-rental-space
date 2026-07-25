@@ -50,9 +50,9 @@ export function slugifyHeading(text: string): string {
 }
 
 function stripTags(html: string): string {
-  return decodeHtmlEntities(
-    html.replace(/<[^>]+>/g, "").replace(/\s+/g, " "),
-  ).trim();
+  return decodeHtmlEntities(html.replace(/<[^>]+>/g, ""))
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 type RewriteContext = {
