@@ -202,6 +202,52 @@ export function formatJstDateString(date: Date | string): string {
   return JST_MACHINE_DATE_FORMATTER.format(value);
 }
 
+/**
+ * JST カレンダー日付 (`"YYYY-MM-DD"`) に日数を加算する。
+ *
+ * `parseJstDateOnly` / `formatJstDateOnly` の UTC 深夜保持設計上、
+ * ホスト tz に依存せず pure なカレンダー日付加算ができる。
+ */
+export function addJstCalendarDays(dateOnly: string, days: number): string {
+  const base = parseJstDateOnly(dateOnly);
+  return formatJstDateOnly(new Date(base.getTime() + days * MS_PER_DAY));
+}
+
+/**
+ * JST カレンダー日付の曜日を返す（0 = 日曜 … 6 = 土曜）。
+ *
+ * `@db.Date` と同型の UTC 深夜 Date から `getUTCDay()` で求めるため、
+ * ホスト tz / 実行環境に依存しない。
+ */
+export function getJstCalendarDayOfWeek(dateOnly: string): number {
+  return parseJstDateOnly(dateOnly).getUTCDay();
+}
+
+/**
+ * JST 1-indexed 月の最終日（例: 2024, 2 → 29）を返す。
+ */
+export function getJstMonthLastDay(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/**
+ * 任意の datetime の JST カレンダー日 00:00 (Asia/Tokyo) を表す UTC Instant。
+ *
+ * カレンダー fetch window / 日境界 query filter の SSoT。
+ */
+export function jstDayStartInstant(date: Date | string): Date {
+  return parseDateTimeLocalAsJst(`${formatJstDateString(date)}T00:00`);
+}
+
+/**
+ * 任意の JST カレンダー日の翌日 00:00 (Asia/Tokyo) — **排他的 end** 境界。
+ *
+ * overlap query (`startTime < end`) と整合する half-open `[start, end)` 用。
+ */
+export function jstDayEndInstantExclusive(date: Date | string): Date {
+  return jstDayStartInstant(addJstCalendarDays(formatJstDateString(date), 1));
+}
+
 const JST_HOUR_MINUTE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Tokyo",
   hour: "2-digit",

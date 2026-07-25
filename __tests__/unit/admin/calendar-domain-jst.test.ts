@@ -1,9 +1,12 @@
 import { describe, test, expect } from "bun:test";
 import {
   calculateEventPosition,
+  formatDateLabel,
+  getCalendarDateRange,
   minutesSinceJstBusinessStart,
 } from "@/admin/lib/calendar";
 import type { CalendarEvent, BusinessHours } from "@/admin/lib/calendar";
+import { formatJstDateString } from "@/shared/lib/date-format";
 
 // Round-4 finding #6 の regression guard。
 // Cloud Run (TZ=UTC) 上で `start.getHours()` は UTC 時刻を返すため、
@@ -88,5 +91,57 @@ describe("minutesSinceJstBusinessStart — SSoT 統一後の behavior 保持", (
     // 2024-06-15 08:00 JST = 2024-06-14 23:00 UTC
     const now = new Date("2024-06-14T23:00:00.000Z");
     expect(minutesSinceJstBusinessStart(now, HOURS)).toBe(-60);
+  });
+});
+
+describe("getCalendarDateRange — JST 固定 (host TZ 非依存)", () => {
+  // 2024-06-15 23:00 JST = 2024-06-15 14:00 UTC
+  const jstEveningUtc = new Date("2024-06-15T14:00:00.000Z");
+  // 2024-06-15 00:00 JST = 2024-06-14 15:00 UTC — UTC 日付は前日だが JST 同日
+  const jstMidnightUtc = new Date("2024-06-14T15:00:00.000Z");
+
+  test("day view: 同一 JST 日の Instant は host TZ に依存せず同じ start/end", () => {
+    for (const anchor of [jstEveningUtc, jstMidnightUtc]) {
+      const range = getCalendarDateRange(anchor, "day");
+      expect(range.start.toISOString()).toBe("2024-06-14T15:00:00.000Z");
+      expect(range.end.toISOString()).toBe("2024-06-15T15:00:00.000Z");
+      expect(range.displayDates).toHaveLength(1);
+      expect(formatJstDateString(range.displayDates[0] ?? anchor)).toBe(
+        "2024-06-15",
+      );
+    }
+  });
+
+  test("week view: JST 2024-06-15 (土) は日曜始まりで 6/9〜6/15", () => {
+    const range = getCalendarDateRange(jstEveningUtc, "week");
+    expect(range.start.toISOString()).toBe("2024-06-08T15:00:00.000Z");
+    expect(range.end.toISOString()).toBe("2024-06-15T15:00:00.000Z");
+    expect(range.displayDates).toHaveLength(7);
+    expect(formatJstDateString(range.displayDates[0] ?? jstEveningUtc)).toBe(
+      "2024-06-09",
+    );
+    expect(formatJstDateString(range.displayDates[6] ?? jstEveningUtc)).toBe(
+      "2024-06-15",
+    );
+  });
+
+  test("month view: JST 2024-06 は前後パディング週を含む 5/26〜7/6", () => {
+    const range = getCalendarDateRange(jstEveningUtc, "month");
+    expect(range.start.toISOString()).toBe("2024-05-25T15:00:00.000Z");
+    expect(range.end.toISOString()).toBe("2024-07-06T15:00:00.000Z");
+    expect(formatJstDateString(range.displayDates[0] ?? jstEveningUtc)).toBe(
+      "2024-05-26",
+    );
+    expect(
+      formatJstDateString(range.displayDates.at(-1) ?? jstEveningUtc),
+    ).toBe("2024-07-06");
+    expect(range.displayDates).toHaveLength(42);
+  });
+});
+
+describe("formatDateLabel — week range JST 固定", () => {
+  test("week view: JST 2024-06-15 (土) のラベルは 6月9日 - 6月15日", () => {
+    const anchor = new Date("2024-06-15T14:00:00.000Z");
+    expect(formatDateLabel(anchor, "week")).toBe("6月9日 - 6月15日");
   });
 });
