@@ -8,7 +8,10 @@
 
 import { useState, type ReactNode } from "react";
 import { IconPhoto, IconLink, IconUpload } from "@tabler/icons-react";
-import { useMediaSelection } from "@/admin/hooks/use-media-selection";
+import {
+  uploadedMediaToSelectedMedia,
+  useMediaSelection,
+} from "@/admin/hooks/use-media-selection";
 import { LibraryTab, UrlTab, UploadTab } from "./tabs";
 import {
   Dialog,
@@ -55,6 +58,15 @@ export function MediaPickerDialog({
 }: MediaPickerDialogProps) {
   const [activeTab, setActiveTab] = useState<MediaPickerTab>("library");
 
+  const [wasOpen, setWasOpen] = useState(isOpen === true);
+  const openNow = isOpen === true;
+  if (openNow !== wasOpen) {
+    setWasOpen(openNow);
+    if (openNow) {
+      setActiveTab("library");
+    }
+  }
+
   const {
     selectedIds,
     selectedMedia,
@@ -66,6 +78,7 @@ export function MediaPickerDialog({
     mode: selectionMode,
     maxSelections,
     initialSelected,
+    isOpen,
   });
 
   const handleLibrarySelect = (media: MediaData) => {
@@ -85,15 +98,7 @@ export function MediaPickerDialog({
   const handleUploadComplete = (media: UploadResult) => {
     addUploadedMedia(media);
     if (selectionMode === "single") {
-      onSelect([
-        {
-          id: media.id,
-          url: media.url,
-          ...(media.mimeType !== undefined && { mimeType: media.mimeType }),
-          ...(media.size !== undefined && { size: media.size }),
-          source: "upload",
-        },
-      ]);
+      onSelect([uploadedMediaToSelectedMedia(media)]);
       onClose();
     }
   };

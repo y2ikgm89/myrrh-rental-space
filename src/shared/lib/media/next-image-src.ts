@@ -28,7 +28,9 @@ const LEXICAL_MEDIA_NODE_TYPES = new Set([
 ]);
 
 function isLocalPublicPath(src: string): boolean {
-  return src.startsWith("/") && !src.startsWith("//") && !src.includes("\\");
+  return (
+    src.startsWith("/images/") && !src.startsWith("//") && !src.includes("\\")
+  );
 }
 
 function parseHttpUrl(src: string): URL | null {

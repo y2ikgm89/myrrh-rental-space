@@ -81,6 +81,39 @@ function getReduceMotionServerSnapshot(): boolean {
   return false;
 }
 
+function HeroSlideImage({
+  src,
+  alt,
+  sizes,
+  priority,
+  isFirst,
+}: {
+  src: string;
+  alt: string;
+  sizes: string;
+  priority: boolean;
+  isFirst: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return <div className="absolute inset-0 bg-muted" aria-hidden="true" />;
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes={sizes}
+      className="object-cover"
+      loading={priority && isFirst ? "eager" : "lazy"}
+      fetchPriority={priority && isFirst ? "high" : "auto"}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export function HeroBackgroundSlideshow({
   items,
   transition,
@@ -300,14 +333,12 @@ export function HeroBackgroundSlideshow({
             style={{ opacity: isFirst ? 1 : 0 }}
           >
             {kind === "image" ? (
-              <Image
+              <HeroSlideImage
                 src={item.url}
                 alt={i === activeIndex ? item.alt : ""}
-                fill
                 sizes={sizes}
-                className="object-cover"
-                loading={priority && isFirst ? "eager" : "lazy"}
-                fetchPriority={priority && isFirst ? "high" : "auto"}
+                priority={priority}
+                isFirst={isFirst}
               />
             ) : (
               <VideoPlayer

@@ -44,6 +44,7 @@ import { isValidMediaUsage } from "@/admin/lib/validations/media";
 type Props = {
   item: MediaData | null;
   onClose: () => void;
+  canDelete?: boolean;
 };
 
 type FormState = {
@@ -62,7 +63,7 @@ function getInitialFormState(item: MediaData | null): FormState {
   };
 }
 
-export function MediaDetailDialog({ item, onClose }: Props) {
+export function MediaDetailDialog({ item, onClose, canDelete = false }: Props) {
   const router = useRouter();
   const confirmDialog = useConfirm();
   const formId = useId();
@@ -126,9 +127,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
     if (!item) return;
     const confirmed = await confirmDialog({
       title: "メディアを削除しますか？",
-      // Round-5 audit Finding #7: hooks.ts の useDeleteMedia と同文言（参照
-      // チェックが行われない旨を明示）。
-      description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中でもチェックされず、参照している箇所は画像が表示されなくなります。`,
+      description: `「${item.filename}」を削除します。この操作は元に戻せません。他のコンテンツで使用中の場合、参照チェックにより削除がブロックされます。`,
       confirmLabel: "削除",
       variant: "destructive",
     });
@@ -291,14 +290,18 @@ export function MediaDetailDialog({ item, onClose }: Props) {
 
             {/* Footer */}
             <div className="flex justify-between p-4 border-t shrink-0">
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={isPending}
-              >
-                <IconTrash className="h-4 w-4 mr-1" />
-                削除
-              </Button>
+              {canDelete ? (
+                <Button
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={isPending}
+                >
+                  <IconTrash className="h-4 w-4 mr-1" />
+                  削除
+                </Button>
+              ) : (
+                <div />
+              )}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose}>
                   閉じる

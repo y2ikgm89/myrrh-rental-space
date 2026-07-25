@@ -39,6 +39,7 @@ export function deriveMediaTypeFromMime(
       return MediaType.DOCUMENT;
     case "audio/mpeg":
     case "audio/wav":
+    case "audio/webm":
       return MediaType.AUDIO;
   }
 }

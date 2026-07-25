@@ -6,7 +6,14 @@
  * アップロードファイルのプレビュー
  */
 
-import { IconX } from "@tabler/icons-react";
+import {
+  IconFile,
+  IconFileText,
+  IconMovie,
+  IconMusic,
+  IconX,
+} from "@tabler/icons-react";
+import { inferMediaType } from "@/admin/lib/validations/media";
 import { formatBytes } from "../../../lib/utils";
 
 interface FilePreviewProps {
@@ -14,6 +21,20 @@ interface FilePreviewProps {
   previewUrl: string | null;
   onRemove: () => void;
   disabled?: boolean;
+}
+
+function FileTypeIcon({ file }: { file: File }) {
+  const mediaType = inferMediaType(file.type);
+  switch (mediaType) {
+    case "VIDEO":
+      return <IconMovie className="h-12 w-12 text-muted-foreground" />;
+    case "AUDIO":
+      return <IconMusic className="h-12 w-12 text-muted-foreground" />;
+    case "DOCUMENT":
+      return <IconFileText className="h-12 w-12 text-muted-foreground" />;
+    default:
+      return <IconFile className="h-12 w-12 text-muted-foreground" />;
+  }
 }
 
 export function FilePreview({
@@ -24,14 +45,15 @@ export function FilePreview({
 }: FilePreviewProps) {
   return (
     <div className="space-y-4">
-      {/* bg-checker: 透過 PNG / SVG の透過部分を市松模様で可視化 */}
       <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-checker">
-        {previewUrl && (
+        {previewUrl ? (
           <img
             src={previewUrl}
             alt="プレビュー"
             className="max-h-full max-w-full object-contain"
           />
+        ) : (
+          <FileTypeIcon file={file} />
         )}
       </div>
 

@@ -9,6 +9,7 @@ describe("MEDIA_MAX_SIZE_BYTES", () => {
     expect(MEDIA_MAX_SIZE_BYTES["image/jpeg"]).toBe(5 * 1024 * 1024);
     expect(MEDIA_MAX_SIZE_BYTES["video/mp4"]).toBe(50 * 1024 * 1024);
     expect(MEDIA_MAX_SIZE_BYTES["audio/mpeg"]).toBe(20 * 1024 * 1024);
+    expect(MEDIA_MAX_SIZE_BYTES["audio/webm"]).toBe(20 * 1024 * 1024);
     expect(MEDIA_MAX_SIZE_BYTES["application/pdf"]).toBe(10 * 1024 * 1024);
   });
 

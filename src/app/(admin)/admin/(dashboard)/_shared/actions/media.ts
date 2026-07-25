@@ -1,11 +1,9 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { isEditorRole } from "@/shared/lib/admin-role-guards";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type {
   MutationError,
   MutationResult,
@@ -15,19 +13,13 @@ import {
   updateMediaCommand,
   uploadMediaCommand,
 } from "@/shared/domain/media/commands";
+import { finalizeMediaMutation } from "@/shared/domain/media/cache";
 import {
   parseMediaUploadFormData,
   mediaUpdateSchema,
   preValidateMediaFile,
   type MediaUpdateInput,
 } from "@/admin/lib/validations/media";
-
-function revalidateMedia(...ids: string[]): void {
-  updateTag(CACHE_TAGS.MEDIA);
-  for (const id of [...new Set(ids)]) {
-    updateTag(getCacheTag.media.detail(id));
-  }
-}
 
 export async function uploadMedia(
   formData: FormData,
@@ -63,7 +55,7 @@ export async function uploadMedia(
         tags: metadata.tags ?? [],
       }),
     afterSuccess: (result) => {
-      revalidateMedia(result.id);
+      finalizeMediaMutation([result.id]);
     },
     resolveAuditResourceId: (result) => result.id,
   });
@@ -106,12 +98,14 @@ export async function updateMedia(
       return null;
     },
     afterSuccess: () => {
-      revalidateMedia(parsedId.data);
+      finalizeMediaMutation([parsedId.data]);
     },
   });
 }
 
-export async function deleteMedia(id: string): Promise<MutationResult> {
+export async function deleteMedia(
+  id: string,
+): Promise<MutationResult<{ id: string; url: string }>> {
   const parsed = singleIdSchema.safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
@@ -119,12 +113,9 @@ export async function deleteMedia(id: string): Promise<MutationResult> {
     resource: "media",
     action: "delete",
     resourceId: parsed.data,
-    execute: async () => {
-      await deleteMediaCommand(id);
-      return null;
-    },
-    afterSuccess: () => {
-      revalidateMedia(id);
+    execute: async () => deleteMediaCommand(parsed.data),
+    afterSuccess: (result) => {
+      finalizeMediaMutation([result.id], [result.url]);
     },
   });
 }

@@ -23,6 +23,9 @@ export interface UploadResult {
   url: string;
   mimeType?: string;
   size?: number;
+  alt?: string;
+  filename?: string;
+  title?: string;
 }
 
 interface UseMediaUploadReturn {
@@ -69,7 +72,7 @@ export function useMediaUpload(): UseMediaUploadReturn {
     }
 
     if (!file.type.startsWith("image/")) {
-      toast.error("画像ファイルを選択してください");
+      setPreviewUrl(null);
       return;
     }
 
@@ -83,8 +86,6 @@ export function useMediaUpload(): UseMediaUploadReturn {
     reader.onload = (e) => {
       if (!isMountedRef.current) return;
       const result = e.target?.result;
-      // FileReader.result は string | ArrayBuffer | null
-      // readAsDataURL使用時はstringのはずだが、型安全に処理
       if (typeof result === "string") {
         setPreviewUrl(result);
       }
@@ -128,8 +129,14 @@ export function useMediaUpload(): UseMediaUploadReturn {
       }
 
       toast.success("アップロードしました");
-      // mimeType / size はアップロード元 File から付与（応答 payload には含まれない）
-      return { ...result, mimeType: file.type, size: file.size };
+      return {
+        ...result,
+        mimeType: file.type,
+        size: file.size,
+        ...(metadata.alt !== undefined && { alt: metadata.alt }),
+        filename: file.name,
+        ...(metadata.title !== undefined && { title: metadata.title }),
+      };
     } finally {
       if (isMountedRef.current) {
         setIsUploading(false);

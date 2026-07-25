@@ -7,10 +7,15 @@ import {
 describe("isAllowedManagedImageSrc", () => {
   const config = { publicMediaUrl: "https://media.example.com" };
 
-  test("ローカル public パスを許可する", () => {
+  test("/images/ 配下のローカル public パスを許可する", () => {
     expect(isAllowedManagedImageSrc("/images/seed/event.svg", config)).toBe(
       true,
     );
+  });
+
+  test("/images/ 以外のローカルパスは拒否する", () => {
+    expect(isAllowedManagedImageSrc("/uploads/photo.jpg", config)).toBe(false);
+    expect(isAllowedManagedImageSrc("/favicon.ico", config)).toBe(false);
   });
 
   test("設定済み R2 public URL の同一 origin を許可する", () => {

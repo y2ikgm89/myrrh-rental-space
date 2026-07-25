@@ -12,7 +12,7 @@
  * 対応フォーマット（4 系統 + MediaType 4 値の派生に直接対応）:
  * - 画像: JPEG / PNG / WebP / GIF
  * - 動画: MP4（ftyp box） / WebM（EBML）
- * - 音声: MP3（ID3 / frame sync） / WAV（RIFF + WAVE）
+ * - 音声: MP3（ID3 / frame sync） / WAV（RIFF + WAVE） / WebM（A_OPUS / A_VORBIS）
  * - 文書: PDF
  *
  * SVG は magic byte を持たない XML テキストで XSS リスクが高いため対象外
@@ -37,7 +37,11 @@ export const SUPPORTED_IMAGE_MIME_TYPES = [
 
 export const SUPPORTED_VIDEO_MIME_TYPES = ["video/mp4", "video/webm"] as const;
 
-export const SUPPORTED_AUDIO_MIME_TYPES = ["audio/mpeg", "audio/wav"] as const;
+export const SUPPORTED_AUDIO_MIME_TYPES = [
+  "audio/mpeg",
+  "audio/wav",
+  "audio/webm",
+] as const;
 
 export const SUPPORTED_DOCUMENT_MIME_TYPES = ["application/pdf"] as const;
 
@@ -76,6 +80,7 @@ export const MEDIA_MIME_EXTENSIONS: Record<SupportedMediaMimeType, string> = {
   "video/webm": "webm",
   "audio/mpeg": "mp3",
   "audio/wav": "wav",
+  "audio/webm": "webm",
   "application/pdf": "pdf",
 };
 
@@ -194,13 +199,15 @@ export function detectMediaMimeFromMagicBytes(
   }
 
   // WebM / Matroska: EBML header signature 1A 45 DF A3
+  // Codec ID は先頭 ~4KB の ASCII 部分文字列で区別する
+  // （音声のみ → audio/webm、動画 or 不明 → video/webm fail-safe）
   if (
     bytes[0] === 0x1a &&
     bytes[1] === 0x45 &&
     bytes[2] === 0xdf &&
     bytes[3] === 0xa3
   ) {
-    return "video/webm";
+    return detectWebmMimeFromCodecIds(bytes);
   }
 
   // PDF: "%PDF-"
@@ -227,4 +234,31 @@ export function detectMediaMimeFromMagicBytes(
   }
 
   return null;
+}
+
+const WEBM_SCAN_BYTES = 4096;
+const WEBM_VIDEO_CODEC_IDS = ["V_VP8", "V_VP9", "V_AV1"] as const;
+const WEBM_AUDIO_CODEC_IDS = ["A_OPUS", "A_VORBIS"] as const;
+
+/**
+ * EBML 先頭付近の Codec ID ASCII から audio/webm vs video/webm を判定する。
+ * 動画コーデックあり / コーデック不明 → video/webm（fail-safe）。
+ * 音声コーデックのみ（A_OPUS / A_VORBIS）→ audio/webm。
+ */
+function detectWebmMimeFromCodecIds(
+  bytes: Uint8Array,
+): "audio/webm" | "video/webm" {
+  const scanLen = Math.min(bytes.length, WEBM_SCAN_BYTES);
+  let ascii = "";
+  for (let i = 0; i < scanLen; i++) {
+    ascii += String.fromCharCode(bytes[i] ?? 0);
+  }
+
+  const hasVideo = WEBM_VIDEO_CODEC_IDS.some((id) => ascii.includes(id));
+  if (hasVideo) return "video/webm";
+
+  const hasAudio = WEBM_AUDIO_CODEC_IDS.some((id) => ascii.includes(id));
+  if (hasAudio) return "audio/webm";
+
+  return "video/webm";
 }

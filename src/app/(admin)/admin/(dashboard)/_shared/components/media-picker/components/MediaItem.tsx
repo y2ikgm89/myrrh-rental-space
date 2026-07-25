@@ -6,7 +6,13 @@
  * メディアグリッド/リストの個別アイテム
  */
 
-import { IconCheck } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconFile,
+  IconFileText,
+  IconMovie,
+  IconMusic,
+} from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import type { MediaData } from "@/admin/types/media-picker";
 import { formatBytes } from "../../../lib/utils";
@@ -17,6 +23,53 @@ interface MediaItemProps {
   onSelect: (media: MediaData) => void;
   viewMode: "grid" | "list";
   disabled?: boolean;
+}
+
+function isImageMedia(media: MediaData): boolean {
+  return media.type === "IMAGE" || media.mimeType.startsWith("image/");
+}
+
+function MediaTypeIcon({ media }: { media: MediaData }) {
+  switch (media.type) {
+    case "VIDEO":
+      return <IconMovie className="h-8 w-8 text-muted-foreground" />;
+    case "AUDIO":
+      return <IconMusic className="h-8 w-8 text-muted-foreground" />;
+    case "DOCUMENT":
+      return <IconFileText className="h-8 w-8 text-muted-foreground" />;
+    default:
+      return <IconFile className="h-8 w-8 text-muted-foreground" />;
+  }
+}
+
+function MediaThumbnail({
+  media,
+  className,
+}: {
+  media: MediaData;
+  className?: string;
+}) {
+  if (isImageMedia(media)) {
+    return (
+      <img
+        src={media.url}
+        alt={media.alt || media.filename}
+        className={className}
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex h-full w-full items-center justify-center bg-muted",
+        className,
+      )}
+    >
+      <MediaTypeIcon media={media} />
+    </div>
+  );
 }
 
 export function MediaItem({
@@ -48,12 +101,7 @@ export function MediaItem({
           disabled && "opacity-50 cursor-not-allowed",
         )}
       >
-        <img
-          src={media.url}
-          alt={media.alt || media.filename}
-          className="h-full w-full object-cover"
-          loading="lazy"
-        />
+        <MediaThumbnail media={media} className="h-full w-full object-cover" />
         {isSelected && (
           <div className="absolute right-1 top-1 rounded-full bg-primary p-1">
             <IconCheck className="h-3 w-3 text-primary-foreground" />
@@ -76,11 +124,9 @@ export function MediaItem({
         disabled && "opacity-50 cursor-not-allowed",
       )}
     >
-      <img
-        src={media.url}
-        alt={media.alt || media.filename}
-        className="h-12 w-12 rounded object-cover"
-      />
+      <div className="h-12 w-12 shrink-0 overflow-hidden rounded">
+        <MediaThumbnail media={media} className="h-12 w-12 object-cover" />
+      </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{media.filename}</p>
         <p className="text-sm text-muted-foreground">
