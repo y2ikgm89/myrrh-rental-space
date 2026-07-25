@@ -6,7 +6,12 @@ const TEST_KEY =
 const OTHER_KEY =
   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const ZERO_HASH = "0".repeat(64);
-const mockFindMany = mock<() => Promise<unknown[]>>(() => Promise.resolve([]));
+const mockFindMany = mock<
+  (args?: {
+    cursor?: { sequence: bigint };
+    take?: number;
+  }) => Promise<unknown[]>
+>(() => Promise.resolve([]));
 const mockServerEnv: Record<string, string | undefined> = {
   NODE_ENV: "test",
   AUDIT_LOG_HMAC_KEY: TEST_KEY,
@@ -124,11 +129,20 @@ const { verifyAuditLogIntegrity } =
 describe("verifyAuditLogIntegrity", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
-    mockFindMany.mockResolvedValue([]);
+    mockFindMany.mockImplementation(async () => []);
     mockServerEnv["NODE_ENV"] = "test";
     mockServerEnv["AUDIT_LOG_HMAC_KEY"] = TEST_KEY;
     mockServerEnv["AUDIT_LOG_HMAC_KEY_ID"] = "test-key";
   });
+
+  function mockFindManyBatches(batches: IntegrityRow[][]) {
+    let callIndex = 0;
+    mockFindMany.mockImplementation(async () => {
+      const batch = batches[callIndex] ?? [];
+      callIndex += 1;
+      return batch;
+    });
+  }
 
   test("全行の hash chain が正しい場合は ok を返す", async () => {
     const first = buildRow({
@@ -143,7 +157,7 @@ describe("verifyAuditLogIntegrity", () => {
       action: "UPDATE",
       newValue: { status: "PUBLISHED" },
     });
-    mockFindMany.mockResolvedValueOnce([first, second]);
+    mockFindManyBatches([[first, second]]);
 
     const result = await verifyAuditLogIntegrity();
 
@@ -165,7 +179,7 @@ describe("verifyAuditLogIntegrity", () => {
       sequence: 3n,
       previousHash: first.entryHash,
     });
-    mockFindMany.mockResolvedValueOnce([first, third]);
+    mockFindManyBatches([[first, third]]);
 
     const result = await verifyAuditLogIntegrity();
 
@@ -190,7 +204,7 @@ describe("verifyAuditLogIntegrity", () => {
       previousHash:
         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     });
-    mockFindMany.mockResolvedValueOnce([first, second]);
+    mockFindManyBatches([[first, second]]);
 
     const result = await verifyAuditLogIntegrity();
 
@@ -211,11 +225,13 @@ describe("verifyAuditLogIntegrity", () => {
       previousHash: ZERO_HASH,
       resource: "post",
     });
-    mockFindMany.mockResolvedValueOnce([
-      {
-        ...first,
-        resource: "settings",
-      },
+    mockFindManyBatches([
+      [
+        {
+          ...first,
+          resource: "settings",
+        },
+      ],
     ]);
 
     const result = await verifyAuditLogIntegrity();
@@ -230,6 +246,37 @@ describe("verifyAuditLogIntegrity", () => {
     );
   });
 
+  test("1000 行のバッチ境界を跨いで連鎖検証する", async () => {
+    const rows: IntegrityRow[] = [];
+    let previousHash = ZERO_HASH;
+
+    for (let sequence = 1; sequence <= 1001; sequence += 1) {
+      const row = buildRow({
+        id: `00000000-0000-0000-0000-${sequence.toString().padStart(12, "0")}`,
+        sequence: BigInt(sequence),
+        previousHash,
+      });
+      rows.push(row);
+      previousHash = row.entryHash;
+    }
+
+    mockFindManyBatches([rows.slice(0, 1000), rows.slice(1000)]);
+
+    const result = await verifyAuditLogIntegrity();
+
+    expect(mockFindMany).toHaveBeenCalledTimes(2);
+    expect(mockFindMany.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        take: 1000,
+        skip: 1,
+        cursor: { sequence: 1000n },
+      }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.checkedCount).toBe(1001);
+    expect(result.latestSequence).toBe("1001");
+  });
+
   test("hashKeyId に対応する鍵がない場合は failure として返す", async () => {
     const first = buildRow(
       {
@@ -240,7 +287,7 @@ describe("verifyAuditLogIntegrity", () => {
       },
       OTHER_KEY,
     );
-    mockFindMany.mockResolvedValueOnce([first]);
+    mockFindManyBatches([[first]]);
 
     const result = await verifyAuditLogIntegrity();
 

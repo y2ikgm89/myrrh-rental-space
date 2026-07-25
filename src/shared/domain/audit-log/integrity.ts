@@ -35,6 +35,8 @@ export type AuditLogIntegrityResult = {
   failures: AuditLogIntegrityFailure[];
 };
 
+const AUDIT_LOG_INTEGRITY_BATCH_SIZE = 1000;
+
 const auditLogIntegritySelect = {
   id: true,
   sequence: true,
@@ -56,6 +58,15 @@ const auditLogIntegritySelect = {
 type AuditLogIntegrityRow = Prisma.AuditLogGetPayload<{
   select: typeof auditLogIntegritySelect;
 }>;
+
+type IntegrityVerificationState = {
+  expectedSequence: bigint;
+  expectedPreviousHash: string;
+  latestSequence: string | null;
+  latestHash: string | null;
+  failures: AuditLogIntegrityFailure[];
+  checkedCount: number;
+};
 
 function toHashPayload(row: AuditLogIntegrityRow): AuditLogHashPayload {
   return {
@@ -88,15 +99,41 @@ function addFailure(
   });
 }
 
-export function verifyAuditLogIntegrityRows(
-  rows: AuditLogIntegrityRow[],
-  checkedAt = new Date(),
+function createInitialVerificationState(): IntegrityVerificationState {
+  return {
+    expectedSequence: 1n,
+    expectedPreviousHash: AUDIT_LOG_GENESIS_HASH,
+    latestSequence: null,
+    latestHash: null,
+    failures: [],
+    checkedCount: 0,
+  };
+}
+
+function toIntegrityResult(
+  state: IntegrityVerificationState,
+  checkedAt: Date,
 ): AuditLogIntegrityResult {
-  const failures: AuditLogIntegrityFailure[] = [];
-  let expectedSequence = 1n;
-  let expectedPreviousHash = AUDIT_LOG_GENESIS_HASH;
-  let latestSequence: string | null = null;
-  let latestHash: string | null = null;
+  return {
+    ok: state.failures.length === 0,
+    checkedCount: state.checkedCount,
+    latestSequence: state.latestSequence,
+    latestHash: state.latestHash,
+    checkedAt: checkedAt.toISOString(),
+    failures: state.failures,
+  };
+}
+
+function verifyAuditLogIntegrityBatch(
+  rows: AuditLogIntegrityRow[],
+  state: IntegrityVerificationState,
+): IntegrityVerificationState {
+  let expectedSequence = state.expectedSequence;
+  let expectedPreviousHash = state.expectedPreviousHash;
+  let latestSequence = state.latestSequence;
+  let latestHash = state.latestHash;
+  const failures = [...state.failures];
+  let checkedCount = state.checkedCount;
 
   for (const row of rows) {
     if (row.sequence !== expectedSequence) {
@@ -157,23 +194,60 @@ export function verifyAuditLogIntegrityRows(
     latestHash = row.entryHash;
     expectedSequence = row.sequence + 1n;
     expectedPreviousHash = row.entryHash;
+    checkedCount += 1;
   }
 
   return {
-    ok: failures.length === 0,
-    checkedCount: rows.length,
+    expectedSequence,
+    expectedPreviousHash,
     latestSequence,
     latestHash,
-    checkedAt: checkedAt.toISOString(),
     failures,
+    checkedCount,
   };
 }
 
-export async function verifyAuditLogIntegrity(): Promise<AuditLogIntegrityResult> {
-  const rows = await prisma.auditLog.findMany({
-    select: auditLogIntegritySelect,
-    orderBy: { sequence: "asc" },
-  });
+export function verifyAuditLogIntegrityRows(
+  rows: AuditLogIntegrityRow[],
+  checkedAt = new Date(),
+): AuditLogIntegrityResult {
+  const state = verifyAuditLogIntegrityBatch(
+    rows,
+    createInitialVerificationState(),
+  );
+  return toIntegrityResult(state, checkedAt);
+}
 
-  return verifyAuditLogIntegrityRows(rows);
+export async function verifyAuditLogIntegrity(): Promise<AuditLogIntegrityResult> {
+  const checkedAt = new Date();
+  let state = createInitialVerificationState();
+  let cursor: bigint | undefined;
+
+  while (true) {
+    const rows = await prisma.auditLog.findMany({
+      select: auditLogIntegritySelect,
+      orderBy: { sequence: "asc" },
+      take: AUDIT_LOG_INTEGRITY_BATCH_SIZE,
+      ...(cursor !== undefined
+        ? { skip: 1, cursor: { sequence: cursor } }
+        : {}),
+    });
+
+    if (rows.length === 0) {
+      break;
+    }
+
+    state = verifyAuditLogIntegrityBatch(rows, state);
+    const lastRow = rows.at(-1);
+    if (lastRow === undefined) {
+      break;
+    }
+    cursor = lastRow.sequence;
+
+    if (rows.length < AUDIT_LOG_INTEGRITY_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return toIntegrityResult(state, checkedAt);
 }

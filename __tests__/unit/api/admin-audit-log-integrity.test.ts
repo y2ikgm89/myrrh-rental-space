@@ -56,7 +56,7 @@ describe("GET /api/admin/audit-logs/integrity", () => {
     expect(mockVerifyAuditLogIntegrity).not.toHaveBeenCalled();
   });
 
-  test("正常時は検証操作を監査して no-store JSON を返す", async () => {
+  test("正常時は検証後に結果を監査して no-store JSON を返す", async () => {
     mockCheckPermission.mockResolvedValue({
       success: true,
       user: { id: "user-1", role: "SUPER_ADMIN" },
@@ -79,6 +79,7 @@ describe("GET /api/admin/audit-logs/integrity", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toContain("application/json");
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(mockVerifyAuditLogIntegrity).toHaveBeenCalledTimes(1);
     expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user-1",
@@ -86,6 +87,11 @@ describe("GET /api/admin/audit-logs/integrity", () => {
         resource: "auditLog",
         metadata: expect.objectContaining({
           operation: "verifyAuditLogIntegrity",
+          ok: true,
+          checkedCount: 2,
+          failureCount: 0,
+          latestSequence: "2",
+          checkedAt: "2026-07-02T00:00:00.000Z",
         }),
       }),
     );
@@ -131,6 +137,18 @@ describe("GET /api/admin/audit-logs/integrity", () => {
     );
 
     expect(response.status).toBe(409);
+    expect(
+      mockVerifyAuditLogIntegrity.mock.invocationCallOrder[0],
+    ).toBeLessThan(mockCreateAuditLogRecord.mock.invocationCallOrder[0] ?? 0);
+    expect(mockCreateAuditLogRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          ok: false,
+          checkedCount: 1,
+          failureCount: 1,
+        }),
+      }),
+    );
     expect(await response.json()).toEqual(
       expect.objectContaining({
         ok: false,

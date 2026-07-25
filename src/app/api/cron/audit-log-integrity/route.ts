@@ -36,16 +36,22 @@ export async function GET(request: Request) {
     });
     if (authResult) return authResult;
 
+    const result = await verifyAuditLogIntegrity();
+
     await createAuditLogRecord({
       action: "INTEGRITY_CHECK",
       resource: "auditLog",
       metadata: {
         operation: "verifyAuditLogIntegrity",
         trigger: "cron",
+        ok: result.ok,
+        checkedCount: result.checkedCount,
+        failureCount: result.failures.length,
+        latestSequence: result.latestSequence,
+        latestHash: result.latestHash,
+        checkedAt: result.checkedAt,
       },
     });
-
-    const result = await verifyAuditLogIntegrity();
 
     if (!result.ok) {
       logError(new Error("Audit log integrity check detected tampering"), {
