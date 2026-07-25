@@ -15,6 +15,7 @@ import {
 } from "@/shared/domain/posts/queries";
 import { buildCategoryPath } from "@/shared/domain/posts/routing";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import { TaxonomyArchiveView } from "../../_components/post-list/taxonomy-archive-view";
 
 const POSTS_PER_PAGE = 12;
@@ -29,31 +30,33 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   await connection();
   const { slug } = await params;
-  const [category, settings] = await Promise.all([
-    getPostCategoryBySlug(slug),
-    getSeoSettings(),
-  ]);
-  if (!category) {
-    return {
-      title: "カテゴリが見つかりません",
-      robots: { index: false, follow: false },
-    };
-  }
+  return withFeatureGate("posts", async () => {
+    const [category, settings] = await Promise.all([
+      getPostCategoryBySlug(slug),
+      getSeoSettings(),
+    ]);
+    if (!category) {
+      return {
+        title: "カテゴリが見つかりません",
+        robots: { index: false, follow: false },
+      };
+    }
 
-  return generateArticleMetadata(
-    {
-      title: category.metaTitle ?? `${category.name}の記事`,
-      description: category.metaDescription ?? category.description,
-      image: category.ogpImageUrl,
-      ogpTitle: category.metaTitle,
-      ogpDescription: category.metaDescription,
-    },
-    settings,
-    {
-      canonicalUrl: `${getBaseUrl()}${buildCategoryPath(category.slug)}`,
-      ogType: "website",
-    },
-  );
+    return generateArticleMetadata(
+      {
+        title: category.metaTitle ?? `${category.name}の記事`,
+        description: category.metaDescription ?? category.description,
+        image: category.ogpImageUrl,
+        ogpTitle: category.metaTitle,
+        ogpDescription: category.metaDescription,
+      },
+      settings,
+      {
+        canonicalUrl: `${getBaseUrl()}${buildCategoryPath(category.slug)}`,
+        ogType: "website",
+      },
+    );
+  });
 }
 
 export default async function CategoryArchivePage({

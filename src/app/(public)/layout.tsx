@@ -63,6 +63,10 @@ import {
   getSeoSettings,
   resolveSiteBranding,
 } from "@/public/lib/seo/metadata-factory";
+import {
+  resolveOpenGraphImages,
+  resolveTwitterImages,
+} from "@/public/lib/seo/default-social-images";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import {
   TaxSettingsProvider,
@@ -109,9 +113,7 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: "/apple-icon",
     },
     ...(feedAlternates !== null && { alternates: feedAlternates }),
-    // OG / Twitter のサイト共通ベース。画像は file-based opengraph-image / twitter-image
-    // が自動注入する。各ページの generateMetadata が openGraph を export すると
-    // shallow 置換されるため、siteName / locale 等はページ側でも明示する必要がある。
+    // OG / Twitter のサイト共通ベース。既定画像は Route Handler（Settings 駆動 alt）。
     openGraph: {
       type: "website",
       locale: "ja_JP",
@@ -119,11 +121,13 @@ export async function generateMetadata(): Promise<Metadata> {
       url: "/",
       title: ogTitle,
       description: ogDescription,
+      images: resolveOpenGraphImages(siteName),
     },
     twitter: {
       card: "summary_large_image",
       title: ogTitle,
       description: ogDescription,
+      images: resolveTwitterImages(siteName),
     },
   };
 }

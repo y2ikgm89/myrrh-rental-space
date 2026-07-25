@@ -303,3 +303,15 @@ export function normalizeFeatureModules(
   }
   return normalized;
 }
+
+/** Page.slug から feature module を逆引き（一覧ページ SEO gate 用）。 */
+export function getFeatureModuleForPageSlug(
+  slug: string,
+): FeatureModule | null {
+  for (const id of FEATURE_MODULES_LIST) {
+    if (FEATURE_MODULES[id].pageSlugs.includes(slug)) {
+      return id;
+    }
+  }
+  return null;
+}

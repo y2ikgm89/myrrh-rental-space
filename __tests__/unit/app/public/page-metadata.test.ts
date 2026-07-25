@@ -35,6 +35,14 @@ mock.module("@/shared/domain/settings/queries/site", () => ({
   getSeoSettings: () => mockGetSeoSettings(),
 }));
 
+const mockIsFeatureEnabled = mock<(module: string) => Promise<boolean>>(() =>
+  Promise.resolve(true),
+);
+
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: (module: string) => mockIsFeatureEnabled(module),
+}));
+
 const { generatePageMetadata } = await import("@/public/lib/page-metadata");
 
 describe("generatePageMetadata — 非公開判定", () => {
@@ -189,5 +197,28 @@ describe("generatePageMetadata — home title", () => {
     const metadata = await generatePageMetadata("home");
 
     expect(metadata.title).toEqual({ absolute: "レンタルスペース Myrrh" });
+  });
+});
+
+describe("generatePageMetadata — feature gate", () => {
+  beforeEach(() => {
+    mockGetPageSeo.mockReset();
+    mockIsPublicPageUnpublished.mockReset();
+    mockIsPublicPageUnpublished.mockResolvedValue(false);
+    mockGetSeoSettings.mockReset();
+    mockGetSeoSettings.mockResolvedValue(null);
+    mockIsFeatureEnabled.mockReset();
+    mockIsFeatureEnabled.mockResolvedValue(true);
+  });
+
+  test("posts OFF + slug=blog → noindex（DB SEO を出さない）", async () => {
+    mockIsFeatureEnabled.mockImplementation(
+      async (module) => module !== "posts",
+    );
+
+    const metadata = await generatePageMetadata("blog");
+
+    expect(metadata.robots).toEqual({ index: false, follow: false });
+    expect(mockGetPageSeo).not.toHaveBeenCalled();
   });
 });

@@ -60,13 +60,40 @@ const microsoftClarityProjectId = z
   .optional();
 
 /** analyticsType: フォームでは "none" を使い、送信時に null に変換する */
-export const analyticsFormSchema = z.object({
-  analyticsType: z.union([z.enum(AnalyticsType), z.literal("none")]),
-  googleAnalyticsId: googleAnalyticsMeasurementId,
-  googleTagManagerId: googleTagManagerContainerId,
-  gaPropertyId,
-  microsoftClarityId: microsoftClarityProjectId,
-});
+function isEmptyAnalyticsId(value: string | undefined): boolean {
+  return value === undefined || value.trim() === "";
+}
+
+export const analyticsFormSchema = z
+  .object({
+    analyticsType: z.union([z.enum(AnalyticsType), z.literal("none")]),
+    googleAnalyticsId: googleAnalyticsMeasurementId,
+    googleTagManagerId: googleTagManagerContainerId,
+    gaPropertyId,
+    microsoftClarityId: microsoftClarityProjectId,
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.analyticsType === AnalyticsType.ga4 &&
+      isEmptyAnalyticsId(data.googleAnalyticsId)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Google Analytics 測定 ID を入力してください",
+        path: ["googleAnalyticsId"],
+      });
+    }
+    if (
+      data.analyticsType === AnalyticsType.gtm &&
+      isEmptyAnalyticsId(data.googleTagManagerId)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Google Tag Manager ID を入力してください",
+        path: ["googleTagManagerId"],
+      });
+    }
+  });
 
 export type AnalyticsFormInput = z.infer<typeof analyticsFormSchema>;
 

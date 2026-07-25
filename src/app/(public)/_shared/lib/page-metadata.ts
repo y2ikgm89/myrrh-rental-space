@@ -18,6 +18,16 @@ import {
   resolveSiteBranding,
 } from "@/public/lib/seo/metadata-factory";
 import {
+  resolveOpenGraphImages,
+  resolveTwitterImages,
+} from "@/public/lib/seo/default-social-images";
+import {
+  FEATURE_DISABLED_PAGE_METADATA,
+  createNoindexMetadata,
+} from "@/public/lib/seo/feature-gated-metadata";
+import { getFeatureModuleForPageSlug } from "@/shared/lib/features/registry";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
+import {
   SYSTEM_PAGES,
   getSystemPageDefinition,
   type SystemPageDefinition,
@@ -30,13 +40,8 @@ import {
 /**
  * 非公開ページ用の metadata。`[...segments]/page.tsx` の 404 metadata と同一の形。
  */
-const UNPUBLISHED_PAGE_METADATA: Metadata = {
-  title: "ページが見つかりません",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+const UNPUBLISHED_PAGE_METADATA: Metadata =
+  createNoindexMetadata("ページが見つかりません");
 
 /**
  * SEOデータ型
@@ -83,6 +88,11 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
  * - keywords
  */
 export async function generatePageMetadata(slug: string): Promise<Metadata> {
+  const featureModule = getFeatureModuleForPageSlug(slug);
+  if (featureModule && !(await isFeatureEnabled(featureModule))) {
+    return FEATURE_DISABLED_PAGE_METADATA;
+  }
+
   if (await isPublicPageUnpublished(slug)) {
     return UNPUBLISHED_PAGE_METADATA;
   }
@@ -153,13 +163,13 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
       siteName,
       locale: "ja_JP",
       type: "website",
-      ...(ogImage && { images: [{ url: ogImage }] }),
+      images: resolveOpenGraphImages(siteName, ogImage, ogTitle),
     },
     twitter: {
       card: "summary_large_image",
       title: ogTitle,
       description: ogDescription ?? undefined,
-      ...(ogImage && { images: [ogImage] }),
+      images: resolveTwitterImages(siteName, ogImage),
     },
   };
 

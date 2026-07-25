@@ -15,6 +15,7 @@ import {
 } from "@/shared/domain/posts/queries";
 import { buildTagPath } from "@/shared/domain/posts/routing";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 import { TaxonomyArchiveView } from "../../_components/post-list/taxonomy-archive-view";
 
 const POSTS_PER_PAGE = 12;
@@ -29,31 +30,33 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   await connection();
   const { slug } = await params;
-  const [tag, settings] = await Promise.all([
-    getPostTagBySlug(slug),
-    getSeoSettings(),
-  ]);
-  if (!tag) {
-    return {
-      title: "タグが見つかりません",
-      robots: { index: false, follow: false },
-    };
-  }
+  return withFeatureGate("posts", async () => {
+    const [tag, settings] = await Promise.all([
+      getPostTagBySlug(slug),
+      getSeoSettings(),
+    ]);
+    if (!tag) {
+      return {
+        title: "タグが見つかりません",
+        robots: { index: false, follow: false },
+      };
+    }
 
-  return generateArticleMetadata(
-    {
-      title: tag.metaTitle ?? `${tag.name}の記事`,
-      description: tag.metaDescription ?? tag.description,
-      image: tag.ogpImageUrl,
-      ogpTitle: tag.metaTitle,
-      ogpDescription: tag.metaDescription,
-    },
-    settings,
-    {
-      canonicalUrl: `${getBaseUrl()}${buildTagPath(tag.slug)}`,
-      ogType: "website",
-    },
-  );
+    return generateArticleMetadata(
+      {
+        title: tag.metaTitle ?? `${tag.name}の記事`,
+        description: tag.metaDescription ?? tag.description,
+        image: tag.ogpImageUrl,
+        ogpTitle: tag.metaTitle,
+        ogpDescription: tag.metaDescription,
+      },
+      settings,
+      {
+        canonicalUrl: `${getBaseUrl()}${buildTagPath(tag.slug)}`,
+        ogType: "website",
+      },
+    );
+  });
 }
 
 export default async function TagArchivePage({

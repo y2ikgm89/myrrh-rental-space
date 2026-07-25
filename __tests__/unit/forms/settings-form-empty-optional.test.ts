@@ -213,6 +213,34 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
     );
   });
 
+  test("Analytics: type=ga4 + googleAnalyticsId 空欄は error", () => {
+    const result = parseWithZod(
+      form({
+        analyticsType: "ga4",
+        googleAnalyticsId: "",
+        googleTagManagerId: "",
+        gaPropertyId: "",
+        microsoftClarityId: "",
+      }),
+      { schema: analyticsFormSchema },
+    );
+    expect(result.status).toBe("error");
+  });
+
+  test("Analytics: type=gtm + googleTagManagerId 空欄は error", () => {
+    const result = parseWithZod(
+      form({
+        analyticsType: "gtm",
+        googleAnalyticsId: "",
+        googleTagManagerId: "",
+        gaPropertyId: "",
+        microsoftClarityId: "",
+      }),
+      { schema: analyticsFormSchema },
+    );
+    expect(result.status).toBe("error");
+  });
+
   test("Analytics: 公式 ID 形式のみ success（script 注入文字列は error）", () => {
     expectSuccess(
       analyticsFormSchema,

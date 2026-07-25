@@ -7,6 +7,7 @@ import {
 } from "../_components/news-detail-page-content";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { withFeatureGate } from "@/public/lib/seo/feature-gated-metadata";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -18,7 +19,7 @@ export async function generateMetadata({
   await connection();
 
   const { slug } = await params;
-  return buildNewsMetadata(slug);
+  return withFeatureGate("news", () => buildNewsMetadata(slug));
 }
 
 export default async function NewsDetailPage({ params }: PageProps) {
