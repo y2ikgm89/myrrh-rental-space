@@ -8,6 +8,8 @@ import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { applyEventRegistrationCancellation } from "./registration-cancel-core";
 import { WAITLIST_XACT_LOCK_NAMESPACE } from "./waitlist-locks";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
+import { recordTermsAgreements } from "@/shared/domain/terms/commands";
+import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
 
 export async function createEventRegistrationCommand(data: {
   eventId: string;
@@ -20,6 +22,13 @@ export async function createEventRegistrationCommand(data: {
   note?: string | null;
   quantity: number;
   customerId?: string | null;
+  /**
+   * 同意済み規約 ID。申込作成と同一 tx 内で TermsAgreement を記録する
+   * （reservation / series 経路の `recordTermsAgreements` と同契約）。
+   */
+  agreedTermsIds?: readonly string[] | undefined;
+  ipAddress?: string | null | undefined;
+  userAgent?: string | null | undefined;
 }) {
   // Global gate: featureModules.events で OFF なら拒否。
   // page.tsx の requireFeatureEnabled は Server Action の直接呼び出しを防げないため、
@@ -170,6 +179,20 @@ export async function createEventRegistrationCommand(data: {
           icsSequence: true,
         },
       });
+
+      // TermsAgreement は申込行と同じ tx で記録する（失敗時は申込ごと rollback）。
+      if (data.agreedTermsIds && data.agreedTermsIds.length > 0) {
+        await recordTermsAgreements({
+          scope: TERMS_SCOPE.EVENT_REGISTRATION,
+          agreements: data.agreedTermsIds.map((termsId) => ({ termsId })),
+          resourceId: registration.id,
+          customerId: data.customerId ?? null,
+          guestEmail: data.customerId ? null : data.email,
+          ipAddress: data.ipAddress ?? null,
+          userAgent: data.userAgent ?? null,
+          tx,
+        });
+      }
 
       return { registration, event: { title: event.title, slug: event.slug } };
     },

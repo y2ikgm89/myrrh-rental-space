@@ -18,6 +18,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -127,7 +128,14 @@ mock.module("@/shared/domain/terms/queries", () => ({
   getPublicTermsBySlug: mock(() => Promise.resolve(null)),
   getPublishedTermsByType: mock(() => Promise.resolve(null)),
   getRequiredTermsByScope: mock(() => Promise.resolve([])),
-  assertAllRequiredTermsAgreed: mock(() => Promise.resolve(undefined)),
+}));
+
+const mockAssertAllRequiredTermsAgreed = mock(() =>
+  Promise.resolve({ matchedTermsIds: [] as string[] }),
+);
+mock.module("@/shared/lib/terms-consent-gate", () => ({
+  assertAllRequiredTermsAgreed: mockAssertAllRequiredTermsAgreed,
+  assertLoginSignupReagreed: mock(() => Promise.resolve()),
 }));
 
 // enums モック — TermsScope.LOGIN_SIGNUP を expose
@@ -154,6 +162,7 @@ describe("consumeSignupTermsAction", () => {
     mockEnsureCustomerLinked.mockClear();
     mockRecordTermsAgreementsCommand.mockClear();
     mockHasTermsAgreementRecorded.mockClear();
+    mockAssertAllRequiredTermsAgreed.mockClear();
 
     // Default: cookie 有 + decode 成功 + 既存無 + insert 成功
     mockCookieGet.mockImplementation((name) =>
@@ -173,6 +182,9 @@ describe("consumeSignupTermsAction", () => {
     );
     mockRecordTermsAgreementsCommand.mockImplementation(() =>
       Promise.resolve({ count: 1 }),
+    );
+    mockAssertAllRequiredTermsAgreed.mockImplementation(() =>
+      Promise.resolve({ matchedTermsIds: [] }),
     );
   });
 
@@ -261,6 +273,38 @@ describe("consumeSignupTermsAction", () => {
       });
       expect(mockRecordTermsAgreementsCommand).not.toHaveBeenCalled();
       expect(mockCookieDelete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("signup gate: assertAllRequiredTermsAgreed", () => {
+    test("記録前に LOGIN_SIGNUP scope gate を呼ぶ", async () => {
+      const { consumeSignupTermsAction } =
+        await import("@/app/(public)/_shared/actions/consume-signup-terms");
+
+      await consumeSignupTermsAction({ isNew: true });
+
+      expect(mockAssertAllRequiredTermsAgreed).toHaveBeenCalledTimes(1);
+      expect(mockAssertAllRequiredTermsAgreed).toHaveBeenCalledWith({
+        scope: "LOGIN_SIGNUP",
+        agreedTermsIds: [TERMS_ID_A],
+      });
+    });
+
+    test("gate が DomainError を throw したら insert せず cookie を保持", async () => {
+      mockAssertAllRequiredTermsAgreed.mockImplementation(() =>
+        Promise.reject(
+          new DomainError("すべての必須規約への同意が必要です", "VALIDATION"),
+        ),
+      );
+
+      const { consumeSignupTermsAction } =
+        await import("@/app/(public)/_shared/actions/consume-signup-terms");
+
+      await expect(consumeSignupTermsAction({ isNew: true })).rejects.toThrow(
+        "すべての必須規約への同意が必要です",
+      );
+      expect(mockRecordTermsAgreementsCommand).not.toHaveBeenCalled();
+      expect(mockCookieDelete).not.toHaveBeenCalled();
     });
   });
 

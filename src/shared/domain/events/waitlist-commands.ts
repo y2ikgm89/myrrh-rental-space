@@ -5,6 +5,7 @@ import {
   EventStatus,
   PaymentStatus,
   RegistrationStatus,
+  TERMS_SCOPE,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { ensureCustomerNotBlacklisted } from "@/shared/domain/customers/guard";
@@ -14,6 +15,7 @@ import {
   tryAcquireWaitlistPromoteSessionLock,
   releaseWaitlistPromoteSessionLock,
 } from "./waitlist-locks";
+import { recordTermsAgreements } from "@/shared/domain/terms/commands";
 
 const OFFER_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -31,6 +33,13 @@ export async function registerWaitlistEntryCommand(data: {
   note?: string | null;
   quantity: number;
   customerId?: string | null;
+  /**
+   * 同意済み規約 ID。waitlist 登録と同一 tx 内で TermsAgreement を記録する
+   * （通常申込経路と同契約。キャンセル待ちフォームも EVENT_REGISTRATION scope）。
+   */
+  agreedTermsIds?: readonly string[] | undefined;
+  ipAddress?: string | null | undefined;
+  userAgent?: string | null | undefined;
 }) {
   if (!(await isFeatureEnabled("events"))) {
     throw new DomainError(
@@ -170,6 +179,20 @@ export async function registerWaitlistEntryCommand(data: {
           "キャンセル待ちの登録に失敗しました",
           "UNEXPECTED",
         );
+      }
+
+      // TermsAgreement は waitlist 行と同じ tx で記録する（失敗時は登録ごと rollback）。
+      if (data.agreedTermsIds && data.agreedTermsIds.length > 0) {
+        await recordTermsAgreements({
+          scope: TERMS_SCOPE.EVENT_REGISTRATION,
+          agreements: data.agreedTermsIds.map((termsId) => ({ termsId })),
+          resourceId: registration.id,
+          customerId: data.customerId ?? null,
+          guestEmail: data.customerId ? null : data.email,
+          ipAddress: data.ipAddress ?? null,
+          userAgent: data.userAgent ?? null,
+          tx,
+        });
       }
 
       return {

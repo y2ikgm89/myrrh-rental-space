@@ -15,11 +15,72 @@ import {
   buildUuidOrderSqlFragments,
 } from "@/shared/domain/order-sql";
 import { sanitizeContentHtml } from "@/shared/lib/html/sanitize";
-import type { TermsFormInput } from "@/shared/lib/validations/terms";
+import { isEmptyLexicalEditorStateJson } from "@/shared/lib/lexical/is-empty-editor-state-json";
+import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
+import {
+  TERMS_SCOPE_LABELS,
+  type TermsFormInput,
+} from "@/shared/lib/validations/terms";
 
 interface SlugOnly {
   id: string;
   slug: string;
+}
+
+/**
+ * 公開時は空 Lexical / 空 HTML を拒否する。
+ * Zod `termsFormSchema` と同契約（command 層でも PublishSwitch 経路を防御）。
+ */
+function assertPublishableContent(input: {
+  contentJson: string;
+  contentHtml: string;
+}): void {
+  if (
+    isEmptyLexicalEditorStateJson(input.contentJson) ||
+    stripHtmlToText(input.contentHtml).length === 0
+  ) {
+    throw new DomainError("公開するには本文を入力してください", "VALIDATION");
+  }
+}
+
+function toContentJsonString(contentJson: Prisma.JsonValue): string {
+  return typeof contentJson === "string"
+    ? contentJson
+    : JSON.stringify(contentJson);
+}
+
+/**
+ * 当該文書がいずれかの scope で「公開中・非削除の最後の 1 件」なら DomainError。
+ * 意図的に scope を無効化する場合は、先に scopes から外してから非公開/削除する。
+ */
+async function assertNotLastPublishedForScopes(
+  id: string,
+  scopes: readonly TermsScope[],
+): Promise<void> {
+  if (scopes.length === 0) return;
+
+  const blockingLabels: string[] = [];
+  for (const scope of scopes) {
+    const other = await prisma.termsDocument.findFirst({
+      where: {
+        id: { not: id },
+        deletedAt: null,
+        isPublished: true,
+        scopes: { has: scope },
+      },
+      select: { id: true },
+    });
+    if (!other) {
+      blockingLabels.push(TERMS_SCOPE_LABELS[scope]);
+    }
+  }
+
+  if (blockingLabels.length > 0) {
+    throw new DomainError(
+      `この規約は「${blockingLabels.join("」「")}」の公開中文書として唯一残っているため、非公開または削除できません。先に該当する同意必須 scope を外してください。`,
+      "VALIDATION",
+    );
+  }
 }
 
 async function ensureSlugAvailable(
@@ -58,6 +119,10 @@ export async function createTermsCommand(
   input: TermsFormInput,
 ): Promise<SlugOnly> {
   await ensureSlugAvailable(input.slug);
+
+  if (input.isPublished) {
+    assertPublishableContent(input);
+  }
 
   const { contentJson, contentHtml } = buildContent(input);
 
@@ -108,6 +173,16 @@ export async function updateTermsCommand(
 
   if (input.slug !== existing.slug) {
     await ensureSlugAvailable(input.slug, id);
+  }
+
+  if (input.isPublished) {
+    assertPublishableContent(input);
+  }
+
+  // エディタ保存経路での非公開化も PublishSwitch / soft-delete と同ガード。
+  // 意図的に scope を無効化する場合は、同一保存で scopes から外す（input.scopes 空なら通過）。
+  if (existing.isPublished && !input.isPublished) {
+    await assertNotLastPublishedForScopes(id, input.scopes);
   }
 
   const { contentJson, contentHtml } = buildContent(input);
@@ -213,10 +288,27 @@ export async function updateTermsPublishedCommand(
 ): Promise<SlugOnly & { isPublished: boolean }> {
   const existing = await prisma.termsDocument.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true, slug: true, isPublished: true, publishedAt: true },
+    select: {
+      id: true,
+      slug: true,
+      isPublished: true,
+      publishedAt: true,
+      scopes: true,
+      contentJson: true,
+      contentHtml: true,
+    },
   });
   if (!existing) {
     throw new DomainError("規約が見つかりません", "NOT_FOUND");
+  }
+
+  if (isPublished) {
+    assertPublishableContent({
+      contentJson: toContentJsonString(existing.contentJson),
+      contentHtml: existing.contentHtml,
+    });
+  } else if (existing.isPublished) {
+    await assertNotLastPublishedForScopes(id, existing.scopes);
   }
 
   const publishedAt = (() => {
@@ -265,10 +357,14 @@ export async function updateTermsFooterVisibilityCommand(
 export async function softDeleteTermsCommand(id: string): Promise<SlugOnly> {
   const existing = await prisma.termsDocument.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, isPublished: true, scopes: true },
   });
   if (!existing) {
     throw new DomainError("規約が見つかりません", "NOT_FOUND");
+  }
+
+  if (existing.isPublished) {
+    await assertNotLastPublishedForScopes(id, existing.scopes);
   }
 
   await prisma.termsDocument.update({
@@ -276,7 +372,7 @@ export async function softDeleteTermsCommand(id: string): Promise<SlugOnly> {
     data: { deletedAt: new Date(), isPublished: false },
   });
 
-  return existing;
+  return { id: existing.id, slug: existing.slug };
 }
 
 /**
@@ -374,8 +470,8 @@ export async function restoreTermsCommand(id: string): Promise<SlugOnly> {
  * 呼出側は事前に `assertAllRequiredTermsAgreed({scope, agreedTermsIds})` で
  * server-side gate を通すこと (curl bypass 防止)。
  *
- * 該当 docs が公開されていない / 削除済みなら 0 件 record を返す (本コマンド
- * は append-only の証跡なので silent skip 設計)。
+ * fail-closed: 要求 ID はすべて `scopes: { has: scope }` かつ公開・非削除で
+ * 解決できなければ DomainError（silent skip / 部分記録なし）。
  *
  * @param termsIds 同意した規約 ID 配列
  * @param scope   "RESERVATION"/"INQUIRY"/"LOGIN_SIGNUP"/"EVENT_REGISTRATION"
@@ -392,16 +488,23 @@ export async function recordTermsAgreementsCommand(input: {
 }): Promise<{ count: number }> {
   if (input.termsIds.length === 0) return { count: 0 };
 
+  const uniqueIds = [...new Set(input.termsIds)];
   const docs = await prisma.termsDocument.findMany({
     where: {
-      id: { in: [...input.termsIds] },
+      id: { in: uniqueIds },
       deletedAt: null,
       isPublished: true,
+      scopes: { has: input.scope },
     },
     select: { id: true, contentHtml: true },
   });
 
-  if (docs.length === 0) return { count: 0 };
+  if (docs.length !== uniqueIds.length) {
+    throw new DomainError(
+      "指定された規約が見つからないか、公開されていないか、この同意 scope の対象ではありません",
+      "VALIDATION",
+    );
+  }
 
   const data = docs.map((doc) => ({
     termsId: doc.id,
@@ -469,8 +572,8 @@ export type RecordTermsAgreementsInput = {
  * は作成行を返さないので、id/agreedAt を呼出前に生成し、その同一オブジェクトを
  * createMany の data と戻り値の双方に使う（挿入内容と返却値が必ず一致する）。
  *
- * 該当 docs が公開されていない/削除済みなら silent skip（既存パターンと同様、
- * 本コマンドは append-only の証跡なので該当なしは空配列を返す）。
+ * fail-closed: 要求 ID はすべて `scopes: { has: scope }` かつ公開・非削除で
+ * 解決できなければ DomainError（silent skip / 部分記録なし）。tx 対応は維持。
  */
 export async function recordTermsAgreements(
   input: RecordTermsAgreementsInput,
@@ -478,18 +581,24 @@ export async function recordTermsAgreements(
   if (input.agreements.length === 0) return [];
 
   const client = input.tx ?? prisma;
-  const termsIds = input.agreements.map((a) => a.termsId);
+  const uniqueIds = [...new Set(input.agreements.map((a) => a.termsId))];
 
   const docs = await client.termsDocument.findMany({
     where: {
-      id: { in: termsIds },
+      id: { in: uniqueIds },
       deletedAt: null,
       isPublished: true,
+      scopes: { has: input.scope },
     },
     select: { id: true, contentHtml: true },
   });
 
-  if (docs.length === 0) return [];
+  if (docs.length !== uniqueIds.length) {
+    throw new DomainError(
+      "指定された規約が見つからないか、公開されていないか、この同意 scope の対象ではありません",
+      "VALIDATION",
+    );
+  }
 
   const agreedAt = new Date();
   const records: TermsAgreement[] = docs.map((doc) => ({

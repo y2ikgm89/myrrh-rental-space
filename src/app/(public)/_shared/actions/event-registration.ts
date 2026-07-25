@@ -53,7 +53,6 @@ import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { getEventRegistrationDetailsForEmail } from "@/shared/domain/events/registration-queries";
-import { recordTermsAgreementsCommand } from "@/shared/domain/terms/commands";
 import {
   assertAllRequiredTermsAgreed,
   assertLoginSignupReagreed,
@@ -146,6 +145,8 @@ export async function registerForEvent(
       const userAgent = headersList.get("user-agent");
 
       try {
+        // TermsAgreement は createEventRegistrationCommand 内の同一 tx で記録する
+        // （申込成立と法務 evidence の atomicity。reservation 経路と同契約）。
         const result = await createEventRegistrationCommand({
           eventId: data.eventId,
           slotId: data.slotId,
@@ -156,20 +157,10 @@ export async function registerForEvent(
           note: data.note ?? null,
           quantity: data.quantity,
           customerId,
+          agreedTermsIds: data.agreedTermsIds,
+          ipAddress: clientIp,
+          userAgent: userAgent ?? null,
         });
-
-        if (data.agreedTermsIds.length > 0) {
-          // 法務 evidence は await で確実に記録する。
-          await recordTermsAgreementsCommand({
-            termsIds: data.agreedTermsIds,
-            scope: TermsScope.EVENT_REGISTRATION,
-            resourceId: result.registration.id,
-            customerId,
-            guestEmail: customerId ? null : data.email,
-            ipAddress: clientIp,
-            userAgent: userAgent ?? null,
-          });
-        }
 
         invalidateEventCaches();
 
@@ -349,6 +340,8 @@ export async function registerForEventWaitlist(
       const userAgent = headersList.get("user-agent");
 
       try {
+        // TermsAgreement は registerWaitlistEntryCommand 内の同一 tx で記録する
+        // （waitlist 登録と法務 evidence の atomicity。通常申込経路と同契約）。
         const result = await registerWaitlistEntryCommand({
           eventId: data.eventId,
           slotId: data.slotId,
@@ -359,20 +352,10 @@ export async function registerForEventWaitlist(
           note: data.note ?? null,
           quantity: data.quantity,
           customerId,
+          agreedTermsIds: data.agreedTermsIds,
+          ipAddress: clientIp,
+          userAgent: userAgent ?? null,
         });
-
-        if (data.agreedTermsIds.length > 0) {
-          // 法務 evidence は await で確実に記録する。
-          await recordTermsAgreementsCommand({
-            termsIds: data.agreedTermsIds,
-            scope: TermsScope.EVENT_REGISTRATION,
-            resourceId: result.registration.id,
-            customerId,
-            guestEmail: customerId ? null : data.email,
-            ipAddress: clientIp,
-            userAgent: userAgent ?? null,
-          });
-        }
 
         invalidateSiteWideCache([CACHE_TAGS.EVENTS, CACHE_TAGS.EVENT_WAITLIST]);
 

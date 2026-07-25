@@ -7,12 +7,7 @@ import { parseWithZod, getZodConstraint } from "@conform-to/zod/v4";
 import type { z } from "zod";
 import { toast } from "sonner";
 import { termsSettingsFormSchema } from "@/admin/lib/validations/terms";
-import {
-  createTerms,
-  updateTerms,
-  updateTermsPublished,
-  deleteTerms,
-} from "@/admin/actions/terms";
+import { createTerms, updateTerms, deleteTerms } from "@/admin/actions/terms";
 import { getTermsPreviewHref } from "@/shared/lib/preview-routes";
 import { openPreviewTab } from "@/admin/lib/open-external-tab";
 import type { AdminTermsDetail } from "@/shared/domain/terms/admin-queries";
@@ -246,16 +241,20 @@ export function useTermsEditor({
   // 規約は本文 + 設定を単一 `updateTerms` で保存する (Post / News のような
   // body / settings 分割を持たない)。edit 系 3 経路 (本文保存 / 設定保存 /
   // プレビュー) が同一 payload を組むため SSoT helper に集約する。
-  const buildUpdateInput = (settingsData: ParsedTermsSettingsFormData) => ({
+  const buildUpdateInput = (
+    settingsData: ParsedTermsSettingsFormData,
+    publishOverride?: boolean,
+  ) => ({
     type: typeValue,
     slug: settingsData.slug,
     title: settingsData.title,
     contentJson,
-    isPublished: Boolean(settingsData.isPublished),
+    isPublished:
+      publishOverride !== undefined ? publishOverride : isPublishedValue,
     scopes: [...scopesValue],
     changelog:
       changelogValue.trim().length === 0 ? null : changelogValue.trim(),
-    showInFooter: Boolean(settingsData.showInFooter),
+    showInFooter: showInFooterValue,
   });
 
   // create mode の下書き作成 SSoT。成功時は新規 id、失敗時は null (toast 済) を返す。
@@ -369,40 +368,54 @@ export function useTermsEditor({
     });
   };
 
-  const handlePublish = () => {
+  const persistTermsWithPublishState = (
+    publishOverride: boolean,
+    successMessage: string,
+  ) => {
     if (!terms || core.isPending) return;
+    const settingsData = getSettingsDataForSubmit();
+    if (!settingsData) return;
+
     core.startTransition(async () => {
-      const result = await updateTermsPublished(terms.id, true);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
+      try {
+        const result = await updateTerms(
+          terms.id,
+          buildUpdateInput(settingsData, publishOverride),
+        );
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+
+        const nextSettings = {
+          ...settingsData,
+          isPublished: publishOverride,
+        };
+        setSettingsSnapshot(nextSettings);
+        setSavedContentJson(contentJson);
+        clearDraft(autoSaveKey);
+        setIsPublishedValue(publishOverride);
+        settingsForm.update({
+          name: settingsFields.isPublished.name,
+          value: publishOverride ? "on" : "",
+        });
+        router.refresh();
+        toast.success(successMessage);
+      } catch (error) {
+        logger.error("公開状態の更新中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("公開状態の更新中にエラーが発生しました");
       }
-      toast.success("公開しました");
-      setIsPublishedValue(true);
-      settingsForm.update({
-        name: settingsFields.isPublished.name,
-        value: "on",
-      });
-      router.refresh();
     });
   };
 
+  const handlePublish = () => {
+    persistTermsWithPublishState(true, "公開しました");
+  };
+
   const handleUnpublish = () => {
-    if (!terms || core.isPending) return;
-    core.startTransition(async () => {
-      const result = await updateTermsPublished(terms.id, false);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success("下書きに戻しました");
-      setIsPublishedValue(false);
-      settingsForm.update({
-        name: settingsFields.isPublished.name,
-        value: "",
-      });
-      router.refresh();
-    });
+    persistTermsWithPublishState(false, "下書きに戻しました");
   };
 
   const handleDelete = () => {

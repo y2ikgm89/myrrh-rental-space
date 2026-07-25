@@ -73,18 +73,14 @@ mock.module(
 );
 
 const mockGetRequiredTermsByScope = mock(() => Promise.resolve([]));
-const mockRecordTermsAgreementsCommand = mock(() =>
-  Promise.resolve({ count: 0 }),
-);
+// TermsAgreement 記録は createEventRegistrationCommand（domain、本 test では mock）
+// の同一 tx 内で行われる。action 層から recordTermsAgreementsCommand は呼ばない。
 mock.module("@/shared/domain/terms/queries", () => ({
   getRequiredTermsByScope: mockGetRequiredTermsByScope,
   // Phase 2 (TERMS-REAGREE-P2): terms-consent-gate.ts が本 module から
   // getReagreeRequiredTermsForCustomer を新規 import したため、
   // module 全体差し替え mock ではここに no-op を明示する必要がある。
   getReagreeRequiredTermsForCustomer: mock(() => Promise.resolve([])),
-}));
-mock.module("@/shared/domain/terms/commands", () => ({
-  recordTermsAgreementsCommand: mockRecordTermsAgreementsCommand,
 }));
 
 mock.module("@/shared/lib/customer-auth", () => ({
@@ -211,7 +207,6 @@ describe("registerForEvent", () => {
     mockCheckEmailRateLimit.mockClear();
     mockCreateEventRegistrationCommand.mockClear();
     mockGetRequiredTermsByScope.mockClear();
-    mockRecordTermsAgreementsCommand.mockClear();
 
     mockValidateTurnstile.mockImplementation(() =>
       Promise.resolve({ success: true as const }),

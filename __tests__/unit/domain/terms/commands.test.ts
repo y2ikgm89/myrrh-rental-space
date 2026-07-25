@@ -8,9 +8,11 @@ type TermsDocument = {
   id: string;
   slug: string;
   contentHtml: string;
+  contentJson: unknown;
   isPublished: boolean;
   publishedAt: Date | null;
   deletedAt: Date | null;
+  scopes: string[];
 };
 
 const mockFindFirst = mock<() => Promise<Partial<TermsDocument> | null>>(() =>
@@ -139,17 +141,48 @@ mock.module("@generated/prisma/client", () => {
 const {
   createTermsCommand,
   updateTermsCommand,
+  updateTermsPublishedCommand,
   reorderTermsCommand,
   softDeleteTermsCommand,
   restoreTermsCommand,
   recordTermsAgreementsCommand,
 } = await import("@/shared/domain/terms/commands");
 
+const NON_EMPTY_CONTENT_JSON = JSON.stringify({
+  root: {
+    children: [
+      {
+        children: [
+          {
+            detail: 0,
+            format: 0,
+            mode: "normal",
+            style: "",
+            text: "テスト規約",
+            type: "text",
+            version: 1,
+          },
+        ],
+        direction: null,
+        format: "",
+        indent: 0,
+        type: "paragraph",
+        version: 1,
+      },
+    ],
+    direction: null,
+    format: "",
+    indent: 0,
+    type: "root",
+    version: 1,
+  },
+});
+
 const VALID_INPUT = {
   type: "privacy",
   slug: "privacy-policy",
   title: "プライバシーポリシー",
-  contentJson: '{"root":{"type":"root","children":[]}}',
+  contentJson: NON_EMPTY_CONTENT_JSON,
   contentHtml: "<p>テスト規約</p>",
   isPublished: true,
   scopes: ["LOGIN_SIGNUP" as const],
@@ -234,6 +267,35 @@ describe("createTermsCommand", () => {
     });
     expect(mockCreate).not.toHaveBeenCalled();
   });
+
+  test("公開時に空 Lexical 本文なら VALIDATION を throw する", async () => {
+    const { EMPTY_LEXICAL_EDITOR_STATE_JSON } =
+      await import("@/shared/lib/validations/lexical");
+
+    await expect(
+      createTermsCommand({
+        ...VALID_INPUT,
+        contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+        contentHtml: "<p></p>",
+        isPublished: true,
+      }),
+    ).rejects.toThrow("公開するには本文を入力してください");
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("下書きなら空 Lexical 本文を許容する", async () => {
+    const { EMPTY_LEXICAL_EDITOR_STATE_JSON } =
+      await import("@/shared/lib/validations/lexical");
+
+    await createTermsCommand({
+      ...VALID_INPUT,
+      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+      contentHtml: "<p></p>",
+      isPublished: false,
+    });
+
+    expect(mockCreate).toHaveBeenCalled();
+  });
 });
 
 describe("updateTermsCommand", () => {
@@ -302,6 +364,43 @@ describe("updateTermsCommand", () => {
         }),
       }),
     );
+  });
+
+  test("非公開化時、scope の最後の公開文書なら拒否する", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce({
+        id: "id-1",
+        slug: "privacy-policy",
+        isPublished: true,
+        publishedAt: new Date("2025-01-15T00:00:00Z"),
+      })
+      .mockResolvedValueOnce(null);
+
+    await expect(
+      updateTermsCommand("id-1", {
+        ...VALID_INPUT,
+        isPublished: false,
+        scopes: ["RESERVATION"],
+      }),
+    ).rejects.toThrow("公開中文書として唯一残っているため");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("非公開化時、同一保存で scopes を外せば通過する", async () => {
+    mockFindFirst.mockResolvedValueOnce({
+      id: "id-1",
+      slug: "privacy-policy",
+      isPublished: true,
+      publishedAt: new Date("2025-01-15T00:00:00Z"),
+    });
+
+    await updateTermsCommand("id-1", {
+      ...VALID_INPUT,
+      isPublished: false,
+      scopes: [],
+    });
+
+    expect(mockUpdate).toHaveBeenCalled();
   });
 
   test("Lexical 本文内の管理メディア origin 外画像は拒否する", async () => {
@@ -445,7 +544,12 @@ describe("softDeleteTermsCommand / restoreTermsCommand", () => {
   });
 
   test("softDelete は deletedAt を set + isPublished を false 化する", async () => {
-    mockFindFirst.mockResolvedValueOnce({ id: "id-1", slug: "privacy" });
+    mockFindFirst.mockResolvedValueOnce({
+      id: "id-1",
+      slug: "privacy",
+      isPublished: false,
+      scopes: [],
+    });
     mockUpdate.mockResolvedValueOnce({ id: "id-1", slug: "privacy" });
 
     await softDeleteTermsCommand("id-1");
@@ -459,6 +563,39 @@ describe("softDeleteTermsCommand / restoreTermsCommand", () => {
         }),
       }),
     );
+  });
+
+  test("softDelete は scope の最後の公開文書なら拒否する", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce({
+        id: "id-1",
+        slug: "privacy",
+        isPublished: true,
+        scopes: ["LOGIN_SIGNUP"],
+      })
+      // assertNotLastPublishedForScopes: 他の公開文書なし
+      .mockResolvedValueOnce(null);
+
+    await expect(softDeleteTermsCommand("id-1")).rejects.toThrow(
+      "公開中文書として唯一残っているため",
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("softDelete は同 scope の他公開文書があれば許可する", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce({
+        id: "id-1",
+        slug: "privacy",
+        isPublished: true,
+        scopes: ["LOGIN_SIGNUP"],
+      })
+      .mockResolvedValueOnce({ id: "id-other" });
+    mockUpdate.mockResolvedValueOnce({ id: "id-1", slug: "privacy" });
+
+    await softDeleteTermsCommand("id-1");
+
+    expect(mockUpdate).toHaveBeenCalled();
   });
 
   test("restore は削除済み以外で VALIDATION を throw する", async () => {
@@ -507,6 +644,53 @@ describe("softDeleteTermsCommand / restoreTermsCommand", () => {
   });
 });
 
+describe("updateTermsPublishedCommand — last published scope guard / empty body", () => {
+  beforeEach(() => {
+    mockFindFirst.mockReset();
+    mockUpdate.mockReset();
+    mockUpdate.mockResolvedValue({ id: "id-1", slug: "privacy" });
+  });
+
+  test("非公開化時、scope の最後の公開文書なら拒否する", async () => {
+    mockFindFirst
+      .mockResolvedValueOnce({
+        id: "id-1",
+        slug: "privacy",
+        isPublished: true,
+        publishedAt: new Date(),
+        scopes: ["RESERVATION"],
+        contentJson: NON_EMPTY_CONTENT_JSON,
+        contentHtml: "<p>テスト規約</p>",
+      })
+      .mockResolvedValueOnce(null);
+
+    await expect(updateTermsPublishedCommand("id-1", false)).rejects.toThrow(
+      "公開中文書として唯一残っているため",
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  test("公開化時、空本文なら拒否する", async () => {
+    const { EMPTY_LEXICAL_EDITOR_STATE_JSON } =
+      await import("@/shared/lib/validations/lexical");
+
+    mockFindFirst.mockResolvedValueOnce({
+      id: "id-1",
+      slug: "privacy",
+      isPublished: false,
+      publishedAt: null,
+      scopes: [],
+      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+      contentHtml: "<p></p>",
+    });
+
+    await expect(updateTermsPublishedCommand("id-1", true)).rejects.toThrow(
+      "公開するには本文を入力してください",
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
+
 describe("recordTermsAgreementsCommand", () => {
   beforeEach(() => {
     mockFindMany.mockReset();
@@ -525,16 +709,53 @@ describe("recordTermsAgreementsCommand", () => {
     expect(mockAgreementCreateMany).not.toHaveBeenCalled();
   });
 
-  test("公開規約が存在しない場合は count: 0 を返し createMany を呼ばない", async () => {
+  test("解決できない termsId がある場合は DomainError（fail-closed）", async () => {
     mockFindMany.mockResolvedValueOnce([]);
 
-    const result = await recordTermsAgreementsCommand({
-      termsIds: ["t1", "t2"],
+    await expect(
+      recordTermsAgreementsCommand({
+        termsIds: ["t1", "t2"],
+        scope: "RESERVATION" as const,
+      }),
+    ).rejects.toThrow("この同意 scope の対象ではありません");
+    expect(mockAgreementCreateMany).not.toHaveBeenCalled();
+  });
+
+  test("部分解決（一部のみ公開/scope 一致）でも DomainError", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      { id: "t1", contentHtml: "<p>第1条</p>" },
+    ]);
+
+    await expect(
+      recordTermsAgreementsCommand({
+        termsIds: ["t1", "t2"],
+        scope: "RESERVATION" as const,
+      }),
+    ).rejects.toThrow("この同意 scope の対象ではありません");
+    expect(mockAgreementCreateMany).not.toHaveBeenCalled();
+  });
+
+  test("findMany に scopes has + published + not deleted を渡す", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      { id: "t1", contentHtml: "<p>第1条</p>" },
+    ]);
+    mockAgreementCreateMany.mockResolvedValueOnce({ count: 1 });
+
+    await recordTermsAgreementsCommand({
+      termsIds: ["t1"],
       scope: "RESERVATION" as const,
     });
 
-    expect(result).toEqual({ count: 0 });
-    expect(mockAgreementCreateMany).not.toHaveBeenCalled();
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { in: ["t1"] },
+          deletedAt: null,
+          isPublished: true,
+          scopes: { has: "RESERVATION" },
+        }),
+      }),
+    );
   });
 
   test("contentSnapshot + sha256 hash + context を含めて createMany を呼ぶ", async () => {

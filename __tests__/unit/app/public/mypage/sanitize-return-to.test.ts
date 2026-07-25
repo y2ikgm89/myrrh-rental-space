@@ -44,6 +44,17 @@ describe("sanitizeReturnTo", () => {
     );
   });
 
+  test("`..` セグメントを含む path traversal は拒否", () => {
+    expect(sanitizeReturnTo("/mypage/../admin")).toBe("/mypage");
+    expect(sanitizeReturnTo("/mypage/reservations/../settings")).toBe(
+      "/mypage",
+    );
+    expect(sanitizeReturnTo("/mypage/%2e%2e/admin")).toBe("/mypage");
+    expect(sanitizeReturnTo("/mypage/reservations/%2E%2E/settings")).toBe(
+      "/mypage",
+    );
+  });
+
   test("配列（?returnTo= の重複指定）はクラッシュせず /mypage にフォールバックする", () => {
     // Next.js の searchParams は同名クエリを重複指定すると string[] になる。
     // sanitizeReturnTo は open redirect 対策 SSoT のため、呼び出し側の型注釈に

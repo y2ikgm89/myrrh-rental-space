@@ -12,6 +12,8 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { normalizeEmailForIdentity } from "@/shared/lib/email/normalize-email";
 import { INQUIRY_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
+import { recordTermsAgreements } from "@/shared/domain/terms/commands";
+import { TERMS_SCOPE } from "@/shared/lib/validations/enums/prisma-types";
 
 // ============================================================================
 // receiptNumber 採番
@@ -379,6 +381,13 @@ type CreateInquiryInput = {
   message: string;
   customerType?: CustomerType | null;
   customerId?: string | null;
+  /**
+   * 同意済み規約 ID。Inquiry 作成と同一 tx 内で TermsAgreement を記録する
+   * （reservation / series 経路の `recordTermsAgreements` と同契約）。
+   */
+  agreedTermsIds?: readonly string[] | undefined;
+  ipAddress?: string | null | undefined;
+  userAgent?: string | null | undefined;
 };
 
 export type InquiryPayload = {
@@ -492,6 +501,21 @@ export async function createInquiryCommand(
             reason: "creation",
           },
         });
+
+        // TermsAgreement は Inquiry 行と同じ tx で記録する（失敗時は問い合わせごと rollback）。
+        if (input.agreedTermsIds && input.agreedTermsIds.length > 0) {
+          await recordTermsAgreements({
+            scope: TERMS_SCOPE.INQUIRY,
+            agreements: input.agreedTermsIds.map((termsId) => ({ termsId })),
+            resourceId: created.id,
+            customerId: input.customerId ?? null,
+            guestEmail: input.customerId ? null : input.email,
+            ipAddress: input.ipAddress ?? null,
+            userAgent: input.userAgent ?? null,
+            tx,
+          });
+        }
+
         return created;
       });
 

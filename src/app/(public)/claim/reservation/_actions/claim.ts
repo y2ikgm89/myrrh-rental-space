@@ -8,6 +8,7 @@ import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { assertCustomerActive } from "@/shared/domain/customers/guard";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
+import { assertLoginSignupReagreed } from "@/shared/lib/terms-consent-gate";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import {
@@ -63,6 +64,7 @@ export async function claimReservationAction(): Promise<
   // OAUTH-BETTER-AUTH-01: 認証済み Customer は isActive / status BLACKLIST を強制する。
   try {
     await assertCustomerActive(customer.id);
+    await assertLoginSignupReagreed(customer.id);
   } catch (error) {
     if (error instanceof DomainError) {
       return createMutationError(error.message);

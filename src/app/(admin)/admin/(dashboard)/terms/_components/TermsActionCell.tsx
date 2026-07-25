@@ -57,7 +57,7 @@ export function TermsActionCell({ id, title }: TermsActionCellProps) {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         itemName={title}
-        description={`「${title}」を削除します。同意記録は保持されます。`}
+        description={`「${title}」を削除します。同意記録は保持されます。各適用画面で唯一の公開規約の場合は削除できません。`}
         onConfirm={handleDelete}
         isPending={isPending}
       />

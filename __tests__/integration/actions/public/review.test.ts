@@ -93,6 +93,13 @@ mock.module("@/shared/domain/customers/guard", () => ({
   ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
 }));
 
+mock.module("@/shared/lib/terms-consent-gate", () => ({
+  assertAllRequiredTermsAgreed: mock(() =>
+    Promise.resolve({ matchedTermsIds: [] }),
+  ),
+  assertLoginSignupReagreed: mock(() => Promise.resolve()),
+}));
+
 const mockCreateReviewCommand = mock(() =>
   Promise.resolve({
     id: "review-001",

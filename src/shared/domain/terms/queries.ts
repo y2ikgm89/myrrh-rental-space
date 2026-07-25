@@ -384,16 +384,18 @@ export async function assertAllRequiredTermsAgreed(
 }
 
 /**
- * 指定 customer + scope + termsIds のいずれかで TermsAgreement が既に記録済みかを返す。
+ * 指定 customer + scope + termsIds の**すべて**について TermsAgreement が
+ * 既に記録済みかを返す（ALL-match）。
  *
  * 用途: `consumeSignupTermsAction` (MYPAGE-AUTH-03) の retry idempotency guard。
  * TermsAgreement には (customerId, scope, termsId) の DB uniqueness 制約が無いため、
  * リトライ経路 (insert 成功後に cookie 削除が persist しなかった等) で同一 cookie を
  * 再度消費すると duplicate row が積まれる。cookie 消費前に本関数で pre-check し、
- * 既存があれば insert を skip して cookie だけ削除する (append-only 契約は維持)。
+ * 要求 ID がすべて揃っていれば insert を skip して cookie だけ削除する
+ * (append-only 契約は維持)。1 件でも欠ける場合は false（部分記録は idempotent とみなさない）。
  *
  * `"use cache"` は付けない — LOGIN_SIGNUP の消費経路は書込直後の read-your-own-writes
- * が必要で、Data Cache の incoming は許容できない。
+ * が必要で、Data Cache の stale は許容できない。
  */
 export async function hasTermsAgreementRecorded(input: {
   readonly customerId: string;
@@ -402,14 +404,16 @@ export async function hasTermsAgreementRecorded(input: {
 }): Promise<boolean> {
   if (input.termsIds.length === 0) return false;
 
-  const found = await prisma.termsAgreement.findFirst({
+  const uniqueIds = [...new Set(input.termsIds)];
+  const found = await prisma.termsAgreement.findMany({
     where: {
       customerId: input.customerId,
       scope: input.scope,
-      termsId: { in: [...input.termsIds] },
+      termsId: { in: uniqueIds },
     },
-    select: { id: true },
+    select: { termsId: true },
+    distinct: ["termsId"],
   });
 
-  return found !== null;
+  return found.length === uniqueIds.length;
 }
