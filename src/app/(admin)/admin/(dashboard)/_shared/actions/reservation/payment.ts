@@ -69,7 +69,7 @@ export async function createCheckoutSession(
 
 export async function recordManualReservationPayment(
   input: ManualReservationPaymentInput,
-): Promise<MutationResult<{ reservationId: string }>> {
+): Promise<MutationResult<{ reservationId: string; receiptWarning?: string }>> {
   const parsed = manualPaymentSchema.safeParse(input);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 

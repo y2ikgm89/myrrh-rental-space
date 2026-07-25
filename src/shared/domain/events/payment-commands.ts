@@ -27,6 +27,14 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { issueReceiptForEventRegistration } from "@/shared/domain/receipts/issue";
+import { notifyReceiptIssuedForEventRegistration } from "@/shared/domain/receipts/notify-issued";
+import { createReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
+import {
+  MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING,
+  MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING,
+} from "@/shared/domain/receipts/manual-payment-warnings";
 
 /**
  * `refundEventRegistrationPaymentCommand` の advisory lock namespace。
@@ -550,14 +558,44 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
  * CANCELLED + UNPAID な登録を PAID に格上げできてしまい、かつ `isRefundable` は
  * stripePaymentIntentId 必須のため返金導線もない「CANCELLED+PAID で戻せない」
  * 会計不整合状態を作れてしまう。
+ *
+ * claim 成功後は `issueReceiptForEventRegistration` を await し、成功時のみ
+ * `notifyReceiptIssuedForEventRegistration` を fire-and-forget する。領収書失敗でも
+ * PAID は維持し、`receiptWarning` で部分失敗を返す（reservation 手動入金と同契約）。
  */
+export type ManualEventPaymentResult = {
+  registrationId: string;
+  /**
+   * PAID は確定したが領収書発行をスキップ / 延期したときの管理者向け警告。
+   */
+  receiptWarning?: string;
+};
+
+function buildEventRegistrationReceiptDetailUrl(input: {
+  customerId: string | null;
+  serialNo: string;
+}): string {
+  const appUrl = getAppUrl();
+  // 会員: mypage イベント一覧（個別詳細 route は未設置）。
+  // ゲスト薄いステータスは out of scope — 既存の領収書 DL 署名 URL を暫定 CTA にする。
+  if (input.customerId !== null) {
+    return `${appUrl}/mypage/events`;
+  }
+  const token = createReceiptDownloadToken(input.serialNo);
+  return `${appUrl}/receipts/${input.serialNo}/download?token=${token}`;
+}
+
 export async function recordManualEventPaymentCommand(data: {
   registrationId: string;
   amount: number;
-}): Promise<{ registrationId: string }> {
+}): Promise<ManualEventPaymentResult> {
   const existing = await prisma.eventRegistration.findUnique({
     where: { id: data.registrationId },
-    select: { paymentStatus: true, stripeCheckoutSessionId: true },
+    select: {
+      paymentStatus: true,
+      stripeCheckoutSessionId: true,
+      customerId: true,
+    },
   });
   if (!existing) {
     throw new DomainError("参加登録が見つかりません", "NOT_FOUND");
@@ -588,7 +626,63 @@ export async function recordManualEventPaymentCommand(data: {
     );
   }
 
-  return { registrationId: data.registrationId };
+  let receiptWarning: string | undefined;
+  try {
+    const receipt = await issueReceiptForEventRegistration(
+      data.registrationId,
+      {
+        source: "manual-payment",
+      },
+    );
+    const detailUrl = buildEventRegistrationReceiptDetailUrl({
+      customerId: existing.customerId,
+      serialNo: receipt.serialNo,
+    });
+    fireAndForget(
+      notifyReceiptIssuedForEventRegistration({
+        receiptId: receipt.id,
+        detailUrl,
+      }),
+      {
+        operation: "notifyReceiptIssuedForEventRegistration",
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          registrationId: data.registrationId,
+          receiptId: receipt.id,
+        },
+      },
+    );
+  } catch (error) {
+    if (error instanceof DomainError && error.code === "VALIDATION") {
+      logError(error, {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "issueReceiptForEventRegistration",
+          registrationId: data.registrationId,
+          source: "manual-payment",
+        },
+      });
+      receiptWarning = MANUAL_PAYMENT_RECEIPT_SKIPPED_WARNING;
+    } else {
+      logError(normalizeError(error), {
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.CRITICAL,
+        context: {
+          operation: "issueReceiptForEventRegistration",
+          registrationId: data.registrationId,
+          source: "manual-payment",
+        },
+      });
+      receiptWarning = MANUAL_PAYMENT_RECEIPT_DEFERRED_WARNING;
+    }
+  }
+
+  return {
+    registrationId: data.registrationId,
+    ...(receiptWarning !== undefined ? { receiptWarning } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -104,7 +104,18 @@ async function createFixtureRegistration(
 }
 
 async function cleanupFixture(eventId: string): Promise<void> {
+  // Receipt は eventRegistration に Restrict のため先に外す。
   // registration → ticket → event の順で削除 (slot は event.delete() の cascade に任せる)。
+  const registrations = await prisma.eventRegistration.findMany({
+    where: { eventId },
+    select: { id: true },
+  });
+  const registrationIds = registrations.map((row) => row.id);
+  if (registrationIds.length > 0) {
+    await prisma.receipt.deleteMany({
+      where: { eventRegistrationId: { in: registrationIds } },
+    });
+  }
   await prisma.eventRegistration.deleteMany({ where: { eventId } });
   await prisma.eventTicket.deleteMany({ where: { eventId } });
   await prisma.event.delete({ where: { id: eventId } });
@@ -145,6 +156,7 @@ describeMaybe("recordManualEventPaymentCommand", () => {
         amount: 1000,
       });
       expect(result.registrationId).toBe(registrationId);
+      expect(result.receiptWarning).toBeUndefined();
 
       const updated = await prisma.eventRegistration.findUniqueOrThrow({
         where: { id: registrationId },
@@ -152,6 +164,12 @@ describeMaybe("recordManualEventPaymentCommand", () => {
       expect(updated.paymentStatus).toBe("PAID");
       expect(updated.paidAmount).toBe(1000);
       expect(updated.paidAt).not.toBeNull();
+
+      const receipt = await prisma.receipt.findUnique({
+        where: { eventRegistrationId: registrationId },
+      });
+      expect(receipt).not.toBeNull();
+      expect(receipt?.amount).toBe(1000);
     } finally {
       await cleanupFixture(fixture.eventId);
     }

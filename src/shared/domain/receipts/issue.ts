@@ -136,9 +136,15 @@ function isUniqueConstraintError(error: unknown): boolean {
  * - "seed": prisma/seed.ts のデモデータ生成 (dev 用、prod では実行されない)
  * - "e2e-fixture": E2E fixture 生成 (`scripts/e2e/create-receipt-download-fixture.ts`)
  * - "admin": 管理画面から手動発行 (現状未実装、将来的な UI 用に予約)
+ * - "manual-payment": 管理画面の手動入金記録 (UNPAID→PAID) 直後の自動発行
  */
 export type ReceiptIssueSource =
-  "stripe-webhook" | "backfill-cron" | "seed" | "e2e-fixture" | "admin";
+  | "stripe-webhook"
+  | "backfill-cron"
+  | "seed"
+  | "e2e-fixture"
+  | "admin"
+  | "manual-payment";
 
 /**
  * 発行成功 (新規 create) の AuditLog を fire-and-forget で記録する。
