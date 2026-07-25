@@ -51,13 +51,13 @@ export function installJSDOMForTests(): void {
 
   // conform の getFormAction が bare `location` を参照するため global へ載せる
   // (form.insert/remove の submit 経路で必要)。
-  defineGlobal(globalThis, "location", window.location);
+  defineGlobal(globalThis, "location", window["location"]);
 
   if ("global" in globalThis) {
     const nodeGlobal = globalThis["global"];
     if (typeof nodeGlobal === "object" && nodeGlobal !== null) {
       defineGlobal(nodeGlobal, "window", window);
-      defineGlobal(nodeGlobal, "document", window.document);
+      defineGlobal(nodeGlobal, "document", window["document"]);
       defineGlobal(nodeGlobal, "DOMParser", window.DOMParser);
     }
   }
@@ -70,9 +70,9 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "HTMLTextAreaElement", window.HTMLTextAreaElement);
   defineGlobal(globalThis, "HTMLButtonElement", window.HTMLButtonElement);
   defineGlobal(globalThis, "HTMLFormElement", window.HTMLFormElement);
-  defineGlobal(globalThis, "customElements", window.customElements);
-  defineGlobal(globalThis, "sessionStorage", window.sessionStorage);
-  defineGlobal(globalThis, "localStorage", window.localStorage);
+  defineGlobal(globalThis, "customElements", window["customElements"]);
+  defineGlobal(globalThis, "sessionStorage", window["sessionStorage"]);
+  defineGlobal(globalThis, "localStorage", window["localStorage"]);
 
   // jsdom は HTMLDialogElement.showModal() / close() を未実装。
   // dialog 要素を使うコンポーネントのテストが TypeError で落ちるため polyfill する。
