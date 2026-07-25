@@ -1,7 +1,10 @@
 import type { ReactElement, ReactNode } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { NewsArticleJsonLd } from "@/public/components/seo/json-ld";
+import {
+  BreadcrumbJsonLd,
+  NewsArticleJsonLd,
+} from "@/public/components/seo/json-ld";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { ArticleHeader } from "@/public/components/layouts/article-header";
 import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
@@ -9,6 +12,7 @@ import {
   generateArticleMetadata,
   getSeoSettings,
 } from "@/public/lib/seo/metadata-factory";
+import { getOrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import { Prose } from "@/public/components/design-system/prose";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
@@ -71,9 +75,10 @@ export async function NewsDetailPageContent({
 }): Promise<ReactElement> {
   await connection();
 
-  const [siteLayout, sidebarSettings] = await Promise.all([
+  const [siteLayout, sidebarSettings, organization] = await Promise.all([
     getSiteLayoutSettings(),
     getSidebarSettings(),
+    getOrganizationJsonLdData(),
   ]);
   // 個別 contentWidth は newsItem 本体（getPublishedNewsItem）由来で、編集時に
   // お知らせキャッシュタグで無効化される。別 cached source を持たず純関数でマージする。
@@ -93,50 +98,60 @@ export async function NewsDetailPageContent({
   const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 
   return (
-    <ArticleLayout
-      {...(banner !== undefined && { banner })}
-      jsonLd={
-        <NewsArticleJsonLd
-          headline={newsItem.title}
-          description={newsItem.metaDescription ?? newsItem.title}
-          {...(newsItem.ogpImageUrl != null
-            ? { image: newsItem.ogpImageUrl }
-            : {})}
-          url={articleUrl}
-          datePublished={datePublished}
-        />
-      }
-      breadcrumb={[
-        { label: "お知らせ", href: "/news" },
-        { label: newsItem.title },
-      ]}
-      contentWidth={layoutConfig.contentWidth}
-      contentWidthCustom={layoutConfig.contentWidthCustom}
-      heroPosition="in-grid"
-      hero={
-        <ArticleHeader
-          eyebrow="News"
-          title={newsItem.title}
-          meta={
-            datePublished ? (
-              <time dateTime={datePublished}>
-                {formatSerializedDate(datePublished)}
-              </time>
-            ) : null
-          }
-        />
-      }
-      {...(showToc && {
-        toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
-        mobileToc: (
-          <ArticleTableOfContents variant="mobile" headings={headings} />
-        ),
-      })}
-    >
-      <Prose variant="editorial" className="max-w-none">
-        <SanitizedHtml html={resolvedContentHtml} />
-      </Prose>
-      <ArticleFooter url={articleUrl} title={newsItem.title} />
-    </ArticleLayout>
+    <>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "お知らせ", url: `${baseUrl}/news` },
+          { name: newsItem.title, url: articleUrl },
+        ]}
+      />
+      <ArticleLayout
+        {...(banner !== undefined && { banner })}
+        jsonLd={
+          <NewsArticleJsonLd
+            headline={newsItem.title}
+            description={newsItem.metaDescription ?? newsItem.title}
+            {...(newsItem.ogpImageUrl != null
+              ? { image: newsItem.ogpImageUrl }
+              : {})}
+            url={articleUrl}
+            datePublished={datePublished}
+            publisherName={organization.name}
+            publisherUrl={organization.url}
+          />
+        }
+        breadcrumb={[
+          { label: "お知らせ", href: "/news" },
+          { label: newsItem.title },
+        ]}
+        contentWidth={layoutConfig.contentWidth}
+        contentWidthCustom={layoutConfig.contentWidthCustom}
+        heroPosition="in-grid"
+        hero={
+          <ArticleHeader
+            eyebrow="News"
+            title={newsItem.title}
+            meta={
+              datePublished ? (
+                <time dateTime={datePublished}>
+                  {formatSerializedDate(datePublished)}
+                </time>
+              ) : null
+            }
+          />
+        }
+        {...(showToc && {
+          toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
+          mobileToc: (
+            <ArticleTableOfContents variant="mobile" headings={headings} />
+          ),
+        })}
+      >
+        <Prose variant="editorial" className="max-w-none">
+          <SanitizedHtml html={resolvedContentHtml} />
+        </Prose>
+        <ArticleFooter url={articleUrl} title={newsItem.title} />
+      </ArticleLayout>
+    </>
   );
 }

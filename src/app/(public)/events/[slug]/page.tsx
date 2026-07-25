@@ -37,6 +37,7 @@ import { requireFeatureEnabled } from "@/shared/lib/features/check";
 import {
   generateArticleMetadata,
   getSeoSettings,
+  resolveSiteBranding,
 } from "@/public/lib/seo/metadata-factory";
 import {
   EventInfoPanel,
@@ -84,7 +85,7 @@ export async function generateMetadata({
       description: event.metaDescription ?? fallbackDescription,
       image: event.ogpImageUrl ?? event.thumbnailUrl,
       ogpTitle: event.ogpTitle,
-      ogpDescription: event.ogpDescription ?? fallbackDescription,
+      ogpDescription: event.ogpDescription,
       metaKeywords: event.metaKeywords,
     },
     settings,
@@ -108,13 +109,15 @@ export default async function EventDetailPage({
     notFound();
   }
 
-  const [slotInventory, turnstileSiteKey, requiredTerms, user] =
+  const [slotInventory, turnstileSiteKey, requiredTerms, user, seoSettings] =
     await Promise.all([
       getSlotRegistrationCounts(event.id),
       getTurnstileSiteKey(),
       getRequiredTermsByScope(TermsScope.EVENT_REGISTRATION),
       getCurrentCustomerUser(),
+      getSeoSettings(),
     ]);
+  const { siteName } = resolveSiteBranding(seoSettings);
 
   const slotOptions = buildCurrentPublicEventSlotOptions({
     slots: slotInventory,
@@ -224,6 +227,7 @@ export default async function EventDetailPage({
             {...(event.thumbnailUrl ? { image: event.thumbnailUrl } : {})}
             eventStatus="EventScheduled"
             format={event.format}
+            organizerName={siteName}
             {...(venueName
               ? {
                   venue: {

@@ -51,6 +51,7 @@ export async function generateMetadata({
     settings,
     {
       canonicalUrl: `${getBaseUrl()}${buildCategoryPath(category.slug)}`,
+      ogType: "website",
     },
   );
 }

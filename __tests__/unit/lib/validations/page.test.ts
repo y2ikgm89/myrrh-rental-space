@@ -14,6 +14,7 @@ import {
   SYSTEM_PAGES,
   SYSTEM_PAGE_SLUGS,
 } from "@/shared/lib/validations/page";
+import { SEO_LIMITS } from "@/shared/lib/validations/seo";
 
 // 有効なSEO更新データ
 const VALID_SEO_INPUT = {
@@ -102,27 +103,31 @@ describe("updatePageSeoSchema", () => {
   });
 
   describe("metaKeywords", () => {
-    test("200文字超過はエラー", () => {
+    test(`${SEO_LIMITS.META_KEYWORDS}文字超過はエラー`, () => {
       const result = updatePageSeoSchema.safeParse({
         ...VALID_SEO_INPUT,
-        metaKeywords: "あ".repeat(201),
+        metaKeywords: "あ".repeat(SEO_LIMITS.META_KEYWORDS + 1),
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("200文字以内");
+        expect(result.error.issues[0].message).toContain(
+          `${SEO_LIMITS.META_KEYWORDS}文字以内`,
+        );
       }
     });
   });
 
   describe("ogpTitle", () => {
-    test("100文字超過はエラー", () => {
+    test(`${SEO_LIMITS.OGP_TITLE}文字超過はエラー`, () => {
       const result = updatePageSeoSchema.safeParse({
         ...VALID_SEO_INPUT,
-        ogpTitle: "あ".repeat(101),
+        ogpTitle: "あ".repeat(SEO_LIMITS.OGP_TITLE + 1),
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("100文字以内");
+        expect(result.error.issues[0].message).toContain(
+          `${SEO_LIMITS.OGP_TITLE}文字以内`,
+        );
       }
     });
   });

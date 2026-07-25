@@ -51,6 +51,7 @@ export async function generateMetadata({
     settings,
     {
       canonicalUrl: `${getBaseUrl()}${buildTagPath(tag.slug)}`,
+      ogType: "website",
     },
   );
 }

@@ -10,7 +10,7 @@
 
 /* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */
 import type { ReactElement } from "react";
-import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { getBaseUrl } from "@/shared/lib/constants";
 import { escapeJsonForScriptTag } from "@/shared/lib/json-ld-escape";
 import type { OrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import type { LocationLocalBusinessJsonLdData } from "@/public/lib/seo/location-json-ld";
@@ -19,11 +19,15 @@ import type { LocationLocalBusinessJsonLdData } from "@/public/lib/seo/location-
 // Types
 // =============================================================================
 
+/** UN/CEFACT common code for hour — hourly rental rate. */
+const UNIT_CODE_HOUR = "HUR";
+
 interface ProductData {
   name: string;
   description: string;
   image: string;
   url: string;
+  /** Hourly rate; emitted as UnitPriceSpecification (unitCode HUR), not a one-shot Offer.price. */
   offers: {
     price: number;
     priceCurrency?: string;
@@ -37,6 +41,11 @@ interface ProductData {
   };
 }
 
+interface ArticlePublisher {
+  name: string;
+  url?: string;
+}
+
 interface ArticleData {
   headline: string;
   description: string;
@@ -44,6 +53,9 @@ interface ArticleData {
   url: string;
   datePublished: string;
   dateModified?: string;
+  /** Required — Settings businessName/siteName (not SITE_DEFAULTS). */
+  publisherName: string;
+  publisherUrl?: string;
   author?: {
     name: string;
     url?: string;
@@ -105,10 +117,12 @@ function buildOrganizationData(
     "@type": "Organization",
     "@id": org.id ?? org["@id"] ?? `${org.url}/#organization`,
     name: org.name,
+    ...(org.alternateName && { alternateName: org.alternateName }),
     ...(org.description && { description: org.description }),
     url: org.url,
     ...(org.logo && { logo: org.logo }),
     ...(org.telephone && { telephone: org.telephone }),
+    ...(org.faxNumber && { faxNumber: org.faxNumber }),
     ...(org.email && { email: org.email }),
     ...(org.address && {
       address: {
@@ -201,10 +215,13 @@ export function LocationsLocalBusinessJsonLd({
  * Product構造化データ（スペース詳細ページ向け）
  *
  * Google リッチリザルト対応:
- * - offers: 必須（price + priceCurrency）
+ * - offers.priceSpecification: 時間単価（UnitPriceSpecification + unitCode HUR）
  * - aggregateRating: レビュー1件以上で出力（星評価リッチリザルト）
  *
+ * 時間貸しのため bare Offer.price（一括購入価格）は使わない。
+ *
  * @see https://developers.google.com/search/docs/appearance/structured-data/product
+ * @see https://schema.org/UnitPriceSpecification
  */
 export function ProductJsonLd({
   name,
@@ -214,6 +231,7 @@ export function ProductJsonLd({
   offers,
   aggregateRating,
 }: ProductData): ReactElement {
+  const priceCurrency = offers.priceCurrency || "JPY";
   const data = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -223,9 +241,14 @@ export function ProductJsonLd({
     url,
     offers: {
       "@type": "Offer",
-      price: offers.price,
-      priceCurrency: offers.priceCurrency || "JPY",
+      priceCurrency,
       availability: offers.availability || "https://schema.org/InStock",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: offers.price,
+        priceCurrency,
+        unitCode: UNIT_CODE_HOUR,
+      },
     },
     ...(aggregateRating &&
       aggregateRating.reviewCount > 0 && {
@@ -242,8 +265,19 @@ export function ProductJsonLd({
   return <JsonLd data={data} />;
 }
 
+function buildPublisher(publisher: ArticlePublisher): Record<string, unknown> {
+  return {
+    "@type": "Organization",
+    name: publisher.name,
+    ...(publisher.url && { url: publisher.url }),
+  };
+}
+
 /**
  * Article構造化データ（ブログ記事向け）
+ *
+ * publisher は Settings（businessName / siteName）由来を必須 props で受け取る。
+ * SITE_DEFAULTS への暗黙フォールバックはしない（call site 側で解決）。
  */
 export function ArticleJsonLd({
   headline,
@@ -252,9 +286,10 @@ export function ArticleJsonLd({
   url,
   datePublished,
   dateModified,
+  publisherName,
+  publisherUrl,
   author,
 }: ArticleData): ReactElement {
-  const baseUrl = getBaseUrl();
   const data = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -271,11 +306,10 @@ export function ArticleJsonLd({
         ...(author.url && { url: author.url }),
       },
     }),
-    publisher: {
-      "@type": "Organization",
-      name: SITE_DEFAULTS.name,
-      url: baseUrl,
-    },
+    publisher: buildPublisher({
+      name: publisherName,
+      ...(publisherUrl !== undefined && { url: publisherUrl }),
+    }),
   };
 
   return <JsonLd data={data} />;
@@ -283,6 +317,8 @@ export function ArticleJsonLd({
 
 /**
  * NewsArticle構造化データ（ニュース記事向け）
+ *
+ * publisher は Settings（businessName / siteName）由来を必須 props で受け取る。
  */
 export function NewsArticleJsonLd({
   headline,
@@ -291,8 +327,9 @@ export function NewsArticleJsonLd({
   url,
   datePublished,
   dateModified,
+  publisherName,
+  publisherUrl,
 }: Omit<ArticleData, "author">): ReactElement {
-  const baseUrl = getBaseUrl();
   const data = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -302,11 +339,10 @@ export function NewsArticleJsonLd({
     url,
     datePublished,
     dateModified: dateModified || datePublished,
-    publisher: {
-      "@type": "Organization",
-      name: SITE_DEFAULTS.name,
-      url: baseUrl,
-    },
+    publisher: buildPublisher({
+      name: publisherName,
+      ...(publisherUrl !== undefined && { url: publisherUrl }),
+    }),
   };
 
   return <JsonLd data={data} />;
@@ -357,6 +393,9 @@ export function FAQPageJsonLd({ items }: { items: FAQItem[] }): ReactElement {
 
 /**
  * WebSite構造化データ（サイト全体）
+ *
+ * 通常は root layout の GraphJsonLd が Organization + WebSite を発行する。
+ * 単独 WebSite が必要な場合のみ利用する（home では重複させない）。
  */
 export function WebSiteJsonLd({
   name,

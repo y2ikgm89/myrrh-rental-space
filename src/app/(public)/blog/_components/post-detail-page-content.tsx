@@ -14,6 +14,7 @@ import {
   generateArticleMetadata,
   getSeoSettings,
 } from "@/public/lib/seo/metadata-factory";
+import { getOrganizationJsonLdData } from "@/public/lib/seo/json-ld-config";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { resolveInternalLinkCards } from "@/shared/lib/lexical/resolve-internal-link-cards";
 import { resolveSpaceCardEmbeds } from "@/shared/lib/lexical/resolve-space-card-embeds";
@@ -73,9 +74,10 @@ export async function PostDetailPageContent({
 }): Promise<ReactElement> {
   await connection();
 
-  const [siteLayout, sidebarSettings] = await Promise.all([
+  const [siteLayout, sidebarSettings, organization] = await Promise.all([
     getSiteLayoutSettings(),
     getSidebarSettings(),
+    getOrganizationJsonLdData(),
   ]);
   // 個別 contentWidth は post 本体（getPublishedPost）由来で、post 編集時に
   // 記事キャッシュタグで無効化される。別 cached source を持たず純関数でマージする。
@@ -108,9 +110,11 @@ export async function PostDetailPageContent({
           <ArticleJsonLd
             headline={post.title}
             description={post.metaDescription ?? post.excerpt}
-            image={post.thumbnailUrl}
+            {...(post.thumbnailUrl != null ? { image: post.thumbnailUrl } : {})}
             url={articleUrl}
             datePublished={datePublished}
+            publisherName={organization.name}
+            publisherUrl={organization.url}
             {...(post.author ? { author: { name: post.author.name } } : {})}
           />
         }

@@ -14,21 +14,23 @@ describe("EVENT_FORMAT", () => {
 });
 
 describe("EVENT_FORMAT_TO_SCHEMA_ORG", () => {
-  test("schema.org eventAttendanceMode と 1:1 mapping", () => {
+  test("schema.org eventAttendanceMode と 1:1 mapping (full URL)", () => {
     expect(EVENT_FORMAT_TO_SCHEMA_ORG[EVENT_FORMAT.OFFLINE]).toBe(
-      "OfflineEventAttendanceMode",
+      "https://schema.org/OfflineEventAttendanceMode",
     );
     expect(EVENT_FORMAT_TO_SCHEMA_ORG[EVENT_FORMAT.ONLINE]).toBe(
-      "OnlineEventAttendanceMode",
+      "https://schema.org/OnlineEventAttendanceMode",
     );
     expect(EVENT_FORMAT_TO_SCHEMA_ORG[EVENT_FORMAT.HYBRID]).toBe(
-      "MixedEventAttendanceMode",
+      "https://schema.org/MixedEventAttendanceMode",
     );
   });
 
-  test("全 EVENT_FORMAT 値が mapping に含まれる", () => {
+  test("全 EVENT_FORMAT 値が mapping に含まれ、値が schema.org URL である", () => {
     for (const value of EVENT_FORMAT_VALUES) {
-      expect(EVENT_FORMAT_TO_SCHEMA_ORG[value]).toBeString();
+      const mapped = EVENT_FORMAT_TO_SCHEMA_ORG[value];
+      expect(mapped).toBeString();
+      expect(mapped.startsWith("https://schema.org/")).toBe(true);
     }
   });
 });

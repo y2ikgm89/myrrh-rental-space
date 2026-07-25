@@ -9,9 +9,11 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import { getPosts, getPostCategories, getPostTags } from "@/admin/queries/post";
+import { getPageBySlug } from "@/admin/queries/pages";
 import { PostFilters } from "./_components/PostFilters";
 import { PostTable } from "./_components/PostTable";
 import { PostsManagementTabs } from "./_components/PostsManagementTabs";
+import { ListPageSeoForm } from "@/admin/components/ListPageSeoForm";
 import { CategoryManager } from "./taxonomy/_components/CategoryManager";
 import { TagManager } from "./taxonomy/_components/TagManager";
 import { Pagination, Button } from "@/admin/components/ui";
@@ -104,11 +106,44 @@ async function TagContent({ allowCreate }: { allowCreate: boolean }) {
 }
 
 // ==============================================================================
+// SEOタブのコンポーネント
+// ==============================================================================
+
+async function SeoContent() {
+  await connection();
+  const page = await getPageBySlug("blog");
+
+  if (!page) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">
+        ブログページのメタ情報が見つかりません。
+        <br />
+        シードデータを再実行するか、管理者にお問い合わせください。
+      </div>
+    );
+  }
+
+  return (
+    <ListPageSeoForm
+      slug="blog"
+      seoData={{
+        title: page.title,
+        metaDescription: page.metaDescription,
+        metaKeywords: page.metaKeywords,
+        ogpTitle: page.ogpTitle,
+        ogpDescription: page.ogpDescription,
+        ogpImageUrl: page.ogpImageUrl,
+      }}
+    />
+  );
+}
+
+// ==============================================================================
 // タブパネル（アクティブタブのみ描画）
 // ==============================================================================
 
 function tabPanel(
-  tab: "posts" | "categories" | "tags",
+  tab: "posts" | "categories" | "tags" | "meta",
   searchParams: SearchParams,
   allowCreate: boolean,
 ) {
@@ -134,6 +169,12 @@ function tabPanel(
       return (
         <Suspense fallback={<LoadingState />}>
           <TagContent allowCreate={allowCreate} />
+        </Suspense>
+      );
+    case "meta":
+      return (
+        <Suspense fallback={<LoadingState />}>
+          <SeoContent />
         </Suspense>
       );
   }

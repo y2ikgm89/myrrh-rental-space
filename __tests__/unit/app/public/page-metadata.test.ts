@@ -134,3 +134,60 @@ describe("generatePageMetadata — description fallback", () => {
     expect(metadata.description).toBe(SITE_DEFAULTS.description);
   });
 });
+
+describe("generatePageMetadata — home title", () => {
+  beforeEach(() => {
+    mockGetPageSeo.mockReset();
+    mockGetPageSeo.mockResolvedValue(null);
+    mockIsPublicPageUnpublished.mockReset();
+    mockIsPublicPageUnpublished.mockResolvedValue(false);
+    mockGetSeoSettings.mockReset();
+    mockGetSeoSettings.mockResolvedValue({
+      siteName: "Custom Site",
+      siteDescription: "Settings site description",
+      defaultMetaDescription: null,
+      defaultOgpImageUrl: null,
+      defaultMetaKeywords: null,
+      defaultOgpTitle: null,
+      defaultOgpDescription: null,
+    });
+  });
+
+  test("DB title 欠落 → absolute siteName（弱い「ホームページ | site」を避ける）", async () => {
+    mockGetPageSeo.mockResolvedValue(null);
+
+    const metadata = await generatePageMetadata("home");
+
+    expect(metadata.title).toEqual({ absolute: "Custom Site" });
+  });
+
+  test("DB title がシステム既定「ホームページ」→ absolute siteName", async () => {
+    mockGetPageSeo.mockResolvedValue({
+      title: "ホームページ",
+      metaDescription: null,
+      metaKeywords: null,
+      ogpTitle: null,
+      ogpDescription: null,
+      ogpImageUrl: null,
+    });
+
+    const metadata = await generatePageMetadata("home");
+
+    expect(metadata.title).toEqual({ absolute: "Custom Site" });
+  });
+
+  test("カスタム DB title → absolute でそのまま使う", async () => {
+    mockGetPageSeo.mockResolvedValue({
+      title: "レンタルスペース Myrrh",
+      metaDescription: null,
+      metaKeywords: null,
+      ogpTitle: null,
+      ogpDescription: null,
+      ogpImageUrl: null,
+    });
+
+    const metadata = await generatePageMetadata("home");
+
+    expect(metadata.title).toEqual({ absolute: "レンタルスペース Myrrh" });
+  });
+});

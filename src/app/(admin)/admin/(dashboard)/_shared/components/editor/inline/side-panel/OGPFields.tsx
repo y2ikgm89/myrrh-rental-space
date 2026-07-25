@@ -55,7 +55,7 @@ export function OGPFields({
         <Label htmlFor={ogpTitleField.id}>OGPタイトル</Label>
         <Input
           {...getInputProps(ogpTitleField, { type: "text" })}
-          placeholder="SNSシェア時のタイトル（100文字以内推奨）"
+          placeholder="SNSシェア時のタイトル（70文字以内推奨）"
           disabled={disabled}
         />
         {ogpTitleError && (
@@ -99,16 +99,29 @@ export function OGPFields({
             </div>
           )}
           <div className="flex-1 space-y-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => ogpPicker.openPicker()}
-              disabled={disabled}
-            >
-              <IconPhotoPlus className="mr-1 h-3 w-3" />
-              選択
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => ogpPicker.openPicker()}
+                disabled={disabled}
+              >
+                <IconPhotoPlus className="mr-1 h-3 w-3" />
+                選択
+              </Button>
+              {ogpImageUrlStr ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => ogpImageControl.change("")}
+                  disabled={disabled}
+                >
+                  削除
+                </Button>
+              ) : null}
+            </div>
             {ogpImageUrlStr && (
               <p className="truncate text-xs text-muted-foreground">
                 {ogpImageUrlStr}

@@ -24,6 +24,27 @@ function truncate(text: string, limit: number): string {
   return `${text.slice(0, limit)}...`;
 }
 
+/**
+ * 最終表示タイトルを 60 文字以内に収める。
+ * サイト名サフィックスは可能な限り残し、余白でタイトル側を切り詰める。
+ */
+function formatSerpTitle(title: string, siteName: string): string {
+  if (!title) {
+    return truncate(siteName, TITLE_DISPLAY_LIMIT);
+  }
+  const suffix = ` | ${siteName}`;
+  const full = `${title}${suffix}`;
+  if (full.length <= TITLE_DISPLAY_LIMIT) {
+    return full;
+  }
+  const ellipsis = "...";
+  const titleBudget = TITLE_DISPLAY_LIMIT - suffix.length - ellipsis.length;
+  if (titleBudget <= 0) {
+    return truncate(full, TITLE_DISPLAY_LIMIT);
+  }
+  return `${title.slice(0, titleBudget)}${ellipsis}${suffix}`;
+}
+
 export function SerpPreview({
   title,
   description,
@@ -32,9 +53,7 @@ export function SerpPreview({
 }: SerpPreviewProps) {
   const baseUrl = getBaseUrl();
   const displaySiteName = siteName || SITE_DEFAULTS.name;
-  const fullTitle = title
-    ? `${truncate(title, TITLE_DISPLAY_LIMIT)} | ${displaySiteName}`
-    : displaySiteName;
+  const fullTitle = formatSerpTitle(title, displaySiteName);
 
   // URL表示: 'home' はルート、それ以外は breadcrumb 形式
   const displayUrl = slug === "home" ? baseUrl : `${displaySiteName} › ${slug}`;
