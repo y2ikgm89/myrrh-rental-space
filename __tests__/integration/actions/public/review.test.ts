@@ -41,6 +41,11 @@ mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
 }));
 
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  checkPublicSiteWritable: mock(() => Promise.resolve({ ok: true as const })),
+  getPublicMaintenanceBlockMutation: mock(() => Promise.resolve(null)),
+}));
+
 const mockGetSession = mock<
   () => Promise<{ user: { id: string; role: string; name: string } } | null>
 >(() =>

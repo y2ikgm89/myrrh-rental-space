@@ -162,7 +162,9 @@ export async function getMaintenanceSettings() {
       });
       return settings ?? { maintenanceMode: false, maintenanceMessage: null };
     },
-    fallback: { maintenanceMode: false, maintenanceMessage: null },
+    // SYS-4 fail-closed: 状態を確定できないときは maintenance ON 扱いにし、
+    // HTML gate + Server Action / API ガードの両方で書込みを止める。
+    fallback: { maintenanceMode: true, maintenanceMessage: null },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.HIGH,
     operationName: "getMaintenanceSettings",

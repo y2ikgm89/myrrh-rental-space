@@ -21,6 +21,7 @@ import {
   encodeSignupTermsCookie,
 } from "@/shared/lib/signup-terms-cookie";
 import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
+import { getPublicMaintenanceBlockMutation } from "@/shared/lib/maintenance-guard";
 
 const inputSchema = z.object({
   termsIds: z
@@ -45,6 +46,9 @@ export async function setSignupTermsAgreementCookie(input: {
   termsIds: readonly string[];
   turnstileToken?: string;
 }): Promise<MutationResult<{ ok: true }>> {
+  const maintenanceBlock = await getPublicMaintenanceBlockMutation();
+  if (maintenanceBlock) return maintenanceBlock;
+
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
 

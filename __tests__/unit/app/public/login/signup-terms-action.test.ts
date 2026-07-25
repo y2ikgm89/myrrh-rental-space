@@ -1,5 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import type { MutationError } from "@/shared/lib/mutation-result";
 
 mock.module("server-only", () => ({}));
 
@@ -62,12 +63,21 @@ mock.module("@/shared/lib/validations/enums/prisma-types", () => ({
   },
 }));
 
+const mockGetPublicMaintenanceBlockMutation = mock(
+  (): Promise<MutationError | null> => Promise.resolve(null),
+);
+
+mock.module("@/shared/lib/maintenance-guard", () => ({
+  getPublicMaintenanceBlockMutation: mockGetPublicMaintenanceBlockMutation,
+}));
+
 describe("setSignupTermsAgreementCookie", () => {
   beforeEach(() => {
     mockCookieSet.mockClear();
     mockCheckActionRateLimit.mockClear();
     mockValidateTurnstile.mockClear();
     mockAssertAllRequiredTermsAgreed.mockClear();
+    mockGetPublicMaintenanceBlockMutation.mockClear();
 
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true }),
@@ -77,6 +87,9 @@ describe("setSignupTermsAgreementCookie", () => {
     );
     mockAssertAllRequiredTermsAgreed.mockImplementation(() =>
       Promise.resolve({ matchedTermsIds: [TERMS_ID_A] }),
+    );
+    mockGetPublicMaintenanceBlockMutation.mockImplementation(() =>
+      Promise.resolve(null),
     );
   });
 
@@ -116,5 +129,31 @@ describe("setSignupTermsAgreementCookie", () => {
       error: "すべての必須規約への同意が必要です",
     });
     expect(mockCookieSet).not.toHaveBeenCalled();
+  });
+
+  test("maintenance ON のとき cookie を保存せず MAINTENANCE を返す", async () => {
+    mockGetPublicMaintenanceBlockMutation.mockImplementation(() =>
+      Promise.resolve({
+        error:
+          "只今メンテナンス中のため、操作を受け付けておりません。しばらくお待ちください。",
+        code: "MAINTENANCE",
+      }),
+    );
+
+    const { setSignupTermsAgreementCookie } =
+      await import("@/app/(public)/login/_components/signup-terms-action");
+
+    const result = await setSignupTermsAgreementCookie({
+      termsIds: [TERMS_ID_A],
+      turnstileToken: "token",
+    });
+
+    expect(result).toEqual({
+      error:
+        "只今メンテナンス中のため、操作を受け付けておりません。しばらくお待ちください。",
+      code: "MAINTENANCE",
+    });
+    expect(mockCookieSet).not.toHaveBeenCalled();
+    expect(mockCheckActionRateLimit).not.toHaveBeenCalled();
   });
 });
