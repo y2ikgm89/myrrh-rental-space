@@ -22,6 +22,18 @@ const mockSettingsSeoFindFirst = mock<
 const mockTermsFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
+const mockLocationFindFirst = mock<
+  () => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+const mockPageFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
+  () => Promise.resolve(null),
+);
+const mockPostCategoryFindFirst = mock<
+  () => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+const mockPostTagFindFirst = mock<
+  () => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
 
 mock.module("server-only", () => ({}));
 
@@ -34,6 +46,10 @@ mock.module("@/shared/db/prisma", () => ({
     section: { findFirst: mockSectionFindFirst },
     settingsSeo: { findFirst: mockSettingsSeoFindFirst },
     termsDocument: { findFirst: mockTermsFindFirst },
+    location: { findFirst: mockLocationFindFirst },
+    page: { findFirst: mockPageFindFirst },
+    postCategory: { findFirst: mockPostCategoryFindFirst },
+    postTag: { findFirst: mockPostTagFindFirst },
   },
 }));
 
@@ -42,23 +58,35 @@ const { findMediaUrlUsages, assertMediaUrlNotInUse } =
 
 const MEDIA_URL = "https://media.example.com/media/hero.jpg";
 
+function resetAllMocks(): void {
+  mockPostFindFirst.mockReset();
+  mockNewsFindFirst.mockReset();
+  mockSpaceFindFirst.mockReset();
+  mockEventFindFirst.mockReset();
+  mockSectionFindFirst.mockReset();
+  mockSettingsSeoFindFirst.mockReset();
+  mockTermsFindFirst.mockReset();
+  mockLocationFindFirst.mockReset();
+  mockPageFindFirst.mockReset();
+  mockPostCategoryFindFirst.mockReset();
+  mockPostTagFindFirst.mockReset();
+
+  mockPostFindFirst.mockResolvedValue(null);
+  mockNewsFindFirst.mockResolvedValue(null);
+  mockSpaceFindFirst.mockResolvedValue(null);
+  mockEventFindFirst.mockResolvedValue(null);
+  mockSectionFindFirst.mockResolvedValue(null);
+  mockSettingsSeoFindFirst.mockResolvedValue(null);
+  mockTermsFindFirst.mockResolvedValue(null);
+  mockLocationFindFirst.mockResolvedValue(null);
+  mockPageFindFirst.mockResolvedValue(null);
+  mockPostCategoryFindFirst.mockResolvedValue(null);
+  mockPostTagFindFirst.mockResolvedValue(null);
+}
+
 describe("findMediaUrlUsages", () => {
   beforeEach(() => {
-    mockPostFindFirst.mockReset();
-    mockNewsFindFirst.mockReset();
-    mockSpaceFindFirst.mockReset();
-    mockEventFindFirst.mockReset();
-    mockSectionFindFirst.mockReset();
-    mockSettingsSeoFindFirst.mockReset();
-    mockTermsFindFirst.mockReset();
-
-    mockPostFindFirst.mockResolvedValue(null);
-    mockNewsFindFirst.mockResolvedValue(null);
-    mockSpaceFindFirst.mockResolvedValue(null);
-    mockEventFindFirst.mockResolvedValue(null);
-    mockSectionFindFirst.mockResolvedValue(null);
-    mockSettingsSeoFindFirst.mockResolvedValue(null);
-    mockTermsFindFirst.mockResolvedValue(null);
+    resetAllMocks();
   });
 
   test("空文字は空配列を返す", async () => {
@@ -86,6 +114,20 @@ describe("findMediaUrlUsages", () => {
     expect(labels).toContain("セクション");
   });
 
+  test("会場・ページ OGP・タクソノミー OGP も検出する", async () => {
+    mockLocationFindFirst.mockResolvedValueOnce({ name: "本館" });
+    mockPageFindFirst.mockResolvedValueOnce({ slug: "about" });
+    mockPostCategoryFindFirst.mockResolvedValueOnce({ slug: "news" });
+    mockPostTagFindFirst.mockResolvedValueOnce({ slug: "promo" });
+
+    const labels = await findMediaUrlUsages(MEDIA_URL);
+
+    expect(labels).toContain("会場: 本館");
+    expect(labels).toContain("ページ OGP: about");
+    expect(labels).toContain("投稿カテゴリ: news");
+    expect(labels).toContain("投稿タグ: promo");
+  });
+
   test("ラベルは最大 5 件に制限される", async () => {
     mockPostFindFirst
       .mockResolvedValueOnce({ slug: "p1" })
@@ -109,21 +151,7 @@ describe("findMediaUrlUsages", () => {
 
 describe("assertMediaUrlNotInUse", () => {
   beforeEach(() => {
-    mockPostFindFirst.mockReset();
-    mockNewsFindFirst.mockReset();
-    mockSpaceFindFirst.mockReset();
-    mockEventFindFirst.mockReset();
-    mockSectionFindFirst.mockReset();
-    mockSettingsSeoFindFirst.mockReset();
-    mockTermsFindFirst.mockReset();
-
-    mockPostFindFirst.mockResolvedValue(null);
-    mockNewsFindFirst.mockResolvedValue(null);
-    mockSpaceFindFirst.mockResolvedValue(null);
-    mockEventFindFirst.mockResolvedValue(null);
-    mockSectionFindFirst.mockResolvedValue(null);
-    mockSettingsSeoFindFirst.mockResolvedValue(null);
-    mockTermsFindFirst.mockResolvedValue(null);
+    resetAllMocks();
   });
 
   test("参照なしでは throw しない", async () => {

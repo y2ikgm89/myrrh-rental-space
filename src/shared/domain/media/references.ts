@@ -8,6 +8,9 @@ const USAGE_LABEL_CAP = 5;
 /**
  * メディア URL の参照先を人間可読ラベルで返す（最大 5 件）。
  * 文字列列は exact match、HTML / JSON は contains（`string_contains`）で走査する。
+ *
+ * MediaPicker 経由で URL が入りうる公開面をカバーする（Location / Page OGP /
+ * taxonomy OGP / Lexical JSON 正本を含む）。
  */
 export async function findMediaUrlUsages(url: string): Promise<string[]> {
   if (url.length === 0) return [];
@@ -24,6 +27,10 @@ export async function findMediaUrlUsages(url: string): Promise<string[]> {
     section,
     seo,
     terms,
+    location,
+    page,
+    postCategory,
+    postTag,
   ] = await Promise.all([
     prisma.post.findFirst({
       where: {
@@ -63,6 +70,7 @@ export async function findMediaUrlUsages(url: string): Promise<string[]> {
       where: {
         OR: [
           { descriptionHtml: { contains: url } },
+          { descriptionJson: { string_contains: url } },
           { gallery: { string_contains: url } },
         ],
       },
@@ -80,6 +88,7 @@ export async function findMediaUrlUsages(url: string): Promise<string[]> {
         deletedAt: null,
         OR: [
           { descriptionHtml: { contains: url } },
+          { descriptionJson: { string_contains: url } },
           { gallery: { string_contains: url } },
         ],
       },
@@ -108,6 +117,24 @@ export async function findMediaUrlUsages(url: string): Promise<string[]> {
           { contentJson: { string_contains: url } },
         ],
       },
+      select: { slug: true },
+    }),
+    prisma.location.findFirst({
+      where: {
+        OR: [{ imageUrl: url }, { imageUrls: { string_contains: url } }],
+      },
+      select: { name: true },
+    }),
+    prisma.page.findFirst({
+      where: { ogpImageUrl: url },
+      select: { slug: true },
+    }),
+    prisma.postCategory.findFirst({
+      where: { ogpImageUrl: url },
+      select: { slug: true },
+    }),
+    prisma.postTag.findFirst({
+      where: { ogpImageUrl: url },
       select: { slug: true },
     }),
   ]);
@@ -139,6 +166,10 @@ export async function findMediaUrlUsages(url: string): Promise<string[]> {
   if (section) add("セクション");
   if (seo) add("サイト設定 (SEO)");
   if (terms) add(`規約: ${terms.slug}`);
+  if (location) add(`会場: ${location.name}`);
+  if (page) add(`ページ OGP: ${page.slug}`);
+  if (postCategory) add(`投稿カテゴリ: ${postCategory.slug}`);
+  if (postTag) add(`投稿タグ: ${postTag.slug}`);
 
   return labels.slice(0, USAGE_LABEL_CAP);
 }
