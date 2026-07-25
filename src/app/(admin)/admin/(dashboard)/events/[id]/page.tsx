@@ -25,6 +25,7 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 import { getEventScheduleModeLabel } from "@/shared/domain/events/schedule-mode";
 import { loadAdminEventRegistrationsSearchParams } from "@/shared/lib/nuqs";
 import { hasPermission } from "@/shared/lib/admin-permissions";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import { RegisterParticipantButton } from "./_components/RegisterParticipantButton";
 import type { Metadata } from "next";
@@ -70,16 +71,18 @@ export default async function EventDetailPage({
   const { id } = await params;
   const { page, perPage, search, status } =
     await loadAdminEventRegistrationsSearchParams(searchParams);
-  const [event, registrationPage, waitlistCount] = await Promise.all([
-    getEventById(id),
-    getEventRegistrations(id, {
-      page,
-      perPage,
-      search,
-      ...(status ? { status } : {}),
-    }),
-    getWaitlistQueueCount(id),
-  ]);
+  const [event, registrationPage, waitlistCount, paymentEnabled] =
+    await Promise.all([
+      getEventById(id),
+      getEventRegistrations(id, {
+        page,
+        perPage,
+        search,
+        ...(status ? { status } : {}),
+      }),
+      getWaitlistQueueCount(id),
+      isFeatureEnabled("payment"),
+    ]);
 
   if (!event) {
     notFound();
@@ -300,6 +303,7 @@ export default async function EventDetailPage({
           total={registrationPage.total}
           currentPage={registrationPage.page}
           perPage={registrationPage.perPage}
+          paymentEnabled={paymentEnabled}
         />
       </DetailSection>
     </AdminDetailLayout>
