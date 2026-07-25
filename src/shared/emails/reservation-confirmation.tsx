@@ -1,4 +1,4 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
 import { reservationConfirmationFixture } from "./reservation-confirmation.fixture";
 import { CalendarLinks } from "./_shared/CalendarLinks";
@@ -7,13 +7,17 @@ import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
   SECTION_VARIANT_STYLES,
+  buttonPrimary,
+  buttonSection,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
   linkDangerStyle,
+  linkStyle,
   text,
+  urlFallbackText,
 } from "./_shared/styles";
 
 type Props = {
@@ -30,6 +34,11 @@ type Props = {
   cancelUrl?: string;
   /** 会員向け: ログイン後の予約詳細ページ URL（マイページから取消・変更可能） */
   memberReservationUrl?: string;
+  /**
+   * 予約詳細ハブ URL（会員 mypage / ゲスト status）。
+   * 解錠番号の平文は載せず、再確認はこの URL 先で行う。
+   */
+  bookingHubUrl: string;
   /** ゲスト向け: マイページに予約を追加する claim リンク（会員は表示しない） */
   claimUrl?: string;
   /** キャンセル受付期限の時間数（予約開始の X 時間前まで） */
@@ -38,13 +47,10 @@ type Props = {
   modificationDeadlineHours?: number;
   /** 公開中のキャンセルポリシー規約 URL。無ければ本文はプレーンテキストにフォールバックする */
   cancellationPolicyUrl?: string;
-  /** 予約確定時に発行されたスマートロックの一時パスコード一覧 */
-  smartLockPasscodes?: { deviceName: string; passcode: string }[];
   /**
    * スマートロックのパスコード発行が失敗した際の代替入室手段案内 (PR#12)。
    * true のとき「当日運営までお問い合わせください」の fallback セクションを描画。
-   * smartLockPasscodes を渡さず (発行なし) `smartLockIssuanceFailed=true` を渡すと
-   * 「本来発行される予定だったが失敗した」ケースを明示できる。
+   * 番号自体は出さない。
    */
   smartLockIssuanceFailed?: boolean;
   /**
@@ -71,11 +77,11 @@ export function ReservationConfirmationEmail({
   addToCalendarLinks,
   cancelUrl,
   memberReservationUrl,
+  bookingHubUrl,
   claimUrl,
   cancellationDeadlineHours,
   modificationDeadlineHours,
   cancellationPolicyUrl,
-  smartLockPasscodes,
   smartLockIssuanceFailed,
   smartLockFallbackContact,
   footer,
@@ -131,22 +137,23 @@ export function ReservationConfirmationEmail({
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 
-      {smartLockPasscodes && smartLockPasscodes.length > 0 && (
-        <Section style={detailsSection}>
-          <Text style={detailsHeading}>スマートロック解錠用の暗証番号</Text>
-          <Hr style={hr} />
-          {smartLockPasscodes.map((entry) => (
-            <Text
-              key={`${entry.deviceName}-${entry.passcode}`}
-              style={detailItem}
-            >
-              <strong>{entry.deviceName}:</strong> {entry.passcode}
-            </Text>
-          ))}
-        </Section>
-      )}
+      <Text style={text}>
+        解錠番号や予約内容の詳細は、予約詳細ページからご確認ください。
+      </Text>
+      <Section style={buttonSection}>
+        <Button href={bookingHubUrl} style={buttonPrimary}>
+          予約詳細を確認する
+        </Button>
+      </Section>
+      <Text style={urlFallbackText}>
+        ボタンが動作しない場合は次の URL をブラウザに貼り付けてください:
+        <br />
+        <Link href={bookingHubUrl} style={linkStyle}>
+          {bookingHubUrl}
+        </Link>
+      </Text>
 
-      {/* スマートロック発行失敗時の代替入室手段案内 (PR#12) */}
+      {/* スマートロック発行失敗時の代替入室手段案内 (PR#12) — 番号は出さない */}
       {smartLockIssuanceFailed && (
         <Section
           style={{

@@ -77,10 +77,12 @@ const mockGetReservationDeadlineSettings = mock<
 type ClaimUrlProps = {
   claimUrl?: string;
   memberReservationUrl?: string;
+  bookingHubUrl?: string;
   cancellationPolicyUrl?: string;
   cancellationDeadlineHours?: number;
   modificationDeadlineHours?: number;
   receiptDownloadUrl?: string;
+  smartLockPasscodes?: unknown;
 };
 const mockReservationConfirmationEmail = mock((props: ClaimUrlProps) => props);
 const mockReservationReminderEmail = mock((props: ClaimUrlProps) => props);
@@ -130,18 +132,25 @@ const mockReservationUpdatedEmail = mock((props: ClaimUrlProps) => props);
 mock.module("@/shared/emails/reservation-updated", () => ({
   ReservationUpdatedEmail: mockReservationUpdatedEmail,
 }));
+const mockReservationStatusChangedEmail = mock((props: ClaimUrlProps) => props);
+mock.module("@/shared/emails/reservation-status-changed", () => ({
+  ReservationStatusChangedEmail: mockReservationStatusChangedEmail,
+}));
 
 // eslint-disable-next-line import-x/first -- mock.module must precede imports
 import {
   sendReservationConfirmationEmail,
   sendReservationUpdatedEmail,
   sendReservationCancelledEmail,
+  sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
 import type {
   ReservationEmailData,
   ReminderEmailData,
+  StatusChangeEmailData,
 } from "@/shared/lib/email/types";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const CONFIRMATION_DATA: ReservationEmailData = {
   reservationId: "reservation-abcdef12",
@@ -168,7 +177,21 @@ const REMINDER_DATA: ReminderEmailData = {
 
 const CLAIM_URL_PATTERN = /\/claim\/reservation\?token=[A-Za-z0-9_-]+$/;
 const MEMBER_URL_PATTERN = /\/mypage\/reservations\/reservation-abcdef12$/;
+const GUEST_STATUS_URL_PATTERN = /\/reservation\/status\?token=[A-Za-z0-9_-]+$/;
 const CANCELLATION_POLICY_URL_PATTERN = /\/terms\/cancellation-policy$/;
+
+const STATUS_CHANGED_DATA: StatusChangeEmailData = {
+  reservationId: "reservation-abcdef12",
+  customerEmail: "customer@example.com",
+  customerName: "山田太郎",
+  spaceName: "会議室A",
+  startTime: new Date("2099-01-01T01:00:00Z"),
+  endTime: new Date("2099-01-01T03:00:00Z"),
+  totalPrice: 5000,
+  oldStatus: ReservationStatus.PENDING,
+  newStatus: ReservationStatus.CONFIRMED,
+  icsSequence: 1,
+};
 
 beforeEach(() => {
   mockSendEmail.mockReset();
@@ -181,6 +204,7 @@ beforeEach(() => {
   mockReservationReminderEmail.mockClear();
   mockReservationCancelledEmail.mockClear();
   mockReservationUpdatedEmail.mockClear();
+  mockReservationStatusChangedEmail.mockClear();
   mockGetPublishedTermsByType.mockReset();
   mockGetPublishedTermsByType.mockResolvedValue({
     slug: "cancellation-policy",
@@ -330,6 +354,80 @@ describe("cancellationPolicyUrl の出し分け（公開中のキャンセルポ
 
     const props = mockReservationCancelledEmail.mock.calls.at(-1)?.[0];
     expect(props?.cancellationPolicyUrl).toBeUndefined();
+  });
+});
+
+describe("bookingHubUrl の出し分け（会員 mypage / ゲスト status）", () => {
+  test("confirmation: 会員は mypage、ゲストは status token URL", async () => {
+    await sendReservationConfirmationEmail({
+      ...CONFIRMATION_DATA,
+      userId: "user-1",
+    });
+    expect(
+      mockReservationConfirmationEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
+    ).toMatch(MEMBER_URL_PATTERN);
+
+    await sendReservationConfirmationEmail({
+      ...CONFIRMATION_DATA,
+      userId: null,
+    });
+    expect(
+      mockReservationConfirmationEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
+    ).toMatch(GUEST_STATUS_URL_PATTERN);
+  });
+
+  test("updated: 会員は mypage、ゲストは status token URL", async () => {
+    await sendReservationUpdatedEmail({
+      ...CONFIRMATION_DATA,
+      userId: "user-1",
+    });
+    expect(
+      mockReservationUpdatedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
+    ).toMatch(MEMBER_URL_PATTERN);
+
+    await sendReservationUpdatedEmail({
+      ...CONFIRMATION_DATA,
+      userId: null,
+    });
+    expect(
+      mockReservationUpdatedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
+    ).toMatch(GUEST_STATUS_URL_PATTERN);
+  });
+
+  test("status-changed: 会員は mypage、ゲストは status token URL", async () => {
+    await sendReservationStatusChangedEmail({
+      ...STATUS_CHANGED_DATA,
+      userId: "user-1",
+    });
+    expect(
+      mockReservationStatusChangedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
+    ).toMatch(MEMBER_URL_PATTERN);
+
+    await sendReservationStatusChangedEmail({
+      ...STATUS_CHANGED_DATA,
+      userId: null,
+    });
+    expect(
+      mockReservationStatusChangedEmail.mock.calls.at(-1)?.[0]?.bookingHubUrl,
+    ).toMatch(GUEST_STATUS_URL_PATTERN);
+  });
+});
+
+describe("confirmation/updated/status-changed は smartLockPasscodes を渡さない", () => {
+  test("confirmation / updated / status-changed いずれも smartLockPasscodes を持たない", async () => {
+    await sendReservationConfirmationEmail(CONFIRMATION_DATA);
+    await sendReservationUpdatedEmail(CONFIRMATION_DATA);
+    await sendReservationStatusChangedEmail(STATUS_CHANGED_DATA);
+
+    expect(
+      mockReservationConfirmationEmail.mock.calls.at(-1)?.[0],
+    ).not.toHaveProperty("smartLockPasscodes");
+    expect(
+      mockReservationUpdatedEmail.mock.calls.at(-1)?.[0],
+    ).not.toHaveProperty("smartLockPasscodes");
+    expect(
+      mockReservationStatusChangedEmail.mock.calls.at(-1)?.[0],
+    ).not.toHaveProperty("smartLockPasscodes");
   });
 });
 

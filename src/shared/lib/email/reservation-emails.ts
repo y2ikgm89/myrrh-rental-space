@@ -27,6 +27,10 @@ import {
   computeCancelTokenExpiresAt,
   createCancelToken,
 } from "@/shared/lib/reservation-cancel-token";
+import {
+  createStatusToken,
+  STATUS_TOKEN_LIFETIME_MS,
+} from "@/shared/lib/reservation-status-token";
 import { createCalendarToken } from "@/shared/lib/calendar/calendar-token";
 import {
   formatDateWithWeekday,
@@ -72,6 +76,24 @@ export function buildMemberReservationUrl(
 ): string | undefined {
   if (!userId) return undefined;
   return `${getAppUrl()}/mypage/reservations/${reservationId}`;
+}
+
+/**
+ * 予約詳細ハブ URL（メール本文の再確認 SSoT）。
+ * 会員はマイページ詳細、ゲストは status token 付き薄い詳細ページ。
+ * 平文パスコードはメールに載せず、この URL 先で開示する。
+ */
+export function buildBookingHubUrl(
+  userId: string | null | undefined,
+  reservationId: string,
+): string {
+  const memberUrl = buildMemberReservationUrl(userId, reservationId);
+  if (memberUrl) return memberUrl;
+  const token = createStatusToken(
+    reservationId,
+    new Date(Date.now() + STATUS_TOKEN_LIFETIME_MS),
+  );
+  return `${getAppUrl()}/reservation/status?token=${token}`;
 }
 
 /**
@@ -162,6 +184,7 @@ export async function sendReservationConfirmationEmail(
     data.userId,
     data.reservationId,
   );
+  const bookingHubUrl = buildBookingHubUrl(data.userId, data.reservationId);
 
   // ゲスト予約のみ、マイページに予約を追加する claim リンクを発行する（会員は不要）。
   const claimUrl = data.userId
@@ -212,11 +235,11 @@ export async function sendReservationConfirmationEmail(
           addToCalendarLinks,
           cancelUrl,
           memberReservationUrl,
+          bookingHubUrl,
           claimUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
           modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
           cancellationPolicyUrl,
-          smartLockPasscodes: data.smartLockPasscodes,
           smartLockIssuanceFailed: data.smartLockIssuanceFailed,
           smartLockFallbackContact: data.smartLockFallbackContact,
           footer,
@@ -312,6 +335,7 @@ export async function sendReservationUpdatedEmail(
     data.userId,
     data.reservationId,
   );
+  const bookingHubUrl = buildBookingHubUrl(data.userId, data.reservationId);
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -354,10 +378,10 @@ export async function sendReservationUpdatedEmail(
           addToCalendarLinks,
           cancelUrl,
           memberReservationUrl,
+          bookingHubUrl,
           cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
           modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
           cancellationPolicyUrl,
-          smartLockPasscodes: data.smartLockPasscodes,
           smartLockIssuanceFailed: data.smartLockIssuanceFailed,
           smartLockFallbackContact: data.smartLockFallbackContact,
           footer,
@@ -522,6 +546,7 @@ export async function sendReservationStatusChangedEmail(
     data.userId,
     data.reservationId,
   );
+  const bookingHubUrl = buildBookingHubUrl(data.userId, data.reservationId);
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
@@ -565,7 +590,7 @@ export async function sendReservationStatusChangedEmail(
           location: data.location,
           addToCalendarLinks,
           memberReservationUrl,
-          smartLockPasscodes: data.smartLockPasscodes,
+          bookingHubUrl,
           footer,
         }),
       ),

@@ -65,7 +65,8 @@ const COMPLETE_TOKEN_TTL_MS = MS_PER_DAY;
 
 /**
  * 予約確定メール送信前に、スペースにアクティブなスマートロックデバイスがあれば
- * 一時パスコードを発行し、確認メールのペイロードにマージする。
+ * 一時パスコードを発行する。平文はメールに載せずハブで開示し、発行失敗時のみ
+ * fallback 案内フラグを付ける。
  * `issueSmartLockPasscodes` は対象デバイスが無いスペースでは即座に空配列を返す
  * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（DBクエリ1回分のみ）。
  * デバイスが設定されているスペースでは SwitchBot 側の確定待ちで最大45秒程度
@@ -82,12 +83,12 @@ async function issueSmartLockAndSendConfirmationEmail(
     endTime: payload.endTime,
   });
 
+  // 平文パスコードはメールに載せない（予約詳細ハブで開示）。発行失敗時のみ
+  // 連絡先 fallback をメールに残す。
   await sendReservationConfirmationEmail(
-    result.passcodes.length > 0
-      ? { ...payload, smartLockPasscodes: result.passcodes }
-      : result.issuanceFailed
-        ? { ...payload, smartLockIssuanceFailed: true }
-        : payload,
+    result.issuanceFailed
+      ? { ...payload, smartLockIssuanceFailed: true }
+      : payload,
   );
 }
 

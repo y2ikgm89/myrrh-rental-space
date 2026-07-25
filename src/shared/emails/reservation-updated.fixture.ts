@@ -24,10 +24,11 @@ export const reservationUpdatedFixture = {
     "https://example.com/reservation/cancel?token=DEMO-TOKEN-DO-NOT-USE",
   memberReservationUrl:
     "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
+  bookingHubUrl:
+    "https://example.com/mypage/reservations/abcdef-0123-4567-89ab-cdef01234567",
   cancellationDeadlineHours: 24,
   modificationDeadlineHours: 24,
   cancellationPolicyUrl: "https://example.com/terms/cancellation-policy",
-  smartLockPasscodes: [{ deviceName: "エントランス", passcode: "482913" }],
   smartLockIssuanceFailed: false,
   smartLockFallbackContact: {
     phone: "03-1234-5678",

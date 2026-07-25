@@ -304,7 +304,7 @@ export async function updateReservationAction(
           const calendarData: ReservationSyncData = payloadData;
 
           // Cluster H #9: status 遷移に応じて適切な顧客通知メールに分岐する。
-          //   - PENDING → CONFIRMED: 確認メール (スマートロック passcode 込み)
+          //   - PENDING → CONFIRMED: 確認メール (ハブ CTA。平文 passcode は載せない)
           //     + 管理者通知 "new" (updateReservationStatus と同型)
           //   - CONFIRMED → PENDING: ステータス変更メール (顧客の decision に影響する
           //     格下げなので silent 化しない)

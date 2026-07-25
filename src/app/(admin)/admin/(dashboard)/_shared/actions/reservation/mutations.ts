@@ -57,7 +57,8 @@ const restoreStatusSchema = z.object({
 
 /**
  * 確認メール送信前に、スペースにアクティブなスマートロックデバイスがあれば
- * 一時パスコードを発行し、確認メールのペイロードにマージする。
+ * 一時パスコードを発行し、確認メールを送る。平文はメールに載せずハブで開示する。
+ * 発行失敗時のみ fallback 案内フラグをペイロードに付ける。
  * `issueSmartLockPasscodes` は対象デバイスが無いスペースでは即座に空配列を返す
  * ため、スマートロック未設定のスペースでは実質的な遅延は生じない（意図した設計、
  * 詳細は `src/shared/domain/smart-lock/issue-passcode.ts`）。
@@ -73,12 +74,12 @@ export async function issueSmartLockAndSendConfirmationEmail(
     endTime: payloadData.endTime,
   });
 
+  // 平文パスコードはメールに載せない（予約詳細ハブで開示）。発行失敗時のみ
+  // 連絡先 fallback をメールに残す。
   return sendReservationConfirmationEmail(
-    result.passcodes.length > 0
-      ? { ...payloadData, smartLockPasscodes: result.passcodes }
-      : result.issuanceFailed
-        ? { ...payloadData, smartLockIssuanceFailed: true }
-        : payloadData,
+    result.issuanceFailed
+      ? { ...payloadData, smartLockIssuanceFailed: true }
+      : payloadData,
   );
 }
 
@@ -351,7 +352,7 @@ export const restoreReservationStatus = async (
 
       if (result.targetStatus === ReservationStatus.CONFIRMED) {
         // CONFIRMED への復元はスマートロック対象スペースであればアクセス権限
-        // （一時パスコード）も再発行し、ステータス変更メールに同梱する
+        // （一時パスコード）も再発行する。平文はメールに同梱せずハブで開示する
         // （対象デバイス無しなら issueSmartLockPasscodes が即座に空配列を返す no-op）。
         fireAndForget(
           issueSmartLockPasscodes({
@@ -359,15 +360,8 @@ export const restoreReservationStatus = async (
             spaceId: result.spaceId,
             startTime: payloadData.startTime,
             endTime: payloadData.endTime,
-          }).then((issueResult) =>
-            sendReservationStatusChangedEmail(
-              issueResult.passcodes.length > 0
-                ? {
-                    ...statusChangedEmailData,
-                    smartLockPasscodes: issueResult.passcodes,
-                  }
-                : statusChangedEmailData,
-            ),
+          }).then(() =>
+            sendReservationStatusChangedEmail(statusChangedEmailData),
           ),
           {
             operation: "restoreIssuePasscodesAndSendStatusChangedEmail",

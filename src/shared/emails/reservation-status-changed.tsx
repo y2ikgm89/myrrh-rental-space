@@ -1,4 +1,4 @@
-import { Hr, Link, Section, Text } from "@react-email/components";
+import { Button, Hr, Link, Section, Text } from "@react-email/components";
 import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
@@ -8,12 +8,16 @@ import { EmailLayout } from "./_shared/EmailLayout";
 import type { EmailFooterData } from "./_shared/footer-data";
 import {
   COLOR,
+  buttonPrimary,
+  buttonSection,
   detailItem,
   detailsHeading,
   detailsSection,
   heading,
   hr,
+  linkStyle,
   text,
+  urlFallbackText,
 } from "./_shared/styles";
 
 type StatusBadgeColors = {
@@ -47,8 +51,11 @@ type Props = {
   location?: string;
   addToCalendarLinks?: AddToCalendarUrls;
   memberReservationUrl?: string;
-  /** 予約復元等でCONFIRMEDに遷移した際に発行されたスマートロックの一時パスコード一覧 */
-  smartLockPasscodes?: { deviceName: string; passcode: string }[];
+  /**
+   * 予約詳細ハブ URL（会員 mypage / ゲスト status）。
+   * 解錠番号の平文は載せず、再確認はこの URL 先で行う。
+   */
+  bookingHubUrl: string;
   footer: EmailFooterData;
 };
 
@@ -64,7 +71,7 @@ export function ReservationStatusChangedEmail({
   location,
   addToCalendarLinks,
   memberReservationUrl,
-  smartLockPasscodes,
+  bookingHubUrl,
   footer,
 }: Props) {
   const badgeColors = STATUS_BADGE_COLORS[newStatus] ?? DEFAULT_BADGE_COLORS;
@@ -138,20 +145,21 @@ export function ReservationStatusChangedEmail({
 
       {addToCalendarLinks && <CalendarLinks links={addToCalendarLinks} />}
 
-      {smartLockPasscodes && smartLockPasscodes.length > 0 && (
-        <Section style={detailsSection}>
-          <Text style={detailsHeading}>スマートロック解錠用の暗証番号</Text>
-          <Hr style={hr} />
-          {smartLockPasscodes.map((entry) => (
-            <Text
-              key={`${entry.deviceName}-${entry.passcode}`}
-              style={detailItem}
-            >
-              <strong>{entry.deviceName}:</strong> {entry.passcode}
-            </Text>
-          ))}
-        </Section>
-      )}
+      <Text style={text}>
+        解錠番号や予約内容の詳細は、予約詳細ページからご確認ください。
+      </Text>
+      <Section style={buttonSection}>
+        <Button href={bookingHubUrl} style={buttonPrimary}>
+          予約詳細を確認する
+        </Button>
+      </Section>
+      <Text style={urlFallbackText}>
+        ボタンが動作しない場合は次の URL をブラウザに貼り付けてください:
+        <br />
+        <Link href={bookingHubUrl} style={linkStyle}>
+          {bookingHubUrl}
+        </Link>
+      </Text>
 
       {memberReservationUrl && (
         <Text style={text}>
