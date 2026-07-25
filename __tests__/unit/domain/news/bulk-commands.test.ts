@@ -61,6 +61,7 @@ describe("bulkTogglePublishedNewsCommand", () => {
       expect(result).toEqual({
         count: 0,
         isPublished: true,
+        affectedIds: [],
         affectedSlugs: [],
       });
       expect(mockNewsFindMany).not.toHaveBeenCalled();
@@ -83,6 +84,7 @@ describe("bulkTogglePublishedNewsCommand", () => {
       expect(result).toEqual({
         count: 3,
         isPublished: true,
+        affectedIds: [NEWS_1.id, NEWS_2.id, NEWS_3.id],
         affectedSlugs: [NEWS_1.slug, NEWS_2.slug, NEWS_3.slug],
       });
       expect(mockNewsUpdateMany).toHaveBeenCalledTimes(1);
@@ -127,6 +129,7 @@ describe("bulkTogglePublishedNewsCommand", () => {
       expect(result).toEqual({
         count: 2,
         isPublished: true,
+        affectedIds: [NEWS_1.id, NEWS_2.id],
         affectedSlugs: [NEWS_1.slug, NEWS_2.slug],
       });
       expect(mockNewsUpdateMany).toHaveBeenCalledTimes(2);
@@ -168,6 +171,7 @@ describe("bulkTogglePublishedNewsCommand", () => {
       expect(result).toEqual({
         count: 0,
         isPublished: true,
+        affectedIds: [],
         affectedSlugs: [],
       });
       expect(mockNewsUpdateMany).not.toHaveBeenCalled();
@@ -189,7 +193,7 @@ describe("bulkDeleteNewsCommand", () => {
     test("空配列の場合は count: 0 を返し DB を呼ばない", async () => {
       const result = await bulkDeleteNewsCommand([]);
 
-      expect(result).toEqual({ count: 0, affectedSlugs: [] });
+      expect(result).toEqual({ count: 0, affectedIds: [], affectedSlugs: [] });
       expect(mockNewsFindMany).not.toHaveBeenCalled();
       expect(mockNewsDeleteMany).not.toHaveBeenCalled();
     });
@@ -202,6 +206,7 @@ describe("bulkDeleteNewsCommand", () => {
 
       expect(result).toEqual({
         count: 2,
+        affectedIds: [NEWS_1.id, NEWS_2.id],
         affectedSlugs: [NEWS_1.slug, NEWS_2.slug],
       });
     });
@@ -222,7 +227,7 @@ describe("bulkDeleteNewsCommand", () => {
 
       const result = await bulkDeleteNewsCommand(["missing-id"]);
 
-      expect(result).toEqual({ count: 0, affectedSlugs: [] });
+      expect(result).toEqual({ count: 0, affectedIds: [], affectedSlugs: [] });
       expect(mockNewsDeleteMany).not.toHaveBeenCalled();
     });
   });
