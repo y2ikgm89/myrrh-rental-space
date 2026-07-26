@@ -211,6 +211,9 @@ locals {
     "data-retention",
     # 段階 B 完了: PR #1080 で追加 → PR #1083 で apply-create → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "waitlist-expire",
+    # 段階 A: 本 PR で cron_jobs + app route 追加。初回 Deploy Production apply-create 後、
+    # state-rebuild 防御のため imported に組み込み (deploy-packaging-contract gate)。
+    "unpaid-event-registration-expire",
     # 段階 B 完了: PR #1121 で追加 → apply-create 完了 → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
     "receipt-backfill",
     # 段階 B 完了: PR #1198 で追加 → apply-create 完了 → 本 PR (follow-up) で adopt 対象に組み込み (state-rebuild 防御)
