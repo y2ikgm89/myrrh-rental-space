@@ -124,7 +124,9 @@ describe("claimReservationAction", () => {
     mockAssertCustomerActive.mockClear();
     mockAssertLoginSignupReagreed.mockClear();
     mockClaimReservationForCustomer.mockClear();
-    mockAssertCustomerActive.mockImplementation(() => Promise.resolve(undefined));
+    mockAssertCustomerActive.mockImplementation(() =>
+      Promise.resolve(undefined),
+    );
     mockAssertLoginSignupReagreed.mockImplementation(() =>
       Promise.resolve(undefined),
     );
@@ -158,7 +160,9 @@ describe("claimEventRegistrationAction", () => {
     mockAssertCustomerActive.mockClear();
     mockAssertLoginSignupReagreed.mockClear();
     mockClaimEventRegistrationForCustomer.mockClear();
-    mockAssertCustomerActive.mockImplementation(() => Promise.resolve(undefined));
+    mockAssertCustomerActive.mockImplementation(() =>
+      Promise.resolve(undefined),
+    );
     mockAssertLoginSignupReagreed.mockImplementation(() =>
       Promise.resolve(undefined),
     );

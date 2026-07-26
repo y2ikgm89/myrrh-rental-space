@@ -110,7 +110,9 @@ describe("reagreeAction", () => {
         isNew: false,
       }),
     );
-    mockAssertCustomerActive.mockImplementation(() => Promise.resolve(undefined));
+    mockAssertCustomerActive.mockImplementation(() =>
+      Promise.resolve(undefined),
+    );
     mockGetReagreeRequiredTermsForCustomer.mockImplementation(() =>
       Promise.resolve([
         {
