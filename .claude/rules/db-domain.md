@@ -35,7 +35,10 @@ paths: ["src/shared/db/**", "src/shared/domain/**"]
 
 - `prisma.$transaction([...])` の配列形式・`.map()` 動的配列形式は ESLint error。
   原子性不要なら `Promise.all`、必要なら interactive `$transaction(async (tx) => ...)`
-- interactive tx は単一コネクション。**tx 内の複数クエリ並行発行は禁止**（逐次 await）
+- interactive tx は単一コネクション。**tx 内の複数クエリ並行発行は禁止**（逐次 await）。
+  callback 内の `Promise.all` / `Promise.allSettled` は
+  `__tests__/unit/architecture/prisma-interactive-tx-no-promise-all.test.ts`
+  が `src/shared/domain/**` と `src/shared/db/**` を静的走査で拒否する
 - `pg_advisory_xact_lock` は void を返すため `$executeRaw` で呼ぶ（`$queryRaw` は失敗）
 - advisory lock 採番レジストリ（衝突禁止）: 728349=calendar-sync（session lock）、
   728350=イベント申込、728351=Space スケジュール空間（Reservation + EventTimeSlot 書込 + order-scope）、
