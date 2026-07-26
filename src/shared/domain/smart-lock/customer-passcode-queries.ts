@@ -4,6 +4,9 @@
  * 平文は `reveal: true` かつ全表示条件を満たすときのみ返す（Server Action 開示用）。
  * ページ初期 props には載せない。
  *
+ * 表示窓は発行時に焼き込まれた `SmartLockPasscode.startTime/endTime` を正本とする
+ * （Settings の buffer を再計算しない）。
+ *
  * @module shared/domain/smart-lock/customer-passcode-queries
  */
 
@@ -77,17 +80,13 @@ function assertAuthMatchesReservation(
   }
 }
 
-function isWithinPasscodeWindow(input: {
+function isWithinStoredPasscodeWindow(input: {
   readonly now: Date;
   readonly startTime: Date;
   readonly endTime: Date;
-  readonly bufferMinutes: number;
 }): boolean {
-  const bufferMs = input.bufferMinutes * 60_000;
-  const windowStart = input.startTime.getTime() - bufferMs;
-  const windowEnd = input.endTime.getTime() + bufferMs;
   const t = input.now.getTime();
-  return t >= windowStart && t <= windowEnd;
+  return t >= input.startTime.getTime() && t <= input.endTime.getTime();
 }
 
 /**
@@ -97,10 +96,10 @@ function isWithinPasscodeWindow(input: {
  * 1. switchbotEnabled かつスペースに有効な Pad デバイス
  * 2. 予約 status === CONFIRMED
  * 3. SmartLockPasscode.status === CONFIRMED（PENDING は pending）
- * 4. now ∈ [start - buffer, end + buffer]
+ * 4. now ∈ [passcode.startTime, passcode.endTime]（発行時焼き込み）
  *
  * Auth: 会員は customerId ownership、ゲストは status-token の rid 一致。
- * ゲストは加えて now ≤ endTime + buffer を認可 TTL とする（超過は unauthorized）。
+ * ゲストは加えて now ≤ passcode.endTime（未発行時は reservation.endTime）を認可 TTL とする。
  */
 export async function getCustomerVisibleSmartLockPasscodesForReservation(
   reservationId: string,
@@ -119,7 +118,6 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
       where: { id: "singleton" },
       select: {
         switchbotEnabled: true,
-        switchbotPasscodeBufferMinutes: true,
       },
     }),
     prisma.reservation.findUnique({
@@ -128,7 +126,6 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
         id: true,
         customerId: true,
         status: true,
-        startTime: true,
         endTime: true,
         space: {
           select: {
@@ -156,18 +153,6 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
     return { status: "unauthorized" };
   }
 
-  // Guest status-token の認可 TTL: 予約終了 + buffer を過ぎたら fail closed。
-  // status cookie 自体はハブ閲覧用に最大 90 日残るが、平文開示の認可は延長しない。
-  // 会員 (customer ownership) は従来どおり窓判定 (outside_window) のみ。
-  if (auth.kind === "status-token") {
-    const bufferMinutes = settings?.switchbotPasscodeBufferMinutes ?? 0;
-    const guestAuthDeadline =
-      reservation.endTime.getTime() + bufferMinutes * 60_000;
-    if (now.getTime() > guestAuthDeadline) {
-      return { status: "unauthorized" };
-    }
-  }
-
   if (!settings?.switchbotEnabled) {
     return { status: "unavailable" };
   }
@@ -193,6 +178,8 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
     select: {
       id: true,
       status: true,
+      startTime: true,
+      endTime: true,
       passcodeCiphertext: true,
       device: { select: { id: true, deviceName: true } },
     },
@@ -200,6 +187,12 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
 
   if (passcodeRows.length === 0) {
     // 発行未完了（create 前）も「手続き中」として扱う
+    if (
+      auth.kind === "status-token" &&
+      now.getTime() > reservation.endTime.getTime()
+    ) {
+      return { status: "unauthorized" };
+    }
     return { status: "pending" };
   }
 
@@ -212,23 +205,41 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
 
   if (confirmedRows.length === 0) {
     if (hasPending) {
+      if (
+        auth.kind === "status-token" &&
+        now.getTime() > reservation.endTime.getTime()
+      ) {
+        return { status: "unauthorized" };
+      }
       return { status: "pending" };
     }
     return { status: "unavailable" };
   }
 
-  if (
-    !isWithinPasscodeWindow({
+  // Guest status-token の認可 TTL: 焼き込み endTime を過ぎたら fail closed。
+  // status cookie 自体はハブ閲覧用に最大 90 日残るが、平文開示の認可は延長しない。
+  if (auth.kind === "status-token") {
+    const guestAuthDeadline = Math.max(
+      ...confirmedRows.map((row) => row.endTime.getTime()),
+    );
+    if (now.getTime() > guestAuthDeadline) {
+      return { status: "unauthorized" };
+    }
+  }
+
+  const inWindowRows = confirmedRows.filter((row) =>
+    isWithinStoredPasscodeWindow({
       now,
-      startTime: reservation.startTime,
-      endTime: reservation.endTime,
-      bufferMinutes: settings.switchbotPasscodeBufferMinutes,
-    })
-  ) {
+      startTime: row.startTime,
+      endTime: row.endTime,
+    }),
+  );
+
+  if (inWindowRows.length === 0) {
     return { status: "outside_window" };
   }
 
-  const deviceNames = confirmedRows.map((row) => row.device.deviceName);
+  const deviceNames = inWindowRows.map((row) => row.device.deviceName);
 
   if (!reveal) {
     return {
@@ -239,7 +250,7 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
   }
 
   const passcodes: CustomerVisiblePasscode[] = [];
-  for (const row of confirmedRows) {
+  for (const row of inWindowRows) {
     const passcode = safeDecryptToString(row.passcodeCiphertext, {
       expectedPurpose: PASSCODE_CRYPTO_PURPOSE,
     });

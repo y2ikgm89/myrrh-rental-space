@@ -28,6 +28,8 @@ import {
   refreshLockDeviceStateCommand,
   type SmartLockDeviceStateSnapshot,
 } from "@/shared/domain/smart-lock/commands";
+import { revokePasscodesAfterPadDeactivated } from "@/shared/domain/smart-lock/assignment-side-effects";
+import { assertDeviceMatchesSwitchBotInventory } from "@/shared/domain/smart-lock/device-inventory";
 import { smartLockDeviceFormSchema } from "@/admin/lib/validations/smart-lock-device";
 import { uuidIdSchema } from "@/shared/lib/validations/params";
 
@@ -45,13 +47,18 @@ export async function createSmartLockDevice(
       const result = await executeAdminMutationResult({
         resource: "settings",
         action: "manage",
-        execute: async () =>
-          createSmartLockDeviceCommand(data.locationId, {
+        execute: async () => {
+          await assertDeviceMatchesSwitchBotInventory(
+            data.deviceId,
+            data.deviceType,
+          );
+          return createSmartLockDeviceCommand(data.locationId, {
             deviceId: data.deviceId,
             deviceName: data.deviceName,
             deviceType: data.deviceType,
             isActive: data.isActive,
-          }),
+          });
+        },
         afterSuccess: () => {
           invalidateSiteWideCache(CACHE_TAGS.SPACES);
         },
@@ -88,13 +95,18 @@ export async function updateSmartLockDevice(
       const result = await executeAdminMutationResult({
         resource: "settings",
         action: "manage",
-        execute: async () =>
-          updateSmartLockDeviceCommand(parsedDevice.data, {
+        execute: async () => {
+          await assertDeviceMatchesSwitchBotInventory(
+            data.deviceId,
+            data.deviceType,
+          );
+          return updateSmartLockDeviceCommand(parsedDevice.data, {
             deviceId: data.deviceId,
             deviceName: data.deviceName,
             deviceType: data.deviceType,
             isActive: data.isActive,
-          }),
+          });
+        },
         afterSuccess: () => {
           invalidateSiteWideCache(CACHE_TAGS.SPACES);
         },
@@ -156,8 +168,16 @@ export async function toggleSmartLockDeviceActive(
   return executeAdminMutationResult({
     resource: "settings",
     action: "manage",
-    execute: async () =>
-      toggleSmartLockDeviceActiveCommand(parsedDevice.data, isActive),
+    execute: async () => {
+      const result = await toggleSmartLockDeviceActiveCommand(
+        parsedDevice.data,
+        isActive,
+      );
+      if (!isActive) {
+        await revokePasscodesAfterPadDeactivated(parsedDevice.data);
+      }
+      return result;
+    },
     afterSuccess: () => {
       invalidateSiteWideCache(CACHE_TAGS.SPACES);
     },

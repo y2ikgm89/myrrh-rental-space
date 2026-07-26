@@ -38,6 +38,8 @@ const commandResultContextSchema = z.object({
   deviceMac: z.string(),
   eventName: z.string(),
   commandId: z.string().optional(),
+  /** deleteKey 相関用。commandId 欠落時のフォールバック */
+  keyName: z.string().optional(),
   result: z.enum(["success", "failed", "timeout"]),
 });
 
@@ -148,12 +150,13 @@ export async function POST(request: Request, { params }: RouteContext) {
       return jsonSuccess({ received: true, handled });
     }
 
-    const { eventName, commandId, result } = parsed.context;
+    const { eventName, commandId, keyName, result } = parsed.context;
     const handled = await processSwitchBotChangeReport({
       deviceMac,
       eventName: eventName.trim(),
       result,
       ...(commandId !== undefined ? { commandId } : {}),
+      ...(keyName !== undefined ? { keyName } : {}),
     });
 
     return jsonSuccess({ received: true, handled });
