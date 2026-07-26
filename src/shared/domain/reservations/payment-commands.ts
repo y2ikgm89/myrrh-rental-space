@@ -325,19 +325,37 @@ export async function createCheckoutSessionCommand(input: {
       },
     });
     if (settled.count === 0) {
-      // PAID / PARTIALLY_REFUNDED / REFUNDED が既に確定していた (異常に速い webhook /
-      // manual admin refund)。stripeCheckoutSessionId は書けないが session URL は既に有効なので
-      // 顧客は決済でき、webhook 側の冪等 claim (UNPAID/PENDING のみ accept) がスキップしてくれる。
+      // PAID / PARTIALLY_REFUNDED / REFUNDED が claim 後に確定 (異常に速い webhook /
+      // manual admin refund)。orphan session を best-effort で expire し、session URL は
+      // 返さない (二重決済・会計 mismatch を fail-closed で防ぐ)。
       logError(
         new Error(
-          "createCheckoutSessionCommand: session settled skipped (already PAID/REFUNDED)",
+          "createCheckoutSessionCommand: session settle rejected (already PAID/REFUNDED)",
         ),
         {
           category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.MEDIUM,
-          context: { operation: "createCheckoutSession", reservationId },
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "createCheckoutSession",
+            reservationId,
+            sessionId: session.id,
+          },
         },
       );
+      try {
+        await client.checkout.sessions.expire(session.id);
+      } catch (expireError) {
+        logError(normalizeError(expireError), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "createCheckoutSessionExpire",
+            reservationId,
+            sessionId: session.id,
+          },
+        });
+      }
+      throw new DomainError("この予約は既に決済が完了しています", "CONFLICT");
     }
 
     return {
@@ -346,6 +364,9 @@ export async function createCheckoutSessionCommand(input: {
       customerId: reservation.customerId,
     };
   } catch (error) {
+    if (error instanceof DomainError) {
+      throw error;
+    }
     // Stripe session 作成 or session id 書込が失敗した。UNPAID に revert して顧客が
     // 再試行できる状態に戻す。既に session が作られていても metadata.reservationId が
     // 分かるので webhook 側で orphan session を identify できる (最悪ケース: session だけ

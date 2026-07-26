@@ -73,10 +73,18 @@ const mockCheckoutSessionCreate = mock<
     url: "https://stripe.example/checkout",
   }),
 );
+const mockCheckoutSessionExpire = mock<
+  (sessionId: string) => Promise<{ id: string }>
+>(() => Promise.resolve({ id: "cs_test_123" }));
 const mockGetStripeClient = mock(() =>
   Promise.resolve({
     client: {
-      checkout: { sessions: { create: mockCheckoutSessionCreate } },
+      checkout: {
+        sessions: {
+          create: mockCheckoutSessionCreate,
+          expire: mockCheckoutSessionExpire,
+        },
+      },
       refunds: { create: mockRefundCreate },
     },
   }),
@@ -206,6 +214,7 @@ describe("reservations/payment-commands", () => {
     mockGetStripeClient.mockReset();
     mockRefundCreate.mockReset();
     mockCheckoutSessionCreate.mockReset();
+    mockCheckoutSessionExpire.mockReset();
     mockLogError.mockReset();
 
     mockReservationFindUnique.mockResolvedValue(paidReservation());
@@ -229,7 +238,12 @@ describe("reservations/payment-commands", () => {
     });
     mockGetStripeClient.mockResolvedValue({
       client: {
-        checkout: { sessions: { create: mockCheckoutSessionCreate } },
+        checkout: {
+          sessions: {
+            create: mockCheckoutSessionCreate,
+            expire: mockCheckoutSessionExpire,
+          },
+        },
         refunds: { create: mockRefundCreate },
       },
     });
@@ -241,6 +255,7 @@ describe("reservations/payment-commands", () => {
       id: "cs_test_123",
       url: "https://stripe.example/checkout",
     });
+    mockCheckoutSessionExpire.mockResolvedValue({ id: "cs_test_123" });
     mockLogError.mockImplementation(() => undefined);
   });
 
@@ -533,7 +548,7 @@ describe("reservations/payment-commands", () => {
       expect(sessionArgs?.expires_at).toBeLessThanOrEqual(expectedMax);
     });
 
-    test("Session settle が PAID/REFUNDED race で count=0 でも session URL は返す (log 出力)", async () => {
+    test("Session settle が PAID/REFUNDED race で count=0 → session expire + CONFLICT (session URL 返却しない)", async () => {
       mockReservationFindUnique
         .mockResolvedValueOnce(unpaidReservation())
         .mockResolvedValueOnce(authoritativeSameAsInitial());
@@ -543,16 +558,20 @@ describe("reservations/payment-commands", () => {
         .mockResolvedValueOnce({ count: 1 })
         .mockResolvedValueOnce({ count: 0 });
 
-      const result = await createCheckoutSessionCommand({
+      const error = await createCheckoutSessionCommand({
         reservationId: RESERVATION_ID,
         actorCustomerId: null,
-      });
+      }).catch((e: unknown) => e);
 
-      // Session URL は返す (webhook 側の冪等性に委任)
-      expect(result.sessionId).toBe("cs_test_123");
-      expect(result.sessionUrl).toBe("https://stripe.example/checkout");
-      // 異常状態を log で通知
-      expect(mockLogError).toHaveBeenCalled();
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("CONFLICT");
+      expect(mockCheckoutSessionExpire).toHaveBeenCalledWith("cs_test_123");
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          severity: "HIGH",
+        }),
+      );
     });
 
     test("Authoritative re-read で totalPriceWithTax が消えたら PENDING → UNPAID revert + VALIDATION", async () => {

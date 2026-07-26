@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import type { ReservationStatus } from "@generated/prisma/enums";
+import { PaymentStatus, type ReservationStatus } from "@generated/prisma/enums";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
@@ -289,6 +289,7 @@ export async function updateAdminReservationCommand(
       select: {
         id: true,
         status: true,
+        paymentStatus: true,
         spaceId: true,
         startTime: true,
         endTime: true,
@@ -388,6 +389,33 @@ export async function updateAdminReservationCommand(
   // silently 消えてしまっていた)。実際の書込みは下記 tx 内の data で条件分岐する。
   const finalTotalPrice = input.totalPrice ?? pricing.totalPrice;
 
+  const chargeAffectingChange =
+    currentReservation.spaceId !== input.spaceId ||
+    currentReservation.startTime.getTime() !== startDateTime.getTime() ||
+    currentReservation.endTime.getTime() !== endDateTime.getTime() ||
+    currentReservation.totalPrice !== finalTotalPrice ||
+    oldCouponId !== newCouponId;
+
+  if (chargeAffectingChange) {
+    const { paymentStatus } = currentReservation;
+    if (paymentStatus === PaymentStatus.PENDING) {
+      throw new DomainError(
+        "決済処理中の予約は日時・スペース・料金・クーポンを変更できません。先に決済セッションを失効させてください。",
+        "VALIDATION",
+      );
+    }
+    if (
+      paymentStatus === PaymentStatus.PAID ||
+      paymentStatus === PaymentStatus.PARTIALLY_REFUNDED ||
+      paymentStatus === PaymentStatus.REFUNDED
+    ) {
+      throw new DomainError(
+        "決済済みの予約は日時・スペース・料金・クーポンを変更できません。返金または再発行の専用フローをご利用ください。",
+        "VALIDATION",
+      );
+    }
+  }
+
   // 税額を予約時点の taxRate スナップショットで再計算する (Codex P2 #1038 対応)。
   //
   // 修正前は admin 編集で totalPrice/base/discount を書き換えても taxAmount と
@@ -442,6 +470,13 @@ export async function updateAdminReservationCommand(
         id,
         deletedAt: null,
         version: input.version,
+        // customer-commands.ts と同型: 課金要素の変更は UNPAID/FAILED のみ atomic claim。
+        // checkout が UNPAID→PENDING に遷移した race では count=0 → CONFLICT。
+        ...(chargeAffectingChange && {
+          paymentStatus: {
+            in: [PaymentStatus.UNPAID, PaymentStatus.FAILED],
+          },
+        }),
       },
       data: {
         spaceId: input.spaceId,

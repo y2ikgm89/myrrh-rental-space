@@ -363,8 +363,7 @@ function extractPaymentSubject(
  * 金額改ざん / 設定 drift は再送しても解消しない poison event と同型。
  * `extractPaymentSubject` が null を返して skip する orphan パターンに揃える)。
  *
- * `amount_total` または期待額が欠落している場合は check を skip する
- * (legacy session / テスト stub 互換)。
+ * `amount_total` または期待額が欠落している場合は fulfill を skip する (fail-closed)。
  */
 async function checkoutSessionAmountMatchesExpected(
   session: Stripe.Checkout.Session,
@@ -374,7 +373,24 @@ async function checkoutSessionAmountMatchesExpected(
   subjectId: string,
 ): Promise<boolean> {
   if (session.amount_total == null || expectedAppAmount == null) {
-    return true;
+    logError(
+      new Error(
+        "Checkout session amount check skipped input — skipping fulfill (fail-closed)",
+      ),
+      {
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.HIGH,
+        context: {
+          operation,
+          subjectKey,
+          subjectId,
+          sessionId: session.id,
+          sessionAmountTotal: session.amount_total,
+          expectedAppAmount,
+        },
+      },
+    );
+    return false;
   }
 
   const currency = session.currency ?? "jpy";
