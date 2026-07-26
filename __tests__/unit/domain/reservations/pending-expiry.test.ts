@@ -28,23 +28,6 @@ const mockCouponUpdateMany = mock<
 const mockApplyCancellationSideEffects = mock<
   (args: Record<string, unknown>) => Promise<void>
 >(() => Promise.resolve());
-const mockAssertStripeCredentialsConfigured = mock<
-  () => Promise<{
-    stripeSecretKey: string;
-  }>
->(() => Promise.resolve({ stripeSecretKey: "sk_test" }));
-const mockSessionsExpire = mock<(id: string) => Promise<unknown>>(() =>
-  Promise.resolve({}),
-);
-const mockGetStripeClient = mock<
-  () => Promise<{
-    client: { checkout: { sessions: { expire: typeof mockSessionsExpire } } };
-  }>
->(() =>
-  Promise.resolve({
-    client: { checkout: { sessions: { expire: mockSessionsExpire } } },
-  }),
-);
 const mockLogError = mock(() => undefined);
 
 const txClient = {
@@ -72,12 +55,6 @@ mock.module("@/shared/db/prisma", () => ({
 mock.module("@/shared/domain/reservations/cancellation-side-effects", () => ({
   applyCancellationSideEffects: mockApplyCancellationSideEffects,
 }));
-mock.module("@/shared/domain/payment/availability", () => ({
-  assertStripeCredentialsConfigured: mockAssertStripeCredentialsConfigured,
-}));
-mock.module("@/shared/lib/stripe", () => ({
-  getStripeClient: mockGetStripeClient,
-}));
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mockLogError,
   normalizeError: (e: unknown) =>
@@ -98,9 +75,6 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockReservationUpdateMany.mockReset();
     mockCouponUpdateMany.mockReset();
     mockApplyCancellationSideEffects.mockReset();
-    mockAssertStripeCredentialsConfigured.mockReset();
-    mockSessionsExpire.mockReset();
-    mockGetStripeClient.mockReset();
     mockLogError.mockReset();
     mockTransaction.mockReset();
     mockTransaction.mockImplementation((fn) => fn(txClient));
@@ -109,13 +83,6 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     mockReservationUpdateMany.mockResolvedValue({ count: 0 });
     mockCouponUpdateMany.mockResolvedValue({ count: 0 });
     mockApplyCancellationSideEffects.mockResolvedValue(undefined);
-    mockAssertStripeCredentialsConfigured.mockResolvedValue({
-      stripeSecretKey: "sk_test",
-    });
-    mockSessionsExpire.mockResolvedValue({});
-    mockGetStripeClient.mockResolvedValue({
-      client: { checkout: { sessions: { expire: mockSessionsExpire } } },
-    });
   });
 
   test("predicate: paymentStatus=PENDING + status ∈ {PENDING, CONFIRMED} + paymentInitiatedAt < cutoff", async () => {
@@ -180,7 +147,7 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
     );
   });
 
-  test("claim 成功後: coupon decrement は claim と同一 tx、session expire + side effects は tx 外", async () => {
+  test("claim 成功後: coupon decrement は claim と同一 tx、Stripe expire 含む副作用は applyCancellationSideEffects に委譲", async () => {
     const now = Date.now();
     const paymentInitiatedAt = new Date(now - 90 * 60 * 1000);
     mockReservationFindMany.mockResolvedValueOnce([
@@ -190,7 +157,6 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
         spaceId: "space-1",
         paymentInitiatedAt,
         couponId: "coupon-1",
-        stripeCheckoutSessionId: "cs_test_1",
       },
     ]);
     mockReservationUpdateMany.mockResolvedValueOnce({ count: 1 });
@@ -205,7 +171,8 @@ describe("expireStalePendingReservationsCommand (Codex P1: PR#1042 fix)", () => 
         data: { usageCount: { decrement: 1 } },
       }),
     );
-    expect(mockSessionsExpire).toHaveBeenCalledWith("cs_test_1");
+    // Stripe session expire は pending-expiry 直呼びではなく
+    // applyCancellationSideEffects → expireOpenCheckoutSessionBestEffort の SSoT。
     expect(mockApplyCancellationSideEffects).toHaveBeenCalledWith(
       expect.objectContaining({
         reservationId: "res-1",
