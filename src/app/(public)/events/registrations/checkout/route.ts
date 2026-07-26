@@ -1,12 +1,15 @@
 /**
  * 有料イベント直接申込の Stripe Checkout 起動 Route Handler。
  *
- * ゲスト申込 (customerId=null) 向け。確認メールの token URL から
- * `createEventCheckoutSessionCommand` を actorCustomerId=null で呼び出す。
+ * ゲスト申込 (customerId=null) 向け。確認メールの `?token=` URL は `proxy.ts` が
+ * HttpOnly cookie に転写してから本 route に到達する。`createEventCheckoutSessionCommand`
+ * を actorCustomerId=null で呼び出す。
  */
 
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-payment-token-cookie-name";
 import { verifyEventRegistrationPaymentToken } from "@/shared/lib/tokens/event-registration-payment-token";
 import { createEventCheckoutSessionCommand } from "@/shared/domain/events/payment-commands";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -19,10 +22,7 @@ import {
 
 const CHECKOUT_ERROR_PATH = "/events/registrations/checkout-error";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ token: string }> },
-): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
   await requireFeatureEnabled("events");
   await requireFeatureEnabled("payment");
 
@@ -35,8 +35,12 @@ export async function GET(
     );
   }
 
-  const { token } = await params;
-  const verified = verifyEventRegistrationPaymentToken(token);
+  // proxy が `?token=` を HttpOnly cookie に転写済み。URL クエリは残さない。
+  const cookieStore = await cookies();
+  const token =
+    cookieStore.get(EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME)?.value ??
+    null;
+  const verified = token ? verifyEventRegistrationPaymentToken(token) : null;
   if (!verified) {
     return NextResponse.redirect(
       new URL(CHECKOUT_ERROR_PATH, request.url),

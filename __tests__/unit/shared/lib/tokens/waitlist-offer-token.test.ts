@@ -5,11 +5,14 @@ import {
 } from "@/shared/lib/tokens/waitlist-offer-token";
 
 const REGISTRATION_ID = "reg_abcdef123456";
+const FUTURE = new Date(Date.now() + 60 * 60 * 1000);
+const PAST = new Date(Date.now() - 60 * 1000);
 
 describe("createWaitlistOfferToken / verifyWaitlistOfferToken", () => {
   test("往復で registrationId を復元できる", () => {
     const token = createWaitlistOfferToken({
       registrationId: REGISTRATION_ID,
+      expiresAt: FUTURE,
     });
     expect(verifyWaitlistOfferToken(token)).toEqual({
       registrationId: REGISTRATION_ID,
@@ -19,6 +22,7 @@ describe("createWaitlistOfferToken / verifyWaitlistOfferToken", () => {
   test("トークンは URL セーフ（base64url 文字のみ）", () => {
     const token = createWaitlistOfferToken({
       registrationId: REGISTRATION_ID,
+      expiresAt: FUTURE,
     });
     expect(token).toMatch(/^[A-Za-z0-9_-]+$/u);
   });
@@ -26,6 +30,7 @@ describe("createWaitlistOfferToken / verifyWaitlistOfferToken", () => {
   test("改ざんされたトークンは null", () => {
     const token = createWaitlistOfferToken({
       registrationId: REGISTRATION_ID,
+      expiresAt: FUTURE,
     });
     const tampered =
       token.slice(0, -4) + (token.endsWith("AAAA") ? "BBBB" : "AAAA");
@@ -56,14 +61,25 @@ describe("createWaitlistOfferToken / verifyWaitlistOfferToken", () => {
     expect(verifyWaitlistOfferToken(foreignToken)).toBeNull();
   });
 
-  test("exp/iat claim を持たない（DB expiresAt が正本のためステートレス）", () => {
+  test("exp は DB offer window（expiresAt）に揃え、期限切れは null", () => {
     const token = createWaitlistOfferToken({
       registrationId: REGISTRATION_ID,
+      expiresAt: PAST,
     });
-    // 発行直後でも将来時刻でも同じ token が同じ registrationId を返す
-    // （token 自身に時刻依存の失効判定が無いことの回帰ガード）。
-    expect(verifyWaitlistOfferToken(token)).toEqual({
+    expect(verifyWaitlistOfferToken(token)).toBeNull();
+  });
+
+  test("exp 直前までは有効", () => {
+    const expiresAt = new Date("2030-06-01T12:00:00.000Z");
+    const token = createWaitlistOfferToken({
       registrationId: REGISTRATION_ID,
+      expiresAt,
     });
+    expect(
+      verifyWaitlistOfferToken(token, new Date(expiresAt.getTime() - 1)),
+    ).toEqual({ registrationId: REGISTRATION_ID });
+    expect(
+      verifyWaitlistOfferToken(token, new Date(expiresAt.getTime())),
+    ).toBeNull();
   });
 });
