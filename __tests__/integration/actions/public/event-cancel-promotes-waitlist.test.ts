@@ -101,6 +101,12 @@ mock.module("@/shared/domain/customers/guard", () => ({
   ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
 }));
 
+// cancelEventRegistration は isFeatureEnabled("events") を直接呼ぶ
+// (event-waitlist-register.test.ts / registration-overbooking.test.ts と同型)。
+mock.module("@/shared/lib/features/check", () => ({
+  isFeatureEnabled: () => Promise.resolve(true),
+}));
+
 // Phase 2 (TERMS-REAGREE-P2): Server Action handler 冒頭に assertLoginSignupReagreed
 // を追加したため、fixture 顧客 (LOGIN_SIGNUP scope 同意履歴なし) を通すため no-op に。
 // assertAllRequiredTermsAgreed は本テストで未使用だが module 全体差し替えのため併記

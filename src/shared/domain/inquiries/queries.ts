@@ -383,13 +383,13 @@ export async function getInquiryById(
  * に使う。admin 側 route は `checkPermission("inquiry","read")` のみで
  * customerId は見ない（admin は全件アクセス可）。
  *
- * soft-deleted（`deletedAt` 非 null）はここでは弾かない — admin は retention
- * 猶予期間中の soft-deleted inquiry も詳細画面から閲覧できる（`getInquiryById`
- * が `deletedAt` で filter しない設計と対称）。customer 側は
- * `getCustomerInquiryById` 自体が `deletedAt: null` で絞るため、customer は
- * そもそも soft-deleted inquiry の詳細ページに到達できず矛盾しない。
+ * soft-deleted（`deletedAt` 非 null）は 404 相当（null）にする — customer
+ * mypage は direct URL でも soft-deleted inquiry の添付を取得できない。
+ * このヘルパーは customer / admin 共通の deny-deleted ゲート（clean break）。
+ * admin が retention 猶予中の soft-deleted 添付を配信する必要がある場合は
+ * 別クエリを用意する。
  *
- * anonymize 済み（`anonymizedAt` 非 null）は 404 相当（null）にする —
+ * anonymize 済み（`anonymizedAt` 非 null）も 404 相当（null）にする —
  * `anonymizeInquiryCommand`（PR6）が添付を R2 ごと削除する設計のため、万一
  * DB 行が残っていてもここでは配信しない防御。
  */
@@ -414,12 +414,16 @@ export async function getInquiryAttachmentForDownload(
       filename: true,
       inquiryId: true,
       inquiry: {
-        select: { customerId: true, anonymizedAt: true },
+        select: { customerId: true, anonymizedAt: true, deletedAt: true },
       },
     },
   });
 
-  if (!attachment || attachment.inquiry.anonymizedAt !== null) {
+  if (
+    !attachment ||
+    attachment.inquiry.anonymizedAt !== null ||
+    attachment.inquiry.deletedAt !== null
+  ) {
     return null;
   }
 

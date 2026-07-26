@@ -177,7 +177,13 @@ export async function toggleCustomerActive(
 export async function updateCustomer(
   id: string,
   data: CustomerFormData,
-): Promise<{ previous: ReturnType<typeof toCustomerData> }> {
+): Promise<{
+  previous: ReturnType<typeof toCustomerData>;
+  /** emailCanonical が変わったか。呼び出し側で SUPPRESSED_EMAILS を invalidate する判定に使う。 */
+  emailChanged: boolean;
+  /** 旧メールの suppression hash を持ち越したか。 */
+  preservedSuppression: boolean;
+}> {
   const customer = await prisma.customer.findUnique({
     where: { id },
     select: {
@@ -199,6 +205,8 @@ export async function updateCustomer(
       notes: true,
       marketingOptIn: true,
       phoneContactOptIn: true,
+      emailDeliveryStatus: true,
+      suppressedEmailHash: true,
     },
   });
   if (!customer) {
@@ -209,10 +217,54 @@ export async function updateCustomer(
     await ensureGuestEmailAvailable(data.email, id);
   }
 
+  const nextCanonical = normalizeEmailForIdentity(data.email);
+  const emailChanged = customer.emailCanonical !== nextCanonical;
+
+  // Clean break: メール変更時は新アドレスの delivery を OK にリセットし、
+  // 旧アドレスが HARD_BOUNCED / COMPLAINED なら suppressedEmailHash に恒久保存する。
+  // 旧実装は status を引き継ぐため、新アドレスが誤抑止されたり旧アドレス抑制が失われたりした。
+  let preservedSuppression = false;
+  let emailChangePatch: {
+    emailDeliveryStatus: EmailDeliveryStatus;
+    emailDeliveryUpdatedAt: Date;
+    emailDeliveryReason: null;
+    suppressedEmailHash?: string;
+  } | null = null;
+
+  if (emailChanged) {
+    const hashToPreserve =
+      customer.suppressedEmailHash ??
+      (isSuppressedDeliveryStatus(customer.emailDeliveryStatus)
+        ? hashSuppressedEmailCandidate(customer.emailCanonical)
+        : null);
+    preservedSuppression = hashToPreserve !== null;
+    emailChangePatch = {
+      emailDeliveryStatus: EmailDeliveryStatus.OK,
+      emailDeliveryUpdatedAt: new Date(),
+      emailDeliveryReason: null,
+      ...(hashToPreserve !== null
+        ? { suppressedEmailHash: hashToPreserve }
+        : {}),
+    };
+  }
+
   try {
-    await prisma.customer.update({
-      where: { id },
-      data: toCustomerData(data),
+    await prisma.$transaction(async (tx) => {
+      await tx.customer.update({
+        where: { id },
+        data: {
+          ...toCustomerData(data),
+          ...(emailChangePatch ?? {}),
+        },
+      });
+
+      // 連携済み User の login email も同一 tx で同期（mypage / Better Auth と乖離させない）。
+      if (customer.userId !== null && emailChanged) {
+        await tx.user.update({
+          where: { id: customer.userId },
+          data: { email: data.email },
+        });
+      }
     });
   } catch (error) {
     if (isUniqueConstraintError(error)) {
@@ -221,8 +273,13 @@ export async function updateCustomer(
     throw error;
   }
 
-  const { userId: _userId, ...previous } = customer;
-  return { previous };
+  const {
+    userId: _userId,
+    emailDeliveryStatus: _eds,
+    suppressedEmailHash: _seh,
+    ...previous
+  } = customer;
+  return { previous, emailChanged, preservedSuppression };
 }
 
 /** 顧客が自身のプロフィールを更新（userId ベース）
@@ -572,6 +629,12 @@ function buildAnonymizedEmail(customerId: string): {
 export async function anonymizeCustomerCommand(input: {
   customerId: string;
   reason: AnonymizeCustomerReason;
+  /**
+   * Better Auth `deleteUser.beforeDelete` 経路では User 削除は BA 本体が行うため
+   * `false` を渡す（二重 delete / FK 競合を避ける）。admin / cron は default `true`。
+   * @see https://www.better-auth.com/docs/concepts/users-accounts
+   */
+  deleteLinkedUser?: boolean;
 }): Promise<{
   customerId: string;
   anonymizedAt: Date;
@@ -580,6 +643,8 @@ export async function anonymizeCustomerCommand(input: {
   /** RESEND-AUDIT M7: 匿名化前の suppression 状態を hash として持ち越したか。 */
   preservedSuppression: boolean;
 }> {
+  const deleteLinkedUser = input.deleteLinkedUser !== false;
+
   return prisma.$transaction(async (tx) => {
     const existing = await tx.customer.findUnique({
       where: { id: input.customerId },
@@ -649,7 +714,9 @@ export async function anonymizeCustomerCommand(input: {
     // Session / Account は User に対して onDelete: Cascade のため連鎖削除される。
     // Reservation / AuditLog の userId は User に対して onDelete: SetNull のため
     // 予約履歴・監査証跡は残る。
-    if (existing.userId !== null) {
+    // deleteLinkedUser=false のとき（BA beforeDelete）は User 行を残し、
+    // deleteUser 本体の物理削除に委譲する。
+    if (deleteLinkedUser && existing.userId !== null) {
       await tx.user.delete({ where: { id: existing.userId } });
     }
 

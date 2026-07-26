@@ -98,11 +98,13 @@ mock.module("@/shared/domain/customers/guard", () => ({
   ensureCustomerNotBlacklisted: mock(() => Promise.resolve(undefined)),
 }));
 
+const mockAssertLoginSignupReagreed = mock(() => Promise.resolve(undefined));
+
 mock.module("@/shared/lib/terms-consent-gate", () => ({
   assertAllRequiredTermsAgreed: mock(() =>
     Promise.resolve({ matchedTermsIds: [] }),
   ),
-  assertLoginSignupReagreed: mock(() => Promise.resolve()),
+  assertLoginSignupReagreed: mockAssertLoginSignupReagreed,
 }));
 
 const mockCreateReviewCommand = mock(() =>
@@ -203,6 +205,7 @@ describe("submitReview", () => {
     mockCreateReviewCommand.mockClear();
     mockInvalidateReviewCaches.mockClear();
     mockUpdateTag.mockClear();
+    mockAssertLoginSignupReagreed.mockClear();
     // 成功レスポンスにリセット
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
@@ -228,6 +231,9 @@ describe("submitReview", () => {
         spaceId: "space-001",
         spaceSlug: "test-space",
       }),
+    );
+    mockAssertLoginSignupReagreed.mockImplementation(() =>
+      Promise.resolve(undefined),
     );
   });
 
@@ -490,6 +496,32 @@ describe("submitReview", () => {
   });
 
   describe("異常系: DomainError", () => {
+    test("LOGIN_SIGNUP 再同意 pending のとき formErrors を返す", async () => {
+      mockAssertLoginSignupReagreed.mockImplementation(() =>
+        Promise.reject(
+          new DomainError(
+            "利用規約が更新されています。マイページで再同意してください: /mypage/terms/reagree",
+            "FORBIDDEN",
+          ),
+        ),
+      );
+
+      const { submitReview } =
+        await import("@/app/(public)/_shared/actions/review");
+
+      const result = await submitReview(
+        undefined,
+        inputToFormData(VALID_INPUT),
+      );
+      expectSubmissionLike(result);
+
+      expect(result.status).toBe("error");
+      expect(result.error?.[""]?.[0]).toBe(
+        "利用規約が更新されています。マイページで再同意してください: /mypage/terms/reagree",
+      );
+      expect(mockCreateReviewCommand).not.toHaveBeenCalled();
+    });
+
     test("DomainError (NOT_FOUND) をスローしたとき formErrors を返す", async () => {
       mockCreateReviewCommand.mockImplementation(() =>
         Promise.reject(new DomainError("予約が見つかりません", "NOT_FOUND")),

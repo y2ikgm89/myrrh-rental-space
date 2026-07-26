@@ -19,6 +19,7 @@ import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidRole } from "@/shared/lib/validations/enums/guards";
 import { sendDeleteAccountVerificationEmail } from "@/shared/lib/email/delete-account-emails";
 import { invalidateSiteWideCacheFromRouteHandler } from "@/shared/lib/cache";
+import { anonymizeCustomerBeforeAuthUserDelete } from "@/shared/domain/customers/account-deletion";
 import { logError, ErrorCategory, ErrorSeverity } from "./errors/server";
 import { SESSION_CONFIG, CACHE_TAGS, getAppUrl } from "./constants";
 import { isRecord } from "./serialize";
@@ -161,9 +162,13 @@ function createCustomerAuth() {
         },
         // 実際の削除は本人がメール内リンクを踏んだ時点（Better Auth 内部の
         // /api/customer-auth/delete-user/callback、Route Handler）で発生する。
-        // Customer.userId は User 削除で SetNull されるため、この時点では
-        // customer 個別レコードの id は復元できない（site-wide の CUSTOMERS
-        // collection タグで一覧系は十分カバーされる）。
+        //
+        // Clean break (mypage audit): PII は User 削除前に必須で anonymize する。
+        // domain SSoT に委譲し、User 物理削除は BA 本体に残す。
+        // @see https://www.better-auth.com/docs/concepts/users-accounts
+        beforeDelete: async (user) => {
+          await anonymizeCustomerBeforeAuthUserDelete(user.id);
+        },
         afterDelete: async () => {
           invalidateSiteWideCacheFromRouteHandler([
             CACHE_TAGS.CUSTOMERS,

@@ -493,6 +493,31 @@ export async function getCustomerByUserId(userId: string) {
 }
 
 /**
+ * 会員 Customer と同じ emailCanonical を持つ、未リンク (userId=null) かつ
+ * 非匿名化の guest Customer が存在するかを返す。
+ *
+ * email 自動リンクは IDOR になるため行わず、mypage では警告表示のみに使う。
+ */
+export async function hasUnlinkedGuestCustomerForEmail(params: {
+  readonly email: string;
+  readonly excludeCustomerId: string;
+}): Promise<boolean> {
+  if (params.email.length === 0) return false;
+
+  const emailCanonical = normalizeEmailForIdentity(params.email);
+  const guest = await prisma.customer.findFirst({
+    where: {
+      emailCanonical,
+      userId: null,
+      anonymizedAt: null,
+      NOT: { id: params.excludeCustomerId },
+    },
+    select: { id: true },
+  });
+  return guest !== null;
+}
+
+/**
  * 顧客一斉配信（Phase 4: 顧客管理強化）の送信対象を解決する。
  *
  * 指定された `customerIds` のうち `marketingOptIn: true` の顧客のみ返す

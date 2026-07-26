@@ -621,6 +621,9 @@ export async function findEventRegistrationsForReminderWindow(
  * - `customerId` を渡した場合: 所有者一致を where 条件で強制 (会員セッション経路)
  * - `customerId` を省略した場合: ID 一致のみで取得 (ゲスト用署名付きトークン経路。
  *   トークン検証側でアクセス権を担保するため、ここでは ownership 強制をしない)
+ * - `meetingUrl` は `status === CONFIRMED` のときのみ event の値を返し、
+ *   それ以外（WAITLISTED / CANCELLED 等）は null。CANCELLED ICS は URL なしで
+ *   発行してよい。
  */
 export async function getEventRegistrationForCalendar(params: {
   registrationId: string;
@@ -683,6 +686,9 @@ export async function getEventRegistrationForCalendar(params: {
     icsSequence: reg.icsSequence,
     status: reg.status,
     format: reg.event.format,
-    meetingUrl: reg.event.meetingUrl,
+    // 参加 URL は CONFIRMED のみ。WAITLISTED / CANCELLED 等への ICS 配信で
+    // 未確定・取消済み参加者へ meetingUrl が漏れないようクエリ層でゲートする。
+    meetingUrl:
+      reg.status === RegistrationStatus.CONFIRMED ? reg.event.meetingUrl : null,
   };
 }
