@@ -13,7 +13,7 @@ import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReceipts } from "@/shared/domain/receipts/queries";
 import { mypageReceiptsSearchParams } from "@/public/lib/search-params";
@@ -31,7 +31,7 @@ export default async function MypageReceiptsPage({
 }: MypageReceiptsPageProps): Promise<ReactElement> {
   await connection();
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
 
   if (!customer) {

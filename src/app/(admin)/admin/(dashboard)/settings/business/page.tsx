@@ -13,7 +13,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
 import { getGlobalBlockedDates } from "@/admin/queries/blocked-dates";
-import { requireAdminPermission } from "@/admin/queries/_helpers";
+import { requireAdminSettingsPage } from "@/admin/helpers/page-auth";
 import { hasPermission } from "@/shared/lib/admin-permissions";
 import { BlockedDatesField } from "@/admin/components/BlockedDatesField";
 import {
@@ -37,7 +37,7 @@ import type { ReactElement } from "react";
 
 async function BusinessSettingsContent(): Promise<ReactElement> {
   await connection();
-  const user = await requireAdminPermission("settings", "read");
+  const user = await requireAdminSettingsPage();
   const readOnly = !hasPermission(user.role, "settings", "update");
 
   const [settings, blockedDates] = await Promise.all([
@@ -111,7 +111,7 @@ function BusinessSettingsLoading(): ReactElement {
 
 export default async function BusinessSettingsPage(): Promise<ReactElement> {
   await connection();
-  const user = await requireAdminPermission("settings", "read");
+  const user = await requireAdminSettingsPage();
   const readOnly = !hasPermission(user.role, "settings", "update");
 
   return (

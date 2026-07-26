@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
-import { verifyCustomerSession } from "@/shared/lib/customer-auth";
+import { requireMypageSession } from "@/shared/lib/customer-auth/gates";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
   isFeatureEnabled,
@@ -38,7 +38,7 @@ export default async function MypageEventRegistrationDetailPage({
 
   const { id } = await params;
 
-  const { user } = await verifyCustomerSession();
+  const { user } = await requireMypageSession();
   const customer = await getCustomerByUserId(user.id);
 
   if (!customer) {
