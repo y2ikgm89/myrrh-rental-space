@@ -29,8 +29,9 @@ paths:
 - `mock.module()` を先に宣言し、テスト対象は宣言後に `await import(...)` で
   動的 import する（静的 import は mock 適用前に評価される）
 - preload（`__tests__/setup.ts`）が server-only の no-op 化・DATABASE_URL のダミー固定・
-  暗号化キー mock を行う。`__tests__/mocks/` の共有 mock は現在未使用で、
-  ファイルローカル mock が現行スタイル
+  暗号化キー mock を行う。共有ヘルパーは `__tests__/mocks/`（例:
+  `errors-server` の `installErrorsServerMock`）。それ以外はファイルローカルの
+  `mock.module()` が現行スタイル
 - JSDOM が必要なテストは `installJSDOMForTests()` を beforeEach で再適用できる
 
 ## 実 DB 統合テスト（要 Postgres）
