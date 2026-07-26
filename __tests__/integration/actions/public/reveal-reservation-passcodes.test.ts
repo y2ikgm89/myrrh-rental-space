@@ -21,9 +21,15 @@ mock.module("@/shared/lib/action-helpers", () => ({
 const mockUserRateLimitCheck = mock(() =>
   Promise.resolve({ success: true, remaining: 20, reset: Date.now() + 60000 }),
 );
+const mockReservationRateLimitCheck = mock(() =>
+  Promise.resolve({ success: true, remaining: 2, reset: Date.now() + 60000 }),
+);
 mock.module("@/shared/lib/rate-limit", () => ({
   passcodeRevealByIpRateLimiter: {},
   passcodeRevealByUserRateLimiter: { check: mockUserRateLimitCheck },
+  passcodeRevealByReservationRateLimiter: {
+    check: mockReservationRateLimitCheck,
+  },
 }));
 
 const VALID_UUID = "11111111-1111-4111-8111-111111111111";
@@ -91,6 +97,7 @@ describe("revealReservationPasscodesAction", () => {
     mockGetReservationCustomerId.mockReset();
     mockGetCustomerByUserId.mockReset();
     mockUserRateLimitCheck.mockReset();
+    mockReservationRateLimitCheck.mockReset();
     mockGetCustomerSession.mockReset();
     mockCookieGet.mockReset();
 
@@ -109,6 +116,11 @@ describe("revealReservationPasscodesAction", () => {
     mockUserRateLimitCheck.mockResolvedValue({
       success: true,
       remaining: 20,
+      reset: Date.now() + 60000,
+    });
+    mockReservationRateLimitCheck.mockResolvedValue({
+      success: true,
+      remaining: 2,
       reset: Date.now() + 60000,
     });
     mockGetCustomerSession.mockResolvedValue(null);
@@ -130,6 +142,7 @@ describe("revealReservationPasscodesAction", () => {
       expect.objectContaining({ reveal: true }),
     );
     expect(mockGetReservationCustomerId).not.toHaveBeenCalled();
+    expect(mockReservationRateLimitCheck).toHaveBeenCalledWith(VALID_UUID);
   });
 
   test("ログイン会員 B + 別人予約の status token は ownership で拒否", async () => {
@@ -184,6 +197,46 @@ describe("revealReservationPasscodesAction", () => {
     const result = await revealReservationPasscodesAction(VALID_UUID);
 
     expect(result).toHaveProperty("error", "リンクが無効または期限切れです");
+    expect(mockGetPasscodes).not.toHaveBeenCalled();
+    expect(mockReservationRateLimitCheck).not.toHaveBeenCalled();
+  });
+
+  test("認可通過後の per-reservation rate limit 超過は拒否", async () => {
+    mockReservationRateLimitCheck.mockResolvedValue({
+      success: false,
+      remaining: 0,
+      reset: Date.now() + 60000,
+    });
+
+    const { revealReservationPasscodesAction } = await import(IMPORT_PATH);
+    const result = await revealReservationPasscodesAction(VALID_UUID);
+
+    expect(result).toHaveProperty(
+      "error",
+      "この予約に対する解錠番号の表示試行が多すぎます。しばらく時間をおいてからお試しください",
+    );
+    expect(mockReservationRateLimitCheck).toHaveBeenCalledWith(VALID_UUID);
+    expect(mockGetPasscodes).not.toHaveBeenCalled();
+  });
+
+  test("ownership 拒否時は per-reservation rate limit を消費しない", async () => {
+    mockGetCustomerSession.mockResolvedValue({
+      user: { id: "user-attacker" },
+    });
+    mockGetCustomerByUserId.mockResolvedValue({
+      id: "cust-attacker",
+      userId: "user-attacker",
+    });
+    mockGetReservationCustomerId.mockResolvedValue("cust-victim");
+
+    const { revealReservationPasscodesAction } = await import(IMPORT_PATH);
+    const result = await revealReservationPasscodesAction(VALID_UUID);
+
+    expect(result).toHaveProperty(
+      "error",
+      "このリンクは別のお客様のご予約です。マイページからご自身のご予約をご確認ください",
+    );
+    expect(mockReservationRateLimitCheck).not.toHaveBeenCalled();
     expect(mockGetPasscodes).not.toHaveBeenCalled();
   });
 });

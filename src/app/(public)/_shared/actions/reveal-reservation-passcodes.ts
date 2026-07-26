@@ -19,6 +19,7 @@ import {
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import {
   passcodeRevealByIpRateLimiter,
+  passcodeRevealByReservationRateLimiter,
   passcodeRevealByUserRateLimiter,
 } from "@/shared/lib/rate-limit";
 
@@ -37,7 +38,9 @@ export type RevealReservationPasscodesData = {
  *
  * - 会員: Better Auth session + reservation.customerId ownership
  * - ゲスト: cookie の reservation-status token の rid 一致
+ *   （認可 TTL は endTime + passcode buffer。cookie の 90 日より短い）
  * - ログイン中でも status token 経路では member-ownership を強制（別会員の cookie 誤操作を遮断）
+ * - 認可通過後に per-reservation rate limit（3/hour）
  * - 平文は本 action の戻り値のみ（RSC 初期 props には載せない）
  */
 export async function revealReservationPasscodesAction(
@@ -141,6 +144,16 @@ export async function revealReservationPasscodesAction(
       throw error;
     }
     auth = { kind: "customer", customerId: customer.id };
+  }
+
+  // per-reservation 第二防壁 — token/session 認可通過後のみ消費
+  const perReservation = await passcodeRevealByReservationRateLimiter.check(
+    parsedId.data,
+  );
+  if (!perReservation.success) {
+    return createMutationError(
+      "この予約に対する解錠番号の表示試行が多すぎます。しばらく時間をおいてからお試しください",
+    );
   }
 
   const result = await getCustomerVisibleSmartLockPasscodesForReservation(
