@@ -13,7 +13,7 @@ import {
 } from "@/shared/domain/reservations/edit-side-effects";
 import { getReservationForGuestEdit } from "@/shared/domain/reservations/customer-queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
-import { assertCustomerActive } from "@/shared/domain/customers/guard";
+import { assertGuestTokenCustomerGates } from "@/shared/domain/customers/guest-token-gates";
 import { fetchReservationEmailData } from "@/shared/domain/reservations/payloads";
 import {
   syncReservationToCalendar,
@@ -158,13 +158,15 @@ export async function updateGuestReservationAction(
         };
       }
 
+      const reservation = await getReservationForGuestEdit(parsedId.data);
+      if (!reservation) {
+        return { ok: false, error: "予約が見つかりません" };
+      }
+
       const session = await getCustomerSession();
       const sessionUserId = session?.user.id ?? null;
+      let sessionCustomerId: string | null = null;
       if (sessionUserId) {
-        const reservation = await getReservationForGuestEdit(parsedId.data);
-        if (!reservation) {
-          return { ok: false, error: "予約が見つかりません" };
-        }
         const customer = await getCustomerByUserId(sessionUserId);
         if (customer && customer.id !== reservation.customerId) {
           return {
@@ -172,16 +174,19 @@ export async function updateGuestReservationAction(
             error: GUEST_STATUS_RESERVATION_MEMBER_OWNERSHIP_MISMATCH_MESSAGE,
           };
         }
-        if (customer) {
-          try {
-            await assertCustomerActive(customer.id);
-          } catch (error) {
-            if (error instanceof DomainError) {
-              return { ok: false, error: error.message };
-            }
-            throw error;
-          }
+        sessionCustomerId = customer?.id ?? null;
+      }
+
+      try {
+        await assertGuestTokenCustomerGates({
+          resourceCustomerId: reservation.customerId,
+          sessionCustomerId,
+        });
+      } catch (error) {
+        if (error instanceof DomainError) {
+          return { ok: false, error: error.message };
         }
+        throw error;
       }
 
       if (!(await isFeatureEnabled("reservation"))) {

@@ -108,6 +108,10 @@ describe("Route Handler contract: GET is session-only, POST carries token claim"
       assertCustomerActive: mock(() => Promise.resolve()),
       ensureCustomerNotBlacklisted: mock(() => Promise.resolve()),
     }));
+    // POST token 経路の linked-customer active gate。契約テストの主眼外のため素通り。
+    mock.module("@/shared/domain/customers/guest-token-gates", () => ({
+      assertGuestTokenCustomerGates: mock(() => Promise.resolve()),
+    }));
   });
 
   test("GET without session returns 404 (no session, no token path)", async () => {

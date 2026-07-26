@@ -17,6 +17,7 @@
  *   が `__tests__/integration/**` を走査し、`TEST_DATABASE_URL` / `DATABASE_URL`
  *   上書きパターンを持つファイルを自動検出して順次実行する（並列書込み競合回避）。
  *   prisma を `mock.module` するファイルは除外。例外は FORCE_INCLUDE / FORCE_EXCLUDE。
+ *   検出結果は `scripts/test-db-runner-env.ts` の `SERIAL_DB_TESTS` に module load 時集約。
  * - serial bucket と parallel bucket は **並列** に動かす (互いに DB 共有なし)。
  *
  * ## 出力順序保持
