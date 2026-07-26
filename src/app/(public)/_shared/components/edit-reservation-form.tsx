@@ -24,6 +24,7 @@ import {
 } from "@/shared/components/turnstile-widget";
 import type { TurnstileAction } from "@/shared/lib/turnstile-actions";
 import { toAppRoute } from "@/shared/lib/typed-routes";
+import { GuestStepper } from "@/app/(public)/reservation/_components/guest-stepper";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -130,6 +131,20 @@ export function EditReservationForm({
   );
 
   const turnstileTokenControl = useInputControl(fields.turnstileToken);
+  const numberOfGuestsControl = useInputControl(fields.numberOfGuests);
+
+  const selectedSpaceId =
+    fields.spaceId.value ?? initialValues.spaceId ?? spaces[0]?.id ?? "";
+  const selectedSpace =
+    spaces.find((space) => space.id === selectedSpaceId) ?? spaces[0];
+  const spaceCapacity = selectedSpace?.capacity ?? 1;
+  const guestCount = Number(numberOfGuestsControl.value ?? numberOfGuests);
+
+  useEffect(() => {
+    if (guestCount > spaceCapacity) {
+      numberOfGuestsControl.change(String(spaceCapacity));
+    }
+  }, [guestCount, spaceCapacity, numberOfGuestsControl]);
 
   if (lastResult !== previousResult) {
     setPreviousResult(lastResult);
@@ -171,7 +186,7 @@ export function EditReservationForm({
       <input
         type="hidden"
         name={fields.numberOfGuests.name}
-        value={String(numberOfGuests)}
+        value={String(Math.min(guestCount, spaceCapacity))}
       />
       <input
         type="hidden"
@@ -198,6 +213,27 @@ export function EditReservationForm({
         })}
         {...getInputProps(fields.spaceId, { type: "text" })}
       />
+
+      <div>
+        <p className="mb-2 text-sm font-medium text-foreground">
+          利用人数
+          <span className="ml-1 text-destructive" aria-hidden="true">
+            *
+          </span>
+        </p>
+        <GuestStepper
+          value={Math.min(guestCount, spaceCapacity)}
+          max={spaceCapacity}
+          onChange={(count) => {
+            numberOfGuestsControl.change(String(count));
+          }}
+        />
+        {fields.numberOfGuests.errors?.[0] !== undefined && (
+          <p className="mt-2 text-sm text-destructive" role="alert">
+            {fields.numberOfGuests.errors[0]}
+          </p>
+        )}
+      </div>
 
       <Input
         label="利用日"

@@ -406,6 +406,7 @@ describeMaybe(
           status: "CONFIRMED",
           totalPrice: 5000, // override
           adminUserId: OTHER_ADMIN_USER_ID,
+          numberOfGuests: 1,
           version: 0,
         });
         expect(updateResult.payload.reservationId).toBe(created.id);
@@ -452,6 +453,7 @@ describeMaybe(
           customerId,
           status: "CONFIRMED",
           adminUserId: OTHER_ADMIN_USER_ID,
+          numberOfGuests: 1,
           version: 0,
         });
         expect(updateResult.payload.reservationId).toBe(created.id);
@@ -497,6 +499,7 @@ describeMaybe(
           status: "CONFIRMED",
           notes: "メモのみ変更",
           adminUserId: OTHER_ADMIN_USER_ID,
+          numberOfGuests: 1,
           version: 0,
         });
         expect(updateResult.payload.reservationId).toBe(created.id);
@@ -524,6 +527,7 @@ describeMaybe(
             customerId: fixture.customerId,
             status: ReservationStatus.CONFIRMED,
             adminUserId: fixture.adminUserId,
+            numberOfGuests: 1,
             version: 0,
           });
           const after = await prisma.reservation.findUniqueOrThrow({
@@ -548,6 +552,7 @@ describeMaybe(
               customerId: fixture.customerId,
               status: ReservationStatus.CONFIRMED,
               adminUserId: fixture.adminUserId,
+              numberOfGuests: 1,
               version: 0,
             }),
             updateAdminReservationCommand(fixture.reservationId, {
@@ -558,6 +563,7 @@ describeMaybe(
               customerId: fixture.customerId,
               status: ReservationStatus.CONFIRMED,
               adminUserId: fixture.adminUserId,
+              numberOfGuests: 1,
               version: 0,
             }),
           ]);
@@ -585,6 +591,7 @@ describeMaybe(
             customerId: fixture.customerId,
             status: ReservationStatus.CONFIRMED,
             adminUserId: fixture.adminUserId,
+            numberOfGuests: 1,
             version: 0,
           });
 
@@ -597,6 +604,7 @@ describeMaybe(
               date: fixture.date,
               startTime: "14:00",
               endTime: "15:00",
+              numberOfGuests: 1,
               version: 0,
             },
             MODIFICATION_DEADLINE_HOURS,
@@ -624,6 +632,7 @@ describeMaybe(
               date: fixture.date,
               startTime: "10:00",
               endTime: "11:00",
+              numberOfGuests: 1,
               version: 0,
             },
             MODIFICATION_DEADLINE_HOURS,
@@ -652,6 +661,7 @@ describeMaybe(
               customerId: fixture.customerId,
               status: ReservationStatus.CONFIRMED,
               adminUserId: fixture.adminUserId,
+              numberOfGuests: 1,
               version: 0,
             }),
           ).rejects.toMatchObject({ code: "CONFLICT" });

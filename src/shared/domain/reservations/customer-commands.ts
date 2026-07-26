@@ -23,7 +23,11 @@ import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-rese
 import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { lockSpaceForTransaction } from "./space-locks";
-import { buildPricingSettings, ensureNoOverlap } from "./payloads";
+import {
+  buildPricingSettings,
+  ensureNoOverlap,
+  guestCountCapacityError,
+} from "./payloads";
 import {
   isReservationEditableForCustomerSelfServe,
   type EditEligibilityReason,
@@ -47,6 +51,8 @@ type ReservationUpdateInput = {
   date: string;
   startTime: string;
   endTime: string;
+  /** 利用人数。Reservation 列は未永続化だが create と同型 gate の入力として必須。 */
+  numberOfGuests: number;
   version: number;
 };
 
@@ -325,10 +331,17 @@ async function updateReservationCommand(input: {
   // spaceId 存在確認と locationId 取得を先行 (public-commands.ts 同型パターン)。
   const spaceForBlockedCheck = await prisma.space.findUnique({
     where: { id: updateInput.spaceId, isActive: true, isPublished: true },
-    select: { locationId: true },
+    select: { locationId: true, capacity: true },
   });
   if (!spaceForBlockedCheck) {
     return { success: false, error: "指定されたスペースが見つかりません" };
+  }
+  const preCheckCapacityError = guestCountCapacityError(
+    updateInput.numberOfGuests,
+    spaceForBlockedCheck.capacity,
+  );
+  if (preCheckCapacityError) {
+    return { success: false, error: preCheckCapacityError };
   }
   await ensureDateNotBlocked(
     updateInput.spaceId,
@@ -415,6 +428,7 @@ async function updateReservationCommand(input: {
       select: {
         id: true,
         locationId: true,
+        capacity: true,
         hourlyPrice: true,
         discountType: true,
         discountValue: true,
@@ -425,6 +439,14 @@ async function updateReservationCommand(input: {
 
     if (!space) {
       throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
+    }
+
+    const txCapacityError = guestCountCapacityError(
+      updateInput.numberOfGuests,
+      space.capacity,
+    );
+    if (txCapacityError) {
+      return { success: false, error: txCapacityError };
     }
 
     await lockSpaceForTransaction(tx, updateInput.spaceId);
