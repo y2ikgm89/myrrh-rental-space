@@ -268,4 +268,25 @@ describe("syncEventTimeSlotsCommand — firstSlotStartAt/lastSlotEndAt 同期", 
     expect(tx.eventTimeSlot.update).not.toHaveBeenCalled();
     expect(tx.event.update).not.toHaveBeenCalled();
   });
+
+  test("他イベントの slot.id や未知 id は DomainError 'NOT_FOUND'", async () => {
+    const startAt = new Date("2026-12-06T10:00:00Z");
+    const endAt = new Date("2026-12-06T12:00:00Z");
+    const tx = buildTx({
+      existingSlots: [{ id: "slot-owned", registrations: [] }],
+    });
+
+    await expect(
+      syncEventTimeSlotsCommand(tx, EVENT_ID, [
+        { id: "slot-foreign", startAt, endAt, capacity: 10 },
+      ]),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "スロットが見つかりません",
+    });
+
+    expect(tx.eventTimeSlot.update).not.toHaveBeenCalled();
+    expect(tx.eventTimeSlot.create).not.toHaveBeenCalled();
+    expect(tx.event.update).not.toHaveBeenCalled();
+  });
 });

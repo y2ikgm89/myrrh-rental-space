@@ -22,7 +22,10 @@ import {
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
-import { EVENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import {
+  EVENT_STATUS_LABELS,
+  EVENT_STATUS_TRANSITIONS,
+} from "@/shared/lib/validations/enums/helpers";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import type { EventFormFields } from "./event-form-fields-types";
@@ -30,7 +33,14 @@ import type { EventFormFields } from "./event-form-fields-types";
 type EventPublishFieldsProps = {
   fields: EventFormFields;
   isPending: boolean;
+  /** フォーム上の選択中ステータス */
   status: EventStatus;
+  /**
+   * DB 上の現ステータス（新規作成時は DRAFT）。
+   * `EVENT_STATUS_TRANSITIONS` の選択肢はここを基準にし、
+   * フォーム内で一時選択した値から再計算しない（`EventStatusSelect` と同型）。
+   */
+  persistedStatus: EventStatus;
   onStatusChange: (status: EventStatus) => void;
   registrationOpen: boolean;
   onRegistrationOpenChange: (open: boolean) => void;
@@ -40,26 +50,11 @@ type EventPublishFieldsProps = {
   onThumbnailUrlChange: (url: string | null) => void;
 };
 
-const EVENT_STATUS_OPTIONS = [
-  { value: EventStatus.DRAFT, label: EVENT_STATUS_LABELS[EventStatus.DRAFT] },
-  {
-    value: EventStatus.PUBLISHED,
-    label: EVENT_STATUS_LABELS[EventStatus.PUBLISHED],
-  },
-  {
-    value: EventStatus.CANCELLED,
-    label: EVENT_STATUS_LABELS[EventStatus.CANCELLED],
-  },
-  {
-    value: EventStatus.ARCHIVED,
-    label: EVENT_STATUS_LABELS[EventStatus.ARCHIVED],
-  },
-] as const;
-
 export function EventPublishFields({
   fields,
   isPending,
   status,
+  persistedStatus,
   onStatusChange,
   registrationOpen,
   onRegistrationOpenChange,
@@ -70,6 +65,9 @@ export function EventPublishFields({
 }: EventPublishFieldsProps): ReactElement {
   const isPublished = status === EventStatus.PUBLISHED;
   const registrationOpenChecked = isPublished ? registrationOpen : false;
+  const allowedNextStatuses = EVENT_STATUS_TRANSITIONS[persistedStatus] ?? [];
+  const statusOptions = [persistedStatus, ...allowedNextStatuses];
+  const isStatusTerminal = persistedStatus === EventStatus.ARCHIVED;
 
   const handleStatusChange = (value: string) => {
     if (!isValidEventStatus(value)) return;
@@ -101,15 +99,18 @@ export function EventPublishFields({
             <Select
               value={status}
               onValueChange={handleStatusChange}
-              disabled={isPending}
+              disabled={isPending || isStatusTerminal}
             >
-              <SelectTrigger id="event-status">
+              <SelectTrigger
+                id="event-status"
+                aria-label={`ステータス（現在: ${EVENT_STATUS_LABELS[status]}）`}
+              >
                 <SelectValue placeholder="ステータス" />
               </SelectTrigger>
               <SelectContent>
-                {EVENT_STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                {statusOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {EVENT_STATUS_LABELS[option]}
                   </SelectItem>
                 ))}
               </SelectContent>

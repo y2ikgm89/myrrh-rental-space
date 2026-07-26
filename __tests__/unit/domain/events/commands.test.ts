@@ -16,6 +16,14 @@ const EventScheduleMode = {
   TIMED_ENTRY: "TIMED_ENTRY",
 } as const;
 
+const RegistrationStatus = {
+  CONFIRMED: "CONFIRMED",
+  CANCELLED: "CANCELLED",
+  WAITLISTED: "WAITLISTED",
+  WAITLISTED_OFFERED: "WAITLISTED_OFFERED",
+  EXPIRED: "EXPIRED",
+} as const;
+
 // ---------------------------------------------------------------------------
 // モック関数（mock.module より前に定義 — TDZ 対策）
 // ---------------------------------------------------------------------------
@@ -204,6 +212,7 @@ mock.module("@/shared/lib/email/event-emails", () => ({
 
 mock.module("@generated/prisma/enums", () => ({
   EventStatus,
+  RegistrationStatus,
 }));
 
 mock.module("@/shared/lib/errors/server", () => ({
@@ -702,6 +711,12 @@ describe("updateEventCommand", () => {
     mockEventTicketCreateMany.mockClear();
     mockEventTicketDeleteMany.mockClear();
     mockEventTicketFindMany.mockImplementation(() => Promise.resolve([]));
+    mockEventRegistrationAggregate.mockClear();
+    mockEventRegistrationAggregate.mockImplementation(() =>
+      Promise.resolve({ _sum: { quantity: 0 } }),
+    );
+    mockEventTimeSlotFindMany.mockClear();
+    mockEventTimeSlotFindMany.mockImplementation(() => Promise.resolve([]));
     mockExecuteRaw.mockClear();
     mockExecuteRaw.mockResolvedValue(0);
     mockFireAndForget.mockClear();
@@ -861,6 +876,15 @@ describe("updateEventCommand", () => {
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
       );
+      mockEventTimeSlotFindMany.mockImplementation(() =>
+        Promise.resolve([
+          {
+            id: "slot-1",
+            registrations: [],
+            googleCalendarEventId: null,
+          },
+        ]),
+      );
 
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
@@ -899,6 +923,15 @@ describe("updateEventCommand", () => {
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
+      );
+      mockEventTimeSlotFindMany.mockImplementation(() =>
+        Promise.resolve([
+          {
+            id: "slot-1",
+            registrations: [],
+            googleCalendarEventId: null,
+          },
+        ]),
       );
 
       await updateEventCommand("event-1", {
@@ -950,6 +983,20 @@ describe("updateEventCommand", () => {
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
+      );
+      mockEventTimeSlotFindMany.mockImplementation(() =>
+        Promise.resolve([
+          {
+            id: "slot-1",
+            registrations: [],
+            googleCalendarEventId: null,
+          },
+          {
+            id: "slot-2",
+            registrations: [],
+            googleCalendarEventId: null,
+          },
+        ]),
       );
 
       await updateEventCommand("event-1", {
@@ -1005,6 +1052,15 @@ describe("updateEventCommand", () => {
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
+      );
+      mockEventTimeSlotFindMany.mockImplementation(() =>
+        Promise.resolve([
+          {
+            id: "slot-1",
+            registrations: [],
+            googleCalendarEventId: null,
+          },
+        ]),
       );
 
       await updateEventCommand("event-1", {
@@ -1221,6 +1277,136 @@ describe("updateEventCommand", () => {
 
       expect(mockEventTicketUpdate).not.toHaveBeenCalled();
       expect(mockExecuteRaw).toHaveBeenCalledTimes(1);
+    });
+
+    test("EVENT_STATUS_TRANSITIONS 外の遷移 (CANCELLED → PUBLISHED) は VALIDATION", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.CANCELLED,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await expect(
+        updateEventCommand("event-1", {
+          ...VALID_EVENT_INPUT,
+          status: EventStatus.PUBLISHED,
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message:
+          "イベントのステータスを CANCELLED から PUBLISHED へ変更することはできません",
+      });
+      expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    test("ARCHIVED からの遷移は VALIDATION", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.ARCHIVED,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+
+      await expect(
+        updateEventCommand("event-1", {
+          ...VALID_EVENT_INPUT,
+          status: EventStatus.DRAFT,
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message:
+          "イベントのステータスを ARCHIVED から DRAFT へ変更することはできません",
+      });
+    });
+
+    test("チケット定員を CONFIRMED 合計未満に下げると VALIDATION", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+      mockEventTicketFindMany.mockResolvedValueOnce([{ id: "ticket-1" }]);
+      mockEventRegistrationAggregate.mockImplementation(() =>
+        Promise.resolve({ _sum: { quantity: 5 } }),
+      );
+
+      await expect(
+        updateEventCommand("event-1", {
+          ...VALID_EVENT_INPUT,
+          tickets: [
+            {
+              id: "ticket-1",
+              name: "一般",
+              description: null,
+              price: 5000,
+              capacity: 4,
+              unitSize: 1,
+              isAvailable: true,
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "定員を確定済み申込人数（5名）未満にはできません",
+      });
+      expect(mockEventTicketUpdate).not.toHaveBeenCalled();
+    });
+
+    test("チケット capacity=null（無制限）は CONFIRMED があっても更新できる", async () => {
+      const existingEvent = {
+        id: "event-1",
+        slug: "test-event",
+        status: EventStatus.DRAFT,
+        slots: [{ startAt: new Date("2024-06-15T10:00:00Z") }],
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
+      };
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve(existingEvent),
+      );
+      mockEventTicketFindMany.mockResolvedValueOnce([{ id: "ticket-1" }]);
+      mockEventRegistrationAggregate.mockImplementation(() =>
+        Promise.resolve({ _sum: { quantity: 50 } }),
+      );
+
+      await updateEventCommand("event-1", {
+        ...VALID_EVENT_INPUT,
+        tickets: [
+          {
+            id: "ticket-1",
+            name: "一般",
+            description: null,
+            price: 5000,
+            capacity: null,
+            unitSize: 1,
+            isAvailable: true,
+          },
+        ],
+      });
+
+      expect(mockEventRegistrationAggregate).not.toHaveBeenCalled();
+      expect(mockEventTicketUpdate).toHaveBeenCalled();
     });
   });
 });
@@ -1695,6 +1881,14 @@ describe("upsertEventFromCalendar", () => {
     mockEventCategoryFindFirst.mockClear();
     mockEventFindMany.mockImplementation(() => Promise.resolve([]));
     mockEventTimeSlotFindFirst.mockImplementation(() => Promise.resolve(null));
+    // 更新保護判定の既定: DRAFT かつアクティブ申込なし → 上書き可
+    mockEventFindFirst.mockImplementation(() =>
+      Promise.resolve({
+        id: "event-1",
+        status: EventStatus.DRAFT,
+        registrations: [],
+      }),
+    );
     // 新規作成分岐（既存スロットなし）のフォールバックカテゴリー解決を既定で成功させる。
     mockEventCategoryFindFirst.mockImplementation(() =>
       Promise.resolve({ id: "fallback-category-1" }),
@@ -1725,6 +1919,50 @@ describe("upsertEventFromCalendar", () => {
       // 1 回目 = event 本体更新、2 回目 = firstSlotStartAt/lastSlotEndAt 同期
       expect(mockEventUpdate).toHaveBeenCalledTimes(2);
       expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+
+    test("PUBLISHED イベントは上書きせず action: skipped を返す", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
+      );
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve({
+          id: "event-1",
+          status: EventStatus.PUBLISHED,
+          registrations: [],
+        }),
+      );
+
+      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
+
+      expect(result).toEqual({
+        id: "event-1",
+        action: "skipped",
+        reason: "published_event_protected",
+      });
+      expect(mockEventUpdate).not.toHaveBeenCalled();
+    });
+
+    test("非キャンセル申込があるイベントは上書きせず action: skipped を返す", async () => {
+      mockEventTimeSlotFindFirst.mockImplementation(() =>
+        Promise.resolve({ id: "slot-1", eventId: "event-1" }),
+      );
+      mockEventFindFirst.mockImplementation(() =>
+        Promise.resolve({
+          id: "event-1",
+          status: EventStatus.DRAFT,
+          registrations: [{ id: "reg-1" }],
+        }),
+      );
+
+      const result = await upsertEventFromCalendar(CALENDAR_INPUT);
+
+      expect(result).toEqual({
+        id: "event-1",
+        action: "skipped",
+        reason: "has_active_registrations",
+      });
+      expect(mockEventUpdate).not.toHaveBeenCalled();
     });
 
     test("既存スロットがない場合、新規作成し action: created を返す", async () => {

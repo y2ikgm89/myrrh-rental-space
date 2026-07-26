@@ -375,11 +375,10 @@ export async function setEventRegistrationCheckInCommand(params: {
     },
   });
   if (!existing) throw new DomainError("申込が見つかりません", "NOT_FOUND");
-  if (existing.status === RegistrationStatus.CANCELLED) {
-    throw new DomainError(
-      "キャンセル済の申込は出席登録できません",
-      "VALIDATION",
-    );
+  // チェックイン / 解除は CONFIRMED のみ。WAITLISTED / OFFERED / EXPIRED /
+  // CANCELLED 等は出席対象外（clean-break）。
+  if (existing.status !== RegistrationStatus.CONFIRMED) {
+    throw new DomainError("確定済みの申込のみ出席登録できます", "VALIDATION");
   }
 
   const nextAttendedAt = params.attended ? new Date() : null;
@@ -398,21 +397,18 @@ export async function setEventRegistrationCheckInCommand(params: {
     };
   }
 
-  // findFirst と update の間に別 tx が CANCELLED へ遷移させた TOCTOU を防ぐため、
+  // findFirst と update の間に別 tx が CONFIRMED 以外へ遷移させた TOCTOU を防ぐため、
   // update ではなく updateMany + status guard で claim する。
   const claim = await prisma.eventRegistration.updateMany({
     where: {
       id: existing.id,
-      status: { not: RegistrationStatus.CANCELLED },
+      status: RegistrationStatus.CONFIRMED,
     },
     data: { attendedAt: nextAttendedAt },
   });
 
   if (claim.count === 0) {
-    throw new DomainError(
-      "キャンセル済の申込は出席登録できません",
-      "VALIDATION",
-    );
+    throw new DomainError("確定済みの申込のみ出席登録できます", "VALIDATION");
   }
 
   return {

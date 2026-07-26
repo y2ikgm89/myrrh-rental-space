@@ -414,6 +414,7 @@ export function EventForm({
             fields={fields}
             isPending={isPending}
             status={status}
+            persistedStatus={event?.status ?? EventStatus.DRAFT}
             onStatusChange={setStatus}
             registrationOpen={registrationOpen}
             onRegistrationOpenChange={setRegistrationOpen}

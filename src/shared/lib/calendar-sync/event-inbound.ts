@@ -35,6 +35,11 @@ export interface EventImportResult {
   success: boolean;
   imported: number;
   updated: number;
+  /**
+   * 公開済み / アクティブ申込あり等で inbound 上書きをスキップした件数。
+   * 失敗ではなく、errors には含めない。
+   */
+  skipped: number;
   /** GCal 上で cancelled になった import 済みイベントを CANCELLED に遷移させた件数 */
   cancelled: number;
   errors: string[];
@@ -52,6 +57,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
     success: true,
     imported: 0,
     updated: 0,
+    skipped: 0,
     cancelled: 0,
     errors: [],
   };
@@ -101,8 +107,16 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
 
         if (upsertResult.action === "created") {
           result.imported++;
-        } else {
+        } else if (upsertResult.action === "updated") {
           result.updated++;
+        } else {
+          // published / active registrations 保護による skip。失敗扱いにしない。
+          result.skipped++;
+          logger.info("Calendar event import skipped", {
+            googleCalendarEventId: event.id,
+            eventId: upsertResult.id,
+            reason: upsertResult.reason,
+          });
         }
       } catch (error) {
         const errorMessage =
@@ -140,6 +154,7 @@ export async function importCalendarEvents(): Promise<EventImportResult> {
     logger.info("Calendar event import completed", {
       imported: result.imported,
       updated: result.updated,
+      skipped: result.skipped,
       errors: result.errors.length,
     });
 
