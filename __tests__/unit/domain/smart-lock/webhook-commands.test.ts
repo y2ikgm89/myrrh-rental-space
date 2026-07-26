@@ -105,6 +105,10 @@ mock.module("@/shared/domain/smart-lock/revoke-passcode", () => ({
   revokeOne: (...args: unknown[]) => mockRevokeOne(...args),
 }));
 
+mock.module("@/shared/domain/smart-lock/reissue-passcode", () => ({
+  completePendingSmartLockReissue: mock(() => Promise.resolve(undefined)),
+}));
+
 const {
   isKnownSmartLockDevice,
   processSwitchBotChangeReport,

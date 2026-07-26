@@ -778,6 +778,10 @@ model Reservation {
   // 二重送信防止のため送信前に atomic claim で now を立て、送信失敗時は null に戻す。
   reminderSentAt DateTime?
 
+  /// 予約変更後の SwitchBot パスコード再発行待ち（revoke 確定後に webhook/cron が createKey）。
+  /// edit-side-effects が revoke 受理後に key 消失を同リクエスト内で確認できなかった場合に立てる。
+  smartLockReissuePendingAt DateTime? @map("smart_lock_reissue_pending_at")
+
   // PR#16: 領収書 (適格請求書) の 1:1 relation (1 予約 = 1 領収書、再発行は
   // Receipt.reissuedFromId で自参照)
   receipt Receipt?

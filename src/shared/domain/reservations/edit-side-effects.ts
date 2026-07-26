@@ -14,6 +14,10 @@ import {
   revokeSmartLockPasscodesForReservation,
 } from "@/shared/domain/smart-lock/revoke-passcode";
 import {
+  clearSmartLockReissuePending,
+  markSmartLockReissuePending,
+} from "@/shared/domain/smart-lock/reissue-passcode";
+import {
   logError,
   normalizeError,
   ErrorCategory,
@@ -176,8 +180,11 @@ export async function applyReservationEditSideEffects(input: {
       const revokeConfirmed =
         await awaitReservationRevokeConfirmation(reservationId);
       if (!revokeConfirmed) {
+        await markSmartLockReissuePending(reservationId);
         return { passcodes: [], issuanceFailed: true };
       }
+
+      await clearSmartLockReissuePending(reservationId);
 
       await prisma.smartLockPasscode.deleteMany({
         where: {
