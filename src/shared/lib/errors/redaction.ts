@@ -36,9 +36,8 @@ import { isRecord } from "@/shared/lib/serialize";
  * 1. **query string** は必ず `?[redacted]` に置き換える (キー名にも値にも
  *    秘密が入りうる)。hash も同格の危険度なので落とす。
  * 2. **path segment** ごとに {@link redactString} を通す。トークンを path に
- *    埋め込むエンドポイント (例: `/api/webhooks/switchbot/<64-char-base64url>`,
- *    `/events/waitlist/checkout/<encrypted-token>`) が Cloud Logging に
- *    そのまま流れることを防ぐ。UUID・slug・数値 id 等は {@link redactString}
+ *    埋め込むエンドポイント (例: `/api/webhooks/switchbot/<64-char-base64url>`) が
+ *    Cloud Logging にそのまま流れることを防ぐ。UUID・slug・数値 id 等は
  *    の pattern battery が触らないので調査キーとして残る。
  */
 

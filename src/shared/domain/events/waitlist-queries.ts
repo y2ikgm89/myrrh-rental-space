@@ -183,7 +183,7 @@ export async function getWaitlistQueueCount(eventId: string): Promise<number> {
 
 /**
  * 繰り上げ当選確認ページ (`/events/waitlist/confirm` および
- * `/events/waitlist/checkout/[token]`) 向けの単票取得クエリ。
+ * `/events/waitlist/checkout`) 向けの単票取得クエリ。
  *
  * WAITLISTED_OFFERED（確認待ち）/ CONFIRMED（確認済み）/ EXPIRED（期限切れ表示）の
  * 3 status のみ対象。WAITLISTED（まだ順番待ち）・CANCELLED はこのページの対象外。
@@ -354,7 +354,7 @@ export async function findExpiredWaitlistOfferCandidates(now: Date) {
  * 繰り上げ当選メール (`sendEventWaitlistOffered`) の CTA 用 payment context を組み立てる。
  *
  * `ticket.price === 0` なら無料イベントの確定 URL（`/events/waitlist/confirm`）、
- * それ以外は有料イベントの Stripe Checkout 起動 URL（`/events/waitlist/checkout/[token]`）
+ * それ以外は有料イベントの Stripe Checkout 起動 URL（`/events/waitlist/checkout?token=...`）
  * を返す。両 URL とも `createWaitlistOfferToken` が発行する HMAC purpose-bound token
  * を埋め込む（token 自体に exp claim は無く、有効期限は `EventRegistration.expiresAt`
  * が正本 — `waitlist-offer-token.ts` の docblock 参照）。
@@ -390,7 +390,7 @@ export async function getEventWaitlistOfferPaymentContext(
 
   return {
     kind: "paid",
-    checkoutUrl: `${baseUrl}/events/waitlist/checkout/${token}`,
+    checkoutUrl: `${baseUrl}/events/waitlist/checkout?token=${token}`,
     price: registration.ticket.price,
   };
 }

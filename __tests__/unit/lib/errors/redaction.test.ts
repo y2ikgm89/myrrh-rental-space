@@ -165,15 +165,15 @@ describe("redactRequestUrl", () => {
       expect(result).toContain("/api/webhooks/switchbot/");
     });
 
-    test("masks JWT-shape path token (waitlist checkout URL)", () => {
+    test("preserves waitlist checkout path without path-embedded token", () => {
       const jwt =
         "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyZWctYWJjIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9FYR3Cq6D8pow";
       const result = redactRequestUrl(
-        `https://example.com/events/waitlist/checkout/${jwt}`,
+        `https://example.com/events/waitlist/checkout?token=${jwt}`,
       );
       expect(result).not.toContain(jwt);
-      expect(result).toContain("[REDACTED:jwt]");
-      expect(result).toContain("/events/waitlist/checkout/");
+      expect(result).toContain("/events/waitlist/checkout");
+      expect(result).toContain("[redacted]");
     });
 
     test("preserves UUID path segments (triage identifiers, not secrets)", () => {

@@ -252,7 +252,7 @@ describe("sendEventWaitlistOffered", () => {
       expiresAt: new Date("2099-01-02T00:00:00Z"),
       paymentContext: {
         kind: "paid",
-        checkoutUrl: "https://example.com/events/waitlist/checkout/tok",
+        checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
         price: 3000,
       },
     });
@@ -292,7 +292,7 @@ describe("sendEventWaitlistOffered", () => {
       expiresAt: new Date("2099-01-02T00:00:00Z"),
       paymentContext: {
         kind: "paid",
-        checkoutUrl: "https://example.com/events/waitlist/checkout/tok",
+        checkoutUrl: "https://example.com/events/waitlist/checkout?token=tok",
         price: 3000,
       },
     });
@@ -300,7 +300,7 @@ describe("sendEventWaitlistOffered", () => {
     const props = mockEventWaitlistOfferedEmail.mock.calls.at(-1)?.[0];
     expect(props?.isPaid).toBe(true);
     expect(props?.actionUrl).toBe(
-      "https://example.com/events/waitlist/checkout/tok",
+      "https://example.com/events/waitlist/checkout?token=tok",
     );
     expect(props?.priceDisplay).toContain("3,000");
   });

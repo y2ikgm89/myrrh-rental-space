@@ -124,7 +124,7 @@ export default async function WaitlistConfirmPage({
   // 有料チケットの繰り上げ当選は Stripe Checkout 経由。誤って ?token= 付きの
   // confirm リンクが有料チケットに踏まれた場合の fallback リダイレクト。
   if (registration.ticketPrice > 0) {
-    redirect(`/events/waitlist/checkout/${token}`);
+    redirect(`/events/waitlist/checkout?token=${token}`);
   }
 
   const turnstileSiteKey = await getTurnstileSiteKey();

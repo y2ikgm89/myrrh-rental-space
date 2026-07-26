@@ -2,14 +2,21 @@
  * イベント waitlist 繰り上げ当選の有料チケット決済起動 Route Handler。
  *
  * `getEventWaitlistOfferPaymentContext` が発行する
- * `/events/waitlist/checkout/[token]` の着地先。有効な WAITLISTED_OFFERED +
- * 有料チケットの場合のみ Stripe Checkout Session へリダイレクトする。
+ * `/events/waitlist/checkout?token=...` は `proxy.ts` が HttpOnly cookie に
+ * 転写してから本 route に到達する。有効な WAITLISTED_OFFERED + 有料チケットの
+ * 場合のみ Stripe Checkout Session へリダイレクトする。
  *
- * @module app/(public)/events/waitlist/checkout/[token]
+ * 冒頭 `await connection()` で build prerender を skip する（静的 path のため
+ * `[token]` 時代と違い params だけでは動的化されない。`requireFeatureEnabled` の
+ * DB 読取を build 時に走らせない）。
+ *
+ * @module app/(public)/events/waitlist/checkout
  */
 
-import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { connection, NextResponse } from "next/server";
 import { requireFeatureEnabled } from "@/shared/lib/features/check";
+import { WAITLIST_OFFER_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/waitlist-offer-token-cookie-name";
 import { verifyWaitlistOfferToken } from "@/shared/lib/tokens/waitlist-offer-token";
 import { getEventRegistrationForConfirm } from "@/shared/domain/events/waitlist-queries";
 import { createWaitlistOfferCheckoutSessionCommand } from "@/shared/domain/events/payment-commands";
@@ -57,10 +64,8 @@ function isGenuineOfferExpiry(error: DomainError): boolean {
   );
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ token: string }> },
-): Promise<NextResponse> {
+export async function GET(request: Request): Promise<NextResponse> {
+  await connection();
   // feature module OFF は 404 (notFound() は Route Handler でも 404 レスポンスを
   // 生成する — Server Component 限定ではない。公式 JSDoc: "In a Route Handler or
   // Server Action, it will serve a 404 to the caller.")
@@ -74,7 +79,13 @@ export async function GET(
     return NextResponse.redirect(new URL(EXPIRED_PATH, request.url), 302);
   }
 
-  const { token } = await params;
+  // proxy が `?token=` を HttpOnly cookie に転写済み。URL クエリは残さない。
+  const cookieStore = await cookies();
+  const token =
+    cookieStore.get(WAITLIST_OFFER_TOKEN_COOKIE_NAME)?.value ?? null;
+  if (!token) {
+    return NextResponse.redirect(new URL(EXPIRED_PATH, request.url), 302);
+  }
   const verified = verifyWaitlistOfferToken(token);
   if (!verified) {
     return NextResponse.redirect(new URL(EXPIRED_PATH, request.url), 302);
