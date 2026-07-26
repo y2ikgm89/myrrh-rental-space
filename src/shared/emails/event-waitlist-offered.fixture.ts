@@ -28,7 +28,7 @@ export const eventWaitlistOfferedPaidFixture = {
   quantity: 1,
   expiresAtDate: "2026年7月26日 (日)",
   expiresAtTime: "10:00",
-  actionUrl: "https://example.com/events/waitlist/checkout/preview-token",
+  actionUrl: "https://example.com/events/waitlist/checkout?token=preview-token",
   eventRegistrationHubUrl:
     "https://example.com/mypage/events/reg-preview-paid-1",
   isPaid: true,

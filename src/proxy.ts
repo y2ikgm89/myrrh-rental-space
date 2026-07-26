@@ -17,6 +17,7 @@ import {
   CALENDAR_RESERVATION_TOKEN_COOKIE_NAME,
   CALENDAR_EVENT_TOKEN_COOKIE_NAME,
 } from "@/shared/lib/constants/calendar-token-cookie-names";
+import { WAITLIST_OFFER_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/waitlist-offer-token-cookie-name";
 import { EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME } from "@/shared/lib/constants/event-registration-payment-token-cookie-name";
 
 import { serverEnv } from "@/shared/lib/env/server";
@@ -282,6 +283,11 @@ const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
     pathname: "/events/registrations/checkout",
     cookieName: EVENT_REGISTRATION_PAYMENT_TOKEN_COOKIE_NAME,
     cookiePath: "/events/registrations/checkout",
+  },
+  {
+    pathname: "/events/waitlist/checkout",
+    cookieName: WAITLIST_OFFER_TOKEN_COOKIE_NAME,
+    cookiePath: "/events/waitlist/checkout",
   },
   {
     pathname: "/api/calendar/reservation/",

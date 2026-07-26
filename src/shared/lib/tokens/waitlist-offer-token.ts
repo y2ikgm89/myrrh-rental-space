@@ -20,9 +20,9 @@ import { isRecord } from "@/shared/lib/serialize";
  * - purpose 不一致（他トークン種別の誤用、例: 予約キャンセルトークンの流用）も
  *   `decrypt()` が throw する（→ null）。cross-token misuse 防止
  *   （memory: [[project_dup1-token-followup-alternative-c-2026-07-11]]）
- * - 暗号文は URL 安全な base64url で包む（`/events/waitlist/confirm?token=...`
- *   クエリ値・`/events/waitlist/checkout/[token]` パスセグメントの両方で
- *   使われるため、標準 base64 の `+` `/` `=` は不可）
+ * - 暗号文は URL 安全な base64url で包む（`/events/waitlist/confirm?token=...` や
+ *   `/events/waitlist/checkout?token=...` のクエリ値で使われるため、標準 base64 の
+ *   `+` `/` `=` は不可）
  */
 
 const PURPOSE = "event-waitlist-offer";
