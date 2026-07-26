@@ -482,7 +482,9 @@ model SpaceCategory {
 
 model Space {
   id                   String    @id @default(uuid()) @db.Uuid
-  slug                 String    @unique
+  // slug の一意性は下記 @@unique(where: isActive) 参照（soft-delete 済み行の
+  // 値を永久に予約しないため partial index。Location.slug / SpaceCategory.name と同型）。
+  slug                 String
   name                 String
   /// Lexical EditorState JSON（正本）
   descriptionJson      Json
@@ -563,6 +565,7 @@ model Space {
   // Seq Scan fallback (per Codex review on PR #986).
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_name_trgm_idx")
   @@index([slug(ops: raw("gin_trgm_ops"))], type: Gin, map: "spaces_slug_trgm_idx")
+  @@unique([slug], map: "spaces_slug_active_key", where: { isActive: true })
   @@map("spaces")
 }
 

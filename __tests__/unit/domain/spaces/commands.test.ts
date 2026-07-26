@@ -17,6 +17,8 @@ const mockSpaceCategoryFindFirst = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
+const mockEventCount = mock<() => Promise<number>>(() => Promise.resolve(0));
+
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/lib/env/server", () => ({
@@ -35,6 +37,7 @@ interface PrismaMock {
   };
   location: { findFirst: typeof mockLocationFindFirst };
   spaceCategory: { findFirst: typeof mockSpaceCategoryFindFirst };
+  event: { count: typeof mockEventCount };
   $executeRaw: (...args: unknown[]) => Promise<unknown>;
   $transaction: <T>(fn: (tx: PrismaMock) => Promise<T>) => Promise<T>;
 }
@@ -50,6 +53,9 @@ const prismaMock: PrismaMock = {
   },
   spaceCategory: {
     findFirst: mockSpaceCategoryFindFirst,
+  },
+  event: {
+    count: mockEventCount,
   },
   $executeRaw: (..._args: unknown[]) => Promise.resolve(undefined),
   $transaction: <T>(fn: (tx: PrismaMock) => Promise<T>): Promise<T> =>
@@ -100,6 +106,14 @@ mock.module("@/shared/lib/slug-validation", () => ({
 // ACTIVE_RESERVATION_STATUSES モック
 mock.module("@/shared/lib/validations/enums/helpers", () => ({
   ACTIVE_RESERVATION_STATUSES: ["PENDING", "CONFIRMED"],
+}));
+
+mock.module("@/shared/domain/spaces/overlap", () => ({
+  ACTIVE_EVENT_STATUSES: ["DRAFT", "PUBLISHED"],
+}));
+
+mock.module("@/shared/domain/reservations/space-locks", () => ({
+  lockSpaceForTransaction: mock(async () => undefined),
 }));
 
 import {
@@ -572,7 +586,12 @@ describe("updateSpacePublishedCommand", () => {
       );
     });
 
-    test("公開時に publishedAt が設定される", async () => {
+    test("公開時に publishedAt が設定される（初回公開）", async () => {
+      mockSpaceFindUnique.mockResolvedValue({
+        ...ACTIVE_SPACE,
+        publishedAt: null,
+      });
+
       await updateSpacePublishedCommand(SPACE_ID, true);
 
       expect(mockSpaceUpdate).toHaveBeenCalledWith(
@@ -580,6 +599,26 @@ describe("updateSpacePublishedCommand", () => {
           data: expect.objectContaining({
             isPublished: true,
             publishedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+
+    test("公開済みの再公開では publishedAt を維持する", async () => {
+      const existingPublishedAt = new Date("2024-01-01T12:00:00Z");
+      mockSpaceFindUnique.mockResolvedValue({
+        ...ACTIVE_SPACE,
+        isPublished: true,
+        publishedAt: existingPublishedAt,
+      });
+
+      await updateSpacePublishedCommand(SPACE_ID, true);
+
+      expect(mockSpaceUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isPublished: true,
+            publishedAt: existingPublishedAt,
           }),
         }),
       );
@@ -628,11 +667,14 @@ describe("deleteSpaceCommand", () => {
   beforeEach(() => {
     mockSpaceFindUnique.mockReset();
     mockSpaceUpdate.mockReset();
+    mockEventCount.mockReset();
 
     mockSpaceFindUnique.mockResolvedValue({
       id: SPACE_ID,
+      slug: "test-space",
       _count: { reservations: 0 },
     });
+    mockEventCount.mockResolvedValue(0);
     mockSpaceUpdate.mockResolvedValue({ id: SPACE_ID });
   });
 
@@ -697,10 +739,21 @@ describe("deleteSpaceCommand", () => {
     test("有効な予約が1件でも存在する場合は削除できない", async () => {
       mockSpaceFindUnique.mockResolvedValue({
         id: SPACE_ID,
+        slug: "test-space",
         _count: { reservations: 1 },
       });
 
       await expect(deleteSpaceCommand(SPACE_ID)).rejects.toThrow(DomainError);
+      expect(mockSpaceUpdate).not.toHaveBeenCalled();
+    });
+
+    test("占有中イベントがある場合 VALIDATION エラーをスローする", async () => {
+      mockEventCount.mockResolvedValue(1);
+
+      await expect(deleteSpaceCommand(SPACE_ID)).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "占有中のイベントがあるため削除できません",
+      });
       expect(mockSpaceUpdate).not.toHaveBeenCalled();
     });
 

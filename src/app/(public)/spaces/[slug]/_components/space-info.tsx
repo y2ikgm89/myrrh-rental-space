@@ -33,8 +33,30 @@ interface SpaceInfoProps {
  *
  * Lead 段落 / Pull-quote / Reviews は page.tsx 側で構築 (この component の責務外)。
  */
+/** 重複ラベルでも一意になる React key（出現回数ベース。array index を key にしない）。 */
+function withOccurrenceKeys<T>(
+  items: readonly T[],
+  getLabel: (item: T) => string,
+): readonly { readonly item: T; readonly key: string }[] {
+  const seen = new Map<string, number>();
+  return items.map((item) => {
+    const label = getLabel(item);
+    const occurrence = seen.get(label) ?? 0;
+    seen.set(label, occurrence + 1);
+    return {
+      item,
+      key: occurrence === 0 ? label : `${label}__${String(occurrence)}`,
+    };
+  });
+}
+
 export async function SpaceInfo({ space }: SpaceInfoProps) {
   const facilities = parseFacilities(space.facilities);
+  const facilityItems = withOccurrenceKeys(facilities, (f) => f.name);
+  const accessLineItems = withOccurrenceKeys(
+    space.location?.accessLines ?? [],
+    (line) => line,
+  );
   const linkCardsResolvedDescriptionHtml = await resolveInternalLinkCards(
     space.descriptionHtml,
   );
@@ -60,7 +82,7 @@ export async function SpaceInfo({ space }: SpaceInfoProps) {
       ) : null}
 
       {/* Amenities: 中央寄せ editorial grid */}
-      {facilities.length > 0 ? (
+      {facilityItems.length > 0 ? (
         <section className="border-y border-divider py-12">
           <p className="text-xs uppercase tracking-eyebrow-wide text-accent">
             — Amenities —
@@ -69,8 +91,8 @@ export async function SpaceInfo({ space }: SpaceInfoProps) {
             設備
           </h2>
           <ul className="mt-8 grid grid-cols-2 gap-y-3 text-base text-foreground md:grid-cols-3">
-            {facilities.map((f) => (
-              <li key={f.name}>・{f.name}</li>
+            {facilityItems.map(({ item: f, key }) => (
+              <li key={key}>・{f.name}</li>
             ))}
           </ul>
         </section>
@@ -91,10 +113,10 @@ export async function SpaceInfo({ space }: SpaceInfoProps) {
           />
           <span>{space.lineAddress}</span>
         </p>
-        {space.location && space.location.accessLines.length > 0 ? (
+        {accessLineItems.length > 0 ? (
           <ol className="mt-4 space-y-2 text-base leading-relaxed text-foreground">
-            {space.location.accessLines.map((line) => (
-              <li key={line}>・{line}</li>
+            {accessLineItems.map(({ item: line, key }) => (
+              <li key={key}>・{line}</li>
             ))}
           </ol>
         ) : null}

@@ -162,6 +162,7 @@ import {
   calculateTaxIncludedPrice,
   calculateTaxExcludedPrice,
   calculateTaxAmount,
+  resolvePublicDisplayPrice,
   DEFAULT_TAX_SETTINGS,
 } from "@/shared/lib/pricing/tax";
 import type { TaxSettings } from "@/shared/lib/pricing/types";
@@ -429,6 +430,39 @@ describe("calculateTaxAmount", () => {
         Math.abs(taxIncluded - taxExcluded - taxAmount),
       ).toBeLessThanOrEqual(1);
     });
+  });
+});
+
+// =============================================================================
+// resolvePublicDisplayPrice
+// =============================================================================
+
+describe("resolvePublicDisplayPrice", () => {
+  test("tax_included では税込価格を返す", () => {
+    expect(
+      resolvePublicDisplayPrice(1000, {
+        ...DEFAULT_TAX_SETTINGS,
+        displayModePublic: "tax_included",
+      }),
+    ).toBe(1100);
+  });
+
+  test("both でも UI と同様に税込価格を返す", () => {
+    expect(
+      resolvePublicDisplayPrice(1000, {
+        ...DEFAULT_TAX_SETTINGS,
+        displayModePublic: "both",
+      }),
+    ).toBe(1100);
+  });
+
+  test("tax_excluded では税抜価格をそのまま返す", () => {
+    expect(
+      resolvePublicDisplayPrice(1000, {
+        ...DEFAULT_TAX_SETTINGS,
+        displayModePublic: "tax_excluded",
+      }),
+    ).toBe(1000);
   });
 });
 

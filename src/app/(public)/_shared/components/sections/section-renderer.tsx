@@ -145,9 +145,8 @@ interface SectionRendererProps {
   readonly searchParams?: Promise<SearchParams>;
   /**
    * 任意 — 親ページの slug（PAGE_TEMPLATES のキー / Page.slug と一致）。
-   * page-context が必要な section が参照するための予約 prop。
-   * 現状 SectionRenderer 本体では参照しないが、全 public page.tsx から
-   * 渡される public API として維持（将来の section 拡張用）。
+   * space-list catalog の Pagination basePath 等、page-context が必要な
+   * section が参照する。全 public page.tsx から渡される。
    */
   readonly pageSlug?: string;
   /**
@@ -158,10 +157,17 @@ interface SectionRendererProps {
   readonly inquiryDefaults?: InquiryDefaults;
 }
 
+/** pageSlug → 公開 URL path（home は `/`、未指定は従来どおり `/spaces`）。 */
+function catalogBasePathFromPageSlug(pageSlug: string | undefined): string {
+  if (pageSlug === undefined) return "/spaces";
+  if (pageSlug === "home") return "/";
+  return `/${pageSlug}`;
+}
+
 export async function SectionRenderer({
   section,
   searchParams,
-  pageSlug: _pageSlug,
+  pageSlug,
   inquiryDefaults,
 }: SectionRendererProps): Promise<ReactElement | null> {
   await connection();
@@ -258,6 +264,7 @@ export async function SectionRenderer({
             config={config}
             style={resolved}
             sectionId={section.id}
+            catalogBasePath={catalogBasePathFromPageSlug(pageSlug)}
             mode={{
               kind: "catalog",
               spaces: items,
@@ -284,10 +291,7 @@ export async function SectionRenderer({
         );
       }
 
-      const rawSpaces = await getShowcaseSpaces(
-        config.maxItems,
-        config.showOnlyPublished,
-      );
+      const rawSpaces = await getShowcaseSpaces(config.maxItems);
       const spaces: SpaceListData[] = rawSpaces.map((s) => ({
         id: s.id,
         slug: s.slug,
@@ -310,10 +314,7 @@ export async function SectionRenderer({
 
     case SectionType.SPACE_SHOWCASE: {
       const config = getSpaceShowcaseConfig(section.config);
-      const rawSpaces = await getShowcaseSpaces(
-        config.maxItems,
-        config.showOnlyPublished,
-      );
+      const rawSpaces = await getShowcaseSpaces(config.maxItems);
       const spaces: ShowcaseSpaceData[] = rawSpaces.map((s) => ({
         id: s.id,
         slug: s.slug,

@@ -7,6 +7,7 @@ import { DayPicker } from "@daypicker/react";
 import { ja } from "@daypicker/react/locale";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { BlockedDateRange } from "@/shared/domain/reservations/availability";
+import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import {
   getWeekdayKey,
   formatDateString,
@@ -30,6 +31,9 @@ interface SpaceAvailabilityCalendarProps {
  * (per-day のスロット問い合わせは高コストで CDN cacheable でないため、
  * 日単位の gate のみ)。`reservation` feature ON のときだけ
  * `/reservation?spaceId=` への導線を出す（OFF 時は閲覧のみ）。
+ *
+ * 過去日・曜日・定休判定はスロット生成と同じ JST / DEFAULT_BUSINESS_HOURS_WEEK
+ * フォールバックを使う（ブラウザ local TZ に依存しない）。
  */
 export function SpaceAvailabilityCalendar({
   spaceId,
@@ -37,11 +41,8 @@ export function SpaceAvailabilityCalendar({
   blockedRanges,
   reservationEnabled,
 }: SpaceAvailabilityCalendarProps): ReactElement {
-  const [minDate] = useState(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  });
+  const [todayJst] = useState(() => formatDateString(new Date()));
+  const effectiveHours = businessHours ?? DEFAULT_BUSINESS_HOURS_WEEK;
 
   const isBlockedDay = (date: Date): boolean => {
     if (blockedRanges.length === 0) return false;
@@ -52,12 +53,14 @@ export function SpaceAvailabilityCalendar({
   };
 
   const isDisabledDay = (date: Date): boolean => {
-    if (date < minDate) return true;
+    const dateStr = formatDateString(date);
+    if (dateStr < todayJst) return true;
     if (isBlockedDay(date)) return true;
-    if (!businessHours) return false;
-    if (isMonthlyClosureDate(date, businessHours.monthlyClosures)) return true;
+    if (isMonthlyClosureDate(dateStr, effectiveHours.monthlyClosures)) {
+      return true;
+    }
     const weekday = getWeekdayKey(date);
-    const daySettings = businessHours[weekday];
+    const daySettings = effectiveHours[weekday];
     return !daySettings.isOpen || daySettings.slots.length === 0;
   };
 

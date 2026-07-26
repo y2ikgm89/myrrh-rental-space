@@ -2,6 +2,8 @@ import { describe, test, expect } from "bun:test";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import {
   getWeekdayKey,
+  getWeekdayKeyFromDateOnly,
+  formatDateString,
   parseTime,
   generateFallbackSlots,
   generateSlotsFromBusinessHours,
@@ -97,8 +99,34 @@ describe("parseTime", () => {
 });
 
 // =============================================================================
-// getWeekdayKey
+// formatDateString / getWeekdayKey（JST 固定）
 // =============================================================================
+
+describe("formatDateString", () => {
+  test("UTC 深夜でも JST カレンダー日付を返す（ホスト tz 非依存）", () => {
+    // UTC 2026-05-30 00:00 → JST 05/30 09:00
+    expect(formatDateString(new Date("2026-05-30T00:00:00.000Z"))).toBe(
+      "2026-05-30",
+    );
+  });
+
+  test("UTC 夜間は JST 翌日に落とす（日跨ぎ）", () => {
+    // UTC 2026-05-30 20:00 → JST 05/31 05:00
+    expect(formatDateString(new Date("2026-05-30T20:00:00.000Z"))).toBe(
+      "2026-05-31",
+    );
+  });
+});
+
+describe("getWeekdayKeyFromDateOnly", () => {
+  test('JST 日付文字列 "2024-01-15" → "monday"', () => {
+    expect(getWeekdayKeyFromDateOnly("2024-01-15")).toBe("monday");
+  });
+
+  test('JST 日付文字列 "2024-01-14" → "sunday"', () => {
+    expect(getWeekdayKeyFromDateOnly("2024-01-14")).toBe("sunday");
+  });
+});
 
 describe("getWeekdayKey", () => {
   describe("正常系", () => {
@@ -136,6 +164,13 @@ describe("getWeekdayKey", () => {
     test('2024-01-19（金曜日）→ "friday" を返す', () => {
       const date = new Date("2024-01-19T12:00:00Z");
       expect(getWeekdayKey(date)).toBe("friday");
+    });
+
+    test("UTC 深夜直前でも JST 曜日に正規化する", () => {
+      // UTC 2024-01-14 20:00 → JST 01/15 05:00（月曜）
+      expect(getWeekdayKey(new Date("2024-01-14T20:00:00.000Z"))).toBe(
+        "monday",
+      );
     });
   });
 });

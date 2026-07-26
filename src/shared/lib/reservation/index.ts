@@ -33,6 +33,8 @@ export { getAvailableTimeSlots, getBusinessHoursSettings } from "./time-slots";
 // Client-safe utilities
 export {
   getWeekdayKey,
+  getWeekdayKeyFromDateOnly,
+  formatDateString,
   parseTime,
   generateSlotsFromBusinessHours,
   generateFallbackSlots,

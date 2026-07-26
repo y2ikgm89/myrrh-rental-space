@@ -15,10 +15,6 @@ export const spaceListConfigSchema = z.object({
     maxItemsCap: 24,
     maxItemsDefault: 6,
   }),
-  showOnlyPublished: field.boolean("公開済みスペースのみ表示する", {
-    default: true,
-    group: "advanced",
-  }),
   displayLayout: field.select("表示レイアウト", {
     options: layouts,
     default: "grid",

@@ -330,7 +330,7 @@ describe("Homepage Settings Admin Action Integration", () => {
       const config = getDefaultConfig(SectionType.SPACE_LIST);
       expect(config["maxItems"]).toBeGreaterThan(0);
       expect(config["columns"]).toBeGreaterThan(0);
-      expect(typeof config["showOnlyPublished"]).toBe("boolean");
+      expect(config["displayLayout"]).toBeDefined();
     });
 
     test("FAQ_LIST のデフォルト設定に必須フィールドが含まれる", () => {

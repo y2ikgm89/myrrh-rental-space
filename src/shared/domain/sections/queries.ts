@@ -18,6 +18,7 @@ import {
   slugParamSchema,
 } from "@/shared/lib/validations/params";
 import { getPublicPage } from "@/shared/domain/pages/queries";
+import { PUBLIC_SPACE_WHERE } from "@/shared/domain/spaces/public-queries";
 
 export type PublicSection = {
   readonly id: string;
@@ -40,10 +41,7 @@ function getDefaultSections(slug: string): PublicSection[] {
   }));
 }
 
-export async function getShowcaseSpaces(
-  maxItems: number,
-  showOnlyPublished: boolean,
-) {
+export async function getShowcaseSpaces(maxItems: number) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(
@@ -55,10 +53,7 @@ export async function getShowcaseSpaces(
   const spaces = await safeFetch({
     fetch: () =>
       prisma.space.findMany({
-        where: {
-          isActive: true,
-          ...(showOnlyPublished ? { isPublished: true } : {}),
-        },
+        where: PUBLIC_SPACE_WHERE,
         select: {
           id: true,
           slug: true,

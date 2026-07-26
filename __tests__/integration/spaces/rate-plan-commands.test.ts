@@ -243,6 +243,62 @@ describeMaybe("SpaceRatePlan CRUD", () => {
     }
   });
 
+  test("createSpaceRatePlan: 無効化された Space には NOT_FOUND を throw する", async () => {
+    const { spaceId, cleanup } = await seedSpaceForTest();
+    try {
+      await prisma.space.update({
+        where: { id: spaceId },
+        data: { isActive: false },
+      });
+
+      let caught: unknown;
+      try {
+        await createSpaceRatePlan({
+          spaceId,
+          name: "無効スペース",
+          hourlyPrice: 3000,
+          daysOfWeek: [],
+          holidayMode: "any",
+          startTime: null,
+          endTime: null,
+          effectiveFrom: null,
+          effectiveTo: null,
+        });
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(DomainError);
+      if (caught instanceof DomainError) {
+        expect(caught.code).toBe("NOT_FOUND");
+      }
+    } finally {
+      await cleanup();
+    }
+  });
+
+  test("createSpaceRatePlan: 存在しない spaceId は NOT_FOUND を throw する", async () => {
+    let caught: unknown;
+    try {
+      await createSpaceRatePlan({
+        spaceId: "00000000-0000-4000-8000-000000000099",
+        name: "孤児プラン",
+        hourlyPrice: 3000,
+        daysOfWeek: [],
+        holidayMode: "any",
+        startTime: null,
+        endTime: null,
+        effectiveFrom: null,
+        effectiveTo: null,
+      });
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(DomainError);
+    if (caught instanceof DomainError) {
+      expect(caught.code).toBe("NOT_FOUND");
+    }
+  });
+
   test("Space 削除で cascade される", async () => {
     const { spaceId, cleanup } = await seedSpaceForTest();
     try {

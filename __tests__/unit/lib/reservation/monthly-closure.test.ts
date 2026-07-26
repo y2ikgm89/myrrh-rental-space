@@ -66,4 +66,12 @@ describe("isMonthlyClosureDate", () => {
       ]),
     ).toBe(false);
   });
+
+  test("YYYY-MM-DD 文字列入力でも同等に判定する（ホスト tz 非依存）", () => {
+    expect(isMonthlyClosureDate("2026-12-21", [THIRD_MONDAY_RULE])).toBe(true);
+    expect(isMonthlyClosureDate("2026-12-07", [THIRD_MONDAY_RULE])).toBe(false);
+    expect(
+      isMonthlyClosureDate("2026-12-28", [{ weekday: "monday", week: "last" }]),
+    ).toBe(true);
+  });
 });

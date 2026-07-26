@@ -58,7 +58,11 @@ export function SpaceBulkActions({
         return;
       }
 
-      toast.success(`${result.count}件のスペースを削除しました`);
+      toast.success(
+        result.skipped > 0
+          ? `${result.count}件のスペースを削除しました（${result.skipped}件は予約またはイベント占有のためスキップ）`
+          : `${result.count}件のスペースを削除しました`,
+      );
       setDeleteOpen(false);
       onClear();
       router.refresh();
@@ -115,7 +119,7 @@ export function SpaceBulkActions({
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={`${selectedIds.length}件のスペースを削除しますか？`}
-        description="この操作は取り消せません。紐づく予約があるスペースはスキップされます。"
+        description="この操作は取り消せません。有効な予約または占有中イベントがあるスペースはスキップされます。"
         onConfirm={handleBulkDelete}
         isPending={isPending}
       />

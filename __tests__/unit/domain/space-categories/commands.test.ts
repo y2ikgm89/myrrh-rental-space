@@ -598,6 +598,24 @@ describe("deleteSpaceCategory", () => {
         }),
       );
     });
+
+    test("スペース件数は isActive: true のみ数える", async () => {
+      mockSpaceCategoryFindUnique.mockResolvedValue(
+        EXISTING_CATEGORY_WITH_COUNT,
+      );
+
+      await deleteSpaceCategory(CATEGORY_ID);
+
+      expect(mockSpaceCategoryFindUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: {
+            _count: {
+              select: { spaces: { where: { isActive: true } } },
+            },
+          },
+        }),
+      );
+    });
   });
 
   describe("異常系", () => {

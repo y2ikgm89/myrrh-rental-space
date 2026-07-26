@@ -48,10 +48,16 @@ const mockGetBlockedDateRangesForSpace = mock(() =>
   ]),
 );
 
+const mockIsPublicSpaceAccessible = mock(() => Promise.resolve(true));
+
 mock.module("@/shared/domain/reservations/availability", () => ({
   getBusinessHoursSettingsQuery: mock(() => Promise.resolve(null)),
   getReservationsForDateQuery: mock(() => Promise.resolve([])),
   getBlockedDateRangesForSpace: mockGetBlockedDateRangesForSpace,
+}));
+
+mock.module("@/shared/domain/spaces/public-queries", () => ({
+  isPublicSpaceAccessible: mockIsPublicSpaceAccessible,
 }));
 
 // server-only モック（テスト環境で server-only を無効化）
@@ -72,10 +78,12 @@ describe("fetchAvailableSlots", () => {
   beforeEach(() => {
     mockCheckActionRateLimit.mockClear();
     mockGetAvailableTimeSlots.mockClear();
+    mockIsPublicSpaceAccessible.mockClear();
     // 成功レスポンスにリセット
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockIsPublicSpaceAccessible.mockImplementation(() => Promise.resolve(true));
     mockGetAvailableTimeSlots.mockImplementation(() =>
       Promise.resolve([
         { time: "09:00", available: true },
@@ -224,6 +232,20 @@ describe("fetchAvailableSlots", () => {
 
       expect(result).toEqual({ ok: false, reason: "invalid" });
     });
+
+    test("非公開または非アクティブなスペースは ok:false reason:invalid を返す", async () => {
+      mockIsPublicSpaceAccessible.mockImplementation(() =>
+        Promise.resolve(false),
+      );
+
+      const { fetchAvailableSlots } =
+        await import("@/app/(public)/_shared/actions/availability");
+
+      const result = await fetchAvailableSlots(VALID_SPACE_ID, VALID_DATE);
+
+      expect(result).toEqual({ ok: false, reason: "invalid" });
+      expect(mockGetAvailableTimeSlots).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -231,9 +253,11 @@ describe("fetchSpaceBlockedDates", () => {
   beforeEach(() => {
     mockCheckActionRateLimit.mockClear();
     mockGetBlockedDateRangesForSpace.mockClear();
+    mockIsPublicSpaceAccessible.mockClear();
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: true as const }),
     );
+    mockIsPublicSpaceAccessible.mockImplementation(() => Promise.resolve(true));
     mockGetBlockedDateRangesForSpace.mockImplementation(() =>
       Promise.resolve([
         { startDate: "2026-12-29", endDate: "2027-01-03", reason: "年末年始" },
@@ -269,6 +293,20 @@ describe("fetchSpaceBlockedDates", () => {
     mockCheckActionRateLimit.mockImplementation(() =>
       Promise.resolve({ success: false, error: "rate limited" }),
     );
+    const { fetchSpaceBlockedDates } =
+      await import("@/app/(public)/_shared/actions/availability");
+
+    const result = await fetchSpaceBlockedDates(VALID_SPACE_ID);
+
+    expect(result).toEqual([]);
+    expect(mockGetBlockedDateRangesForSpace).not.toHaveBeenCalled();
+  });
+
+  test("非公開または非アクティブなスペースは空配列を返す", async () => {
+    mockIsPublicSpaceAccessible.mockImplementation(() =>
+      Promise.resolve(false),
+    );
+
     const { fetchSpaceBlockedDates } =
       await import("@/app/(public)/_shared/actions/availability");
 

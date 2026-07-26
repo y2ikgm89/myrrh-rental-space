@@ -14,6 +14,9 @@ const spaceFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(() =>
 const spaceCount = mock<(_args?: unknown) => Promise<number>>(() =>
   Promise.resolve(0),
 );
+const spaceFindUnique = mock<(_args?: unknown) => Promise<unknown>>(() =>
+  Promise.resolve(null),
+);
 const reservationFindMany = mock<(_args?: unknown) => Promise<unknown[]>>(() =>
   Promise.resolve([]),
 );
@@ -34,6 +37,7 @@ mock.module("@/shared/db/prisma", () => ({
     space: {
       findMany: (args: unknown) => spaceFindMany(args),
       count: (args: unknown) => spaceCount(args),
+      findUnique: (args: unknown) => spaceFindUnique(args),
     },
     reservation: {
       findMany: (args: unknown) => reservationFindMany(args),
@@ -68,17 +72,20 @@ const {
   getPublishedSpacesPaginated,
   getPublishedSpacesPaginatedWithAvailability,
   getPublicSpaceFacilityNames,
+  isPublicSpaceAccessible,
 } = await import("@/shared/domain/spaces/public-queries");
 
 function resetAllMocks() {
   spaceFindMany.mockReset();
   spaceCount.mockReset();
+  spaceFindUnique.mockReset();
   reservationFindMany.mockReset();
   eventTimeSlotFindMany.mockReset();
   settingsOrganizationFindUnique.mockReset();
   blockedDateFindMany.mockReset();
   spaceFindMany.mockResolvedValue([]);
   spaceCount.mockResolvedValue(0);
+  spaceFindUnique.mockResolvedValue(null);
   reservationFindMany.mockResolvedValue([]);
   eventTimeSlotFindMany.mockResolvedValue([]);
   settingsOrganizationFindUnique.mockResolvedValue(null);
@@ -483,6 +490,28 @@ describe("getPublishedSpacesPaginatedWithAvailability", () => {
     const items = result.items as unknown as CatalogItemWithAvailability[];
     expect(items.every((i) => i.isAvailableForSearch === false)).toBe(true);
     expect(candidatesCall()).toBeDefined();
+  });
+});
+
+describe("isPublicSpaceAccessible", () => {
+  beforeEach(resetAllMocks);
+
+  test("isPublished && isActive のとき true", async () => {
+    spaceFindUnique.mockResolvedValue({ isPublished: true, isActive: true });
+    await expect(isPublicSpaceAccessible("space-1")).resolves.toBe(true);
+  });
+
+  test("非公開または非アクティブのとき false", async () => {
+    spaceFindUnique.mockResolvedValue({ isPublished: false, isActive: true });
+    await expect(isPublicSpaceAccessible("space-1")).resolves.toBe(false);
+
+    spaceFindUnique.mockResolvedValue({ isPublished: true, isActive: false });
+    await expect(isPublicSpaceAccessible("space-2")).resolves.toBe(false);
+  });
+
+  test("存在しないスペースは false", async () => {
+    spaceFindUnique.mockResolvedValue(null);
+    await expect(isPublicSpaceAccessible("missing")).resolves.toBe(false);
   });
 });
 

@@ -15,6 +15,8 @@ import {
   assertAllowedManagedImageUrl,
   assertAllowedManagedImageUrls,
 } from "@/shared/domain/media/managed-image-assertions";
+import { lockSpaceForTransaction } from "@/shared/domain/reservations/space-locks";
+import { ACTIVE_EVENT_STATUSES } from "@/shared/domain/spaces/overlap";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {
   checkSlugAvailability,
@@ -253,13 +255,15 @@ export async function updateSpacePublishedCommand(
   id: string,
   isPublished: boolean,
 ): Promise<{ id: string; slug: string; isPublished: boolean }> {
-  await ensureSpaceExists(id);
+  const existingSpace = await ensureSpaceExists(id);
 
   const row = await prisma.space.update({
     where: { id, isActive: true },
     data: {
       isPublished,
-      publishedAt: isPublished ? new Date() : null,
+      publishedAt: isPublished
+        ? (existingSpace.publishedAt ?? new Date())
+        : null,
     },
     select: { id: true, slug: true },
   });
@@ -270,41 +274,60 @@ export async function updateSpacePublishedCommand(
 export async function deleteSpaceCommand(
   id: string,
 ): Promise<{ id: string; slug: string }> {
-  const space = await prisma.space.findUnique({
-    where: { id, isActive: true },
-    select: {
-      id: true,
-      slug: true,
-      _count: {
-        select: {
-          reservations: {
-            where: {
-              status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+  return prisma.$transaction(async (tx) => {
+    await lockSpaceForTransaction(tx, id);
+
+    const space = await tx.space.findUnique({
+      where: { id, isActive: true },
+      select: {
+        id: true,
+        slug: true,
+        _count: {
+          select: {
+            reservations: {
+              where: {
+                status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+              },
             },
           },
         },
       },
-    },
+    });
+
+    if (!space) {
+      throw new DomainError("スペースが見つかりません", "NOT_FOUND");
+    }
+
+    if (space._count.reservations > 0) {
+      throw new DomainError("有効な予約があるため削除できません", "VALIDATION");
+    }
+
+    const occupyingEvents = await tx.event.count({
+      where: {
+        spaceId: id,
+        deletedAt: null,
+        status: { in: [...ACTIVE_EVENT_STATUSES] },
+      },
+    });
+
+    if (occupyingEvents > 0) {
+      throw new DomainError(
+        "占有中のイベントがあるため削除できません",
+        "VALIDATION",
+      );
+    }
+
+    await tx.space.update({
+      where: { id, isActive: true },
+      data: {
+        isActive: false,
+        isPublished: false,
+        publishedAt: null,
+      },
+    });
+
+    return { id: space.id, slug: space.slug };
   });
-
-  if (!space) {
-    throw new DomainError("スペースが見つかりません", "NOT_FOUND");
-  }
-
-  if (space._count.reservations > 0) {
-    throw new DomainError("有効な予約があるため削除できません", "VALIDATION");
-  }
-
-  await prisma.space.update({
-    where: { id, isActive: true },
-    data: {
-      isActive: false,
-      isPublished: false,
-      publishedAt: null,
-    },
-  });
-
-  return { id: space.id, slug: space.slug };
 }
 
 /**
@@ -431,14 +454,15 @@ export async function duplicateSpaceCommand(
  * 同一ロジックが `events/commands.ts` にもある（YAGNI のため共通化していない）。
  */
 async function ensureUniqueSlug(slug: string): Promise<string> {
-  const existing = await prisma.space.findUnique({
-    where: { slug },
+  // Space.slug は isActive 部分 unique。soft-delete 済みは再利用可。
+  const existing = await prisma.space.findFirst({
+    where: { slug, isActive: true },
     select: { id: true },
   });
   if (!existing) return slug;
 
   const siblings = await prisma.space.findMany({
-    where: { slug: { startsWith: `${slug}-` } },
+    where: { slug: { startsWith: `${slug}-` }, isActive: true },
     select: { slug: true },
   });
 

@@ -108,6 +108,11 @@ interface SpaceListSectionProps {
    * （catalog variant のみ SpaceGrid 経由で使用）。
    */
   readonly sectionId: string;
+  /**
+   * catalog Pagination の path。FilterBar (nuqs = 現在 URL) と揃え、
+   * 埋め込みページで `/spaces` へ飛ばないようにする。未指定時は `/spaces`。
+   */
+  readonly catalogBasePath?: string;
 }
 
 /**
@@ -152,6 +157,7 @@ export function SpaceListSection({
   style,
   mode,
   sectionId,
+  catalogBasePath = "/spaces",
 }: SpaceListSectionProps): ReactElement {
   if (mode.kind === "catalog") {
     const hasFilters = hasAnyFacetActive(mode.filter);
@@ -203,7 +209,7 @@ export function SpaceListSection({
           <Pagination
             currentPage={mode.currentPage}
             totalPages={mode.totalPages}
-            basePath="/spaces"
+            basePath={catalogBasePath}
             preservedQuery={buildPreservedQuery(mode.filter)}
           />
         </div>

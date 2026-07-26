@@ -36,7 +36,7 @@ import { isWithinBusinessHours } from "@/shared/lib/reservation/time-slots-utils
  * 公開スペースクエリの共通 where 句。Space model に deletedAt 列はないため
  * isPublished + isActive gate のみ。新規 query 追加時の gate 漏れを構造的に防ぐ。
  */
-const PUBLIC_WHERE = {
+export const PUBLIC_SPACE_WHERE = {
   isPublished: true,
   isActive: true,
 } as const satisfies Prisma.SpaceWhereInput;
@@ -100,7 +100,7 @@ export interface SpaceCatalogFilter {
 function buildSpaceWhereClause(
   input: SpaceCatalogFilter,
 ): Prisma.SpaceWhereInput {
-  const where: Prisma.SpaceWhereInput = { ...PUBLIC_WHERE };
+  const where: Prisma.SpaceWhereInput = { ...PUBLIC_SPACE_WHERE };
 
   if (input.categoryId) where.categoryId = input.categoryId;
   if (input.locationId) where.locationId = input.locationId;
@@ -178,6 +178,20 @@ async function runSpacesPaginated(input: SpaceCatalogFilter) {
 // =============================================================================
 // 公開 API
 // =============================================================================
+
+/**
+ * 公開読み取り API 用: スペースが isPublished && isActive かを検証する。
+ * キャッシュなし（公開 action の gate 用途）。
+ */
+export async function isPublicSpaceAccessible(
+  spaceId: string,
+): Promise<boolean> {
+  const space = await prisma.space.findUnique({
+    where: { id: spaceId },
+    select: { isPublished: true, isActive: true },
+  });
+  return space !== null && space.isPublished && space.isActive;
+}
 
 export type PaginatedSpaces = Awaited<ReturnType<typeof runSpacesPaginated>>;
 
@@ -471,7 +485,7 @@ export async function getSpaceBySlug(slug: string) {
   const space = await safeFetch({
     fetch: () =>
       prisma.space.findFirst({
-        where: { ...PUBLIC_WHERE, slug },
+        where: { ...PUBLIC_SPACE_WHERE, slug },
         select: {
           id: true,
           slug: true,
@@ -545,7 +559,7 @@ export async function getRelatedSpaces(
     fetch: () =>
       prisma.space.findMany({
         where: {
-          ...PUBLIC_WHERE,
+          ...PUBLIC_SPACE_WHERE,
           id: { not: currentId },
           ...(categoryId ? { categoryId } : {}),
         },
@@ -631,7 +645,7 @@ export async function getPublicSpaceFacilityNames(): Promise<
   const rows = await safeFetch({
     fetch: () =>
       prisma.space.findMany({
-        where: PUBLIC_WHERE,
+        where: PUBLIC_SPACE_WHERE,
         select: { facilities: true },
       }),
     fallback: [],
@@ -654,7 +668,7 @@ export async function getPublicSpaceFacilityNames(): Promise<
  */
 export async function getActiveSpacesByLocationId(locationId: string) {
   const spaces = await prisma.space.findMany({
-    where: { ...PUBLIC_WHERE, locationId },
+    where: { ...PUBLIC_SPACE_WHERE, locationId },
     select: {
       id: true,
       name: true,
@@ -703,7 +717,7 @@ export async function resolveSpaceCardEmbedData(
   const rows = await safeFetch({
     fetch: () =>
       prisma.space.findMany({
-        where: { ...PUBLIC_WHERE, id: { in: uniqueIds } },
+        where: { ...PUBLIC_SPACE_WHERE, id: { in: uniqueIds } },
         select: {
           id: true,
           slug: true,
