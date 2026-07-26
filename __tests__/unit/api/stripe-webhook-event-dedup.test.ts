@@ -28,6 +28,7 @@ type MockCredentials = {
 };
 const mockAssertStripeCredentialsConfigured =
   mock<() => Promise<MockCredentials>>();
+const mockAssertOnlinePaymentAvailable = mock<() => Promise<MockCredentials>>();
 const mockSafeDecrypt = mock<(value: string) => string | null>();
 
 type StripeWebhookEvent = {
@@ -126,6 +127,16 @@ const mockSendReservationConfirmationEmail =
 mock.module("@/shared/domain/payment/availability", () => ({
   assertStripeCredentialsConfigured: () =>
     mockAssertStripeCredentialsConfigured(),
+  // reservations/payment-commands が実モジュールとしてロードされる経路向け
+  // （refundCheckoutAmountMismatchForReservation 等）。named export 欠落は
+  // Bun の link 時に SyntaxError になる。
+  assertOnlinePaymentAvailable: () => mockAssertOnlinePaymentAvailable(),
+  isOnlinePaymentAvailable: () => Promise.resolve(true),
+}));
+
+mock.module("@/shared/domain/reservations/payment-commands", () => ({
+  refundCheckoutAmountMismatchForReservation: () =>
+    Promise.resolve({ outcome: "not_applicable" }),
 }));
 
 const actualCrypto = await import("@/shared/lib/crypto");
@@ -169,12 +180,28 @@ mock.module("@/shared/domain/events/payment-queries", () => ({
   findEventRegistrationForReceiptNotify: () => Promise.resolve(null),
   applyEventChargeRefundIdempotent: () => Promise.resolve(),
   findExpiredPendingWaitlistOfferRegistration: () => Promise.resolve(null),
+  findWaitlistOfferRegistrationNeedingRefundAfterPaidSession: () =>
+    Promise.resolve(null),
+  expireWaitlistOfferForRefundIfNeeded: () => Promise.resolve(null),
   getEventRegistrationCheckoutExpectedAmount: () => Promise.resolve(5000),
 }));
 
 mock.module("@/shared/domain/events/payment-commands", () => ({
   refundExpiredWaitlistOfferPaymentCommand: () =>
     Promise.resolve({ outcome: "not_applicable" }),
+  refundCheckoutAmountMismatchForEventRegistration: () =>
+    Promise.resolve({ outcome: "not_applicable" }),
+}));
+
+mock.module(
+  "@/shared/domain/events/waitlist-admin-notification-side-effects",
+  () => ({
+    fireEventWaitlistConfirmedAdminNotification: () => Promise.resolve(),
+  }),
+);
+
+mock.module("@/shared/domain/notifications/commands", () => ({
+  createNotificationCommand: () => Promise.resolve({ id: "notif-mock" }),
 }));
 
 mock.module("@/shared/domain/events/waitlist-commands", () => ({
