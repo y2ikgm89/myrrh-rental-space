@@ -20,7 +20,11 @@ import {
 
 import { serverEnv } from "@/shared/lib/env/server";
 import { parseCloudTraceContext } from "@/shared/lib/errors/logger-core";
-import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
+import {
+  checkRateLimit,
+  getClientIp,
+  infraEndpointRateLimiter,
+} from "@/shared/lib/rate-limit";
 
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
@@ -394,13 +398,31 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     // `/api/health` は DB 疎通を含む監視・手動確認用 endpoint なので通常の API
     // rate-limit を適用する。
     const isProbeOrInfraEndpoint = pathname === "/api/live";
+    const isWebhookOrCronEndpoint =
+      pathname.startsWith("/api/webhooks") || pathname.startsWith("/api/cron");
+    const clientIp = getClientIp(req);
 
-    if (
-      !pathname.startsWith("/api/webhooks") &&
-      !pathname.startsWith("/api/cron") &&
-      !isProbeOrInfraEndpoint
-    ) {
-      const clientIp = getClientIp(req);
+    if (isWebhookOrCronEndpoint) {
+      const rateLimitResult = await infraEndpointRateLimiter.check(
+        `${clientIp}:${pathname.split("/").slice(0, 4).join("/")}`,
+      );
+
+      if (!rateLimitResult.success) {
+        return NextResponse.json(
+          { error: "Too many requests" },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Remaining": "0",
+              "X-RateLimit-Reset": String(rateLimitResult.reset),
+              "Retry-After": String(
+                Math.ceil((rateLimitResult.reset - Date.now()) / 1000),
+              ),
+            },
+          },
+        );
+      }
+    } else if (!isProbeOrInfraEndpoint) {
       const rateLimitResult = await checkRateLimit(pathname, clientIp);
 
       if (!rateLimitResult.success) {

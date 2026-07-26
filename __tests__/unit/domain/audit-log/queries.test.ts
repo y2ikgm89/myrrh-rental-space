@@ -72,7 +72,7 @@ mock.module("@generated/prisma/enums", () => ({
   },
 }));
 
-const { getAuditLogs, getAuditLogsForExport } =
+const { getAuditLogs, getAuditLogsForExport, getAuditLogStats } =
   await import("@/shared/domain/audit-log/queries");
 
 describe("getAuditLogs", () => {
@@ -238,6 +238,65 @@ describe("getAuditLogs", () => {
             string_contains: "203.0.113.10",
           },
         }),
+      }),
+    );
+  });
+});
+
+describe("getAuditLogStats", () => {
+  const RealDate = Date;
+
+  function withFixedNow<T>(isoUtc: string, fn: () => Promise<T>): Promise<T> {
+    const fixedMs = new RealDate(isoUtc).getTime();
+    const MockDate = class extends RealDate {
+      constructor(value?: string | number | Date) {
+        super(value === undefined ? fixedMs : value);
+      }
+      static override now(): number {
+        return fixedMs;
+      }
+    };
+    globalThis.Date = MockDate as DateConstructor;
+    return fn().finally(() => {
+      globalThis.Date = RealDate;
+    });
+  }
+
+  beforeEach(() => {
+    mockCount.mockReset();
+    mockGroupBy.mockReset();
+    mockCount.mockResolvedValue(0);
+    mockGroupBy.mockResolvedValue([]);
+  });
+
+  test("today count は JST 日境界 (jstDayStartInstant) 以降で集計する", async () => {
+    await withFixedNow("2026-06-30T14:30:00.000Z", async () => {
+      await getAuditLogStats();
+    });
+
+    expect(mockCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          createdAt: {
+            gte: new Date("2026-06-29T15:00:00.000Z"),
+          },
+        },
+      }),
+    );
+  });
+
+  test("JST 日付が切り替わった直後は新しい JST 日の 00:00 以降で集計する", async () => {
+    await withFixedNow("2026-06-30T15:00:00.000Z", async () => {
+      await getAuditLogStats();
+    });
+
+    expect(mockCount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          createdAt: {
+            gte: new Date("2026-06-30T15:00:00.000Z"),
+          },
+        },
       }),
     );
   });

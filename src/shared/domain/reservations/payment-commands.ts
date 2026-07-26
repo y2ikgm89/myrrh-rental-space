@@ -20,6 +20,7 @@ import {
   findPaymentMethodsIncompatibleWithCurrency,
   isStripePaymentMethodType,
 } from "@/shared/lib/stripe-payment-methods";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/reservations/checkout-session-expiry";
 import { PENDING_RESERVATION_EXPIRY_MINUTES } from "@/shared/domain/reservations/pending-expiry";
 import {
   REFUNDED_BY_TYPE,
@@ -252,6 +253,8 @@ export async function createCheckoutSessionCommand(input: {
     );
   }
 
+  let createdSessionId: string | null = null;
+
   try {
     // Stripe session の `expires_at` を fail-safe cron の cutoff (PENDING_RESERVATION_EXPIRY_MINUTES)
     // と揃える (Codex P1: PR#1042 の silent orphan 予防)。
@@ -290,6 +293,7 @@ export async function createCheckoutSessionCommand(input: {
       success_url: `${appUrl}/mypage/reservations/${reservationId}?payment=success`,
       cancel_url: `${appUrl}/mypage/reservations/${reservationId}?payment=cancelled`,
     });
+    createdSessionId = session.id;
 
     // session id を確定書込 + paymentStatus: PENDING を再 assert する。
     //
@@ -366,6 +370,12 @@ export async function createCheckoutSessionCommand(input: {
   } catch (error) {
     if (error instanceof DomainError) {
       throw error;
+    }
+    if (createdSessionId) {
+      await expireOpenCheckoutSessionBestEffort({
+        reservationId,
+        sessionId: createdSessionId,
+      });
     }
     // Stripe session 作成 or session id 書込が失敗した。UNPAID に revert して顧客が
     // 再試行できる状態に戻す。既に session が作られていても metadata.reservationId が
