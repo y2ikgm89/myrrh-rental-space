@@ -4,6 +4,19 @@ import { PaymentStatus, RegistrationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { isPrismaUniqueConstraintError } from "@/shared/lib/prisma-errors";
 import { fromStripeUnitAmount } from "@/shared/lib/stripe-shared";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { refundOrphanedStripePaymentForCancelledEventRegistration } from "@/shared/domain/events/payment-commands";
+import {
+  logError,
+  normalizeError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import {
   REFUNDED_BY_TYPE,
   isValidRefundedByType,
@@ -36,7 +49,124 @@ export async function claimEventRegistrationAsPaid(
       paidAt: new Date(),
     },
   });
-  return result.count > 0;
+
+  if (result.count > 0) {
+    return true;
+  }
+
+  // count=0 の大半は無害 (重複 webhook 配信・既に PAID 等) だが、
+  // status=CANCELLED での不一致だけは money-in-flight。自動返金で収束させる。
+  const current = await prisma.eventRegistration.findUnique({
+    where: { id: registrationId },
+    select: {
+      status: true,
+      paymentStatus: true,
+      stripePaymentIntentId: true,
+    },
+  });
+
+  if (current?.status !== RegistrationStatus.CANCELLED) {
+    return false;
+  }
+
+  const paymentIntentId =
+    data.stripePaymentIntentId ?? current.stripePaymentIntentId;
+
+  if (!paymentIntentId) {
+    logError(
+      new Error(
+        "claimEventRegistrationAsPaid: missing stripePaymentIntentId for a cancelled event registration",
+      ),
+      {
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.CRITICAL,
+        context: {
+          operation: "claimEventRegistrationAsPaid",
+          registrationId,
+          currentPaymentStatus: current.paymentStatus,
+        },
+      },
+    );
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
+        title:
+          NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
+        message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立しました。PaymentIntent ID が不明なため自動返金できません（要確認）`,
+        resourceType: "event-registration",
+        resourceId: registrationId,
+      }),
+      {
+        operation:
+          "notifyEventRegistrationAutoRefundFailedMissingPaymentIntentId",
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.HIGH,
+        context: { registrationId },
+      },
+    );
+    return false;
+  }
+
+  try {
+    const refunded =
+      await refundOrphanedStripePaymentForCancelledEventRegistration({
+        registrationId,
+        stripePaymentIntentId: paymentIntentId,
+      });
+    if (refunded.outcome === "refunded") {
+      fireAndForget(
+        createNotificationCommand({
+          type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
+          title:
+            NOTIFICATION_TYPE_LABELS[
+              NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND
+            ],
+          message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立したため、自動で全額返金しました（返金額: ${refunded.refundAmount ?? 0} 円）`,
+          resourceType: "event-registration",
+          resourceId: registrationId,
+        }),
+        {
+          operation: "notifyEventRegistrationAutoRefundedAfterCancel",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            registrationId,
+            stripePaymentIntentId: paymentIntentId,
+            refundId: refunded.refundId,
+          },
+        },
+      );
+    }
+  } catch (error) {
+    logError(normalizeError(error), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.CRITICAL,
+      context: {
+        operation: "refundOrphanedStripePaymentForCancelledEventRegistration",
+        registrationId,
+        stripePaymentIntentId: paymentIntentId,
+        currentPaymentStatus: current.paymentStatus,
+      },
+    });
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND,
+        title:
+          NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION_REFUND],
+        message: `イベント申込 ${registrationId} はキャンセル済みですが Stripe 決済が成立しました。自動返金に失敗しました（PaymentIntent: ${paymentIntentId}）。至急確認してください。`,
+        resourceType: "event-registration",
+        resourceId: registrationId,
+      }),
+      {
+        operation: "notifyEventRegistrationAutoRefundFailedAfterCancel",
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.CRITICAL,
+        context: { registrationId, stripePaymentIntentId: paymentIntentId },
+      },
+    );
+  }
+
+  return false;
 }
 
 /**

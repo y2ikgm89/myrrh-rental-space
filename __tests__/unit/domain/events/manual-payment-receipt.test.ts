@@ -128,6 +128,8 @@ function unpaidRegistration(
     paymentStatus: PaymentStatus.UNPAID,
     stripeCheckoutSessionId: null,
     customerId: null,
+    quantity: 1,
+    ticket: { price: 1000 },
     ...overrides,
   };
 }

@@ -167,6 +167,7 @@ mock.module("@/shared/lib/receipt-download-token", () => ({
 const {
   createEventCheckoutSessionCommand,
   createWaitlistOfferCheckoutSessionCommand,
+  recordManualEventPaymentCommand,
 } = await import("@/shared/domain/events/payment-commands");
 
 const REGISTRATION_ID = "550e8400-e29b-41d4-a716-446655440101";
@@ -791,6 +792,73 @@ describe("events/payment-commands", () => {
       expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
       // authoritative 再読み込みも走らない
       expect(mockRegFindUnique).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("recordManualEventPaymentCommand", () => {
+    function unpaidRegistration(overrides: Record<string, unknown> = {}) {
+      return {
+        paymentStatus: PaymentStatus.UNPAID,
+        stripeCheckoutSessionId: null,
+        customerId: CUSTOMER_ID,
+        quantity: 1,
+        ticket: { price: 5000 },
+        ...overrides,
+      };
+    }
+
+    test("amount が ticket.price × quantity と一致すれば PAID に claim する", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(unpaidRegistration());
+      mockRegUpdateMany.mockResolvedValueOnce({ count: 1 });
+
+      const result = await recordManualEventPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        amount: 5000,
+      });
+
+      expect(result.registrationId).toBe(REGISTRATION_ID);
+      expect(mockRegUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: REGISTRATION_ID,
+            status: RegistrationStatus.CONFIRMED,
+            paymentStatus: PaymentStatus.UNPAID,
+          }),
+          data: expect.objectContaining({
+            paymentStatus: PaymentStatus.PAID,
+            paidAmount: 5000,
+          }),
+        }),
+      );
+    });
+
+    test("amount が charge base と不一致なら VALIDATION で拒否", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(unpaidRegistration());
+
+      const error = await recordManualEventPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        amount: 4000,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect((error as DomainError).message).toContain("5000");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
+    });
+
+    test("無料チケット (price × quantity <= 0) は VALIDATION で拒否", async () => {
+      mockRegFindUnique.mockResolvedValueOnce(
+        unpaidRegistration({ ticket: { price: 0 } }),
+      );
+
+      const error = await recordManualEventPaymentCommand({
+        registrationId: REGISTRATION_ID,
+        amount: 0,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(DomainError);
+      expect((error as DomainError).code).toBe("VALIDATION");
+      expect(mockRegUpdateMany).not.toHaveBeenCalled();
     });
   });
 });
