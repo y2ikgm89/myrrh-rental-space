@@ -13,10 +13,11 @@
  *   `min(navigator.hardwareConcurrency, 8)` の `p-limit` プール。CI の 4 上限は
  *   GitHub Actions の 2-4 vCPU と OOM 余裕を優先し、ローカルは実測に基づいて
  *   待ち時間を短縮する。`TEST_PARALLEL` 環境変数で上書き可能。
- * - **実 DB 接続テストは serial bucket に隔離**。対象は
- *   `scripts/test-db-runner-env.ts` の `SERIAL_DB_TESTS` に登録されたファイル
- *   （`TEST_DATABASE_URL` で共有 Postgres を操作）。登録済みテストは順次実行で
- *   並列書込み競合を避ける。
+ * - **実 DB 接続テストは serial bucket に隔離**。`scripts/serial-db-test-detection.ts`
+ *   が `__tests__/integration/**` を走査し、`TEST_DATABASE_URL` / `DATABASE_URL`
+ *   上書きパターンを持つファイルを自動検出して順次実行する（並列書込み競合回避）。
+ *   prisma を `mock.module` するファイルは除外。例外は FORCE_INCLUDE / FORCE_EXCLUDE。
+ *   検出結果は `scripts/test-db-runner-env.ts` の `SERIAL_DB_TESTS` に module load 時集約。
  * - serial bucket と parallel bucket は **並列** に動かす (互いに DB 共有なし)。
  *
  * ## 出力順序保持
@@ -48,7 +49,7 @@ import { resolveTestConcurrency } from "./test-runner-concurrency";
 import {
   assertRequiredTestDatabaseUrl,
   findSelectedSerialDbTests,
-  SERIAL_DB_TESTS,
+  isSerialDbTest,
 } from "./test-db-runner-env";
 
 interface FileResult {
@@ -119,7 +120,7 @@ if (testDatabaseUrlCheck.url !== undefined) {
   }
 }
 
-const parallelFiles = files.filter((f) => !SERIAL_DB_TESTS.has(f));
+const parallelFiles = files.filter((f) => !isSerialDbTest(f));
 const serialFiles = selectedSerialDbTests;
 
 const concurrency = resolveTestConcurrency({

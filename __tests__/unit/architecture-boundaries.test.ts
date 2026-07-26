@@ -3426,18 +3426,19 @@ describe("architecture boundaries", () => {
     });
   });
 
-  describe("実 DB integration テストの SERIAL_DB_TESTS 登録 (TEST-01 再発防止)", () => {
+  describe("実 DB integration テストの serial bucket 自動検出 (TEST-01 再発防止)", () => {
     // `.claude/rules/testing-unit.md` の SSoT 契約:「新規の実 DB テストは
-    // SERIAL_DB_TESTS にフルパス登録必須（未登録だと parallel bucket に入り共有 DB で
-    // 競合する）」。__tests__/integration 配下で
+    // TEST_DATABASE_URL / DATABASE_URL 上書きマーカーを持てば serial bucket に
+    // 自動入る（未検出だと parallel bucket に入り共有 DB で競合する）」。
+    // __tests__/integration 配下で
     // `const describeMaybe = TEST_DB_URL ? describe : describe.skip;` パターンを使う
-    // ファイルは scripts/test-db-runner-env.ts の SERIAL_DB_TESTS Set に登録漏れが
-    // あると: (a) 単発ターゲット実行時に TEST_DATABASE_URL 未注入 = silent skip
+    // ファイルは scripts/serial-db-test-detection.ts が内容走査で拾う。
+    // 検出漏れがあると: (a) 単発ターゲット実行時に TEST_DATABASE_URL 未注入 = silent skip
     // (security-critical assertion が 0 test passed で緑判定)、(b) 全域実行時は
     // parallel bucket に入り共有 test-db を他 parallel テストと同時書込みで race。
     // 過去に BLACKLIST 予約拒否・rate-plan CRUD・不審検知の 3 本で発生 (TEST-01)。
-    test("describeMaybe pattern を使う integration テストは SERIAL_DB_TESTS に登録済", async () => {
-      const { SERIAL_DB_TESTS } =
+    test("describeMaybe pattern を使う integration テストは serial bucket 対象", async () => {
+      const { isSerialDbTest } =
         await import("../../scripts/test-db-runner-env");
       const INTEGRATION_ROOT = join(ROOT, "__tests__", "integration");
       const PATTERN =
@@ -3462,14 +3463,14 @@ describe("architecture boundaries", () => {
         const content = readFileSync(file, "utf-8");
         if (!PATTERN.test(content)) continue;
         const rel = relative(ROOT, file).replace(/\\/g, "/");
-        if (!SERIAL_DB_TESTS.has(rel)) {
+        if (!isSerialDbTest(rel)) {
           unregistered.push(rel);
         }
       }
 
       expect(
         unregistered,
-        `__tests__/integration 配下で describeMaybe pattern を使う実 DB テストが SERIAL_DB_TESTS に未登録。scripts/test-db-runner-env.ts の Set に以下 file をフルパスで追加してください (未登録だと silent skip + parallel race)。詳細は .claude/rules/testing-unit.md`,
+        `__tests__/integration 配下で describeMaybe pattern を使う実 DB テストが serial bucket 自動検出対象外。TEST_DATABASE_URL / DATABASE_URL 上書きマーカーを追加するか scripts/serial-db-test-detection.ts の FORCE_INCLUDE に登録してください (未検出だと silent skip + parallel race)。詳細は .claude/rules/testing-unit.md`,
       ).toEqual([]);
     });
   });
