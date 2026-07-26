@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/public/components/design-system/badge";
@@ -39,6 +33,9 @@ import { getAppUrl } from "@/shared/lib/constants";
 import { toAppRoute } from "@/shared/lib/typed-routes";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
+import { EventMeetingUrlRow } from "@/app/(public)/_shared/components/event-meeting-url-row";
+import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
 import {
   TurnstileWidget,
   type TurnstileInstance,
@@ -161,21 +158,12 @@ export function EventRegistrationDetail({
           {PAYMENT_STATUS_LABELS[paymentStatus]}
         </DetailRow>
         {isEventVirtualAccessible(registration.event) &&
-          registration.event.meetingUrl &&
-          (status === RegistrationStatus.CONFIRMED ? (
-            <DetailRow label="参加 URL">
-              <a
-                href={registration.event.meetingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all underline underline-offset-4 hover:text-foreground"
-              >
-                {registration.event.meetingUrl}
-              </a>
-            </DetailRow>
-          ) : (
-            <DetailRow label="参加 URL">参加確定後に表示されます</DetailRow>
-          ))}
+          registration.event.meetingUrl && (
+            <EventMeetingUrlRow
+              meetingUrl={registration.event.meetingUrl}
+              isConfirmed={status === RegistrationStatus.CONFIRMED}
+            />
+          )}
       </dl>
 
       {registration.status === RegistrationStatus.WAITLISTED && (
@@ -253,18 +241,10 @@ export function EventRegistrationDetail({
       )}
 
       {receiptSerialNo && (
-        <div className="border-t border-border px-4 py-4 sm:px-6">
-          <p className="mb-3 text-sm text-muted-foreground">
-            適格請求書 (領収書) は PDF でダウンロードできます。
-          </p>
-          <a
-            href={`/api/receipts/${receiptSerialNo}/pdf`}
-            download={`receipt-${receiptSerialNo}.pdf`}
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-          >
-            領収書をダウンロード
-          </a>
-        </div>
+        <ReceiptDownloadSection
+          href={`/api/receipts/${receiptSerialNo}/pdf`}
+          downloadFilename={`receipt-${receiptSerialNo}.pdf`}
+        />
       )}
 
       {canCancel && (
@@ -338,25 +318,6 @@ export function EventRegistrationDetail({
           </Dialog>
         </div>
       )}
-    </div>
-  );
-}
-
-function DetailRow({
-  label,
-  children,
-}: {
-  readonly label: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1 border-b border-border py-3 last:border-none sm:flex-row sm:items-baseline sm:gap-4">
-      <dt className="shrink-0 text-sm text-muted-foreground sm:w-36">
-        {label}
-      </dt>
-      <dd className="min-w-0 break-words text-sm text-foreground [overflow-wrap:anywhere]">
-        {children}
-      </dd>
     </div>
   );
 }

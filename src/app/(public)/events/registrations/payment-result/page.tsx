@@ -91,10 +91,10 @@ export default async function EventRegistrationPaymentResultPage({
           イベントページへ戻る
         </Link>
         <Link
-          href="/mypage/events"
+          href={`/mypage/events/${registrationId}`}
           className="underline decoration-border underline-offset-4"
         >
-          マイページのイベント申込へ
+          マイページのイベント申込詳細へ
         </Link>
       </div>
     </main>

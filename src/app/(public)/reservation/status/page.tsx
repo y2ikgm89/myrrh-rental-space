@@ -33,7 +33,9 @@ import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notif
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
+import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
 import { PasscodeReveal } from "@/app/(public)/_shared/components/passcode-reveal";
+import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
 import { getPasscodeRevealState } from "@/shared/domain/smart-lock/customer-passcode-queries";
 import {
   publicQueryRateLimiter,
@@ -185,17 +187,7 @@ export default async function GuestReservationStatusPage(): Promise<ReactElement
         />
 
         {receiptDownloadHref && (
-          <div className="border-t border-border px-4 py-4 sm:px-6">
-            <p className="mb-3 text-sm text-muted-foreground">
-              適格請求書 (領収書) は PDF でダウンロードできます。
-            </p>
-            <a
-              href={toAppRoute(receiptDownloadHref)}
-              className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-            >
-              領収書をダウンロード
-            </a>
-          </div>
+          <ReceiptDownloadSection href={toAppRoute(receiptDownloadHref)} />
         )}
       </div>
 
@@ -275,22 +267,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </Stack>
     </PageLayout>
-  );
-}
-
-interface DetailRowProps {
-  readonly label: string;
-  readonly children: React.ReactNode;
-}
-
-function DetailRow({ label, children }: DetailRowProps) {
-  return (
-    <div className="flex flex-col gap-1 border-b border-border py-3 last:border-none sm:flex-row sm:items-baseline sm:gap-4">
-      <dt className="shrink-0 text-sm text-muted-foreground sm:w-36">
-        {label}
-      </dt>
-      <dd className="text-sm text-foreground">{children}</dd>
-    </div>
   );
 }
 

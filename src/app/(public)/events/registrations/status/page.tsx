@@ -32,6 +32,9 @@ import {
   publicQueryRateLimiter,
   getClientIpFromHeaders,
 } from "@/shared/lib/rate-limit";
+import { DetailRow } from "@/app/(public)/_shared/components/detail-row";
+import { EventMeetingUrlRow } from "@/app/(public)/_shared/components/event-meeting-url-row";
+import { ReceiptDownloadSection } from "@/app/(public)/_shared/components/receipt-download-section";
 
 // トークンゲートのユーティリティページ。検索結果に出さない（cancel と同方針）。
 // robots.ts は `/events/registrations/` でまとめて disallow 済み。
@@ -94,10 +97,7 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
     ? `/claim/event-registration?token=${createEventRegistrationClaimToken(registration.id)}`
     : null;
   const isVirtual = isEventVirtualAccessible(registration.event);
-  const showConfirmedMeetingUrl =
-    registration.status === RegistrationStatus.CONFIRMED &&
-    isVirtual &&
-    registration.event.meetingUrl != null;
+  const isConfirmed = registration.status === RegistrationStatus.CONFIRMED;
 
   return (
     <Layout>
@@ -157,35 +157,16 @@ export default async function GuestEventRegistrationStatusPage(): Promise<ReactE
           <DetailRow label="お支払い">
             {PAYMENT_STATUS_LABELS[paymentStatus]}
           </DetailRow>
-          {isVirtual &&
-            (showConfirmedMeetingUrl && registration.event.meetingUrl ? (
-              <DetailRow label="参加 URL">
-                <a
-                  href={registration.event.meetingUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="break-all underline underline-offset-4 hover:text-foreground"
-                >
-                  {registration.event.meetingUrl}
-                </a>
-              </DetailRow>
-            ) : (
-              <DetailRow label="参加 URL">参加確定後に表示されます</DetailRow>
-            ))}
+          {isVirtual && (
+            <EventMeetingUrlRow
+              meetingUrl={registration.event.meetingUrl}
+              isConfirmed={isConfirmed}
+            />
+          )}
         </dl>
 
         {receiptDownloadHref && (
-          <div className="border-t border-border px-4 py-4 sm:px-6">
-            <p className="mb-3 text-sm text-muted-foreground">
-              適格請求書 (領収書) は PDF でダウンロードできます。
-            </p>
-            <a
-              href={toAppRoute(receiptDownloadHref)}
-              className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-foreground px-4 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-            >
-              領収書をダウンロード
-            </a>
-          </div>
+          <ReceiptDownloadSection href={toAppRoute(receiptDownloadHref)} />
         )}
       </div>
 
@@ -259,22 +240,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </Stack>
     </PageLayout>
-  );
-}
-
-interface DetailRowProps {
-  readonly label: string;
-  readonly children: React.ReactNode;
-}
-
-function DetailRow({ label, children }: DetailRowProps) {
-  return (
-    <div className="flex flex-col gap-1 border-b border-border py-3 last:border-none sm:flex-row sm:items-baseline sm:gap-4">
-      <dt className="shrink-0 text-sm text-muted-foreground sm:w-36">
-        {label}
-      </dt>
-      <dd className="text-sm text-foreground">{children}</dd>
-    </div>
   );
 }
 
