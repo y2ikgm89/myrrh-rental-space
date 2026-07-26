@@ -252,6 +252,16 @@ describe("getCustomerVisibleSmartLockPasscodesForReservation — visibility", ()
     expect(result).toEqual({ status: "outside_window" });
   });
 
+  test("ゲスト status-token: 窓後は認可 TTL 切れで unauthorized", async () => {
+    const result = await getCustomerVisibleSmartLockPasscodesForReservation(
+      RESERVATION_ID,
+      { kind: "status-token", reservationId: RESERVATION_ID },
+      { now: NOW_AFTER_WINDOW, reveal: true },
+    );
+    expect(result).toEqual({ status: "unauthorized" });
+    expect(mockFindManyPasscodes).not.toHaveBeenCalled();
+  });
+
   test("全条件充足 + reveal で平文を返す", async () => {
     const result = await getCustomerVisibleSmartLockPasscodesForReservation(
       RESERVATION_ID,

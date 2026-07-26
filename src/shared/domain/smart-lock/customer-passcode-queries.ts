@@ -100,6 +100,7 @@ function isWithinPasscodeWindow(input: {
  * 4. now ∈ [start - buffer, end + buffer]
  *
  * Auth: 会員は customerId ownership、ゲストは status-token の rid 一致。
+ * ゲストは加えて now ≤ endTime + buffer を認可 TTL とする（超過は unauthorized）。
  */
 export async function getCustomerVisibleSmartLockPasscodesForReservation(
   reservationId: string,
@@ -153,6 +154,18 @@ export async function getCustomerVisibleSmartLockPasscodesForReservation(
     !assertAuthMatchesReservation(reservationId, auth, reservation.customerId)
   ) {
     return { status: "unauthorized" };
+  }
+
+  // Guest status-token の認可 TTL: 予約終了 + buffer を過ぎたら fail closed。
+  // status cookie 自体はハブ閲覧用に最大 90 日残るが、平文開示の認可は延長しない。
+  // 会員 (customer ownership) は従来どおり窓判定 (outside_window) のみ。
+  if (auth.kind === "status-token") {
+    const bufferMinutes = settings?.switchbotPasscodeBufferMinutes ?? 0;
+    const guestAuthDeadline =
+      reservation.endTime.getTime() + bufferMinutes * 60_000;
+    if (now.getTime() > guestAuthDeadline) {
+      return { status: "unauthorized" };
+    }
   }
 
   if (!settings?.switchbotEnabled) {
