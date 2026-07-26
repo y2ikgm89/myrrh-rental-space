@@ -54,7 +54,7 @@ const REFUND_FIXTURE_TAX_RATE = 10;
  * fixture の各 instance は startTime が現在時刻から 1 年以上先のため、
  * `calculateRefundRate` は tiers[0] に match して 50% を返す。
  * バグ (snapshot=null で fallback 発火) 時は per-instance で
- * `refundPolicySnapshot` を渡さない代わりに `parseRefundPolicy(null)=null`
+ * `refundPolicySnapshot` を渡さない代わりに `resolveRefundPolicy(null)=unset`
  * になり、`policy !== null` の gate を抜けて `refundAmount=undefined`
  * (残額全額) で refund 呼出 → totalPrice=5000 の全額返金が意図せず走る。
  */

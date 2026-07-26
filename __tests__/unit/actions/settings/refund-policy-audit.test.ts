@@ -61,15 +61,21 @@ mock.module("@/shared/domain/settings/commands", () => ({
 
 const mockGetRefundPolicySettings = mock<
   () => Promise<{
-    policy: {
-      tiers: { hoursBefore: number; refundRate: number }[];
-      defaultRefundRate: number;
-    } | null;
+    resolution:
+      | { status: "unset" }
+      | {
+          status: "configured";
+          policy: {
+            tiers: { hoursBefore: number; refundRate: number }[];
+            defaultRefundRate: number;
+          };
+        }
+      | { status: "invalid"; reason: string };
     commerceUpdatedAt: string;
   }>
 >(() =>
   Promise.resolve({
-    policy: null,
+    resolution: { status: "unset" },
     commerceUpdatedAt: "2026-01-01T00:00:00.000Z",
   }),
 );
@@ -122,14 +128,14 @@ describe("updateRefundPolicySettings の AuditLog diff", () => {
     mockUpdateRefundPolicyCommand.mockResolvedValue(undefined);
     mockGetRefundPolicySettings.mockReset();
     mockGetRefundPolicySettings.mockResolvedValue({
-      policy: null,
+      resolution: { status: "unset" },
       commerceUpdatedAt: "2026-01-01T00:00:00.000Z",
     });
     mockCreateAuditLogRecord.mockReset();
     mockCreateAuditLogRecord.mockResolvedValue(undefined);
   });
 
-  test("未設定 (null) → 有効化を oldValue=null / newValue={tiers,defaultRefundRate} で記録する", async () => {
+  test("未設定 (unset) → 有効化を oldValue=unset / newValue={tiers,defaultRefundRate} で記録する", async () => {
     await updateRefundPolicySettings(undefined, new FormData());
     await flushMicrotasks();
 
@@ -139,7 +145,9 @@ describe("updateRefundPolicySettings の AuditLog diff", () => {
     if (!call) throw new Error("call is undefined");
     expect(call["action"]).toBe("UPDATE");
     expect(call["resource"]).toBe("settings.refundPolicy");
-    expect(call["oldValue"]).toEqual({ refundPolicy: null });
+    expect(call["oldValue"]).toEqual({
+      refundPolicy: { status: "unset" },
+    });
     expect(call["newValue"]).toEqual({
       refundPolicy: {
         tiers: [{ hoursBefore: 24, refundRate: 50 }],
@@ -150,9 +158,12 @@ describe("updateRefundPolicySettings の AuditLog diff", () => {
 
   test("有効設定 → 無効化 (OFF) を newValue=null で記録する", async () => {
     mockGetRefundPolicySettings.mockResolvedValue({
-      policy: {
-        tiers: [{ hoursBefore: 24, refundRate: 50 }],
-        defaultRefundRate: 0,
+      resolution: {
+        status: "configured",
+        policy: {
+          tiers: [{ hoursBefore: 24, refundRate: 50 }],
+          defaultRefundRate: 0,
+        },
       },
       commerceUpdatedAt: "2026-01-01T00:00:00.000Z",
     });
@@ -171,8 +182,11 @@ describe("updateRefundPolicySettings の AuditLog diff", () => {
     if (!call) throw new Error("call is undefined");
     expect(call["oldValue"]).toEqual({
       refundPolicy: {
-        tiers: [{ hoursBefore: 24, refundRate: 50 }],
-        defaultRefundRate: 0,
+        status: "configured",
+        policy: {
+          tiers: [{ hoursBefore: 24, refundRate: 50 }],
+          defaultRefundRate: 0,
+        },
       },
     });
     expect(call["newValue"]).toEqual({ refundPolicy: null });

@@ -88,6 +88,17 @@ describe("maintenance-guard", () => {
     });
   });
 
+  test("isPublicSiteInMaintenance returns true when getMaintenanceSettings throws (SYS-4 fail-closed)", async () => {
+    mockGetMaintenanceSettings.mockImplementation(() =>
+      Promise.reject(new Error("connection lost")),
+    );
+
+    const { isPublicSiteInMaintenance } =
+      await import("@/shared/lib/maintenance-guard");
+
+    await expect(isPublicSiteInMaintenance()).resolves.toBe(true);
+  });
+
   test("isCustomerAuthSignOutPath matches sign-out only", async () => {
     const { isCustomerAuthSignOutPath } =
       await import("@/shared/lib/maintenance-guard");

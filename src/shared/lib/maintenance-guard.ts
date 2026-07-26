@@ -3,8 +3,9 @@
  *
  * HTML gate (`MaintenanceGate`) に加え、Server Action / 公開 mutating API の
  * 境界で `maintenanceMode === true` を拒否する。DB 障害時は
- * `getMaintenanceSettings` の fallback が maintenance ON になるため、
- * 状態不明時も書込みを止める (SYS-4)。
+ * `getMaintenanceSettings` が throw するため、ここでは catch して
+ * maintenance ON 扱いとし、状態不明時も書込みを止める (SYS-4)。
+ * 失敗結果は Data Cache に載せない（クエリ側は criticalFetch）。
  *
  * ## Allowlist — maintenance ON でも動作継続
  *
@@ -34,8 +35,14 @@ export const PUBLIC_MAINTENANCE_BLOCKED_MESSAGE =
   "只今メンテナンス中のため、操作を受け付けておりません。しばらくお待ちください。";
 
 export async function isPublicSiteInMaintenance(): Promise<boolean> {
-  const settings = await getMaintenanceSettings();
-  return settings.maintenanceMode;
+  try {
+    const settings = await getMaintenanceSettings();
+    return settings.maintenanceMode;
+  } catch {
+    // SYS-4: 状態を確定できないときは fail-closed（書込み拒否）。
+    // この fallback は call site のみ — Data Cache には載せない。
+    return true;
+  }
 }
 
 export async function assertPublicSiteWritable(): Promise<void> {

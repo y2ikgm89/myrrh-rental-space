@@ -7,10 +7,11 @@
  * `DiscountSection` と同型の conform 配列 (form.insert / form.remove) パターン。
  *
  * ## UI 構造
- * - Enable Switch: OFF なら policy null (全額返金の後方互換動作)
+ * - Enable Switch: OFF なら policy null (意図的未設定 = 残額全額の自動返金)
  * - Tier リスト: hoursBefore + refundRate ペア (追加/削除)
  * - defaultRefundRate: 全 tier 外れ時の返金率
  * - プリセット button: 「7日前100% / 3日前50% / それ以降0%」を一括挿入
+ * - invalid: 破損 JSON を検知し自動返金停止を明示（fail-closed）
  */
 
 import { useActionState, useEffect } from "react";
@@ -25,6 +26,9 @@ import {
 import { parseWithZod } from "@conform-to/zod/v4";
 import { toast } from "sonner";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
   Card,
   CardContent,
@@ -38,10 +42,10 @@ import {
 } from "@/admin/components/ui";
 import { updateRefundPolicySettings } from "@/admin/actions/settings";
 import { refundPolicyFormSchema } from "@/admin/actions/settings/schemas/refund-policy";
-import type { RefundPolicy } from "@/shared/domain/refund/policy";
+import type { RefundPolicyResolution } from "@/shared/domain/refund/policy";
 
 interface RefundPolicySectionProps {
-  settings: RefundPolicy | null;
+  resolution: RefundPolicyResolution;
   commerceUpdatedAt: string;
 }
 
@@ -55,7 +59,7 @@ const PRESET_TIERS: ReadonlyArray<{ hoursBefore: number; refundRate: number }> =
   ];
 
 export function RefundPolicySection({
-  settings,
+  resolution,
   commerceUpdatedAt,
 }: RefundPolicySectionProps) {
   const router = useRouter();
@@ -64,6 +68,9 @@ export function RefundPolicySection({
     undefined,
   );
 
+  const settings =
+    resolution.status === "configured" ? resolution.policy : null;
+  const parseError = resolution.status === "invalid" ? resolution.reason : null;
   const initialEnabled = settings !== null;
   const initialTiers =
     settings && settings.tiers.length > 0
@@ -163,12 +170,21 @@ export function RefundPolicySection({
           <CardTitle>返金ポリシー</CardTitle>
           <CardDescription>
             予約キャンセル時の自動返金率を、予約開始までの残り時間（壁時計の時間、168
-            時間 ≈ 7 日）で段階的に設定します。無効（policy 未設定）の場合は
-            fail-open
-            で、キャンセル時に決済残額の全額を自動返金します（返金なしではありません）。
+            時間 ≈ 7
+            日）で段階的に設定します。無効（意図的な未設定）の場合は、キャンセル時に決済残額の全額を自動返金します。JSON
+            が破損している場合は自動返金を停止します（fail-closed）。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {parseError !== null && (
+            <Alert variant="destructive">
+              <AlertTitle>返金ポリシーのデータが破損しています</AlertTitle>
+              <AlertDescription>
+                自動返金は停止されています。内容を修正して保存してください（理由:{" "}
+                {parseError}）。
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
               <Label htmlFor={fields.refundPolicyEnabled.id}>
@@ -176,7 +192,7 @@ export function RefundPolicySection({
               </Label>
               <p className="text-xs text-muted-foreground">
                 無効時は tier
-                設定を保存せず、キャンセル時に決済残額の全額を自動返金します（fail-open）。
+                設定を保存せず、キャンセル時に決済残額の全額を自動返金します（意図的な未設定）。
               </p>
             </div>
             <Switch

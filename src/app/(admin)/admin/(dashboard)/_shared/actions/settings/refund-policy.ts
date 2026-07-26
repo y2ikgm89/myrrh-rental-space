@@ -6,8 +6,7 @@
  * `Settings.refundPolicy` (Json?) を書き込む thin admin action。
  *
  * ## 挙動
- * - `refundPolicyEnabled=false` → policy null 保存 (cancellation-side-effects の
- *   後方互換動作 = 残額全額返金 に戻す)
+ * - `refundPolicyEnabled=false` → policy null 保存 (意図的未設定 = 残額全額自動返金)
  * - `refundPolicyEnabled=true`  → tier array + defaultRefundRate を JSON 保存
  *
  * ## 権限
@@ -50,7 +49,7 @@ export async function updateRefundPolicySettings(
         action: "manage",
         execute: async (user) => {
           const previousData = await getRefundPolicySettings();
-          const previous = previousData.policy;
+          const previous = previousData.resolution;
           const policy = data.refundPolicyEnabled
             ? {
                 tiers: data.refundPolicyTiers,

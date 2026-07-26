@@ -3,7 +3,7 @@ import "server-only";
 import { isRecord } from "@/shared/lib/serialize";
 
 /**
- * `Settings.refundPolicy` の shape 定義と計算ヘルパー (task #9 PR#5 domain 部分)。
+ * `Settings.refundPolicy` の shape 定義と計算ヘルパー。
  *
  * ## Policy schema (`Settings.refundPolicy` の JSON カラムに格納)
  *
@@ -23,23 +23,11 @@ import { isRecord } from "@/shared/lib/serialize";
  * 4. 全 tier に match しなければ `defaultRefundRate` を採用
  * 5. 0-100 の範囲に clamp
  *
- * ### 例
+ * ## 未設定 vs 破損 (`resolveRefundPolicy`)
  *
- * ```json
- * {
- *   "tiers": [
- *     { "hoursBefore": 168, "refundRate": 100 },  // 7 日 (168 時間) 前まで: 全額
- *     { "hoursBefore": 72,  "refundRate": 50  }   // 3 日 (72 時間) 前まで: 半額
- *   ],
- *   "defaultRefundRate": 0                          // それ以降: 返金不可
- * }
- * ```
- *
- * ## 未設定時の挙動 (`parseRefundPolicy` が null を返す場合)
- *
- * 呼出側は「policy 未設定」として扱い、現状の「auto refund は残額全額」動作を維持する。
- * NULL / shape 不正の両方を同一分岐に集約するため `parseRefundPolicy` は返り値 null を
- * 使う (throw しない、fail-open で running system の robustness を保つ)。
+ * - `unset` — 意図的な null / undefined。製品ポリシーどおりキャンセル時は残額全額の自動返金
+ * - `invalid` — JSON shape 破損。fail-closed（自動返金しない）。ログ HIGH + 管理画面で検知
+ * - `configured` — 有効な policy。tier 計算で返金額を決定
  */
 
 /**
@@ -60,8 +48,16 @@ export interface RefundPolicy {
 }
 
 /**
+ * `Settings.refundPolicy` の解決結果。未設定と parse 失敗を混同しない。
+ */
+export type RefundPolicyResolution =
+  | { readonly status: "configured"; readonly policy: RefundPolicy }
+  | { readonly status: "unset" }
+  | { readonly status: "invalid"; readonly reason: string };
+
+/**
  * Rate を 0-100 の範囲に clamp する (Infinity / NaN / 負数 / 100 超は全て正規化)。
- * fail-open 設計: 無効な値は 0% として扱い、over-refund を防ぐ (business-safe default)。
+ * 無効な値は 0% として扱い、over-refund を防ぐ (business-safe default)。
  */
 function clampRate(rate: number): number {
   if (!Number.isFinite(rate)) return 0;
@@ -89,7 +85,7 @@ export function calculateRefundRate(
 
   // 開始時刻を過ぎている (負数) は defaultRefundRate。
   // (キャンセル可能日時を過ぎている想定 — 実際には status: COMPLETED で cancel gate を通らないが
-  // ここは fail-open で defaultRefundRate に fallback)
+  // ここは defaultRefundRate に fallback)
   if (hoursUntilStart < 0) {
     return clampRate(policy.defaultRefundRate);
   }
@@ -144,44 +140,61 @@ export function calculateRefundAmountNow(
 }
 
 /**
- * `Settings.refundPolicy` の unknown JSON 値を type-safe に parse する。
+ * `Settings.refundPolicy` の unknown JSON 値を type-safe に解決する。
  *
- * ## fail-open 設計
- * shape 違反 (フィールド欠落 / 型不一致 / 配列でない等) は `null` を返す。
- * 呼出側は null を「policy 未設定」として扱い、現状挙動 (auto refund は残額全額) に fallback。
- * throw しないのは、Settings 側の JSON 手入力による部分的破損で refund 経路全体が
- * 500 化するのを防ぐため (business continuity 優先)。
+ * - `null` / `undefined` → `unset`（意図的な未設定）
+ * - shape 違反 → `invalid`（破損。自動返金 fail-closed）
+ * - 有効 → `configured`
  *
  * @param raw `Settings.refundPolicy` の JSON 値 (Prisma から来る unknown)
- * @returns 有効な RefundPolicy、または `null` (未設定 / shape 不正)
  */
-export function parseRefundPolicy(raw: unknown): RefundPolicy | null {
-  if (!isRecord(raw)) return null;
+export function resolveRefundPolicy(raw: unknown): RefundPolicyResolution {
+  if (raw === null || raw === undefined) {
+    return { status: "unset" };
+  }
+
+  if (!isRecord(raw)) {
+    return { status: "invalid", reason: "not_object" };
+  }
 
   const tiersRaw = raw["tiers"];
   const defaultRateRaw = raw["defaultRefundRate"];
-  if (!Array.isArray(tiersRaw)) return null;
-  if (typeof defaultRateRaw !== "number") return null;
-  // Codex P2 (PR #1134): defaultRefundRate も finite check で NaN / Infinity を reject。
-  // clamp は `calculateRefundRate` で 0-100 に normalize されるが parse 境界で早期 reject
-  // することで shape 破壊状態の Settings 全体を「未設定」扱いに fall back させる。
-  if (!Number.isFinite(defaultRateRaw)) return null;
+  if (!Array.isArray(tiersRaw)) {
+    return { status: "invalid", reason: "tiers_not_array" };
+  }
+  if (typeof defaultRateRaw !== "number") {
+    return { status: "invalid", reason: "default_refund_rate_missing" };
+  }
+  if (!Number.isFinite(defaultRateRaw)) {
+    return { status: "invalid", reason: "default_refund_rate_not_finite" };
+  }
 
   const tiers: RefundPolicyTier[] = [];
   for (const tier of tiersRaw) {
-    if (!isRecord(tier)) return null;
+    if (!isRecord(tier)) {
+      return { status: "invalid", reason: "tier_not_object" };
+    }
     const hoursBefore = tier["hoursBefore"];
     const refundRate = tier["refundRate"];
-    if (typeof hoursBefore !== "number") return null;
-    if (typeof refundRate !== "number") return null;
-    // Codex P2 (PR #1134, comment 3589594663): 契約上 hoursBefore は正 (0 以上)。
-    // 手入力 JSON で -1 等が入ると `hoursUntilStart >= -1` が常に true になり、
+    if (typeof hoursBefore !== "number") {
+      return { status: "invalid", reason: "tier_hours_before_invalid" };
+    }
+    if (typeof refundRate !== "number") {
+      return { status: "invalid", reason: "tier_refund_rate_invalid" };
+    }
+    // hoursBefore は正 (0 以上)。負数だと `hoursUntilStart >= -1` が常に true になり
     // 意図した defaultRefundRate を上書きして誤返金を招くため境界で reject。
-    // Infinity / NaN も同時に排除 (`calculateRefundRate` の sort が非決定的になる)。
-    if (!Number.isFinite(hoursBefore) || hoursBefore < 0) return null;
-    if (!Number.isFinite(refundRate)) return null;
+    if (!Number.isFinite(hoursBefore) || hoursBefore < 0) {
+      return { status: "invalid", reason: "tier_hours_before_out_of_range" };
+    }
+    if (!Number.isFinite(refundRate)) {
+      return { status: "invalid", reason: "tier_refund_rate_not_finite" };
+    }
     tiers.push({ hoursBefore, refundRate });
   }
 
-  return { tiers, defaultRefundRate: defaultRateRaw };
+  return {
+    status: "configured",
+    policy: { tiers, defaultRefundRate: defaultRateRaw },
+  };
 }

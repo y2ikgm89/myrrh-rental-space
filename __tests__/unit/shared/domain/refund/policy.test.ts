@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   calculateRefundAmount,
   calculateRefundRate,
-  parseRefundPolicy,
+  resolveRefundPolicy,
   type RefundPolicy,
 } from "@/shared/domain/refund/policy";
 
@@ -115,8 +115,8 @@ describe("calculateRefundAmount", () => {
   });
 });
 
-describe("parseRefundPolicy", () => {
-  test("有効な JSON shape を parse", () => {
+describe("resolveRefundPolicy", () => {
+  test("有効な JSON shape を configured として返す", () => {
     const raw = {
       tiers: [
         { hoursBefore: 168, refundRate: 100 },
@@ -124,103 +124,160 @@ describe("parseRefundPolicy", () => {
       ],
       defaultRefundRate: 0,
     };
-    const parsed = parseRefundPolicy(raw);
-    expect(parsed).toEqual({
-      tiers: [
-        { hoursBefore: 168, refundRate: 100 },
-        { hoursBefore: 72, refundRate: 50 },
-      ],
-      defaultRefundRate: 0,
+    expect(resolveRefundPolicy(raw)).toEqual({
+      status: "configured",
+      policy: {
+        tiers: [
+          { hoursBefore: 168, refundRate: 100 },
+          { hoursBefore: 72, refundRate: 50 },
+        ],
+        defaultRefundRate: 0,
+      },
     });
   });
 
-  test("null / undefined / 非オブジェクトは null (fail-open)", () => {
-    expect(parseRefundPolicy(null)).toBeNull();
-    expect(parseRefundPolicy(undefined)).toBeNull();
-    expect(parseRefundPolicy("policy")).toBeNull();
-    expect(parseRefundPolicy(42)).toBeNull();
-    expect(parseRefundPolicy(true)).toBeNull();
-    expect(parseRefundPolicy([])).toBeNull();
+  test("null / undefined は unset（意図的未設定）", () => {
+    expect(resolveRefundPolicy(null)).toEqual({ status: "unset" });
+    expect(resolveRefundPolicy(undefined)).toEqual({ status: "unset" });
   });
 
-  test("tiers 欠落 / 非配列 は null", () => {
-    expect(parseRefundPolicy({ defaultRefundRate: 0 })).toBeNull();
+  test("非オブジェクトは invalid（unset と混同しない）", () => {
+    expect(resolveRefundPolicy("policy")).toEqual({
+      status: "invalid",
+      reason: "not_object",
+    });
+    expect(resolveRefundPolicy(42)).toEqual({
+      status: "invalid",
+      reason: "not_object",
+    });
+    expect(resolveRefundPolicy(true)).toEqual({
+      status: "invalid",
+      reason: "not_object",
+    });
+    expect(resolveRefundPolicy([])).toEqual({
+      status: "invalid",
+      reason: "not_object",
+    });
+  });
+
+  test("tiers 欠落 / 非配列 は invalid", () => {
+    expect(resolveRefundPolicy({ defaultRefundRate: 0 })).toEqual({
+      status: "invalid",
+      reason: "tiers_not_array",
+    });
     expect(
-      parseRefundPolicy({ tiers: "not-array", defaultRefundRate: 0 }),
-    ).toBeNull();
+      resolveRefundPolicy({ tiers: "not-array", defaultRefundRate: 0 }),
+    ).toEqual({
+      status: "invalid",
+      reason: "tiers_not_array",
+    });
   });
 
-  test("defaultRefundRate 欠落 / 型不一致 は null", () => {
-    expect(parseRefundPolicy({ tiers: [] })).toBeNull();
-    expect(parseRefundPolicy({ tiers: [], defaultRefundRate: "0" })).toBeNull();
+  test("defaultRefundRate 欠落 / 型不一致 は invalid", () => {
+    expect(resolveRefundPolicy({ tiers: [] })).toEqual({
+      status: "invalid",
+      reason: "default_refund_rate_missing",
+    });
+    expect(resolveRefundPolicy({ tiers: [], defaultRefundRate: "0" })).toEqual({
+      status: "invalid",
+      reason: "default_refund_rate_missing",
+    });
   });
 
-  test("tier の shape 不正は null (フィールド欠落 / 型不一致 / null)", () => {
+  test("tier の shape 不正は invalid", () => {
     expect(
-      parseRefundPolicy({
-        tiers: [{ hoursBefore: 24 }], // refundRate 欠落
+      resolveRefundPolicy({
+        tiers: [{ hoursBefore: 24 }],
         defaultRefundRate: 0,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "tier_refund_rate_invalid",
+    });
     expect(
-      parseRefundPolicy({
-        tiers: [{ hoursBefore: "24", refundRate: 50 }], // 型不一致
+      resolveRefundPolicy({
+        tiers: [{ hoursBefore: "24", refundRate: 50 }],
         defaultRefundRate: 0,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "tier_hours_before_invalid",
+    });
     expect(
-      parseRefundPolicy({
+      resolveRefundPolicy({
         tiers: [null],
         defaultRefundRate: 0,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "tier_not_object",
+    });
   });
 
-  test("空 tiers 配列 + defaultRefundRate のみでも有効", () => {
-    const parsed = parseRefundPolicy({ tiers: [], defaultRefundRate: 25 });
-    expect(parsed).toEqual({ tiers: [], defaultRefundRate: 25 });
+  test("空 tiers 配列 + defaultRefundRate のみでも configured", () => {
+    expect(resolveRefundPolicy({ tiers: [], defaultRefundRate: 25 })).toEqual({
+      status: "configured",
+      policy: { tiers: [], defaultRefundRate: 25 },
+    });
   });
 
-  // Codex P2 (PR #1134, comment 3589594663) 対応
-  test("hoursBefore が負数の tier は null (誤返金防止)", () => {
+  test("hoursBefore が負数の tier は invalid (誤返金防止)", () => {
     expect(
-      parseRefundPolicy({
+      resolveRefundPolicy({
         tiers: [{ hoursBefore: -1, refundRate: 100 }],
         defaultRefundRate: 0,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "tier_hours_before_out_of_range",
+    });
   });
 
-  test("hoursBefore / refundRate が NaN / Infinity の tier は null", () => {
+  test("hoursBefore / refundRate が NaN / Infinity の tier は invalid", () => {
     expect(
-      parseRefundPolicy({
+      resolveRefundPolicy({
         tiers: [{ hoursBefore: Number.NaN, refundRate: 50 }],
         defaultRefundRate: 0,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "tier_hours_before_out_of_range",
+    });
     expect(
-      parseRefundPolicy({
+      resolveRefundPolicy({
         tiers: [{ hoursBefore: Number.POSITIVE_INFINITY, refundRate: 50 }],
         defaultRefundRate: 0,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "tier_hours_before_out_of_range",
+    });
     expect(
-      parseRefundPolicy({
+      resolveRefundPolicy({
         tiers: [{ hoursBefore: 24, refundRate: Number.NaN }],
         defaultRefundRate: 0,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "tier_refund_rate_not_finite",
+    });
   });
 
-  test("defaultRefundRate が NaN / Infinity は null", () => {
+  test("defaultRefundRate が NaN / Infinity は invalid", () => {
     expect(
-      parseRefundPolicy({ tiers: [], defaultRefundRate: Number.NaN }),
-    ).toBeNull();
+      resolveRefundPolicy({ tiers: [], defaultRefundRate: Number.NaN }),
+    ).toEqual({
+      status: "invalid",
+      reason: "default_refund_rate_not_finite",
+    });
     expect(
-      parseRefundPolicy({
+      resolveRefundPolicy({
         tiers: [],
         defaultRefundRate: Number.POSITIVE_INFINITY,
       }),
-    ).toBeNull();
+    ).toEqual({
+      status: "invalid",
+      reason: "default_refund_rate_not_finite",
+    });
   });
 });

@@ -16,11 +16,12 @@ import {
  * 1. DB の `Settings.featureModules` から explicit に true となっている module を抽出
  * 2. `FEATURE_MODULES[id].requires` の依存解決を伝播的に適用（A requires B & B OFF → A も OFF）
  *
- * fail-closed 原則: DB に key が存在しない / DB が空 / 不正値 → その module は OFF。
+ * fail-closed 原則: DB 取得成功時に key が存在しない / DB が空 / 不正値 → その module は OFF。
+ * DB 取得失敗は `getFeatureModulesSettings` が throw（Data Cache に全 OFF を載せない）。
  * `seed.ts` と migration が全 11 module を explicit に保つことで運用上は全 ON で動作する。
  *
- * 内部の `getFeatureModulesSettings` が `'use cache'` で cross-request キャッシュを
- * 持つため、本関数は薄い解決ロジック層（メモ化不要）。
+ * 内部の `getFeatureModulesSettings` が成功結果のみ `'use cache'` するため、
+ * 本関数は薄い解決ロジック層（メモ化不要）。
  */
 export async function getEnabledFeatures(): Promise<
   ReadonlySet<FeatureModule>

@@ -25,15 +25,16 @@
  * 現在は `reservations/cancellation-side-effects.ts` と対称に、
  * `paymentStatus === PAID | PARTIALLY_REFUNDED` かつ `stripePaymentIntentId` あり の
  * ときに `refundEventRegistrationPaymentCommand(actorType=AUTO_ON_CANCEL)` を発火する。
- * `Settings.refundPolicy` があれば tier ベースで返金額を算出し、未設定なら残額全額。
+ * `Settings.refundPolicy` が configured なら tier ベースで返金額を算出し、
+ * unset なら残額全額。invalid（JSON 破損）は fail-closed で自動返金 skip。
  * policy 適用結果が 0 円なら refund 全 skip し、admin 通知タイトルを
  * 「要返金確認」に昇格して手動対応を明示的に促す。
  *
  * 含まれる副作用:
  *   1. Stripe refund（`paymentStatus === PAID | PARTIALLY_REFUNDED` かつ
  *      `stripePaymentIntentId` あり のときのみ自動発火）。
- *      `Settings.refundPolicy` が設定されていれば tier ベースで返金額を算出し、
- *      未設定なら残額全額を返金する。policy 適用結果が 0 円なら refund 全 skip。
+ *      `Settings.refundPolicy` が configured なら tier ベース、unset なら残額全額。
+ *      invalid は自動返金しない（fail-closed）。0 円なら refund 全 skip。
  *      MYPAGE-EVENT-02: 予約キャンセル (`reservations/cancellation-side-effects.ts`)
  *      と対称の挙動を保証する（従来はイベント側のみ手動対応必須で顧客誤解の原因）。
  *   2. 参加者向けキャンセル確認メール（CANCEL ICS 添付）
@@ -65,8 +66,8 @@ import { getEventWaitlistOfferPaymentContext } from "@/shared/domain/events/wait
 import { refundEventRegistrationPaymentCommand } from "@/shared/domain/events/payment-commands";
 import {
   calculateRefundAmount,
-  parseRefundPolicy,
-  type RefundPolicy,
+  resolveRefundPolicy,
+  type RefundPolicyResolution,
 } from "@/shared/domain/refund/policy";
 import type { WaitlistPromotionOutcome } from "@/shared/domain/events/registration-cancel-core";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -118,10 +119,9 @@ export interface EventCancellationSideEffectInput {
    * 渡す（`reservations/cancellation-side-effects.ts` の同名フィールドと同型契約）。
    *
    * - 省略 (undefined) → 従前どおり per-call で `Settings.findUnique` を実行
-   * - `RefundPolicy` → その snapshot を使用
-   * - `null` → 「policy 未設定 = 残額全額」を明示 (parseRefundPolicy が返す null を snapshot 化)
+   * - `RefundPolicyResolution` → その snapshot を使用
    */
-  refundPolicySnapshot?: RefundPolicy | null;
+  refundPolicySnapshot?: RefundPolicyResolution;
 }
 
 // -----------------------------------------------------------------------------
@@ -246,10 +246,10 @@ async function runRefundStep(args: {
   }
 
   try {
-    const policy: RefundPolicy | null =
+    const resolution: RefundPolicyResolution =
       input.refundPolicySnapshot !== undefined
         ? input.refundPolicySnapshot
-        : parseRefundPolicy(
+        : resolveRefundPolicy(
             (
               await prisma.settingsCommerce.findUnique({
                 where: { id: "singleton" },
@@ -258,15 +258,40 @@ async function runRefundStep(args: {
             )?.refundPolicy,
           );
 
+    if (resolution.status === "invalid") {
+      logError(
+        new Error("Auto refund skipped: refund policy JSON is invalid"),
+        {
+          category: ErrorCategory.DATABASE,
+          severity: ErrorSeverity.HIGH,
+          context: {
+            operation: "autoRefundEventRegistrationOnCancel",
+            registrationId: input.registrationId,
+            reason: "policy_invalid",
+            parseReason: resolution.reason,
+          },
+        },
+      );
+      return {
+        status: "skipped",
+        reason: "policy_invalid",
+        detail: { parseReason: resolution.reason },
+      };
+    }
+
     let refundAmount: number | undefined;
-    if (policy !== null && registration.paidAmount !== null) {
+    if (
+      resolution.status === "configured" &&
+      registration.paidAmount !== null
+    ) {
       refundAmount = calculateRefundAmount(
-        policy,
+        resolution.policy,
         registration.paidAmount,
         registration.slot.startAt,
         new Date(),
       );
     }
+    // status === "unset" → refundAmount 未指定のまま残額全額自動返金
 
     if (refundAmount !== undefined && refundAmount === 0) {
       // Policy による refundRate=0% → 返金 skip。

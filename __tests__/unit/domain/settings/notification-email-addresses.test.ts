@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 const mockSettingsNotificationFindUnique = mock<
   () => Promise<{
@@ -34,9 +35,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/lib/errors/server", () => ({
-  ErrorCategory: { DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW" },
+await installErrorsServerMock({
   safeFetch: async <T>({
     fetch,
     fallback,
@@ -50,9 +49,10 @@ mock.module("@/shared/lib/errors/server", () => ({
       return fallback;
     }
   },
-}));
+});
 
-import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
+const { getNotificationEmailAddresses } =
+  await import("@/shared/domain/settings/queries/notification");
 
 describe("getNotificationEmailAddresses", () => {
   beforeEach(() => {

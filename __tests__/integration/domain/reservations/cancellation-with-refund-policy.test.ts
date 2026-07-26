@@ -12,7 +12,7 @@
  * 2. policy 設定あり (168h=100%): 200h 前予約 → 全額返金
  * 3. policy 設定あり (72h=50%): 100h 前予約 → 半額返金 (Refund child amount)
  * 4. policy 設定あり (defaultRate=0%): 24h 前予約 → refund skip + logError 発火
- * 5. policy shape 破損 → parseRefundPolicy 経由で null に fallback → 全額返金
+ * 5. policy shape 破損 → resolveRefundPolicy invalid → 自動返金 skip (fail-closed)
  * 6. Refund child table に amount / refundedByType=AUTO_ON_CANCEL / reservationId 記録
  * 7. AuditLog metadata に wasPaid=true / requiresRefund=true 記録
  *
@@ -566,13 +566,13 @@ describeMaybe(
       }
     }, 30_000);
 
-    test("case 5: policy shape 破損 (tiers 欠落) → parseRefundPolicy が null に fallback → 全額返金", async () => {
+    test("case 5: policy shape 破損 → resolveRefundPolicy invalid → 自動返金 skip (fail-closed)", async () => {
       const { reservationId, cleanup } = await createPaidReservationFixture(
         5000,
         100,
       );
       try {
-        // shape 違反 (tiers array ではなく string)。parseRefundPolicy は null 返却。
+        // shape 違反 (tiers array ではなく string)。invalid = 自動返金しない。
         await setRefundPolicy({ tiers: "broken", defaultRefundRate: 100 });
         await applyCancellationSideEffects(baseInput(reservationId));
         await drainSideEffects();
@@ -580,9 +580,7 @@ describeMaybe(
         const refunds = await prisma.refund.findMany({
           where: { reservationId },
         });
-        expect(refunds).toHaveLength(1);
-        // policy 破損 → null fallback → amount undefined pass through → 残額全額
-        expect(refunds[0]!.amount).toBe(5000);
+        expect(refunds).toHaveLength(0);
       } finally {
         await cleanup();
       }

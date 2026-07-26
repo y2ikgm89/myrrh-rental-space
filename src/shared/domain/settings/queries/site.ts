@@ -6,6 +6,7 @@ import type { AnalyticsType } from "@generated/prisma/enums";
 import { LayoutWidth } from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
+  criticalFetch,
   ErrorCategory,
   ErrorSeverity,
   safeFetch,
@@ -151,7 +152,10 @@ export async function getMaintenanceSettings() {
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);
   cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
 
-  const result = await safeFetch({
+  // criticalFetch: DB 失敗を Data Cache に書かない。
+  // SYS-4 fail-closed（maintenance ON）は call site
+  // （MaintenanceGate / maintenance-guard）で適用する。
+  const result = await criticalFetch({
     fetch: async () => {
       const settings = await prisma.settingsSystem.findUnique({
         where: { id: "singleton" },
@@ -162,11 +166,7 @@ export async function getMaintenanceSettings() {
       });
       return settings ?? { maintenanceMode: false, maintenanceMessage: null };
     },
-    // SYS-4 fail-closed: 状態を確定できないときは maintenance ON 扱いにし、
-    // HTML gate + Server Action / API ガードの両方で書込みを止める。
-    fallback: { maintenanceMode: true, maintenanceMessage: null },
     category: ErrorCategory.DATABASE,
-    severity: ErrorSeverity.HIGH,
     operationName: "getMaintenanceSettings",
   });
 

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { installErrorsServerMock } from "../../../mocks/errors-server";
 
 // Prisma モック（mock.module より前に定義 — TDZ 回避）
 const cacheLifeMock = mock(() => {});
@@ -25,7 +26,7 @@ interface SafeFetchOpts<T> {
   readonly fetch: () => Promise<T>;
   readonly fallback: T;
 }
-mock.module("@/shared/lib/errors/server", () => ({
+await installErrorsServerMock({
   safeFetch: async <T>(opts: SafeFetchOpts<T>): Promise<T> => {
     try {
       return await opts.fetch();
@@ -33,9 +34,7 @@ mock.module("@/shared/lib/errors/server", () => ({
       return opts.fallback;
     }
   },
-  ErrorCategory: { DATABASE: "DATABASE" },
-  ErrorSeverity: { LOW: "LOW" },
-}));
+});
 
 const { getPublishedFaqItems } =
   await import("@/shared/domain/sections/queries");
