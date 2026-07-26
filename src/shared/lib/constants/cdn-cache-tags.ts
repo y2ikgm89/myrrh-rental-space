@@ -222,6 +222,9 @@ export const PRIVATE_NO_TAG_PREFIXES = [
   "/login",
   "/preview",
   "/contact",
+  // Guest token PII surfaces (next.config private,no-store; no Cache-Tag).
+  "/receipts",
+  "/claim",
   "/api",
   ...EVENT_PRIVATE_FIRST_SEGMENTS.map(
     (segment) => `/events/${segment}` as const,

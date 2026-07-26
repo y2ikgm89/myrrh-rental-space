@@ -22,6 +22,10 @@
  *   bun prisma/seed.ts
  *   bun prisma/seed.ts --reset
  *   bun prisma/seed.ts --production owner@example.com "オーナー名"
+ *
+ * Safety:
+ *   `--dev` / `--reset` fail closed against production-looking DATABASE_URL and
+ *   deployed runtimes (NODE_ENV=production / APP_SURFACE). See `./seed-safety`.
  */
 
 // Bun runtime が .env / .env.local を自動読み込みするため dotenv は不要。
@@ -60,6 +64,7 @@ import {
   computeAuditLogEntryHashWithKey,
   type AuditLogHashPayload,
 } from "../src/shared/domain/audit-log/hash-chain-core";
+import { evaluateSeedSafety } from "./seed-safety";
 
 // NOTE: terms 系の import (applyBusinessInfo / getTemplatesForType / TermsScope 等) は
 // 初期 baseline migration に SSoT 移管したため撤去済。
@@ -5336,29 +5341,43 @@ async function seedProduction(email: string | undefined, name: string) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const mode = args[0];
+  const safety = evaluateSeedSafety({
+    argv: args,
+    env: {
+      databaseUrl: process.env["DATABASE_URL"],
+      nodeEnv: process.env["NODE_ENV"],
+      appSurface: process.env["APP_SURFACE"],
+    },
+  });
+  if (!safety.ok) {
+    console.error(`❌ ${safety.error}`);
+    process.exit(1);
+  }
 
   console.log("");
   console.log("🌱 Starting seed...");
   console.log("");
 
-  if (!mode || mode === "--dev") {
-    // DEV（既定）: prisma db seed / bun run db:reset の seed 経路。
-    await seedDev();
-  } else if (mode === "--reset") {
-    // DEV: 全削除してから再構築（破壊的・開発専用）。
-    await clearAllData();
-    await seedDev();
-  } else if (mode === "--production") {
-    const email = args[1];
-    const name = args[2];
-    await seedProduction(email, name ?? "Administrator");
-  } else {
-    console.error(`Unknown option: ${mode}`);
-    console.error(
-      "Usage: bun prisma/seed.ts [--dev | --reset | --production [email] [name]]",
-    );
-    process.exit(1);
+  switch (safety.mode) {
+    case "dev":
+      // DEV（既定）: prisma db seed / bun run db:reset の seed 経路。
+      await seedDev();
+      break;
+    case "reset":
+      // DEV: 全削除してから再構築（破壊的・開発専用）。
+      await clearAllData();
+      await seedDev();
+      break;
+    case "production": {
+      const email = args[1];
+      const name = args[2];
+      await seedProduction(email, name ?? "Administrator");
+      break;
+    }
+    default: {
+      const _exhaustive: never = safety.mode;
+      throw new Error(`Unhandled seed mode: ${String(_exhaustive)}`);
+    }
   }
 
   console.log("");
