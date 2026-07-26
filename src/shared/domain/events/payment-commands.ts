@@ -13,10 +13,14 @@ import {
 } from "@/shared/domain/payment/availability";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { getStripeClient } from "@/shared/lib/stripe";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import {
-  expireCheckoutSessionWithClientBestEffort,
-  expireOpenCheckoutSessionBestEffort,
-} from "@/shared/domain/payment/checkout-session-expiry";
+  handleCheckoutSessionCreateFailure,
+  rejectCheckoutSessionSettle,
+  revertCheckoutPendingToUnpaid,
+  settleCheckoutSessionWrite,
+} from "@/shared/domain/payment/checkout-session-write-orchestration";
+import { PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT } from "@/shared/domain/payment/payment-status-guards";
 import {
   acquirePaymentRefundAdvisoryLock,
   createRefundRecordIdempotent,
@@ -183,7 +187,7 @@ export async function createEventCheckoutSessionCommand(input: {
     where: {
       id: registrationId,
       status: RegistrationStatus.CONFIRMED,
-      paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.FAILED] },
+      paymentStatus: { in: [...PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT] },
     },
     data: { paymentStatus: PaymentStatus.PENDING },
   });
@@ -210,10 +214,10 @@ export async function createEventCheckoutSessionCommand(input: {
   });
 
   if (!authoritative || authoritative.ticket.price <= 0) {
-    await prisma.eventRegistration.updateMany({
-      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
-    });
+    await revertCheckoutPendingToUnpaid(
+      (args) => prisma.eventRegistration.updateMany(args),
+      { entityId: registrationId },
+    );
     throw new DomainError("チケット料金が設定されていません", "VALIDATION");
   }
 
@@ -263,47 +267,22 @@ export async function createEventCheckoutSessionCommand(input: {
     });
     createdSessionId = session.id;
 
-    const settled = await prisma.eventRegistration.updateMany({
-      where: {
-        id: registrationId,
-        paymentStatus: {
-          notIn: [
-            PaymentStatus.PAID,
-            PaymentStatus.PARTIALLY_REFUNDED,
-            PaymentStatus.REFUNDED,
-          ],
-        },
+    const { settled } = await settleCheckoutSessionWrite(
+      (args) => prisma.eventRegistration.updateMany(args),
+      {
+        entityId: registrationId,
+        sessionId: session.id,
+        extraData: { paidAmount: authoritativeTotal },
       },
-      data: {
-        paymentStatus: PaymentStatus.PENDING,
-        stripeCheckoutSessionId: session.id,
-        paidAmount: authoritativeTotal,
-      },
-    });
-    if (settled.count === 0) {
-      // PAID / PARTIALLY_REFUNDED / REFUNDED が claim 後に確定。orphan session を
-      // best-effort expire し session URL は返さない (二重決済・会計 mismatch 防止)。
-      logError(
-        new Error(
-          "createEventCheckoutSessionCommand: session settle rejected (already PAID/REFUNDED)",
-        ),
-        {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "createEventCheckoutSession",
-            registrationId,
-            sessionId: session.id,
-          },
-        },
-      );
-      await expireCheckoutSessionWithClientBestEffort({
+    );
+    if (!settled) {
+      await rejectCheckoutSessionSettle({
         client,
         sessionId: session.id,
-        operation: "createEventCheckoutSessionExpire",
-        context: { registrationId, sessionId: session.id },
+        operation: "createEventCheckoutSessionCommand",
+        logContext: { registrationId },
+        conflictMessage: "この申込は既に決済が完了しています",
       });
-      throw new DomainError("この申込は既に決済が完了しています", "CONFLICT");
     }
 
     return {
@@ -315,12 +294,6 @@ export async function createEventCheckoutSessionCommand(input: {
     if (error instanceof DomainError) {
       throw error;
     }
-    if (createdSessionId) {
-      await expireOpenCheckoutSessionBestEffort({
-        sessionId: createdSessionId,
-        context: { registrationId },
-      });
-    }
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
@@ -329,9 +302,15 @@ export async function createEventCheckoutSessionCommand(input: {
         registrationId,
       },
     });
-    await prisma.eventRegistration.updateMany({
-      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
+    await handleCheckoutSessionCreateFailure({
+      createdSessionId,
+      expireOpenCheckoutSessionBestEffort,
+      revertPending: () =>
+        revertCheckoutPendingToUnpaid(
+          (args) => prisma.eventRegistration.updateMany(args),
+          { entityId: registrationId },
+        ),
+      expireContext: { registrationId },
     });
     throw new DomainError(
       "決済セッションの作成に失敗しました。しばらく経ってからお試しください。",
@@ -426,7 +405,7 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     where: {
       id: registrationId,
       status: RegistrationStatus.WAITLISTED_OFFERED,
-      paymentStatus: { in: [PaymentStatus.UNPAID, PaymentStatus.FAILED] },
+      paymentStatus: { in: [...PAYMENT_STATUSES_REOPENABLE_FOR_CHECKOUT] },
     },
     data: { paymentStatus: PaymentStatus.PENDING },
   });
@@ -454,10 +433,10 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
 
   if (!authoritative || authoritative.ticket.price <= 0) {
     // 「claim 済みだが金額が消えた」異常状態。UNPAID に revert して stuck state を解消。
-    await prisma.eventRegistration.updateMany({
-      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
-    });
+    await revertCheckoutPendingToUnpaid(
+      (args) => prisma.eventRegistration.updateMany(args),
+      { entityId: registrationId },
+    );
     throw new DomainError("チケット料金が設定されていません", "VALIDATION");
   }
 
@@ -466,10 +445,10 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     // 必ず expiresAt を設定するため理論上到達しないが、列は nullable なので
     // 型レベルで防御する（non-null assertion は使わない）。「claim 済みだが
     // 期限情報が消えた」異常状態として、上と同じく UNPAID に revert する。
-    await prisma.eventRegistration.updateMany({
-      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
-    });
+    await revertCheckoutPendingToUnpaid(
+      (args) => prisma.eventRegistration.updateMany(args),
+      { entityId: registrationId },
+    );
     throw new DomainError("確定期限の情報が取得できませんでした", "VALIDATION");
   }
 
@@ -485,10 +464,10 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
   // `isGenuineOfferExpiry` allowlist と密結合（変更時は両方更新する）。
   const now = new Date();
   if (authoritative.expiresAt.getTime() <= now.getTime()) {
-    await prisma.eventRegistration.updateMany({
-      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
-    });
+    await revertCheckoutPendingToUnpaid(
+      (args) => prisma.eventRegistration.updateMany(args),
+      { entityId: registrationId },
+    );
     throw new DomainError("この繰り上げ当選は既に期限切れです", "VALIDATION");
   }
 
@@ -499,10 +478,10 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     (authoritative.expiresAt.getTime() - now.getTime()) / 1000,
   );
   if (remainingSeconds < 30 * 60) {
-    await prisma.eventRegistration.updateMany({
-      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
-    });
+    await revertCheckoutPendingToUnpaid(
+      (args) => prisma.eventRegistration.updateMany(args),
+      { entityId: registrationId },
+    );
     throw new DomainError(
       "確定期限までの残り時間が短いため、決済を開始できません。期限切れ後に次の待機者へ繰り上がります。",
       "VALIDATION",
@@ -556,45 +535,22 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     });
     createdSessionId = session.id;
 
-    const settled = await prisma.eventRegistration.updateMany({
-      where: {
-        id: registrationId,
-        paymentStatus: {
-          notIn: [
-            PaymentStatus.PAID,
-            PaymentStatus.PARTIALLY_REFUNDED,
-            PaymentStatus.REFUNDED,
-          ],
-        },
+    const { settled } = await settleCheckoutSessionWrite(
+      (args) => prisma.eventRegistration.updateMany(args),
+      {
+        entityId: registrationId,
+        sessionId: session.id,
+        extraData: { paidAmount: authoritativeTotal },
       },
-      data: {
-        paymentStatus: PaymentStatus.PENDING,
-        stripeCheckoutSessionId: session.id,
-        paidAmount: authoritativeTotal,
-      },
-    });
-    if (settled.count === 0) {
-      logError(
-        new Error(
-          "createWaitlistOfferCheckoutSessionCommand: session settle rejected (already PAID/REFUNDED)",
-        ),
-        {
-          category: ErrorCategory.DATABASE,
-          severity: ErrorSeverity.HIGH,
-          context: {
-            operation: "createWaitlistOfferCheckoutSession",
-            registrationId,
-            sessionId: session.id,
-          },
-        },
-      );
-      await expireCheckoutSessionWithClientBestEffort({
+    );
+    if (!settled) {
+      await rejectCheckoutSessionSettle({
         client,
         sessionId: session.id,
-        operation: "createWaitlistOfferCheckoutSessionExpire",
-        context: { registrationId, sessionId: session.id },
+        operation: "createWaitlistOfferCheckoutSessionCommand",
+        logContext: { registrationId },
+        conflictMessage: "この申込は既に決済が完了しています",
       });
-      throw new DomainError("この申込は既に決済が完了しています", "CONFLICT");
     }
 
     if (!session.url) {
@@ -610,12 +566,6 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
     if (error instanceof DomainError) {
       throw error;
     }
-    if (createdSessionId) {
-      await expireOpenCheckoutSessionBestEffort({
-        sessionId: createdSessionId,
-        context: { registrationId },
-      });
-    }
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,
@@ -624,9 +574,15 @@ export async function createWaitlistOfferCheckoutSessionCommand(input: {
         registrationId,
       },
     });
-    await prisma.eventRegistration.updateMany({
-      where: { id: registrationId, paymentStatus: PaymentStatus.PENDING },
-      data: { paymentStatus: PaymentStatus.UNPAID },
+    await handleCheckoutSessionCreateFailure({
+      createdSessionId,
+      expireOpenCheckoutSessionBestEffort,
+      revertPending: () =>
+        revertCheckoutPendingToUnpaid(
+          (args) => prisma.eventRegistration.updateMany(args),
+          { entityId: registrationId },
+        ),
+      expireContext: { registrationId },
     });
     throw new DomainError(
       "決済セッションの作成に失敗しました。しばらく経ってからお試しください。",
