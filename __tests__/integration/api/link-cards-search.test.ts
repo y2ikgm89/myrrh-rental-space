@@ -53,6 +53,7 @@ describe("searchLinkCardCandidates", () => {
     expect(mockPostFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
+          deletedAt: null,
           status: "PUBLISHED",
           title: { contains: "記事", mode: "insensitive" },
         }),
@@ -167,7 +168,9 @@ describe("searchLinkCardCandidates", () => {
   test("空クエリ（空白のみ）では title フィルタを付けず status のみで検索する", async () => {
     await searchLinkCardCandidates({ contentType: "post", query: "   " });
     expect(mockPostFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { status: "PUBLISHED" } }),
+      expect.objectContaining({
+        where: { deletedAt: null, status: "PUBLISHED" },
+      }),
     );
   });
 });
