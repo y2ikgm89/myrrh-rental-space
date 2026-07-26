@@ -11,8 +11,14 @@ import {
   CANCELLED_BY,
 } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import { getSpaceRatePlans } from "@/shared/domain/spaces/rate-plan-queries";
 import { checkSpaceOverlap } from "@/shared/domain/spaces/overlap";
+import { asPrismaInputJsonValue } from "@/shared/db/json";
+import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { formatDateTimeFull, formatTimeShort } from "@/shared/lib/date-format";
+import { calculateReservationPricing } from "@/shared/lib/pricing/calculate-reservation-pricing";
+import { buildPricingSettings, getReservationSettings } from "./payloads";
+import { expireOpenCheckoutSessionBestEffort } from "./checkout-session-expiry";
 import { lockSpaceForTransaction } from "./space-locks";
 
 /**
@@ -83,7 +89,7 @@ export type CalendarSyncReservationRecord = {
   spaceId: string;
   notes: string | null;
   guestEmail: string | null;
-  /** GCAL-AUDIT-11: PAID/PARTIALLY_REFUNDED/PENDING は時間変更を拒否する判定に使う。 */
+  /** GCAL-AUDIT-11: 決済確定/保留/返金済/失敗は時間変更を拒否する判定に使う。 */
   paymentStatus: PaymentStatus;
   space: {
     name: string;
@@ -447,13 +453,21 @@ export async function cancelReservationFromCalendar(input: {
   reservationId: string;
   existingNotes: string | null;
 }): Promise<CancelReservationFromCalendarResult> {
+  const preClaim = await prisma.reservation.findFirst({
+    where: { id: input.reservationId, deletedAt: null },
+    select: {
+      paymentStatus: true,
+      stripeCheckoutSessionId: true,
+    },
+  });
+
   const syncNote = `[Google Calendarで削除] ${formatDateTimeFull(new Date())}`;
   const newNotes = input.existingNotes
     ? `${input.existingNotes}\n${syncNote}`
     : syncNote;
   const now = new Date();
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const claimed = await tx.reservation.updateMany({
       where: {
         id: input.reservationId,
@@ -491,7 +505,34 @@ export async function cancelReservationFromCalendar(input: {
 
     return { cancelled: true };
   });
+
+  if (
+    result.cancelled &&
+    preClaim?.paymentStatus === PaymentStatus.PENDING &&
+    preClaim.stripeCheckoutSessionId
+  ) {
+    await expireOpenCheckoutSessionBestEffort({
+      reservationId: input.reservationId,
+      sessionId: preClaim.stripeCheckoutSessionId,
+    });
+  }
+
+  return result;
 }
+
+export type ApplyCalendarTimeChangeResult =
+  | { success: true }
+  | {
+      success: false;
+      reason: "overlap";
+      conflictingReservation: {
+        id: string;
+        startTime: Date;
+        endTime: Date;
+      };
+    }
+  | { success: false; reason: "payment_race" }
+  | { success: false; reason: "pricing_unavailable" };
 
 export async function applyCalendarTimeChange(input: {
   reservationId: string;
@@ -499,19 +540,66 @@ export async function applyCalendarTimeChange(input: {
   existingNotes: string | null;
   startTime: Date;
   endTime: Date;
-}): Promise<
-  | { success: true }
-  | {
-      success: false;
-      conflictingReservation: {
-        id: string;
-        startTime: Date;
-        endTime: Date;
-      };
-    }
-> {
+}): Promise<ApplyCalendarTimeChangeResult> {
+  if (input.endTime.getTime() <= input.startTime.getTime()) {
+    return { success: false, reason: "pricing_unavailable" };
+  }
+
+  const ratePlans = await getSpaceRatePlans(input.spaceId);
+  const reservationSettings = buildPricingSettings(
+    await getReservationSettings(),
+  );
+
   return prisma.$transaction(async (tx) => {
     await lockSpaceForTransaction(tx, input.spaceId);
+
+    const reservation = await tx.reservation.findFirst({
+      where: {
+        id: input.reservationId,
+        deletedAt: null,
+        paymentStatus: PaymentStatus.UNPAID,
+        status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+      },
+      select: {
+        id: true,
+        taxRate: true,
+        coupon: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            type: true,
+            discountValue: true,
+            maxDiscountAmount: true,
+            canCombineWithDurationDiscount: true,
+            validFrom: true,
+            validUntil: true,
+          },
+        },
+      },
+    });
+
+    if (!reservation) {
+      return { success: false as const, reason: "payment_race" as const };
+    }
+
+    const space = await tx.space.findUnique({
+      where: { id: input.spaceId },
+      select: {
+        hourlyPrice: true,
+        discountType: true,
+        discountValue: true,
+        durationDiscountOverride: true,
+        taxRateType: true,
+      },
+    });
+
+    if (!space) {
+      return {
+        success: false as const,
+        reason: "pricing_unavailable" as const,
+      };
+    }
 
     const overlap = await checkSpaceOverlap(
       {
@@ -546,6 +634,7 @@ export async function applyCalendarTimeChange(input: {
 
       return {
         success: false as const,
+        reason: "overlap" as const,
         conflictingReservation: {
           id: overlap.conflictId,
           startTime: overlap.startTime,
@@ -554,15 +643,74 @@ export async function applyCalendarTimeChange(input: {
       };
     }
 
-    await tx.reservation.update({
-      where: { id: input.reservationId, deletedAt: null },
+    const coupon = reservation.coupon;
+    const couponForCalc =
+      coupon &&
+      new Date(coupon.validFrom) <= input.startTime &&
+      (!coupon.validUntil || new Date(coupon.validUntil) >= input.endTime)
+        ? {
+            id: coupon.id,
+            code: coupon.code,
+            name: coupon.name,
+            type: coupon.type,
+            discountValue: coupon.discountValue,
+            maxDiscountAmount: coupon.maxDiscountAmount,
+            canCombineWithDurationDiscount:
+              coupon.canCombineWithDurationDiscount,
+          }
+        : null;
+
+    const pricing = calculateReservationPricing({
+      startDateTime: input.startTime,
+      endDateTime: input.endTime,
+      space: {
+        hourlyPrice: space.hourlyPrice,
+        discountType: space.discountType,
+        discountValue: space.discountValue,
+        durationDiscountOverride: space.durationDiscountOverride,
+        taxRateType: space.taxRateType,
+      },
+      ratePlans,
+      reservationSettings,
+      coupon: couponForCalc,
+      holidayJudge: isJapaneseHoliday,
+    });
+
+    const taxRate = reservation.taxRate ? Number(reservation.taxRate) : 0;
+    const taxAmount = Math.round((pricing.totalPrice * taxRate) / 100);
+
+    const updated = await tx.reservation.updateMany({
+      where: {
+        id: input.reservationId,
+        deletedAt: null,
+        paymentStatus: PaymentStatus.UNPAID,
+        status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+      },
       data: {
         startTime: input.startTime,
         endTime: input.endTime,
+        basePrice: pricing.basePrice,
+        totalPrice: pricing.totalPrice,
+        rateBreakdownJson: asPrismaInputJsonValue(
+          pricing.rateBreakdown,
+          "料金内訳の生成に失敗しました",
+        ),
+        spaceDiscountAmount: pricing.spaceDiscountAmount,
+        durationDiscountAmount: pricing.durationDiscountAmount,
+        couponDiscountAmount: pricing.couponDiscountAmount,
+        taxAmount,
+        totalPriceWithTax: pricing.totalPrice + taxAmount,
+        priceOverriddenBy: null,
+        couponId: pricing.appliedCoupon?.id ?? null,
         calendarSyncedAt: new Date(),
         calendarSyncError: null,
+        icsSequence: { increment: 1 },
       },
     });
+
+    if (updated.count === 0) {
+      return { success: false as const, reason: "payment_race" as const };
+    }
 
     return { success: true as const };
   });

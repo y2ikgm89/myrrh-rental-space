@@ -11,8 +11,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
-import { assertStripeCredentialsConfigured } from "@/shared/domain/payment/availability";
-import { getStripeClient } from "@/shared/lib/stripe";
+import { expireOpenCheckoutSessionBestEffort } from "./checkout-session-expiry";
 
 /**
  * PENDING 予約の fail-safe 有効期限（分）。**checkout 開始時刻** (Reservation.paymentInitiatedAt)
@@ -152,7 +151,7 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
     if (!candidate) continue;
 
     if (candidate.stripeCheckoutSessionId) {
-      await expireCheckoutSessionBestEffort({
+      await expireOpenCheckoutSessionBestEffort({
         reservationId: log.id,
         sessionId: candidate.stripeCheckoutSessionId,
       });
@@ -180,28 +179,4 @@ export async function expireStalePendingReservationsCommand(): Promise<ExpirePen
   }
 
   return { expired: expiredLogs, total: expiredLogs.length };
-}
-
-async function expireCheckoutSessionBestEffort(input: {
-  reservationId: string;
-  sessionId: string;
-}): Promise<void> {
-  try {
-    const stripeSettings = await assertStripeCredentialsConfigured();
-    const { client } = await getStripeClient(stripeSettings.stripeSecretKey);
-    if (!client) return;
-    await client.checkout.sessions.expire(input.sessionId);
-  } catch (error) {
-    // 既に expired / completed の session は Stripe が reject する。
-    // cron の CANCELLED claim は既に成功しているため、expire 失敗は観測のみ。
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.LOW,
-      context: {
-        operation: "pendingExpiryExpireCheckoutSession",
-        reservationId: input.reservationId,
-        sessionId: input.sessionId,
-      },
-    });
-  }
 }
