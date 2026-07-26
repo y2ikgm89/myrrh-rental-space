@@ -19,7 +19,7 @@ import {
  */
 export const PAYMENT_REFUND_LOCK_NAMESPACE = {
   reservation: 728355,
-  eventRegistration: 728356,
+  "event-registration": 728356,
 } as const;
 
 export type PaymentRefundEntityKind =

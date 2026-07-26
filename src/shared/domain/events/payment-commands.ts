@@ -875,7 +875,7 @@ export async function refundEventRegistrationPaymentCommand(
     // 申込単位 advisory lock (concurrent refund 直列化 + over-refund 防止)
     await acquirePaymentRefundAdvisoryLock(
       tx,
-      "eventRegistration",
+      "event-registration",
       registrationId,
     );
 
@@ -1063,7 +1063,7 @@ export async function refundOrphanedStripePaymentForCancelledEventRegistration(i
   const result = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(
       tx,
-      "eventRegistration",
+      "event-registration",
       registrationId,
     );
 
@@ -1228,7 +1228,7 @@ export async function refundExpiredWaitlistOfferPaymentCommand(input: {
   const result = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(
       tx,
-      "eventRegistration",
+      "event-registration",
       registrationId,
     );
 
@@ -1362,7 +1362,7 @@ export async function refundCheckoutAmountMismatchForEventRegistration(input: {
   const result = await prisma.$transaction(async (tx) => {
     await acquirePaymentRefundAdvisoryLock(
       tx,
-      "eventRegistration",
+      "event-registration",
       registrationId,
     );
 

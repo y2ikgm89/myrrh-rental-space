@@ -58,7 +58,7 @@ describe("stripe-refund-orchestration kernel", () => {
 
   test("PAYMENT_REFUND_LOCK_NAMESPACE matches db-domain registry", () => {
     expect(PAYMENT_REFUND_LOCK_NAMESPACE.reservation).toBe(728355);
-    expect(PAYMENT_REFUND_LOCK_NAMESPACE.eventRegistration).toBe(728356);
+    expect(PAYMENT_REFUND_LOCK_NAMESPACE["event-registration"]).toBe(728356);
   });
 
   test("acquirePaymentRefundAdvisoryLock uses entity-specific namespace", async () => {
