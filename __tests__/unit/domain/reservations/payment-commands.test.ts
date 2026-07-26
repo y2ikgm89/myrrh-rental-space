@@ -80,7 +80,10 @@ const mockCheckoutSessionRetrieve = mock<
   (sessionId: string) => Promise<{ status: string }>
 >(() => Promise.resolve({ status: "expired" }));
 const mockExpireOpenCheckoutSessionBestEffort = mock<
-  (input: { reservationId: string; sessionId: string }) => Promise<void>
+  (input: {
+    sessionId: string;
+    context?: Record<string, string>;
+  }) => Promise<void>
 >(() => Promise.resolve());
 const mockRetrieveCheckoutSessionStatus = mock<
   (sessionId: string) => Promise<string | null>
@@ -174,10 +177,8 @@ mock.module("@/shared/domain/reservations/pending-expiry", () => ({
 }));
 mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
   expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
-  retrieveCheckoutSessionStatus: mockRetrieveCheckoutSessionStatus,
-}));
-mock.module("@/shared/domain/reservations/checkout-session-expiry", () => ({
-  expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
+  expireCheckoutSessionWithClientBestEffort:
+    mockExpireOpenCheckoutSessionBestEffort,
   retrieveCheckoutSessionStatus: mockRetrieveCheckoutSessionStatus,
 }));
 mock.module("@/shared/lib/async-utils", () => ({
@@ -512,8 +513,8 @@ describe("reservations/payment-commands", () => {
 
       expect((error as DomainError).code).toBe("UNEXPECTED");
       expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith({
-        reservationId: RESERVATION_ID,
         sessionId: "cs_test_123",
+        context: { reservationId: RESERVATION_ID },
       });
     });
 
@@ -606,7 +607,16 @@ describe("reservations/payment-commands", () => {
 
       expect(error).toBeInstanceOf(DomainError);
       expect((error as DomainError).code).toBe("CONFLICT");
-      expect(mockCheckoutSessionExpire).toHaveBeenCalledWith("cs_test_123");
+      expect(mockExpireOpenCheckoutSessionBestEffort).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sessionId: "cs_test_123",
+          operation: "createCheckoutSessionExpire",
+          context: {
+            reservationId: RESERVATION_ID,
+            sessionId: "cs_test_123",
+          },
+        }),
+      );
       expect(mockLogError).toHaveBeenCalledWith(
         expect.any(Error),
         expect.objectContaining({

@@ -151,7 +151,7 @@ mock.module("@/shared/domain/reservations/payloads", () => ({
   }),
 }));
 
-mock.module("@/shared/domain/reservations/checkout-session-expiry", () => ({
+mock.module("@/shared/domain/payment/checkout-session-expiry", () => ({
   expireOpenCheckoutSessionBestEffort: mockExpireOpenCheckoutSessionBestEffort,
 }));
 

@@ -5,7 +5,7 @@ import { prisma } from "@/shared/db/prisma";
 import { applyEventRegistrationCancellationSideEffects } from "@/shared/domain/events/registration-cancellation-side-effects";
 import { offerNextWaitlistEntryCommand } from "@/shared/domain/events/waitlist-commands";
 import { WAITLIST_XACT_LOCK_NAMESPACE } from "@/shared/domain/events/waitlist-locks";
-import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/reservations/checkout-session-expiry";
+import { expireOpenCheckoutSessionBestEffort } from "@/shared/domain/payment/checkout-session-expiry";
 import { MS_PER_MINUTE } from "@/shared/lib/date-format";
 import {
   ErrorCategory,
@@ -173,8 +173,8 @@ export async function expireStaleUnpaidEventRegistrationsCommand(): Promise<Expi
 
     if (candidate.stripeCheckoutSessionId) {
       await expireOpenCheckoutSessionBestEffort({
-        reservationId: log.id,
         sessionId: candidate.stripeCheckoutSessionId,
+        context: { registrationId: log.id },
       });
     }
 
