@@ -10,6 +10,7 @@
  */
 
 import { Suspense } from "react";
+import Link from "next/link";
 import { connection } from "next/server";
 import {
   getSettings,
@@ -18,6 +19,8 @@ import {
 import { checkAdminAuth } from "@/admin/lib/action-auth";
 import { requireAdminPermission } from "@/admin/queries/_helpers";
 import { hasPermission } from "@/shared/lib/admin-permissions";
+import { isEmailEnabled } from "@/shared/lib/email/client";
+import { isFeatureEnabled } from "@/shared/lib/features/check";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
 import {
@@ -27,12 +30,47 @@ import {
 } from "../_components/sections";
 import type { ReactElement } from "react";
 
+function EmailDeliveryDisabledBanner(): ReactElement {
+  return (
+    <div
+      role="alert"
+      className="rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground"
+    >
+      <p className="font-medium">メール送信が無効です</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Resend API キーが未設定のため、通知メールやテスト送信は実行できません。
+        SUPER_ADMIN は
+        <Link
+          href="/admin/settings/integrations?tab=resend"
+          className="mx-1 underline underline-offset-4 hover:text-accent"
+        >
+          連携設定
+        </Link>
+        で Resend API キーを設定してください（環境変数{" "}
+        <code className="font-mono">RESEND_API_KEY</code> でも代替可能です）。
+      </p>
+    </div>
+  );
+}
+
 async function NotificationsSettingsContent(): Promise<ReactElement> {
   await connection();
-  const [settings, staff, auth] = await Promise.all([
+  const [
+    settings,
+    staff,
+    auth,
+    emailEnabled,
+    reservationEnabled,
+    contactEnabled,
+    eventsEnabled,
+  ] = await Promise.all([
     getSettings(),
     getNotificationStaffCandidates(),
     checkAdminAuth(),
+    isEmailEnabled(),
+    isFeatureEnabled("reservation"),
+    isFeatureEnabled("contact"),
+    isFeatureEnabled("events"),
   ]);
 
   if (!settings || !auth.success) {
@@ -50,22 +88,42 @@ async function NotificationsSettingsContent(): Promise<ReactElement> {
       value: "email",
       label: "メール",
       content: (
-        <EmailSection settings={settings} staff={staff} readOnly={readOnly} />
+        <div className="space-y-4">
+          {!emailEnabled ? <EmailDeliveryDisabledBanner /> : null}
+          <EmailSection
+            settings={settings}
+            staff={staff}
+            readOnly={readOnly}
+            reservationEnabled={reservationEnabled}
+            eventsEnabled={eventsEnabled}
+          />
+        </div>
       ),
     },
     {
       value: "notification",
       label: "通知",
-      content: <NotificationSection settings={settings} readOnly={readOnly} />,
+      content: (
+        <NotificationSection
+          settings={settings}
+          readOnly={readOnly}
+          reservationEnabled={reservationEnabled}
+          contactEnabled={contactEnabled}
+          eventsEnabled={eventsEnabled}
+        />
+      ),
     },
     {
       value: "templates",
       label: "テンプレート",
       content: (
-        <EmailTemplatesSection
-          defaultRecipient={auth.user.email}
-          readOnly={readOnly}
-        />
+        <div className="space-y-4">
+          {!emailEnabled ? <EmailDeliveryDisabledBanner /> : null}
+          <EmailTemplatesSection
+            defaultRecipient={auth.user.email}
+            readOnly={readOnly}
+          />
+        </div>
       ),
     },
   ];
@@ -94,7 +152,7 @@ export default async function NotificationsSettingsPage(): Promise<ReactElement>
   return (
     <SettingsLayout
       title="メール・通知"
-      description="メール送信元、管理者通知、テンプレートのプレビュー & テスト送信"
+      description="メール送信元、管理者通知メール、テンプレートのプレビュー & テスト送信"
       readOnly={readOnly}
     >
       <Suspense fallback={<NotificationsSettingsLoading />}>

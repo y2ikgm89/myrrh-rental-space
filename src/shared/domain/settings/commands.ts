@@ -12,6 +12,7 @@ import type {
   TaxDisplayMode,
 } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { assertAllowlistedNotificationStaffIds } from "@/shared/domain/settings/notification-staff";
 import { assertAllowedManagedImageUrls } from "@/shared/domain/media/managed-image-assertions";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import type {
@@ -20,7 +21,6 @@ import type {
 } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import type { RefundPolicy } from "@/shared/domain/refund/policy";
-import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
 import { DEFAULT_BUSINESS_HOURS_WEEK } from "@/shared/lib/business-hours";
 import {
   buildInitialFeatureModules,
@@ -107,6 +107,12 @@ export type EmailSettingsInput = {
   notifyEventReminder: boolean;
   notificationStaffIds: string[];
   notificationEmailAddresses: string[];
+  /** 楽観的 concurrency: 読み込み時の SettingsOrganization.updatedAt */
+  expectedOrganizationUpdatedAt: string | Date;
+  /** 楽観的 concurrency: 読み込み時の SettingsReservation.updatedAt */
+  expectedReservationUpdatedAt: string | Date;
+  /** 楽観的 concurrency: 読み込み時の SettingsNotification.updatedAt */
+  expectedNotificationUpdatedAt: string | Date;
 };
 
 export type NotificationSettingsInput = {
@@ -118,6 +124,8 @@ export type NotificationSettingsInput = {
   notifyEventRegistration: boolean;
   notifyEventWaitlistRegistration: boolean;
   notifyEventCancellation: boolean;
+  /** 楽観的 concurrency: 読み込み時の SettingsNotification.updatedAt */
+  expectedUpdatedAt: string | Date;
 };
 
 export type MaintenanceSettingsInput = {
@@ -155,6 +163,49 @@ function toExpectedUpdatedAt(value: string | Date): Date {
     throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
   }
   return expected;
+}
+
+async function casUpdateOrCreateSingleton<
+  TUpdate extends Record<string, unknown>,
+  TCreate extends Record<string, unknown>,
+>({
+  updateMany,
+  findUnique,
+  create,
+  expectedUpdatedAt,
+  updateData,
+  createData,
+}: {
+  updateMany: (args: {
+    where: { id: "singleton"; updatedAt: Date };
+    data: TUpdate;
+  }) => Promise<{ count: number }>;
+  findUnique: (args: {
+    where: { id: "singleton" };
+    select: { id: true };
+  }) => Promise<{ id: string } | null>;
+  create: (args: { data: TCreate }) => Promise<unknown>;
+  expectedUpdatedAt: Date;
+  updateData: TUpdate;
+  createData: TCreate;
+}): Promise<void> {
+  const result = await updateMany({
+    where: { id: "singleton", updatedAt: expectedUpdatedAt },
+    data: updateData,
+  });
+  if (result.count > 0) {
+    return;
+  }
+
+  const existing = await findUnique({
+    where: { id: "singleton" },
+    select: { id: true },
+  });
+  if (existing) {
+    throw new DomainError(SETTINGS_OPTIMISTIC_CONFLICT_MESSAGE, "CONFLICT");
+  }
+
+  await create({ data: createData });
 }
 
 export type HeaderSettingsInput = {
@@ -366,44 +417,20 @@ export async function updateBusinessHoursSettings(
   });
 }
 
-/**
- * 通知先スタッフ ID を正規化し、有効なダッシュボードスタッフのみであることを検証する。
- *
- * - 重複 ID は除去する
- * - 存在する User かつ `dashboardEnabled: true` かつ role ∈ DASHBOARD_ROLES のみ許可
- */
-async function normalizeAndAssertNotificationStaffIds(
-  ids: readonly string[],
-): Promise<string[]> {
-  const uniqueIds = [...new Set(ids)];
-  if (uniqueIds.length === 0) {
-    return [];
-  }
-
-  const validUsers = await prisma.user.findMany({
-    where: {
-      id: { in: uniqueIds },
-      dashboardEnabled: true,
-      role: { in: [...DASHBOARD_ROLES] },
-    },
-    select: { id: true },
-  });
-
-  if (validUsers.length !== uniqueIds.length) {
-    throw new DomainError(
-      "通知先スタッフに無効なユーザーが含まれています。ダッシュボード利用可能なスタッフのみ選択できます。",
-      "VALIDATION",
-    );
-  }
-
-  return uniqueIds;
-}
-
 export async function updateEmailSettings(
   data: EmailSettingsInput,
 ): Promise<void> {
-  const notificationStaffIds = await normalizeAndAssertNotificationStaffIds(
+  const notificationStaffIds = await assertAllowlistedNotificationStaffIds(
     data.notificationStaffIds,
+  );
+  const expectedOrganizationUpdatedAt = toExpectedUpdatedAt(
+    data.expectedOrganizationUpdatedAt,
+  );
+  const expectedReservationUpdatedAt = toExpectedUpdatedAt(
+    data.expectedReservationUpdatedAt,
+  );
+  const expectedNotificationUpdatedAt = toExpectedUpdatedAt(
+    data.expectedNotificationUpdatedAt,
   );
 
   const organizationData = {
@@ -420,32 +447,60 @@ export async function updateEmailSettings(
     notificationEmailAddresses: data.notificationEmailAddresses,
   };
 
-  await Promise.all([
-    prisma.settingsOrganization.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton", ...organizationData },
-      update: organizationData,
-    }),
-    prisma.settingsReservation.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton", ...reservationData },
-      update: reservationData,
-    }),
-    prisma.settingsNotification.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton", ...notificationData },
-      update: notificationData,
-    }),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await casUpdateOrCreateSingleton({
+      updateMany: (args) => tx.settingsOrganization.updateMany(args),
+      findUnique: (args) => tx.settingsOrganization.findUnique(args),
+      create: (args) => tx.settingsOrganization.create(args),
+      expectedUpdatedAt: expectedOrganizationUpdatedAt,
+      updateData: organizationData,
+      createData: { id: "singleton", ...organizationData },
+    });
+
+    await casUpdateOrCreateSingleton({
+      updateMany: (args) => tx.settingsReservation.updateMany(args),
+      findUnique: (args) => tx.settingsReservation.findUnique(args),
+      create: (args) => tx.settingsReservation.create(args),
+      expectedUpdatedAt: expectedReservationUpdatedAt,
+      updateData: reservationData,
+      createData: { id: "singleton", ...reservationData },
+    });
+
+    await casUpdateOrCreateSingleton({
+      updateMany: (args) => tx.settingsNotification.updateMany(args),
+      findUnique: (args) => tx.settingsNotification.findUnique(args),
+      create: (args) => tx.settingsNotification.create(args),
+      expectedUpdatedAt: expectedNotificationUpdatedAt,
+      updateData: notificationData,
+      createData: { id: "singleton", ...notificationData },
+    });
+  });
 }
 
 export async function updateNotificationSettings(
   data: NotificationSettingsInput,
 ): Promise<void> {
-  await prisma.settingsNotification.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
+  const expectedUpdatedAt = toExpectedUpdatedAt(data.expectedUpdatedAt);
+  const updateData = {
+    notifyNewReservation: data.notifyNewReservation,
+    notifyReservationChange: data.notifyReservationChange,
+    notifyReservationCancel: data.notifyReservationCancel,
+    notifyNewInquiry: data.notifyNewInquiry,
+    notifyInquiryCustomerReply: data.notifyInquiryCustomerReply,
+    notifyEventRegistration: data.notifyEventRegistration,
+    notifyEventWaitlistRegistration: data.notifyEventWaitlistRegistration,
+    notifyEventCancellation: data.notifyEventCancellation,
+  };
+
+  await prisma.$transaction(async (tx) => {
+    await casUpdateOrCreateSingleton({
+      updateMany: (args) => tx.settingsNotification.updateMany(args),
+      findUnique: (args) => tx.settingsNotification.findUnique(args),
+      create: (args) => tx.settingsNotification.create(args),
+      expectedUpdatedAt,
+      updateData,
+      createData: { id: "singleton", ...updateData },
+    });
   });
 }
 

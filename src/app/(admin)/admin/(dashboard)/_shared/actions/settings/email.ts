@@ -25,12 +25,21 @@ import {
   notificationFormSchema,
 } from "./schemas/form-schemas-email-notification";
 import { validateSenderDomain } from "@/shared/lib/email/domain-verification";
+import type { SenderDomainCheck } from "@/shared/lib/email/domain-verification";
 import { resolveSenderEmailAddress } from "@/shared/lib/email/client";
 
-function buildSenderDomainError(verifiedDomains: readonly string[]): string {
+function buildSenderDomainError(
+  check: Extract<SenderDomainCheck, { ok: false }>,
+): string {
+  if (check.reason === "resend_unavailable") {
+    return "Resend が未設定のため送信元ドメインを検証できません。管理画面の「連携設定」（/admin/settings/integrations）で Resend API キーを設定してください。";
+  }
+  if (check.reason === "resend_error") {
+    return "Resend への接続に失敗したため送信元ドメインを検証できません。Resend の設定とネットワークを確認してから再度保存してください。";
+  }
   const list =
-    verifiedDomains.length > 0
-      ? verifiedDomains.join(", ")
+    check.verifiedDomains.length > 0
+      ? check.verifiedDomains.join(", ")
       : "（検証済みドメインがありません）";
   return `送信元アドレスのドメインが Resend で検証されていません。検証済みドメイン: ${list}`;
 }
@@ -69,10 +78,7 @@ export async function updateEmailSettings(
         }
         const check = await validateSenderDomain(effectiveSenderEmail);
         if (!check.ok) {
-          throw new DomainError(
-            buildSenderDomainError(check.verifiedDomains),
-            "VALIDATION",
-          );
+          throw new DomainError(buildSenderDomainError(check), "VALIDATION");
         }
 
         await updateEmailSettingsCommand({
@@ -84,6 +90,9 @@ export async function updateEmailSettings(
           notifyEventReminder: data.notifyEventReminder,
           notificationStaffIds: data.notificationStaffIds,
           notificationEmailAddresses: data.notificationEmailAddresses,
+          expectedOrganizationUpdatedAt: data.expectedOrganizationUpdatedAt,
+          expectedReservationUpdatedAt: data.expectedReservationUpdatedAt,
+          expectedNotificationUpdatedAt: data.expectedNotificationUpdatedAt,
         });
         return null;
       },

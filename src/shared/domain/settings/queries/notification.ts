@@ -2,6 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
+import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,
@@ -9,7 +10,6 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { mergeRecipients } from "@/shared/lib/email/recipients";
-import { DASHBOARD_ROLES } from "@/shared/lib/admin-roles";
 
 /**
  * 通知先（スタッフ＋カスタム）を解決した実メールアドレス一覧を返す。
@@ -95,7 +95,10 @@ export type EmailDeliverySettings = {
  *
  * 各送信関数（`reservation-emails` / `contact-emails`）と `send.ts`（返信先注入）が
  * 参照する。`STATIC_SETTINGS` ライフで `NOTIFICATION_SETTINGS` タグにより無効化される。
- * カラム欠損時は schema の `@default(true)` と同じく送信側に倒す。
+ *
+ * 管理者向け notify* は SettingsNotification 行が欠落・取得失敗時 fail-closed（すべて false）。
+ * 行が存在すれば DB @default(true) をそのまま使う。顧客向け予約確認メールのみ
+ * SettingsReservation 欠落時 true（schema @default(true)）を維持する。
  */
 export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings> {
   "use cache";
@@ -157,16 +160,16 @@ export async function getEmailDeliverySettings(): Promise<EmailDeliverySettings>
   return {
     sendReservationConfirmationEmail:
       reservation?.sendReservationConfirmationEmail ?? true,
-    notifyNewReservation: notification?.notifyNewReservation ?? true,
-    notifyReservationChange: notification?.notifyReservationChange ?? true,
-    notifyReservationCancel: notification?.notifyReservationCancel ?? true,
-    notifyNewInquiry: notification?.notifyNewInquiry ?? true,
+    notifyNewReservation: notification?.notifyNewReservation ?? false,
+    notifyReservationChange: notification?.notifyReservationChange ?? false,
+    notifyReservationCancel: notification?.notifyReservationCancel ?? false,
+    notifyNewInquiry: notification?.notifyNewInquiry ?? false,
     notifyInquiryCustomerReply:
-      notification?.notifyInquiryCustomerReply ?? true,
-    notifyEventRegistration: notification?.notifyEventRegistration ?? true,
+      notification?.notifyInquiryCustomerReply ?? false,
+    notifyEventRegistration: notification?.notifyEventRegistration ?? false,
     notifyEventWaitlistRegistration:
-      notification?.notifyEventWaitlistRegistration ?? true,
-    notifyEventCancellation: notification?.notifyEventCancellation ?? true,
+      notification?.notifyEventWaitlistRegistration ?? false,
+    notifyEventCancellation: notification?.notifyEventCancellation ?? false,
     // schema の @default(false) と揃える（他の notify* とは既定値が異なる）
     notifyEventReminder: notification?.notifyEventReminder ?? false,
     senderEmail: organization?.senderEmail ?? null,

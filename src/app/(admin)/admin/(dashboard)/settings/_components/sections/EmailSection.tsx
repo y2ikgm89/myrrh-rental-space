@@ -6,7 +6,14 @@
  * 送信者情報、返信先、通知先メールアドレスの設定
  */
 
-import { useEffect, useActionState, useState, useId } from "react";
+import {
+  useEffect,
+  useActionState,
+  useRef,
+  useState,
+  useId,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -29,14 +36,16 @@ import {
 } from "@/admin/components/ui";
 import { updateEmailSettings } from "@/admin/actions/settings";
 import { emailFormSchema } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
-import type { SettingsData } from "@/admin/actions/settings";
+import type { SettingsData } from "@/shared/domain/settings/types";
 import type { Serialized } from "@/shared/lib/serialize";
-import { EmailChips } from "./EmailChips";
+import { EmailChips, type EmailChipsHandle } from "./EmailChips";
 import { NotificationStaffPicker } from "./NotificationStaffPicker";
 import {
   isSettingsFormDisabled,
   type SettingsReadOnlyProps,
 } from "../shared/settings-read-only";
+
+const OPTIMISTIC_CONFLICT_HINT = "他のユーザーにより更新されています";
 
 type StaffOption = {
   id: string;
@@ -47,6 +56,8 @@ type StaffOption = {
 interface EmailSectionProps extends SettingsReadOnlyProps {
   settings: Serialized<SettingsData>;
   staff: StaffOption[];
+  reservationEnabled?: boolean;
+  eventsEnabled?: boolean;
 }
 
 type EmailSwitchProps = {
@@ -55,39 +66,66 @@ type EmailSwitchProps = {
   field: FieldMetadata<boolean | undefined>;
   label: string;
   disabled: boolean;
+  hint?: string | undefined;
 };
 
-function EmailSwitch({ field, label, disabled }: EmailSwitchProps) {
+function EmailSwitch({ field, label, disabled, hint }: EmailSwitchProps) {
   const control = useInputControl(field);
   const isOn = control.value === "on";
   return (
-    <div className="flex items-center gap-2">
-      <Switch
-        id={field.id}
-        checked={isOn}
-        onCheckedChange={(checked) => control.change(checked ? "on" : "")}
-        onBlur={control.blur}
-        disabled={disabled}
-      />
-      <label className="text-sm font-medium" htmlFor={field.id}>
-        {label}
-      </label>
-      <input type="hidden" name={field.name} value={isOn ? "on" : ""} />
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <Switch
+          id={field.id}
+          checked={isOn}
+          onCheckedChange={(checked) => control.change(checked ? "on" : "")}
+          onBlur={control.blur}
+          disabled={disabled}
+        />
+        <label className="text-sm font-medium" htmlFor={field.id}>
+          {label}
+        </label>
+        <input type="hidden" name={field.name} value={isOn ? "on" : ""} />
+      </div>
+      {hint ? (
+        <p className="text-xs text-muted-foreground pl-0.5">{hint}</p>
+      ) : null}
     </div>
   );
+}
+
+function filterValidStaffIds(
+  staffIds: string[],
+  staff: StaffOption[],
+): string[] {
+  const allowlist = new Set(staff.map((member) => member.id));
+  return staffIds.filter((id) => allowlist.has(id));
 }
 
 export function EmailSection({
   settings,
   staff,
   readOnly = false,
+  reservationEnabled = true,
+  eventsEnabled = true,
 }: EmailSectionProps) {
   const router = useRouter();
+  const emailChipsRef = useRef<EmailChipsHandle>(null);
   const [lastResult, action, isPending] = useActionState(
     updateEmailSettings,
     undefined,
   );
   const isDisabled = isSettingsFormDisabled(isPending, readOnly);
+
+  const initialValidStaffIds = filterValidStaffIds(
+    settings.notificationStaffIds,
+    staff,
+  );
+
+  const orphanStaffIds = settings.notificationStaffIds.filter(
+    (id) => !staff.some((member) => member.id === id),
+  );
+
   const [form, fields] = useForm({
     id: "email-settings",
     lastResult,
@@ -103,14 +141,15 @@ export function EmailSection({
       sendReservationConfirmationEmail:
         settings.sendReservationConfirmationEmail ? "on" : "",
       notifyEventReminder: settings.notifyEventReminder ? "on" : "",
-      notificationStaffIds: settings.notificationStaffIds,
+      notificationStaffIds: initialValidStaffIds,
       notificationEmailAddresses: settings.notificationEmailAddresses,
+      expectedOrganizationUpdatedAt: settings.organizationUpdatedAt,
+      expectedReservationUpdatedAt: settings.reservationUpdatedAt,
+      expectedNotificationUpdatedAt: settings.notificationUpdatedAt,
     },
   });
 
-  const [staffIds, setStaffIds] = useState<string[]>(
-    settings.notificationStaffIds,
-  );
+  const [staffIds, setStaffIds] = useState<string[]>(initialValidStaffIds);
   const [customTokens, setCustomTokens] = useState<string[]>(
     () => settings.notificationEmailAddresses,
   );
@@ -135,10 +174,30 @@ export function EmailSection({
   const customHelpId = useId();
   const noRecipients = staffIds.length === 0 && customTokens.length === 0;
 
+  const flushEmailChipsDraft = (): boolean =>
+    emailChipsRef.current?.flushDraft() ?? true;
+
+  const handleSubmitCapture = (event: FormEvent<HTMLFormElement>) => {
+    if (!flushEmailChipsDraft()) {
+      event.preventDefault();
+    }
+  };
+
   useEffect(() => {
     if (lastResult && lastResult.initialValue === null) {
       toast.success("メール設定を更新しました");
       router.refresh();
+      return;
+    }
+    if (lastResult?.status === "error") {
+      const formLevelErrors = lastResult.error?.[""];
+      const conflictMessage = formLevelErrors?.find((message) =>
+        message.includes(OPTIMISTIC_CONFLICT_HINT),
+      );
+      if (conflictMessage) {
+        toast.error(conflictMessage);
+        router.refresh();
+      }
     }
   }, [lastResult, router]);
 
@@ -146,7 +205,11 @@ export function EmailSection({
 
   return (
     <>
-      <form {...getFormProps(form)} action={action}>
+      <form
+        {...getFormProps(form)}
+        action={action}
+        onSubmitCapture={handleSubmitCapture}
+      >
         <Card>
           <CardHeader>
             <CardTitle>メール設定</CardTitle>
@@ -157,6 +220,22 @@ export function EmailSection({
               disabled={readOnly}
               className="space-y-4 border-0 p-0 m-0 min-w-0"
             >
+              <input
+                {...getInputProps(fields.expectedOrganizationUpdatedAt, {
+                  type: "hidden",
+                })}
+              />
+              <input
+                {...getInputProps(fields.expectedReservationUpdatedAt, {
+                  type: "hidden",
+                })}
+              />
+              <input
+                {...getInputProps(fields.expectedNotificationUpdatedAt, {
+                  type: "hidden",
+                })}
+              />
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label
@@ -243,6 +322,15 @@ export function EmailSection({
                 <span className="block text-sm font-medium text-foreground">
                   通知を受け取るスタッフ
                 </span>
+                {orphanStaffIds.length > 0 && (
+                  <p
+                    role="status"
+                    className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-foreground"
+                  >
+                    選択できないスタッフ ID が {orphanStaffIds.length}{" "}
+                    件含まれています（退職・権限変更など）。次回の保存で自動的に削除されます。
+                  </p>
+                )}
                 <NotificationStaffPicker
                   staff={staff}
                   value={staffIds}
@@ -262,6 +350,7 @@ export function EmailSection({
                   その他の通知先（スタッフ以外）
                 </span>
                 <EmailChips
+                  ref={emailChipsRef}
                   name="notificationEmailAddresses"
                   value={customTokens}
                   onChange={setCustomTokens}
@@ -296,7 +385,12 @@ export function EmailSection({
                 <EmailSwitch
                   field={fields.sendReservationConfirmationEmail}
                   label="予約確認メールを予約者へ送信"
-                  disabled={isDisabled}
+                  disabled={isDisabled || !reservationEnabled}
+                  hint={
+                    !reservationEnabled
+                      ? "予約機能モジュールが OFF のため、この設定は無効です。"
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   新規予約時の確認メールのみを制御します。キャンセル・ステータス変更の
@@ -305,7 +399,12 @@ export function EmailSection({
                 <EmailSwitch
                   field={fields.notifyEventReminder}
                   label="イベント前日リマインダーを参加者へ送信"
-                  disabled={isDisabled}
+                  disabled={isDisabled || !eventsEnabled}
+                  hint={
+                    !eventsEnabled
+                      ? "イベント機能モジュールが OFF のため、この設定は無効です。"
+                      : undefined
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   翌日開催のイベントについて、前日に参加者全員へリマインダーメールを

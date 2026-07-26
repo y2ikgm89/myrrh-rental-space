@@ -641,14 +641,31 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   test("メール設定: 送信 Switch OFF + 全テキスト空欄でも success", () => {
     expectSuccess(
       emailFormSchema,
-      emptyKeys([
-        "senderEmail",
-        "senderName",
-        "replyToEmail",
-        "sendReservationConfirmationEmail",
-      ]),
+      form({
+        senderEmail: "",
+        senderName: "",
+        replyToEmail: "",
+        sendReservationConfirmationEmail: "",
+        expectedOrganizationUpdatedAt: EXPECTED_UPDATED_AT,
+        expectedReservationUpdatedAt: EXPECTED_UPDATED_AT,
+        expectedNotificationUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
       "email",
     );
+  });
+
+  test("メール設定: expected*UpdatedAt 欠落は error", () => {
+    expect(
+      parseWithZod(
+        emptyKeys([
+          "senderEmail",
+          "senderName",
+          "replyToEmail",
+          "sendReservationConfirmationEmail",
+        ]),
+        { schema: emailFormSchema },
+      ).status,
+    ).toBe("error");
   });
 
   test("メール設定: 不正メールはエラー（任意だが形式は検証）", () => {
@@ -665,17 +682,35 @@ describe("settings フォームスキーマ: 空欄保存 / OFF 保存（conform
   test("通知設定: 全 Switch OFF でも success", () => {
     expectSuccess(
       notificationFormSchema,
-      emptyKeys([
-        "notifyNewReservation",
-        "notifyReservationChange",
-        "notifyReservationCancel",
-        "notifyNewInquiry",
-        "notifyInquiryCustomerReply",
-        "notifyEventRegistration",
-        "notifyEventCancellation",
-      ]),
+      form({
+        notifyNewReservation: "",
+        notifyReservationChange: "",
+        notifyReservationCancel: "",
+        notifyNewInquiry: "",
+        notifyInquiryCustomerReply: "",
+        notifyEventRegistration: "",
+        notifyEventCancellation: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
+      }),
       "notification",
     );
+  });
+
+  test("通知設定: expectedUpdatedAt 欠落は error", () => {
+    expect(
+      parseWithZod(
+        emptyKeys([
+          "notifyNewReservation",
+          "notifyReservationChange",
+          "notifyReservationCancel",
+          "notifyNewInquiry",
+          "notifyInquiryCustomerReply",
+          "notifyEventRegistration",
+          "notifyEventCancellation",
+        ]),
+        { schema: notificationFormSchema },
+      ).status,
+    ).toBe("error");
   });
 
   // ---------------------------------------------------------------------------

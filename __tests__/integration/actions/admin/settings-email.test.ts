@@ -27,6 +27,14 @@ function form(entries: Record<string, string | string[]>): FormData {
   return fd;
 }
 
+const EXPECTED_UPDATED_AT = "2026-01-15T00:00:00.000Z";
+
+const emailFormBaseTimestamps = {
+  expectedOrganizationUpdatedAt: EXPECTED_UPDATED_AT,
+  expectedReservationUpdatedAt: EXPECTED_UPDATED_AT,
+  expectedNotificationUpdatedAt: EXPECTED_UPDATED_AT,
+};
+
 describe("emailFormSchema（実体）", () => {
   test("有効な返信先 + 通知先 + 確認 ON で success", () => {
     const r = parseWithZod(
@@ -34,6 +42,7 @@ describe("emailFormSchema（実体）", () => {
         replyToEmail: "reply@example.com",
         notificationEmailAddresses: ["admin@example.com"],
         sendReservationConfirmationEmail: "on",
+        ...emailFormBaseTimestamps,
       }),
       { schema: emailFormSchema },
     );
@@ -45,6 +54,7 @@ describe("emailFormSchema（実体）", () => {
       form({
         replyToEmail: "",
         sendReservationConfirmationEmail: "",
+        ...emailFormBaseTimestamps,
       }),
       { schema: emailFormSchema },
     );
@@ -55,9 +65,12 @@ describe("emailFormSchema（実体）", () => {
   });
 
   test("不正な返信先メールは error", () => {
-    const r = parseWithZod(form({ replyToEmail: "not-an-email" }), {
-      schema: emailFormSchema,
-    });
+    const r = parseWithZod(
+      form({ replyToEmail: "not-an-email", ...emailFormBaseTimestamps }),
+      {
+        schema: emailFormSchema,
+      },
+    );
     expect(r.status).toBe("error");
   });
 
@@ -65,12 +78,14 @@ describe("emailFormSchema（実体）", () => {
     const at100 = `${"a".repeat(88)}@example.com`; // 88 + 1 + 11 = 100
     const at101 = `${"a".repeat(89)}@example.com`; // 89 + 1 + 11 = 101
     expect(
-      parseWithZod(form({ replyToEmail: at100 }), { schema: emailFormSchema })
-        .status,
+      parseWithZod(form({ replyToEmail: at100, ...emailFormBaseTimestamps }), {
+        schema: emailFormSchema,
+      }).status,
     ).toBe("success");
     expect(
-      parseWithZod(form({ replyToEmail: at101 }), { schema: emailFormSchema })
-        .status,
+      parseWithZod(form({ replyToEmail: at101, ...emailFormBaseTimestamps }), {
+        schema: emailFormSchema,
+      }).status,
     ).toBe("error");
   });
 
@@ -78,6 +93,7 @@ describe("emailFormSchema（実体）", () => {
     const result = parseWithZod(
       form({
         notificationEmailAddresses: ["a@example.com", "b@example.com"],
+        ...emailFormBaseTimestamps,
       }),
       { schema: emailFormSchema },
     );
@@ -93,7 +109,10 @@ describe("emailFormSchema（実体）", () => {
   test("カスタム通知先: カンマ区切り単一文字列は error", () => {
     expect(
       parseWithZod(
-        form({ notificationEmailAddresses: "a@example.com, b@example.com" }),
+        form({
+          notificationEmailAddresses: "a@example.com, b@example.com",
+          ...emailFormBaseTimestamps,
+        }),
         { schema: emailFormSchema },
       ).status,
     ).toBe("error");
@@ -104,6 +123,7 @@ describe("emailFormSchema（実体）", () => {
       parseWithZod(
         form({
           notificationEmailAddresses: ["a@example.com", "not-an-email"],
+          ...emailFormBaseTimestamps,
         }),
         { schema: emailFormSchema },
       ).status,
@@ -116,32 +136,49 @@ describe("emailFormSchema（実体）", () => {
       (_, index) => `recipient-${index}@example.com`,
     );
     expect(
-      parseWithZod(form({ notificationEmailAddresses: tooMany }), {
-        schema: emailFormSchema,
-      }).status,
+      parseWithZod(
+        form({
+          notificationEmailAddresses: tooMany,
+          ...emailFormBaseTimestamps,
+        }),
+        {
+          schema: emailFormSchema,
+        },
+      ).status,
     ).toBe("error");
   });
 
   test("送信元メール: 有効は success / 不正は error / 100文字境界", () => {
     expect(
-      parseWithZod(form({ senderEmail: "noreply@example.com" }), {
-        schema: emailFormSchema,
-      }).status,
+      parseWithZod(
+        form({
+          senderEmail: "noreply@example.com",
+          ...emailFormBaseTimestamps,
+        }),
+        {
+          schema: emailFormSchema,
+        },
+      ).status,
     ).toBe("success");
     expect(
-      parseWithZod(form({ senderEmail: "not-an-email" }), {
-        schema: emailFormSchema,
-      }).status,
+      parseWithZod(
+        form({ senderEmail: "not-an-email", ...emailFormBaseTimestamps }),
+        {
+          schema: emailFormSchema,
+        },
+      ).status,
     ).toBe("error");
     const at100 = `${"a".repeat(88)}@example.com`; // 100
     const at101 = `${"a".repeat(89)}@example.com`; // 101
     expect(
-      parseWithZod(form({ senderEmail: at100 }), { schema: emailFormSchema })
-        .status,
+      parseWithZod(form({ senderEmail: at100, ...emailFormBaseTimestamps }), {
+        schema: emailFormSchema,
+      }).status,
     ).toBe("success");
     expect(
-      parseWithZod(form({ senderEmail: at101 }), { schema: emailFormSchema })
-        .status,
+      parseWithZod(form({ senderEmail: at101, ...emailFormBaseTimestamps }), {
+        schema: emailFormSchema,
+      }).status,
     ).toBe("error");
   });
 
@@ -159,6 +196,9 @@ describe("emailFormSchema（実体）", () => {
     const fd = new FormData();
     fd.append("notificationStaffIds", staffId1);
     fd.append("notificationStaffIds", staffId2);
+    fd.set("expectedOrganizationUpdatedAt", EXPECTED_UPDATED_AT);
+    fd.set("expectedReservationUpdatedAt", EXPECTED_UPDATED_AT);
+    fd.set("expectedNotificationUpdatedAt", EXPECTED_UPDATED_AT);
     const r = parseWithZod(fd, { schema: emailFormSchema });
     expect(r.status).toBe("success");
     if (r.status === "success" && r.value) {
@@ -174,11 +214,26 @@ describe("emailFormSchema（実体）", () => {
   });
 
   test("notificationStaffIds 未指定でも success（任意）", () => {
-    const r = parseWithZod(new FormData(), { schema: emailFormSchema });
+    const r = parseWithZod(form(emailFormBaseTimestamps), {
+      schema: emailFormSchema,
+    });
     expect(r.status).toBe("success");
     if (r.status === "success" && r.value) {
       expect(r.value.notificationStaffIds).toEqual([]);
     }
+  });
+
+  test("notificationStaffIds: 51件超は error", () => {
+    const tooMany = Array.from({ length: 51 }, (_, index) => `staff-${index}`);
+    expect(
+      parseWithZod(
+        form({
+          notificationStaffIds: tooMany,
+          ...emailFormBaseTimestamps,
+        }),
+        { schema: emailFormSchema },
+      ).status,
+    ).toBe("error");
   });
 });
 
@@ -192,6 +247,7 @@ describe("notificationFormSchema（実体）", () => {
         notifyNewInquiry: "",
         notifyEventRegistration: "",
         notifyEventCancellation: "",
+        expectedUpdatedAt: EXPECTED_UPDATED_AT,
       }),
       { schema: notificationFormSchema },
     );
