@@ -237,6 +237,10 @@ const GUEST_TOKEN_TRANSFER_ROUTES: ReadonlyArray<{
     cookieName: RESERVATION_STATUS_TOKEN_COOKIE_NAME,
   },
   {
+    pathname: "/reservation/status/edit",
+    cookieName: RESERVATION_STATUS_TOKEN_COOKIE_NAME,
+  },
+  {
     pathname: "/events/registrations/status",
     cookieName: EVENT_REGISTRATION_STATUS_TOKEN_COOKIE_NAME,
   },

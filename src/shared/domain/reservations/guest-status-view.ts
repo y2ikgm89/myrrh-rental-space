@@ -9,6 +9,9 @@ import {
 import { verifyStatusToken } from "@/shared/lib/reservation-status-token";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { buildGuestEditHref } from "./edit-eligibility";
+
+export { buildGuestEditHref };
 
 export type GuestStatusAccessResult =
   | { kind: "invalid" }

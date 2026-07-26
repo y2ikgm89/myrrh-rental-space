@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
+import type { SearchParams } from "nuqs/server";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageLayout } from "@/public/components/design-system/page-layout";
@@ -13,6 +14,7 @@ import { getReservationForGuestStatus } from "@/shared/domain/reservations/custo
 import {
   buildGuestReceiptDownloadHref,
   buildGuestCancelHref,
+  buildGuestEditHref,
   resolveGuestStatusAccess,
   shouldShowGuestClaimLink,
 } from "@/shared/domain/reservations/guest-status-view";
@@ -48,10 +50,28 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function GuestReservationStatusPage(): Promise<ReactElement> {
+const REDIRECT_REASONS = ["status", "deadline", "discount", "payment"] as const;
+type RedirectReason = (typeof REDIRECT_REASONS)[number];
+const REDIRECT_REASON_SET = new Set<string>(REDIRECT_REASONS);
+function isRedirectReason(value: string): value is RedirectReason {
+  return REDIRECT_REASON_SET.has(value);
+}
+
+interface PageProps {
+  readonly searchParams: Promise<SearchParams>;
+}
+
+export default async function GuestReservationStatusPage({
+  searchParams,
+}: PageProps): Promise<ReactElement> {
   await connection();
 
   await requireFeatureEnabled("reservation");
+
+  const sp = await searchParams;
+  const reasonRaw = typeof sp["reason"] === "string" ? sp["reason"] : null;
+  const reason: RedirectReason | null =
+    reasonRaw && isRedirectReason(reasonRaw) ? reasonRaw : null;
 
   const clientIp = await getClientIpFromHeaders();
   const limit = await publicQueryRateLimiter.check(clientIp);
@@ -104,6 +124,18 @@ export default async function GuestReservationStatusPage(): Promise<ReactElement
     cancellationDeadlineHours: deadlineSettings.cancellationDeadlineHours,
     now,
   });
+  const editHref = buildGuestEditHref({
+    status: reservation.status,
+    paymentStatus: reservation.paymentStatus,
+    discountAmounts: {
+      couponDiscountAmount: reservation.couponDiscountAmount,
+      durationDiscountAmount: reservation.durationDiscountAmount,
+      spaceDiscountAmount: reservation.spaceDiscountAmount,
+    },
+    startTime: reservation.startTime,
+    modificationDeadlineHours: deadlineSettings.modificationDeadlineHours,
+    now,
+  });
   const claimUrl = shouldShowGuestClaimLink({
     customerUserId: reservation.customer.userId,
     isLoggedIn: user != null,
@@ -141,6 +173,35 @@ export default async function GuestReservationStatusPage(): Promise<ReactElement
           ご予約内容とお支払い状況をご確認いただけます。
         </p>
       </div>
+
+      {reason && (
+        <div
+          role="alert"
+          className="border border-warning/30 bg-warning/5 p-4 text-sm"
+        >
+          <p className="font-medium text-foreground">
+            予約変更ページから戻りました
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            {reason === "status" && "この予約は変更できないステータスです。"}
+            {reason === "deadline" && "予約変更の受付期限を過ぎています。"}
+            {reason === "discount" && (
+              <>
+                割引が適用されているため、オンラインでは変更できません。
+                <Link
+                  href={toAppRoute("/contact")}
+                  className="ml-1 underline underline-offset-4 hover:text-foreground"
+                >
+                  お問い合わせください
+                </Link>
+                。
+              </>
+            )}
+            {reason === "payment" &&
+              "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。"}
+          </p>
+        </div>
+      )}
 
       <div className="border border-border">
         <div className="border-b border-border p-4 sm:p-6">
@@ -202,6 +263,16 @@ export default async function GuestReservationStatusPage(): Promise<ReactElement
           次のステップ
         </Heading>
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+          {editHref && (
+            <li>
+              <Link
+                href={toAppRoute(editHref)}
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                予約を変更する
+              </Link>
+            </li>
+          )}
           {cancelHref && (
             <li>
               <a

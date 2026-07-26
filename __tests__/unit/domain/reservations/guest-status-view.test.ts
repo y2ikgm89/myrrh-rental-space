@@ -7,9 +7,11 @@ import {
 import {
   buildGuestReceiptDownloadHref,
   buildGuestCancelHref,
+  buildGuestEditHref,
   resolveGuestStatusAccess,
   shouldShowGuestClaimLink,
 } from "@/shared/domain/reservations/guest-status-view";
+import { PaymentStatus } from "@generated/prisma/enums";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { verifyReceiptDownloadToken } from "@/shared/lib/receipt-download-token";
 import { receiptDownloadNow } from "@/shared/domain/receipts/server-download-instant";
@@ -142,6 +144,37 @@ describe("buildGuestCancelHref", () => {
         status: ReservationStatus.CONFIRMED,
         startTime: new Date("2026-04-01T12:00:00Z"),
         cancellationDeadlineHours: 24,
+        now,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("buildGuestEditHref", () => {
+  const now = new Date("2026-04-01T00:00:00Z");
+  const startTime = new Date("2026-04-10T10:00:00Z");
+
+  test("UNPAID + 期限内なら edit URL", () => {
+    expect(
+      buildGuestEditHref({
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.UNPAID,
+        discountAmounts: {},
+        startTime,
+        modificationDeadlineHours: 24,
+        now,
+      }),
+    ).toBe("/reservation/status/edit");
+  });
+
+  test("PAID なら null", () => {
+    expect(
+      buildGuestEditHref({
+        status: ReservationStatus.CONFIRMED,
+        paymentStatus: PaymentStatus.PAID,
+        discountAmounts: {},
+        startTime,
+        modificationDeadlineHours: 24,
         now,
       }),
     ).toBeNull();

@@ -4,12 +4,11 @@ import { parseDateTimeLocalAsJst } from "@/shared/lib/date-format";
 import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { isWithinDeadline } from "./deadline";
-import { reservationDeadlineNow } from "./server-deadline-instant";
-import { applyCancellation, CANCELLABLE_STATUSES } from "./cancel-core";
+import { applyCancellation } from "./cancel-core";
 import { cancelReservationSeriesCommand } from "./series-commands";
 import type { CancelRequestContext } from "./cancellation-side-effects";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
+import { reservationDeadlineNow } from "./server-deadline-instant";
 import {
   checkReservationDuration,
   isWithinBusinessHours,
@@ -25,6 +24,10 @@ import { isJapaneseHoliday } from "@/shared/lib/date/holiday";
 import { asPrismaInputJsonValue } from "@/shared/db/json";
 import { lockSpaceForTransaction } from "./space-locks";
 import { buildPricingSettings, ensureNoOverlap } from "./payloads";
+import {
+  isReservationEditableForCustomerSelfServe,
+  type EditEligibilityReason,
+} from "./edit-eligibility";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,6 +41,67 @@ type UpdatePayload = {
   reservationId: string;
   googleCalendarEventId: string | null;
 };
+
+type ReservationUpdateInput = {
+  spaceId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  version: number;
+};
+
+function editEligibilityErrorMessage(reason: EditEligibilityReason): string {
+  switch (reason) {
+    case "status":
+      return "この予約は変更できません";
+    case "payment":
+      return "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。";
+    case "discount":
+      return "割引が適用された予約は変更できません。お問い合わせください。";
+    case "deadline":
+      return "変更期限を過ぎています";
+    default: {
+      const _exhaustive: never = reason;
+      return _exhaustive;
+    }
+  }
+}
+
+function validateReservationEditableForUpdate(
+  reservation: {
+    status: import("@/shared/lib/validations/enums/prisma-types").ReservationStatus;
+    paymentStatus: PaymentStatus;
+    couponDiscountAmount: unknown;
+    durationDiscountAmount: unknown;
+    spaceDiscountAmount: unknown;
+    startTime: Date;
+  },
+  modificationDeadlineHours: number,
+): { ok: true } | { ok: false; error: string } {
+  const eligibility = isReservationEditableForCustomerSelfServe({
+    status: reservation.status,
+    paymentStatus: reservation.paymentStatus,
+    discountAmounts: {
+      couponDiscountAmount: Number(reservation.couponDiscountAmount ?? 0),
+      durationDiscountAmount: Number(reservation.durationDiscountAmount ?? 0),
+      spaceDiscountAmount: Number(reservation.spaceDiscountAmount ?? 0),
+    },
+    startTime: reservation.startTime,
+    modificationDeadlineHours,
+    now: reservationDeadlineNow(),
+  });
+  if (!eligibility.ok) {
+    const error = editEligibilityErrorMessage(eligibility.reason);
+    if (eligibility.reason === "deadline") {
+      return {
+        ok: false,
+        error: `変更期限（${String(modificationDeadlineHours)}時間前）を過ぎています`,
+      };
+    }
+    return { ok: false, error };
+  }
+  return { ok: true };
+}
 
 // ---------------------------------------------------------------------------
 // Cancel
@@ -176,19 +240,50 @@ export async function cancelReservationByToken(
 export async function updateCustomerReservation(
   reservationId: string,
   customerId: string,
-  input: {
-    spaceId: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    version: number;
-  },
+  input: ReservationUpdateInput,
   modificationDeadlineHours: number,
 ): Promise<CommandResult<UpdatePayload>> {
+  return updateReservationCommand({
+    reservationId,
+    input,
+    modificationDeadlineHours,
+    ownership: { kind: "customer", customerId },
+  });
+}
+
+/**
+ * トークン経由の予約変更（ゲスト用）
+ *
+ * status token 検証済みの前提で reservationId のみで予約を特定する。
+ * ゲート本体は {@link updateCustomerReservation} と同一。
+ */
+export async function updateGuestReservationByToken(
+  reservationId: string,
+  input: ReservationUpdateInput,
+  modificationDeadlineHours: number,
+): Promise<CommandResult<UpdatePayload>> {
+  return updateReservationCommand({
+    reservationId,
+    input,
+    modificationDeadlineHours,
+    ownership: { kind: "token" },
+  });
+}
+
+async function updateReservationCommand(input: {
+  reservationId: string;
+  input: ReservationUpdateInput;
+  modificationDeadlineHours: number;
+  ownership: { kind: "customer"; customerId: string } | { kind: "token" };
+}): Promise<CommandResult<UpdatePayload>> {
+  const { reservationId, modificationDeadlineHours, ownership } = input;
+  const updateInput = input.input;
   const startDateTime = parseDateTimeLocalAsJst(
-    `${input.date}T${input.startTime}`,
+    `${updateInput.date}T${updateInput.startTime}`,
   );
-  const endDateTime = parseDateTimeLocalAsJst(`${input.date}T${input.endTime}`);
+  const endDateTime = parseDateTimeLocalAsJst(
+    `${updateInput.date}T${updateInput.endTime}`,
+  );
 
   // 過去時刻への変更を封殺する (MYPAGE-EDIT-01)。
   // 既存の modificationDeadline チェック (tx 内) は「予約開始 N 時間前を過ぎたら
@@ -206,9 +301,9 @@ export async function updateCustomerReservation(
   if (
     !isWithinBusinessHours(
       businessHours,
-      input.date,
-      input.startTime,
-      input.endTime,
+      updateInput.date,
+      updateInput.startTime,
+      updateInput.endTime,
     )
   ) {
     return { success: false, error: "選択した時間帯は営業時間外です" };
@@ -229,16 +324,16 @@ export async function updateCustomerReservation(
   // admin override は許容せず休業日への移動を防ぐ (business-domain rule)。
   // spaceId 存在確認と locationId 取得を先行 (public-commands.ts 同型パターン)。
   const spaceForBlockedCheck = await prisma.space.findUnique({
-    where: { id: input.spaceId, isActive: true, isPublished: true },
+    where: { id: updateInput.spaceId, isActive: true, isPublished: true },
     select: { locationId: true },
   });
   if (!spaceForBlockedCheck) {
     return { success: false, error: "指定されたスペースが見つかりません" };
   }
   await ensureDateNotBlocked(
-    input.spaceId,
+    updateInput.spaceId,
     spaceForBlockedCheck.locationId,
-    input.date,
+    updateInput.date,
   );
 
   // Reservation ↔ Event cross-table overlap の tx 外 pre-check (Codex P1 #1019, comment 3566931085)。
@@ -247,7 +342,7 @@ export async function updateCustomerReservation(
   // admin-commands.ts と同一パターン)。
   try {
     await ensureNoOverlap({
-      spaceId: input.spaceId,
+      spaceId: updateInput.spaceId,
       startTime: startDateTime,
       endTime: endDateTime,
       excludeReservationId: reservationId,
@@ -261,11 +356,17 @@ export async function updateCustomerReservation(
 
   // rate plan は read-only なので advisory lock の取得前（tx の外）で取得する
   // (public-commands.ts / admin-commands.ts と同一パターン)。
-  const ratePlans = await getSpaceRatePlans(input.spaceId);
+  const ratePlans = await getSpaceRatePlans(updateInput.spaceId);
 
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
-      where: { id: reservationId, customerId, deletedAt: null },
+      where: {
+        id: reservationId,
+        deletedAt: null,
+        ...(ownership.kind === "customer"
+          ? { customerId: ownership.customerId }
+          : {}),
+      },
       select: {
         id: true,
         status: true,
@@ -300,51 +401,17 @@ export async function updateCustomerReservation(
       return { success: false, error: "予約が見つかりません" };
     }
 
-    if (!CANCELLABLE_STATUSES.includes(reservation.status)) {
-      return { success: false, error: "この予約は変更できません" };
-    }
-
-    // 割引適用済み予約のセルフ変更禁止（page の redirect は UX、domain が SSoT）。
-    // 差額精算・クーポン再計算の複雑さを避けるため、お問い合わせ / 再予約に誘導する。
-    if (
-      Number(reservation.couponDiscountAmount ?? 0) > 0 ||
-      Number(reservation.durationDiscountAmount ?? 0) > 0 ||
-      Number(reservation.spaceDiscountAmount ?? 0) > 0
-    ) {
-      return {
-        success: false,
-        error: "割引が適用された予約は変更できません。お問い合わせください。",
-      };
-    }
-
-    // PAID edit gate: 決済確定/決済中の予約はセルフ変更を禁止 (業界標準の Peerspace/Airbnb
-    // パターン)。差額精算/返金の運用複雑さと silent regression を避けるため、
-    // 顧客には「キャンセル + 再予約」に誘導する。admin は SUPER_ADMIN 限定で override 可能
-    // (別 command)。REFUNDED は変更不能 (元の決済 IntentId が消失している)。
-    if (reservation.paymentStatus !== PaymentStatus.UNPAID) {
-      return {
-        success: false,
-        error:
-          "決済処理が開始された予約は変更できません。キャンセル後に新規予約をお願いいたします。",
-      };
-    }
-
-    if (
-      !isWithinDeadline(
-        reservation.startTime,
-        modificationDeadlineHours,
-        reservationDeadlineNow(),
-      )
-    ) {
-      return {
-        success: false,
-        error: `変更期限（${String(modificationDeadlineHours)}時間前）を過ぎています`,
-      };
+    const eligibility = validateReservationEditableForUpdate(
+      reservation,
+      modificationDeadlineHours,
+    );
+    if (!eligibility.ok) {
+      return { success: false, error: eligibility.error };
     }
 
     // スペースの存在確認（割引設定も取得）
     const space = await tx.space.findUnique({
-      where: { id: input.spaceId, isActive: true, isPublished: true },
+      where: { id: updateInput.spaceId, isActive: true, isPublished: true },
       select: {
         id: true,
         locationId: true,
@@ -360,10 +427,15 @@ export async function updateCustomerReservation(
       throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
     }
 
-    await lockSpaceForTransaction(tx, input.spaceId);
+    await lockSpaceForTransaction(tx, updateInput.spaceId);
 
     // BlockedDate の tx 内二重ガード (tx 外 pre-check と race する GLOBAL 休業日追加を封鎖)
-    await ensureDateNotBlocked(input.spaceId, space.locationId, input.date, tx);
+    await ensureDateNotBlocked(
+      updateInput.spaceId,
+      space.locationId,
+      updateInput.date,
+      tx,
+    );
 
     // Reservation ↔ Event cross-table overlap SSoT (Codex P1 #1019, comment 3566931085)。
     // ensureNoOverlap は EventTimeSlot 側の生きたスロットも union で検査し、
@@ -372,7 +444,7 @@ export async function updateCustomerReservation(
     try {
       await ensureNoOverlap(
         {
-          spaceId: input.spaceId,
+          spaceId: updateInput.spaceId,
           startTime: startDateTime,
           endTime: endDateTime,
           excludeReservationId: reservationId,
@@ -462,10 +534,10 @@ export async function updateCustomerReservation(
         id: reservationId,
         deletedAt: null,
         paymentStatus: PaymentStatus.UNPAID,
-        version: input.version,
+        version: updateInput.version,
       },
       data: {
-        spaceId: input.spaceId,
+        spaceId: updateInput.spaceId,
         startTime: startDateTime,
         endTime: endDateTime,
         basePrice: pricing.basePrice,

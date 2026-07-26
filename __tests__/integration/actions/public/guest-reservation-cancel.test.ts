@@ -100,6 +100,9 @@ mock.module("@/shared/domain/reservations/customer-commands", () => ({
   updateCustomerReservation: mock(() =>
     Promise.resolve({ success: false, error: "not used in guest test" }),
   ),
+  updateGuestReservationByToken: mock(() =>
+    Promise.resolve({ success: false, error: "not used in guest cancel test" }),
+  ),
   cancelCustomerReservationSeries: mock(() =>
     Promise.resolve({ success: false, error: "not used in guest test" }),
   ),

@@ -86,6 +86,24 @@ describe("guest token transfer", () => {
     expect(res.status).not.toBe(307);
   });
 
+  test("/reservation/status/edit の ?token= を HttpOnly cookie に転写する", async () => {
+    const token = createStatusToken(
+      "66666666-6666-4666-8666-666666666666",
+      FUTURE,
+    );
+    const req = new NextRequest(
+      `https://example.com/reservation/status/edit?token=${token}`,
+    );
+    const res = await proxy(req);
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.searchParams.get("token")).toBeNull();
+    const cookie = res.cookies.get(RESERVATION_STATUS_TOKEN_COOKIE_NAME);
+    expect(cookie?.value).toBe(token);
+    expect(cookie?.sameSite).toBe("strict");
+    expect(cookie?.httpOnly).toBe(true);
+  });
+
   test("/events/registrations/status の ?token= を HttpOnly cookie に転写する", async () => {
     const token = createEventRegistrationStatusToken(
       "clxxxxxxxxxxxxxxxxxxxxxxxxx",
