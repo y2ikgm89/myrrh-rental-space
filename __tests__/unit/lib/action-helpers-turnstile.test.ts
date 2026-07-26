@@ -11,12 +11,24 @@ const mockServerEnv: Record<string, string | undefined> = {
   NODE_ENV: "test",
 };
 
+mock.module("next/headers", () => ({
+  headers: mock(() => new Headers({ host: "localhost:3000" })),
+}));
+
 mock.module("@/shared/lib/env/server", () => ({
   serverEnv: mockServerEnv,
   // isLocalhostUrl は e2e-runtime.ts が env/server から import する transitive dep。
   // rate-limit.ts → e2e-runtime.ts → env/server の chain で必要になる。
   // このテスト環境では E2E bypass を発動させないため常に false を返す。
   isLocalhostUrl: () => false,
+}));
+
+mock.module("@/shared/lib/e2e-runtime", () => ({
+  isE2ESecurityBypassAllowedFromHeaders: mock(() => Promise.resolve(false)),
+  isE2ESecurityBypassAllowed: () => false,
+  isLocalProductionE2EEnv: () => false,
+  isCustomerE2ELoginEnabled: () => false,
+  isCustomerE2ELoginEnvEnabled: () => false,
 }));
 
 mock.module("@/shared/lib/turnstile", () => ({

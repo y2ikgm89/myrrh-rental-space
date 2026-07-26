@@ -63,9 +63,10 @@ webServer が毎回 `bun prisma/seed.ts --dev` を実行するため、spec は 
     （context 単位で一意な `x-forwarded-for` 203.0.113.x を付与）。
     setup 相当を自前でやるなら同ファイルの `signInAsAdmin(page)`。
 - 顧客ログインバイパスは `src/shared/lib/e2e-runtime.ts` の
-  `isCustomerE2ELoginEnabled()`（`NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` AND localhost 限定
-  `isLocalProductionE2ERuntime()`）で成立している。この env を staging / production に
-  伝播させない（rules の `security-auth.md` 参照）。
+  `isCustomerE2ELoginEnabled(headers)`（`NEXT_PUBLIC_ENABLE_E2E_LOGIN=1` AND
+  localhost env URL の `isLocalProductionE2EEnv()` AND リクエスト Host が loopback）
+  で成立している。この env を staging / production に伝播させない（rules の
+  `security-auth.md` 参照）。
 
 ## Step 4: 時刻を凍結する（時刻依存 UI のみ）
 

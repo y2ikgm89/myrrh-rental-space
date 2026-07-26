@@ -86,9 +86,12 @@ describe("Playwright E2E webServer env", () => {
     expect(playwrightConfig).toContain('E2E_RUNTIME: "1"');
     expect(playwrightConfig).toContain("E2E_FIXED_NOW_ISO:");
 
-    expect(adminAuth).toContain("isLocalProductionE2ERuntime");
+    expect(adminAuth).toContain("isLocalProductionE2EEnv");
+    expect(adminAuth).toContain("isLoopbackRequestHost");
     expect(e2eRuntime).toContain('serverEnv.E2E_RUNTIME === "1"');
     expect(e2eRuntime).toContain("isLocalhostUrl");
+    expect(e2eRuntime).toContain("isLoopbackRequestHost");
+    expect(e2eRuntime).toContain("isE2ESecurityBypassAllowed");
     expect(e2eRuntime).toContain('process.env["NEXT_PUBLIC_ENABLE_E2E_LOGIN"]');
 
     for (const serverOnlyFile of [adminAuthQueries, cacheHealth]) {

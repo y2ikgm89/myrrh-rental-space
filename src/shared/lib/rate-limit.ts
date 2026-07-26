@@ -33,8 +33,10 @@
  */
 
 import { LRUCache } from "lru-cache";
+import { headers } from "next/headers";
+import { isE2ESecurityBypassAllowed } from "@/shared/lib/e2e-runtime";
+import { isLoopbackHost } from "@/shared/lib/request-host";
 import { timingSafeEqualStrings } from "@/shared/lib/timing-safe";
-import { isLocalProductionE2ERuntime } from "@/shared/lib/e2e-runtime";
 
 export interface RateLimitResult {
   success: boolean;
@@ -153,16 +155,6 @@ function isProductionRuntime(): boolean {
   return process.env["NODE_ENV"] === "production";
 }
 
-function isLocalhostHost(host: string | null): boolean {
-  if (!host) return false;
-  return (
-    host === "localhost" ||
-    host.startsWith("localhost:") ||
-    host === "127.0.0.1" ||
-    host.startsWith("127.0.0.1:")
-  );
-}
-
 function hasTrustedCloudflareOriginHeader(
   getHeader: (name: string) => string | null,
 ): boolean {
@@ -176,7 +168,7 @@ function hasTrustedCloudflareOriginHeader(
 }
 
 function canUseDevelopmentProxyFallback(host: string | null): boolean {
-  return !isProductionRuntime() || isLocalhostHost(host);
+  return !isProductionRuntime() || isLoopbackHost(host);
 }
 
 function extractClientIp(
@@ -311,12 +303,12 @@ export const eventWaitlistConfirmRateLimiter = createRateLimiter({
 
 // 公開クエリ用（30リクエスト/分/IP）— DoS対策
 //
-// **E2E bypass**: `isLocalProductionE2ERuntime()` 成立時（NODE_ENV=production +
+// **E2E bypass**: `isE2ESecurityBypassAllowed` 成立時（NODE_ENV=production +
 // E2E_RUNTIME=1 + ADMIN_APP_URL / BETTER_AUTH_URL / NEXT_PUBLIC_BASE_URL /
-// NEXT_PUBLIC_APP_URL の 4 URL 全て localhost）のみ bypass する。localhost URL
-// check により staging/prod へは構造的に漏れず、`isCustomerE2ELoginEnabled` と
-// 同型の triple-gate。他の limiter（reservationSubmit / authMutation / turnstile 等）
-// は E2E でも実動作を検証し続ける。
+// NEXT_PUBLIC_APP_URL の 4 URL 全て localhost + リクエスト Host が loopback）
+// のみ bypass する。env URL と Host の二重チェックにより staging/prod へは
+// 構造的に漏れない。他の limiter（reservationSubmit / authMutation /
+// turnstile 等）は E2E でも実動作を検証し続ける。
 //
 // 理由: playwright は `retries: 2` + `workers: 2` で並行実行され、単一 test の
 // 再試行が page reload → blocked-dates / slots fetch を再発火するため、単独で
@@ -332,13 +324,14 @@ export const publicQueryRateLimiter: {
   check: (token: string) => Promise<RateLimitResult>;
   reset: (token: string) => Promise<void>;
 } = {
-  check: (token) => {
-    if (isLocalProductionE2ERuntime()) {
-      return Promise.resolve({
+  check: async (token) => {
+    const requestHeaders = await headers();
+    if (isE2ESecurityBypassAllowed(requestHeaders)) {
+      return {
         success: true,
         remaining: 30,
         reset: Date.now() + 60 * 1000,
-      });
+      };
     }
     return _publicQueryRateLimiterBase.check(token);
   },
@@ -574,7 +567,6 @@ export async function checkRateLimit(
  * Server Action 用のIP取得（headers() 経由）
  */
 export async function getClientIpFromHeaders(): Promise<string> {
-  const { headers } = await import("next/headers");
   const hdrs = await headers();
   return extractClientIp((name) => hdrs.get(name), hdrs.get("host"));
 }
